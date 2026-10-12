@@ -1,0 +1,11 @@
+LIBRARY ddraw.dll
+EXPORTS
+    DirectDrawCreate = Proxy_DirectDrawCreate@12
+    DirectDrawCreateClipper = Proxy_DirectDrawCreateClipper@12
+    DirectDrawCreateEx = Proxy_DirectDrawCreateEx@16
+    DirectDrawEnumerateA = Proxy_DirectDrawEnumerateA@8
+    DirectDrawEnumerateExA = Proxy_DirectDrawEnumerateExA@12
+    DirectDrawEnumerateExW = Proxy_DirectDrawEnumerateExW@12
+    DirectDrawEnumerateW = Proxy_DirectDrawEnumerateW@8
+    DllCanUnloadNow = Proxy_DllCanUnloadNow@0 PRIVATE
+    DllGetClassObject = Proxy_DllGetClassObject@12 PRIVATE
