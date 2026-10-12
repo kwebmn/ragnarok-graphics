@@ -76,5 +76,6 @@ extern "C" HRESULT WINAPI Proxy_DllGetClassObject(REFCLSID clsid, REFIID iid, LP
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) DisableThreadLibraryCalls(inst);
+    if (reason == DLL_PROCESS_DETACH) uagfx::win::logModulesAtExit();
     return TRUE;
 }
