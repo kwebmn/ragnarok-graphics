@@ -66,4 +66,9 @@ bool active();  // the hooks are in place and K > 1
 Picture* picture(uintptr_t bitmap);
 void drop(uintptr_t bitmap);  // its twin, copy, tile textures and tile surfaces
 
+// text.cpp: the game's text and triangles (spec §4); the big fonts go when K changes.
+BOOL WINAPI hookTextOutW(HDC dc, int x, int y, LPCWSTR text, int count);
+BOOL WINAPI hookFillRgn(HDC dc, HRGN region, HBRUSH brush);
+void dropFonts();
+
 }  // namespace uagfx::win::crisp

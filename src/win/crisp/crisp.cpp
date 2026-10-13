@@ -65,6 +65,8 @@ void dropAll() {
     State& s = state();
     while (!s.pictures.empty()) drop(s.pictures.begin()->first);
     s.tiles.clear();
+    dropFonts();  // the big fonts and their letters were for the old K
+    s.glyphs.clear();
 }
 
 // The game's windows from a list's head node down through their children: each gets the flag Invalidate sets, so
@@ -186,6 +188,8 @@ std::vector<Hook> hooks() {
         slot(ce::kTextureCopy, reinterpret_cast<uintptr_t>(&onTextureCopy)),
         slot(ce::kClear, reinterpret_cast<uintptr_t>(&onClear)),
         Hook{ce::kImportCreateDibSection, reinterpret_cast<uintptr_t>(&onCreateDibSection), &s.createDibSection},
+        Hook{ce::kImportTextOutW, reinterpret_cast<uintptr_t>(&hookTextOutW), &s.textOutW},
+        Hook{ce::kImportFillRgn, reinterpret_cast<uintptr_t>(&hookFillRgn), &s.fillRgn},
     };
 }
 
