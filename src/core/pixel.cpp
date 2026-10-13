@@ -111,4 +111,15 @@ void rowFromArgb8(PixelFormat f, const uint32_t* src, uint8_t* dst, int count) {
     for (int i = 0; i < count; ++i) writePixel(f, dst + i * n, fromArgb8(f, src[i]));
 }
 
+uint32_t targetToClient(PixelFormat f, uint32_t argb) {
+    const uint32_t r = (argb >> 16) & 255;
+    const uint32_t g = (argb >> 8) & 255;
+    const uint32_t b = argb & 255;
+    switch (f) {
+        case PixelFormat::R5G6B5: return (r * 31 / 255) << 11 | (g * 63 / 255) << 5 | (b * 31 / 255);
+        case PixelFormat::X1R5G5B5: return (r * 31 / 255) << 10 | (g * 31 / 255) << 5 | (b * 31 / 255);
+        default: return fromArgb8(f, argb);
+    }
+}
+
 }  // namespace uagfx

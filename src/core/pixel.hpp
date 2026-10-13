@@ -20,6 +20,10 @@ PixelFormat formatFromMasks(uint32_t bits, uint32_t r, uint32_t g, uint32_t b, u
 // Expansion repeats the high bits (5-bit 31 -> 255), so 16-bit values survive the round trip unchanged.
 uint32_t toArgb8(PixelFormat f, uint32_t raw);
 uint32_t fromArgb8(PixelFormat f, uint32_t argb);
+// A render-target pixel (ARGB8 from the GPU) -> the client's screen format when the client reads the target
+// back. 16-bit channels are floored from the 8-bit values (v5 = v8 * 31 / 255), so the client's start-up
+// calibration settles on (0.5, 0.5) in 16-bit modes too (docs/research/calibration.md §5).
+uint32_t targetToClient(PixelFormat f, uint32_t argb);
 
 uint32_t readPixel(PixelFormat f, const uint8_t* p);  // little-endian
 void writePixel(PixelFormat f, uint8_t* p, uint32_t raw);
