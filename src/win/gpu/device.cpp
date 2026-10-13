@@ -5,12 +5,16 @@
 
 #include <algorithm>
 #include <cstring>
+#include <fstream>
+#include <set>
 
 #include "core/d3d7.hpp"
+#include "core/pipeline_key.hpp"
 #include "core/scale.hpp"
 #include "core/window_plan.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::gpu {
 namespace {
@@ -491,6 +495,28 @@ Renderer::~Renderer() {
 std::string Renderer::adapterName() const { return impl_->adapter; }
 
 void Renderer::setUiSharp(bool sharp) { impl_->uiSharp = sharp; }
+
+void Renderer::preparePipelines(const std::string& file) {
+    Impl& m = *impl_;
+    std::string text;
+    win::readTextFile(file, text);
+    const std::vector<uint64_t> keys = parsePipelineKeys(text);
+    // Written anew: a list from another version or with broken lines starts clean, keys listed twice once.
+    const std::set<uint64_t> unique(keys.begin(), keys.end());
+    std::string clean = pipelineKeysHeader();
+    for (const uint64_t k : unique) clean += pipelineKeyLine(k);
+    std::ofstream(file, std::ios::binary | std::ios::trunc) << clean;
+    LARGE_INTEGER freq, t0, t1;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&t0);
+    unsigned ready = 0;
+    for (const uint64_t k : unique)
+        if (m.pipelineForKey(k)) ++ready;
+    QueryPerformanceCounter(&t1);
+    m.pipelineFile = file;  // from now on every new pipeline is added
+    LOG_INFO("pipelines: %u of %u saved ones prepared in %.0f ms", ready, unsigned(unique.size()),
+             double(t1.QuadPart - t0.QuadPart) * 1000.0 / double(freq.QuadPart));
+}
 
 bool Renderer::create(std::string& error) {
     Impl& m = *impl_;

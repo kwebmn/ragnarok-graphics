@@ -149,6 +149,7 @@ struct Renderer::Impl {
     ID3DBlob* presentPs = nullptr;
     ID3D12PipelineState* presentPipeline = nullptr;
     std::unordered_map<uint64_t, ID3D12PipelineState*> pipelines;
+    std::string pipelineFile;  // the saved keys (1B review M8): every new pipeline is added to it
 
     HWND window = nullptr;
     IDXGISwapChain3* swapChain = nullptr;
@@ -205,6 +206,7 @@ struct Renderer::Impl {
     D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const StageSetup& s0, const StageSetup& s1);
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf);
+    ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp
     void prepareGeometry(const FrameRecord& rec);
     void draw(const FrameRecord& rec, const DrawCmd& d);

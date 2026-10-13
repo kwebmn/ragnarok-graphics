@@ -29,6 +29,9 @@ public:
     bool create(std::string& error);  // device, queue, heaps, shaders; false when Direct3D 12 is not usable
     std::string adapterName() const;
     void setUiSharp(bool sharp);  // [display] ui_filter for interface draws
+    // 1B review M8: builds the pipelines whose keys file lists, so effects do not stutter the first time they are
+    // drawn, and adds every new pipeline to it.
+    void preparePipelines(const std::string& file);
     bool setTarget(int width, int height);  // the client's size: target (BGRA8) and depth (D32) at k = 1, black
     // Stage 3: from now on draw into a target k times the game's size (targetWidth x targetHeight); the current
     // picture is stretched into it, as the back buffer keeps its contents across a present.
