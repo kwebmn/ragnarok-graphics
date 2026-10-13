@@ -37,15 +37,16 @@ bool Context::open(std::string& error) {
 
 void Context::close() {
     flush();
+    if (scaleLog_.pending()) LOG_INFO("%s", scaleLine_.c_str());  // the last change, before the final stats
     logStats(true);
     delete renderer;  // waits for the GPU
     renderer = nullptr;
     record.reset();
     window = nullptr;
     windowApplied = false;
-    if (scaleLog_.pending()) LOG_INFO("%s", scaleLine_.c_str());  // the last change before the game closed
     scaleLog_ = Throttle(500);
     scaledWidth_ = scaledHeight_ = 0;
+    scaleMade_ = true;
     lastOut_ = SIZE{};
     lastPlan_ = ScalePlan{};
 }
@@ -54,6 +55,7 @@ bool Context::setTarget(int width, int height) {
     if (!renderer || !renderer->setTarget(width, height)) return false;
     scaledWidth_ = width;  // the renderer is back at the game's size until the next present
     scaledHeight_ = height;
+    scaleMade_ = true;     // that target exists (0.4.2 review)
     record.reset();
     installShadowHandler();
     if (!shadow.resize(width, height, screenFormat)) {

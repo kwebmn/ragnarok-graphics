@@ -711,9 +711,10 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight) {
     m.height = targetHeight;
     m.scale = k;
     m.applyViewport();
-    if (!m.begin()) return false;
-    m.list->ClearDepthStencilView(m.dsvHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-    m.submit();
+    if (m.begin()) {  // the target is in place; a lost device can neither clear its depth nor draw (0.4.2 review)
+        m.list->ClearDepthStencilView(m.dsvHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+        m.submit();
+    }
     LOG_DEBUG("render target %dx%d: %.3f times the game's %dx%d", targetWidth, targetHeight, k, m.gameWidth,
              m.gameHeight);
     return true;
