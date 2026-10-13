@@ -14,14 +14,16 @@ uint32_t FrameRecord::addState(const DrawSetup& s) {
     return uint32_t(states_.size() - 1);
 }
 
+// Every call adds its data, then its command: memory running out between the two leaves data no command uses, never
+// a command without its data (0.5.2 review 2a).
 void FrameRecord::clear(const ClearCmd& c) {
-    commands_.push_back({Cmd::Clear, uint32_t(clears_.size())});
     clears_.push_back(c);
+    commands_.push_back({Cmd::Clear, uint32_t(clears_.size() - 1)});
 }
 
 void FrameRecord::viewport(const ViewportCmd& v) {
-    commands_.push_back({Cmd::Viewport, uint32_t(viewports_.size())});
     viewports_.push_back(v);
+    commands_.push_back({Cmd::Viewport, uint32_t(viewports_.size() - 1)});
 }
 
 void FrameRecord::draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, const uint16_t* indices,
@@ -34,8 +36,8 @@ void FrameRecord::draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, 
     cmd.firstIndex = uint32_t(indices_.size());
     cmd.indexCount = indices ? indexCount : 0;
     if (indices) indices_.insert(indices_.end(), indices, indices + indexCount);
-    commands_.push_back({Cmd::Draw, uint32_t(draws_.size())});
     draws_.push_back(cmd);
+    commands_.push_back({Cmd::Draw, uint32_t(draws_.size() - 1)});
 }
 
 uint32_t FrameRecord::addPixels(const uint32_t* argb, size_t count) {
@@ -50,16 +52,16 @@ void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, con
     u.level = level;
     u.rect = rect;
     u.pixels = addPixels(argb, size_t(rect.width()) * size_t(rect.height()));
-    commands_.push_back({Cmd::Upload, uint32_t(uploads_.size())});
     uploads_.push_back(u);
+    commands_.push_back({Cmd::Upload, uint32_t(uploads_.size() - 1)});
 }
 
 void FrameRecord::writeTarget(const Rect& rect, const uint32_t* argb) {
     WriteTargetCmd w;
     w.rect = rect;
     w.pixels = addPixels(argb, size_t(rect.width()) * size_t(rect.height()));
-    commands_.push_back({Cmd::WriteTarget, uint32_t(writes_.size())});
     writes_.push_back(w);
+    commands_.push_back({Cmd::WriteTarget, uint32_t(writes_.size() - 1)});
 }
 
 void FrameRecord::reset() {

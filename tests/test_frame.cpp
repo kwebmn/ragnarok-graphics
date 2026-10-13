@@ -1,7 +1,10 @@
 #include <cstring>
+#include <functional>
+#include <new>
 
 #include "core/d3d7.hpp"
 #include "core/frame.hpp"
+#include "fail_alloc.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -126,4 +129,48 @@ TEST(frame_draw_carries_a_window_twin) {
     CHECK_EQ(f.draws()[0].twin, 7u);
     CHECK_EQ(f.draws()[0].twinTile[0], 256);
     CHECK(f.draws()[0].twinScale == 1.75);
+}
+
+TEST(frame_record_out_of_memory_leaves_no_command_without_its_data) {
+    // Each call adds its data, then its command (0.5.2 review 2a): memory running out between the two must leave no
+    // command whose data is missing - execute would read past the end. Three commands of another kind leave the
+    // command list room for a fourth, so the call allocates only for its own data.
+    const uint32_t pixels[4] = {1, 2, 3, 4};
+    const uint8_t vertices[32] = {};
+    const auto survives = [](bool clears, int allowed, const std::function<void(FrameRecord&)>& add) {
+        FrameRecord r;
+        for (int i = 0; i < 3; ++i) {
+            if (clears)
+                r.clear(ClearCmd{});
+            else
+                r.viewport(ViewportCmd{});
+        }
+        bool threw = false;
+        {
+            t::FailAllocations fail(allowed);
+            try {
+                add(r);
+            } catch (const std::bad_alloc&) {
+                threw = true;
+            }
+        }
+        for (const Command& c : r.commands()) {
+            const size_t n = c.type == Cmd::Clear      ? r.clears().size()
+                             : c.type == Cmd::Viewport ? r.viewports().size()
+                             : c.type == Cmd::Draw     ? r.draws().size()
+                             : c.type == Cmd::Upload   ? r.uploads().size()
+                                                       : r.writes().size();
+            if (c.index >= n) return false;
+        }
+        return threw && r.commands().size() == 3;
+    };
+    CHECK(survives(false, 0, [](FrameRecord& r) { r.clear(ClearCmd{}); }));
+    CHECK(survives(true, 0, [](FrameRecord& r) { r.viewport(ViewportCmd{}); }));
+    CHECK(survives(true, 1, [&](FrameRecord& r) { r.upload(7, 0, Rect{0, 0, 2, 2}, pixels); }));  // its pixels go in
+    CHECK(survives(true, 1, [&](FrameRecord& r) { r.writeTarget(Rect{0, 0, 2, 2}, pixels); }));
+    CHECK(survives(true, 1, [&](FrameRecord& r) {  // its vertices go in
+        DrawCmd d;
+        d.fvf = d3d7::FVF_TL1;
+        r.draw(d, vertices, 1, nullptr, 0);
+    }));
 }
