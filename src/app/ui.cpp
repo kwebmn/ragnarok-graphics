@@ -1,5 +1,6 @@
 #include "app/ui.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <utility>
 
@@ -11,6 +12,16 @@ namespace {
 constexpr int kLabel = 200;  // the label column, at 96 DPI
 constexpr int kRow = 26;
 constexpr int kGap = 6;
+
+// A grey control's text: no letter of its own (Alt+one would send the focus elsewhere), its '&' shown as it is.
+std::wstring literal(const std::wstring& text) {
+    std::wstring out;
+    for (wchar_t ch : text) {
+        out += ch;
+        if (ch == L'&') out += L'&';
+    }
+    return out;
+}
 
 }  // namespace
 
@@ -137,8 +148,8 @@ HWND Panel::heading(const std::wstring& text) {
 }
 
 HWND Panel::check(int id, const std::wstring& text, bool on, const std::wstring& hint, bool enabled) {
-    HWND c = make(L"BUTTON", withMnemonic(text, taken_), BS_AUTOCHECKBOX | WS_TABSTOP, area_.left, y_,
-                  area_.right - area_.left, at(kRow), id);
+    HWND c = make(L"BUTTON", enabled ? withMnemonic(text, taken_) : literal(text), BS_AUTOCHECKBOX | WS_TABSTOP,
+                  area_.left, y_, area_.right - area_.left, at(kRow), id);
     SendMessageW(c, BM_SETCHECK, on ? BST_CHECKED : BST_UNCHECKED, 0);
     EnableWindow(c, enabled);
     tip(c, hint);
@@ -149,8 +160,8 @@ HWND Panel::check(int id, const std::wstring& text, bool on, const std::wstring&
 HWND Panel::radio(int id, const std::wstring& text0, const std::wstring& text, bool on, bool first,
                   const std::wstring& hint, bool enabled) {
     if (!text0.empty()) label(text0, at(kRow), false);  // the group's name: the buttons have letters of their own
-    HWND c = make(L"BUTTON", withMnemonic(text, taken_), BS_AUTORADIOBUTTON | WS_TABSTOP, area_.left + at(kLabel), y_,
-                  area_.right - area_.left - at(kLabel), at(kRow), id, 0, first);
+    HWND c = make(L"BUTTON", enabled ? withMnemonic(text, taken_) : literal(text), BS_AUTORADIOBUTTON | WS_TABSTOP,
+                  area_.left + at(kLabel), y_, area_.right - area_.left - at(kLabel), at(kRow), id, 0, first);
     SendMessageW(c, BM_SETCHECK, on ? BST_CHECKED : BST_UNCHECKED, 0);
     EnableWindow(c, enabled);
     tip(c, hint);
@@ -160,7 +171,7 @@ HWND Panel::radio(int id, const std::wstring& text0, const std::wstring& text, b
 
 HWND Panel::choice(int id, const std::wstring& text, const std::vector<std::wstring>& items, int selected,
                    const std::wstring& hint, bool enabled) {
-    label(text, at(kRow));
+    label(text, at(kRow), enabled);
     HWND c = make(WC_COMBOBOXW, L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, area_.left + at(kLabel), y_,
                   area_.right - area_.left - at(kLabel), at(300), id);
     for (const std::wstring& item : items) SendMessageW(c, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(item.c_str()));
@@ -173,14 +184,15 @@ HWND Panel::choice(int id, const std::wstring& text, const std::vector<std::wstr
 
 HWND Panel::slider(int id, const std::wstring& text, int lo, int hi, int step, int value, const std::wstring& valueText,
                    const std::wstring& hint, bool enabled) {
-    label(text, at(kRow + 4));
+    label(text, at(kRow + 4), enabled);
     const int width = area_.right - area_.left - at(kLabel) - at(70);
     HWND c = make(TRACKBAR_CLASSW, L"", TBS_HORZ | TBS_AUTOTICKS | WS_TABSTOP, area_.left + at(kLabel), y_, width,
                   at(kRow + 4), id);
     SendMessageW(c, TBM_SETRANGE, TRUE, MAKELPARAM(lo, hi));
-    SendMessageW(c, TBM_SETTICFREQ, WPARAM(step), 0);
+    const int tenth = std::max(step, (hi - lo) / 10);  // ticks and a page: a tenth of the range, at least a step
+    SendMessageW(c, TBM_SETTICFREQ, WPARAM(tenth), 0);
     SendMessageW(c, TBM_SETLINESIZE, 0, LPARAM(step));
-    SendMessageW(c, TBM_SETPAGESIZE, 0, LPARAM(step * 2));
+    SendMessageW(c, TBM_SETPAGESIZE, 0, LPARAM(std::max(step * 2, tenth)));
     SendMessageW(c, TBM_SETPOS, TRUE, LPARAM(value));
     EnableWindow(c, enabled);
     tip(c, hint);
@@ -191,7 +203,7 @@ HWND Panel::slider(int id, const std::wstring& text, int lo, int hi, int step, i
 }
 
 HWND Panel::number(int id, const std::wstring& text, const std::wstring& value, const std::wstring& hint, bool enabled) {
-    label(text, at(kRow));
+    label(text, at(kRow), enabled);
     HWND c = make(L"EDIT", value, ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP, area_.left + at(kLabel), y_, at(90), at(kRow),
                   id, WS_EX_CLIENTEDGE);
     EnableWindow(c, enabled);
@@ -201,7 +213,7 @@ HWND Panel::number(int id, const std::wstring& text, const std::wstring& value, 
 }
 
 HWND Panel::pair(int id, const std::wstring& text, int a, int b, const std::wstring& hint, bool enabled) {
-    label(text, at(kRow));
+    label(text, at(kRow), enabled);
     const int x = area_.left + at(kLabel);
     HWND c = make(L"EDIT", std::to_wstring(a), ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP, x, y_, at(80), at(kRow), id,
                   WS_EX_CLIENTEDGE);
@@ -214,6 +226,36 @@ HWND Panel::pair(int id, const std::wstring& text, int a, int b, const std::wstr
     tip(d, hint);
     y_ += at(kRow) + at(kGap);
     return c;
+}
+
+void Panel::checks(const std::vector<CheckItem>& items) {
+    const int half = (area_.right - area_.left - at(12)) / 2;
+    for (size_t i = 0; i < items.size(); ++i) {
+        const CheckItem& c = items[i];
+        HWND h = make(L"BUTTON", c.enabled ? withMnemonic(c.text, taken_) : literal(c.text),
+                      BS_AUTOCHECKBOX | WS_TABSTOP, area_.left + (i % 2 ? half + at(12) : 0), y_, half, at(kRow), c.id);
+        SendMessageW(h, BM_SETCHECK, c.on ? BST_CHECKED : BST_UNCHECKED, 0);
+        EnableWindow(h, c.enabled);
+        tip(h, c.hint);
+        if (i % 2 == 1 || i + 1 == items.size()) y_ += at(kRow) + at(kGap);
+    }
+}
+
+void Panel::lines(const std::vector<LineItem>& items, int maxChars, const std::wstring& hint, bool enabled) {
+    const int half = (area_.right - area_.left - at(12)) / 2;
+    const int name = at(48);
+    for (size_t i = 0; i < items.size(); ++i) {
+        const LineItem& l = items[i];
+        const int x = area_.left + (i % 2 ? half + at(12) : 0);
+        make(L"STATIC", l.label, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, x, y_, name, at(kRow), 0);
+        HWND e = make(L"EDIT", l.value, ES_AUTOHSCROLL | WS_TABSTOP, x + name, y_, half - name, at(kRow), l.id,
+                      WS_EX_CLIENTEDGE);
+        SendMessageW(e, EM_LIMITTEXT, WPARAM(maxChars), 0);
+        SendMessageW(e, EM_SETCUEBANNER, FALSE, reinterpret_cast<LPARAM>(l.cue.c_str()));
+        EnableWindow(e, enabled);
+        tip(e, hint);
+        if (i % 2 == 1 || i + 1 == items.size()) y_ += at(kRow) + at(kGap);
+    }
 }
 
 HWND Panel::note(const std::wstring& text, Tone tone) {
@@ -234,8 +276,8 @@ HWND Panel::buttons(const std::vector<std::pair<int, std::wstring>>& list, bool 
         SIZE s{};
         GetTextExtentPoint32W(dc, b.second.c_str(), int(b.second.size()), &s);
         const int w = s.cx + at(28);
-        HWND c = make(L"BUTTON", withMnemonic(b.second, taken_), BS_PUSHBUTTON | WS_TABSTOP, x, y_, w, at(kRow + 4),
-                      b.first);
+        HWND c = make(L"BUTTON", enabled ? withMnemonic(b.second, taken_) : literal(b.second),
+                      BS_PUSHBUTTON | WS_TABSTOP, x, y_, w, at(kRow + 4), b.first);
         EnableWindow(c, enabled);
         if (!first) first = c;
         x += w + at(8);

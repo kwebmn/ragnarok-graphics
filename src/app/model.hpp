@@ -2,6 +2,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "app/registry.hpp"
@@ -89,6 +90,11 @@ public:
     void setRegWord(const settings::RegSetting& s, const std::string& word);
     // Whether a page may change it now: what the game writes itself waits for it to close (spec §4.1).
     bool regOpen(const settings::RegSetting& s) const { return !s.gameWrites || !now_.gameRunning; }
+    // Spec §4.2: the values setup.exe writes (the sound device) where the player's copy differs from setup.exe's own
+    // (the common copy), each with setup.exe's word; "as in setup.exe" takes those words, and Apply then deletes the
+    // personal values.
+    std::vector<std::pair<const settings::RegSetting*, std::string>> regSetupDiffers() const;
+    void regAsSetup();
     std::vector<std::wstring> skins() const;  // the folders of skin\ next to uaRO.exe (spec §6.1)
     bool hasIntro() const;                     // openning.bik next to uaRO.exe
 

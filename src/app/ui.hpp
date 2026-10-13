@@ -19,6 +19,21 @@ bool copyToClipboard(HWND owner, const std::wstring& text);
 enum class Tone { Normal, Muted, Good, Warn, Bad };
 COLORREF toneColor(Tone t);
 
+struct CheckItem {  // a check box of Panel::checks
+    int id;
+    std::wstring text;
+    bool on;
+    std::wstring hint;
+    bool enabled;
+};
+
+struct LineItem {  // a text field of Panel::lines
+    int id;
+    std::wstring label;
+    std::wstring value;
+    std::wstring cue;  // shown grey while it is empty
+};
+
 // The controls of one page (stage 2 spec §6), laid out from the top in rows: a label on the left, the control on the
 // right, notes under it across the page. They are children of the main window, so Tab goes through all of them.
 class Panel {
@@ -43,6 +58,9 @@ public:
                 bool enabled = true);
     // Two numbers with "×" between them: ids id and id + 1.
     HWND pair(int id, const std::wstring& label, int a, int b, const std::wstring& hint, bool enabled = true);
+    void checks(const std::vector<CheckItem>& items);  // two to a row
+    // Text fields two to a row, a short label before each (the chat macros); at most maxChars letters.
+    void lines(const std::vector<LineItem>& items, int maxChars, const std::wstring& hint, bool enabled);
     HWND note(const std::wstring& text, Tone tone = Tone::Muted);
     HWND buttons(const std::vector<std::pair<int, std::wstring>>& list, bool enabled = true);
     HWND listBox(int id, int rows);

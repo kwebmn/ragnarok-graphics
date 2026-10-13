@@ -297,6 +297,30 @@ TEST(model_a_game_setting_as_setup_s_leaves_setup_in_charge) {
     CHECK_EQ(effectiveDword("SOUNDMODE"), 1);
 }
 
+TEST(model_sound_differs_from_setup_exe_s_until_taken_as_in_it) {
+    // Spec §4.2: where the personal copy's sound differs from setup.exe's (the common copy), the page says so; "as in
+    // setup.exe" takes setup.exe's words, and Apply deletes the personal values.
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.registry.common.keys[""]["SOUNDMODE"] = RegValue::dword(1);
+    w.registry.common.keys[""]["NUMSAMPLETYPE"] = RegValue::dword(0);
+    w.registry.personal.exists = true;
+    w.registry.personal.keys[""]["SOUNDMODE"] = RegValue::dword(2);
+    w.registry.personal.keys[""]["NUMSAMPLETYPE"] = RegValue::dword(0);       // the same as setup.exe's
+    w.registry.personal.keys[""]["SPEAKERTYPE"] = RegValue::dword(1);         // setup.exe has none to compare
+    w.registry.personal.keys["Option"]["soundVolume"] = RegValue::dword(50);  // not setup.exe's
+    app::Model m;
+    const auto differs = m.regSetupDiffers();
+    CHECK_EQ(differs.size(), size_t(1));
+    CHECK(!differs.empty() && regKey(*differs[0].first) == "SOUNDMODE" && differs[0].second == "1");
+    m.regAsSetup();
+    CHECK(m.regWord(*findRegSetting("SOUNDMODE")) == "1");
+    CHECK(m.regSetupDiffers().empty());  // the player has taken it
+    CHECK(m.apply(Lang::En).empty());
+    CHECK(w.registry.personal.find("", "SOUNDMODE") == nullptr);
+    CHECK(w.registry.personal.find("", "SPEAKERTYPE") != nullptr);
+}
+
 TEST(model_presets_and_revert_take_the_game_s_quality_too) {
     fake::Windows& w = fake::reset();
     fake::gameKey(w.registry.common, 1920, 1080, false);

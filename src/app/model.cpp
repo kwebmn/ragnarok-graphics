@@ -188,6 +188,24 @@ void Model::setRegWord(const RegSetting& s, const std::string& word) {
         reg_[regKey(s)] = word;
 }
 
+std::vector<std::pair<const RegSetting*, std::string>> Model::regSetupDiffers() const {
+    GameRegistry setup = now_.registry;
+    setup.personal = RegCopy{};
+    const std::vector<std::string>& names = setupValues();
+    std::vector<std::pair<const RegSetting*, std::string>> out;
+    for (const RegSetting& s : regSettings()) {
+        if (*s.subkey || std::find(names.begin(), names.end(), s.name) == names.end()) continue;
+        if (!now_.registry.personal.find("", s.name) || !now_.registry.common.find("", s.name)) continue;
+        const std::string theirs = regWordOf(s, setup);
+        if (regWord(s) != theirs) out.push_back({&s, theirs});
+    }
+    return out;
+}
+
+void Model::regAsSetup() {
+    for (const auto& d : regSetupDiffers()) setRegWord(*d.first, d.second);
+}
+
 std::vector<std::wstring> Model::skins() const { return listFolder(paths_.dir + L"\\skin", true); }
 
 bool Model::hasIntro() const { return fileExists(paths_.dir + L"\\openning.bik"); }
