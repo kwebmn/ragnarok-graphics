@@ -21,6 +21,10 @@ struct ReportFacts {
     std::vector<std::string> problems;       // red and yellow lines of the Diagnostics page
     LogDigest log;
 };
+// DXGI tells a 32-bit program no more than 3072 MB of video memory: from there on the number is the least the card
+// has, not its size.
+constexpr unsigned long long kVramSeenAtMost = 3072;
+std::string vramText(unsigned long long mb);  // "2048 MB"; "at least 3072 MB (a 32-bit program sees no more)"
 // The text, in English for the developers; Windows user names in paths are hidden.
 std::string makeReport(const ReportFacts& f);
 std::string maskUserPaths(const std::string& text);  // "\Users\<name>\" -> "\Users\...\"

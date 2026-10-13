@@ -46,6 +46,13 @@ TEST(log_digest_reads_the_main_facts) {
     CHECK(!digestLog("").found);
 }
 
+TEST(report_video_memory_at_the_32_bit_cap_is_a_floor) {
+    // DXGI tells a 32-bit program no more than 3072 MB (the RTX 5060 Ti of 0.1.1's check showed 3072 MB).
+    CHECK(vramText(2048) == "2048 MB");
+    CHECK(vramText(3071) == "3071 MB");
+    CHECK(vramText(3072) == "at least 3072 MB (a 32-bit program sees no more)");
+}
+
 TEST(report_hides_user_names_and_lists_the_settings) {
     ReportFacts f;
     f.utilityVersion = "0.6.0";

@@ -133,9 +133,10 @@ private:
                            (win10 ? L"" : t(Text::DiagWindowsOld)),
                        win10 ? Tone::Good : Tone::Warn, {}});
         if (sys.d3d12Probed) {
+            const std::vector<std::string> gpu{sys.d3d12.adapter, num(static_cast<long long>(sys.d3d12.vramMb)),
+                                               sys.gpuDriver.empty() ? utf8(t(Text::Unknown)) : sys.gpuDriver};
             out.push_back({t(Text::DiagGpu),
-                           tf(Text::DiagGpuValue, {sys.d3d12.adapter, num(static_cast<long long>(sys.d3d12.vramMb)),
-                                                   sys.gpuDriver.empty() ? utf8(t(Text::Unknown)) : sys.gpuDriver}),
+                           tf(sys.d3d12.vramMb >= kVramSeenAtMost ? Text::DiagGpuValueCapped : Text::DiagGpuValue, gpu),
                            Tone::Normal, {}});
             out.push_back({t(Text::DiagD3D12),
                            sys.d3d12.ok ? t(Text::DiagD3D12Ok) : tf(Text::DiagD3D12Failed, {hresult(sys.d3d12.hr)}),
@@ -232,8 +233,8 @@ private:
         f.driverVersion = s.installedVersion;
         f.windows = num(long(sys.windows.major)) + "." + num(long(sys.windows.minor)) + " build " +
                     num(long(sys.windows.build));
-        f.gpu = sys.d3d12Probed ? sys.d3d12.adapter + ", " + num(static_cast<long long>(sys.d3d12.vramMb)) +
-                                      " MB, driver " + (sys.gpuDriver.empty() ? "unknown" : sys.gpuDriver) +
+        f.gpu = sys.d3d12Probed ? sys.d3d12.adapter + ", " + vramText(sys.d3d12.vramMb) + ", driver " +
+                                      (sys.gpuDriver.empty() ? "unknown" : sys.gpuDriver) +
                                       ", Direct3D 12: " + (sys.d3d12.ok ? "OK" : "failed " + hresult(sys.d3d12.hr))
                                 : "not checked (Windows before 10)";
         for (const MonitorInfo& mon : sys.monitors)

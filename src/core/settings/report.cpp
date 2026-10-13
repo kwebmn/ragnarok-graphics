@@ -6,6 +6,11 @@
 
 namespace uagfx::settings {
 
+std::string vramText(unsigned long long mb) {
+    const std::string text = std::to_string(mb) + " MB";
+    return mb >= kVramSeenAtMost ? "at least " + text + " (a 32-bit program sees no more)" : text;
+}
+
 std::string maskUserPaths(const std::string& text) {
     std::string out;
     size_t pos = 0;
