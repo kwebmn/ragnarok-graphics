@@ -53,16 +53,17 @@ struct Constants {
     uint32_t fogEnable;    // 7
     float fogColor[4];     // 8-11
     uint32_t colorKey;     // 12
-    uint32_t uiMode;       // 13: uiFilterMode() - 0 none, 1 sharp, 2 smooth (interface draws at k > 1)
+    uint32_t uiMode;       // 13: uiFilterMode() - 0 none, 1 sharp, 2 smooth (interface draws at k > 1); 3 a twin
     float scale;           // 14: k, game pixels -> target pixels (stage 3)
     float footprint;       // 15: blit only - source texels per destination pixel
     float sourceRect[4];   // 16-19: blit only, normalised u0 v0 u1 v1
     float uiPixels[4];     // 20-23: uiMode only - the quad's game pixels: first x, first y, last x, last y
     float sourceClamp[4];  // 24-27: blit only - the outermost texel centres of the source rectangle, normalised
     float sharpen;         // 28: blit only - CAS sharpness 0..1 of the picture on screen, below 0 = none
+    float twin[4];         // 29-32: uiMode 3 only (stage 6) - the twin texel origin O (x, y), the twin texture's size
 };
 constexpr UINT kConstantCount = sizeof(Constants) / 4;
-static_assert(kConstantCount == 29, "Constants must stay 29 DWORDs");
+static_assert(kConstantCount == 33, "Constants must stay 33 DWORDs");
 
 struct Texture {
     ID3D12Resource* resource = nullptr;

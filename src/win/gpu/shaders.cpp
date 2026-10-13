@@ -19,6 +19,10 @@ cbuffer Params : register(b0) {
     float4 uiPixels;
     float4 sourceClamp;
     float sharpen;
+    float twinX;  // uiMode 3 (stage 6): the twin texel origin O and the twin texture's size
+    float twinY;
+    float twinW;
+    float twinH;
 };
 Texture2D tex0 : register(t0);
 Texture2D tex1 : register(t1);
@@ -148,12 +152,24 @@ float4 uiSample(float2 uv, float2 du, float2 dv, float2 pos) {
     return c.a > 0.0 ? float4(c.rgb / c.a, c.a) : float4(0.0, 0.0, 0.0, 0.0);
 }
 
+// Stage 6 (crisp text spec §3, §6): a window tile drawn from its twin. Target pixel p shows texel p - O of the
+// tile's twin texture - one texel per pixel; past the texture the last column and row repeat. The twin is
+// premultiplied; the game's blending wants the plain colour.
+float4 twinTexel(float2 pos) {
+    float2 t = clamp(floor(pos) - float2(twinX, twinY), float2(0.0, 0.0), float2(twinW, twinH) - 1.0);
+    float4 c = tex0.Load(int3(int2(t), 0));
+    return c.a > 0.0 ? float4(c.rgb / c.a, c.a) : float4(0.0, 0.0, 0.0, 0.0);
+}
+
 float4 draw_ps(PsIn i) : SV_Target {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
     float2 dv = ddy(uv0);
     float4 t0 = tex0.Sample(samp0, uv0);
-    if (uiMode != 0) t0 = uiSample(uv0, du, dv, i.pos.xy);
+    if (uiMode == 3)
+        t0 = twinTexel(i.pos.xy);
+    else if (uiMode != 0)
+        t0 = uiSample(uv0, du, dv, i.pos.xy);
     float4 t1 = tex1.Sample(samp1, ((stage1.y >> 16) & 7) == 0 ? i.uv0 : i.uv1);
     if (colorKey != 0) {  // colour-keyed textures carry the key as alpha 0 (TextureLevels, Task 10)
         if (((stage0.y >> 24) & 1) != 0 && t0.a == 0) discard;

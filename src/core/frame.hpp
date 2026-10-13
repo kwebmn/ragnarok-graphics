@@ -34,6 +34,11 @@ struct DrawCmd {
     uint32_t vertexCount = 0;
     uint32_t firstIndex = 0;       // into indices()
     uint32_t indexCount = 0;       // 0 = not indexed
+    // Stage 6: a tile of a game window picture drawn from the picture's twin (win/crisp) - the twin texture, the
+    // tile's place in the picture in game pixels and the scale K the twin was made at; twin 0 = none.
+    uint32_t twin = 0;
+    int32_t twinTile[2] = {0, 0};
+    double twinScale = 0.0;
 };
 
 struct UploadCmd {  // texture pixels, ARGB8, rect.width() * rect.height() values at pixels()[pixels]

@@ -5,6 +5,7 @@
 
 #include "core/d3d7.hpp"
 #include "core/scale.hpp"
+#include "core/twin_grid.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -80,9 +81,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         prepareGeometry(rec);
         if (!vertexBase) return;
     }
+    // Stage 6: a window tile whose twin was made at this scale is drawn from the twin, a texel per target pixel;
+    // otherwise (Pause, another scale, no twin) exactly as before.
+    const bool twin = d.twin && s.ui && twinMatches(d.twinScale, scale) && textures.count(d.twin);
     Texture* t[2] = {nullptr, nullptr};
     for (int i = 0; i < 2; ++i) {
-        auto it = textures.find(d.texture[i] ? d.texture[i] : white);
+        const uint32_t id = i == 0 && twin ? d.twin : d.texture[i];
+        auto it = textures.find(id ? id : white);
         if (it == textures.end()) it = textures.find(white);
         if (it == textures.end()) return;
         t[i] = &it->second;
@@ -121,7 +126,17 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[3] = 1.0f;
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale, uiSharp ? UiFilter::Sharp : UiFilter::Smooth));
-    if (c.uiMode != 0) uiPixels(rec, d, c.uiPixels);
+    if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
+        float quad[4];
+        uiPixels(rec, d, quad);
+        c.uiMode = 3;
+        c.twin[0] = float(tileOrigin(int(quad[0]) - d.twinTile[0], d.twinTile[0], scale, d.twinScale));
+        c.twin[1] = float(tileOrigin(int(quad[1]) - d.twinTile[1], d.twinTile[1], scale, d.twinScale));
+        c.twin[2] = float(t[0]->width);
+        c.twin[3] = float(t[0]->height);
+    } else if (c.uiMode != 0) {
+        uiPixels(rec, d, c.uiPixels);
+    }
     c.scale = float(scale);
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP

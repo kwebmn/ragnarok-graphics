@@ -111,3 +111,19 @@ TEST(frame_counts_vertices_and_indices_too) {
     r.draw(d, vertices.data(), 4, indices, 6);
     CHECK_EQ(r.pendingBytes(), size_t(40 * 4 + 6 * 2));
 }
+
+TEST(frame_draw_carries_a_window_twin) {
+    CHECK_EQ(DrawCmd{}.twin, 0u);  // none unless the driver attaches one (stage 6)
+    FrameRecord f;
+    DrawCmd cmd;
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.twin = 7;
+    cmd.twinTile[0] = 256;
+    cmd.twinTile[1] = 0;
+    cmd.twinScale = 1.75;
+    const uint8_t vertices[32 * 3] = {};
+    f.draw(cmd, vertices, 3, nullptr, 0);
+    CHECK_EQ(f.draws()[0].twin, 7u);
+    CHECK_EQ(f.draws()[0].twinTile[0], 256);
+    CHECK(f.draws()[0].twinScale == 1.75);
+}
