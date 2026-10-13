@@ -54,6 +54,9 @@ private:
     // One log line every 30 seconds and one at close: frames shown and reads of the frame from the GPU. Reads
     // should stay near 0 while playing: the per-frame Lock must not cause any (Review Focus 1).
     void logStats(bool final);
+    // Stage 2 (spec §3.4): uaro-graphics.ini is looked at once a second while the game runs, and what applies now
+    // is applied at once.
+    void watchSettings();
     struct Stats {
         unsigned frames = 0;
         unsigned readBacks = 0;
@@ -72,6 +75,10 @@ private:
     unsigned totalReads_ = 0;  // since start, in the scale line: the start-up calibration came first (review M4)
     std::string scaleLine_;    // the latest scale line: written now, by the throttle later, or at close
     bool scaleMade_ = true;    // whether setScale made that target (0.4.1 review)
+    uint64_t settingsChecked_ = 0;  // GetTickCount64 of the last look at uaro-graphics.ini
+    bool settingsKnown_ = false;    // its write time and size below are those of the text read last
+    FILETIME settingsTime_{};
+    uint64_t settingsSize_ = 0;
 };
 
 // Holds the global lock for a scope; every DirectDraw / Direct3D method starts with one.

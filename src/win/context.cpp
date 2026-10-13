@@ -2,6 +2,7 @@
 
 #include <cstdio>
 
+#include "core/live_config.hpp"
 #include "core/scale.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
@@ -94,6 +95,7 @@ void Context::flushIfFull() {
 void Context::present(const Rect& source, bool waitForVblank) {
     flush();
     if (!renderer) return;
+    watchSettings();
     if (window && IsIconic(window)) {  // minimised: nothing to show, and no vsync to hold the game's loop back
         Sleep(15);
         return;
@@ -153,6 +155,39 @@ void Context::present(const Rect& source, bool waitForVblank) {
     renderer->present(window, out.cx, out.cy, source, o);
     ++stats_.frames;
     logStats(false);
+}
+
+void Context::watchSettings() {
+    const uint64_t now = GetTickCount64();
+    if (settingsChecked_ && now - settingsChecked_ < 1000) return;
+    settingsChecked_ = now;
+    const std::string path = gameDir() + "\\uaro-graphics.ini";
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    if (!GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &a)) return;  // no file: the defaults stay
+    const uint64_t size = (uint64_t(a.nFileSizeHigh) << 32) | a.nFileSizeLow;
+    if (settingsKnown_ && CompareFileTime(&a.ftLastWriteTime, &settingsTime_) == 0 && size == settingsSize_) return;
+    std::string text;
+    if (!readTextFile(path, text)) return;  // the settings app is replacing it right now: the next look reads it
+    settingsKnown_ = true;
+    settingsTime_ = a.ftLastWriteTime;
+    settingsSize_ = size;
+    const LiveUpdate u = liveUpdate(config, parseConfig(text));
+    if (u.applied.empty() && u.waiting.empty()) return;
+    const Config was = config;
+    config = u.next;  // render_scale, high_resolution, sharpen, vsync and fps_limit are read at every present
+    if (config.uiFilter != was.uiFilter) renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
+    if (config.crispText != was.crispText) {
+        if (config.crispText)
+            crisp::install(true);
+        else
+            crisp::uninstall();
+    }
+    if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
+    std::string line = "settings: uaro-graphics.ini changed:";
+    for (size_t i = 0; i < u.applied.size(); ++i) line += (i ? ", " : " ") + u.applied[i];
+    if (!u.waiting.empty()) line += u.applied.empty() ? " at the next start:" : "; at the next start:";
+    for (size_t i = 0; i < u.waiting.size(); ++i) line += (i ? ", " : " ") + u.waiting[i];
+    LOG_INFO("%s", line.c_str());
 }
 
 void Context::logStats(bool final) {

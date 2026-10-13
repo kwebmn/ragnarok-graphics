@@ -21,6 +21,13 @@ void open(const std::string& path, LogLevel level) {
 
 bool enabled(LogLevel level) { return g_file && int(level) <= int(g_level); }
 
+void setLevel(LogLevel level) {
+    if (!g_file) return;
+    EnterCriticalSection(&g_lock);
+    g_level = level;
+    LeaveCriticalSection(&g_lock);
+}
+
 void line(LogLevel level, const char* fmt, ...) {
     if (!enabled(level)) return;
     char msg[1024];
