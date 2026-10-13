@@ -15,8 +15,8 @@
 ## Проверка
 
 1. `update.bat` в конце написал `uaRO Graphics 0.4.2 build … is installed`.
-2. Запусти игру: в `uaro-graphics.log` строка `pipelines: N of N saved ones prepared in … ms` — N столько же, сколько
-   набралось в 0.4.1.
+2. Запусти игру: в `uaro-graphics.log` строка `pipelines: N of N saved ones prepared in … ms` с N больше нуля —
+   конвейеры, запомненные в 0.4.1, сохранились.
 3. Всё как в 0.4.1: картинка, Pause, края окон, мышь, ROExt, геймпад, смена карты, скриншот, Alt+Tab.
 
 ## Что прислать
