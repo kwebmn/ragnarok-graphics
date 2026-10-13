@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include "core/image.hpp"
@@ -29,5 +30,12 @@ void drawGlyph(TwinPicture& t, const GlyphBitmap& g, int penX, int baseline, uin
 Rect textRect(int x, int y, int extent, int cellHeight, int margin);
 // GetTextColor's COLORREF (0x00BBGGRR) as the 0xRRGGBB drawGlyph takes.
 uint32_t textColor(uint32_t colorref);
+// The height of the twin's font (0.5.1). The game's small font is hinted: its letters are whole pixels wide, mostly
+// rounded down, and the game lays its strings out with those widths - the same font K times larger is wider than
+// the places it gets, so letters touch and stick out of their frames. The twin's font is the largest from `start`
+// (K times the game's height) down to `least` whose sample text is at most `target` wide (the game's width of it
+// times K). widthAt(h): the sample's width at height h, 0 when it cannot be measured - then `start`, as does a
+// target of 0 or a start of 0 (the game's default height).
+int fitFontHeight(int start, int least, double target, const std::function<int(int)>& widthAt);
 
 }  // namespace uagfx

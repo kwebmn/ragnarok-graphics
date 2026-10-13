@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <iterator>
 #include <map>
 #include <string>
 #include <tuple>
@@ -11,6 +13,7 @@
 #include "core/twin_text.hpp"
 #include "win/context.hpp"
 #include "win/crisp/state.hpp"
+#include "win/log.hpp"
 
 namespace uagfx::win::crisp {
 namespace {
@@ -38,16 +41,59 @@ std::map<FontKey, BigFont> g_fonts;
 HDC g_glyphDc = nullptr;  // GetGlyphOutlineW reads the big fonts here
 uint32_t g_nextFont = 1;
 
-// The game's font K times larger (spec §4); null when GDI cannot make it.
-const BigFont* bigFont(const LOGFONTW& lf, double K) {
+// The text the twin's font is fitted with (0.5.1): the letters of uaRO's chat and windows - Latin, Cyrillic, digits.
+const wchar_t kSample[] =
+    L"The quick brown fox jumps over the lazy dog 0123456789 "
+    L"\u0421\u044a\u0435\u0448\u044c \u0436\u0435 \u0435\u0449\u0451 \u044d\u0442\u0438\u0445 "
+    L"\u043c\u044f\u0433\u043a\u0438\u0445 \u0444\u0440\u0430\u043d\u0446\u0443\u0437\u0441\u043a\u0438\u0445 "
+    L"\u0431\u0443\u043b\u043e\u043a, \u0434\u0430 \u0432\u044b\u043f\u0435\u0439 \u0447\u0430\u044e";
+constexpr int kSampleLength = int(std::size(kSample)) - 1;
+
+HDC glyphDc() {
+    if (!g_glyphDc) g_glyphDc = CreateCompatibleDC(nullptr);
+    return g_glyphDc;
+}
+
+// The sample's width in lf at height h; 0 when GDI cannot tell.
+int sampleWidth(LOGFONTW lf, LONG height) {
+    lf.lfHeight = height;
+    const HFONT font = CreateFontIndirectW(&lf);
+    const HDC dc = glyphDc();
+    if (!font || !dc) {
+        if (font) DeleteObject(font);
+        return 0;
+    }
+    const HGDIOBJ old = SelectObject(dc, font);
+    SIZE size{};
+    const BOOL ok = GetTextExtentPoint32W(dc, kSample, kSampleLength, &size);
+    SelectObject(dc, old);
+    DeleteObject(font);
+    return ok ? int(size.cx) : 0;
+}
+
+// The game's font as the twin draws it (spec §4, 0.5.1): K times larger, or as much smaller as it takes for its
+// sample to be no wider than the game's times K - the game's hinted small letters are narrower than K times larger
+// ones, and the game places every letter by them. Measured once per font, with the game's DC, which holds the game's
+// font. Null when GDI cannot make it.
+const BigFont* bigFont(HDC dc, const LOGFONTW& lf, double K) {
     const FontKey key{lf.lfFaceName, lf.lfHeight, lf.lfWidth, lf.lfWeight, lf.lfItalic, lf.lfCharSet};
     auto it = g_fonts.find(key);
     if (it == g_fonts.end()) {
         LOGFONTW big = lf;
-        big.lfHeight = LONG(std::lround(lf.lfHeight * K));
         big.lfWidth = LONG(std::lround(lf.lfWidth * K));
         big.lfQuality = ANTIALIASED_QUALITY;
+        const LONG sign = lf.lfHeight < 0 ? -1 : 1;
+        const int start = int(std::lround(std::labs(lf.lfHeight) * K));
+        SIZE game{};
+        const double target = GetTextExtentPoint32W(dc, kSample, kSampleLength, &game) ? game.cx * K : 0.0;
+        const int height = fitFontHeight(start, int(std::lround(start * 0.8)), target,
+                                         [&big, sign](int h) { return sampleWidth(big, sign * h); });
+        big.lfHeight = sign * height;
+        big.lfWidth = start > 0 ? LONG(std::lround(lf.lfWidth * K * height / start)) : 0;
         it = g_fonts.emplace(key, BigFont{CreateFontIndirectW(&big), g_nextFont++}).first;
+        LOG_INFO("crisp text: the game's font of height %ld drawn at %d (k %.3f: sample %d px, the game's x k %.0f)",
+                 static_cast<long>(lf.lfHeight), static_cast<int>(sign * height), K, sampleWidth(big, big.lfHeight),
+                 target);
     }
     return it->second.font ? &it->second : nullptr;
 }
@@ -56,8 +102,7 @@ const BigFont* bigFont(const LOGFONTW& lf, double K) {
 const GlyphBitmap* glyph(const BigFont& f, wchar_t ch) {
     State& s = state();
     if (const GlyphBitmap* g = s.glyphs.find(f.id, ch)) return g;
-    if (!g_glyphDc) g_glyphDc = CreateCompatibleDC(nullptr);
-    if (!g_glyphDc || !SelectObject(g_glyphDc, f.font)) return nullptr;
+    if (!glyphDc() || !SelectObject(g_glyphDc, f.font)) return nullptr;
     const MAT2 identity{{0, 1}, {0, 0}, {0, 0}, {0, 1}};
     GLYPHMETRICS gm{};
     const DWORD size = GetGlyphOutlineW(g_glyphDc, ch, GGO_GRAY8_BITMAP, &gm, 0, nullptr, &identity);
@@ -113,7 +158,7 @@ BOOL WINAPI hookTextOutW(HDC dc, int x, int y, LPCWSTR text, int count) {
     if (GetTextAlign(dc) == 0 &&  // TA_TOP | TA_LEFT | TA_NOUPDATECP: the game never changes it
         GetObjectW(GetCurrentObject(dc, OBJ_FONT), sizeof lf, &lf) == int(sizeof lf) && lf.lfEscapement == 0 &&
         GetTextMetricsW(dc, &tm) && GetTextExtentExPointW(dc, text, count, 0, nullptr, ends.data(), &extent))
-        font = bigFont(lf, s.K);
+        font = bigFont(dc, lf, s.K);
     bool letters = font != nullptr;
     for (int i = 0; letters && i < count; ++i) letters = glyph(*font, text[i]) != nullptr;  // every one, or none
     if (!letters) {  // like any other write: the small letters enlarged

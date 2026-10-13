@@ -92,3 +92,20 @@ TEST(twin_text_a_label_redrawn_over_its_skin_stays_the_same) {
     }
     CHECK(t.twin() == once);
 }
+
+TEST(twin_text_font_fits_the_game_letters) {
+    // The game's hinted 15-pixel Arial is narrower than the 26-pixel one over 1.75: the twin's font steps down until
+    // the sample is no wider than the game's (0.5.1: letters touched and stuck out of their frames).
+    const auto width = [](int h) { return h == 26 ? 1264 : h == 25 ? 1192 : h * 45; };
+    CHECK_EQ(fitFontHeight(26, 21, 1233.75, width), 25);
+    CHECK_EQ(fitFontHeight(26, 21, 1300.0, width), 26);  // already fits: as large as K times the game's
+}
+
+TEST(twin_text_font_fit_has_a_floor_and_falls_back) {
+    const auto wide = [](int) { return 5000; };
+    CHECK_EQ(fitFontHeight(26, 21, 1000.0, wide), 21);  // never below the floor
+    const auto unknown = [](int) { return 0; };
+    CHECK_EQ(fitFontHeight(26, 21, 1000.0, unknown), 26);  // nothing measures: K times the game's
+    CHECK_EQ(fitFontHeight(26, 21, 0.0, wide), 26);        // the game's width unknown
+    CHECK_EQ(fitFontHeight(0, 0, 1000.0, wide), 0);        // the game's default height stays default
+}

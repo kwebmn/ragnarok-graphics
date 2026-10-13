@@ -38,4 +38,15 @@ Rect textRect(int x, int y, int extent, int cellHeight, int margin) {
 
 uint32_t textColor(uint32_t c) { return (c & 0xFF) << 16 | (c & 0xFF00) | (c >> 16 & 0xFF); }
 
+int fitFontHeight(int start, int least, double target, const std::function<int(int)>& widthAt) {
+    if (start <= 0 || target <= 0.0) return start;
+    const int floor = std::max(least, 1);
+    for (int h = start; h > floor; --h) {
+        const int w = widthAt(h);
+        if (w <= 0) return start;
+        if (w <= target) return h;
+    }
+    return std::min(start, floor);
+}
+
 }  // namespace uagfx
