@@ -114,3 +114,22 @@ TEST(image_stretch_linear_one_to_one_is_a_copy) {
     CHECK(stretch(dst, dst.bounds(), src, src.bounds(), StretchFilter::Linear));
     for (int x = 0; x < 3; ++x) CHECK_EQ(dst.pixel(x, 0), src.pixel(x, 0));
 }
+
+TEST(image_copies_reject_a_source_rect_outside_the_source) {
+    const Image src = filled(2, 2, PixelFormat::A8R8G8B8, 7);
+    Image dst(4, 4, PixelFormat::A8R8G8B8);
+    CHECK(!copy(dst, 3, 0, src, Rect{-2, 0, 2, 2}));  // DirectDraw answers DDERR_INVALIDRECT
+    CHECK(!copy(dst, 0, 0, src, Rect{0, 0, 3, 2}));
+    CHECK(!copyKeyed(dst, 0, 0, src, Rect{0, 0, 2, 3}, 0, 0));
+    CHECK(!copy(dst, 0, 0, src, Rect{1, 1, 1, 2}));  // empty
+    for (int y = 0; y < 4; ++y)
+        for (int x = 0; x < 4; ++x) CHECK_EQ(dst.pixel(x, y), 0u);
+}
+
+TEST(image_stretch_rejects_a_source_rect_outside_the_source) {
+    const Image src = filled(2, 2, PixelFormat::A8R8G8B8, 7);
+    Image dst(4, 4, PixelFormat::A8R8G8B8);
+    CHECK(!stretch(dst, dst.bounds(), src, Rect{0, -1, 2, 2}, StretchFilter::Linear));
+    CHECK(!stretch(dst, dst.bounds(), src, Rect{0, 0, 3, 2}, StretchFilter::Point));
+    CHECK_EQ(dst.pixel(0, 0), 0u);
+}

@@ -52,6 +52,8 @@ private:
 // DDBLT_COLORFILL: raw is a value in dst's format; only its low bytes are written.
 void fill(Image& dst, Rect r, uint32_t raw);
 // BltFast / Blt of the same size. Both images must have the same format; src and dst may be the same image.
+// Every blit returns false, writing nothing, when the source rectangle is not inside the source image
+// (DDERR_INVALIDRECT); the destination is clipped.
 bool copy(Image& dst, int dx, int dy, const Image& src, Rect sr);
 // The same, skipping source pixels whose raw value lies in [keyLow, keyHigh] (source colour key).
 bool copyKeyed(Image& dst, int dx, int dy, const Image& src, Rect sr, uint32_t keyLow, uint32_t keyHigh);
