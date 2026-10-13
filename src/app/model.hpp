@@ -109,6 +109,11 @@ public:
     std::wstring removeCompatFlag(const CompatFlag& f, settings::Lang l);
     std::wstring resetRegistryValue(const std::string& name, settings::Lang l);
     std::wstring forgetLogin(settings::Lang l);  // the saved login goes; only while the game is closed (§4.1)
+    // Spec §8: the whole game key as the game reads it, to a .reg file under the personal copy's path; from one, it
+    // replaces the personal copy (only while the game is closed, a copy of the present one made first).
+    std::wstring saveGameSettings(const std::wstring& file, settings::Lang l) const;
+    std::wstring loadGameSettings(const std::wstring& file, settings::Lang l);
+    std::wstring resetWindowLayout(settings::Lang l);  // spec §8; only while the game is closed
     std::wstring launchGame(settings::Lang l);
     std::optional<settings::Lang> savedLanguage() const;
     void saveLanguage(settings::Lang l);  // the app's own key: no backup for it

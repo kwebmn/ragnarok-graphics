@@ -467,6 +467,46 @@ std::wstring Model::forgetLogin(Lang l) {
     return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
 }
 
+std::wstring Model::saveGameSettings(const std::wstring& file, Lang l) const {
+    GameRegistry r;  // as it is now: the game wrote its hotbars at its last map change
+    r.personal = readPersonal();
+    r.common = readCommon();
+    const std::string text = utf8ToRegFile(toRegFile(effectiveCopy(r), gameKeyPaths().personalRoot));
+    return writeFileAtomic(file, text) ? L"" : wtrf(l, Text::ErrWriteFile, {utf8(file)});
+}
+
+std::wstring Model::loadGameSettings(const std::wstring& file, Lang l) {
+    refreshRunning();
+    if (now_.gameRunning) return wtr(l, Text::ErrGameRunning);  // the game writes most of it at exit
+    std::string bytes;
+    RegCopy copy;
+    if (!readFile(file, bytes) || !fromRegFileAny(regFileToUtf8(bytes), gameKeyRoots(), copy))
+        return wtrf(l, Text::ErrReadFile, {utf8(file)});
+    std::wstring err = backupOnce(l);
+    if (!err.empty()) return err;
+    const std::string failed = replacePersonal(copy);
+    reg_.clear();  // the game's key is another one now: what the pages changed was for the old one
+    screen_.reset();
+    screenAsSetup_ = false;
+    load();
+    return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
+}
+
+std::wstring Model::resetWindowLayout(Lang l) {
+    refreshRunning();
+    if (now_.gameRunning) return wtr(l, Text::ErrGameRunning);  // the game writes UIRectInfo at exit
+    GameRegistry r;
+    r.personal = readPersonal();
+    r.common = readCommon();
+    const std::vector<RegWrite> writes = windowLayoutReset(r);
+    if (writes.empty()) return L"";
+    std::wstring err = backupOnce(l);
+    if (!err.empty()) return err;
+    const std::string failed = writeValues(writes);
+    load();
+    return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
+}
+
 std::wstring Model::launchGame(Lang l) {
     const unsigned long e = launch(paths_.game, paths_.dir);
     refreshRunning();

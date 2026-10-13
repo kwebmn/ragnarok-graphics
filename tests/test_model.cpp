@@ -338,3 +338,61 @@ TEST(model_forget_login_clears_the_saved_one) {
     CHECK(m.forgetLogin(Lang::En).empty());
     CHECK(w.registry.personal.find("", "ID")->text == "");
 }
+
+TEST(model_game_settings_go_to_a_file_and_back) {
+    // Spec §8: the file holds the whole key as the game reads it - both copies, the personal one winning - under the
+    // personal copy's path; loading replaces the personal copy, a copy of the present one made first.
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.registry.common.keys[""]["SOUNDMODE"] = RegValue::dword(1);
+    w.registry.personal.exists = true;
+    w.registry.personal.keys["Option"]["isEffectOn"] = RegValue::dword(0);
+    w.registry.personal.keys["ShortcutItem\\uaRO"]["SITEM000"] = RegValue::sz("Red Potion");
+    app::Model m;
+    const std::wstring file = fake::path(L"mine.reg");
+    CHECK(m.saveGameSettings(file, Lang::En).empty());
+    RegCopy saved;
+    CHECK(fromRegFile(w.files[file], app::gameKeyPaths().personalRoot, saved));
+    CHECK(saved.find("", "SOUNDMODE") && saved.find("Option", "isEffectOn") &&
+          saved.find("ShortcutItem\\uaRO", "SITEM000"));
+    w.registry.personal = RegCopy{};  // another PC: nothing of the player's there yet
+    app::Model other;
+    CHECK(other.loadGameSettings(file, Lang::En).empty());
+    const RegValue* item = w.registry.personal.find("ShortcutItem\\uaRO", "SITEM000");
+    CHECK(item && item->text == "Red Potion");
+    CHECK(w.registry.personal.find("Option", "isEffectOn") != nullptr);
+    CHECK(!other.now().backups.empty());
+}
+
+TEST(model_game_settings_load_and_reset_wait_for_the_game_to_close) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.files[fake::path(L"mine.reg")] = toRegFile(effectiveCopy(w.registry), app::gameKeyPaths().personalRoot);
+    w.gameRunning = true;  // the game writes most of it at exit (spec §4.1)
+    app::Model m;
+    CHECK(!m.loadGameSettings(fake::path(L"mine.reg"), Lang::En).empty());
+    CHECK(!m.resetWindowLayout(Lang::En).empty());
+    CHECK(!w.registry.personal.exists);
+}
+
+TEST(model_a_file_without_the_game_key_is_refused) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"other.reg")] =
+        "Windows Registry Editor Version 5.00\r\n\r\n[HKEY_CURRENT_USER\\Software\\Other]\r\n\"A\"=dword:00000001\r\n";
+    app::Model m;
+    CHECK(!m.loadGameSettings(fake::path(L"other.reg"), Lang::En).empty());
+    CHECK(!m.loadGameSettings(fake::path(L"none.reg"), Lang::En).empty());
+    CHECK(!w.registry.personal.exists);
+}
+
+TEST(model_a_window_layout_reset_writes_the_personal_copy) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.registry.personal.exists = true;
+    w.registry.personal.keys["UIRectInfo"]["ITEMWNDINFO.X"] = RegValue::dword(1700);
+    app::Model m;
+    CHECK(m.resetWindowLayout(Lang::En).empty());
+    const auto x = effectiveValue(w.registry, "UIRectInfo", "ITEMWNDINFO.X");
+    CHECK(x && x->asDword() && *x->asDword() == 0xFFFFFFFFu);
+    CHECK(!m.now().backups.empty());
+}
