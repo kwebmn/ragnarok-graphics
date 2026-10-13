@@ -60,7 +60,7 @@ The vtable at `0x6956EC` (10 slots, read from `.rdata`):
 |---|---|---|
 | 0 (+0x00) | 0x402EB0 | Scalar deleting destructor → `FUN_00402ee0` (L1744). Deletes the tiles, then `SelectObject(old)`, `DeleteObject(HBITMAP)`, `DeleteDC` (L1789–1791). |
 | 1 (+0x04) | 0x403780 | Grow-only resize: when w or h is larger, reselect the old object, delete the bitmap, call `FUN_00403960` (L2254). No caller found. |
-| 2 (+0x08) | 0x402FF0 | GetDC(&hdc): sets dirty and returns the HDC (L1812). |
+| 2 (+0x08) | 0x402FF0 | GetDC(&hdc): sets dirty, writes the HDC and returns true in AL (`mov al,1`, L1812). The painter tests that result (0x406478): when it is false, it skips GetCurrentObject and SetBkMode(TRANSPARENT). |
 | 3 (+0x0C) | 0x403010 | ReleaseDC: `ret 4`, a no-op. |
 | 4 (+0x10) | 0x4037C0 | CopyPixels(x,y,w,h,src32,key) (L2269). Does not clip. With `key` set it skips source pixels equal to `0xFFFF00FF` (L2293). Quirk: it stops when the destination pixel at a row start is `0x00000000` (L2285, `cmp [edx+eax*4],0` at 0x40380A). |
 | 5 (+0x14) | 0x4030E0 | CopyFrom(x,y,w,h,CDCBitmap* src) (L1882). Copies a child into this DIB and skips `0xFFFF00FF` (L1922). Clipping uses unsigned compares (`jae` at 0x4030FF/0x40310D), so a negative x or y copies **nothing**. Right and bottom edges are clipped. |
@@ -242,7 +242,7 @@ The painter is a stack object:
 | +0x1D | bold |
 
 `UIWindow::TextOut` is `FUN_004c9f20` (L170830). Arguments: x, y, string, length (0 = strlen), font type, height, COLORREF. It runs:
-1. `FUN_00406460(m_dc)` (L4742): calls `m_dc->GetDC` (slot 2, sets dirty). Saves `GetCurrentObject(hdc, OBJ_FONT)` (L4754). Calls `SetBkMode(hdc, TRANSPARENT)` (L4756, 0x40648F).
+1. `FUN_00406460(m_dc)` (L4742): calls `m_dc->GetDC` (slot 2, sets dirty). Only when GetDC returns true (`test al,al` at 0x406478; it always does) does it save `GetCurrentObject(hdc, OBJ_FONT)` (L4754) and call `SetBkMode(hdc, TRANSPARENT)` (L4756, 0x40648F), the only SetBkMode call in the exe.
 2. `FUN_004064d0(type, height, 0)`. No GDI call.
 3. `FUN_004065d0(colour)` → `SetTextColor(hdc, colour)` (L4842, 0x4065DA).
 4. `FUN_00406900` (L4989). With `DAT_0074b559 = 0` it calls `FUN_004065f0(x, y, str, len)` (L4848), which:

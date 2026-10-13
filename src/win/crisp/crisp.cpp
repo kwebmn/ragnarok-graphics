@@ -86,15 +86,17 @@ int markWindows(uintptr_t head, int depth) {
     return n;
 }
 
-// --- The window picture's methods (docs/research/text.md §1.1): the game's first, then the twin (spec §4). ---
+// --- The window picture's methods (docs/research/text.md §1.1): the game's first, then the twin (spec §4). Every
+// hook returns what the game's method left in eax: the painter tests GetDC's true before it makes the text
+// background transparent (0x406478), so a lost result paints a box behind every string; the rest pass theirs on too.
 
 using DestroyFn = void*(UAGFX_THISCALL*)(void*, unsigned);
-using GetDcFn = void(UAGFX_THISCALL*)(void*, HDC*);
-using CopyPixelsFn = void(UAGFX_THISCALL*)(void*, int, int, int, int, const uint32_t*, int);
-using CopyFromFn = void(UAGFX_THISCALL*)(void*, int, int, int, int, void*);
-using SpriteFn = void(UAGFX_THISCALL*)(void*, int, int, int, int, int);
-using TextureCopyFn = void(UAGFX_THISCALL*)(void*, int, int, int, int, int, int, int, int, int, int);
-using ClearFn = void(UAGFX_THISCALL*)(void*, const RECT*, uint32_t);
+using GetDcFn = uint32_t(UAGFX_THISCALL*)(void*, HDC*);
+using CopyPixelsFn = uint32_t(UAGFX_THISCALL*)(void*, int, int, int, int, const uint32_t*, int);
+using CopyFromFn = uint32_t(UAGFX_THISCALL*)(void*, int, int, int, int, void*);
+using SpriteFn = uint32_t(UAGFX_THISCALL*)(void*, int, int, int, int, int);
+using TextureCopyFn = uint32_t(UAGFX_THISCALL*)(void*, int, int, int, int, int, int, int, int, int, int);
+using ClearFn = uint32_t(UAGFX_THISCALL*)(void*, const RECT*, uint32_t);
 using CreateDibFn = HBITMAP(WINAPI*)(HDC, const BITMAPINFO*, UINT, void**, HANDLE, DWORD);
 
 void* UAGFX_THISCALL onDestroy(void* p, unsigned flags) {
@@ -104,19 +106,21 @@ void* UAGFX_THISCALL onDestroy(void* p, unsigned flags) {
     return original<DestroyFn>(ce::kDestroy)(p, flags);
 }
 
-void UAGFX_THISCALL onGetDc(void* p, HDC* out) {
+uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
     Guard guard;
-    original<GetDcFn>(ce::kGetDc)(p, out);
+    const uint32_t result = original<GetDcFn>(ce::kGetDc)(p, out);
     if (active() && out && *out) state().dcs[*out] = self(p);  // TextOutW and FillRgn find the picture by its DC
+    return result;
 }
 
-void UAGFX_THISCALL onCopyPixels(void* p, int x, int y, int w, int h, const uint32_t* src, int key) {
+uint32_t UAGFX_THISCALL onCopyPixels(void* p, int x, int y, int w, int h, const uint32_t* src, int key) {
     Guard guard;
-    original<CopyPixelsFn>(ce::kCopyPixels)(p, x, y, w, h, src, key);
+    const uint32_t result = original<CopyPixelsFn>(ce::kCopyPixels)(p, x, y, w, h, src, key);
     if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, Rect{x, y, x + w, y + h});
+    return result;
 }
 
-void UAGFX_THISCALL onCopyFrom(void* p, int x, int y, int w, int h, void* child) {
+uint32_t UAGFX_THISCALL onCopyFrom(void* p, int x, int y, int w, int h, void* child) {
     Guard guard;
     Picture* pic = picture(self(p));
     Picture* kid = pic && child ? picture(self(child)) : nullptr;
@@ -126,36 +130,40 @@ void UAGFX_THISCALL onCopyFrom(void* p, int x, int y, int w, int h, void* child)
         pic->twin->sync(pic->bits, r);
         if (kid) kid->twin->sync(kid->bits, whole(*kid));
     }
-    original<CopyFromFn>(ce::kCopyFrom)(p, x, y, w, h, child);
-    if (!copies) return;
+    const uint32_t result = original<CopyFromFn>(ce::kCopyFrom)(p, x, y, w, h, child);
+    if (!copies) return result;
     if (kid)
         pic->twin->copyFrom(pic->bits, *kid->twin, r.left, r.top, r.width(), r.height());
     else
         pic->twin->sync(pic->bits, r);
+    return result;
 }
 
-void UAGFX_THISCALL onSprite(void* p, int a, int b, int c, int d, int e) {
+uint32_t UAGFX_THISCALL onSprite(void* p, int a, int b, int c, int d, int e) {
     Guard guard;
-    original<SpriteFn>(ce::kSprite)(p, a, b, c, d, e);
+    const uint32_t result = original<SpriteFn>(ce::kSprite)(p, a, b, c, d, e);
     if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, whole(*pic));
+    return result;
 }
 
-void UAGFX_THISCALL onTextureCopy(void* p, int a, int b, int c, int d, int e, int f, int g, int h, int i, int j) {
+uint32_t UAGFX_THISCALL onTextureCopy(void* p, int a, int b, int c, int d, int e, int f, int g, int h, int i, int j) {
     Guard guard;
-    original<TextureCopyFn>(ce::kTextureCopy)(p, a, b, c, d, e, f, g, h, i, j);
+    const uint32_t result = original<TextureCopyFn>(ce::kTextureCopy)(p, a, b, c, d, e, f, g, h, i, j);
     if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, whole(*pic));
+    return result;
 }
 
-void UAGFX_THISCALL onClear(void* p, const RECT* r, uint32_t color) {
+uint32_t UAGFX_THISCALL onClear(void* p, const RECT* r, uint32_t color) {
     Guard guard;
-    original<ClearFn>(ce::kClear)(p, r, color);
+    const uint32_t result = original<ClearFn>(ce::kClear)(p, r, color);
     if (Picture* pic = picture(self(p))) {
         const Rect all = whole(*pic);
         pic->twin->overwrite(pic->bits, r ? Rect{int(r->left), int(r->top), int(r->right), int(r->bottom)} : all);
     }
+    return result;
 }
 
-using DrawFn = void(UAGFX_THISCALL*)(void*, int, int, int, int, uint32_t);
+using DrawFn = uint32_t(UAGFX_THISCALL*)(void*, int, int, int, int, uint32_t);
 
 // The twin textures of a picture's tiles (spec §6): made, or made again when their size changes, and loaded with
 // what changed in the twin since the last time - for the chat window, which the game redraws every frame, its edit
@@ -202,7 +210,7 @@ void uploadTiles(Picture& pic) {
 
 // The game shows a window picture (spec §4, §6): first the safety net - what reached its pixels outside the known
 // calls goes into the twin enlarged - then the game's own upload and quads, then the twin textures.
-void UAGFX_THISCALL onDraw(void* p, int x, int y, int w, int h, uint32_t argb) {
+uint32_t UAGFX_THISCALL onDraw(void* p, int x, int y, int w, int h, uint32_t argb) {
     Guard guard;
     State& s = state();
     Picture* pic = picture(self(p));
@@ -211,8 +219,9 @@ void UAGFX_THISCALL onDraw(void* p, int x, int y, int w, int h, uint32_t argb) {
         s.loggedSizes.insert(uint32_t(pic->twin->width()) << 16 | uint32_t(pic->twin->height())).second)
         LOG_INFO("crisp text: a %dx%d window changed outside the known calls", pic->twin->width(),
                  pic->twin->height());
-    original<DrawFn>(ce::kDraw)(p, x, y, w, h, argb);
+    const uint32_t result = original<DrawFn>(ce::kDraw)(p, x, y, w, h, argb);
     if (pic) uploadTiles(*pic);
+    return result;
 }
 
 HBITMAP WINAPI onCreateDibSection(HDC dc, const BITMAPINFO* info, UINT usage, void** bits, HANDLE section,
