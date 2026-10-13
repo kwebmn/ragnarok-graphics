@@ -840,9 +840,11 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     }
     if (!m.target || !window || source.empty()) return;
     if (!m.ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),
-                           options.allowTearing) ||
-        !m.begin())
+                           options.allowTearing)) {
+        Sleep(15);  // no swap chain (0.4.1 review): no Present waits for vblank, keep the game's loop from spinning
         return;
+    }
+    if (!m.begin()) return;
     const UINT index = m.swapChain->GetCurrentBackBufferIndex();
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_RENDER_TARGET);
     const D3D12_CPU_DESCRIPTOR_HANDLE rtv = m.rtvHandle(kRtvSwap + index);
