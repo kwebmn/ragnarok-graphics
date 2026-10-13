@@ -98,7 +98,10 @@ void Model::load() {
 bool Model::refreshRunning() {
     const bool running = gameRunning(paths_.game);
     if (running == now_.gameRunning) return false;
-    now_.gameRunning = running;
+    if (running)
+        now_.gameRunning = true;
+    else
+        load();  // it wrote its own values as it closed - Option, UIRectInfo, its quality, the login (0.6.2 review I1)
     return true;
 }
 

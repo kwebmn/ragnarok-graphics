@@ -384,6 +384,22 @@ TEST(model_skins_are_the_folders_of_skin_and_the_intro_a_file) {
     CHECK(m.hasIntro());
 }
 
+TEST(model_a_closed_game_s_own_writes_are_read_again) {
+    // 0.6.2 review I1: the game writes Option, UIRectInfo, its quality and the login as it closes; the pages show them
+    // and Apply plans against them once it is closed - the app was open all the while.
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.gameRunning = true;
+    app::Model m;
+    w.registry.personal.exists = true;
+    w.registry.personal.keys["Option"]["isEffectOn"] = RegValue::dword(0);  // the game, at exit
+    w.gameRunning = false;
+    CHECK(m.refreshRunning());
+    CHECK(m.regWord(*findRegSetting("Option\\isEffectOn")) == "0");
+    m.setRegWord(*findRegSetting("Option\\isEffectOn"), "1");  // effects back on: a change, not a no-op
+    CHECK_EQ(m.pendingCount(), size_t(1));
+}
+
 TEST(model_forget_login_clears_the_saved_one) {
     fake::Windows& w = fake::reset();
     fake::gameKey(w.registry.common, 1920, 1080, false);
