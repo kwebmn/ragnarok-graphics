@@ -37,6 +37,8 @@ if exist "uaro-graphics.ini" (
     )
 )
 if not exist "uaro-graphics.ini" copy "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
+rem update.bat calls install.bat /quiet and reports the result itself.
+if /i "%~1"=="/quiet" exit /b 0
 echo.
 echo uaRO Graphics is installed. Start the game as usual.
 echo To draw with the uaRO Graphics renderer (Direct3D 12), run use-uaro.bat; use-dgvoodoo.bat switches back.
@@ -50,5 +52,5 @@ echo.
 echo Cannot write to this folder. Right-click install.bat and choose "Run as administrator".
 :fail
 echo.
-pause
+if /i not "%~1"=="/quiet" pause
 exit /b 1
