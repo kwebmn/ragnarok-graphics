@@ -37,3 +37,9 @@ TEST(mnemonic_doubles_an_ampersand_and_leaves_a_text_with_no_free_letter) {
     CHECK(withMnemonic(L"ab", all) == L"ab");
     CHECK(all == L"ab");
 }
+
+TEST(mnemonic_a_text_with_a_letter_of_its_own_keeps_it) {
+    std::wstring taken = L"п";
+    CHECK(withMnemonic(L"&Исправить", taken) == L"&Исправить");  // strings: "&Fix" (0.6.1 review I2)
+    CHECK(taken == L"пи");
+}

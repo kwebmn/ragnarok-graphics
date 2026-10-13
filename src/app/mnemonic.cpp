@@ -20,6 +20,16 @@ bool letter(wchar_t c) {
 }  // namespace
 
 std::wstring withMnemonic(const std::wstring& text, std::wstring& taken) {
+    for (size_t i = 0; i + 1 < text.size(); ++i) {  // a letter of its own ("&Fix"): kept (0.6.1 review I2)
+        if (text[i] != L'&') continue;
+        if (text[i + 1] == L'&') {
+            ++i;
+            continue;
+        }
+        if (!letter(text[i + 1])) continue;
+        taken += fold(text[i + 1]);
+        return text;
+    }
     size_t at = std::wstring::npos;
     for (int pass = 0; pass < 2 && at == std::wstring::npos; ++pass)  // the first letter of a word, then any
         for (size_t i = 0; i < text.size(); ++i) {
