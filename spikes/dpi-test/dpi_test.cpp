@@ -23,11 +23,13 @@ using SetCtxFn = DPI_AWARENESS_CONTEXT(WINAPI*)(DPI_AWARENESS_CONTEXT);
 using SetHostingFn = DPI_HOSTING_BEHAVIOR(WINAPI*)(DPI_HOSTING_BEHAVIOR);
 using GetDpiForWindowFn = UINT(WINAPI*)(HWND);
 using GetDpiForMonitorFn = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
+using DwmFlushFn = HRESULT(WINAPI*)();
 
 SetCtxFn setThreadCtx = nullptr;
 SetHostingFn setHosting = nullptr;
 GetDpiForWindowFn getDpiForWindow = nullptr;
 GetDpiForMonitorFn getDpiForMonitor = nullptr;
+DwmFlushFn dwmFlush = nullptr;
 
 FILE* logFile = nullptr;
 void logf(const char* fmt, ...) {
@@ -143,7 +145,8 @@ void updateTitle() {
                                L"A2: своё дочернее окно в настоящих точках"};
     wchar_t t[512];
     swprintf(t, 512, L"Вариант %d — %ls | окно %ldx%ld, на экране %ldx%ld, масштаб %u%% | клики: %d%ls", variant,
-             names[variant - 1], logical.cx, logical.cy, physical.cx, physical.cy, monitorDpi * 100 / 96, parentClicks,
+             names[variant - 1], logical.cx, logical.cy, physical.cx, physical.cy,
+             logical.cx ? unsigned(physical.cx * 100 / logical.cx) : 100u, parentClicks,
              childClicks ? L" (дочернее окно перехватило клики!)" : L"");
     SetWindowTextW(mainWnd, t);
 }
@@ -176,6 +179,80 @@ void show() {
         present(mainChain);
     }
     updateTitle();
+}
+
+// Takes the window's client area from the composed screen in physical pixels and counts, in the line and checker
+// areas, the pixels that are neither black nor white: a frame shown pixel for pixel has none, a stretched one many.
+void measure() {
+    for (int i = 0; i < 3; ++i) {  // let the compositor show the frame just presented
+        MSG msg;
+        while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+        if (dwmFlush) dwmFlush();
+        Sleep(120);
+    }
+    DPI_AWARENESS_CONTEXT oldCtx = setThreadCtx ? setThreadCtx(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) : nullptr;
+    RECT rc{};
+    GetClientRect(mainWnd, &rc);
+    POINT tl{0, 0};
+    ClientToScreen(mainWnd, &tl);
+    const int w = rc.right, h = rc.bottom;
+    HDC screen = GetDC(nullptr);
+    HDC mem = CreateCompatibleDC(screen);
+    BITMAPINFO bi{};
+    bi.bmiHeader.biSize = sizeof bi.bmiHeader;
+    bi.bmiHeader.biWidth = w;
+    bi.bmiHeader.biHeight = -h;
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = 32;
+    bi.bmiHeader.biCompression = BI_RGB;
+    void* bits = nullptr;
+    HBITMAP dib = CreateDIBSection(mem, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+    HGDIOBJ oldBmp = SelectObject(mem, dib);
+    const BOOL ok = BitBlt(mem, 0, 0, w, h, screen, tl.x, tl.y, SRCCOPY | CAPTUREBLT);
+    GdiFlush();
+    if (oldCtx) setThreadCtx(oldCtx);
+    const uint32_t* px = static_cast<const uint32_t*>(bits);
+    auto luma = [&](int x, int y) {
+        const uint32_t c = px[size_t(y) * size_t(w) + size_t(x)];
+        return int(((c >> 16) & 255) * 3 + ((c >> 8) & 255) * 6 + (c & 255)) / 10;
+    };
+    auto region = [&](int x0, int x1, int y0, int y1, double& grey, double& alternating) {
+        long n = 0, g = 0, alt = 0, pairs = 0;
+        for (int y = y0; y < y1; ++y)
+            for (int x = x0; x < x1; ++x) {
+                const int l = luma(x, y);
+                ++n;
+                if (l > 40 && l < 215) ++g;
+                if (x + 1 < x1) {
+                    ++pairs;
+                    if ((l < 128) != (luma(x + 1, y) < 128)) ++alt;
+                }
+            }
+        grey = n ? 100.0 * g / n : 0;
+        alternating = pairs ? 100.0 * alt / pairs : 0;
+    };
+    double gV = 0, aV = 0, gC = 0, aC = 0, gH = 0, aH = 0;
+    if (ok && bits && w > 20 && h > 20) {
+        region(w / 10, w * 4 / 10, h * 45 / 100, h * 55 / 100, gV, aV);       // vertical lines
+        region(w * 6 / 10, w * 9 / 10, h * 45 / 100, h * 55 / 100, gC, aC);  // checkerboard
+        region(w * 3 / 10, w * 7 / 10, h * 10 / 100, h * 25 / 100, gH, aH);  // horizontal lines
+    }
+    int frame = 0;  // red pixels from the left edge on the middle row: 3 when shown pixel for pixel
+    while (ok && bits && frame < w && ((px[size_t(h / 2) * size_t(w) + size_t(frame)] >> 16) & 255) > 128 &&
+           ((px[size_t(h / 2) * size_t(w) + size_t(frame)] >> 8) & 255) < 128)
+        ++frame;
+    const bool exact = ok && gV < 2 && gC < 2 && gH < 2 && frame == 3;
+    logf("MEASURE variant %d: capture %s %dx%d at %ld,%ld | grey: lines %.1f%%, checker %.1f%%, rows %.1f%% | "
+         "alternating: lines %.1f%%, checker %.1f%% | red frame %d px | %s",
+         variant, ok ? "ok" : "FAILED", w, h, tl.x, tl.y, gV, gC, gH, aV, aC, frame,
+         exact ? "PIXEL-EXACT" : "RESAMPLED (or capture problem)");
+    SelectObject(mem, oldBmp);
+    DeleteObject(dib);
+    DeleteDC(mem);
+    ReleaseDC(nullptr, screen);
 }
 
 LRESULT CALLBACK childProc(HWND h, UINT m, WPARAM w, LPARAM l) {
@@ -225,6 +302,8 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE, LPSTR, int) {
     setThreadCtx = reinterpret_cast<SetCtxFn>(reinterpret_cast<void*>(GetProcAddress(user32, "SetThreadDpiAwarenessContext")));
     setHosting = reinterpret_cast<SetHostingFn>(reinterpret_cast<void*>(GetProcAddress(user32, "SetThreadDpiHostingBehavior")));
     getDpiForWindow = reinterpret_cast<GetDpiForWindowFn>(reinterpret_cast<void*>(GetProcAddress(user32, "GetDpiForWindow")));
+    if (HMODULE dwm = LoadLibraryA("dwmapi.dll"))
+        dwmFlush = reinterpret_cast<DwmFlushFn>(reinterpret_cast<void*>(GetProcAddress(dwm, "DwmFlush")));
     if (HMODULE shcore = LoadLibraryA("shcore.dll"))
         getDpiForMonitor = reinterpret_cast<GetDpiForMonitorFn>(reinterpret_cast<void*>(GetProcAddress(shcore, "GetDpiForMonitor")));
     OSVERSIONINFOW v{};
@@ -255,8 +334,11 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE, LPSTR, int) {
         if (SUCCEEDED(getDpiForMonitor(MonitorFromWindow(mainWnd, MONITOR_DEFAULTTOPRIMARY), 0, &dx, &dy)))
             monitorDpi = dx;
     }
-    logf("monitor DPI %u (scale %u%%), window DPI as the window sees it %u", monitorDpi, monitorDpi * 100 / 96,
-         getDpiForWindow ? getDpiForWindow(mainWnd) : 0);
+    {
+        const SIZE lg = clientSize(mainWnd, false), ph = clientSize(mainWnd, true);
+        logf("scale from the window: %ldx%ld logical = %ldx%ld physical (%ld%%); GetDpiForMonitor says %u (it answers "
+             "96 to DPI-unaware programs)", lg.cx, lg.cy, ph.cx, ph.cy, lg.cx ? ph.cx * 100 / lg.cx : 0, monitorDpi);
+    }
 
     // The aware child: per-monitor v2 context and mixed hosting on this thread while it is created.
     if (setThreadCtx && setHosting) {
@@ -286,17 +368,20 @@ int WINAPI WinMain(HINSTANCE inst, HINSTANCE, LPSTR, int) {
     adapter->GetParent(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(&factory));
 
     MessageBoxW(nullptr,
-                L"Сейчас откроется окно с мелким узором из полосок толщиной в одну точку.\n\n"
-                L"Клавиши 1, 2, 3 переключают варианты показа (номер виден в углу и в заголовке).\n"
-                L"Для каждого варианта посмотри вблизи:\n"
-                L" • чётко — ровные тонкие полоски и шахматка, без волн и серых пятен;\n"
-                L" • размыто — серая каша, волны, полоски разной яркости.\n"
-                L"Ещё покликай мышью в окне в варианте 3 — счётчик кликов в заголовке должен расти.\n\n"
-                L"Esc — выход. Напиши, какие варианты чёткие, и пришли файл dpi-test.log рядом с программой.",
+                L"Сейчас откроется окно с мелким узором. Программа сама покажет варианты 1, 2, 3 и измерит,\n"
+                L"какой из них Windows выводит точка в точку (несколько секунд).\n\n"
+                L"Пока идёт замер, не двигай окно и ничего им не закрывай. Когда в заголовке появится\n"
+                L"«Замер готов», закрой программу (Esc) и пришли файл dpi-test.log, который лежит рядом с ней.",
                 L"uaRO DPI test", MB_ICONINFORMATION);
 
     ShowWindow(mainWnd, SW_SHOW);
-    show();
+    SetForegroundWindow(mainWnd);
+    for (int v = 1; v <= 3; ++v) {
+        variant = v;
+        show();
+        measure();
+    }
+    SetWindowTextW(mainWnd, L"Замер готов — закрой программу (Esc) и пришли dpi-test.log. Клавиши 1-3 — посмотреть варианты.");
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
         TranslateMessage(&msg);
