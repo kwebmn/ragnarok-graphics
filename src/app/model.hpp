@@ -104,7 +104,9 @@ public:
     void saveLanguage(settings::Lang l);  // the app's own key: no backup for it
 
 private:
-    std::string baseIni() const;  // the file, or the shipped defaults when there is none
+    // The ini as it is on disk now - what Notepad or use-*.bat wrote since load() stays - or the shipped defaults
+    // when there is none.
+    std::string currentIni() const;
     std::wstring writeIni(const std::vector<settings::IniEdit>& edits, settings::Lang l);
     std::wstring backupOnce(settings::Lang l, bool prune = true);  // prune: only the 20 newest stay (spec §4.6)
     std::vector<settings::IniEdit> pendingIniEdits() const;

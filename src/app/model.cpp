@@ -185,10 +185,13 @@ size_t Model::pendingCount() const {
     return ini_.size() + (screen ? 1 : 0) + (screenAsSetup_ ? 1 : 0);
 }
 
-std::string Model::baseIni() const { return now_.iniExists ? now_.iniText : defaultIni(); }
+std::string Model::currentIni() const {
+    std::string text;
+    return readFile(paths_.ini, text) ? text : defaultIni();
+}
 
 std::wstring Model::writeIni(const std::vector<IniEdit>& edits, Lang l) {
-    const std::string text = applyIniEdits(baseIni(), edits);
+    const std::string text = applyIniEdits(currentIni(), edits);
     if (!writeFileAtomic(paths_.ini, text)) return wtrf(l, Text::ErrWriteFile, {"uaro-graphics.ini"});
     now_.iniText = text;
     now_.iniExists = true;
@@ -271,7 +274,9 @@ std::wstring Model::apply(Lang l) {
         }
         if (!roext.empty()) {
             const ModuleFile& m = now_.modules[size_t(now_.roextModule)];
-            if (!writeFileAtomic(m.iniPath, applyIniEdits(m.iniText, roext))) {
+            std::string text;  // as it is now, like the ini: what the player wrote there meanwhile stays
+            readFile(m.iniPath, text);
+            if (!writeFileAtomic(m.iniPath, applyIniEdits(text, roext))) {
                 load();
                 return wtrf(l, Text::ErrWriteFile, {m.info.ini});
             }
@@ -359,7 +364,7 @@ void Model::keepNewestBackups(size_t count) {
 std::wstring Model::resetDefaults(Lang l) {
     std::wstring err = backupOnce(l);
     if (!err.empty()) return err;
-    std::vector<IniEdit> keep{{"renderer", "backend", backendToken(now_.config.backend)}};
+    std::vector<IniEdit> keep{{"renderer", "backend", backendToken(parseConfig(currentIni()).backend)}};
     if (const auto lang = savedLanguage()) keep.push_back({"utility", "language", langToken(*lang)});
     const std::string text = applyIniEdits(defaultIni(), keep);
     if (!writeFileAtomic(paths_.ini, text)) return wtrf(l, Text::ErrWriteFile, {"uaro-graphics.ini"});
