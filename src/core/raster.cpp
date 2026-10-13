@@ -95,6 +95,23 @@ void RefRaster::triangle(const TlVertex& a, const TlVertex& b, const TlVertex& c
     const int x1 = std::min(w_ - 1, int(std::floor(maxX - off)));
     const int y0 = std::max(0, int(std::ceil(minY - off)));
     const int y1 = std::min(h_ - 1, int(std::floor(maxY - off)));
+    // Interface draws: the texture where Direct3D 7 sampled game pixel (gx, gy), whose target point is
+    // targetCoord(g), from this triangle's plane; and the game pixels the quad covers.
+    const bool ui = uiMode_ != 0 && centers_ == PixelCenters::Ours;
+    const auto d3d7Sample = [&](int gx, int gy) {
+        const double sx = targetCoord(gx, scale_), sy = targetCoord(gy, scale_);
+        const double l0 = edge(p1->x, p1->y, p2->x, p2->y, sx, sy) / area;
+        const double l1 = edge(p2->x, p2->y, p0->x, p0->y, sx, sy) / area;
+        const double l2 = edge(p0->x, p0->y, p1->x, p1->y, sx, sy) / area;
+        const double q = l0 * p0->rhw + l1 * p1->rhw + l2 * p2->rhw;
+        const double u = (l0 * p0->u0 * p0->rhw + l1 * p1->u0 * p1->rhw + l2 * p2->u0 * p2->rhw) / q;
+        const double v = (l0 * p0->v0 * p0->rhw + l1 * p1->v0 * p1->rhw + l2 * p2->v0 * p2->rhw) / q;
+        return sample(tex, u, v, linear, address);
+    };
+    const int firstX = int(std::ceil(std::min({a.x, b.x, c.x})));
+    const int lastX = int(std::ceil(std::max({a.x, b.x, c.x}))) - 1;
+    const int firstY = int(std::ceil(std::min({a.y, b.y, c.y})));
+    const int lastY = int(std::ceil(std::max({a.y, b.y, c.y}))) - 1;
     const bool tl12 = topLeft(p1->x, p1->y, p2->x, p2->y);
     const bool tl20 = topLeft(p2->x, p2->y, p0->x, p0->y);
     const bool tl01 = topLeft(p0->x, p0->y, p1->x, p1->y);
@@ -112,7 +129,17 @@ void RefRaster::triangle(const TlVertex& a, const TlVertex& b, const TlVertex& c
             const double q = l0 * p0->rhw + l1 * p1->rhw + l2 * p2->rhw;
             const double u = (l0 * p0->u0 * p0->rhw + l1 * p1->u0 * p1->rhw + l2 * p2->u0 * p2->rhw) / q;
             const double v = (l0 * p0->v0 * p0->rhw + l1 * p1->v0 * p1->rhw + l2 * p2->v0 * p2->rhw) / q;
-            const Rgb t = sample(tex, u, v, linear, address);
+            Rgb t = sample(tex, u, v, linear, address);
+            if (ui) {
+                const UiTaps tx = uiTaps(x, scale_, firstX, lastX, uiMode_ == 1);
+                const UiTaps ty = uiTaps(y, scale_, firstY, lastY, uiMode_ == 1);
+                const Rgb s00 = d3d7Sample(tx.g0, ty.g0), s10 = d3d7Sample(tx.g1, ty.g0);
+                const Rgb s01 = d3d7Sample(tx.g0, ty.g1), s11 = d3d7Sample(tx.g1, ty.g1);
+                const auto mix = [&](double c00, double c10, double c01, double c11) {
+                    return (c00 * (1 - tx.w) + c10 * tx.w) * (1 - ty.w) + (c01 * (1 - tx.w) + c11 * tx.w) * ty.w;
+                };
+                t = Rgb{mix(s00.r, s10.r, s01.r, s11.r), mix(s00.g, s10.g, s01.g, s11.g), mix(s00.b, s10.b, s01.b, s11.b)};
+            }
             const auto chan = [&](int shift) {
                 const double d0 = double((p0->diffuse >> shift) & 255) / 255.0;
                 const double d1 = double((p1->diffuse >> shift) & 255) / 255.0;

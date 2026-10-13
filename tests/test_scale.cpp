@@ -119,13 +119,55 @@ TEST(scale_target_coord) {
     CHECK(near(targetCoord(7.0, 1.0), 7.5));         // k = 1: calibration.md §3
 }
 
-TEST(sharp_coord_keeps_texels_flat_and_steps_in_one_pixel) {
-    CHECK(near(sharpCoord(2.5, 1.75), 2.5));  // a texel centre stays
-    CHECK(near(sharpCoord(2.7, 1.75), 2.5));  // inside the texel: snapped to it
-    CHECK(near(sharpCoord(3.0, 1.75), 3.0));  // the middle of the step between two texels
-    const double half = 0.5 / 1.75;           // the step is one screen pixel = 1 / 1.75 texel wide
-    CHECK(near(sharpCoord(3.0 - half, 1.75), 2.5));
-    CHECK(near(sharpCoord(3.0 + half, 1.75), 3.5));
-    CHECK(near(sharpCoord(2.8, 1.0), 2.8));  // not magnified: unchanged
-    CHECK(near(sharpCoord(2.8, 0.5), 2.8));
+TEST(ui_taps_sharp_at_1_75_blocks_with_a_one_pixel_blend) {
+    // Target pixel p belongs to game pixel floor(p / k); where a game pixel edge crosses it, the part beyond the
+    // edge shows the next game pixel. Game pixels 0-3 of a wide quad cover target pixels 0-1, 2-3, 4-5, 6.
+    const int g[7] = {0, 0, 1, 1, 2, 2, 3};
+    const double w[7] = {0.0, 0.25, 0.0, 0.5, 0.0, 0.75, 0.0};
+    for (int p = 0; p < 7; ++p) {
+        const UiTaps t = uiTaps(p, 1.75, 0, 9, true);
+        CHECK_EQ(t.g0, g[p]);
+        CHECK_EQ(t.g1, g[p] + 1);
+        CHECK(near(t.w, w[p]));
+    }
+}
+
+TEST(ui_taps_never_leave_the_quad) {
+    // A quad over game pixels 2-3: target pixel 6 belongs to game pixel 3, its last; nothing of game pixel 4.
+    const UiTaps last = uiTaps(6, 1.75, 2, 3, true);
+    CHECK_EQ(last.g0, 3);
+    CHECK_EQ(last.g1, 3);
+    const UiTaps left = uiTaps(4, 2.0, 2, 3, false);  // smooth: the first pixel would blend with game pixel 1
+    CHECK_EQ(left.g0, 2);
+    CHECK_EQ(left.g1, 2);
+    const UiTaps right = uiTaps(7, 2.0, 2, 3, false);
+    CHECK_EQ(right.g0, 3);
+    CHECK_EQ(right.g1, 3);
+}
+
+TEST(ui_taps_smooth_at_2_is_bilinear_between_game_pixel_centres) {
+    const UiTaps a = uiTaps(5, 2.0, 0, 9, false);  // centre 5.5 = game 2.75: between game pixels 2 and 3
+    CHECK_EQ(a.g0, 2);
+    CHECK_EQ(a.g1, 3);
+    CHECK(near(a.w, 0.25));
+    const UiTaps b = uiTaps(6, 2.0, 0, 9, false);
+    CHECK_EQ(b.g0, 2);
+    CHECK(near(b.w, 0.75));
+}
+
+TEST(ui_taps_at_1_are_the_pixel_itself) {
+    for (const bool sharp : {true, false})
+        for (int p = 0; p < 5; ++p) {
+            const UiTaps t = uiTaps(p, 1.0, 0, 9, sharp);
+            CHECK_EQ(t.g0, p);
+            CHECK(near(t.w, 0.0));
+        }
+}
+
+TEST(ui_filter_mode_only_above_scale_1) {  // review I2: high_resolution = 0 and 100 % must be exactly 0.2.0
+    CHECK_EQ(uiFilterMode(true, 1.0, UiFilter::Sharp), 0);
+    CHECK_EQ(uiFilterMode(true, 1.0, UiFilter::Smooth), 0);
+    CHECK_EQ(uiFilterMode(true, 1.75, UiFilter::Sharp), 1);
+    CHECK_EQ(uiFilterMode(true, 1.75, UiFilter::Smooth), 2);
+    CHECK_EQ(uiFilterMode(false, 1.75, UiFilter::Sharp), 0);  // the world keeps its sampling
 }

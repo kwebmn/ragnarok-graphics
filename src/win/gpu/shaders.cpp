@@ -12,10 +12,11 @@ cbuffer Params : register(b0) {
     uint fogEnable;
     float4 fogColor;
     uint colorKey;
-    uint uiSharp;
+    uint uiMode;
     float scale;
     float footprint;
     float4 sourceRect;
+    float4 uiPixels;
 };
 Texture2D tex0 : register(t0);
 Texture2D tex1 : register(t1);
@@ -114,21 +115,43 @@ bool passes(uint func, float a, float ref) {
     return true;
 }
 
-// "Sharp bilinear" (stage 3 spec §6; core sharpCoord does the same): every texel a flat square, a one-pixel
-// linear step between neighbours; unchanged where the picture is not magnified.
-float2 sharpUv(Texture2D t, float2 uv) {
-    float2 size;
-    t.GetDimensions(size.x, size.y);
-    float2 texel = uv * size;
-    float2 magnification = max(1.0 / max(fwidth(texel), 1e-6), 1.0);
-    float2 base = floor(texel - 0.5) + 0.5;
-    return (base + saturate((texel - base - 0.5) * magnification + 0.5)) / size;
+// Interface draws at k > 1 (stage 3 spec §6, review C1; core uiTaps does the same): target pixel p belongs to game
+// pixel floor(p / k) and shows the game pixels it overlaps, each sampled exactly where Direct3D 7 sampled it (target
+// g * k + 0.5) - never past the quad. Returns the two game pixels and the weight of the second.
+float3 uiTaps(float p, float first, float last) {
+    if (uiMode == 1) {  // sharp: k x k blocks, a one-pixel area blend where a game pixel edge crosses the pixel
+        float g = clamp(floor(p / scale + 1e-4), first, last);
+        float next = min(g + 1.0, last);
+        return float3(g, next, next > g ? saturate(p + 1.0 - (g + 1.0) * scale) : 0.0);
+    }
+    float a = (p + 0.5) / scale - 0.5;  // smooth: bilinear between game pixel centres
+    float g = floor(a);
+    return float3(clamp(g, first, last), clamp(g + 1.0, first, last), a - g);
+}
+
+// Game pixel (gx, gy) as Direct3D 7 sampled it, premultiplied so a transparent neighbour does not darken an edge.
+float4 uiTexel(float2 uv, float2 du, float2 dv, float2 pos, float gx, float gy) {
+    float2 at = uv + du * (gx * scale + 0.5 - pos.x) + dv * (gy * scale + 0.5 - pos.y);
+    float4 t = tex0.SampleGrad(samp0, at, du * scale, dv * scale);
+    return float4(t.rgb * t.a, t.a);
+}
+
+float4 uiSample(float2 uv, float2 du, float2 dv, float2 pos) {
+    float2 p = floor(pos);
+    float3 x = uiTaps(p.x, uiPixels.x, uiPixels.z);
+    float3 y = uiTaps(p.y, uiPixels.y, uiPixels.w);
+    float4 top = lerp(uiTexel(uv, du, dv, pos, x.x, y.x), uiTexel(uv, du, dv, pos, x.y, y.x), x.z);
+    float4 bottom = lerp(uiTexel(uv, du, dv, pos, x.x, y.y), uiTexel(uv, du, dv, pos, x.y, y.y), x.z);
+    float4 c = lerp(top, bottom, y.z);
+    return c.a > 0.0 ? float4(c.rgb / c.a, c.a) : float4(0.0, 0.0, 0.0, 0.0);
 }
 
 float4 draw_ps(PsIn i) : SV_Target {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
-    if (uiSharp != 0) uv0 = sharpUv(tex0, uv0);
+    float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
+    float2 dv = ddy(uv0);
     float4 t0 = tex0.Sample(samp0, uv0);
+    if (uiMode != 0) t0 = uiSample(uv0, du, dv, i.pos.xy);
     float4 t1 = tex1.Sample(samp1, ((stage1.y >> 16) & 7) == 0 ? i.uv0 : i.uv1);
     if (colorKey != 0) {  // colour-keyed textures carry the key as alpha 0 (TextureLevels, Task 10)
         if (((stage0.y >> 24) & 1) != 0 && t0.a == 0) discard;

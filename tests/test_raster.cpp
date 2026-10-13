@@ -2,6 +2,7 @@
 
 #include "core/d3d7.hpp"
 #include "core/raster.hpp"
+#include "core/scale.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -102,4 +103,55 @@ TEST(raster_one_game_pixel_becomes_k_by_k_pixels) {
     CHECK(!near(r.at(6, 6).r, 0.25));
     CHECK(!near(r.at(7, 7).r, 0.25));
     CHECK(near(r.at(8, 8).r, 0.25));
+}
+
+// Review C1: the client gives an interface picture of w texels the UVs (0.5 .. w + 0.5) / texW (calibration.md §2),
+// so Direct3D 7 samples texel centres 0.5 .. w - 0.5. At k > 1 no covered target pixel may show the padding texel w.
+int interfaceLeaks(bool ui, bool sharp) {
+    RefTexture tex{8, 8, {}};  // a 4x4 white picture at the top left; the rest is padding (red)
+    for (int y = 0; y < 8; ++y)
+        for (int x = 0; x < 8; ++x) tex.argb.push_back(x < 4 && y < 4 ? 0xFFFFFFFFu : 0xFFFF0000u);
+    int leaks = 0;
+    for (int gx = 0; gx < 4; ++gx) {  // every phase of x * 1.75
+        RefRaster r(28, 28, PixelCenters::Ours, 1.75);
+        r.setInterface(uiFilterMode(ui, 1.75, sharp ? UiFilter::Sharp : UiFilter::Smooth));
+        r.clear(Rgb{0, 0, 1});
+        const float x0 = float(gx), x1 = x0 + 4, u0 = 0.5f / 8, u1 = 4.5f / 8;
+        const TlVertex v[4] = {tl(x0, 4, u0, u0), tl(x0, 8, u0, u1), tl(x1, 4, u1, u0), tl(x1, 8, u1, u1)};
+        r.strip(v, 4, tex, true, d3d7::TADDRESS_CLAMP);
+        for (int y = 0; y < 28; ++y)
+            for (int x = 0; x < 28; ++x) {
+                const Rgb c = r.at(x, y);
+                if (!(c.r == 0 && c.b == 1) && c.g < 0.999) ++leaks;  // covered, and not the picture's white
+            }
+    }
+    return leaks;
+}
+
+TEST(raster_interface_picture_at_1_75_stays_within_its_texels) {
+    CHECK_EQ(interfaceLeaks(true, true), 0);
+    CHECK_EQ(interfaceLeaks(true, false), 0);
+}
+
+TEST(raster_interface_at_2_is_the_d3d7_frame_doubled) {
+    // A 4x4 picture the game stretches over 6x6 game pixels (calibration.md §2: offset 0.5, source size 4): at k = 2
+    // the sharp interface is exactly Direct3D 7's picture with every pixel doubled - stretched pictures stay smooth.
+    RefTexture tex{4, 4, {}};
+    for (int i = 0; i < 16; ++i) tex.argb.push_back(0xFF000000u | uint32_t(i * 16) << 16 | uint32_t(255 - i * 12) << 8 | 0x40u);
+    const float u0 = 0.5f / 4, u1 = 4.5f / 4;
+    const TlVertex v[4] = {tl(1, 1, u0, u0), tl(1, 7, u0, u1), tl(7, 1, u1, u0), tl(7, 7, u1, u1)};
+    RefRaster d3d7(8, 8, PixelCenters::D3D7);
+    d3d7.clear(Rgb{0, 0, 1});
+    d3d7.strip(v, 4, tex, true, d3d7::TADDRESS_CLAMP);
+    RefRaster ours(16, 16, PixelCenters::Ours, 2.0);
+    ours.setInterface(uiFilterMode(true, 2.0, UiFilter::Sharp));
+    ours.clear(Rgb{0, 0, 1});
+    ours.strip(v, 4, tex, true, d3d7::TADDRESS_CLAMP);
+    int differ = 0;
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x) {
+            const Rgb a = ours.at(x, y), b = d3d7.at(x / 2, y / 2);
+            if (!near(a.r, b.r) || !near(a.g, b.g) || !near(a.b, b.b)) ++differ;
+        }
+    CHECK_EQ(differ, 0);
 }

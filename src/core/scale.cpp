@@ -45,10 +45,25 @@ Rect scaleRect(const Rect& r, double k) {
     return Rect{edge(r.left), edge(r.top), edge(r.right), edge(r.bottom)};
 }
 
-double sharpCoord(double texel, double magnification) {
-    const double base = std::floor(texel - 0.5) + 0.5;  // the centre of the left texel of the bilinear pair
-    const double f = texel - base;
-    return base + std::clamp((f - 0.5) * std::max(magnification, 1.0) + 0.5, 0.0, 1.0);
+UiTaps uiTaps(int p, double k, int first, int last, bool sharp) {
+    UiTaps t;
+    if (sharp) {
+        t.g0 = std::clamp(int(std::floor(p / k + 1e-4)), first, last);  // 1e-4: p / k is exactly whole at block starts
+        t.g1 = std::min(t.g0 + 1, last);
+        t.w = t.g1 > t.g0 ? std::clamp(p + 1 - (t.g0 + 1) * k, 0.0, 1.0) : 0.0;
+        return t;
+    }
+    const double a = (p + 0.5) / k - 0.5;  // the pixel centre in game pixels, 0 at game pixel 0's centre
+    const int g = int(std::floor(a));
+    t.g0 = std::clamp(g, first, last);
+    t.g1 = std::clamp(g + 1, first, last);
+    t.w = a - g;
+    return t;
+}
+
+int uiFilterMode(bool ui, double k, UiFilter filter) {
+    if (!ui || k <= 1.0) return 0;
+    return filter == UiFilter::Sharp ? 1 : 2;
 }
 
 }  // namespace uagfx

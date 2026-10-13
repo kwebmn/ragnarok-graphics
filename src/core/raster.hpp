@@ -35,6 +35,10 @@ class RefRaster {
 public:
     RefRaster(int width, int height, PixelCenters centers, double scale = 1.0);
     void clear(const Rgb& c);
+    // Stage 3 interface draws (review C1): mode = uiFilterMode(): 0 samples as usual, 1 (sharp) and 2 (smooth) show
+    // every target pixel's game pixels with the texture where Direct3D 7 sampled them (uiTaps). The quad's game pixels
+    // come from the triangle's vertices; for the client's 4-vertex quads that is the whole quad, as on the GPU.
+    void setInterface(int mode) { uiMode_ = mode; }
     void strip(const TlVertex* v, int count, const RefTexture& tex, bool linear, uint32_t address);
     void triangle(const TlVertex& a, const TlVertex& b, const TlVertex& c, const RefTexture& tex, bool linear,
                   uint32_t address);
@@ -47,6 +51,7 @@ private:
     int h_;
     PixelCenters centers_;
     double scale_;
+    int uiMode_ = 0;
     std::vector<Rgb> px_;
 };
 

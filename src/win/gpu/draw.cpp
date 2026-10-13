@@ -1,6 +1,10 @@
+#include <algorithm>
+#include <cfloat>
+#include <cmath>
 #include <cstring>
 
 #include "core/d3d7.hpp"
+#include "core/scale.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -10,6 +14,25 @@ namespace {
 void packStage(const StageSetup& st, bool keyed, uint32_t out[2]) {
     out[0] = uint32_t(st.colorOp) | uint32_t(st.colorArg1) << 8 | uint32_t(st.colorArg2) << 16 | uint32_t(st.alphaOp) << 24;
     out[1] = uint32_t(st.alphaArg1) | uint32_t(st.alphaArg2) << 8 | uint32_t(st.texCoord) << 16 | uint32_t(keyed ? 1 : 0) << 24;
+}
+
+// The game pixels an interface quad covers (stage 3, review C1): Direct3D 7 draws pixel x when x0 <= x < x1.
+void uiPixels(const FrameRecord& rec, const DrawCmd& d, float out[4]) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    float x0 = FLT_MAX, y0 = FLT_MAX, x1 = -FLT_MAX, y1 = -FLT_MAX;
+    for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= v.size(); ++i) {
+        float xy[2];
+        std::memcpy(xy, v.data() + d.vertexOffset + i * stride, sizeof xy);
+        x0 = std::min(x0, xy[0]);
+        y0 = std::min(y0, xy[1]);
+        x1 = std::max(x1, xy[0]);
+        y1 = std::max(y1, xy[1]);
+    }
+    out[0] = std::ceil(x0);
+    out[1] = std::ceil(y0);
+    out[2] = std::ceil(x1) - 1.0f;
+    out[3] = std::ceil(y1) - 1.0f;
 }
 
 }  // namespace
@@ -89,7 +112,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[2] = float(s.fogColor & 255) / 255.0f;
     c.fogColor[3] = 1.0f;
     c.colorKey = s.colorKey ? 1u : 0u;
-    c.uiSharp = s.ui && uiSharp ? 1u : 0u;
+    c.uiMode = uint32_t(uiFilterMode(s.ui, scale, uiSharp ? UiFilter::Sharp : UiFilter::Smooth));
+    if (c.uiMode != 0) uiPixels(rec, d, c.uiPixels);
     c.scale = float(scale);
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
