@@ -19,6 +19,9 @@ ALLOWED = {
     "comctl32.dll": {
         "InitCommonControlsEx",
     },
+    "comdlg32.dll": {
+        "GetOpenFileNameW", "GetSaveFileNameW",
+    },
     "gdi32.dll": {
         "CreateFontIndirectW", "DeleteObject", "GetDeviceCaps", "GetTextExtentPoint32W", "SelectObject",
         "SetBkMode", "SetTextColor",

@@ -337,6 +337,19 @@ TEST(model_presets_and_revert_take_the_game_s_quality_too) {
     CHECK_EQ(m.pendingCount(), size_t(0));
 }
 
+TEST(model_the_preset_shown_counts_the_game_s_quality) {
+    // Spec §8: from 0.6.2 a preset sets the game's quality too; with it changed by hand the Service page names none.
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    m.applyPreset(Preset::Speed);
+    CHECK(m.preset() == Preset::Speed);
+    m.setRegWord(*findRegSetting("TEXTUREMODE"), "2");
+    CHECK(!m.preset());
+    m.applyPreset(Preset::Maximum);
+    CHECK(m.preset() == Preset::Maximum);
+}
+
 TEST(model_skins_are_the_folders_of_skin_and_the_intro_a_file) {
     fake::Windows& w = fake::reset();
     w.folders.insert(fake::path(L"skin"));

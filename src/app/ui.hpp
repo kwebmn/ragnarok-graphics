@@ -27,6 +27,12 @@ struct CheckItem {  // a check box of Panel::checks
     bool enabled;
 };
 
+struct ButtonItem {  // a button of Panel::buttons
+    int id;
+    std::wstring text;
+    bool enabled = true;
+};
+
 struct LineItem {  // a text field of Panel::lines
     int id;
     std::wstring label;
@@ -62,7 +68,7 @@ public:
     // Text fields two to a row, a short label before each (the chat macros); at most maxChars letters.
     void lines(const std::vector<LineItem>& items, int maxChars, const std::wstring& hint, bool enabled);
     HWND note(const std::wstring& text, Tone tone = Tone::Muted);
-    HWND buttons(const std::vector<std::pair<int, std::wstring>>& list, bool enabled = true);
+    HWND buttons(const std::vector<ButtonItem>& list);
     HWND listBox(int id, int rows);
     HWND listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows);
     void gap(int at96 = 8);

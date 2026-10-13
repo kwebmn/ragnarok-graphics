@@ -267,18 +267,18 @@ HWND Panel::note(const std::wstring& text, Tone tone) {
     return c;
 }
 
-HWND Panel::buttons(const std::vector<std::pair<int, std::wstring>>& list, bool enabled) {
+HWND Panel::buttons(const std::vector<ButtonItem>& list) {
     HWND first = nullptr;
     int x = area_.left;
     HDC dc = GetDC(owner_);
     HGDIOBJ old = SelectObject(dc, font_);
     for (const auto& b : list) {
         SIZE s{};
-        GetTextExtentPoint32W(dc, b.second.c_str(), int(b.second.size()), &s);
+        GetTextExtentPoint32W(dc, b.text.c_str(), int(b.text.size()), &s);
         const int w = s.cx + at(28);
-        HWND c = make(L"BUTTON", enabled ? withMnemonic(b.second, taken_) : literal(b.second),
-                      BS_PUSHBUTTON | WS_TABSTOP, x, y_, w, at(kRow + 4), b.first);
-        EnableWindow(c, enabled);
+        HWND c = make(L"BUTTON", b.enabled ? withMnemonic(b.text, taken_) : literal(b.text),
+                      BS_PUSHBUTTON | WS_TABSTOP, x, y_, w, at(kRow + 4), b.id);
+        EnableWindow(c, b.enabled);
         if (!first) first = c;
         x += w + at(8);
     }

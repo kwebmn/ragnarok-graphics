@@ -12,6 +12,9 @@ constexpr int kBackups = 1410;
 constexpr int kRestore = 1411;
 constexpr int kKeepFive = 1412;
 constexpr int kReset = 1420;
+constexpr int kGameSave = 1430;
+constexpr int kGameLoad = 1431;
+constexpr int kLayoutReset = 1432;
 
 Text presetName(Preset p) {
     switch (p) {
@@ -29,36 +32,47 @@ std::wstring backupLabel(const std::wstring& name) {
     return name.substr(0, 10) + L" " + name.substr(11, 2) + L":" + name.substr(13, 2) + L":" + name.substr(15, 2);
 }
 
-// The Service page (stage 2 spec §8, 0.6.0 part): presets, backups, reset, versions.
+// The Service page (stage 2 spec §8): presets, backups, the game's settings to a file and back, the window layout
+// reset, uaRO Graphics' own reset and versions. While the game runs, what it writes itself waits (spec §4.1): those
+// buttons are grey and their group's note says why.
 class ServicePage : public Page {
 public:
     explicit ServicePage(PageHost& host) : Page(host) {}
 
     void build(Panel& p) override {
         Model& m = host_.model();
+        const bool running = m.now().gameRunning;
+        const bool backups = !m.now().backups.empty();
         p.heading(t(Text::ServicePresets));
-        std::vector<std::pair<int, std::wstring>> presets;
+        std::vector<ButtonItem> presets;
         for (int i = 0; i < kPresetCount; ++i) presets.push_back({kPreset + i, t(presetName(Preset(i)))});
         p.buttons(presets);
-        const auto now = presetOf(m.pendingConfig());
+        const auto now = m.preset();
         p.note(tf(Text::PresetNote, {utf8(now ? t(presetName(*now)) : t(Text::PresetCustom))}));
         p.gap();
         p.heading(t(Text::ServiceBackups));
-        list_ = p.listBox(kBackups, 4);
+        list_ = p.listBox(kBackups, 3);
         for (const std::wstring& b : m.now().backups)
             SendMessageW(list_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(backupLabel(b).c_str()));
-        if (m.now().backups.empty()) p.note(t(Text::BackupNone));
-        p.buttons({{kRestore, t(Text::BackupRestore)}, {kKeepFive, t(Text::BackupPrune)}}, !m.now().backups.empty());
-        if (m.now().gameRunning && !m.now().backups.empty()) {  // it writes what the game writes too (spec §4.1)
-            EnableWindow(GetDlgItem(host_.window(), kRestore), FALSE);
+        if (!backups) SendMessageW(list_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(t(Text::BackupNone).c_str()));
+        p.buttons({{kRestore, t(Text::BackupRestore), backups && !running},  // the game writes it too (spec §4.1)
+                   {kKeepFive, t(Text::BackupPrune), backups}});
+        if (running && backups)
             p.note(t(Text::ErrGameRunning), Tone::Warn);
-        }
-        p.note(t(Text::BackupNote));
+        else
+            p.note(t(Text::BackupNote));
         p.gap();
-        p.heading(t(Text::ServiceReset));
+        p.heading(t(Text::ServiceGameSettings));
+        p.buttons({{kGameSave, t(Text::GameSave)},
+                   {kGameLoad, t(Text::GameLoad), !running},
+                   {kLayoutReset, t(Text::LayoutReset), !running}});
+        if (running)
+            p.note(t(Text::GameSettingsRunning), Tone::Warn);
+        else
+            p.note(t(Text::GameSettingsNote));
+        p.gap();
+        p.heading(t(Text::ServiceUaroGraphics));
         p.buttons({{kReset, t(Text::ResetButton)}});
-        p.gap();
-        p.heading(t(Text::ServiceVersions));
         p.note(tf(Text::VersionsValue,
                   {kVersion, m.now().installedVersion.empty() ? utf8(t(Text::Unknown)) : m.now().installedVersion}),
                Tone::Normal);
@@ -87,6 +101,22 @@ public:
             if (!host_.ask(t(Text::ResetAsk))) return;
             const std::wstring err = m.resetDefaults(l);
             if (!err.empty()) host_.message(err, true);
+            host_.reload();
+        } else if (id == kGameSave) {
+            const std::wstring file = host_.pickFile(true);
+            if (file.empty()) return;
+            const std::wstring err = m.saveGameSettings(file, l);
+            host_.message(err.empty() ? tf(Text::GameSaved, {utf8(file)}) : err, !err.empty());
+        } else if (id == kGameLoad) {
+            const std::wstring file = host_.pickFile(false);
+            if (file.empty() || !host_.ask(tf(Text::GameLoadAsk, {utf8(file)}))) return;
+            const std::wstring err = m.loadGameSettings(file, l);
+            host_.message(err.empty() ? t(Text::GameLoaded) : err, !err.empty());
+            host_.reload();
+        } else if (id == kLayoutReset) {
+            if (!host_.ask(t(Text::LayoutResetAsk))) return;
+            const std::wstring err = m.resetWindowLayout(l);
+            host_.message(err.empty() ? t(Text::LayoutResetDone) : err, !err.empty());
             host_.reload();
         }
     }

@@ -44,8 +44,8 @@ enum class Text : uint16_t {
     DiagLogErrorsNone,
     DiagLogErrorsSome, DiagLogFps, DiagLog, DiagLogNone, DiagFixed,
     ServicePresets, PresetMaximum, PresetBalance, PresetSpeed, PresetPlain, PresetNote, PresetCustom,
-    ServiceBackups, BackupRestore, BackupPrune, BackupNote, BackupNone, BackupAsk, ServiceReset, ResetButton,
-    ResetAsk, ServiceVersions, VersionsValue, Unknown,
+    ServiceBackups, BackupRestore, BackupPrune, BackupNote, BackupNone, BackupAsk, ServiceUaroGraphics, ResetButton,
+    ResetAsk, VersionsValue, Unknown,
     ErrWriteFile, ErrWriteRegistry, ErrGameRunning, ApplyWaits, ErrBackup, ErrScreen, ErrLaunch, ErrRestore,
     PageSound, PageGame, PageChat,
     GameQualityHeading, GameSprites, GameSpritesHint, GameTextures, GameTexturesHint, LevelHigh, LevelHalf, LevelLow,
@@ -60,6 +60,7 @@ enum class Text : uint16_t {
     ChatForgetAsk, ChatLoginForgotten, ChatMacrosHeading, ChatMacrosHint,
     ServiceGameSettings, GameSave, GameLoad, LayoutReset, GameSettingsNote, GameLoadAsk, LayoutResetAsk, GameSaved,
     GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, SoundSetupDiffers,
+    GameSettingsRunning,
     Count
 };
 

@@ -121,7 +121,7 @@ public:
             p.note(tf(Text::ScreenSetupDiffers, {num(setup->width), num(setup->height),
                                                  utf8(t(setupFull ? Text::ShowFullscreenWord : Text::ShowWindowWord))}),
                    Tone::Warn);
-            p.buttons({{kAsSetup, t(Text::ScreenAsSetup)}}, !m.screenAsSetupPending());
+            p.buttons({{kAsSetup, t(Text::ScreenAsSetup), !m.screenAsSetupPending()}});
         }
         if (roext) {
             p.note(tf(Text::ScreenRoext, {snap.modules[size_t(snap.roextModule)].info.ini}));

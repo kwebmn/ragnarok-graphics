@@ -99,6 +99,7 @@ public:
     bool hasIntro() const;                     // openning.bik next to uaRO.exe
 
     void applyPreset(settings::Preset p);
+    std::optional<settings::Preset> preset() const;  // the one the fields hold now, with the game's quality (spec §8)
     size_t pendingCount() const;  // the player's changes not written yet
     // Apply has something to write: the player's changes, or the game's key on a first run (spec §4.3).
     bool canApply() const { return pendingCount() > 0 || !settings::gameKeyExists(now_.registry); }

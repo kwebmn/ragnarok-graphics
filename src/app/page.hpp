@@ -26,6 +26,8 @@ public:
     // A message box. The page stays until it is closed: its code still runs under the box.
     virtual void message(const std::wstring& text, bool error) = 0;
     virtual bool ask(const std::wstring& text) = 0;  // Yes or No
+    // A .reg file to save the game's settings to (save) or to load them from; "" when the player cancels.
+    virtual std::wstring pickFile(bool save) = 0;
 };
 
 // One page of the list on the left (stage 2 spec §6.1). Its controls' ids start at 1000.

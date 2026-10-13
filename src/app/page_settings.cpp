@@ -269,8 +269,8 @@ private:
     void buildForgetLogin(Panel& p) {
         const Snapshot& now = host_.model().now();
         const auto login = effectiveValue(now.registry, "", "ID");
-        p.buttons({{kForgetLogin, t(Text::ChatForgetLogin)}},
-                  login && login->isSz() && !login->text.empty() && !now.gameRunning);
+        p.buttons({{kForgetLogin, t(Text::ChatForgetLogin), login && login->isSz() && !login->text.empty() &&
+                                                                !now.gameRunning}});
     }
 
     void forgetLogin() {

@@ -217,6 +217,14 @@ void Model::applyPreset(Preset p) {
         if (const RegSetting* s = findRegSetting(w.first)) setRegWord(*s, w.second);
 }
 
+std::optional<Preset> Model::preset() const {
+    std::map<std::string, std::string> words;
+    for (int i = 0; i < kPresetCount; ++i)
+        for (const auto& w : presetRegWords(Preset(i)))
+            if (const RegSetting* s = findRegSetting(w.first)) words[w.first] = regWord(*s);
+    return presetOf(pendingConfig(), words);
+}
+
 size_t Model::pendingCount() const {
     const bool screen = screen_ && !(*screen_ == screenNow().choice);
     return ini_.size() + reg_.size() + (screen ? 1 : 0) + (screenAsSetup_ ? 1 : 0);
