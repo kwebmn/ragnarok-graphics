@@ -190,7 +190,8 @@ struct Renderer::Impl {
     bool createTarget(int w, int h, ID3D12Resource*& rt, ID3D12Resource*& ds);
     bool scaled() const { return width != gameWidth || height != gameHeight; }
     void applyViewport();
-    void blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
+    // false: there is no list to record into (the GPU is lost) - the caller stops too
+    bool blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
               const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW, int dstH,
               float sharpen = -1.0f);
     bool growUpload(Slot& s, UINT64 size);

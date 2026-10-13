@@ -319,16 +319,16 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
 
 // Draws srcRect (in the source's pixels) of a texture into dstRect of a render target with the present pipeline:
 // one bilinear sample per pixel when enlarging, an average over each pixel's footprint when shrinking.
-void Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
+bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
                           const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW,
                           int dstH, float sharpen) {
-    if (dstRect.empty() || srcW <= 0 || srcH <= 0) return;
+    if (dstRect.empty() || srcW <= 0 || srcH <= 0) return true;  // nothing to copy
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
     linearClamp.magFilter = d3d7::TFG_LINEAR;
     linearClamp.minFilter = d3d7::TFN_LINEAR;
     linearClamp.mipFilter = d3d7::TFP_NONE;
-    if (!makeRoom(linearClamp, linearClamp)) return;  // first: a new list starts before this copy records anything
+    if (!makeRoom(linearClamp, linearClamp)) return false;  // first: a new list starts before this copy records anything
     const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp);
     const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(srcSrv, srcSrv);
     transition(src, srcState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -362,6 +362,7 @@ void Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     boundPipeline = nullptr;  // the next draws bind everything again
     boundTextures = boundSamplers = ~0ull;
     targetBound = false;
+    return true;
 }
 
 bool Renderer::Impl::createTarget(int w, int h, ID3D12Resource*& rt, ID3D12Resource*& ds) {
@@ -685,8 +686,12 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight) {
     }
     m.device->CreateRenderTargetView(target, nullptr, m.rtvHandle(kRtvNew));
     const float all[4] = {0.0f, 0.0f, float(m.width), float(m.height)};
-    m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvNew),
-           Rect{0, 0, targetWidth, targetHeight}, targetWidth, targetHeight);
+    if (!m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvNew),
+                Rect{0, 0, targetWidth, targetHeight}, targetWidth, targetHeight)) {
+        releaseCom(target);
+        releaseCom(depth);
+        return false;
+    }
     m.waitIdle();
     releaseCom(m.target);
     releaseCom(m.depth);
@@ -757,6 +762,7 @@ void Renderer::execute(const FrameRecord& record) {
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
     m.prepareGeometry(record);
     for (const Command& c : record.commands()) {
+        if (!m.open) break;  // the list could not go on (the GPU is lost): nothing more is recorded
         switch (c.type) {
             case Cmd::Clear: m.clear(record.clears()[c.index]); break;
             case Cmd::Viewport: m.setViewport(record.viewports()[c.index]); break;
@@ -778,8 +784,9 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     if (m.scaled()) {  // the client reads its own size: shrink the target into the helper first (stage 3 spec §5)
         m.transition(m.gameSized, m.gameState, D3D12_RESOURCE_STATE_RENDER_TARGET);
         const float all[4] = {0.0f, 0.0f, float(m.width), float(m.height)};
-        m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvGame),
-               Rect{0, 0, m.gameWidth, m.gameHeight}, m.gameWidth, m.gameHeight);
+        if (!m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvGame),
+                    Rect{0, 0, m.gameWidth, m.gameHeight}, m.gameWidth, m.gameHeight))
+            return false;  // no stale frame for the client
         source = m.gameSized;
         sourceState = &m.gameState;
     }
@@ -853,8 +860,9 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const auto tx = [&m](int x) { return float(double(x) * m.width / m.gameWidth); };
     const auto ty = [&m](int y) { return float(double(y) * m.height / m.gameHeight); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
-    m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, from, rtv, fit, int(m.swapWidth),
-           int(m.swapHeight), options.sharpen);
+    if (!m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, from, rtv, fit, int(m.swapWidth),
+                int(m.swapHeight), options.sharpen))
+        return;
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
     m.submit();
 
