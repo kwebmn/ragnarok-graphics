@@ -14,7 +14,7 @@ enum class Page : uint8_t { Render, Screen, Quality, Frames, Sound, Game, Chat, 
 constexpr int kPageCount = 9;
 Text pageName(Page p);
 
-enum class Control : uint8_t { Check, Slider, Choice, Number };
+enum class Control : uint8_t { Check, Slider, Choice, Number, Line };  // Line: a line of text
 
 // One key of uaro-graphics.ini the pages edit one to one. The Screen page writes [display] mode, monitor,
 // window_width and window_height from its own plan (spec §5.3).

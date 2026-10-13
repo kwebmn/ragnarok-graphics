@@ -144,6 +144,8 @@ private:
                 case Control::Number:
                     p.number(id, t(s.label), wide(token), t(s.hint));
                     break;
+                case Control::Line:  // the game's key only: a key of uaro-graphics.ini is never a line of text
+                    break;
             }
             if (!appliesNow(sectionKey(s))) p.note(t(Text::AfterRestart));
         }
