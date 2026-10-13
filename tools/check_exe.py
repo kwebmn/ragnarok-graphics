@@ -57,12 +57,12 @@ ALLOWED = {
         "AdjustWindowRectEx", "CloseClipboard", "CreateWindowExW", "DefWindowProcW", "DestroyWindow",
         "DispatchMessageW", "DrawTextW", "EmptyClipboard", "EnableWindow", "EnumDisplayMonitors",
         "EnumDisplaySettingsExW", "FindWindowW", "GetClientRect", "GetDC", "GetDlgCtrlID", "GetDlgItem", "GetFocus",
-        "GetMessageW", "GetMonitorInfoW", "GetSysColor", "GetSysColorBrush", "GetWindowLongW", "GetWindowRect",
-        "GetWindowTextW", "IsChild", "IsDialogMessageW", "KillTimer", "LoadCursorW", "LoadIconW", "MapWindowPoints",
-        "MessageBoxW", "MoveWindow", "OpenClipboard", "PostMessageW", "PostQuitMessage", "RegisterClassExW",
-        "ReleaseDC", "SendMessageW", "SetClipboardData", "SetDlgItemTextW", "SetFocus", "SetForegroundWindow",
-        "SetTimer", "SetWindowLongW", "SetWindowPos", "SetWindowTextW", "ShowWindow", "SystemParametersInfoW",
-        "TranslateMessage", "wsprintfW",
+        "GetMessageW", "GetMonitorInfoW", "GetNextDlgTabItem", "GetSysColor", "GetSysColorBrush", "GetWindowLongW",
+        "GetWindowRect", "GetWindowTextW", "IsChild", "IsDialogMessageW", "KillTimer", "LoadCursorW", "LoadIconW",
+        "MapWindowPoints", "MessageBoxW", "MoveWindow", "OpenClipboard", "PostMessageW", "PostQuitMessage",
+        "RegisterClassExW", "ReleaseDC", "SendMessageW", "SetClipboardData", "SetDlgItemTextW", "SetFocus",
+        "SetForegroundWindow", "SetTimer", "SetWindowLongW", "SetWindowPos", "SetWindowTextW", "ShowWindow",
+        "SystemParametersInfoW", "TranslateMessage", "wsprintfW",
     },
 }
 # Newer than Windows 7: never on the list above (a check of the list itself).

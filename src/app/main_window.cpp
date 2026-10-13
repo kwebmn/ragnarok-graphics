@@ -349,6 +349,16 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             rebuild();  // posted: a page's message box may be open
             return 0;
         }
+        case WM_NEXTDLGCTL: {
+            // How IsDialogMessage moves the focus for Alt+a label's letter - a dialog's own work, which this window
+            // does itself (0.6.1 review): lp set, wp is the control; else the next (wp 0) or the previous tab stop.
+            HWND to = LOWORD(lp) ? reinterpret_cast<HWND>(wp) : GetNextDlgTabItem(hwnd_, GetFocus(), wp != 0);
+            if (to) {
+                SetFocus(to);
+                if (SendMessageW(to, WM_GETDLGCODE, 0, 0) & DLGC_HASSETSEL) SendMessageW(to, EM_SETSEL, 0, -1);
+            }
+            return 0;
+        }
         case WM_CLOSE:
             if (confirmClose()) DestroyWindow(hwnd_);
             return 0;
