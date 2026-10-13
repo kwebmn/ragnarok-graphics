@@ -23,6 +23,8 @@ public:
         mark(now);
         return true;
     }
+    // A change is held back: written at close if the presents stop before its time (0.4.1 review).
+    bool pending() const { return pending_; }
 
 private:
     void mark(uint64_t now) {

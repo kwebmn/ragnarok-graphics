@@ -70,6 +70,8 @@ private:
     SIZE lastOut_{};
     ScalePlan lastPlan_;
     unsigned totalReads_ = 0;  // since start, in the scale line: the start-up calibration came first (review M4)
+    std::string scaleLine_;    // the latest scale line: written now, by the throttle later, or at close
+    bool scaleMade_ = true;    // whether setScale made that target (0.4.1 review)
 };
 
 // Holds the global lock for a scope; every DirectDraw / Direct3D method starts with one.

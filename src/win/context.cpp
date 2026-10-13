@@ -1,5 +1,7 @@
 #include "win/context.hpp"
 
+#include <cstdio>
+
 #include "core/scale.hpp"
 #include "win/dpi.hpp"
 #include "win/log.hpp"
@@ -41,6 +43,8 @@ void Context::close() {
     record.reset();
     window = nullptr;
     windowApplied = false;
+    if (scaleLog_.pending()) LOG_INFO("%s", scaleLine_.c_str());  // the last change before the game closed
+    scaleLog_ = Throttle(500);
     scaledWidth_ = scaledHeight_ = 0;
     lastOut_ = SIZE{};
     lastPlan_ = ScalePlan{};
@@ -112,22 +116,27 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_) {
         scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
         scaledHeight_ = plan.targetHeight;
-        renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight);
+        scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight);
     }
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
-    // final state once it settles (stage 3 review M7).
+    // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
     const bool changed = out.cx != lastOut_.cx || out.cy != lastOut_.cy || plan.k != lastPlan_.k ||
                          plan.targetWidth != lastPlan_.targetWidth || plan.targetHeight != lastPlan_.targetHeight ||
                          !(plan.picture == lastPlan_.picture);
     lastOut_ = out;
     lastPlan_ = plan;
+    if (changed) {
+        char line[320];
+        std::snprintf(line, sizeof line,
+                      "scale: game %dx%d, output %ldx%ld, s %.3f, r %.2f, k %.3f, target %dx%d%s, picture %dx%d at "
+                      "%d,%d, %u reads of the frame so far",
+                      shadow.width(), shadow.height(), out.cx, out.cy, plan.s, plan.r, plan.k, plan.targetWidth,
+                      plan.targetHeight, scaleMade_ ? "" : " not made", plan.picture.width(), plan.picture.height(),
+                      plan.picture.left, plan.picture.top, totalReads_);
+        scaleLine_ = line;
+    }
     const uint64_t now = GetTickCount64();
-    if (changed ? scaleLog_.changed(now) : scaleLog_.due(now))
-        LOG_INFO("scale: game %dx%d, output %ldx%ld, s %.3f, r %.2f, k %.3f, target %dx%d, picture %dx%d at %d,%d, "
-                 "%u reads of the frame so far",
-                 shadow.width(), shadow.height(), out.cx, out.cy, plan.s, plan.r, plan.k, plan.targetWidth,
-                 plan.targetHeight, plan.picture.width(), plan.picture.height(), plan.picture.left, plan.picture.top,
-                 totalReads_);
+    if (changed ? scaleLog_.changed(now) : scaleLog_.due(now)) LOG_INFO("%s", scaleLine_.c_str());
     gpu::PresentOptions o;
     o.vsync = config.vsync && waitForVblank;
     o.allowTearing = config.allowTearing;
