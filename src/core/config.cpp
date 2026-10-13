@@ -68,6 +68,13 @@ Config parseConfig(const std::string& text) {
             if (val == "auto") c.mode = DisplayMode::Auto;
             if (val == "window") c.mode = DisplayMode::Window;
             if (val == "borderless") c.mode = DisplayMode::Borderless;
+        } else if (key == "display.high_resolution") {
+            setBool(val, c.highResolution);
+        } else if (key == "display.ui_filter") {
+            if (val == "sharp") c.uiFilter = UiFilter::Sharp;
+            if (val == "smooth") c.uiFilter = UiFilter::Smooth;
+        } else if (key == "quality.render_scale") {
+            toInt(val, 100, 200, c.renderScale);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {
@@ -98,5 +105,7 @@ const char* displayModeToken(DisplayMode m) {
     }
     return "auto";
 }
+
+const char* uiFilterToken(UiFilter f) { return f == UiFilter::Smooth ? "smooth" : "sharp"; }
 
 }  // namespace uagfx

@@ -47,6 +47,8 @@ Startup decide() {
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
     LOG_INFO("settings: %s; backend = %s, mode = %s", haveIni ? "uaro-graphics.ini" : "no uaro-graphics.ini, defaults",
              backendToken(s.config.backend), displayModeToken(s.config.mode));
+    LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%", s.config.highResolution ? 1 : 0,
+             uiFilterToken(s.config.uiFilter), s.config.renderScale);
     const WindowsVersion v = windowsVersion();
     LOG_INFO("Windows %lu.%lu build %lu", v.major, v.minor, v.build);
     logModule("dinput.dll");   // ROExt or uaRO Pad
