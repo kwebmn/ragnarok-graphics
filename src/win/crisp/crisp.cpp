@@ -384,12 +384,15 @@ void uninstall() {
     s.loggedSizes.clear();
     s.budgetLogged = false;
     s.K = 0.0;
+    s.scale = Settled(300);
     s.installed = false;
 }
 
 void setScale(double K) {
     State& s = state();
-    if (!s.installed || K == s.K) return;
+    // While the window's edge is dragged K changes on every frame: it is taken once it holds for 300 ms; until then
+    // the twins are not shown - their K is not the renderer's k (0.5.0 review M2).
+    if (!s.installed || !s.scale.take(K, GetTickCount64()) || K == s.K) return;
     dropAll();
     s.K = K;
     if (K <= 1.0) {

@@ -10,6 +10,7 @@
 
 #include "core/crisp_exe.hpp"
 #include "core/glyph_cache.hpp"
+#include "core/settled.hpp"
 #include "core/twin.hpp"
 
 // The game's methods are MSVC __thiscall: this in ECX, the callee pops its stack arguments.
@@ -56,6 +57,7 @@ struct State {
     size_t bytes = 0;  // every twin and copy together
     bool budgetLogged = false;
     std::set<uint32_t> loggedSizes;  // the safety net writes one line per window size
+    Settled scale{300};              // K once it holds: not on every frame of a resize
     GlyphCache glyphs{size_t(16) << 20};
 };
 
