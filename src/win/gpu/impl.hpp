@@ -91,6 +91,7 @@ struct Renderer::Impl {
 
     ID3D12DescriptorHeap* cpuSrv = nullptr;
     std::vector<UINT> freeSrv;
+    std::vector<uint32_t> dying;  // released by the client; the record execute() plays next may still draw with them
     UINT nextSrv = 0;
     ID3D12DescriptorHeap* gpuSrv = nullptr;
     UINT ringSrv = 0;
@@ -151,6 +152,7 @@ struct Renderer::Impl {
     void submit();
     void waitSlot(Slot& s);
     void waitIdle();
+    void retireDying();  // after execute() has submitted: the dying textures go with that submission
     bool growUpload(Slot& s, UINT64 size);
     Upload allocUpload(UINT64 size, UINT64 alignment);
     void transition(ID3D12Resource* r, D3D12_RESOURCE_STATES& state, D3D12_RESOURCE_STATES to);

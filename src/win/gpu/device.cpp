@@ -543,11 +543,22 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
 
 void Renderer::releaseTexture(uint32_t id) {
     Impl& m = *impl_;
-    auto it = m.textures.find(id);
-    if (it == m.textures.end()) return;
-    m.slots[m.slot].garbage.push_back(it->second.resource);  // the GPU may still read it
-    m.freeSrv.push_back(it->second.srv);
-    m.textures.erase(it);
+    // Draws recorded before the client let go of the texture have not been played yet: it stays until they have.
+    if (m.textures.count(id)) m.dying.push_back(id);
+}
+
+void Renderer::Impl::retireDying() {
+    // The record that could still draw with them has just been submitted. Its slot's begin() frees them once that
+    // submission's fence has passed, and with it every earlier submission on the queue.
+    Slot& s = slots[(slot + kSlots - 1) % kSlots];
+    for (uint32_t id : dying) {
+        auto it = textures.find(id);
+        if (it == textures.end()) continue;
+        s.garbage.push_back(it->second.resource);
+        freeSrv.push_back(it->second.srv);
+        textures.erase(it);
+    }
+    dying.clear();
 }
 
 void Renderer::execute(const FrameRecord& record) {
@@ -563,7 +574,9 @@ void Renderer::execute(const FrameRecord& record) {
             case Cmd::Draw: m.draw(record, record.draws()[c.index]); break;
         }
     }
+    const UINT64 before = m.fenceValue;
     m.submit();
+    if (m.fenceValue != before) m.retireDying();  // only once the record really went to the GPU
 }
 
 bool Renderer::readTarget(std::vector<uint32_t>& argb) {
