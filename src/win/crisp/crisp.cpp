@@ -155,6 +155,66 @@ void UAGFX_THISCALL onClear(void* p, const RECT* r, uint32_t color) {
     }
 }
 
+using DrawFn = void(UAGFX_THISCALL*)(void*, int, int, int, int, uint32_t);
+
+// The twin textures of a picture's tiles (spec §6): made, or made again when their size changes, and loaded with
+// what changed in the twin since the last time - for the chat window, which the game redraws every frame, its edit
+// line. Every tile's surface is noted, so its quad - drawn later, from the game's interface list - finds the twin.
+void uploadTiles(Picture& pic) {
+    State& s = state();
+    Context& c = Context::get();
+    const int count = field<int>(pic.self, ce::kTileCount);
+    const uintptr_t head = field<uintptr_t>(pic.self, ce::kTiles);
+    if (!c.renderer || count <= 0 || count > 4096 || !head) return;
+    for (size_t i = size_t(count); i < pic.tiles.size(); ++i)
+        if (pic.tiles[i].texture) c.renderer->releaseTexture(pic.tiles[i].texture);
+    pic.tiles.resize(size_t(count));
+    const Rect changed = pic.twin->takeChanged();
+    std::vector<uint32_t> texels;
+    int i = 0;
+    for (uintptr_t node = field<uintptr_t>(head, ce::kNodeNext); node != head && i < count;
+         node = field<uintptr_t>(node, ce::kNodeNext), ++i) {
+        const uintptr_t texture = field<uintptr_t>(node, ce::kNodeValue);
+        if (!texture) continue;
+        const void* surface = reinterpret_cast<const void*>(field<uintptr_t>(texture, ce::kTextureSurface));
+        if (!surface) continue;
+        s.tiles[surface] = TileRef{pic.self, i};
+        const TilePlace place = tilePlace(i, pic.twin->width(), pic.twin->height());
+        const TwinSpan sx = tileSpan(place.x, place.width, pic.twin->twinWidth(), s.K);
+        const TwinSpan sy = tileSpan(place.y, place.height, pic.twin->twinHeight(), s.K);
+        const Rect span{sx.first, sy.first, sx.end, sy.end};  // the tile's texture, in twin pixels
+        Picture::Tile& t = pic.tiles[size_t(i)];
+        const bool fresh = t.width != span.width() || t.height != span.height();
+        if (fresh) {  // a texture that cannot be made is not tried again at this size
+            if (t.texture) c.renderer->releaseTexture(t.texture);
+            t.width = span.width();
+            t.height = span.height();
+            t.texture = t.width > 0 && t.height > 0 ? c.renderer->createTexture(t.width, t.height, 1) : 0;
+        }
+        Rect part = span;
+        if (!t.texture || (!fresh && !clipRect(changed, part))) continue;  // none, or nothing of it changed
+        pic.twin->texels(part, texels);
+        const Rect at{part.left - span.left, part.top - span.top, part.right - span.left, part.bottom - span.top};
+        c.record.upload(t.texture, 0, at, texels.data());
+        c.flushIfFull();
+    }
+}
+
+// The game shows a window picture (spec §4, §6): first the safety net - what reached its pixels outside the known
+// calls goes into the twin enlarged - then the game's own upload and quads, then the twin textures.
+void UAGFX_THISCALL onDraw(void* p, int x, int y, int w, int h, uint32_t argb) {
+    Guard guard;
+    State& s = state();
+    Picture* pic = picture(self(p));
+    const bool dirty = field<uint8_t>(self(p), ce::kDirty) != 0;
+    if (pic && dirty && pic->twin->sync(pic->bits, whole(*pic)) > 0 &&
+        s.loggedSizes.insert(uint32_t(pic->twin->width()) << 16 | uint32_t(pic->twin->height())).second)
+        LOG_INFO("crisp text: a %dx%d window changed outside the known calls", pic->twin->width(),
+                 pic->twin->height());
+    original<DrawFn>(ce::kDraw)(p, x, y, w, h, argb);
+    if (pic) uploadTiles(*pic);
+}
+
 HBITMAP WINAPI onCreateDibSection(HDC dc, const BITMAPINFO* info, UINT usage, void** bits, HANDLE section,
                                   DWORD offset) {
     Guard guard;
@@ -187,6 +247,7 @@ std::vector<Hook> hooks() {
         slot(ce::kSprite, reinterpret_cast<uintptr_t>(&onSprite)),
         slot(ce::kTextureCopy, reinterpret_cast<uintptr_t>(&onTextureCopy)),
         slot(ce::kClear, reinterpret_cast<uintptr_t>(&onClear)),
+        slot(ce::kDraw, reinterpret_cast<uintptr_t>(&onDraw)),
         Hook{ce::kImportCreateDibSection, reinterpret_cast<uintptr_t>(&onCreateDibSection), &s.createDibSection},
         Hook{ce::kImportTextOutW, reinterpret_cast<uintptr_t>(&hookTextOutW), &s.textOutW},
         Hook{ce::kImportFillRgn, reinterpret_cast<uintptr_t>(&hookFillRgn), &s.fillRgn},
@@ -334,5 +395,24 @@ std::string stats() {
                   static_cast<unsigned>(s.glyphs.size()));
     return line;
 }
+
+void tileDraw(const void* surface, DrawCmd& cmd) {
+    const State& s = state();
+    if (!active() || !surface) return;
+    const auto t = s.tiles.find(surface);
+    if (t == s.tiles.end()) return;
+    const auto p = s.pictures.find(t->second.picture);
+    if (p == s.pictures.end() || size_t(t->second.index) >= p->second->tiles.size()) return;
+    const Picture& pic = *p->second;
+    const Picture::Tile& tile = pic.tiles[size_t(t->second.index)];
+    if (!tile.texture) return;
+    const TilePlace place = tilePlace(t->second.index, pic.twin->width(), pic.twin->height());
+    cmd.twin = tile.texture;
+    cmd.twinTile[0] = place.x;
+    cmd.twinTile[1] = place.y;
+    cmd.twinScale = s.K;
+}
+
+void forgetSurface(const void* surface) { state().tiles.erase(surface); }
 
 }  // namespace uagfx::win::crisp

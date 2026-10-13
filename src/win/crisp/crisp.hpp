@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#include "core/frame.hpp"
+
 namespace uagfx::win::crisp {
 
 // Stage 6, crisp text (docs/superpowers/specs/2026-10-13-stage6-crisp-text-design.md): the driver keeps a twin of
@@ -14,6 +16,10 @@ void uninstall();
 // At every present, between the game's frames: the scale twins are made at - k with every improvement on (Pause
 // does not change it). A new scale drops the twins and has the game redraw every window.
 void setScale(double K);
+// Device7::record: a draw whose stage 0 texture is a tile of a window picture with a twin carries that twin.
+void tileDraw(const void* surface, DrawCmd& cmd);
+// Surface7's destructor: that surface is no tile any more.
+void forgetSurface(const void* surface);
 // For the 30-second stats line: "" while crisp text is off.
 std::string stats();
 

@@ -3,6 +3,7 @@
 #include "core/device_caps.hpp"
 #include "core/frame.hpp"
 #include "win/context.hpp"
+#include "win/crisp/crisp.hpp"
 #include "win/dx7/caps.hpp"
 #include "win/dx7/formats.hpp"
 #include "win/dx7/surface7.hpp"
@@ -194,6 +195,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         cmd.texture[i] = t->gpuTexture();
         cmd.keyed[i] = t->colorKeyed();
     }
+    win::crisp::tileDraw(textures_[0], cmd);  // stage 6: a window tile carries its twin
     DrawSetup setup = resolveDrawSetup(states_, false, hasTexture);  // the target has no alpha
     setup.ui = scene_.ui();
     cmd.state = c.record.addState(setup);

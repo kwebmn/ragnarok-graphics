@@ -6,6 +6,7 @@
 
 #include "core/d3d7.hpp"
 #include "win/context.hpp"
+#include "win/crisp/crisp.hpp"
 #include "win/dx7/formats.hpp"
 #include "win/log.hpp"
 
@@ -43,6 +44,7 @@ Surface7::Surface7(SurfaceRole role, DWORD caps, int width, int height, PixelFor
 
 Surface7::~Surface7() {
     magic_ = 0;
+    win::crisp::forgetSurface(this);  // stage 6: a tile's surface is gone
     win::Context& c = win::Context::get();
     if (locked_ && role_ == SurfaceRole::RenderTarget) c.shadow.unlock();
     freeDc();
