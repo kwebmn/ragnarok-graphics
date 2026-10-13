@@ -65,7 +65,11 @@ HRESULT STDMETHODCALLTYPE Device7::EnumTextureFormats(LPD3DENUMPIXELFORMATSCALLB
     return D3D_OK;
 }
 
-HRESULT STDMETHODCALLTYPE Device7::BeginScene() { return D3D_OK; }
+HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
+    win::Guard guard;
+    scene_.beginScene();
+    return D3D_OK;
+}
 
 HRESULT STDMETHODCALLTYPE Device7::EndScene() {
     win::Guard guard;
@@ -143,6 +147,7 @@ HRESULT STDMETHODCALLTYPE Device7::LightEnable(DWORD, WINBOOL) { return D3D_OK; 
 HRESULT STDMETHODCALLTYPE Device7::SetRenderState(D3DRENDERSTATETYPE state, DWORD value) {
     win::Guard guard;
     states_.setRender(uint32_t(state), value);
+    scene_.renderState(uint32_t(state), value);
     static bool keyLogged = false;
     if (uint32_t(state) == d3d7::RS_COLORKEYENABLE && value && !keyLogged) {  // spec §4.5
         LOG_INFO("COLORKEYENABLE on: only textures created with a colour key drop their keyed texels");
@@ -189,7 +194,9 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         cmd.texture[i] = t->gpuTexture();
         cmd.keyed[i] = t->colorKeyed();
     }
-    cmd.state = c.record.addState(resolveDrawSetup(states_, false, hasTexture));  // the target has no alpha
+    DrawSetup setup = resolveDrawSetup(states_, false, hasTexture);  // the target has no alpha
+    setup.ui = scene_.ui();
+    cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);

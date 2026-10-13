@@ -56,6 +56,7 @@ struct DrawSetup {
     uint32_t fogColor = 0;
     bool colorKey = false;
     StageSetup stage[2];
+    bool ui = false;  // an interface draw (SceneTracker): magnified pictures get the [display] ui_filter
     bool operator==(const DrawSetup& o) const;
 };
 

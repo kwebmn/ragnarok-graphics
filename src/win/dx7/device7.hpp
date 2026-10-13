@@ -4,6 +4,7 @@
 #include <d3d.h>
 
 #include "core/d3d7.hpp"
+#include "core/scene.hpp"
 #include "core/states.hpp"
 #include "win/dx7/com_bases.hpp"
 
@@ -58,6 +59,7 @@ private:
     Surface7* target_;
     Surface7* textures_[d3d7::kStages] = {};
     DeviceStates states_;
+    SceneTracker scene_;  // which draws are interface (stage 3)
     D3DVIEWPORT7 viewport_{};
 };
 

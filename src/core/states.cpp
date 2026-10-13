@@ -108,7 +108,7 @@ bool DrawSetup::operator==(const DrawSetup& o) const {
     return zEnable == o.zEnable && zWrite == o.zWrite && zFunc == o.zFunc && cull == o.cull && blend == o.blend &&
            srcBlend == o.srcBlend && dstBlend == o.dstBlend && alphaTest == o.alphaTest && alphaFunc == o.alphaFunc &&
            alphaRef == o.alphaRef && fog == o.fog && fogColor == o.fogColor && colorKey == o.colorKey &&
-           stage[0] == o.stage[0] && stage[1] == o.stage[1];
+           stage[0] == o.stage[0] && stage[1] == o.stage[1] && ui == o.ui;
 }
 
 DrawSetup resolveDrawSetup(const DeviceStates& s, bool targetHasAlpha, const bool stageHasTexture[2]) {
