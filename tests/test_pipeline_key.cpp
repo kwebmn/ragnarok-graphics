@@ -50,9 +50,11 @@ TEST(pipeline_key_file_skips_keys_the_renderer_cannot_make) {
     good.cull = CULL_NONE;
     good.srcBlend = BLEND_ONE;
     good.dstBlend = BLEND_ZERO;
-    const std::string text = pipelineKeysHeader() + "40000\nffffffffffffffff\n" +
-                             pipelineKeyLine(packPipelineKey(bad)) + pipelineKeyLine(packPipelineKey(good));
-    const std::vector<uint64_t> keys = parsePipelineKeys(text);  // bit 18 and up, all bits, blend 12: skipped
+    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 18) +
+                             "ffffffffffffffff\n" + pipelineKeyLine(packPipelineKey(bad)) +
+                             pipelineKeyLine(packPipelineKey(good));
+    // good with bit 18 (only the stray-bits check rejects it), all bits, blend 12: skipped
+    const std::vector<uint64_t> keys = parsePipelineKeys(text);
     CHECK_EQ(keys.size(), size_t(1));
     CHECK(keys.size() == 1 && keys[0] == packPipelineKey(good));
     CHECK(validPipelineKey(packPipelineKey(good)));
@@ -130,4 +132,6 @@ TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
     CHECK(rejected(plain, [](PipelineKey& k) { k.zWrite = true; }));                 // no Z test: no Z writes
     CHECK(rejected(plain, [](PipelineKey& k) { k.srcBlend = BLEND_SRCALPHA; }));     // no blending: ONE and ZERO
     CHECK(rejected(plain, [](PipelineKey& k) { k.dstBlend = BLEND_INVSRCALPHA; }));
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 18));  // a bit past the packed fields
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 63));
 }
