@@ -158,6 +158,10 @@ ScreenPlan Model::screenPlan() const {
     return planScreen(screenChoice(), system_.monitors, backend(), now_.roext, system_.frame);
 }
 
+bool Model::screenWaits() const {
+    return now_.gameRunning && now_.roextModule >= 0 && screenPlan().writesRoext;
+}
+
 void Model::screenAsSetup() {
     screen_.reset();
     screenAsSetup_ = true;

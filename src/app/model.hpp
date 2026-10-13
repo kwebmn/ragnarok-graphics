@@ -81,6 +81,9 @@ public:
     void setScreen(const settings::ScreenChoice& c);
     settings::ScreenNow screenNow() const;
     settings::ScreenPlan screenPlan() const;
+    // The plan needs ROExt's ini, written only while the game is closed (spec §4.1): the Screen page greys what changes
+    // the window. The full screen never needs it (0.6.1 minor 6).
+    bool screenWaits() const;
     void screenAsSetup();          // "as in setup.exe": the personal screen values go
     bool screenAsSetupPending() const { return screenAsSetup_; }
     std::optional<settings::Size> setupScreen(bool& fullscreen) const;  // setup.exe's, when it differs from the game's

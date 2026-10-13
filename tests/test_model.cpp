@@ -220,6 +220,28 @@ TEST(model_a_screen_that_waits_for_the_game_leaves_the_rest_written) {
     CHECK_EQ(valueOf(w.files[roext], "roext.windowwidth"), std::string("1680"));
 }
 
+TEST(model_while_the_game_runs_only_a_screen_roext_sizes_waits) {
+    // Spec §4.1, 0.6.1 minor 6: ROExt's ini waits while the game runs, and only a window's plan writes it - the full
+    // screen does not: the Screen page greys the window's controls only.
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    w.files[fake::path(L"dinput.dll")] = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput.ini" + '\0';
+    w.files[fake::path(L"dinput.ini")] = "[ROExt]\r\nWindowLock=1\r\nWindowWidth=1920\r\nWindowHeight=1080\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.gameRunning = true;
+    app::Model m;
+    CHECK(m.screenWaits());  // the game's window: ROExt sizes it
+    ScreenChoice c = m.screenChoice();
+    c.show = Show::Fullscreen;
+    m.setScreen(c);
+    CHECK(!m.screenWaits());
+    c.show = Show::Window;
+    m.setScreen(c);
+    w.gameRunning = false;
+    m.refreshRunning();
+    CHECK(!m.screenWaits());
+}
+
 TEST(model_a_first_run_while_the_game_runs_writes_the_key_and_leaves_roexts_ini) {
     // No key yet: the game waits in its setup.exe loop (registry.md §2) with ROExt loaded. The key goes now - it is
     // what lets the game start - and ROExt's ini waits for the game to close (spec §4.1; 0.6.1 review I1).

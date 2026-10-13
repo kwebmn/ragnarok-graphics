@@ -35,15 +35,14 @@ public:
         if (monitors.empty()) return;
         const int index = uaro && c.monitor >= 0 && size_t(c.monitor) < monitors.size() ? c.monitor : 0;
         const MonitorInfo& mon = monitors[size_t(index)];
-        // ROExt sizes the window, and its ini is written only while the game is closed (spec §4.1): until then the
-        // choice is grey (0.6.0 review M4).
+        // ROExt sizes the window, and its ini is written only while the game is closed (spec §4.1): until then what
+        // changes the window is grey (0.6.0 review M4). The full screen never needs it (0.6.1 minor 6).
         const Snapshot& snap = m.now();
         const bool roext = snap.roext.active && (snap.roext.lock || snap.roext.size.width > 0) && snap.roextModule >= 0;
-        const bool open = !(roext && snap.gameRunning);
+        const bool open = !m.screenWaits();
 
-        p.radio(kFullscreen, t(Text::ScreenShow), t(Text::ScreenFullscreen), c.show == Show::Fullscreen, true, L"",
-                open);
-        p.radio(kWindow, L"", t(Text::ScreenWindow), c.show == Show::Window, false, L"", open);
+        p.radio(kFullscreen, t(Text::ScreenShow), t(Text::ScreenFullscreen), c.show == Show::Fullscreen, true, L"");
+        p.radio(kWindow, L"", t(Text::ScreenWindow), c.show == Show::Window, false, L"");
         p.gap(6);
         std::vector<std::wstring> items;
         for (size_t i = 0; i < monitors.size(); ++i)

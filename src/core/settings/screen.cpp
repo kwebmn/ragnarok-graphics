@@ -42,7 +42,7 @@ ScreenPlan planScreen(const ScreenChoice& c, const std::vector<MonitorInfo>& mon
     }
     const MonitorInfo& primary = monitors[0];
     const bool uaro = backend == Backend::Uaro;
-    // dgVoodoo leaves our ini alone: its window and full screen stay on the main monitor until 0.6.2.
+    // dgVoodoo leaves our ini alone: its window and full screen stay on the main monitor until 0.6.3.
     const int index = uaro && c.monitor >= 0 && size_t(c.monitor) < monitors.size() ? c.monitor : 0;
     const MonitorInfo& m = monitors[size_t(index)];
     if (c.show == Show::Fullscreen) {
