@@ -511,20 +511,23 @@ void Renderer::preparePipelines(const std::string& file) {
     std::string text;
     win::readTextFile(file, text);
     const std::vector<uint64_t> keys = parsePipelineKeys(text);
-    // Written anew: a list from another version or with broken lines starts clean, keys listed twice once.
     const std::set<uint64_t> unique(keys.begin(), keys.end());
-    std::string clean = pipelineKeysHeader();
-    for (const uint64_t k : unique) clean += pipelineKeyLine(k);
-    std::ofstream(file, std::ios::binary | std::ios::trunc) << clean;
     LARGE_INTEGER freq, t0, t1;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&t0);
-    unsigned ready = 0;
+    std::vector<uint64_t> built;
     for (const uint64_t k : unique)
-        if (m.pipelineForKey(k)) ++ready;
+        if (m.pipelineForKey(k)) built.push_back(k);
     QueryPerformanceCounter(&t1);
-    m.pipelineFile = file;  // from now on every new pipeline is added
-    LOG_INFO("pipelines: %u of %u saved ones prepared in %.0f ms", ready, unsigned(unique.size()),
+    // Written anew with the keys that built: a list from another version, broken lines or keys listed twice start clean.
+    std::ofstream f(file, std::ios::binary | std::ios::trunc);
+    f << pipelineKeysText(built);
+    f.close();
+    if (f)
+        m.pipelineFile = file;  // from now on every new pipeline is added
+    else
+        LOG_INFO("cannot write %s: pipelines are not remembered for the next start", file.c_str());
+    LOG_INFO("pipelines: %u of %u saved ones prepared in %.0f ms", unsigned(built.size()), unsigned(unique.size()),
              double(t1.QuadPart - t0.QuadPart) * 1000.0 / double(freq.QuadPart));
 }
 

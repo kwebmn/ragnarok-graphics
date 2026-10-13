@@ -250,9 +250,14 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
         pso = nullptr;
     }
     pipelines.emplace(key, pso);  // a failure is remembered too: no retry every draw
-    if (pso && !pipelineFile.empty()) {  // built at the next start (1B review M8); a folder without rights: no list
+    if (pso && !pipelineFile.empty()) {  // built at the next start (1B review M8)
         std::ofstream f(pipelineFile, std::ios::binary | std::ios::app);
         f << pipelineKeyLine(key);
+        f.close();
+        if (!f) {
+            LOG_INFO("cannot add to %s: pipelines are not remembered any more", pipelineFile.c_str());
+            pipelineFile.clear();
+        }
     }
     return pso;
 }

@@ -1,6 +1,7 @@
 #include "core/pipeline_key.hpp"
 
 #include <cstdio>
+#include <set>
 #include <sstream>
 
 #include "core/d3d7.hpp"
@@ -66,9 +67,22 @@ std::vector<uint64_t> parsePipelineKeys(const std::string& text) {
         }
         if (line.empty() || line.size() > 16 || line.find_first_not_of("0123456789abcdef") != std::string::npos)
             continue;
-        keys.push_back(std::stoull(line, nullptr, 16));
+        const uint64_t v = std::stoull(line, nullptr, 16);
+        if (validPipelineKey(v)) keys.push_back(v);
     }
     return keys;
+}
+
+bool validPipelineKey(uint64_t v) {
+    const PipelineKey k = unpackPipelineKey(v);
+    return packPipelineKey(k) == v && k.srcBlend <= d3d7::BLEND_SRCALPHASAT && k.dstBlend <= d3d7::BLEND_SRCALPHASAT &&
+           k.zFunc <= d3d7::CMP_ALWAYS;
+}
+
+std::string pipelineKeysText(const std::vector<uint64_t>& keys) {
+    std::string text = pipelineKeysHeader();
+    for (const uint64_t k : std::set<uint64_t>(keys.begin(), keys.end())) text += pipelineKeyLine(k);
+    return text;
 }
 
 }  // namespace uagfx

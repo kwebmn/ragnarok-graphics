@@ -32,4 +32,11 @@ std::vector<uint64_t> parsePipelineKeys(const std::string& text);
 std::string pipelineKeysHeader();
 std::string pipelineKeyLine(uint64_t v);
 
+// A key the renderer can make (review of 0.4.1): no bits above the packed fields, no blend factor above 11 (12 and 13
+// are resolved away, 14 and 15 do not exist), no comparison above ALWAYS. Damaged lines - two game instances
+// appending at once - are skipped by parsePipelineKeys.
+bool validPipelineKey(uint64_t v);
+// The file's text: the header, then each key once, in increasing order.
+std::string pipelineKeysText(const std::vector<uint64_t>& keys);
+
 }  // namespace uagfx
