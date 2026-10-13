@@ -20,6 +20,15 @@ if(WIN32)
     target_compile_options(ddraw PRIVATE -Wall -Wextra)
     target_link_libraries(ddraw PRIVATE uagfx_core)
     target_link_options(ddraw PRIVATE -static -static-libgcc -static-libstdc++ -s)
+
+    # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
+    add_library(uagfx_app STATIC src/app/text.cpp src/app/files.cpp src/app/registry.cpp src/app/system.cpp
+                src/app/model.cpp src/win/system_probe.cpp)
+    target_include_directories(uagfx_app PUBLIC src)
+    target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
+                               WIDL_EXPLICIT_AGGREGATE_RETURNS)
+    target_compile_options(uagfx_app PRIVATE -Wall -Wextra)
+    target_link_libraries(uagfx_app PUBLIC uagfx_core comctl32 shell32 ole32 advapi32)
 else()
     enable_testing()
     file(GLOB UAGFX_TEST_SOURCES CONFIGURE_DEPENDS tests/*.cpp)
