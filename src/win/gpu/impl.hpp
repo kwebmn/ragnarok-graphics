@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "core/frame.hpp"
+#include "core/key_pair.hpp"
 #include "core/log_once.hpp"
 #include "win/gpu/renderer.hpp"
 
@@ -110,7 +111,7 @@ struct Renderer::Impl {
     ID3D12DescriptorHeap* gpuSrv = nullptr;
     UINT ringSrv = 0;
     ID3D12DescriptorHeap* samplerHeap = nullptr;
-    std::unordered_map<uint64_t, UINT> samplerPairs;
+    std::unordered_map<KeyPair, UINT, KeyPairHash> samplerPairs;
     UINT nextSampler = 0;
     ID3D12DescriptorHeap* rtvHeap = nullptr;  // kRtv*
     ID3D12DescriptorHeap* dsvHeap = nullptr;

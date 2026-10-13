@@ -140,7 +140,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, const StageSetup& s1) {
-    const uint64_t key = samplerKey(s0) * 1000003ull ^ samplerKey(s1);
+    const KeyPair key{samplerKey(s0), samplerKey(s1)};
     auto it = samplerPairs.find(key);
     if (it == samplerPairs.end()) {
         if (nextSampler + 2 > kSamplerCount) {  // full: start over once the GPU is done with the old pairs
