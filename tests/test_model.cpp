@@ -74,3 +74,15 @@ TEST(model_a_backup_keeps_the_twenty_newest) {
     CHECK(m.now().backups.front() == L"2026-10-13-120000");  // this run's
     CHECK(m.now().backups.back() == L"2026-10-01-120001");   // the oldest went
 }
+
+TEST(model_first_run_can_be_applied_with_nothing_changed) {
+    fake::Windows& w = fake::reset();  // no setup.exe yet: the game's key is in neither copy (spec §4.3)
+    app::Model m;
+    CHECK(m.canApply());
+    CHECK_EQ(m.pendingCount(), size_t(0));  // nothing of the player's: closing asks nothing
+    CHECK(m.apply(Lang::En).empty());
+    CHECK(gameKeyExists(w.registry));
+    CHECK_EQ(effectiveDword("WIDTH"), 1920);  // a 3360 x 1890 window at 175 %
+    CHECK_EQ(effectiveDword("HEIGHT"), 1080);
+    CHECK(!m.canApply());
+}

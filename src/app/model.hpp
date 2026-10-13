@@ -84,7 +84,9 @@ public:
     std::optional<settings::Size> setupScreen(bool& fullscreen) const;  // setup.exe's, when it differs from the game's
 
     void applyPreset(settings::Preset p);
-    size_t pendingCount() const;
+    size_t pendingCount() const;  // the player's changes not written yet
+    // Apply has something to write: the player's changes, or the game's key on a first run (spec §4.3).
+    bool canApply() const { return pendingCount() > 0 || !settings::gameKeyExists(now_.registry); }
     bool canRevert() const { return pendingCount() > 0 || !wroteNow_.empty(); }
 
     // Writing (spec §4). Each returns "" or what went wrong, in the language given.

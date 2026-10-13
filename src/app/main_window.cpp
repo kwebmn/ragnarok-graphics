@@ -186,7 +186,7 @@ void MainWindow::updateStatus() {
         if (pending) text += L" " + wtrf(lang_, Text::StatusPending, {num(static_cast<long long>(pending))});
     }
     SetWindowTextW(status_, text.c_str());
-    EnableWindow(apply_, pending > 0);
+    EnableWindow(apply_, model_->canApply());
     EnableWindow(play_, !model_->system().elevated);
     EnableWindow(undo_, model_->canRevert());
 }
