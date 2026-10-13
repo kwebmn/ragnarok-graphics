@@ -19,6 +19,7 @@ TEST(config_defaults_without_a_file) {
     CHECK(c.vsync);
     CHECK_EQ(c.fpsLimit, 0);
     CHECK(!c.allowTearing);
+    CHECK(c.crispText);
     CHECK(c.logLevel == LogLevel::Info);
 }
 
@@ -26,7 +27,7 @@ TEST(config_reads_every_key) {
     const Config c = parseConfig(
         "[renderer]\nbackend = uaro\n"
         "[display]\nmode = window\nmonitor = 1\nwindow_width = 1600\nwindow_height = 900\n"
-        "high_resolution = 0\nui_filter = smooth\n"
+        "high_resolution = 0\nui_filter = smooth\ncrisp_text = 0\n"
         "[quality]\nrender_scale = 150\nsharpen = 80\n"
         "[frames]\nvsync = 0\nfps_limit = 144\nallow_tearing = 1\n"
         "[debug]\nlog = verbose\n");
@@ -37,6 +38,7 @@ TEST(config_reads_every_key) {
     CHECK_EQ(c.windowHeight, 900);
     CHECK(!c.highResolution);
     CHECK(c.uiFilter == UiFilter::Smooth);
+    CHECK(!c.crispText);
     CHECK_EQ(c.renderScale, 150);
     CHECK_EQ(c.sharpen, 80);
     CHECK(!c.vsync);
@@ -49,7 +51,8 @@ TEST(config_invalid_values_keep_defaults) {
     const Config c = parseConfig(
         "[renderer]\nbackend = vulkan\n"
         "[display]\nmode = fullscreen\nmonitor = -1\nwindow_width = 100\nwindow_height = abc\n"
-        "high_resolution = maybe\nui_filter = blurry\n[quality]\nrender_scale = 300\nsharpen = 101\n"
+        "high_resolution = maybe\nui_filter = blurry\ncrisp_text = maybe\n"
+        "[quality]\nrender_scale = 300\nsharpen = 101\n"
         "[frames]\nvsync = maybe\nfps_limit = -5\n"
         "[debug]\nlog = loud\n");
     CHECK(c.backend == Backend::DgVoodoo);
@@ -63,6 +66,7 @@ TEST(config_invalid_values_keep_defaults) {
     CHECK_EQ(c.sharpen, 50);
     CHECK(c.vsync);
     CHECK_EQ(c.fpsLimit, 0);
+    CHECK(c.crispText);
     CHECK(c.logLevel == LogLevel::Info);
 }
 

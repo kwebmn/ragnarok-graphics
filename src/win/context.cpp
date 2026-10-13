@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "core/scale.hpp"
+#include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -32,6 +33,7 @@ bool Context::open(std::string& error) {
     renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
     LOG_INFO("Direct3D 12 renderer on %s", renderer->adapterName().c_str());
+    crisp::install(config.crispText);
     return true;
 }
 
@@ -39,7 +41,8 @@ void Context::close() {
     flush();
     if (scaleLog_.pending()) LOG_INFO("%s", scaleLine_.c_str());  // the last change, before the final stats
     logStats(true);
-    delete renderer;  // waits for the GPU
+    crisp::uninstall();  // the game's methods back; the twins' textures go before the renderer
+    delete renderer;     // waits for the GPU
     renderer = nullptr;
     record.reset();
     window = nullptr;
@@ -115,6 +118,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
     const ScalePlan plan = planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale,
                                      config.highResolution && enhanced_);
+    // Stage 6: twins follow the scale with every improvement on, so Pause leaves them as they are.
+    crisp::setScale(
+        planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale, config.highResolution).k);
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_) {
         scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
         scaledHeight_ = plan.targetHeight;
@@ -155,8 +161,8 @@ void Context::logStats(bool final) {
     const DWORD ms = now - stats_.since;
     if (!final && ms < 30000) return;
     if (stats_.frames || stats_.readBacks)
-        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU", stats_.frames, ms / 1000.0,
-                 ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks);
+        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s", stats_.frames, ms / 1000.0,
+                 ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str());
     stats_ = Stats{};
     stats_.since = now;
 }

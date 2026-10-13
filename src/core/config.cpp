@@ -73,6 +73,8 @@ Config parseConfig(const std::string& text) {
         } else if (key == "display.ui_filter") {
             if (val == "sharp") c.uiFilter = UiFilter::Sharp;
             if (val == "smooth") c.uiFilter = UiFilter::Smooth;
+        } else if (key == "display.crisp_text") {
+            setBool(val, c.crispText);
         } else if (key == "quality.render_scale") {
             toInt(val, 100, 200, c.renderScale);
         } else if (key == "quality.sharpen") {
