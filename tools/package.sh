@@ -7,6 +7,11 @@ cmake -S . -B build-win --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-
 cmake --build build-win -j >/dev/null
 python3 tools/check_dll.py build-win/ddraw.dll
 out="build-win/uaro-graphics-$version.zip"
-rm -f "$out"
-zip -q -j "$out" build-win/ddraw.dll dist/uaro-graphics.ini dist/TEST.ru.md
+stage="build-win/package"
+rm -rf "$out" "$stage"
+mkdir -p "$stage/uaro-graphics"
+cp dist/install.bat dist/uninstall.bat dist/TEST.ru.md "$stage/"
+cp build-win/ddraw.dll dist/uaro-graphics.ini "$stage/uaro-graphics/"
+(cd "$stage" && zip -q -r "../uaro-graphics-$version.zip" .)
+python3 tools/check_package.py "$out"
 echo "packed $out"

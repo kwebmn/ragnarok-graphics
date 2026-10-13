@@ -56,7 +56,7 @@ HMODULE loadReal() {
     SystemFacts facts;
     facts.windows10 = v.major >= 10;
     facts.dgvoodoo = fileExists(dir + "\\dgvoodoo\\DDraw.dll");
-    if (config.backend == Backend::Uaro && facts.windows10) {
+    if (facts.windows10) {  // 0.1.x: always, so the log shows what the uaRO renderer would get
         const D3D12Probe p = probeD3D12();
         facts.d3d12 = p.ok;
         LOG_INFO("Direct3D 12: %s, adapter %s (vendor 0x%04x, device 0x%04x, %llu MB), hr 0x%08lx",

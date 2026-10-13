@@ -1,0 +1,3 @@
+# cmd.exe needs CRLF; Notepad on Windows 7 shows LF files as one line.
+*.bat text eol=crlf
+dist/*.ini text eol=crlf
