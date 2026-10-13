@@ -196,7 +196,7 @@ std::wstring Model::writeIni(const std::vector<IniEdit>& edits, Lang l) {
     return L"";
 }
 
-std::wstring Model::backupOnce(Lang l) {
+std::wstring Model::backupOnce(Lang l, bool prune) {
     if (backedUp_) return L"";
     const std::wstring dir = paths_.backups + L"\\" + timestampName();
     if (!makeFolder(paths_.backups) || !makeFolder(dir)) return wtrf(l, Text::ErrBackup, {utf8(dir)});
@@ -221,7 +221,7 @@ std::wstring Model::backupOnce(Lang l) {
          writeFileAtomic(dir + L"\\files.txt", list);
     if (!ok) return wtrf(l, Text::ErrBackup, {utf8(dir)});
     backedUp_ = true;
-    keepNewestBackups(20);
+    if (prune) keepNewestBackups(20);
     return L"";
 }
 
@@ -323,7 +323,7 @@ std::wstring Model::restore(const std::wstring& backup, Lang l) {
         !fromRegFile(regFileToUtf8(reg), gameKeyPaths().personalRoot, personal))
         return wtrf(l, Text::ErrRestore, {utf8(backup)});
     backedUp_ = false;  // what is there now goes into a copy of its own first
-    std::wstring err = backupOnce(l);
+    std::wstring err = backupOnce(l, false);  // the copy restored may be the oldest: the next run prunes
     if (!err.empty()) return err;
     size_t pos = 0;
     while (pos < list.size()) {

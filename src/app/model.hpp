@@ -104,7 +104,7 @@ public:
 private:
     std::string baseIni() const;  // the file, or the shipped defaults when there is none
     std::wstring writeIni(const std::vector<settings::IniEdit>& edits, settings::Lang l);
-    std::wstring backupOnce(settings::Lang l);
+    std::wstring backupOnce(settings::Lang l, bool prune = true);  // prune: only the 20 newest stay (spec §4.6)
     std::vector<settings::IniEdit> pendingIniEdits() const;
 
     Paths paths_;
