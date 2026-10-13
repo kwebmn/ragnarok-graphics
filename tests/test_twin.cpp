@@ -210,3 +210,23 @@ TEST(twin_picture_copy_pixels_wraps_past_the_right_edge) {
     CHECK_EQ(at(t, 0, 2), 0xFF0000FFu);
     CHECK_EQ(at(t, 2, 2), 0xFF808080u);
 }
+
+TEST(twin_picture_copy_from_leaves_the_game_holes) {
+    // The game copies every child pixel but exactly 0xFFFF00FF; one its upload then makes transparent - magenta in
+    // 5 bits, or GDI's magenta with alpha 0 - is a hole in the parent, and so in the twin (0.5.0 review M1).
+    std::vector<uint32_t> parent(16, 0xFF0000FF);  // 4 x 4
+    TwinPicture p(parent.data(), 4, 4, 2.0);
+    const std::vector<uint32_t> kid = {0xFFF807F8, 0x00FF00FF, kMagenta, 0xFFFF0000};  // 2 x 2
+    const TwinPicture c(kid.data(), 2, 2, 2.0);
+    for (int y = 0; y < 2; ++y)  // what the game's copy does to the parent's pixels
+        for (int x = 0; x < 2; ++x) {
+            const uint32_t v = kid[size_t(y) * 2 + size_t(x)];
+            if (v != kMagenta) parent[size_t(y) * 4 + size_t(x)] = v;
+        }
+    p.copyFrom(parent.data(), c, 0, 0, 2, 2);
+    CHECK_EQ(at(p, 0, 0), 0u);           // 5-bit magenta: a hole
+    CHECK_EQ(at(p, 2, 0), 0u);           // GDI's magenta: a hole
+    CHECK_EQ(at(p, 0, 2), 0xFF0000FFu);  // exactly 0xFFFF00FF: not copied, the parent stays
+    CHECK_EQ(at(p, 2, 2), 0xFFFF0000u);
+    CHECK_EQ(p.sync(parent.data(), Rect{0, 0, 4, 4}), 0);
+}

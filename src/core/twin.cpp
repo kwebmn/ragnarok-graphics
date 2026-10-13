@@ -153,6 +153,22 @@ void TwinPicture::copyFrom(const uint32_t* dib, const TwinPicture& child, int x,
         }
         touch(Rect{x0, y0, x1, y1});
     }
+    // A child pixel the game copies - anything but exactly 0xFFFF00FF - that its upload makes transparent is a hole in
+    // this picture, as in the game; "over" kept this picture's pixel (0.5.0 review M1).
+    const auto hole = [](uint32_t v) { return v != 0xFFFF00FFu && transparentAtUpload(v); };
+    for (int j = 0; j < std::min(r.height(), child.h_); ++j) {
+        const uint32_t* line = child.copy_.data() + size_t(j) * size_t(child.w_);
+        const int cols = std::min(r.width(), child.w_);
+        for (int i = 0; i < cols;) {
+            if (!hole(line[i])) {
+                ++i;
+                continue;
+            }
+            const int run = i;
+            while (i < cols && hole(line[i])) ++i;
+            fillRow(dib, r.top + j, r.left + run, r.left + i);
+        }
+    }
     absorb(dib, r);
 }
 
