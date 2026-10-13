@@ -75,6 +75,21 @@ TEST(reg_file_refuses_other_text_and_writes_an_empty_copy_as_a_header) {
     CHECK(toRegFile(empty, kRoot) == "Windows Registry Editor Version 5.00\r\n\r\n[" + std::string(kRoot) + "]\r\n\r\n");
 }
 
+TEST(reg_file_regedit_s_padded_strings_are_read) {
+    // The game writes SITEM, SKINNAME and ID with a fixed size, NULs after the text (registry.md): regedit exports
+    // such a REG_SZ as hex(1), its UTF-16LE bytes. It is read up to the first NUL, so loading a regedit export keeps
+    // the hotbars (0.6.2 review).
+    const std::string text = "Windows Registry Editor Version 5.00\r\n\r\n[" + std::string(kRoot) +
+                             "]\r\n\"SITEM000\"=hex(1):52,00,65,00,64,00,00,00,41,00,00,00\r\n"
+                             "\"ID\"=hex(1):36,04,30,04,00,00\r\n";
+    RegCopy c;
+    CHECK(fromRegFile(text, kRoot, c));
+    const RegValue* item = c.find("", "SITEM000");
+    CHECK(item && item->isSz() && item->text == "Red");
+    const RegValue* id = c.find("", "ID");
+    CHECK(id && id->isSz() && id->text == "жа");
+}
+
 TEST(reg_file_a_settings_file_reads_under_any_root_of_the_game_key) {
     RegCopy c;
     c.exists = true;

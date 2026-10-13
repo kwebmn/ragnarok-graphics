@@ -118,6 +118,39 @@ bool readHex(const std::string& s, std::vector<uint8_t>& out) {
     return true;
 }
 
+// UTF-16LE bytes as UTF-8 text, up to the first NUL: regedit exports a REG_SZ with NULs after its text - the game
+// writes SITEM, SKINNAME and ID with a fixed size (registry.md) - as hex(1).
+std::string utf16leText(const std::vector<uint8_t>& b) {
+    std::string out;
+    for (size_t i = 0; i + 1 < b.size(); i += 2) {
+        uint32_t c = uint32_t(b[i]) | uint32_t(b[i + 1]) << 8;
+        if (c == 0) break;
+        if (c >= 0xD800 && c < 0xDC00 && i + 3 < b.size()) {  // a surrogate pair
+            const uint32_t low = uint32_t(b[i + 2]) | uint32_t(b[i + 3]) << 8;
+            if (low >= 0xDC00 && low < 0xE000) {
+                c = 0x10000 + ((c - 0xD800) << 10) + (low - 0xDC00);
+                i += 2;
+            }
+        }
+        if (c < 0x80) {
+            out += char(c);
+        } else if (c < 0x800) {
+            out += char(0xC0 | c >> 6);
+            out += char(0x80 | (c & 0x3F));
+        } else if (c < 0x10000) {
+            out += char(0xE0 | c >> 12);
+            out += char(0x80 | (c >> 6 & 0x3F));
+            out += char(0x80 | (c & 0x3F));
+        } else {
+            out += char(0xF0 | c >> 18);
+            out += char(0x80 | (c >> 12 & 0x3F));
+            out += char(0x80 | (c >> 6 & 0x3F));
+            out += char(0x80 | (c & 0x3F));
+        }
+    }
+    return out;
+}
+
 bool readValue(const std::string& s, RegValue& v) {
     if (!s.empty() && s[0] == '"') {
         size_t i = 0;
@@ -145,7 +178,7 @@ bool readValue(const std::string& s, RegValue& v) {
         v = RegValue{};
         v.type = uint32_t(std::strtoul(s.substr(4, close - 4).c_str(), nullptr, 16));
         if (!readHex(s.substr(close + 2), v.bytes)) return false;
-        if (v.type == uint32_t(RegType::Sz)) return false;  // hex(1) needs UTF-16 decoding: not written by us
+        if (v.type == uint32_t(RegType::Sz)) v = RegValue::sz(utf16leText(v.bytes));  // regedit: NULs after the text
         return true;
     }
     return false;
