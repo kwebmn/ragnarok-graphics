@@ -12,7 +12,9 @@ cbuffer Params : register(b0) {
     uint fogEnable;
     float4 fogColor;
     uint colorKey;
-    uint3 pad;
+    uint uiSharp;
+    float scale;
+    float footprint;
     float4 sourceRect;
 };
 Texture2D tex0 : register(t0);
@@ -35,12 +37,13 @@ struct PsIn {
     float2 uv1 : TEXCOORD1;
 };
 
-// D3D7 puts pixel centres on integer coordinates, D3D12 on half-integers: x + 0.5 (calibration.md §3).
+// D3D7 puts pixel centres on integer coordinates, D3D12 on half-integers, and the target is `scale` times the
+// game's size: a game x lands at x * scale + 0.5 (stage 3 spec §4; at scale 1 that is calibration.md §3).
 PsIn draw_vs(VsIn i) {
     PsIn o;
     float w = i.pos.w > 0.0 ? 1.0 / i.pos.w : 1.0;
-    float x = (i.pos.x + 0.5) * 2.0 / targetSize.x - 1.0;
-    float y = 1.0 - (i.pos.y + 0.5) * 2.0 / targetSize.y;
+    float x = (i.pos.x * scale + 0.5) * 2.0 / targetSize.x - 1.0;
+    float y = 1.0 - (i.pos.y * scale + 0.5) * 2.0 / targetSize.y;
     o.pos = float4(x * w, y * w, i.pos.z * w, w);
     o.diffuse = i.diffuse;
     o.specular = i.specular;
@@ -111,8 +114,21 @@ bool passes(uint func, float a, float ref) {
     return true;
 }
 
+// "Sharp bilinear" (stage 3 spec §6; core sharpCoord does the same): every texel a flat square, a one-pixel
+// linear step between neighbours; unchanged where the picture is not magnified.
+float2 sharpUv(Texture2D t, float2 uv) {
+    float2 size;
+    t.GetDimensions(size.x, size.y);
+    float2 texel = uv * size;
+    float2 magnification = max(1.0 / max(fwidth(texel), 1e-6), 1.0);
+    float2 base = floor(texel - 0.5) + 0.5;
+    return (base + saturate((texel - base - 0.5) * magnification + 0.5)) / size;
+}
+
 float4 draw_ps(PsIn i) : SV_Target {
-    float4 t0 = tex0.Sample(samp0, ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0);
+    float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
+    if (uiSharp != 0) uv0 = sharpUv(tex0, uv0);
+    float4 t0 = tex0.Sample(samp0, uv0);
     float4 t1 = tex1.Sample(samp1, ((stage1.y >> 16) & 7) == 0 ? i.uv0 : i.uv1);
     if (colorKey != 0) {  // colour-keyed textures carry the key as alpha 0 (TextureLevels, Task 10)
         if (((stage0.y >> 24) & 1) != 0 && t0.a == 0) discard;
@@ -141,8 +157,20 @@ PresentOut present_vs(uint id : SV_VertexID) {
     return o;
 }
 
+// Copies part of a texture: one bilinear sample when it is not shrunk, else the average of n x n samples over the
+// destination pixel's footprint (supersampling; the target read back at the game's size).
 float4 present_ps(PresentOut i) : SV_Target {
-    return float4(tex0.Sample(samp0, i.uv).rgb, 1);
+    if (footprint <= 1.0001) return float4(tex0.Sample(samp0, i.uv).rgb, 1);
+    int n = min((int)ceil(footprint), 4);
+    float2 dx = ddx(i.uv);
+    float2 dy = ddy(i.uv);
+    float3 sum = 0;
+    for (int y = 0; y < n; ++y)
+        for (int x = 0; x < n; ++x) {
+            float2 o = (float2(x, y) + 0.5) / n - 0.5;
+            sum += tex0.SampleGrad(samp0, i.uv + o.x * dx + o.y * dy, dx, dy).rgb;
+        }
+    return float4(sum / (n * n), 1);
 }
 )HLSL";
 }

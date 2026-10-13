@@ -27,6 +27,7 @@ public:
 
     bool create(std::string& error);  // device, queue, heaps, shaders; false when Direct3D 12 is not usable
     std::string adapterName() const;
+    void setUiSharp(bool sharp);  // [display] ui_filter for interface draws
     bool setTarget(int width, int height);  // the client's target (BGRA8) and depth (D32), cleared to black
     int targetWidth() const;
     int targetHeight() const;

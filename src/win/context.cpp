@@ -24,6 +24,7 @@ bool Context::open(std::string& error) {
         return false;
     }
     renderer = r;
+    renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     LOG_INFO("Direct3D 12 renderer on %s", renderer->adapterName().c_str());
     return true;
 }

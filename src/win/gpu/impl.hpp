@@ -36,15 +36,17 @@ constexpr UINT kRootSamplers = 2;
 
 // Root constants; must match cbuffer Params in shaders.cpp.
 struct Constants {
-    float targetSize[2];   // 0-1
+    float targetSize[2];   // 0-1: the target's size in pixels
     uint32_t stage0[2];    // 2-3: colorOp | colorArg1 << 8 | colorArg2 << 16 | alphaOp << 24, alphaArg1 | alphaArg2 << 8 | texCoord << 16 | keyed << 24
     uint32_t stage1[2];    // 4-5
     uint32_t alphaTest;    // 6: func | ref << 8 | enabled << 16
     uint32_t fogEnable;    // 7
     float fogColor[4];     // 8-11
     uint32_t colorKey;     // 12
-    uint32_t pad[3];       // 13-15
-    float sourceRect[4];   // 16-19: present only, normalised u0 v0 u1 v1
+    uint32_t uiSharp;      // 13: an interface draw with [display] ui_filter = sharp
+    float scale;           // 14: k, game pixels -> target pixels (stage 3)
+    float footprint;       // 15: blit only - source texels per destination pixel
+    float sourceRect[4];   // 16-19: blit only, normalised u0 v0 u1 v1
 };
 constexpr UINT kConstantCount = sizeof(Constants) / 4;
 static_assert(kConstantCount == 20, "Constants must stay 20 DWORDs");
@@ -113,6 +115,8 @@ struct Renderer::Impl {
     UINT targetSrv = 0;
     int width = 0;
     int height = 0;
+    double scale = 1.0;  // k: game pixels -> target pixels (stage 3)
+    bool uiSharp = true;  // [display] ui_filter = sharp
     D3D12_VIEWPORT viewport{};
     D3D12_RECT scissor{};
     ID3D12Resource* readback = nullptr;

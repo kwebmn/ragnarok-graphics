@@ -89,6 +89,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[2] = float(s.fogColor & 255) / 255.0f;
     c.fogColor[3] = 1.0f;
     c.colorKey = s.colorKey ? 1u : 0u;
+    c.uiSharp = s.ui && uiSharp ? 1u : 0u;
+    c.scale = float(scale);
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
                                                                        : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

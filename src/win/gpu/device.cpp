@@ -413,6 +413,8 @@ std::string Renderer::adapterName() const { return impl_->adapter; }
 int Renderer::targetWidth() const { return impl_->width; }
 int Renderer::targetHeight() const { return impl_->height; }
 
+void Renderer::setUiSharp(bool sharp) { impl_->uiSharp = sharp; }
+
 bool Renderer::create(std::string& error) {
     Impl& m = *impl_;
     m.d3d12 = LoadLibraryA("d3d12.dll");
