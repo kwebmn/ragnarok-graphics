@@ -515,6 +515,9 @@ std::wstring Model::loadGameSettings(const std::wstring& file, Lang l) {
     RegCopy copy;
     if (!readFile(file, bytes) || !fromRegFileAny(regFileToUtf8(bytes), gameKeyRoots(), copy))
         return wtrf(l, Text::ErrReadFile, {utf8(file)});
+    // Only the whole key replaces the personal copy: one folder of it - regedit's export of the chat macros, say -
+    // would take the hotbars and the windows away (0.6.2 review I2).
+    if (copy.keys.find("") == copy.keys.end()) return wtrf(l, Text::ErrPartialFile, {utf8(file)});
     std::wstring err = backupOnce(l);
     if (!err.empty()) return err;
     const std::string failed = replacePersonal(copy);

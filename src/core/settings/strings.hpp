@@ -60,7 +60,7 @@ enum class Text : uint16_t {
     ChatForgetAsk, ChatLoginForgotten, ChatMacrosHeading, ChatMacrosHint,
     ServiceGameSettings, GameSave, GameLoad, LayoutReset, GameSettingsNote, GameLoadAsk, LayoutResetAsk, GameSaved,
     GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, SoundSetupDiffers,
-    GameSettingsRunning,
+    GameSettingsRunning, ErrPartialFile,
     Count
 };
 

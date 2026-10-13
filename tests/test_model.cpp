@@ -460,6 +460,20 @@ TEST(model_a_file_without_the_game_key_is_refused) {
     CHECK(!w.registry.personal.exists);
 }
 
+TEST(model_a_file_with_a_part_of_the_key_is_refused) {
+    // 0.6.2 review I2: regedit's export of one folder of the key (the chat macros, say) is not the whole of it;
+    // loading it in place of the personal copy would take the hotbars and the windows away.
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.registry.personal.exists = true;
+    w.registry.personal.keys["ShortcutItem\\uaRO"]["SITEM000"] = RegValue::sz("Red Potion");
+    w.files[fake::path(L"macros.reg")] = "Windows Registry Editor Version 5.00\r\n\r\n[" +
+                                         app::gameKeyPaths().personalRoot + "\\ShortCutList]\r\n\"0\"=\"/lv\"\r\n";
+    app::Model m;
+    CHECK(!m.loadGameSettings(fake::path(L"macros.reg"), Lang::En).empty());
+    CHECK(w.registry.personal.find("ShortcutItem\\uaRO", "SITEM000") != nullptr);
+}
+
 TEST(model_a_window_layout_reset_writes_the_personal_copy) {
     fake::Windows& w = fake::reset();
     fake::gameKey(w.registry.common, 1920, 1080, false);

@@ -404,6 +404,12 @@ const Entry kTexts[] = {
     {"Loading and the layout reset wait for the game to close: it rewrites its key when it exits.",
      "Завантаження й скидання розкладки — при закритій грі: вона перезаписує свій ключ при виході.",
      "Загрузка и сброс раскладки — при закрытой игре: она перезаписывает свой ключ при выходе."},
+    {"{1} holds only a part of the game's key (a regedit export of one folder, say): loading it would replace all the "
+     "rest. Such a file is added with a double-click (regedit).",
+     "У {1} лише частина ключа гри (наприклад, вивантаження однієї теки з regedit): завантаження замінило б усе інше. "
+     "Такий файл додають подвійним клацанням (regedit).",
+     "В {1} только часть ключа игры (например, выгрузка одной папки из regedit): загрузка заменила бы всё остальное. "
+     "Такой файл добавляют двойным щелчком (regedit)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
