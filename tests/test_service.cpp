@@ -63,3 +63,24 @@ TEST(report_hides_user_names_and_lists_the_settings) {
     CHECK(r.find("Installed driver: unknown") != std::string::npos);
     CHECK(maskUserPaths("C:/Users/anna/x and D:\\users\\b\\y") == "C:/Users/.../x and D:\\users\\...\\y");
 }
+
+TEST(log_digest_reads_the_crisp_text_lines_of_the_last_start) {
+    const std::string log =
+        "19:20:01.001 INFO  uaRO Graphics 0.6.0 in C:\\Games\\uaRO\\uaRO.exe\r\n"
+        "19:20:01.050 INFO  crisp text: on\r\n"
+        "19:20:02.000 INFO  crisp text: k 1.750, 12 windows redrawn\r\n"
+        "19:30:01.001 INFO  uaRO Graphics 0.6.1 in C:\\Games\\uaRO\\uaRO.exe\r\n"
+        "19:30:01.050 INFO  crisp text: on\r\n"
+        "19:30:02.000 INFO  crisp text: k 2.625, 74 windows redrawn\r\n"
+        "19:30:03.000 INFO  crisp text: the game's font of height -15 drawn at -37 (k 2.625: sample 812 px)\r\n";
+    const LogDigest d = digestLog(log);
+    CHECK(d.crisp == "on");
+    CHECK(d.crispScale == "k 2.625, 74 windows redrawn");
+    const LogDigest off = digestLog(
+        "19:20:01.001 INFO  uaRO Graphics 0.6.0 in C:\\Games\\uaRO\\uaRO.exe\r\n"
+        "19:20:01.002 INFO  crisp text: k 1.750, 12 windows redrawn\r\n"
+        "19:40:01.001 INFO  uaRO Graphics 0.6.1 in C:\\Games\\uaRO\\uaRO.exe\r\n"
+        "19:40:01.050 INFO  crisp text: off (the game is not at 0x400000)\r\n");
+    CHECK(off.crisp == "off (the game is not at 0x400000)");
+    CHECK(off.crispScale.empty());  // the last start's own lines only
+}

@@ -31,11 +31,19 @@ LogDigest digestLog(const std::string& text, size_t keep) {
         if (!stamped(l)) continue;
         const std::string level = l.substr(13, 5);
         const std::string msg = l.substr(19);
-        if (msg.rfind("uaRO Graphics ", 0) == 0) {
+        if (msg.rfind("uaRO Graphics ", 0) == 0) {  // a start: the lines after it are that run's
             const size_t end = msg.find(' ', 14);
             d.version = msg.substr(14, end == std::string::npos ? std::string::npos : end - 14);
+            d.crisp.clear();
+            d.crispScale.clear();
         } else if (msg.rfind("renderer: ", 0) == 0) {
             d.renderer = msg.substr(10);
+        } else if (msg.rfind("crisp text: ", 0) == 0) {
+            const std::string what = msg.substr(12);
+            if (what == "on" || what.rfind("off", 0) == 0)
+                d.crisp = what;
+            else if (what.rfind("k ", 0) == 0)
+                d.crispScale = what;
         }
         const size_t frames = msg.find(" frames in ");
         const size_t open = msg.find(" (", frames == std::string::npos ? 0 : frames);

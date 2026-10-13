@@ -89,3 +89,20 @@ TEST(registry_first_run_has_all_the_game_needs) {
         CHECK(w.value.isSz() || w.value.type == uint32_t(RegType::Binary) || w.value.asDword().has_value());
     CHECK(effectiveValue(r, "", "TRILINEARFILTER")->asDword() == 0u);
 }
+
+TEST(game_registry_lists_the_setup_values_the_copies_differ_in) {
+    GameRegistry r;
+    r.personal.exists = r.common.exists = true;
+    r.personal.keys[""]["WIDTH"] = RegValue::dword(1680);
+    r.common.keys[""]["WIDTH"] = RegValue::dword(1920);
+    r.personal.keys[""]["HEIGHT"] = RegValue::dword(1080);
+    r.common.keys[""]["HEIGHT"] = RegValue::dword(1080);
+    r.personal.keys[""]["PROVIDERNAME"] = RegValue::sz("Miles Fast 2D Positional Audio");
+    r.common.keys[""]["PROVIDERNAME"] = RegValue::sz("No Provider");
+    r.personal.keys[""]["SOUNDMODE"] = RegValue::dword(0);  // in one copy only: nothing to compare
+    const std::vector<CopyDifference> d = copyDifferences(r, setupValues());
+    CHECK_EQ(d.size(), size_t(2));
+    CHECK(d.size() == 2 && d[0].name == "WIDTH" && d[0].personal == "1680" && d[0].common == "1920");
+    CHECK(d.size() == 2 && d[1].name == "PROVIDERNAME" && d[1].personal == "Miles Fast 2D Positional Audio" &&
+          d[1].common == "No Provider");
+}

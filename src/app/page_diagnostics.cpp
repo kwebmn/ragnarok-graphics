@@ -34,10 +34,6 @@ std::string hresult(long hr) {
     return buf;
 }
 
-std::string dwordText(const RegValue* v) {
-    return v && v->asDword() ? num(static_cast<long long>(*v->asDword())) : std::string("-");
-}
-
 Text effectText(LayerEffect e) {
     switch (e) {
         case LayerEffect::RunAsAdmin: return Text::CompatRunAsAdmin;
@@ -115,7 +111,7 @@ public:
             if (cd->nmcd.dwDrawStage == CDDS_ITEMPREPAINT) {
                 const size_t i = size_t(cd->nmcd.dwItemSpec);
                 if (i < rows_.size()) cd->clrText = toneColor(rows_[i].tone);
-                return CDRF_DODEFAULT;
+                return CDRF_NEWFONT;  // a colour set here is taken, as documented (0.6.0 review M15)
             }
         } else if (n->code == LVN_ITEMCHANGED) {
             const LRESULT i = SendMessageW(list_, LVM_GETNEXTITEM, WPARAM(-1), LVNI_SELECTED);
@@ -152,6 +148,9 @@ private:
                                                        num(mon.scale), utf8(t(mon.hdr ? Text::Yes : Text::No))}) +
                                (mon.primary ? t(Text::MonitorMain) : L""),
                            Tone::Normal, {}});
+            out.push_back({tf(Text::DiagMonitorWork, {num(long(i) + 1)}),
+                           tf(Text::DiagMonitorWorkValue, {num(mon.work.width), num(mon.work.height)}), Tone::Normal,
+                           {}});
         }
         if (s.ddraw == Ddraw::Ours)
             out.push_back({t(Text::DiagDdraw), wide("uaRO Graphics " + s.installedVersion), Tone::Good, {}});
@@ -194,12 +193,9 @@ private:
                            tf(Text::DiagRegistryValue, {utf8(t(s.registry.personal.exists ? Text::Yes : Text::No)),
                                                         utf8(t(s.registry.common.exists ? Text::Yes : Text::No))}),
                            Tone::Normal, {}});
-            for (const char* name : {"ISFULLSCREENMODE", "WIDTH", "HEIGHT", "BITPERPIXEL"}) {
-                const RegValue* mine = s.registry.personal.find("", name);
-                const RegValue* common = s.registry.common.find("", name);
-                if (!mine || !common || *mine == *common) continue;
-                const std::string n = name;
-                out.push_back({wide(n), tf(Text::DiagRegistryDiffers, {dwordText(mine), dwordText(common)}), Tone::Warn,
+            for (const CopyDifference& d : copyDifferences(s.registry, setupValues())) {  // screen and sound (§7)
+                const std::string n = d.name;
+                out.push_back({wide(n), tf(Text::DiagRegistryDiffers, {d.personal, d.common}), Tone::Warn,
                                [&m, n](Lang l) { return m.resetRegistryValue(n, l); }});
             }
         }
@@ -208,6 +204,14 @@ private:
         } else {
             if (!s.log.renderer.empty())
                 out.push_back({t(Text::DiagLogRenderer), wide(s.log.renderer), Tone::Normal, {}});
+            if (!s.log.crisp.empty()) {  // spec §7: the lines of crisp text
+                const Tone tone = s.log.crisp == "on"                     ? Tone::Good
+                                  : s.log.crisp == "off (crisp_text = 0)" ? Tone::Muted
+                                                                          : Tone::Warn;
+                out.push_back({t(Text::DiagLogCrisp),
+                               wide(s.log.crisp + (s.log.crispScale.empty() ? "" : "; " + s.log.crispScale)), tone,
+                               {}});
+            }
             out.push_back({t(Text::DiagLogErrors),
                            s.log.errorCount == 0
                                ? t(Text::DiagLogErrorsNone)

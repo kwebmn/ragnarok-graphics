@@ -12,6 +12,9 @@ struct LogDigest {
     std::string version;              // "0.6.0" from "uaRO Graphics 0.6.0 in ..."
     std::string renderer;             // what follows "renderer: "
     std::string fps;                  // "129.4 fps" from the last stats line
+    // Crisp text at the last start (spec §7): "on" or "off (<why>)", and the last "k 2.625, 74 windows redrawn".
+    std::string crisp;
+    std::string crispScale;
     std::vector<std::string> errors;  // the last 10 ERROR messages
     size_t errorCount = 0;
     std::vector<std::string> tail;    // the last lines, whole, for the report

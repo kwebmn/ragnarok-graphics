@@ -122,4 +122,39 @@ std::vector<RegWrite> firstRunWrites(int width, int height, bool fullscreen) {
     };
 }
 
+namespace {
+
+std::string valueText(const RegValue& v) {
+    if (const auto d = v.asDword()) return std::to_string(*d);
+    if (v.isSz()) return v.text;
+    static const char kHex[] = "0123456789abcdef";
+    std::string out;
+    for (const uint8_t b : v.bytes) {
+        if (!out.empty()) out += ' ';
+        out += kHex[b >> 4];
+        out += kHex[b & 15];
+    }
+    return out;
+}
+
+}  // namespace
+
+std::vector<CopyDifference> copyDifferences(const GameRegistry& r, const std::vector<std::string>& names) {
+    std::vector<CopyDifference> out;
+    for (const std::string& name : names) {
+        const RegValue* mine = r.personal.find("", name);
+        const RegValue* common = r.common.find("", name);
+        if (mine && common && *mine != *common) out.push_back({name, valueText(*mine), valueText(*common)});
+    }
+    return out;
+}
+
+const std::vector<std::string>& setupValues() {
+    static const std::vector<std::string> names{"ISFULLSCREENMODE", "WIDTH",           "HEIGHT",
+                                                "BITPERPIXEL",      "SOUNDMODE",       "DIGITALRATETYPE",
+                                                "DIGITALBITSTYPE",  "NUMSAMPLETYPE",   "SPEAKERTYPE",
+                                                "PROVIDERNAME"};
+    return names;
+}
+
 }  // namespace uagfx::settings

@@ -48,6 +48,16 @@ struct GameRegistry {
 std::optional<RegValue> effectiveValue(const GameRegistry& r, const std::string& subkey, const std::string& name);
 bool gameKeyExists(const GameRegistry& r);  // in either copy
 
+// A value of the key itself that both copies hold, differently (stage 2 spec §7): the personal one wins.
+struct CopyDifference {
+    std::string name;
+    std::string personal;  // as text: the number, the string, else the bytes in hex
+    std::string common;
+};
+std::vector<CopyDifference> copyDifferences(const GameRegistry& r, const std::vector<std::string>& names);
+// What setup.exe writes for the screen and the sound: the values the Diagnostics page compares (spec §7).
+const std::vector<std::string>& setupValues();
+
 enum class RegOp { Set, Delete };
 // One change of the personal copy.
 struct RegWrite {
