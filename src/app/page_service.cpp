@@ -49,7 +49,7 @@ public:
             SendMessageW(list_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(backupLabel(b).c_str()));
         if (m.now().backups.empty()) p.note(t(Text::BackupNone));
         p.buttons({{kRestore, t(Text::BackupRestore)}, {kKeepFive, t(Text::BackupPrune)}}, !m.now().backups.empty());
-        if (m.now().gameRunning) {  // it writes what the game writes too, and ROExt's ini (spec §4.1)
+        if (m.now().gameRunning && !m.now().backups.empty()) {  // it writes what the game writes too (spec §4.1)
             EnableWindow(GetDlgItem(host_.window(), kRestore), FALSE);
             p.note(t(Text::ErrGameRunning), Tone::Warn);
         }
