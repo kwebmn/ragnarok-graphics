@@ -25,4 +25,12 @@ SIZE clientPixels(HWND hwnd, bool physical) {
     return SIZE{std::max<LONG>(1, rc.right - rc.left), std::max<LONG>(1, rc.bottom - rc.top)};
 }
 
+RealPixels::RealPixels() {
+    if (const SetContextFn set = setContext()) old_ = set(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+}
+
+RealPixels::~RealPixels() {
+    if (old_) setContext()(old_);
+}
+
 }  // namespace uagfx::win

@@ -183,10 +183,12 @@ void Context::watchSettings() {
     config = u.next;  // render_scale, high_resolution, sharpen, vsync and fps_limit are read at every present
     if (config.uiFilter != was.uiFilter) renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     if (config.crispText != was.crispText) {
-        if (config.crispText)
+        if (config.crispText) {
             crisp::install(true);
-        else
+        } else {
             crisp::uninstall();
+            LOG_INFO("crisp text: off (crisp_text = 0)");  // as at a start without it: the Diagnostics page reads it
+        }
     }
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
     std::string line = "settings: uaro-graphics.ini changed:";

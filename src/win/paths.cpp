@@ -40,6 +40,7 @@ bool readTextFile(const std::string& path, std::string& out) {
         ok = out.empty() || (ReadFile(f, &out[0], DWORD(out.size()), &got, nullptr) && got == out.size());
     }
     CloseHandle(f);
+    if (!ok) out.clear();  // not half a file: a caller that does not look at the answer reads nothing
     return ok;
 }
 

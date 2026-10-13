@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "core/window_plan.hpp"
+#include "win/dpi.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
@@ -36,6 +37,19 @@ RECT monitorRect(int index) {
     return mi.rcMonitor;
 }
 
+// Borderless over the monitor in its real pixels. uaRO.exe is not DPI-aware: in its coordinates a 3840 x 2160 monitor
+// at 175 % is 2194 x 1234, and a window of that size came out 3839 x 2159 (0.6.1). False when it did not land on the
+// monitor's pixels - Windows before 10 1607, or one that placed it otherwise - and `got` is where it went.
+bool placeInPixels(HWND hwnd, int monitor, RECT& got) {
+    RealPixels real;
+    if (!real.active()) return false;
+    const RECT mon = monitorRect(monitor);  // EnumDisplayMonitors and GetMonitorInfo tell real pixels now
+    SetWindowPos(hwnd, HWND_NOTOPMOST, mon.left, mon.top, mon.right - mon.left, mon.bottom - mon.top,
+                 SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+    GetWindowRect(hwnd, &got);
+    return got.left == mon.left && got.top == mon.top && got.right == mon.right && got.bottom == mon.bottom;
+}
+
 const char* actionName(WindowAction a) {
     switch (a) {
         case WindowAction::Window: return "a normal window";
@@ -65,6 +79,12 @@ void applyWindowMode(HWND hwnd, const Config& config, bool gameFullscreen, int g
         SetWindowLongA(hwnd, GWL_STYLE, LONG(WS_POPUP) | visible);
         SetWindowLongA(hwnd, GWL_EXSTYLE,
                        ex & ~LONG(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE | WS_EX_WINDOWEDGE | WS_EX_TOPMOST));
+        RECT got{};
+        if (placeInPixels(hwnd, config.monitor, got)) {
+            LOG_INFO("window: %s (mode = %s), %ldx%ld real pixels at %ld,%ld", actionName(action),
+                     displayModeToken(config.mode), got.right - got.left, got.bottom - got.top, got.left, got.top);
+            return;
+        }
         SetWindowPos(hwnd, HWND_NOTOPMOST, mon.left, mon.top, mon.right - mon.left, mon.bottom - mon.top,
                      SWP_FRAMECHANGED | SWP_SHOWWINDOW);
     } else {
