@@ -89,5 +89,7 @@ ScreenNow currentScreen(bool regFullscreen, Size regSize, const Config& ini, con
                         const std::vector<MonitorInfo>& monitors, Backend backend);
 
 bool integerScale(double s);  // ×2, ×3...: the crispest interface
+// The game's size L in a window of W real pixels with the interface at u %: W·100/u, rounded (spec §5.3).
+Size gameSize(Size window, int ui);
 
 }  // namespace uagfx::settings

@@ -197,3 +197,12 @@ TEST(screen_now_reads_what_the_game_will_get) {
     CHECK(again.game == (Size{1920, 1080}));
     CHECK(again.mode == DisplayMode::Auto);
 }
+
+TEST(screen_game_size_in_a_window_is_rounded_as_the_plan) {
+    CHECK(gameSize({3360, 1890}, 175) == (Size{1920, 1080}));
+    CHECK(gameSize({2560, 1440}, 175) == (Size{1463, 823}));  // 1462.9 x 822.9: rounded, not cut
+    ScreenChoice c;
+    c.window = {2560, 1440};
+    c.ui = 175;
+    CHECK(planScreen(c, {fourK()}, Backend::Uaro, RoextWindow{}, Frame{}).game == gameSize(c.window, c.ui));
+}

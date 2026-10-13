@@ -87,8 +87,9 @@ public:
             int selected = -1;
             for (size_t i = 0; i < sizes_.size(); ++i) {
                 const Size s = sizes_[i];
-                items.push_back(tf(Text::WindowItem, {num(s.width), num(s.height), num(s.width * 100 / ui),
-                                                      num(s.height * 100 / ui)}));
+                const Size game = gameSize(s, ui);  // as the plan rounds it (0.6.0 review M15)
+                items.push_back(
+                    tf(Text::WindowItem, {num(s.width), num(s.height), num(game.width), num(game.height)}));
                 if (s == c.window) selected = int(i);
             }
             p.choice(kSize, t(Text::ScreenWindowSize), items, selected, t(Text::ScreenWindowSizeHint), open);
@@ -101,7 +102,7 @@ public:
         } else {
             const Size out = c.show == Show::Fullscreen ? mon.pixels : c.window;
             std::wstring line = tf(Text::ScreenResult, {num(plan.game.width), num(plan.game.height), num(out.width),
-                                                        num(out.height), scaleText(plan.s)});
+                                                        num(out.height), scaleText(plan.s, host_.lang())});
             if (integerScale(plan.s)) line += t(Text::ScreenCrispest);
             p.note(line, Tone::Normal);
         }

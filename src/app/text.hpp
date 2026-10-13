@@ -12,6 +12,6 @@ std::string utf8(const std::wstring& w);
 std::wstring wtr(settings::Lang l, settings::Text t);
 std::wstring wtrf(settings::Lang l, settings::Text t, const std::vector<std::string>& args);
 std::string num(long long v);  // "1920"
-std::string scaleText(double s);  // "1.75", the decimal point as the language writes it is not needed: always "."
+std::string scaleText(double s, settings::Lang l);  // "1.75"; Ukrainian and Russian write "1,75"
 
 }  // namespace uagfx::app

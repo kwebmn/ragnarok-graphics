@@ -70,7 +70,7 @@ ScreenPlan planScreen(const ScreenChoice& c, const std::vector<MonitorInfo>& mon
             p.problem = ScreenProblem::BadNumber;
             return p;
         }
-        p.game = scaled(c.window, 100, ui);
+        p.game = gameSize(c.window, ui);
         if (uaro) {
             p.writesIni = true;
             p.monitor = index;
@@ -167,5 +167,7 @@ ScreenNow currentScreen(bool regFullscreen, Size regSize, const Config& ini, con
 }
 
 bool integerScale(double s) { return s >= 1.999 && std::fabs(s - std::round(s)) < 0.001; }
+
+Size gameSize(Size window, int ui) { return scaled(window, 100, ui); }
 
 }  // namespace uagfx::settings
