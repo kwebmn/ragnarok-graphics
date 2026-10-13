@@ -27,10 +27,10 @@ TEST(pipeline_key_round_trips) {
 }
 
 TEST(pipeline_key_file_parses_its_own_lines) {
-    const std::string text = pipelineKeysHeader() + pipelineKeyLine(0x2453) + "zz\r\n\r\n" + pipelineKeyLine(0x2cb90);
+    const std::string text = pipelineKeysHeader() + pipelineKeyLine(0x2453) + "zz\r\n\r\n" + pipelineKeyLine(0x2cba0);
     const std::vector<uint64_t> keys = parsePipelineKeys(text);
     CHECK_EQ(keys.size(), size_t(2));  // the line that is not hex is skipped
-    CHECK(keys.size() == 2 && keys[0] == 0x2453 && keys[1] == 0x2cb90);
+    CHECK(keys.size() == 2 && keys[0] == 0x2453 && keys[1] == 0x2cba0);
     CHECK(pipelineKeyLine(0x1a2b) == "1a2b\n");
 }
 
@@ -62,4 +62,47 @@ TEST(pipeline_key_file_skips_keys_the_renderer_cannot_make) {
 TEST(pipeline_key_file_text_lists_each_key_once) {
     CHECK(pipelineKeysText({3, 1, 3}) == pipelineKeysHeader() + "1\n3\n");
     CHECK(pipelineKeysText({}) == pipelineKeysHeader());
+}
+
+TEST(pipeline_key_every_key_the_renderer_makes_is_valid) {
+    // Every D3D7 state the client can set, through resolveDrawSetup: none of the keys may be rejected (0.4.2 review).
+    const bool both[2] = {true, true};
+    int rejected = 0;
+    for (uint32_t z = 0; z < 2; ++z)
+        for (uint32_t zw = 0; zw < 2; ++zw)
+            for (uint32_t zf = CMP_NEVER; zf <= CMP_ALWAYS; ++zf)
+                for (uint32_t cull = CULL_NONE; cull <= CULL_CCW; ++cull)
+                    for (uint32_t blend = 0; blend < 2; ++blend)
+                        for (uint32_t src = BLEND_ZERO; src <= BLEND_BOTHINVSRCALPHA; ++src)
+                            for (uint32_t dst = BLEND_ZERO; dst <= BLEND_BOTHINVSRCALPHA; ++dst)
+                                for (const bool alpha : {false, true}) {
+                                    DeviceStates s;
+                                    s.setRender(RS_ZENABLE, z);
+                                    s.setRender(RS_ZWRITEENABLE, zw);
+                                    s.setRender(RS_ZFUNC, zf);
+                                    s.setRender(RS_CULLMODE, cull);
+                                    s.setRender(RS_ALPHABLENDENABLE, blend);
+                                    s.setRender(RS_SRCBLEND, src);
+                                    s.setRender(RS_DESTBLEND, dst);
+                                    const DrawSetup d = resolveDrawSetup(s, alpha, both);
+                                    for (const uint32_t fvf : {FVF_TL1, FVF_TL2})
+                                        if (!validPipelineKey(packPipelineKey(pipelineKey(d, fvf)))) ++rejected;
+                                }
+    CHECK_EQ(rejected, 0);
+}
+
+TEST(pipeline_key_forms_the_renderer_never_makes_are_rejected) {
+    PipelineKey k;
+    k.cull = CULL_NONE;
+    k.srcBlend = BLEND_ONE;
+    k.dstBlend = BLEND_ZERO;
+    k.zFunc = CMP_LESSEQUAL;  // without a Z test resolveDrawSetup gives ALWAYS
+    CHECK(!validPipelineKey(packPipelineKey(k)));
+    k.zFunc = CMP_ALWAYS;
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    k.srcBlend = BLEND_SRCALPHA;  // no blending means ONE, ZERO
+    CHECK(!validPipelineKey(packPipelineKey(k)));
+    k.srcBlend = BLEND_ONE;
+    k.cull = 0;  // no such cull mode
+    CHECK(!validPipelineKey(packPipelineKey(k)));
 }

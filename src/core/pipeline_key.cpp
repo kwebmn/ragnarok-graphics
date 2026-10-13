@@ -75,8 +75,12 @@ std::vector<uint64_t> parsePipelineKeys(const std::string& text) {
 
 bool validPipelineKey(uint64_t v) {
     const PipelineKey k = unpackPipelineKey(v);
-    return packPipelineKey(k) == v && k.srcBlend <= d3d7::BLEND_SRCALPHASAT && k.dstBlend <= d3d7::BLEND_SRCALPHASAT &&
-           k.zFunc <= d3d7::CMP_ALWAYS;
+    if (packPipelineKey(k) != v || k.cull < d3d7::CULL_NONE) return false;
+    if (k.zEnable ? k.zFunc < d3d7::CMP_NEVER || k.zFunc > d3d7::CMP_ALWAYS : k.zFunc != d3d7::CMP_ALWAYS || k.zWrite)
+        return false;
+    if (!k.blend) return k.srcBlend == d3d7::BLEND_ONE && k.dstBlend == d3d7::BLEND_ZERO;
+    const auto factor = [](uint8_t f) { return f >= d3d7::BLEND_ZERO && f <= d3d7::BLEND_SRCALPHASAT; };
+    return factor(k.srcBlend) && factor(k.dstBlend);
 }
 
 std::string pipelineKeysText(const std::vector<uint64_t>& keys) {
