@@ -26,6 +26,9 @@ constexpr uint32_t kImportTextOutW = 0x695084;
 constexpr uint32_t kImportFillRgn = 0x69507C;
 constexpr uint32_t kImportCreateDibSection = 0x6950A0;
 constexpr uint32_t kCreateDibReturn = 0x403A16;  // after the only call (FUN_00403960): its ppvBits is &bitmap->bits
+// The mode fade's logo (FUN_004ce140): a picture made, copied into, drawn once and deleted on every call - no text.
+constexpr uint32_t kLogoCopyReturn = 0x4CE188;  // after its CopyPixels (call at 0x4CE185)
+constexpr uint32_t kLogoDrawReturn = 0x4CE1A7;  // after its Draw (call at 0x4CE1A4)
 // UIWindowMgr (0x727ED8): the list of top-level windows; UIWindow: the flag Invalidate sets, its children.
 constexpr uint32_t kWindowList = 0x727ED8 + 0x38;  // the pointer to the list's head node
 constexpr uint32_t kWindowDirty = 0x24;            // a dword

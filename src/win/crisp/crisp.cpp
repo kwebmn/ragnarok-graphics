@@ -126,6 +126,11 @@ uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
 // before the call.
 uint32_t UAGFX_THISCALL onCopyPixels(void* p, int x, int y, int w, int h, const uint32_t* src, int key) {
     Guard guard;
+    // The mode fade's logo: no twin for a picture drawn once and deleted (0.5.0 review M6).
+    if (reinterpret_cast<uintptr_t>(__builtin_return_address(0)) == ce::kLogoCopyReturn) {
+        guarded([p] { drop(self(p)); }, [] {});
+        return original<CopyPixelsFn>(ce::kCopyPixels)(p, x, y, w, h, src, key);
+    }
     Picture* pic = nullptr;
     int rows = 0;
     guarded(
@@ -262,6 +267,8 @@ void uploadTiles(Picture& pic) {
 // calls goes into the twin enlarged - then the game's own upload and quads, then the twin textures.
 uint32_t UAGFX_THISCALL onDraw(void* p, int x, int y, int w, int h, uint32_t argb) {
     Guard guard;
+    if (reinterpret_cast<uintptr_t>(__builtin_return_address(0)) == ce::kLogoDrawReturn)
+        return original<DrawFn>(ce::kDraw)(p, x, y, w, h, argb);  // the fade's logo: no twin (0.5.0 review M6)
     Picture* pic = nullptr;
     guarded(
         [&] {
