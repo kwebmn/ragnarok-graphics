@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "core/frame.hpp"
+#include "core/log_once.hpp"
 #include "win/gpu/renderer.hpp"
 
 namespace uagfx::gpu {
@@ -88,6 +89,8 @@ struct Renderer::Impl {
     UINT slot = 0;
     bool open = false;
     std::string adapter;
+    LogOnce failures;
+    bool lost = false;  // the device was removed (driver crash, TDR): no more GPU work, the reason is in the log
 
     ID3D12DescriptorHeap* cpuSrv = nullptr;
     std::vector<UINT> freeSrv;
@@ -134,6 +137,8 @@ struct Renderer::Impl {
     Rect picture;  // where present() last put the picture in the window, for the log
     UINT swapWidth = 0;
     UINT swapHeight = 0;
+    UINT failedWidth = 0;  // a swap chain of this size could not be made: not retried every frame
+    UINT failedHeight = 0;
     bool tearingSupported = false;
     LARGE_INTEGER lastPresent{};
 
@@ -153,6 +158,7 @@ struct Renderer::Impl {
     void waitSlot(Slot& s);
     void waitIdle();
     void retireDying();  // after execute() has submitted: the dying textures go with that submission
+    void failed(uint32_t place, const char* what, HRESULT hr);
     bool growUpload(Slot& s, UINT64 size);
     Upload allocUpload(UINT64 size, UINT64 alignment);
     void transition(ID3D12Resource* r, D3D12_RESOURCE_STATES& state, D3D12_RESOURCE_STATES to);

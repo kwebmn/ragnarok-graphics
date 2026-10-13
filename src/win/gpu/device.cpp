@@ -66,13 +66,16 @@ ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, 
 
 bool Renderer::Impl::begin() {
     if (open) return true;
+    if (lost) return false;
     Slot& s = slots[slot];
     waitSlot(s);
     for (IUnknown* g : s.garbage) g->Release();
     s.garbage.clear();
     s.used = 0;
-    if (FAILED(s.allocator->Reset()) || FAILED(list->Reset(s.allocator, nullptr))) {
-        LOG_ERROR("command list reset failed");
+    HRESULT hr = s.allocator->Reset();
+    if (SUCCEEDED(hr)) hr = list->Reset(s.allocator, nullptr);
+    if (FAILED(hr)) {
+        failed(1, "command list reset", hr);
         return false;
     }
     ID3D12DescriptorHeap* heaps[2] = {gpuSrv, samplerHeap};
@@ -88,9 +91,9 @@ bool Renderer::Impl::begin() {
 void Renderer::Impl::submit() {
     if (!open) return;
     open = false;
-    if (FAILED(list->Close())) {
-        LOG_ERROR("command list close failed (device removed: 0x%08lx)",
-                  static_cast<unsigned long>(device->GetDeviceRemovedReason()));
+    const HRESULT hr = list->Close();
+    if (FAILED(hr)) {
+        failed(2, "command list close", hr);
         return;
     }
     ID3D12CommandList* lists[1] = {list};
@@ -109,11 +112,26 @@ void Renderer::Impl::waitSlot(Slot& s) {
 
 void Renderer::Impl::waitIdle() {
     submit();
+    if (lost) return;  // a removed device's fence never moves on
     queue->Signal(fence, ++fenceValue);
     if (fence->GetCompletedValue() < fenceValue) {
         fence->SetEventOnCompletion(fenceValue, fenceEvent);
         WaitForSingleObject(fenceEvent, INFINITE);
     }
+}
+
+// A failed call is logged once per place and code. A removed device (driver crash, TDR) stops all further GPU work
+// with its reason in the log, instead of failing - and waiting - again every frame.
+void Renderer::Impl::failed(uint32_t place, const char* what, HRESULT hr) {
+    const HRESULT reason = device ? device->GetDeviceRemovedReason() : S_OK;
+    if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || FAILED(reason)) {
+        if (!lost)
+            LOG_ERROR("%s: the GPU device was removed (0x%08lx, reason 0x%08lx); the picture stops here, restart the game",
+                      what, static_cast<unsigned long>(hr), static_cast<unsigned long>(reason));
+        lost = true;
+        return;
+    }
+    if (failures.first(place, uint32_t(hr))) LOG_ERROR("%s failed: 0x%08lx", what, static_cast<unsigned long>(hr));
 }
 
 bool Renderer::Impl::growUpload(Slot& s, UINT64 size) {
@@ -285,13 +303,17 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, bool wantTearing) {
     const UINT w = UINT(std::max<LONG>(1, rc.right - rc.left));
     const UINT h = UINT(std::max<LONG>(1, rc.bottom - rc.top));
     if (swapChain && hwnd == window && w == swapWidth && h == swapHeight) return true;
+    if (!swapChain && w == failedWidth && h == failedHeight) return false;  // tried: wait for another size
     waitIdle();
     const UINT flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     if (swapChain && hwnd == window) {  // the window changed size
         for (ID3D12Resource*& b : backBuffers) releaseCom(b);
-        if (FAILED(swapChain->ResizeBuffers(2, w, h, DXGI_FORMAT_B8G8R8A8_UNORM, flags))) {
-            LOG_ERROR("swap chain resize to %ux%u failed", w, h);
+        const HRESULT hr = swapChain->ResizeBuffers(2, w, h, DXGI_FORMAT_B8G8R8A8_UNORM, flags);
+        if (FAILED(hr)) {
+            failed(3, "swap chain resize", hr);
             releaseSwapChain();
+            failedWidth = w;
+            failedHeight = h;
             return false;
         }
     } else {
@@ -314,10 +336,13 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, bool wantTearing) {
         d.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
         d.Flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
         IDXGISwapChain1* sc1 = nullptr;
-        if (FAILED(factory->CreateSwapChainForHwnd(queue, hwnd, &d, nullptr, nullptr, &sc1)) ||
-            FAILED(sc1->QueryInterface(__uuidof(IDXGISwapChain3), reinterpret_cast<void**>(&swapChain)))) {
-            LOG_ERROR("cannot create a swap chain for the game window");
+        HRESULT hr = factory->CreateSwapChainForHwnd(queue, hwnd, &d, nullptr, nullptr, &sc1);
+        if (SUCCEEDED(hr)) hr = sc1->QueryInterface(__uuidof(IDXGISwapChain3), reinterpret_cast<void**>(&swapChain));
+        if (FAILED(hr)) {
+            failed(4, "swap chain creation", hr);
             releaseCom(sc1);
+            failedWidth = w;
+            failedHeight = h;
             return false;
         }
         sc1->Release();
@@ -335,6 +360,7 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, bool wantTearing) {
     }
     swapWidth = w;
     swapHeight = h;
+    failedWidth = failedHeight = 0;
     return true;
 }
 
@@ -563,7 +589,7 @@ void Renderer::Impl::retireDying() {
 
 void Renderer::execute(const FrameRecord& record) {
     Impl& m = *impl_;
-    if (!m.target || record.empty() || !m.begin()) return;
+    if (m.lost || !m.target || record.empty() || !m.begin()) return;
     m.prepareGeometry(record);
     for (const Command& c : record.commands()) {
         switch (c.type) {
@@ -581,7 +607,7 @@ void Renderer::execute(const FrameRecord& record) {
 
 bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     Impl& m = *impl_;
-    if (!m.target || !m.begin()) return false;
+    if (m.lost || !m.target || !m.begin()) return false;
     const UINT pitch = UINT(alignUp(UINT64(m.width) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
     const UINT64 size = UINT64(pitch) * UINT64(m.height);
     if (m.readbackSize < size) {
@@ -608,7 +634,11 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     m.waitIdle();
     uint8_t* data = nullptr;
     D3D12_RANGE all{0, SIZE_T(size)};
-    if (FAILED(m.readback->Map(0, &all, reinterpret_cast<void**>(&data)))) return false;
+    const HRESULT hr = m.readback->Map(0, &all, reinterpret_cast<void**>(&data));
+    if (FAILED(hr)) {
+        m.failed(6, "reading the frame back", hr);
+        return false;
+    }
     argb.resize(size_t(m.width) * size_t(m.height));
     for (int y = 0; y < m.height; ++y)
         std::memcpy(argb.data() + size_t(y) * size_t(m.width), data + UINT64(y) * pitch, size_t(m.width) * 4);
@@ -619,7 +649,7 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
 
 void Renderer::present(HWND window, const Rect& source, const PresentOptions& options) {
     Impl& m = *impl_;
-    if (!m.target || !window || source.empty()) return;
+    if (m.lost || !m.target || !window || source.empty()) return;
     if (!m.ensureSwapChain(window, options.allowTearing) || !m.begin()) return;
     const UINT index = m.swapChain->GetCurrentBackBufferIndex();
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -675,7 +705,10 @@ void Renderer::present(HWND window, const Rect& source, const PresentOptions& op
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = m.swapChain->Present(sync, flags);
-    if (FAILED(hr)) LOG_ERROR("Present failed: 0x%08lx", static_cast<unsigned long>(hr));
+    if (FAILED(hr))
+        m.failed(5, "Present", hr);
+    else if (hr == DXGI_STATUS_OCCLUDED)
+        Sleep(15);  // the window is covered: Present does not wait for vblank, keep the game's loop from spinning
 }
 
 }  // namespace uagfx::gpu
