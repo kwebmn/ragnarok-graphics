@@ -2,15 +2,70 @@
 """Checks the cross-built uaro-graphics.exe, the settings app (stage 2 spec §3.1).
 
 - It is a 32-bit Windows GUI program.
-- It imports system DLLs of Windows 7 only, and no function Windows 7 lacks: those are found at run time.
+- It imports only the functions on the list below: system DLLs and functions Windows 7 has. The list is of what is
+  allowed, not of what is not (0.6.0 review M7): a new import fails until someone checks that Windows 7 has it and
+  adds it; a newer function is found at run time (GetProcAddress) instead.
 - Its manifest asks for no administrator rights (asInvoker) and per-monitor DPI.
 """
 import struct
 import sys
 
-ALLOWED_DLLS = {"kernel32.dll", "user32.dll", "gdi32.dll", "comctl32.dll", "shell32.dll", "ole32.dll", "advapi32.dll",
-                "msvcrt.dll"}
-# Newer than Windows 7: a static import of any of them would keep the program from starting there.
+# Every function the settings app imports, each one Windows 7 has.
+ALLOWED = {
+    "advapi32.dll": {
+        "GetTokenInformation", "OpenProcessToken", "RegCloseKey", "RegCreateKeyExW", "RegDeleteTreeW",
+        "RegDeleteValueW", "RegEnumKeyExW", "RegEnumValueW", "RegOpenKeyExW", "RegSetValueExW",
+    },
+    "comctl32.dll": {
+        "InitCommonControlsEx",
+    },
+    "gdi32.dll": {
+        "CreateFontIndirectW", "DeleteObject", "GetDeviceCaps", "GetTextExtentPoint32W", "SelectObject",
+        "SetBkMode", "SetTextColor",
+    },
+    "kernel32.dll": {
+        "CloseHandle", "CreateDirectoryW", "CreateFileW", "CreateSemaphoreW", "CreateToolhelp32Snapshot",
+        "DeleteCriticalSection", "DeleteFileW", "EnterCriticalSection", "FindClose", "FindFirstFileW",
+        "FindNextFileW", "FindResourceW", "FlushFileBuffers", "FormatMessageA", "FreeLibrary", "GetCurrentProcess",
+        "GetCurrentThreadId", "GetEnvironmentVariableW", "GetFileAttributesW", "GetFileSizeEx", "GetLastError",
+        "GetLocalTime", "GetModuleFileNameW", "GetModuleHandleA", "GetModuleHandleW", "GetProcAddress",
+        "GetStartupInfoW", "GetSystemDirectoryA", "GetSystemDirectoryW", "GetUserDefaultUILanguage", "GlobalAlloc",
+        "GlobalFree", "GlobalLock", "GlobalUnlock", "InitializeCriticalSection", "IsDBCSLeadByteEx",
+        "IsWow64Process", "LeaveCriticalSection", "LoadLibraryA", "LoadLibraryW", "LoadResource", "LocalFree",
+        "LockResource", "MoveFileExW", "MulDiv", "MultiByteToWideChar", "OpenProcess", "Process32FirstW",
+        "Process32NextW", "QueryFullProcessImageNameW", "ReadFile", "ReleaseSemaphore", "RemoveDirectoryW",
+        "SetLastError", "SetUnhandledExceptionFilter", "SizeofResource", "Sleep", "TlsAlloc", "TlsFree",
+        "TlsGetValue", "TlsSetValue", "VirtualProtect", "VirtualQuery", "WaitForSingleObject",
+        "WideCharToMultiByte", "WriteFile", "lstrcmpiW", "lstrcpyW",
+    },
+    "msvcrt.dll": {
+        "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",
+        "__wgetmainargs", "__winitenv", "_amsg_exit", "_cexit", "_close", "_errno", "_initterm", "_iob", "_onexit",
+        "_read", "abort", "atoi", "calloc", "exit", "fprintf", "fputc", "fputs", "fputwc", "free", "fwprintf",
+        "fwrite", "iswctype", "localeconv", "malloc", "memchr", "memcmp", "memcpy", "memmove", "memset", "realloc",
+        "setlocale", "signal", "strchr", "strcmp", "strcoll", "strerror", "strftime", "strlen", "strncmp", "strtol",
+        "strtoul", "strxfrm", "tolower", "toupper", "towlower", "towupper", "vfprintf", "wcscoll", "wcsftime",
+        "wcslen", "wcsxfrm",
+    },
+    "ole32.dll": {
+        "CoInitializeEx", "CoUninitialize",
+    },
+    "shell32.dll": {
+        "SHGetFolderPathW", "ShellExecuteExW", "ShellExecuteW",
+    },
+    "user32.dll": {
+        "AdjustWindowRectEx", "CloseClipboard", "CreateWindowExW", "DefWindowProcW", "DestroyWindow",
+        "DispatchMessageW", "DrawTextW", "EmptyClipboard", "EnableWindow", "EnumDisplayMonitors",
+        "EnumDisplaySettingsExW", "FindWindowW", "GetClientRect", "GetDC", "GetDlgCtrlID", "GetDlgItem", "GetFocus",
+        "GetMessageW", "GetMonitorInfoW", "GetSysColor", "GetSysColorBrush", "GetWindowLongW", "GetWindowRect",
+        "GetWindowTextW", "IsChild", "IsDialogMessageW", "KillTimer", "LoadCursorW", "LoadIconW", "MapWindowPoints",
+        "MessageBoxW", "MoveWindow", "OpenClipboard", "PostMessageW", "PostQuitMessage", "RegisterClassExW",
+        "ReleaseDC", "SendMessageW", "SetClipboardData", "SetDlgItemTextW", "SetFocus", "SetForegroundWindow",
+        "SetTimer", "SetWindowLongW", "SetWindowPos", "SetWindowTextW", "ShowWindow", "SystemParametersInfoW",
+        "TranslateMessage", "wsprintfW",
+    },
+}
+# Newer than Windows 7: never on the list above (a check of the list itself).
 NOT_ON_WINDOWS_7 = {"GetDpiForWindow", "GetDpiForSystem", "SystemParametersInfoForDpi", "AdjustWindowRectExForDpi",
                     "SetThreadDpiAwarenessContext", "SetProcessDpiAwarenessContext", "GetDpiForMonitor",
                     "EnableNonClientDpiScaling", "GetSystemMetricsForDpi", "D3D12CreateDevice", "CreateDXGIFactory1",
@@ -52,30 +107,35 @@ def main(path):
         o = off(rva)
         return data[o:data.index(b"\0", o)].decode()
 
-    dlls, functions = [], []
+    listed_late = sorted(set().union(*ALLOWED.values()) & NOT_ON_WINDOWS_7)
+    if listed_late:
+        fail("the list holds functions Windows 7 does not have: " + ", ".join(listed_late))
+    dlls, imports = [], []
     o = off(imp_rva)
     while struct.unpack_from("<I", data, o + 12)[0]:
         lookup, _, _, name, first = struct.unpack_from("<IIIII", data, o)
-        dlls.append(cstr(name).lower())
+        dll = cstr(name).lower()
+        dlls.append(dll)
         t = off(lookup or first)
         while True:
             entry = struct.unpack_from("<I", data, t)[0]
             if entry == 0:
                 break
             if not entry & 0x80000000:
-                functions.append(cstr(entry + 2))
+                imports.append((dll, cstr(entry + 2)))
             t += 4
         o += 20
-    bad = [d for d in dlls if d not in ALLOWED_DLLS]
+    bad = [d for d in dlls if d not in ALLOWED]
     if bad:
         fail("unexpected imports: " + ", ".join(bad))
-    late = sorted(set(functions) & NOT_ON_WINDOWS_7)
-    if late:
-        fail("imports functions Windows 7 does not have: " + ", ".join(late))
+    unknown = sorted("%s!%s" % (d, f) for d, f in imports if f not in ALLOWED[d])
+    if unknown:
+        fail("imports functions not on the list: " + ", ".join(unknown) +
+             " - check that Windows 7 has them, then add them to ALLOWED")
     for needed in (b"asInvoker", b"PerMonitorV2", b"Microsoft.Windows.Common-Controls"):
         if needed not in data:
             fail("the manifest has no " + needed.decode())
-    print("OK: %s: GUI, %d functions from %s, asInvoker, per-monitor DPI" % (path, len(functions), " ".join(dlls)))
+    print("OK: %s: GUI, %d functions from %s, asInvoker, per-monitor DPI" % (path, len(imports), " ".join(dlls)))
 
 
 if __name__ == "__main__":
