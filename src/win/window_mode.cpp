@@ -8,18 +8,27 @@
 namespace uagfx::win {
 namespace {
 
+struct Monitor {
+    RECT rect;
+    bool primary;
+};
+
 BOOL CALLBACK addMonitor(HMONITOR m, HDC, LPRECT, LPARAM data) {
     MONITORINFO mi{};
     mi.cbSize = sizeof mi;
-    if (GetMonitorInfoA(m, &mi)) reinterpret_cast<std::vector<RECT>*>(data)->push_back(mi.rcMonitor);
+    if (GetMonitorInfoA(m, &mi))
+        reinterpret_cast<std::vector<Monitor>*>(data)->push_back(Monitor{mi.rcMonitor, (mi.dwFlags & MONITORINFOF_PRIMARY) != 0});
     return TRUE;
 }
 
 RECT monitorRect(int index) {
     if (index > 0) {
-        std::vector<RECT> all;
+        std::vector<Monitor> all;
         EnumDisplayMonitors(nullptr, nullptr, addMonitor, reinterpret_cast<LPARAM>(&all));
-        if (size_t(index) < all.size()) return all[size_t(index)];
+        std::vector<bool> primary;
+        for (const Monitor& m : all) primary.push_back(m.primary);
+        const int i = monitorIndex(primary, index);
+        if (i >= 0) return all[size_t(i)].rect;
     }
     MONITORINFO mi{};
     mi.cbSize = sizeof mi;

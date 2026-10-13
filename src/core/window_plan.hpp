@@ -1,4 +1,6 @@
 #pragma once
+#include <vector>
+
 #include "core/config.hpp"
 #include "core/image.hpp"
 
@@ -18,5 +20,10 @@ WindowAction windowAction(const Config& config, bool gameFullscreen);
 // Where a width x height picture goes in an outWidth x outHeight window: as large as fits, shape kept, centred, on
 // whole pixels. A fractional offset would make every output pixel sample between two source pixels.
 Rect fitPicture(int width, int height, int outWidth, int outHeight);
+
+// [display] monitor = N: 0 is the main monitor, then the others in Windows' order (1B review M9: EnumDisplayMonitors
+// does not list the main one first). primary: a flag per monitor in enumeration order. Returns the enumeration index
+// of monitor N, or -1 when there is no such monitor.
+int monitorIndex(const std::vector<bool>& primary, int wanted);
 
 }  // namespace uagfx

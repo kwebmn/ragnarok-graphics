@@ -52,3 +52,12 @@ TEST(fit_nothing_for_empty_sizes) {
     CHECK(fitPicture(0, 600, 1920, 1080).empty());
     CHECK(fitPicture(800, 600, 0, 0).empty());
 }
+
+TEST(winplan_monitors_are_counted_from_the_main_one) {
+    const std::vector<bool> primary = {false, true, false};  // Windows lists the main monitor second
+    CHECK_EQ(monitorIndex(primary, 0), 1);
+    CHECK_EQ(monitorIndex(primary, 1), 0);
+    CHECK_EQ(monitorIndex(primary, 2), 2);
+    CHECK_EQ(monitorIndex(primary, 3), -1);
+    CHECK_EQ(monitorIndex({true}, 1), -1);  // one monitor: there is no second
+}

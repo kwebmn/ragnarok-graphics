@@ -27,4 +27,13 @@ Rect fitPicture(int width, int height, int outWidth, int outHeight) {
     return Rect{left, top, left + w, top + h};
 }
 
+int monitorIndex(const std::vector<bool>& primary, int wanted) {
+    std::vector<int> order;
+    for (size_t i = 0; i < primary.size(); ++i)
+        if (primary[i]) order.push_back(int(i));
+    for (size_t i = 0; i < primary.size(); ++i)
+        if (!primary[i]) order.push_back(int(i));
+    return wanted >= 0 && size_t(wanted) < order.size() ? order[size_t(wanted)] : -1;
+}
+
 }  // namespace uagfx
