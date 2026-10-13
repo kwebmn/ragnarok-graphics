@@ -1,0 +1,311 @@
+#include "core/settings/strings.hpp"
+
+#include <cctype>
+
+namespace uagfx::settings {
+namespace {
+
+struct Entry {
+    const char* en;
+    const char* uk;
+    const char* ru;
+};
+
+// In the order of Text.
+const Entry kTexts[] = {
+    {"uaRO Graphics Settings", "uaRO Graphics Settings", "uaRO Graphics Settings"},
+    {"Renderer", "Рендер", "Рендер"},
+    {"Screen", "Екран", "Экран"},
+    {"Quality", "Якість", "Качество"},
+    {"Frames", "Кадри", "Кадры"},
+    {"Diagnostics", "Діагностика", "Диагностика"},
+    {"Service", "Сервіс", "Сервис"},
+    {"&Apply", "&Застосувати", "&Применить"},
+    {"Apply and &play", "Застосувати й &грати", "Применить и и&грать"},
+    {"&Undo", "&Скасувати", "&Отменить"},
+    {"&Close", "За&крити", "За&крыть"},
+    {"The game is running.", "Гра запущена.", "Игра запущена."},
+    {"The game is not running.", "Гра не запущена.", "Игра не запущена."},
+    {"Not applied: {1}.", "Не застосовано: {1}.", "Не применено: {1}."},
+    {"Applied.", "Застосовано.", "Применено."},
+    {"The settings app runs as administrator: a game started from it would not see its settings. Close it and start "
+     "it normally.",
+     "Утиліту запущено від імені адміністратора: гра, запущена з неї, не побачить свої налаштування. Закрий її та "
+     "запусти звичайно.",
+     "Утилита запущена от имени администратора: игра, запущенная из неё, не увидит свои настройки. Закрой её и "
+     "запусти обычно."},
+    {"↻ after the game restarts", "↻ після перезапуску гри", "↻ после перезапуска игры"},
+    {"These settings work in a running game too, without a restart.",
+     "Ці налаштування діють і в запущеній грі, без перезапуску.",
+     "Эти настройки действуют и в запущенной игре, без перезапуска."},
+    {"The game is running: a slider applies as soon as you let it go.",
+     "Гра запущена: повзунок застосовується, щойно його відпустиш.",
+     "Игра запущена: ползунок применяется, как только его отпустишь."},
+    {"Some changes are not applied. Close without them?", "Деякі зміни не застосовано. Закрити без них?",
+     "Часть изменений не применена. Закрыть без них?"},
+    {"What draws the game", "Чим малювати гру", "Чем рисовать игру"},
+    {"uaRO Graphics (Direct3D 12)", "uaRO Graphics (Direct3D 12)", "uaRO Graphics (Direct3D 12)"},
+    {"dgVoodoo", "dgVoodoo", "dgVoodoo"},
+    {"Our renderer: the picture at the screen's real pixels, sharpening, crisp text. Needs Windows 10 or newer.",
+     "Наш рендер: картинка в справжніх точках екрана, різкість, чіткий текст. Потрібна Windows 10 або новіша.",
+     "Наш рендер: картинка в настоящих точках экрана, резкость, чёткий текст. Нужна Windows 10 или новее."},
+    {"As before: dgVoodoo draws the game.", "Як раніше: гру малює dgVoodoo.", "Как раньше: игру рисует dgVoodoo."},
+    {"Our renderer is not available: it needs Windows 10 or newer.",
+     "Наш рендер недоступний: потрібна Windows 10 або новіша.", "Наш рендер недоступен: нужна Windows 10 или новее."},
+    {"Our renderer is not available: Direct3D 12 does not start ({1}).",
+     "Наш рендер недоступний: Direct3D 12 не запускається ({1}).",
+     "Наш рендер недоступен: Direct3D 12 не запускается ({1})."},
+    {"Installed: uaRO Graphics {1}.", "Встановлено: uaRO Graphics {1}.", "Установлено: uaRO Graphics {1}."},
+    {"uaRO Graphics' ddraw.dll is not in the game folder: run install.bat.",
+     "ddraw.dll uaRO Graphics немає в теці гри: запусти install.bat.",
+     "ddraw.dll uaRO Graphics нет в папке игры: запусти install.bat."},
+    {"dgVoodoo is in the dgvoodoo folder.", "dgVoodoo — у теці dgvoodoo.", "dgVoodoo — в папке dgvoodoo."},
+    {"dgVoodoo is not in the dgvoodoo folder.", "dgVoodoo немає в теці dgvoodoo.", "dgVoodoo нет в папке dgvoodoo."},
+    {"In the game, Pause (or Scroll Lock) switches every improvement off and on, to compare.",
+     "У грі клавіша Pause (або Scroll Lock) вимикає й вмикає всі покращення — для порівняння.",
+     "В игре клавиша Pause (или Scroll Lock) выключает и включает все улучшения — для сравнения."},
+    {"Show", "Показ", "Показ"},
+    {"Full screen", "На весь екран", "Во весь экран"},
+    {"In a window", "У вікні", "В окне"},
+    {"Monitor", "Монітор", "Монитор"},
+    {"{1}: {2}×{3}, scaling {4} %", "{1}: {2}×{3}, масштаб {4} %", "{1}: {2}×{3}, масштаб {4} %"},
+    {", main", ", основний", ", основной"},
+    {"Interface size", "Розмір інтерфейсу", "Размер интерфейса"},
+    {"Screen pixels per game pixel. More: a larger interface and less of the world.",
+     "Скільки точок екрана на одну точку гри. Більше — більший інтерфейс і менше видно світу.",
+     "Сколько точек экрана на одну точку игры. Больше — крупнее интерфейс и меньше видно мира."},
+    {"exactly, %", "точно, %", "точно, %"},
+    {"With dgVoodoo the interface size is Windows scaling ({1} %).",
+     "З dgVoodoo розмір інтерфейсу — це масштаб Windows ({1} %).",
+     "С dgVoodoo размер интерфейса — это масштаб Windows ({1} %)."},
+    {"Monitor mode", "Режим монітора", "Режим монитора"},
+    {"dgVoodoo may switch the monitor to this mode.", "dgVoodoo може перемкнути монітор у цей режим.",
+     "dgVoodoo может переключить монитор в этот режим."},
+    {"Window size", "Розмір вікна", "Размер окна"},
+    {"In the screen's real pixels; only sizes that fit the screen above the task bar.",
+     "У справжніх точках екрана; лише ті, що вміщуються над панеллю завдань.",
+     "В настоящих точках экрана; только те, что помещаются над панелью задач."},
+    {"{1}×{2} (game {3}×{4})", "{1}×{2} (гра {3}×{4})", "{1}×{2} (игра {3}×{4})"},
+    {"Game {1}×{2} → screen {3}×{4}, interface ×{5}", "Гра {1}×{2} → екран {3}×{4}, інтерфейс ×{5}",
+     "Игра {1}×{2} → экран {3}×{4}, интерфейс ×{5}"},
+    {" — the crispest interface", " — найчіткіший інтерфейс", " — самый чёткий интерфейс"},
+    {"It will not fit: the window is larger than the screen above the task bar.",
+     "Не вміститься: вікно більше за екран над панеллю завдань.",
+     "Не поместится: окно больше экрана над панелью задач."},
+    {"Too small: the game needs at least 640×480.", "Замало: грі потрібно щонайменше 640×480.",
+     "Слишком мало: игре нужно не меньше 640×480."},
+    {"Not a valid size.", "Неправильний розмір.", "Неверный размер."},
+    {"Now: in a window · window {1}×{2} · interface {3} % · game {4}×{5}",
+     "Зараз: у вікні · вікно {1}×{2} · інтерфейс {3} % · гра {4}×{5}",
+     "Сейчас: в окне · окно {1}×{2} · интерфейс {3} % · игра {4}×{5}"},
+    {"Now: full screen · game {1}×{2} · interface {3} %", "Зараз: на весь екран · гра {1}×{2} · інтерфейс {3} %",
+     "Сейчас: во весь экран · игра {1}×{2} · интерфейс {3} %"},
+    {"setup.exe has {1}×{2}, {3}; the game uses this app's values.",
+     "У setup.exe {1}×{2}, {3}; гра бере значення цієї утиліти.",
+     "В setup.exe {1}×{2}, {3}; игра берёт значения этой утилиты."},
+    {"in a window", "у вікні", "в окне"},
+    {"full screen", "на весь екран", "во весь экран"},
+    {"As in setup.exe", "Як у setup.exe", "Как в setup.exe"},
+    {"ROExt sets the window size ({1}): the app writes the same size there.",
+     "Розмір вікна задає ROExt ({1}): утиліта запише туди той самий розмір.",
+     "Размер окна задаёт ROExt ({1}): утилита запишет туда тот же размер."},
+    {"The game has no settings in the registry yet: Apply creates everything it needs, no setup.exe required.",
+     "У реєстрі ще немає налаштувань гри: «Застосувати» створить усе потрібне, setup.exe не знадобиться.",
+     "В реестре ещё нет настроек игры: «Применить» создаст всё нужное, setup.exe не понадобится."},
+    {"In full screen the game minimises itself on Alt+Tab: that is how it works.",
+     "На весь екран гра сама згортається при Alt+Tab — так вона влаштована.",
+     "Во весь экран игра сама сворачивается при Alt+Tab — так она устроена."},
+    {"High resolution", "Висока роздільність", "Высокое разрешение"},
+    {"Draw the game at the window's real pixels: with Windows scaling the world is sharper.",
+     "Малювати гру в справжніх точках вікна: при масштабі Windows світ чіткіший.",
+     "Рисовать игру в настоящих точках окна: при масштабе Windows мир чётче."},
+    {"Render scale", "Масштаб рендера", "Масштаб рендера"},
+    {"The frame is drawn larger and shrunk when shown: smoother edges, more work for the graphics card.",
+     "Кадр малюється більшим і зменшується при показі: гладші краї, відеокарта працює більше.",
+     "Кадр рисуется больше и уменьшается при показе: глаже края, видеокарта работает больше."},
+    {"Sharpening", "Різкість", "Резкость"},
+    {"Sharpening of the picture on screen; 0 = off. Screenshots are not sharpened.",
+     "Різкість картинки на екрані; 0 — вимкнено. Скриншоти не змінюються.",
+     "Резкость картинки на экране; 0 — выключено. Скриншоты не меняются."},
+    {"Interface pictures", "Картинки інтерфейсу", "Картинки интерфейса"},
+    {"How enlarged interface pictures look. With crisp text the windows come from their crisp twins.",
+     "Як виглядають збільшені картинки інтерфейсу. З чітким текстом вікна беруться з чітких двійників.",
+     "Как выглядят увеличенные картинки интерфейса. При чётком тексте окна берутся из чётких двойников."},
+    {"sharp", "чіткі", "чёткие"},
+    {"smooth", "м'які", "мягкие"},
+    {"Crisp text", "Чіткий текст", "Чёткий текст"},
+    {"The game's text, window frames and fills at the screen's real pixels when the game is enlarged.",
+     "Текст, рамки й заливки вікон гри в справжніх точках екрана, коли гру збільшено.",
+     "Текст, рамки и заливки окон игры в настоящих точках экрана, когда игра увеличена."},
+    {"Vertical sync (VSync)", "Вертикальна синхронізація (VSync)", "Вертикальная синхронизация (VSync)"},
+    {"Frames are shown in step with the monitor: no tearing.", "Кадри показуються в такт із монітором: без розривів.",
+     "Кадры показываются в такт с монитором: без разрывов."},
+    {"FPS limit", "Обмеження FPS", "Ограничение FPS"},
+    {"Frames per second at most, 0-1000; 0 = no limit.", "Кадрів на секунду не більше, 0–1000; 0 — без обмеження.",
+     "Кадров в секунду не больше, 0–1000; 0 — без ограничения."},
+    {"Tearing for G-SYNC and FreeSync", "Розриви для G-SYNC і FreeSync", "Разрывы для G-SYNC и FreeSync"},
+    {"With VSync off, G-SYNC and FreeSync monitors show each frame as soon as it is ready.",
+     "Без VSync монітори G-SYNC і FreeSync показують кожен кадр, щойно він готовий.",
+     "Без VSync мониторы G-SYNC и FreeSync показывают каждый кадр, как только он готов."},
+    {"Check", "Перевірка", "Проверка"},
+    {"Result", "Результат", "Результат"},
+    {"&Fix", "&Виправити", "&Исправить"},
+    {"Open the log", "Відкрити лог", "Открыть лог"},
+    {"Open the folder", "Відкрити теку", "Открыть папку"},
+    {"Report for the forum", "Звіт для форуму", "Отчёт для форума"},
+    {"Check again", "Перевірити знову", "Проверить снова"},
+    {"Detailed log", "Докладний лог", "Подробный лог"},
+    {"The log writes more details: useful when something is wrong.",
+     "Лог пише більше подробиць: потрібно, коли щось не так.",
+     "Лог пишет больше подробностей: нужно, когда что-то не так."},
+    {"The report is on the clipboard and in uaro-graphics-report.txt.",
+     "Звіт скопійовано в буфер обміну й збережено в uaro-graphics-report.txt.",
+     "Отчёт скопирован в буфер обмена и сохранён в uaro-graphics-report.txt."},
+    {"Windows", "Windows", "Windows"},
+    {"{1}.{2}, build {3}", "{1}.{2}, збірка {3}", "{1}.{2}, сборка {3}"},
+    {" — our renderer needs Windows 10", " — нашому рендеру потрібна Windows 10", " — нашему рендеру нужна Windows 10"},
+    {"Graphics card", "Відеокарта", "Видеокарта"},
+    {"{1}, {2} MB, driver {3}", "{1}, {2} МБ, драйвер {3}", "{1}, {2} МБ, драйвер {3}"},
+    {"Direct3D 12", "Direct3D 12", "Direct3D 12"},
+    {"works", "працює", "работает"},
+    {"does not start ({1})", "не запускається ({1})", "не запускается ({1})"},
+    {"Monitor {1}", "Монітор {1}", "Монитор {1}"},
+    {"{1}×{2}, {3} Hz, scaling {4} %, HDR: {5}", "{1}×{2}, {3} Гц, масштаб {4} %, HDR: {5}",
+     "{1}×{2}, {3} Гц, масштаб {4} %, HDR: {5}"},
+    {"yes", "так", "да"},
+    {"no", "ні", "нет"},
+    {"ddraw.dll", "ddraw.dll", "ddraw.dll"},
+    {"not uaRO Graphics: run install.bat", "не uaRO Graphics: запусти install.bat",
+     "не uaRO Graphics: запусти install.bat"},
+    {"missing: run install.bat", "немає: запусти install.bat", "нет: запусти install.bat"},
+    {"in the dgvoodoo folder", "у теці dgvoodoo", "в папке dgvoodoo"},
+    {"not in the dgvoodoo folder: dgVoodoo will not start", "немає в теці dgvoodoo: dgVoodoo не запуститься",
+     "нет в папке dgvoodoo: dgVoodoo не запустится"},
+    {"ROExt (reads {1})", "ROExt (читає {1})", "ROExt (читает {1})"},
+    {"an unknown module", "невідомий модуль", "неизвестный модуль"},
+    {" — off", " — вимкнено", " — отключён"},
+    {"Input module", "Модуль вводу", "Модуль ввода"},
+    {"none: neither ROExt nor uaRO Pad", "немає: ні ROExt, ні uaRO Pad", "нет: ни ROExt, ни uaRO Pad"},
+    {"Game folder", "Тека гри", "Папка игры"},
+    {"writable", "можна писати", "можно писать"},
+    {"not writable: the settings cannot be saved", "не можна писати: налаштування не збережуться",
+     "нельзя писать: настройки не сохранятся"},
+    {"in Program Files: Windows redirects the game's files; better move the client, e.g. to C:\\Games",
+     "у Program Files: Windows підміняє файли гри; краще перенести клієнт, наприклад у C:\\Games",
+     "в Program Files: Windows подменяет файлы игры; лучше перенести клиент, например в C:\\Games"},
+    {"Settings app", "Утиліта", "Утилита"},
+    {"runs as administrator: start it normally", "запущена від імені адміністратора: запусти звичайно",
+     "запущена от имени администратора: запусти обычно"},
+    {"Game", "Гра", "Игра"},
+    {"running", "запущена", "запущена"},
+    {"not running", "не запущена", "не запущена"},
+    {"Flag {1} ({2})", "Прапорець {1} ({2})", "Флажок {1} ({2})"},
+    {"this user", "ваш користувач", "ваш пользователь"},
+    {"all users", "усі користувачі", "все пользователи"},
+    {"the game does not see its personal settings in the registry",
+     "гра не бачить свої особисті налаштування в реєстрі", "игра не видит свои личные настройки в реестре"},
+    {"an old Windows mode: in the way of Direct3D 12 and scaling", "режим старої Windows: заважає Direct3D 12 і масштабу",
+     "режим старой Windows: мешает Direct3D 12 и масштабу"},
+    {"scaling overridden: the picture is not at the real pixels", "масштаб перевизначено: картинка не в справжніх точках",
+     "масштаб переопределён: картинка не в настоящих точках"},
+    {"old colours or 640×480", "старі кольори або 640×480", "старые цвета или 640×480"},
+    {"a Windows compatibility flag", "прапорець сумісності Windows", "флажок совместимости Windows"},
+    {"; remove it in uaRO.exe's properties as administrator",
+     "; знімається у властивостях uaRO.exe з правами адміністратора",
+     "; снимается в свойствах uaRO.exe с правами администратора"},
+    {"Game settings in the registry", "Налаштування гри в реєстрі", "Настройки игры в реестре"},
+    {"personal copy: {1}, setup.exe's copy: {2}", "особиста копія: {1}, копія setup.exe: {2}",
+     "личная копия: {1}, копия setup.exe: {2}"},
+    {"none: Apply on the Screen page creates them", "немає: «Застосувати» на сторінці «Екран» створить їх",
+     "нет: «Применить» на странице «Экран» создаст их"},
+    {"the game uses {1}, setup.exe has {2}", "гра бере {1}, у setup.exe {2}", "игра берёт {1}, в setup.exe {2}"},
+    {"Renderer last time", "Рендер минулого разу", "Рендер в прошлый раз"},
+    {"Errors in the log", "Помилки в лозі", "Ошибки в логе"},
+    {"none", "немає", "нет"},
+    {"{1}, the last: {2}", "{1}, остання: {2}", "{1}, последняя: {2}"},
+    {"Frames per second", "Кадрів на секунду", "Кадров в секунду"},
+    {"Log", "Лог", "Лог"},
+    {"none yet: start the game", "ще немає: запусти гру", "ещё нет: запусти игру"},
+    {"Fixed.", "Виправлено.", "Исправлено."},
+    {"Presets", "Пресети", "Пресеты"},
+    {"Maximum", "Максимум", "Максимум"},
+    {"Balance", "Баланс", "Баланс"},
+    {"Speed", "Швидкість", "Скорость"},
+    {"No improvements", "Без покращень", "Без улучшений"},
+    {"A preset fills in the Quality page; Apply writes it. Now: {1}.",
+     "Пресет заповнює сторінку «Якість»; записує «Застосувати». Зараз: {1}.",
+     "Пресет заполняет страницу «Качество»; записывает «Применить». Сейчас: {1}."},
+    {"your own values", "свої значення", "свои значения"},
+    {"Backups", "Резервні копії", "Резервные копии"},
+    {"Restore", "Відновити", "Восстановить"},
+    {"Keep the 5 newest", "Залишити 5 останніх", "Оставить 5 последних"},
+    {"Before its first write in each run the app copies everything it may change; the 20 newest copies stay.",
+     "Перед першим записом у кожному запуску утиліта копіює все, що може змінити; зберігаються 20 останніх копій.",
+     "Перед первой записью в каждом запуске утилита копирует всё, что может изменить; хранятся 20 последних копий."},
+    {"No backups yet.", "Копій ще немає.", "Копий ещё нет."},
+    {"Restore the settings from the copy of {1}? The current ones are copied first.",
+     "Повернути налаштування з копії від {1}? Поточні спершу теж скопіюються.",
+     "Вернуть настройки из копии от {1}? Нынешние сначала тоже скопируются."},
+    {"Reset", "Скидання", "Сброс"},
+    {"Reset uaRO Graphics to its defaults", "Скинути uaRO Graphics до типових", "Сбросить uaRO Graphics к умолчаниям"},
+    {"Return every uaRO Graphics setting to its default? The renderer and the language stay.",
+     "Повернути всі налаштування uaRO Graphics до типових? Рендер і мова залишаться.",
+     "Вернуть все настройки uaRO Graphics к умолчаниям? Рендер и язык останутся."},
+    {"Versions", "Версії", "Версии"},
+    {"Settings app {1} · driver {2}", "Утиліта {1} · драйвер {2}", "Утилита {1} · драйвер {2}"},
+    {"unknown", "невідомо", "неизвестно"},
+    {"Cannot write {1}.", "Не вдалося записати {1}.", "Не удалось записать {1}."},
+    {"Cannot write {1} to the registry.", "Не вдалося записати {1} до реєстру.", "Не удалось записать {1} в реестр."},
+    {"Close the game first.", "Спершу закрий гру.", "Сначала закрой игру."},
+    {"Cannot make the backup ({1}): nothing was written.", "Не вдалося зробити резервну копію ({1}): нічого не записано.",
+     "Не удалось сделать резервную копию ({1}): ничего не записано."},
+    {"Screen: {1}", "Екран: {1}", "Экран: {1}"},
+    {"Cannot start uaRO.exe (error {1}).", "Не вдалося запустити uaRO.exe (помилка {1}).",
+     "Не удалось запустить uaRO.exe (ошибка {1})."},
+    {"Cannot restore {1}.", "Не вдалося відновити {1}.", "Не удалось восстановить {1}."},
+};
+static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
+
+}  // namespace
+
+std::optional<Lang> parseLang(const std::string& token) {
+    std::string t;
+    for (char ch : token) t += char(std::tolower(static_cast<unsigned char>(ch)));
+    if (t == "en") return Lang::En;
+    if (t == "uk") return Lang::Uk;
+    if (t == "ru") return Lang::Ru;
+    return std::nullopt;
+}
+
+const char* langToken(Lang l) { return l == Lang::Uk ? "uk" : l == Lang::Ru ? "ru" : "en"; }
+
+const char* langName(Lang l) { return l == Lang::Uk ? "Українська" : l == Lang::Ru ? "Русский" : "English"; }
+
+Lang langForWindows(uint16_t langId) {
+    const uint16_t primary = langId & 0x3FF;
+    if (primary == 0x22) return Lang::Uk;
+    if (primary == 0x19) return Lang::Ru;
+    return Lang::En;
+}
+
+const char* tr(Lang l, Text t) {
+    const Entry& e = kTexts[size_t(t)];
+    return l == Lang::Uk ? e.uk : l == Lang::Ru ? e.ru : e.en;
+}
+
+std::string fmt(const std::string& pattern, const std::vector<std::string>& args) {
+    std::string out;
+    for (size_t i = 0; i < pattern.size(); ++i) {
+        if (pattern[i] == '{' && i + 2 < pattern.size() && pattern[i + 2] == '}' && pattern[i + 1] >= '1' &&
+            pattern[i + 1] <= '9') {
+            const size_t n = size_t(pattern[i + 1] - '1');
+            out += n < args.size() ? args[n] : std::string();
+            i += 2;
+        } else {
+            out += pattern[i];
+        }
+    }
+    return out;
+}
+
+}  // namespace uagfx::settings
