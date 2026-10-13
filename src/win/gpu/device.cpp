@@ -521,7 +521,15 @@ void Renderer::preparePipelines(const std::string& file) {
     for (const uint64_t k : unique)
         if (m.pipelineForKey(k)) built.push_back(k);
     QueryPerformanceCounter(&t1);
-    // Written anew with the keys that built: a list from another version, broken lines or keys listed twice start clean.
+    LOG_INFO("pipelines: %u of %u saved ones prepared in %.0f ms", unsigned(built.size()), unsigned(unique.size()),
+             double(t1.QuadPart - t0.QuadPart) * 1000.0 / double(freq.QuadPart));
+    if (FAILED(m.device->GetDeviceRemovedReason())) return;  // a lost device built nothing: the file stays (0.4.2 review)
+    // Written anew with the keys that built: a list from another version, broken lines or keys listed twice start
+    // clean. Keys another running client added meanwhile stay (0.4.2 review).
+    std::string latest;
+    win::readTextFile(file, latest);
+    for (const uint64_t k : parsePipelineKeys(latest))
+        if (!unique.count(k)) built.push_back(k);
     std::ofstream f(file, std::ios::binary | std::ios::trunc);
     f << pipelineKeysText(built);
     f.close();
@@ -529,8 +537,6 @@ void Renderer::preparePipelines(const std::string& file) {
         m.pipelineFile = file;  // from now on every new pipeline is added
     else
         LOG_INFO("cannot write %s: pipelines are not remembered for the next start", file.c_str());
-    LOG_INFO("pipelines: %u of %u saved ones prepared in %.0f ms", unsigned(built.size()), unsigned(unique.size()),
-             double(t1.QuadPart - t0.QuadPart) * 1000.0 / double(freq.QuadPart));
 }
 
 bool Renderer::create(std::string& error) {
