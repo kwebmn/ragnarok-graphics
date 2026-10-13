@@ -25,10 +25,16 @@ if exist "ddraw.dll" (
 if exist "D3DImm.dll" move /y "D3DImm.dll" "dgvoodoo\D3DImm.dll" >nul || goto :noaccess
 if exist "dgVoodoo.conf" copy /y "dgVoodoo.conf" "dgvoodoo\dgVoodoo.conf" >nul
 copy /y "uaro-graphics\ddraw.dll" "ddraw.dll" >nul || goto :noaccess
-rem The settings file of version 0.1 holds only defaults; 0.2 changes some (mode = auto), so it is replaced.
+rem A settings file older than 0.3 holds the defaults and the renderer choice: it is replaced by the new one,
+rem with every new setting and its notes, and keeps that choice.
 if exist "uaro-graphics.ini" (
-    findstr /c:"not in version 0.1 yet" "uaro-graphics.ini" >nul 2>&1
-    if not errorlevel 1 copy /y "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
+    findstr /c:"high_resolution" "uaro-graphics.ini" >nul 2>&1
+    if errorlevel 1 (
+        set "uaro="
+        findstr /i /r /c:"^ *backend *= *uaro" "uaro-graphics.ini" >nul 2>&1 && set "uaro=1"
+        copy /y "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
+        if defined uaro powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='uaro-graphics.ini'; (Get-Content -LiteralPath $f) -replace '^backend = dgvoodoo$','backend = uaro' | Set-Content -LiteralPath $f -Encoding ASCII"
+    )
 )
 if not exist "uaro-graphics.ini" copy "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
 echo.
