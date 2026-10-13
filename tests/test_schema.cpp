@@ -56,3 +56,14 @@ TEST(schema_live_keys_are_the_specs) {
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "frames.allow_tearing"));
     }
 }
+
+TEST(schema_pages_follow_the_spec) {
+    // Stage 2 spec §6.1 with 0.6.2: Sound, Game, and Chat and login after Frames - the last holds the whisper, login
+    // and chat macro rows the Game page has no room for.
+    CHECK_EQ(kPageCount, 9);
+    CHECK(pageName(Page::Sound) == Text::PageSound);
+    CHECK(pageName(Page::Game) == Text::PageGame);
+    CHECK(pageName(Page::Chat) == Text::PageChat);
+    CHECK_EQ(int(Page::Diagnostics), 7);
+    CHECK_EQ(int(Page::Service), 8);
+}

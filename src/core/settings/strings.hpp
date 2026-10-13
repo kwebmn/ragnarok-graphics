@@ -46,7 +46,20 @@ enum class Text : uint16_t {
     ServicePresets, PresetMaximum, PresetBalance, PresetSpeed, PresetPlain, PresetNote, PresetCustom,
     ServiceBackups, BackupRestore, BackupPrune, BackupNote, BackupNone, BackupAsk, ServiceReset, ResetButton,
     ResetAsk, ServiceVersions, VersionsValue, Unknown,
-    ErrWriteFile, ErrWriteRegistry, ErrGameRunning, ScreenWaits, ErrBackup, ErrScreen, ErrLaunch, ErrRestore,
+    ErrWriteFile, ErrWriteRegistry, ErrGameRunning, ApplyWaits, ErrBackup, ErrScreen, ErrLaunch, ErrRestore,
+    PageSound, PageGame, PageChat,
+    GameQualityHeading, GameSprites, GameSpritesHint, GameTextures, GameTexturesHint, LevelHigh, LevelHalf, LevelLow,
+    GameMipmaps, GameMipmapsHint, GameLightmaps, GameLightmapsHint, GameFog, GameFogHint, GameClosedOnly,
+    SoundMode, SoundModeHint, SoundOff, Sound2D, Sound3D, SoundRate, SoundRateHint, Rate22050, Rate11025, Rate8000,
+    SoundBits, SoundBitsHint, Bits16, Bits8, SoundVoices, SoundVoicesHint, Voices48, Voices32, Voices16,
+    SoundSpeakers, SoundSpeakersHint, Speakers2, SpeakersPhones, SpeakersSurround, Speakers4, Speakers51, Speakers71,
+    SoundMusic, SoundMusicVolume, SoundEffects, SoundEffectsVolume, SoundVolumeHint,
+    GameEffects, GameMiss, GameSkillSnap, GameAttackSnap, GameItemSnap, GameCamera, GameHomunAi, GameMercAi,
+    GameSkin, GameSkinHint, SkinNone, SkinMissing, GameTips, GameIntro, GameMinimap, GameStacks,
+    ChatWhisperStrangers, ChatWhisperFriends, ChatWhisperSound, ChatFriendsNote, ChatRememberLogin, ChatForgetLogin,
+    ChatForgetAsk, ChatLoginForgotten, ChatMacrosHeading, ChatMacrosHint,
+    ServiceGameSettings, GameSave, GameLoad, LayoutReset, GameSettingsNote, GameLoadAsk, LayoutResetAsk, GameSaved,
+    GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, SoundSetupDiffers,
     Count
 };
 

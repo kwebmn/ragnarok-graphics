@@ -322,7 +322,7 @@ std::wstring Model::apply(Lang l) {
     screenAsSetup_ = false;
     wroteNow_.clear();
     load();
-    return waits ? wtr(l, Text::ScreenWaits) : L"";
+    return waits ? wtr(l, Text::ApplyWaits) : L"";
 }
 
 std::wstring Model::writeNow(const IniSetting& s, const std::string& token, Lang l) {

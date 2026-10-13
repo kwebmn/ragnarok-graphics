@@ -12,6 +12,9 @@ Text pageName(Page p) {
         case Page::Screen: return Text::PageScreen;
         case Page::Quality: return Text::PageQuality;
         case Page::Frames: return Text::PageFrames;
+        case Page::Sound: return Text::PageSound;
+        case Page::Game: return Text::PageGame;
+        case Page::Chat: return Text::PageChat;
         case Page::Diagnostics: return Text::PageDiagnostics;
         case Page::Service: break;
     }
