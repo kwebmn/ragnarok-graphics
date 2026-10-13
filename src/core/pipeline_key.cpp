@@ -1,0 +1,74 @@
+#include "core/pipeline_key.hpp"
+
+#include <cstdio>
+#include <sstream>
+
+#include "core/d3d7.hpp"
+
+namespace uagfx {
+
+bool PipelineKey::operator==(const PipelineKey& o) const {
+    return zEnable == o.zEnable && zWrite == o.zWrite && zFunc == o.zFunc && cull == o.cull && blend == o.blend &&
+           srcBlend == o.srcBlend && dstBlend == o.dstBlend && twoUv == o.twoUv;
+}
+
+PipelineKey pipelineKey(const DrawSetup& s, uint32_t fvf) {
+    PipelineKey k;
+    k.zEnable = s.zEnable;
+    k.zWrite = s.zWrite;
+    k.zFunc = uint8_t(s.zFunc & 15);
+    k.cull = uint8_t(s.cull & 3);
+    k.blend = s.blend;
+    k.srcBlend = uint8_t(s.srcBlend & 15);
+    k.dstBlend = uint8_t(s.dstBlend & 15);
+    k.twoUv = fvf == d3d7::FVF_TL2;
+    return k;
+}
+
+uint64_t packPipelineKey(const PipelineKey& k) {
+    return uint64_t(k.zEnable) | uint64_t(k.zWrite) << 1 | uint64_t(k.zFunc & 15) << 2 | uint64_t(k.cull & 3) << 6 |
+           uint64_t(k.blend) << 8 | uint64_t(k.srcBlend & 15) << 9 | uint64_t(k.dstBlend & 15) << 13 |
+           uint64_t(k.twoUv) << 17;
+}
+
+PipelineKey unpackPipelineKey(uint64_t v) {
+    PipelineKey k;
+    k.zEnable = (v & 1) != 0;
+    k.zWrite = (v >> 1 & 1) != 0;
+    k.zFunc = uint8_t(v >> 2 & 15);
+    k.cull = uint8_t(v >> 6 & 3);
+    k.blend = (v >> 8 & 1) != 0;
+    k.srcBlend = uint8_t(v >> 9 & 15);
+    k.dstBlend = uint8_t(v >> 13 & 15);
+    k.twoUv = (v >> 17 & 1) != 0;
+    return k;
+}
+
+std::string pipelineKeysHeader() { return "uaro-graphics pipelines 1\n"; }
+
+std::string pipelineKeyLine(uint64_t v) {
+    char line[24];
+    std::snprintf(line, sizeof line, "%llx\n", static_cast<unsigned long long>(v));
+    return line;
+}
+
+std::vector<uint64_t> parsePipelineKeys(const std::string& text) {
+    std::vector<uint64_t> keys;
+    std::istringstream in(text);
+    std::string line;
+    bool header = false;
+    while (std::getline(in, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (!header) {
+            if (line + "\n" != pipelineKeysHeader()) return keys;
+            header = true;
+            continue;
+        }
+        if (line.empty() || line.size() > 16 || line.find_first_not_of("0123456789abcdef") != std::string::npos)
+            continue;
+        keys.push_back(std::stoull(line, nullptr, 16));
+    }
+    return keys;
+}
+
+}  // namespace uagfx
