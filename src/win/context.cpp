@@ -42,6 +42,8 @@ void Context::close() {
     window = nullptr;
     windowApplied = false;
     scaledWidth_ = scaledHeight_ = 0;
+    lastOut_ = SIZE{};
+    lastPlan_ = ScalePlan{};
 }
 
 bool Context::setTarget(int width, int height) {
@@ -67,6 +69,7 @@ void Context::flush() {
 bool Context::readTarget(std::vector<uint32_t>& argb) {
     flush();
     ++stats_.readBacks;
+    ++totalReads_;
     return renderer && renderer->readTarget(argb);
 }
 
@@ -109,12 +112,22 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_) {
         scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
         scaledHeight_ = plan.targetHeight;
-        if (renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight))
-            LOG_INFO("scale: game %dx%d, output %ldx%ld, s %.3f, r %.2f, k %.3f, target %dx%d, picture %dx%d at %d,%d",
-                     shadow.width(), shadow.height(), out.cx, out.cy, plan.s, plan.r, plan.k, plan.targetWidth,
-                     plan.targetHeight, plan.picture.width(), plan.picture.height(), plan.picture.left,
-                     plan.picture.top);
+        renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight);
     }
+    // A line per change of the picture's geometry; while the window is being resized at most two a second and the
+    // final state once it settles (stage 3 review M7).
+    const bool changed = out.cx != lastOut_.cx || out.cy != lastOut_.cy || plan.k != lastPlan_.k ||
+                         plan.targetWidth != lastPlan_.targetWidth || plan.targetHeight != lastPlan_.targetHeight ||
+                         !(plan.picture == lastPlan_.picture);
+    lastOut_ = out;
+    lastPlan_ = plan;
+    const uint64_t now = GetTickCount64();
+    if (changed ? scaleLog_.changed(now) : scaleLog_.due(now))
+        LOG_INFO("scale: game %dx%d, output %ldx%ld, s %.3f, r %.2f, k %.3f, target %dx%d, picture %dx%d at %d,%d, "
+                 "%u reads of the frame so far",
+                 shadow.width(), shadow.height(), out.cx, out.cy, plan.s, plan.r, plan.k, plan.targetWidth,
+                 plan.targetHeight, plan.picture.width(), plan.picture.height(), plan.picture.left, plan.picture.top,
+                 totalReads_);
     gpu::PresentOptions o;
     o.vsync = config.vsync && waitForVblank;
     o.allowTearing = config.allowTearing;

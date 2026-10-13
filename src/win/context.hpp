@@ -9,6 +9,8 @@
 #include "core/frame.hpp"
 #include "core/image.hpp"
 #include "core/pixel.hpp"
+#include "core/scale.hpp"
+#include "core/throttle.hpp"
 #include "core/toggle_key.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/shadow.hpp"
@@ -64,6 +66,10 @@ private:
     int scaledHeight_ = 0;
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
+    Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)
+    SIZE lastOut_{};
+    ScalePlan lastPlan_;
+    unsigned totalReads_ = 0;  // since start, in the scale line: the start-up calibration came first (review M4)
 };
 
 // Holds the global lock for a scope; every DirectDraw / Direct3D method starts with one.

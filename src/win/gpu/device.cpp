@@ -699,7 +699,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight) {
     if (!m.begin()) return false;
     m.list->ClearDepthStencilView(m.dsvHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
     m.submit();
-    LOG_INFO("render target %dx%d: %.3f times the game's %dx%d", targetWidth, targetHeight, k, m.gameWidth,
+    LOG_DEBUG("render target %dx%d: %.3f times the game's %dx%d", targetWidth, targetHeight, k, m.gameWidth,
              m.gameHeight);
     return true;
 }
@@ -841,7 +841,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const Rect fit = fitPicture(source.width(), source.height(), int(m.swapWidth), int(m.swapHeight));
     if (!(fit == m.picture)) {
         m.picture = fit;
-        LOG_INFO("picture %dx%d of the game shown as %dx%d at %d,%d in the %ux%u window", source.width(),
+        LOG_DEBUG("picture %dx%d of the game shown as %dx%d at %d,%d in the %ux%u window", source.width(),
                  source.height(), fit.width(), fit.height(), fit.left, fit.top, m.swapWidth, m.swapHeight);
     }
     // The source is in game pixels: into target pixels by each axis' own ratio, so the whole frame is exactly the
