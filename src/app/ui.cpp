@@ -1,5 +1,7 @@
 #include "app/ui.hpp"
 
+#include <cstring>
+
 namespace uagfx::app {
 namespace {
 
@@ -252,6 +254,24 @@ bool Panel::toneOf(HWND ctl, Tone& tone) const {
     if (it == tones_.end()) return false;
     tone = it->second;
     return true;
+}
+
+bool copyToClipboard(HWND owner, const std::wstring& text) {
+    if (!OpenClipboard(owner)) return false;
+    EmptyClipboard();
+    const size_t bytes = (text.size() + 1) * sizeof(wchar_t);
+    HGLOBAL h = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    bool ok = false;
+    if (h) {
+        if (void* p = GlobalLock(h)) {
+            std::memcpy(p, text.c_str(), bytes);
+            GlobalUnlock(h);
+            ok = SetClipboardData(CF_UNICODETEXT, h) != nullptr;
+        }
+        if (!ok) GlobalFree(h);
+    }
+    CloseClipboard();
+    return ok;
 }
 
 }  // namespace uagfx::app

@@ -1,5 +1,7 @@
 #include "app/files.hpp"
 
+#include <windows.h>
+
 #include <shellapi.h>
 #include <shlobj.h>
 
@@ -145,22 +147,11 @@ void openInShell(const std::wstring& path) {
     ShellExecuteW(nullptr, L"open", path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
 
-bool copyToClipboard(HWND owner, const std::wstring& text) {
-    if (!OpenClipboard(owner)) return false;
-    EmptyClipboard();
-    const size_t bytes = (text.size() + 1) * sizeof(wchar_t);
-    HGLOBAL h = GlobalAlloc(GMEM_MOVEABLE, bytes);
-    bool ok = false;
-    if (h) {
-        if (void* p = GlobalLock(h)) {
-            std::memcpy(p, text.c_str(), bytes);
-            GlobalUnlock(h);
-            ok = SetClipboardData(CF_UNICODETEXT, h) != nullptr;
-        }
-        if (!ok) GlobalFree(h);
-    }
-    CloseClipboard();
-    return ok;
+std::string defaultIni() {
+    HRSRC r = FindResourceW(nullptr, L"DEFAULT_INI", MAKEINTRESOURCEW(10));  // RT_RCDATA
+    HGLOBAL g = r ? LoadResource(nullptr, r) : nullptr;
+    const void* p = g ? LockResource(g) : nullptr;
+    return p ? std::string(static_cast<const char*>(p), SizeofResource(nullptr, r)) : std::string();
 }
 
 }  // namespace uagfx::app

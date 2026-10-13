@@ -14,6 +14,8 @@ int windowDpi(HWND hwnd);  // GetDpiForWindow on Windows 10, else the screen's
 inline int px(int at96, int dpi) { return MulDiv(at96, dpi, 96); }
 HFONT makeFont(int dpi, bool bold, int percent = 100);  // Windows' message font at that DPI
 
+bool copyToClipboard(HWND owner, const std::wstring& text);
+
 enum class Tone { Normal, Muted, Good, Warn, Bad };
 COLORREF toneColor(Tone t);
 

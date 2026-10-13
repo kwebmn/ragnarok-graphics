@@ -1,7 +1,5 @@
 #include "app/model.hpp"
 
-#include <windows.h>
-
 #include <algorithm>
 #include <set>
 
@@ -42,13 +40,6 @@ Text problemText(ScreenProblem p) {
         case ScreenProblem::None: break;
     }
     return Text::ScreenBadNumber;
-}
-
-std::string defaultIni() {
-    HRSRC r = FindResourceW(nullptr, L"DEFAULT_INI", MAKEINTRESOURCEW(10));  // RT_RCDATA
-    HGLOBAL g = r ? LoadResource(nullptr, r) : nullptr;
-    const void* p = g ? LockResource(g) : nullptr;
-    return p ? std::string(static_cast<const char*>(p), SizeofResource(nullptr, r)) : std::string();
 }
 
 Model::Model() {

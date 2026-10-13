@@ -1,6 +1,4 @@
 #pragma once
-#include <windows.h>
-
 #include <string>
 #include <vector>
 
@@ -24,6 +22,7 @@ std::string utf8ToRegFile(const std::string& utf8);
 // 0 when started; else the Windows error.
 unsigned long launch(const std::wstring& file, const std::wstring& folder);
 void openInShell(const std::wstring& path);
-bool copyToClipboard(HWND owner, const std::wstring& text);
+// The text of dist/uaro-graphics.ini built into the app (resource DEFAULT_INI).
+std::string defaultIni();
 
 }  // namespace uagfx::app

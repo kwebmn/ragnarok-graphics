@@ -120,7 +120,4 @@ private:
 // What the Screen page says about a plan it cannot write.
 settings::Text problemText(settings::ScreenProblem p);
 
-// The text of dist/uaro-graphics.ini built into the app (resource DEFAULT_INI).
-std::string defaultIni();
-
 }  // namespace uagfx::app
