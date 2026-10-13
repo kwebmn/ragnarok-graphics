@@ -14,7 +14,7 @@ struct SystemInfo {
     win::D3D12Probe d3d12;
     std::string gpuDriver;                        // "32.0.15.6094": the main adapter's driver, "" when unknown
     std::vector<settings::MonitorInfo> monitors;  // as the driver numbers them: 0 = the main one
-    settings::Frame frame;                        // the game's window frame, in the game's pixels
+    settings::Frame frame;                        // the game window's frame: its own or ours, the larger
     bool elevated = false;                        // this app runs as administrator
 };
 SystemInfo probeSystem();

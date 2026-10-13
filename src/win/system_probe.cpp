@@ -14,6 +14,14 @@ std::string utf8(const wchar_t* w) {
     return n > 0 ? std::string(out) : std::string();
 }
 
+// A system DLL: by name, as the game finds it, or Windows' own copy from System32.
+HMODULE load(const char* name, bool systemOnly) {
+    if (!systemOnly) return LoadLibraryA(name);
+    char dir[MAX_PATH];
+    const UINT n = GetSystemDirectoryA(dir, MAX_PATH);
+    return n && n < MAX_PATH ? LoadLibraryA((std::string(dir, n) + "\\" + name).c_str()) : nullptr;
+}
+
 }  // namespace
 
 WindowsVersion windowsVersion() {
@@ -33,10 +41,10 @@ WindowsVersion windowsVersion() {
     return v;
 }
 
-D3D12Probe probeD3D12() {
+D3D12Probe probeD3D12(bool systemOnly) {
     D3D12Probe p;
-    HMODULE d3d12 = LoadLibraryA("d3d12.dll");
-    HMODULE dxgi = LoadLibraryA("dxgi.dll");
+    HMODULE dxgi = load("dxgi.dll", systemOnly);  // first: d3d12.dll then finds it loaded
+    HMODULE d3d12 = load("d3d12.dll", systemOnly);
     if (!d3d12 || !dxgi) {
         p.hr = HRESULT_FROM_WIN32(GetLastError());
         return p;

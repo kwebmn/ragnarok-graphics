@@ -29,11 +29,19 @@ BOOL CALLBACK collect(HMONITOR m, HDC, LPRECT, LPARAM out) {
     return TRUE;
 }
 
+// Windows' own copy of a system DLL, from System32: the game folder, searched first, may hold a dxgi.dll of its own
+// (ReShade) that the settings app has no business loading (0.6.0 review M8).
+HMODULE systemLibrary(const wchar_t* name) {
+    wchar_t dir[MAX_PATH];
+    const UINT n = GetSystemDirectoryW(dir, MAX_PATH);
+    return n && n < MAX_PATH ? LoadLibraryW((std::wstring(dir, n) + L"\\" + name).c_str()) : nullptr;
+}
+
 // Windows scaling of a monitor in %: GetDpiForMonitor on Windows 8.1 and newer, else the screen's DPI.
 int monitorScale(HMONITOR m) {
     using Fn = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
     static const Fn fn = [] {
-        HMODULE shcore = LoadLibraryW(L"shcore.dll");
+        HMODULE shcore = systemLibrary(L"shcore.dll");
         return shcore ? reinterpret_cast<Fn>(reinterpret_cast<void*>(GetProcAddress(shcore, "GetDpiForMonitor")))
                       : nullptr;
     }();
@@ -63,7 +71,7 @@ std::vector<Size> modesOf(const wchar_t* device) {
 // main adapter's driver version.
 std::vector<HMONITOR> dxgiFacts(std::string& driver) {
     std::vector<HMONITOR> out;
-    HMODULE dxgi = LoadLibraryW(L"dxgi.dll");
+    HMODULE dxgi = systemLibrary(L"dxgi.dll");
     using CreateFn = HRESULT(WINAPI*)(REFIID, void**);
     const auto create =
         dxgi ? reinterpret_cast<CreateFn>(reinterpret_cast<void*>(GetProcAddress(dxgi, "CreateDXGIFactory1"))) : nullptr;
@@ -92,10 +100,8 @@ std::vector<HMONITOR> dxgiFacts(std::string& driver) {
     return out;
 }
 
-// The frame of the game's window style (WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN, registry.md §2)
-// at 96 DPI: the game is not DPI-aware, so it measures in those pixels.
-settings::Frame gameFrame() {
-    const DWORD style = 0x02CA0000;
+// The frame of a window style at 96 DPI: the game is not DPI-aware, so it measures in those pixels.
+settings::Frame frameOf(DWORD style) {
     RECT r{0, 0, 0, 0};
     using ForDpi = BOOL(WINAPI*)(LPRECT, DWORD, BOOL, DWORD, UINT);
     const auto fn = reinterpret_cast<ForDpi>(
@@ -114,6 +120,15 @@ settings::Frame gameFrame() {
     return f;
 }
 
+// The frame of the game's window: its own style (WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN,
+// registry.md §2) or our driver's normal window (WS_OVERLAPPEDWINDOW, mode = window) - the larger, so that a size
+// offered fits either way (0.6.0 review M14).
+settings::Frame gameFrame() {
+    const settings::Frame own = frameOf(0x02CA0000);
+    const settings::Frame ours = frameOf(WS_OVERLAPPEDWINDOW);
+    return settings::Frame{std::max(own.width, ours.width), std::max(own.height, ours.height)};
+}
+
 bool runsElevated() {
     HANDLE token = nullptr;
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) return false;
@@ -130,7 +145,7 @@ SystemInfo probeSystem() {
     SystemInfo s;
     s.windows = win::windowsVersion();
     if (s.windows.major >= 10) {
-        s.d3d12 = win::probeD3D12();
+        s.d3d12 = win::probeD3D12(true);
         s.d3d12Probed = true;
     }
     std::vector<Found> found;

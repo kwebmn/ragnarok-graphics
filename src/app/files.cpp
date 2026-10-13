@@ -44,11 +44,17 @@ bool writeFileAtomic(const std::wstring& path, const std::string& bytes) {
     const bool ok = (bytes.empty() || WriteFile(f, bytes.data(), DWORD(bytes.size()), &put, nullptr)) &&
                     put == bytes.size() && FlushFileBuffers(f);
     CloseHandle(f);
-    if (!ok || !MoveFileExW(temp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
-        DeleteFileW(temp.c_str());
-        return false;
+    // The driver reads with FILE_SHARE_DELETE; an editor or an antivirus may hold the file a moment: the move is tried
+    // again for half a second (0.6.0 review M1).
+    for (int attempt = 0; ok; ++attempt) {
+        if (MoveFileExW(temp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) return true;
+        const DWORD e = GetLastError();
+        if (attempt == 20 || (e != ERROR_SHARING_VIOLATION && e != ERROR_ACCESS_DENIED && e != ERROR_LOCK_VIOLATION))
+            break;
+        Sleep(25);
     }
-    return true;
+    DeleteFileW(temp.c_str());
+    return false;
 }
 
 bool fileExists(const std::wstring& path) {
@@ -79,6 +85,9 @@ std::vector<std::wstring> listFolder(const std::wstring& dir, bool folders) {
 bool makeFolder(const std::wstring& path) { return CreateDirectoryW(path.c_str(), nullptr) || dirExists(path); }
 
 bool removeTree(const std::wstring& path) {
+    // A junction or a link to a folder goes itself: what it leads to is not ours (0.6.0 review M9).
+    const DWORD a = GetFileAttributesW(path.c_str());
+    if (a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_REPARSE_POINT)) return RemoveDirectoryW(path.c_str()) != 0;
     for (const std::wstring& f : listFolder(path, false)) DeleteFileW((path + L"\\" + f).c_str());
     for (const std::wstring& d : listFolder(path, true)) removeTree(path + L"\\" + d);
     return RemoveDirectoryW(path.c_str()) != 0;
@@ -98,11 +107,18 @@ bool underProgramFiles(const std::wstring& dir) {
         for (wchar_t& ch : s) ch = wchar_t(std::towlower(ch));
         return s;
     };
-    const std::wstring d = lower(dir) + L"\\";
+    std::vector<std::wstring> roots;
     for (int csidl : {CSIDL_PROGRAM_FILES, CSIDL_PROGRAM_FILESX86}) {
         wchar_t path[MAX_PATH];
-        if (SHGetFolderPathW(nullptr, csidl, nullptr, SHGFP_TYPE_CURRENT, path) != S_OK) continue;
-        const std::wstring p = lower(path) + L"\\";
+        if (SHGetFolderPathW(nullptr, csidl, nullptr, SHGFP_TYPE_CURRENT, path) == S_OK) roots.push_back(path);
+    }
+    // A 32-bit program is told "Program Files (x86)" for both: the 64-bit folder is ProgramW6432 (0.6.0 review M9).
+    wchar_t w64[MAX_PATH];
+    const DWORD n = GetEnvironmentVariableW(L"ProgramW6432", w64, MAX_PATH);
+    if (n > 0 && n < MAX_PATH) roots.push_back(w64);
+    const std::wstring d = lower(dir) + L"\\";
+    for (const std::wstring& root : roots) {
+        const std::wstring p = lower(root) + L"\\";
         if (d.compare(0, p.size(), p) == 0) return true;
     }
     return false;

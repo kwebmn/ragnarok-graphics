@@ -19,7 +19,9 @@ struct D3D12Probe {
     unsigned device = 0;
     unsigned long long vramMb = 0;
 };
-// d3d12.dll and dxgi.dll are loaded at run time and stay loaded for the renderer.
-D3D12Probe probeD3D12();
+// d3d12.dll and dxgi.dll are loaded at run time and stay loaded for the renderer: as the game finds them, or with
+// systemOnly Windows' own copies from System32 - the settings app has no business with a dxgi.dll the game folder may
+// hold (ReShade), 0.6.0 review M8.
+D3D12Probe probeD3D12(bool systemOnly = false);
 
 }  // namespace uagfx::win

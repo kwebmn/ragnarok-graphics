@@ -1,8 +1,5 @@
 #include "win/paths.hpp"
 
-#include <fstream>
-#include <sstream>
-
 namespace uagfx::win {
 
 std::string modulePath(HMODULE m) {
@@ -30,12 +27,20 @@ bool fileExists(const std::string& path) {
 }
 
 bool readTextFile(const std::string& path, std::string& out) {
-    std::ifstream f(path, std::ios::binary);
-    if (!f) return false;
-    std::ostringstream s;
-    s << f.rdbuf();
-    out = s.str();
-    return true;
+    // Shared for deleting too: the settings app replaces uaro-graphics.ini in one step (MoveFileEx), also while it is
+    // read here (0.6.0 review M1).
+    HANDLE f = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                           OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return false;
+    LARGE_INTEGER size{};
+    bool ok = GetFileSizeEx(f, &size) && size.QuadPart < (LONGLONG(1) << 30);
+    if (ok) {
+        out.assign(size_t(size.QuadPart), '\0');
+        DWORD got = 0;
+        ok = out.empty() || (ReadFile(f, &out[0], DWORD(out.size()), &got, nullptr) && got == out.size());
+    }
+    CloseHandle(f);
+    return ok;
 }
 
 }  // namespace uagfx::win
