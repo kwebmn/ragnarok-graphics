@@ -20,6 +20,7 @@ struct Config {
     bool highResolution = true;  // draw at the window's real pixels under Windows scaling (stage 3); false = 0.2
     UiFilter uiFilter = UiFilter::Sharp;
     int renderScale = 100;       // %, 100-200: the frame is drawn this much larger and shrunk when shown
+    int sharpen = 50;            // 0-100: contrast adaptive sharpening of the picture on screen; 0 = off
     bool vsync = true;
     int fpsLimit = 0;      // 0 = no limit
     bool allowTearing = false;  // let G-SYNC / FreeSync monitors show frames as soon as they are ready

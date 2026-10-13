@@ -55,9 +55,10 @@ struct Constants {
     float footprint;       // 15: blit only - source texels per destination pixel
     float sourceRect[4];   // 16-19: blit only, normalised u0 v0 u1 v1
     float uiPixels[4];     // 20-23: uiMode only - the quad's game pixels: first x, first y, last x, last y
+    float sharpen;         // 24: blit only - CAS sharpness 0..1 of the picture on screen, below 0 = none
 };
 constexpr UINT kConstantCount = sizeof(Constants) / 4;
-static_assert(kConstantCount == 24, "Constants must stay 24 DWORDs");
+static_assert(kConstantCount == 25, "Constants must stay 25 DWORDs");
 
 struct Texture {
     ID3D12Resource* resource = nullptr;
@@ -182,7 +183,8 @@ struct Renderer::Impl {
     bool scaled() const { return width != gameWidth || height != gameHeight; }
     void applyViewport();
     void blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
-              const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW, int dstH);
+              const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW, int dstH,
+              float sharpen = -1.0f);
     bool growUpload(Slot& s, UINT64 size);
     Upload allocUpload(UINT64 size, UINT64 alignment);
     void transition(ID3D12Resource* r, D3D12_RESOURCE_STATES& state, D3D12_RESOURCE_STATES to);

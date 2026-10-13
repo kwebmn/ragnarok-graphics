@@ -14,6 +14,7 @@ struct PresentOptions {
     bool vsync = true;
     bool allowTearing = false;  // used only with vsync off, when Windows supports it
     int fpsLimit = 0;           // 0 = no limit
+    float sharpen = -1.0f;      // CAS sharpness 0..1 of the picture on screen; below 0 = none
 };
 
 // Direct3D 12 behind the DirectDraw surfaces: plays frame records onto the render target the client draws into,

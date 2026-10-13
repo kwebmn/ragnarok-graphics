@@ -17,6 +17,7 @@ cbuffer Params : register(b0) {
     float footprint;
     float4 sourceRect;
     float4 uiPixels;
+    float sharpen;
 };
 Texture2D tex0 : register(t0);
 Texture2D tex1 : register(t1);
@@ -182,18 +183,37 @@ PresentOut present_vs(uint id : SV_VertexID) {
 
 // Copies part of a texture: one bilinear sample when it is not shrunk, else the average of n x n samples over the
 // destination pixel's footprint (supersampling; the target read back at the game's size).
-float4 present_ps(PresentOut i) : SV_Target {
-    if (footprint <= 1.0001) return float4(tex0.Sample(samp0, i.uv).rgb, 1);
+// One destination pixel of a copy: a bilinear sample when the source is not shrunk, else the average of n x n
+// samples over the pixel's footprint (supersampling; the target read back at the game's size).
+float3 fetch(float2 uv, float2 dx, float2 dy) {
+    if (footprint <= 1.0001) return tex0.SampleGrad(samp0, uv, dx, dy).rgb;
     int n = min((int)ceil(footprint), 4);
-    float2 dx = ddx(i.uv);
-    float2 dy = ddy(i.uv);
     float3 sum = 0;
     for (int y = 0; y < n; ++y)
         for (int x = 0; x < n; ++x) {
             float2 o = (float2(x, y) + 0.5) / n - 0.5;
-            sum += tex0.SampleGrad(samp0, i.uv + o.x * dx + o.y * dy, dx, dy).rgb;
+            sum += tex0.SampleGrad(samp0, uv + o.x * dx + o.y * dy, dx, dy).rgb;
         }
-    return float4(sum / (n * n), 1);
+    return sum / (n * n);
+}
+
+// Contrast adaptive sharpening (after AMD FidelityFX CAS, the 5-tap cross; core casSharpen does the same): more local
+// contrast where there is detail, flat and linear areas as they are, never beyond the neighbours - no halos.
+float3 cas(float3 c, float3 n, float3 s, float3 w, float3 e) {
+    float3 mn = min(c, min(min(n, s), min(w, e)));
+    float3 mx = max(c, max(max(n, s), max(w, e)));
+    float3 amp = sqrt(saturate(min(mn, 1.0 - mx) / max(mx, 1e-5)));
+    float3 wgt = amp * (-1.0 / lerp(8.0, 5.0, sharpen));
+    return clamp((c + wgt * (n + s + w + e)) / (1.0 + 4.0 * wgt), mn, mx);
+}
+
+float4 present_ps(PresentOut i) : SV_Target {
+    float2 dx = ddx(i.uv);  // one destination pixel in the source; outside any branch
+    float2 dy = ddy(i.uv);
+    float3 c = fetch(i.uv, dx, dy);
+    if (sharpen >= 0.0)
+        c = cas(c, fetch(i.uv - dy, dx, dy), fetch(i.uv + dy, dx, dy), fetch(i.uv - dx, dx, dy), fetch(i.uv + dx, dx, dy));
+    return float4(c, 1);
 }
 )HLSL";
 }

@@ -91,11 +91,19 @@ void Context::present(const Rect& source, bool waitForVblank) {
         windowApplied = true;
         applyWindowMode(window, config, gameFullscreen, shadow.width(), shadow.height());
     }
+    // Pause or Scroll Lock in the game window: every improvement off - the game's size stretched like Windows does,
+    // no interface filter, no sharpening - and on again, to compare without a restart.
+    const bool keyDown = window && GetForegroundWindow() == window &&
+                         (GetAsyncKeyState(VK_PAUSE) < 0 || GetAsyncKeyState(VK_SCROLL) < 0);
+    if (compareKey_.pressed(keyDown)) {
+        enhanced_ = !enhanced_;
+        LOG_INFO("compare key: improvements %s", enhanced_ ? "on" : "off");
+    }
     // Stage 3: the window's real pixels and the scale for them. The first present switches from the game's size:
     // the start-up calibration has run by then (spec §4.3).
     const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
-    const ScalePlan plan =
-        planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale, config.highResolution);
+    const ScalePlan plan = planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale,
+                                     config.highResolution && enhanced_);
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_) {
         scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
         scaledHeight_ = plan.targetHeight;
@@ -109,6 +117,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.vsync = config.vsync && waitForVblank;
     o.allowTearing = config.allowTearing;
     o.fpsLimit = config.fpsLimit;
+    o.sharpen = enhanced_ && config.sharpen > 0 ? float(config.sharpen - 1) / 99.0f : -1.0f;  // 1-100 -> CAS 0..1
     renderer->present(window, out.cx, out.cy, source, o);
     ++stats_.frames;
     logStats(false);

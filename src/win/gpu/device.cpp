@@ -315,7 +315,7 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
 // one bilinear sample per pixel when enlarging, an average over each pixel's footprint when shrinking.
 void Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
                           const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW,
-                          int dstH) {
+                          int dstH, float sharpen) {
     if (dstRect.empty() || srcW <= 0 || srcH <= 0) return;
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
@@ -341,6 +341,7 @@ void Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     c.sourceRect[3] = srcRect[3] / float(srcH);
     c.footprint = std::max((srcRect[2] - srcRect[0]) / float(dstRect.width()),
                            (srcRect[3] - srcRect[1]) / float(dstRect.height()));
+    c.sharpen = sharpen;  // only the picture on screen: reads and writes of the frame stay as the game drew it
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
     list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
@@ -800,7 +801,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const auto ty = [&m](int y) { return float(double(y) * m.height / m.gameHeight); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
     m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, from, rtv, fit, int(m.swapWidth),
-           int(m.swapHeight));
+           int(m.swapHeight), options.sharpen);
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
     m.submit();
 

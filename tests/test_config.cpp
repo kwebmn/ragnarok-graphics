@@ -15,6 +15,7 @@ TEST(config_defaults_without_a_file) {
     CHECK(c.highResolution);
     CHECK(c.uiFilter == UiFilter::Sharp);
     CHECK_EQ(c.renderScale, 100);
+    CHECK_EQ(c.sharpen, 50);
     CHECK(c.vsync);
     CHECK_EQ(c.fpsLimit, 0);
     CHECK(!c.allowTearing);
@@ -26,7 +27,7 @@ TEST(config_reads_every_key) {
         "[renderer]\nbackend = uaro\n"
         "[display]\nmode = window\nmonitor = 1\nwindow_width = 1600\nwindow_height = 900\n"
         "high_resolution = 0\nui_filter = smooth\n"
-        "[quality]\nrender_scale = 150\n"
+        "[quality]\nrender_scale = 150\nsharpen = 80\n"
         "[frames]\nvsync = 0\nfps_limit = 144\nallow_tearing = 1\n"
         "[debug]\nlog = verbose\n");
     CHECK(c.backend == Backend::Uaro);
@@ -37,6 +38,7 @@ TEST(config_reads_every_key) {
     CHECK(!c.highResolution);
     CHECK(c.uiFilter == UiFilter::Smooth);
     CHECK_EQ(c.renderScale, 150);
+    CHECK_EQ(c.sharpen, 80);
     CHECK(!c.vsync);
     CHECK_EQ(c.fpsLimit, 144);
     CHECK(c.allowTearing);
@@ -47,7 +49,7 @@ TEST(config_invalid_values_keep_defaults) {
     const Config c = parseConfig(
         "[renderer]\nbackend = vulkan\n"
         "[display]\nmode = fullscreen\nmonitor = -1\nwindow_width = 100\nwindow_height = abc\n"
-        "high_resolution = maybe\nui_filter = blurry\n[quality]\nrender_scale = 300\n"
+        "high_resolution = maybe\nui_filter = blurry\n[quality]\nrender_scale = 300\nsharpen = 101\n"
         "[frames]\nvsync = maybe\nfps_limit = -5\n"
         "[debug]\nlog = loud\n");
     CHECK(c.backend == Backend::DgVoodoo);
@@ -58,6 +60,7 @@ TEST(config_invalid_values_keep_defaults) {
     CHECK(c.highResolution);
     CHECK(c.uiFilter == UiFilter::Sharp);
     CHECK_EQ(c.renderScale, 100);
+    CHECK_EQ(c.sharpen, 50);
     CHECK(c.vsync);
     CHECK_EQ(c.fpsLimit, 0);
     CHECK(c.logLevel == LogLevel::Info);
@@ -86,4 +89,12 @@ TEST(config_tokens) {
     CHECK(std::strcmp(displayModeToken(DisplayMode::Auto), "auto") == 0);
     CHECK(std::strcmp(uiFilterToken(UiFilter::Sharp), "sharp") == 0);
     CHECK(std::strcmp(uiFilterToken(UiFilter::Smooth), "smooth") == 0);
+}
+
+// install.bat adds the sharpen key to a 0.3 settings file as a second [quality] section at its end.
+TEST(config_a_section_may_come_twice) {
+    const Config c = parseConfig("[quality]\nrender_scale = 150\n[frames]\nvsync = 0\n[quality]\nsharpen = 0\n");
+    CHECK_EQ(c.renderScale, 150);
+    CHECK_EQ(c.sharpen, 0);
+    CHECK(!c.vsync);
 }

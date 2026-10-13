@@ -9,6 +9,7 @@
 #include "core/frame.hpp"
 #include "core/image.hpp"
 #include "core/pixel.hpp"
+#include "core/toggle_key.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/shadow.hpp"
 
@@ -61,6 +62,8 @@ private:
     Stats stats_;
     int scaledWidth_ = 0;  // the target size the last scale plan asked for (stage 3)
     int scaledHeight_ = 0;
+    ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
+    bool enhanced_ = true;
 };
 
 // Holds the global lock for a scope; every DirectDraw / Direct3D method starts with one.

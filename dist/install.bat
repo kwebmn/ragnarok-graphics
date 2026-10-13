@@ -37,6 +37,15 @@ if exist "uaro-graphics.ini" (
     )
 )
 if not exist "uaro-graphics.ini" copy "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
+rem A 0.3 settings file has no sharpen key yet: it is added at the end, every other setting stays.
+findstr /c:"sharpen" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [quality]
+    >>"uaro-graphics.ini" echo ; sharpening of the picture on screen, 0-100: 0 = off, more = crisper detail
+    >>"uaro-graphics.ini" echo sharpen = 50
+    >>"uaro-graphics.ini" echo ; in the game, Pause or Scroll Lock switches all improvements off and on, to compare
+)
 rem update.bat calls install.bat /quiet and reports the result itself.
 if /i "%~1"=="/quiet" exit /b 0
 echo.

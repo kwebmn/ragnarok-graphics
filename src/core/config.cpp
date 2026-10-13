@@ -75,6 +75,8 @@ Config parseConfig(const std::string& text) {
             if (val == "smooth") c.uiFilter = UiFilter::Smooth;
         } else if (key == "quality.render_scale") {
             toInt(val, 100, 200, c.renderScale);
+        } else if (key == "quality.sharpen") {
+            toInt(val, 0, 100, c.sharpen);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {
