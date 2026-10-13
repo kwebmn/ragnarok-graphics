@@ -23,7 +23,12 @@ const GlyphBitmap& GlyphCache::put(uint32_t font, uint32_t ch, GlyphBitmap g) {
     }
     const size_t c = cost(g);
     order_.push_front(Entry{key, std::move(g), c});
-    map_[key] = order_.begin();
+    try {
+        map_[key] = order_.begin();
+    } catch (...) {  // no memory for its index: the letter goes again, the cache stays as it was (0.5.2 review 2c)
+        order_.pop_front();
+        throw;
+    }
     bytes_ += c;
     while (bytes_ > budget_ && order_.size() > 1) {
         bytes_ -= order_.back().bytes;

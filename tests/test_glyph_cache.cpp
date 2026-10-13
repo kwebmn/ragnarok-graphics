@@ -1,4 +1,8 @@
+#include <new>
+#include <utility>
+
 #include "core/glyph_cache.hpp"
+#include "fail_alloc.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -55,4 +59,27 @@ TEST(glyph_cache_put_again_replaces) {
     CHECK_EQ(c.size(), size_t(0));
     CHECK_EQ(c.bytes(), size_t(0));
     CHECK(c.find(1, 'a') == nullptr);
+}
+
+TEST(glyph_cache_out_of_memory_in_put_leaves_it_as_it_was) {
+    // A letter goes into the list, then into the index: no memory for the index must not leave it in the list,
+    // uncounted, for the budget to subtract later (0.5.2 review 2c).
+    const size_t one = GlyphCache::cost(letter(8));
+    GlyphCache c(one * 2);
+    c.put(1, 'a', letter(8));
+    GlyphBitmap b = letter(8);
+    bool threw = false;
+    {
+        t::FailAllocations fail(1);  // the list entry is made, the index entry is not
+        try {
+            c.put(1, 'b', std::move(b));
+        } catch (const std::bad_alloc&) {
+            threw = true;
+        }
+    }
+    CHECK(threw);
+    CHECK(c.find(1, 'b') == nullptr);
+    for (uint32_t ch = 'c'; ch <= 'f'; ++ch) c.put(1, ch, letter(8));  // past the budget: the oldest go
+    CHECK_EQ(c.size(), size_t(2));
+    CHECK_EQ(c.bytes(), one * 2);
 }
