@@ -388,6 +388,7 @@ HRESULT STDMETHODCALLTYPE Surface7::GetDC(HDC* out) {
     }
     dibBits_ = static_cast<uint32_t*>(bits);
     std::memcpy(dibBits_, argb.data(), std::min(argb.size(), size_t(width_) * size_t(height_)) * sizeof(uint32_t));
+    dcBefore_.assign(dibBits_, dibBits_ + size_t(width_) * size_t(height_));
     oldBitmap_ = SelectObject(dc_, dib_);  // ARGB8 in memory is the DIB's B, G, R, X
     *out = dc_;
     return DD_OK;
@@ -397,9 +398,17 @@ HRESULT STDMETHODCALLTYPE Surface7::ReleaseDC(HDC dc) {
     win::Guard guard;
     if (!dc_ || dc != dc_) return DDERR_NODC;
     GdiFlush();
-    std::vector<uint32_t> argb(dibBits_, dibBits_ + size_t(width_) * size_t(height_));
-    for (uint32_t& p : argb) p |= 0xFF000000u;  // GDI leaves the X byte 0
-    win::Context::get().writeTarget(bounds(), argb.data());
+    // Only what GDI drew goes back (review I1): at k > 1 the whole frame would be the shrunk copy stretched over the
+    // sharp picture, and the screenshot read after it would be resampled twice.
+    const Rect r = changedRect(dcBefore_.data(), dibBits_, width_, height_);
+    if (!r.empty()) {
+        std::vector<uint32_t> argb(size_t(r.width()) * size_t(r.height()));
+        for (int y = r.top; y < r.bottom; ++y)
+            for (int x = r.left; x < r.right; ++x)  // GDI leaves the X byte 0
+                argb[size_t(y - r.top) * size_t(r.width()) + size_t(x - r.left)] =
+                    dibBits_[size_t(y) * size_t(width_) + size_t(x)] | 0xFF000000u;
+        win::Context::get().writeTarget(r, argb.data());
+    }
     freeDc();
     return DD_OK;
 }
@@ -412,6 +421,7 @@ void Surface7::freeDc() {
     dib_ = nullptr;
     oldBitmap_ = nullptr;
     dibBits_ = nullptr;
+    dcBefore_.clear();
 }
 
 HRESULT STDMETHODCALLTYPE Surface7::GetPixelFormat(LPDDPIXELFORMAT format) {

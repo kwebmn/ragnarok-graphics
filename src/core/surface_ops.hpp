@@ -41,4 +41,7 @@ struct TargetWrite {
 bool targetWrite(const Image& src, const Rect& sr, const Rect& dr, int width, int height, const ColorKey& key,
                  const std::vector<uint32_t>& current, TargetWrite& out);
 
+// The bounds of the pixels whose colour differs (the top byte, which GDI zeroes, is ignored); empty when none.
+Rect changedRect(const uint32_t* before, const uint32_t* after, int width, int height);
+
 }  // namespace uagfx

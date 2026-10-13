@@ -1,5 +1,7 @@
 #include "core/surface_ops.hpp"
 
+#include <algorithm>
+
 namespace uagfx {
 namespace {
 
@@ -90,6 +92,20 @@ bool targetWrite(const Image& src, const Rect& sr, const Rect& dr, int width, in
                                                 : toArgb8(src.format(), raw));
         }
     return true;
+}
+
+Rect changedRect(const uint32_t* before, const uint32_t* after, int width, int height) {
+    Rect r{width, height, 0, 0};
+    for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x) {
+            const size_t i = size_t(y) * size_t(width) + size_t(x);
+            if (((before[i] ^ after[i]) & 0x00FFFFFFu) == 0) continue;
+            r.left = std::min(r.left, x);
+            r.top = std::min(r.top, y);
+            r.right = std::max(r.right, x + 1);
+            r.bottom = std::max(r.bottom, y + 1);
+        }
+    return r.empty() ? Rect{} : r;
 }
 
 }  // namespace uagfx

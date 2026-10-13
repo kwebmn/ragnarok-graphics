@@ -103,3 +103,17 @@ TEST(surfops_target_write_with_key_keeps_the_target) {
     CHECK_EQ(w.argb[1], 0xFF0000FFu);
     CHECK(!targetWrite(src, src.bounds(), Rect{0, 0, 2, 1}, 2, 1, kMagenta, {}, w));  // a key needs the target
 }
+
+// Review I1: ReleaseDC writes back only what GDI drew (the screenshot caption), so at k > 1 the rest of the frame is
+// not shrunk and stretched again before the screenshot reads it.
+TEST(surfops_changed_rect_bounds_what_gdi_drew) {
+    const std::vector<uint32_t> before(8 * 6, 0xFF102030u);
+    std::vector<uint32_t> after = before;
+    CHECK(changedRect(before.data(), after.data(), 8, 6).empty());  // nothing drawn
+    after[2 * 8 + 3] = 0x00FFFFFFu;  // GDI text: white, the X byte 0
+    after[4 * 8 + 5] = 0x00000000u;
+    CHECK(changedRect(before.data(), after.data(), 8, 6) == (Rect{3, 2, 6, 5}));
+    after = before;
+    after[0] = 0x00102030u;  // only the X byte: GDI touched it, the colour is the same
+    CHECK(changedRect(before.data(), after.data(), 8, 6).empty());
+}

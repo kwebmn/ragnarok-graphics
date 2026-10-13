@@ -102,6 +102,7 @@ private:
     HBITMAP dib_ = nullptr;
     HGDIOBJ oldBitmap_ = nullptr;
     uint32_t* dibBits_ = nullptr;
+    std::vector<uint32_t> dcBefore_;  // the frame as GetDC gave it: ReleaseDC writes back only what GDI changed
 };
 
 }  // namespace uagfx::dx7
