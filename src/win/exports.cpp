@@ -2,6 +2,11 @@
 
 #include <ddraw.h>
 
+#include <string>
+
+#include "core/renderer_choice.hpp"
+#include "win/context.hpp"
+#include "win/dx7/ddraw7.hpp"
 #include "win/log.hpp"
 #include "win/real_ddraw.hpp"
 
@@ -12,12 +17,35 @@ Fn real(const char* name) {
     return reinterpret_cast<Fn>(reinterpret_cast<void*>(uagfx::win::realProc(name)));
 }
 
+bool g_uaroFailed = false;  // the uaRO renderer did not start: every later call goes to the other DirectDraw
+
+// DirectDraw of the uaRO renderer. S_FALSE: Direct3D 12 would not start, the caller falls back.
+HRESULT createUaro(REFIID iid, LPVOID* out, IUnknown* outer) {
+    if (outer) return CLASS_E_NOAGGREGATION;
+    uagfx::win::Guard guard;
+    uagfx::win::Context& c = uagfx::win::Context::get();
+    c.config = uagfx::win::startup().config;
+    std::string error;
+    if (!c.open(error)) {
+        LOG_ERROR("the uaRO renderer could not start (%s): falling back to another DirectDraw", error.c_str());
+        return S_FALSE;
+    }
+    const HRESULT hr = uagfx::dx7::createDirectDraw(iid, out);
+    LOG_INFO("DirectDrawCreateEx = 0x%08lx (uaRO renderer)", static_cast<unsigned long>(hr));
+    return hr;
+}
+
 }  // namespace
 
 // The only DDRAW.dll import of uaRO.exe. ROExt inline-hooks it as soon as the game starts, so it begins
 // with the hot-patch prologue (mov edi,edi / push ebp / mov ebp,esp) that hooks expect.
 extern "C" __attribute__((ms_hook_prologue)) HRESULT WINAPI Proxy_DirectDrawCreateEx(GUID* guid, LPVOID* out,
                                                                                     REFIID iid, IUnknown* outer) {
+    if (uagfx::win::startup().choice.renderer == uagfx::Renderer::Uaro && !g_uaroFailed) {
+        const HRESULT hr = createUaro(iid, out, outer);
+        if (hr != S_FALSE) return hr;
+        g_uaroFailed = true;
+    }
     using Fn = HRESULT(WINAPI*)(GUID*, LPVOID*, REFIID, IUnknown*);
     const Fn fn = real<Fn>("DirectDrawCreateEx");
     if (!fn) return E_FAIL;

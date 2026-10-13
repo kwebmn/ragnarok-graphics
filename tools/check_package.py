@@ -7,7 +7,8 @@ overwrites dgVoodoo's DDraw.dll; install.bat moves the files into place.
 import sys
 import zipfile
 
-EXPECTED = {"install.bat", "uninstall.bat", "TEST.ru.md", "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.ini"}
+EXPECTED = {"install.bat", "uninstall.bat", "use-uaro.bat", "use-dgvoodoo.bat", "TEST.ru.md",
+            "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.ini"}
 
 
 def fail(msg):
@@ -23,11 +24,11 @@ def main(path):
     names = {n for n in z.namelist() if not n.endswith("/")}
     if names != EXPECTED:
         fail("layout %s, expected %s" % (sorted(names), sorted(EXPECTED)))
-    for bat in ("install.bat", "uninstall.bat"):
+    for bat in sorted(n for n in names if n.endswith(".bat")):
         if b"\n" in z.read(bat).replace(b"\r\n", b""):
             fail(bat + " has LF line endings: cmd.exe needs CRLF")
     print("OK: %s: %s" % (path, ", ".join(sorted(names))))
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "build-win/uaro-graphics-0.1.1.zip")
+    main(sys.argv[1] if len(sys.argv) > 1 else "build-win/uaro-graphics-0.2.0.zip")

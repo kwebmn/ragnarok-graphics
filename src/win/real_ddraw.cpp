@@ -2,8 +2,6 @@
 
 #include <string>
 
-#include "core/config.hpp"
-#include "core/renderer_choice.hpp"
 #include "core/version.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -14,8 +12,8 @@ namespace {
 
 HMODULE g_loaded = nullptr;  // set once the real DirectDraw is loaded
 
-// 0.1.x has no uaRO renderer yet: everything goes to dgVoodoo or the system DirectDraw.
-constexpr bool kUaroBuilt = false;
+// 0.2.0 has the uaRO renderer. It is opt-in (backend = uaro); dgVoodoo stays the default.
+constexpr bool kUaroBuilt = true;
 
 void logModule(const char* name) {
     if (HMODULE m = GetModuleHandleA(name)) LOG_INFO("%s: %s", name, modulePath(m).c_str());
@@ -39,15 +37,16 @@ HMODULE loadSystem() {
     return m;
 }
 
-HMODULE loadReal() {
+Startup decide() {
+    Startup s;
     const std::string dir = gameDir();
     std::string ini;
     const bool haveIni = readTextFile(dir + "\\uaro-graphics.ini", ini);
-    const Config config = parseConfig(ini);
-    wlog::open(dir + "\\uaro-graphics.log", config.logLevel);
+    s.config = parseConfig(ini);
+    wlog::open(dir + "\\uaro-graphics.log", s.config.logLevel);
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
     LOG_INFO("settings: %s; backend = %s, mode = %s", haveIni ? "uaro-graphics.ini" : "no uaro-graphics.ini, defaults",
-             backendToken(config.backend), displayModeToken(config.mode));
+             backendToken(s.config.backend), displayModeToken(s.config.mode));
     const WindowsVersion v = windowsVersion();
     LOG_INFO("Windows %lu.%lu build %lu", v.major, v.minor, v.build);
     logModule("dinput.dll");   // ROExt or uaRO Pad
@@ -56,18 +55,24 @@ HMODULE loadReal() {
     SystemFacts facts;
     facts.windows10 = v.major >= 10;
     facts.dgvoodoo = fileExists(dir + "\\dgvoodoo\\DDraw.dll");
-    if (facts.windows10) {  // 0.1.x: always, so the log shows what the uaRO renderer would get
+    if (facts.windows10) {  // always: backend = uaro needs it, and the log names the adapter either way
         const D3D12Probe p = probeD3D12();
         facts.d3d12 = p.ok;
         LOG_INFO("Direct3D 12: %s, adapter %s (vendor 0x%04x, device 0x%04x, %llu MB), hr 0x%08lx",
                  p.ok ? "OK" : "FAILED", p.adapter.c_str(), p.vendor, p.device, p.vramMb,
                  static_cast<unsigned long>(p.hr));
     }
-    const RendererChoice choice = chooseRenderer(config, facts, kUaroBuilt);
-    LOG_INFO("renderer: %s (%s)", rendererName(choice.renderer), choice.reason.c_str());
+    s.choice = chooseRenderer(s.config, facts, kUaroBuilt);
+    LOG_INFO("renderer: %s (%s)", rendererName(s.choice.renderer), s.choice.reason.c_str());
+    return s;
+}
 
+HMODULE loadReal() {
+    const Startup& s = startup();
+    const std::string dir = gameDir();
     HMODULE m = nullptr;
-    if (choice.renderer == Renderer::DgVoodoo) m = loadDgVoodoo(dir);
+    // dgVoodoo when it was chosen, and as the uaRO renderer's fallback when it is there.
+    if (s.choice.renderer != Renderer::System && fileExists(dir + "\\dgvoodoo\\DDraw.dll")) m = loadDgVoodoo(dir);
     if (!m) m = loadSystem();
     if (m) LOG_INFO("passing DirectDraw to %s", modulePath(m).c_str());
     g_loaded = m;
@@ -75,6 +80,11 @@ HMODULE loadReal() {
 }
 
 }  // namespace
+
+const Startup& startup() {
+    static const Startup s = decide();
+    return s;
+}
 
 HMODULE realModule() {
     static HMODULE m = loadReal();

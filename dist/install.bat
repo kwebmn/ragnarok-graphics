@@ -28,6 +28,7 @@ copy /y "uaro-graphics\ddraw.dll" "ddraw.dll" >nul || goto :noaccess
 if not exist "uaro-graphics.ini" copy "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
 echo.
 echo uaRO Graphics is installed. Start the game as usual.
+echo To draw with the uaRO Graphics renderer (Direct3D 12), run use-uaro.bat; use-dgvoodoo.bat switches back.
 echo The log is uaro-graphics.log in this folder. To undo everything, run uninstall.bat.
 echo.
 pause
