@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "core/d3d7.hpp"
+#include "core/scale.hpp"
 
 namespace uagfx {
 namespace {
@@ -54,8 +55,8 @@ void tlToNdc(float x, float y, int width, int height, float& ndcX, float& ndcY) 
     ndcY = 1.0f - (y + 0.5f) * 2.0f / float(height);
 }
 
-RefRaster::RefRaster(int width, int height, PixelCenters centers)
-    : w_(width), h_(height), centers_(centers), px_(size_t(width) * size_t(height), Rgb{0, 0, 0}) {}
+RefRaster::RefRaster(int width, int height, PixelCenters centers, double scale)
+    : w_(width), h_(height), centers_(centers), scale_(scale), px_(size_t(width) * size_t(height), Rgb{0, 0, 0}) {}
 
 void RefRaster::clear(const Rgb& c) { std::fill(px_.begin(), px_.end(), c); }
 
@@ -70,9 +71,15 @@ void RefRaster::strip(const TlVertex* v, int count, const RefTexture& tex, bool 
 
 void RefRaster::triangle(const TlVertex& a, const TlVertex& b, const TlVertex& c, const RefTexture& tex, bool linear,
                          uint32_t address) {
-    const TlVertex* p0 = &a;
-    const TlVertex* p1 = &b;
-    const TlVertex* p2 = &c;
+    TlVertex t[3] = {a, b, c};
+    if (centers_ == PixelCenters::Ours)
+        for (TlVertex& v : t) {
+            v.x = float(targetCoord(v.x, scale_));
+            v.y = float(targetCoord(v.y, scale_));
+        }
+    const TlVertex* p0 = &t[0];
+    const TlVertex* p1 = &t[1];
+    const TlVertex* p2 = &t[2];
     double area = edge(p0->x, p0->y, p1->x, p1->y, p2->x, p2->y);
     if (area == 0) return;
     if (area < 0) {

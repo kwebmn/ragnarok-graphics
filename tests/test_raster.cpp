@@ -19,6 +19,20 @@ void quad(RefRaster& r, float x0, float y0, float u0, float v0, float u1, float 
     r.strip(v, 4, checker(), true, address);
 }
 bool near(double a, double b) { return std::fabs(a - b) < 1e-9; }
+// A solid white rectangle of game pixels [x0, x1) x [y0, y1) drawn into r on a grey background.
+void rect(RefRaster& r, float x0, float y0, float x1, float y1) {
+    const RefTexture white{1, 1, {0xFFFFFFFF}};
+    const TlVertex v[4] = {tl(x0, y0, 0, 0), tl(x0, y1, 0, 1), tl(x1, y0, 1, 0), tl(x1, y1, 1, 1)};
+    r.clear(Rgb{0.25, 0.25, 0.25});
+    r.strip(v, 4, white, false, d3d7::TADDRESS_CLAMP);
+}
+int covered(const RefRaster& r) {
+    int n = 0;
+    for (int y = 0; y < r.height(); ++y)
+        for (int x = 0; x < r.width(); ++x)
+            if (!near(r.at(x, y).r, 0.25)) ++n;
+    return n;
+}
 }  // namespace
 
 TEST(raster_ndc_puts_d3d7_pixel_centres_on_d3d12_centres) {
@@ -62,4 +76,30 @@ TEST(raster_zero_offset_blurs_half_and_half) {
     CHECK(near(r.at(3, 0).g, 1.0));
     CHECK(near(r.at(0, 2).g, 0.5));
     CHECK(near(r.at(2, 2).g, 0.5));
+}
+
+TEST(raster_ours_at_scale_1_matches_d3d7) {
+    RefRaster a(8, 8, PixelCenters::D3D7);
+    RefRaster b(8, 8, PixelCenters::Ours, 1.0);
+    quad(a, 2, 2, 0.0f, 0.0f, 1.0f, 1.0f, d3d7::TADDRESS_CLAMP);
+    quad(b, 2, 2, 0.0f, 0.0f, 1.0f, 1.0f, d3d7::TADDRESS_CLAMP);
+    for (int y = 0; y < 8; ++y)
+        for (int x = 0; x < 8; ++x) CHECK(near(a.at(x, y).g, b.at(x, y).g));
+}
+
+TEST(raster_full_screen_quad_at_1_75_covers_every_pixel) {
+    // An 8x8 game drawn 1.75 times larger: 14x14. The client's full-screen quad has its vertices on the screen's
+    // edges (0 and 8); every target pixel must be covered ((x + 0.5) k would leave column 0 and row 0 empty).
+    RefRaster r(14, 14, PixelCenters::Ours, 1.75);
+    rect(r, 0, 0, 8, 8);
+    CHECK_EQ(covered(r), 14 * 14);
+}
+
+TEST(raster_one_game_pixel_becomes_k_by_k_pixels) {
+    RefRaster r(16, 16, PixelCenters::Ours, 2.0);
+    rect(r, 3, 3, 4, 4);
+    CHECK_EQ(covered(r), 4);
+    CHECK(!near(r.at(6, 6).r, 0.25));
+    CHECK(!near(r.at(7, 7).r, 0.25));
+    CHECK(near(r.at(8, 8).r, 0.25));
 }
