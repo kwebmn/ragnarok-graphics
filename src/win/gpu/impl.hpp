@@ -172,7 +172,8 @@ struct Renderer::Impl {
     D3D12_GPU_VIRTUAL_ADDRESS vertexBase = 0;
     D3D12_GPU_VIRTUAL_ADDRESS indexBase = 0;
     UINT indexBytes = 0;
-    UINT64 geometryFence = 0;  // fenceValue when that geometry was uploaded: a later list uploads it again
+    UINT64 listSerial = 0;    // counts the lists begin() opened
+    UINT64 geometryList = 0;  // the list that geometry was uploaded for: a later list uploads it again
     // Bindings already set on the open command list (reset by begin()).
     ID3D12PipelineState* boundPipeline = nullptr;
     uint64_t boundTextures = ~0ull;

@@ -92,6 +92,7 @@ bool Renderer::Impl::begin() {
     boundSamplers = ~0ull;
     targetBound = false;
     open = true;
+    ++listSerial;
     return true;
 }
 

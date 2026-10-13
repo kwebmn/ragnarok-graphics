@@ -38,7 +38,7 @@ void uiPixels(const FrameRecord& rec, const DrawCmd& d, float out[4]) {
 }  // namespace
 
 void Renderer::Impl::prepareGeometry(const FrameRecord& rec) {
-    geometryFence = fenceValue;
+    geometryList = listSerial;
     vertexBase = 0;
     indexBase = 0;
     indexBytes = 0;
@@ -76,7 +76,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
     if (!makeRoom(s.stage[0], s.stage[1])) return;
-    if (geometryFence != fenceValue) {
+    if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
     }
