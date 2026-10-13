@@ -821,7 +821,15 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     src.SubresourceIndex = 0;
     m.list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+    const UINT64 before = m.fenceValue;
+    m.submit();
+    if (m.fenceValue == before) return false;  // the list did not reach the GPU (Close failed, lost): no copy
     m.waitIdle();
+    const HRESULT removed = m.device->GetDeviceRemovedReason();
+    if (FAILED(removed)) {  // removed meanwhile: the wait ended without the copy (0.4.2 review)
+        m.failed(6, "reading the frame back", removed);
+        return false;
+    }
     uint8_t* data = nullptr;
     D3D12_RANGE all{0, SIZE_T(size)};
     const HRESULT hr = m.readback->Map(0, &all, reinterpret_cast<void**>(&data));
