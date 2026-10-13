@@ -71,9 +71,15 @@ bool Context::setTarget(int width, int height) {
 
 void Context::flush() {
     if (!renderer || record.empty()) return;
+    // Also when execute throws (out of memory): played again, the record's draws would show twice (0.5.2 review 2c).
+    struct Done {
+        Context& c;
+        ~Done() {
+            c.record.reset();
+            c.shadow.gpuChanged();
+        }
+    } done{*this};
     renderer->execute(record);
-    record.reset();
-    shadow.gpuChanged();
 }
 
 bool Context::readTarget(std::vector<uint32_t>& argb) {

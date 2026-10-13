@@ -90,7 +90,9 @@ const BigFont* bigFont(HDC dc, const LOGFONTW& lf, double K) {
                                          [&big, sign](int h) { return sampleWidth(big, sign * h); });
         big.lfHeight = sign * height;
         big.lfWidth = start > 0 ? LONG(std::lround(lf.lfWidth * K * height / start)) : 0;
-        it = g_fonts.emplace(key, BigFont{CreateFontIndirectW(&big), g_nextFont++}).first;
+        // The entry first: should it throw (no memory), no font is made and left behind (0.5.2 review 2c).
+        it = g_fonts.emplace(key, BigFont{}).first;
+        it->second = BigFont{CreateFontIndirectW(&big), g_nextFont++};
         LOG_INFO("crisp text: the game's font of height %ld drawn at %d (k %.3f: sample %d px, the game's x k %.0f)",
                  static_cast<long>(lf.lfHeight), static_cast<int>(sign * height), K, sampleWidth(big, big.lfHeight),
                  target);

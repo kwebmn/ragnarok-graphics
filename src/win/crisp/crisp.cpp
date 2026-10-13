@@ -103,8 +103,8 @@ void* UAGFX_THISCALL onDestroy(void* p, unsigned flags) {
     Guard guard;
     guarded(
         [p] {
+            forgetDc(self(p));  // first: it cannot fail, drop() can (0.5.2 review 2b)
             drop(self(p));
-            forgetDc(self(p));
         },
         [] {});
     return original<DestroyFn>(ce::kDestroy)(p, flags);
@@ -209,7 +209,10 @@ uint32_t UAGFX_THISCALL onClear(void* p, const RECT* r, uint32_t color) {
     const uint32_t result = original<ClearFn>(ce::kClear)(p, r, color);
     guarded(
         [p, r] {
-            if (Picture* pic = picture(self(p))) {
+            // Only into a twin there is already: the twin a picture's next write makes from its DIB has the fill, so a
+            // fill makes none - and the mode fade's logo, cleared by the factory (0x404DAC), gets none (0.5.2
+            // review 1).
+            if (Picture* pic = existing(self(p))) {
                 const Rect area = r ? Rect{int(r->left), int(r->top), int(r->right), int(r->bottom)} : whole(*pic);
                 pic->twin->overwrite(pic->bits, area);
             }
@@ -390,10 +393,13 @@ Picture* picture(uintptr_t bitmap) {
     return made;
 }
 
+Picture* existing(uintptr_t bitmap) { return state().pictures.count(bitmap) ? picture(bitmap) : nullptr; }
+
 void lost(uintptr_t bitmap) noexcept {
     guarded([bitmap] { drop(bitmap); }, [] {});
     static bool logged = false;
-    if (!logged) LOG_INFO("crisp text: no memory for a window's twin, it stays as in 0.4");
+    if (!logged)
+        LOG_INFO("crisp text: a window's twin was dropped after an error; it is made again at its next change");
     logged = true;
 }
 
@@ -401,13 +407,15 @@ void drop(uintptr_t bitmap) {
     State& s = state();
     const auto it = s.pictures.find(bitmap);
     if (it == s.pictures.end()) return;
-    gpu::Renderer* r = Context::get().renderer;
-    for (const Picture::Tile& t : it->second->tiles)
-        if (t.texture && r) r->releaseTexture(t.texture);
+    // Unlinked first: should releasing a texture throw, nothing of the picture stays behind (0.5.2 review 2b).
+    const std::unique_ptr<Picture> pic = std::move(it->second);
+    s.pictures.erase(it);
+    s.bytes -= pic->twin->bytes();
     for (auto t = s.tiles.begin(); t != s.tiles.end();)
         t = t->second.picture == bitmap ? s.tiles.erase(t) : std::next(t);
-    s.bytes -= it->second->twin->bytes();
-    s.pictures.erase(it);
+    if (gpu::Renderer* r = Context::get().renderer)
+        for (const Picture::Tile& t : pic->tiles)
+            if (t.texture) r->releaseTexture(t.texture);
 }
 
 void install(bool enabled) {
@@ -451,14 +459,14 @@ void uninstall() {
     s.loggedSizes.clear();
     s.budgetLogged = false;
     s.K = 0.0;
-    s.scale = Settled(300);
+    s.scale = Settled(kSettleMs);
     s.installed = false;
 }
 
 void setScale(double K) {
     State& s = state();
-    // While the window's edge is dragged K changes on every frame: it is taken once it holds for 300 ms; until then
-    // the twins are not shown - their K is not the renderer's k (0.5.0 review M2).
+    // While the window's edge is dragged K changes on every frame: it is taken once it holds for kSettleMs; until
+    // then the twins are not shown - their K is not the renderer's k (0.5.0 review M2).
     if (!s.installed || !s.scale.take(K, GetTickCount64()) || K == s.K) return;
     dropAll();
     s.K = K;

@@ -19,6 +19,9 @@
 
 namespace uagfx::win::crisp {
 
+// K is taken once it holds this long: not on every frame of a resize (0.5.0 review M2).
+constexpr uint64_t kSettleMs = 300;
+
 // A field of a game object.
 template <typename T>
 T& field(uintptr_t object, uintptr_t offset) {
@@ -58,7 +61,7 @@ struct State {
     size_t bytes = 0;  // every twin and copy together
     bool budgetLogged = false;
     std::set<uint32_t> loggedSizes;  // the safety net writes one line per window size
-    Settled scale{300};              // K once it holds: not on every frame of a resize
+    Settled scale{kSettleMs};        // K once it holds
     GlyphCache glyphs{size_t(16) << 20};
 };
 
@@ -67,8 +70,11 @@ bool active();  // the hooks are in place and K > 1
 // The picture of a CDCBitmap: made from its pixels at first sight, made again when the address holds another
 // picture now; null while crisp text is off or past the memory budget.
 Picture* picture(uintptr_t bitmap);
+// The same, but only for a picture that has its twin already: a fill makes none (0.5.2 review 1).
+Picture* existing(uintptr_t bitmap);
 void drop(uintptr_t bitmap);  // its twin, copy, tile textures and tile surfaces
-// A hook's own work failed (no memory): the picture loses its twin and shows as in 0.4; one log line.
+// A hook's own work failed (an exception): the picture loses its twin, made again from its pixels at its next write;
+// one log line.
 void lost(uintptr_t bitmap) noexcept;
 
 // text.cpp: the game's text and triangles (spec §4); the big fonts go when K changes.
