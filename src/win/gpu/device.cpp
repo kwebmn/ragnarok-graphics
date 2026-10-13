@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cstring>
 
+#include "core/d3d7.hpp"
+#include "core/scale.hpp"
 #include "core/window_plan.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -213,7 +215,8 @@ void Renderer::Impl::bindTarget() {
 // ---- Impl: frame record commands ---------------------------------------------------------------------------
 
 void Renderer::Impl::clear(const ClearCmd& c) {
-    D3D12_RECT r{c.rect.left, c.rect.top, c.rect.right, c.rect.bottom};
+    const Rect t = scaleRect(c.rect, scale);  // game pixels -> target pixels
+    D3D12_RECT r{t.left, t.top, t.right, t.bottom};
     r.left = std::max<LONG>(r.left, 0);
     r.top = std::max<LONG>(r.top, 0);
     r.right = std::min<LONG>(r.right, width);
@@ -229,10 +232,19 @@ void Renderer::Impl::clear(const ClearCmd& c) {
 }
 
 void Renderer::Impl::setViewport(const ViewportCmd& v) {
-    viewport = D3D12_VIEWPORT{float(v.rect.left), float(v.rect.top), float(v.rect.width()), float(v.rect.height()),
-                              v.minZ, v.maxZ};
-    scissor = D3D12_RECT{v.rect.left, v.rect.top, v.rect.right, v.rect.bottom};
-    if (targetBound) {
+    gameViewport = v;
+    applyViewport();
+}
+
+// Pre-transformed vertices carry their screen position: the D3D7 viewport only clips them and gives the depth
+// range. So the D3D12 viewport is the whole target and the client's viewport becomes the scissor rectangle.
+void Renderer::Impl::applyViewport() {
+    viewport = D3D12_VIEWPORT{0.0f, 0.0f, float(width), float(height), gameViewport.minZ, gameViewport.maxZ};
+    const Rect r = scaleRect(gameViewport.rect, scale);
+    const LONG left = std::max(r.left, 0), top = std::max(r.top, 0);
+    scissor = D3D12_RECT{left, top, std::max<LONG>(left, std::min(r.right, width)),
+                         std::max<LONG>(top, std::min(r.bottom, height))};
+    if (open && targetBound) {  // setTarget and setScale call this between command lists
         list->RSSetViewports(1, &viewport);
         list->RSSetScissorRects(1, &scissor);
     }
@@ -288,6 +300,64 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
     list->CopyTextureRegion(&dst, UINT(w.rect.left), UINT(w.rect.top), 0, &src, nullptr);
 }
 
+// Draws srcRect (in the source's pixels) of a texture into dstRect of a render target with the present pipeline:
+// one bilinear sample per pixel when enlarging, an average over each pixel's footprint when shrinking.
+void Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
+                          const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW,
+                          int dstH) {
+    if (dstRect.empty() || srcW <= 0 || srcH <= 0) return;
+    StageSetup linearClamp;
+    linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
+    linearClamp.magFilter = d3d7::TFG_LINEAR;
+    linearClamp.minFilter = d3d7::TFN_LINEAR;
+    linearClamp.mipFilter = d3d7::TFP_NONE;
+    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp);  // first: may restart the list
+    const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(srcSrv, srcSrv);
+    transition(src, srcState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const D3D12_VIEWPORT vp{float(dstRect.left), float(dstRect.top), float(dstRect.width()), float(dstRect.height()),
+                            0.0f, 1.0f};
+    const D3D12_RECT clip{std::max<LONG>(dstRect.left, 0), std::max<LONG>(dstRect.top, 0),
+                          std::min<LONG>(dstRect.right, dstW), std::min<LONG>(dstRect.bottom, dstH)};
+    list->OMSetRenderTargets(1, &dst, FALSE, nullptr);
+    list->RSSetViewports(1, &vp);
+    list->RSSetScissorRects(1, &clip);
+    list->SetGraphicsRootSignature(root);
+    list->SetPipelineState(presentPipeline);
+    Constants c{};
+    c.sourceRect[0] = srcRect[0] / float(srcW);
+    c.sourceRect[1] = srcRect[1] / float(srcH);
+    c.sourceRect[2] = srcRect[2] / float(srcW);
+    c.sourceRect[3] = srcRect[3] / float(srcH);
+    c.footprint = std::max((srcRect[2] - srcRect[0]) / float(dstRect.width()),
+                           (srcRect[3] - srcRect[1]) / float(dstRect.height()));
+    list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
+    list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
+    list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
+    list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    list->DrawInstanced(3, 1, 0, 0);
+    boundPipeline = nullptr;  // the next draws bind everything again
+    boundTextures = boundSamplers = ~0ull;
+    targetBound = false;
+}
+
+bool Renderer::Impl::createTarget(int w, int h, ID3D12Resource*& rt, ID3D12Resource*& ds) {
+    D3D12_CLEAR_VALUE black{};
+    black.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    black.Color[3] = 1.0f;
+    rt = createTexture2D(device, w, h, 1, DXGI_FORMAT_B8G8R8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+                         D3D12_RESOURCE_STATE_RENDER_TARGET, &black);
+    D3D12_CLEAR_VALUE farthest{};  // not "far": windef.h defines far as an empty macro
+    farthest.Format = DXGI_FORMAT_D32_FLOAT;
+    farthest.DepthStencil.Depth = 1.0f;
+    ds = createTexture2D(device, w, h, 1, DXGI_FORMAT_D32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
+                         D3D12_RESOURCE_STATE_DEPTH_WRITE, &farthest);
+    if (rt && ds) return true;
+    releaseCom(rt);
+    releaseCom(ds);
+    LOG_ERROR("cannot create a %dx%d render target", w, h);
+    return false;
+}
+
 // ---- Impl: swap chain --------------------------------------------------------------------------------------
 
 void Renderer::Impl::releaseSwapChain() {
@@ -297,11 +367,7 @@ void Renderer::Impl::releaseSwapChain() {
     swapWidth = swapHeight = 0;
 }
 
-bool Renderer::Impl::ensureSwapChain(HWND hwnd, bool wantTearing) {
-    RECT rc{};
-    GetClientRect(hwnd, &rc);
-    const UINT w = UINT(std::max<LONG>(1, rc.right - rc.left));
-    const UINT h = UINT(std::max<LONG>(1, rc.bottom - rc.top));
+bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing) {
     if (swapChain && hwnd == window && w == swapWidth && h == swapHeight) return true;
     if (!swapChain && w == failedWidth && h == failedHeight) return false;  // tried: wait for another size
     waitIdle();
@@ -410,8 +476,6 @@ Renderer::~Renderer() {
 }
 
 std::string Renderer::adapterName() const { return impl_->adapter; }
-int Renderer::targetWidth() const { return impl_->width; }
-int Renderer::targetHeight() const { return impl_->height; }
 
 void Renderer::setUiSharp(bool sharp) { impl_->uiSharp = sharp; }
 
@@ -482,7 +546,7 @@ bool Renderer::create(std::string& error) {
     if (!heap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kCpuSrvCount, false, m.cpuSrv) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kGpuSrvCount, true, m.gpuSrv) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kSamplerCount, true, m.samplerHeap) ||
-        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 3, false, m.rtvHeap) ||
+        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kRtvCount, false, m.rtvHeap) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false, m.dsvHeap)) {
         error = "descriptor heaps";
         return false;
@@ -510,38 +574,64 @@ bool Renderer::create(std::string& error) {
 bool Renderer::setTarget(int width, int height) {
     Impl& m = *impl_;
     if (width <= 0 || height <= 0) return false;
-    if (width == m.width && height == m.height && m.target) return true;
+    if (width == m.gameWidth && height == m.gameHeight && m.target) return true;
     m.waitIdle();
     releaseCom(m.target);
     releaseCom(m.depth);
-    D3D12_CLEAR_VALUE black{};
-    black.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    black.Color[3] = 1.0f;
-    m.target = createTexture2D(m.device, width, height, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
-                               D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, &black);
-    D3D12_CLEAR_VALUE farthest{};  // not "far": windef.h defines far as an empty macro
-    farthest.Format = DXGI_FORMAT_D32_FLOAT;
-    farthest.DepthStencil.Depth = 1.0f;
-    m.depth = createTexture2D(m.device, width, height, 1, DXGI_FORMAT_D32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
-                              D3D12_RESOURCE_STATE_DEPTH_WRITE, &farthest);
-    if (!m.target || !m.depth) {
-        LOG_ERROR("cannot create a %dx%d render target", width, height);
-        return false;
-    }
+    if (!m.createTarget(width, height, m.target, m.depth)) return false;
     m.targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    m.device->CreateRenderTargetView(m.target, nullptr, m.rtvHandle(0));
+    m.device->CreateRenderTargetView(m.target, nullptr, m.rtvHandle(kRtvTarget));
     m.device->CreateDepthStencilView(m.depth, nullptr, m.dsvHandle());
     m.device->CreateShaderResourceView(m.target, nullptr, m.cpuSrvHandle(m.targetSrv));
-    m.width = width;
-    m.height = height;
-    m.viewport = D3D12_VIEWPORT{0.0f, 0.0f, float(width), float(height), 0.0f, 1.0f};
-    m.scissor = D3D12_RECT{0, 0, width, height};
+    m.width = m.gameWidth = width;
+    m.height = m.gameHeight = height;
+    m.scale = 1.0;  // until the first present (stage 3 spec §3): the start-up calibration sees DX7's picture
+    m.gameViewport = ViewportCmd{Rect{0, 0, width, height}, 0.0f, 1.0f};
+    m.applyViewport();
     if (!m.begin()) return false;
     const float color[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-    m.list->ClearRenderTargetView(m.rtvHandle(0), color, 0, nullptr);
+    m.list->ClearRenderTargetView(m.rtvHandle(kRtvTarget), color, 0, nullptr);
     m.list->ClearDepthStencilView(m.dsvHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
     m.submit();
     LOG_INFO("render target %dx%d", width, height);
+    return true;
+}
+
+bool Renderer::setScale(double k, int targetWidth, int targetHeight) {
+    Impl& m = *impl_;
+    if (m.lost || !m.target || targetWidth <= 0 || targetHeight <= 0) return false;
+    if (k == m.scale && targetWidth == m.width && targetHeight == m.height) return true;
+    ID3D12Resource* target = nullptr;
+    ID3D12Resource* depth = nullptr;
+    if (!m.createTarget(targetWidth, targetHeight, target, depth)) return false;
+    // The back buffer keeps its picture across a present: the old target is stretched into the new one.
+    if (!m.begin()) {
+        releaseCom(target);
+        releaseCom(depth);
+        return false;
+    }
+    m.device->CreateRenderTargetView(target, nullptr, m.rtvHandle(kRtvNew));
+    const float all[4] = {0.0f, 0.0f, float(m.width), float(m.height)};
+    m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvNew),
+           Rect{0, 0, targetWidth, targetHeight}, targetWidth, targetHeight);
+    m.waitIdle();
+    releaseCom(m.target);
+    releaseCom(m.depth);
+    m.target = target;
+    m.depth = depth;
+    m.targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    m.device->CreateRenderTargetView(m.target, nullptr, m.rtvHandle(kRtvTarget));
+    m.device->CreateDepthStencilView(m.depth, nullptr, m.dsvHandle());
+    m.device->CreateShaderResourceView(m.target, nullptr, m.cpuSrvHandle(m.targetSrv));
+    m.width = targetWidth;
+    m.height = targetHeight;
+    m.scale = k;
+    m.applyViewport();
+    if (!m.begin()) return false;
+    m.list->ClearDepthStencilView(m.dsvHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+    m.submit();
+    LOG_INFO("render target %dx%d: %.3f times the game's %dx%d", targetWidth, targetHeight, k, m.gameWidth,
+             m.gameHeight);
     return true;
 }
 
@@ -649,48 +739,34 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     return true;
 }
 
-void Renderer::present(HWND window, const Rect& source, const PresentOptions& options) {
+void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rect& source,
+                       const PresentOptions& options) {
     Impl& m = *impl_;
     if (m.lost || !m.target || !window || source.empty()) return;
-    if (!m.ensureSwapChain(window, options.allowTearing) || !m.begin()) return;
+    if (!m.ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),
+                           options.allowTearing) ||
+        !m.begin())
+        return;
     const UINT index = m.swapChain->GetCurrentBackBufferIndex();
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_RENDER_TARGET);
-    m.transition(m.target, m.targetState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    const D3D12_CPU_DESCRIPTOR_HANDLE rtv = m.rtvHandle(1 + index);
+    const D3D12_CPU_DESCRIPTOR_HANDLE rtv = m.rtvHandle(kRtvSwap + index);
     const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     m.list->ClearRenderTargetView(rtv, black, 0, nullptr);
     // Fit the source into the window, keeping its shape, on whole pixels: bars where the shapes differ.
     const Rect fit = fitPicture(source.width(), source.height(), int(m.swapWidth), int(m.swapHeight));
     if (!(fit == m.picture)) {
         m.picture = fit;
-        LOG_INFO("picture %dx%d shown as %dx%d at %d,%d in the %ux%u window", source.width(), source.height(),
-                 fit.width(), fit.height(), fit.left, fit.top, m.swapWidth, m.swapHeight);
+        LOG_INFO("picture %dx%d of the game shown as %dx%d at %d,%d in the %ux%u window", source.width(),
+                 source.height(), fit.width(), fit.height(), fit.left, fit.top, m.swapWidth, m.swapHeight);
     }
-    D3D12_VIEWPORT vp{float(fit.left), float(fit.top), float(fit.width()), float(fit.height()), 0.0f, 1.0f};
-    D3D12_RECT all{0, 0, LONG(m.swapWidth), LONG(m.swapHeight)};
-    m.list->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
-    m.list->RSSetViewports(1, &vp);
-    m.list->RSSetScissorRects(1, &all);
-    m.list->SetGraphicsRootSignature(m.root);
-    m.list->SetPipelineState(m.presentPipeline);
-    Constants c{};
-    c.sourceRect[0] = float(source.left) / float(m.width);
-    c.sourceRect[1] = float(source.top) / float(m.height);
-    c.sourceRect[2] = float(source.right) / float(m.width);
-    c.sourceRect[3] = float(source.bottom) / float(m.height);
-    m.list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
-    m.list->SetGraphicsRootDescriptorTable(kRootTextures, m.textureTable(m.targetSrv, m.targetSrv));
-    StageSetup linearClamp;
-    linearClamp.addressU = linearClamp.addressV = 3;  // CLAMP
-    linearClamp.magFilter = linearClamp.minFilter = 2;  // LINEAR
-    linearClamp.mipFilter = 1;                          // NONE
-    m.list->SetGraphicsRootDescriptorTable(kRootSamplers, m.samplerTable(linearClamp, linearClamp));
-    m.list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    m.list->DrawInstanced(3, 1, 0, 0);
+    // The source is in game pixels: into target pixels by each axis' own ratio, so the whole frame is exactly the
+    // whole target and at render_scale 100, where the target is the picture, it is copied pixel for pixel.
+    const auto tx = [&m](int x) { return float(double(x) * m.width / m.gameWidth); };
+    const auto ty = [&m](int y) { return float(double(y) * m.height / m.gameHeight); };
+    const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
+    m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, from, rtv, fit, int(m.swapWidth),
+           int(m.swapHeight));
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
-    m.boundPipeline = nullptr;  // the next draws rebind everything
-    m.boundTextures = m.boundSamplers = ~0ull;
-    m.targetBound = false;
     m.submit();
 
     if (options.fpsLimit > 0) {  // simple pacing: wait until 1/limit seconds after the previous present

@@ -1,5 +1,7 @@
 #include "win/context.hpp"
 
+#include "core/scale.hpp"
+#include "win/dpi.hpp"
 #include "win/log.hpp"
 #include "win/window_mode.hpp"
 
@@ -37,10 +39,13 @@ void Context::close() {
     record.reset();
     window = nullptr;
     windowApplied = false;
+    scaledWidth_ = scaledHeight_ = 0;
 }
 
 bool Context::setTarget(int width, int height) {
     if (!renderer || !renderer->setTarget(width, height)) return false;
+    scaledWidth_ = width;  // the renderer is back at the game's size until the next present
+    scaledHeight_ = height;
     record.reset();
     installShadowHandler();
     if (!shadow.resize(width, height, screenFormat)) {
@@ -86,11 +91,25 @@ void Context::present(const Rect& source, bool waitForVblank) {
         windowApplied = true;
         applyWindowMode(window, config, gameFullscreen, shadow.width(), shadow.height());
     }
+    // Stage 3: the window's real pixels and the scale for them. The first present switches from the game's size:
+    // the start-up calibration has run by then (spec §4.3).
+    const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
+    const ScalePlan plan =
+        planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale, config.highResolution);
+    if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_) {
+        scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
+        scaledHeight_ = plan.targetHeight;
+        if (renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight))
+            LOG_INFO("scale: game %dx%d, output %ldx%ld, s %.3f, r %.2f, k %.3f, target %dx%d, picture %dx%d at %d,%d",
+                     shadow.width(), shadow.height(), out.cx, out.cy, plan.s, plan.r, plan.k, plan.targetWidth,
+                     plan.targetHeight, plan.picture.width(), plan.picture.height(), plan.picture.left,
+                     plan.picture.top);
+    }
     gpu::PresentOptions o;
     o.vsync = config.vsync && waitForVblank;
     o.allowTearing = config.allowTearing;
     o.fpsLimit = config.fpsLimit;
-    renderer->present(window, source, o);
+    renderer->present(window, out.cx, out.cy, source, o);
     ++stats_.frames;
     logStats(false);
 }

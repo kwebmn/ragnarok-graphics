@@ -59,6 +59,8 @@ private:
 
     CRITICAL_SECTION cs_;
     Stats stats_;
+    int scaledWidth_ = 0;  // the target size the last scale plan asked for (stage 3)
+    int scaledHeight_ = 0;
 };
 
 // Holds the global lock for a scope; every DirectDraw / Direct3D method starts with one.

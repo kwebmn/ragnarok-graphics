@@ -30,6 +30,13 @@ constexpr UINT kGpuSrvCount = 65536;    // ring of texture pairs bound for drawi
 constexpr UINT kSamplerCount = 1024;    // cache of sampler pairs, two descriptors each
 constexpr UINT64 kUploadSize = 32ull << 20;  // per slot; grows when one submission needs more
 
+// Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled.
+constexpr UINT kRtvTarget = 0;
+constexpr UINT kRtvSwap = 1;
+constexpr UINT kRtvGame = 3;
+constexpr UINT kRtvNew = 4;
+constexpr UINT kRtvCount = 5;
+
 constexpr UINT kRootConstants = 0;
 constexpr UINT kRootTextures = 1;
 constexpr UINT kRootSamplers = 2;
@@ -103,7 +110,7 @@ struct Renderer::Impl {
     ID3D12DescriptorHeap* samplerHeap = nullptr;
     std::unordered_map<uint64_t, UINT> samplerPairs;
     UINT nextSampler = 0;
-    ID3D12DescriptorHeap* rtvHeap = nullptr;  // 0: target, 1-2: swap chain buffers
+    ID3D12DescriptorHeap* rtvHeap = nullptr;  // kRtv*
     ID3D12DescriptorHeap* dsvHeap = nullptr;
     UINT srvStep = 0;
     UINT samplerStep = 0;
@@ -113,10 +120,13 @@ struct Renderer::Impl {
     ID3D12Resource* depth = nullptr;
     D3D12_RESOURCE_STATES targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     UINT targetSrv = 0;
-    int width = 0;
+    int width = 0;  // the target: the game's size times scale
     int height = 0;
+    int gameWidth = 0;  // the client's size
+    int gameHeight = 0;
     double scale = 1.0;  // k: game pixels -> target pixels (stage 3)
     bool uiSharp = true;  // [display] ui_filter = sharp
+    ViewportCmd gameViewport;  // the client's viewport, in game pixels
     D3D12_VIEWPORT viewport{};
     D3D12_RECT scissor{};
     ID3D12Resource* readback = nullptr;
@@ -163,6 +173,10 @@ struct Renderer::Impl {
     void waitIdle();
     void retireDying();  // after execute() has submitted: the dying textures go with that submission
     void failed(uint32_t place, const char* what, HRESULT hr);
+    bool createTarget(int w, int h, ID3D12Resource*& rt, ID3D12Resource*& ds);
+    void applyViewport();
+    void blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
+              const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW, int dstH);
     bool growUpload(Slot& s, UINT64 size);
     Upload allocUpload(UINT64 size, UINT64 alignment);
     void transition(ID3D12Resource* r, D3D12_RESOURCE_STATES& state, D3D12_RESOURCE_STATES to);
@@ -170,7 +184,7 @@ struct Renderer::Impl {
     D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle(UINT i) const;
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(UINT i) const;
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle() const;
-    bool ensureSwapChain(HWND hwnd, bool wantTearing);
+    bool ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing);
     void releaseSwapChain();
     void clear(const ClearCmd& c);
     void setViewport(const ViewportCmd& v);
