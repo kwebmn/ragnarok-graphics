@@ -91,18 +91,39 @@ TEST(pipeline_key_every_key_the_renderer_makes_is_valid) {
     CHECK_EQ(rejected, 0);
 }
 
-TEST(pipeline_key_forms_the_renderer_never_makes_are_rejected) {
-    PipelineKey k;
-    k.cull = CULL_NONE;
-    k.srcBlend = BLEND_ONE;
-    k.dstBlend = BLEND_ZERO;
-    k.zFunc = CMP_LESSEQUAL;  // without a Z test resolveDrawSetup gives ALWAYS
-    CHECK(!validPipelineKey(packPipelineKey(k)));
-    k.zFunc = CMP_ALWAYS;
-    CHECK(validPipelineKey(packPipelineKey(k)));
-    k.srcBlend = BLEND_SRCALPHA;  // no blending means ONE, ZERO
-    CHECK(!validPipelineKey(packPipelineKey(k)));
-    k.srcBlend = BLEND_ONE;
-    k.cull = 0;  // no such cull mode
-    CHECK(!validPipelineKey(packPipelineKey(k)));
+TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
+    // Keys the renderer makes, then one change each that breaks exactly one check: every check rejects its change on
+    // its own (0.4.3 review: the old bad key failed on its cull mode first, six loosened checks went unnoticed).
+    PipelineKey good;  // Z test, blending
+    good.zEnable = true;
+    good.zWrite = true;
+    good.zFunc = CMP_LESSEQUAL;
+    good.cull = CULL_CCW;
+    good.blend = true;
+    good.srcBlend = BLEND_SRCALPHA;
+    good.dstBlend = BLEND_INVSRCALPHA;
+    CHECK(validPipelineKey(packPipelineKey(good)));
+    PipelineKey plain;  // neither, in resolveDrawSetup's forms
+    plain.zFunc = CMP_ALWAYS;
+    plain.cull = CULL_NONE;
+    plain.srcBlend = BLEND_ONE;
+    plain.dstBlend = BLEND_ZERO;
+    CHECK(validPipelineKey(packPipelineKey(plain)));
+    const auto rejected = [](PipelineKey k, void (*change)(PipelineKey&)) {
+        change(k);
+        return !validPipelineKey(packPipelineKey(k));
+    };
+    CHECK(rejected(good, [](PipelineKey& k) { k.cull = 0; }));                       // no such cull mode
+    CHECK(rejected(good, [](PipelineKey& k) { k.zFunc = 0; }));                      // no such comparison
+    CHECK(rejected(good, [](PipelineKey& k) { k.zFunc = CMP_ALWAYS + 1; }));
+    CHECK(rejected(good, [](PipelineKey& k) { k.srcBlend = 0; }));                   // no such factor
+    CHECK(rejected(good, [](PipelineKey& k) { k.dstBlend = 0; }));
+    CHECK(rejected(good, [](PipelineKey& k) { k.srcBlend = BLEND_BOTHSRCALPHA; }));  // BOTH* are resolved
+    CHECK(rejected(good, [](PipelineKey& k) { k.dstBlend = BLEND_BOTHINVSRCALPHA; }));
+    CHECK(rejected(good, [](PipelineKey& k) { k.srcBlend = 14; }));                  // past D3D7's factors
+    CHECK(rejected(good, [](PipelineKey& k) { k.dstBlend = 15; }));
+    CHECK(rejected(plain, [](PipelineKey& k) { k.zFunc = CMP_LESSEQUAL; }));        // no Z test: ALWAYS
+    CHECK(rejected(plain, [](PipelineKey& k) { k.zWrite = true; }));                 // no Z test: no Z writes
+    CHECK(rejected(plain, [](PipelineKey& k) { k.srcBlend = BLEND_SRCALPHA; }));     // no blending: ONE and ZERO
+    CHECK(rejected(plain, [](PipelineKey& k) { k.dstBlend = BLEND_INVSRCALPHA; }));
 }
