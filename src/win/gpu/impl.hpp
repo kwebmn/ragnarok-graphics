@@ -129,6 +129,10 @@ struct Renderer::Impl {
     ViewportCmd gameViewport;  // the client's viewport, in game pixels
     D3D12_VIEWPORT viewport{};
     D3D12_RECT scissor{};
+    // The game-sized helper: the target shrunk for reading back, the client's pixels before they are stretched in.
+    ID3D12Resource* gameSized = nullptr;
+    D3D12_RESOURCE_STATES gameState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT gameSrv = 0;
     ID3D12Resource* readback = nullptr;
     UINT64 readbackSize = 0;
 
@@ -174,6 +178,7 @@ struct Renderer::Impl {
     void retireDying();  // after execute() has submitted: the dying textures go with that submission
     void failed(uint32_t place, const char* what, HRESULT hr);
     bool createTarget(int w, int h, ID3D12Resource*& rt, ID3D12Resource*& ds);
+    bool scaled() const { return width != gameWidth || height != gameHeight; }
     void applyViewport();
     void blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
               const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW, int dstH);

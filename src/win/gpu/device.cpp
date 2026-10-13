@@ -292,12 +292,23 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + w.pixels, UINT(w.rect.width()),
                                                   UINT(w.rect.height()));
     if (!src.pResource) return;
-    transition(target, targetState, D3D12_RESOURCE_STATE_COPY_DEST);
     D3D12_TEXTURE_COPY_LOCATION dst{};
-    dst.pResource = target;
     dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     dst.SubresourceIndex = 0;
+    if (!scaled()) {  // the target has the game's size: straight in
+        transition(target, targetState, D3D12_RESOURCE_STATE_COPY_DEST);
+        dst.pResource = target;
+        list->CopyTextureRegion(&dst, UINT(w.rect.left), UINT(w.rect.top), 0, &src, nullptr);
+        return;
+    }
+    // A larger target (stage 3 spec §5): the client's pixels go into the game-sized helper and are stretched in.
+    transition(gameSized, gameState, D3D12_RESOURCE_STATE_COPY_DEST);
+    dst.pResource = gameSized;
     list->CopyTextureRegion(&dst, UINT(w.rect.left), UINT(w.rect.top), 0, &src, nullptr);
+    transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    const float from[4] = {float(w.rect.left), float(w.rect.top), float(w.rect.right), float(w.rect.bottom)};
+    blit(gameSized, gameState, gameSrv, gameWidth, gameHeight, from, rtvHandle(kRtvTarget), scaleRect(w.rect, scale),
+         width, height);
 }
 
 // Draws srcRect (in the source's pixels) of a texture into dstRect of a render target with the present pipeline:
@@ -446,6 +457,7 @@ void Renderer::Impl::destroy() {
     releaseCom(readback);
     releaseCom(target);
     releaseCom(depth);
+    releaseCom(gameSized);
     for (Slot& s : slots) {
         for (IUnknown* g : s.garbage) g->Release();
         s.garbage.clear();
@@ -555,6 +567,7 @@ bool Renderer::create(std::string& error) {
     m.samplerStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     m.rtvStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     m.targetSrv = m.allocSrv();
+    m.gameSrv = m.allocSrv();
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).
@@ -578,11 +591,21 @@ bool Renderer::setTarget(int width, int height) {
     m.waitIdle();
     releaseCom(m.target);
     releaseCom(m.depth);
+    releaseCom(m.gameSized);
     if (!m.createTarget(width, height, m.target, m.depth)) return false;
+    m.gameSized = createTexture2D(m.device, width, height, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                  D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+    if (!m.gameSized) {
+        LOG_ERROR("cannot create the %dx%d helper of the game's size", width, height);
+        return false;
+    }
     m.targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    m.gameState = D3D12_RESOURCE_STATE_COPY_DEST;
     m.device->CreateRenderTargetView(m.target, nullptr, m.rtvHandle(kRtvTarget));
     m.device->CreateDepthStencilView(m.depth, nullptr, m.dsvHandle());
     m.device->CreateShaderResourceView(m.target, nullptr, m.cpuSrvHandle(m.targetSrv));
+    m.device->CreateRenderTargetView(m.gameSized, nullptr, m.rtvHandle(kRtvGame));
+    m.device->CreateShaderResourceView(m.gameSized, nullptr, m.cpuSrvHandle(m.gameSrv));
     m.width = m.gameWidth = width;
     m.height = m.gameHeight = height;
     m.scale = 1.0;  // until the first present (stage 3 spec §3): the start-up calibration sees DX7's picture
@@ -700,26 +723,38 @@ void Renderer::execute(const FrameRecord& record) {
 bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     Impl& m = *impl_;
     if (m.lost || !m.target || !m.begin()) return false;
-    const UINT pitch = UINT(alignUp(UINT64(m.width) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
-    const UINT64 size = UINT64(pitch) * UINT64(m.height);
+    ID3D12Resource* source = m.target;
+    D3D12_RESOURCE_STATES* sourceState = &m.targetState;
+    if (m.scaled()) {  // the client reads its own size: shrink the target into the helper first (stage 3 spec §5)
+        m.transition(m.gameSized, m.gameState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        const float all[4] = {0.0f, 0.0f, float(m.width), float(m.height)};
+        m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvGame),
+               Rect{0, 0, m.gameWidth, m.gameHeight}, m.gameWidth, m.gameHeight);
+        source = m.gameSized;
+        sourceState = &m.gameState;
+    }
+    const int w = m.gameWidth;
+    const int h = m.gameHeight;
+    const UINT pitch = UINT(alignUp(UINT64(w) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+    const UINT64 size = UINT64(pitch) * UINT64(h);
     if (m.readbackSize < size) {
         releaseCom(m.readback);
         m.readback = createBuffer(m.device, D3D12_HEAP_TYPE_READBACK, size, D3D12_RESOURCE_STATE_COPY_DEST);
         m.readbackSize = m.readback ? size : 0;
         if (!m.readback) return false;
     }
-    m.transition(m.target, m.targetState, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    m.transition(source, *sourceState, D3D12_RESOURCE_STATE_COPY_SOURCE);
     D3D12_TEXTURE_COPY_LOCATION dst{};
     dst.pResource = m.readback;
     dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
     dst.PlacedFootprint.Offset = 0;
     dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    dst.PlacedFootprint.Footprint.Width = UINT(m.width);
-    dst.PlacedFootprint.Footprint.Height = UINT(m.height);
+    dst.PlacedFootprint.Footprint.Width = UINT(w);
+    dst.PlacedFootprint.Footprint.Height = UINT(h);
     dst.PlacedFootprint.Footprint.Depth = 1;
     dst.PlacedFootprint.Footprint.RowPitch = pitch;
     D3D12_TEXTURE_COPY_LOCATION src{};
-    src.pResource = m.target;
+    src.pResource = source;
     src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     src.SubresourceIndex = 0;
     m.list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
@@ -731,9 +766,9 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
         m.failed(6, "reading the frame back", hr);
         return false;
     }
-    argb.resize(size_t(m.width) * size_t(m.height));
-    for (int y = 0; y < m.height; ++y)
-        std::memcpy(argb.data() + size_t(y) * size_t(m.width), data + UINT64(y) * pitch, size_t(m.width) * 4);
+    argb.resize(size_t(w) * size_t(h));
+    for (int y = 0; y < h; ++y)
+        std::memcpy(argb.data() + size_t(y) * size_t(w), data + UINT64(y) * pitch, size_t(w) * 4);
     D3D12_RANGE none{0, 0};
     m.readback->Unmap(0, &none);
     return true;

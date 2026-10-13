@@ -37,7 +37,7 @@ public:
     void releaseTexture(uint32_t id);                           // freed once the GPU no longer uses it
 
     void execute(const FrameRecord& record);        // submits, does not wait
-    bool readTarget(std::vector<uint32_t>& argb);   // waits; width * height values, row-major
+    bool readTarget(std::vector<uint32_t>& argb);   // waits; the game's width * height values, row-major
     // source: in game pixels; shown fitted into a swap chain of outputWidth x outputHeight (real pixels, stage 3).
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
 
