@@ -1,0 +1,33 @@
+#include <winver.h>
+
+#include "version_rc.h"
+
+// The settings app's icon, manifest (asInvoker, per-monitor DPI, Common Controls 6, Windows 7-11), the shipped
+// uaro-graphics.ini for "Reset" and a new file, and its version (stage 2 spec §3.1, §3.3).
+1 ICON "app.ico"
+1 24 "app.manifest"
+DEFAULT_INI RCDATA "uaro-graphics.ini"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION UAGFX_VERSION_NUMBERS
+PRODUCTVERSION UAGFX_VERSION_NUMBERS
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "KWEB Team"
+            VALUE "FileDescription", "uaRO Graphics Settings"
+            VALUE "FileVersion", UAGFX_VERSION_TEXT
+            VALUE "OriginalFilename", "uaro-graphics.exe"
+            VALUE "ProductName", "uaRO Graphics"
+            VALUE "ProductVersion", UAGFX_VERSION_TEXT
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

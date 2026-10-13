@@ -29,6 +29,22 @@ if(WIN32)
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)
     target_compile_options(uagfx_app PRIVATE -Wall -Wextra)
     target_link_libraries(uagfx_app PUBLIC uagfx_core comctl32 shell32 ole32 advapi32)
+
+    # uaro-graphics.exe, the settings app (stage 2 spec): its version comes from src/core/version.cpp.
+    enable_language(RC)
+    file(STRINGS src/core/version.cpp UAGFX_VERSION_LINE REGEX "kVersion = ")
+    string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" UAGFX_VERSION "${UAGFX_VERSION_LINE}")
+    set(UAGFX_V1 ${CMAKE_MATCH_1})
+    set(UAGFX_V2 ${CMAKE_MATCH_2})
+    set(UAGFX_V3 ${CMAKE_MATCH_3})
+    configure_file(src/app/version_rc.h.in ${CMAKE_BINARY_DIR}/app/version_rc.h)
+    add_executable(uaro-graphics WIN32 src/app/main.cpp src/app/main_window.cpp src/app/ui.cpp src/app/page.cpp
+                   src/app/page_settings.cpp src/app/page_screen.cpp src/app/page_diagnostics.cpp
+                   src/app/page_service.cpp src/app/app.rc)
+    target_include_directories(uaro-graphics PRIVATE src/app dist ${CMAKE_BINARY_DIR}/app)
+    target_compile_options(uaro-graphics PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
+    target_link_libraries(uaro-graphics PRIVATE uagfx_app)
+    target_link_options(uaro-graphics PRIVATE -static -static-libgcc -static-libstdc++ -s -municode)
 else()
     enable_testing()
     file(GLOB UAGFX_TEST_SOURCES CONFIGURE_DEPENDS tests/*.cpp)
