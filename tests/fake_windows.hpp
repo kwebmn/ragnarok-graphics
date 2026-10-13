@@ -17,6 +17,7 @@ struct Windows {
     std::set<std::wstring> folders;             // full paths
     uagfx::settings::GameRegistry registry;
     std::vector<uagfx::app::CompatEntry> compat;
+    std::set<std::string> refused;  // value names the registry refuses to write (error 5)
     bool gameRunning = false;
     uagfx::app::SystemInfo system;
     int clock = 0;  // seconds after 2026-10-13 12:00:00: backup folders are named after it

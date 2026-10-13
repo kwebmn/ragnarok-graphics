@@ -218,14 +218,25 @@ std::wstring Model::backupOnce(Lang l, bool prune) {
     for (const ModuleFile& m : now_.modules)
         if (ok && m.iniExists) ok = keep(wide(m.info.ini), L"module-" + wide(m.info.ini));
     const GameKeyPaths k = gameKeyPaths();
-    ok = ok &&
-         writeFileAtomic(dir + L"\\personal.reg", utf8ToRegFile(toRegFile(now_.registry.personal, k.personalRoot))) &&
-         writeFileAtomic(dir + L"\\common.reg", utf8ToRegFile(toRegFile(now_.registry.common, k.commonRoot))) &&
+    // The registry as it is now, not as it was read: the game writes its hotbars at every map change (0.6.0 M2).
+    const RegCopy personal = readPersonal();
+    const RegCopy common = readCommon();
+    ok = ok && writeFileAtomic(dir + L"\\personal.reg", utf8ToRegFile(toRegFile(personal, k.personalRoot))) &&
+         writeFileAtomic(dir + L"\\common.reg", utf8ToRegFile(toRegFile(common, k.commonRoot))) &&
          writeFileAtomic(dir + L"\\files.txt", list);
     if (!ok) return wtrf(l, Text::ErrBackup, {utf8(dir)});
     backedUp_ = true;
     if (prune) keepNewestBackups(20);
     return L"";
+}
+
+std::string Model::writeValues(const std::vector<RegWrite>& writes) {
+    std::string failed;
+    for (const RegWrite& w : writes) {
+        const std::string e = writePersonalValue(w);
+        if (!e.empty()) failed += (failed.empty() ? "" : ", ") + e;
+    }
+    return failed;
 }
 
 std::wstring Model::apply(Lang l) {
@@ -236,29 +247,35 @@ std::wstring Model::apply(Lang l) {
     const bool firstRun = !gameKeyExists(now_.registry);
     // The Screen page shows the plan for the renderer chosen: a switch of the renderer alone writes it too.
     const bool screen = (screen_ && !(*screen_ == screenNow().choice)) || backend() != now_.config.backend;
+    bool waits = false;  // the screen needs ROExt's ini, written only while the game is closed (spec §4.1)
     if (screen || firstRun) {
         const ScreenPlan p = screenPlan();
         if (p.problem != ScreenProblem::None) return wtrf(l, Text::ErrScreen, {utf8(wtr(l, problemText(p.problem)))});
-        if (firstRun) {
-            reg = firstRunWrites(p.game.width, p.game.height, p.fullscreen);
+        waits = !firstRun && p.writesRoext && now_.roextModule >= 0 && now_.gameRunning;
+        if (waits) {  // the screen and its renderer switch wait for the game to close; the rest goes now (0.6.0 M4)
+            ini.erase(std::remove_if(ini.begin(), ini.end(),
+                                     [](const IniEdit& e) { return e.section == "renderer" && e.key == "backend"; }),
+                      ini.end());
         } else {
-            auto add = [&](const char* name, uint32_t v) {
-                if (const auto w = planWrite(now_.registry, "", name, RegValue::dword(v))) reg.push_back(*w);
-            };
-            add("ISFULLSCREENMODE", p.fullscreen ? 1 : 0);
-            add("WIDTH", uint32_t(p.game.width));
-            add("HEIGHT", uint32_t(p.game.height));
-            add("BITPERPIXEL", 32);
-        }
-        if (p.writesIni) {
-            ini.push_back({"display", "mode", displayModeToken(p.mode)});
-            ini.push_back({"display", "monitor", num(p.monitor)});
-            ini.push_back({"display", "window_width", num(p.iniWindow.width)});
-            ini.push_back({"display", "window_height", num(p.iniWindow.height)});
-        }
-        if (p.writesRoext && now_.roextModule >= 0) {
-            if (now_.gameRunning) return wtr(l, Text::ErrGameRunning);  // ROExt's ini only when the game is closed
-            roext = {{"ROExt", "WindowWidth", num(p.game.width)}, {"ROExt", "WindowHeight", num(p.game.height)}};
+            if (firstRun) {
+                reg = firstRunWrites(p.game.width, p.game.height, p.fullscreen);
+            } else {
+                auto add = [&](const char* name, uint32_t v) {
+                    if (const auto w = planWrite(now_.registry, "", name, RegValue::dword(v))) reg.push_back(*w);
+                };
+                add("ISFULLSCREENMODE", p.fullscreen ? 1 : 0);
+                add("WIDTH", uint32_t(p.game.width));
+                add("HEIGHT", uint32_t(p.game.height));
+                add("BITPERPIXEL", 32);
+            }
+            if (p.writesIni) {
+                ini.push_back({"display", "mode", displayModeToken(p.mode)});
+                ini.push_back({"display", "monitor", num(p.monitor)});
+                ini.push_back({"display", "window_width", num(p.iniWindow.width)});
+                ini.push_back({"display", "window_height", num(p.iniWindow.height)});
+            }
+            if (p.writesRoext && now_.roextModule >= 0)
+                roext = {{"ROExt", "WindowWidth", num(p.game.width)}, {"ROExt", "WindowHeight", num(p.game.height)}};
         }
     } else if (screenAsSetup_) {
         for (const char* name : {"ISFULLSCREENMODE", "WIDTH", "HEIGHT", "BITPERPIXEL"})
@@ -268,7 +285,7 @@ std::wstring Model::apply(Lang l) {
         std::wstring err = backupOnce(l);
         if (!err.empty()) return err;
         if (!reg.empty()) {
-            const std::string failed = writePersonal(reg);
+            const std::string failed = writeValues(reg);
             if (!failed.empty()) {
                 load();
                 return wtrf(l, Text::ErrWriteRegistry, {failed});
@@ -291,12 +308,16 @@ std::wstring Model::apply(Lang l) {
             }
         }
     }
+    // What was written is no longer pending; a screen that waits stays, with its renderer switch.
+    const auto backendWord = ini_.find("renderer.backend");
+    const std::string kept = waits && backendWord != ini_.end() ? backendWord->second : "";
     ini_.clear();
-    screen_.reset();
+    if (!kept.empty()) ini_["renderer.backend"] = kept;
+    if (!waits) screen_.reset();
     screenAsSetup_ = false;
     wroteNow_.clear();
     load();
-    return L"";
+    return waits ? wtr(l, Text::ScreenWaits) : L"";
 }
 
 std::wstring Model::writeNow(const IniSetting& s, const std::string& token, Lang l) {
@@ -393,7 +414,7 @@ std::wstring Model::resetRegistryValue(const std::string& name, Lang l) {
     if (!w) return L"";
     std::wstring err = backupOnce(l);
     if (!err.empty()) return err;
-    const std::string failed = writePersonal({*w});
+    const std::string failed = writePersonalValue(*w);
     load();
     return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
 }

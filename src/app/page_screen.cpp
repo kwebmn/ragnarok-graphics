@@ -35,16 +35,22 @@ public:
         if (monitors.empty()) return;
         const int index = uaro && c.monitor >= 0 && size_t(c.monitor) < monitors.size() ? c.monitor : 0;
         const MonitorInfo& mon = monitors[size_t(index)];
+        // ROExt sizes the window, and its ini is written only while the game is closed (spec §4.1): until then the
+        // choice is grey (0.6.0 review M4).
+        const Snapshot& snap = m.now();
+        const bool roext = snap.roext.active && (snap.roext.lock || snap.roext.size.width > 0) && snap.roextModule >= 0;
+        const bool open = !(roext && snap.gameRunning);
 
-        p.radio(kFullscreen, t(Text::ScreenShow), t(Text::ScreenFullscreen), c.show == Show::Fullscreen, true, L"");
-        p.radio(kWindow, L"", t(Text::ScreenWindow), c.show == Show::Window, false, L"");
+        p.radio(kFullscreen, t(Text::ScreenShow), t(Text::ScreenFullscreen), c.show == Show::Fullscreen, true, L"",
+                open);
+        p.radio(kWindow, L"", t(Text::ScreenWindow), c.show == Show::Window, false, L"", open);
         p.gap(6);
         std::vector<std::wstring> items;
         for (size_t i = 0; i < monitors.size(); ++i)
             items.push_back(tf(Text::MonitorItem, {num(long(i) + 1), num(monitors[i].pixels.width),
                                                    num(monitors[i].pixels.height), num(monitors[i].scale)}) +
                             (monitors[i].primary ? t(Text::MonitorMain) : L""));
-        p.choice(kMonitor, t(Text::ScreenMonitor), items, index, L"", uaro && monitors.size() > 1);
+        p.choice(kMonitor, t(Text::ScreenMonitor), items, index, L"", uaro && monitors.size() > 1 && open);
 
         if (c.show == Show::Fullscreen && !uaro) {
             modes_ = mon.modes;
@@ -53,7 +59,8 @@ public:
             items.clear();
             for (Size s : modes_) items.push_back(wide(sizeText(s)));
             p.choice(kMode, t(Text::ScreenMode), items,
-                     int(std::find(modes_.begin(), modes_.end(), current) - modes_.begin()), t(Text::ScreenModeHint));
+                     int(std::find(modes_.begin(), modes_.end(), current) - modes_.begin()), t(Text::ScreenModeHint),
+                     open);
         } else {
             uis_ = uiSteps();
             const bool fixed = !uaro;  // dgVoodoo in a window: Windows scaling
@@ -65,11 +72,11 @@ public:
             items.clear();
             for (int u : uis_) items.push_back(wide(num(u) + " %"));
             p.choice(kUi, t(Text::ScreenUi), items, int(std::find(uis_.begin(), uis_.end(), ui) - uis_.begin()),
-                     t(Text::ScreenUiHint), !fixed);
+                     t(Text::ScreenUiHint), !fixed && open);
             if (fixed)
                 p.note(tf(Text::ScreenUiDgVoodoo, {num(mon.scale)}));
             else
-                p.number(kUiExact, t(Text::ScreenUiExact), wide(num(c.ui)), t(Text::ScreenUiHint));
+                p.number(kUiExact, t(Text::ScreenUiExact), wide(num(c.ui)), t(Text::ScreenUiHint), open);
         }
         if (c.show == Show::Window) {
             sizes_ = windowSizes(mon, m.system().frame);
@@ -84,8 +91,8 @@ public:
                                                       num(s.height * 100 / ui)}));
                 if (s == c.window) selected = int(i);
             }
-            p.choice(kSize, t(Text::ScreenWindowSize), items, selected, t(Text::ScreenWindowSizeHint));
-            p.pair(kWidth, L"", c.window.width, c.window.height, t(Text::ScreenWindowSizeHint));
+            p.choice(kSize, t(Text::ScreenWindowSize), items, selected, t(Text::ScreenWindowSizeHint), open);
+            p.pair(kWidth, L"", c.window.width, c.window.height, t(Text::ScreenWindowSizeHint), open);
         }
 
         const ScreenPlan plan = m.screenPlan();
@@ -115,10 +122,9 @@ public:
                    Tone::Warn);
             p.buttons({{kAsSetup, t(Text::ScreenAsSetup)}}, !m.screenAsSetupPending());
         }
-        const Snapshot& s = m.now();
-        if (s.roext.active && (s.roext.lock || s.roext.size.width > 0) && s.roextModule >= 0) {
-            p.note(tf(Text::ScreenRoext, {s.modules[size_t(s.roextModule)].info.ini}));
-            if (s.gameRunning && plan.writesRoext) p.note(t(Text::ErrGameRunning), Tone::Warn);  // spec §4.1
+        if (roext) {
+            p.note(tf(Text::ScreenRoext, {snap.modules[size_t(snap.roextModule)].info.ini}));
+            if (!open) p.note(t(Text::ErrGameRunning), Tone::Warn);  // spec §4.1
         }
         p.note(t(Text::AfterRestart));
     }

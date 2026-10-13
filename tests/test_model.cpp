@@ -166,3 +166,55 @@ TEST(model_a_switch_to_uaro_writes_the_screen_the_page_shows) {
     CHECK(m.apply(Lang::En).empty());
     CHECK_EQ(valueOf(w.files[ini], "display.mode"), std::string("auto"));
 }
+
+TEST(model_a_registry_value_refused_leaves_the_others_written) {
+    fake::Windows& w = fake::reset();  // a first run: every value the game needs (spec §4.3)
+    w.refused = {"WIDTH"};
+    app::Model m;
+    const std::wstring err = m.apply(Lang::En);
+    CHECK(err.find(L"WIDTH (error 5)") != std::wstring::npos);  // named (spec §4.5)
+    CHECK_EQ(effectiveDword("HEIGHT"), 1080);                   // and the others written all the same
+    CHECK(effectiveValue(w.registry, "", "DEVICENAME").has_value());
+}
+
+TEST(model_a_backup_holds_the_registry_as_it_is_at_the_backup) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-graphics.ini")] = "[quality]\r\nsharpen = 50\r\n";
+    fake::gameKey(w.registry.personal, 1920, 1080, false);
+    app::Model m;
+    w.registry.personal.keys["ShortcutItem\\uaRO"]["Slot1"] = RegValue::dword(7);  // the game, at a map change
+    m.setToken(setting("quality.sharpen"), "80");
+    CHECK(m.apply(Lang::En).empty());
+    RegCopy saved;
+    CHECK(fromRegFile(w.files[fake::path(kBackups + L"\\2026-10-13-120000\\personal.reg")],
+                      app::gameKeyPaths().personalRoot, saved));
+    const RegValue* slot = saved.find("ShortcutItem\\uaRO", "Slot1");
+    CHECK(slot && slot->asDword() && *slot->asDword() == 7);
+}
+
+TEST(model_a_screen_that_waits_for_the_game_leaves_the_rest_written) {
+    // While the game runs, ROExt's ini is not written (spec §4.1): a screen that needs it waits for the game to
+    // close, everything else is written now (0.6.0 review M4).
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    w.files[ini] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 50\r\n";
+    w.files[fake::path(L"dinput.dll")] = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput.ini" + '\0';
+    const std::wstring roext = fake::path(L"dinput.ini");
+    w.files[roext] = "[ROExt]\r\nWindowLock=1\r\nWindowWidth=1920\r\nWindowHeight=1080\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.gameRunning = true;
+    app::Model m;
+    ScreenChoice c = m.screenChoice();
+    c.ui = 200;  // the same 3360 x 1890 window, the interface larger: the game 1680 x 945
+    m.setScreen(c);
+    m.setToken(setting("quality.sharpen"), "80");
+    CHECK(!m.apply(Lang::En).empty());  // it says the screen waits
+    CHECK_EQ(valueOf(w.files[ini], "quality.sharpen"), std::string("80"));
+    CHECK_EQ(effectiveDword("WIDTH"), 1920);
+    CHECK_EQ(valueOf(w.files[roext], "roext.windowwidth"), std::string("1920"));
+    CHECK_EQ(m.pendingCount(), size_t(1));  // the screen
+    w.gameRunning = false;
+    CHECK(m.apply(Lang::En).empty());
+    CHECK_EQ(effectiveDword("WIDTH"), 1680);
+    CHECK_EQ(valueOf(w.files[roext], "roext.windowwidth"), std::string("1680"));
+}

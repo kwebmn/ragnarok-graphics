@@ -17,9 +17,10 @@ GameKeyPaths gameKeyPaths();
 
 settings::RegCopy readPersonal();
 settings::RegCopy readCommon();
-// Writes to the personal copy in order; "" or "NAME (error N)" of the first one that failed.
-std::string writePersonal(const std::vector<settings::RegWrite>& writes);
-// The personal copy becomes `copy` (a restored backup): its whole tree goes, then every key and value is written.
+// One change of the personal copy; "" or "NAME (error N)".
+std::string writePersonalValue(const settings::RegWrite& w);
+// The personal copy becomes `copy` (a restored backup): its whole tree goes, then every key and value is written, each
+// on its own (spec §4.5); "" or the ones that failed, "NAME (error N), ...".
 std::string replacePersonal(const settings::RegCopy& copy);
 
 // AppCompatFlags\Layers values for the game's exe (stage 2 spec §7).

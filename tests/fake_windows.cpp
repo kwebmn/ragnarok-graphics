@@ -151,8 +151,9 @@ settings::RegCopy readPersonal() { return windows().registry.personal; }
 
 settings::RegCopy readCommon() { return windows().registry.common; }
 
-std::string writePersonal(const std::vector<settings::RegWrite>& writes) {
-    settings::applyWrites(windows().registry.personal, writes);
+std::string writePersonalValue(const settings::RegWrite& w) {
+    if (windows().refused.count(w.name)) return w.name + " (error 5)";
+    settings::applyWrites(windows().registry.personal, {w});
     return "";
 }
 

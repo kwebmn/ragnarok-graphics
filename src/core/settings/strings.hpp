@@ -44,7 +44,7 @@ enum class Text : uint16_t {
     ServicePresets, PresetMaximum, PresetBalance, PresetSpeed, PresetPlain, PresetNote, PresetCustom,
     ServiceBackups, BackupRestore, BackupPrune, BackupNote, BackupNone, BackupAsk, ServiceReset, ResetButton,
     ResetAsk, ServiceVersions, VersionsValue, Unknown,
-    ErrWriteFile, ErrWriteRegistry, ErrGameRunning, ErrBackup, ErrScreen, ErrLaunch, ErrRestore,
+    ErrWriteFile, ErrWriteRegistry, ErrGameRunning, ScreenWaits, ErrBackup, ErrScreen, ErrLaunch, ErrRestore,
     Count
 };
 
