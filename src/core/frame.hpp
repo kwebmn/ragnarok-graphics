@@ -64,6 +64,13 @@ public:
     void upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb);
     void writeTarget(const Rect& rect, const uint32_t* argb);
     bool empty() const { return commands_.empty(); }
+    // Bytes waiting to go to the GPU: vertices, indices and pixels. Past kFlushBytes the driver plays the record at
+    // once rather than letting the GPU upload buffers grow: a 32-bit game has 2 GB of address space.
+    static constexpr size_t kFlushBytes = size_t(16) << 20;
+    size_t pendingBytes() const {
+        return vertices_.size() + indices_.size() * sizeof(uint16_t) + pixels_.size() * sizeof(uint32_t);
+    }
+    bool full() const { return pendingBytes() >= kFlushBytes; }
     void reset();
 
     const std::vector<Command>& commands() const { return commands_; }

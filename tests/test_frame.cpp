@@ -86,3 +86,28 @@ TEST(frame_reset_empties_everything) {
     CHECK(f.states().empty());
     CHECK(f.pixels().empty());
 }
+
+TEST(frame_is_full_after_16_mb) {
+    // A map's first frame uploads every texture it draws; past 16 MB the driver plays the record at once instead of
+    // growing the GPU upload buffers in a game that has 2 GB of address space.
+    FrameRecord r;
+    const std::vector<uint32_t> mb4(1024 * 1024, 0xFF00FF00u);
+    for (int i = 0; i < 3; ++i) r.upload(1, 0, Rect{0, 0, 1024, 1024}, mb4.data());
+    CHECK_EQ(r.pendingBytes(), size_t(12) << 20);
+    CHECK(!r.full());
+    r.writeTarget(Rect{0, 0, 1024, 1024}, mb4.data());
+    CHECK(r.full());
+    r.reset();
+    CHECK_EQ(r.pendingBytes(), size_t(0));
+    CHECK(!r.full());
+}
+
+TEST(frame_counts_vertices_and_indices_too) {
+    FrameRecord r;
+    DrawCmd d;
+    d.fvf = d3d7::FVF_TL2;
+    const std::vector<uint8_t> vertices(40 * 4, 0);
+    const uint16_t indices[6] = {0, 1, 2, 2, 1, 3};
+    r.draw(d, vertices.data(), 4, indices, 6);
+    CHECK_EQ(r.pendingBytes(), size_t(40 * 4 + 6 * 2));
+}

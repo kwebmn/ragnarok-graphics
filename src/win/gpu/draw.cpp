@@ -21,13 +21,18 @@ void Renderer::Impl::prepareGeometry(const FrameRecord& rec) {
     const std::vector<uint8_t>& v = rec.vertexBytes();
     if (!v.empty()) {
         const Upload u = allocUpload(v.size(), 16);
+        if (!u.cpu) return;  // no memory for this record's vertices: its draws are skipped (vertexBase 0)
         std::memcpy(u.cpu, v.data(), v.size());
         vertexBase = u.gpu;
     }
     const std::vector<uint16_t>& i = rec.indices();
     if (!i.empty()) {
+        const Upload u = allocUpload(i.size() * sizeof(uint16_t), 4);
+        if (!u.cpu) {
+            vertexBase = 0;
+            return;
+        }
         indexBytes = UINT(i.size() * sizeof(uint16_t));
-        const Upload u = allocUpload(indexBytes, 4);
         std::memcpy(u.cpu, i.data(), indexBytes);
         indexBase = u.gpu;
     }

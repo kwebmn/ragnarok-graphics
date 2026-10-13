@@ -131,7 +131,15 @@ Upload Renderer::Impl::allocUpload(UINT64 size, UINT64 alignment) {
     Slot& s = slots[slot];
     UINT64 at = alignUp(s.used, alignment);
     if (at + size > s.size) {
-        growUpload(s, std::max(s.size * 2, alignUp(size, 1 << 20) + (1 << 20)));
+        const UINT64 want = std::max(s.size * 2, alignUp(size, 1 << 20) + (1 << 20));
+        if (!growUpload(s, want)) {  // out of address space: skip this upload or draw rather than crash
+            static bool logged = false;
+            if (!logged)
+                LOG_ERROR("cannot map a %llu MB upload buffer: some textures and draws are skipped",
+                          static_cast<unsigned long long>(want >> 20));
+            logged = true;
+            return Upload{nullptr, 0, 0};
+        }
         at = 0;
     }
     s.used = at + size;
@@ -218,8 +226,9 @@ namespace {
 D3D12_TEXTURE_COPY_LOCATION stage(Renderer::Impl& m, const uint32_t* argb, UINT w, UINT h) {
     const UINT pitch = UINT(alignUp(UINT64(w) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
     const Upload u = m.allocUpload(UINT64(pitch) * h, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-    for (UINT y = 0; y < h; ++y) std::memcpy(u.cpu + UINT64(y) * pitch, argb + UINT64(y) * w, size_t(w) * 4);
     D3D12_TEXTURE_COPY_LOCATION src{};
+    if (!u.cpu) return src;  // pResource stays null: nothing to copy
+    for (UINT y = 0; y < h; ++y) std::memcpy(u.cpu + UINT64(y) * pitch, argb + UINT64(y) * w, size_t(w) * 4);
     src.pResource = m.slots[m.slot].upload;
     src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
     src.PlacedFootprint.Offset = u.offset;
@@ -239,6 +248,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     Texture& t = it->second;
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + u.pixels, UINT(u.rect.width()),
                                                   UINT(u.rect.height()));
+    if (!src.pResource) return;
     transition(t.resource, t.state, D3D12_RESOURCE_STATE_COPY_DEST);
     D3D12_TEXTURE_COPY_LOCATION dst{};
     dst.pResource = t.resource;
@@ -251,6 +261,7 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
     if (w.rect.empty()) return;
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + w.pixels, UINT(w.rect.width()),
                                                   UINT(w.rect.height()));
+    if (!src.pResource) return;
     transition(target, targetState, D3D12_RESOURCE_STATE_COPY_DEST);
     D3D12_TEXTURE_COPY_LOCATION dst{};
     dst.pResource = target;

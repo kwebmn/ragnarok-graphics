@@ -41,6 +41,7 @@ public:
     void flush();                           // plays the record on the GPU
     bool readTarget(std::vector<uint32_t>& argb);
     void writeTarget(const Rect& rect, const uint32_t* argb);
+    void flushIfFull();  // past FrameRecord::kFlushBytes: play the record now (a map's first frame, big writes)
     // Flip and WaitForVerticalBlank + Blt wait for vblank (when vsync is on); the loading bar's Blt shows at once
     // (spec §4.1), and so does Bink's.
     void present(const Rect& source, bool waitForVblank);

@@ -193,6 +193,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
+    c.flushIfFull();  // the textures this draw sent may have filled the record
     return D3D_OK;
 }
 

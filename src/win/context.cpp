@@ -62,7 +62,14 @@ bool Context::readTarget(std::vector<uint32_t>& argb) {
     return renderer && renderer->readTarget(argb);
 }
 
-void Context::writeTarget(const Rect& rect, const uint32_t* argb) { record.writeTarget(rect, argb); }
+void Context::writeTarget(const Rect& rect, const uint32_t* argb) {
+    record.writeTarget(rect, argb);
+    flushIfFull();
+}
+
+void Context::flushIfFull() {
+    if (record.full()) flush();
+}
 
 void Context::present(const Rect& source, bool waitForVblank) {
     flush();
