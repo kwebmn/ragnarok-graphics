@@ -439,6 +439,21 @@ TEST(model_game_settings_go_to_a_file_and_back) {
     CHECK(!other.now().backups.empty());
 }
 
+TEST(model_the_settings_file_leaves_a_legacy_password_out) {
+    // 0.6.2 review M3: the client never writes PASSWORD and drops it when it reads it (registry.md); an old one
+    // must not travel in a file a player may pass on.
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.registry.common.keys[""]["PASSWORD"] = RegValue::sz("secret");
+    app::Model m;
+    const std::wstring file = fake::path(L"mine.reg");
+    CHECK(m.saveGameSettings(file, Lang::En).empty());
+    RegCopy saved;
+    CHECK(fromRegFile(w.files[file], app::gameKeyPaths().personalRoot, saved));
+    CHECK(saved.find("", "WIDTH") != nullptr);
+    CHECK(saved.find("", "PASSWORD") == nullptr);
+}
+
 TEST(model_game_settings_load_and_reset_wait_for_the_game_to_close) {
     fake::Windows& w = fake::reset();
     fake::gameKey(w.registry.common, 1920, 1080, false);

@@ -504,7 +504,11 @@ std::wstring Model::saveGameSettings(const std::wstring& file, Lang l) const {
     GameRegistry r;  // as it is now: the game wrote its hotbars at its last map change
     r.personal = readPersonal();
     r.common = readCommon();
-    const std::string text = utf8ToRegFile(toRegFile(effectiveCopy(r), gameKeyPaths().personalRoot));
+    RegCopy all = effectiveCopy(r);
+    // The client never writes PASSWORD and drops it when it reads it (registry.md): an old one stays out of a file a
+    // player may pass on (0.6.2 review).
+    all.keys[""].erase("PASSWORD");
+    const std::string text = utf8ToRegFile(toRegFile(all, gameKeyPaths().personalRoot));
     return writeFileAtomic(file, text) ? L"" : wtrf(l, Text::ErrWriteFile, {utf8(file)});
 }
 
