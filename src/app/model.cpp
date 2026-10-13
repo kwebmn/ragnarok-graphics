@@ -175,14 +175,33 @@ std::optional<Size> Model::setupScreen(bool& fullscreen) const {
     return Size{dword(now_.registry.common, "WIDTH"), dword(now_.registry.common, "HEIGHT")};
 }
 
+std::string Model::regWord(const RegSetting& s) const {
+    const auto it = reg_.find(regKey(s));
+    return it != reg_.end() ? it->second : regWordOf(s, now_.registry);
+}
+
+void Model::setRegWord(const RegSetting& s, const std::string& word) {
+    if (!validRegWord(s, word)) return;
+    if (word == regWordOf(s, now_.registry))
+        reg_.erase(regKey(s));
+    else
+        reg_[regKey(s)] = word;
+}
+
+std::vector<std::wstring> Model::skins() const { return listFolder(paths_.dir + L"\\skin", true); }
+
+bool Model::hasIntro() const { return fileExists(paths_.dir + L"\\openning.bik"); }
+
 void Model::applyPreset(Preset p) {
     for (const IniEdit& e : presetEdits(p))
         if (const IniSetting* s = findSetting(e.section + "." + e.key)) setToken(*s, e.value);
+    for (const auto& w : presetRegWords(p))
+        if (const RegSetting* s = findRegSetting(w.first)) setRegWord(*s, w.second);
 }
 
 size_t Model::pendingCount() const {
     const bool screen = screen_ && !(*screen_ == screenNow().choice);
-    return ini_.size() + (screen ? 1 : 0) + (screenAsSetup_ ? 1 : 0);
+    return ini_.size() + reg_.size() + (screen ? 1 : 0) + (screenAsSetup_ ? 1 : 0);
 }
 
 std::string Model::currentIni() const {
@@ -283,6 +302,15 @@ std::wstring Model::apply(Lang l) {
         for (const char* name : {"ISFULLSCREENMODE", "WIDTH", "HEIGHT", "BITPERPIXEL"})
             if (const auto w = planReset(now_.registry, "", name)) reg.push_back(*w);
     }
+    std::map<std::string, std::string> held;  // what the game writes itself waits for it to close (spec §4.1)
+    for (const auto& kv : reg_) {  // after the screen's: the player's word wins over a first run's
+        const RegSetting* s = findRegSetting(kv.first);
+        if (!s) continue;
+        if (!regOpen(*s))
+            held.insert(kv);
+        else if (const auto w = planWrite(now_.registry, s->subkey, s->name, regValueOf(*s, kv.second)))
+            reg.push_back(*w);
+    }
     if (!ini.empty() || !reg.empty() || !roext.empty()) {
         std::wstring err = backupOnce(l);
         if (!err.empty()) return err;
@@ -315,6 +343,7 @@ std::wstring Model::apply(Lang l) {
     const std::string kept = waits && backendWord != ini_.end() ? backendWord->second : "";
     ini_.clear();
     if (!kept.empty()) ini_["renderer.backend"] = kept;
+    reg_ = held;
     if (waits)
         screen_ = chosen;  // the next Apply with the game closed writes the rest of it
     else
@@ -322,7 +351,7 @@ std::wstring Model::apply(Lang l) {
     screenAsSetup_ = false;
     wroteNow_.clear();
     load();
-    return waits ? wtr(l, Text::ApplyWaits) : L"";
+    return waits || !held.empty() ? wtr(l, Text::ApplyWaits) : L"";
 }
 
 std::wstring Model::writeNow(const IniSetting& s, const std::string& token, Lang l) {
@@ -337,6 +366,7 @@ std::wstring Model::writeNow(const IniSetting& s, const std::string& token, Lang
 
 std::wstring Model::revert(Lang l) {
     ini_.clear();
+    reg_.clear();
     screen_.reset();
     screenAsSetup_ = false;
     if (wroteNow_.empty()) return L"";
@@ -375,6 +405,7 @@ std::wstring Model::restore(const std::wstring& backup, Lang l) {
     }
     const std::string failed = replacePersonal(personal);
     ini_.clear();
+    reg_.clear();
     screen_.reset();
     screenAsSetup_ = false;
     wroteNow_.clear();
@@ -416,6 +447,18 @@ std::wstring Model::removeCompatFlag(const CompatFlag& f, Lang l) {
 
 std::wstring Model::resetRegistryValue(const std::string& name, Lang l) {
     const auto w = planReset(now_.registry, "", name);
+    if (!w) return L"";
+    std::wstring err = backupOnce(l);
+    if (!err.empty()) return err;
+    const std::string failed = writePersonalValue(*w);
+    load();
+    return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
+}
+
+std::wstring Model::forgetLogin(Lang l) {
+    refreshRunning();
+    if (now_.gameRunning) return wtr(l, Text::ErrGameRunning);  // the game writes it from its login window
+    const auto w = planWrite(now_.registry, "", "ID", RegValue::sz(""));
     if (!w) return L"";
     std::wstring err = backupOnce(l);
     if (!err.empty()) return err;

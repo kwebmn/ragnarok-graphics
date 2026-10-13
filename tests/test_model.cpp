@@ -1,5 +1,6 @@
 // The settings app's model (stage 2 spec §4) over the stand-ins of tests/fake_windows.cpp.
 #include "app/model.hpp"
+#include "core/settings/game_settings.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/reg_file.hpp"
 #include "fake_windows.hpp"
@@ -239,4 +240,101 @@ TEST(model_a_first_run_while_the_game_runs_writes_the_key_and_leaves_roexts_ini)
     w.gameRunning = false;
     CHECK(m.apply(Lang::En).empty());
     CHECK_EQ(valueOf(w.files[roext], "roext.windowwidth"), std::string("1400"));
+}
+
+TEST(model_game_settings_are_written_while_the_game_is_closed) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    m.setRegWord(*findRegSetting("SPRITEMODE"), "1");
+    m.setRegWord(*findRegSetting("Option\\isEffectOn"), "0");
+    m.setRegWord(*findRegSetting("ShortCutList\\0"), "/lv");
+    CHECK_EQ(m.pendingCount(), size_t(3));
+    CHECK(m.regWord(*findRegSetting("SPRITEMODE")) == "1");
+    CHECK(m.apply(Lang::En).empty());
+    CHECK_EQ(effectiveDword("SPRITEMODE"), 1);
+    const auto effect = effectiveValue(w.registry, "Option", "isEffectOn");
+    CHECK(effect && effect->asDword() && *effect->asDword() == 0u);
+    const auto macro = effectiveValue(w.registry, "ShortCutList", "0");
+    CHECK(macro && macro->text == "/lv");
+    CHECK_EQ(m.pendingCount(), size_t(0));
+}
+
+TEST(model_game_settings_the_game_writes_wait_while_it_runs) {
+    // Spec §4.1: ISLIGHTMAP the game never writes - it goes now; SPRITEMODE it writes at exit - it waits.
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    m.setRegWord(*findRegSetting("ISLIGHTMAP"), "0");
+    m.setRegWord(*findRegSetting("SPRITEMODE"), "0");
+    w.gameRunning = true;
+    m.refreshRunning();
+    CHECK(!m.regOpen(*findRegSetting("SPRITEMODE")));
+    CHECK(m.regOpen(*findRegSetting("ISLIGHTMAP")));
+    CHECK(!m.apply(Lang::En).empty());  // it says what waits
+    CHECK_EQ(effectiveDword("ISLIGHTMAP"), 0);
+    CHECK_EQ(effectiveDword("SPRITEMODE"), -1);  // not there yet
+    CHECK_EQ(m.pendingCount(), size_t(1));
+    w.gameRunning = false;
+    CHECK(m.apply(Lang::En).empty());
+    CHECK_EQ(effectiveDword("SPRITEMODE"), 0);
+}
+
+TEST(model_a_game_setting_as_setup_s_leaves_setup_in_charge) {
+    // Spec §4.2: a value equal to the common copy's deletes the personal one.
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.registry.common.keys[""]["SOUNDMODE"] = RegValue::dword(1);
+    w.registry.personal.exists = true;
+    w.registry.personal.keys[""]["SOUNDMODE"] = RegValue::dword(2);
+    app::Model m;
+    CHECK(m.regWord(*findRegSetting("SOUNDMODE")) == "2");
+    m.setRegWord(*findRegSetting("SOUNDMODE"), "1");
+    CHECK(m.apply(Lang::En).empty());
+    CHECK(w.registry.personal.find("", "SOUNDMODE") == nullptr);
+    CHECK_EQ(effectiveDword("SOUNDMODE"), 1);
+}
+
+TEST(model_presets_and_revert_take_the_game_s_quality_too) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    m.applyPreset(Preset::Speed);
+    CHECK(m.regWord(*findRegSetting("TEXTUREMODE")) == "1");
+    m.applyPreset(Preset::Maximum);
+    CHECK(m.regWord(*findRegSetting("TEXTUREMODE")) == "2");
+    CHECK(m.regWord(*findRegSetting("SPRITEMODE")) == "2");
+    m.setRegWord(*findRegSetting("FOG"), "0");
+    CHECK(m.canRevert());
+    CHECK(m.revert(Lang::En).empty());
+    CHECK(m.regWord(*findRegSetting("FOG")) == "1");
+    CHECK_EQ(m.pendingCount(), size_t(0));
+}
+
+TEST(model_skins_are_the_folders_of_skin_and_the_intro_a_file) {
+    fake::Windows& w = fake::reset();
+    w.folders.insert(fake::path(L"skin"));
+    w.folders.insert(fake::path(L"skin\\default"));
+    w.folders.insert(fake::path(L"skin\\Blue"));
+    app::Model m;
+    CHECK(m.skins() == (std::vector<std::wstring>{L"Blue", L"default"}));
+    CHECK(!m.hasIntro());
+    w.files[fake::path(L"openning.bik")] = "BIK";
+    CHECK(m.hasIntro());
+}
+
+TEST(model_forget_login_clears_the_saved_one) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.registry.personal.exists = true;
+    w.registry.personal.keys[""]["ID"] = RegValue::sz("player");
+    w.gameRunning = true;  // the game writes it from its login window: refused while it runs (spec §4.1)
+    app::Model m;
+    CHECK(!m.forgetLogin(Lang::En).empty());
+    CHECK(w.registry.personal.find("", "ID")->text == "player");
+    w.gameRunning = false;
+    CHECK(m.forgetLogin(Lang::En).empty());
+    CHECK(w.registry.personal.find("", "ID")->text == "");
 }

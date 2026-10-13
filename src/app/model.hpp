@@ -8,6 +8,7 @@
 #include "app/system.hpp"
 #include "core/config.hpp"
 #include "core/settings/game_registry.hpp"
+#include "core/settings/game_settings.hpp"
 #include "core/settings/input_module.hpp"
 #include "core/settings/log_digest.hpp"
 #include "core/settings/presets.hpp"
@@ -83,6 +84,14 @@ public:
     bool screenAsSetupPending() const { return screenAsSetup_; }
     std::optional<settings::Size> setupScreen(bool& fullscreen) const;  // setup.exe's, when it differs from the game's
 
+    // The game's key on the pages (0.6.2): the player's word, else what the game reads now (game_settings).
+    std::string regWord(const settings::RegSetting& s) const;
+    void setRegWord(const settings::RegSetting& s, const std::string& word);
+    // Whether a page may change it now: what the game writes itself waits for it to close (spec §4.1).
+    bool regOpen(const settings::RegSetting& s) const { return !s.gameWrites || !now_.gameRunning; }
+    std::vector<std::wstring> skins() const;  // the folders of skin\ next to uaRO.exe (spec §6.1)
+    bool hasIntro() const;                     // openning.bik next to uaRO.exe
+
     void applyPreset(settings::Preset p);
     size_t pendingCount() const;  // the player's changes not written yet
     // Apply has something to write: the player's changes, or the game's key on a first run (spec §4.3).
@@ -99,6 +108,7 @@ public:
     std::wstring resetDefaults(settings::Lang l);
     std::wstring removeCompatFlag(const CompatFlag& f, settings::Lang l);
     std::wstring resetRegistryValue(const std::string& name, settings::Lang l);
+    std::wstring forgetLogin(settings::Lang l);  // the saved login goes; only while the game is closed (§4.1)
     std::wstring launchGame(settings::Lang l);
     std::optional<settings::Lang> savedLanguage() const;
     void saveLanguage(settings::Lang l);  // the app's own key: no backup for it
@@ -117,6 +127,7 @@ private:
     SystemInfo system_;
     Snapshot now_;
     std::map<std::string, std::string> ini_;  // "section.key" -> the player's word
+    std::map<std::string, std::string> reg_;  // regKey -> the player's word
     std::optional<settings::ScreenChoice> screen_;
     bool screenAsSetup_ = false;
     std::map<std::string, std::string> wroteNow_;  // "section.key" -> the word before the first writeNow
