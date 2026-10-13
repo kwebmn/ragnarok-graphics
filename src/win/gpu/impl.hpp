@@ -12,6 +12,7 @@
 #include "core/frame.hpp"
 #include "core/key_pair.hpp"
 #include "core/log_once.hpp"
+#include "core/retry_timer.hpp"
 #include "win/gpu/renderer.hpp"
 
 namespace uagfx::gpu {
@@ -162,6 +163,7 @@ struct Renderer::Impl {
     UINT swapHeight = 0;
     UINT failedWidth = 0;  // a swap chain of this size could not be made: not retried every frame
     UINT failedHeight = 0;
+    RetryTimer swapRetry{1000};  // that size is tried again after a second (stage 3 review M1)
     bool tearingSupported = false;
     LARGE_INTEGER lastPresent{};
 

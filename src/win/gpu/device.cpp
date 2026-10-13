@@ -387,7 +387,7 @@ void Renderer::Impl::releaseSwapChain() {
 
 bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing) {
     if (swapChain && hwnd == window && w == swapWidth && h == swapHeight) return true;
-    if (!swapChain && w == failedWidth && h == failedHeight) return false;  // tried: wait for another size
+    if (!swapChain && w == failedWidth && h == failedHeight && !swapRetry.mayTry(GetTickCount64())) return false;
     waitIdle();
     const UINT flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     if (swapChain && hwnd == window) {  // the window changed size
@@ -398,6 +398,7 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
             releaseSwapChain();
             failedWidth = w;
             failedHeight = h;
+            swapRetry.failed(GetTickCount64());
             return false;
         }
     } else {
@@ -427,6 +428,7 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
             releaseCom(sc1);
             failedWidth = w;
             failedHeight = h;
+            swapRetry.failed(GetTickCount64());
             return false;
         }
         sc1->Release();
@@ -445,6 +447,7 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
     swapWidth = w;
     swapHeight = h;
     failedWidth = failedHeight = 0;
+    swapRetry.succeeded();
     return true;
 }
 
