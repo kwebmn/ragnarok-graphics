@@ -17,6 +17,7 @@ cbuffer Params : register(b0) {
     float footprint;
     float4 sourceRect;
     float4 uiPixels;
+    float4 sourceClamp;
     float sharpen;
 };
 Texture2D tex0 : register(t0);
@@ -184,15 +185,16 @@ PresentOut present_vs(uint id : SV_VertexID) {
 // Copies part of a texture: one bilinear sample when it is not shrunk, else the average of n x n samples over the
 // destination pixel's footprint (supersampling; the target read back at the game's size).
 // One destination pixel of a copy: a bilinear sample when the source is not shrunk, else the average of n x n
-// samples over the pixel's footprint (supersampling; the target read back at the game's size).
+// samples over the pixel's footprint (supersampling; the target read back at the game's size). Every tap stays
+// inside the source rectangle (stage 3 review M6).
 float3 fetch(float2 uv, float2 dx, float2 dy) {
-    if (footprint <= 1.0001) return tex0.SampleGrad(samp0, uv, dx, dy).rgb;
+    if (footprint <= 1.0001) return tex0.SampleGrad(samp0, clamp(uv, sourceClamp.xy, sourceClamp.zw), dx, dy).rgb;
     int n = min((int)ceil(footprint), 4);
     float3 sum = 0;
     for (int y = 0; y < n; ++y)
         for (int x = 0; x < n; ++x) {
             float2 o = (float2(x, y) + 0.5) / n - 0.5;
-            sum += tex0.SampleGrad(samp0, uv + o.x * dx + o.y * dy, dx, dy).rgb;
+            sum += tex0.SampleGrad(samp0, clamp(uv + o.x * dx + o.y * dy, sourceClamp.xy, sourceClamp.zw), dx, dy).rgb;
         }
     return sum / (n * n);
 }

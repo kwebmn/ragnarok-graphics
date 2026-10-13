@@ -58,10 +58,11 @@ struct Constants {
     float footprint;       // 15: blit only - source texels per destination pixel
     float sourceRect[4];   // 16-19: blit only, normalised u0 v0 u1 v1
     float uiPixels[4];     // 20-23: uiMode only - the quad's game pixels: first x, first y, last x, last y
-    float sharpen;         // 24: blit only - CAS sharpness 0..1 of the picture on screen, below 0 = none
+    float sourceClamp[4];  // 24-27: blit only - the outermost texel centres of the source rectangle, normalised
+    float sharpen;         // 28: blit only - CAS sharpness 0..1 of the picture on screen, below 0 = none
 };
 constexpr UINT kConstantCount = sizeof(Constants) / 4;
-static_assert(kConstantCount == 25, "Constants must stay 25 DWORDs");
+static_assert(kConstantCount == 29, "Constants must stay 29 DWORDs");
 
 struct Texture {
     ID3D12Resource* resource = nullptr;

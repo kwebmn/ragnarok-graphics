@@ -345,6 +345,11 @@ void Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     c.sourceRect[1] = srcRect[1] / float(srcH);
     c.sourceRect[2] = srcRect[2] / float(srcW);
     c.sourceRect[3] = srcRect[3] / float(srcH);
+    // No tap from beyond the source rectangle, stale or not, reaches the copy's edges (stage 3 review M6).
+    c.sourceClamp[0] = (srcRect[0] + 0.5f) / float(srcW);
+    c.sourceClamp[1] = (srcRect[1] + 0.5f) / float(srcH);
+    c.sourceClamp[2] = std::max(srcRect[0] + 0.5f, srcRect[2] - 0.5f) / float(srcW);
+    c.sourceClamp[3] = std::max(srcRect[1] + 0.5f, srcRect[3] - 0.5f) / float(srcH);
     c.footprint = std::max((srcRect[2] - srcRect[0]) / float(dstRect.width()),
                            (srcRect[3] - srcRect[1]) / float(dstRect.height()));
     c.sharpen = sharpen;  // only the picture on screen: reads and writes of the frame stay as the game drew it
