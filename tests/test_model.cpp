@@ -218,3 +218,25 @@ TEST(model_a_screen_that_waits_for_the_game_leaves_the_rest_written) {
     CHECK_EQ(effectiveDword("WIDTH"), 1680);
     CHECK_EQ(valueOf(w.files[roext], "roext.windowwidth"), std::string("1680"));
 }
+
+TEST(model_a_first_run_while_the_game_runs_writes_the_key_and_leaves_roexts_ini) {
+    // No key yet: the game waits in its setup.exe loop (registry.md §2) with ROExt loaded. The key goes now - it is
+    // what lets the game start - and ROExt's ini waits for the game to close (spec §4.1; 0.6.1 review I1).
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    w.files[fake::path(L"dinput.dll")] = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput.ini" + '\0';
+    const std::wstring roext = fake::path(L"dinput.ini");
+    w.files[roext] = "[ROExt]\r\nWindowLock=1\r\nWindowWidth=1600\r\nWindowHeight=900\r\n";
+    w.gameRunning = true;
+    app::Model m;
+    ScreenChoice c = m.screenChoice();
+    c.ui = 200;  // the 2800 x 1575 window ROExt makes, the interface larger: the game 1400 x 788
+    m.setScreen(c);
+    CHECK(!m.apply(Lang::En).empty());  // it says the screen waits
+    CHECK(gameKeyExists(w.registry));
+    CHECK_EQ(effectiveDword("WIDTH"), 1400);
+    CHECK_EQ(valueOf(w.files[roext], "roext.windowwidth"), std::string("1600"));
+    w.gameRunning = false;
+    CHECK(m.apply(Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[roext], "roext.windowwidth"), std::string("1400"));
+}

@@ -248,18 +248,20 @@ std::wstring Model::apply(Lang l) {
     // The Screen page shows the plan for the renderer chosen: a switch of the renderer alone writes it too.
     const bool screen = (screen_ && !(*screen_ == screenNow().choice)) || backend() != now_.config.backend;
     bool waits = false;  // the screen needs ROExt's ini, written only while the game is closed (spec §4.1)
+    ScreenChoice chosen;
     if (screen || firstRun) {
+        chosen = screenChoice();
         const ScreenPlan p = screenPlan();
         if (p.problem != ScreenProblem::None) return wtrf(l, Text::ErrScreen, {utf8(wtr(l, problemText(p.problem)))});
-        waits = !firstRun && p.writesRoext && now_.roextModule >= 0 && now_.gameRunning;
+        waits = p.writesRoext && now_.roextModule >= 0 && now_.gameRunning;
+        // A first run's key goes even then: the game waits for it in its setup.exe loop (spec §4.3; 0.6.1 review I1).
+        if (firstRun) reg = firstRunWrites(p.game.width, p.game.height, p.fullscreen);
         if (waits) {  // the screen and its renderer switch wait for the game to close; the rest goes now (0.6.0 M4)
             ini.erase(std::remove_if(ini.begin(), ini.end(),
                                      [](const IniEdit& e) { return e.section == "renderer" && e.key == "backend"; }),
                       ini.end());
         } else {
-            if (firstRun) {
-                reg = firstRunWrites(p.game.width, p.game.height, p.fullscreen);
-            } else {
+            if (!firstRun) {
                 auto add = [&](const char* name, uint32_t v) {
                     if (const auto w = planWrite(now_.registry, "", name, RegValue::dword(v))) reg.push_back(*w);
                 };
@@ -313,7 +315,10 @@ std::wstring Model::apply(Lang l) {
     const std::string kept = waits && backendWord != ini_.end() ? backendWord->second : "";
     ini_.clear();
     if (!kept.empty()) ini_["renderer.backend"] = kept;
-    if (!waits) screen_.reset();
+    if (waits)
+        screen_ = chosen;  // the next Apply with the game closed writes the rest of it
+    else
+        screen_.reset();
     screenAsSetup_ = false;
     wroteNow_.clear();
     load();
