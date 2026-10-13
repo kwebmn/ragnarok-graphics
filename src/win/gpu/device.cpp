@@ -78,6 +78,7 @@ bool Renderer::Impl::begin() {
     for (IUnknown* g : s.garbage) g->Release();
     s.garbage.clear();
     s.used = 0;
+    ringSrv = 0;  // this list's part of the descriptor ring is free: the slot's previous list has finished
     HRESULT hr = s.allocator->Reset();
     if (SUCCEEDED(hr)) hr = list->Reset(s.allocator, nullptr);
     if (FAILED(hr)) {
@@ -326,7 +327,8 @@ void Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     linearClamp.magFilter = d3d7::TFG_LINEAR;
     linearClamp.minFilter = d3d7::TFN_LINEAR;
     linearClamp.mipFilter = d3d7::TFP_NONE;
-    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp);  // first: may restart the list
+    if (!makeRoom(linearClamp, linearClamp)) return;  // first: a new list starts before this copy records anything
+    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp);
     const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(srcSrv, srcSrv);
     transition(src, srcState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     const D3D12_VIEWPORT vp{float(dstRect.left), float(dstRect.top), float(dstRect.width()), float(dstRect.height()),

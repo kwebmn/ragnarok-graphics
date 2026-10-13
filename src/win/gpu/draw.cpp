@@ -38,6 +38,7 @@ void uiPixels(const FrameRecord& rec, const DrawCmd& d, float out[4]) {
 }  // namespace
 
 void Renderer::Impl::prepareGeometry(const FrameRecord& rec) {
+    geometryFence = fenceValue;
     vertexBase = 0;
     indexBase = 0;
     indexBytes = 0;
@@ -72,6 +73,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const DrawSetup& s = rec.states()[d.state];
     ID3D12PipelineState* pso = pipelineFor(s, d.fvf);
     if (!pso) return;
+    // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
+    // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
+    if (!makeRoom(s.stage[0], s.stage[1])) return;
+    if (geometryFence != fenceValue) {
+        prepareGeometry(rec);
+        if (!vertexBase) return;
+    }
     Texture* t[2] = {nullptr, nullptr};
     for (int i = 0; i < 2; ++i) {
         auto it = textures.find(d.texture[i] ? d.texture[i] : white);
@@ -80,7 +88,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         t[i] = &it->second;
         transition(t[i]->resource, t[i]->state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     }
-    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(s.stage[0], s.stage[1]);  // may restart the list
+    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(s.stage[0], s.stage[1]);
     bindTarget();
     if (!boundPipeline) {  // a fresh list or after present(): the root signature and its tables are gone
         list->SetGraphicsRootSignature(root);

@@ -27,7 +27,8 @@ void releaseCom(T*& p) {
 constexpr UINT kSlots = 2;              // submissions in flight
 constexpr UINT kCpuSrvCount = 65536;    // one SRV per texture (the client keeps thousands), the white one, the target
 constexpr UINT kNoSrv = UINT(-1);       // allocSrv: the heap is full
-constexpr UINT kGpuSrvCount = 65536;    // ring of texture pairs bound for drawing
+constexpr UINT kGpuSrvCount = 65536;    // texture pairs bound for drawing: each slot's list has its own part
+constexpr UINT kRingPerSlot = kGpuSrvCount / kSlots;
 constexpr UINT kSamplerCount = 1024;    // cache of sampler pairs, two descriptors each
 constexpr UINT64 kUploadSize = 32ull << 20;  // per slot; grows when one submission needs more
 
@@ -109,7 +110,7 @@ struct Renderer::Impl {
     std::vector<uint32_t> dying;  // released by the client; the record execute() plays next may still draw with them
     UINT nextSrv = 0;
     ID3D12DescriptorHeap* gpuSrv = nullptr;
-    UINT ringSrv = 0;
+    UINT ringSrv = 0;  // the next free place in this list's part of the ring, which starts at slot * kRingPerSlot
     ID3D12DescriptorHeap* samplerHeap = nullptr;
     std::unordered_map<KeyPair, UINT, KeyPairHash> samplerPairs;
     UINT nextSampler = 0;
@@ -168,6 +169,7 @@ struct Renderer::Impl {
     D3D12_GPU_VIRTUAL_ADDRESS vertexBase = 0;
     D3D12_GPU_VIRTUAL_ADDRESS indexBase = 0;
     UINT indexBytes = 0;
+    UINT64 geometryFence = 0;  // fenceValue when that geometry was uploaded: a later list uploads it again
     // Bindings already set on the open command list (reset by begin()).
     ID3D12PipelineState* boundPipeline = nullptr;
     uint64_t boundTextures = ~0ull;
@@ -206,6 +208,7 @@ struct Renderer::Impl {
     bool createPipelines(std::string& error);
     D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const StageSetup& s0, const StageSetup& s1);
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
+    bool makeRoom(const StageSetup& s0, const StageSetup& s1);  // before samplerTable and textureTable; false: lost
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf);
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp

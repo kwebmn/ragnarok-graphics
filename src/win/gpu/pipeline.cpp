@@ -143,12 +143,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, c
     const KeyPair key{samplerKey(s0), samplerKey(s1)};
     auto it = samplerPairs.find(key);
     if (it == samplerPairs.end()) {
-        if (nextSampler + 2 > kSamplerCount) {  // full: start over once the GPU is done with the old pairs
-            waitIdle();
-            samplerPairs.clear();
-            nextSampler = 0;
-            begin();
-        }
+        if (nextSampler + 2 > kSamplerCount) return samplerHeap->GetGPUDescriptorHandleForHeapStart();  // never: makeRoom()
         const UINT index = nextSampler;
         nextSampler += 2;
         D3D12_CPU_DESCRIPTOR_HANDLE h = samplerHeap->GetCPUDescriptorHandleForHeapStart();
@@ -166,16 +161,36 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, c
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::textureTable(UINT srv0, UINT srv1) {
-    if (ringSrv + 2 > kGpuSrvCount) ringSrv = 0;  // the ring is far larger than one submission ever needs
+    if (ringSrv + 2 > kRingPerSlot) ringSrv = kRingPerSlot - 2;  // never: makeRoom() ran first; stay in this part
+    const UINT index = slot * kRingPerSlot + ringSrv;
+    ringSrv += 2;
     D3D12_CPU_DESCRIPTOR_HANDLE dst = gpuSrv->GetCPUDescriptorHandleForHeapStart();
-    dst.ptr += SIZE_T(ringSrv) * srvStep;
+    dst.ptr += SIZE_T(index) * srvStep;
     device->CopyDescriptorsSimple(1, dst, cpuSrvHandle(srv0), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     dst.ptr += srvStep;
     device->CopyDescriptorsSimple(1, dst, cpuSrvHandle(srv1), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     D3D12_GPU_DESCRIPTOR_HANDLE g = gpuSrv->GetGPUDescriptorHandleForHeapStart();
-    g.ptr += UINT64(ringSrv) * srvStep;
-    ringSrv += 2;
+    g.ptr += UINT64(index) * srvStep;
     return g;
+}
+
+// Room for one more draw or copy, made before it records anything (1B review M4, M5). A new sampler pair needs a
+// free place in the cache - when it is full, every list using the old pairs has to finish first - and the two texture
+// descriptors come from this list's part of the ring. Either way a new list starts here, never in the middle of a
+// draw. False when the GPU is lost.
+bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1) {
+    if (nextSampler + 2 > kSamplerCount &&
+        samplerPairs.find(KeyPair{samplerKey(s0), samplerKey(s1)}) == samplerPairs.end()) {
+        waitIdle();
+        samplerPairs.clear();
+        nextSampler = 0;
+        if (!begin()) return false;
+    }
+    if (ringSrv + 2 > kRingPerSlot) {
+        submit();
+        if (!begin()) return false;
+    }
+    return open;
 }
 
 // D3D7 and D3D12 share the numbers of blend factors (ZERO 1 ... SRCALPHASAT 11), comparison functions
