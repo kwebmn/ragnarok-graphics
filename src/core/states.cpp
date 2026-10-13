@@ -113,15 +113,23 @@ bool DrawSetup::operator==(const DrawSetup& o) const {
 
 DrawSetup resolveDrawSetup(const DeviceStates& s, bool targetHasAlpha, const bool stageHasTexture[2]) {
     DrawSetup d;
+    // Values past D3D7's (unvalidated STR effect data, states.md §3) are drawn as the renderer can draw them: a
+    // comparison as ALWAYS, a cull mode as NONE, a blend factor as D3D7's default ONE / ZERO - never a pipeline the
+    // keys file rejects, nor a D3D12 enum D3D7 does not have (0.4.3 review).
+    const uint32_t zFunc = s.render(RS_ZFUNC);
+    const uint32_t cull = s.render(RS_CULLMODE);
     d.zEnable = s.render(RS_ZENABLE) != 0;
     d.zWrite = d.zEnable && s.render(RS_ZWRITEENABLE) != 0;
-    d.zFunc = d.zEnable ? uint8_t(s.render(RS_ZFUNC)) : uint8_t(CMP_ALWAYS);
-    d.cull = uint8_t(s.render(RS_CULLMODE));
+    d.zFunc = d.zEnable && zFunc >= CMP_NEVER && zFunc <= CMP_ALWAYS ? uint8_t(zFunc) : uint8_t(CMP_ALWAYS);
+    d.cull = cull >= CULL_NONE && cull <= CULL_CCW ? uint8_t(cull) : uint8_t(CULL_NONE);
 
     d.blend = s.render(RS_ALPHABLENDENABLE) != 0;
     if (d.blend) {
-        uint8_t src = uint8_t(s.render(RS_SRCBLEND));
-        uint8_t dst = uint8_t(s.render(RS_DESTBLEND));
+        const uint32_t rawSrc = s.render(RS_SRCBLEND);
+        const uint32_t rawDst = s.render(RS_DESTBLEND);
+        const auto known = [](uint32_t f) { return f >= BLEND_ZERO && f <= BLEND_BOTHINVSRCALPHA; };
+        uint8_t src = known(rawSrc) ? uint8_t(rawSrc) : uint8_t(BLEND_ONE);
+        uint8_t dst = known(rawDst) ? uint8_t(rawDst) : uint8_t(BLEND_ZERO);
         if (src == BLEND_BOTHSRCALPHA) {
             src = BLEND_SRCALPHA;
             dst = BLEND_INVSRCALPHA;

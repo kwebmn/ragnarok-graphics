@@ -65,16 +65,20 @@ TEST(pipeline_key_file_text_lists_each_key_once) {
 }
 
 TEST(pipeline_key_every_key_the_renderer_makes_is_valid) {
-    // Every D3D7 state the client can set, through resolveDrawSetup: none of the keys may be rejected (0.4.2 review).
+    // Every D3D7 state the client can set - and values past D3D7's, which unvalidated STR effect data may hold -
+    // through resolveDrawSetup: none of the keys may be rejected (0.4.2 and 0.4.3 reviews).
     const bool both[2] = {true, true};
+    const uint32_t funcs[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16, 0x104};
+    const uint32_t culls[] = {0, 1, 2, 3, 4, 0x102};
+    const uint32_t factors[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0x105};
     int rejected = 0;
     for (uint32_t z = 0; z < 2; ++z)
         for (uint32_t zw = 0; zw < 2; ++zw)
-            for (uint32_t zf = CMP_NEVER; zf <= CMP_ALWAYS; ++zf)
-                for (uint32_t cull = CULL_NONE; cull <= CULL_CCW; ++cull)
+            for (const uint32_t zf : funcs)
+                for (const uint32_t cull : culls)
                     for (uint32_t blend = 0; blend < 2; ++blend)
-                        for (uint32_t src = BLEND_ZERO; src <= BLEND_BOTHINVSRCALPHA; ++src)
-                            for (uint32_t dst = BLEND_ZERO; dst <= BLEND_BOTHINVSRCALPHA; ++dst)
+                        for (const uint32_t src : factors)
+                            for (const uint32_t dst : factors)
                                 for (const bool alpha : {false, true}) {
                                     DeviceStates s;
                                     s.setRender(RS_ZENABLE, z);

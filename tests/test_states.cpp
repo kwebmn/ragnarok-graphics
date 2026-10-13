@@ -172,3 +172,28 @@ TEST(states_both_blends_as_dest_read_as_their_source_half) {
     d = resolveDrawSetup(s, false, kBoth);
     CHECK_EQ(d.dstBlend, uint8_t(BLEND_INVSRCALPHA));
 }
+
+TEST(states_values_past_d3d7_draw_as_the_defaults) {
+    // STR effect data is not validated (states.md §3): a comparison, cull mode or blend factor D3D7 does not have is
+    // drawn as ALWAYS, NONE and ONE / ZERO - not as a pipeline that cannot be made (0.4.3 review).
+    DeviceStates s = clientInit();
+    s.setRender(RS_ZFUNC, 9);
+    s.setRender(RS_CULLMODE, 0);
+    s.setRender(RS_ALPHABLENDENABLE, 1);
+    s.setRender(RS_SRCBLEND, 0);
+    s.setRender(RS_DESTBLEND, 14);
+    DrawSetup d = resolveDrawSetup(s, false, kBoth);
+    CHECK_EQ(d.zFunc, uint8_t(CMP_ALWAYS));
+    CHECK_EQ(d.cull, uint8_t(CULL_NONE));
+    CHECK_EQ(d.srcBlend, uint8_t(BLEND_ONE));
+    CHECK_EQ(d.dstBlend, uint8_t(BLEND_ZERO));
+    s.setRender(RS_ZFUNC, 0x104);  // LESSEQUAL in its low byte only
+    s.setRender(RS_CULLMODE, 0x102);
+    s.setRender(RS_SRCBLEND, 0x105);
+    s.setRender(RS_DESTBLEND, 15);
+    d = resolveDrawSetup(s, false, kBoth);
+    CHECK_EQ(d.zFunc, uint8_t(CMP_ALWAYS));
+    CHECK_EQ(d.cull, uint8_t(CULL_NONE));
+    CHECK_EQ(d.srcBlend, uint8_t(BLEND_ONE));
+    CHECK_EQ(d.dstBlend, uint8_t(BLEND_ZERO));
+}
