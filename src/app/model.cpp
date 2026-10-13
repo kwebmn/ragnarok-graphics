@@ -234,7 +234,9 @@ std::wstring Model::apply(Lang l) {
     std::vector<RegWrite> reg;
     std::vector<IniEdit> roext;
     const bool firstRun = !gameKeyExists(now_.registry);
-    if ((screen_ && !(*screen_ == screenNow().choice)) || firstRun) {
+    // The Screen page shows the plan for the renderer chosen: a switch of the renderer alone writes it too.
+    const bool screen = (screen_ && !(*screen_ == screenNow().choice)) || backend() != now_.config.backend;
+    if (screen || firstRun) {
         const ScreenPlan p = screenPlan();
         if (p.problem != ScreenProblem::None) return wtrf(l, Text::ErrScreen, {utf8(wtr(l, problemText(p.problem)))});
         if (firstRun) {
