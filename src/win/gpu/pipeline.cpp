@@ -176,6 +176,63 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::textureTable(UINT srv0, UINT srv1) {
     return g;
 }
 
-ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup&, uint32_t) { return nullptr; }  // Task 8
+// D3D7 and D3D12 share the numbers of blend factors (ZERO 1 ... SRCALPHASAT 11), comparison functions
+// (NEVER 1 ... ALWAYS 8) and cull modes (NONE 1, CW = FRONT 2, CCW = BACK 3 with clockwise front faces), and both
+// count winding in window space (y down), so the states map one to one.
+ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf) {
+    const bool two = fvf == d3d7::FVF_TL2;
+    const uint64_t key = uint64_t(s.zEnable) | uint64_t(s.zWrite) << 1 | uint64_t(s.zFunc & 15) << 2 |
+                         uint64_t(s.cull & 3) << 6 | uint64_t(s.blend) << 8 | uint64_t(s.srcBlend & 15) << 9 |
+                         uint64_t(s.dstBlend & 15) << 13 | uint64_t(two) << 17;
+    auto it = pipelines.find(key);
+    if (it != pipelines.end()) return it->second;
+
+    // FVF 0x1C4 has one UV set: TEXCOORD1 reads the same bytes as TEXCOORD0.
+    const D3D12_INPUT_ELEMENT_DESC layout[5] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_B8G8R8A8_UNORM, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"COLOR", 1, DXGI_FORMAT_B8G8R8A8_UNORM, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, two ? 32u : 24u, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    };
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
+    p.pRootSignature = root;
+    p.VS = {drawVs->GetBufferPointer(), drawVs->GetBufferSize()};
+    p.PS = {drawPs->GetBufferPointer(), drawPs->GetBufferSize()};
+    D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
+    b.BlendEnable = s.blend ? TRUE : FALSE;
+    b.SrcBlend = D3D12_BLEND(s.srcBlend ? uint32_t(s.srcBlend) : uint32_t(d3d7::BLEND_ONE));
+    b.DestBlend = D3D12_BLEND(s.dstBlend ? uint32_t(s.dstBlend) : uint32_t(d3d7::BLEND_ZERO));
+    b.BlendOp = D3D12_BLEND_OP_ADD;
+    b.SrcBlendAlpha = D3D12_BLEND_ONE;  // the target's alpha is never read (DESTALPHA reads 1): keep it simple
+    b.DestBlendAlpha = D3D12_BLEND_ZERO;
+    b.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    b.LogicOp = D3D12_LOGIC_OP_NOOP;
+    b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+    p.SampleMask = UINT_MAX;
+    p.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+    p.RasterizerState.CullMode = s.cull >= d3d7::CULL_NONE && s.cull <= d3d7::CULL_CCW ? D3D12_CULL_MODE(s.cull)
+                                                                                        : D3D12_CULL_MODE_NONE;
+    p.RasterizerState.FrontCounterClockwise = FALSE;
+    p.RasterizerState.DepthClipEnable = TRUE;
+    p.DepthStencilState.DepthEnable = s.zEnable ? TRUE : FALSE;
+    p.DepthStencilState.DepthWriteMask = s.zWrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+    p.DepthStencilState.DepthFunc = s.zFunc >= d3d7::CMP_NEVER && s.zFunc <= d3d7::CMP_ALWAYS
+                                        ? D3D12_COMPARISON_FUNC(s.zFunc)
+                                        : D3D12_COMPARISON_FUNC_ALWAYS;
+    p.InputLayout = {layout, 5};
+    p.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    p.NumRenderTargets = 1;
+    p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
+    p.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+    p.SampleDesc.Count = 1;
+    ID3D12PipelineState* pso = nullptr;
+    if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState), reinterpret_cast<void**>(&pso)))) {
+        LOG_ERROR("pipeline for key 0x%llx failed", static_cast<unsigned long long>(key));
+        pso = nullptr;
+    }
+    pipelines.emplace(key, pso);  // a failure is remembered too: no retry every draw
+    return pso;
+}
 
 }  // namespace uagfx::gpu
