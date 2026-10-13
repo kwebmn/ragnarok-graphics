@@ -32,6 +32,7 @@ public:
     HWND window = nullptr;
     bool windowApplied = false;  // [display] mode is applied at the first present, once the client's size is fixed
     bool vblankWaited = false;   // WaitForVerticalBlank came before the next Blt onto the primary
+    bool gameFullscreen = false;  // the game asked for DDSCL_FULLSCREEN ([display] mode = auto follows it)
     Shadow shadow;
 
     bool open(std::string& error);          // the renderer, at DirectDrawCreateEx; false: use another DirectDraw

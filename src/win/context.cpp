@@ -76,7 +76,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         // logical size must stay the one from its settings, whatever the window becomes. The flag goes first:
         // SetWindowPos sends WM_MOVE, and the client may present again from its handler (L457929).
         windowApplied = true;
-        applyWindowMode(window, config, shadow.width(), shadow.height());
+        applyWindowMode(window, config, gameFullscreen, shadow.width(), shadow.height());
     }
     gpu::PresentOptions o;
     o.vsync = config.vsync && waitForVblank;

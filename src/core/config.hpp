@@ -5,12 +5,14 @@ namespace uagfx {
 
 enum class LogLevel { Error = 0, Info = 1, Debug = 2 };
 enum class Backend { DgVoodoo, Uaro };          // [renderer] backend
-enum class DisplayMode { Window, Borderless };  // [display] mode
+// [display] mode. Auto follows the game: a windowed game keeps its window (ROExt sizes it), full screen becomes
+// borderless. Window and Borderless override what the game asks for.
+enum class DisplayMode { Auto, Window, Borderless };
 
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 struct Config {
     Backend backend = Backend::DgVoodoo;
-    DisplayMode mode = DisplayMode::Borderless;
+    DisplayMode mode = DisplayMode::Auto;
     int monitor = 0;       // 0 = the main monitor
     int windowWidth = 0;   // window mode: inner size in pixels; 0 = the size the game asks for
     int windowHeight = 0;

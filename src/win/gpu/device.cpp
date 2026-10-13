@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "core/window_plan.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -602,11 +603,14 @@ void Renderer::present(HWND window, const Rect& source, const PresentOptions& op
     const D3D12_CPU_DESCRIPTOR_HANDLE rtv = m.rtvHandle(1 + index);
     const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     m.list->ClearRenderTargetView(rtv, black, 0, nullptr);
-    // Fit the source into the window, keeping its shape: bars where the shapes differ.
-    const float sw = float(source.width()), sh = float(source.height());
-    const float scale = std::min(float(m.swapWidth) / sw, float(m.swapHeight) / sh);
-    D3D12_VIEWPORT vp{(float(m.swapWidth) - sw * scale) / 2, (float(m.swapHeight) - sh * scale) / 2, sw * scale,
-                      sh * scale, 0.0f, 1.0f};
+    // Fit the source into the window, keeping its shape, on whole pixels: bars where the shapes differ.
+    const Rect fit = fitPicture(source.width(), source.height(), int(m.swapWidth), int(m.swapHeight));
+    if (!(fit == m.picture)) {
+        m.picture = fit;
+        LOG_INFO("picture %dx%d shown as %dx%d at %d,%d in the %ux%u window", source.width(), source.height(),
+                 fit.width(), fit.height(), fit.left, fit.top, m.swapWidth, m.swapHeight);
+    }
+    D3D12_VIEWPORT vp{float(fit.left), float(fit.top), float(fit.width()), float(fit.height()), 0.0f, 1.0f};
     D3D12_RECT all{0, 0, LONG(m.swapWidth), LONG(m.swapHeight)};
     m.list->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
     m.list->RSSetViewports(1, &vp);

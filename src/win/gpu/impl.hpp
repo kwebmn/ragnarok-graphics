@@ -130,6 +130,7 @@ struct Renderer::Impl {
     IDXGISwapChain3* swapChain = nullptr;
     ID3D12Resource* backBuffers[2] = {nullptr, nullptr};
     D3D12_RESOURCE_STATES backStates[2] = {D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_PRESENT};
+    Rect picture;  // where present() last put the picture in the window, for the log
     UINT swapWidth = 0;
     UINT swapHeight = 0;
     bool tearingSupported = false;

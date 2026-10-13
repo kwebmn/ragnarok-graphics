@@ -65,6 +65,7 @@ Config parseConfig(const std::string& text) {
             if (val == "dgvoodoo") c.backend = Backend::DgVoodoo;
             if (val == "uaro") c.backend = Backend::Uaro;
         } else if (key == "display.mode") {
+            if (val == "auto") c.mode = DisplayMode::Auto;
             if (val == "window") c.mode = DisplayMode::Window;
             if (val == "borderless") c.mode = DisplayMode::Borderless;
         } else if (key == "display.monitor") {
@@ -89,6 +90,13 @@ Config parseConfig(const std::string& text) {
 
 const char* backendToken(Backend b) { return b == Backend::Uaro ? "uaro" : "dgvoodoo"; }
 
-const char* displayModeToken(DisplayMode m) { return m == DisplayMode::Window ? "window" : "borderless"; }
+const char* displayModeToken(DisplayMode m) {
+    switch (m) {
+        case DisplayMode::Window: return "window";
+        case DisplayMode::Borderless: return "borderless";
+        case DisplayMode::Auto: break;
+    }
+    return "auto";
+}
 
 }  // namespace uagfx

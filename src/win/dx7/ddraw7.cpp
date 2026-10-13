@@ -150,9 +150,10 @@ HRESULT STDMETHODCALLTYPE DirectDraw7::SetCooperativeLevel(HWND hwnd, DWORD flag
     win::Guard guard;
     win::Context& c = win::Context::get();
     if (hwnd) c.window = hwnd;
+    c.gameFullscreen = (flags & DDSCL_FULLSCREEN) != 0;
     if (flags & DDSCL_FPUSETUP) _control87(_PC_24, _MCW_PC);  // the x87 state DirectX 7 leaves behind
-    LOG_INFO("SetCooperativeLevel(0x%lx)%s", static_cast<unsigned long>(flags),
-             (flags & DDSCL_FULLSCREEN) ? ": full screen becomes a borderless window" : "");
+    LOG_INFO("SetCooperativeLevel(0x%lx): the game asks for %s", static_cast<unsigned long>(flags),
+             c.gameFullscreen ? "full screen" : "a window");
     return DD_OK;
 }
 
