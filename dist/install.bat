@@ -13,6 +13,10 @@ if not exist "uaro-graphics\ddraw.dll" (
     echo uaro-graphics\ddraw.dll is missing: unpack the whole archive, keeping its folders.
     goto :fail
 )
+tasklist /fi "imagename eq uaro-graphics.exe" 2>nul | find /i "uaro-graphics.exe" >nul && (
+    echo uaRO Graphics Settings is open: close it and run install.bat again.
+    goto :fail
+)
 rem A client under Program Files can only be changed with administrator rights.
 (echo test) > "uaro-graphics-write-test.tmp" 2>nul || goto :noaccess
 del "uaro-graphics-write-test.tmp"
@@ -25,6 +29,8 @@ if exist "ddraw.dll" (
 if exist "D3DImm.dll" move /y "D3DImm.dll" "dgvoodoo\D3DImm.dll" >nul || goto :noaccess
 if exist "dgVoodoo.conf" copy /y "dgVoodoo.conf" "dgvoodoo\dgVoodoo.conf" >nul
 copy /y "uaro-graphics\ddraw.dll" "ddraw.dll" >nul || goto :noaccess
+rem The settings app, uaRO Graphics Settings, lives next to uaRO.exe.
+if exist "uaro-graphics\uaro-graphics.exe" copy /y "uaro-graphics\uaro-graphics.exe" "uaro-graphics.exe" >nul || goto :noaccess
 rem A settings file older than 0.3 holds the defaults and the renderer choice: it is replaced by the new one,
 rem with every new setting and its notes, and keeps that choice.
 if exist "uaro-graphics.ini" (
@@ -58,7 +64,8 @@ rem update.bat calls install.bat /quiet and reports the result itself.
 if /i "%~1"=="/quiet" exit /b 0
 echo.
 echo uaRO Graphics is installed. Start the game as usual.
-echo To draw with the uaRO Graphics renderer (Direct3D 12), run use-uaro.bat; use-dgvoodoo.bat switches back.
+echo Every setting is in uaro-graphics.exe (uaRO Graphics Settings) in this folder.
+echo To draw with the uaRO Graphics renderer (Direct3D 12), choose it there or run use-uaro.bat; use-dgvoodoo.bat switches back.
 echo The log is uaro-graphics.log in this folder. To undo everything, run uninstall.bat.
 echo.
 pause

@@ -13,6 +13,18 @@ tasklist /fi "imagename eq uaRO.exe" 2>nul | find /i "uaRO.exe" >nul && (
     echo The game is running: close it and run update.bat again.
     goto :fail
 )
+rem The settings app may have started this update: give it up to 10 seconds to close, its exe is replaced too.
+set /a waited=0
+:waitapp
+tasklist /fi "imagename eq uaro-graphics.exe" 2>nul | find /i "uaro-graphics.exe" >nul || goto :appclosed
+if %waited% geq 10 (
+    echo uaRO Graphics Settings is open: close it and run update.bat again.
+    goto :fail
+)
+timeout /t 1 /nobreak >nul
+set /a waited+=1
+goto :waitapp
+:appclosed
 where curl >nul 2>&1 || goto :oldwindows
 where tar >nul 2>&1 || goto :oldwindows
 rem A client under Program Files can only be changed with administrator rights.

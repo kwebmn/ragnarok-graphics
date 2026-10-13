@@ -10,7 +10,8 @@ import zipfile
 from pathlib import Path
 
 EXPECTED = {"install.bat", "uninstall.bat", "use-uaro.bat", "use-dgvoodoo.bat", "update.bat", "TEST.ru.md",
-            "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.ini", "uaro-graphics/version.txt"}
+            "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.exe", "uaro-graphics/uaro-graphics.ini",
+            "uaro-graphics/version.txt"}
 VERSION_CPP = Path(__file__).resolve().parent.parent / "src" / "core" / "version.cpp"
 
 
