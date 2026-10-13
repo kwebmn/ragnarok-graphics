@@ -31,12 +31,26 @@ std::vector<IniEdit> presetEdits(Preset p) {
             {"display", "crisp_text", v.crispText ? "1" : "0"}};
 }
 
-std::optional<Preset> presetOf(const Config& c) {
+std::vector<std::pair<std::string, std::string>> presetRegWords(Preset p) {
+    switch (p) {
+        case Preset::Maximum:
+        case Preset::Balance: return {{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}};
+        case Preset::Speed: return {{"TEXTUREMODE", "1"}};
+        case Preset::Plain: break;
+    }
+    return {};
+}
+
+std::optional<Preset> presetOf(const Config& c, const std::map<std::string, std::string>& gameWords) {
     for (int i = 0; i < kPresetCount; ++i) {
         const Values v = valuesOf(Preset(i));
-        if (c.highResolution == v.highResolution && c.renderScale == v.renderScale && c.sharpen == v.sharpen &&
-            c.uiFilter == UiFilter::Sharp && c.crispText == v.crispText)
-            return Preset(i);
+        bool same = c.highResolution == v.highResolution && c.renderScale == v.renderScale && c.sharpen == v.sharpen &&
+                    c.uiFilter == UiFilter::Sharp && c.crispText == v.crispText;
+        for (const auto& w : presetRegWords(Preset(i))) {
+            const auto it = gameWords.find(w.first);
+            same = same && (it == gameWords.end() || it->second == w.second);
+        }
+        if (same) return Preset(i);
     }
     return std::nullopt;
 }

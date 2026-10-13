@@ -106,3 +106,38 @@ TEST(game_registry_lists_the_setup_values_the_copies_differ_in) {
     CHECK(d.size() == 2 && d[1].name == "PROVIDERNAME" && d[1].personal == "Miles Fast 2D Positional Audio" &&
           d[1].common == "No Provider");
 }
+
+TEST(game_registry_the_effective_copy_is_what_the_game_reads) {
+    GameRegistry r;
+    r.common.exists = true;
+    r.common.keys[""]["WIDTH"] = RegValue::dword(1920);
+    r.common.keys[""]["SOUNDMODE"] = RegValue::dword(1);
+    r.personal.exists = true;
+    r.personal.keys[""]["WIDTH"] = RegValue::dword(1680);
+    r.personal.keys["Option"]["isEffectOn"] = RegValue::dword(0);
+    const RegCopy c = effectiveCopy(r);
+    CHECK(c.exists);
+    CHECK(c.find("", "WIDTH") && *c.find("", "WIDTH")->asDword() == 1680u);  // the personal one wins
+    CHECK(c.find("", "SOUNDMODE") && *c.find("", "SOUNDMODE")->asDword() == 1u);
+    CHECK(c.find("Option", "isEffectOn") && *c.find("Option", "isEffectOn")->asDword() == 0u);
+    CHECK(!effectiveCopy(GameRegistry{}).exists);
+}
+
+TEST(game_registry_a_window_layout_reset_puts_every_window_back) {
+    // Spec §8: every window's .X becomes -1 - it does not fit, so the game puts the window in its place when it
+    // opens - and the chat goes to the bottom left; the rest stays.
+    GameRegistry r;
+    r.personal.exists = true;
+    r.personal.keys["UIRectInfo"]["ITEMWNDINFO.X"] = RegValue::dword(1700);
+    r.personal.keys["UIRectInfo"]["ITEMWNDINFO.Y"] = RegValue::dword(50);
+    r.personal.keys["UIRectInfo"]["M_CHATWNDY"] = RegValue::dword(900);
+    r.common.exists = true;
+    r.common.keys["UIRectInfo"]["SKILLLISTWNDINFO.X"] = RegValue::dword(300);
+    GameRegistry after = r;
+    applyWrites(after.personal, windowLayoutReset(r));
+    CHECK(effectiveValue(after, "UIRectInfo", "ITEMWNDINFO.X") == RegValue::dword(0xFFFFFFFFu));
+    CHECK(effectiveValue(after, "UIRectInfo", "SKILLLISTWNDINFO.X") == RegValue::dword(0xFFFFFFFFu));
+    CHECK(effectiveValue(after, "UIRectInfo", "M_CHATWNDY") == RegValue::dword(0xFFFFFFFFu));
+    CHECK(effectiveValue(after, "UIRectInfo", "ITEMWNDINFO.Y") == RegValue::dword(50));
+    CHECK(windowLayoutReset(GameRegistry{}).empty());  // no layout yet: the game makes its own
+}

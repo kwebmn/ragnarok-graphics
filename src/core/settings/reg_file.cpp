@@ -218,4 +218,24 @@ bool fromRegFile(const std::string& text, const std::string& root, RegCopy& out)
     return true;
 }
 
+const std::vector<std::string>& gameKeyRoots() {
+    static const std::vector<std::string> roots{
+        "HKEY_CURRENT_USER\\Software\\Classes\\VirtualStore\\MACHINE\\SOFTWARE\\WOW6432Node\\Gravity Soft\\Ragnarok",
+        "HKEY_CURRENT_USER\\Software\\Classes\\VirtualStore\\MACHINE\\SOFTWARE\\Gravity Soft\\Ragnarok",
+        "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Gravity Soft\\Ragnarok",
+        "HKEY_LOCAL_MACHINE\\SOFTWARE\\Gravity Soft\\Ragnarok"};
+    return roots;
+}
+
+bool fromRegFileAny(const std::string& text, const std::vector<std::string>& roots, RegCopy& out) {
+    for (const std::string& root : roots) {
+        RegCopy c;
+        if (fromRegFile(text, root, c) && c.exists) {
+            out = c;
+            return true;
+        }
+    }
+    return false;
+}
+
 }  // namespace uagfx::settings

@@ -47,6 +47,9 @@ struct GameRegistry {
 
 std::optional<RegValue> effectiveValue(const GameRegistry& r, const std::string& subkey, const std::string& name);
 bool gameKeyExists(const GameRegistry& r);  // in either copy
+// The game's key as the game reads it: every key and value of either copy, the personal one winning (spec §8: the
+// settings file holds it).
+RegCopy effectiveCopy(const GameRegistry& r);
 
 // A value of the key itself that both copies hold, differently (stage 2 spec §7): the personal one wins.
 struct CopyDifference {
@@ -76,6 +79,10 @@ std::optional<RegWrite> planWrite(const GameRegistry& r, const std::string& subk
 // value or no common one to fall back on.
 std::optional<RegWrite> planReset(const GameRegistry& r, const std::string& subkey, const std::string& name);
 void applyWrites(RegCopy& personal, const std::vector<RegWrite>& writes);
+// "Reset the windows' layout" (spec §8): every window's .X in UIRectInfo becomes -1 - a window that does not fit is put
+// in its place when it opens (registry.md §5) - and the chat goes to the bottom left (M_CHATWNDY = -1). Nothing when
+// there is no layout yet: the game makes its own.
+std::vector<RegWrite> windowLayoutReset(const GameRegistry& r);
 
 // The IID of the Direct3D HAL device, as setup.exe stores it in GUIDDEVICE.
 std::vector<uint8_t> halDeviceGuid();

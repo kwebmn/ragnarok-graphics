@@ -84,3 +84,16 @@ TEST(log_digest_reads_the_crisp_text_lines_of_the_last_start) {
     CHECK(off.crisp == "off (the game is not at 0x400000)");
     CHECK(off.crispScale.empty());  // the last start's own lines only
 }
+
+TEST(presets_set_the_game_s_own_quality) {
+    // Spec §8 from 0.6.2: Maximum and Balance - sprites and textures high; Speed - textures half; mipmaps never.
+    using Words = std::vector<std::pair<std::string, std::string>>;
+    CHECK(presetRegWords(Preset::Maximum) == (Words{{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}}));
+    CHECK(presetRegWords(Preset::Balance) == (Words{{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}}));
+    CHECK(presetRegWords(Preset::Speed) == (Words{{"TEXTUREMODE", "1"}}));
+    CHECK(presetRegWords(Preset::Plain).empty());
+    const Config balance = parseConfig(applyIniEdits("", presetEdits(Preset::Balance)));
+    CHECK(presetOf(balance, {{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}}) == Preset::Balance);
+    CHECK(!presetOf(balance, {{"SPRITEMODE", "2"}, {"TEXTUREMODE", "1"}}).has_value());
+    CHECK(presetOf(balance) == Preset::Balance);  // without the game's words: uaro-graphics.ini alone
+}

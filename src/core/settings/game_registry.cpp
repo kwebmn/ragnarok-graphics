@@ -93,6 +93,29 @@ void applyWrites(RegCopy& personal, const std::vector<RegWrite>& writes) {
     }
 }
 
+RegCopy effectiveCopy(const GameRegistry& r) {
+    RegCopy out = r.common;
+    out.exists = r.personal.exists || r.common.exists;
+    for (const auto& key : r.personal.keys)
+        for (const auto& v : key.second) out.keys[key.first][v.first] = v.second;
+    return out;
+}
+
+std::vector<RegWrite> windowLayoutReset(const GameRegistry& r) {
+    std::vector<RegWrite> out;
+    const RegCopy all = effectiveCopy(r);
+    const auto layout = all.keys.find("UIRectInfo");
+    if (layout == all.keys.end()) return out;
+    const auto same = [](const std::string& a, const std::string& b) { return !NameLess{}(a, b) && !NameLess{}(b, a); };
+    const RegValue away = RegValue::dword(0xFFFFFFFFu);
+    std::vector<std::string> names{"M_CHATWNDY"};  // the chat's Y, there or not
+    for (const auto& v : layout->second)
+        if (v.first.size() > 2 && same(v.first.substr(v.first.size() - 2), ".X")) names.push_back(v.first);
+    for (const std::string& name : names)
+        if (const auto w = planWrite(r, "UIRectInfo", name, away)) out.push_back(*w);
+    return out;
+}
+
 std::vector<uint8_t> halDeviceGuid() {
     // {84E63DE0-46AA-11CF-816F-0000C020156E}: IID_IDirect3DHALDevice, the GUID's bytes in memory order.
     return {0xE0, 0x3D, 0xE6, 0x84, 0xAA, 0x46, 0xCF, 0x11, 0x81, 0x6F, 0x00, 0x00, 0xC0, 0x20, 0x15, 0x6E};

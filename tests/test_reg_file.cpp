@@ -74,3 +74,19 @@ TEST(reg_file_refuses_other_text_and_writes_an_empty_copy_as_a_header) {
     empty.exists = true;
     CHECK(toRegFile(empty, kRoot) == "Windows Registry Editor Version 5.00\r\n\r\n[" + std::string(kRoot) + "]\r\n\r\n");
 }
+
+TEST(reg_file_a_settings_file_reads_under_any_root_of_the_game_key) {
+    RegCopy c;
+    c.exists = true;
+    c.keys[""]["WIDTH"] = RegValue::dword(1920);
+    c.keys["Option"]["isEffectOn"] = RegValue::dword(0);
+    CHECK_EQ(gameKeyRoots().size(), size_t(4));
+    for (const std::string& root : gameKeyRoots()) {  // a file from another PC, or exported with regedit from HKLM
+        RegCopy back;
+        CHECK(fromRegFileAny(toRegFile(c, root), gameKeyRoots(), back));
+        CHECK(back.exists && back.find("Option", "isEffectOn") && *back.find("Option", "isEffectOn")->asDword() == 0u);
+    }
+    RegCopy none;
+    CHECK(!fromRegFileAny(toRegFile(c, "HKEY_CURRENT_USER\\Software\\Other"), gameKeyRoots(), none));
+    CHECK(!fromRegFileAny("not a .reg file", gameKeyRoots(), none));
+}
