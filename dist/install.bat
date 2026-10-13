@@ -46,6 +46,14 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo sharpen = 50
     >>"uaro-graphics.ini" echo ; in the game, Pause or Scroll Lock switches all improvements off and on, to compare
 )
+rem A settings file older than 0.5 has no crisp_text key: it is added at the end the same way.
+findstr /c:"crisp_text" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [display]
+    >>"uaro-graphics.ini" echo ; 1 = the game's text, window frames and fills at the real pixels of the window when the game is enlarged; 0 = as version 0.4
+    >>"uaro-graphics.ini" echo crisp_text = 1
+)
 rem update.bat calls install.bat /quiet and reports the result itself.
 if /i "%~1"=="/quiet" exit /b 0
 echo.
