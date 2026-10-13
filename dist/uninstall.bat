@@ -2,6 +2,12 @@
 rem uaRO Graphics: removes our ddraw.dll and puts dgVoodoo back where it was.
 setlocal
 cd /d "%~dp0"
+tasklist /fi "imagename eq uaro-graphics.exe" 2>nul | find /i "uaro-graphics.exe" >nul && (
+    echo uaRO Graphics Settings is open: close it and run uninstall.bat again.
+    echo.
+    pause
+    exit /b 1
+)
 (echo test) > "uaro-graphics-write-test.tmp" 2>nul || goto :noaccess
 del "uaro-graphics-write-test.tmp"
 if exist "ddraw.dll" (
