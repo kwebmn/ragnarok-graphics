@@ -164,6 +164,8 @@ inline-перехват на `DirectDrawCreateEx`, `CreateWindowExA`, `PeekMessa
 - Настройки: VSync, ограничение FPS, разрешение разрывов (для G-SYNC/VRR).
 
 ### 4.2 Координаты и масштаб
+*Уточнено для этапа 3 в `2026-10-13-stage3-resolution-design.md`: вывод `O` — в настоящих точках окна (масштаб
+Windows), формула вершин `x · k + 0.5`, перевод прямоугольников, чтение и запись кадра при масштабе.*
 - Логическое разрешение `L` — то, что видит клиент (реестр WIDTH/HEIGHT). Вывод `O` — клиентская область окна.
   Масштаб `s = O / L`, одинаковый по осям; если пропорции не совпадают — поля по краям (утилита подбирает `L` под
   пропорции монитора, чтобы полей не было).
@@ -257,7 +259,8 @@ inline-перехват на `DirectDrawCreateEx`, `CreateWindowExA`, `PeekMessa
 backend = dgvoodoo        ; dgvoodoo | uaro
 
 [display]
-mode = borderless         ; window | borderless
+mode = auto               ; auto | window | borderless (auto — как просит игра; этап 1B)
+high_resolution = 1       ; рисовать в настоящих точках окна (этап 3)
 monitor = 0               ; 0 = основной
 window_width = 0          ; только для mode = window; 0 = размер, заданный клиентом (масштаб 1)
 window_height = 0
