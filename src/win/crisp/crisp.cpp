@@ -101,15 +101,23 @@ using CreateDibFn = HBITMAP(WINAPI*)(HDC, const BITMAPINFO*, UINT, void**, HANDL
 
 void* UAGFX_THISCALL onDestroy(void* p, unsigned flags) {
     Guard guard;
-    drop(self(p));
-    forgetDc(self(p));
+    guarded(
+        [p] {
+            drop(self(p));
+            forgetDc(self(p));
+        },
+        [] {});
     return original<DestroyFn>(ce::kDestroy)(p, flags);
 }
 
 uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
     Guard guard;
     const uint32_t result = original<GetDcFn>(ce::kGetDc)(p, out);
-    if (active() && out && *out) state().dcs[*out] = self(p);  // TextOutW and FillRgn find the picture by its DC
+    guarded(  // TextOutW and FillRgn find the picture by its DC
+        [p, out] {
+            if (active() && out && *out) state().dcs[*out] = self(p);
+        },
+        [p] { lost(self(p)); });
     return result;
 }
 
@@ -118,53 +126,90 @@ uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
 // before the call.
 uint32_t UAGFX_THISCALL onCopyPixels(void* p, int x, int y, int w, int h, const uint32_t* src, int key) {
     Guard guard;
-    Picture* pic = src ? picture(self(p)) : nullptr;
-    const int rows = pic ? copyPixelsRows(pic->bits, pic->twin->width(), pic->twin->height(), x, y, h) : 0;
+    Picture* pic = nullptr;
+    int rows = 0;
+    guarded(
+        [&] {
+            pic = src ? picture(self(p)) : nullptr;
+            if (pic) rows = copyPixelsRows(pic->bits, pic->twin->width(), pic->twin->height(), x, y, h);
+        },
+        [&] {
+            pic = nullptr;
+            lost(self(p));
+        });
     const uint32_t result = original<CopyPixelsFn>(ce::kCopyPixels)(p, x, y, w, h, src, key);
-    if (pic) pic->twin->copyPixels(pic->bits, x, y, w, rows, src, (key & 0xFF) != 0);  // the key is a byte
+    if (pic)  // the key is a byte
+        guarded([&] { pic->twin->copyPixels(pic->bits, x, y, w, rows, src, (key & 0xFF) != 0); },
+                [p] { lost(self(p)); });
     return result;
 }
 
 uint32_t UAGFX_THISCALL onCopyFrom(void* p, int x, int y, int w, int h, void* child) {
     Guard guard;
-    Picture* pic = picture(self(p));
-    Picture* kid = pic && child ? picture(self(child)) : nullptr;
+    Picture* pic = nullptr;
+    Picture* kid = nullptr;
     Rect r;
-    const bool copies = pic && copyFromRegion(x, y, w, h, pic->twin->width(), pic->twin->height(), r);
-    if (copies) {  // what both twins missed so far, before the copy mixes them
-        pic->twin->sync(pic->bits, r);
-        if (kid) kid->twin->sync(kid->bits, whole(*kid));
-    }
+    bool copies = false;
+    guarded(
+        [&] {
+            pic = picture(self(p));
+            kid = pic && child ? picture(self(child)) : nullptr;
+            copies = pic && copyFromRegion(x, y, w, h, pic->twin->width(), pic->twin->height(), r);
+            if (copies) {  // what both twins missed so far, before the copy mixes them
+                pic->twin->sync(pic->bits, r);
+                if (kid) kid->twin->sync(kid->bits, whole(*kid));
+            }
+        },
+        [&] {
+            copies = false;
+            lost(self(p));
+        });
     const uint32_t result = original<CopyFromFn>(ce::kCopyFrom)(p, x, y, w, h, child);
-    if (!copies) return result;
-    if (kid)
-        pic->twin->copyFrom(pic->bits, *kid->twin, r.left, r.top, r.width(), r.height());
-    else
-        pic->twin->sync(pic->bits, r);
+    if (copies)
+        guarded(
+            [&] {
+                if (kid)
+                    pic->twin->copyFrom(pic->bits, *kid->twin, r.left, r.top, r.width(), r.height());
+                else
+                    pic->twin->sync(pic->bits, r);
+            },
+            [p] { lost(self(p)); });
     return result;
 }
 
 uint32_t UAGFX_THISCALL onSprite(void* p, int a, int b, int c, int d, int e) {
     Guard guard;
     const uint32_t result = original<SpriteFn>(ce::kSprite)(p, a, b, c, d, e);
-    if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, whole(*pic));
+    guarded(
+        [p] {
+            if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, whole(*pic));
+        },
+        [p] { lost(self(p)); });
     return result;
 }
 
 uint32_t UAGFX_THISCALL onTextureCopy(void* p, int a, int b, int c, int d, int e, int f, int g, int h, int i, int j) {
     Guard guard;
     const uint32_t result = original<TextureCopyFn>(ce::kTextureCopy)(p, a, b, c, d, e, f, g, h, i, j);
-    if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, whole(*pic));
+    guarded(
+        [p] {
+            if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, whole(*pic));
+        },
+        [p] { lost(self(p)); });
     return result;
 }
 
 uint32_t UAGFX_THISCALL onClear(void* p, const RECT* r, uint32_t color) {
     Guard guard;
     const uint32_t result = original<ClearFn>(ce::kClear)(p, r, color);
-    if (Picture* pic = picture(self(p))) {
-        const Rect all = whole(*pic);
-        pic->twin->overwrite(pic->bits, r ? Rect{int(r->left), int(r->top), int(r->right), int(r->bottom)} : all);
-    }
+    guarded(
+        [p, r] {
+            if (Picture* pic = picture(self(p))) {
+                const Rect area = r ? Rect{int(r->left), int(r->top), int(r->right), int(r->bottom)} : whole(*pic);
+                pic->twin->overwrite(pic->bits, area);
+            }
+        },
+        [p] { lost(self(p)); });
     return result;
 }
 
@@ -217,15 +262,23 @@ void uploadTiles(Picture& pic) {
 // calls goes into the twin enlarged - then the game's own upload and quads, then the twin textures.
 uint32_t UAGFX_THISCALL onDraw(void* p, int x, int y, int w, int h, uint32_t argb) {
     Guard guard;
-    State& s = state();
-    Picture* pic = picture(self(p));
-    const bool dirty = field<uint8_t>(self(p), ce::kDirty) != 0;
-    if (pic && dirty && pic->twin->sync(pic->bits, whole(*pic)) > 0 &&
-        s.loggedSizes.insert(uint32_t(pic->twin->width()) << 16 | uint32_t(pic->twin->height())).second)
-        LOG_INFO("crisp text: a %dx%d window changed outside the known calls", pic->twin->width(),
-                 pic->twin->height());
+    Picture* pic = nullptr;
+    guarded(
+        [&] {
+            State& s = state();
+            pic = picture(self(p));
+            const bool dirty = field<uint8_t>(self(p), ce::kDirty) != 0;
+            if (pic && dirty && pic->twin->sync(pic->bits, whole(*pic)) > 0 &&
+                s.loggedSizes.insert(uint32_t(pic->twin->width()) << 16 | uint32_t(pic->twin->height())).second)
+                LOG_INFO("crisp text: a %dx%d window changed outside the known calls", pic->twin->width(),
+                         pic->twin->height());
+        },
+        [&] {
+            pic = nullptr;
+            lost(self(p));
+        });
     const uint32_t result = original<DrawFn>(ce::kDraw)(p, x, y, w, h, argb);
-    if (pic) uploadTiles(*pic);
+    if (pic) guarded([&] { uploadTiles(*pic); }, [p] { lost(self(p)); });
     return result;
 }
 
@@ -237,7 +290,7 @@ HBITMAP WINAPI onCreateDibSection(HDC dc, const BITMAPINFO* info, UINT usage, vo
     // The game's only call (FUN_00403960) passes &bitmap->bits: a new DIB for that window picture, so whatever twin
     // the address had is gone (spec §5).
     if (bits && reinterpret_cast<uintptr_t>(__builtin_return_address(0)) == ce::kCreateDibReturn)
-        drop(self(bits) - ce::kBits);
+        guarded([bits] { drop(self(bits) - ce::kBits); }, [] {});
     return made;
 }
 
@@ -324,10 +377,17 @@ Picture* picture(uintptr_t bitmap) {
     p->dc = field<HDC>(bitmap, ce::kDc);
     p->bits = bits;
     Picture* made = p.get();
-    if (p->dc) s.dcs[p->dc] = bitmap;
+    s.pictures[bitmap] = std::move(p);  // first: should an insert below throw, drop() finds the picture whole
     s.bytes += bytes;
-    s.pictures[bitmap] = std::move(p);
+    if (made->dc) s.dcs[made->dc] = bitmap;
     return made;
+}
+
+void lost(uintptr_t bitmap) noexcept {
+    guarded([bitmap] { drop(bitmap); }, [] {});
+    static bool logged = false;
+    if (!logged) LOG_INFO("crisp text: no memory for a window's twin, it stays as in 0.4");
+    logged = true;
 }
 
 void drop(uintptr_t bitmap) {

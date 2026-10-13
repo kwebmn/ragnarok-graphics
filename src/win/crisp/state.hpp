@@ -10,6 +10,7 @@
 
 #include "core/crisp_exe.hpp"
 #include "core/glyph_cache.hpp"
+#include "core/guarded.hpp"
 #include "core/settled.hpp"
 #include "core/twin.hpp"
 
@@ -67,6 +68,8 @@ bool active();  // the hooks are in place and K > 1
 // picture now; null while crisp text is off or past the memory budget.
 Picture* picture(uintptr_t bitmap);
 void drop(uintptr_t bitmap);  // its twin, copy, tile textures and tile surfaces
+// A hook's own work failed (no memory): the picture loses its twin and shows as in 0.4; one log line.
+void lost(uintptr_t bitmap) noexcept;
 
 // text.cpp: the game's text and triangles (spec §4); the big fonts go when K changes.
 BOOL WINAPI hookTextOutW(HDC dc, int x, int y, LPCWSTR text, int count);

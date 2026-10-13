@@ -140,16 +140,10 @@ Rect all(const Picture& p) { return Rect{0, 0, p.twin->width(), p.twin->height()
 using TextOutWFn = BOOL(WINAPI*)(HDC, int, int, LPCWSTR, int);
 using FillRgnFn = BOOL(WINAPI*)(HDC, HRGN, HBRUSH);
 
-}  // namespace
-
-// The game's TextOutW on a window picture's DC (spec §4): the same letters K times larger, each where the game put
-// its small one.
-BOOL WINAPI hookTextOutW(HDC dc, int x, int y, LPCWSTR text, int count) {
-    Guard guard;
+// TextOutW on a picture's DC (spec §4): the twin's part around the game's call, which call() makes.
+template <typename Call>
+void textOut(Picture& pic, HDC dc, int x, int y, LPCWSTR text, int count, Call&& call) {
     State& s = state();
-    const auto real = reinterpret_cast<TextOutWFn>(s.textOutW);
-    Picture* pic = text && count > 0 ? pictureOf(dc) : nullptr;
-    if (!pic) return real(dc, x, y, text, count);
     LOGFONTW lf{};
     TEXTMETRICW tm{};
     SIZE extent{};
@@ -162,21 +156,63 @@ BOOL WINAPI hookTextOutW(HDC dc, int x, int y, LPCWSTR text, int count) {
     bool letters = font != nullptr;
     for (int i = 0; letters && i < count; ++i) letters = glyph(*font, text[i]) != nullptr;  // every one, or none
     if (!letters) {  // like any other write: the small letters enlarged
-        const BOOL ok = real(dc, x, y, text, count);
+        call();
         GdiFlush();
-        pic->twin->sync(pic->bits, all(*pic));
-        return ok;
+        pic.twin->sync(pic.bits, all(pic));
+        return;
     }
     const Rect r = textRect(x, y, extent.cx, tm.tmHeight, tm.tmHeight);
-    pic->twin->sync(pic->bits, r);  // what the twin missed there so far
-    const BOOL ok = real(dc, x, y, text, count);
+    pic.twin->sync(pic.bits, r);  // what the twin missed there so far
+    call();
     GdiFlush();
     const uint32_t rgb = textColor(GetTextColor(dc));
     const int baseline = baselineRow(y, tm.tmAscent, s.K);
     for (int i = 0; i < count; ++i)
         if (const GlyphBitmap* g = glyph(*font, text[i]))
-            drawGlyph(*pic->twin, *g, letterPen(x, i > 0 ? ends[size_t(i) - 1] : 0, s.K), baseline, rgb);
-    pic->twin->absorb(pic->bits, r);  // the small letters stay out of the twin
+            drawGlyph(*pic.twin, *g, letterPen(x, i > 0 ? ends[size_t(i) - 1] : 0, s.K), baseline, rgb);
+    pic.twin->absorb(pic.bits, r);  // the small letters stay out of the twin
+}
+
+// FillRgn on a picture's DC: every pixel of the region takes its new value in the twin.
+void fillRegion(Picture& pic, HRGN region) {
+    const DWORD size = GetRegionData(region, 0, nullptr);
+    std::vector<uint8_t> data(size);
+    if (size < sizeof(RGNDATAHEADER) || GetRegionData(region, size, reinterpret_cast<RGNDATA*>(data.data())) != size) {
+        pic.twin->sync(pic.bits, all(pic));
+        return;
+    }
+    const RGNDATA* d = reinterpret_cast<const RGNDATA*>(data.data());
+    const RECT* rects = reinterpret_cast<const RECT*>(d->Buffer);
+    const DWORD fit = DWORD((size - sizeof(RGNDATAHEADER)) / sizeof(RECT));
+    for (DWORD i = 0; i < std::min(d->rdh.nCount, fit); ++i) {
+        const RECT& b = rects[i];
+        pic.twin->overwrite(pic.bits, Rect{int(b.left), int(b.top), int(b.right), int(b.bottom)});
+    }
+}
+
+}  // namespace
+
+// The game's TextOutW on a window picture's DC (spec §4): the same letters K times larger, each where the game put
+// its small one.
+BOOL WINAPI hookTextOutW(HDC dc, int x, int y, LPCWSTR text, int count) {
+    Guard guard;
+    const auto real = reinterpret_cast<TextOutWFn>(state().textOutW);
+    BOOL ok = FALSE;
+    bool called = false;
+    const auto call = [&] {
+        ok = real(dc, x, y, text, count);
+        called = true;
+    };
+    Picture* pic = nullptr;
+    guarded(  // the driver's part; the game's call is made once, whatever fails (0.5.0 review M3)
+        [&] {
+            pic = text && count > 0 ? pictureOf(dc) : nullptr;
+            if (pic) textOut(*pic, dc, x, y, text, count, call);
+        },
+        [&] {
+            if (pic) lost(pic->self);
+        });
+    if (!called) call();
     return ok;
 }
 
@@ -185,21 +221,15 @@ BOOL WINAPI hookTextOutW(HDC dc, int x, int y, LPCWSTR text, int count) {
 BOOL WINAPI hookFillRgn(HDC dc, HRGN region, HBRUSH brush) {
     Guard guard;
     const BOOL ok = reinterpret_cast<FillRgnFn>(state().fillRgn)(dc, region, brush);
-    Picture* pic = pictureOf(dc);  // after its GdiFlush the fill is in the pixels
-    if (!pic) return ok;
-    const DWORD size = GetRegionData(region, 0, nullptr);
-    std::vector<uint8_t> data(size);
-    if (size < sizeof(RGNDATAHEADER) || GetRegionData(region, size, reinterpret_cast<RGNDATA*>(data.data())) != size) {
-        pic->twin->sync(pic->bits, all(*pic));
-        return ok;
-    }
-    const RGNDATA* d = reinterpret_cast<const RGNDATA*>(data.data());
-    const RECT* rects = reinterpret_cast<const RECT*>(d->Buffer);
-    const DWORD fit = DWORD((size - sizeof(RGNDATAHEADER)) / sizeof(RECT));
-    for (DWORD i = 0; i < std::min(d->rdh.nCount, fit); ++i) {
-        const RECT& b = rects[i];
-        pic->twin->overwrite(pic->bits, Rect{int(b.left), int(b.top), int(b.right), int(b.bottom)});
-    }
+    Picture* pic = nullptr;
+    guarded(
+        [&] {
+            pic = pictureOf(dc);  // after its GdiFlush the fill is in the pixels
+            if (pic) fillRegion(*pic, region);
+        },
+        [&] {
+            if (pic) lost(pic->self);
+        });
     return ok;
 }
 
