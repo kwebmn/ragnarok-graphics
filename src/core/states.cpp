@@ -129,6 +129,10 @@ DrawSetup resolveDrawSetup(const DeviceStates& s, bool targetHasAlpha, const boo
             src = BLEND_INVSRCALPHA;
             dst = BLEND_SRCALPHA;
         }
+        // BOTH* is defined for SRCBLEND only. As a DESTBLEND (unvalidated STR effect data, states.md §3) it reads as
+        // its source half, as in Wine; passed through, D3D12 would refuse the pipeline and the draw would vanish.
+        if (dst == BLEND_BOTHSRCALPHA) dst = BLEND_SRCALPHA;
+        if (dst == BLEND_BOTHINVSRCALPHA) dst = BLEND_INVSRCALPHA;
         if (!targetHasAlpha) {
             src = noDestAlpha(src);
             dst = noDestAlpha(dst);

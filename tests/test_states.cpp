@@ -159,3 +159,16 @@ TEST(states_vertex_fog) {
     CHECK(!d.fog);
     CHECK_EQ(d.fogColor, 0u);
 }
+
+TEST(states_both_blends_as_dest_read_as_their_source_half) {
+    DeviceStates s = clientInit();
+    s.setRender(RS_ALPHABLENDENABLE, 1);
+    s.setRender(RS_SRCBLEND, BLEND_ONE);
+    s.setRender(RS_DESTBLEND, BLEND_BOTHSRCALPHA);  // STR effect data is not validated (states.md §3)
+    DrawSetup d = resolveDrawSetup(s, false, kBoth);
+    CHECK_EQ(d.srcBlend, uint8_t(BLEND_ONE));
+    CHECK_EQ(d.dstBlend, uint8_t(BLEND_SRCALPHA));
+    s.setRender(RS_DESTBLEND, BLEND_BOTHINVSRCALPHA);
+    d = resolveDrawSetup(s, false, kBoth);
+    CHECK_EQ(d.dstBlend, uint8_t(BLEND_INVSRCALPHA));
+}
