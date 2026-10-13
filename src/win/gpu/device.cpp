@@ -621,15 +621,24 @@ bool Renderer::setTarget(int width, int height) {
     if (width <= 0 || height <= 0) return false;
     if (width == m.gameWidth && height == m.gameHeight && m.target) return true;
     m.waitIdle();
+    // On a failure nothing half made is left (stage 3 review M3): no target, sizes zero, so the next call starts over
+    // and no view describes a released resource.
+    const auto fail = [&m]() {
+        releaseCom(m.target);
+        releaseCom(m.depth);
+        releaseCom(m.gameSized);
+        m.width = m.height = m.gameWidth = m.gameHeight = 0;
+        return false;
+    };
     releaseCom(m.target);
     releaseCom(m.depth);
     releaseCom(m.gameSized);
-    if (!m.createTarget(width, height, m.target, m.depth)) return false;
+    if (!m.createTarget(width, height, m.target, m.depth)) return fail();
     m.gameSized = createTexture2D(m.device, width, height, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
                                   D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
     if (!m.gameSized) {
         LOG_ERROR("cannot create the %dx%d helper of the game's size", width, height);
-        return false;
+        return fail();
     }
     m.targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     m.gameState = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -809,7 +818,11 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
 void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rect& source,
                        const PresentOptions& options) {
     Impl& m = *impl_;
-    if (m.lost || !m.target || !window || source.empty()) return;
+    if (m.lost) {  // the GPU is gone (stage 3 review M2): no Present waits for vblank, keep the game's loop from spinning
+        Sleep(15);
+        return;
+    }
+    if (!m.target || !window || source.empty()) return;
     if (!m.ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),
                            options.allowTearing) ||
         !m.begin())
