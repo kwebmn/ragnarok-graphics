@@ -1,6 +1,9 @@
 #include "app/ui.hpp"
 
 #include <cstring>
+#include <utility>
+
+#include "app/mnemonic.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -57,26 +60,32 @@ COLORREF toneColor(Tone t) {
     return GetSysColor(COLOR_WINDOWTEXT);
 }
 
-Panel::Panel(HWND owner, HFONT font, HFONT heading, HWND tooltip, int dpi, RECT area)
-    : owner_(owner), font_(font), heading_(heading), tooltip_(tooltip), dpi_(dpi), area_(area), y_(area.top) {}
+Panel::Panel(HWND owner, HFONT font, HFONT heading, HWND tooltip, int dpi, RECT area, std::wstring taken)
+    : owner_(owner), font_(font), heading_(heading), tooltip_(tooltip), dpi_(dpi), area_(area), y_(area.top),
+      taken_(std::move(taken)) {}
 
 Panel::~Panel() {
     for (HWND h : made_) {
-        if (tooltip_) {
+        if (tooltip_) {  // both of tip()'s tools
             TOOLINFOW ti{};
             ti.cbSize = sizeof ti;
             ti.hwnd = owner_;
             ti.uId = reinterpret_cast<UINT_PTR>(h);
+            SendMessageW(tooltip_, TTM_DELTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
+            ti.uId = UINT_PTR(GetDlgCtrlID(h));
             SendMessageW(tooltip_, TTM_DELTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
         }
         DestroyWindow(h);
     }
 }
 
+// Every control starts a group of its own, but a radio button after its group's first: the arrows go through a
+// group, and a group of radio buttons ends at the next control (0.6.0 review M6).
 HWND Panel::make(const wchar_t* cls, const std::wstring& text, DWORD style, int x, int y, int w, int h, int id,
-                 DWORD ex) {
-    HWND c = CreateWindowExW(ex, cls, text.c_str(), WS_CHILD | WS_VISIBLE | style, x, y, w, h, owner_,
-                             reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
+                 DWORD ex, bool group) {
+    HWND c = CreateWindowExW(ex, cls, text.c_str(), WS_CHILD | WS_VISIBLE | style | (group ? WS_GROUP : 0), x, y, w,
+                             h, owner_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr),
+                             nullptr);
     SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
     made_.push_back(c);
     return c;
@@ -86,11 +95,21 @@ void Panel::tip(HWND ctl, const std::wstring& hint) {
     if (!tooltip_ || hint.empty()) return;
     TOOLINFOW ti{};
     ti.cbSize = sizeof ti;
-    ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+    ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;  // the control's own mouse, while it is enabled
     ti.hwnd = owner_;
     ti.uId = reinterpret_cast<UINT_PTR>(ctl);
     ti.lpszText = const_cast<wchar_t*>(hint.c_str());
     SendMessageW(tooltip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
+    // A disabled control gets no mouse - its parent does, over its rectangle: the same hint there (0.6.0 review M6).
+    TOOLINFOW area{};
+    area.cbSize = sizeof area;
+    area.uFlags = TTF_SUBCLASS;
+    area.hwnd = owner_;
+    area.uId = UINT_PTR(GetDlgCtrlID(ctl));
+    GetWindowRect(ctl, &area.rect);
+    MapWindowPoints(nullptr, owner_, reinterpret_cast<POINT*>(&area.rect), 2);
+    area.lpszText = const_cast<wchar_t*>(hint.c_str());
+    SendMessageW(tooltip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&area));
 }
 
 int Panel::textHeight(const std::wstring& text, int width) const {
@@ -103,8 +122,10 @@ int Panel::textHeight(const std::wstring& text, int width) const {
     return r.bottom - r.top;
 }
 
-HWND Panel::label(const std::wstring& text, int height) {
-    return make(L"STATIC", text, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX, area_.left, y_, at(kLabel) - at(8), height, 0);
+// A row's name. With a letter (Alt+it) it sends the focus to the control after it (stage 2 spec §6).
+HWND Panel::label(const std::wstring& text, int height, bool letter) {
+    return make(L"STATIC", letter ? withMnemonic(text, taken_) : text,
+                SS_LEFT | SS_CENTERIMAGE | (letter ? 0 : SS_NOPREFIX), area_.left, y_, at(kLabel) - at(8), height, 0);
 }
 
 HWND Panel::heading(const std::wstring& text) {
@@ -116,7 +137,8 @@ HWND Panel::heading(const std::wstring& text) {
 }
 
 HWND Panel::check(int id, const std::wstring& text, bool on, const std::wstring& hint, bool enabled) {
-    HWND c = make(L"BUTTON", text, BS_AUTOCHECKBOX | WS_TABSTOP, area_.left, y_, area_.right - area_.left, at(kRow), id);
+    HWND c = make(L"BUTTON", withMnemonic(text, taken_), BS_AUTOCHECKBOX | WS_TABSTOP, area_.left, y_,
+                  area_.right - area_.left, at(kRow), id);
     SendMessageW(c, BM_SETCHECK, on ? BST_CHECKED : BST_UNCHECKED, 0);
     EnableWindow(c, enabled);
     tip(c, hint);
@@ -126,9 +148,9 @@ HWND Panel::check(int id, const std::wstring& text, bool on, const std::wstring&
 
 HWND Panel::radio(int id, const std::wstring& text0, const std::wstring& text, bool on, bool first,
                   const std::wstring& hint, bool enabled) {
-    if (!text0.empty()) label(text0, at(kRow));
-    HWND c = make(L"BUTTON", text, BS_AUTORADIOBUTTON | WS_TABSTOP | (first ? WS_GROUP : 0), area_.left + at(kLabel),
-                  y_, area_.right - area_.left - at(kLabel), at(kRow), id);
+    if (!text0.empty()) label(text0, at(kRow), false);  // the group's name: the buttons have letters of their own
+    HWND c = make(L"BUTTON", withMnemonic(text, taken_), BS_AUTORADIOBUTTON | WS_TABSTOP, area_.left + at(kLabel), y_,
+                  area_.right - area_.left - at(kLabel), at(kRow), id, 0, first);
     SendMessageW(c, BM_SETCHECK, on ? BST_CHECKED : BST_UNCHECKED, 0);
     EnableWindow(c, enabled);
     tip(c, hint);
@@ -212,7 +234,8 @@ HWND Panel::buttons(const std::vector<std::pair<int, std::wstring>>& list, bool 
         SIZE s{};
         GetTextExtentPoint32W(dc, b.second.c_str(), int(b.second.size()), &s);
         const int w = s.cx + at(28);
-        HWND c = make(L"BUTTON", b.second, BS_PUSHBUTTON | WS_TABSTOP, x, y_, w, at(kRow + 4), b.first);
+        HWND c = make(L"BUTTON", withMnemonic(b.second, taken_), BS_PUSHBUTTON | WS_TABSTOP, x, y_, w, at(kRow + 4),
+                      b.first);
         EnableWindow(c, enabled);
         if (!first) first = c;
         x += w + at(8);

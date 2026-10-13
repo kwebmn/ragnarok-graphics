@@ -37,6 +37,7 @@ private:
     void updateStatus();
     int box(const std::wstring& text, UINT type);
     bool confirmClose();
+    std::wstring windowLetters() const;  // Alt+letter of the window's own buttons
     void doApply(bool play);
     RECT pageArea() const;
 
@@ -61,6 +62,7 @@ private:
     std::unique_ptr<Panel> panel_;
     std::unique_ptr<Page> current_;
     Rebuilds rebuilds_;
+    bool typing_ = false;  // a number field holds text it has not taken yet: Apply takes it first (0.6.0 review M5)
     std::wstring flash_;          // the last result in the status line, until the next change
 };
 

@@ -23,7 +23,8 @@ COLORREF toneColor(Tone t);
 // right, notes under it across the page. They are children of the main window, so Tab goes through all of them.
 class Panel {
 public:
-    Panel(HWND owner, HFONT font, HFONT heading, HWND tooltip, int dpi, RECT area);
+    // taken: the letters of the window's own buttons (Alt+letter): the page's controls take others.
+    Panel(HWND owner, HFONT font, HFONT heading, HWND tooltip, int dpi, RECT area, std::wstring taken);
     ~Panel();
     Panel(const Panel&) = delete;
     Panel& operator=(const Panel&) = delete;
@@ -51,8 +52,8 @@ public:
 
 private:
     HWND make(const wchar_t* cls, const std::wstring& text, DWORD style, int x, int y, int w, int h, int id,
-              DWORD ex = 0);
-    HWND label(const std::wstring& text, int height);
+              DWORD ex = 0, bool group = true);
+    HWND label(const std::wstring& text, int height, bool letter = true);
     void tip(HWND ctl, const std::wstring& hint);
     int textHeight(const std::wstring& text, int width) const;
     int at(int v) const { return px(v, dpi_); }
@@ -66,6 +67,7 @@ private:
     int y_;
     std::vector<HWND> made_;
     std::map<HWND, Tone> tones_;
+    std::wstring taken_;  // the letters for Alt+letter taken so far
 };
 
 }  // namespace uagfx::app

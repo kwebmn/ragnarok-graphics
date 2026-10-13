@@ -135,24 +135,28 @@ public:
         ScreenChoice c = m.screenChoice();
         HWND ctl = GetDlgItem(host_.window(), id);
         const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
+        // A list's pick is taken when the list is closed: while it is open the arrows go through its items, and a
+        // rebuild would close it under them (0.6.0 review M6).
+        const bool picked =
+            code == CBN_CLOSEUP || (code == CBN_SELCHANGE && !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0));
         const std::vector<MonitorInfo>& monitors = m.system().monitors;
         if ((id == kFullscreen || id == kWindow) && code == BN_CLICKED) {
             c.show = id == kFullscreen ? Show::Fullscreen : Show::Window;
             if (c.show == Show::Window && c.window.width <= 0 && !monitors.empty())
                 c.window = defaultWindow(monitors[0], m.system().frame);
-        } else if (id == kMonitor && code == CBN_SELCHANGE && sel >= 0 && size_t(sel) < monitors.size()) {
+        } else if (id == kMonitor && picked && sel >= 0 && size_t(sel) < monitors.size()) {
             c.monitor = int(sel);
             const std::vector<Size> fit = windowSizes(monitors[size_t(sel)], m.system().frame);
             if (c.show == Show::Window && std::find(fit.begin(), fit.end(), c.window) == fit.end())
                 c.window = defaultWindow(monitors[size_t(sel)], m.system().frame);
-        } else if (id == kMode && code == CBN_SELCHANGE && sel >= 0 && size_t(sel) < modes_.size()) {
+        } else if (id == kMode && picked && sel >= 0 && size_t(sel) < modes_.size()) {
             c.mode = modes_[size_t(sel)];
-        } else if (id == kUi && code == CBN_SELCHANGE && sel >= 0 && size_t(sel) < uis_.size()) {
+        } else if (id == kUi && picked && sel >= 0 && size_t(sel) < uis_.size()) {
             c.ui = uis_[size_t(sel)];
         } else if (id == kUiExact && code == EN_KILLFOCUS) {
             const int v = std::atoi(controlText(ctl).c_str());
             if (v >= kUiMin && v <= kUiMax) c.ui = v;
-        } else if (id == kSize && code == CBN_SELCHANGE && sel >= 0 && size_t(sel) < sizes_.size()) {
+        } else if (id == kSize && picked && sel >= 0 && size_t(sel) < sizes_.size()) {
             c.window = sizes_[size_t(sel)];
         } else if ((id == kWidth || id == kWidth + 1) && code == EN_KILLFOCUS) {
             const int w = std::atoi(controlText(GetDlgItem(host_.window(), kWidth)).c_str());

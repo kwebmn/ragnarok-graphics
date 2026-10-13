@@ -2,6 +2,8 @@
 
 #include <commctrl.h>
 
+#include "app/mnemonic.hpp"
+
 namespace uagfx::app {
 namespace {
 
@@ -172,7 +174,7 @@ void MainWindow::buildPage() {
     }
     current_.reset();
     panel_.reset();
-    panel_ = std::make_unique<Panel>(hwnd_, font_, heading_, tooltip_, dpi_, pageArea());
+    panel_ = std::make_unique<Panel>(hwnd_, font_, heading_, tooltip_, dpi_, pageArea(), windowLetters());
     switch (settings::Page(page_)) {
         case settings::Page::Screen: current_ = makeScreenPage(*this); break;
         case settings::Page::Diagnostics: current_ = makeDiagnosticsPage(*this); break;
@@ -180,6 +182,9 @@ void MainWindow::buildPage() {
         default: current_ = makeSettingsPage(*this, settings::Page(page_)); break;
     }
     current_->build(*panel_);
+    for (HWND w : {apply_, play_, undo_, close_, langBox_})  // after the page in the Tab order (0.6.0 review M6)
+        SetWindowPos(w, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    typing_ = false;  // a number being typed was taken above
     if (pageFont_) DeleteObject(pageFont_);
     if (pageHeading_) DeleteObject(pageHeading_);
     pageFont_ = pageHeading_ = nullptr;
@@ -200,7 +205,7 @@ void MainWindow::updateStatus() {
         if (pending) text += L" " + wtrf(lang_, Text::StatusPending, {num(static_cast<long long>(pending))});
     }
     SetWindowTextW(status_, text.c_str());
-    EnableWindow(apply_, model_->canApply());
+    EnableWindow(apply_, model_->canApply() || typing_);
     EnableWindow(play_, !model_->system().elevated);
     EnableWindow(undo_, model_->canRevert());
 }
@@ -236,6 +241,12 @@ bool MainWindow::ask(const std::wstring& text) { return box(text, MB_YESNO | MB_
 
 bool MainWindow::confirmClose() { return model_->pendingCount() == 0 || ask(wtr(lang_, Text::AskUnsaved)); }
 
+std::wstring MainWindow::windowLetters() const {
+    std::wstring taken;
+    for (Text t : {Text::Apply, Text::ApplyAndPlay, Text::Revert, Text::Close}) takeMnemonic(wtr(lang_, t), taken);
+    return taken;
+}
+
 void MainWindow::doApply(bool play) {
     std::wstring err = model_->apply(lang_);
     if (err.empty() && play) err = model_->launchGame(lang_);
@@ -260,9 +271,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                     page_ = int(sel);
                     buildPage();
                 }
-            } else if (id == kLang && code == CBN_SELCHANGE) {
-                const LRESULT sel = SendMessageW(langBox_, CB_GETCURSEL, 0, 0);
-                if (sel >= 0 && sel < kLangCount) {
+            } else if (id == kLang && (code == CBN_CLOSEUP ||
+                                       (code == CBN_SELCHANGE && !SendMessageW(langBox_, CB_GETDROPPEDSTATE, 0, 0)))) {
+                const LRESULT sel = SendMessageW(langBox_, CB_GETCURSEL, 0, 0);  // taken when its list is closed
+                if (sel >= 0 && sel < kLangCount && Lang(sel) != lang_) {
                     lang_ = Lang(sel);
                     model_->saveLanguage(lang_);
                     reload();
@@ -282,11 +294,19 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             } else if (id == IDOK) {  // Enter: a number field takes what was typed
                 HWND focus = GetFocus();
                 const int focusId = focus ? GetDlgCtrlID(focus) : 0;
-                if (focusId >= 1000 && current_) current_->command(focusId, EN_KILLFOCUS);
+                if (focusId >= 1000 && current_) {
+                    typing_ = false;
+                    current_->command(focusId, EN_KILLFOCUS);
+                    updateStatus();
+                }
             } else if (id == IDCANCEL) {
                 PostMessageW(hwnd_, WM_CLOSE, 0, 0);
             } else if (id >= 1000 && current_ && !rebuilds_.quiet()) {
+                // A number being typed counts for Apply, which takes it first: the field loses the focus to the
+                // button and takes the number (0.6.0 review M5).
+                if (code == EN_CHANGE || code == EN_KILLFOCUS) typing_ = code == EN_CHANGE;
                 current_->command(id, code);
+                if (code == EN_CHANGE || code == EN_KILLFOCUS) updateStatus();
             }
             return 0;
         }
