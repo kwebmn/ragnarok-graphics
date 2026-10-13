@@ -1,0 +1,237 @@
+#include "win/dx7/device7.hpp"
+
+#include "core/device_caps.hpp"
+#include "core/frame.hpp"
+#include "win/context.hpp"
+#include "win/dx7/caps.hpp"
+#include "win/dx7/formats.hpp"
+#include "win/dx7/surface7.hpp"
+#include "win/log.hpp"
+
+namespace uagfx::dx7 {
+
+Device7::Device7(Surface7* target) : target_(target) {
+    target_->AddRef();
+    const win::Context& c = win::Context::get();  // D3D7's default viewport: the whole target
+    viewport_.dwWidth = DWORD(c.shadow.width());
+    viewport_.dwHeight = DWORD(c.shadow.height());
+    viewport_.dvMaxZ = 1.0f;
+}
+
+Device7::~Device7() {
+    for (Surface7*& t : textures_)
+        if (t) t->Release();
+    target_->Release();
+}
+
+HRESULT STDMETHODCALLTYPE Device7::QueryInterface(REFIID riid, void** out) {
+    if (!out) return E_POINTER;
+    if (riid == __uuidof(IUnknown) || riid == IID_IDirect3DDevice7) {
+        *out = static_cast<IDirect3DDevice7*>(this);
+        AddRef();
+        return S_OK;
+    }
+    *out = nullptr;
+    unknownInterface("IDirect3DDevice7", riid);
+    return E_NOINTERFACE;
+}
+
+ULONG STDMETHODCALLTYPE Device7::AddRef() {
+    win::Guard guard;
+    return ULONG(++refs_);
+}
+
+ULONG STDMETHODCALLTYPE Device7::Release() {
+    win::Guard guard;
+    if (refs_ <= 0) return 0;
+    const LONG n = --refs_;
+    if (n == 0) delete this;
+    return ULONG(n);
+}
+
+HRESULT STDMETHODCALLTYPE Device7::GetCaps(D3DDEVICEDESC7* desc) {
+    if (!desc) return DDERR_INVALIDPARAMS;
+    fillDeviceDesc(*desc);
+    return D3D_OK;  // exactly 0: otherwise the client keeps a max texture size of 0 (surfaces-present-caps.md §5)
+}
+
+HRESULT STDMETHODCALLTYPE Device7::EnumTextureFormats(LPD3DENUMPIXELFORMATSCALLBACK cb, void* ctx) {
+    if (!cb) return DDERR_INVALIDPARAMS;
+    for (PixelFormat f : textureFormats()) {
+        DDPIXELFORMAT pf;
+        fillPixelFormat(pf, f);
+        if (cb(&pf, ctx) == D3DENUMRET_CANCEL) break;  // the client stops at its match
+    }
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::BeginScene() { return D3D_OK; }
+
+HRESULT STDMETHODCALLTYPE Device7::EndScene() {
+    win::Guard guard;
+    win::Context::get().flush();  // the GPU starts on the frame while the client gets ready to present it
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::SetRenderTarget(IDirectDrawSurface7* surface, DWORD) {
+    win::Guard guard;
+    Surface7* t = Surface7::from(surface);
+    if (!t || t->role() != SurfaceRole::RenderTarget) return DDERR_INVALIDPARAMS;
+    t->AddRef();  // there is one GPU target; its depth stands for the attached Z-buffer
+    target_->Release();
+    target_ = t;
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::GetRenderTarget(IDirectDrawSurface7** surface) {
+    win::Guard guard;
+    if (!surface) return DDERR_INVALIDPARAMS;
+    target_->AddRef();
+    *surface = target_;
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::Clear(DWORD count, D3DRECT* rects, DWORD flags, D3DCOLOR color, D3DVALUE z, DWORD) {
+    win::Guard guard;
+    win::Context& c = win::Context::get();
+    ClearCmd cmd;
+    cmd.flags = flags & (d3d7::CLEAR_TARGET | d3d7::CLEAR_ZBUFFER);  // no stencil
+    cmd.argb = color;
+    cmd.z = z;
+    if (!cmd.flags) return D3D_OK;
+    const Rect vp{int(viewport_.dwX), int(viewport_.dwY), int(viewport_.dwX + viewport_.dwWidth),
+                  int(viewport_.dwY + viewport_.dwHeight)};
+    if (count == 0 || !rects) {  // the whole viewport (the calibration clear)
+        cmd.rect = vp;
+        if (clipRect(Rect{0, 0, c.shadow.width(), c.shadow.height()}, cmd.rect)) c.record.clear(cmd);
+        return D3D_OK;
+    }
+    for (DWORD i = 0; i < count; ++i) {
+        cmd.rect = Rect{int(rects[i].x1), int(rects[i].y1), int(rects[i].x2), int(rects[i].y2)};
+        if (clipRect(vp, cmd.rect)) c.record.clear(cmd);
+    }
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::SetTransform(D3DTRANSFORMSTATETYPE, D3DMATRIX*) { return D3D_OK; }
+
+HRESULT STDMETHODCALLTYPE Device7::SetViewport(D3DVIEWPORT7* data) {
+    win::Guard guard;
+    if (!data) return DDERR_INVALIDPARAMS;
+    viewport_ = *data;
+    ViewportCmd v;
+    v.rect = Rect{int(data->dwX), int(data->dwY), int(data->dwX + data->dwWidth), int(data->dwY + data->dwHeight)};
+    v.minZ = data->dvMinZ;
+    v.maxZ = data->dvMaxZ;
+    win::Context::get().record.viewport(v);
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::GetViewport(D3DVIEWPORT7* data) {
+    win::Guard guard;
+    if (!data) return DDERR_INVALIDPARAMS;
+    *data = viewport_;
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::SetMaterial(D3DMATERIAL7*) { return D3D_OK; }
+
+HRESULT STDMETHODCALLTYPE Device7::SetLight(DWORD, D3DLIGHT7*) { return D3D_OK; }
+
+HRESULT STDMETHODCALLTYPE Device7::LightEnable(DWORD, WINBOOL) { return D3D_OK; }
+
+HRESULT STDMETHODCALLTYPE Device7::SetRenderState(D3DRENDERSTATETYPE state, DWORD value) {
+    win::Guard guard;
+    states_.setRender(uint32_t(state), value);
+    static bool keyLogged = false;
+    if (uint32_t(state) == d3d7::RS_COLORKEYENABLE && value && !keyLogged) {  // spec §4.5
+        LOG_INFO("COLORKEYENABLE on: only textures created with a colour key drop their keyed texels");
+        keyLogged = true;
+    }
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::GetRenderState(D3DRENDERSTATETYPE state, LPDWORD value) {
+    win::Guard guard;
+    if (!value) return DDERR_INVALIDPARAMS;
+    *value = states_.render(uint32_t(state));
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::PreLoad(IDirectDrawSurface7*) { return D3D_OK; }
+
+HRESULT STDMETHODCALLTYPE Device7::DrawPrimitive(D3DPRIMITIVETYPE type, DWORD fvf, void* vertices, DWORD vertexCount,
+                                                DWORD) {
+    win::Guard guard;
+    return record(type, fvf, vertices, vertexCount, nullptr, 0);
+}
+
+HRESULT STDMETHODCALLTYPE Device7::DrawIndexedPrimitive(D3DPRIMITIVETYPE type, DWORD fvf, void* vertices,
+                                                       DWORD vertexCount, WORD* indices, DWORD indexCount, DWORD) {
+    win::Guard guard;
+    if (!indices || indexCount == 0) return DDERR_INVALIDPARAMS;
+    return record(type, fvf, vertices, vertexCount, indices, indexCount);
+}
+
+HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, DWORD vertexCount,
+                        const WORD* indices, DWORD indexCount) {
+    if (fvf != d3d7::FVF_TL1 && fvf != d3d7::FVF_TL2)
+        return notImplemented("IDirect3DDevice7::DrawPrimitive (a vertex format other than 0x1C4 and 0x2C4)");
+    if (!vertices || vertexCount == 0) return DDERR_INVALIDPARAMS;
+    win::Context& c = win::Context::get();
+    DrawCmd cmd;
+    bool hasTexture[2] = {false, false};
+    for (int i = 0; i < 2; ++i) {
+        Surface7* t = textures_[i];
+        if (!t) continue;
+        t->sync(c.record);  // the texture's changes go before the draw that samples it
+        hasTexture[i] = true;
+        cmd.texture[i] = t->gpuTexture();
+        cmd.keyed[i] = t->colorKeyed();
+    }
+    cmd.state = c.record.addState(resolveDrawSetup(states_, false, hasTexture));  // the target has no alpha
+    cmd.primitive = uint32_t(type);
+    cmd.fvf = fvf;
+    c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::GetTexture(DWORD stage, IDirectDrawSurface7** surface) {
+    win::Guard guard;
+    if (!surface || stage >= d3d7::kStages) return DDERR_INVALIDPARAMS;
+    *surface = textures_[stage];
+    if (textures_[stage]) textures_[stage]->AddRef();
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::SetTexture(DWORD stage, IDirectDrawSurface7* surface) {
+    win::Guard guard;
+    if (stage >= d3d7::kStages) return DDERR_INVALIDPARAMS;
+    Surface7* t = Surface7::from(surface);
+    if (surface && (!t || t->role() != SurfaceRole::Texture)) return DDERR_INVALIDPARAMS;
+    if (t) t->AddRef();
+    if (textures_[stage]) textures_[stage]->Release();
+    textures_[stage] = t;  // NULL on stage 0 samples white (states.md §5)
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::GetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE type, LPDWORD value) {
+    win::Guard guard;
+    if (!value || stage >= d3d7::kStages) return DDERR_INVALIDPARAMS;
+    *value = states_.stage(stage, uint32_t(type));
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE type, DWORD value) {
+    win::Guard guard;
+    if (stage >= d3d7::kStages) return DDERR_INVALIDPARAMS;
+    states_.setStage(stage, uint32_t(type), value);
+    return D3D_OK;
+}
+
+HRESULT STDMETHODCALLTYPE Device7::ValidateDevice(LPDWORD passes) {
+    if (passes) *passes = 1;
+    return D3D_OK;
+}
+
+}  // namespace uagfx::dx7

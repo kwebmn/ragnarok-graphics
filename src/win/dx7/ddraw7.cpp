@@ -9,6 +9,7 @@
 #include "core/surface_plan.hpp"
 #include "win/context.hpp"
 #include "win/dx7/clipper.hpp"
+#include "win/dx7/d3d7.hpp"
 #include "win/dx7/formats.hpp"
 #include "win/dx7/surface7.hpp"
 #include "win/log.hpp"
@@ -55,6 +56,10 @@ HRESULT STDMETHODCALLTYPE DirectDraw7::QueryInterface(REFIID riid, void** out) {
     if (riid == __uuidof(IUnknown) || riid == IID_IDirectDraw7) {
         *out = static_cast<IDirectDraw7*>(this);
         AddRef();
+        return S_OK;
+    }
+    if (riid == IID_IDirect3D7) {  // right after the surfaces (surfaces-present-caps.md §7, L2951)
+        *out = static_cast<IDirect3D7*>(new Direct3D7);
         return S_OK;
     }
     *out = nullptr;
