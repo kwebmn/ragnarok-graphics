@@ -115,6 +115,7 @@ inline-перехват на `DirectDrawCreateEx`, `CreateWindowExA`, `PeekMessa
 | `ddraw.dll` | драйвер uaRO Graphics (32 бит) |
 | `uaro-graphics.ini` | настройки (с комментариями) |
 | `uaro-graphics.log` | лог |
+| `uaro-graphics-pipelines.txt` | ключи конвейеров, встреченных в игре: строятся заранее при запуске (кэш с 0.4.1, удаляется `uninstall.bat`) |
 | `uaro-graphics.exe` | утилита «uaRO Graphics Settings» |
 | `dgvoodoo\DDraw.dll`, `dgvoodoo\D3DImm.dll` | dgVoodoo, перенесённый в подпапку (для отката) |
 

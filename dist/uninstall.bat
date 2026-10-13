@@ -11,6 +11,8 @@ if exist "ddraw.dll" (
 if exist "dgvoodoo\DDraw.dll" move /y "dgvoodoo\DDraw.dll" "DDraw.dll" >nul || goto :noaccess
 if exist "dgvoodoo\D3DImm.dll" move /y "dgvoodoo\D3DImm.dll" "D3DImm.dll" >nul || goto :noaccess
 if exist "dgvoodoo\dgVoodoo.conf" del /f "dgvoodoo\dgVoodoo.conf"
+rem The list of pipelines met in the game is a cache of uaRO Graphics: it goes too.
+if exist "uaro-graphics-pipelines.txt" del /f "uaro-graphics-pipelines.txt"
 rmdir "dgvoodoo" 2>nul
 echo.
 echo uaRO Graphics is removed and dgVoodoo is back in place.
