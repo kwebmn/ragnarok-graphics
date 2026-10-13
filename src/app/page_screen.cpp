@@ -159,12 +159,28 @@ public:
         } else {
             return;
         }
-        if (!(c == m.screenChoice())) m.setScreen(c);
+        if (c == m.screenChoice()) {
+            // Nothing changed: no rebuild, it would take down the control the focus goes to - only a field that shows
+            // something else than its value (a number out of range, "0175") gets the value back.
+            if (code == EN_KILLFOCUS && !fieldsShow(c)) host_.rebuild();
+            return;
+        }
+        m.setScreen(c);
         host_.changed();
         host_.rebuild();  // the result, the problem and the lists follow the choice
     }
 
 private:
+    // Whether the number fields there are show the choice as build() writes it.
+    bool fieldsShow(const ScreenChoice& c) const {
+        const HWND w = host_.window();
+        const HWND exact = GetDlgItem(w, kUiExact);
+        const HWND width = GetDlgItem(w, kWidth);
+        const HWND height = GetDlgItem(w, kWidth + 1);
+        return (!exact || controlText(exact) == num(c.ui)) && (!width || controlText(width) == num(c.window.width)) &&
+               (!height || controlText(height) == num(c.window.height));
+    }
+
     std::vector<int> uis_;
     std::vector<Size> sizes_;
     std::vector<Size> modes_;

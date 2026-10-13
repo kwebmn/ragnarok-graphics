@@ -49,6 +49,10 @@ public:
             SendMessageW(list_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(backupLabel(b).c_str()));
         if (m.now().backups.empty()) p.note(t(Text::BackupNone));
         p.buttons({{kRestore, t(Text::BackupRestore)}, {kKeepFive, t(Text::BackupPrune)}}, !m.now().backups.empty());
+        if (m.now().gameRunning) {  // it writes what the game writes too, and ROExt's ini (spec §4.1)
+            EnableWindow(GetDlgItem(host_.window(), kRestore), FALSE);
+            p.note(t(Text::ErrGameRunning), Tone::Warn);
+        }
         p.note(t(Text::BackupNote));
         p.gap();
         p.heading(t(Text::ServiceReset));
@@ -72,9 +76,7 @@ public:
             const LRESULT sel = SendMessageW(list_, LB_GETCURSEL, 0, 0);
             if (sel < 0 || size_t(sel) >= m.now().backups.size()) return;
             const std::wstring name = m.now().backups[size_t(sel)];
-            const std::wstring ask = tf(Text::BackupAsk, {utf8(backupLabel(name))});
-            if (MessageBoxW(host_.window(), ask.c_str(), t(Text::AppTitle).c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
-                return;
+            if (!host_.ask(tf(Text::BackupAsk, {utf8(backupLabel(name))}))) return;
             const std::wstring err = m.restore(name, l);
             if (!err.empty()) host_.message(err, true);
             host_.reload();
@@ -82,9 +84,7 @@ public:
             m.keepNewestBackups(5);
             host_.reload();
         } else if (id == kReset) {
-            if (MessageBoxW(host_.window(), t(Text::ResetAsk).c_str(), t(Text::AppTitle).c_str(),
-                            MB_YESNO | MB_ICONQUESTION) != IDYES)
-                return;
+            if (!host_.ask(t(Text::ResetAsk))) return;
             const std::wstring err = m.resetDefaults(l);
             if (!err.empty()) host_.message(err, true);
             host_.reload();

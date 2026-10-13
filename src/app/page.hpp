@@ -23,7 +23,9 @@ public:
     virtual void changed() = 0;  // the player's changes changed: the status line and the buttons
     virtual void rebuild() = 0;  // the page again: it shows values that depend on others
     virtual void reload() = 0;   // the stores were written: everything is read again and every page rebuilt
+    // A message box. The page stays until it is closed: its code still runs under the box.
     virtual void message(const std::wstring& text, bool error) = 0;
+    virtual bool ask(const std::wstring& text) = 0;  // Yes or No
 };
 
 // One page of the list on the left (stage 2 spec §6.1). Its controls' ids start at 1000.

@@ -65,8 +65,13 @@ LRESULT CALLBACK MainWindow::proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 void MainWindow::makeFonts() {
-    if (font_) DeleteObject(font_);
-    if (heading_) DeleteObject(heading_);
+    if (!pageFont_) {  // the page keeps its fonts until it is made again (buildPage)
+        pageFont_ = font_;
+        pageHeading_ = heading_;
+    } else {  // made at a DPI change before: nothing but the bar keeps them, and layout() gives it the new ones
+        if (font_) DeleteObject(font_);
+        if (heading_) DeleteObject(heading_);
+    }
     font_ = makeFont(dpi_, false);
     heading_ = makeFont(dpi_, true, 115);
 }
@@ -153,15 +158,18 @@ void MainWindow::retext() {
 }
 
 void MainWindow::buildPage() {
-    rebuildPosted_ = false;
+    rebuilds_.begin();  // every request from here on is served by this rebuild; the page's notifications are quiet
     HWND focus = GetFocus();
     const int focusId = focus && IsChild(hwnd_, focus) ? GetDlgCtrlID(focus) : 0;
+    // A number field keeps its caret and selection: Tab selected all of it, typing goes on where it was.
+    const bool field = focusId >= 1000 && (SendMessageW(focus, WM_GETDLGCODE, 0, 0) & DLGC_HASSETSEL);
+    DWORD selStart = 0;
+    DWORD selEnd = 0;
+    if (field) SendMessageW(focus, EM_GETSEL, reinterpret_cast<WPARAM>(&selStart), reinterpret_cast<LPARAM>(&selEnd));
     if (focusId >= 1000 && current_) {
         current_->command(focusId, EN_KILLFOCUS);  // a number being typed is kept, not lost with its field
-        rebuildPosted_ = false;
         SetFocus(sidebar_);
     }
-    quiet_ = true;
     current_.reset();
     panel_.reset();
     panel_ = std::make_unique<Panel>(hwnd_, font_, heading_, tooltip_, dpi_, pageArea());
@@ -172,9 +180,15 @@ void MainWindow::buildPage() {
         default: current_ = makeSettingsPage(*this, settings::Page(page_)); break;
     }
     current_->build(*panel_);
-    quiet_ = false;
+    if (pageFont_) DeleteObject(pageFont_);
+    if (pageHeading_) DeleteObject(pageHeading_);
+    pageFont_ = pageHeading_ = nullptr;
+    rebuilds_.end();
     if (focusId >= 1000)
-        if (HWND f = GetDlgItem(hwnd_, focusId)) SetFocus(f);
+        if (HWND f = GetDlgItem(hwnd_, focusId)) {
+            SetFocus(f);
+            if (field) SendMessageW(f, EM_SETSEL, selStart, selEnd);
+        }
     updateStatus();
 }
 
@@ -197,25 +211,30 @@ void MainWindow::changed() {
 }
 
 void MainWindow::rebuild() {
-    if (rebuildPosted_) return;
-    rebuildPosted_ = true;
-    PostMessageW(hwnd_, kRebuild, 0, 0);  // after this message: the control that asked is not taken down under it
+    // After this message: the control that asked is not taken down under it.
+    if (rebuilds_.request()) PostMessageW(hwnd_, kRebuild, 0, 0);
 }
 
 void MainWindow::reload() {
     retext();
-    buildPage();
+    rebuild();  // the page asking may be the one taken down: it goes when its code is done
+}
+
+// While the box waits, its own message loop runs: the page whose code opened it is not made again under it.
+int MainWindow::box(const std::wstring& text, UINT type) {
+    rebuilds_.boxOpened();
+    const int answer = MessageBoxW(hwnd_, text.c_str(), wtr(lang_, Text::AppTitle).c_str(), type);
+    if (rebuilds_.boxClosed()) PostMessageW(hwnd_, kRebuild, 0, 0);
+    return answer;
 }
 
 void MainWindow::message(const std::wstring& text, bool error) {
-    MessageBoxW(hwnd_, text.c_str(), wtr(lang_, Text::AppTitle).c_str(), error ? MB_ICONWARNING : MB_ICONINFORMATION);
+    box(text, error ? MB_ICONWARNING : MB_ICONINFORMATION);
 }
 
-bool MainWindow::confirmClose() {
-    return model_->pendingCount() == 0 || MessageBoxW(hwnd_, wtr(lang_, Text::AskUnsaved).c_str(),
-                                                      wtr(lang_, Text::AppTitle).c_str(),
-                                                      MB_YESNO | MB_ICONQUESTION) == IDYES;
-}
+bool MainWindow::ask(const std::wstring& text) { return box(text, MB_YESNO | MB_ICONQUESTION) == IDYES; }
+
+bool MainWindow::confirmClose() { return model_->pendingCount() == 0 || ask(wtr(lang_, Text::AskUnsaved)); }
 
 void MainWindow::doApply(bool play) {
     std::wstring err = model_->apply(lang_);
@@ -266,20 +285,20 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 if (focusId >= 1000 && current_) current_->command(focusId, EN_KILLFOCUS);
             } else if (id == IDCANCEL) {
                 PostMessageW(hwnd_, WM_CLOSE, 0, 0);
-            } else if (id >= 1000 && current_ && !quiet_) {
+            } else if (id >= 1000 && current_ && !rebuilds_.quiet()) {
                 current_->command(id, code);
             }
             return 0;
         }
         case WM_HSCROLL:
-            if (lp && current_ && !quiet_) {
+            if (lp && current_ && !rebuilds_.quiet()) {
                 HWND ctl = reinterpret_cast<HWND>(lp);
                 current_->scroll(GetDlgCtrlID(ctl), LOWORD(wp), int(SendMessageW(ctl, TBM_GETPOS, 0, 0)));
             }
             return 0;
         case WM_NOTIFY: {
             const auto* n = reinterpret_cast<const NMHDR*>(lp);
-            if (n && n->idFrom >= 1000 && current_ && !quiet_) return current_->notify(n);
+            if (n && n->idFrom >= 1000 && current_ && !rebuilds_.quiet()) return current_->notify(n);
             return 0;
         }
         case WM_CTLCOLORSTATIC: {
@@ -294,10 +313,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return reinterpret_cast<LRESULT>(GetSysColorBrush(COLOR_WINDOW));
         }
         case kRebuild:
-            if (rebuildPosted_) buildPage();
+            if (rebuilds_.arrived()) buildPage();
             return 0;
         case WM_TIMER:
-            if (wp == kTimer && model_->refreshRunning()) buildPage();  // the game started or closed
+            if (wp == kTimer && model_->refreshRunning()) rebuild();  // the game started or closed
             return 0;
         case WM_DPICHANGED: {
             dpi_ = HIWORD(wp);
@@ -307,7 +326,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                          SWP_NOZORDER | SWP_NOACTIVATE);
             SendMessageW(tooltip_, TTM_SETMAXTIPWIDTH, 0, px(380, dpi_));
             layout();
-            buildPage();
+            rebuild();  // posted: a page's message box may be open
             return 0;
         }
         case WM_CLOSE:

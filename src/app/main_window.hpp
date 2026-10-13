@@ -6,6 +6,7 @@
 
 #include "app/model.hpp"
 #include "app/page.hpp"
+#include "app/rebuilds.hpp"
 #include "app/ui.hpp"
 
 namespace uagfx::app {
@@ -23,6 +24,7 @@ public:
     void rebuild() override;
     void reload() override;
     void message(const std::wstring& text, bool error) override;
+    bool ask(const std::wstring& text) override;
 
 private:
     static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -33,6 +35,7 @@ private:
     void retext();
     void buildPage();
     void updateStatus();
+    int box(const std::wstring& text, UINT type);
     bool confirmClose();
     void doApply(bool play);
     RECT pageArea() const;
@@ -43,6 +46,8 @@ private:
     int dpi_ = 96;
     HFONT font_ = nullptr;
     HFONT heading_ = nullptr;
+    HFONT pageFont_ = nullptr;  // the fonts the page was made with, after a DPI change: they go when it is made again
+    HFONT pageHeading_ = nullptr;
     HWND sidebar_ = nullptr;
     HWND langBox_ = nullptr;
     HWND banner_ = nullptr;
@@ -55,8 +60,7 @@ private:
     int page_ = 0;
     std::unique_ptr<Panel> panel_;
     std::unique_ptr<Page> current_;
-    bool quiet_ = false;          // the page is being made or taken down: its notifications are not the player's
-    bool rebuildPosted_ = false;
+    Rebuilds rebuilds_;
     std::wstring flash_;          // the last result in the status line, until the next change
 };
 
