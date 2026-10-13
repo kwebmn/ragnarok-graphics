@@ -29,6 +29,15 @@ bool copyFromRegion(int x, int y, int w, int h, int width, int height, Rect& out
     return true;
 }
 
+int copyPixelsRows(const uint32_t* dib, int width, int height, int x, int y, int h) {
+    const int64_t size = int64_t(width) * height;
+    for (int r = 0; r < h; ++r) {
+        const int64_t i = (int64_t(y) + r) * width + x;
+        if (i >= 0 && i < size && dib[i] == 0) return r;
+    }
+    return std::max(h, 0);
+}
+
 TwinPicture::TwinPicture(const uint32_t* dib, int width, int height, double K)
     : w_(std::max(width, 0)), h_(std::max(height, 0)), k_(K), ex_(size_t(w_) + 1), ey_(size_t(h_) + 1) {
     for (int g = 0; g <= w_; ++g) ex_[size_t(g)] = twinEdge(g, K);
@@ -91,6 +100,31 @@ void TwinPicture::absorb(const uint32_t* dib, Rect r) {
     for (int y = r.top; y < r.bottom; ++y) {
         const size_t i = size_t(y) * size_t(w_) + size_t(r.left);
         std::copy_n(dib + i, size_t(r.width()), copy_.data() + i);
+    }
+}
+
+void TwinPicture::copyPixels(const uint32_t* dib, int x, int y, int w, int rows, const uint32_t* src, bool key) {
+    const int64_t size = int64_t(w_) * h_;
+    const auto skipped = [key](uint32_t v) { return key && v == 0xFFFF00FFu; };
+    for (int r = 0; r < rows && w > 0; ++r) {
+        const uint32_t* line = src + size_t(r) * size_t(w);
+        for (int c = 0; c < w;) {
+            if (skipped(line[c])) {
+                ++c;
+                continue;
+            }
+            const int run = c;  // written pixels side by side: their flat indices, cut to the picture, row by row
+            while (c < w && !skipped(line[c])) ++c;
+            int64_t a = std::max<int64_t>((int64_t(y) + r) * w_ + x + run, 0);
+            const int64_t end = std::min<int64_t>((int64_t(y) + r) * w_ + x + c, size);
+            while (a < end) {
+                const int gy = int(a / w_);
+                const int gx = int(a % w_);
+                const int n = int(std::min<int64_t>(end - a, w_ - gx));
+                fillRow(dib, gy, gx, gx + n);
+                a += n;
+            }
+        }
     }
 }
 

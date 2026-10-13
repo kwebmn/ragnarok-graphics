@@ -21,6 +21,10 @@ uint32_t over(uint32_t src, uint32_t dst);
 // false: nothing is copied.
 bool copyFromRegion(int x, int y, int w, int h, int width, int height, Rect& out);
 
+// The game's CopyPixels (slot 4, docs/research/text.md §1.1) at (x, y), h rows high: how many rows it writes. It
+// stops at the first row whose first destination pixel is 0x00000000. dib: the picture before the call.
+int copyPixelsRows(const uint32_t* dib, int width, int height, int x, int y, int h);
+
 // A game window picture (CDCBitmap) as the driver keeps it (spec §4): its twin at K and a copy of the game's pixels
 // the twin shows. dib: the game's pixels, width x height, row by row.
 class TwinPicture {
@@ -45,6 +49,10 @@ public:
     int sync(const uint32_t* dib, Rect r);
     // The game drew text into r, which the twin got at its own size: the copy takes the new pixels, the twin stays.
     void absorb(const uint32_t* dib, Rect r);
+    // The game's CopyPixels wrote `rows` rows of the w-wide source at (x, y): every pixel but the ones its key skips
+    // (exactly 0xFFFF00FF), at flat index (y + r) * width + x + c - past the right edge into the next row, as the
+    // game does. Their blocks take the new values, whatever the twin had there (review 0.5.0 I1).
+    void copyPixels(const uint32_t* dib, int x, int y, int w, int rows, const uint32_t* src, bool key);
     // CopyFrom (spec §3, §4): child's twin over this twin on the game pixels [x, x + w) x [y, y + h), x and y not
     // negative; then the copy takes the new pixels there. A child made at another scale goes in through sync.
     void copyFrom(const uint32_t* dib, const TwinPicture& child, int x, int y, int w, int h);

@@ -76,3 +76,19 @@ TEST(twin_text_colour_from_gdi) {
     CHECK_EQ(textColor(0x00332211), 0x112233u);  // a COLORREF is 0x00BBGGRR
     CHECK_EQ(textColor(0x02FFFFFF), 0xFFFFFFu);  // its top byte is no colour
 }
+
+TEST(twin_text_a_label_redrawn_over_its_skin_stays_the_same) {
+    // A skin button: the game repaints its skin with CopyPixels, then draws its label. The twin must look the same
+    // after every redraw, not bolder (review 0.5.0 I1).
+    const std::vector<uint32_t> skin(6 * 3, 0xFFC0C0C0);
+    const std::vector<uint32_t> dib = skin;
+    TwinPicture t(dib.data(), 6, 3, 1.75);
+    const GlyphBitmap letter = glyph(4, 3, 0, 3, {16, 48, 48, 16, 32, 64, 64, 32, 16, 48, 48, 16});
+    std::vector<uint32_t> once;
+    for (int i = 0; i < 10; ++i) {
+        t.copyPixels(dib.data(), 0, 0, 6, 3, skin.data(), false);
+        drawGlyph(t, letter, 3, 4, 0x000000);
+        if (i == 0) once = t.twin();
+    }
+    CHECK(t.twin() == once);
+}

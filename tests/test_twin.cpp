@@ -157,3 +157,56 @@ TEST(twin_picture_bytes_for_matches_a_made_one) {
     const TwinPicture t(dib.data(), 30, 20, 2.625);
     CHECK_EQ(TwinPicture::bytesFor(30, 20, 2.625), t.bytes());
 }
+
+TEST(twin_picture_copy_pixels_replaces_every_pixel_it_writes) {
+    // The game's CopyPixels writes every pixel of its rectangle: a skin repainted over the edge of a crisp letter
+    // erases it even where the small picture does not change (review 0.5.0 I1; sync keeps it).
+    const std::vector<uint32_t> dib(8, 0xFF808080);  // 4 x 2
+    TwinPicture t(dib.data(), 4, 2, 2.0);            // 8 x 4
+    t.twin()[2] = 0xFF000000;                        // a letter's edge in game pixel (1, 0)
+    const std::vector<uint32_t> skin(2, 0xFF808080);
+    CHECK_EQ(t.sync(dib.data(), Rect{1, 0, 3, 1}), 0);  // the small pixels did not change
+    t.copyPixels(dib.data(), 1, 0, 2, 1, skin.data(), false);
+    CHECK_EQ(at(t, 2, 0), 0xFF808080u);
+}
+
+TEST(twin_picture_copy_pixels_key_skips_exact_magenta) {
+    std::vector<uint32_t> dib(4, 0xFF808080);  // 2 x 2
+    TwinPicture t(dib.data(), 2, 2, 2.0);      // 4 x 4
+    t.twin()[0] = 0xFF000000;                  // details in game pixels (0, 0) and (1, 0)
+    t.twin()[2] = 0xFF000000;
+    const std::vector<uint32_t> src = {kMagenta, 0xFF808080};
+    t.copyPixels(dib.data(), 0, 0, 2, 1, src.data(), true);
+    CHECK_EQ(at(t, 0, 0), 0xFF000000u);  // skipped: the game kept its pixel, the twin keeps its detail
+    CHECK_EQ(at(t, 2, 0), 0xFF808080u);
+    dib[0] = kMagenta;  // without the key the game writes the magenta too
+    t.copyPixels(dib.data(), 0, 0, 2, 1, src.data(), false);
+    CHECK_EQ(at(t, 0, 0), 0u);
+}
+
+TEST(twin_picture_copy_pixels_stops_where_the_game_stops) {
+    // The game stops at the first row whose first destination pixel is 0x00000000 (black GDI text).
+    std::vector<uint32_t> dib(9, 0xFF808080);  // 3 x 3
+    dib[2 * 3 + 1] = 0x00000000;               // the start of row 2 at x = 1
+    CHECK_EQ(copyPixelsRows(dib.data(), 3, 3, 1, 0, 3), 2);
+    CHECK_EQ(copyPixelsRows(dib.data(), 3, 3, 0, 0, 3), 3);
+    CHECK_EQ(copyPixelsRows(dib.data(), 3, 3, 1, -5, 3), 3);  // starts outside the picture: the game reads elsewhere
+    CHECK_EQ(copyPixelsRows(dib.data(), 3, 3, 1, 2, 1), 0);
+    TwinPicture t(dib.data(), 3, 3, 2.0);
+    t.twin()[size_t(4 * 6 + 2)] = 0xFF000000;  // a detail in game pixel (1, 2): a row the game does not write
+    const std::vector<uint32_t> src(6, 0xFF808080);
+    t.copyPixels(dib.data(), 1, 0, 2, copyPixelsRows(dib.data(), 3, 3, 1, 0, 3), src.data(), false);
+    CHECK_EQ(at(t, 2, 4), 0xFF000000u);
+}
+
+TEST(twin_picture_copy_pixels_wraps_past_the_right_edge) {
+    std::vector<uint32_t> dib(6, 0xFF808080);  // 3 x 2
+    TwinPicture t(dib.data(), 3, 2, 2.0);      // 6 x 4
+    const std::vector<uint32_t> src = {0xFF00FF00, 0xFF0000FF};
+    dib[2] = src[0];  // what the game wrote: (2, 0) and, past the right edge, (0, 1)
+    dib[3] = src[1];
+    t.copyPixels(dib.data(), 2, 0, 2, 1, src.data(), false);
+    CHECK_EQ(at(t, 4, 0), 0xFF00FF00u);
+    CHECK_EQ(at(t, 0, 2), 0xFF0000FFu);
+    CHECK_EQ(at(t, 2, 2), 0xFF808080u);
+}

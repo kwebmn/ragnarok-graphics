@@ -113,10 +113,15 @@ uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
     return result;
 }
 
+// The game writes every pixel of the rectangle but what its key skips, so the twin takes them all (review 0.5.0 I1):
+// a skin repainted under a label erases the edges of its crisp letters. Which rows it writes depends on its pixels
+// before the call.
 uint32_t UAGFX_THISCALL onCopyPixels(void* p, int x, int y, int w, int h, const uint32_t* src, int key) {
     Guard guard;
+    Picture* pic = src ? picture(self(p)) : nullptr;
+    const int rows = pic ? copyPixelsRows(pic->bits, pic->twin->width(), pic->twin->height(), x, y, h) : 0;
     const uint32_t result = original<CopyPixelsFn>(ce::kCopyPixels)(p, x, y, w, h, src, key);
-    if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, Rect{x, y, x + w, y + h});
+    if (pic) pic->twin->copyPixels(pic->bits, x, y, w, rows, src, (key & 0xFF) != 0);  // the key is a byte
     return result;
 }
 
