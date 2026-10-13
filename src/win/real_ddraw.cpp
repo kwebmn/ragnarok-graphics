@@ -12,6 +12,8 @@
 namespace uagfx::win {
 namespace {
 
+HMODULE g_loaded = nullptr;  // set once the real DirectDraw is loaded
+
 // 0.1.x has no uaRO renderer yet: everything goes to dgVoodoo or the system DirectDraw.
 constexpr bool kUaroBuilt = false;
 
@@ -68,6 +70,7 @@ HMODULE loadReal() {
     if (choice.renderer == Renderer::DgVoodoo) m = loadDgVoodoo(dir);
     if (!m) m = loadSystem();
     if (m) LOG_INFO("passing DirectDraw to %s", modulePath(m).c_str());
+    g_loaded = m;
     return m;
 }
 
@@ -82,6 +85,8 @@ FARPROC realProc(const char* name) {
     HMODULE m = realModule();
     return m ? GetProcAddress(m, name) : nullptr;
 }
+
+FARPROC loadedProc(const char* name) { return g_loaded ? GetProcAddress(g_loaded, name) : nullptr; }
 
 void logModulesAtExit() {
     logModule("D3DImm.dll");  // which D3DImm.dll dgVoodoo's DirectDraw picked up

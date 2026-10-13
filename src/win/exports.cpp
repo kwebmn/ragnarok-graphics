@@ -74,6 +74,93 @@ extern "C" HRESULT WINAPI Proxy_DllGetClassObject(REFCLSID clsid, REFIID iid, LP
     return fn ? fn(clsid, iid, out) : CLASS_E_CLASSNOTAVAILABLE;
 }
 
+// The private exports of ddraw.dll. The system's d3dim700.dll imports some of them, and dgVoodoo's D3DImm.dll
+// looks them up at run time; both ask for "ddraw.dll" by name and get us, the first module of that name.
+namespace {
+
+template <typename Fn>
+Fn loaded(const char* name) {
+    return reinterpret_cast<Fn>(reinterpret_cast<void*>(uagfx::win::loadedProc(name)));
+}
+
+}  // namespace
+
+extern "C" void WINAPI Proxy_AcquireDDThreadLock() {
+    using Fn = void(WINAPI*)();
+    if (const Fn fn = loaded<Fn>("AcquireDDThreadLock")) fn();
+}
+
+extern "C" void WINAPI Proxy_ReleaseDDThreadLock() {
+    using Fn = void(WINAPI*)();
+    if (const Fn fn = loaded<Fn>("ReleaseDDThreadLock")) fn();
+}
+
+extern "C" HRESULT WINAPI Proxy_CompleteCreateSysmemSurface(DWORD a) {
+    using Fn = HRESULT(WINAPI*)(DWORD);
+    const Fn fn = loaded<Fn>("CompleteCreateSysmemSurface");
+    return fn ? fn(a) : E_FAIL;
+}
+
+extern "C" HRESULT WINAPI Proxy_D3DParseUnknownCommand(LPVOID command, LPVOID* next) {
+    using Fn = HRESULT(WINAPI*)(LPVOID, LPVOID*);
+    const Fn fn = loaded<Fn>("D3DParseUnknownCommand");
+    return fn ? fn(command, next) : E_FAIL;
+}
+
+extern "C" HRESULT WINAPI Proxy_DDGetAttachedSurfaceLcl(DWORD a, DWORD b, DWORD c) {
+    using Fn = HRESULT(WINAPI*)(DWORD, DWORD, DWORD);
+    const Fn fn = loaded<Fn>("DDGetAttachedSurfaceLcl");
+    return fn ? fn(a, b, c) : E_FAIL;
+}
+
+extern "C" HRESULT WINAPI Proxy_DDInternalLock(DWORD a, DWORD b) {
+    using Fn = HRESULT(WINAPI*)(DWORD, DWORD);
+    const Fn fn = loaded<Fn>("DDInternalLock");
+    return fn ? fn(a, b) : E_FAIL;
+}
+
+extern "C" HRESULT WINAPI Proxy_DDInternalUnlock(DWORD a) {
+    using Fn = HRESULT(WINAPI*)(DWORD);
+    const Fn fn = loaded<Fn>("DDInternalUnlock");
+    return fn ? fn(a) : E_FAIL;
+}
+
+extern "C" HRESULT WINAPI Proxy_DSoundHelp(DWORD a, DWORD b, DWORD c) {
+    using Fn = HRESULT(WINAPI*)(DWORD, DWORD, DWORD);
+    const Fn fn = loaded<Fn>("DSoundHelp");
+    return fn ? fn(a, b, c) : E_FAIL;
+}
+
+extern "C" HRESULT WINAPI Proxy_GetDDSurfaceLocal(DWORD a, DWORD b, DWORD c) {
+    using Fn = HRESULT(WINAPI*)(DWORD, DWORD, DWORD);
+    const Fn fn = loaded<Fn>("GetDDSurfaceLocal");
+    return fn ? fn(a, b, c) : E_FAIL;
+}
+
+extern "C" DWORD WINAPI Proxy_GetOLEThunkData(DWORD index) {
+    using Fn = DWORD(WINAPI*)(DWORD);
+    const Fn fn = loaded<Fn>("GetOLEThunkData");
+    return fn ? fn(index) : 0;
+}
+
+extern "C" HRESULT WINAPI Proxy_GetSurfaceFromDC(HDC dc, LPDIRECTDRAWSURFACE7* out, DWORD c) {
+    using Fn = HRESULT(WINAPI*)(HDC, LPDIRECTDRAWSURFACE7*, DWORD);
+    const Fn fn = loaded<Fn>("GetSurfaceFromDC");
+    return fn ? fn(dc, out, c) : E_FAIL;
+}
+
+extern "C" HRESULT WINAPI Proxy_RegisterSpecialCase(DWORD a, DWORD b, DWORD c, DWORD d) {
+    using Fn = HRESULT(WINAPI*)(DWORD, DWORD, DWORD, DWORD);
+    const Fn fn = loaded<Fn>("RegisterSpecialCase");
+    return fn ? fn(a, b, c, d) : E_FAIL;
+}
+
+extern "C" HRESULT WINAPI Proxy_SetAppCompatData(DWORD a, DWORD b) {
+    using Fn = HRESULT(WINAPI*)(DWORD, DWORD);
+    const Fn fn = loaded<Fn>("SetAppCompatData");
+    return fn ? fn(a, b) : E_FAIL;
+}
+
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) DisableThreadLibraryCalls(inst);
     if (reason == DLL_PROCESS_DETACH) uagfx::win::logModulesAtExit();

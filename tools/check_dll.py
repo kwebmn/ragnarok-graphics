@@ -2,16 +2,20 @@
 """Checks the cross-built ddraw.dll.
 
 - It is a 32-bit DLL, like uaRO.exe.
-- It exports what games and dgVoodoo users expect from ddraw.dll.
+- It exports everything the system ddraw.dll exports (22 functions), forwarding them to the real DirectDraw.
 - DirectDrawCreateEx starts with the hot-patch prologue: ROExt inline-hooks it.
 - It imports system DLLs only: d3d12.dll and dxgi.dll are loaded at run time, so the DLL loads on Windows 7.
 """
 import struct
 import sys
 
-REQUIRED = ["DirectDrawCreate", "DirectDrawCreateClipper", "DirectDrawCreateEx", "DirectDrawEnumerateA",
-            "DirectDrawEnumerateExA", "DirectDrawEnumerateExW", "DirectDrawEnumerateW",
-            "DllCanUnloadNow", "DllGetClassObject"]
+# All 22 exports of the system ddraw.dll: d3dim700.dll (system) and dgVoodoo's D3DImm.dll find the private ones
+# by the name "ddraw.dll", which is us once we are loaded.
+REQUIRED = ["AcquireDDThreadLock", "CompleteCreateSysmemSurface", "D3DParseUnknownCommand", "DDGetAttachedSurfaceLcl",
+            "DDInternalLock", "DDInternalUnlock", "DSoundHelp", "DirectDrawCreate", "DirectDrawCreateClipper",
+            "DirectDrawCreateEx", "DirectDrawEnumerateA", "DirectDrawEnumerateExA", "DirectDrawEnumerateExW",
+            "DirectDrawEnumerateW", "DllCanUnloadNow", "DllGetClassObject", "GetDDSurfaceLocal", "GetOLEThunkData",
+            "GetSurfaceFromDC", "RegisterSpecialCase", "ReleaseDDThreadLock", "SetAppCompatData"]
 ALLOWED_IMPORTS = {"kernel32.dll", "user32.dll", "gdi32.dll", "msvcrt.dll"}
 HOTPATCH = bytes([0x8B, 0xFF, 0x55, 0x8B, 0xEC])  # mov edi,edi / push ebp / mov ebp,esp
 
