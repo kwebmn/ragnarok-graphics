@@ -75,6 +75,8 @@ void logRepeating(uagfx::LogLevel level, const std::string& key, const std::stri
 void slLog(sl::LogType type, const char* text) {
     if (type == sl::LogType::eInfo) return;
     std::string line = text ? text : "";
+    // Without frame generation its plugins are not asked for: Streamline says so as a warning at every start.
+    if (line.find("since it is was not requested by the host") != std::string::npos) return;
     while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back();
     // "[time][streamline][error][tid][uptime]file:line[function] message": the same message without its stamps
     size_t from = 0;
