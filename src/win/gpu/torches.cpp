@@ -7,6 +7,7 @@
 #include <cstring>
 #include <unordered_map>
 
+#include "core/fireflies.hpp"
 #include "core/game_camera.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -103,6 +104,74 @@ void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, const Te
     s.strength = t.fire * shown * std::clamp(size / 120.0f, 0.15f, 1.5f);
     std::copy(t.fireColour, t.fireColour + 3, s.colour);
     fireSparks.push_back(s);
+}
+
+// 0.28: a firefly the game draws (effect 45, known by the driver: d.effect) - noted for applyTorches, not drawn: its
+// middle, size and depth from its quad, the game's fade and tint of it. Drawn as the game has it when the fireflies
+// cannot be drawn anew here.
+bool Renderer::Impl::takeFirefly(const FrameRecord& rec, const DrawCmd& d) {
+    if (fireflyDraws.size() >= kMaxFireflies) return false;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const uint32_t n = std::min<uint32_t>(d.vertexCount, 8);
+    if (n < 3 || d.vertexOffset + size_t(n) * stride > v.size()) return false;
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, rhw = 0.0f;
+    uint32_t diffuse = 0;
+    for (uint32_t i = 0; i < n; ++i) {
+        const uint8_t* p = v.data() + d.vertexOffset + size_t(i) * stride;
+        float xyzw[4];
+        std::memcpy(xyzw, p, sizeof xyzw);
+        if (i == 0) std::memcpy(&diffuse, p + 16, sizeof diffuse);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3];
+    }
+    rhw /= float(n);
+    if (rhw <= 0.0f || !torchReady() || !fireflyReady()) return false;
+    Firefly f;
+    f.gameX = (x0 + x1) * 0.5f;
+    f.gameY = (y0 + y1) * 0.5f;
+    f.rhw = rhw;
+    f.size = std::sqrt(std::max(0.0f, (x1 - x0) * (y1 - y0)));
+    f.alpha = float(diffuse >> 24) / 255.0f;
+    fireflies::colourOf(diffuse, f.colour);
+    f.seed = float(d.effectSeed) / 255.0f;
+    fireflyDraws.push_back(f);
+    if (!firefliesLogged) LOG_INFO("fireflies: the game's fireflies drawn anew");
+    firefliesLogged = true;
+    return true;
+}
+
+// 0.28: the fireflies' pipeline for this target - their light added (alpha 0, the mask under DLSS untouched).
+bool Renderer::Impl::fireflyReady() {
+    if (!fireflyPs || !open) return false;
+    const UINT n = upscale ? 1 : samples;
+    const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
+    const UINT at = upscale ? 4 : code;
+    if (fireflyPipelines[at]) return true;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+        fullScreenPipeline(root, presentVs, fireflyPs, DXGI_FORMAT_B8G8R8A8_UNORM, upscale ? 1 : 1u << code);
+    D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
+    b.BlendEnable = TRUE;
+    b.SrcBlend = D3D12_BLEND_ONE;
+    b.DestBlend = D3D12_BLEND_ONE;
+    b.BlendOp = D3D12_BLEND_OP_ADD;
+    b.SrcBlendAlpha = D3D12_BLEND_ZERO;
+    b.DestBlendAlpha = D3D12_BLEND_ONE;
+    b.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    b.LogicOp = D3D12_LOGIC_OP_NOOP;
+    b.RenderTargetWriteMask =
+        D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+    if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                   reinterpret_cast<void**>(&fireflyPipelines[at])))) {
+        fireflyPipelines[at] = nullptr;
+        LOG_ERROR("fireflies: their pipeline failed: they stay the game's");
+        releaseCom(fireflyPs);  // not tried again
+        return false;
+    }
+    return true;
 }
 
 // The shaders, the pipelines for this target and the copies of the picture: false when any is missing (logged once).
@@ -226,6 +295,40 @@ bool Renderer::Impl::applyTorches() {
             f.rhw = 1.0f / vb.z;
             if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
         }
+    // 0.28: the fireflies - the game's (their flash by their primitive's seed) and, the map file read, those the
+    // maps' makers placed that the game does not show (713, 714, 946), drifting about their places.
+    struct Fly {
+        float gx, gy, vz, r, bright, colour[3];  // game pixels, view depth, the core's radius, brightness
+    };
+    std::vector<Fly> flies;
+    if (fireflyWanted() && fireflyReady()) {
+        const float user = float(std::clamp(effects.firefliesBrightness, 0, 200)) / 100.0f;
+        for (const Firefly& g : fireflyDraws) {
+            const float bright = user * g.alpha * fireflies::blink(time, g.seed);
+            flies.push_back(Fly{g.gameX, g.gameY, 1.0f / g.rhw, std::max(g.size * 0.06f, 0.4f), bright,
+                                {g.colour[0], g.colour[1], g.colour[2]}});
+        }
+        if (layout) {
+            uint32_t index = 0, drawn = 0;
+            for (const rsw::Effect& e : layout->effects) {
+                if (e.id != 713 && e.id != 714 && e.id != 946) continue;
+                const float seed = float(((++index) * 2654435761u) >> 8 & 0xFFFFu) / 65535.0f;
+                if (flies.size() >= kMaxFireflies) break;
+                const map::Point o = fireflies::wander(time, seed);
+                const map::Point w = map::toWorld(axes, map::Point{e.pos[0] + o.x, e.pos[1] + o.y, e.pos[2] + o.z});
+                const map::Point v = toView(viewToWorld, w);
+                if (v.z <= proj.nearZ) continue;
+                const float gx = v.x / v.z * proj.f0 + proj.cx, gy = v.y / v.z * proj.f1 + proj.cy;
+                if (!onScreen(gx, gy, 32.0f)) continue;
+                flies.push_back(Fly{gx, gy, v.z, 0.22f * proj.f0 / v.z, user * fireflies::blink(time, seed),
+                                    {1.0f, 0.86f, 0.3f}});
+                ++drawn;
+            }
+            if (drawn && !mapFirefliesLogged) LOG_INFO("fireflies: the map file's own drawn (%u in view)", drawn);
+            mapFirefliesLogged = mapFirefliesLogged || drawn > 0;
+        }
+    }
+    fireflyDraws.clear();
     // 0.23.3: the shader bounds it. 0.25.2: four fifths of 0.25's at 100 % ("too much and too dense" once the torch
     // has come up from its fade); 0.25.3: a little less again ("ещё чуточку"); 0.25.4: near half ("in the original
     // not so bright" - the game's torch lights nothing, its glow is baked into the ground).
@@ -286,6 +389,20 @@ bool Renderer::Impl::applyTorches() {
         }
     }
     fireSparks.clear();
+    // 0.28: the fireflies light a little around them, the nearest 16.
+    if (!flies.empty()) {
+        std::vector<size_t> order(flies.size());
+        for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return flies[a].vz < flies[b].vz; });
+        for (size_t i = 0, used = 0; i < order.size() && used < 16 && lights.size() < kMaxLights; ++i) {
+            const Fly& f = flies[order[i]];
+            if (f.bright < 0.05f) continue;
+            const float vx = (f.gx - proj.cx) * f.vz / proj.f0, vy = (f.gy - proj.cy) * f.vz / proj.f1;
+            lights.push_back(
+                LightItem{{vx, vy, f.vz}, 0.12f * f.bright, {f.colour[0], f.colour[1], f.colour[2]}, 12.0f});
+            ++used;
+        }
+    }
     // 0.25: the lamps the map's makers placed, the nearest to the camera first, as many as the pass takes.
     if (layout && lampsWanted() && effects.lampsLight > 0) {
         const float lampStrength = 0.8f * float(std::clamp(effects.lampsLight, 0, 200)) / 100.0f;
@@ -313,7 +430,7 @@ bool Renderer::Impl::applyTorches() {
         }
     }
     if (lights.size() > kMaxLights) lights.resize(kMaxLights);
-    if ((flames.empty() && lights.empty()) || !torchReady()) return true;
+    if ((flames.empty() && lights.empty() && flies.empty()) || !torchReady()) return true;
     if (!copySceneColor() || !copySceneDepth()) return false;
     const float k = float(upscale ? worldScale : scale);
     const float jx = upscale ? jitter[0] : 0.0f, jy = upscale ? jitter[1] : 0.0f;
@@ -402,6 +519,21 @@ bool Renderer::Impl::applyTorches() {
         if (around.right <= around.left || around.bottom <= around.top) continue;
         if (!effectPass(torchFirePipelines[upscale ? 4 : code], dst, dstState, rtv, w, h, c, sceneColorSrv, true,
                         kNoSrv, &around))
+            return false;
+    }
+    for (const Fly& f : flies) {  // 0.28: each firefly's dot and halo (a pass each, cut to it)
+        if (f.bright < 0.01f) continue;
+        const float fx = f.gx * k + 0.5f + jx, fy = f.gy * k + 0.5f + jy, r = std::max(f.r * k, 0.6f);
+        c.sourceRect[0] = fx;
+        c.sourceRect[1] = fy;
+        c.sourceRect[2] = r;
+        c.sourceClamp[1] = f.vz;
+        c.twin[0] = f.bright;
+        std::copy(f.colour, f.colour + 3, c.fogColor);
+        const D3D12_RECT around = clipped(fx - 8.0f * r, fy - 8.0f * r, fx + 8.0f * r, fy + 8.0f * r, w, h);
+        if (around.right <= around.left || around.bottom <= around.top) continue;
+        if (!effectPass(fireflyPipelines[upscale ? 4 : code], dst, dstState, rtv, w, h, c, sceneColorSrv, true, kNoSrv,
+                        &around))
             return false;
     }
     return true;

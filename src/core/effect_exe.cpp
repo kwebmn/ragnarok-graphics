@@ -6,8 +6,15 @@
 
 namespace uagfx::effect_exe {
 
+bool isSortEntry(const uint8_t bytes[6]) {
+    static const uint8_t kEntry[6] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x0C};
+    return std::memcmp(bytes, kEntry, sizeof kEntry) == 0;
+}
+
 Kind kindOf(int id) {
     switch (id) {
+    case 45:
+        return Kind::Firefly;
     case 200:
     case 201:
     case 202:
@@ -34,29 +41,16 @@ void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent) {
     }
 }
 
-void Prims::note(uint32_t prim, Kind kind) {
-    if (kind == Kind::None) return;
-    if (!prims_.empty() && prim < prims_.back().first) sorted_ = false;
-    prims_.emplace_back(prim, kind);
+void Faces::note(uint32_t vertices, Tag tag) {
+    if (vertices && tag.kind != Kind::None) faces_[vertices] = tag;
 }
 
-Kind Prims::of(uint32_t vertices) {
-    if (prims_.empty()) return Kind::None;
-    if (!sorted_) {
-        std::sort(prims_.begin(), prims_.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-        sorted_ = true;
-    }
-    // The last primitive starting at or before the address.
-    auto it = std::upper_bound(prims_.begin(), prims_.end(), vertices,
-                               [](uint32_t v, const auto& p) { return v < p.first; });
-    if (it == prims_.begin()) return Kind::None;
-    --it;
-    return vertices - it->first < kPrimSize ? it->second : Kind::None;
+Tag Faces::of(uint32_t vertices) const {
+    if (faces_.empty()) return Tag{};
+    const auto it = faces_.find(vertices);
+    return it == faces_.end() ? Tag{} : it->second;
 }
 
-void Prims::clear() {
-    prims_.clear();
-    sorted_ = true;
-}
+void Faces::clear() { faces_.clear(); }
 
 }  // namespace uagfx::effect_exe

@@ -203,9 +203,12 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;
     // 0.27: the level 99 aura softer - its vertices' colour and alpha, in a copy (the game's stay as they are).
+    // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew).
+    const effect_exe::Tag tag = win::drawnEffect(vertices);
+    cmd.effect = uint8_t(tag.kind);
+    cmd.effectSeed = tag.seed;
     const EffectSettings& fx = c.config.effects;
-    if (fx.aura && fx.auraBrightness < 100 && c.enhanced() &&
-        win::drawnEffect(vertices) == effect_exe::Kind::Aura) {
+    if (fx.aura && fx.auraBrightness < 100 && c.enhanced() && tag.kind == effect_exe::Kind::Aura) {
         static bool logged = false;
         if (!logged) LOG_INFO("effects: a level 99 aura drawn at %d %% of the game's brightness", fx.auraBrightness);
         logged = true;

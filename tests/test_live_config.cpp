@@ -164,6 +164,15 @@ TEST(live_config_aura_applies_now) {
     CHECK(u.applied[1] == "aura_brightness 50 -> 20");
 }
 
+TEST(live_config_fireflies_apply_now) {
+    const LiveUpdate u =
+        liveUpdate(parseConfig(""), parseConfig("[effects]\nfireflies = 0\nfireflies_brightness = 60\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "fireflies 1 -> 0");
+    CHECK(u.applied[1] == "fireflies_brightness 100 -> 60");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

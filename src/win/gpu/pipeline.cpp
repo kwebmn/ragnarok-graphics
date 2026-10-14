@@ -101,7 +101,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"dof_blur_ps", "ps_5_0", &dofBlurPs},          {"dof_apply_ps", "ps_5_0", &dofApplyPs},
                    {"dof_focus_ps", "ps_5_0", &dofFocusPs},       {"mask_ps", "ps_5_0", &maskPs},
                    {"torch_light_ps", "ps_5_0", &torchLightPs},   {"torch_fire_ps", "ps_5_0", &torchFirePs},
-                   {"smoke_ps", "ps_5_0", &smokePs},              {"smoke_glow_ps", "ps_5_0", &smokeGlowPs}};
+                   {"smoke_ps", "ps_5_0", &smokePs},              {"smoke_glow_ps", "ps_5_0", &smokeGlowPs},
+                   {"firefly_ps", "ps_5_0", &fireflyPs}};
     for (const auto& e : effects) {
         std::string why;
         if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {

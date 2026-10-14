@@ -168,6 +168,8 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         w.u32(d.texture[1]);
         w.u8(uint8_t(d.keyed[0]));
         w.u8(uint8_t(d.keyed[1]));
+        w.u8(d.effect);
+        w.u8(d.effectSeed);
         w.u32(d.primitive);
         w.u32(d.fvf);
         w.u32(d.vertexOffset);
@@ -246,6 +248,8 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         d.texture[1] = rd.u32();
         d.keyed[0] = rd.u8() != 0;
         d.keyed[1] = rd.u8() != 0;
+        d.effect = rd.u8();
+        d.effectSeed = rd.u8();
         d.primitive = rd.u32();
         d.fvf = rd.u32();
         d.vertexOffset = rd.u32();

@@ -343,6 +343,18 @@ TEST(config_effects_aura) {
     CHECK(parseConfig("[effects]\naura_brightness = 150\n").effects == d);
 }
 
+TEST(config_effects_fireflies) {
+    // 0.28: fireflies drawn anew - glowing, flashing, lighting a little around them - on unless turned off.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.fireflies);
+    CHECK_EQ(d.firefliesBrightness, 100);
+    const EffectSettings e = parseConfig("[effects]\nfireflies = 0\nfireflies_brightness = 150\n").effects;
+    CHECK(!e.fireflies);
+    CHECK_EQ(e.firefliesBrightness, 150);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nfireflies_brightness = 250\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

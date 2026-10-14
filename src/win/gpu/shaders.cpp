@@ -874,6 +874,22 @@ float4 smokeShade(PsIn i) {
 
 float4 smoke_ps(PsIn i) : SV_Target { return smokeShade(i); }
 
+// 0.28, the fireflies (torches.cpp): a glowing dot and its soft halo, added to the picture - sourceRect.xy its middle
+// and .z its core's radius (target pixels), sourceClamp.y its view depth, fogColor its colour, twinX its brightness
+// (its flash, the game's fade, the player's setting). Hidden behind what stands in front of it by the picture's depth.
+float4 firefly_ps(PresentOut i) : SV_Target {
+    float2 d = i.pos.xy - sourceRect.xy;
+    float r = max(sourceRect.z, 0.5);
+    float d2 = dot(d, d) / (r * r);
+    float z = viewDepth(sceneDepth.Load(int3(int2(i.pos.xy), 0)));
+    float seen = saturate((z - sourceClamp.y + 1.5) / 1.5);
+    float core = exp(-d2 * 1.2);
+    float halo = 0.22 * exp(-d2 / 10.0) + 0.05 / (1.0 + d2 / 4.0);
+    float fade = saturate(1.0 - d2 / 64.0);  // none at eight radii, the edge of its pass
+    float3 c = fogColor.rgb * halo + lerp(fogColor.rgb, float3(1.0, 1.0, 1.0), 0.55) * core;
+    return float4(c * (twinX * seen * fade), 0.0);
+}
+
 GlowOut smoke_glow_ps(PsIn i) {
     GlowOut o;
     o.c = smokeShade(i);

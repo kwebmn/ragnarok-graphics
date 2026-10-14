@@ -28,6 +28,9 @@ struct DrawCmd {
     uint32_t state = 0;            // index into states()
     uint32_t texture[2] = {0, 0};  // renderer texture ids; 0 = nothing bound
     bool keyed[2] = {false, false};  // the texture has a colour key baked into alpha 0
+    // 0.28: the game's effect the draw is of (effect_exe::Kind; 0 none) and a seed of its primitive's own.
+    uint8_t effect = 0;
+    uint8_t effectSeed = 0;
     uint32_t primitive = 0;        // d3d7::PT_*
     uint32_t fvf = 0;              // d3d7::FVF_TL1 or FVF_TL2
     uint32_t vertexOffset = 0;     // bytes into vertexBytes()

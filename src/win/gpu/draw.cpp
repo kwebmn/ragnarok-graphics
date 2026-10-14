@@ -5,6 +5,7 @@
 
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
+#include "core/effect_exe.hpp"
 #include "core/game_camera.hpp"
 #include "core/scale.hpp"
 #include "core/twin_grid.hpp"
@@ -87,6 +88,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (upscale) startFrame();
     // 0.23: the game's torch layers - its glow not drawn, its flame noted - are drawn anew once the world is.
     if (!s.ui && torchWanted() && !torchDone && d.vertexCount == 4 && !objectTextures.empty() && takeTorch(rec, d))
+        return;
+    // 0.28: a firefly the game draws (effect 45, known by the driver) - drawn anew with the torches.
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Firefly) && fireflyWanted() && !torchDone &&
+        takeFirefly(rec, d))
         return;
     // 0.18, the glow: from the first draw of the world that adds light on, the world's draws write into the glow
     // target too - what adds light adds it there, what covers it takes it away. Once the world is drawn, its glow

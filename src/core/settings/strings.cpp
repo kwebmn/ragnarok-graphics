@@ -853,6 +853,16 @@ const Entry kTexts[] = {
     {"How bright the aura is, of what the game draws: 100 % as in the game, 0 % none.",
      "Наскільки яскрава аура від того, як її малює гра: 100 % — як у грі, 0 % — немає.",
      "Насколько ярка аура от того, как её рисует игра: 100 % — как в игре, 0 % — нет."},
+    {"Fireflies", "Світлячки", "Светлячки"},
+    {"The maps' fireflies glow, flash now and then and light the ground a little around them. Also those the maps' "
+     "makers placed that the game never showed (once the map's file is read).",
+     "Світлячки на картах світяться, час від часу спалахують і трохи освітлюють землю довкола. Також ті, що їх "
+     "поставили автори карт, але гра ніколи не показувала (коли файл карти прочитано).",
+     "Светлячки на картах светятся, время от времени вспыхивают и немного освещают землю вокруг. Также те, что "
+     "поставили авторы карт, но игра никогда не показывала (когда файл карты прочитан)."},
+    {"Fireflies' brightness", "Яскравість світлячків", "Яркость светлячков"},
+    {"How bright the fireflies and their light are.", "Наскільки яскраві світлячки та їхнє світло.",
+     "Насколько ярки светлячки и их свет."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

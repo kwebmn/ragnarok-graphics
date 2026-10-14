@@ -51,6 +51,7 @@ constexpr UINT64 kUploadSize = 32ull << 20;  // per slot; grows when one submiss
 constexpr int kUpscaleGiveUp = 30;  // part 3: DLSS failing this many frames in a row is not used any more
 constexpr UINT kMaxTorches = 32;    // 0.23: torches drawn anew in a frame; the rest as the game draws them
 constexpr UINT kMaxLights = 64;     // 0.25: lights of the torches' pass - the torches' and the lamps'
+constexpr UINT kMaxFireflies = 96;  // 0.28: fireflies drawn anew in a frame
 
 // Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled;
 // part 3 (DLSS): the world, its motion, the interface layer.
@@ -135,6 +136,16 @@ struct FireSpark {
     float strength;
     float colour[3];
     float gameX, gameY;  // its middle on the screen, game pixels (gathered by place)
+};
+
+// 0.28: a firefly the game draws this frame (effect 45: its dot, a quad facing the screen) - drawn anew.
+struct Firefly {
+    float gameX, gameY;  // its middle, game pixels
+    float rhw;           // the depth of its quad
+    float size;          // the quad's side, game pixels
+    float alpha;         // the game's fade of it
+    float colour[3];     // fireflies::colourOf the game's tint
+    float seed;          // 0-1, its primitive's own
 };
 
 struct Slot {
@@ -348,6 +359,9 @@ struct Renderer::Impl {
     MapWorld mapWorld;                      // 0.25: the map file - its lamps and the effects the game does not show
     std::vector<torch::Flame> torchFlames;  // this frame's
     std::vector<FireSpark> fireSparks;      // 0.26: this frame's fire of skills
+    std::vector<Firefly> fireflyDraws;      // 0.28: this frame's fireflies the game draws
+    bool firefliesLogged = false;
+    bool mapFirefliesLogged = false;
     bool torchDone = false;                 // this frame's are drawn, or could not be
     bool torchesLogged = false;
     ID3D12Resource* torchData = nullptr;  // R32G32B32A32 float, a texel a torch: its light's place and strength
@@ -359,6 +373,8 @@ struct Renderer::Impl {
     ID3DBlob* smokeGlowPs = nullptr;
     ID3D12PipelineState* torchLightPipelines[4] = {};  // into the target of 1, 2, 4, 8 samples (the world: 1)
     ID3D12PipelineState* torchFirePipelines[5] = {};   // the same, and the world under DLSS (its alpha the mask)
+    ID3DBlob* fireflyPs = nullptr;                      // 0.28: a firefly's dot and halo
+    ID3D12PipelineState* fireflyPipelines[5] = {};     // as torchFirePipelines
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
@@ -530,8 +546,12 @@ struct Renderer::Impl {
     bool lampsWanted() const { return effects.lamps; }  // 0.25
     bool fireWanted() const { return effects.fireLight && effects.fireLightStrength > 0; }  // 0.26
     void noteFire(const FrameRecord& rec, const DrawCmd& d, const Texture& t);
+    bool fireflyWanted() const { return effects.fireflies && effects.firefliesBrightness > 0 && fireflyPs; }  // 0.28
+    bool takeFirefly(const FrameRecord& rec, const DrawCmd& d);  // one the game draws: true when it is not to be
+    bool fireflyReady();  // its pipelines for this target
     bool torchDue() const {
-        return !torchDone && (torchWanted() || lampsWanted() || !torchFlames.empty() || !fireSparks.empty());
+        return !torchDone && (torchWanted() || lampsWanted() || fireflyWanted() || !torchFlames.empty() ||
+                              !fireSparks.empty());
     }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     bool torchReady();     // the shaders, pipelines and the picture's copies are there
@@ -542,6 +562,7 @@ struct Renderer::Impl {
         aoDone = groundDrawn = gradeDone = dofDone = torchDone = false;  // 0.20-0.23
         torchFlames.clear();
         fireSparks.clear();
+        fireflyDraws.clear();
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

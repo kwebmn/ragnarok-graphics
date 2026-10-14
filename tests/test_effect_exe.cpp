@@ -50,24 +50,33 @@ TEST(effect_exe_softens_the_colour_and_alpha_of_a_draw) {
     CHECK_EQ(same.diffuse, 0u);
 }
 
-TEST(effect_exe_finds_the_primitive_a_draws_vertices_are_in) {
-    // A face's vertices lie inside its primitive (CEffectPrim, kPrimSize bytes).
-    effect_exe::Prims p;
-    CHECK(p.of(0x2000000) == Kind::None);
-    p.note(0x3000000, Kind::Aura);
-    p.note(0x1000000, Kind::Aura);
-    CHECK(p.of(0x3000000) == Kind::Aura);
-    CHECK(p.of(0x3000000 + 0x1F04 + 5 * 0x6C) == Kind::Aura);
-    CHECK(p.of(0x3000000 + effect_exe::kPrimSize - 1) == Kind::Aura);
-    CHECK(p.of(0x3000000 + effect_exe::kPrimSize) == Kind::None);
-    CHECK(p.of(0x2FFFFFF) == Kind::None);
-    CHECK(p.of(0x1000000 + 0x40) == Kind::Aura);
-    CHECK(p.of(0) == Kind::None);
-    // The same primitive again (drawn twice in a frame) changes nothing.
-    p.note(0x1000000, Kind::Aura);
-    CHECK(p.of(0x1000000 + 0x40) == Kind::Aura);
-    // A new frame: the primitives drawn in it are noted anew - one gone may hold anything by now.
-    p.clear();
-    CHECK(p.of(0x3000000) == Kind::None);
-    CHECK(p.of(0x1000000) == Kind::None);
+TEST(effect_exe_knows_the_faces_of_an_effect_by_their_vertices) {
+    // 0.28: a face the game sorts into its lists while an effect's primitive renders is noted by its vertices - the
+    // address its draw gets - with what the effect is and a seed of the primitive's own.
+    effect_exe::Faces f;
+    CHECK(f.of(0x1000040).kind == Kind::None);
+    f.note(0x1000040, effect_exe::Tag{Kind::Firefly, 17});
+    f.note(0x2000000, effect_exe::Tag{Kind::Aura, 3});
+    CHECK(f.of(0x1000040).kind == Kind::Firefly);
+    CHECK_EQ(int(f.of(0x1000040).seed), 17);
+    CHECK(f.of(0x2000000).kind == Kind::Aura);
+    CHECK(f.of(0x1000044).kind == Kind::None);  // the exact address only
+    CHECK(f.of(0).kind == Kind::None);
+    f.note(0, effect_exe::Tag{Kind::Aura, 1});  // no vertices: nothing
+    CHECK(f.of(0).kind == Kind::None);
+    // A new frame: the faces of the next one are noted anew - the memory may hold another face by then.
+    f.clear();
+    CHECK(f.of(0x1000040).kind == Kind::None);
+    CHECK(f.of(0x2000000).kind == Kind::None);
+}
+
+TEST(effect_exe_knows_fireflies_and_the_sort_functions_entry) {
+    CHECK(effect_exe::kindOf(45) == Kind::Firefly);
+    CHECK(effect_exe::kindOf(44) == Kind::None);
+    // The face sort's first instructions (push ebp; mov ebp, esp; sub esp, 0xC): moved whole into the hook's
+    // trampoline. Another build's bytes are refused.
+    const uint8_t entry[6] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x0C};
+    CHECK(effect_exe::isSortEntry(entry));
+    const uint8_t other[6] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10};
+    CHECK(!effect_exe::isSortEntry(other));
 }

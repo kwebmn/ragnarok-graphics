@@ -99,6 +99,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (fe.fireLight != re.fireLight)
         u.applied.push_back(change("fire_light", flag(re.fireLight), flag(fe.fireLight)));
     if (fe.aura != re.aura) u.applied.push_back(change("aura", flag(re.aura), flag(fe.aura)));
+    if (fe.fireflies != re.fireflies)
+        u.applied.push_back(change("fireflies", flag(re.fireflies), flag(fe.fireflies)));
     if (fe.glow != re.glow) u.applied.push_back(change("glow", flag(re.glow), flag(fe.glow)));
     if (fe.glowStrength != re.glowStrength)
         u.applied.push_back(
@@ -118,6 +120,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         {"lamps_light", {re.lampsLight, fe.lampsLight}},
         {"fire_light_strength", {re.fireLightStrength, fe.fireLightStrength}},
         {"aura_brightness", {re.auraBrightness, fe.auraBrightness}},
+        {"fireflies_brightness", {re.firefliesBrightness, fe.firefliesBrightness}},
         {"glow_light", {re.glowLight, fe.glowLight}},
         {"ao_strength", {re.aoStrength, fe.aoStrength}},
         {"ao_size", {re.aoSize, fe.aoSize}},

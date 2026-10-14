@@ -261,6 +261,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-100 %%: how bright the aura is, of what the game draws
     >>"uaro-graphics.ini" echo aura_brightness = 50
 )
+rem 0.28: the maps' fireflies drawn anew, on.
+findstr /i /l /c:"fireflies_brightness" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = the maps' fireflies glow, flash now and then and light a little around them
+    >>"uaro-graphics.ini" echo fireflies = 1
+    >>"uaro-graphics.ini" echo ; 0-200 %%: how bright the fireflies and their light are
+    >>"uaro-graphics.ini" echo fireflies_brightness = 100
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

@@ -26,6 +26,8 @@ FrameRecord sampleRecord() {
     d.state = r.addState(s);
     d.texture[0] = 0x40000001;
     d.keyed[1] = true;
+    d.effect = 2;        // 0.28: the game's effect the draw is of
+    d.effectSeed = 201;
     d.primitive = d3d7::PT_TRIANGLESTRIP;
     d.fvf = d3d7::FVF_TL2;
     d.twin = 7;
@@ -66,6 +68,8 @@ TEST(bridge_a_record_crosses_field_by_field) {
     CHECK_EQ(d.twinScale, 2.625);
     CHECK_EQ(d.twinTile[0], -3);
     CHECK(d.keyed[1] && !d.keyed[0]);
+    CHECK_EQ(int(d.effect), 2);
+    CHECK_EQ(int(d.effectSeed), 201);
     CHECK(b.states()[0] == a.states()[0]);
     CHECK(b.vertexBytes() == a.vertexBytes());
     CHECK(b.indices() == a.indices());

@@ -345,6 +345,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.lampsLight = rd.i32();
             e.fireLight = rd.u8() != 0;
             e.fireLightStrength = rd.i32();
+            e.fireflies = rd.u8() != 0;
+            e.firefliesBrightness = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }
