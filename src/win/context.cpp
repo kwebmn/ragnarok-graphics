@@ -6,6 +6,7 @@
 #include "core/scale.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
+#include "win/effect_hook.hpp"
 #include "win/game_camera.hpp"
 #include "win/sprite_hook.hpp"
 #include "win/log.hpp"
@@ -104,6 +105,7 @@ bool Context::open(std::string& error) {
     const AiSettings& ai = config.ai;
     if ((ai.enabled && (ai.sprites() || ai.effects || ai.icons) && renderer->remote()) || !config.remix)
         installSpriteHook();
+    installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)
     crisp::setAiIcons(config.ai.enabled && config.ai.icons && renderer->remote() && config.crispText,
@@ -186,6 +188,7 @@ void Context::flushIfFull() {
 
 void Context::present(const Rect& source, bool waitForVblank) {
     flush();
+    effectFrame();  // 0.27: the effects' primitives of the next frame
     if (!renderer) return;
     watchSettings();
     if (window && IsIconic(window)) {  // minimised: nothing to show, and no vsync to hold the game's loop back

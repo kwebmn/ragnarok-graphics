@@ -251,6 +251,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how much
     >>"uaro-graphics.ini" echo fire_light_strength = 100
 )
+rem 0.27: the level 99 aura softer, on.
+findstr /i /l /c:"aura_brightness" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = the level 99 aura - its ring, bubbles and circle - shines softer
+    >>"uaro-graphics.ini" echo aura = 1
+    >>"uaro-graphics.ini" echo ; 0-100 %%: how bright the aura is, of what the game draws
+    >>"uaro-graphics.ini" echo aura_brightness = 50
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

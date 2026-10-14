@@ -841,6 +841,17 @@ const Entry kTexts[] = {
     {"Fire light", "Світло вогню", "Свет огня"},
     {"How much the fire of skills lights around it.", "Наскільки вогонь умінь освітлює довкола.",
      "Насколько огонь умений освещает всё вокруг."},
+    {"Softer level 99 aura", "М'якша аура 99 рівня", "Мягкая аура 99 уровня"},
+    {"The level 99 aura - its ring, bubbles and circle - shines softer, so that it does not dazzle around the "
+     "characters. The game's own /aura command still shows the circle alone.",
+     "Аура 99 рівня — її кільце, бульбашки й коло — світить м'якше й не сліпить довкола персонажів. Команда гри "
+     "/aura, як і раніше, залишає саме коло.",
+     "Аура 99 уровня — её кольцо, пузырьки и круг — светит мягче и не слепит вокруг персонажей. Команда игры /aura, "
+     "как и раньше, оставляет один круг."},
+    {"Aura brightness", "Яскравість аури", "Яркость ауры"},
+    {"How bright the aura is, of what the game draws: 100 % as in the game, 0 % none.",
+     "Наскільки яскрава аура від того, як її малює гра: 100 % — як у грі, 0 % — немає.",
+     "Насколько ярка аура от того, как её рисует игра: 100 % — как в игре, 0 % — нет."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

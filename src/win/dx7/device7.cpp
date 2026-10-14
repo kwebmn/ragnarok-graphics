@@ -7,6 +7,7 @@
 #include "win/dx7/caps.hpp"
 #include "win/dx7/formats.hpp"
 #include "win/dx7/surface7.hpp"
+#include "win/effect_hook.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::dx7 {
@@ -201,6 +202,18 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;
+    // 0.27: the level 99 aura softer - its vertices' colour and alpha, in a copy (the game's stay as they are).
+    const EffectSettings& fx = c.config.effects;
+    if (fx.aura && fx.auraBrightness < 100 && c.enhanced() &&
+        win::drawnEffect(vertices) == effect_exe::Kind::Aura) {
+        static bool logged = false;
+        if (!logged) LOG_INFO("effects: a level 99 aura drawn at %d %% of the game's brightness", fx.auraBrightness);
+        logged = true;
+        const auto* bytes = static_cast<const uint8_t*>(vertices);
+        soft_.assign(bytes, bytes + size_t(vertexCount) * FrameRecord::stride(fvf));
+        effect_exe::soften(soft_.data(), vertexCount, FrameRecord::stride(fvf), fx.auraBrightness);
+        vertices = soft_.data();
+    }
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
     c.flushIfFull();  // the textures this draw sent may have filled the record
     return D3D_OK;

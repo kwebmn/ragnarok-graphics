@@ -3,6 +3,9 @@
 
 #include <d3d.h>
 
+#include <cstdint>
+#include <vector>
+
 #include "core/d3d7.hpp"
 #include "core/scene.hpp"
 #include "core/states.hpp"
@@ -61,6 +64,7 @@ private:
     DeviceStates states_;
     SceneTracker scene_;  // which draws are interface (stage 3)
     D3DVIEWPORT7 viewport_{};
+    std::vector<uint8_t> soft_;  // 0.27: a draw of the level 99 aura's vertices, softer
 };
 
 }  // namespace uagfx::dx7

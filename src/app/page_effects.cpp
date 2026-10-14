@@ -25,6 +25,7 @@ const Effect kEffects[] = {
     {"effects.ao", {}, {"effects.ao_strength", "effects.ao_size"}, {}, false},
     {"effects.glow", {}, {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}, {}, false},
     {"effects.fire_light", {}, {"effects.fire_light_strength"}, {}, false},
+    {"effects.aura", {}, {"effects.aura_brightness"}, {}, false},
     {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, false},
     {"effects.grade",
      {},

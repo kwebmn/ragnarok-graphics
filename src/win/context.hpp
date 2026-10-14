@@ -48,6 +48,7 @@ public:
     // Flip and WaitForVerticalBlank + Blt wait for vblank (when vsync is on); the loading bar's Blt shows at once
     // (spec §4.1), and so does Bink's.
     void present(const Rect& source, bool waitForVblank);
+    bool enhanced() const { return enhanced_; }  // not paused (Pause or Scroll Lock: the game's own picture)
 
 private:
     Context();

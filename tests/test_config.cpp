@@ -331,6 +331,18 @@ TEST(config_effects_fire_light) {
     CHECK(parseConfig("[effects]\nfire_light_strength = 300\n").effects == d);
 }
 
+TEST(config_effects_aura) {
+    // 0.27: the level 99 aura made softer - on unless turned off, 0-100 % of the game's brightness.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.aura);
+    CHECK_EQ(d.auraBrightness, 50);
+    const EffectSettings e = parseConfig("[effects]\naura = 0\naura_brightness = 30\n").effects;
+    CHECK(!e.aura);
+    CHECK_EQ(e.auraBrightness, 30);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\naura_brightness = 150\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;
