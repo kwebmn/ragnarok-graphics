@@ -11,11 +11,31 @@ bool isWriteCall(const uint8_t bytes[5]) {
     return kWriteCall + 5 + rel == kWrite;
 }
 
-Source sourceOf(const char* path) {
-    if (!path) return Source::Unknown;
+namespace {
+
+// The path in lower case with backslashes, as the folders are compared.
+std::string normal(const char* path) {
     std::string p;
     for (const char* c = path; *c && p.size() < 512; ++c)
         p += *c >= 'A' && *c <= 'Z' ? char(*c - 'A' + 'a') : *c == '/' ? '\\' : *c;
+    return p;
+}
+
+const std::string kEffect = "\xC0\xCC\xC6\xD1\xC6\xAE";  // 이팩트
+
+}  // namespace
+
+bool isTorch(const char* path) {
+    if (!path) return false;
+    const std::string p = normal(path);
+    const std::string file = kEffect + "\\torch_01.spr";
+    return p.size() >= file.size() && p.compare(p.size() - file.size(), file.size(), file) == 0 &&
+           (p.size() == file.size() || p[p.size() - file.size() - 1] == '\\');
+}
+
+Source sourceOf(const char* path) {
+    if (!path) return Source::Unknown;
+    const std::string p = normal(path);
     // A folder of the path: at its start or after a backslash, and a backslash after it.
     const auto in = [&p](const std::string& folder) {
         for (size_t at = p.find(folder + "\\"); at != std::string::npos; at = p.find(folder + "\\", at + 1))
@@ -25,7 +45,7 @@ Source sourceOf(const char* path) {
     const std::string ui = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
     const std::string monster = "\xB8\xF3\xBD\xBA\xC5\xCD";                            // 몬스터
     const std::string item = "\xBE\xC6\xC0\xCC\xC5\xDB";                               // 아이템
-    const std::string effect = "\xC0\xCC\xC6\xD1\xC6\xAE";                             // 이팩트
+    const std::string& effect = kEffect;
     const std::string human = "\xC0\xCE\xB0\xA3\xC1\xB7";                              // 인간족: bodies, heads
     const std::string headgear = "\xBE\xC7\xBC\xBC\xBB\xE7\xB8\xAE";                 // 악세사리
     const std::string shield = "\xB9\xE6\xC6\xD0";                                       // 방패

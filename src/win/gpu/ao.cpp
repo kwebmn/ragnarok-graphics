@@ -11,7 +11,6 @@
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
-namespace {
 
 D3D12_GRAPHICS_PIPELINE_STATE_DESC fullScreenPipeline(ID3D12RootSignature* root, ID3DBlob* vs, ID3DBlob* ps,
                                                       DXGI_FORMAT format, UINT samples) {
@@ -31,11 +30,9 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC fullScreenPipeline(ID3D12RootSignature* root,
     return p;
 }
 
-}  // namespace
-
 bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
                                 D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0,
-                                bool scene, UINT srv1) {
+                                bool scene, UINT srv1, const D3D12_RECT* clip) {
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
     linearClamp.magFilter = d3d7::TFG_LINEAR;
@@ -47,10 +44,10 @@ bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D
     const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(srv0, srv1 == kNoSrv ? srv0 : srv1);
     transition(dst, dstState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     const D3D12_VIEWPORT vp{0.0f, 0.0f, float(dstW), float(dstH), 0.0f, 1.0f};
-    const D3D12_RECT clip{0, 0, dstW, dstH};
+    const D3D12_RECT whole{0, 0, dstW, dstH};
     list->OMSetRenderTargets(1, &dstRtv, FALSE, nullptr);
     list->RSSetViewports(1, &vp);
-    list->RSSetScissorRects(1, &clip);
+    list->RSSetScissorRects(1, clip ? clip : &whole);
     list->SetGraphicsRootSignature(root);
     list->SetPipelineState(pso);
     c.targetSize[0] = float(dstW);
@@ -360,6 +357,7 @@ bool Renderer::Impl::applyDof() {
 
 bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
+    if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
     if (gradeDue() && !applyGrade()) return false;
     return !dofDue() || applyDof();
 }

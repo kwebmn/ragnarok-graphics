@@ -54,6 +54,13 @@ struct EffectSettings {
     // 0.22.6: the map's baked light - torches' and lamps' pools, the shadows of houses and trees on the ground -
     // smooth instead of blotches and steps (the ground's coarse lightmap blurred within its cells). On by default.
     bool smoothLight = true;
+    // 0.23: the maps' torches drawn anew (core/torch.hpp) - a flame that burns and sparks instead of the game's
+    // magnified drop, a soft glow in the air around it instead of its red blotch, and its warm flickering light on
+    // the ground and the walls. On by default.
+    bool torch = true;
+    int torchGlow = 100;    // %, 0-200: the glow around the flame
+    int torchLight = 100;   // %, 0-200: the light it throws around
+    int torchFlicker = 50;  // %, 0-100: how much it flickers
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

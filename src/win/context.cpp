@@ -99,9 +99,11 @@ bool Context::open(std::string& error) {
     LOG_INFO("Direct3D 12 renderer on %s", renderer->adapterName().c_str());
     crisp::install(config.crispText);
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'
-    // icons through crisp text's twins.
+    // icons through crisp text's twins. 0.23: the torches' frames are known through it too - whenever the picture is
+    // ours (not RTX Remix's), as the torches can be turned on in a running game.
     const AiSettings& ai = config.ai;
-    if (ai.enabled && (ai.sprites() || ai.effects || ai.icons) && renderer->remote()) installSpriteHook();
+    if ((ai.enabled && (ai.sprites() || ai.effects || ai.icons) && renderer->remote()) || !config.remix)
+        installSpriteHook();
     renderer->setIconSink(&crisp::iconReady, nullptr);
     crisp::setAiIcons(config.ai.enabled && config.ai.icons && renderer->remote() && config.crispText,
                       config.ai.uiPieces);
@@ -254,6 +256,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);
     EffectSettings none;  // Pause: the game's own picture, no effect
     none.smoothLight = false;
+    none.torch = false;
     renderer->setEffects(enhanced_ ? config.effects : none);
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).

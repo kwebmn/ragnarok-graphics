@@ -40,6 +40,16 @@ uint32_t __attribute__((thiscall)) spriteLoad(uint32_t sprite, const char* name)
     const uint8_t source = uint8_t(sprite_exe::sourceOf(name));
     noteFrames(sprite + sprite_exe::kImages, source);
     noteFrames(sprite + sprite_exe::kRgbaImages, source);
+    // 0.23: the torch's 32-bit frames - the first its glow, the rest its flame (core/torch.hpp).
+    if (sprite_exe::isTorch(name)) {
+        const uint32_t list = sprite + sprite_exe::kRgbaImages;
+        const uint32_t* begin = *reinterpret_cast<uint32_t* const*>(uintptr_t(list));
+        const uint32_t* end = *reinterpret_cast<uint32_t* const*>(uintptr_t(list) + 4);
+        if (begin && end > begin && end - begin <= 64)
+            for (const uint32_t* f = begin; f != end; ++f)
+                if (*f)
+                    g_frames[*f] = uint8_t(f == begin ? sprite_exe::Source::TorchGlow : sprite_exe::Source::TorchFlame);
+    }
     return result;
 }
 

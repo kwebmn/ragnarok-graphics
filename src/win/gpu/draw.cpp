@@ -85,6 +85,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool toWorld = upscale && !s.ui;
     const bool toLayer = upscale && s.ui;
     if (upscale) startFrame();
+    // 0.23: the game's torch layers - its glow not drawn, its flame noted - are drawn anew once the world is.
+    if (!s.ui && torchWanted() && !torchDone && d.vertexCount == 4 && !torchCells.empty() && takeTorch(rec, d)) return;
     // 0.18, the glow: from the first draw of the world that adds light on, the world's draws write into the glow
     // target too - what adds light adds it there, what covers it takes it away. Once the world is drawn, its glow
     // goes onto the picture before the interface (under DLSS onto the upscaled world, composite()).

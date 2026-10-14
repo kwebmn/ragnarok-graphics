@@ -13,12 +13,17 @@
 #include "core/key_pair.hpp"
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
+#include "core/torch.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/gpu/upscaler.hpp"
 
 namespace uagfx::gpu {
 
 class AiTextures;  // ai_textures.hpp
+
+// A pipeline that draws one triangle over the viewport into a target of that format and samples (ao.cpp).
+D3D12_GRAPHICS_PIPELINE_STATE_DESC fullScreenPipeline(ID3D12RootSignature* root, ID3DBlob* vs, ID3DBlob* ps,
+                                                      DXGI_FORMAT format, UINT samples);
 
 // A committed 2D texture in the default heap (device.cpp); null when it cannot be made.
 ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, DXGI_FORMAT format,
@@ -42,6 +47,7 @@ constexpr UINT kRingPerSlot = kGpuSrvCount / kSlots;
 constexpr UINT kSamplerCount = 1024;    // cache of sampler pairs, two descriptors each
 constexpr UINT64 kUploadSize = 32ull << 20;  // per slot; grows when one submission needs more
 constexpr int kUpscaleGiveUp = 30;  // part 3: DLSS failing this many frames in a row is not used any more
+constexpr UINT kMaxTorches = 32;    // 0.23: torches drawn anew in a frame; the rest as the game draws them
 
 // Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled;
 // part 3 (DLSS): the world, its motion, the interface layer.
@@ -321,6 +327,19 @@ struct Renderer::Impl {
     LARGE_INTEGER dofFocusTime{};  // when the focus last moved (0.22.4: by time, not by frames)
     ID3DBlob* dofFocusPs = nullptr;
     ID3D12PipelineState* dofFocusPipeline = nullptr;
+    // 0.23, the torches (torches.cpp): the game's torch layers are not drawn - its glow not at all, its flames noted -
+    // and drawn anew once the world is: their light into the picture, then each flame and the glow around it.
+    torch::Cells torchCells;                // the sprite caches' cells that hold a torch frame
+    std::vector<torch::Flame> torchFlames;  // this frame's
+    bool torchDone = false;                 // this frame's are drawn, or could not be
+    bool torchesLogged = false;
+    ID3D12Resource* torchData = nullptr;  // R32G32B32A32 float, a texel a torch: its light's place and strength
+    D3D12_RESOURCE_STATES torchDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT torchDataSrv = 0;
+    ID3DBlob* torchLightPs = nullptr;
+    ID3DBlob* torchFirePs = nullptr;
+    ID3D12PipelineState* torchLightPipelines[4] = {};  // into the target of 1, 2, 4, 8 samples (the world: 1)
+    ID3D12PipelineState* torchFirePipelines[5] = {};   // the same, and the world under DLSS (its alpha the mask)
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
@@ -486,6 +505,18 @@ struct Renderer::Impl {
     bool copySceneDepth();
     void releaseScene();
     void makeDepthViews(UINT n);  // the target's depth: its D32 view and its R32 one
+    // torches.cpp (0.23)
+    bool torchWanted() const { return effects.torch; }
+    bool torchDue() const { return torchWanted() && !torchDone && !torchFlames.empty(); }
+    bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
+    bool torchReady();     // the shaders, pipelines and the picture's copies are there
+    bool applyTorches();   // once a frame (torchDone), the world drawn: before its colours; false: lost
+    // A new picture (cleared, presented, another target): the world's effects are due again.
+    void newPicture() {
+        waterCopied = false;  // 0.19: its water copies what is under it anew
+        aoDone = groundDrawn = gradeDone = dofDone = torchDone = false;  // 0.20-0.23
+        torchFlames.clear();
+    }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }
     bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
@@ -508,7 +539,8 @@ struct Renderer::Impl {
     // scene, the picture and depth copies (t2-t4). The sources are in their shader state already.
     bool effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
                     D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0, bool scene,
-                    UINT srv1 = kNoSrv);  // t1: srv0 again unless given
+                    UINT srv1 = kNoSrv,                 // t1: srv0 again unless given
+                    const D3D12_RECT* clip = nullptr);  // 0.23: only these pixels
     float waterTime();            // seconds since the first water
     ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
     ID3D12PipelineState* glowLightPipeline(UINT samples, bool upscaledFormat);

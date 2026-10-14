@@ -101,7 +101,9 @@ bool AiSettings::operator==(const AiSettings& o) const {
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
-    return smoothLight == o.smoothLight && glow == o.glow && glowStrength == o.glowStrength &&
+    return smoothLight == o.smoothLight && torch == o.torch && torchGlow == o.torchGlow &&
+           torchLight == o.torchLight && torchFlicker == o.torchFlicker && glow == o.glow &&
+           glowStrength == o.glowStrength &&
            glowSize == o.glowSize && glowLight == o.glowLight &&
            ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
            gradeSaturation == o.gradeSaturation && gradeContrast == o.gradeContrast &&
@@ -234,6 +236,14 @@ Config parseConfig(const std::string& text) {
             parseAi(k, val, c.ai, newEnabled, newBudget, newDenoise);
         } else if (key == "effects.smooth_light") {
             setBool(val, c.effects.smoothLight);
+        } else if (key == "effects.torch") {
+            setBool(val, c.effects.torch);
+        } else if (key == "effects.torch_glow") {
+            toInt(val, 0, 200, c.effects.torchGlow);
+        } else if (key == "effects.torch_light") {
+            toInt(val, 0, 200, c.effects.torchLight);
+        } else if (key == "effects.torch_flicker") {
+            toInt(val, 0, 100, c.effects.torchFlicker);
         } else if (key == "effects.glow") {
             setBool(val, c.effects.glow);
         } else if (key == "effects.glow_strength") {

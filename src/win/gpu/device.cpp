@@ -327,8 +327,7 @@ void Renderer::Impl::clear(const ClearCmd& c) {
     if ((c.flags & 1) && c.rect.left <= 0 && c.rect.top <= 0 && c.rect.right >= gameWidth &&
         c.rect.bottom >= gameHeight) {
         dropGlow();
-        waterCopied = false;  // 0.19: a new picture - its water copies what is under it anew
-        aoDone = groundDrawn = gradeDone = dofDone = false;  // 0.20-0.22: its shadows, colours, depth of field
+        newPicture();  // 0.19-0.23: its water, shadows, torches, colours, depth of field anew
     }
     if (upscale) {  // part 3: the world and its depth; a colour clear empties the interface layer too
         startFrame();
@@ -433,6 +432,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     if (ai)
         ai->noteUpload(u.texture, t, u, rec.pixels().data() + u.pixels,
                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);  // with their sources
+    if (u.slotCount) torchCells.note(u.texture, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.23
 }
 
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
@@ -1046,6 +1046,11 @@ void Renderer::Impl::destroy() {
     releaseCom(dofFocusPs);
     releaseCom(maskPipeline);  // 0.22.3
     releaseCom(maskPs);
+    for (ID3D12PipelineState*& p : torchLightPipelines) releaseCom(p);  // 0.23
+    for (ID3D12PipelineState*& p : torchFirePipelines) releaseCom(p);
+    releaseCom(torchLightPs);
+    releaseCom(torchFirePs);
+    releaseCom(torchData);
     releaseCom(dofDownPipeline);
     releaseCom(dofBlurPipeline);
     for (ID3D12PipelineState*& p : dofApplyPipelines) releaseCom(p);
@@ -1249,15 +1254,16 @@ void Renderer::setEffects(const EffectSettings& e) {
     Impl& m = *impl_;
     if (e == m.effects) return;
     const bool was = m.glowWanted();
-    const bool scene = m.waterWanted() || m.aoWanted() || m.gradeWanted() || m.dofWanted();
+    const bool scene = m.waterWanted() || m.aoWanted() || m.gradeWanted() || m.dofWanted() || m.torchWanted();
     const bool dof = m.dofWanted();
     const bool ao = m.aoWanted();
     m.effects = e;
-    LOG_INFO("effects: smooth map light %s; shadows %s, strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, "
-             "light %d%%; "
+    LOG_INFO("effects: smooth map light %s; torches %s, glow %d%%, light %d%%, flicker %d%%; shadows %s, strength "
+             "%d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
-             e.smoothLight ? "on" : "off", e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
+             e.smoothLight ? "on" : "off", e.torch ? "on" : "off", e.torchGlow, e.torchLight, e.torchFlicker,
+             e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
              e.grade ? "on" : "off", e.gradeSaturation, e.gradeContrast, e.gradeBrightness, e.gradeWarmth,
@@ -1265,7 +1271,8 @@ void Renderer::setEffects(const EffectSettings& e) {
     if (was && !m.glowWanted()) m.releaseGlow();  // its video memory back
     if (ao && !m.aoWanted()) m.releaseAo();
     if (dof && !m.dofWanted()) m.releaseDof();
-    if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted() && !m.dofWanted()) m.releaseScene();
+    if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted() && !m.dofWanted() && !m.torchWanted())
+        m.releaseScene();
 }
 
 void Renderer::preparePipelines(const std::string& file) {
@@ -1458,8 +1465,7 @@ bool Renderer::setTarget(int width, int height) {
     releaseCom(m.gameSized);
     m.releaseUpscaleTargets();
     m.dropGlow();
-    m.waterCopied = false;
-    m.aoDone = m.groundDrawn = m.gradeDone = m.dofDone = false;
+    m.newPicture();
     m.upscale = false;
     m.samples = 1;  // until the first present, like the scale: the calibration sees DX7's picture
     if (!m.createTarget(width, height, 1, m.target, m.depth)) return fail();
@@ -1535,8 +1541,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
         return drop();
     m.waitIdle();
     m.dropGlow();  // 0.18: drawn for the old target
-    m.waterCopied = false;
-    m.aoDone = m.groundDrawn = m.gradeDone = m.dofDone = false;
+    m.newPicture();
     releaseCom(m.target);
     releaseCom(m.depth);
     releaseCom(m.resolved);
@@ -1628,6 +1633,7 @@ void Renderer::Impl::retireDying() {
             freeSrv.push_back(it->second.aiSrv);
         }
         if (ai) ai->forget(id);
+        torchCells.forget(id);  // 0.23
         textures.erase(it);
     }
     dying.clear();
@@ -1857,8 +1863,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (m.upscaler && m.upscaler->generates()) m.upscaler->afterPresent();  // every frame: the next frame's token
     m.renderStarted = false;
     m.upscaledNow = false;
-    m.waterCopied = false;  // 0.19: the next frame's water copies what is under it anew
-    m.aoDone = m.groundDrawn = m.gradeDone = m.dofDone = false;  // 0.20-0.22: shadows, colours, depth of field
+    m.newPicture();  // 0.19-0.23: the next frame's water, shadows, torches, colours, depth of field
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;
         m.nextJitter();

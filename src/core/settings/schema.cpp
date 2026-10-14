@@ -57,6 +57,14 @@ const std::vector<IniSetting>& iniSettings() {
          Text::SmoothAnisoHint, ""},
         {"effects", "smooth_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothLight,
          Text::FxSmoothLightHint, ""},
+        {"effects", "torch", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTorch, Text::FxTorchHint,
+         ""},
+        {"effects", "torch_glow", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxTorchGlow,
+         Text::FxTorchGlowHint, " %"},
+        {"effects", "torch_light", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxTorchLight,
+         Text::FxTorchLightHint, " %"},
+        {"effects", "torch_flicker", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxTorchFlicker,
+         Text::FxTorchFlickerHint, " %"},
         {"effects", "ao", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAo, Text::FxAoHint, ""},
         {"effects", "ao_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAoStrength,
          Text::FxAoStrengthHint, " %"},
@@ -177,6 +185,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.ahead") return a.ahead ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
     if (k == "effects.smooth_light") return c.effects.smoothLight ? "1" : "0";
+    if (k == "effects.torch") return c.effects.torch ? "1" : "0";
+    if (k == "effects.torch_glow") return std::to_string(c.effects.torchGlow);
+    if (k == "effects.torch_light") return std::to_string(c.effects.torchLight);
+    if (k == "effects.torch_flicker") return std::to_string(c.effects.torchFlicker);
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";
     if (k == "effects.glow_strength") return std::to_string(c.effects.glowStrength);
     if (k == "effects.glow_size") return std::to_string(c.effects.glowSize);

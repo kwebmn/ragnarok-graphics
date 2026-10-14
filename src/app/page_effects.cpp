@@ -18,6 +18,7 @@ struct Effect {
 };
 const Effect kEffects[] = {
     {"effects.smooth_light", {}},
+    {"effects.torch", {"effects.torch_glow", "effects.torch_light", "effects.torch_flicker"}},
     {"effects.ao", {"effects.ao_strength", "effects.ao_size"}},
     {"effects.glow", {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}},
     {"effects.water", {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}},

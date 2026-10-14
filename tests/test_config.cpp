@@ -294,3 +294,20 @@ TEST(config_effects_smooth_map_light) {
     CHECK(!parseConfig("[effects]\nsmooth_light = 0\n").effects.smoothLight);
 }
 
+TEST(config_effects_torches) {
+    // 0.23: on unless turned off; the glow and the light 0-200 %, the flicker 0-100 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.torch);
+    CHECK_EQ(d.torchGlow, 100);
+    CHECK_EQ(d.torchLight, 100);
+    CHECK_EQ(d.torchFlicker, 50);
+    const EffectSettings e =
+        parseConfig("[effects]\ntorch = 0\ntorch_glow = 200\ntorch_light = 0\ntorch_flicker = 100\n").effects;
+    CHECK(!e.torch);
+    CHECK_EQ(e.torchGlow, 200);
+    CHECK_EQ(e.torchLight, 0);
+    CHECK_EQ(e.torchFlicker, 100);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\ntorch_flicker = 150\ntorch_glow = 300\n").effects == d);
+}
+
