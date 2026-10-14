@@ -233,6 +233,10 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.glow ? 1 : 0);
     w.i32(e.glowStrength);
     w.i32(e.glowSize);
+    w.i32(e.glowLight);
+    w.u8(e.ao ? 1 : 0);
+    w.i32(e.aoStrength);
+    w.i32(e.aoSize);
     w.u8(e.water ? 1 : 0);
     w.i32(e.waterWaves);
     w.i32(e.waterReflections);

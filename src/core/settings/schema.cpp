@@ -55,12 +55,19 @@ const std::vector<IniSetting>& iniSettings() {
         {"quality", "anisotropy", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8", "16"},
          {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8, Text::Factor16}, Text::SmoothAniso,
          Text::SmoothAnisoHint, ""},
+        {"effects", "ao", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAo, Text::FxAoHint, ""},
+        {"effects", "ao_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAoStrength,
+         Text::FxAoStrengthHint, " %"},
+        {"effects", "ao_size", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAoSize, Text::FxAoSizeHint,
+         " %"},
         {"effects", "glow", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGlow, Text::FxGlowHint,
          ""},
         {"effects", "glow_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGlowStrength,
          Text::FxGlowStrengthHint, " %"},
         {"effects", "glow_size", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxGlowSize,
          Text::FxGlowSizeHint, " %"},
+        {"effects", "glow_light", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxGlowLight,
+         Text::FxGlowLightHint, " %"},
         {"effects", "water", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWater, Text::FxWaterHint,
          ""},
         {"effects", "water_waves", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxWaterWaves,
@@ -153,6 +160,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";
     if (k == "effects.glow_strength") return std::to_string(c.effects.glowStrength);
     if (k == "effects.glow_size") return std::to_string(c.effects.glowSize);
+    if (k == "effects.glow_light") return std::to_string(c.effects.glowLight);
+    if (k == "effects.ao") return c.effects.ao ? "1" : "0";
+    if (k == "effects.ao_strength") return std::to_string(c.effects.aoStrength);
+    if (k == "effects.ao_size") return std::to_string(c.effects.aoSize);
     if (k == "effects.water") return c.effects.water ? "1" : "0";
     if (k == "effects.water_waves") return std::to_string(c.effects.waterWaves);
     if (k == "effects.water_reflections") return std::to_string(c.effects.waterReflections);

@@ -95,7 +95,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"glow_up_ps", "ps_5_0", &glowUpPs},      {"glow_add_ps", "ps_5_0", &glowAddPs},
                    {"water_vs", "vs_5_0", &waterVs},         {"water_ps", "ps_5_0", &waterPs},
                    {"water_glow_ps", "ps_5_0", &waterGlowPs}, {"depth_copy_ps", "ps_5_0", &depthCopyPs},
-                   {"depth_copy_ms_ps", "ps_5_0", &depthCopyMsPs}};
+                   {"depth_copy_ms_ps", "ps_5_0", &depthCopyMsPs}, {"ao_ps", "ps_5_0", &aoPs},
+                   {"ao_blur_ps", "ps_5_0", &aoBlurPs},          {"ao_apply_ps", "ps_5_0", &aoApplyPs}};
     for (const auto& e : effects) {
         std::string why;
         if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {

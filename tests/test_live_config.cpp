@@ -101,3 +101,16 @@ TEST(live_config_water_applies_now) {
     for (const char* k : {"effects.water", "effects.water_waves", "effects.water_reflections", "effects.water_clarity"})
         CHECK(appliesNow(k));
 }
+
+TEST(live_config_shadows_apply_now) {
+    const LiveUpdate u =
+        liveUpdate(parseConfig(""), parseConfig("[effects]\nao = 1\nao_size = 70\nglow_light = 20\n"));
+    CHECK(u.waiting.empty());
+    CHECK(u.next.effects.ao);
+    CHECK_EQ(u.applied.size(), size_t(3));
+    CHECK(u.applied[0] == "ao 0 -> 1");
+    CHECK(u.applied[1] == "glow_light 50 -> 20");
+    CHECK(u.applied[2] == "ao_size 50 -> 70");
+    for (const char* k : {"effects.ao", "effects.ao_strength", "effects.ao_size", "effects.glow_light"})
+        CHECK(appliesNow(k));
+}

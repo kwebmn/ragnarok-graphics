@@ -56,6 +56,12 @@ struct EffectSettings {
     bool glow = false;
     int glowStrength = 100;  // %, 0-200: how bright the glow is
     int glowSize = 50;       // %, 0-100: how far it spreads
+    int glowLight = 50;      // %, 0-100 (0.20): how much the light falls on what is around, in its colour
+    // 0.20: soft shadows where surfaces meet - at the walls, in the corners of buildings, under trees - on the map
+    // and its models (screen-space ambient occlusion); the characters and the effects keep their light.
+    bool ao = false;
+    int aoStrength = 60;  // %, 0-100: how dark
+    int aoSize = 50;      // %, 0-100: how far from a corner
     // 0.19: the maps' water drawn anew - waves, the picture above it reflected, the sun's glints, the bed seen
     // through it and darker with depth, foam along the shore.
     bool water = false;

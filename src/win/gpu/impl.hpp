@@ -59,7 +59,8 @@ constexpr UINT kRtvUpscaled = 11;  // the upscaler's output, for the glow to be 
 constexpr int kGlowLevels = 8;     // the glow's chain of smaller copies, the first half the world's size
 constexpr UINT kRtvGlowChain = 12;
 constexpr UINT kRtvSceneDepth = kRtvGlowChain + kGlowLevels;  // 0.19: the depth before the frame's first water
-constexpr UINT kRtvCount = kRtvSceneDepth + 1;
+constexpr UINT kRtvAo = kRtvSceneDepth + 1;  // 0.20: the soft shadows' two targets
+constexpr UINT kRtvCount = kRtvAo + 2;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -247,6 +248,7 @@ struct Renderer::Impl {
     ID3D12PipelineState* glowDownPipeline = nullptr;
     ID3D12PipelineState* glowUpPipeline = nullptr;
     ID3D12PipelineState* glowAddPipelines[5] = {};  // onto the target of 1, 2, 4, 8 samples; onto the upscaled world
+    ID3D12PipelineState* glowLightPipelines[5] = {};  // 0.20: the light on the surroundings, the same five
     // 0.19, modern water (water.cpp): the frame's picture and depth as they were before its first cell of water -
     // the map, its models and the characters are drawn by then - for the water's own shader.
     D3D12_RESOURCE_STATES depthState = D3D12_RESOURCE_STATE_DEPTH_WRITE;  // the target's depth
@@ -269,6 +271,21 @@ struct Renderer::Impl {
     ID3DBlob* depthCopyMsPs = nullptr;
     ID3D12PipelineState* depthCopyPipeline = nullptr;
     ID3D12PipelineState* depthCopyMsPipeline = nullptr;
+    // 0.20, soft shadows (ao.cpp): from the depth of the map and its models once they are drawn - at the frame's
+    // first blended draw of the world after its ground - multiplied into the picture before the characters.
+    ID3D12Resource* aoTarget[2] = {};  // R8, half the world's size: the shadows, then blurred back and forth
+    D3D12_RESOURCE_STATES aoState[2] = {};
+    UINT aoSrv[2] = {};
+    int aoWidth = 0, aoHeight = 0;
+    bool aoFailed = false;
+    bool aoDone = false;       // this frame's shadows are on the picture, or could not be
+    bool groundDrawn = false;  // this frame has drawn ground (two UV sets): the map is there
+    ID3DBlob* aoPs = nullptr;
+    ID3DBlob* aoBlurPs = nullptr;
+    ID3DBlob* aoApplyPs = nullptr;
+    ID3D12PipelineState* aoPipeline = nullptr;
+    ID3D12PipelineState* aoBlurPipeline = nullptr;
+    ID3D12PipelineState* aoApplyPipelines[4] = {};
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
@@ -429,10 +446,25 @@ struct Renderer::Impl {
     // Before the frame's first cell of water: its picture and depth so far copied; false (and the water the game's)
     // when the camera is not known or the copies cannot be made. Once a frame (waterCopied).
     bool copyScene();
+    // The world's picture and depth copies at its size (`user` names the effect in the log); the depth copied.
+    bool ensureScene(const char* user);
+    bool copySceneDepth();
     void releaseScene();
     void makeDepthViews(UINT n);  // the target's depth: its D32 view and its R32 one
+    // ao.cpp (0.20)
+    bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }
+    bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
+    bool applyAo();  // once a frame (aoDone); false: lost
+    bool ensureAo(int w, int h);
+    void releaseAo();
+    ID3D12PipelineState* aoApplyPipeline(UINT samples);
+    // One full-screen pass into dst (dstW x dstH): the constants, t0 = srv0 (sampled linearly, clamped) and, with
+    // scene, the picture and depth copies (t2-t4). The sources are in their shader state already.
+    bool effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
+                    D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0, bool scene);
     float waterTime();            // seconds since the first water
     ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
+    ID3D12PipelineState* glowLightPipeline(UINT samples, bool upscaledFormat);
     // One full-screen pass of the glow: src (sampled linearly, clamped) into dst; blendFactor with glow_up_ps.
     bool glowPass(ID3D12PipelineState* pso, ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv,
                   int srcW, int srcH, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,

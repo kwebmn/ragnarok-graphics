@@ -88,6 +88,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.18, the glow: from the first draw of the world that adds light on, the world's draws write into the glow
     // target too - what adds light adds it there, what covers it takes it away. Once the world is drawn, its glow
     // goes onto the picture before the interface (under DLSS onto the upscaled world, composite()).
+    // 0.20, soft shadows: once the frame's ground (two UV sets) is drawn, at the world's first blended draw - the
+    // characters' list comes first of those - or at the interface, the shadows go onto what is drawn so far: the
+    // map and its models, before the characters and the effects.
+    if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
+    if ((s.ui ? !upscale : s.blend) && aoDue() && !applyAo()) return;
     if (s.ui && !upscale && glowDrawn && !addGlowToTarget()) return;
     const bool adds = !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE;
     if (adds && !glowActive && glowWanted()) startGlow();

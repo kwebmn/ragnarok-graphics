@@ -485,6 +485,77 @@ float4 water(WaterIn i) {
     return float4(c, saturate(thick / 0.8));  // the shore line fades in, no hard edge
 }
 
+// 0.20, soft shadows where surfaces meet (screen-space ambient occlusion): on the map and its models once they are
+// drawn, before the characters and the effects. f0-farZ are the game's projection, scale and jitter the world's;
+// uiPixels the world's size and the shadows' (half of it); footprint the radius in world units, sharpen the
+// strength (0-1); sourceRect.xy the blur's direction.
+float3 viewAt(int2 wp) {  // the point of the view the world pixel wp shows (its centre: game (wp - jitter) / scale)
+    float z = viewDepth(sceneDepth.Load(int3(wp, 0)));
+    float2 g = (float2(wp) - float2(jitterX, jitterY)) / scale;
+    return float3((g.x - cx) * z / f0, (g.y - cy) * z / f1, z);
+}
+
+float ao_ps(PresentOut i) : SV_Target {
+    const float3 kernel[12] = {
+        float3(-0.0933, 0.0078, 0.0503), float3(-0.1224, 0.0021, 0.0252), float3(-0.0230, -0.1494, 0.0394),
+        float3(-0.0421, 0.1821, 0.0711), float3(0.0986, -0.0906, 0.2185), float3(0.2057, -0.0826, 0.2377),
+        float3(0.1547, -0.0847, 0.3660), float3(0.3701, 0.2501, 0.2247), float3(0.0994, 0.0337, 0.5971),
+        float3(-0.7008, -0.0222, 0.1846), float3(0.3223, 0.5069, 0.6102), float3(0.3189, 0.2700, 0.9085)};
+    int2 wp = int2(i.pos.xy) * 2;
+    int2 last = int2(uiPixels.xy) - 1;
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) return 1.0;  // nothing drawn there
+    float3 p = viewAt(wp);
+    // The normal from the neighbours, each on the side nearer in depth, so that an edge does not bend it.
+    float3 l = viewAt(max(wp - int2(2, 0), int2(0, 0))), r = viewAt(min(wp + int2(2, 0), last));
+    float3 u = viewAt(max(wp - int2(0, 2), int2(0, 0))), d = viewAt(min(wp + int2(0, 2), last));
+    float3 dx = abs(r.z - p.z) < abs(p.z - l.z) ? r - p : p - l;
+    float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
+    float3 n = normalize(cross(dy, dx));
+    if (dot(n, p) > 0.0) n = -n;  // towards the camera
+    // The kernel turned around the normal by an angle of its own for each pixel; the blur evens the noise out.
+    float a = hash12(float2(wp)) * 6.2831853;
+    float3 t0 = normalize(abs(n.x) < 0.9 ? cross(n, float3(1, 0, 0)) : cross(n, float3(0, 1, 0)));
+    float3 t1 = cross(n, t0);
+    float3 tx = t0 * cos(a) + t1 * sin(a);
+    float3 ty = cross(n, tx);
+    float radius = footprint;
+    float occlusion = 0.0;
+    [unroll] for (int k = 0; k < 12; ++k) {
+        float3 q = p + (tx * kernel[k].x + ty * kernel[k].y + n * kernel[k].z) * radius;
+        if (q.z <= nearZ) continue;
+        float2 t = float2(q.x / q.z * f0 + cx, q.y / q.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
+        if (any(t < 0.0) || any(t >= uiPixels.xy)) continue;
+        float zs = viewDepth(sceneDepth.Load(int3(int2(t), 0)));
+        if (zs < q.z - 0.02 * radius) occlusion += saturate(radius / max(abs(p.z - zs), 1e-3));  // near ones only
+    }
+    return 1.0 - occlusion / 12.0;
+}
+
+// Nine taps along one direction, weighed by distance and by how close in depth they are: the shadows stay on their
+// side of an edge.
+float ao_blur_ps(PresentOut i) : SV_Target {
+    int2 p = int2(i.pos.xy);
+    int2 dir = int2(sourceRect.xy);
+    int2 last = int2(uiPixels.zw) - 1;
+    float z0 = viewDepth(sceneDepth.Load(int3(min(p * 2, int2(uiPixels.xy) - 1), 0)));
+    float sum = 0.0, weights = 0.0;
+    [unroll] for (int k = -4; k <= 4; ++k) {
+        int2 q = clamp(p + dir * k, int2(0, 0), last);
+        float zq = viewDepth(sceneDepth.Load(int3(min(q * 2, int2(uiPixels.xy) - 1), 0)));
+        float w = exp(-float(k * k) / 8.0) * saturate(1.0 - abs(zq - z0) / (0.04 * z0 + 1.0));
+        sum += tex0.Load(int3(q, 0)).r * w;
+        weights += w;
+    }
+    return sum / max(weights, 1e-4);
+}
+
+// Onto the picture: multiplied (blend ZERO, SRCCOLOR).
+float4 ao_apply_ps(PresentOut i) : SV_Target {
+    float ao = tex0.SampleLevel(samp0, i.pos.xy * 0.5 / uiPixels.zw, 0).r;
+    float f = lerp(1.0, ao, sharpen);
+    return float4(f, f, f, 1.0);
+}
+
 float4 water_ps(WaterIn i) : SV_Target { return water(i); }
 
 GlowOut water_glow_ps(WaterIn i) {

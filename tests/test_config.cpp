@@ -239,3 +239,18 @@ TEST(config_effects_water) {
     CHECK_EQ(e.waterClarity, 30);
     CHECK(parseConfig("[effects]\nwater_waves = 101\nwater_clarity = x\n").effects == d);
 }
+
+TEST(config_effects_shadows_and_light) {
+    // 0.20: the soft shadows, off unless asked for; the glow's light on the surroundings.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(!d.ao);
+    CHECK_EQ(d.aoStrength, 60);
+    CHECK_EQ(d.aoSize, 50);
+    CHECK_EQ(d.glowLight, 50);
+    const EffectSettings e = parseConfig("[effects]\nao = 1\nao_strength = 90\nao_size = 20\nglow_light = 0\n").effects;
+    CHECK(e.ao);
+    CHECK_EQ(e.aoStrength, 90);
+    CHECK_EQ(e.aoSize, 20);
+    CHECK_EQ(e.glowLight, 0);
+    CHECK(parseConfig("[effects]\nao_strength = 101\nglow_light = -5\n").effects == d);
+}

@@ -101,7 +101,8 @@ bool AiSettings::operator==(const AiSettings& o) const {
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
-    return glow == o.glow && glowStrength == o.glowStrength && glowSize == o.glowSize && water == o.water &&
+    return glow == o.glow && glowStrength == o.glowStrength && glowSize == o.glowSize && glowLight == o.glowLight &&
+           ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && water == o.water &&
            waterWaves == o.waterWaves && waterReflections == o.waterReflections && waterClarity == o.waterClarity;
 }
 
@@ -233,6 +234,14 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 200, c.effects.glowStrength);
         } else if (key == "effects.glow_size") {
             toInt(val, 0, 100, c.effects.glowSize);
+        } else if (key == "effects.glow_light") {
+            toInt(val, 0, 100, c.effects.glowLight);
+        } else if (key == "effects.ao") {
+            setBool(val, c.effects.ao);
+        } else if (key == "effects.ao_strength") {
+            toInt(val, 0, 100, c.effects.aoStrength);
+        } else if (key == "effects.ao_size") {
+            toInt(val, 0, 100, c.effects.aoSize);
         } else if (key == "effects.water") {
             setBool(val, c.effects.water);
         } else if (key == "effects.water_waves") {

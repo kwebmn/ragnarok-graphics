@@ -697,6 +697,28 @@ const Entry kTexts[] = {
     {"How deep one sees into the water: less is murky, more is clear to the bottom.",
      "Як глибоко видно у воду: менше — каламутна, більше — прозора до дна.",
      "Как глубоко видно в воду: меньше — мутная, больше — прозрачная до дна."},
+    {"Light on the surroundings", "Світло на оточення", "Свет на окружение"},
+    {"How much the light of effects falls on the ground, walls and characters near them, in its own colour: a "
+     "fireball lights the street. 0 % is the halo alone.",
+     "Наскільки світло ефектів падає на землю, стіни й персонажів поруч, у своєму кольорі: вогняна куля освітлює "
+     "вулицю. 0 % — лише ореол.",
+     "Насколько свет эффектов падает на землю, стены и персонажей рядом, в своём цвете: огненный шар освещает "
+     "улицу. 0 % — только ореол."},
+    {"Soft shadows", "М'які тіні", "Мягкие тени"},
+    {"Soft shade where surfaces meet: at the foot of walls, in the corners of buildings, under trees and rocks, as in "
+     "modern games (ambient occlusion). The characters and the effects keep their light.",
+     "М'яка тінь там, де поверхні сходяться: біля стін, у кутах будівель, під деревами й каменями, як у сучасних "
+     "іграх (ambient occlusion). Персонажі й ефекти не затіняються.",
+     "Мягкая тень там, где поверхности сходятся: у стен, в углах зданий, под деревьями и камнями, как в современных "
+     "играх (ambient occlusion). Персонажи и эффекты не затеняются."},
+    {"Shadow strength", "Сила тіней", "Сила теней"},
+    {"How dark the shade is in the deepest corners.", "Наскільки темна тінь у найглибших кутах.",
+     "Насколько темна тень в самых глубоких углах."},
+    {"Shadow size", "Розмір тіней", "Размер теней"},
+    {"How far the shade reaches from a corner: less hugs the edges, more spreads under trees and between buildings.",
+     "Як далеко тінь сягає від кута: менше — тонко вздовж країв, більше — широко під деревами й між будівлями.",
+     "Как далеко тень заходит от угла: меньше — тонко вдоль краёв, больше — широко под деревьями и между "
+     "зданиями."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

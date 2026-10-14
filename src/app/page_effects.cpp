@@ -17,7 +17,8 @@ struct Effect {
     const char* sliders[3];
 };
 const Effect kEffects[] = {
-    {"effects.glow", {"effects.glow_strength", "effects.glow_size", nullptr}},
+    {"effects.ao", {"effects.ao_strength", "effects.ao_size", nullptr}},
+    {"effects.glow", {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}},
     {"effects.water", {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}},
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);

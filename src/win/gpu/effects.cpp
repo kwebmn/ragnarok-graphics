@@ -119,6 +119,41 @@ ID3D12PipelineState* Renderer::Impl::glowAddPipeline(UINT n, bool upscaledFormat
     return glowAddPipelines[code];
 }
 
+// 0.20, the light on the surroundings: the picture times (1 + light) - blend DESTCOLOR, ONE.
+ID3D12PipelineState* Renderer::Impl::glowLightPipeline(UINT n, bool upscaledFormat) {
+    const UINT code = upscaledFormat ? 4 : n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
+    if (glowLightPipelines[code]) return glowLightPipelines[code];
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
+    p.pRootSignature = root;
+    p.VS = {presentVs->GetBufferPointer(), presentVs->GetBufferSize()};
+    p.PS = {glowAddPs->GetBufferPointer(), glowAddPs->GetBufferSize()};
+    D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
+    b.BlendEnable = TRUE;
+    b.SrcBlend = D3D12_BLEND_DEST_COLOR;
+    b.DestBlend = D3D12_BLEND_ONE;
+    b.BlendOp = D3D12_BLEND_OP_ADD;
+    b.SrcBlendAlpha = D3D12_BLEND_ZERO;
+    b.DestBlendAlpha = D3D12_BLEND_ONE;
+    b.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    b.LogicOp = D3D12_LOGIC_OP_NOOP;
+    b.RenderTargetWriteMask =
+        D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+    p.SampleMask = UINT_MAX;
+    p.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+    p.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    p.RasterizerState.DepthClipEnable = TRUE;
+    p.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    p.NumRenderTargets = 1;
+    p.RTVFormats[0] = upscaledFormat ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_B8G8R8A8_UNORM;
+    p.SampleDesc.Count = upscaledFormat ? 1 : 1u << code;
+    if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                   reinterpret_cast<void**>(&glowLightPipelines[code])))) {
+        LOG_ERROR("the glow's light pipeline failed");
+        glowLightPipelines[code] = nullptr;
+    }
+    return glowLightPipelines[code];
+}
+
 void Renderer::Impl::releaseGlow() {
     Slot& s = slots[slot];  // what the open list recorded may still read them
     if (glow) s.garbage.push_back(glow);
@@ -280,6 +315,13 @@ bool Renderer::Impl::addGlow(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstStat
                       glowChainWidth[i + 1], glowChainHeight[i + 1], glowChain[i], glowChainState[i],
                       rtvHandle(kRtvGlowChain + UINT(i)), glowChainWidth[i], glowChainHeight[i], 0.0f, false, spread))
             return false;
+    // 0.20: the light on what is around, in its colour - the picture times one and the wide glow.
+    const float light = 2.0f * float(std::clamp(effects.glowLight, 0, 100)) / 100.0f;
+    const int wide = std::min(2, glowLevels - 1);
+    ID3D12PipelineState* lit = light > 0.0f ? glowLightPipeline(dstSamples, upscaledFormat) : nullptr;
+    if (lit && !glowPass(lit, glowChain[wide], glowChainState[wide], glowChainSrv[wide], glowChainWidth[wide],
+                         glowChainHeight[wide], dst, dstState, dstRtv, dstW, dstH, light, false))
+        return false;
     const float strength = float(std::clamp(effects.glowStrength, 0, 200)) / 100.0f;
     return glowPass(add, glowChain[0], glowChainState[0], glowChainSrv[0], glowChainWidth[0], glowChainHeight[0], dst,
                     dstState, dstRtv, dstW, dstH, strength, false);
