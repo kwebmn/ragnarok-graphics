@@ -31,7 +31,7 @@ public:
     bool setScale(double k, int width, int height, int samples, bool upscale);
     void setCamera(bool valid, const float view[12]);
     int samples() const { return samples_; }
-    void setDrawQuality(int anisotropy, bool alphaToCoverage);
+    void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown);
     uint32_t createTexture(int width, int height, int levels);
     void releaseTexture(uint32_t id);
     void execute(const FrameRecord& record);

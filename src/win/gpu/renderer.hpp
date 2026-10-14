@@ -26,6 +26,8 @@ struct BridgeOptions {
     int frameGeneration = 0;          // 2-4: DLSS frame generation, 0 none
     bool dlssJitterInverted = false;  // test switches ([quality] dlss_jitter, dlss_motion)
     bool dlssMotionInverted = false;
+    bool aiTextures = false;          // AI textures ([quality] ai_textures)
+    double aiBudget = 2.0;            // ms of GPU time a frame for the network
     int logLevel = 1;                // LogLevel
 };
 
@@ -74,7 +76,8 @@ public:
     int samples() const;  // of the target now
     // Stage 4: anisotropic filtering of the world's textures (0 = off, else 2-16), and alpha testing as coverage in
     // draws without blending while the target has several samples.
-    void setDrawQuality(int anisotropy, bool alphaToCoverage);
+    // aiShown: AI textures drawn instead of the game's (off with Pause, to compare).
+    void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown = true);
 
     uint32_t createTexture(int width, int height, int levels);  // an ARGB8 texture; 0 on failure
     void releaseTexture(uint32_t id);                           // freed once the GPU no longer uses it
@@ -95,6 +98,9 @@ public:
     // Before create(): called with the device as soon as it exists, before anything is made on it (Streamline wants
     // slSetD3DDevice before the command queue, 0.10 log: "API hook is activated without device being created").
     void setOnDevice(void (*fn)(void* context, ID3D12Device* device), void* context);
+    // AI textures (ai_textures.hpp, uaro-render64.exe): after create(); targetMs of GPU time a frame for the
+    // network. false: off, the reason in the log.
+    bool startAiTextures(const std::string& gameDir, double targetMs);
     // Part 3, DLSS started after the device (in the background, so that the game does not wait for it): the DXGI
     // factory becomes Streamline's (upgrade = slUpgradeInterface) and the swap chain is made again through it at the
     // next present, so that Streamline sees every present. False: the factory stays the system's.

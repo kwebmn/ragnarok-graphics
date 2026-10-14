@@ -108,6 +108,10 @@ Config parseConfig(const std::string& text) {
             if (val == "normal" || val == "inverted") c.dlssMotionInverted = val == "inverted";
         } else if (key == "quality.anisotropy") {
             setFactor(val, 16, c.anisotropy);
+        } else if (key == "quality.ai_textures") {
+            setBool(val, c.aiTextures);
+        } else if (key == "quality.ai_budget") {
+            toInt(val, 1, 20, c.aiBudget);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {

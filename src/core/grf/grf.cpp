@@ -110,6 +110,13 @@ bool Archive::open(const std::string& path, bool create, std::string& error) {
     return true;
 }
 
+std::vector<std::string> Archive::names() const {
+    std::vector<std::string> out;
+    out.reserve(entries_.size());
+    for (const auto& e : entries_) out.push_back(e.first);
+    return out;
+}
+
 const Entry* Archive::find(const std::string& name) const {
     const auto it = entries_.find(name);
     return it == entries_.end() ? nullptr : &it->second;

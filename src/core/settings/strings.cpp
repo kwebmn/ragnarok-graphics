@@ -457,6 +457,19 @@ const Entry kTexts[] = {
      "Добавляет придуманные кадры между кадрами игры: GeForce RTX 40 и 50 (3x и 4x — RTX 50), только с DLSS в "
      "«Сглаживании». Плавнее движение, чуть больше задержка; в меню выключается сама."},
     {"3×", "3×", "3×"},
+    {"AI textures (experiment)", "Нейромережа для текстур (експеримент)", "Нейросеть для текстур (эксперимент)"},
+    {"The world's textures enlarged 4 times by a neural network (Real-ESRGAN) on your graphics card, a little every "
+     "frame, while you play; done ones go into upscaled.grf and show at once next time. Pause shows the old ones.",
+     "Текстури світу збільшує в 4 рази нейромережа (Real-ESRGAN) на вашій відеокарті, потроху щокадру, поки ви "
+     "граєте; готові йдуть в upscaled.grf і наступного разу з'являються одразу. Pause показує старі.",
+     "Текстуры мира увеличивает в 4 раза нейросеть (Real-ESRGAN) на вашей видеокарте, понемногу каждый кадр, пока "
+     "вы играете; готовые идут в upscaled.grf и в следующий раз появляются сразу. Pause показывает старые."},
+    {"AI textures: GPU time a frame, ms", "Нейромережа: час відеокарти на кадр, мс",
+     "Нейросеть: время видеокарты на кадр, мс"},
+    {"How much of each frame the neural network may take, 1-20 ms: more makes textures faster, less keeps the "
+     "frame rate.",
+     "Скільки часу кожного кадру може брати нейромережа, 1–20 мс: більше — текстури швидше, менше — FPS вищий.",
+     "Сколько времени каждого кадра может брать нейросеть, 1–20 мс: больше — текстуры быстрее, меньше — FPS выше."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

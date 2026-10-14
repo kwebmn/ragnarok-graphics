@@ -68,7 +68,8 @@ bool Context::open(std::string& error) {
     }
     if (config.frameGeneration && config.dlss == "off")
         LOG_INFO("frame generation %dx: off - it needs NVIDIA DLSS on (Smoothing page)", config.frameGeneration);
-    if (!remote && (config.bridge || config.dlss != "off")) {  // part 3: the 64-bit renderer (DLSS needs it)
+    // Part 3: the 64-bit renderer - DLSS and the AI textures need it.
+    if (!remote && (config.bridge || config.dlss != "off" || config.aiTextures)) {
         gpu::BridgeOptions o;
         o.hostExe = gameDir() + "\\uaro-graphics\\uaro-render64.exe";
         o.gameDir = gameDir();
@@ -79,6 +80,8 @@ bool Context::open(std::string& error) {
         o.dlssJitterInverted = config.dlssJitterInverted;
         o.dlssMotionInverted = config.dlssMotionInverted;
         o.frameGeneration = config.dlss != "off" ? config.frameGeneration : 0;  // it uses DLSS's depth and motion
+        o.aiTextures = config.aiTextures;
+        o.aiBudget = config.aiBudget;
         std::string why;
         remote = r->createRemote(o, why);
         if (remote)
@@ -231,7 +234,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
             LOG_INFO("DLSS: the game's camera %s", known ? "found" : "not in view (no world shown, or another exe)");
         }
     }
-    renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage);
+    renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
     const bool changed = out.cx != lastOut_.cx || out.cy != lastOut_.cy || plan.k != lastPlan_.k ||

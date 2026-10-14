@@ -50,6 +50,10 @@ const std::vector<IniSetting>& iniSettings() {
         {"quality", "anisotropy", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8", "16"},
          {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8, Text::Factor16}, Text::SmoothAniso,
          Text::SmoothAnisoHint, ""},
+        {"quality", "ai_textures", Page::Smoothing, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::SmoothAi,
+         Text::SmoothAiHint, ""},
+        {"quality", "ai_budget", Page::Smoothing, Control::Number, 1, 20, 1, {}, {}, Text::SmoothAiBudget,
+         Text::SmoothAiBudgetHint, ""},
         {"frames", "vsync", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesVsync,
          Text::FramesVsyncHint, ""},
         {"frames", "frame_generation", Page::Frames, Control::Choice, 0, 0, 0, {"off", "2x", "3x", "4x"},
@@ -85,6 +89,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.dlss") return c.dlss;
     if (k == "quality.msaa") return std::to_string(c.msaa);
     if (k == "quality.alpha_to_coverage") return c.alphaToCoverage ? "1" : "0";
+    if (k == "quality.ai_textures") return c.aiTextures ? "1" : "0";
+    if (k == "quality.ai_budget") return std::to_string(c.aiBudget);
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);

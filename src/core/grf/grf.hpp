@@ -31,6 +31,7 @@ public:
     bool isOpen() const { return file_ != nullptr; }
     const Entry* find(const std::string& name) const;
     size_t count() const { return entries_.size(); }
+    std::vector<std::string> names() const;
     bool read(const std::string& name, std::vector<uint8_t>& out, std::string& error);
     // Compresses and adds the files (a name already there gets the new data), then a new table and header. New data
     // goes after the old table, which stays in place until the header points elsewhere: an archive cut short by a

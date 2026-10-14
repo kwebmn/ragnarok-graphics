@@ -14,6 +14,7 @@
 #include "core/pipeline_key.hpp"
 #include "core/scale.hpp"
 #include "core/window_plan.hpp"
+#include "win/gpu/ai_textures.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/gpu/remix9.hpp"
 #include "win/gpu/remote.hpp"
@@ -99,7 +100,7 @@ bool Renderer::Impl::begin() {
     centered = false;  // a new list starts with the default sample positions
     if (timer) {
         readTimes(s, slot);
-        list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4);
+        list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes);
     }
     open = true;
     ++listSerial;
@@ -111,9 +112,15 @@ void Renderer::Impl::submit() {
     open = false;
     if (timer) {
         Slot& s = slots[slot];
-        list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4 + 1);
-        list->ResolveQueryData(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4, s.upscaleTimed ? 4 : 2, timerBuffer,
-                               UINT64(slot) * 4 * sizeof(UINT64));
+        list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 1);
+        // Only what was written: the list's own pair, then the upscale's and the AI textures' when they ran.
+        const auto resolve = [&](UINT first) {
+            list->ResolveQueryData(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + first, 2, timerBuffer,
+                                   UINT64(slot * kTimes + first) * sizeof(UINT64));
+        };
+        resolve(0);
+        if (s.upscaleTimed) resolve(2);
+        if (s.aiTimed) resolve(4);
         s.timed = true;
     }
     const HRESULT hr = list->Close();
@@ -130,11 +137,15 @@ void Renderer::Impl::submit() {
 
 void Renderer::Impl::readTimes(Slot& s, UINT index) {
     if (s.timed && timerData) {
-        const UINT64* t = timerData + index * 4;
+        const UINT64* t = timerData + index * kTimes;
         if (t[1] > t[0]) gpuTicks += t[1] - t[0];
         if (s.upscaleTimed && t[3] > t[2]) upscaleTicks += t[3] - t[2];
+        if (s.aiTimed && t[5] >= t[4]) {
+            aiTicks += t[5] - t[4];
+            if (ai) ai->observe(index, double(t[5] - t[4]) * 1000.0 / double(timerFrequency));
+        }
     }
-    s.timed = s.upscaleTimed = false;
+    s.timed = s.upscaleTimed = s.aiTimed = false;
 }
 
 void Renderer::Impl::noteGpuFrame() {
@@ -144,6 +155,9 @@ void Renderer::Impl::noteGpuFrame() {
     if (!gpuSince) gpuSince = now;
     if (now - gpuSince < 30000) return;
     const double ms = 1000.0 / double(timerFrequency) / double(gpuFrames);
+    if (aiTicks)
+        LOG_INFO("GPU: %.2f ms of work a frame, %.2f ms of it AI textures (%u frames in %.0f s)",
+                 double(gpuTicks) * ms, double(aiTicks) * ms, gpuFrames, double(now - gpuSince) / 1000.0);
     if (upscaleTicks)
         LOG_INFO("GPU: %.2f ms of work a frame, %.2f ms of it %s (%u frames in %.0f s)", double(gpuTicks) * ms,
                  double(upscaleTicks) * ms, upscaler ? upscaler->name() : "upscaling", gpuFrames,
@@ -151,7 +165,7 @@ void Renderer::Impl::noteGpuFrame() {
     else
         LOG_INFO("GPU: %.2f ms of work a frame (%u frames in %.0f s)", double(gpuTicks) * ms, gpuFrames,
                  double(now - gpuSince) / 1000.0);
-    gpuTicks = upscaleTicks = 0;
+    gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
     gpuSince = now;
 }
@@ -404,6 +418,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     dst.SubresourceIndex = u.level;
     list->CopyTextureRegion(&dst, UINT(u.rect.left), UINT(u.rect.top), 0, &src, nullptr);
+    if (ai) ai->noteUpload(u.texture, t, u, rec.pixels().data() + u.pixels);
 }
 
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
@@ -742,10 +757,10 @@ bool Renderer::Impl::composite() {
         // A jump (a warp, a new map) leaves no history worth keeping.
         const float jump = std::fabs(c.reproject[9]) + std::fabs(c.reproject[10]) + std::fabs(c.reproject[11]);
         f.reset = historyReset || !moving || jump > 400.0f;
-        if (timer) list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4 + 2);
+        if (timer) list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 2);
         const bool ok = upscaler->evaluate(f);
         if (timer) {
-            list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4 + 3);
+            list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 3);
             slots[slot].upscaleTimed = true;
         }
         ID3D12DescriptorHeap* heaps[2] = {gpuSrv, samplerHeap};  // Streamline leaves the list's state to us
@@ -910,8 +925,13 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
 
 void Renderer::Impl::destroy() {
     if (device && fence) waitIdle();
+    delete ai;  // its last results go into upscaled.grf
+    ai = nullptr;
     releaseSwapChain();
-    for (auto& t : textures) releaseCom(t.second.resource);
+    for (auto& t : textures) {
+        releaseCom(t.second.resource);
+        releaseCom(t.second.ai);
+    }
     textures.clear();
     for (auto& p : pipelines) releaseCom(p.second);
     pipelines.clear();
@@ -1026,6 +1046,20 @@ bool Renderer::upgradeFactory(bool (*upgrade)(void** object)) {
     return true;
 }
 
+bool Renderer::startAiTextures(const std::string& gameDir, double targetMs) {
+    Impl& m = *impl_;
+    if (remote_ || remix_ || m.ai) return m.ai != nullptr;
+    m.ai = new AiTextures(m);
+    std::string error;
+    if (!m.ai->start(gameDir, targetMs, error)) {
+        LOG_ERROR("AI textures: %s; they stay off", error.c_str());
+        delete m.ai;
+        m.ai = nullptr;
+        return false;
+    }
+    return true;
+}
+
 void Renderer::finish() {
     if (!remote_ && impl_->device && impl_->fence) impl_->waitIdle();
 }
@@ -1067,10 +1101,11 @@ bool Renderer::presentRefused() const { return impl_->refused; }
 
 bool Renderer::lost() const { return impl_->lost; }
 
-void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage) {
+void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown) {
     if (remix_) return;
-    if (remote_) return remote_->setDrawQuality(anisotropy, alphaToCoverage);
+    if (remote_) return remote_->setDrawQuality(anisotropy, alphaToCoverage, aiShown);
     Impl& m = *impl_;
+    if (m.ai) m.ai->shown = aiShown;
     if (anisotropy == m.anisotropy && alphaToCoverage == m.alphaToCoverage) return;
     m.anisotropy = anisotropy;
     m.alphaToCoverage = alphaToCoverage;
@@ -1175,11 +1210,11 @@ bool Renderer::create(std::string& error) {
     // GPU time for the log: without it nothing else changes.
     D3D12_QUERY_HEAP_DESC qh{};
     qh.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-    qh.Count = kSlots * 4;
+    qh.Count = kSlots * kTimes;
     void* times = nullptr;
     if (SUCCEEDED(m.queue->GetTimestampFrequency(&m.timerFrequency)) && m.timerFrequency &&
         SUCCEEDED(m.device->CreateQueryHeap(&qh, __uuidof(ID3D12QueryHeap), reinterpret_cast<void**>(&m.timer))) &&
-        (m.timerBuffer = createBuffer(m.device, D3D12_HEAP_TYPE_READBACK, kSlots * 4 * sizeof(UINT64),
+        (m.timerBuffer = createBuffer(m.device, D3D12_HEAP_TYPE_READBACK, kSlots * kTimes * sizeof(UINT64),
                                       D3D12_RESOURCE_STATE_COPY_DEST)) &&
         SUCCEEDED(m.timerBuffer->Map(0, nullptr, &times))) {
         m.timerData = static_cast<const UINT64*>(times);
@@ -1416,6 +1451,11 @@ void Renderer::Impl::retireDying() {
         if (it == textures.end()) continue;
         s.garbage.push_back(it->second.resource);
         freeSrv.push_back(it->second.srv);
+        if (it->second.ai) {
+            s.garbage.push_back(it->second.ai);
+            freeSrv.push_back(it->second.aiSrv);
+        }
+        if (ai) ai->forget(id);
         textures.erase(it);
     }
     dying.clear();
@@ -1611,6 +1651,14 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     } else if (!m.blit(shown.resource, *shown.state, m.targetSrv, m.width, m.height, from, rtv, fit,
                        int(m.swapWidth), int(m.swapHeight), options.sharpen)) {
         return;
+    }
+    if (m.ai) {  // a slice of the AI textures' network, in this frame's list, timed so that it keeps to its share
+        if (m.timer) m.list->EndQuery(m.timer, D3D12_QUERY_TYPE_TIMESTAMP, m.slot * kTimes + 4);
+        m.ai->work();
+        if (m.timer) {
+            m.list->EndQuery(m.timer, D3D12_QUERY_TYPE_TIMESTAMP, m.slot * kTimes + 5);
+            m.slots[m.slot].aiTimed = true;
+        }
     }
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
     m.submit();

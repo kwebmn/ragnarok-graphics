@@ -18,6 +18,8 @@
 
 namespace uagfx::gpu {
 
+class AiTextures;  // ai_textures.hpp
+
 template <typename T>
 void releaseCom(T*& p) {
     if (p) {
@@ -27,6 +29,7 @@ void releaseCom(T*& p) {
 }
 
 constexpr UINT kSlots = 2;              // submissions in flight
+constexpr UINT kTimes = 6;              // GPU timestamps a slot: its list, the upscale, the AI textures' work
 constexpr UINT kCpuSrvCount = 65536;    // one SRV per texture (the client keeps thousands), the white one, the target
 constexpr UINT kNoSrv = UINT(-1);       // allocSrv: the heap is full
 constexpr UINT kGpuSrvCount = 65536;    // texture pairs bound for drawing: each slot's list has its own part
@@ -88,6 +91,10 @@ struct Texture {
     int levels = 1;
     UINT srv = 0;  // index in the CPU SRV heap
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COPY_DEST;
+    // AI textures (ai_textures.hpp): the network's version, drawn in the world instead while it is shown.
+    ID3D12Resource* ai = nullptr;
+    D3D12_RESOURCE_STATES aiState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT aiSrv = 0;
 };
 
 struct Slot {
@@ -100,6 +107,7 @@ struct Slot {
     std::vector<IUnknown*> garbage;          // released once that fence has passed
     bool timed = false;                      // its list's start and end times are in the timer's buffer
     bool upscaleTimed = false;               // and those of an upscale in it
+    bool aiTimed = false;                    // and those of the AI textures' work in it
 };
 
 struct Upload {
@@ -159,6 +167,7 @@ struct Renderer::Impl {
     // Part 3 (DLSS, uaro-render64.exe; upscaler.hpp): the world at the render size with a jitter, its depth and
     // motion, the upscaler's output at the target's size and the interface layer (premultiplied) that goes on top.
     Upscaler* upscaler = nullptr;
+    AiTextures* ai = nullptr;  // AI textures, when on (startAiTextures)
     bool upscale = false;  // on now
     ID3D12Resource* world = nullptr;
     ID3D12Resource* worldDepth = nullptr;  // R32 typeless: D32 to draw into, R32 to read
@@ -198,11 +207,11 @@ struct Renderer::Impl {
     HMODULE api = nullptr;  // setApi
     // GPU time (0.10.4): timestamps around every list and the upscale, read when the slot comes round again, and a
     // log line every half a minute - how much of each frame the card spends on the picture, and DLSS's part of it.
-    ID3D12QueryHeap* timer = nullptr;  // 4 per slot: list start, list end, upscale start, upscale end
+    ID3D12QueryHeap* timer = nullptr;  // kTimes per slot: list start and end, upscale's, AI textures'
     ID3D12Resource* timerBuffer = nullptr;
     const UINT64* timerData = nullptr;  // mapped for good
     UINT64 timerFrequency = 0;
-    UINT64 gpuTicks = 0, upscaleTicks = 0;
+    UINT64 gpuTicks = 0, upscaleTicks = 0, aiTicks = 0;
     uint32_t gpuFrames = 0;
     ULONGLONG gpuSince = 0;
     void readTimes(Slot& s, UINT index);  // the slot's last list has finished

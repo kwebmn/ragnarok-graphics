@@ -22,6 +22,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.remix != running.remix) u.waiting.push_back("remix");
     if (file.dlss != running.dlss) u.waiting.push_back("dlss");
     if (file.frameGeneration != running.frameGeneration) u.waiting.push_back("frame_generation");
+    if (file.aiTextures != running.aiTextures) u.waiting.push_back("ai_textures");
+    if (file.aiBudget != running.aiBudget) u.waiting.push_back("ai_budget");
     if (file.mode != running.mode) u.waiting.push_back("mode");
     if (file.highResolution != running.highResolution) {
         u.applied.push_back(change("high_resolution", flag(running.highResolution), flag(file.highResolution)));

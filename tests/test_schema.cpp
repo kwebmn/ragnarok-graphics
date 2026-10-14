@@ -50,11 +50,13 @@ TEST(schema_covers_every_key_of_the_shipped_ini) {
 }
 
 TEST(schema_live_keys_are_the_specs) {
-    // Spec §2.2: the renderer and allow_tearing wait for a restart, the rest of the pages' keys apply at once.
+    // Spec §2.2: the renderer and allow_tearing wait for a restart, the rest of the pages' keys apply at once (the
+    // 64-bit renderer's features too: DLSS, frame generation, AI textures).
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "quality.dlss" &&
-                                k != "frames.allow_tearing" && k != "frames.frame_generation"));
+                                k != "frames.allow_tearing" && k != "frames.frame_generation" &&
+                                k != "quality.ai_textures" && k != "quality.ai_budget"));
     }
 }
 

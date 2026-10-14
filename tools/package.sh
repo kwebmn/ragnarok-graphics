@@ -15,12 +15,14 @@ python3 tools/check_exe.py build-win/uaro-graphics.exe
 out="build-win/uaro-graphics.zip"
 stage="build-win/package"
 rm -rf "$out" "$stage"
-mkdir -p "$stage/uaro-graphics/remix"
+mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai"
 cp dist/install.bat dist/uninstall.bat dist/use-uaro.bat dist/use-dgvoodoo.bat dist/update.bat dist/get-dlss.bat \
    dist/TEST.ru.md "$stage/"
 cp build-win/ddraw.dll build-win/uaro-graphics.exe dist/uaro-graphics.ini build-win64/uaro-render64.exe \
    dist/dlss-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
+# AI textures: the neural network's model (Real-ESRGAN, BSD-3-Clause) and its licence.
+cp dist/ai/realesr-general-x4v3.bin dist/ai/LICENSE-Real-ESRGAN.txt "$stage/uaro-graphics/ai/"
 printf '%s build %s\r\n' "$version" "$(date '+%Y-%m-%d %H:%M')" > "$stage/uaro-graphics/version.txt"
 (cd "$stage" && zip -q -r "../uaro-graphics.zip" .)
 python3 tools/check_package.py "$out"

@@ -30,7 +30,7 @@ enum class Msg : uint32_t {
     PreparePipelines,   // str file
     SetTarget,          // i32 width, height -> TargetSet
     SetScale,           // f64 k, i32 width, height, samples, u8 upscale -> ScaleSet
-    SetDrawQuality,     // i32 anisotropy, u8 alpha to coverage
+    SetDrawQuality,     // i32 anisotropy, u8 alpha to coverage, u8 AI textures shown
     CreateTexture,      // u32 id, i32 width, height, levels
     ReleaseTexture,     // u32 id
     Execute,            // a frame record (writeRecord)

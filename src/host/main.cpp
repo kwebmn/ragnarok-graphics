@@ -35,6 +35,8 @@ struct Args {
     bool jitterInverted = false;
     bool motionInverted = false;
     int generation = 0;
+    bool aiTextures = false;
+    double aiBudget = 2.0;  // ms of GPU time a frame for the network
 };
 
 // The driver's command line: words, "quoted words".
@@ -66,6 +68,8 @@ Args parseArgs() {
         else if (k == "--dlss-jitter") a.jitterInverted = v == "inverted";
         else if (k == "--dlss-motion") a.motionInverted = v == "inverted";
         else if (k == "--fg") a.generation = std::atoi(v.c_str());
+        else if (k == "--ai-textures") a.aiTextures = v == "1";
+        else if (k == "--ai-budget") a.aiBudget = std::atof(v.c_str());
         else continue;
         ++i;
     }
@@ -182,6 +186,7 @@ int Host::run(const Args& a) {
         return 3;
     }
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
+    if (a.aiTextures) renderer_.startAiTextures(a.dir, a.aiBudget);  // its own log line, on or why not
     bool upscales = false;
     if (dlss) {  // Streamline got the device the moment it was made (setOnDevice)
         if (attach.ok) {
@@ -286,7 +291,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
         case Msg::SetDrawQuality: {
             const int aniso = rd.i32();
             const bool coverage = rd.u8() != 0;
-            renderer_.setDrawQuality(aniso, coverage);
+            const bool aiShown = rd.u8() != 0;
+            renderer_.setDrawQuality(aniso, coverage, aiShown);
             break;
         }
         case Msg::CreateTexture: {

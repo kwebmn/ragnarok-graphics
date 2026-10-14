@@ -6,6 +6,7 @@
 #include "core/d3d7.hpp"
 #include "core/scale.hpp"
 #include "core/twin_grid.hpp"
+#include "win/gpu/ai_textures.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -94,13 +95,22 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // otherwise (Pause, another scale, no twin) exactly as before.
     const bool twin = d.twin && s.ui && twinMatches(d.twinScale, scale) && textures.count(d.twin);
     Texture* t[2] = {nullptr, nullptr};
+    UINT srv[2] = {0, 0};
     for (int i = 0; i < 2; ++i) {
         const uint32_t id = i == 0 && twin ? d.twin : d.texture[i];
         auto it = textures.find(id ? id : white);
         if (it == textures.end()) it = textures.find(white);
         if (it == textures.end()) return;
         t[i] = &it->second;
-        transition(t[i]->resource, t[i]->state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        // AI textures: a world texture the network has done is drawn in its place; one it has not, waits its turn.
+        if (ai && !s.ui && id && id != white) ai->noteWorldUse(id);
+        if (ai && ai->shown && !s.ui && t[i]->ai) {
+            transition(t[i]->ai, t[i]->aiState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            srv[i] = t[i]->aiSrv;
+        } else {
+            transition(t[i]->resource, t[i]->state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            srv[i] = t[i]->srv;
+        }
     }
     const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(s.stage[0], s.stage[1], aniso);
     bindPass(toWorld ? kPassWorld : toLayer ? kPassLayer : kPassTarget);
@@ -118,9 +128,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         list->SetPipelineState(pso);
         boundPipeline = pso;
     }
-    const uint64_t textureKey = uint64_t(t[0]->srv) << 32 | t[1]->srv;
+    const uint64_t textureKey = uint64_t(srv[0]) << 32 | srv[1];
     if (textureKey != boundTextures) {
-        list->SetGraphicsRootDescriptorTable(kRootTextures, textureTable(t[0]->srv, t[1]->srv));
+        list->SetGraphicsRootDescriptorTable(kRootTextures, textureTable(srv[0], srv[1]));
         boundTextures = textureKey;
     }
     if (samplers.ptr != boundSamplers) {
