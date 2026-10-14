@@ -185,7 +185,9 @@ bool Renderer::Impl::applyTorches() {
             f.rhw = 1.0f / vb.z;
             if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
         }
-    const float strength = float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;  // 0.23.3: the shader bounds it
+    // 0.23.3: the shader bounds it. 0.25.2: four fifths of 0.25's at 100 % ("too much and too dense" once the torch
+    // has come up from its fade).
+    const float strength = 0.8f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
     std::vector<LightItem> lights;
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f);
     for (size_t i = 0; i < flames.size(); ++i) {
@@ -215,7 +217,7 @@ bool Renderer::Impl::applyTorches() {
     if (layout && lampsWanted() && effects.lampsLight > 0) {
         const float lampStrength = 0.8f * float(std::clamp(effects.lampsLight, 0, 200)) / 100.0f;
         std::vector<LightItem> lamps;
-        for (const rsw::Light& r : layout->lights) {
+        for (const rsw::Light& r : mapWorld.lamps()) {
             const map::Point w = map::toWorld(axes, map::Point{r.pos[0], r.pos[1], r.pos[2]});
             const map::Point v = toView(viewToWorld, w);
             const float reach = std::clamp(r.range * 0.45f, 15.0f, 70.0f);

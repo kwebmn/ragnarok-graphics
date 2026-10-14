@@ -829,7 +829,8 @@ float4 torch_fire_ps(PresentOut i) : SV_Target {
     float midSeen = saturate((viewDepth(sceneDepth.Load(int3(m, 0))) - flameZ + 3.0) / 3.0);
     float r2 = dot(pos - mid, pos - mid) / (h * h);
     float fade = saturate(1.0 - r2 / 4.84);  // none at 2.2 heights, the edge of its pass
-    float glow = (0.28 * exp(-r2 / 0.16) + 0.12 / (1.0 + r2 / 0.5)) * fade * fade;
+    // 0.25.2: half of 0.23.3's - as the game's torch looks while it comes up from its fade, which the player liked.
+    float glow = (0.14 * exp(-r2 / 0.16) + 0.06 / (1.0 + r2 / 0.5)) * fade * fade;
     glow *= (1.0 + (flick - 1.0) * 0.5) * twinX * twinY * midSeen * saturate((z - flameZ + 15.0) / 15.0);
     // 0.23.3: on bright ground the glow only washes it out - less of it there.
     float under = dot(sceneColor.Load(int3(int2(pos), 0)).rgb, float3(0.2126, 0.7152, 0.0722));

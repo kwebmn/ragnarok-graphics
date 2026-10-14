@@ -123,6 +123,7 @@ void MapWorld::setMap(const std::string& name) {
     ready_ = false;
     world_ = rsw::World{};
     placed_.clear();
+    lamps_.clear();
     seen_.clear();
     if (name.empty() || gameDir_.empty()) return;
     EnterCriticalSection(&shared_->lock);
@@ -144,8 +145,19 @@ void MapWorld::poll() {
     LeaveCriticalSection(&shared_->lock);
     if (!fresh || !ready_) return;
     placed_.clear();
-    for (const rsw::Effect& e : world_.effects)
+    std::vector<map::Point> torches;  // the game's and those it does not show (red, green, purple)
+    for (const rsw::Effect& e : world_.effects) {
         if (e.id == 47) placed_.push_back(map::Point{e.pos[0], e.pos[1], e.pos[2]});
+        if (e.id == 47 || e.id == 690 || e.id == 691 || e.id == 696)
+            torches.push_back(map::Point{e.pos[0], e.pos[1], e.pos[2]});
+    }
+    lamps_.clear();
+    for (const rsw::Light& l : world_.lights) {
+        bool onTorch = false;
+        for (const map::Point& t : torches)
+            onTorch = onTorch || std::hypot(l.pos[0] - t.x, l.pos[2] - t.z) < 20.0f;
+        if (!onTorch) lamps_.push_back(l);
+    }
     tryAxes();
 }
 

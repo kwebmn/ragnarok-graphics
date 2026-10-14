@@ -25,6 +25,9 @@ public:
     void setMap(const std::string& name);     // "prontera"; "" none
     void poll();                              // the render thread, each frame: takes a finished read
     const rsw::World* world() const { return ready_ ? &world_ : nullptr; }
+    // 0.25.2: its lights but those on a torch - the makers put one on many torches to bake its glow into the ground,
+    // and the torch lights that place itself.
+    const std::vector<rsw::Light>& lamps() const { return lamps_; }
     map::Axes axes() const { return axes_; }
     // The base of a torch's flame seen this frame, in the game's world: the axes are found from them.
     void noteTorch(const map::Point& world);
@@ -43,6 +46,7 @@ private:
     bool ready_ = false;
     map::Axes axes_;
     std::vector<map::Point> placed_;  // the file's torches (effect 47)
+    std::vector<rsw::Light> lamps_;
     std::vector<map::Point> seen_;    // where torches were seen, until the axes are known
 };
 
