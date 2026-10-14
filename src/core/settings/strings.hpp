@@ -94,7 +94,7 @@ enum class Text : uint16_t {
     FxCloudsStrengthHint, FxHaze, FxHazeHint, FxHazeStrength, FxHazeStrengthHint,
     FxHeat, FxHeatHint, FxHeatStrength, FxHeatStrengthHint, FxSkillColours, FxSkillColoursHint,
     FxSkillsSoft, FxSkillsSoftHint, FxSkillBrightness, FxSkillBrightnessHint, FxPortals, FxPortalsHint,
-    FxPortalsStrength, FxPortalsStrengthHint,
+    FxPortalsStrength, FxPortalsStrengthHint, FxWeather, FxWeatherHint, FxWeatherAmount, FxWeatherAmountHint,
     Count
 };
 

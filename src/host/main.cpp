@@ -364,6 +364,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.skillColours = rd.u8() != 0;
             e.portals = rd.u8() != 0;
             e.portalsStrength = rd.i32();
+            e.weather = rd.u8() != 0;
+            e.weatherAmount = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

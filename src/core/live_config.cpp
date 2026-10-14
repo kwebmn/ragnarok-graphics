@@ -114,6 +114,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (fe.haze != re.haze) u.applied.push_back(change("haze", flag(re.haze), flag(fe.haze)));
     if (fe.heat != re.heat) u.applied.push_back(change("heat", flag(re.heat), flag(fe.heat)));
     if (fe.portals != re.portals) u.applied.push_back(change("portals", flag(re.portals), flag(fe.portals)));
+    if (fe.weather != re.weather) u.applied.push_back(change("weather", flag(re.weather), flag(fe.weather)));
     if (fe.glow != re.glow) u.applied.push_back(change("glow", flag(re.glow), flag(fe.glow)));
     if (fe.glowStrength != re.glowStrength)
         u.applied.push_back(
@@ -143,6 +144,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         {"haze_strength", {re.hazeStrength, fe.hazeStrength}},
         {"heat_strength", {re.heatStrength, fe.heatStrength}},
         {"portals_strength", {re.portalsStrength, fe.portalsStrength}},
+        {"weather_amount", {re.weatherAmount, fe.weatherAmount}},
         {"glow_light", {re.glowLight, fe.glowLight}},
         {"ao_strength", {re.aoStrength, fe.aoStrength}},
         {"ao_size", {re.aoSize, fe.aoSize}},

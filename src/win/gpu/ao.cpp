@@ -361,7 +361,8 @@ bool Renderer::Impl::finishWorld() {
     if (hazeDue() && !applyHaze()) return false;      // 0.34: far off and over the ground, before the colours
     if (heatDue() && !applyHeat()) return false;      // 0.35: the hot air shimmering over all of that
     if (gradeDue() && !applyGrade()) return false;
-    return !dofDue() || applyDof();
+    if (dofDue() && !applyDof()) return false;
+    return !weatherDue() || applyWeather();  // 0.39: the weather in front of all of it, sharp
 }
 
 }  // namespace uagfx::gpu

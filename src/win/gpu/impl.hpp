@@ -17,6 +17,7 @@
 #include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/pipeline_key.hpp"
+#include "core/weather.hpp"
 #include "core/torch.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/gpu/map_world.hpp"
@@ -189,6 +190,8 @@ struct Upload {
     D3D12_GPU_VIRTUAL_ADDRESS gpu;
     UINT64 offset;  // in the slot's upload buffer
 };
+
+const char* weatherName(weather::Kind k);  // 0.39: for the log
 
 struct Renderer::Impl {
     HMODULE d3d12 = nullptr;
@@ -444,6 +447,12 @@ struct Renderer::Impl {
     bool heatDone = false;
     bool heatLogged = false;
     bool mapDesert = false;  // core/outdoors.hpp
+    // 0.39, the driver's own weather (weather.cpp) on the map's list (core/weather.hpp).
+    ID3DBlob* weatherPs = nullptr;
+    ID3D12PipelineState* weatherPipelines[4] = {};
+    bool weatherDone = false;
+    bool weatherLogged = false;
+    weather::Kind mapWeather = weather::Kind::None;
     ID3DBlob* lavaPs = nullptr;     // 0.31: a cell of lava (draw.cpp), with the glow's second target
     ID3DBlob* lavaGlowPs = nullptr;
     std::string mapName;                    // the map the game shows (setMap)
@@ -661,6 +670,12 @@ struct Renderer::Impl {
     }
     bool portalsWanted() const { return effects.portals && effects.portalsStrength > 0; }  // 0.38
     float heatUser() const { return float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f; }
+    bool weatherWanted() const {  // 0.39
+        return effects.weather && effects.weatherAmount > 0 && weatherPs && mapWeather != weather::Kind::None;
+    }
+    bool weatherDue() const { return weatherWanted() && groundDrawn && !weatherDone; }
+    bool applyWeather();  // once a frame, the world finished; false: lost
+    ID3D12PipelineState* weatherPipeline(UINT samples);
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
     bool applyHeat();  // once a frame, after the torches' pass and the haze; false: lost
     ID3D12PipelineState* heatPipeline(UINT samples);
@@ -690,6 +705,7 @@ struct Renderer::Impl {
         heatDone = false;
         heatSpots.clear();
         portalSparks.clear();
+        weatherDone = false;
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

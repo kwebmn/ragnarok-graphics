@@ -466,6 +466,18 @@ TEST(config_effects_portals) {
     CHECK(parseConfig("[effects]\nportals_strength = 250\n").effects == d);
 }
 
+TEST(config_effects_weather) {
+    // 0.39: the driver's own weather on some maps - on unless turned off, 0-200 % (how much of it).
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.weather);
+    CHECK_EQ(d.weatherAmount, 100);
+    const EffectSettings e = parseConfig("[effects]\nweather = 0\nweather_amount = 40\n").effects;
+    CHECK(!e.weather);
+    CHECK_EQ(e.weatherAmount, 40);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nweather_amount = 999\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

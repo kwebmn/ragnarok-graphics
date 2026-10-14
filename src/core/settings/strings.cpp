@@ -956,6 +956,16 @@ const Entry kTexts[] = {
     {"Portals' strength", "Сила порталів", "Сила порталов"},
     {"How bright their glow and how strong the swirl is.", "Наскільки яскраве світіння та сильний вир.",
      "Насколько ярко свечение и силён вихрь."},
+    {"Weather", "Погода", "Погода"},
+    {"The driver's own weather on some maps: snow over Lutie, leaves falling in Payon's woods, sand in the wind about "
+     "Morroc, a fine rain over Niflheim and Einbroch.",
+     "Власна погода драйвера на деяких картах: сніг над Лютією, листопад у лісах Пайона, піщаний вітер довкола "
+     "Морока, дрібний дощ над Нифльгеймом та Ейнброхом.",
+     "Своя погода драйвера на некоторых картах: снег над Лютией, листопад в лесах Пайона, песчаный ветер вокруг "
+     "Морокка, мелкий дождь над Нифльхеймом и Эйнброхом."},
+    {"Weather's amount", "Кількість опадів", "Количество осадков"},
+    {"How much snow, rain, leaves or sand there is.", "Скільки снігу, дощу, листя чи піску.",
+     "Сколько снега, дождя, листьев или песка."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

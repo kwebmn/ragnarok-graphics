@@ -282,6 +282,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.skillColours ? 1 : 0);
     w.u8(e.portals ? 1 : 0);
     w.i32(e.portalsStrength);
+    w.u8(e.weather ? 1 : 0);
+    w.i32(e.weatherAmount);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

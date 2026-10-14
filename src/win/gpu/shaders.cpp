@@ -1040,6 +1040,70 @@ float4 heat_ps(PresentOut i) : SV_Target {
     return float4(sceneColor.SampleLevel(samp0, (p + aside) / uiPixels.xy, 0).rgb, 1.0);
 }
 
+// 0.39, the driver's own weather (weather.cpp): three layers of particles, far to near, falling (or blown) through
+// cells of the screen - a particle a cell, some cells empty - each layer moved by the camera's moves (sourceRect.xy,
+// game pixels) the more the nearer. twinX the kind (1 snow, 2 rain, 3 leaves, 4 sand), footprint how much (1 = 100 %),
+// sharpen the time, scale k. Blended over the picture by its alpha.
+float4 weather_ps(PresentOut i) : SV_Target {
+    float2 p = i.pos.xy / scale;  // game pixels
+    float t = sharpen;
+    int kind = int(twinX + 0.5);
+    float3 sum = float3(0.0, 0.0, 0.0);
+    float a = 0.0;
+    [unroll] for (int layer = 0; layer < 3; ++layer) {
+        float depth = 0.6 + 0.5 * float(layer);
+        float cell = (kind == 1 ? 36.0 : kind == 2 ? 22.0 : kind == 3 ? 110.0 : 60.0) * depth;
+        float2 fall = kind == 1 ? float2(8.0 * sin(t * 0.21), 34.0)
+                      : kind == 2 ? float2(-55.0, 520.0)
+                      : kind == 3 ? float2(18.0, 26.0)
+                                  : float2(-300.0, 14.0);
+        float2 q = p + sourceRect.xy * depth - fall * depth * t;
+        float2 id = floor(q / cell);
+        float2 f = frac(q / cell);
+        float presence = kind == 3 ? 0.18 : kind == 4 ? 0.35 : 0.55;
+        if (hash12(id + float2(91.0, 17.0) * float(layer + 1)) > presence * footprint) continue;
+        float2 h = float2(hash12(id + float(layer) * 17.0), hash12(id * 1.7 + float(layer) * 3.1));
+        float2 d = (f - (0.2 + 0.6 * h)) * cell;  // from the particle, game pixels
+        float shape = 0.0;
+        float3 colour = float3(1.0, 1.0, 1.0);
+        float alpha = 0.0;
+        if (kind == 1) {  // snow: a soft flake, swaying
+            d.x += sin(t * 1.3 + h.x * 6.28) * 4.0 * depth;
+            float r = 0.9 + 0.8 * depth;
+            shape = exp(-dot(d, d) / (r * r));
+            alpha = 0.85;
+        } else if (kind == 2) {  // rain: a thin streak along its fall
+            float2 dir = normalize(fall);
+            float along = dot(d, dir), across = dot(d, float2(-dir.y, dir.x));
+            shape = exp(-across * across / (0.35 * depth)) * saturate(1.0 - abs(along) / (10.0 * depth));
+            colour = float3(0.78, 0.83, 0.92);
+            alpha = 0.32;
+        } else if (kind == 3) {  // a leaf: tumbling as it falls, its width turning
+            float turn = abs(sin(t * 2.1 + h.y * 6.28));
+            float2 e = d / float2(max(3.2 * depth * turn, 0.6), 2.0 * depth);
+            shape = saturate(1.0 - dot(e, e)) * 1.5;
+            colour = h.x < 0.4    ? float3(0.86, 0.45, 0.13)
+                     : h.x < 0.75 ? float3(0.58, 0.36, 0.16)
+                                  : float3(0.62, 0.66, 0.2);
+            alpha = 0.92;
+        } else {  // sand: a streak blown across
+            float2 e = d / float2(26.0 * depth, 0.9 * depth);
+            shape = exp(-dot(e, e));
+            colour = float3(0.86, 0.76, 0.56);
+            alpha = 0.14;
+        }
+        float s = saturate(shape) * alpha;
+        sum += colour * s;
+        a += s;
+    }
+    if (kind == 4) {  // and the air itself a little sandy
+        sum += float3(0.86, 0.76, 0.56) * 0.05 * footprint;
+        a += 0.05 * footprint;
+    }
+    if (a < 0.003) discard;
+    return float4(sum / a, saturate(a));
+}
+
 // The mask softened: nine taps along sourceRect.xy (across, then down), uiPixels.zw the mask's size.
 float4 shadow_blur_ps(PresentOut i) : SV_Target {
     float2 step = sourceRect.xy / uiPixels.zw;

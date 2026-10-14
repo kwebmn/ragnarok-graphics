@@ -255,6 +255,14 @@ TEST(live_config_portals_apply_now) {
     CHECK(u.applied[1] == "portals_strength 100 -> 70");
 }
 
+TEST(live_config_weather_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nweather = 0\nweather_amount = 150\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "weather 1 -> 0");
+    CHECK(u.applied[1] == "weather_amount 100 -> 150");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

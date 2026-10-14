@@ -1076,6 +1076,8 @@ void Renderer::Impl::destroy() {
     releaseCom(cloudsPs);
     for (ID3D12PipelineState*& p : hazePipelines) releaseCom(p);  // 0.34
     releaseCom(hazePs);
+    for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
+    releaseCom(weatherPs);
     for (ID3D12PipelineState*& p : heatPipelines) releaseCom(p);  // 0.35
     releaseCom(heatPs);
     releaseCom(heatData);
@@ -1228,6 +1230,8 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapOutdoors = outdoors(map);  // 0.33: the clouds' shadows
     impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
+    impl_->mapWeather = weather::of(map);  // 0.39: its weather
+    impl_->weatherLogged = false;
     if (impl_->ai) impl_->ai->setMap(map);
 }
 
@@ -1308,7 +1312,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              "the others %s; "
              "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; "
              "characters' shadows %s, %d%%; clouds %s, %d%%; haze %s, %d%%; heat haze %s, %d%%; portals %s, %d%%; "
-             "shadows %s, "
+             "weather %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
@@ -1320,6 +1324,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness, e.actorShadows ? "on" : "off",
              e.actorShadowsStrength, e.clouds ? "on" : "off", e.cloudsStrength, e.haze ? "on" : "off", e.hazeStrength,
              e.heat ? "on" : "off", e.heatStrength, e.portals ? "on" : "off", e.portalsStrength,
+             e.weather ? "on" : "off", e.weatherAmount,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,

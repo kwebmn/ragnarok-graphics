@@ -369,6 +369,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how much
     >>"uaro-graphics.ini" echo heat_strength = 100
 )
+rem 0.39: the driver's own weather, on.
+findstr /i /l /c:"weather_amount" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = snow over Lutie, leaves in Payon, sand about Morroc, rain over Niflheim and Einbroch
+    >>"uaro-graphics.ini" echo weather = 1
+    >>"uaro-graphics.ini" echo ; 0-200 %%: how much of it
+    >>"uaro-graphics.ini" echo weather_amount = 100
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.
