@@ -40,7 +40,7 @@ std::string entryName(const std::string& model, const TextureKey& k) {
 std::vector<uint8_t> encodeTexture(const uint32_t* argb, int width, int height) {
     std::vector<uint8_t> b;
     b.reserve(16 + size_t(width) * size_t(height) * 4);
-    b.insert(b.end(), {'U', 'A', 'T', 'X'});
+    for (const char c : {'U', 'A', 'T', 'X'}) b.push_back(uint8_t(c));  // (insert of a list: a false GCC warning)
     put32(b, 1);
     put32(b, uint32_t(width));
     put32(b, uint32_t(height));
