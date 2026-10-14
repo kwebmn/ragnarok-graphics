@@ -59,6 +59,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSmoothLightHint, ""},
         {"effects", "torch", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTorch, Text::FxTorchHint,
          ""},
+        {"effects", "torch_flame", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTorchFlame,
+         Text::FxTorchFlameHint, ""},
+        {"effects", "torch_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxTorchBrightness,
+         Text::FxTorchBrightnessHint, " %"},
         {"effects", "torch_glow", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxTorchGlow,
          Text::FxTorchGlowHint, " %"},
         {"effects", "torch_light", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxTorchLight,
@@ -186,6 +190,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
     if (k == "effects.smooth_light") return c.effects.smoothLight ? "1" : "0";
     if (k == "effects.torch") return c.effects.torch ? "1" : "0";
+    if (k == "effects.torch_flame") return c.effects.torchFlame ? "1" : "0";
+    if (k == "effects.torch_brightness") return std::to_string(c.effects.torchBrightness);
     if (k == "effects.torch_glow") return std::to_string(c.effects.torchGlow);
     if (k == "effects.torch_light") return std::to_string(c.effects.torchLight);
     if (k == "effects.torch_flicker") return std::to_string(c.effects.torchFlicker);

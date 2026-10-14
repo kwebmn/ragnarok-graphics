@@ -255,6 +255,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.torchGlow);
     w.i32(e.torchLight);
     w.i32(e.torchFlicker);
+    w.u8(e.torchFlame ? 1 : 0);
+    w.i32(e.torchBrightness);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

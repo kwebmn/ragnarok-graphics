@@ -52,7 +52,9 @@ public:
     Panel& operator=(const Panel&) = delete;
 
     HWND heading(const std::wstring& text);
-    HWND check(int id, const std::wstring& text, bool on, const std::wstring& hint, bool enabled = true);
+    // nested (0.23.2): in the control column, under the box it belongs to.
+    HWND check(int id, const std::wstring& text, bool on, const std::wstring& hint, bool enabled = true,
+               bool nested = false);
     // A radio button in the control column; `label` (the group's name) goes to the label column of its row.
     HWND radio(int id, const std::wstring& label, const std::wstring& text, bool on, bool first, const std::wstring& hint,
                bool enabled = true);

@@ -10,27 +10,39 @@ namespace {
 
 using namespace settings;
 
-// Each effect: its box and the sliders under it. Ids: the box 1001 + 100 * effect, a slider 1010 + 100 * effect +
-// 10 * its place (its number one more).
+// Each effect: its box, the boxes under it (0.23.2) and its sliders - a slider may need one of those boxes on too.
+// Ids: the box 1001 + 100 * effect, a slider 1010 + 100 * effect + 10 * its place (its number one more), a box under
+// it 1070 + 100 * effect + 2 * its place. The map's objects drawn anew (0.23.2: object) are a block of their own.
 struct Effect {
     const char* box;
+    const char* checks[2];
     const char* sliders[5];
+    const char* needs[5];  // the box under it each slider needs on, or none
+    bool object;
 };
 const Effect kEffects[] = {
-    {"effects.smooth_light", {}},
-    {"effects.torch", {"effects.torch_glow", "effects.torch_light", "effects.torch_flicker"}},
-    {"effects.ao", {"effects.ao_strength", "effects.ao_size"}},
-    {"effects.glow", {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}},
-    {"effects.water", {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}},
+    {"effects.smooth_light", {}, {}, {}, false},
+    {"effects.ao", {}, {"effects.ao_strength", "effects.ao_size"}, {}, false},
+    {"effects.glow", {}, {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}, {}, false},
+    {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, false},
     {"effects.grade",
+     {},
      {"effects.grade_saturation", "effects.grade_contrast", "effects.grade_brightness", "effects.grade_warmth",
-      "effects.grade_vignette"}},
-    {"effects.dof", {"effects.dof_strength", "effects.dof_range"}},
+      "effects.grade_vignette"},
+     {},
+     false},
+    {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, false},
+    {"effects.torch",
+     {"effects.torch_flame"},
+     {"effects.torch_brightness", "effects.torch_glow", "effects.torch_light", "effects.torch_flicker"},
+     {"effects.torch_flame"},
+     true},
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 
 int boxId(int e) { return 1001 + 100 * e; }
 int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
+int checkId(int e, int k) { return 1070 + 100 * e + 2 * k; }
 
 const IniSetting& setting(const char* key) { return *findSetting(key); }
 
@@ -41,27 +53,42 @@ public:
     explicit EffectsPage(PageHost& host) : Page(host) {}
 
     void build(Panel& p) override {
-        Model& m = host_.model();
         p.heading(t(Text::PageEffects));
         p.note(t(Text::FxIntro), Tone::Normal);
+        bool objects = false;
         for (int e = 0; e < kEffectCount; ++e) {
+            const Effect& fx = kEffects[e];
+            if (fx.object && !objects) {  // 0.23.2: the map's objects, a block of their own
+                objects = true;
+                p.gap(16);
+                p.heading(t(Text::FxObjects));
+                p.note(t(Text::FxObjectsIntro), Tone::Normal);
+            }
             p.gap();
-            const IniSetting& box = setting(kEffects[e].box);
-            const bool on = m.token(box) == "1";
+            const IniSetting& box = setting(fx.box);
+            const bool on = isOn(fx.box);
             p.check(boxId(e), t(box.label), on, t(box.hint));
-            for (int k = 0; k < 5 && kEffects[e].sliders[k]; ++k) slider(p, sliderId(e, k), kEffects[e].sliders[k], on);
+            for (int k = 0; k < 2 && fx.checks[k]; ++k) {
+                const IniSetting& c = setting(fx.checks[k]);
+                p.check(checkId(e, k), t(c.label), isOn(fx.checks[k]), t(c.hint), on, true);
+            }
+            for (int k = 0; k < 5 && fx.sliders[k]; ++k)
+                slider(p, sliderId(e, k), fx.sliders[k], on && (!fx.needs[k] || isOn(fx.needs[k])));
         }
         p.gap();
-        p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
+        p.note(t(host_.model().now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
     }
 
     void command(int id, int code) override {
         if (code != BN_CLICKED) return;
         for (int e = 0; e < kEffectCount; ++e) {
-            if (id != boxId(e)) continue;
+            const char* key = id == boxId(e) ? kEffects[e].box : nullptr;
+            for (int k = 0; k < 2 && !key && kEffects[e].checks[k]; ++k)
+                if (id == checkId(e, k)) key = kEffects[e].checks[k];
+            if (!key) continue;
             const bool checked = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
-            set(setting(kEffects[e].box), checked ? "1" : "0", true);
-            host_.rebuild();  // the sliders follow the box
+            set(setting(key), checked ? "1" : "0", true);
+            host_.rebuild();  // what is under it follows the box
             return;
         }
     }
@@ -79,6 +106,8 @@ public:
     }
 
 private:
+    bool isOn(const char* key) { return host_.model().token(setting(key)) == "1"; }
+
     static const char* sliderKey(int id) {
         for (int e = 0; e < kEffectCount; ++e)
             for (int k = 0; k < 5 && kEffects[e].sliders[k]; ++k)

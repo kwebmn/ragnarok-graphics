@@ -788,6 +788,24 @@ const Entry kTexts[] = {
     {"How much the fire and its light flicker; 0 % burns evenly.",
      "Наскільки мерехтять вогонь і його світло; 0 % — горить рівно.",
      "Насколько мерцают огонь и его свет; 0 % — горит ровно."},
+    {"Map objects", "Об'єкти карти", "Объекты карты"},
+    {"Things on the maps the game draws as small pictures blown up many times: the driver draws them anew, each "
+     "with its own box. They apply in a running game; Pause shows the game's own.",
+     "Речі на картах, які гра малює маленькими картинками, розтягнутими в багато разів: драйвер малює їх наново, "
+     "кожну — своєю галочкою. Діють у запущеній грі; Pause показує ігрові.",
+     "Вещи на картах, которые игра рисует маленькими картинками, растянутыми во много раз: драйвер рисует их "
+     "заново, каждую — своей галочкой. Действуют в запущенной игре; Pause показывает игровые."},
+    {"New flame", "Новий вогонь", "Новый огонь"},
+    {"A flame that burns, sways and throws sparks instead of the game's blurred picture. Off: the game's own flame, "
+     "with the new glow and light around it.",
+     "Полум'я, що горить, гойдається й сипле іскрами, замість розмитої картинки гри. Вимкнено: вогонь гри, а сяйво "
+     "й світло довкола — нові.",
+     "Пламя, которое горит, колышется и сыплет искрами, вместо размытой картинки игры. Выключено: огонь игры, а "
+     "свечение и свет вокруг — новые."},
+    {"Flame brightness", "Яскравість вогню", "Яркость огня"},
+    {"How bright and dense the new flame burns: less is softer and more see-through, more is hotter.",
+     "Наскільки яскраво й щільно горить новий вогонь: менше — м'якше й прозоріше, більше — гарячіше.",
+     "Насколько ярко и плотно горит новый огонь: меньше — мягче и прозрачнее, больше — жарче."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

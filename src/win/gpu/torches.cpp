@@ -58,7 +58,7 @@ bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
     torchFlames.push_back(f);
     if (!torchesLogged) LOG_INFO("torches: the map's torches drawn anew");
     torchesLogged = true;
-    return true;
+    return effects.torchFlame;  // 0.23.2: off - the game's own flame, the new glow and light around it
 }
 
 // The shaders, the pipelines for this target and the copies of the picture: false when any is missing (logged once).
@@ -135,6 +135,8 @@ bool Renderer::Impl::applyTorches() {
     const float amount = 0.35f * float(std::clamp(effects.torchFlicker, 0, 100)) / 100.0f;
     const float strength = 1.25f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
     const float glowStrength = float(std::clamp(effects.torchGlow, 0, 200)) / 100.0f;
+    // 0.23.2: the flame softer than 0.23's at 100 % ("too harsh"), none where the game's own is drawn.
+    const float flame = effects.torchFlame ? 0.8f * float(std::clamp(effects.torchBrightness, 0, 200)) / 100.0f : 0.0f;
     float data[kMaxTorches][4] = {};
     float flickers[kMaxTorches] = {};
     float seed[kMaxTorches] = {};
@@ -222,6 +224,7 @@ bool Renderer::Impl::applyTorches() {
         c.uiPixels[3] = time;
         c.twin[0] = glowStrength;
         c.twin[1] = f.alpha;
+        c.twin[2] = flame;
         const float mx = bx + ux * kMiddle, my = by + uy * kMiddle, r = fh * kGlowRadius;
         const D3D12_RECT around = clipped(mx - r, my - r, mx + r, my + r, w, h);
         if (around.right <= around.left || around.bottom <= around.top) continue;

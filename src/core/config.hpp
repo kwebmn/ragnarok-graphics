@@ -58,6 +58,8 @@ struct EffectSettings {
     // magnified drop, a soft glow in the air around it instead of its red blotch, and its warm flickering light on
     // the ground and the walls. On by default.
     bool torch = true;
+    bool torchFlame = true;     // 0.23.2: the new flame; else the game's own picture of it (the rest stays new)
+    int torchBrightness = 100;  // %, 0-200 (0.23.2): how bright the new flame burns
     int torchGlow = 100;    // %, 0-200: the glow around the flame
     int torchLight = 100;   // %, 0-200: the light it throws around
     int torchFlicker = 50;  // %, 0-100: how much it flickers

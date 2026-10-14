@@ -309,5 +309,13 @@ TEST(config_effects_torches) {
     CHECK_EQ(e.torchFlicker, 100);
     CHECK(!(e == d));
     CHECK(parseConfig("[effects]\ntorch_flicker = 150\ntorch_glow = 300\n").effects == d);
+    // 0.23.2: the new flame (else the game's own picture of it) and its brightness, 0-200 %.
+    CHECK(d.torchFlame);
+    CHECK_EQ(d.torchBrightness, 100);
+    const EffectSettings f = parseConfig("[effects]\ntorch_flame = 0\ntorch_brightness = 60\n").effects;
+    CHECK(!f.torchFlame);
+    CHECK_EQ(f.torchBrightness, 60);
+    CHECK(!(f == d));
+    CHECK(parseConfig("[effects]\ntorch_brightness = 250\n").effects == d);
 }
 

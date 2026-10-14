@@ -161,9 +161,10 @@ HWND Panel::heading(const std::wstring& text) {
     return c;
 }
 
-HWND Panel::check(int id, const std::wstring& text, bool on, const std::wstring& hint, bool enabled) {
-    HWND c = make(L"BUTTON", enabled ? withMnemonic(text, taken_) : literal(text), BS_AUTOCHECKBOX | WS_TABSTOP,
-                  area_.left, y_, area_.right - area_.left, at(kRow), id);
+HWND Panel::check(int id, const std::wstring& text, bool on, const std::wstring& hint, bool enabled, bool nested) {
+    const int x = area_.left + (nested ? at(kLabel) : 0);
+    HWND c = make(L"BUTTON", enabled ? withMnemonic(text, taken_) : literal(text), BS_AUTOCHECKBOX | WS_TABSTOP, x,
+                  y_, area_.right - x, at(kRow), id);
     SendMessageW(c, BM_SETCHECK, on ? BST_CHECKED : BST_UNCHECKED, 0);
     EnableWindow(c, enabled);
     tip(c, hint);

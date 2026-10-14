@@ -140,6 +140,11 @@ TEST(live_config_torches_apply_now) {
     CHECK(u.applied[0] == "torch 1 -> 0");
     CHECK(u.applied[1] == "torch_light 100 -> 150");
     CHECK(appliesNow("effects.torch_glow"));
+    const LiveUpdate v =
+        liveUpdate(parseConfig(""), parseConfig("[effects]\ntorch_flame = 0\ntorch_brightness = 70\n"));
+    CHECK_EQ(v.applied.size(), size_t(2));
+    CHECK(v.applied[0] == "torch_flame 1 -> 0");
+    CHECK(v.applied[1] == "torch_brightness 100 -> 70");
 }
 
 TEST(live_config_smooth_map_light_applies_now) {

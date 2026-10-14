@@ -766,8 +766,10 @@ float fbm4(float2 p) {
 
 // A flame at q (x across, its half width 1; y up from its base 0 to its tip 1), premultiplied: it rises, sways and
 // tears into tongues as noise scrolls up through it, a few sparks rise from it. hw and h are its half width and height
-// in pixels (the sparks' size), seed its own pattern (0-1), flick its flicker (about 1).
+// in pixels (the sparks' size), seed its own pattern (0-1), flick its flicker (about 1). 0.23.2: calmer and softer
+// than 0.23's ("burns too harshly") - slower, softer edges, orange more than white; its brightness the caller's.
 float3 torchFlame(float2 q, float t, float seed, float flick, float hw, float h) {
+    t *= 0.75;
     float y = q.y / (0.97 + 0.4 * (flick - 1.0));  // a brighter moment burns taller
     float n1 = fbm4(float2(q.x * 1.3 + seed * 7.1, q.y * 1.9 - t * 2.4 + seed * 3.3));
     float n2 = fbm4(float2(q.x * 2.6 - seed * 2.3, q.y * 3.6 - t * 3.9));
@@ -775,15 +777,15 @@ float3 torchFlame(float2 q, float t, float seed, float flick, float hw, float h)
     float sway = sin(t * 1.9 + seed * 5.0) * 0.10 + sin(t * 3.7 + seed) * 0.05;
     float x = q.x + (n1 - 0.47) * 1.5 * pow(saturate(y), 1.4) + sway * y;
     float width = 1.15 * pow(saturate(1.0 - y), 0.5) * smoothstep(-0.2, 0.25, y);
-    float body = 1.0 - smoothstep(0.15, 1.0, abs(x) / max(width, 1e-3));
-    float torn = body - (n2 - 0.32) * 1.25 * smoothstep(0.1, 0.85, y) - (n3 - 0.5) * 0.25 * y;
+    float body = 1.0 - smoothstep(0.0, 1.0, abs(x) / max(width, 1e-3));
+    float torn = body - (n2 - 0.32) * smoothstep(0.1, 0.85, y) - (n3 - 0.5) * 0.25 * y;
     float heat = saturate(torn) * saturate(1.05 - y * 0.6) * smoothstep(-0.06, 0.06, q.y);
     const float3 red = float3(0.6, 0.08, 0.02), orange = float3(1.0, 0.40, 0.06);
-    const float3 yellow = float3(1.0, 0.74, 0.28), white = float3(1.0, 0.93, 0.78);
+    const float3 yellow = float3(1.0, 0.74, 0.28), white = float3(1.0, 0.86, 0.6);
     float3 c = heat < 0.3    ? red * (heat / 0.3)
                : heat < 0.55 ? lerp(red, orange, (heat - 0.3) / 0.25)
-               : heat < 0.8  ? lerp(orange, yellow, (heat - 0.55) / 0.25)
-                             : lerp(yellow, white, saturate((heat - 0.8) / 0.2));
+               : heat < 0.88 ? lerp(orange, yellow, (heat - 0.55) / 0.33)
+                             : lerp(yellow, white, saturate((heat - 0.88) / 0.12));
     float3 o = c * (smoothstep(0.02, 0.45, heat) * (1.0 + 0.5 * (flick - 1.0)));
     float size = max(h / 160.0, 0.35);
     [unroll] for (int k = 0; k < 4; ++k) {  // sparks: each rises, drifts and dies out, then starts again elsewhere
@@ -793,7 +795,7 @@ float3 torchFlame(float2 q, float t, float seed, float flick, float hw, float h)
                    sin(life * 9.0 + float(k)) * 0.12;
         float2 d = (q - float2(sx, 0.55 + life * 1.1)) * float2(hw, h);
         float e = exp(-dot(d, d) / (2.2 * size * size)) * (1.0 - life) * (1.0 - life);
-        o += float3(1.0, 0.55, 0.15) * (e * 1.6);
+        o += float3(1.0, 0.55, 0.15) * (e * 1.1);
     }
     return o;
 }
@@ -802,7 +804,8 @@ float3 torchFlame(float2 q, float t, float seed, float flick, float hw, float h)
 // adds light, the flame hides some of what is behind it; under DLSS its alpha marks it in the mask). sourceRect.xy its
 // base and .zw base to tip in target pixels, sourceClamp.x its half width in target pixels, .y its view depth, .w its
 // seed (0-1); uiPixels.xy the world's size, .z its flicker, .w the time (seconds); twinX the glow's strength, twinY the
-// game's fade. Hidden behind what stands in front of it - a character, the bowl's rim - by the picture's depth (t3).
+// game's fade, twinW the flame's brightness (0: the game draws its own). Hidden behind what stands in front of it - a
+// character, the bowl's rim - by the picture's depth (t3).
 float4 torch_fire_ps(PresentOut i) : SV_Target {
     float2 pos = i.pos.xy;
     float h = max(length(sourceRect.zw), 1.0);
@@ -821,8 +824,9 @@ float4 torch_fire_ps(PresentOut i) : SV_Target {
     float fade = saturate(1.0 - r2 / 4.84);  // none at 2.2 heights, the edge of its pass
     float glow = (0.34 * exp(-r2 / 0.16) + 0.16 / (1.0 + r2 / 0.5)) * fade * fade;
     glow *= flick * twinX * twinY * midSeen * saturate((z - flameZ + 15.0) / 15.0);
-    float3 f = torchFlame(q, uiPixels.w, sourceClamp.w, flick, sourceClamp.x, h) * (seen * twinY);
-    float a = saturate(max(f.r, max(f.g, f.b)) * 0.6);
+    float3 f = twinW > 0.0 ? torchFlame(q, uiPixels.w, sourceClamp.w, flick, sourceClamp.x, h) * (seen * twinY * twinW)
+                           : float3(0.0, 0.0, 0.0);
+    float a = saturate(max(f.r, max(f.g, f.b)) * 0.45);
     return float4(float3(1.0, 0.5, 0.18) * glow * (1.0 - a) + f, a);
 }
 )HLSL";

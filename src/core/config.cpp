@@ -101,7 +101,8 @@ bool AiSettings::operator==(const AiSettings& o) const {
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
-    return smoothLight == o.smoothLight && torch == o.torch && torchGlow == o.torchGlow &&
+    return smoothLight == o.smoothLight && torch == o.torch && torchFlame == o.torchFlame &&
+           torchBrightness == o.torchBrightness && torchGlow == o.torchGlow &&
            torchLight == o.torchLight && torchFlicker == o.torchFlicker && glow == o.glow &&
            glowStrength == o.glowStrength &&
            glowSize == o.glowSize && glowLight == o.glowLight &&
@@ -238,6 +239,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.smoothLight);
         } else if (key == "effects.torch") {
             setBool(val, c.effects.torch);
+        } else if (key == "effects.torch_flame") {
+            setBool(val, c.effects.torchFlame);
+        } else if (key == "effects.torch_brightness") {
+            toInt(val, 0, 200, c.effects.torchBrightness);
         } else if (key == "effects.torch_glow") {
             toInt(val, 0, 200, c.effects.torchGlow);
         } else if (key == "effects.torch_light") {

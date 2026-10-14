@@ -211,6 +211,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo torch_light = 100
     >>"uaro-graphics.ini" echo torch_flicker = 50
 )
+rem 0.23.2: the torches' new flame and its brightness.
+findstr /i /l /c:"torch_brightness" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = the torches' new flame, 0 = the game's own flame with the new glow and light
+    >>"uaro-graphics.ini" echo torch_flame = 1
+    >>"uaro-graphics.ini" echo ; 0-200 %%: how bright the new flame burns
+    >>"uaro-graphics.ini" echo torch_brightness = 100
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

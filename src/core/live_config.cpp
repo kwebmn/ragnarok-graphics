@@ -92,6 +92,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (fe.smoothLight != re.smoothLight)
         u.applied.push_back(change("smooth_light", flag(re.smoothLight), flag(fe.smoothLight)));
     if (fe.torch != re.torch) u.applied.push_back(change("torch", flag(re.torch), flag(fe.torch)));
+    if (fe.torchFlame != re.torchFlame)
+        u.applied.push_back(change("torch_flame", flag(re.torchFlame), flag(fe.torchFlame)));
     if (fe.glow != re.glow) u.applied.push_back(change("glow", flag(re.glow), flag(fe.glow)));
     if (fe.glowStrength != re.glowStrength)
         u.applied.push_back(
@@ -103,6 +105,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (fe.dof != re.dof) u.applied.push_back(change("dof", flag(re.dof), flag(fe.dof)));
     if (fe.water != re.water) u.applied.push_back(change("water", flag(re.water), flag(fe.water)));
     const std::pair<const char*, std::pair<int, int>> numbers[] = {
+        {"torch_brightness", {re.torchBrightness, fe.torchBrightness}},
         {"torch_glow", {re.torchGlow, fe.torchGlow}},
         {"torch_light", {re.torchLight, fe.torchLight}},
         {"torch_flicker", {re.torchFlicker, fe.torchFlicker}},

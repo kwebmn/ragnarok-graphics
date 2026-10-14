@@ -1257,11 +1257,12 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool dof = m.dofWanted();
     const bool ao = m.aoWanted();
     m.effects = e;
-    LOG_INFO("effects: smooth map light %s; torches %s, glow %d%%, light %d%%, flicker %d%%; shadows %s, strength "
-             "%d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
+    LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
+             "%d%%; shadows %s, strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
-             e.smoothLight ? "on" : "off", e.torch ? "on" : "off", e.torchGlow, e.torchLight, e.torchFlicker,
+             e.smoothLight ? "on" : "off", e.torch ? "on" : "off", e.torchFlame ? "on" : "off", e.torchBrightness,
+             e.torchGlow, e.torchLight, e.torchFlicker,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
