@@ -3,6 +3,12 @@
 
 using namespace uagfx;
 
+TEST(outdoors_the_desert_shimmers) {
+    // 0.35: Morroc and its fields shimmer far off in the heat.
+    for (const char* m : {"morocc", "moc_fild01", "moc_fild20", "moc_ruins"}) CHECK(desert(m));
+    for (const char* m : {"prontera", "moc_pryd01", "moc_prydb1", "prt_fild08", ""}) CHECK(!desert(m));
+}
+
 TEST(outdoors_are_the_fields_and_the_towns) {
     // 0.33: cloud shadows only under the open sky.
     for (const char* m : {"prontera", "payon", "morocc", "geffen", "alberta", "aldebaran", "comodo", "umbala", "yuno",

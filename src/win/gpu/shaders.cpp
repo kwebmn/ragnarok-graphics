@@ -1008,6 +1008,30 @@ float4 haze_ps(PresentOut i) : SV_Target {
     return float4(c, a);
 }
 
+// 0.35, heat haze (heat.cpp): where the hot air rises - over the torches' flames, burning skills, lava, and far off
+// in the desert - the picture is read from its copy (t2) a little aside, the aside drifting up. t1 holds a texel a
+// spot - its middle (target pixels) .xy, radius .z, strength .w - footprint how many; twinX the desert's (0 none, by
+// the depth, t3), sharpen the time, scale k, uiPixels.xy the world's size.
+float4 heat_ps(PresentOut i) : SV_Target {
+    float2 p = i.pos.xy;
+    float heat = 0.0;
+    int count = int(footprint);
+    [loop] for (int k = 0; k < count; ++k) {
+        float4 s = tex1.Load(int3(k, 0, 0));
+        float2 d = p - s.xy;
+        d.y *= d.y > 0.0 ? 2.0 : 0.6;  // further above than below
+        float f = saturate(1.0 - dot(d, d) / max(s.z * s.z, 1.0));
+        heat += s.w * f * f;
+    }
+    if (twinX > 0.0) heat += twinX * smoothstep(250.0, 900.0, viewDepth(sceneDepth.Load(int3(int2(p), 0))));
+    if (heat < 0.002) discard;
+    float t = sharpen;
+    float2 q = p / scale * 0.06;
+    float2 n = float2(fbm4(q + float2(0.0, t * 1.4)), fbm4(q * 1.3 + float2(4.1, t * 1.7))) - 0.5;
+    float2 aside = n * saturate(heat) * 4.0 * scale;
+    return float4(sceneColor.SampleLevel(samp0, (p + aside) / uiPixels.xy, 0).rgb, 1.0);
+}
+
 // The mask softened: nine taps along sourceRect.xy (across, then down), uiPixels.zw the mask's size.
 float4 shadow_blur_ps(PresentOut i) : SV_Target {
     float2 step = sourceRect.xy / uiPixels.zw;

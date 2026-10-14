@@ -55,6 +55,7 @@ constexpr int kUpscaleGiveUp = 30;  // part 3: DLSS failing this many frames in 
 constexpr UINT kMaxTorches = 32;    // 0.23: torches drawn anew in a frame; the rest as the game draws them
 constexpr UINT kMaxLights = 64;     // 0.25: lights of the torches' pass - the torches' and the lamps'
 constexpr UINT kMaxFireflies = 96;  // 0.28: fireflies drawn anew in a frame
+constexpr UINT kMaxHeat = 32;       // 0.35: spots of heat haze in a frame
 
 // Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled;
 // part 3 (DLSS): the world, its motion, the interface layer.
@@ -150,6 +151,11 @@ struct RayPart {
     float middle[3];
     float foot[3];
     float gameX, gameY;
+};
+
+// 0.35: a spot of heat this frame (a flame, burning skills, lava): its middle and radius in target pixels, how much.
+struct HeatSpot {
+    float x, y, radius, strength;
 };
 
 // 0.28: a firefly the game draws this frame (effect 45: its dot, a quad facing the screen) - drawn anew.
@@ -424,6 +430,16 @@ struct Renderer::Impl {
     bool hazeDone = false;
     bool hazeLogged = false;
     haze::Look mapLook;
+    // 0.35, heat haze (heat.cpp): the spots the torches' pass gathers, read aside from the picture's copy.
+    ID3DBlob* heatPs = nullptr;
+    ID3D12PipelineState* heatPipelines[4] = {};
+    ID3D12Resource* heatData = nullptr;
+    D3D12_RESOURCE_STATES heatDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT heatDataSrv = 0;
+    std::vector<HeatSpot> heatSpots;
+    bool heatDone = false;
+    bool heatLogged = false;
+    bool mapDesert = false;  // core/outdoors.hpp
     ID3DBlob* lavaPs = nullptr;     // 0.31: a cell of lava (draw.cpp), with the glow's second target
     ID3DBlob* lavaGlowPs = nullptr;
     std::string mapName;                    // the map the game shows (setMap)
@@ -634,6 +650,10 @@ struct Renderer::Impl {
     bool hazeDue() const { return hazeWanted() && groundDrawn && !hazeDone && viewToWorldValid; }
     bool applyHaze();  // once a frame, the world drawn and lit; false: lost
     ID3D12PipelineState* hazePipeline(UINT samples);
+    bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
+    bool heatDue() const { return heatWanted() && groundDrawn && !heatDone && (!heatSpots.empty() || mapDesert); }
+    bool applyHeat();  // once a frame, after the torches' pass and the haze; false: lost
+    ID3D12PipelineState* heatPipeline(UINT samples);
     void noteRay(const FrameRecord& rec, const DrawCmd& d);
     // An added-light pipeline of `ps` for this target (fireflies, dust); false (and `ps` dropped) when it fails.
     bool lightPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[5], const char* what);
@@ -657,6 +677,8 @@ struct Renderer::Impl {
         actorShadowsDone = actorShadowsDrawn = false;
         cloudsDone = false;
         hazeDone = false;
+        heatDone = false;
+        heatSpots.clear();
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

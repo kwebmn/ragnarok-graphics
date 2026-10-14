@@ -20,4 +20,8 @@ bool outdoors(const std::string& map) {
     return false;
 }
 
+bool desert(const std::string& map) {
+    return map == "morocc" || map == "moc_ruins" || map.compare(0, 8, "moc_fild") == 0;
+}
+
 }  // namespace uagfx

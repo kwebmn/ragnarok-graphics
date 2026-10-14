@@ -165,7 +165,7 @@ void Context::flush() {
     const EffectSettings& fx = config.effects;
     if (renderer->remix() ||
         (enhanced_ && (fx.water || fx.torch || fx.smoke || fx.lamps || fx.fireflies || fx.mapGlows || fx.rays ||
-                       fx.lava || fx.actorShadows || fx.clouds || fx.haze))) {
+                       fx.lava || fx.actorShadows || fx.clouds || fx.haze || fx.heat))) {
         float view[12];
         const bool known = readGameCamera(view);
         renderer->setCamera(known, view);

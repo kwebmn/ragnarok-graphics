@@ -535,6 +535,17 @@ bool Renderer::Impl::applyTorches() {
         // 0.26.1: a third of 0.26's, the brightest place no more than one fire ("светит слишком сильно, намного
         // помягче"), a shorter reach.
         const float fireStrength = 0.18f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f;
+        if (heatWanted()) {  // 0.35: the hot air over burning skills (their middles, game pixels to the target's)
+            const float hk = float(upscale ? worldScale : scale);
+            for (size_t i = 0; i < best.size() && i < 16; ++i) {
+                const Cell& c = best[i];
+                const float vz = c.view[2] / c.w;
+                if (vz <= proj.nearZ) continue;
+                const float gx = c.view[0] / c.w / vz * proj.f0 + proj.cx;
+                const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
+                heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 70.0f * hk, 0.6f * std::min(c.w, 1.0f)});
+            }
+        }
         for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
@@ -584,6 +595,12 @@ bool Renderer::Impl::applyTorches() {
             const float strength = 0.35f * user * breath;
             LightItem l{{q.view[0], q.view[1] - 3.0f, q.view[2]}, strength, {1.0f, 0.42f, 0.12f}, 35.0f};
             lights.push_back(l);
+            if (heatWanted() && q.view[2] > proj.nearZ) {  // 0.35: the hot air over the lava
+                const float hk = float(upscale ? worldScale : scale);
+                const float gx = q.view[0] / q.view[2] * proj.f0 + proj.cx;
+                const float gy = q.view[1] / q.view[2] * proj.f1 + proj.cy;
+                heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 110.0f * hk, 0.45f});
+            }
         }
     }
     lavaCells.clear();
@@ -683,6 +700,13 @@ bool Renderer::Impl::applyTorches() {
                         &lit))
             return false;
     }
+    if (heatWanted())  // 0.35: the hot air over each flame
+        for (const torch::Flame& f : flames) {
+            const float h = std::hypot(f.upX, f.upY) * k;
+            if (h < 2.0f) continue;
+            const float hx = (f.baseX + f.upX * 0.9f) * k + 0.5f + jx, hy = (f.baseY + f.upY * 0.9f) * k + 0.5f + jy;
+            heatSpots.push_back(HeatSpot{hx, hy, h * 1.4f, 0.5f * f.alpha});
+        }
     for (size_t i = 0; i < flames.size(); ++i) {
         const torch::Flame& f = flames[i];
         const float bx = f.baseX * k + 0.5f + jx, by = f.baseY * k + 0.5f + jy;

@@ -105,6 +105,10 @@ struct EffectSettings {
     // (core/haze.hpp). On by default.
     bool haze = true;
     int hazeStrength = 50;  // %, 0-100
+    // 0.35: heat haze - the picture shimmers over the torches' flames, burning skills, lava and far off over the
+    // desert. On by default.
+    bool heat = true;
+    int heatStrength = 100;  // %, 0-200
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

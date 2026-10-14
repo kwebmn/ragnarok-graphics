@@ -921,6 +921,16 @@ const Entry kTexts[] = {
      "над землёй. Дома и прочее — без изменений."},
     {"Haze's strength", "Сила серпанку", "Сила дымки"},
     {"How thick the haze and the fog are.", "Наскільки густі серпанок і туман.", "Насколько густы дымка и туман."},
+    {"Heat haze", "Марево від жару", "Марево от жара"},
+    {"Over the torches' flames, burning skills and lava, and far off in the desert of Morroc, the picture shimmers as "
+     "the hot air rises.",
+     "Над полум'ям смолоскипів, вогняними вміннями й лавою, а вдалині — у пустелі Морока, картинка тремтить, наче "
+     "гаряче повітря здіймається.",
+     "Над пламенем факелов, огненными умениями и лавой, а вдали — в пустыне Морокка, картинка дрожит, будто "
+     "поднимается горячий воздух."},
+    {"Heat haze's strength", "Сила марева", "Сила марева"},
+    {"How much the hot air shimmers.", "Наскільки сильно тремтить гаряче повітря.",
+     "Насколько сильно дрожит горячий воздух."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

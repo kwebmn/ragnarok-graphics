@@ -1074,6 +1074,9 @@ void Renderer::Impl::destroy() {
     releaseCom(cloudsPs);
     for (ID3D12PipelineState*& p : hazePipelines) releaseCom(p);  // 0.34
     releaseCom(hazePs);
+    for (ID3D12PipelineState*& p : heatPipelines) releaseCom(p);  // 0.35
+    releaseCom(heatPs);
+    releaseCom(heatData);
     releaseCom(torchData);
     releaseCom(smokePs);  // 0.24
     releaseCom(smokeGlowPs);
@@ -1222,6 +1225,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapName = map;  // 0.31: lava's maps
     impl_->mapOutdoors = outdoors(map);  // 0.33: the clouds' shadows
     impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
+    impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
     if (impl_->ai) impl_->ai->setMap(map);
 }
 
@@ -1292,7 +1296,7 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool was = m.glowWanted();
     const bool scene =
         m.waterWanted() || m.aoWanted() || m.gradeWanted() || m.dofWanted() || m.torchWanted() || m.fireflyWanted() ||
-        m.mapGlowsWanted() || m.actorShadowsWanted() || m.cloudsWanted() || m.hazeWanted();
+        m.mapGlowsWanted() || m.actorShadowsWanted() || m.cloudsWanted() || m.hazeWanted() || m.heatWanted();
     const bool dof = m.dofWanted();
     const bool ao = m.aoWanted();
     const bool actorShadows = m.actorShadowsWanted();
@@ -1300,7 +1304,7 @@ void Renderer::setEffects(const EffectSettings& e) {
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%; "
              "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; "
-             "characters' shadows %s, %d%%; clouds %s, %d%%; haze %s, %d%%; shadows %s, "
+             "characters' shadows %s, %d%%; clouds %s, %d%%; haze %s, %d%%; heat haze %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
@@ -1310,6 +1314,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.rays ? "on" : "off",
              e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness, e.actorShadows ? "on" : "off",
              e.actorShadowsStrength, e.clouds ? "on" : "off", e.cloudsStrength, e.haze ? "on" : "off", e.hazeStrength,
+             e.heat ? "on" : "off", e.heatStrength,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
@@ -1320,7 +1325,8 @@ void Renderer::setEffects(const EffectSettings& e) {
     if (actorShadows && !m.actorShadowsWanted()) m.releaseShadowMask();  // 0.32
     if (dof && !m.dofWanted()) m.releaseDof();
     if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted() && !m.dofWanted() && !m.torchWanted() &&
-        !m.fireflyWanted() && !m.mapGlowsWanted() && !m.actorShadowsWanted() && !m.cloudsWanted() && !m.hazeWanted())
+        !m.fireflyWanted() && !m.mapGlowsWanted() && !m.actorShadowsWanted() && !m.cloudsWanted() && !m.hazeWanted() &&
+        !m.heatWanted())
         m.releaseScene();
 }
 

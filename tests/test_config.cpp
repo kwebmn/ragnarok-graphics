@@ -427,6 +427,18 @@ TEST(config_effects_haze) {
     CHECK(parseConfig("[effects]\nhaze_strength = -1\n").effects == d);
 }
 
+TEST(config_effects_heat) {
+    // 0.35: heat haze over fire, lava and the desert far off - on unless turned off, 0-200 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.heat);
+    CHECK_EQ(d.heatStrength, 100);
+    const EffectSettings e = parseConfig("[effects]\nheat = 0\nheat_strength = 150\n").effects;
+    CHECK(!e.heat);
+    CHECK_EQ(e.heatStrength, 150);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nheat_strength = 300\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

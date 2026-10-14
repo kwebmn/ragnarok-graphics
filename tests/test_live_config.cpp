@@ -223,6 +223,14 @@ TEST(live_config_haze_applies_now) {
     CHECK(u.applied[1] == "haze_strength 50 -> 10");
 }
 
+TEST(live_config_heat_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nheat = 0\nheat_strength = 40\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "heat 1 -> 0");
+    CHECK(u.applied[1] == "heat_strength 100 -> 40");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());
