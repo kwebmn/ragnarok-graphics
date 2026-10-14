@@ -320,17 +320,19 @@ bool Renderer::Impl::applyDof() {
     c.uiPixels[1] = float(h);
     c.uiPixels[2] = float(qw);
     c.uiPixels[3] = float(qh);
-    c.footprint = 3.0f + 37.0f * float(std::clamp(effects.dofRange, 0, 100)) / 100.0f;  // world units of depth
+    // Where the blur starts: 1-15 % of the focus's distance (about 3-45 units at the usual camera distance).
+    c.footprint = 0.01f + 0.14f * float(std::clamp(effects.dofRange, 0, 100)) / 100.0f;
     c.sharpen = float(std::clamp(effects.dofStrength, 0, 100)) / 100.0f;
     // The focus: from the last frame's, into the other texel - a share of the way that follows the time since then
-    // (0.2 s to most of it), the first one or after a pause all of it.
+    // (0.22.5: 0.06 s to most of it - the camera zooms without the focus lagging; the median already holds still
+    // against a character's frames), the first one or after a pause all of it.
     LARGE_INTEGER now, freq;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&now);
     const double dt =
         dofFocusTime.QuadPart ? double(now.QuadPart - dofFocusTime.QuadPart) / double(freq.QuadPart) : 1.0;
     dofFocusTime = now;
-    c.twin[3] = dt > 0.5 ? 1.0f : float(1.0 - std::exp(-dt / 0.2));
+    c.twin[3] = dt > 0.5 ? 1.0f : float(1.0 - std::exp(-dt / 0.06));
     const int was = dofFocusNow;
     dofFocusNow = 1 - dofFocusNow;
     transition(dofFocus[was], dofFocusState[was], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

@@ -614,8 +614,8 @@ float4 grade_ps(PresentOut i) : SV_Target {
 
 // 0.22, depth of field (tilt-shift): sharp around what the camera looks at - the character in the middle of the
 // screen - softer with the distance in depth from it, near and far, as if the map were a model. uiPixels the
-// world's size and its blurred copy's (a quarter); footprint where the blur starts (world units of depth from the
-// focus), sharpen its strength (0-1); sourceRect.xy the blur's direction.
+// world's size and its blurred copy's (a quarter); footprint where the blur starts (0.22.5: a share of the focus's
+// distance), sharpen its strength (0-1); sourceRect.xy the blur's direction.
 float4 dof_down_ps(PresentOut i) : SV_Target {  // four by four of the picture: four bilinear taps
     float2 c = i.pos.xy * 4.0;
     float2 t = 1.0 / uiPixels.xy;
@@ -676,7 +676,10 @@ float4 dof_apply_ps(PresentOut i) : SV_Target {
     float3 soft = tex0.SampleLevel(samp0, i.pos.xy * 0.25 / uiPixels.zw, 0).rgb;
     float focus = tex1.Load(int3(0, 0, 0)).r;  // dof_focus_ps
     float z = viewDepth(sceneDepth.Load(int3(p, 0)));
-    float blur = focus > 0.0 ? smoothstep(footprint, footprint * 3.0, abs(z - focus)) * sharpen : 0.0;  // none yet
+    // 0.22.5: the sharp zone a share of the focus's distance (footprint), so that zooming the camera out or in
+    // keeps the same part of the screen sharp.
+    float start = focus * footprint;
+    float blur = focus > 0.0 ? smoothstep(start, start * 3.0, abs(z - focus)) * sharpen : 0.0;  // none yet
     return float4(lerp(sharp, soft, blur), 1.0);
 }
 
