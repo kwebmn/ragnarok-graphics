@@ -138,15 +138,18 @@ bool aiIcon(Picture& pic, int x, int y, int w, int h, int rows, const uint32_t* 
     if (!s.aiIcons || !aiPictureSize(w, h) || rows != h || x < 0 || y < 0 || x + w > pic.twin->width() ||
         y + h > pic.twin->height())
         return false;
+    // Transparent: what the key skips, and (0.14.2) the magenta the window's upload makes a hole of - a picture copied
+    // without its key ("Lv UP" with magenta corners) came out with magenta on it.
     std::vector<uint32_t> argb(size_t(w) * size_t(h));
     for (size_t i = 0; i < argb.size(); ++i)
-        argb[i] = key && src[i] == 0xFFFF00FFu ? 0u : (src[i] | 0xFF000000u);  // the key: transparent
+        argb[i] = transparentAtUpload(src[i]) ? 0u : (src[i] | 0xFF000000u);
     const uint64_t k = ai::textureKey(argb.data(), w, h).hash;
     const auto it = s.icons.find(k);
     if (it != s.icons.end()) {
         const Rect r{x, y, x + w, y + h};
         pic.twin->absorb(pic.bits, r);
-        pic.twin->paint(r, it->second.argb.data(), it->second.width, it->second.height);
+        // With its key the game keeps what was under the skipped pixels; without it every pixel is written.
+        pic.twin->paint(r, it->second.argb.data(), it->second.width, it->second.height, key);
         return true;
     }
     if (s.asked.insert(k).second)

@@ -258,3 +258,19 @@ TEST(twin_picture_paint_puts_a_larger_icon_over_the_twin) {
     t.paint(Rect{3, 3, 5, 5}, icon.data(), 8, 8);
     CHECK(t.takeChanged().empty());
 }
+
+TEST(twin_picture_paint_without_the_key_writes_holes_too) {
+    // 0.14.2: a picture the game copies without its key writes every pixel, and its magenta ones become holes in the
+    // window; its larger one does the same - transparent where it is, not the twin's old pixels.
+    std::vector<uint32_t> dib(16, 0xFF202020);
+    TwinPicture t(dib.data(), 4, 4, 2.0);
+    std::vector<uint32_t> icon(64, 0xFF00FF00);
+    for (size_t i : {0, 1, 8, 9}) icon[i] = 0;  // its top left corner transparent: the twin pixel over it
+    t.paint(Rect{1, 1, 3, 3}, icon.data(), 8, 8, false);
+    CHECK_EQ(at(t, 2, 2), 0u);           // a hole
+    CHECK_EQ(at(t, 5, 5), 0xFF00FF00u);  // green
+    CHECK_EQ(at(t, 1, 1), 0xFF202020u);  // outside: untouched
+    TwinPicture u(dib.data(), 4, 4, 2.0);
+    u.paint(Rect{1, 1, 3, 3}, icon.data(), 8, 8, true);
+    CHECK_EQ(at(u, 2, 2) >> 24, 0xFFu);  // over: the grey under it shows
+}

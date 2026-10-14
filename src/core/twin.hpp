@@ -56,10 +56,12 @@ public:
     // CopyFrom (spec §3, §4): child's twin over this twin on the game pixels [x, x + w) x [y, y + h), x and y not
     // negative; then the copy takes the new pixels there. A child made at another scale goes in through sync.
     void copyFrom(const uint32_t* dib, const TwinPicture& child, int x, int y, int w, int h);
-    // 0.14, AI icons: a picture of w x h straight ARGB pixels (the icon at r, made larger by the AI textures) over the
+    // 0.14, AI icons: a picture of w x h straight ARGB pixels (the icon at r, made larger by the AI textures) into the
     // twin pixels of the game rectangle r, inside the picture: each twin pixel takes the average of the picture's
-    // pixels it covers, alpha included, over what the twin has there. The copy stays: absorb() takes the game's pixels.
-    void paint(Rect r, const uint32_t* argb, int w, int h);
+    // pixels it covers, alpha included - over what the twin has there, or (over false, 0.14.2) in its place, as the
+    // game's CopyPixels without its key writes every pixel and its magenta ones become holes in the window. The copy
+    // stays: absorb() takes the game's pixels.
+    void paint(Rect r, const uint32_t* argb, int w, int h, bool over = true);
     // The twin pixels of r - twin coordinates, inside the twin - row by row: what a tile's texture loads.
     void texels(const Rect& r, std::vector<uint32_t>& out) const;
     // The twin pixels changed since the last call (a new twin: all of it); empty when none.

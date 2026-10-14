@@ -186,7 +186,7 @@ Rect TwinPicture::takeChanged() {
     return r;
 }
 
-void TwinPicture::paint(Rect r, const uint32_t* argb, int w, int h) {
+void TwinPicture::paint(Rect r, const uint32_t* argb, int w, int h, bool overTwin) {
     if (r.empty() || r.left < 0 || r.top < 0 || r.right > w_ || r.bottom > h_ || w <= 0 || h <= 0) return;
     const int tx0 = ex_[size_t(r.left)], tx1 = ex_[size_t(r.right)];
     const int ty0 = ey_[size_t(r.top)], ty1 = ey_[size_t(r.bottom)];
@@ -210,12 +210,15 @@ void TwinPicture::paint(Rect r, const uint32_t* argb, int w, int h) {
                     area += f;
                 }
             }
-            if (area <= 0 || acc[3] <= 0) continue;
+            uint32_t& d = twin_[size_t(ty) * size_t(twinWidth()) + size_t(tx)];
+            if (area <= 0 || acc[3] <= 0) {
+                if (!overTwin) d = 0;  // a hole, as the game's magenta makes one
+                continue;
+            }
             uint32_t src = uint32_t(std::lround(std::min(acc[3] / area, 1.0) * 255.0)) << 24;
             for (int c = 0; c < 3; ++c)
                 src |= uint32_t(std::min<long>(std::lround(acc[c] / area), 255)) << (8 * c);
-            uint32_t& d = twin_[size_t(ty) * size_t(twinWidth()) + size_t(tx)];
-            d = over(src, d);
+            d = overTwin ? over(src, d) : src;
         }
     }
     touch(Rect{tx0, ty0, tx1, ty1});
