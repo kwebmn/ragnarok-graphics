@@ -20,6 +20,11 @@ tasklist /fi "imagename eq uaro-graphics.exe" 2>nul | find /i "uaro-graphics.exe
 rem A client under Program Files can only be changed with administrator rights.
 (echo test) > "uaro-graphics-write-test.tmp" 2>nul || goto :noaccess
 del "uaro-graphics-write-test.tmp"
+rem An update.bat of 0.11.0 or older copies only the files of uaro-graphics, not its folders (the AI model in ai,
+rem RTX Remix's settings in remix), and then runs this new install.bat: the update it unpacked is still here.
+if /i "%~1"=="/quiet" if exist "uaro-graphics-update\files\uaro-graphics\ddraw.dll" (
+    xcopy /e /i /y /q "uaro-graphics-update\files\uaro-graphics" "uaro-graphics" >nul || goto :noaccess
+)
 if not exist "dgvoodoo" mkdir "dgvoodoo" || goto :noaccess
 rem The ddraw.dll in this folder is dgVoodoo's unless it is already ours.
 if exist "ddraw.dll" (

@@ -33,6 +33,16 @@ def main(path):
     for bat in sorted(n for n in names if n.endswith(".bat")):
         if b"\n" in z.read(bat).replace(b"\r\n", b""):
             fail(bat + " has LF line endings: cmd.exe needs CRLF")
+    # 0.11.0: update.bat copied only the files of uaro-graphics\, never its folders, so the AI model (ai\) and
+    # rtx.conf (remix\) did not arrive. It copies the folders now; install.bat does it too for an update.bat older
+    # than that, which runs the new install.bat while the unpacked update is still there.
+    if any(n.count("/") > 1 for n in names if n.startswith("uaro-graphics/")):
+        if not re.search(rb'(?im)^\s*xcopy /e /i /y /q "%work%\\files\\uaro-graphics" "uaro-graphics"\s',
+                         z.read("update.bat")):
+            fail('update.bat does not copy the folders of uaro-graphics\\ (xcopy /e /i /y /q ...)')
+        if not re.search(rb'(?im)^\s*xcopy /e /i /y /q "uaro-graphics-update\\files\\uaro-graphics" "uaro-graphics"\s',
+                         z.read("install.bat")):
+            fail("install.bat does not copy the folders an older update.bat leaves out")
     # update.bat shows this line inside a ( ) block: no brackets or other cmd syntax, one CRLF line.
     stamp = z.read("uaro-graphics/version.txt")
     m = re.fullmatch(rb"(\d+\.\d+\.\d+) build \d{4}-\d{2}-\d{2} \d{2}:\d{2}\r\n", stamp)

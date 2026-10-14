@@ -86,7 +86,7 @@ bool AiTextures::start(const std::string& gameDir, double targetMs, std::string&
     std::ifstream f(modelPath, std::ios::binary);
     std::vector<uint8_t> file((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     if (file.empty()) {
-        error = "no model " + modelPath;
+        error = "no model " + modelPath + " (update.bat installs it)";
         return false;
     }
     if (!ai::parseModel(file, model_, error) || model_.scale != kScale) {

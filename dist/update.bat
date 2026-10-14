@@ -53,7 +53,8 @@ set "now=unknown"
 if exist "%work%\files\uaro-graphics\version.txt" set /p now=<"%work%\files\uaro-graphics\version.txt"
 rem Every file but this script, which replaces itself last; then the same steps as install.bat.
 if not exist "uaro-graphics" mkdir "uaro-graphics" || goto :noaccess
-copy /y "%work%\files\uaro-graphics\*" "uaro-graphics\" >nul || goto :noaccess
+rem With its folders: the AI model (ai) and RTX Remix's settings (remix) - 0.11.0 and older left them out.
+xcopy /e /i /y /q "%work%\files\uaro-graphics" "uaro-graphics" >nul || goto :noaccess
 for %%f in ("%work%\files\*") do (
     if /i not "%%~nxf"=="update.bat" copy /y "%%~f" . >nul || goto :noaccess
 )
