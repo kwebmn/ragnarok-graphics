@@ -105,4 +105,41 @@ void applyWindowMode(HWND hwnd, const Config& config, bool gameFullscreen, int g
              now.right - now.left, now.bottom - now.top, now.left, now.top);
 }
 
+namespace {
+
+struct Biggest {
+    HWND hwnd = nullptr;
+    LONG area = 0;
+};
+
+BOOL CALLBACK keepBiggest(HWND hwnd, LPARAM p) {
+    RECT r;
+    if (!IsWindowVisible(hwnd) || !GetWindowRect(hwnd, &r)) return TRUE;
+    auto* b = reinterpret_cast<Biggest*>(p);
+    const LONG area = (r.right - r.left) * (r.bottom - r.top);
+    if (area > b->area) {
+        b->area = area;
+        b->hwnd = hwnd;
+    }
+    return TRUE;
+}
+
+}  // namespace
+
+void blackenGameWindow() {
+    // The thread's biggest visible top-level window: the game's (the IME's windows are small or hidden).
+    Biggest found;
+    EnumThreadWindows(GetCurrentThreadId(), keepBiggest, reinterpret_cast<LPARAM>(&found));
+    if (!found.hwnd) return;
+    // Black for every later erase too, and black now: nothing repaints it until the first present.
+    SetClassLongPtrA(found.hwnd, GCLP_HBRBACKGROUND, reinterpret_cast<LONG_PTR>(GetStockObject(BLACK_BRUSH)));
+    RECT client;
+    if (HDC dc = GetClientRect(found.hwnd, &client) ? GetDC(found.hwnd) : nullptr) {
+        FillRect(dc, &client, static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+        ReleaseDC(found.hwnd, dc);
+    }
+    ValidateRect(found.hwnd, nullptr);  // painted: no WM_PAINT left to paint it white again
+    LOG_DEBUG("the game's window 0x%p painted black until the first picture", static_cast<void*>(found.hwnd));
+}
+
 }  // namespace uagfx::win

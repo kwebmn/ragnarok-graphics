@@ -6,6 +6,7 @@
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/system_probe.hpp"
+#include "win/window_mode.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -53,6 +54,9 @@ Startup decide() {
     LOG_INFO("Windows %lu.%lu build %lu", v.major, v.minor, v.build);
     logModule("dinput.dll");   // ROExt or uaRO Pad
     logModule("dinput8.dll");
+    // The game's window black before anything that takes time - the Direct3D 12 probe, the renderer's start - so
+    // that its white 640x480 start-up area does not stay on the screen meanwhile (window_mode.hpp).
+    if (s.config.backend == Backend::Uaro) blackenGameWindow();
 
     SystemFacts facts;
     facts.windows10 = v.major >= 10;

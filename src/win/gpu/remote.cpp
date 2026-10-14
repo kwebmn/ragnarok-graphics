@@ -51,6 +51,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
                       (o.dlssMotionInverted ? "inverted" : "normal") + " --fg " + std::to_string(o.frameGeneration);
     STARTUPINFOA si{};
     si.cb = sizeof si;
+    si.dwFlags = STARTF_FORCEOFFFEEDBACK;  // it never shows a window: no "app starting" cursor over the game
     std::vector<char> line(cmd.begin(), cmd.end());
     line.push_back('\0');
     if (!CreateProcessA(o.hostExe.c_str(), line.data(), nullptr, nullptr, FALSE, 0, nullptr, o.gameDir.c_str(), &si,
