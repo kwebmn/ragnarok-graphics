@@ -652,9 +652,7 @@ bool AiTextures::cellOn(uint8_t source) const {
         case sprite_exe::Source::Player: return settings_.players;
         case sprite_exe::Source::Npc: return settings_.npcs;
         case sprite_exe::Source::Item: return settings_.items;
-        case sprite_exe::Source::Effect:
-        case sprite_exe::Source::TorchGlow:  // 0.23: the torch's layers are effects
-        case sprite_exe::Source::TorchFlame: return settings_.effects;
+        case sprite_exe::Source::Effect: return settings_.effects;
         case sprite_exe::Source::Interface: return settings_.icons;  // the cursor
         case sprite_exe::Source::Unknown: break;
     }
@@ -733,7 +731,7 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
         j.name = ai::entryName(nets_[size_t(net)]->folder, key);
         const sprite_exe::Source source = sprite_exe::Source(cells[i].source);
-        const ai::Kind kind = sprite_exe::isEffect(source)              ? ai::Kind::Effects
+        const ai::Kind kind = source == sprite_exe::Source::Effect      ? ai::Kind::Effects
                               : source == sprite_exe::Source::Interface ? ai::Kind::Icons
                                                                         : ai::Kind::Sprites;
         if (kinds_.emplace(key, kind).second) tag(ai::kindTag(kind, key));

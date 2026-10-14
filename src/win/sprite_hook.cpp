@@ -6,7 +6,12 @@
 #include <cstring>
 #include <unordered_map>
 
+#include "core/crisp_exe.hpp"
 #include "core/sprite_exe.hpp"
+#include "core/torch.hpp"
+#include "win/context.hpp"
+#include "win/dx7/surface7.hpp"
+#include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
@@ -35,21 +40,49 @@ void noteFrames(uint32_t list, uint8_t source) {
         if (*f) g_frames[*f] = source;
 }
 
+// [at, at + n) lies in committed, readable memory: the game's objects are read on its word.
+bool readable(uintptr_t at, size_t n) {
+    MEMORY_BASIC_INFORMATION m{};
+    if (!at || !VirtualQuery(reinterpret_cast<const void*>(at), &m, sizeof m) || m.State != MEM_COMMIT ||
+        (m.Protect & (PAGE_NOACCESS | PAGE_GUARD)))
+        return false;
+    return at + n <= reinterpret_cast<uintptr_t>(m.BaseAddress) + m.RegionSize;
+}
+
+// 0.23.1, the maps' torches (core/torch.hpp): the loader gives each 32-bit frame a texture of its own (SprImg + 8, a
+// CTexture whose surface is one of ours) and the effect draws from it, not from the sprite cache - the renderer
+// learns which is the glow (the first frame) and which the flame (the rest).
+void noteTorchTextures(uint32_t sprite) {
+    gpu::Renderer* renderer = Context::get().renderer;
+    const uint32_t list = sprite + sprite_exe::kRgbaImages;
+    if (!renderer || !readable(list, 8)) return;
+    const uint32_t* begin = *reinterpret_cast<uint32_t* const*>(uintptr_t(list));
+    const uint32_t* end = *reinterpret_cast<uint32_t* const*>(uintptr_t(list) + 4);
+    if (!begin || end <= begin || end - begin > 64 || !readable(uintptr_t(begin), size_t(end - begin) * 4)) return;
+    int found = 0;
+    for (const uint32_t* f = begin; f != end; ++f) {
+        if (!*f || !readable(*f, 12)) continue;
+        const uint32_t texture = *reinterpret_cast<const uint32_t*>(uintptr_t(*f) + 8);
+        if (!texture || !readable(texture, crisp_exe::kTextureSurface + 4)) continue;
+        IDirectDrawSurface7* surface =
+            *reinterpret_cast<IDirectDrawSurface7* const*>(uintptr_t(texture) + crisp_exe::kTextureSurface);
+        if (!surface || !readable(reinterpret_cast<uintptr_t>(surface), sizeof(dx7::Surface7))) continue;
+        const dx7::Surface7* s = dx7::Surface7::from(surface);
+        if (!s || !s->gpuTexture()) continue;
+        renderer->noteTorchTexture(s->gpuTexture(), uint8_t(f == begin ? torch::Layer::Glow : torch::Layer::Flame));
+        ++found;
+    }
+    static bool logged = false;
+    if (!logged) LOG_INFO("torches: the torch's frames, %d textures of their own, known", found);
+    logged = true;
+}
+
 uint32_t __attribute__((thiscall)) spriteLoad(uint32_t sprite, const char* name) {
     const uint32_t result = reinterpret_cast<LoadFn>(g_load)(sprite, name);
     const uint8_t source = uint8_t(sprite_exe::sourceOf(name));
     noteFrames(sprite + sprite_exe::kImages, source);
     noteFrames(sprite + sprite_exe::kRgbaImages, source);
-    // 0.23: the torch's 32-bit frames - the first its glow, the rest its flame (core/torch.hpp).
-    if (sprite_exe::isTorch(name)) {
-        const uint32_t list = sprite + sprite_exe::kRgbaImages;
-        const uint32_t* begin = *reinterpret_cast<uint32_t* const*>(uintptr_t(list));
-        const uint32_t* end = *reinterpret_cast<uint32_t* const*>(uintptr_t(list) + 4);
-        if (begin && end > begin && end - begin <= 64)
-            for (const uint32_t* f = begin; f != end; ++f)
-                if (*f)
-                    g_frames[*f] = uint8_t(f == begin ? sprite_exe::Source::TorchGlow : sprite_exe::Source::TorchFlame);
-    }
+    if (sprite_exe::isTorch(name)) noteTorchTextures(sprite);  // 0.23
     return result;
 }
 

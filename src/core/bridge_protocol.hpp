@@ -8,10 +8,11 @@ namespace uagfx::bridge {
 // process (DLSS and frame generation exist only for 64-bit programs). They share one block of memory: BlockHeader,
 // the ring from the driver to the renderer, then the ring back (core/bridge_ring.hpp).
 constexpr uint32_t kMagic = 0x52423455;  // "U4BR"
-constexpr uint32_t kVersion = 11;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
+constexpr uint32_t kVersion = 12;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
                                   // sprite a cell's frame is of (0.16); 5: effects (0.18); 6: the water (0.19);
                                   // 7: soft shadows, the glow's light (0.20); 8: colours (0.21); 9: depth of
-                                  // field (0.22); 10: smooth map light (0.22.6); 11: torches (0.23)
+                                  // field (0.22); 10: smooth map light (0.22.6); 11: torches (0.23); 12: the
+                                  // torches' own textures (0.23.1)
 
 struct alignas(16) BlockHeader {
     uint32_t magic;
@@ -49,6 +50,7 @@ enum class Msg : uint32_t {
                         // i32 waves, reflections, clarity, u8 colours, i32 saturation, contrast, brightness,
                         // warmth, vignette, u8 depth of field, i32 its strength, range, u8 smooth map light,
                         // u8 torches, i32 their glow, light, flicker ([effects], 0.18-0.23)
+    TorchTexture,       // u32 id, u8 layer (torch::Layer): a texture that is a layer of the torches (0.23.1)
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text

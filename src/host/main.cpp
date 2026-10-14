@@ -349,6 +349,12 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             break;
         }
         case Msg::ReleaseTexture: renderer_.releaseTexture(rd.u32()); break;
+        case Msg::TorchTexture: {
+            const uint32_t id = rd.u32();
+            const uint8_t layer = rd.u8();
+            if (rd.ok()) renderer_.noteTorchTexture(id, layer);
+            break;
+        }
         case Msg::Execute: {
             if (bridge::readRecord(rd, record_)) {
                 renderer_.execute(record_);

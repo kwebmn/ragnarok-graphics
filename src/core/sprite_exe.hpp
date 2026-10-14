@@ -25,10 +25,9 @@ constexpr uint32_t kRgbaImages = 0x524;  // 32-bit frames
 // What a sprite file shows, by its folder (the names are EUC-KR bytes in data\sprite\): what the AI page's boxes
 // choose. Homunculi and mercenaries look like monsters; heads, bodies, headgear, shields, garments and weapons make
 // players.
-// 0.23: the map torches' two layers (torch.hpp), frames of effect\torch_01 - effects to the AI page.
-enum class Source : uint8_t { Unknown, Monster, Player, Npc, Item, Effect, Interface, TorchGlow, TorchFlame };
+enum class Source : uint8_t { Unknown, Monster, Player, Npc, Item, Effect, Interface };
 Source sourceOf(const char* path);
-bool isTorch(const char* path);  // effect\torch_01.spr: its 32-bit frame 0 is the glow, the rest the flame
-inline bool isEffect(Source s) { return s == Source::Effect || s == Source::TorchGlow || s == Source::TorchFlame; }
+// 0.23: the maps' torches (core/torch.hpp), effect\torch_01.spr: its 32-bit frame 0 is the glow, the rest the flame.
+bool isTorch(const char* path);
 
 }  // namespace uagfx::sprite_exe

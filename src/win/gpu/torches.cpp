@@ -26,7 +26,7 @@ D3D12_RECT clipped(float x0, float y0, float x1, float y1, int w, int h) {
 
 }  // namespace
 
-// A world draw of one of the game's torch layers (core/torch.hpp) - known by the sprite cache's cell its quad shows:
+// A world draw of one of the game's torch layers (core/torch.hpp) - known by its texture (Renderer::noteTorchTexture):
 // true when it is not to be drawn, the glow not at all, the flame noted for applyTorches. Drawn as the game has it
 // when the torches cannot be drawn anew here (no shaders, no copy of the picture) or the frame's are drawn already.
 bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
@@ -49,14 +49,11 @@ bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
         if (i == 0) std::memcpy(&diffuse, p + 16, sizeof diffuse);
     }
     const Texture& t = it->second;
-    Rect cell;
-    const torch::Layer layer =
-        torchCells.at(d.texture[0], su * 0.25f * float(t.width), sv * 0.25f * float(t.height), &cell);
+    const torch::Layer layer = torchCells.at(d.texture[0], su * 0.25f * float(t.width), sv * 0.25f * float(t.height));
     if (layer == torch::Layer::None || !torchReady()) return false;
     if (layer == torch::Layer::Glow) return true;
     torch::Flame f;
-    if (torchFlames.size() >= kMaxTorches || !torch::flameOf(q, t.width, t.height, cell, f) || f.rhw <= 0.0f)
-        return false;
+    if (torchFlames.size() >= kMaxTorches || !torch::flameOf(q, f) || f.rhw <= 0.0f) return false;
     f.alpha = std::min(1.0f, float(diffuse >> 24) / 240.0f);  // the .act shows the flame at 240
     torchFlames.push_back(f);
     if (!torchesLogged) LOG_INFO("torches: the map's torches drawn anew");

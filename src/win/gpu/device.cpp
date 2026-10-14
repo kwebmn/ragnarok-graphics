@@ -432,7 +432,6 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     if (ai)
         ai->noteUpload(u.texture, t, u, rec.pixels().data() + u.pixels,
                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);  // with their sources
-    if (u.slotCount) torchCells.note(u.texture, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.23
 }
 
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
@@ -1609,6 +1608,12 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
     const uint32_t id = m.nextTexture++;
     m.textures.emplace(id, t);
     return id;
+}
+
+void Renderer::noteTorchTexture(uint32_t id, uint8_t layer) {
+    if (remix_) return;
+    if (remote_) return remote_->noteTorchTexture(id, layer);
+    impl_->torchCells.noteWhole(id, torch::Layer(layer));
 }
 
 void Renderer::releaseTexture(uint32_t id) {

@@ -18,45 +18,33 @@ TEST(sprite_exe_knows_the_torch_file) {
     CHECK(!isTorch("data\\sprite\\\xC0\xCC\xC6\xD1\xC6\xAE\\torch_02.spr"));
     CHECK(!isTorch("data\\sprite\\\xB8\xF3\xBD\xBA\xC5\xCD\\torch_01.spr"));  // 몬스터: not the effect
     CHECK(!isTorch(nullptr));
-    CHECK(sprite_exe::isEffect(sprite_exe::Source::Effect));
-    CHECK(sprite_exe::isEffect(sprite_exe::Source::TorchGlow));
-    CHECK(sprite_exe::isEffect(sprite_exe::Source::TorchFlame));
-    CHECK(!sprite_exe::isEffect(sprite_exe::Source::Monster));
 }
 
-TEST(torch_cells_follow_the_sprite_cache) {
-    // A cell holds a torch frame from its upload until another frame is written into it.
+TEST(torch_cells_of_whole_textures) {
+    // 0.23.1: the game gives each 32-bit frame a texture of its own at load (CSprRes::Load) and draws it from there,
+    // not from its sprite cache: the texture is the layer as a whole, its frame in the top left corner.
     torch::Cells cells;
-    CHECK(cells.empty());
-    const SpriteCell first[2] = {{Rect{0, 0, 128, 128}, uint8_t(sprite_exe::Source::TorchFlame)},
-                                 {Rect{128, 0, 256, 128}, uint8_t(sprite_exe::Source::Monster)}};
-    cells.note(5, first, 2);
-    CHECK(!cells.empty());
+    cells.noteWhole(9, torch::Layer::Flame);
     Rect where;
-    CHECK(cells.at(5, 60.0f, 60.0f, &where) == torch::Layer::Flame);
-    CHECK(where == (Rect{0, 0, 128, 128}));
-    CHECK(cells.at(5, 200.0f, 60.0f) == torch::Layer::None);
-    CHECK(cells.at(6, 60.0f, 60.0f) == torch::Layer::None);  // another texture
-    const SpriteCell glow = {Rect{192, 192, 256, 256}, uint8_t(sprite_exe::Source::TorchGlow)};
-    cells.note(5, &glow, 1);
-    CHECK(cells.at(5, 220.0f, 230.0f) == torch::Layer::Glow);
-    const SpriteCell monster = {Rect{0, 0, 128, 128}, uint8_t(sprite_exe::Source::Monster)};
-    cells.note(5, &monster, 1);  // the flame's cell taken by a monster's frame
-    CHECK(cells.at(5, 60.0f, 60.0f) == torch::Layer::None);
-    CHECK(cells.at(5, 220.0f, 230.0f) == torch::Layer::Glow);
-    cells.forget(5);
+    CHECK(cells.at(9, 100.0f, 120.0f, &where) == torch::Layer::Flame);
+    CHECK(where.left == 0 && where.top == 0);
+    cells.noteWhole(10, torch::Layer::Glow);
+    CHECK(cells.at(10, 3.0f, 3.0f) == torch::Layer::Glow);
+    cells.noteWhole(9, torch::Layer::None);  // another picture now
+    CHECK(cells.at(9, 100.0f, 120.0f) == torch::Layer::None);
+    cells.forget(10);
     CHECK(cells.empty());
 }
 
 TEST(torch_flame_of_an_upright_quad) {
-    // A flame frame in the cell (128, 0) of a 256 x 256 cache, drawn twice its size with its top left at (100, 50):
+    // A flame frame in the right half of a 256 x 256 texture, drawn twice its size with its top left at (100, 50):
     // its base is texel (65, 103) of the frame, its tip 58 texels higher, its half width 14 texels.
     const torch::Corner q[4] = {{100, 50, 0.5f, 0.01f, 0.5f, 0.0f},
                                 {356, 50, 0.5f, 0.01f, 1.0f, 0.0f},
                                 {100, 306, 0.5f, 0.01f, 0.5f, 0.5f},
                                 {356, 306, 0.5f, 0.01f, 1.0f, 0.5f}};
     torch::Flame f;
-    CHECK(torch::flameOf(q, 256, 256, Rect{128, 0, 256, 128}, f));
+    CHECK(torch::flameOf(q, f));
     CHECK(near(f.baseX, 230.0f));
     CHECK(near(f.baseY, 256.0f));
     CHECK(near(f.upX, 0.0f));
@@ -73,7 +61,7 @@ TEST(torch_flame_of_a_turned_quad) {
                                 {100, 0, 0.3f, 0.02f, 0.0f, 0.5f},    // texel (0, 128)
                                 {100, 128, 0.3f, 0.02f, 0.5f, 0.5f}};
     torch::Flame f;
-    CHECK(torch::flameOf(q, 256, 256, Rect{0, 0, 128, 128}, f));
+    CHECK(torch::flameOf(q, f));
     CHECK(near(f.baseX, 228.0f - 103.0f));
     CHECK(near(f.baseY, 65.0f));
     CHECK(near(f.upX, 58.0f));
@@ -85,10 +73,25 @@ TEST(torch_flame_needs_a_quad_that_maps_the_texture) {
     const torch::Corner flat[4] = {{0, 0, 0.5f, 0.1f, 0.2f, 0.2f}, {10, 0, 0.5f, 0.1f, 0.2f, 0.2f},
                                    {0, 10, 0.5f, 0.1f, 0.2f, 0.2f}, {10, 10, 0.5f, 0.1f, 0.2f, 0.2f}};
     torch::Flame f;
-    CHECK(!torch::flameOf(flat, 256, 256, Rect{0, 0, 128, 128}, f));
-    const torch::Corner q[4] = {{0, 0, 0.5f, 0.1f, 0.0f, 0.0f}, {10, 0, 0.5f, 0.1f, 0.5f, 0.0f},
-                                {0, 10, 0.5f, 0.1f, 0.0f, 0.5f}, {10, 10, 0.5f, 0.1f, 0.5f, 0.5f}};
-    CHECK(!torch::flameOf(q, 0, 256, Rect{0, 0, 128, 128}, f));
+    CHECK(!torch::flameOf(flat, f));
+    const torch::Corner line[4] = {{0, 0, 0.5f, 0.1f, 0.0f, 0.0f}, {10, 0, 0.5f, 0.1f, 0.5f, 0.0f},
+                                   {20, 0, 0.5f, 0.1f, 1.0f, 0.0f}, {30, 0, 0.5f, 0.1f, 0.0f, 0.0f}};
+    CHECK(!torch::flameOf(line, f));  // no height in the texture
+}
+
+TEST(torch_flame_of_a_halved_frame) {
+    // The game's sprite setting "half": the frame is 64 x 64 texels in a 64 x 64 texture, drawn at the same size on
+    // the screen - the flame lands where it does at full size.
+    const torch::Corner q[4] = {{100, 50, 0.5f, 0.01f, 0.0f, 0.0f},
+                                {356, 50, 0.5f, 0.01f, 1.0f, 0.0f},
+                                {100, 306, 0.5f, 0.01f, 0.0f, 1.0f},
+                                {356, 306, 0.5f, 0.01f, 1.0f, 1.0f}};
+    torch::Flame f;
+    CHECK(torch::flameOf(q, f));
+    CHECK(near(f.baseX, 230.0f));
+    CHECK(near(f.baseY, 256.0f));
+    CHECK(near(f.upY, -116.0f));
+    CHECK(near(f.halfWidth, 28.0f));
 }
 
 TEST(torch_flicker_stays_within_its_amount) {

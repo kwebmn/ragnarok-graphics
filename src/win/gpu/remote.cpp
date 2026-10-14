@@ -279,6 +279,14 @@ void Remote::releaseTexture(uint32_t id) {
     send(Msg::ReleaseTexture, buffer_);
 }
 
+void Remote::noteTorchTexture(uint32_t id, uint8_t layer) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.u32(id);
+    w.u8(layer);
+    send(Msg::TorchTexture, buffer_);
+}
+
 void Remote::execute(const FrameRecord& record) {
     if (lost_ || record.empty()) return;
     buffer_.clear();
