@@ -60,7 +60,7 @@ bool parseModel(const std::vector<uint8_t>& file, Model& m, std::string& error) 
 }
 
 void convolve(const Model& m, const Model::Conv& c, const float* in, int width, int height, float* out, int first,
-              int last) {
+              int last, Border border) {
     const size_t plane = size_t(width) * size_t(height);
     const float* bias = m.data.data() + c.bias;
     const float* weight = m.data.data() + c.weight;
@@ -73,14 +73,23 @@ void convolve(const Model& m, const Model::Conv& c, const float* in, int width, 
             for (int y = 0; y < height; ++y) {
                 float* row = dst + size_t(y) * size_t(width);
                 for (int ky = 0; ky < 3; ++ky) {
-                    const int sy = y + ky - 1;
-                    if (sy < 0 || sy >= height) continue;  // the zero border
+                    int sy = y + ky - 1;
+                    if (sy < 0 || sy >= height) {
+                        if (border == Border::Zero) continue;  // nothing past the edge
+                        sy = (sy + height) % height;           // the other side
+                    }
                     const float* s = src + size_t(sy) * size_t(width);
                     const float k0 = k[ky * 3], k1 = k[ky * 3 + 1], k2 = k[ky * 3 + 2];
                     // x = 0 and x = width - 1 have one neighbour outside; the inside runs without checks.
-                    row[0] += k1 * s[0] + (width > 1 ? k2 * s[1] : 0.0f);
+                    const float before = border == Border::Wrap ? s[width - 1] : 0.0f;  // what x = -1 reads
+                    const float after = border == Border::Wrap ? s[0] : 0.0f;           // and x = width
+                    if (width == 1) {
+                        row[0] += k0 * before + k1 * s[0] + k2 * after;
+                        continue;
+                    }
+                    row[0] += k0 * before + k1 * s[0] + k2 * s[1];
                     for (int x = 1; x + 1 < width; ++x) row[x] += k0 * s[x - 1] + k1 * s[x] + k2 * s[x + 1];
-                    if (width > 1) row[width - 1] += k0 * s[width - 2] + k1 * s[width - 1];
+                    row[width - 1] += k0 * s[width - 2] + k1 * s[width - 1] + k2 * after;
                 }
             }
         }
@@ -111,19 +120,19 @@ void shuffleAdd(const float* planes, const float* rgb, int width, int height, in
             }
 }
 
-void upscale(const Model& m, const float* rgb, int width, int height, float* out) {
+void upscale(const Model& m, const float* rgb, int width, int height, float* out, Border border) {
     const size_t plane = size_t(width) * size_t(height);
     const int widest = std::max(m.features, 3 * m.scale * m.scale);
     std::vector<float> a(plane * size_t(widest)), b(plane * size_t(widest));
-    convolve(m, m.convs[0], rgb, width, height, a.data(), 0, m.convs[0].out);
+    convolve(m, m.convs[0], rgb, width, height, a.data(), 0, m.convs[0].out, border);
     prelu(m.data.data() + m.prelu[0], a.data(), m.features, width, height);
     for (int l = 1; l <= m.middle; ++l) {
-        convolve(m, m.convs[size_t(l)], a.data(), width, height, b.data(), 0, m.convs[size_t(l)].out);
+        convolve(m, m.convs[size_t(l)], a.data(), width, height, b.data(), 0, m.convs[size_t(l)].out, border);
         prelu(m.data.data() + m.prelu[size_t(l)], b.data(), m.features, width, height);
         a.swap(b);
     }
     const Model::Conv& last = m.convs.back();
-    convolve(m, last, a.data(), width, height, b.data(), 0, last.out);
+    convolve(m, last, a.data(), width, height, b.data(), 0, last.out, border);
     shuffleAdd(b.data(), rgb, width, height, m.scale, out);
 }
 

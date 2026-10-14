@@ -110,6 +110,9 @@ private:
     bool ready_ = false;
     ai::Model model_;
     std::string modelName_ = "realesr-general-x4v3";
+    // upscaled.grf's folder: the model, its denoising (dn100: the model as it is) and how it reads past a texture's
+    // edge (wrapped since 0.11.2; 0.11.0 and 0.11.1 read zeros there, and a repeat showed a seam).
+    std::string cacheName_ = modelName_ + "-dn100-wrap";
     double budget_ = 3e8;          // multiply-adds a frame, adjusted to targetMs_
     double targetMs_ = 2.0;
     double scheduled_[2] = {0, 0};  // multiply-adds put into each slot's list (kSlots)

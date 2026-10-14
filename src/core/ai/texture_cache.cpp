@@ -34,8 +34,10 @@ TextureKey textureKey(const uint32_t* argb, int width, int height) {
 std::string entryName(const std::string& model, const TextureKey& k) {
     char hex[17];
     std::snprintf(hex, sizeof hex, "%016llx", static_cast<unsigned long long>(k.hash));
-    return "ai\\" + model + "\\" + std::to_string(k.width) + "x" + std::to_string(k.height) + "\\" + hex + ".tex";
+    return entryFolder(model) + std::to_string(k.width) + "x" + std::to_string(k.height) + "\\" + hex + ".tex";
 }
+
+std::string entryFolder(const std::string& model) { return "ai\\" + model + "\\"; }
 
 std::vector<uint8_t> encodeTexture(const uint32_t* argb, int width, int height) {
     std::vector<uint8_t> b;

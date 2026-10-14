@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iterator>
@@ -34,10 +35,52 @@ TEST(ai_network_matches_the_independent_python_forward_pass) {
         for (int y = 0; y < H; ++y)
             for (int x = 0; x < W; ++x)
                 rgb[size_t((c * H + y) * W + x)] = float((c * 37 + y * 11 + x * 7) % 23) / 22.0f;
-    upscale(m, rgb.data(), W, H, out.data());
+    upscale(m, rgb.data(), W, H, out.data(), Border::Zero);
     const float row0[6] = {0.0f, 0.123672f, 0.394143f, 0.634569f, 0.70155f, 0.564371f};
     for (int i = 0; i < 6; ++i) CHECK(std::fabs(out[size_t(i * 3)] - row0[i]) < 1e-4f);
     for (float v : out) CHECK(v >= 0.0f && v <= 1.0f);
+}
+
+TEST(ai_wrapped_border_keeps_a_repeating_texture_repeating) {
+    // The ground repeats one texture every 4x4 tiles (comodo.gnd: 98% of the sand tiles continue their neighbour's
+    // quarter). With a zero border the network made each repeat's edges up from black, and the beach showed a seam
+    // every 4 tiles (0.11.1). Wrapped, the network sees the texture as the ground shows it: a texture moved round
+    // by (dx, dy) comes out moved round by 4 * (dx, dy), so the enlarged one repeats without a seam too.
+    Model m;
+    CHECK(loadModel(m));
+    const int W = 8, H = 6, dx = 3, dy = 2, S = 4, OW = W * S, OH = H * S;
+    std::vector<float> rgb(3 * W * H), moved(3 * W * H), out(3 * OW * OH), outMoved(3 * OW * OH);
+    for (int c = 0; c < 3; ++c)
+        for (int y = 0; y < H; ++y)
+            for (int x = 0; x < W; ++x)
+                rgb[size_t((c * H + y) * W + x)] = float((c * 29 + y * 13 + x * 5 + x * y) % 31) / 30.0f;
+    for (int c = 0; c < 3; ++c)
+        for (int y = 0; y < H; ++y)
+            for (int x = 0; x < W; ++x)
+                moved[size_t((c * H + (y + dy) % H) * W + (x + dx) % W)] = rgb[size_t((c * H + y) * W + x)];
+    upscale(m, rgb.data(), W, H, out.data(), Border::Wrap);
+    upscale(m, moved.data(), W, H, outMoved.data(), Border::Wrap);
+    float worst = 0.0f;
+    for (int c = 0; c < 3; ++c)
+        for (int y = 0; y < OH; ++y)
+            for (int x = 0; x < OW; ++x) {
+                const float a = out[size_t((c * OH + y) * OW + x)];
+                const float b = outMoved[size_t((c * OH + (y + dy * S) % OH) * OW + (x + dx * S) % OW)];
+                worst = std::max(worst, std::fabs(a - b));
+            }
+    CHECK(worst < 1e-5f);
+    // The zero border, as Real-ESRGAN was trained, is what the reference check above runs: not this.
+    upscale(m, rgb.data(), W, H, out.data(), Border::Zero);
+    upscale(m, moved.data(), W, H, outMoved.data(), Border::Zero);
+    worst = 0.0f;
+    for (int c = 0; c < 3; ++c)
+        for (int y = 0; y < OH; ++y)
+            for (int x = 0; x < OW; ++x) {
+                const float a = out[size_t((c * OH + y) * OW + x)];
+                const float b = outMoved[size_t((c * OH + (y + dy * S) % OH) * OW + (x + dx * S) % OW)];
+                worst = std::max(worst, std::fabs(a - b));
+            }
+    CHECK(worst > 0.01f);
 }
 
 TEST(ai_model_file_must_be_whole) {
@@ -62,6 +105,8 @@ TEST(ai_texture_key_names_and_blob_round_trip) {
     const std::string name = entryName("realesr-general-x4v3", k);
     // the prefix, 16 hex digits and ".tex"
     CHECK(name.rfind("ai\\realesr-general-x4v3\\64x32\\", 0) == 0 && name.size() == 30 + 16 + 4);
+    CHECK(entryFolder("realesr-general-x4v3") == "ai\\realesr-general-x4v3\\");  // how upscaled.grf's are told apart
+    CHECK(name.rfind(entryFolder("realesr-general-x4v3"), 0) == 0);
     int w = 0, h = 0;
     CHECK(decodeTexture(encodeTexture(a.data(), 64, 32), b, w, h) && w == 64 && h == 32 && b == a);
     std::vector<uint8_t> broken = encodeTexture(a.data(), 64, 32);

@@ -20,8 +20,9 @@ RWByteAddressBuffer U2 : register(u2);
 
 float weight(uint i) { return asfloat(W.Load(i * 4)); }
 
-// One 3x3 convolution with a zero border over rows [rowBegin, rowEnd) of the input, 16 output channels per thread
-// (z picks which 16), PReLU after it when preluAt is not ~0. U0: input planes, U1: output planes.
+// One 3x3 convolution over rows [rowBegin, rowEnd) of the input, 16 output channels per thread (z picks which 16),
+// PReLU after it when preluAt is not ~0. U0: input planes, U1: output planes. Past an edge it reads the other side
+// (ai::Border::Wrap): a texture repeats on the ground, and so must the enlarged one.
 #define CONV_WIDTH c0.x
 #define CONV_HEIGHT c0.y
 #define CONV_IN c0.z
@@ -45,12 +46,9 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
     const uint flat = t.y * 8 + t.x;
     for (uint i = 0; i < CONV_IN; ++i) {
         for (uint l = flat; l < 100; l += 64) {
-            const int sx = int(g.x * 8) + int(l % 10) - 1;
-            const int sy = int(CONV_ROW_BEGIN + g.y * 8) + int(l / 10) - 1;
-            float v = 0.0;
-            if (sx >= 0 && sy >= 0 && sx < int(CONV_WIDTH) && sy < int(CONV_HEIGHT))
-                v = asfloat(U0.Load((i * plane + uint(sy) * CONV_WIDTH + uint(sx)) * 4));
-            tile[l / 10][l % 10] = v;
+            const uint sx = uint(int(g.x * 8) + int(l % 10) - 1 + int(CONV_WIDTH)) % CONV_WIDTH;
+            const uint sy = uint(int(CONV_ROW_BEGIN + g.y * 8) + int(l / 10) - 1 + int(CONV_HEIGHT)) % CONV_HEIGHT;
+            tile[l / 10][l % 10] = asfloat(U0.Load((i * plane + sy * CONV_WIDTH + sx) * 4));
         }
         GroupMemoryBarrierWithGroupSync();
         float v9[9];

@@ -16,6 +16,7 @@ TextureKey textureKey(const uint32_t* argb, int width, int height);
 // The entry's name in upscaled.grf: the model's name, the size and the hash, e.g.
 // "ai\realesr-general-x4v3\256x256\0123456789abcdef.tex".
 std::string entryName(const std::string& model, const TextureKey& k);
+std::string entryFolder(const std::string& model);  // the start of every entryName of the model: "ai\<model>\"
 
 // An upscaled texture as stored: "UATX", version 1, width, height, then width * height ARGB values.
 std::vector<uint8_t> encodeTexture(const uint32_t* argb, int width, int height);

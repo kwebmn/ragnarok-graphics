@@ -108,7 +108,15 @@ bool AiTextures::start(const std::string& gameDir, double targetMs, std::string&
         writable_ = false;
     }
     // From here on only the I/O thread touches the archive; the renderer looks names up in known_.
-    for (std::string& name : archive_.names()) known_.insert(std::move(name));
+    // Only this version's: the textures of 0.11.0 and 0.11.1 (a zero border, seams) stay in the file unused.
+    const std::string ours = ai::entryFolder(cacheName_);
+    unsigned older = 0;
+    for (std::string& name : archive_.names()) {
+        if (name.compare(0, ours.size(), ours) == 0)
+            known_.insert(std::move(name));
+        else
+            ++older;
+    }
     InitializeCriticalSection(&ioLock_);
     ioLockMade_ = true;
     ioWake_ = CreateEventA(nullptr, FALSE, FALSE, nullptr);
@@ -118,9 +126,12 @@ bool AiTextures::start(const std::string& gameDir, double targetMs, std::string&
         return false;
     }
     ready_ = true;
-    LOG_INFO("AI textures: on - %s on the GPU, self-test passed in %llu ms; upscaled.grf has %u textures%s",
+    char note[96] = "";
+    if (older)
+        std::snprintf(note, sizeof note, " (and %u of an older version, not used: delete it to free them)", older);
+    LOG_INFO("AI textures: on - %s on the GPU, self-test passed in %llu ms; upscaled.grf has %u textures%s%s",
              modelName_.c_str(), static_cast<unsigned long long>(tested), static_cast<unsigned>(known_.size()),
-             writable_ ? "" : " (read only: another game writes it)");
+             note, writable_ ? "" : " (read only: another game writes it)");
     return true;
 }
 
@@ -487,7 +498,7 @@ void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const u
     keptBytes_ += n * 4;
     item.width = t.width;
     item.height = t.height;
-    item.name = ai::entryName(modelName_, ai::textureKey(argb, t.width, t.height));
+    item.name = ai::entryName(cacheName_, ai::textureKey(argb, t.width, t.height));
     item.state = Item::Kept;
 }
 
@@ -721,7 +732,7 @@ bool AiTextures::selfTest(std::string& error) {
     std::vector<float> planes;
     ai::prepareInput(argb.data(), w, h, planes);
     std::vector<float> out(size_t(3 * w * h * kScale * kScale));
-    ai::upscale(model_, planes.data(), w, h, out.data());
+    ai::upscale(model_, planes.data(), w, h, out.data(), ai::Border::Wrap);  // as the GPU's ai_conv
     std::vector<uint8_t> alpha;
     ai::enlargeAlpha(planes.data() + 3 * w * h, w, h, kScale, alpha);
 

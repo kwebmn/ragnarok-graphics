@@ -28,15 +28,19 @@ struct Model {
 // false with error when the file is not a whole SRVG model.
 bool parseModel(const std::vector<uint8_t>& file, Model& m, std::string& error);
 
-// One 3x3 convolution with a zero border, output channels [first, last) only (callers may split them over threads).
+// What a 3x3 convolution reads past the image's edge: zeros, as Real-ESRGAN was trained (the reference check), or
+// the other side of the image - a texture repeats on the ground, and the enlarged one must repeat without a seam.
+enum class Border { Zero, Wrap };
+
+// One 3x3 convolution, output channels [first, last) only (callers may split them over threads).
 // in: inC planes of width * height; out: outC planes.
 void convolve(const Model& m, const Model::Conv& c, const float* in, int width, int height, float* out, int first,
-              int last);
+              int last, Border border);
 void prelu(const float* slopes, float* planes, int channels, int width, int height);
 
 // The whole network on planar RGB (3 planes of width * height, 0..1): out gets 3 planes of (width * scale) x
 // (height * scale), clamped to 0..1.
-void upscale(const Model& m, const float* rgb, int width, int height, float* out);
+void upscale(const Model& m, const float* rgb, int width, int height, float* out, Border border);
 
 // The last steps, shared by upscale and the GPU's checks: pixel shuffle of 3 * s * s planes into 3 planes s times as
 // large, plus the input enlarged (nearest), clamped.
