@@ -234,6 +234,7 @@ private:
     std::unordered_set<uint64_t> icons_;  // the icons asked for this run
     uint32_t iconsNetwork_ = 0, iconsLoaded_ = 0;
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run
+    uint32_t soft_ = 0;      // textures and sprite frames of soft light alone, left as the game's (0.22.2)
     ULONGLONG lastLog_ = 0;
 };
 

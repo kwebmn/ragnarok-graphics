@@ -713,6 +713,10 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         if (!made) standIn(t, a->second, c, pixels.data(), w);  // the frame as the game has it, at once
         ++cellsWritten_;
         if (!cellOn(cells[i].source)) continue;  // a kind that is off: it stays as the game has it
+        if (ai::softPicture(pixels.data(), w, h)) {  // 0.22.2: a frame of soft light alone, as the game has it
+            ++soft_;
+            continue;
+        }
         Job j;
         j.id = id;
         j.net = net;
@@ -977,6 +981,14 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     }
     item.ui = kind == ai::Kind::Icons;  // through noteUpload only the interface's big pictures have this kind
     if (!item.ui && (item.width > maxSide_ || item.height > maxSide_)) {  // past the page's "texture sides"
+        drop(item);
+        return;
+    }
+    // 0.22.2: soft light alone - a torch's glow, a halo, a gradient - stays the game's, also when upscaled.grf has
+    // a picture of it from before: the network would turn its gradients into bands.
+    if (item.argb.size() >= size_t(item.width) * size_t(item.height) &&
+        ai::softPicture(item.argb.data(), item.width, item.height)) {
+        ++soft_;
         drop(item);
         return;
     }
@@ -1274,9 +1286,9 @@ void AiTextures::logNow(bool final) {
         seen += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " + std::to_string(seen_[k]) +
                 (netOf_[k] < 0 ? " (off)" : "");
     LOG_INFO("AI textures: %u made by the network, %u from upscaled.grf, %u waiting, %u ahead, %u written; seen %s, "
-             "lightmaps %u",
+             "lightmaps %u; %u of soft light left as the game's",
              doneNetwork_, doneLoaded_, static_cast<unsigned>(queue_.size() + (job_ ? 1 : 0)),
-             static_cast<unsigned>(later_.size()), written_, seen.c_str(), seen_[int(ai::Kind::Lightmap)]);
+             static_cast<unsigned>(later_.size()), written_, seen.c_str(), seen_[int(ai::Kind::Lightmap)], soft_);
     if (cellsWritten_)
         LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u made by the network, %u from "
                  "upscaled.grf, %u waiting",

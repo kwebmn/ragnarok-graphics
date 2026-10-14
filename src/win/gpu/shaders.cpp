@@ -452,13 +452,22 @@ float4 water(WaterIn i) {
     int2 px = int2(i.pos.xy);
     float t = sharpen;
     float waves = footprint;
-    float2 slope = waveSlope(i.world.xz, t) * (0.15 + 1.6 * waves);
+    // 0.22.2: the world's axes turned, for the noise: no rows along them.
+    float2 fp = float2(dot(i.world.xz, float2(0.8, 0.6)), dot(i.world.xz, float2(-0.6, 0.8)));
+    float2 slope = waveSlope(i.world.xz, t);
+    // Ripples of noise on the swells, so that their glints do not line up.
+    float2 rq = fp * 0.55 + t * float2(0.21, 0.13);
+    float n0 = valueNoise(rq);
+    float2 g = float2(valueNoise(rq + float2(0.15, 0.0)) - n0, valueNoise(rq + float2(0.0, 0.15)) - n0) / 0.15;
+    slope += float2(0.8 * g.x - 0.6 * g.y, 0.6 * g.x + 0.8 * g.y) * 0.05;
+    slope *= 0.15 + 1.6 * waves;
     float3 n = normalize(float3(-slope.x, -1.0, -slope.y));  // up is -y
     float3 eye = float3(r9, r10, r11);
     float3 toEye = normalize(eye - i.world);
     float ndv = saturate(dot(n, toEye));
     float3 nv = float3(dot(n, float3(r0, r1, r2)), dot(n, float3(r3, r4, r5)), dot(n, float3(r6, r7, r8)));
     float waterZ = i.view.z;
+    float2 dz = float2(ddx(waterZ), ddy(waterZ));  // the water's depth from pixel to pixel (outside any branch)
     float thick = max(viewDepth(sceneDepth.Load(int3(px, 0))) - waterZ, 0.0);
     // The bed through the waves - shifted by how far the waves tilt the water from flat (its up in the view:
     // -y of the world); where the shifted pixel is in front of the water, straight through.
@@ -494,12 +503,24 @@ float4 water(WaterIn i) {
     // The sun's glints.
     float3 h = normalize(normalize(float3(-0.45, -0.8, 0.4)) + toEye);
     float ndh = saturate(dot(n, h));
-    c += (pow(ndh, 600.0) * 3.0 + pow(ndh, 60.0) * 0.12) * light * (0.25 + 0.75 * waves);
-    // Foam along the shore, broken by noise that drifts with the waves.
-    float foam = saturate(1.0 - thick / 4.0) *
-                 smoothstep(0.42, 0.78, valueNoise(i.world.xz * 0.35 + t * 0.3) * 0.6 +
-                                             valueNoise(i.world.xz * 0.9 - t * 0.5) * 0.4);
-    c = lerp(c, float3(0.92, 0.95, 0.97) * light, foam * 0.7);
+    float sun = fogEnable != 0 ? 0.25 : 1.0;  // in a fog (dungeons, caves) hardly any sun
+    c += (pow(ndh, 600.0) * 3.0 + pow(ndh, 60.0) * 0.12) * light * (0.25 + 0.75 * waves) * sun;
+    // 0.22.2: foam where the water meets the shore - near a pixel whose ground stands at or above the water there
+    // (the water's own depth carried over by its slope on the screen), not over the whole of shallow water -
+    // broken by noise that drifts with the waves.
+    float shore = 0.0;
+    float reach = 5.0 * scale;
+    [unroll] for (int k = 0; k < 4; ++k) {
+        float2 o = k == 0 ? float2(reach, 0.0) : k == 1 ? float2(-reach, 0.0) : k == 2 ? float2(0.0, reach)
+                                                                                    : float2(0.0, -reach);
+        int2 q = clamp(int2(i.pos.xy + o), int2(0, 0), int2(targetSize) - 1);
+        float above = viewDepth(sceneDepth.Load(int3(q, 0))) - (waterZ + dot(o, dz));
+        shore = max(shore, saturate(1.0 - above / 0.6));
+    }
+    shore *= saturate(1.0 - thick / 3.0);
+    float froth = smoothstep(0.45, 0.8, valueNoise(fp * 0.4 + t * 0.25) * 0.6 +
+                                            valueNoise(fp.yx * 1.1 - t * 0.45) * 0.4);
+    c = lerp(c, float3(0.92, 0.95, 0.97) * light, shore * froth * 0.6);
     return float4(c, saturate(thick / 0.8));  // the shore line fades in, no hard edge
 }
 

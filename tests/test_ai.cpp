@@ -412,3 +412,29 @@ TEST(ai_clamped_edges_do_not_darken_an_opaque_picture) {
     CHECK(std::fabs(corner(clamped) - middle(clamped)) < 0.03f);
     CHECK(std::fabs(corner(zero) - middle(zero)) > std::fabs(corner(clamped) - middle(clamped)));
 }
+
+TEST(ai_soft_pictures_are_glows_and_gradients) {
+    // 0.22.2: light alone - a glow, a ramp, one colour - is soft; grain or a hard edge is not.
+    const int n = 64;
+    std::vector<uint32_t> glow(size_t(n) * n), ramp(size_t(n) * n), flat(size_t(n) * n, 0xFF336699u);
+    std::vector<uint32_t> grain(size_t(n) * n), disc(size_t(n) * n);
+    uint32_t seed = 12345;
+    for (int y = 0; y < n; ++y)
+        for (int x = 0; x < n; ++x) {
+            const float dx = float(x) - 31.5f, dy = float(y) - 31.5f;
+            const auto g = uint32_t(255.0f * std::exp(-(dx * dx + dy * dy) / (2.0f * 12.0f * 12.0f)));
+            glow[size_t(y) * n + x] = 0xFF000000u | g << 16 | (g * 3 / 4) << 8 | g / 4;
+            const uint32_t r = uint32_t(x * 4);
+            ramp[size_t(y) * n + x] = 0xFF000000u | r << 16 | r << 8 | r;
+            seed = seed * 1103515245u + 12345u;
+            const uint32_t v = 96 + (seed >> 16) % 64;  // a texture's grain: +-32
+            grain[size_t(y) * n + x] = 0xFF000000u | v << 16 | v << 8 | v;
+            disc[size_t(y) * n + x] = dx * dx + dy * dy < 20.0f * 20.0f ? 0xFFC08040u : 0u;
+        }
+    CHECK(softPicture(glow.data(), n, n));
+    CHECK(softPicture(ramp.data(), n, n));
+    CHECK(softPicture(flat.data(), n, n));
+    CHECK(!softPicture(grain.data(), n, n));
+    CHECK(!softPicture(disc.data(), n, n));
+    CHECK(!softPicture(glow.data(), 2, 2));  // too small to tell
+}

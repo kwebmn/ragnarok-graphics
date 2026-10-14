@@ -57,6 +57,10 @@ bool decodeTexture(const std::vector<uint8_t>& blob, std::vector<uint32_t>& argb
 // the alpha plane is enlarged on its own (enlargeAlpha) and decides which texels stay transparent.
 void prepareInput(const uint32_t* argb, int width, int height, std::vector<float>& planes);
 bool hasTransparency(const uint32_t* argb, int width, int height);
+// 0.22.2: a picture of soft light alone - glows, halos, gradients: under 2 % of its texels by an edge or a grain
+// (the premultiplied colour's Laplacian). The network adds nothing to such a picture and turns its gradients into
+// bands (the drawn model most), so it is drawn as the game's, filtered.
+bool softPicture(const uint32_t* argb, int width, int height);
 // Alpha s times as large: bilinear between texel centres, then cut at one half - smooth edges, still all or nothing
 // like the colour key.
 void enlargeAlpha(const float* alpha, int width, int height, int scale, std::vector<uint8_t>& out);

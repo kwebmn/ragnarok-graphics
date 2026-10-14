@@ -158,6 +158,27 @@ bool hasTransparency(const uint32_t* argb, int width, int height) {
     return false;
 }
 
+bool softPicture(const uint32_t* argb, int width, int height) {
+    if (!argb || width < 3 || height < 3) return false;  // too small to tell: as before
+    const auto value = [&](int x, int y, int shift) {    // premultiplied, 0-255
+        const uint32_t p = argb[size_t(y) * size_t(width) + size_t(x)];
+        return int((p >> shift) & 255) * int(p >> 24) / 255;
+    };
+    size_t detailed = 0, all = 0;
+    for (int y = 1; y + 1 < height; ++y)
+        for (int x = 1; x + 1 < width; ++x) {
+            int most = 0;
+            for (int shift : {0, 8, 16}) {
+                const int lap = 4 * value(x, y, shift) - value(x - 1, y, shift) - value(x + 1, y, shift) -
+                                value(x, y - 1, shift) - value(x, y + 1, shift);
+                most = std::max(most, lap < 0 ? -lap : lap);
+            }
+            detailed += most > 24 ? 1 : 0;
+            ++all;
+        }
+    return detailed * 50 < all;
+}
+
 void prepareInput(const uint32_t* argb, int width, int height, std::vector<float>& planes) {
     const size_t n = size_t(width) * size_t(height);
     planes.assign(n * 4, 0.0f);
