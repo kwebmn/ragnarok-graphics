@@ -165,7 +165,7 @@ float4 twinTexel(float2 pos) {
     return c.a > 0.0 ? float4(c.rgb / c.a, c.a) : float4(0.0, 0.0, 0.0, 0.0);
 }
 
-float4 draw_ps(PsIn i) : SV_Target {
+float4 shade(PsIn i) {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
     float2 dv = ddy(uv0);
@@ -197,6 +197,23 @@ float4 draw_ps(PsIn i) : SV_Target {
     // Part 3 (DLSS): an opaque interface draw covers the world wholly in the layer, whatever alpha it carries.
     if (((alphaTest >> 18) & 1) != 0) c.a = 1.0;
     return c;
+}
+
+float4 draw_ps(PsIn i) : SV_Target { return shade(i); }
+
+// 0.18, the glow of effects: world draws also write the light they add into a second target, blended the same way.
+// A draw that adds light (alphaTest bit 19; also one that multiplies, which scales the light under it alike) writes
+// its colour; any other writes no colour with its alpha, so whatever covers the light takes it away as it hides it.
+struct GlowOut {
+    float4 c : SV_Target0;
+    float4 g : SV_Target1;
+};
+
+GlowOut draw_glow_ps(PsIn i) {
+    GlowOut o;
+    o.c = shade(i);
+    o.g = ((alphaTest >> 19) & 1) != 0 ? o.c : float4(0.0, 0.0, 0.0, o.c.a);
+    return o;
 }
 
 struct PresentOut {
@@ -273,6 +290,52 @@ float4 present_ps(PresentOut i) : SV_Target {
         c = cas(c, fetch(i.uv - dy, dx, dy), fetch(i.uv + dy, dx, dy), fetch(i.uv - dx, dx, dy), fetch(i.uv + dx, dx, dy));
     return float4(c, 1);
 }
+
+// 0.18, the glow: the light of the world's additive draws shrunk level by level, blurred on the way back up and
+// added to the picture (Jimenez, "Next generation post processing in Call of Duty: Advanced Warfare", 2014). For
+// these passes sourceClamp.xy is a texel of the source, footprint the glow's strength, sharpen 1 for the first level.
+float3 glowTap(float2 uv) { return min(tex0.SampleLevel(samp0, uv, 0).rgb, 16.0); }
+
+float glowWeight(float3 c) { return 1.0 / (1.0 + max(c.r, max(c.g, c.b))); }
+
+// Thirteen taps over a 4 x 4 texel area; the first level weighs its five boxes by brightness (Karis), so that a lone
+// spark does not flicker as it moves across the pixels.
+float4 glow_down_ps(PresentOut i) : SV_Target {
+    float2 t = sourceClamp.xy;
+    float2 uv = i.uv;
+    float3 a = glowTap(uv + t * float2(-2, -2)), b = glowTap(uv + t * float2(0, -2));
+    float3 c = glowTap(uv + t * float2(2, -2));
+    float3 d = glowTap(uv + t * float2(-1, -1)), e = glowTap(uv + t * float2(1, -1));
+    float3 f = glowTap(uv + t * float2(-2, 0)), g = glowTap(uv), h = glowTap(uv + t * float2(2, 0));
+    float3 j = glowTap(uv + t * float2(-1, 1)), k = glowTap(uv + t * float2(1, 1));
+    float3 l = glowTap(uv + t * float2(-2, 2)), m = glowTap(uv + t * float2(0, 2)), n = glowTap(uv + t * float2(2, 2));
+    float3 inner = (d + e + j + k) * 0.25;
+    float3 b1 = (a + b + f + g) * 0.25, b2 = (b + c + g + h) * 0.25, b3 = (f + g + l + m) * 0.25;
+    float3 b4 = (g + h + m + n) * 0.25;
+    if (sharpen > 0.5) {
+        float w0 = glowWeight(inner) * 0.5, w1 = glowWeight(b1) * 0.125, w2 = glowWeight(b2) * 0.125;
+        float w3 = glowWeight(b3) * 0.125, w4 = glowWeight(b4) * 0.125;
+        return float4((inner * w0 + b1 * w1 + b2 * w2 + b3 * w3 + b4 * w4) / (w0 + w1 + w2 + w3 + w4), 1.0);
+    }
+    return float4(inner * 0.5 + (b1 + b2 + b3 + b4) * 0.125, 1.0);
+}
+
+// A 3 x 3 tent over the smaller level, one of its texels apart.
+float3 glowTent(float2 uv) {
+    float2 t = sourceClamp.xy;
+    float3 s = glowTap(uv + t * float2(-1, -1)) + glowTap(uv + t * float2(1, -1)) + glowTap(uv + t * float2(-1, 1)) +
+               glowTap(uv + t * float2(1, 1));
+    s += 2.0 * (glowTap(uv + t * float2(0, -1)) + glowTap(uv + t * float2(-1, 0)) + glowTap(uv + t * float2(1, 0)) +
+                glowTap(uv + t * float2(0, 1)));
+    s += 4.0 * glowTap(uv);
+    return s / 16.0;
+}
+
+// Into the larger level, blended with what it holds by the blend factor: how far the glow spreads.
+float4 glow_up_ps(PresentOut i) : SV_Target { return float4(glowTent(i.uv), 1.0); }
+
+// Onto the picture, added.
+float4 glow_add_ps(PresentOut i) : SV_Target { return float4(glowTent(i.uv) * footprint, 1.0); }
 )HLSL";
 }
 

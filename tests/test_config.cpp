@@ -208,3 +208,18 @@ TEST(config_ai_sprites_by_their_kind) {
     CHECK(parseConfig("[ai]\nsprites = 0\n").ai.sprites() == false);
     CHECK(!AiSettings().sprites());
 }
+
+TEST(config_effects) {
+    // 0.18: [effects] - the glow off unless asked for, its strength 0-200 % and size 0-100 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(!d.glow);
+    CHECK_EQ(d.glowStrength, 100);
+    CHECK_EQ(d.glowSize, 50);
+    const EffectSettings e = parseConfig("[effects]\nglow = 1\nglow_strength = 150\nglow_size = 80\n").effects;
+    CHECK(e.glow);
+    CHECK_EQ(e.glowStrength, 150);
+    CHECK_EQ(e.glowSize, 80);
+    const EffectSettings bad = parseConfig("[effects]\nglow = maybe\nglow_strength = 201\nglow_size = -1\n").effects;
+    CHECK(bad == d);  // what does not parse keeps the default
+    CHECK(parseConfig("[quality]\nglow = 1\n").effects == d);  // outside its section
+}

@@ -8,8 +8,8 @@ namespace uagfx::bridge {
 // process (DLSS and frame generation exist only for 64-bit programs). They share one block of memory: BlockHeader,
 // the ring from the driver to the renderer, then the ring back (core/bridge_ring.hpp).
 constexpr uint32_t kMagic = 0x52423455;  // "U4BR"
-constexpr uint32_t kVersion = 4;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
-                                  // sprite a cell's frame is of (0.16)
+constexpr uint32_t kVersion = 5;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
+                                  // sprite a cell's frame is of (0.16); 5: effects (0.18)
 
 struct alignas(16) BlockHeader {
     uint32_t magic;
@@ -43,6 +43,7 @@ enum class Msg : uint32_t {
     Quit,
     Map,                // str: the map the game shows, "" none (AI textures note the textures seen on it)
     IconWanted,         // u64 key, i32 width, height, then width * height ARGB: an icon of a window for the network
+    SetEffects,         // u8 glow, i32 glow strength, i32 glow size ([effects], 0.18)
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text

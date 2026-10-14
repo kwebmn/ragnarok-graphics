@@ -48,6 +48,18 @@ bool aiKind(const AiSettings& a, int kind);  // ai::Kind order: ground, objects,
 std::string aiArgument(const AiSettings& a);
 AiSettings parseAiArgument(const std::string& word);
 
+// [effects] (0.18): the picture made more modern by the driver, drawn on top of what the game draws. They apply while
+// the game runs; Pause switches them off with the other improvements.
+struct EffectSettings {
+    // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
+    // (bloom from those draws alone; the rest of the picture keeps its brightness).
+    bool glow = false;
+    int glowStrength = 100;  // %, 0-200: how bright the glow is
+    int glowSize = 50;       // %, 0-100: how far it spreads
+    bool operator==(const EffectSettings& o) const;
+    bool operator!=(const EffectSettings& o) const { return !(*this == o); }
+};
+
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 struct Config {
     Backend backend = Backend::DgVoodoo;
@@ -73,6 +85,7 @@ struct Config {
     bool alphaToCoverage = true; // stage 4, with MSAA: soft edges where alpha testing cuts textures (leaves, fences)
     int anisotropy = 16;         // stage 4: anisotropic filtering of the world's textures - 0 (off), 2, 4, 8 or 16
     AiSettings ai;
+    EffectSettings effects;
     // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance or ultra - NVIDIA DLSS in the 64-bit
     // renderer (it starts that renderer; MSAA is off then).
     std::string dlss = "off";

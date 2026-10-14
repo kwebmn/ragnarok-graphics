@@ -38,6 +38,7 @@ public:
     }
     int samples() const { return samples_; }
     void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown);
+    void setEffects(const EffectSettings& e);  // sent when they change
     uint32_t createTexture(int width, int height, int levels);
     void releaseTexture(uint32_t id);
     void execute(const FrameRecord& record);
@@ -64,6 +65,8 @@ private:
     bool upscales_ = false;
     bool lost_ = false;
     bool needSurface_ = false;  // the renderer could not make a swap chain for the game's window
+    EffectSettings effects_;  // as last sent
+    bool effectsSent_ = false;
     Renderer::IconSink iconSink_ = nullptr;  // AI icons that came back (Msg::IconDone)
     void* iconContext_ = nullptr;
     std::vector<uint8_t> buffer_;  // a message being written; kept to keep its memory

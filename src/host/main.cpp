@@ -309,6 +309,14 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             renderer_.setDrawQuality(aniso, coverage, aiShown);
             break;
         }
+        case Msg::SetEffects: {
+            EffectSettings e;
+            e.glow = rd.u8() != 0;
+            e.glowStrength = rd.i32();
+            e.glowSize = rd.i32();
+            if (rd.ok()) renderer_.setEffects(e);
+            break;
+        }
         case Msg::CreateTexture: {
             const uint32_t id = rd.u32();
             const int width = rd.i32();

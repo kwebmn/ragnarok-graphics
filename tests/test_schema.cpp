@@ -51,7 +51,7 @@ TEST(schema_covers_every_key_of_the_shipped_ini) {
 
 TEST(schema_live_keys_are_the_specs) {
     // Spec §2.2: the renderer and allow_tearing wait for a restart, the rest of the pages' keys apply at once (the
-    // 64-bit renderer's features too: DLSS, frame generation, AI textures).
+    // 64-bit renderer's features too: DLSS, frame generation, AI textures); [effects] at once (0.18).
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "renderer.remix" &&
@@ -64,17 +64,19 @@ TEST(schema_live_keys_are_the_specs) {
 TEST(schema_pages_follow_the_spec) {
     // Stage 2 spec §6.1 with 0.6.2: Sound, Game, and Chat and login after Frames - the last holds the whisper, login
     // and chat macro rows the Game page has no room for.
-    CHECK_EQ(kPageCount, 12);
+    CHECK_EQ(kPageCount, 13);
     CHECK(pageName(Page::Sound) == Text::PageSound);
     CHECK(pageName(Page::Game) == Text::PageGame);
     CHECK(pageName(Page::Chat) == Text::PageChat);
     CHECK(pageName(Page::Smoothing) == Text::PageSmoothing);  // stage 4, after Quality
     CHECK_EQ(int(Page::Smoothing), 3);
-    // 0.12: the AI textures' settings and what upscaled.grf holds, after Smoothing.
+    // 0.18: Effects after Smoothing; 0.12: the AI textures' settings and what upscaled.grf holds after them.
+    CHECK(pageName(Page::Effects) == Text::PageEffects);
+    CHECK_EQ(int(Page::Effects), 4);
     CHECK(pageName(Page::Ai) == Text::PageAi);
     CHECK(pageName(Page::AiCache) == Text::PageAiCache);
-    CHECK_EQ(int(Page::Ai), 4);
-    CHECK_EQ(int(Page::AiCache), 5);
-    CHECK_EQ(int(Page::Diagnostics), 10);
-    CHECK_EQ(int(Page::Service), 11);
+    CHECK_EQ(int(Page::Ai), 5);
+    CHECK_EQ(int(Page::AiCache), 6);
+    CHECK_EQ(int(Page::Diagnostics), 11);
+    CHECK_EQ(int(Page::Service), 12);
 }

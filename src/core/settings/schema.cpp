@@ -12,6 +12,7 @@ Text pageName(Page p) {
         case Page::Screen: return Text::PageScreen;
         case Page::Quality: return Text::PageQuality;
         case Page::Smoothing: return Text::PageSmoothing;
+        case Page::Effects: return Text::PageEffects;
         case Page::Ai: return Text::PageAi;
         case Page::AiCache: return Text::PageAiCache;
         case Page::Frames: return Text::PageFrames;
@@ -54,6 +55,12 @@ const std::vector<IniSetting>& iniSettings() {
         {"quality", "anisotropy", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8", "16"},
          {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8, Text::Factor16}, Text::SmoothAniso,
          Text::SmoothAnisoHint, ""},
+        {"effects", "glow", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGlow, Text::FxGlowHint,
+         ""},
+        {"effects", "glow_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGlowStrength,
+         Text::FxGlowStrengthHint, " %"},
+        {"effects", "glow_size", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxGlowSize,
+         Text::FxGlowSizeHint, " %"},
         {"ai", "enabled", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiEnable, Text::AiEnableHint, ""},
         {"ai", "ground", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiGround, Text::AiGroundHint, ""},
         {"ai", "objects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiObjects, Text::AiObjectsHint,
@@ -135,6 +142,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.max_size") return std::to_string(a.maxSize);
     if (k == "ai.ahead") return a.ahead ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
+    if (k == "effects.glow") return c.effects.glow ? "1" : "0";
+    if (k == "effects.glow_strength") return std::to_string(c.effects.glowStrength);
+    if (k == "effects.glow_size") return std::to_string(c.effects.glowSize);
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.frame_generation") return c.frameGeneration ? std::to_string(c.frameGeneration) + "x" : "off";

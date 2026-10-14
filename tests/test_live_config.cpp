@@ -73,3 +73,19 @@ TEST(live_config_ai_waits_for_the_next_start) {
     CHECK(u.waiting[2] == "ai.model");
     CHECK(u.waiting[4] == "ai.budget");
 }
+
+TEST(live_config_effects_apply_now) {
+    // 0.18: [effects] apply in a running game, the driver's log naming each change.
+    const Config running = parseConfig("");
+    const LiveUpdate u =
+        liveUpdate(running, parseConfig("[effects]\nglow = 1\nglow_strength = 140\nglow_size = 30\n"));
+    CHECK(u.waiting.empty());
+    CHECK(u.next.effects.glow);
+    CHECK_EQ(u.next.effects.glowStrength, 140);
+    CHECK_EQ(u.next.effects.glowSize, 30);
+    CHECK_EQ(u.applied.size(), size_t(3));
+    CHECK(u.applied[0] == "glow 0 -> 1");
+    CHECK(u.applied[1] == "glow_strength 100 -> 140");
+    CHECK(u.applied[2] == "glow_size 50 -> 30");
+    for (const char* k : {"effects.glow", "effects.glow_strength", "effects.glow_size"}) CHECK(appliesNow(k));
+}

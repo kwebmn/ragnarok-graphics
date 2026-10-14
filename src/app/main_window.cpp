@@ -182,6 +182,7 @@ void MainWindow::buildPage() {
         case settings::Page::Service: current_ = makeServicePage(*this); break;
         case settings::Page::Ai: current_ = makeAiPage(*this); break;
         case settings::Page::AiCache: current_ = makeAiCachePage(*this); break;
+        case settings::Page::Effects: current_ = makeEffectsPage(*this); break;
         default: current_ = makeSettingsPage(*this, settings::Page(page_)); break;
     }
     current_->build(*panel_);

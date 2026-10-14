@@ -60,7 +60,8 @@ elseif(WIN32)
     configure_file(src/app/version_rc.h.in ${CMAKE_BINARY_DIR}/app/version_rc.h)
     add_executable(uaro-graphics WIN32 src/app/main.cpp src/app/main_window.cpp src/app/ui.cpp src/app/page.cpp
                    src/app/page_settings.cpp src/app/page_screen.cpp src/app/page_diagnostics.cpp
-                   src/app/page_service.cpp src/app/page_ai.cpp src/app/page_ai_cache.cpp src/app/app.rc)
+                   src/app/page_service.cpp src/app/page_ai.cpp src/app/page_ai_cache.cpp
+                   src/app/page_effects.cpp src/app/app.rc)
     target_include_directories(uaro-graphics PRIVATE src/app dist ${CMAKE_BINARY_DIR}/app)
     target_compile_options(uaro-graphics PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
     target_link_libraries(uaro-graphics PRIVATE uagfx_app comdlg32)

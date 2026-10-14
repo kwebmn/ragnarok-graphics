@@ -226,6 +226,19 @@ void Remote::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown) 
     send(Msg::SetDrawQuality, buffer_);
 }
 
+void Remote::setEffects(const EffectSettings& e) {
+    if (effectsSent_ && e == effects_) return;
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.u8(e.glow ? 1 : 0);
+    w.i32(e.glowStrength);
+    w.i32(e.glowSize);
+    if (send(Msg::SetEffects, buffer_)) {
+        effects_ = e;
+        effectsSent_ = true;
+    }
+}
+
 uint32_t Remote::createTexture(int width, int height, int levels) {
     if (lost_) return 0;
     const uint32_t id = nextTexture_++;

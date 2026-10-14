@@ -100,6 +100,10 @@ bool AiSettings::operator==(const AiSettings& o) const {
            maxSize == o.maxSize && ahead == o.ahead;
 }
 
+bool EffectSettings::operator==(const EffectSettings& o) const {
+    return glow == o.glow && glowStrength == o.glowStrength && glowSize == o.glowSize;
+}
+
 AiPreset aiPresetOf(const AiSettings& a) {
     for (AiPreset p : {AiPreset::Recommended, AiPreset::All})
         if (aiPresetSettings(p, a.enabled) == a) return p;
@@ -222,6 +226,12 @@ Config parseConfig(const std::string& text) {
             const std::string k = key.substr(3);
             newSprites = newSprites || k == "monsters" || k == "players" || k == "npcs" || k == "items";
             parseAi(k, val, c.ai, newEnabled, newBudget, newDenoise);
+        } else if (key == "effects.glow") {
+            setBool(val, c.effects.glow);
+        } else if (key == "effects.glow_strength") {
+            toInt(val, 0, 200, c.effects.glowStrength);
+        } else if (key == "effects.glow_size") {
+            toInt(val, 0, 100, c.effects.glowSize);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {

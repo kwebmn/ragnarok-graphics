@@ -654,6 +654,30 @@ const Entry kTexts[] = {
     {"Items on the ground", "Речі на землі", "Вещи на земле"},
     {"What lies on the ground: drops, loot.", "Те, що лежить на землі: здобич, луп.",
      "То, что лежит на земле: добыча, лут."},
+    {"Effects", "Ефекти", "Эффекты"},
+    {"Modern effects over the game's own picture. They work with the uaRO Graphics renderer (not with dgVoodoo or "
+     "RTX Remix) and apply at once, in a running game too. Pause or Scroll Lock in the game compares with the "
+     "original picture.",
+     "Сучасні ефекти поверх картинки самої гри. Працюють із рендером uaRO Graphics (не з dgVoodoo і не з RTX Remix) "
+     "і діють одразу, у запущеній грі теж. Pause або Scroll Lock у грі порівнює з оригінальною картинкою.",
+     "Современные эффекты поверх картинки самой игры. Работают с рендером uaRO Graphics (не с dgVoodoo и не с RTX "
+     "Remix) и действуют сразу, в запущенной игре тоже. Pause или Scroll Lock в игре сравнивает с исходной "
+     "картинкой."},
+    {"Glow of effects", "Світіння ефектів", "Свечение эффектов"},
+    {"Fire, lightning, the light of skills, portals and lamps shine with a soft halo, as in modern games. The rest "
+     "of the picture keeps its brightness.",
+     "Вогонь, блискавки, світло вмінь, портали й ліхтарі світяться м'яким ореолом, як у сучасних іграх. Решта "
+     "картинки не змінює яскравості.",
+     "Огонь, молнии, свет умений, порталы и фонари светятся мягким ореолом, как в современных играх. Остальная "
+     "картинка не меняет яркости."},
+    {"Glow brightness", "Яскравість світіння", "Яркость свечения"},
+    {"How bright the halo is: 100 % as intended, 200 % twice as bright, 0 % none.",
+     "Наскільки яскравий ореол: 100 % — як задумано, 200 % — удвічі яскравіше, 0 % — без нього.",
+     "Насколько ярок ореол: 100 % — как задумано, 200 % — вдвое ярче, 0 % — без него."},
+    {"Halo size", "Розмір ореолу", "Размер ореола"},
+    {"How far the glow spreads around an effect: less is a tight glow, more a wide haze.",
+     "Як далеко світіння розходиться навколо ефекту: менше — щільне сяйво, більше — широкий серпанок.",
+     "Как далеко свечение расходится вокруг эффекта: меньше — плотное сияние, больше — широкая дымка."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

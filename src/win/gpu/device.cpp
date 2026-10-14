@@ -50,9 +50,11 @@ ID3D12Resource* createBuffer(ID3D12Device* device, D3D12_HEAP_TYPE type, UINT64 
     return r;
 }
 
+}  // namespace
+
 ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, DXGI_FORMAT format,
                                 D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, const D3D12_CLEAR_VALUE* clear,
-                                UINT samples = 1) {
+                                UINT samples) {
     D3D12_HEAP_PROPERTIES heap{};
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_RESOURCE_DESC d{};
@@ -71,8 +73,6 @@ ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, 
         return nullptr;
     return r;
 }
-
-}  // namespace
 
 // ---- Impl: submissions -------------------------------------------------------------------------------------
 
@@ -270,9 +270,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE Renderer::Impl::dsvHandle(UINT i) const {
     return h;
 }
 
-// The target (with its depth), or under DLSS (part 3) the world (with its depth) or the interface layer.
+// The target (with its depth), or under DLSS (part 3) the world (with its depth) or the interface layer; the glow's
+// passes (0.18) with the glow target as the second.
 void Renderer::Impl::bindPass(int p) {
-    if (p == kPassWorld) {
+    const bool withGlow = p == kPassTargetGlow || p == kPassWorldGlow;
+    const bool toWorld = p == kPassWorld || p == kPassWorldGlow;
+    if (toWorld) {
         transition(world, worldState, D3D12_RESOURCE_STATE_RENDER_TARGET);
         transition(worldDepth, worldDepthState, D3D12_RESOURCE_STATE_DEPTH_WRITE);
     } else if (p == kPassLayer) {
@@ -280,11 +283,12 @@ void Renderer::Impl::bindPass(int p) {
     } else {
         transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     }
+    if (withGlow) transition(glow, glowState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     if (pass == p) return;
-    if (p == kPassWorld) {
-        const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(kRtvWorld);
+    if (toWorld) {
+        const D3D12_CPU_DESCRIPTOR_HANDLE rtv[2] = {rtvHandle(kRtvWorld), rtvHandle(kRtvGlow)};
         const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle(kDsvWorld);
-        list->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+        list->OMSetRenderTargets(withGlow ? 2 : 1, rtv, FALSE, &dsv);
         list->RSSetViewports(1, &worldViewport);
         list->RSSetScissorRects(1, &worldScissor);
     } else if (p == kPassLayer) {
@@ -295,9 +299,9 @@ void Renderer::Impl::bindPass(int p) {
         const float one[4] = {1.0f, 1.0f, 1.0f, 1.0f};  // the opaque interface's alpha (pipelineForKey)
         list->OMSetBlendFactor(one);
     } else {
-        const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(kRtvTarget);
+        const D3D12_CPU_DESCRIPTOR_HANDLE rtv[2] = {rtvHandle(kRtvTarget), rtvHandle(kRtvGlow)};
         const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle();
-        list->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+        list->OMSetRenderTargets(withGlow ? 2 : 1, rtv, FALSE, &dsv);
         list->RSSetViewports(1, &viewport);
         list->RSSetScissorRects(1, &scissor);
     }
@@ -318,6 +322,10 @@ void Renderer::Impl::placeSamples(bool center) {
 // ---- Impl: frame record commands ---------------------------------------------------------------------------
 
 void Renderer::Impl::clear(const ClearCmd& c) {
+    // 0.18: the picture cleared - the light of a world no longer there is not added to the next one.
+    if ((c.flags & 1) && c.rect.left <= 0 && c.rect.top <= 0 && c.rect.right >= gameWidth &&
+        c.rect.bottom >= gameHeight)
+        dropGlow();
     if (upscale) {  // part 3: the world and its depth; a colour clear empties the interface layer too
         startFrame();
         const Rect w = scaleRect(c.rect, worldScale);
@@ -426,6 +434,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
     if (w.rect.empty()) return;
     if (upscale) startFrame();
+    if (!upscale && glowDrawn && !addGlowToTarget()) return;  // 0.18: the world's glow under the game's own pixels
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + w.pixels, UINT(w.rect.width()),
                                                   UINT(w.rect.height()));
     if (!src.pResource) return;
@@ -585,8 +594,8 @@ bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
     motion = createTexture2D(device, rw, rh, 1, DXGI_FORMAT_R16G16_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
                              D3D12_RESOURCE_STATE_RENDER_TARGET, &still);
     upscaled = createTexture2D(device, targetW, targetH, 1, DXGI_FORMAT_R8G8B8A8_UNORM,
-                               D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-                               nullptr);
+                               D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS | D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+                               D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
     layer = createTexture2D(device, targetW, targetH, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
                             D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
     if (!world || !worldDepth || !motion || !upscaled || !layer) {
@@ -612,6 +621,7 @@ bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
     device->CreateShaderResourceView(worldDepth, &sv, cpuSrvHandle(depthSrv));
     device->CreateRenderTargetView(motion, nullptr, rtvHandle(kRtvMotion));
     device->CreateShaderResourceView(upscaled, nullptr, cpuSrvHandle(upscaledSrv));
+    device->CreateRenderTargetView(upscaled, nullptr, rtvHandle(kRtvUpscaled));  // 0.18: the glow goes onto it
     device->CreateRenderTargetView(layer, nullptr, rtvHandle(kRtvLayer));
     device->CreateShaderResourceView(layer, nullptr, cpuSrvHandle(layerSrv));
     renderWidth = rw;
@@ -775,6 +785,11 @@ bool Renderer::Impl::composite() {
             failedOnce = true;
             LOG_ERROR("%s did not run: the world is stretched instead", upscaler->name());
         }
+        // 0.18: the world's glow onto the upscaled world - so also onto frame generation's picture without the
+        // interface - once per world drawn.
+        if (ok && glowDrawn && !addGlow(upscaled, upscaledState, rtvHandle(kRtvUpscaled), width, height, 1, true))
+            return false;
+        dropGlow();
         upscaledValid = ok;
         upscaledNow = ok;
         // Failing frame after frame, the stretched world would also shake with the jitter: off after a while.
@@ -948,6 +963,16 @@ void Renderer::Impl::destroy() {
     releaseCom(overPipeline);
     releaseCom(motionPs);
     releaseCom(copyPs);
+    releaseCom(glow);  // 0.18
+    releaseCom(glowResolved);
+    for (ID3D12Resource*& r : glowChain) releaseCom(r);
+    releaseCom(glowDownPipeline);
+    releaseCom(glowUpPipeline);
+    for (ID3D12PipelineState*& p : glowAddPipelines) releaseCom(p);
+    releaseCom(drawGlowPs);
+    releaseCom(glowDownPs);
+    releaseCom(glowUpPs);
+    releaseCom(glowAddPs);
     releaseUpscaleTargets();
     releaseCom(root);
     releaseCom(drawVs);
@@ -1130,6 +1155,17 @@ void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown
     LOG_INFO("quality: anisotropy %d, alpha to coverage %s", anisotropy, alphaToCoverage ? "on" : "off");
 }
 
+void Renderer::setEffects(const EffectSettings& e) {
+    if (remix_) return;
+    if (remote_) return remote_->setEffects(e);
+    Impl& m = *impl_;
+    if (e == m.effects) return;
+    const bool was = m.glowWanted();
+    m.effects = e;
+    LOG_INFO("effects: glow %s, strength %d%%, size %d%%", e.glow ? "on" : "off", e.glowStrength, e.glowSize);
+    if (was && !m.glowWanted()) m.releaseGlow();  // its video memory back
+}
+
 void Renderer::preparePipelines(const std::string& file) {
     if (remix_) return;
     if (remote_) return remote_->preparePipelines(file);
@@ -1272,6 +1308,9 @@ bool Renderer::create(std::string& error) {
     m.worldSrv = m.allocSrv();
     m.hudlessSrv = m.allocSrv();  // frame generation
     m.uiCopySrv = m.allocSrv();
+    m.glowSrv = m.allocSrv();  // 0.18: the glow, resolved, and its chain
+    m.glowResolvedSrv = m.allocSrv();
+    for (UINT& srv : m.glowChainSrv) srv = m.allocSrv();
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).
@@ -1309,6 +1348,7 @@ bool Renderer::setTarget(int width, int height) {
     releaseCom(m.resolved);
     releaseCom(m.gameSized);
     m.releaseUpscaleTargets();
+    m.dropGlow();
     m.upscale = false;
     m.samples = 1;  // until the first present, like the scale: the calibration sees DX7's picture
     if (!m.createTarget(width, height, 1, m.target, m.depth)) return fail();
@@ -1383,6 +1423,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
                 Rect{0, 0, targetWidth, targetHeight}, targetWidth, targetHeight, -1.0f, n))
         return drop();
     m.waitIdle();
+    m.dropGlow();  // 0.18: drawn for the old target
     releaseCom(m.target);
     releaseCom(m.depth);
     releaseCom(m.resolved);
@@ -1510,6 +1551,7 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     Impl& m = *impl_;
     if (m.lost || !m.target || !m.begin()) return false;
     if (!m.composite()) return false;  // part 3: the picture as it would be shown
+    if (!m.upscale && m.glowDrawn && !m.addGlowToTarget()) return false;  // 0.18: a frame without an interface
     const Impl::Readable r = m.readableTarget();  // resolved first when it has several samples (stage 4)
     ID3D12Resource* source = r.resource;
     D3D12_RESOURCE_STATES* sourceState = r.state;
@@ -1605,6 +1647,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         return;
     }
     if (!m.begin() || !m.composite()) return;  // part 3: the upscaled world and the interface layer first
+    if (!m.upscale && m.glowDrawn && !m.addGlowToTarget()) return;  // 0.18: a frame without an interface
     const Impl::Readable shown = m.readableTarget();  // resolved first when it has several samples (stage 4)
     const UINT index = m.swapChain->GetCurrentBackBufferIndex();
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_RENDER_TARGET);

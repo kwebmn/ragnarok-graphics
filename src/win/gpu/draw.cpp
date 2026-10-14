@@ -83,7 +83,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool toWorld = upscale && !s.ui;
     const bool toLayer = upscale && s.ui;
     if (upscale) startFrame();
-    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer);
+    // 0.18, the glow: from the first draw of the world that adds light on, the world's draws write into the glow
+    // target too - what adds light adds it there, what covers it takes it away. Once the world is drawn, its glow
+    // goes onto the picture before the interface (under DLSS onto the upscaled world, composite()).
+    if (s.ui && !upscale && glowDrawn && !addGlowToTarget()) return;
+    const bool adds = !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE;
+    if (adds && !glowActive && glowWanted()) startGlow();
+    const bool toGlow = !s.ui && glowActive;
+    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow);
     if (!pso) return;
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
@@ -141,9 +148,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
     }
     const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(sampled[0], sampled[1], aniso);
-    bindPass(toWorld ? kPassWorld : toLayer ? kPassLayer : kPassTarget);
+    bindPass(toWorld ? (toGlow ? kPassWorldGlow : kPassWorld)
+                     : toLayer ? kPassLayer : toGlow ? kPassTargetGlow : kPassTarget);
     worldDrawn = worldDrawn || toWorld;
     layerDrawn = layerDrawn || toLayer;
+    glowDrawn = glowDrawn || (toGlow && adds);
     // Stage 4 review: the interface's edges fall on pixel centres (whole D3D7 positions, x * k + 0.5); with every
     // sample there it is drawn exactly as with one sample, while the world keeps its smoothed edges.
     if (samples > 1) placeSamples(s.ui);
@@ -177,6 +186,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
     if (coverage) c.alphaTest |= 1u << 17;
     if (toLayer && !s.blend) c.alphaTest |= 1u << 18;  // part 3: opaque in the layer (0.8 review I2)
+    // 0.18: its colour into the glow target - light it adds, or a factor it multiplies the light under it by.
+    if (toGlow && (adds || (s.blend && (s.srcBlend == d3d7::BLEND_ZERO || s.srcBlend == d3d7::BLEND_DESTCOLOR))))
+        c.alphaTest |= 1u << 19;
     c.fogEnable = s.fog ? 1u : 0u;
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;

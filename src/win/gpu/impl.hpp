@@ -20,6 +20,11 @@ namespace uagfx::gpu {
 
 class AiTextures;  // ai_textures.hpp
 
+// A committed 2D texture in the default heap (device.cpp); null when it cannot be made.
+ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, DXGI_FORMAT format,
+                                D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, const D3D12_CLEAR_VALUE* clear,
+                                UINT samples = 1);
+
 template <typename T>
 void releaseCom(T*& p) {
     if (p) {
@@ -49,12 +54,16 @@ constexpr UINT kRtvMotion = 6;
 constexpr UINT kRtvLayer = 7;
 constexpr UINT kRtvHudless = 8;  // frame generation: the picture without the interface, the interface
 constexpr UINT kRtvUi = 9;
-constexpr UINT kRtvCount = 10;
+constexpr UINT kRtvGlow = 10;      // 0.18: the light the world's additive draws add
+constexpr UINT kRtvUpscaled = 11;  // the upscaler's output, for the glow to be added to it
+constexpr int kGlowLevels = 8;     // the glow's chain of smaller copies, the first half the world's size
+constexpr UINT kRtvGlowChain = 12;
+constexpr UINT kRtvCount = kRtvGlowChain + kGlowLevels;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
-// What the open command list draws into (bindPass).
-enum Pass { kPassNone = 0, kPassTarget, kPassWorld, kPassLayer };
+// What the open command list draws into (bindPass); the glow's passes add its target as the second one (0.18).
+enum Pass { kPassNone = 0, kPassTarget, kPassWorld, kPassLayer, kPassTargetGlow, kPassWorldGlow };
 
 constexpr UINT kRootConstants = 0;
 constexpr UINT kRootTextures = 1;
@@ -210,6 +219,32 @@ struct Renderer::Impl {
     ID3D12PipelineState* motionPipeline = nullptr;
     ID3D12PipelineState* overPipeline = nullptr;  // the layer over the picture: premultiplied
     ID3D12PipelineState* copyPipeline = nullptr;  // the layer copied as it is, alpha kept (frame generation)
+    // 0.18, the glow of effects (effects.cpp): world draws write the light they add into `glow` too, from the first
+    // additive draw of a frame on; once the world is drawn that light is shrunk into the chain, blurred back up and
+    // added to the picture - before the interface, or (DLSS) to the upscaled world.
+    EffectSettings effects;
+    ID3D12Resource* glow = nullptr;          // R11G11B10 float: the world target's size and samples
+    ID3D12Resource* glowResolved = nullptr;  // with several samples: `glow` resolved
+    D3D12_RESOURCE_STATES glowState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    D3D12_RESOURCE_STATES glowResolvedState = D3D12_RESOURCE_STATE_RESOLVE_DEST;
+    UINT glowSrv = 0, glowResolvedSrv = 0;
+    int glowWidth = 0, glowHeight = 0;
+    UINT glowSamples = 0;
+    bool glowFailed = false;   // not made at this size and count: not tried again every frame
+    ID3D12Resource* glowChain[kGlowLevels] = {};
+    D3D12_RESOURCE_STATES glowChainState[kGlowLevels] = {};
+    UINT glowChainSrv[kGlowLevels] = {};
+    int glowChainWidth[kGlowLevels] = {}, glowChainHeight[kGlowLevels] = {};
+    int glowLevels = 0;
+    bool glowActive = false;  // this frame's world draws write into `glow` too
+    bool glowDrawn = false;   // `glow` holds light not yet added to the picture
+    ID3DBlob* drawGlowPs = nullptr;
+    ID3DBlob* glowDownPs = nullptr;
+    ID3DBlob* glowUpPs = nullptr;
+    ID3DBlob* glowAddPs = nullptr;
+    ID3D12PipelineState* glowDownPipeline = nullptr;
+    ID3D12PipelineState* glowUpPipeline = nullptr;
+    ID3D12PipelineState* glowAddPipelines[5] = {};  // onto the target of 1, 2, 4, 8 samples; onto the upscaled world
     HMODULE api = nullptr;  // setApi
     // GPU time (0.10.4): timestamps around every list and the upscale, read when the slot comes round again, and a
     // log line every half a minute - how much of each frame the card spends on the picture, and DLSS's part of it.
@@ -342,12 +377,32 @@ struct Renderer::Impl {
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
     // Before samplerTable and textureTable; false: lost.
     bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso);
-    ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false);
+    ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
+                                     bool toGlow = false);
     bool createUpscalePipelines();  // the motion pass and the layer composite
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp
     void prepareGeometry(const FrameRecord& rec);
     void draw(const FrameRecord& rec, const DrawCmd& d);
+    // effects.cpp (0.18)
+    bool glowWanted() const { return effects.glow && effects.glowStrength > 0; }
+    // From a world draw that adds light on: the glow target for the world being drawn, cleared; false when it cannot
+    // be made (the glow stays off at this size).
+    bool startGlow();
+    void releaseGlow();
+    void dropGlow();  // what `glow` holds goes unseen: the world it belonged to was cleared away
+    // The light drawn so far onto the picture: `dst` of dstW x dstH (its RTV, format and samples). The glow is
+    // ready for the next frame then. False: lost.
+    bool addGlow(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState, D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW,
+                 int dstH, UINT dstSamples, bool upscaledFormat);
+    bool addGlowToTarget();  // without DLSS: before the interface, a present or a read of the picture
+    bool createGlowPipelines();
+    ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
+    // One full-screen pass of the glow: src (sampled linearly, clamped) into dst; blendFactor with glow_up_ps.
+    bool glowPass(ID3D12PipelineState* pso, ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv,
+                  int srcW, int srcH, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
+                  D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, float strength, bool first,
+                  float blendFactor = 1.0f);
 };
 
 }  // namespace uagfx::gpu

@@ -78,6 +78,8 @@ public:
     // draws without blending while the target has several samples.
     // aiShown: AI textures drawn instead of the game's (off with Pause, to compare).
     void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown = true);
+    // 0.18: [effects] as they apply now (off with Pause); nothing in Remix's Direct3D 9.
+    void setEffects(const EffectSettings& e);
 
     uint32_t createTexture(int width, int height, int levels);  // an ARGB8 texture; 0 on failure
     void releaseTexture(uint32_t id);                           // freed once the GPU no longer uses it

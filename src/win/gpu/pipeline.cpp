@@ -84,7 +84,11 @@ bool Renderer::Impl::createPipelines(std::string& error) {
         !compile(compileFn, "present_vs", "vs_5_0", presentVs, error) ||
         !compile(compileFn, "present_ps", "ps_5_0", presentPs, error) ||
         !compile(compileFn, "motion_ps", "ps_5_0", motionPs, error) ||
-        !compile(compileFn, "copy_ps", "ps_5_0", copyPs, error))
+        !compile(compileFn, "copy_ps", "ps_5_0", copyPs, error) ||
+        !compile(compileFn, "draw_glow_ps", "ps_5_0", drawGlowPs, error) ||
+        !compile(compileFn, "glow_down_ps", "ps_5_0", glowDownPs, error) ||
+        !compile(compileFn, "glow_up_ps", "ps_5_0", glowUpPs, error) ||
+        !compile(compileFn, "glow_add_ps", "ps_5_0", glowAddPs, error))
         return false;
 
     D3D12_DESCRIPTOR_RANGE srvRange{};
@@ -270,12 +274,15 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
 // D3D7 and D3D12 share the numbers of blend factors (ZERO 1 ... SRCALPHASAT 11), comparison functions
 // (NEVER 1 ... ALWAYS 8) and cull modes (NONE 1, CW = FRONT 2, CCW = BACK 3 with clockwise front faces), and both
 // count winding in window space (y down), so the states map one to one.
-// Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage).
-ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer) {
+// Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage). 0.18: toGlow, the
+// glow target as the second one.
+ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer,
+                                                 bool toGlow) {
     PipelineKey k = pipelineKey(s, fvf);
     k.samples = uint8_t(toLayer ? 1 : samples);
     k.alphaToCoverage = coverage && !toLayer;
     k.layer = toLayer;
+    k.glow = toGlow && !toLayer;
     return pipelineForKey(packPipelineKey(k));
 }
 
@@ -324,6 +331,11 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
     p.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     p.SampleDesc.Count = k.samples;
+    if (k.glow) {  // 0.18: the light it adds into the glow target too, blended alike (one blend for both)
+        p.PS = {drawGlowPs->GetBufferPointer(), drawGlowPs->GetBufferSize()};
+        p.NumRenderTargets = 2;
+        p.RTVFormats[1] = DXGI_FORMAT_R11G11B10_FLOAT;
+    }
     if (k.layer) {  // part 3 (DLSS): the interface layer keeps its coverage in alpha, premultiplied, for the composite
         b.BlendEnable = TRUE;
         b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
