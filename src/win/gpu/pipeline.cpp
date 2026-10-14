@@ -83,7 +83,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     if (!compile(compileFn, "draw_vs", "vs_5_0", drawVs, error) || !compile(compileFn, "draw_ps", "ps_5_0", drawPs, error) ||
         !compile(compileFn, "present_vs", "vs_5_0", presentVs, error) ||
         !compile(compileFn, "present_ps", "ps_5_0", presentPs, error) ||
-        !compile(compileFn, "motion_ps", "ps_5_0", motionPs, error))
+        !compile(compileFn, "motion_ps", "ps_5_0", motionPs, error) ||
+        !compile(compileFn, "copy_ps", "ps_5_0", copyPs, error))
         return false;
 
     D3D12_DESCRIPTOR_RANGE srvRange{};
@@ -157,7 +158,7 @@ bool Renderer::Impl::createUpscalePipelines() {
         }
     }
     if (!overPipeline) {
-        p.PS = {presentPs->GetBufferPointer(), presentPs->GetBufferSize()};
+        p.PS = {copyPs->GetBufferPointer(), copyPs->GetBufferSize()};  // the layer's own alpha, not 1
         p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
         D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
         b.BlendEnable = TRUE;  // the layer is premultiplied: colour + picture * (1 - coverage)

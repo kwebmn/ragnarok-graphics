@@ -1,6 +1,7 @@
-# uaRO Graphics 0.8.0 — проверка
+# uaRO Graphics 0.8.1 — проверка
 
 Что нового:
+- 0.8.1: в 0.8.0 с DLSS мир под интерфейсом был бы чёрным — исправлено, проверяй DLSS на этой версии.
 - **NVIDIA DLSS** (только GeForce RTX): «Сглаживание» → «NVIDIA DLSS». DLAA сглаживает мир в полном разрешении лучше
   MSAA; «Качество» … «Ультра» рисуют мир меньше и восстанавливают его. Интерфейс рисуется поверх, в полном разрешении
   и без DLSS. DLSS включает 64-битный рендер сам.
@@ -13,7 +14,7 @@
 
 ## Проверка
 
-1. `update.bat` написал `NVIDIA DLSS is installed` и `uaRO Graphics 0.8.0 build … is installed`. В папке клиента
+1. `update.bat` написал `NVIDIA DLSS is installed` и `uaRO Graphics 0.8.1 build … is installed`. В папке клиента
    есть `uaro-graphics\dlss\` с `nvngx_dlss.dll`.
 2. Утилита → «Сглаживание» → «NVIDIA DLSS» — «DLAA» → «Применить и играть». Зайди в игру (не в меню — на карту).
    В `uaro-graphics.log` должны быть строки:

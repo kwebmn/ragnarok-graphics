@@ -815,6 +815,7 @@ void Renderer::Impl::destroy() {
     releaseCom(motionPipeline);
     releaseCom(overPipeline);
     releaseCom(motionPs);
+    releaseCom(copyPs);
     releaseUpscaleTargets();
     releaseCom(root);
     releaseCom(drawVs);

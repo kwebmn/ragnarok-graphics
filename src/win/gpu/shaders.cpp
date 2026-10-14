@@ -255,6 +255,14 @@ float2 motion_ps(PresentOut i) : SV_Target {
     return float2(vx / vz * f0 + cx - gx, vy / vz * f1 + cy - gy) * scale;
 }
 
+// Part 3: a copy that keeps alpha - the premultiplied interface layer over the picture (present_ps writes alpha 1,
+// which would black the world out under the layer), and the layer for frame generation.
+float4 copy_ps(PresentOut i) : SV_Target {
+    float2 dx = ddx(i.uv);
+    float2 dy = ddy(i.uv);
+    return tex0.SampleGrad(samp0, clamp(i.uv, sourceClamp.xy, sourceClamp.zw), dx, dy);
+}
+
 float4 present_ps(PresentOut i) : SV_Target {
     float2 dx = ddx(i.uv);  // one destination pixel in the source; outside any branch
     float2 dy = ddy(i.uv);

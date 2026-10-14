@@ -180,6 +180,7 @@ struct Renderer::Impl {
     bool cameraValid = false, prevCameraValid = false;
     float camera[12]{}, prevCamera[12]{};
     ID3DBlob* motionPs = nullptr;
+    ID3DBlob* copyPs = nullptr;  // copy_ps: alpha kept
     ID3D12PipelineState* motionPipeline = nullptr;
     ID3D12PipelineState* overPipeline = nullptr;  // the layer over the picture: premultiplied
     int width = 0;  // the target: the game's size times scale
