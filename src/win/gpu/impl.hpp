@@ -43,7 +43,9 @@ constexpr UINT kRtvNew = 4;
 constexpr UINT kRtvWorld = 5;
 constexpr UINT kRtvMotion = 6;
 constexpr UINT kRtvLayer = 7;
-constexpr UINT kRtvCount = 8;
+constexpr UINT kRtvHudless = 8;  // frame generation: the picture without the interface, the interface
+constexpr UINT kRtvUi = 9;
+constexpr UINT kRtvCount = 10;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -183,6 +185,16 @@ struct Renderer::Impl {
     ID3DBlob* copyPs = nullptr;  // copy_ps: alpha kept
     ID3D12PipelineState* motionPipeline = nullptr;
     ID3D12PipelineState* overPipeline = nullptr;  // the layer over the picture: premultiplied
+    ID3D12PipelineState* copyPipeline = nullptr;  // the layer copied as it is, alpha kept (frame generation)
+    HMODULE api = nullptr;  // setApi
+    // Frame generation: the back buffer's picture without the interface and the interface alone (upscaler.hpp).
+    ID3D12Resource* hudless = nullptr;
+    ID3D12Resource* uiCopy = nullptr;
+    D3D12_RESOURCE_STATES hudlessState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    D3D12_RESOURCE_STATES uiCopyState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT hudlessSrv = 0, uiCopySrv = 0;
+    UINT generationWidth = 0, generationHeight = 0;
+    bool renderStarted = false;  // renderStart() told for this frame
     int width = 0;  // the target: the game's size times scale
     int height = 0;
     int gameWidth = 0;  // the client's size
@@ -264,7 +276,8 @@ struct Renderer::Impl {
     // false: there is no list to record into (the GPU is lost) - the caller stops too
     bool blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
               const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW, int dstH,
-              float sharpen = -1.0f, UINT dstSamples = 1, bool over = false);
+              float sharpen = -1.0f, UINT dstSamples = 1, bool over = false, bool copy = false);
+    bool ensureGenerationTargets(UINT w, UINT h);  // frame generation's two back-buffer-sized textures
     bool growUpload(Slot& s, UINT64 size);
     Upload allocUpload(UINT64 size, UINT64 alignment);
     void transition(ID3D12Resource* r, D3D12_RESOURCE_STATES& state, D3D12_RESOURCE_STATES to);

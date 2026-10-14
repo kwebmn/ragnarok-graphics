@@ -449,6 +449,14 @@ const Entry kTexts[] = {
     {"Balanced", "Баланс", "Баланс"},
     {"Performance", "Продуктивність", "Производительность"},
     {"Ultra performance", "Ультрапродуктивність", "Ультрапроизводительность"},
+    {"NVIDIA DLSS frame generation", "Генерація кадрів NVIDIA DLSS", "Генерация кадров NVIDIA DLSS"},
+    {"Adds made-up frames between the game's: GeForce RTX 40 and 50 (3x and 4x: RTX 50), only with DLSS on the "
+     "Smoothing page. Smoother movement, a little more delay; off in menus by itself.",
+     "Додає вигадані кадри між кадрами гри: GeForce RTX 40 і 50 (3x і 4x — RTX 50), лише з DLSS у «Згладжуванні». "
+     "Плавніший рух, трохи більша затримка; у меню вимикається сама.",
+     "Добавляет придуманные кадры между кадрами игры: GeForce RTX 40 и 50 (3x и 4x — RTX 50), только с DLSS в "
+     "«Сглаживании». Плавнее движение, чуть больше задержка; в меню выключается сама."},
+    {"3×", "3×", "3×"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

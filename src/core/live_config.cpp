@@ -20,6 +20,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.backend != running.backend) u.waiting.push_back("backend");
     if (file.bridge != running.bridge) u.waiting.push_back("bridge");
     if (file.dlss != running.dlss) u.waiting.push_back("dlss");
+    if (file.frameGeneration != running.frameGeneration) u.waiting.push_back("frame_generation");
     if (file.mode != running.mode) u.waiting.push_back("mode");
     if (file.highResolution != running.highResolution) {
         u.applied.push_back(change("high_resolution", flag(running.highResolution), flag(file.highResolution)));

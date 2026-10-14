@@ -1,5 +1,6 @@
 #include "host/streamline.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -7,6 +8,9 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "sl.h"
 #include "sl_dlss.h"
+#include "sl_dlss_g.h"
+#include "sl_pcl.h"
+#include "sl_reflex.h"
 #pragma GCC diagnostic pop
 
 #include "win/log.hpp"
@@ -106,7 +110,11 @@ Dlss::~Dlss() {
     g_sl = nullptr;
 }
 
-bool Dlss::init(const std::string& folder, const std::string& logFolder, const std::string& mode, std::string& error) {
+HMODULE Dlss::module() const { return g_sl; }
+
+bool Dlss::init(const std::string& folder, const std::string& logFolder, const std::string& mode, int generation,
+                std::string& error) {
+    generation_ = generation >= 2 && generation <= 4 ? generation : 0;
     for (const Mode& m : kModes)
         if (mode == m.token) {
             mode_ = uint32_t(m.mode);
@@ -138,7 +146,8 @@ bool Dlss::init(const std::string& folder, const std::string& logFolder, const s
     }
     const std::wstring logs = wide(logFolder);
     const wchar_t* paths[1] = {dir.c_str()};
-    sl::Feature features[1] = {sl::kFeatureDLSS};
+    // Frame generation needs Reflex and its latency markers (PCL) as well.
+    sl::Feature features[4] = {sl::kFeatureDLSS, sl::kFeatureDLSS_G, sl::kFeatureReflex, sl::kFeaturePCL};
     sl::Preferences pref{};
     pref.showConsole = false;
     pref.logLevel = sl::LogLevel::eDefault;
@@ -148,7 +157,7 @@ bool Dlss::init(const std::string& folder, const std::string& logFolder, const s
     pref.logMessageCallback = slLog;
     pref.flags = sl::PreferenceFlags::eDisableCLStateTracking;  // the renderer sets its state again itself; no OTA
     pref.featuresToLoad = features;
-    pref.numFeaturesToLoad = 1;
+    pref.numFeaturesToLoad = generation_ ? 4 : 1;
     pref.engine = sl::EngineType::eCustom;
     pref.engineVersion = "uaRO Graphics";
     pref.projectId = "5b0c8a37-2f6e-4d91-a6c4-0e7f3b9d2c18";
@@ -176,6 +185,20 @@ bool Dlss::attach(ID3D12Device* device, std::string& error) {
     if (r != sl::Result::eOk) {
         error = "this graphics card or its driver has no DLSS (" + std::to_string(int(r)) + ")";
         return false;
+    }
+    if (generation_) {
+        r = slIsFeatureSupported(sl::kFeatureDLSS_G, adapter);
+        if (r != sl::Result::eOk) {
+            LOG_ERROR("DLSS frame generation is not available (%d): a GeForce RTX 40 or 50, a recent driver and "
+                      "Windows' hardware-accelerated GPU scheduling are needed",
+                      int(r));
+        } else {
+            sl::ReflexOptions reflex;
+            reflex.mode = sl::ReflexMode::eLowLatency;  // frame generation works only with Reflex on
+            const sl::Result rr = slReflexSetOptions(reflex);
+            if (rr != sl::Result::eOk) LOG_ERROR("%s", result("slReflexSetOptions", rr).c_str());
+            generationReady_ = true;
+        }
     }
     return true;
 }
@@ -218,10 +241,10 @@ bool Dlss::setOptions(int outW, int outH) {
 
 bool Dlss::evaluate(const Frame& f) {
     if (!started_ || !setOptions(f.outW, f.outH)) return false;
-    sl::FrameToken* token = nullptr;
-    const uint32_t index = frame_++;
-    sl::Result r = slGetNewFrameToken(token, &index);
-    if (r != sl::Result::eOk || !token) return false;
+    if (!generationReady_) token_ = nullptr;  // without frame generation every upscale is a frame of its own
+    sl::FrameToken* token = static_cast<sl::FrameToken*>(this->token());
+    if (!token) return false;
+    sl::Result r = sl::Result::eOk;
     sl::Constants c;
     std::memcpy(&c.cameraViewToClip, f.viewToClip, sizeof f.viewToClip);
     std::memcpy(&c.clipToCameraView, f.clipToView, sizeof f.clipToView);
@@ -257,12 +280,15 @@ bool Dlss::evaluate(const Frame& f) {
     sl::Resource depth(sl::ResourceType::eTex2d, f.depth, uint32_t(f.depthState));
     sl::Resource motion(sl::ResourceType::eTex2d, f.motion, uint32_t(f.motionState));
     const sl::Extent in{0, 0, uint32_t(f.renderW), uint32_t(f.renderH)};
+    // Frame generation reads depth and motion at the present: they stay as they are until then.
+    const sl::ResourceLifecycle lasting =
+        generationReady_ ? sl::ResourceLifecycle::eValidUntilPresent : sl::ResourceLifecycle::eOnlyValidNow;
     const sl::Extent out{0, 0, uint32_t(f.outW), uint32_t(f.outH)};
     const sl::ResourceTag tags[4] = {
         sl::ResourceTag(&color, sl::kBufferTypeScalingInputColor, sl::ResourceLifecycle::eOnlyValidNow, &in),
         sl::ResourceTag(&output, sl::kBufferTypeScalingOutputColor, sl::ResourceLifecycle::eOnlyValidNow, &out),
-        sl::ResourceTag(&depth, sl::kBufferTypeDepth, sl::ResourceLifecycle::eOnlyValidNow, &in),
-        sl::ResourceTag(&motion, sl::kBufferTypeMotionVectors, sl::ResourceLifecycle::eOnlyValidNow, &in)};
+        sl::ResourceTag(&depth, sl::kBufferTypeDepth, lasting, &in),
+        sl::ResourceTag(&motion, sl::kBufferTypeMotionVectors, lasting, &in)};
     auto* list = reinterpret_cast<sl::CommandBuffer*>(f.list);
     r = slSetTagForFrame(*token, kViewport, tags, 4, list);
     if (r != sl::Result::eOk) {
@@ -276,6 +302,90 @@ bool Dlss::evaluate(const Frame& f) {
         return false;
     }
     return true;
+}
+
+void* Dlss::token() {
+    if (!token_) {
+        sl::FrameToken* t = nullptr;
+        const uint32_t index = frame_++;
+        if (slGetNewFrameToken(t, &index) == sl::Result::eOk) token_ = t;
+    }
+    return token_;
+}
+
+void Dlss::marker(uint32_t m) {
+    if (!generationReady_ || !token()) return;
+    slPCLSetMarker(sl::PCLMarker(m), *static_cast<sl::FrameToken*>(token_));
+}
+
+void Dlss::renderStart() {
+    marker(uint32_t(sl::PCLMarker::eSimulationEnd));  // the game has worked out its frame: its draws arrive
+    marker(uint32_t(sl::PCLMarker::eRenderSubmitStart));
+}
+
+void Dlss::beforePresent(const Generation& g) {
+    if (!generationReady_ || !token()) return;
+    auto* frame = static_cast<sl::FrameToken*>(token_);
+    auto* list = reinterpret_cast<sl::CommandBuffer*>(g.list);
+    const sl::Extent picture{uint32_t(g.picture.top), uint32_t(g.picture.left),
+                             uint32_t(g.picture.right - g.picture.left), uint32_t(g.picture.bottom - g.picture.top)};
+    sl::Resource hudless(sl::ResourceType::eTex2d, g.hudless, uint32_t(g.hudlessState));
+    sl::Resource ui(sl::ResourceType::eTex2d, g.ui, uint32_t(g.uiState));
+    sl::Resource back(sl::ResourceType::eTex2d, nullptr, 0u);  // the swap chain's: only its part with the picture
+    std::vector<sl::ResourceTag> tags = {
+        sl::ResourceTag(&hudless, sl::kBufferTypeHUDLessColor, sl::ResourceLifecycle::eValidUntilPresent, &picture),
+        sl::ResourceTag(&ui, sl::kBufferTypeUIColorAndAlpha, sl::ResourceLifecycle::eValidUntilPresent, &picture)};
+    if (picture.width != uint32_t(g.backWidth) || picture.height != uint32_t(g.backHeight))
+        tags.push_back(sl::ResourceTag(&back, sl::kBufferTypeBackbuffer, sl::ResourceLifecycle::eValidUntilPresent,
+                                       &picture));
+    sl::Result r = slSetTagForFrame(*frame, kViewport, tags.data(), uint32_t(tags.size()), list);
+    if (r != sl::Result::eOk) LOG_ERROR("%s", result("slSetTagForFrame (frame generation)", r).c_str());
+    const int mode = g.on ? 1 : 0;
+    if (mode != generationMode_) {
+        if (mode && generationMode_ < 0) {  // the first time: as many frames as this card can make
+            sl::DLSSGState state;
+            if (slDLSSGGetState(kViewport, state, nullptr) == sl::Result::eOk && state.numFramesToGenerateMax > 0) {
+                generationFrames_ = std::min<uint32_t>(uint32_t(generation_ - 1), state.numFramesToGenerateMax);
+                if (generationFrames_ + 1 < uint32_t(generation_))
+                    LOG_INFO("DLSS frame generation: %ux on this card instead of %dx", generationFrames_ + 1,
+                             generation_);
+            } else {
+                generationFrames_ = 1;
+            }
+        }
+        sl::DLSSGOptions o;
+        o.mode = mode ? sl::DLSSGMode::eOn : sl::DLSSGMode::eOff;
+        o.numFramesToGenerate = generationFrames_;
+        o.flags = sl::DLSSGFlags::eRetainResourcesWhenOff;  // menus come and go: no stutter when it comes back
+        r = slDLSSGSetOptions(kViewport, o);
+        if (r != sl::Result::eOk) {
+            LOG_ERROR("%s", result("slDLSSGSetOptions", r).c_str());
+        } else {
+            LOG_INFO("DLSS frame generation %s", mode ? "on" : "off (no world on screen)");
+            generationMode_ = mode;
+        }
+    }
+    marker(uint32_t(sl::PCLMarker::eRenderSubmitEnd));
+    marker(uint32_t(sl::PCLMarker::ePresentStart));
+}
+
+void Dlss::suspend() {
+    if (!generationReady_ || generationMode_ != 1) return;
+    sl::DLSSGOptions o;
+    o.mode = sl::DLSSGMode::eOff;
+    o.numFramesToGenerate = generationFrames_;
+    o.flags = sl::DLSSGFlags::eRetainResourcesWhenOff;
+    if (slDLSSGSetOptions(kViewport, o) == sl::Result::eOk) generationMode_ = 0;
+}
+
+void Dlss::afterPresent() {
+    if (!generationReady_) return;
+    marker(uint32_t(sl::PCLMarker::ePresentEnd));
+    token_ = nullptr;  // the next frame: its own token, Reflex's sleep, then its simulation
+    if (token()) {
+        slReflexSleep(*static_cast<sl::FrameToken*>(token_));
+        marker(uint32_t(sl::PCLMarker::eSimulationStart));
+    }
 }
 
 }  // namespace uagfx::host

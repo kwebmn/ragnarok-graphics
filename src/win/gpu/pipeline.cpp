@@ -135,7 +135,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
 }
 
 bool Renderer::Impl::createUpscalePipelines() {
-    if (motionPipeline && overPipeline) return true;
+    if (motionPipeline && overPipeline && copyPipeline) return true;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
     p.pRootSignature = root;
     p.VS = {presentVs->GetBufferPointer(), presentVs->GetBufferSize()};
@@ -154,6 +154,16 @@ bool Renderer::Impl::createUpscalePipelines() {
                                                        reinterpret_cast<void**>(&motionPipeline)))) {
             LOG_ERROR("the motion pipeline failed");
             motionPipeline = nullptr;
+            return false;
+        }
+    }
+    if (!copyPipeline) {  // as it is: frame generation's interface
+        p.PS = {copyPs->GetBufferPointer(), copyPs->GetBufferSize()};
+        p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&copyPipeline)))) {
+            LOG_ERROR("the copy pipeline failed");
+            copyPipeline = nullptr;
             return false;
         }
     }

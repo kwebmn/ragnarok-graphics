@@ -114,6 +114,9 @@ Config parseConfig(const std::string& text) {
             setSide(val, c.windowHeight);
         } else if (key == "frames.vsync") {
             setBool(val, c.vsync);
+        } else if (key == "frames.frame_generation") {
+            if (val == "off") c.frameGeneration = 0;
+            if (val == "2x" || val == "3x" || val == "4x") c.frameGeneration = val[0] - '0';
         } else if (key == "frames.fps_limit") {
             toInt(val, 0, 1000, c.fpsLimit);
         } else if (key == "frames.allow_tearing") {

@@ -33,6 +33,7 @@ struct Args {
     std::string dlss = "off";
     bool jitterInverted = false;
     bool motionInverted = false;
+    int generation = 0;
 };
 
 // The driver's command line: words, "quoted words".
@@ -63,6 +64,7 @@ Args parseArgs() {
         else if (k == "--dlss") a.dlss = v;
         else if (k == "--dlss-jitter") a.jitterInverted = v == "inverted";
         else if (k == "--dlss-motion") a.motionInverted = v == "inverted";
+        else if (k == "--fg") a.generation = std::atoi(v.c_str());
         else continue;
         ++i;
     }
@@ -118,7 +120,9 @@ int Host::run(const Args& a) {
     bool dlss = false;
     if (a.dlss != "off") {
         std::string why;
-        dlss = dlss_.init(a.dir + "\\uaro-graphics\\dlss", a.dir, a.dlss, why);
+        dlss = dlss_.init(a.dir + "\\uaro-graphics\\dlss", a.dir, a.dlss, a.generation, why);
+        // Frame generation takes over the swap chain: Direct3D 12 and DXGI come through Streamline's interposer.
+        if (dlss && a.generation >= 2) renderer_.setApi(dlss_.module());
         dlss_.setSigns(a.jitterInverted ? -1.0f : 1.0f, a.motionInverted ? -1.0f : 1.0f);
         if (!dlss) LOG_ERROR("DLSS: %s; drawing without it", why.c_str());
     }

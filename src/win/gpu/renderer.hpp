@@ -22,6 +22,7 @@ struct BridgeOptions {
     std::string present = "auto";    // auto: the game's window, else a composition surface; window; composition
     bool dpiScale = true;            // composition: scaled for Windows scaling of a DPI-unaware game window
     std::string dlss = "off";        // off, dlaa, quality, balanced, performance, ultra
+    int frameGeneration = 0;          // 2-4: DLSS frame generation, 0 none
     bool dlssJitterInverted = false;  // test switches ([quality] dlss_jitter, dlss_motion)
     bool dlssMotionInverted = false;
     int logLevel = 1;                // LogLevel
@@ -80,6 +81,9 @@ public:
     // way to show the picture; whether the GPU is lost.
     bool createTextureAs(uint32_t id, int width, int height, int levels);
     void setUpscaler(Upscaler* u);   // before setScale
+    // Before create(): Direct3D 12 and DXGI from this module (Streamline's sl.interposer.dll, so that frame
+    // generation can take over the swap chain) instead of the system's.
+    void setApi(HMODULE module);
     void finish();                   // waits until the GPU has done everything submitted
     ID3D12Device* device() const;
     void setPresentSurface(HANDLE surface);

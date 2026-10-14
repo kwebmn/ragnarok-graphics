@@ -38,6 +38,7 @@ bool Context::open(std::string& error) {
         o.dlss = config.dlss;
         o.dlssJitterInverted = config.dlssJitterInverted;
         o.dlssMotionInverted = config.dlssMotionInverted;
+        o.frameGeneration = config.dlss != "off" ? config.frameGeneration : 0;  // it uses DLSS's depth and motion
         std::string why;
         remote = r->createRemote(o, why);
         if (remote)

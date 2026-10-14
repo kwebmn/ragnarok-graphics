@@ -40,6 +40,7 @@ struct Config {
     bool dlssMotionInverted = false;
     bool vsync = true;
     int fpsLimit = 0;      // 0 = no limit
+    int frameGeneration = 0;  // part 3: [frames] frame_generation = off, 2x, 3x, 4x - DLSS frame generation (DLSS on)
     bool allowTearing = false;  // let G-SYNC / FreeSync monitors show frames as soon as they are ready
     LogLevel logLevel = LogLevel::Info;
 };

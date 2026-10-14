@@ -54,7 +54,7 @@ TEST(schema_live_keys_are_the_specs) {
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "quality.dlss" &&
-                                k != "frames.allow_tearing"));
+                                k != "frames.allow_tearing" && k != "frames.frame_generation"));
     }
 }
 

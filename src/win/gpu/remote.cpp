@@ -44,7 +44,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
                       std::to_string(GetCurrentProcessId()) + " --dir \"" + o.gameDir + "\" --log " +
                       std::to_string(o.logLevel) + " --present " + o.present + " --dlss " + o.dlss +
                       " --dlss-jitter " + (o.dlssJitterInverted ? "inverted" : "normal") + " --dlss-motion " +
-                      (o.dlssMotionInverted ? "inverted" : "normal");
+                      (o.dlssMotionInverted ? "inverted" : "normal") + " --fg " + std::to_string(o.frameGeneration);
     STARTUPINFOA si{};
     si.cb = sizeof si;
     std::vector<char> line(cmd.begin(), cmd.end());

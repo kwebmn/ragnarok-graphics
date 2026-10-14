@@ -52,6 +52,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::SmoothAnisoHint, ""},
         {"frames", "vsync", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesVsync,
          Text::FramesVsyncHint, ""},
+        {"frames", "frame_generation", Page::Frames, Control::Choice, 0, 0, 0, {"off", "2x", "3x", "4x"},
+         {Text::SmoothOff, Text::Factor2, Text::Times3, Text::Factor4}, Text::FramesGeneration,
+         Text::FramesGenerationHint, ""},
         {"frames", "fps_limit", Page::Frames, Control::Number, 0, 1000, 1, {}, {}, Text::FramesFpsLimit,
          Text::FramesFpsLimitHint, ""},
         {"frames", "allow_tearing", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesTearing,
@@ -85,6 +88,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
+    if (k == "frames.frame_generation") return c.frameGeneration ? std::to_string(c.frameGeneration) + "x" : "off";
     if (k == "frames.allow_tearing") return c.allowTearing ? "1" : "0";
     if (k == "debug.log") return c.logLevel == LogLevel::Debug ? "verbose" : "normal";
     return "";

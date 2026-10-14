@@ -34,6 +34,23 @@ public:
     // Records the upscale; false when it failed - the renderer then stretches the world itself. The command list's
     // state (heaps, root signature, pipeline, targets) is the renderer's to set again afterwards.
     virtual bool evaluate(const Frame& f) = 0;
+
+    // Frame generation (DLSS-G), when it was asked for and the card has it: the frame's life around the present.
+    struct Generation {
+        ID3D12GraphicsCommandList* list = nullptr;  // submitted right before the present
+        ID3D12Resource* hudless = nullptr;          // back buffer size: the picture without the interface
+        ID3D12Resource* ui = nullptr;               // back buffer size: the interface, premultiplied
+        D3D12_RESOURCE_STATES hudlessState{}, uiState{};
+        RECT picture{};                             // where the picture is in the back buffer
+        int backWidth = 0, backHeight = 0;
+        bool on = false;  // generate around this frame: a world on screen with a known camera
+    };
+    virtual bool generates() const { return false; }
+    virtual void renderStart() {}                        // the frame's first commands arrived
+    virtual void beforePresent(const Generation&) {}     // its inputs and options, before the present
+    virtual void afterPresent() {}                       // the next frame begins (latency markers, sleep)
+    // Generation off now: before the swap chain changes size, and for frames without the upscale (Pause).
+    virtual void suspend() {}
 };
 
 }  // namespace uagfx::gpu

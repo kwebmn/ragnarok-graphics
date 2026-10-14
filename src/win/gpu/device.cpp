@@ -403,9 +403,9 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
 // one bilinear sample per pixel when enlarging, an average over each pixel's footprint when shrinking.
 bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
                           const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW,
-                          int dstH, float sharpen, UINT dstSamples, bool over) {
+                          int dstH, float sharpen, UINT dstSamples, bool over, bool copy) {
     if (dstRect.empty() || srcW <= 0 || srcH <= 0) return true;  // nothing to copy
-    ID3D12PipelineState* pso = over ? overPipeline : presentPipelineFor(dstSamples);
+    ID3D12PipelineState* pso = copy ? copyPipeline : over ? overPipeline : presentPipelineFor(dstSamples);
     if (!pso) return true;  // logged when it failed: the copy is skipped
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
@@ -715,6 +715,38 @@ bool Renderer::Impl::composite() {
     return true;
 }
 
+bool Renderer::Impl::ensureGenerationTargets(UINT w, UINT h) {
+    if (hudless && uiCopy && w == generationWidth && h == generationHeight) return true;
+    Slot& s = slots[slot];  // the old ones may still be read by what this list recorded
+    if (hudless) s.garbage.push_back(hudless);
+    if (uiCopy) s.garbage.push_back(uiCopy);
+    hudless = uiCopy = nullptr;
+    generationWidth = generationHeight = 0;
+    D3D12_CLEAR_VALUE black{};
+    black.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    black.Color[3] = 1.0f;
+    D3D12_CLEAR_VALUE none{};
+    none.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    hudless = createTexture2D(device, int(w), int(h), 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                              D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, &black);
+    uiCopy = createTexture2D(device, int(w), int(h), 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                             D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
+    if (!hudless || !uiCopy) {
+        releaseCom(hudless);
+        releaseCom(uiCopy);
+        LOG_ERROR("cannot create frame generation's %ux%u inputs", w, h);
+        return false;
+    }
+    hudlessState = uiCopyState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    device->CreateRenderTargetView(hudless, nullptr, rtvHandle(kRtvHudless));
+    device->CreateShaderResourceView(hudless, nullptr, cpuSrvHandle(hudlessSrv));
+    device->CreateRenderTargetView(uiCopy, nullptr, rtvHandle(kRtvUi));
+    device->CreateShaderResourceView(uiCopy, nullptr, cpuSrvHandle(uiCopySrv));
+    generationWidth = w;
+    generationHeight = h;
+    return true;
+}
+
 // ---- Impl: swap chain --------------------------------------------------------------------------------------
 
 void Renderer::Impl::releaseSwapChain() {
@@ -813,6 +845,9 @@ void Renderer::Impl::destroy() {
     pipelines.clear();
     for (ID3D12PipelineState*& p : presentPipelines) releaseCom(p);
     releaseCom(motionPipeline);
+    releaseCom(copyPipeline);
+    releaseCom(hudless);
+    releaseCom(uiCopy);
     releaseCom(overPipeline);
     releaseCom(motionPs);
     releaseCom(copyPs);
@@ -877,6 +912,8 @@ void Renderer::setUiSharp(bool sharp) {
 int Renderer::samples() const { return remote_ ? remote_->samples() : int(impl_->samples); }
 
 void Renderer::setUpscaler(Upscaler* u) { impl_->upscaler = u; }
+
+void Renderer::setApi(HMODULE module) { impl_->api = module; }
 
 void Renderer::finish() {
     if (!remote_ && impl_->device && impl_->fence) impl_->waitIdle();
@@ -961,8 +998,8 @@ void Renderer::preparePipelines(const std::string& file) {
 
 bool Renderer::create(std::string& error) {
     Impl& m = *impl_;
-    m.d3d12 = LoadLibraryA("d3d12.dll");
-    m.dxgi = LoadLibraryA("dxgi.dll");
+    m.d3d12 = m.api ? m.api : LoadLibraryA("d3d12.dll");  // part 3: Streamline's interposer when it is given
+    m.dxgi = m.api ? m.api : LoadLibraryA("dxgi.dll");
     if (!m.d3d12 || !m.dxgi) {
         error = "d3d12.dll or dxgi.dll is missing";
         return false;
@@ -1050,6 +1087,8 @@ bool Renderer::create(std::string& error) {
     m.upscaledSrv = m.allocSrv();
     m.layerSrv = m.allocSrv();
     m.worldSrv = m.allocSrv();
+    m.hudlessSrv = m.allocSrv();  // frame generation
+    m.uiCopySrv = m.allocSrv();
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).
@@ -1252,6 +1291,10 @@ void Renderer::execute(const FrameRecord& record) {
     if (remote_) return remote_->execute(record);
     Impl& m = *impl_;
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
+    if (m.upscale && m.upscaler && !m.renderStarted) {  // part 3: latency markers
+        m.renderStarted = true;
+        m.upscaler->renderStart();
+    }
     m.prepareGeometry(record);
     for (const Command& c : record.commands()) {
         if (!m.open) break;  // the list could not go on (the GPU is lost): nothing more is recorded
@@ -1343,6 +1386,10 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         return;
     }
     if (!m.target || !window || source.empty()) return;
+    // Part 3: frame generation must be off while the swap chain changes, and for frames it has no inputs for.
+    const UINT wantW = UINT(std::max(1, outputWidth)), wantH = UINT(std::max(1, outputHeight));
+    if (m.upscaler && m.upscaler->generates() && (!m.upscale || wantW != m.swapWidth || wantH != m.swapHeight))
+        m.upscaler->suspend();
     if (!m.ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),
                            options.allowTearing)) {
         Sleep(15);  // no swap chain (0.4.1 review): no Present waits for vblank, keep the game's loop from spinning
@@ -1367,9 +1414,50 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const auto tx = [&m](int x) { return float(double(x) * m.width / m.gameWidth); };
     const auto ty = [&m](int y) { return float(double(y) * m.height / m.gameHeight); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
-    if (!m.blit(shown.resource, *shown.state, m.targetSrv, m.width, m.height, from, rtv, fit, int(m.swapWidth),
-                int(m.swapHeight), options.sharpen))
+    const bool generation = m.upscale && m.upscaler && m.upscaler->generates() && m.upscaledValid &&
+                            m.ensureGenerationTargets(m.swapWidth, m.swapHeight);
+    if (generation) {
+        // Part 3, frame generation: the back buffer is put together from the picture without the interface and the
+        // interface alone (premultiplied), exactly as DLSS-G puts generated frames together: UI + (1 - a) * picture.
+        const Rect whole{0, 0, int(m.swapWidth), int(m.swapHeight)};
+        const float wholeF[4] = {0.0f, 0.0f, float(m.swapWidth), float(m.swapHeight)};
+        const float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+        const float none[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        m.transition(m.hudless, m.hudlessState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        m.list->ClearRenderTargetView(m.rtvHandle(kRtvHudless), clearColor, 0, nullptr);
+        m.transition(m.uiCopy, m.uiCopyState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        m.list->ClearRenderTargetView(m.rtvHandle(kRtvUi), none, 0, nullptr);
+        if (!m.blit(m.upscaled, m.upscaledState, m.upscaledSrv, m.width, m.height, from, m.rtvHandle(kRtvHudless), fit,
+                    int(m.swapWidth), int(m.swapHeight), options.sharpen))
+            return;
+        if (m.layerDrawn && !m.blit(m.layer, m.layerState, m.layerSrv, m.width, m.height, from, m.rtvHandle(kRtvUi),
+                                    fit, int(m.swapWidth), int(m.swapHeight), -1.0f, 1, false, true))
+            return;
+        if (!m.blit(m.hudless, m.hudlessState, m.hudlessSrv, int(m.swapWidth), int(m.swapHeight), wholeF, rtv, whole,
+                    int(m.swapWidth), int(m.swapHeight)) ||
+            !m.blit(m.uiCopy, m.uiCopyState, m.uiCopySrv, int(m.swapWidth), int(m.swapHeight), wholeF, rtv, whole,
+                    int(m.swapWidth), int(m.swapHeight), -1.0f, 1, true))
+            return;
+        Upscaler::Generation g;
+        g.list = m.list;
+        g.hudless = m.hudless;
+        g.ui = m.uiCopy;
+        g.hudlessState = m.hudlessState;
+        g.uiState = m.uiCopyState;
+        g.picture = RECT{fit.left, fit.top, fit.right, fit.bottom};
+        g.backWidth = int(m.swapWidth);
+        g.backHeight = int(m.swapHeight);
+        g.on = m.cameraValid;  // a world on screen: not the login, the character list or a loading screen
+        m.upscaler->beforePresent(g);
+        ID3D12DescriptorHeap* heaps[2] = {m.gpuSrv, m.samplerHeap};  // Streamline may have changed them
+        m.list->SetDescriptorHeaps(2, heaps);
+        m.boundPipeline = nullptr;
+        m.boundTextures = m.boundSamplers = ~0ull;
+        m.pass = kPassNone;
+    } else if (!m.blit(shown.resource, *shown.state, m.targetSrv, m.width, m.height, from, rtv, fit,
+                       int(m.swapWidth), int(m.swapHeight), options.sharpen)) {
         return;
+    }
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
     m.submit();
 
@@ -1387,6 +1475,8 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = m.swapChain->Present(sync, flags);
+    if (generation) m.upscaler->afterPresent();
+    m.renderStarted = false;
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;
         m.nextJitter();
