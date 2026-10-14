@@ -1046,12 +1046,12 @@ bool Renderer::upgradeFactory(bool (*upgrade)(void** object)) {
     return true;
 }
 
-bool Renderer::startAiTextures(const std::string& gameDir, double targetMs) {
+bool Renderer::startAiTextures(const std::string& gameDir, double targetMs, int denoise) {
     Impl& m = *impl_;
     if (remote_ || remix_ || m.ai) return m.ai != nullptr;
     m.ai = new AiTextures(m);
     std::string error;
-    if (!m.ai->start(gameDir, targetMs, error)) {
+    if (!m.ai->start(gameDir, targetMs, denoise, error)) {
         LOG_ERROR("AI textures: %s; they stay off", error.c_str());
         delete m.ai;
         m.ai = nullptr;

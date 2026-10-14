@@ -65,6 +65,7 @@ enum class Text : uint16_t {
     Factor2, Factor4, Factor8, Factor16, RenderBridge, RenderBridgeHint,
     SmoothDlss, SmoothDlssHint, DlssDlaa, DlssQuality, DlssBalanced, DlssPerformance, DlssUltra,
     FramesGeneration, FramesGenerationHint, Times3, SmoothAi, SmoothAiHint, SmoothAiBudget, SmoothAiBudgetHint,
+    SmoothAiDenoise, SmoothAiDenoiseHint,
     Count
 };
 

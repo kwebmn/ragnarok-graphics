@@ -37,6 +37,7 @@ struct Args {
     int generation = 0;
     bool aiTextures = false;
     double aiBudget = 2.0;  // ms of GPU time a frame for the network
+    int aiDenoise = 25;     // % of the grain it smooths away
 };
 
 // The driver's command line: words, "quoted words".
@@ -70,6 +71,7 @@ Args parseArgs() {
         else if (k == "--fg") a.generation = std::atoi(v.c_str());
         else if (k == "--ai-textures") a.aiTextures = v == "1";
         else if (k == "--ai-budget") a.aiBudget = std::atof(v.c_str());
+        else if (k == "--ai-denoise") a.aiDenoise = std::atoi(v.c_str());
         else continue;
         ++i;
     }
@@ -186,7 +188,7 @@ int Host::run(const Args& a) {
         return 3;
     }
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
-    if (a.aiTextures) renderer_.startAiTextures(a.dir, a.aiBudget);  // its own log line, on or why not
+    if (a.aiTextures) renderer_.startAiTextures(a.dir, a.aiBudget, a.aiDenoise);  // its own log line, on or why not
     bool upscales = false;
     if (dlss) {  // Streamline got the device the moment it was made (setOnDevice)
         if (attach.ok) {

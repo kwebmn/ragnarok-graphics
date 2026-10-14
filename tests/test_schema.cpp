@@ -56,7 +56,8 @@ TEST(schema_live_keys_are_the_specs) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "quality.dlss" &&
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
-                                k != "quality.ai_textures" && k != "quality.ai_budget"));
+                                k != "quality.ai_textures" && k != "quality.ai_budget" &&
+                                k != "quality.ai_denoise"));
     }
 }
 

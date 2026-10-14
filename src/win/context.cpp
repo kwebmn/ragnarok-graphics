@@ -82,6 +82,7 @@ bool Context::open(std::string& error) {
         o.frameGeneration = config.dlss != "off" ? config.frameGeneration : 0;  // it uses DLSS's depth and motion
         o.aiTextures = config.aiTextures;
         o.aiBudget = config.aiBudget;
+        o.aiDenoise = config.aiDenoise;
         std::string why;
         remote = r->createRemote(o, why);
         if (remote)

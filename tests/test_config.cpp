@@ -70,6 +70,16 @@ TEST(config_invalid_values_keep_defaults) {
     CHECK(c.logLevel == LogLevel::Info);
 }
 
+TEST(config_ai_denoise_is_a_percent) {
+    // Below Real-ESRGAN's 50: a game texture's grain is its detail (sand at 100 came out softer than the game's own,
+    // 0.11.2), and walls and floors look alike at every strength.
+    CHECK_EQ(parseConfig("").aiDenoise, 25);
+    CHECK_EQ(parseConfig("[quality]\nai_denoise = 0\n").aiDenoise, 0);
+    CHECK_EQ(parseConfig("[quality]\nai_denoise = 100\n").aiDenoise, 100);
+    CHECK_EQ(parseConfig("[quality]\nai_denoise = 101\n").aiDenoise, 25);
+    CHECK_EQ(parseConfig("[quality]\nai_denoise = some\n").aiDenoise, 25);
+}
+
 TEST(config_notepad_file_with_bom_crlf_comments_and_capitals) {
     const Config c = parseConfig("\xEF\xBB\xBF; uaRO Graphics\r\n[Renderer]\r\nBackend = UARO ; the new one\r\n");
     CHECK(c.backend == Backend::Uaro);

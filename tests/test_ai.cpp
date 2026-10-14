@@ -13,8 +13,8 @@ using namespace uagfx::ai;
 
 namespace {
 
-bool loadModel(Model& m) {
-    std::ifstream f(std::string(UAGFX_SOURCE_DIR) + "/dist/ai/realesr-general-x4v3.bin", std::ios::binary);
+bool loadModel(Model& m, const char* name = "realesr-general-x4v3") {
+    std::ifstream f(std::string(UAGFX_SOURCE_DIR) + "/dist/ai/" + name + ".bin", std::ios::binary);
     std::vector<uint8_t> file((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     std::string error;
     return parseModel(file, m, error);
@@ -81,6 +81,30 @@ TEST(ai_wrapped_border_keeps_a_repeating_texture_repeating) {
                 worst = std::max(worst, std::fabs(a - b));
             }
     CHECK(worst > 0.01f);
+}
+
+TEST(ai_models_mix_by_denoise_strength) {
+    // Real-ESRGAN's denoise strength for realesr-general-x4v3: its weights and the weak-denoise model's
+    // (realesr-general-wdn-x4v3) mixed, d * x4v3 + (1 - d) * wdn. 100 is the model alone (0.11.0-0.11.2, sand came out
+    // flat), 50 Real-ESRGAN's default, 0 keeps the most grain.
+    Model strong, weak, mixed;
+    CHECK(loadModel(strong));
+    CHECK(loadModel(weak, "realesr-general-wdn-x4v3"));
+    std::string error;
+    CHECK(mixModels(strong, weak, 100, mixed, error));
+    CHECK(mixed.data == strong.data);
+    CHECK(mixModels(strong, weak, 0, mixed, error));
+    CHECK(mixed.data == weak.data);
+    CHECK(mixModels(strong, weak, 50, mixed, error));
+    CHECK_EQ(mixed.middle, strong.middle);
+    CHECK_EQ(mixed.convs.size(), strong.convs.size());
+    float worst = 0.0f;
+    for (size_t i = 0; i < mixed.data.size(); ++i)
+        worst = std::max(worst, std::fabs(mixed.data[i] - 0.5f * (strong.data[i] + weak.data[i])));
+    CHECK(worst < 1e-6f);
+    Model other = weak;
+    other.data.pop_back();
+    CHECK(!mixModels(strong, other, 50, mixed, error) && !error.empty());  // not the same network
 }
 
 TEST(ai_model_file_must_be_whole) {

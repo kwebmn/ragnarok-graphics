@@ -59,6 +59,20 @@ bool parseModel(const std::vector<uint8_t>& file, Model& m, std::string& error) 
     return true;
 }
 
+bool mixModels(const Model& strong, const Model& weak, int denoise, Model& out, std::string& error) {
+    if (strong.features != weak.features || strong.middle != weak.middle || strong.scale != weak.scale ||
+        strong.inChannels != weak.inChannels || strong.data.size() != weak.data.size()) {
+        error = "the two models are not the same network";
+        return false;
+    }
+    const float d = float(std::clamp(denoise, 0, 100)) / 100.0f;
+    out = strong;
+    if (d == 1.0f) return true;  // exactly the strong one, and the weak one at 0 below
+    for (size_t i = 0; i < out.data.size(); ++i)
+        out.data[i] = d == 0.0f ? weak.data[i] : d * strong.data[i] + (1.0f - d) * weak.data[i];
+    return true;
+}
+
 void convolve(const Model& m, const Model::Conv& c, const float* in, int width, int height, float* out, int first,
               int last, Border border) {
     const size_t plane = size_t(width) * size_t(height);

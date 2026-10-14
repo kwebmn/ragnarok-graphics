@@ -112,6 +112,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.aiTextures);
         } else if (key == "quality.ai_budget") {
             toInt(val, 1, 20, c.aiBudget);
+        } else if (key == "quality.ai_denoise") {
+            toInt(val, 0, 100, c.aiDenoise);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {

@@ -34,7 +34,7 @@ public:
 
     // The model, the shaders, a self-test against the CPU's network, upscaled.grf. false: the feature stays off.
     // targetMs: the GPU time a frame the work may take; the amount of work follows what it measures (observe).
-    bool start(const std::string& gameDir, double targetMs, std::string& error);
+    bool start(const std::string& gameDir, double targetMs, int denoise, std::string& error);
     void observe(UINT slot, double ms);  // what this slot's last share of the work took on the GPU
     // A texture's pixels as the game uploads them: level 0 of a whole texture is kept for the network.
     void noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb);
@@ -110,8 +110,10 @@ private:
     bool ready_ = false;
     ai::Model model_;
     std::string modelName_ = "realesr-general-x4v3";
-    // upscaled.grf's folder: the model, its denoising (dn100: the model as it is) and how it reads past a texture's
-    // edge (wrapped since 0.11.2; 0.11.0 and 0.11.1 read zeros there, and a repeat showed a seam).
+    std::string weakName_ = "realesr-general-wdn-x4v3";  // its weak-denoise twin
+    int denoise_ = 100;  // % of the model in the mix, the rest its twin's
+    // upscaled.grf's folder: the model, its denoise strength and how it reads past a texture's edge (wrapped since
+    // 0.11.2; 0.11.0 and 0.11.1 read zeros there, and a repeat showed a seam).
     std::string cacheName_ = modelName_ + "-dn100-wrap";
     double budget_ = 3e8;          // multiply-adds a frame, adjusted to targetMs_
     double targetMs_ = 2.0;

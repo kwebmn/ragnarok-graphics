@@ -80,19 +80,42 @@ AiTextures::~AiTextures() {
     releaseCom(feat_[1]);
 }
 
-bool AiTextures::start(const std::string& gameDir, double targetMs, std::string& error) {
-    targetMs_ = std::clamp(targetMs, 0.5, 20.0);
-    const std::string modelPath = gameDir + "\\uaro-graphics\\ai\\" + modelName_ + ".bin";
-    std::ifstream f(modelPath, std::ios::binary);
+namespace {
+
+bool loadModel(const std::string& path, ai::Model& m, std::string& error) {
+    std::ifstream f(path, std::ios::binary);
     std::vector<uint8_t> file((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     if (file.empty()) {
-        error = "no model " + modelPath + " (update.bat installs it)";
+        error = "no model " + path + " (update.bat installs it)";
         return false;
     }
-    if (!ai::parseModel(file, model_, error) || model_.scale != kScale) {
-        if (error.empty()) error = "the model does not enlarge 4 times";
+    return ai::parseModel(file, m, error);
+}
+
+}  // namespace
+
+bool AiTextures::start(const std::string& gameDir, double targetMs, int denoise, std::string& error) {
+    targetMs_ = std::clamp(targetMs, 0.5, 20.0);
+    const std::string dir = gameDir + "\\uaro-graphics\\ai\\";
+    if (!loadModel(dir + modelName_ + ".bin", model_, error)) return false;
+    if (model_.scale != kScale) {
+        error = "the model does not enlarge 4 times";
         return false;
     }
+    // [quality] ai_denoise: Real-ESRGAN's denoise strength, the model mixed with its weak-denoise twin (0.11.2 and
+    // older: the model alone, 100 - sand came out flat).
+    denoise_ = std::clamp(denoise, 0, 100);
+    if (denoise_ < 100) {
+        ai::Model weak, mixed;
+        std::string why;
+        if (loadModel(dir + weakName_ + ".bin", weak, why) && ai::mixModels(model_, weak, denoise_, mixed, why)) {
+            model_ = std::move(mixed);
+        } else {
+            LOG_ERROR("AI textures: %s; the model alone, denoise 100%%", why.c_str());
+            denoise_ = 100;
+        }
+    }
+    cacheName_ = modelName_ + "-dn" + std::to_string(denoise_) + "-wrap";
     if (!createGpu(error)) return false;
     const ULONGLONG t0 = GetTickCount64();
     if (!selfTest(error)) return false;
@@ -129,8 +152,10 @@ bool AiTextures::start(const std::string& gameDir, double targetMs, std::string&
     char note[96] = "";
     if (older)
         std::snprintf(note, sizeof note, " (and %u of an older version, not used: delete it to free them)", older);
-    LOG_INFO("AI textures: on - %s on the GPU, self-test passed in %llu ms; upscaled.grf has %u textures%s%s",
-             modelName_.c_str(), static_cast<unsigned long long>(tested), static_cast<unsigned>(known_.size()),
+    LOG_INFO("AI textures: on - %s, denoise %d%%, on the GPU, self-test passed in %llu ms; upscaled.grf has %u "
+             "textures%s%s",
+             modelName_.c_str(), denoise_, static_cast<unsigned long long>(tested),
+             static_cast<unsigned>(known_.size()),
              note, writable_ ? "" : " (read only: another game writes it)");
     return true;
 }

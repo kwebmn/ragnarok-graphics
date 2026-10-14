@@ -35,9 +35,12 @@ struct Config {
     bool alphaToCoverage = true; // stage 4, with MSAA: soft edges where alpha testing cuts textures (leaves, fences)
     int anisotropy = 16;         // stage 4: anisotropic filtering of the world's textures - 0 (off), 2, 4, 8 or 16
     // [quality] ai_textures: the world's textures enlarged x4 by a neural network on the GPU, cached in upscaled.grf
-    // (experiment; it starts the 64-bit renderer); ai_budget: milliseconds of GPU time a frame for it, 1-20.
+    // (experiment; it starts the 64-bit renderer); ai_budget: milliseconds of GPU time a frame for it, 1-20;
+    // ai_denoise: how much of the textures' grain it smooths away, 0-100 % (Real-ESRGAN's denoise strength; 25,
+    // below its 50: a game texture's grain is its detail).
     bool aiTextures = false;
     int aiBudget = 2;
+    int aiDenoise = 25;
     // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance or ultra - NVIDIA DLSS in the 64-bit
     // renderer (it starts that renderer; MSAA is off then).
     std::string dlss = "off";

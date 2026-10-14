@@ -28,6 +28,10 @@ struct Model {
 // false with error when the file is not a whole SRVG model.
 bool parseModel(const std::vector<uint8_t>& file, Model& m, std::string& error);
 
+// Real-ESRGAN's denoise strength (its dni): out gets denoise% of strong's weights and the rest of weak's - for
+// realesr-general-x4v3 and realesr-general-wdn-x4v3. false with error when they are not the same network.
+bool mixModels(const Model& strong, const Model& weak, int denoise, Model& out, std::string& error);
+
 // What a 3x3 convolution reads past the image's edge: zeros, as Real-ESRGAN was trained (the reference check), or
 // the other side of the image - a texture repeats on the ground, and the enlarged one must repeat without a seam.
 enum class Border { Zero, Wrap };
