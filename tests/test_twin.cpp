@@ -274,3 +274,24 @@ TEST(twin_picture_paint_without_the_key_writes_holes_too) {
     u.paint(Rect{1, 1, 3, 3}, icon.data(), 8, 8, true);
     CHECK_EQ(at(u, 2, 2) >> 24, 0xFFu);  // over: the grey under it shows
 }
+
+TEST(twin_picture_changed_pixels_make_a_picture) {
+    // 0.15: a sprite the game drew into the window (the equipment window's character): what differs from the copy,
+    // as a picture of its box, the rest transparent; the window's magenta transparent too.
+    std::vector<uint32_t> dib(64, 0xFF202020);
+    TwinPicture t(dib.data(), 8, 8, 2.0);
+    Rect box;
+    std::vector<uint32_t> argb;
+    CHECK(!t.changedPicture(dib.data(), Rect{0, 0, 8, 8}, box, argb));
+    dib[size_t(2 * 8 + 3)] = 0xFFFF0000;  // (3, 2)
+    dib[size_t(4 * 8 + 5)] = 0xFF00FF00;  // (5, 4)
+    dib[size_t(3 * 8 + 4)] = 0xFFFF00FF;  // (4, 3): magenta, a hole
+    dib[size_t(6 * 8 + 6)] = 0x00202020;  // only the alpha byte: no change
+    CHECK(t.changedPicture(dib.data(), Rect{0, 0, 8, 8}, box, argb));
+    CHECK(box == (Rect{3, 2, 6, 5}));
+    CHECK_EQ(argb.size(), size_t(9));
+    CHECK_EQ(argb[0], 0xFFFF0000u);
+    CHECK_EQ(argb[8], 0xFF00FF00u);
+    CHECK_EQ(argb[4], 0u);  // the magenta
+    CHECK_EQ(argb[1], 0u);  // unchanged
+}

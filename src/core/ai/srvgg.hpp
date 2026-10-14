@@ -32,9 +32,11 @@ bool parseModel(const std::vector<uint8_t>& file, Model& m, std::string& error);
 // realesr-general-x4v3 and realesr-general-wdn-x4v3. false with error when they are not the same network.
 bool mixModels(const Model& strong, const Model& weak, int denoise, Model& out, std::string& error);
 
-// What a 3x3 convolution reads past the image's edge: zeros, as Real-ESRGAN was trained (the reference check), or
-// the other side of the image - a texture repeats on the ground, and the enlarged one must repeat without a seam.
-enum class Border { Zero, Wrap };
+// What a 3x3 convolution reads past the image's edge: zeros, as Real-ESRGAN was trained (the reference check, a
+// sprite cell: nothing around it), the other side of the image - a texture repeats on the ground, and the enlarged one
+// must repeat without a seam - or (0.15) the edge pixel again: a picture of the interface, whose opaque edge would
+// darken against zeros.
+enum class Border { Zero, Wrap, Clamp };
 
 // One 3x3 convolution, output channels [first, last) only (callers may split them over threads).
 // in: inC planes of width * height; out: outC planes.

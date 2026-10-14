@@ -390,3 +390,25 @@ TEST(ai_alpha_through_the_network_keeps_thin_lines_whole) {
     for (int t = 3 * s + s / 2; t <= 12 * s + s / 2; ++t) gaps += bilinear[size_t(t * w * s + t + 1)] ? 0 : 1;
     CHECK(gaps > 0);
 }
+
+TEST(ai_clamped_edges_do_not_darken_an_opaque_picture) {
+    // 0.15, an interface picture (a button, an item's picture) is opaque to its edge: with zeros past it the network
+    // darkens the edge; with the edge pixel repeated a flat picture stays flat.
+    Model m;
+    CHECK(loadModel(m, "realesr-animevideov3"));
+    const int w = 8, h = 8;
+    std::vector<float> rgb(size_t(3 * w * h));
+    for (int c = 0; c < 3; ++c)
+        for (int i = 0; i < w * h; ++i) rgb[size_t(c * w * h + i)] = c == 0 ? 0.9f : c == 1 ? 0.8f : 0.7f;
+    const size_t big = size_t(w * h * 16);
+    std::vector<float> clamped(3 * big), zero(3 * big);
+    upscale(m, rgb.data(), w, h, clamped.data(), Border::Clamp);
+    upscale(m, rgb.data(), w, h, zero.data(), Border::Zero);
+    const auto corner = [&](const std::vector<float>& out) { return out[0] + out[big] + out[2 * big]; };
+    const auto middle = [&](const std::vector<float>& out) {
+        const size_t i = size_t((h * 2) * (w * 4) + w * 2);
+        return out[i] + out[big + i] + out[2 * big + i];
+    };
+    CHECK(std::fabs(corner(clamped) - middle(clamped)) < 0.03f);
+    CHECK(std::fabs(corner(zero) - middle(zero)) > std::fabs(corner(clamped) - middle(clamped)));
+}

@@ -28,6 +28,9 @@ std::string entryFolder(const std::string& folder);  // the start of every entry
 // "realesr-animevideov3-r2-x2". The way: "-wrap" (0.11.2-0.13.0) a texture's other side past its edge and a bilinear
 // alpha; "-r2" (0.13.1) the alpha through the network too, and zeros past a sprite cell's edge.
 std::string netFolder(const std::string& model, int denoise, int scale);
+// The folder of a kind's pictures: the network's, and for the interface's (0.15) "-ui" after it - their edges are
+// made with the edge pixel repeated (ai::Border::Clamp), 0.14's with zeros.
+std::string kindFolder(const std::string& netFolder, Kind kind);
 // 0.12: what a texture was drawn as and the maps it was seen on, as empty entries next to the pictures - the settings
 // app shows and deletes the pictures by map and kind with them, whatever settings made them:
 // "ai\@kind\ground\256x256\0123456789abcdef", "ai\@map\prontera\256x256\0123456789abcdef".

@@ -31,7 +31,8 @@ public:
         file_ = readAiCache(path_);
         const AiSettings& a = m.now().config.ai;  // the settings in force: what the driver uses
         current_[0] = current_[1] = ai::netFolder(a.model, a.denoise, a.scale);
-        current_[2] = current_[3] = current_[4] = ai::netFolder(a.spriteModel, a.denoise, a.scale);
+        current_[2] = current_[3] = ai::netFolder(a.spriteModel, a.denoise, a.scale);
+        current_[4] = ai::kindFolder(current_[2], ai::Kind::Icons);
         contents_ = ai::CacheContents(file_.entries);
         index_ = contents_.index(current_);
         busy_ = m.now().gameRunning || aiCacheInUse();

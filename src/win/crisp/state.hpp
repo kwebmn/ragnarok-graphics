@@ -67,6 +67,7 @@ struct State {
     GlyphCache glyphs{size_t(16) << 20};
     // 0.14, AI icons: the windows' icons the AI textures made larger, by the hash of the game's icon (TextureKey).
     bool aiIcons = false;
+    bool aiPieces = false;  // 0.15: the windows' small pieces too
     struct Icon {
         int width = 0, height = 0;
         std::vector<uint32_t> argb;

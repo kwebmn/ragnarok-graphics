@@ -62,6 +62,10 @@ public:
     // game's CopyPixels without its key writes every pixel and its magenta ones become holes in the window. The copy
     // stays: absorb() takes the game's pixels.
     void paint(Rect r, const uint32_t* argb, int w, int h, bool over = true);
+    // 0.15: what a call drew into the picture since the copy last took its pixels (a sprite in the equipment window):
+    // the box of the game pixels in r that differ from the copy (the alpha byte aside), and its picture - those
+    // pixels opaque (the window's magenta transparent), the rest transparent. false: nothing differs.
+    bool changedPicture(const uint32_t* dib, Rect r, Rect& box, std::vector<uint32_t>& argb) const;
     // The twin pixels of r - twin coordinates, inside the twin - row by row: what a tile's texture loads.
     void texels(const Rect& r, std::vector<uint32_t>& out) const;
     // The twin pixels changed since the last call (a new twin: all of it); empty when none.

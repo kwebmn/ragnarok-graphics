@@ -123,19 +123,38 @@ uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
     return result;
 }
 
-// 0.14, AI icons: a picture copied whole into the window - an icon (a square of 16 to 64: items, skills) or (0.14.1)
-// a picture (32 to 512 a side, at most 3 times as long as wide: an item's picture in its description, a card's, an
-// NPC's illustration; not a strip of the window's frame). The AI's larger one goes into the twin when it has come
-// back - the twin keeps what is under it, the copy takes the game's pixels; until then it is asked for once and the
-// game's pixels go in as blocks. true: the twin has it.
+// 0.14, AI icons: what the AI may take of a window - an icon (a square of 16 to 64: items, skills), (0.14.1) a
+// picture (an item's picture in its description, a card's, an NPC's illustration) and (0.15) a piece of the window
+// (a button, a tab, a slot's oval, a sprite drawn into it): 8 to 512 a side, at most 8 times as long as wide - not
+// a strip of a window's frame, which the game repeats edge to edge.
 bool aiPictureSize(int w, int h) {
-    if (w == h && w >= 16 && w <= 64) return true;
-    return w >= 32 && h >= 32 && w <= 512 && h <= 512 && std::max(w, h) <= 3 * std::min(w, h);
+    if (w == h && w >= 16 && w <= 64) return true;  // an icon
+    if (w >= 32 && h >= 32 && w <= 512 && h <= 512 && std::max(w, h) <= 3 * std::min(w, h)) return true;  // a picture
+    return state().aiPieces && w >= 8 && h >= 8 && w <= 512 && h <= 512 && std::max(w, h) <= 8 * std::min(w, h);
 }
 
-bool aiIcon(Picture& pic, int x, int y, int w, int h, int rows, const uint32_t* src, bool key) {
+// The AI's larger picture of argb (w x h, transparent where the window shows what is under it) at r of the window:
+// into the twin when it has come back - the copy takes the game's pixels - else asked for once (the game's pixels go
+// in as blocks meanwhile). over: what was under it shows through its transparent pixels; else they are holes, as
+// the game's own copy without its key makes them. true: the twin has it.
+bool aiPaint(Picture& pic, const Rect& r, const std::vector<uint32_t>& argb, bool over) {
     State& s = state();
-    if (!s.aiIcons || !aiPictureSize(w, h) || rows != h || x < 0 || y < 0 || x + w > pic.twin->width() ||
+    const int w = r.width(), h = r.height();
+    const uint64_t k = ai::textureKey(argb.data(), w, h).hash;
+    const auto it = s.icons.find(k);
+    if (it != s.icons.end()) {
+        pic.twin->absorb(pic.bits, r);
+        pic.twin->paint(r, it->second.argb.data(), it->second.width, it->second.height, over);
+        return true;
+    }
+    if (s.asked.insert(k).second)
+        if (gpu::Renderer* renderer = Context::get().renderer) renderer->requestIcon(k, w, h, argb.data());
+    return false;
+}
+
+// A picture the game copied whole into the window (CopyPixels).
+bool aiIcon(Picture& pic, int x, int y, int w, int h, int rows, const uint32_t* src, bool key) {
+    if (!state().aiIcons || !aiPictureSize(w, h) || rows != h || x < 0 || y < 0 || x + w > pic.twin->width() ||
         y + h > pic.twin->height())
         return false;
     // Transparent: what the key skips, and (0.14.2) the magenta the window's upload makes a hole of - a picture copied
@@ -143,18 +162,19 @@ bool aiIcon(Picture& pic, int x, int y, int w, int h, int rows, const uint32_t* 
     std::vector<uint32_t> argb(size_t(w) * size_t(h));
     for (size_t i = 0; i < argb.size(); ++i)
         argb[i] = transparentAtUpload(src[i]) ? 0u : (src[i] | 0xFF000000u);
-    const uint64_t k = ai::textureKey(argb.data(), w, h).hash;
-    const auto it = s.icons.find(k);
-    if (it != s.icons.end()) {
-        const Rect r{x, y, x + w, y + h};
-        pic.twin->absorb(pic.bits, r);
-        // With its key the game keeps what was under the skipped pixels; without it every pixel is written.
-        pic.twin->paint(r, it->second.argb.data(), it->second.width, it->second.height, key);
-        return true;
-    }
-    if (s.asked.insert(k).second)
-        if (gpu::Renderer* renderer = Context::get().renderer) renderer->requestIcon(k, w, h, argb.data());
-    return false;
+    // With its key the game keeps what was under the skipped pixels; without it every pixel is written.
+    return aiPaint(pic, Rect{x, y, x + w, y + h}, argb, key);
+}
+
+// 0.15: a sprite the game drew into the window (slot 6: the equipment window's character; slot 7: animated
+// pictures) - what it changed, as a picture of its own over what was under it.
+bool aiDrawn(Picture& pic) {
+    if (!state().aiIcons) return false;
+    Rect box;
+    std::vector<uint32_t> argb;
+    if (!pic.twin->changedPicture(pic.bits, whole(pic), box, argb) || !aiPictureSize(box.width(), box.height()))
+        return false;
+    return aiPaint(pic, box, argb, true);
 }
 
 // The game writes every pixel of the rectangle but what its key skips, so the twin takes them all (review 0.5.0 I1):
@@ -227,7 +247,8 @@ uint32_t UAGFX_THISCALL onSprite(void* p, int a, int b, int c, int d, int e) {
     const uint32_t result = original<SpriteFn>(ce::kSprite)(p, a, b, c, d, e);
     guarded(
         [p] {
-            if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, whole(*pic));
+            if (Picture* pic = picture(self(p)))
+                if (!aiDrawn(*pic)) pic->twin->sync(pic->bits, whole(*pic));
         },
         [p] { lost(self(p)); });
     return result;
@@ -238,7 +259,8 @@ uint32_t UAGFX_THISCALL onTextureCopy(void* p, int a, int b, int c, int d, int e
     const uint32_t result = original<TextureCopyFn>(ce::kTextureCopy)(p, a, b, c, d, e, f, g, h, i, j);
     guarded(
         [p] {
-            if (Picture* pic = picture(self(p))) pic->twin->sync(pic->bits, whole(*pic));
+            if (Picture* pic = picture(self(p)))
+                if (!aiDrawn(*pic)) pic->twin->sync(pic->bits, whole(*pic));
         },
         [p] { lost(self(p)); });
     return result;
@@ -560,9 +582,12 @@ void tileDraw(const void* surface, DrawCmd& cmd) {
 
 void forgetSurface(const void* surface) { state().tiles.erase(surface); }
 
-void setAiIcons(bool on) {
+void setAiIcons(bool on, bool pieces) {
     state().aiIcons = on;
-    if (on) LOG_INFO("AI textures: icons of the windows go to the network (crisp text draws them)");
+    state().aiPieces = on && pieces;
+    if (on)
+        LOG_INFO("AI textures: icons and pictures of the windows go to the network (crisp text draws them)%s",
+                 pieces ? ", their frames and buttons too" : "");
 }
 
 void iconReady(void*, uint64_t key, int width, int height, const uint32_t* argb) {

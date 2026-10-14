@@ -21,9 +21,9 @@ RWByteAddressBuffer U2 : register(u2);
 float weight(uint i) { return asfloat(W.Load(i * 4)); }
 
 // One 3x3 convolution over rows [rowBegin, rowEnd) of the input, 16 output channels per thread (z picks which 16),
-// PReLU after it when preluAt is not ~0. U0: input planes, U1: output planes. Past an edge it reads the other side
-// (ai::Border::Wrap): a texture repeats on the ground, and so must the enlarged one - or zeros (zero not 0: a cell of
-// the sprite cache, a picture of its own, ai::Border::Zero).
+// PReLU after it when preluAt is not ~0. U0: input planes, U1: output planes. Past an edge (border, ai::Border) it
+// reads the other side (0, Wrap): a texture repeats on the ground, and so must the enlarged one; zeros (1, Zero): a
+// cell of the sprite cache, a picture of its own; or the edge pixel again (2, Clamp): a picture of the interface.
 #define CONV_WIDTH c0.x
 #define CONV_HEIGHT c0.y
 #define CONV_IN c0.z
@@ -33,7 +33,7 @@ float weight(uint i) { return asfloat(W.Load(i * 4)); }
 #define CONV_PRELU c1.z
 #define CONV_ROW_BEGIN c1.w
 #define CONV_ROW_END c2.x
-#define CONV_ZERO c2.y
+#define CONV_BORDER c2.y
 
 groupshared float tile[10][10];
 
@@ -51,10 +51,14 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
             const int lx = int(g.x * 8) + int(l % 10) - 1;
             const int ly = int(CONV_ROW_BEGIN + g.y * 8) + int(l / 10) - 1;
             const bool outside = lx < 0 || ly < 0 || lx >= int(CONV_WIDTH) || ly >= int(CONV_HEIGHT);
-            const uint sx = uint(lx + int(CONV_WIDTH)) % CONV_WIDTH;
-            const uint sy = uint(ly + int(CONV_HEIGHT)) % CONV_HEIGHT;
+            uint sx = uint(lx + int(CONV_WIDTH)) % CONV_WIDTH;
+            uint sy = uint(ly + int(CONV_HEIGHT)) % CONV_HEIGHT;
+            if (CONV_BORDER == 2) {
+                sx = uint(clamp(lx, 0, int(CONV_WIDTH) - 1));
+                sy = uint(clamp(ly, 0, int(CONV_HEIGHT) - 1));
+            }
             tile[l / 10][l % 10] =
-                CONV_ZERO != 0 && outside ? 0.0 : asfloat(U0.Load((i * plane + sy * CONV_WIDTH + sx) * 4));
+                CONV_BORDER == 1 && outside ? 0.0 : asfloat(U0.Load((i * plane + sy * CONV_WIDTH + sx) * 4));
         }
         GroupMemoryBarrierWithGroupSync();
         float v9[9];

@@ -19,13 +19,14 @@ constexpr int kBudget = 1050;
 constexpr int kSizes = 1060;  // from, and to at 1061
 constexpr int kAhead = 1070;
 
-const char* const kKindKeys[] = {"ai.ground", "ai.objects", "ai.sprites", "ai.effects", "ai.icons"};
+const char* const kKindKeys[] = {"ai.ground", "ai.objects", "ai.sprites", "ai.effects", "ai.icons", "ai.ui_pieces"};
 const Text kKindTexts[][2] = {{Text::AiGround, Text::AiGroundHint},
                               {Text::AiObjects, Text::AiObjectsHint},
                               {Text::AiSprites, Text::AiSpritesHint},
                               {Text::AiEffects, Text::AiEffectsHint},
-                              {Text::AiIcons, Text::AiIconsHint}};
-constexpr int kKindCount = 5;
+                              {Text::AiIcons, Text::AiIconsHint},
+                              {Text::AiUiPieces, Text::AiUiPiecesHint}};
+constexpr int kKindCount = 6;  // the five kinds, then the windows' pieces (with the interface)
 
 const IniSetting& setting(const char* key) { return *findSetting(key); }
 
@@ -47,8 +48,10 @@ public:
                  t(Text::AiPresetHint), on);
         p.note(t(Text::AiWhat), Tone::Normal);
         std::vector<CheckItem> kinds;
-        for (int k = 0; k < kKindCount; ++k)
-            kinds.push_back({kKinds + k, t(kKindTexts[k][0]), aiKind(a, k), t(kKindTexts[k][1]), on});
+        for (int k = 0; k < kKindCount; ++k) {
+            const bool ticked = k < 5 ? aiKind(a, k) : a.uiPieces;
+            kinds.push_back({kKinds + k, t(kKindTexts[k][0]), ticked, t(kKindTexts[k][1]), on && (k < 5 || a.icons)});
+        }
         p.checks(kinds, 3);
         const bool maps = a.ground || a.objects, sprites = a.sprites || a.effects || a.icons;
         choiceRow(p, kModel, "ai.model", on && maps);

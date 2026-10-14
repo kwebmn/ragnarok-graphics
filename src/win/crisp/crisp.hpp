@@ -24,7 +24,7 @@ void forgetSurface(const void* surface);
 std::string stats();
 // AI icons (0.14): on - an icon the game copies whole into a window (a square of 16 to 64 pixels: items, skills) goes
 // to the renderer to be made larger, and the larger one goes into the twin from then on.
-void setAiIcons(bool on);
+void setAiIcons(bool on, bool pieces);  // pieces (0.15): the windows' buttons, tabs, slots too
 // Renderer::IconSink: an icon came back; the windows are redrawn with it at a present soon.
 void iconReady(void* context, uint64_t key, int width, int height, const uint32_t* argb);
 

@@ -21,6 +21,7 @@ struct AiSettings {
     bool sprites = false;  // monsters, players, NPCs, items: pixel art the network may change too much
     bool effects = false;  // light and sparks
     bool icons = true;     // 0.14: item and skill icons in the game's windows (crisp text's twins)
+    bool uiPieces = true;  // 0.15: with icons, the windows' small pieces too - buttons, tabs, slots (baked-in text)
     std::string model = "general";      // ground and objects: general (realistic) or anime (drawn)
     std::string spriteModel = "anime";  // sprites and effects
     int denoise = 25;  // % of the grain the general model smooths away (Real-ESRGAN's denoise strength)

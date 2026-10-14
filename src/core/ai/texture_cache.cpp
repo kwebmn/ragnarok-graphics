@@ -52,6 +52,10 @@ std::string netFolder(const std::string& model, int denoise, int scale) {
     return "realesr-general-x4v3-dn" + std::to_string(std::clamp(denoise, 0, 100)) + "-r2" + size;
 }
 
+std::string kindFolder(const std::string& netFolder, Kind kind) {
+    return kind == Kind::Icons ? netFolder + "-ui" : netFolder;
+}
+
 std::string kindTag(Kind kind, const std::string& key) {
     return std::string("ai\\@kind\\") + kindName(kind) + "\\" + key;
 }

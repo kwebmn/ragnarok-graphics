@@ -178,7 +178,8 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
             mapTags_.insert(std::move(name));
         } else if (e.type == ai::ParsedEntry::Picture) {
             bool ours = false;
-            for (const auto& n : nets_) ours = ours || e.folder == n->folder;
+            for (const auto& n : nets_)
+                ours = ours || e.folder == n->folder || e.folder == ai::kindFolder(n->folder, ai::Kind::Icons);
             if (ours)
                 known_.insert(std::move(name));
             else
@@ -433,8 +434,8 @@ double AiTextures::runBand(Job& job, double budget) {
     k.v[6] = size_t(job.conv) < model.prelu.size() ? uint32_t(model.prelu[size_t(job.conv)]) : 0xFFFFFFFFu;
     k.v[7] = uint32_t(job.row);
     k.v[8] = uint32_t(end);
-    // A sprite cell or an icon is a picture of its own: zeros past its edge, not its other side.
-    k.v[9] = job.cell || job.icon ? 1u : 0u;
+    // Past the edge: a world texture repeats, a sprite cell stands in nothing, an interface picture's edge goes on.
+    k.v[9] = job.border;
     bindCompute();
     m_.list->SetComputeRootShaderResourceView(kAiWeights, net.weights->GetGPUVirtualAddress());
     m_.list->SetPipelineState(conv_);
@@ -699,6 +700,7 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         j.cell = true;
         j.cellX = c.left;
         j.cellY = c.top;
+        j.border = 1;
         j.alpha = ai::hasTransparency(pixels.data(), w, h);
         j.frame = ++a->second.frames[uint32_t(c.top) << 16 | uint32_t(c.left)];
         const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
@@ -826,10 +828,11 @@ void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* a
     j.height = height;
     j.icon = true;
     j.iconKey = key;
+    j.border = 2;
     j.pixels.assign(argb, argb + size_t(width) * size_t(height));
     j.alpha = ai::hasTransparency(j.pixels.data(), width, height);
     const std::string k = ai::keyName(ai::textureKey(j.pixels.data(), width, height));
-    j.name = ai::entryName(nets_[size_t(net)]->folder, k);
+    j.name = ai::entryName(ai::kindFolder(nets_[size_t(net)]->folder, ai::Kind::Icons), k);
     if (kinds_.emplace(k, ai::Kind::Icons).second) tag(ai::kindTag(ai::Kind::Icons, k));
     if (known_.count(j.name)) {  // made before: from upscaled.grf
         IoRequest r;
@@ -953,7 +956,7 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         return;
     }
     item.net = netOf_[k];
-    item.name = ai::entryName(nets_[size_t(item.net)]->folder, item.key);
+    item.name = ai::entryName(ai::kindFolder(nets_[size_t(item.net)]->folder, kind), item.key);
     item.state = Item::Waiting;
     if (kinds_.emplace(item.key, kind).second) tag(ai::kindTag(kind, item.key));
     if (known_.count(item.name)) {  // done before: from upscaled.grf
@@ -1059,6 +1062,7 @@ bool AiTextures::nextJob() {
             job_->height = item.height;
             job_->pixels = item.argb;
             job_->alpha = ai::hasTransparency(item.argb.data(), item.width, item.height);
+            job_->border = item.ui ? 2 : 0;
             return true;
         }
     }
@@ -1340,10 +1344,10 @@ void AiTextures::ioLoop() {
 
 bool AiTextures::selfTest(int net, std::string& error) {
     // A 16x16 texture with a transparent band through the network on the GPU, and the same on the CPU (core/ai): the
-    // colour with wrapped edges (a world texture's) and the alpha's own pass with zeros past them (a sprite cell's) -
-    // every channel within 2 of 255 and nearly the same transparency, or the feature stays off.
+    // colour with each way past the edge (a world texture's, a sprite cell's, an interface picture's) and the alpha's
+    // own pass - every channel within 2 of 255 and nearly the same transparency, or the feature stays off.
     const ai::Model& model = nets_[size_t(net)]->model;
-    const int w = 16, h = 16;
+    const int w = 16, h = 16, ow = w * kNetScale, oh = h * kNetScale;
     std::vector<uint32_t> argb(size_t(w * h));
     for (int y = 0; y < h; ++y)
         for (int x = 0; x < w; ++x) {
@@ -1353,73 +1357,77 @@ bool AiTextures::selfTest(int net, std::string& error) {
         }
     std::vector<float> planes;
     ai::prepareInput(argb.data(), w, h, planes);
-    std::vector<float> out(size_t(3 * w * h * kNetScale * kNetScale));
-    ai::upscale(model, planes.data(), w, h, out.data(), ai::Border::Wrap);  // as the GPU's ai_conv
-    std::vector<uint8_t> alpha;
-    ai::upscaleAlpha(model, planes.data() + 3 * w * h, w, h, alpha, ai::Border::Zero);
-
-    Job j;
-    j.net = net;
-    j.width = w;
-    j.height = h;
-    j.pixels = argb;
-    j.alpha = true;
-    const int ow = w * kNetScale, oh = h * kNetScale;
     std::vector<Level> levels;
     UINT64 bytes = 0;
     layout(ow, oh, levels, bytes);
-    if (!ensureBuffers(w, h) || !m_.begin() || !uploadInput(j)) {
-        error = "no GPU memory for the self-test";
-        return false;
-    }
-    computeBound_ = false;
-    for (j.conv = 0; size_t(j.conv) < model.convs.size();) runBand(j, 1e18);
-    ID3D12Resource* image =
-        buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
-    ID3D12Resource* back = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, UINT64(levels[0].pitch) * UINT64(oh),
-                                  D3D12_RESOURCE_STATE_COPY_DEST, false);
-    if (image && back) dispatchShuffle(j, image, levels[0]);
-    if (!image || !back || !uploadAlphaInput(j)) {
+    const ai::Border borders[3] = {ai::Border::Wrap, ai::Border::Zero, ai::Border::Clamp};  // as Job::border
+    for (uint32_t mode = 0; mode < 3; ++mode) {
+        std::vector<float> out(size_t(3 * ow * oh));
+        ai::upscale(model, planes.data(), w, h, out.data(), borders[mode]);
+        std::vector<uint8_t> alpha;
+        if (mode == 2) ai::upscaleAlpha(model, planes.data() + 3 * w * h, w, h, alpha, ai::Border::Clamp);
+        Job j;
+        j.net = net;
+        j.width = w;
+        j.height = h;
+        j.pixels = argb;
+        j.border = mode;
+        if (!ensureBuffers(w, h) || !m_.begin() || !uploadInput(j)) {
+            error = "no GPU memory for the self-test";
+            return false;
+        }
+        computeBound_ = false;
+        for (j.conv = 0; size_t(j.conv) < model.convs.size();) runBand(j, 1e18);
+        ID3D12Resource* image =
+            buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
+        ID3D12Resource* back = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, UINT64(levels[0].pitch) * UINT64(oh),
+                                      D3D12_RESOURCE_STATE_COPY_DEST, false);
+        if (image && back) dispatchShuffle(j, image, levels[0]);
+        if (!image || !back || (mode == 2 && !uploadAlphaInput(j))) {
+            releaseCom(image);
+            releaseCom(back);
+            m_.submit();
+            error = "no GPU memory for the self-test";
+            return false;
+        }
+        if (mode == 2) {  // the alpha's own pass, as an interface picture's
+            for (j.conv = 0; size_t(j.conv) < model.convs.size();) runBand(j, 1e18);
+            dispatchAlpha(j, image, levels[0]);
+        }
+        D3D12_RESOURCE_STATES imageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        m_.transition(image, imageState, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        m_.list->CopyBufferRegion(back, 0, image, 0, UINT64(levels[0].pitch) * UINT64(oh));
+        m_.waitIdle();
+        computeBound_ = false;
+        int worst = 0, alphaDiffers = 0;
+        void* mapped = nullptr;
+        const bool ok = !m_.lost && SUCCEEDED(back->Map(0, nullptr, &mapped));
+        if (ok) {
+            const size_t plane = size_t(ow) * size_t(oh);
+            for (int y = 0; y < oh; ++y)
+                for (int x = 0; x < ow; ++x) {
+                    const uint32_t g =
+                        static_cast<const uint32_t*>(mapped)[size_t(y) * (levels[0].pitch / 4) + size_t(x)];
+                    const size_t i = size_t(y) * size_t(ow) + size_t(x);
+                    for (int c = 0; c < 3; ++c) {
+                        const int want = int(out[size_t(c) * plane + i] * 255.0f + 0.5f);
+                        const int got = int((g >> (16 - 8 * c)) & 255);
+                        worst = std::max(worst, std::abs(want - got));
+                    }
+                    if (mode == 2 && ((g >> 24) != 0) != (alpha[i] != 0)) ++alphaDiffers;
+                }
+            back->Unmap(0, nullptr);
+        }
         releaseCom(image);
         releaseCom(back);
-        m_.submit();
-        error = "no GPU memory for the self-test";
-        return false;
-    }
-    j.cell = true;  // the alpha's pass with zeros past the edges
-    for (j.conv = 0; size_t(j.conv) < model.convs.size();) runBand(j, 1e18);
-    dispatchAlpha(j, image, levels[0]);
-    D3D12_RESOURCE_STATES imageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    m_.transition(image, imageState, D3D12_RESOURCE_STATE_COPY_SOURCE);
-    m_.list->CopyBufferRegion(back, 0, image, 0, UINT64(levels[0].pitch) * UINT64(oh));
-    m_.waitIdle();
-    computeBound_ = false;
-    int worst = 0, alphaDiffers = 0;
-    void* mapped = nullptr;
-    const bool ok = !m_.lost && SUCCEEDED(back->Map(0, nullptr, &mapped));
-    if (ok) {
-        const size_t plane = size_t(ow) * size_t(oh);
-        for (int y = 0; y < oh; ++y)
-            for (int x = 0; x < ow; ++x) {
-                const uint32_t g = static_cast<const uint32_t*>(mapped)[size_t(y) * (levels[0].pitch / 4) + size_t(x)];
-                const size_t i = size_t(y) * size_t(ow) + size_t(x);
-                for (int c = 0; c < 3; ++c) {
-                    const int want = int(out[size_t(c) * plane + i] * 255.0f + 0.5f);
-                    const int got = int((g >> (16 - 8 * c)) & 255);
-                    worst = std::max(worst, std::abs(want - got));
-                }
-                if (((g >> 24) != 0) != (alpha[i] != 0)) ++alphaDiffers;
-            }
-        back->Unmap(0, nullptr);
-    }
-    releaseCom(image);
-    releaseCom(back);
-    if (!ok || worst > 2 || alphaDiffers > ow * oh / 50) {
-        char text[200];
-        std::snprintf(text, sizeof text, "%s: the GPU's network does not match the CPU's (largest difference %d of "
-                      "255, %d transparency differences)", nets_[size_t(net)]->name.c_str(), worst, alphaDiffers);
-        error = ok ? text : "the self-test could not be read";
-        return false;
+        if (!ok || worst > 2 || alphaDiffers > ow * oh / 50) {
+            char text[220];
+            std::snprintf(text, sizeof text, "%s: the GPU's network does not match the CPU's (border %u: largest "
+                          "difference %d of 255, %d transparency differences)", nets_[size_t(net)]->name.c_str(),
+                          mode, worst, alphaDiffers);
+            error = ok ? text : "the self-test could not be read";
+            return false;
+        }
     }
     return true;
 }

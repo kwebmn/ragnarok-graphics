@@ -186,6 +186,32 @@ Rect TwinPicture::takeChanged() {
     return r;
 }
 
+bool TwinPicture::changedPicture(const uint32_t* dib, Rect r, Rect& box, std::vector<uint32_t>& argb) const {
+    if (!clipRect(Rect{0, 0, w_, h_}, r)) return false;
+    box = Rect{r.right, r.bottom, r.left, r.top};
+    const auto differs = [&](int x, int y) {
+        const size_t i = size_t(y) * size_t(w_) + size_t(x);
+        return ((dib[i] ^ copy_[i]) & 0x00FFFFFFu) != 0;
+    };
+    for (int y = r.top; y < r.bottom; ++y)
+        for (int x = r.left; x < r.right; ++x)
+            if (differs(x, y)) {
+                box.left = std::min(box.left, x);
+                box.top = std::min(box.top, y);
+                box.right = std::max(box.right, x + 1);
+                box.bottom = std::max(box.bottom, y + 1);
+            }
+    if (box.empty()) return false;
+    argb.assign(size_t(box.width()) * size_t(box.height()), 0);
+    for (int y = box.top; y < box.bottom; ++y)
+        for (int x = box.left; x < box.right; ++x) {
+            const uint32_t p = dib[size_t(y) * size_t(w_) + size_t(x)];
+            if (differs(x, y) && !transparentAtUpload(p))
+                argb[size_t(y - box.top) * size_t(box.width()) + size_t(x - box.left)] = p | 0xFF000000u;
+        }
+    return true;
+}
+
 void TwinPicture::paint(Rect r, const uint32_t* argb, int w, int h, bool overTwin) {
     if (r.empty() || r.left < 0 || r.top < 0 || r.right > w_ || r.bottom > h_ || w <= 0 || h <= 0) return;
     const int tx0 = ex_[size_t(r.left)], tx1 = ex_[size_t(r.right)];

@@ -90,13 +90,17 @@ void convolve(const Model& m, const Model::Conv& c, const float* in, int width, 
                     int sy = y + ky - 1;
                     if (sy < 0 || sy >= height) {
                         if (border == Border::Zero) continue;  // nothing past the edge
-                        sy = (sy + height) % height;           // the other side
+                        sy = border == Border::Wrap ? (sy + height) % height : std::clamp(sy, 0, height - 1);
                     }
                     const float* s = src + size_t(sy) * size_t(width);
                     const float k0 = k[ky * 3], k1 = k[ky * 3 + 1], k2 = k[ky * 3 + 2];
                     // x = 0 and x = width - 1 have one neighbour outside; the inside runs without checks.
-                    const float before = border == Border::Wrap ? s[width - 1] : 0.0f;  // what x = -1 reads
-                    const float after = border == Border::Wrap ? s[0] : 0.0f;           // and x = width
+                    const float before = border == Border::Wrap    ? s[width - 1]  // what x = -1 reads
+                                         : border == Border::Clamp ? s[0]
+                                                                   : 0.0f;
+                    const float after = border == Border::Wrap    ? s[0]  // and x = width
+                                        : border == Border::Clamp ? s[width - 1]
+                                                                  : 0.0f;
                     if (width == 1) {
                         row[0] += k0 * before + k1 * s[0] + k2 * after;
                         continue;

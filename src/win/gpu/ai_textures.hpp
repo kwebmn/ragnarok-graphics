@@ -101,6 +101,7 @@ private:
         int phase = 0;  // 0 the colour, 1 the alpha
         bool icon = false;  // 0.14: an icon of a window - the picture goes back to the driver
         uint64_t iconKey = 0;
+        uint32_t border = 0;  // past the picture's edge (ai_conv): 0 the other side, 1 zeros, 2 the edge again
         ID3D12Resource* image = nullptr;
         std::vector<Level> levels;
     };
