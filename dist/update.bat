@@ -4,6 +4,9 @@ rem The renderer choice and uaro-graphics.ini stay. If anything fails, nothing i
 setlocal
 cd /d "%~dp0"
 set "url=https://github.com/kwebmn/ragnarok-graphics/raw/main/release/uaro-graphics.zip"
+set "raw=https://raw.githubusercontent.com/kwebmn/ragnarok-graphics"
+set "api=https://api.github.com/repos/kwebmn/ragnarok-graphics/commits/main"
+set "accept=Accept: application/vnd.github.sha"
 set "work=uaro-graphics-update"
 if not exist "uaRO.exe" (
     echo uaRO.exe is not in this folder: update.bat belongs in the uaRO client folder, next to uaRO.exe.
@@ -36,7 +39,14 @@ rem Download and unpack into a folder of their own first: a failed or broken dow
 if exist "%work%" rmdir /s /q "%work%"
 mkdir "%work%\files" || goto :noaccess
 echo Downloading the newest uaRO Graphics...
-curl -fsSL -o "%work%\uaro-graphics.zip" "%url%" || (
+rem The usual link can show a release up to 5 minutes late, from GitHub's cache (0.11.2): the archive is taken
+rem by the number of the newest commit, which no cache keeps old - only hex digits are taken for it. Without an
+rem answer that way, the usual link.
+set "fresh="
+set "got="
+for /f "usebackq delims=" %%s in (`curl -fsSL -H "%accept%" "%api%" 2^>nul ^| findstr /x /r "[0-9a-f]*"`) do set "fresh=%%s"
+if defined fresh curl -fsSL -o "%work%\uaro-graphics.zip" "%raw%/%fresh%/release/uaro-graphics.zip" 2>nul && set "got=1"
+if not defined got curl -fsSL -o "%work%\uaro-graphics.zip" "%url%" || (
     echo Cannot download %url%
     echo Check the internet connection and try again later.
     goto :fail

@@ -13,7 +13,8 @@ EXPECTED = {"install.bat", "uninstall.bat", "use-uaro.bat", "use-dgvoodoo.bat", 
             "TEST.ru.md", "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.exe",
             "uaro-graphics/uaro-graphics.ini", "uaro-graphics/version.txt", "uaro-graphics/uaro-render64.exe",
             "uaro-graphics/dlss-version.txt", "uaro-graphics/remix/rtx.conf",
-            "uaro-graphics/ai/realesr-general-x4v3.bin", "uaro-graphics/ai/LICENSE-Real-ESRGAN.txt"}
+            "uaro-graphics/ai/realesr-general-x4v3.bin", "uaro-graphics/ai/realesr-general-wdn-x4v3.bin",
+            "uaro-graphics/ai/LICENSE-Real-ESRGAN.txt"}
 VERSION_CPP = Path(__file__).resolve().parent.parent / "src" / "core" / "version.cpp"
 
 
@@ -43,6 +44,13 @@ def main(path):
         if not re.search(rb'(?im)^\s*xcopy /e /i /y /q "uaro-graphics-update\\files\\uaro-graphics" "uaro-graphics"\s',
                          z.read("install.bat")):
             fail("install.bat does not copy the folders an older update.bat leaves out")
+    # GitHub's raw link is cached for 5 minutes (a query does not change that): right after a release update.bat got
+    # the one before (0.11.2). It takes the archive of the newest commit by its number first.
+    update = z.read("update.bat").decode("ascii")
+    for part in ('"%accept%" "%api%"', 'findstr /x /r "[0-9a-f]*"', '"%raw%/%fresh%/release/uaro-graphics.zip"',
+                 'set "accept=Accept: application/vnd.github.sha"'):
+        if part not in update:
+            fail("update.bat does not take the newest commit's archive: no " + part)
     # update.bat shows this line inside a ( ) block: no brackets or other cmd syntax, one CRLF line.
     stamp = z.read("uaro-graphics/version.txt")
     m = re.fullmatch(rb"(\d+\.\d+\.\d+) build \d{4}-\d{2}-\d{2} \d{2}:\d{2}\r\n", stamp)
