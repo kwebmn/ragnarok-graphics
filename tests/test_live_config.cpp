@@ -147,6 +147,14 @@ TEST(live_config_torches_apply_now) {
     CHECK(v.applied[1] == "torch_brightness 100 -> 70");
 }
 
+TEST(live_config_lamps_apply_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "lamps 1 -> 0");
+    CHECK(u.applied[1] == "lamps_light 60 -> 100");
+}
+
 TEST(live_config_chimney_smoke_applies_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nsmoke = 0\nsmoke_density = 150\n"));
     CHECK(u.waiting.empty());

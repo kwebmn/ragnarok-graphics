@@ -105,6 +105,7 @@ bool Context::open(std::string& error) {
     if ((ai.enabled && (ai.sprites() || ai.effects || ai.icons) && renderer->remote()) || !config.remix)
         installSpriteHook();
     renderer->setIconSink(&crisp::iconReady, nullptr);
+    renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)
     crisp::setAiIcons(config.ai.enabled && config.ai.icons && renderer->remote() && config.crispText,
                       config.ai.uiPieces);
     return true;
@@ -246,7 +247,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
             LOG_INFO("DLSS: the game's camera %s", known ? "found" : "not in view (no world shown, or another exe)");
         }
     }
-    if (config.ai.enabled && renderer->remote()) {  // AI textures: upscaled.grf notes the maps textures are seen on
+    // AI textures: upscaled.grf notes the maps textures are seen on; 0.25: the map's file - its lamps and the torches
+    // the game does not show.
+    if ((config.ai.enabled && renderer->remote()) || !config.remix) {
         const std::string map = readGameMap();
         if (map != map_) {
             map_ = map;
@@ -259,6 +262,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     none.smoothLight = false;
     none.torch = false;
     none.smoke = false;
+    none.lamps = false;
     renderer->setEffects(enhanced_ ? config.effects : none);
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).

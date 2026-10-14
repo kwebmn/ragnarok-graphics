@@ -319,6 +319,18 @@ TEST(config_effects_torches) {
     CHECK(parseConfig("[effects]\ntorch_brightness = 250\n").effects == d);
 }
 
+TEST(config_effects_lamps) {
+    // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.lamps);
+    CHECK_EQ(d.lampsLight, 60);
+    const EffectSettings e = parseConfig("[effects]\nlamps = 0\nlamps_light = 150\n").effects;
+    CHECK(!e.lamps);
+    CHECK_EQ(e.lampsLight, 150);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nlamps_light = -5\n").effects == d);
+}
+
 TEST(config_effects_chimney_smoke) {
     // 0.24: on unless turned off, its density 0-200 %.
     const EffectSettings d = parseConfig("").effects;

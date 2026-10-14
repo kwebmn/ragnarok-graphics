@@ -16,6 +16,7 @@
 #include "core/map_objects.hpp"
 #include "core/torch.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/gpu/map_world.hpp"
 #include "win/gpu/upscaler.hpp"
 
 namespace uagfx::gpu {
@@ -49,6 +50,7 @@ constexpr UINT kSamplerCount = 1024;    // cache of sampler pairs, two descripto
 constexpr UINT64 kUploadSize = 32ull << 20;  // per slot; grows when one submission needs more
 constexpr int kUpscaleGiveUp = 30;  // part 3: DLSS failing this many frames in a row is not used any more
 constexpr UINT kMaxTorches = 32;    // 0.23: torches drawn anew in a frame; the rest as the game draws them
+constexpr UINT kMaxLights = 64;     // 0.25: lights of the torches' pass - the torches' and the lamps'
 
 // Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled;
 // part 3 (DLSS): the world, its motion, the interface layer.
@@ -331,6 +333,7 @@ struct Renderer::Impl {
     // 0.23, the torches (torches.cpp): the game's torch layers are not drawn - its glow not at all, its flames noted -
     // and drawn anew once the world is: their light into the picture, then each flame and the glow around it.
     objects::Textures objectTextures;      // 0.23.1, 0.24: the textures that are a frame of a map object
+    MapWorld mapWorld;                      // 0.25: the map file - its lamps and the effects the game does not show
     std::vector<torch::Flame> torchFlames;  // this frame's
     bool torchDone = false;                 // this frame's are drawn, or could not be
     bool torchesLogged = false;
@@ -511,7 +514,8 @@ struct Renderer::Impl {
     // torches.cpp (0.23)
     bool torchWanted() const { return effects.torch; }
     bool smokeWanted() const { return effects.smoke && smokePs && smokeGlowPs; }  // 0.24
-    bool torchDue() const { return torchWanted() && !torchDone && !torchFlames.empty(); }
+    bool lampsWanted() const { return effects.lamps; }  // 0.25
+    bool torchDue() const { return !torchDone && (torchWanted() || lampsWanted() || !torchFlames.empty()); }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     bool torchReady();     // the shaders, pipelines and the picture's copies are there
     bool applyTorches();   // once a frame (torchDone), the world drawn: before its colours; false: lost

@@ -231,6 +231,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how thick the smoke is
     >>"uaro-graphics.ini" echo smoke_density = 100
 )
+rem 0.25: the lamps' light from the map files, on.
+findstr /i /l /c:"lamps_light" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = the maps' lamps light the characters and walls too, the fire-coloured ones flicker
+    >>"uaro-graphics.ini" echo lamps = 1
+    >>"uaro-graphics.ini" echo ; 0-200 %%: how bright the lamps' light is
+    >>"uaro-graphics.ini" echo lamps_light = 60
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

@@ -817,6 +817,20 @@ const Entry kTexts[] = {
     {"How thick the smoke is: less is thin and see-through, more is dense.",
      "Наскільки густий дим: менше — тонкий і прозорий, більше — щільний.",
      "Насколько густой дым: меньше — тонкий и прозрачный, больше — плотный."},
+    {"Lamps' light", "Світло ламп", "Свет ламп"},
+    {"The lights the maps' makers placed - lamps, braziers, crystals - light the characters and the walls near them "
+     "too, not only the ground, and the fire-coloured ones flicker. Read from the map files; the first visit to a map "
+     "with torches teaches the driver how they lie.",
+     "Світло, яке розставили автори карт, — лампи, жаровні, кристали — освітлює й персонажів та стіни поруч, а не "
+     "лише землю, а вогняне мерехтить. Береться з файлів карт; перший візит на карту зі смолоскипами вчить драйвер, "
+     "як вони лягають.",
+     "Свет, который расставили авторы карт, — лампы, жаровни, кристаллы — освещает и персонажей и стены рядом, а не "
+     "только землю, а огненный мерцает. Берётся из файлов карт; первый заход на карту с факелами учит драйвер, как "
+     "они ложатся."},
+    {"Lamps' brightness", "Яскравість ламп", "Яркость ламп"},
+    {"How much light the lamps add: less is a hint, more is bright.",
+     "Скільки світла додають лампи: менше — ледь помітно, більше — яскраво.",
+     "Сколько света добавляют лампы: меньше — едва заметно, больше — ярко."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

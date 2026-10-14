@@ -28,6 +28,7 @@ struct Flame {
     float halfWidth = 0;
     float z = 0, rhw = 0;  // the quad's
     float alpha = 1;       // the game's fade (the quad's vertex alpha, 1 when it shows the layer as the .act has it)
+    float tint[3] = {1, 1, 1};  // 0.25: a torch the game does not show - red, green, purple; white: the fire's own
 };
 
 // The flame of a quad drawn with a flame frame - its texture coordinates span the frame (the game's sprite setting

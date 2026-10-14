@@ -105,8 +105,11 @@ public:
     void setOnDevice(void (*fn)(void* context, ID3D12Device* device), void* context);
     // AI textures (ai_textures.hpp, uaro-render64.exe): after create(). false: off, the reason in the log.
     bool startAiTextures(const std::string& gameDir, const AiSettings& settings);
-    // The map the game shows ("prontera"; "" none): upscaled.grf notes the textures seen on it (AI textures).
+    // The map the game shows ("prontera"; "" none): upscaled.grf notes the textures seen on it (AI textures); 0.25:
+    // its file is read for its lamps and the torches the game does not show.
     void setMap(const std::string& map);
+    // 0.25: the game's folder - its data and DATA.INI (the driver's own renderer; uaro-render64.exe has it at start).
+    void setGameDir(const std::string& dir);
     // AI icons (0.14): a picture the game copies into one of its windows - w x h straight ARGB, transparent where its
     // key skips - for the network; the picture made larger comes to the sink, keyed as asked. In the driver the sink
     // gets it from the bridge; in uaro-render64.exe the sink sends it over the bridge.

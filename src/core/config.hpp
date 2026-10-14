@@ -67,6 +67,10 @@ struct EffectSettings {
     // instead of the same small picture blown up. On by default.
     bool smoke = true;
     int smokeDensity = 100;  // %, 0-200: how thick it is
+    // 0.25: the lamps' light - the lights the maps' makers placed (only baked into the ground until now) falls on the
+    // characters and the walls too, and the fire-coloured ones flicker. On by default.
+    bool lamps = true;
+    int lampsLight = 60;  // %, 0-200: how bright
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

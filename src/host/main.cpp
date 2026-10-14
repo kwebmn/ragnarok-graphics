@@ -201,6 +201,7 @@ int Host::run(const Args& a) {
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
     renderer_.setIconSink(&Host::iconDone, this);
     if (a.ai.enabled) renderer_.startAiTextures(a.dir, a.ai);  // its own log line, on or why not
+    renderer_.setGameDir(a.dir);  // 0.25: the maps' files and the axes file
     bool upscales = false;
     if (dlss) {  // Streamline got the device the moment it was made (setOnDevice)
         if (attach.ok) {
@@ -340,6 +341,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.torchBrightness = rd.i32();
             e.smoke = rd.u8() != 0;
             e.smokeDensity = rd.i32();
+            e.lamps = rd.u8() != 0;
+            e.lampsLight = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }
