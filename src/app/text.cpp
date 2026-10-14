@@ -24,4 +24,16 @@ std::string scaleText(double s, settings::Lang l) {
     return out;
 }
 
+std::string sizeText(unsigned long long bytes, settings::Lang l) {
+    const double mb = double(bytes) / (1024.0 * 1024.0);
+    if (mb < 1023.95) return settings::fmt(settings::tr(l, settings::Text::SizeMb), {num((long long)(mb + 0.5))});
+    char buf[32];
+    std::snprintf(buf, sizeof buf, "%.1f", mb / 1024.0);
+    std::string v = buf;
+    if (l != settings::Lang::En)
+        for (char& ch : v)
+            if (ch == '.') ch = ',';
+    return settings::fmt(settings::tr(l, settings::Text::SizeGb), {v});
+}
+
 }  // namespace uagfx::app

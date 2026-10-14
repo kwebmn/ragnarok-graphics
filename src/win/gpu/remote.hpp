@@ -30,6 +30,7 @@ public:
     bool setTarget(int width, int height);
     bool setScale(double k, int width, int height, int samples, bool upscale);
     void setCamera(bool valid, const float view[12]);
+    void setMap(const std::string& map);
     int samples() const { return samples_; }
     void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown);
     uint32_t createTexture(int width, int height, int levels);

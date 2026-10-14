@@ -12,6 +12,7 @@ constexpr uint32_t kModeMgr = 0x74B578;
 constexpr uint32_t kModeCurrent = 0x04;  // CGameMode*
 constexpr uint32_t kModeType = 0x58;     // 1 in the game, 0 at the login
 constexpr uint32_t kModeView = 0xC8;     // CView* of the game mode
+constexpr uint32_t kModeMap = 0x60;      // the map's file name, "prontera.rsw" (copied there as the world loads)
 constexpr uint32_t kViewMatrix = 0x94;   // 4 x 3 floats: world -> view for row vectors (D3D), the last row a move
 constexpr uint32_t kConstants = 0x695740;  // pi, far, near, horizontal and vertical field of view in degrees
 constexpr float kPi = 3.141592025756836f;  // as the exe holds it

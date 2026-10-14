@@ -62,6 +62,8 @@ std::unique_ptr<Page> makeSettingsPage(PageHost& host, settings::Page which);  /
 std::unique_ptr<Page> makeScreenPage(PageHost& host);
 std::unique_ptr<Page> makeDiagnosticsPage(PageHost& host);
 std::unique_ptr<Page> makeServicePage(PageHost& host);
+std::unique_ptr<Page> makeAiPage(PageHost& host);       // 0.12: the [ai] section
+std::unique_ptr<Page> makeAiCachePage(PageHost& host);  // 0.12: what upscaled.grf holds
 
 // The window text of a control, as UTF-8 (number fields).
 std::string controlText(HWND ctl);

@@ -64,8 +64,16 @@ enum class Text : uint16_t {
     PageSmoothing, SmoothMsaa, SmoothMsaaHint, SmoothA2c, SmoothA2cHint, SmoothAniso, SmoothAnisoHint, SmoothOff,
     Factor2, Factor4, Factor8, Factor16, RenderBridge, RenderBridgeHint,
     SmoothDlss, SmoothDlssHint, DlssDlaa, DlssQuality, DlssBalanced, DlssPerformance, DlssUltra,
-    FramesGeneration, FramesGenerationHint, Times3, SmoothAi, SmoothAiHint, SmoothAiBudget, SmoothAiBudgetHint,
-    SmoothAiDenoise, SmoothAiDenoiseHint, RenderRemix, RenderRemixHint,
+    FramesGeneration, FramesGenerationHint, Times3, AiEnable, AiEnableHint, AiBudget, AiBudgetHint,
+    AiDenoise, AiDenoiseHint, RenderRemix, RenderRemixHint,
+    PageAi, PageAiCache, AiPreset, AiPresetHint, AiPresetRecommended, AiPresetAll, AiPresetCustom, AiWhat, AiGround,
+    AiGroundHint, AiObjects, AiObjectsHint, AiSprites, AiSpritesHint, AiEffects, AiEffectsHint, AiModelWorld,
+    AiModelWorldHint, AiModelSprites, AiModelSpritesHint, AiModelGeneral, AiModelAnime, AiScale, AiScaleHint,
+    AiScale4, AiScale2, AiSizes, AiSizesHint, AiAhead, AiAheadHint, AiOffNote,
+    AiCacheSummary, AiCacheNone, AiCacheUnreadable, AiCacheMap, AiCacheColGround, AiCacheColObjects,
+    AiCacheColSprites, AiCacheColEffects, AiCacheColTotal, AiCacheColSize, AiCacheAllMaps, AiCacheNoMap,
+    AiCacheDeleteKinds, AiCacheDelete, AiCacheDeleteOld, AiCacheDeleteAll, AiCacheOldNote, AiCacheRunning,
+    AiCacheAskDelete, AiCacheAskAll, AiCacheDeleted, AiCacheDeletedAll, AiCacheNothing, AiCacheError, SizeMb, SizeGb,
     Count
 };
 

@@ -10,6 +10,36 @@ enum class Backend { DgVoodoo, Uaro };          // [renderer] backend
 enum class DisplayMode { Auto, Window, Borderless };
 enum class UiFilter { Sharp, Smooth };  // [display] ui_filter: how magnified interface pictures are sampled
 
+// [ai] (0.12; 0.11's [quality] ai_textures, ai_budget and ai_denoise are read when [ai] has no such key): the world's
+// textures enlarged by a neural network on the GPU (Real-ESRGAN, experiment; it starts the 64-bit renderer) and kept
+// in upscaled.grf next to uaRO.exe.
+struct AiSettings {
+    bool enabled = false;
+    // What it works on, the kinds the driver tells apart by how the game draws them (core/ai/kinds.hpp).
+    bool ground = true;
+    bool objects = true;   // buildings, trees, water
+    bool sprites = false;  // monsters, players, NPCs, items: pixel art the network may change too much
+    bool effects = false;  // light and sparks
+    std::string model = "general";      // ground and objects: general (realistic) or anime (drawn)
+    std::string spriteModel = "anime";  // sprites and effects
+    int denoise = 25;  // % of the grain the general model smooths away (Real-ESRGAN's denoise strength)
+    int scale = 4;     // the result 4 or 2 times the game's texture (2: a quarter of the video memory)
+    int budget = 2;    // ms of GPU time a frame, 1-20
+    int minSize = 64;  // the textures it takes: both sides from min_size to max_size, 16-1024
+    int maxSize = 512;
+    bool ahead = true;  // a map's textures known from earlier visits are done at once, not when they come into view
+    bool operator==(const AiSettings& o) const;
+    bool operator!=(const AiSettings& o) const { return !(*this == o); }
+};
+// The page's sets: Recommended (the defaults: ground and objects), All (every kind), Custom (anything else).
+enum class AiPreset { Recommended, All, Custom };
+AiPreset aiPresetOf(const AiSettings& a);  // whatever `enabled` is
+AiSettings aiPresetSettings(AiPreset p, bool enabled);  // Custom: the defaults
+bool aiKind(const AiSettings& a, int kind);  // ai::Kind order: ground, objects, sprites, effects
+// The settings as one word for uaro-render64.exe's command line ("enabled=1;ground=1;...;ahead=1") and back.
+std::string aiArgument(const AiSettings& a);
+AiSettings parseAiArgument(const std::string& word);
+
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 struct Config {
     Backend backend = Backend::DgVoodoo;
@@ -34,13 +64,7 @@ struct Config {
     int msaa = 4;                // stage 4: samples per pixel at polygon edges - 0 (off), 2, 4 or 8
     bool alphaToCoverage = true; // stage 4, with MSAA: soft edges where alpha testing cuts textures (leaves, fences)
     int anisotropy = 16;         // stage 4: anisotropic filtering of the world's textures - 0 (off), 2, 4, 8 or 16
-    // [quality] ai_textures: the world's textures enlarged x4 by a neural network on the GPU, cached in upscaled.grf
-    // (experiment; it starts the 64-bit renderer); ai_budget: milliseconds of GPU time a frame for it, 1-20;
-    // ai_denoise: how much of the textures' grain it smooths away, 0-100 % (Real-ESRGAN's denoise strength; 25,
-    // below its 50: a game texture's grain is its detail).
-    bool aiTextures = false;
-    int aiBudget = 2;
-    int aiDenoise = 25;
+    AiSettings ai;
     // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance or ultra - NVIDIA DLSS in the 64-bit
     // renderer (it starts that renderer; MSAA is off then).
     std::string dlss = "off";

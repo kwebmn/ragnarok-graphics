@@ -2,8 +2,9 @@
 
 Without torch: a restricted unpickler that only builds tensor descriptions (no code from the file runs), then the
 weights as little-endian float32 in our order. Usage: python3 -I tools/ai_model.py realesr-general-x4v3.pth out.bin
-The model in dist/ai/ came from github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth
-(BSD-3-Clause, dist/ai/LICENSE-Real-ESRGAN.txt)."""
+The models in dist/ai/ came from github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/: realesr-general-x4v3.pth,
+realesr-general-wdn-x4v3.pth and realesr-animevideov3.pth (16 convolutions instead of 32; BSD-3-Clause,
+dist/ai/LICENSE-Real-ESRGAN.txt)."""
 import pickle, struct, sys, zipfile
 
 class Storage:

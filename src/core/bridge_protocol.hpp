@@ -40,6 +40,7 @@ enum class Msg : uint32_t {
     SetSurface,         // u64 a DirectComposition surface handle, valid in the renderer's process
     Camera,             // u8 valid, 12 f32: the game's view matrix of the frame being drawn (DLSS)
     Quit,
+    Map,                // str: the map the game shows, "" none (AI textures note the textures seen on it)
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text

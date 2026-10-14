@@ -59,3 +59,16 @@ TEST(live_config_names_the_keys_that_apply_now) {
                           "display.window_height", "frames.allow_tearing", "utility.language", "nothing"})
         CHECK(!appliesNow(k));
 }
+
+TEST(live_config_ai_waits_for_the_next_start) {
+    // [ai]: the networks and their models start with the 64-bit renderer.
+    const Config running = parseConfig("");
+    const LiveUpdate u =
+        liveUpdate(running, parseConfig("[ai]\nenabled = 1\nsprites = 1\nmodel = anime\nscale = 2\nbudget = 4\n"));
+    CHECK(u.applied.empty());
+    CHECK(u.next.ai == running.ai);
+    CHECK_EQ(u.waiting.size(), size_t(5));
+    CHECK(u.waiting[0] == "ai.enabled");
+    CHECK(u.waiting[2] == "ai.model");
+    CHECK(u.waiting[4] == "ai.budget");
+}

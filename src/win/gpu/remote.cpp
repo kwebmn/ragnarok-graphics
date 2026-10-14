@@ -49,8 +49,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
                       std::to_string(o.logLevel) + " --present " + o.present + " --dlss " + o.dlss +
                       " --dlss-jitter " + (o.dlssJitterInverted ? "inverted" : "normal") + " --dlss-motion " +
                       (o.dlssMotionInverted ? "inverted" : "normal") + " --fg " + std::to_string(o.frameGeneration) +
-                      " --ai-textures " + (o.aiTextures ? "1" : "0") + " --ai-budget " + std::to_string(o.aiBudget) +
-                      " --ai-denoise " + std::to_string(o.aiDenoise);
+                      " --ai " + aiArgument(o.ai);
     STARTUPINFOA si{};
     si.cb = sizeof si;
     si.dwFlags = STARTF_FORCEOFFFEEDBACK;  // it never shows a window: no "app starting" cursor over the game
@@ -188,6 +187,13 @@ void Remote::setCamera(bool valid, const float view[12]) {
     w.u8(valid ? 1 : 0);
     for (int i = 0; i < 12; ++i) w.f32(valid ? view[i] : 0.0f);
     send(Msg::Camera, buffer_);
+}
+
+void Remote::setMap(const std::string& map) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.str(map);
+    send(Msg::Map, buffer_);
 }
 
 void Remote::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown) {

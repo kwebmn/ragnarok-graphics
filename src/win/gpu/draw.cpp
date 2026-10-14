@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstring>
 
+#include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/scale.hpp"
 #include "core/twin_grid.hpp"
@@ -94,6 +95,16 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // Stage 6: a window tile whose twin was made at this scale is drawn from the twin, a texel per target pixel;
     // otherwise (Pause, another scale, no twin) exactly as before.
     const bool twin = d.twin && s.ui && twinMatches(d.twinScale, scale) && textures.count(d.twin);
+    // AI textures: what the draw shows - the ground, its lightmap, a sprite, an effect, the rest of the world.
+    ai::DrawFacts facts;
+    if (ai && !s.ui) {
+        facts.uvSets = d.fvf == d3d7::FVF_TL2 ? 2 : 1;
+        facts.additive = s.blend && s.dstBlend == d3d7::BLEND_ONE;
+        const std::vector<uint8_t>& v = rec.vertexBytes();
+        const size_t stride = FrameRecord::stride(d.fvf);
+        if (d.vertexCount == 4 && d.vertexOffset + 4 * stride <= v.size())
+            facts.flatQuad = ai::flatQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount);
+    }
     Texture* t[2] = {nullptr, nullptr};
     UINT srv[2] = {0, 0};
     for (int i = 0; i < 2; ++i) {
@@ -102,8 +113,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (it == textures.end()) it = textures.find(white);
         if (it == textures.end()) return;
         t[i] = &it->second;
-        // AI textures: a world texture the network has done is drawn in its place; one it has not, waits its turn.
-        if (ai && !s.ui && id && id != white) ai->noteWorldUse(id);
+        // A world texture the network has done is drawn in its place; one it has not, waits its turn.
+        if (ai && !s.ui && id && id != white) {
+            facts.stage = i;
+            ai->noteWorldUse(id, ai::drawKind(facts));
+        }
         if (ai && ai->shown && !s.ui && t[i]->ai) {
             transition(t[i]->ai, t[i]->aiState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             srv[i] = t[i]->aiSrv;

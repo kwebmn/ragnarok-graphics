@@ -71,6 +71,7 @@ private:
     int scaledSamples_ = 1;  // and its samples per pixel (stage 4)
     bool scaledUpscale_ = false;  // and whether DLSS draws the world (part 3)
     bool cameraKnown_ = false;    // the game's camera was read last frame (part 3, for the log)
+    std::string map_;  // the map the game showed at the last present (AI textures)
     bool renderScaleNoted_ = false;  // the log has said render_scale is not used with DLSS
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;

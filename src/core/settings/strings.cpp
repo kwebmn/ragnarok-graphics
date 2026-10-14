@@ -457,29 +457,32 @@ const Entry kTexts[] = {
      "Добавляет придуманные кадры между кадрами игры: GeForce RTX 40 и 50 (3x и 4x — RTX 50), только с DLSS в "
      "«Сглаживании». Плавнее движение, чуть больше задержка; в меню выключается сама."},
     {"3×", "3×", "3×"},
-    {"AI textures (experiment)", "Нейромережа для текстур (експеримент)", "Нейросеть для текстур (эксперимент)"},
-    {"The world's textures enlarged 4 times by a neural network (Real-ESRGAN) on your graphics card, a little every "
-     "frame, while you play; done ones go into upscaled.grf and show at once next time. Pause shows the old ones.",
-     "Текстури світу збільшує в 4 рази нейромережа (Real-ESRGAN) на вашій відеокарті, потроху щокадру, поки ви "
-     "граєте; готові йдуть в upscaled.grf і наступного разу з'являються одразу. Pause показує старі.",
-     "Текстуры мира увеличивает в 4 раза нейросеть (Real-ESRGAN) на вашей видеокарте, понемногу каждый кадр, пока "
-     "вы играете; готовые идут в upscaled.grf и в следующий раз появляются сразу. Pause показывает старые."},
-    {"AI textures: GPU time a frame, ms", "Нейромережа: час відеокарти на кадр, мс",
-     "Нейросеть: время видеокарты на кадр, мс"},
+    {"Improve textures with a neural network (experiment)", "Покращувати текстури нейромережею (експеримент)",
+     "Улучшать текстуры нейросетью (эксперимент)"},
+    {"While you play, a neural network (Real-ESRGAN) on your graphics card redraws the game's textures larger and "
+     "sharper, a little every frame; done ones go into upscaled.grf and show at once next time. Pause shows the "
+     "game's own. Any card with Direct3D 12; it starts the 64-bit renderer.",
+     "Поки ви граєте, нейромережа (Real-ESRGAN) на вашій відеокарті перемальовує текстури гри більшими й чіткішими, "
+     "потроху щокадру; готові йдуть в upscaled.grf і наступного разу з'являються одразу. Pause показує власні "
+     "текстури гри. Будь-яка відеокарта з Direct3D 12; вмикає 64-бітний рендер.",
+     "Пока вы играете, нейросеть (Real-ESRGAN) на вашей видеокарте перерисовывает текстуры игры крупнее и чётче, "
+     "понемногу каждый кадр; готовые идут в upscaled.grf и в следующий раз появляются сразу. Pause показывает "
+     "родные текстуры игры. Любая видеокарта с Direct3D 12; включает 64-битный рендер."},
+    {"GPU time a frame, ms", "Час відеокарти на кадр, мс", "Время видеокарты на кадр, мс"},
     {"How much of each frame the neural network may take, 1-20 ms: more makes textures faster, less keeps the "
      "frame rate.",
      "Скільки часу кожного кадру може брати нейромережа, 1–20 мс: більше — текстури швидше, менше — FPS вищий.",
      "Сколько времени каждого кадра может брать нейросеть, 1–20 мс: больше — текстуры быстрее, меньше — FPS выше."},
-    {"AI textures: grain smoothing", "Нейромережа: згладжування зерна", "Нейросеть: сглаживание зерна"},
-    {"How much of the textures' grain the neural network smooths away: 0 keeps all of it (sand and grass stay crisp), "
-     "100 makes them smooth as if painted. Walls and floors look alike at any value. Textures made at another value "
-     "are made again.",
-     "Скільки зерна текстур згладжує нейромережа: 0 — лишає все (пісок і трава чіткі), 100 — гладкі, наче "
+    {"Grain smoothing", "Згладжування зерна", "Сглаживание зерна"},
+    {"How much of the textures' grain the realistic model smooths away: 0 keeps all of it (sand and grass stay "
+     "crisp), 100 makes them smooth as if painted. Walls and floors look alike at any value. Textures made at "
+     "another value are made again.",
+     "Скільки зерна текстур згладжує реалістична модель: 0 — лишає все (пісок і трава чіткі), 100 — гладкі, наче "
      "намальовані. Стіни й підлога майже однакові за будь-якого значення. Текстури, зроблені з іншим значенням, "
      "робляться знову.",
-     "Сколько зерна текстур сглаживает нейросеть: 0 — оставляет всё (песок и трава чёткие), 100 — гладкие, будто "
-     "нарисованные. Стены и пол почти одинаковы при любом значении. Текстуры, сделанные с другим значением, "
-     "делаются заново."},
+     "Сколько зерна текстур сглаживает реалистичная модель: 0 — оставляет всё (песок и трава чёткие), 100 — "
+     "гладкие, будто нарисованные. Стены и пол почти одинаковы при любом значении. Текстуры, сделанные с другим "
+     "значением, делаются заново."},
     {"RTX Remix (experiment)", "RTX Remix (експеримент)", "RTX Remix (эксперимент)"},
     {"Draws through Direct3D 9 for NVIDIA RTX Remix: path tracing, and DLSS 5 once NVIDIA adds it to Remix "
      "(announced for 23 October 2026). Needs RTX Remix's d3d9.dll and .trex folder next to uaRO.exe and rtx.conf "
@@ -491,6 +494,129 @@ const Entry kTexts[] = {
      "Рисует через Direct3D 9 для NVIDIA RTX Remix: трассировка путей, а DLSS 5 — когда NVIDIA добавит его в Remix "
      "(обещано 23 октября 2026). Нужны d3d9.dll и папка .trex из RTX Remix рядом с uaRO.exe и туда же rtx.conf "
      "из uaro-graphics\\remix; Alt+X открывает меню Remix. Без них игра рисует через Direct3D 12, как обычно."},
+    {"AI textures", "Нейромережа", "Нейросеть"},
+    {"Ready textures", "Готові текстури", "Готовые текстуры"},
+    {"Set", "Набір", "Набор"},
+    {"Recommended works on the ground and buildings: the safest choice. Everything takes characters and effects "
+     "too. Change any setting below and the set becomes Custom.",
+     "«Рекомендований» покращує землю й будівлі — найнадійніший вибір. «Усе» бере ще персонажів та ефекти. "
+     "Змініть будь-що нижче — і набір стане «Свій».",
+     "«Рекомендуемый» улучшает землю и здания — самый надёжный выбор. «Всё» берёт ещё персонажей и эффекты. "
+     "Измените что-нибудь ниже — и набор станет «Свой»."},
+    {"Recommended: ground and buildings", "Рекомендований: земля й будівлі", "Рекомендуемый: земля и здания"},
+    {"Everything: characters and effects too", "Усе: і персонажі, і ефекти", "Всё: и персонажи, и эффекты"},
+    {"Custom", "Свій", "Свой"},
+    {"What to improve:", "Що покращувати:", "Что улучшать:"},
+    {"Map ground", "Земля карт", "Земля карт"},
+    {"Sand, grass, paving, roads: everything you walk on.", "Пісок, трава, плити, дороги: усе, чим ходять.",
+     "Песок, трава, плиты, дороги: всё, по чему ходят."},
+    {"Buildings, trees and water", "Будівлі, дерева й вода", "Здания, деревья и вода"},
+    {"Everything else that stands on a map: houses, walls, trees, rocks, water.",
+     "Усе інше, що стоїть на карті: будинки, стіни, дерева, каміння, вода.",
+     "Всё остальное, что стоит на карте: дома, стены, деревья, камни, вода."},
+    {"Characters, monsters, NPCs", "Персонажі, монстри, NPC", "Персонажи, монстры, NPC"},
+    {"And items on the ground: the game draws them alike, so this is one box. They are small pixel pictures: the "
+     "network may change their look - try it and see.",
+     "І речі на землі: гра малює їх однаково, тож це одна галочка. Це маленькі піксельні картинки: нейромережа може "
+     "змінити їхній вигляд — спробуйте й подивіться.",
+     "И вещи на земле: игра рисует их одинаково, поэтому это одна галочка. Это маленькие пиксельные картинки: "
+     "нейросеть может изменить их вид — попробуйте и посмотрите."},
+    {"Skill effects", "Ефекти вмінь", "Эффекты умений"},
+    {"Glows, sparks and light added onto the picture. Usually small and quick: the difference is little.",
+     "Сяйва, іскри й світло, що додаються до картинки. Зазвичай маленькі й швидкі: різниця невелика.",
+     "Свечения, искры и свет, которые добавляются к картинке. Обычно маленькие и быстрые: разница небольшая."},
+    {"Model for maps", "Модель для карт", "Модель для карт"},
+    {"For the ground and buildings. Realistic keeps the texture's own detail; Drawn makes it smooth and clean like a "
+     "painting and is twice as fast.",
+     "Для землі й будівель. «Реалістична» зберігає власні деталі текстури; «Мальована» робить її гладкою й чистою, "
+     "як малюнок, і вдвічі швидша.",
+     "Для земли и зданий. «Реалистичная» сохраняет собственные детали текстуры; «Рисованная» делает её гладкой и "
+     "чистой, как рисунок, и вдвое быстрее."},
+    {"Model for characters", "Модель для персонажів", "Модель для персонажей"},
+    {"For characters, monsters, NPCs, items and effects. Drawn (made for anime) keeps clean lines and flat colours.",
+     "Для персонажів, монстрів, NPC, речей та ефектів. «Мальована» (зроблена для аніме) зберігає чисті лінії й "
+     "рівні кольори.",
+     "Для персонажей, монстров, NPC, вещей и эффектов. «Рисованная» (сделана для аниме) сохраняет чистые линии и "
+     "ровные цвета."},
+    {"Realistic (general-x4v3)", "Реалістична (general-x4v3)", "Реалистичная (general-x4v3)"},
+    {"Drawn (animevideov3)", "Мальована (animevideov3)", "Рисованная (animevideov3)"},
+    {"Result size", "Розмір результату", "Размер результата"},
+    {"×4: a 256×256 texture becomes 1024×1024, about 5.6 MB of video memory with its smaller copies. ×2: 512×512, "
+     "about 1.4 MB - for cards with 4 GB or less; upscaled.grf grows 4 times slower too.",
+     "×4: текстура 256×256 стає 1024×1024 — близько 5,6 МБ відеопам'яті з меншими копіями. ×2: 512×512, близько "
+     "1,4 МБ — для відеокарт із 4 ГБ і менше; upscaled.grf теж росте вчетверо повільніше.",
+     "×4: текстура 256×256 становится 1024×1024 — около 5,6 МБ видеопамяти с уменьшенными копиями. ×2: 512×512, "
+     "около 1,4 МБ — для видеокарт с 4 ГБ и меньше; upscaled.grf тоже растёт вчетверо медленнее."},
+    {"×4 - the sharpest", "×4 — найчіткіші", "×4 — самые чёткие"},
+    {"×2 - a quarter of the memory", "×2 — учетверо менше пам'яті", "×2 — вчетверо меньше памяти"},
+    {"Texture sides, from - to", "Сторони текстур, від — до", "Стороны текстур, от — до"},
+    {"Which textures it takes, by their sides in pixels (16-1024). Under 64 are mostly small sprites and effects. "
+     "Over 512 needs much video memory: the network takes about 0.5 GB for 1024×1024.",
+     "Які текстури брати — за їхніми сторонами в пікселях (16–1024). Менші за 64 — здебільшого дрібні спрайти й "
+     "ефекти. Понад 512 потребує багато відеопам'яті: нейромережі треба близько 0,5 ГБ на 1024×1024.",
+     "Какие текстуры брать — по их сторонам в пикселях (16–1024). Меньше 64 — в основном мелкие спрайты и эффекты. "
+     "Больше 512 требует много видеопамяти: нейросети нужно около 0,5 ГБ на 1024×1024."},
+    {"Prepare a map's known textures in advance", "Заздалегідь готувати знайомі текстури карти",
+     "Заранее готовить знакомые текстуры карты"},
+    {"Textures seen on a map before are taken from upscaled.grf (or made again after a change of settings) as soon "
+     "as the map loads, not when they come into view: fewer of them sharpen before your eyes.",
+     "Текстури, які вже траплялися на карті, беруться з upscaled.grf (або робляться знову після зміни налаштувань) "
+     "щойно карта завантажилась, а не коли потраплять у кадр: менше «проявлення» на очах.",
+     "Текстуры, которые уже встречались на карте, берутся из upscaled.grf (или делаются заново после смены "
+     "настроек) сразу после загрузки карты, а не когда попадут в кадр: меньше «проявления» на глазах."},
+    {"Tick the box above and the network starts improving textures while you play. The Ready textures page shows "
+     "and deletes what it has made.",
+     "Поставте галочку вище — і нейромережа почне покращувати текстури, поки ви граєте. Сторінка «Готові текстури» "
+     "показує й видаляє зроблене.",
+     "Поставьте галочку выше — и нейросеть начнёт улучшать текстуры, пока вы играете. Страница «Готовые текстуры» "
+     "показывает и удаляет сделанное."},
+    {"upscaled.grf: {1} textures of these settings, {2}. The file: {3} of the 4 GB the format allows.",
+     "upscaled.grf: текстур із цими налаштуваннями — {1}, {2}. Файл: {3} з 4 ГБ, які дозволяє формат.",
+     "upscaled.grf: текстур с этими настройками — {1}, {2}. Файл: {3} из 4 ГБ, которые позволяет формат."},
+    {"There is no upscaled.grf yet: the network makes it once it starts improving textures.",
+     "upscaled.grf ще немає: нейромережа створить його, коли почне покращувати текстури.",
+     "upscaled.grf пока нет: нейросеть создаст его, когда начнёт улучшать текстуры."},
+    {"upscaled.grf cannot be read: {1}", "upscaled.grf не читається: {1}", "upscaled.grf не читается: {1}"},
+    {"Map", "Карта", "Карта"},
+    {"Ground", "Земля", "Земля"},
+    {"Buildings", "Будівлі", "Здания"},
+    {"Characters", "Персонажі", "Персонажи"},
+    {"Effects", "Ефекти", "Эффекты"},
+    {"Total", "Усього", "Всего"},
+    {"Size", "Розмір", "Размер"},
+    {"All maps", "Усі карти", "Все карты"},
+    {"no map (made before 0.12)", "без карти (зроблені до 0.12)", "без карты (сделаны до 0.12)"},
+    {"Delete from the ticked maps:", "Видаляти з позначених карт:", "Удалять с отмеченных карт:"},
+    {"Delete ticked", "Видалити позначене", "Удалить отмеченное"},
+    {"Delete outdated: {1}", "Видалити застарілі: {1}", "Удалить устаревшие: {1}"},
+    {"Delete all", "Видалити все", "Удалить всё"},
+    {"Outdated: made with another model, smoothing or size, or by an older version - the game no longer uses them. "
+     "A texture seen on several maps is on each of their rows. Deleted ones are made again when they turn up in the "
+     "game.",
+     "Застарілі — зроблені з іншою моделлю, згладжуванням чи розміром або старішою версією: гра їх більше не "
+     "використовує. Текстура, що траплялася на кількох картах, є в кожному їхньому рядку. Видалені робляться знову, "
+     "коли трапляться в грі.",
+     "Устаревшие — сделанные с другой моделью, сглаживанием или размером или старой версией: игра их больше не "
+     "использует. Текстура, встречавшаяся на нескольких картах, есть в каждой их строке. Удалённые делаются снова, "
+     "когда попадутся в игре."},
+    {"The game is running: textures can be deleted once it is closed (it keeps the file open).",
+     "Гра запущена: видаляти можна, коли вона закрита (вона тримає файл відкритим).",
+     "Игра запущена: удалять можно, когда она закрыта (она держит файл открытым)."},
+    {"Delete the ticked textures from upscaled.grf ({1})? They are made again when they turn up in the game.",
+     "Видалити позначені текстури з upscaled.grf ({1} шт.)? Вони зробляться знову, коли трапляться в грі.",
+     "Удалить отмеченные текстуры из upscaled.grf ({1} шт.)? Они сделаются снова, когда попадутся в игре."},
+    {"Delete the whole upscaled.grf ({1})? Every texture is made again when it turns up in the game.",
+     "Видалити весь upscaled.grf ({1})? Усі текстури зробляться знову, коли трапляться в грі.",
+     "Удалить весь upscaled.grf ({1})? Все текстуры сделаются снова, когда попадутся в игре."},
+    {"Deleted textures: {1}. upscaled.grf is {2} now.", "Видалено текстур: {1}. upscaled.grf тепер {2}.",
+     "Удалено текстур: {1}. upscaled.grf теперь {2}."},
+    {"upscaled.grf is deleted.", "upscaled.grf видалено.", "upscaled.grf удалён."},
+    {"Nothing to delete: tick maps in the table first.", "Нічого видаляти: спершу позначте карти в таблиці.",
+     "Нечего удалять: сначала отметьте карты в таблице."},
+    {"upscaled.grf could not be changed: {1}", "Не вдалося змінити upscaled.grf: {1}",
+     "Не удалось изменить upscaled.grf: {1}"},
+    {"{1} MB", "{1} МБ", "{1} МБ"},
+    {"{1} GB", "{1} ГБ", "{1} ГБ"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

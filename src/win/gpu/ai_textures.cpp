@@ -15,10 +15,9 @@
 namespace uagfx::gpu {
 namespace {
 
-constexpr int kScale = 4;
-constexpr int kMinSide = 64;   // smaller ones are mostly sprites and effects
-constexpr int kMaxSide = 512;  // the network's buffers for 512x512 are 64 MB each
+constexpr int kNetScale = 4;  // every network enlarges 4 times; a result of twice the size is its first mip level
 constexpr size_t kKeptLimit = size_t(512) << 20;
+constexpr size_t kBatchBytes = size_t(32) << 20;  // pictures written to upscaled.grf at once
 constexpr UINT kAiConstants = 0, kAiWeights = 1, kAiU0 = 2, kAiU1 = 3, kAiU2 = 4;  // root parameters
 
 UINT64 alignUp64(UINT64 v, UINT64 a) { return (v + a - 1) / a * a; }
@@ -74,7 +73,7 @@ AiTextures::~AiTextures() {
     releaseCom(shuffle_);
     releaseCom(mip_);
     releaseCom(root_);
-    releaseCom(weights_);
+    for (auto& n : nets_) releaseCom(n->weights);
     releaseCom(planes_);
     releaseCom(feat_[0]);
     releaseCom(feat_[1]);
@@ -92,33 +91,66 @@ bool loadModel(const std::string& path, ai::Model& m, std::string& error) {
     return ai::parseModel(file, m, error);
 }
 
+// The model file of an [ai] model word.
+const char* modelFile(const std::string& token) {
+    return token == "anime" ? "realesr-animevideov3" : "realesr-general-x4v3";
+}
+
 }  // namespace
 
-bool AiTextures::start(const std::string& gameDir, double targetMs, int denoise, std::string& error) {
-    targetMs_ = std::clamp(targetMs, 0.5, 20.0);
-    const std::string dir = gameDir + "\\uaro-graphics\\ai\\";
-    if (!loadModel(dir + modelName_ + ".bin", model_, error)) return false;
-    if (model_.scale != kScale) {
-        error = "the model does not enlarge 4 times";
+bool AiTextures::loadNet(const std::string& dir, const std::string& token, int denoise, Net& net,
+                         std::string& error) {
+    net.token = token;
+    net.name = modelFile(token);
+    if (!loadModel(dir + net.name + ".bin", net.model, error)) return false;
+    if (net.model.scale != kNetScale) {
+        error = net.name + " does not enlarge 4 times";
         return false;
     }
-    // [quality] ai_denoise: Real-ESRGAN's denoise strength, the model mixed with its weak-denoise twin (0.11.2 and
-    // older: the model alone, 100 - sand came out flat).
-    denoise_ = std::clamp(denoise, 0, 100);
-    if (denoise_ < 100) {
+    // The general model's denoise strength: mixed with its weak-denoise twin (0.11.2 and older: the model alone,
+    // 100 - sand came out flat). The anime model has no twin.
+    if (token == "general") net.denoise = std::clamp(denoise, 0, 100);
+    if (net.denoise < 100) {
         ai::Model weak, mixed;
         std::string why;
-        if (loadModel(dir + weakName_ + ".bin", weak, why) && ai::mixModels(model_, weak, denoise_, mixed, why)) {
-            model_ = std::move(mixed);
+        if (loadModel(dir + weakName_ + ".bin", weak, why) && ai::mixModels(net.model, weak, net.denoise, mixed, why)) {
+            net.model = std::move(mixed);
         } else {
             LOG_ERROR("AI textures: %s; the model alone, denoise 100%%", why.c_str());
-            denoise_ = 100;
+            net.denoise = 100;
         }
     }
-    cacheName_ = modelName_ + "-dn" + std::to_string(denoise_) + "-wrap";
+    net.folder = ai::netFolder(token, net.denoise, scale_);
+    return true;
+}
+
+bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::string& error) {
+    targetMs_ = std::clamp(double(s.budget), 0.5, 20.0);
+    scale_ = s.scale == 2 ? 2 : 4;
+    minSide_ = std::min(s.minSize, s.maxSize);
+    maxSide_ = std::max(s.minSize, s.maxSize);
+    ahead_ = s.ahead;
+    const std::string dir = gameDir + "\\uaro-graphics\\ai\\";
+    for (int k = 0; k < ai::kKinds; ++k) {
+        if (!aiKind(s, k)) continue;
+        const std::string& token = k < 2 ? s.model : s.spriteModel;  // the ground and objects, sprites and effects
+        for (size_t i = 0; i < nets_.size() && netOf_[k] < 0; ++i)
+            if (nets_[i]->token == token) netOf_[k] = int(i);
+        if (netOf_[k] >= 0) continue;
+        auto net = std::make_unique<Net>();
+        if (!loadNet(dir, token, s.denoise, *net, error)) return false;
+        features_ = std::max(features_, net->model.features);
+        nets_.push_back(std::move(net));
+        netOf_[k] = int(nets_.size()) - 1;
+    }
+    if (nets_.empty()) {
+        error = "no kind of texture is chosen (the AI textures page)";
+        return false;
+    }
     if (!createGpu(error)) return false;
     const ULONGLONG t0 = GetTickCount64();
-    if (!selfTest(error)) return false;
+    for (size_t i = 0; i < nets_.size(); ++i)
+        if (!selfTest(int(i), error)) return false;
     const ULONGLONG tested = GetTickCount64() - t0;
 
     // upscaled.grf: written by one game at a time (a second client reads it only).
@@ -130,15 +162,23 @@ bool AiTextures::start(const std::string& gameDir, double targetMs, int denoise,
         LOG_ERROR("AI textures: %s; they are made again every start", why.c_str());
         writable_ = false;
     }
-    // From here on only the I/O thread touches the archive; the renderer looks names up in known_.
-    // Only this version's: the textures of 0.11.0 and 0.11.1 (a zero border, seams) stay in the file unused.
-    const std::string ours = ai::entryFolder(cacheName_);
-    unsigned older = 0;
+    // From here on only the I/O thread touches the archive; the renderer looks names up in known_. Pictures of other
+    // settings stay in the file unused (the settings app deletes them); the tags count for every setting.
+    unsigned other = 0;
     for (std::string& name : archive_.names()) {
-        if (name.compare(0, ours.size(), ours) == 0)
-            known_.insert(std::move(name));
-        else
-            ++older;
+        const ai::ParsedEntry e = ai::parseEntry(name);
+        if (e.type == ai::ParsedEntry::KindTag) {
+            kinds_.emplace(e.key, e.kind);
+        } else if (e.type == ai::ParsedEntry::MapTag) {
+            mapTags_.insert(std::move(name));
+        } else if (e.type == ai::ParsedEntry::Picture) {
+            bool ours = false;
+            for (const auto& n : nets_) ours = ours || e.folder == n->folder;
+            if (ours)
+                known_.insert(std::move(name));
+            else
+                ++other;
+        }
     }
     InitializeCriticalSection(&ioLock_);
     ioLockMade_ = true;
@@ -149,14 +189,21 @@ bool AiTextures::start(const std::string& gameDir, double targetMs, int denoise,
         return false;
     }
     ready_ = true;
-    char note[96] = "";
-    if (older)
-        std::snprintf(note, sizeof note, " (and %u of an older version, not used: delete it to free them)", older);
-    LOG_INFO("AI textures: on - %s, denoise %d%%, on the GPU, self-test passed in %llu ms; upscaled.grf has %u "
-             "textures%s%s",
-             modelName_.c_str(), denoise_, static_cast<unsigned long long>(tested),
-             static_cast<unsigned>(known_.size()),
-             note, writable_ ? "" : " (read only: another game writes it)");
+    std::string kinds;
+    for (int k = 0; k < ai::kKinds; ++k) {
+        const Net* n = netOf_[k] >= 0 ? nets_[size_t(netOf_[k])].get() : nullptr;
+        kinds += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " + (n ? n->name : std::string("off"));
+        if (n && n->token == "general") kinds += " (denoise " + std::to_string(n->denoise) + "%)";
+    }
+    char note[112] = "";
+    if (other)
+        std::snprintf(note, sizeof note, " (and %u of other settings or older versions, not used: the Ready textures "
+                      "page deletes them)", other);
+    LOG_INFO("AI textures: on - %s; x%d, textures %d-%d, ahead %s; on the GPU, self-test passed in %llu ms; "
+             "upscaled.grf has %u textures of these settings%s%s",
+             kinds.c_str(), scale_, minSide_, maxSide_, ahead_ ? "on" : "off",
+             static_cast<unsigned long long>(tested), static_cast<unsigned>(known_.size()), note,
+             writable_ ? "" : " (read only: another game writes it)");
     return true;
 }
 
@@ -219,23 +266,29 @@ bool AiTextures::createGpu(std::string& error) {
         return SUCCEEDED(r);
     };
     if (!pso("ai_conv", conv_) || !pso("ai_shuffle", shuffle_) || !pso("ai_mip", mip_)) return false;
+    for (auto& n : nets_)
+        if (!uploadWeights(*n, error)) return false;
+    return true;
+}
 
-    // The weights, once, into GPU memory.
-    const UINT64 bytes = UINT64(model_.data.size()) * 4;
-    weights_ = buffer(device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_COPY_DEST, false);
+// The weights, once, into GPU memory.
+bool AiTextures::uploadWeights(Net& net, std::string& error) {
+    ID3D12Device* device = m_.device;
+    const UINT64 bytes = UINT64(net.model.data.size()) * 4;
+    net.weights = buffer(device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_COPY_DEST, false);
     ID3D12Resource* staging = buffer(device, D3D12_HEAP_TYPE_UPLOAD, bytes, D3D12_RESOURCE_STATE_GENERIC_READ, false);
     void* mapped = nullptr;
-    if (!weights_ || !staging || FAILED(staging->Map(0, nullptr, &mapped)) || !m_.begin()) {
+    if (!net.weights || !staging || FAILED(staging->Map(0, nullptr, &mapped)) || !m_.begin()) {
         releaseCom(staging);
         error = "no memory for the network's weights";
         return false;
     }
-    std::memcpy(mapped, model_.data.data(), bytes);
+    std::memcpy(mapped, net.model.data.data(), bytes);
     staging->Unmap(0, nullptr);
-    m_.list->CopyBufferRegion(weights_, 0, staging, 0, bytes);
+    m_.list->CopyBufferRegion(net.weights, 0, staging, 0, bytes);
     D3D12_RESOURCE_BARRIER b{};
     b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    b.Transition.pResource = weights_;
+    b.Transition.pResource = net.weights;
     b.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     b.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
     b.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -247,7 +300,7 @@ bool AiTextures::createGpu(std::string& error) {
 
 bool AiTextures::ensureBuffers(int width, int height) {
     const UINT64 n = UINT64(width) * UINT64(height);
-    const UINT64 planes = n * 4 * 4, feat = n * UINT64(std::max(model_.features, 3 * kScale * kScale)) * 4;
+    const UINT64 planes = n * 4 * 4, feat = n * UINT64(std::max(features_, 3 * kNetScale * kNetScale)) * 4;
     if (planes > planesBytes_) {
         if (planes_) m_.slots[m_.slot].garbage.push_back(planes_);
         planes_ = buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, planes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
@@ -267,7 +320,6 @@ bool AiTextures::ensureBuffers(int width, int height) {
 void AiTextures::bindCompute() {
     if (computeBound_) return;
     m_.list->SetComputeRootSignature(root_);
-    m_.list->SetComputeRootShaderResourceView(kAiWeights, weights_->GetGPUVirtualAddress());
     computeBound_ = true;
     m_.boundPipeline = nullptr;  // the next draw sets its pipeline again
 }
@@ -293,7 +345,9 @@ bool AiTextures::uploadInput(const Job& job) {
 }
 
 double AiTextures::runBand(Job& job, double budget) {
-    const ai::Model::Conv& c = model_.convs[size_t(job.conv)];
+    const Net& net = *nets_[size_t(job.net)];
+    const ai::Model& model = net.model;
+    const ai::Model::Conv& c = model.convs[size_t(job.conv)];
     const double perRow = double(job.width) * c.out * c.in * 9;
     const double fits = budget / perRow;  // may be huge (the self-test runs all of it at once)
     const int rows = fits >= double(job.height) ? job.height : std::max(8, int(fits) / 8 * 8);
@@ -305,10 +359,11 @@ double AiTextures::runBand(Job& job, double budget) {
     k.v[3] = uint32_t(c.out);
     k.v[4] = uint32_t(c.bias);
     k.v[5] = uint32_t(c.weight);
-    k.v[6] = size_t(job.conv) < model_.prelu.size() ? uint32_t(model_.prelu[size_t(job.conv)]) : 0xFFFFFFFFu;
+    k.v[6] = size_t(job.conv) < model.prelu.size() ? uint32_t(model.prelu[size_t(job.conv)]) : 0xFFFFFFFFu;
     k.v[7] = uint32_t(job.row);
     k.v[8] = uint32_t(end);
     bindCompute();
+    m_.list->SetComputeRootShaderResourceView(kAiWeights, net.weights->GetGPUVirtualAddress());
     m_.list->SetPipelineState(conv_);
     m_.list->SetComputeRoot32BitConstants(kAiConstants, 16, k.v, 0);
     ID3D12Resource* in = job.conv == 0 ? planes_ : feat_[(job.conv - 1) % 2];
@@ -350,11 +405,11 @@ void AiTextures::dispatchShuffle(const Job& job, ID3D12Resource* image, const Le
     bindCompute();
     m_.list->SetPipelineState(shuffle_);
     m_.list->SetComputeRoot32BitConstants(kAiConstants, 16, k.v, 0);
-    const int last = int(model_.convs.size()) - 1;
+    const int last = int(nets_[size_t(job.net)]->model.convs.size()) - 1;
     m_.list->SetComputeRootUnorderedAccessView(kAiU0, feat_[last % 2]->GetGPUVirtualAddress());
     m_.list->SetComputeRootUnorderedAccessView(kAiU1, image->GetGPUVirtualAddress());
     m_.list->SetComputeRootUnorderedAccessView(kAiU2, planes_->GetGPUVirtualAddress());
-    m_.list->Dispatch(UINT((job.width * kScale + 7) / 8), UINT((job.height * kScale + 7) / 8), 1);
+    m_.list->Dispatch(UINT((job.width * kNetScale + 7) / 8), UINT((job.height * kNetScale + 7) / 8), 1);
     uavBarrier();
 }
 
@@ -383,7 +438,11 @@ void AiTextures::dispatchMips(ID3D12Resource* image, const std::vector<Level>& l
 }
 
 bool AiTextures::finish(Job& job) {
-    const int w = job.width * kScale, h = job.height * kScale;
+    // A network's picture is 4 times the game's texture; for a result of twice the size its first mip level is the
+    // texture's top level. A picture from upscaled.grf is the result's size already.
+    const int skip = !job.loaded && scale_ == 2 ? 1 : 0;
+    const int full = job.loaded ? scale_ : kNetScale;
+    const int w = job.width * full, h = job.height * full;
     std::vector<Level> levels;
     UINT64 bytes = 0;
     layout(w, h, levels, bytes);
@@ -406,14 +465,15 @@ bool AiTextures::finish(Job& job) {
     }
     dispatchMips(image, levels);
 
+    const Level& top = levels[size_t(skip)];
     D3D12_HEAP_PROPERTIES hp{};
     hp.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_RESOURCE_DESC td{};
     td.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    td.Width = UINT64(w);
-    td.Height = UINT(h);
+    td.Width = UINT64(top.width);
+    td.Height = UINT(top.height);
     td.DepthOrArraySize = 1;
-    td.MipLevels = UINT16(levels.size());
+    td.MipLevels = UINT16(levels.size() - size_t(skip));
     td.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     td.SampleDesc.Count = 1;
     ID3D12Resource* tex = nullptr;
@@ -421,7 +481,7 @@ bool AiTextures::finish(Job& job) {
                                                   nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&tex))))
         return false;
     m_.transition(image, imageState, D3D12_RESOURCE_STATE_COPY_SOURCE);
-    for (size_t i = 0; i < levels.size(); ++i) {
+    for (size_t i = size_t(skip); i < levels.size(); ++i) {
         D3D12_TEXTURE_COPY_LOCATION src{}, dst{};
         src.pResource = image;
         src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
@@ -433,26 +493,29 @@ bool AiTextures::finish(Job& job) {
         src.PlacedFootprint.Footprint.RowPitch = levels[i].pitch;
         dst.pResource = tex;
         dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        dst.SubresourceIndex = UINT(i);
+        dst.SubresourceIndex = UINT(i - size_t(skip));
         m_.list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
     }
     if (!job.loaded && writable_) {  // the result for upscaled.grf, read once this list has run
         Readback r;
-        r.buffer = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, UINT64(levels[0].pitch) * UINT64(h),
-                          D3D12_RESOURCE_STATE_COPY_DEST, false);
+        const UINT64 size = UINT64(top.pitch) * UINT64(top.height);
+        r.buffer = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, size, D3D12_RESOURCE_STATE_COPY_DEST, false);
         if (r.buffer) {
-            m_.list->CopyBufferRegion(r.buffer, 0, image, 0, UINT64(levels[0].pitch) * UINT64(h));
+            m_.list->CopyBufferRegion(r.buffer, 0, image, top.at, size);
             r.fence = m_.fenceValue + 1;  // the value the open list's submission signals
             r.name = job.name;
-            r.width = w;
-            r.height = h;
-            r.pitch = levels[0].pitch;
+            r.width = top.width;
+            r.height = top.height;
+            r.pitch = top.pitch;
             readbacks_.push_back(r);
             known_.insert(job.name);
         }
     }
+    // The game may have uploaded other pixels meanwhile, or released the texture: the picture is not its any more.
     const auto it = m_.textures.find(job.id);
-    if (it == m_.textures.end()) {
+    const auto item = items_.find(job.id);
+    if (it == m_.textures.end() || item == items_.end() || item->second.state != Item::Waiting ||
+        item->second.name != job.name) {
         m_.slots[m_.slot].garbage.push_back(tex);
         return true;
     }
@@ -468,13 +531,10 @@ bool AiTextures::finish(Job& job) {
     m_.transition(t.ai, t.aiState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     t.aiSrv = srv;
     m_.device->CreateShaderResourceView(tex, nullptr, m_.cpuSrvHandle(srv));
-    const auto item = items_.find(job.id);
-    if (item != items_.end()) {
-        item->second.state = Item::Done;
-        keptBytes_ -= item->second.argb.size() * 4;
-        item->second.argb.clear();
-        item->second.argb.shrink_to_fit();
-    }
+    item->second.state = Item::Done;
+    keptBytes_ -= item->second.argb.size() * 4;
+    item->second.argb.clear();
+    item->second.argb.shrink_to_fit();
     if (job.loaded)
         ++doneLoaded_;
     else
@@ -491,15 +551,18 @@ void AiTextures::dropAi(uint32_t id) {
     it->second.aiSrv = 0;
 }
 
+void AiTextures::drop(Item& item) {
+    keptBytes_ -= item.argb.size() * 4;
+    item.argb.clear();
+    item.argb.shrink_to_fit();
+    item.state = Item::Skipped;
+}
+
 void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb) {
     if (!ready_ || u.level != 0) return;
-    if (t.ai) {  // the game changed a texture the network had done: its own pixels again
-        dropAi(id);
-        const auto it = items_.find(id);
-        if (it != items_.end()) it->second.state = Item::Kept;
-    }
+    if (t.ai) dropAi(id);  // the game changed a texture the network had done: its own pixels again
     const bool whole = u.rect.left == 0 && u.rect.top == 0 && u.rect.width() == t.width && u.rect.height() == t.height;
-    if (!whole || t.width < kMinSide || t.height < kMinSide || t.width > kMaxSide || t.height > kMaxSide) {
+    if (!whole || t.width < minSide_ || t.height < minSide_ || t.width > maxSide_ || t.height > maxSide_) {
         const auto it = items_.find(id);
         if (it != items_.end()) {
             keptBytes_ -= it->second.argb.size() * 4;
@@ -510,6 +573,10 @@ void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const u
     Item& item = items_[id];
     keptBytes_ -= item.argb.size() * 4;
     item.argb.clear();
+    item.state = Item::Kept;  // drawn again, it gets its turn again (a result of the old pixels is not taken)
+    item.later = item.loading = false;
+    item.name.clear();
+    item.mapSerial = 0;
     if (++item.uploads > 3) {  // changed again and again (an effect): not worth the network
         item.state = Item::Skipped;
         return;
@@ -523,23 +590,74 @@ void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const u
     keptBytes_ += n * 4;
     item.width = t.width;
     item.height = t.height;
-    item.name = ai::entryName(cacheName_, ai::textureKey(argb, t.width, t.height));
-    item.state = Item::Kept;
+    item.key = ai::keyName(ai::textureKey(argb, t.width, t.height));
+    // Ahead: a texture of a kind upscaled.grf knows from an earlier visit goes before it is drawn, after the drawn.
+    if (ahead_) {
+        const auto k = kinds_.find(item.key);
+        if (k != kinds_.end()) begin(id, item, k->second, true);
+    }
 }
 
-void AiTextures::noteWorldUse(uint32_t id) {
-    const auto it = items_.find(id);
-    if (it == items_.end() || it->second.state != Item::Kept) return;
-    Item& item = it->second;
+void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
+    item.kind = kind;
+    const int k = int(kind);
+    if (k >= ai::kKinds || netOf_[k] < 0) {  // a lightmap, no world texture, or a kind that is off
+        drop(item);
+        return;
+    }
+    item.net = netOf_[k];
+    item.name = ai::entryName(nets_[size_t(item.net)]->folder, item.key);
     item.state = Item::Waiting;
+    if (kinds_.emplace(item.key, kind).second) tag(ai::kindTag(kind, item.key));
     if (known_.count(item.name)) {  // done before: from upscaled.grf
+        item.loading = true;
         IoRequest r;
         r.id = id;
         r.name = item.name;
         request(std::move(r));
+    } else if (later) {
+        item.later = true;
+        later_.push_back(id);
     } else {
         queue_.push_back(id);
     }
+}
+
+void AiTextures::tag(const std::string& name) {
+    if (!writable_) return;
+    IoRequest r;
+    r.write = true;
+    r.tag = true;
+    r.name = name;
+    request(std::move(r));
+}
+
+void AiTextures::noteWorldUse(uint32_t id, ai::Kind kind) {
+    const auto it = items_.find(id);
+    if (it == items_.end()) return;
+    Item& item = it->second;
+    if (kind == ai::Kind::None) return;  // a second stage of a draw that is no ground: says nothing of the texture
+    if (item.state == Item::Kept) {
+        ++seen_[size_t(kind)];
+        begin(id, item, kind, false);
+    } else if (item.state == Item::Waiting && item.later) {  // done ahead, and in view now: its turn now
+        item.later = false;
+        if (!item.loading) queue_.push_back(id);
+    }
+    // The maps a texture of the kinds on is seen on, once a map each.
+    if (item.mapSerial != mapSerial_ && (item.state == Item::Waiting || item.state == Item::Done)) {
+        item.mapSerial = mapSerial_;
+        if (!map_.empty()) {
+            std::string name = ai::mapTag(map_, item.key);
+            if (mapTags_.insert(name).second) tag(name);
+        }
+    }
+}
+
+void AiTextures::setMap(const std::string& map) {
+    if (map == map_) return;
+    map_ = map;
+    ++mapSerial_;
 }
 
 void AiTextures::forget(uint32_t id) {
@@ -557,18 +675,25 @@ bool AiTextures::nextJob() {
         loaded_.pop_front();
         return true;
     }
-    while (!queue_.empty()) {
-        const uint32_t id = queue_.front();
-        queue_.pop_front();
-        const auto it = items_.find(id);
-        if (it == items_.end() || it->second.state != Item::Waiting || it->second.argb.empty()) continue;
-        job_ = std::make_unique<Job>();
-        job_->id = id;
-        job_->name = it->second.name;
-        job_->width = it->second.width;
-        job_->height = it->second.height;
-        job_->pixels = it->second.argb;
-        return true;
+    for (std::deque<uint32_t>* q : {&queue_, &later_}) {
+        while (!q->empty()) {
+            const uint32_t id = q->front();
+            q->pop_front();
+            const auto it = items_.find(id);
+            if (it == items_.end()) continue;
+            Item& item = it->second;
+            if (item.state != Item::Waiting || item.loading || item.argb.empty()) continue;
+            if (q == &later_ && !item.later) continue;  // drawn meanwhile: queue_ has it
+            item.later = false;
+            job_ = std::make_unique<Job>();
+            job_->id = id;
+            job_->net = item.net;
+            job_->name = item.name;
+            job_->width = item.width;
+            job_->height = item.height;
+            job_->pixels = item.argb;
+            return true;
+        }
     }
     return false;
 }
@@ -580,16 +705,21 @@ void AiTextures::takeLoaded() {
     LeaveCriticalSection(&ioLock_);
     for (IoResult& r : results) {
         const auto it = items_.find(r.id);
-        if (it == items_.end() || it->second.state != Item::Waiting) continue;
-        if (!r.ok || r.width != it->second.width * kScale || r.height != it->second.height * kScale) {
-            queue_.push_back(r.id);  // not usable: the network makes it again
+        if (it == items_.end()) continue;
+        Item& item = it->second;
+        if (item.state != Item::Waiting || !item.loading || item.name != r.name) continue;
+        item.loading = false;
+        if (!r.ok || r.width != item.width * scale_ || r.height != item.height * scale_) {
+            (item.later ? later_ : queue_).push_back(r.id);  // not usable: the network makes it again
             continue;
         }
+        item.later = false;
         Job j;
         j.id = r.id;
-        j.name = it->second.name;
-        j.width = it->second.width;
-        j.height = it->second.height;
+        j.net = item.net;
+        j.name = item.name;
+        j.width = item.width;
+        j.height = item.height;
         j.loaded = true;
         j.pixels = std::move(r.argb);
         loaded_.push_back(std::move(j));
@@ -639,7 +769,10 @@ void AiTextures::work() {
         Job& j = *job_;
         if (j.loaded) {
             if (finished) break;
-            if (!finish(j)) queue_.push_back(j.id);
+            if (!finish(j)) {
+                const auto it = items_.find(j.id);
+                if (it != items_.end() && it->second.state == Item::Waiting) queue_.push_back(j.id);
+            }
             finished = true;
             job_.reset();
             continue;
@@ -648,14 +781,14 @@ void AiTextures::work() {
             if (!ensureBuffers(j.width, j.height) || !uploadInput(j)) {
                 LOG_ERROR("AI textures: no GPU memory for a %dx%d texture; it stays as it is", j.width, j.height);
                 const auto it = items_.find(j.id);
-                if (it != items_.end()) it->second.state = Item::Skipped;
+                if (it != items_.end()) drop(it->second);
                 job_.reset();
                 continue;
             }
             j.conv = 0;
             j.row = 0;
         }
-        if (size_t(j.conv) < model_.convs.size()) {
+        if (size_t(j.conv) < nets_[size_t(j.net)]->model.convs.size()) {
             const double macs = runBand(j, budget);
             budget -= macs;
             spent += macs;
@@ -664,7 +797,7 @@ void AiTextures::work() {
         if (finished) break;
         if (!finish(j)) {
             const auto it = items_.find(j.id);
-            if (it != items_.end()) it->second.state = Item::Skipped;
+            if (it != items_.end()) drop(it->second);
         }
         finished = true;
         job_.reset();
@@ -685,9 +818,16 @@ void AiTextures::logNow(bool final) {
     const ULONGLONG now = GetTickCount64();
     if (!final && now - lastLog_ < 30000) return;
     lastLog_ = now;
-    if (!doneNetwork_ && !doneLoaded_ && queue_.empty()) return;
-    LOG_INFO("AI textures: %u made by the network, %u from upscaled.grf, %u waiting, %u written", doneNetwork_,
-             doneLoaded_, static_cast<unsigned>(queue_.size() + (job_ ? 1 : 0)), written_);
+    if (!doneNetwork_ && !doneLoaded_ && queue_.empty() && later_.empty()) return;
+    // What the draws showed: how the kinds come out in the game (the network takes only the ones that are on).
+    std::string seen;
+    for (int k = 0; k < ai::kKinds; ++k)
+        seen += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " + std::to_string(seen_[k]) +
+                (netOf_[k] < 0 ? " (off)" : "");
+    LOG_INFO("AI textures: %u made by the network, %u from upscaled.grf, %u waiting, %u ahead, %u written; seen %s, "
+             "lightmaps %u",
+             doneNetwork_, doneLoaded_, static_cast<unsigned>(queue_.size() + (job_ ? 1 : 0)),
+             static_cast<unsigned>(later_.size()), written_, seen.c_str(), seen_[int(ai::Kind::Lightmap)]);
 }
 
 void AiTextures::request(IoRequest r) {
@@ -703,8 +843,12 @@ DWORD WINAPI AiTextures::ioMain(void* self) {
 }
 
 void AiTextures::ioLoop() {
+    // Pictures go into upscaled.grf every 3 seconds or 32 MB, tags (empty entries) with them or every 15 seconds:
+    // every write puts a new file table at the end.
     std::vector<std::pair<std::string, std::vector<uint8_t>>> batch;
-    ULONGLONG since = 0;
+    size_t bytes = 0;
+    uint32_t pictures = 0;
+    ULONGLONG since = 0, tagsSince = 0;
     bool logged = false;
     for (;;) {
         WaitForSingleObject(ioWake_, batch.empty() ? INFINITE : 1000);
@@ -714,13 +858,21 @@ void AiTextures::ioLoop() {
         const bool stop = ioStop_;
         LeaveCriticalSection(&ioLock_);
         for (IoRequest& r : work) {
+            if (r.write && r.tag) {
+                batch.emplace_back(r.name, std::vector<uint8_t>());
+                if (!tagsSince) tagsSince = GetTickCount64();
+                continue;
+            }
             if (r.write) {
                 batch.emplace_back(r.name, ai::encodeTexture(r.argb.data(), r.width, r.height));
+                bytes += batch.back().second.size();
+                ++pictures;
                 if (!since) since = GetTickCount64();
                 continue;
             }
             IoResult res;
             res.id = r.id;
+            res.name = r.name;
             std::vector<uint8_t> blob;
             std::string error;
             res.ok = archive_.read(r.name, blob, error) && ai::decodeTexture(blob, res.argb, res.width, res.height);
@@ -728,24 +880,30 @@ void AiTextures::ioLoop() {
             ioOut_.push_back(std::move(res));
             LeaveCriticalSection(&ioLock_);
         }
-        if (!batch.empty() && (stop || batch.size() >= 8 || GetTickCount64() - since >= 3000)) {
+        const ULONGLONG now = GetTickCount64();
+        const bool due = stop || bytes >= kBatchBytes || (since && now - since >= 3000) ||
+                         (tagsSince && now - tagsSince >= 15000);
+        if (!batch.empty() && due) {
             std::string error;
             if (writable_ && archive_.append(batch, error)) {
-                written_ += uint32_t(batch.size());
+                written_ += pictures;
             } else if (!logged) {
                 logged = true;
                 LOG_ERROR("AI textures: upscaled.grf not written (%s)", error.empty() ? "read only" : error.c_str());
             }
             batch.clear();
-            since = 0;
+            bytes = 0;
+            pictures = 0;
+            since = tagsSince = 0;
         }
         if (stop) break;
     }
 }
 
-bool AiTextures::selfTest(std::string& error) {
+bool AiTextures::selfTest(int net, std::string& error) {
     // A 16x16 texture with a transparent band through the network on the GPU, and the same on the CPU (core/ai):
     // every channel within 2 of 255 and the same transparency, or the feature stays off.
+    const ai::Model& model = nets_[size_t(net)]->model;
     const int w = 16, h = 16;
     std::vector<uint32_t> argb(size_t(w * h));
     for (int y = 0; y < h; ++y)
@@ -756,16 +914,17 @@ bool AiTextures::selfTest(std::string& error) {
         }
     std::vector<float> planes;
     ai::prepareInput(argb.data(), w, h, planes);
-    std::vector<float> out(size_t(3 * w * h * kScale * kScale));
-    ai::upscale(model_, planes.data(), w, h, out.data(), ai::Border::Wrap);  // as the GPU's ai_conv
+    std::vector<float> out(size_t(3 * w * h * kNetScale * kNetScale));
+    ai::upscale(model, planes.data(), w, h, out.data(), ai::Border::Wrap);  // as the GPU's ai_conv
     std::vector<uint8_t> alpha;
-    ai::enlargeAlpha(planes.data() + 3 * w * h, w, h, kScale, alpha);
+    ai::enlargeAlpha(planes.data() + 3 * w * h, w, h, kNetScale, alpha);
 
     Job j;
+    j.net = net;
     j.width = w;
     j.height = h;
     j.pixels = argb;
-    const int ow = w * kScale, oh = h * kScale;
+    const int ow = w * kNetScale, oh = h * kNetScale;
     std::vector<Level> levels;
     UINT64 bytes = 0;
     layout(ow, oh, levels, bytes);
@@ -774,7 +933,7 @@ bool AiTextures::selfTest(std::string& error) {
         return false;
     }
     computeBound_ = false;
-    for (j.conv = 0; size_t(j.conv) < model_.convs.size();) runBand(j, 1e18);
+    for (j.conv = 0; size_t(j.conv) < model.convs.size();) runBand(j, 1e18);
     ID3D12Resource* image =
         buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
     ID3D12Resource* back = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, UINT64(levels[0].pitch) * UINT64(oh),
@@ -813,9 +972,9 @@ bool AiTextures::selfTest(std::string& error) {
     releaseCom(image);
     releaseCom(back);
     if (!ok || worst > 2 || alphaDiffers > ow * oh / 50) {
-        char text[160];
-        std::snprintf(text, sizeof text, "the GPU's network does not match the CPU's (largest difference %d of 255, "
-                      "%d transparency differences)", worst, alphaDiffers);
+        char text[200];
+        std::snprintf(text, sizeof text, "%s: the GPU's network does not match the CPU's (largest difference %d of "
+                      "255, %d transparency differences)", nets_[size_t(net)]->name.c_str(), worst, alphaDiffers);
         error = ok ? text : "the self-test could not be read";
         return false;
     }

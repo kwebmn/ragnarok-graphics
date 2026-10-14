@@ -1,6 +1,7 @@
 #include "core/ai/texture_cache.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -31,13 +32,99 @@ TextureKey textureKey(const uint32_t* argb, int width, int height) {
     return TextureKey{h, width, height};
 }
 
-std::string entryName(const std::string& model, const TextureKey& k) {
+std::string keyName(const TextureKey& k) {
     char hex[17];
     std::snprintf(hex, sizeof hex, "%016llx", static_cast<unsigned long long>(k.hash));
-    return entryFolder(model) + std::to_string(k.width) + "x" + std::to_string(k.height) + "\\" + hex + ".tex";
+    return std::to_string(k.width) + "x" + std::to_string(k.height) + "\\" + hex;
 }
 
-std::string entryFolder(const std::string& model) { return "ai\\" + model + "\\"; }
+std::string entryName(const std::string& folder, const TextureKey& k) { return entryName(folder, keyName(k)); }
+
+std::string entryName(const std::string& folder, const std::string& key) {
+    return entryFolder(folder) + key + ".tex";
+}
+
+std::string entryFolder(const std::string& folder) { return "ai\\" + folder + "\\"; }
+
+std::string netFolder(const std::string& model, int denoise, int scale) {
+    const std::string size = scale == 2 ? "-x2" : "";
+    if (model == "anime") return "realesr-animevideov3-wrap" + size;
+    return "realesr-general-x4v3-dn" + std::to_string(std::clamp(denoise, 0, 100)) + "-wrap" + size;
+}
+
+std::string kindTag(Kind kind, const std::string& key) {
+    return std::string("ai\\@kind\\") + kindName(kind) + "\\" + key;
+}
+
+std::string mapTag(const std::string& map, const std::string& key) { return "ai\\@map\\" + map + "\\" + key; }
+
+namespace {
+
+// "256x256\0123456789abcdef": a size and 16 hex digits.
+bool isKey(const std::string& s) {
+    const size_t slash = s.find('\\');
+    if (slash == std::string::npos || s.size() != slash + 17) return false;
+    const size_t x = s.find('x');
+    if (x == 0 || x == std::string::npos || x + 1 >= slash) return false;
+    for (size_t i = 0; i < slash; ++i)
+        if (i != x && !std::isdigit(static_cast<unsigned char>(s[i]))) return false;
+    for (size_t i = slash + 1; i < s.size(); ++i)
+        if (!std::isxdigit(static_cast<unsigned char>(s[i])) || std::isupper(static_cast<unsigned char>(s[i])))
+            return false;
+    return true;
+}
+
+// The first part of `rest` up to a backslash, and rest after it; false when there is none.
+bool split(std::string& rest, std::string& first) {
+    const size_t slash = rest.find('\\');
+    if (slash == std::string::npos || slash == 0) return false;
+    first = rest.substr(0, slash);
+    rest = rest.substr(slash + 1);
+    return true;
+}
+
+}  // namespace
+
+ParsedEntry parseEntry(const std::string& name) {
+    ParsedEntry e;
+    if (name.compare(0, 3, "ai\\") != 0) return e;
+    std::string rest = name.substr(3), first;
+    if (!split(rest, first)) return e;
+    if (first == "@kind") {
+        std::string kind;
+        if (split(rest, kind) && parseKind(kind, e.kind) && isKey(rest)) {
+            e.type = ParsedEntry::KindTag;
+            e.key = rest;
+        }
+        return e;
+    }
+    if (first == "@map") {
+        std::string map;
+        if (split(rest, map) && isKey(rest)) {
+            e.type = ParsedEntry::MapTag;
+            e.map = map;
+            e.key = rest;
+        }
+        return e;
+    }
+    if (rest.size() > 4 && rest.compare(rest.size() - 4, 4, ".tex") == 0 && isKey(rest.substr(0, rest.size() - 4))) {
+        e.type = ParsedEntry::Picture;
+        e.folder = first;
+        e.key = rest.substr(0, rest.size() - 4);
+    }
+    return e;
+}
+
+std::string mapName(const char* raw, size_t size) {
+    std::string out;
+    for (size_t i = 0; i < size && raw[i]; ++i) {
+        const char c = char(std::tolower(static_cast<unsigned char>(raw[i])));
+        if (c == '.') break;
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '@' && c != '-') return "";
+        out += c;
+    }
+    return out.size() <= 40 ? out : "";
+}
 
 std::vector<uint8_t> encodeTexture(const uint32_t* argb, int width, int height) {
     std::vector<uint8_t> b;

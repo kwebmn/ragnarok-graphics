@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <cstdio>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -27,6 +28,9 @@ public:
 
     // An existing archive, or a new empty one when create and the file is not there. Names are compared as stored.
     bool open(const std::string& path, bool create, std::string& error);
+    // An archive in a file the caller opened ("rb", or "r+b" when writable; the settings app opens UTF-16 paths):
+    // the archive closes it.
+    bool open(std::FILE* file, bool writable, std::string& error);
     void close();
     bool isOpen() const { return file_ != nullptr; }
     const Entry* find(const std::string& name) const;
@@ -38,8 +42,12 @@ public:
     // crash still opens as it was. Fails rather than pass the format's 4 GB.
     bool append(const std::vector<std::pair<std::string, std::vector<uint8_t>>>& files, std::string& error);
     uint64_t bytes() const { return end_; }  // where the next data would go: the archive's length
+    // A new archive in `out` (opened "wb") with the entries `keep` takes, their stored data copied as it is: the
+    // settings app deletes pictures of upscaled.grf this way, and the space of old file tables goes with them.
+    bool copyTo(std::FILE* out, const std::function<bool(const std::string&)>& keep, std::string& error);
 
 private:
+    bool readTable(const std::string& what, std::string& error);
     bool writeTable(uint64_t at, std::string& error);
 
     FILE* file_ = nullptr;

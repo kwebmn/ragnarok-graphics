@@ -1,5 +1,7 @@
 #include "core/live_config.hpp"
 
+#include <utility>
+
 namespace uagfx {
 namespace {
 
@@ -22,9 +24,19 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.remix != running.remix) u.waiting.push_back("remix");
     if (file.dlss != running.dlss) u.waiting.push_back("dlss");
     if (file.frameGeneration != running.frameGeneration) u.waiting.push_back("frame_generation");
-    if (file.aiTextures != running.aiTextures) u.waiting.push_back("ai_textures");
-    if (file.aiBudget != running.aiBudget) u.waiting.push_back("ai_budget");
-    if (file.aiDenoise != running.aiDenoise) u.waiting.push_back("ai_denoise");
+    // [ai]: the network and its models start with the 64-bit renderer.
+    const AiSettings& fa = file.ai;
+    const AiSettings& ra = running.ai;
+    const std::pair<const char*, bool> ai[] = {
+        {"ai.enabled", fa.enabled != ra.enabled}, {"ai.ground", fa.ground != ra.ground},
+        {"ai.objects", fa.objects != ra.objects}, {"ai.sprites", fa.sprites != ra.sprites},
+        {"ai.effects", fa.effects != ra.effects}, {"ai.model", fa.model != ra.model},
+        {"ai.sprite_model", fa.spriteModel != ra.spriteModel}, {"ai.denoise", fa.denoise != ra.denoise},
+        {"ai.scale", fa.scale != ra.scale}, {"ai.budget", fa.budget != ra.budget},
+        {"ai.min_size", fa.minSize != ra.minSize}, {"ai.max_size", fa.maxSize != ra.maxSize},
+        {"ai.ahead", fa.ahead != ra.ahead}};
+    for (const auto& k : ai)
+        if (k.second) u.waiting.push_back(k.first);
     if (file.mode != running.mode) u.waiting.push_back("mode");
     if (file.highResolution != running.highResolution) {
         u.applied.push_back(change("high_resolution", flag(running.highResolution), flag(file.highResolution)));

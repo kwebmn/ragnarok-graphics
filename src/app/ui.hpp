@@ -62,15 +62,17 @@ public:
                 const std::wstring& hint, bool enabled = true);
     HWND number(int id, const std::wstring& label, const std::wstring& value, const std::wstring& hint,
                 bool enabled = true);
-    // Two numbers with "×" between them: ids id and id + 1.
-    HWND pair(int id, const std::wstring& label, int a, int b, const std::wstring& hint, bool enabled = true);
-    void checks(const std::vector<CheckItem>& items);  // two to a row
+    // Two numbers with "×" (or `between`) between them: ids id and id + 1.
+    HWND pair(int id, const std::wstring& label, int a, int b, const std::wstring& hint, bool enabled = true,
+              const std::wstring& between = L"×");
+    void checks(const std::vector<CheckItem>& items, int perRow = 2);  // two (or perRow) to a row
     // Text fields two to a row, a short label before each (the chat macros); at most maxChars letters.
     void lines(const std::vector<LineItem>& items, int maxChars, const std::wstring& hint, bool enabled);
     HWND note(const std::wstring& text, Tone tone = Tone::Muted);
     HWND buttons(const std::vector<ButtonItem>& list);
     HWND listBox(int id, int rows);
-    HWND listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows);
+    // checkboxes: a check box before every row (LVS_EX_CHECKBOXES).
+    HWND listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows, bool checkboxes = false);
     void gap(int at96 = 8);
     bool toneOf(HWND ctl, Tone& tone) const;
 

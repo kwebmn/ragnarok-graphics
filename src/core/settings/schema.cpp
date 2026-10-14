@@ -12,6 +12,8 @@ Text pageName(Page p) {
         case Page::Screen: return Text::PageScreen;
         case Page::Quality: return Text::PageQuality;
         case Page::Smoothing: return Text::PageSmoothing;
+        case Page::Ai: return Text::PageAi;
+        case Page::AiCache: return Text::PageAiCache;
         case Page::Frames: return Text::PageFrames;
         case Page::Sound: return Text::PageSound;
         case Page::Game: return Text::PageGame;
@@ -52,12 +54,25 @@ const std::vector<IniSetting>& iniSettings() {
         {"quality", "anisotropy", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8", "16"},
          {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8, Text::Factor16}, Text::SmoothAniso,
          Text::SmoothAnisoHint, ""},
-        {"quality", "ai_textures", Page::Smoothing, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::SmoothAi,
-         Text::SmoothAiHint, ""},
-        {"quality", "ai_budget", Page::Smoothing, Control::Number, 1, 20, 1, {}, {}, Text::SmoothAiBudget,
-         Text::SmoothAiBudgetHint, ""},
-        {"quality", "ai_denoise", Page::Smoothing, Control::Slider, 0, 100, 5, {}, {}, Text::SmoothAiDenoise,
-         Text::SmoothAiDenoiseHint, " %"},
+        {"ai", "enabled", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiEnable, Text::AiEnableHint, ""},
+        {"ai", "ground", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiGround, Text::AiGroundHint, ""},
+        {"ai", "objects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiObjects, Text::AiObjectsHint,
+         ""},
+        {"ai", "sprites", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiSprites, Text::AiSpritesHint,
+         ""},
+        {"ai", "effects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiEffects, Text::AiEffectsHint,
+         ""},
+        {"ai", "model", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime"},
+         {Text::AiModelGeneral, Text::AiModelAnime}, Text::AiModelWorld, Text::AiModelWorldHint, ""},
+        {"ai", "sprite_model", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime"},
+         {Text::AiModelGeneral, Text::AiModelAnime}, Text::AiModelSprites, Text::AiModelSpritesHint, ""},
+        {"ai", "denoise", Page::Ai, Control::Slider, 0, 100, 5, {}, {}, Text::AiDenoise, Text::AiDenoiseHint, " %"},
+        {"ai", "scale", Page::Ai, Control::Choice, 0, 0, 0, {"4", "2"}, {Text::AiScale4, Text::AiScale2},
+         Text::AiScale, Text::AiScaleHint, ""},
+        {"ai", "budget", Page::Ai, Control::Number, 1, 20, 1, {}, {}, Text::AiBudget, Text::AiBudgetHint, ""},
+        {"ai", "min_size", Page::Ai, Control::Number, 16, 1024, 1, {}, {}, Text::AiSizes, Text::AiSizesHint, ""},
+        {"ai", "max_size", Page::Ai, Control::Number, 16, 1024, 1, {}, {}, Text::AiSizes, Text::AiSizesHint, ""},
+        {"ai", "ahead", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiAhead, Text::AiAheadHint, ""},
         {"frames", "vsync", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesVsync,
          Text::FramesVsyncHint, ""},
         {"frames", "frame_generation", Page::Frames, Control::Choice, 0, 0, 0, {"off", "2x", "3x", "4x"},
@@ -94,9 +109,20 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.dlss") return c.dlss;
     if (k == "quality.msaa") return std::to_string(c.msaa);
     if (k == "quality.alpha_to_coverage") return c.alphaToCoverage ? "1" : "0";
-    if (k == "quality.ai_textures") return c.aiTextures ? "1" : "0";
-    if (k == "quality.ai_budget") return std::to_string(c.aiBudget);
-    if (k == "quality.ai_denoise") return std::to_string(c.aiDenoise);
+    const AiSettings& a = c.ai;
+    if (k == "ai.enabled") return a.enabled ? "1" : "0";
+    if (k == "ai.ground") return a.ground ? "1" : "0";
+    if (k == "ai.objects") return a.objects ? "1" : "0";
+    if (k == "ai.sprites") return a.sprites ? "1" : "0";
+    if (k == "ai.effects") return a.effects ? "1" : "0";
+    if (k == "ai.model") return a.model;
+    if (k == "ai.sprite_model") return a.spriteModel;
+    if (k == "ai.denoise") return std::to_string(a.denoise);
+    if (k == "ai.scale") return std::to_string(a.scale);
+    if (k == "ai.budget") return std::to_string(a.budget);
+    if (k == "ai.min_size") return std::to_string(a.minSize);
+    if (k == "ai.max_size") return std::to_string(a.maxSize);
+    if (k == "ai.ahead") return a.ahead ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);

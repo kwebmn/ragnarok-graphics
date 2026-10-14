@@ -1,10 +1,13 @@
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <string>
 #include <vector>
 
+#include "core/ai/cache_index.hpp"
+#include "core/ai/kinds.hpp"
 #include "core/ai/srvgg.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "test.hpp"
@@ -163,4 +166,196 @@ TEST(ai_keyed_texels_take_their_neighbours_colour_and_alpha_grows_smooth) {
     CHECK_EQ(alpha[4], 255);
     std::vector<uint32_t> opaque(16, 0xFF102030u);
     CHECK(!hasTransparency(opaque.data(), 4, 4));
+}
+
+TEST(ai_draw_kinds) {
+    // The ground has two sets of texture coordinates (its lightmap in stage 1); additive blending is light; one quad
+    // facing the screen is a sprite; the rest of the world is objects.
+    DrawFacts f;
+    CHECK(drawKind(f) == Kind::Objects);
+    f.flatQuad = true;
+    CHECK(drawKind(f) == Kind::Sprites);
+    f.additive = true;
+    CHECK(drawKind(f) == Kind::Effects);
+    f = DrawFacts();
+    f.uvSets = 2;
+    CHECK(drawKind(f) == Kind::Ground);
+    f.stage = 1;
+    CHECK(drawKind(f) == Kind::Lightmap);  // never enlarged: its tiles would bleed into each other
+    f.uvSets = 1;
+    CHECK(drawKind(f) == Kind::None);
+    Kind k;
+    CHECK(parseKind("sprites", k) && k == Kind::Sprites);
+    CHECK(!parseKind("lightmap", k));
+    CHECK(std::string(kindName(Kind::Lightmap)).empty());
+}
+
+namespace {
+
+std::vector<uint8_t> quad(const float xyzw[4][4], size_t stride) {
+    std::vector<uint8_t> v(stride * 4, 0);
+    for (int i = 0; i < 4; ++i) std::memcpy(v.data() + i * stride, xyzw[i], 16);
+    return v;
+}
+
+}  // namespace
+
+TEST(ai_flat_quads_are_sprites) {
+    const size_t stride = 32;  // XYZRHW, diffuse, specular, one UV set
+    // A sprite: four corners at one depth (a strip).
+    const float sprite[4][4] = {{10, 20, 0.5f, 2}, {74, 20, 0.5f, 2}, {10, 148, 0.5f, 2}, {74, 148, 0.5f, 2}};
+    CHECK(flatQuad(quad(sprite, stride).data(), stride, 4, 0));
+    CHECK(flatQuad(quad(sprite, stride).data(), stride, 4, 6));   // a list through 6 indices
+    CHECK(!flatQuad(quad(sprite, stride).data(), stride, 3, 0));  // a triangle
+    CHECK(!flatQuad(quad(sprite, stride).data(), stride, 4, 3));
+    // A rectangle along the axes with the depth changing (a sprite the game gave a slope): still one.
+    const float leaning[4][4] = {{10, 20, 0.4f, 2}, {74, 20, 0.4f, 2}, {74, 148, 0.6f, 2}, {10, 148, 0.6f, 2}};
+    CHECK(flatQuad(quad(leaning, stride).data(), stride, 4, 0));
+    // A ground tile in perspective: its depth changes and its corners make no rectangle.
+    const float tile[4][4] = {{100, 300, 0.6f, 1.5f}, {160, 300, 0.6f, 1.5f}, {90, 340, 0.5f, 1.7f},
+                              {170, 340, 0.5f, 1.7f}};
+    CHECK(!flatQuad(quad(tile, stride).data(), stride, 4, 0));
+    // A rotated quad at one depth (an effect turning): one depth is enough.
+    const float turned[4][4] = {{50, 10, 0.3f, 3}, {90, 50, 0.3f, 3}, {10, 50, 0.3f, 3}, {50, 90, 0.3f, 3}};
+    CHECK(flatQuad(quad(turned, stride).data(), stride, 4, 0));
+    CHECK(!flatQuad(nullptr, stride, 4, 0));
+}
+
+TEST(ai_cache_names_tags_and_folders) {
+    // 0.12: pictures by the network's settings, tags for the kind and the maps, settings-free.
+    TextureKey k{0x0123456789abcdefull, 256, 128};
+    const std::string key = keyName(k);
+    CHECK(key == "256x128\\0123456789abcdef");
+    CHECK(netFolder("general", 25, 4) == "realesr-general-x4v3-dn25-wrap");  // 0.11.3's: its pictures stay in use
+    CHECK(netFolder("general", 25, 2) == "realesr-general-x4v3-dn25-wrap-x2");
+    CHECK(netFolder("anime", 25, 4) == "realesr-animevideov3-wrap");
+    CHECK(netFolder("anime", 80, 2) == "realesr-animevideov3-wrap-x2");
+    const std::string picture = entryName(netFolder("general", 25, 4), key);
+    CHECK(picture == "ai\\realesr-general-x4v3-dn25-wrap\\256x128\\0123456789abcdef.tex");
+    CHECK(picture == entryName(netFolder("general", 25, 4), k));
+    ParsedEntry e = parseEntry(picture);
+    CHECK(e.type == ParsedEntry::Picture && e.folder == "realesr-general-x4v3-dn25-wrap" && e.key == key);
+    e = parseEntry(kindTag(Kind::Ground, key));
+    CHECK(kindTag(Kind::Ground, key) == "ai\\@kind\\ground\\256x128\\0123456789abcdef");
+    CHECK(e.type == ParsedEntry::KindTag && e.kind == Kind::Ground && e.key == key);
+    e = parseEntry(mapTag("prt_fild08", key));
+    CHECK(e.type == ParsedEntry::MapTag && e.map == "prt_fild08" && e.key == key);
+    CHECK(parseEntry("ai\\@kind\\lightmap\\256x128\\0123456789abcdef").type == ParsedEntry::Other);
+    CHECK(parseEntry("ai\\x\\256x128\\0123456789ABCDEF.tex").type == ParsedEntry::Other);
+    CHECK(parseEntry("ai\\x\\256x128\\0123.tex").type == ParsedEntry::Other);
+    CHECK(parseEntry("data\\texture\\a.bmp").type == ParsedEntry::Other);
+    // 0.11.0's pictures: a folder without settings, still pictures (outdated ones).
+    CHECK(parseEntry("ai\\realesr-general-x4v3\\64x64\\00000000000000ff.tex").type == ParsedEntry::Picture);
+}
+
+TEST(ai_map_names_as_the_game_loads_them) {
+    CHECK(mapName("prontera.rsw", 12) == "prontera");
+    CHECK(mapName("PRT_FILD08.RSW\0junk", 19) == "prt_fild08");
+    CHECK(mapName("1@tower.rsw", 11) == "1@tower");
+    CHECK(mapName("new_1-1.rsw", 11) == "new_1-1");
+    CHECK(mapName("\x01\x02garbage", 9).empty());
+    CHECK(mapName("", 0).empty());
+    CHECK(mapName("prontera", 4) == "pron");  // only the bytes given
+}
+
+namespace {
+
+const std::string kCurrent[kKinds] = {"g", "g", "a", "a"};  // the ground and objects general, sprites anime
+
+std::vector<CacheEntry> sampleCache() {
+    const std::string k1 = "256x256\\0000000000000001", k2 = "256x256\\0000000000000002",
+                      k3 = "128x128\\0000000000000003", k4 = "64x64\\0000000000000004", k5 = "64x64\\0000000000000005";
+    return {
+        {entryName("g", k1), 100},  {kindTag(Kind::Ground, k1), 8},  {mapTag("prontera", k1), 8},
+        {mapTag("geffen", k1), 8},  {entryName("g", k2), 200},       {kindTag(Kind::Objects, k2), 8},
+        {mapTag("prontera", k2), 8}, {entryName("old", k2), 50},     {entryName("a", k3), 30},
+        {kindTag(Kind::Sprites, k3), 8}, {mapTag("geffen", k3), 8},  {entryName("g", k4), 10},  // before 0.12: no tags
+        {entryName("a", k5), 5},    {kindTag(Kind::Ground, k5), 8},  // a ground texture made by another model
+    };
+}
+
+}  // namespace
+
+TEST(ai_cache_index_by_map_and_kind) {
+    const CacheContents c(sampleCache());
+    CHECK_EQ(c.pictures(), size_t(6));
+    const CacheIndex x = c.index(kCurrent);
+    CHECK_EQ(x.outdated, 2u);  // "old", and k5's anime picture while the ground is general
+    CHECK_EQ(x.outdatedBytes, uint64_t(55));
+    CHECK_EQ(x.all.total, 4u);
+    CHECK_EQ(x.all.bytes, uint64_t(340));
+    CHECK_EQ(x.all.count[0], 1u);
+    CHECK_EQ(x.all.count[1], 1u);
+    CHECK_EQ(x.all.count[2], 1u);
+    CHECK_EQ(x.rows.size(), size_t(3));  // geffen, prontera, then the one of no map
+    CHECK(x.rows[0].map == "geffen");
+    CHECK_EQ(x.rows[0].total, 2u);  // k1 (shared with prontera) and k3
+    CHECK_EQ(x.rows[0].bytes, uint64_t(130));
+    CHECK_EQ(x.rows[0].count[2], 1u);
+    CHECK(x.rows[1].map == "prontera");
+    CHECK_EQ(x.rows[1].total, 2u);
+    CHECK_EQ(x.rows[1].count[0], 1u);
+    CHECK_EQ(x.rows[1].count[1], 1u);
+    CHECK(x.rows[2].map.empty());
+    CHECK_EQ(x.rows[2].total, 1u);  // k4: of no kind, counted in the total only
+    CHECK_EQ(x.rows[2].count[0] + x.rows[2].count[1] + x.rows[2].count[2] + x.rows[2].count[3], 0u);
+}
+
+TEST(ai_cache_deletion_keeps_tags_and_what_is_not_chosen) {
+    const CacheContents c(sampleCache());
+    const auto has = [](const std::vector<std::string>& names, const std::string& n) {
+        return std::find(names.begin(), names.end(), n) != names.end();
+    };
+    const std::string k1 = "256x256\\0000000000000001", k2 = "256x256\\0000000000000002";
+    // Prontera's ground only: k1 goes (also from geffen - it is the same texture), k2 (objects) stays.
+    CacheDeletion d;
+    d.maps = {"prontera"};
+    d.kinds[1] = false;
+    std::vector<std::string> keep = c.keep(d, kCurrent);
+    CHECK(!has(keep, entryName("g", k1)));
+    CHECK(has(keep, entryName("g", k2)));
+    CHECK(has(keep, kindTag(Kind::Ground, k1)));  // the tags stay: the texture is still on those maps
+    CHECK(has(keep, mapTag("geffen", k1)));
+    CHECK_EQ(keep.size(), sampleCache().size() - 1);
+    // Every kind of prontera: every settings' picture of its textures, the outdated one of k2 too.
+    d.kinds[1] = true;
+    keep = c.keep(d, kCurrent);
+    CHECK(!has(keep, entryName("g", k2)));
+    CHECK(!has(keep, entryName("old", k2)));
+    // The row of no map: the pictures made before 0.12, of no kind, go whatever kinds are chosen.
+    CacheDeletion none;
+    none.maps = {""};
+    for (bool& k : none.kinds) k = false;
+    keep = c.keep(none, kCurrent);
+    CHECK(!has(keep, entryName("g", "64x64\\0000000000000004")));
+    CHECK(has(keep, entryName("a", "64x64\\0000000000000005")));  // tagged ground: chosen by kind
+    // Outdated only.
+    CacheDeletion old;
+    old.outdated = true;
+    keep = c.keep(old, kCurrent);
+    CHECK_EQ(keep.size(), sampleCache().size() - 2);
+    CHECK(!has(keep, entryName("old", k2)));
+    CHECK(!has(keep, entryName("a", "64x64\\0000000000000005")));
+}
+
+TEST(ai_anime_model_is_the_compact_one) {
+    // realesr-animevideov3 (the Drawn model): the same network with 16 convolutions in the middle instead of 32 - the
+    // GPU's shaders read the count from the file. A flat picture stays flat and keeps its colour.
+    Model m;
+    CHECK(loadModel(m, "realesr-animevideov3"));
+    CHECK_EQ(m.middle, 16);
+    CHECK_EQ(m.features, 64);
+    CHECK_EQ(m.scale, 4);
+    CHECK_EQ(m.convs.size(), size_t(18));
+    const int w = 8, h = 8;
+    std::vector<float> rgb(size_t(3 * w * h));
+    for (int c = 0; c < 3; ++c)
+        for (int i = 0; i < w * h; ++i) rgb[size_t(c * w * h + i)] = c == 0 ? 0.8f : c == 1 ? 0.5f : 0.2f;
+    std::vector<float> out(size_t(3 * w * h * 16));
+    upscale(m, rgb.data(), w, h, out.data(), Border::Wrap);
+    float worst = 0;
+    for (int c = 0; c < 3; ++c)
+        for (int i = 0; i < w * h * 16; ++i)
+            worst = std::max(worst, std::fabs(out[size_t(c * w * h * 16 + i)] - rgb[size_t(c * w * h)]));
+    CHECK(worst < 0.05f);
 }

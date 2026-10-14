@@ -1046,12 +1046,12 @@ bool Renderer::upgradeFactory(bool (*upgrade)(void** object)) {
     return true;
 }
 
-bool Renderer::startAiTextures(const std::string& gameDir, double targetMs, int denoise) {
+bool Renderer::startAiTextures(const std::string& gameDir, const AiSettings& settings) {
     Impl& m = *impl_;
     if (remote_ || remix_ || m.ai) return m.ai != nullptr;
     m.ai = new AiTextures(m);
     std::string error;
-    if (!m.ai->start(gameDir, targetMs, denoise, error)) {
+    if (!m.ai->start(gameDir, settings, error)) {
         LOG_ERROR("AI textures: %s; they stay off", error.c_str());
         delete m.ai;
         m.ai = nullptr;
@@ -1062,6 +1062,11 @@ bool Renderer::startAiTextures(const std::string& gameDir, double targetMs, int 
 
 void Renderer::finish() {
     if (!remote_ && impl_->device && impl_->fence) impl_->waitIdle();
+}
+
+void Renderer::setMap(const std::string& map) {
+    if (remote_) return remote_->setMap(map);
+    if (impl_->ai) impl_->ai->setMap(map);
 }
 
 void Renderer::setCamera(bool valid, const float view[12]) {

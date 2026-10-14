@@ -42,7 +42,8 @@ elseif(WIN32)
 
     # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
     add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/registry.cpp
-                src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp src/win/system_probe.cpp)
+                src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp src/app/ai_cache.cpp
+                src/win/system_probe.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)
@@ -59,7 +60,7 @@ elseif(WIN32)
     configure_file(src/app/version_rc.h.in ${CMAKE_BINARY_DIR}/app/version_rc.h)
     add_executable(uaro-graphics WIN32 src/app/main.cpp src/app/main_window.cpp src/app/ui.cpp src/app/page.cpp
                    src/app/page_settings.cpp src/app/page_screen.cpp src/app/page_diagnostics.cpp
-                   src/app/page_service.cpp src/app/app.rc)
+                   src/app/page_service.cpp src/app/page_ai.cpp src/app/page_ai_cache.cpp src/app/app.rc)
     target_include_directories(uaro-graphics PRIVATE src/app dist ${CMAKE_BINARY_DIR}/app)
     target_compile_options(uaro-graphics PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
     target_link_libraries(uaro-graphics PRIVATE uagfx_app comdlg32)

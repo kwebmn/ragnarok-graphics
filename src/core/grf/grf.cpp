@@ -1,5 +1,6 @@
 #include "core/grf/grf.hpp"
 
+#include <algorithm>
 #include <cstring>
 
 #include "miniz.h"
@@ -68,6 +69,21 @@ bool Archive::open(const std::string& path, bool create, std::string& error) {
         }
         return true;
     }
+    return readTable(path, error);
+}
+
+bool Archive::open(std::FILE* file, bool writable, std::string& error) {
+    close();
+    if (!file) {
+        error = "no file";
+        return false;
+    }
+    file_ = file;
+    writable_ = writable;
+    return readTable("the archive", error);
+}
+
+bool Archive::readTable(const std::string& path, std::string& error) {
     uint8_t h[kHeader];
     if (!readAt(file_, 0, h, sizeof h) || std::memcmp(h, kMagic, 15) != 0 || get32(h + 42) != kVersion) {
         error = path + " is not a GRF archive of version 0x200";
@@ -179,6 +195,43 @@ bool Archive::append(const std::vector<std::pair<std::string, std::vector<uint8_
         return false;
     }
     return true;
+}
+
+bool Archive::copyTo(std::FILE* out, const std::function<bool(const std::string&)>& keep, std::string& error) {
+    if (!file_ || !out) {
+        error = "no archive to copy";
+        return false;
+    }
+    // In the order of the data: the source is read front to back.
+    std::vector<std::pair<uint32_t, std::string>> order;
+    for (const auto& e : entries_)
+        if (keep(e.first)) order.emplace_back(e.second.offset, e.first);
+    std::sort(order.begin(), order.end());
+    Archive copy;
+    copy.file_ = out;
+    copy.writable_ = true;
+    uint64_t at = kHeader;
+    std::vector<uint8_t> data;
+    for (const auto& o : order) {
+        Entry e = entries_.at(o.second);
+        data.resize(e.aligned);
+        if (!readAt(file_, kHeader + e.offset, data.data(), data.size())) {
+            error = "cannot read " + o.second;
+            copy.file_ = nullptr;
+            return false;
+        }
+        if (!writeAt(out, at, data.data(), data.size())) {
+            error = "cannot write " + o.second;
+            copy.file_ = nullptr;
+            return false;
+        }
+        e.offset = uint32_t(at - kHeader);
+        copy.entries_[o.second] = e;
+        at += data.size();
+    }
+    const bool ok = copy.writeTable(at, error);
+    copy.file_ = nullptr;  // the caller closes it
+    return ok;
 }
 
 bool Archive::writeTable(uint64_t at, std::string& error) {

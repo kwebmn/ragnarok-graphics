@@ -57,20 +57,24 @@ TEST(schema_live_keys_are_the_specs) {
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "renderer.remix" &&
                                 k != "quality.dlss" &&
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
-                                k != "quality.ai_textures" && k != "quality.ai_budget" &&
-                                k != "quality.ai_denoise"));
+                                k.compare(0, 3, "ai.") != 0));
     }
 }
 
 TEST(schema_pages_follow_the_spec) {
     // Stage 2 spec §6.1 with 0.6.2: Sound, Game, and Chat and login after Frames - the last holds the whisper, login
     // and chat macro rows the Game page has no room for.
-    CHECK_EQ(kPageCount, 10);
+    CHECK_EQ(kPageCount, 12);
     CHECK(pageName(Page::Sound) == Text::PageSound);
     CHECK(pageName(Page::Game) == Text::PageGame);
     CHECK(pageName(Page::Chat) == Text::PageChat);
     CHECK(pageName(Page::Smoothing) == Text::PageSmoothing);  // stage 4, after Quality
     CHECK_EQ(int(Page::Smoothing), 3);
-    CHECK_EQ(int(Page::Diagnostics), 8);
-    CHECK_EQ(int(Page::Service), 9);
+    // 0.12: the AI textures' settings and what upscaled.grf holds, after Smoothing.
+    CHECK(pageName(Page::Ai) == Text::PageAi);
+    CHECK(pageName(Page::AiCache) == Text::PageAiCache);
+    CHECK_EQ(int(Page::Ai), 4);
+    CHECK_EQ(int(Page::AiCache), 5);
+    CHECK_EQ(int(Page::Diagnostics), 10);
+    CHECK_EQ(int(Page::Service), 11);
 }

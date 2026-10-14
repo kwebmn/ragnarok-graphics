@@ -212,12 +212,13 @@ HWND Panel::number(int id, const std::wstring& text, const std::wstring& value, 
     return c;
 }
 
-HWND Panel::pair(int id, const std::wstring& text, int a, int b, const std::wstring& hint, bool enabled) {
+HWND Panel::pair(int id, const std::wstring& text, int a, int b, const std::wstring& hint, bool enabled,
+                 const std::wstring& between) {
     label(text, at(kRow), enabled);
     const int x = area_.left + at(kLabel);
     HWND c = make(L"EDIT", std::to_wstring(a), ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP, x, y_, at(80), at(kRow), id,
                   WS_EX_CLIENTEDGE);
-    make(L"STATIC", L"×", SS_CENTER | SS_CENTERIMAGE, x + at(80), y_, at(24), at(kRow), 0);
+    make(L"STATIC", between, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX, x + at(80), y_, at(24), at(kRow), 0);
     HWND d = make(L"EDIT", std::to_wstring(b), ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP, x + at(104), y_, at(80),
                   at(kRow), id + 1, WS_EX_CLIENTEDGE);
     EnableWindow(c, enabled);
@@ -228,16 +229,18 @@ HWND Panel::pair(int id, const std::wstring& text, int a, int b, const std::wstr
     return c;
 }
 
-void Panel::checks(const std::vector<CheckItem>& items) {
-    const int half = (area_.right - area_.left - at(12)) / 2;
+void Panel::checks(const std::vector<CheckItem>& items, int perRow) {
+    const size_t n = size_t(std::max(perRow, 1));
+    const int width = (area_.right - area_.left - at(12) * int(n - 1)) / int(n);
     for (size_t i = 0; i < items.size(); ++i) {
         const CheckItem& c = items[i];
         HWND h = make(L"BUTTON", c.enabled ? withMnemonic(c.text, taken_) : literal(c.text),
-                      BS_AUTOCHECKBOX | WS_TABSTOP, area_.left + (i % 2 ? half + at(12) : 0), y_, half, at(kRow), c.id);
+                      BS_AUTOCHECKBOX | WS_TABSTOP, area_.left + int(i % n) * (width + at(12)), y_, width, at(kRow),
+                      c.id);
         SendMessageW(h, BM_SETCHECK, c.on ? BST_CHECKED : BST_UNCHECKED, 0);
         EnableWindow(h, c.enabled);
         tip(h, c.hint);
-        if (i % 2 == 1 || i + 1 == items.size()) y_ += at(kRow) + at(kGap);
+        if (i % n == n - 1 || i + 1 == items.size()) y_ += at(kRow) + at(kGap);
     }
 }
 
@@ -296,11 +299,12 @@ HWND Panel::listBox(int id, int rows) {
     return c;
 }
 
-HWND Panel::listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows) {
+HWND Panel::listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows, bool checkboxes) {
     const int h = at(rows * 22 + 28);
     HWND c = make(WC_LISTVIEWW, L"", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_TABSTOP,
                   area_.left, y_, area_.right - area_.left, h, id, WS_EX_CLIENTEDGE);
-    SendMessageW(c, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP);
+    SendMessageW(c, LVM_SETEXTENDEDLISTVIEWSTYLE, 0,
+                 LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP | (checkboxes ? LVS_EX_CHECKBOXES : 0));
     for (size_t i = 0; i < columns.size(); ++i) {
         LVCOLUMNW col{};
         col.mask = LVCF_TEXT | LVCF_WIDTH;

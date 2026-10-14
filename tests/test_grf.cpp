@@ -89,3 +89,52 @@ TEST(grf_archive_refuses_what_is_not_one) {
     CHECK(!error.empty());
     std::remove(path.c_str());
 }
+
+TEST(grf_copy_keeps_the_chosen_entries_and_drops_old_tables) {
+    // The settings app deletes pictures of upscaled.grf: a new archive with the rest, their data as stored; the file
+    // tables every append left behind go too. Empty entries (0.12's tags) survive both.
+    const std::string path = tempPath(), copy = tempPath();
+    std::string error;
+    {
+        Archive a;
+        CHECK(a.open(path, true, error));
+        for (int i = 0; i < 6; ++i)
+            CHECK(a.append({{"ai\\p" + std::to_string(i), bytes(20000, uint8_t(i))},
+                            {"ai\\@t" + std::to_string(i), {}}},
+                           error));
+    }
+    uint64_t before = 0;
+    {
+        Archive a;
+        CHECK(a.open(path, false, error));
+        before = a.bytes();
+        CHECK(a.find("ai\\@t3") && a.find("ai\\@t3")->size == 0);
+        std::FILE* out = std::fopen(copy.c_str(), "wb");
+        CHECK(a.copyTo(out, [](const std::string& n) { return n != "ai\\p1" && n != "ai\\p4"; }, error));
+        std::fclose(out);
+    }
+    Archive b;
+    CHECK(b.open(std::fopen(copy.c_str(), "rb"), false, error));
+    CHECK_EQ(b.count(), size_t(10));
+    CHECK(!b.find("ai\\p1") && !b.find("ai\\p4"));
+    std::vector<uint8_t> out;
+    for (int i : {0, 2, 3, 5})
+        CHECK(b.read("ai\\p" + std::to_string(i), out, error) && out == bytes(20000, uint8_t(i)));
+    CHECK(b.find("ai\\@t1") && b.find("ai\\@t1")->size == 0);
+    CHECK(b.bytes() < before);
+    b.close();
+    // Nothing kept: still a valid, empty archive.
+    {
+        Archive a;
+        CHECK(a.open(path, false, error));
+        std::FILE* o = std::fopen(copy.c_str(), "wb");
+        CHECK(a.copyTo(o, [](const std::string&) { return false; }, error));
+        std::fclose(o);
+    }
+    Archive e;
+    CHECK(e.open(copy, false, error));
+    CHECK_EQ(e.count(), size_t(0));
+    CHECK(!b.open(static_cast<std::FILE*>(nullptr), false, error));
+    std::remove(path.c_str());
+    std::remove(copy.c_str());
+}

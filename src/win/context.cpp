@@ -69,7 +69,7 @@ bool Context::open(std::string& error) {
     if (config.frameGeneration && config.dlss == "off")
         LOG_INFO("frame generation %dx: off - it needs NVIDIA DLSS on (Smoothing page)", config.frameGeneration);
     // Part 3: the 64-bit renderer - DLSS and the AI textures need it.
-    if (!remote && (config.bridge || config.dlss != "off" || config.aiTextures)) {
+    if (!remote && (config.bridge || config.dlss != "off" || config.ai.enabled)) {
         gpu::BridgeOptions o;
         o.hostExe = gameDir() + "\\uaro-graphics\\uaro-render64.exe";
         o.gameDir = gameDir();
@@ -80,9 +80,7 @@ bool Context::open(std::string& error) {
         o.dlssJitterInverted = config.dlssJitterInverted;
         o.dlssMotionInverted = config.dlssMotionInverted;
         o.frameGeneration = config.dlss != "off" ? config.frameGeneration : 0;  // it uses DLSS's depth and motion
-        o.aiTextures = config.aiTextures;
-        o.aiBudget = config.aiBudget;
-        o.aiDenoise = config.aiDenoise;
+        o.ai = config.ai;
         std::string why;
         remote = r->createRemote(o, why);
         if (remote)
@@ -233,6 +231,14 @@ void Context::present(const Rect& source, bool waitForVblank) {
         if (known != cameraKnown_) {
             cameraKnown_ = known;
             LOG_INFO("DLSS: the game's camera %s", known ? "found" : "not in view (no world shown, or another exe)");
+        }
+    }
+    if (config.ai.enabled && renderer->remote()) {  // AI textures: upscaled.grf notes the maps textures are seen on
+        const std::string map = readGameMap();
+        if (map != map_) {
+            map_ = map;
+            renderer->setMap(map);
+            if (!map.empty()) LOG_INFO("map: %s", map.c_str());
         }
     }
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);

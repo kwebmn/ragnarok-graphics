@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
 
@@ -26,9 +27,7 @@ struct BridgeOptions {
     int frameGeneration = 0;          // 2-4: DLSS frame generation, 0 none
     bool dlssJitterInverted = false;  // test switches ([quality] dlss_jitter, dlss_motion)
     bool dlssMotionInverted = false;
-    bool aiTextures = false;          // AI textures ([quality] ai_textures)
-    double aiBudget = 2.0;            // ms of GPU time a frame for the network
-    int aiDenoise = 25;               // % of the grain it smooths away ([quality] ai_denoise)
+    AiSettings ai;                    // AI textures ([ai])
     int logLevel = 1;                // LogLevel
 };
 
@@ -99,9 +98,10 @@ public:
     // Before create(): called with the device as soon as it exists, before anything is made on it (Streamline wants
     // slSetD3DDevice before the command queue, 0.10 log: "API hook is activated without device being created").
     void setOnDevice(void (*fn)(void* context, ID3D12Device* device), void* context);
-    // AI textures (ai_textures.hpp, uaro-render64.exe): after create(); targetMs of GPU time a frame for the
-    // network. false: off, the reason in the log.
-    bool startAiTextures(const std::string& gameDir, double targetMs, int denoise);
+    // AI textures (ai_textures.hpp, uaro-render64.exe): after create(). false: off, the reason in the log.
+    bool startAiTextures(const std::string& gameDir, const AiSettings& settings);
+    // The map the game shows ("prontera"; "" none): upscaled.grf notes the textures seen on it (AI textures).
+    void setMap(const std::string& map);
     // Part 3, DLSS started after the device (in the background, so that the game does not wait for it): the DXGI
     // factory becomes Streamline's (upgrade = slUpgradeInterface) and the swap chain is made again through it at the
     // next present, so that Streamline sees every present. False: the factory stays the system's.

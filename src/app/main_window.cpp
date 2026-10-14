@@ -180,6 +180,8 @@ void MainWindow::buildPage() {
         case settings::Page::Screen: current_ = makeScreenPage(*this); break;
         case settings::Page::Diagnostics: current_ = makeDiagnosticsPage(*this); break;
         case settings::Page::Service: current_ = makeServicePage(*this); break;
+        case settings::Page::Ai: current_ = makeAiPage(*this); break;
+        case settings::Page::AiCache: current_ = makeAiCachePage(*this); break;
         default: current_ = makeSettingsPage(*this, settings::Page(page_)); break;
     }
     current_->build(*panel_);
