@@ -108,6 +108,9 @@ void Remote::handle(Msg type, const uint8_t* data, uint32_t size) {
         case Msg::NeedSurface:
             needSurface_ = true;
             break;
+        case Msg::UpscalerReady:  // the next present switches to it (Context::present asks every frame)
+            upscales_ = true;
+            break;
         case Msg::Lost: setLost("render64: " + rd.str()); break;
         default: break;  // an answer nobody waits for any more
     }

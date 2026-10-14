@@ -181,6 +181,9 @@ struct Renderer::Impl {
     bool historyReset = true;  // the next upscale has no usable history
     bool upscaledValid = false;  // the last upscale ran: `upscaled` holds the world
     bool upscaledNow = false;    // ... since the last present: only then has frame generation this frame's inputs
+    bool worldValid = false;     // `world` has been drawn into since the upscale targets were made
+    bool generationFailed = false;  // its inputs could not be made at this size: not tried again
+    UINT generationFailedW = 0, generationFailedH = 0;
     int upscaleFailures = 0;     // the upscale failed this many frames in a row
     bool dropUpscale = false;    // so many that it stops after this present
     bool cameraValid = false, prevCameraValid = false;
@@ -242,6 +245,7 @@ struct Renderer::Impl {
     RetryTimer swapRetry{1000};  // that size is tried again after a second (stage 3 review M1)
     bool tearingSupported = false;
     HANDLE presentSurface = nullptr;  // part 3: a composition surface instead of the game's window
+    bool surfaceNoted = false;        // the log has said frame generation stays off on it
     bool refused = false;             // the game's window took no swap chain from this process
     LARGE_INTEGER lastPresent{};
 

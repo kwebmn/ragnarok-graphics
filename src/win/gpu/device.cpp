@@ -504,6 +504,7 @@ void Renderer::Impl::releaseUpscaleTargets() {
     releaseCom(upscaled);
     releaseCom(layer);
     renderWidth = renderHeight = 0;
+    upscaledValid = upscaledNow = worldValid = false;
 }
 
 bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
@@ -610,9 +611,13 @@ void Renderer::Impl::startFrame() {
 
 bool Renderer::Impl::composite() {
     if (!upscale) return true;
+    // Targets made since the frame's draws (setScale: a new size, Pause, DLSS coming on): nothing is in them yet,
+    // and the target keeps the old picture setScale stretched into it - not a black frame (0.10 review 6).
+    if (!worldDrawn && !layerDrawn && !worldValid) return true;
     if (!begin()) return false;
     static bool failedOnce = false;
     if (worldDrawn) {
+        worldValid = true;
         // The motion of every world pixel from the game's camera (motion_ps).
         StageSetup linearClamp;
         linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
@@ -736,6 +741,7 @@ bool Renderer::Impl::composite() {
 
 bool Renderer::Impl::ensureGenerationTargets(UINT w, UINT h) {
     if (hudless && uiCopy && w == generationWidth && h == generationHeight) return true;
+    if (generationFailed && w == generationFailedW && h == generationFailedH) return false;  // not again every frame
     Slot& s = slots[slot];  // the old ones may still be read by what this list recorded
     if (hudless) s.garbage.push_back(hudless);
     if (uiCopy) s.garbage.push_back(uiCopy);
@@ -753,7 +759,10 @@ bool Renderer::Impl::ensureGenerationTargets(UINT w, UINT h) {
     if (!hudless || !uiCopy) {
         releaseCom(hudless);
         releaseCom(uiCopy);
-        LOG_ERROR("cannot create frame generation's %ux%u inputs", w, h);
+        LOG_ERROR("cannot create frame generation's %ux%u inputs: it stays off at this size", w, h);
+        generationFailed = true;
+        generationFailedW = w;
+        generationFailedH = h;
         return false;
     }
     hudlessState = uiCopyState = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -956,6 +965,18 @@ void Renderer::setApi(HMODULE module) { impl_->api = module; }
 void Renderer::setOnDevice(void (*fn)(void* context, ID3D12Device* device), void* context) {
     impl_->onDevice = fn;
     impl_->onDeviceContext = context;
+}
+
+bool Renderer::upgradeFactory(bool (*upgrade)(void** object)) {
+    Impl& m = *impl_;
+    if (remote_ || remix_ || !m.factory || !upgrade) return false;
+    void* object = m.factory;
+    if (!upgrade(&object) || !object || object == m.factory) return false;
+    m.waitIdle();
+    m.releaseSwapChain();  // made again at the next present, through Streamline's factory
+    m.factory->Release();  // Streamline's factory holds the system's one itself
+    m.factory = static_cast<IDXGIFactory4*>(object);
+    return true;
 }
 
 void Renderer::finish() {
@@ -1440,15 +1461,26 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         return;
     }
     if (!m.target || !window || source.empty()) return;
-    // Part 3: frame generation must be off while the swap chain changes, for frames it has no inputs for, and while
-    // the game's window is not in front: NVIDIA asks for it off before the window is minimised or moved (the game
-    // in full screen minimises itself when it loses the focus).
-    const UINT wantW = UINT(std::max(1, outputWidth)), wantH = UINT(std::max(1, outputHeight));
-    if (m.upscaler && m.upscaler->generates() &&
-        (!m.upscale || !options.foreground || wantW != m.swapWidth || wantH != m.swapHeight))
+    // Part 3: frame generation must be off while the swap chain changes, for frames it has no inputs for, while
+    // the game's window is not in front (NVIDIA asks for it off before the window is minimised or moved; the game in
+    // full screen minimises itself when it loses the focus), and on a composition surface, whose swap chain
+    // Streamline never sees (0.10 review 4). Off takes a present to apply: a new size waits a frame while frame
+    // generation was on, so the swap chain never changes under it (0.10 review 3).
+    UINT wantW = UINT(std::max(1, outputWidth)), wantH = UINT(std::max(1, outputHeight));
+    const bool resize = m.swapChain && (wantW != m.swapWidth || wantH != m.swapHeight);
+    const bool held = !m.upscale || !options.foreground || resize || m.presentSurface;
+    if (m.upscaler && m.upscaler->generates() && held) {
+        if (m.presentSurface && !m.surfaceNoted) {
+            m.surfaceNoted = true;
+            LOG_INFO("DLSS frame generation needs the game's own window: off with a composition surface");
+        }
+        if (m.upscaler->generating() && resize) {
+            wantW = m.swapWidth;
+            wantH = m.swapHeight;
+        }
         m.upscaler->suspend();
-    if (!m.ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),
-                           options.allowTearing)) {
+    }
+    if (!m.ensureSwapChain(window, wantW, wantH, options.allowTearing)) {
         Sleep(15);  // no swap chain (0.4.1 review): no Present waits for vblank, keep the game's loop from spinning
         return;
     }
@@ -1473,8 +1505,8 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
     // Only a frame whose world was upscaled now has its constants, depth and motion: a frame that drew no world
     // (the last ones before the game closes) would have DLSS-G look for them in vain (0.10 log, frame 1079).
-    const bool generation = m.upscale && m.upscaler && m.upscaler->generates() && m.upscaledNow &&
-                            options.foreground && m.ensureGenerationTargets(m.swapWidth, m.swapHeight);
+    const bool generation = m.upscale && m.upscaler && m.upscaler->generates() && m.upscaledNow && !held &&
+                            m.ensureGenerationTargets(m.swapWidth, m.swapHeight);
     if (!generation && m.upscaler && m.upscaler->generates()) m.upscaler->suspend();  // no inputs for this frame
     if (generation) {
         // Part 3, frame generation: the back buffer is put together from the picture without the interface and the

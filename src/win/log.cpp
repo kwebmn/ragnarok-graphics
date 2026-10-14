@@ -2,13 +2,14 @@
 
 #include <windows.h>
 
+#include <atomic>
 #include <cstdarg>
 #include <cstdio>
 
 namespace uagfx::wlog {
 namespace {
 FILE* g_file = nullptr;
-void (*g_sink)(LogLevel, const char*) = nullptr;
+std::atomic<void (*)(LogLevel, const char*)> g_sink{nullptr};  // other threads log too (Streamline's)
 LogLevel g_level = LogLevel::Info;
 CRITICAL_SECTION g_lock;
 }  // namespace
@@ -44,7 +45,7 @@ void line(LogLevel level, const char* fmt, ...) {
                  kNames[int(level)], msg);
     std::fflush(g_file);
     LeaveCriticalSection(&g_lock);
-    if (g_sink) g_sink(level, msg);
+    if (const auto sink = g_sink.load()) sink(level, msg);  // read once: it may go meanwhile (0.10 review 10)
 }
 
 void setSink(void (*sink)(LogLevel level, const char* text)) { g_sink = sink; }

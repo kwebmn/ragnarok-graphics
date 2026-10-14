@@ -18,10 +18,12 @@ public:
     Dlss& operator=(const Dlss&) = delete;
 
     // mode: dlaa, quality, balanced, performance, ultra; generation: 0, else the frame multiplier 2-4 (DLSS frame
-    // generation, with Reflex). Streamline's own log goes to logFolder (sl.log).
+    // generation, with Reflex). Streamline's own log goes to logFolder (sl.log). late: Streamline comes after the
+    // device (manual hooking), and only the DXGI factory goes through it (upgrade).
     bool init(const std::string& folder, const std::string& logFolder, const std::string& mode, int generation,
-              std::string& error);
+              bool late, std::string& error);
     HMODULE module() const;  // sl.interposer.dll: the renderer takes Direct3D 12 and DXGI from it (setApi)
+    static bool upgrade(void** iface);  // slUpgradeInterface: a DXGI or Direct3D 12 object becomes its proxy
     bool attach(ID3D12Device* device, std::string& error);  // false: this card or driver has no DLSS
     void setSigns(float jitter, float motion) {  // the test switches: -1 inverts
         jitterSign_ = jitter;
@@ -32,6 +34,7 @@ public:
     bool renderSize(int outW, int outH, int& renderW, int& renderH) override;
     bool evaluate(const Frame& f) override;
     bool generates() const override { return generationReady_; }
+    bool generating() const override { return generationMode_ == 1; }
     void renderStart() override;
     void beforePresent(const Generation& g) override;
     void afterPresent() override;  // after every present while it generates, whatever the frame did
@@ -60,6 +63,7 @@ private:
     bool presentStarted_ = false;  // beforePresent ran this frame: its present has a start marker
     int generationMode_ = -1;     // the options set last: off (0) or on (1)
     uint32_t generationFrames_ = 1;
+    bool framesKnown_ = false;  // generationFrames_ asked of the card
     bool statusLogged_ = false;
     ULONGLONG statsStart_ = 0;
     uint32_t statsFrames_ = 0;

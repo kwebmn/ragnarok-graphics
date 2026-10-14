@@ -257,6 +257,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.fpsLimit = config.fpsLimit;
     o.sharpen = enhanced_ && config.sharpen > 0 ? float(config.sharpen - 1) / 99.0f : -1.0f;  // 1-100 -> CAS 0..1
     o.foreground = foreground;
+    o.vsyncSetting = config.vsync;
     renderer->present(window, out.cx, out.cy, source, o);
     ++stats_.frames;
     logStats(false);

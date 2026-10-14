@@ -46,6 +46,7 @@ public:
         bool on = false;  // generate around this frame: a world on screen with a known camera
     };
     virtual bool generates() const { return false; }
+    virtual bool generating() const { return false; }   // on as of the last present: off takes a present to apply
     virtual void renderStart() {}                        // the frame's first commands arrived
     virtual void beforePresent(const Generation&) {}     // its inputs and options, before the present
     virtual void afterPresent() {}                       // the next frame begins (latency markers, sleep)

@@ -5,6 +5,7 @@
 // and it ends with the game.
 #include <windows.h>
 
+#include <atomic>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -71,17 +72,41 @@ Args parseArgs() {
     return a;
 }
 
-win::bridge::Channel* g_channel = nullptr;
+std::atomic<win::bridge::Channel*> g_channel{nullptr};
 
 // Every log line also goes to the driver, which writes it into uaro-graphics.log with "render64:" in front - when
 // there is room: a line never waits (it may come from Streamline's own thread while the main one waits to send).
 void forward(LogLevel level, const char* text) {
-    if (!g_channel) return;
+    win::bridge::Channel* channel = g_channel.load();  // once: it goes at shutdown (0.10 review 10)
+    if (!channel) return;
     std::vector<uint8_t> out;
     WireWriter w(out);
     w.u8(uint8_t(level));
     w.str(text);
-    g_channel->trySend(Msg::Log, out);
+    channel->trySend(Msg::Log, out);
+}
+
+// Part 3: DLSS without frame generation starts on a thread of its own once the device exists, so that the game
+// shows its picture at once: NVIDIA's start takes some five seconds (0.10 logs), and the game's window stayed
+// black all that time.
+struct LateDlss {
+    host::Dlss* dlss = nullptr;
+    ID3D12Device* device = nullptr;
+    std::string folder, logs, mode, why;
+    std::atomic<int> state{0};  // 0 starting, 1 ready, 2 not there
+    ULONGLONG started = 0;
+    HANDLE thread = nullptr;
+    bool done = false;  // the main thread has acted on the state
+};
+
+DWORD WINAPI startDlssLate(void* context) {
+    auto* late = static_cast<LateDlss*>(context);
+    std::string why;
+    const bool ok = late->dlss->init(late->folder, late->logs, late->mode, 0, true, why) &&
+                    late->dlss->attach(late->device, why);
+    late->why = why;
+    late->state.store(ok ? 1 : 2, std::memory_order_release);
+    return 0;
 }
 
 class Host {
@@ -91,6 +116,7 @@ public:
 private:
     void dispatch(Msg type, const uint8_t* data, uint32_t size);
     void present(WireReader& rd);
+    void checkLateDlss();  // DLSS started in the background: on, or the reason it is not
 
     win::bridge::Channel channel_;
     gpu::Renderer renderer_;
@@ -104,6 +130,7 @@ private:
     FrameRecord record_;
     std::vector<uint32_t> pixels_;
     std::vector<uint8_t> out_;
+    LateDlss late_;
 };
 
 int Host::run(const Args& a) {
@@ -117,19 +144,23 @@ int Host::run(const Args& a) {
     channel_.setPeer(parent);
     g_channel = &channel_;
     wlog::setSink(forward);
-    // Part 3: Streamline starts before the first Direct3D call of the process.
+    // Part 3: DLSS. Frame generation takes over the swap chain, so with it Streamline starts before the first
+    // Direct3D call of the process and Direct3D 12 and DXGI come through its interposer. Without it Streamline starts
+    // in the background once the device exists (LateDlss) and takes over only the DXGI factory - still seeing every
+    // present (0.10 log: "presentCommon() was not observed": its bookkeeping and clean-up run there).
+    const std::string folder = a.dir + "\\uaro-graphics\\dlss";
+    const bool wantDlss = a.dlss != "off";
+    const bool early = wantDlss && a.generation >= 2;
     bool dlss = false;
     struct Attach {
         host::Dlss* dlss;
         bool ok;
         std::string why;
     } attach{&dlss_, false, "the device was not made"};
-    if (a.dlss != "off") {
+    dlss_.setSigns(a.jitterInverted ? -1.0f : 1.0f, a.motionInverted ? -1.0f : 1.0f);
+    if (early) {
         std::string why;
-        dlss = dlss_.init(a.dir + "\\uaro-graphics\\dlss", a.dir, a.dlss, a.generation, why);
-        // Direct3D 12 and DXGI come through Streamline's interposer: frame generation takes over the swap chain, and
-        // without it Streamline still has to see every present (0.10 log: "presentCommon() was not observed" - its
-        // bookkeeping and the release of what it no longer needs run there).
+        dlss = dlss_.init(folder, a.dir, a.dlss, a.generation, false, why);
         if (dlss) {
             renderer_.setApi(dlss_.module());
             renderer_.setOnDevice(
@@ -139,7 +170,6 @@ int Host::run(const Args& a) {
                 },
                 &attach);
         }
-        dlss_.setSigns(a.jitterInverted ? -1.0f : 1.0f, a.motionInverted ? -1.0f : 1.0f);
         if (!dlss) LOG_ERROR("DLSS: %s; drawing without it", why.c_str());
     }
     out_.clear();
@@ -166,13 +196,31 @@ int Host::run(const Args& a) {
     hello.str(renderer_.adapterName());
     hello.u8(upscales ? 1 : 0);  // the driver keeps MSAA and render_scale when DLSS is not there (0.8 review M4)
     channel_.send(Msg::Hello, out_);
+    if (wantDlss && !early) {
+        late_.dlss = &dlss_;
+        late_.device = renderer_.device();
+        late_.folder = folder;
+        late_.logs = a.dir;
+        late_.mode = a.dlss;
+        late_.started = GetTickCount64();
+        late_.thread = CreateThread(nullptr, 0, startDlssLate, &late_, 0, nullptr);
+        if (!late_.thread)
+            LOG_ERROR("DLSS: its start could not be run (error %lu); drawing without it", GetLastError());
+    }
     for (;;) {
         Msg type;
         const uint8_t* data = nullptr;
         uint32_t size = 0;
-        if (!channel_.receive(type, data, size, INFINITE)) break;  // the game has gone
+        // The background start is looked at between frames: after a present, or while nothing comes.
+        const DWORD wait = late_.thread && !late_.done ? 100 : INFINITE;
+        if (!channel_.receive(type, data, size, wait)) {
+            if (wait == INFINITE || channel_.peerGone()) break;  // the game has gone
+            checkLateDlss();
+            continue;
+        }
         if (type == Msg::Quit) break;
         dispatch(type, data, size);
+        if (type == Msg::Present) checkLateDlss();
         if (renderer_.lost() && !lostSent_) {
             lostSent_ = true;
             out_.clear();
@@ -180,11 +228,34 @@ int Host::run(const Args& a) {
             channel_.send(Msg::Lost, out_);
         }
     }
+    if (late_.thread) {  // a start still running when the game closes: nothing is taken down under it
+        if (WaitForSingleObject(late_.thread, 10000) != WAIT_OBJECT_0) ExitProcess(0);
+        CloseHandle(late_.thread);
+    }
     renderer_.finish();  // nothing of DLSS's still on the GPU when Streamline shuts down
     wlog::setSink(nullptr);
     g_channel = nullptr;
     if (parent) CloseHandle(parent);
     return 0;
+}
+
+void Host::checkLateDlss() {
+    if (!late_.thread || late_.done) return;
+    const int state = late_.state.load(std::memory_order_acquire);
+    if (state == 0) return;
+    late_.done = true;
+    if (state == 2) {
+        LOG_ERROR("DLSS: %s; drawing without it", late_.why.c_str());
+        return;
+    }
+    if (!renderer_.upgradeFactory(&host::Dlss::upgrade)) {
+        LOG_ERROR("DLSS: Streamline could not take over the DXGI factory; drawing without it");
+        return;
+    }
+    renderer_.setUpscaler(&dlss_);
+    channel_.send(Msg::UpscalerReady);  // the driver turns it on at its next present
+    LOG_INFO("%s ready (NVIDIA DLSS through Streamline, started alongside the game in %.1f s)", dlss_.name(),
+             double(GetTickCount64() - late_.started) / 1000.0);
 }
 
 void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {

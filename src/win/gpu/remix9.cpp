@@ -258,7 +258,18 @@ void Remix9::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
         if (!world) ++flatDraws_;
     }
-    applyState(s);
+    // D3D7's colour key drops the keyed texels (alpha 0 here); Direct3D 9 has no colour key, so a keyed texture
+    // without an alpha test of its own gets one that drops alpha 0 - which also tells Remix it is a cut-out
+    // (0.10 review 5: such draws showed black where the game shows nothing).
+    if (s.colorKey && (d.keyed[0] || d.keyed[1]) && !s.alphaTest) {
+        DrawSetup keyed = s;
+        keyed.alphaTest = true;
+        keyed.alphaFunc = d3d7::CMP_GREATER;
+        keyed.alphaRef = 0;
+        applyState(keyed);
+    } else {
+        applyState(s);
+    }
     for (DWORD i = 0; i < 2; ++i) device_->SetTexture(i, textureOf(d.texture[i]));
     const void* vertices = world ? static_cast<const void*>(worldVertices_.data()) : static_cast<const void*>(src);
     const UINT vertexStride = world ? stride - 4 : stride;
@@ -379,9 +390,11 @@ bool Remix9::readTarget(std::vector<uint32_t>& argb) {
 
 void Remix9::present(HWND window, const PresentOptions& options) {
     if (!window_) window_ = window;  // the device's window; a later one is presented to as an override
-    if (options.vsync != vsync_) {
-        vsync_ = options.vsync;
-        if (device_) lost_ = true;  // the presentation interval is set with Reset
+    // The presentation interval is set with a Reset: it follows the setting, not each loading-bar Blt that shows at
+    // once (0.10 review 13: a Reset every time).
+    if (options.vsyncSetting != vsync_) {
+        vsync_ = options.vsyncSetting;
+        if (device_) lost_ = true;
     }
     if (!ensureDevice()) {
         Sleep(15);

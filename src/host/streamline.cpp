@@ -30,6 +30,7 @@ PFun_slSetConstants* p_constants = nullptr;
 PFun_slSetTagForFrame* p_tags = nullptr;
 PFun_slEvaluateFeature* p_evaluate = nullptr;
 PFun_slGetFeatureFunction* p_function = nullptr;
+PFun_slUpgradeInterface* p_upgrade = nullptr;
 
 template <typename F>
 F* function(const char* name) {
@@ -85,7 +86,12 @@ void slLog(sl::LogType type, const char* text) {
         if (end == std::string::npos) break;
         from = end + 1;
     }
-    logRepeating(uagfx::LogLevel::Info, line.substr(from), "streamline: " + line);
+    // Messages about frame N are one message: with the numbers in the key every frame was a new one, and once the
+    // table was full nothing new was logged at all (0.10 review 9).
+    std::string key;
+    for (size_t i = from; i < line.size(); ++i)
+        if (line[i] < '0' || line[i] > '9') key += line[i];
+    logRepeating(uagfx::LogLevel::Info, key, "streamline: " + line);
 }
 
 void failed(const std::string& text) { logRepeating(uagfx::LogLevel::Error, text, text); }
@@ -151,16 +157,18 @@ std::string result(const char* what, sl::Result r) {
 
 }  // namespace
 
+// sl.interposer.dll stays loaded until the process ends: the renderer's swap chain and DXGI factory may be its
+// proxies, released after this (0.10 review 2: freeing it here crashed uaro-render64.exe on the way out).
 Dlss::~Dlss() {
     if (started_) slShutdown();
-    if (g_sl) FreeLibrary(g_sl);
-    g_sl = nullptr;
 }
+
+bool Dlss::upgrade(void** iface) { return p_upgrade && iface && *iface && p_upgrade(iface) == sl::Result::eOk; }
 
 HMODULE Dlss::module() const { return g_sl; }
 
 bool Dlss::init(const std::string& folder, const std::string& logFolder, const std::string& mode, int generation,
-                std::string& error) {
+                bool late, std::string& error) {
     generation_ = generation >= 2 && generation <= 4 ? generation : 0;
     for (const Mode& m : kModes)
         if (mode == m.token) {
@@ -186,6 +194,7 @@ bool Dlss::init(const std::string& folder, const std::string& logFolder, const s
     p_tags = function<PFun_slSetTagForFrame>("slSetTagForFrame");
     p_evaluate = function<PFun_slEvaluateFeature>("slEvaluateFeature");
     p_function = function<PFun_slGetFeatureFunction>("slGetFeatureFunction");
+    p_upgrade = function<PFun_slUpgradeInterface>("slUpgradeInterface");
     if (!p_init || !p_shutdown || !p_supported || !p_device || !p_token || !p_constants || !p_tags || !p_evaluate ||
         !p_function) {
         error = "sl.interposer.dll lacks a function this renderer needs";
@@ -205,6 +214,15 @@ bool Dlss::init(const std::string& folder, const std::string& logFolder, const s
     // The renderer sets its state again itself; no OTA. slSetTagForFrame needs frame-based tagging switched on
     // (without it Streamline refuses every tag: 0.9 never upscaled).
     pref.flags = sl::PreferenceFlags::eDisableCLStateTracking | sl::PreferenceFlags::eUseFrameBasedResourceTagging;
+    // Started after the device (in the background, so the game does not wait): the renderer keeps the system's
+    // Direct3D 12 and DXGI and gives Streamline only the DXGI factory to wrap (upgrade).
+    if (late) {
+        if (!p_upgrade) {
+            error = "sl.interposer.dll has no slUpgradeInterface";
+            return false;
+        }
+        pref.flags |= sl::PreferenceFlags::eUseManualHooking;
+    }
     pref.featuresToLoad = features;
     pref.numFeaturesToLoad = generation_ ? 4 : 1;
     pref.engine = sl::EngineType::eCustom;
@@ -392,7 +410,10 @@ void Dlss::beforePresent(const Generation& g) {
     if (r != sl::Result::eOk) failed(result("slSetTagForFrame (frame generation)", r));
     const int mode = g.on ? 1 : 0;
     if (mode != generationMode_) {
-        if (mode && generationMode_ < 0) {  // the first time: as many frames as this card can make
+        // The first time it comes on: as many frames as this card can make. Not tied to the first change, which is
+        // an "off" on the login screen (0.10 review 1: 3x and 4x ran as 2x).
+        if (mode && !framesKnown_) {
+            framesKnown_ = true;
             sl::DLSSGState state;
             if (slDLSSGGetState(kViewport, state, nullptr) == sl::Result::eOk && state.numFramesToGenerateMax > 0) {
                 generationFrames_ = std::min<uint32_t>(uint32_t(generation_ - 1), state.numFramesToGenerateMax);

@@ -41,13 +41,14 @@ enum class Msg : uint32_t {
     Camera,             // u8 valid, 12 f32: the game's view matrix of the frame being drawn (DLSS)
     Quit,
     // renderer -> driver
-    Hello = 100,        // u8 ok, str adapter (ok) or what failed
+    Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text
     TargetSet,          // u8 ok
     ScaleSet,           // u8 ok, i32 samples
     TargetPixels,       // u8 ok, i32 width, height, then width * height ARGB values
     NeedSurface,        // the game's window took no swap chain from this process: a composition surface instead
     Lost,               // str why: the renderer cannot draw any more
+    UpscalerReady,      // DLSS came up after the Hello (it starts in the background)
 };
 
 }  // namespace uagfx::bridge

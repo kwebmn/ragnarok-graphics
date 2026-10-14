@@ -157,7 +157,8 @@ bool Channel::send(Msg type, const void* data, size_t size, DWORD ms) {
 
 bool Channel::trySend(Msg type, const std::vector<uint8_t>& payload) {
     if (!view_ || payload.size() > out_.maxChunk()) return false;
-    EnterCriticalSection(&sendLock_);
+    // Never waits, not even for the lock: the main thread may be inside a long send (0.10 review 10).
+    if (!TryEnterCriticalSection(&sendLock_)) return false;
     const uint32_t size = uint32_t(payload.size());
     const bool ok = out_.tryWrite(uint32_t(type), size, 0, payload.data(), size);
     LeaveCriticalSection(&sendLock_);
