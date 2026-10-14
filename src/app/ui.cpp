@@ -121,6 +121,20 @@ void Panel::tip(HWND ctl, const std::wstring& hint) {
     MapWindowPoints(nullptr, owner_, reinterpret_cast<POINT*>(&area.rect), 2);
     area.lpszText = const_cast<wchar_t*>(hint.c_str());
     SendMessageW(tooltip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&area));
+    tipped_.push_back(ctl);
+}
+
+void Panel::moveTips() {
+    if (!tooltip_) return;
+    for (HWND ctl : tipped_) {
+        TOOLINFOW area{};
+        area.cbSize = sizeof area;
+        area.hwnd = owner_;
+        area.uId = UINT_PTR(GetDlgCtrlID(ctl));
+        GetWindowRect(ctl, &area.rect);
+        MapWindowPoints(nullptr, owner_, reinterpret_cast<POINT*>(&area.rect), 2);
+        SendMessageW(tooltip_, TTM_NEWTOOLRECTW, 0, reinterpret_cast<LPARAM>(&area));
+    }
 }
 
 int Panel::textHeight(const std::wstring& text, int width) const {

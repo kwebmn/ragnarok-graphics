@@ -19,7 +19,7 @@ public:
 
     Model& model() override { return *model_; }
     settings::Lang lang() const override { return lang_; }
-    HWND window() const override { return hwnd_; }
+    HWND window() const override { return view_; }  // the page view: the page's controls are its children
     void changed() override;
     void rebuild() override;
     void reload() override;
@@ -30,6 +30,13 @@ public:
 private:
     static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
     LRESULT handle(UINT msg, WPARAM wp, LPARAM lp);
+    // 0.22.1, the page view: the page in a child window that scrolls it when it is taller than the window.
+    static LRESULT CALLBACK viewProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+    LRESULT handleView(UINT msg, WPARAM wp, LPARAM lp);
+    void scrollTo(int y);  // the view's top at y of the page
+    void updateScrollBar();
+    void showFocused();             // after Tab or Alt+letter: the focused control of the page in view
+    bool wheelToPage(const MSG& m);  // a wheel turned over the page scrolls the page, not the slider under it
     void create();
     void makeFonts();
     void layout();
@@ -50,6 +57,9 @@ private:
     HFONT heading_ = nullptr;
     HFONT pageFont_ = nullptr;  // the fonts the page was made with, after a DPI change: they go when it is made again
     HFONT pageHeading_ = nullptr;
+    HWND view_ = nullptr;  // the page view (0.22.1)
+    int scroll_ = 0;        // its top, in pixels of the page; kept while the page is made again
+    int pageHeight_ = 0;
     HWND sidebar_ = nullptr;
     HWND langBox_ = nullptr;
     HWND banner_ = nullptr;

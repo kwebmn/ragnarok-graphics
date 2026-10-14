@@ -41,7 +41,8 @@ struct LineItem {  // a text field of Panel::lines
 };
 
 // The controls of one page (stage 2 spec §6), laid out from the top in rows: a label on the left, the control on the
-// right, notes under it across the page. They are children of the main window, so Tab goes through all of them.
+// right, notes under it across the page. They are children of the page view (0.22.1: it scrolls them), a control
+// parent of the main window, so Tab goes through all of them.
 class Panel {
 public:
     // taken: the letters of the window's own buttons (Alt+letter): the page's controls take others.
@@ -75,6 +76,10 @@ public:
     HWND listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows, bool checkboxes = false);
     void gap(int at96 = 8);
     bool toneOf(HWND ctl, Tone& tone) const;
+    // How tall the page is: from the area's top to below its last row (the scrolled page view's range).
+    int height() const { return y_ - area_.top; }
+    // The hints over disabled controls follow their controls after the page view scrolled them.
+    void moveTips();
 
 private:
     HWND make(const wchar_t* cls, const std::wstring& text, DWORD style, int x, int y, int w, int h, int id,
@@ -92,6 +97,7 @@ private:
     RECT area_;
     int y_;
     std::vector<HWND> made_;
+    std::vector<HWND> tipped_;  // the controls with a hint over their rectangle too (tip())
     std::map<HWND, Tone> tones_;
     std::wstring taken_;  // the letters for Alt+letter taken so far
 };

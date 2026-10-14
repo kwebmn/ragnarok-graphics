@@ -19,7 +19,7 @@ public:
     virtual ~PageHost() = default;
     virtual Model& model() = 0;
     virtual settings::Lang lang() const = 0;
-    virtual HWND window() const = 0;
+    virtual HWND window() const = 0;  // the window the page's controls are children of (GetDlgItem)
     virtual void changed() = 0;  // the player's changes changed: the status line and the buttons
     virtual void rebuild() = 0;  // the page again: it shows values that depend on others
     virtual void reload() = 0;   // the stores were written: everything is read again and every page rebuilt

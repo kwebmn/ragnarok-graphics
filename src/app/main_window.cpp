@@ -3,6 +3,8 @@
 #include <commctrl.h>
 #include <commdlg.h>
 
+#include <algorithm>
+
 #include "app/mnemonic.hpp"
 
 namespace uagfx::app {
@@ -11,6 +13,7 @@ namespace {
 using namespace settings;
 
 const wchar_t kClass[] = L"uaroGraphicsSettings";
+const wchar_t kViewClass[] = L"uaroGraphicsPage";
 constexpr int kWidth = 880;  // the client area at 96 DPI
 constexpr int kHeight = 600;
 constexpr int kSidebar = 10;
@@ -43,6 +46,11 @@ int MainWindow::run(HINSTANCE inst, int show) {
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
     wc.lpszClassName = kClass;
     RegisterClassExW(&wc);
+    WNDCLASSEXW vc = wc;  // the page view (0.22.1)
+    vc.lpfnWndProc = viewProc;
+    vc.hIcon = vc.hIconSm = nullptr;
+    vc.lpszClassName = kViewClass;
+    RegisterClassExW(&vc);
     hwnd_ = CreateWindowExW(0, kClass, wtr(lang_, Text::AppTitle).c_str(),
                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, CW_USEDEFAULT, CW_USEDEFAULT,
                             kWidth, kHeight, nullptr, nullptr, inst, this);
@@ -50,7 +58,11 @@ int MainWindow::run(HINSTANCE inst, int show) {
     ShowWindow(hwnd_, show);
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
-        if (IsDialogMessageW(hwnd_, &msg)) continue;  // Tab, arrows and Alt+letter between the controls
+        if (msg.message == WM_MOUSEWHEEL && wheelToPage(msg)) continue;
+        if (IsDialogMessageW(hwnd_, &msg)) {  // Tab, arrows and Alt+letter between the controls
+            if (msg.message == WM_KEYDOWN || msg.message == WM_SYSCHAR || msg.message == WM_CHAR) showFocused();
+            continue;
+        }
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
     }
@@ -65,6 +77,111 @@ LRESULT CALLBACK MainWindow::proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
     auto* self = reinterpret_cast<MainWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
     return self ? self->handle(msg, wp, lp) : DefWindowProcW(hwnd, msg, wp, lp);
+}
+
+LRESULT CALLBACK MainWindow::viewProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    if (msg == WM_NCCREATE) {
+        auto* self = static_cast<MainWindow*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
+    }
+    auto* self = reinterpret_cast<MainWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+    return self && self->view_ == hwnd ? self->handleView(msg, wp, lp) : DefWindowProcW(hwnd, msg, wp, lp);
+}
+
+// The page's controls report to the main window as before; the view scrolls by its bar and the wheel.
+LRESULT MainWindow::handleView(UINT msg, WPARAM wp, LPARAM lp) {
+    switch (msg) {
+        case WM_COMMAND:
+        case WM_NOTIFY:
+        case WM_HSCROLL:
+        case WM_CTLCOLORSTATIC:
+        case WM_CTLCOLORBTN:
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORLISTBOX:
+            return handle(msg, wp, lp);
+        case WM_VSCROLL: {
+            if (lp) return 0;  // a control's own, not the view's bar
+            SCROLLINFO si{};
+            si.cbSize = sizeof si;
+            si.fMask = SIF_ALL;
+            GetScrollInfo(view_, SB_VERT, &si);
+            int y = scroll_;
+            switch (LOWORD(wp)) {
+                case SB_LINEUP: y -= px(40, dpi_); break;
+                case SB_LINEDOWN: y += px(40, dpi_); break;
+                case SB_PAGEUP: y -= int(si.nPage); break;
+                case SB_PAGEDOWN: y += int(si.nPage); break;
+                case SB_THUMBTRACK:
+                case SB_THUMBPOSITION: y = si.nTrackPos; break;
+                case SB_TOP: y = 0; break;
+                case SB_BOTTOM: y = pageHeight_; break;
+                default: break;
+            }
+            scrollTo(y);
+            return 0;
+        }
+        case WM_MOUSEWHEEL:  // 120 a notch: 60 pixels at 96 DPI; a touchpad's smaller steps as smoothly
+            scrollTo(scroll_ - int(short(HIWORD(wp))) * px(60, dpi_) / WHEEL_DELTA);
+            return 0;
+        default:
+            break;
+    }
+    return DefWindowProcW(view_, msg, wp, lp);
+}
+
+void MainWindow::scrollTo(int y) {
+    RECT r;
+    GetClientRect(view_, &r);
+    y = std::clamp(y, 0, std::max(0, pageHeight_ - int(r.bottom)));
+    if (y == scroll_) return;
+    ScrollWindowEx(view_, 0, scroll_ - y, nullptr, nullptr, nullptr, nullptr,
+                   SW_SCROLLCHILDREN | SW_INVALIDATE | SW_ERASE);
+    scroll_ = y;
+    SetScrollPos(view_, SB_VERT, y, TRUE);
+    if (panel_) panel_->moveTips();
+}
+
+// The bar's range is the page's height; a page that fits shows no bar.
+void MainWindow::updateScrollBar() {
+    RECT r;
+    GetClientRect(view_, &r);
+    SCROLLINFO si{};
+    si.cbSize = sizeof si;
+    si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+    si.nMin = 0;
+    si.nMax = std::max(0, pageHeight_ - 1);
+    si.nPage = UINT(std::max(0L, r.bottom));
+    si.nPos = scroll_;
+    SetScrollInfo(view_, SB_VERT, &si, TRUE);
+}
+
+void MainWindow::showFocused() {
+    HWND f = GetFocus();
+    if (!view_ || !f || !IsChild(view_, f)) return;
+    RECT r;
+    GetWindowRect(f, &r);
+    MapWindowPoints(nullptr, view_, reinterpret_cast<POINT*>(&r), 2);
+    RECT c;
+    GetClientRect(view_, &c);
+    const int margin = px(8, dpi_);
+    if (r.top < margin)
+        scrollTo(scroll_ + r.top - margin);
+    else if (r.bottom > c.bottom - margin)
+        scrollTo(scroll_ + r.bottom - c.bottom + margin);
+}
+
+bool MainWindow::wheelToPage(const MSG& m) {
+    if (!view_) return false;
+    const POINT at{short(LOWORD(m.lParam)), short(HIWORD(m.lParam))};  // screen coordinates
+    HWND under = WindowFromPoint(at);
+    if (!under || (under != view_ && !IsChild(view_, under))) return false;
+    // A list scrolls itself (the tables of the AI textures and of the diagnostics); an open combo box's list is a
+    // window of its own, outside the view.
+    wchar_t cls[32] = {};
+    GetClassNameW(under, cls, 32);
+    if (lstrcmpiW(cls, WC_LISTVIEWW) == 0 || lstrcmpiW(cls, L"ListBox") == 0) return false;
+    SendMessageW(view_, WM_MOUSEWHEEL, m.wParam, m.lParam);
+    return true;
 }
 
 void MainWindow::makeFonts() {
@@ -90,6 +207,9 @@ void MainWindow::create() {
         return c;
     };
     sidebar_ = child(L"LISTBOX", LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_TABSTOP | WS_VSCROLL, kSidebar, WS_EX_CLIENTEDGE);
+    // The page view: its controls are a group of the window's for Tab (control parent); it scrolls them.
+    view_ = CreateWindowExW(WS_EX_CONTROLPARENT, kViewClass, L"", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_VSCROLL,
+                            0, 0, 10, 10, hwnd_, nullptr, inst, this);
     langBox_ = child(WC_COMBOBOXW, CBS_DROPDOWNLIST | WS_TABSTOP, kLang);
     for (int i = 0; i < kLangCount; ++i)
         SendMessageW(langBox_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(wide(langName(Lang(i))).c_str()));
@@ -144,6 +264,8 @@ void MainWindow::layout() {
         x -= at(8);
     }
     MoveWindow(status_, at(12), by, x - at(12), bh, TRUE);
+    const RECT page = pageArea();
+    MoveWindow(view_, page.left, page.top, page.right - page.left, page.bottom - page.top, TRUE);
 }
 
 void MainWindow::retext() {
@@ -175,7 +297,15 @@ void MainWindow::buildPage() {
     }
     current_.reset();
     panel_.reset();
-    panel_ = std::make_unique<Panel>(hwnd_, font_, heading_, tooltip_, dpi_, pageArea(), windowLetters());
+    // The page is laid out in the view from its top, scroll_ above the view's: where it was before it was made again.
+    RECT view;
+    GetWindowRect(view_, &view);
+    using SystemMetricsForDpiFn = int(WINAPI*)(int, UINT);
+    static const SystemMetricsForDpiFn metrics = reinterpret_cast<SystemMetricsForDpiFn>(reinterpret_cast<void*>(
+        GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetSystemMetricsForDpi")));
+    const int bar = metrics ? metrics(SM_CXVSCROLL, UINT(dpi_)) : GetSystemMetrics(SM_CXVSCROLL);
+    const RECT area{0, -scroll_, view.right - view.left - bar - px(8, dpi_), view.bottom - view.top - scroll_};
+    panel_ = std::make_unique<Panel>(view_, font_, heading_, tooltip_, dpi_, area, windowLetters());
     switch (settings::Page(page_)) {
         case settings::Page::Screen: current_ = makeScreenPage(*this); break;
         case settings::Page::Diagnostics: current_ = makeDiagnosticsPage(*this); break;
@@ -186,6 +316,9 @@ void MainWindow::buildPage() {
         default: current_ = makeSettingsPage(*this, settings::Page(page_)); break;
     }
     current_->build(*panel_);
+    pageHeight_ = panel_->height() + px(8, dpi_);
+    updateScrollBar();
+    scrollTo(scroll_);  // a page that got shorter: back up to its end
     for (HWND w : {apply_, play_, undo_, close_, langBox_})  // after the page in the Tab order (0.6.0 review M6)
         SetWindowPos(w, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     typing_ = false;  // a number being typed was taken above
@@ -194,7 +327,7 @@ void MainWindow::buildPage() {
     pageFont_ = pageHeading_ = nullptr;
     rebuilds_.end();
     if (focusId >= 1000)
-        if (HWND f = GetDlgItem(hwnd_, focusId)) {
+        if (HWND f = GetDlgItem(view_, focusId)) {
             SetFocus(f);
             if (field) SendMessageW(f, EM_SETSEL, selStart, selEnd);
         }
@@ -294,6 +427,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 const LRESULT sel = SendMessageW(sidebar_, LB_GETCURSEL, 0, 0);
                 if (sel >= 0 && sel != page_) {
                     page_ = int(sel);
+                    scroll_ = 0;  // another page starts at its top
                     buildPage();
                 }
             } else if (id == kLang && (code == CBN_CLOSEUP ||

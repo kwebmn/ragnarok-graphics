@@ -70,6 +70,9 @@ ALLOWED = {
         "RegisterClassExW", "ReleaseDC", "SendMessageW", "SetClipboardData", "SetDlgItemTextW", "SetFocus",
         "SetForegroundWindow", "SetTimer", "SetWindowLongW", "SetWindowPos", "SetWindowTextW", "ShowWindow",
         "SystemParametersInfoW", "TranslateMessage", "wsprintfW",
+        # 0.22.1, the page view that scrolls (all of them in Windows since 95 / NT 3.1)
+        "GetClassNameW", "GetScrollInfo", "GetSystemMetrics", "ScrollWindowEx", "SetScrollInfo", "SetScrollPos",
+        "WindowFromPoint",
     },
 }
 # Newer than Windows 7: never on the list above (a check of the list itself).
