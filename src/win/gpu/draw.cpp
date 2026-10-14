@@ -115,7 +115,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.36: the other skills light too, in their pictures' colours - not the aura, the maps' objects (their own).
     if (adds && fireWanted() && !torchDone && d.texture[0]) {
         const auto ft = textures.find(d.texture[0]);
-        const bool mine = d.effect == uint8_t(effect_exe::Kind::None);
+        const bool mine = d.effect == uint8_t(effect_exe::Kind::None) || d.effect == uint8_t(effect_exe::Kind::Skill);
         if (ft != textures.end() && ft->second.fire > 0.15f && mine) {
             noteFire(rec, d, ft->second.fire, ft->second.fireColour);
         } else if (ft != textures.end() && effects.skillColours && ft->second.light > 0.2f && mine &&

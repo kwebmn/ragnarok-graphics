@@ -938,6 +938,17 @@ const Entry kTexts[] = {
      "золотим, отрута — зеленим: кожне вміння кольором своєї картинки.",
      "Не только огонь: лёд и вода светят холодным голубым, молнии — короткими белыми вспышками, святые умения — "
      "золотым, яд — зелёным: каждое умение цветом своей картинки."},
+    {"Softer skills", "М'якші вміння", "Мягкие умения"},
+    {"Skills and other effects of the game (not the maps' torches, smoke and the like) shine softer, so that big ones "
+     "- Storm Gust, Magnus Exorcismus, Meteor Storm - do not blind.",
+     "Уміння та інші ефекти гри (не смолоскипи, дим тощо на картах) світять м'якше, щоб великі — Storm Gust, Magnus "
+     "Exorcismus, Meteor Storm — не сліпили.",
+     "Умения и другие эффекты игры (не факелы, дым и т. п. на картах) светят мягче, чтобы большие — Storm Gust, Magnus "
+     "Exorcismus, Meteor Storm — не слепили."},
+    {"Skills' brightness", "Яскравість умінь", "Яркость умений"},
+    {"How bright the skills are, of what the game draws: 100 % as in the game.",
+     "Наскільки яскраві вміння від того, як їх малює гра: 100 % — як у грі.",
+     "Насколько ярки умения от того, как их рисует игра: 100 % — как в игре."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

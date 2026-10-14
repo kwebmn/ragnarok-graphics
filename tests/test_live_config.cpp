@@ -238,6 +238,15 @@ TEST(live_config_skill_colours_apply_now) {
     CHECK(u.applied[0] == "skill_colours 1 -> 0");
 }
 
+TEST(live_config_skills_soft_apply_now) {
+    const LiveUpdate u =
+        liveUpdate(parseConfig(""), parseConfig("[effects]\nskills_soft = 0\nskill_brightness = 60\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "skills_soft 1 -> 0");
+    CHECK(u.applied[1] == "skill_brightness 80 -> 60");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

@@ -30,6 +30,7 @@ const Effect kEffects[] = {
     {"effects.haze", {}, {"effects.haze_strength"}, {}, false},
     {"effects.heat", {}, {"effects.heat_strength"}, {}, false},
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, false},
+    {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, false},
     {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, false},
     {"effects.grade",
      {},

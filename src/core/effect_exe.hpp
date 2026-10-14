@@ -17,6 +17,10 @@ constexpr uint32_t kPrimSize = 0xF9E4;
 constexpr uint32_t kPrimMaster = 0xF8;
 constexpr uint32_t kEffectVtable = 0x69F9CC;
 constexpr uint32_t kEffectId = 0x100;
+// 0.37: an effect's own Render (FUN_005c25a0, thiscall: the view matrix) - its STR animation's layers; its vtable
+// entry.
+constexpr uint32_t kEffectRender = 0x5C25A0;
+constexpr uint32_t kEffectRenderSlot = 0x69F9D8;  // CRagEffect's vtable 0x69F9CC, entry 3
 constexpr uint32_t kSortFace = 0x412020;
 // 0.28: whether these 6 bytes at kSortFace are the expected first instructions (push ebp; mov ebp, esp; sub esp,
 // 0xC), moved whole into the hook's trampoline: else the exe is another build.
@@ -28,7 +32,8 @@ constexpr uint32_t kActorShadow = 0x547B80;
 bool isShadowEntry(const uint8_t bytes[6]);
 
 // The effects the driver does something with.
-enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow };  // Shadow: a character's (not an effect)
+// Shadow: a character's (not an effect); 0.37: Skill - any other effect the game shows (skills, items, level ups).
+enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow, Skill };
 // The level 99 aura: 200, 201 and 202 - its ring (effect\ring_blue.tga), bubbles (effect\pikapika2.bmp) and circle
 // (effect\freezing_circle.bmp) - and 397, 398 and 362, those of the transcendent classes (362: effect\whitelight.tga).
 // The game shows the circles alone unless /aura is on (0x772CE4, 0 at start, not kept): it reads that when it makes

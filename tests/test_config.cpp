@@ -442,6 +442,18 @@ TEST(config_effects_heat) {
     CHECK(parseConfig("[effects]\nheat_strength = 300\n").effects == d);
 }
 
+TEST(config_effects_skills_soft) {
+    // 0.37: the skills a little softer - on unless turned off, 0-100 % of the game's brightness.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.skillsSoft);
+    CHECK_EQ(d.skillBrightness, 80);
+    const EffectSettings e = parseConfig("[effects]\nskills_soft = 0\nskill_brightness = 50\n").effects;
+    CHECK(!e.skillsSoft);
+    CHECK_EQ(e.skillBrightness, 50);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nskill_brightness = 101\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

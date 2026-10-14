@@ -24,7 +24,9 @@ struct Tl2 {  // FVF 0x2C4
 TEST(effect_exe_knows_the_level_99_aura) {
     // 0.27: the ring, the bubbles and the circle, and the transcendent classes' ones.
     for (int id : {200, 201, 202, 362, 397, 398}) CHECK(effect_exe::kindOf(id) == Kind::Aura);
-    for (int id : {0, 47, 199, 203, 361, 363, 396, 399, 629, -1}) CHECK(effect_exe::kindOf(id) == Kind::None);
+    // 0.37: the rest are skills and the like - but the maps' own (torches, smoke, bubbles, bats...) and nothing.
+    for (int id : {47, 44, 109, 353, 359, 557, -1, 0}) CHECK(effect_exe::kindOf(id) == Kind::None);
+    for (int id : {89, 199, 203, 361, 363, 396, 399, 629}) CHECK(effect_exe::kindOf(id) == Kind::Skill);
 }
 
 TEST(effect_exe_softens_the_colour_and_alpha_of_a_draw) {
@@ -74,7 +76,7 @@ TEST(effect_exe_knows_fireflies_and_the_sort_functions_entry) {
     CHECK(effect_exe::kindOf(45) == Kind::Firefly);
     CHECK(effect_exe::kindOf(44) == Kind::None);
     for (int id : {307, 322, 323, 324}) CHECK(effect_exe::kindOf(id) == Kind::Ray);  // 0.30: the forest's light
-    CHECK(effect_exe::kindOf(719) == Kind::None);  // forestlight5: the game does not show it
+    CHECK(effect_exe::kindOf(719) == Kind::None);  // forestlight5: the game does not show it (ids past 629)
     // The face sort's first instructions (push ebp; mov ebp, esp; sub esp, 0xC): moved whole into the hook's
     // trampoline. Another build's bytes are refused.
     const uint8_t entry[6] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x0C};

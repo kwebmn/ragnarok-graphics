@@ -32,8 +32,25 @@ Kind kindOf(int id) {
     case 397:
     case 398:
         return Kind::Aura;
-    default:
+    // 0.37: the maps' own - torches, smoke, bubbles, pillars of light, the waterfall, the ghost and the bats, falls of
+    // blue light - stay as they are.
+    case 44:
+    case 47:
+    case 109:
+    case 231:
+    case 247:
+    case 259:
+    case 353:
+    case 358:
+    case 359:
+    case 360:
+    case 557:
+    case 558:
+    case 559:
+    case 560:
         return Kind::None;
+    default:
+        return id > 0 && id <= 629 ? Kind::Skill : Kind::None;  // the game shows ids up to 629
     }
 }
 

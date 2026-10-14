@@ -208,13 +208,18 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
     const EffectSettings& fx = c.config.effects;
-    if (fx.aura && fx.auraBrightness < 100 && c.enhanced() && tag.kind == effect_exe::Kind::Aura) {
+    // 0.37: the skills likewise, by their own slider.
+    const bool aura = fx.aura && fx.auraBrightness < 100 && tag.kind == effect_exe::Kind::Aura;
+    const bool skill = fx.skillsSoft && fx.skillBrightness < 100 && tag.kind == effect_exe::Kind::Skill;
+    if ((aura || skill) && c.enhanced()) {
         static bool logged = false;
-        if (!logged) LOG_INFO("effects: a level 99 aura drawn at %d %% of the game's brightness", fx.auraBrightness);
-        logged = true;
+        if (!logged && aura)
+            LOG_INFO("effects: a level 99 aura drawn at %d %% of the game's brightness", fx.auraBrightness);
+        logged = logged || aura;
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         soft_.assign(bytes, bytes + size_t(vertexCount) * FrameRecord::stride(fvf));
-        effect_exe::soften(soft_.data(), vertexCount, FrameRecord::stride(fvf), fx.auraBrightness);
+        effect_exe::soften(soft_.data(), vertexCount, FrameRecord::stride(fvf),
+                           aura ? fx.auraBrightness : fx.skillBrightness);
         vertices = soft_.data();
     }
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);

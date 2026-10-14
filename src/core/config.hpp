@@ -76,6 +76,9 @@ struct EffectSettings {
     bool fireLight = true;
     int fireLightStrength = 100;  // %, 0-200
     bool skillColours = true;  // 0.36: the other skills too, each in its own colour (ice blue, lightning white...)
+    // 0.37: the skills a little softer - their pictures' colour and alpha, as the aura's. On by default.
+    bool skillsSoft = true;
+    int skillBrightness = 80;  // %, 0-100 of the game's
     // 0.27: the level 99 aura - its ring, bubbles and circle - softer than the game draws it. On by default.
     bool aura = true;
     int auraBrightness = 50;  // %, 0-100 of the game's

@@ -269,6 +269,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-100 %%: how bright the aura is, of what the game draws
     >>"uaro-graphics.ini" echo aura_brightness = 50
 )
+rem 0.37: softer skills, on.
+findstr /i /l /c:"skill_brightness" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = skills and the other effects of the game shine a little softer
+    >>"uaro-graphics.ini" echo skills_soft = 1
+    >>"uaro-graphics.ini" echo ; 0-100 %%: how bright, of what the game draws
+    >>"uaro-graphics.ini" echo skill_brightness = 80
+)
 rem 0.28: the maps' fireflies drawn anew, on.
 findstr /i /l /c:"fireflies_brightness" "uaro-graphics.ini" >nul 2>&1
 if errorlevel 1 (

@@ -24,6 +24,7 @@ using ShadowFn = void(__attribute__((thiscall)) *)(uint32_t actor, uint32_t matr
 uintptr_t g_render = 0;  // the Render the vtable held
 uintptr_t g_sort = 0;    // 0.28: the face sort's first instructions, then a jump to the rest of it
 uintptr_t g_shadow = 0;  // 0.32: the characters' shadow's, likewise
+uintptr_t g_effect = 0;  // 0.37: the Render the effects' vtable held
 // The game's thread renders its primitives, which sort their faces then and there: what the primitive being rendered
 // is of, while it renders.
 Tag g_current;
@@ -42,6 +43,15 @@ void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
     g_current = tag;
     reinterpret_cast<RenderFn>(g_render)(prim, matrix);
     g_current = Tag{};
+}
+
+// 0.37: while an effect renders its own animation (an STR: most of the big skills), its faces are its.
+void __attribute__((thiscall)) effectRender(uint32_t effect, void* matrix) {
+    const Tag before = g_current;
+    g_current = Tag{effect_exe::kindOf(*reinterpret_cast<const int*>(uintptr_t(effect) + effect_exe::kEffectId)),
+                    uint8_t((effect >> 4) * 2654435761u >> 24)};
+    reinterpret_cast<RenderFn>(g_effect)(effect, matrix);
+    g_current = before;
 }
 
 void __attribute__((thiscall)) sortFace(uint32_t renderer, uint32_t face, uint32_t flags) {
@@ -126,6 +136,17 @@ bool installEffectHook() {
     DWORD unused = 0;
     VirtualProtect(slot, sizeof now, old, &unused);
     done = 1;
+    // 0.37: the effects' own animations (the big skills' STR); without it only their primitives are known.
+    auto* own = reinterpret_cast<uintptr_t*>(uintptr_t(effect_exe::kEffectRenderSlot));
+    uintptr_t held = 0;
+    if (ReadProcessMemory(GetCurrentProcess(), own, &held, sizeof held, &got) && got == sizeof held &&
+        held == effect_exe::kEffectRender && VirtualProtect(own, sizeof held, PAGE_EXECUTE_READWRITE, &old)) {
+        g_effect = held;
+        *own = reinterpret_cast<uintptr_t>(&effectRender);
+        VirtualProtect(own, sizeof held, old, &unused);
+    } else {
+        LOG_INFO("effects: the effects' own animations are not known - the skills' primitives alone are");
+    }
     // 0.32: the characters' shadows (their own faces then); without it they stay the game's round ones.
     if (!hookEntry(effect_exe::kActorShadow, &effect_exe::isShadowEntry, reinterpret_cast<const void*>(&actorShadow),
                    g_shadow))

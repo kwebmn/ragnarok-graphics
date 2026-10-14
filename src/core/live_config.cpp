@@ -100,6 +100,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("fire_light", flag(re.fireLight), flag(fe.fireLight)));
     if (fe.skillColours != re.skillColours)
         u.applied.push_back(change("skill_colours", flag(re.skillColours), flag(fe.skillColours)));
+    if (fe.skillsSoft != re.skillsSoft)
+        u.applied.push_back(change("skills_soft", flag(re.skillsSoft), flag(fe.skillsSoft)));
     if (fe.aura != re.aura) u.applied.push_back(change("aura", flag(re.aura), flag(fe.aura)));
     if (fe.fireflies != re.fireflies)
         u.applied.push_back(change("fireflies", flag(re.fireflies), flag(fe.fireflies)));
@@ -130,6 +132,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         {"lamps_light", {re.lampsLight, fe.lampsLight}},
         {"fire_light_strength", {re.fireLightStrength, fe.fireLightStrength}},
         {"aura_brightness", {re.auraBrightness, fe.auraBrightness}},
+        {"skill_brightness", {re.skillBrightness, fe.skillBrightness}},
         {"fireflies_brightness", {re.firefliesBrightness, fe.firefliesBrightness}},
         {"map_glows_brightness", {re.mapGlowsBrightness, fe.mapGlowsBrightness}},
         {"rays_brightness", {re.raysBrightness, fe.raysBrightness}},
