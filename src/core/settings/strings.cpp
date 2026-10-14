@@ -480,6 +480,17 @@ const Entry kTexts[] = {
      "Сколько зерна текстур сглаживает нейросеть: 0 — оставляет всё (песок и трава чёткие), 100 — гладкие, будто "
      "нарисованные. Стены и пол почти одинаковы при любом значении. Текстуры, сделанные с другим значением, "
      "делаются заново."},
+    {"RTX Remix (experiment)", "RTX Remix (експеримент)", "RTX Remix (эксперимент)"},
+    {"Draws through Direct3D 9 for NVIDIA RTX Remix: path tracing, and DLSS 5 once NVIDIA adds it to Remix "
+     "(announced for 23 October 2026). Needs RTX Remix's d3d9.dll and .trex folder next to uaRO.exe and rtx.conf "
+     "from uaro-graphics\\remix copied there; Alt+X opens Remix's menu. Without them the game draws with "
+     "Direct3D 12 as usual.",
+     "Малює через Direct3D 9 для NVIDIA RTX Remix: трасування шляхів, а DLSS 5 — коли NVIDIA додасть його в Remix "
+     "(обіцяно 23 жовтня 2026). Потрібні d3d9.dll і тека .trex з RTX Remix поруч з uaRO.exe і туди ж rtx.conf з "
+     "uaro-graphics\\remix; Alt+X відкриває меню Remix. Без них гра малює через Direct3D 12, як завжди.",
+     "Рисует через Direct3D 9 для NVIDIA RTX Remix: трассировка путей, а DLSS 5 — когда NVIDIA добавит его в Remix "
+     "(обещано 23 октября 2026). Нужны d3d9.dll и папка .trex из RTX Remix рядом с uaRO.exe и туда же rtx.conf "
+     "из uaro-graphics\\remix; Alt+X открывает меню Remix. Без них игра рисует через Direct3D 12, как обычно."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
