@@ -1016,19 +1016,27 @@ float4 heat_ps(PresentOut i) : SV_Target {
     float2 p = i.pos.xy;
     float heat = 0.0;
     int count = int(footprint);
+    float2 swirl = float2(0.0, 0.0);
+    float t = sharpen;
     [loop] for (int k = 0; k < count; ++k) {
         float4 s = tex1.Load(int3(k, 0, 0));
         float2 d = p - s.xy;
+        if (s.w < 0.0) {  // 0.38: a portal - the air turns about it, faster near its middle
+            float r = length(d) / max(s.z, 1.0);
+            float f = saturate(1.0 - r);
+            float turn = -s.w * f * f * (0.5 + 0.5 * sin(t * 2.0 + r * 9.0));
+            swirl += float2(-d.y, d.x) / max(length(d), 1.0) * turn * 6.0 * scale;
+            continue;
+        }
         d.y *= d.y > 0.0 ? 2.0 : 0.6;  // further above than below
         float f = saturate(1.0 - dot(d, d) / max(s.z * s.z, 1.0));
         heat += s.w * f * f;
     }
     if (twinX > 0.0) heat += twinX * smoothstep(250.0, 900.0, viewDepth(sceneDepth.Load(int3(int2(p), 0))));
-    if (heat < 0.002) discard;
-    float t = sharpen;
+    if (heat < 0.002 && dot(swirl, swirl) < 0.01) discard;
     float2 q = p / scale * 0.06;
     float2 n = float2(fbm4(q + float2(0.0, t * 1.4)), fbm4(q * 1.3 + float2(4.1, t * 1.7))) - 0.5;
-    float2 aside = n * saturate(heat) * 4.0 * scale;
+    float2 aside = n * saturate(heat) * 4.0 * scale + swirl;
     return float4(sceneColor.SampleLevel(samp0, (p + aside) / uiPixels.xy, 0).rgb, 1.0);
 }
 

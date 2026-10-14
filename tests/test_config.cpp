@@ -454,6 +454,18 @@ TEST(config_effects_skills_soft) {
     CHECK(parseConfig("[effects]\nskill_brightness = 101\n").effects == d);
 }
 
+TEST(config_effects_portals) {
+    // 0.38: the portals glow around and the air turns in them - on unless turned off, 0-200 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.portals);
+    CHECK_EQ(d.portalsStrength, 100);
+    const EffectSettings e = parseConfig("[effects]\nportals = 0\nportals_strength = 30\n").effects;
+    CHECK(!e.portals);
+    CHECK_EQ(e.portalsStrength, 30);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nportals_strength = 250\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

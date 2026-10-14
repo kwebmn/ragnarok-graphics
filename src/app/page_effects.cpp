@@ -50,6 +50,7 @@ const Effect kEffects[] = {
     {"effects.map_glows", {}, {"effects.map_glows_brightness"}, {}, true},
     {"effects.rays", {}, {"effects.rays_brightness"}, {}, true},
     {"effects.lava", {}, {"effects.lava_brightness"}, {}, true},
+    {"effects.portals", {}, {"effects.portals_strength"}, {}, true},
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 

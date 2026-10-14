@@ -113,6 +113,9 @@ struct EffectSettings {
     // desert. On by default.
     bool heat = true;
     int heatStrength = 100;  // %, 0-200
+    // 0.38: the portals glow around in blue and the air turns in them. On by default.
+    bool portals = true;
+    int portalsStrength = 100;  // %, 0-200
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

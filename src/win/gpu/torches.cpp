@@ -107,6 +107,37 @@ void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, float am
     fireSparks.push_back(s);
 }
 
+// 0.38: a portal's draw (draw.cpp): its middle in the view and on the screen, gathered by place for its glow and swirl.
+void Renderer::Impl::notePortal(const FrameRecord& rec, const DrawCmd& d) {
+    if (portalSparks.size() >= 256) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const uint32_t n = std::min<uint32_t>(d.vertexCount, 64);
+    if (n == 0 || d.vertexOffset + size_t(n) * stride > v.size()) return;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, rhw = 0.0f;
+    for (uint32_t i = 0; i < n; ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, v.data() + d.vertexOffset + size_t(i) * stride, sizeof xyzw);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3];
+    }
+    rhw /= float(n);
+    if (rhw <= 0.0f) return;
+    FireSpark s{};
+    s.gameX = (x0 + x1) * 0.5f;
+    s.gameY = (y0 + y1) * 0.5f;
+    const float vz = 1.0f / rhw;
+    s.view[0] = (s.gameX - p.cx) * vz / p.f0;
+    s.view[1] = (s.gameY - p.cy) * vz / p.f1;
+    s.view[2] = vz;
+    s.strength = std::max(x1 - x0, y1 - y0);  // its size on the screen, game pixels
+    portalSparks.push_back(s);
+}
+
 // 0.31: a cell of lava (draw.cpp): its middle in the view, to light around it.
 void Renderer::Impl::noteLava(const FrameRecord& rec, const DrawCmd& d) {
     if (lavaCells.size() >= 4096) return;
@@ -543,7 +574,7 @@ bool Renderer::Impl::applyTorches() {
                 if (vz <= proj.nearZ) continue;
                 const float gx = c.view[0] / c.w / vz * proj.f0 + proj.cx;
                 const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
-                heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 70.0f * hk, 0.6f * std::min(c.w, 1.0f)});
+                heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 70.0f * hk, 0.6f * std::min(c.w, 1.0f) * heatUser()});
             }
         }
         for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
@@ -599,11 +630,45 @@ bool Renderer::Impl::applyTorches() {
                 const float hk = float(upscale ? worldScale : scale);
                 const float gx = q.view[0] / q.view[2] * proj.f0 + proj.cx;
                 const float gy = q.view[1] / q.view[2] * proj.f1 + proj.cy;
-                heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 110.0f * hk, 0.45f});
+                heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 110.0f * hk, 0.45f * heatUser()});
             }
         }
     }
     lavaCells.clear();
+    // 0.38: the portals, gathered by place (cells of 96 game pixels): a soft blue glow about each, and (in the heat
+    // haze's pass) the air turning in it.
+    if (!portalSparks.empty() && portalsWanted()) {
+        struct Gate {
+            float view[3] = {0, 0, 0}, gx = 0, gy = 0, size = 0;
+            int n = 0;
+        };
+        std::unordered_map<int, Gate> gates;
+        for (const FireSpark& s : portalSparks) {
+            Gate& g = gates[int(std::floor(s.gameX / 96.0f)) * 4096 + int(std::floor(s.gameY / 96.0f))];
+            for (int k = 0; k < 3; ++k) g.view[k] += s.view[k];
+            g.gx += s.gameX;
+            g.gy += s.gameY;
+            g.size = std::max(g.size, s.strength);
+            ++g.n;
+        }
+        const float user = float(std::clamp(effects.portalsStrength, 0, 200)) / 100.0f;
+        const float hk = float(upscale ? worldScale : scale);
+        int lit = 0;
+        for (const auto& kv : gates) {
+            const Gate& g = kv.second;
+            const float n = float(g.n);
+            if (lit++ < 8 && lights.size() < kMaxLights) {
+                LightItem l{{g.view[0] / n, g.view[1] / n - 4.0f, g.view[2] / n}, 0.35f * user, {0.45f, 0.75f, 1.0f},
+                            30.0f};
+                lights.push_back(l);
+            }
+            if (heatPs) {
+                const float r = std::clamp(g.size * 0.6f, 30.0f, 140.0f) * hk;
+                heatSpots.push_back(HeatSpot{g.gx / n * hk, g.gy / n * hk, r, -0.7f * std::min(user, 1.5f)});
+            }
+        }
+    }
+    portalSparks.clear();
     // 0.29: the maps' hidden lights, the nearest 24.
     std::sort(glowLights.begin(), glowLights.end(),
               [](const LightItem& a, const LightItem& b) { return a.view[2] < b.view[2]; });
@@ -705,7 +770,7 @@ bool Renderer::Impl::applyTorches() {
             const float h = std::hypot(f.upX, f.upY) * k;
             if (h < 2.0f) continue;
             const float hx = (f.baseX + f.upX * 0.9f) * k + 0.5f + jx, hy = (f.baseY + f.upY * 0.9f) * k + 0.5f + jy;
-            heatSpots.push_back(HeatSpot{hx, hy, h * 1.4f, 0.5f * f.alpha});
+            heatSpots.push_back(HeatSpot{hx, hy, h * 1.4f, 0.5f * f.alpha * heatUser()});
         }
     for (size_t i = 0; i < flames.size(); ++i) {
         const torch::Flame& f = flames[i];

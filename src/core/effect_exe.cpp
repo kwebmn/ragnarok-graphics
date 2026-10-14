@@ -32,6 +32,18 @@ Kind kindOf(int id) {
     case 397:
     case 398:
         return Kind::Aura;
+    case 35:  // 0.38: readyportal, portal, warpzone; portal2-5, warpzone2 (the warp NPC's), big_portal, 2
+    case 36:
+    case 61:
+    case 316:
+    case 317:
+    case 321:
+    case 341:
+    case 389:
+    case 402:
+    case 561:
+    case 562:
+        return Kind::Portal;
     // 0.37: the maps' own - torches, smoke, bubbles, pillars of light, the waterfall, the ghost and the bats, falls of
     // blue light - stay as they are.
     case 44:

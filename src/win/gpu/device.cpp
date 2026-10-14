@@ -1307,7 +1307,8 @@ void Renderer::setEffects(const EffectSettings& e) {
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "
              "the others %s; "
              "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; "
-             "characters' shadows %s, %d%%; clouds %s, %d%%; haze %s, %d%%; heat haze %s, %d%%; shadows %s, "
+             "characters' shadows %s, %d%%; clouds %s, %d%%; haze %s, %d%%; heat haze %s, %d%%; portals %s, %d%%; "
+             "shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
@@ -1318,7 +1319,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.rays ? "on" : "off",
              e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness, e.actorShadows ? "on" : "off",
              e.actorShadowsStrength, e.clouds ? "on" : "off", e.cloudsStrength, e.haze ? "on" : "off", e.hazeStrength,
-             e.heat ? "on" : "off", e.heatStrength,
+             e.heat ? "on" : "off", e.heatStrength, e.portals ? "on" : "off", e.portalsStrength,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,

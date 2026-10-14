@@ -136,6 +136,10 @@ const std::vector<IniSetting>& iniSettings() {
          ""},
         {"effects", "heat_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxHeatStrength,
          Text::FxHeatStrengthHint, " %"},
+        {"effects", "portals", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxPortals,
+         Text::FxPortalsHint, ""},
+        {"effects", "portals_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxPortalsStrength,
+         Text::FxPortalsStrengthHint, " %"},
         {"effects", "grade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrade, Text::FxGradeHint,
          ""},
         {"effects", "grade_saturation", Page::Effects, Control::Slider, 0, 200, 5, {}, {}, Text::FxGradeSaturation,
@@ -274,6 +278,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.haze_strength") return std::to_string(c.effects.hazeStrength);
     if (k == "effects.heat") return c.effects.heat ? "1" : "0";
     if (k == "effects.heat_strength") return std::to_string(c.effects.heatStrength);
+    if (k == "effects.portals") return c.effects.portals ? "1" : "0";
+    if (k == "effects.portals_strength") return std::to_string(c.effects.portalsStrength);
     if (k == "effects.lamps") return c.effects.lamps ? "1" : "0";
     if (k == "effects.lamps_light") return std::to_string(c.effects.lampsLight);
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";

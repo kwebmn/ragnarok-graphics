@@ -112,6 +112,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool adds = !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE;
     if (adds && !glowActive && glowWanted()) startGlow();
     // 0.26: the fire of skills (a fire-coloured picture added on) lights around it once the world is drawn.
+    // 0.38: a portal's draw: its middle, for its glow and its swirl once the world is drawn.
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted() && !torchDone) notePortal(rec, d);
     // 0.36: the other skills light too, in their pictures' colours - not the aura, the maps' objects (their own).
     if (adds && fireWanted() && !torchDone && d.texture[0]) {
         const auto ft = textures.find(d.texture[0]);

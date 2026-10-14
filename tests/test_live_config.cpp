@@ -247,6 +247,14 @@ TEST(live_config_skills_soft_apply_now) {
     CHECK(u.applied[1] == "skill_brightness 80 -> 60");
 }
 
+TEST(live_config_portals_apply_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nportals = 0\nportals_strength = 70\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "portals 1 -> 0");
+    CHECK(u.applied[1] == "portals_strength 100 -> 70");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

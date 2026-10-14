@@ -949,6 +949,13 @@ const Entry kTexts[] = {
     {"How bright the skills are, of what the game draws: 100 % as in the game.",
      "Наскільки яскраві вміння від того, як їх малює гра: 100 % — як у грі.",
      "Насколько ярки умения от того, как их рисует игра: 100 % — как в игре."},
+    {"Living portals", "Живі портали", "Живые порталы"},
+    {"The warps and the portals of the Warp Portal skill glow around in soft blue, and the air turns in them.",
+     "Варпи й портали вміння Warp Portal м'яко світять довкола блакитним, а повітря в них закручується.",
+     "Варпы и порталы умения Warp Portal мягко светят вокруг голубым, а воздух в них закручивается."},
+    {"Portals' strength", "Сила порталів", "Сила порталов"},
+    {"How bright their glow and how strong the swirl is.", "Наскільки яскраве світіння та сильний вир.",
+     "Насколько ярко свечение и силён вихрь."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

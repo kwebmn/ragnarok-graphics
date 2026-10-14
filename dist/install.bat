@@ -319,6 +319,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how brightly the lava glows and lights around it
     >>"uaro-graphics.ini" echo lava_brightness = 100
 )
+rem 0.38: living portals, on.
+findstr /i /l /c:"portals_strength" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = the warps and the skill's portals glow around in soft blue, the air turns in them
+    >>"uaro-graphics.ini" echo portals = 1
+    >>"uaro-graphics.ini" echo ; 0-200 %%: how bright the glow, how strong the swirl
+    >>"uaro-graphics.ini" echo portals_strength = 100
+)
 rem 0.32: the characters' shadows from their sprites, on.
 findstr /i /l /c:"actor_shadows_strength" "uaro-graphics.ini" >nul 2>&1
 if errorlevel 1 (

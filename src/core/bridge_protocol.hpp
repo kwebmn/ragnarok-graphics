@@ -8,7 +8,7 @@ namespace uagfx::bridge {
 // process (DLSS and frame generation exist only for 64-bit programs). They share one block of memory: BlockHeader,
 // the ring from the driver to the renderer, then the ring back (core/bridge_ring.hpp).
 constexpr uint32_t kMagic = 0x52423455;  // "U4BR"
-constexpr uint32_t kVersion = 25;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
+constexpr uint32_t kVersion = 26;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
                                   // sprite a cell's frame is of (0.16); 5: effects (0.18); 6: the water (0.19);
                                   // 7: soft shadows, the glow's light (0.20); 8: colours (0.21); 9: depth of
                                   // field (0.22); 10: smooth map light (0.22.6); 11: torches (0.23); 12: the
@@ -17,7 +17,8 @@ constexpr uint32_t kVersion = 25;  // 2: uploads carry the sprite cache's cells 
                                   // (0.26); 17: the game's effect a draw is of, the fireflies (0.28); 18: the
                                   // maps' hidden lights (0.29); 19: the forest's beams of light (0.30); 20:
                                   // lava (0.31); 21: the characters' shadows (0.32); 22: clouds (0.33); 23: haze
-                                  // and fog (0.34); 24: heat haze (0.35); 25: the skills' colours (0.36)
+                                  // and fog (0.34); 24: heat haze (0.35); 25: the skills' colours (0.36); 26:
+                                  // the portals (0.38)
 
 struct alignas(16) BlockHeader {
     uint32_t magic;

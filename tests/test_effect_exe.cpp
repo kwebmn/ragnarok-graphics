@@ -77,6 +77,9 @@ TEST(effect_exe_knows_fireflies_and_the_sort_functions_entry) {
     CHECK(effect_exe::kindOf(44) == Kind::None);
     for (int id : {307, 322, 323, 324}) CHECK(effect_exe::kindOf(id) == Kind::Ray);  // 0.30: the forest's light
     CHECK(effect_exe::kindOf(719) == Kind::None);  // forestlight5: the game does not show it (ids past 629)
+    // 0.38: the portals - the warp NPC's (321, warpzone2), the skill's (35, 36) and the like.
+    for (int id : {321, 61, 35, 36, 316, 317, 341, 389, 402, 561, 562})
+        CHECK(effect_exe::kindOf(id) == Kind::Portal);
     // The face sort's first instructions (push ebp; mov ebp, esp; sub esp, 0xC): moved whole into the hook's
     // trampoline. Another build's bytes are refused.
     const uint8_t entry[6] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x0C};

@@ -155,7 +155,8 @@ struct RayPart {
     float gameX, gameY;
 };
 
-// 0.35: a spot of heat this frame (a flame, burning skills, lava): its middle and radius in target pixels, how much.
+// 0.35: a spot of heat this frame (a flame, burning skills, lava): its middle and radius in target pixels, how much
+// (the player's setting in it). 0.38: a portal's swirl - strength below 0: the air turns about it instead of rising.
 struct HeatSpot {
     float x, y, radius, strength;
 };
@@ -439,6 +440,7 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES heatDataState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT heatDataSrv = 0;
     std::vector<HeatSpot> heatSpots;
+    std::vector<FireSpark> portalSparks;  // 0.38: this frame's portals' draws (their middles), gathered by place
     bool heatDone = false;
     bool heatLogged = false;
     bool mapDesert = false;  // core/outdoors.hpp
@@ -654,7 +656,12 @@ struct Renderer::Impl {
     bool applyHaze();  // once a frame, the world drawn and lit; false: lost
     ID3D12PipelineState* hazePipeline(UINT samples);
     bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
-    bool heatDue() const { return heatWanted() && groundDrawn && !heatDone && (!heatSpots.empty() || mapDesert); }
+    bool heatDue() const {
+        return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));
+    }
+    bool portalsWanted() const { return effects.portals && effects.portalsStrength > 0; }  // 0.38
+    float heatUser() const { return float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f; }
+    void notePortal(const FrameRecord& rec, const DrawCmd& d);
     bool applyHeat();  // once a frame, after the torches' pass and the haze; false: lost
     ID3D12PipelineState* heatPipeline(UINT samples);
     void noteRay(const FrameRecord& rec, const DrawCmd& d);
@@ -663,7 +670,7 @@ struct Renderer::Impl {
     bool torchDue() const {
         return !torchDone && (torchWanted() || lampsWanted() || fireflyWanted() || mapGlowsWanted() ||
                               !torchFlames.empty() || !fireSparks.empty() || !rayParts.empty() ||
-                              !lavaCells.empty());
+                              !lavaCells.empty() || !portalSparks.empty());
     }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     bool torchReady();     // the shaders, pipelines and the picture's copies are there
@@ -682,6 +689,7 @@ struct Renderer::Impl {
         hazeDone = false;
         heatDone = false;
         heatSpots.clear();
+        portalSparks.clear();
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

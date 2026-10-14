@@ -36,8 +36,8 @@ bool Renderer::Impl::applyHeat() {
     std::vector<HeatSpot> spots;
     spots.swap(heatSpots);
     const float user = float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f;
-    const float desertAmount = mapDesert && viewToWorldValid ? 0.35f * user : 0.0f;
-    if ((spots.empty() && desertAmount <= 0.0f) || user <= 0.0f) return true;
+    const float desertAmount = heatWanted() && mapDesert && viewToWorldValid ? 0.35f * user : 0.0f;
+    if (spots.empty() && desertAmount <= 0.0f) return true;
     if (!ensureScene("heat haze")) return true;
     ID3D12PipelineState* pso = heatPipeline(upscale ? 1 : samples);
     if (!pso) return true;
@@ -56,7 +56,8 @@ bool Renderer::Impl::applyHeat() {
     }
     if (!copySceneColor() || !copySceneDepth()) return false;
     const int w = sceneWidth, h = sceneHeight;
-    std::sort(spots.begin(), spots.end(), [](const HeatSpot& a, const HeatSpot& b) { return a.strength > b.strength; });
+    std::sort(spots.begin(), spots.end(),
+              [](const HeatSpot& a, const HeatSpot& b) { return std::fabs(a.strength) > std::fabs(b.strength); });
     if (spots.size() > kMaxHeat) spots.resize(kMaxHeat);
     float data[kMaxHeat][4] = {};
     float x0 = float(w), y0 = float(h), x1 = 0.0f, y1 = 0.0f;
@@ -65,7 +66,7 @@ bool Renderer::Impl::applyHeat() {
         data[i][0] = s.x;
         data[i][1] = s.y;
         data[i][2] = s.radius;
-        data[i][3] = std::min(1.5f, s.strength * user);
+        data[i][3] = std::clamp(s.strength, -1.5f, 1.5f);  // the player's setting is in it; below 0 a swirl
         x0 = std::min(x0, s.x - s.radius * 1.2f);
         x1 = std::max(x1, s.x + s.radius * 1.2f);
         y0 = std::min(y0, s.y - s.radius * 2.0f);  // the hot air rises
