@@ -318,6 +318,7 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES dofFocusState[2] = {};
     UINT dofFocusSrv[2] = {};
     int dofFocusNow = 0;
+    LARGE_INTEGER dofFocusTime{};  // when the focus last moved (0.22.4: by time, not by frames)
     ID3DBlob* dofFocusPs = nullptr;
     ID3D12PipelineState* dofFocusPipeline = nullptr;
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water

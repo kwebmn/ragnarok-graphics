@@ -3,6 +3,7 @@
 #include <d3d12.h>
 
 #include <algorithm>
+#include <cmath>
 
 #include "core/d3d7.hpp"
 #include "core/game_camera.hpp"
@@ -57,7 +58,8 @@ bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
     list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
-    if (scene) list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
+    if (scene)
+        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
     list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     list->DrawInstanced(3, 1, 0, 0);
     boundPipeline = nullptr;  // the next draws bind everything again
@@ -320,7 +322,15 @@ bool Renderer::Impl::applyDof() {
     c.uiPixels[3] = float(qh);
     c.footprint = 3.0f + 37.0f * float(std::clamp(effects.dofRange, 0, 100)) / 100.0f;  // world units of depth
     c.sharpen = float(std::clamp(effects.dofStrength, 0, 100)) / 100.0f;
-    // The focus: from the last frame's, into the other texel.
+    // The focus: from the last frame's, into the other texel - a share of the way that follows the time since then
+    // (0.2 s to most of it), the first one or after a pause all of it.
+    LARGE_INTEGER now, freq;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&now);
+    const double dt =
+        dofFocusTime.QuadPart ? double(now.QuadPart - dofFocusTime.QuadPart) / double(freq.QuadPart) : 1.0;
+    dofFocusTime = now;
+    c.twin[3] = dt > 0.5 ? 1.0f : float(1.0 - std::exp(-dt / 0.2));
     const int was = dofFocusNow;
     dofFocusNow = 1 - dofFocusNow;
     transition(dofFocus[was], dofFocusState[was], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

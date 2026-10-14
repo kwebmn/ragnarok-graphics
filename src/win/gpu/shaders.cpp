@@ -642,16 +642,21 @@ float4 dof_blur_ps(PresentOut i) : SV_Target {  // nine taps along one direction
 
 // 0.22.3, the focus (one texel): the median of the depths around the middle of the screen - the character there
 // covers the middle itself in some frames of its walk and not in others, the ground around it holds still - and
-// carried over from the last frame's (t0) a little each frame; a jump (a warp, another map) at once.
+// carried over from the last frame's (t0) by twinH, this frame's share of the way (0.22.4: by the time since it,
+// not by frames). 0.22.4: nothing drawn (the void past a cliff, the sky) counts for nothing - with too few samples
+// left the focus stays - and only a jump of a warp or another map is taken at once.
 float dof_focus_ps(PresentOut i) : SV_Target {
     int2 mid = int2(uiPixels.xy * 0.5);
     float rad = 26.0 * scale;
     float z[13];
-    z[0] = viewDepth(sceneDepth.Load(int3(mid, 0)));
-    [unroll] for (int k = 0; k < 12; ++k) {
+    float valid = 0.0;
+    [unroll] for (int k = 0; k < 13; ++k) {
         float a = 6.2831853 * float(k) / 12.0;
-        int2 q = clamp(mid + int2(float2(cos(a), sin(a)) * rad), int2(0, 0), int2(uiPixels.xy) - 1);
-        z[k + 1] = viewDepth(sceneDepth.Load(int3(q, 0)));
+        int2 q = k == 0 ? mid : clamp(mid + int2(float2(cos(a), sin(a)) * rad), int2(0, 0), int2(uiPixels.xy) - 1);
+        float d = sceneDepth.Load(int3(q, 0));
+        bool drawn = d < 0.99999;
+        z[k] = drawn ? viewDepth(d) : 1e6;  // sorted past every drawn one
+        valid += drawn ? 1.0 : 0.0;
     }
     [unroll] for (int n = 0; n < 12; ++n)  // sorted (bubbles; every index known when compiled)
         [unroll] for (int m = 0; m < 12 - n; ++m) {
@@ -659,9 +664,10 @@ float dof_focus_ps(PresentOut i) : SV_Target {
             z[m + 1] = max(z[m], z[m + 1]);
             z[m] = lo;
         }
-    float now = z[6];
     float before = tex0.Load(int3(0, 0, 0)).r;
-    return before <= 0.0 || abs(now - before) > 80.0 ? now : lerp(before, now, 0.12);
+    if (valid < 4.0) return before;  // too little of the ground in view: as it was (0 until there is a focus)
+    float now = z[int(valid) / 2];
+    return before <= 0.0 || abs(now - before) > 300.0 ? now : lerp(before, now, twinH);
 }
 
 float4 dof_apply_ps(PresentOut i) : SV_Target {
@@ -670,7 +676,7 @@ float4 dof_apply_ps(PresentOut i) : SV_Target {
     float3 soft = tex0.SampleLevel(samp0, i.pos.xy * 0.25 / uiPixels.zw, 0).rgb;
     float focus = tex1.Load(int3(0, 0, 0)).r;  // dof_focus_ps
     float z = viewDepth(sceneDepth.Load(int3(p, 0)));
-    float blur = smoothstep(footprint, footprint * 3.0, abs(z - focus)) * sharpen;
+    float blur = focus > 0.0 ? smoothstep(footprint, footprint * 3.0, abs(z - focus)) * sharpen : 0.0;  // none yet
     return float4(lerp(sharp, soft, blur), 1.0);
 }
 
