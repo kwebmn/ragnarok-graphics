@@ -62,6 +62,7 @@ const std::vector<IniSetting>& iniSettings() {
          ""},
         {"ai", "effects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiEffects, Text::AiEffectsHint,
          ""},
+        {"ai", "icons", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiIcons, Text::AiIconsHint, ""},
         {"ai", "model", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime"},
          {Text::AiModelGeneral, Text::AiModelAnime}, Text::AiModelWorld, Text::AiModelWorldHint, ""},
         {"ai", "sprite_model", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime"},
@@ -115,6 +116,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.objects") return a.objects ? "1" : "0";
     if (k == "ai.sprites") return a.sprites ? "1" : "0";
     if (k == "ai.effects") return a.effects ? "1" : "0";
+    if (k == "ai.icons") return a.icons ? "1" : "0";
     if (k == "ai.model") return a.model;
     if (k == "ai.sprite_model") return a.spriteModel;
     if (k == "ai.denoise") return std::to_string(a.denoise);

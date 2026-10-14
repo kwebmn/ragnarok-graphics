@@ -74,6 +74,7 @@ enum class Text : uint16_t {
     AiCacheColSprites, AiCacheColEffects, AiCacheColTotal, AiCacheColSize, AiCacheAllMaps, AiCacheNoMap,
     AiCacheDeleteKinds, AiCacheDelete, AiCacheDeleteOld, AiCacheDeleteAll, AiCacheOldNote, AiCacheRunning,
     AiCacheAskDelete, AiCacheAskAll, AiCacheDeleted, AiCacheDeletedAll, AiCacheNothing, AiCacheError, SizeMb, SizeGb,
+    AiIcons, AiIconsHint, AiCacheColIcons,
     Count
 };
 

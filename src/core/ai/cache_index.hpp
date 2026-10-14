@@ -32,7 +32,7 @@ struct CacheIndex {
 
 struct CacheDeletion {
     std::set<std::string> maps;  // the rows whose pictures go ("" the row of no map), every settings' pictures
-    bool kinds[kKinds] = {true, true, true, true};  // of these kinds; a picture of no kind goes with its row
+    bool kinds[kKinds] = {true, true, true, true, true};  // of these kinds; a picture of no kind goes with its row
     bool outdated = false;       // and every outdated picture
 };
 

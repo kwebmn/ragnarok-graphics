@@ -47,6 +47,8 @@ public:
     void noteWorldUse(uint32_t id, ai::Kind kind);  // drawn in the world as `kind`: its turn comes, if that is on
     void forget(uint32_t id);                       // the game released it
     void setMap(const std::string& map);            // the map the game shows now, "" none
+    // 0.14: an icon of the game's windows (Renderer::requestIcon); made larger, it goes to Impl::iconSink.
+    void noteIcon(uint64_t key, int width, int height, const uint32_t* argb);
     void work();                                    // with the frame's list open, before its present: a slice
     bool shown = true;                              // Pause: the game's own textures
 
@@ -93,6 +95,8 @@ private:
         // whose picture waits in image meanwhile.
         bool alpha = false;
         int phase = 0;  // 0 the colour, 1 the alpha
+        bool icon = false;  // 0.14: an icon of a window - the picture goes back to the driver
+        uint64_t iconKey = 0;
         ID3D12Resource* image = nullptr;
         std::vector<Level> levels;
     };
@@ -107,6 +111,8 @@ private:
         std::string name;
         int width = 0, height = 0;
         UINT pitch = 0;
+        bool icon = false;  // also to the driver, as iconKey
+        uint64_t iconKey = 0;
     };
     struct IoRequest {
         bool write = false;
@@ -147,6 +153,7 @@ private:
     void writeRegion(Texture& t, int level, int x, int y, int w, int h, const std::vector<uint32_t>& argb);
     bool cellCurrent(const Job& job) const;
     bool finishCell(Job& job);
+    bool finishIcon(Job& job);
     void layout(int width, int height, std::vector<Level>& levels, UINT64& bytes) const;
     void dispatchShuffle(const Job& job, ID3D12Resource* image, const Level& level0);
     void dispatchMips(ID3D12Resource* image, const std::vector<Level>& levels);
@@ -216,6 +223,8 @@ private:
 
     uint32_t doneNetwork_ = 0, doneLoaded_ = 0, written_ = 0;
     uint32_t cellsWritten_ = 0, cellsNetwork_ = 0, cellsLoaded_ = 0;  // sprite frames: by the game, by us
+    std::unordered_set<uint64_t> icons_;  // the icons asked for this run
+    uint32_t iconsNetwork_ = 0, iconsLoaded_ = 0;
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run
     ULONGLONG lastLog_ = 0;
 };

@@ -8,7 +8,7 @@ namespace uagfx::bridge {
 // process (DLSS and frame generation exist only for 64-bit programs). They share one block of memory: BlockHeader,
 // the ring from the driver to the renderer, then the ring back (core/bridge_ring.hpp).
 constexpr uint32_t kMagic = 0x52423455;  // "U4BR"
-constexpr uint32_t kVersion = 2;  // 2: uploads carry the sprite cache's cells (0.13)
+constexpr uint32_t kVersion = 3;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14)
 
 struct alignas(16) BlockHeader {
     uint32_t magic;
@@ -41,6 +41,7 @@ enum class Msg : uint32_t {
     Camera,             // u8 valid, 12 f32: the game's view matrix of the frame being drawn (DLSS)
     Quit,
     Map,                // str: the map the game shows, "" none (AI textures note the textures seen on it)
+    IconWanted,         // u64 key, i32 width, height, then width * height ARGB: an icon of a window for the network
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text
@@ -50,6 +51,7 @@ enum class Msg : uint32_t {
     NeedSurface,        // the game's window took no swap chain from this process: a composition surface instead
     Lost,               // str why: the renderer cannot draw any more
     UpscalerReady,      // DLSS came up after the Hello (it starts in the background)
+    IconDone,           // u64 key, i32 width, height, then width * height ARGB: that icon made larger
 };
 
 }  // namespace uagfx::bridge

@@ -230,3 +230,31 @@ TEST(twin_picture_copy_from_leaves_the_game_holes) {
     CHECK_EQ(at(p, 2, 2), 0xFFFF0000u);
     CHECK_EQ(p.sync(parent.data(), Rect{0, 0, 4, 4}), 0);
 }
+
+TEST(twin_picture_paint_puts_a_larger_icon_over_the_twin) {
+    // 0.14, AI icons: a 2x2 game icon at (1,1) of a 4x4 window, twin at K = 2; the AI made it 4 times larger (8x8):
+    // its twin pixels take the picture box-filtered, over what the twin had; the rest of the twin stays.
+    std::vector<uint32_t> dib(16, 0xFF202020);
+    TwinPicture t(dib.data(), 4, 4, 2.0);
+    t.takeChanged();
+    std::vector<uint32_t> icon(64, 0xFFFF0000);  // red
+    for (int y = 4; y < 8; ++y)
+        for (int x = 4; x < 8; ++x) icon[size_t(y * 8 + x)] = 0x00000000;  // its bottom right quarter transparent
+    t.paint(Rect{1, 1, 3, 3}, icon.data(), 8, 8);
+    CHECK_EQ(at(t, 2, 2), 0xFFFF0000u);  // the icon's top left twin pixel: red
+    CHECK_EQ(at(t, 5, 5), 0xFF202020u);  // under its transparent quarter: what was there
+    CHECK_EQ(at(t, 1, 1), 0xFF202020u);  // outside the icon: untouched
+    CHECK_EQ(at(t, 6, 6), 0xFF202020u);
+    // A twin pixel half covered by the transparent quarter blends.
+    std::vector<uint32_t> half(64, 0xFFFF0000);
+    for (int y = 0; y < 8; ++y) half[size_t(y * 8 + 7)] = 0;  // the last column of the picture transparent
+    TwinPicture u(dib.data(), 4, 4, 2.0);
+    u.paint(Rect{1, 1, 3, 3}, half.data(), 8, 8);
+    const uint32_t edge = at(u, 5, 2);  // covers picture columns 6 and 7: half red, half the grey under it
+    CHECK_EQ(edge >> 24, 0xFFu);
+    CHECK(((edge >> 16) & 255) > 0x80 && ((edge >> 16) & 255) < 0xA0);
+    CHECK(t.takeChanged() == (Rect{2, 2, 6, 6}));
+    // Outside the picture: nothing.
+    t.paint(Rect{3, 3, 5, 5}, icon.data(), 8, 8);
+    CHECK(t.takeChanged().empty());
+}

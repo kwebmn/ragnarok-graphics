@@ -416,7 +416,8 @@ double AiTextures::runBand(Job& job, double budget) {
     k.v[6] = size_t(job.conv) < model.prelu.size() ? uint32_t(model.prelu[size_t(job.conv)]) : 0xFFFFFFFFu;
     k.v[7] = uint32_t(job.row);
     k.v[8] = uint32_t(end);
-    k.v[9] = job.cell ? 1u : 0u;  // a sprite cell is a picture of its own: zeros past its edge, not its other side
+    // A sprite cell or an icon is a picture of its own: zeros past its edge, not its other side.
+    k.v[9] = job.cell || job.icon ? 1u : 0u;
     bindCompute();
     m_.list->SetComputeRootShaderResourceView(kAiWeights, net.weights->GetGPUVirtualAddress());
     m_.list->SetPipelineState(conv_);
@@ -532,7 +533,7 @@ ID3D12Resource* AiTextures::makeImage(Job& job, std::vector<Level>& levels) {
 }
 
 void AiTextures::readBack(const Job& job, ID3D12Resource* image, const Level& top) {
-    if (job.loaded || !writable_) return;
+    if (job.loaded || (!writable_ && !job.icon)) return;  // an icon goes to the driver even when no file takes it
     Readback r;  // read once this list has run (finishReadbacks)
     const UINT64 size = UINT64(top.pitch) * UINT64(top.height);
     r.buffer = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, size, D3D12_RESOURCE_STATE_COPY_DEST, false);
@@ -543,8 +544,10 @@ void AiTextures::readBack(const Job& job, ID3D12Resource* image, const Level& to
     r.width = top.width;
     r.height = top.height;
     r.pitch = top.pitch;
+    r.icon = job.icon;
+    r.iconKey = job.iconKey;
     readbacks_.push_back(r);
-    known_.insert(job.name);
+    if (writable_) known_.insert(job.name);
 }
 
 bool AiTextures::finish(Job& job) {
@@ -784,6 +787,39 @@ bool AiTextures::cellCurrent(const Job& job) const {
     return f != a->second.frames.end() && f->second == job.frame && t != m_.textures.end() && t->second.ai;
 }
 
+bool AiTextures::finishIcon(Job& job) {
+    std::vector<Level> levels;
+    ID3D12Resource* image = makeImage(job, levels);
+    if (!image) return false;
+    readBack(job, image, levels[!job.loaded && scale_ == 2 ? 1 : 0]);  // to the driver once this list has run
+    ++iconsNetwork_;
+    return true;
+}
+
+void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* argb) {
+    const int net = netOf_[int(ai::Kind::Icons)];
+    if (!ready_ || net < 0 || width <= 0 || height <= 0 || !icons_.insert(key).second) return;
+    Job j;
+    j.net = net;
+    j.width = width;
+    j.height = height;
+    j.icon = true;
+    j.iconKey = key;
+    j.pixels.assign(argb, argb + size_t(width) * size_t(height));
+    j.alpha = ai::hasTransparency(j.pixels.data(), width, height);
+    const std::string k = ai::keyName(ai::textureKey(j.pixels.data(), width, height));
+    j.name = ai::entryName(nets_[size_t(net)]->folder, k);
+    if (kinds_.emplace(k, ai::Kind::Icons).second) tag(ai::kindTag(ai::Kind::Icons, k));
+    if (known_.count(j.name)) {  // made before: from upscaled.grf
+        IoRequest r;
+        r.name = j.name;
+        r.cell = std::move(j);
+        request(std::move(r));
+    } else {
+        cells_.push_back(std::move(j));  // in turn with the sprite frames
+    }
+}
+
 bool AiTextures::finishCell(Job& job) {
     std::vector<Level> levels;
     ID3D12Resource* image = makeImage(job, levels);
@@ -965,7 +1001,7 @@ bool AiTextures::nextJob() {
     while (!cells_.empty() && (cellTurn_ || queue_.empty())) {
         Job j = std::move(cells_.front());
         cells_.pop_front();
-        if (!cellCurrent(j)) continue;  // the cell has another frame by now
+        if (!j.icon && !cellCurrent(j)) continue;  // the cell has another frame by now
         job_ = std::make_unique<Job>(std::move(j));
         return true;
     }
@@ -993,7 +1029,7 @@ bool AiTextures::nextJob() {
     while (!cells_.empty()) {  // the world's turn, and it had nothing
         Job j = std::move(cells_.front());
         cells_.pop_front();
-        if (!cellCurrent(j)) continue;
+        if (!j.icon && !cellCurrent(j)) continue;
         job_ = std::make_unique<Job>(std::move(j));
         return true;
     }
@@ -1006,6 +1042,16 @@ void AiTextures::takeLoaded() {
     results.swap(ioOut_);
     LeaveCriticalSection(&ioLock_);
     for (IoResult& r : results) {
+        if (r.cell.icon) {  // an icon: straight back to the driver, or the network after all
+            Job j = std::move(r.cell);
+            if (r.ok && r.width == j.width * scale_ && r.height == j.height * scale_ && m_.iconSink) {
+                m_.iconSink(m_.iconContext, j.iconKey, r.width, r.height, r.argb.data());
+                ++iconsLoaded_;
+            } else {
+                cells_.push_back(std::move(j));
+            }
+            continue;
+        }
         if (r.cell.cell) {  // a sprite cache's cell: the picture, or the network after all
             Job j = std::move(r.cell);
             if (!cellCurrent(j)) continue;
@@ -1063,7 +1109,8 @@ void AiTextures::finishReadbacks() {
                             static_cast<const uint8_t*>(mapped) + size_t(y) * r.pitch, size_t(r.width) * 4);
             D3D12_RANGE none{0, 0};
             r.buffer->Unmap(0, &none);
-            request(std::move(w));
+            if (r.icon && m_.iconSink) m_.iconSink(m_.iconContext, r.iconKey, w.width, w.height, w.argb.data());
+            if (writable_) request(std::move(w));
         }
         releaseCom(r.buffer);
         readbacks_.erase(readbacks_.begin() + std::ptrdiff_t(i));
@@ -1091,6 +1138,8 @@ void AiTextures::work() {
             finishing -= texels(j);
             if (j.cell) {
                 finishCell(j);
+            } else if (j.icon) {
+                finishIcon(j);
             } else if (!finish(j)) {
                 const auto it = items_.find(j.id);
                 if (it != items_.end() && it->second.state == Item::Waiting) queue_.push_back(j.id);
@@ -1101,7 +1150,7 @@ void AiTextures::work() {
         if (j.conv < 0) {
             if (!ensureBuffers(j.width, j.height) || !uploadInput(j)) {
                 LOG_ERROR("AI textures: no GPU memory for a %dx%d texture; it stays as it is", j.width, j.height);
-                const auto it = j.cell ? items_.end() : items_.find(j.id);
+                const auto it = j.cell || j.icon ? items_.end() : items_.find(j.id);
                 if (it != items_.end()) drop(it->second);
                 dropJob();
                 continue;
@@ -1118,7 +1167,7 @@ void AiTextures::work() {
         if (j.alpha && j.phase == 0) {  // transparent texels: the alpha's own pass from the next band on
             if (!startAlpha(j)) {
                 LOG_ERROR("AI textures: no GPU memory for a %dx%d picture; it stays as it is", j.width, j.height);
-                const auto it = j.cell ? items_.end() : items_.find(j.id);
+                const auto it = j.cell || j.icon ? items_.end() : items_.find(j.id);
                 if (it != items_.end()) drop(it->second);
                 dropJob();
             }
@@ -1128,6 +1177,8 @@ void AiTextures::work() {
         finishing -= texels(j);
         if (j.cell) {
             finishCell(j);
+        } else if (j.icon) {
+            finishIcon(j);
         } else if (!finish(j)) {
             const auto it = items_.find(j.id);
             if (it != items_.end()) drop(it->second);
@@ -1150,7 +1201,8 @@ void AiTextures::logNow(bool final) {
     const ULONGLONG now = GetTickCount64();
     if (!final && now - lastLog_ < 30000) return;
     lastLog_ = now;
-    if (!doneNetwork_ && !doneLoaded_ && queue_.empty() && later_.empty() && !cellsWritten_) return;
+    if (!doneNetwork_ && !doneLoaded_ && queue_.empty() && later_.empty() && !cellsWritten_ && icons_.empty())
+        return;
     // What the draws showed: how the kinds come out in the game (the network takes only the ones that are on).
     std::string seen;
     for (int k = 0; k < ai::kKinds; ++k)
@@ -1165,6 +1217,9 @@ void AiTextures::logNow(bool final) {
                  "upscaled.grf, %u waiting",
                  cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsNetwork_, cellsLoaded_,
                  static_cast<unsigned>(cells_.size()));
+    if (!icons_.empty())
+        LOG_INFO("AI textures: icons - %u asked, %u made by the network, %u from upscaled.grf",
+                 static_cast<unsigned>(icons_.size()), iconsNetwork_, iconsLoaded_);
 }
 
 void AiTextures::request(IoRequest r) {

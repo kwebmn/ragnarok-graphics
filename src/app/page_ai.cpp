@@ -10,7 +10,7 @@ using namespace settings;
 
 constexpr int kEnable = 1001;
 constexpr int kPreset = 1002;
-constexpr int kKinds = 1010;  // + the kind (ground, objects, sprites, effects)
+constexpr int kKinds = 1010;  // + the kind (ground, objects, sprites, effects, icons)
 constexpr int kModel = 1020;
 constexpr int kSpriteModel = 1021;
 constexpr int kDenoise = 1030;  // its number is 1031
@@ -19,11 +19,13 @@ constexpr int kBudget = 1050;
 constexpr int kSizes = 1060;  // from, and to at 1061
 constexpr int kAhead = 1070;
 
-const char* const kKindKeys[] = {"ai.ground", "ai.objects", "ai.sprites", "ai.effects"};
+const char* const kKindKeys[] = {"ai.ground", "ai.objects", "ai.sprites", "ai.effects", "ai.icons"};
 const Text kKindTexts[][2] = {{Text::AiGround, Text::AiGroundHint},
                               {Text::AiObjects, Text::AiObjectsHint},
                               {Text::AiSprites, Text::AiSpritesHint},
-                              {Text::AiEffects, Text::AiEffectsHint}};
+                              {Text::AiEffects, Text::AiEffectsHint},
+                              {Text::AiIcons, Text::AiIconsHint}};
+constexpr int kKindCount = 5;
 
 const IniSetting& setting(const char* key) { return *findSetting(key); }
 
@@ -45,10 +47,10 @@ public:
                  t(Text::AiPresetHint), on);
         p.note(t(Text::AiWhat), Tone::Normal);
         std::vector<CheckItem> kinds;
-        for (int k = 0; k < 4; ++k)
+        for (int k = 0; k < kKindCount; ++k)
             kinds.push_back({kKinds + k, t(kKindTexts[k][0]), aiKind(a, k), t(kKindTexts[k][1]), on});
-        p.checks(kinds);
-        const bool maps = a.ground || a.objects, sprites = a.sprites || a.effects;
+        p.checks(kinds, 3);
+        const bool maps = a.ground || a.objects, sprites = a.sprites || a.effects || a.icons;
         choiceRow(p, kModel, "ai.model", on && maps);
         choiceRow(p, kSpriteModel, "ai.sprite_model", on && sprites);
         // The grain is the realistic model's: grey when no kind that is on goes through it.
@@ -73,7 +75,7 @@ public:
         const bool checked = SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED;
         if (id == kEnable && clicked) {
             m.setToken(setting("ai.enabled"), checked ? "1" : "0");
-        } else if (id >= kKinds && id < kKinds + 4 && clicked) {
+        } else if (id >= kKinds && id < kKinds + kKindCount && clicked) {
             m.setToken(setting(kKindKeys[id - kKinds]), checked ? "1" : "0");
         } else if (id == kAhead && clicked) {
             m.setToken(setting("ai.ahead"), checked ? "1" : "0");

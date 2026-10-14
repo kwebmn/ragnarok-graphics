@@ -7,12 +7,13 @@ namespace uagfx::ai {
 
 // What a texture is to the game, as the driver tells it from the way the game draws it (no file name reaches the
 // driver): the [ai] page chooses which kinds the network works on. Monsters, players, NPCs and items on the ground
-// are drawn alike - one kind, sprites.
-enum class Kind : uint8_t { Ground, Objects, Sprites, Effects, Lightmap, None };
-constexpr int kKinds = 4;  // the ones a setting chooses; a lightmap or a texture of no world draw is never enlarged
+// are drawn alike - one kind, sprites. Icons (0.14): the pictures the game copies into its windows (items, skills),
+// which the driver hands over itself.
+enum class Kind : uint8_t { Ground, Objects, Sprites, Effects, Icons, Lightmap, None };
+constexpr int kKinds = 5;  // the ones a setting chooses; a lightmap or a texture of no world draw is never enlarged
 
-const char* kindName(Kind k);  // "ground", "objects", "sprites", "effects"; "" for the others
-bool parseKind(const std::string& name, Kind& out);  // one of the four
+const char* kindName(Kind k);  // "ground", "objects", "sprites", "effects", "icons"; "" for the others
+bool parseKind(const std::string& name, Kind& out);  // one of those five
 
 // What a draw shows of its texture.
 struct DrawFacts {

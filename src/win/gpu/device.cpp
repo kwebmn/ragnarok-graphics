@@ -1066,6 +1066,17 @@ void Renderer::finish() {
     if (!remote_ && impl_->device && impl_->fence) impl_->waitIdle();
 }
 
+void Renderer::requestIcon(uint64_t key, int width, int height, const uint32_t* argb) {
+    if (remote_) return remote_->sendIcon(key, width, height, argb);
+    if (impl_->ai) impl_->ai->noteIcon(key, width, height, argb);
+}
+
+void Renderer::setIconSink(IconSink sink, void* context) {
+    impl_->iconSink = sink;
+    impl_->iconContext = context;
+    if (remote_) remote_->setIconSink(sink, context);
+}
+
 void Renderer::setMap(const std::string& map) {
     if (remote_) return remote_->setMap(map);
     if (impl_->ai) impl_->ai->setMap(map);

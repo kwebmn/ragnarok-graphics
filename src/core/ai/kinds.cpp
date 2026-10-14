@@ -12,6 +12,7 @@ const char* kindName(Kind k) {
         case Kind::Objects: return "objects";
         case Kind::Sprites: return "sprites";
         case Kind::Effects: return "effects";
+        case Kind::Icons: return "icons";
         case Kind::Lightmap:
         case Kind::None: break;
     }

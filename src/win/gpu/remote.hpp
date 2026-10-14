@@ -31,6 +31,11 @@ public:
     bool setScale(double k, int width, int height, int samples, bool upscale);
     void setCamera(bool valid, const float view[12]);
     void setMap(const std::string& map);
+    void sendIcon(uint64_t key, int width, int height, const uint32_t* argb);
+    void setIconSink(Renderer::IconSink sink, void* context) {
+        iconSink_ = sink;
+        iconContext_ = context;
+    }
     int samples() const { return samples_; }
     void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown);
     uint32_t createTexture(int width, int height, int levels);
@@ -59,6 +64,8 @@ private:
     bool upscales_ = false;
     bool lost_ = false;
     bool needSurface_ = false;  // the renderer could not make a swap chain for the game's window
+    Renderer::IconSink iconSink_ = nullptr;  // AI icons that came back (Msg::IconDone)
+    void* iconContext_ = nullptr;
     std::vector<uint8_t> buffer_;  // a message being written; kept to keep its memory
 };
 

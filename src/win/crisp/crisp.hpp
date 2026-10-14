@@ -22,5 +22,10 @@ void tileDraw(const void* surface, DrawCmd& cmd);
 void forgetSurface(const void* surface);
 // For the 30-second stats line: "" while crisp text is off.
 std::string stats();
+// AI icons (0.14): on - an icon the game copies whole into a window (a square of 16 to 64 pixels: items, skills) goes
+// to the renderer to be made larger, and the larger one goes into the twin from then on.
+void setAiIcons(bool on);
+// Renderer::IconSink: an icon came back; the windows are redrawn with it at a present soon.
+void iconReady(void* context, uint64_t key, int width, int height, const uint32_t* argb);
 
 }  // namespace uagfx::win::crisp

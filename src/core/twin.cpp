@@ -1,6 +1,7 @@
 #include "core/twin.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace uagfx {
 
@@ -183,6 +184,41 @@ Rect TwinPicture::takeChanged() {
     const Rect r = changed_;
     changed_ = Rect{};
     return r;
+}
+
+void TwinPicture::paint(Rect r, const uint32_t* argb, int w, int h) {
+    if (r.empty() || r.left < 0 || r.top < 0 || r.right > w_ || r.bottom > h_ || w <= 0 || h <= 0) return;
+    const int tx0 = ex_[size_t(r.left)], tx1 = ex_[size_t(r.right)];
+    const int ty0 = ey_[size_t(r.top)], ty1 = ey_[size_t(r.bottom)];
+    if (tx1 <= tx0 || ty1 <= ty0) return;
+    const double sx = double(w) / double(tx1 - tx0), sy = double(h) / double(ty1 - ty0);
+    for (int ty = ty0; ty < ty1; ++ty) {
+        const double y0 = double(ty - ty0) * sy, y1 = y0 + sy;
+        for (int tx = tx0; tx < tx1; ++tx) {
+            const double x0 = double(tx - tx0) * sx, x1 = x0 + sx;
+            double acc[4] = {0, 0, 0, 0}, area = 0;  // premultiplied blue, green, red; alpha
+            for (int py = int(y0); py < std::min(h, int(std::ceil(y1))); ++py) {
+                const double wy = std::min(y1, py + 1.0) - std::max(y0, double(py));
+                if (wy <= 0) continue;
+                for (int px = int(x0); px < std::min(w, int(std::ceil(x1))); ++px) {
+                    const double wx = std::min(x1, px + 1.0) - std::max(x0, double(px));
+                    if (wx <= 0) continue;
+                    const uint32_t p = argb[size_t(py) * size_t(w) + size_t(px)];
+                    const double f = wx * wy, a = double(p >> 24) / 255.0;
+                    for (int c = 0; c < 3; ++c) acc[c] += f * a * double((p >> (8 * c)) & 255);
+                    acc[3] += f * a;
+                    area += f;
+                }
+            }
+            if (area <= 0 || acc[3] <= 0) continue;
+            uint32_t src = uint32_t(std::lround(std::min(acc[3] / area, 1.0) * 255.0)) << 24;
+            for (int c = 0; c < 3; ++c)
+                src |= uint32_t(std::min<long>(std::lround(acc[c] / area), 255)) << (8 * c);
+            uint32_t& d = twin_[size_t(ty) * size_t(twinWidth()) + size_t(tx)];
+            d = over(src, d);
+        }
+    }
+    touch(Rect{tx0, ty0, tx1, ty1});
 }
 
 void TwinPicture::touch(Rect r) {

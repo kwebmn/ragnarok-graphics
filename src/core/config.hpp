@@ -20,6 +20,7 @@ struct AiSettings {
     bool objects = true;   // buildings, trees, water
     bool sprites = false;  // monsters, players, NPCs, items: pixel art the network may change too much
     bool effects = false;  // light and sparks
+    bool icons = true;     // 0.14: item and skill icons in the game's windows (crisp text's twins)
     std::string model = "general";      // ground and objects: general (realistic) or anime (drawn)
     std::string spriteModel = "anime";  // sprites and effects
     int denoise = 25;  // % of the grain the general model smooths away (Real-ESRGAN's denoise strength)
@@ -35,7 +36,7 @@ struct AiSettings {
 enum class AiPreset { Recommended, All, Custom };
 AiPreset aiPresetOf(const AiSettings& a);  // whatever `enabled` is
 AiSettings aiPresetSettings(AiPreset p, bool enabled);  // Custom: the defaults
-bool aiKind(const AiSettings& a, int kind);  // ai::Kind order: ground, objects, sprites, effects
+bool aiKind(const AiSettings& a, int kind);  // ai::Kind order: ground, objects, sprites, effects, icons
 // The settings as one word for uaro-render64.exe's command line ("enabled=1;ground=1;...;ahead=1") and back.
 std::string aiArgument(const AiSettings& a);
 AiSettings parseAiArgument(const std::string& word);

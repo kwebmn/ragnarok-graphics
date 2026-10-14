@@ -6,6 +6,7 @@
 #include <memory>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "core/crisp_exe.hpp"
@@ -63,6 +64,16 @@ struct State {
     std::set<uint32_t> loggedSizes;  // the safety net writes one line per window size
     Settled scale{kSettleMs};        // K once it holds
     GlyphCache glyphs{size_t(16) << 20};
+    // 0.14, AI icons: the windows' icons the AI textures made larger, by the hash of the game's icon (TextureKey).
+    bool aiIcons = false;
+    struct Icon {
+        int width = 0, height = 0;
+        std::vector<uint32_t> argb;
+    };
+    std::unordered_map<uint64_t, Icon> icons;
+    std::unordered_set<uint64_t> asked;  // sent to the renderer, not back yet
+    bool iconsArrived = false;           // the windows are redrawn at a present soon
+    ULONGLONG iconsMarked = 0;           // when they were last
 };
 
 State& state();

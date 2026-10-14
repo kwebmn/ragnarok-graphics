@@ -168,6 +168,8 @@ struct Renderer::Impl {
     // motion, the upscaler's output at the target's size and the interface layer (premultiplied) that goes on top.
     Upscaler* upscaler = nullptr;
     AiTextures* ai = nullptr;  // AI textures, when on (startAiTextures)
+    Renderer::IconSink iconSink = nullptr;  // where AI icons go (Renderer::setIconSink)
+    void* iconContext = nullptr;
     bool upscale = false;  // on now
     ID3D12Resource* world = nullptr;
     ID3D12Resource* worldDepth = nullptr;  // R32 typeless: D32 to draw into, R32 to read

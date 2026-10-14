@@ -261,7 +261,7 @@ TEST(ai_map_names_as_the_game_loads_them) {
 
 namespace {
 
-const std::string kCurrent[kKinds] = {"g", "g", "a", "a"};  // the ground and objects general, sprites anime
+const std::string kCurrent[kKinds] = {"g", "g", "a", "a", "a"};  // the ground and objects general, sprites anime
 
 std::vector<CacheEntry> sampleCache() {
     const std::string k1 = "256x256\\0000000000000001", k2 = "256x256\\0000000000000002",

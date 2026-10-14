@@ -18,7 +18,7 @@ const char kAllMaps[] = "*";  // the first row: every map
 
 // What the page's ticks were: the page is made again after every change and keeps them across.
 std::set<std::string> g_ticked;
-bool g_kinds[ai::kKinds] = {true, true, true, true};
+bool g_kinds[ai::kKinds] = {true, true, true, true, true};
 
 // What upscaled.grf holds by map and kind (0.12), and deleting some or all of it while the game is closed.
 class AiCachePage : public Page {
@@ -31,7 +31,7 @@ public:
         file_ = readAiCache(path_);
         const AiSettings& a = m.now().config.ai;  // the settings in force: what the driver uses
         current_[0] = current_[1] = ai::netFolder(a.model, a.denoise, a.scale);
-        current_[2] = current_[3] = ai::netFolder(a.spriteModel, a.denoise, a.scale);
+        current_[2] = current_[3] = current_[4] = ai::netFolder(a.spriteModel, a.denoise, a.scale);
         contents_ = ai::CacheContents(file_.entries);
         index_ = contents_.index(current_);
         busy_ = m.now().gameRunning || aiCacheInUse();
@@ -45,10 +45,10 @@ public:
             p.note(tf(Text::AiCacheSummary, {num(index_.all.total), sizeText(index_.all.bytes, l),
                                               sizeText(file_.bytes, l)}));
         list_ = p.listView(kList,
-                           {{t(Text::AiCacheMap), 172}, {t(Text::AiCacheColGround), 66},
-                            {t(Text::AiCacheColObjects), 66}, {t(Text::AiCacheColSprites), 80},
-                            {t(Text::AiCacheColEffects), 66}, {t(Text::AiCacheColTotal), 60},
-                            {t(Text::AiCacheColSize), 86}},
+                           {{t(Text::AiCacheMap), 150}, {t(Text::AiCacheColGround), 60},
+                            {t(Text::AiCacheColObjects), 64}, {t(Text::AiCacheColSprites), 76},
+                            {t(Text::AiCacheColEffects), 62}, {t(Text::AiCacheColIcons), 58},
+                            {t(Text::AiCacheColTotal), 56}, {t(Text::AiCacheColSize), 80}},
                            8, true);
         maps_.clear();
         if (!index_.rows.empty()) {
@@ -63,9 +63,9 @@ public:
         p.note(t(Text::AiCacheDeleteKinds), Tone::Normal);
         std::vector<CheckItem> kinds;
         const Text names[] = {Text::AiCacheColGround, Text::AiCacheColObjects, Text::AiCacheColSprites,
-                              Text::AiCacheColEffects};
+                              Text::AiCacheColEffects, Text::AiCacheColIcons};
         for (int k = 0; k < ai::kKinds; ++k) kinds.push_back({kKinds + k, t(names[k]), g_kinds[k], L"", true});
-        p.checks(kinds, 4);
+        p.checks(kinds, 5);
         const bool usable = file_.exists && file_.error.empty() && !busy_;
         p.buttons({{kDelete, t(Text::AiCacheDelete), usable && !g_ticked.empty()},
                    {kDeleteOld, tf(Text::AiCacheDeleteOld, {num(index_.outdated) + " (" +

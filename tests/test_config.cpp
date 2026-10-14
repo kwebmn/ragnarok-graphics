@@ -139,7 +139,8 @@ TEST(config_ai_presets) {
     const AiSettings all = aiPresetSettings(AiPreset::All, true);
     CHECK(all.enabled && all.ground && all.objects && all.sprites && all.effects);
     CHECK(!aiPresetSettings(AiPreset::Recommended, false).enabled);
-    CHECK(aiKind(all, 2) && !aiKind(AiSettings(), 3) && aiKind(AiSettings(), 0) && !aiKind(all, 4));
+    CHECK(aiKind(all, 2) && !aiKind(AiSettings(), 3) && aiKind(AiSettings(), 0) && !aiKind(all, 5));
+    CHECK(aiKind(AiSettings(), 4));  // 0.14: the windows' icons, on in Recommended
 }
 
 TEST(config_ai_argument_round_trips) {

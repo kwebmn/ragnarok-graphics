@@ -114,6 +114,17 @@ void Remote::handle(Msg type, const uint8_t* data, uint32_t size) {
             upscales_ = true;
             break;
         case Msg::Lost: setLost("render64: " + rd.str()); break;
+        case Msg::IconDone: {  // AI icons (0.14): one made larger
+            const uint64_t key = rd.u64();
+            const int w = rd.i32(), h = rd.i32();
+            if (!rd.ok() || w <= 0 || h <= 0 || w > 1024 || h > 1024 || !iconSink_) break;
+            const uint8_t* bytes = rd.take(size_t(w) * size_t(h) * 4);
+            if (!bytes) break;
+            std::vector<uint32_t> argb(size_t(w) * size_t(h));
+            std::memcpy(argb.data(), bytes, argb.size() * 4);
+            iconSink_(iconContext_, key, w, h, argb.data());
+            break;
+        }
         default: break;  // an answer nobody waits for any more
     }
 }
@@ -187,6 +198,16 @@ void Remote::setCamera(bool valid, const float view[12]) {
     w.u8(valid ? 1 : 0);
     for (int i = 0; i < 12; ++i) w.f32(valid ? view[i] : 0.0f);
     send(Msg::Camera, buffer_);
+}
+
+void Remote::sendIcon(uint64_t key, int width, int height, const uint32_t* argb) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.u64(key);
+    w.i32(width);
+    w.i32(height);
+    w.bytes(argb, size_t(width) * size_t(height) * 4);
+    send(Msg::IconWanted, buffer_);
 }
 
 void Remote::setMap(const std::string& map) {

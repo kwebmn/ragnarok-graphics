@@ -30,7 +30,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     const std::pair<const char*, bool> ai[] = {
         {"ai.enabled", fa.enabled != ra.enabled}, {"ai.ground", fa.ground != ra.ground},
         {"ai.objects", fa.objects != ra.objects}, {"ai.sprites", fa.sprites != ra.sprites},
-        {"ai.effects", fa.effects != ra.effects}, {"ai.model", fa.model != ra.model},
+        {"ai.effects", fa.effects != ra.effects}, {"ai.icons", fa.icons != ra.icons},
+        {"ai.model", fa.model != ra.model},
         {"ai.sprite_model", fa.spriteModel != ra.spriteModel}, {"ai.denoise", fa.denoise != ra.denoise},
         {"ai.scale", fa.scale != ra.scale}, {"ai.budget", fa.budget != ra.budget},
         {"ai.min_size", fa.minSize != ra.minSize}, {"ai.max_size", fa.maxSize != ra.maxSize},

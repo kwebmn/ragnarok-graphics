@@ -8,6 +8,7 @@
 #include <new>
 #include <vector>
 
+#include "core/ai/texture_cache.hpp"
 #include "win/context.hpp"
 #include "win/crisp/state.hpp"
 #include "win/log.hpp"
@@ -121,6 +122,30 @@ uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
     return result;
 }
 
+// 0.14, AI icons: an icon-sized picture copied whole into the window. The AI's larger one goes into the twin when it
+// has come back - the twin keeps what is under the icon, the copy takes the game's pixels; until then it is asked for
+// once and the game's pixels go in as blocks. true: the twin has it.
+bool aiIcon(Picture& pic, int x, int y, int w, int h, int rows, const uint32_t* src, bool key) {
+    State& s = state();
+    if (!s.aiIcons || w != h || w < 16 || w > 64 || rows != h || x < 0 || y < 0 || x + w > pic.twin->width() ||
+        y + h > pic.twin->height())
+        return false;
+    std::vector<uint32_t> argb(size_t(w) * size_t(h));
+    for (size_t i = 0; i < argb.size(); ++i)
+        argb[i] = key && src[i] == 0xFFFF00FFu ? 0u : (src[i] | 0xFF000000u);  // the key: transparent
+    const uint64_t k = ai::textureKey(argb.data(), w, h).hash;
+    const auto it = s.icons.find(k);
+    if (it != s.icons.end()) {
+        const Rect r{x, y, x + w, y + h};
+        pic.twin->absorb(pic.bits, r);
+        pic.twin->paint(r, it->second.argb.data(), it->second.width, it->second.height);
+        return true;
+    }
+    if (s.asked.insert(k).second)
+        if (gpu::Renderer* renderer = Context::get().renderer) renderer->requestIcon(k, w, h, argb.data());
+    return false;
+}
+
 // The game writes every pixel of the rectangle but what its key skips, so the twin takes them all (review 0.5.0 I1):
 // a skin repainted under a label erases the edges of its crisp letters. Which rows it writes depends on its pixels
 // before the call.
@@ -144,8 +169,12 @@ uint32_t UAGFX_THISCALL onCopyPixels(void* p, int x, int y, int w, int h, const 
         });
     const uint32_t result = original<CopyPixelsFn>(ce::kCopyPixels)(p, x, y, w, h, src, key);
     if (pic)  // the key is a byte
-        guarded([&] { pic->twin->copyPixels(pic->bits, x, y, w, rows, src, (key & 0xFF) != 0); },
-                [p] { lost(self(p)); });
+        guarded(
+            [&] {
+                if (!aiIcon(*pic, x, y, w, h, rows, src, (key & 0xFF) != 0))
+                    pic->twin->copyPixels(pic->bits, x, y, w, rows, src, (key & 0xFF) != 0);
+            },
+            [p] { lost(self(p)); });
     return result;
 }
 
@@ -461,10 +490,21 @@ void uninstall() {
     s.K = 0.0;
     s.scale = Settled(kSettleMs);
     s.installed = false;
+    s.icons.clear();  // their renderer is gone; a new one is asked again
+    s.asked.clear();
+    s.iconsArrived = false;
 }
 
 void setScale(double K) {
     State& s = state();
+    // AI icons came back: every window draws again, the new ones in its twin - at most five times a second while a
+    // full inventory's icons arrive one after another.
+    const ULONGLONG now = GetTickCount64();
+    if (s.iconsArrived && s.installed && s.K > 1.0 && now - s.iconsMarked >= 200) {
+        s.iconsArrived = false;
+        s.iconsMarked = now;
+        markWindows(readable(ce::kWindowList, 4) ? field<uintptr_t>(ce::kWindowList, 0) : 0, 0);
+    }
     // While the window's edge is dragged K changes on every frame: it is taken once it holds for kSettleMs; until
     // then the twins are not shown - their K is not the renderer's k (0.5.0 review M2).
     if (!s.installed || !s.scale.take(K, GetTickCount64()) || K == s.K) return;
@@ -506,5 +546,22 @@ void tileDraw(const void* surface, DrawCmd& cmd) {
 }
 
 void forgetSurface(const void* surface) { state().tiles.erase(surface); }
+
+void setAiIcons(bool on) {
+    state().aiIcons = on;
+    if (on) LOG_INFO("AI textures: icons of the windows go to the network (crisp text draws them)");
+}
+
+void iconReady(void*, uint64_t key, int width, int height, const uint32_t* argb) {
+    State& s = state();
+    s.asked.erase(key);
+    if (width <= 0 || height <= 0) return;
+    if (s.icons.size() >= 4096) s.icons.clear();  // the game's address space is 32-bit: a bound, seldom reached
+    State::Icon& icon = s.icons[key];
+    icon.width = width;
+    icon.height = height;
+    icon.argb.assign(argb, argb + size_t(width) * size_t(height));
+    s.iconsArrived = true;
+}
 
 }  // namespace uagfx::win::crisp

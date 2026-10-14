@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -118,6 +119,8 @@ public:
 private:
     void dispatch(Msg type, const uint8_t* data, uint32_t size);
     void present(WireReader& rd);
+    // AI icons (0.14): one made larger goes back to the driver.
+    static void iconDone(void* self, uint64_t key, int width, int height, const uint32_t* argb);
     void checkLateDlss();  // DLSS started in the background: on, or the reason it is not
 
     win::bridge::Channel channel_;
@@ -132,8 +135,20 @@ private:
     FrameRecord record_;
     std::vector<uint32_t> pixels_;
     std::vector<uint8_t> out_;
+    std::vector<uint8_t> iconOut_;  // its own: an icon comes back in the middle of other work
     LateDlss late_;
 };
+
+void Host::iconDone(void* self, uint64_t key, int width, int height, const uint32_t* argb) {
+    Host& h = *static_cast<Host*>(self);
+    h.iconOut_.clear();
+    WireWriter w(h.iconOut_);
+    w.u64(key);
+    w.i32(width);
+    w.i32(height);
+    w.bytes(argb, size_t(width) * size_t(height) * 4);
+    h.channel_.send(Msg::IconDone, h.iconOut_);
+}
 
 int Host::run(const Args& a) {
     presentMode_ = a.present;
@@ -184,6 +199,7 @@ int Host::run(const Args& a) {
         return 3;
     }
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
+    renderer_.setIconSink(&Host::iconDone, this);
     if (a.ai.enabled) renderer_.startAiTextures(a.dir, a.ai);  // its own log line, on or why not
     bool upscales = false;
     if (dlss) {  // Streamline got the device the moment it was made (setOnDevice)
@@ -328,6 +344,17 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             float view[12];
             for (float& v : view) v = rd.f32();
             if (rd.ok()) renderer_.setCamera(valid, view);
+            break;
+        }
+        case Msg::IconWanted: {
+            const uint64_t key = rd.u64();
+            const int w = rd.i32(), h = rd.i32();
+            if (!rd.ok() || w <= 0 || h <= 0 || w > 256 || h > 256) break;
+            const uint8_t* bytes = rd.take(size_t(w) * size_t(h) * 4);
+            if (!bytes) break;
+            std::vector<uint32_t> argb(size_t(w) * size_t(h));
+            std::memcpy(argb.data(), bytes, argb.size() * 4);
+            renderer_.requestIcon(key, w, h, argb.data());
             break;
         }
         case Msg::Map: {

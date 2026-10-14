@@ -102,6 +102,12 @@ public:
     bool startAiTextures(const std::string& gameDir, const AiSettings& settings);
     // The map the game shows ("prontera"; "" none): upscaled.grf notes the textures seen on it (AI textures).
     void setMap(const std::string& map);
+    // AI icons (0.14): a picture the game copies into one of its windows - w x h straight ARGB, transparent where its
+    // key skips - for the network; the picture made larger comes to the sink, keyed as asked. In the driver the sink
+    // gets it from the bridge; in uaro-render64.exe the sink sends it over the bridge.
+    using IconSink = void (*)(void* context, uint64_t key, int width, int height, const uint32_t* argb);
+    void requestIcon(uint64_t key, int width, int height, const uint32_t* argb);
+    void setIconSink(IconSink sink, void* context);
     // Part 3, DLSS started after the device (in the background, so that the game does not wait for it): the DXGI
     // factory becomes Streamline's (upgrade = slUpgradeInterface) and the swap chain is made again through it at the
     // next present, so that Streamline sees every present. False: the factory stays the system's.

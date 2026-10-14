@@ -62,6 +62,8 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
         setBool(v, a.sprites);
     } else if (k == "effects") {
         setBool(v, a.effects);
+    } else if (k == "icons") {
+        setBool(v, a.icons);
     } else if (k == "model" || k == "sprite_model") {
         if (v == "general" || v == "anime") (k == "model" ? a.model : a.spriteModel) = v;
     } else if (k == "denoise") {
@@ -83,8 +85,9 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
 
 bool AiSettings::operator==(const AiSettings& o) const {
     return enabled == o.enabled && ground == o.ground && objects == o.objects && sprites == o.sprites &&
-           effects == o.effects && model == o.model && spriteModel == o.spriteModel && denoise == o.denoise &&
-           scale == o.scale && budget == o.budget && minSize == o.minSize && maxSize == o.maxSize && ahead == o.ahead;
+           effects == o.effects && icons == o.icons && model == o.model && spriteModel == o.spriteModel &&
+           denoise == o.denoise && scale == o.scale && budget == o.budget && minSize == o.minSize &&
+           maxSize == o.maxSize && ahead == o.ahead;
 }
 
 AiPreset aiPresetOf(const AiSettings& a) {
@@ -106,6 +109,7 @@ bool aiKind(const AiSettings& a, int kind) {
         case 1: return a.objects;
         case 2: return a.sprites;
         case 3: return a.effects;
+        case 4: return a.icons;
         default: return false;
     }
 }
@@ -113,7 +117,7 @@ bool aiKind(const AiSettings& a, int kind) {
 std::string aiArgument(const AiSettings& a) {
     const auto b = [](bool v) { return v ? "1" : "0"; };
     return std::string("enabled=") + b(a.enabled) + ";ground=" + b(a.ground) + ";objects=" + b(a.objects) +
-           ";sprites=" + b(a.sprites) + ";effects=" + b(a.effects) + ";model=" + a.model +
+           ";sprites=" + b(a.sprites) + ";effects=" + b(a.effects) + ";icons=" + b(a.icons) + ";model=" + a.model +
            ";sprite_model=" + a.spriteModel + ";denoise=" + std::to_string(a.denoise) +
            ";scale=" + std::to_string(a.scale) + ";budget=" + std::to_string(a.budget) +
            ";min_size=" + std::to_string(a.minSize) + ";max_size=" + std::to_string(a.maxSize) + ";ahead=" + b(a.ahead);
