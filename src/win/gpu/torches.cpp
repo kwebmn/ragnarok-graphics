@@ -274,12 +274,14 @@ bool Renderer::Impl::applyTorches() {
         for (const auto& kv : cells)
             if (kv.second.w > 0.02f) best.push_back(kv.second);
         std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
-        const float fireStrength = 0.55f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f;
+        // 0.26.1: a third of 0.26's, the brightest place no more than one fire ("светит слишком сильно, намного
+        // помягче"), a shorter reach.
+        const float fireStrength = 0.18f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f;
         for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
-            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, fireStrength * std::min(c.w, 1.5f),
-                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top}, 30.0f + 20.0f * std::min(c.w, 1.0f)};
+            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, fireStrength * std::min(c.w, 1.0f),
+                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top}, 25.0f + 15.0f * std::min(c.w, 1.0f)};
             lights.push_back(l);
         }
     }
