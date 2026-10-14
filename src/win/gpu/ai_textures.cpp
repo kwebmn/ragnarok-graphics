@@ -19,9 +19,11 @@ namespace {
 constexpr int kNetScale = 4;  // every network enlarges 4 times; a result of twice the size is its first mip level
 constexpr size_t kKeptLimit = size_t(512) << 20;
 // 0.14.1: the interface's big pictures - the loading screen and the login's backgrounds are one texture of 1024 a
-// side (the picture in its top left corner); a window's tiles and the letters are smaller.
-constexpr int kUiPictureSide = 512;
+// side (the picture in its top left corner); (0.17) from 128 a side - a map's sign. A window's tiles (crisp text
+// draws them from its twins) and the letters are not taken.
+constexpr int kUiPictureSide = 128;
 constexpr int kUiPictureMax = 1024;
+constexpr int kTrimSide = 512;  // past this a picture's network buffers are freed once it is done
 constexpr size_t kBatchBytes = size_t(32) << 20;  // pictures written to upscaled.grf at once
 constexpr UINT kAiConstants = 0, kAiWeights = 1, kAiU0 = 2, kAiU1 = 3, kAiU2 = 4;  // root parameters
 
@@ -401,7 +403,7 @@ void AiTextures::dispatchAlpha(const Job& job, ID3D12Resource* image, const Leve
 }
 
 void AiTextures::trimBuffers() {
-    const UINT64 normal = UINT64(kUiPictureSide) * UINT64(kUiPictureSide) * UINT64(features_) * 4;
+    const UINT64 normal = UINT64(kTrimSide) * UINT64(kTrimSide) * UINT64(features_) * 4;
     if (featBytes_ <= normal) return;
     for (ID3D12Resource*& r : feat_) {
         if (r) m_.slots[m_.slot].garbage.push_back(r);  // freed once this list has run

@@ -125,12 +125,12 @@ uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
 
 // 0.14, AI icons: what the AI may take of a window - an icon (a square of 16 to 64: items, skills), (0.14.1) a
 // picture (an item's picture in its description, a card's, an NPC's illustration) and (0.15) a piece of the window
-// (a button, a tab, a slot's oval, a sprite drawn into it): 8 to 512 a side, at most 8 times as long as wide - not
-// a strip of a window's frame, which the game repeats edge to edge.
+// (a button, a tab, a slot's oval, a sprite drawn into it) - (0.17) strips of the frames too, which the game repeats
+// edge to edge: their edges go on as their own pixels (ai::Border::Clamp), so the copies meet. 8 to 512 a side.
 bool aiPictureSize(int w, int h) {
     if (w == h && w >= 16 && w <= 64) return true;  // an icon
     if (w >= 32 && h >= 32 && w <= 512 && h <= 512 && std::max(w, h) <= 3 * std::min(w, h)) return true;  // a picture
-    return state().aiPieces && w >= 8 && h >= 8 && w <= 512 && h <= 512 && std::max(w, h) <= 8 * std::min(w, h);
+    return state().aiPieces && w >= 8 && h >= 8 && w <= 512 && h <= 512;
 }
 
 // The AI's larger picture of argb (w x h, transparent where the window shows what is under it) at r of the window:

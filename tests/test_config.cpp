@@ -98,13 +98,13 @@ TEST(config_ai_section_reads_every_key) {
     CHECK_EQ(a.minSize, 32);
     CHECK_EQ(a.maxSize, 1024);
     CHECK(!a.ahead);
-    // Words it does not take leave the defaults: the ground and objects, general and anime, x4, 64-512.
+    // Words it does not take leave the defaults: the ground and objects, general and anime, x4, 16-512.
     const AiSettings d = parseConfig("[ai]\nmodel = best\nscale = 3\nmin_size = 8\nmax_size = 2048\n").ai;
     CHECK(d == AiSettings());
     CHECK(d.ground && d.objects && !d.sprites() && !d.effects);
     CHECK(d.model == "general" && d.spriteModel == "anime");
     CHECK_EQ(d.scale, 4);
-    CHECK_EQ(d.minSize, 64);
+    CHECK_EQ(d.minSize, 16);  // 0.17: shadows and the small things of a map too
     CHECK_EQ(d.maxSize, 512);
 }
 

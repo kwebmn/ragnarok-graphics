@@ -33,7 +33,7 @@ struct AiSettings {
     int denoise = 25;  // % of the grain the general model smooths away (Real-ESRGAN's denoise strength)
     int scale = 4;     // the result 4 or 2 times the game's texture (2: a quarter of the video memory)
     int budget = 2;    // ms of GPU time a frame, 1-20
-    int minSize = 64;  // the textures it takes: both sides from min_size to max_size, 16-1024
+    int minSize = 16;  // the textures it takes: both sides from min_size to max_size, 16-1024 (0.17: 16, was 64)
     int maxSize = 512;
     bool ahead = true;  // a map's textures known from earlier visits are done at once, not when they come into view
     bool operator==(const AiSettings& o) const;

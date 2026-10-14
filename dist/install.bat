@@ -93,6 +93,9 @@ set "aniso=0"
 >>"uaro-graphics.ini" echo ; anisotropic filtering of the world: 0 = off, 2, 4, 8 or 16
 >>"uaro-graphics.ini" echo anisotropy = %aniso%
 :smoothing_done
+rem 0.17: the AI textures take textures of 16 pixels and more, not 64 - shadows and a map's small things. The settings
+rem file 0.12-0.16 put in place says min_size = 64 under that version's note: both change, once.
+findstr /x /c:"; the textures it takes, by their sides in pixels: from min_size to max_size, 16-1024" "uaro-graphics.ini" >nul 2>&1 && findstr /x /c:"min_size = 64" "uaro-graphics.ini" >nul 2>&1 && powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='uaro-graphics.ini'; (Get-Content -LiteralPath $f) -replace '^min_size = 64$','min_size = 16' -replace '^; the textures it takes, by their sides in pixels: from min_size to max_size, 16-1024$','; the textures of the world it takes, by their sides in pixels (16 since 0.17)' | Set-Content -LiteralPath $f -Encoding ASCII"
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

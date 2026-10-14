@@ -554,12 +554,13 @@ const Entry kTexts[] = {
     {"×4 - the sharpest", "×4 — найчіткіші", "×4 — самые чёткие"},
     {"×2 - a quarter of the memory", "×2 — учетверо менше пам'яті", "×2 — вчетверо меньше памяти"},
     {"Texture sides, from - to", "Сторони текстур, від — до", "Стороны текстур, от — до"},
-    {"Which textures it takes, by their sides in pixels (16-1024). Under 64 are mostly small sprites and effects. "
-     "Over 512 needs much video memory: the network takes about 0.5 GB for 1024×1024.",
-     "Які текстури брати — за їхніми сторонами в пікселях (16–1024). Менші за 64 — здебільшого дрібні спрайти й "
-     "ефекти. Понад 512 потребує багато відеопам'яті: нейромережі треба близько 0,5 ГБ на 1024×1024.",
-     "Какие текстуры брать — по их сторонам в пикселях (16–1024). Меньше 64 — в основном мелкие спрайты и эффекты. "
-     "Больше 512 требует много видеопамяти: нейросети нужно около 0,5 ГБ на 1024×1024."},
+    {"Which textures of the world it takes, by their sides in pixels (16-1024). From 16: shadows, the frame under "
+     "the cursor, the small things of a map too. Over 512 needs much video memory: the network takes about 0.5 GB "
+     "for 1024×1024.",
+     "Які текстури світу брати — за їхніми сторонами в пікселях (16–1024). Від 16 — також тіні, рамка під курсором, "
+     "дрібниці карти. Понад 512 потребує багато відеопам'яті: нейромережі треба близько 0,5 ГБ на 1024×1024.",
+     "Какие текстуры мира брать — по их сторонам в пикселях (16–1024). От 16 — также тени, рамка под курсором, "
+     "мелочи карты. Больше 512 требует много видеопамяти: нейросети нужно около 0,5 ГБ на 1024×1024."},
     {"Prepare a map's known textures in advance", "Заздалегідь готувати знайомі текстури карти",
      "Заранее готовить знакомые текстуры карты"},
     {"Textures seen on a map before are taken from upscaled.grf (or made again after a change of settings) as soon "
