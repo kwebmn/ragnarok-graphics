@@ -70,6 +70,7 @@ private:
     int scaledSamples_ = 1;  // and its samples per pixel (stage 4)
     bool scaledUpscale_ = false;  // and whether DLSS draws the world (part 3)
     bool cameraKnown_ = false;    // the game's camera was read last frame (part 3, for the log)
+    bool renderScaleNoted_ = false;  // the log has said render_scale is not used with DLSS
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
     Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)

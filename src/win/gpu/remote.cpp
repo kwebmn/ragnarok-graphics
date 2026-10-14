@@ -14,15 +14,18 @@ using bridge::WireWriter;
 
 namespace {
 
-constexpr uint32_t kToHostBytes = 32u << 20;   // frame records; larger ones go in chunks
-constexpr uint32_t kToClientBytes = 8u << 20;  // log lines and the frame read back, in chunks
+// Each ring's header comes off its area, and a ring's room is a power of two (0.8 review M3).
+constexpr uint32_t kRingHeader = uint32_t(sizeof(bridge::RingHeader));
+constexpr uint32_t kToHostBytes = (32u << 20) + kRingHeader;   // frame records; larger ones go in chunks
+constexpr uint32_t kToClientBytes = (8u << 20) + kRingHeader;  // log lines and the frame read back, in chunks
 constexpr DWORD kAnswerMs = 10000;            // a renderer that does not answer for this long is taken as hung
 
 }  // namespace
 
 Remote::~Remote() {
     if (process_.hProcess) {
-        if (!lost_ && channel_.send(Msg::Quit) && WaitForSingleObject(process_.hProcess, 3000) == WAIT_OBJECT_0) {
+        if (!lost_ && channel_.send(Msg::Quit, nullptr, 0, 2000) &&
+            WaitForSingleObject(process_.hProcess, 3000) == WAIT_OBJECT_0) {
             // finished by itself
         } else if (WaitForSingleObject(process_.hProcess, 0) != WAIT_OBJECT_0) {
             TerminateProcess(process_.hProcess, 1);
@@ -40,6 +43,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
     const std::string name =
         "Local\\uaro-render-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64());
     if (!channel_.create(name, kToHostBytes, kToClientBytes, error)) return false;
+    channel_.setWhileWaiting([](void* self) { static_cast<Remote*>(self)->drain(); }, this);
     std::string cmd = "\"" + o.hostExe + "\" --channel " + name + " --parent " +
                       std::to_string(GetCurrentProcessId()) + " --dir \"" + o.gameDir + "\" --log " +
                       std::to_string(o.logLevel) + " --present " + o.present + " --dlss " + o.dlss +
@@ -69,6 +73,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
         return false;
     }
     adapter_ = text;
+    upscales_ = rd.u8() != 0 && rd.ok();
     return true;
 }
 

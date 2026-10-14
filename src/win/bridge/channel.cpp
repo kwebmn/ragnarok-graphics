@@ -24,7 +24,10 @@ HANDLE event(bool create, const std::string& name) {
 
 }  // namespace
 
-Channel::~Channel() { close(); }
+Channel::~Channel() {
+    close();
+    DeleteCriticalSection(&sendLock_);
+}
 
 bool Channel::create(const std::string& name, uint32_t toHostBytes, uint32_t toClientBytes, std::string& error) {
     close();
@@ -122,21 +125,44 @@ bool Channel::wait(HANDLE event, DWORD ms) {
     return r == WAIT_OBJECT_0;
 }
 
-bool Channel::send(Msg type, const void* data, size_t size) {
+bool Channel::send(Msg type, const void* data, size_t size, DWORD ms) {
     if (!view_ || size > 0xFFFFFFFFu) return false;
     const uint8_t* bytes = static_cast<const uint8_t*>(data);
     const uint32_t total = uint32_t(size);
+    const ULONGLONG start = GetTickCount64();
     uint32_t offset = 0;
+    bool ok = true;
+    EnterCriticalSection(&sendLock_);
     do {
         const uint32_t chunk = std::min(total - offset, out_.maxChunk());
-        while (!out_.tryWrite(uint32_t(type), total, offset, bytes + offset, chunk)) {
-            if (peerGone()) return false;
-            wait(spaceOut_, 50);  // a missed signal costs at most this long
+        while (ok && !out_.tryWrite(uint32_t(type), total, offset, bytes + offset, chunk)) {
+            if (peerGone() || (ms != INFINITE && GetTickCount64() - start >= ms)) {
+                ok = false;
+                break;
+            }
+            if (whileWaiting_ && !inWhileWaiting_) {
+                inWhileWaiting_ = true;
+                whileWaiting_(waitingContext_);
+                inWhileWaiting_ = false;
+            }
+            wait(spaceOut_, whileWaiting_ ? 5 : 50);  // a missed signal costs at most this long
         }
+        if (!ok) break;
         SetEvent(dataOut_);
         offset += chunk;
     } while (offset < total);
-    return true;
+    LeaveCriticalSection(&sendLock_);
+    return ok;
+}
+
+bool Channel::trySend(Msg type, const std::vector<uint8_t>& payload) {
+    if (!view_ || payload.size() > out_.maxChunk()) return false;
+    EnterCriticalSection(&sendLock_);
+    const uint32_t size = uint32_t(payload.size());
+    const bool ok = out_.tryWrite(uint32_t(type), size, 0, payload.data(), size);
+    LeaveCriticalSection(&sendLock_);
+    if (ok) SetEvent(dataOut_);
+    return ok;
 }
 
 bool Channel::receive(Msg& type, const uint8_t*& data, uint32_t& size, DWORD ms) {

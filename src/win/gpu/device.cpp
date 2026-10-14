@@ -568,6 +568,20 @@ bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
     return true;
 }
 
+void Renderer::Impl::stopUpscaling() {
+    dropUpscale = false;
+    if (!upscaler) return;
+    LOG_ERROR("%s failed %d frames in a row: the world is drawn without it until the game restarts",
+              upscaler->name(), upscaleFailures);
+    if (upscaler->generates()) upscaler->suspend();
+    waitIdle();
+    releaseUpscaleTargets();
+    upscale = false;
+    upscaledValid = false;
+    upscaler = nullptr;
+    applyViewport();
+}
+
 // Halton (2, 3): DLSS's recommended pattern, its length growing with the upscale (8 phases at DLAA).
 void Renderer::Impl::nextJitter() {
     const auto halton = [](uint32_t i, uint32_t base) {
@@ -696,6 +710,9 @@ bool Renderer::Impl::composite() {
             LOG_ERROR("%s did not run: the world is stretched instead", upscaler->name());
         }
         upscaledValid = ok;
+        // Failing frame after frame, the stretched world would also shake with the jitter: off after a while.
+        upscaleFailures = ok ? 0 : upscaleFailures + 1;
+        if (upscaleFailures == kUpscaleGiveUp) dropUpscale = true;
         worldDrawn = false;
         historyReset = false;
     }
@@ -926,6 +943,8 @@ void Renderer::setUiSharp(bool sharp) {
     if (remote_) return remote_->setUiSharp(sharp);
     impl_->uiSharp = sharp;
 }
+
+bool Renderer::upscales() const { return remote_ && remote_->upscales(); }
 
 int Renderer::samples() const { return remix_ ? 1 : remote_ ? remote_->samples() : int(impl_->samples); }
 
@@ -1444,6 +1463,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
     const bool generation = m.upscale && m.upscaler && m.upscaler->generates() && m.upscaledValid &&
                             m.ensureGenerationTargets(m.swapWidth, m.swapHeight);
+    if (!generation && m.upscaler && m.upscaler->generates()) m.upscaler->suspend();  // no inputs for this frame
     if (generation) {
         // Part 3, frame generation: the back buffer is put together from the picture without the interface and the
         // interface alone (premultiplied), exactly as DLSS-G puts generated frames together: UI + (1 - a) * picture.
@@ -1503,7 +1523,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = m.swapChain->Present(sync, flags);
-    if (generation) m.upscaler->afterPresent();
+    if (m.upscaler && m.upscaler->generates()) m.upscaler->afterPresent();  // every frame: the next frame's token
     m.renderStarted = false;
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;
@@ -1512,6 +1532,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         std::memcpy(m.prevCamera, m.camera, sizeof m.camera);
         m.frameEnded = true;
     }
+    if (m.dropUpscale) m.stopUpscaling();
     if (FAILED(hr))
         m.failed(5, "Present", hr);
     else if (hr == DXGI_STATUS_OCCLUDED)

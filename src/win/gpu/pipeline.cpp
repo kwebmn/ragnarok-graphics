@@ -327,7 +327,7 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     if (k.layer) {  // part 3 (DLSS): the interface layer keeps its coverage in alpha, premultiplied, for the composite
         b.BlendEnable = TRUE;
         b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-        if (!k.blend) {  // opaque: alpha 1 from the blend factor (1, 1, 1, 1), set with the layer
+        if (!k.blend) {  // opaque: the shader writes alpha 1 (a blend factor only scales the shader's alpha)
             b.SrcBlend = D3D12_BLEND_ONE;
             b.DestBlend = D3D12_BLEND_ZERO;
             b.SrcBlendAlpha = D3D12_BLEND_BLEND_FACTOR;

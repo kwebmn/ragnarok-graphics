@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <map>
 #include <vector>
 
 #pragma GCC diagnostic push
@@ -37,16 +38,60 @@ F* function(const char* name) {
 
 constexpr sl::Result kNotLoaded = sl::Result::eErrorNotInitialized;
 
+// What goes wrong in a frame goes wrong in every frame: a message the first few times, then silence, so the logs
+// stay readable and the bridge to the driver is not flooded. Streamline logs from a thread of its own.
+struct Seen {
+    CRITICAL_SECTION lock;
+    std::map<std::string, int> counts;
+    Seen() { InitializeCriticalSection(&lock); }
+};
+constexpr int kRepeats = 3;
+
+// How many times `key` came, this time included; 0 once too many different messages have come.
+int seenCount(const std::string& key) {
+    static Seen s;
+    EnterCriticalSection(&s.lock);
+    int n = 0;
+    const auto it = s.counts.find(key);
+    if (it != s.counts.end()) {
+        n = it->second < kRepeats + 1 ? ++it->second : kRepeats + 1;
+    } else if (s.counts.size() < 256) {
+        s.counts.emplace(key, 1);
+        n = 1;
+    }
+    LeaveCriticalSection(&s.lock);
+    return n;
+}
+
+void logRepeating(uagfx::LogLevel level, const std::string& key, const std::string& text) {
+    const int n = seenCount(key);
+    if (n == 0 || n > kRepeats) return;
+    if (n < kRepeats)
+        uagfx::wlog::line(level, "%s", text.c_str());
+    else
+        uagfx::wlog::line(level, "%s (again and again: not logged any more)", text.c_str());
+}
+
 void slLog(sl::LogType type, const char* text) {
     if (type == sl::LogType::eInfo) return;
     std::string line = text ? text : "";
     while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back();
-    LOG_INFO("streamline: %s", line.c_str());
+    // "[time][streamline][error][tid][uptime]file:line[function] message": the same message without its stamps
+    size_t from = 0;
+    while (from < line.size() && line[from] == '[') {
+        const size_t end = line.find(']', from);
+        if (end == std::string::npos) break;
+        from = end + 1;
+    }
+    logRepeating(uagfx::LogLevel::Info, line.substr(from), "streamline: " + line);
 }
 
+void failed(const std::string& text) { logRepeating(uagfx::LogLevel::Error, text, text); }
+
+// The paths come from the ANSI command line and module name: the system's code page, not UTF-8 (0.8 review I1).
 std::wstring wide(const std::string& s) {
     std::wstring w(s.size() + 1, L'\0');
-    const int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), int(s.size()), &w[0], int(w.size()));
+    const int n = MultiByteToWideChar(CP_ACP, 0, s.c_str(), int(s.size()), &w[0], int(w.size()));
     w.resize(n > 0 ? size_t(n) : 0);
     return w;
 }
@@ -155,7 +200,9 @@ bool Dlss::init(const std::string& folder, const std::string& logFolder, const s
     pref.numPathsToPlugins = 1;
     pref.pathToLogsAndData = logs.c_str();
     pref.logMessageCallback = slLog;
-    pref.flags = sl::PreferenceFlags::eDisableCLStateTracking;  // the renderer sets its state again itself; no OTA
+    // The renderer sets its state again itself; no OTA. slSetTagForFrame needs frame-based tagging switched on
+    // (without it Streamline refuses every tag: 0.9 never upscaled).
+    pref.flags = sl::PreferenceFlags::eDisableCLStateTracking | sl::PreferenceFlags::eUseFrameBasedResourceTagging;
     pref.featuresToLoad = features;
     pref.numFeaturesToLoad = generation_ ? 4 : 1;
     pref.engine = sl::EngineType::eCustom;
@@ -211,7 +258,7 @@ bool Dlss::renderSize(int outW, int outH, int& renderW, int& renderH) {
     sl::DLSSOptimalSettings s;
     const sl::Result r = slDLSSGetOptimalSettings(o, s);
     if (r != sl::Result::eOk || !s.optimalRenderWidth || !s.optimalRenderHeight) {
-        LOG_ERROR("%s", result("slDLSSGetOptimalSettings", r).c_str());
+        failed(result("slDLSSGetOptimalSettings", r));
         return false;
     }
     renderW = int(s.optimalRenderWidth);
@@ -231,7 +278,7 @@ bool Dlss::setOptions(int outW, int outH) {
     o.ultraPerformancePreset = sl::DLSSPreset::ePresetL;
     const sl::Result r = slDLSSSetOptions(kViewport, o);
     if (r != sl::Result::eOk) {
-        LOG_ERROR("%s", result("slDLSSSetOptions", r).c_str());
+        failed(result("slDLSSSetOptions", r));
         return false;
     }
     optionsW_ = outW;
@@ -272,7 +319,7 @@ bool Dlss::evaluate(const Frame& f) {
     c.motionVectorsJittered = sl::Boolean::eFalse;
     r = slSetConstants(c, *token, kViewport);
     if (r != sl::Result::eOk) {
-        LOG_ERROR("%s", result("slSetConstants", r).c_str());
+        failed(result("slSetConstants", r));
         return false;
     }
     sl::Resource color(sl::ResourceType::eTex2d, f.color, uint32_t(f.colorState));
@@ -292,13 +339,13 @@ bool Dlss::evaluate(const Frame& f) {
     auto* list = reinterpret_cast<sl::CommandBuffer*>(f.list);
     r = slSetTagForFrame(*token, kViewport, tags, 4, list);
     if (r != sl::Result::eOk) {
-        LOG_ERROR("%s", result("slSetTagForFrame", r).c_str());
+        failed(result("slSetTagForFrame", r));
         return false;
     }
     const sl::BaseStructure* inputs[1] = {&kViewport};
     r = slEvaluateFeature(sl::kFeatureDLSS, *token, inputs, 1, list);
     if (r != sl::Result::eOk) {
-        LOG_ERROR("%s", result("slEvaluateFeature", r).c_str());
+        failed(result("slEvaluateFeature", r));
         return false;
     }
     return true;
@@ -339,7 +386,7 @@ void Dlss::beforePresent(const Generation& g) {
         tags.push_back(sl::ResourceTag(&back, sl::kBufferTypeBackbuffer, sl::ResourceLifecycle::eValidUntilPresent,
                                        &picture));
     sl::Result r = slSetTagForFrame(*frame, kViewport, tags.data(), uint32_t(tags.size()), list);
-    if (r != sl::Result::eOk) LOG_ERROR("%s", result("slSetTagForFrame (frame generation)", r).c_str());
+    if (r != sl::Result::eOk) failed(result("slSetTagForFrame (frame generation)", r));
     const int mode = g.on ? 1 : 0;
     if (mode != generationMode_) {
         if (mode && generationMode_ < 0) {  // the first time: as many frames as this card can make
@@ -359,7 +406,7 @@ void Dlss::beforePresent(const Generation& g) {
         o.flags = sl::DLSSGFlags::eRetainResourcesWhenOff;  // menus come and go: no stutter when it comes back
         r = slDLSSGSetOptions(kViewport, o);
         if (r != sl::Result::eOk) {
-            LOG_ERROR("%s", result("slDLSSGSetOptions", r).c_str());
+            failed(result("slDLSSGSetOptions", r));
         } else {
             LOG_INFO("DLSS frame generation %s", mode ? "on" : "off (no world on screen)");
             generationMode_ = mode;
@@ -367,6 +414,7 @@ void Dlss::beforePresent(const Generation& g) {
     }
     marker(uint32_t(sl::PCLMarker::eRenderSubmitEnd));
     marker(uint32_t(sl::PCLMarker::ePresentStart));
+    presentStarted_ = true;
 }
 
 void Dlss::suspend() {
@@ -380,8 +428,12 @@ void Dlss::suspend() {
 
 void Dlss::afterPresent() {
     if (!generationReady_) return;
-    marker(uint32_t(sl::PCLMarker::ePresentEnd));
-    token_ = nullptr;  // the next frame: its own token, Reflex's sleep, then its simulation
+    if (presentStarted_) marker(uint32_t(sl::PCLMarker::ePresentEnd));
+    presentStarted_ = false;
+    // The next frame: its own token, Reflex's sleep, then its simulation. Every frame, also one whose upscale failed
+    // or that had nothing to generate around: a token kept on would take the next frame's constants as a second set
+    // for the same frame (0.9: "Setting different 'common' constants multiple times within the same frame").
+    token_ = nullptr;
     if (token()) {
         slReflexSleep(*static_cast<sl::FrameToken*>(token_));
         marker(uint32_t(sl::PCLMarker::eSimulationStart));

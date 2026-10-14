@@ -38,6 +38,8 @@ bool Context::open(std::string& error) {
         else
             LOG_ERROR("remix: %s; drawing with Direct3D 12", why.c_str());
     }
+    if (config.frameGeneration && config.dlss == "off")
+        LOG_INFO("frame generation %dx: off - it needs NVIDIA DLSS on (Smoothing page)", config.frameGeneration);
     if (!remote && (config.bridge || config.dlss != "off")) {  // part 3: the 64-bit renderer (DLSS needs it)
         gpu::BridgeOptions o;
         o.hostExe = gameDir() + "\\uaro-graphics\\uaro-render64.exe";
@@ -164,14 +166,22 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Stage 3: the window's real pixels and the scale for them. The first present switches from the game's size:
     // the start-up calibration has run by then (spec §4.3).
     const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
-    const ScalePlan plan = planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale,
+    // Part 3: DLSS draws the world at its own size and shows it at the picture's - no supersampling on top of it
+    // (DLAA at 150% would draw 2.25 times the pixels for nothing).
+    const bool dlss = renderer->upscales() && config.dlss != "off";
+    const int renderScale = dlss ? 100 : config.renderScale;
+    if (dlss && config.renderScale > 100 && !renderScaleNoted_) {
+        renderScaleNoted_ = true;
+        LOG_INFO("render_scale %d%% is not used with DLSS: it draws the world at its own size", config.renderScale);
+    }
+    const ScalePlan plan = planScale(shadow.width(), shadow.height(), out.cx, out.cy, renderScale,
                                      config.highResolution && enhanced_);
     // Stage 6: twins follow the scale with every improvement on, so Pause leaves them as they are.
-    crisp::setScale(
-        planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale, config.highResolution).k);
+    crisp::setScale(planScale(shadow.width(), shadow.height(), out.cx, out.cy, renderScale, config.highResolution).k);
     // Stage 4: MSAA comes with the scale, so the calibration has drawn without it; Pause turns it off too.
-    // Part 3: DLSS (in the 64-bit renderer) draws the world instead of MSAA; Pause turns it off as well.
-    const bool upscale = enhanced_ && renderer->remote() && config.dlss != "off";
+    // Part 3: DLSS (in the 64-bit renderer) draws the world instead of MSAA; Pause turns it off as well. Without
+    // DLSS in the renderer (no RTX card, no files) MSAA stays (0.8 review M4).
+    const bool upscale = enhanced_ && dlss;
     const int samples = enhanced_ && !upscale && config.msaa > 1 ? config.msaa : 1;
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_ || samples != scaledSamples_ ||
         upscale != scaledUpscale_) {

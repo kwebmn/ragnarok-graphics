@@ -33,6 +33,7 @@ constexpr UINT kGpuSrvCount = 65536;    // texture pairs bound for drawing: each
 constexpr UINT kRingPerSlot = kGpuSrvCount / kSlots;
 constexpr UINT kSamplerCount = 1024;    // cache of sampler pairs, two descriptors each
 constexpr UINT64 kUploadSize = 32ull << 20;  // per slot; grows when one submission needs more
+constexpr int kUpscaleGiveUp = 30;  // part 3: DLSS failing this many frames in a row is not used any more
 
 // Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled;
 // part 3 (DLSS): the world, its motion, the interface layer.
@@ -61,7 +62,7 @@ struct Constants {
     float targetSize[2];   // 0-1: the target's size in pixels
     uint32_t stage0[2];    // 2-3: colorOp | colorArg1 << 8 | colorArg2 << 16 | alphaOp << 24, alphaArg1 | alphaArg2 << 8 | texCoord << 16 | keyed << 24
     uint32_t stage1[2];    // 4-5
-    uint32_t alphaTest;    // 6: func | ref << 8 | enabled << 16
+    uint32_t alphaTest;    // 6: func | ref << 8 | enabled << 16 | coverage << 17 | opaque in the layer << 18
     uint32_t fogEnable;    // 7
     float fogColor[4];     // 8-11
     uint32_t colorKey;     // 12
@@ -179,6 +180,8 @@ struct Renderer::Impl {
     bool frameEnded = true;    // presented: the next command starts a frame (the layer is cleared then)
     bool historyReset = true;  // the next upscale has no usable history
     bool upscaledValid = false;  // the last upscale ran: `upscaled` holds the world
+    int upscaleFailures = 0;     // the upscale failed this many frames in a row
+    bool dropUpscale = false;    // so many that it stops after this present
     bool cameraValid = false, prevCameraValid = false;
     float camera[12]{}, prevCamera[12]{};
     ID3DBlob* motionPs = nullptr;
@@ -261,6 +264,7 @@ struct Renderer::Impl {
     bool createTarget(int w, int h, UINT n, ID3D12Resource*& rt, ID3D12Resource*& ds);
     bool createUpscaleTargets(int targetW, int targetH);  // part 3: false (and nothing kept) when it cannot
     void releaseUpscaleTargets();
+    void stopUpscaling();  // for the rest of the run: the world at the target's size, without jitter
     void startFrame();   // the first command after a present: a clean interface layer
     bool composite();    // the world upscaled and the layer on top, into the target; false: lost
     void nextJitter();

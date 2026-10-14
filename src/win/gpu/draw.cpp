@@ -138,6 +138,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     packStage(s.stage[1], d.keyed[1], c.stage1);
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
     if (coverage) c.alphaTest |= 1u << 17;
+    if (toLayer && !s.blend) c.alphaTest |= 1u << 18;  // part 3: opaque in the layer (0.8 review I2)
     c.fogEnable = s.fog ? 1u : 0u;
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;

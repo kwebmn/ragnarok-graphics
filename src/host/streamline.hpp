@@ -34,7 +34,7 @@ public:
     bool generates() const override { return generationReady_; }
     void renderStart() override;
     void beforePresent(const Generation& g) override;
-    void afterPresent() override;
+    void afterPresent() override;  // after every present while it generates, whatever the frame did
     void suspend() override;
 
 private:
@@ -53,6 +53,7 @@ private:
     int generation_ = 0;          // asked for: 2-4, 0 none
     bool generationReady_ = false;  // DLSS-G loaded and this card has it
     void* token_ = nullptr;       // sl::FrameToken* of the frame being drawn
+    bool presentStarted_ = false;  // beforePresent ran this frame: its present has a start marker
     int generationMode_ = -1;     // the options set last: off (0) or on (1)
     uint32_t generationFrames_ = 1;
 };

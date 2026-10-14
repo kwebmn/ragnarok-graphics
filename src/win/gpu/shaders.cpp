@@ -194,6 +194,8 @@ float4 draw_ps(PsIn i) : SV_Target {
     } else if (((alphaTest >> 16) & 1) != 0 && !passes(alphaTest & 255, round(c.a * 255.0), (alphaTest >> 8) & 255)) {
         discard;
     }
+    // Part 3 (DLSS): an opaque interface draw covers the world wholly in the layer, whatever alpha it carries.
+    if (((alphaTest >> 18) & 1) != 0) c.a = 1.0;
     return c;
 }
 

@@ -73,14 +73,15 @@ Args parseArgs() {
 
 win::bridge::Channel* g_channel = nullptr;
 
-// Every log line also goes to the driver, which writes it into uaro-graphics.log with "render64:" in front.
+// Every log line also goes to the driver, which writes it into uaro-graphics.log with "render64:" in front - when
+// there is room: a line never waits (it may come from Streamline's own thread while the main one waits to send).
 void forward(LogLevel level, const char* text) {
     if (!g_channel) return;
     std::vector<uint8_t> out;
     WireWriter w(out);
     w.u8(uint8_t(level));
     w.str(text);
-    g_channel->send(Msg::Log, out);
+    g_channel->trySend(Msg::Log, out);
 }
 
 class Host {
@@ -136,10 +137,12 @@ int Host::run(const Args& a) {
         return 3;
     }
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
+    bool upscales = false;
     if (dlss) {
         std::string why;
         if (dlss_.attach(renderer_.device(), why)) {
             renderer_.setUpscaler(&dlss_);
+            upscales = true;
             LOG_INFO("%s ready (NVIDIA DLSS through Streamline)", dlss_.name());
         } else {
             LOG_ERROR("DLSS: %s; drawing without it", why.c_str());
@@ -147,6 +150,7 @@ int Host::run(const Args& a) {
     }
     hello.u8(1);
     hello.str(renderer_.adapterName());
+    hello.u8(upscales ? 1 : 0);  // the driver keeps MSAA and render_scale when DLSS is not there (0.8 review M4)
     channel_.send(Msg::Hello, out_);
     for (;;) {
         Msg type;

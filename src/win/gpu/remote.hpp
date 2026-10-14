@@ -24,6 +24,7 @@ public:
 
     bool start(const BridgeOptions& o, std::string& error);
     std::string adapterName() const { return adapter_; }
+    bool upscales() const { return upscales_; }  // DLSS is ready in the renderer
     void setUiSharp(bool sharp);
     void preparePipelines(const std::string& file);
     bool setTarget(int width, int height);
@@ -54,6 +55,7 @@ private:
     uint32_t nextTexture_ = 0;
     uint32_t presentsSent_ = 0;
     int samples_ = 1;
+    bool upscales_ = false;
     bool lost_ = false;
     bool needSurface_ = false;  // the renderer could not make a swap chain for the game's window
     std::vector<uint8_t> buffer_;  // a message being written; kept to keep its memory

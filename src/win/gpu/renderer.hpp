@@ -49,6 +49,7 @@ public:
     // Part 3: the same, in uaro-render64.exe; false (and nothing left running) when that process cannot draw.
     bool createRemote(const BridgeOptions& o, std::string& error);
     bool remote() const { return remote_ != nullptr; }
+    bool upscales() const;  // part 3: DLSS is ready (in uaro-render64.exe)
     // Part 4: through Direct3D 9's fixed function - RTX Remix when d3d9Path is its d3d9.dll (remix9.hpp).
     bool createRemix(const std::string& d3d9Path, std::string& error);
     bool remix() const { return remix_ != nullptr; }
