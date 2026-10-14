@@ -3,6 +3,7 @@
 #include <d3d12.h>
 #include <d3dcompiler.h>
 
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 
@@ -33,7 +34,8 @@ bool compile(pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& 
 }
 
 // One D3D12 sampler from a D3D7 stage. D3D7 address modes and D3D12's share their numbers (WRAP 1 ... BORDER 4).
-D3D12_SAMPLER_DESC samplerFor(const StageSetup& s) {
+// Stage 4: a world texture the client filters linearly is filtered anisotropically when aniso is 2-16.
+D3D12_SAMPLER_DESC samplerFor(const StageSetup& s, int aniso) {
     D3D12_SAMPLER_DESC d{};
     const bool linearMin = s.minFilter == d3d7::TFN_LINEAR || s.minFilter == d3d7::TFN_ANISOTROPIC;
     const bool linearMag = s.magFilter == d3d7::TFG_LINEAR || s.magFilter == d3d7::TFG_ANISOTROPIC;
@@ -48,6 +50,10 @@ D3D12_SAMPLER_DESC samplerFor(const StageSetup& s) {
     d.AddressV = address(s.addressV);
     d.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
     d.MaxAnisotropy = 1;
+    if (aniso >= 2 && linearMin && linearMag) {  // mips, when the texture has them, are linear then
+        d.Filter = D3D12_FILTER_ANISOTROPIC;
+        d.MaxAnisotropy = UINT(std::min(aniso, 16));
+    }
     d.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
     d.BorderColor[0] = float((s.borderColor >> 16) & 255) / 255.0f;
     d.BorderColor[1] = float((s.borderColor >> 8) & 255) / 255.0f;
@@ -58,9 +64,10 @@ D3D12_SAMPLER_DESC samplerFor(const StageSetup& s) {
     return d;
 }
 
-uint64_t samplerKey(const StageSetup& s) {
+uint64_t samplerKey(const StageSetup& s, int aniso) {
     return uint64_t(s.addressU) | uint64_t(s.addressV) << 4 | uint64_t(s.magFilter) << 8 |
-           uint64_t(s.minFilter) << 12 | uint64_t(s.mipFilter) << 16 | uint64_t(s.borderColor) << 20;
+           uint64_t(s.minFilter) << 12 | uint64_t(s.mipFilter) << 16 | uint64_t(s.borderColor) << 20 |
+           uint64_t(aniso & 31) << 52;
 }
 
 }  // namespace
@@ -118,6 +125,16 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     releaseCom(blob);
     releaseCom(errors);
 
+    if (!presentPipelineFor(1)) {
+        error = "present pipeline";
+        return false;
+    }
+    return true;
+}
+
+ID3D12PipelineState* Renderer::Impl::presentPipelineFor(UINT n) {
+    const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
+    if (presentPipelines[code]) return presentPipelines[code];
     D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
     p.pRootSignature = root;
     p.VS = {presentVs->GetBufferPointer(), presentVs->GetBufferSize()};
@@ -130,17 +147,17 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     p.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     p.NumRenderTargets = 1;
     p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
-    p.SampleDesc.Count = 1;
+    p.SampleDesc.Count = 1u << code;
     if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
-                                                   reinterpret_cast<void**>(&presentPipeline)))) {
-        error = "present pipeline";
-        return false;
+                                                   reinterpret_cast<void**>(&presentPipelines[code])))) {
+        LOG_ERROR("present pipeline for %u samples failed", 1u << code);
+        presentPipelines[code] = nullptr;
     }
-    return true;
+    return presentPipelines[code];
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, const StageSetup& s1) {
-    const KeyPair key{samplerKey(s0), samplerKey(s1)};
+D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, const StageSetup& s1, int aniso) {
+    const KeyPair key{samplerKey(s0, aniso), samplerKey(s1, aniso)};
     auto it = samplerPairs.find(key);
     if (it == samplerPairs.end()) {
         if (nextSampler + 2 > kSamplerCount) return samplerHeap->GetGPUDescriptorHandleForHeapStart();  // never: makeRoom()
@@ -148,8 +165,8 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, c
         nextSampler += 2;
         D3D12_CPU_DESCRIPTOR_HANDLE h = samplerHeap->GetCPUDescriptorHandleForHeapStart();
         h.ptr += SIZE_T(index) * samplerStep;
-        const D3D12_SAMPLER_DESC d0 = samplerFor(s0);
-        const D3D12_SAMPLER_DESC d1 = samplerFor(s1);
+        const D3D12_SAMPLER_DESC d0 = samplerFor(s0, aniso);
+        const D3D12_SAMPLER_DESC d1 = samplerFor(s1, aniso);
         device->CreateSampler(&d0, h);
         h.ptr += samplerStep;
         device->CreateSampler(&d1, h);
@@ -178,9 +195,9 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::textureTable(UINT srv0, UINT srv1) {
 // free place in the cache - when it is full, every list using the old pairs has to finish first - and the two texture
 // descriptors come from this list's part of the ring. Either way a new list starts here, never in the middle of a
 // draw. False when the GPU is lost.
-bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1) {
+bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso) {
     if (nextSampler + 2 > kSamplerCount &&
-        samplerPairs.find(KeyPair{samplerKey(s0), samplerKey(s1)}) == samplerPairs.end()) {
+        samplerPairs.find(KeyPair{samplerKey(s0, aniso), samplerKey(s1, aniso)}) == samplerPairs.end()) {
         waitIdle();
         samplerPairs.clear();
         nextSampler = 0;
@@ -196,8 +213,12 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1) {
 // D3D7 and D3D12 share the numbers of blend factors (ZERO 1 ... SRCALPHASAT 11), comparison functions
 // (NEVER 1 ... ALWAYS 8) and cull modes (NONE 1, CW = FRONT 2, CCW = BACK 3 with clockwise front faces), and both
 // count winding in window space (y down), so the states map one to one.
-ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf) {
-    return pipelineForKey(packPipelineKey(pipelineKey(s, fvf)));
+// Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage).
+ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage) {
+    PipelineKey k = pipelineKey(s, fvf);
+    k.samples = uint8_t(samples);
+    k.alphaToCoverage = coverage;
+    return pipelineForKey(packPipelineKey(k));
 }
 
 ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
@@ -215,6 +236,7 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     };
     D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
     p.pRootSignature = root;
+    p.BlendState.AlphaToCoverageEnable = k.alphaToCoverage ? TRUE : FALSE;
     p.VS = {drawVs->GetBufferPointer(), drawVs->GetBufferSize()};
     p.PS = {drawPs->GetBufferPointer(), drawPs->GetBufferSize()};
     D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
@@ -243,7 +265,7 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     p.NumRenderTargets = 1;
     p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
     p.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-    p.SampleDesc.Count = 1;
+    p.SampleDesc.Count = k.samples;
     ID3D12PipelineState* pso = nullptr;
     if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState), reinterpret_cast<void**>(&pso)))) {
         LOG_ERROR("pipeline for key 0x%llx failed", static_cast<unsigned long long>(key));

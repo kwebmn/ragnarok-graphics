@@ -67,6 +67,7 @@ private:
     Stats stats_;
     int scaledWidth_ = 0;  // the target size the last scale plan asked for (stage 3)
     int scaledHeight_ = 0;
+    int scaledSamples_ = 1;  // and its samples per pixel (stage 4)
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
     Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)

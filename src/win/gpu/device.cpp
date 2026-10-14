@@ -46,7 +46,8 @@ ID3D12Resource* createBuffer(ID3D12Device* device, D3D12_HEAP_TYPE type, UINT64 
 }
 
 ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, DXGI_FORMAT format,
-                                D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, const D3D12_CLEAR_VALUE* clear) {
+                                D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, const D3D12_CLEAR_VALUE* clear,
+                                UINT samples = 1) {
     D3D12_HEAP_PROPERTIES heap{};
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_RESOURCE_DESC d{};
@@ -56,7 +57,7 @@ ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, 
     d.DepthOrArraySize = 1;
     d.MipLevels = UINT16(levels);
     d.Format = format;
-    d.SampleDesc.Count = 1;
+    d.SampleDesc.Count = samples;
     d.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     d.Flags = flags;
     ID3D12Resource* r = nullptr;
@@ -301,35 +302,39 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
     D3D12_TEXTURE_COPY_LOCATION dst{};
     dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     dst.SubresourceIndex = 0;
-    if (!scaled()) {  // the target has the game's size: straight in
+    if (!scaled() && samples == 1) {  // the target has the game's size: straight in
         transition(target, targetState, D3D12_RESOURCE_STATE_COPY_DEST);
         dst.pResource = target;
         list->CopyTextureRegion(&dst, UINT(w.rect.left), UINT(w.rect.top), 0, &src, nullptr);
         return;
     }
-    // A larger target (stage 3 spec §5): the client's pixels go into the game-sized helper and are stretched in.
+    // A larger target (stage 3 spec §5), or one with several samples that takes no copies (stage 4): the client's
+    // pixels go into the game-sized helper and are stretched in.
     transition(gameSized, gameState, D3D12_RESOURCE_STATE_COPY_DEST);
     dst.pResource = gameSized;
     list->CopyTextureRegion(&dst, UINT(w.rect.left), UINT(w.rect.top), 0, &src, nullptr);
     transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     const float from[4] = {float(w.rect.left), float(w.rect.top), float(w.rect.right), float(w.rect.bottom)};
     blit(gameSized, gameState, gameSrv, gameWidth, gameHeight, from, rtvHandle(kRtvTarget), scaleRect(w.rect, scale),
-         width, height);
+         width, height, -1.0f, samples);
 }
 
 // Draws srcRect (in the source's pixels) of a texture into dstRect of a render target with the present pipeline:
 // one bilinear sample per pixel when enlarging, an average over each pixel's footprint when shrinking.
 bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
                           const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW,
-                          int dstH, float sharpen) {
+                          int dstH, float sharpen, UINT dstSamples) {
     if (dstRect.empty() || srcW <= 0 || srcH <= 0) return true;  // nothing to copy
+    ID3D12PipelineState* pso = presentPipelineFor(dstSamples);
+    if (!pso) return true;  // logged when it failed: the copy is skipped
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
     linearClamp.magFilter = d3d7::TFG_LINEAR;
     linearClamp.minFilter = d3d7::TFN_LINEAR;
     linearClamp.mipFilter = d3d7::TFP_NONE;
-    if (!makeRoom(linearClamp, linearClamp)) return false;  // first: a new list starts before this copy records anything
-    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp);
+    // First: a new list starts before this copy records anything.
+    if (!makeRoom(linearClamp, linearClamp, 0)) return false;
+    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp, 0);
     const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(srcSrv, srcSrv);
     transition(src, srcState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     const D3D12_VIEWPORT vp{float(dstRect.left), float(dstRect.top), float(dstRect.width()), float(dstRect.height()),
@@ -340,7 +345,7 @@ bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     list->RSSetViewports(1, &vp);
     list->RSSetScissorRects(1, &clip);
     list->SetGraphicsRootSignature(root);
-    list->SetPipelineState(presentPipeline);
+    list->SetPipelineState(pso);
     Constants c{};
     c.sourceRect[0] = srcRect[0] / float(srcW);
     c.sourceRect[1] = srcRect[1] / float(srcH);
@@ -365,22 +370,46 @@ bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     return true;
 }
 
-bool Renderer::Impl::createTarget(int w, int h, ID3D12Resource*& rt, ID3D12Resource*& ds) {
+bool Renderer::Impl::createTarget(int w, int h, UINT n, ID3D12Resource*& rt, ID3D12Resource*& ds) {
     D3D12_CLEAR_VALUE black{};
     black.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     black.Color[3] = 1.0f;
     rt = createTexture2D(device, w, h, 1, DXGI_FORMAT_B8G8R8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
-                         D3D12_RESOURCE_STATE_RENDER_TARGET, &black);
+                         D3D12_RESOURCE_STATE_RENDER_TARGET, &black, n);
     D3D12_CLEAR_VALUE farthest{};  // not "far": windef.h defines far as an empty macro
     farthest.Format = DXGI_FORMAT_D32_FLOAT;
     farthest.DepthStencil.Depth = 1.0f;
     ds = createTexture2D(device, w, h, 1, DXGI_FORMAT_D32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
-                         D3D12_RESOURCE_STATE_DEPTH_WRITE, &farthest);
+                         D3D12_RESOURCE_STATE_DEPTH_WRITE, &farthest, n);
     if (rt && ds) return true;
     releaseCom(rt);
     releaseCom(ds);
-    LOG_ERROR("cannot create a %dx%d render target", w, h);
+    LOG_ERROR("cannot create a %dx%d render target with %u samples", w, h, n);
     return false;
+}
+
+UINT Renderer::Impl::supportedSamples(UINT want) {
+    for (UINT n = want >= 8 ? 8 : want >= 4 ? 4 : want >= 2 ? 2 : 1; n > 1; n /= 2) {
+        bool ok = true;
+        for (DXGI_FORMAT f : {DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_D32_FLOAT}) {
+            D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS q{};
+            q.Format = f;
+            q.SampleCount = n;
+            ok = ok && SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &q, sizeof q)) &&
+                 q.NumQualityLevels > 0;
+        }
+        if (ok) return n;
+    }
+    return 1;
+}
+
+// A target with several samples is resolved into `resolved` (stage 4); bindTarget() turns it back into a target.
+Renderer::Impl::Readable Renderer::Impl::readableTarget() {
+    if (samples <= 1 || !resolved) return Readable{target, &targetState};
+    transition(target, targetState, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+    transition(resolved, resolvedState, D3D12_RESOURCE_STATE_RESOLVE_DEST);
+    list->ResolveSubresource(resolved, 0, target, 0, DXGI_FORMAT_B8G8R8A8_UNORM);
+    return Readable{resolved, &resolvedState};
 }
 
 // ---- Impl: swap chain --------------------------------------------------------------------------------------
@@ -465,7 +494,7 @@ void Renderer::Impl::destroy() {
     textures.clear();
     for (auto& p : pipelines) releaseCom(p.second);
     pipelines.clear();
-    releaseCom(presentPipeline);
+    for (ID3D12PipelineState*& p : presentPipelines) releaseCom(p);
     releaseCom(root);
     releaseCom(drawVs);
     releaseCom(drawPs);
@@ -474,6 +503,7 @@ void Renderer::Impl::destroy() {
     releaseCom(readback);
     releaseCom(target);
     releaseCom(depth);
+    releaseCom(resolved);
     releaseCom(gameSized);
     for (Slot& s : slots) {
         for (IUnknown* g : s.garbage) g->Release();
@@ -507,6 +537,16 @@ Renderer::~Renderer() {
 std::string Renderer::adapterName() const { return impl_->adapter; }
 
 void Renderer::setUiSharp(bool sharp) { impl_->uiSharp = sharp; }
+
+int Renderer::samples() const { return int(impl_->samples); }
+
+void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage) {
+    Impl& m = *impl_;
+    if (anisotropy == m.anisotropy && alphaToCoverage == m.alphaToCoverage) return;
+    m.anisotropy = anisotropy;
+    m.alphaToCoverage = alphaToCoverage;
+    LOG_INFO("quality: anisotropy %d, alpha to coverage %s", anisotropy, alphaToCoverage ? "on" : "off");
+}
 
 void Renderer::preparePipelines(const std::string& file) {
     Impl& m = *impl_;
@@ -648,8 +688,10 @@ bool Renderer::setTarget(int width, int height) {
     };
     releaseCom(m.target);
     releaseCom(m.depth);
+    releaseCom(m.resolved);
     releaseCom(m.gameSized);
-    if (!m.createTarget(width, height, m.target, m.depth)) return fail();
+    m.samples = 1;  // until the first present, like the scale: the calibration sees DX7's picture
+    if (!m.createTarget(width, height, 1, m.target, m.depth)) return fail();
     m.gameSized = createTexture2D(m.device, width, height, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
                                   D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
     if (!m.gameSized) {
@@ -677,36 +719,58 @@ bool Renderer::setTarget(int width, int height) {
     return true;
 }
 
-bool Renderer::setScale(double k, int targetWidth, int targetHeight) {
+bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples) {
     Impl& m = *impl_;
     if (m.lost || !m.target || targetWidth <= 0 || targetHeight <= 0) return false;
-    if (k == m.scale && targetWidth == m.width && targetHeight == m.height) return true;
+    UINT n = m.supportedSamples(UINT(std::max(samples, 1)));
+    if (k == m.scale && targetWidth == m.width && targetHeight == m.height && n == m.samples) return true;
     ID3D12Resource* target = nullptr;
     ID3D12Resource* depth = nullptr;
-    if (!m.createTarget(targetWidth, targetHeight, target, depth)) return false;
+    ID3D12Resource* resolved = nullptr;
+    const auto make = [&](UINT count) {
+        if (!m.createTarget(targetWidth, targetHeight, count, target, depth)) return false;
+        if (count == 1) return true;
+        resolved = createTexture2D(m.device, targetWidth, targetHeight, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                   D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_RESOLVE_DEST, nullptr);
+        if (resolved && m.presentPipelineFor(count)) return true;
+        LOG_ERROR("cannot resolve a %dx%d target with %u samples", targetWidth, targetHeight, count);
+        releaseCom(target);
+        releaseCom(depth);
+        releaseCom(resolved);
+        return false;
+    };
+    if (!make(n)) {  // stage 4: no memory for that many samples - one sample per pixel instead
+        if (n == 1 || !make(1)) return false;
+        n = 1;
+    }
     // The back buffer keeps its picture across a present: the old target is stretched into the new one.
-    if (!m.begin()) {
+    const auto drop = [&]() {
         releaseCom(target);
         releaseCom(depth);
+        releaseCom(resolved);
         return false;
-    }
+    };
+    if (!m.begin()) return drop();
     m.device->CreateRenderTargetView(target, nullptr, m.rtvHandle(kRtvNew));
+    const Impl::Readable old = m.readableTarget();
     const float all[4] = {0.0f, 0.0f, float(m.width), float(m.height)};
-    if (!m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvNew),
-                Rect{0, 0, targetWidth, targetHeight}, targetWidth, targetHeight)) {
-        releaseCom(target);
-        releaseCom(depth);
-        return false;
-    }
+    if (!m.blit(old.resource, *old.state, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvNew),
+                Rect{0, 0, targetWidth, targetHeight}, targetWidth, targetHeight, -1.0f, n))
+        return drop();
     m.waitIdle();
     releaseCom(m.target);
     releaseCom(m.depth);
+    releaseCom(m.resolved);
     m.target = target;
     m.depth = depth;
+    m.resolved = resolved;
     m.targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    m.resolvedState = D3D12_RESOURCE_STATE_RESOLVE_DEST;
+    const UINT was = m.samples;
+    m.samples = n;
     m.device->CreateRenderTargetView(m.target, nullptr, m.rtvHandle(kRtvTarget));
     m.device->CreateDepthStencilView(m.depth, nullptr, m.dsvHandle());
-    m.device->CreateShaderResourceView(m.target, nullptr, m.cpuSrvHandle(m.targetSrv));
+    m.device->CreateShaderResourceView(n > 1 ? m.resolved : m.target, nullptr, m.cpuSrvHandle(m.targetSrv));
     m.width = targetWidth;
     m.height = targetHeight;
     m.scale = k;
@@ -715,8 +779,11 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight) {
         m.list->ClearDepthStencilView(m.dsvHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
         m.submit();
     }
-    LOG_DEBUG("render target %dx%d: %.3f times the game's %dx%d", targetWidth, targetHeight, k, m.gameWidth,
-             m.gameHeight);
+    LOG_DEBUG("render target %dx%d with %u samples: %.3f times the game's %dx%d", targetWidth, targetHeight, n, k,
+              m.gameWidth, m.gameHeight);
+    if (n != was || int(n) < samples)
+        LOG_INFO("msaa: %u sample%s per pixel%s", n, n == 1 ? "" : "s",
+                 int(n) < samples ? " (fewer than asked: the card or its memory has no more)" : "");
     return true;
 }
 
@@ -786,12 +853,13 @@ void Renderer::execute(const FrameRecord& record) {
 bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     Impl& m = *impl_;
     if (m.lost || !m.target || !m.begin()) return false;
-    ID3D12Resource* source = m.target;
-    D3D12_RESOURCE_STATES* sourceState = &m.targetState;
+    const Impl::Readable r = m.readableTarget();  // resolved first when it has several samples (stage 4)
+    ID3D12Resource* source = r.resource;
+    D3D12_RESOURCE_STATES* sourceState = r.state;
     if (m.scaled()) {  // the client reads its own size: shrink the target into the helper first (stage 3 spec §5)
         m.transition(m.gameSized, m.gameState, D3D12_RESOURCE_STATE_RENDER_TARGET);
         const float all[4] = {0.0f, 0.0f, float(m.width), float(m.height)};
-        if (!m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvGame),
+        if (!m.blit(source, *sourceState, m.targetSrv, m.width, m.height, all, m.rtvHandle(kRtvGame),
                     Rect{0, 0, m.gameWidth, m.gameHeight}, m.gameWidth, m.gameHeight))
             return false;  // no stale frame for the client
         source = m.gameSized;
@@ -860,6 +928,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         return;
     }
     if (!m.begin()) return;
+    const Impl::Readable shown = m.readableTarget();  // resolved first when it has several samples (stage 4)
     const UINT index = m.swapChain->GetCurrentBackBufferIndex();
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_RENDER_TARGET);
     const D3D12_CPU_DESCRIPTOR_HANDLE rtv = m.rtvHandle(kRtvSwap + index);
@@ -877,7 +946,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const auto tx = [&m](int x) { return float(double(x) * m.width / m.gameWidth); };
     const auto ty = [&m](int y) { return float(double(y) * m.height / m.gameHeight); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
-    if (!m.blit(m.target, m.targetState, m.targetSrv, m.width, m.height, from, rtv, fit, int(m.swapWidth),
+    if (!m.blit(shown.resource, *shown.state, m.targetSrv, m.width, m.height, from, rtv, fit, int(m.swapWidth),
                 int(m.swapHeight), options.sharpen))
         return;
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);

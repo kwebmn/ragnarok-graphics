@@ -43,6 +43,19 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("sharpen", std::to_string(running.sharpen), std::to_string(file.sharpen)));
         n.sharpen = file.sharpen;
     }
+    if (file.msaa != running.msaa) {
+        u.applied.push_back(change("msaa", std::to_string(running.msaa), std::to_string(file.msaa)));
+        n.msaa = file.msaa;
+    }
+    if (file.alphaToCoverage != running.alphaToCoverage) {
+        u.applied.push_back(change("alpha_to_coverage", flag(running.alphaToCoverage), flag(file.alphaToCoverage)));
+        n.alphaToCoverage = file.alphaToCoverage;
+    }
+    if (file.anisotropy != running.anisotropy) {
+        u.applied.push_back(
+            change("anisotropy", std::to_string(running.anisotropy), std::to_string(file.anisotropy)));
+        n.anisotropy = file.anisotropy;
+    }
     if (file.vsync != running.vsync) {
         u.applied.push_back(change("vsync", flag(running.vsync), flag(file.vsync)));
         n.vsync = file.vsync;
@@ -61,7 +74,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
 
 bool appliesNow(const std::string& k) {
     return k == "display.high_resolution" || k == "display.ui_filter" || k == "display.crisp_text" ||
-           k == "quality.render_scale" || k == "quality.sharpen" || k == "frames.vsync" ||
+           k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" ||
+           k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "debug.log";
 }
 

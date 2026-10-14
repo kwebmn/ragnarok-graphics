@@ -126,7 +126,12 @@ struct Renderer::Impl {
     ID3D12Resource* target = nullptr;
     ID3D12Resource* depth = nullptr;
     D3D12_RESOURCE_STATES targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    UINT targetSrv = 0;
+    UINT targetSrv = 0;  // the target as one sample per pixel: itself, or `resolved` when it has several
+    UINT samples = 1;    // stage 4: of the target and its depth
+    ID3D12Resource* resolved = nullptr;  // samples > 1: the target resolved, for showing and reading it
+    D3D12_RESOURCE_STATES resolvedState = D3D12_RESOURCE_STATE_RESOLVE_DEST;
+    int anisotropy = 0;           // stage 4: of world draws; 0 = off
+    bool alphaToCoverage = false;  // stage 4
     int width = 0;  // the target: the game's size times scale
     int height = 0;
     int gameWidth = 0;  // the client's size
@@ -152,7 +157,7 @@ struct Renderer::Impl {
     ID3DBlob* drawPs = nullptr;
     ID3DBlob* presentVs = nullptr;
     ID3DBlob* presentPs = nullptr;
-    ID3D12PipelineState* presentPipeline = nullptr;
+    ID3D12PipelineState* presentPipelines[4] = {};  // copies into a target of 1, 2, 4 or 8 samples (stage 4)
     std::unordered_map<uint64_t, ID3D12PipelineState*> pipelines;
     std::string pipelineFile;  // the saved keys (1B review M8): every new pipeline is added to it
 
@@ -188,13 +193,20 @@ struct Renderer::Impl {
     void waitIdle();
     void retireDying();  // after execute() has submitted: the dying textures go with that submission
     void failed(uint32_t place, const char* what, HRESULT hr);
-    bool createTarget(int w, int h, ID3D12Resource*& rt, ID3D12Resource*& ds);
+    bool createTarget(int w, int h, UINT n, ID3D12Resource*& rt, ID3D12Resource*& ds);
+    UINT supportedSamples(UINT want);  // the most samples up to `want` the card has for the target and its depth
+    // The target with one sample per pixel, for blit() and copies: itself, or resolved into `resolved` (stage 4).
+    struct Readable {
+        ID3D12Resource* resource;
+        D3D12_RESOURCE_STATES* state;
+    };
+    Readable readableTarget();
     bool scaled() const { return width != gameWidth || height != gameHeight; }
     void applyViewport();
     // false: there is no list to record into (the GPU is lost) - the caller stops too
     bool blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
               const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW, int dstH,
-              float sharpen = -1.0f);
+              float sharpen = -1.0f, UINT dstSamples = 1);
     bool growUpload(Slot& s, UINT64 size);
     Upload allocUpload(UINT64 size, UINT64 alignment);
     void transition(ID3D12Resource* r, D3D12_RESOURCE_STATES& state, D3D12_RESOURCE_STATES to);
@@ -212,10 +224,13 @@ struct Renderer::Impl {
     void destroy();
     // pipeline.cpp
     bool createPipelines(std::string& error);
-    D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const StageSetup& s0, const StageSetup& s1);
+    ID3D12PipelineState* presentPipelineFor(UINT n);  // made the first time a target of n samples needs it
+    // aniso: the anisotropy of the pair's samplers, 0 for interface draws and copies (stage 4).
+    D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const StageSetup& s0, const StageSetup& s1, int aniso);
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
-    bool makeRoom(const StageSetup& s0, const StageSetup& s1);  // before samplerTable and textureTable; false: lost
-    ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf);
+    // Before samplerTable and textureTable; false: lost.
+    bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso);
+    ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage);
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp
     void prepareGeometry(const FrameRecord& rec);

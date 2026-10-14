@@ -50,6 +50,7 @@ void Context::close() {
     windowApplied = false;
     scaleLog_ = Throttle(500);
     scaledWidth_ = scaledHeight_ = 0;
+    scaledSamples_ = 1;
     scaleMade_ = true;
     lastOut_ = SIZE{};
     lastPlan_ = ScalePlan{};
@@ -58,6 +59,7 @@ void Context::close() {
 bool Context::setTarget(int width, int height) {
     if (!renderer || !renderer->setTarget(width, height)) return false;
     scaledWidth_ = width;  // the renderer is back at the game's size until the next present
+    scaledSamples_ = 1;    // and at one sample per pixel
     scaledHeight_ = height;
     scaleMade_ = true;     // that target exists (0.4.2 review)
     record.reset();
@@ -129,11 +131,15 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Stage 6: twins follow the scale with every improvement on, so Pause leaves them as they are.
     crisp::setScale(
         planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale, config.highResolution).k);
-    if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_) {
+    // Stage 4: MSAA comes with the scale, so the calibration has drawn without it; Pause turns it off too.
+    const int samples = enhanced_ && config.msaa > 1 ? config.msaa : 1;
+    if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_ || samples != scaledSamples_) {
         scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
         scaledHeight_ = plan.targetHeight;
-        scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight);
+        scaledSamples_ = samples;
+        scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight, samples);
     }
+    renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage);
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
     const bool changed = out.cx != lastOut_.cx || out.cy != lastOut_.cy || plan.k != lastPlan_.k ||

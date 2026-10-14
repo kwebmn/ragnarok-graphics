@@ -22,6 +22,9 @@ struct Config {
     bool crispText = true;       // window text and lines at the window's real pixels when k > 1 (stage 6)
     int renderScale = 100;       // %, 100-200: the frame is drawn this much larger and shrunk when shown
     int sharpen = 50;            // 0-100: contrast adaptive sharpening of the picture on screen; 0 = off
+    int msaa = 4;                // stage 4: samples per pixel at polygon edges - 0 (off), 2, 4 or 8
+    bool alphaToCoverage = true; // stage 4, with MSAA: soft edges where alpha testing cuts textures (leaves, fences)
+    int anisotropy = 16;         // stage 4: anisotropic filtering of the world's textures - 0 (off), 2, 4, 8 or 16
     bool vsync = true;
     int fpsLimit = 0;      // 0 = no limit
     bool allowTearing = false;  // let G-SYNC / FreeSync monitors show frames as soon as they are ready

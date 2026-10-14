@@ -19,6 +19,8 @@ struct PipelineKey {
     uint8_t srcBlend = 0;  // d3d7::BLEND_*
     uint8_t dstBlend = 0;
     bool twoUv = false;    // FVF_TL2: a second UV set
+    uint8_t samples = 1;   // stage 4: of the target - 1, 2, 4 or 8
+    bool alphaToCoverage = false;  // stage 4: alpha testing as coverage (several samples, no blending)
     bool operator==(const PipelineKey& o) const;
 };
 
@@ -33,7 +35,8 @@ std::string pipelineKeysHeader();
 std::string pipelineKeyLine(uint64_t v);
 
 // A key the renderer makes (0.4.1 and 0.4.2 reviews): only the packed fields, in resolveDrawSetup's forms - no Z test
-// means ALWAYS and no Z writes, no blending means ONE and ZERO, blend factors 1-11 (BOTH* resolved), a cull mode.
+// means ALWAYS and no Z writes, no blending means ONE and ZERO, blend factors 1-11 (BOTH* resolved), a cull mode;
+// alpha to coverage only with several samples and no blending.
 // Damaged lines - two game instances appending at once - are skipped by parsePipelineKeys.
 bool validPipelineKey(uint64_t v);
 // The file's text: the header, then each key once, in increasing order.

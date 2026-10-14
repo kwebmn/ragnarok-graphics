@@ -32,6 +32,13 @@ void setBool(const std::string& v, bool& out) {
     if (v == "0" || v == "false" || v == "off") out = false;
 }
 
+// One of a few factors ("0", "2", "4", ...); 1 means off, as 0.
+void setFactor(const std::string& v, int most, int& out) {
+    int n = 0;
+    if (!toInt(v, 0, most, n) || (n & (n - 1)) != 0) return;  // 0 or a power of two
+    out = n == 1 ? 0 : n;
+}
+
 // A window side: 0 (the game's own size) or a real size.
 void setSide(const std::string& v, int& out) {
     int n = 0;
@@ -79,6 +86,12 @@ Config parseConfig(const std::string& text) {
             toInt(val, 100, 200, c.renderScale);
         } else if (key == "quality.sharpen") {
             toInt(val, 0, 100, c.sharpen);
+        } else if (key == "quality.msaa") {
+            setFactor(val, 8, c.msaa);
+        } else if (key == "quality.alpha_to_coverage") {
+            setBool(val, c.alphaToCoverage);
+        } else if (key == "quality.anisotropy") {
+            setFactor(val, 16, c.anisotropy);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {

@@ -34,8 +34,13 @@ public:
     void preparePipelines(const std::string& file);
     bool setTarget(int width, int height);  // the client's size: target (BGRA8) and depth (D32) at k = 1, black
     // Stage 3: from now on draw into a target k times the game's size (targetWidth x targetHeight); the current
-    // picture is stretched into it, as the back buffer keeps its contents across a present.
-    bool setScale(double k, int targetWidth, int targetHeight);
+    // picture is stretched into it, as the back buffer keeps its contents across a present. Stage 4: with `samples`
+    // samples per pixel (1, 2, 4 or 8; fewer when the card or its memory has not that many).
+    bool setScale(double k, int targetWidth, int targetHeight, int samples = 1);
+    int samples() const;  // of the target now
+    // Stage 4: anisotropic filtering of the world's textures (0 = off, else 2-16), and alpha testing as coverage in
+    // draws without blending while the target has several samples.
+    void setDrawQuality(int anisotropy, bool alphaToCoverage);
 
     uint32_t createTexture(int width, int height, int levels);  // an ARGB8 texture; 0 on failure
     void releaseTexture(uint32_t id);                           // freed once the GPU no longer uses it

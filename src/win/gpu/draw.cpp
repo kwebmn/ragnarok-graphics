@@ -72,11 +72,16 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         return;
     }
     const DrawSetup& s = rec.states()[d.state];
-    ID3D12PipelineState* pso = pipelineFor(s, d.fvf);
+    // Stage 4: with several samples an alpha test that keeps the brighter alpha (the client's 0xCF on leaves and
+    // fences, no blending) becomes coverage - a soft edge instead of a step. World textures get anisotropy.
+    const bool coverage = alphaToCoverage && samples > 1 && s.alphaTest && !s.blend &&
+                          (s.alphaFunc == d3d7::CMP_GREATER || s.alphaFunc == d3d7::CMP_GREATEREQUAL);
+    const int aniso = s.ui ? 0 : anisotropy;
+    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage);
     if (!pso) return;
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
-    if (!makeRoom(s.stage[0], s.stage[1])) return;
+    if (!makeRoom(s.stage[0], s.stage[1], aniso)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
@@ -93,7 +98,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         t[i] = &it->second;
         transition(t[i]->resource, t[i]->state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     }
-    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(s.stage[0], s.stage[1]);
+    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(s.stage[0], s.stage[1], aniso);
     bindTarget();
     if (!boundPipeline) {  // a fresh list or after present(): the root signature and its tables are gone
         list->SetGraphicsRootSignature(root);
@@ -119,6 +124,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
+    if (coverage) c.alphaTest |= 1u << 17;
     c.fogEnable = s.fog ? 1u : 0u;
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;
