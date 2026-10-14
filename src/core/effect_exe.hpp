@@ -21,7 +21,8 @@ constexpr uint32_t kEffectId = 0x100;
 enum class Kind : uint8_t { None, Aura };
 // The level 99 aura: 200, 201 and 202 - its ring (effect\ring_blue.tga), bubbles (effect\pikapika2.bmp) and circle
 // (effect\freezing_circle.bmp) - and 397, 398 and 362, those of the transcendent classes (362: effect\whitelight.tga).
-// With /aura the game shows the circles alone.
+// The game shows the circles alone unless /aura is on (0x772CE4, 0 at start, not kept): it reads that when it makes
+// an aura - a map entered, a player come into view - not when the command is given.
 Kind kindOf(int id);
 
 // A draw's TL vertices (`stride` bytes each, the diffuse colour at byte 16) made `percent` % as bright: their colour

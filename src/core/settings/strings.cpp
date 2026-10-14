@@ -842,12 +842,13 @@ const Entry kTexts[] = {
     {"How much the fire of skills lights around it.", "Наскільки вогонь умінь освітлює довкола.",
      "Насколько огонь умений освещает всё вокруг."},
     {"Softer level 99 aura", "М'якша аура 99 рівня", "Мягкая аура 99 уровня"},
-    {"The level 99 aura - its ring, bubbles and circle - shines softer, so that it does not dazzle around the "
-     "characters. The game's own /aura command still shows the circle alone.",
-     "Аура 99 рівня — її кільце, бульбашки й коло — світить м'якше й не сліпить довкола персонажів. Команда гри "
-     "/aura, як і раніше, залишає саме коло.",
-     "Аура 99 уровня — её кольцо, пузырьки и круг — светит мягче и не слепит вокруг персонажей. Команда игры /aura, "
-     "как и раньше, оставляет один круг."},
+    {"The level 99 aura shines softer and does not dazzle around the characters. The game shows the simplified "
+     "aura (the circle); its /aura command turns on the full one (the ring and bubbles too) - after a teleport or a "
+     "new map.",
+     "Аура 99 рівня світить м'якше й не сліпить довкола персонажів. Гра показує спрощену ауру (коло); її команда "
+     "/aura вмикає повну (ще кільце й бульбашки) — після телепорту чи нової карти.",
+     "Аура 99 уровня светит мягче и не слепит вокруг персонажей. Игра показывает упрощённую ауру (круг); её команда "
+     "/aura включает полную (ещё кольцо и пузырьки) — после телепорта или новой карты."},
     {"Aura brightness", "Яскравість аури", "Яркость ауры"},
     {"How bright the aura is, of what the game draws: 100 % as in the game, 0 % none.",
      "Наскільки яскрава аура від того, як її малює гра: 100 % — як у грі, 0 % — немає.",
