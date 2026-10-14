@@ -111,7 +111,17 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                                    d.primitive == d3d7::PT_TRIANGLESTRIP) &&
                 copyScene();
     }
-    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water);
+    // One quad facing the screen: a sprite (a character, a monster, an item). 0.22.3: under DLSS such a draw, and an
+    // effect, writes its coverage into the world's alpha - DLSS's mask of pixels whose history it is not to take.
+    bool quad = false;
+    if (!s.ui && (ai || toWorld) && d.vertexCount == 4) {
+        const std::vector<uint8_t>& v = rec.vertexBytes();
+        const size_t stride = FrameRecord::stride(d.fvf);
+        quad = d.vertexOffset + 4 * stride <= v.size() &&
+               ai::flatQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount);
+    }
+    const bool mask = toWorld && biasMask && (quad || adds);
+    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask);
     if (!pso) return;
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
@@ -139,10 +149,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (ai && !s.ui) {
         facts.uvSets = d.fvf == d3d7::FVF_TL2 ? 2 : 1;
         facts.additive = s.blend && s.dstBlend == d3d7::BLEND_ONE;
-        const std::vector<uint8_t>& v = rec.vertexBytes();
-        const size_t stride = FrameRecord::stride(d.fvf);
-        if (d.vertexCount == 4 && d.vertexOffset + 4 * stride <= v.size())
-            facts.flatQuad = ai::flatQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount);
+        facts.flatQuad = quad;
     }
     Texture* t[2] = {nullptr, nullptr};
     UINT srv[2] = {0, 0};

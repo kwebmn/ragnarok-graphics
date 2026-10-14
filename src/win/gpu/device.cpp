@@ -340,9 +340,9 @@ void Renderer::Impl::clear(const ClearCmd& c) {
                       std::min<LONG>(t.bottom, height)};
         if (wr.right > wr.left && wr.bottom > wr.top) {
             bindPass(kPassWorld);
-            if (c.flags & 1) {
+            if (c.flags & 1) {  // alpha 0: no character or effect there yet (DLSS's mask, 0.22.3)
                 const float color[4] = {float((c.argb >> 16) & 255) / 255.0f, float((c.argb >> 8) & 255) / 255.0f,
-                                        float(c.argb & 255) / 255.0f, 1.0f};
+                                        float(c.argb & 255) / 255.0f, 0.0f};
                 list->ClearRenderTargetView(rtvHandle(kRtvWorld), color, 1, &wr);
                 worldDrawn = true;
             }
@@ -569,6 +569,7 @@ Renderer::Impl::Readable Renderer::Impl::readableTarget() {
 // ---- Impl: DLSS (part 3, uaro-render64.exe) -------------------------------------------------------------------
 
 void Renderer::Impl::releaseUpscaleTargets() {
+    releaseCom(biasMask);
     releaseCom(world);
     releaseCom(worldDepth);
     releaseCom(motion);
@@ -583,10 +584,7 @@ bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
     int rw = 0, rh = 0;
     if (!upscaler || !createUpscalePipelines() || !upscaler->renderSize(targetW, targetH, rw, rh) || rw <= 0 || rh <= 0)
         return false;
-    D3D12_CLEAR_VALUE black{};
-    black.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    black.Color[3] = 1.0f;
-    D3D12_CLEAR_VALUE none{};
+    D3D12_CLEAR_VALUE none{};  // black, alpha 0: the world's too (its alpha is DLSS's mask, 0.22.3)
     none.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     D3D12_CLEAR_VALUE farthest{};
     farthest.Format = DXGI_FORMAT_D32_FLOAT;
@@ -594,7 +592,7 @@ bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
     D3D12_CLEAR_VALUE still{};
     still.Format = DXGI_FORMAT_R16G16_FLOAT;
     world = createTexture2D(device, rw, rh, 1, DXGI_FORMAT_B8G8R8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
-                            D3D12_RESOURCE_STATE_RENDER_TARGET, &black);
+                            D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
     worldDepth = createTexture2D(device, rw, rh, 1, DXGI_FORMAT_R32_TYPELESS, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
                                  D3D12_RESOURCE_STATE_DEPTH_WRITE, &farthest);
     motion = createTexture2D(device, rw, rh, 1, DXGI_FORMAT_R16G16_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
@@ -604,6 +602,17 @@ bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
                                D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
     layer = createTexture2D(device, targetW, targetH, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
                             D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
+    D3D12_CLEAR_VALUE clearMask{};
+    clearMask.Format = DXGI_FORMAT_R8_UNORM;
+    biasMask = maskPs ? createTexture2D(device, rw, rh, 1, DXGI_FORMAT_R8_UNORM,
+                                        D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                        &clearMask)
+                      : nullptr;  // without it DLSS takes the history everywhere, as before
+    biasState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    if (biasMask) {
+        device->CreateRenderTargetView(biasMask, nullptr, rtvHandle(kRtvBias));
+        device->CreateShaderResourceView(biasMask, nullptr, cpuSrvHandle(biasSrv));
+    }
     if (!world || !worldDepth || !motion || !upscaled || !layer) {
         LOG_ERROR("cannot create the %dx%d world and its %dx%d picture for %s", rw, rh, targetW, targetH,
                   upscaler->name());
@@ -689,6 +698,39 @@ bool Renderer::Impl::composite() {
     if (!begin()) return false;
     static bool failedOnce = false;
     if (worldDrawn && !finishWorld()) return false;  // 0.20, 0.21: its shadows (if no blended draw came), colours
+    bool masked = false;
+    if (worldDrawn && biasMask && maskPs) {  // 0.22.3: the world's alpha into DLSS's mask
+        if (!maskPipeline) {
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
+            p.pRootSignature = root;
+            p.VS = {presentVs->GetBufferPointer(), presentVs->GetBufferSize()};
+            p.PS = {maskPs->GetBufferPointer(), maskPs->GetBufferSize()};
+            p.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+            p.SampleMask = UINT_MAX;
+            p.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+            p.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+            p.RasterizerState.DepthClipEnable = TRUE;
+            p.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            p.NumRenderTargets = 1;
+            p.RTVFormats[0] = DXGI_FORMAT_R8_UNORM;
+            p.SampleDesc.Count = 1;
+            if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                           reinterpret_cast<void**>(&maskPipeline)))) {
+                maskPipeline = nullptr;
+                releaseCom(maskPs);  // not tried again
+                LOG_ERROR("DLSS's mask of the characters failed: their history is taken as before");
+            }
+        }
+        if (maskPipeline) {
+            transition(world, worldState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            Constants mc{};
+            if (!effectPass(maskPipeline, biasMask, biasState, rtvHandle(kRtvBias), renderWidth, renderHeight, mc,
+                            worldSrv, false))
+                return false;
+            transition(biasMask, biasState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            masked = true;
+        }
+    }
     if (worldDrawn) {
         worldValid = true;
         // The motion of every world pixel from the game's camera (motion_ps).
@@ -742,6 +784,8 @@ bool Renderer::Impl::composite() {
         f.depth = worldDepth;
         f.motion = motion;
         f.output = upscaled;
+        f.bias = masked ? biasMask : nullptr;
+        f.biasState = biasState;
         f.colorState = worldState;
         f.depthState = worldDepthState;
         f.motionState = motionState;
@@ -997,6 +1041,11 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : gradePipelines) releaseCom(p);  // 0.21
     releaseCom(gradePs);
     for (ID3D12Resource*& r : dofTarget) releaseCom(r);  // 0.22
+    for (ID3D12Resource*& r : dofFocus) releaseCom(r);
+    releaseCom(dofFocusPipeline);
+    releaseCom(dofFocusPs);
+    releaseCom(maskPipeline);  // 0.22.3
+    releaseCom(maskPs);
     releaseCom(dofDownPipeline);
     releaseCom(dofBlurPipeline);
     for (ID3D12PipelineState*& p : dofApplyPipelines) releaseCom(p);
@@ -1367,6 +1416,8 @@ bool Renderer::create(std::string& error) {
     m.sceneDepthSrv = m.allocSrv();
     for (UINT& srv : m.aoSrv) srv = m.allocSrv();  // 0.20: the soft shadows
     for (UINT& srv : m.dofSrv) srv = m.allocSrv();  // 0.22: the depth of field
+    for (UINT& srv : m.dofFocusSrv) srv = m.allocSrv();
+    m.biasSrv = m.allocSrv();  // 0.22.3: DLSS's mask
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).

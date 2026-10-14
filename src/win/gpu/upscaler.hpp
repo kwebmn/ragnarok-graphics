@@ -22,7 +22,10 @@ public:
         ID3D12Resource* depth = nullptr;   // render size, R32 (the game's depth, 0 near ... 1 far)
         ID3D12Resource* motion = nullptr;  // render size, R16G16: where each pixel was, minus where it is, in pixels
         ID3D12Resource* output = nullptr;  // output size, unordered access
-        D3D12_RESOURCE_STATES colorState{}, depthState{}, motionState{}, outputState{};  // left as they are
+        // 0.22.3, render size, R8: 1 where the history is not to be taken (characters, monsters, effects - they move
+        // on their own, their motion is not the camera's); null: none.
+        ID3D12Resource* bias = nullptr;
+        D3D12_RESOURCE_STATES colorState{}, depthState{}, motionState{}, outputState{}, biasState{};  // left so
         int renderW = 0, renderH = 0, outW = 0, outH = 0;
         float jitter[2] = {0, 0};  // render pixels: how far the world's geometry was moved this frame
         bool reset = false;        // no history to use: the first frame, a new size, a camera jump

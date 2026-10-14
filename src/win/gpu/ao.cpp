@@ -34,7 +34,7 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC fullScreenPipeline(ID3D12RootSignature* root,
 
 bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
                                 D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0,
-                                bool scene) {
+                                bool scene, UINT srv1) {
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
     linearClamp.magFilter = d3d7::TFG_LINEAR;
@@ -43,7 +43,7 @@ bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D
     if (!makeRoom(linearClamp, linearClamp, 0, scene ? 5 : 2)) return false;  // before the pass records anything
     placeSamples(false);
     const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp, 0);
-    const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(srv0, srv0);
+    const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(srv0, srv1 == kNoSrv ? srv0 : srv1);
     transition(dst, dstState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     const D3D12_VIEWPORT vp{0.0f, 0.0f, float(dstW), float(dstH), 0.0f, 1.0f};
     const D3D12_RECT clip{0, 0, dstW, dstH};
@@ -224,6 +224,10 @@ void Renderer::Impl::releaseDof() {
         if (r) s.garbage.push_back(r);
         r = nullptr;
     }
+    for (ID3D12Resource*& r : dofFocus) {  // made again cleared: the next focus is taken at once
+        if (r) s.garbage.push_back(r);
+        r = nullptr;
+    }
     dofWidth = dofHeight = 0;
 }
 
@@ -231,7 +235,7 @@ bool Renderer::Impl::applyDof() {
     dofDone = true;  // tried once a frame, whatever comes of it
     const UINT n = upscale ? 1 : samples;
     const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
-    if (!dofDownPs || !dofBlurPs || !dofApplyPs || !ensureScene("depth of field")) return true;
+    if (!dofDownPs || !dofBlurPs || !dofApplyPs || !dofFocusPs || !ensureScene("depth of field")) return true;
     const int w = sceneWidth, h = sceneHeight;
     if (!dofDownPipeline) {
         D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
@@ -243,7 +247,11 @@ bool Renderer::Impl::applyDof() {
         if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
                                                        reinterpret_cast<void**>(&dofBlurPipeline))))
             dofBlurPipeline = nullptr;
-        if (!dofDownPipeline || !dofBlurPipeline) {
+        p = fullScreenPipeline(root, presentVs, dofFocusPs, DXGI_FORMAT_R32_FLOAT, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&dofFocusPipeline))))
+            dofFocusPipeline = nullptr;
+        if (!dofDownPipeline || !dofBlurPipeline || !dofFocusPipeline) {
             LOG_ERROR("depth of field: its pipelines failed: it stays off");
             return true;
         }
@@ -285,6 +293,21 @@ bool Renderer::Impl::applyDof() {
         dofFailed = false;
         LOG_INFO("depth of field: blurred at %dx%d from the %dx%d world", qw, qh, w, h);
     }
+    if (!dofFocus[0]) {
+        D3D12_CLEAR_VALUE none{};
+        none.Format = DXGI_FORMAT_R32_FLOAT;
+        for (int i = 0; i < 2; ++i) {
+            dofFocus[i] = createTexture2D(device, 1, 1, 1, DXGI_FORMAT_R32_FLOAT,
+                                          D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                          &none);
+            dofFocusState[i] = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            if (!dofFocus[i]) return true;  // tried again the next frame
+            device->CreateRenderTargetView(dofFocus[i], nullptr, rtvHandle(kRtvDofFocus + UINT(i)));
+            device->CreateShaderResourceView(dofFocus[i], nullptr, cpuSrvHandle(dofFocusSrv[i]));
+            const float zero[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // no focus yet: the first is taken as it is
+            list->ClearRenderTargetView(rtvHandle(kRtvDofFocus + UINT(i)), zero, 0, nullptr);
+        }
+    }
     if (!copySceneColor() || !copySceneDepth()) return false;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
@@ -297,6 +320,14 @@ bool Renderer::Impl::applyDof() {
     c.uiPixels[3] = float(qh);
     c.footprint = 3.0f + 37.0f * float(std::clamp(effects.dofRange, 0, 100)) / 100.0f;  // world units of depth
     c.sharpen = float(std::clamp(effects.dofStrength, 0, 100)) / 100.0f;
+    // The focus: from the last frame's, into the other texel.
+    const int was = dofFocusNow;
+    dofFocusNow = 1 - dofFocusNow;
+    transition(dofFocus[was], dofFocusState[was], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    if (!effectPass(dofFocusPipeline, dofFocus[dofFocusNow], dofFocusState[dofFocusNow],
+                    rtvHandle(kRtvDofFocus + UINT(dofFocusNow)), 1, 1, c, dofFocusSrv[was], true))
+        return false;
+    transition(dofFocus[dofFocusNow], dofFocusState[dofFocusNow], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     if (!effectPass(dofDownPipeline, dofTarget[0], dofState[0], rtvHandle(kRtvDof), qw, qh, c, sceneColorSrv, true))
         return false;
     for (int i = 0; i < 2; ++i) {  // across, then down
@@ -308,10 +339,11 @@ bool Renderer::Impl::applyDof() {
             return false;
     }
     transition(dofTarget[0], dofState[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const UINT focus = dofFocusSrv[dofFocusNow];
     return upscale ? effectPass(dofApplyPipelines[code], world, worldState, rtvHandle(kRtvWorld), w, h, c, dofSrv[0],
-                                true)
+                                true, focus)
                    : effectPass(dofApplyPipelines[code], target, targetState, rtvHandle(kRtvTarget), w, h, c,
-                                dofSrv[0], true);
+                                dofSrv[0], true, focus);
 }
 
 bool Renderer::Impl::finishWorld() {

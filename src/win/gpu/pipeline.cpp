@@ -98,7 +98,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"depth_copy_ms_ps", "ps_5_0", &depthCopyMsPs}, {"ao_ps", "ps_5_0", &aoPs},
                    {"ao_blur_ps", "ps_5_0", &aoBlurPs},          {"ao_apply_ps", "ps_5_0", &aoApplyPs},
                    {"grade_ps", "ps_5_0", &gradePs},              {"dof_down_ps", "ps_5_0", &dofDownPs},
-                   {"dof_blur_ps", "ps_5_0", &dofBlurPs},          {"dof_apply_ps", "ps_5_0", &dofApplyPs}};
+                   {"dof_blur_ps", "ps_5_0", &dofBlurPs},          {"dof_apply_ps", "ps_5_0", &dofApplyPs},
+                   {"dof_focus_ps", "ps_5_0", &dofFocusPs},       {"mask_ps", "ps_5_0", &maskPs}};
     for (const auto& e : effects) {
         std::string why;
         if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {
@@ -317,13 +318,14 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
 // Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage). 0.18: toGlow, the
 // glow target as the second one.
 ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer,
-                                                 bool toGlow, bool water) {
+                                                 bool toGlow, bool water, bool mask) {
     PipelineKey k = pipelineKey(s, fvf);
     k.samples = uint8_t(toLayer ? 1 : samples);
     k.alphaToCoverage = coverage && !toLayer;
     k.layer = toLayer;
     k.glow = toGlow && !toLayer;
     k.water = water && !toLayer;
+    k.mask = mask && !toLayer;
     return pipelineForKey(packPipelineKey(k));
 }
 
@@ -381,6 +383,11 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
         p.PS = {drawGlowPs->GetBufferPointer(), drawGlowPs->GetBufferSize()};
         p.NumRenderTargets = 2;
         p.RTVFormats[1] = DXGI_FORMAT_R11G11B10_FLOAT;
+    }
+    if (k.mask) {  // 0.22.3: its coverage into the world's alpha too, gathered (DLSS's mask, composite())
+        b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+        b.SrcBlendAlpha = D3D12_BLEND_ONE;
+        b.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
     }
     if (k.water) {  // 0.19: a cell of water by the modern water's shaders
         p.VS = {waterVs->GetBufferPointer(), waterVs->GetBufferSize()};

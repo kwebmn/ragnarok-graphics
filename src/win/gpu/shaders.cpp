@@ -640,21 +640,42 @@ float4 dof_blur_ps(PresentOut i) : SV_Target {  // nine taps along one direction
     return float4(sum / weights, 1.0);
 }
 
+// 0.22.3, the focus (one texel): the median of the depths around the middle of the screen - the character there
+// covers the middle itself in some frames of its walk and not in others, the ground around it holds still - and
+// carried over from the last frame's (t0) a little each frame; a jump (a warp, another map) at once.
+float dof_focus_ps(PresentOut i) : SV_Target {
+    int2 mid = int2(uiPixels.xy * 0.5);
+    float rad = 26.0 * scale;
+    float z[13];
+    z[0] = viewDepth(sceneDepth.Load(int3(mid, 0)));
+    [unroll] for (int k = 0; k < 12; ++k) {
+        float a = 6.2831853 * float(k) / 12.0;
+        int2 q = clamp(mid + int2(float2(cos(a), sin(a)) * rad), int2(0, 0), int2(uiPixels.xy) - 1);
+        z[k + 1] = viewDepth(sceneDepth.Load(int3(q, 0)));
+    }
+    [unroll] for (int n = 0; n < 12; ++n)  // sorted (bubbles; every index known when compiled)
+        [unroll] for (int m = 0; m < 12 - n; ++m) {
+            float lo = min(z[m], z[m + 1]);
+            z[m + 1] = max(z[m], z[m + 1]);
+            z[m] = lo;
+        }
+    float now = z[6];
+    float before = tex0.Load(int3(0, 0, 0)).r;
+    return before <= 0.0 || abs(now - before) > 80.0 ? now : lerp(before, now, 0.12);
+}
+
 float4 dof_apply_ps(PresentOut i) : SV_Target {
     int2 p = int2(i.pos.xy);
     float3 sharp = sceneColor.Load(int3(p, 0)).rgb;
     float3 soft = tex0.SampleLevel(samp0, i.pos.xy * 0.25 / uiPixels.zw, 0).rgb;
-    // The focus: the depth in the middle of the screen, a few pixels around it averaged.
-    int2 mid = int2(uiPixels.xy * 0.5);
-    int r = int(4.0 * scale);
-    float focus = (viewDepth(sceneDepth.Load(int3(mid, 0))) + viewDepth(sceneDepth.Load(int3(mid + int2(r, 0), 0))) +
-                   viewDepth(sceneDepth.Load(int3(mid - int2(r, 0), 0))) +
-                   viewDepth(sceneDepth.Load(int3(mid + int2(0, r), 0))) +
-                   viewDepth(sceneDepth.Load(int3(mid - int2(0, r), 0)))) * 0.2;
+    float focus = tex1.Load(int3(0, 0, 0)).r;  // dof_focus_ps
     float z = viewDepth(sceneDepth.Load(int3(p, 0)));
     float blur = smoothstep(footprint, footprint * 3.0, abs(z - focus)) * sharpen;
     return float4(lerp(sharp, soft, blur), 1.0);
 }
+
+// 0.22.3: the world's alpha - the coverage of its characters and effects - as DLSS's mask.
+float mask_ps(PresentOut i) : SV_Target { return tex0.Load(int3(int2(i.pos.xy), 0)).a; }
 
 float4 water_ps(WaterIn i) : SV_Target { return water(i); }
 

@@ -61,7 +61,9 @@ constexpr UINT kRtvGlowChain = 12;
 constexpr UINT kRtvSceneDepth = kRtvGlowChain + kGlowLevels;  // 0.19: the depth before the frame's first water
 constexpr UINT kRtvAo = kRtvSceneDepth + 1;  // 0.20: the soft shadows' two targets
 constexpr UINT kRtvDof = kRtvAo + 2;         // 0.22: the depth of field's two
-constexpr UINT kRtvCount = kRtvDof + 2;
+constexpr UINT kRtvDofFocus = kRtvDof + 2;   // 0.22.3: its focus, last frame's and this one's
+constexpr UINT kRtvBias = kRtvDofFocus + 2;  // 0.22.3: DLSS's mask of pixels whose history it is not to take
+constexpr UINT kRtvCount = kRtvBias + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -193,6 +195,13 @@ struct Renderer::Impl {
     ID3D12Resource* motion = nullptr;      // R16G16 float, target pixels
     ID3D12Resource* upscaled = nullptr;    // RGBA8, unordered access
     ID3D12Resource* layer = nullptr;
+    // 0.22.3: R8 at the render size - the characters', monsters' and effects' coverage, which the world's draws of
+    // them write into its alpha: DLSS takes no history there (they move by themselves, not with the camera).
+    ID3D12Resource* biasMask = nullptr;
+    D3D12_RESOURCE_STATES biasState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT biasSrv = 0;
+    ID3DBlob* maskPs = nullptr;
+    ID3D12PipelineState* maskPipeline = nullptr;
     D3D12_RESOURCE_STATES worldState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     D3D12_RESOURCE_STATES worldDepthState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
     D3D12_RESOURCE_STATES motionState = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -304,6 +313,13 @@ struct Renderer::Impl {
     ID3D12PipelineState* dofDownPipeline = nullptr;
     ID3D12PipelineState* dofBlurPipeline = nullptr;
     ID3D12PipelineState* dofApplyPipelines[4] = {};
+    // 0.22.3: the focus in one R32 texel, the two in turn: this frame's made from the last one's.
+    ID3D12Resource* dofFocus[2] = {};
+    D3D12_RESOURCE_STATES dofFocusState[2] = {};
+    UINT dofFocusSrv[2] = {};
+    int dofFocusNow = 0;
+    ID3DBlob* dofFocusPs = nullptr;
+    ID3D12PipelineState* dofFocusPipeline = nullptr;
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
@@ -440,7 +456,7 @@ struct Renderer::Impl {
     bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2);
     D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4);  // 0.19, kRootScene
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
-                                     bool toGlow = false, bool water = false);
+                                     bool toGlow = false, bool water = false, bool mask = false);
     bool createUpscalePipelines();  // the motion pass and the layer composite
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp
@@ -490,7 +506,8 @@ struct Renderer::Impl {
     // One full-screen pass into dst (dstW x dstH): the constants, t0 = srv0 (sampled linearly, clamped) and, with
     // scene, the picture and depth copies (t2-t4). The sources are in their shader state already.
     bool effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
-                    D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0, bool scene);
+                    D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0, bool scene,
+                    UINT srv1 = kNoSrv);  // t1: srv0 again unless given
     float waterTime();            // seconds since the first water
     ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
     ID3D12PipelineState* glowLightPipeline(UINT samples, bool upscaledFormat);

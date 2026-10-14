@@ -353,12 +353,14 @@ bool Dlss::evaluate(const Frame& f) {
     const sl::ResourceLifecycle now = sl::ResourceLifecycle::eValidUntilEvaluate;
     const sl::ResourceLifecycle lasting = generationReady_ ? sl::ResourceLifecycle::eValidUntilPresent : now;
     const sl::Extent out{0, 0, uint32_t(f.outW), uint32_t(f.outH)};
-    const sl::ResourceTag tags[4] = {sl::ResourceTag(&color, sl::kBufferTypeScalingInputColor, now, &in),
+    sl::Resource bias(sl::ResourceType::eTex2d, f.bias, uint32_t(f.biasState));
+    const sl::ResourceTag tags[5] = {sl::ResourceTag(&color, sl::kBufferTypeScalingInputColor, now, &in),
                                      sl::ResourceTag(&output, sl::kBufferTypeScalingOutputColor, now, &out),
                                      sl::ResourceTag(&depth, sl::kBufferTypeDepth, lasting, &in),
-                                     sl::ResourceTag(&motion, sl::kBufferTypeMotionVectors, lasting, &in)};
+                                     sl::ResourceTag(&motion, sl::kBufferTypeMotionVectors, lasting, &in),
+                                     sl::ResourceTag(&bias, sl::kBufferTypeBiasCurrentColorHint, now, &in)};
     auto* list = reinterpret_cast<sl::CommandBuffer*>(f.list);
-    r = slSetTagForFrame(*token, kViewport, tags, 4, list);
+    r = slSetTagForFrame(*token, kViewport, tags, f.bias ? 5 : 4, list);
     if (r != sl::Result::eOk) {
         failed(result("slSetTagForFrame", r));
         return false;
