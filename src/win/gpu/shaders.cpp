@@ -720,8 +720,10 @@ GlowOut water_glow_ps(WaterIn i) {
 // 0.23, the torches (torches.cpp). Their light, from the picture's copy (t2) and its depth (t3) into the picture -
 // the pixels it reaches only: t1 holds a texel a torch, its flame's middle in the view (xyz) and its light (w: the
 // strength, its flicker and the game's fade); footprint is how many, sharpen the light's reach (world units),
-// fogColor its colour, uiPixels.xy the world's size. Warm light shows a surface's own colour: under it the map's tint
-// (the caves' purple) gives way to the light's.
+// fogColor its colour, uiPixels.xy the world's size. 0.23.3: bounded ("everything white" around torches on bright
+// ground, two side by side) - the light takes a surface over towards a warm, brighter version of itself, never past
+// white, the more the darker the surface; several torches saturate instead of adding up; what the sun lights already
+// a torch hardly changes. Under it the map's tint (the caves' purple) gives way to the light's colour.
 float4 torch_light_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there
@@ -743,15 +745,16 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
         if (d2 >= reach2) continue;
         float f = 1.0 - d2 / reach2;
         float facing = saturate(dot(n, v * rsqrt(max(d2, 1e-4))) * 0.7 + 0.3);  // wrapped: soft on what turns away
-        light += t.w * f * f * facing;
+        light += t.w * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;  // brighter near the fire
     }
     float3 c = sceneColor.Load(int3(wp, 0)).rgb;
-    float lum = dot(c, float3(0.2126, 0.7152, 0.0722));
-    light *= 1.0 - 0.7 * smoothstep(0.3, 0.8, lum);  // what the sun lights already, a torch hardly adds to
-    if (light < 0.004) discard;
-    float b = max(lum, 0.02);
-    float3 own = lerp(c, float3(b, b, b), saturate(light * 0.6));
-    return float4(own * (1.0 + 1.6 * light * fogColor.rgb) + fogColor.rgb * (lum * light * 0.8), 1.0);
+    const float3 luma = float3(0.2126, 0.7152, 0.0722);
+    float lum = dot(c, luma);
+    float w = (1.0 - exp(-2.4 * light)) * (1.0 - 0.6 * smoothstep(0.3, 0.8, lum));
+    if (w < 0.004) discard;
+    float lift = 1.0 + 2.4 * (1.0 - smoothstep(0.08, 0.7, lum));  // dark surfaces lit more, bright ones tinted
+    float3 warm = fogColor.rgb * (min(lum * lift, 0.9) / dot(fogColor.rgb, luma));
+    return float4(lerp(c, warm, w * 0.9), 1.0);
 }
 
 float fbm4(float2 p) {
@@ -822,8 +825,11 @@ float4 torch_fire_ps(PresentOut i) : SV_Target {
     float midSeen = saturate((viewDepth(sceneDepth.Load(int3(m, 0))) - flameZ + 3.0) / 3.0);
     float r2 = dot(pos - mid, pos - mid) / (h * h);
     float fade = saturate(1.0 - r2 / 4.84);  // none at 2.2 heights, the edge of its pass
-    float glow = (0.34 * exp(-r2 / 0.16) + 0.16 / (1.0 + r2 / 0.5)) * fade * fade;
+    float glow = (0.28 * exp(-r2 / 0.16) + 0.12 / (1.0 + r2 / 0.5)) * fade * fade;
     glow *= flick * twinX * twinY * midSeen * saturate((z - flameZ + 15.0) / 15.0);
+    // 0.23.3: on bright ground the glow only washes it out - less of it there.
+    float under = dot(sceneColor.Load(int3(int2(pos), 0)).rgb, float3(0.2126, 0.7152, 0.0722));
+    glow *= 1.0 - 0.6 * smoothstep(0.3, 0.9, under);
     float3 f = twinW > 0.0 ? torchFlame(q, uiPixels.w, sourceClamp.w, flick, sourceClamp.x, h) * (seen * twinY * twinW)
                            : float3(0.0, 0.0, 0.0);
     float a = saturate(max(f.r, max(f.g, f.b)) * 0.45);

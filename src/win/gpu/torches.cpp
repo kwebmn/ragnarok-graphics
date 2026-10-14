@@ -133,7 +133,7 @@ bool Renderer::Impl::applyTorches() {
     const int w = sceneWidth, h = sceneHeight;
     const float time = waterTime();  // the effects' clock
     const float amount = 0.35f * float(std::clamp(effects.torchFlicker, 0, 100)) / 100.0f;
-    const float strength = 1.25f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
+    const float strength = float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;  // 0.23.3: the shader bounds it
     const float glowStrength = float(std::clamp(effects.torchGlow, 0, 200)) / 100.0f;
     // 0.23.2: the flame softer than 0.23's at 100 % ("too harsh"), none where the game's own is drawn.
     const float flame = effects.torchFlame ? 0.8f * float(std::clamp(effects.torchBrightness, 0, 200)) / 100.0f : 0.0f;
