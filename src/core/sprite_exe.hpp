@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 
+#include "core/map_objects.hpp"
+
 namespace uagfx::sprite_exe {
 
 // AI textures (0.13): uaRO.exe's sprite cache. Every sprite - monsters, players, NPCs, items on the ground - is drawn
@@ -27,7 +29,8 @@ constexpr uint32_t kRgbaImages = 0x524;  // 32-bit frames
 // players.
 enum class Source : uint8_t { Unknown, Monster, Player, Npc, Item, Effect, Interface };
 Source sourceOf(const char* path);
-// 0.23: the maps' torches (core/torch.hpp), effect\torch_01.spr: its 32-bit frame 0 is the glow, the rest the flame.
-bool isTorch(const char* path);
+// 0.23, 0.24: the maps' objects the driver draws anew (core/map_objects.hpp), by their files in the effects' folder:
+// torch_01.spr, 굴뚝연기.spr (the chimneys' smoke).
+objects::File objectFile(const char* path);
 
 }  // namespace uagfx::sprite_exe

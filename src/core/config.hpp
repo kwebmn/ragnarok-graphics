@@ -63,6 +63,10 @@ struct EffectSettings {
     int torchGlow = 100;    // %, 0-200: the glow around the flame
     int torchLight = 100;   // %, 0-200: the light it throws around
     int torchFlicker = 50;  // %, 0-100: how much it flickers
+    // 0.24: the chimneys' smoke - each puff the game sends up drawn as billowing smoke, its wisps changing as it rises,
+    // instead of the same small picture blown up. On by default.
+    bool smoke = true;
+    int smokeDensity = 100;  // %, 0-200: how thick it is
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

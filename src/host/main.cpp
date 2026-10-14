@@ -338,6 +338,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.torchFlicker = rd.i32();
             e.torchFlame = rd.u8() != 0;
             e.torchBrightness = rd.i32();
+            e.smoke = rd.u8() != 0;
+            e.smokeDensity = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }
@@ -351,10 +353,10 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             break;
         }
         case Msg::ReleaseTexture: renderer_.releaseTexture(rd.u32()); break;
-        case Msg::TorchTexture: {
+        case Msg::ObjectTexture: {
             const uint32_t id = rd.u32();
-            const uint8_t layer = rd.u8();
-            if (rd.ok()) renderer_.noteTorchTexture(id, layer);
+            const uint8_t kind = rd.u8();
+            if (rd.ok()) renderer_.noteObjectTexture(id, kind);
             break;
         }
         case Msg::Execute: {

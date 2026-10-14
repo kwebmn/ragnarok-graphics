@@ -100,7 +100,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"grade_ps", "ps_5_0", &gradePs},              {"dof_down_ps", "ps_5_0", &dofDownPs},
                    {"dof_blur_ps", "ps_5_0", &dofBlurPs},          {"dof_apply_ps", "ps_5_0", &dofApplyPs},
                    {"dof_focus_ps", "ps_5_0", &dofFocusPs},       {"mask_ps", "ps_5_0", &maskPs},
-                   {"torch_light_ps", "ps_5_0", &torchLightPs},   {"torch_fire_ps", "ps_5_0", &torchFirePs}};
+                   {"torch_light_ps", "ps_5_0", &torchLightPs},   {"torch_fire_ps", "ps_5_0", &torchFirePs},
+                   {"smoke_ps", "ps_5_0", &smokePs},              {"smoke_glow_ps", "ps_5_0", &smokeGlowPs}};
     for (const auto& e : effects) {
         std::string why;
         if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {
@@ -319,7 +320,7 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
 // Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage). 0.18: toGlow, the
 // glow target as the second one.
 ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer,
-                                                 bool toGlow, bool water, bool mask) {
+                                                 bool toGlow, bool water, bool mask, bool smoke) {
     PipelineKey k = pipelineKey(s, fvf);
     k.samples = uint8_t(toLayer ? 1 : samples);
     k.alphaToCoverage = coverage && !toLayer;
@@ -327,6 +328,7 @@ ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fv
     k.glow = toGlow && !toLayer;
     k.water = water && !toLayer;
     k.mask = mask && !toLayer;
+    k.smoke = smoke && !toLayer;
     return pipelineForKey(packPipelineKey(k));
 }
 
@@ -376,7 +378,8 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     p.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     p.SampleDesc.Count = k.samples;
     // 0.18, 0.19: an effect whose shaders did not compile (a key saved by another run) builds nothing.
-    if ((k.glow && !drawGlowPs) || (k.water && (!waterVs || !waterPs || !waterGlowPs))) {
+    if ((k.glow && !drawGlowPs) || (k.water && (!waterVs || !waterPs || !waterGlowPs)) ||
+        (k.smoke && (!smokePs || !smokeGlowPs))) {
         pipelines.emplace(key, nullptr);
         return nullptr;
     }
@@ -389,6 +392,10 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
         b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
         b.SrcBlendAlpha = D3D12_BLEND_ONE;
         b.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+    }
+    if (k.smoke) {  // 0.24: a puff of the chimneys' smoke by the smoke's shaders, blended as the game blends it
+        ID3DBlob* ps = k.glow ? smokeGlowPs : smokePs;
+        p.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
     }
     if (k.water) {  // 0.19: a cell of water by the modern water's shaders
         p.VS = {waterVs->GetBufferPointer(), waterVs->GetBufferSize()};

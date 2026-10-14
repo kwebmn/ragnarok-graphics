@@ -26,17 +26,16 @@ D3D12_RECT clipped(float x0, float y0, float x1, float y1, int w, int h) {
 
 }  // namespace
 
-// A world draw of one of the game's torch layers (core/torch.hpp) - known by its texture (Renderer::noteTorchTexture):
+// A world draw of one of the game's torch layers (core/torch.hpp) - known by its texture (Renderer::noteObjectTexture):
 // true when it is not to be drawn, the glow not at all, the flame noted for applyTorches. Drawn as the game has it
 // when the torches cannot be drawn anew here (no shaders, no copy of the picture) or the frame's are drawn already.
 bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
-    const auto it = textures.find(d.texture[0]);
-    if (it == textures.end() || it->second.width <= 0 || it->second.height <= 0) return false;
+    const objects::Kind kind = objectTextures.of(d.texture[0]);
+    if (kind != objects::Kind::TorchGlow && kind != objects::Kind::TorchFlame) return false;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     if (d.vertexOffset + 4 * stride > v.size()) return false;
     torch::Corner q[4];
-    float su = 0.0f, sv = 0.0f;
     uint32_t diffuse = 0;
     for (int i = 0; i < 4; ++i) {
         const uint8_t* p = v.data() + d.vertexOffset + size_t(i) * stride;
@@ -44,14 +43,10 @@ bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(xyzw, p, sizeof xyzw);
         std::memcpy(uv, p + 24, sizeof uv);  // after the position, the diffuse and the specular colours
         q[i] = torch::Corner{xyzw[0], xyzw[1], xyzw[2], xyzw[3], uv[0], uv[1]};
-        su += uv[0];
-        sv += uv[1];
         if (i == 0) std::memcpy(&diffuse, p + 16, sizeof diffuse);
     }
-    const Texture& t = it->second;
-    const torch::Layer layer = torchCells.at(d.texture[0], su * 0.25f * float(t.width), sv * 0.25f * float(t.height));
-    if (layer == torch::Layer::None || !torchReady()) return false;
-    if (layer == torch::Layer::Glow) return true;
+    if (!torchReady()) return false;
+    if (kind == objects::Kind::TorchGlow) return true;
     torch::Flame f;
     if (torchFlames.size() >= kMaxTorches || !torch::flameOf(q, f) || f.rhw <= 0.0f) return false;
     f.alpha = std::min(1.0f, float(diffuse >> 24) / 240.0f);  // the .act shows the flame at 240

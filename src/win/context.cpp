@@ -157,8 +157,9 @@ void Context::flush() {
         }
     } done{*this};
     // Part 4: the world goes back into world space with the camera of this frame; 0.19: the modern water draws its
-    // waves and reflections in the world, with the same camera.
-    if (renderer->remix() || (config.effects.water && enhanced_)) {
+    // waves and reflections in the world, with the same camera; 0.23, 0.24: the torches' flicker and the smoke's
+    // wisps keep to their places in the world with it.
+    if (renderer->remix() || (enhanced_ && (config.effects.water || config.effects.torch || config.effects.smoke))) {
         float view[12];
         const bool known = readGameCamera(view);
         renderer->setCamera(known, view);
@@ -257,6 +258,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     EffectSettings none;  // Pause: the game's own picture, no effect
     none.smoothLight = false;
     none.torch = false;
+    none.smoke = false;
     renderer->setEffects(enhanced_ ? config.effects : none);
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).

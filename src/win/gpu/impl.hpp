@@ -13,6 +13,7 @@
 #include "core/key_pair.hpp"
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
+#include "core/map_objects.hpp"
 #include "core/torch.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/gpu/upscaler.hpp"
@@ -329,7 +330,7 @@ struct Renderer::Impl {
     ID3D12PipelineState* dofFocusPipeline = nullptr;
     // 0.23, the torches (torches.cpp): the game's torch layers are not drawn - its glow not at all, its flames noted -
     // and drawn anew once the world is: their light into the picture, then each flame and the glow around it.
-    torch::Cells torchCells;                // the sprite caches' cells that hold a torch frame
+    objects::Textures objectTextures;      // 0.23.1, 0.24: the textures that are a frame of a map object
     std::vector<torch::Flame> torchFlames;  // this frame's
     bool torchDone = false;                 // this frame's are drawn, or could not be
     bool torchesLogged = false;
@@ -338,6 +339,8 @@ struct Renderer::Impl {
     UINT torchDataSrv = 0;
     ID3DBlob* torchLightPs = nullptr;
     ID3DBlob* torchFirePs = nullptr;
+    ID3DBlob* smokePs = nullptr;  // 0.24: the chimneys' smoke (draw.cpp), with the glow's second target and without
+    ID3DBlob* smokeGlowPs = nullptr;
     ID3D12PipelineState* torchLightPipelines[4] = {};  // into the target of 1, 2, 4, 8 samples (the world: 1)
     ID3D12PipelineState* torchFirePipelines[5] = {};   // the same, and the world under DLSS (its alpha the mask)
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
@@ -476,7 +479,7 @@ struct Renderer::Impl {
     bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2);
     D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4);  // 0.19, kRootScene
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
-                                     bool toGlow = false, bool water = false, bool mask = false);
+                                     bool toGlow = false, bool water = false, bool mask = false, bool smoke = false);
     bool createUpscalePipelines();  // the motion pass and the layer composite
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp
@@ -507,6 +510,7 @@ struct Renderer::Impl {
     void makeDepthViews(UINT n);  // the target's depth: its D32 view and its R32 one
     // torches.cpp (0.23)
     bool torchWanted() const { return effects.torch; }
+    bool smokeWanted() const { return effects.smoke && smokePs && smokeGlowPs; }  // 0.24
     bool torchDue() const { return torchWanted() && !torchDone && !torchFlames.empty(); }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     bool torchReady();     // the shaders, pipelines and the picture's copies are there

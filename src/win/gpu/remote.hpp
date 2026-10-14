@@ -41,7 +41,7 @@ public:
     void setEffects(const EffectSettings& e);  // sent when they change
     uint32_t createTexture(int width, int height, int levels);
     void releaseTexture(uint32_t id);
-    void noteTorchTexture(uint32_t id, uint8_t layer);  // 0.23.1
+    void noteObjectTexture(uint32_t id, uint8_t kind);  // 0.23.1
     void execute(const FrameRecord& record);
     bool readTarget(std::vector<uint32_t>& argb);
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);

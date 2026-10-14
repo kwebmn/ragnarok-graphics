@@ -319,3 +319,15 @@ TEST(config_effects_torches) {
     CHECK(parseConfig("[effects]\ntorch_brightness = 250\n").effects == d);
 }
 
+TEST(config_effects_chimney_smoke) {
+    // 0.24: on unless turned off, its density 0-200 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.smoke);
+    CHECK_EQ(d.smokeDensity, 100);
+    const EffectSettings e = parseConfig("[effects]\nsmoke = 0\nsmoke_density = 40\n").effects;
+    CHECK(!e.smoke);
+    CHECK_EQ(e.smokeDensity, 40);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nsmoke_density = 201\n").effects == d);
+}
+

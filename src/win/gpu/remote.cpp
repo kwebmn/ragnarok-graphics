@@ -257,6 +257,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.torchFlicker);
     w.u8(e.torchFlame ? 1 : 0);
     w.i32(e.torchBrightness);
+    w.u8(e.smoke ? 1 : 0);
+    w.i32(e.smokeDensity);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;
@@ -281,12 +283,12 @@ void Remote::releaseTexture(uint32_t id) {
     send(Msg::ReleaseTexture, buffer_);
 }
 
-void Remote::noteTorchTexture(uint32_t id, uint8_t layer) {
+void Remote::noteObjectTexture(uint32_t id, uint8_t kind) {
     buffer_.clear();
     WireWriter w(buffer_);
     w.u32(id);
-    w.u8(layer);
-    send(Msg::TorchTexture, buffer_);
+    w.u8(kind);
+    send(Msg::ObjectTexture, buffer_);
 }
 
 void Remote::execute(const FrameRecord& record) {

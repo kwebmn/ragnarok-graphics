@@ -29,27 +29,6 @@ float noise(double x, uint32_t seed) {
 
 }  // namespace
 
-void Cells::noteWhole(uint32_t texture, Layer layer) {
-    if (layer == Layer::None) {
-        byTexture_.erase(texture);
-        return;
-    }
-    byTexture_[texture] = std::vector<Cell>{Cell{Rect{0, 0, 1 << 20, 1 << 20}, layer}};
-}
-
-void Cells::forget(uint32_t texture) { byTexture_.erase(texture); }
-
-Layer Cells::at(uint32_t texture, float x, float y, Rect* cell) const {
-    const auto it = byTexture_.find(texture);
-    if (it == byTexture_.end()) return Layer::None;
-    for (const Cell& c : it->second)
-        if (x >= float(c.rect.left) && x < float(c.rect.right) && y >= float(c.rect.top) && y < float(c.rect.bottom)) {
-            if (cell) *cell = c.rect;
-            return c.layer;
-        }
-    return Layer::None;
-}
-
 bool flameOf(const Corner q[4], Flame& out) {
     // The frame in the texture: what the corners span.
     double u0 = q[0].u, u1 = q[0].u, v0 = q[0].v, v1 = q[0].v;

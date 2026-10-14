@@ -86,7 +86,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool toLayer = upscale && s.ui;
     if (upscale) startFrame();
     // 0.23: the game's torch layers - its glow not drawn, its flame noted - are drawn anew once the world is.
-    if (!s.ui && torchWanted() && !torchDone && d.vertexCount == 4 && !torchCells.empty() && takeTorch(rec, d)) return;
+    if (!s.ui && torchWanted() && !torchDone && d.vertexCount == 4 && !objectTextures.empty() && takeTorch(rec, d))
+        return;
     // 0.18, the glow: from the first draw of the world that adds light on, the world's draws write into the glow
     // target too - what adds light adds it there, what covers it takes it away. Once the world is drawn, its glow
     // goes onto the picture before the interface (under DLSS onto the upscaled world, composite()).
@@ -123,7 +124,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                ai::flatQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount);
     }
     const bool mask = toWorld && biasMask && (quad || adds);
-    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask);
+    // 0.24: a puff of the chimneys' smoke (core/map_objects.hpp) - drawn billowing by the smoke's shaders.
+    bool smoke = false;
+    if (!s.ui && !water && smokeWanted() && d.vertexCount == 4 && !objectTextures.empty() &&
+        objectTextures.of(d.texture[0]) == objects::Kind::Smoke)
+        smoke = d.vertexOffset + 4 * FrameRecord::stride(d.fvf) <= rec.vertexBytes().size();
+    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask, smoke);
     if (!pso) return;
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
@@ -258,6 +264,24 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.footprint = float(effects.waterWaves) / 100.0f;
         c.twin[0] = float(effects.waterReflections) / 100.0f;
         c.twin[1] = float(effects.waterClarity) / 100.0f;
+    }
+    if (smoke) {  // its depth, the camera backwards, the time and the density (smoke_ps)
+        const uint8_t* v = rec.vertexBytes().data() + d.vertexOffset;
+        const size_t stride = FrameRecord::stride(d.fvf);
+        float rhw = 0.0f;
+        for (size_t k = 0; k < 4; ++k) {
+            float w = 0.0f;
+            std::memcpy(&w, v + k * stride + 12, sizeof w);
+            rhw += w * 0.25f;
+        }
+        c.twin[0] = rhw > 0.0f ? 1.0f / rhw : 1.0f;
+        static const float kSame[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};  // the camera unknown: the view itself
+        std::memcpy(c.reproject, viewToWorldValid ? viewToWorld : kSame, sizeof c.reproject);
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        c.twin[3] = waterTime();
+        c.footprint = float(std::clamp(effects.smokeDensity, 0, 200)) / 100.0f;
     }
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP

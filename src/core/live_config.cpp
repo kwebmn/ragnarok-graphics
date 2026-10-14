@@ -94,6 +94,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (fe.torch != re.torch) u.applied.push_back(change("torch", flag(re.torch), flag(fe.torch)));
     if (fe.torchFlame != re.torchFlame)
         u.applied.push_back(change("torch_flame", flag(re.torchFlame), flag(fe.torchFlame)));
+    if (fe.smoke != re.smoke) u.applied.push_back(change("smoke", flag(re.smoke), flag(fe.smoke)));
     if (fe.glow != re.glow) u.applied.push_back(change("glow", flag(re.glow), flag(fe.glow)));
     if (fe.glowStrength != re.glowStrength)
         u.applied.push_back(
@@ -109,6 +110,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         {"torch_glow", {re.torchGlow, fe.torchGlow}},
         {"torch_light", {re.torchLight, fe.torchLight}},
         {"torch_flicker", {re.torchFlicker, fe.torchFlicker}},
+        {"smoke_density", {re.smokeDensity, fe.smokeDensity}},
         {"glow_light", {re.glowLight, fe.glowLight}},
         {"ao_strength", {re.aoStrength, fe.aoStrength}},
         {"ao_size", {re.aoSize, fe.aoSize}},

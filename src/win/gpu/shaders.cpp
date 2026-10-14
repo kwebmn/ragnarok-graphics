@@ -835,6 +835,35 @@ float4 torch_fire_ps(PresentOut i) : SV_Target {
     float a = saturate(max(f.r, max(f.g, f.b)) * 0.45);
     return float4(float3(1.0, 0.5, 0.18) * glow * (1.0 - a) + f, a);
 }
+
+// 0.24, the chimneys' smoke (draw.cpp): a puff the game sends up, drawn as the game would (its colour, fade and fog:
+// shade) with billowing inside - wisps, curls and gaps that rise and churn. The noise lies in the world, at each
+// pixel's place on the puff (a billboard at its view depth, twinX): the puffs that overlap show the same wisps, so the
+// column reads as one body of smoke rather than a stack of the same picture. r0-r11 the camera backwards (or the view
+// itself when it is not known), f0-farZ the projection, twinH the time (seconds), footprint the density (1 = 100 %).
+float4 smokeShade(PsIn i) {
+    float4 c = shade(i);
+    float2 g = (i.pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;
+    float z = twinX;
+    float3 v = float3((g.x - cx) * z / f0, (g.y - cy) * z / f1, z);
+    float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    float t = twinH;
+    float2 p = float2(w.x + w.z * 0.7, w.y) * 0.1 + float2(0.0, t * 0.3);  // up is -y: the wisps rise
+    float2 warp = float2(fbm4(p + float2(0.0, t * 0.1)), fbm4(p + float2(5.2 + t * 0.05, 1.3)));
+    float n = fbm4(p * 1.4 + warp * 1.5);
+    c.a *= saturate(smoothstep(0.22, 0.66, n) * 1.6 * footprint);
+    c.rgb *= 0.78 + 0.4 * n;  // the thick folds lighter, the thin ones darker: a little depth
+    return c;
+}
+
+float4 smoke_ps(PsIn i) : SV_Target { return smokeShade(i); }
+
+GlowOut smoke_glow_ps(PsIn i) {
+    GlowOut o;
+    o.c = smokeShade(i);
+    o.g = ((alphaTest >> 19) & 1) != 0 ? o.c : float4(0.0, 0.0, 0.0, o.c.a);
+    return o;
+}
 )HLSL";
 }
 

@@ -1050,6 +1050,8 @@ void Renderer::Impl::destroy() {
     releaseCom(torchLightPs);
     releaseCom(torchFirePs);
     releaseCom(torchData);
+    releaseCom(smokePs);  // 0.24
+    releaseCom(smokeGlowPs);
     releaseCom(dofDownPipeline);
     releaseCom(dofBlurPipeline);
     for (ID3D12PipelineState*& p : dofApplyPipelines) releaseCom(p);
@@ -1258,11 +1260,12 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool ao = m.aoWanted();
     m.effects = e;
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
-             "%d%%; shadows %s, strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
+             "%d%%; chimney smoke %s, density %d%%; shadows %s, strength %d%%, size %d%%; glow %s, strength %d%%, "
+             "size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
              e.smoothLight ? "on" : "off", e.torch ? "on" : "off", e.torchFlame ? "on" : "off", e.torchBrightness,
-             e.torchGlow, e.torchLight, e.torchFlicker,
+             e.torchGlow, e.torchLight, e.torchFlicker, e.smoke ? "on" : "off", e.smokeDensity,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
@@ -1611,10 +1614,10 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
     return id;
 }
 
-void Renderer::noteTorchTexture(uint32_t id, uint8_t layer) {
+void Renderer::noteObjectTexture(uint32_t id, uint8_t kind) {
     if (remix_) return;
-    if (remote_) return remote_->noteTorchTexture(id, layer);
-    impl_->torchCells.noteWhole(id, torch::Layer(layer));
+    if (remote_) return remote_->noteObjectTexture(id, kind);
+    impl_->objectTextures.note(id, objects::Kind(kind));
 }
 
 void Renderer::releaseTexture(uint32_t id) {
@@ -1639,7 +1642,7 @@ void Renderer::Impl::retireDying() {
             freeSrv.push_back(it->second.aiSrv);
         }
         if (ai) ai->forget(id);
-        torchCells.forget(id);  // 0.23
+        objectTextures.forget(id);  // 0.23.1
         textures.erase(it);
     }
     dying.clear();

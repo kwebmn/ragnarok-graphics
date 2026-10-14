@@ -8,7 +8,7 @@
 
 #include "core/crisp_exe.hpp"
 #include "core/sprite_exe.hpp"
-#include "core/torch.hpp"
+#include "core/map_objects.hpp"
 #include "win/context.hpp"
 #include "win/dx7/surface7.hpp"
 #include "win/gpu/renderer.hpp"
@@ -49,10 +49,10 @@ bool readable(uintptr_t at, size_t n) {
     return at + n <= reinterpret_cast<uintptr_t>(m.BaseAddress) + m.RegionSize;
 }
 
-// 0.23.1, the maps' torches (core/torch.hpp): the loader gives each 32-bit frame a texture of its own (SprImg + 8, a
-// CTexture whose surface is one of ours) and the effect draws from it, not from the sprite cache - the renderer
-// learns which is the glow (the first frame) and which the flame (the rest).
-void noteTorchTextures(uint32_t sprite) {
+// 0.23.1, 0.24, the maps' objects drawn anew (core/map_objects.hpp): the loader gives each 32-bit frame a texture of
+// its own (SprImg + 8, a CTexture whose surface is one of ours) and the effect draws from it, not from the sprite
+// cache - the renderer learns which texture is which frame.
+void noteObjectTextures(uint32_t sprite, objects::File file) {
     gpu::Renderer* renderer = Context::get().renderer;
     const uint32_t list = sprite + sprite_exe::kRgbaImages;
     if (!renderer || !readable(list, 8)) return;
@@ -69,12 +69,15 @@ void noteTorchTextures(uint32_t sprite) {
         if (!surface || !readable(reinterpret_cast<uintptr_t>(surface), sizeof(dx7::Surface7))) continue;
         const dx7::Surface7* s = dx7::Surface7::from(surface);
         if (!s || !s->gpuTexture()) continue;
-        renderer->noteTorchTexture(s->gpuTexture(), uint8_t(f == begin ? torch::Layer::Glow : torch::Layer::Flame));
+        renderer->noteObjectTexture(s->gpuTexture(), uint8_t(objects::kindOf(file, size_t(f - begin))));
         ++found;
     }
-    static bool logged = false;
-    if (!logged) LOG_INFO("torches: the torch's frames, %d textures of their own, known", found);
-    logged = true;
+    static bool logged[3] = {};
+    const size_t at = size_t(file) % 3;
+    if (!logged[at])
+        LOG_INFO("map objects: the %s's frames, %d textures of their own, known",
+                 file == objects::File::Torch ? "torch" : "chimney smoke", found);
+    logged[at] = true;
 }
 
 uint32_t __attribute__((thiscall)) spriteLoad(uint32_t sprite, const char* name) {
@@ -82,7 +85,8 @@ uint32_t __attribute__((thiscall)) spriteLoad(uint32_t sprite, const char* name)
     const uint8_t source = uint8_t(sprite_exe::sourceOf(name));
     noteFrames(sprite + sprite_exe::kImages, source);
     noteFrames(sprite + sprite_exe::kRgbaImages, source);
-    if (sprite_exe::isTorch(name)) noteTorchTextures(sprite);  // 0.23
+    const objects::File object = sprite_exe::objectFile(name);  // 0.23, 0.24
+    if (object != objects::File::None) noteObjectTextures(sprite, object);
     return result;
 }
 

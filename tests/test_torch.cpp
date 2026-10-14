@@ -1,6 +1,5 @@
 #include <cmath>
 
-#include "core/sprite_exe.hpp"
 #include "core/torch.hpp"
 #include "test.hpp"
 
@@ -9,32 +8,6 @@ using namespace uagfx;
 namespace {
 bool near(float a, float b, float eps = 1e-3f) { return std::fabs(a - b) <= eps; }
 }  // namespace
-
-TEST(sprite_exe_knows_the_torch_file) {
-    // 0.23: the map torches' sprite, effect\torch_01, its frames told apart from the other effects'.
-    using sprite_exe::isTorch;
-    CHECK(isTorch("data\\sprite\\\xC0\xCC\xC6\xD1\xC6\xAE\\torch_01.spr"));  // 이팩트
-    CHECK(isTorch("\xC0\xCC\xC6\xD1\xC6\xAE\\TORCH_01.SPR"));                // relative, any case
-    CHECK(!isTorch("data\\sprite\\\xC0\xCC\xC6\xD1\xC6\xAE\\torch_02.spr"));
-    CHECK(!isTorch("data\\sprite\\\xB8\xF3\xBD\xBA\xC5\xCD\\torch_01.spr"));  // 몬스터: not the effect
-    CHECK(!isTorch(nullptr));
-}
-
-TEST(torch_cells_of_whole_textures) {
-    // 0.23.1: the game gives each 32-bit frame a texture of its own at load (CSprRes::Load) and draws it from there,
-    // not from its sprite cache: the texture is the layer as a whole, its frame in the top left corner.
-    torch::Cells cells;
-    cells.noteWhole(9, torch::Layer::Flame);
-    Rect where;
-    CHECK(cells.at(9, 100.0f, 120.0f, &where) == torch::Layer::Flame);
-    CHECK(where.left == 0 && where.top == 0);
-    cells.noteWhole(10, torch::Layer::Glow);
-    CHECK(cells.at(10, 3.0f, 3.0f) == torch::Layer::Glow);
-    cells.noteWhole(9, torch::Layer::None);  // another picture now
-    CHECK(cells.at(9, 100.0f, 120.0f) == torch::Layer::None);
-    cells.forget(10);
-    CHECK(cells.empty());
-}
 
 TEST(torch_flame_of_an_upright_quad) {
     // A flame frame in the right half of a 256 x 256 texture, drawn twice its size with its top left at (100, 50):

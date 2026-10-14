@@ -83,9 +83,9 @@ public:
 
     uint32_t createTexture(int width, int height, int levels);  // an ARGB8 texture; 0 on failure
     void releaseTexture(uint32_t id);                           // freed once the GPU no longer uses it
-    // 0.23.1: the texture is a layer of the maps' torches as a whole (core/torch.hpp: torch::Layer; 0 none) - a
-    // 32-bit frame of effect\torch_01, which the game draws from a texture of its own.
-    void noteTorchTexture(uint32_t id, uint8_t layer);
+    // 0.23.1, 0.24: the texture is a frame of a map object the driver draws anew (core/map_objects.hpp: objects::Kind;
+    // 0 none) - a 32-bit frame of its sprite, which the game draws from a texture of its own.
+    void noteObjectTexture(uint32_t id, uint8_t kind);
 
     void execute(const FrameRecord& record);        // submits, does not wait
     bool readTarget(std::vector<uint32_t>& argb);   // waits; the game's width * height values, row-major

@@ -50,10 +50,10 @@ TEST(pipeline_key_file_skips_keys_the_renderer_cannot_make) {
     good.cull = CULL_NONE;
     good.srcBlend = BLEND_ONE;
     good.dstBlend = BLEND_ZERO;
-    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 25) +
+    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 26) +
                              "ffffffffffffffff\n" + pipelineKeyLine(packPipelineKey(bad)) +
                              pipelineKeyLine(packPipelineKey(good));
-    // good with bit 25 (only the stray-bits check rejects it), all bits, blend 12: skipped
+    // good with bit 26 (only the stray-bits check rejects it), all bits, blend 12: skipped
     const std::vector<uint64_t> keys = parsePipelineKeys(text);
     CHECK_EQ(keys.size(), size_t(1));
     CHECK(keys.size() == 1 && keys[0] == packPipelineKey(good));
@@ -132,7 +132,7 @@ TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
     CHECK(rejected(plain, [](PipelineKey& k) { k.zWrite = true; }));                 // no Z test: no Z writes
     CHECK(rejected(plain, [](PipelineKey& k) { k.srcBlend = BLEND_SRCALPHA; }));     // no blending: ONE and ZERO
     CHECK(rejected(plain, [](PipelineKey& k) { k.dstBlend = BLEND_INVSRCALPHA; }));
-    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 25));  // a bit past the packed fields
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 26));  // a bit past the packed fields
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 63));
 }
 
@@ -212,3 +212,29 @@ TEST(pipeline_key_dlss_mask_is_a_world_draw) {
     CHECK(!validPipelineKey(packPipelineKey(layer)));
 }
 
+TEST(pipeline_key_smoke_is_a_world_draw) {
+    // 0.24: a puff of the chimneys' smoke drawn by the smoke's shader - in the world, with its glow or its mask too,
+    // never in the interface layer.
+    PipelineKey k;
+    k.zEnable = true;
+    k.zFunc = CMP_LESSEQUAL;
+    k.cull = CULL_NONE;
+    k.blend = true;
+    k.srcBlend = BLEND_SRCALPHA;
+    k.dstBlend = BLEND_INVSRCALPHA;
+    k.smoke = true;
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
+    k.glow = true;
+    k.mask = true;
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
+    PipelineKey layer;
+    layer.zFunc = CMP_ALWAYS;
+    layer.cull = CULL_NONE;
+    layer.srcBlend = BLEND_ONE;
+    layer.dstBlend = BLEND_ZERO;
+    layer.layer = true;
+    layer.smoke = true;
+    CHECK(!validPipelineKey(packPipelineKey(layer)));
+}

@@ -25,12 +25,17 @@ const std::string kEffect = "\xC0\xCC\xC6\xD1\xC6\xAE";  // 이팩트
 
 }  // namespace
 
-bool isTorch(const char* path) {
-    if (!path) return false;
+objects::File objectFile(const char* path) {
+    if (!path) return objects::File::None;
     const std::string p = normal(path);
-    const std::string file = kEffect + "\\torch_01.spr";
-    return p.size() >= file.size() && p.compare(p.size() - file.size(), file.size(), file) == 0 &&
-           (p.size() == file.size() || p[p.size() - file.size() - 1] == '\\');
+    const auto is = [&p](const std::string& name) {
+        const std::string file = kEffect + "\\" + name;
+        return p.size() >= file.size() && p.compare(p.size() - file.size(), file.size(), file) == 0 &&
+               (p.size() == file.size() || p[p.size() - file.size() - 1] == '\\');
+    };
+    if (is("torch_01.spr")) return objects::File::Torch;
+    if (is("\xB1\xBC\xB6\xD2\xBF\xAC\xB1\xE2.spr")) return objects::File::Smoke;  // 굴뚝연기
+    return objects::File::None;
 }
 
 Source sourceOf(const char* path) {

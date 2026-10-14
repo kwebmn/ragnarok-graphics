@@ -806,6 +806,17 @@ const Entry kTexts[] = {
     {"How bright and dense the new flame burns: less is softer and more see-through, more is hotter.",
      "Наскільки яскраво й щільно горить новий вогонь: менше — м'якше й прозоріше, більше — гарячіше.",
      "Насколько ярко и плотно горит новый огонь: меньше — мягче и прозрачнее, больше — жарче."},
+    {"Chimney smoke", "Дим із труб", "Дым из труб"},
+    {"Each puff the chimneys send up drawn as billowing smoke - wisps and holes that change as it rises - instead of "
+     "the same small picture blown up.",
+     "Кожен клуб диму з труб малюється клубчастим димом — пасма й просвіти, що змінюються, поки він піднімається, — "
+     "замість тієї самої маленької розтягнутої картинки.",
+     "Каждый клуб дыма из труб рисуется клубящимся дымом — пряди и просветы, которые меняются, пока он поднимается, "
+     "— вместо одной и той же маленькой растянутой картинки."},
+    {"Smoke density", "Густота диму", "Густота дыма"},
+    {"How thick the smoke is: less is thin and see-through, more is dense.",
+     "Наскільки густий дим: менше — тонкий і прозорий, більше — щільний.",
+     "Насколько густой дым: меньше — тонкий и прозрачный, больше — плотный."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

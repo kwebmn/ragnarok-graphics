@@ -37,6 +37,7 @@ const Effect kEffects[] = {
      {"effects.torch_brightness", "effects.torch_glow", "effects.torch_light", "effects.torch_flicker"},
      {"effects.torch_flame"},
      true},
+    {"effects.smoke", {}, {"effects.smoke_density"}, {}, true},
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 
