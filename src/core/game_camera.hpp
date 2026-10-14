@@ -46,4 +46,23 @@ bool inverse4(const float m[16], float out[16]);
 void multiply4(const float a[16], const float b[16], float out[16]);
 void affine4(const float m12[12], float out[16]);  // a 4 x 3 affine as 4 x 4
 
+// Part 4 (RTX Remix): Remix path traces the world it is given in world space and takes the camera from Direct3D 9's
+// view and projection, by D3D's conventions: a left-handed view space with y up, and a projection the right way up
+// (it rejects a camera whose field of view comes out negative). The game's view space has y down, so its world is
+// handed over turned: +y up (rtx.zUp = False) and left-handed (rtx.leftHandedCoordinateSystem = True), whichever
+// way the game's own axes go. The same turn for the whole run: Remix keeps its history in world space.
+struct RemixSpace {
+    float flip[3] = {1.0f, -1.0f, 1.0f};  // the game's world -> Remix's, per axis
+};
+// From a camera of the game: its +y going down the screen means its y points down (uaRO's ground: up is -y).
+RemixSpace remixSpaceFor(const float view[12]);
+// The point the game drew at (sx, sy) with this 1/z, in Remix's world; false when 1/z is no camera point - a
+// picture drawn flat on the screen (1/z of 1 is nearer than the near plane) or none at all.
+bool remixPoint(const Projection& p, const float inverseView[16], const RemixSpace& s, float sx, float sy, float rhw,
+                float out[3]);
+// Row-major 4 x 4 for Direct3D 9's SetTransform (row vectors): Remix's world -> view (x right, y up, z forward),
+// and view -> clip as the game projects for width x height.
+void remixView(const float view[12], const RemixSpace& s, float out[16]);
+void remixProjection(const Projection& p, int width, int height, float out[16]);
+
 }  // namespace uagfx::camera

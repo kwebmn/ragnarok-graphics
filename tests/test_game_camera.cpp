@@ -97,3 +97,79 @@ TEST(game_camera_clip_matrices_agree_with_the_game) {
     CHECK(std::fabs((1.0f - ny) * 1081 * 0.5f - sy) < 0.01f);
     CHECK(std::fabs(nz - sz) < 1e-5f);
 }
+
+namespace {
+
+float det3(const float m[16]) {
+    return m[0] * (m[5] * m[10] - m[6] * m[9]) - m[1] * (m[4] * m[10] - m[6] * m[8]) +
+           m[2] * (m[4] * m[9] - m[5] * m[8]);
+}
+
+// The point in the game's world -> where Remix's view and projection put it on the screen.
+void remixScreen(const float v[16], const float clip[16], const float r[3], int width, int height, float& sx,
+                 float& sy, float& sz) {
+    float e[4], c[4];
+    for (int k = 0; k < 4; ++k) e[k] = r[0] * v[k] + r[1] * v[4 + k] + r[2] * v[8 + k] + v[12 + k];
+    for (int k = 0; k < 4; ++k) c[k] = e[0] * clip[k] + e[1] * clip[4 + k] + e[2] * clip[8 + k] + e[3] * clip[12 + k];
+    sx = (c[0] / c[3] + 1.0f) * float(width) * 0.5f;
+    sy = (1.0f - c[1] / c[3]) * float(height) * 0.5f;
+    sz = c[2] / c[3];
+}
+
+void checkRemixCamera(const float view[12], int width, int height) {
+    const Projection p = projectionFor(width, height);
+    const RemixSpace s = remixSpaceFor(view);
+    float v[16], clip[16], g[16], iv[16];
+    remixView(view, s, v);
+    remixProjection(p, width, height, clip);
+    CHECK(clip[0] > 0.0f && clip[5] > 0.0f);  // nothing upside down: Remix rejects a negative field of view
+    CHECK_EQ(clip[11], 1.0f);                  // left-handed: w = view z
+    CHECK(std::fabs(det3(v) - 1.0f) < 1e-3f);  // a rotation: Remix's world is left-handed like its view space
+    affine4(view, g);
+    CHECK(inverse4(g, iv));
+    for (V3 w : {V3{50, 0, 80}, V3{120, -30, 10}, V3{-40, 5, 160}, V3{70, -60, 90}}) {
+        float sx, sy, sz, r[3], rx, ry, rz;
+        project(p, view, w, sx, sy, sz);
+        const float zc = view[2] * w.x + view[5] * w.y + view[8] * w.z + view[11];
+        CHECK(remixPoint(p, iv, s, sx, sy, 1.0f / zc, r));
+        CHECK(std::fabs(r[0] - s.flip[0] * w.x) < 0.05f && std::fabs(r[1] - s.flip[1] * w.y) < 0.05f &&
+              std::fabs(r[2] - s.flip[2] * w.z) < 0.05f);
+        remixScreen(v, clip, r, width, height, rx, ry, rz);
+        CHECK(std::fabs(rx - sx) < 0.02f && std::fabs(ry - sy) < 0.02f && std::fabs(rz - sz) < 1e-4f);
+    }
+}
+
+}  // namespace
+
+TEST(game_camera_hands_remix_a_y_up_world_that_shows_as_the_game_draws_it) {
+    // Part 4 (RTX Remix): the game's world turned so that +y is up, the view a rotation and the projection the right
+    // way up, and every point the game drew lands where it drew it.
+    float view[12];
+    lookAt({300, -250, 100}, {50, 0, 80}, {0, 1, 0}, view);  // uaRO's ground: y points down, the camera above it
+    const RemixSpace s = remixSpaceFor(view);
+    CHECK_EQ(s.flip[1], -1.0f);
+    checkRemixCamera(view, 2194, 1234);
+    checkRemixCamera(view, 1921, 1081);  // odd: the centre is not the middle
+    // Up is up: a point above another in the game's world (smaller y) has the larger y in Remix's.
+    float g[16], iv[16], a[3], b[3];
+    affine4(view, g);
+    CHECK(inverse4(g, iv));
+    const Projection p = projectionFor(2194, 1234);
+    float sx, sy, sz;
+    project(p, view, V3{50, 0, 80}, sx, sy, sz);
+    CHECK(remixPoint(p, iv, s, sx, sy, 1.0f / (view[2] * 50 + view[8] * 80 + view[11]), a));
+    project(p, view, V3{50, -40, 80}, sx, sy, sz);
+    CHECK(remixPoint(p, iv, s, sx, sy, 1.0f / (view[2] * 50 + view[5] * -40 + view[8] * 80 + view[11]), b));
+    CHECK(b[1] > a[1]);
+    // A world whose y points up keeps its y and is mirrored in x instead, to stay left-handed.
+    float other[12];
+    lookAt({300, 250, 100}, {50, 0, 80}, {0, -1, 0}, other);
+    const RemixSpace t = remixSpaceFor(other);
+    CHECK_EQ(t.flip[1], 1.0f);
+    CHECK_EQ(t.flip[0], -1.0f);
+    checkRemixCamera(other, 2194, 1234);
+    // A picture flat on the screen (1/z of 1: nearer than the near plane) or no 1/z at all is no point of the world.
+    CHECK(!remixPoint(p, iv, s, 100, 100, 1.0f, a));
+    CHECK(!remixPoint(p, iv, s, 100, 100, 0.0f, a));
+    CHECK(!remixPoint(p, iv, s, 100, 100, -0.01f, a));
+}

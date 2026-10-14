@@ -28,6 +28,26 @@ D3DMATRIX matrixOf(const float m[16]) {
 // D3D7's mip filter numbers are one above D3D9's (NONE 1 -> 0, POINT 2 -> 1, LINEAR 3 -> 2).
 DWORD mipFilter(uint8_t f) { return f >= 1 && f <= 3 ? DWORD(f - 1) : DWORD(D3DTEXF_NONE); }
 
+// D3D7's magnification filters go on past linear: flat and Gaussian cubic (3, 4), anisotropic (5).
+DWORD magFilter(uint8_t f) {
+    if (f == 5) return D3DTEXF_ANISOTROPIC;
+    if (f == 3 || f == 4) return D3DTEXF_LINEAR;
+    return f ? DWORD(f) : DWORD(D3DTEXF_POINT);
+}
+
+// Primitives of `count` vertices or indices; D3D7's primitive types are D3D9's.
+UINT primitivesOf(uint32_t type, uint32_t count) {
+    switch (type) {
+        case d3d7::PT_POINTLIST: return count;
+        case d3d7::PT_LINELIST: return count / 2;
+        case d3d7::PT_LINESTRIP: return count >= 1 ? count - 1 : 0;
+        case d3d7::PT_TRIANGLELIST: return count / 3;
+        case d3d7::PT_TRIANGLESTRIP:
+        case d3d7::PT_TRIANGLEFAN: return count >= 2 ? count - 2 : 0;
+        default: return 0;
+    }
+}
+
 }  // namespace
 
 Remix9::~Remix9() {
@@ -159,12 +179,17 @@ void Remix9::setCamera(bool valid, const float view[12]) {
     float v[16];
     camera::affine4(camera_, v);
     cameraValid_ = camera::inverse4(v, inverseView_);
+    if (cameraValid_ && !haveSpace_) {
+        haveSpace_ = true;
+        space_ = camera::remixSpaceFor(camera_);
+        LOG_INFO("remix: the game's world as Remix's: x %+.0f, y %+.0f, z %+.0f (y up, left-handed)", space_.flip[0],
+                 space_.flip[1], space_.flip[2]);
+    }
 }
 
-// The DrawSetup as Direct3D 9 fixed-function states; D3D7's numbers are D3D9's except the mip filter. World draws
-// with a known camera go through the view and projection; the rest keep their screen positions.
-void Remix9::applyState(const DrawSetup& s, bool world) {
-    if (haveState_ && s == state_ && world == stateWorld_) return;
+// The DrawSetup as Direct3D 9 fixed-function states; D3D7's numbers are D3D9's except some texture filters.
+void Remix9::applyState(const DrawSetup& s) {
+    if (haveState_ && s == state_) return;
     IDirect3DDevice9* d = device_;
     d->SetRenderState(D3DRS_LIGHTING, FALSE);
     d->SetRenderState(D3DRS_ZENABLE, s.zEnable ? D3DZB_TRUE : D3DZB_FALSE);
@@ -194,70 +219,52 @@ void Remix9::applyState(const DrawSetup& s, bool world) {
         d->SetSamplerState(i, D3DSAMP_ADDRESSU, st.addressU ? DWORD(st.addressU) : DWORD(D3DTADDRESS_WRAP));
         d->SetSamplerState(i, D3DSAMP_ADDRESSV, st.addressV ? DWORD(st.addressV) : DWORD(D3DTADDRESS_WRAP));
         d->SetSamplerState(i, D3DSAMP_BORDERCOLOR, st.borderColor);
-        d->SetSamplerState(i, D3DSAMP_MAGFILTER, st.magFilter ? DWORD(st.magFilter) : DWORD(D3DTEXF_POINT));
+        d->SetSamplerState(i, D3DSAMP_MAGFILTER, magFilter(st.magFilter));
         d->SetSamplerState(i, D3DSAMP_MINFILTER, st.minFilter ? DWORD(st.minFilter) : DWORD(D3DTEXF_POINT));
         d->SetSamplerState(i, D3DSAMP_MIPFILTER, mipFilter(st.mipFilter));
     }
     d->SetTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
     d->SetTextureStageState(2, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
-    if (world) {  // the game's camera: Remix sees a scene, not a picture
-        float view[16], proj[16];
-        camera::affine4(camera_, view);
-        for (int c = 0; c < 4; ++c) view[4 + c] = -view[4 + c];  // the world's y flipped: up is +y for Remix
-        camera::viewToClip(projection_, width_, height_, proj);
-        const float identity[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-        const D3DMATRIX w = matrixOf(identity), v = matrixOf(view), p = matrixOf(proj);
-        d->SetTransform(D3DTS_WORLD, &w);
-        d->SetTransform(D3DTS_VIEW, &v);
-        d->SetTransform(D3DTS_PROJECTION, &p);
-    }
     state_ = s;
-    stateWorld_ = world;
     haveState_ = true;
 }
 
 void Remix9::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (d.vertexCount == 0) return;
-    if (d.primitive != d3d7::PT_TRIANGLELIST && d.primitive != d3d7::PT_TRIANGLESTRIP) return;
+    const uint32_t count = d.indexCount ? d.indexCount : d.vertexCount;
+    const UINT primitives = primitivesOf(d.primitive, count);
+    if (!primitives) return;
     const DrawSetup& s = rec.states()[d.state];
     const bool twoUv = d.fvf == d3d7::FVF_TL2;
     const UINT stride = FrameRecord::stride(d.fvf);
     const uint8_t* src = rec.vertexBytes().data() + d.vertexOffset;
-    const bool world = !s.ui && cameraValid_;
-    applyState(s, world);
-    for (DWORD i = 0; i < 2; ++i) device_->SetTexture(i, textureOf(d.texture[i]));
-    const void* vertices = src;
-    UINT vertexStride = stride;
-    DWORD fvf = twoUv ? (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX2)
-                      : (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX1);
+    bool world = !s.ui && cameraValid_;
     if (world) {
-        // x, y, z, rhw on the screen -> the point in the world (ProjectVertex backwards): x y z diffuse specular uv.
-        vertexStride = stride - 4;
-        worldVertices_.resize(size_t(d.vertexCount) * vertexStride);
+        // x, y, z, rhw on the screen -> the point in Remix's world (ProjectVertex backwards): x y z diffuse specular
+        // uv. A vertex no camera put there keeps the whole draw on the screen.
+        const UINT worldStride = stride - 4;
+        worldVertices_.resize(size_t(d.vertexCount) * worldStride);
         for (uint32_t v = 0; v < d.vertexCount; ++v) {
             const uint8_t* in = src + size_t(v) * stride;
-            uint8_t* out = worldVertices_.data() + size_t(v) * vertexStride;
-            float p[4];
+            uint8_t* out = worldVertices_.data() + size_t(v) * worldStride;
+            float p[4], w[3];
             std::memcpy(p, in, sizeof p);
-            const float zc = p[3] > 0.0f ? 1.0f / p[3] : projection_.farZ;
-            const float xc = (p[0] - projection_.cx) * zc / projection_.f0;
-            const float yc = (p[1] - projection_.cy) * zc / projection_.f1;
-            const float* m = inverseView_;
-            // The game's world has y pointing down; Remix takes +y as up (rtx.conf: right-handed, y up).
-            const float w[3] = {xc * m[0] + yc * m[4] + zc * m[8] + m[12], -(xc * m[1] + yc * m[5] + zc * m[9] + m[13]),
-                                xc * m[2] + yc * m[6] + zc * m[10] + m[14]};
+            if (!camera::remixPoint(projection_, inverseView_, space_, p[0], p[1], p[3], w)) {
+                world = false;
+                break;
+            }
             std::memcpy(out, w, sizeof w);
             std::memcpy(out + 12, in + 16, stride - 16);  // the colours and texture coordinates as they are
         }
-        vertices = worldVertices_.data();
-        fvf = twoUv ? (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX2)
-                    : (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX1);
+        if (!world) ++flatDraws_;
     }
-    device_->SetFVF(fvf);
-    const D3DPRIMITIVETYPE type = d.primitive == d3d7::PT_TRIANGLESTRIP ? D3DPT_TRIANGLESTRIP : D3DPT_TRIANGLELIST;
-    const uint32_t count = d.indexCount ? d.indexCount : d.vertexCount;
-    const UINT primitives = type == D3DPT_TRIANGLESTRIP ? (count >= 2 ? count - 2 : 0) : count / 3;
-    if (!primitives) return;
+    applyState(s);
+    for (DWORD i = 0; i < 2; ++i) device_->SetTexture(i, textureOf(d.texture[i]));
+    const void* vertices = world ? static_cast<const void*>(worldVertices_.data()) : static_cast<const void*>(src);
+    const UINT vertexStride = world ? stride - 4 : stride;
+    const DWORD place = world ? D3DFVF_XYZ : D3DFVF_XYZRHW;
+    device_->SetFVF(place | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | (twoUv ? D3DFVF_TEX2 : D3DFVF_TEX1));
+    const D3DPRIMITIVETYPE type = D3DPRIMITIVETYPE(d.primitive);
     if (d.indexCount)
         device_->DrawIndexedPrimitiveUP(type, 0, d.vertexCount, primitives, rec.indices().data() + d.firstIndex,
                                         D3DFMT_INDEX16, vertices, vertexStride);
@@ -269,6 +276,17 @@ void Remix9::execute(const FrameRecord& rec) {
     if (rec.empty() || !ensureDevice()) return;
     projection_ = camera::projectionFor(width_, height_);
     device_->BeginScene();
+    if (cameraValid_) {  // this frame's camera for every world draw: Remix sees a scene, not a picture
+        float view[16], proj[16];
+        camera::remixView(camera_, space_, view);
+        camera::remixProjection(projection_, width_, height_, proj);
+        const float identity[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+        const D3DMATRIX w = matrixOf(identity), v = matrixOf(view), p = matrixOf(proj);
+        device_->SetTransform(D3DTS_WORLD, &w);
+        device_->SetTransform(D3DTS_VIEW, &v);
+        device_->SetTransform(D3DTS_PROJECTION, &p);
+    }
+    flatDraws_ = 0;
     for (const Command& c : rec.commands()) {
         switch (c.type) {
             case Cmd::Clear: {
@@ -328,6 +346,10 @@ void Remix9::execute(const FrameRecord& rec) {
         }
     }
     device_->EndScene();
+    if (flatDraws_ && !flatLogged_) {  // Remix takes them for the interface: worth knowing they exist
+        flatLogged_ = true;
+        LOG_INFO("remix: %u draws of the world have no camera depth: they stay on the screen", flatDraws_);
+    }
 }
 
 bool Remix9::readTarget(std::vector<uint32_t>& argb) {
@@ -346,6 +368,7 @@ bool Remix9::readTarget(std::vector<uint32_t>& argb) {
                 std::memcpy(argb.data() + size_t(y) * size_t(width_),
                             static_cast<const uint8_t*>(lr.pBits) + size_t(y) * size_t(lr.Pitch), size_t(width_) * 4);
             sys->UnlockRect();
+            for (uint32_t& px : argb) px |= 0xFF000000u;  // X8R8G8B8: the X byte is undefined
             ok = true;
         }
     }

@@ -19,9 +19,10 @@ namespace uagfx::gpu {
 
 // Part 4 (RTX Remix): the game drawn through Direct3D 9's fixed-function pipeline - through RTX Remix when its d3d9.dll
 // is next to uaRO.exe. Remix path traces geometry it gets in world space with a camera; the game projects its world on
-// the CPU, so world draws are turned back into world space with the game's camera (core/game_camera, the same exact
-// inverse as DLSS's motion) and drawn with its view and projection. The interface stays in screen space, which Remix
-// draws over its picture (rtx.preTransformedVerticesIsUI in rtx.conf).
+// the CPU, so world draws are turned back into world space with the game's camera (core/game_camera: remixPoint,
+// remixView, remixProjection) and drawn with its view and projection. The interface stays in screen space, which
+// Remix draws over its picture (rtx.preTransformedVerticesIsUI in rtx.conf), and so does a world draw without a
+// depth the camera could have given it (a picture flat on the screen).
 class Remix9 {
 public:
     Remix9() = default;
@@ -49,7 +50,7 @@ private:
     };
     bool ensureDevice();
     bool resetDevice();
-    void applyState(const DrawSetup& s, bool world);
+    void applyState(const DrawSetup& s);
     void draw(const FrameRecord& rec, const DrawCmd& d);
     IDirect3DTexture9* textureOf(uint32_t id);
 
@@ -67,11 +68,14 @@ private:
     IDirect3DTexture9* white_ = nullptr;
     bool haveState_ = false;
     DrawSetup state_;  // applied last
-    bool stateWorld_ = false;
     bool cameraValid_ = false;
     float camera_[12]{};
     float inverseView_[16]{};
     camera::Projection projection_;
+    bool haveSpace_ = false;  // decided from the first camera, kept for the run
+    camera::RemixSpace space_;
+    uint32_t flatDraws_ = 0;  // world draws of this frame kept on the screen
+    bool flatLogged_ = false;
     std::vector<uint8_t> worldVertices_;  // a world draw's vertices in world space
     std::vector<uint32_t> pixels_;
 };

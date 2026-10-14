@@ -110,6 +110,45 @@ void reproject(const Projection& p, const float r[12], float sx, float sy, float
     py = y / z * p.f1 + p.cy;
 }
 
+RemixSpace remixSpaceFor(const float m[12]) {
+    RemixSpace s;
+    // How far down the screen a step along the game's +y goes; about 0 when the camera looks straight down.
+    const float down = m[4];
+    const float fy = down < -0.05f ? 1.0f : -1.0f;
+    // Remix's view space (x right, y up, z forward) is left-handed, and its world should be too: the view a
+    // rotation. The y turns of the world and of the view cancel; a game view that mirrors (det < 0), or a world
+    // whose y is kept, needs one more turn - of x.
+    const float det = m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) +
+                      m[2] * (m[3] * m[7] - m[4] * m[6]);
+    s.flip[0] = det < 0.0f ? fy : -fy;
+    s.flip[1] = fy;
+    s.flip[2] = 1.0f;
+    return s;
+}
+
+bool remixPoint(const Projection& p, const float iv[16], const RemixSpace& s, float sx, float sy, float rhw,
+                float out[3]) {
+    if (!(rhw > 0.0f) || p.f0 == 0.0f || p.f1 == 0.0f) return false;
+    const float zc = 1.0f / rhw;
+    if (!(zc >= p.nearZ * 0.5f && zc <= p.farZ * 4.0f)) return false;
+    const float xc = (sx - p.cx) * zc / p.f0;  // ProjectVertex backwards
+    const float yc = (sy - p.cy) * zc / p.f1;
+    for (int k = 0; k < 3; ++k) out[k] = s.flip[k] * (xc * iv[k] + yc * iv[4 + k] + zc * iv[8 + k] + iv[12 + k]);
+    return true;
+}
+
+void remixView(const float view[12], const RemixSpace& s, float out[16]) {
+    affine4(view, out);
+    for (int r = 0; r < 3; ++r)  // a point of Remix's world back to the game's first (each flip is its own inverse)
+        for (int c = 0; c < 4; ++c) out[4 * r + c] *= s.flip[r];
+    for (int r = 0; r < 4; ++r) out[4 * r + 1] = -out[4 * r + 1];  // then the view's y up
+}
+
+void remixProjection(const Projection& p, int width, int height, float out[16]) {
+    viewToClip(p, width, height, out);
+    for (int c = 0; c < 4; ++c) out[4 + c] = -out[4 + c];  // the view's y is up now: the picture stays as it was
+}
+
 void viewToClip(const Projection& p, int width, int height, float out[16]) {
     const float hw = float(width) * 0.5f;
     const float hh = float(height) * 0.5f;
