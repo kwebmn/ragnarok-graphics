@@ -203,7 +203,10 @@ bool Renderer::Impl::applyTorches() {
         flickers[i] = torch::flicker(time, s, amount);
         seeds[i] = float(s % 1000u) / 1000.0f;
         if (strength <= 0.0f) continue;
-        LightItem l{{vx, vy, vz}, strength * flickers[i] * f.alpha, {}, kReach};
+        // 0.25.1: the light on the ground flickers less and slower than the flame ("мигает слишком сильно"): a
+        // third of its swing at half its pace.
+        const float calm = torch::flicker(double(time) * 0.5, s ^ 0x5BD1E995u, amount * 0.35f);
+        LightItem l{{vx, vy, vz}, strength * calm * f.alpha, {}, kReach};
         const bool hidden = f.tint[0] < 0.99f || f.tint[1] < 0.99f || f.tint[2] < 0.99f;  // its own colour
         std::copy(hidden ? f.tint : kLightColor, (hidden ? f.tint : kLightColor) + 3, l.color);
         lights.push_back(l);
@@ -224,7 +227,7 @@ bool Renderer::Impl::applyTorches() {
             LightItem l{{v.x, v.y, v.z}, lampStrength, {r.color[0] / top, r.color[1] / top, r.color[2] / top}, reach};
             // A fire's colour - red the most, then green, then blue - flickers, each its own way.
             if (r.color[0] >= r.color[1] && r.color[1] >= r.color[2] * 0.9f && r.color[0] > 0.5f)
-                l.strength *= torch::flicker(time, torch::seedAt(w.x, w.z), amount * 0.6f);
+                l.strength *= torch::flicker(double(time) * 0.5, torch::seedAt(w.x, w.z), amount * 0.25f);
             lamps.push_back(l);
         }
         std::sort(lamps.begin(), lamps.end(),
