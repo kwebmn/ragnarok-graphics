@@ -88,6 +88,35 @@ int markWindows(uintptr_t head, int depth) {
     return n;
 }
 
+// 0.22.8: the flag Invalidate sets only for the windows whose pictures are in State::redraw (each found leaves it)
+// and for the parents of those below the top level: the game copies a child into its parent's picture when it
+// draws it, and a grandchild reaches the top-level picture only through a parent drawn too (docs/research/text.md
+// §1.4). Returns whether any window in the list or under it was marked.
+bool markRedraws(uintptr_t head, int depth) {
+    State& s = state();
+    if (depth > 32 || !readable(head, 12)) return false;
+    bool any = false;
+    int guard = 0;
+    for (uintptr_t node = field<uintptr_t>(head, ce::kNodeNext); node != head && ++guard < 100000;
+         node = field<uintptr_t>(node, ce::kNodeNext)) {
+        if (!readable(node, 12)) break;
+        const uintptr_t window = field<uintptr_t>(node, ce::kNodeValue);
+        if (!readable(window, ce::kWindowDc + 4)) continue;
+        bool own = false;
+        const auto it = s.redraw.find(field<uintptr_t>(window, ce::kWindowDc));
+        if (it != s.redraw.end()) {
+            own = !it->second || depth > 0;  // painted in place in a top-level picture: the screen has it
+            s.redraw.erase(it);
+        }
+        const bool below = markRedraws(field<uintptr_t>(window, ce::kWindowChildren), depth + 1);
+        if (own || (below && depth > 0)) {
+            field<uint32_t>(window, ce::kWindowDirty) = 1;
+            any = true;
+        }
+    }
+    return any;
+}
+
 // --- The window picture's methods (docs/research/text.md §1.1): the game's first, then the twin (spec §4). Every
 // hook returns what the game's method left in eax: the painter tests GetDC's true before it makes the text
 // background transparent (0x406478), so a lost result paints a box behind every string; the rest pass theirs on too.
@@ -133,6 +162,43 @@ bool aiPictureSize(int w, int h) {
     return state().aiPieces && w >= 8 && h >= 8 && w <= 512 && h <= 512;
 }
 
+// 0.22.8: waiting places past this many: the windows are drawn again when their pictures come; the twin pixels kept
+// under them past these bytes (a 32-bit address space): their windows too.
+constexpr size_t kPlacements = 4096;
+constexpr size_t kUnderBytes = size_t(8) << 20, kUnderEach = size_t(512) << 10;
+
+void forgetPlaces(uint64_t key) {
+    State& s = state();
+    const auto places = s.placements.equal_range(key);
+    for (auto p = places.first; p != places.second; ++p) s.underBytes -= p->second.under.size() * 4;
+    s.placements.erase(places.first, places.second);
+}
+
+// Where the asked picture of key goes in pic: once a place (a window drawn again while it waits brings it up to
+// date). The twin there has not taken the game's copy yet, so it still holds what the picture goes over.
+void notePlace(uint64_t key, Picture& pic, const Rect& r, bool over) {
+    State& s = state();
+    State::Placement* at = nullptr;
+    const auto places = s.placements.equal_range(key);
+    for (auto p = places.first; p != places.second && !at; ++p)
+        if (p->second.picture == pic.self && p->second.rect == r) at = &p->second;
+    if (!at) {
+        if (s.placements.size() >= kPlacements) return;
+        at = &s.placements.emplace(key, State::Placement{})->second;
+        at->picture = pic.self;
+        at->rect = r;
+    }
+    at->over = over;
+    at->pixels = hashPixels(pic.bits, pic.twin->width(), r);
+    s.underBytes -= at->under.size() * 4;
+    at->under.clear();
+    const double bytes = double(r.width()) * double(r.height()) * s.K * s.K * 4.0;
+    if (over && bytes <= double(kUnderEach) && double(s.underBytes) + bytes <= double(kUnderBytes)) {
+        pic.twin->keep(r, at->under);
+        s.underBytes += at->under.size() * 4;
+    }
+}
+
 // The AI's larger picture of argb (w x h, transparent where the window shows what is under it) at r of the window:
 // into the twin when it has come back - the copy takes the game's pixels - else asked for once (the game's pixels go
 // in as blocks meanwhile). over: what was under it shows through its transparent pixels; else they are holes, as
@@ -147,6 +213,7 @@ bool aiPaint(Picture& pic, const Rect& r, const std::vector<uint32_t>& argb, boo
         pic.twin->paint(r, it->second.argb.data(), it->second.width, it->second.height, over);
         return true;
     }
+    notePlace(k, pic, r, over);
     if (s.asked.insert(k).second)
         if (gpu::Renderer* renderer = Context::get().renderer) renderer->requestIcon(k, w, h, argb.data());
     return false;
@@ -527,18 +594,31 @@ void uninstall() {
     s.iconOrder.clear();
     s.iconBytes = 0;
     s.asked.clear();
+    s.placements.clear();
+    s.underBytes = 0;
+    s.redraw.clear();
     s.iconsArrived = false;
 }
 
 void setScale(double K) {
     State& s = state();
-    // AI icons came back: every window draws again, the new ones in its twin - at most five times a second while a
-    // full inventory's icons arrive one after another.
+    // AI pictures came back (0.22.8): the windows whose places showed something else by then draw again, four times
+    // a second at most - and every window, once a second at most, for those whose places were not kept. The game
+    // draws them on the CPU and the twins go to the GPU whole: at five times a second for every window it was the
+    // interface's stutter while a new cache filled.
     const ULONGLONG now = GetTickCount64();
-    if (s.iconsArrived && s.installed && s.K > 1.0 && now - s.iconsMarked >= 200) {
-        s.iconsArrived = false;
-        s.iconsMarked = now;
-        markWindows(readable(ce::kWindowList, 4) ? field<uintptr_t>(ce::kWindowList, 0) : 0, 0);
+    if (s.installed && s.K > 1.0) {
+        const uintptr_t head = readable(ce::kWindowList, 4) ? field<uintptr_t>(ce::kWindowList, 0) : 0;
+        if (s.iconsArrived && now - s.iconsMarked >= 1000) {
+            s.iconsArrived = false;
+            s.iconsMarked = now;
+            s.redraw.clear();  // they are among them
+            markWindows(head, 0);
+        } else if (!s.redraw.empty() && now - s.redrawMarked >= 250) {
+            s.redrawMarked = now;
+            markRedraws(head, 0);
+            s.redraw.clear();  // in no window: drawn when its window is
+        }
     }
     // While the window's edge is dragged K changes on every frame: it is taken once it holds for kSettleMs; until
     // then the twins are not shown - their K is not the renderer's k (0.5.0 review M2).
@@ -593,7 +673,10 @@ void setAiIcons(bool on, bool pieces) {
 void iconReady(void*, uint64_t key, int width, int height, const uint32_t* argb) {
     State& s = state();
     s.asked.erase(key);
-    if (width <= 0 || height <= 0 || s.icons.count(key)) return;
+    if (width <= 0 || height <= 0 || s.icons.count(key)) {
+        forgetPlaces(key);
+        return;
+    }
     // The game's address space is 32-bit: 96 MB of them at most - an NPC's illustration made 4 times larger is some
     // ten; the oldest go first and are asked for again when drawn (upscaled.grf has them by then).
     const size_t bytes = size_t(width) * size_t(height) * 4, budget = size_t(96) << 20;
@@ -611,7 +694,28 @@ void iconReady(void*, uint64_t key, int width, int height, const uint32_t* argb)
     icon.argb.assign(argb, argb + size_t(width) * size_t(height));
     s.iconOrder.push_back(key);
     s.iconBytes += bytes;
-    s.iconsArrived = true;
+    // 0.22.8: into the twins where it waits and the window still shows what it did there - over the twin pixels it
+    // went over, put back - and no window drawn again; where it shows something else now, or nothing was kept, that
+    // window draws again (setScale). A window closed meanwhile draws it when it opens.
+    const auto places = s.placements.equal_range(key);
+    if (places.first == places.second) s.iconsArrived = true;  // nowhere known: every window draws again
+    for (auto p = places.first; p != places.second; ++p) {
+        const State::Placement& at = p->second;
+        const auto it = s.pictures.find(at.picture);
+        if (it == s.pictures.end() || !it->second->twin || !it->second->bits) continue;
+        Picture& pic = *it->second;
+        const Rect& r = at.rect;
+        const bool same = r.left >= 0 && r.top >= 0 && r.right <= pic.twin->width() &&
+                          r.bottom <= pic.twin->height() && hashPixels(pic.bits, pic.twin->width(), r) == at.pixels;
+        if (same && (!at.over || pic.twin->put(r, at.under))) {
+            pic.twin->absorb(pic.bits, r);
+            pic.twin->paint(r, icon.argb.data(), icon.width, icon.height, at.over);
+            s.redraw.emplace(at.picture, true);
+        } else {
+            s.redraw[at.picture] = false;
+        }
+    }
+    forgetPlaces(key);
 }
 
 }  // namespace uagfx::win::crisp

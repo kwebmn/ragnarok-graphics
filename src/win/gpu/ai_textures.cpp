@@ -868,8 +868,8 @@ void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* a
         r.name = j.name;
         r.cell = std::move(j);
         request(std::move(r));
-    } else {
-        cells_.push_back(std::move(j));  // in turn with the sprite frames
+    } else {  // in turn with the sprite frames - ahead of them (0.22.8): a window shows blocks while it waits
+        cells_.insert(std::find_if(cells_.begin(), cells_.end(), [](const Job& c) { return !c.icon; }), std::move(j));
     }
 }
 

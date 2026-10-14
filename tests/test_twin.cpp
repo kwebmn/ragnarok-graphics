@@ -295,3 +295,41 @@ TEST(twin_picture_changed_pixels_make_a_picture) {
     CHECK_EQ(argb[4], 0u);  // the magenta
     CHECK_EQ(argb[1], 0u);  // unchanged
 }
+
+TEST(twin_picture_keep_and_put_bring_back_what_was_under) {
+    // 0.22.8: an AI icon that comes back after the game's own icon went into the twin goes over what was there before
+    // it: keep() takes those twin pixels, put() writes them back.
+    std::vector<uint32_t> dib(16, 0xFF202020);
+    TwinPicture t(dib.data(), 4, 4, 2.0);
+    std::vector<uint32_t> under;
+    t.keep(Rect{1, 1, 3, 3}, under);
+    CHECK_EQ(under.size(), size_t(16));  // 2 x 2 game pixels, 4 x 4 twin pixels
+    const std::vector<uint32_t> icon(4, 0xFFFF0000);
+    for (int y = 1; y < 3; ++y)
+        for (int x = 1; x < 3; ++x) dib[size_t(y * 4 + x)] = 0xFFFF0000;  // the game's copy
+    t.copyPixels(dib.data(), 1, 1, 2, 2, icon.data(), true);
+    CHECK_EQ(at(t, 2, 2), 0xFFFF0000u);
+    t.takeChanged();
+    CHECK(t.put(Rect{1, 1, 3, 3}, under));
+    CHECK_EQ(at(t, 2, 2), 0xFF202020u);  // what was under the icon
+    CHECK_EQ(at(t, 5, 5), 0xFF202020u);
+    CHECK(t.takeChanged() == (Rect{2, 2, 6, 6}));
+    CHECK(!t.put(Rect{0, 0, 3, 3}, under));  // another size: another twin by now - nothing
+    CHECK(t.takeChanged().empty());
+    t.keep(Rect{3, 3, 5, 5}, under);  // not inside the picture: nothing kept, nothing put
+    CHECK(under.empty());
+    CHECK(!t.put(Rect{3, 3, 5, 5}, under));
+}
+
+TEST(twin_hash_pixels_ignores_the_alpha_byte) {
+    // 0.22.8: whether a place of a window still shows what it did when its AI icon comes back - the game sets the
+    // alpha byte before every upload, so that does not count.
+    std::vector<uint32_t> dib(16, 0xFF202020);
+    const uint64_t h = hashPixels(dib.data(), 4, Rect{1, 1, 3, 3});
+    dib[0] = 0xFF000000;  // outside
+    CHECK(hashPixels(dib.data(), 4, Rect{1, 1, 3, 3}) == h);
+    dib[5] = 0x00202020;  // inside, only the alpha byte
+    CHECK(hashPixels(dib.data(), 4, Rect{1, 1, 3, 3}) == h);
+    dib[10] = 0xFF202021;  // inside, a colour
+    CHECK(hashPixels(dib.data(), 4, Rect{1, 1, 3, 3}) != h);
+}

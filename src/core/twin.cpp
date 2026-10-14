@@ -39,6 +39,16 @@ int copyPixelsRows(const uint32_t* dib, int width, int height, int x, int y, int
     return std::max(h, 0);
 }
 
+uint64_t hashPixels(const uint32_t* dib, int width, Rect r) {
+    uint64_t h = 1469598103934665603ull;
+    for (int y = r.top; y < r.bottom; ++y)
+        for (int x = r.left; x < r.right; ++x) {
+            h ^= dib[size_t(y) * size_t(width) + size_t(x)] & 0xFFFFFFu;
+            h *= 1099511628211ull;
+        }
+    return h;
+}
+
 TwinPicture::TwinPicture(const uint32_t* dib, int width, int height, double K)
     : w_(std::max(width, 0)), h_(std::max(height, 0)), k_(K), ex_(size_t(w_) + 1), ey_(size_t(h_) + 1) {
     for (int g = 0; g <= w_; ++g) ex_[size_t(g)] = twinEdge(g, K);
@@ -248,6 +258,30 @@ void TwinPicture::paint(Rect r, const uint32_t* argb, int w, int h, bool overTwi
         }
     }
     touch(Rect{tx0, ty0, tx1, ty1});
+}
+
+bool TwinPicture::twinOf(Rect r, Rect& out) const {
+    if (r.empty() || r.left < 0 || r.top < 0 || r.right > w_ || r.bottom > h_) return false;
+    out = Rect{ex_[size_t(r.left)], ey_[size_t(r.top)], ex_[size_t(r.right)], ey_[size_t(r.bottom)]};
+    return !out.empty();
+}
+
+void TwinPicture::keep(Rect r, std::vector<uint32_t>& out) const {
+    Rect t;
+    if (twinOf(r, t))
+        texels(t, out);
+    else
+        out.clear();
+}
+
+bool TwinPicture::put(Rect r, const std::vector<uint32_t>& in) {
+    Rect t;
+    if (!twinOf(r, t) || in.size() != size_t(t.width()) * size_t(t.height())) return false;
+    for (int y = t.top; y < t.bottom; ++y)
+        std::copy_n(in.data() + size_t(y - t.top) * size_t(t.width()), size_t(t.width()),
+                    twin_.data() + size_t(y) * size_t(twinWidth()) + size_t(t.left));
+    touch(t);
+    return true;
 }
 
 void TwinPicture::touch(Rect r) {

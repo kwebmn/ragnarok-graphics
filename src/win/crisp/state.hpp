@@ -78,6 +78,24 @@ struct State {
     std::unordered_set<uint64_t> asked;  // sent to the renderer, not back yet
     bool iconsArrived = false;           // the windows are redrawn at a present soon
     ULONGLONG iconsMarked = 0;           // when they were last
+    // 0.22.8: where an asked picture went - the window picture, its place, its colours there just after the game's
+    // copy (hashPixels) and, when it goes over what is there, the twin pixels it goes over. When it comes back and
+    // the place still shows the same, it goes into the twin at once (the next frame uploads it): no window is drawn
+    // again for it.
+    struct Placement {
+        uintptr_t picture = 0;
+        Rect rect;
+        bool over = false;
+        uint64_t pixels = 0;
+        std::vector<uint32_t> under;
+    };
+    std::unordered_multimap<uint64_t, Placement> placements;  // by the picture's key
+    size_t underBytes = 0;                                    // their `under` together
+    // Pictures whose windows the game draws again for a picture that came back: false, its place shows something
+    // else now (the count over an item's icon); true, painted in place - only a child window's, which the screen
+    // shows through its parent's picture.
+    std::unordered_map<uintptr_t, bool> redraw;
+    ULONGLONG redrawMarked = 0;  // when windows were last marked for them
 };
 
 State& state();

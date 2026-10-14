@@ -33,6 +33,7 @@ constexpr uint32_t kLogoDrawReturn = 0x4CE1A7;  // after its Draw (call at 0x4CE
 constexpr uint32_t kWindowList = 0x727ED8 + 0x38;  // the pointer to the list's head node
 constexpr uint32_t kWindowDirty = 0x24;            // a dword
 constexpr uint32_t kWindowChildren = 0x0C;         // the pointer to the head node of its children
+constexpr uint32_t kWindowDc = 0x28;               // its picture, the CDCBitmap* (0.22.8)
 // An MSVC std::list node: next, previous, value.
 constexpr uint32_t kNodeNext = 0x00;
 constexpr uint32_t kNodeValue = 0x08;

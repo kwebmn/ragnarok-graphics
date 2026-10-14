@@ -25,6 +25,10 @@ bool copyFromRegion(int x, int y, int w, int h, int width, int height, Rect& out
 // stops at the first row whose first destination pixel is 0x00000000. dib: the picture before the call.
 int copyPixelsRows(const uint32_t* dib, int width, int height, int x, int y, int h);
 
+// 0.22.8: the colours of dib (width pixels a row) in r, alpha bytes aside, as one number (FNV-1a): whether a place of
+// a window still shows what it did - the game sets the alpha byte before every upload.
+uint64_t hashPixels(const uint32_t* dib, int width, Rect r);
+
 // A game window picture (CDCBitmap) as the driver keeps it (spec §4): its twin at K and a copy of the game's pixels
 // the twin shows. dib: the game's pixels, width x height, row by row.
 class TwinPicture {
@@ -62,6 +66,11 @@ public:
     // game's CopyPixels without its key writes every pixel and its magenta ones become holes in the window. The copy
     // stays: absorb() takes the game's pixels.
     void paint(Rect r, const uint32_t* argb, int w, int h, bool over = true);
+    // 0.22.8: the twin pixels of the game rectangle r, row by row (none when r is not inside the picture) - what an AI
+    // picture that comes back later goes over. put() writes them back at r; false, and nothing written, when there
+    // are not as many as r has (another twin by now).
+    void keep(Rect r, std::vector<uint32_t>& out) const;
+    bool put(Rect r, const std::vector<uint32_t>& in);
     // 0.15: what a call drew into the picture since the copy last took its pixels (a sprite in the equipment window):
     // the box of the game pixels in r that differ from the copy (the alpha byte aside), and its picture - those
     // pixels opaque (the window's magenta transparent), the rest transparent. false: nothing differs.
@@ -76,6 +85,7 @@ public:
 private:
     void fillRow(const uint32_t* dib, int y, int x0, int x1);
     bool clip(Rect& r) const { return clipRect(Rect{0, 0, w_, h_}, r); }
+    bool twinOf(Rect r, Rect& out) const;  // the twin pixels of r, which is inside the picture and not empty
 
     int w_;
     int h_;
