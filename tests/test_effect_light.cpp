@@ -29,3 +29,21 @@ TEST(effect_light_knows_fire_by_its_colours) {
     CHECK(effect_light::fireOf(spark.data(), 64, 64, c) > 0.5f);
     CHECK(effect_light::fireOf(nullptr, 0, 0, c) == 0.0f);
 }
+
+TEST(effect_light_knows_the_colour_other_skills_light_in) {
+    // 0.36: a skill's picture lights in its own colour: ice blue, poison green, holy gold, lightning near white.
+    float c[3];
+    CHECK(effect_light::lightOf(filled(0xFF4080FF).data(), 64, 64, c) > 0.3f);  // ice
+    CHECK(c[2] == 1.0f && c[0] < 0.4f);
+    CHECK(effect_light::lightOf(filled(0xFF40FF50).data(), 64, 64, c) > 0.3f);  // poison
+    CHECK(c[1] == 1.0f && c[0] < 0.4f);
+    CHECK(effect_light::lightOf(filled(0xFFFFE070).data(), 64, 64, c) > 0.3f);  // holy
+    CHECK(c[0] == 1.0f && c[1] > 0.8f && c[2] < 0.6f);
+    CHECK(effect_light::lightOf(filled(0xFFE8F0FF).data(), 64, 64, c) > 0.2f);  // lightning: bright, a little blue
+    CHECK(c[2] == 1.0f && c[0] > 0.85f);
+    CHECK(effect_light::lightOf(filled(0xFF808080).data(), 64, 64, c) == 0.0f);  // grey: dust, smoke
+    CHECK(effect_light::lightOf(filled(0xFF000000).data(), 64, 64, c) == 0.0f);  // black adds nothing
+    CHECK(effect_light::lightOf(filled(0x00FF8020).data(), 64, 64, c) == 0.0f);  // transparent
+    CHECK(effect_light::lightOf(filled(0xFF301008).data(), 64, 64, c) == 0.0f);  // too dark to light
+    CHECK(effect_light::lightOf(nullptr, 0, 0, c) == 0.0f);
+}

@@ -68,8 +68,8 @@ bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
 }
 
 // 0.26: a fire-coloured effect drawn this frame (draw.cpp) - its middle and depth from its vertices, how much it
-// lights: its picture's fire, the game's fade and colour of it, its size on the screen.
-void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, const Texture& t) {
+// lights: its picture's fire (0.36: or its own light), the game's fade and colour of it, its size on the screen.
+void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]) {
     if (fireSparks.size() >= 512) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
@@ -102,8 +102,8 @@ void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, const Te
     s.view[1] = (s.gameY - p.cy) * vz / p.f1;
     s.view[2] = vz;
     const float size = std::sqrt(std::max(0.0f, (x1 - x0) * (y1 - y0)));  // game pixels
-    s.strength = t.fire * shown * std::clamp(size / 120.0f, 0.15f, 1.5f);
-    std::copy(t.fireColour, t.fireColour + 3, s.colour);
+    s.strength = amount * shown * std::clamp(size / 120.0f, 0.15f, 1.5f);
+    std::copy(colour, colour + 3, s.colour);
     fireSparks.push_back(s);
 }
 

@@ -931,6 +931,13 @@ const Entry kTexts[] = {
     {"Heat haze's strength", "Сила марева", "Сила марева"},
     {"How much the hot air shimmers.", "Наскільки сильно тремтить гаряче повітря.",
      "Насколько сильно дрожит горячий воздух."},
+    {"Other skills in their colours", "Інші вміння своїм кольором", "Другие умения своим цветом"},
+    {"Not only fire: ice and water light in cold blue, lightning in brief white flashes, holy skills in gold, poison "
+     "in green - each skill in the colour of its own picture.",
+     "Не лише вогонь: лід і вода світять холодним блакитним, блискавки — короткими білими спалахами, святі вміння — "
+     "золотим, отрута — зеленим: кожне вміння кольором своєї картинки.",
+     "Не только огонь: лёд и вода светят холодным голубым, молнии — короткими белыми вспышками, святые умения — "
+     "золотым, яд — зелёным: каждое умение цветом своей картинки."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

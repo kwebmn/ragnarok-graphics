@@ -75,6 +75,7 @@ struct EffectSettings {
     // ground, the walls and the characters around it a little, as a torch does. On by default.
     bool fireLight = true;
     int fireLightStrength = 100;  // %, 0-200
+    bool skillColours = true;  // 0.36: the other skills too, each in its own colour (ice blue, lightning white...)
     // 0.27: the level 99 aura - its ring, bubbles and circle - softer than the game draws it. On by default.
     bool aura = true;
     int auraBrightness = 50;  // %, 0-100 of the game's

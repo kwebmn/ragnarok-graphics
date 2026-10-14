@@ -251,6 +251,14 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how much
     >>"uaro-graphics.ini" echo fire_light_strength = 100
 )
+rem 0.36: the other skills light in their colours, on.
+findstr /i /l /c:"skill_colours" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = the other skills light too, each in its colour: ice blue, lightning white, holy gold
+    >>"uaro-graphics.ini" echo skill_colours = 1
+)
 rem 0.27: the level 99 aura softer, on.
 findstr /i /l /c:"aura_brightness" "uaro-graphics.ini" >nul 2>&1
 if errorlevel 1 (

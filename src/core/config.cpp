@@ -105,7 +105,8 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
            torchBrightness == o.torchBrightness && torchGlow == o.torchGlow &&
            torchLight == o.torchLight && torchFlicker == o.torchFlicker && smoke == o.smoke &&
            smokeDensity == o.smokeDensity && lamps == o.lamps && lampsLight == o.lampsLight &&
-           fireLight == o.fireLight && fireLightStrength == o.fireLightStrength && aura == o.aura &&
+           fireLight == o.fireLight && fireLightStrength == o.fireLightStrength && skillColours == o.skillColours &&
+           aura == o.aura &&
            auraBrightness == o.auraBrightness && fireflies == o.fireflies &&
            firefliesBrightness == o.firefliesBrightness && mapGlows == o.mapGlows &&
            mapGlowsBrightness == o.mapGlowsBrightness && rays == o.rays && raysBrightness == o.raysBrightness &&
@@ -262,6 +263,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.fireLight);
         } else if (key == "effects.fire_light_strength") {
             toInt(val, 0, 200, c.effects.fireLightStrength);
+        } else if (key == "effects.skill_colours") {
+            setBool(val, c.effects.skillColours);
         } else if (key == "effects.aura") {
             setBool(val, c.effects.aura);
         } else if (key == "effects.aura_brightness") {

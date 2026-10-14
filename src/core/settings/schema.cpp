@@ -94,6 +94,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFireLightHint, ""},
         {"effects", "fire_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
          Text::FxFireLightStrength, Text::FxFireLightStrengthHint, " %"},
+        {"effects", "skill_colours", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkillColours,
+         Text::FxSkillColoursHint, ""},
         {"effects", "aura", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAura, Text::FxAuraHint,
          ""},
         {"effects", "aura_brightness", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAuraBrightness,
@@ -247,6 +249,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.smoke_density") return std::to_string(c.effects.smokeDensity);
     if (k == "effects.fire_light") return c.effects.fireLight ? "1" : "0";
     if (k == "effects.fire_light_strength") return std::to_string(c.effects.fireLightStrength);
+    if (k == "effects.skill_colours") return c.effects.skillColours ? "1" : "0";
     if (k == "effects.aura") return c.effects.aura ? "1" : "0";
     if (k == "effects.aura_brightness") return std::to_string(c.effects.auraBrightness);
     if (k == "effects.fireflies") return c.effects.fireflies ? "1" : "0";

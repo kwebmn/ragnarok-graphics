@@ -231,6 +231,13 @@ TEST(live_config_heat_applies_now) {
     CHECK(u.applied[1] == "heat_strength 100 -> 40");
 }
 
+TEST(live_config_skill_colours_apply_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nskill_colours = 0\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(1));
+    CHECK(u.applied[0] == "skill_colours 1 -> 0");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

@@ -98,6 +98,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (fe.lamps != re.lamps) u.applied.push_back(change("lamps", flag(re.lamps), flag(fe.lamps)));
     if (fe.fireLight != re.fireLight)
         u.applied.push_back(change("fire_light", flag(re.fireLight), flag(fe.fireLight)));
+    if (fe.skillColours != re.skillColours)
+        u.applied.push_back(change("skill_colours", flag(re.skillColours), flag(fe.skillColours)));
     if (fe.aura != re.aura) u.applied.push_back(change("aura", flag(re.aura), flag(fe.aura)));
     if (fe.fireflies != re.fireflies)
         u.applied.push_back(change("fireflies", flag(re.fireflies), flag(fe.fireflies)));

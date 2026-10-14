@@ -133,6 +133,8 @@ struct Texture {
     // lights around it.
     float fire = 0.0f;
     float fireColour[3] = {0, 0, 0};
+    float light = 0.0f;  // 0.36: how much it lights in its own colour (core/effect_light.hpp: lightOf)
+    float lightColour[3] = {0, 0, 0};
     // 0.32: a sprite cache's cells and what each holds now (sprite_exe::Source) - the characters cast shadows.
     std::vector<SpriteCell> spriteCells;
 };
@@ -616,7 +618,8 @@ struct Renderer::Impl {
     bool smokeWanted() const { return effects.smoke && smokePs && smokeGlowPs; }  // 0.24
     bool lampsWanted() const { return effects.lamps; }  // 0.25
     bool fireWanted() const { return effects.fireLight && effects.fireLightStrength > 0; }  // 0.26
-    void noteFire(const FrameRecord& rec, const DrawCmd& d, const Texture& t);
+    // `amount` and `colour`: the picture's fire, or (0.36) its own light.
+    void noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]);
     bool fireflyWanted() const { return effects.fireflies && effects.firefliesBrightness > 0 && fireflyPs; }  // 0.28
     bool takeFirefly(const FrameRecord& rec, const DrawCmd& d);  // one the game draws: true when it is not to be
     bool fireflyReady();  // its pipelines for this target

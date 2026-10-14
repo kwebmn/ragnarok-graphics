@@ -112,9 +112,16 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool adds = !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE;
     if (adds && !glowActive && glowWanted()) startGlow();
     // 0.26: the fire of skills (a fire-coloured picture added on) lights around it once the world is drawn.
+    // 0.36: the other skills light too, in their pictures' colours - not the aura, the maps' objects (their own).
     if (adds && fireWanted() && !torchDone && d.texture[0]) {
         const auto ft = textures.find(d.texture[0]);
-        if (ft != textures.end() && ft->second.fire > 0.15f) noteFire(rec, d, ft->second);
+        const bool mine = d.effect == uint8_t(effect_exe::Kind::None);
+        if (ft != textures.end() && ft->second.fire > 0.15f && mine) {
+            noteFire(rec, d, ft->second.fire, ft->second.fireColour);
+        } else if (ft != textures.end() && effects.skillColours && ft->second.light > 0.2f && mine &&
+                   (objectTextures.empty() || objectTextures.of(d.texture[0]) == objects::Kind::None)) {
+            noteFire(rec, d, ft->second.light, ft->second.lightColour);
+        }
     }
     const bool toGlow = !s.ui && glowActive;
     // 0.19, modern water: a cell of a map's water (core/water.hpp) is drawn by its own shader, from the picture and

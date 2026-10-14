@@ -329,6 +329,9 @@ TEST(config_effects_fire_light) {
     CHECK_EQ(e.fireLightStrength, 40);
     CHECK(!(e == d));
     CHECK(parseConfig("[effects]\nfire_light_strength = 300\n").effects == d);
+    // 0.36: the other skills too, each in its colour - on unless turned off.
+    CHECK(d.skillColours);
+    CHECK(!parseConfig("[effects]\nskill_colours = 0\n").effects.skillColours);
 }
 
 TEST(config_effects_aura) {

@@ -279,6 +279,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.hazeStrength);
     w.u8(e.heat ? 1 : 0);
     w.i32(e.heatStrength);
+    w.u8(e.skillColours ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

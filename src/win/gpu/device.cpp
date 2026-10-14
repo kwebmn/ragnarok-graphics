@@ -422,8 +422,10 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     if (it == textures.end() || u.rect.empty()) return;
     Texture& t = it->second;
     // 0.26: a whole picture - how much it looks like fire (an effect drawn from it lights around it).
-    if (u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height)
+    if (u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
         t.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height, t.fireColour);
+        t.light = effect_light::lightOf(rec.pixels().data() + u.pixels, t.width, t.height, t.lightColour);  // 0.36
+    }
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + u.pixels, UINT(u.rect.width()),
                                                   UINT(u.rect.height()));
     if (!src.pResource) return;
@@ -1302,7 +1304,8 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool actorShadows = m.actorShadowsWanted();
     m.effects = e;
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
-             "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%; "
+             "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "
+             "the others %s; "
              "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; "
              "characters' shadows %s, %d%%; clouds %s, %d%%; haze %s, %d%%; heat haze %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
@@ -1310,7 +1313,8 @@ void Renderer::setEffects(const EffectSettings& e) {
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
              e.smoothLight ? "on" : "off", e.torch ? "on" : "off", e.torchFlame ? "on" : "off", e.torchBrightness,
              e.torchGlow, e.torchLight, e.torchFlicker, e.smoke ? "on" : "off", e.smokeDensity, e.lamps ? "on" : "off",
-             e.lampsLight, e.fireLight ? "on" : "off", e.fireLightStrength, e.fireflies ? "on" : "off",
+             e.lampsLight, e.fireLight ? "on" : "off", e.fireLightStrength, e.skillColours ? "on" : "off",
+             e.fireflies ? "on" : "off",
              e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.rays ? "on" : "off",
              e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness, e.actorShadows ? "on" : "off",
              e.actorShadowsStrength, e.clouds ? "on" : "off", e.cloudsStrength, e.haze ? "on" : "off", e.hazeStrength,
