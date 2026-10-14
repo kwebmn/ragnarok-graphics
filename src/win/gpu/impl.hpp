@@ -95,6 +95,10 @@ struct Texture {
     ID3D12Resource* ai = nullptr;
     D3D12_RESOURCE_STATES aiState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT aiSrv = 0;
+    // Where it stands in: the world's draws, the interface's (0.14.1: the sprite cache's copy for the cursor, the
+    // loading screen and other big pictures of the interface).
+    bool aiWorld = true;
+    bool aiUi = false;
 };
 
 struct Slot {

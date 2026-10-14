@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <set>
 #include <unordered_map>
@@ -71,6 +72,8 @@ struct State {
         std::vector<uint32_t> argb;
     };
     std::unordered_map<uint64_t, Icon> icons;
+    std::deque<uint64_t> iconOrder;      // the oldest first: past kIconBytes they go (asked again when drawn)
+    size_t iconBytes = 0;
     std::unordered_set<uint64_t> asked;  // sent to the renderer, not back yet
     bool iconsArrived = false;           // the windows are redrawn at a present soon
     ULONGLONG iconsMarked = 0;           // when they were last

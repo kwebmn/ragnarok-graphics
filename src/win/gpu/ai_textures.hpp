@@ -45,6 +45,9 @@ public:
     void noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
                     uint32_t cellCount);
     void noteWorldUse(uint32_t id, ai::Kind kind);  // drawn in the world as `kind`: its turn comes, if that is on
+    // 0.14.1: drawn in the interface - a big picture (the loading screen, the login's backgrounds) gets its turn as
+    // an icon of the interface (the kind Icons) and stands in for interface draws.
+    void noteUiUse(uint32_t id);
     void forget(uint32_t id);                       // the game released it
     void setMap(const std::string& map);            // the map the game shows now, "" none
     // 0.14: an icon of the game's windows (Renderer::requestIcon); made larger, it goes to Impl::iconSink.
@@ -73,6 +76,7 @@ private:
         uint32_t mapSerial = 0;  // the map whose tag it has been seen to
         bool later = false;      // in later_: done ahead, before it is drawn
         bool loading = false;    // its picture is being read from upscaled.grf
+        bool ui = false;         // a picture of the interface: it stands in for interface draws, not the world's
     };
     struct Level {
         UINT64 at = 0;  // bytes into the image
@@ -142,6 +146,7 @@ private:
     bool startAlpha(Job& job);              // the colour into a new image, then the alpha's pass
     void dispatchAlpha(const Job& job, ID3D12Resource* image, const Level& level0);
     void dropJob();                         // the running job goes, its image with it
+    void trimBuffers();                     // after a big picture: its half a gigabyte of buffers goes
     double runBand(Job& job, double budget);  // MACs dispatched
     bool finish(Job& job);
     ID3D12Resource* makeImage(Job& job, std::vector<Level>& levels);  // in COPY_SOURCE, all its levels

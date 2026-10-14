@@ -88,11 +88,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
     StageSetup sampled[2] = {s.stage[0], s.stage[1]};
-    if (ai && ai->shown && !s.ui)
+    bool aiDrawn[2] = {false, false};  // the stage's texture is the AI's
+    if (ai && ai->shown && !(d.twin && s.ui))
         for (int i = 0; i < 2; ++i) {
             const auto it = d.texture[i] ? textures.find(d.texture[i]) : textures.end();
+            aiDrawn[i] = it != textures.end() && it->second.ai && (s.ui ? it->second.aiUi : it->second.aiWorld);
             const bool mips = sampled[i].mipFilter == d3d7::TFP_POINT || sampled[i].mipFilter == d3d7::TFP_LINEAR;
-            if (it != textures.end() && it->second.ai && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
+            if (aiDrawn[i] && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
         }
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
@@ -122,12 +124,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (it == textures.end()) it = textures.find(white);
         if (it == textures.end()) return;
         t[i] = &it->second;
-        // A world texture the network has done is drawn in its place; one it has not, waits its turn.
+        // A world texture the network has done is drawn in its place; one it has not, waits its turn. In the
+        // interface (0.14.1): its big pictures - the loading screen, the login's background.
         if (ai && !s.ui && id && id != white) {
             facts.stage = i;
             ai->noteWorldUse(id, ai::drawKind(facts));
+        } else if (ai && s.ui && !twin && i == 0 && id && id != white) {
+            ai->noteUiUse(id);
         }
-        if (ai && ai->shown && !s.ui && t[i]->ai) {
+        if (aiDrawn[i]) {
             transition(t[i]->ai, t[i]->aiState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
             srv[i] = t[i]->aiSrv;
         } else {
@@ -179,6 +184,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[3] = 1.0f;
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale, uiSharp ? UiFilter::Sharp : UiFilter::Smooth));
+    // The AI's picture has the detail the game pixels lack: sampled as it is, not one tap per game pixel.
+    if (aiDrawn[0]) c.uiMode = 0;
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
         float quad[4];
         uiPixels(rec, d, quad);

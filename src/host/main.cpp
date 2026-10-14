@@ -349,7 +349,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
         case Msg::IconWanted: {
             const uint64_t key = rd.u64();
             const int w = rd.i32(), h = rd.i32();
-            if (!rd.ok() || w <= 0 || h <= 0 || w > 256 || h > 256) break;
+            if (!rd.ok() || w <= 0 || h <= 0 || w > 512 || h > 512) break;
             const uint8_t* bytes = rd.take(size_t(w) * size_t(h) * 4);
             if (!bytes) break;
             std::vector<uint32_t> argb(size_t(w) * size_t(h));

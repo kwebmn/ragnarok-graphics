@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <iterator>
@@ -122,12 +123,19 @@ uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
     return result;
 }
 
-// 0.14, AI icons: an icon-sized picture copied whole into the window. The AI's larger one goes into the twin when it
-// has come back - the twin keeps what is under the icon, the copy takes the game's pixels; until then it is asked for
-// once and the game's pixels go in as blocks. true: the twin has it.
+// 0.14, AI icons: a picture copied whole into the window - an icon (a square of 16 to 64: items, skills) or (0.14.1)
+// a picture (32 to 512 a side, at most 3 times as long as wide: an item's picture in its description, a card's, an
+// NPC's illustration; not a strip of the window's frame). The AI's larger one goes into the twin when it has come
+// back - the twin keeps what is under it, the copy takes the game's pixels; until then it is asked for once and the
+// game's pixels go in as blocks. true: the twin has it.
+bool aiPictureSize(int w, int h) {
+    if (w == h && w >= 16 && w <= 64) return true;
+    return w >= 32 && h >= 32 && w <= 512 && h <= 512 && std::max(w, h) <= 3 * std::min(w, h);
+}
+
 bool aiIcon(Picture& pic, int x, int y, int w, int h, int rows, const uint32_t* src, bool key) {
     State& s = state();
-    if (!s.aiIcons || w != h || w < 16 || w > 64 || rows != h || x < 0 || y < 0 || x + w > pic.twin->width() ||
+    if (!s.aiIcons || !aiPictureSize(w, h) || rows != h || x < 0 || y < 0 || x + w > pic.twin->width() ||
         y + h > pic.twin->height())
         return false;
     std::vector<uint32_t> argb(size_t(w) * size_t(h));
@@ -491,6 +499,8 @@ void uninstall() {
     s.scale = Settled(kSettleMs);
     s.installed = false;
     s.icons.clear();  // their renderer is gone; a new one is asked again
+    s.iconOrder.clear();
+    s.iconBytes = 0;
     s.asked.clear();
     s.iconsArrived = false;
 }
@@ -555,12 +565,24 @@ void setAiIcons(bool on) {
 void iconReady(void*, uint64_t key, int width, int height, const uint32_t* argb) {
     State& s = state();
     s.asked.erase(key);
-    if (width <= 0 || height <= 0) return;
-    if (s.icons.size() >= 4096) s.icons.clear();  // the game's address space is 32-bit: a bound, seldom reached
+    if (width <= 0 || height <= 0 || s.icons.count(key)) return;
+    // The game's address space is 32-bit: 96 MB of them at most - an NPC's illustration made 4 times larger is some
+    // ten; the oldest go first and are asked for again when drawn (upscaled.grf has them by then).
+    const size_t bytes = size_t(width) * size_t(height) * 4, budget = size_t(96) << 20;
+    while (!s.iconOrder.empty() && s.iconBytes + bytes > budget) {
+        const auto old = s.icons.find(s.iconOrder.front());
+        if (old != s.icons.end()) {
+            s.iconBytes -= old->second.argb.size() * 4;
+            s.icons.erase(old);
+        }
+        s.iconOrder.pop_front();
+    }
     State::Icon& icon = s.icons[key];
     icon.width = width;
     icon.height = height;
     icon.argb.assign(argb, argb + size_t(width) * size_t(height));
+    s.iconOrder.push_back(key);
+    s.iconBytes += bytes;
     s.iconsArrived = true;
 }
 

@@ -17,6 +17,10 @@ namespace {
 
 constexpr int kNetScale = 4;  // every network enlarges 4 times; a result of twice the size is its first mip level
 constexpr size_t kKeptLimit = size_t(512) << 20;
+// 0.14.1: the interface's big pictures - the loading screen and the login's backgrounds are one texture of 1024 a
+// side (the picture in its top left corner); a window's tiles and the letters are smaller.
+constexpr int kUiPictureSide = 512;
+constexpr int kUiPictureMax = 1024;
 constexpr size_t kBatchBytes = size_t(32) << 20;  // pictures written to upscaled.grf at once
 constexpr UINT kAiConstants = 0, kAiWeights = 1, kAiU0 = 2, kAiU1 = 3, kAiU2 = 4;  // root parameters
 
@@ -393,9 +397,22 @@ void AiTextures::dispatchAlpha(const Job& job, ID3D12Resource* image, const Leve
     uavBarrier();
 }
 
+void AiTextures::trimBuffers() {
+    const UINT64 normal = UINT64(kUiPictureSide) * UINT64(kUiPictureSide) * UINT64(features_) * 4;
+    if (featBytes_ <= normal) return;
+    for (ID3D12Resource*& r : feat_) {
+        if (r) m_.slots[m_.slot].garbage.push_back(r);  // freed once this list has run
+        r = nullptr;
+    }
+    if (planes_) m_.slots[m_.slot].garbage.push_back(planes_);
+    planes_ = nullptr;
+    featBytes_ = planesBytes_ = 0;
+}
+
 void AiTextures::dropJob() {
     if (job_ && job_->image) m_.slots[m_.slot].garbage.push_back(job_->image);  // freed once this list has run
     job_.reset();
+    trimBuffers();
 }
 
 double AiTextures::runBand(Job& job, double budget) {
@@ -606,6 +623,8 @@ bool AiTextures::finish(Job& job) {
     t.aiState = D3D12_RESOURCE_STATE_COPY_DEST;
     m_.transition(t.ai, t.aiState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     t.aiSrv = srv;
+    t.aiWorld = !item->second.ui;
+    t.aiUi = item->second.ui;
     m_.device->CreateShaderResourceView(tex, nullptr, m_.cpuSrvHandle(srv));
     item->second.state = Item::Done;
     keptBytes_ -= item->second.argb.size() * 4;
@@ -730,6 +749,8 @@ bool AiTextures::makeAtlas(uint32_t id, Texture& t) {
     t.ai = tex;
     t.aiState = D3D12_RESOURCE_STATE_COPY_DEST;
     t.aiSrv = srv;
+    t.aiWorld = true;
+    t.aiUi = true;  // the cursor and the interface's other sprites come from the same cache
     m_.device->CreateShaderResourceView(tex, nullptr, m_.cpuSrvHandle(srv));
     atlases_[id] = std::move(a);
     return true;
@@ -882,7 +903,8 @@ void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const u
     }
     if (t.ai) dropAi(id);  // the game changed a texture the network had done: its own pixels again
     const bool whole = u.rect.left == 0 && u.rect.top == 0 && u.rect.width() == t.width && u.rect.height() == t.height;
-    if (!whole || t.width < minSide_ || t.height < minSide_ || t.width > maxSide_ || t.height > maxSide_) {
+    const int most = std::max(maxSide_, kUiPictureMax);  // the world's textures get the setting's at begin()
+    if (!whole || t.width < minSide_ || t.height < minSide_ || t.width > most || t.height > most) {
         const auto it = items_.find(id);
         if (it != items_.end()) {
             keptBytes_ -= it->second.argb.size() * 4;
@@ -894,7 +916,7 @@ void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const u
     keptBytes_ -= item.argb.size() * 4;
     item.argb.clear();
     item.state = Item::Kept;  // drawn again, it gets its turn again (a result of the old pixels is not taken)
-    item.later = item.loading = false;
+    item.later = item.loading = item.ui = false;
     item.name.clear();
     item.mapSerial = 0;
     if (++item.uploads > 3) {  // changed again and again (an effect): not worth the network
@@ -922,6 +944,11 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     item.kind = kind;
     const int k = int(kind);
     if (k >= ai::kKinds || netOf_[k] < 0) {  // a lightmap, no world texture, or a kind that is off
+        drop(item);
+        return;
+    }
+    item.ui = kind == ai::Kind::Icons;  // through noteUpload only the interface's big pictures have this kind
+    if (!item.ui && (item.width > maxSide_ || item.height > maxSide_)) {  // past the page's "texture sides"
         drop(item);
         return;
     }
@@ -972,6 +999,15 @@ void AiTextures::noteWorldUse(uint32_t id, ai::Kind kind) {
             if (mapTags_.insert(name).second) tag(name);
         }
     }
+}
+
+void AiTextures::noteUiUse(uint32_t id) {
+    const auto it = items_.find(id);
+    if (it == items_.end() || it->second.state != Item::Kept) return;
+    Item& item = it->second;
+    if (item.width < kUiPictureSide || item.height < kUiPictureSide) return;  // no big picture: maybe a world one
+    ++seen_[int(ai::Kind::Icons)];
+    begin(id, item, ai::Kind::Icons, false);
 }
 
 void AiTextures::setMap(const std::string& map) {

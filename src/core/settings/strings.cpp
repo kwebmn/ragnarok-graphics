@@ -622,14 +622,18 @@ const Entry kTexts[] = {
      "Не удалось изменить upscaled.grf: {1}"},
     {"{1} MB", "{1} МБ", "{1} МБ"},
     {"{1} GB", "{1} ГБ", "{1} ГБ"},
-    {"Icons in the game's windows", "Іконки у вікнах гри", "Иконки в окнах игры"},
-    {"Items in the inventory and equipment, skills, the hotkey bar: drawn smooth at the window's real pixels instead "
-     "of in squares. Needs crisp text (Quality page); the model for characters draws them.",
-     "Речі в інвентарі та спорядженні, вміння, панель гарячих клавіш: малюються гладко в реальних пікселях вікна, а "
-     "не квадратами. Потрібен чіткий текст (сторінка «Якість»); їх малює модель для персонажів.",
-     "Вещи в инвентаре и снаряжении, умения, панель горячих клавиш: рисуются гладко в настоящих пикселях окна, а не "
-     "квадратами. Нужен чёткий текст (страница «Качество»); их рисует модель для персонажей."},
-    {"Icons", "Іконки", "Иконки"},
+    {"Interface: icons, pictures, loading screen", "Інтерфейс: іконки, картинки, заставка",
+     "Интерфейс: иконки, картинки, заставка"},
+    {"Items and skills in the windows, an item's picture in its description, cards' and NPCs' illustrations: smooth "
+     "at the window's real pixels instead of in squares (needs crisp text, Quality page). The loading screen and the "
+     "login's backgrounds too. The model for characters draws them; the mouse cursor comes with the characters' box.",
+     "Речі й уміння у вікнах, картинка речі в її описі, ілюстрації карт і NPC: гладко в реальних пікселях вікна, а "
+     "не квадратами (потрібен чіткий текст, сторінка «Якість»). А також заставка завантаження й тло входу. Їх малює "
+     "модель для персонажів; курсор миші — разом із галочкою персонажів.",
+     "Вещи и умения в окнах, картинка вещи в её описании, иллюстрации карт и NPC: гладко в настоящих пикселях окна, "
+     "а не квадратами (нужен чёткий текст, страница «Качество»). А также заставка загрузки и фон входа. Их рисует "
+     "модель для персонажей; курсор мыши — вместе с галочкой персонажей."},
+    {"Interface", "Інтерфейс", "Интерфейс"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
