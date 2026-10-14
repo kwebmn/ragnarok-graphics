@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <unordered_map>
 
 #include "core/sprite_exe.hpp"
 #include "win/log.hpp"
@@ -17,10 +18,36 @@ using WriteFn = void(__attribute__((thiscall)) *)(uint32_t texture, int x, int y
 
 bool g_writing = false;  // the game's thread only: it draws and writes its sprites itself
 Rect g_cell;
+uint8_t g_source = 0;
+// 0.16: every frame the sprite loader read (SprImg*) -> what its file is (sprite_exe::Source). A frame freed and its
+// memory taken by another file's is written again by that file's load.
+std::unordered_map<uint32_t, uint8_t> g_frames;
+uintptr_t g_load = 0;  // the loader the vtable held
+
+using LoadFn = uint32_t(__attribute__((thiscall)) *)(uint32_t sprite, const char* name);
+
+// The frames of one of the sprite's lists (std::vector<SprImg*>: begin, end), each noted with `source`.
+void noteFrames(uint32_t list, uint8_t source) {
+    const uint32_t* begin = *reinterpret_cast<uint32_t* const*>(uintptr_t(list));
+    const uint32_t* end = *reinterpret_cast<uint32_t* const*>(uintptr_t(list) + 4);
+    if (!begin || end < begin || end - begin > 65536) return;
+    for (const uint32_t* f = begin; f != end; ++f)
+        if (*f) g_frames[*f] = source;
+}
+
+uint32_t __attribute__((thiscall)) spriteLoad(uint32_t sprite, const char* name) {
+    const uint32_t result = reinterpret_cast<LoadFn>(g_load)(sprite, name);
+    const uint8_t source = uint8_t(sprite_exe::sourceOf(name));
+    noteFrames(sprite + sprite_exe::kImages, source);
+    noteFrames(sprite + sprite_exe::kRgbaImages, source);
+    return result;
+}
 
 void __attribute__((thiscall)) spriteWrite(uint32_t texture, int x, int y, unsigned width, int height, void* image,
                                            void* palette) {
     g_cell = Rect{x, y, x + int(width), y + height};
+    const auto f = g_frames.find(uint32_t(reinterpret_cast<uintptr_t>(image)));
+    g_source = f == g_frames.end() ? 0 : f->second;
     g_writing = true;
     reinterpret_cast<WriteFn>(uintptr_t(sprite_exe::kWrite))(texture, x, y, width, height, image, palette);
     g_writing = false;
@@ -52,12 +79,25 @@ bool installSpriteHook() {
     FlushInstructionCache(GetCurrentProcess(), at, sizeof bytes);
     done = 1;
     LOG_INFO("AI textures: the game's sprite frames are seen one by one (uaRO.exe 0x%X)", sprite_exe::kWriteCall);
+    // 0.16: the loader's vtable entry, so that every frame is known by its file's folder.
+    auto* slot = reinterpret_cast<uintptr_t*>(uintptr_t(sprite_exe::kLoadSlot));
+    uintptr_t now = 0;
+    if (!ReadProcessMemory(GetCurrentProcess(), slot, &now, sizeof now, &got) || got != sizeof now ||
+        now != sprite_exe::kLoad || !VirtualProtect(slot, sizeof now, PAGE_EXECUTE_READWRITE, &old)) {
+        LOG_INFO("AI textures: the sprites' files are not known - every sprite counts as a monster");
+        return true;
+    }
+    g_load = now;
+    *slot = reinterpret_cast<uintptr_t>(&spriteLoad);
+    VirtualProtect(slot, sizeof now, old, &unused);
+    LOG_INFO("AI textures: sprites known by their files (monsters, players, NPCs, items)");
     return true;
 }
 
-bool spriteCell(Rect& cell) {
+bool spriteCell(Rect& cell, uint8_t& source) {
     if (!g_writing) return false;
     cell = g_cell;
+    source = g_source;
     return true;
 }
 

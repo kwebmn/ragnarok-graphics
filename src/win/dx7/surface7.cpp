@@ -490,7 +490,8 @@ HRESULT STDMETHODCALLTYPE Surface7::Unlock(LPRECT) {
     if (role_ == SurfaceRole::Texture) {
         changed(lockRect_);
         Rect cell;  // AI textures: a frame the game wrote into a cell of its sprite cache (sprite_hook.hpp)
-        if (level_ == 0 && win::spriteCell(cell)) top()->levels_->slotWritten(cell);
+        uint8_t source = 0;
+        if (level_ == 0 && win::spriteCell(cell, source)) top()->levels_->slotWritten(cell, source);
     }
     if (role_ == SurfaceRole::RenderTarget) {
         win::Context& c = win::Context::get();

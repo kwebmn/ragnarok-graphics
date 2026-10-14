@@ -58,8 +58,14 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
         setBool(v, a.ground);
     } else if (k == "objects") {
         setBool(v, a.objects);
-    } else if (k == "sprites") {
-        setBool(v, a.sprites);
+    } else if (k == "monsters") {
+        setBool(v, a.monsters);
+    } else if (k == "players") {
+        setBool(v, a.players);
+    } else if (k == "npcs") {
+        setBool(v, a.npcs);
+    } else if (k == "items") {
+        setBool(v, a.items);
     } else if (k == "effects") {
         setBool(v, a.effects);
     } else if (k == "icons") {
@@ -86,7 +92,8 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
 }  // namespace
 
 bool AiSettings::operator==(const AiSettings& o) const {
-    return enabled == o.enabled && ground == o.ground && objects == o.objects && sprites == o.sprites &&
+    return enabled == o.enabled && ground == o.ground && objects == o.objects && monsters == o.monsters &&
+           players == o.players && npcs == o.npcs && items == o.items &&
            effects == o.effects && icons == o.icons && uiPieces == o.uiPieces && model == o.model &&
            spriteModel == o.spriteModel &&
            denoise == o.denoise && scale == o.scale && budget == o.budget && minSize == o.minSize &&
@@ -102,7 +109,7 @@ AiPreset aiPresetOf(const AiSettings& a) {
 AiSettings aiPresetSettings(AiPreset p, bool enabled) {
     AiSettings a;
     a.enabled = enabled;
-    if (p == AiPreset::All) a.sprites = a.effects = true;
+    if (p == AiPreset::All) a.monsters = a.players = a.npcs = a.items = a.effects = true;
     return a;
 }
 
@@ -110,7 +117,7 @@ bool aiKind(const AiSettings& a, int kind) {
     switch (kind) {
         case 0: return a.ground;
         case 1: return a.objects;
-        case 2: return a.sprites;
+        case 2: return a.sprites();
         case 3: return a.effects;
         case 4: return a.icons;
         default: return false;
@@ -120,7 +127,8 @@ bool aiKind(const AiSettings& a, int kind) {
 std::string aiArgument(const AiSettings& a) {
     const auto b = [](bool v) { return v ? "1" : "0"; };
     return std::string("enabled=") + b(a.enabled) + ";ground=" + b(a.ground) + ";objects=" + b(a.objects) +
-           ";sprites=" + b(a.sprites) + ";effects=" + b(a.effects) + ";icons=" + b(a.icons) +
+           ";monsters=" + b(a.monsters) + ";players=" + b(a.players) + ";npcs=" + b(a.npcs) + ";items=" + b(a.items) +
+           ";effects=" + b(a.effects) + ";icons=" + b(a.icons) +
            ";ui_pieces=" + b(a.uiPieces) + ";model=" + a.model +
            ";sprite_model=" + a.spriteModel + ";denoise=" + std::to_string(a.denoise) +
            ";scale=" + std::to_string(a.scale) + ";budget=" + std::to_string(a.budget) +
@@ -139,6 +147,9 @@ Config parseConfig(const std::string& text) {
     AiSettings legacy;
     bool oldEnabled = false, oldBudget = false, oldDenoise = false;
     bool newEnabled = false, newBudget = false, newDenoise = false;
+    // 0.13-0.15's [ai] sprites: all four kinds of sprites, where none of their own keys is in the file.
+    int oldSprites = -1;
+    bool newSprites = false;
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -205,8 +216,12 @@ Config parseConfig(const std::string& text) {
             oldBudget = toInt(val, 1, 20, legacy.budget) || oldBudget;
         } else if (key == "quality.ai_denoise") {
             oldDenoise = toInt(val, 0, 100, legacy.denoise) || oldDenoise;
+        } else if (key == "ai.sprites") {
+            if (isBool(val)) oldSprites = val == "1" || val == "true" || val == "on" ? 1 : 0;
         } else if (key.compare(0, 3, "ai.") == 0) {
-            parseAi(key.substr(3), val, c.ai, newEnabled, newBudget, newDenoise);
+            const std::string k = key.substr(3);
+            newSprites = newSprites || k == "monsters" || k == "players" || k == "npcs" || k == "items";
+            parseAi(k, val, c.ai, newEnabled, newBudget, newDenoise);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {
@@ -227,6 +242,7 @@ Config parseConfig(const std::string& text) {
             if (val == "verbose") c.logLevel = LogLevel::Debug;
         }
     }
+    if (!newSprites && oldSprites >= 0) c.ai.monsters = c.ai.players = c.ai.npcs = c.ai.items = oldSprites == 1;
     if (!newEnabled && oldEnabled) c.ai.enabled = legacy.enabled;
     if (!newBudget && oldBudget) c.ai.budget = legacy.budget;
     if (!newDenoise && oldDenoise) c.ai.denoise = legacy.denoise;

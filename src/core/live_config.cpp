@@ -29,7 +29,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     const AiSettings& ra = running.ai;
     const std::pair<const char*, bool> ai[] = {
         {"ai.enabled", fa.enabled != ra.enabled}, {"ai.ground", fa.ground != ra.ground},
-        {"ai.objects", fa.objects != ra.objects}, {"ai.sprites", fa.sprites != ra.sprites},
+        {"ai.objects", fa.objects != ra.objects}, {"ai.monsters", fa.monsters != ra.monsters},
+        {"ai.players", fa.players != ra.players}, {"ai.npcs", fa.npcs != ra.npcs}, {"ai.items", fa.items != ra.items},
         {"ai.effects", fa.effects != ra.effects}, {"ai.icons", fa.icons != ra.icons},
         {"ai.ui_pieces", fa.uiPieces != ra.uiPieces},
         {"ai.model", fa.model != ra.model},

@@ -27,16 +27,17 @@ TEST(texlevels_sprite_cells_go_with_the_next_upload_of_level_0) {
     CHECK_EQ(r.uploads()[0].slotCount, 0u);
     r.reset();
     t.changed(0, Rect{0, 0, 256, 256});
-    t.slotWritten(Rect{64, 0, 128, 128});
+    t.slotWritten(Rect{64, 0, 128, 128}, 1);
     t.changed(0, Rect{0, 0, 256, 256});
-    t.slotWritten(Rect{0, 128, 64, 256});
-    t.slotWritten(Rect{64, 0, 128, 128});
+    t.slotWritten(Rect{0, 128, 64, 256}, 2);
+    t.slotWritten(Rect{64, 0, 128, 128}, 3);  // the newest frame's source
     t.slotWritten(Rect{300, 0, 400, 64});  // outside: dropped
     t.sync(r, 9);
     CHECK_EQ(r.uploads().size(), size_t(1));
     CHECK_EQ(r.uploads()[0].slotCount, 2u);
-    CHECK(r.slots()[r.uploads()[0].firstSlot] == (Rect{64, 0, 128, 128}));
-    CHECK(r.slots()[r.uploads()[0].firstSlot + 1] == (Rect{0, 128, 64, 256}));
+    CHECK(r.slots()[r.uploads()[0].firstSlot].rect == (Rect{64, 0, 128, 128}));
+    CHECK_EQ(r.slots()[r.uploads()[0].firstSlot].source, 3);
+    CHECK(r.slots()[r.uploads()[0].firstSlot + 1].rect == (Rect{0, 128, 64, 256}));
     r.reset();
     t.changed(0, Rect{0, 0, 8, 8});
     t.sync(r, 9);
@@ -133,4 +134,38 @@ TEST(ai_hidden_texels_fill_as_before_and_in_one_walk) {
             for (int c = 0; c < 3; ++c) same = same && planes[size_t(c) * n + i] == want[i * 3 + size_t(c)];
         CHECK(same);
     }
+}
+
+TEST(sprite_exe_files_by_their_folder) {
+    // 0.16: the AI page's boxes by the sprite file's folder (EUC-KR names under data\sprite\).
+    using sprite_exe::Source;
+    using sprite_exe::sourceOf;
+    CHECK(sourceOf("data\\sprite\\\xB8\xF3\xBD\xBA\xC5\xCD\\poring.spr") == Source::Monster);  // 몬스터
+    CHECK(sourceOf("\xB8\xF3\xBD\xBA\xC5\xCD\\poring.spr") == Source::Monster);               // relative
+    CHECK(sourceOf("data/sprite/homun/lif.spr") == Source::Monster);
+    CHECK(sourceOf("data\\sprite\\NPC\\4_F_KAFRA1.SPR") == Source::Npc);  // any case
+    CHECK(sourceOf("data\\sprite\\\xBE\xC6\xC0\xCC\xC5\xDB\\apple.spr") == Source::Item);      // 아이템
+    CHECK(sourceOf("data\\sprite\\\xC0\xCC\xC6\xD1\xC6\xAE\\msg.spr") == Source::Effect);      // 이팩트
+    // 인간족\몸통\남\ (a body), 악세사리\ (headgear), 방패\ (a shield): a player.
+    CHECK(sourceOf("data\\sprite\\\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xF6\xC5\xEB\\body.spr") == Source::Player);
+    CHECK(sourceOf("data\\sprite\\\xBE\xC7\xBC\xBC\xBB\xE7\xB8\xAE\\hat.spr") == Source::Player);
+    CHECK(sourceOf("data\\sprite\\\xB9\xE6\xC6\xD0\\guard.spr") == Source::Player);
+    CHECK(sourceOf("data\\sprite\\cursors.spr") == Source::Interface);
+    CHECK(sourceOf("data\\sprite\\npcs.spr") == Source::Unknown);  // a file named so, not the folder
+    CHECK(sourceOf(nullptr) == Source::Unknown);
+}
+
+TEST(ai_nearest_enlargement_is_the_games_own_look) {
+    // 0.16: a sprite frame of a kind that is off stays as the game has it in the cache's enlarged copy - every texel a
+    // block, its transparency too.
+    const uint32_t cell[4] = {0xFFFF0000, 0x00000000, 0xFF00FF00, 0xFF0000FF};
+    std::vector<uint32_t> big;
+    ai::enlargeNearest(cell, 2, 2, 4, big);
+    CHECK_EQ(big.size(), size_t(64));
+    CHECK_EQ(big[0], 0xFFFF0000u);
+    CHECK_EQ(big[3], 0xFFFF0000u);
+    CHECK_EQ(big[4], 0u);  // the transparent texel's block
+    CHECK_EQ(big[7], 0u);
+    CHECK_EQ(big[size_t(4 * 8)], 0xFF00FF00u);
+    CHECK_EQ(big[63], 0xFF0000FFu);
 }

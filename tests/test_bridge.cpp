@@ -39,7 +39,7 @@ FrameRecord sampleRecord() {
     const uint32_t pixels[6] = {1, 2, 3, 4, 5, 6};
     r.upload(0x40000002, 1, Rect{4, 4, 7, 6}, pixels);
     r.writeTarget(Rect{0, 0, 2, 1}, pixels + 4);
-    r.upload(0x40000003, 0, Rect{0, 0, 3, 2}, pixels, {Rect{0, 0, 1, 1}, Rect{2, 0, 3, 2}});  // 0.13: cells
+    r.upload(0x40000003, 0, Rect{0, 0, 3, 2}, pixels, {{Rect{0, 0, 1, 1}, 1}, {Rect{2, 0, 3, 2}, 4}});  // 0.13: cells
     return r;
 }
 
@@ -75,7 +75,8 @@ TEST(bridge_a_record_crosses_field_by_field) {
     CHECK_EQ(b.uploads()[1].firstSlot, 0u);
     CHECK_EQ(b.uploads()[1].slotCount, 2u);
     CHECK(b.slots() == a.slots());
-    CHECK(b.slots()[1] == (Rect{2, 0, 3, 2}));
+    CHECK(b.slots()[1].rect == (Rect{2, 0, 3, 2}));
+    CHECK_EQ(b.slots()[1].source, 4);  // 0.16: what sprite the frame is of
 }
 
 TEST(bridge_a_damaged_record_is_refused) {

@@ -18,7 +18,13 @@ struct AiSettings {
     // What it works on, the kinds the driver tells apart by how the game draws them (core/ai/kinds.hpp).
     bool ground = true;
     bool objects = true;   // buildings, trees, water
-    bool sprites = false;  // monsters, players, NPCs, items: pixel art the network may change too much
+    // The sprites (pixel art the network may change too much), told apart by their files' folders (0.16; 0.13-0.15's
+    // one "sprites" key sets all four where none of them is in the file).
+    bool monsters = false;  // and homunculi, mercenaries
+    bool players = false;   // bodies, heads, headgear, weapons, shields
+    bool npcs = false;
+    bool items = false;     // on the ground
+    bool sprites() const { return monsters || players || npcs || items; }
     bool effects = false;  // light and sparks
     bool icons = true;     // 0.14: item and skill icons in the game's windows (crisp text's twins)
     bool uiPieces = true;  // 0.15: with icons, the windows' small pieces too - buttons, tabs, slots (baked-in text)

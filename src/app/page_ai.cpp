@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdlib>
+#include <string>
 
 #include "app/page.hpp"
 
@@ -10,7 +11,7 @@ using namespace settings;
 
 constexpr int kEnable = 1001;
 constexpr int kPreset = 1002;
-constexpr int kKinds = 1010;  // + the kind (ground, objects, sprites, effects, icons)
+constexpr int kKinds = 1010;  // + the box's place in kBoxes
 constexpr int kModel = 1020;
 constexpr int kSpriteModel = 1021;
 constexpr int kDenoise = 1030;  // its number is 1031
@@ -19,14 +20,21 @@ constexpr int kBudget = 1050;
 constexpr int kSizes = 1060;  // from, and to at 1061
 constexpr int kAhead = 1070;
 
-const char* const kKindKeys[] = {"ai.ground", "ai.objects", "ai.sprites", "ai.effects", "ai.icons", "ai.ui_pieces"};
-const Text kKindTexts[][2] = {{Text::AiGround, Text::AiGroundHint},
-                              {Text::AiObjects, Text::AiObjectsHint},
-                              {Text::AiSprites, Text::AiSpritesHint},
-                              {Text::AiEffects, Text::AiEffectsHint},
-                              {Text::AiIcons, Text::AiIconsHint},
-                              {Text::AiUiPieces, Text::AiUiPiecesHint}};
-constexpr int kKindCount = 6;  // the five kinds, then the windows' pieces (with the interface)
+// What to improve, three to a row: the map, the sprites by their files (0.16), the interface.
+struct KindBox {
+    const char* key;
+    Text label, hint;
+};
+const KindBox kBoxes[] = {{"ai.ground", Text::AiGround, Text::AiGroundHint},
+                          {"ai.objects", Text::AiObjects, Text::AiObjectsHint},
+                          {"ai.effects", Text::AiEffects, Text::AiEffectsHint},
+                          {"ai.monsters", Text::AiSprites, Text::AiSpritesHint},
+                          {"ai.players", Text::AiPlayers, Text::AiPlayersHint},
+                          {"ai.npcs", Text::AiNpcs, Text::AiNpcsHint},
+                          {"ai.items", Text::AiItems, Text::AiItemsHint},
+                          {"ai.icons", Text::AiIcons, Text::AiIconsHint},
+                          {"ai.ui_pieces", Text::AiUiPieces, Text::AiUiPiecesHint}};
+constexpr int kKindCount = int(sizeof kBoxes / sizeof kBoxes[0]);
 
 const IniSetting& setting(const char* key) { return *findSetting(key); }
 
@@ -49,11 +57,13 @@ public:
         p.note(t(Text::AiWhat), Tone::Normal);
         std::vector<CheckItem> kinds;
         for (int k = 0; k < kKindCount; ++k) {
-            const bool ticked = k < 5 ? aiKind(a, k) : a.uiPieces;
-            kinds.push_back({kKinds + k, t(kKindTexts[k][0]), ticked, t(kKindTexts[k][1]), on && (k < 5 || a.icons)});
+            const bool ticked = m.token(setting(kBoxes[k].key)) == "1";
+            // The windows' pieces go with the interface's box.
+            const bool open = on && (std::string(kBoxes[k].key) != "ai.ui_pieces" || a.icons);
+            kinds.push_back({kKinds + k, t(kBoxes[k].label), ticked, t(kBoxes[k].hint), open});
         }
         p.checks(kinds, 3);
-        const bool maps = a.ground || a.objects, sprites = a.sprites || a.effects || a.icons;
+        const bool maps = a.ground || a.objects, sprites = a.sprites() || a.effects || a.icons;
         choiceRow(p, kModel, "ai.model", on && maps);
         choiceRow(p, kSpriteModel, "ai.sprite_model", on && sprites);
         // The grain is the realistic model's: grey when no kind that is on goes through it.
@@ -79,7 +89,7 @@ public:
         if (id == kEnable && clicked) {
             m.setToken(setting("ai.enabled"), checked ? "1" : "0");
         } else if (id >= kKinds && id < kKinds + kKindCount && clicked) {
-            m.setToken(setting(kKindKeys[id - kKinds]), checked ? "1" : "0");
+            m.setToken(setting(kBoxes[id - kKinds].key), checked ? "1" : "0");
         } else if (id == kAhead && clicked) {
             m.setToken(setting("ai.ahead"), checked ? "1" : "0");
         } else if (id == kPreset && code == CBN_SELCHANGE) {

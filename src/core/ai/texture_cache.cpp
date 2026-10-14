@@ -266,6 +266,16 @@ void enlargeCell(const uint32_t* argb, int width, int height, int scale, std::ve
     }
 }
 
+void enlargeNearest(const uint32_t* argb, int width, int height, int scale, std::vector<uint32_t>& out) {
+    const int ow = width * scale;
+    out.resize(size_t(ow) * size_t(height * scale));
+    for (int y = 0; y < height * scale; ++y) {
+        uint32_t* row = out.data() + size_t(y) * size_t(ow);
+        const uint32_t* src = argb + size_t(y / scale) * size_t(width);
+        for (int x = 0; x < ow; ++x) row[x] = src[x / scale];
+    }
+}
+
 void halve(const std::vector<uint32_t>& argb, int width, int height, std::vector<uint32_t>& out, int& outWidth,
            int& outHeight) {
     outWidth = std::max(1, width / 2);

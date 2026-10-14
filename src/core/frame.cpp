@@ -47,7 +47,7 @@ uint32_t FrameRecord::addPixels(const uint32_t* argb, size_t count) {
 }
 
 void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
-                         const std::vector<Rect>& slots) {
+                         const std::vector<SpriteCell>& slots) {
     UploadCmd u;
     u.texture = texture;
     u.level = level;

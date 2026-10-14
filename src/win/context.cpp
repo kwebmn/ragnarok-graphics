@@ -100,7 +100,8 @@ bool Context::open(std::string& error) {
     crisp::install(config.crispText);
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'
     // icons through crisp text's twins.
-    if (config.ai.enabled && config.ai.sprites && renderer->remote()) installSpriteHook();
+    const AiSettings& ai = config.ai;
+    if (ai.enabled && (ai.sprites() || ai.effects || ai.icons) && renderer->remote()) installSpriteHook();
     renderer->setIconSink(&crisp::iconReady, nullptr);
     crisp::setAiIcons(config.ai.enabled && config.ai.icons && renderer->remote() && config.crispText,
                       config.ai.uiPieces);

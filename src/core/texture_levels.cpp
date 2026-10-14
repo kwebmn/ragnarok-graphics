@@ -31,11 +31,14 @@ void TextureLevels::changed(int level, Rect r) {
     dirty_[size_t(level)] = unite(dirty_[size_t(level)], r);
 }
 
-void TextureLevels::slotWritten(Rect r) {
+void TextureLevels::slotWritten(Rect r, uint8_t source) {
     if (levels() == 0 || !clipRect(images_[0].bounds(), r)) return;
-    for (const Rect& s : slots_)
-        if (s == r) return;  // written again before the upload: the cell's newest frame goes once
-    slots_.push_back(r);
+    for (SpriteCell& s : slots_)
+        if (s.rect == r) {  // written again before the upload: the cell's newest frame goes once
+            s.source = source;
+            return;
+        }
+    slots_.push_back(SpriteCell{r, source});
 }
 
 bool TextureLevels::pending() const {
@@ -49,7 +52,7 @@ void TextureLevels::sync(FrameRecord& record, uint32_t texture) {
     for (size_t i = 0; i < images_.size(); ++i) {
         if (dirty_[i].empty()) continue;
         toArgbRect(images_[i], dirty_[i], key_, argb);
-        record.upload(texture, uint32_t(i), dirty_[i], argb.data(), i == 0 ? slots_ : std::vector<Rect>());
+        record.upload(texture, uint32_t(i), dirty_[i], argb.data(), i == 0 ? slots_ : std::vector<SpriteCell>());
         dirty_[i] = Rect{};
         if (i == 0) slots_.clear();
     }

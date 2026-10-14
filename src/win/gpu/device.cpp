@@ -420,7 +420,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     list->CopyTextureRegion(&dst, UINT(u.rect.left), UINT(u.rect.top), 0, &src, nullptr);
     if (ai)
         ai->noteUpload(u.texture, t, u, rec.pixels().data() + u.pixels,
-                       u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);
+                       u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);  // with their sources
 }
 
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {

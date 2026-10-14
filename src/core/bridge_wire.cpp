@@ -189,7 +189,10 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         w.u32(u.slotCount);
     }
     w.u32(uint32_t(r.slots().size()));
-    for (const Rect& s : r.slots()) w.rect(s);
+    for (const SpriteCell& s : r.slots()) {
+        w.rect(s.rect);
+        w.u8(s.source);
+    }
     w.u32(uint32_t(r.writes().size()));
     for (const WriteTargetCmd& t : r.writes()) {
         w.rect(t.rect);
@@ -264,9 +267,12 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         u.firstSlot = rd.u32();
         u.slotCount = rd.u32();
     }
-    if (!count(rd, 16, n)) return fail();
+    if (!count(rd, 17, n)) return fail();
     r.slots_.resize(n);
-    for (Rect& s : r.slots_) s = rd.rect();
+    for (SpriteCell& s : r.slots_) {
+        s.rect = rd.rect();
+        s.source = rd.u8();
+    }
     if (!count(rd, 20, n)) return fail();
     r.writes_.resize(n);
     for (WriteTargetCmd& t : r.writes_) {

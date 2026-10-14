@@ -514,16 +514,16 @@ const Entry kTexts[] = {
     {"Everything else that stands on a map: houses, walls, trees, rocks, water.",
      "Усе інше, що стоїть на карті: будинки, стіни, дерева, каміння, вода.",
      "Всё остальное, что стоит на карте: дома, стены, деревья, камни, вода."},
-    {"Characters, monsters, NPCs", "Персонажі, монстри, NPC", "Персонажи, монстры, NPC"},
-    {"And items on the ground: the game draws them alike, so this is one box. It keeps their animation frames in a "
-     "shared cache; every frame is enlarged on its own as it comes (a new monster within a second or two, then at "
-     "once from upscaled.grf). Small pixel pictures: the network may change their look - try it and see.",
-     "І речі на землі: гра малює їх однаково, тож це одна галочка. Кадри їхніх анімацій гра тримає в спільному "
-     "кеші; кожен кадр покращується окремо, щойно з'явиться (новий монстр — за секунду-дві, далі одразу з "
-     "upscaled.grf). Це маленькі піксельні картинки: нейромережа може змінити їхній вигляд — спробуйте й подивіться.",
-     "И вещи на земле: игра рисует их одинаково, поэтому это одна галочка. Кадры их анимаций игра держит в общем "
-     "кэше; каждый кадр улучшается отдельно, как только появится (новый монстр — за секунду-две, дальше сразу из "
-     "upscaled.grf). Это маленькие пиксельные картинки: нейросеть может изменить их вид — попробуйте и посмотрите."},
+    {"Monsters", "Монстри", "Монстры"},
+    {"Monsters, pets, homunculi and mercenaries. Their animation frames are enlarged one by one as they come (a new "
+     "monster within a second or two, then at once from upscaled.grf). Small pixel pictures: the network may change "
+     "their look - try it and see.",
+     "Монстри, вихованці, гомункули й найманці. Кадри їхніх анімацій покращуються по одному, щойно з'являться "
+     "(новий монстр — за секунду-дві, далі одразу з upscaled.grf). Це маленькі піксельні картинки: нейромережа може "
+     "змінити їхній вигляд — спробуйте й подивіться.",
+     "Монстры, питомцы, гомункулы и наёмники. Кадры их анимаций улучшаются по одному, как только появятся (новый "
+     "монстр — за секунду-две, дальше сразу из upscaled.grf). Это маленькие пиксельные картинки: нейросеть может "
+     "изменить их вид — попробуйте и посмотрите."},
     {"Skill effects", "Ефекти вмінь", "Эффекты умений"},
     {"Glows, sparks and light added onto the picture. Usually small and quick: the difference is little.",
      "Сяйва, іскри й світло, що додаються до картинки. Зазвичай маленькі й швидкі: різниця невелика.",
@@ -641,6 +641,18 @@ const Entry kTexts[] = {
      "картинки, вони теж згладжуються: якщо здадуться розмитими, зніміть цю галочку, іконки лишаться.",
      "Вместе с галочкой интерфейса: мелкие части окон — кнопки, вкладки, ячейки, стрелки. Надписи на кнопках — это "
      "картинки, они тоже сглаживаются: если покажутся размытыми, снимите эту галочку, иконки останутся."},
+    {"Players", "Гравці", "Игроки"},
+    {"Characters of players, your own too: bodies, heads, headgear, weapons, shields, garments - every frame by "
+     "itself.",
+     "Персонажі гравців, ваш теж: тіла, голови, головні убори, зброя, щити, плащі — кожен кадр окремо.",
+     "Персонажи игроков, ваш тоже: тела, головы, головные уборы, оружие, щиты, плащи — каждый кадр отдельно."},
+    {"NPCs", "NPC", "NPC"},
+    {"The game's characters in towns and dungeons: Kafra, merchants, guards.",
+     "Персонажі гри в містах і підземеллях: Кафра, торговці, вартові.",
+     "Персонажи игры в городах и подземельях: Кафра, торговцы, стражники."},
+    {"Items on the ground", "Речі на землі", "Вещи на земле"},
+    {"What lies on the ground: drops, loot.", "Те, що лежить на землі: здобич, луп.",
+     "То, что лежит на земле: добыча, лут."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

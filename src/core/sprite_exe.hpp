@@ -14,4 +14,18 @@ constexpr uint32_t kWriteCall = 0x40E0D8;  // E8 rel32: that call
 // Whether these 5 bytes, at kWriteCall, are the expected call of kWrite: else the exe is another build.
 bool isWriteCall(const uint8_t bytes[5]);
 
+// 0.16: which sprite a frame is of. CSprRes::Load (FUN_004385f0, thiscall, the file's name) is a virtual method: its
+// vtable entry at kLoadSlot holds kLoad. It reads the frames into two lists of SprImg* (std::vector: begin, end):
+// the palette ones and the 32-bit ones; FUN_00417ae0 gets one of those SprImg* as its image.
+constexpr uint32_t kLoad = 0x4385F0;
+constexpr uint32_t kLoadSlot = 0x695A0C;
+constexpr uint32_t kImages = 0x514;      // palette frames: begin, then end at +4
+constexpr uint32_t kRgbaImages = 0x524;  // 32-bit frames
+
+// What a sprite file shows, by its folder (the names are EUC-KR bytes in data\sprite\): what the AI page's boxes
+// choose. Homunculi and mercenaries look like monsters; heads, bodies, headgear, shields, garments and weapons make
+// players.
+enum class Source : uint8_t { Unknown, Monster, Player, Npc, Item, Effect, Interface };
+Source sourceOf(const char* path);
+
 }  // namespace uagfx::sprite_exe

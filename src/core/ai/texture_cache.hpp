@@ -65,6 +65,9 @@ void enlargeAlpha(const float* alpha, int width, int height, int scale, std::vec
 // (hidden texels take their visible neighbours' colour first, as for the network), the alpha as enlargeAlpha - the
 // look of the game's own texture drawn larger.
 void enlargeCell(const uint32_t* argb, int width, int height, int scale, std::vector<uint32_t>& out);
+// 0.16: the same cell exactly as the game has it, every texel scale x scale: what the enlarged copy of the sprite
+// cache holds for a frame the network does not take (a kind that is off), and until it is done.
+void enlargeNearest(const uint32_t* argb, int width, int height, int scale, std::vector<uint32_t>& out);
 // The next mip level of an ARGB picture, as the GPU's ai_mip makes it: the average of up to four texels, the alpha all
 // or nothing.
 void halve(const std::vector<uint32_t>& argb, int width, int height, std::vector<uint32_t>& out, int& outWidth,

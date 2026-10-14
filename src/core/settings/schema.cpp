@@ -58,8 +58,11 @@ const std::vector<IniSetting>& iniSettings() {
         {"ai", "ground", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiGround, Text::AiGroundHint, ""},
         {"ai", "objects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiObjects, Text::AiObjectsHint,
          ""},
-        {"ai", "sprites", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiSprites, Text::AiSpritesHint,
+        {"ai", "monsters", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiSprites, Text::AiSpritesHint,
          ""},
+        {"ai", "players", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiPlayers, Text::AiPlayersHint, ""},
+        {"ai", "npcs", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiNpcs, Text::AiNpcsHint, ""},
+        {"ai", "items", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiItems, Text::AiItemsHint, ""},
         {"ai", "effects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiEffects, Text::AiEffectsHint,
          ""},
         {"ai", "icons", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiIcons, Text::AiIconsHint, ""},
@@ -116,7 +119,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.enabled") return a.enabled ? "1" : "0";
     if (k == "ai.ground") return a.ground ? "1" : "0";
     if (k == "ai.objects") return a.objects ? "1" : "0";
-    if (k == "ai.sprites") return a.sprites ? "1" : "0";
+    if (k == "ai.monsters") return a.monsters ? "1" : "0";
+    if (k == "ai.players") return a.players ? "1" : "0";
+    if (k == "ai.npcs") return a.npcs ? "1" : "0";
+    if (k == "ai.items") return a.items ? "1" : "0";
     if (k == "ai.effects") return a.effects ? "1" : "0";
     if (k == "ai.icons") return a.icons ? "1" : "0";
     if (k == "ai.ui_pieces") return a.uiPieces ? "1" : "0";

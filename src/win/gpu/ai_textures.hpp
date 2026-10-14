@@ -42,7 +42,7 @@ public:
     void observe(UINT slot, double ms);  // what this slot's last share of the work took on the GPU
     // A texture's pixels as the game uploads them: level 0 of a whole texture is kept for the network. cells: the
     // cells of the game's sprite cache that got a new frame (UploadCmd::slots) - each enlarged on its own.
-    void noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
+    void noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const SpriteCell* cells,
                     uint32_t cellCount);
     void noteWorldUse(uint32_t id, ai::Kind kind);  // drawn in the world as `kind`: its turn comes, if that is on
     // 0.14.1: drawn in the interface - a big picture (the loading screen, the login's backgrounds) gets its turn as
@@ -152,8 +152,9 @@ private:
     bool finish(Job& job);
     ID3D12Resource* makeImage(Job& job, std::vector<Level>& levels);  // in COPY_SOURCE, all its levels
     void readBack(const Job& job, ID3D12Resource* image, const Level& top);  // for upscaled.grf
-    void noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
+    void noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const SpriteCell* cells,
                    uint32_t count);
+    bool cellOn(uint8_t source) const;  // a frame of this sprite file's kind goes to the network (sprite_exe)
     bool makeAtlas(uint32_t id, Texture& t);
     void standIn(Texture& t, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch);
     void writeRegion(Texture& t, int level, int x, int y, int w, int h, const std::vector<uint32_t>& argb);
@@ -179,6 +180,7 @@ private:
 
     Renderer::Impl& m_;
     bool ready_ = false;
+    AiSettings settings_;
     std::vector<std::unique_ptr<Net>> nets_;
     int netOf_[ai::kKinds] = {-1, -1, -1, -1};  // the network of each kind; -1: the kind is off
     int scale_ = 4;                             // the result: 4 or 2 times the game's texture

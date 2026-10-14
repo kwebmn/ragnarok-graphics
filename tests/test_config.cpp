@@ -88,7 +88,7 @@ TEST(config_ai_section_reads_every_key) {
     CHECK(a.enabled);
     CHECK(!a.ground);
     CHECK(!a.objects);
-    CHECK(a.sprites);
+    CHECK(a.monsters && a.players && a.npcs && a.items);  // 0.13-0.15's one key: all four kinds of sprites
     CHECK(a.effects);
     CHECK(a.model == "anime");
     CHECK(a.spriteModel == "general");
@@ -101,7 +101,7 @@ TEST(config_ai_section_reads_every_key) {
     // Words it does not take leave the defaults: the ground and objects, general and anime, x4, 64-512.
     const AiSettings d = parseConfig("[ai]\nmodel = best\nscale = 3\nmin_size = 8\nmax_size = 2048\n").ai;
     CHECK(d == AiSettings());
-    CHECK(d.ground && d.objects && !d.sprites && !d.effects);
+    CHECK(d.ground && d.objects && !d.sprites() && !d.effects);
     CHECK(d.model == "general" && d.spriteModel == "anime");
     CHECK_EQ(d.scale, 4);
     CHECK_EQ(d.minSize, 64);
@@ -131,13 +131,14 @@ TEST(config_ai_presets) {
     CHECK(aiPresetOf(a) == AiPreset::Recommended);
     a.enabled = true;
     CHECK(aiPresetOf(a) == AiPreset::Recommended);
-    a.sprites = a.effects = true;
+    a.monsters = a.players = a.npcs = a.items = a.effects = true;
     CHECK(aiPresetOf(a) == AiPreset::All);
     a.denoise = 30;
     CHECK(aiPresetOf(a) == AiPreset::Custom);
     CHECK(aiPresetSettings(AiPreset::All, true) != aiPresetSettings(AiPreset::Recommended, true));
     const AiSettings all = aiPresetSettings(AiPreset::All, true);
-    CHECK(all.enabled && all.ground && all.objects && all.sprites && all.effects);
+    CHECK(all.enabled && all.ground && all.objects && all.monsters && all.players && all.npcs && all.items &&
+          all.effects);
     CHECK(!aiPresetSettings(AiPreset::Recommended, false).enabled);
     CHECK(aiKind(all, 2) && !aiKind(AiSettings(), 3) && aiKind(AiSettings(), 0) && !aiKind(all, 5));
     CHECK(aiKind(AiSettings(), 4));  // 0.14: the windows' icons, on in Recommended
@@ -148,7 +149,8 @@ TEST(config_ai_argument_round_trips) {
     AiSettings a;
     a.enabled = true;
     a.objects = false;
-    a.sprites = true;
+    a.monsters = true;
+    a.npcs = true;
     a.model = "anime";
     a.spriteModel = "general";
     a.denoise = 35;
@@ -194,4 +196,15 @@ TEST(config_a_section_may_come_twice) {
     CHECK_EQ(c.renderScale, 150);
     CHECK_EQ(c.sharpen, 0);
     CHECK(!c.vsync);
+}
+
+TEST(config_ai_sprites_by_their_kind) {
+    // 0.16: monsters, players, NPCs and items each have a key; 0.13-0.15's "sprites" sets all four only where none
+    // of them is in the file.
+    const AiSettings a = parseConfig("[ai]\nmonsters = 1\nplayers = 0\nnpcs = 1\n").ai;
+    CHECK(a.monsters && !a.players && a.npcs && !a.items && a.sprites());
+    const AiSettings b = parseConfig("[ai]\nsprites = 1\nplayers = 0\n").ai;  // one new key: the old one is ignored
+    CHECK(!b.monsters && !b.players && !b.npcs && !b.items);
+    CHECK(parseConfig("[ai]\nsprites = 0\n").ai.sprites() == false);
+    CHECK(!AiSettings().sprites());
 }

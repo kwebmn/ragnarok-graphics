@@ -9,6 +9,7 @@
 #include <iterator>
 
 #include "core/ai/texture_cache.hpp"
+#include "core/sprite_exe.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -130,6 +131,7 @@ bool AiTextures::loadNet(const std::string& dir, const std::string& token, int d
 }
 
 bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::string& error) {
+    settings_ = s;
     targetMs_ = std::clamp(double(s.budget), 0.5, 20.0);
     scale_ = s.scale == 2 ? 2 : 4;
     minSide_ = std::min(s.minSize, s.maxSize);
@@ -642,14 +644,30 @@ bool AiTextures::finish(Job& job) {
 // a whole - its contents change all the time - but cell by cell into its enlarged copy (Texture::ai), where the game's
 // own texture coordinates find the enlarged frame. A new frame goes in plainly enlarged at once, so that a cell
 // never shows the frame it held before, and the network's picture replaces it once done, if the cell still holds it.
-void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
+bool AiTextures::cellOn(uint8_t source) const {
+    switch (sprite_exe::Source(source)) {
+        case sprite_exe::Source::Monster: return settings_.monsters;
+        case sprite_exe::Source::Player: return settings_.players;
+        case sprite_exe::Source::Npc: return settings_.npcs;
+        case sprite_exe::Source::Item: return settings_.items;
+        case sprite_exe::Source::Effect: return settings_.effects;
+        case sprite_exe::Source::Interface: return settings_.icons;  // the cursor
+        case sprite_exe::Source::Unknown: break;
+    }
+    return settings_.monsters;  // a file the loader's hook did not see: as most sprites are
+}
+
+void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const SpriteCell* cells,
                            uint32_t count) {
     const auto item = items_.find(id);
     if (item != items_.end()) {
         keptBytes_ -= item->second.argb.size() * 4;
         items_.erase(item);
     }
-    const int net = netOf_[int(ai::Kind::Sprites)];
+    // The network for sprites (the model for characters): any kind of theirs that is on has made it.
+    int net = -1;
+    for (ai::Kind k : {ai::Kind::Sprites, ai::Kind::Effects, ai::Kind::Icons})
+        if (net < 0) net = netOf_[int(k)];
     if (net < 0) return;
     auto a = atlases_.find(id);
     const bool made = a == atlases_.end();
@@ -680,7 +698,7 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
                     u.rect.width());
     }
     for (uint32_t i = 0; i < count; ++i) {
-        const Rect c = cells[i];
+        const Rect c = cells[i].rect;
         if (c.empty() || c.left < u.rect.left || c.top < u.rect.top || c.right > u.rect.right ||
             c.bottom > u.rect.bottom)
             continue;
@@ -690,8 +708,9 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
             std::memcpy(pixels.data() + size_t(y) * size_t(w),
                         argb + size_t(c.top - u.rect.top + y) * size_t(u.rect.width()) + size_t(c.left - u.rect.left),
                         size_t(w) * 4);
-        if (!made) standIn(t, a->second, c, pixels.data(), w);
+        if (!made) standIn(t, a->second, c, pixels.data(), w);  // the frame as the game has it, at once
         ++cellsWritten_;
+        if (!cellOn(cells[i].source)) continue;  // a kind that is off: it stays as the game has it
         Job j;
         j.id = id;
         j.net = net;
@@ -705,7 +724,11 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         j.frame = ++a->second.frames[uint32_t(c.top) << 16 | uint32_t(c.left)];
         const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
         j.name = ai::entryName(nets_[size_t(net)]->folder, key);
-        if (kinds_.emplace(key, ai::Kind::Sprites).second) tag(ai::kindTag(ai::Kind::Sprites, key));
+        const sprite_exe::Source source = sprite_exe::Source(cells[i].source);
+        const ai::Kind kind = source == sprite_exe::Source::Effect      ? ai::Kind::Effects
+                              : source == sprite_exe::Source::Interface ? ai::Kind::Icons
+                                                                        : ai::Kind::Sprites;
+        if (kinds_.emplace(key, kind).second) tag(ai::kindTag(kind, key));
         if (!map_.empty()) {
             std::string name = ai::mapTag(map_, key);
             if (mapTags_.insert(name).second) tag(name);
@@ -764,7 +787,7 @@ void AiTextures::standIn(Texture& t, const Atlas& a, const Rect& r, const uint32
     for (int y = 0; y < h; ++y)
         std::memcpy(src.data() + size_t(y) * size_t(w), argb + size_t(y) * size_t(pitch), size_t(w) * 4);
     std::vector<uint32_t> level, next;
-    ai::enlargeCell(src.data(), w, h, scale_, level);
+    ai::enlargeNearest(src.data(), w, h, scale_, level);  // the game's own look until the network's picture comes
     int lw = w * scale_, lh = h * scale_;
     for (int i = 0; i < a.levels; ++i) {
         writeRegion(t, i, (r.left * scale_) >> i, (r.top * scale_) >> i, lw, lh, level);
@@ -897,8 +920,8 @@ void AiTextures::drop(Item& item) {
     item.state = Item::Skipped;
 }
 
-void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
-                            uint32_t cellCount) {
+void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb,
+                            const SpriteCell* cells, uint32_t cellCount) {
     if (!ready_ || u.level != 0) return;
     if (cellCount || atlases_.count(id)) {  // a sprite cache: cell by cell
         noteCells(id, t, u, argb, cells, cellCount);
