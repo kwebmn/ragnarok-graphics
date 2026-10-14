@@ -92,7 +92,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // characters' list comes first of those - or at the interface, the shadows go onto what is drawn so far: the
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
-    if ((s.ui ? !upscale : s.blend) && aoDue() && !applyAo()) return;
+    if (!s.ui && s.blend && aoDue() && !applyAo()) return;
+    // 0.21: the world done - at the interface - its colours, then its glow.
+    if (s.ui && !upscale && !finishWorld()) return;
     if (s.ui && !upscale && glowDrawn && !addGlowToTarget()) return;
     const bool adds = !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE;
     if (adds && !glowActive && glowWanted()) startGlow();

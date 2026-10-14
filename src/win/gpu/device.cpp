@@ -328,7 +328,7 @@ void Renderer::Impl::clear(const ClearCmd& c) {
         c.rect.bottom >= gameHeight) {
         dropGlow();
         waterCopied = false;  // 0.19: a new picture - its water copies what is under it anew
-        aoDone = groundDrawn = false;  // 0.20: and its shadows come once its ground is there
+        aoDone = groundDrawn = gradeDone = false;  // 0.20, 0.21: its shadows and colours once its ground is there
     }
     if (upscale) {  // part 3: the world and its depth; a colour clear empties the interface layer too
         startFrame();
@@ -438,7 +438,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
     if (w.rect.empty()) return;
     if (upscale) startFrame();
-    if (!upscale && aoDue() && !applyAo()) return;  // 0.20: the world's shadows and glow under the game's own pixels
+    if (!upscale && !finishWorld()) return;  // 0.20, 0.21: the world's shadows, colours, glow under the game's pixels
     if (!upscale && glowDrawn && !addGlowToTarget()) return;
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + w.pixels, UINT(w.rect.width()),
                                                   UINT(w.rect.height()));
@@ -688,7 +688,7 @@ bool Renderer::Impl::composite() {
     if (!worldDrawn && !layerDrawn && !worldValid) return true;
     if (!begin()) return false;
     static bool failedOnce = false;
-    if (worldDrawn && aoDue() && !applyAo()) return false;  // 0.20: a world whose blended draws never came
+    if (worldDrawn && !finishWorld()) return false;  // 0.20, 0.21: its shadows (if no blended draw came), colours
     if (worldDrawn) {
         worldValid = true;
         // The motion of every world pixel from the game's camera (motion_ps).
@@ -994,6 +994,8 @@ void Renderer::Impl::destroy() {
     releaseCom(aoBlurPipeline);
     for (ID3D12PipelineState*& p : aoApplyPipelines) releaseCom(p);
     for (ID3D12PipelineState*& p : glowLightPipelines) releaseCom(p);
+    for (ID3D12PipelineState*& p : gradePipelines) releaseCom(p);  // 0.21
+    releaseCom(gradePs);
     releaseCom(aoPs);
     releaseCom(aoBlurPs);
     releaseCom(aoApplyPs);
@@ -1191,16 +1193,19 @@ void Renderer::setEffects(const EffectSettings& e) {
     Impl& m = *impl_;
     if (e == m.effects) return;
     const bool was = m.glowWanted();
-    const bool scene = m.waterWanted() || m.aoWanted();
+    const bool scene = m.waterWanted() || m.aoWanted() || m.gradeWanted();
     const bool ao = m.aoWanted();
     m.effects = e;
     LOG_INFO("effects: shadows %s, strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
-             "water %s, waves %d%%, reflections %d%%, clarity %d%%",
+             "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
+             "brightness %d%%, warmth %d%%, vignette %d%%",
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off", e.glowStrength, e.glowSize,
-             e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity);
+             e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
+             e.grade ? "on" : "off", e.gradeSaturation, e.gradeContrast, e.gradeBrightness, e.gradeWarmth,
+             e.gradeVignette);
     if (was && !m.glowWanted()) m.releaseGlow();  // its video memory back
     if (ao && !m.aoWanted()) m.releaseAo();
-    if (scene && !m.waterWanted() && !m.aoWanted()) m.releaseScene();
+    if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted()) m.releaseScene();
 }
 
 void Renderer::preparePipelines(const std::string& file) {
@@ -1391,7 +1396,7 @@ bool Renderer::setTarget(int width, int height) {
     m.releaseUpscaleTargets();
     m.dropGlow();
     m.waterCopied = false;
-    m.aoDone = m.groundDrawn = false;
+    m.aoDone = m.groundDrawn = m.gradeDone = false;
     m.upscale = false;
     m.samples = 1;  // until the first present, like the scale: the calibration sees DX7's picture
     if (!m.createTarget(width, height, 1, m.target, m.depth)) return fail();
@@ -1468,7 +1473,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
     m.waitIdle();
     m.dropGlow();  // 0.18: drawn for the old target
     m.waterCopied = false;
-    m.aoDone = m.groundDrawn = false;
+    m.aoDone = m.groundDrawn = m.gradeDone = false;
     releaseCom(m.target);
     releaseCom(m.depth);
     releaseCom(m.resolved);
@@ -1596,7 +1601,7 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     Impl& m = *impl_;
     if (m.lost || !m.target || !m.begin()) return false;
     if (!m.composite()) return false;  // part 3: the picture as it would be shown
-    if (!m.upscale && m.aoDue() && !m.applyAo()) return false;  // 0.20, 0.18: a frame without an interface
+    if (!m.upscale && !m.finishWorld()) return false;  // 0.20, 0.21, 0.18: a frame without an interface
     if (!m.upscale && m.glowDrawn && !m.addGlowToTarget()) return false;
     const Impl::Readable r = m.readableTarget();  // resolved first when it has several samples (stage 4)
     ID3D12Resource* source = r.resource;
@@ -1693,7 +1698,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         return;
     }
     if (!m.begin() || !m.composite()) return;  // part 3: the upscaled world and the interface layer first
-    if (!m.upscale && m.aoDue() && !m.applyAo()) return;  // 0.20, 0.18: a frame without an interface
+    if (!m.upscale && !m.finishWorld()) return;  // 0.20, 0.21, 0.18: a frame without an interface
     if (!m.upscale && m.glowDrawn && !m.addGlowToTarget()) return;
     const Impl::Readable shown = m.readableTarget();  // resolved first when it has several samples (stage 4)
     const UINT index = m.swapChain->GetCurrentBackBufferIndex();
@@ -1790,7 +1795,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     m.renderStarted = false;
     m.upscaledNow = false;
     m.waterCopied = false;  // 0.19: the next frame's water copies what is under it anew
-    m.aoDone = m.groundDrawn = false;  // 0.20: and its shadows come once its ground is there
+    m.aoDone = m.groundDrawn = m.gradeDone = false;  // 0.20, 0.21: its shadows and colours once its ground is there
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;
         m.nextJitter();

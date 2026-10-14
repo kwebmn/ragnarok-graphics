@@ -96,7 +96,7 @@ set "aniso=0"
 rem 0.17: the AI textures take textures of 16 pixels and more, not 64 - shadows and a map's small things. The settings
 rem file 0.12-0.16 put in place says min_size = 64 under that version's note: both change, once.
 findstr /x /c:"; the textures it takes, by their sides in pixels: from min_size to max_size, 16-1024" "uaro-graphics.ini" >nul 2>&1 && findstr /x /c:"min_size = 64" "uaro-graphics.ini" >nul 2>&1 && powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='uaro-graphics.ini'; (Get-Content -LiteralPath $f) -replace '^min_size = 64$','min_size = 16' -replace '^; the textures it takes, by their sides in pixels: from min_size to max_size, 16-1024$','; the textures of the world it takes, by their sides in pixels (16 since 0.17)' | Set-Content -LiteralPath $f -Encoding ASCII"
-rem 0.18-0.20: the effects page's keys, off, with their notes, at the end of a settings file from before they came
+rem 0.18-0.21: the effects page's keys, off, with their notes, at the end of a settings file from before they came
 rem - all of them, or 0.19's water after the [effects] 0.18 added.
 findstr /i /l /c:"[effects]" "uaro-graphics.ini" >nul 2>&1
 if errorlevel 1 (
@@ -124,6 +124,14 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo water_waves = 50
     >>"uaro-graphics.ini" echo water_reflections = 50
     >>"uaro-graphics.ini" echo water_clarity = 50
+    >>"uaro-graphics.ini" echo ; 1 = the picture's colours to taste: saturation 0-200 %%, contrast and brightness
+    >>"uaro-graphics.ini" echo ;     50-150 %% - 100 as the game, warmth 0-100 %% - 50 as the game, vignette 0-100 %%
+    >>"uaro-graphics.ini" echo grade = 0
+    >>"uaro-graphics.ini" echo grade_saturation = 115
+    >>"uaro-graphics.ini" echo grade_contrast = 108
+    >>"uaro-graphics.ini" echo grade_brightness = 100
+    >>"uaro-graphics.ini" echo grade_warmth = 50
+    >>"uaro-graphics.ini" echo grade_vignette = 25
 )
 findstr /i /l /c:"water_waves" "uaro-graphics.ini" >nul 2>&1
 if errorlevel 1 (
@@ -150,6 +158,20 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ao_size = 50
     >>"uaro-graphics.ini" echo ; 0-100 %%: how much the effects' light falls on what is around them
     >>"uaro-graphics.ini" echo glow_light = 50
+)
+rem 0.21: the colours, after the [effects] 0.18-0.20 added.
+findstr /i /l /c:"grade_saturation" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = the picture's colours to taste: saturation 0-200 %%, contrast and brightness
+    >>"uaro-graphics.ini" echo ;     50-150 %% - 100 as the game, warmth 0-100 %% - 50 as the game, vignette 0-100 %%
+    >>"uaro-graphics.ini" echo grade = 0
+    >>"uaro-graphics.ini" echo grade_saturation = 115
+    >>"uaro-graphics.ini" echo grade_contrast = 108
+    >>"uaro-graphics.ini" echo grade_brightness = 100
+    >>"uaro-graphics.ini" echo grade_warmth = 50
+    >>"uaro-graphics.ini" echo grade_vignette = 25
 )
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet

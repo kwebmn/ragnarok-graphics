@@ -322,6 +322,12 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.waterWaves = rd.i32();
             e.waterReflections = rd.i32();
             e.waterClarity = rd.i32();
+            e.grade = rd.u8() != 0;
+            e.gradeSaturation = rd.i32();
+            e.gradeContrast = rd.i32();
+            e.gradeBrightness = rd.i32();
+            e.gradeWarmth = rd.i32();
+            e.gradeVignette = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

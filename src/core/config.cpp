@@ -102,7 +102,10 @@ bool AiSettings::operator==(const AiSettings& o) const {
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
     return glow == o.glow && glowStrength == o.glowStrength && glowSize == o.glowSize && glowLight == o.glowLight &&
-           ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && water == o.water &&
+           ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
+           gradeSaturation == o.gradeSaturation && gradeContrast == o.gradeContrast &&
+           gradeBrightness == o.gradeBrightness && gradeWarmth == o.gradeWarmth && gradeVignette == o.gradeVignette &&
+           water == o.water &&
            waterWaves == o.waterWaves && waterReflections == o.waterReflections && waterClarity == o.waterClarity;
 }
 
@@ -242,6 +245,18 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 100, c.effects.aoStrength);
         } else if (key == "effects.ao_size") {
             toInt(val, 0, 100, c.effects.aoSize);
+        } else if (key == "effects.grade") {
+            setBool(val, c.effects.grade);
+        } else if (key == "effects.grade_saturation") {
+            toInt(val, 0, 200, c.effects.gradeSaturation);
+        } else if (key == "effects.grade_contrast") {
+            toInt(val, 50, 150, c.effects.gradeContrast);
+        } else if (key == "effects.grade_brightness") {
+            toInt(val, 50, 150, c.effects.gradeBrightness);
+        } else if (key == "effects.grade_warmth") {
+            toInt(val, 0, 100, c.effects.gradeWarmth);
+        } else if (key == "effects.grade_vignette") {
+            toInt(val, 0, 100, c.effects.gradeVignette);
         } else if (key == "effects.water") {
             setBool(val, c.effects.water);
         } else if (key == "effects.water_waves") {

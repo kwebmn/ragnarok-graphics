@@ -96,11 +96,17 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (fe.glowSize != re.glowSize)
         u.applied.push_back(change("glow_size", std::to_string(re.glowSize), std::to_string(fe.glowSize)));
     if (fe.ao != re.ao) u.applied.push_back(change("ao", flag(re.ao), flag(fe.ao)));
+    if (fe.grade != re.grade) u.applied.push_back(change("grade", flag(re.grade), flag(fe.grade)));
     if (fe.water != re.water) u.applied.push_back(change("water", flag(re.water), flag(fe.water)));
     const std::pair<const char*, std::pair<int, int>> numbers[] = {
         {"glow_light", {re.glowLight, fe.glowLight}},
         {"ao_strength", {re.aoStrength, fe.aoStrength}},
         {"ao_size", {re.aoSize, fe.aoSize}},
+        {"grade_saturation", {re.gradeSaturation, fe.gradeSaturation}},
+        {"grade_contrast", {re.gradeContrast, fe.gradeContrast}},
+        {"grade_brightness", {re.gradeBrightness, fe.gradeBrightness}},
+        {"grade_warmth", {re.gradeWarmth, fe.gradeWarmth}},
+        {"grade_vignette", {re.gradeVignette, fe.gradeVignette}},
         {"water_waves", {re.waterWaves, fe.waterWaves}},
         {"water_reflections", {re.waterReflections, fe.waterReflections}},
         {"water_clarity", {re.waterClarity, fe.waterClarity}}};

@@ -114,3 +114,13 @@ TEST(live_config_shadows_apply_now) {
     for (const char* k : {"effects.ao", "effects.ao_strength", "effects.ao_size", "effects.glow_light"})
         CHECK(appliesNow(k));
 }
+
+TEST(live_config_colour_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\ngrade = 1\ngrade_warmth = 70\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "grade 0 -> 1");
+    CHECK(u.applied[1] == "grade_warmth 50 -> 70");
+    CHECK(appliesNow("effects.grade_vignette"));
+}
+

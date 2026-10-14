@@ -254,3 +254,24 @@ TEST(config_effects_shadows_and_light) {
     CHECK_EQ(e.glowLight, 0);
     CHECK(parseConfig("[effects]\nao_strength = 101\nglow_light = -5\n").effects == d);
 }
+
+TEST(config_effects_colour) {
+    // 0.21: the picture's colours, off unless asked for; contrast and brightness 50-150 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(!d.grade);
+    CHECK_EQ(d.gradeSaturation, 115);
+    CHECK_EQ(d.gradeContrast, 108);
+    CHECK_EQ(d.gradeBrightness, 100);
+    CHECK_EQ(d.gradeWarmth, 50);
+    CHECK_EQ(d.gradeVignette, 25);
+    const EffectSettings e = parseConfig("[effects]\ngrade = 1\ngrade_saturation = 0\ngrade_contrast = 150\n"
+                                         "grade_brightness = 50\ngrade_warmth = 100\ngrade_vignette = 0\n").effects;
+    CHECK(e.grade);
+    CHECK_EQ(e.gradeSaturation, 0);
+    CHECK_EQ(e.gradeContrast, 150);
+    CHECK_EQ(e.gradeBrightness, 50);
+    CHECK_EQ(e.gradeWarmth, 100);
+    CHECK_EQ(e.gradeVignette, 0);
+    CHECK(parseConfig("[effects]\ngrade_contrast = 49\ngrade_brightness = 151\n").effects == d);
+}
+

@@ -14,12 +14,15 @@ using namespace settings;
 // 10 * its place (its number one more).
 struct Effect {
     const char* box;
-    const char* sliders[3];
+    const char* sliders[5];
 };
 const Effect kEffects[] = {
-    {"effects.ao", {"effects.ao_strength", "effects.ao_size", nullptr}},
+    {"effects.ao", {"effects.ao_strength", "effects.ao_size"}},
     {"effects.glow", {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}},
     {"effects.water", {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}},
+    {"effects.grade",
+     {"effects.grade_saturation", "effects.grade_contrast", "effects.grade_brightness", "effects.grade_warmth",
+      "effects.grade_vignette"}},
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 
@@ -43,7 +46,7 @@ public:
             const IniSetting& box = setting(kEffects[e].box);
             const bool on = m.token(box) == "1";
             p.check(boxId(e), t(box.label), on, t(box.hint));
-            for (int k = 0; k < 3 && kEffects[e].sliders[k]; ++k) slider(p, sliderId(e, k), kEffects[e].sliders[k], on);
+            for (int k = 0; k < 5 && kEffects[e].sliders[k]; ++k) slider(p, sliderId(e, k), kEffects[e].sliders[k], on);
         }
         p.gap();
         p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
@@ -75,7 +78,7 @@ public:
 private:
     static const char* sliderKey(int id) {
         for (int e = 0; e < kEffectCount; ++e)
-            for (int k = 0; k < 3 && kEffects[e].sliders[k]; ++k)
+            for (int k = 0; k < 5 && kEffects[e].sliders[k]; ++k)
                 if (id == sliderId(e, k)) return kEffects[e].sliders[k];
         return nullptr;
     }

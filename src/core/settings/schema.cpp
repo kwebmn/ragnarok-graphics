@@ -68,6 +68,18 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxGlowSizeHint, " %"},
         {"effects", "glow_light", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxGlowLight,
          Text::FxGlowLightHint, " %"},
+        {"effects", "grade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrade, Text::FxGradeHint,
+         ""},
+        {"effects", "grade_saturation", Page::Effects, Control::Slider, 0, 200, 5, {}, {}, Text::FxGradeSaturation,
+         Text::FxGradeSaturationHint, " %"},
+        {"effects", "grade_contrast", Page::Effects, Control::Slider, 50, 150, 2, {}, {}, Text::FxGradeContrast,
+         Text::FxGradeContrastHint, " %"},
+        {"effects", "grade_brightness", Page::Effects, Control::Slider, 50, 150, 2, {}, {}, Text::FxGradeBrightness,
+         Text::FxGradeBrightnessHint, " %"},
+        {"effects", "grade_warmth", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxGradeWarmth,
+         Text::FxGradeWarmthHint, " %"},
+        {"effects", "grade_vignette", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxGradeVignette,
+         Text::FxGradeVignetteHint, " %"},
         {"effects", "water", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWater, Text::FxWaterHint,
          ""},
         {"effects", "water_waves", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxWaterWaves,
@@ -164,6 +176,12 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.ao") return c.effects.ao ? "1" : "0";
     if (k == "effects.ao_strength") return std::to_string(c.effects.aoStrength);
     if (k == "effects.ao_size") return std::to_string(c.effects.aoSize);
+    if (k == "effects.grade") return c.effects.grade ? "1" : "0";
+    if (k == "effects.grade_saturation") return std::to_string(c.effects.gradeSaturation);
+    if (k == "effects.grade_contrast") return std::to_string(c.effects.gradeContrast);
+    if (k == "effects.grade_brightness") return std::to_string(c.effects.gradeBrightness);
+    if (k == "effects.grade_warmth") return std::to_string(c.effects.gradeWarmth);
+    if (k == "effects.grade_vignette") return std::to_string(c.effects.gradeVignette);
     if (k == "effects.water") return c.effects.water ? "1" : "0";
     if (k == "effects.water_waves") return std::to_string(c.effects.waterWaves);
     if (k == "effects.water_reflections") return std::to_string(c.effects.waterReflections);

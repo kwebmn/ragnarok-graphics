@@ -185,4 +185,42 @@ bool Renderer::Impl::applyAo() {
                    : effectPass(apply, target, targetState, rtvHandle(kRtvTarget), w, h, c, aoSrv[0], false);
 }
 
+// Into the target (its samples) or the world under DLSS (one sample), as it is: the colours are made in the shader.
+bool Renderer::Impl::applyGrade() {
+    gradeDone = true;  // tried once a frame, whatever comes of it
+    const UINT n = upscale ? 1 : samples;
+    const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
+    if (!gradePs || !ensureScene("colour")) return true;
+    if (!gradePipelines[code]) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, gradePs, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
+        p.BlendState.RenderTarget[0].RenderTargetWriteMask =
+            D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&gradePipelines[code])))) {
+            gradePipelines[code] = nullptr;
+            LOG_ERROR("colour: the pipeline onto %u samples failed", 1u << code);
+            return true;
+        }
+    }
+    if (!copySceneColor()) return false;
+    Constants c{};
+    c.sharpen = float(std::clamp(effects.gradeSaturation, 0, 200)) / 100.0f;
+    c.footprint = float(std::clamp(effects.gradeContrast, 50, 150)) / 100.0f;
+    c.twin[0] = float(std::clamp(effects.gradeBrightness, 50, 150)) / 100.0f;
+    c.twin[1] = float(std::clamp(effects.gradeWarmth, 0, 100) - 50) / 50.0f;
+    c.twin[2] = float(std::clamp(effects.gradeVignette, 0, 100)) / 100.0f;
+    c.uiPixels[0] = float(sceneWidth);
+    c.uiPixels[1] = float(sceneHeight);
+    return upscale ? effectPass(gradePipelines[code], world, worldState, rtvHandle(kRtvWorld), sceneWidth,
+                                sceneHeight, c, sceneColorSrv, true)
+                   : effectPass(gradePipelines[code], target, targetState, rtvHandle(kRtvTarget), sceneWidth,
+                                sceneHeight, c, sceneColorSrv, true);
+}
+
+bool Renderer::Impl::finishWorld() {
+    if (aoDue() && !applyAo()) return false;
+    return !gradeDue() || applyGrade();
+}
+
 }  // namespace uagfx::gpu

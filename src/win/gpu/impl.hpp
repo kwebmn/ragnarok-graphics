@@ -286,6 +286,10 @@ struct Renderer::Impl {
     ID3D12PipelineState* aoPipeline = nullptr;
     ID3D12PipelineState* aoBlurPipeline = nullptr;
     ID3D12PipelineState* aoApplyPipelines[4] = {};
+    // 0.21, the picture's colours (ao.cpp): once a frame, with the shadows' timing but once the world is drawn.
+    bool gradeDone = false;
+    ID3DBlob* gradePs = nullptr;
+    ID3D12PipelineState* gradePipelines[4] = {};  // into the target of 1, 2, 4, 8 samples (the world under DLSS: 1)
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
@@ -455,6 +459,13 @@ struct Renderer::Impl {
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }
     bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
     bool applyAo();  // once a frame (aoDone); false: lost
+    bool gradeWanted() const { return effects.grade; }
+    bool gradeDue() const { return gradeWanted() && groundDrawn && !gradeDone; }
+    bool applyGrade();  // once a frame (gradeDone), the world drawn: before its glow and the interface; false: lost
+    // The world's shadows if they are due, then its colours: before the interface, a present or a read of the
+    // picture (and under DLSS before the upscale). False: lost.
+    bool finishWorld();
+    bool copySceneColor();  // the world's picture so far into sceneColor, one sample per pixel
     bool ensureAo(int w, int h);
     void releaseAo();
     ID3D12PipelineState* aoApplyPipeline(UINT samples);

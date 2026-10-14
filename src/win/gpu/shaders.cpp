@@ -392,6 +392,19 @@ float2 waveSlope(float2 p, float t) {
     return g;
 }
 
+// 0.21, light on the bed: where the moving surface focuses the sun (its height field concave), bright and narrow.
+float causticAt(float2 p, float t) {
+    const float2 dir[4] = {float2(0.83, 0.56), float2(-0.37, 0.93), float2(-0.95, -0.31), float2(0.45, -0.89)};
+    const float len[4] = {8.7, 6.1, 4.4, 3.2};
+    const float speed[4] = {1.3, 1.1, 0.9, 0.8};
+    float focus = 0.0;
+    [unroll] for (int k = 0; k < 4; ++k) {
+        float w = 6.2831853 / len[k];
+        focus += sin(w * (dot(dir[k], p) - speed[k] * t));
+    }
+    return pow(saturate(focus * 0.25 + 0.5), 7.0) * 2.5;
+}
+
 float hash12(float2 p) {
     float3 q = frac(float3(p.xyx) * 0.1031);
     q += dot(q, q.yzx + 33.33);
@@ -459,6 +472,11 @@ float4 water(WaterIn i) {
     }
     float3 bed = sceneColor.Load(int3(rp, 0)).rgb;
     float path = max(bedZ - waterZ, 0.0);
+    // 0.21: the sun's light focused by the waves on the bed, where it is shallow and light.
+    float3 ray = normalize(i.world - eye);
+    float2 bedXz = i.world.xz + ray.xz * (path / max(dot(ray, float3(r6, r7, r8)), 0.2));
+    float shallow = exp(-path * lerp(0.3, 0.05, twinY));
+    bed *= 1.0 + causticAt(bedXz, t) * shallow * waves;
     // The game's own water picture gives the water its colour.
     float3 tint = tex0.Sample(samp0, i.uv + slope * 0.04).rgb * i.diffuse.rgb;
     float absorb = 1.0 - exp(-path * lerp(0.22, 0.012, twinY));
@@ -554,6 +572,23 @@ float4 ao_apply_ps(PresentOut i) : SV_Target {
     float ao = tex0.SampleLevel(samp0, i.pos.xy * 0.5 / uiPixels.zw, 0).r;
     float f = lerp(1.0, ao, sharpen);
     return float4(f, f, f, 1.0);
+}
+
+// 0.21, the picture's colours (grade): from its copy (t2) into the picture, before the interface. sharpen the
+// saturation (0-2), footprint the contrast and twin.x the brightness (0.5-1.5), twin.y the warmth (-1 colder to 1
+// warmer), twin.z the vignette (0-1); uiPixels.xy the world's size.
+float4 grade_ps(PresentOut i) : SV_Target {
+    float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb;
+    c = pow(max(c, 0.0), 1.0 / twinX);  // brighter middle tones, the white stays white
+    float k = footprint;
+    c = k >= 1.0 ? lerp(c, c * c * (3.0 - 2.0 * c), saturate((k - 1.0) * 2.0))  // an S curve: nothing clips
+                 : lerp(float3(0.5, 0.5, 0.5), c, k);
+    float l = dot(c, float3(0.2126, 0.7152, 0.0722));
+    c = lerp(float3(l, l, l), c, sharpen);
+    c *= float3(1.0 + 0.1 * twinY, 1.0 + 0.02 * twinY, 1.0 - 0.1 * twinY);
+    float2 q = (i.pos.xy / uiPixels.xy - 0.5) * float2(uiPixels.x / uiPixels.y, 1.0);
+    c *= 1.0 - twinW * smoothstep(0.35, 1.0, length(q) * 1.15) * 0.8;
+    return float4(saturate(c), 1.0);
 }
 
 float4 water_ps(WaterIn i) : SV_Target { return water(i); }

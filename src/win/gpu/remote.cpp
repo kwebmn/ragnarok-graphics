@@ -241,6 +241,12 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.waterWaves);
     w.i32(e.waterReflections);
     w.i32(e.waterClarity);
+    w.u8(e.grade ? 1 : 0);
+    w.i32(e.gradeSaturation);
+    w.i32(e.gradeContrast);
+    w.i32(e.gradeBrightness);
+    w.i32(e.gradeWarmth);
+    w.i32(e.gradeVignette);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

@@ -161,7 +161,13 @@ bool Renderer::Impl::copyScene() {
     linearClamp.minFilter = d3d7::TFN_LINEAR;
     linearClamp.mipFilter = d3d7::TFP_NONE;
     if (!makeRoom(linearClamp, linearClamp, 0, 3)) return false;  // a new list starts before the copies
-    // The picture so far, one sample per pixel.
+    if (!copySceneColor() || !copySceneDepth()) return false;
+    waterReady = true;
+    return true;
+}
+
+bool Renderer::Impl::copySceneColor() {
+    if (!open) return false;
     if (!upscale && samples > 1) {
         transition(target, targetState, D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
         transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_RESOLVE_DEST);
@@ -172,9 +178,7 @@ bool Renderer::Impl::copyScene() {
         transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_COPY_DEST);
         list->CopyResource(sceneColor, src);
     }
-    if (!copySceneDepth()) return false;
     transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    waterReady = true;
     return true;
 }
 

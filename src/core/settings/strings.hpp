@@ -79,7 +79,9 @@ enum class Text : uint16_t {
     PageEffects, FxIntro, FxGlow, FxGlowHint, FxGlowStrength, FxGlowStrengthHint, FxGlowSize, FxGlowSizeHint,
     FxWater, FxWaterHint, FxWaterWaves, FxWaterWavesHint, FxWaterReflections, FxWaterReflectionsHint, FxWaterClarity,
     FxWaterClarityHint, FxGlowLight, FxGlowLightHint, FxAo, FxAoHint, FxAoStrength, FxAoStrengthHint, FxAoSize,
-    FxAoSizeHint,
+    FxAoSizeHint, FxGrade, FxGradeHint, FxGradeSaturation, FxGradeSaturationHint, FxGradeContrast,
+    FxGradeContrastHint, FxGradeBrightness, FxGradeBrightnessHint, FxGradeWarmth, FxGradeWarmthHint,
+    FxGradeVignette, FxGradeVignetteHint,
     Count
 };
 

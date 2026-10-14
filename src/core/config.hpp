@@ -64,6 +64,14 @@ struct EffectSettings {
     int aoSize = 50;      // %, 0-100: how far from a corner
     // 0.19: the maps' water drawn anew - waves, the picture above it reflected, the sun's glints, the bed seen
     // through it and darker with depth, foam along the shore.
+    // 0.21: the picture's colours (not the interface's): saturation and brightness 100 as the game, contrast too;
+    // warmth 50 neutral, less colder, more warmer; a vignette darkens the corners.
+    bool grade = false;
+    int gradeSaturation = 115;  // %, 0-200
+    int gradeContrast = 108;    // %, 50-150
+    int gradeBrightness = 100;  // %, 50-150
+    int gradeWarmth = 50;       // %, 0-100
+    int gradeVignette = 25;     // %, 0-100
     bool water = false;
     int waterWaves = 50;        // %, 0-100: 0 a still mirror
     int waterReflections = 50;  // %, 0-100: how much the water reflects
