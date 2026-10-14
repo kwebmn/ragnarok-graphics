@@ -45,6 +45,11 @@ void prelu(const float* slopes, float* planes, int channels, int width, int heig
 // The whole network on planar RGB (3 planes of width * height, 0..1): out gets 3 planes of (width * scale) x
 // (height * scale), clamped to 0..1.
 void upscale(const Model& m, const float* rgb, int width, int height, float* out, Border border);
+// 0.13.1: the alpha (0..1, width * height) enlarged by the network itself, Real-ESRGAN's way for RGBA pictures: the
+// alpha as a grey picture through the network, the mean of its three channels cut at one half (out: 0 or 255, the
+// enlarged size) - a thin line stays a line, a staircase becomes an edge. As the GPU's ai_alpha.
+void upscaleAlpha(const Model& m, const float* alpha, int width, int height, std::vector<uint8_t>& out,
+                  Border border);
 
 // The last steps, shared by upscale and the GPU's checks: pixel shuffle of 3 * s * s planes into 3 planes s times as
 // large, plus the input enlarged (nearest), clamped.

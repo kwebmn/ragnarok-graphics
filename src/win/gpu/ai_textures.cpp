@@ -72,6 +72,7 @@ AiTextures::~AiTextures() {
     releaseCom(conv_);
     releaseCom(shuffle_);
     releaseCom(mip_);
+    releaseCom(alpha_);
     releaseCom(root_);
     for (auto& n : nets_) releaseCom(n->weights);
     releaseCom(planes_);
@@ -265,7 +266,8 @@ bool AiTextures::createGpu(std::string& error) {
         releaseCom(msg);
         return SUCCEEDED(r);
     };
-    if (!pso("ai_conv", conv_) || !pso("ai_shuffle", shuffle_) || !pso("ai_mip", mip_)) return false;
+    if (!pso("ai_conv", conv_) || !pso("ai_shuffle", shuffle_) || !pso("ai_mip", mip_) || !pso("ai_alpha", alpha_))
+        return false;
     for (auto& n : nets_)
         if (!uploadWeights(*n, error)) return false;
     return true;
@@ -344,6 +346,58 @@ bool AiTextures::uploadInput(const Job& job) {
     return true;
 }
 
+bool AiTextures::uploadAlphaInput(const Job& job) {
+    const size_t n = size_t(job.width) * size_t(job.height);
+    std::vector<float> planes(n * 4);
+    for (size_t i = 0; i < n; ++i) {
+        const float a = (job.pixels[i] >> 24) >= 128 ? 1.0f : 0.0f;
+        for (int c = 0; c < 4; ++c) planes[size_t(c) * n + i] = a;
+    }
+    const UINT64 bytes = UINT64(planes.size()) * 4;
+    const Upload u = m_.allocUpload(bytes, 256);
+    if (!u.cpu) return false;
+    std::memcpy(u.cpu, planes.data(), bytes);
+    m_.transition(planes_, planesState_, D3D12_RESOURCE_STATE_COPY_DEST);
+    m_.list->CopyBufferRegion(planes_, 0, m_.slots[m_.slot].upload, u.offset, bytes);
+    m_.transition(planes_, planesState_, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    return true;
+}
+
+bool AiTextures::startAlpha(Job& job) {
+    UINT64 bytes = 0;
+    layout(job.width * kNetScale, job.height * kNetScale, job.levels, bytes);
+    job.image = buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
+    if (!job.image) return false;
+    dispatchShuffle(job, job.image, job.levels[0]);  // the colour (and a bilinear alpha the next pass replaces)
+    if (!uploadAlphaInput(job)) return false;
+    job.phase = 1;
+    job.conv = 0;
+    job.row = 0;
+    return true;
+}
+
+void AiTextures::dispatchAlpha(const Job& job, ID3D12Resource* image, const Level& level0) {
+    AiConstants k;
+    k.v[0] = uint32_t(job.width);
+    k.v[1] = uint32_t(job.height);
+    k.v[2] = level0.pitch / 4;
+    k.v[3] = uint32_t(level0.at / 4);
+    bindCompute();
+    m_.list->SetPipelineState(alpha_);
+    m_.list->SetComputeRoot32BitConstants(kAiConstants, 16, k.v, 0);
+    const int last = int(nets_[size_t(job.net)]->model.convs.size()) - 1;
+    m_.list->SetComputeRootUnorderedAccessView(kAiU0, feat_[last % 2]->GetGPUVirtualAddress());
+    m_.list->SetComputeRootUnorderedAccessView(kAiU1, image->GetGPUVirtualAddress());
+    m_.list->SetComputeRootUnorderedAccessView(kAiU2, planes_->GetGPUVirtualAddress());
+    m_.list->Dispatch(UINT((job.width * kNetScale + 7) / 8), UINT((job.height * kNetScale + 7) / 8), 1);
+    uavBarrier();
+}
+
+void AiTextures::dropJob() {
+    if (job_ && job_->image) m_.slots[m_.slot].garbage.push_back(job_->image);  // freed once this list has run
+    job_.reset();
+}
+
 double AiTextures::runBand(Job& job, double budget) {
     const Net& net = *nets_[size_t(job.net)];
     const ai::Model& model = net.model;
@@ -362,6 +416,7 @@ double AiTextures::runBand(Job& job, double budget) {
     k.v[6] = size_t(job.conv) < model.prelu.size() ? uint32_t(model.prelu[size_t(job.conv)]) : 0xFFFFFFFFu;
     k.v[7] = uint32_t(job.row);
     k.v[8] = uint32_t(end);
+    k.v[9] = job.cell ? 1u : 0u;  // a sprite cell is a picture of its own: zeros past its edge, not its other side
     bindCompute();
     m_.list->SetComputeRootShaderResourceView(kAiWeights, net.weights->GetGPUVirtualAddress());
     m_.list->SetPipelineState(conv_);
@@ -437,7 +492,18 @@ void AiTextures::dispatchMips(ID3D12Resource* image, const std::vector<Level>& l
     }
 }
 
-ID3D12Resource* AiTextures::makeImage(const Job& job, std::vector<Level>& levels) {
+ID3D12Resource* AiTextures::makeImage(Job& job, std::vector<Level>& levels) {
+    if (job.image) {  // the colour's pass filled it: the alpha's now, then its mip levels
+        ID3D12Resource* image = job.image;
+        job.image = nullptr;
+        levels = job.levels;
+        m_.slots[m_.slot].garbage.push_back(image);  // freed once this list has run
+        D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        dispatchAlpha(job, image, levels[0]);
+        dispatchMips(image, levels);
+        m_.transition(image, state, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        return image;
+    }
     // A network's picture is 4 times the game's texture; one from upscaled.grf is the result's size already.
     const int full = job.loaded ? scale_ : kNetScale;
     const int w = job.width * full, h = job.height * full;
@@ -611,6 +677,7 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         j.cell = true;
         j.cellX = c.left;
         j.cellY = c.top;
+        j.alpha = ai::hasTransparency(pixels.data(), w, h);
         j.frame = ++a->second.frames[uint32_t(c.top) << 16 | uint32_t(c.left)];
         const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
         j.name = ai::entryName(nets_[size_t(net)]->folder, key);
@@ -884,7 +951,7 @@ void AiTextures::forget(uint32_t id) {
         items_.erase(it);
     }
     atlases_.erase(id);  // its enlarged copy goes with the texture (Renderer: Texture::ai)
-    if (job_ && job_->id == id) job_.reset();  // its buffers serve the next one
+    if (job_ && job_->id == id) dropJob();  // its buffers serve the next one
 }
 
 bool AiTextures::nextJob() {
@@ -919,6 +986,7 @@ bool AiTextures::nextJob() {
             job_->width = item.width;
             job_->height = item.height;
             job_->pixels = item.argb;
+            job_->alpha = ai::hasTransparency(item.argb.data(), item.width, item.height);
             return true;
         }
     }
@@ -1027,7 +1095,7 @@ void AiTextures::work() {
                 const auto it = items_.find(j.id);
                 if (it != items_.end() && it->second.state == Item::Waiting) queue_.push_back(j.id);
             }
-            job_.reset();
+            dropJob();
             continue;
         }
         if (j.conv < 0) {
@@ -1035,7 +1103,7 @@ void AiTextures::work() {
                 LOG_ERROR("AI textures: no GPU memory for a %dx%d texture; it stays as it is", j.width, j.height);
                 const auto it = j.cell ? items_.end() : items_.find(j.id);
                 if (it != items_.end()) drop(it->second);
-                job_.reset();
+                dropJob();
                 continue;
             }
             j.conv = 0;
@@ -1047,6 +1115,15 @@ void AiTextures::work() {
             spent += macs;
             continue;
         }
+        if (j.alpha && j.phase == 0) {  // transparent texels: the alpha's own pass from the next band on
+            if (!startAlpha(j)) {
+                LOG_ERROR("AI textures: no GPU memory for a %dx%d picture; it stays as it is", j.width, j.height);
+                const auto it = j.cell ? items_.end() : items_.find(j.id);
+                if (it != items_.end()) drop(it->second);
+                dropJob();
+            }
+            continue;
+        }
         if (finishing <= 0) break;
         finishing -= texels(j);
         if (j.cell) {
@@ -1055,7 +1132,7 @@ void AiTextures::work() {
             const auto it = items_.find(j.id);
             if (it != items_.end()) drop(it->second);
         }
-        job_.reset();
+        dropJob();
     }
     scheduled_[m_.slot % 2] = spent;
     logNow(false);
@@ -1171,8 +1248,9 @@ void AiTextures::ioLoop() {
 }
 
 bool AiTextures::selfTest(int net, std::string& error) {
-    // A 16x16 texture with a transparent band through the network on the GPU, and the same on the CPU (core/ai):
-    // every channel within 2 of 255 and the same transparency, or the feature stays off.
+    // A 16x16 texture with a transparent band through the network on the GPU, and the same on the CPU (core/ai): the
+    // colour with wrapped edges (a world texture's) and the alpha's own pass with zeros past them (a sprite cell's) -
+    // every channel within 2 of 255 and nearly the same transparency, or the feature stays off.
     const ai::Model& model = nets_[size_t(net)]->model;
     const int w = 16, h = 16;
     std::vector<uint32_t> argb(size_t(w * h));
@@ -1187,13 +1265,14 @@ bool AiTextures::selfTest(int net, std::string& error) {
     std::vector<float> out(size_t(3 * w * h * kNetScale * kNetScale));
     ai::upscale(model, planes.data(), w, h, out.data(), ai::Border::Wrap);  // as the GPU's ai_conv
     std::vector<uint8_t> alpha;
-    ai::enlargeAlpha(planes.data() + 3 * w * h, w, h, kNetScale, alpha);
+    ai::upscaleAlpha(model, planes.data() + 3 * w * h, w, h, alpha, ai::Border::Zero);
 
     Job j;
     j.net = net;
     j.width = w;
     j.height = h;
     j.pixels = argb;
+    j.alpha = true;
     const int ow = w * kNetScale, oh = h * kNetScale;
     std::vector<Level> levels;
     UINT64 bytes = 0;
@@ -1208,14 +1287,17 @@ bool AiTextures::selfTest(int net, std::string& error) {
         buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
     ID3D12Resource* back = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, UINT64(levels[0].pitch) * UINT64(oh),
                                   D3D12_RESOURCE_STATE_COPY_DEST, false);
-    if (!image || !back) {
+    if (image && back) dispatchShuffle(j, image, levels[0]);
+    if (!image || !back || !uploadAlphaInput(j)) {
         releaseCom(image);
         releaseCom(back);
         m_.submit();
         error = "no GPU memory for the self-test";
         return false;
     }
-    dispatchShuffle(j, image, levels[0]);
+    j.cell = true;  // the alpha's pass with zeros past the edges
+    for (j.conv = 0; size_t(j.conv) < model.convs.size();) runBand(j, 1e18);
+    dispatchAlpha(j, image, levels[0]);
     D3D12_RESOURCE_STATES imageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     m_.transition(image, imageState, D3D12_RESOURCE_STATE_COPY_SOURCE);
     m_.list->CopyBufferRegion(back, 0, image, 0, UINT64(levels[0].pitch) * UINT64(oh));

@@ -226,15 +226,16 @@ TEST(ai_cache_names_tags_and_folders) {
     TextureKey k{0x0123456789abcdefull, 256, 128};
     const std::string key = keyName(k);
     CHECK(key == "256x128\\0123456789abcdef");
-    CHECK(netFolder("general", 25, 4) == "realesr-general-x4v3-dn25-wrap");  // 0.11.3's: its pictures stay in use
-    CHECK(netFolder("general", 25, 2) == "realesr-general-x4v3-dn25-wrap-x2");
-    CHECK(netFolder("anime", 25, 4) == "realesr-animevideov3-wrap");
-    CHECK(netFolder("anime", 80, 2) == "realesr-animevideov3-wrap-x2");
+    // 0.13.1 ("-r2"): the alpha through the network too - the pictures of 0.11.2-0.13.0 ("-wrap") are outdated.
+    CHECK(netFolder("general", 25, 4) == "realesr-general-x4v3-dn25-r2");
+    CHECK(netFolder("general", 25, 2) == "realesr-general-x4v3-dn25-r2-x2");
+    CHECK(netFolder("anime", 25, 4) == "realesr-animevideov3-r2");
+    CHECK(netFolder("anime", 80, 2) == "realesr-animevideov3-r2-x2");
     const std::string picture = entryName(netFolder("general", 25, 4), key);
-    CHECK(picture == "ai\\realesr-general-x4v3-dn25-wrap\\256x128\\0123456789abcdef.tex");
+    CHECK(picture == "ai\\realesr-general-x4v3-dn25-r2\\256x128\\0123456789abcdef.tex");
     CHECK(picture == entryName(netFolder("general", 25, 4), k));
     ParsedEntry e = parseEntry(picture);
-    CHECK(e.type == ParsedEntry::Picture && e.folder == "realesr-general-x4v3-dn25-wrap" && e.key == key);
+    CHECK(e.type == ParsedEntry::Picture && e.folder == "realesr-general-x4v3-dn25-r2" && e.key == key);
     e = parseEntry(kindTag(Kind::Ground, key));
     CHECK(kindTag(Kind::Ground, key) == "ai\\@kind\\ground\\256x128\\0123456789abcdef");
     CHECK(e.type == ParsedEntry::KindTag && e.kind == Kind::Ground && e.key == key);
@@ -358,4 +359,34 @@ TEST(ai_anime_model_is_the_compact_one) {
         for (int i = 0; i < w * h * 16; ++i)
             worst = std::max(worst, std::fabs(out[size_t(c * w * h * 16 + i)] - rgb[size_t(c * w * h)]));
     CHECK(worst < 0.05f);
+}
+
+TEST(ai_alpha_through_the_network_keeps_thin_lines_whole) {
+    // 0.13.1: a sprite's thin diagonal line (texels touching at their corners). The bilinear alpha cut at one half
+    // breaks it into dots at every corner; the network's own alpha (Real-ESRGAN's way for RGBA pictures) keeps it one
+    // line - the beads the first sprites of 0.13.0 showed at their thin edges.
+    Model m;
+    CHECK(loadModel(m, "realesr-animevideov3"));
+    const int w = 16, h = 16, s = 4;
+    std::vector<float> alpha(size_t(w * h), 0.0f);
+    for (int i = 3; i < 13; ++i) alpha[size_t(i * w + i)] = 1.0f;
+    const auto connected = [&](const std::vector<uint8_t>& a) {
+        // Along the line's middle, every enlarged pixel between its first and last texel's centre is opaque.
+        for (int t = 3 * s + s / 2; t <= 12 * s + s / 2; ++t)
+            if (!a[size_t(t * w * s + t)]) return false;
+        return true;
+    };
+    std::vector<uint8_t> bilinear;
+    enlargeAlpha(alpha.data(), w, h, s, bilinear);
+    std::vector<uint8_t> network;
+    upscaleAlpha(m, alpha.data(), w, h, network, Border::Zero);
+    CHECK_EQ(network.size(), size_t(w * h * s * s));
+    CHECK(connected(network));
+    // Away from the line it stays transparent: no halo.
+    CHECK(!network[size_t((2 * s) * w * s + 13 * s)]);
+    CHECK(!network[size_t((13 * s) * w * s + 2 * s)]);
+    // The diagonal through the corners: the network fills it, the bilinear cut leaves it at exactly one half.
+    size_t gaps = 0;
+    for (int t = 3 * s + s / 2; t <= 12 * s + s / 2; ++t) gaps += bilinear[size_t(t * w * s + t + 1)] ? 0 : 1;
+    CHECK(gaps > 0);
 }

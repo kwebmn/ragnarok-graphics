@@ -23,9 +23,10 @@ std::string keyName(const TextureKey& k);
 std::string entryName(const std::string& folder, const TextureKey& k);
 std::string entryName(const std::string& folder, const std::string& key);
 std::string entryFolder(const std::string& folder);  // the start of every entryName of the folder: "ai\<folder>\"
-// The folder of a network's pictures: the model ("general" with its denoise strength, "anime"), what it reads past a
-// texture's edge (wrapped since 0.11.2) and the result's size, "-x2" for twice the game's instead of 4 times:
-// "realesr-general-x4v3-dn25-wrap", "realesr-animevideov3-wrap-x2".
+// The folder of a network's pictures: the model ("general" with its denoise strength, "anime"), the way they are
+// made and the result's size, "-x2" for twice the game's instead of 4 times: "realesr-general-x4v3-dn25-r2",
+// "realesr-animevideov3-r2-x2". The way: "-wrap" (0.11.2-0.13.0) a texture's other side past its edge and a bilinear
+// alpha; "-r2" (0.13.1) the alpha through the network too, and zeros past a sprite cell's edge.
 std::string netFolder(const std::string& model, int denoise, int scale);
 // 0.12: what a texture was drawn as and the maps it was seen on, as empty entries next to the pictures - the settings
 // app shows and deletes the pictures by map and kind with them, whatever settings made them:

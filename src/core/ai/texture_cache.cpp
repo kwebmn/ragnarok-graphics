@@ -48,8 +48,8 @@ std::string entryFolder(const std::string& folder) { return "ai\\" + folder + "\
 
 std::string netFolder(const std::string& model, int denoise, int scale) {
     const std::string size = scale == 2 ? "-x2" : "";
-    if (model == "anime") return "realesr-animevideov3-wrap" + size;
-    return "realesr-general-x4v3-dn" + std::to_string(std::clamp(denoise, 0, 100)) + "-wrap" + size;
+    if (model == "anime") return "realesr-animevideov3-r2" + size;
+    return "realesr-general-x4v3-dn" + std::to_string(std::clamp(denoise, 0, 100)) + "-r2" + size;
 }
 
 std::string kindTag(Kind kind, const std::string& key) {

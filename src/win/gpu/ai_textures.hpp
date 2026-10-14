@@ -89,6 +89,12 @@ private:
         bool cell = false;  // a cell of a sprite cache: the picture goes into the cache's enlarged copy
         int cellX = 0, cellY = 0;
         uint32_t frame = 0;  // the cell's frame it is for (Atlas::frames)
+        // 0.13.1, transparent texels: a second pass of the network over the alpha (ai_alpha) after the colour's,
+        // whose picture waits in image meanwhile.
+        bool alpha = false;
+        int phase = 0;  // 0 the colour, 1 the alpha
+        ID3D12Resource* image = nullptr;
+        std::vector<Level> levels;
     };
     // A sprite cache of the game (0.13): its enlarged copy is the texture's Texture::ai, made cell by cell.
     struct Atlas {
@@ -126,9 +132,13 @@ private:
     bool selfTest(int net, std::string& error);
     bool ensureBuffers(int width, int height);
     bool uploadInput(const Job& job);
+    bool uploadAlphaInput(const Job& job);  // A in the R, G, B and A planes
+    bool startAlpha(Job& job);              // the colour into a new image, then the alpha's pass
+    void dispatchAlpha(const Job& job, ID3D12Resource* image, const Level& level0);
+    void dropJob();                         // the running job goes, its image with it
     double runBand(Job& job, double budget);  // MACs dispatched
     bool finish(Job& job);
-    ID3D12Resource* makeImage(const Job& job, std::vector<Level>& levels);  // in COPY_SOURCE, all its levels
+    ID3D12Resource* makeImage(Job& job, std::vector<Level>& levels);  // in COPY_SOURCE, all its levels
     void readBack(const Job& job, ID3D12Resource* image, const Level& top);  // for upscaled.grf
     void noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
                    uint32_t count);
@@ -170,6 +180,7 @@ private:
     ID3D12PipelineState* conv_ = nullptr;
     ID3D12PipelineState* shuffle_ = nullptr;
     ID3D12PipelineState* mip_ = nullptr;
+    ID3D12PipelineState* alpha_ = nullptr;
     ID3D12Resource* planes_ = nullptr;  // the input: R, G, B, A planes
     ID3D12Resource* feat_[2] = {nullptr, nullptr};
     UINT64 planesBytes_ = 0, featBytes_ = 0;

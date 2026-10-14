@@ -150,4 +150,16 @@ void upscale(const Model& m, const float* rgb, int width, int height, float* out
     shuffleAdd(b.data(), rgb, width, height, m.scale, out);
 }
 
+void upscaleAlpha(const Model& m, const float* alpha, int width, int height, std::vector<uint8_t>& out,
+                  Border border) {
+    const size_t plane = size_t(width) * size_t(height);
+    std::vector<float> grey(plane * 3);
+    for (int c = 0; c < 3; ++c) std::copy(alpha, alpha + plane, grey.begin() + std::ptrdiff_t(size_t(c) * plane));
+    const size_t big = plane * size_t(m.scale) * size_t(m.scale);
+    std::vector<float> rgb(big * 3);
+    upscale(m, grey.data(), width, height, rgb.data(), border);
+    out.assign(big, 0);
+    for (size_t i = 0; i < big; ++i) out[i] = rgb[i] + rgb[big + i] + rgb[2 * big + i] >= 1.5f ? 255 : 0;
+}
+
 }  // namespace uagfx::ai

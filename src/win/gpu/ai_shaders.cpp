@@ -22,7 +22,8 @@ float weight(uint i) { return asfloat(W.Load(i * 4)); }
 
 // One 3x3 convolution over rows [rowBegin, rowEnd) of the input, 16 output channels per thread (z picks which 16),
 // PReLU after it when preluAt is not ~0. U0: input planes, U1: output planes. Past an edge it reads the other side
-// (ai::Border::Wrap): a texture repeats on the ground, and so must the enlarged one.
+// (ai::Border::Wrap): a texture repeats on the ground, and so must the enlarged one - or zeros (zero not 0: a cell of
+// the sprite cache, a picture of its own, ai::Border::Zero).
 #define CONV_WIDTH c0.x
 #define CONV_HEIGHT c0.y
 #define CONV_IN c0.z
@@ -32,6 +33,7 @@ float weight(uint i) { return asfloat(W.Load(i * 4)); }
 #define CONV_PRELU c1.z
 #define CONV_ROW_BEGIN c1.w
 #define CONV_ROW_END c2.x
+#define CONV_ZERO c2.y
 
 groupshared float tile[10][10];
 
@@ -46,9 +48,13 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
     const uint flat = t.y * 8 + t.x;
     for (uint i = 0; i < CONV_IN; ++i) {
         for (uint l = flat; l < 100; l += 64) {
-            const uint sx = uint(int(g.x * 8) + int(l % 10) - 1 + int(CONV_WIDTH)) % CONV_WIDTH;
-            const uint sy = uint(int(CONV_ROW_BEGIN + g.y * 8) + int(l / 10) - 1 + int(CONV_HEIGHT)) % CONV_HEIGHT;
-            tile[l / 10][l % 10] = asfloat(U0.Load((i * plane + sy * CONV_WIDTH + sx) * 4));
+            const int lx = int(g.x * 8) + int(l % 10) - 1;
+            const int ly = int(CONV_ROW_BEGIN + g.y * 8) + int(l / 10) - 1;
+            const bool outside = lx < 0 || ly < 0 || lx >= int(CONV_WIDTH) || ly >= int(CONV_HEIGHT);
+            const uint sx = uint(lx + int(CONV_WIDTH)) % CONV_WIDTH;
+            const uint sy = uint(ly + int(CONV_HEIGHT)) % CONV_HEIGHT;
+            tile[l / 10][l % 10] =
+                CONV_ZERO != 0 && outside ? 0.0 : asfloat(U0.Load((i * plane + sy * CONV_WIDTH + sx) * 4));
         }
         GroupMemoryBarrierWithGroupSync();
         float v9[9];
@@ -109,6 +115,26 @@ void ai_shuffle(uint3 id : SV_DispatchThreadID) {
     const float av = (a00 * (1.0 - tx) + a10 * tx) * (1.0 - ty) + (a01 * (1.0 - tx) + a11 * tx) * ty;
     const uint a = av >= 0.5 ? 255u : 0u;
     U1.Store((SH_AT + id.y * SH_PITCH + id.x) * 4, (a << 24) | (rgb[0] << 16) | (rgb[1] << 8) | rgb[2]);
+}
+
+// 0.13.1, a texture with transparent texels: its alpha through the network as a grey picture (Real-ESRGAN's way for
+// RGBA pictures; U2 holds A in the R, G and B planes), the mean of the three channels cut at one half - into the
+// image's alpha, its colour kept. A thin line stays a line and a staircase becomes an edge, where the bilinear
+// alpha of ai_shuffle broke lines into dots.
+[numthreads(8, 8, 1)]
+void ai_alpha(uint3 id : SV_DispatchThreadID) {
+    const uint ow = SH_WIDTH * 4, oh = SH_HEIGHT * 4;
+    if (id.x >= ow || id.y >= oh) return;
+    const uint plane = SH_WIDTH * SH_HEIGHT;
+    const uint sx = id.x / 4, sy = id.y / 4, i = id.y % 4, j = id.x % 4;
+    float v = 0.0;
+    [unroll] for (uint c = 0; c < 3; ++c) {
+        const float n = asfloat(U0.Load(((c * 16 + i * 4 + j) * plane + sy * SH_WIDTH + sx) * 4));
+        const float b = asfloat(U2.Load((c * plane + sy * SH_WIDTH + sx) * 4));
+        v += saturate(n + b);
+    }
+    const uint at = (SH_AT + id.y * SH_PITCH + id.x) * 4;
+    U1.Store(at, (v >= 1.5 ? 0xFF000000u : 0u) | (U1.Load(at) & 0x00FFFFFFu));
 }
 
 // One mip level from the one above it, both in the image (U1): the average of up to four texels, alpha again all
