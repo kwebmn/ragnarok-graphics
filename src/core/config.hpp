@@ -94,6 +94,10 @@ struct EffectSettings {
     // and the characters around it. On by default.
     bool lava = true;
     int lavaBrightness = 100;  // %, 0-200
+    // 0.32: the characters' shadows - each layer of their sprites laid on the ground from their feet, away from the
+    // light - instead of the game's round ones. On by default.
+    bool actorShadows = true;
+    int actorShadowsStrength = 55;  // %, 0-100: how dark
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

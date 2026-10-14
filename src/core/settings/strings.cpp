@@ -894,6 +894,15 @@ const Entry kTexts[] = {
     {"Lava's brightness", "Яскравість лави", "Яркость лавы"},
     {"How brightly the lava glows and lights around it.", "Наскільки яскраво лава сяє та освітлює довкола.",
      "Насколько ярко лава светится и освещает всё вокруг."},
+    {"Characters' shadows", "Тіні персонажів", "Тени персонажей"},
+    {"Characters and monsters cast soft shadows the shape of their sprites - on the ground, away from the light: from "
+     "a torch nearby, else from the sun - instead of the game's round spot under the feet.",
+     "Персонажі й монстри відкидають м'які тіні за формою спрайта — на землю, від світла: від смолоскипа поруч, інакше "
+     "від сонця — замість круглої плями гри під ногами.",
+     "Персонажи и монстры отбрасывают мягкие тени по форме спрайта — на землю, от света: от факела рядом, иначе от "
+     "солнца — вместо круглого пятна игры под ногами."},
+    {"Shadows' darkness", "Темрява тіней", "Темнота теней"},
+    {"How dark the characters' shadows are.", "Наскільки темні тіні персонажів.", "Насколько темны тени персонажей."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

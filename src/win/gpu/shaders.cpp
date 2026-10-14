@@ -934,6 +934,50 @@ float4 lava_ps(PsIn i) : SV_Target {
     return float4(lavaShade(i, glow), 1.0);
 }
 
+// 0.32, the characters' shadows (actor_shadows.cpp). A layer's shadow into the half-sized mask: its picture's alpha
+// times its own, the darkest where several fall (blend MAX); none where the ground there is hidden by something nearer
+// than the character's feet - the world's depth (t3, uiPixels.xy its size, twinX the mask's pixels to its).
+struct ShadowIn {
+    float4 pos : SV_Position;
+    float2 uv : TEXCOORD0;
+    float2 az : TEXCOORD1;  // the layer's alpha, the feet's view depth
+};
+
+ShadowIn shadow_vs(float4 pos : POSITION, float2 uv : TEXCOORD0, float2 az : TEXCOORD1) {
+    ShadowIn o;
+    o.pos = pos;
+    o.uv = uv;
+    o.az = az;
+    return o;
+}
+
+float4 shadow_ps(ShadowIn i) : SV_Target {
+    int2 wp = min(int2(i.pos.xy * twinX), int2(uiPixels.xy) - 1);
+    float z = viewDepth(sceneDepth.Load(int3(wp, 0)));
+    if (z < i.az.y - 3.0) discard;  // a wall, a tree or a character in front of the ground there
+    float a = saturate(tex0.Sample(samp0, i.uv).a * i.az.x);
+    return float4(a, a, a, a);
+}
+
+// The mask softened: nine taps along sourceRect.xy (across, then down), uiPixels.zw the mask's size.
+float4 shadow_blur_ps(PresentOut i) : SV_Target {
+    float2 step = sourceRect.xy / uiPixels.zw;
+    float2 uv = i.pos.xy / uiPixels.zw;
+    const float w[5] = {0.227, 0.194, 0.122, 0.054, 0.016};
+    float m = tex0.SampleLevel(samp0, uv, 0).r * w[0];
+    [unroll] for (int k = 1; k < 5; ++k)
+        m += (tex0.SampleLevel(samp0, uv + step * float(k), 0).r + tex0.SampleLevel(samp0, uv - step * float(k), 0).r) *
+             w[k];
+    return float4(m, m, m, m);
+}
+
+// Multiplied into the picture (blend ZERO, SRC_COLOR): what light the shadows leave, sharpen their darkness.
+float4 shadow_apply_ps(PresentOut i) : SV_Target {
+    float m = tex0.SampleLevel(samp0, i.pos.xy / uiPixels.xy, 0).r;
+    float f = 1.0 - saturate(m) * sharpen;
+    return float4(f, f, f * 1.02, 1.0);
+}
+
 GlowOut lava_glow_ps(PsIn i) {
     GlowOut o;
     float glow;

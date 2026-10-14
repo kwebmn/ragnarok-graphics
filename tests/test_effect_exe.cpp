@@ -81,4 +81,8 @@ TEST(effect_exe_knows_fireflies_and_the_sort_functions_entry) {
     CHECK(effect_exe::isSortEntry(entry));
     const uint8_t other[6] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10};
     CHECK(!effect_exe::isSortEntry(other));
+    // 0.32: the characters' shadow's (push ebp; mov ebp, esp; sub esp, 0x64).
+    const uint8_t shadow[6] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x64};
+    CHECK(effect_exe::isShadowEntry(shadow));
+    CHECK(!effect_exe::isShadowEntry(entry));
 }

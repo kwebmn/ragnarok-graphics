@@ -74,7 +74,8 @@ constexpr UINT kRtvAo = kRtvSceneDepth + 1;  // 0.20: the soft shadows' two targ
 constexpr UINT kRtvDof = kRtvAo + 2;         // 0.22: the depth of field's two
 constexpr UINT kRtvDofFocus = kRtvDof + 2;   // 0.22.3: its focus, last frame's and this one's
 constexpr UINT kRtvBias = kRtvDofFocus + 2;  // 0.22.3: DLSS's mask of pixels whose history it is not to take
-constexpr UINT kRtvCount = kRtvBias + 1;
+constexpr UINT kRtvShadow = kRtvBias + 1;  // 0.32: the characters' shadows' two masks
+constexpr UINT kRtvCount = kRtvShadow + 2;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -129,6 +130,8 @@ struct Texture {
     // lights around it.
     float fire = 0.0f;
     float fireColour[3] = {0, 0, 0};
+    // 0.32: a sprite cache's cells and what each holds now (sprite_exe::Source) - the characters cast shadows.
+    std::vector<SpriteCell> spriteCells;
 };
 
 // 0.26: a draw of a fire-coloured effect this frame: its middle in the view, how much it lights, its colour.
@@ -390,6 +393,23 @@ struct Renderer::Impl {
     ID3DBlob* rayPs = nullptr;  // 0.30: a beam of the forest's light (draw.cpp), with the glow's second target
     ID3DBlob* rayGlowPs = nullptr;
     std::vector<RayPart> rayParts;  // 0.30: this frame's faces of the forest's beams: dust and light where they fall
+    // 0.32, the characters' shadows (actor_shadows.cpp): their layers laid on the ground into a half-sized mask,
+    // softened, multiplied into the picture before the characters are drawn.
+    ID3DBlob* shadowVs = nullptr;
+    ID3DBlob* shadowPs = nullptr;
+    ID3DBlob* shadowBlurPs = nullptr;
+    ID3DBlob* shadowApplyPs = nullptr;
+    ID3D12PipelineState* shadowQuadPipeline = nullptr;
+    ID3D12PipelineState* shadowBlurPipeline = nullptr;
+    ID3D12PipelineState* shadowApplyPipelines[4] = {};
+    ID3D12Resource* shadowMask[2] = {};
+    D3D12_RESOURCE_STATES shadowMaskState[2] = {};
+    UINT shadowMaskSrv[2] = {};
+    int shadowMaskW = 0, shadowMaskH = 0;
+    bool shadowMaskFailed = false;
+    bool actorShadowsDone = false;   // this frame's are in, or could not be
+    bool actorShadowsDrawn = false;  // and the game's round ones with them: not drawn on their own
+    bool actorShadowsLogged = false;
     ID3DBlob* lavaPs = nullptr;     // 0.31: a cell of lava (draw.cpp), with the glow's second target
     ID3DBlob* lavaGlowPs = nullptr;
     std::string mapName;                    // the map the game shows (setMap)
@@ -580,6 +600,16 @@ struct Renderer::Impl {
         return (w && w->waterType == 4) || mapName == "mag_dun01" || mapName == "mag_dun02" || mapName == "tak_run";
     }
     void noteLava(const FrameRecord& rec, const DrawCmd& d);
+    bool actorShadowsWanted() const {  // 0.32
+        return effects.actorShadows && effects.actorShadowsStrength > 0 && shadowVs && shadowPs && shadowBlurPs &&
+               shadowApplyPs;
+    }
+    bool actorShadowsDue() const { return actorShadowsWanted() && groundDrawn && !actorShadowsDone; }
+    bool applyActorShadows(const FrameRecord& rec, size_t draw);  // once a frame; false: lost
+    bool ensureShadowMask(int w, int h);
+    void releaseShadowMask();
+    ID3D12PipelineState* shadowApplyPipeline(UINT samples);
+    void noteSpriteCells(Texture& t, const SpriteCell* slots, uint32_t count);
     void noteRay(const FrameRecord& rec, const DrawCmd& d);
     // An added-light pipeline of `ps` for this target (fireflies, dust); false (and `ps` dropped) when it fails.
     bool lightPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[5], const char* what);
@@ -600,6 +630,7 @@ struct Renderer::Impl {
         fireflyDraws.clear();
         rayParts.clear();
         lavaCells.clear();
+        actorShadowsDone = actorShadowsDrawn = false;
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

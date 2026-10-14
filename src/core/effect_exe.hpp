@@ -21,9 +21,14 @@ constexpr uint32_t kSortFace = 0x412020;
 // 0.28: whether these 6 bytes at kSortFace are the expected first instructions (push ebp; mov ebp, esp; sub esp,
 // 0xC), moved whole into the hook's trampoline: else the exe is another build.
 bool isSortEntry(const uint8_t bytes[6]);
+// 0.32: the game's shadow under a character (FUN_00547b80, thiscall: the actor; the view matrix and a scale off the
+// stack): a sprite of shadow.spr at the feet, its face from the renderer's pool. Its entry's first six bytes (push
+// ebp; mov ebp, esp; sub esp, 0x64), likewise.
+constexpr uint32_t kActorShadow = 0x547B80;
+bool isShadowEntry(const uint8_t bytes[6]);
 
 // The effects the driver does something with.
-enum class Kind : uint8_t { None, Aura, Firefly, Ray };
+enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow };  // Shadow: a character's (not an effect)
 // The level 99 aura: 200, 201 and 202 - its ring (effect\ring_blue.tga), bubbles (effect\pikapika2.bmp) and circle
 // (effect\freezing_circle.bmp) - and 397, 398 and 362, those of the transcendent classes (362: effect\whitelight.tga).
 // The game shows the circles alone unless /aura is on (0x772CE4, 0 at start, not kept): it reads that when it makes

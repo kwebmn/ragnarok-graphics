@@ -198,6 +198,15 @@ TEST(live_config_lava_applies_now) {
     CHECK(u.applied[1] == "lava_brightness 100 -> 120");
 }
 
+TEST(live_config_actor_shadows_apply_now) {
+    const LiveUpdate u =
+        liveUpdate(parseConfig(""), parseConfig("[effects]\nactor_shadows = 0\nactor_shadows_strength = 30\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "actor_shadows 1 -> 0");
+    CHECK(u.applied[1] == "actor_shadows_strength 55 -> 30");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

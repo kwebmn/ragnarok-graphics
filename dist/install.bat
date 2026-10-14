@@ -301,6 +301,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how brightly the lava glows and lights around it
     >>"uaro-graphics.ini" echo lava_brightness = 100
 )
+rem 0.32: the characters' shadows from their sprites, on.
+findstr /i /l /c:"actor_shadows_strength" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = characters and monsters cast soft shadows the shape of their sprites
+    >>"uaro-graphics.ini" echo actor_shadows = 1
+    >>"uaro-graphics.ini" echo ; 0-100 %%: how dark
+    >>"uaro-graphics.ini" echo actor_shadows_strength = 55
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

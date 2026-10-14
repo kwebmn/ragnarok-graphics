@@ -11,6 +11,11 @@ bool isSortEntry(const uint8_t bytes[6]) {
     return std::memcmp(bytes, kEntry, sizeof kEntry) == 0;
 }
 
+bool isShadowEntry(const uint8_t bytes[6]) {
+    static const uint8_t kEntry[6] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x64};
+    return std::memcmp(bytes, kEntry, sizeof kEntry) == 0;
+}
+
 Kind kindOf(int id) {
     switch (id) {
     case 45:

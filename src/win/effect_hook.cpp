@@ -18,9 +18,12 @@ using effect_exe::Tag;
 using RenderFn = void(__attribute__((thiscall)) *)(uint32_t prim, void* matrix);
 // The face sort's: the renderer in ECX, the face and its flags the callee takes off the stack.
 using SortFn = void(__attribute__((thiscall)) *)(uint32_t renderer, uint32_t face, uint32_t flags);
+// 0.32: the characters' shadow's: the actor in ECX, the view matrix and a scale off the stack.
+using ShadowFn = void(__attribute__((thiscall)) *)(uint32_t actor, uint32_t matrix, float scale);
 
 uintptr_t g_render = 0;  // the Render the vtable held
 uintptr_t g_sort = 0;    // 0.28: the face sort's first instructions, then a jump to the rest of it
+uintptr_t g_shadow = 0;  // 0.32: the characters' shadow's, likewise
 // The game's thread renders its primitives, which sort their faces then and there: what the primitive being rendered
 // is of, while it renders.
 Tag g_current;
@@ -50,20 +53,28 @@ void __attribute__((thiscall)) sortFace(uint32_t renderer, uint32_t face, uint32
     reinterpret_cast<SortFn>(g_sort)(renderer, face, flags);
 }
 
-// 0.28: the face sort's entry jumps to sortFace; its first six bytes, whole instructions, run in a trampoline of
-// their own before the rest of it.
-bool hookSort() {
-    auto* at = reinterpret_cast<uint8_t*>(uintptr_t(effect_exe::kSortFace));
+// 0.32: while the game draws a character's shadow, its face is the character's shadow.
+void __attribute__((thiscall)) actorShadow(uint32_t actor, uint32_t matrix, float scale) {
+    const Tag before = g_current;
+    g_current = Tag{Kind::Shadow, uint8_t((actor >> 4) * 2654435761u >> 24)};
+    reinterpret_cast<ShadowFn>(g_shadow)(actor, matrix, scale);
+    g_current = before;
+}
+
+// 0.28: a function's entry (`entry`, its first six bytes whole instructions that `valid` knows) jumps to `hook`;
+// those six bytes run in a trampoline of their own before the rest of it (`trampoline`).
+bool hookEntry(uint32_t entry, bool (*valid)(const uint8_t*), const void* hook, uintptr_t& trampoline) {
+    auto* at = reinterpret_cast<uint8_t*>(uintptr_t(entry));
     uint8_t bytes[6] = {};
     SIZE_T got = 0;
     if (!ReadProcessMemory(GetCurrentProcess(), at, bytes, sizeof bytes, &got) || got != sizeof bytes ||
-        !effect_exe::isSortEntry(bytes))
+        !valid(bytes))
         return false;
     auto* t = static_cast<uint8_t*>(VirtualAlloc(nullptr, 16, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
     if (!t) return false;
     std::memcpy(t, bytes, sizeof bytes);
-    t[6] = 0xE9;  // jmp kSortFace + 6
-    const int32_t back = int32_t(uintptr_t(effect_exe::kSortFace) + 6 - (reinterpret_cast<uintptr_t>(t) + 11));
+    t[6] = 0xE9;  // jmp entry + 6
+    const int32_t back = int32_t(uintptr_t(entry) + 6 - (reinterpret_cast<uintptr_t>(t) + 11));
     std::memcpy(t + 7, &back, sizeof back);
     FlushInstructionCache(GetCurrentProcess(), t, 16);
     DWORD old = 0;
@@ -71,9 +82,9 @@ bool hookSort() {
         VirtualFree(t, 0, MEM_RELEASE);
         return false;
     }
-    g_sort = reinterpret_cast<uintptr_t>(t);
-    uint8_t jump[6] = {0xE9, 0, 0, 0, 0, 0x90};  // jmp sortFace; nop
-    const int32_t to = int32_t(reinterpret_cast<uintptr_t>(&sortFace) - (uintptr_t(effect_exe::kSortFace) + 5));
+    trampoline = reinterpret_cast<uintptr_t>(t);
+    uint8_t jump[6] = {0xE9, 0, 0, 0, 0, 0x90};  // jmp hook; nop
+    const int32_t to = int32_t(reinterpret_cast<uintptr_t>(hook) - (uintptr_t(entry) + 5));
     std::memcpy(jump + 1, &to, sizeof to);
     std::memcpy(at, jump, sizeof jump);
     DWORD unused = 0;
@@ -99,7 +110,8 @@ bool installEffectHook() {
         return false;
     }
     // The sort first: without it no draw is known, and the primitives are best left alone.
-    if (!hookSort()) {
+    if (!hookEntry(effect_exe::kSortFace, &effect_exe::isSortEntry, reinterpret_cast<const void*>(&sortFace),
+                   g_sort)) {
         LOG_INFO("effects: the game's effects stay as it draws them (the level 99 aura, the fireflies) - its face "
                  "sort is not where this build of uaRO.exe has it");
         return false;
@@ -114,6 +126,10 @@ bool installEffectHook() {
     DWORD unused = 0;
     VirtualProtect(slot, sizeof now, old, &unused);
     done = 1;
+    // 0.32: the characters' shadows (their own faces then); without it they stay the game's round ones.
+    if (!hookEntry(effect_exe::kActorShadow, &effect_exe::isShadowEntry, reinterpret_cast<const void*>(&actorShadow),
+                   g_shadow))
+        LOG_INFO("effects: the characters' shadows stay the game's - its shadow is not where this build has it");
     LOG_INFO("effects: the game's effects known by their draws (uaRO.exe 0x%X, 0x%X) - the level 99 aura, the "
              "fireflies", effect_exe::kPrimRender, effect_exe::kSortFace);
     return true;

@@ -391,6 +391,18 @@ TEST(config_effects_lava) {
     CHECK(parseConfig("[effects]\nlava_brightness = 900\n").effects == d);
 }
 
+TEST(config_effects_actor_shadows) {
+    // 0.32: the characters' shadows laid on the ground from their sprites - on unless turned off, 0-100 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.actorShadows);
+    CHECK_EQ(d.actorShadowsStrength, 55);
+    const EffectSettings e = parseConfig("[effects]\nactor_shadows = 0\nactor_shadows_strength = 80\n").effects;
+    CHECK(!e.actorShadows);
+    CHECK_EQ(e.actorShadowsStrength, 80);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nactor_shadows_strength = 101\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

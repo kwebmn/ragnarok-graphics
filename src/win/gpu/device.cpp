@@ -433,6 +433,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     dst.SubresourceIndex = u.level;
     list->CopyTextureRegion(&dst, UINT(u.rect.left), UINT(u.rect.top), 0, &src, nullptr);
+    if (u.slotCount) noteSpriteCells(t, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.32
     if (ai)
         ai->noteUpload(u.texture, t, u, rec.pixels().data() + u.pixels,
                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);  // with their sources
@@ -1061,6 +1062,14 @@ void Renderer::Impl::destroy() {
     releaseCom(rayGlowPs);
     releaseCom(lavaPs);  // 0.31
     releaseCom(lavaGlowPs);
+    for (ID3D12Resource*& r : shadowMask) releaseCom(r);  // 0.32
+    releaseCom(shadowQuadPipeline);
+    releaseCom(shadowBlurPipeline);
+    for (ID3D12PipelineState*& p : shadowApplyPipelines) releaseCom(p);
+    releaseCom(shadowVs);
+    releaseCom(shadowPs);
+    releaseCom(shadowBlurPs);
+    releaseCom(shadowApplyPs);
     releaseCom(torchData);
     releaseCom(smokePs);  // 0.24
     releaseCom(smokeGlowPs);
@@ -1277,13 +1286,15 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool was = m.glowWanted();
     const bool scene =
         m.waterWanted() || m.aoWanted() || m.gradeWanted() || m.dofWanted() || m.torchWanted() || m.fireflyWanted() ||
-        m.mapGlowsWanted();
+        m.mapGlowsWanted() || m.actorShadowsWanted();
     const bool dof = m.dofWanted();
     const bool ao = m.aoWanted();
+    const bool actorShadows = m.actorShadowsWanted();
     m.effects = e;
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%; "
-             "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; shadows %s, "
+             "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; "
+             "characters' shadows %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
@@ -1291,7 +1302,8 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.torchGlow, e.torchLight, e.torchFlicker, e.smoke ? "on" : "off", e.smokeDensity, e.lamps ? "on" : "off",
              e.lampsLight, e.fireLight ? "on" : "off", e.fireLightStrength, e.fireflies ? "on" : "off",
              e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.rays ? "on" : "off",
-             e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness,
+             e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness, e.actorShadows ? "on" : "off",
+             e.actorShadowsStrength,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
@@ -1299,9 +1311,10 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.gradeVignette, e.dof ? "on" : "off", e.dofStrength, e.dofRange);
     if (was && !m.glowWanted()) m.releaseGlow();  // its video memory back
     if (ao && !m.aoWanted()) m.releaseAo();
+    if (actorShadows && !m.actorShadowsWanted()) m.releaseShadowMask();  // 0.32
     if (dof && !m.dofWanted()) m.releaseDof();
     if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted() && !m.dofWanted() && !m.torchWanted() &&
-        !m.fireflyWanted() && !m.mapGlowsWanted())
+        !m.fireflyWanted() && !m.mapGlowsWanted() && !m.actorShadowsWanted())
         m.releaseScene();
 }
 
@@ -1454,6 +1467,7 @@ bool Renderer::create(std::string& error) {
     m.sceneColorSrv = m.allocSrv();
     m.sceneDepthSrv = m.allocSrv();
     for (UINT& srv : m.aoSrv) srv = m.allocSrv();  // 0.20: the soft shadows
+    for (UINT& srv : m.shadowMaskSrv) srv = m.allocSrv();  // 0.32: the characters' shadows
     for (UINT& srv : m.dofSrv) srv = m.allocSrv();  // 0.22: the depth of field
     for (UINT& srv : m.dofFocusSrv) srv = m.allocSrv();
     m.biasSrv = m.allocSrv();  // 0.22.3: DLSS's mask

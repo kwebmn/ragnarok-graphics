@@ -114,6 +114,10 @@ const std::vector<IniSetting>& iniSettings() {
          ""},
         {"effects", "lava_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxLavaBrightness,
          Text::FxLavaBrightnessHint, " %"},
+        {"effects", "actor_shadows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxActorShadows,
+         Text::FxActorShadowsHint, ""},
+        {"effects", "actor_shadows_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {},
+         Text::FxActorShadowsStrength, Text::FxActorShadowsStrengthHint, " %"},
         {"effects", "grade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrade, Text::FxGradeHint,
          ""},
         {"effects", "grade_saturation", Page::Effects, Control::Slider, 0, 200, 5, {}, {}, Text::FxGradeSaturation,
@@ -241,6 +245,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.rays_brightness") return std::to_string(c.effects.raysBrightness);
     if (k == "effects.lava") return c.effects.lava ? "1" : "0";
     if (k == "effects.lava_brightness") return std::to_string(c.effects.lavaBrightness);
+    if (k == "effects.actor_shadows") return c.effects.actorShadows ? "1" : "0";
+    if (k == "effects.actor_shadows_strength") return std::to_string(c.effects.actorShadowsStrength);
     if (k == "effects.lamps") return c.effects.lamps ? "1" : "0";
     if (k == "effects.lamps_light") return std::to_string(c.effects.lampsLight);
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";
