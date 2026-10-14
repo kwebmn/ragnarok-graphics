@@ -186,8 +186,8 @@ bool Renderer::Impl::applyTorches() {
             if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
         }
     // 0.23.3: the shader bounds it. 0.25.2: four fifths of 0.25's at 100 % ("too much and too dense" once the torch
-    // has come up from its fade).
-    const float strength = 0.8f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
+    // has come up from its fade); 0.25.3: a little less again ("ещё чуточку").
+    const float strength = 0.65f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
     std::vector<LightItem> lights;
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f);
     for (size_t i = 0; i < flames.size(); ++i) {
