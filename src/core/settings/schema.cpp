@@ -90,6 +90,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxGlowSizeHint, " %"},
         {"effects", "glow_light", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxGlowLight,
          Text::FxGlowLightHint, " %"},
+        {"effects", "fire_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFireLight,
+         Text::FxFireLightHint, ""},
+        {"effects", "fire_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
+         Text::FxFireLightStrength, Text::FxFireLightStrengthHint, " %"},
         {"effects", "grade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrade, Text::FxGradeHint,
          ""},
         {"effects", "grade_saturation", Page::Effects, Control::Slider, 0, 200, 5, {}, {}, Text::FxGradeSaturation,
@@ -205,6 +209,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.torch_flicker") return std::to_string(c.effects.torchFlicker);
     if (k == "effects.smoke") return c.effects.smoke ? "1" : "0";
     if (k == "effects.smoke_density") return std::to_string(c.effects.smokeDensity);
+    if (k == "effects.fire_light") return c.effects.fireLight ? "1" : "0";
+    if (k == "effects.fire_light_strength") return std::to_string(c.effects.fireLightStrength);
     if (k == "effects.lamps") return c.effects.lamps ? "1" : "0";
     if (k == "effects.lamps_light") return std::to_string(c.effects.lampsLight);
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";

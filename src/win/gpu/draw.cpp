@@ -101,6 +101,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && !upscale && glowDrawn && !addGlowToTarget()) return;
     const bool adds = !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE;
     if (adds && !glowActive && glowWanted()) startGlow();
+    // 0.26: the fire of skills (a fire-coloured picture added on) lights around it once the world is drawn.
+    if (adds && fireWanted() && !torchDone && d.texture[0]) {
+        const auto ft = textures.find(d.texture[0]);
+        if (ft != textures.end() && ft->second.fire > 0.15f) noteFire(rec, d, ft->second);
+    }
     const bool toGlow = !s.ui && glowActive;
     // 0.19, modern water: a cell of a map's water (core/water.hpp) is drawn by its own shader, from the picture and
     // the depth the frame had before its first water (copyScene); without them, as the game draws it.

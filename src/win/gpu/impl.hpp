@@ -123,6 +123,18 @@ struct Texture {
     // loading screen and other big pictures of the interface).
     bool aiWorld = true;
     bool aiUi = false;
+    // 0.26: how much its picture looks like fire (core/effect_light.hpp) and its colour - an effect drawn from it
+    // lights around it.
+    float fire = 0.0f;
+    float fireColour[3] = {0, 0, 0};
+};
+
+// 0.26: a draw of a fire-coloured effect this frame: its middle in the view, how much it lights, its colour.
+struct FireSpark {
+    float view[3];
+    float strength;
+    float colour[3];
+    float gameX, gameY;  // its middle on the screen, game pixels (gathered by place)
 };
 
 struct Slot {
@@ -335,6 +347,7 @@ struct Renderer::Impl {
     objects::Textures objectTextures;      // 0.23.1, 0.24: the textures that are a frame of a map object
     MapWorld mapWorld;                      // 0.25: the map file - its lamps and the effects the game does not show
     std::vector<torch::Flame> torchFlames;  // this frame's
+    std::vector<FireSpark> fireSparks;      // 0.26: this frame's fire of skills
     bool torchDone = false;                 // this frame's are drawn, or could not be
     bool torchesLogged = false;
     ID3D12Resource* torchData = nullptr;  // R32G32B32A32 float, a texel a torch: its light's place and strength
@@ -515,7 +528,11 @@ struct Renderer::Impl {
     bool torchWanted() const { return effects.torch; }
     bool smokeWanted() const { return effects.smoke && smokePs && smokeGlowPs; }  // 0.24
     bool lampsWanted() const { return effects.lamps; }  // 0.25
-    bool torchDue() const { return !torchDone && (torchWanted() || lampsWanted() || !torchFlames.empty()); }
+    bool fireWanted() const { return effects.fireLight && effects.fireLightStrength > 0; }  // 0.26
+    void noteFire(const FrameRecord& rec, const DrawCmd& d, const Texture& t);
+    bool torchDue() const {
+        return !torchDone && (torchWanted() || lampsWanted() || !torchFlames.empty() || !fireSparks.empty());
+    }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     bool torchReady();     // the shaders, pipelines and the picture's copies are there
     bool applyTorches();   // once a frame (torchDone), the world drawn: before its colours; false: lost
@@ -524,6 +541,7 @@ struct Renderer::Impl {
         waterCopied = false;  // 0.19: its water copies what is under it anew
         aoDone = groundDrawn = gradeDone = dofDone = torchDone = false;  // 0.20-0.23
         torchFlames.clear();
+        fireSparks.clear();
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

@@ -342,7 +342,13 @@ float4 glow_down_ps(PresentOut i) : SV_Target {
     if (sharpen > 0.5) {
         float w0 = glowWeight(inner) * 0.5, w1 = glowWeight(b1) * 0.125, w2 = glowWeight(b2) * 0.125;
         float w3 = glowWeight(b3) * 0.125, w4 = glowWeight(b4) * 0.125;
-        return float4((inner * w0 + b1 * w1 + b2 * w2 + b3 * w3 + b4 * w4) / (w0 + w1 + w2 + w3 + w4), 1.0);
+        float3 c = (inner * w0 + b1 * w1 + b2 * w2 + b3 * w3 + b4 * w4) / (w0 + w1 + w2 + w3 + w4);
+        // 0.26: only the bright glows - a soft knee from 0.2 to 0.8 (the level 99 aura's even light, a skill's broad
+        // haze hardly), the cores of fire and the flashes fully.
+        float top = max(c.r, max(c.g, c.b));
+        float soft = clamp(top - 0.2, 0.0, 0.6);
+        soft = soft * soft / 1.2;
+        return float4(c * (max(soft, top - 0.5) / max(top, 1e-4)), 1.0);
     }
     return float4(inner * 0.5 + (b1 + b2 + b3 + b4) * 0.125, 1.0);
 }

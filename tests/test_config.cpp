@@ -319,6 +319,18 @@ TEST(config_effects_torches) {
     CHECK(parseConfig("[effects]\ntorch_brightness = 250\n").effects == d);
 }
 
+TEST(config_effects_fire_light) {
+    // 0.26: the fire of skills lights what is around it, as a torch - on unless turned off, 0-200 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.fireLight);
+    CHECK_EQ(d.fireLightStrength, 100);
+    const EffectSettings e = parseConfig("[effects]\nfire_light = 0\nfire_light_strength = 40\n").effects;
+    CHECK(!e.fireLight);
+    CHECK_EQ(e.fireLightStrength, 40);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nfire_light_strength = 300\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

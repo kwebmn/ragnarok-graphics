@@ -261,6 +261,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.smokeDensity);
     w.u8(e.lamps ? 1 : 0);
     w.i32(e.lampsLight);
+    w.u8(e.fireLight ? 1 : 0);
+    w.i32(e.fireLightStrength);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

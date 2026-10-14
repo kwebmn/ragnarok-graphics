@@ -316,7 +316,8 @@ bool Renderer::Impl::addGlow(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstStat
                       rtvHandle(kRtvGlowChain + UINT(i)), glowChainWidth[i], glowChainHeight[i], 0.0f, false, spread))
             return false;
     // 0.20: the light on what is around, in its colour - the picture times one and the wide glow.
-    const float light = 2.0f * float(std::clamp(effects.glowLight, 0, 100)) / 100.0f;
+    // 0.26: half of 0.20's - the level 99 aura and skills lit everything around them too much.
+    const float light = float(std::clamp(effects.glowLight, 0, 100)) / 100.0f;
     const int wide = std::min(2, glowLevels - 1);
     ID3D12PipelineState* lit = light > 0.0f ? glowLightPipeline(dstSamples, upscaledFormat) : nullptr;
     if (lit && !glowPass(lit, glowChain[wide], glowChainState[wide], glowChainSrv[wide], glowChainWidth[wide],

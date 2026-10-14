@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <unordered_map>
 
 #include "core/game_camera.hpp"
 #include "win/gpu/impl.hpp"
@@ -62,6 +63,46 @@ bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
     if (!torchesLogged) LOG_INFO("torches: the map's torches drawn anew");
     torchesLogged = true;
     return effects.torchFlame;  // 0.23.2: off - the game's own flame, the new glow and light around it
+}
+
+// 0.26: a fire-coloured effect drawn this frame (draw.cpp) - its middle and depth from its vertices, how much it
+// lights: its picture's fire, the game's fade and colour of it, its size on the screen.
+void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, const Texture& t) {
+    if (fireSparks.size() >= 512) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const uint32_t n = std::min<uint32_t>(d.vertexCount, 256);
+    if (n == 0 || d.vertexOffset + size_t(n) * stride > v.size()) return;
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, rhw = 0.0f, shown = 0.0f;
+    for (uint32_t i = 0; i < n; ++i) {
+        const uint8_t* p = v.data() + d.vertexOffset + size_t(i) * stride;
+        float xyzw[4];
+        uint32_t diffuse = 0;
+        std::memcpy(xyzw, p, sizeof xyzw);
+        std::memcpy(&diffuse, p + 16, sizeof diffuse);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3];
+        const uint32_t top = std::max({diffuse >> 16 & 255u, diffuse >> 8 & 255u, diffuse & 255u});
+        shown += float(diffuse >> 24) / 255.0f * float(top) / 255.0f;
+    }
+    rhw /= float(n);
+    shown /= float(n);
+    if (rhw <= 0.0f || shown <= 0.01f) return;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    FireSpark s;
+    s.gameX = (x0 + x1) * 0.5f;
+    s.gameY = (y0 + y1) * 0.5f;
+    const float vz = 1.0f / rhw;
+    s.view[0] = (s.gameX - p.cx) * vz / p.f0;
+    s.view[1] = (s.gameY - p.cy) * vz / p.f1;
+    s.view[2] = vz;
+    const float size = std::sqrt(std::max(0.0f, (x1 - x0) * (y1 - y0)));  // game pixels
+    s.strength = t.fire * shown * std::clamp(size / 120.0f, 0.15f, 1.5f);
+    std::copy(t.fireColour, t.fireColour + 3, s.colour);
+    fireSparks.push_back(s);
 }
 
 // The shaders, the pipelines for this target and the copies of the picture: false when any is missing (logged once).
@@ -214,6 +255,35 @@ bool Renderer::Impl::applyTorches() {
         std::copy(hidden ? f.tint : kLightColor, (hidden ? f.tint : kLightColor) + 3, l.color);
         lights.push_back(l);
     }
+    // 0.26: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16. A little, as a torch:
+    // the shader bounds it.
+    if (fireWanted() && !fireSparks.empty()) {
+        struct Cell {
+            float w = 0, view[3] = {0, 0, 0}, colour[3] = {0, 0, 0};
+        };
+        std::unordered_map<int, Cell> cells;
+        for (const FireSpark& f : fireSparks) {
+            Cell& c = cells[int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f))];
+            c.w += f.strength;
+            for (int k = 0; k < 3; ++k) {
+                c.view[k] += f.view[k] * f.strength;
+                c.colour[k] += f.colour[k] * f.strength;
+            }
+        }
+        std::vector<Cell> best;
+        for (const auto& kv : cells)
+            if (kv.second.w > 0.02f) best.push_back(kv.second);
+        std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
+        const float fireStrength = 0.55f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f;
+        for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
+            const Cell& c = best[i];
+            const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
+            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, fireStrength * std::min(c.w, 1.5f),
+                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top}, 30.0f + 20.0f * std::min(c.w, 1.0f)};
+            lights.push_back(l);
+        }
+    }
+    fireSparks.clear();
     // 0.25: the lamps the map's makers placed, the nearest to the camera first, as many as the pass takes.
     if (layout && lampsWanted() && effects.lampsLight > 0) {
         const float lampStrength = 0.8f * float(std::clamp(effects.lampsLight, 0, 200)) / 100.0f;

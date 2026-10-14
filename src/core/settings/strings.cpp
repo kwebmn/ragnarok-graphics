@@ -831,6 +831,16 @@ const Entry kTexts[] = {
     {"How much light the lamps add: less is a hint, more is bright.",
      "Скільки світла додають лампи: менше — ледь помітно, більше — яскраво.",
      "Сколько света добавляют лампы: меньше — едва заметно, больше — ярко."},
+    {"Fire of skills lights around", "Вогонь умінь світить довкола", "Огонь умений светит вокруг"},
+    {"Fire walls, fire bolts, meteors and other fire-coloured effects light the ground, the walls and the characters "
+     "around them a little, as a torch does - with the depth of the scene, never washing it out.",
+     "Вогняні стіни, вогняні стріли, метеори та інші вогняні ефекти трохи освітлюють землю, стіни й персонажів "
+     "довкола, як смолоскип, — з глибиною сцени, без засвічення.",
+     "Огненные стены, огненные стрелы, метеоры и другие огненные эффекты немного освещают землю, стены и персонажей "
+     "вокруг, как факел, — с глубиной сцены, без пересвета."},
+    {"Fire light", "Світло вогню", "Свет огня"},
+    {"How much the fire of skills lights around it.", "Наскільки вогонь умінь освітлює довкола.",
+     "Насколько огонь умений освещает всё вокруг."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

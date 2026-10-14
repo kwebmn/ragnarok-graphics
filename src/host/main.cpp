@@ -343,6 +343,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.smokeDensity = rd.i32();
             e.lamps = rd.u8() != 0;
             e.lampsLight = rd.i32();
+            e.fireLight = rd.u8() != 0;
+            e.fireLightStrength = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

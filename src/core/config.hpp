@@ -71,6 +71,10 @@ struct EffectSettings {
     // characters and the walls too, and the fire-coloured ones flicker. On by default.
     bool lamps = true;
     int lampsLight = 60;  // %, 0-200: how bright
+    // 0.26: the fire of skills - fire walls, bolts, meteors: effects whose pictures are fire-coloured - lights the
+    // ground, the walls and the characters around it a little, as a torch does. On by default.
+    bool fireLight = true;
+    int fireLightStrength = 100;  // %, 0-200
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

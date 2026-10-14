@@ -147,6 +147,15 @@ TEST(live_config_torches_apply_now) {
     CHECK(v.applied[1] == "torch_brightness 100 -> 70");
 }
 
+TEST(live_config_fire_light_applies_now) {
+    const LiveUpdate u =
+        liveUpdate(parseConfig(""), parseConfig("[effects]\nfire_light = 0\nfire_light_strength = 150\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "fire_light 1 -> 0");
+    CHECK(u.applied[1] == "fire_light_strength 100 -> 150");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

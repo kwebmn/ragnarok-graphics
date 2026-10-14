@@ -241,6 +241,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how bright the lamps' light is
     >>"uaro-graphics.ini" echo lamps_light = 60
 )
+rem 0.26: the fire of skills lights around it, on.
+findstr /i /l /c:"fire_light_strength" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = fire walls, fire bolts and other fire-coloured skills light around them a little
+    >>"uaro-graphics.ini" echo fire_light = 1
+    >>"uaro-graphics.ini" echo ; 0-200 %%: how much
+    >>"uaro-graphics.ini" echo fire_light_strength = 100
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.
