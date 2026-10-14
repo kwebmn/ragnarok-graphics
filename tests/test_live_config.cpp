@@ -190,6 +190,14 @@ TEST(live_config_rays_apply_now) {
     CHECK(u.applied[1] == "rays_brightness 100 -> 50");
 }
 
+TEST(live_config_lava_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlava = 0\nlava_brightness = 120\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "lava 1 -> 0");
+    CHECK(u.applied[1] == "lava_brightness 100 -> 120");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

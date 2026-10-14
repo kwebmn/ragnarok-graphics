@@ -291,6 +291,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how bright the beams and their light are
     >>"uaro-graphics.ini" echo rays_brightness = 100
 )
+rem 0.31: living lava, on.
+findstr /i /l /c:"lava_brightness" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = lava flows: its crust drifts, its cracks glow, its heat lights what is around it
+    >>"uaro-graphics.ini" echo lava = 1
+    >>"uaro-graphics.ini" echo ; 0-200 %%: how brightly the lava glows and lights around it
+    >>"uaro-graphics.ini" echo lava_brightness = 100
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

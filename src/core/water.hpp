@@ -16,5 +16,8 @@ constexpr float kStep = 0.25f;  // the UV of one cell (0x748850, set at start)
 // Whether four vertices (XYZRHW, diffuse at byte 16, UV at byte 24; `stride` bytes apart) drawn as a strip are one
 // such quad.
 bool isWaterQuad(const uint8_t* vertices, size_t stride, uint32_t vertexCount, uint32_t indexCount, bool strip);
+// 0.31: a cell of lava (water type 4: mag_dun01, mag_dun02, tak_run in UaRO.grf) - the same quad, opaque, each corner
+// in the map's light (one colour), blended alike.
+bool isLavaQuad(const uint8_t* vertices, size_t stride, uint32_t vertexCount, uint32_t indexCount, bool strip);
 
 }  // namespace uagfx::water

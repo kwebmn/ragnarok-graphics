@@ -52,3 +52,16 @@ TEST(water_quad_is_not_lava_nor_another_picture) {
     std::memcpy(turned.data() + 32 + 24, cell(2, 1).data() + 24, 8);
     CHECK(!water::isWaterQuad(turned.data(), 32, 4, 0, true));
 }
+
+TEST(lava_quad_is_an_opaque_cell_in_the_maps_light) {
+    // 0.31: lava (water type 4) - the same cells, opaque, every corner in the map's light (one colour).
+    CHECK(water::isLavaQuad(cell(0, 0, 0xFFC8A078).data(), 32, 4, 0, true));
+    CHECK(water::isLavaQuad(cell(3, 2, 0xFFFFFFFF).data(), 32, 4, 0, true));
+    CHECK(!water::isLavaQuad(cell(1, 1).data(), 32, 4, 0, true));               // water
+    CHECK(!water::isLavaQuad(cell(1, 1, 0xC0FFFFFF).data(), 32, 4, 0, true));  // not opaque
+    std::vector<uint8_t> v = cell(2, 3, 0xFF806040);
+    const uint32_t other = 0xFF806041;  // corners of another colour: lit, a model's face
+    std::memcpy(v.data() + 2 * 32 + 16, &other, 4);
+    CHECK(!water::isLavaQuad(v.data(), 32, 4, 0, true));
+    CHECK(!water::isLavaQuad(cell(1, 1, 0xFF808080).data(), 32, 4, 0, false));  // a list
+}

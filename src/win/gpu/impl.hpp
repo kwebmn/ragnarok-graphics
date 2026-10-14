@@ -390,6 +390,11 @@ struct Renderer::Impl {
     ID3DBlob* rayPs = nullptr;  // 0.30: a beam of the forest's light (draw.cpp), with the glow's second target
     ID3DBlob* rayGlowPs = nullptr;
     std::vector<RayPart> rayParts;  // 0.30: this frame's faces of the forest's beams: dust and light where they fall
+    ID3DBlob* lavaPs = nullptr;     // 0.31: a cell of lava (draw.cpp), with the glow's second target
+    ID3DBlob* lavaGlowPs = nullptr;
+    std::string mapName;                    // the map the game shows (setMap)
+    std::vector<FireSpark> lavaCells;       // 0.31: this frame's cells of lava: their middles light around them
+    bool lavaLogged = false;
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
@@ -568,12 +573,20 @@ struct Renderer::Impl {
     // 0.29: the maps' hidden lights (core/map_glows.hpp), from the map's file.
     bool mapGlowsWanted() const { return effects.mapGlows && effects.mapGlowsBrightness > 0 && fireflyPs; }
     bool raysWanted() const { return effects.rays && rayPs && rayGlowPs; }  // 0.30
+    bool lavaWanted() const { return effects.lava && lavaPs && lavaGlowPs; }  // 0.31
+    // 0.31: the map has lava - its file says so (water type 4), or it is one of UaRO.grf's three that do.
+    bool lavaMap() const {
+        const rsw::World* w = mapWorld.world();
+        return (w && w->waterType == 4) || mapName == "mag_dun01" || mapName == "mag_dun02" || mapName == "tak_run";
+    }
+    void noteLava(const FrameRecord& rec, const DrawCmd& d);
     void noteRay(const FrameRecord& rec, const DrawCmd& d);
     // An added-light pipeline of `ps` for this target (fireflies, dust); false (and `ps` dropped) when it fails.
     bool lightPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[5], const char* what);
     bool torchDue() const {
         return !torchDone && (torchWanted() || lampsWanted() || fireflyWanted() || mapGlowsWanted() ||
-                              !torchFlames.empty() || !fireSparks.empty() || !rayParts.empty());
+                              !torchFlames.empty() || !fireSparks.empty() || !rayParts.empty() ||
+                              !lavaCells.empty());
     }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     bool torchReady();     // the shaders, pipelines and the picture's copies are there
@@ -586,6 +599,7 @@ struct Renderer::Impl {
         fireSparks.clear();
         fireflyDraws.clear();
         rayParts.clear();
+        lavaCells.clear();
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

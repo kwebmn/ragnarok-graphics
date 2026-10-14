@@ -164,7 +164,8 @@ void Context::flush() {
     // wisps keep to their places in the world with it; 0.25, 0.28: the map file's lamps and fireflies stand in it.
     const EffectSettings& fx = config.effects;
     if (renderer->remix() ||
-        (enhanced_ && (fx.water || fx.torch || fx.smoke || fx.lamps || fx.fireflies || fx.mapGlows))) {
+        (enhanced_ && (fx.water || fx.torch || fx.smoke || fx.lamps || fx.fireflies || fx.mapGlows || fx.rays ||
+                       fx.lava))) {
         float view[12];
         const bool known = readGameCamera(view);
         renderer->setCamera(known, view);

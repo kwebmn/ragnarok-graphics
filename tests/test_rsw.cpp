@@ -29,7 +29,7 @@ std::vector<uint8_t> sample() {
     w.bytes(version, 2);
     for (int i = 0; i < 4; ++i) w.text("x", 40);  // ini, gnd, gat, src
     w.f32(-5.0f);                                  // water: level, type, wave height, speed, pitch, animation
-    w.i32(0);
+    w.i32(4);
     w.f32(1.0f);
     w.f32(2.0f);
     w.f32(50.0f);
@@ -86,6 +86,7 @@ TEST(rsw_lights_and_effects_of_a_map) {
     std::string error;
     CHECK(rsw::parse(b.data(), b.size(), w, error));
     CHECK(error.empty());
+    CHECK_EQ(w.waterType, 4);  // 0.31: lava
     CHECK_EQ(w.lights.size(), size_t(1));
     CHECK_EQ(w.effects.size(), size_t(1));
     if (w.lights.size() == 1) {

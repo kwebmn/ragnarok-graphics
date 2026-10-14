@@ -107,6 +107,30 @@ void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, const Te
     fireSparks.push_back(s);
 }
 
+// 0.31: a cell of lava (draw.cpp): its middle in the view, to light around it.
+void Renderer::Impl::noteLava(const FrameRecord& rec, const DrawCmd& d) {
+    if (lavaCells.size() >= 4096) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    FireSpark s{};
+    float rhw = 0.0f;
+    for (uint32_t i = 0; i < 4; ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, v.data() + d.vertexOffset + size_t(i) * stride, sizeof xyzw);
+        s.gameX += xyzw[0] * 0.25f;
+        s.gameY += xyzw[1] * 0.25f;
+        rhw += xyzw[3] * 0.25f;
+    }
+    if (rhw <= 0.0f) return;
+    const float vz = 1.0f / rhw;
+    s.view[0] = (s.gameX - p.cx) * vz / p.f0;
+    s.view[1] = (s.gameY - p.cy) * vz / p.f1;
+    s.view[2] = vz;
+    s.strength = 1.0f;
+    lavaCells.push_back(s);
+}
+
 // 0.30: a face of one of the forest's beams (draw.cpp): its middle and its foot - the end its texture's v reaches 1
 // at, the ground - in the view, from its vertices.
 void Renderer::Impl::noteRay(const FrameRecord& rec, const DrawCmd& d) {
@@ -534,6 +558,35 @@ bool Renderer::Impl::applyTorches() {
             ++used;
         }
     }
+    // 0.31: the lava's heat, gathered by place (cells of 96 game pixels): the nearest 12 light around, breathing.
+    if (!lavaCells.empty() && lavaWanted()) {
+        struct Pool {
+            float view[3] = {0, 0, 0};
+            int n = 0;
+        };
+        std::unordered_map<int, Pool> pools;
+        for (const FireSpark& s : lavaCells) {
+            Pool& q = pools[int(std::floor(s.gameX / 96.0f)) * 4096 + int(std::floor(s.gameY / 96.0f))];
+            for (int k = 0; k < 3; ++k) q.view[k] += s.view[k];
+            ++q.n;
+        }
+        std::vector<Pool> heat;
+        for (auto& kv : pools) {
+            Pool q = kv.second;
+            for (int k = 0; k < 3; ++k) q.view[k] /= float(q.n);
+            heat.push_back(q);
+        }
+        std::sort(heat.begin(), heat.end(), [](const Pool& a, const Pool& b) { return a.view[2] < b.view[2]; });
+        const float user = float(std::clamp(effects.lavaBrightness, 0, 200)) / 100.0f;
+        for (size_t i = 0; i < heat.size() && i < 12 && lights.size() < kMaxLights; ++i) {
+            const Pool& q = heat[i];
+            const float breath = 0.85f + 0.15f * std::sin(time * 1.1f + float(i) * 2.3f);
+            const float strength = 0.35f * user * breath;
+            LightItem l{{q.view[0], q.view[1] - 3.0f, q.view[2]}, strength, {1.0f, 0.42f, 0.12f}, 35.0f};
+            lights.push_back(l);
+        }
+    }
+    lavaCells.clear();
     // 0.29: the maps' hidden lights, the nearest 24.
     std::sort(glowLights.begin(), glowLights.end(),
               [](const LightItem& a, const LightItem& b) { return a.view[2] < b.view[2]; });

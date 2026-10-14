@@ -110,6 +110,10 @@ const std::vector<IniSetting>& iniSettings() {
          ""},
         {"effects", "rays_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxRaysBrightness,
          Text::FxRaysBrightnessHint, " %"},
+        {"effects", "lava", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLava, Text::FxLavaHint,
+         ""},
+        {"effects", "lava_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxLavaBrightness,
+         Text::FxLavaBrightnessHint, " %"},
         {"effects", "grade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrade, Text::FxGradeHint,
          ""},
         {"effects", "grade_saturation", Page::Effects, Control::Slider, 0, 200, 5, {}, {}, Text::FxGradeSaturation,
@@ -235,6 +239,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.map_glows_brightness") return std::to_string(c.effects.mapGlowsBrightness);
     if (k == "effects.rays") return c.effects.rays ? "1" : "0";
     if (k == "effects.rays_brightness") return std::to_string(c.effects.raysBrightness);
+    if (k == "effects.lava") return c.effects.lava ? "1" : "0";
+    if (k == "effects.lava_brightness") return std::to_string(c.effects.lavaBrightness);
     if (k == "effects.lamps") return c.effects.lamps ? "1" : "0";
     if (k == "effects.lamps_light") return std::to_string(c.effects.lampsLight);
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";

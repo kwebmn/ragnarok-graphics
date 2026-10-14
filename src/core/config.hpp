@@ -90,6 +90,10 @@ struct EffectSettings {
     // moving leaves, dust in them, light where they fall. On by default.
     bool rays = true;
     int raysBrightness = 100;  // %, 0-200
+    // 0.31: lava (the Magma Dungeon, tak_run) - its crust drifting, its cracks glowing, its heat lighting the walls
+    // and the characters around it. On by default.
+    bool lava = true;
+    int lavaBrightness = 100;  // %, 0-200
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

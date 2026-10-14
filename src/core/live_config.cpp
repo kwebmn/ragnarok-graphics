@@ -103,6 +103,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("fireflies", flag(re.fireflies), flag(fe.fireflies)));
     if (fe.mapGlows != re.mapGlows) u.applied.push_back(change("map_glows", flag(re.mapGlows), flag(fe.mapGlows)));
     if (fe.rays != re.rays) u.applied.push_back(change("rays", flag(re.rays), flag(fe.rays)));
+    if (fe.lava != re.lava) u.applied.push_back(change("lava", flag(re.lava), flag(fe.lava)));
     if (fe.glow != re.glow) u.applied.push_back(change("glow", flag(re.glow), flag(fe.glow)));
     if (fe.glowStrength != re.glowStrength)
         u.applied.push_back(
@@ -125,6 +126,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         {"fireflies_brightness", {re.firefliesBrightness, fe.firefliesBrightness}},
         {"map_glows_brightness", {re.mapGlowsBrightness, fe.mapGlowsBrightness}},
         {"rays_brightness", {re.raysBrightness, fe.raysBrightness}},
+        {"lava_brightness", {re.lavaBrightness, fe.lavaBrightness}},
         {"glow_light", {re.glowLight, fe.glowLight}},
         {"ao_strength", {re.aoStrength, fe.aoStrength}},
         {"ao_size", {re.aoSize, fe.aoSize}},

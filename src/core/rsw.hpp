@@ -23,7 +23,8 @@ struct Effect {
 };
 
 struct World {
-    int version = 0;  // major * 256 + minor
+    int version = 0;     // major * 256 + minor
+    int waterType = -1;  // 0.31: its water's kind (4: lava); -1 not known
     std::vector<Light> lights;
     std::vector<Effect> effects;
 };

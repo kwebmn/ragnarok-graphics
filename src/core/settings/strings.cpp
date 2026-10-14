@@ -884,6 +884,16 @@ const Entry kTexts[] = {
     {"How bright the beams and the light they leave on the ground are.",
      "Наскільки яскраві промені та світло, яке вони лишають на землі.",
      "Насколько ярки лучи и свет, который они оставляют на земле."},
+    {"Living lava", "Жива лава", "Живая лава"},
+    {"Lava (the Magma Dungeon) flows: its dark crust drifts, its cracks glow and pulse, and its heat lights the walls "
+     "and the characters around it in red and orange.",
+     "Лава (Магма-підземелля) тече: темна кірка пливе, тріщини світяться й пульсують, а жар освітлює стіни й "
+     "персонажів довкола червоним і помаранчевим.",
+     "Лава (Магма-подземелье) течёт: тёмная корка плывёт, трещины светятся и пульсируют, а жар освещает стены и "
+     "персонажей вокруг красным и оранжевым."},
+    {"Lava's brightness", "Яскравість лави", "Яркость лавы"},
+    {"How brightly the lava glows and lights around it.", "Наскільки яскраво лава сяє та освітлює довкола.",
+     "Насколько ярко лава светится и освещает всё вокруг."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

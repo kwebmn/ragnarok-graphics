@@ -351,6 +351,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.mapGlowsBrightness = rd.i32();
             e.rays = rd.u8() != 0;
             e.raysBrightness = rd.i32();
+            e.lava = rd.u8() != 0;
+            e.lavaBrightness = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

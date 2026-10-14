@@ -897,6 +897,52 @@ float4 rayShade(PsIn i) {
 
 float4 ray_ps(PsIn i) : SV_Target { return rayShade(i); }
 
+// 0.31, lava (draw.cpp): a cell of it - the game's own picture in the map's light, drifting slowly as a crust over a
+// glowing flow: the cracks between its plates glow and pulse, the crust is darker; the glow is its own (the map's
+// light does not dim it) and goes into the glow target. The noise lies in the world at the pixel's place (its depth
+// i.pos.w, r0-r11 the camera backwards, f0-farZ the projection), twinH the time, footprint the brightness (1 = 100 %).
+float3 lavaShade(PsIn i, out float glow) {
+    float2 g = (i.pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;
+    float z = i.pos.w;
+    float3 p = float3((g.x - cx) * z / f0, (g.y - cy) * z / f1, z);
+    float3 w = p.x * float3(r0, r1, r2) + p.y * float3(r3, r4, r5) + p.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    float t = twinH;
+    float2 q = w.xz * 0.045;
+    float2 flow = float2(t * 0.012, t * 0.008);
+    float2 warp = float2(fbm4(q * 1.3 + flow + float2(3.1, 0.0)), fbm4(q * 1.3 - flow + float2(0.0, 7.7)));
+    float plates = fbm4(q * 2.2 + warp * 1.6 + flow * 2.0);
+    float crack = 1.0 - smoothstep(0.02, 0.12, abs(plates - 0.5));
+    float pulse = 0.75 + 0.25 * sin(t * 1.3 + plates * 9.0);
+    float4 tex = tex0.Sample(samp0, i.uv0 + (warp - 0.5) * 0.06);  // the game's lava, drifting
+    float heat = saturate(dot(tex.rgb, float3(0.5, 0.35, 0.15)) * 1.1 + crack * pulse * 0.8 - 0.15);
+    const float3 coal = float3(0.08, 0.02, 0.01), red = float3(0.6, 0.09, 0.02), orange = float3(1.0, 0.42, 0.06);
+    const float3 yellow = float3(1.0, 0.85, 0.45);
+    float3 ramp = heat < 0.4    ? lerp(coal, red, heat / 0.4)
+                  : heat < 0.75 ? lerp(red, orange, (heat - 0.4) / 0.35)
+                                : lerp(orange, yellow, (heat - 0.75) / 0.25);
+    float emissive = smoothstep(0.45, 1.0, heat);
+    float3 lit = tex.rgb * i.diffuse.rgb;
+    float amount = saturate(footprint);
+    float3 c = lerp(lit, ramp, 0.65 * amount) + ramp * emissive * 0.8 * footprint;
+    if (fogEnable != 0) c = lerp(fogColor.rgb, c, i.specular.a);
+    glow = emissive * footprint;
+    return c;
+}
+
+float4 lava_ps(PsIn i) : SV_Target {
+    float glow;
+    return float4(lavaShade(i, glow), 1.0);
+}
+
+GlowOut lava_glow_ps(PsIn i) {
+    GlowOut o;
+    float glow;
+    float3 c = lavaShade(i, glow);
+    o.c = float4(c, 1.0);
+    o.g = float4(c * glow, 1.0);  // its glow into the glow target: the lava shines
+    return o;
+}
+
 GlowOut ray_glow_ps(PsIn i) {
     GlowOut o;
     o.c = rayShade(i);

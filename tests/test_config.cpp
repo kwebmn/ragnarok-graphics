@@ -379,6 +379,18 @@ TEST(config_effects_rays) {
     CHECK(parseConfig("[effects]\nrays_brightness = -5\n").effects == d);
 }
 
+TEST(config_effects_lava) {
+    // 0.31: lava flowing and glowing, lighting what is around it - on unless turned off, 0-200 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.lava);
+    CHECK_EQ(d.lavaBrightness, 100);
+    const EffectSettings e = parseConfig("[effects]\nlava = 0\nlava_brightness = 160\n").effects;
+    CHECK(!e.lava);
+    CHECK_EQ(e.lavaBrightness, 160);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nlava_brightness = 900\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

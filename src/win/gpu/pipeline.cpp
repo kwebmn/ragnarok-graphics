@@ -103,7 +103,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"torch_light_ps", "ps_5_0", &torchLightPs},   {"torch_fire_ps", "ps_5_0", &torchFirePs},
                    {"smoke_ps", "ps_5_0", &smokePs},              {"smoke_glow_ps", "ps_5_0", &smokeGlowPs},
                    {"firefly_ps", "ps_5_0", &fireflyPs},          {"dust_ps", "ps_5_0", &dustPs},
-                   {"ray_ps", "ps_5_0", &rayPs},                  {"ray_glow_ps", "ps_5_0", &rayGlowPs}};
+                   {"ray_ps", "ps_5_0", &rayPs},                  {"ray_glow_ps", "ps_5_0", &rayGlowPs},
+                   {"lava_ps", "ps_5_0", &lavaPs},                {"lava_glow_ps", "ps_5_0", &lavaGlowPs}};
     for (const auto& e : effects) {
         std::string why;
         if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {
@@ -382,7 +383,8 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     // 0.18, 0.19: an effect whose shaders did not compile (a key saved by another run) builds nothing.
     if ((k.glow && !drawGlowPs) || (k.water && (!waterVs || !waterPs || !waterGlowPs)) ||
         (k.shader == DrawShader::Smoke && (!smokePs || !smokeGlowPs)) ||
-        (k.shader == DrawShader::Ray && (!rayPs || !rayGlowPs)) || k.shader == DrawShader::Lava) {
+        (k.shader == DrawShader::Ray && (!rayPs || !rayGlowPs)) ||
+        (k.shader == DrawShader::Lava && (!lavaPs || !lavaGlowPs))) {
         pipelines.emplace(key, nullptr);
         return nullptr;
     }
@@ -402,6 +404,10 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     }
     if (k.shader == DrawShader::Ray) {  // 0.30: a beam of the forest's light, blended as the game blends it
         ID3DBlob* ps = k.glow ? rayGlowPs : rayPs;
+        p.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
+    }
+    if (k.shader == DrawShader::Lava) {  // 0.31: a cell of lava, its glow into the glow target
+        ID3DBlob* ps = k.glow ? lavaGlowPs : lavaPs;
         p.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
     }
     if (k.water) {  // 0.19: a cell of water by the modern water's shaders

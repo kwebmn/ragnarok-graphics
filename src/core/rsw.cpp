@@ -47,7 +47,11 @@ bool parse(const uint8_t* data, size_t size, World& out, std::string& error) {
     const int v = major * 256 + minor;
     out.version = v;
     r.skip(40 * 4);  // ini, gnd, gat, src
-    if (v >= 0x103) r.skip(20 + (v >= 0x108 ? 4 : 0));  // water
+    if (v >= 0x103) {  // water: level, type, wave height, speed, pitch (and from 1.8 its animation)
+        r.skip(4);
+        out.waterType = r.get<int32_t>();
+        r.skip(12 + (v >= 0x108 ? 4 : 0));
+    }
     r.skip(8 + 24 + (v >= 0x107 ? 4 : 0));               // the light: longitude, latitude, colours, opacity
     if (v >= 0x106) r.skip(16);                          // the ground's box
     const int32_t count = r.get<int32_t>();
