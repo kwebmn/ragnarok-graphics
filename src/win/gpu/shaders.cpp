@@ -874,6 +874,36 @@ float4 smokeShade(PsIn i) {
 
 float4 smoke_ps(PsIn i) : SV_Target { return smokeShade(i); }
 
+// 0.30, the forest's light (draw.cpp): a face of one of its beams - five-sided tubes from above to the ground - drawn
+// as the game would (its picture, colour, fade and fog: shade) with soft ends, brighter along the face's middle, and
+// light shimmering as through moving leaves. The noise lies in the world at the pixel's place on the beam (its depth:
+// i.pos.w), so the tube's sides show one pattern as the camera turns. r0-r11 the camera backwards, f0-farZ the
+// projection, twinH the time, footprint the brightness (1 = 100 %).
+float4 rayShade(PsIn i) {
+    float4 c = shade(i);
+    float v = saturate(i.uv0.y), u = saturate(i.uv0.x);
+    float ends = smoothstep(0.0, 0.22, v) * (1.0 - smoothstep(0.62, 1.0, v));
+    float across = 0.55 + 0.45 * sin(u * 3.14159);
+    float2 g = (i.pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;
+    float z = i.pos.w;
+    float3 p = float3((g.x - cx) * z / f0, (g.y - cy) * z / f1, z);
+    float3 w = p.x * float3(r0, r1, r2) + p.y * float3(r3, r4, r5) + p.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    float t = twinH;
+    float leaves = fbm4(float2(w.x * 0.07 + t * 0.06, w.z * 0.07 - t * 0.045) + float2(w.y * 0.015, w.y * -0.01));
+    float shimmer = 0.5 + 1.0 * smoothstep(0.3, 0.78, leaves);
+    c.rgb *= ends * across * shimmer * footprint;
+    return c;
+}
+
+float4 ray_ps(PsIn i) : SV_Target { return rayShade(i); }
+
+GlowOut ray_glow_ps(PsIn i) {
+    GlowOut o;
+    o.c = rayShade(i);
+    o.g = ((alphaTest >> 19) & 1) != 0 ? o.c : float4(0.0, 0.0, 0.0, o.c.a);
+    return o;
+}
+
 // 0.28, the fireflies (torches.cpp): a glowing dot and its soft halo, added to the picture - sourceRect.xy its middle
 // and .z its core's radius (target pixels), sourceClamp.y its view depth, fogColor its colour, twinX its brightness
 // (its flash, the game's fade, the player's setting). Hidden behind what stands in front of it by the picture's depth.

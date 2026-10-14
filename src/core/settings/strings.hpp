@@ -88,7 +88,7 @@ enum class Text : uint16_t {
     FxLampsHint, FxLampsLight, FxLampsLightHint, FxFireLight, FxFireLightHint, FxFireLightStrength,
     FxFireLightStrengthHint, FxAura, FxAuraHint, FxAuraBrightness, FxAuraBrightnessHint,
     FxFireflies, FxFirefliesHint, FxFirefliesBrightness, FxFirefliesBrightnessHint, FxMapGlows, FxMapGlowsHint,
-    FxMapGlowsBrightness, FxMapGlowsBrightnessHint,
+    FxMapGlowsBrightness, FxMapGlowsBrightnessHint, FxRays, FxRaysHint, FxRaysBrightness, FxRaysBrightnessHint,
     Count
 };
 

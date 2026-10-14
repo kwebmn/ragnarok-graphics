@@ -14,6 +14,7 @@
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
 #include "core/map_objects.hpp"
+#include "core/pipeline_key.hpp"
 #include "core/torch.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/gpu/map_world.hpp"
@@ -136,6 +137,14 @@ struct FireSpark {
     float strength;
     float colour[3];
     float gameX, gameY;  // its middle on the screen, game pixels (gathered by place)
+};
+
+// 0.30: a face of one of the forest's beams of light drawn this frame - its middle and its foot (the end at the
+// ground) in the view, and on the screen (game pixels) to gather them by place.
+struct RayPart {
+    float middle[3];
+    float foot[3];
+    float gameX, gameY;
 };
 
 // 0.28: a firefly the game draws this frame (effect 45: its dot, a quad facing the screen) - drawn anew.
@@ -378,6 +387,9 @@ struct Renderer::Impl {
     ID3D12PipelineState* fireflyPipelines[5] = {};     // as torchFirePipelines
     ID3DBlob* dustPs = nullptr;                         // 0.29: a cloud of the towers' dust
     ID3D12PipelineState* dustPipelines[5] = {};
+    ID3DBlob* rayPs = nullptr;  // 0.30: a beam of the forest's light (draw.cpp), with the glow's second target
+    ID3DBlob* rayGlowPs = nullptr;
+    std::vector<RayPart> rayParts;  // 0.30: this frame's faces of the forest's beams: dust and light where they fall
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
@@ -514,7 +526,8 @@ struct Renderer::Impl {
     bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2);
     D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4);  // 0.19, kRootScene
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
-                                     bool toGlow = false, bool water = false, bool mask = false, bool smoke = false);
+                                     bool toGlow = false, bool water = false, bool mask = false,
+                                     DrawShader shader = DrawShader::Game);
     bool createUpscalePipelines();  // the motion pass and the layer composite
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp
@@ -554,11 +567,13 @@ struct Renderer::Impl {
     bool fireflyReady();  // its pipelines for this target
     // 0.29: the maps' hidden lights (core/map_glows.hpp), from the map's file.
     bool mapGlowsWanted() const { return effects.mapGlows && effects.mapGlowsBrightness > 0 && fireflyPs; }
+    bool raysWanted() const { return effects.rays && rayPs && rayGlowPs; }  // 0.30
+    void noteRay(const FrameRecord& rec, const DrawCmd& d);
     // An added-light pipeline of `ps` for this target (fireflies, dust); false (and `ps` dropped) when it fails.
     bool lightPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[5], const char* what);
     bool torchDue() const {
         return !torchDone && (torchWanted() || lampsWanted() || fireflyWanted() || mapGlowsWanted() ||
-                              !torchFlames.empty() || !fireSparks.empty());
+                              !torchFlames.empty() || !fireSparks.empty() || !rayParts.empty());
     }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     bool torchReady();     // the shaders, pipelines and the picture's copies are there
@@ -570,6 +585,7 @@ struct Renderer::Impl {
         torchFlames.clear();
         fireSparks.clear();
         fireflyDraws.clear();
+        rayParts.clear();
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

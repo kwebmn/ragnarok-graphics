@@ -1057,6 +1057,8 @@ void Renderer::Impl::destroy() {
     releaseCom(torchFirePs);
     releaseCom(fireflyPs);
     releaseCom(dustPs);
+    releaseCom(rayPs);  // 0.30
+    releaseCom(rayGlowPs);
     releaseCom(torchData);
     releaseCom(smokePs);  // 0.24
     releaseCom(smokeGlowPs);
@@ -1278,14 +1280,15 @@ void Renderer::setEffects(const EffectSettings& e) {
     m.effects = e;
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%; "
-             "fireflies %s, %d%%; hidden lights %s, %d%%; shadows %s, "
+             "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
              e.smoothLight ? "on" : "off", e.torch ? "on" : "off", e.torchFlame ? "on" : "off", e.torchBrightness,
              e.torchGlow, e.torchLight, e.torchFlicker, e.smoke ? "on" : "off", e.smokeDensity, e.lamps ? "on" : "off",
              e.lampsLight, e.fireLight ? "on" : "off", e.fireLightStrength, e.fireflies ? "on" : "off",
-             e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness,
+             e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.rays ? "on" : "off",
+             e.raysBrightness,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,

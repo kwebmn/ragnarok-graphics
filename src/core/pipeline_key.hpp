@@ -7,6 +7,10 @@
 
 namespace uagfx {
 
+// 0.24, 0.30: a world draw by a shader of its own instead of the game's: a puff of the chimneys' smoke, a beam of the
+// forest's light, (0.31) lava.
+enum class DrawShader : uint8_t { Game, Smoke, Ray, Lava };
+
 // The pipeline state a draw needs; packed, it is the key the renderer caches pipelines by. The keys met in a session
 // are saved and their pipelines built at the next start, so an effect does not stutter the first time it is drawn
 // (1B review M8).
@@ -25,7 +29,7 @@ struct PipelineKey {
     bool glow = false;   // 0.18: a world draw that also writes the light it adds into the glow target (two targets)
     bool water = false;  // 0.19: a cell of a map's water, drawn by the modern water's shaders
     bool mask = false;   // 0.22.3: a character or an effect in the DLSS world - its coverage into the alpha
-    bool smoke = false;  // 0.24: a puff of the chimneys' smoke, drawn by the smoke's shader
+    DrawShader shader = DrawShader::Game;  // 0.24: Smoke (bit 25, as 0.24 saved it); 0.30: two bits
     bool operator==(const PipelineKey& o) const;
 };
 
@@ -42,7 +46,7 @@ std::string pipelineKeyLine(uint64_t v);
 // A key the renderer makes (0.4.1 and 0.4.2 reviews): only the packed fields, in resolveDrawSetup's forms - no Z test
 // means ALWAYS and no Z writes, no blending means ONE and ZERO, blend factors 1-11 (BOTH* resolved), a cull mode;
 // alpha to coverage only with several samples and no blending; the interface layer with one sample and no Z test;
-// the glow's second target, the water, the DLSS mask and the smoke never with the layer.
+// the glow's second target, the water, the DLSS mask and a shader of the draw's own never with the layer.
 // Damaged lines - two game instances appending at once - are skipped by parsePipelineKeys.
 bool validPipelineKey(uint64_t v);
 // The file's text: the header, then each key once, in increasing order.

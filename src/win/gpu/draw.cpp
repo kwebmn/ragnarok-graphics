@@ -139,7 +139,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui && !water && smokeWanted() && d.vertexCount == 4 && !objectTextures.empty() &&
         objectTextures.of(d.texture[0]) == objects::Kind::Smoke)
         smoke = d.vertexOffset + 4 * FrameRecord::stride(d.fvf) <= rec.vertexBytes().size();
-    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask, smoke);
+    // 0.30: a face of one of the forest's beams of light (known by the driver) - by the beams' shaders; its middle and
+    // foot noted for the dust and the light where it falls.
+    const bool ray = !s.ui && !water && !smoke && d.effect == uint8_t(effect_exe::Kind::Ray) && raysWanted() &&
+                     !torchDone && d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) <=
+                                       rec.vertexBytes().size();
+    if (ray) noteRay(rec, d);
+    const DrawShader shader = smoke ? DrawShader::Smoke : ray ? DrawShader::Ray : DrawShader::Game;
+    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask, shader);
     if (!pso) return;
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
@@ -292,6 +299,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(c.projection, proj, sizeof proj);
         c.twin[3] = waterTime();
         c.footprint = float(std::clamp(effects.smokeDensity, 0, 200)) / 100.0f;
+    }
+    if (ray) {  // 0.30: the camera backwards, the time and the brightness (ray_ps; its depth is its own pixels')
+        static const float kSame[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+        std::memcpy(c.reproject, viewToWorldValid ? viewToWorld : kSame, sizeof c.reproject);
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        c.twin[3] = waterTime();
+        c.footprint = float(std::clamp(effects.raysBrightness, 0, 200)) / 100.0f;
     }
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP

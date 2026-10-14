@@ -15,6 +15,11 @@ Kind kindOf(int id) {
     switch (id) {
     case 45:
         return Kind::Firefly;
+    case 307:
+    case 322:
+    case 323:
+    case 324:
+        return Kind::Ray;
     case 200:
     case 201:
     case 202:

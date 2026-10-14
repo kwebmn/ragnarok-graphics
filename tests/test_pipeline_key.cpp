@@ -50,10 +50,10 @@ TEST(pipeline_key_file_skips_keys_the_renderer_cannot_make) {
     good.cull = CULL_NONE;
     good.srcBlend = BLEND_ONE;
     good.dstBlend = BLEND_ZERO;
-    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 26) +
+    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 27) +
                              "ffffffffffffffff\n" + pipelineKeyLine(packPipelineKey(bad)) +
                              pipelineKeyLine(packPipelineKey(good));
-    // good with bit 26 (only the stray-bits check rejects it), all bits, blend 12: skipped
+    // good with bit 27 (only the stray-bits check rejects it), all bits, blend 12: skipped
     const std::vector<uint64_t> keys = parsePipelineKeys(text);
     CHECK_EQ(keys.size(), size_t(1));
     CHECK(keys.size() == 1 && keys[0] == packPipelineKey(good));
@@ -132,7 +132,7 @@ TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
     CHECK(rejected(plain, [](PipelineKey& k) { k.zWrite = true; }));                 // no Z test: no Z writes
     CHECK(rejected(plain, [](PipelineKey& k) { k.srcBlend = BLEND_SRCALPHA; }));     // no blending: ONE and ZERO
     CHECK(rejected(plain, [](PipelineKey& k) { k.dstBlend = BLEND_INVSRCALPHA; }));
-    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 26));  // a bit past the packed fields
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 27));  // a bit past the packed fields
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 63));
 }
 
@@ -222,7 +222,7 @@ TEST(pipeline_key_smoke_is_a_world_draw) {
     k.blend = true;
     k.srcBlend = BLEND_SRCALPHA;
     k.dstBlend = BLEND_INVSRCALPHA;
-    k.smoke = true;
+    k.shader = DrawShader::Smoke;
     CHECK(validPipelineKey(packPipelineKey(k)));
     CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
     k.glow = true;
@@ -235,6 +235,31 @@ TEST(pipeline_key_smoke_is_a_world_draw) {
     layer.srcBlend = BLEND_ONE;
     layer.dstBlend = BLEND_ZERO;
     layer.layer = true;
-    layer.smoke = true;
+    layer.shader = DrawShader::Smoke;
     CHECK(!validPipelineKey(packPipelineKey(layer)));
+}
+
+TEST(pipeline_key_draw_shaders_keep_the_smokes_bit) {
+    // 0.30: the world's draws by a shader of their own - the smoke (bit 25, as 0.24 saved it), a beam of the forest's
+    // light, lava - in two bits; never in the interface layer.
+    PipelineKey k;
+    k.zEnable = true;
+    k.zFunc = CMP_LESSEQUAL;
+    k.cull = CULL_NONE;
+    k.blend = true;
+    k.srcBlend = BLEND_SRCALPHA;
+    k.dstBlend = BLEND_ONE;
+    const uint64_t game = packPipelineKey(k);
+    k.shader = DrawShader::Smoke;
+    CHECK_EQ(packPipelineKey(k), game | uint64_t(1) << 25);
+    for (DrawShader s : {DrawShader::Ray, DrawShader::Lava}) {
+        k.shader = s;
+        CHECK(validPipelineKey(packPipelineKey(k)));
+        CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
+    }
+    k.shader = DrawShader::Ray;
+    k.layer = true;
+    k.zEnable = false;
+    k.zFunc = CMP_ALWAYS;
+    CHECK(!validPipelineKey(packPipelineKey(k)));
 }

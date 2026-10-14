@@ -107,6 +107,44 @@ void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, const Te
     fireSparks.push_back(s);
 }
 
+// 0.30: a face of one of the forest's beams (draw.cpp): its middle and its foot - the end its texture's v reaches 1
+// at, the ground - in the view, from its vertices.
+void Renderer::Impl::noteRay(const FrameRecord& rec, const DrawCmd& d) {
+    if (rayParts.size() >= 512) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const uint32_t n = std::min<uint32_t>(d.vertexCount, 64);
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    RayPart r{};
+    float sx = 0.0f, sy = 0.0f;
+    int all = 0, feet = 0;
+    for (uint32_t i = 0; i < n; ++i) {
+        const uint8_t* q = v.data() + d.vertexOffset + size_t(i) * stride;
+        float xyzw[4], uv[2];
+        std::memcpy(xyzw, q, sizeof xyzw);
+        std::memcpy(uv, q + 24, sizeof uv);
+        if (xyzw[3] <= 0.0f) continue;
+        const float vz = 1.0f / xyzw[3];
+        const float view[3] = {(xyzw[0] - p.cx) * vz / p.f0, (xyzw[1] - p.cy) * vz / p.f1, vz};
+        for (int k = 0; k < 3; ++k) r.middle[k] += view[k];
+        sx += xyzw[0];
+        sy += xyzw[1];
+        ++all;
+        if (uv[1] >= 0.5f) {
+            for (int k = 0; k < 3; ++k) r.foot[k] += view[k];
+            ++feet;
+        }
+    }
+    if (all == 0 || feet == 0) return;
+    for (int k = 0; k < 3; ++k) {
+        r.middle[k] /= float(all);
+        r.foot[k] /= float(feet);
+    }
+    r.gameX = sx / float(all);
+    r.gameY = sy / float(all);
+    rayParts.push_back(r);
+}
+
 // 0.28: a firefly the game draws (effect 45, known by the driver: d.effect) - noted for applyTorches, not drawn: its
 // middle, size and depth from its quad, the game's fade and tint of it. Drawn as the game has it when the fireflies
 // cannot be drawn anew here.
@@ -376,6 +414,51 @@ bool Renderer::Impl::applyTorches() {
         }
         if (drawn && !mapGlowsLogged) LOG_INFO("hidden lights: the map file's drawn (%u in view)", drawn);
         mapGlowsLogged = mapGlowsLogged || drawn > 0;
+    }
+    // 0.30: the forest's beams, gathered by place (cells of 64 game pixels): dust drifting in each, light where it
+    // falls - the nearest 12.
+    if (!rayParts.empty()) {
+        struct Beam {
+            float middle[3] = {0, 0, 0}, foot[3] = {0, 0, 0};
+            float gx = 0, gy = 0;
+            int n = 0;
+        };
+        std::unordered_map<int, Beam> beams;
+        for (const RayPart& r : rayParts) {
+            Beam& b = beams[int(std::floor(r.gameX / 64.0f)) * 4096 + int(std::floor(r.gameY / 64.0f))];
+            for (int k = 0; k < 3; ++k) {
+                b.middle[k] += r.middle[k];
+                b.foot[k] += r.foot[k];
+            }
+            b.gx += r.gameX;
+            b.gy += r.gameY;
+            ++b.n;
+        }
+        std::vector<Beam> closest;
+        for (auto& kv : beams) {
+            Beam b = kv.second;
+            for (int k = 0; k < 3; ++k) {
+                b.middle[k] /= float(b.n);
+                b.foot[k] /= float(b.n);
+            }
+            b.gx /= float(b.n);
+            b.gy /= float(b.n);
+            closest.push_back(b);
+        }
+        std::sort(closest.begin(), closest.end(),
+                  [](const Beam& a, const Beam& b) { return a.middle[2] < b.middle[2]; });
+        const float user = float(std::clamp(effects.raysBrightness, 0, 200)) / 100.0f;
+        static const float kSun[3] = {0.95f, 1.0f, 0.82f};
+        for (size_t i = 0; i < closest.size() && i < 12; ++i) {
+            const Beam& b = closest[i];
+            if (b.middle[2] <= proj.nearZ) continue;
+            glowLights.push_back(
+                LightItem{{b.foot[0], b.foot[1], b.foot[2]}, 0.22f * user, {kSun[0], kSun[1], kSun[2]}, 20.0f});
+            if (dustPs && clouds.size() < 32)
+                clouds.push_back(Cloud{b.gx, b.gy, b.middle[2], proj.f0 / b.middle[2], 6.0f,
+                                       float(i) * 0.137f + 0.05f, 0.3f * user, {1.0f, 0.97f, 0.86f}});
+        }
+        rayParts.clear();
     }
     // 0.23.3: the shader bounds it. 0.25.2: four fifths of 0.25's at 100 % ("too much and too dense" once the torch
     // has come up from its fade); 0.25.3: a little less again ("ещё чуточку"); 0.25.4: near half ("in the original

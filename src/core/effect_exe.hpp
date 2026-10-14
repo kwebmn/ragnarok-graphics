@@ -23,12 +23,13 @@ constexpr uint32_t kSortFace = 0x412020;
 bool isSortEntry(const uint8_t bytes[6]);
 
 // The effects the driver does something with.
-enum class Kind : uint8_t { None, Aura, Firefly };
+enum class Kind : uint8_t { None, Aura, Firefly, Ray };
 // The level 99 aura: 200, 201 and 202 - its ring (effect\ring_blue.tga), bubbles (effect\pikapika2.bmp) and circle
 // (effect\freezing_circle.bmp) - and 397, 398 and 362, those of the transcendent classes (362: effect\whitelight.tga).
 // The game shows the circles alone unless /aura is on (0x772CE4, 0 at start, not kept): it reads that when it makes
 // an aura - a map entered, a player come into view - not when the command is given. 0.28: 45, the maps' fireflies
-// (a sprite primitive: 이팩트\particle1.spr, a soft white dot the game tints).
+// (a sprite primitive: 이팩트\particle1.spr, a soft white dot the game tints). 0.30: 307, 322, 323, 324, the
+// forest's light (forestlight 1-4: primitive 0x42, effect\cloud11.tga on four five-sided tubes down to the ground).
 Kind kindOf(int id);
 
 // A draw's TL vertices (`stride` bytes each, the diffuse colour at byte 16) made `percent` % as bright: their colour

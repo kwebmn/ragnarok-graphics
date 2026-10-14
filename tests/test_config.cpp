@@ -367,6 +367,18 @@ TEST(config_effects_map_glows) {
     CHECK(parseConfig("[effects]\nmap_glows_brightness = 201\n").effects == d);
 }
 
+TEST(config_effects_rays) {
+    // 0.30: the forest's beams of light drawn softer, shimmering, with dust and light where they fall - on, 0-200 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.rays);
+    CHECK_EQ(d.raysBrightness, 100);
+    const EffectSettings e = parseConfig("[effects]\nrays = 0\nrays_brightness = 140\n").effects;
+    CHECK(!e.rays);
+    CHECK_EQ(e.raysBrightness, 140);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nrays_brightness = -5\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

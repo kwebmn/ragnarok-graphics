@@ -267,6 +267,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.firefliesBrightness);
     w.u8(e.mapGlows ? 1 : 0);
     w.i32(e.mapGlowsBrightness);
+    w.u8(e.rays ? 1 : 0);
+    w.i32(e.raysBrightness);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

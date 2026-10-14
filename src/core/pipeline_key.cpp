@@ -12,7 +12,7 @@ bool PipelineKey::operator==(const PipelineKey& o) const {
     return zEnable == o.zEnable && zWrite == o.zWrite && zFunc == o.zFunc && cull == o.cull && blend == o.blend &&
            srcBlend == o.srcBlend && dstBlend == o.dstBlend && twoUv == o.twoUv && samples == o.samples &&
            alphaToCoverage == o.alphaToCoverage && layer == o.layer && glow == o.glow && water == o.water &&
-           mask == o.mask && smoke == o.smoke;
+           mask == o.mask && shader == o.shader;
 }
 
 PipelineKey pipelineKey(const DrawSetup& s, uint32_t fvf) {
@@ -40,7 +40,7 @@ uint64_t packPipelineKey(const PipelineKey& k) {
            uint64_t(k.blend) << 8 | uint64_t(k.srcBlend & 15) << 9 | uint64_t(k.dstBlend & 15) << 13 |
            uint64_t(k.twoUv) << 17 | samplesCode(k.samples) << 18 | uint64_t(k.alphaToCoverage) << 20 |
            uint64_t(k.layer) << 21 | uint64_t(k.glow) << 22 | uint64_t(k.water) << 23 | uint64_t(k.mask) << 24 |
-           uint64_t(k.smoke) << 25;
+           uint64_t(uint8_t(k.shader) & 3) << 25;
 }
 
 PipelineKey unpackPipelineKey(uint64_t v) {
@@ -59,7 +59,7 @@ PipelineKey unpackPipelineKey(uint64_t v) {
     k.glow = (v >> 22 & 1) != 0;
     k.water = (v >> 23 & 1) != 0;
     k.mask = (v >> 24 & 1) != 0;
-    k.smoke = (v >> 25 & 1) != 0;
+    k.shader = DrawShader(v >> 25 & 3);
     return k;
 }
 
@@ -95,7 +95,8 @@ bool validPipelineKey(uint64_t v) {
     const PipelineKey k = unpackPipelineKey(v);
     if (packPipelineKey(k) != v || k.cull < d3d7::CULL_NONE) return false;
     if (k.alphaToCoverage && (k.samples < 2 || k.blend)) return false;
-    if (k.layer && (k.samples != 1 || k.zEnable || k.glow || k.water || k.mask || k.smoke)) return false;
+    if (k.layer && (k.samples != 1 || k.zEnable || k.glow || k.water || k.mask || k.shader != DrawShader::Game))
+        return false;
     if (k.zEnable ? k.zFunc < d3d7::CMP_NEVER || k.zFunc > d3d7::CMP_ALWAYS : k.zFunc != d3d7::CMP_ALWAYS || k.zWrite)
         return false;
     if (!k.blend) return k.srcBlend == d3d7::BLEND_ONE && k.dstBlend == d3d7::BLEND_ZERO;

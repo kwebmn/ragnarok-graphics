@@ -182,6 +182,14 @@ TEST(live_config_map_glows_apply_now) {
     CHECK(u.applied[1] == "map_glows_brightness 100 -> 150");
 }
 
+TEST(live_config_rays_apply_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nrays = 0\nrays_brightness = 50\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "rays 1 -> 0");
+    CHECK(u.applied[1] == "rays_brightness 100 -> 50");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

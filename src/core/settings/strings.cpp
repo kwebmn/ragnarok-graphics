@@ -873,6 +873,17 @@ const Entry kTexts[] = {
     {"Hidden lights' brightness", "Яскравість вогників", "Яркость огоньков"},
     {"How bright the maps' hidden lights and their light are.", "Наскільки яскраві приховані вогники та їхнє світло.",
      "Насколько ярки скрытые огоньки и их свет."},
+    {"Beams of light in the forest", "Промені світла в лісі", "Лучи света в лесу"},
+    {"The beams of light falling through the trees (Umbala, Geffenia, Glast Heim) are soft at their ends, shimmer as "
+     "if through moving leaves, have dust drifting in them and light the ground where they fall.",
+     "Промені світла крізь дерева (Умбала, Гефенія, Гласт Хейм) м'які на кінцях, мерехтять, наче крізь листя, у них "
+     "кружляє пил, а там, де вони падають, світиться земля.",
+     "Лучи света сквозь деревья (Умбала, Гефения, Гласт Хейм) мягкие на концах, мерцают, будто сквозь листву, в них "
+     "кружится пыль, а там, где они падают, светится земля."},
+    {"Beams' brightness", "Яскравість променів", "Яркость лучей"},
+    {"How bright the beams and the light they leave on the ground are.",
+     "Наскільки яскраві промені та світло, яке вони лишають на землі.",
+     "Насколько ярки лучи и свет, который они оставляют на земле."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -86,6 +86,10 @@ struct EffectSettings {
     // never shows - drawn from the map's file. On by default.
     bool mapGlows = true;
     int mapGlowsBrightness = 100;  // %, 0-200
+    // 0.30: the forest's beams of light (Umbala, Geffenia, Glast Heim) - soft ends, light shimmering as through
+    // moving leaves, dust in them, light where they fall. On by default.
+    bool rays = true;
+    int raysBrightness = 100;  // %, 0-200
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

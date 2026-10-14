@@ -102,7 +102,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"dof_focus_ps", "ps_5_0", &dofFocusPs},       {"mask_ps", "ps_5_0", &maskPs},
                    {"torch_light_ps", "ps_5_0", &torchLightPs},   {"torch_fire_ps", "ps_5_0", &torchFirePs},
                    {"smoke_ps", "ps_5_0", &smokePs},              {"smoke_glow_ps", "ps_5_0", &smokeGlowPs},
-                   {"firefly_ps", "ps_5_0", &fireflyPs},          {"dust_ps", "ps_5_0", &dustPs}};
+                   {"firefly_ps", "ps_5_0", &fireflyPs},          {"dust_ps", "ps_5_0", &dustPs},
+                   {"ray_ps", "ps_5_0", &rayPs},                  {"ray_glow_ps", "ps_5_0", &rayGlowPs}};
     for (const auto& e : effects) {
         std::string why;
         if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {
@@ -321,7 +322,7 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
 // Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage). 0.18: toGlow, the
 // glow target as the second one.
 ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer,
-                                                 bool toGlow, bool water, bool mask, bool smoke) {
+                                                 bool toGlow, bool water, bool mask, DrawShader shader) {
     PipelineKey k = pipelineKey(s, fvf);
     k.samples = uint8_t(toLayer ? 1 : samples);
     k.alphaToCoverage = coverage && !toLayer;
@@ -329,7 +330,7 @@ ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fv
     k.glow = toGlow && !toLayer;
     k.water = water && !toLayer;
     k.mask = mask && !toLayer;
-    k.smoke = smoke && !toLayer;
+    k.shader = toLayer ? DrawShader::Game : shader;
     return pipelineForKey(packPipelineKey(k));
 }
 
@@ -380,7 +381,8 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     p.SampleDesc.Count = k.samples;
     // 0.18, 0.19: an effect whose shaders did not compile (a key saved by another run) builds nothing.
     if ((k.glow && !drawGlowPs) || (k.water && (!waterVs || !waterPs || !waterGlowPs)) ||
-        (k.smoke && (!smokePs || !smokeGlowPs))) {
+        (k.shader == DrawShader::Smoke && (!smokePs || !smokeGlowPs)) ||
+        (k.shader == DrawShader::Ray && (!rayPs || !rayGlowPs)) || k.shader == DrawShader::Lava) {
         pipelines.emplace(key, nullptr);
         return nullptr;
     }
@@ -394,8 +396,12 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
         b.SrcBlendAlpha = D3D12_BLEND_ONE;
         b.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
     }
-    if (k.smoke) {  // 0.24: a puff of the chimneys' smoke by the smoke's shaders, blended as the game blends it
+    if (k.shader == DrawShader::Smoke) {  // 0.24: a puff of the chimneys' smoke, blended as the game blends it
         ID3DBlob* ps = k.glow ? smokeGlowPs : smokePs;
+        p.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
+    }
+    if (k.shader == DrawShader::Ray) {  // 0.30: a beam of the forest's light, blended as the game blends it
+        ID3DBlob* ps = k.glow ? rayGlowPs : rayPs;
         p.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
     }
     if (k.water) {  // 0.19: a cell of water by the modern water's shaders
