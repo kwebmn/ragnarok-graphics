@@ -9,9 +9,9 @@
 namespace uagfx::settings {
 
 // The settings app's pages in the order of its list (stage 2 spec §6.1): Chat holds the whisper, login and chat macro
-// rows the Game page has no room for; Input and dgVoodoo come with 0.6.3.
-enum class Page : uint8_t { Render, Screen, Quality, Frames, Sound, Game, Chat, Diagnostics, Service };
-constexpr int kPageCount = 9;
+// rows the Game page has no room for; Smoothing comes with stage 4 (spec §13), Input and dgVoodoo with 0.6.3.
+enum class Page : uint8_t { Render, Screen, Quality, Smoothing, Frames, Sound, Game, Chat, Diagnostics, Service };
+constexpr int kPageCount = 10;
 Text pageName(Page p);
 
 enum class Control : uint8_t { Check, Slider, Choice, Number, Line };  // Line: a line of text

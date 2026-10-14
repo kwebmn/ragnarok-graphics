@@ -60,6 +60,18 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 1 = the game's text, window frames and fills at the real pixels of the window when the game is enlarged; 0 = as version 0.4
     >>"uaro-graphics.ini" echo crisp_text = 1
 )
+rem A settings file older than 0.7 has no msaa key: the smoothing settings are added at the end the same way.
+findstr /c:"msaa" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [quality]
+    >>"uaro-graphics.ini" echo ; edge smoothing (MSAA): samples per pixel - 0 = off, 2, 4 or 8
+    >>"uaro-graphics.ini" echo msaa = 4
+    >>"uaro-graphics.ini" echo ; 1 = with msaa, soft edges where textures are cut out (leaves, fences)
+    >>"uaro-graphics.ini" echo alpha_to_coverage = 1
+    >>"uaro-graphics.ini" echo ; anisotropic filtering of the world: 0 = off, 2, 4, 8 or 16
+    >>"uaro-graphics.ini" echo anisotropy = 16
+)
 rem update.bat calls install.bat /quiet and reports the result itself.
 if /i "%~1"=="/quiet" exit /b 0
 echo.

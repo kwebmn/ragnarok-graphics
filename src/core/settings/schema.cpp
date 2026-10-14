@@ -11,6 +11,7 @@ Text pageName(Page p) {
         case Page::Render: return Text::PageRender;
         case Page::Screen: return Text::PageScreen;
         case Page::Quality: return Text::PageQuality;
+        case Page::Smoothing: return Text::PageSmoothing;
         case Page::Frames: return Text::PageFrames;
         case Page::Sound: return Text::PageSound;
         case Page::Game: return Text::PageGame;
@@ -35,6 +36,13 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::UiSharp, Text::UiSmooth}, Text::QualityUiFilter, Text::QualityUiFilterHint, ""},
         {"display", "crisp_text", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityCrispText,
          Text::QualityCrispTextHint, ""},
+        {"quality", "msaa", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8"},
+         {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8}, Text::SmoothMsaa, Text::SmoothMsaaHint, ""},
+        {"quality", "alpha_to_coverage", Page::Smoothing, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::SmoothA2c,
+         Text::SmoothA2cHint, ""},
+        {"quality", "anisotropy", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8", "16"},
+         {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8, Text::Factor16}, Text::SmoothAniso,
+         Text::SmoothAnisoHint, ""},
         {"frames", "vsync", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesVsync,
          Text::FramesVsyncHint, ""},
         {"frames", "fps_limit", Page::Frames, Control::Number, 0, 1000, 1, {}, {}, Text::FramesFpsLimit,
@@ -63,6 +71,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.sharpen") return std::to_string(c.sharpen);
     if (k == "display.ui_filter") return uiFilterToken(c.uiFilter);
     if (k == "display.crisp_text") return c.crispText ? "1" : "0";
+    if (k == "quality.msaa") return std::to_string(c.msaa);
+    if (k == "quality.alpha_to_coverage") return c.alphaToCoverage ? "1" : "0";
+    if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.allow_tearing") return c.allowTearing ? "1" : "0";

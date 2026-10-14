@@ -181,11 +181,12 @@ float4 draw_ps(PsIn i) : SV_Target {
         if ((stage1.x & 255) != 1) c = stage(stage1, i.diffuse, i.specular, c, t1);
     }
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
+    float alphaStep = fwidth(c.a);  // outside any branch
     if (((alphaTest >> 17) & 1) != 0) {
         // Stage 4, alpha to coverage: the test's edge (alpha >= ref) as coverage over about one pixel, so the edge
-        // stays where the test put it and is smooth. The flag is the same for the whole draw: fwidth is safe here.
+        // stays where the test put it and is smooth.
         float ref = float((alphaTest >> 8) & 255) / 255.0;
-        c.a = saturate((c.a - ref) / max(fwidth(c.a), 1e-4) + 0.5);
+        c.a = saturate((c.a - ref) / max(alphaStep, 1e-4) + 0.5);
     } else if (((alphaTest >> 16) & 1) != 0 && !passes(alphaTest & 255, round(c.a * 255.0), (alphaTest >> 8) & 255)) {
         discard;
     }

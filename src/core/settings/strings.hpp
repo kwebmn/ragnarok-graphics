@@ -61,6 +61,8 @@ enum class Text : uint16_t {
     ServiceGameSettings, GameSave, GameLoad, LayoutReset, GameSettingsNote, GameLoadAsk, LayoutResetAsk, GameSaved,
     GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, SoundSetupDiffers,
     GameSettingsRunning, ErrPartialFile,
+    PageSmoothing, SmoothMsaa, SmoothMsaaHint, SmoothA2c, SmoothA2cHint, SmoothAniso, SmoothAnisoHint, SmoothOff,
+    Factor2, Factor4, Factor8, Factor16,
     Count
 };
 
