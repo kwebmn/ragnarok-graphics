@@ -98,6 +98,8 @@ struct Slot {
     UINT64 used = 0;
     UINT64 fence = 0;                        // signalled when this slot's last submission finished
     std::vector<IUnknown*> garbage;          // released once that fence has passed
+    bool timed = false;                      // its list's start and end times are in the timer's buffer
+    bool upscaleTimed = false;               // and those of an upscale in it
 };
 
 struct Upload {
@@ -194,6 +196,17 @@ struct Renderer::Impl {
     ID3D12PipelineState* overPipeline = nullptr;  // the layer over the picture: premultiplied
     ID3D12PipelineState* copyPipeline = nullptr;  // the layer copied as it is, alpha kept (frame generation)
     HMODULE api = nullptr;  // setApi
+    // GPU time (0.10.4): timestamps around every list and the upscale, read when the slot comes round again, and a
+    // log line every half a minute - how much of each frame the card spends on the picture, and DLSS's part of it.
+    ID3D12QueryHeap* timer = nullptr;  // 4 per slot: list start, list end, upscale start, upscale end
+    ID3D12Resource* timerBuffer = nullptr;
+    const UINT64* timerData = nullptr;  // mapped for good
+    UINT64 timerFrequency = 0;
+    UINT64 gpuTicks = 0, upscaleTicks = 0;
+    uint32_t gpuFrames = 0;
+    ULONGLONG gpuSince = 0;
+    void readTimes(Slot& s, UINT index);  // the slot's last list has finished
+    void noteGpuFrame();                   // after a present
     void (*onDevice)(void*, ID3D12Device*) = nullptr;  // setOnDevice
     void* onDeviceContext = nullptr;
     // Frame generation: the back buffer's picture without the interface and the interface alone (upscaler.hpp).

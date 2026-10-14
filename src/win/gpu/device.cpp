@@ -97,6 +97,10 @@ bool Renderer::Impl::begin() {
     boundSamplers = ~0ull;
     pass = kPassNone;
     centered = false;  // a new list starts with the default sample positions
+    if (timer) {
+        readTimes(s, slot);
+        list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4);
+    }
     open = true;
     ++listSerial;
     return true;
@@ -105,6 +109,13 @@ bool Renderer::Impl::begin() {
 void Renderer::Impl::submit() {
     if (!open) return;
     open = false;
+    if (timer) {
+        Slot& s = slots[slot];
+        list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4 + 1);
+        list->ResolveQueryData(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4, s.upscaleTimed ? 4 : 2, timerBuffer,
+                               UINT64(slot) * 4 * sizeof(UINT64));
+        s.timed = true;
+    }
     const HRESULT hr = list->Close();
     if (FAILED(hr)) {
         failed(2, "command list close", hr);
@@ -115,6 +126,34 @@ void Renderer::Impl::submit() {
     queue->Signal(fence, ++fenceValue);
     slots[slot].fence = fenceValue;
     slot = (slot + 1) % kSlots;
+}
+
+void Renderer::Impl::readTimes(Slot& s, UINT index) {
+    if (s.timed && timerData) {
+        const UINT64* t = timerData + index * 4;
+        if (t[1] > t[0]) gpuTicks += t[1] - t[0];
+        if (s.upscaleTimed && t[3] > t[2]) upscaleTicks += t[3] - t[2];
+    }
+    s.timed = s.upscaleTimed = false;
+}
+
+void Renderer::Impl::noteGpuFrame() {
+    if (!timer || !timerFrequency) return;
+    ++gpuFrames;
+    const ULONGLONG now = GetTickCount64();
+    if (!gpuSince) gpuSince = now;
+    if (now - gpuSince < 30000) return;
+    const double ms = 1000.0 / double(timerFrequency) / double(gpuFrames);
+    if (upscaleTicks)
+        LOG_INFO("GPU: %.2f ms of work a frame, %.2f ms of it %s (%u frames in %.0f s)", double(gpuTicks) * ms,
+                 double(upscaleTicks) * ms, upscaler ? upscaler->name() : "upscaling", gpuFrames,
+                 double(now - gpuSince) / 1000.0);
+    else
+        LOG_INFO("GPU: %.2f ms of work a frame (%u frames in %.0f s)", double(gpuTicks) * ms, gpuFrames,
+                 double(now - gpuSince) / 1000.0);
+    gpuTicks = upscaleTicks = 0;
+    gpuFrames = 0;
+    gpuSince = now;
 }
 
 void Renderer::Impl::waitSlot(Slot& s) {
@@ -703,7 +742,12 @@ bool Renderer::Impl::composite() {
         // A jump (a warp, a new map) leaves no history worth keeping.
         const float jump = std::fabs(c.reproject[9]) + std::fabs(c.reproject[10]) + std::fabs(c.reproject[11]);
         f.reset = historyReset || !moving || jump > 400.0f;
+        if (timer) list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4 + 2);
         const bool ok = upscaler->evaluate(f);
+        if (timer) {
+            list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * 4 + 3);
+            slots[slot].upscaleTimed = true;
+        }
         ID3D12DescriptorHeap* heaps[2] = {gpuSrv, samplerHeap};  // Streamline leaves the list's state to us
         list->SetDescriptorHeaps(2, heaps);
         boundPipeline = nullptr;
@@ -873,6 +917,9 @@ void Renderer::Impl::destroy() {
     pipelines.clear();
     for (ID3D12PipelineState*& p : presentPipelines) releaseCom(p);
     releaseCom(motionPipeline);
+    releaseCom(timer);
+    releaseCom(timerBuffer);
+    timerData = nullptr;
     releaseCom(copyPipeline);
     releaseCom(hudless);
     releaseCom(uiCopy);
@@ -1124,6 +1171,21 @@ bool Renderer::create(std::string& error) {
     } else {
         m.list1 = nullptr;
         LOG_INFO("msaa: this card cannot place samples, so MSAA stays off (the interface would lose sharpness)");
+    }
+    // GPU time for the log: without it nothing else changes.
+    D3D12_QUERY_HEAP_DESC qh{};
+    qh.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+    qh.Count = kSlots * 4;
+    void* times = nullptr;
+    if (SUCCEEDED(m.queue->GetTimestampFrequency(&m.timerFrequency)) && m.timerFrequency &&
+        SUCCEEDED(m.device->CreateQueryHeap(&qh, __uuidof(ID3D12QueryHeap), reinterpret_cast<void**>(&m.timer))) &&
+        (m.timerBuffer = createBuffer(m.device, D3D12_HEAP_TYPE_READBACK, kSlots * 4 * sizeof(UINT64),
+                                      D3D12_RESOURCE_STATE_COPY_DEST)) &&
+        SUCCEEDED(m.timerBuffer->Map(0, nullptr, &times))) {
+        m.timerData = static_cast<const UINT64*>(times);
+    } else {
+        releaseCom(m.timer);
+        releaseCom(m.timerBuffer);
     }
     if (FAILED(m.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), reinterpret_cast<void**>(&m.fence))) ||
         !(m.fenceEvent = CreateEventA(nullptr, FALSE, FALSE, nullptr))) {
@@ -1567,6 +1629,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = m.swapChain->Present(sync, flags);
+    m.noteGpuFrame();
     if (m.upscaler && m.upscaler->generates()) m.upscaler->afterPresent();  // every frame: the next frame's token
     m.renderStarted = false;
     m.upscaledNow = false;
