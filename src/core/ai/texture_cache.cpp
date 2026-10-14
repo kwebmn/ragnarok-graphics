@@ -160,23 +160,42 @@ bool hasTransparency(const uint32_t* argb, int width, int height) {
 
 bool softPicture(const uint32_t* argb, int width, int height) {
     if (!argb || width < 3 || height < 3) return false;  // too small to tell: as before
-    const auto value = [&](int x, int y, int shift) {    // premultiplied, 0-255
-        const uint32_t p = argb[size_t(y) * size_t(width) + size_t(x)];
-        return int((p >> shift) & 255) * int(p >> 24) / 255;
+    // 0.22.7: three rows of the premultiplied colour at a time, times 255 (no division), and done as soon as more
+    // than 2 % of the texels have an edge or a grain - most textures show that in their first rows. The renderer
+    // asks this of every texture as the game loads a map (0.22.2-0.22.6 took 3 ms a 512 x 512 one).
+    const size_t w = size_t(width);
+    const size_t interior = (w - 2) * size_t(height - 2);
+    const size_t limit = interior / 50;
+    std::vector<int> ring(w * 9);  // three rows of R, G, B
+    const auto fill = [&](int y) {
+        int* r = ring.data() + size_t(y % 3) * w * 3;
+        const uint32_t* p = argb + size_t(y) * w;
+        for (size_t x = 0; x < w; ++x) {
+            const int a = int(p[x] >> 24);
+            r[3 * x] = int(p[x] & 255) * a;
+            r[3 * x + 1] = int((p[x] >> 8) & 255) * a;
+            r[3 * x + 2] = int((p[x] >> 16) & 255) * a;
+        }
     };
-    size_t detailed = 0, all = 0;
-    for (int y = 1; y + 1 < height; ++y)
-        for (int x = 1; x + 1 < width; ++x) {
+    fill(0);
+    fill(1);
+    size_t detailed = 0;
+    for (int y = 1; y + 1 < height; ++y) {
+        fill(y + 1);
+        const int* up = ring.data() + size_t((y - 1) % 3) * w * 3;
+        const int* mid = ring.data() + size_t(y % 3) * w * 3;
+        const int* down = ring.data() + size_t((y + 1) % 3) * w * 3;
+        for (size_t x = 1; x + 1 < w; ++x) {
             int most = 0;
-            for (int shift : {0, 8, 16}) {
-                const int lap = 4 * value(x, y, shift) - value(x - 1, y, shift) - value(x + 1, y, shift) -
-                                value(x, y - 1, shift) - value(x, y + 1, shift);
+            for (size_t k = 0; k < 3; ++k) {
+                const size_t i = 3 * x + k;
+                const int lap = 4 * mid[i] - mid[i - 3] - mid[i + 3] - up[i] - down[i];
                 most = std::max(most, lap < 0 ? -lap : lap);
             }
-            detailed += most > 24 ? 1 : 0;
-            ++all;
+            if (most > 24 * 255 && ++detailed > limit) return false;
         }
-    return detailed * 50 < all;
+    }
+    return true;
 }
 
 void prepareInput(const uint32_t* argb, int width, int height, std::vector<float>& planes) {
