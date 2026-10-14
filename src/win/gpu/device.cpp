@@ -998,10 +998,10 @@ bool Renderer::createRemote(const BridgeOptions& o, std::string& error) {
     return false;
 }
 
-bool Renderer::createRemix(const std::string& d3d9Path, std::string& error) {
+bool Renderer::createRemix(const std::string& d3d9Path, HWND window, std::string& error) {
     if (remix_) return true;
     remix_ = new Remix9;
-    if (remix_->create(d3d9Path, error)) return true;
+    if (remix_->create(d3d9Path, window, error)) return true;
     delete remix_;
     remix_ = nullptr;
     return false;

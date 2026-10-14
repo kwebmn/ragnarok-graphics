@@ -17,4 +17,8 @@ void applyWindowMode(HWND hwnd, const Config& config, bool gameFullscreen, int g
 // thread that made the window.
 void blackenGameWindow();
 
+// The calling thread's biggest visible top-level window - the game's (the IME's windows are small or hidden) -
+// or null. Part 4: RTX Remix's device is made on it when the renderer starts.
+HWND findGameWindow();
+
 }  // namespace uagfx::win

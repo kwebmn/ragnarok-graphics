@@ -30,7 +30,10 @@ public:
     Remix9(const Remix9&) = delete;
     Remix9& operator=(const Remix9&) = delete;
 
-    bool create(const std::string& d3d9Path, std::string& error);  // the library; the device comes with the window
+    // The library and, when the game's window is known, the device on it - so a Direct3D 9 that cannot draw (RTX
+    // Remix not starting) is known before the game draws and leaves it to Direct3D 12. Without the window the device
+    // comes with it.
+    bool create(const std::string& d3d9Path, HWND window, std::string& error);
     std::string adapterName() const { return adapter_; }
     void setWindow(HWND window) { window_ = window; }
     bool setTarget(int width, int height);
@@ -42,13 +45,23 @@ public:
     void setCamera(bool valid, const float view[12]);
 
 private:
+    struct Pending {  // pixels the game gave before the texture could be made
+        int level = 0;
+        Rect rect;
+        std::vector<uint32_t> argb;
+    };
     struct Texture {
         IDirect3DTexture9* texture = nullptr;
         int width = 0;
         int height = 0;
         int levels = 1;
+        std::vector<Pending> pending;
     };
     bool ensureDevice();
+    bool makeDevice(long& hr);
+    bool ensureTexture(Texture& t);
+    void upload(const FrameRecord& rec, const UploadCmd& u);
+    void noteShape(HWND window);
     bool resetDevice();
     void applyState(const DrawSetup& s);
     void draw(const FrameRecord& rec, const DrawCmd& d);
@@ -76,6 +89,8 @@ private:
     camera::RemixSpace space_;
     uint32_t flatDraws_ = 0;  // world draws of this frame kept on the screen
     bool flatLogged_ = false;
+    int shapeLines_ = 0;                // lines about the picture stretched to the window's shape
+    SIZE shapeGame_{}, shapeWindow_{};  // the sizes last looked at
     std::vector<uint8_t> worldVertices_;  // a world draw's vertices in world space
     std::vector<uint32_t> pixels_;
 };

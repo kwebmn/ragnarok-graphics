@@ -3,6 +3,8 @@
 #include <d3d9.h>
 
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <cstring>
 
 #include "core/d3d7.hpp"
@@ -48,6 +50,34 @@ UINT primitivesOf(uint32_t type, uint32_t count) {
     }
 }
 
+D3DPRESENT_PARAMETERS paramsFor(HWND window, int width, int height, bool vsync) {
+    D3DPRESENT_PARAMETERS pp{};
+    pp.BackBufferWidth = UINT(width);
+    pp.BackBufferHeight = UINT(height);
+    pp.BackBufferFormat = D3DFMT_X8R8G8B8;
+    pp.BackBufferCount = 1;
+    pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    pp.hDeviceWindow = window;
+    pp.Windowed = TRUE;
+    pp.EnableAutoDepthStencil = TRUE;
+    pp.AutoDepthStencilFormat = D3DFMT_D24X8;
+    pp.Flags = D3DPRESENTFLAG_LOCKABLE_BACKBUFFER;
+    pp.PresentationInterval = vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
+    return pp;
+}
+
+// A rectangle of a texture level from the game's pixels, a row at a time.
+bool writeLevel(IDirect3DTexture9* t, int level, const Rect& rect, const uint32_t* argb) {
+    const RECT r{rect.left, rect.top, rect.right, rect.bottom};
+    D3DLOCKED_RECT lr;
+    if (FAILED(t->LockRect(UINT(level), &lr, &r, 0))) return false;
+    for (int y = 0; y < rect.height(); ++y)
+        std::memcpy(static_cast<uint8_t*>(lr.pBits) + size_t(y) * size_t(lr.Pitch),
+                    argb + size_t(y) * size_t(rect.width()), size_t(rect.width()) * 4);
+    t->UnlockRect(UINT(level));
+    return true;
+}
+
 }  // namespace
 
 Remix9::~Remix9() {
@@ -56,10 +86,11 @@ Remix9::~Remix9() {
     drop(white_);
     drop(device_);
     drop(d3d_);
-    if (dll_) FreeLibrary(dll_);
+    // dll_ stays loaded: the game closes DirectDraw when it changes modes and opens it again, and RTX Remix's bridge
+    // starts its server process when loaded - it is not made to be unloaded and loaded again in one run.
 }
 
-bool Remix9::create(const std::string& d3d9Path, std::string& error) {
+bool Remix9::create(const std::string& d3d9Path, HWND window, std::string& error) {
     dll_ = LoadLibraryA(d3d9Path.c_str());
     if (!dll_) {
         error = "cannot load " + d3d9Path + " (error " + std::to_string(GetLastError()) + ")";
@@ -73,31 +104,39 @@ bool Remix9::create(const std::string& d3d9Path, std::string& error) {
     }
     D3DADAPTER_IDENTIFIER9 id{};
     if (SUCCEEDED(d3d_->GetAdapterIdentifier(D3DADAPTER_DEFAULT, 0, &id))) adapter_ = id.Description;
-    return true;
+    if (!window) return true;  // the device comes with the window (setWindow, present)
+    // 0.10 review 16: the device on the game's window at its size now - the game's own size comes with setTarget, a
+    // Reset - so a failure here leaves the game to Direct3D 12 instead of a black screen for the whole run.
+    RECT client{};
+    GetClientRect(window, &client);
+    window_ = window;
+    width_ = client.right > 0 ? int(client.right) : 640;
+    height_ = client.bottom > 0 ? int(client.bottom) : 480;
+    long hr = 0;
+    if (makeDevice(hr)) return true;
+    char text[96];
+    std::snprintf(text, sizeof text, "its Direct3D 9 device %dx%d failed: 0x%08lx", width_, height_,
+                  static_cast<unsigned long>(hr));
+    error = d3d9Path + ": " + text;
+    return false;
 }
 
 bool Remix9::ensureDevice() {
     if (device_) return !lost_ || resetDevice();
     if (!d3d_ || !window_ || width_ <= 0 || height_ <= 0) return false;
-    D3DPRESENT_PARAMETERS pp{};
-    pp.BackBufferWidth = UINT(width_);
-    pp.BackBufferHeight = UINT(height_);
-    pp.BackBufferFormat = D3DFMT_X8R8G8B8;
-    pp.BackBufferCount = 1;
-    pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    pp.hDeviceWindow = window_;
-    pp.Windowed = TRUE;
-    pp.EnableAutoDepthStencil = TRUE;
-    pp.AutoDepthStencilFormat = D3DFMT_D24X8;
-    pp.Flags = D3DPRESENTFLAG_LOCKABLE_BACKBUFFER;
-    pp.PresentationInterval = vsync_ ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
-    const HRESULT hr = d3d_->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window_,
-                                          D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_FPU_PRESERVE, &pp, &device_);
+    long hr = 0;
+    if (makeDevice(hr)) return true;
+    static bool logged = false;
+    if (!logged) LOG_ERROR("Direct3D 9 device %dx%d failed: 0x%08lx", width_, height_, static_cast<unsigned long>(hr));
+    logged = true;
+    return false;
+}
+
+bool Remix9::makeDevice(long& hr) {
+    D3DPRESENT_PARAMETERS pp = paramsFor(window_, width_, height_, vsync_);
+    hr = d3d_->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window_,
+                            D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_FPU_PRESERVE, &pp, &device_);
     if (FAILED(hr)) {
-        static bool logged = false;
-        if (!logged)
-            LOG_ERROR("Direct3D 9 device %dx%d failed: 0x%08lx", width_, height_, static_cast<unsigned long>(hr));
-        logged = true;
         device_ = nullptr;
         return false;
     }
@@ -116,18 +155,7 @@ bool Remix9::ensureDevice() {
 bool Remix9::resetDevice() {
     const HRESULT test = device_->TestCooperativeLevel();
     if (test == D3DERR_DEVICELOST) return false;  // not yet: try again later
-    D3DPRESENT_PARAMETERS pp{};
-    pp.BackBufferWidth = UINT(width_);
-    pp.BackBufferHeight = UINT(height_);
-    pp.BackBufferFormat = D3DFMT_X8R8G8B8;
-    pp.BackBufferCount = 1;
-    pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    pp.hDeviceWindow = window_;
-    pp.Windowed = TRUE;
-    pp.EnableAutoDepthStencil = TRUE;
-    pp.AutoDepthStencilFormat = D3DFMT_D24X8;
-    pp.Flags = D3DPRESENTFLAG_LOCKABLE_BACKBUFFER;
-    pp.PresentationInterval = vsync_ ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
+    D3DPRESENT_PARAMETERS pp = paramsFor(window_, width_, height_, vsync_);
     if (FAILED(device_->Reset(&pp))) return false;  // managed textures survive a reset
     lost_ = false;
     haveState_ = false;
@@ -150,7 +178,10 @@ bool Remix9::setTarget(int width, int height) {
 
 uint32_t Remix9::createTexture(int width, int height, int levels) {
     const uint32_t id = nextTexture_++;
-    textures_[id] = Texture{nullptr, width, height, std::max(1, levels)};
+    Texture& t = textures_[id];
+    t.width = width;
+    t.height = height;
+    t.levels = std::max(1, levels);
     return id;
 }
 
@@ -163,13 +194,41 @@ void Remix9::releaseTexture(uint32_t id) {
 
 IDirect3DTexture9* Remix9::textureOf(uint32_t id) {
     auto it = textures_.find(id);
-    if (it == textures_.end()) return white_;
-    Texture& t = it->second;
-    if (!t.texture && device_ &&
-        FAILED(device_->CreateTexture(UINT(t.width), UINT(t.height), UINT(t.levels), 0, D3DFMT_A8R8G8B8,
-                                      D3DPOOL_MANAGED, &t.texture, nullptr)))
+    return it != textures_.end() && ensureTexture(it->second) ? it->second.texture : white_;
+}
+
+// The texture, made on first use, with what the game gave for it before then.
+bool Remix9::ensureTexture(Texture& t) {
+    if (t.texture) return true;
+    if (!device_ || FAILED(device_->CreateTexture(UINT(t.width), UINT(t.height), UINT(t.levels), 0, D3DFMT_A8R8G8B8,
+                                                  D3DPOOL_MANAGED, &t.texture, nullptr))) {
         t.texture = nullptr;
-    return t.texture ? t.texture : white_;
+        return false;
+    }
+    for (const Pending& p : t.pending) writeLevel(t.texture, p.level, p.rect, p.argb.data());
+    std::vector<Pending>().swap(t.pending);
+    return true;
+}
+
+// A texture's pixels: into the texture - a managed one takes them while the device is lost too - or, with no device
+// yet, kept until it is made (0.10 review 14: the game uploads a texture once, and one lost stayed white).
+void Remix9::upload(const FrameRecord& rec, const UploadCmd& u) {
+    auto it = textures_.find(u.texture);
+    if (it == textures_.end() || u.rect.empty()) return;
+    Texture& t = it->second;
+    const uint32_t* argb = rec.pixels().data() + u.pixels;
+    const int level = int(u.level);
+    if (ensureTexture(t)) {
+        writeLevel(t.texture, level, u.rect, argb);
+        return;
+    }
+    const int w = std::max(1, t.width >> level), h = std::max(1, t.height >> level);
+    if (u.rect.left <= 0 && u.rect.top <= 0 && u.rect.right >= w && u.rect.bottom >= h)  // all of it: older is gone
+        t.pending.erase(std::remove_if(t.pending.begin(), t.pending.end(),
+                                       [&](const Pending& p) { return p.level == level; }),
+                        t.pending.end());
+    const size_t count = size_t(u.rect.width()) * size_t(u.rect.height());
+    t.pending.push_back(Pending{level, u.rect, std::vector<uint32_t>(argb, argb + count)});
 }
 
 void Remix9::setCamera(bool valid, const float view[12]) {
@@ -258,18 +317,21 @@ void Remix9::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
         if (!world) ++flatDraws_;
     }
+    // Texture coordinates as the Direct3D 12 path reads them (shaders.cpp): with one set (FVF 0x1C4) every stage
+    // reads it, where Direct3D 9 reads nothing for an index past the vertex's sets; with two, stage 0 reads the
+    // second only for index 1 and stage 1 the first only for index 0 (0.10 review 16).
+    DrawSetup use = s;
+    use.stage[0].texCoord = twoUv && s.stage[0].texCoord == 1 ? 1 : 0;
+    use.stage[1].texCoord = twoUv && s.stage[1].texCoord != 0 ? 1 : 0;
     // D3D7's colour key drops the keyed texels (alpha 0 here); Direct3D 9 has no colour key, so a keyed texture
     // without an alpha test of its own gets one that drops alpha 0 - which also tells Remix it is a cut-out
     // (0.10 review 5: such draws showed black where the game shows nothing).
     if (s.colorKey && (d.keyed[0] || d.keyed[1]) && !s.alphaTest) {
-        DrawSetup keyed = s;
-        keyed.alphaTest = true;
-        keyed.alphaFunc = d3d7::CMP_GREATER;
-        keyed.alphaRef = 0;
-        applyState(keyed);
-    } else {
-        applyState(s);
+        use.alphaTest = true;
+        use.alphaFunc = d3d7::CMP_GREATER;
+        use.alphaRef = 0;
     }
+    applyState(use);
     for (DWORD i = 0; i < 2; ++i) device_->SetTexture(i, textureOf(d.texture[i]));
     const void* vertices = world ? static_cast<const void*>(worldVertices_.data()) : static_cast<const void*>(src);
     const UINT vertexStride = world ? stride - 4 : stride;
@@ -284,7 +346,12 @@ void Remix9::draw(const FrameRecord& rec, const DrawCmd& d) {
 }
 
 void Remix9::execute(const FrameRecord& rec) {
-    if (rec.empty() || !ensureDevice()) return;
+    if (rec.empty()) return;
+    if (!ensureDevice()) {  // nothing is drawn, but the textures keep what the game gave them
+        for (const Command& c : rec.commands())
+            if (c.type == Cmd::Upload) upload(rec, rec.uploads()[c.index]);
+        return;
+    }
     projection_ = camera::projectionFor(width_, height_);
     device_->BeginScene();
     if (cameraValid_) {  // this frame's camera for every world draw: Remix sees a scene, not a picture
@@ -317,20 +384,7 @@ void Remix9::execute(const FrameRecord& rec) {
                 device_->SetViewport(&vp);
                 break;
             }
-            case Cmd::Upload: {
-                const UploadCmd& u = rec.uploads()[c.index];
-                IDirect3DTexture9* t = textureOf(u.texture);
-                if (!t || t == white_ || u.rect.empty()) break;
-                const RECT r{u.rect.left, u.rect.top, u.rect.right, u.rect.bottom};
-                D3DLOCKED_RECT lr;
-                if (FAILED(t->LockRect(u.level, &lr, &r, 0))) break;
-                const uint32_t* px = rec.pixels().data() + u.pixels;
-                for (int y = 0; y < u.rect.height(); ++y)
-                    std::memcpy(static_cast<uint8_t*>(lr.pBits) + size_t(y) * size_t(lr.Pitch),
-                                px + size_t(y) * size_t(u.rect.width()), size_t(u.rect.width()) * 4);
-                t->UnlockRect(u.level);
-                break;
-            }
+            case Cmd::Upload: upload(rec, rec.uploads()[c.index]); break;
             case Cmd::WriteTarget: {  // the game's own pixels into the back buffer
                 const WriteTargetCmd& w = rec.writes()[c.index];
                 IDirect3DSurface9* back = nullptr;
@@ -400,8 +454,30 @@ void Remix9::present(HWND window, const PresentOptions& options) {
         Sleep(15);
         return;
     }
+    noteShape(window ? window : window_);
     const HRESULT hr = device_->Present(nullptr, nullptr, window, nullptr);
     if (hr == D3DERR_DEVICELOST) lost_ = true;
+}
+
+// RTX Remix shows the picture over the whole window: a destination rectangle only sizes its swap chain (dxvk-remix
+// D3D9SwapChainEx::UpdatePresentRegion), so there are no bars as with Direct3D 12 - a game size of another shape
+// than the window is stretched (0.10 review 16). The log says so, with what keeps the picture true.
+void Remix9::noteShape(HWND window) {
+    RECT client{};
+    if (!window || !GetClientRect(window, &client) || client.right <= 0 || client.bottom <= 0) return;
+    const SIZE game{width_, height_}, shown{client.right, client.bottom};
+    if (game.cx == shapeGame_.cx && game.cy == shapeGame_.cy && shown.cx == shapeWindow_.cx &&
+        shown.cy == shapeWindow_.cy)
+        return;
+    shapeGame_ = game;
+    shapeWindow_ = shown;
+    const double stretch = double(game.cx) * double(shown.cy) / (double(game.cy) * double(shown.cx));
+    if (std::fabs(stretch - 1.0) <= 0.01 || shapeLines_ >= 5) return;
+    ++shapeLines_;
+    LOG_INFO("remix: the game's %ldx%ld picture fills the %ldx%ld window, stretched %.0f%% %s: a game size of the "
+             "window's shape keeps it true",
+             game.cx, game.cy, shown.cx, shown.cy, std::fabs(stretch - 1.0) * 100.0,
+             stretch < 1.0 ? "wider" : "taller");
 }
 
 }  // namespace uagfx::gpu

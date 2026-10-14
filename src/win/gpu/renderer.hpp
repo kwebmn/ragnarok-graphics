@@ -55,7 +55,7 @@ public:
     bool remote() const { return remote_ != nullptr; }
     bool upscales() const;  // part 3: DLSS is ready (in uaro-render64.exe)
     // Part 4: through Direct3D 9's fixed function - RTX Remix when d3d9Path is its d3d9.dll (remix9.hpp).
-    bool createRemix(const std::string& d3d9Path, std::string& error);
+    bool createRemix(const std::string& d3d9Path, HWND window, std::string& error);  // window: the game's, or null
     bool remix() const { return remix_ != nullptr; }
     void setWindow(HWND window);  // the game's window, as soon as it is known (Direct3D 9 makes its device on it)
     std::string adapterName() const;

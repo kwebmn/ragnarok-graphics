@@ -60,7 +60,7 @@ bool Context::open(std::string& error) {
         const std::string local = gameDir() + "\\d3d9.dll";
         const std::string dll = fileExists(local) ? local : systemDir() + "\\d3d9.dll";
         std::string why;
-        remote = r->createRemix(dll, why);
+        remote = r->createRemix(dll, findGameWindow(), why);  // on the game's thread: DirectDrawCreateEx
         if (remote)
             LOG_INFO("remix: drawing through %s (Direct3D 9 fixed function, the world in world space)", dll.c_str());
         else
