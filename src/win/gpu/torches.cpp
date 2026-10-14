@@ -186,8 +186,9 @@ bool Renderer::Impl::applyTorches() {
             if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
         }
     // 0.23.3: the shader bounds it. 0.25.2: four fifths of 0.25's at 100 % ("too much and too dense" once the torch
-    // has come up from its fade); 0.25.3: a little less again ("ещё чуточку").
-    const float strength = 0.65f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
+    // has come up from its fade); 0.25.3: a little less again ("ещё чуточку"); 0.25.4: near half ("in the original
+    // not so bright" - the game's torch lights nothing, its glow is baked into the ground).
+    const float strength = 0.4f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
     std::vector<LightItem> lights;
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f);
     for (size_t i = 0; i < flames.size(); ++i) {
@@ -248,7 +249,7 @@ bool Renderer::Impl::applyTorches() {
     const float glowStrength = float(std::clamp(effects.torchGlow, 0, 200)) / 100.0f;
     // 0.23.2: the flame softer than 0.23's at 100 % ("too harsh"), none where the game's own is drawn - the torches
     // the game does not show always have the new one (0.25).
-    const float brightness = 0.8f * float(std::clamp(effects.torchBrightness, 0, 200)) / 100.0f;
+    const float brightness = 0.65f * float(std::clamp(effects.torchBrightness, 0, 200)) / 100.0f;  // 0.25.4: was 0.8
     ID3D12Resource* dst = upscale ? world : target;
     D3D12_RESOURCE_STATES& dstState = upscale ? worldState : targetState;
     const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(upscale ? kRtvWorld : kRtvTarget);
