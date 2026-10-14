@@ -877,17 +877,42 @@ float4 smoke_ps(PsIn i) : SV_Target { return smokeShade(i); }
 // 0.28, the fireflies (torches.cpp): a glowing dot and its soft halo, added to the picture - sourceRect.xy its middle
 // and .z its core's radius (target pixels), sourceClamp.y its view depth, fogColor its colour, twinX its brightness
 // (its flash, the game's fade, the player's setting). Hidden behind what stands in front of it by the picture's depth.
+// 0.29: also the maps' hidden glows, softer - sourceRect.w how sharp the core is (a firefly's 1.2), twinY how much
+// halo (a firefly's 1).
 float4 firefly_ps(PresentOut i) : SV_Target {
     float2 d = i.pos.xy - sourceRect.xy;
     float r = max(sourceRect.z, 0.5);
     float d2 = dot(d, d) / (r * r);
     float z = viewDepth(sceneDepth.Load(int3(int2(i.pos.xy), 0)));
     float seen = saturate((z - sourceClamp.y + 1.5) / 1.5);
-    float core = exp(-d2 * 1.2);
-    float halo = 0.22 * exp(-d2 / 10.0) + 0.05 / (1.0 + d2 / 4.0);
+    float core = exp(-d2 * sourceRect.w);
+    float halo = (0.22 * exp(-d2 / 10.0) + 0.05 / (1.0 + d2 / 4.0)) * twinY;
     float fade = saturate(1.0 - d2 / 64.0);  // none at eight radii, the edge of its pass
     float3 c = fogColor.rgb * halo + lerp(fogColor.rgb, float3(1.0, 1.0, 1.0), 0.55) * core;
     return float4(c * (twinX * seen * fade), 0.0);
+}
+
+// 0.29, the towers' dust (torches.cpp): motes drifting about a place, each a tiny soft dot that twinkles -
+// sourceRect.xy the cloud's middle (target pixels), .z pixels a world unit there, .w its radius (world units);
+// sourceClamp.y its view depth, .w its seed; uiPixels.w the time; fogColor the motes' colour, twinX their brightness.
+float4 dust_ps(PresentOut i) : SV_Target {
+    float2 pos = i.pos.xy;
+    float z = viewDepth(sceneDepth.Load(int3(int2(pos), 0)));
+    float seen = saturate((z - sourceClamp.y + 6.0) / 6.0);
+    float t = uiPixels.w;
+    float r = max(0.12 * sourceRect.z, 0.7);  // a mote: a tenth of a unit, at least most of a pixel
+    float sum = 0.0;
+    [loop] for (int k = 0; k < 24; ++k) {
+        float fk = float(k);
+        float2 h = float2(hash12(float2(sourceClamp.w * 31.0 + fk, 1.7)),
+                          hash12(float2(fk * 1.3, sourceClamp.w * 17.0)));
+        float2 dir = float2(cos(h.x * 6.2832), sin(h.x * 6.2832)) * sqrt(h.y) * 0.8;
+        float2 drift = float2(sin(t * (0.11 + 0.05 * h.y) + fk), cos(t * (0.09 + 0.04 * h.x) + fk * 1.7)) * 0.25;
+        float2 d = pos - (sourceRect.xy + (dir + drift) * sourceRect.w * sourceRect.z);
+        float twinkle = 0.35 + 0.65 * saturate(sin(t * (0.8 + h.x) + fk * 2.1) * 0.5 + 0.5);
+        sum += exp(-dot(d, d) / (r * r)) * twinkle;
+    }
+    return float4(fogColor.rgb * (sum * twinX * seen), 0.0);
 }
 
 GlowOut smoke_glow_ps(PsIn i) {

@@ -173,6 +173,15 @@ TEST(live_config_fireflies_apply_now) {
     CHECK(u.applied[1] == "fireflies_brightness 100 -> 60");
 }
 
+TEST(live_config_map_glows_apply_now) {
+    const LiveUpdate u =
+        liveUpdate(parseConfig(""), parseConfig("[effects]\nmap_glows = 0\nmap_glows_brightness = 150\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "map_glows 1 -> 0");
+    CHECK(u.applied[1] == "map_glows_brightness 100 -> 150");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

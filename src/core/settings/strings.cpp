@@ -863,6 +863,16 @@ const Entry kTexts[] = {
     {"Fireflies' brightness", "Яскравість світлячків", "Яркость светлячков"},
     {"How bright the fireflies and their light are.", "Наскільки яскраві світлячки та їхнє світло.",
      "Насколько ярки светлячки и их свет."},
+    {"Hidden lights of the maps", "Приховані вогники карт", "Скрытые огоньки карт"},
+    {"Glows, pools of light and dust the maps' makers placed but the game never showed - Manuk, Splendide, "
+     "Nidhoggur's nest, the towers - drawn from the map's file: floating balls of light, light on the ground.",
+     "Сяйва, світлові кола й пил, що їх поставили автори карт, але гра ніколи не показувала, — Манук, Сплендід, "
+     "гніздо Нідхьоґґа, вежі, — малюються за файлом карти: кулі світла в повітрі, світло на землі.",
+     "Свечения, световые круги и пыль, которые поставили авторы карт, но игра никогда не показывала, — Манук, "
+     "Сплендид, гнездо Нидхёгга, башни, — рисуются по файлу карты: шары света в воздухе, свет на земле."},
+    {"Hidden lights' brightness", "Яскравість вогників", "Яркость огоньков"},
+    {"How bright the maps' hidden lights and their light are.", "Наскільки яскраві приховані вогники та їхнє світло.",
+     "Насколько ярки скрытые огоньки и их свет."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

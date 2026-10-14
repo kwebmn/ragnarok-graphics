@@ -102,6 +102,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFirefliesHint, ""},
         {"effects", "fireflies_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
          Text::FxFirefliesBrightness, Text::FxFirefliesBrightnessHint, " %"},
+        {"effects", "map_glows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMapGlows,
+         Text::FxMapGlowsHint, ""},
+        {"effects", "map_glows_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
+         Text::FxMapGlowsBrightness, Text::FxMapGlowsBrightnessHint, " %"},
         {"effects", "grade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrade, Text::FxGradeHint,
          ""},
         {"effects", "grade_saturation", Page::Effects, Control::Slider, 0, 200, 5, {}, {}, Text::FxGradeSaturation,
@@ -223,6 +227,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.aura_brightness") return std::to_string(c.effects.auraBrightness);
     if (k == "effects.fireflies") return c.effects.fireflies ? "1" : "0";
     if (k == "effects.fireflies_brightness") return std::to_string(c.effects.firefliesBrightness);
+    if (k == "effects.map_glows") return c.effects.mapGlows ? "1" : "0";
+    if (k == "effects.map_glows_brightness") return std::to_string(c.effects.mapGlowsBrightness);
     if (k == "effects.lamps") return c.effects.lamps ? "1" : "0";
     if (k == "effects.lamps_light") return std::to_string(c.effects.lampsLight);
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";

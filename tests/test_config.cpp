@@ -355,6 +355,18 @@ TEST(config_effects_fireflies) {
     CHECK(parseConfig("[effects]\nfireflies_brightness = 250\n").effects == d);
 }
 
+TEST(config_effects_map_glows) {
+    // 0.29: the maps' hidden lights - glows, pools of light, dust - on unless turned off, 0-200 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.mapGlows);
+    CHECK_EQ(d.mapGlowsBrightness, 100);
+    const EffectSettings e = parseConfig("[effects]\nmap_glows = 0\nmap_glows_brightness = 70\n").effects;
+    CHECK(!e.mapGlows);
+    CHECK_EQ(e.mapGlowsBrightness, 70);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nmap_glows_brightness = 201\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

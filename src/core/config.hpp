@@ -82,6 +82,10 @@ struct EffectSettings {
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;
     int firefliesBrightness = 100;  // %, 0-200
+    // 0.29: the maps' hidden lights - glows, pools of light, the towers' dust the maps' makers placed and the game
+    // never shows - drawn from the map's file. On by default.
+    bool mapGlows = true;
+    int mapGlowsBrightness = 100;  // %, 0-200
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

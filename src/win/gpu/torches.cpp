@@ -9,6 +9,7 @@
 
 #include "core/fireflies.hpp"
 #include "core/game_camera.hpp"
+#include "core/map_glows.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -145,14 +146,16 @@ bool Renderer::Impl::takeFirefly(const FrameRecord& rec, const DrawCmd& d) {
 }
 
 // 0.28: the fireflies' pipeline for this target - their light added (alpha 0, the mask under DLSS untouched).
-bool Renderer::Impl::fireflyReady() {
-    if (!fireflyPs || !open) return false;
+bool Renderer::Impl::fireflyReady() { return lightPipeline(fireflyPs, fireflyPipelines, "fireflies"); }
+
+bool Renderer::Impl::lightPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[5], const char* what) {
+    if (!ps || !open) return false;
     const UINT n = upscale ? 1 : samples;
     const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
     const UINT at = upscale ? 4 : code;
-    if (fireflyPipelines[at]) return true;
+    if (pipelines[at]) return true;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
-        fullScreenPipeline(root, presentVs, fireflyPs, DXGI_FORMAT_B8G8R8A8_UNORM, upscale ? 1 : 1u << code);
+        fullScreenPipeline(root, presentVs, ps, DXGI_FORMAT_B8G8R8A8_UNORM, upscale ? 1 : 1u << code);
     D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
     b.BlendEnable = TRUE;
     b.SrcBlend = D3D12_BLEND_ONE;
@@ -165,10 +168,10 @@ bool Renderer::Impl::fireflyReady() {
     b.RenderTargetWriteMask =
         D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
     if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
-                                                   reinterpret_cast<void**>(&fireflyPipelines[at])))) {
-        fireflyPipelines[at] = nullptr;
-        LOG_ERROR("fireflies: their pipeline failed: they stay the game's");
-        releaseCom(fireflyPs);  // not tried again
+                                                   reinterpret_cast<void**>(&pipelines[at])))) {
+        pipelines[at] = nullptr;
+        LOG_ERROR("%s: the pipeline failed: not drawn anew", what);
+        releaseCom(ps);  // not tried again
         return false;
     }
     return true;
@@ -299,6 +302,7 @@ bool Renderer::Impl::applyTorches() {
     // maps' makers placed that the game does not show (713, 714, 946), drifting about their places.
     struct Fly {
         float gx, gy, vz, r, bright, colour[3];  // game pixels, view depth, the core's radius, brightness
+        float sharp = 1.2f, halo = 1.0f;         // a firefly's; 0.29: the maps' glows softer
     };
     std::vector<Fly> flies;
     if (fireflyWanted() && fireflyReady()) {
@@ -329,6 +333,50 @@ bool Renderer::Impl::applyTorches() {
         }
     }
     fireflyDraws.clear();
+    // 0.29: the maps' hidden lights (core/map_glows.hpp): an orb floats and breathes, a pool lights the ground about
+    // it, a cloud of dust drifts - and the orbs and pools light around them, the nearest 24.
+    struct Cloud {
+        float gx, gy, vz, perUnit, radius, seed, bright, colour[3];  // perUnit: game pixels a world unit there
+    };
+    std::vector<Cloud> clouds;
+    std::vector<LightItem> glowLights;
+    if (layout && mapGlowsWanted() && fireflyReady()) {
+        const float user = float(std::clamp(effects.mapGlowsBrightness, 0, 200)) / 100.0f;
+        uint32_t index = 0, drawn = 0;
+        for (const rsw::Effect& e : layout->effects) {
+            map_glows::Glow g;
+            if (!map_glows::glowOf(e.id, g)) continue;
+            const float seed = float(((++index) * 2246822519u) >> 8 & 0xFFFFu) / 65535.0f;
+            const float lift = g.shape == map_glows::Shape::Orb ? map_glows::bob(time, seed) : 0.0f;
+            const map::Point w = map::toWorld(axes, map::Point{e.pos[0], e.pos[1] + lift, e.pos[2]});
+            const map::Point v = toView(viewToWorld, w);
+            if (v.z <= proj.nearZ) continue;
+            const float gx = v.x / v.z * proj.f0 + proj.cx, gy = v.y / v.z * proj.f1 + proj.cy;
+            const float perUnit = proj.f0 / v.z;
+            const float breath = g.shape == map_glows::Shape::Dust ? 1.0f : map_glows::pulse(time, seed);
+            const float slack = std::max(g.reach, g.size) * perUnit + 32.0f;
+            if (!onScreen(gx, gy, slack)) continue;
+            if (g.light > 0.0f)
+                glowLights.push_back(LightItem{{v.x, v.y, v.z}, g.light * breath * user,
+                                               {g.colour[0], g.colour[1], g.colour[2]}, g.reach});
+            if (!onScreen(gx, gy, g.size * perUnit + 32.0f)) continue;
+            if (g.shape == map_glows::Shape::Dust) {
+                if (clouds.size() < 32 && dustPs)
+                    clouds.push_back(Cloud{gx, gy, v.z, perUnit, g.size, seed, 0.35f * user,
+                                           {g.colour[0], g.colour[1], g.colour[2]}});
+            } else if (flies.size() < kMaxFireflies + 64) {
+                const bool pool = g.shape == map_glows::Shape::Pool;
+                Fly f{gx, gy, v.z, g.size * perUnit, (pool ? 0.18f : 0.75f) * breath * user,
+                      {g.colour[0], g.colour[1], g.colour[2]}};
+                f.sharp = pool ? 0.15f : 0.4f;
+                f.halo = pool ? 0.6f : 1.6f;
+                flies.push_back(f);
+            }
+            ++drawn;
+        }
+        if (drawn && !mapGlowsLogged) LOG_INFO("hidden lights: the map file's drawn (%u in view)", drawn);
+        mapGlowsLogged = mapGlowsLogged || drawn > 0;
+    }
     // 0.23.3: the shader bounds it. 0.25.2: four fifths of 0.25's at 100 % ("too much and too dense" once the torch
     // has come up from its fade); 0.25.3: a little less again ("ещё чуточку"); 0.25.4: near half ("in the original
     // not so bright" - the game's torch lights nothing, its glow is baked into the ground).
@@ -403,6 +451,11 @@ bool Renderer::Impl::applyTorches() {
             ++used;
         }
     }
+    // 0.29: the maps' hidden lights, the nearest 24.
+    std::sort(glowLights.begin(), glowLights.end(),
+              [](const LightItem& a, const LightItem& b) { return a.view[2] < b.view[2]; });
+    for (size_t i = 0; i < glowLights.size() && i < 24 && lights.size() < kMaxLights; ++i)
+        lights.push_back(glowLights[i]);
     // 0.25: the lamps the map's makers placed, the nearest to the camera first, as many as the pass takes.
     if (layout && lampsWanted() && effects.lampsLight > 0) {
         const float lampStrength = 0.8f * float(std::clamp(effects.lampsLight, 0, 200)) / 100.0f;
@@ -430,7 +483,7 @@ bool Renderer::Impl::applyTorches() {
         }
     }
     if (lights.size() > kMaxLights) lights.resize(kMaxLights);
-    if ((flames.empty() && lights.empty() && flies.empty()) || !torchReady()) return true;
+    if ((flames.empty() && lights.empty() && flies.empty() && clouds.empty()) || !torchReady()) return true;
     if (!copySceneColor() || !copySceneDepth()) return false;
     const float k = float(upscale ? worldScale : scale);
     const float jx = upscale ? jitter[0] : 0.0f, jy = upscale ? jitter[1] : 0.0f;
@@ -527,8 +580,10 @@ bool Renderer::Impl::applyTorches() {
         c.sourceRect[0] = fx;
         c.sourceRect[1] = fy;
         c.sourceRect[2] = r;
+        c.sourceRect[3] = f.sharp;
         c.sourceClamp[1] = f.vz;
         c.twin[0] = f.bright;
+        c.twin[1] = f.halo;
         std::copy(f.colour, f.colour + 3, c.fogColor);
         const D3D12_RECT around = clipped(fx - 8.0f * r, fy - 8.0f * r, fx + 8.0f * r, fy + 8.0f * r, w, h);
         if (around.right <= around.left || around.bottom <= around.top) continue;
@@ -536,6 +591,25 @@ bool Renderer::Impl::applyTorches() {
                         &around))
             return false;
     }
+    if (!clouds.empty() && lightPipeline(dustPs, dustPipelines, "the towers' dust"))
+        for (const Cloud& d : clouds) {  // 0.29: each cloud of dust (a pass each, cut to it)
+            const float dx = d.gx * k + 0.5f + jx, dy = d.gy * k + 0.5f + jy, perUnit = d.perUnit * k;
+            const float reach = d.radius * perUnit * 1.3f + 4.0f;
+            c.sourceRect[0] = dx;
+            c.sourceRect[1] = dy;
+            c.sourceRect[2] = perUnit;
+            c.sourceRect[3] = d.radius;
+            c.sourceClamp[1] = d.vz;
+            c.sourceClamp[3] = d.seed;
+            c.uiPixels[3] = time;
+            c.twin[0] = d.bright;
+            std::copy(d.colour, d.colour + 3, c.fogColor);
+            const D3D12_RECT around = clipped(dx - reach, dy - reach, dx + reach, dy + reach, w, h);
+            if (around.right <= around.left || around.bottom <= around.top) continue;
+            if (!effectPass(dustPipelines[upscale ? 4 : code], dst, dstState, rtv, w, h, c, sceneColorSrv, true, kNoSrv,
+                            &around))
+                return false;
+        }
     return true;
 }
 
