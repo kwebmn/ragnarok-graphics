@@ -43,6 +43,7 @@ private:
     void marker(uint32_t m);  // sl::PCLMarker
     void startStats();         // frame generation came on
     void countStats();         // a frame with frame generation on
+    void reportStats();        // the line since the last one: every half a minute and when it goes off
     void noteMode(const char* what);
 
     bool started_ = false;

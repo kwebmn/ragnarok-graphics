@@ -405,6 +405,7 @@ void Dlss::beforePresent(const Generation& g) {
         o.mode = mode ? sl::DLSSGMode::eOn : sl::DLSSGMode::eOff;
         o.numFramesToGenerate = generationFrames_;
         o.flags = sl::DLSSGFlags::eRetainResourcesWhenOff;  // menus come and go: no stutter when it comes back
+        if (!mode && generationMode_ == 1) reportStats();
         r = slDLSSGSetOptions(kViewport, o);
         if (r != sl::Result::eOk) {
             failed(result("slDLSSGSetOptions", r));
@@ -421,8 +422,8 @@ void Dlss::beforePresent(const Generation& g) {
 }
 
 // What DLSS-G says about itself once it is on - a status other than OK names what is missing - and then every half
-// a minute how many frames it really showed for the game's frames: the log alone tells whether it works. Its count
-// covers the frames since the last question, so it is asked every frame and summed.
+// a minute, and when it goes off, how many frames it really showed for the game's frames: the log alone tells
+// whether it works. Its count covers the frames since the last question, so it is asked every frame and summed.
 void Dlss::startStats() {
     sl::DLSSGState state;
     if (slDLSSGGetState(kViewport, state, nullptr) != sl::Result::eOk) return;  // the count starts afresh
@@ -445,8 +446,12 @@ void Dlss::countStats() {
     sl::DLSSGState state;
     if (slDLSSGGetState(kViewport, state, nullptr) == sl::Result::eOk) statsShown_ += state.numFramesActuallyPresented;
     ++statsFrames_;
+    if (GetTickCount64() - statsStart_ >= 30000) reportStats();
+}
+
+void Dlss::reportStats() {
     const ULONGLONG now = GetTickCount64();
-    if (now - statsStart_ < 30000) return;
+    if (!statsFrames_ || now - statsStart_ < 2000) return;  // too short to say anything
     const double seconds = double(now - statsStart_) / 1000.0;
     LOG_INFO("DLSS frame generation: %u frames of the game in %.0f s (%.0f a second), %u shown with the generated "
              "ones (%.0f a second)",
@@ -457,6 +462,7 @@ void Dlss::countStats() {
 
 void Dlss::suspend() {
     if (!generationReady_ || generationMode_ != 1) return;
+    reportStats();
     sl::DLSSGOptions o;
     o.mode = sl::DLSSGMode::eOff;
     o.numFramesToGenerate = generationFrames_;
