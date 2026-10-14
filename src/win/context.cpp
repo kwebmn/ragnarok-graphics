@@ -154,7 +154,9 @@ void Context::flush() {
             c.shadow.gpuChanged();
         }
     } done{*this};
-    if (renderer->remix()) {  // part 4: the world goes back into world space with the camera of this frame
+    // Part 4: the world goes back into world space with the camera of this frame; 0.19: the modern water draws its
+    // waves and reflections in the world, with the same camera.
+    if (renderer->remix() || (config.effects.water && enhanced_)) {
         float view[12];
         const bool known = readGameCamera(view);
         renderer->setCamera(known, view);

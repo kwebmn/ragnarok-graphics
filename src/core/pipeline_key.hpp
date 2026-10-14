@@ -23,6 +23,7 @@ struct PipelineKey {
     bool alphaToCoverage = false;  // stage 4: alpha testing as coverage (several samples, no blending)
     bool layer = false;  // part 3 (DLSS): the interface layer - alpha kept for the composite, no depth
     bool glow = false;   // 0.18: a world draw that also writes the light it adds into the glow target (two targets)
+    bool water = false;  // 0.19: a cell of a map's water, drawn by the modern water's shaders
     bool operator==(const PipelineKey& o) const;
 };
 
@@ -39,7 +40,7 @@ std::string pipelineKeyLine(uint64_t v);
 // A key the renderer makes (0.4.1 and 0.4.2 reviews): only the packed fields, in resolveDrawSetup's forms - no Z test
 // means ALWAYS and no Z writes, no blending means ONE and ZERO, blend factors 1-11 (BOTH* resolved), a cull mode;
 // alpha to coverage only with several samples and no blending; the interface layer with one sample and no Z test;
-// the glow's second target never with the layer.
+// the glow's second target and the water never with the layer.
 // Damaged lines - two game instances appending at once - are skipped by parsePipelineKeys.
 bool validPipelineKey(uint64_t v);
 // The file's text: the header, then each key once, in increasing order.

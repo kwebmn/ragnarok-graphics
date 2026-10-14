@@ -30,6 +30,11 @@ cbuffer Params : register(b0) {
 };
 Texture2D tex0 : register(t0);
 Texture2D tex1 : register(t1);
+// 0.19, modern water: the picture and its depth as they were before the frame's first water (water_ps), and the
+// depth with several samples it is copied from (depth_copy_ms_ps). One table of three (kRootScene).
+Texture2D sceneColor : register(t2);
+Texture2D<float> sceneDepth : register(t3);
+Texture2DMS<float> depthMs : register(t4);
 SamplerState samp0 : register(s0);
 SamplerState samp1 : register(s1);
 
@@ -336,6 +341,158 @@ float4 glow_up_ps(PresentOut i) : SV_Target { return float4(glowTent(i.uv), 1.0)
 
 // Onto the picture, added.
 float4 glow_add_ps(PresentOut i) : SV_Target { return float4(glowTent(i.uv) * footprint, 1.0); }
+
+// 0.19, the depth the frame has so far, one sample per pixel, for the water: from a target of one sample (t3) or of
+// several (t4, the first sample).
+float depth_copy_ps(PresentOut i) : SV_Target { return sceneDepth.Load(int3(int2(i.pos.xy), 0)); }
+
+float depth_copy_ms_ps(PresentOut i) : SV_Target { return depthMs.Load(int2(i.pos.xy), 0); }
+
+// 0.19, modern water (core/water.hpp: the cells of a map's water). Its draws carry the game's camera: r0-r11 its
+// matrix from view to world (the rows: the view's x, y and z axes in the world, then its place), f0-farZ its
+// projection; sharpen is the time in seconds, footprint the waves, twinX the reflections, twinY the clarity (0-1).
+// uaRO's world has its up along -y; a cell is ten units.
+struct WaterIn {
+    float4 pos : SV_Position;
+    float4 diffuse : COLOR0;
+    float2 uv : TEXCOORD0;
+    float3 world : TEXCOORD1;
+    float3 view : TEXCOORD2;
+};
+
+// The game's projection backwards (ProjectVertex: x / z * f0 + cx, 1 / z its RHW), then into the world.
+WaterIn water_vs(VsIn i) {
+    WaterIn o;
+    PsIn d = draw_vs(i);
+    o.pos = d.pos;
+    o.diffuse = i.diffuse;
+    o.uv = i.uv0;
+    float z = i.pos.w > 0.0 ? 1.0 / i.pos.w : nearZ;
+    o.view = float3((i.pos.x - cx) * z / f0, (i.pos.y - cy) * z / f1, z);
+    o.world = o.view.x * float3(r0, r1, r2) + o.view.y * float3(r3, r4, r5) + o.view.z * float3(r6, r7, r8) +
+              float3(r9, r10, r11);
+    return o;
+}
+
+float viewDepth(float d) { return farZ * nearZ / (farZ - d * (farZ - nearZ)); }
+
+// The slope of a few travelling waves at a point of the water (world units): long swells and short ripples, each
+// its own way, so that the pattern never repeats on screen.
+float2 waveSlope(float2 p, float t) {
+    const float2 dir[5] = {float2(0.96, 0.28), float2(-0.51, 0.86), float2(0.2, -0.98), float2(-0.93, -0.37),
+                           float2(0.66, 0.75)};
+    const float len[5] = {23.0, 13.0, 7.3, 4.1, 2.3};
+    const float speed[5] = {2.1, 1.6, 1.2, 0.9, 0.7};
+    const float amp[5] = {0.30, 0.18, 0.08, 0.04, 0.02};
+    float2 g = float2(0.0, 0.0);
+    [unroll] for (int k = 0; k < 5; ++k) {
+        float w = 6.2831853 / len[k];
+        g += dir[k] * (amp[k] * w * cos(w * (dot(dir[k], p) - speed[k] * t)));
+    }
+    return g;
+}
+
+float hash12(float2 p) {
+    float3 q = frac(float3(p.xyx) * 0.1031);
+    q += dot(q, q.yzx + 33.33);
+    return frac((q.x + q.y) * q.z);
+}
+
+float valueNoise(float2 p) {
+    float2 i = floor(p);
+    float2 f = frac(p);
+    float2 u = f * f * (3.0 - 2.0 * f);
+    float bottom = lerp(hash12(i), hash12(i + float2(1, 0)), u.x);
+    float top = lerp(hash12(i + float2(0, 1)), hash12(i + float2(1, 1)), u.x);
+    return lerp(bottom, top, u.y);
+}
+
+// A target pixel for a point of the game's view space; false when it is off the target or behind the camera.
+bool viewToPixel(float3 q, out float2 tp) {
+    tp = float2(0.0, 0.0);
+    if (q.z <= nearZ) return false;
+    tp = float2(q.x / q.z * f0 + cx, q.y / q.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
+    return all(tp >= 0.0) && all(tp < targetSize);
+}
+
+// What the reflected ray meets first in the picture before the water (screen-space reflection), and how sure that
+// is: 0 for the sky (the ray left the picture or met nothing).
+float3 waterReflection(float3 p, float3 r, out float weight) {
+    weight = 0.0;
+    float dist = 2.0;
+    float2 tp;
+    [loop] for (int k = 0; k < 28; ++k) {
+        float3 q = p + r * dist;
+        if (!viewToPixel(q, tp)) break;
+        float behind = q.z - viewDepth(sceneDepth.Load(int3(int2(tp), 0)));
+        if (behind > 0.0 && behind < 3.0 + dist * 0.12) {
+            float2 edge = min(tp, targetSize - tp) / (0.08 * targetSize);
+            weight = saturate(min(edge.x, edge.y)) * saturate(1.5 - dist / 400.0);
+            return sceneColor.Load(int3(int2(tp), 0)).rgb;
+        }
+        dist *= 1.22;
+    }
+    return float3(0.0, 0.0, 0.0);
+}
+
+float4 water(WaterIn i) {
+    int2 px = int2(i.pos.xy);
+    float t = sharpen;
+    float waves = footprint;
+    float2 slope = waveSlope(i.world.xz, t) * (0.15 + 1.6 * waves);
+    float3 n = normalize(float3(-slope.x, -1.0, -slope.y));  // up is -y
+    float3 eye = float3(r9, r10, r11);
+    float3 toEye = normalize(eye - i.world);
+    float ndv = saturate(dot(n, toEye));
+    float3 nv = float3(dot(n, float3(r0, r1, r2)), dot(n, float3(r3, r4, r5)), dot(n, float3(r6, r7, r8)));
+    float waterZ = i.view.z;
+    float thick = max(viewDepth(sceneDepth.Load(int3(px, 0))) - waterZ, 0.0);
+    // The bed through the waves - shifted by how far the waves tilt the water from flat (its up in the view:
+    // -y of the world); where the shifted pixel is in front of the water, straight through.
+    float2 tilt = nv.xy + float2(r1, r4);
+    float2 shift = tilt * (36.0 * scale) * saturate(thick / 6.0) * (0.2 + waves);
+    int2 rp = clamp(int2(i.pos.xy + shift), int2(0, 0), int2(targetSize) - 1);
+    float bedZ = viewDepth(sceneDepth.Load(int3(rp, 0)));
+    if (bedZ < waterZ) {
+        rp = px;
+        bedZ = waterZ + thick;
+    }
+    float3 bed = sceneColor.Load(int3(rp, 0)).rgb;
+    float path = max(bedZ - waterZ, 0.0);
+    // The game's own water picture gives the water its colour.
+    float3 tint = tex0.Sample(samp0, i.uv + slope * 0.04).rgb * i.diffuse.rgb;
+    float absorb = 1.0 - exp(-path * lerp(0.22, 0.012, twinY));
+    float3 body = lerp(bed * lerp(float3(1.0, 1.0, 1.0), tint * 1.3, 0.3), tint * 0.45, absorb);
+    body = lerp(body, tint, 0.1);
+    // The place's light, from the bed's brightness: night, dungeons.
+    float light = clamp(dot(bed, float3(0.299, 0.587, 0.114)) * 2.2, 0.25, 1.0);
+    float3 sky = (fogEnable != 0 ? fogColor.rgb : float3(0.62, 0.74, 0.88)) * light;
+    float hit;
+    float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), hit);
+    float3 reflection = lerp(sky, seen, hit);
+    float f0r = lerp(0.02, 0.3, twinX);
+    float fresnel = f0r + (1.0 - f0r) * pow(1.0 - ndv, 5.0);
+    float3 c = lerp(body, reflection, fresnel);
+    // The sun's glints.
+    float3 h = normalize(normalize(float3(-0.45, -0.8, 0.4)) + toEye);
+    float ndh = saturate(dot(n, h));
+    c += (pow(ndh, 600.0) * 3.0 + pow(ndh, 60.0) * 0.12) * light * (0.25 + 0.75 * waves);
+    // Foam along the shore, broken by noise that drifts with the waves.
+    float foam = saturate(1.0 - thick / 4.0) *
+                 smoothstep(0.42, 0.78, valueNoise(i.world.xz * 0.35 + t * 0.3) * 0.6 +
+                                             valueNoise(i.world.xz * 0.9 - t * 0.5) * 0.4);
+    c = lerp(c, float3(0.92, 0.95, 0.97) * light, foam * 0.7);
+    return float4(c, saturate(thick / 0.8));  // the shore line fades in, no hard edge
+}
+
+float4 water_ps(WaterIn i) : SV_Target { return water(i); }
+
+GlowOut water_glow_ps(WaterIn i) {
+    GlowOut o;
+    o.c = water(i);
+    o.g = float4(0.0, 0.0, 0.0, o.c.a);  // the water covers the light under it
+    return o;
+}
 )HLSL";
 }
 

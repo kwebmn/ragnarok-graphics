@@ -678,6 +678,25 @@ const Entry kTexts[] = {
     {"How far the glow spreads around an effect: less is a tight glow, more a wide haze.",
      "Як далеко світіння розходиться навколо ефекту: менше — щільне сяйво, більше — широкий серпанок.",
      "Как далеко свечение расходится вокруг эффекта: меньше — плотное сияние, больше — широкая дымка."},
+    {"Modern water", "Сучасна вода", "Современная вода"},
+    {"The maps' water drawn anew: waves, reflections of the shore, trees and characters, the sun's glints, the bed "
+     "seen through the water and darker where it is deep, foam along the shore. Lava stays as it is.",
+     "Вода на картах малюється заново: хвилі, відображення берега, дерев і персонажів, відблиски сонця, дно крізь "
+     "воду, темніше там, де глибоко, піна вздовж берега. Лава лишається як є.",
+     "Вода на картах рисуется заново: волны, отражения берега, деревьев и персонажей, блики солнца, дно сквозь воду, "
+     "темнее там, где глубоко, пена вдоль берега. Лава остаётся как есть."},
+    {"Waves", "Хвилі", "Волны"},
+    {"How rough the water is: 0 % a still mirror, 100 % wind-driven ripples.",
+     "Наскільки неспокійна вода: 0 % — гладке дзеркало, 100 % — брижі від вітру.",
+     "Насколько неспокойна вода: 0 % — гладкое зеркало, 100 % — рябь от ветра."},
+    {"Reflections", "Відображення", "Отражения"},
+    {"How much the water reflects the sky and what stands at its edge.",
+     "Наскільки вода відображає небо і те, що стоїть на її березі.",
+     "Насколько вода отражает небо и то, что стоит у её берега."},
+    {"Clarity", "Прозорість", "Прозрачность"},
+    {"How deep one sees into the water: less is murky, more is clear to the bottom.",
+     "Як глибоко видно у воду: менше — каламутна, більше — прозора до дна.",
+     "Как глубоко видно в воду: меньше — мутная, больше — прозрачная до дна."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

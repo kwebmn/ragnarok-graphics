@@ -50,10 +50,10 @@ TEST(pipeline_key_file_skips_keys_the_renderer_cannot_make) {
     good.cull = CULL_NONE;
     good.srcBlend = BLEND_ONE;
     good.dstBlend = BLEND_ZERO;
-    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 23) +
+    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 24) +
                              "ffffffffffffffff\n" + pipelineKeyLine(packPipelineKey(bad)) +
                              pipelineKeyLine(packPipelineKey(good));
-    // good with bit 23 (only the stray-bits check rejects it), all bits, blend 12: skipped
+    // good with bit 24 (only the stray-bits check rejects it), all bits, blend 12: skipped
     const std::vector<uint64_t> keys = parsePipelineKeys(text);
     CHECK_EQ(keys.size(), size_t(1));
     CHECK(keys.size() == 1 && keys[0] == packPipelineKey(good));
@@ -132,7 +132,7 @@ TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
     CHECK(rejected(plain, [](PipelineKey& k) { k.zWrite = true; }));                 // no Z test: no Z writes
     CHECK(rejected(plain, [](PipelineKey& k) { k.srcBlend = BLEND_SRCALPHA; }));     // no blending: ONE and ZERO
     CHECK(rejected(plain, [](PipelineKey& k) { k.dstBlend = BLEND_INVSRCALPHA; }));
-    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 23));  // a bit past the packed fields
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 24));  // a bit past the packed fields
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 63));
 }
 
@@ -161,5 +161,30 @@ TEST(pipeline_key_glow_is_a_world_draw_with_two_targets) {
     layer.layer = true;
     CHECK(validPipelineKey(packPipelineKey(layer)));
     layer.glow = true;
+    CHECK(!validPipelineKey(packPipelineKey(layer)));
+}
+
+TEST(pipeline_key_water_is_a_world_draw) {
+    // 0.19: a cell of water, with or without the glow's second target; never in the interface layer.
+    PipelineKey k;
+    k.zEnable = true;
+    k.zFunc = CMP_LESSEQUAL;
+    k.cull = CULL_NONE;
+    k.blend = true;
+    k.srcBlend = BLEND_SRCALPHA;
+    k.dstBlend = BLEND_INVSRCALPHA;
+    k.samples = 4;
+    k.water = true;
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
+    k.glow = true;
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    PipelineKey layer;
+    layer.zFunc = CMP_ALWAYS;
+    layer.cull = CULL_NONE;
+    layer.srcBlend = BLEND_ONE;
+    layer.dstBlend = BLEND_ZERO;
+    layer.layer = true;
+    layer.water = true;
     CHECK(!validPipelineKey(packPipelineKey(layer)));
 }

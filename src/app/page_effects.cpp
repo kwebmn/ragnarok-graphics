@@ -10,9 +10,20 @@ namespace {
 
 using namespace settings;
 
-constexpr int kGlow = 1001;
-constexpr int kStrength = 1010;  // its number is 1011
-constexpr int kSize = 1020;      // its number is 1021
+// Each effect: its box and the sliders under it. Ids: the box 1001 + 100 * effect, a slider 1010 + 100 * effect +
+// 10 * its place (its number one more).
+struct Effect {
+    const char* box;
+    const char* sliders[3];
+};
+const Effect kEffects[] = {
+    {"effects.glow", {"effects.glow_strength", "effects.glow_size", nullptr}},
+    {"effects.water", {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}},
+};
+constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
+
+int boxId(int e) { return 1001 + 100 * e; }
+int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
 
 const IniSetting& setting(const char* key) { return *findSetting(key); }
 
@@ -26,25 +37,32 @@ public:
         Model& m = host_.model();
         p.heading(t(Text::PageEffects));
         p.note(t(Text::FxIntro), Tone::Normal);
-        p.gap();
-        const bool glow = m.token(setting("effects.glow")) == "1";
-        p.check(kGlow, t(Text::FxGlow), glow, t(Text::FxGlowHint));
-        slider(p, kStrength, "effects.glow_strength", glow);
-        slider(p, kSize, "effects.glow_size", glow);
+        for (int e = 0; e < kEffectCount; ++e) {
+            p.gap();
+            const IniSetting& box = setting(kEffects[e].box);
+            const bool on = m.token(box) == "1";
+            p.check(boxId(e), t(box.label), on, t(box.hint));
+            for (int k = 0; k < 3 && kEffects[e].sliders[k]; ++k) slider(p, sliderId(e, k), kEffects[e].sliders[k], on);
+        }
         p.gap();
         p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
     }
 
     void command(int id, int code) override {
-        if (id != kGlow || code != BN_CLICKED) return;
-        const bool checked = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
-        set(setting("effects.glow"), checked ? "1" : "0", true);
-        host_.rebuild();  // the sliders follow the box
+        if (code != BN_CLICKED) return;
+        for (int e = 0; e < kEffectCount; ++e) {
+            if (id != boxId(e)) continue;
+            const bool checked = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
+            set(setting(kEffects[e].box), checked ? "1" : "0", true);
+            host_.rebuild();  // the sliders follow the box
+            return;
+        }
     }
 
     void scroll(int id, int code, int pos) override {
-        if (id != kStrength && id != kSize) return;
-        const IniSetting& s = setting(id == kStrength ? "effects.glow_strength" : "effects.glow_size");
+        const char* key = sliderKey(id);
+        if (!key) return;
+        const IniSetting& s = setting(key);
         const int step = std::max(s.step, 1);
         const int v = std::clamp((pos + step / 2) / step * step, s.min, s.max);
         if (v != pos) SendMessageW(GetDlgItem(host_.window(), id), TBM_SETPOS, TRUE, v);
@@ -54,6 +72,13 @@ public:
     }
 
 private:
+    static const char* sliderKey(int id) {
+        for (int e = 0; e < kEffectCount; ++e)
+            for (int k = 0; k < 3 && kEffects[e].sliders[k]; ++k)
+                if (id == sliderId(e, k)) return kEffects[e].sliders[k];
+        return nullptr;
+    }
+
     void slider(Panel& p, int id, const char* key, bool enabled) {
         const IniSetting& s = setting(key);
         const std::string token = host_.model().token(s);

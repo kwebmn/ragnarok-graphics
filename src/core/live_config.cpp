@@ -95,6 +95,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("glow_strength", std::to_string(re.glowStrength), std::to_string(fe.glowStrength)));
     if (fe.glowSize != re.glowSize)
         u.applied.push_back(change("glow_size", std::to_string(re.glowSize), std::to_string(fe.glowSize)));
+    if (fe.water != re.water) u.applied.push_back(change("water", flag(re.water), flag(fe.water)));
+    const std::pair<const char*, std::pair<int, int>> water[] = {
+        {"water_waves", {re.waterWaves, fe.waterWaves}},
+        {"water_reflections", {re.waterReflections, fe.waterReflections}},
+        {"water_clarity", {re.waterClarity, fe.waterClarity}}};
+    for (const auto& k : water)
+        if (k.second.first != k.second.second)
+            u.applied.push_back(change(k.first, std::to_string(k.second.first), std::to_string(k.second.second)));
     n.effects = fe;
     if (file.logLevel != running.logLevel) {
         u.applied.push_back(change("log", logToken(running.logLevel), logToken(file.logLevel)));

@@ -223,3 +223,19 @@ TEST(config_effects) {
     CHECK(bad == d);  // what does not parse keeps the default
     CHECK(parseConfig("[quality]\nglow = 1\n").effects == d);  // outside its section
 }
+
+TEST(config_effects_water) {
+    // 0.19: the modern water, off unless asked for; its waves, reflections and clarity 0-100 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(!d.water);
+    CHECK_EQ(d.waterWaves, 50);
+    CHECK_EQ(d.waterReflections, 50);
+    CHECK_EQ(d.waterClarity, 50);
+    const EffectSettings e =
+        parseConfig("[effects]\nwater = 1\nwater_waves = 0\nwater_reflections = 100\nwater_clarity = 30\n").effects;
+    CHECK(e.water);
+    CHECK_EQ(e.waterWaves, 0);
+    CHECK_EQ(e.waterReflections, 100);
+    CHECK_EQ(e.waterClarity, 30);
+    CHECK(parseConfig("[effects]\nwater_waves = 101\nwater_clarity = x\n").effects == d);
+}

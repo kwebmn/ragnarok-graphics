@@ -233,6 +233,10 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.glow ? 1 : 0);
     w.i32(e.glowStrength);
     w.i32(e.glowSize);
+    w.u8(e.water ? 1 : 0);
+    w.i32(e.waterWaves);
+    w.i32(e.waterReflections);
+    w.i32(e.waterClarity);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

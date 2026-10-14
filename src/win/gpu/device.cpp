@@ -282,6 +282,7 @@ void Renderer::Impl::bindPass(int p) {
         transition(layer, layerState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     } else {
         transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        transition(depth, depthState, D3D12_RESOURCE_STATE_DEPTH_WRITE);  // 0.19: read by the water's copy
     }
     if (withGlow) transition(glow, glowState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     if (pass == p) return;
@@ -324,8 +325,10 @@ void Renderer::Impl::placeSamples(bool center) {
 void Renderer::Impl::clear(const ClearCmd& c) {
     // 0.18: the picture cleared - the light of a world no longer there is not added to the next one.
     if ((c.flags & 1) && c.rect.left <= 0 && c.rect.top <= 0 && c.rect.right >= gameWidth &&
-        c.rect.bottom >= gameHeight)
+        c.rect.bottom >= gameHeight) {
         dropGlow();
+        waterCopied = false;  // 0.19: a new picture - its water copies what is under it anew
+    }
     if (upscale) {  // part 3: the world and its depth; a colour clear empties the interface layer too
         startFrame();
         const Rect w = scaleRect(c.rect, worldScale);
@@ -526,7 +529,8 @@ bool Renderer::Impl::createTarget(int w, int h, UINT n, ID3D12Resource*& rt, ID3
     D3D12_CLEAR_VALUE farthest{};  // not "far": windef.h defines far as an empty macro
     farthest.Format = DXGI_FORMAT_D32_FLOAT;
     farthest.DepthStencil.Depth = 1.0f;
-    ds = createTexture2D(device, w, h, 1, DXGI_FORMAT_D32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
+    // 0.19: typeless - D32 to draw with, R32 for the modern water to read (makeDepthViews).
+    ds = createTexture2D(device, w, h, 1, DXGI_FORMAT_R32_TYPELESS, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
                          D3D12_RESOURCE_STATE_DEPTH_WRITE, &farthest, n);
     if (rt && ds) return true;
     releaseCom(rt);
@@ -973,6 +977,15 @@ void Renderer::Impl::destroy() {
     releaseCom(glowDownPs);
     releaseCom(glowUpPs);
     releaseCom(glowAddPs);
+    releaseCom(sceneColor);  // 0.19
+    releaseCom(sceneDepth);
+    releaseCom(depthCopyPipeline);
+    releaseCom(depthCopyMsPipeline);
+    releaseCom(waterVs);
+    releaseCom(waterPs);
+    releaseCom(waterGlowPs);
+    releaseCom(depthCopyPs);
+    releaseCom(depthCopyMsPs);
     releaseUpscaleTargets();
     releaseCom(root);
     releaseCom(drawVs);
@@ -1113,6 +1126,12 @@ void Renderer::setCamera(bool valid, const float view[12]) {
     Impl& m = *impl_;
     m.cameraValid = valid;
     if (valid) std::memcpy(m.camera, view, sizeof m.camera);
+    float v4[16], inv[16];  // 0.19: view -> world for the water
+    camera::affine4(m.camera, v4);
+    m.viewToWorldValid = valid && camera::inverse4(v4, inv);
+    if (m.viewToWorldValid)
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 3; ++c) m.viewToWorld[3 * r + c] = inv[4 * r + c];
 }
 
 ID3D12Device* Renderer::device() const { return impl_->device; }
@@ -1161,9 +1180,13 @@ void Renderer::setEffects(const EffectSettings& e) {
     Impl& m = *impl_;
     if (e == m.effects) return;
     const bool was = m.glowWanted();
+    const bool water = m.waterWanted();
     m.effects = e;
-    LOG_INFO("effects: glow %s, strength %d%%, size %d%%", e.glow ? "on" : "off", e.glowStrength, e.glowSize);
+    LOG_INFO("effects: glow %s, strength %d%%, size %d%%; water %s, waves %d%%, reflections %d%%, clarity %d%%",
+             e.glow ? "on" : "off", e.glowStrength, e.glowSize, e.water ? "on" : "off", e.waterWaves,
+             e.waterReflections, e.waterClarity);
     if (was && !m.glowWanted()) m.releaseGlow();  // its video memory back
+    if (water && !m.waterWanted()) m.releaseScene();
 }
 
 void Renderer::preparePipelines(const std::string& file) {
@@ -1311,6 +1334,9 @@ bool Renderer::create(std::string& error) {
     m.glowSrv = m.allocSrv();  // 0.18: the glow, resolved, and its chain
     m.glowResolvedSrv = m.allocSrv();
     for (UINT& srv : m.glowChainSrv) srv = m.allocSrv();
+    m.depthTargetSrv = m.allocSrv();  // 0.19: the target's depth, the picture and depth under the water
+    m.sceneColorSrv = m.allocSrv();
+    m.sceneDepthSrv = m.allocSrv();
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).
@@ -1349,6 +1375,7 @@ bool Renderer::setTarget(int width, int height) {
     releaseCom(m.gameSized);
     m.releaseUpscaleTargets();
     m.dropGlow();
+    m.waterCopied = false;
     m.upscale = false;
     m.samples = 1;  // until the first present, like the scale: the calibration sees DX7's picture
     if (!m.createTarget(width, height, 1, m.target, m.depth)) return fail();
@@ -1361,7 +1388,7 @@ bool Renderer::setTarget(int width, int height) {
     m.targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     m.gameState = D3D12_RESOURCE_STATE_COPY_DEST;
     m.device->CreateRenderTargetView(m.target, nullptr, m.rtvHandle(kRtvTarget));
-    m.device->CreateDepthStencilView(m.depth, nullptr, m.dsvHandle());
+    m.makeDepthViews(1);
     m.device->CreateShaderResourceView(m.target, nullptr, m.cpuSrvHandle(m.targetSrv));
     m.device->CreateRenderTargetView(m.gameSized, nullptr, m.rtvHandle(kRtvGame));
     m.device->CreateShaderResourceView(m.gameSized, nullptr, m.cpuSrvHandle(m.gameSrv));
@@ -1424,6 +1451,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
         return drop();
     m.waitIdle();
     m.dropGlow();  // 0.18: drawn for the old target
+    m.waterCopied = false;
     releaseCom(m.target);
     releaseCom(m.depth);
     releaseCom(m.resolved);
@@ -1435,7 +1463,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
     const UINT was = m.samples;
     m.samples = n;
     m.device->CreateRenderTargetView(m.target, nullptr, m.rtvHandle(kRtvTarget));
-    m.device->CreateDepthStencilView(m.depth, nullptr, m.dsvHandle());
+    m.makeDepthViews(n);
     m.device->CreateShaderResourceView(n > 1 ? m.resolved : m.target, nullptr, m.cpuSrvHandle(m.targetSrv));
     m.width = targetWidth;
     m.height = targetHeight;
@@ -1742,6 +1770,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (m.upscaler && m.upscaler->generates()) m.upscaler->afterPresent();  // every frame: the next frame's token
     m.renderStarted = false;
     m.upscaledNow = false;
+    m.waterCopied = false;  // 0.19: the next frame's water copies what is under it anew
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;
         m.nextJitter();

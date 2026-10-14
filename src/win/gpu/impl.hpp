@@ -58,7 +58,8 @@ constexpr UINT kRtvGlow = 10;      // 0.18: the light the world's additive draws
 constexpr UINT kRtvUpscaled = 11;  // the upscaler's output, for the glow to be added to it
 constexpr int kGlowLevels = 8;     // the glow's chain of smaller copies, the first half the world's size
 constexpr UINT kRtvGlowChain = 12;
-constexpr UINT kRtvCount = kRtvGlowChain + kGlowLevels;
+constexpr UINT kRtvSceneDepth = kRtvGlowChain + kGlowLevels;  // 0.19: the depth before the frame's first water
+constexpr UINT kRtvCount = kRtvSceneDepth + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -68,6 +69,7 @@ enum Pass { kPassNone = 0, kPassTarget, kPassWorld, kPassLayer, kPassTargetGlow,
 constexpr UINT kRootConstants = 0;
 constexpr UINT kRootTextures = 1;
 constexpr UINT kRootSamplers = 2;
+constexpr UINT kRootScene = 3;  // 0.19: t2-t4, the picture and its depth before the frame's first water
 
 // Root constants; must match cbuffer Params in shaders.cpp.
 struct Constants {
@@ -245,6 +247,30 @@ struct Renderer::Impl {
     ID3D12PipelineState* glowDownPipeline = nullptr;
     ID3D12PipelineState* glowUpPipeline = nullptr;
     ID3D12PipelineState* glowAddPipelines[5] = {};  // onto the target of 1, 2, 4, 8 samples; onto the upscaled world
+    // 0.19, modern water (water.cpp): the frame's picture and depth as they were before its first cell of water -
+    // the map, its models and the characters are drawn by then - for the water's own shader.
+    D3D12_RESOURCE_STATES depthState = D3D12_RESOURCE_STATE_DEPTH_WRITE;  // the target's depth
+    UINT depthTargetSrv = 0;               // ... read as R32 (with several samples a multisample view)
+    ID3D12Resource* sceneColor = nullptr;  // B8G8R8A8, the world's size, one sample
+    ID3D12Resource* sceneDepth = nullptr;  // R32 float: the game's depth
+    D3D12_RESOURCE_STATES sceneColorState = D3D12_RESOURCE_STATE_COPY_DEST;
+    D3D12_RESOURCE_STATES sceneDepthState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT sceneColorSrv = 0, sceneDepthSrv = 0;
+    int sceneWidth = 0, sceneHeight = 0;
+    bool sceneFailed = false;  // not made at this size: the water stays the game's
+    bool waterCopied = false;  // this frame's copy is made, or could not be
+    bool waterReady = false;   // ... and the water is drawn from it
+    float viewToWorld[12] = {};  // the camera backwards: the view's x, y and z axes in the world, then its place
+    bool viewToWorldValid = false;
+    ID3DBlob* waterVs = nullptr;
+    ID3DBlob* waterPs = nullptr;
+    ID3DBlob* waterGlowPs = nullptr;
+    ID3DBlob* depthCopyPs = nullptr;
+    ID3DBlob* depthCopyMsPs = nullptr;
+    ID3D12PipelineState* depthCopyPipeline = nullptr;
+    ID3D12PipelineState* depthCopyMsPipeline = nullptr;
+    LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
+    uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
     // GPU time (0.10.4): timestamps around every list and the upscale, read when the slot comes round again, and a
     // log line every half a minute - how much of each frame the card spends on the picture, and DLSS's part of it.
@@ -375,10 +401,11 @@ struct Renderer::Impl {
     // aniso: the anisotropy of the pair's samplers, 0 for interface draws and copies (stage 4).
     D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const StageSetup& s0, const StageSetup& s1, int aniso);
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
-    // Before samplerTable and textureTable; false: lost.
-    bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso);
+    // Before samplerTable and textureTable (and sceneTable: `descriptors` 5); false: lost.
+    bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2);
+    D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4);  // 0.19, kRootScene
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
-                                     bool toGlow = false);
+                                     bool toGlow = false, bool water = false);
     bool createUpscalePipelines();  // the motion pass and the layer composite
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp
@@ -397,6 +424,14 @@ struct Renderer::Impl {
                  int dstH, UINT dstSamples, bool upscaledFormat);
     bool addGlowToTarget();  // without DLSS: before the interface, a present or a read of the picture
     bool createGlowPipelines();
+    // water.cpp (0.19)
+    bool waterWanted() const { return effects.water; }
+    // Before the frame's first cell of water: its picture and depth so far copied; false (and the water the game's)
+    // when the camera is not known or the copies cannot be made. Once a frame (waterCopied).
+    bool copyScene();
+    void releaseScene();
+    void makeDepthViews(UINT n);  // the target's depth: its D32 view and its R32 one
+    float waterTime();            // seconds since the first water
     ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
     // One full-screen pass of the glow: src (sampled linearly, clamped) into dst; blendFactor with glow_up_ps.
     bool glowPass(ID3D12PipelineState* pso, ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv,

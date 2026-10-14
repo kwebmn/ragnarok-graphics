@@ -77,6 +77,8 @@ enum class Text : uint16_t {
     AiIcons, AiIconsHint, AiCacheColIcons, AiUiPieces, AiUiPiecesHint, AiPlayers, AiPlayersHint, AiNpcs, AiNpcsHint,
     AiItems, AiItemsHint,
     PageEffects, FxIntro, FxGlow, FxGlowHint, FxGlowStrength, FxGlowStrengthHint, FxGlowSize, FxGlowSizeHint,
+    FxWater, FxWaterHint, FxWaterWaves, FxWaterWavesHint, FxWaterReflections, FxWaterReflectionsHint, FxWaterClarity,
+    FxWaterClarityHint,
     Count
 };
 

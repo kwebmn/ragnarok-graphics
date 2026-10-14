@@ -5,8 +5,10 @@
 
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
+#include "core/game_camera.hpp"
 #include "core/scale.hpp"
 #include "core/twin_grid.hpp"
+#include "core/water.hpp"
 #include "win/gpu/ai_textures.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -90,7 +92,19 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool adds = !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE;
     if (adds && !glowActive && glowWanted()) startGlow();
     const bool toGlow = !s.ui && glowActive;
-    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow);
+    // 0.19, modern water: a cell of a map's water (core/water.hpp) is drawn by its own shader, from the picture and
+    // the depth the frame had before its first water (copyScene); without them, as the game draws it.
+    bool water = false;
+    if (!s.ui && waterWanted() && d.fvf == d3d7::FVF_TL1 && d.vertexCount == 4 && s.blend &&
+        s.srcBlend == d3d7::BLEND_SRCALPHA && s.dstBlend == d3d7::BLEND_INVSRCALPHA) {
+        const std::vector<uint8_t>& v = rec.vertexBytes();
+        const size_t stride = FrameRecord::stride(d.fvf);
+        water = d.vertexOffset + 4 * stride <= v.size() &&
+                water::isWaterQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
+                                   d.primitive == d3d7::PT_TRIANGLESTRIP) &&
+                copyScene();
+    }
+    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water);
     if (!pso) return;
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
@@ -105,7 +119,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
-    if (!makeRoom(sampled[0], sampled[1], aniso)) return;
+    if (!makeRoom(sampled[0], sampled[1], aniso, water ? 5 : 2)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
@@ -174,6 +188,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
         boundSamplers = samplers.ptr;
     }
+    if (water) {  // the picture and the depth under the water (t2, t3)
+        transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
+        if (!waterCells++) LOG_INFO("water: the map's water found, drawn anew");
+    }
     Constants c{};
     c.targetSize[0] = float(toWorld ? renderWidth : width);
     c.targetSize[1] = float(toWorld ? renderHeight : height);
@@ -210,6 +230,16 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         uiPixels(rec, d, c.uiPixels);
     }
     c.scale = float(toWorld ? worldScale : scale);
+    if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
+        std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        c.sharpen = waterTime();
+        c.footprint = float(effects.waterWaves) / 100.0f;
+        c.twin[0] = float(effects.waterReflections) / 100.0f;
+        c.twin[1] = float(effects.waterClarity) / 100.0f;
+    }
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
                                                                        : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

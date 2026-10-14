@@ -314,6 +314,10 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.glow = rd.u8() != 0;
             e.glowStrength = rd.i32();
             e.glowSize = rd.i32();
+            e.water = rd.u8() != 0;
+            e.waterWaves = rd.i32();
+            e.waterReflections = rd.i32();
+            e.waterClarity = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

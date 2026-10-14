@@ -89,3 +89,15 @@ TEST(live_config_effects_apply_now) {
     CHECK(u.applied[2] == "glow_size 50 -> 30");
     for (const char* k : {"effects.glow", "effects.glow_strength", "effects.glow_size"}) CHECK(appliesNow(k));
 }
+
+TEST(live_config_water_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nwater = 1\nwater_clarity = 80\n"));
+    CHECK(u.waiting.empty());
+    CHECK(u.next.effects.water);
+    CHECK_EQ(u.next.effects.waterClarity, 80);
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "water 0 -> 1");
+    CHECK(u.applied[1] == "water_clarity 50 -> 80");
+    for (const char* k : {"effects.water", "effects.water_waves", "effects.water_reflections", "effects.water_clarity"})
+        CHECK(appliesNow(k));
+}

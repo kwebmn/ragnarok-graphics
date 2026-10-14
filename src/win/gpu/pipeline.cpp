@@ -84,12 +84,25 @@ bool Renderer::Impl::createPipelines(std::string& error) {
         !compile(compileFn, "present_vs", "vs_5_0", presentVs, error) ||
         !compile(compileFn, "present_ps", "ps_5_0", presentPs, error) ||
         !compile(compileFn, "motion_ps", "ps_5_0", motionPs, error) ||
-        !compile(compileFn, "copy_ps", "ps_5_0", copyPs, error) ||
-        !compile(compileFn, "draw_glow_ps", "ps_5_0", drawGlowPs, error) ||
-        !compile(compileFn, "glow_down_ps", "ps_5_0", glowDownPs, error) ||
-        !compile(compileFn, "glow_up_ps", "ps_5_0", glowUpPs, error) ||
-        !compile(compileFn, "glow_add_ps", "ps_5_0", glowAddPs, error))
+        !compile(compileFn, "copy_ps", "ps_5_0", copyPs, error))
         return false;
+    // 0.18, 0.19: the effects' shaders - one that does not compile leaves its effect off, the rest draws on.
+    const struct {
+        const char* entry;
+        const char* profile;
+        ID3DBlob** blob;
+    } effects[] = {{"draw_glow_ps", "ps_5_0", &drawGlowPs},  {"glow_down_ps", "ps_5_0", &glowDownPs},
+                   {"glow_up_ps", "ps_5_0", &glowUpPs},      {"glow_add_ps", "ps_5_0", &glowAddPs},
+                   {"water_vs", "vs_5_0", &waterVs},         {"water_ps", "ps_5_0", &waterPs},
+                   {"water_glow_ps", "ps_5_0", &waterGlowPs}, {"depth_copy_ps", "ps_5_0", &depthCopyPs},
+                   {"depth_copy_ms_ps", "ps_5_0", &depthCopyMsPs}};
+    for (const auto& e : effects) {
+        std::string why;
+        if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {
+            *e.blob = nullptr;
+            LOG_ERROR("%s: its effect stays off", why.c_str());
+        }
+    }
 
     D3D12_DESCRIPTOR_RANGE srvRange{};
     srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -99,7 +112,12 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     samplerRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
     samplerRange.NumDescriptors = 2;
     samplerRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-    D3D12_ROOT_PARAMETER params[3] = {};
+    D3D12_DESCRIPTOR_RANGE sceneRange{};  // 0.19: the water's t2-t4
+    sceneRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    sceneRange.NumDescriptors = 3;
+    sceneRange.BaseShaderRegister = 2;
+    sceneRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    D3D12_ROOT_PARAMETER params[4] = {};
     params[kRootConstants].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     params[kRootConstants].Constants.ShaderRegister = 0;
     params[kRootConstants].Constants.Num32BitValues = kConstantCount;
@@ -112,8 +130,12 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     params[kRootSamplers].DescriptorTable.NumDescriptorRanges = 1;
     params[kRootSamplers].DescriptorTable.pDescriptorRanges = &samplerRange;
     params[kRootSamplers].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[kRootScene].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[kRootScene].DescriptorTable.NumDescriptorRanges = 1;
+    params[kRootScene].DescriptorTable.pDescriptorRanges = &sceneRange;
+    params[kRootScene].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     D3D12_ROOT_SIGNATURE_DESC desc{};
-    desc.NumParameters = 3;
+    desc.NumParameters = 4;
     desc.pParameters = params;
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     const auto serialize = reinterpret_cast<SerializeRootSignatureFn>(
@@ -238,6 +260,21 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, c
     return g;
 }
 
+D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::sceneTable(UINT t2, UINT t3, UINT t4) {
+    if (ringSrv + 3 > kRingPerSlot) ringSrv = kRingPerSlot - 3;  // never: makeRoom() ran first; stay in this part
+    const UINT index = slot * kRingPerSlot + ringSrv;
+    ringSrv += 3;
+    D3D12_CPU_DESCRIPTOR_HANDLE dst = gpuSrv->GetCPUDescriptorHandleForHeapStart();
+    dst.ptr += SIZE_T(index) * srvStep;
+    for (const UINT srv : {t2, t3, t4}) {
+        device->CopyDescriptorsSimple(1, dst, cpuSrvHandle(srv), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        dst.ptr += srvStep;
+    }
+    D3D12_GPU_DESCRIPTOR_HANDLE g = gpuSrv->GetGPUDescriptorHandleForHeapStart();
+    g.ptr += UINT64(index) * srvStep;
+    return g;
+}
+
 D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::textureTable(UINT srv0, UINT srv1) {
     if (ringSrv + 2 > kRingPerSlot) ringSrv = kRingPerSlot - 2;  // never: makeRoom() ran first; stay in this part
     const UINT index = slot * kRingPerSlot + ringSrv;
@@ -256,7 +293,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::textureTable(UINT srv0, UINT srv1) {
 // free place in the cache - when it is full, every list using the old pairs has to finish first - and the two texture
 // descriptors come from this list's part of the ring. Either way a new list starts here, never in the middle of a
 // draw. False when the GPU is lost.
-bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso) {
+bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors) {
     if (nextSampler + 2 > kSamplerCount &&
         samplerPairs.find(KeyPair{samplerKey(s0, aniso), samplerKey(s1, aniso)}) == samplerPairs.end()) {
         waitIdle();
@@ -264,7 +301,7 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
         nextSampler = 0;
         if (!begin()) return false;
     }
-    if (ringSrv + 2 > kRingPerSlot) {
+    if (ringSrv + descriptors > kRingPerSlot) {
         submit();
         if (!begin()) return false;
     }
@@ -277,12 +314,13 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
 // Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage). 0.18: toGlow, the
 // glow target as the second one.
 ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer,
-                                                 bool toGlow) {
+                                                 bool toGlow, bool water) {
     PipelineKey k = pipelineKey(s, fvf);
     k.samples = uint8_t(toLayer ? 1 : samples);
     k.alphaToCoverage = coverage && !toLayer;
     k.layer = toLayer;
     k.glow = toGlow && !toLayer;
+    k.water = water && !toLayer;
     return pipelineForKey(packPipelineKey(k));
 }
 
@@ -331,10 +369,20 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
     p.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     p.SampleDesc.Count = k.samples;
+    // 0.18, 0.19: an effect whose shaders did not compile (a key saved by another run) builds nothing.
+    if ((k.glow && !drawGlowPs) || (k.water && (!waterVs || !waterPs || !waterGlowPs))) {
+        pipelines.emplace(key, nullptr);
+        return nullptr;
+    }
     if (k.glow) {  // 0.18: the light it adds into the glow target too, blended alike (one blend for both)
         p.PS = {drawGlowPs->GetBufferPointer(), drawGlowPs->GetBufferSize()};
         p.NumRenderTargets = 2;
         p.RTVFormats[1] = DXGI_FORMAT_R11G11B10_FLOAT;
+    }
+    if (k.water) {  // 0.19: a cell of water by the modern water's shaders
+        p.VS = {waterVs->GetBufferPointer(), waterVs->GetBufferSize()};
+        ID3DBlob* ps = k.glow ? waterGlowPs : waterPs;
+        p.PS = {ps->GetBufferPointer(), ps->GetBufferSize()};
     }
     if (k.layer) {  // part 3 (DLSS): the interface layer keeps its coverage in alpha, premultiplied, for the composite
         b.BlendEnable = TRUE;

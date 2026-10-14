@@ -11,7 +11,7 @@ namespace uagfx {
 bool PipelineKey::operator==(const PipelineKey& o) const {
     return zEnable == o.zEnable && zWrite == o.zWrite && zFunc == o.zFunc && cull == o.cull && blend == o.blend &&
            srcBlend == o.srcBlend && dstBlend == o.dstBlend && twoUv == o.twoUv && samples == o.samples &&
-           alphaToCoverage == o.alphaToCoverage && layer == o.layer && glow == o.glow;
+           alphaToCoverage == o.alphaToCoverage && layer == o.layer && glow == o.glow && water == o.water;
 }
 
 PipelineKey pipelineKey(const DrawSetup& s, uint32_t fvf) {
@@ -38,7 +38,7 @@ uint64_t packPipelineKey(const PipelineKey& k) {
     return uint64_t(k.zEnable) | uint64_t(k.zWrite) << 1 | uint64_t(k.zFunc & 15) << 2 | uint64_t(k.cull & 3) << 6 |
            uint64_t(k.blend) << 8 | uint64_t(k.srcBlend & 15) << 9 | uint64_t(k.dstBlend & 15) << 13 |
            uint64_t(k.twoUv) << 17 | samplesCode(k.samples) << 18 | uint64_t(k.alphaToCoverage) << 20 |
-           uint64_t(k.layer) << 21 | uint64_t(k.glow) << 22;
+           uint64_t(k.layer) << 21 | uint64_t(k.glow) << 22 | uint64_t(k.water) << 23;
 }
 
 PipelineKey unpackPipelineKey(uint64_t v) {
@@ -55,6 +55,7 @@ PipelineKey unpackPipelineKey(uint64_t v) {
     k.alphaToCoverage = (v >> 20 & 1) != 0;
     k.layer = (v >> 21 & 1) != 0;
     k.glow = (v >> 22 & 1) != 0;
+    k.water = (v >> 23 & 1) != 0;
     return k;
 }
 
@@ -90,7 +91,7 @@ bool validPipelineKey(uint64_t v) {
     const PipelineKey k = unpackPipelineKey(v);
     if (packPipelineKey(k) != v || k.cull < d3d7::CULL_NONE) return false;
     if (k.alphaToCoverage && (k.samples < 2 || k.blend)) return false;
-    if (k.layer && (k.samples != 1 || k.zEnable || k.glow)) return false;
+    if (k.layer && (k.samples != 1 || k.zEnable || k.glow || k.water)) return false;
     if (k.zEnable ? k.zFunc < d3d7::CMP_NEVER || k.zFunc > d3d7::CMP_ALWAYS : k.zFunc != d3d7::CMP_ALWAYS || k.zWrite)
         return false;
     if (!k.blend) return k.srcBlend == d3d7::BLEND_ONE && k.dstBlend == d3d7::BLEND_ZERO;

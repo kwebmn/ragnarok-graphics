@@ -101,7 +101,8 @@ bool AiSettings::operator==(const AiSettings& o) const {
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
-    return glow == o.glow && glowStrength == o.glowStrength && glowSize == o.glowSize;
+    return glow == o.glow && glowStrength == o.glowStrength && glowSize == o.glowSize && water == o.water &&
+           waterWaves == o.waterWaves && waterReflections == o.waterReflections && waterClarity == o.waterClarity;
 }
 
 AiPreset aiPresetOf(const AiSettings& a) {
@@ -232,6 +233,14 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 200, c.effects.glowStrength);
         } else if (key == "effects.glow_size") {
             toInt(val, 0, 100, c.effects.glowSize);
+        } else if (key == "effects.water") {
+            setBool(val, c.effects.water);
+        } else if (key == "effects.water_waves") {
+            toInt(val, 0, 100, c.effects.waterWaves);
+        } else if (key == "effects.water_reflections") {
+            toInt(val, 0, 100, c.effects.waterReflections);
+        } else if (key == "effects.water_clarity") {
+            toInt(val, 0, 100, c.effects.waterClarity);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {

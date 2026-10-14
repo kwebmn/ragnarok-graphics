@@ -61,6 +61,14 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxGlowStrengthHint, " %"},
         {"effects", "glow_size", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxGlowSize,
          Text::FxGlowSizeHint, " %"},
+        {"effects", "water", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWater, Text::FxWaterHint,
+         ""},
+        {"effects", "water_waves", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxWaterWaves,
+         Text::FxWaterWavesHint, " %"},
+        {"effects", "water_reflections", Page::Effects, Control::Slider, 0, 100, 10, {}, {},
+         Text::FxWaterReflections, Text::FxWaterReflectionsHint, " %"},
+        {"effects", "water_clarity", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxWaterClarity,
+         Text::FxWaterClarityHint, " %"},
         {"ai", "enabled", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiEnable, Text::AiEnableHint, ""},
         {"ai", "ground", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiGround, Text::AiGroundHint, ""},
         {"ai", "objects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiObjects, Text::AiObjectsHint,
@@ -145,6 +153,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";
     if (k == "effects.glow_strength") return std::to_string(c.effects.glowStrength);
     if (k == "effects.glow_size") return std::to_string(c.effects.glowSize);
+    if (k == "effects.water") return c.effects.water ? "1" : "0";
+    if (k == "effects.water_waves") return std::to_string(c.effects.waterWaves);
+    if (k == "effects.water_reflections") return std::to_string(c.effects.waterReflections);
+    if (k == "effects.water_clarity") return std::to_string(c.effects.waterClarity);
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.frame_generation") return c.frameGeneration ? std::to_string(c.frameGeneration) + "x" : "off";

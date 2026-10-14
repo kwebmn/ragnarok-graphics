@@ -56,6 +56,12 @@ struct EffectSettings {
     bool glow = false;
     int glowStrength = 100;  // %, 0-200: how bright the glow is
     int glowSize = 50;       // %, 0-100: how far it spreads
+    // 0.19: the maps' water drawn anew - waves, the picture above it reflected, the sun's glints, the bed seen
+    // through it and darker with depth, foam along the shore.
+    bool water = false;
+    int waterWaves = 50;        // %, 0-100: 0 a still mirror
+    int waterReflections = 50;  // %, 0-100: how much the water reflects
+    int waterClarity = 50;      // %, 0-100: how deep one sees into it
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };
