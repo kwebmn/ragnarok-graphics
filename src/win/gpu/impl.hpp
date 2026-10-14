@@ -162,6 +162,13 @@ struct HeatSpot {
     float x, y, radius, strength;
 };
 
+// 0.39.1: a portal followed from frame to frame: its middle in the view and on the screen (game pixels), its size,
+// how much it shows (fading in and out as its rings come and go).
+struct PortalTrack {
+    float view[3];
+    float gx, gy, size, strength;
+};
+
 // 0.28: a firefly the game draws this frame (effect 45: its dot, a quad facing the screen) - drawn anew.
 struct Firefly {
     float gameX, gameY;  // its middle, game pixels
@@ -444,6 +451,8 @@ struct Renderer::Impl {
     UINT heatDataSrv = 0;
     std::vector<HeatSpot> heatSpots;
     std::vector<FireSpark> portalSparks;  // 0.38: this frame's portals' draws (their middles), gathered by place
+    std::vector<PortalTrack> portalTracks;  // 0.39.1: the portals followed from frame to frame
+    float portalTime = 0.0f;
     bool heatDone = false;
     bool heatLogged = false;
     bool mapDesert = false;  // core/outdoors.hpp
@@ -685,7 +694,7 @@ struct Renderer::Impl {
     bool torchDue() const {
         return !torchDone && (torchWanted() || lampsWanted() || fireflyWanted() || mapGlowsWanted() ||
                               !torchFlames.empty() || !fireSparks.empty() || !rayParts.empty() ||
-                              !lavaCells.empty() || !portalSparks.empty());
+                              !lavaCells.empty() || !portalSparks.empty() || !portalTracks.empty());
     }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     bool torchReady();     // the shaders, pipelines and the picture's copies are there

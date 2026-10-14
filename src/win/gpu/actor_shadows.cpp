@@ -20,11 +20,12 @@ namespace uagfx::gpu {
 namespace {
 
 // A corner of a shadow in the mask: its place (clip space), its texture's coordinates, the layer's alpha and the
-// feet's view depth (shadow_vs).
+// feet's view depth, (0.39.1) where the feet stand (target pixels) (shadow_vs).
 struct MaskVertex {
     float pos[4];
     float uv[2];
     float alphaZ[2];
+    float feet[2];
 };
 
 // The light's way on the screen when no torch is near: down and to the right, as from a sun behind the camera's left.
@@ -71,13 +72,14 @@ void Renderer::Impl::releaseShadowMask() {
 bool Renderer::Impl::ensureShadowMask(int w, int h) {
     if (!shadowVs || !shadowPs || !shadowBlurPs || !shadowApplyPs) return false;
     if (!shadowQuadPipeline) {
-        const D3D12_INPUT_ELEMENT_DESC layout[3] = {
+        const D3D12_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
             {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
             {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 2, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         };
         D3D12_GRAPHICS_PIPELINE_STATE_DESC p = fullScreenPipeline(root, shadowVs, shadowPs, DXGI_FORMAT_R8_UNORM, 1);
-        p.InputLayout = {layout, 3};
+        p.InputLayout = {layout, 4};
         D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
         b.BlendEnable = TRUE;  // where several layers' shadows fall, the darkest of them: no layer darkens another
         b.SrcBlend = D3D12_BLEND_ONE;
@@ -193,7 +195,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
         if (d.vertexOffset + 4 * stride > v.size()) continue;
         const uint8_t* q = v.data() + d.vertexOffset;
         actor_shadows::Layer l{};
-        float rhw = 0.0f, u0 = 0.0f, v0 = 0.0f;
+        float rhw = 0.0f, u0 = 0.0f, v0 = 0.0f, w[4] = {0, 0, 0, 0};
         uint32_t diffuse = 0;
         for (int i = 0; i < 4; ++i) {
             float xyzw[4], uv[2];
@@ -204,12 +206,19 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
             l.corner[i][1] = xyzw[1];
             l.uv[i][0] = uv[0];
             l.uv[i][1] = uv[1];
+            w[i] = xyzw[3];
             rhw += xyzw[3] * 0.25f;
             u0 += uv[0] * 0.25f;
             v0 += uv[1] * 0.25f;
         }
-        if (rhw <= 0.0f) continue;
-        l.viewZ = 1.0f / rhw;
+        if (rhw <= 0.0f || w[0] <= 0.0f || w[1] <= 0.0f || w[2] <= 0.0f || w[3] <= 0.0f) continue;
+        {  // 0.39.1: the depth of its top and of its bottom - the game tilts a sprite's depth with its height
+            int order[4] = {0, 1, 2, 3};
+            std::sort(order, order + 4, [&](int a, int b) { return l.corner[a][1] < l.corner[b][1]; });
+            l.topZ = 0.5f * (1.0f / w[order[0]] + 1.0f / w[order[1]]);
+            l.bottomZ = 0.5f * (1.0f / w[order[2]] + 1.0f / w[order[3]]);
+        }
+        const float viewZ = 1.0f / rhw;
         l.alpha = float(diffuse >> 24) / 255.0f;
         l.texture = d.texture[0];
         if (d.effect == uint8_t(effect_exe::Kind::Shadow)) {  // the game's round one
@@ -221,7 +230,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
                 y1 = std::max(y1, l.corner[i][1]);
             }
             blobs.push_back(actor_shadows::Blob{(x0 + x1) * 0.5f, (y0 + y1) * 0.5f, (x1 - x0) * 0.5f, (y1 - y0) * 0.5f,
-                                                l.viewZ});
+                                                viewZ});
             rounds.push_back(l);
             continue;
         }
@@ -277,12 +286,15 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
         }
     }
     std::vector<actor_shadows::ShadowQuad> quads = actor_shadows::cast(blobs, layers, dirs, kSun, kLength);
-    for (const actor_shadows::Layer& r : rounds) {  // the round ones, under the feet, a little lighter
+    for (size_t i = 0; i < rounds.size(); ++i) {  // the round ones, under the feet
+        const actor_shadows::Layer& r = rounds[i];
         actor_shadows::ShadowQuad q{};
         std::memcpy(q.corner, r.corner, sizeof q.corner);
         std::memcpy(q.uv, r.uv, sizeof q.uv);
         q.alpha = std::min(1.0f, r.alpha * 1.5f);
-        q.viewZ = r.viewZ;
+        q.viewZ = blobs[i].viewZ;
+        q.feetX = blobs[i].x;
+        q.feetY = blobs[i].y;
         q.texture = r.texture;
         quads.push_back(q);
     }
@@ -320,6 +332,8 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
             mv.uv[1] = s.uv[c][1];
             mv.alphaZ[0] = s.alpha * opacity;
             mv.alphaZ[1] = s.viewZ;
+            mv.feet[0] = s.feetX * k + 0.5f + jx;
+            mv.feet[1] = s.feetY * k + 0.5f + jy;
         }
     }
     transition(shadowMask[0], shadowMaskState[0], D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -342,6 +356,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     std::copy(pv, pv + 6, c.projection);
     c.targetSize[0] = float(shadowMaskW);
     c.targetSize[1] = float(shadowMaskH);
+    c.scale = k;
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->SetGraphicsRootDescriptorTable(kRootSamplers, samplerTable(linearClamp, linearClamp, 0));
     list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));

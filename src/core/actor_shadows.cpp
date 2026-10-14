@@ -17,13 +17,16 @@ std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<L
             bottom = std::max(bottom, l.corner[i][1]);
         }
         const float middle = (x0 + x1) * 0.5f;
+        // 0.39.1: the layer's depth at a given height on the screen, along its tilt (its mean was off by up to half
+        // its height's tilt - tall characters got no shadow).
+        const float tilt = bottom > top ? (l.bottomZ - l.topZ) / (bottom - top) : 0.0f;
         int best = -1;
-        float closest = 4.0f;  // world units: a character's layers stand at its depth
+        float closest = 5.0f;  // world units: a character's layers stand at its depth
         for (size_t b = 0; b < blobs.size(); ++b) {
             const Blob& s = blobs[b];
-            const float off = std::fabs(l.viewZ - s.viewZ);
-            if (std::fabs(middle - s.x) > std::max(s.halfW * 1.8f, 12.0f) || top >= s.y ||
-                bottom > s.y + s.halfH + 4.0f || off > closest)
+            const float off = std::fabs(l.bottomZ + tilt * (s.y - bottom) - s.viewZ);
+            if (std::fabs(middle - s.x) > std::max(s.halfW * 2.2f, 16.0f) || top >= s.y ||
+                bottom > s.y + std::max(s.halfH * 2.5f, 20.0f) || off > closest)
                 continue;
             closest = off;
             best = int(b);
@@ -41,6 +44,8 @@ std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<L
         }
         q.alpha = l.alpha;
         q.viewZ = s.viewZ;
+        q.feetX = s.x;
+        q.feetY = s.y;
         q.texture = l.texture;
         out.push_back(q);
     }

@@ -11,8 +11,9 @@ using actor_shadows::ShadowQuad;
 
 namespace {
 
-// A sprite's layer: an upright quad from (x0, top) to (x1, bottom), game pixels, at view depth z.
-Layer layer(float x0, float top, float x1, float bottom, float z, uint32_t texture = 7) {
+// A sprite's layer: an upright quad from (x0, top) to (x1, bottom), game pixels, at view depth z - its top as deep,
+// unless topZ says otherwise.
+Layer layer(float x0, float top, float x1, float bottom, float z, uint32_t texture = 7, float topZ = -1.0f) {
     Layer l;
     const float xy[4][2] = {{x0, top}, {x1, top}, {x0, bottom}, {x1, bottom}};
     const float uv[4][2] = {{0.25f, 0.5f}, {0.5f, 0.5f}, {0.25f, 0.75f}, {0.5f, 0.75f}};
@@ -22,7 +23,8 @@ Layer layer(float x0, float top, float x1, float bottom, float z, uint32_t textu
         l.uv[i][0] = uv[i][0];
         l.uv[i][1] = uv[i][1];
     }
-    l.viewZ = z;
+    l.bottomZ = z;
+    l.topZ = topZ < 0.0f ? z : topZ;
     l.alpha = 1.0f;
     l.texture = texture;
     return l;
@@ -46,6 +48,25 @@ TEST(actor_shadows_lay_a_characters_layers_on_the_ground) {
     CHECK(q[0].uv[0][0] == 0.25f && q[0].uv[3][1] == 0.75f);  // its own picture
     CHECK_EQ(q[0].texture, 7u);
     CHECK(std::fabs(q[0].viewZ - 150.0f) < 1e-3f);  // at the feet's depth
+    CHECK(q[0].feetX == 200.0f && q[0].feetY == 300.0f);
+}
+
+TEST(actor_shadows_know_a_tall_sprites_depth_at_its_feet) {
+    // 0.39.1: uaRO.exe tilts a sprite's depth with its height (0.16 units a pixel), its top nearer than its feet: the
+    // depth at the feet is found along that tilt, not as the corners' mean - tall characters got no shadow.
+    std::vector<Blob> blobs = {Blob{200.0f, 300.0f, 20.0f, 8.0f, 150.0f}};
+    std::vector<Layer> layers = {
+        layer(180.0f, 200.0f, 220.0f, 302.0f, 150.3f, 7, 150.3f - 102.0f * 0.16f),  // a body, 102 pixels tall
+        layer(185.0f, 190.0f, 215.0f, 240.0f, 150.0f - 60.0f * 0.16f, 8,
+              150.0f - 110.0f * 0.16f),  // a head on it: 60-110 pixels above the feet
+        layer(185.0f, 190.0f, 215.0f, 240.0f, 120.0f, 9, 112.0f),  // another's head, much nearer
+    };
+    const float dir[2] = {0.8f, 0.6f};
+    const std::vector<ShadowQuad> q = actor_shadows::cast(blobs, layers, {}, dir, 0.5f);
+    CHECK_EQ(q.size(), size_t(2));
+    // A body a little lower than the feet (its frame's margin) still stands on them.
+    std::vector<Layer> low = {layer(180.0f, 200.0f, 220.0f, 320.0f, 150.0f, 7, 150.0f - 120.0f * 0.16f)};
+    CHECK_EQ(actor_shadows::cast(blobs, low, {}, dir, 0.5f).size(), size_t(1));
 }
 
 TEST(actor_shadows_take_only_layers_of_a_character_at_its_place) {

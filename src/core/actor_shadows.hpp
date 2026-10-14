@@ -15,12 +15,13 @@ struct Blob {
     float x, y, halfW, halfH, viewZ;
 };
 
-// A layer of a sprite drawn this frame: its corners and their texture coordinates, its alpha, view depth, texture.
+// A layer of a sprite drawn this frame: its corners and their texture coordinates, its alpha, the view depth of its
+// top and its bottom (uaRO.exe tilts a sprite's depth with its height: 0.16 units a pixel), its texture.
 struct Layer {
     float corner[4][2];
     float uv[4][2];
     float alpha;
-    float viewZ;
+    float topZ, bottomZ;
     uint32_t texture;
 };
 
@@ -29,7 +30,8 @@ struct ShadowQuad {
     float corner[4][2];
     float uv[4][2];
     float alpha;
-    float viewZ;  // the feet's
+    float viewZ;         // the feet's
+    float feetX, feetY;  // 0.39.1: where they stand on the screen
     uint32_t texture;
 };
 

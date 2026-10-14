@@ -219,7 +219,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         soft_.assign(bytes, bytes + size_t(vertexCount) * FrameRecord::stride(fvf));
         effect_exe::soften(soft_.data(), vertexCount, FrameRecord::stride(fvf),
-                           aura ? fx.auraBrightness : fx.skillBrightness);
+                           aura ? fx.auraBrightness : fx.skillBrightness,
+                           effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();
     }
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);

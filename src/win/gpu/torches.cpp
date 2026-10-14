@@ -635,36 +635,83 @@ bool Renderer::Impl::applyTorches() {
         }
     }
     lavaCells.clear();
-    // 0.38: the portals, gathered by place (cells of 96 game pixels): a soft blue glow about each, and (in the heat
-    // haze's pass) the air turning in it.
-    if (!portalSparks.empty() && portalsWanted()) {
+    // 0.38: the portals - a soft blue glow about each and (in the heat haze's pass) the air turning in it. 0.39.1:
+    // this frame's draws gathered into what stands there, followed from frame to frame - their places eased, their
+    // strength fading in and out - so that the glow holds steady while the rings rise and come and go (0.38 lit each
+    // frame's gathering by a grid: as the rings crossed its lines the lights doubled and went out - it blinked).
+    const float portalStep = std::clamp(time - portalTime, 0.0f, 0.25f);
+    portalTime = time;
+    if (!portalsWanted()) portalTracks.clear();
+    if (portalsWanted()) {
         struct Gate {
             float view[3] = {0, 0, 0}, gx = 0, gy = 0, size = 0;
             int n = 0;
+            bool claimed = false;
         };
-        std::unordered_map<int, Gate> gates;
+        std::vector<Gate> seen;
         for (const FireSpark& s : portalSparks) {
-            Gate& g = gates[int(std::floor(s.gameX / 96.0f)) * 4096 + int(std::floor(s.gameY / 96.0f))];
-            for (int k = 0; k < 3; ++k) g.view[k] += s.view[k];
-            g.gx += s.gameX;
-            g.gy += s.gameY;
-            g.size = std::max(g.size, s.strength);
-            ++g.n;
+            Gate* g = nullptr;
+            for (Gate& o : seen)
+                if (std::hypot(o.gx / float(o.n) - s.gameX, o.gy / float(o.n) - s.gameY) <
+                    std::max(80.0f, std::max(o.size, s.strength) * 0.8f))
+                    g = &o;
+            if (!g) {
+                seen.push_back(Gate{});
+                g = &seen.back();
+            }
+            for (int k = 0; k < 3; ++k) g->view[k] += s.view[k];
+            g->gx += s.gameX;
+            g->gy += s.gameY;
+            g->size = std::max(g->size, s.strength);
+            ++g->n;
         }
+        for (Gate& g : seen) {
+            for (int k = 0; k < 3; ++k) g.view[k] /= float(g.n);
+            g.gx /= float(g.n);
+            g.gy /= float(g.n);
+        }
+        const float ease = 1.0f - std::exp(-portalStep * 5.0f);
+        for (PortalTrack& t : portalTracks) {
+            Gate* best = nullptr;
+            float bestD = 140.0f;
+            for (Gate& g : seen) {
+                const float d = std::hypot(g.gx - t.gx, g.gy - t.gy);
+                if (!g.claimed && d < bestD) {
+                    bestD = d;
+                    best = &g;
+                }
+            }
+            if (best) {
+                best->claimed = true;
+                for (int k = 0; k < 3; ++k) t.view[k] += (best->view[k] - t.view[k]) * ease;
+                t.gx += (best->gx - t.gx) * ease;
+                t.gy += (best->gy - t.gy) * ease;
+                t.size += (best->size - t.size) * ease;
+                t.strength = std::min(1.0f, t.strength + portalStep / 0.4f);
+            } else {
+                t.strength -= portalStep / 1.2f;  // its rings gone a moment: it fades rather than goes out
+            }
+        }
+        for (const Gate& g : seen)
+            if (!g.claimed && portalTracks.size() < 16)
+                portalTracks.push_back(PortalTrack{{g.view[0], g.view[1], g.view[2]}, g.gx, g.gy, g.size, 0.0f});
+        portalTracks.erase(std::remove_if(portalTracks.begin(), portalTracks.end(),
+                                          [](const PortalTrack& t) { return t.strength <= 0.0f; }),
+                           portalTracks.end());
         const float user = float(std::clamp(effects.portalsStrength, 0, 200)) / 100.0f;
         const float hk = float(upscale ? worldScale : scale);
         int lit = 0;
-        for (const auto& kv : gates) {
-            const Gate& g = kv.second;
-            const float n = float(g.n);
+        for (const PortalTrack& t : portalTracks) {
+            const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
+            if (shown <= 0.0f) continue;
             if (lit++ < 8 && lights.size() < kMaxLights) {
-                LightItem l{{g.view[0] / n, g.view[1] / n - 4.0f, g.view[2] / n}, 0.35f * user, {0.45f, 0.75f, 1.0f},
+                LightItem l{{t.view[0], t.view[1] - 4.0f, t.view[2]}, 0.35f * user * shown, {0.45f, 0.75f, 1.0f},
                             30.0f};
                 lights.push_back(l);
             }
             if (heatPs) {
-                const float r = std::clamp(g.size * 0.6f, 30.0f, 140.0f) * hk;
-                heatSpots.push_back(HeatSpot{g.gx / n * hk, g.gy / n * hk, r, -0.7f * std::min(user, 1.5f)});
+                const float r = std::clamp(t.size * 0.6f, 30.0f, 140.0f) * hk;
+                heatSpots.push_back(HeatSpot{t.gx * hk, t.gy * hk, r, -0.7f * std::min(user, 1.5f) * shown});
             }
         }
     }

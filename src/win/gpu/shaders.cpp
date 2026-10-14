@@ -940,21 +940,32 @@ float4 lava_ps(PsIn i) : SV_Target {
 struct ShadowIn {
     float4 pos : SV_Position;
     float2 uv : TEXCOORD0;
-    float2 az : TEXCOORD1;  // the layer's alpha, the feet's view depth
+    float2 az : TEXCOORD1;    // the layer's alpha, the feet's view depth
+    float2 feet : TEXCOORD2;  // 0.39.1: where they stand, world pixels
 };
 
-ShadowIn shadow_vs(float4 pos : POSITION, float2 uv : TEXCOORD0, float2 az : TEXCOORD1) {
+ShadowIn shadow_vs(float4 pos : POSITION, float2 uv : TEXCOORD0, float2 az : TEXCOORD1, float2 feet : TEXCOORD2) {
     ShadowIn o;
     o.pos = pos;
     o.uv = uv;
     o.az = az;
+    o.feet = feet;
     return o;
 }
 
 float4 shadow_ps(ShadowIn i) : SV_Target {
-    int2 wp = min(int2(i.pos.xy * twinX), int2(uiPixels.xy) - 1);
+    int2 last = int2(uiPixels.xy) - 1;
+    int2 wp = min(int2(i.pos.xy * twinX), last);
+    // 0.39.1: the ground's depth here, from the feet's along the ground's slope under them on the screen (nothing but
+    // the ground is drawn yet there): the shadow lies nearer the camera than the feet, on the ground - only what
+    // stands well in front of the ground hides it. (0.32 hid all of it nearer than the feet.)
+    float step = 12.0 * scale;
+    float z0 = viewDepth(sceneDepth.Load(int3(clamp(int2(i.feet), int2(0, 0), last), 0)));
+    float z1 = viewDepth(sceneDepth.Load(int3(clamp(int2(i.feet + float2(0.0, step)), int2(0, 0), last), 0)));
+    float slope = clamp((z1 - z0) / step, -0.6, 0.6);
+    float expected = i.az.y + (float(wp.y) - i.feet.y) * slope;
     float z = viewDepth(sceneDepth.Load(int3(wp, 0)));
-    if (z < i.az.y - 3.0) discard;  // a wall, a tree or a character in front of the ground there
+    if (z < expected - 6.0) discard;  // a wall, a tree in front of the ground there
     float a = saturate(tex0.Sample(samp0, i.uv).a * i.az.x);
     return float4(a, a, a, a);
 }
@@ -1024,7 +1035,7 @@ float4 heat_ps(PresentOut i) : SV_Target {
         if (s.w < 0.0) {  // 0.38: a portal - the air turns about it, faster near its middle
             float r = length(d) / max(s.z, 1.0);
             float f = saturate(1.0 - r);
-            float turn = -s.w * f * f * (0.5 + 0.5 * sin(t * 2.0 + r * 9.0));
+            float turn = -s.w * f * f * (0.8 + 0.2 * sin(t * 1.5 + r * 6.0));  // 0.39.1: steadier
             swirl += float2(-d.y, d.x) / max(length(d), 1.0) * turn * 6.0 * scale;
             continue;
         }

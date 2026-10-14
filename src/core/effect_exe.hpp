@@ -43,10 +43,15 @@ enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow, Skill, Portal };
 // forest's light (forestlight 1-4: primitive 0x42, effect\cloud11.tga on four five-sided tubes down to the ground).
 Kind kindOf(int id);
 
-// A draw's TL vertices (`stride` bytes each, the diffuse colour at byte 16) made `percent` % as bright: their colour
-// and alpha each by its square root - the game's draws multiply the texture by both, and an effect adds its light as
-// colour times alpha.
-void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent);
+// 0.39.1: how a draw is made softer, by how it blends (the game's draws multiply the texture by the vertices' colour
+// and alpha): an added one (ONE, ONE) by its colour; one added or laid over by its alpha (SRCALPHA, ONE or
+// INVSRCALPHA) by its alpha; one that multiplies the picture (ZERO, SRCCOLOR or DESTCOLOR, ZERO) towards white - which
+// changes nothing; any other not at all. (0.37's scaled colour and alpha alike: a multiplying skill - Soul Strike -
+// became a darker square.)
+enum class Soften : uint8_t { None, Colour, Alpha, White };
+Soften softenFor(bool blend, uint32_t srcBlend, uint32_t dstBlend);
+// A draw's TL vertices (`stride` bytes each, the diffuse colour at byte 16) made `percent` % as strong, `how`.
+void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Soften how);
 
 // What a draw is of, and a seed of its primitive's own (its fireflies flash each its own way).
 struct Tag {

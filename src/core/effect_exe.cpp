@@ -1,5 +1,7 @@
 #include "core/effect_exe.hpp"
 
+#include "core/d3d7.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -66,16 +68,36 @@ Kind kindOf(int id) {
     }
 }
 
-void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent) {
-    if (!vertices || stride < 20 || percent >= 100) return;
-    const float f = std::sqrt(float(std::max(percent, 0)) / 100.0f);
+Soften softenFor(bool blend, uint32_t srcBlend, uint32_t dstBlend) {
+    if (!blend) return Soften::None;
+    if (dstBlend == d3d7::BLEND_ONE)
+        return srcBlend == d3d7::BLEND_SRCALPHA ? Soften::Alpha
+               : srcBlend == d3d7::BLEND_ONE    ? Soften::Colour
+                                                : Soften::None;
+    if (srcBlend == d3d7::BLEND_SRCALPHA && dstBlend == d3d7::BLEND_INVSRCALPHA) return Soften::Alpha;
+    if ((srcBlend == d3d7::BLEND_ZERO && dstBlend == d3d7::BLEND_SRCCOLOR) ||
+        (srcBlend == d3d7::BLEND_DESTCOLOR && dstBlend == d3d7::BLEND_ZERO))
+        return Soften::White;
+    return Soften::None;
+}
+
+void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Soften how) {
+    if (!vertices || stride < 20 || percent >= 100 || how == Soften::None) return;
+    const float f = float(std::max(percent, 0)) / 100.0f;
     for (uint32_t i = 0; i < count; ++i) {
         uint8_t* at = vertices + size_t(i) * stride + 16;
         uint32_t c = 0;
         std::memcpy(&c, at, 4);
-        uint32_t out = 0;
-        for (int shift = 0; shift < 32; shift += 8)
-            out |= uint32_t(float((c >> shift) & 255) * f + 0.5f) << shift;
+        uint32_t out = how == Soften::Alpha ? c & 0x00FFFFFFu : c & 0xFF000000u;
+        if (how == Soften::Alpha) {
+            out |= uint32_t(float(c >> 24) * f + 0.5f) << 24;
+        } else {
+            for (int shift = 0; shift < 24; shift += 8) {
+                const float v = float((c >> shift) & 255);
+                const float to = how == Soften::White ? 255.0f - (255.0f - v) * f : v * f;
+                out |= uint32_t(to + 0.5f) << shift;
+            }
+        }
         std::memcpy(at, &out, 4);
     }
 }
