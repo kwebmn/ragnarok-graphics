@@ -53,7 +53,7 @@ TEST(schema_live_keys_are_the_specs) {
     // Spec §2.2: the renderer and allow_tearing wait for a restart, the rest of the pages' keys apply at once.
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
-        CHECK(appliesNow(k) == (k != "renderer.backend" && k != "frames.allow_tearing"));
+        CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "frames.allow_tearing"));
     }
 }
 

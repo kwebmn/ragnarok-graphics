@@ -13,6 +13,7 @@
 #include "core/scale.hpp"
 #include "core/window_plan.hpp"
 #include "win/gpu/impl.hpp"
+#include "win/gpu/remote.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 
@@ -457,10 +458,23 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
         d.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
         d.Flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
         IDXGISwapChain1* sc1 = nullptr;
-        HRESULT hr = factory->CreateSwapChainForHwnd(queue, hwnd, &d, nullptr, nullptr, &sc1);
+        HRESULT hr = E_FAIL;
+        if (presentSurface) {  // part 3: the surface the game's window shows (uaro-render64.exe)
+            d.Scaling = DXGI_SCALING_STRETCH;
+            d.Flags = 0;
+            tearingSupported = false;
+            IDXGIFactoryMedia* media = nullptr;
+            hr = factory->QueryInterface(__uuidof(IDXGIFactoryMedia), reinterpret_cast<void**>(&media));
+            if (SUCCEEDED(hr))
+                hr = media->CreateSwapChainForCompositionSurfaceHandle(queue, presentSurface, &d, nullptr, &sc1);
+            releaseCom(media);
+        } else {
+            hr = factory->CreateSwapChainForHwnd(queue, hwnd, &d, nullptr, nullptr, &sc1);
+            refused = FAILED(hr);
+        }
         if (SUCCEEDED(hr)) hr = sc1->QueryInterface(__uuidof(IDXGISwapChain3), reinterpret_cast<void**>(&swapChain));
         if (FAILED(hr)) {
-            failed(4, "swap chain creation", hr);
+            failed(4, presentSurface ? "swap chain on the composition surface" : "swap chain creation", hr);
             releaseCom(sc1);
             failedWidth = w;
             failedHeight = h;
@@ -468,9 +482,10 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
             return false;
         }
         sc1->Release();
-        factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
+        if (!presentSurface) factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
         window = hwnd;
-        LOG_INFO("swap chain %ux%u%s", w, h, tearingSupported ? ", tearing allowed" : "");
+        LOG_INFO("swap chain %ux%u%s%s", w, h, tearingSupported ? ", tearing allowed" : "",
+                 presentSurface ? " on a composition surface" : "");
     }
     for (UINT i = 0; i < 2; ++i) {
         if (FAILED(swapChain->GetBuffer(i, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&backBuffers[i])))) {
@@ -530,17 +545,56 @@ void Renderer::Impl::destroy() {
 Renderer::Renderer() : impl_(new Impl) {}
 
 Renderer::~Renderer() {
+    delete remote_;  // the renderer process finishes first
     impl_->destroy();
     delete impl_;
 }
 
-std::string Renderer::adapterName() const { return impl_->adapter; }
+bool Renderer::createRemote(const BridgeOptions& o, std::string& error) {
+    if (remote_) return true;
+    remote_ = new Remote;
+    if (remote_->start(o, error)) return true;
+    delete remote_;
+    remote_ = nullptr;
+    return false;
+}
 
-void Renderer::setUiSharp(bool sharp) { impl_->uiSharp = sharp; }
+std::string Renderer::adapterName() const { return remote_ ? remote_->adapterName() : impl_->adapter; }
 
-int Renderer::samples() const { return int(impl_->samples); }
+void Renderer::setUiSharp(bool sharp) {
+    if (remote_) return remote_->setUiSharp(sharp);
+    impl_->uiSharp = sharp;
+}
+
+int Renderer::samples() const { return remote_ ? remote_->samples() : int(impl_->samples); }
+
+bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
+    Impl& m = *impl_;
+    if (!id || m.textures.count(id)) return false;
+    const uint32_t made = createTexture(width, height, levels);
+    if (!made) return false;
+    Texture t = m.textures[made];
+    m.textures.erase(made);
+    m.textures.emplace(id, t);
+    return true;
+}
+
+void Renderer::setPresentSurface(HANDLE surface) {
+    Impl& m = *impl_;
+    if (m.presentSurface == surface) return;
+    m.waitIdle();
+    m.releaseSwapChain();
+    if (m.presentSurface) CloseHandle(m.presentSurface);
+    m.presentSurface = surface;
+    m.failedWidth = m.failedHeight = 0;
+}
+
+bool Renderer::presentRefused() const { return impl_->refused; }
+
+bool Renderer::lost() const { return impl_->lost; }
 
 void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage) {
+    if (remote_) return remote_->setDrawQuality(anisotropy, alphaToCoverage);
     Impl& m = *impl_;
     if (anisotropy == m.anisotropy && alphaToCoverage == m.alphaToCoverage) return;
     m.anisotropy = anisotropy;
@@ -549,6 +603,7 @@ void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage) {
 }
 
 void Renderer::preparePipelines(const std::string& file) {
+    if (remote_) return remote_->preparePipelines(file);
     Impl& m = *impl_;
     std::string text;
     win::readTextFile(file, text);
@@ -673,6 +728,7 @@ bool Renderer::create(std::string& error) {
 }
 
 bool Renderer::setTarget(int width, int height) {
+    if (remote_) return remote_->setTarget(width, height);
     Impl& m = *impl_;
     if (width <= 0 || height <= 0) return false;
     if (width == m.gameWidth && height == m.gameHeight && m.target) return true;
@@ -720,6 +776,7 @@ bool Renderer::setTarget(int width, int height) {
 }
 
 bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples) {
+    if (remote_) return remote_->setScale(k, targetWidth, targetHeight, samples);
     Impl& m = *impl_;
     if (m.lost || !m.target || targetWidth <= 0 || targetHeight <= 0) return false;
     UINT n = m.supportedSamples(UINT(std::max(samples, 1)));
@@ -788,6 +845,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
 }
 
 uint32_t Renderer::createTexture(int width, int height, int levels) {
+    if (remote_) return remote_->createTexture(width, height, levels);
     Impl& m = *impl_;
     Texture t;
     t.width = width;
@@ -812,6 +870,7 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
 }
 
 void Renderer::releaseTexture(uint32_t id) {
+    if (remote_) return remote_->releaseTexture(id);
     Impl& m = *impl_;
     // Draws recorded before the client let go of the texture have not been played yet: it stays until they have.
     if (m.textures.count(id)) m.dying.push_back(id);
@@ -832,6 +891,7 @@ void Renderer::Impl::retireDying() {
 }
 
 void Renderer::execute(const FrameRecord& record) {
+    if (remote_) return remote_->execute(record);
     Impl& m = *impl_;
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
     m.prepareGeometry(record);
@@ -851,6 +911,7 @@ void Renderer::execute(const FrameRecord& record) {
 }
 
 bool Renderer::readTarget(std::vector<uint32_t>& argb) {
+    if (remote_) return remote_->readTarget(argb);
     Impl& m = *impl_;
     if (m.lost || !m.target || !m.begin()) return false;
     const Impl::Readable r = m.readableTarget();  // resolved first when it has several samples (stage 4)
@@ -916,6 +977,7 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
 
 void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rect& source,
                        const PresentOptions& options) {
+    if (remote_) return remote_->present(window, outputWidth, outputHeight, source, options);
     Impl& m = *impl_;
     if (m.lost) {  // the GPU is gone (stage 3 review M2): no Present waits for vblank, keep the game's loop from spinning
         Sleep(15);

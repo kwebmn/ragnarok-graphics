@@ -11,6 +11,8 @@ bool enabled(LogLevel level);
 // [debug] log changed while the game runs (stage 2 spec §3.4).
 void setLevel(LogLevel level);
 void line(LogLevel level, const char* fmt, ...);
+// Part 3: uaro-render64.exe also hands every line it writes to the driver, which writes it into the game's log.
+void setSink(void (*sink)(LogLevel level, const char* text));
 
 }  // namespace uagfx::wlog
 

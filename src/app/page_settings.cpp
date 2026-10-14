@@ -290,6 +290,10 @@ private:
                 (win10 && d3d12) || uaro);
         p.radio(kDgVoodoo, L"", t(Text::RenderDgVoodoo), !uaro, false, t(Text::RenderDgVoodooHint));
         p.gap();
+        const auto& all = iniSettings();
+        for (size_t i = 0; i < all.size(); ++i)  // part 3 (test): the renderer in a 64-bit process
+            if (sectionKey(all[i]) == "renderer.bridge")
+                p.check(kRows + int(i) * 4, t(all[i].label), m.token(all[i]) == "1", t(all[i].hint));
         if (!win10)
             p.note(t(Text::RenderNeedsWindows10), Tone::Bad);
         else if (!d3d12)

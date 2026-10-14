@@ -1,0 +1,269 @@
+#include "win/gpu/remote.hpp"
+
+#include <algorithm>
+#include <cstring>
+
+#include "core/bridge_wire.hpp"
+#include "win/log.hpp"
+
+namespace uagfx::gpu {
+
+using bridge::Msg;
+using bridge::WireReader;
+using bridge::WireWriter;
+
+namespace {
+
+constexpr uint32_t kToHostBytes = 32u << 20;   // frame records; larger ones go in chunks
+constexpr uint32_t kToClientBytes = 8u << 20;  // log lines and the frame read back, in chunks
+constexpr DWORD kAnswerMs = 10000;            // a renderer that does not answer for this long is taken as hung
+
+}  // namespace
+
+Remote::~Remote() {
+    if (process_.hProcess) {
+        if (!lost_ && channel_.send(Msg::Quit) && WaitForSingleObject(process_.hProcess, 3000) == WAIT_OBJECT_0) {
+            // finished by itself
+        } else if (WaitForSingleObject(process_.hProcess, 0) != WAIT_OBJECT_0) {
+            TerminateProcess(process_.hProcess, 1);
+        }
+        CloseHandle(process_.hProcess);
+        CloseHandle(process_.hThread);
+    }
+    composition_.release();
+    channel_.close();
+}
+
+bool Remote::start(const BridgeOptions& o, std::string& error) {
+    options_ = o;
+    nextTexture_ = bridge::kFirstClientTexture;
+    const std::string name =
+        "Local\\uaro-render-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64());
+    if (!channel_.create(name, kToHostBytes, kToClientBytes, error)) return false;
+    std::string cmd = "\"" + o.hostExe + "\" --channel " + name + " --parent " +
+                      std::to_string(GetCurrentProcessId()) + " --dir \"" + o.gameDir + "\" --log " +
+                      std::to_string(o.logLevel) + " --present " + o.present;
+    STARTUPINFOA si{};
+    si.cb = sizeof si;
+    std::vector<char> line(cmd.begin(), cmd.end());
+    line.push_back('\0');
+    if (!CreateProcessA(o.hostExe.c_str(), line.data(), nullptr, nullptr, FALSE, 0, nullptr, o.gameDir.c_str(), &si,
+                        &process_)) {
+        error = "cannot start " + o.hostExe + " (error " + std::to_string(GetLastError()) + ")";
+        process_ = PROCESS_INFORMATION{};
+        return false;
+    }
+    channel_.setPeer(process_.hProcess);
+    std::vector<uint8_t> hello;
+    if (!await(Msg::Hello, hello, 20000)) {
+        error = lost_ ? "the 64-bit renderer exited at its start" : "the 64-bit renderer did not answer";
+        return false;
+    }
+    WireReader rd(hello.data(), hello.size());
+    const bool ok = rd.u8() != 0;
+    const std::string text = rd.str();
+    if (!ok || !rd.ok()) {
+        error = "the 64-bit renderer: " + text;
+        return false;
+    }
+    adapter_ = text;
+    return true;
+}
+
+bool Remote::send(Msg type, const std::vector<uint8_t>& payload) {
+    if (lost_) return false;
+    if (!channel_.send(type, payload)) {
+        setLost("the 64-bit renderer is gone");
+        return false;
+    }
+    return true;
+}
+
+void Remote::setLost(const std::string& why) {
+    if (lost_) return;
+    lost_ = true;
+    DWORD code = 0;
+    if (process_.hProcess && WaitForSingleObject(process_.hProcess, 0) == WAIT_OBJECT_0)
+        GetExitCodeProcess(process_.hProcess, &code);
+    LOG_ERROR("%s (exit code 0x%08lx); the picture stops here, restart the game", why.c_str(),
+              static_cast<unsigned long>(code));
+}
+
+void Remote::handle(Msg type, const uint8_t* data, uint32_t size) {
+    WireReader rd(data, size);
+    switch (type) {
+        case Msg::Log: {
+            const uint8_t level = rd.u8();
+            const std::string text = rd.str();
+            if (rd.ok()) wlog::line(LogLevel(std::min<uint8_t>(level, 2)), "render64: %s", text.c_str());
+            break;
+        }
+        case Msg::NeedSurface:
+            needSurface_ = true;
+            break;
+        case Msg::Lost: setLost("render64: " + rd.str()); break;
+        default: break;  // an answer nobody waits for any more
+    }
+}
+
+bool Remote::await(Msg want, std::vector<uint8_t>& reply, DWORD ms) {
+    const ULONGLONG start = GetTickCount64();
+    for (;;) {
+        Msg type;
+        const uint8_t* data = nullptr;
+        uint32_t size = 0;
+        const ULONGLONG spent = GetTickCount64() - start;
+        if (spent >= ms || !channel_.receive(type, data, size, DWORD(ms - spent))) {
+            if (channel_.peerGone()) setLost("the 64-bit renderer exited");
+            return false;
+        }
+        if (type == want) {
+            reply.assign(data, data + size);
+            return true;
+        }
+        handle(type, data, size);
+    }
+}
+
+void Remote::drain() {
+    Msg type;
+    const uint8_t* data = nullptr;
+    uint32_t size = 0;
+    while (!lost_ && channel_.receive(type, data, size, 0)) handle(type, data, size);
+    if (!lost_ && channel_.peerGone()) setLost("the 64-bit renderer exited");
+}
+
+void Remote::setUiSharp(bool sharp) { send(Msg::SetUiSharp, {uint8_t(sharp ? 1 : 0)}); }
+
+void Remote::preparePipelines(const std::string& file) {
+    buffer_.clear();
+    WireWriter(buffer_).str(file);
+    send(Msg::PreparePipelines, buffer_);
+}
+
+bool Remote::setTarget(int width, int height) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.i32(width);
+    w.i32(height);
+    std::vector<uint8_t> reply;
+    if (!send(Msg::SetTarget, buffer_) || !await(Msg::TargetSet, reply, kAnswerMs)) return false;
+    samples_ = 1;
+    return !reply.empty() && reply[0] != 0;
+}
+
+bool Remote::setScale(double k, int width, int height, int samples) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.f64(k);
+    w.i32(width);
+    w.i32(height);
+    w.i32(samples);
+    std::vector<uint8_t> reply;
+    if (!send(Msg::SetScale, buffer_) || !await(Msg::ScaleSet, reply, kAnswerMs)) return false;
+    WireReader rd(reply.data(), reply.size());
+    const bool ok = rd.u8() != 0;
+    const int made = rd.i32();
+    if (rd.ok()) samples_ = made;
+    return ok && rd.ok();
+}
+
+void Remote::setDrawQuality(int anisotropy, bool alphaToCoverage) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.i32(anisotropy);
+    w.u8(alphaToCoverage ? 1 : 0);
+    send(Msg::SetDrawQuality, buffer_);
+}
+
+uint32_t Remote::createTexture(int width, int height, int levels) {
+    if (lost_) return 0;
+    const uint32_t id = nextTexture_++;
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.u32(id);
+    w.i32(width);
+    w.i32(height);
+    w.i32(levels);
+    return send(Msg::CreateTexture, buffer_) ? id : 0;
+}
+
+void Remote::releaseTexture(uint32_t id) {
+    buffer_.clear();
+    WireWriter(buffer_).u32(id);
+    send(Msg::ReleaseTexture, buffer_);
+}
+
+void Remote::execute(const FrameRecord& record) {
+    if (lost_ || record.empty()) return;
+    buffer_.clear();
+    WireWriter w(buffer_);
+    bridge::writeRecord(w, record);
+    send(Msg::Execute, buffer_);
+}
+
+bool Remote::readTarget(std::vector<uint32_t>& argb) {
+    std::vector<uint8_t> reply;
+    if (!send(Msg::ReadTarget, {}) || !await(Msg::TargetPixels, reply, kAnswerMs)) return false;
+    WireReader rd(reply.data(), reply.size());
+    const bool ok = rd.u8() != 0;
+    const int w = rd.i32();
+    const int h = rd.i32();
+    if (!ok || !rd.ok() || w <= 0 || h <= 0) return false;
+    const size_t count = size_t(w) * size_t(h);
+    const uint8_t* pixels = rd.take(count * 4);
+    if (!pixels) return false;
+    argb.resize(count);
+    std::memcpy(argb.data(), pixels, count * 4);
+    return true;
+}
+
+void Remote::showOn(HWND window, int outputWidth) {
+    float scale = 1.0f;
+    RECT logical{};
+    if (options_.dpiScale && GetClientRect(window, &logical) && logical.right > 0 && outputWidth > 0)
+        scale = float(logical.right) / float(outputWidth);  // a DPI-unaware window: its points per real pixel
+    if (composition_.window() == window) {
+        composition_.setScale(scale);
+        return;
+    }
+    uint64_t handle = 0;
+    std::string error;
+    if (!composition_.attach(window, process_.hProcess, scale, handle, error)) {
+        setLost("the game's window cannot show the 64-bit renderer's picture: " + error);
+        return;
+    }
+    buffer_.clear();
+    WireWriter(buffer_).u64(handle);
+    if (send(Msg::SetSurface, buffer_))
+        LOG_INFO("bridge: the picture comes through a composition surface (scale %.4f)", double(scale));
+}
+
+void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& o) {
+    if (lost_) {
+        Sleep(15);
+        return;
+    }
+    drain();
+    if (lost_) return;
+    if (window && (needSurface_ || options_.present == "composition")) showOn(window, outputWidth);
+    // At most two pictures wait to be shown: the game's loop keeps the pace of the renderer's presents (vsync).
+    if (presentsSent_ - channel_.presented() >= 2 && !channel_.waitPresented(presentsSent_ - 1, 1000) &&
+        channel_.peerGone()) {
+        setLost("the 64-bit renderer exited");
+        return;
+    }
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.u64(uint64_t(uintptr_t(window)));
+    w.i32(outputWidth);
+    w.i32(outputHeight);
+    w.rect(source);
+    w.u8(o.vsync ? 1 : 0);
+    w.u8(o.allowTearing ? 1 : 0);
+    w.i32(o.fpsLimit);
+    w.f32(o.sharpen);
+    if (send(Msg::Present, buffer_)) ++presentsSent_;
+}
+
+}  // namespace uagfx::gpu

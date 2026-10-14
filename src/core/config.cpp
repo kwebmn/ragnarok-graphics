@@ -71,6 +71,12 @@ Config parseConfig(const std::string& text) {
         if (key == "renderer.backend") {
             if (val == "dgvoodoo") c.backend = Backend::DgVoodoo;
             if (val == "uaro") c.backend = Backend::Uaro;
+        } else if (key == "renderer.bridge") {
+            setBool(val, c.bridge);
+        } else if (key == "renderer.bridge_present") {
+            if (val == "auto" || val == "window" || val == "composition") c.bridgePresent = val;
+        } else if (key == "renderer.bridge_dpi_scale") {
+            setBool(val, c.bridgeDpiScale);
         } else if (key == "display.mode") {
             if (val == "auto") c.mode = DisplayMode::Auto;
             if (val == "window") c.mode = DisplayMode::Window;

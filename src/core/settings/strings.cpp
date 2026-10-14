@@ -429,6 +429,14 @@ const Entry kTexts[] = {
     {"4×", "4×", "4×"},
     {"8×", "8×", "8×"},
     {"16×", "16×", "16×"},
+    {"64-bit renderer (test, for DLSS)", "64-бітний рендер (перевірка, для DLSS)",
+     "64-битный рендер (проверка, для DLSS)"},
+    {"Draws in a separate 64-bit process, uaro-render64.exe: DLSS and frame generation need it. The picture should "
+     "look the same.",
+     "Малює в окремому 64-бітному процесі uaro-render64.exe: він потрібен для DLSS і генерації кадрів. Картинка має "
+     "бути та сама.",
+     "Рисует в отдельном 64-битном процессе uaro-render64.exe: он нужен для DLSS и генерации кадров. Картинка "
+     "должна быть та же."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

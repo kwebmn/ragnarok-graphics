@@ -10,6 +10,17 @@
 
 namespace uagfx::gpu {
 
+class Remote;
+
+// Part 3: the renderer in the 64-bit process uaro-render64.exe ([renderer] bridge = 1).
+struct BridgeOptions {
+    std::string hostExe;             // uaro-render64.exe
+    std::string gameDir;             // its log, uaro-render64.log, goes there
+    std::string present = "auto";    // auto: the game's window, else a composition surface; window; composition
+    bool dpiScale = true;            // composition: scaled for Windows scaling of a DPI-unaware game window
+    int logLevel = 1;                // LogLevel
+};
+
 struct PresentOptions {
     bool vsync = true;
     bool allowTearing = false;  // used only with vsync off, when Windows supports it
@@ -27,6 +38,9 @@ public:
     Renderer& operator=(const Renderer&) = delete;
 
     bool create(std::string& error);  // device, queue, heaps, shaders; false when Direct3D 12 is not usable
+    // Part 3: the same, in uaro-render64.exe; false (and nothing left running) when that process cannot draw.
+    bool createRemote(const BridgeOptions& o, std::string& error);
+    bool remote() const { return remote_ != nullptr; }
     std::string adapterName() const;
     void setUiSharp(bool sharp);  // [display] ui_filter for interface draws
     // 1B review M8: builds the pipelines whose keys file lists, so effects do not stutter the first time they are
@@ -50,10 +64,19 @@ public:
     // source: in game pixels; shown fitted into a swap chain of outputWidth x outputHeight (real pixels, stage 3).
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
 
+    // uaro-render64.exe's side of the bridge: a texture under the id the driver gave it; the composition surface
+    // the game's window shows (when it takes no swap chain from this process); whether the last present found no
+    // way to show the picture; whether the GPU is lost.
+    bool createTextureAs(uint32_t id, int width, int height, int levels);
+    void setPresentSurface(HANDLE surface);
+    bool presentRefused() const;
+    bool lost() const;
+
     struct Impl;
 
 private:
     Impl* impl_;
+    Remote* remote_ = nullptr;
 };
 
 }  // namespace uagfx::gpu

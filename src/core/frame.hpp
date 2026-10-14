@@ -58,6 +58,12 @@ struct Command {
     uint32_t index;  // into the vector of that type
 };
 
+class FrameRecord;
+namespace bridge {
+class WireReader;
+bool readRecord(WireReader& rd, FrameRecord& r);
+}  // namespace bridge
+
 class FrameRecord {
 public:
     static uint32_t stride(uint32_t fvf);
@@ -90,6 +96,7 @@ public:
     const std::vector<uint32_t>& pixels() const { return pixels_; }
 
 private:
+    friend bool bridge::readRecord(bridge::WireReader& rd, FrameRecord& r);  // part 3: a record from its bytes
     uint32_t addPixels(const uint32_t* argb, size_t count);
 
     std::vector<Command> commands_;

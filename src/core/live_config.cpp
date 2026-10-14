@@ -18,6 +18,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     u.next = running;
     Config& n = u.next;
     if (file.backend != running.backend) u.waiting.push_back("backend");
+    if (file.bridge != running.bridge) u.waiting.push_back("bridge");
     if (file.mode != running.mode) u.waiting.push_back("mode");
     if (file.highResolution != running.highResolution) {
         u.applied.push_back(change("high_resolution", flag(running.highResolution), flag(file.highResolution)));

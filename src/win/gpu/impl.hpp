@@ -172,6 +172,8 @@ struct Renderer::Impl {
     UINT failedHeight = 0;
     RetryTimer swapRetry{1000};  // that size is tried again after a second (stage 3 review M1)
     bool tearingSupported = false;
+    HANDLE presentSurface = nullptr;  // part 3: a composition surface instead of the game's window
+    bool refused = false;             // the game's window took no swap chain from this process
     LARGE_INTEGER lastPresent{};
 
     // Geometry of the record being executed, copied into the upload buffer once per execute().

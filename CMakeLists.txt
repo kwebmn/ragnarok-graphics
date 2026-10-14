@@ -11,7 +11,16 @@ add_library(uagfx_core STATIC ${UAGFX_CORE_SOURCES})
 target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
 
-if(WIN32)
+if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # uaro-render64.exe (part 3): the renderer in a 64-bit process the driver hands its calls to; the rest of the
+    # project is 32-bit (cmake/mingw-x86_64.cmake builds only this).
+    file(GLOB UAGFX_HOST_SOURCES CONFIGURE_DEPENDS src/win/gpu/*.cpp src/win/bridge/*.cpp)
+    add_executable(uaro-render64 WIN32 src/host/main.cpp ${UAGFX_HOST_SOURCES} src/win/log.cpp src/win/paths.cpp)
+    target_compile_definitions(uaro-render64 PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS)
+    target_compile_options(uaro-render64 PRIVATE -Wall -Wextra)
+    target_link_libraries(uaro-render64 PRIVATE uagfx_core)
+    target_link_options(uaro-render64 PRIVATE -static -static-libgcc -static-libstdc++ -s)
+elseif(WIN32)
     # ddraw.dll that uaRO.exe loads from its own folder instead of dgVoodoo's or the system one.
     file(GLOB_RECURSE UAGFX_WIN_SOURCES CONFIGURE_DEPENDS src/win/*.cpp)
     add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} src/win/ddraw.def)

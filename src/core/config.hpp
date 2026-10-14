@@ -13,6 +13,12 @@ enum class UiFilter { Sharp, Smooth };  // [display] ui_filter: how magnified in
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 struct Config {
     Backend backend = Backend::DgVoodoo;
+    // Part 3 (test): [renderer] bridge = 1 draws in the 64-bit process uaro-render64.exe; bridge_present = auto,
+    // window or composition (how its picture reaches the game's window); bridge_dpi_scale = 1 scales a composition
+    // surface for Windows scaling of the game's window.
+    bool bridge = false;
+    std::string bridgePresent = "auto";
+    bool bridgeDpiScale = true;
     DisplayMode mode = DisplayMode::Auto;
     int monitor = 0;       // 0 = the main monitor
     int windowWidth = 0;   // window mode: inner size in pixels; 0 = the size the game asks for

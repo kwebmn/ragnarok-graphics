@@ -26,7 +26,22 @@ Context::Context() {
 bool Context::open(std::string& error) {
     if (renderer) return true;
     gpu::Renderer* r = new gpu::Renderer;
-    if (!r->create(error)) {
+    bool remote = false;
+    if (config.bridge) {  // part 3 (test): the renderer in the 64-bit process
+        gpu::BridgeOptions o;
+        o.hostExe = gameDir() + "\\uaro-graphics\\uaro-render64.exe";
+        o.gameDir = gameDir();
+        o.present = config.bridgePresent;
+        o.dpiScale = config.bridgeDpiScale;
+        o.logLevel = int(config.logLevel);
+        std::string why;
+        remote = r->createRemote(o, why);
+        if (remote)
+            LOG_INFO("bridge: drawing in uaro-render64.exe (64-bit), pictures: %s", o.present.c_str());
+        else
+            LOG_ERROR("bridge: %s; drawing in the game's process", why.c_str());
+    }
+    if (!remote && !r->create(error)) {
         delete r;
         return false;
     }

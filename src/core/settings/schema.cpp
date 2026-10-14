@@ -26,6 +26,8 @@ const std::vector<IniSetting>& iniSettings() {
     static const std::vector<IniSetting> list{
         {"renderer", "backend", Page::Render, Control::Choice, 0, 0, 0, {"uaro", "dgvoodoo"},
          {Text::RenderUaro, Text::RenderDgVoodoo}, Text::RenderHeading, Text::RenderUaroHint, ""},
+        {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
+         Text::RenderBridgeHint, ""},
         {"display", "high_resolution", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityHighRes,
          Text::QualityHighResHint, ""},
         {"quality", "render_scale", Page::Quality, Control::Slider, 100, 200, 10, {}, {}, Text::QualityRenderScale,
@@ -66,6 +68,7 @@ std::string sectionKey(const IniSetting& s) { return std::string(s.section) + ".
 std::string tokenOf(const IniSetting& s, const Config& c) {
     const std::string k = sectionKey(s);
     if (k == "renderer.backend") return backendToken(c.backend);
+    if (k == "renderer.bridge") return c.bridge ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";
     if (k == "quality.render_scale") return std::to_string(c.renderScale);
     if (k == "quality.sharpen") return std::to_string(c.sharpen);
