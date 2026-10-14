@@ -42,7 +42,9 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
     if (!channel_.create(name, kToHostBytes, kToClientBytes, error)) return false;
     std::string cmd = "\"" + o.hostExe + "\" --channel " + name + " --parent " +
                       std::to_string(GetCurrentProcessId()) + " --dir \"" + o.gameDir + "\" --log " +
-                      std::to_string(o.logLevel) + " --present " + o.present;
+                      std::to_string(o.logLevel) + " --present " + o.present + " --dlss " + o.dlss +
+                      " --dlss-jitter " + (o.dlssJitterInverted ? "inverted" : "normal") + " --dlss-motion " +
+                      (o.dlssMotionInverted ? "inverted" : "normal");
     STARTUPINFOA si{};
     si.cb = sizeof si;
     std::vector<char> line(cmd.begin(), cmd.end());
@@ -152,13 +154,14 @@ bool Remote::setTarget(int width, int height) {
     return !reply.empty() && reply[0] != 0;
 }
 
-bool Remote::setScale(double k, int width, int height, int samples) {
+bool Remote::setScale(double k, int width, int height, int samples, bool upscale) {
     buffer_.clear();
     WireWriter w(buffer_);
     w.f64(k);
     w.i32(width);
     w.i32(height);
     w.i32(samples);
+    w.u8(upscale ? 1 : 0);
     std::vector<uint8_t> reply;
     if (!send(Msg::SetScale, buffer_) || !await(Msg::ScaleSet, reply, kAnswerMs)) return false;
     WireReader rd(reply.data(), reply.size());
@@ -166,6 +169,14 @@ bool Remote::setScale(double k, int width, int height, int samples) {
     const int made = rd.i32();
     if (rd.ok()) samples_ = made;
     return ok && rd.ok();
+}
+
+void Remote::setCamera(bool valid, const float view[12]) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.u8(valid ? 1 : 0);
+    for (int i = 0; i < 12; ++i) w.f32(valid ? view[i] : 0.0f);
+    send(Msg::Camera, buffer_);
 }
 
 void Remote::setDrawQuality(int anisotropy, bool alphaToCoverage) {

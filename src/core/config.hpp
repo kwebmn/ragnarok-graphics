@@ -31,6 +31,13 @@ struct Config {
     int msaa = 4;                // stage 4: samples per pixel at polygon edges - 0 (off), 2, 4 or 8
     bool alphaToCoverage = true; // stage 4, with MSAA: soft edges where alpha testing cuts textures (leaves, fences)
     int anisotropy = 16;         // stage 4: anisotropic filtering of the world's textures - 0 (off), 2, 4, 8 or 16
+    // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance or ultra - NVIDIA DLSS in the 64-bit
+    // renderer (it starts that renderer; MSAA is off then).
+    std::string dlss = "off";
+    // Test switches (not on a page): dlss_jitter, dlss_motion = normal or inverted - the sign conventions DLSS
+    // expects, should the picture come out blurred (jitter) or smeared (motion).
+    bool dlssJitterInverted = false;
+    bool dlssMotionInverted = false;
     bool vsync = true;
     int fpsLimit = 0;      // 0 = no limit
     bool allowTearing = false;  // let G-SYNC / FreeSync monitors show frames as soon as they are ready

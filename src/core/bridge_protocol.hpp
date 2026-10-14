@@ -29,7 +29,7 @@ enum class Msg : uint32_t {
     SetUiSharp = 1,     // u8 sharp
     PreparePipelines,   // str file
     SetTarget,          // i32 width, height -> TargetSet
-    SetScale,           // f64 k, i32 width, height, samples -> ScaleSet
+    SetScale,           // f64 k, i32 width, height, samples, u8 upscale -> ScaleSet
     SetDrawQuality,     // i32 anisotropy, u8 alpha to coverage
     CreateTexture,      // u32 id, i32 width, height, levels
     ReleaseTexture,     // u32 id
@@ -38,6 +38,7 @@ enum class Msg : uint32_t {
     Present,            // u64 window, i32 output width, height, rect source, u8 vsync, u8 tearing, i32 fps limit,
                         // f32 sharpen
     SetSurface,         // u64 a DirectComposition surface handle, valid in the renderer's process
+    Camera,             // u8 valid, 12 f32: the game's view matrix of the frame being drawn (DLSS)
     Quit,
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed

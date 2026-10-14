@@ -63,6 +63,7 @@ enum class Text : uint16_t {
     GameSettingsRunning, ErrPartialFile,
     PageSmoothing, SmoothMsaa, SmoothMsaaHint, SmoothA2c, SmoothA2cHint, SmoothAniso, SmoothAnisoHint, SmoothOff,
     Factor2, Factor4, Factor8, Factor16, RenderBridge, RenderBridgeHint,
+    SmoothDlss, SmoothDlssHint, DlssDlaa, DlssQuality, DlssBalanced, DlssPerformance, DlssUltra,
     Count
 };
 

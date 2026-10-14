@@ -6,6 +6,7 @@
 #include "core/scale.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
+#include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/window_mode.hpp"
@@ -27,13 +28,16 @@ bool Context::open(std::string& error) {
     if (renderer) return true;
     gpu::Renderer* r = new gpu::Renderer;
     bool remote = false;
-    if (config.bridge) {  // part 3 (test): the renderer in the 64-bit process
+    if (config.bridge || config.dlss != "off") {  // part 3: the renderer in the 64-bit process (DLSS needs it)
         gpu::BridgeOptions o;
         o.hostExe = gameDir() + "\\uaro-graphics\\uaro-render64.exe";
         o.gameDir = gameDir();
         o.present = config.bridgePresent;
         o.dpiScale = config.bridgeDpiScale;
         o.logLevel = int(config.logLevel);
+        o.dlss = config.dlss;
+        o.dlssJitterInverted = config.dlssJitterInverted;
+        o.dlssMotionInverted = config.dlssMotionInverted;
         std::string why;
         remote = r->createRemote(o, why);
         if (remote)
@@ -66,6 +70,7 @@ void Context::close() {
     scaleLog_ = Throttle(500);
     scaledWidth_ = scaledHeight_ = 0;
     scaledSamples_ = 1;
+    scaledUpscale_ = false;
     scaleMade_ = true;
     lastOut_ = SIZE{};
     lastPlan_ = ScalePlan{};
@@ -75,6 +80,7 @@ bool Context::setTarget(int width, int height) {
     if (!renderer || !renderer->setTarget(width, height)) return false;
     scaledWidth_ = width;  // the renderer is back at the game's size until the next present
     scaledSamples_ = 1;    // and at one sample per pixel
+    scaledUpscale_ = false;
     scaledHeight_ = height;
     scaleMade_ = true;     // that target exists (0.4.2 review)
     record.reset();
@@ -147,12 +153,25 @@ void Context::present(const Rect& source, bool waitForVblank) {
     crisp::setScale(
         planScale(shadow.width(), shadow.height(), out.cx, out.cy, config.renderScale, config.highResolution).k);
     // Stage 4: MSAA comes with the scale, so the calibration has drawn without it; Pause turns it off too.
-    const int samples = enhanced_ && config.msaa > 1 ? config.msaa : 1;
-    if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_ || samples != scaledSamples_) {
+    // Part 3: DLSS (in the 64-bit renderer) draws the world instead of MSAA; Pause turns it off as well.
+    const bool upscale = enhanced_ && renderer->remote() && config.dlss != "off";
+    const int samples = enhanced_ && !upscale && config.msaa > 1 ? config.msaa : 1;
+    if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_ || samples != scaledSamples_ ||
+        upscale != scaledUpscale_) {
         scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
         scaledHeight_ = plan.targetHeight;
         scaledSamples_ = samples;
-        scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight, samples);
+        scaledUpscale_ = upscale;
+        scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight, samples, upscale);
+    }
+    if (upscale) {  // the camera of the frame being shown: the motion of its pixels
+        float view[12];
+        const bool known = readGameCamera(view);
+        renderer->setCamera(known, view);
+        if (known != cameraKnown_) {
+            cameraKnown_ = known;
+            LOG_INFO("DLSS: the game's camera %s", known ? "found" : "not in view (no world shown, or another exe)");
+        }
     }
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage);
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the

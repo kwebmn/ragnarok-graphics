@@ -77,7 +77,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool coverage = alphaToCoverage && samples > 1 && s.alphaTest && !s.blend &&
                           (s.alphaFunc == d3d7::CMP_GREATER || s.alphaFunc == d3d7::CMP_GREATEREQUAL);
     const int aniso = s.ui ? 0 : anisotropy;
-    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage);
+    // Part 3 (DLSS): the world into its own target with the frame's jitter, the interface into the layer.
+    const bool toWorld = upscale && !s.ui;
+    const bool toLayer = upscale && s.ui;
+    if (upscale) startFrame();
+    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer);
     if (!pso) return;
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
@@ -99,7 +103,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         transition(t[i]->resource, t[i]->state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     }
     const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(s.stage[0], s.stage[1], aniso);
-    bindTarget();
+    bindPass(toWorld ? kPassWorld : toLayer ? kPassLayer : kPassTarget);
+    worldDrawn = worldDrawn || toWorld;
+    layerDrawn = layerDrawn || toLayer;
     // Stage 4 review: the interface's edges fall on pixel centres (whole D3D7 positions, x * k + 0.5); with every
     // sample there it is drawn exactly as with one sample, while the world keeps its smoothed edges.
     if (samples > 1) placeSamples(s.ui);
@@ -122,8 +128,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         boundSamplers = samplers.ptr;
     }
     Constants c{};
-    c.targetSize[0] = float(width);
-    c.targetSize[1] = float(height);
+    c.targetSize[0] = float(toWorld ? renderWidth : width);
+    c.targetSize[1] = float(toWorld ? renderHeight : height);
+    if (toWorld) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
@@ -146,7 +156,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     } else if (c.uiMode != 0) {
         uiPixels(rec, d, c.uiPixels);
     }
-    c.scale = float(scale);
+    c.scale = float(toWorld ? worldScale : scale);
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
                                                                        : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

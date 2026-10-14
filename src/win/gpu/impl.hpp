@@ -14,6 +14,7 @@
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/gpu/upscaler.hpp"
 
 namespace uagfx::gpu {
 
@@ -33,12 +34,21 @@ constexpr UINT kRingPerSlot = kGpuSrvCount / kSlots;
 constexpr UINT kSamplerCount = 1024;    // cache of sampler pairs, two descriptors each
 constexpr UINT64 kUploadSize = 32ull << 20;  // per slot; grows when one submission needs more
 
-// Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled.
+// Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled;
+// part 3 (DLSS): the world, its motion, the interface layer.
 constexpr UINT kRtvTarget = 0;
 constexpr UINT kRtvSwap = 1;
 constexpr UINT kRtvGame = 3;
 constexpr UINT kRtvNew = 4;
-constexpr UINT kRtvCount = 5;
+constexpr UINT kRtvWorld = 5;
+constexpr UINT kRtvMotion = 6;
+constexpr UINT kRtvLayer = 7;
+constexpr UINT kRtvCount = 8;
+constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
+constexpr UINT kDsvWorld = 1;
+
+// What the open command list draws into (bindPass).
+enum Pass { kPassNone = 0, kPassTarget, kPassWorld, kPassLayer };
 
 constexpr UINT kRootConstants = 0;
 constexpr UINT kRootTextures = 1;
@@ -61,9 +71,12 @@ struct Constants {
     float sourceClamp[4];  // 24-27: blit only - the outermost texel centres of the source rectangle, normalised
     float sharpen;         // 28: blit only - CAS sharpness 0..1 of the picture on screen, below 0 = none
     float twin[4];         // 29-32: uiMode 3 only (stage 6) - the twin texel origin O (x, y), the twin texture's size
+    float jitter[2];       // 33-34: part 3 (DLSS) - the world's geometry moved this frame, target pixels
+    float reproject[12];   // 35-46: motion only - this view -> the previous one (4 x 3)
+    float projection[6];   // 47-52: motion only - f0, f1, cx, cy, near, far (core/game_camera.hpp)
 };
 constexpr UINT kConstantCount = sizeof(Constants) / 4;
-static_assert(kConstantCount == 33, "Constants must stay 33 DWORDs");
+static_assert(kConstantCount == 53, "Constants must stay 53 DWORDs: the cbuffer in shaders.cpp");
 
 struct Texture {
     ID3D12Resource* resource = nullptr;
@@ -126,6 +139,7 @@ struct Renderer::Impl {
     UINT srvStep = 0;
     UINT samplerStep = 0;
     UINT rtvStep = 0;
+    UINT dsvStep = 0;
 
     ID3D12Resource* target = nullptr;
     ID3D12Resource* depth = nullptr;
@@ -137,6 +151,37 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES resolvedState = D3D12_RESOURCE_STATE_RESOLVE_DEST;
     int anisotropy = 0;           // stage 4: of world draws; 0 = off
     bool alphaToCoverage = false;  // stage 4
+    // Part 3 (DLSS, uaro-render64.exe; upscaler.hpp): the world at the render size with a jitter, its depth and
+    // motion, the upscaler's output at the target's size and the interface layer (premultiplied) that goes on top.
+    Upscaler* upscaler = nullptr;
+    bool upscale = false;  // on now
+    ID3D12Resource* world = nullptr;
+    ID3D12Resource* worldDepth = nullptr;  // R32 typeless: D32 to draw into, R32 to read
+    ID3D12Resource* motion = nullptr;      // R16G16 float, target pixels
+    ID3D12Resource* upscaled = nullptr;    // RGBA8, unordered access
+    ID3D12Resource* layer = nullptr;
+    D3D12_RESOURCE_STATES worldState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    D3D12_RESOURCE_STATES worldDepthState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    D3D12_RESOURCE_STATES motionState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    D3D12_RESOURCE_STATES upscaledState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    D3D12_RESOURCE_STATES layerState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT depthSrv = 0, upscaledSrv = 0, layerSrv = 0, worldSrv = 0;
+    int renderWidth = 0, renderHeight = 0;
+    double worldScale = 1.0;  // game pixels -> world pixels
+    D3D12_VIEWPORT worldViewport{};
+    D3D12_RECT worldScissor{};
+    float jitter[2] = {0, 0};  // world pixels, this frame
+    uint32_t upscaleFrame = 0;
+    bool worldDrawn = false;   // the world changed since the last upscale
+    bool layerDrawn = false;   // the layer has something since its last clear
+    bool frameEnded = true;    // presented: the next command starts a frame (the layer is cleared then)
+    bool historyReset = true;  // the next upscale has no usable history
+    bool upscaledValid = false;  // the last upscale ran: `upscaled` holds the world
+    bool cameraValid = false, prevCameraValid = false;
+    float camera[12]{}, prevCamera[12]{};
+    ID3DBlob* motionPs = nullptr;
+    ID3D12PipelineState* motionPipeline = nullptr;
+    ID3D12PipelineState* overPipeline = nullptr;  // the layer over the picture: premultiplied
     int width = 0;  // the target: the game's size times scale
     int height = 0;
     int gameWidth = 0;  // the client's size
@@ -191,7 +236,7 @@ struct Renderer::Impl {
     ID3D12PipelineState* boundPipeline = nullptr;
     uint64_t boundTextures = ~0ull;
     uint64_t boundSamplers = ~0ull;
-    bool targetBound = false;
+    int pass = kPassNone;
 
     // device.cpp
     bool begin();
@@ -201,6 +246,11 @@ struct Renderer::Impl {
     void retireDying();  // after execute() has submitted: the dying textures go with that submission
     void failed(uint32_t place, const char* what, HRESULT hr);
     bool createTarget(int w, int h, UINT n, ID3D12Resource*& rt, ID3D12Resource*& ds);
+    bool createUpscaleTargets(int targetW, int targetH);  // part 3: false (and nothing kept) when it cannot
+    void releaseUpscaleTargets();
+    void startFrame();   // the first command after a present: a clean interface layer
+    bool composite();    // the world upscaled and the layer on top, into the target; false: lost
+    void nextJitter();
     UINT supportedSamples(UINT want);  // the most samples up to `want` the card has for the target and its depth
     // The target with one sample per pixel, for blit() and copies: itself, or resolved into `resolved` (stage 4).
     struct Readable {
@@ -213,21 +263,22 @@ struct Renderer::Impl {
     // false: there is no list to record into (the GPU is lost) - the caller stops too
     bool blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
               const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW, int dstH,
-              float sharpen = -1.0f, UINT dstSamples = 1);
+              float sharpen = -1.0f, UINT dstSamples = 1, bool over = false);
     bool growUpload(Slot& s, UINT64 size);
     Upload allocUpload(UINT64 size, UINT64 alignment);
     void transition(ID3D12Resource* r, D3D12_RESOURCE_STATES& state, D3D12_RESOURCE_STATES to);
     UINT allocSrv();
     D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle(UINT i) const;
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(UINT i) const;
-    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle() const;
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle(UINT i = kDsvTarget) const;
     bool ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing);
     void releaseSwapChain();
     void clear(const ClearCmd& c);
     void setViewport(const ViewportCmd& v);
     void upload(const FrameRecord& rec, const UploadCmd& u);
     void writeTarget(const FrameRecord& rec, const WriteTargetCmd& w);
-    void bindTarget();
+    void bindTarget() { bindPass(kPassTarget); }
+    void bindPass(int p);
     void placeSamples(bool center);  // stage 4 review: at the centre for the interface, the card's default else
     void destroy();
     // pipeline.cpp
@@ -238,7 +289,8 @@ struct Renderer::Impl {
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
     // Before samplerTable and textureTable; false: lost.
     bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso);
-    ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage);
+    ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false);
+    bool createUpscalePipelines();  // the motion pass and the layer composite
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp
     void prepareGeometry(const FrameRecord& rec);

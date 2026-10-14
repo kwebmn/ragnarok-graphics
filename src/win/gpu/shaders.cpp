@@ -23,6 +23,10 @@ cbuffer Params : register(b0) {
     float twinY;
     float twinW;
     float twinH;
+    float jitterX;  // part 3 (DLSS): how far the world's geometry moves this frame, in target pixels
+    float jitterY;
+    float r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11;  // motion only: this view -> the previous one, 4 x 3
+    float f0, f1, cx, cy, nearZ, farZ;  // motion only: the game's projection (core/game_camera.hpp)
 };
 Texture2D tex0 : register(t0);
 Texture2D tex1 : register(t1);
@@ -49,8 +53,8 @@ struct PsIn {
 PsIn draw_vs(VsIn i) {
     PsIn o;
     float w = i.pos.w > 0.0 ? 1.0 / i.pos.w : 1.0;
-    float x = (i.pos.x * scale + 0.5) * 2.0 / targetSize.x - 1.0;
-    float y = 1.0 - (i.pos.y * scale + 0.5) * 2.0 / targetSize.y;
+    float x = (i.pos.x * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
+    float y = 1.0 - (i.pos.y * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
     o.pos = float4(x * w, y * w, i.pos.z * w, w);
     o.diffuse = i.diffuse;
     o.specular = i.specular;
@@ -231,6 +235,24 @@ float3 cas(float3 c, float3 n, float3 s, float3 w, float3 e) {
     float3 amp = sqrt(saturate(min(mn, 1.0 - mx) / max(mx, 1e-5)));
     float3 wgt = amp * (-1.0 / lerp(8.0, 5.0, sharpen));
     return clamp((c + wgt * (n + s + w + e)) / (1.0 + 4.0 * wgt), mn, mx);
+}
+
+// Part 3 (DLSS): where each world pixel was in the previous frame, from the game's camera alone (core/game_camera:
+// its depth turned back into a point of this frame's view, then shown with the previous view). In target pixels, the
+// jitter taken out: the pixel shows the game point x with x * scale + 0.5 + jitter = pixel centre.
+float2 motion_ps(PresentOut i) : SV_Target {
+    int2 p = int2(i.pos.xy);
+    float sz = tex0.Load(int3(p, 0)).r;
+    float gx = (float(p.x) - jitterX) / scale;
+    float gy = (float(p.y) - jitterY) / scale;
+    float zc = farZ * nearZ / (farZ - sz * (farZ - nearZ));
+    float xc = (gx - cx) * zc / f0;
+    float yc = (gy - cy) * zc / f1;
+    float vx = xc * r0 + yc * r3 + zc * r6 + r9;
+    float vy = xc * r1 + yc * r4 + zc * r7 + r10;
+    float vz = xc * r2 + yc * r5 + zc * r8 + r11;
+    if (vz < 1e-4) return float2(0, 0);  // behind the previous camera
+    return float2(vx / vz * f0 + cx - gx, vy / vz * f1 + cy - gy) * scale;
 }
 
 float4 present_ps(PresentOut i) : SV_Target {

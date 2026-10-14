@@ -96,6 +96,14 @@ Config parseConfig(const std::string& text) {
             setFactor(val, 8, c.msaa);
         } else if (key == "quality.alpha_to_coverage") {
             setBool(val, c.alphaToCoverage);
+        } else if (key == "quality.dlss") {
+            if (val == "off" || val == "dlaa" || val == "quality" || val == "balanced" || val == "performance" ||
+                val == "ultra")
+                c.dlss = val;
+        } else if (key == "quality.dlss_jitter") {
+            if (val == "normal" || val == "inverted") c.dlssJitterInverted = val == "inverted";
+        } else if (key == "quality.dlss_motion") {
+            if (val == "normal" || val == "inverted") c.dlssMotionInverted = val == "inverted";
         } else if (key == "quality.anisotropy") {
             setFactor(val, 16, c.anisotropy);
         } else if (key == "display.monitor") {

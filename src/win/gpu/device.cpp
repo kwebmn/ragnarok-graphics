@@ -4,11 +4,13 @@
 #include <dxgi1_6.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <set>
 
 #include "core/d3d7.hpp"
+#include "core/game_camera.hpp"
 #include "core/pipeline_key.hpp"
 #include "core/scale.hpp"
 #include "core/window_plan.hpp"
@@ -92,7 +94,7 @@ bool Renderer::Impl::begin() {
     boundPipeline = nullptr;
     boundTextures = ~0ull;
     boundSamplers = ~0ull;
-    targetBound = false;
+    pass = kPassNone;
     centered = false;  // a new list starts with the default sample positions
     open = true;
     ++listSerial;
@@ -208,17 +210,44 @@ D3D12_CPU_DESCRIPTOR_HANDLE Renderer::Impl::rtvHandle(UINT i) const {
     return h;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE Renderer::Impl::dsvHandle() const { return dsvHeap->GetCPUDescriptorHandleForHeapStart(); }
+D3D12_CPU_DESCRIPTOR_HANDLE Renderer::Impl::dsvHandle(UINT i) const {
+    D3D12_CPU_DESCRIPTOR_HANDLE h = dsvHeap->GetCPUDescriptorHandleForHeapStart();
+    h.ptr += SIZE_T(i) * dsvStep;
+    return h;
+}
 
-void Renderer::Impl::bindTarget() {
-    transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
-    if (targetBound) return;
-    const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(0);
-    const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle();
-    list->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-    list->RSSetViewports(1, &viewport);
-    list->RSSetScissorRects(1, &scissor);
-    targetBound = true;
+// The target (with its depth), or under DLSS (part 3) the world (with its depth) or the interface layer.
+void Renderer::Impl::bindPass(int p) {
+    if (p == kPassWorld) {
+        transition(world, worldState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        transition(worldDepth, worldDepthState, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+    } else if (p == kPassLayer) {
+        transition(layer, layerState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    } else {
+        transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    }
+    if (pass == p) return;
+    if (p == kPassWorld) {
+        const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(kRtvWorld);
+        const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle(kDsvWorld);
+        list->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+        list->RSSetViewports(1, &worldViewport);
+        list->RSSetScissorRects(1, &worldScissor);
+    } else if (p == kPassLayer) {
+        const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(kRtvLayer);
+        list->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+        list->RSSetViewports(1, &viewport);
+        list->RSSetScissorRects(1, &scissor);
+        const float one[4] = {1.0f, 1.0f, 1.0f, 1.0f};  // the opaque interface's alpha (pipelineForKey)
+        list->OMSetBlendFactor(one);
+    } else {
+        const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(kRtvTarget);
+        const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle();
+        list->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+        list->RSSetViewports(1, &viewport);
+        list->RSSetScissorRects(1, &scissor);
+    }
+    pass = p;
 }
 
 void Renderer::Impl::placeSamples(bool center) {
@@ -235,6 +264,31 @@ void Renderer::Impl::placeSamples(bool center) {
 // ---- Impl: frame record commands ---------------------------------------------------------------------------
 
 void Renderer::Impl::clear(const ClearCmd& c) {
+    if (upscale) {  // part 3: the world and its depth; a colour clear empties the interface layer too
+        startFrame();
+        const Rect w = scaleRect(c.rect, worldScale);
+        D3D12_RECT wr{std::max<LONG>(w.left, 0), std::max<LONG>(w.top, 0), std::min<LONG>(w.right, renderWidth),
+                      std::min<LONG>(w.bottom, renderHeight)};
+        const Rect t = scaleRect(c.rect, scale);
+        D3D12_RECT tr{std::max<LONG>(t.left, 0), std::max<LONG>(t.top, 0), std::min<LONG>(t.right, width),
+                      std::min<LONG>(t.bottom, height)};
+        if (wr.right > wr.left && wr.bottom > wr.top) {
+            bindPass(kPassWorld);
+            if (c.flags & 1) {
+                const float color[4] = {float((c.argb >> 16) & 255) / 255.0f, float((c.argb >> 8) & 255) / 255.0f,
+                                        float(c.argb & 255) / 255.0f, 1.0f};
+                list->ClearRenderTargetView(rtvHandle(kRtvWorld), color, 1, &wr);
+                worldDrawn = true;
+            }
+            if (c.flags & 2) list->ClearDepthStencilView(dsvHandle(kDsvWorld), D3D12_CLEAR_FLAG_DEPTH, c.z, 0, 1, &wr);
+        }
+        if ((c.flags & 1) && tr.right > tr.left && tr.bottom > tr.top) {
+            bindPass(kPassLayer);
+            const float none[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            list->ClearRenderTargetView(rtvHandle(kRtvLayer), none, 1, &tr);
+        }
+        return;
+    }
     const Rect t = scaleRect(c.rect, scale);  // game pixels -> target pixels
     D3D12_RECT r{t.left, t.top, t.right, t.bottom};
     r.left = std::max<LONG>(r.left, 0);
@@ -264,10 +318,15 @@ void Renderer::Impl::applyViewport() {
     const LONG left = std::max(r.left, 0), top = std::max(r.top, 0);
     scissor = D3D12_RECT{left, top, std::max<LONG>(left, std::min(r.right, width)),
                          std::max<LONG>(top, std::min(r.bottom, height))};
-    if (open && targetBound) {  // setTarget and setScale call this between command lists
-        list->RSSetViewports(1, &viewport);
-        list->RSSetScissorRects(1, &scissor);
+    if (upscale) {  // part 3: the world's own size
+        worldViewport = D3D12_VIEWPORT{0.0f, 0.0f, float(renderWidth), float(renderHeight), gameViewport.minZ,
+                                       gameViewport.maxZ};
+        const Rect w = scaleRect(gameViewport.rect, worldScale);
+        const LONG wl = std::max(w.left, 0), wt = std::max(w.top, 0);
+        worldScissor = D3D12_RECT{wl, wt, std::max<LONG>(wl, std::min(w.right, renderWidth)),
+                                  std::max<LONG>(wt, std::min(w.bottom, renderHeight))};
     }
+    pass = kPassNone;  // the next draw binds its pass with these
 }
 
 namespace {
@@ -309,13 +368,14 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
 
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
     if (w.rect.empty()) return;
+    if (upscale) startFrame();
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + w.pixels, UINT(w.rect.width()),
                                                   UINT(w.rect.height()));
     if (!src.pResource) return;
     D3D12_TEXTURE_COPY_LOCATION dst{};
     dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     dst.SubresourceIndex = 0;
-    if (!scaled() && samples == 1) {  // the target has the game's size: straight in
+    if (!scaled() && samples == 1 && !upscale) {  // the target has the game's size: straight in
         transition(target, targetState, D3D12_RESOURCE_STATE_COPY_DEST);
         dst.pResource = target;
         list->CopyTextureRegion(&dst, UINT(w.rect.left), UINT(w.rect.top), 0, &src, nullptr);
@@ -326,8 +386,15 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
     transition(gameSized, gameState, D3D12_RESOURCE_STATE_COPY_DEST);
     dst.pResource = gameSized;
     list->CopyTextureRegion(&dst, UINT(w.rect.left), UINT(w.rect.top), 0, &src, nullptr);
-    transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     const float from[4] = {float(w.rect.left), float(w.rect.top), float(w.rect.right), float(w.rect.bottom)};
+    if (upscale) {  // part 3: the game's own pixels cover the world, so they go into the interface layer, opaque
+        transition(layer, layerState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        blit(gameSized, gameState, gameSrv, gameWidth, gameHeight, from, rtvHandle(kRtvLayer), scaleRect(w.rect, scale),
+             width, height);
+        layerDrawn = true;
+        return;
+    }
+    transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     blit(gameSized, gameState, gameSrv, gameWidth, gameHeight, from, rtvHandle(kRtvTarget), scaleRect(w.rect, scale),
          width, height, -1.0f, samples);
 }
@@ -336,9 +403,9 @@ void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w
 // one bilinear sample per pixel when enlarging, an average over each pixel's footprint when shrinking.
 bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, UINT srcSrv, int srcW, int srcH,
                           const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW,
-                          int dstH, float sharpen, UINT dstSamples) {
+                          int dstH, float sharpen, UINT dstSamples, bool over) {
     if (dstRect.empty() || srcW <= 0 || srcH <= 0) return true;  // nothing to copy
-    ID3D12PipelineState* pso = presentPipelineFor(dstSamples);
+    ID3D12PipelineState* pso = over ? overPipeline : presentPipelineFor(dstSamples);
     if (!pso) return true;  // logged when it failed: the copy is skipped
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
@@ -380,7 +447,7 @@ bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     list->DrawInstanced(3, 1, 0, 0);
     boundPipeline = nullptr;  // the next draws bind everything again
     boundTextures = boundSamplers = ~0ull;
-    targetBound = false;
+    pass = kPassNone;
     return true;
 }
 
@@ -425,6 +492,227 @@ Renderer::Impl::Readable Renderer::Impl::readableTarget() {
     transition(resolved, resolvedState, D3D12_RESOURCE_STATE_RESOLVE_DEST);
     list->ResolveSubresource(resolved, 0, target, 0, DXGI_FORMAT_B8G8R8A8_UNORM);
     return Readable{resolved, &resolvedState};
+}
+
+// ---- Impl: DLSS (part 3, uaro-render64.exe) -------------------------------------------------------------------
+
+void Renderer::Impl::releaseUpscaleTargets() {
+    releaseCom(world);
+    releaseCom(worldDepth);
+    releaseCom(motion);
+    releaseCom(upscaled);
+    releaseCom(layer);
+    renderWidth = renderHeight = 0;
+}
+
+bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
+    releaseUpscaleTargets();
+    int rw = 0, rh = 0;
+    if (!upscaler || !createUpscalePipelines() || !upscaler->renderSize(targetW, targetH, rw, rh) || rw <= 0 || rh <= 0)
+        return false;
+    D3D12_CLEAR_VALUE black{};
+    black.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    black.Color[3] = 1.0f;
+    D3D12_CLEAR_VALUE none{};
+    none.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    D3D12_CLEAR_VALUE farthest{};
+    farthest.Format = DXGI_FORMAT_D32_FLOAT;
+    farthest.DepthStencil.Depth = 1.0f;
+    D3D12_CLEAR_VALUE still{};
+    still.Format = DXGI_FORMAT_R16G16_FLOAT;
+    world = createTexture2D(device, rw, rh, 1, DXGI_FORMAT_B8G8R8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+                            D3D12_RESOURCE_STATE_RENDER_TARGET, &black);
+    worldDepth = createTexture2D(device, rw, rh, 1, DXGI_FORMAT_R32_TYPELESS, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
+                                 D3D12_RESOURCE_STATE_DEPTH_WRITE, &farthest);
+    motion = createTexture2D(device, rw, rh, 1, DXGI_FORMAT_R16G16_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+                             D3D12_RESOURCE_STATE_RENDER_TARGET, &still);
+    upscaled = createTexture2D(device, targetW, targetH, 1, DXGI_FORMAT_R8G8B8A8_UNORM,
+                               D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+                               nullptr);
+    layer = createTexture2D(device, targetW, targetH, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                            D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
+    if (!world || !worldDepth || !motion || !upscaled || !layer) {
+        LOG_ERROR("cannot create the %dx%d world and its %dx%d picture for %s", rw, rh, targetW, targetH,
+                  upscaler->name());
+        releaseUpscaleTargets();
+        return false;
+    }
+    worldState = layerState = motionState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    worldDepthState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    upscaledState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    device->CreateRenderTargetView(world, nullptr, rtvHandle(kRtvWorld));
+    device->CreateShaderResourceView(world, nullptr, cpuSrvHandle(worldSrv));
+    D3D12_DEPTH_STENCIL_VIEW_DESC dv{};
+    dv.Format = DXGI_FORMAT_D32_FLOAT;
+    dv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    device->CreateDepthStencilView(worldDepth, &dv, dsvHandle(kDsvWorld));
+    D3D12_SHADER_RESOURCE_VIEW_DESC sv{};
+    sv.Format = DXGI_FORMAT_R32_FLOAT;
+    sv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    sv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    sv.Texture2D.MipLevels = 1;
+    device->CreateShaderResourceView(worldDepth, &sv, cpuSrvHandle(depthSrv));
+    device->CreateRenderTargetView(motion, nullptr, rtvHandle(kRtvMotion));
+    device->CreateShaderResourceView(upscaled, nullptr, cpuSrvHandle(upscaledSrv));
+    device->CreateRenderTargetView(layer, nullptr, rtvHandle(kRtvLayer));
+    device->CreateShaderResourceView(layer, nullptr, cpuSrvHandle(layerSrv));
+    renderWidth = rw;
+    renderHeight = rh;
+    worldScale = double(rw) / double(gameWidth);
+    historyReset = true;
+    worldDrawn = layerDrawn = false;
+    frameEnded = true;
+    upscaleFrame = 0;
+    nextJitter();
+    return true;
+}
+
+// Halton (2, 3): DLSS's recommended pattern, its length growing with the upscale (8 phases at DLAA).
+void Renderer::Impl::nextJitter() {
+    const auto halton = [](uint32_t i, uint32_t base) {
+        float f = 1.0f, r = 0.0f;
+        for (; i; i /= base) {
+            f /= float(base);
+            r += f * float(i % base);
+        }
+        return r;
+    };
+    const double ratio = renderWidth > 0 ? double(width) / double(renderWidth) : 1.0;
+    const uint32_t phases = std::max<uint32_t>(8, uint32_t(8.0 * ratio * ratio + 0.5));
+    const uint32_t i = upscaleFrame % phases + 1;
+    jitter[0] = halton(i, 2) - 0.5f;
+    jitter[1] = halton(i, 3) - 0.5f;
+}
+
+void Renderer::Impl::startFrame() {
+    if (!frameEnded || !layer) return;
+    frameEnded = false;
+    bindPass(kPassLayer);
+    const float none[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    list->ClearRenderTargetView(rtvHandle(kRtvLayer), none, 0, nullptr);
+    layerDrawn = false;
+}
+
+bool Renderer::Impl::composite() {
+    if (!upscale) return true;
+    if (!begin()) return false;
+    static bool failedOnce = false;
+    if (worldDrawn) {
+        // The motion of every world pixel from the game's camera (motion_ps).
+        StageSetup linearClamp;
+        linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
+        linearClamp.magFilter = d3d7::TFG_LINEAR;
+        linearClamp.minFilter = d3d7::TFN_LINEAR;
+        if (!makeRoom(linearClamp, linearClamp, 0)) return false;
+        const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp, 0);
+        const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(depthSrv, depthSrv);
+        transition(worldDepth, worldDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        transition(motion, motionState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(kRtvMotion);
+        list->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+        const D3D12_VIEWPORT vp{0.0f, 0.0f, float(renderWidth), float(renderHeight), 0.0f, 1.0f};
+        const D3D12_RECT all{0, 0, renderWidth, renderHeight};
+        list->RSSetViewports(1, &vp);
+        list->RSSetScissorRects(1, &all);
+        list->SetGraphicsRootSignature(root);
+        list->SetPipelineState(motionPipeline);
+        Constants c{};
+        c.targetSize[0] = float(renderWidth);
+        c.targetSize[1] = float(renderHeight);
+        c.scale = float(worldScale);
+        c.sourceRect[2] = c.sourceRect[3] = 1.0f;
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+        const bool moving = cameraValid && prevCameraValid;
+        if (moving) {
+            camera::reprojection(camera, prevCamera, c.reproject);
+        } else {
+            const float identity[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+            std::memcpy(c.reproject, identity, sizeof identity);
+        }
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
+        list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
+        list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
+        list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        list->DrawInstanced(3, 1, 0, 0);
+
+        // The upscale.
+        transition(world, worldState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        transition(motion, motionState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        transition(upscaled, upscaledState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        Upscaler::Frame f;
+        f.list = list;
+        f.color = world;
+        f.depth = worldDepth;
+        f.motion = motion;
+        f.output = upscaled;
+        f.colorState = worldState;
+        f.depthState = worldDepthState;
+        f.motionState = motionState;
+        f.outputState = upscaledState;
+        f.renderW = renderWidth;
+        f.renderH = renderHeight;
+        f.outW = width;
+        f.outH = height;
+        f.jitter[0] = jitter[0];
+        f.jitter[1] = jitter[1];
+        camera::viewToClip(p, gameWidth, gameHeight, f.viewToClip);
+        camera::inverse4(f.viewToClip, f.clipToView);
+        float r4[16], m[16];
+        camera::affine4(c.reproject, r4);
+        camera::multiply4(f.clipToView, r4, m);
+        camera::multiply4(m, f.viewToClip, f.clipToPrevClip);
+        camera::inverse4(f.clipToPrevClip, f.prevClipToClip);
+        f.nearZ = p.nearZ;
+        f.farZ = p.farZ;
+        f.fovY = camera::kFov * camera::kPi / 180.0f;
+        f.aspect = float(gameWidth) / float(gameHeight);
+        float view[16], eye[16];
+        camera::affine4(cameraValid ? camera : c.reproject, view);
+        if (camera::inverse4(view, eye)) {  // the camera's axes and place in the world (its y points down)
+            for (int k = 0; k < 3; ++k) {
+                f.cameraRight[k] = eye[k];
+                f.cameraUp[k] = -eye[4 + k];
+                f.cameraFwd[k] = eye[8 + k];
+                f.cameraPos[k] = eye[12 + k];
+            }
+        }
+        // A jump (a warp, a new map) leaves no history worth keeping.
+        const float jump = std::fabs(c.reproject[9]) + std::fabs(c.reproject[10]) + std::fabs(c.reproject[11]);
+        f.reset = historyReset || !moving || jump > 400.0f;
+        const bool ok = upscaler->evaluate(f);
+        ID3D12DescriptorHeap* heaps[2] = {gpuSrv, samplerHeap};  // Streamline leaves the list's state to us
+        list->SetDescriptorHeaps(2, heaps);
+        boundPipeline = nullptr;
+        boundTextures = boundSamplers = ~0ull;
+        pass = kPassNone;
+        centered = false;
+        if (!ok && !failedOnce) {
+            failedOnce = true;
+            LOG_ERROR("%s did not run: the world is stretched instead", upscaler->name());
+        }
+        upscaledValid = ok;
+        worldDrawn = false;
+        historyReset = false;
+    }
+    // The picture: the world at the target's size, the interface layer over it.
+    const float worldAll[4] = {0.0f, 0.0f, float(renderWidth), float(renderHeight)};
+    const float targetAll[4] = {0.0f, 0.0f, float(width), float(height)};
+    transition(target, targetState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    const bool shown = upscaledValid
+                           ? blit(upscaled, upscaledState, upscaledSrv, width, height, targetAll, rtvHandle(kRtvTarget),
+                                  Rect{0, 0, width, height}, width, height)
+                           : blit(world, worldState, worldSrv, renderWidth, renderHeight, worldAll,
+                                  rtvHandle(kRtvTarget), Rect{0, 0, width, height}, width, height);
+    if (!shown) return false;
+    if (layerDrawn &&
+        !blit(layer, layerState, layerSrv, width, height, targetAll, rtvHandle(kRtvTarget), Rect{0, 0, width, height},
+              width, height, -1.0f, 1, true))
+        return false;
+    return true;
 }
 
 // ---- Impl: swap chain --------------------------------------------------------------------------------------
@@ -524,6 +812,10 @@ void Renderer::Impl::destroy() {
     for (auto& p : pipelines) releaseCom(p.second);
     pipelines.clear();
     for (ID3D12PipelineState*& p : presentPipelines) releaseCom(p);
+    releaseCom(motionPipeline);
+    releaseCom(overPipeline);
+    releaseCom(motionPs);
+    releaseUpscaleTargets();
     releaseCom(root);
     releaseCom(drawVs);
     releaseCom(drawPs);
@@ -582,6 +874,23 @@ void Renderer::setUiSharp(bool sharp) {
 }
 
 int Renderer::samples() const { return remote_ ? remote_->samples() : int(impl_->samples); }
+
+void Renderer::setUpscaler(Upscaler* u) { impl_->upscaler = u; }
+
+void Renderer::finish() {
+    if (!remote_ && impl_->device && impl_->fence) impl_->waitIdle();
+}
+
+void Renderer::setCamera(bool valid, const float view[12]) {
+    if (remote_) return remote_->setCamera(valid, view);
+    Impl& m = *impl_;
+    m.cameraValid = valid;
+    if (valid) std::memcpy(m.camera, view, sizeof m.camera);
+}
+
+ID3D12Device* Renderer::device() const { return impl_->device; }
+
+bool Renderer::upscaling() const { return impl_->upscale; }
 
 bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
     Impl& m = *impl_;
@@ -726,15 +1035,20 @@ bool Renderer::create(std::string& error) {
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kGpuSrvCount, true, m.gpuSrv) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kSamplerCount, true, m.samplerHeap) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kRtvCount, false, m.rtvHeap) ||
-        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false, m.dsvHeap)) {
+        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 2, false, m.dsvHeap)) {
         error = "descriptor heaps";
         return false;
     }
     m.srvStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     m.samplerStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     m.rtvStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    m.dsvStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
     m.targetSrv = m.allocSrv();
     m.gameSrv = m.allocSrv();
+    m.depthSrv = m.allocSrv();  // part 3 (DLSS): the world's depth, its picture, the interface layer, the world
+    m.upscaledSrv = m.allocSrv();
+    m.layerSrv = m.allocSrv();
+    m.worldSrv = m.allocSrv();
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).
@@ -770,6 +1084,8 @@ bool Renderer::setTarget(int width, int height) {
     releaseCom(m.depth);
     releaseCom(m.resolved);
     releaseCom(m.gameSized);
+    m.releaseUpscaleTargets();
+    m.upscale = false;
     m.samples = 1;  // until the first present, like the scale: the calibration sees DX7's picture
     if (!m.createTarget(width, height, 1, m.target, m.depth)) return fail();
     m.gameSized = createTexture2D(m.device, width, height, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
@@ -799,12 +1115,15 @@ bool Renderer::setTarget(int width, int height) {
     return true;
 }
 
-bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples) {
-    if (remote_) return remote_->setScale(k, targetWidth, targetHeight, samples);
+bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples, bool upscale) {
+    if (remote_) return remote_->setScale(k, targetWidth, targetHeight, samples, upscale);
     Impl& m = *impl_;
     if (m.lost || !m.target || targetWidth <= 0 || targetHeight <= 0) return false;
-    UINT n = m.supportedSamples(UINT(std::max(samples, 1)));
-    if (k == m.scale && targetWidth == m.width && targetHeight == m.height && n == m.samples) return true;
+    const bool wantUpscale = upscale && m.upscaler;  // part 3: DLSS replaces MSAA
+    UINT n = wantUpscale ? 1 : m.supportedSamples(UINT(std::max(samples, 1)));
+    if (k == m.scale && targetWidth == m.width && targetHeight == m.height && n == m.samples &&
+        wantUpscale == m.upscale)
+        return true;
     ID3D12Resource* target = nullptr;
     ID3D12Resource* depth = nullptr;
     ID3D12Resource* resolved = nullptr;
@@ -862,6 +1181,19 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
     }
     LOG_DEBUG("render target %dx%d with %u samples: %.3f times the game's %dx%d", targetWidth, targetHeight, n, k,
               m.gameWidth, m.gameHeight);
+    const bool wasUpscaling = m.upscale;
+    m.upscale = false;
+    if (wantUpscale && m.createUpscaleTargets(targetWidth, targetHeight)) {
+        m.upscale = true;
+        m.applyViewport();
+        LOG_INFO("%s: the world at %dx%d, shown at %dx%d", m.upscaler->name(), m.renderWidth, m.renderHeight,
+                 targetWidth, targetHeight);
+    } else {
+        if (wantUpscale) LOG_ERROR("%s cannot work at %dx%d: the world is drawn as before", m.upscaler->name(),
+                                   targetWidth, targetHeight);
+        else if (wasUpscaling) LOG_INFO("upscaling off");
+        m.releaseUpscaleTargets();
+    }
     if (n != was || (int(n) < samples && samples != m.askedSamples))
         LOG_INFO("msaa: %u sample%s per pixel%s", n, n == 1 ? "" : "s",
                  int(n) < samples ? " (fewer than asked: the card or its memory has no more)" : "");
@@ -939,6 +1271,7 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     if (remote_) return remote_->readTarget(argb);
     Impl& m = *impl_;
     if (m.lost || !m.target || !m.begin()) return false;
+    if (!m.composite()) return false;  // part 3: the picture as it would be shown
     const Impl::Readable r = m.readableTarget();  // resolved first when it has several samples (stage 4)
     ID3D12Resource* source = r.resource;
     D3D12_RESOURCE_STATES* sourceState = r.state;
@@ -1014,7 +1347,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         Sleep(15);  // no swap chain (0.4.1 review): no Present waits for vblank, keep the game's loop from spinning
         return;
     }
-    if (!m.begin()) return;
+    if (!m.begin() || !m.composite()) return;  // part 3: the upscaled world and the interface layer first
     const Impl::Readable shown = m.readableTarget();  // resolved first when it has several samples (stage 4)
     const UINT index = m.swapChain->GetCurrentBackBufferIndex();
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -1053,6 +1386,13 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = m.swapChain->Present(sync, flags);
+    if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
+        ++m.upscaleFrame;
+        m.nextJitter();
+        m.prevCameraValid = m.cameraValid;
+        std::memcpy(m.prevCamera, m.camera, sizeof m.camera);
+        m.frameEnded = true;
+    }
     if (FAILED(hr))
         m.failed(5, "Present", hr);
     else if (hr == DXGI_STATUS_OCCLUDED)

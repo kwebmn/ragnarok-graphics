@@ -82,7 +82,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     }
     if (!compile(compileFn, "draw_vs", "vs_5_0", drawVs, error) || !compile(compileFn, "draw_ps", "ps_5_0", drawPs, error) ||
         !compile(compileFn, "present_vs", "vs_5_0", presentVs, error) ||
-        !compile(compileFn, "present_ps", "ps_5_0", presentPs, error))
+        !compile(compileFn, "present_ps", "ps_5_0", presentPs, error) ||
+        !compile(compileFn, "motion_ps", "ps_5_0", motionPs, error))
         return false;
 
     D3D12_DESCRIPTOR_RANGE srvRange{};
@@ -128,6 +129,51 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     if (!presentPipelineFor(1)) {
         error = "present pipeline";
         return false;
+    }
+    return true;
+}
+
+bool Renderer::Impl::createUpscalePipelines() {
+    if (motionPipeline && overPipeline) return true;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
+    p.pRootSignature = root;
+    p.VS = {presentVs->GetBufferPointer(), presentVs->GetBufferSize()};
+    p.SampleMask = UINT_MAX;
+    p.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+    p.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    p.RasterizerState.DepthClipEnable = TRUE;
+    p.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    p.NumRenderTargets = 1;
+    p.SampleDesc.Count = 1;
+    p.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    if (!motionPipeline) {
+        p.PS = {motionPs->GetBufferPointer(), motionPs->GetBufferSize()};
+        p.RTVFormats[0] = DXGI_FORMAT_R16G16_FLOAT;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&motionPipeline)))) {
+            LOG_ERROR("the motion pipeline failed");
+            motionPipeline = nullptr;
+            return false;
+        }
+    }
+    if (!overPipeline) {
+        p.PS = {presentPs->GetBufferPointer(), presentPs->GetBufferSize()};
+        p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
+        D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
+        b.BlendEnable = TRUE;  // the layer is premultiplied: colour + picture * (1 - coverage)
+        b.SrcBlend = D3D12_BLEND_ONE;
+        b.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+        b.BlendOp = D3D12_BLEND_OP_ADD;
+        b.SrcBlendAlpha = D3D12_BLEND_ONE;
+        b.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+        b.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+        b.LogicOp = D3D12_LOGIC_OP_NOOP;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&overPipeline)))) {
+            LOG_ERROR("the layer pipeline failed");
+            overPipeline = nullptr;
+            return false;
+        }
     }
     return true;
 }
@@ -214,10 +260,11 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
 // (NEVER 1 ... ALWAYS 8) and cull modes (NONE 1, CW = FRONT 2, CCW = BACK 3 with clockwise front faces), and both
 // count winding in window space (y down), so the states map one to one.
 // Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage).
-ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage) {
+ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer) {
     PipelineKey k = pipelineKey(s, fvf);
-    k.samples = uint8_t(samples);
-    k.alphaToCoverage = coverage;
+    k.samples = uint8_t(toLayer ? 1 : samples);
+    k.alphaToCoverage = coverage && !toLayer;
+    k.layer = toLayer;
     return pipelineForKey(packPipelineKey(k));
 }
 
@@ -266,6 +313,25 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     p.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
     p.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     p.SampleDesc.Count = k.samples;
+    if (k.layer) {  // part 3 (DLSS): the interface layer keeps its coverage in alpha, premultiplied, for the composite
+        b.BlendEnable = TRUE;
+        b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+        if (!k.blend) {  // opaque: alpha 1 from the blend factor (1, 1, 1, 1), set with the layer
+            b.SrcBlend = D3D12_BLEND_ONE;
+            b.DestBlend = D3D12_BLEND_ZERO;
+            b.SrcBlendAlpha = D3D12_BLEND_BLEND_FACTOR;
+            b.DestBlendAlpha = D3D12_BLEND_ZERO;
+        } else if (k.dstBlend == d3d7::BLEND_INVSRCALPHA) {  // over: the coverage adds up
+            b.SrcBlendAlpha = D3D12_BLEND_ONE;
+            b.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+        } else {  // added light and the like: the coverage stays as it was
+            b.SrcBlendAlpha = D3D12_BLEND_ZERO;
+            b.DestBlendAlpha = D3D12_BLEND_ONE;
+        }
+        p.DepthStencilState.DepthEnable = FALSE;
+        p.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+        p.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    }
     ID3D12PipelineState* pso = nullptr;
     if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState), reinterpret_cast<void**>(&pso)))) {
         LOG_ERROR("pipeline for key 0x%llx failed", static_cast<unsigned long long>(key));

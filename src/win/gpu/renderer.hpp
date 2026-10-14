@@ -8,9 +8,12 @@
 #include "core/frame.hpp"
 #include "core/image.hpp"
 
+struct ID3D12Device;
+
 namespace uagfx::gpu {
 
 class Remote;
+class Upscaler;
 
 // Part 3: the renderer in the 64-bit process uaro-render64.exe ([renderer] bridge = 1).
 struct BridgeOptions {
@@ -18,6 +21,9 @@ struct BridgeOptions {
     std::string gameDir;             // its log, uaro-render64.log, goes there
     std::string present = "auto";    // auto: the game's window, else a composition surface; window; composition
     bool dpiScale = true;            // composition: scaled for Windows scaling of a DPI-unaware game window
+    std::string dlss = "off";        // off, dlaa, quality, balanced, performance, ultra
+    bool dlssJitterInverted = false;  // test switches ([quality] dlss_jitter, dlss_motion)
+    bool dlssMotionInverted = false;
     int logLevel = 1;                // LogLevel
 };
 
@@ -50,7 +56,12 @@ public:
     // Stage 3: from now on draw into a target k times the game's size (targetWidth x targetHeight); the current
     // picture is stretched into it, as the back buffer keeps its contents across a present. Stage 4: with `samples`
     // samples per pixel (1, 2, 4 or 8; fewer when the card or its memory has not that many).
-    bool setScale(double k, int targetWidth, int targetHeight, int samples = 1);
+    // Part 3: with upscale (and an upscaler, uaro-render64.exe) the world is drawn smaller with a jitter and DLSS
+    // makes the target's size of it; MSAA is off then.
+    bool setScale(double k, int targetWidth, int targetHeight, int samples = 1, bool upscale = false);
+    // Part 3: the game's view matrix of the frame being drawn (false: not known - no motion).
+    void setCamera(bool valid, const float view[12]);
+    bool upscaling() const;
     int samples() const;  // of the target now
     // Stage 4: anisotropic filtering of the world's textures (0 = off, else 2-16), and alpha testing as coverage in
     // draws without blending while the target has several samples.
@@ -68,6 +79,9 @@ public:
     // the game's window shows (when it takes no swap chain from this process); whether the last present found no
     // way to show the picture; whether the GPU is lost.
     bool createTextureAs(uint32_t id, int width, int height, int levels);
+    void setUpscaler(Upscaler* u);   // before setScale
+    void finish();                   // waits until the GPU has done everything submitted
+    ID3D12Device* device() const;
     void setPresentSurface(HANDLE surface);
     bool presentRefused() const;
     bool lost() const;

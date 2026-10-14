@@ -12,6 +12,7 @@
 #include "core/bridge_protocol.hpp"
 #include "core/bridge_wire.hpp"
 #include "core/version.hpp"
+#include "host/streamline.hpp"
 #include "win/bridge/channel.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
@@ -29,6 +30,9 @@ struct Args {
     std::string dir = ".";
     int log = 1;
     std::string present = "auto";
+    std::string dlss = "off";
+    bool jitterInverted = false;
+    bool motionInverted = false;
 };
 
 // The driver's command line: words, "quoted words".
@@ -56,6 +60,9 @@ Args parseArgs() {
         else if (k == "--dir") a.dir = v;
         else if (k == "--log") a.log = std::atoi(v.c_str());
         else if (k == "--present") a.present = v;
+        else if (k == "--dlss") a.dlss = v;
+        else if (k == "--dlss-jitter") a.jitterInverted = v == "inverted";
+        else if (k == "--dlss-motion") a.motionInverted = v == "inverted";
         else continue;
         ++i;
     }
@@ -84,6 +91,7 @@ private:
 
     win::bridge::Channel channel_;
     gpu::Renderer renderer_;
+    host::Dlss dlss_;  // after the renderer: Streamline shuts down before the device goes
     std::string presentMode_;
     bool surface_ = false;      // the driver gave a composition surface
     bool surfaceAsked_ = false;
@@ -106,6 +114,14 @@ int Host::run(const Args& a) {
     channel_.setPeer(parent);
     g_channel = &channel_;
     wlog::setSink(forward);
+    // Part 3: Streamline starts before the first Direct3D call of the process.
+    bool dlss = false;
+    if (a.dlss != "off") {
+        std::string why;
+        dlss = dlss_.init(a.dir + "\\uaro-graphics\\dlss", a.dir, a.dlss, why);
+        dlss_.setSigns(a.jitterInverted ? -1.0f : 1.0f, a.motionInverted ? -1.0f : 1.0f);
+        if (!dlss) LOG_ERROR("DLSS: %s; drawing without it", why.c_str());
+    }
     out_.clear();
     WireWriter hello(out_);
     if (!renderer_.create(error)) {
@@ -116,6 +132,15 @@ int Host::run(const Args& a) {
         return 3;
     }
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
+    if (dlss) {
+        std::string why;
+        if (dlss_.attach(renderer_.device(), why)) {
+            renderer_.setUpscaler(&dlss_);
+            LOG_INFO("%s ready (NVIDIA DLSS through Streamline)", dlss_.name());
+        } else {
+            LOG_ERROR("DLSS: %s; drawing without it", why.c_str());
+        }
+    }
     hello.u8(1);
     hello.str(renderer_.adapterName());
     channel_.send(Msg::Hello, out_);
@@ -133,6 +158,7 @@ int Host::run(const Args& a) {
             channel_.send(Msg::Lost, out_);
         }
     }
+    renderer_.finish();  // nothing of DLSS's still on the GPU when Streamline shuts down
     wlog::setSink(nullptr);
     g_channel = nullptr;
     if (parent) CloseHandle(parent);
@@ -158,7 +184,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             const int width = rd.i32();
             const int height = rd.i32();
             const int samples = rd.i32();
-            w.u8(rd.ok() && renderer_.setScale(k, width, height, samples) ? 1 : 0);
+            const bool upscale = rd.u8() != 0;
+            w.u8(rd.ok() && renderer_.setScale(k, width, height, samples, upscale) ? 1 : 0);
             w.i32(renderer_.samples());
             channel_.send(Msg::ScaleSet, out_);
             break;
@@ -199,6 +226,13 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             break;
         }
         case Msg::Present: present(rd); break;
+        case Msg::Camera: {
+            const bool valid = rd.u8() != 0;
+            float view[12];
+            for (float& v : view) v = rd.f32();
+            if (rd.ok()) renderer_.setCamera(valid, view);
+            break;
+        }
         case Msg::SetSurface: {
             const uint64_t handle = rd.u64();
             if (!rd.ok()) break;

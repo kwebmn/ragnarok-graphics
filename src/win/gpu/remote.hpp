@@ -27,7 +27,8 @@ public:
     void setUiSharp(bool sharp);
     void preparePipelines(const std::string& file);
     bool setTarget(int width, int height);
-    bool setScale(double k, int width, int height, int samples);
+    bool setScale(double k, int width, int height, int samples, bool upscale);
+    void setCamera(bool valid, const float view[12]);
     int samples() const { return samples_; }
     void setDrawQuality(int anisotropy, bool alphaToCoverage);
     uint32_t createTexture(int width, int height, int levels);

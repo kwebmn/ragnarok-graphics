@@ -38,6 +38,11 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::UiSharp, Text::UiSmooth}, Text::QualityUiFilter, Text::QualityUiFilterHint, ""},
         {"display", "crisp_text", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityCrispText,
          Text::QualityCrispTextHint, ""},
+        {"quality", "dlss", Page::Smoothing, Control::Choice, 0, 0, 0,
+         {"off", "dlaa", "quality", "balanced", "performance", "ultra"},
+         {Text::SmoothOff, Text::DlssDlaa, Text::DlssQuality, Text::DlssBalanced, Text::DlssPerformance,
+          Text::DlssUltra},
+         Text::SmoothDlss, Text::SmoothDlssHint, ""},
         {"quality", "msaa", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8"},
          {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8}, Text::SmoothMsaa, Text::SmoothMsaaHint, ""},
         {"quality", "alpha_to_coverage", Page::Smoothing, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::SmoothA2c,
@@ -74,6 +79,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.sharpen") return std::to_string(c.sharpen);
     if (k == "display.ui_filter") return uiFilterToken(c.uiFilter);
     if (k == "display.crisp_text") return c.crispText ? "1" : "0";
+    if (k == "quality.dlss") return c.dlss;
     if (k == "quality.msaa") return std::to_string(c.msaa);
     if (k == "quality.alpha_to_coverage") return c.alphaToCoverage ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);

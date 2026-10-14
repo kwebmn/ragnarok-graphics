@@ -437,6 +437,18 @@ const Entry kTexts[] = {
      "бути та сама.",
      "Рисует в отдельном 64-битном процессе uaro-render64.exe: он нужен для DLSS и генерации кадров. Картинка "
      "должна быть та же."},
+    {"NVIDIA DLSS", "NVIDIA DLSS", "NVIDIA DLSS"},
+    {"A technology of NVIDIA for GeForce RTX cards, in the 64-bit renderer (it starts by itself). DLAA smooths at "
+     "full resolution; Quality ... Ultra draw the world smaller and rebuild it. Instead of MSAA.",
+     "Технологія NVIDIA для карт GeForce RTX, у 64-бітному рендері (вмикається сам). DLAA згладжує в повній "
+     "роздільності; «Якість» … «Ультра» малюють світ меншим і відновлюють його. Замість MSAA.",
+     "Технология NVIDIA для карт GeForce RTX, в 64-битном рендере (включается сам). DLAA сглаживает в полном "
+     "разрешении; «Качество» … «Ультра» рисуют мир меньше и восстанавливают его. Вместо MSAA."},
+    {"DLAA (smoothing only)", "DLAA (лише згладжування)", "DLAA (только сглаживание)"},
+    {"Quality", "Якість", "Качество"},
+    {"Balanced", "Баланс", "Баланс"},
+    {"Performance", "Продуктивність", "Производительность"},
+    {"Ultra performance", "Ультрапродуктивність", "Ультрапроизводительность"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

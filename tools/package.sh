@@ -16,9 +16,10 @@ out="build-win/uaro-graphics.zip"
 stage="build-win/package"
 rm -rf "$out" "$stage"
 mkdir -p "$stage/uaro-graphics"
-cp dist/install.bat dist/uninstall.bat dist/use-uaro.bat dist/use-dgvoodoo.bat dist/update.bat dist/TEST.ru.md "$stage/"
+cp dist/install.bat dist/uninstall.bat dist/use-uaro.bat dist/use-dgvoodoo.bat dist/update.bat dist/get-dlss.bat \
+   dist/TEST.ru.md "$stage/"
 cp build-win/ddraw.dll build-win/uaro-graphics.exe dist/uaro-graphics.ini build-win64/uaro-render64.exe \
-   "$stage/uaro-graphics/"
+   dist/dlss-version.txt "$stage/uaro-graphics/"
 printf '%s build %s\r\n' "$version" "$(date '+%Y-%m-%d %H:%M')" > "$stage/uaro-graphics/version.txt"
 (cd "$stage" && zip -q -r "../uaro-graphics.zip" .)
 python3 tools/check_package.py "$out"

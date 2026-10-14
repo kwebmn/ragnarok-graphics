@@ -88,6 +88,8 @@ set "aniso=0"
 >>"uaro-graphics.ini" echo ; anisotropic filtering of the world: 0 = off, 2, 4, 8 or 16
 >>"uaro-graphics.ini" echo anisotropy = %aniso%
 :smoothing_done
+rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
+if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.
 if /i "%~1"=="/quiet" exit /b 0
 echo.
