@@ -80,6 +80,11 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxGradeWarmthHint, " %"},
         {"effects", "grade_vignette", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxGradeVignette,
          Text::FxGradeVignetteHint, " %"},
+        {"effects", "dof", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDof, Text::FxDofHint, ""},
+        {"effects", "dof_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxDofStrength,
+         Text::FxDofStrengthHint, " %"},
+        {"effects", "dof_range", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxDofRange,
+         Text::FxDofRangeHint, " %"},
         {"effects", "water", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWater, Text::FxWaterHint,
          ""},
         {"effects", "water_waves", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxWaterWaves,
@@ -182,6 +187,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.grade_brightness") return std::to_string(c.effects.gradeBrightness);
     if (k == "effects.grade_warmth") return std::to_string(c.effects.gradeWarmth);
     if (k == "effects.grade_vignette") return std::to_string(c.effects.gradeVignette);
+    if (k == "effects.dof") return c.effects.dof ? "1" : "0";
+    if (k == "effects.dof_strength") return std::to_string(c.effects.dofStrength);
+    if (k == "effects.dof_range") return std::to_string(c.effects.dofRange);
     if (k == "effects.water") return c.effects.water ? "1" : "0";
     if (k == "effects.water_waves") return std::to_string(c.effects.waterWaves);
     if (k == "effects.water_reflections") return std::to_string(c.effects.waterReflections);

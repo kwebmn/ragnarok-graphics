@@ -72,6 +72,11 @@ struct EffectSettings {
     int gradeBrightness = 100;  // %, 50-150
     int gradeWarmth = 50;       // %, 0-100
     int gradeVignette = 25;     // %, 0-100
+    // 0.22: depth of field - sharp around the character in the middle of the screen, the rest softer with the
+    // distance in depth from it (tilt-shift: the map looks like a model).
+    bool dof = false;
+    int dofStrength = 60;  // %, 0-100: how soft the far and the near get
+    int dofRange = 40;     // %, 0-100: how deep the sharp zone is
     bool water = false;
     int waterWaves = 50;        // %, 0-100: 0 a still mirror
     int waterReflections = 50;  // %, 0-100: how much the water reflects

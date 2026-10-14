@@ -218,9 +218,106 @@ bool Renderer::Impl::applyGrade() {
                                 sceneHeight, c, sceneColorSrv, true);
 }
 
+void Renderer::Impl::releaseDof() {
+    Slot& s = slots[slot];  // what the open list recorded may still read them
+    for (ID3D12Resource*& r : dofTarget) {
+        if (r) s.garbage.push_back(r);
+        r = nullptr;
+    }
+    dofWidth = dofHeight = 0;
+}
+
+bool Renderer::Impl::applyDof() {
+    dofDone = true;  // tried once a frame, whatever comes of it
+    const UINT n = upscale ? 1 : samples;
+    const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
+    if (!dofDownPs || !dofBlurPs || !dofApplyPs || !ensureScene("depth of field")) return true;
+    const int w = sceneWidth, h = sceneHeight;
+    if (!dofDownPipeline) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, dofDownPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&dofDownPipeline))))
+            dofDownPipeline = nullptr;
+        p = fullScreenPipeline(root, presentVs, dofBlurPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&dofBlurPipeline))))
+            dofBlurPipeline = nullptr;
+        if (!dofDownPipeline || !dofBlurPipeline) {
+            LOG_ERROR("depth of field: its pipelines failed: it stays off");
+            return true;
+        }
+    }
+    if (!dofApplyPipelines[code]) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, dofApplyPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
+        p.BlendState.RenderTarget[0].RenderTargetWriteMask =
+            D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&dofApplyPipelines[code])))) {
+            dofApplyPipelines[code] = nullptr;
+            LOG_ERROR("depth of field: the pipeline onto %u samples failed", 1u << code);
+            return true;
+        }
+    }
+    const int qw = std::max(1, (w + 3) / 4), qh = std::max(1, (h + 3) / 4);
+    if (!dofTarget[0] || qw != dofWidth || qh != dofHeight) {
+        if (dofFailed && qw == dofWidth && qh == dofHeight) return true;
+        releaseDof();
+        dofWidth = qw;
+        dofHeight = qh;
+        dofFailed = true;
+        for (int i = 0; i < 2; ++i) {
+            dofTarget[i] = createTexture2D(device, qw, qh, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                           D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                           nullptr);
+            dofState[i] = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            if (!dofTarget[i]) {
+                LOG_ERROR("depth of field: no video memory at %dx%d: it stays off at this size", qw, qh);
+                releaseDof();
+                dofWidth = qw;  // remembered as failed
+                dofHeight = qh;
+                return true;
+            }
+            device->CreateRenderTargetView(dofTarget[i], nullptr, rtvHandle(kRtvDof + UINT(i)));
+            device->CreateShaderResourceView(dofTarget[i], nullptr, cpuSrvHandle(dofSrv[i]));
+        }
+        dofFailed = false;
+        LOG_INFO("depth of field: blurred at %dx%d from the %dx%d world", qw, qh, w, h);
+    }
+    if (!copySceneColor() || !copySceneDepth()) return false;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.scale = float(upscale ? worldScale : scale);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.uiPixels[2] = float(qw);
+    c.uiPixels[3] = float(qh);
+    c.footprint = 3.0f + 37.0f * float(std::clamp(effects.dofRange, 0, 100)) / 100.0f;  // world units of depth
+    c.sharpen = float(std::clamp(effects.dofStrength, 0, 100)) / 100.0f;
+    if (!effectPass(dofDownPipeline, dofTarget[0], dofState[0], rtvHandle(kRtvDof), qw, qh, c, sceneColorSrv, true))
+        return false;
+    for (int i = 0; i < 2; ++i) {  // across, then down
+        transition(dofTarget[i], dofState[i], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        c.sourceRect[0] = i == 0 ? 1.0f : 0.0f;
+        c.sourceRect[1] = i == 0 ? 0.0f : 1.0f;
+        if (!effectPass(dofBlurPipeline, dofTarget[1 - i], dofState[1 - i], rtvHandle(kRtvDof + UINT(1 - i)), qw, qh,
+                        c, dofSrv[i], true))
+            return false;
+    }
+    transition(dofTarget[0], dofState[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    return upscale ? effectPass(dofApplyPipelines[code], world, worldState, rtvHandle(kRtvWorld), w, h, c, dofSrv[0],
+                                true)
+                   : effectPass(dofApplyPipelines[code], target, targetState, rtvHandle(kRtvTarget), w, h, c,
+                                dofSrv[0], true);
+}
+
 bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
-    return !gradeDue() || applyGrade();
+    if (gradeDue() && !applyGrade()) return false;
+    return !dofDue() || applyDof();
 }
 
 }  // namespace uagfx::gpu

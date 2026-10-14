@@ -105,7 +105,7 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
            ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
            gradeSaturation == o.gradeSaturation && gradeContrast == o.gradeContrast &&
            gradeBrightness == o.gradeBrightness && gradeWarmth == o.gradeWarmth && gradeVignette == o.gradeVignette &&
-           water == o.water &&
+           dof == o.dof && dofStrength == o.dofStrength && dofRange == o.dofRange && water == o.water &&
            waterWaves == o.waterWaves && waterReflections == o.waterReflections && waterClarity == o.waterClarity;
 }
 
@@ -257,6 +257,12 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 100, c.effects.gradeWarmth);
         } else if (key == "effects.grade_vignette") {
             toInt(val, 0, 100, c.effects.gradeVignette);
+        } else if (key == "effects.dof") {
+            setBool(val, c.effects.dof);
+        } else if (key == "effects.dof_strength") {
+            toInt(val, 0, 100, c.effects.dofStrength);
+        } else if (key == "effects.dof_range") {
+            toInt(val, 0, 100, c.effects.dofRange);
         } else if (key == "effects.water") {
             setBool(val, c.effects.water);
         } else if (key == "effects.water_waves") {

@@ -23,6 +23,7 @@ const Effect kEffects[] = {
     {"effects.grade",
      {"effects.grade_saturation", "effects.grade_contrast", "effects.grade_brightness", "effects.grade_warmth",
       "effects.grade_vignette"}},
+    {"effects.dof", {"effects.dof_strength", "effects.dof_range"}},
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 

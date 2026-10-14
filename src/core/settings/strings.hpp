@@ -81,7 +81,8 @@ enum class Text : uint16_t {
     FxWaterClarityHint, FxGlowLight, FxGlowLightHint, FxAo, FxAoHint, FxAoStrength, FxAoStrengthHint, FxAoSize,
     FxAoSizeHint, FxGrade, FxGradeHint, FxGradeSaturation, FxGradeSaturationHint, FxGradeContrast,
     FxGradeContrastHint, FxGradeBrightness, FxGradeBrightnessHint, FxGradeWarmth, FxGradeWarmthHint,
-    FxGradeVignette, FxGradeVignetteHint,
+    FxGradeVignette, FxGradeVignetteHint, FxDof, FxDofHint, FxDofStrength, FxDofStrengthHint, FxDofRange,
+    FxDofRangeHint,
     Count
 };
 

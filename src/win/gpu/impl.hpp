@@ -60,7 +60,8 @@ constexpr int kGlowLevels = 8;     // the glow's chain of smaller copies, the fi
 constexpr UINT kRtvGlowChain = 12;
 constexpr UINT kRtvSceneDepth = kRtvGlowChain + kGlowLevels;  // 0.19: the depth before the frame's first water
 constexpr UINT kRtvAo = kRtvSceneDepth + 1;  // 0.20: the soft shadows' two targets
-constexpr UINT kRtvCount = kRtvAo + 2;
+constexpr UINT kRtvDof = kRtvAo + 2;         // 0.22: the depth of field's two
+constexpr UINT kRtvCount = kRtvDof + 2;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -290,6 +291,19 @@ struct Renderer::Impl {
     bool gradeDone = false;
     ID3DBlob* gradePs = nullptr;
     ID3D12PipelineState* gradePipelines[4] = {};  // into the target of 1, 2, 4, 8 samples (the world under DLSS: 1)
+    // 0.22, depth of field (ao.cpp): after the colours, from a quarter-sized blurred copy.
+    bool dofDone = false;
+    ID3D12Resource* dofTarget[2] = {};  // B8G8R8A8, a quarter of the world's size
+    D3D12_RESOURCE_STATES dofState[2] = {};
+    UINT dofSrv[2] = {};
+    int dofWidth = 0, dofHeight = 0;
+    bool dofFailed = false;
+    ID3DBlob* dofDownPs = nullptr;
+    ID3DBlob* dofBlurPs = nullptr;
+    ID3DBlob* dofApplyPs = nullptr;
+    ID3D12PipelineState* dofDownPipeline = nullptr;
+    ID3D12PipelineState* dofBlurPipeline = nullptr;
+    ID3D12PipelineState* dofApplyPipelines[4] = {};
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
@@ -466,6 +480,10 @@ struct Renderer::Impl {
     // picture (and under DLSS before the upscale). False: lost.
     bool finishWorld();
     bool copySceneColor();  // the world's picture so far into sceneColor, one sample per pixel
+    bool dofWanted() const { return effects.dof && effects.dofStrength > 0; }
+    bool dofDue() const { return dofWanted() && groundDrawn && !dofDone; }
+    bool applyDof();  // once a frame (dofDone), after the colours; false: lost
+    void releaseDof();
     bool ensureAo(int w, int h);
     void releaseAo();
     ID3D12PipelineState* aoApplyPipeline(UINT samples);

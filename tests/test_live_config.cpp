@@ -124,3 +124,12 @@ TEST(live_config_colour_applies_now) {
     CHECK(appliesNow("effects.grade_vignette"));
 }
 
+TEST(live_config_depth_of_field_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\ndof = 1\ndof_range = 80\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "dof 0 -> 1");
+    CHECK(u.applied[1] == "dof_range 40 -> 80");
+    CHECK(appliesNow("effects.dof_strength"));
+}
+

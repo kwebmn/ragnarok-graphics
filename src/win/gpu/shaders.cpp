@@ -591,6 +591,50 @@ float4 grade_ps(PresentOut i) : SV_Target {
     return float4(saturate(c), 1.0);
 }
 
+// 0.22, depth of field (tilt-shift): sharp around what the camera looks at - the character in the middle of the
+// screen - softer with the distance in depth from it, near and far, as if the map were a model. uiPixels the
+// world's size and its blurred copy's (a quarter); footprint where the blur starts (world units of depth from the
+// focus), sharpen its strength (0-1); sourceRect.xy the blur's direction.
+float4 dof_down_ps(PresentOut i) : SV_Target {  // four by four of the picture: four bilinear taps
+    float2 c = i.pos.xy * 4.0;
+    float2 t = 1.0 / uiPixels.xy;
+    float3 s = sceneColor.SampleLevel(samp0, (c + float2(-1.0, -1.0)) * t, 0).rgb +
+               sceneColor.SampleLevel(samp0, (c + float2(1.0, -1.0)) * t, 0).rgb +
+               sceneColor.SampleLevel(samp0, (c + float2(-1.0, 1.0)) * t, 0).rgb +
+               sceneColor.SampleLevel(samp0, (c + float2(1.0, 1.0)) * t, 0).rgb;
+    return float4(s * 0.25, 1.0);
+}
+
+float4 dof_blur_ps(PresentOut i) : SV_Target {  // nine taps along one direction
+    int2 p = int2(i.pos.xy);
+    int2 dir = int2(sourceRect.xy);
+    int2 last = int2(uiPixels.zw) - 1;
+    float3 sum = float3(0.0, 0.0, 0.0);
+    float weights = 0.0;
+    [unroll] for (int k = -4; k <= 4; ++k) {
+        float w = exp(-float(k * k) / 12.5);
+        sum += tex0.Load(int3(clamp(p + dir * k, int2(0, 0), last), 0)).rgb * w;
+        weights += w;
+    }
+    return float4(sum / weights, 1.0);
+}
+
+float4 dof_apply_ps(PresentOut i) : SV_Target {
+    int2 p = int2(i.pos.xy);
+    float3 sharp = sceneColor.Load(int3(p, 0)).rgb;
+    float3 soft = tex0.SampleLevel(samp0, i.pos.xy * 0.25 / uiPixels.zw, 0).rgb;
+    // The focus: the depth in the middle of the screen, a few pixels around it averaged.
+    int2 mid = int2(uiPixels.xy * 0.5);
+    int r = int(4.0 * scale);
+    float focus = (viewDepth(sceneDepth.Load(int3(mid, 0))) + viewDepth(sceneDepth.Load(int3(mid + int2(r, 0), 0))) +
+                   viewDepth(sceneDepth.Load(int3(mid - int2(r, 0), 0))) +
+                   viewDepth(sceneDepth.Load(int3(mid + int2(0, r), 0))) +
+                   viewDepth(sceneDepth.Load(int3(mid - int2(0, r), 0)))) * 0.2;
+    float z = viewDepth(sceneDepth.Load(int3(p, 0)));
+    float blur = smoothstep(footprint, footprint * 3.0, abs(z - focus)) * sharpen;
+    return float4(lerp(sharp, soft, blur), 1.0);
+}
+
 float4 water_ps(WaterIn i) : SV_Target { return water(i); }
 
 GlowOut water_glow_ps(WaterIn i) {

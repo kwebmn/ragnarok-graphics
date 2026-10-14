@@ -745,6 +745,21 @@ const Entry kTexts[] = {
     {"Vignette", "Віньєтка", "Виньетка"},
     {"The corners of the screen darker, as in films; 0 % none.",
      "Кути екрана темніші, як у кіно; 0 % — без неї.", "Углы экрана темнее, как в кино; 0 % — без неё."},
+    {"Depth of field", "Глибина різкості", "Глубина резкости"},
+    {"Sharp around your character in the middle of the screen; what is farther or nearer gets softer, as if the "
+     "map were a model (tilt-shift). The interface stays sharp.",
+     "Різко довкола вашого персонажа посеред екрана; дальше й ближче — м'якше, ніби карта — макет (tilt-shift). "
+     "Інтерфейс лишається різким.",
+     "Резко вокруг вашего персонажа в центре экрана; дальше и ближе — мягче, будто карта — макет (tilt-shift). "
+     "Интерфейс остаётся резким."},
+    {"Blur", "Розмиття", "Размытие"},
+    {"How soft the far and the near get.", "Наскільки м'якими стають дальнє й ближнє.",
+     "Насколько мягкими становятся дальнее и ближнее."},
+    {"Sharp zone", "Зона різкості", "Зона резкости"},
+    {"How deep the sharp zone around the character is: less blurs sooner, more keeps more sharp.",
+     "Наскільки глибока різка зона довкола персонажа: менше — розмиття починається раніше, більше — різкого більше.",
+     "Насколько глубока резкая зона вокруг персонажа: меньше — размытие начинается раньше, больше — резкого "
+     "больше."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

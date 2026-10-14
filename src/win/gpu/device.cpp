@@ -328,7 +328,7 @@ void Renderer::Impl::clear(const ClearCmd& c) {
         c.rect.bottom >= gameHeight) {
         dropGlow();
         waterCopied = false;  // 0.19: a new picture - its water copies what is under it anew
-        aoDone = groundDrawn = gradeDone = false;  // 0.20, 0.21: its shadows and colours once its ground is there
+        aoDone = groundDrawn = gradeDone = dofDone = false;  // 0.20-0.22: its shadows, colours, depth of field
     }
     if (upscale) {  // part 3: the world and its depth; a colour clear empties the interface layer too
         startFrame();
@@ -996,6 +996,13 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : glowLightPipelines) releaseCom(p);
     for (ID3D12PipelineState*& p : gradePipelines) releaseCom(p);  // 0.21
     releaseCom(gradePs);
+    for (ID3D12Resource*& r : dofTarget) releaseCom(r);  // 0.22
+    releaseCom(dofDownPipeline);
+    releaseCom(dofBlurPipeline);
+    for (ID3D12PipelineState*& p : dofApplyPipelines) releaseCom(p);
+    releaseCom(dofDownPs);
+    releaseCom(dofBlurPs);
+    releaseCom(dofApplyPs);
     releaseCom(aoPs);
     releaseCom(aoBlurPs);
     releaseCom(aoApplyPs);
@@ -1193,19 +1200,21 @@ void Renderer::setEffects(const EffectSettings& e) {
     Impl& m = *impl_;
     if (e == m.effects) return;
     const bool was = m.glowWanted();
-    const bool scene = m.waterWanted() || m.aoWanted() || m.gradeWanted();
+    const bool scene = m.waterWanted() || m.aoWanted() || m.gradeWanted() || m.dofWanted();
+    const bool dof = m.dofWanted();
     const bool ao = m.aoWanted();
     m.effects = e;
     LOG_INFO("effects: shadows %s, strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
-             "brightness %d%%, warmth %d%%, vignette %d%%",
+             "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off", e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
              e.grade ? "on" : "off", e.gradeSaturation, e.gradeContrast, e.gradeBrightness, e.gradeWarmth,
-             e.gradeVignette);
+             e.gradeVignette, e.dof ? "on" : "off", e.dofStrength, e.dofRange);
     if (was && !m.glowWanted()) m.releaseGlow();  // its video memory back
     if (ao && !m.aoWanted()) m.releaseAo();
-    if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted()) m.releaseScene();
+    if (dof && !m.dofWanted()) m.releaseDof();
+    if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted() && !m.dofWanted()) m.releaseScene();
 }
 
 void Renderer::preparePipelines(const std::string& file) {
@@ -1357,6 +1366,7 @@ bool Renderer::create(std::string& error) {
     m.sceneColorSrv = m.allocSrv();
     m.sceneDepthSrv = m.allocSrv();
     for (UINT& srv : m.aoSrv) srv = m.allocSrv();  // 0.20: the soft shadows
+    for (UINT& srv : m.dofSrv) srv = m.allocSrv();  // 0.22: the depth of field
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).
@@ -1396,7 +1406,7 @@ bool Renderer::setTarget(int width, int height) {
     m.releaseUpscaleTargets();
     m.dropGlow();
     m.waterCopied = false;
-    m.aoDone = m.groundDrawn = m.gradeDone = false;
+    m.aoDone = m.groundDrawn = m.gradeDone = m.dofDone = false;
     m.upscale = false;
     m.samples = 1;  // until the first present, like the scale: the calibration sees DX7's picture
     if (!m.createTarget(width, height, 1, m.target, m.depth)) return fail();
@@ -1473,7 +1483,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
     m.waitIdle();
     m.dropGlow();  // 0.18: drawn for the old target
     m.waterCopied = false;
-    m.aoDone = m.groundDrawn = m.gradeDone = false;
+    m.aoDone = m.groundDrawn = m.gradeDone = m.dofDone = false;
     releaseCom(m.target);
     releaseCom(m.depth);
     releaseCom(m.resolved);
@@ -1795,7 +1805,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     m.renderStarted = false;
     m.upscaledNow = false;
     m.waterCopied = false;  // 0.19: the next frame's water copies what is under it anew
-    m.aoDone = m.groundDrawn = m.gradeDone = false;  // 0.20, 0.21: its shadows and colours once its ground is there
+    m.aoDone = m.groundDrawn = m.gradeDone = m.dofDone = false;  // 0.20-0.22: shadows, colours, depth of field
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;
         m.nextJitter();
