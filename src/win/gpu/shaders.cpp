@@ -975,6 +975,39 @@ float4 clouds_ps(PresentOut i) : SV_Target {
     return float4(f * 0.985, f, min(f * 1.015, 1.0), 1.0);  // a touch cooler under the clouds
 }
 
+// 0.34, haze and fog (haze.cpp): the picture's depth (t3) gives each pixel's view depth and place in the world (r0-r11
+// the camera backwards, f0-farZ the projection). Far off it goes over to the haze's colour (fogColor) - twinX where
+// it starts, twinY where it is whole, twinW how much; over the low ground a fog drifts - sourceRect.rgb its colour,
+// .w how much, the ground's height that near the middle of the view (the player's); sharpen the time. Blended over
+// the picture by its alpha.
+float4 haze_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    bool nothing = sceneDepth.Load(int3(wp, 0)) >= 0.99999;
+    float3 v = viewAt(wp);
+    float a = (nothing ? 1.0 : smoothstep(twinX, twinY, v.z)) * twinW;
+    float3 c = fogColor.rgb;
+    if (sourceRect.w > 0.0 && !nothing) {
+        int2 last = int2(uiPixels.xy) - 1;
+        int2 mid = int2(uiPixels.xy * float2(0.5, 0.58));
+        float gy = 0.0;
+        [unroll] for (int k = 0; k < 5; ++k) {
+            float3 m = viewAt(clamp(mid + int2((k - 2) * int(uiPixels.x) / 16, 0), int2(0, 0), last));
+            gy += m.x * r1 + m.y * r4 + m.z * r7 + r10;
+        }
+        gy *= 0.2;
+        float3 w =
+            v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+        float low = saturate((w.y - gy + 4.0) / 8.0);  // up is -y: the lower, the thicker
+        float t = sharpen;
+        float wisps = fbm4(w.xz * 0.025 + float2(t * 0.02, -t * 0.013));
+        float f = low * (0.45 + 0.55 * smoothstep(0.3, 0.7, wisps)) * sourceRect.w;
+        c = lerp(c, sourceRect.rgb, f / max(a + f, 1e-3));
+        a = saturate(a + f);
+    }
+    if (a < 0.003) discard;
+    return float4(c, a);
+}
+
 // The mask softened: nine taps along sourceRect.xy (across, then down), uiPixels.zw the mask's size.
 float4 shadow_blur_ps(PresentOut i) : SV_Target {
     float2 step = sourceRect.xy / uiPixels.zw;

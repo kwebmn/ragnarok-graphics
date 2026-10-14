@@ -101,6 +101,10 @@ struct EffectSettings {
     // 0.33: clouds' shadows drifting over the fields and the towns (core/outdoors.hpp). On by default.
     bool clouds = true;
     int cloudsStrength = 50;  // %, 0-100: how dark
+    // 0.34: haze far off under the open sky; in the dungeons the dark far off and a low fog over the ground
+    // (core/haze.hpp). On by default.
+    bool haze = true;
+    int hazeStrength = 50;  // %, 0-100
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

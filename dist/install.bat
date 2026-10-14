@@ -321,6 +321,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-100 %%: how dark
     >>"uaro-graphics.ini" echo clouds_strength = 50
 )
+rem 0.34: haze and the dungeons' low fog, on.
+findstr /i /l /c:"haze_strength" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = a light haze far off outside; in the dungeons the dark far off and a low fog
+    >>"uaro-graphics.ini" echo haze = 1
+    >>"uaro-graphics.ini" echo ; 0-100 %%: how thick
+    >>"uaro-graphics.ini" echo haze_strength = 50
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

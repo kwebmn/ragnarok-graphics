@@ -358,6 +358,7 @@ bool Renderer::Impl::applyDof() {
 bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
+    if (hazeDue() && !applyHaze()) return false;      // 0.34: far off and over the ground, before the colours
     if (gradeDue() && !applyGrade()) return false;
     return !dofDue() || applyDof();
 }

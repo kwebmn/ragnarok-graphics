@@ -357,6 +357,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.actorShadowsStrength = rd.i32();
             e.clouds = rd.u8() != 0;
             e.cloudsStrength = rd.i32();
+            e.haze = rd.u8() != 0;
+            e.hazeStrength = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

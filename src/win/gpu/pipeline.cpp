@@ -107,7 +107,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"lava_ps", "ps_5_0", &lavaPs},                {"lava_glow_ps", "ps_5_0", &lavaGlowPs},
                    {"shadow_vs", "vs_5_0", &shadowVs},            {"shadow_ps", "ps_5_0", &shadowPs},
                    {"shadow_blur_ps", "ps_5_0", &shadowBlurPs},   {"shadow_apply_ps", "ps_5_0", &shadowApplyPs},
-                   {"clouds_ps", "ps_5_0", &cloudsPs}};
+                   {"clouds_ps", "ps_5_0", &cloudsPs},            {"haze_ps", "ps_5_0", &hazePs}};
     for (const auto& e : effects) {
         std::string why;
         if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {

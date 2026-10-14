@@ -14,6 +14,7 @@
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
 #include "core/map_objects.hpp"
+#include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/pipeline_key.hpp"
 #include "core/torch.hpp"
@@ -417,6 +418,12 @@ struct Renderer::Impl {
     bool cloudsDone = false;
     bool cloudsLogged = false;
     bool mapOutdoors = false;  // the map is a field or a town (core/outdoors.hpp)
+    // 0.34, haze and fog (haze.cpp), the map's look (core/haze.hpp).
+    ID3DBlob* hazePs = nullptr;
+    ID3D12PipelineState* hazePipelines[4] = {};
+    bool hazeDone = false;
+    bool hazeLogged = false;
+    haze::Look mapLook;
     ID3DBlob* lavaPs = nullptr;     // 0.31: a cell of lava (draw.cpp), with the glow's second target
     ID3DBlob* lavaGlowPs = nullptr;
     std::string mapName;                    // the map the game shows (setMap)
@@ -621,6 +628,12 @@ struct Renderer::Impl {
     bool cloudsDue() const { return cloudsWanted() && groundDrawn && !cloudsDone && viewToWorldValid; }
     bool applyClouds();  // once a frame; false: lost
     ID3D12PipelineState* cloudsPipeline(UINT samples);
+    bool hazeWanted() const {
+        return effects.haze && effects.hazeStrength > 0 && hazePs && (mapLook.haze > 0.0f || mapLook.fog > 0.0f);
+    }
+    bool hazeDue() const { return hazeWanted() && groundDrawn && !hazeDone && viewToWorldValid; }
+    bool applyHaze();  // once a frame, the world drawn and lit; false: lost
+    ID3D12PipelineState* hazePipeline(UINT samples);
     void noteRay(const FrameRecord& rec, const DrawCmd& d);
     // An added-light pipeline of `ps` for this target (fireflies, dust); false (and `ps` dropped) when it fails.
     bool lightPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[5], const char* what);
@@ -643,6 +656,7 @@ struct Renderer::Impl {
         lavaCells.clear();
         actorShadowsDone = actorShadowsDrawn = false;
         cloudsDone = false;
+        hazeDone = false;
     }
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }

@@ -215,6 +215,14 @@ TEST(live_config_clouds_apply_now) {
     CHECK(u.applied[1] == "clouds_strength 50 -> 20");
 }
 
+TEST(live_config_haze_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nhaze = 0\nhaze_strength = 10\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "haze 1 -> 0");
+    CHECK(u.applied[1] == "haze_strength 50 -> 10");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());
