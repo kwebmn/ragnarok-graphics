@@ -51,6 +51,9 @@ AiSettings parseAiArgument(const std::string& word);
 // [effects] (0.18): the picture made more modern by the driver, drawn on top of what the game draws. They apply while
 // the game runs; Pause switches them off with the other improvements.
 struct EffectSettings {
+    // 0.22.6: the map's baked light - torches' and lamps' pools, the shadows of houses and trees on the ground -
+    // smooth instead of blotches and steps (the ground's coarse lightmap blurred within its cells). On by default.
+    bool smoothLight = true;
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

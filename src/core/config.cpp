@@ -101,7 +101,8 @@ bool AiSettings::operator==(const AiSettings& o) const {
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
-    return glow == o.glow && glowStrength == o.glowStrength && glowSize == o.glowSize && glowLight == o.glowLight &&
+    return smoothLight == o.smoothLight && glow == o.glow && glowStrength == o.glowStrength &&
+           glowSize == o.glowSize && glowLight == o.glowLight &&
            ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
            gradeSaturation == o.gradeSaturation && gradeContrast == o.gradeContrast &&
            gradeBrightness == o.gradeBrightness && gradeWarmth == o.gradeWarmth && gradeVignette == o.gradeVignette &&
@@ -231,6 +232,8 @@ Config parseConfig(const std::string& text) {
             const std::string k = key.substr(3);
             newSprites = newSprites || k == "monsters" || k == "players" || k == "npcs" || k == "items";
             parseAi(k, val, c.ai, newEnabled, newBudget, newDenoise);
+        } else if (key == "effects.smooth_light") {
+            setBool(val, c.effects.smoothLight);
         } else if (key == "effects.glow") {
             setBool(val, c.effects.glow);
         } else if (key == "effects.glow_strength") {

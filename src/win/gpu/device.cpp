@@ -1253,10 +1253,12 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool dof = m.dofWanted();
     const bool ao = m.aoWanted();
     m.effects = e;
-    LOG_INFO("effects: shadows %s, strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
+    LOG_INFO("effects: smooth map light %s; shadows %s, strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, "
+             "light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
              "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
-             e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off", e.glowStrength, e.glowSize,
+             e.smoothLight ? "on" : "off", e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
+             e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
              e.grade ? "on" : "off", e.gradeSaturation, e.gradeContrast, e.gradeBrightness, e.gradeWarmth,
              e.gradeVignette, e.dof ? "on" : "off", e.dofStrength, e.dofRange);

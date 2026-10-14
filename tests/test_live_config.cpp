@@ -133,3 +133,10 @@ TEST(live_config_depth_of_field_applies_now) {
     CHECK(appliesNow("effects.dof_strength"));
 }
 
+TEST(live_config_smooth_map_light_applies_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nsmooth_light = 0\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(1));
+    CHECK(u.applied[0] == "smooth_light 1 -> 0");
+}
+

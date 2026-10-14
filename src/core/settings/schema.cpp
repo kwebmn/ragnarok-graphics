@@ -55,6 +55,8 @@ const std::vector<IniSetting>& iniSettings() {
         {"quality", "anisotropy", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8", "16"},
          {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8, Text::Factor16}, Text::SmoothAniso,
          Text::SmoothAnisoHint, ""},
+        {"effects", "smooth_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothLight,
+         Text::FxSmoothLightHint, ""},
         {"effects", "ao", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAo, Text::FxAoHint, ""},
         {"effects", "ao_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAoStrength,
          Text::FxAoStrengthHint, " %"},
@@ -174,6 +176,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.max_size") return std::to_string(a.maxSize);
     if (k == "ai.ahead") return a.ahead ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
+    if (k == "effects.smooth_light") return c.effects.smoothLight ? "1" : "0";
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";
     if (k == "effects.glow_strength") return std::to_string(c.effects.glowStrength);
     if (k == "effects.glow_size") return std::to_string(c.effects.glowSize);

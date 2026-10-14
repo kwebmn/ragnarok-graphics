@@ -170,6 +170,26 @@ float4 twinTexel(float2 pos) {
     return c.a > 0.0 ? float4(c.rgb / c.a, c.a) : float4(0.0, 0.0, 0.0, 0.0);
 }
 
+// 0.22.6, the map's baked light (the ground's lightmap): 8x8 texel cells in 256x256 atlases, the tile showing the
+// middle 6x6 and the border texels its neighbours' (0x4e32e5). RO bakes the torches' coloured light (RGB) as sparse
+// dots and the cells are coarse: magnified they show as blotches with edges. Blurred within the cell - the colour
+// much, the shadow (alpha) a little.
+float4 smoothLightmap(float2 uv, float4 sharp) {
+    float2 t = uv * 256.0;
+    float2 lo = floor(t / 8.0) * 8.0 + 0.5;
+    float2 hi = lo + 7.0;
+    float4 sum = float4(0.0, 0.0, 0.0, 0.0);
+    float weights = 0.0;
+    [unroll] for (int y = -1; y <= 1; ++y)
+        [unroll] for (int x = -1; x <= 1; ++x) {
+            float w = (x == 0 ? 2.0 : 1.0) * (y == 0 ? 2.0 : 1.0);
+            sum += tex1.SampleLevel(samp1, clamp(t + float2(x, y) * 1.5, lo, hi) / 256.0, 0) * w;
+            weights += w;
+        }
+    float4 soft = sum / weights;
+    return float4(soft.rgb, lerp(sharp.a, soft.a, 0.3));
+}
+
 float4 shade(PsIn i) {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
@@ -179,7 +199,9 @@ float4 shade(PsIn i) {
         t0 = twinTexel(i.pos.xy);
     else if (uiMode != 0)
         t0 = uiSample(uv0, du, dv, i.pos.xy);
-    float4 t1 = tex1.Sample(samp1, ((stage1.y >> 16) & 7) == 0 ? i.uv0 : i.uv1);
+    float2 uv1 = ((stage1.y >> 16) & 7) == 0 ? i.uv0 : i.uv1;
+    float4 t1 = tex1.Sample(samp1, uv1);
+    if (((stage1.y >> 25) & 1) != 0) t1 = smoothLightmap(uv1, t1);  // 0.22.6: the ground's lightmap
     if (colorKey != 0) {  // colour-keyed textures carry the key as alpha 0 (TextureLevels, Task 10)
         if (((stage0.y >> 24) & 1) != 0 && t0.a == 0) discard;
         if (((stage1.y >> 24) & 1) != 0 && t1.a == 0) discard;

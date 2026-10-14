@@ -250,6 +250,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.dof ? 1 : 0);
     w.i32(e.dofStrength);
     w.i32(e.dofRange);
+    w.u8(e.smoothLight ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

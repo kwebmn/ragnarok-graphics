@@ -189,6 +189,15 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo dof_strength = 60
     >>"uaro-graphics.ini" echo dof_range = 40
 )
+rem 0.22.6: the smooth map light, on, after the [effects] 0.18-0.22 added.
+findstr /i /l /c:"smooth_light" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = the map's baked light - torch pools, shadows on the ground -
+    >>"uaro-graphics.ini" echo ;     smooth instead of blotches
+    >>"uaro-graphics.ini" echo smooth_light = 1
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

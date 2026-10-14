@@ -331,6 +331,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.dof = rd.u8() != 0;
             e.dofStrength = rd.i32();
             e.dofRange = rd.i32();
+            e.smoothLight = rd.u8() != 0;
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

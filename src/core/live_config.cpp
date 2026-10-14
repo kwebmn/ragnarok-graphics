@@ -89,6 +89,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.allowTearing != running.allowTearing) u.waiting.push_back("allow_tearing");
     const EffectSettings& fe = file.effects;
     const EffectSettings& re = running.effects;
+    if (fe.smoothLight != re.smoothLight)
+        u.applied.push_back(change("smooth_light", flag(re.smoothLight), flag(fe.smoothLight)));
     if (fe.glow != re.glow) u.applied.push_back(change("glow", flag(re.glow), flag(fe.glow)));
     if (fe.glowStrength != re.glowStrength)
         u.applied.push_back(

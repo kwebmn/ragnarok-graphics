@@ -288,3 +288,9 @@ TEST(config_effects_depth_of_field) {
     CHECK(parseConfig("[effects]\ndof_range = 200\n").effects == d);
 }
 
+TEST(config_effects_smooth_map_light) {
+    // 0.22.6: on unless turned off.
+    CHECK(parseConfig("").effects.smoothLight);
+    CHECK(!parseConfig("[effects]\nsmooth_light = 0\n").effects.smoothLight);
+}
+

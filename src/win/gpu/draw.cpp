@@ -217,6 +217,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
+    // 0.22.6: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly.
+    if (effects.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1] && t[1]->width == 256 && t[1]->height == 256)
+        c.stage1[1] |= 1u << 25;
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
     if (coverage) c.alphaTest |= 1u << 17;
     if (toLayer && !s.blend) c.alphaTest |= 1u << 18;  // part 3: opaque in the layer (0.8 review I2)
