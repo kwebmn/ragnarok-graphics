@@ -1,15 +1,22 @@
 cmake_minimum_required(VERSION 3.20)
-project(uaro_graphics LANGUAGES CXX)
+project(uaro_graphics LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# miniz (MIT): deflate and inflate for GRF archives (upscaled.grf). Third-party code: its own warnings are not ours.
+add_library(uagfx_miniz STATIC third_party/miniz/miniz.c)
+target_include_directories(uagfx_miniz PUBLIC third_party/miniz)
+target_compile_options(uagfx_miniz PRIVATE -w)
+target_compile_definitions(uagfx_miniz PUBLIC MINIZ_NO_STDIO MINIZ_NO_ARCHIVE_APIS MINIZ_NO_TIME)  # only (in)flate
 
 # Portable core: formats, surfaces, config, decisions. No Windows headers; unit-tested on Linux.
 file(GLOB_RECURSE UAGFX_CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(uagfx_core STATIC ${UAGFX_CORE_SOURCES})
 target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
+target_link_libraries(uagfx_core PUBLIC uagfx_miniz)
 
 if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # uaro-render64.exe (part 3): the renderer in a 64-bit process the driver hands its calls to; the rest of the
