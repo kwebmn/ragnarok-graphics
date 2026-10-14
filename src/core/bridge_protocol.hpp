@@ -8,7 +8,7 @@ namespace uagfx::bridge {
 // process (DLSS and frame generation exist only for 64-bit programs). They share one block of memory: BlockHeader,
 // the ring from the driver to the renderer, then the ring back (core/bridge_ring.hpp).
 constexpr uint32_t kMagic = 0x52423455;  // "U4BR"
-constexpr uint32_t kVersion = 1;
+constexpr uint32_t kVersion = 2;  // 2: uploads carry the sprite cache's cells (0.13)
 
 struct alignas(16) BlockHeader {
     uint32_t magic;

@@ -437,35 +437,57 @@ void AiTextures::dispatchMips(ID3D12Resource* image, const std::vector<Level>& l
     }
 }
 
-bool AiTextures::finish(Job& job) {
-    // A network's picture is 4 times the game's texture; for a result of twice the size its first mip level is the
-    // texture's top level. A picture from upscaled.grf is the result's size already.
-    const int skip = !job.loaded && scale_ == 2 ? 1 : 0;
+ID3D12Resource* AiTextures::makeImage(const Job& job, std::vector<Level>& levels) {
+    // A network's picture is 4 times the game's texture; one from upscaled.grf is the result's size already.
     const int full = job.loaded ? scale_ : kNetScale;
     const int w = job.width * full, h = job.height * full;
-    std::vector<Level> levels;
     UINT64 bytes = 0;
     layout(w, h, levels, bytes);
     ID3D12Resource* image =
         buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
-    if (!image) return false;
-    D3D12_RESOURCE_STATES imageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    if (!image) return nullptr;
+    D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     m_.slots[m_.slot].garbage.push_back(image);  // freed once this list has run
     if (job.loaded) {  // level 0 from upscaled.grf
         const Level& l0 = levels[0];
         const Upload u = m_.allocUpload(UINT64(l0.pitch) * UINT64(h), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-        if (!u.cpu) return false;
+        if (!u.cpu) return nullptr;
         for (int y = 0; y < h; ++y)
             std::memcpy(u.cpu + UINT64(y) * l0.pitch, job.pixels.data() + size_t(y) * size_t(w), size_t(w) * 4);
-        m_.transition(image, imageState, D3D12_RESOURCE_STATE_COPY_DEST);
+        m_.transition(image, state, D3D12_RESOURCE_STATE_COPY_DEST);
         m_.list->CopyBufferRegion(image, 0, m_.slots[m_.slot].upload, u.offset, UINT64(l0.pitch) * UINT64(h));
-        m_.transition(image, imageState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        m_.transition(image, state, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     } else {
         dispatchShuffle(job, image, levels[0]);
     }
     dispatchMips(image, levels);
+    m_.transition(image, state, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    return image;
+}
 
-    const Level& top = levels[size_t(skip)];
+void AiTextures::readBack(const Job& job, ID3D12Resource* image, const Level& top) {
+    if (job.loaded || !writable_) return;
+    Readback r;  // read once this list has run (finishReadbacks)
+    const UINT64 size = UINT64(top.pitch) * UINT64(top.height);
+    r.buffer = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, size, D3D12_RESOURCE_STATE_COPY_DEST, false);
+    if (!r.buffer) return;
+    m_.list->CopyBufferRegion(r.buffer, 0, image, top.at, size);
+    r.fence = m_.fenceValue + 1;  // the value the open list's submission signals
+    r.name = job.name;
+    r.width = top.width;
+    r.height = top.height;
+    r.pitch = top.pitch;
+    readbacks_.push_back(r);
+    known_.insert(job.name);
+}
+
+bool AiTextures::finish(Job& job) {
+    std::vector<Level> levels;
+    ID3D12Resource* image = makeImage(job, levels);
+    if (!image) return false;
+    // For a result of twice the size the network's first mip level is the texture's top level.
+    const size_t skip = !job.loaded && scale_ == 2 ? 1 : 0;
+    const Level& top = levels[skip];
     D3D12_HEAP_PROPERTIES hp{};
     hp.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_RESOURCE_DESC td{};
@@ -473,15 +495,14 @@ bool AiTextures::finish(Job& job) {
     td.Width = UINT64(top.width);
     td.Height = UINT(top.height);
     td.DepthOrArraySize = 1;
-    td.MipLevels = UINT16(levels.size() - size_t(skip));
+    td.MipLevels = UINT16(levels.size() - skip);
     td.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     td.SampleDesc.Count = 1;
     ID3D12Resource* tex = nullptr;
     if (FAILED(m_.device->CreateCommittedResource(&hp, D3D12_HEAP_FLAG_NONE, &td, D3D12_RESOURCE_STATE_COPY_DEST,
                                                   nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&tex))))
         return false;
-    m_.transition(image, imageState, D3D12_RESOURCE_STATE_COPY_SOURCE);
-    for (size_t i = size_t(skip); i < levels.size(); ++i) {
+    for (size_t i = skip; i < levels.size(); ++i) {
         D3D12_TEXTURE_COPY_LOCATION src{}, dst{};
         src.pResource = image;
         src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
@@ -493,24 +514,10 @@ bool AiTextures::finish(Job& job) {
         src.PlacedFootprint.Footprint.RowPitch = levels[i].pitch;
         dst.pResource = tex;
         dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        dst.SubresourceIndex = UINT(i - size_t(skip));
+        dst.SubresourceIndex = UINT(i - skip);
         m_.list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
     }
-    if (!job.loaded && writable_) {  // the result for upscaled.grf, read once this list has run
-        Readback r;
-        const UINT64 size = UINT64(top.pitch) * UINT64(top.height);
-        r.buffer = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, size, D3D12_RESOURCE_STATE_COPY_DEST, false);
-        if (r.buffer) {
-            m_.list->CopyBufferRegion(r.buffer, 0, image, top.at, size);
-            r.fence = m_.fenceValue + 1;  // the value the open list's submission signals
-            r.name = job.name;
-            r.width = top.width;
-            r.height = top.height;
-            r.pitch = top.pitch;
-            readbacks_.push_back(r);
-            known_.insert(job.name);
-        }
-    }
+    readBack(job, image, top);
     // The game may have uploaded other pixels meanwhile, or released the texture: the picture is not its any more.
     const auto it = m_.textures.find(job.id);
     const auto item = items_.find(job.id);
@@ -542,6 +549,211 @@ bool AiTextures::finish(Job& job) {
     return true;
 }
 
+// The game's sprite cache (0.13): a 256x256 texture whose cells get one frame after another. It is never enlarged as
+// a whole - its contents change all the time - but cell by cell into its enlarged copy (Texture::ai), where the game's
+// own texture coordinates find the enlarged frame. A new frame goes in plainly enlarged at once, so that a cell
+// never shows the frame it held before, and the network's picture replaces it once done, if the cell still holds it.
+void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
+                           uint32_t count) {
+    const auto item = items_.find(id);
+    if (item != items_.end()) {
+        keptBytes_ -= item->second.argb.size() * 4;
+        items_.erase(item);
+    }
+    const int net = netOf_[int(ai::Kind::Sprites)];
+    if (net < 0) return;
+    auto a = atlases_.find(id);
+    const bool made = a == atlases_.end();
+    if (made) {
+        if (!makeAtlas(id, t)) return;
+        a = atlases_.find(id);
+    }
+    if (!count) {  // a change of no frame: as it is
+        standIn(t, a->second, u.rect, argb, u.rect.width());
+        return;
+    }
+    if (made) {  // what it held already, as it is: where it has anything (the enlarged copy starts cleared)
+        Rect box{u.rect.right, u.rect.bottom, u.rect.left, u.rect.top};
+        for (int y = u.rect.top; y < u.rect.bottom; ++y)
+            for (int x = u.rect.left; x < u.rect.right; ++x)
+                if (argb[size_t(y - u.rect.top) * size_t(u.rect.width()) + size_t(x - u.rect.left)]) {
+                    box.left = std::min(box.left, x);
+                    box.top = std::min(box.top, y);
+                    box.right = std::max(box.right, x + 1);
+                    box.bottom = std::max(box.bottom, y + 1);
+                }
+        // A texel more on each side: the enlargement blends with its neighbours.
+        box = Rect{std::max(box.left - 1, u.rect.left), std::max(box.top - 1, u.rect.top),
+                   std::min(box.right + 1, u.rect.right), std::min(box.bottom + 1, u.rect.bottom)};
+        if (!box.empty())
+            standIn(t, a->second, box,
+                    argb + size_t(box.top - u.rect.top) * size_t(u.rect.width()) + size_t(box.left - u.rect.left),
+                    u.rect.width());
+    }
+    for (uint32_t i = 0; i < count; ++i) {
+        const Rect c = cells[i];
+        if (c.empty() || c.left < u.rect.left || c.top < u.rect.top || c.right > u.rect.right ||
+            c.bottom > u.rect.bottom)
+            continue;
+        const int w = c.width(), h = c.height();
+        std::vector<uint32_t> pixels(size_t(w) * size_t(h));
+        for (int y = 0; y < h; ++y)
+            std::memcpy(pixels.data() + size_t(y) * size_t(w),
+                        argb + size_t(c.top - u.rect.top + y) * size_t(u.rect.width()) + size_t(c.left - u.rect.left),
+                        size_t(w) * 4);
+        if (!made) standIn(t, a->second, c, pixels.data(), w);
+        ++cellsWritten_;
+        Job j;
+        j.id = id;
+        j.net = net;
+        j.width = w;
+        j.height = h;
+        j.cell = true;
+        j.cellX = c.left;
+        j.cellY = c.top;
+        j.frame = ++a->second.frames[uint32_t(c.top) << 16 | uint32_t(c.left)];
+        const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
+        j.name = ai::entryName(nets_[size_t(net)]->folder, key);
+        if (kinds_.emplace(key, ai::Kind::Sprites).second) tag(ai::kindTag(ai::Kind::Sprites, key));
+        if (!map_.empty()) {
+            std::string name = ai::mapTag(map_, key);
+            if (mapTags_.insert(name).second) tag(name);
+        }
+        if (known_.count(j.name)) {  // made before: from upscaled.grf
+            IoRequest r;
+            r.id = id;
+            r.name = j.name;
+            j.pixels = std::move(pixels);
+            r.cell = std::move(j);
+            request(std::move(r));
+        } else {
+            j.pixels = std::move(pixels);
+            cells_.push_back(std::move(j));
+            if (cells_.size() > 4096) cells_.pop_front();  // a crowd: the oldest frames are likely gone anyway
+        }
+    }
+}
+
+bool AiTextures::makeAtlas(uint32_t id, Texture& t) {
+    Atlas a;
+    a.levels = scale_ == 4 ? 4 : 3;  // down to half the game's texels: sprites are seldom smaller on the screen
+    D3D12_HEAP_PROPERTIES hp{};
+    hp.Type = D3D12_HEAP_TYPE_DEFAULT;
+    D3D12_RESOURCE_DESC td{};
+    td.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    td.Width = UINT64(t.width) * UINT64(scale_);
+    td.Height = UINT(t.height * scale_);
+    td.DepthOrArraySize = 1;
+    td.MipLevels = UINT16(a.levels);
+    td.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    td.SampleDesc.Count = 1;
+    ID3D12Resource* tex = nullptr;
+    if (FAILED(m_.device->CreateCommittedResource(&hp, D3D12_HEAP_FLAG_NONE, &td, D3D12_RESOURCE_STATE_COPY_DEST,
+                                                  nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&tex))))
+        return false;
+    const UINT srv = m_.allocSrv();
+    if (srv == kNoSrv) {
+        m_.slots[m_.slot].garbage.push_back(tex);
+        return false;
+    }
+    dropAi(id);  // a picture of it as a whole, made before it was seen to be a sprite cache
+    t.ai = tex;
+    t.aiState = D3D12_RESOURCE_STATE_COPY_DEST;
+    t.aiSrv = srv;
+    m_.device->CreateShaderResourceView(tex, nullptr, m_.cpuSrvHandle(srv));
+    atlases_[id] = std::move(a);
+    return true;
+}
+
+void AiTextures::standIn(Texture& t, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch) {
+    const int w = r.width(), h = r.height();
+    std::vector<uint32_t> src(size_t(w) * size_t(h));
+    for (int y = 0; y < h; ++y)
+        std::memcpy(src.data() + size_t(y) * size_t(w), argb + size_t(y) * size_t(pitch), size_t(w) * 4);
+    std::vector<uint32_t> level, next;
+    ai::enlargeCell(src.data(), w, h, scale_, level);
+    int lw = w * scale_, lh = h * scale_;
+    for (int i = 0; i < a.levels; ++i) {
+        writeRegion(t, i, (r.left * scale_) >> i, (r.top * scale_) >> i, lw, lh, level);
+        if (i + 1 == a.levels) break;
+        int nw = 0, nh = 0;
+        ai::halve(level, lw, lh, next, nw, nh);
+        level.swap(next);
+        lw = nw;
+        lh = nh;
+    }
+}
+
+void AiTextures::writeRegion(Texture& t, int level, int x, int y, int w, int h, const std::vector<uint32_t>& argb) {
+    const int dw = std::max(1, (t.width * scale_) >> level), dh = std::max(1, (t.height * scale_) >> level);
+    const int cw = std::min(w, dw - x), ch = std::min(h, dh - y);
+    if (cw <= 0 || ch <= 0) return;
+    const UINT pitch = UINT(alignUp64(UINT64(cw) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+    const Upload up = m_.allocUpload(UINT64(pitch) * UINT64(ch), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+    if (!up.cpu) return;  // no room this frame: the cell keeps what it had until its picture comes
+    for (int row = 0; row < ch; ++row)
+        std::memcpy(up.cpu + UINT64(row) * pitch, argb.data() + size_t(row) * size_t(w), size_t(cw) * 4);
+    m_.transition(t.ai, t.aiState, D3D12_RESOURCE_STATE_COPY_DEST);
+    D3D12_TEXTURE_COPY_LOCATION src{}, dst{};
+    src.pResource = m_.slots[m_.slot].upload;
+    src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint.Offset = up.offset;
+    src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    src.PlacedFootprint.Footprint.Width = UINT(cw);
+    src.PlacedFootprint.Footprint.Height = UINT(ch);
+    src.PlacedFootprint.Footprint.Depth = 1;
+    src.PlacedFootprint.Footprint.RowPitch = pitch;
+    dst.pResource = t.ai;
+    dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    dst.SubresourceIndex = UINT(level);
+    m_.list->CopyTextureRegion(&dst, UINT(x), UINT(y), 0, &src, nullptr);
+}
+
+bool AiTextures::cellCurrent(const Job& job) const {
+    const auto a = atlases_.find(job.id);
+    if (a == atlases_.end()) return false;
+    const auto f = a->second.frames.find(uint32_t(job.cellY) << 16 | uint32_t(job.cellX));
+    const auto t = m_.textures.find(job.id);
+    return f != a->second.frames.end() && f->second == job.frame && t != m_.textures.end() && t->second.ai;
+}
+
+bool AiTextures::finishCell(Job& job) {
+    std::vector<Level> levels;
+    ID3D12Resource* image = makeImage(job, levels);
+    if (!image) return false;
+    const size_t skip = !job.loaded && scale_ == 2 ? 1 : 0;
+    readBack(job, image, levels[skip]);
+    if (!cellCurrent(job)) return true;  // the cell has another frame by now: the picture waits in upscaled.grf
+    Texture& t = m_.textures.find(job.id)->second;
+    const Atlas& a = atlases_.find(job.id)->second;
+    m_.transition(t.ai, t.aiState, D3D12_RESOURCE_STATE_COPY_DEST);
+    for (int i = 0; i < a.levels && skip + size_t(i) < levels.size(); ++i) {
+        const Level& l = levels[skip + size_t(i)];
+        const int x = (job.cellX * scale_) >> i, y = (job.cellY * scale_) >> i;
+        const int dw = std::max(1, (t.width * scale_) >> i), dh = std::max(1, (t.height * scale_) >> i);
+        if (x >= dw || y >= dh) break;
+        D3D12_TEXTURE_COPY_LOCATION src{}, dst{};
+        src.pResource = image;
+        src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        src.PlacedFootprint.Offset = l.at;
+        src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        src.PlacedFootprint.Footprint.Width = UINT(l.width);
+        src.PlacedFootprint.Footprint.Height = UINT(l.height);
+        src.PlacedFootprint.Footprint.Depth = 1;
+        src.PlacedFootprint.Footprint.RowPitch = l.pitch;
+        dst.pResource = t.ai;
+        dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        dst.SubresourceIndex = UINT(i);
+        const D3D12_BOX box{0, 0, 0, UINT(std::min(l.width, dw - x)), UINT(std::min(l.height, dh - y)), 1};
+        m_.list->CopyTextureRegion(&dst, UINT(x), UINT(y), 0, &src, &box);
+    }
+    if (job.loaded)
+        ++cellsLoaded_;
+    else
+        ++cellsNetwork_;
+    return true;
+}
+
 void AiTextures::dropAi(uint32_t id) {
     const auto it = m_.textures.find(id);
     if (it == m_.textures.end() || !it->second.ai) return;
@@ -558,8 +770,13 @@ void AiTextures::drop(Item& item) {
     item.state = Item::Skipped;
 }
 
-void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb) {
+void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
+                            uint32_t cellCount) {
     if (!ready_ || u.level != 0) return;
+    if (cellCount || atlases_.count(id)) {  // a sprite cache: cell by cell
+        noteCells(id, t, u, argb, cells, cellCount);
+        return;
+    }
     if (t.ai) dropAi(id);  // the game changed a texture the network had done: its own pixels again
     const bool whole = u.rect.left == 0 && u.rect.top == 0 && u.rect.width() == t.width && u.rect.height() == t.height;
     if (!whole || t.width < minSide_ || t.height < minSide_ || t.width > maxSide_ || t.height > maxSide_) {
@@ -666,6 +883,7 @@ void AiTextures::forget(uint32_t id) {
         keptBytes_ -= it->second.argb.size() * 4;
         items_.erase(it);
     }
+    atlases_.erase(id);  // its enlarged copy goes with the texture (Renderer: Texture::ai)
     if (job_ && job_->id == id) job_.reset();  // its buffers serve the next one
 }
 
@@ -673,6 +891,15 @@ bool AiTextures::nextJob() {
     if (!loaded_.empty()) {
         job_ = std::make_unique<Job>(std::move(loaded_.front()));
         loaded_.pop_front();
+        return true;
+    }
+    // Sprite frames and the rest of the world take turns: a crowd's stream of new frames does not hold up the ground.
+    cellTurn_ = !cellTurn_;
+    while (!cells_.empty() && (cellTurn_ || queue_.empty())) {
+        Job j = std::move(cells_.front());
+        cells_.pop_front();
+        if (!cellCurrent(j)) continue;  // the cell has another frame by now
+        job_ = std::make_unique<Job>(std::move(j));
         return true;
     }
     for (std::deque<uint32_t>* q : {&queue_, &later_}) {
@@ -695,6 +922,13 @@ bool AiTextures::nextJob() {
             return true;
         }
     }
+    while (!cells_.empty()) {  // the world's turn, and it had nothing
+        Job j = std::move(cells_.front());
+        cells_.pop_front();
+        if (!cellCurrent(j)) continue;
+        job_ = std::make_unique<Job>(std::move(j));
+        return true;
+    }
     return false;
 }
 
@@ -704,6 +938,18 @@ void AiTextures::takeLoaded() {
     results.swap(ioOut_);
     LeaveCriticalSection(&ioLock_);
     for (IoResult& r : results) {
+        if (r.cell.cell) {  // a sprite cache's cell: the picture, or the network after all
+            Job j = std::move(r.cell);
+            if (!cellCurrent(j)) continue;
+            if (r.ok && r.width == j.width * scale_ && r.height == j.height * scale_) {
+                j.loaded = true;
+                j.pixels = std::move(r.argb);
+                loaded_.push_back(std::move(j));
+            } else {
+                cells_.push_back(std::move(j));
+            }
+            continue;
+        }
         const auto it = items_.find(r.id);
         if (it == items_.end()) continue;
         Item& item = it->second;
@@ -763,24 +1009,31 @@ void AiTextures::work() {
     finishReadbacks();
     double budget = budget_;
     double spent = 0;
-    bool finished = false;  // one finished picture a frame: its mips and copies are not free either
+    // Finished pictures: their mips and copies are not free either - up to 4M texels a frame (a 512x512 texture
+    // enlarged 4 times, or many sprite frames).
+    double finishing = 4.0 * 1024 * 1024;
+    const auto texels = [this](const Job& j) {
+        return double(j.width) * double(j.height) * (j.loaded ? scale_ * scale_ : kNetScale * kNetScale);
+    };
     while (budget > 0) {
         if (!job_ && !nextJob()) break;
         Job& j = *job_;
         if (j.loaded) {
-            if (finished) break;
-            if (!finish(j)) {
+            if (finishing <= 0) break;
+            finishing -= texels(j);
+            if (j.cell) {
+                finishCell(j);
+            } else if (!finish(j)) {
                 const auto it = items_.find(j.id);
                 if (it != items_.end() && it->second.state == Item::Waiting) queue_.push_back(j.id);
             }
-            finished = true;
             job_.reset();
             continue;
         }
         if (j.conv < 0) {
             if (!ensureBuffers(j.width, j.height) || !uploadInput(j)) {
                 LOG_ERROR("AI textures: no GPU memory for a %dx%d texture; it stays as it is", j.width, j.height);
-                const auto it = items_.find(j.id);
+                const auto it = j.cell ? items_.end() : items_.find(j.id);
                 if (it != items_.end()) drop(it->second);
                 job_.reset();
                 continue;
@@ -794,12 +1047,14 @@ void AiTextures::work() {
             spent += macs;
             continue;
         }
-        if (finished) break;
-        if (!finish(j)) {
+        if (finishing <= 0) break;
+        finishing -= texels(j);
+        if (j.cell) {
+            finishCell(j);
+        } else if (!finish(j)) {
             const auto it = items_.find(j.id);
             if (it != items_.end()) drop(it->second);
         }
-        finished = true;
         job_.reset();
     }
     scheduled_[m_.slot % 2] = spent;
@@ -818,7 +1073,7 @@ void AiTextures::logNow(bool final) {
     const ULONGLONG now = GetTickCount64();
     if (!final && now - lastLog_ < 30000) return;
     lastLog_ = now;
-    if (!doneNetwork_ && !doneLoaded_ && queue_.empty() && later_.empty()) return;
+    if (!doneNetwork_ && !doneLoaded_ && queue_.empty() && later_.empty() && !cellsWritten_) return;
     // What the draws showed: how the kinds come out in the game (the network takes only the ones that are on).
     std::string seen;
     for (int k = 0; k < ai::kKinds; ++k)
@@ -828,6 +1083,11 @@ void AiTextures::logNow(bool final) {
              "lightmaps %u",
              doneNetwork_, doneLoaded_, static_cast<unsigned>(queue_.size() + (job_ ? 1 : 0)),
              static_cast<unsigned>(later_.size()), written_, seen.c_str(), seen_[int(ai::Kind::Lightmap)]);
+    if (cellsWritten_)
+        LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u made by the network, %u from "
+                 "upscaled.grf, %u waiting",
+                 cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsNetwork_, cellsLoaded_,
+                 static_cast<unsigned>(cells_.size()));
 }
 
 void AiTextures::request(IoRequest r) {
@@ -843,9 +1103,11 @@ DWORD WINAPI AiTextures::ioMain(void* self) {
 }
 
 void AiTextures::ioLoop() {
-    // Pictures go into upscaled.grf every 3 seconds or 32 MB, tags (empty entries) with them or every 15 seconds:
-    // every write puts a new file table at the end.
+    // Pictures and tags (empty entries) go into upscaled.grf every 30 seconds or 32 MB, and when the game closes:
+    // every write puts a new file table at the end and leaves the old one unused in the file - with thousands of
+    // sprite frames and their tags that table is hundreds of kilobytes.
     std::vector<std::pair<std::string, std::vector<uint8_t>>> batch;
+    std::unordered_map<std::string, size_t> pending;  // a picture's place in the batch
     size_t bytes = 0;
     uint32_t pictures = 0;
     ULONGLONG since = 0, tagsSince = 0;
@@ -865,6 +1127,7 @@ void AiTextures::ioLoop() {
             }
             if (r.write) {
                 batch.emplace_back(r.name, ai::encodeTexture(r.argb.data(), r.width, r.height));
+                pending[r.name] = batch.size() - 1;
                 bytes += batch.back().second.size();
                 ++pictures;
                 if (!since) since = GetTickCount64();
@@ -873,16 +1136,22 @@ void AiTextures::ioLoop() {
             IoResult res;
             res.id = r.id;
             res.name = r.name;
+            res.cell = std::move(r.cell);
             std::vector<uint8_t> blob;
             std::string error;
-            res.ok = archive_.read(r.name, blob, error) && ai::decodeTexture(blob, res.argb, res.width, res.height);
+            const auto waiting = pending.find(r.name);  // made a moment ago, not in the file yet
+            if (waiting != pending.end())
+                res.ok = ai::decodeTexture(batch[waiting->second].second, res.argb, res.width, res.height);
+            else
+                res.ok = archive_.read(r.name, blob, error) &&
+                         ai::decodeTexture(blob, res.argb, res.width, res.height);
             EnterCriticalSection(&ioLock_);
             ioOut_.push_back(std::move(res));
             LeaveCriticalSection(&ioLock_);
         }
         const ULONGLONG now = GetTickCount64();
-        const bool due = stop || bytes >= kBatchBytes || (since && now - since >= 3000) ||
-                         (tagsSince && now - tagsSince >= 15000);
+        const bool due = stop || bytes >= kBatchBytes || (since && now - since >= 30000) ||
+                         (tagsSince && now - tagsSince >= 30000);
         if (!batch.empty() && due) {
             std::string error;
             if (writable_ && archive_.append(batch, error)) {
@@ -892,6 +1161,7 @@ void AiTextures::ioLoop() {
                 LOG_ERROR("AI textures: upscaled.grf not written (%s)", error.empty() ? "read only" : error.c_str());
             }
             batch.clear();
+            pending.clear();
             bytes = 0;
             pictures = 0;
             since = tagsSince = 0;

@@ -21,12 +21,15 @@ public:
     const ColorKey& key() const { return key_; }
     void setKey(const ColorKey& key);  // the alpha of keyed texels changes: every level is sent again
     void changed(int level, Rect r);   // r is clipped to the level
+    // AI textures (0.13): a cell of the game's sprite cache got a new frame; the next upload of level 0 names it.
+    void slotWritten(Rect r);
     bool pending() const;
     void sync(FrameRecord& record, uint32_t texture);  // records the changed rectangles as uploads
 
 private:
     std::vector<Image> images_;
     std::vector<Rect> dirty_;
+    std::vector<Rect> slots_;  // since the last upload of level 0
     ColorKey key_;
 };
 

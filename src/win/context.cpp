@@ -7,6 +7,7 @@
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
 #include "win/game_camera.hpp"
+#include "win/sprite_hook.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/window_mode.hpp"
@@ -97,6 +98,8 @@ bool Context::open(std::string& error) {
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
     LOG_INFO("Direct3D 12 renderer on %s", renderer->adapterName().c_str());
     crisp::install(config.crispText);
+    // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp).
+    if (config.ai.enabled && config.ai.sprites && renderer->remote()) installSpriteHook();
     return true;
 }
 

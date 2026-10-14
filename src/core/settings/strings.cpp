@@ -515,12 +515,15 @@ const Entry kTexts[] = {
      "Усе інше, що стоїть на карті: будинки, стіни, дерева, каміння, вода.",
      "Всё остальное, что стоит на карте: дома, стены, деревья, камни, вода."},
     {"Characters, monsters, NPCs", "Персонажі, монстри, NPC", "Персонажи, монстры, NPC"},
-    {"And items on the ground: the game draws them alike, so this is one box. They are small pixel pictures: the "
-     "network may change their look - try it and see.",
-     "І речі на землі: гра малює їх однаково, тож це одна галочка. Це маленькі піксельні картинки: нейромережа може "
-     "змінити їхній вигляд — спробуйте й подивіться.",
-     "И вещи на земле: игра рисует их одинаково, поэтому это одна галочка. Это маленькие пиксельные картинки: "
-     "нейросеть может изменить их вид — попробуйте и посмотрите."},
+    {"And items on the ground: the game draws them alike, so this is one box. It keeps their animation frames in a "
+     "shared cache; every frame is enlarged on its own as it comes (a new monster within a second or two, then at "
+     "once from upscaled.grf). Small pixel pictures: the network may change their look - try it and see.",
+     "І речі на землі: гра малює їх однаково, тож це одна галочка. Кадри їхніх анімацій гра тримає в спільному "
+     "кеші; кожен кадр покращується окремо, щойно з'явиться (новий монстр — за секунду-дві, далі одразу з "
+     "upscaled.grf). Це маленькі піксельні картинки: нейромережа може змінити їхній вигляд — спробуйте й подивіться.",
+     "И вещи на земле: игра рисует их одинаково, поэтому это одна галочка. Кадры их анимаций игра держит в общем "
+     "кэше; каждый кадр улучшается отдельно, как только появится (новый монстр — за секунду-две, дальше сразу из "
+     "upscaled.grf). Это маленькие пиксельные картинки: нейросеть может изменить их вид — попробуйте и посмотрите."},
     {"Skill effects", "Ефекти вмінь", "Эффекты умений"},
     {"Glows, sparks and light added onto the picture. Usually small and quick: the difference is little.",
      "Сяйва, іскри й світло, що додаються до картинки. Зазвичай маленькі й швидкі: різниця невелика.",

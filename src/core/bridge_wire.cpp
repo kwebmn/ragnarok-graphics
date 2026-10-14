@@ -185,7 +185,11 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         w.u32(u.level);
         w.rect(u.rect);
         w.u32(u.pixels);
+        w.u32(u.firstSlot);
+        w.u32(u.slotCount);
     }
+    w.u32(uint32_t(r.slots().size()));
+    for (const Rect& s : r.slots()) w.rect(s);
     w.u32(uint32_t(r.writes().size()));
     for (const WriteTargetCmd& t : r.writes()) {
         w.rect(t.rect);
@@ -250,14 +254,19 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         d.twinTile[1] = rd.i32();
         d.twinScale = rd.f64();
     }
-    if (!count(rd, 28, n)) return fail();
+    if (!count(rd, 36, n)) return fail();
     r.uploads_.resize(n);
     for (UploadCmd& u : r.uploads_) {
         u.texture = rd.u32();
         u.level = rd.u32();
         u.rect = rd.rect();
         u.pixels = rd.u32();
+        u.firstSlot = rd.u32();
+        u.slotCount = rd.u32();
     }
+    if (!count(rd, 16, n)) return fail();
+    r.slots_.resize(n);
+    for (Rect& s : r.slots_) s = rd.rect();
     if (!count(rd, 20, n)) return fail();
     r.writes_.resize(n);
     for (WriteTargetCmd& t : r.writes_) {
@@ -297,7 +306,7 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         return uint64_t(at) + uint64_t(rect.width()) * uint64_t(rect.height()) <= r.pixels_.size();
     };
     for (const UploadCmd& u : r.uploads_)
-        if (!pixelsFit(u.rect, u.pixels)) return fail();
+        if (!pixelsFit(u.rect, u.pixels) || uint64_t(u.firstSlot) + u.slotCount > r.slots_.size()) return fail();
     for (const WriteTargetCmd& t : r.writes_)
         if (!pixelsFit(t.rect, t.pixels)) return fail();
     return true;

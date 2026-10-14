@@ -57,4 +57,13 @@ bool hasTransparency(const uint32_t* argb, int width, int height);
 // like the colour key.
 void enlargeAlpha(const float* alpha, int width, int height, int scale, std::vector<uint8_t>& out);
 
+// 0.13, a cell of the game's sprite cache until the network has done it: the colour bilinear between texel centres
+// (hidden texels take their visible neighbours' colour first, as for the network), the alpha as enlargeAlpha - the
+// look of the game's own texture drawn larger.
+void enlargeCell(const uint32_t* argb, int width, int height, int scale, std::vector<uint32_t>& out);
+// The next mip level of an ARGB picture, as the GPU's ai_mip makes it: the average of up to four texels, the alpha all
+// or nothing.
+void halve(const std::vector<uint32_t>& argb, int width, int height, std::vector<uint32_t>& out, int& outWidth,
+           int& outHeight);
+
 }  // namespace uagfx::ai

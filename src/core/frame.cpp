@@ -46,12 +46,16 @@ uint32_t FrameRecord::addPixels(const uint32_t* argb, size_t count) {
     return at;
 }
 
-void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb) {
+void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
+                         const std::vector<Rect>& slots) {
     UploadCmd u;
     u.texture = texture;
     u.level = level;
     u.rect = rect;
     u.pixels = addPixels(argb, size_t(rect.width()) * size_t(rect.height()));
+    u.firstSlot = uint32_t(slots_.size());
+    u.slotCount = uint32_t(slots.size());
+    slots_.insert(slots_.end(), slots.begin(), slots.end());
     uploads_.push_back(u);
     commands_.push_back({Cmd::Upload, uint32_t(uploads_.size() - 1)});
 }
@@ -75,6 +79,7 @@ void FrameRecord::reset() {
     vertices_.clear();
     indices_.clear();
     pixels_.clear();
+    slots_.clear();
 }
 
 }  // namespace uagfx

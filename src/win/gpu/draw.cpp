@@ -85,9 +85,18 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (upscale) startFrame();
     ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer);
     if (!pso) return;
+    // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
+    // off in its options): four times the texels, shrunk on the screen, would shimmer.
+    StageSetup sampled[2] = {s.stage[0], s.stage[1]};
+    if (ai && ai->shown && !s.ui)
+        for (int i = 0; i < 2; ++i) {
+            const auto it = d.texture[i] ? textures.find(d.texture[i]) : textures.end();
+            const bool mips = sampled[i].mipFilter == d3d7::TFP_POINT || sampled[i].mipFilter == d3d7::TFP_LINEAR;
+            if (it != textures.end() && it->second.ai && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
+        }
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
-    if (!makeRoom(s.stage[0], s.stage[1], aniso)) return;
+    if (!makeRoom(sampled[0], sampled[1], aniso)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
@@ -126,7 +135,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             srv[i] = t[i]->srv;
         }
     }
-    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(s.stage[0], s.stage[1], aniso);
+    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(sampled[0], sampled[1], aniso);
     bindPass(toWorld ? kPassWorld : toLayer ? kPassLayer : kPassTarget);
     worldDrawn = worldDrawn || toWorld;
     layerDrawn = layerDrawn || toLayer;

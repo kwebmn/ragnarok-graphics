@@ -46,6 +46,10 @@ struct UploadCmd {  // texture pixels, ARGB8, rect.width() * rect.height() value
     uint32_t level = 0;
     Rect rect;
     uint32_t pixels = 0;
+    // AI textures (0.13): the cells of the game's sprite cache that got a new frame since the last upload, at
+    // slots()[firstSlot, firstSlot + slotCount) - each a whole cell, the frame in its top left corner.
+    uint32_t firstSlot = 0;
+    uint32_t slotCount = 0;
 };
 
 struct WriteTargetCmd {  // CPU pixels written into the render target (Unlock after a write, Blt from memory)
@@ -72,7 +76,8 @@ public:
     void clear(const ClearCmd& c);
     void viewport(const ViewportCmd& v);
     void draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, const uint16_t* indices, uint32_t indexCount);
-    void upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb);
+    void upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
+                const std::vector<Rect>& slots = {});
     void writeTarget(const Rect& rect, const uint32_t* argb);
     bool empty() const { return commands_.empty(); }
     // Bytes waiting to go to the GPU: vertices, indices and pixels. Past kFlushBytes the driver plays the record at
@@ -94,6 +99,7 @@ public:
     const std::vector<uint8_t>& vertexBytes() const { return vertices_; }
     const std::vector<uint16_t>& indices() const { return indices_; }
     const std::vector<uint32_t>& pixels() const { return pixels_; }
+    const std::vector<Rect>& slots() const { return slots_; }
 
 private:
     friend bool bridge::readRecord(bridge::WireReader& rd, FrameRecord& r);  // part 3: a record from its bytes
@@ -109,6 +115,7 @@ private:
     std::vector<uint8_t> vertices_;
     std::vector<uint16_t> indices_;
     std::vector<uint32_t> pixels_;
+    std::vector<Rect> slots_;
 };
 
 }  // namespace uagfx

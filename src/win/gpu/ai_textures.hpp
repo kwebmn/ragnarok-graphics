@@ -40,8 +40,10 @@ public:
     // off. The amount of work a frame follows the GPU time it takes (observe) to the settings' budget.
     bool start(const std::string& gameDir, const AiSettings& settings, std::string& error);
     void observe(UINT slot, double ms);  // what this slot's last share of the work took on the GPU
-    // A texture's pixels as the game uploads them: level 0 of a whole texture is kept for the network.
-    void noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb);
+    // A texture's pixels as the game uploads them: level 0 of a whole texture is kept for the network. cells: the
+    // cells of the game's sprite cache that got a new frame (UploadCmd::slots) - each enlarged on its own.
+    void noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
+                    uint32_t cellCount);
     void noteWorldUse(uint32_t id, ai::Kind kind);  // drawn in the world as `kind`: its turn comes, if that is on
     void forget(uint32_t id);                       // the game released it
     void setMap(const std::string& map);            // the map the game shows now, "" none
@@ -79,11 +81,19 @@ private:
         uint32_t id = 0;
         int net = 0;
         std::string name;
-        int width = 0, height = 0;  // the game's texture
+        int width = 0, height = 0;  // the game's texture, or the cell
         bool loaded = false;        // from upscaled.grf: pixels holds the finished picture
         std::vector<uint32_t> pixels;
         int conv = -1;  // the next convolution; -1 before the input is on the GPU
         int row = 0;    // its next band
+        bool cell = false;  // a cell of a sprite cache: the picture goes into the cache's enlarged copy
+        int cellX = 0, cellY = 0;
+        uint32_t frame = 0;  // the cell's frame it is for (Atlas::frames)
+    };
+    // A sprite cache of the game (0.13): its enlarged copy is the texture's Texture::ai, made cell by cell.
+    struct Atlas {
+        int levels = 0;
+        std::unordered_map<uint32_t, uint32_t> frames;  // a cell's corner (y << 16 | x) -> its frames so far
     };
     struct Readback {
         ID3D12Resource* buffer = nullptr;
@@ -97,8 +107,9 @@ private:
         bool tag = false;  // an empty entry: a kind or a map (texture_cache.hpp)
         uint32_t id = 0;
         std::string name;
-        std::vector<uint32_t> argb;
+        std::vector<uint32_t> argb;  // to write; for a cell's read, the cell as the game has it
         int width = 0, height = 0;
+        Job cell;  // a cell's read: the job it becomes (its pixels the network's input should the read fail)
     };
     struct IoResult {
         uint32_t id = 0;
@@ -106,6 +117,7 @@ private:
         bool ok = false;
         std::vector<uint32_t> argb;
         int width = 0, height = 0;
+        Job cell;
     };
 
     bool loadNet(const std::string& dir, const std::string& token, int denoise, Net& net, std::string& error);
@@ -116,6 +128,15 @@ private:
     bool uploadInput(const Job& job);
     double runBand(Job& job, double budget);  // MACs dispatched
     bool finish(Job& job);
+    ID3D12Resource* makeImage(const Job& job, std::vector<Level>& levels);  // in COPY_SOURCE, all its levels
+    void readBack(const Job& job, ID3D12Resource* image, const Level& top);  // for upscaled.grf
+    void noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const Rect* cells,
+                   uint32_t count);
+    bool makeAtlas(uint32_t id, Texture& t);
+    void standIn(Texture& t, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch);
+    void writeRegion(Texture& t, int level, int x, int y, int w, int h, const std::vector<uint32_t>& argb);
+    bool cellCurrent(const Job& job) const;
+    bool finishCell(Job& job);
     void layout(int width, int height, std::vector<Level>& levels, UINT64& bytes) const;
     void dispatchShuffle(const Job& job, ID3D12Resource* image, const Level& level0);
     void dispatchMips(ID3D12Resource* image, const std::vector<Level>& levels);
@@ -159,6 +180,9 @@ private:
     size_t keptBytes_ = 0;
     std::deque<uint32_t> queue_;  // drawn and waiting for the network
     std::deque<uint32_t> later_;  // ahead: known from earlier visits, not drawn yet
+    std::deque<Job> cells_;       // sprite cache cells waiting for the network
+    bool cellTurn_ = false;       // whose turn it is: a sprite frame or the rest of the world
+    std::unordered_map<uint32_t, Atlas> atlases_;
     std::deque<Job> loaded_;
     std::unique_ptr<Job> job_;
     std::vector<Readback> readbacks_;
@@ -180,6 +204,7 @@ private:
     std::deque<IoResult> ioOut_;
 
     uint32_t doneNetwork_ = 0, doneLoaded_ = 0, written_ = 0;
+    uint32_t cellsWritten_ = 0, cellsNetwork_ = 0, cellsLoaded_ = 0;  // sprite frames: by the game, by us
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run
     ULONGLONG lastLog_ = 0;
 };

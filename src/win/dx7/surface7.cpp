@@ -9,6 +9,7 @@
 #include "win/crisp/crisp.hpp"
 #include "win/dx7/formats.hpp"
 #include "win/log.hpp"
+#include "win/sprite_hook.hpp"
 
 namespace uagfx::dx7 {
 namespace {
@@ -486,7 +487,11 @@ HRESULT STDMETHODCALLTYPE Surface7::Unlock(LPRECT) {
     win::Guard guard;
     if (!locked_) return DDERR_NOTLOCKED;  // the client unlocks everything before an error box
     locked_ = false;
-    if (role_ == SurfaceRole::Texture) changed(lockRect_);
+    if (role_ == SurfaceRole::Texture) {
+        changed(lockRect_);
+        Rect cell;  // AI textures: a frame the game wrote into a cell of its sprite cache (sprite_hook.hpp)
+        if (level_ == 0 && win::spriteCell(cell)) top()->levels_->slotWritten(cell);
+    }
     if (role_ == SurfaceRole::RenderTarget) {
         win::Context& c = win::Context::get();
         if (c.shadow.unlock()) {  // written (the wave effect, Bink): the GPU target gets the memory
