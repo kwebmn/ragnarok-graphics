@@ -93,6 +93,7 @@ bool Renderer::Impl::begin() {
     boundTextures = ~0ull;
     boundSamplers = ~0ull;
     targetBound = false;
+    centered = false;  // a new list starts with the default sample positions
     open = true;
     ++listSerial;
     return true;
@@ -220,6 +221,17 @@ void Renderer::Impl::bindTarget() {
     targetBound = true;
 }
 
+void Renderer::Impl::placeSamples(bool center) {
+    if (!list1 || center == centered) return;
+    if (center) {
+        D3D12_SAMPLE_POSITION at[8] = {};  // all eight at (0, 0): the pixel's centre
+        list1->SetSamplePositions(samples, 1, at);
+    } else {
+        list1->SetSamplePositions(0, 0, nullptr);
+    }
+    centered = center;
+}
+
 // ---- Impl: frame record commands ---------------------------------------------------------------------------
 
 void Renderer::Impl::clear(const ClearCmd& c) {
@@ -335,6 +347,7 @@ bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     linearClamp.mipFilter = d3d7::TFP_NONE;
     // First: a new list starts before this copy records anything.
     if (!makeRoom(linearClamp, linearClamp, 0)) return false;
+    placeSamples(false);  // positions for one sample count must not meet a target of another
     const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp, 0);
     const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(srcSrv, srcSrv);
     transition(src, srcState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -390,6 +403,7 @@ bool Renderer::Impl::createTarget(int w, int h, UINT n, ID3D12Resource*& rt, ID3
 }
 
 UINT Renderer::Impl::supportedSamples(UINT want) {
+    if (!list1) return 1;  // the interface could not stay sharp (stage 4 review): no MSAA
     for (UINT n = want >= 8 ? 8 : want >= 4 ? 4 : want >= 2 ? 2 : 1; n > 1; n /= 2) {
         bool ok = true;
         for (DXGI_FORMAT f : {DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_D32_FLOAT}) {
@@ -526,6 +540,7 @@ void Renderer::Impl::destroy() {
         releaseCom(s.upload);
         releaseCom(s.allocator);
     }
+    releaseCom(list1);
     releaseCom(list);
     releaseCom(cpuSrv);
     releaseCom(gpuSrv);
@@ -686,6 +701,15 @@ bool Renderer::create(std::string& error) {
         return false;
     }
     m.list->Close();
+    D3D12_FEATURE_DATA_D3D12_OPTIONS2 options2{};
+    if (SUCCEEDED(m.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &options2, sizeof options2)) &&
+        options2.ProgrammableSamplePositionsTier >= D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_1 &&
+        SUCCEEDED(m.list->QueryInterface(__uuidof(ID3D12GraphicsCommandList1), reinterpret_cast<void**>(&m.list1)))) {
+        LOG_DEBUG("msaa: sample positions tier %d", int(options2.ProgrammableSamplePositionsTier));
+    } else {
+        m.list1 = nullptr;
+        LOG_INFO("msaa: this card cannot place samples, so MSAA stays off (the interface would lose sharpness)");
+    }
     if (FAILED(m.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), reinterpret_cast<void**>(&m.fence))) ||
         !(m.fenceEvent = CreateEventA(nullptr, FALSE, FALSE, nullptr))) {
         error = "fence";
@@ -796,9 +820,9 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
         releaseCom(resolved);
         return false;
     };
-    if (!make(n)) {  // stage 4: no memory for that many samples - one sample per pixel instead
-        if (n == 1 || !make(1)) return false;
-        n = 1;
+    while (!make(n)) {  // stage 4: no memory for that many samples - half as many, down to one
+        if (n == 1) return false;
+        n /= 2;
     }
     // The back buffer keeps its picture across a present: the old target is stretched into the new one.
     const auto drop = [&]() {
@@ -838,9 +862,10 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
     }
     LOG_DEBUG("render target %dx%d with %u samples: %.3f times the game's %dx%d", targetWidth, targetHeight, n, k,
               m.gameWidth, m.gameHeight);
-    if (n != was || int(n) < samples)
+    if (n != was || (int(n) < samples && samples != m.askedSamples))
         LOG_INFO("msaa: %u sample%s per pixel%s", n, n == 1 ? "" : "s",
                  int(n) < samples ? " (fewer than asked: the card or its memory has no more)" : "");
+    m.askedSamples = samples;
     return true;
 }
 

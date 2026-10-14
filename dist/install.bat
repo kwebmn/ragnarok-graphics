@@ -60,18 +60,34 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 1 = the game's text, window frames and fills at the real pixels of the window when the game is enlarged; 0 = as version 0.4
     >>"uaro-graphics.ini" echo crisp_text = 1
 )
-rem A settings file older than 0.7 has no msaa key: the smoothing settings are added at the end the same way.
+rem A settings file older than 0.7 has no msaa key: the smoothing settings are added at the end the same way, as the
+rem preset the file holds has them - Speed (no sharpening, no crisp text) and No improvements (also no high resolution)
+rem get less, so an update never makes a weak card work harder (0.7.0 review).
 findstr /c:"msaa" "uaro-graphics.ini" >nul 2>&1
-if errorlevel 1 (
-    >>"uaro-graphics.ini" echo.
-    >>"uaro-graphics.ini" echo [quality]
-    >>"uaro-graphics.ini" echo ; edge smoothing (MSAA): samples per pixel - 0 = off, 2, 4 or 8
-    >>"uaro-graphics.ini" echo msaa = 4
-    >>"uaro-graphics.ini" echo ; 1 = with msaa, soft edges where textures are cut out (leaves, fences)
-    >>"uaro-graphics.ini" echo alpha_to_coverage = 1
-    >>"uaro-graphics.ini" echo ; anisotropic filtering of the world: 0 = off, 2, 4, 8 or 16
-    >>"uaro-graphics.ini" echo anisotropy = 16
-)
+if not errorlevel 1 goto :smoothing_done
+set "msaa=4"
+set "a2c=1"
+set "aniso=16"
+findstr /i /r /c:"^ *sharpen *= *0 *$" /c:"^ *sharpen *= *0[^0-9]" "uaro-graphics.ini" >nul 2>&1 ^
+    || goto :smoothing_write
+findstr /i /r /c:"^ *crisp_text *= *0 *$" /c:"^ *crisp_text *= *0[^0-9]" "uaro-graphics.ini" >nul 2>&1 ^
+    || goto :smoothing_write
+set "msaa=0"
+set "aniso=4"
+findstr /i /r /c:"^ *high_resolution *= *0 *$" /c:"^ *high_resolution *= *0[^0-9]" "uaro-graphics.ini" >nul 2>&1 ^
+    || goto :smoothing_write
+set "a2c=0"
+set "aniso=0"
+:smoothing_write
+>>"uaro-graphics.ini" echo.
+>>"uaro-graphics.ini" echo [quality]
+>>"uaro-graphics.ini" echo ; edge smoothing (MSAA): samples per pixel - 0 = off, 2, 4 or 8
+>>"uaro-graphics.ini" echo msaa = %msaa%
+>>"uaro-graphics.ini" echo ; 1 = with msaa, soft edges where textures are cut out (leaves, fences)
+>>"uaro-graphics.ini" echo alpha_to_coverage = %a2c%
+>>"uaro-graphics.ini" echo ; anisotropic filtering of the world: 0 = off, 2, 4, 8 or 16
+>>"uaro-graphics.ini" echo anisotropy = %aniso%
+:smoothing_done
 rem update.bat calls install.bat /quiet and reports the result itself.
 if /i "%~1"=="/quiet" exit /b 0
 echo.

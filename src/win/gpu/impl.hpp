@@ -98,6 +98,10 @@ struct Renderer::Impl {
     ID3D12Device* device = nullptr;
     ID3D12CommandQueue* queue = nullptr;
     ID3D12GraphicsCommandList* list = nullptr;
+    // Stage 4 review: sample positions - every sample at the pixel's centre for interface draws, whose edges fall on
+    // pixel centres; null when the card cannot place samples, and then MSAA stays off.
+    ID3D12GraphicsCommandList1* list1 = nullptr;
+    bool centered = false;  // the open list has them at the centre now
     ID3D12Fence* fence = nullptr;
     HANDLE fenceEvent = nullptr;
     UINT64 fenceValue = 0;
@@ -128,6 +132,7 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES targetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     UINT targetSrv = 0;  // the target as one sample per pixel: itself, or `resolved` when it has several
     UINT samples = 1;    // stage 4: of the target and its depth
+    int askedSamples = 0;  // the last count setScale was asked for: the msaa line once per change
     ID3D12Resource* resolved = nullptr;  // samples > 1: the target resolved, for showing and reading it
     D3D12_RESOURCE_STATES resolvedState = D3D12_RESOURCE_STATE_RESOLVE_DEST;
     int anisotropy = 0;           // stage 4: of world draws; 0 = off
@@ -223,6 +228,7 @@ struct Renderer::Impl {
     void upload(const FrameRecord& rec, const UploadCmd& u);
     void writeTarget(const FrameRecord& rec, const WriteTargetCmd& w);
     void bindTarget();
+    void placeSamples(bool center);  // stage 4 review: at the centre for the interface, the card's default else
     void destroy();
     // pipeline.cpp
     bool createPipelines(std::string& error);

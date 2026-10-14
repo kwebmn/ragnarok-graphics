@@ -100,6 +100,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(s.stage[0], s.stage[1], aniso);
     bindTarget();
+    // Stage 4 review: the interface's edges fall on pixel centres (whole D3D7 positions, x * k + 0.5); with every
+    // sample there it is drawn exactly as with one sample, while the world keeps its smoothed edges.
+    if (samples > 1) placeSamples(s.ui);
     if (!boundPipeline) {  // a fresh list or after present(): the root signature and its tables are gone
         list->SetGraphicsRootSignature(root);
         boundTextures = ~0ull;
