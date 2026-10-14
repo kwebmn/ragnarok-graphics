@@ -959,6 +959,22 @@ float4 shadow_ps(ShadowIn i) : SV_Target {
     return float4(a, a, a, a);
 }
 
+// 0.33, the clouds' shadows (clouds.cpp): each pixel's place in the world from the picture's depth (t3; r0-r11 the
+// camera backwards, f0-farZ the projection), darker where the clouds' noise is high there, the clouds drifting with the
+// wind; multiplied into the picture (blend ZERO, SRC_COLOR). sharpen the time, footprint the darkness (1 = 100 %).
+float4 clouds_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) return float4(1.0, 1.0, 1.0, 1.0);  // nothing drawn there
+    float3 v = viewAt(wp);
+    float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    float t = sharpen;
+    float2 q = w.xz * 0.0035 + float2(t * 0.012, t * 0.005);
+    float n = fbm4(q) * 0.7 + fbm4(q * 2.3 + float2(5.1, 1.7)) * 0.3;
+    float shade = smoothstep(0.46, 0.68, n) * footprint * 0.55;
+    float f = 1.0 - shade;
+    return float4(f * 0.985, f, min(f * 1.015, 1.0), 1.0);  // a touch cooler under the clouds
+}
+
 // The mask softened: nine taps along sourceRect.xy (across, then down), uiPixels.zw the mask's size.
 float4 shadow_blur_ps(PresentOut i) : SV_Target {
     float2 step = sourceRect.xy / uiPixels.zw;

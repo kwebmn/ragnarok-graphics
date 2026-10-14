@@ -207,6 +207,14 @@ TEST(live_config_actor_shadows_apply_now) {
     CHECK(u.applied[1] == "actor_shadows_strength 55 -> 30");
 }
 
+TEST(live_config_clouds_apply_now) {
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nclouds = 0\nclouds_strength = 20\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(2));
+    CHECK(u.applied[0] == "clouds 1 -> 0");
+    CHECK(u.applied[1] == "clouds_strength 50 -> 20");
+}
+
 TEST(live_config_lamps_apply_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nlamps = 0\nlamps_light = 100\n"));
     CHECK(u.waiting.empty());

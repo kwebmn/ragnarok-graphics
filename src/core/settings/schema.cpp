@@ -118,6 +118,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxActorShadowsHint, ""},
         {"effects", "actor_shadows_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {},
          Text::FxActorShadowsStrength, Text::FxActorShadowsStrengthHint, " %"},
+        {"effects", "clouds", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxClouds,
+         Text::FxCloudsHint, ""},
+        {"effects", "clouds_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxCloudsStrength,
+         Text::FxCloudsStrengthHint, " %"},
         {"effects", "grade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrade, Text::FxGradeHint,
          ""},
         {"effects", "grade_saturation", Page::Effects, Control::Slider, 0, 200, 5, {}, {}, Text::FxGradeSaturation,
@@ -247,6 +251,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.lava_brightness") return std::to_string(c.effects.lavaBrightness);
     if (k == "effects.actor_shadows") return c.effects.actorShadows ? "1" : "0";
     if (k == "effects.actor_shadows_strength") return std::to_string(c.effects.actorShadowsStrength);
+    if (k == "effects.clouds") return c.effects.clouds ? "1" : "0";
+    if (k == "effects.clouds_strength") return std::to_string(c.effects.cloudsStrength);
     if (k == "effects.lamps") return c.effects.lamps ? "1" : "0";
     if (k == "effects.lamps_light") return std::to_string(c.effects.lampsLight);
     if (k == "effects.glow") return c.effects.glow ? "1" : "0";

@@ -311,6 +311,16 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-100 %%: how dark
     >>"uaro-graphics.ini" echo actor_shadows_strength = 55
 )
+rem 0.33: clouds' shadows over the fields and towns, on.
+findstr /i /l /c:"clouds_strength" "uaro-graphics.ini" >nul 2>&1
+if errorlevel 1 (
+    >>"uaro-graphics.ini" echo.
+    >>"uaro-graphics.ini" echo [effects]
+    >>"uaro-graphics.ini" echo ; 1 = clouds' shadows drift over the fields and the towns
+    >>"uaro-graphics.ini" echo clouds = 1
+    >>"uaro-graphics.ini" echo ; 0-100 %%: how dark
+    >>"uaro-graphics.ini" echo clouds_strength = 50
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

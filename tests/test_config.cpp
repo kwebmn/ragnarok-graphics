@@ -403,6 +403,18 @@ TEST(config_effects_actor_shadows) {
     CHECK(parseConfig("[effects]\nactor_shadows_strength = 101\n").effects == d);
 }
 
+TEST(config_effects_clouds) {
+    // 0.33: clouds' shadows drifting over the fields and towns - on unless turned off, 0-100 %.
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(d.clouds);
+    CHECK_EQ(d.cloudsStrength, 50);
+    const EffectSettings e = parseConfig("[effects]\nclouds = 0\nclouds_strength = 70\n").effects;
+    CHECK(!e.clouds);
+    CHECK_EQ(e.cloudsStrength, 70);
+    CHECK(!(e == d));
+    CHECK(parseConfig("[effects]\nclouds_strength = 120\n").effects == d);
+}
+
 TEST(config_effects_lamps) {
     // 0.25: the lamps' light from the map files, on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

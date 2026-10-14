@@ -98,6 +98,9 @@ struct EffectSettings {
     // light - instead of the game's round ones. On by default.
     bool actorShadows = true;
     int actorShadowsStrength = 55;  // %, 0-100: how dark
+    // 0.33: clouds' shadows drifting over the fields and the towns (core/outdoors.hpp). On by default.
+    bool clouds = true;
+    int cloudsStrength = 50;  // %, 0-100: how dark
     // The game's light and sparks - what it adds to the picture: skills, portals, lamps - shine with a soft glow
     // (bloom from those draws alone; the rest of the picture keeps its brightness).
     bool glow = false;

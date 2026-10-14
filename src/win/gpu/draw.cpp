@@ -101,6 +101,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
     if (!s.ui && s.blend && aoDue() && !applyAo()) return;
+    if (!s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
     // the game's round ones are in them.
     if (!s.ui && s.blend && actorShadowsDue() && !applyActorShadows(rec, size_t(&d - rec.draws().data()))) return;

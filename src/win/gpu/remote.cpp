@@ -273,6 +273,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.lavaBrightness);
     w.u8(e.actorShadows ? 1 : 0);
     w.i32(e.actorShadowsStrength);
+    w.u8(e.clouds ? 1 : 0);
+    w.i32(e.cloudsStrength);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

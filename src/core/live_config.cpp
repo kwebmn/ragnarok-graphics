@@ -106,6 +106,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (fe.lava != re.lava) u.applied.push_back(change("lava", flag(re.lava), flag(fe.lava)));
     if (fe.actorShadows != re.actorShadows)
         u.applied.push_back(change("actor_shadows", flag(re.actorShadows), flag(fe.actorShadows)));
+    if (fe.clouds != re.clouds) u.applied.push_back(change("clouds", flag(re.clouds), flag(fe.clouds)));
     if (fe.glow != re.glow) u.applied.push_back(change("glow", flag(re.glow), flag(fe.glow)));
     if (fe.glowStrength != re.glowStrength)
         u.applied.push_back(
@@ -130,6 +131,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         {"rays_brightness", {re.raysBrightness, fe.raysBrightness}},
         {"lava_brightness", {re.lavaBrightness, fe.lavaBrightness}},
         {"actor_shadows_strength", {re.actorShadowsStrength, fe.actorShadowsStrength}},
+        {"clouds_strength", {re.cloudsStrength, fe.cloudsStrength}},
         {"glow_light", {re.glowLight, fe.glowLight}},
         {"ao_strength", {re.aoStrength, fe.aoStrength}},
         {"ao_size", {re.aoSize, fe.aoSize}},
