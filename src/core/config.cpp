@@ -75,6 +75,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.bridge);
         } else if (key == "renderer.bridge_present") {
             if (val == "auto" || val == "window" || val == "composition") c.bridgePresent = val;
+        } else if (key == "renderer.remix") {
+            setBool(val, c.remix);
         } else if (key == "renderer.bridge_dpi_scale") {
             setBool(val, c.bridgeDpiScale);
         } else if (key == "display.mode") {

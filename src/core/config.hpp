@@ -19,6 +19,9 @@ struct Config {
     bool bridge = false;
     std::string bridgePresent = "auto";
     bool bridgeDpiScale = true;
+    // Part 4 (test): [renderer] remix = 1 draws through Direct3D 9's fixed function, with the world in world space:
+    // RTX Remix when its d3d9.dll is next to uaRO.exe, else the system's Direct3D 9.
+    bool remix = false;
     DisplayMode mode = DisplayMode::Auto;
     int monitor = 0;       // 0 = the main monitor
     int windowWidth = 0;   // window mode: inner size in pixels; 0 = the size the game asks for

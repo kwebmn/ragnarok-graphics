@@ -13,6 +13,7 @@ struct ID3D12Device;
 namespace uagfx::gpu {
 
 class Remote;
+class Remix9;
 class Upscaler;
 
 // Part 3: the renderer in the 64-bit process uaro-render64.exe ([renderer] bridge = 1).
@@ -48,6 +49,10 @@ public:
     // Part 3: the same, in uaro-render64.exe; false (and nothing left running) when that process cannot draw.
     bool createRemote(const BridgeOptions& o, std::string& error);
     bool remote() const { return remote_ != nullptr; }
+    // Part 4: through Direct3D 9's fixed function - RTX Remix when d3d9Path is its d3d9.dll (remix9.hpp).
+    bool createRemix(const std::string& d3d9Path, std::string& error);
+    bool remix() const { return remix_ != nullptr; }
+    void setWindow(HWND window);  // the game's window, as soon as it is known (Direct3D 9 makes its device on it)
     std::string adapterName() const;
     void setUiSharp(bool sharp);  // [display] ui_filter for interface draws
     // 1B review M8: builds the pipelines whose keys file lists, so effects do not stutter the first time they are
@@ -95,6 +100,7 @@ public:
 private:
     Impl* impl_;
     Remote* remote_ = nullptr;
+    Remix9* remix_ = nullptr;
 };
 
 }  // namespace uagfx::gpu

@@ -15,6 +15,7 @@
 #include "core/scale.hpp"
 #include "core/window_plan.hpp"
 #include "win/gpu/impl.hpp"
+#include "win/gpu/remix9.hpp"
 #include "win/gpu/remote.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -889,6 +890,7 @@ Renderer::Renderer() : impl_(new Impl) {}
 
 Renderer::~Renderer() {
     delete remote_;  // the renderer process finishes first
+    delete remix_;
     impl_->destroy();
     delete impl_;
 }
@@ -902,14 +904,30 @@ bool Renderer::createRemote(const BridgeOptions& o, std::string& error) {
     return false;
 }
 
-std::string Renderer::adapterName() const { return remote_ ? remote_->adapterName() : impl_->adapter; }
+bool Renderer::createRemix(const std::string& d3d9Path, std::string& error) {
+    if (remix_) return true;
+    remix_ = new Remix9;
+    if (remix_->create(d3d9Path, error)) return true;
+    delete remix_;
+    remix_ = nullptr;
+    return false;
+}
+
+void Renderer::setWindow(HWND window) {
+    if (remix_) remix_->setWindow(window);
+}
+
+std::string Renderer::adapterName() const {
+    return remote_ ? remote_->adapterName() : remix_ ? remix_->adapterName() : impl_->adapter;
+}
 
 void Renderer::setUiSharp(bool sharp) {
+    if (remix_) return;
     if (remote_) return remote_->setUiSharp(sharp);
     impl_->uiSharp = sharp;
 }
 
-int Renderer::samples() const { return remote_ ? remote_->samples() : int(impl_->samples); }
+int Renderer::samples() const { return remix_ ? 1 : remote_ ? remote_->samples() : int(impl_->samples); }
 
 void Renderer::setUpscaler(Upscaler* u) { impl_->upscaler = u; }
 
@@ -920,6 +938,7 @@ void Renderer::finish() {
 }
 
 void Renderer::setCamera(bool valid, const float view[12]) {
+    if (remix_) return remix_->setCamera(valid, view);
     if (remote_) return remote_->setCamera(valid, view);
     Impl& m = *impl_;
     m.cameraValid = valid;
@@ -956,6 +975,7 @@ bool Renderer::presentRefused() const { return impl_->refused; }
 bool Renderer::lost() const { return impl_->lost; }
 
 void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage) {
+    if (remix_) return;
     if (remote_) return remote_->setDrawQuality(anisotropy, alphaToCoverage);
     Impl& m = *impl_;
     if (anisotropy == m.anisotropy && alphaToCoverage == m.alphaToCoverage) return;
@@ -965,6 +985,7 @@ void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage) {
 }
 
 void Renderer::preparePipelines(const std::string& file) {
+    if (remix_) return;
     if (remote_) return remote_->preparePipelines(file);
     Impl& m = *impl_;
     std::string text;
@@ -1106,6 +1127,7 @@ bool Renderer::create(std::string& error) {
 }
 
 bool Renderer::setTarget(int width, int height) {
+    if (remix_) return remix_->setTarget(width, height);
     if (remote_) return remote_->setTarget(width, height);
     Impl& m = *impl_;
     if (width <= 0 || height <= 0) return false;
@@ -1156,6 +1178,7 @@ bool Renderer::setTarget(int width, int height) {
 }
 
 bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples, bool upscale) {
+    if (remix_) return true;  // Remix draws at its own size
     if (remote_) return remote_->setScale(k, targetWidth, targetHeight, samples, upscale);
     Impl& m = *impl_;
     if (m.lost || !m.target || targetWidth <= 0 || targetHeight <= 0) return false;
@@ -1242,6 +1265,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
 }
 
 uint32_t Renderer::createTexture(int width, int height, int levels) {
+    if (remix_) return remix_->createTexture(width, height, levels);
     if (remote_) return remote_->createTexture(width, height, levels);
     Impl& m = *impl_;
     Texture t;
@@ -1267,6 +1291,7 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
 }
 
 void Renderer::releaseTexture(uint32_t id) {
+    if (remix_) return remix_->releaseTexture(id);
     if (remote_) return remote_->releaseTexture(id);
     Impl& m = *impl_;
     // Draws recorded before the client let go of the texture have not been played yet: it stays until they have.
@@ -1288,6 +1313,7 @@ void Renderer::Impl::retireDying() {
 }
 
 void Renderer::execute(const FrameRecord& record) {
+    if (remix_) return remix_->execute(record);
     if (remote_) return remote_->execute(record);
     Impl& m = *impl_;
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
@@ -1312,6 +1338,7 @@ void Renderer::execute(const FrameRecord& record) {
 }
 
 bool Renderer::readTarget(std::vector<uint32_t>& argb) {
+    if (remix_) return remix_->readTarget(argb);
     if (remote_) return remote_->readTarget(argb);
     Impl& m = *impl_;
     if (m.lost || !m.target || !m.begin()) return false;
@@ -1379,6 +1406,7 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
 
 void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rect& source,
                        const PresentOptions& options) {
+    if (remix_) return remix_->present(window, options);
     if (remote_) return remote_->present(window, outputWidth, outputHeight, source, options);
     Impl& m = *impl_;
     if (m.lost) {  // the GPU is gone (stage 3 review M2): no Present waits for vblank, keep the game's loop from spinning

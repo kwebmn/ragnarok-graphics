@@ -28,7 +28,17 @@ bool Context::open(std::string& error) {
     if (renderer) return true;
     gpu::Renderer* r = new gpu::Renderer;
     bool remote = false;
-    if (config.bridge || config.dlss != "off") {  // part 3: the renderer in the 64-bit process (DLSS needs it)
+    if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if it is there
+        const std::string local = gameDir() + "\\d3d9.dll";
+        const std::string dll = fileExists(local) ? local : systemDir() + "\\d3d9.dll";
+        std::string why;
+        remote = r->createRemix(dll, why);
+        if (remote)
+            LOG_INFO("remix: drawing through %s (Direct3D 9 fixed function, the world in world space)", dll.c_str());
+        else
+            LOG_ERROR("remix: %s; drawing with Direct3D 12", why.c_str());
+    }
+    if (!remote && (config.bridge || config.dlss != "off")) {  // part 3: the 64-bit renderer (DLSS needs it)
         gpu::BridgeOptions o;
         o.hostExe = gameDir() + "\\uaro-graphics\\uaro-render64.exe";
         o.gameDir = gameDir();
@@ -78,6 +88,7 @@ void Context::close() {
 }
 
 bool Context::setTarget(int width, int height) {
+    if (renderer) renderer->setWindow(window);
     if (!renderer || !renderer->setTarget(width, height)) return false;
     scaledWidth_ = width;  // the renderer is back at the game's size until the next present
     scaledSamples_ = 1;    // and at one sample per pixel
@@ -103,6 +114,11 @@ void Context::flush() {
             c.shadow.gpuChanged();
         }
     } done{*this};
+    if (renderer->remix()) {  // part 4: the world goes back into world space with the camera of this frame
+        float view[12];
+        const bool known = readGameCamera(view);
+        renderer->setCamera(known, view);
+    }
     renderer->execute(record);
 }
 
