@@ -327,15 +327,16 @@ bool Dlss::evaluate(const Frame& f) {
     sl::Resource depth(sl::ResourceType::eTex2d, f.depth, uint32_t(f.depthState));
     sl::Resource motion(sl::ResourceType::eTex2d, f.motion, uint32_t(f.motionState));
     const sl::Extent in{0, 0, uint32_t(f.renderW), uint32_t(f.renderH)};
-    // Frame generation reads depth and motion at the present: they stay as they are until then.
-    const sl::ResourceLifecycle lasting =
-        generationReady_ ? sl::ResourceLifecycle::eValidUntilPresent : sl::ResourceLifecycle::eOnlyValidNow;
+    // Nothing changes them before the upscale has run, so Streamline copies none of them ("valid only now" made it
+    // copy the world, depth and motion every frame); frame generation reads depth and motion at the present, and
+    // they stay as they are until then.
+    const sl::ResourceLifecycle now = sl::ResourceLifecycle::eValidUntilEvaluate;
+    const sl::ResourceLifecycle lasting = generationReady_ ? sl::ResourceLifecycle::eValidUntilPresent : now;
     const sl::Extent out{0, 0, uint32_t(f.outW), uint32_t(f.outH)};
-    const sl::ResourceTag tags[4] = {
-        sl::ResourceTag(&color, sl::kBufferTypeScalingInputColor, sl::ResourceLifecycle::eOnlyValidNow, &in),
-        sl::ResourceTag(&output, sl::kBufferTypeScalingOutputColor, sl::ResourceLifecycle::eOnlyValidNow, &out),
-        sl::ResourceTag(&depth, sl::kBufferTypeDepth, lasting, &in),
-        sl::ResourceTag(&motion, sl::kBufferTypeMotionVectors, lasting, &in)};
+    const sl::ResourceTag tags[4] = {sl::ResourceTag(&color, sl::kBufferTypeScalingInputColor, now, &in),
+                                     sl::ResourceTag(&output, sl::kBufferTypeScalingOutputColor, now, &out),
+                                     sl::ResourceTag(&depth, sl::kBufferTypeDepth, lasting, &in),
+                                     sl::ResourceTag(&motion, sl::kBufferTypeMotionVectors, lasting, &in)};
     auto* list = reinterpret_cast<sl::CommandBuffer*>(f.list);
     r = slSetTagForFrame(*token, kViewport, tags, 4, list);
     if (r != sl::Result::eOk) {
@@ -378,14 +379,14 @@ void Dlss::beforePresent(const Generation& g) {
                              uint32_t(g.picture.right - g.picture.left), uint32_t(g.picture.bottom - g.picture.top)};
     sl::Resource hudless(sl::ResourceType::eTex2d, g.hudless, uint32_t(g.hudlessState));
     sl::Resource ui(sl::ResourceType::eTex2d, g.ui, uint32_t(g.uiState));
-    sl::Resource back(sl::ResourceType::eTex2d, nullptr, 0u);  // the swap chain's: only its part with the picture
-    std::vector<sl::ResourceTag> tags = {
+    // The back buffer by its part with the picture only (no resource: Streamline knows which one it presents), also
+    // when that is all of it - without it DLSS-G warns that the back buffer has no extent (0.10 log).
+    sl::Resource back(sl::ResourceType::eTex2d, nullptr, 0u);
+    const sl::ResourceTag tags[3] = {
         sl::ResourceTag(&hudless, sl::kBufferTypeHUDLessColor, sl::ResourceLifecycle::eValidUntilPresent, &picture),
-        sl::ResourceTag(&ui, sl::kBufferTypeUIColorAndAlpha, sl::ResourceLifecycle::eValidUntilPresent, &picture)};
-    if (picture.width != uint32_t(g.backWidth) || picture.height != uint32_t(g.backHeight))
-        tags.push_back(sl::ResourceTag(&back, sl::kBufferTypeBackbuffer, sl::ResourceLifecycle::eValidUntilPresent,
-                                       &picture));
-    sl::Result r = slSetTagForFrame(*frame, kViewport, tags.data(), uint32_t(tags.size()), list);
+        sl::ResourceTag(&ui, sl::kBufferTypeUIColorAndAlpha, sl::ResourceLifecycle::eValidUntilPresent, &picture),
+        sl::ResourceTag(&back, sl::kBufferTypeBackbuffer, sl::ResourceLifecycle::eValidUntilPresent, &picture)};
+    sl::Result r = slSetTagForFrame(*frame, kViewport, tags, 3, list);
     if (r != sl::Result::eOk) failed(result("slSetTagForFrame (frame generation)", r));
     const int mode = g.on ? 1 : 0;
     if (mode != generationMode_) {
@@ -408,13 +409,50 @@ void Dlss::beforePresent(const Generation& g) {
         if (r != sl::Result::eOk) {
             failed(result("slDLSSGSetOptions", r));
         } else {
-            LOG_INFO("DLSS frame generation %s", mode ? "on" : "off (no world on screen)");
+            noteMode(mode ? "on" : "off (no world on screen)");
             generationMode_ = mode;
+            if (mode) startStats();
         }
     }
+    if (generationMode_ == 1) countStats();
     marker(uint32_t(sl::PCLMarker::eRenderSubmitEnd));
     marker(uint32_t(sl::PCLMarker::ePresentStart));
     presentStarted_ = true;
+}
+
+// What DLSS-G says about itself once it is on - a status other than OK names what is missing - and then every half
+// a minute how many frames it really showed for the game's frames: the log alone tells whether it works. Its count
+// covers the frames since the last question, so it is asked every frame and summed.
+void Dlss::startStats() {
+    sl::DLSSGState state;
+    if (slDLSSGGetState(kViewport, state, nullptr) != sl::Result::eOk) return;  // the count starts afresh
+    if (!statusLogged_) {
+        statusLogged_ = true;
+        if (state.status != sl::DLSSGStatus::eOk)
+            LOG_ERROR("DLSS frame generation reports status 0x%x (1 output too small, 2 no Reflex, 4 HDR format, "
+                      "8 constants, 16 back buffer index)",
+                      unsigned(state.status));
+        LOG_INFO("DLSS frame generation: vsync %s, up to %ux", state.bIsVsyncSupportAvailable == sl::Boolean::eTrue
+                                                                   ? "supported"
+                                                                   : "not supported (it shows frames as they come)",
+                 state.numFramesToGenerateMax + 1);
+    }
+    statsStart_ = GetTickCount64();
+    statsFrames_ = statsShown_ = 0;
+}
+
+void Dlss::countStats() {
+    sl::DLSSGState state;
+    if (slDLSSGGetState(kViewport, state, nullptr) == sl::Result::eOk) statsShown_ += state.numFramesActuallyPresented;
+    ++statsFrames_;
+    const ULONGLONG now = GetTickCount64();
+    if (now - statsStart_ < 30000) return;
+    const double seconds = double(now - statsStart_) / 1000.0;
+    LOG_INFO("DLSS frame generation: %u frames of the game in %.0f s (%.0f a second), %u shown with the generated "
+             "ones (%.0f a second)",
+             statsFrames_, seconds, statsFrames_ / seconds, statsShown_, statsShown_ / seconds);
+    statsStart_ = now;
+    statsFrames_ = statsShown_ = 0;
 }
 
 void Dlss::suspend() {
@@ -423,7 +461,17 @@ void Dlss::suspend() {
     o.mode = sl::DLSSGMode::eOff;
     o.numFramesToGenerate = generationFrames_;
     o.flags = sl::DLSSGFlags::eRetainResourcesWhenOff;
-    if (slDLSSGSetOptions(kViewport, o) == sl::Result::eOk) generationMode_ = 0;
+    if (slDLSSGSetOptions(kViewport, o) == sl::Result::eOk) {
+        generationMode_ = 0;
+        noteMode("off for now (no world drawn this frame, the window not in front, or a new size)");
+    }
+}
+
+// Every change while there are few: whether it is on, and how often it stops, says how it went.
+void Dlss::noteMode(const char* what) {
+    if (modeLines_ > 20) return;
+    ++modeLines_;
+    LOG_INFO("DLSS frame generation %s%s", what, modeLines_ > 20 ? " (its changes are not logged any more)" : "");
 }
 
 void Dlss::afterPresent() {
@@ -435,7 +483,11 @@ void Dlss::afterPresent() {
     // for the same frame (0.9: "Setting different 'common' constants multiple times within the same frame").
     token_ = nullptr;
     if (token()) {
+        const ULONGLONG before = GetTickCount64();
         slReflexSleep(*static_cast<sl::FrameToken*>(token_));
+        const ULONGLONG slept = GetTickCount64() - before;
+        if (slept > 100) logRepeating(LogLevel::Info, "reflex sleep", "Reflex held the next frame back for " +
+                                                                          std::to_string(slept) + " ms");
         marker(uint32_t(sl::PCLMarker::eSimulationStart));
     }
 }

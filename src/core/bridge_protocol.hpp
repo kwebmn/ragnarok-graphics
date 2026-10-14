@@ -36,7 +36,7 @@ enum class Msg : uint32_t {
     Execute,            // a frame record (writeRecord)
     ReadTarget,         // -> TargetPixels
     Present,            // u64 window, i32 output width, height, rect source, u8 vsync, u8 tearing, i32 fps limit,
-                        // f32 sharpen
+                        // f32 sharpen, u8 the window in front
     SetSurface,         // u64 a DirectComposition surface handle, valid in the renderer's process
     Camera,             // u8 valid, 12 f32: the game's view matrix of the frame being drawn (DLSS)
     Quit,

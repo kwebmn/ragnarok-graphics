@@ -34,6 +34,7 @@ struct PresentOptions {
     bool allowTearing = false;  // used only with vsync off, when Windows supports it
     int fpsLimit = 0;           // 0 = no limit
     float sharpen = -1.0f;      // CAS sharpness 0..1 of the picture on screen; below 0 = none
+    bool foreground = true;     // the game's window is in front: frame generation only then
 };
 
 // Direct3D 12 behind the DirectDraw surfaces: plays frame records onto the render target the client draws into,
@@ -90,6 +91,9 @@ public:
     // Before create(): Direct3D 12 and DXGI from this module (Streamline's sl.interposer.dll, so that frame
     // generation can take over the swap chain) instead of the system's.
     void setApi(HMODULE module);
+    // Before create(): called with the device as soon as it exists, before anything is made on it (Streamline wants
+    // slSetD3DDevice before the command queue, 0.10 log: "API hook is activated without device being created").
+    void setOnDevice(void (*fn)(void* context, ID3D12Device* device), void* context);
     void finish();                   // waits until the GPU has done everything submitted
     ID3D12Device* device() const;
     void setPresentSurface(HANDLE surface);

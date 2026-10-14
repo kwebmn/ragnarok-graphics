@@ -119,11 +119,26 @@ int Host::run(const Args& a) {
     wlog::setSink(forward);
     // Part 3: Streamline starts before the first Direct3D call of the process.
     bool dlss = false;
+    struct Attach {
+        host::Dlss* dlss;
+        bool ok;
+        std::string why;
+    } attach{&dlss_, false, "the device was not made"};
     if (a.dlss != "off") {
         std::string why;
         dlss = dlss_.init(a.dir + "\\uaro-graphics\\dlss", a.dir, a.dlss, a.generation, why);
-        // Frame generation takes over the swap chain: Direct3D 12 and DXGI come through Streamline's interposer.
-        if (dlss && a.generation >= 2) renderer_.setApi(dlss_.module());
+        // Direct3D 12 and DXGI come through Streamline's interposer: frame generation takes over the swap chain, and
+        // without it Streamline still has to see every present (0.10 log: "presentCommon() was not observed" - its
+        // bookkeeping and the release of what it no longer needs run there).
+        if (dlss) {
+            renderer_.setApi(dlss_.module());
+            renderer_.setOnDevice(
+                [](void* context, ID3D12Device* device) {
+                    auto* at = static_cast<Attach*>(context);
+                    at->ok = at->dlss->attach(device, at->why);
+                },
+                &attach);
+        }
         dlss_.setSigns(a.jitterInverted ? -1.0f : 1.0f, a.motionInverted ? -1.0f : 1.0f);
         if (!dlss) LOG_ERROR("DLSS: %s; drawing without it", why.c_str());
     }
@@ -138,14 +153,13 @@ int Host::run(const Args& a) {
     }
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
     bool upscales = false;
-    if (dlss) {
-        std::string why;
-        if (dlss_.attach(renderer_.device(), why)) {
+    if (dlss) {  // Streamline got the device the moment it was made (setOnDevice)
+        if (attach.ok) {
             renderer_.setUpscaler(&dlss_);
             upscales = true;
             LOG_INFO("%s ready (NVIDIA DLSS through Streamline)", dlss_.name());
         } else {
-            LOG_ERROR("DLSS: %s; drawing without it", why.c_str());
+            LOG_ERROR("DLSS: %s; drawing without it", attach.why.c_str());
         }
     }
     hello.u8(1);
@@ -263,6 +277,7 @@ void Host::present(WireReader& rd) {
     o.allowTearing = rd.u8() != 0;
     o.fpsLimit = rd.i32();
     o.sharpen = rd.f32();
+    o.foreground = rd.u8() != 0;
     if (rd.ok() && (surface_ || presentMode_ != "composition")) {
         renderer_.present(window, width, height, source, o);
         if (!surface_ && renderer_.presentRefused() && !surfaceAsked_ && presentMode_ != "window") {

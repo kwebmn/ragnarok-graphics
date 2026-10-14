@@ -279,6 +279,7 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     w.u8(o.allowTearing ? 1 : 0);
     w.i32(o.fpsLimit);
     w.f32(o.sharpen);
+    w.u8(o.foreground ? 1 : 0);
     if (send(Msg::Present, buffer_)) ++presentsSent_;
 }
 

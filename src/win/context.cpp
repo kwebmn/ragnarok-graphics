@@ -12,6 +12,34 @@
 #include "win/window_mode.hpp"
 
 namespace uagfx::win {
+namespace {
+
+// The window in front, for the log: its class and its program (no title: it may name the player).
+std::string foregroundName() {
+    const HWND fg = GetForegroundWindow();
+    if (!fg) return "no window";
+    char cls[64] = "";
+    GetClassNameA(fg, cls, sizeof cls);
+    DWORD pid = 0;
+    GetWindowThreadProcessId(fg, &pid);
+    std::string exe = "an unknown program";
+    using QueryName = BOOL(WINAPI*)(HANDLE, DWORD, LPSTR, PDWORD);
+    static const auto query = reinterpret_cast<QueryName>(
+        reinterpret_cast<void*>(GetProcAddress(GetModuleHandleA("kernel32.dll"), "QueryFullProcessImageNameA")));
+    if (HANDLE p = query ? OpenProcess(0x1000 /* PROCESS_QUERY_LIMITED_INFORMATION */, FALSE, pid) : nullptr) {
+        char path[MAX_PATH];
+        DWORD n = MAX_PATH;
+        if (query(p, 0, path, &n)) {
+            exe = std::string(path, n);
+            const size_t slash = exe.find_last_of("\\/");
+            if (slash != std::string::npos) exe = exe.substr(slash + 1);
+        }
+        CloseHandle(p);
+    }
+    return std::string("\"") + cls + "\" of " + exe;
+}
+
+}  // namespace
 
 Context& Context::get() {
     static Context c;
@@ -145,9 +173,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (!renderer) return;
     watchSettings();
     if (window && IsIconic(window)) {  // minimised: nothing to show, and no vsync to hold the game's loop back
+        noteWindow(true, false);
         Sleep(15);
         return;
     }
+    const bool foreground = !window || GetForegroundWindow() == window;
+    noteWindow(false, foreground);
     if (!windowApplied && window) {
         // Not earlier: a windowed client sizes its back buffer from the window's client area (L3039), and that
         // logical size must stay the one from its settings, whatever the window becomes. The flag goes first:
@@ -225,6 +256,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.allowTearing = config.allowTearing;
     o.fpsLimit = config.fpsLimit;
     o.sharpen = enhanced_ && config.sharpen > 0 ? float(config.sharpen - 1) / 99.0f : -1.0f;  // 1-100 -> CAS 0..1
+    o.foreground = foreground;
     renderer->present(window, out.cx, out.cy, source, o);
     ++stats_.frames;
     logStats(false);
@@ -263,6 +295,40 @@ void Context::watchSettings() {
     if (!u.waiting.empty()) line += u.applied.empty() ? " at the next start:" : "; at the next start:";
     for (size_t i = 0; i < u.waiting.size(); ++i) line += (i ? ", " : " ") + u.waiting[i];
     LOG_INFO("%s", line.c_str());
+}
+
+// 0.10 logs: with frame generation on the game stood still twice for seconds - minimised, it turned out, and the log
+// could not say why. Now it says when the window goes behind another or is minimised, which window took the front,
+// and when it is back.
+void Context::noteWindow(bool minimized, bool foreground) {
+    const uint64_t now = GetTickCount64();
+    std::string line;
+    if (minimized != minimized_) {
+        minimized_ = minimized;
+        if (minimized) {
+            minimizedAt_ = now;
+            line = "the game's window is minimized, nothing is drawn (in front: " + foregroundName() + ")";
+        } else {
+            char text[96];
+            std::snprintf(text, sizeof text, "the game's window is back after %.1f s",
+                          double(now - minimizedAt_) / 1000.0);
+            line = text;
+        }
+    } else if (!minimized && foreground != foreground_) {
+        foreground_ = foreground;
+        if (!foreground) {
+            behindAt_ = now;
+            line = "the game's window is behind " + foregroundName();
+        } else {
+            char text[96];
+            std::snprintf(text, sizeof text, "the game's window is in front again after %.1f s",
+                          double(now - behindAt_) / 1000.0);
+            line = text;
+        }
+    }
+    if (line.empty() || windowLines_ > 40) return;
+    ++windowLines_;
+    LOG_INFO("%s%s", line.c_str(), windowLines_ > 40 ? " (its changes are not logged any more)" : "");
 }
 
 void Context::logStats(bool final) {

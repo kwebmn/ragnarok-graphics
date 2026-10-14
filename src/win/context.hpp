@@ -57,6 +57,7 @@ private:
     // Stage 2 (spec §3.4): uaro-graphics.ini is looked at once a second while the game runs, and what applies now
     // is applied at once.
     void watchSettings();
+    void noteWindow(bool minimized, bool foreground);  // a line when the game's window changes (0.10.1)
     struct Stats {
         unsigned frames = 0;
         unsigned readBacks = 0;
@@ -83,6 +84,11 @@ private:
     bool settingsKnown_ = false;    // its write time and size below are those of the text read last
     FILETIME settingsTime_{};
     uint64_t settingsSize_ = 0;
+    bool minimized_ = false;  // the game's window, as the last present saw it
+    bool foreground_ = true;
+    uint64_t minimizedAt_ = 0;
+    uint64_t behindAt_ = 0;
+    int windowLines_ = 0;
 };
 
 // Holds the global lock for a scope; every DirectDraw / Direct3D method starts with one.

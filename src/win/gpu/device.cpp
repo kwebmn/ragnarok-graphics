@@ -577,7 +577,7 @@ void Renderer::Impl::stopUpscaling() {
     waitIdle();
     releaseUpscaleTargets();
     upscale = false;
-    upscaledValid = false;
+    upscaledValid = upscaledNow = false;
     upscaler = nullptr;
     applyViewport();
 }
@@ -710,6 +710,7 @@ bool Renderer::Impl::composite() {
             LOG_ERROR("%s did not run: the world is stretched instead", upscaler->name());
         }
         upscaledValid = ok;
+        upscaledNow = ok;
         // Failing frame after frame, the stretched world would also shake with the jitter: off after a while.
         upscaleFailures = ok ? 0 : upscaleFailures + 1;
         if (upscaleFailures == kUpscaleGiveUp) dropUpscale = true;
@@ -952,6 +953,11 @@ void Renderer::setUpscaler(Upscaler* u) { impl_->upscaler = u; }
 
 void Renderer::setApi(HMODULE module) { impl_->api = module; }
 
+void Renderer::setOnDevice(void (*fn)(void* context, ID3D12Device* device), void* context) {
+    impl_->onDevice = fn;
+    impl_->onDeviceContext = context;
+}
+
 void Renderer::finish() {
     if (!remote_ && impl_->device && impl_->fence) impl_->waitIdle();
 }
@@ -1068,6 +1074,7 @@ bool Renderer::create(std::string& error) {
         error = "no hardware adapter with Direct3D 12";
         return false;
     }
+    if (m.onDevice) m.onDevice(m.onDeviceContext, m.device);
     D3D12_COMMAND_QUEUE_DESC qd{};
     qd.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
     if (FAILED(m.device->CreateCommandQueue(&qd, __uuidof(ID3D12CommandQueue), reinterpret_cast<void**>(&m.queue)))) {
@@ -1433,9 +1440,12 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         return;
     }
     if (!m.target || !window || source.empty()) return;
-    // Part 3: frame generation must be off while the swap chain changes, and for frames it has no inputs for.
+    // Part 3: frame generation must be off while the swap chain changes, for frames it has no inputs for, and while
+    // the game's window is not in front: NVIDIA asks for it off before the window is minimised or moved (the game
+    // in full screen minimises itself when it loses the focus).
     const UINT wantW = UINT(std::max(1, outputWidth)), wantH = UINT(std::max(1, outputHeight));
-    if (m.upscaler && m.upscaler->generates() && (!m.upscale || wantW != m.swapWidth || wantH != m.swapHeight))
+    if (m.upscaler && m.upscaler->generates() &&
+        (!m.upscale || !options.foreground || wantW != m.swapWidth || wantH != m.swapHeight))
         m.upscaler->suspend();
     if (!m.ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),
                            options.allowTearing)) {
@@ -1461,8 +1471,10 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const auto tx = [&m](int x) { return float(double(x) * m.width / m.gameWidth); };
     const auto ty = [&m](int y) { return float(double(y) * m.height / m.gameHeight); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
-    const bool generation = m.upscale && m.upscaler && m.upscaler->generates() && m.upscaledValid &&
-                            m.ensureGenerationTargets(m.swapWidth, m.swapHeight);
+    // Only a frame whose world was upscaled now has its constants, depth and motion: a frame that drew no world
+    // (the last ones before the game closes) would have DLSS-G look for them in vain (0.10 log, frame 1079).
+    const bool generation = m.upscale && m.upscaler && m.upscaler->generates() && m.upscaledNow &&
+                            options.foreground && m.ensureGenerationTargets(m.swapWidth, m.swapHeight);
     if (!generation && m.upscaler && m.upscaler->generates()) m.upscaler->suspend();  // no inputs for this frame
     if (generation) {
         // Part 3, frame generation: the back buffer is put together from the picture without the interface and the
@@ -1525,6 +1537,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const HRESULT hr = m.swapChain->Present(sync, flags);
     if (m.upscaler && m.upscaler->generates()) m.upscaler->afterPresent();  // every frame: the next frame's token
     m.renderStarted = false;
+    m.upscaledNow = false;
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;
         m.nextJitter();

@@ -180,6 +180,7 @@ struct Renderer::Impl {
     bool frameEnded = true;    // presented: the next command starts a frame (the layer is cleared then)
     bool historyReset = true;  // the next upscale has no usable history
     bool upscaledValid = false;  // the last upscale ran: `upscaled` holds the world
+    bool upscaledNow = false;    // ... since the last present: only then has frame generation this frame's inputs
     int upscaleFailures = 0;     // the upscale failed this many frames in a row
     bool dropUpscale = false;    // so many that it stops after this present
     bool cameraValid = false, prevCameraValid = false;
@@ -190,6 +191,8 @@ struct Renderer::Impl {
     ID3D12PipelineState* overPipeline = nullptr;  // the layer over the picture: premultiplied
     ID3D12PipelineState* copyPipeline = nullptr;  // the layer copied as it is, alpha kept (frame generation)
     HMODULE api = nullptr;  // setApi
+    void (*onDevice)(void*, ID3D12Device*) = nullptr;  // setOnDevice
+    void* onDeviceContext = nullptr;
     // Frame generation: the back buffer's picture without the interface and the interface alone (upscaler.hpp).
     ID3D12Resource* hudless = nullptr;
     ID3D12Resource* uiCopy = nullptr;

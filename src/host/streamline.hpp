@@ -41,6 +41,9 @@ private:
     bool setOptions(int outW, int outH);
     void* token();  // this frame's sl::FrameToken: one for every Streamline call of a frame
     void marker(uint32_t m);  // sl::PCLMarker
+    void startStats();         // frame generation came on
+    void countStats();         // a frame with frame generation on
+    void noteMode(const char* what);
 
     bool started_ = false;
     uint32_t mode_ = 0;  // sl::DLSSMode
@@ -56,6 +59,11 @@ private:
     bool presentStarted_ = false;  // beforePresent ran this frame: its present has a start marker
     int generationMode_ = -1;     // the options set last: off (0) or on (1)
     uint32_t generationFrames_ = 1;
+    bool statusLogged_ = false;
+    ULONGLONG statsStart_ = 0;
+    uint32_t statsFrames_ = 0;
+    uint32_t statsShown_ = 0;
+    int modeLines_ = 0;
 };
 
 }  // namespace uagfx::host
