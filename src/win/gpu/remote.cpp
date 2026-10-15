@@ -310,6 +310,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.sky ? 1 : 0);  // 0.69
     w.i32(e.skyClouds);
     w.i32(e.skyStrength);
+    w.u8(e.motes ? 1 : 0);  // 0.70
+    w.i32(e.motesAmount);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

@@ -1491,6 +1491,21 @@ const Entry kTexts[] = {
     {"How much the sky covers the void: less lets the game's own colour show through.",
      "Наскільки небо закриває порожнечу: менше — проступає власний колір гри.",
      "Насколько небо закрывает пустоту: меньше — проступает собственный цвет игры."},
+    {"Motes in the air",
+     "Порошинки в повітрі",
+     "Частицы в воздухе"},
+    {"Where the map has no weather of its own, tiny motes drift in the air: pollen over the fields and the towns, "
+     "dust in the dungeons and the houses. Direct3D 12.",
+     "Де на карті немає власної погоди, у повітрі пливуть дрібні порошинки: пилок над полями й містами, пил у "
+     "підземеллях і будинках. Direct3D 12.",
+     "Где на карте нет своей погоды, в воздухе плывут мелкие частицы: пыльца над полями и городами, пыль в "
+     "подземельях и домах. Direct3D 12."},
+    {"How many motes",
+     "Скільки порошинок",
+     "Сколько частиц"},
+    {"How many motes float in the air.",
+     "Скільки порошинок пливе в повітрі.",
+     "Сколько частиц плывёт в воздухе."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

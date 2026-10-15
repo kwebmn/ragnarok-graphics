@@ -184,6 +184,10 @@ struct EffectSettings {
     bool sky = true;
     int skyClouds = 60;  // %, 0-100
     int skyStrength = 100;  // %, 0-100
+    // 0.70: motes in the air where the map has no weather - pollen drifting over the fields and the towns, dust
+    // in the dungeons and the houses. On by default.
+    bool motes = true;
+    int motesAmount = 100;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

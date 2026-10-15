@@ -26,3 +26,10 @@ TEST(sky_on_by_default_with_its_clouds) {
     CHECK(!parseConfig("[effects]\nsky = 0\n").effects.sky);
     CHECK(!effectsOff().sky);
 }
+
+TEST(motes_on_by_default_their_amount_bounded) {
+    // 0.70: pollen and dust in the air.
+    CHECK(parseConfig("").effects.motes && parseConfig("").effects.motesAmount == 100);
+    CHECK(parseConfig("[effects]\nmotes_amount = 40\n").effects.motesAmount == 40);
+    CHECK(!effectsOff().motes);
+}

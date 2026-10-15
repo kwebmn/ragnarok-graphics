@@ -145,6 +145,8 @@ enum class Text : uint16_t {
     FxRimLight, FxRimLightHint, FxRimStrength, FxRimStrengthHint,
     // 0.69
     FxSky, FxSkyHint, FxSkyClouds, FxSkyCloudsHint, FxSkyStrength, FxSkyStrengthHint,
+    // 0.70
+    FxMotes, FxMotesHint, FxMotesAmount, FxMotesAmountHint,
     Count
 };
 

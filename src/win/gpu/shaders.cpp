@@ -1179,7 +1179,8 @@ float4 heat_ps(PresentOut i) : SV_Target {
 
 // 0.39, the driver's own weather (weather.cpp): three layers of particles, far to near, falling (or blown) through
 // cells of the screen - a particle a cell, some cells empty - each layer moved by the camera's moves (sourceRect.xy,
-// game pixels) the more the nearer. twinX the kind (1 snow, 2 rain, 3 leaves, 4 sand), footprint how much (1 = 100 %),
+// game pixels) the more the nearer. twinX the kind (1 snow, 2 rain, 3 leaves, 4 sand; 0.70: 5 pollen, 6 dust - motes
+// drifting in the air), footprint how much (1 = 100 %),
 // sharpen the time, scale k. Blended over the picture by its alpha.
 float4 weather_ps(PresentOut i) : SV_Target {
     float2 p = i.pos.xy / scale;  // game pixels
@@ -1189,15 +1190,16 @@ float4 weather_ps(PresentOut i) : SV_Target {
     float a = 0.0;
     [unroll] for (int layer = 0; layer < 3; ++layer) {
         float depth = 0.6 + 0.5 * float(layer);
-        float cell = (kind == 1 ? 36.0 : kind == 2 ? 22.0 : kind == 3 ? 110.0 : 60.0) * depth;
+        float cell = (kind == 1 ? 36.0 : kind == 2 ? 22.0 : kind == 3 ? 110.0 : kind == 4 ? 60.0 : 80.0) * depth;
         float2 fall = kind == 1 ? float2(8.0 * sin(t * 0.21), 34.0)
                       : kind == 2 ? float2(-55.0, 520.0)
                       : kind == 3 ? float2(18.0, 26.0)
-                                  : float2(-300.0, 14.0);
+                      : kind == 4 ? float2(-300.0, 14.0)
+                                  : float2(5.0, kind == 5 ? -3.0 : 2.0);
         float2 q = p + sourceRect.xy * depth - fall * depth * t;
         float2 id = floor(q / cell);
         float2 f = frac(q / cell);
-        float presence = kind == 3 ? 0.18 : kind == 4 ? 0.35 : 0.55;
+        float presence = kind == 3 ? 0.18 : kind == 4 ? 0.35 : kind >= 5 ? 0.3 : 0.55;
         if (hash12(id + float2(91.0, 17.0) * float(layer + 1)) > presence * footprint) continue;
         float2 h = float2(hash12(id + float(layer) * 17.0), hash12(id * 1.7 + float(layer) * 3.1));
         float2 d = (f - (0.2 + 0.6 * h)) * cell;  // from the particle, game pixels
@@ -1223,11 +1225,17 @@ float4 weather_ps(PresentOut i) : SV_Target {
                      : h.x < 0.75 ? float3(0.58, 0.36, 0.16)
                                   : float3(0.62, 0.66, 0.2);
             alpha = 0.92;
-        } else {  // sand: a streak blown across
+        } else if (kind == 4) {  // sand: a streak blown across
             float2 e = d / float2(26.0 * depth, 0.9 * depth);
             shape = exp(-dot(e, e));
             colour = float3(0.86, 0.76, 0.56);
             alpha = 0.14;
+        } else {  // a mote: wandering slowly, now catching the light, now not
+            d += float2(sin(t * 0.37 + h.x * 6.28), cos(t * 0.29 + h.y * 6.28)) * 6.0 * depth;
+            float r = 0.45 + 0.35 * depth;
+            shape = exp(-dot(d, d) / (r * r)) * (0.55 + 0.45 * sin(t * (0.8 + h.y) + h.x * 20.0));
+            colour = kind == 5 ? float3(1.0, 0.95, 0.75) : float3(0.85, 0.80, 0.70);
+            alpha = kind == 5 ? 0.55 : 0.35;
         }
         float s = saturate(shape) * alpha;
         sum += colour * s;

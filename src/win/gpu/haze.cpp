@@ -12,33 +12,7 @@ namespace uagfx::gpu {
 
 // 0.34: blended over the target (its samples) or the world under DLSS (one sample) by its alpha.
 ID3D12PipelineState* Renderer::Impl::hazePipeline(UINT n) {
-    return blendedPassPipeline(hazePs, hazePipelines, n, "haze");
-}
-
-ID3D12PipelineState* Renderer::Impl::blendedPassPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&cache)[4], UINT n,
-                                                         const char* user) {
-    const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
-    if (cache[code] || !ps) return cache[code];
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
-        fullScreenPipeline(root, presentVs, ps, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
-    D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
-    b.BlendEnable = TRUE;
-    b.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-    b.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-    b.BlendOp = D3D12_BLEND_OP_ADD;
-    b.SrcBlendAlpha = D3D12_BLEND_ZERO;
-    b.DestBlendAlpha = D3D12_BLEND_ONE;
-    b.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-    b.LogicOp = D3D12_LOGIC_OP_NOOP;
-    b.RenderTargetWriteMask =
-        D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
-    if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
-                                                   reinterpret_cast<void**>(&cache[code])))) {
-        LOG_ERROR("%s: the pipeline onto %u samples failed: none", user, 1u << code);
-        cache[code] = nullptr;
-        releaseCom(ps);  // not tried again
-    }
-    return cache[code];
+    return alphaPipeline(hazePs, hazePipelines, n, "haze");
 }
 
 // Once the world is drawn and lit (before its colours): far off it goes over to the haze, over the dungeons' low
@@ -82,7 +56,7 @@ bool Renderer::Impl::applySky() {
     skyDone = true;
     EffectTime timing(*this, kTimeHaze);
     if (!ensureScene("sky")) return true;
-    ID3D12PipelineState* pso = blendedPassPipeline(skyPs, skyPipelines, upscale ? 1 : samples, "sky");
+    ID3D12PipelineState* pso = alphaPipeline(skyPs, skyPipelines, upscale ? 1 : samples, "sky");
     if (!pso) return true;
     if (!copySceneDepth()) return false;
     const int w = sceneWidth, h = sceneHeight;

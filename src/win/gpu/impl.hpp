@@ -707,10 +707,6 @@ struct Renderer::Impl {
     bool hazeDue() const { return hazeWanted() && groundDrawn && !hazeDone && viewToWorldValid; }
     bool applyHaze();  // once a frame, the world drawn and lit; false: lost
     ID3D12PipelineState* hazePipeline(UINT samples);
-    // 0.34, 0.69: a full-screen pass blended over the target (its samples) or the world by its alpha; ps released
-    // when the pipeline cannot be made.
-    ID3D12PipelineState* blendedPassPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&cache)[4], UINT samples,
-                                             const char* user);
     bool skyWanted() const { return effects.sky && effects.skyStrength > 0 && skyPs && mapOutdoors; }
     bool skyDue() const { return skyWanted() && groundDrawn && !skyDone && viewToWorldValid; }
     bool applySky();  // once a frame, the world drawn; false: lost
@@ -720,9 +716,12 @@ struct Renderer::Impl {
     }
     bool portalsWanted() const { return effects.portals && effects.portalsStrength > 0; }  // 0.38
     float heatUser() const { return float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f; }
-    bool weatherWanted() const {  // 0.39
+    bool mapWeatherWanted() const {  // 0.39
         return effects.weather && effects.weatherAmount > 0 && weatherPs && mapWeather != weather::Kind::None;
     }
+    // 0.70: motes in the air where the map has no weather - pollen under the open sky, dust elsewhere
+    bool motesWanted() const { return effects.motes && effects.motesAmount > 0 && weatherPs && !mapName.empty(); }
+    bool weatherWanted() const { return mapWeatherWanted() || motesWanted(); }
     bool weatherDue() const { return weatherWanted() && groundDrawn && !weatherDone; }
     bool applyWeather();  // once a frame, the world finished; false: lost
     ID3D12PipelineState* weatherPipeline(UINT samples);

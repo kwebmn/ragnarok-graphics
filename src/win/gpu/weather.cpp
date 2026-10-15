@@ -57,6 +57,14 @@ bool Renderer::Impl::applyWeather() {
     c.uiPixels[1] = float(h);
     c.twin[0] = float(int(mapWeather));
     c.footprint = float(std::clamp(effects.weatherAmount, 0, 200)) / 100.0f;
+    // 0.70: no weather of the map's own - motes, weather_ps's kinds 5 (pollen) and 6 (dust); the pollen fewer at night
+    const bool motes = !mapWeatherWanted();
+    if (motes) {
+        const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+        c.twin[0] = mapOutdoors ? 5.0f : 6.0f;
+        c.footprint = float(std::clamp(effects.motesAmount, 0, 200)) / 100.0f;
+        if (mapOutdoors) c.footprint *= 1.0f - 0.7f * night;
+    }
     c.sharpen = waterTime();
     if (viewToWorldValid) {  // the camera's place along the view's own across and down, in game pixels nearby
         const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
@@ -65,14 +73,16 @@ bool Renderer::Impl::applyWeather() {
         c.sourceRect[0] = (m[9] * m[0] + m[10] * m[1] + m[11] * m[2]) * perUnit;
         c.sourceRect[1] = (m[9] * m[3] + m[10] * m[4] + m[11] * m[5]) * perUnit;
     }
-    if (!weatherLogged) LOG_INFO("weather: %s over %s", weatherName(mapWeather), mapName.c_str());
+    if (!weatherLogged)
+        LOG_INFO("weather: %s over %s", motes ? (mapOutdoors ? "pollen" : "dust") : weatherName(mapWeather),
+                 mapName.c_str());
     weatherLogged = true;
     if (!(upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, false)
                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, false)))
         return false;
     // 0.64: the rain's splashes on the ground, where it is known (the camera read)
     ID3D12PipelineState* splash = alphaPipeline(splashPs, splashPipelines, upscale ? 1 : samples, "rain's splashes");
-    if (mapWeather != weather::Kind::Rain || !viewToWorldValid || !splash) return true;
+    if (motes || mapWeather != weather::Kind::Rain || !viewToWorldValid || !splash) return true;
     if (!copySceneDepth()) return false;
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
