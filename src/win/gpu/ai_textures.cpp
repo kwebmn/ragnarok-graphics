@@ -170,6 +170,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     const ULONGLONG tested = GetTickCount64() - t0;
     // 0.42: the texture pack - read by the I/O thread, looked up here; 0.48: the only place of the pictures.
     packPath_ = gameDir + "\\uaro-textures.zip";
+    dump_.setGameDir(gameDir);
     const bool packThere = GetFileAttributesA(packPath_.c_str()) != INVALID_FILE_ATTRIBUTES;
     std::string packError;
     if (!pack_.open(packPath_, packError) && packThere)
@@ -906,6 +907,7 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         }
         if (net < 0) {  // not generating: the frame stays as the game has it
             ++cellsMissing_;
+            dump_.save(sprite_exe::sourceName(cells[i].source), key, pixels.data(), w, h);
             continue;
         }
         j.name = name;
@@ -1173,6 +1175,7 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     item.name = pack::pictureName(item.ui ? pack::Group::Ui : pack::Group::World, item.key);
     if (item.net < 0) {  // not generating: it stays the game's
         ++missing_[k];
+        dump_.save(ai::kindName(kind), item.key, item.argb.data(), item.width, item.height);
         drop(item);
     } else if (later) {
         item.later = true;

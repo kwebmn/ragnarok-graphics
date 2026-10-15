@@ -20,6 +20,7 @@
 #include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/texture_pack.hpp"
+#include "win/gpu/missing_dump.hpp"
 #include "win/gpu/renderer.hpp"
 
 namespace uagfx::gpu {
@@ -218,6 +219,7 @@ private:
     bool generate_ = false;                     // [ai] generate: the network makes what is missing
     pack::Reader pack_;                         // 0.42: uaro-textures.zip, read by the I/O thread
     std::unique_ptr<ai::ReadyPictures> pictures_;  // 0.48: the pack's pictures and kinds, looked up here
+    MissingDump dump_;                             // 0.49.1
     int scale_ = 4;                             // the result: 4 or 2 times the game's texture
     int minSide_ = 64, maxSide_ = 512;          // the textures taken
     bool ahead_ = true;

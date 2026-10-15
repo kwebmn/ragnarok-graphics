@@ -29,6 +29,8 @@ constexpr uint32_t kRgbaImages = 0x524;  // 32-bit frames
 // players.
 enum class Source : uint8_t { Unknown, Monster, Player, Npc, Item, Effect, Interface };
 Source sourceOf(const char* path);
+// 0.49.1: "monster", "player", "npc", "item", "effect", "interface", "unknown".
+const char* sourceName(uint8_t source);
 // 0.23, 0.24: the maps' objects the driver draws anew (core/map_objects.hpp), by their files in the effects' folder:
 // torch_01.spr, 굴뚝연기.spr (the chimneys' smoke).
 objects::File objectFile(const char* path);

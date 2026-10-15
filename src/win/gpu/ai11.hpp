@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <list>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -14,6 +15,7 @@
 #include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/texture_pack.hpp"
+#include "win/gpu/missing_dump.hpp"
 #include "win/gpu/renderer.hpp"
 
 struct ID3D11Device;
@@ -67,6 +69,7 @@ private:
         bool ui = false;    // a picture of the interface: it stands in for the interface's draws
         std::string alike;  // 0.49: a .jpg's: the pack's picture most like it (found as it was uploaded)
         uint32_t serial = 0;   // its pixels': a picture asked for older ones is not taken
+        bool urgent = false;   // 0.49.1: drawn while its picture, asked for ahead, is still on its way
         uint64_t lastUse = 0;  // the frame it was last drawn in
     };
     struct Copy {
@@ -85,6 +88,7 @@ private:
         uint32_t id = 0;
         uint32_t serial = 0;  // a texture's Item::serial, a cell's frame
         std::string name;     // the picture's in the pack
+        bool ahead = false;   // 0.49.1: a texture known ahead, not drawn yet: after the rest
         int width = 0, height = 0;  // the game texture's, the cell's, the icon's
         int cellX = 0, cellY = 0;
         uint64_t iconKey = 0;
@@ -102,7 +106,7 @@ private:
         std::vector<Level> levels;  // a cell's (the sprite cache's levels), an icon's one
     };
 
-    void begin(uint32_t id, Item& item, ai::Kind kind);
+    void begin(uint32_t id, Item& item, ai::Kind kind, bool ahead = false);
     void bringBack(uint32_t id, Item& item);
     void dropCopy(uint32_t id);
     void putAwayOld();
@@ -145,6 +149,7 @@ private:
     uint32_t putAway_ = 0, broughtBack_ = 0;
 
     pack::Reader pack_;  // read by the thread; has() on either
+    MissingDump dump_;   // 0.49.1
     HANDLE thread_ = nullptr;
     HANDLE wake_ = nullptr;
     CRITICAL_SECTION lock_{};
@@ -153,6 +158,12 @@ private:
     std::deque<Request> in_;
     std::deque<Result> out_;
     std::unordered_set<uint32_t> gone_;  // textures released while their pictures were asked for
+    std::unordered_set<uint32_t> urgent_;  // 0.49.1: textures asked for ahead and drawn since: read first
+    // 0.49.1, the thread's: the sprite frames' pictures read lately - an animation shows the same ones again and again.
+    std::list<std::string> recent_;
+    std::unordered_map<std::string, std::pair<std::vector<Level>, std::list<std::string>::iterator>> frames_;
+    size_t framesBytes_ = 0;
+    bool next(Request& r);  // under the lock: the request to serve now
 
     uint32_t texturesTaken_ = 0, cellsWritten_ = 0, cellsTaken_ = 0, iconsTaken_ = 0, iconsNone_ = 0;
     uint32_t failed_ = 0, soft_ = 0, waiting_ = 0;

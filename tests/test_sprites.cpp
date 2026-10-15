@@ -169,3 +169,10 @@ TEST(ai_nearest_enlargement_is_the_games_own_look) {
     CHECK_EQ(big[size_t(4 * 8)], 0xFF00FF00u);
     CHECK_EQ(big[63], 0xFF0000FFu);
 }
+
+TEST(sprite_exe_names_the_sources) {
+    // 0.49.1: in the names of the frames saved for the developers (uaro-graphics\missing\).
+    CHECK(std::string(sprite_exe::sourceName(uint8_t(sprite_exe::Source::Player))) == "player");
+    CHECK(std::string(sprite_exe::sourceName(uint8_t(sprite_exe::Source::Interface))) == "interface");
+    CHECK(std::string(sprite_exe::sourceName(200)) == "unknown");
+}

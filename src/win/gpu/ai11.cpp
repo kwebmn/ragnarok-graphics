@@ -80,6 +80,7 @@ bool Ai11::start(const std::string& gameDir, const AiSettings& s, std::string& e
         error = "no kind of texture is chosen (the AI textures page)";
         return false;
     }
+    dump_.setGameDir(gameDir);
     const std::string packPath = gameDir + "\\uaro-textures.zip";
     std::string why;
     if (!pack_.open(packPath, why) && GetFileAttributesA(packPath.c_str()) != INVALID_FILE_ATTRIBUTES)
@@ -170,10 +171,10 @@ void Ai11::noteUpload(uint32_t id, int width, int height, const UploadCmd& u, co
     item.alike.clear();
     if (pictures_->hasAlike(width, height)) pictures_->alikeName(argb, width, height, item.alike);
     ai::Kind kind = ai::Kind::None;
-    if (pictures_->knownKind(item.key, kind)) begin(id, item, kind);  // ahead: on its way before it is drawn
+    if (pictures_->knownKind(item.key, kind)) begin(id, item, kind, true);  // ahead: on its way before it is drawn
 }
 
-void Ai11::begin(uint32_t id, Item& item, ai::Kind kind) {
+void Ai11::begin(uint32_t id, Item& item, ai::Kind kind, bool ahead) {
     item.kind = kind;
     item.ui = kind == ai::Kind::Icons;  // through noteUpload only the interface's big pictures have this kind
     item.state = Item::Skipped;
@@ -197,6 +198,7 @@ void Ai11::begin(uint32_t id, Item& item, ai::Kind kind) {
     r.serial = item.serial;
     r.width = item.width;
     r.height = item.height;
+    r.ahead = ahead;
     request(std::move(r));
 }
 
@@ -209,6 +211,12 @@ void Ai11::noteWorldUse(uint32_t id, ai::Kind kind) {
     if (item.state == Item::Away) {  // 0.44: its copy was put away - back from the pack
         bringBack(id, item);
         return;
+    }
+    if (item.state == Item::Waiting && !item.urgent) {  // 0.49.1: asked for ahead and on screen now - first
+        item.urgent = true;
+        EnterCriticalSection(&lock_);
+        urgent_.insert(id);
+        LeaveCriticalSection(&lock_);
     }
     if (item.state != Item::Kept) return;
     ++seen_[size_t(kind)];
@@ -364,8 +372,10 @@ void Ai11::noteCells(uint32_t id, int width, int height, const UploadCmd& u, con
             continue;
         }
         Request r;
-        if (!pictures_->cell(ai::keyName(ai::textureKey(pixels.data(), w, h)), r.name)) {
+        const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
+        if (!pictures_->cell(key, r.name)) {
             ++cellsMissing_;
+            dump_.save(sprite_exe::sourceName(cells[i].source), key, pixels.data(), w, h);
             continue;
         }
         r.want = Want::Cell;
@@ -561,6 +571,25 @@ DWORD WINAPI Ai11::ioMain(void* self) {
     return 0;
 }
 
+// 0.49.1: what is on screen first - the sprite frames and the windows' icons, then the textures drawn, then the ones
+// known ahead (a map's hundreds as it loads): the characters were left as the game's pixels for seconds behind them.
+bool Ai11::next(Request& r) {
+    size_t pick = 0;
+    int best = 3;
+    for (size_t i = 0; i < in_.size() && best > 0; ++i) {
+        const Request& q = in_[i];
+        const int rank = q.want != Want::Texture ? 0 : (!q.ahead || urgent_.count(q.id)) ? 1 : 2;
+        if (rank < best) {
+            best = rank;
+            pick = i;
+        }
+    }
+    r = std::move(in_[pick]);
+    in_.erase(in_.begin() + std::ptrdiff_t(pick));
+    urgent_.erase(r.id);
+    return true;
+}
+
 void Ai11::ioLoop() {
     for (;;) {
         WaitForSingleObject(wake_, INFINITE);
@@ -576,8 +605,7 @@ void Ai11::ioLoop() {
                 LeaveCriticalSection(&lock_);
                 break;
             }
-            r = std::move(in_.front());
-            in_.pop_front();
+            next(r);
             const bool gone = r.want != Want::Icon && gone_.count(r.id) != 0;
             LeaveCriticalSection(&lock_);
             if (gone) continue;
@@ -609,7 +637,21 @@ bool Ai11::load(const Request& r, std::vector<uint32_t>& argb, int& width, int& 
     return width == r.width * scale_ && height == r.height * scale_;
 }
 
+namespace {
+constexpr size_t kFramesBytes = size_t(48) << 20;  // the frames kept read: the game's address space is 32-bit
+}  // namespace
+
 void Ai11::serve(const Request& r, Result& out) {
+    if (r.want == Want::Cell) {  // 0.49.1: read lately - again at once
+        const auto kept = frames_.find(r.name);
+        if (kept != frames_.end() && !kept->second.first.empty() && kept->second.first[0].width == r.width * scale_ &&
+            kept->second.first[0].height == r.height * scale_) {
+            recent_.splice(recent_.begin(), recent_, kept->second.second);
+            out.levels = kept->second.first;
+            out.ok = true;
+            return;
+        }
+    }
     std::vector<uint32_t> argb;
     int w = 0, h = 0;
     if (!load(r, argb, w, h)) return;
@@ -627,6 +669,19 @@ void Ai11::serve(const Request& r, Result& out) {
             out.levels.push_back(std::move(next));
         }
         out.ok = true;
+        size_t bytes = 0;
+        for (const Level& l : out.levels) bytes += l.argb.size() * 4;
+        if (bytes * 8 < kFramesBytes && !frames_.count(r.name)) {
+            recent_.push_front(r.name);
+            frames_[r.name] = {out.levels, recent_.begin()};
+            framesBytes_ += bytes;
+            while (framesBytes_ > kFramesBytes && !recent_.empty()) {  // the least lately shown go
+                const auto old = frames_.find(recent_.back());
+                for (const Level& l : old->second.first) framesBytes_ -= l.argb.size() * 4;
+                frames_.erase(old);
+                recent_.pop_back();
+            }
+        }
         return;
     }
     // A texture's picture, at most kLargestSide a side, with all its levels: its texture is made here.

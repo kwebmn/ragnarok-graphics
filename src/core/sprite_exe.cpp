@@ -64,4 +64,17 @@ Source sourceOf(const char* path) {
     return Source::Unknown;
 }
 
+const char* sourceName(uint8_t source) {
+    switch (Source(source)) {
+        case Source::Monster: return "monster";
+        case Source::Player: return "player";
+        case Source::Npc: return "npc";
+        case Source::Item: return "item";
+        case Source::Effect: return "effect";
+        case Source::Interface: return "interface";
+        case Source::Unknown: break;
+    }
+    return "unknown";
+}
+
 }  // namespace uagfx::sprite_exe
