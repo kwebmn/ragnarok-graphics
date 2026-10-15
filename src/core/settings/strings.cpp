@@ -1696,6 +1696,13 @@ const Entry kTexts[] = {
     {"After a warp or a new map the world comes in smoothly from black instead of at once. Direct3D 12.",
      "Після телепорту чи нової карти світ плавно проявляється з темряви, а не одразу. Direct3D 12.",
      "После телепорта или новой карты мир плавно проявляется из темноты, а не сразу. Direct3D 12."},
+    {"Round characters",
+     "Об’ємні персонажі",
+     "Объёмные персонажи"},
+    {"Torches, lamps and fire light a character as if it were round: the side towards the fire brighter, the far one "
+     "darker.",
+     "Факели, лампи й вогонь освітлюють персонажа як округлого: бік до вогню світліший, дальній темніший.",
+     "Факелы, лампы и огонь освещают персонажа как округлого: сторона к огню светлее, дальняя темнее."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

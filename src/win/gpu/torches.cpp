@@ -898,6 +898,7 @@ bool Renderer::Impl::applyTorches() {
         transition(torchData, torchDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         c.footprint = float(lights.size());
         shaftLights = UINT(lights.size());  // 0.73: for the light in the air
+        c.sourceRect[0] = effects.roundLight ? 1.0f : 0.0f;  // 0.84
         c.sharpen = effects.rimLight ? 0.6f * float(std::clamp(effects.rimStrength, 0, 200)) / 100.0f : 0.0f;  // 0.68
         const D3D12_RECT lit = clipped(lx0, ly0, lx1, ly1, w, h);
         if (lit.right > lit.left && lit.bottom > lit.top &&

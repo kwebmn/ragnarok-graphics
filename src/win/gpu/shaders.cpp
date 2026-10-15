@@ -918,9 +918,9 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
     float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
     float3 n = normalize(cross(dy, dx));
     if (dot(n, p) > 0.0) n = -n;  // towards the camera
-    // 0.79, round characters (with the rim light, sharpen): something narrow in front of what is behind it - a
+    // 0.79, round characters (0.84: their own switch, sourceRect.x): something narrow in front of what is behind it - a
     // character, a monster, a post - is lit as if round across: its normal turns towards the nearer of its edges.
-    if (sharpen > 0.0) {
+    if (sourceRect.x > 0.5) {
         float stepPx = max(1.0, scale * 1.5);
         float dl = 0.0, dr = 0.0;
         [loop] for (int k = 1; k <= 16 && (dl == 0.0 || dr == 0.0); ++k) {

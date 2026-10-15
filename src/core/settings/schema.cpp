@@ -239,6 +239,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFilmGrainAmountHint, " %"},
         {"effects", "map_fade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMapFade,
          Text::FxMapFadeHint, ""},
+        {"effects", "round_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRoundLight,
+         Text::FxRoundLightHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -436,6 +438,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.film_grain") return c.effects.filmGrain ? "1" : "0";
     if (k == "effects.film_grain_amount") return std::to_string(c.effects.filmGrainAmount);
     if (k == "effects.map_fade") return c.effects.mapFade ? "1" : "0";
+    if (k == "effects.round_light") return c.effects.roundLight ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

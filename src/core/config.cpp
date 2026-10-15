@@ -113,7 +113,7 @@ EffectSettings effectsOff() {
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
     e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.sunShadows = e.bloom = e.filmic = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
-    e.filmGrain = e.mapFade = false;
+    e.filmGrain = e.mapFade = e.roundLight = false;
     e.nightNow = 0;
     e.dayNow = -1;
     return e;
@@ -139,7 +139,8 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage || e.softParticles || e.rimLight || e.sky || e.motes ||
            e.relief || e.floorReflections || e.shafts || e.dayCycle || e.sunShadows || e.bloom || e.filmic ||
-           e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks || e.filmGrain;
+           e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks || e.filmGrain ||
+           e.roundLight;
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
@@ -463,6 +464,8 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 100, c.effects.filmGrainAmount);
         } else if (key == "effects.map_fade") {
             setBool(val, c.effects.mapFade);
+        } else if (key == "effects.round_light") {
+            setBool(val, c.effects.roundLight);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

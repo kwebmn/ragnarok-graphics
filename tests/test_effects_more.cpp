@@ -48,10 +48,10 @@ TEST(floor_reflections_on_by_default_their_shine_bounded) {
     CHECK(!effectsOff().floorReflections);
 }
 
-TEST(light_in_the_air_on_by_default) {
-    // 0.73: the air glows about the lights, rays from the sky.
-    CHECK(parseConfig("").effects.shafts && parseConfig("").effects.shaftsStrength == 100);
-    CHECK(!parseConfig("[effects]\nshafts = 0\n").effects.shafts);
+TEST(light_in_the_air_off_by_default) {
+    // 0.73: the air glows about the lights, rays from the sky; 0.84: off unless asked.
+    CHECK(!parseConfig("").effects.shafts && parseConfig("").effects.shaftsStrength == 100);
+    CHECK(parseConfig("[effects]\nshafts = 1\n").effects.shafts);
     CHECK(!effectsOff().shafts);
 }
 
@@ -75,28 +75,30 @@ TEST(keep_fps_off_unless_asked_and_bounded) {
     CHECK(parseConfig("[frames]\nkeep_fps = 999\n").keepFps == 0);
 }
 
-TEST(sun_shadows_on_by_default) {
-    // 0.77: the houses' and trees' shadows from the sun.
-    CHECK(parseConfig("").effects.sunShadows && parseConfig("").effects.sunShadowsStrength == 60);
+TEST(sun_shadows_off_by_default) {
+    // 0.77: the houses' and trees' shadows from the sun; 0.84: off unless asked.
+    CHECK(!parseConfig("").effects.sunShadows && parseConfig("").effects.sunShadowsStrength == 60);
+    CHECK(parseConfig("[effects]\nsun_shadows = 1\n").effects.sunShadows);
     CHECK(!effectsOff().sunShadows);
 }
 
-TEST(bloom_and_filmic_on_by_default) {
-    // 0.78
+TEST(bloom_and_filmic_off_by_default) {
+    // 0.78; 0.84: off unless asked
     const Config c = parseConfig("");
-    CHECK(c.effects.bloom && c.effects.bloomStrength == 60 && c.effects.filmic);
+    CHECK(!c.effects.bloom && c.effects.bloomStrength == 60 && !c.effects.filmic);
     CHECK(!effectsOff().bloom && !effectsOff().filmic);
 }
 
-TEST(region_looks_on_by_default) {
-    // 0.79
-    CHECK(parseConfig("").effects.regionLooks && parseConfig("").effects.regionLooksStrength == 100);
+TEST(region_looks_off_by_default) {
+    // 0.79; 0.84: off unless asked, the round characters too
+    CHECK(!parseConfig("").effects.regionLooks && parseConfig("").effects.regionLooksStrength == 100);
+    CHECK(!parseConfig("").effects.roundLight && parseConfig("[effects]\nround_light = 1\n").effects.roundLight);
     CHECK(!effectsOff().regionLooks);
 }
 
-TEST(footprints_and_storms_on_by_default) {
-    // 0.80
-    CHECK(parseConfig("").effects.footprints && parseConfig("").effects.storms);
+TEST(footprints_and_storms_off_by_default) {
+    // 0.80; 0.84: off unless asked
+    CHECK(!parseConfig("").effects.footprints && !parseConfig("").effects.storms);
     CHECK(!effectsOff().footprints && !effectsOff().storms);
 }
 
@@ -106,14 +108,14 @@ TEST(grass_off_by_default) {
     CHECK(parseConfig("[effects]\ngrass = 1\n").effects.grass);
 }
 
-TEST(skill_sparks_on_by_default) {
-    // 0.82
-    CHECK(parseConfig("").effects.skillSparks && parseConfig("").effects.skillSparksAmount == 100);
+TEST(skill_sparks_off_by_default) {
+    // 0.82; 0.84: off unless asked
+    CHECK(!parseConfig("").effects.skillSparks && parseConfig("").effects.skillSparksAmount == 100);
     CHECK(!effectsOff().skillSparks);
 }
 
-TEST(film_grain_off_map_fade_on_by_default) {
-    // 0.83
-    CHECK(!parseConfig("").effects.filmGrain && parseConfig("").effects.mapFade);
+TEST(film_grain_and_map_fade_off_by_default) {
+    // 0.83; 0.84: the map's fade off too
+    CHECK(!parseConfig("").effects.filmGrain && !parseConfig("").effects.mapFade);
     CHECK(!effectsOff().filmGrain && !effectsOff().mapFade);
 }

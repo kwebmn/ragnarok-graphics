@@ -173,6 +173,8 @@ enum class Text : uint16_t {
     FxSkillSparks, FxSkillSparksHint, FxSkillSparksAmount, FxSkillSparksAmountHint,
     // 0.83
     FxFilmGrain, FxFilmGrainHint, FxFilmGrainAmount, FxFilmGrainAmountHint, FxMapFade, FxMapFadeHint,
+    // 0.84
+    FxRoundLight, FxRoundLightHint,
     Count
 };
 

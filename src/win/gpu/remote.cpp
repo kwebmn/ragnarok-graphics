@@ -336,6 +336,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.filmGrain ? 1 : 0);  // 0.83
     w.i32(e.filmGrainAmount);
     w.u8(e.mapFade ? 1 : 0);
+    w.u8(e.roundLight ? 1 : 0);  // 0.84
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

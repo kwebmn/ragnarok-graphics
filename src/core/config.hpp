@@ -197,8 +197,8 @@ struct EffectSettings {
     bool floorReflections = true;
     int floorReflectStrength = 35;  // %, 0-100 (in the rain 1.6 times)
     // 0.73: light in the air - the air glows about the torches, lamps and burning skills (hidden by the walls in
-    // front), and on the fields rays stream from the sky past the map's edge. On by default.
-    bool shafts = true;
+    // front), and on the fields rays stream from the sky past the map's edge. 0.84: off by default (too much).
+    bool shafts = false;
     int shaftsStrength = 100;  // %, 0-200
     // 0.74: the day going round (core/daylight.hpp): by the computer's clock the sun's shadows turn and lengthen
     // and its light warms in the morning and the evening. dayNow: the minute of the day now - the driver's, each
@@ -206,34 +206,37 @@ struct EffectSettings {
     bool dayCycle = false;
     int dayNow = -1;
     // 0.77: the sun's shadows - on the fields and in the towns the houses, walls and trees cast shadows on the
-    // ground away from the sun (with the time of day they turn). On by default.
-    bool sunShadows = true;
+    // ground away from the sun (with the time of day they turn). 0.84: off by default.
+    bool sunShadows = false;
     int sunShadowsStrength = 60;  // %, 0-100
     // 0.78: bloom - the bright parts of the picture (sunlit tiles, snow, windows, fire) glow softly; the filmic
-    // curve - the highlights roll off instead of clipping, as in modern games. Both on by default.
-    bool bloom = true;
+    // curve - the highlights roll off instead of clipping, as in modern games. 0.84: both off by default.
+    bool bloom = false;
     int bloomStrength = 60;  // %, 0-200
-    bool filmic = true;
+    bool filmic = false;
     // 0.79: each region its colours (core/region_look.hpp): Payon warm and green, Niflheim cold and pale, Morroc
-    // sun-bleached... On by default.
-    bool regionLooks = true;
+    // sun-bleached... 0.84: off by default.
+    bool regionLooks = false;
     int regionLooksStrength = 100;  // %, 0-100
     // 0.80: footprints in the snow and the sand, dust under the feet on dry ground; a thunderstorm's lightning
-    // where it rains. Both on by default.
-    bool footprints = true;
-    bool storms = true;
+    // where it rains. 0.84: both off by default.
+    bool footprints = false;
+    bool storms = false;
     // 0.81: grass - blades on the green ground of the fields, swaying in the wind and trodden down where the
     // characters walk. Off by default: it costs the card the most of the effects.
     bool grass = false;
     int grassAmount = 70;  // %, 0-100
     // 0.82: the skills' sparks - embers rise from burning skills, glints of their colour spread from the others.
-    // On by default.
-    bool skillSparks = true;
+    // 0.84: off by default.
+    bool skillSparks = false;
     int skillSparksAmount = 100;  // %, 0-200
-    // 0.83: film grain (off by default) and the world coming in from black after a new map (on by default).
+    // 0.83: film grain and the world coming in from black after a new map; 0.84: both off by default.
     bool filmGrain = false;
     int filmGrainAmount = 30;  // %, 0-100
-    bool mapFade = true;
+    bool mapFade = false;
+    // 0.84: round characters - the torches' light across a character as if it were round (0.79 with the rim light;
+    // now its own switch). Off by default.
+    bool roundLight = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

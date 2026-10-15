@@ -43,6 +43,7 @@ const Effect kEffects[] = {
     {"effects.skill_sparks", {}, {"effects.skill_sparks_amount"}, {}, false},  // 0.82
     {"effects.film_grain", {}, {"effects.film_grain_amount"}, {}, false},  // 0.83
     {"effects.map_fade", {}, {}, {}, false},                                // 0.83
+    {"effects.round_light", {}, {}, {}, false},  // 0.84
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, false},
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, false},
     {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, false},
