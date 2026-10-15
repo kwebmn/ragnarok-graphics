@@ -129,6 +129,8 @@ enum class Text : uint16_t {
     ProfileSaved, ProfileLoaded, ProfileAskLoad, ProfileAskDelete, ProfileBadName,
     // 0.56
     PackBodyColours, PackBodyColoursHint,
+    // 0.57
+    AiCompress, AiCompressHint, AiCompressAuto, AiCompressOn, AiCompressOff,
     Count
 };
 

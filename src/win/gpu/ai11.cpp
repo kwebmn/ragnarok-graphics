@@ -10,6 +10,7 @@
 
 #include "core/ai/texture_cache.hpp"
 #include "core/ai/vram.hpp"
+#include "core/bc_encode.hpp"
 #include "core/sprite_exe.hpp"
 #include "core/webp_image.hpp"
 #include "win/log.hpp"
@@ -97,6 +98,8 @@ bool Ai11::start(const std::string& gameDir, const AiSettings& s, std::string& e
                        std::string(index.begin(), index.end()));
     systemBudget_ = videoMemory(nullptr);
     vramBudget_ = ai::copiesBudget(systemBudget_);
+    // 0.57: compressed on a card with little memory (or as asked) - BC1/BC3, a quarter to an eighth of it
+    compress_ = settings_.compress == "on" || (settings_.compress == "auto" && systemBudget_ < (uint64_t(3) << 30));
     InitializeCriticalSection(&lock_);
     lockMade_ = true;
     wake_ = CreateEventA(nullptr, FALSE, FALSE, nullptr);
@@ -119,6 +122,7 @@ bool Ai11::start(const std::string& gameDir, const AiSettings& s, std::string& e
              static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)),
              static_cast<unsigned>(pictures_->ahead()), static_cast<unsigned>(pictures_->aliases()),
              pack_.recovered() ? " - cut short, read by its pictures' headers, without its index" : "");
+    if (compress_) LOG_INFO("AI textures: kept compressed in video memory (BC1, BC3 with alpha)");
     LOG_INFO("AI textures: the copies keep to %llu MB of video memory (the system gives the game %llu MB)",
              static_cast<unsigned long long>(vramBudget_ >> 20), static_cast<unsigned long long>(systemBudget_ >> 20));
     return true;
@@ -716,7 +720,19 @@ void Ai11::serve(const Request& r, Result& out) {
     }
     std::vector<D3D11_SUBRESOURCE_DATA> init(levels.size());
     uint64_t bytes = 0;
+    // 0.57: compressed - BC1 when it is opaque, else BC3; level 0 a whole number of blocks (Direct3D 11 asks it)
+    const bool bc = compress_ && levels[0].width % 4 == 0 && levels[0].height % 4 == 0;
+    const bool solid = bc && bc::opaque(levels[0].argb.data(), levels[0].width, levels[0].height);
+    std::vector<std::vector<uint8_t>> blocks(bc ? levels.size() : 0);
     for (size_t i = 0; i < levels.size(); ++i) {
+        if (bc) {
+            const Level& l = levels[i];
+            blocks[i] = solid ? bc::encodeBC1(l.argb.data(), l.width, l.height)
+                              : bc::encodeBC3(l.argb.data(), l.width, l.height);
+            init[i] = {blocks[i].data(), UINT(bc::blocksAcross(l.width) * (solid ? 8 : 16)), 0};
+            bytes += blocks[i].size();
+            continue;
+        }
         init[i] = {levels[i].argb.data(), UINT(levels[i].width) * 4, 0};
         bytes += uint64_t(levels[i].argb.size()) * 4;
     }
@@ -725,7 +741,7 @@ void Ai11::serve(const Request& r, Result& out) {
     d.Height = UINT(levels[0].height);
     d.MipLevels = UINT(levels.size());
     d.ArraySize = 1;
-    d.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    d.Format = !bc ? DXGI_FORMAT_B8G8R8A8_UNORM : solid ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC3_UNORM;
     d.SampleDesc.Count = 1;
     d.Usage = D3D11_USAGE_IMMUTABLE;
     d.BindFlags = D3D11_BIND_SHADER_RESOURCE;

@@ -70,11 +70,13 @@ AutoSetup autoSetup(const Machine& m) {
         for (const char* k : {"ao", "dof", "clouds", "rays", "haze", "heat", "weather", "glow"})
             set(e, "effects", k, "0");
     // The AI textures: the pack's pictures only (the game makes none: that is for debugging). The world's take the
-    // most video memory: a card under 2 GB keeps to the sprites and the icons.
+    // most video memory: a card under 1 GB keeps to the sprites and the icons (0.57: 2 GB before the compression,
+    // [ai] compress = auto, which a card under 3 GB gets).
     a.ai = m.pack && a.tier != Tier::NoDriver;
-    a.aiWorld = a.ai && m.vramMb >= 2048;
+    a.aiWorld = a.ai && m.vramMb >= 1024;
     set(e, "ai", "enabled", a.ai ? "1" : "0");
     set(e, "ai", "generate", "0");
+    set(e, "ai", "compress", "auto");
     if (a.ai) {
         for (const char* k : {"monsters", "players", "npcs", "items", "icons"}) set(e, "ai", k, "1");
         for (const char* k : {"ground", "objects", "effects"}) set(e, "ai", k, a.aiWorld ? "1" : "0");

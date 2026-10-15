@@ -204,6 +204,8 @@ const std::vector<IniSetting>& iniSettings() {
         {"ai", "budget", Page::Ai, Control::Number, 1, 20, 1, {}, {}, Text::AiBudget, Text::AiBudgetHint, ""},
         {"ai", "min_size", Page::Ai, Control::Number, 16, 1024, 1, {}, {}, Text::AiSizes, Text::AiSizesHint, ""},
         {"ai", "max_size", Page::Ai, Control::Number, 16, 1024, 1, {}, {}, Text::AiSizes, Text::AiSizesHint, ""},
+        {"ai", "compress", Page::Ai, Control::Choice, 0, 0, 0, {"auto", "on", "off"},
+         {Text::AiCompressAuto, Text::AiCompressOn, Text::AiCompressOff}, Text::AiCompress, Text::AiCompressHint, ""},
         {"ai", "ahead", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiAhead, Text::AiAheadHint, ""},
         {"ai", "generate", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiGenerate, Text::AiGenerateHint,
          ""},
@@ -268,6 +270,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.min_size") return std::to_string(a.minSize);
     if (k == "ai.max_size") return std::to_string(a.maxSize);
     if (k == "ai.ahead") return a.ahead ? "1" : "0";
+    if (k == "ai.compress") return a.compress;
     if (k == "ai.generate") return a.generate ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
     if (k == "effects.smooth_light") return c.effects.smoothLight ? "1" : "0";

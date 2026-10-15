@@ -142,6 +142,7 @@ private:
     int scale_ = 4;
     int minSide_ = 16, maxSide_ = 512;
     int atlasLevels_ = 4;
+    bool compress_ = false;  // 0.57: [ai] compress - the textures kept as BC1/BC3
     Renderer::IconSink iconSink_ = nullptr;
     void* iconContext_ = nullptr;
 

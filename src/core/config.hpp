@@ -45,6 +45,9 @@ struct AiSettings {
     // from the pack.
     bool generate = false;
     bool ahead = true;  // a map's textures the pack's index knows are taken at once, not when they come into view
+    // 0.57: Direct3D 11 keeps the pictures compressed in video memory (BC1/BC3): "on", "off", "auto" (a card under
+    // 3 GB)
+    std::string compress = "auto";
     bool operator==(const AiSettings& o) const;
     bool operator!=(const AiSettings& o) const { return !(*this == o); }
 };

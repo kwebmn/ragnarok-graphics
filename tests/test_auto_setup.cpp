@@ -61,8 +61,13 @@ TEST(auto_setup_an_old_radeon_on_direct3d_11) {
     CHECK(valueOf(a, "quality", "msaa") == "0");
     CHECK(valueOf(a, "quality", "dlss") == "off" && valueOf(a, "frames", "frame_generation") == "off");
     CHECK(valueOf(a, "renderer", "bridge") == "0");
-    CHECK(a.ai && !a.aiWorld);  // under 2 GB: sprites and icons only
-    CHECK(valueOf(a, "ai", "players") == "1" && valueOf(a, "ai", "ground") == "0");
+    CHECK(a.ai && a.aiWorld);  // 0.57: 1 GB and the textures compressed - the world's too
+    CHECK(valueOf(a, "ai", "compress") == "auto");
+    m.vramMb = 512;
+    const AutoSetup small = autoSetup(m);
+    CHECK(small.ai && !small.aiWorld);  // under 1 GB: sprites and icons only
+    CHECK(valueOf(small, "ai", "players") == "1" && valueOf(small, "ai", "ground") == "0");
+    m.vramMb = 1024;
     m.pack = false;
     CHECK(valueOf(autoSetup(m), "ai", "enabled") == "0");  // no pack: nothing to show
 }

@@ -1195,9 +1195,9 @@ const Entry kTexts[] = {
     {"AI textures: on, every kind (from the texture pack).",
      "ШІ-текстури: увімкнено, усі види (з пакета текстур).",
      "ИИ-текстуры: включены, все виды (из пакета текстур)."},
-    {"AI textures: characters, monsters, items and icons only - the card has under 2 GB of video memory.",
-     "ШІ-текстури: лише персонажі, монстри, предмети та іконки — у карти менше 2 ГБ відеопам'яті.",
-     "ИИ-текстуры: только персонажи, монстры, предметы и иконки — у карты меньше 2 ГБ видеопамяти."},
+    {"AI textures: characters, monsters, items and icons only - the card has under 1 GB of video memory.",
+     "ШІ-текстури: лише персонажі, монстри, предмети та іконки — у карти менше 1 ГБ відеопам'яті.",
+     "ИИ-текстуры: только персонажи, монстры, предметы и иконки — у карты меньше 1 ГБ видеопамяти."},
     {"AI textures: off - uaro-textures.zip is not next to uaRO.exe.",
      "ШІ-текстури: вимкнено — поруч з uaRO.exe немає uaro-textures.zip.",
      "ИИ-текстуры: выключены — рядом с uaRO.exe нет uaro-textures.zip."},
@@ -1375,6 +1375,24 @@ const Entry kTexts[] = {
      "тіл — більший пакет і довше створення.",
      "Тела персонажей также в каждом цвете краски одежды (игроки, покрасившие одежду): в 4–9 раз больше картинок тел "
      "— больше пакет и дольше создание."},
+    {"Compress in video memory",
+     "Стискати у відеопам'яті",
+     "Сжимать в видеопамяти"},
+    {"Direct3D 11: the AI textures compressed (BC1, BC3) - a quarter to an eighth of the video memory, a little less "
+     "exact. Automatic: on for a card under 3 GB.",
+     "Direct3D 11: ШІ-текстури стиснуті (BC1, BC3) — від чверті до восьмої частини відеопам'яті, трохи менш точно. "
+     "Автоматично: увімкнено для карти до 3 ГБ.",
+     "Direct3D 11: ИИ-текстуры сжаты (BC1, BC3) — от четверти до восьмой части видеопамяти, чуть менее точно. "
+     "Автоматически: включено для карты до 3 ГБ."},
+    {"Automatic",
+     "Автоматично",
+     "Автоматически"},
+    {"On",
+     "Увімкнено",
+     "Включено"},
+    {"Off",
+     "Вимкнено",
+     "Выключено"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
