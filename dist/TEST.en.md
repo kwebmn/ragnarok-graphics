@@ -1,3 +1,17 @@
+# uaRO Graphics 0.61.0 — testing
+
+What is new in 0.61.0 (Direct3D 11, part 2):
+- **The characters' shadows on Direct3D 11** (Effects → characters' shadows): each character and monster casts its
+  sprite's soft shadow on the ground, as with Direct3D 12 - lit by the sun alone (Direct3D 12 also turns them away
+  from the map's lamps). The log: `characters' shadows: N characters ... (Direct3D 11, the sun's light)`.
+- **The torches' light on Direct3D 11** (Effects → torches, their light): each torch lights the ground about it, warm
+  and flickering a little; the flame and its glow stay the game's (Direct3D 12 draws them anew). The log:
+  `torches: N lit (Direct3D 11 ...)`.
+- With either on, Direct3D 11 now knows the sprites' kinds without AI textures too.
+
+How to test: Direct3D 11; a field with monsters - their shadows; a dungeon with torches (Prontera's culverts, Glast
+Heim) - the light round them; Pause to compare.
+
 # uaRO Graphics 0.60.0 — testing
 
 What is new in 0.60.0 (one file for a player):
