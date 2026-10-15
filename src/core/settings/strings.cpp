@@ -1648,6 +1648,21 @@ const Entry kTexts[] = {
      "Direct3D 12.",
      "Де йде дощ (з увімкненою погодою), час від часу спалахує блискавка й на мить освітлює все. Direct3D 12.",
      "Где идёт дождь (с включённой погодой), время от времени сверкает молния и на миг освещает всё. Direct3D 12."},
+    {"Grass",
+     "Трава",
+     "Трава"},
+    {"Blades of grass grow on the green ground of the fields and towns, sway in the wind and lie down where "
+     "characters walk. Costly for the graphics card. Direct3D 12.",
+     "На зеленій землі полів і міст ростуть травинки, гойдаються на вітрі й приминаються там, де йдуть персонажі. "
+     "Дорого для відеокарти. Direct3D 12.",
+     "На зелёной земле полей и городов растут травинки, качаются на ветру и приминаются там, где идут персонажи. "
+     "Дорого для видеокарты. Direct3D 12."},
+    {"How thick the grass is",
+     "Наскільки густа трава",
+     "Насколько густая трава"},
+    {"How many blades grow.",
+     "Скільки травинок росте.",
+     "Сколько травинок растёт."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

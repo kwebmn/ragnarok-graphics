@@ -317,6 +317,42 @@ float Renderer::Impl::flashNow() const {
     return lightning::flash(double(const_cast<Impl*>(this)->waterTime()));
 }
 
+// 0.81: grass blades from the green ground (grass_ps), trodden down where the last frame's steps are.
+bool Renderer::Impl::applyGrass() {
+    grassDone = true;
+    EffectTime timing(*this, kTimeGrass);
+    if (!ensureScene("grass")) return true;
+    ID3D12PipelineState* pso = alphaPipeline(grassPs, grassPipelines, upscale ? 1 : samples, "grass");
+    if (!pso) return true;
+    if (!copySceneColor() || !copySceneDepth()) return false;
+    const bool steps = stepsData && !footTracker.steps().empty();
+    if (steps) transition(stepsData, stepsDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    const float k = float(upscale ? worldScale : scale);
+    c.scale = k;
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.footprint = steps ? float(std::min(footTracker.steps().size(), footsteps::Tracker::kMax)) : 0.0f;
+    // The longest blade: about 1.6 units at the camera's usual distance.
+    c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, 28.0f);
+    c.twin[1] = 0.65f * float(std::clamp(effects.grassAmount, 0, 100)) / 100.0f;
+    c.sharpen = waterTime();
+    if (!grassLogged) LOG_INFO("grass: on %s, blades up to %.0f pixels", mapName.c_str(), c.twin[0]);
+    grassLogged = true;
+    const UINT list1 = steps ? stepsDataSrv : sceneColorSrv;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, list1)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, list1);
+}
+
 // 0.80: the steps the characters left - prints in the snow and the sand, dust on dry ground - onto the ground.
 bool Renderer::Impl::applySteps() {
     stepsDone = true;
@@ -635,6 +671,7 @@ bool Renderer::Impl::applyDof() {
 bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
     if (sunShadowDue() && !applySunShadows()) return false;  // 0.77
+    if (grassDue() && !applyGrass()) return false;            // 0.81
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours

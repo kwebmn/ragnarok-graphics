@@ -39,6 +39,7 @@ const Effect kEffects[] = {
     {"effects.weather", {}, {"effects.weather_amount"}, {}, false},
     {"effects.footprints", {}, {}, {}, false},  // 0.80
     {"effects.storms", {}, {}, {}, false},      // 0.80
+    {"effects.grass", {}, {"effects.grass_amount"}, {}, false},  // 0.81
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, false},
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, false},
     {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, false},

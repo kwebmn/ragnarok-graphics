@@ -222,6 +222,10 @@ struct EffectSettings {
     // where it rains. Both on by default.
     bool footprints = true;
     bool storms = true;
+    // 0.81: grass - blades on the green ground of the fields, swaying in the wind and trodden down where the
+    // characters walk. Off by default: it costs the card the most of the effects.
+    bool grass = false;
+    int grassAmount = 70;  // %, 0-100
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

@@ -99,3 +99,9 @@ TEST(footprints_and_storms_on_by_default) {
     CHECK(parseConfig("").effects.footprints && parseConfig("").effects.storms);
     CHECK(!effectsOff().footprints && !effectsOff().storms);
 }
+
+TEST(grass_off_by_default) {
+    // 0.81: costly - asked for
+    CHECK(!parseConfig("").effects.grass && parseConfig("").effects.grassAmount == 70);
+    CHECK(parseConfig("[effects]\ngrass = 1\n").effects.grass);
+}

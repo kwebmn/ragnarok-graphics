@@ -329,6 +329,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.regionLooksStrength);
     w.u8(e.footprints ? 1 : 0);  // 0.80
     w.u8(e.storms ? 1 : 0);
+    w.u8(e.grass ? 1 : 0);  // 0.81
+    w.i32(e.grassAmount);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

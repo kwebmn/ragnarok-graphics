@@ -1249,6 +1249,50 @@ float4 sun_shadow_ps(PresentOut i) : SV_Target {
     return float4(s, s, s, 1.0);
 }
 
+// 0.81, grass (ao.cpp applyGrass), before the characters are drawn: each pixel looks down the screen for a blade
+// rooted below it that reaches up to it - a root on green ground (the picture's copy, t2), at a spot of the world
+// that has a blade (its place on the ground, so the blades stay put as the camera moves), the nearest root (lowest on
+// the screen) in front. The blades sway in the wind and lie down where a step was left lately (t1, as steps_ps reads
+// it; footprint how many). twinX the blades' longest (target pixels), twinY how many (0-1), sharpen the time.
+float4 grass_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    int2 last = int2(uiPixels.xy) - 1;
+    float here = sceneDepth.Load(int3(wp, 0));
+    float hereZ = here >= 0.99999 ? 1e6 : viewDepth(here);
+    int longest = int(twinX);
+    float t = sharpen;
+    [loop] for (int k = longest; k >= 1; --k) {
+        float up = float(k) / twinX;
+        float sway = sin(t * 1.7 + float(wp.x) * 0.021 + float(wp.y) * 0.013) * 0.25 * twinX * up * up;
+        int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
+        float rd = sceneDepth.Load(int3(root, 0));
+        if (rd >= 0.99999) continue;
+        float3 rc = sceneColor.Load(int3(root, 0)).rgb;
+        if (rc.g < rc.r * 1.04 || rc.g < rc.b * 1.15 || rc.g < 0.12) continue;  // not green ground
+        float3 v = viewAt(root);
+        if (hereZ < v.z - 1.0) continue;  // something in front of the blade
+        float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) +
+                   float3(r9, r10, r11);
+        float2 cell = w.xz * 2.0;  // a blade or none every half unit
+        float2 id = floor(cell);
+        float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
+        if (hash12(id) > twinY || dot(at, at) > 0.05) continue;  // no blade here
+        float height = 0.45 + 0.55 * hash12(id + 2.1);
+        int count = int(footprint);
+        [loop] for (int s = 0; s < count; ++s) {  // trodden down
+            float4 st = tex1.Load(int3(2 * s, 0, 0));
+            float age = tex1.Load(int3(2 * s + 1, 0, 0)).x;
+            float2 d = w.xz - st.xz;
+            height *= lerp(1.0, saturate(dot(d, d) / 9.0), 1.0 - age);
+        }
+        if (up > height) continue;
+        float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3));
+        return float4(colour, 1.0);
+    }
+    discard;
+    return float4(0.0, 0.0, 0.0, 0.0);
+}
+
 // 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of
 // t1 - two texels: its place (xyz) and way (w), then its age 0-1 (x) - footprint how many; twinX the kind: 1 snow,
 // 2 sand (a foot's print, fading), 3 dust (a puff spreading and thinning). Blended over by its alpha.

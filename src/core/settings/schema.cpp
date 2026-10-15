@@ -225,6 +225,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFootprintsHint, ""},
         {"effects", "storms", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxStorms,
          Text::FxStormsHint, ""},
+        {"effects", "grass", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrass,
+         Text::FxGrassHint, ""},
+        {"effects", "grass_amount", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxGrassAmount,
+         Text::FxGrassAmountHint, " %"},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -415,6 +419,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.region_looks_strength") return std::to_string(c.effects.regionLooksStrength);
     if (k == "effects.footprints") return c.effects.footprints ? "1" : "0";
     if (k == "effects.storms") return c.effects.storms ? "1" : "0";
+    if (k == "effects.grass") return c.effects.grass ? "1" : "0";
+    if (k == "effects.grass_amount") return std::to_string(c.effects.grassAmount);
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

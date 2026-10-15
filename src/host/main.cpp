@@ -430,6 +430,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.regionLooksStrength = rd.i32();
             e.footprints = rd.u8() != 0;  // 0.80
             e.storms = rd.u8() != 0;
+            e.grass = rd.u8() != 0;  // 0.81
+            e.grassAmount = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

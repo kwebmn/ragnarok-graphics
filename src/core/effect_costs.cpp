@@ -15,6 +15,7 @@ struct Costly {
 
 // The usually costliest first: what keep_fps turns off while nothing is measured (Direct3D 11, the 64-bit renderer).
 const Costly kCostly[] = {
+    {"grass", "grass", &EffectSettings::grass},
     {"floor_reflections", "floor", &EffectSettings::floorReflections},
     {"dof", "dof", &EffectSettings::dof},
     {"sun_shadows", "sun", &EffectSettings::sunShadows},

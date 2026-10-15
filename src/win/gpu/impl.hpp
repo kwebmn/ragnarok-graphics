@@ -51,7 +51,7 @@ constexpr UINT kSlots = 2;              // submissions in flight
 // and the floors' reflections their own.
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
-    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeSun, kTimeBloom, kEffectTimes
+    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeSun, kTimeBloom, kTimeGrass, kEffectTimes
 };
 // GPU timestamps a slot: its list, the upscale, the AI textures' work, (0.39.2) a pair an effect.
 constexpr UINT kTimes = 6 + 2 * kEffectTimes;
@@ -809,6 +809,7 @@ struct Renderer::Impl {
         sunShadowDone = false;  // 0.77
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80
+        grassDone = false;  // 0.81
         shaftsDone = false;  // 0.73
         shaftLights = 0;
         heatDone = false;
@@ -819,6 +820,16 @@ struct Renderer::Impl {
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }
     bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
+    // 0.81: grass on the green ground (ao.cpp applyGrass), off by default: it is costly
+    ID3DBlob* grassPs = nullptr;
+    ID3D12PipelineState* grassPipelines[4] = {};
+    bool grassDone = false;
+    bool grassLogged = false;
+    bool grassDue() const {
+        return effects.grass && effects.grassAmount > 0 && grassPs && mapOutdoors && groundDrawn && !grassDone &&
+               viewToWorldValid;
+    }
+    bool applyGrass();  // once a frame, before the characters; false: lost
     // 0.80: footprints and dust (ao.cpp applySteps) - the characters' feet followed (actor_shadows.cpp)
     footsteps::Tracker footTracker;
     ID3DBlob* stepsPs = nullptr;

@@ -111,6 +111,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.grass = false;
     e.storms = false;
     e.footprints = false;
     e.regionLooks = false;
@@ -142,6 +143,7 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.grass ||
            e.storms ||
            e.footprints ||
            e.regionLooks ||
@@ -458,6 +460,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.footprints);
         } else if (key == "effects.storms") {
             setBool(val, c.effects.storms);
+        } else if (key == "effects.grass") {
+            setBool(val, c.effects.grass);
+        } else if (key == "effects.grass_amount") {
+            toInt(val, 0, 100, c.effects.grassAmount);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {
