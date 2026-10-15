@@ -1448,6 +1448,13 @@ const Entry kTexts[] = {
      "яскравіші за білий. Не з генерацією кадрів DLSS. Перевірка.",
      "Direct3D 12 на мониторе с включённым HDR в Windows: картинка в HDR10, белый 200 нит, огни и искры чуть ярче "
      "белого. Не с генерацией кадров DLSS. Проверка."},
+    {"Soft effects at the ground",
+     "М’які ефекти біля землі",
+     "Мягкие эффекты у земли"},
+    {"Skills, sparks and portals fade softly where they touch the ground and the walls instead of being cut off along "
+     "a hard line.",
+     "Уміння, іскри й портали м’яко згасають там, де торкаються землі та стін, а не обрізаються різкою лінією.",
+     "Умения, искры и порталы мягко гаснут там, где касаются земли и стен, а не обрезаются резкой линией."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

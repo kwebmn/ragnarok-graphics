@@ -304,6 +304,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.nightNow);
     w.u8(e.foliage ? 1 : 0);  // 0.64
     w.i32(e.foliageStrength);
+    w.u8(e.softParticles ? 1 : 0);  // 0.67
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

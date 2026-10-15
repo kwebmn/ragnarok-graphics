@@ -172,6 +172,9 @@ struct EffectSettings {
     int waterWaves = 50;        // %, 0-100: 0 a still mirror
     int waterReflections = 50;  // %, 0-100: how much the water reflects
     int waterClarity = 50;      // %, 0-100: how deep one sees into it
+    // 0.67: soft particles - the effects (skills, sparks, portals) fade where they meet the ground and the walls
+    // instead of being cut along a line. On by default.
+    bool softParticles = true;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

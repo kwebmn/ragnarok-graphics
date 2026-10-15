@@ -405,6 +405,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.nightNow = rd.i32();
             e.foliage = rd.u8() != 0;  // 0.64
             e.foliageStrength = rd.i32();
+            e.softParticles = rd.u8() != 0;  // 0.67
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

@@ -162,6 +162,10 @@ private:
     size_t shadowVbBytes_ = 0;
     ID3D11ShaderResourceView* depthSrv_ = nullptr;
     ID3D11Texture2D* depthSrvOf_ = nullptr;  // the depth buffer depthSrv_ reads
+    // 0.67, soft particles: the depth tested but not written, while the effect reads it (t3)
+    ID3D11DepthStencilView* readOnlyDsv_ = nullptr;
+    ID3D11Texture2D* readOnlyDsvOf_ = nullptr;
+    bool depthViews();  // depthSrv_ and readOnlyDsv_ for depth_; false when they cannot be made
     ID3D11BlendState* maxBlend_ = nullptr;   // the mask: the darkest shadow
     ID3D11BlendState* mulBlend_ = nullptr;   // onto the picture: multiplied
     Target shadowMask_[2];

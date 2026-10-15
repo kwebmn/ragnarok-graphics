@@ -328,6 +328,7 @@ struct Renderer::Impl {
     bool sceneFailed = false;  // not made at this size: the water stays the game's
     bool waterCopied = false;  // this frame's copy is made, or could not be
     bool waterReady = false;   // ... and the water is drawn from it
+    int softCopied = 0;        // 0.67: the soft effects' depth: 1 copied this picture, -1 could not be
     float viewToWorld[12] = {};  // the camera backwards: the view's x, y and z axes in the world, then its place
     bool viewToWorldValid = false;
     ID3DBlob* waterVs = nullptr;
@@ -734,6 +735,7 @@ struct Renderer::Impl {
         waterCopied = false;  // 0.19: its water copies what is under it anew
         aoDone = groundDrawn = gradeDone = dofDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
+        softCopied = 0;     // 0.67
         waterfallsDone = false;  // 0.65
         torchFlames.clear();
         fireSparks.clear();

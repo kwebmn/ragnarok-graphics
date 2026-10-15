@@ -147,6 +147,17 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                      !torchDone && d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) <=
                                        rec.vertexBytes().size();
     if (ray) noteRay(rec, d);
+    // 0.67, soft particles: an effect facing the screen - added light, a skill's or a portal's picture - fades
+    // where it goes into what is behind it (the frame's depth so far, copied once while nothing writes it). Not the
+    // characters (their feet stand in the ground), not what writes depth itself. Copied once a picture: what is
+    // drawn later (the characters) only hides the effect by the depth test - the ground and the walls are there.
+    const bool effectDraw = adds || d.effect == uint8_t(effect_exe::Kind::Skill) ||
+                            d.effect == uint8_t(effect_exe::Kind::Portal);
+    bool soft = !s.ui && !water && !smoke && !ray && !lava && quad && effects.softParticles && s.blend &&
+                s.zEnable && !s.zWrite && effectDraw && s.srcBlend != d3d7::BLEND_ZERO &&
+                s.srcBlend != d3d7::BLEND_DESTCOLOR && softCopied >= 0;
+    if (soft && !softCopied) softCopied = ensureScene("soft particles") && copySceneDepth() ? 1 : -1;
+    soft = soft && softCopied > 0;
     const DrawShader shader = smoke ? DrawShader::Smoke
                               : ray ? DrawShader::Ray
                               : lava ? DrawShader::Lava
@@ -166,7 +177,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
     // A new list, if this draw needs one, starts before the draw records anything; the record's geometry then goes
     // into the new list's slot (1B review M4: the old slot is reused while the new list may still read it).
-    if (!makeRoom(sampled[0], sampled[1], aniso, water ? 5 : 2)) return;
+    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft ? 5 : 2)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
@@ -237,6 +248,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
         if (!waterCells++) LOG_INFO("water: the map's water found, drawn anew");
+    } else if (soft) {  // the depth behind the effect (t3)
+        transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
     }
     Constants c{};
     c.targetSize[0] = float(toWorld ? renderWidth : width);
@@ -256,6 +271,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.18: its colour into the glow target - light it adds, or a factor it multiplies the light under it by.
     if (toGlow && (adds || (s.blend && (s.srcBlend == d3d7::BLEND_ZERO || s.srcBlend == d3d7::BLEND_DESTCOLOR))))
         c.alphaTest |= 1u << 19;
+    if (soft) {  // 0.67: its fade (shaders.cpp shade())
+        c.alphaTest |= 1u << 20;
+        if (s.srcBlend == d3d7::BLEND_ONE) c.alphaTest |= 1u << 21;  // added or premultiplied: the colour too
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+    }
     c.fogEnable = s.fog ? 1u : 0u;
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;

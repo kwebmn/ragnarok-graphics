@@ -14,7 +14,9 @@
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/d3d_map.hpp"
+#include "core/effect_exe.hpp"
 #include "core/foliage.hpp"
+#include "core/game_camera.hpp"
 #include "core/png_write.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
@@ -113,6 +115,7 @@ Renderer11::~Renderer11() {
     drop(shadowLayout_);
     drop(shadowVb_);
     drop(depthSrv_);
+    drop(readOnlyDsv_);
     drop(maxBlend_);
     drop(mulBlend_);
     for (Target& m : shadowMask_) dropTarget(m);
@@ -925,6 +928,24 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = float(double(now - clockStart_) / 1000.0);
     }
+    // 0.67, soft particles (as draw.cpp): an effect facing the screen fades where it goes into the ground; the
+    // depth read while it is tested only.
+    const bool adds = s.blend && s.dstBlend == d3d7::BLEND_ONE;
+    const bool effectDraw = adds || d.effect == uint8_t(effect_exe::Kind::Skill) ||
+                            d.effect == uint8_t(effect_exe::Kind::Portal);
+    const bool soft = !s.ui && effects_.softParticles && d.vertexCount == 4 && s.blend && s.zEnable && !s.zWrite &&
+                      effectDraw && s.srcBlend != d3d7::BLEND_ZERO && s.srcBlend != d3d7::BLEND_DESTCOLOR &&
+                      ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount) &&
+                      depthViews();
+    if (soft) {
+        c.alphaTest |= 1u << 20;
+        if (s.srcBlend == d3d7::BLEND_ONE) c.alphaTest |= 1u << 21;
+        const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        ctx_->OMSetRenderTargets(1, &target_.rtv, readOnlyDsv_);
+        ctx_->PSSetShaderResources(3, 1, &depthSrv_);
+    }
     setConstants(c);
     const int aniso = s.ui ? 0 : anisotropy_;
     ID3D11SamplerState* samplers[2] = {samplerState(sampled[0], aniso), samplerState(sampled[1], aniso)};
@@ -948,6 +969,34 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     } else {
         ctx_->Draw(d.vertexCount, 0);
     }
+    if (soft) {  // the depth written again by the next draws
+        ID3D11ShaderResourceView* none = nullptr;
+        ctx_->PSSetShaderResources(3, 1, &none);
+        ctx_->OMSetRenderTargets(1, &target_.rtv, dsv_);
+    }
+}
+
+bool Renderer11::depthViews() {
+    if (!depth_) return false;
+    if (depthSrvOf_ != depth_) {
+        drop(depthSrv_);
+        D3D11_SHADER_RESOURCE_VIEW_DESC v{};
+        v.Format = DXGI_FORMAT_R32_FLOAT;
+        v.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        v.Texture2D.MipLevels = 1;
+        depthSrvOf_ = depth_;
+        if (FAILED(device_->CreateShaderResourceView(depth_, &v, &depthSrv_))) depthSrv_ = nullptr;
+    }
+    if (readOnlyDsvOf_ != depth_) {
+        drop(readOnlyDsv_);
+        D3D11_DEPTH_STENCIL_VIEW_DESC v{};
+        v.Format = DXGI_FORMAT_D32_FLOAT;
+        v.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+        v.Flags = D3D11_DSV_READ_ONLY_DEPTH;
+        readOnlyDsvOf_ = depth_;
+        if (FAILED(device_->CreateDepthStencilView(depth_, &v, &readOnlyDsv_))) readOnlyDsv_ = nullptr;
+    }
+    return depthSrv_ && readOnlyDsv_;
 }
 
 void Renderer11::execute(const FrameRecord& record) {

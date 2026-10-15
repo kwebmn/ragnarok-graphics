@@ -139,6 +139,8 @@ enum class Text : uint16_t {
     FxFoliage, FxFoliageHint, FxFoliageStrength, FxFoliageStrengthHint,
     // 0.65
     QualityHdr, QualityHdrHint,
+    // 0.67
+    FxSoftParticles, FxSoftParticlesHint,
     Count
 };
 

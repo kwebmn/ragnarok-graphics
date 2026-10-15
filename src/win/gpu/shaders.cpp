@@ -37,6 +37,8 @@ Texture2D<float> sceneDepth : register(t3);
 Texture2DMS<float> depthMs : register(t4);
 SamplerState samp0 : register(s0);
 SamplerState samp1 : register(s1);
+// The distance from the camera of a depth the game's projection gave (water, the effects).
+float viewDepth(float d) { return farZ * nearZ / (farZ - d * (farZ - nearZ)); }
 
 struct VsIn {
     float4 pos : POSITION;       // x, y in D3D7 pixels, z in [0, 1], rhw
@@ -232,6 +234,14 @@ float4 shade(PsIn i) {
     }
     // Part 3 (DLSS): an opaque interface draw covers the world wholly in the layer, whatever alpha it carries.
     if (((alphaTest >> 18) & 1) != 0) c.a = 1.0;
+    // 0.67, soft particles: an effect fades over the last few units before what is behind it (the frame's depth so
+    // far, sceneDepth) - no hard line where it goes into the ground; its colour too when it adds light (bit 21).
+    if (((alphaTest >> 20) & 1) != 0) {
+        float behind = viewDepth(sceneDepth.Load(int3(int2(i.pos.xy), 0))) - viewDepth(i.pos.z);
+        float fade = smoothstep(0.0, 1.0, saturate(behind / 7.0));
+        c.a *= fade;
+        if (((alphaTest >> 21) & 1) != 0) c.rgb *= fade;
+    }
     return c;
 }
 
@@ -453,7 +463,6 @@ WaterIn water_vs(VsIn i) {
     return o;
 }
 
-float viewDepth(float d) { return farZ * nearZ / (farZ - d * (farZ - nearZ)); }
 
 // The slope of a few travelling waves at a point of the water (world units): long swells and short ripples, each
 // its own way, so that the pattern never repeats on screen.
