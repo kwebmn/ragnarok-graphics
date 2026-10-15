@@ -1,3 +1,18 @@
+# uaRO Graphics 0.65.0 — testing
+
+What is new in 0.65.0:
+- **The waterfalls of Brasilis** (Direct3D 12, with the modern water on): bra_fild01's map file has some forty
+  waterfalls along its cliffs that uaRO.exe never shows (effect 821) - now each is a sheet of falling water with
+  streaks running down and foam at its foot, hidden behind what stands nearer. The log:
+  `waterfalls: the map file's drawn (N in view)`. Their width and which way they face are guessed from the map file:
+  send a screenshot.
+- **HDR** (Settings → Quality → HDR, off by default; Direct3D 12): on a monitor with Windows' HDR on, the picture in
+  HDR10 - white at 200 nits, fires and sparks a little brighter than white. The log: `HDR: on ...`, or why not.
+  Not with DLSS frame generation; Ctrl+Shift+F12 takes no screenshot while it is on.
+
+How to test: bra_fild01 (Brasilis' field) with water on - the cliffs; HDR on with Windows' HDR on - the log and the
+look (torches, skills).
+
 # uaRO Graphics 0.64.0 — testing
 
 What is new in 0.64.0:
