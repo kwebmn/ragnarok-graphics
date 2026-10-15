@@ -3,8 +3,10 @@
 
 #include <d3d12.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -32,7 +34,7 @@ const char* aiShaderSource();  // ai_shaders.cpp
 // beside it the kinds and maps the textures were seen as and on, for the settings app. The game knows nothing of it.
 class AiTextures {
 public:
-    explicit AiTextures(Renderer::Impl& m) : m_(m) {}
+    explicit AiTextures(Renderer::Impl& m) : m_(m) { std::fill(std::begin(netOf_), std::end(netOf_), -1); }
     ~AiTextures();
     AiTextures(const AiTextures&) = delete;
     AiTextures& operator=(const AiTextures&) = delete;
@@ -202,7 +204,10 @@ private:
     bool ready_ = false;
     AiSettings settings_;
     std::vector<std::unique_ptr<Net>> nets_;
-    int netOf_[ai::kKinds] = {-1, -1, -1, -1};  // the network of each kind; -1: off, or (0.42) not generating
+    // The network of each kind; -1: off, or (0.42) not generating. 0.47.1: every kind -1 at first (the constructor) -
+    // the icons' was 0 since 0.14: the first network made them, and without one (0.42) the start read nets_[0] of
+    // none and uaro-render64.exe fell (0xc0000005) whenever the AI textures were on.
+    int netOf_[ai::kKinds];
     bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack or upscaled.grf
     std::string folders_[ai::kKinds];           // upscaled.grf's folder of each kind's pictures (netFolder)
     bool generate_ = false;                     // [ai] generate: the network makes what is missing

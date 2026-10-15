@@ -1082,6 +1082,8 @@ void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* a
         request(std::move(r));
     } else if (net >= 0) {  // in turn with the sprite frames - ahead of them (0.22.8): a window shows blocks meanwhile
         cells_.insert(std::find_if(cells_.begin(), cells_.end(), [](const Job& c) { return !c.icon; }), std::move(j));
+    } else if (m_.iconSink) {  // 0.47.1: none made and none to make - crisp text makes it by xBR
+        m_.iconSink(m_.iconContext, key, 0, 0, nullptr);
     }
 }
 
@@ -1384,6 +1386,8 @@ void AiTextures::takeLoaded() {
                 ++(r.pack ? iconsPack_ : iconsLoaded_);
             } else if (j.net >= 0) {
                 cells_.push_back(std::move(j));
+            } else if (m_.iconSink) {  // 0.47.1: not usable and none to make
+                m_.iconSink(m_.iconContext, j.iconKey, 0, 0, nullptr);
             }
             continue;
         }

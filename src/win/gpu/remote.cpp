@@ -117,6 +117,10 @@ void Remote::handle(Msg type, const uint8_t* data, uint32_t size) {
         case Msg::IconDone: {  // AI icons (0.14): one made larger
             const uint64_t key = rd.u64();
             const int w = rd.i32(), h = rd.i32();
+            if (rd.ok() && w == 0 && h == 0 && iconSink_) {  // 0.47.1: there is none - crisp text makes it by xBR
+                iconSink_(iconContext_, key, 0, 0, nullptr);
+                break;
+            }
             if (!rd.ok() || w <= 0 || h <= 0 || w > 1024 || h > 1024 || !iconSink_) break;
             const uint8_t* bytes = rd.take(size_t(w) * size_t(h) * 4);
             if (!bytes) break;

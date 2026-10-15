@@ -2,6 +2,6 @@
 
 namespace uagfx {
 
-const char* const kVersion = "0.47.0";
+const char* const kVersion = "0.47.1";
 
 }  // namespace uagfx

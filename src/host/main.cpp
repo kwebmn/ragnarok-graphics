@@ -170,7 +170,7 @@ void Host::iconDone(void* self, uint64_t key, int width, int height, const uint3
     w.u64(key);
     w.i32(width);
     w.i32(height);
-    w.bytes(argb, size_t(width) * size_t(height) * 4);
+    if (width > 0 && height > 0 && argb) w.bytes(argb, size_t(width) * size_t(height) * 4);  // 0x0: there is none
     h.channel_.send(Msg::IconDone, h.iconOut_);
 }
 
