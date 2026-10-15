@@ -1,3 +1,15 @@
+# uaRO Graphics 0.64.0 — testing
+
+What is new in 0.64.0:
+- **The rain's splashes** (Direct3D 12, with the weather on, where it rains - Niflheim, Einbroch): rings spreading
+  where the drops land, fixed on the ground (not on the screen), on what faces up only - not on walls.
+- **Leaves in the wind** (Effects → "Leaves in the wind", off by default; Direct3D 12 and 11): the leaves of trees and
+  bushes - textures that are green with holes - sway a little, their tops more than their trunks; fences and walls
+  stay still.
+
+How to test: Niflheim with the weather on - the splashes on the paths; Payon or Prontera's fields with "Leaves in the
+wind" - the trees; tell if anything that is no leaf moves.
+
 # uaRO Graphics 0.63.0 — testing
 
 What is new in 0.63.0:
