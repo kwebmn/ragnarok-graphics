@@ -1,3 +1,18 @@
+# uaRO Graphics 0.51.0 — testing
+
+What is new in 0.51.0 ("logs and settings to the site, to debug for each device"):
+- **Settings app → Diagnostics → "Report to the developers".** "What happened" (a line of your own) and "Send the
+  report": the graphics card(s), Windows, monitors, uaro-graphics.ini and the logs' ends (uaro-graphics.log,
+  uaro-render64.log, uaro-pack.log) go to uaro.kiev.ua - no login, no character, the Windows user name hidden. The
+  window answers with the report's code (R-XXXXXX, copied): name it to the developers. The codes sent are listed.
+- **"Send a report by itself when something goes wrong"** (off by default; `[report] auto` in uaro-graphics.ini,
+  from the next start of the game): the driver starts the settings app hidden as a watcher of the game; after the game
+  it reads the log and sends a report only when the renderer would not start, the graphics card was lost, or the game
+  closed without closing the renderer - at most one in 6 hours.
+- The site keeps the reports 90 days; the developers see them in its admin ("Звіти графіки").
+
+How to test: Diagnostics → write a line → "Send the report" → a code comes; tick the automatic one, Apply, play.
+
 # uaRO Graphics 0.50.2 — testing
 
 What is new in 0.50.2 ("can the card be chosen somewhere?"):
