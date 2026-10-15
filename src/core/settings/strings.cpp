@@ -1427,6 +1427,18 @@ const Entry kTexts[] = {
     {"Night only from 20:00 to 6:00 by this computer's clock, with an hour of dusk and of dawn.",
      "Ніч лише з 20:00 до 6:00 за годинником цього комп'ютера, з годиною сутінків і світанку.",
      "Ночь только с 20:00 до 6:00 по часам этого компьютера, с часом сумерек и рассвета."},
+    {"Leaves in the wind",
+     "Листя на вітрі",
+     "Листва на ветру"},
+    {"The leaves of trees and bushes sway a little, their tops more than their trunks.",
+     "Листя дерев і кущів трохи гойдається, верхівки більше за стовбури.",
+     "Листва деревьев и кустов немного колышется, верхушки больше стволов."},
+    {"How much",
+     "Наскільки",
+     "Насколько"},
+    {"100 % a light breeze, 200 % a strong wind.",
+     "100 % — легкий вітерець, 200 % — сильний вітер.",
+     "100 % — лёгкий ветерок, 200 % — сильный ветер."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

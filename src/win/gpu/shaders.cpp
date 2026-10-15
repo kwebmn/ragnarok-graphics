@@ -58,7 +58,16 @@ struct PsIn {
 PsIn draw_vs(VsIn i) {
     PsIn o;
     float w = i.pos.w > 0.0 ? 1.0 / i.pos.w : 1.0;
-    float x = (i.pos.x * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
+    float gx = i.pos.x;
+    // 0.64: the leaves the wind sways (core/foliage.cpp's sway) - a world draw of leaves: twinX the swing (game
+    // pixels), twinY the draw's bottom, twinW its height, twinH the time; the top swings, the trunk stays.
+    if (uiMode == 0 && twinX > 0.0) {
+        float up = saturate((twinY - i.pos.y) / max(twinW, 1.0));
+        float wave = sin(twinH * 1.6 + i.pos.x * 0.013 + i.pos.y * 0.007) * 0.7 +
+                     sin(twinH * 2.9 + i.pos.x * 0.031) * 0.3;
+        gx += twinX * up * up * wave;
+    }
+    float x = (gx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
     float y = 1.0 - (i.pos.y * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
     o.pos = float4(x * w, y * w, i.pos.z * w, w);
     o.diffuse = i.diffuse;
@@ -1160,6 +1169,31 @@ float4 weather_ps(PresentOut i) : SV_Target {
     }
     if (a < 0.003) discard;
     return float4(sum / a, saturate(a));
+}
+
+// 0.64, the rain's splashes: rings spreading where drops land, fixed on the ground - each pixel's place in the world
+// from the picture's depth (t3) and the camera backwards (r0-r11, the projection f0-farZ) - on what faces up only,
+// each patch of the ground its own drop now and then. sharpen the time, footprint how much rain.
+float4 splash_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there
+    int2 last = int2(uiPixels.xy) - 1;
+    float3 p = viewAt(wp);
+    float3 r = viewAt(min(wp + int2(1, 0), last)), d = viewAt(min(wp + int2(0, 1), last));
+    float3 n = normalize(cross(d - p, r - p));
+    float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
+    if (abs(nw.y) < 0.8) discard;  // a wall, a tree trunk: no splash
+    float3 w = p.x * float3(r0, r1, r2) + p.y * float3(r3, r4, r5) + p.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    float2 g = w.xz / 3.0;  // patches of three world units
+    float2 id = floor(g);
+    if (hash12(id + float2(7.3, 1.9)) > 0.3 * footprint) discard;
+    float phase = frac(sharpen / 0.8 + hash12(id));
+    float2 o = (float2(hash12(id + 1.1), hash12(id + 2.2)) - 0.5) * 0.5;
+    float dist = length(frac(g) - 0.5 - o);
+    float radius = phase * 0.42;
+    float ring = exp(-(dist - radius) * (dist - radius) / 0.0012) * (1.0 - phase);
+    if (ring < 0.02) discard;
+    return float4(0.86, 0.9, 1.0, saturate(ring * 0.4));
 }
 
 // The mask softened: nine taps along sourceRect.xy (across, then down), uiPixels.zw the mask's size.

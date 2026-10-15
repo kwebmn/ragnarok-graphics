@@ -14,6 +14,7 @@
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/d3d_map.hpp"
+#include "core/foliage.hpp"
 #include "core/png_write.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
@@ -802,6 +803,8 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     const D3D11_BOX box = boxOf(u.rect);
     ctx_->UpdateSubresource(t.texture, UINT(level), &box, rec.pixels().data() + u.pixels, UINT(u.rect.width()) * 4,
                             0);
+    if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height)
+        it->second.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
     if (u.slotCount) noteCells(it->second, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1: the shadows
     if (ai_)  // 0.47: its key, or the sprite cache's new frames with their sources
         ai_->noteUpload(u.texture, t.width, t.height, u, rec.pixels().data() + u.pixels,
@@ -912,6 +915,16 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         uiPixels(rec, d, c.uiPixels);
     }
     c.scale = float(scale_);
+    float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind (as draw.cpp)
+    if (!s.ui && !twin && c.uiMode == 0 && effects_.foliage && effects_.foliageStrength > 0 && t[0] && t[0]->leafy &&
+        d.fvf != d3d7::FVF_TL2 && yExtent(rec, d, swayTop, swayBottom)) {
+        const unsigned long long now = GetTickCount64();
+        if (!clockStart_) clockStart_ = now;
+        c.twin[0] = 1.2f * float(effects_.foliageStrength) / 100.0f;
+        c.twin[1] = swayBottom;
+        c.twin[2] = swayBottom - swayTop;
+        c.twin[3] = float(double(now - clockStart_) / 1000.0);
+    }
     setConstants(c);
     const int aniso = s.ui ? 0 : anisotropy_;
     ID3D11SamplerState* samplers[2] = {samplerState(sampled[0], aniso), samplerState(sampled[1], aniso)};

@@ -110,7 +110,7 @@ EffectSettings effectsOff() {
     EffectSettings e;  // every switch off (0.39.4: the ones added since 0.27 too), the sliders as they are
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
-    e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = false;
+    e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
     e.nightNow = 0;
     return e;
 }
@@ -133,7 +133,7 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
 bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
-           e.grade || e.dof || e.water || e.night;
+           e.grade || e.dof || e.water || e.night || e.foliage;
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
@@ -158,7 +158,8 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
            ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
            gradeSaturation == o.gradeSaturation && gradeContrast == o.gradeContrast &&
            gradeBrightness == o.gradeBrightness && gradeWarmth == o.gradeWarmth && gradeVignette == o.gradeVignette &&
-           night == o.night && nightStrength == o.nightStrength && nightClock == o.nightClock &&
+           foliage == o.foliage && foliageStrength == o.foliageStrength && night == o.night &&
+           nightStrength == o.nightStrength && nightClock == o.nightClock &&
            nightNow == o.nightNow && dof == o.dof && dofStrength == o.dofStrength && dofRange == o.dofRange &&
            water == o.water &&
            waterWaves == o.waterWaves && waterReflections == o.waterReflections && waterClarity == o.waterClarity;
@@ -390,6 +391,10 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 100, c.effects.aoStrength);
         } else if (key == "effects.ao_size") {
             toInt(val, 0, 100, c.effects.aoSize);
+        } else if (key == "effects.foliage") {
+            setBool(val, c.effects.foliage);
+        } else if (key == "effects.foliage_strength") {
+            toInt(val, 0, 200, c.effects.foliageStrength);
         } else if (key == "effects.night") {
             setBool(val, c.effects.night);
         } else if (key == "effects.night_strength") {

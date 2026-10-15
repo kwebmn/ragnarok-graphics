@@ -38,4 +38,19 @@ inline void uiPixels(const FrameRecord& rec, const DrawCmd& d, float out[4]) {
     out[3] = std::ceil(y1) - 1.0f;
 }
 
+// 0.64: a draw's top and bottom (game pixels) - the leaves' sway (core/foliage.hpp); false when it has no height.
+inline bool yExtent(const FrameRecord& rec, const DrawCmd& d, float& top, float& bottom) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    top = FLT_MAX;
+    bottom = -FLT_MAX;
+    for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= v.size(); ++i) {
+        float xy[2];
+        std::memcpy(xy, v.data() + d.vertexOffset + i * stride, sizeof xy);
+        top = std::min(top, xy[1]);
+        bottom = std::max(bottom, xy[1]);
+    }
+    return bottom - top > 2.0f;
+}
+
 }  // namespace uagfx::gpu

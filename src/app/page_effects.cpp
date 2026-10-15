@@ -40,6 +40,7 @@ const Effect kEffects[] = {
      {},
      false},
     {"effects.night", {"effects.night_clock"}, {"effects.night_strength"}, {}, false},  // 0.63
+    {"effects.foliage", {}, {"effects.foliage_strength"}, {}, false},                    // 0.64
     {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, false},
     {"effects.torch",
      {"effects.torch_flame"},

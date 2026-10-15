@@ -158,6 +158,9 @@ struct EffectSettings {
     // 0.63: night - the world darker and colder, the torches, lamps and skills shining out of it; by the clock: only
     // from 20:00 to 6:00 (dusk and dawn an hour each), the computer's time. nightNow: how much now (0-100) - the
     // driver's, each frame, not the file's.
+    // 0.64: the leaves sway in the wind (trees, bushes: green textures with holes)
+    bool foliage = false;
+    int foliageStrength = 100;  // %, 0-200
     bool night = false;
     int nightStrength = 60;  // %, 0-100
     bool nightClock = false;

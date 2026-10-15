@@ -79,6 +79,7 @@ private:
         ID3D11ShaderResourceView* srv = nullptr;
         int width = 0, height = 0, levels = 1;
         std::vector<SpriteCell> cells;  // 0.60.1: a sprite cache's cells and what each holds (the shadows)
+        bool leafy = false;             // 0.64: leaves (core/foliage.hpp): swayed in the world
     };
     struct Target {  // a picture drawn into and read from
         ID3D11Texture2D* texture = nullptr;

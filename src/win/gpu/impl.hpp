@@ -107,6 +107,7 @@ struct Texture {
     int height = 0;
     int levels = 1;
     UINT srv = 0;  // index in the CPU SRV heap
+    bool leafy = false;  // 0.64: leaves (core/foliage.hpp): swayed in the world
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COPY_DEST;
     // AI textures (ai_textures.hpp): the network's version, drawn in the world instead while it is shown.
     ID3D12Resource* ai = nullptr;
@@ -460,6 +461,8 @@ struct Renderer::Impl {
     // 0.39, the driver's own weather (weather.cpp) on the map's list (core/weather.hpp).
     ID3DBlob* weatherPs = nullptr;
     ID3D12PipelineState* weatherPipelines[4] = {};
+    ID3DBlob* splashPs = nullptr;  // 0.64: the rain's splashes
+    ID3D12PipelineState* splashPipelines[4] = {};
     bool weatherDone = false;
     bool weatherLogged = false;
     weather::Kind mapWeather = weather::Kind::None;
@@ -701,6 +704,8 @@ struct Renderer::Impl {
     bool weatherDue() const { return weatherWanted() && groundDrawn && !weatherDone; }
     bool applyWeather();  // once a frame, the world finished; false: lost
     ID3D12PipelineState* weatherPipeline(UINT samples);
+    ID3D12PipelineState* alphaPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
+                                       const char* what);  // 0.64
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
     bool applyHeat();  // once a frame, after the torches' pass and the haze; false: lost
     ID3D12PipelineState* heatPipeline(UINT samples);

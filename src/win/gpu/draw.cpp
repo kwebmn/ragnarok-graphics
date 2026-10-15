@@ -277,6 +277,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         uiPixels(rec, d, c.uiPixels);
     }
     c.scale = float(toWorld ? worldScale : scale);
+    float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind
+    if (!s.ui && !twin && c.uiMode == 0 && effects.foliage && effects.foliageStrength > 0 && t[0] && t[0]->leafy &&
+        d.fvf != d3d7::FVF_TL2 && yExtent(rec, d, swayTop, swayBottom)) {
+        c.twin[0] = 1.2f * float(effects.foliageStrength) / 100.0f;
+        c.twin[1] = swayBottom;
+        c.twin[2] = swayBottom - swayTop;
+        c.twin[3] = waterTime();
+    }
     if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
         std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);

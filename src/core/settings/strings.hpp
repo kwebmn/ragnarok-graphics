@@ -135,6 +135,8 @@ enum class Text : uint16_t {
     QualityUiNative, QualityUiNativeHint,
     // 0.63
     FxNight, FxNightHint, FxNightStrength, FxNightStrengthHint, FxNightClock, FxNightClockHint,
+    // 0.64
+    FxFoliage, FxFoliageHint, FxFoliageStrength, FxFoliageStrengthHint,
     Count
 };
 

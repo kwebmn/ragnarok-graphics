@@ -10,6 +10,7 @@
 #include <set>
 
 #include "core/d3d7.hpp"
+#include "core/foliage.hpp"
 #include "core/png_write.hpp"
 #include "core/effect_light.hpp"
 #include "core/game_camera.hpp"
@@ -460,6 +461,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     if (u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
         t.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height, t.fireColour);
         t.light = effect_light::lightOf(rec.pixels().data() + u.pixels, t.width, t.height, t.lightColour);  // 0.36
+        t.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
     }
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + u.pixels, UINT(u.rect.width()),
                                                   UINT(u.rect.height()));
@@ -1131,6 +1133,8 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : hazePipelines) releaseCom(p);  // 0.34
     releaseCom(hazePs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
+    for (ID3D12PipelineState*& p : splashPipelines) releaseCom(p);  // 0.64
+    releaseCom(splashPs);
     releaseCom(weatherPs);
     for (ID3D12PipelineState*& p : heatPipelines) releaseCom(p);  // 0.35
     releaseCom(heatPs);
