@@ -707,6 +707,10 @@ void Renderer::Impl::stopUpscaling() {
 
 // Halton (2, 3): DLSS's recommended pattern, its length growing with the upscale (8 phases at DLAA).
 void Renderer::Impl::nextJitter() {
+    if (upscaler && upscaler->passthrough()) {  // 0.62: supersampling - the world where it is
+        jitter[0] = jitter[1] = 0.0f;
+        return;
+    }
     const auto halton = [](uint32_t i, uint32_t base) {
         float f = 1.0f, r = 0.0f;
         for (; i; i /= base) {
@@ -740,6 +744,13 @@ bool Renderer::Impl::composite() {
     static bool failedOnce = false;
     if (worldDrawn && !finishWorld()) return false;  // 0.20, 0.21: its shadows (if no blended draw came), colours
     bool masked = false;
+    const bool passthrough = upscaler && upscaler->passthrough();  // 0.62: only made smaller
+    if (worldDrawn && passthrough) {
+        worldValid = true;
+        upscaledValid = upscaledNow = false;  // the world shrunk into the picture below, its glow onto that
+        worldDrawn = false;
+        historyReset = false;
+    }
     if (worldDrawn && biasMask && maskPs) {  // 0.22.3: the world's alpha into DLSS's mask
         if (!maskPipeline) {
             D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
@@ -900,6 +911,9 @@ bool Renderer::Impl::composite() {
                            : blit(world, worldState, worldSrv, renderWidth, renderHeight, worldAll,
                                   rtvHandle(kRtvTarget), Rect{0, 0, width, height}, width, height);
     if (!shown) return false;
+    if (passthrough && glowDrawn && !addGlow(target, targetState, rtvHandle(kRtvTarget), width, height, 1, false))
+        return false;  // 0.62: the world's glow onto the shrunk world, under the interface
+    if (passthrough) dropGlow();
     if (layerDrawn &&
         !blit(layer, layerState, layerSrv, width, height, targetAll, rtvHandle(kRtvTarget), Rect{0, 0, width, height},
               width, height, -1.0f, 1, true))
@@ -1174,6 +1188,7 @@ Renderer::~Renderer() {
     delete d3d11_;
     impl_->destroy();
     delete impl_;
+    delete supersample_;  // 0.62: after the renderer that used it
 }
 
 bool Renderer::createRemote(const BridgeOptions& o, std::string& error) {
@@ -1229,6 +1244,18 @@ int Renderer::samples() const {
 }
 
 void Renderer::setUpscaler(Upscaler* u) { impl_->upscaler = u; }
+
+bool Renderer::setSupersample(double ratio) {
+    if (remote_ || d3d11_ || remix_) return false;  // 0.62: Direct3D 12 in the game's process only
+    if (ratio <= 1.0) {
+        if (supersample_ && impl_->upscaler == supersample_) impl_->upscaler = nullptr;
+        return false;
+    }
+    if (!supersample_) supersample_ = new Supersample();
+    supersample_->setRatio(ratio);
+    impl_->upscaler = supersample_;
+    return true;
+}
 
 void Renderer::setApi(HMODULE module) { impl_->api = module; }
 

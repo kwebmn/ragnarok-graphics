@@ -278,7 +278,14 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Part 3: DLSS draws the world at its own size and shows it at the picture's - no supersampling on top of it
     // (DLAA at 150% would draw 2.25 times the pixels for nothing).
     const bool dlss = renderer->upscales() && config.dlss != "off";
-    const int renderScale = dlss ? 100 : config.renderScale;
+    // 0.62: [display] ui_native - supersampling the world alone (Direct3D 12 in this process, no DLSS): the target the
+    // picture's size, the world render_scale times it, made smaller into it; the interface at the picture's pixels.
+    const bool nativeWanted = !dlss && config.uiNative && config.highResolution && config.renderScale > 100 &&
+                              renderer->canSupersample();
+    const bool uiNative =
+        nativeWanted && renderer->setSupersample(enhanced_ ? config.renderScale / 100.0 : 1.0) && enhanced_;
+    if (!nativeWanted) renderer->setSupersample(1.0);  // turned off in a running game
+    const int renderScale = dlss || uiNative ? 100 : config.renderScale;
     if (dlss && config.renderScale > 100 && !renderScaleNoted_) {
         renderScaleNoted_ = true;
         LOG_INFO("render_scale %d%% is not used with DLSS: it draws the world at its own size", config.renderScale);
@@ -286,11 +293,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const ScalePlan plan = planScale(shadow.width(), shadow.height(), out.cx, out.cy, renderScale,
                                      config.highResolution && enhanced_);
     // Stage 6: twins follow the scale with every improvement on, so Pause leaves them as they are.
-    crisp::setScale(planScale(shadow.width(), shadow.height(), out.cx, out.cy, renderScale, config.highResolution).k);
+    crisp::setScale(planScale(shadow.width(), shadow.height(), out.cx, out.cy, nativeWanted ? 100 : renderScale,
+                              config.highResolution)
+                        .k);
     // Stage 4: MSAA comes with the scale, so the calibration has drawn without it; Pause turns it off too.
     // Part 3: DLSS (in the 64-bit renderer) draws the world instead of MSAA; Pause turns it off as well. Without
     // DLSS in the renderer (no RTX card, no files) MSAA stays (0.8 review M4).
-    const bool upscale = enhanced_ && dlss;
+    const bool upscale = enhanced_ && (dlss || uiNative);
     const int samples = enhanced_ && !upscale && config.msaa > 1 ? config.msaa : 1;
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_ || samples != scaledSamples_ ||
         upscale != scaledUpscale_) {
@@ -300,7 +309,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         scaledUpscale_ = upscale;
         scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight, samples, upscale);
     }
-    if (upscale) {  // the camera of the frame being shown: the motion of its pixels
+    if (upscale && dlss) {  // the camera of the frame being shown: the motion of its pixels
         float view[12];
         const bool known = readGameCamera(view);
         renderer->setCamera(known, view);

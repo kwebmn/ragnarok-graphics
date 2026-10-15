@@ -131,6 +131,8 @@ enum class Text : uint16_t {
     PackBodyColours, PackBodyColoursHint,
     // 0.57
     AiCompress, AiCompressHint, AiCompressAuto, AiCompressOn, AiCompressOff,
+    // 0.62
+    QualityUiNative, QualityUiNativeHint,
     Count
 };
 

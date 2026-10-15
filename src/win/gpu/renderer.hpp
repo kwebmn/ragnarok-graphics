@@ -18,6 +18,7 @@ class Remote;
 class Remix9;
 class Renderer11;
 class Upscaler;
+class Supersample;
 
 // Part 3: the renderer in the 64-bit process uaro-render64.exe ([renderer] bridge = 1).
 struct BridgeOptions {
@@ -104,6 +105,10 @@ public:
     // way to show the picture; whether the GPU is lost.
     bool createTextureAs(uint32_t id, int width, int height, int levels);
     void setUpscaler(Upscaler* u);   // before setScale
+    // 0.62: [display] ui_native - the world `ratio` times the picture, made smaller into it, the interface at the
+    // picture's pixels (setScale with upscale then); false where it cannot (Direct3D 11, the 64-bit renderer).
+    bool setSupersample(double ratio);
+    bool canSupersample() const { return !remote_ && !d3d11_ && !remix_; }
     // 0.39.5, before create(): the shaders' code is kept in this file between starts - compiled once, not each time.
     void setShaderCache(const std::string& file);
     // Before create(): Direct3D 12 and DXGI from this module (Streamline's sl.interposer.dll, so that frame
@@ -152,6 +157,7 @@ private:
     Remote* remote_ = nullptr;
     Remix9* remix_ = nullptr;
     Renderer11* d3d11_ = nullptr;
+    Supersample* supersample_ = nullptr;  // 0.62
 };
 
 }  // namespace uagfx::gpu

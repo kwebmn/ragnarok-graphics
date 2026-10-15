@@ -49,6 +49,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::QualitySharpenHint, ""},
         {"display", "ui_filter", Page::Quality, Control::Choice, 0, 0, 0, {"sharp", "smooth"},
          {Text::UiSharp, Text::UiSmooth}, Text::QualityUiFilter, Text::QualityUiFilterHint, ""},
+        {"display", "ui_native", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityUiNative,
+         Text::QualityUiNativeHint, ""},
         {"display", "crisp_text", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityCrispText,
          Text::QualityCrispTextHint, ""},
         {"display", "window_art", Page::Quality, Control::Choice, 0, 0, 0, {"xbr", "ai", "pixels"},
@@ -334,6 +336,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.fps_counter") return c.fpsCounter ? "1" : "0";
+    if (k == "display.ui_native") return c.uiNative ? "1" : "0";
     if (k == "frames.frame_generation") return c.frameGeneration ? std::to_string(c.frameGeneration) + "x" : "off";
     if (k == "frames.allow_tearing") return c.allowTearing ? "1" : "0";
     if (k == "debug.log") return c.logLevel == LogLevel::Debug ? "verbose" : "normal";

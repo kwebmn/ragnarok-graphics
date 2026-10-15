@@ -1399,6 +1399,15 @@ const Entry kTexts[] = {
     {"Off",
      "Вимкнено",
      "Выключено"},
+    {"Interface at the screen's pixels",
+     "Інтерфейс у пікселях екрана",
+     "Интерфейс в пикселях экрана"},
+    {"With a render scale over 100 % on Direct3D 12 without DLSS: only the world is drawn larger and made smaller; "
+     "the windows and the text are drawn at the screen's own pixels - sharper. A test: say how it looks.",
+     "З масштабом рендера понад 100 % на Direct3D 12 без DLSS: більшим малюється й зменшується лише світ; вікна й "
+     "текст малюються в пікселях самого екрана — різкіше. Перевірка: скажіть, як виглядає.",
+     "С масштабом рендера больше 100 % на Direct3D 12 без DLSS: больше рисуется и уменьшается только мир; окна и "
+     "текст рисуются в пикселях самого экрана — резче. Проверка: скажите, как выглядит."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

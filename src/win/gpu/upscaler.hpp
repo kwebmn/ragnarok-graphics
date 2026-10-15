@@ -48,6 +48,9 @@ public:
         int backWidth = 0, backHeight = 0;
         bool on = false;  // generate around this frame: a world on screen with a known camera
     };
+    // 0.62: the world drawn larger than the picture and only made smaller (supersampling with the interface at the
+    // screen's pixels): no motion, no jitter, no evaluate - the renderer shrinks the world into the picture itself.
+    virtual bool passthrough() const { return false; }
     virtual bool generates() const { return false; }
     virtual bool generating() const { return false; }   // on as of the last present: off takes a present to apply
     virtual void renderStart() {}                        // the frame's first commands arrived
@@ -55,6 +58,23 @@ public:
     virtual void afterPresent() {}                       // the next frame begins (latency markers, sleep)
     // Generation off now: before the swap chain changes size, and for frames without the upscale (Pause).
     virtual void suspend() {}
+};
+
+// 0.62: [display] ui_native - the world at render_scale, the interface at the picture's own pixels.
+class Supersample : public Upscaler {
+public:
+    void setRatio(double r) { ratio_ = r; }
+    const char* name() const override { return "supersampling (the interface at the screen's pixels)"; }
+    bool renderSize(int outW, int outH, int& renderW, int& renderH) override {
+        renderW = int(outW * ratio_ + 0.5);
+        renderH = int(outH * ratio_ + 0.5);
+        return ratio_ > 1.0 && renderW <= 16384 && renderH <= 16384;
+    }
+    bool evaluate(const Frame&) override { return false; }
+    bool passthrough() const override { return true; }
+
+private:
+    double ratio_ = 1.0;
 };
 
 }  // namespace uagfx::gpu
