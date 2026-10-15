@@ -21,15 +21,23 @@ using SerializeRootSignatureFn = HRESULT(WINAPI*)(const D3D12_ROOT_SIGNATURE_DES
 
 bool compile(pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& out, std::string& error) {
     const char* src = shaderSource();
-    ID3DBlob* errors = nullptr;
-    const HRESULT hr = fn(src, std::strlen(src), "uaro-graphics.hlsl", nullptr, nullptr, entry, profile,
-                          D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &out, &errors);
-    if (FAILED(hr)) {
-        error = std::string("shader ") + entry + ": " +
-                (errors ? std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize())
-                        : std::string("compile failed"));
+    // 0.39.2: the compiler's optimiser fails now and then with an internal error ("argument pulled into unrelated
+    // predicate": ray_glow_ps on a player's machine) - then again with less of it.
+    static const UINT kLevels[3] = {D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCOMPILE_OPTIMIZATION_LEVEL1,
+                                    D3DCOMPILE_SKIP_OPTIMIZATION};
+    HRESULT hr = E_FAIL;
+    for (int i = 0; i < 3 && FAILED(hr); ++i) {
+        ID3DBlob* errors = nullptr;
+        out = nullptr;
+        hr = fn(src, std::strlen(src), "uaro-graphics.hlsl", nullptr, nullptr, entry, profile, kLevels[i], 0, &out,
+                &errors);
+        if (FAILED(hr) && i == 0)
+            error = std::string("shader ") + entry + ": " +
+                    (errors ? std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize())
+                            : std::string("compile failed"));
+        if (SUCCEEDED(hr) && i > 0) LOG_INFO("shader %s: compiled with less optimisation (%s)", entry, error.c_str());
+        releaseCom(errors);
     }
-    releaseCom(errors);
     return SUCCEEDED(hr);
 }
 

@@ -40,6 +40,7 @@ ID3D12PipelineState* Renderer::Impl::hazePipeline(UINT n) {
 // ground a fog drifts (core/haze.hpp: by the map).
 bool Renderer::Impl::applyHaze() {
     hazeDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeHaze);  // 0.39.2
     if (!ensureScene("haze")) return true;
     ID3D12PipelineState* pso = hazePipeline(upscale ? 1 : samples);
     if (!pso) return true;

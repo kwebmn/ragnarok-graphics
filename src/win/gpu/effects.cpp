@@ -329,6 +329,7 @@ bool Renderer::Impl::addGlow(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstStat
 }
 
 bool Renderer::Impl::addGlowToTarget() {
+    EffectTime timing(*this, kTimeGlow);  // 0.39.2
     return addGlow(target, targetState, rtvHandle(kRtvTarget), width, height, samples, false);
 }
 

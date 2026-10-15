@@ -77,6 +77,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         return;
     }
     const DrawSetup& s = rec.states()[d.state];
+    if (s.zEnable && s.zWrite) sceneDepthFresh = false;  // 0.39.2: the depth's copy is out of date
     // Stage 4: with several samples an alpha test that keeps the brighter alpha (the client's 0xCF on leaves and
     // fences, no blending) becomes coverage - a soft edge instead of a step. World textures get anisotropy.
     const bool coverage = alphaToCoverage && samples > 1 && s.alphaTest && !s.blend &&

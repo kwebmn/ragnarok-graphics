@@ -713,7 +713,8 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         if (!made) standIn(t, a->second, c, pixels.data(), w);  // the frame as the game has it, at once
         ++cellsWritten_;
         if (!cellOn(cells[i].source)) continue;  // a kind that is off: it stays as the game has it
-        if (ai::softPicture(pixels.data(), w, h)) {  // 0.22.2: a frame of soft light alone, as the game has it
+        // 0.22.2: a frame of soft light alone, as the game has it; 0.39.2: or shaped by a soft alpha.
+        if (ai::softPicture(pixels.data(), w, h) || ai::softAlpha(pixels.data(), w, h)) {
             ++soft_;
             continue;
         }
@@ -985,9 +986,11 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         return;
     }
     // 0.22.2: soft light alone - a torch's glow, a halo, a gradient - stays the game's, also when upscaled.grf has
-    // a picture of it from before: the network would turn its gradients into bands.
+    // a picture of it from before: the network would turn its gradients into bands. 0.39.2: so does a picture shaped
+    // by a soft alpha (smoke, glowing particles): the network's alpha is all or nothing.
     if (item.argb.size() >= size_t(item.width) * size_t(item.height) &&
-        ai::softPicture(item.argb.data(), item.width, item.height)) {
+        (ai::softPicture(item.argb.data(), item.width, item.height) ||
+         ai::softAlpha(item.argb.data(), item.width, item.height))) {
         ++soft_;
         drop(item);
         return;

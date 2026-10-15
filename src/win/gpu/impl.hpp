@@ -45,7 +45,13 @@ void releaseCom(T*& p) {
 }
 
 constexpr UINT kSlots = 2;              // submissions in flight
-constexpr UINT kTimes = 6;              // GPU timestamps a slot: its list, the upscale, the AI textures' work
+// 0.39.2: the effects timed one by one, for the log (kEffectNames in device.cpp).
+enum EffectTimer : UINT {
+    kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
+    kTimeGlow, kTimeWater, kEffectTimes
+};
+// GPU timestamps a slot: its list, the upscale, the AI textures' work, (0.39.2) a pair an effect.
+constexpr UINT kTimes = 6 + 2 * kEffectTimes;
 constexpr UINT kCpuSrvCount = 65536;    // one SRV per texture (the client keeps thousands), the white one, the target
 constexpr UINT kNoSrv = UINT(-1);       // allocSrv: the heap is full
 constexpr UINT kGpuSrvCount = 65536;    // texture pairs bound for drawing: each slot's list has its own part
@@ -190,6 +196,7 @@ struct Slot {
     bool timed = false;                      // its list's start and end times are in the timer's buffer
     bool upscaleTimed = false;               // and those of an upscale in it
     bool aiTimed = false;                    // and those of the AI textures' work in it
+    uint32_t effectTimed = 0;                // 0.39.2: and those of these effects (1 << EffectTimer)
 };
 
 struct Upload {
@@ -431,6 +438,7 @@ struct Renderer::Impl {
     bool actorShadowsDone = false;   // this frame's are in, or could not be
     bool actorShadowsDrawn = false;  // and the game's round ones with them: not drawn on their own
     bool actorShadowsLogged = false;
+    bool sceneDepthFresh = false;  // 0.39.2: sceneDepth holds the depth as it is now (copySceneDepth)
     // 0.33, the clouds' shadows (clouds.cpp) over the open sky's maps.
     ID3DBlob* cloudsPs = nullptr;
     ID3D12PipelineState* cloudsPipelines[4] = {};
@@ -480,6 +488,11 @@ struct Renderer::Impl {
     uint32_t gpuFrames = 0;
     ULONGLONG gpuSince = 0;
     void readTimes(Slot& s, UINT index);  // the slot's last list has finished
+    // 0.39.2: an effect's GPU time, between these two in one list (an effect that starts a new list is not timed).
+    uint64_t effectTicks[kEffectTimes] = {};
+    uint64_t effectSerial[kEffectTimes] = {};
+    void effectBegin(EffectTimer e);
+    void effectEnd(EffectTimer e);
     void noteGpuFrame();                   // after a present
     void (*onDevice)(void*, ID3D12Device*) = nullptr;  // setOnDevice
     void* onDeviceContext = nullptr;
@@ -710,6 +723,7 @@ struct Renderer::Impl {
         lavaCells.clear();
         actorShadowsDone = actorShadowsDrawn = false;
         cloudsDone = false;
+        sceneDepthFresh = false;
         hazeDone = false;
         heatDone = false;
         heatSpots.clear();
@@ -748,6 +762,16 @@ struct Renderer::Impl {
                   int srcW, int srcH, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
                   D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, float strength, bool first,
                   float blendFactor = 1.0f);
+};
+
+// 0.39.2: an effect timed for as long as it runs (Renderer::Impl::effectBegin, effectEnd).
+struct EffectTime {
+    Renderer::Impl& m;
+    EffectTimer e;
+    EffectTime(Renderer::Impl& impl, EffectTimer which) : m(impl), e(which) { m.effectBegin(e); }
+    ~EffectTime() { m.effectEnd(e); }
+    EffectTime(const EffectTime&) = delete;
+    EffectTime& operator=(const EffectTime&) = delete;
 };
 
 }  // namespace uagfx::gpu

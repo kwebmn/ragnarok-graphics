@@ -161,6 +161,7 @@ ID3D12PipelineState* Renderer::Impl::shadowApplyPipeline(UINT n) {
 // the characters are drawn. The round shadows go into it too, and are not drawn on their own.
 bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     actorShadowsDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeActorShadows);  // 0.39.2
     if (!ensureScene("characters' shadows")) return true;
     const int w = sceneWidth, h = sceneHeight;
     ID3D12PipelineState* apply = shadowApplyPipeline(upscale ? 1 : samples);

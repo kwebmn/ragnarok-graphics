@@ -40,6 +40,7 @@ ID3D12PipelineState* Renderer::Impl::cloudsPipeline(UINT n) {
 // pixel's place in the world from the picture's depth and the camera, darker where the clouds' noise is high there.
 bool Renderer::Impl::applyClouds() {
     cloudsDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeClouds);  // 0.39.2
     if (!ensureScene("clouds")) return true;
     ID3D12PipelineState* pso = cloudsPipeline(upscale ? 1 : samples);
     if (!pso) return true;

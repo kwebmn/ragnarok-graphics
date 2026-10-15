@@ -438,3 +438,24 @@ TEST(ai_soft_pictures_are_glows_and_gradients) {
     CHECK(!softPicture(disc.data(), n, n));
     CHECK(!softPicture(glow.data(), 2, 2));  // too small to tell
 }
+
+TEST(ai_soft_alpha_pictures_stay_the_games) {
+    // 0.39.2: a picture whose shape is in a soft alpha - the chimneys' smoke, a skill's glowing particle (Soul Strike):
+    // its colour flat, more than 5 % of its texels part-transparent. The network's alpha is all or nothing (made for
+    // the colour key): smoke turned into a hard white blob, a soft particle into a small square.
+    std::vector<uint32_t> glow(64 * 64);
+    for (int y = 0; y < 64; ++y)
+        for (int x = 0; x < 64; ++x) {
+            const float d = std::hypot(float(x) - 31.5f, float(y) - 31.5f) / 32.0f;
+            const uint32_t a = uint32_t(255.0f * std::max(0.0f, 1.0f - d));
+            glow[size_t(y) * 64 + size_t(x)] = a << 24 | 0xFFFFFFu;
+        }
+    CHECK(softAlpha(glow.data(), 64, 64));
+    std::vector<uint32_t> keyed(64 * 64, 0xFF808080u);  // a sprite: its texels all or nothing
+    for (int i = 0; i < 64 * 20; ++i) keyed[size_t(i)] = 0x00FF00FFu;
+    CHECK(!softAlpha(keyed.data(), 64, 64));
+    std::vector<uint32_t> edge(64 * 64, 0xFF808080u);  // a few soft texels along an edge: not enough
+    for (int i = 0; i < 64; ++i) edge[size_t(i)] = 0x80808080u;
+    CHECK(!softAlpha(edge.data(), 64, 64));
+    CHECK(!softAlpha(nullptr, 0, 0));
+}

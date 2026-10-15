@@ -147,6 +147,7 @@ ID3D12PipelineState* Renderer::Impl::aoApplyPipeline(UINT n) {
 
 bool Renderer::Impl::applyAo() {
     aoDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeAo);  // 0.39.2
     if (!ensureScene("shadows")) return true;
     const int w = sceneWidth, h = sceneHeight;
     ID3D12PipelineState* apply = aoApplyPipeline(upscale ? 1 : samples);
@@ -187,6 +188,7 @@ bool Renderer::Impl::applyAo() {
 // Into the target (its samples) or the world under DLSS (one sample), as it is: the colours are made in the shader.
 bool Renderer::Impl::applyGrade() {
     gradeDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeGrade);  // 0.39.2
     const UINT n = upscale ? 1 : samples;
     const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
     if (!gradePs || !ensureScene("colour")) return true;
@@ -232,6 +234,7 @@ void Renderer::Impl::releaseDof() {
 
 bool Renderer::Impl::applyDof() {
     dofDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeDof);  // 0.39.2
     const UINT n = upscale ? 1 : samples;
     const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
     if (!dofDownPs || !dofBlurPs || !dofApplyPs || !dofFocusPs || !ensureScene("depth of field")) return true;

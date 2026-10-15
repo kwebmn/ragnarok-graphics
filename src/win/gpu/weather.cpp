@@ -40,6 +40,7 @@ ID3D12PipelineState* Renderer::Impl::weatherPipeline(UINT n) {
 // camera's own moves a little (the near one the most), so that it hangs in the air rather than on the screen.
 bool Renderer::Impl::applyWeather() {
     weatherDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeWeather);  // 0.39.2
     if (!ensureScene("weather")) return true;
     ID3D12PipelineState* pso = weatherPipeline(upscale ? 1 : samples);
     if (!pso) return true;

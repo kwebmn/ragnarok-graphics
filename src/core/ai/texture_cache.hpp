@@ -61,6 +61,10 @@ bool hasTransparency(const uint32_t* argb, int width, int height);
 // (the premultiplied colour's Laplacian). The network adds nothing to such a picture and turns its gradients into
 // bands (the drawn model most), so it is drawn as the game's, filtered.
 bool softPicture(const uint32_t* argb, int width, int height);
+// 0.39.2: a picture whose shape is in a soft alpha - more than 5 % of its texels part-transparent (16-239): the
+// chimneys' smoke, a skill's glowing particle. The network's alpha is all or nothing (made for the colour key), so it
+// stays the game's: smoke became a hard white blob, Soul Strike's particles small squares.
+bool softAlpha(const uint32_t* argb, int width, int height);
 // Alpha s times as large: bilinear between texel centres, then cut at one half - smooth edges, still all or nothing
 // like the colour key.
 void enlargeAlpha(const float* alpha, int width, int height, int scale, std::vector<uint8_t>& out);

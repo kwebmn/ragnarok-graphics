@@ -28,6 +28,7 @@ void Renderer::Impl::makeDepthViews(UINT n) {
 }
 
 void Renderer::Impl::releaseScene() {
+    sceneDepthFresh = false;
     Slot& s = slots[slot];  // what the open list recorded may still read them
     if (sceneColor) s.garbage.push_back(sceneColor);
     if (sceneDepth) s.garbage.push_back(sceneDepth);
@@ -85,6 +86,7 @@ bool Renderer::Impl::ensureScene(const char* user) {
     farthest.Color[0] = 1.0f;
     sceneColor = createTexture2D(device, w, h, 1, DXGI_FORMAT_B8G8R8A8_UNORM, D3D12_RESOURCE_FLAG_NONE,
                                  D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+    sceneDepthFresh = false;
     sceneDepth = createTexture2D(device, w, h, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
                                  D3D12_RESOURCE_STATE_RENDER_TARGET, &farthest);
     if (!sceneColor || !sceneDepth) {
@@ -106,6 +108,9 @@ bool Renderer::Impl::ensureScene(const char* user) {
 
 // The world's depth so far into sceneDepth (a depth buffer cannot be resolved): with several samples the first.
 bool Renderer::Impl::copySceneDepth() {
+    // 0.39.2: once for as long as the depth stays as it is - nothing drawn since that writes it (each effect copied it
+    // again: seven copies of a 4K depth a frame).
+    if (sceneDepthFresh) return true;
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
     linearClamp.magFilter = d3d7::TFG_LINEAR;
@@ -140,12 +145,14 @@ bool Renderer::Impl::copySceneDepth() {
     boundTextures = boundSamplers = ~0ull;
     pass = kPassNone;
     transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    sceneDepthFresh = true;
     return true;
 }
 
 bool Renderer::Impl::copyScene() {
     if (waterCopied) return waterReady;
     waterCopied = true;
+    EffectTime timing(*this, kTimeWater);  // 0.39.2
     waterReady = false;
     if (!waterVs || !waterPs || !waterGlowPs) return false;  // its shaders did not compile (logged at the start)
     if (!viewToWorldValid) {

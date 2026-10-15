@@ -362,6 +362,7 @@ map::Point toView(const float m[12], const map::Point& w) {
 // the torches the game does not show and the lamps' lights join those the game draws.
 bool Renderer::Impl::applyTorches() {
     torchDone = true;  // the world's draws after this are the game's own
+    EffectTime timing(*this, kTimeLights);  // 0.39.2
     mapWorld.poll();
     std::vector<torch::Flame> flames;
     flames.swap(torchFlames);
@@ -775,18 +776,26 @@ bool Renderer::Impl::applyTorches() {
         float lx0 = float(w), ly0 = float(h), lx1 = 0.0f, ly1 = 0.0f;  // where the light falls on the screen
         for (size_t i = 0; i < lights.size(); ++i) {
             const LightItem& l = lights[i];
+            // 0.39.2: its place and reach first, its colour and strength second - the pass reads the second only
+            // for the lights that reach a pixel.
             std::copy(l.view, l.view + 3, data[2 * i]);
-            data[2 * i][3] = l.strength;
+            data[2 * i][3] = l.reach;
             std::copy(l.color, l.color + 3, data[2 * i + 1]);
-            data[2 * i + 1][3] = l.reach;
-            const float vz = std::max(l.view[2], proj.nearZ);
-            const float r = l.reach * proj.f0 / vz * k;  // the reach on the screen at its depth
-            const float tx = (l.view[0] / vz * proj.f0 + proj.cx) * k + 0.5f + jx;
-            const float ty = (l.view[1] / vz * proj.f1 + proj.cy) * k + 0.5f + jy;
-            lx0 = std::min(lx0, tx - r);
-            ly0 = std::min(ly0, ty - r);
-            lx1 = std::max(lx1, tx + r);
-            ly1 = std::max(ly1, ty + r);
+            data[2 * i + 1][3] = l.strength;
+            // 0.39.2: where its reach falls on the screen - the cube about it, each corner projected, the nearer ones
+            // further out. A light up in the air lights the ground well below it on the screen: 0.25-0.39.1 cut it off
+            // at a square about the light's own place (the skills' light came out square).
+            for (int corner = 0; corner < 8; ++corner) {
+                const float px = l.view[0] + ((corner & 1) ? l.reach : -l.reach);
+                const float py = l.view[1] + ((corner & 2) ? l.reach : -l.reach);
+                const float pz = std::max(l.view[2] + ((corner & 4) ? l.reach : -l.reach), proj.nearZ);
+                const float tx = (px / pz * proj.f0 + proj.cx) * k + 0.5f + jx;
+                const float ty = (py / pz * proj.f1 + proj.cy) * k + 0.5f + jy;
+                lx0 = std::min(lx0, tx);
+                ly0 = std::min(ly0, ty);
+                lx1 = std::max(lx1, tx);
+                ly1 = std::max(ly1, ty);
+            }
         }
         const Upload u = allocUpload(sizeof data, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
         if (!u.cpu) return true;  // no upload memory this frame: the torches wait for the next

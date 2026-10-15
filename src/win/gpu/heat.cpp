@@ -33,6 +33,7 @@ ID3D12PipelineState* Renderer::Impl::heatPipeline(UINT n) {
 // lava) and hazed: where the hot air rises the picture shimmers; in the desert far off too.
 bool Renderer::Impl::applyHeat() {
     heatDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeHeat);  // 0.39.2
     std::vector<HeatSpot> spots;
     spots.swap(heatSpots);
     const float user = float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f;

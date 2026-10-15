@@ -158,6 +158,17 @@ bool hasTransparency(const uint32_t* argb, int width, int height) {
     return false;
 }
 
+bool softAlpha(const uint32_t* argb, int width, int height) {
+    if (!argb || width <= 0 || height <= 0) return false;
+    const size_t n = size_t(width) * size_t(height);
+    size_t partial = 0;
+    for (size_t i = 0; i < n; ++i) {
+        const uint32_t a = argb[i] >> 24;
+        partial += a >= 16 && a < 240;
+    }
+    return partial * 20 > n;
+}
+
 bool softPicture(const uint32_t* argb, int width, int height) {
     if (!argb || width < 3 || height < 3) return false;  // too small to tell: as before
     // 0.22.7: three rows of the premultiplied colour at a time, times 255 (no division), and done as soon as more

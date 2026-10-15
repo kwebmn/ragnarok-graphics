@@ -122,6 +122,8 @@ void Renderer::Impl::submit() {
         resolve(0);
         if (s.upscaleTimed) resolve(2);
         if (s.aiTimed) resolve(4);
+        for (UINT e = 0; e < kEffectTimes; ++e)
+            if (s.effectTimed >> e & 1) resolve(6 + 2 * e);
         s.timed = true;
     }
     const HRESULT hr = list->Close();
@@ -145,8 +147,23 @@ void Renderer::Impl::readTimes(Slot& s, UINT index) {
             aiTicks += t[5] - t[4];
             if (ai) ai->observe(index, double(t[5] - t[4]) * 1000.0 / double(timerFrequency));
         }
+        for (UINT e = 0; e < kEffectTimes; ++e)
+            if ((s.effectTimed >> e & 1) && t[7 + 2 * e] > t[6 + 2 * e]) effectTicks[e] += t[7 + 2 * e] - t[6 + 2 * e];
     }
     s.timed = s.upscaleTimed = s.aiTimed = false;
+    s.effectTimed = 0;
+}
+
+void Renderer::Impl::effectBegin(EffectTimer e) {
+    if (!timer || !open) return;
+    list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 6 + 2 * e);
+    effectSerial[e] = listSerial;
+}
+
+void Renderer::Impl::effectEnd(EffectTimer e) {
+    if (!timer || !open || effectSerial[e] != listSerial) return;
+    list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 7 + 2 * e);
+    slots[slot].effectTimed |= 1u << e;
 }
 
 void Renderer::Impl::noteGpuFrame() {
@@ -166,6 +183,20 @@ void Renderer::Impl::noteGpuFrame() {
     else
         LOG_INFO("GPU: %.2f ms of work a frame (%u frames in %.0f s)", double(gpuTicks) * ms, gpuFrames,
                  double(now - gpuSince) / 1000.0);
+    // 0.39.2: the effects one by one - what each of them costs a frame.
+    static const char* const kEffectNames[kEffectTimes] = {
+        "soft shadows", "clouds", "characters' shadows", "lights and torches", "haze", "heat haze", "colour",
+        "depth of field", "weather", "glow", "water's copies"};
+    std::string effects;
+    for (UINT e = 0; e < kEffectTimes; ++e) {
+        if (!effectTicks[e]) continue;
+        char part[64];
+        std::snprintf(part, sizeof part, "%s%s %.2f ms", effects.empty() ? "" : ", ", kEffectNames[e],
+                      double(effectTicks[e]) * ms);
+        effects += part;
+        effectTicks[e] = 0;
+    }
+    if (!effects.empty()) LOG_INFO("GPU: effects a frame - %s", effects.c_str());
     gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
     gpuSince = now;
@@ -324,6 +355,7 @@ void Renderer::Impl::placeSamples(bool center) {
 // ---- Impl: frame record commands ---------------------------------------------------------------------------
 
 void Renderer::Impl::clear(const ClearCmd& c) {
+    if (c.flags & 2) sceneDepthFresh = false;  // 0.39.2: the depth cleared - its copy out of date
     // 0.18: the picture cleared - the light of a world no longer there is not added to the next one.
     if ((c.flags & 1) && c.rect.left <= 0 && c.rect.top <= 0 && c.rect.right >= gameWidth &&
         c.rect.bottom >= gameHeight) {

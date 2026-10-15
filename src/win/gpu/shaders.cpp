@@ -725,11 +725,12 @@ GlowOut water_glow_ps(WaterIn i) {
 
 // 0.23, the torches (torches.cpp). Their light, from the picture's copy (t2) and its depth (t3) into the picture -
 // the pixels it reaches only: t1 holds two texels a light (0.25: the torches' and the lamps'), its place in the view
-// (xyz) and strength (w: with its flicker and the game's fade), then its colour and reach (world units); footprint is
-// how many, uiPixels.xy the world's size. 0.23.3: bounded ("everything white" around torches on bright ground, two
-// side by side) - the light takes a surface over towards a coloured, brighter version of itself, never past white,
-// the more the darker the surface; several lights saturate instead of adding up; what the sun lights already a light
-// hardly changes. Under it the map's tint (the caves' purple) gives way to the light's colour.
+// (xyz) and (0.39.2) reach (w, world units), then its colour and strength (w: with its flicker and the game's
+// fade); footprint is how many, uiPixels.xy the world's size. 0.23.3: bounded ("everything white" around torches
+// on bright ground, two side by side) - the light takes a surface over towards a coloured, brighter version of
+// itself, never past white, the more the darker the surface; several lights saturate instead of adding up; what the
+// sun lights already a light hardly changes. Under it the map's tint (the caves' purple) gives way to the light's
+// colour.
 float4 torch_light_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there
@@ -745,14 +746,14 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
     float3 colour = float3(0.0, 0.0, 0.0);
     int count = int(footprint);
     [loop] for (int k = 0; k < count; ++k) {
-        float4 t = tex1.Load(int3(2 * k, 0, 0));
-        float4 c = tex1.Load(int3(2 * k + 1, 0, 0));
-        float3 v = t.xyz - p;
-        float d2 = dot(v, v), reach2 = c.w * c.w;
+        float4 t = tex1.Load(int3(2 * k, 0, 0));  // 0.39.2: its place and reach; its colour and strength only if it
+        float3 v = t.xyz - p;                      // reaches here
+        float d2 = dot(v, v), reach2 = t.w * t.w;
         if (d2 >= reach2) continue;
+        float4 c = tex1.Load(int3(2 * k + 1, 0, 0));
         float f = 1.0 - d2 / reach2;
         float facing = saturate(dot(n, v * rsqrt(max(d2, 1e-4))) * 0.7 + 0.3);  // wrapped: soft on what turns away
-        float a = t.w * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;  // brighter near the source
+        float a = c.w * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;  // brighter near the source
         light += a;
         colour += a * c.rgb;
     }
@@ -1143,10 +1144,10 @@ GlowOut lava_glow_ps(PsIn i) {
     return o;
 }
 
-GlowOut ray_glow_ps(PsIn i) {
+GlowOut ray_glow_ps(PsIn i) {  // 0.39.2: a beam is light - its glow its colour (the choice made FXC fail inside)
     GlowOut o;
     o.c = rayShade(i);
-    o.g = ((alphaTest >> 19) & 1) != 0 ? o.c : float4(0.0, 0.0, 0.0, o.c.a);
+    o.g = o.c;
     return o;
 }
 
