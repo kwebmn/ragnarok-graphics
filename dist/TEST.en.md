@@ -1,3 +1,17 @@
+# uaRO Graphics 0.87.0 — testing
+
+What is new in 0.87.0:
+- **Measuring where uaRO.exe spends its time** (Settings → Diagnostics → "Measure where the game spends its time";
+  applies at once, in a running game too). About a thousand times a second the driver notes where the game's thread
+  is and every 10 seconds writes into the log:
+  - `profile: N samples in 10 s - uaRO.exe X%, ntdll.dll Y%, ...` - the time by module (the waits show too);
+  - `profile: uaRO.exe's busiest places - 0x412cc0 7.1%, ...` - the client's own busiest places;
+  - `profile: called from uaRO.exe - 0x40e0d0 into ddraw.dll 5.0%, ...` - where the client goes into other modules.
+  It slows the game a little - turn it off after measuring.
+
+How to test: turn it on, play a minute in a town with people, change a couple of maps (loading), fight monsters with
+skills; turn it off and send the log. The addresses are matched to the client's decompilation.
+
 # uaRO Graphics 0.86.0 — testing
 
 What is new in 0.86.0 (Direct3D 12) - less load:
