@@ -51,6 +51,35 @@ bool Renderer::Impl::applyHaze() {
                    : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneDepthSrv, true);
 }
 
+// 0.72: the floors reflect what stands on them - indoors and in the rain (floor_reflect_ps, from the picture's copy).
+bool Renderer::Impl::applyFloorReflections() {
+    floorReflectDone = true;
+    EffectTime timing(*this, kTimeWater);
+    if (!ensureScene("floor reflections")) return true;
+    ID3D12PipelineState* pso =
+        alphaPipeline(floorReflectPs, floorReflectPipelines, upscale ? 1 : samples, "floor reflections");
+    if (!pso) return true;
+    if (!copySceneColor() || !copySceneDepth()) return false;
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.twin[0] = floorReflectAmount();
+    if (!floorReflectLogged) LOG_INFO("floor reflections: on %s", mapName.c_str());
+    floorReflectLogged = true;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+}
+
 // 0.69: past the map's edge on a map under the open sky - the sky, its clouds, at night its stars (sky_ps).
 bool Renderer::Impl::applySky() {
     skyDone = true;

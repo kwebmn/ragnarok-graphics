@@ -314,6 +314,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.motesAmount);
     w.u8(e.relief ? 1 : 0);  // 0.71
     w.i32(e.reliefStrength);
+    w.u8(e.floorReflections ? 1 : 0);  // 0.72
+    w.i32(e.floorReflectStrength);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

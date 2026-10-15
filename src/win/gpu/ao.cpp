@@ -394,6 +394,7 @@ bool Renderer::Impl::finishWorld() {
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
     if (waterfallsDue() && !applyWaterfalls()) return false;  // 0.65: the maps' waterfalls the game never shows
+    if (floorReflectDue() && !applyFloorReflections()) return false;  // 0.72: lit, before the haze
     if (hazeDue() && !applyHaze()) return false;      // 0.34: far off and over the ground, before the colours
     if (skyDue() && !applySky()) return false;        // 0.69: the sky where the haze filled the void
     if (heatDue() && !applyHeat()) return false;      // 0.35: the hot air shimmering over all of that

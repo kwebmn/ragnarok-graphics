@@ -192,6 +192,10 @@ struct EffectSettings {
     // texture's brightness; the AI textures' detail the most). On by default.
     bool relief = true;
     int reliefStrength = 100;  // %, 0-200
+    // 0.72: reflections on the floor - indoors (polished and wet floors) and in the rain what stands on the
+    // floor is reflected in it (screen-space). On by default.
+    bool floorReflections = true;
+    int floorReflectStrength = 35;  // %, 0-100 (in the rain 1.6 times)
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

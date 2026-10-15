@@ -1518,6 +1518,21 @@ const Entry kTexts[] = {
     {"How deep the ground looks.",
      "Наскільки глибокою виглядає земля.",
      "Насколько глубокой выглядит земля."},
+    {"Reflections on the floor",
+     "Відбиття на підлозі",
+     "Отражения на полу"},
+    {"Indoors (dungeons, castles, houses) and in the rain the floor reflects the characters and what stands on it; a "
+     "dry field does not shine. Direct3D 12.",
+     "У приміщеннях (підземелля, замки, будинки) і під дощем підлога відбиває персонажів і те, що на ній стоїть; сухе "
+     "поле не блищить. Direct3D 12.",
+     "В помещениях (подземелья, замки, дома) и под дождём пол отражает персонажей и то, что на нём стоит; сухое поле "
+     "не блестит. Direct3D 12."},
+    {"Floor shine",
+     "Блиск підлоги",
+     "Блеск пола"},
+    {"How much the floor reflects; in the rain more.",
+     "Наскільки підлога відбиває; під дощем більше.",
+     "Насколько пол отражает; под дождём больше."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

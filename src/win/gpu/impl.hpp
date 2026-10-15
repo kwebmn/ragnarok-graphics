@@ -446,6 +446,11 @@ struct Renderer::Impl {
     bool hazeDone = false;
     bool hazeLogged = false;
     haze::Look mapLook;
+    // 0.72, reflections on the floor (haze.cpp, floor_reflect_ps).
+    ID3DBlob* floorReflectPs = nullptr;
+    ID3D12PipelineState* floorReflectPipelines[4] = {};
+    bool floorReflectDone = false;
+    bool floorReflectLogged = false;
     // 0.69, the sky past the map's edge (haze.cpp, sky_ps).
     ID3DBlob* skyPs = nullptr;
     ID3D12PipelineState* skyPipelines[4] = {};
@@ -710,6 +715,18 @@ struct Renderer::Impl {
     bool skyWanted() const { return effects.sky && effects.skyStrength > 0 && skyPs && mapOutdoors; }
     bool skyDue() const { return skyWanted() && groundDrawn && !skyDone && viewToWorldValid; }
     bool applySky();  // once a frame, the world drawn; false: lost
+    // 0.72: indoors (a polished or wet floor) and in the rain; a field under a dry sky does not shine
+    float floorReflectAmount() const {
+        if (!effects.floorReflections || !floorReflectPs) return 0.0f;
+        const float user = float(std::clamp(effects.floorReflectStrength, 0, 100)) / 100.0f;
+        return mapWeather == weather::Kind::Rain && effects.weather ? std::min(1.0f, user * 1.6f)
+               : mapOutdoors                                         ? 0.0f
+                                                                     : user;
+    }
+    bool floorReflectDue() const {
+        return floorReflectAmount() > 0.0f && groundDrawn && !floorReflectDone && viewToWorldValid;
+    }
+    bool applyFloorReflections();  // once a frame, the world drawn and lit; false: lost
     bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
     bool heatDue() const {
         return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));
@@ -758,6 +775,7 @@ struct Renderer::Impl {
         sceneDepthFresh = false;
         hazeDone = false;
         skyDone = false;  // 0.69
+        floorReflectDone = false;  // 0.72
         heatDone = false;
         heatSpots.clear();
         portalSparks.clear();

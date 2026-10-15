@@ -1133,6 +1133,32 @@ float4 haze_ps(PresentOut i) : SV_Target {
     return float4(c, a);
 }
 
+// 0.72, reflections on the floor (haze.cpp): what faces up - the floors of the dungeons and houses, the ground in the
+// rain - reflects the picture (t2, before it) along the mirrored view (waterReflection), the more the flatter one looks
+// along it. twinX its strength, the alpha it blends with.
+float4 floor_reflect_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
+    int2 last = int2(uiPixels.xy) - 1;
+    float3 p = viewAt(wp);
+    float3 l = viewAt(max(wp - int2(1, 0), int2(0, 0))), r = viewAt(min(wp + int2(1, 0), last));
+    float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
+    float3 dx = abs(r.z - p.z) < abs(p.z - l.z) ? r - p : p - l;
+    float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
+    float3 n = normalize(cross(dy, dx));
+    if (dot(n, p) > 0.0) n = -n;  // towards the camera
+    float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
+    float flat = smoothstep(0.88, 0.97, -nw.y);  // up is -y
+    if (flat <= 0.0) discard;
+    float3 v = normalize(p);
+    float weight;
+    float3 c = waterReflection(p + n * 0.6, reflect(v, n), weight);
+    float fresnel = 0.04 + 0.96 * pow(1.0 - saturate(dot(-v, n)), 5.0);
+    float a = flat * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
+    if (a < 0.003) discard;
+    return float4(c, a);
+}
+
 // 0.69, the sky (haze.cpp): on a map under the open sky, where nothing is drawn - past the map's edge - a sky
 // instead of the void: from the horizon's colour (fogColor) to the zenith's (sourceRect.rgb) by how far up the pixel
 // looks in the world (reproject: the camera's axes, up is -y), clouds drifting on a far layer (twinX how many; under

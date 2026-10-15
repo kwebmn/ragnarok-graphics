@@ -149,6 +149,8 @@ enum class Text : uint16_t {
     FxMotes, FxMotesHint, FxMotesAmount, FxMotesAmountHint,
     // 0.71
     FxRelief, FxReliefHint, FxReliefStrength, FxReliefStrengthHint,
+    // 0.72
+    FxFloorReflections, FxFloorReflectionsHint, FxFloorReflectStrength, FxFloorReflectStrengthHint,
     Count
 };
 

@@ -40,3 +40,10 @@ TEST(relief_on_by_default_its_strength_bounded) {
     CHECK(parseConfig("[effects]\nrelief_strength = 0\n").effects.reliefStrength == 0);
     CHECK(!effectsOff().relief);
 }
+
+TEST(floor_reflections_on_by_default_their_shine_bounded) {
+    // 0.72: the floors reflect, indoors and in the rain.
+    CHECK(parseConfig("").effects.floorReflections && parseConfig("").effects.floorReflectStrength == 35);
+    CHECK(parseConfig("[effects]\nfloor_reflect_strength = 101\n").effects.floorReflectStrength == 35);
+    CHECK(!effectsOff().floorReflections);
+}

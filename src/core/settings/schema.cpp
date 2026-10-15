@@ -195,6 +195,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxReliefHint, ""},
         {"effects", "relief_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxReliefStrength,
          Text::FxReliefStrengthHint, " %"},
+        {"effects", "floor_reflections", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::FxFloorReflections, Text::FxFloorReflectionsHint, ""},
+        {"effects", "floor_reflect_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {},
+         Text::FxFloorReflectStrength, Text::FxFloorReflectStrengthHint, " %"},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -368,6 +372,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.motes_amount") return std::to_string(c.effects.motesAmount);
     if (k == "effects.relief") return c.effects.relief ? "1" : "0";
     if (k == "effects.relief_strength") return std::to_string(c.effects.reliefStrength);
+    if (k == "effects.floor_reflections") return c.effects.floorReflections ? "1" : "0";
+    if (k == "effects.floor_reflect_strength") return std::to_string(c.effects.floorReflectStrength);
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

@@ -415,6 +415,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.motesAmount = rd.i32();
             e.relief = rd.u8() != 0;  // 0.71
             e.reliefStrength = rd.i32();
+            e.floorReflections = rd.u8() != 0;  // 0.72
+            e.floorReflectStrength = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }
