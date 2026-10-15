@@ -1,3 +1,14 @@
+# uaRO Graphics 0.77.0 — testing
+
+What is new in 0.77.0 (Direct3D 12):
+- **Shadows of houses and trees** (Effects → "Shadows of houses and trees" and their darkness; on by default, 60 %).
+  On the fields and in the towns houses, walls and trees cast shadows on the ground away from the sun (as the
+  characters' do). With "Time of day" they turn and lengthen towards the evening; at night there are none. Dungeons and
+  houses are unchanged. Log: `sun's shadows: over <map>`; the cost - `sun's shadows` in the `GPU: effects a frame` line.
+
+How to test: Prontera, Payon (trees), Alberta; do they double with the map's baked shadows, are there stripes or noise
+on the ground; turn the camera - the shadows must stay put by the houses.
+
 # uaRO Graphics 0.76.0 — testing
 
 What is new in 0.76.0:
