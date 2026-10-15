@@ -1,6 +1,7 @@
 #include "core/twin_text.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 #include "core/twin.hpp"
 #include "core/twin_grid.hpp"
@@ -8,6 +9,22 @@
 namespace uagfx {
 
 int letterPen(int x, int advance, double K) { return twinEdge(x + advance, K); }
+
+std::vector<int> letterPens(int x, const std::vector<int>& ends, const std::vector<int>& advances, double K) {
+    const size_t n = std::min(ends.size(), advances.size());
+    std::vector<int> pens(n);
+    if (n == 0) return pens;
+    const int start = twinEdge(x, K);
+    double own = 0.0;
+    for (size_t i = 0; i < n; ++i) own += advances[i];
+    const double spread = (double(twinEdge(x + ends[n - 1], K) - start) - own) / double(n);
+    double at = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+        pens[i] = start + int(std::lround(at));
+        at += advances[i] + spread;
+    }
+    return pens;
+}
 
 int baselineRow(int y, int ascent, double K) { return twinEdge(y + ascent, K); }
 

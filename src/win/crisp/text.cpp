@@ -112,6 +112,7 @@ const GlyphBitmap* glyph(const BigFont& f, wchar_t ch) {
     GlyphBitmap g;
     g.originX = gm.gmptGlyphOrigin.x;
     g.originY = gm.gmptGlyphOrigin.y;
+    g.advance = gm.gmCellIncX;  // 0.41
     if (size > 0) {  // a space has no pixels
         std::vector<uint8_t> raw(size);
         if (GetGlyphOutlineW(g_glyphDc, ch, GGO_GRAY8_BITMAP, &gm, size, raw.data(), &identity) == GDI_ERROR)
@@ -156,7 +157,12 @@ void textOut(Picture& pic, HDC dc, int x, int y, LPCWSTR text, int count, Call&&
         GetTextMetricsW(dc, &tm) && GetTextExtentExPointW(dc, text, count, 0, nullptr, ends.data(), &extent))
         font = bigFont(dc, lf, s.K);
     bool letters = font != nullptr;
-    for (int i = 0; letters && i < count; ++i) letters = glyph(*font, text[i]) != nullptr;  // every one, or none
+    std::vector<int> advances(static_cast<size_t>(count));  // 0.41: the large letters' own
+    for (int i = 0; letters && i < count; ++i) {  // every one, or none
+        const GlyphBitmap* g = glyph(*font, text[i]);
+        letters = g != nullptr;
+        if (g) advances[size_t(i)] = g->advance;
+    }
     if (!letters) {  // like any other write: the small letters enlarged
         call();
         GdiFlush();
@@ -169,9 +175,9 @@ void textOut(Picture& pic, HDC dc, int x, int y, LPCWSTR text, int count, Call&&
     GdiFlush();
     const uint32_t rgb = textColor(GetTextColor(dc));
     const int baseline = baselineRow(y, tm.tmAscent, s.K);
+    const std::vector<int> pens = letterPens(x, ends, advances, s.K);  // 0.41: evenly spaced in the game's run
     for (int i = 0; i < count; ++i)
-        if (const GlyphBitmap* g = glyph(*font, text[i]))
-            drawGlyph(*pic.twin, *g, letterPen(x, i > 0 ? ends[size_t(i) - 1] : 0, s.K), baseline, rgb);
+        if (const GlyphBitmap* g = glyph(*font, text[i])) drawGlyph(*pic.twin, *g, pens[size_t(i)], baseline, rgb);
     pic.twin->absorb(pic.bits, r);  // the small letters stay out of the twin
 }
 
@@ -194,8 +200,8 @@ void fillRegion(Picture& pic, HRGN region) {
 
 }  // namespace
 
-// The game's TextOutW on a window picture's DC (spec §4): the same letters K times larger, each where the game put
-// its small one.
+// The game's TextOutW on a window picture's DC (spec §4): the same letters K times larger, (0.41) evenly spaced
+// where the game put its small ones.
 BOOL WINAPI hookTextOutW(HDC dc, int x, int y, LPCWSTR text, int count) {
     Guard guard;
     const auto real = reinterpret_cast<TextOutWFn>(state().textOutW);
