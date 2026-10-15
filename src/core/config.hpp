@@ -262,6 +262,9 @@ struct Config {
     bool dlssMotionInverted = false;
     bool vsync = true;
     int fpsLimit = 0;      // 0 = no limit
+    // 0.76: [frames] keep_fps - below this for ten seconds, the costliest effect goes off for the rest of the game
+    // (core/effect_costs.hpp); 0 = never
+    int keepFps = 0;
     bool fpsCounter = false;
     // 0.62: [display] ui_native - with render_scale over 100 % on Direct3D 12 (no DLSS): the world drawn larger and
     // made smaller, the interface drawn at the screen's own pixels (not drawn larger and made smaller with it)

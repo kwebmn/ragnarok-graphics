@@ -46,10 +46,11 @@ void releaseCom(T*& p) {
 }
 
 constexpr UINT kSlots = 2;              // submissions in flight
-// 0.39.2: the effects timed one by one, for the log (kEffectNames in device.cpp).
+// 0.39.2: the effects timed one by one, for the log (kEffectNames in device.cpp); 0.76: the sky, the light in the air
+// and the floors' reflections their own.
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
-    kTimeGlow, kTimeWater, kEffectTimes
+    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kEffectTimes
 };
 // GPU timestamps a slot: its list, the upscale, the AI textures' work, (0.39.2) a pair an effect.
 constexpr UINT kTimes = 6 + 2 * kEffectTimes;
@@ -519,6 +520,8 @@ struct Renderer::Impl {
     // 0.39.2: an effect's GPU time, between these two in one list (an effect that starts a new list is not timed).
     uint64_t effectTicks[kEffectTimes] = {};
     uint64_t effectSerial[kEffectTimes] = {};
+    double effectMs[kEffectTimes] = {};  // 0.76: the last half minute's, ms a frame (Renderer::effectCosts)
+    bool effectMsKnown = false;
     void effectBegin(EffectTimer e);
     void effectEnd(EffectTimer e);
     void noteGpuFrame();                   // after a present

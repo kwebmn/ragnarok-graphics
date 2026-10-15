@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/config.hpp"
+#include "core/effect_costs.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
 #include "core/start_screen.hpp"
@@ -110,7 +111,9 @@ public:
     // 0.62: [display] ui_native - the world `ratio` times the picture, made smaller into it, the interface at the
     // picture's pixels (setScale with upscale then); false where it cannot (Direct3D 11, the 64-bit renderer).
     bool setSupersample(double ratio);
-    bool setTaa(bool on);  // 0.75: [display] taa - Direct3D 12 in the game's process; false when it is not used
+    bool setTaa(bool on);  // 0.75: [quality] taa - Direct3D 12 in the game's process; false when it is not used
+    // 0.76: what the effects cost a frame, the last half minute (Direct3D 12 in the game's process); false: unknown
+    bool effectCosts(effect_costs::Costs& out) const;
     bool canSupersample() const { return !remote_ && !d3d11_ && !remix_; }
     // 0.39.5, before create(): the shaders' code is kept in this file between starts - compiled once, not each time.
     void setShaderCache(const std::string& file);

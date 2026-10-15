@@ -264,6 +264,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FramesFpsCounterHint, ""},
         {"frames", "fps_limit", Page::Frames, Control::Number, 0, 1000, 1, {}, {}, Text::FramesFpsLimit,
          Text::FramesFpsLimitHint, ""},
+        {"frames", "keep_fps", Page::Frames, Control::Number, 0, 240, 1, {}, {}, Text::FramesKeepFps,
+         Text::FramesKeepFpsHint, ""},
         {"frames", "allow_tearing", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesTearing,
          Text::FramesTearingHint, ""},
         {"debug", "log", Page::Diagnostics, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
@@ -400,6 +402,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.water_clarity") return std::to_string(c.effects.waterClarity);
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
+    if (k == "frames.keep_fps") return std::to_string(c.keepFps);
     if (k == "frames.fps_counter") return c.fpsCounter ? "1" : "0";
     if (k == "display.ui_native") return c.uiNative ? "1" : "0";
     if (k == "display.hdr") return c.hdr ? "1" : "0";

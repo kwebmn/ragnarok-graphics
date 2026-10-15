@@ -307,15 +307,19 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         for (Want& w : wants) {
             if (!w.code.empty()) continue;
             // As Direct3D 12 does (0.39.2): the optimiser fails now and then - then again with less of it.
-            static const UINT kLevels[3] = {D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCOMPILE_OPTIMIZATION_LEVEL1,
-                                            D3DCOMPILE_SKIP_OPTIMIZATION};
+            // 0.76: and at last without the newest features (UAGFX_SAFE), as pipeline.cpp does.
+            static const UINT kLevels[4] = {D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCOMPILE_OPTIMIZATION_LEVEL1,
+                                            D3DCOMPILE_SKIP_OPTIMIZATION, D3DCOMPILE_OPTIMIZATION_LEVEL1};
+            static const D3D_SHADER_MACRO kSafe[2] = {{"UAGFX_SAFE", "1"}, {nullptr, nullptr}};
             HRESULT hr = E_FAIL;
             std::string said;
-            for (int i = 0; i < 3 && FAILED(hr); ++i) {
+            for (int i = 0; i < 4 && FAILED(hr); ++i) {
                 ID3DBlob* code = nullptr;
                 ID3DBlob* errors = nullptr;
-                hr = compile(w.source, std::strlen(w.source), "uaro-graphics.hlsl", nullptr, nullptr, w.entry,
-                             w.profile, kLevels[i], 0, &code, &errors);
+                hr = compile(w.source, std::strlen(w.source), "uaro-graphics.hlsl", i == 3 ? kSafe : nullptr,
+                             nullptr, w.entry, w.profile, kLevels[i], 0, &code, &errors);
+                if (SUCCEEDED(hr) && i == 3)
+                    LOG_ERROR("Direct3D 11: shader %s compiled without the newest features", w.entry);
                 if (FAILED(hr) && i == 0 && errors)
                     said = std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize());
                 if (SUCCEEDED(hr) && code) {

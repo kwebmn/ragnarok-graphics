@@ -190,9 +190,10 @@ void Renderer::Impl::noteGpuFrame() {
     // 0.39.2: the effects one by one - what each of them costs a frame.
     static const char* const kEffectNames[kEffectTimes] = {
         "soft shadows", "clouds", "characters' shadows", "lights and torches", "haze", "heat haze", "colour",
-        "depth of field", "weather", "glow", "water's copies"};
+        "depth of field", "weather", "glow", "water's copies", "sky", "light in the air", "floor reflections"};
     std::string effects;
     for (UINT e = 0; e < kEffectTimes; ++e) {
+        effectMs[e] = double(effectTicks[e]) * ms;  // 0.76: for keep_fps and the settings app
         if (!effectTicks[e]) continue;
         char part[64];
         std::snprintf(part, sizeof part, "%s%s %.2f ms", effects.empty() ? "" : ", ", kEffectNames[e],
@@ -201,6 +202,7 @@ void Renderer::Impl::noteGpuFrame() {
         effectTicks[e] = 0;
     }
     if (!effects.empty()) LOG_INFO("GPU: effects a frame - %s", effects.c_str());
+    effectMsKnown = true;
     gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
     gpuSince = now;
@@ -1411,6 +1413,18 @@ bool Renderer::setSupersample(double ratio) {
     if (!supersample_) supersample_ = new Supersample();
     supersample_->setRatio(ratio);
     impl_->upscaler = supersample_;
+    return true;
+}
+
+bool Renderer::effectCosts(effect_costs::Costs& out) const {
+    // 0.76: the names effect_costs.cpp knows the passes by (kEffectNames' order)
+    static const char* const kNames[kEffectTimes] = {"ao",   "clouds", "actor_shadows", "lights", "haze",
+                                                     "heat", "grade",  "dof",           "weather", "glow",
+                                                     "water", "sky",   "shafts",        "floor"};
+    out.clear();
+    if (remote_ || d3d11_ || remix_ || !impl_->effectMsKnown) return false;
+    for (UINT e = 0; e < kEffectTimes; ++e)
+        if (impl_->effectMs[e] > 0.0) out[kNames[e]] = impl_->effectMs[e];
     return true;
 }
 

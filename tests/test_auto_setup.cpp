@@ -125,3 +125,14 @@ TEST(auto_setup_taa_for_cards_without_dlss) {
     old.vramMb = 1024;
     CHECK(valueOf(autoSetup(old), "quality", "taa") == "0");
 }
+
+TEST(auto_setup_keeps_the_frame_rate_on_smaller_cards) {
+    // 0.76: [frames] keep_fps 45 short of a strong card; a strong one decides itself.
+    CHECK(valueOf(autoSetup(rtx5060()), "frames", "keep_fps") == "0");
+    Machine old = rtx5060();
+    old.vendor = 0x1002;
+    old.d3d12 = false;
+    old.d3d11Level = 0xb000;
+    old.vramMb = 1024;
+    CHECK(valueOf(autoSetup(old), "frames", "keep_fps") == "45");
+}

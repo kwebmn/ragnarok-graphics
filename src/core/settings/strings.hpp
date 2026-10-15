@@ -157,6 +157,8 @@ enum class Text : uint16_t {
     FxDayCycle, FxDayCycleHint,
     // 0.75
     SmoothTaa, SmoothTaaHint,
+    // 0.76
+    FramesKeepFps, FramesKeepFpsHint, FxCostMs,
     Count
 };
 

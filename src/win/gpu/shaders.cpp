@@ -204,6 +204,7 @@ float4 smoothLightmap(float2 uv, float4 sharp) {
 // 0.71, the ground's relief: its picture's brightness as height (the dark cracks low), its slope across a texel
 // turned into the screen's directions (du, dv: the texture's steps a pixel) and lit from up left - a factor about 1
 // for the ground's colour; strength uiPixels.x (a world draw has no interface quad).
+#ifndef UAGFX_SAFE  // 0.76: the newest features, left out when a compiler will not take them (pipeline.cpp)
 float relief(float2 uv, float2 du, float2 dv) {
     float w, h;
     tex0.GetDimensions(w, h);
@@ -221,13 +222,16 @@ float relief(float2 uv, float2 du, float2 dv) {
     const float3 light = float3(-0.4706, -0.5752, 0.6690);  // normalised (-0.45, -0.55, 0.64)
     return clamp(dot(n, light) / light.z, 0.55, 1.3);
 }
+#endif
 
 float4 shade(PsIn i) {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
     float2 dv = ddy(uv0);
     float4 t0 = tex0.Sample(samp0, uv0);
+#ifndef UAGFX_SAFE
     if (((stage1.y >> 26) & 1) != 0) t0.rgb *= relief(uv0, du, dv);  // 0.71: the ground
+#endif
     if (uiMode == 3)
         t0 = twinTexel(i.pos.xy);
     else if (uiMode != 0)
@@ -258,12 +262,14 @@ float4 shade(PsIn i) {
     if (((alphaTest >> 18) & 1) != 0) c.a = 1.0;
     // 0.67, soft particles: an effect fades over the last few units before what is behind it (the frame's depth so
     // far, sceneDepth) - no hard line where it goes into the ground; its colour too when it adds light (bit 21).
+#ifndef UAGFX_SAFE
     if (((alphaTest >> 20) & 1) != 0) {
         float behind = viewDepth(sceneDepth.Load(int3(int2(i.pos.xy), 0))) - viewDepth(i.pos.z);
         float fade = smoothstep(0.0, 1.0, saturate(behind / 7.0));
         c.a *= fade;
         if (((alphaTest >> 21) & 1) != 0) c.rgb *= fade;
     }
+#endif
     return c;
 }
 

@@ -1,8 +1,11 @@
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
 #include <string>
 
+#include "app/files.hpp"
 #include "app/page.hpp"
+#include "core/effect_costs.hpp"
 #include "core/live_config.hpp"
 
 namespace uagfx::app {
@@ -80,6 +83,12 @@ public:
     void build(Panel& p) override {
         p.heading(t(Text::PageEffects));
         p.note(t(Text::FxIntro), Tone::Normal);
+        // 0.76: what each cost the card in the last game (the driver's uaro-graphics\effect-costs.txt)
+        std::string text;
+        const effect_costs::Costs costs =
+            readFile(host_.model().paths().dir + L"\\uaro-graphics\\effect-costs.txt", text)
+                ? effect_costs::parse(text)
+                : effect_costs::Costs{};
         bool objects = false;
         for (int e = 0; e < kEffectCount; ++e) {
             const Effect& fx = kEffects[e];
@@ -92,7 +101,14 @@ public:
             p.gap();
             const IniSetting& box = setting(fx.box);
             const bool on = isOn(fx.box);
-            p.check(boxId(e), t(box.label), on, t(box.hint));
+            std::wstring label = t(box.label);
+            const double ms = effect_costs::costOf(costs, fx.box);
+            if (ms >= 0.0) {
+                char v[16];
+                std::snprintf(v, sizeof v, "%.1f", std::max(ms, 0.1));
+                label += tf(Text::FxCostMs, {v});
+            }
+            p.check(boxId(e), label, on, t(box.hint));
             for (int k = 0; k < 2 && fx.checks[k]; ++k) {
                 const IniSetting& c = setting(fx.checks[k]);
                 p.check(checkId(e, k), t(c.label), isOn(fx.checks[k]), t(c.hint), on, true);

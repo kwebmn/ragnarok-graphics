@@ -84,21 +84,27 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
     const char* src = shaderSource();
     // 0.39.2: the compiler's optimiser fails now and then with an internal error ("argument pulled into unrelated
     // predicate": ray_glow_ps on a player's machine) - then again with less of it.
-    static const UINT kLevels[3] = {D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCOMPILE_OPTIMIZATION_LEVEL1,
-                                    D3DCOMPILE_SKIP_OPTIMIZATION};
+    // 0.76: and at last without the newest features (UAGFX_SAFE in shaders.cpp) - a compiler that will not take them
+    // leaves the picture as before them rather than none.
+    static const UINT kLevels[4] = {D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCOMPILE_OPTIMIZATION_LEVEL1,
+                                    D3DCOMPILE_SKIP_OPTIMIZATION, D3DCOMPILE_OPTIMIZATION_LEVEL1};
+    static const D3D_SHADER_MACRO kSafe[2] = {{"UAGFX_SAFE", "1"}, {nullptr, nullptr}};
     HRESULT hr = E_FAIL;
     std::string said;  // what the compiler said the first time
-    for (int i = 0; i < 3 && FAILED(hr); ++i) {
+    for (int i = 0; i < 4 && FAILED(hr); ++i) {
         ID3DBlob* errors = nullptr;
         out = nullptr;
-        hr = fn(src, std::strlen(src), "uaro-graphics.hlsl", nullptr, nullptr, entry, profile, kLevels[i], 0, &out,
-                &errors);
+        hr = fn(src, std::strlen(src), "uaro-graphics.hlsl", i == 3 ? kSafe : nullptr, nullptr, entry, profile,
+                kLevels[i], 0, &out, &errors);
         if (FAILED(hr) && i == 0) {
             said = errors ? std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize())
                           : std::string("compile failed");
             error = std::string("shader ") + entry + ": " + said;
         }
-        if (SUCCEEDED(hr) && i > 0)  // 0.39.3: a line of it is enough then
+        if (SUCCEEDED(hr) && i == 3)
+            LOG_ERROR("shader %s: compiled without the newest features (soft effects, ground relief) - %s", entry,
+                      errorLine(said).c_str());
+        else if (SUCCEEDED(hr) && i > 0)  // 0.39.3: a line of it is enough then
             LOG_INFO("shader %s: compiled with less optimisation - %s", entry, errorLine(said).c_str());
         releaseCom(errors);
     }

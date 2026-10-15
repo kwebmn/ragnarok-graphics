@@ -95,6 +95,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("fps_limit", std::to_string(running.fpsLimit), std::to_string(file.fpsLimit)));
         n.fpsLimit = file.fpsLimit;
     }
+    if (file.keepFps != running.keepFps) {  // 0.76
+        u.applied.push_back(change("keep_fps", std::to_string(running.keepFps), std::to_string(file.keepFps)));
+        n.keepFps = file.keepFps;
+    }
     if (file.allowTearing != running.allowTearing) u.waiting.push_back("allow_tearing");
     const EffectSettings& fe = file.effects;
     const EffectSettings& re = running.effects;
@@ -183,7 +187,7 @@ bool appliesNow(const std::string& k) {
            k == "display.window_art" ||
            k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
-           k == "frames.fps_limit" || k == "debug.log" || k.compare(0, 8, "effects.") == 0;
+           k == "frames.fps_limit" || k == "frames.keep_fps" || k == "debug.log" || k.compare(0, 8, "effects.") == 0;
 }
 
 }  // namespace uagfx

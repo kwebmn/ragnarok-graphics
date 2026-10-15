@@ -67,3 +67,10 @@ TEST(taa_off_unless_asked) {
     CHECK(!parseConfig("").taa);
     CHECK(parseConfig("[quality]\ntaa = 1\n").taa);
 }
+
+TEST(keep_fps_off_unless_asked_and_bounded) {
+    // 0.76: [frames] keep_fps
+    CHECK(parseConfig("").keepFps == 0);
+    CHECK(parseConfig("[frames]\nkeep_fps = 45\n").keepFps == 45);
+    CHECK(parseConfig("[frames]\nkeep_fps = 999\n").keepFps == 0);
+}

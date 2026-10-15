@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -80,6 +81,14 @@ private:
     ToggleKey fpsKey_;  // 0.54: Ctrl+Shift+F11 - the frame counter
     ToggleKey shotKey_;  // 0.54: Ctrl+Shift+F12 - a screenshot at the picture's full size
     bool fpsShown_ = false;
+    // 0.76: [frames] keep_fps - the frames counted since keepSince_, slow windows in a row, the effects turned off for
+    // this game; the effects' costs written for the settings app every half minute
+    void keepFrameRate(const Config& config, HWND window);
+    uint64_t keepSince_ = 0;
+    unsigned keepFrames_ = 0;
+    int keepSlow_ = 0;
+    std::set<std::string> keepOff_;
+    uint64_t costsWritten_ = 0;
     FpsOverlay fps_;
     Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)
     SIZE lastOut_{};

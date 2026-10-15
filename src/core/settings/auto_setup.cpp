@@ -74,6 +74,9 @@ AutoSetup autoSetup(const Machine& m) {
     const bool taa =
         m.vendor != kNvidia && (a.tier == Tier::High || (a.tier == Tier::Middle && pixels <= 2560LL * 1440));
     set(e, "quality", "taa", taa ? "1" : "0");
+    // 0.76: a card short of a strong one keeps 45 frames a second - the costliest effects go off when it cannot
+    const bool keep = a.tier == Tier::Old || a.tier == Tier::Low || a.tier == Tier::Middle;
+    set(e, "frames", "keep_fps", keep ? "45" : "0");
     // The effects of the Effects page: Direct3D 12's. A small card keeps the light ones.
     if (a.tier == Tier::Low)
         for (const char* k : {"ao", "dof", "clouds", "rays", "haze", "heat", "weather", "glow"})

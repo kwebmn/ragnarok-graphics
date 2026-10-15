@@ -1,7 +1,9 @@
 #include "win/context.hpp"
 
 #include <cstdio>
+#include <fstream>
 
+#include "core/effect_costs.hpp"
 #include "core/live_config.hpp"
 #include "core/scale.hpp"
 #include "win/crisp/crisp.hpp"
@@ -334,6 +336,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         }
     }
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);
+    keepFrameRate(config, window);
     EffectSettings fx = config.effects;  // 0.63: how much night now, by the clock; 0.74: the minute of the day
     if (fx.night || fx.dayCycle) {
         SYSTEMTIME t{};
@@ -341,6 +344,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         fx.nightNow = nightAmount(fx, t.wHour, t.wMinute);
         if (fx.dayCycle) fx.dayNow = t.wHour * 60 + t.wMinute;
     }
+    for (const std::string& k : keepOff_) effect_costs::drop(fx, k);  // 0.76
     renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
@@ -374,6 +378,52 @@ void Context::present(const Rect& source, bool waitForVblank) {
     fps_.present(window, fpsShown_);
     ++stats_.frames;
     logStats(false);
+}
+
+// 0.76: every half minute the effects' costs into uaro-graphics\effect-costs.txt (the settings app shows them);
+// [frames] keep_fps - the frames counted in five-second windows while the game is in front with every improvement on;
+// two slow windows in a row (under 90 % of it) turn the costliest effect off for the rest of the game.
+void Context::keepFrameRate(const Config& config, HWND window) {
+    const uint64_t now = GetTickCount64();
+    effect_costs::Costs costs;
+    const bool measured = renderer && renderer->effectCosts(costs);
+    if (measured && now - costsWritten_ >= 30000) {
+        costsWritten_ = now;
+        std::ofstream f(gameDir() + "\\uaro-graphics\\effect-costs.txt", std::ios::binary | std::ios::trunc);
+        f << effect_costs::format(costs);
+    }
+    if (config.keepFps <= 0) {
+        keepOff_.clear();  // turned off: the effects come back
+        keepSince_ = 0;
+        return;
+    }
+    if (!enhanced_ || !window || GetForegroundWindow() != window || IsIconic(window)) {
+        keepSince_ = 0;  // a frame rate in the background says nothing
+        return;
+    }
+    if (!keepSince_) {
+        keepSince_ = now;
+        keepFrames_ = 0;
+        return;
+    }
+    ++keepFrames_;
+    if (now - keepSince_ < 5000) return;
+    const double fps = double(keepFrames_) * 1000.0 / double(now - keepSince_);
+    keepSince_ = now;
+    keepFrames_ = 0;
+    keepSlow_ = fps < 0.9 * double(config.keepFps) ? keepSlow_ + 1 : 0;
+    if (keepSlow_ < 2) return;
+    keepSlow_ = 0;
+    EffectSettings fx = config.effects;
+    for (const std::string& k : keepOff_) effect_costs::drop(fx, k);
+    const std::string key = effect_costs::pickToDrop(fx, measured ? costs : effect_costs::Costs{}, keepOff_,
+                                                     startup().choice.api == Api::D3d11);
+    if (key.empty()) return;
+    keepOff_.insert(key);
+    const double ms = effect_costs::costOf(costs, key);
+    char cost[48] = "";
+    if (ms >= 0) std::snprintf(cost, sizeof cost, " (it cost %.2f ms)", ms);
+    LOG_INFO("keep_fps: %.0f fps, under %d - effects.%s off for this game%s", fps, config.keepFps, key.c_str(), cost);
 }
 
 void Context::watchSettings() {

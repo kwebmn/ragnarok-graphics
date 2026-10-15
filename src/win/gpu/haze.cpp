@@ -55,7 +55,7 @@ bool Renderer::Impl::applyHaze() {
 // sky, rays from where the sky shows past the map's edge (shafts_ps), added on.
 bool Renderer::Impl::applyShafts() {
     shaftsDone = true;
-    EffectTime timing(*this, kTimeLights);
+    EffectTime timing(*this, kTimeShafts);
     if (!ensureScene("light in the air") || !torchReady()) return true;
     ID3D12PipelineState* pso = addPipeline(shaftsPs, shaftsPipelines, upscale ? 1 : samples, "light in the air");
     if (!pso) return true;
@@ -93,7 +93,7 @@ bool Renderer::Impl::applyShafts() {
 // 0.72: the floors reflect what stands on them - indoors and in the rain (floor_reflect_ps, from the picture's copy).
 bool Renderer::Impl::applyFloorReflections() {
     floorReflectDone = true;
-    EffectTime timing(*this, kTimeWater);
+    EffectTime timing(*this, kTimeFloor);
     if (!ensureScene("floor reflections")) return true;
     ID3D12PipelineState* pso =
         alphaPipeline(floorReflectPs, floorReflectPipelines, upscale ? 1 : samples, "floor reflections");
@@ -122,7 +122,7 @@ bool Renderer::Impl::applyFloorReflections() {
 // 0.69: past the map's edge on a map under the open sky - the sky, its clouds, at night its stars (sky_ps).
 bool Renderer::Impl::applySky() {
     skyDone = true;
-    EffectTime timing(*this, kTimeHaze);
+    EffectTime timing(*this, kTimeSky);
     if (!ensureScene("sky")) return true;
     ID3D12PipelineState* pso = alphaPipeline(skyPs, skyPipelines, upscale ? 1 : samples, "sky");
     if (!pso) return true;
