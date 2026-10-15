@@ -1,3 +1,15 @@
+# uaRO Graphics 0.57.0 — testing
+
+What is new in 0.57.0 (weak graphics cards):
+- **AI textures compressed in video memory** (Direct3D 11): BC1 for the opaque pictures (an eighth of the memory),
+  BC3 for the ones with alpha (a quarter), made on the reading thread as they load. Settings → AI textures →
+  "Compress in video memory": Automatic (a card under 3 GB - the old Radeons, integrated graphics), On, Off
+  (`[ai] compress`). The log says "AI textures: kept compressed in video memory".
+- "Set up automatically" turns the world's AI textures on from 1 GB of video memory (was 2 GB).
+
+How to test: Direct3D 11, "Compress in video memory" On: the textures look the same at a glance, the log's "copies"
+line shows a fraction of the MB of before; Off for comparison.
+
 # uaRO Graphics 0.56.0 — testing
 
 What is new in 0.56.0:
