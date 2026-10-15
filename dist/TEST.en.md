@@ -1,3 +1,14 @@
+# uaRO Graphics 0.69.0 — testing
+
+What is new in 0.69.0 (Direct3D 12):
+- **Sky past the map's edge** (Effects → "Sky past the map's edge", clouds and strength; on by default). On the fields
+  and in the towns the void past the edge of the map (black or the haze's colour) now shows a sky: the map's haze
+  colour at the horizon, blue higher up, clouds drifting over it; looking down past the edge, a sea of clouds. At night
+  (the Night effect) the sky is dark with stars. Dungeons and houses are unchanged. Log: `sky: over <map>`.
+
+How to test: the edge of a field (prt_fild08, pay_fild01 by the edge), zoom the camera out and turn it so the void
+past the map shows; at night - the stars. Pause - compare.
+
 # uaRO Graphics 0.68.0 — testing
 
 What is new in 0.68.0 (Direct3D 12 and Direct3D 11, with the torches or the lamps on):
