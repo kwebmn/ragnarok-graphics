@@ -23,6 +23,7 @@ if exist "uaro-graphics-pipelines.txt" del /f "uaro-graphics-pipelines.txt"
 rem The shaders compiled at the first start and kept for the next ones are a cache too.
 if exist "uaro-graphics\shaders-32.bin" del /f "uaro-graphics\shaders-32.bin"
 if exist "uaro-graphics\shaders-64.bin" del /f "uaro-graphics\shaders-64.bin"
+if exist "uaro-graphics\shaders-d3d11.bin" del /f "uaro-graphics\shaders-d3d11.bin"
 rem The texture pack builder's status for the settings app goes too.
 if exist "uaro-graphics\pack-status.txt" del /f "uaro-graphics\pack-status.txt"
 if exist "uaro-graphics\pack-status.txt.part" del /f "uaro-graphics\pack-status.txt.part"
