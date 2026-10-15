@@ -459,15 +459,18 @@ const Entry kTexts[] = {
     {"3×", "3×", "3×"},
     {"Improve textures with a neural network (experiment)", "Покращувати текстури нейромережею (експеримент)",
      "Улучшать текстуры нейросетью (эксперимент)"},
-    {"While you play, a neural network (Real-ESRGAN) on your graphics card redraws the game's textures larger and "
-     "sharper, a little every frame; done ones go into upscaled.grf and show at once next time. Pause shows the "
-     "game's own. Any card with Direct3D 12; it starts the 64-bit renderer.",
-     "Поки ви граєте, нейромережа (Real-ESRGAN) на вашій відеокарті перемальовує текстури гри більшими й чіткішими, "
-     "потроху щокадру; готові йдуть в upscaled.grf і наступного разу з'являються одразу. Pause показує власні "
-     "текстури гри. Будь-яка відеокарта з Direct3D 12; вмикає 64-бітний рендер.",
-     "Пока вы играете, нейросеть (Real-ESRGAN) на вашей видеокарте перерисовывает текстуры игры крупнее и чётче, "
-     "понемногу каждый кадр; готовые идут в upscaled.grf и в следующий раз появляются сразу. Pause показывает "
-     "родные текстуры игры. Любая видеокарта с Direct3D 12; включает 64-битный рендер."},
+    {"The game's textures redrawn larger and sharper by a neural network (Real-ESRGAN): the ready pictures of the "
+     "texture pack uaro-textures.zip, which the Texture pack page makes once on a graphics card with Direct3D 12 - a "
+     "player's card makes nothing. Pause shows the game's own. Direct3D 12 draws them in the 64-bit renderer, "
+     "Direct3D 11 in the game itself.",
+     "Текстури гри, перемальовані нейромережею (Real-ESRGAN) більшими й чіткішими: готові картинки пакета текстур "
+     "uaro-textures.zip, який один раз створює вкладка «Пакет текстур» на відеокарті з Direct3D 12, — відеокарта "
+     "гравця нічого не створює. Pause показує власні текстури гри. Direct3D 12 малює їх у 64-бітному рендері, "
+     "Direct3D 11 — у самій грі.",
+     "Текстуры игры, перерисованные нейросетью (Real-ESRGAN) крупнее и чётче: готовые картинки пакета текстур "
+     "uaro-textures.zip, который один раз создаёт вкладка «Пакет текстур» на видеокарте с Direct3D 12, — видеокарта "
+     "игрока ничего не создаёт. Pause показывает родные текстуры игры. Direct3D 12 рисует их в 64-битном рендере, "
+     "Direct3D 11 — в самой игре."},
     {"GPU time a frame, ms", "Час відеокарти на кадр, мс", "Время видеокарты на кадр, мс"},
     {"How much of each frame the neural network may take, 1-20 ms: more makes textures faster, less keeps the "
      "frame rate.",
@@ -515,15 +518,12 @@ const Entry kTexts[] = {
      "Усе інше, що стоїть на карті: будинки, стіни, дерева, каміння, вода.",
      "Всё остальное, что стоит на карте: дома, стены, деревья, камни, вода."},
     {"Monsters", "Монстри", "Монстры"},
-    {"Monsters, pets, homunculi and mercenaries. Their animation frames are enlarged one by one as they come (a new "
-     "monster within a second or two, then at once from upscaled.grf). Small pixel pictures: the network may change "
-     "their look - try it and see.",
-     "Монстри, вихованці, гомункули й найманці. Кадри їхніх анімацій покращуються по одному, щойно з'являться "
-     "(новий монстр — за секунду-дві, далі одразу з upscaled.grf). Це маленькі піксельні картинки: нейромережа може "
-     "змінити їхній вигляд — спробуйте й подивіться.",
-     "Монстры, питомцы, гомункулы и наёмники. Кадры их анимаций улучшаются по одному, как только появятся (новый "
-     "монстр — за секунду-две, дальше сразу из upscaled.grf). Это маленькие пиксельные картинки: нейросеть может "
-     "изменить их вид — попробуйте и посмотрите."},
+    {"Monsters, pets, homunculi and mercenaries: their animation frames from the texture pack, one by one as the game "
+     "draws them. Small pixel pictures: the network may change their look - try it and see.",
+     "Монстри, вихованці, гомункули й найманці: кадри їхніх анімацій із пакета текстур, по одному, щойно гра їх "
+     "малює. Це маленькі піксельні картинки: нейромережа може змінити їхній вигляд — спробуйте й подивіться.",
+     "Монстры, питомцы, гомункулы и наёмники: кадры их анимаций из пакета текстур, по одному, как только игра их "
+     "рисует. Это маленькие пиксельные картинки: нейросеть может изменить их вид — попробуйте и посмотрите."},
     {"Skill effects", "Ефекти вмінь", "Эффекты умений"},
     {"Glows, sparks and light added onto the picture. Usually small and quick: the difference is little.",
      "Сяйва, іскри й світло, що додаються до картинки. Зазвичай маленькі й швидкі: різниця невелика.",
@@ -546,11 +546,11 @@ const Entry kTexts[] = {
     {"Drawn (animevideov3)", "Мальована (animevideov3)", "Рисованная (animevideov3)"},
     {"Result size", "Розмір результату", "Размер результата"},
     {"×4: a 256×256 texture becomes 1024×1024, about 5.6 MB of video memory with its smaller copies. ×2: 512×512, "
-     "about 1.4 MB - for cards with 4 GB or less; upscaled.grf grows 4 times slower too.",
-     "×4: текстура 256×256 стає 1024×1024 — близько 5,6 МБ відеопам'яті з меншими копіями. ×2: 512×512, близько "
-     "1,4 МБ — для відеокарт із 4 ГБ і менше; upscaled.grf теж росте вчетверо повільніше.",
-     "×4: текстура 256×256 становится 1024×1024 — около 5,6 МБ видеопамяти с уменьшенными копиями. ×2: 512×512, "
-     "около 1,4 МБ — для видеокарт с 4 ГБ и меньше; upscaled.grf тоже растёт вчетверо медленнее."},
+     "about 1.4 MB - for cards with 4 GB or less (the pack's pictures are taken at half their size).",
+     "×4: текстура 256×256 стає 1024×1024 — близько 5,6 МБ відеопам'яті з меншими копіями. ×2: 512×512, близько 1,4 "
+     "МБ — для відеокарт із 4 ГБ і менше (картинки пакета беруться вдвічі меншими).",
+     "×4: текстура 256×256 становится 1024×1024 — около 5,6 МБ видеопамяти с уменьшенными копиями. ×2: 512×512, около "
+     "1,4 МБ — для видеокарт с 4 ГБ и меньше (картинки пакета берутся вдвое меньшими)."},
     {"×4 - the sharpest", "×4 — найчіткіші", "×4 — самые чёткие"},
     {"×2 - a quarter of the memory", "×2 — учетверо менше пам'яті", "×2 — вчетверо меньше памяти"},
     {"Texture sides, from - to", "Сторони текстур, від — до", "Стороны текстур, от — до"},
@@ -563,25 +563,27 @@ const Entry kTexts[] = {
      "мелочи карты. Больше 512 требует много видеопамяти: нейросети нужно около 0,5 ГБ на 1024×1024."},
     {"Prepare a map's known textures in advance", "Заздалегідь готувати знайомі текстури карти",
      "Заранее готовить знакомые текстуры карты"},
-    {"Textures seen on a map before are taken from upscaled.grf (or made again after a change of settings) as soon "
-     "as the map loads, not when they come into view: fewer of them sharpen before your eyes.",
-     "Текстури, які вже траплялися на карті, беруться з upscaled.grf (або робляться знову після зміни налаштувань) "
-     "щойно карта завантажилась, а не коли потраплять у кадр: менше «проявлення» на очах.",
-     "Текстуры, которые уже встречались на карте, берутся из upscaled.grf (или делаются заново после смены "
-     "настроек) сразу после загрузки карты, а не когда попадут в кадр: меньше «проявления» на глазах."},
+    {"A map's textures the texture pack knows are taken from it as soon as the map loads, not when they come into "
+     "view: fewer of them sharpen before your eyes.",
+     "Текстури карти, які знає пакет текстур, беруться з нього щойно карта завантажилась, а не коли потраплять у "
+     "кадр: менше «проявлення» на очах.",
+     "Текстуры карты, которые знает пакет текстур, берутся из него сразу после загрузки карты, а не когда попадут в "
+     "кадр: меньше «проявления» на глазах."},
     {"Tick the box above and the network starts improving textures while you play. The Ready textures page shows "
      "and deletes what it has made.",
      "Поставте галочку вище — і нейромережа почне покращувати текстури, поки ви граєте. Сторінка «Готові текстури» "
      "показує й видаляє зроблене.",
      "Поставьте галочку выше — и нейросеть начнёт улучшать текстуры, пока вы играете. Страница «Готовые текстуры» "
      "показывает и удаляет сделанное."},
-    {"upscaled.grf: {1} textures of these settings, {2}. The file: {3} of the 4 GB the format allows.",
-     "upscaled.grf: текстур із цими налаштуваннями — {1}, {2}. Файл: {3} з 4 ГБ, які дозволяє формат.",
-     "upscaled.grf: текстур с этими настройками — {1}, {2}. Файл: {3} из 4 ГБ, которые позволяет формат."},
-    {"There is no upscaled.grf yet: the network makes it once it starts improving textures.",
-     "upscaled.grf ще немає: нейромережа створить його, коли почне покращувати текстури.",
-     "upscaled.grf пока нет: нейросеть создаст его, когда начнёт улучшать текстуры."},
-    {"upscaled.grf cannot be read: {1}", "upscaled.grf не читається: {1}", "upscaled.grf не читается: {1}"},
+    {"The texture pack uaro-textures.zip: {1} pictures, {2} (the file: {3}).",
+     "Пакет текстур uaro-textures.zip: картинок — {1}, {2} (файл: {3}).",
+     "Пакет текстур uaro-textures.zip: картинок — {1}, {2} (файл: {3})."},
+    {"There is no texture pack (uaro-textures.zip) yet: the Texture pack page makes it.",
+     "Пакета текстур (uaro-textures.zip) ще немає: його створює вкладка «Пакет текстур».",
+     "Пакета текстур (uaro-textures.zip) пока нет: его создаёт вкладка «Пакет текстур»."},
+    {"uaro-textures.zip cannot be read: {1}",
+     "uaro-textures.zip не читається: {1}",
+     "uaro-textures.zip не читается: {1}"},
     {"Map", "Карта", "Карта"},
     {"Ground", "Земля", "Земля"},
     {"Buildings", "Будівлі", "Здания"},
@@ -590,37 +592,44 @@ const Entry kTexts[] = {
     {"Total", "Усього", "Всего"},
     {"Size", "Розмір", "Размер"},
     {"All maps", "Усі карти", "Все карты"},
-    {"no map (icons; made before 0.12)", "без карти (іконки; зроблені до 0.12)",
-     "без карты (иконки; сделаны до 0.12)"},
+    {"no map (the builder's; icons)",
+     "без карти (від збирача; іконки)",
+     "без карты (от сборщика; иконки)"},
     {"Delete from the ticked maps:", "Видаляти з позначених карт:", "Удалять с отмеченных карт:"},
     {"Delete ticked", "Видалити позначене", "Удалить отмеченное"},
-    {"Delete outdated: {1}", "Видалити застарілі: {1}", "Удалить устаревшие: {1}"},
+    {"Delete the old upscaled.grf ({1})",
+     "Видалити старий upscaled.grf ({1})",
+     "Удалить старый upscaled.grf ({1})"},
     {"Delete all", "Видалити все", "Удалить всё"},
-    {"Outdated: made with another model, smoothing or size, or by an older version - the game no longer uses them. "
-     "A texture seen on several maps is on each of their rows. Deleted ones are made again when they turn up in the "
-     "game.",
-     "Застарілі — зроблені з іншою моделлю, згладжуванням чи розміром або старішою версією: гра їх більше не "
-     "використовує. Текстура, що траплялася на кількох картах, є в кожному їхньому рядку. Видалені робляться знову, "
-     "коли трапляться в грі.",
-     "Устаревшие — сделанные с другой моделью, сглаживанием или размером или старой версией: игра их больше не "
-     "использует. Текстура, встречавшаяся на нескольких картах, есть в каждой их строке. Удалённые делаются снова, "
-     "когда попадутся в игре."},
-    {"The game is running: textures can be deleted once it is closed (it keeps the file open).",
-     "Гра запущена: видаляти можна, коли вона закрита (вона тримає файл відкритим).",
-     "Игра запущена: удалять можно, когда она закрыта (она держит файл открытым)."},
-    {"Delete the ticked textures from upscaled.grf ({1})? They are made again when they turn up in the game.",
-     "Видалити позначені текстури з upscaled.grf ({1} шт.)? Вони зробляться знову, коли трапляться в грі.",
-     "Удалить отмеченные текстуры из upscaled.grf ({1} шт.)? Они сделаются снова, когда попадутся в игре."},
-    {"Delete the whole upscaled.grf ({1})? Every texture is made again when it turns up in the game.",
-     "Видалити весь upscaled.grf ({1})? Усі текстури зробляться знову, коли трапляться в грі.",
-     "Удалить весь upscaled.grf ({1})? Все текстуры сделаются снова, когда попадутся в игре."},
-    {"Deleted textures: {1}. upscaled.grf is {2} now.", "Видалено текстур: {1}. upscaled.grf тепер {2}.",
-     "Удалено текстур: {1}. upscaled.grf теперь {2}."},
-    {"upscaled.grf is deleted.", "upscaled.grf видалено.", "upscaled.grf удалён."},
+    {"The pictures the pack's builder made are of no map; the maps are noted when the game makes pictures itself "
+     "(making new ones while playing). Deleted pictures are made again by the Texture pack page. upscaled.grf "
+     "(0.11-0.47) is not used any more.",
+     "Картинки, які створив збирач пакета, без карти; карти записуються, коли картинки створює сама гра (створення "
+     "нових під час гри). Видалені картинки знову створює вкладка «Пакет текстур». upscaled.grf (0.11-0.47) більше не "
+     "використовується.",
+     "Картинки, которые создал сборщик пакета, без карты; карты записываются, когда картинки создаёт сама игра "
+     "(создание новых во время игры). Удалённые картинки снова создаёт вкладка «Пакет текстур». upscaled.grf "
+     "(0.11-0.47) больше не используется."},
+    {"The game or the pack's builder is running: pictures can be deleted once it is closed (it keeps the pack open).",
+     "Гра або збирач пакета запущені: видаляти можна, коли вони закриті (вони тримають пакет відкритим).",
+     "Игра или сборщик пакета запущены: удалять можно, когда они закрыты (они держат пакет открытым)."},
+    {"Delete the ticked pictures from the texture pack ({1})? The Texture pack page makes them again.",
+     "Видалити позначені картинки з пакета текстур ({1} шт.)? Вкладка «Пакет текстур» створить їх знову.",
+     "Удалить отмеченные картинки из пакета текстур ({1} шт.)? Вкладка «Пакет текстур» создаст их снова."},
+    {"Delete the whole texture pack ({1})? The Texture pack page makes it again.",
+     "Видалити весь пакет текстур ({1})? Вкладка «Пакет текстур» створить його знову.",
+     "Удалить весь пакет текстур ({1})? Вкладка «Пакет текстур» создаст его снова."},
+    {"Deleted pictures: {1}. The texture pack is {2} now.",
+     "Видалено картинок: {1}. Пакет текстур тепер {2}.",
+     "Удалено картинок: {1}. Пакет текстур теперь {2}."},
+    {"The texture pack is deleted.",
+     "Пакет текстур видалено.",
+     "Пакет текстур удалён."},
     {"Nothing to delete: tick maps in the table first.", "Нічого видаляти: спершу позначте карти в таблиці.",
      "Нечего удалять: сначала отметьте карты в таблице."},
-    {"upscaled.grf could not be changed: {1}", "Не вдалося змінити upscaled.grf: {1}",
-     "Не удалось изменить upscaled.grf: {1}"},
+    {"The texture pack could not be changed: {1}",
+     "Не вдалося змінити пакет текстур: {1}",
+     "Не удалось изменить пакет текстур: {1}"},
     {"{1} MB", "{1} МБ", "{1} МБ"},
     {"{1} GB", "{1} ГБ", "{1} ГБ"},
     {"Interface: icons, pictures, loading screen", "Інтерфейс: іконки, картинки, заставка",
@@ -981,15 +990,18 @@ const Entry kTexts[] = {
     {"As in the game (pixels)", "Як у грі (пікселі)", "Как в игре (пиксели)"},
     {"Make new ones while playing (debugging)", "Створювати нові під час гри (налагодження)",
      "Создавать новые во время игры (отладка)"},
-    {"The network makes in the game what the texture pack and upscaled.grf do not have yet, a little every frame. For "
-     "the pack's maker; players take the ready pack - their graphics card makes nothing.",
-     "Нейромережа створює в грі те, чого ще немає в пакеті текстур і upscaled.grf, потроху кожен кадр. Для того, "
-     "хто збирає пакет; гравці беруть готовий пакет - їхня відеокарта нічого не створює.",
-     "Нейросеть создаёт в игре то, чего ещё нет в пакете текстур и upscaled.grf, понемногу каждый кадр. Для того, "
-     "кто собирает пакет; игроки берут готовый пакет - их видеокарта ничего не создаёт."},
-    {"The textures come from the texture pack uaro-textures.zip in the game's folder (and from upscaled.grf).",
-     "Текстури беруться з пакета текстур uaro-textures.zip у теці гри (і з upscaled.grf).",
-     "Текстуры берутся из пакета текстур uaro-textures.zip в папке игры (и из upscaled.grf)."},
+    {"Direct3D 12: the network makes in the game what the texture pack does not have yet, a little every frame, and "
+     "writes it into the pack. For the pack's maker; players take the ready pack - their graphics card makes nothing.",
+     "Direct3D 12: нейромережа створює в грі те, чого ще немає в пакеті текстур, потроху кожен кадр, і дописує це в "
+     "пакет. Для того, хто збирає пакет; гравці беруть готовий пакет - їхня відеокарта нічого не створює.",
+     "Direct3D 12: нейросеть создаёт в игре то, чего ещё нет в пакете текстур, понемногу каждый кадр, и дописывает "
+     "это в пакет. Для того, кто собирает пакет; игроки берут готовый пакет - их видеокарта ничего не создаёт."},
+    {"The textures come from the texture pack uaro-textures.zip in the game's folder. What it lacks the game's log "
+     "says (\"not in the pack\").",
+     "Текстури беруться з пакета текстур uaro-textures.zip у теці гри. Чого в ньому бракує, пише журнал гри (\"not in "
+     "the pack\").",
+     "Текстуры берутся из пакета текстур uaro-textures.zip в папке игры. Чего в нём не хватает, пишет лог игры (\"not "
+     "in the pack\")."},
     {"Texture pack", "Пакет текстур", "Пакет текстур"},
     {"The texture pack - uaro-textures.zip in the game's folder - holds the AI's pictures of the game's textures, made "
      "once on this graphics card. Give it to other players: their game shows the pictures at once and their graphics "
@@ -1040,7 +1052,6 @@ const Entry kTexts[] = {
      "Нейросети - со страницы ИИ-текстур: {1} для карт, {2} для остального."},
     {"Make the pack", "Створити пакет", "Создать пакет"},
     {"Stop", "Зупинити", "Остановить"},
-    {"Check the keys", "Перевірити ключі", "Проверить ключи"},
     {"Make anew", "Створити заново", "Создать заново"},
     {"Copy the result", "Скопіювати результат", "Скопировать результат"},
     {"Throw away the {1} pictures of the pack and make it anew?",
@@ -1057,8 +1068,6 @@ const Entry kTexts[] = {
      "Картинки: {1} из {2}, {3} в секунду; осталось около {4}."},
     {"Pictures: {1} of {2}.", "Картинки: {1} з {2}.", "Картинки: {1} из {2}."},
     {"Now: {1}", "Зараз: {1}", "Сейчас: {1}"},
-    {"Checking the keys: {1} of {2} files.", "Перевірка ключів: {1} з {2} файлів.",
-     "Проверка ключей: {1} из {2} файлов."},
     {"Done: the pack holds {1} pictures, {2}.", "Готово: у пакеті {1} картинок, {2}.",
      "Готово: в пакете {1} картинок, {2}."},
     {"Stopped: {1} pictures made this time. Make the pack goes on from here.",
@@ -1068,22 +1077,12 @@ const Entry kTexts[] = {
     {"The builder closed before it finished. Make the pack goes on from where it stopped.",
      "Збирач закрився, не закінчивши. «Створити пакет» продовжить з того місця, де він зупинився.",
      "Сборщик закрылся, не закончив. «Создать пакет» продолжит с того места, где он остановился."},
-    {"The keys: {1}", "Ключі: {1}", "Ключи: {1}"},
-    {"Pictures of upscaled.grf no file gives: {1}", "Картинки upscaled.grf, яких не дає жоден файл: {1}",
-     "Картинки upscaled.grf, которых не даёт ни один файл: {1}"},
     {"The game is running: it shares the graphics card with the builder and may stutter meanwhile.",
      "Гра запущена: вона ділить відеокарту зі збирачем і тим часом може підгальмовувати.",
      "Игра запущена: она делит видеокарту со сборщиком и в это время может подтормаживать."},
     {"The pack is made in the background: this window can be closed, the work goes on.",
      "Пакет створюється у фоні: це вікно можна закрити, робота триває.",
      "Пакет создаётся в фоне: это окно можно закрыть, работа продолжится."},
-    {"Check the keys compares the pictures the pack would hold with the ones the game made into upscaled.grf (with "
-     "making new ones while playing on): whether the game will find the pack's pictures. Send the result to the "
-     "developers.",
-     "«Перевірити ключі» порівнює картинки, які міститиме пакет, з тими, що гра створила в upscaled.grf (зі "
-     "створенням нових під час гри): чи знайде гра картинки пакета. Надішли результат розробникам.",
-     "«Проверить ключи» сравнивает картинки, которые будут в пакете, с теми, что игра создала в upscaled.grf (с "
-     "созданием новых во время игры): найдёт ли игра картинки пакета. Отправь результат разработчикам."},
     {"{1} h {2} min", "{1} год {2} хв", "{1} ч {2} мин"},
     {"{1} min", "{1} хв", "{1} мин"},
     {"{1} s", "{1} с", "{1} с"},
@@ -1110,12 +1109,18 @@ const Entry kTexts[] = {
     {"Direct3D 11", "Direct3D 11", "Direct3D 11"},
     {"works, feature level {1}", "працює, рівень можливостей {1}", "работает, уровень возможностей {1}"},
     {"does not work ({1})", "не працює ({1})", "не работает ({1})"},
-    {"With Direct3D 11 (the Render page) the game shows the ready pictures of the texture pack and upscaled.grf; "
-     "making new ones while playing needs Direct3D 12.",
-     "З Direct3D 11 (вкладка «Рендер») гра показує готові картинки пакета текстур і upscaled.grf; створення нових під "
-     "час гри потребує Direct3D 12.",
-     "С Direct3D 11 (вкладка «Рендер») игра показывает готовые картинки пакета текстур и upscaled.grf; создание новых "
-     "во время игры требует Direct3D 12."},
+    {"With Direct3D 11 (the Render page) the game shows the ready pictures of the texture pack; making new ones while "
+     "playing needs Direct3D 12.",
+     "З Direct3D 11 (вкладка «Рендер») гра показує готові картинки пакета текстур; створення нових під час гри "
+     "потребує Direct3D 12.",
+     "С Direct3D 11 (вкладка «Рендер») игра показывает готовые картинки пакета текстур; создание новых во время игры "
+     "требует Direct3D 12."},
+    {"Delete upscaled.grf ({1})? It is not used any more: the textures come from the texture pack.",
+     "Видалити upscaled.grf ({1})? Він більше не використовується: текстури беруться з пакета текстур.",
+     "Удалить upscaled.grf ({1})? Он больше не используется: текстуры берутся из пакета текстур."},
+    {"upscaled.grf is deleted.",
+     "upscaled.grf видалено.",
+     "upscaled.grf удалён."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
@@ -1134,12 +1139,7 @@ const char* langToken(Lang l) { return l == Lang::Uk ? "uk" : l == Lang::Ru ? "r
 
 const char* langName(Lang l) { return l == Lang::Uk ? "Українська" : l == Lang::Ru ? "Русский" : "English"; }
 
-Lang langForWindows(uint16_t langId) {
-    const uint16_t primary = langId & 0x3FF;
-    if (primary == 0x22) return Lang::Uk;
-    if (primary == 0x19) return Lang::Ru;
-    return Lang::En;
-}
+Lang startLang(std::optional<Lang> chosen) { return chosen ? *chosen : Lang::En; }
 
 const char* tr(Lang l, Text t) {
     const Entry& e = kTexts[size_t(t)];

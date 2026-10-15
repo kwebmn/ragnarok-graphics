@@ -33,7 +33,7 @@ echo.
 echo uaRO Graphics is removed and dgVoodoo is back in place.
 echo uaro-graphics.ini, uaro-graphics.log and uaro-pack.log stay here; delete them if you like.
 echo The uaro-graphics-backup folder keeps the copies of your settings the settings app made.
-echo upscaled.grf keeps the AI textures made so far; delete it if you like.
+echo upscaled.grf of the versions before 0.48 is not used any more; delete it.
 echo uaro-textures.zip is the texture pack; delete it if you like.
 echo.
 pause

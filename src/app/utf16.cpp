@@ -21,4 +21,11 @@ std::string utf8(const std::wstring& w) {
     return out;
 }
 
+std::string ansi(const std::wstring& w) {
+    const int n = WideCharToMultiByte(CP_ACP, 0, w.c_str(), int(w.size()), nullptr, 0, nullptr, nullptr);
+    std::string out(size_t(n > 0 ? n : 0), '\0');
+    if (n > 0) WideCharToMultiByte(CP_ACP, 0, w.c_str(), int(w.size()), &out[0], n, nullptr, nullptr);
+    return out;
+}
+
 }  // namespace uagfx::app

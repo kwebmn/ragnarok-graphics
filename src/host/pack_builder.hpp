@@ -6,11 +6,11 @@
 
 namespace uagfx::host {
 
-// 0.43: uaro-render64.exe --pack check|build - the texture pack (uaro-textures.zip) made on this computer's graphics
+// 0.43: uaro-render64.exe --pack build - the texture pack (uaro-textures.zip) made on this computer's graphics
 // card for the settings app's "Texture pack" page, which starts it, reads its status file twice a second and asks it
 // to stop by a file of its own (the status file's name and ".stop").
 struct PackArgs {
-    std::string mode;    // "check": the builder's keys against upscaled.grf's pictures; "build": the pack
+    std::string mode;    // "build": the pack (0.48: "check", the keys against upscaled.grf, is gone with the file)
     std::string dir;     // the game's folder
     std::string out;     // the pack; uaro-textures.zip in the game's folder when empty
     std::string status;  // uaro-graphics\pack-status.txt in the game's folder when empty

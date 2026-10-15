@@ -8,6 +8,7 @@ namespace uagfx::app {
 
 std::wstring wide(const std::string& utf8);
 std::string utf8(const std::wstring& w);
+std::string ansi(const std::wstring& w);  // the paths the core's files take (fopen), as the driver's
 // The page texts (stage 2 spec §6) in the chosen language.
 std::wstring wtr(settings::Lang l, settings::Text t);
 std::wstring wtrf(settings::Lang l, settings::Text t, const std::vector<std::string>& args);

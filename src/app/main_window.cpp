@@ -36,7 +36,7 @@ int MainWindow::run(HINSTANCE inst, int show) {
     }
     model_ = std::make_unique<Model>();
     const auto saved = model_->savedLanguage();
-    lang_ = saved ? *saved : langForWindows(GetUserDefaultUILanguage());
+    lang_ = startLang(saved);  // 0.48: English until one is chosen
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof wc;
     wc.lpfnWndProc = proc;

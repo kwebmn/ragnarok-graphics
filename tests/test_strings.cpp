@@ -35,13 +35,13 @@ TEST(strings_fill_placeholders) {
           "Игра 1920×1080 → экран 3360×1890, интерфейс ×1,75");
 }
 
-TEST(strings_languages_and_windows) {
+TEST(strings_languages_and_the_first_one) {
     CHECK(parseLang("RU") == Lang::Ru);
     CHECK(parseLang("uk") == Lang::Uk);
     CHECK(!parseLang("de").has_value());
     CHECK(std::string(langToken(Lang::Uk)) == "uk");
-    CHECK(langForWindows(0x0422) == Lang::Uk);  // uk-UA
-    CHECK(langForWindows(0x0419) == Lang::Ru);  // ru-RU
-    CHECK(langForWindows(0x0409) == Lang::En);  // en-US
-    CHECK(langForWindows(0x0407) == Lang::En);  // de-DE
+    // 0.48: English until a language is chosen (it was the language of Windows); the chosen one stays.
+    CHECK(startLang(std::nullopt) == Lang::En);
+    CHECK(startLang(Lang::Ru) == Lang::Ru);
+    CHECK(startLang(Lang::Uk) == Lang::Uk);
 }

@@ -13,7 +13,6 @@
 #include "core/ai/ready.hpp"
 #include "core/config.hpp"
 #include "core/frame.hpp"
-#include "core/grf/grf.hpp"
 #include "core/texture_pack.hpp"
 #include "win/gpu/renderer.hpp"
 
@@ -25,12 +24,12 @@ struct IDXGIAdapter;
 
 namespace uagfx::gpu {
 
-// 0.47: the AI textures with Direct3D 11 - the ready pictures of the texture pack and upscaled.grf (core/ai/ready)
-// drawn in place of the game's textures as Direct3D 12 draws them (ai_textures.hpp), none made: no network runs in
-// the game's own process. A picture is read, decoded and given its mip levels on a thread of its own, which makes its
-// texture too (the device is free-threaded); the game's thread only puts it in. The game's sprite cache gets an
-// enlarged copy whose cells take their frames' pictures, the windows' icons go back to crisp text, and the copies keep
-// to a share of the video memory, as with Direct3D 12.
+// 0.47: the AI textures with Direct3D 11 - the ready pictures of the texture pack (core/ai/ready; 0.48: upscaled.grf
+// no more) drawn in place of the game's textures as Direct3D 12 draws them (ai_textures.hpp), none made: no network
+// runs in the game's own process. A picture is read, decoded and given its mip levels on a thread of its own, which
+// makes its texture too (the device is free-threaded); the game's thread only puts it in. The game's sprite cache gets
+// an enlarged copy whose cells take their frames' pictures, the windows' icons go back to crisp text, and the copies
+// keep to a share of the video memory, as with Direct3D 12.
 class Ai11 {
 public:
     Ai11(ID3D11Device* device, ID3D11DeviceContext* context, IDXGIAdapter* adapter);
@@ -84,8 +83,7 @@ private:
         Want want = Want::Texture;
         uint32_t id = 0;
         uint32_t serial = 0;  // a texture's Item::serial, a cell's frame
-        std::string name;
-        bool pack = false;
+        std::string name;     // the picture's in the pack
         int width = 0, height = 0;  // the game texture's, the cell's, the icon's
         int cellX = 0, cellY = 0;
         uint64_t iconKey = 0;
@@ -145,8 +143,7 @@ private:
     uint64_t frame_ = 0, aiBytes_ = 0, vramBudget_ = 0, systemBudget_ = 0, lastPutAway_ = 0;
     uint32_t putAway_ = 0, broughtBack_ = 0;
 
-    pack::Reader pack_;     // read by the thread; has() on either
-    grf::Archive archive_;  // the thread's once it runs
+    pack::Reader pack_;  // read by the thread; has() on either
     HANDLE thread_ = nullptr;
     HANDLE wake_ = nullptr;
     CRITICAL_SECTION lock_{};
@@ -156,9 +153,11 @@ private:
     std::deque<Result> out_;
     std::unordered_set<uint32_t> gone_;  // textures released while their pictures were asked for
 
-    uint32_t texturesPack_ = 0, texturesGrf_ = 0, cellsWritten_ = 0, cellsPack_ = 0, cellsGrf_ = 0;
-    uint32_t iconsPack_ = 0, iconsGrf_ = 0, iconsNone_ = 0, failed_ = 0, soft_ = 0, waiting_ = 0;
+    uint32_t texturesTaken_ = 0, cellsWritten_ = 0, cellsTaken_ = 0, iconsTaken_ = 0, iconsNone_ = 0;
+    uint32_t failed_ = 0, soft_ = 0, waiting_ = 0;
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run
+    // 0.48 (in place of the settings app's "Check the keys"): what the pack has no picture of, by kind; frames.
+    uint32_t missing_[ai::kKinds] = {}, cellsMissing_ = 0;
     ULONGLONG lastLog_ = 0;
 };
 

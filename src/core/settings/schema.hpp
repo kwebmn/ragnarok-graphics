@@ -10,8 +10,8 @@ namespace uagfx::settings {
 
 // The settings app's pages in the order of its list (stage 2 spec §6.1): Chat holds the whisper, login and chat macro
 // rows the Game page has no room for; Smoothing comes with stage 4 (spec §13), Input and dgVoodoo with 0.6.3; Ai (the
-// [ai] section) and AiCache (what upscaled.grf holds) with 0.12; Effects (the [effects] section) with 0.18; Pack (the
-// texture pack's builder) with 0.43.
+// [ai] section) and AiCache (what the texture pack holds, 0.48) with 0.12; Effects (the [effects] section) with 0.18;
+// Pack (the texture pack's builder) with 0.43.
 enum class Page : uint8_t {
     Render, Screen, Quality, Smoothing, Effects, Ai, AiCache, Pack, Frames, Sound, Game, Chat, Diagnostics, Service
 };

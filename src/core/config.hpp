@@ -16,8 +16,8 @@ enum class UiFilter { Sharp, Smooth };  // [display] ui_filter: how magnified in
 enum class WindowArt { Xbr, Ai, Pixels };
 
 // [ai] (0.12; 0.11's [quality] ai_textures, ai_budget and ai_denoise are read when [ai] has no such key): the world's
-// textures enlarged by a neural network on the GPU (Real-ESRGAN, experiment; it starts the 64-bit renderer) and kept
-// in upscaled.grf next to uaRO.exe.
+// textures enlarged by a neural network (Real-ESRGAN): 0.48 - the pictures of the texture pack uaro-textures.zip next
+// to uaRO.exe (upscaled.grf until 0.47), its builder on the Texture pack page.
 struct AiSettings {
     bool enabled = false;
     // What it works on, the kinds the driver tells apart by how the game draws them (core/ai/kinds.hpp).
@@ -40,10 +40,11 @@ struct AiSettings {
     int budget = 2;    // ms of GPU time a frame, 1-20
     int minSize = 16;  // the textures it takes: both sides from min_size to max_size, 16-1024 (0.17: 16, was 64)
     int maxSize = 512;
-    // 0.42: the network makes in the game what the texture pack (uaro-textures.zip) and upscaled.grf do not have - a
-    // debugging aid of the pack's maker. Off: no model is even loaded; the players' textures come from the pack.
+    // 0.42: the network makes in the game what the texture pack (uaro-textures.zip) does not have (0.48: and writes it
+    // into the pack) - a debugging aid of the pack's maker. Off: no model is even loaded; the players' textures come
+    // from the pack.
     bool generate = false;
-    bool ahead = true;  // a map's textures known from earlier visits are done at once, not when they come into view
+    bool ahead = true;  // a map's textures the pack's index knows are taken at once, not when they come into view
     bool operator==(const AiSettings& o) const;
     bool operator!=(const AiSettings& o) const { return !(*this == o); }
 };

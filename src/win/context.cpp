@@ -123,7 +123,7 @@ bool Context::open(std::string& error) {
     renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
     LOG_INFO("%s renderer on %s", d3d11 ? "Direct3D 11" : "Direct3D 12", renderer->adapterName().c_str());
-    // 0.47: the AI textures with Direct3D 11 - the texture pack's and upscaled.grf's pictures, in the game's process.
+    // 0.47: the AI textures with Direct3D 11 - the texture pack's pictures, in the game's process.
     const bool aiHere = d3d11 && config.ai.enabled && renderer->startAiTextures(gameDir(), config.ai);
     crisp::setWindowArt(config.windowArt);  // 0.41: before the first twin
     crisp::install(config.crispText);
@@ -283,8 +283,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
             LOG_INFO("DLSS: the game's camera %s", known ? "found" : "not in view (no world shown, or another exe)");
         }
     }
-    // AI textures: upscaled.grf notes the maps textures are seen on; 0.25: the map's file - its lamps and the torches
-    // the game does not show.
+    // AI textures: the pack's index notes the maps textures are seen on (making them); 0.25: the map's file - its lamps
+    // and the torches the game does not show.
     if ((config.ai.enabled && renderer->remote()) || !config.remix) {
         const std::string map = readGameMap();
         if (map != map_) {

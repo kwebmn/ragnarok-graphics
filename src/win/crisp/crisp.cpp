@@ -182,7 +182,7 @@ constexpr uint64_t kXbrKey = 0x5842522058425221ull;  // xBR's picture of a key: 
 const State::Icon& keepIcon(uint64_t key, int width, int height, std::vector<uint32_t> argb) {
     State& s = state();
     // The game's address space is 32-bit: 96 MB of them at most - an NPC's illustration made 4 times larger is some
-    // ten; the oldest go first and are asked for again when drawn (upscaled.grf has them by then).
+    // ten; the oldest go first and are asked for again when drawn (the texture pack has them).
     const size_t bytes = size_t(width) * size_t(height) * 4, budget = size_t(96) << 20;
     while (!s.iconOrder.empty() && s.iconBytes + bytes > budget) {
         const auto old = s.icons.find(s.iconOrder.front());

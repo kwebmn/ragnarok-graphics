@@ -1032,7 +1032,7 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
 
 void Renderer::Impl::destroy() {
     if (device && fence) waitIdle();
-    delete ai;  // its last results go into upscaled.grf
+    delete ai;  // its last results go into the texture pack
     ai = nullptr;
     releaseSwapChain();
     for (auto& t : textures) {

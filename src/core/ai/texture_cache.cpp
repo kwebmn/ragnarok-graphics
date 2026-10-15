@@ -7,17 +7,6 @@
 #include <cstring>
 
 namespace uagfx::ai {
-namespace {
-
-void put32(std::vector<uint8_t>& b, uint32_t v) {
-    for (int i = 0; i < 4; ++i) b.push_back(uint8_t(v >> (8 * i)));
-}
-uint32_t get32(const uint8_t* p) {
-    return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24;
-}
-
-}  // namespace
-
 TextureKey textureKey(const uint32_t* argb, int width, int height) {
     uint64_t h = 1469598103934665603ull;
     const auto mix = [&h](uint32_t v) {
@@ -38,87 +27,6 @@ std::string keyName(const TextureKey& k) {
     return std::to_string(k.width) + "x" + std::to_string(k.height) + "\\" + hex;
 }
 
-std::string entryName(const std::string& folder, const TextureKey& k) { return entryName(folder, keyName(k)); }
-
-std::string entryName(const std::string& folder, const std::string& key) {
-    return entryFolder(folder) + key + ".tex";
-}
-
-std::string entryFolder(const std::string& folder) { return "ai\\" + folder + "\\"; }
-
-std::string netFolder(const std::string& model, int denoise, int scale) {
-    const std::string size = scale == 2 ? "-x2" : "";
-    if (model == "anime") return "realesr-animevideov3-r2" + size;
-    return "realesr-general-x4v3-dn" + std::to_string(std::clamp(denoise, 0, 100)) + "-r2" + size;
-}
-
-std::string kindFolder(const std::string& netFolder, Kind kind) {
-    return kind == Kind::Icons ? netFolder + "-ui" : netFolder;
-}
-
-std::string kindTag(Kind kind, const std::string& key) {
-    return std::string("ai\\@kind\\") + kindName(kind) + "\\" + key;
-}
-
-std::string mapTag(const std::string& map, const std::string& key) { return "ai\\@map\\" + map + "\\" + key; }
-
-namespace {
-
-// "256x256\0123456789abcdef": a size and 16 hex digits.
-bool isKey(const std::string& s) {
-    const size_t slash = s.find('\\');
-    if (slash == std::string::npos || s.size() != slash + 17) return false;
-    const size_t x = s.find('x');
-    if (x == 0 || x == std::string::npos || x + 1 >= slash) return false;
-    for (size_t i = 0; i < slash; ++i)
-        if (i != x && !std::isdigit(static_cast<unsigned char>(s[i]))) return false;
-    for (size_t i = slash + 1; i < s.size(); ++i)
-        if (!std::isxdigit(static_cast<unsigned char>(s[i])) || std::isupper(static_cast<unsigned char>(s[i])))
-            return false;
-    return true;
-}
-
-// The first part of `rest` up to a backslash, and rest after it; false when there is none.
-bool split(std::string& rest, std::string& first) {
-    const size_t slash = rest.find('\\');
-    if (slash == std::string::npos || slash == 0) return false;
-    first = rest.substr(0, slash);
-    rest = rest.substr(slash + 1);
-    return true;
-}
-
-}  // namespace
-
-ParsedEntry parseEntry(const std::string& name) {
-    ParsedEntry e;
-    if (name.compare(0, 3, "ai\\") != 0) return e;
-    std::string rest = name.substr(3), first;
-    if (!split(rest, first)) return e;
-    if (first == "@kind") {
-        std::string kind;
-        if (split(rest, kind) && parseKind(kind, e.kind) && isKey(rest)) {
-            e.type = ParsedEntry::KindTag;
-            e.key = rest;
-        }
-        return e;
-    }
-    if (first == "@map") {
-        std::string map;
-        if (split(rest, map) && isKey(rest)) {
-            e.type = ParsedEntry::MapTag;
-            e.map = map;
-            e.key = rest;
-        }
-        return e;
-    }
-    if (rest.size() > 4 && rest.compare(rest.size() - 4, 4, ".tex") == 0 && isKey(rest.substr(0, rest.size() - 4))) {
-        e.type = ParsedEntry::Picture;
-        e.folder = first;
-        e.key = rest.substr(0, rest.size() - 4);
-    }
-    return e;
-}
-
 std::string mapName(const char* raw, size_t size) {
     std::string out;
     for (size_t i = 0; i < size && raw[i]; ++i) {
@@ -128,17 +36,6 @@ std::string mapName(const char* raw, size_t size) {
         out += c;
     }
     return out.size() <= 40 ? out : "";
-}
-
-std::vector<uint8_t> encodeTexture(const uint32_t* argb, int width, int height) {
-    std::vector<uint8_t> b;
-    b.reserve(16 + size_t(width) * size_t(height) * 4);
-    for (const char c : {'U', 'A', 'T', 'X'}) b.push_back(uint8_t(c));  // (insert of a list: a false GCC warning)
-    put32(b, 1);
-    put32(b, uint32_t(width));
-    put32(b, uint32_t(height));
-    for (size_t i = 0, n = size_t(width) * size_t(height); i < n; ++i) put32(b, argb[i]);
-    return b;
 }
 
 void halve(std::vector<uint32_t>& argb, int& width, int& height) {
@@ -163,17 +60,6 @@ void halve(std::vector<uint32_t>& argb, int& width, int& height) {
     argb = std::move(out);
     width = w;
     height = h;
-}
-
-bool decodeTexture(const std::vector<uint8_t>& blob, std::vector<uint32_t>& argb, int& width, int& height) {
-    if (blob.size() < 16 || std::memcmp(blob.data(), "UATX", 4) != 0 || get32(blob.data() + 4) != 1) return false;
-    const uint32_t w = get32(blob.data() + 8), h = get32(blob.data() + 12);
-    if (w == 0 || h == 0 || w > 16384 || h > 16384 || blob.size() != 16 + size_t(w) * h * 4) return false;
-    width = int(w);
-    height = int(h);
-    argb.resize(size_t(w) * h);
-    for (size_t i = 0; i < argb.size(); ++i) argb[i] = get32(blob.data() + 16 + i * 4);
-    return true;
 }
 
 bool hasTransparency(const uint32_t* argb, int width, int height) {

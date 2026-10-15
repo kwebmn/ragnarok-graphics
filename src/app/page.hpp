@@ -66,7 +66,7 @@ std::unique_ptr<Page> makeScreenPage(PageHost& host);
 std::unique_ptr<Page> makeDiagnosticsPage(PageHost& host);
 std::unique_ptr<Page> makeServicePage(PageHost& host);
 std::unique_ptr<Page> makeAiPage(PageHost& host);       // 0.12: the [ai] section
-std::unique_ptr<Page> makeAiCachePage(PageHost& host);  // 0.12: what upscaled.grf holds
+std::unique_ptr<Page> makeAiCachePage(PageHost& host);  // 0.12: what the texture pack holds (0.48)
 std::unique_ptr<Page> makeEffectsPage(PageHost& host);  // 0.18: the [effects] section
 std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pack's builder
 

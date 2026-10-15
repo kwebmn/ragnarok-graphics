@@ -64,7 +64,6 @@ Ai11::~Ai11() {
         release(c.second.texture);
     }
     if (lockMade_) DeleteCriticalSection(&lock_);
-    archive_.close();
     release(adapter_);
 }
 
@@ -85,26 +84,16 @@ bool Ai11::start(const std::string& gameDir, const AiSettings& s, std::string& e
     std::string why;
     if (!pack_.open(packPath, why) && GetFileAttributesA(packPath.c_str()) != INVALID_FILE_ATTRIBUTES)
         LOG_ERROR("AI textures: the texture pack cannot be read (%s)", why.c_str());
-    if (pack_.isOpen()) {
-        std::vector<uint8_t> index;
-        if (!pack_.read(pack::kIndexName, index)) index.clear();
-        const pack::Reader* reader = &pack_;
-        pictures_->addPack([reader](const std::string& name) { return reader->has(name); },
-                           std::string(index.begin(), index.end()));
-    }
-    // upscaled.grf read only: the game that makes the pictures (Direct3D 12) writes it.
-    const std::string cache = gameDir + "\\upscaled.grf";
-    if (std::FILE* f = std::fopen(cache.c_str(), "rb")) {
-        if (archive_.open(f, false, why))  // the archive closes the file, also when it fails
-            pictures_->addGrf(archive_.names());
-        else
-            LOG_ERROR("AI textures: upscaled.grf cannot be read (%s)", why.c_str());
-    }
-    if (!pack_.isOpen() && !archive_.isOpen()) {
-        error = "no texture pack (uaro-textures.zip) and no upscaled.grf in the game's folder - there is nothing to "
-                "show (with Direct3D 11 the textures are not made in the game)";
+    if (!pack_.isOpen()) {
+        error = "no texture pack (uaro-textures.zip) in the game's folder - there is nothing to show (its builder is "
+                "on the Texture pack page of the settings)";
         return false;
     }
+    std::vector<uint8_t> index;
+    if (!pack_.read(pack::kIndexName, index)) index.clear();
+    const pack::Reader* reader = &pack_;
+    pictures_->addPack([reader](const std::string& name) { return reader->has(name); },
+                       std::string(index.begin(), index.end()));
     systemBudget_ = videoMemory(nullptr);
     vramBudget_ = ai::copiesBudget(systemBudget_);
     InitializeCriticalSection(&lock_);
@@ -121,20 +110,14 @@ bool Ai11::start(const std::string& gameDir, const AiSettings& s, std::string& e
     for (int k = 0; k < ai::kKinds; ++k)
         kinds += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) +
                  (pictures_->kindOn(ai::Kind(k)) ? " on" : " off");
-    LOG_INFO("AI textures: on with Direct3D 11 - %s; x%d, textures %d-%d, ahead %s; the pack's and upscaled.grf's "
-             "pictures only%s",
+    LOG_INFO("AI textures: on with Direct3D 11 - %s; x%d, textures %d-%d, ahead %s; the pack's pictures only%s",
              kinds.c_str(), scale_, minSide_, maxSide_, s.ahead ? "on" : "off",
              s.generate ? " (making new ones in the game needs Direct3D 12)" : "");
-    if (archive_.isOpen())
-        LOG_INFO("AI textures: upscaled.grf has %u textures of these settings (and %u of others, not used)",
-                 static_cast<unsigned>(pictures_->grfPictures()), static_cast<unsigned>(pictures_->otherPictures()));
-    if (pack_.isOpen())
-        LOG_INFO("AI textures: the texture pack uaro-textures.zip has %u pictures (%u keys known ahead, %u of a lower "
-                 "texture detail)",
-                 static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)),
-                 static_cast<unsigned>(pictures_->ahead()), static_cast<unsigned>(pictures_->aliases()));
-    else
-        LOG_INFO("AI textures: no texture pack (uaro-textures.zip) in the game's folder");
+    LOG_INFO("AI textures: the texture pack uaro-textures.zip has %u pictures (%u keys known ahead, %u of a lower "
+             "texture detail)%s",
+             static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)),
+             static_cast<unsigned>(pictures_->ahead()), static_cast<unsigned>(pictures_->aliases()),
+             pack_.recovered() ? " - cut short, read by its pictures' headers, without its index" : "");
     LOG_INFO("AI textures: the copies keep to %llu MB of video memory (the system gives the game %llu MB)",
              static_cast<unsigned long long>(vramBudget_ >> 20), static_cast<unsigned long long>(systemBudget_ >> 20));
     return true;
@@ -199,14 +182,14 @@ void Ai11::begin(uint32_t id, Item& item, ai::Kind kind) {
         ++soft_;
         return;
     }
-    ai::ReadyPictures::Source s;
-    if (!pictures_->texture(item.key, kind, s)) return;  // none made: the game's
-    item.state = Item::Waiting;
     Request r;
+    if (!pictures_->texture(item.key, kind, r.name)) {  // none made: the game's
+        ++missing_[int(kind)];
+        return;
+    }
+    item.state = Item::Waiting;
     r.id = id;
     r.serial = item.serial;
-    r.name = s.name;
-    r.pack = s.pack;
     r.width = item.width;
     r.height = item.height;
     request(std::move(r));
@@ -218,7 +201,7 @@ void Ai11::noteWorldUse(uint32_t id, ai::Kind kind) {
     if (it == items_.end()) return;
     Item& item = it->second;
     item.lastUse = frame_;
-    if (item.state == Item::Away) {  // 0.44: its copy was put away - back from the pack or upscaled.grf
+    if (item.state == Item::Away) {  // 0.44: its copy was put away - back from the pack
         bringBack(id, item);
         return;
     }
@@ -242,17 +225,14 @@ void Ai11::noteUiUse(uint32_t id) {
 }
 
 void Ai11::bringBack(uint32_t id, Item& item) {
-    ai::ReadyPictures::Source s;
-    if (!pictures_->texture(item.key, item.kind, s)) {
+    Request r;
+    if (!pictures_->texture(item.key, item.kind, r.name)) {
         item.state = Item::Skipped;
         return;
     }
     item.state = Item::Waiting;
-    Request r;
     r.id = id;
     r.serial = item.serial;
-    r.name = s.name;
-    r.pack = s.pack;
     r.width = item.width;
     r.height = item.height;
     request(std::move(r));
@@ -305,7 +285,7 @@ void Ai11::putAwayOld() {
 }
 
 // The game's sprite cache (0.13): its enlarged copy takes each new frame at once as the game has it, every texel
-// scale x scale, and the frame's picture when the pack or upscaled.grf has it and the cell still holds that frame.
+// scale x scale, and the frame's picture when the pack has it and the cell still holds that frame.
 bool Ai11::cellOn(uint8_t source) const {
     switch (sprite_exe::Source(source)) {
         case sprite_exe::Source::Monster: return settings_.monsters;
@@ -327,7 +307,6 @@ void Ai11::noteCells(uint32_t id, int width, int height, const UploadCmd& u, con
         items_.erase(item);
     }
     if (!pictures_->anyCells()) return;
-    if (!pack_.isOpen() && !pictures_->grfPictures()) return;  // nothing to show: as the game has them
     auto a = atlases_.find(id);
     const bool made = a == atlases_.end();
     if (made) {
@@ -376,14 +355,14 @@ void Ai11::noteCells(uint32_t id, int width, int height, const UploadCmd& u, con
             ++soft_;
             continue;
         }
-        ai::ReadyPictures::Source s;
-        if (!pictures_->cell(ai::keyName(ai::textureKey(pixels.data(), w, h)), s)) continue;
         Request r;
+        if (!pictures_->cell(ai::keyName(ai::textureKey(pixels.data(), w, h)), r.name)) {
+            ++cellsMissing_;
+            continue;
+        }
         r.want = Want::Cell;
         r.id = id;
         r.serial = frame;
-        r.name = s.name;
-        r.pack = s.pack;
         r.width = w;
         r.height = h;
         r.cellX = c.left;
@@ -465,15 +444,12 @@ void Ai11::noteIcon(uint64_t key, int width, int height, const uint32_t* argb) {
     if (!ready_ || !pictures_->kindOn(ai::Kind::Icons) || width <= 0 || height <= 0 || !argb ||
         !icons_.insert(key).second)
         return;
-    ai::ReadyPictures::Source s;
-    if (!pictures_->icon(ai::keyName(ai::textureKey(argb, width, height)), s)) {
+    Request r;
+    if (!pictures_->icon(ai::keyName(ai::textureKey(argb, width, height)), r.name)) {
         noPicture_.push_back(key);  // told at the next frame: not from inside the window's drawing that asks
         return;
     }
-    Request r;
     r.want = Want::Icon;
-    r.name = s.name;
-    r.pack = s.pack;
     r.width = width;
     r.height = height;
     r.iconKey = key;
@@ -518,7 +494,7 @@ void Ai11::take(Result& r) {
         if (r.ok && !r.levels.empty() && iconSink_) {
             const Level& l = r.levels[0];
             iconSink_(iconContext_, q.iconKey, l.width, l.height, l.argb.data());
-            ++(q.pack ? iconsPack_ : iconsGrf_);
+            ++iconsTaken_;
         } else if (!r.ok) {
             ++failed_;
             noPicture_.push_back(q.iconKey);
@@ -535,7 +511,7 @@ void Ai11::take(Result& r) {
         for (size_t i = 0; i < r.levels.size(); ++i)
             writeLevel(q.id, a, int(i), (q.cellX * scale_) >> i, (q.cellY * scale_) >> i, r.levels[i].width,
                        r.levels[i].height, r.levels[i].argb.data());
-        ++(q.pack ? cellsPack_ : cellsGrf_);
+        ++cellsTaken_;
         return;
     }
     const auto it = items_.find(q.id);
@@ -562,7 +538,7 @@ void Ai11::take(Result& r) {
     aiBytes_ += c.bytes;
     it->second.state = Item::Done;
     it->second.lastUse = frame_;
-    ++(q.pack ? texturesPack_ : texturesGrf_);
+    ++texturesTaken_;
 }
 
 void Ai11::request(Request r) {
@@ -616,17 +592,12 @@ void Ai11::ioLoop() {
 
 bool Ai11::load(const Request& r, std::vector<uint32_t>& argb, int& width, int& height) {
     std::vector<uint8_t> blob;
-    if (r.pack) {
-        if (!pack_.read(r.name, blob) || !webp::decode(blob.data(), blob.size(), argb, width, height)) return false;
-        std::vector<uint8_t>().swap(blob);
-        // 4 times the game's texture - twice at [ai] scale = 2; (0.45) a whole texture's picture for one at a lower
-        // texture detail, 8 or 16 times its size.
-        while (width > r.width * scale_ && height > r.height * scale_ && width % 2 == 0 && height % 2 == 0)
-            ai::halve(argb, width, height);
-    } else {
-        std::string error;
-        if (!archive_.read(r.name, blob, error) || !ai::decodeTexture(blob, argb, width, height)) return false;
-    }
+    if (!pack_.read(r.name, blob) || !webp::decode(blob.data(), blob.size(), argb, width, height)) return false;
+    std::vector<uint8_t>().swap(blob);
+    // 4 times the game's texture - twice at [ai] scale = 2; (0.45) a whole texture's picture for one at a lower
+    // texture detail, 8 or 16 times its size.
+    while (width > r.width * scale_ && height > r.height * scale_ && width % 2 == 0 && height % 2 == 0)
+        ai::halve(argb, width, height);
     return width == r.width * scale_ && height == r.height * scale_;
 }
 
@@ -691,21 +662,24 @@ void Ai11::logNow(bool final) {
     lastLog_ = now;
     uint32_t seen = 0;
     for (uint32_t n : seen_) seen += n;
-    if (!seen && !texturesPack_ && !texturesGrf_ && !cellsWritten_ && icons_.empty() && !failed_) return;
-    std::string kinds;
-    for (int k = 0; k < ai::kKinds; ++k)
+    if (!seen && !texturesTaken_ && !cellsWritten_ && icons_.empty() && !failed_) return;
+    std::string kinds, missing;
+    for (int k = 0; k < ai::kKinds; ++k) {
         kinds += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " + std::to_string(seen_[k]) +
                  (!pictures_->kindOn(ai::Kind(k)) ? " (off)" : "");
-    LOG_INFO("AI textures: %u from the pack, %u from upscaled.grf, %u waiting, %u not usable; seen %s, lightmaps %u; "
-             "%u of soft light left as the game's",
-             texturesPack_, texturesGrf_, waiting_, failed_, kinds.c_str(), seen_[int(ai::Kind::Lightmap)], soft_);
+        missing += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " + std::to_string(missing_[k]);
+    }
+    LOG_INFO("AI textures: %u from the pack, %u waiting, %u not usable; seen %s, lightmaps %u; %u of soft light left "
+             "as the game's",
+             texturesTaken_, waiting_, failed_, kinds.c_str(), seen_[int(ai::Kind::Lightmap)], soft_);
+    LOG_INFO("AI textures: not in the pack - %s; sprite frames %u, icons %u", missing.c_str(), cellsMissing_,
+             iconsNone_);
     if (cellsWritten_)
-        LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack, %u from "
-                 "upscaled.grf",
-                 cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsPack_, cellsGrf_);
+        LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack", cellsWritten_,
+                 static_cast<unsigned>(atlases_.size()), cellsTaken_);
     if (!icons_.empty())
-        LOG_INFO("AI textures: icons - %u asked, %u from the pack, %u from upscaled.grf, %u of none (xBR's)",
-                 static_cast<unsigned>(icons_.size()), iconsPack_, iconsGrf_, iconsNone_);
+        LOG_INFO("AI textures: icons - %u asked, %u from the pack, %u of none (xBR's)",
+                 static_cast<unsigned>(icons_.size()), iconsTaken_, iconsNone_);
     uint64_t used = 0;
     const uint64_t system = videoMemory(&used);
     unsigned copies = 0;

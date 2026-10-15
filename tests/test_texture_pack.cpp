@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -137,8 +138,15 @@ TEST(texture_pack_keeps_the_pictures_of_a_run_that_broke_off) {
         CHECK(w.checkpoint("index\n", error));
         CHECK(add(w, "world/1x1/c.webp", std::string(300, 'c')));  // over the index and the directory
     }  // no close: broken off
+    // 0.48: the game reads such a pack too, by the same headers - without its index.
     pack::Reader broken;
-    CHECK(!broken.open(path, error));  // no whole ZIP as it is
+    CHECK(broken.open(path, error));
+    CHECK(broken.recovered());
+    CHECK_EQ(int(broken.count()), 3);
+    std::vector<uint8_t> got;
+    CHECK(broken.read("world/1x1/c.webp", got) && got.size() == 300);
+    CHECK(!broken.has(pack::kIndexName));
+    broken.close();
     {
         pack::Writer w;
         CHECK(w.open(path, true, error));
@@ -148,10 +156,76 @@ TEST(texture_pack_keeps_the_pictures_of_a_run_that_broke_off) {
     }
     pack::Reader r;
     CHECK(r.open(path, error));
+    CHECK(!r.recovered());
     std::vector<uint8_t> out;
     CHECK(r.read("world/1x1/c.webp", out) && out.size() == 300);
+    CHECK_EQ(r.sizeOf("world/1x1/c.webp"), uint64_t(300));
+    CHECK_EQ(r.sizeOf("world/1x1/none.webp"), uint64_t(0));
     r.close();
     std::remove(path.c_str());
+}
+
+TEST(texture_pack_index_holds_the_maps_of_its_pictures) {
+    // 0.48: the game's own making notes the maps a picture was shown on ("name\tkind\tmap,map"); the builder's
+    // pictures have none. The lower details' keys go with them; a line it cannot read is left out.
+    pack::Index x;
+    x.pictures["world/256x256/00000000000000aa.webp"] = pack::IndexEntry{ai::Kind::Ground, {"prontera", "geffen"}};
+    x.pictures["sprites/64x64/00000000000000bb.webp"] = pack::IndexEntry{ai::Kind::Sprites, {}};
+    x.aliases["128x128\\00000000000000cc"] = "world/256x256/00000000000000aa.webp";
+    const std::string text = pack::indexText(x);
+    CHECK_EQ(text, std::string("sprites/64x64/00000000000000bb.webp\tsprites\n"
+                               "world/256x256/00000000000000aa.webp\tground\tgeffen,prontera\n"
+                               "=128x128\\00000000000000cc\tworld/256x256/00000000000000aa.webp\n"));
+    const pack::Index back = pack::parseIndexFile(text + "no tab\nworld/1x1/1.webp\tnonsense\t,,payon,\n");
+    CHECK_EQ(back.pictures.size(), size_t(3));
+    const std::string aa = "world/256x256/00000000000000aa.webp";
+    CHECK(back.pictures.at(aa) == x.pictures.at(aa));
+    CHECK(back.pictures.at("sprites/64x64/00000000000000bb.webp").maps.empty());
+    const pack::IndexEntry& odd = back.pictures.at("world/1x1/1.webp");
+    CHECK(odd.kind == ai::Kind::None && odd.maps == std::set<std::string>{"payon"});
+    CHECK(back.aliases == x.aliases);
+    // The kinds alone, as before (0.43): the maps after the kind do not change it.
+    CHECK(pack::parseIndex(text).at("world/256x256/00000000000000aa.webp") == ai::Kind::Ground);
+}
+
+TEST(texture_pack_rewrites_itself_without_some_pictures) {
+    // 0.48: the Ready textures page deletes pictures - the pack again without them, the index with what stays (a
+    // lower detail's key to a picture gone goes too).
+    const std::string path = tempPath(), out = tempPath();
+    std::string error;
+    {
+        pack::Writer w;
+        CHECK(w.open(path, false, error));
+        CHECK(add(w, "world/1x1/a.webp", "aaa"));
+        CHECK(add(w, "world/1x1/b.webp", "bbbb"));
+        CHECK(add(w, "ui/1x1/c.webp", "cc"));
+        pack::Index x;
+        x.pictures["world/1x1/a.webp"] = pack::IndexEntry{ai::Kind::Ground, {"prontera"}};
+        x.pictures["world/1x1/b.webp"] = pack::IndexEntry{ai::Kind::Objects, {}};
+        x.pictures["ui/1x1/c.webp"] = pack::IndexEntry{ai::Kind::Icons, {}};
+        x.aliases["1x1\\1"] = "world/1x1/a.webp";
+        x.aliases["1x1\\2"] = "world/1x1/b.webp";
+        CHECK(w.close(pack::indexText(x), error));
+    }
+    size_t kept = 0;
+    CHECK(pack::rewrite(path, out, [](const std::string& n) { return n != "world/1x1/b.webp"; }, kept, error));
+    CHECK_EQ(kept, size_t(2));
+    pack::Reader r;
+    CHECK(r.open(out, error));
+    CHECK_EQ(int(r.count()), 3);  // two pictures and the index
+    std::vector<uint8_t> data;
+    CHECK(r.read("world/1x1/a.webp", data) && data == bytes("aaa"));
+    CHECK(r.read("ui/1x1/c.webp", data) && data == bytes("cc"));
+    CHECK(!r.has("world/1x1/b.webp"));
+    CHECK(r.read(pack::kIndexName, data));
+    const pack::Index x = pack::parseIndexFile(std::string(data.begin(), data.end()));
+    CHECK_EQ(x.pictures.size(), size_t(2));
+    CHECK(x.pictures.at("world/1x1/a.webp").maps == std::set<std::string>{"prontera"});
+    CHECK(x.aliases.size() == 1 && x.aliases.count("1x1\\1"));
+    r.close();
+    CHECK(!pack::rewrite(path + ".none", out, [](const std::string&) { return true; }, kept, error));
+    std::remove(path.c_str());
+    std::remove(out.c_str());
 }
 
 TEST(texture_pack_holds_more_than_a_plain_zip_does) {

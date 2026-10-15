@@ -67,8 +67,9 @@ bool anyChosen(const Choice& c);
 
 // What the builder does, in a file the settings app reads (uaro-graphics\pack-status.txt): a "key=value" line each.
 struct Status {
-    enum State : uint8_t { Starting, Reading, Building, Checking, Done, Stopped, Failed } state = Starting;
-    bool check = false;                      // the keys' check, not the pack
+    // 0.48: the keys' check against upscaled.grf (0.43-0.47) is gone with the file: the game's log says what the
+    // pack lacks.
+    enum State : uint8_t { Starting, Reading, Building, Done, Stopped, Failed } state = Starting;
     uint32_t filesDone = 0, filesTotal = 0;  // the game's files read
     uint32_t made = 0, toMake = 0;           // pictures, this run
     uint32_t inPack = 0;                     // pictures in the pack now
@@ -77,8 +78,7 @@ struct Status {
     int eta = -1;                            // seconds left; -1 not known yet
     uint32_t pid = 0;                        // the builder's process
     std::string current;                     // the file it makes pictures of (UTF-8)
-    std::string message;                     // why it failed; the check's result
-    std::vector<std::string> missing;        // the check's examples
+    std::string message;                     // why it failed
 };
 std::string statusText(const Status& s);
 bool parseStatus(const std::string& text, Status& out);  // false: no state in it
@@ -94,15 +94,5 @@ Source sourceOf(const std::string& name, const Choice& c);  // a normal name ("d
 // The pictures of a file the driver would give the network, in order: none of soft light (the driver leaves those as
 // the game's), the world's within the sides, the interface's of an icon's or a picture's size (pieces are xBR's).
 std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t size, const Choice& c);
-
-// How the keys the builder makes stand against the pictures upscaled.grf holds from the game: per kind (its tags),
-// how many of its pictures one of the game's files gives.
-struct KeyCheck {
-    uint32_t seen[ai::kKinds] = {}, found[ai::kKinds] = {};
-    uint32_t untagged = 0, untaggedFound = 0;
-    std::vector<std::string> missing;  // some of the ones no file gives: "sprites 64x64\0123..."
-};
-KeyCheck checkKeys(const std::vector<std::string>& cacheNames, const std::unordered_set<std::string>& made);
-std::string keyCheckText(const KeyCheck& k);  // one line for the log and the settings app
 
 }  // namespace uagfx::pack

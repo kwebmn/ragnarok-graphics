@@ -60,7 +60,7 @@ public:
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
-    // 0.47: the AI textures from the texture pack and upscaled.grf (none made); false: off, the reason in the log.
+    // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);
     void setAiShown(bool shown);  // Pause: the game's own textures
     void requestIcon(uint64_t key, int width, int height, const uint32_t* argb);

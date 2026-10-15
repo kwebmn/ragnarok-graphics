@@ -13,7 +13,6 @@
 
 #include "core/ai/kinds.hpp"
 #include "core/ai/texture_cache.hpp"
-#include "core/grf/grf.hpp"
 #include "core/texture_pack.hpp"
 #include "core/webp_image.hpp"
 #include "win/gpu/renderer.hpp"
@@ -213,7 +212,6 @@ class Builder {
 public:
     explicit Builder(const PackArgs& a) : a_(a), status_(a.status) {
         s_.pid = GetCurrentProcessId();
-        s_.check = a.mode == "check";
     }
     int run();
 
@@ -226,7 +224,6 @@ private:
         return 3;
     }
     bool listFiles();  // the game's files of the choice
-    int check();
     int build();
     // The index and the central directory after the last picture: a whole ZIP (last: and the file closed).
     bool checkpoint(Encoders* enc, bool last);
@@ -238,9 +235,9 @@ private:
     pack::GameFiles files_;
     std::vector<std::pair<std::string, pack::Source>> list_;
     pack::Writer writer_;
-    std::map<std::string, ai::Kind> kinds_;  // every picture's of this run and of the pack's index
-    // 0.45: the keys of the world's textures at the game's lower texture details, to their whole textures' pictures.
-    std::map<std::string, std::string> aliases_;
+    // Every picture's kind of this run and of the pack's index (0.48: with the maps the game's own making noted), and
+    // (0.45) the keys of the world's textures at the game's lower texture details, to their whole textures' pictures.
+    pack::Index index_;
     void noteLowerDetails(const pack::Picture& p, const std::string& name);
 };
 
@@ -248,7 +245,7 @@ void Builder::noteLowerDetails(const pack::Picture& p, const std::string& name) 
     if (p.group != pack::Group::World) return;
     for (int div : {2, 4}) {
         pack::Picture low;
-        if (pack::lowerDetail(p, div, low) && low.key != p.key) aliases_.emplace(low.key, name);
+        if (pack::lowerDetail(p, div, low) && low.key != p.key) index_.aliases.emplace(low.key, name);
     }
 }
 
@@ -270,89 +267,23 @@ bool Builder::listFiles() {
 int Builder::run() {
     s_.state = pack::Status::Starting;
     status_.write(s_, true);
-    if (a_.mode == "check") return check();
     if (a_.mode == "build") return build();
     return fail("no such work: " + a_.mode);
 }
 
-// How the builder's keys stand against the pictures the game made into upscaled.grf: whether the pack's pictures are
-// the ones the game will look for.
-int Builder::check() {
-    if (!listFiles()) return 3;
-    s_.state = pack::Status::Checking;
-    std::unordered_set<std::string> keys, lower[2];  // 0.45: and the world's at half and a quarter a side
-    uint32_t groups[3] = {};
-    std::vector<uint8_t> data;
-    for (const auto& f : list_) {
-        if (status_.stopAsked()) {
-            s_.state = pack::Status::Stopped;
-            status_.write(s_, true);
-            return 0;
-        }
-        s_.current = utf8Of(f.first);
-        if (files_.read(f.first, data))
-            for (const pack::Picture& p : picturesOf(f.first, f.second, data, a_.choice)) {
-                if (keys.insert(p.key).second) ++groups[int(p.group)];
-                pack::Picture low;
-                for (int i = 0; i < 2 && p.group == pack::Group::World; ++i)
-                    if (pack::lowerDetail(p, 2 << i, low)) lower[i].insert(low.key);
-            }
-        ++s_.filesDone;
-        status_.write(s_);
-    }
-    s_.current.clear();
-    std::vector<std::string> cache;
-    const std::string grfPath = a_.dir + "\\upscaled.grf";
-    std::string text;
-    if (std::FILE* f = std::fopen(grfPath.c_str(), "rb")) {
-        grf::Archive archive;
-        std::string error;
-        if (archive.open(f, false, error))  // the archive closes the file, also when it does not open
-            cache = archive.names();
-        else
-            text = "upscaled.grf: " + error + "; ";
-    } else {
-        text = "no upscaled.grf to check against; ";
-    }
-    const pack::KeyCheck k = pack::checkKeys(cache, keys);
-    // The ones not found: made at a lower texture detail of the game?
-    uint32_t atLower[2] = {};
-    std::unordered_set<std::string> counted;
-    for (const std::string& name : cache) {
-        const ai::ParsedEntry e = ai::parseEntry(name);
-        if (e.type != ai::ParsedEntry::Picture || keys.count(e.key) || !counted.insert(e.key).second) continue;
-        if (lower[0].count(e.key))
-            ++atLower[0];
-        else if (lower[1].count(e.key))
-            ++atLower[1];
-    }
-    text += "found " + pack::keyCheckText(k) + "; the pack would hold " + std::to_string(keys.size()) +
-            " pictures (world " + std::to_string(groups[0]) + ", sprites " + std::to_string(groups[1]) +
-            ", interface " + std::to_string(groups[2]) + "); of the rest, at a lower texture detail: half " +
-            std::to_string(atLower[0]) + ", a quarter " + std::to_string(atLower[1]);
-    LOG_INFO("texture pack, the keys: %s", text.c_str());
-    for (const std::string& m : k.missing) LOG_INFO("texture pack: no file gives %s", m.c_str());
-    s_.state = pack::Status::Done;
-    s_.message = text;
-    s_.missing = k.missing;
-    status_.write(s_, true);
-    return 0;
-}
-
 bool Builder::checkpoint(Encoders* enc, bool last) {
     if (enc) enc->lockWriter();
-    std::map<std::string, ai::Kind> index;
+    pack::Index index;  // of the pictures in the pack
     for (const std::string& n : writer_.names()) {
-        const auto it = kinds_.find(n);
-        index[n] = it == kinds_.end() ? ai::Kind::None : it->second;
+        const auto it = index_.pictures.find(n);
+        index.pictures[n] = it == index_.pictures.end() ? pack::IndexEntry() : it->second;
     }
-    std::map<std::string, std::string> aliases;  // to the pictures in the pack
-    for (const auto& a : aliases_)
-        if (index.count(a.second)) aliases.insert(a);
+    for (const auto& a : index_.aliases)
+        if (index.pictures.count(a.second)) index.aliases.insert(a);
     std::string error;
-    const std::string text = pack::indexText(index, aliases);
+    const std::string text = pack::indexText(index);
     const bool ok = last ? writer_.close(text, error) : writer_.checkpoint(text, error);
-    s_.inPack = uint32_t(index.size());
+    s_.inPack = uint32_t(index.pictures.size());
     s_.bytes = writer_.bytes();
     if (enc) enc->unlockWriter();
     if (!ok) LOG_ERROR("texture pack: %s", error.c_str());
@@ -378,10 +309,8 @@ int Builder::build() {
         pack::Reader old;
         std::string error;
         std::vector<uint8_t> index;
-        if (old.open(out, error) && old.read(pack::kIndexName, index)) {
-            kinds_ = pack::parseIndex(std::string(index.begin(), index.end()));
-            aliases_ = pack::parseAliases(std::string(index.begin(), index.end()));
-        }
+        if (old.open(out, error) && old.read(pack::kIndexName, index))
+            index_ = pack::parseIndexFile(std::string(index.begin(), index.end()));
     }
     std::string error;
     if (!writer_.open(out, !a_.fresh, error)) return fail(out + ": " + error);
@@ -403,7 +332,7 @@ int Builder::build() {
             for (const pack::Picture& p : picturesOf(list_[i].first, list_[i].second, data, a_.choice)) {
                 const std::string name = pack::pictureName(p.group, p.key);
                 if (!seen.insert(name).second) continue;
-                kinds_[name] = list_[i].second.kind;
+                index_.pictures[name].kind = list_[i].second.kind;
                 noteLowerDetails(p, name);
                 if (!done.count(name)) {
                     ++s_.toMake;
@@ -415,7 +344,7 @@ int Builder::build() {
         status_.write(s_);
     }
     LOG_INFO("texture pack: %u pictures to make of %zu files; %zu keys of the world's textures at a lower texture "
-             "detail", s_.toMake, todo.size(), aliases_.size());
+             "detail", s_.toMake, todo.size(), index_.aliases.size());
     if (!s_.toMake) {
         checkpoint(nullptr, true);
         s_.state = pack::Status::Done;
@@ -522,9 +451,24 @@ int runPack(const PackArgs& args) {
         CloseHandle(one);
         return 4;
     }
+    // 0.48: and no game writes it meanwhile (making pictures while playing, [ai] generate).
+    HANDLE writer = CreateMutexA(nullptr, FALSE, pack::kWriterMutex);
+    if (!writer || WaitForSingleObject(writer, 0) != WAIT_OBJECT_0) {
+        LOG_ERROR("texture pack: a game is writing it (making textures while playing): close the game first");
+        pack::Status s;
+        s.state = pack::Status::Failed;
+        s.message = "a game is writing the pack (making textures while playing): close the game first";
+        s.pid = GetCurrentProcessId();
+        StatusFile(a.status).write(s, true);
+        if (writer) CloseHandle(writer);
+        if (one) CloseHandle(one);
+        return 4;
+    }
     LOG_INFO("texture pack: %s, kinds %s, quality %d", a.mode.c_str(), pack::choiceText(a.choice).c_str(), a.quality);
     Builder b(a);
     const int code = b.run();
+    ReleaseMutex(writer);
+    CloseHandle(writer);
     if (one) CloseHandle(one);
     return code;
 }

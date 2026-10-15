@@ -9,8 +9,8 @@
 namespace uagfx::grf {
 
 // Ragnarok's GRF archive, version 0x200: a 46-byte header, the files' zlib streams, and a zlib-compressed table of
-// names, sizes and offsets that the header points to. upscaled.grf (the neural texture cache) is one: GRF tools open
-// it, and copying it to another player's client hands them the finished textures.
+// names, sizes and offsets that the header points to: the game's data.grf; upscaled.grf (the neural texture cache of
+// 0.11-0.47, the texture pack since 0.48) was one too.
 struct Entry {
     uint32_t compressed = 0;  // bytes of the zlib stream
     uint32_t aligned = 0;     // as stored (equal for unencrypted files)
@@ -42,8 +42,8 @@ public:
     // crash still opens as it was. Fails rather than pass the format's 4 GB.
     bool append(const std::vector<std::pair<std::string, std::vector<uint8_t>>>& files, std::string& error);
     uint64_t bytes() const { return end_; }  // where the next data would go: the archive's length
-    // A new archive in `out` (opened "wb") with the entries `keep` takes, their stored data copied as it is: the
-    // settings app deletes pictures of upscaled.grf this way, and the space of old file tables goes with them.
+    // A new archive in `out` (opened "wb") with the entries `keep` takes, their stored data copied as it is, and the
+    // space of old file tables gone (the settings app deleted pictures of upscaled.grf so until 0.48).
     bool copyTo(std::FILE* out, const std::function<bool(const std::string&)>& keep, std::string& error);
 
 private:

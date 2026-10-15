@@ -6,7 +6,7 @@ namespace uagfx::ai {
 
 // 0.44: the AI copies of the game's textures in video memory - 16 times a texture's bytes and more - keep to a budget.
 // Over it, the copies of the textures not drawn for longest are put away (a texture drawn again gets its copy back
-// from the texture pack or upscaled.grf, a read away).
+// from the texture pack, a read away).
 struct Copy {
     uint32_t id = 0;        // the game texture's
     uint64_t bytes = 0;     // its copy's, all its mip levels

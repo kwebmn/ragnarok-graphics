@@ -2,7 +2,6 @@
 
 #include "app/ai_cache.hpp"
 #include "app/page.hpp"
-#include "core/ai/texture_cache.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -20,22 +19,21 @@ const char kAllMaps[] = "*";  // the first row: every map
 std::set<std::string> g_ticked;
 bool g_kinds[ai::kKinds] = {true, true, true, true, true};
 
-// What upscaled.grf holds by map and kind (0.12), and deleting some or all of it while the game is closed.
+// What the texture pack holds by map and kind (0.12; 0.48: the pack's index, upscaled.grf until 0.47), and deleting
+// some or all of it while the game and the pack's builder are closed.
 class AiCachePage : public Page {
 public:
     explicit AiCachePage(PageHost& host) : Page(host) {}
 
     void build(Panel& p) override {
         Model& m = host_.model();
-        path_ = m.paths().dir + L"\\upscaled.grf";
-        file_ = readAiCache(path_);
-        const AiSettings& a = m.now().config.ai;  // the settings in force: what the driver uses
-        current_[0] = current_[1] = ai::netFolder(a.model, a.denoise, a.scale);
-        current_[2] = current_[3] = ai::netFolder(a.spriteModel, a.denoise, a.scale);
-        current_[4] = ai::kindFolder(current_[2], ai::Kind::Icons);
+        path_ = m.paths().dir + L"\\uaro-textures.zip";
+        oldPath_ = m.paths().dir + L"\\upscaled.grf";
+        file_ = readPack(path_);
+        oldBytes_ = fileBytes(oldPath_);
         contents_ = ai::CacheContents(file_.entries);
-        index_ = contents_.index(current_);
-        busy_ = m.now().gameRunning || aiCacheInUse();
+        index_ = contents_.index();
+        busy_ = m.now().gameRunning || packInUse();
         const Lang l = host_.lang();
         p.heading(t(Text::PageAiCache));
         if (!file_.exists)
@@ -68,11 +66,11 @@ public:
         for (int k = 0; k < ai::kKinds; ++k) kinds.push_back({kKinds + k, t(names[k]), g_kinds[k], L"", true});
         p.checks(kinds, 5);
         const bool usable = file_.exists && file_.error.empty() && !busy_;
-        p.buttons({{kDelete, t(Text::AiCacheDelete), usable && !g_ticked.empty()},
-                   {kDeleteOld, tf(Text::AiCacheDeleteOld, {num(index_.outdated) + " (" +
-                                                           sizeText(index_.outdatedBytes, l) + ")"}),
-                    usable && index_.outdated > 0},
-                   {kDeleteAll, t(Text::AiCacheDeleteAll), file_.exists && !busy_}});
+        std::vector<ButtonItem> buttons = {{kDelete, t(Text::AiCacheDelete), usable && !g_ticked.empty()},
+                                           {kDeleteAll, t(Text::AiCacheDeleteAll), file_.exists && !busy_}};
+        if (oldBytes_)  // 0.48: upscaled.grf of 0.11-0.47, not used any more
+            buttons.push_back({kDeleteOld, tf(Text::AiCacheDeleteOld, {sizeText(oldBytes_, l)}), !busy_});
+        p.buttons(buttons);
         if (busy_) p.note(t(Text::AiCacheRunning), Tone::Warn);
         p.note(t(Text::AiCacheOldNote));
     }
@@ -83,43 +81,45 @@ public:
             g_kinds[id - kKinds] = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
             return;
         }
-        if (id == kDelete || id == kDeleteOld) {
+        if (id == kDelete) {
             ai::CacheDeletion d;
-            if (id == kDelete) {
-                for (const std::string& map : g_ticked)
-                    if (map != kAllMaps) d.maps.insert(map);
-                if (g_ticked.count(kAllMaps))
-                    for (const ai::CacheRow& r : index_.rows) d.maps.insert(r.map);
-                for (int k = 0; k < ai::kKinds; ++k) d.kinds[k] = g_kinds[k];
-            } else {
-                d.outdated = true;
-            }
-            const std::vector<std::string> keep = contents_.keep(d, current_);
-            size_t kept = 0;
-            for (const std::string& n : keep) kept += ai::parseEntry(n).type == ai::ParsedEntry::Picture ? 1 : 0;
-            const size_t gone = contents_.pictures() - kept;
+            for (const std::string& map : g_ticked)
+                if (map != kAllMaps) d.maps.insert(map);
+            if (g_ticked.count(kAllMaps))
+                for (const ai::CacheRow& r : index_.rows) d.maps.insert(r.map);
+            for (int k = 0; k < ai::kKinds; ++k) d.kinds[k] = g_kinds[k];
+            const std::vector<std::string> keep = contents_.keep(d);
+            const size_t gone = contents_.pictures() - keep.size();
             if (!gone) {
                 host_.message(t(Text::AiCacheNothing), false);
                 return;
             }
             if (!host_.ask(tf(Text::AiCacheAskDelete, {num((long long)gone)}))) return;
             if (busy()) return;
-            const std::string error = rewriteAiCache(path_, keep);
-            if (!error.empty()) {
+            const std::string error = rewritePack(path_, keep);
+            if (!error.empty())
                 host_.message(tf(Text::AiCacheError, {error}), true);
-            } else {
-                const AiCacheFile now = readAiCache(path_);
-                host_.message(tf(Text::AiCacheDeleted, {num((long long)gone), sizeText(now.bytes, host_.lang())}),
+            else
+                host_.message(tf(Text::AiCacheDeleted, {num((long long)gone), sizeText(fileBytes(path_),
+                                                                                       host_.lang())}),
                               false);
-            }
             g_ticked.clear();
+            host_.rebuild();
+            return;
+        }
+        if (id == kDeleteOld) {  // 0.48: upscaled.grf of 0.11-0.47
+            if (!host_.ask(tf(Text::AiCacheAskOld, {sizeText(oldBytes_, host_.lang())}))) return;
+            if (busy()) return;
+            const std::string error = removeFile(oldPath_);
+            host_.message(error.empty() ? t(Text::AiCacheOldDeleted) : tf(Text::AiCacheError, {error}),
+                          !error.empty());
             host_.rebuild();
             return;
         }
         if (id == kDeleteAll) {
             if (!host_.ask(tf(Text::AiCacheAskAll, {sizeText(file_.bytes, host_.lang())}))) return;
             if (busy()) return;
-            const std::string error = removeAiCache(path_);
+            const std::string error = removeFile(path_);
             host_.message(error.empty() ? t(Text::AiCacheDeletedAll) : tf(Text::AiCacheError, {error}), !error.empty());
             g_ticked.clear();
             host_.rebuild();
@@ -183,17 +183,17 @@ private:
 
     // Again just before writing: the game may have started while the question was open.
     bool busy() {
-        if (!host_.model().now().gameRunning && !aiCacheInUse()) return false;
+        if (!host_.model().now().gameRunning && !packInUse()) return false;
         host_.message(t(Text::AiCacheRunning), true);
         host_.rebuild();
         return true;
     }
 
-    std::wstring path_;
-    AiCacheFile file_;
+    std::wstring path_, oldPath_;
+    PackFile file_;
+    uint64_t oldBytes_ = 0;  // upscaled.grf's, 0 when it is gone
     ai::CacheContents contents_{std::vector<ai::CacheEntry>()};
     ai::CacheIndex index_;
-    std::string current_[ai::kKinds];
     std::vector<std::string> maps_;  // the list's rows: kAllMaps, the maps, "" for no map
     HWND list_ = nullptr;
     bool busy_ = false;

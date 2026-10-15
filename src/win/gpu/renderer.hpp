@@ -118,8 +118,8 @@ public:
     bool enlargeForPack(int kind, const uint32_t* argb, int width, int height, uint32_t border,
                         std::vector<uint32_t>& out, std::string& error);
     std::string packNetName(int kind) const;
-    // The map the game shows ("prontera"; "" none): upscaled.grf notes the textures seen on it (AI textures); 0.25:
-    // its file is read for its lamps and the torches the game does not show.
+    // The map the game shows ("prontera"; "" none): the texture pack's index notes the textures seen on it (AI
+    // textures made); 0.25: its file is read for its lamps and the torches the game does not show.
     void setMap(const std::string& map);
     // 0.25: the game's folder - its data and DATA.INI (the driver's own renderer; uaro-render64.exe has it at start).
     void setGameDir(const std::string& dir);

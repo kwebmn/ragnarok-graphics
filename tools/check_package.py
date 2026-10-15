@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 
 EXPECTED = {"install.bat", "uninstall.bat", "use-uaro.bat", "use-dgvoodoo.bat", "update.bat", "get-dlss.bat",
-            "TEST.ru.md", "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.exe",
+            "TEST.en.md", "TEST.uk.md", "TEST.ru.md", "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.exe",
             "uaro-graphics/uaro-graphics.ini", "uaro-graphics/version.txt", "uaro-graphics/uaro-render64.exe",
             "uaro-graphics/dlss-version.txt", "uaro-graphics/remix/rtx.conf",
             "uaro-graphics/ai/realesr-general-x4v3.bin", "uaro-graphics/ai/realesr-general-wdn-x4v3.bin",

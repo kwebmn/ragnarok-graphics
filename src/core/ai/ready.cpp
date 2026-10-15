@@ -1,56 +1,37 @@
 #include "core/ai/ready.hpp"
 
-#include <algorithm>
 #include <map>
 #include <utility>
 
-#include "core/ai/texture_cache.hpp"
 #include "core/texture_pack.hpp"
 
 namespace uagfx::ai {
 
 ReadyPictures::ReadyPictures(const AiSettings& s) : settings_(s) {
-    const int scale = s.scale == 2 ? 2 : 4;
-    for (int k = 0; k < kKinds; ++k) {
-        on_[k] = aiKind(s, k);
-        const std::string& token = k < 2 ? s.model : s.spriteModel;  // the ground and objects, the rest
-        folders_[k] = netFolder(token, token == "general" ? std::clamp(s.denoise, 0, 100) : 100, scale);
-    }
+    for (int k = 0; k < kKinds; ++k) on_[k] = aiKind(s, k);
 }
 
 void ReadyPictures::addPack(std::function<bool(const std::string&)> has, const std::string& index) {
     packHas_ = std::move(has);
-    std::map<std::string, Kind> pictureKinds;  // a world or interface picture's name -> its kind
-    for (const auto& e : pack::parseIndex(index)) {
+    const pack::Index x = pack::parseIndexFile(index);
+    for (const auto& e : x.pictures) {
         pack::Group g = pack::Group::World;
         std::string key;
-        if (int(e.second) >= kKinds || !pack::keyOfPicture(e.first, g, key) || g == pack::Group::Sprites) continue;
-        pictureKinds[e.first] = e.second;
-        kinds_.emplace(key, e.second);
+        if (int(e.second.kind) < kKinds && pack::keyOfPicture(e.first, g, key) && g != pack::Group::Sprites)
+            kinds_.emplace(key, e.second.kind);
     }
-    for (const auto& a : pack::parseAliases(index)) {
+    for (const auto& a : x.aliases) {
         if (!packHas_ || !packHas_(a.second)) continue;
         aliases_.emplace(a.first, a.second);
-        const auto k = pictureKinds.find(a.second);
-        if (k != pictureKinds.end()) kinds_.emplace(a.first, k->second);
+        const auto k = x.pictures.find(a.second);
+        if (k != x.pictures.end() && int(k->second.kind) < kKinds) kinds_.emplace(a.first, k->second.kind);
     }
 }
 
-void ReadyPictures::addGrf(const std::vector<std::string>& names) {
-    for (const std::string& name : names) {
-        const ParsedEntry e = parseEntry(name);
-        if (e.type == ParsedEntry::KindTag) {
-            kinds_.emplace(e.key, e.kind);
-        } else if (e.type == ParsedEntry::Picture) {
-            bool ours = false;
-            for (int k = 0; k < kKinds && !ours; ++k)
-                ours = on_[k] && (e.folder == folders_[k] || e.folder == kindFolder(folders_[k], Kind::Icons));
-            if (ours)
-                grf_.insert(name);
-            else
-                ++other_;
-        }
-    }
+void ReadyPictures::addMade(const std::string& name) { made_.insert(name); }
+
+void ReadyPictures::noteKind(const std::string& key, Kind kind) {
+    if (int(kind) < kKinds) kinds_.emplace(key, kind);
 }
 
 bool ReadyPictures::anyCells() const {
@@ -65,41 +46,28 @@ bool ReadyPictures::knownKind(const std::string& key, Kind& kind) const {
     return true;
 }
 
-bool ReadyPictures::find(const std::string& packed, const std::string& grf, Source& out) const {
-    if (packHas_ && packHas_(packed)) {
-        out = Source{packed, true};
-        return true;
-    }
-    if (grf_.count(grf)) {
-        out = Source{grf, false};
-        return true;
-    }
-    return false;
-}
-
-bool ReadyPictures::texture(const std::string& key, Kind kind, Source& out) const {
+bool ReadyPictures::texture(const std::string& key, Kind kind, std::string& name) const {
     if (!kindOn(kind)) return false;
     const bool ui = kind == Kind::Icons;
-    std::string packed = pack::pictureName(ui ? pack::Group::Ui : pack::Group::World, key);
-    if (!ui && !(packHas_ && packHas_(packed))) {
-        const auto a = aliases_.find(key);
-        if (a != aliases_.end()) packed = a->second;
-    }
-    return find(packed, entryName(kindFolder(folders_[int(kind)], kind), key), out);
+    name = pack::pictureName(ui ? pack::Group::Ui : pack::Group::World, key);
+    if (has(name)) return true;
+    if (ui) return false;
+    const auto a = aliases_.find(key);
+    if (a == aliases_.end() || !has(a->second)) return false;
+    name = a->second;
+    return true;
 }
 
-bool ReadyPictures::cell(const std::string& key, Source& out) const {
-    int folder = -1;  // the sprites' network's: the first of their kinds that is on
-    for (Kind k : {Kind::Sprites, Kind::Effects, Kind::Icons})
-        if (folder < 0 && on_[int(k)]) folder = int(k);
-    if (folder < 0) return false;
-    return find(pack::pictureName(pack::Group::Sprites, key), entryName(folders_[folder], key), out);
+bool ReadyPictures::cell(const std::string& key, std::string& name) const {
+    if (!anyCells()) return false;
+    name = pack::pictureName(pack::Group::Sprites, key);
+    return has(name);
 }
 
-bool ReadyPictures::icon(const std::string& key, Source& out) const {
+bool ReadyPictures::icon(const std::string& key, std::string& name) const {
     if (!on_[int(Kind::Icons)]) return false;
-    return find(pack::pictureName(pack::Group::Ui, key),
-                entryName(kindFolder(folders_[int(Kind::Icons)], Kind::Icons), key), out);
+    name = pack::pictureName(pack::Group::Ui, key);
+    return has(name);
 }
 
 }  // namespace uagfx::ai

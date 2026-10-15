@@ -14,7 +14,9 @@ std::optional<Lang> parseLang(const std::string& token);  // "en", "uk", "ru", a
 const char* langToken(Lang l);                            // [utility] language
 const char* langName(Lang l);                             // in its own language
 // The language of Windows' menus (GetUserDefaultUILanguage): Ukrainian or Russian, else English.
-Lang langForWindows(uint16_t langId);
+// 0.48: the language the settings app starts in - the one chosen in it, else English (until 0.47 the language of
+// Windows).
+Lang startLang(std::optional<Lang> chosen);
 
 enum class Text : uint16_t {
     AppTitle, PageRender, PageScreen, PageQuality, PageFrames, PageDiagnostics, PageService,
@@ -100,12 +102,13 @@ enum class Text : uint16_t {
     PagePack, PackIntro, PackHas, PackNone, PackWhat, PackWorld, PackWorldHint, PackEffects, PackEffectsHint,
     PackMonsters, PackMonstersHint, PackPlayers, PackPlayersHint, PackNpcs, PackNpcsHint, PackItems, PackItemsHint,
     PackInterface, PackInterfaceHint, PackQuality, PackQualityHint, PackQualitySmall, PackQualityBalanced,
-    PackQualityLossless, PackNets, PackMake, PackStop, PackCheck, PackAnew, PackCopy, PackAskAnew, PackNoHost,
-    PackNothing, PackStarting, PackReading, PackBuilding, PackBuildingNoEta, PackFile, PackChecking, PackDone,
-    PackStopped, PackFailed, PackGone, PackChecked, PackMissing, PackGameRunning, PackBackground, PackCheckNote,
+    PackQualityLossless, PackNets, PackMake, PackStop, PackAnew, PackCopy, PackAskAnew, PackNoHost,
+    PackNothing, PackStarting, PackReading, PackBuilding, PackBuildingNoEta, PackFile, PackDone,
+    PackStopped, PackFailed, PackGone, PackGameRunning, PackBackground, 
     TimeHoursMinutes, TimeMinutes, TimeSeconds,
     RenderApi, RenderApiHint, RenderApiD3d12, RenderApiD3d11, RenderApiAuto, RenderUseD3d11, DiagD3D11,
     DiagD3D11Ok, DiagD3D11Failed, AiD3d11Note,
+    AiCacheAskOld, AiCacheOldDeleted,
     Count
 };
 

@@ -121,24 +121,16 @@ TEST(ai_model_file_must_be_whole) {
     CHECK(!parseModel(std::vector<uint8_t>{'N', 'O', 'P', 'E'}, m, error));
 }
 
-TEST(ai_texture_key_names_and_blob_round_trip) {
-    std::vector<uint32_t> a(64 * 32), b;
+TEST(ai_texture_key_changes_with_every_texel) {
+    std::vector<uint32_t> a(64 * 32);
     for (size_t i = 0; i < a.size(); ++i) a[i] = 0xFF000000u | uint32_t(i * 2654435761u >> 8);
     const TextureKey k = textureKey(a.data(), 64, 32);
     CHECK(k.width == 64 && k.height == 32);
     a[100] ^= 1;
     CHECK(textureKey(a.data(), 64, 32).hash != k.hash);  // one texel differs: another texture
     CHECK(textureKey(a.data(), 32, 64).hash != textureKey(a.data(), 64, 32).hash);
-    const std::string name = entryName("realesr-general-x4v3", k);
-    // the prefix, 16 hex digits and ".tex"
-    CHECK(name.rfind("ai\\realesr-general-x4v3\\64x32\\", 0) == 0 && name.size() == 30 + 16 + 4);
-    CHECK(entryFolder("realesr-general-x4v3") == "ai\\realesr-general-x4v3\\");  // how upscaled.grf's are told apart
-    CHECK(name.rfind(entryFolder("realesr-general-x4v3"), 0) == 0);
-    int w = 0, h = 0;
-    CHECK(decodeTexture(encodeTexture(a.data(), 64, 32), b, w, h) && w == 64 && h == 32 && b == a);
-    std::vector<uint8_t> broken = encodeTexture(a.data(), 64, 32);
-    broken.pop_back();
-    CHECK(!decodeTexture(broken, b, w, h));
+    CHECK(keyName(k) == "64x32\\" + keyName(k).substr(6));  // the size, a backslash and 16 hex digits
+    CHECK_EQ(keyName(k).size(), size_t(6 + 16));
 }
 
 TEST(ai_keyed_texels_take_their_neighbours_colour_and_alpha_grows_smooth) {
@@ -221,32 +213,10 @@ TEST(ai_flat_quads_are_sprites) {
     CHECK(!flatQuad(nullptr, stride, 4, 0));
 }
 
-TEST(ai_cache_names_tags_and_folders) {
-    // 0.12: pictures by the network's settings, tags for the kind and the maps, settings-free.
+TEST(ai_key_names) {
+    // A game texture's key as the texture pack names its pictures by it (pack::pictureName).
     TextureKey k{0x0123456789abcdefull, 256, 128};
-    const std::string key = keyName(k);
-    CHECK(key == "256x128\\0123456789abcdef");
-    // 0.13.1 ("-r2"): the alpha through the network too - the pictures of 0.11.2-0.13.0 ("-wrap") are outdated.
-    CHECK(netFolder("general", 25, 4) == "realesr-general-x4v3-dn25-r2");
-    CHECK(netFolder("general", 25, 2) == "realesr-general-x4v3-dn25-r2-x2");
-    CHECK(netFolder("anime", 25, 4) == "realesr-animevideov3-r2");
-    CHECK(netFolder("anime", 80, 2) == "realesr-animevideov3-r2-x2");
-    const std::string picture = entryName(netFolder("general", 25, 4), key);
-    CHECK(picture == "ai\\realesr-general-x4v3-dn25-r2\\256x128\\0123456789abcdef.tex");
-    CHECK(picture == entryName(netFolder("general", 25, 4), k));
-    ParsedEntry e = parseEntry(picture);
-    CHECK(e.type == ParsedEntry::Picture && e.folder == "realesr-general-x4v3-dn25-r2" && e.key == key);
-    e = parseEntry(kindTag(Kind::Ground, key));
-    CHECK(kindTag(Kind::Ground, key) == "ai\\@kind\\ground\\256x128\\0123456789abcdef");
-    CHECK(e.type == ParsedEntry::KindTag && e.kind == Kind::Ground && e.key == key);
-    e = parseEntry(mapTag("prt_fild08", key));
-    CHECK(e.type == ParsedEntry::MapTag && e.map == "prt_fild08" && e.key == key);
-    CHECK(parseEntry("ai\\@kind\\lightmap\\256x128\\0123456789abcdef").type == ParsedEntry::Other);
-    CHECK(parseEntry("ai\\x\\256x128\\0123456789ABCDEF.tex").type == ParsedEntry::Other);
-    CHECK(parseEntry("ai\\x\\256x128\\0123.tex").type == ParsedEntry::Other);
-    CHECK(parseEntry("data\\texture\\a.bmp").type == ParsedEntry::Other);
-    // 0.11.0's pictures: a folder without settings, still pictures (outdated ones).
-    CHECK(parseEntry("ai\\realesr-general-x4v3\\64x64\\00000000000000ff.tex").type == ParsedEntry::Picture);
+    CHECK(keyName(k) == "256x128\\0123456789abcdef");
 }
 
 TEST(ai_map_names_as_the_game_loads_them) {
@@ -261,17 +231,14 @@ TEST(ai_map_names_as_the_game_loads_them) {
 
 namespace {
 
-const std::string kCurrent[kKinds] = {"g", "g", "a", "a", "a"};  // the ground and objects general, sprites anime
-
+// 0.48: the texture pack's pictures, their kinds and maps from its index (the builder's have no map).
 std::vector<CacheEntry> sampleCache() {
-    const std::string k1 = "256x256\\0000000000000001", k2 = "256x256\\0000000000000002",
-                      k3 = "128x128\\0000000000000003", k4 = "64x64\\0000000000000004", k5 = "64x64\\0000000000000005";
     return {
-        {entryName("g", k1), 100},  {kindTag(Kind::Ground, k1), 8},  {mapTag("prontera", k1), 8},
-        {mapTag("geffen", k1), 8},  {entryName("g", k2), 200},       {kindTag(Kind::Objects, k2), 8},
-        {mapTag("prontera", k2), 8}, {entryName("old", k2), 50},     {entryName("a", k3), 30},
-        {kindTag(Kind::Sprites, k3), 8}, {mapTag("geffen", k3), 8},  {entryName("g", k4), 10},  // before 0.12: no tags
-        {entryName("a", k5), 5},    {kindTag(Kind::Ground, k5), 8},  // a ground texture made by another model
+        {"world/256x256/0000000000000001.webp", 100, Kind::Ground, {"prontera", "geffen"}},
+        {"world/256x256/0000000000000002.webp", 200, Kind::Objects, {"prontera"}},
+        {"sprites/128x128/0000000000000003.webp", 30, Kind::Sprites, {"geffen"}},
+        {"world/64x64/0000000000000004.webp", 10, Kind::None, {}},  // not in the index: no kind, no map
+        {"world/64x64/0000000000000005.webp", 5, Kind::Ground, {}},
     };
 }
 
@@ -279,18 +246,16 @@ std::vector<CacheEntry> sampleCache() {
 
 TEST(ai_cache_index_by_map_and_kind) {
     const CacheContents c(sampleCache());
-    CHECK_EQ(c.pictures(), size_t(6));
-    const CacheIndex x = c.index(kCurrent);
-    CHECK_EQ(x.outdated, 2u);  // "old", and k5's anime picture while the ground is general
-    CHECK_EQ(x.outdatedBytes, uint64_t(55));
-    CHECK_EQ(x.all.total, 4u);
-    CHECK_EQ(x.all.bytes, uint64_t(340));
-    CHECK_EQ(x.all.count[0], 1u);
+    CHECK_EQ(c.pictures(), size_t(5));
+    const CacheIndex x = c.index();
+    CHECK_EQ(x.all.total, 5u);
+    CHECK_EQ(x.all.bytes, uint64_t(345));
+    CHECK_EQ(x.all.count[0], 2u);
     CHECK_EQ(x.all.count[1], 1u);
     CHECK_EQ(x.all.count[2], 1u);
-    CHECK_EQ(x.rows.size(), size_t(3));  // geffen, prontera, then the one of no map
+    CHECK_EQ(x.rows.size(), size_t(3));  // geffen, prontera, then the pictures of no map
     CHECK(x.rows[0].map == "geffen");
-    CHECK_EQ(x.rows[0].total, 2u);  // k1 (shared with prontera) and k3
+    CHECK_EQ(x.rows[0].total, 2u);  // 1 (shared with prontera) and 3
     CHECK_EQ(x.rows[0].bytes, uint64_t(130));
     CHECK_EQ(x.rows[0].count[2], 1u);
     CHECK(x.rows[1].map == "prontera");
@@ -298,45 +263,41 @@ TEST(ai_cache_index_by_map_and_kind) {
     CHECK_EQ(x.rows[1].count[0], 1u);
     CHECK_EQ(x.rows[1].count[1], 1u);
     CHECK(x.rows[2].map.empty());
-    CHECK_EQ(x.rows[2].total, 1u);  // k4: of no kind, counted in the total only
-    CHECK_EQ(x.rows[2].count[0] + x.rows[2].count[1] + x.rows[2].count[2] + x.rows[2].count[3], 0u);
+    CHECK_EQ(x.rows[2].total, 2u);  // 4 (of no kind: in the total only) and 5
+    CHECK_EQ(x.rows[2].count[0], 1u);
+    CHECK_EQ(x.rows[2].count[1] + x.rows[2].count[2] + x.rows[2].count[3] + x.rows[2].count[4], 0u);
 }
 
-TEST(ai_cache_deletion_keeps_tags_and_what_is_not_chosen) {
+TEST(ai_cache_deletion_by_map_and_kind) {
     const CacheContents c(sampleCache());
     const auto has = [](const std::vector<std::string>& names, const std::string& n) {
         return std::find(names.begin(), names.end(), n) != names.end();
     };
-    const std::string k1 = "256x256\\0000000000000001", k2 = "256x256\\0000000000000002";
-    // Prontera's ground only: k1 goes (also from geffen - it is the same texture), k2 (objects) stays.
+    const std::string p1 = "world/256x256/0000000000000001.webp", p2 = "world/256x256/0000000000000002.webp";
+    // Prontera's ground only: 1 goes (from geffen too - it is the same texture), 2 (objects) stays.
     CacheDeletion d;
     d.maps = {"prontera"};
     d.kinds[1] = false;
-    std::vector<std::string> keep = c.keep(d, kCurrent);
-    CHECK(!has(keep, entryName("g", k1)));
-    CHECK(has(keep, entryName("g", k2)));
-    CHECK(has(keep, kindTag(Kind::Ground, k1)));  // the tags stay: the texture is still on those maps
-    CHECK(has(keep, mapTag("geffen", k1)));
-    CHECK_EQ(keep.size(), sampleCache().size() - 1);
-    // Every kind of prontera: every settings' picture of its textures, the outdated one of k2 too.
+    std::vector<std::string> keep = c.keep(d);
+    CHECK(!has(keep, p1));
+    CHECK(has(keep, p2));
+    CHECK_EQ(keep.size(), size_t(4));
+    // Every kind of prontera.
     d.kinds[1] = true;
-    keep = c.keep(d, kCurrent);
-    CHECK(!has(keep, entryName("g", k2)));
-    CHECK(!has(keep, entryName("old", k2)));
-    // The row of no map: the pictures made before 0.12, of no kind, go whatever kinds are chosen.
+    keep = c.keep(d);
+    CHECK(!has(keep, p1) && !has(keep, p2));
+    CHECK_EQ(keep.size(), size_t(3));
+    // The row of no map: a picture of no kind goes whatever kinds are chosen, the others by their kind.
     CacheDeletion none;
     none.maps = {""};
     for (bool& k : none.kinds) k = false;
-    keep = c.keep(none, kCurrent);
-    CHECK(!has(keep, entryName("g", "64x64\\0000000000000004")));
-    CHECK(has(keep, entryName("a", "64x64\\0000000000000005")));  // tagged ground: chosen by kind
-    // Outdated only.
-    CacheDeletion old;
-    old.outdated = true;
-    keep = c.keep(old, kCurrent);
-    CHECK_EQ(keep.size(), sampleCache().size() - 2);
-    CHECK(!has(keep, entryName("old", k2)));
-    CHECK(!has(keep, entryName("a", "64x64\\0000000000000005")));
+    keep = c.keep(none);
+    CHECK(!has(keep, "world/64x64/0000000000000004.webp"));
+    CHECK(has(keep, "world/64x64/0000000000000005.webp"));
+    none.kinds[0] = true;
+    keep = c.keep(none);
+    CHECK(!has(keep, "world/64x64/0000000000000005.webp"));
+    CHECK_EQ(keep.size(), size_t(3));
 }
 
 TEST(ai_anime_model_is_the_compact_one) {

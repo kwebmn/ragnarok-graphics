@@ -17,7 +17,6 @@ constexpr int kKinds = 1001;  // + the kind's place in kKindBoxes
 constexpr int kQuality = 1010;
 constexpr int kMake = 1020;
 constexpr int kStop = 1021;
-constexpr int kCheck = 1022;
 constexpr int kAnew = 1023;
 constexpr int kCopy = 1024;
 constexpr int kBar = 1030;
@@ -42,13 +41,6 @@ ULONGLONG g_launchedAt = 0;
 bool* kindOf(pack::Choice& c, int i) {
     bool* const fields[7] = {&c.world, &c.effects, &c.monsters, &c.players, &c.npcs, &c.items, &c.interface};
     return fields[i];
-}
-
-std::string ansi(const std::wstring& w) {  // the paths the core's files take (fopen), as the driver's
-    const int n = WideCharToMultiByte(CP_ACP, 0, w.c_str(), int(w.size()), nullptr, 0, nullptr, nullptr);
-    std::string out(size_t(n > 0 ? n : 0), '\0');
-    if (n > 0) WideCharToMultiByte(CP_ACP, 0, w.c_str(), int(w.size()), out.data(), n, nullptr, nullptr);
-    return out;
 }
 
 bool readStatus(const std::wstring& path, pack::Status& s) {
@@ -83,12 +75,11 @@ bool builderAlive(uint32_t pid) {
 }
 
 bool working(pack::Status::State s) {
-    return s == pack::Status::Starting || s == pack::Status::Reading || s == pack::Status::Building ||
-           s == pack::Status::Checking;
+    return s == pack::Status::Starting || s == pack::Status::Reading || s == pack::Status::Building;
 }
 
 // The texture pack (0.43): what goes into it, its making in the background (uaro-render64.exe --pack) with its
-// progress, and the keys' check against upscaled.grf.
+// progress. 0.48: the keys' check against upscaled.grf is gone with the file - the game's log says what the pack lacks.
 class PackPage : public Page {
 public:
     explicit PackPage(PageHost& host) : Page(host) {}
@@ -127,11 +118,8 @@ public:
         texts(line, detail, &tone);
         line_ = p.note(running_ ? line + L"\n " : line, tone);
         detail_ = p.note(running_ ? detail + L"\n " : detail);
-        const bool result = !running_ && haveStatus_ && status_.check && status_.state == pack::Status::Done;
-        p.buttons({{kCheck, t(Text::PackCheck), host && !running_},
-                   {kAnew, t(Text::PackAnew), host && chosen && !running_},
-                   {kCopy, t(Text::PackCopy), result}});
-        p.note(t(Text::PackCheckNote));
+        const bool result = !running_ && haveStatus_ && !working(status_.state);
+        p.buttons({{kAnew, t(Text::PackAnew), host && chosen && !running_}, {kCopy, t(Text::PackCopy), result}});
         if (!host) p.note(t(Text::PackNoHost), Tone::Bad);
         if (!chosen) p.note(t(Text::PackNothing), Tone::Warn);
         if (running_) p.note(t(Text::PackBackground));
@@ -168,17 +156,15 @@ public:
         } else if (id == kAnew) {
             if (!host_.ask(tf(Text::PackAskAnew, {num((long long)packCount_)}))) return;
             start("build", g_choice, true);
-        } else if (id == kCheck) {
-            start("check", pack::Choice(), false);  // every kind: the whole of upscaled.grf
         } else if (id == kStop) {
             const std::wstring stop = statusPath_ + L".stop";
             HANDLE f = CreateFileW(stop.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
                                    nullptr);
             if (f != INVALID_HANDLE_VALUE) CloseHandle(f);
-        } else if (id == kCopy) {
-            std::wstring text = wide(status_.message);
-            for (const std::string& miss : status_.missing) text += L"\r\n" + wide(miss);
-            copyToClipboard(host_.window(), text);
+        } else if (id == kCopy) {  // how it ended, for the developers
+            std::wstring line, detail;
+            texts(line, detail);
+            copyToClipboard(host_.window(), detail.empty() ? line : line + L"\r\n" + detail);
         }
     }
 
@@ -258,11 +244,6 @@ private:
                     permille = part(s.filesDone, s.filesTotal);
                     detail = tf(Text::PackFile, {s.current});
                     break;
-                case pack::Status::Checking:
-                    line = tf(Text::PackChecking, {num(s.filesDone), num(s.filesTotal)});
-                    permille = part(s.filesDone, s.filesTotal);
-                    detail = tf(Text::PackFile, {s.current});
-                    break;
                 case pack::Status::Building: {
                     char rate[32];
                     std::snprintf(rate, sizeof rate, s.rate >= 10 ? "%.0f" : "%.1f", s.rate);
@@ -276,14 +257,7 @@ private:
                 case pack::Status::Done:
                     permille = 1000;
                     how = Tone::Good;
-                    if (s.check) {
-                        line = tf(Text::PackChecked, {s.message});
-                        std::string missing;
-                        for (const std::string& miss : s.missing) missing += (missing.empty() ? "" : ", ") + miss;
-                        if (!missing.empty()) detail = tf(Text::PackMissing, {missing});
-                    } else {
-                        line = tf(Text::PackDone, {num(s.inPack), sizeText(s.bytes, host_.lang())});
-                    }
+                    line = tf(Text::PackDone, {num(s.inPack), sizeText(s.bytes, host_.lang())});
                     break;
                 case pack::Status::Stopped:
                     line = tf(Text::PackStopped, {num(s.made)});

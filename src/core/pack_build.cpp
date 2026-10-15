@@ -213,35 +213,6 @@ std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t siz
     return out;
 }
 
-KeyCheck checkKeys(const std::vector<std::string>& cacheNames, const std::unordered_set<std::string>& made) {
-    KeyCheck k;
-    std::unordered_map<std::string, ai::Kind> kinds;
-    std::unordered_set<std::string> pictures;
-    for (const std::string& name : cacheNames) {
-        const ai::ParsedEntry e = ai::parseEntry(name);
-        if (e.type == ai::ParsedEntry::KindTag)
-            kinds.emplace(e.key, e.kind);
-        else if (e.type == ai::ParsedEntry::Picture)
-            pictures.insert(e.key);
-    }
-    std::vector<std::string> sorted(pictures.begin(), pictures.end());
-    std::sort(sorted.begin(), sorted.end());
-    for (const std::string& key : sorted) {
-        const auto it = kinds.find(key);
-        const bool found = made.count(key) != 0;
-        if (it == kinds.end() || int(it->second) >= ai::kKinds) {
-            ++k.untagged;
-            k.untaggedFound += found;
-        } else {
-            ++k.seen[int(it->second)];
-            k.found[int(it->second)] += found;
-        }
-        if (!found && k.missing.size() < 12)
-            k.missing.push_back(std::string(it == kinds.end() ? "untagged" : ai::kindName(it->second)) + " " + key);
-    }
-    return k;
-}
-
 namespace {
 
 const char* const kChoiceWords[7] = {"world", "effects", "monsters", "players", "npcs", "items", "interface"};
@@ -249,7 +220,7 @@ bool* choiceField(Choice& c, int i) {
     bool* const fields[7] = {&c.world, &c.effects, &c.monsters, &c.players, &c.npcs, &c.items, &c.interface};
     return fields[i];
 }
-const char* const kStates[7] = {"starting", "reading", "building", "checking", "done", "stopped", "failed"};
+const char* const kStates[6] = {"starting", "reading", "building", "done", "stopped", "failed"};
 
 std::string oneLine(const std::string& s) {
     std::string out = s;
@@ -290,8 +261,7 @@ bool anyChosen(const Choice& c) {
 std::string statusText(const Status& s) {
     char rate[32];
     std::snprintf(rate, sizeof rate, "%.2f", s.rate);
-    std::string t = std::string("state=") + kStates[std::min<int>(s.state, 6)] + "\n";
-    t += std::string("mode=") + (s.check ? "check" : "build") + "\n";
+    std::string t = std::string("state=") + kStates[std::min<int>(s.state, 5)] + "\n";
     t += "files=" + std::to_string(s.filesDone) + "/" + std::to_string(s.filesTotal) + "\n";
     t += "pictures=" + std::to_string(s.made) + "/" + std::to_string(s.toMake) + "\n";
     t += "in_pack=" + std::to_string(s.inPack) + "\n";
@@ -301,7 +271,6 @@ std::string statusText(const Status& s) {
     t += "pid=" + std::to_string(s.pid) + "\n";
     t += "current=" + oneLine(s.current) + "\n";
     t += "message=" + oneLine(s.message) + "\n";
-    for (const std::string& m : s.missing) t += "missing=" + oneLine(m) + "\n";
     return t;
 }
 
@@ -323,13 +292,11 @@ bool parseStatus(const std::string& text, Status& out) {
             b = slash == std::string::npos ? 0 : uint32_t(std::strtoul(v.c_str() + slash + 1, nullptr, 10));
         };
         if (k == "state") {
-            for (int i = 0; i < 7; ++i)
+            for (int i = 0; i < 6; ++i)
                 if (v == kStates[i]) {
                     s.state = Status::State(i);
                     state = true;
                 }
-        } else if (k == "mode") {
-            s.check = v == "check";
         } else if (k == "files") {
             pair(s.filesDone, s.filesTotal);
         } else if (k == "pictures") {
@@ -348,21 +315,10 @@ bool parseStatus(const std::string& text, Status& out) {
             s.current = v;
         } else if (k == "message") {
             s.message = v;
-        } else if (k == "missing") {
-            s.missing.push_back(v);
         }
     }
     if (state) out = std::move(s);
     return state;
-}
-
-std::string keyCheckText(const KeyCheck& k) {
-    std::string s;
-    for (int i = 0; i < ai::kKinds; ++i)
-        s += std::string(i ? ", " : "") + ai::kindName(ai::Kind(i)) + " " + std::to_string(k.found[i]) + " of " +
-             std::to_string(k.seen[i]);
-    if (k.untagged) s += ", of no kind " + std::to_string(k.untaggedFound) + " of " + std::to_string(k.untagged);
-    return s;
 }
 
 }  // namespace uagfx::pack

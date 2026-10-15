@@ -283,6 +283,28 @@ std::map<std::string, std::string> parseAliases(const std::string& text) {
 
 std::map<std::string, ai::Kind> parseIndex(const std::string& text) {
     std::map<std::string, ai::Kind> out;
+    for (const auto& e : parseIndexFile(text).pictures) out[e.first] = e.second.kind;
+    return out;
+}
+
+std::string indexText(const Index& index) {
+    std::string t;
+    for (const auto& e : index.pictures) {
+        t += e.first + "\t" + ai::kindName(e.second.kind);
+        const char* sep = "\t";
+        for (const std::string& map : e.second.maps) {
+            t += sep + map;
+            sep = ",";
+        }
+        t += "\n";
+    }
+    for (const auto& a : index.aliases) t += "=" + a.first + "\t" + a.second + "\n";
+    return t;
+}
+
+Index parseIndexFile(const std::string& text) {
+    Index out;
+    out.aliases = parseAliases(text);
     size_t at = 0;
     while (at < text.size()) {
         size_t end = text.find('\n', at);
@@ -292,12 +314,20 @@ std::map<std::string, ai::Kind> parseIndex(const std::string& text) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
         const size_t tab = line.find('\t');
         if (tab == std::string::npos || tab == 0 || line[0] == '=') continue;  // 0.45: '=': a lower detail's key
-        std::string kind = line.substr(tab + 1);
-        const size_t more = kind.find('\t');  // the maps, later
-        if (more != std::string::npos) kind.resize(more);
-        ai::Kind k = ai::Kind::None;
-        if (!ai::parseKind(kind, k)) k = ai::Kind::None;
-        out[line.substr(0, tab)] = k;
+        std::string kind = line.substr(tab + 1), maps;
+        const size_t more = kind.find('\t');  // 0.48: the maps it was shown on
+        if (more != std::string::npos) {
+            maps = kind.substr(more + 1);
+            kind.resize(more);
+        }
+        IndexEntry& e = out.pictures[line.substr(0, tab)];
+        if (!ai::parseKind(kind, e.kind)) e.kind = ai::Kind::None;
+        for (size_t from = 0; from <= maps.size();) {
+            size_t comma = maps.find(',', from);
+            if (comma == std::string::npos) comma = maps.size();
+            if (comma > from) e.maps.insert(maps.substr(from, comma - from));
+            from = comma + 1;
+        }
     }
     return out;
 }
@@ -334,10 +364,15 @@ bool Reader::open(const std::string& path, std::string& error) {
         return false;
     }
     std::vector<Found> found;
-    if (!centralDirectory(file_, found, error)) {
-        error = path + ": " + error;
-        close();
-        return false;
+    std::string why;
+    if (!centralDirectory(file_, found, why)) {  // 0.48: cut short - its pictures by their local headers
+        localHeaders(file_, found);
+        if (found.empty()) {
+            error = path + ": " + why;
+            close();
+            return false;
+        }
+        recovered_ = true;
     }
     entries_.reserve(found.size());
     for (Found& e : found) entries_[e.name] = Entry{e.header, e.compressed, e.size, uint16_t(e.method)};
@@ -347,7 +382,13 @@ bool Reader::open(const std::string& path, std::string& error) {
 void Reader::close() {
     if (file_) std::fclose(file_);
     file_ = nullptr;
+    recovered_ = false;
     entries_.clear();
+}
+
+uint64_t Reader::sizeOf(const std::string& name) const {
+    const auto it = entries_.find(name);
+    return it == entries_.end() ? 0 : it->second.compressed;
 }
 
 bool Reader::read(const std::string& name, std::vector<uint8_t>& out) const {
@@ -495,6 +536,32 @@ bool Writer::close(const std::string& index, std::string& error) {
     std::fclose(file_);
     file_ = nullptr;
     return ok;
+}
+
+bool rewrite(const std::string& from, const std::string& to, const std::function<bool(const std::string&)>& keep,
+             size_t& kept, std::string& error) {
+    kept = 0;
+    Reader r;
+    if (!r.open(from, error)) return false;
+    std::vector<uint8_t> data;
+    const Index old = r.read(kIndexName, data) ? parseIndexFile(std::string(data.begin(), data.end())) : Index();
+    Writer w;
+    if (!w.open(to, false, error)) return false;
+    Index now;
+    for (const std::string& name : r.names()) {
+        if (name == kIndexName || !keep(name)) continue;
+        if (!r.read(name, data)) {
+            error = from + ": " + name + " cannot be read";
+            return false;
+        }
+        if (!w.add(name, data.data(), data.size(), error)) return false;
+        const auto e = old.pictures.find(name);
+        if (e != old.pictures.end()) now.pictures[name] = e->second;
+        ++kept;
+    }
+    for (const auto& a : old.aliases)
+        if (w.has(a.second)) now.aliases.insert(a);
+    return w.close(indexText(now), error);
 }
 
 }  // namespace uagfx::pack

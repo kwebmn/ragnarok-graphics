@@ -83,21 +83,6 @@ TEST(pack_build_takes_a_file_from_the_first_archive) {
     rmdir(dir.c_str());
 }
 
-TEST(pack_build_checks_its_keys_against_upscaled_grf) {
-    // What the game showed (upscaled.grf: pictures and their kind tags) against the keys the builder made.
-    const std::vector<std::string> cache = {
-        "ai\\realesr-animevideov3-r2\\256x256\\0000000000000001.tex", "ai\\@kind\\ground\\256x256\\0000000000000001",
-        "ai\\realesr-animevideov3-r2\\64x64\\0000000000000002.tex", "ai\\@kind\\sprites\\64x64\\0000000000000002",
-        "ai\\realesr-animevideov3-r2\\32x32\\0000000000000003.tex", "ai\\@kind\\sprites\\32x32\\0000000000000003",
-        "ai\\@map\\prontera\\256x256\\0000000000000001"};
-    const std::unordered_set<std::string> made = {"256x256\\0000000000000001", "64x64\\0000000000000002"};
-    const pack::KeyCheck k = pack::checkKeys(cache, made);
-    CHECK(k.seen[int(ai::Kind::Ground)] == 1 && k.found[int(ai::Kind::Ground)] == 1);
-    CHECK(k.seen[int(ai::Kind::Sprites)] == 2 && k.found[int(ai::Kind::Sprites)] == 1);
-    CHECK(k.missing.size() == 1 && k.missing[0] == "sprites 32x32\\0000000000000003");
-    CHECK(pack::keyCheckText(k).find("sprites 1 of 2") != std::string::npos);
-}
-
 TEST(pack_build_passes_its_choice_as_words) {
     // 0.43: the settings app starts the builder with the kinds ticked on its page, as words.
     pack::Choice c;
@@ -117,7 +102,6 @@ TEST(pack_build_writes_and_reads_its_status) {
     // What the builder does, in a file the settings app reads twice a second: a line a value.
     pack::Status s;
     s.state = pack::Status::Building;
-    s.check = true;  // the check's run, not the pack's
     s.filesDone = 120;
     s.filesTotal = 11253;
     s.made = 5000;
@@ -129,22 +113,20 @@ TEST(pack_build_writes_and_reads_its_status) {
     s.pid = 4242;
     s.current = "data\\sprite\\poring.spr\nsecond line";  // never two lines
     s.message = "";
-    s.missing = {"sprites 64x64\\0123456789abcdef", "ground 256x256\\fedcba9876543210"};
     const std::string text = pack::statusText(s);
     pack::Status r;
     CHECK(pack::parseStatus(text, r));
-    CHECK(r.state == pack::Status::Building && r.check);
+    CHECK(r.state == pack::Status::Building);
     CHECK(r.filesDone == 120 && r.filesTotal == 11253 && r.made == 5000 && r.toMake == 80000 && r.inPack == 7000);
     CHECK(r.bytes == 123456789012ull && r.eta == 1807 && r.pid == 4242);
     CHECK(r.rate > 41.4 && r.rate < 41.6);
     CHECK_EQ(r.current, std::string("data\\sprite\\poring.spr second line"));
-    CHECK(r.missing.size() == 2 && r.missing[1] == "ground 256x256\\fedcba9876543210");
     for (int st = 0; st <= int(pack::Status::Failed); ++st) {
         pack::Status a;
         a.state = pack::Status::State(st);
         a.message = "why";
         pack::Status b;
-        CHECK(pack::parseStatus(pack::statusText(a), b) && b.state == a.state && b.message == "why" && !b.check);
+        CHECK(pack::parseStatus(pack::statusText(a), b) && b.state == a.state && b.message == "why");
     }
     pack::Status bad;
     CHECK(!pack::parseStatus("", bad));

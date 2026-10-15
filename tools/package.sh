@@ -17,7 +17,7 @@ stage="build-win/package"
 rm -rf "$out" "$stage"
 mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai"
 cp dist/install.bat dist/uninstall.bat dist/use-uaro.bat dist/use-dgvoodoo.bat dist/update.bat dist/get-dlss.bat \
-   dist/TEST.ru.md "$stage/"
+   dist/TEST.en.md dist/TEST.uk.md dist/TEST.ru.md "$stage/"
 cp build-win/ddraw.dll build-win/uaro-graphics.exe dist/uaro-graphics.ini build-win64/uaro-render64.exe \
    dist/dlss-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
