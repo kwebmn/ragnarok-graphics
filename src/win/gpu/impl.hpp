@@ -355,6 +355,9 @@ struct Renderer::Impl {
     bool gradeDone = false;
     ID3DBlob* gradePs = nullptr;
     ID3D12PipelineState* gradePipelines[4] = {};  // into the target of 1, 2, 4, 8 samples (the world under DLSS: 1)
+    bool nightDone = false;  // 0.63
+    ID3DBlob* nightPs = nullptr;
+    ID3D12PipelineState* nightPipelines[4] = {};
     // 0.22, depth of field (ao.cpp): after the colours, from a quarter-sized blurred copy.
     bool dofDone = false;
     ID3D12Resource* dofTarget[2] = {};  // B8G8R8A8, a quarter of the world's size
@@ -716,6 +719,7 @@ struct Renderer::Impl {
     void newPicture() {
         waterCopied = false;  // 0.19: its water copies what is under it anew
         aoDone = groundDrawn = gradeDone = dofDone = torchDone = false;  // 0.20-0.23
+        nightDone = false;  // 0.63
         torchFlames.clear();
         fireSparks.clear();
         fireflyDraws.clear();
@@ -735,6 +739,8 @@ struct Renderer::Impl {
     bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
     bool applyAo();  // once a frame (aoDone); false: lost
     bool gradeWanted() const { return effects.grade; }
+    bool nightDue() const { return effects.night && effects.nightNow > 0 && nightPs && groundDrawn && !nightDone; }
+    bool applyNight();  // 0.63: once a frame, before the torches' light; false: lost
     bool gradeDue() const { return gradeWanted() && groundDrawn && !gradeDone; }
     bool applyGrade();  // once a frame (gradeDone), the world drawn: before its glow and the interface; false: lost
     // The world's shadows if they are due, then its colours: before the interface, a present or a read of the

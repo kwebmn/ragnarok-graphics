@@ -399,6 +399,10 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.portalsStrength = rd.i32();
             e.weather = rd.u8() != 0;
             e.weatherAmount = rd.i32();
+            e.night = rd.u8() != 0;  // 0.63
+            e.nightStrength = rd.i32();
+            e.nightClock = rd.u8() != 0;
+            e.nightNow = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

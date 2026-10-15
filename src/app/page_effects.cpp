@@ -39,6 +39,7 @@ const Effect kEffects[] = {
       "effects.grade_vignette"},
      {},
      false},
+    {"effects.night", {"effects.night_clock"}, {"effects.night_strength"}, {}, false},  // 0.63
     {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, false},
     {"effects.torch",
      {"effects.torch_flame"},

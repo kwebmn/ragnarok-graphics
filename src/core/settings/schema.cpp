@@ -169,6 +169,12 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxGradeWarmthHint, " %"},
         {"effects", "grade_vignette", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxGradeVignette,
          Text::FxGradeVignetteHint, " %"},
+        {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
+         ""},
+        {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
+         Text::FxNightStrengthHint, " %"},
+        {"effects", "night_clock", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNightClock,
+         Text::FxNightClockHint, ""},
         {"effects", "dof", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDof, Text::FxDofHint, ""},
         {"effects", "dof_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxDofStrength,
          Text::FxDofStrengthHint, " %"},
@@ -326,6 +332,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.grade_brightness") return std::to_string(c.effects.gradeBrightness);
     if (k == "effects.grade_warmth") return std::to_string(c.effects.gradeWarmth);
     if (k == "effects.grade_vignette") return std::to_string(c.effects.gradeVignette);
+    if (k == "effects.night") return c.effects.night ? "1" : "0";
+    if (k == "effects.night_strength") return std::to_string(c.effects.nightStrength);
+    if (k == "effects.night_clock") return c.effects.nightClock ? "1" : "0";
     if (k == "effects.dof") return c.effects.dof ? "1" : "0";
     if (k == "effects.dof_strength") return std::to_string(c.effects.dofStrength);
     if (k == "effects.dof_range") return std::to_string(c.effects.dofRange);

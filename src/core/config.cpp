@@ -1,5 +1,7 @@
 #include "core/config.hpp"
 
+#include <algorithm>
+
 #include <cctype>
 #include <cstdlib>
 #include <sstream>
@@ -108,14 +110,30 @@ EffectSettings effectsOff() {
     EffectSettings e;  // every switch off (0.39.4: the ones added since 0.27 too), the sliders as they are
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
-    e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = false;
+    e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = false;
+    e.nightNow = 0;
     return e;
+}
+
+int nightAmount(const EffectSettings& e, int hour, int minute) {
+    if (!e.night) return 0;
+    const int strength = std::clamp(e.nightStrength, 0, 100);
+    if (!e.nightClock) return strength;
+    const double t = hour + minute / 60.0;
+    double f = 0.0;
+    if (t >= 21.0 || t < 5.0)
+        f = 1.0;
+    else if (t >= 20.0)
+        f = t - 20.0;  // dusk
+    else if (t < 6.0)
+        f = 6.0 - t;  // dawn
+    return int(strength * f + 0.5);
 }
 
 bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
-           e.grade || e.dof || e.water;
+           e.grade || e.dof || e.water || e.night;
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
@@ -140,7 +158,9 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
            ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
            gradeSaturation == o.gradeSaturation && gradeContrast == o.gradeContrast &&
            gradeBrightness == o.gradeBrightness && gradeWarmth == o.gradeWarmth && gradeVignette == o.gradeVignette &&
-           dof == o.dof && dofStrength == o.dofStrength && dofRange == o.dofRange && water == o.water &&
+           night == o.night && nightStrength == o.nightStrength && nightClock == o.nightClock &&
+           nightNow == o.nightNow && dof == o.dof && dofStrength == o.dofStrength && dofRange == o.dofRange &&
+           water == o.water &&
            waterWaves == o.waterWaves && waterReflections == o.waterReflections && waterClarity == o.waterClarity;
 }
 
@@ -370,6 +390,12 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 100, c.effects.aoStrength);
         } else if (key == "effects.ao_size") {
             toInt(val, 0, 100, c.effects.aoSize);
+        } else if (key == "effects.night") {
+            setBool(val, c.effects.night);
+        } else if (key == "effects.night_strength") {
+            toInt(val, 0, 100, c.effects.nightStrength);
+        } else if (key == "effects.night_clock") {
+            setBool(val, c.effects.nightClock);
         } else if (key == "effects.grade") {
             setBool(val, c.effects.grade);
         } else if (key == "effects.grade_saturation") {

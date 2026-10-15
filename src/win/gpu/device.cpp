@@ -1094,6 +1094,8 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : aoApplyPipelines) releaseCom(p);
     for (ID3D12PipelineState*& p : glowLightPipelines) releaseCom(p);
     for (ID3D12PipelineState*& p : gradePipelines) releaseCom(p);  // 0.21
+    for (ID3D12PipelineState*& p : nightPipelines) releaseCom(p);  // 0.63
+    releaseCom(nightPs);
     releaseCom(gradePs);
     for (ID3D12Resource*& r : dofTarget) releaseCom(r);  // 0.22
     for (ID3D12Resource*& r : dofFocus) releaseCom(r);
@@ -1435,7 +1437,8 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool was = m.glowWanted();
     const bool scene =
         m.waterWanted() || m.aoWanted() || m.gradeWanted() || m.dofWanted() || m.torchWanted() || m.fireflyWanted() ||
-        m.mapGlowsWanted() || m.actorShadowsWanted() || m.cloudsWanted() || m.hazeWanted() || m.heatWanted();
+        m.mapGlowsWanted() || m.actorShadowsWanted() || m.cloudsWanted() || m.hazeWanted() || m.heatWanted() ||
+        m.effects.night;  // 0.63
     const bool dof = m.dofWanted();
     const bool ao = m.aoWanted();
     const bool actorShadows = m.actorShadowsWanted();
@@ -1471,7 +1474,7 @@ void Renderer::setEffects(const EffectSettings& e) {
     if (dof && !m.dofWanted()) m.releaseDof();
     if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted() && !m.dofWanted() && !m.torchWanted() &&
         !m.fireflyWanted() && !m.mapGlowsWanted() && !m.actorShadowsWanted() && !m.cloudsWanted() && !m.hazeWanted() &&
-        !m.heatWanted())
+        !m.heatWanted() && !m.effects.night)
         m.releaseScene();
 }
 

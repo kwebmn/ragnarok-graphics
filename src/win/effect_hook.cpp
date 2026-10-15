@@ -37,7 +37,9 @@ void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
     const uint32_t master = *reinterpret_cast<const uint32_t*>(uintptr_t(prim) + effect_exe::kPrimMaster);
     Tag tag;
     if (master && *reinterpret_cast<const uint32_t*>(uintptr_t(master)) == effect_exe::kEffectVtable) {
-        tag.kind = effect_exe::kindOf(*reinterpret_cast<const int*>(uintptr_t(master) + effect_exe::kEffectId));
+        const int id = *reinterpret_cast<const int*>(uintptr_t(master) + effect_exe::kEffectId);
+        tag.kind = effect_exe::kindOf(id);
+        tag.auraExtra = effect_exe::auraExtra(id);
         tag.seed = uint8_t((prim >> 4) * 2654435761u >> 24);  // the primitive's own
     }
     g_current = tag;
@@ -48,8 +50,8 @@ void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
 // 0.37: while an effect renders its own animation (an STR: most of the big skills), its faces are its.
 void __attribute__((thiscall)) effectRender(uint32_t effect, void* matrix) {
     const Tag before = g_current;
-    g_current = Tag{effect_exe::kindOf(*reinterpret_cast<const int*>(uintptr_t(effect) + effect_exe::kEffectId)),
-                    uint8_t((effect >> 4) * 2654435761u >> 24)};
+    const int id = *reinterpret_cast<const int*>(uintptr_t(effect) + effect_exe::kEffectId);
+    g_current = Tag{effect_exe::kindOf(id), uint8_t((effect >> 4) * 2654435761u >> 24), effect_exe::auraExtra(id)};
     reinterpret_cast<RenderFn>(g_effect)(effect, matrix);
     g_current = before;
 }
@@ -104,6 +106,10 @@ bool hookEntry(uint32_t entry, bool (*valid)(const uint8_t*), const void* hook, 
 }
 
 }  // namespace
+
+bool auraOff() {
+    return g_render && *reinterpret_cast<volatile const int*>(uintptr_t(effect_exe::kAuraFlag)) == 0;
+}
 
 bool installEffectHook() {
     static int done = -1;  // once: 1 hooked, 0 not

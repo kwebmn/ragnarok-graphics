@@ -9,6 +9,8 @@ namespace uagfx::win {
 bool installEffectHook();
 // The effect the draw whose vertices these are is of (Kind::None: none the driver cares about).
 effect_exe::Tag drawnEffect(const void* vertices);
+// 0.63: /aura is off now (the game's flag; false while the hook is not in: its exe is another build).
+bool auraOff();
 // A frame was shown: the next one's primitives are noted anew.
 void effectFrame();
 

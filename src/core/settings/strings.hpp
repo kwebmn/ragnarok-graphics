@@ -133,6 +133,8 @@ enum class Text : uint16_t {
     AiCompress, AiCompressHint, AiCompressAuto, AiCompressOn, AiCompressOff,
     // 0.62
     QualityUiNative, QualityUiNativeHint,
+    // 0.63
+    FxNight, FxNightHint, FxNightStrength, FxNightStrengthHint, FxNightClock, FxNightClockHint,
     Count
 };
 

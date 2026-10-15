@@ -205,6 +205,9 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 0.27: the level 99 aura softer - its vertices' colour and alpha, in a copy (the game's stay as they are).
     // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew).
     const effect_exe::Tag tag = win::drawnEffect(vertices);
+    // 0.63: /aura at once - the game reads it only as an aura is made (a map entered): its ring and bubbles go the
+    // moment it is off; the circles stay, as the game shows them.
+    if (tag.auraExtra && c.enhanced() && win::auraOff()) return D3D_OK;
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
     const EffectSettings& fx = c.config.effects;

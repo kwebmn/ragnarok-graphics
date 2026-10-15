@@ -57,7 +57,12 @@ void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Sof
 struct Tag {
     Kind kind = Kind::None;
     uint8_t seed = 0;
+    bool auraExtra = false;  // 0.63: the aura's ring or bubbles (auraExtra): what /aura shows
 };
+// 0.63: the level 99 aura's parts /aura turns on - the ring and bubbles (200, 201; 397, 398 transcendent), not the
+// circles (202, 362) the game always shows - and where the game keeps /aura (0 off; read only as an aura is made).
+bool auraExtra(int id);
+constexpr uint32_t kAuraFlag = 0x772CE4;
 
 // The faces of the effects the driver cares about sorted this frame, by the address of their vertices.
 class Faces {

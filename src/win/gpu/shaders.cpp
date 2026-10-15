@@ -669,6 +669,16 @@ float4 grade_ps(PresentOut i) : SV_Target {
     return float4(saturate(c), 1.0);
 }
 
+// 0.63, night: the world from its copy (t2) darker and colder - the bright stays (a fire, a lamp, a spark), and the
+// torches' light (after this) shines out of it. sharpen how much (0-1).
+float4 night_ps(PresentOut i) : SV_Target {
+    float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb;
+    float l = dot(c, float3(0.2126, 0.7152, 0.0722));
+    float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * 0.45;
+    float keep = smoothstep(0.72, 0.97, l);
+    return float4(lerp(c, lerp(night, c, keep), sharpen), 1.0);
+}
+
 // 0.22, depth of field (tilt-shift): sharp around what the camera looks at - the character in the middle of the
 // screen - softer with the distance in depth from it, near and far, as if the map were a model. uiPixels the
 // world's size and its blurred copy's (a quarter); footprint where the blur starts (0.22.5: a share of the focus's

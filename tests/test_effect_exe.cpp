@@ -25,6 +25,9 @@ struct Tl2 {  // FVF 0x2C4
 TEST(effect_exe_knows_the_level_99_aura) {
     // 0.27: the ring, the bubbles and the circle, and the transcendent classes' ones.
     for (int id : {200, 201, 202, 362, 397, 398}) CHECK(effect_exe::kindOf(id) == Kind::Aura);
+    // 0.63: what /aura turns on - the ring and bubbles, not the circles
+    for (int id : {200, 201, 397, 398}) CHECK(effect_exe::auraExtra(id));
+    for (int id : {202, 362, 45, 0}) CHECK(!effect_exe::auraExtra(id));
     // 0.37: the rest are skills and the like - but the maps' own (torches, smoke, bubbles, bats...) and nothing.
     for (int id : {47, 44, 109, 353, 359, 557, -1, 0}) CHECK(effect_exe::kindOf(id) == Kind::None);
     for (int id : {89, 199, 203, 361, 363, 396, 399, 629}) CHECK(effect_exe::kindOf(id) == Kind::Skill);

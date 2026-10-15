@@ -221,6 +221,35 @@ bool Renderer::Impl::applyGrade() {
                                 sceneHeight, c, sceneColorSrv, true);
 }
 
+// 0.63: the night (night_ps) - as the colours are made, from the picture's copy into it.
+bool Renderer::Impl::applyNight() {
+    nightDone = true;
+    const UINT n = upscale ? 1 : samples;
+    const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
+    if (!nightPs || !ensureScene("night")) return true;
+    if (!nightPipelines[code]) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, nightPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
+        p.BlendState.RenderTarget[0].RenderTargetWriteMask =
+            D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&nightPipelines[code])))) {
+            nightPipelines[code] = nullptr;
+            LOG_ERROR("night: the pipeline onto %u samples failed", 1u << code);
+            return true;
+        }
+    }
+    if (!copySceneColor()) return false;
+    Constants c{};
+    c.sharpen = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    c.uiPixels[0] = float(sceneWidth);
+    c.uiPixels[1] = float(sceneHeight);
+    return upscale ? effectPass(nightPipelines[code], world, worldState, rtvHandle(kRtvWorld), sceneWidth,
+                                sceneHeight, c, sceneColorSrv, true)
+                   : effectPass(nightPipelines[code], target, targetState, rtvHandle(kRtvTarget), sceneWidth,
+                                sceneHeight, c, sceneColorSrv, true);
+}
+
 void Renderer::Impl::releaseDof() {
     Slot& s = slots[slot];  // what the open list recorded may still read them
     for (ID3D12Resource*& r : dofTarget) {
@@ -362,6 +391,7 @@ bool Renderer::Impl::applyDof() {
 
 bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
+    if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
     if (hazeDue() && !applyHaze()) return false;      // 0.34: far off and over the ground, before the colours
     if (heatDue() && !applyHeat()) return false;      // 0.35: the hot air shimmering over all of that

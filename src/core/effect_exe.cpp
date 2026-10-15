@@ -18,6 +18,8 @@ bool isShadowEntry(const uint8_t bytes[6]) {
     return std::memcmp(bytes, kEntry, sizeof kEntry) == 0;
 }
 
+bool auraExtra(int id) { return id == 200 || id == 201 || id == 397 || id == 398; }
+
 Kind kindOf(int id) {
     switch (id) {
     case 45:

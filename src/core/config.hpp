@@ -155,6 +155,13 @@ struct EffectSettings {
     int gradeVignette = 25;     // %, 0-100
     // 0.22: depth of field - sharp around the character in the middle of the screen, the rest softer with the
     // distance in depth from it (tilt-shift: the map looks like a model).
+    // 0.63: night - the world darker and colder, the torches, lamps and skills shining out of it; by the clock: only
+    // from 20:00 to 6:00 (dusk and dawn an hour each), the computer's time. nightNow: how much now (0-100) - the
+    // driver's, each frame, not the file's.
+    bool night = false;
+    int nightStrength = 60;  // %, 0-100
+    bool nightClock = false;
+    int nightNow = 0;
     bool dof = false;
     int dofStrength = 60;  // %, 0-100: how soft the far and the near get
     int dofRange = 40;     // %, 0-100: how deep the sharp zone is
@@ -170,6 +177,9 @@ EffectSettings effectsOff();
 // 0.46.1: one of the effects the Direct3D 12 renderer draws itself is on (all but the aura's and the skills'
 // softness, which the game's draws get on their way).
 bool drawnByRenderer(const EffectSettings& e);
+// 0.63: how much night now (0-100, EffectSettings::nightNow) at this local time: its strength, by the clock only
+// from 20:00 to 6:00 - rising from 20:00 to 21:00, fading from 5:00 to 6:00.
+int nightAmount(const EffectSettings& e, int hour, int minute);
 
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 struct Config {

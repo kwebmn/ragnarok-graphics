@@ -87,6 +87,8 @@ private:
         int width = 0, height = 0;
     };
     void applyGrade();  // 0.59
+    void applyNight();  // 0.63
+    void worldPass(ID3D11PixelShader* ps, const Constants& c);
     // 0.60.1: the characters' shadows (actor_shadows11.cpp, as Direct3D 12's actor_shadows.cpp - the sun's light
     // alone: no map's lamps without the camera)
     bool shadowsWanted() const {
@@ -165,6 +167,8 @@ private:
     bool groundDrawn_ = false, shadowsDone_ = false, shadowsLogged_ = false;
     // 0.61: the torches' light
     ID3D11PixelShader* torchLightPs_ = nullptr;
+    ID3D11PixelShader* nightPs_ = nullptr;  // 0.63
+    bool nightDone_ = false;
     ID3D11Texture2D* lightData_ = nullptr;  // two texels a light (torch_light_ps's t1)
     ID3D11ShaderResourceView* lightDataSrv_ = nullptr;
     objects::Textures objectTextures_;

@@ -329,7 +329,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
         }
     }
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);
-    renderer->setEffects(enhanced_ ? config.effects : effectsOff());  // Pause: the game's own picture
+    EffectSettings fx = config.effects;  // 0.63: how much night now, by the clock
+    if (fx.night) {
+        SYSTEMTIME t{};
+        GetLocalTime(&t);
+        fx.nightNow = nightAmount(fx, t.wHour, t.wMinute);
+    }
+    renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
     const bool changed = out.cx != lastOut_.cx || out.cy != lastOut_.cy || plan.k != lastPlan_.k ||

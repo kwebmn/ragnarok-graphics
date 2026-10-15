@@ -298,6 +298,10 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.portalsStrength);
     w.u8(e.weather ? 1 : 0);
     w.i32(e.weatherAmount);
+    w.u8(e.night ? 1 : 0);  // 0.63
+    w.i32(e.nightStrength);
+    w.u8(e.nightClock ? 1 : 0);
+    w.i32(e.nightNow);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

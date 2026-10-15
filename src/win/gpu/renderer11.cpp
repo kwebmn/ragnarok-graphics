@@ -102,6 +102,7 @@ Renderer11::~Renderer11() {
     drop(presentPs_);
     drop(gradePs_);
     drop(torchLightPs_);
+    drop(nightPs_);
     drop(lightDataSrv_);
     drop(lightData_);
     drop(shadowVs_);
@@ -264,13 +265,14 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         const char* profile;
         const char* source;
         std::vector<uint8_t> code;
-    } wants[12] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[13] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
                    {"shadow_vs", vs, shaderSource(), {}},  {"shadow_ps", ps, shaderSource(), {}},  // 0.60.1
                    {"shadow_blur_ps", ps, shaderSource(), {}}, {"shadow_apply_ps", ps, shaderSource(), {}},
-                   {"torch_light_ps", ps, shaderSource(), {}}};  // 0.61
+                   {"torch_light_ps", ps, shaderSource(), {}},  // 0.61
+                   {"night_ps", ps, shaderSource(), {}}};       // 0.63
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -347,7 +349,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (!vsOf(wants[0], drawVs_) || !psOf(wants[1], drawPs_) || !vsOf(wants[2], presentVs_) ||
         !psOf(wants[3], presentPs_) || !vsOf(wants[4], clearVs_) || !psOf(wants[5], clearPs_) ||
         !psOf(wants[6], gradePs_) || !vsOf(wants[7], shadowVs_) || !psOf(wants[8], shadowPs_) ||
-        !psOf(wants[9], shadowBlurPs_) || !psOf(wants[10], shadowApplyPs_) || !psOf(wants[11], torchLightPs_)) {
+        !psOf(wants[9], shadowBlurPs_) || !psOf(wants[10], shadowApplyPs_) || !psOf(wants[11], torchLightPs_) ||
+        !psOf(wants[12], nightPs_)) {
         error = "the shaders' code was refused";
         return false;
     }
@@ -836,6 +839,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const DrawSetup& s = rec.states()[d.state];
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
+    if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
     if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && torchesWanted()) noteTorch(rec, d);
@@ -1110,6 +1114,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     const auto tx = [this](int x) { return float(double(x) * target_.width / gameWidth_); };
     const auto ty = [this](int y) { return float(double(y) * target_.height / gameHeight_); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
+    if (worldDrawn_ && !nightDone_) applyNight();  // 0.63
     if (worldDrawn_ && !lightDone_) applyTorchLight();  // 0.61
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
@@ -1118,7 +1123,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (!options.screenshot.empty()) saveScreenshot(options.screenshot);  // 0.54
     gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
-    lightDone_ = false;  // 0.61
+    lightDone_ = nightDone_ = false;  // 0.61, 0.63
     flames_.clear();
     timeEnd();
     timeFrame();
@@ -1144,9 +1149,32 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
 
 // 0.59: the Effects page's colours on Direct3D 11 - grade_ps from a copy of the picture into it, RGB only (as
 // Direct3D 12's Impl::applyGrade).
+void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its strength now
+    nightDone_ = true;
+    if (!effects_.night || effects_.nightNow <= 0 || !nightPs_ || !target_.texture) return;
+    Constants c{};
+    c.sharpen = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    worldPass(nightPs_, c);
+}
+
 void Renderer11::applyGrade() {
     gradeDone_ = true;
     if (!effects_.grade || !gradePs_ || !target_.texture) return;
+    Constants c{};
+    c.sharpen = float(std::clamp(effects_.gradeSaturation, 0, 200)) / 100.0f;
+    c.footprint = float(std::clamp(effects_.gradeContrast, 50, 150)) / 100.0f;
+    c.twin[0] = float(std::clamp(effects_.gradeBrightness, 50, 150)) / 100.0f;
+    c.twin[1] = float(std::clamp(effects_.gradeWarmth, 0, 100) - 50) / 50.0f;
+    c.twin[2] = float(std::clamp(effects_.gradeVignette, 0, 100)) / 100.0f;
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    worldPass(gradePs_, c);
+}
+
+// A pass over the world from a copy of it (scene_, t2) into it, RGB only: the colours (0.59), the night (0.63).
+void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c) {
     if (scene_.width != target_.width || scene_.height != target_.height) {
         dropTarget(scene_);
         if (!makeTarget(scene_, target_.width, target_.height)) return;
@@ -1160,14 +1188,6 @@ void Renderer11::applyGrade() {
     ctx_->RSSetViewports(1, &vp);
     const D3D11_RECT all{0, 0, target_.width, target_.height};
     ctx_->RSSetScissorRects(1, &all);
-    Constants c{};
-    c.sharpen = float(std::clamp(effects_.gradeSaturation, 0, 200)) / 100.0f;
-    c.footprint = float(std::clamp(effects_.gradeContrast, 50, 150)) / 100.0f;
-    c.twin[0] = float(std::clamp(effects_.gradeBrightness, 50, 150)) / 100.0f;
-    c.twin[1] = float(std::clamp(effects_.gradeWarmth, 0, 100) - 50) / 50.0f;
-    c.twin[2] = float(std::clamp(effects_.gradeVignette, 0, 100)) / 100.0f;
-    c.uiPixels[0] = float(target_.width);
-    c.uiPixels[1] = float(target_.height);
     setConstants(c);
     ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO,
                                      D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
@@ -1178,7 +1198,7 @@ void Renderer11::applyGrade() {
     ctx_->IASetInputLayout(nullptr);
     ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     ctx_->VSSetShader(presentVs_, nullptr, 0);
-    ctx_->PSSetShader(gradePs_, nullptr, 0);
+    ctx_->PSSetShader(ps, nullptr, 0);
     ctx_->VSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
