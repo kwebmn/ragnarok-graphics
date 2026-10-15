@@ -119,6 +119,9 @@ enum class Text : uint16_t {
     // 0.51: reports to the developers
     ReportHeading, ReportNote, ReportComment, ReportCommentCue, ReportSend, ReportAsk, ReportSent, ReportFailed,
     ReportSentList, ReportAuto, ReportAutoHint,
+    // 0.53: the texture pack from the site
+    PackFetchHeading, PackFetchNote, PackFetchButton, PackFetchStop, PackFetchListing, PackFetchProgress, PackFetchDone,
+    PackFetchUpToDate, PackFetchFailed, PackFetchStopped, PackMakeHeading,
     Count
 };
 

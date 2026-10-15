@@ -2,10 +2,12 @@
 #include <cstdio>
 #include <string>
 
+#include "app/pack_fetch.hpp"
 #include "app/page.hpp"
 #include "app/ui.hpp"
 #include "core/config.hpp"
 #include "core/pack_build.hpp"
+#include "core/pack_download.hpp"
 #include "core/texture_pack.hpp"
 
 namespace uagfx::app {
@@ -20,6 +22,9 @@ constexpr int kStop = 1021;
 constexpr int kAnew = 1023;
 constexpr int kCopy = 1024;
 constexpr int kBar = 1030;
+constexpr int kFetch = 1040;  // 0.53: the pack from the site
+constexpr int kFetchStop = 1041;
+constexpr int kFetchBar = 1042;
 
 struct KindBox {
     Text label, hint;
@@ -93,8 +98,19 @@ public:
         const bool host = GetFileAttributesW(builderExe().c_str()) != INVALID_FILE_ATTRIBUTES;
         look();
         p.heading(t(Text::PagePack));
-        p.note(t(Text::PackIntro));
         p.note(packText(), Tone::Normal);
+        // 0.53: first what a player does - the developers' pack from the site
+        p.heading(t(Text::PackFetchHeading));
+        p.note(t(Text::PackFetchNote));
+        fetching_ = fetchRunning();
+        p.buttons({{kFetch, t(Text::PackFetchButton), !fetching_ && !running_},
+                   {kFetchStop, t(Text::PackFetchStop), fetching_}});
+        fetchBar_ = p.progress(kFetchBar);
+        fetchLine_ = p.note(fetchText() + L"\n ");
+        showFetch();
+        p.gap();
+        p.heading(t(Text::PackMakeHeading));
+        p.note(t(Text::PackIntro));
         p.note(t(Text::PackWhat), Tone::Normal);
         std::vector<CheckItem> kinds;
         for (int i = 0; i < 7; ++i)
@@ -128,6 +144,11 @@ public:
     }
 
     void tick() override {
+        if (fetching_ != fetchRunning()) {
+            host_.rebuild();  // its buttons and the pack's numbers
+            return;
+        }
+        showFetch();
         const bool was = running_;
         const pack::Status::State before = status_.state;
         look();
@@ -151,6 +172,15 @@ public:
             return;
         }
         if (code != BN_CLICKED) return;
+        if (id == kFetch) {
+            startFetch(dir_, pack::kPackUrl);
+            host_.rebuild();
+            return;
+        }
+        if (id == kFetchStop) {
+            stopFetch();
+            return;
+        }
         if (id == kMake) {
             start("build", g_choice, false);
         } else if (id == kAnew) {
@@ -169,6 +199,42 @@ public:
     }
 
 private:
+    // 0.53: the download's line and bar as they are now.
+    std::wstring fetchText() const {
+        const FetchState f = fetchState();
+        const auto mb = [&](uint64_t b) { return sizeText(b, host_.lang()); };
+        switch (f.kind) {
+            case FetchState::Idle: return L"";
+            case FetchState::Listing: return t(Text::PackFetchListing);
+            case FetchState::Fetching: {
+                const double left = f.bytesPerSecond > 0 ? double(f.total - f.done) / f.bytesPerSecond / 60.0 : 0;
+                return tf(Text::PackFetchProgress,
+                          {num(f.fetched), num(f.pictures), mb(f.done), mb(f.total),
+                           mb(uint64_t(f.bytesPerSecond)), num((long long)(left + 0.5))});
+            }
+            case FetchState::Done:
+                return f.pictures ? tf(Text::PackFetchDone, {num(f.fetched), num(f.already)})
+                                  : tf(Text::PackFetchUpToDate, {num(f.already)});
+            case FetchState::Failed: return tf(Text::PackFetchFailed, {f.error});
+            case FetchState::Stopped: return tf(Text::PackFetchStopped, {num(f.fetched)});
+        }
+        return L"";
+    }
+    void showFetch() {
+        const FetchState f = fetchState();
+        if (fetchBar_)
+            SendMessageW(fetchBar_, PBM_SETPOS, WPARAM(f.total ? f.done * 1000 / f.total : (f.kind == FetchState::Done
+                                                                                               ? 1000 : 0)), 0);
+        if (fetchLine_) {
+            const std::wstring text = fetchText();
+            wchar_t now[512] = {};
+            GetWindowTextW(fetchLine_, now, 512);
+            if (text + L"\n " != now) SetWindowTextW(fetchLine_, (text + L"\n ").c_str());
+        }
+    }
+    bool fetching_ = false;
+    HWND fetchBar_ = nullptr, fetchLine_ = nullptr;
+
     // The builder: the 64-bit renderer in the uaro-graphics folder, as the driver starts it (context.cpp).
     std::wstring builderExe() const { return dir_ + L"\\uaro-graphics\\uaro-render64.exe"; }
 

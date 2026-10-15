@@ -53,6 +53,17 @@ struct Index {
 std::string indexText(const Index& index);
 Index parseIndexFile(const std::string& text);
 
+// 0.53: a ZIP's entry as its central directory has it; the directory read through a function of the bytes at an
+// offset (a file, or a pack on the site by HTTP ranges).
+struct ZipEntry {
+    std::string name;
+    uint64_t header = 0, compressed = 0, size = 0;  // its local header's offset, its sizes
+    uint32_t crc = 0;
+    uint32_t method = 0;  // 0 stored
+};
+using ReadAt = std::function<bool(uint64_t at, uint8_t* out, size_t n)>;
+bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<ZipEntry>& out, std::string& error);
+
 class Reader {
 public:
     Reader() = default;

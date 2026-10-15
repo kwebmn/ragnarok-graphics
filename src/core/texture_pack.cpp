@@ -56,23 +56,20 @@ bool truncateTo(std::FILE* f, uint64_t size) {
 #endif
 }
 
-struct Found {
-    std::string name;
-    uint64_t header = 0, compressed = 0, size = 0;
-    uint32_t crc = 0;
-    uint32_t method = 0;
-};
+using Found = ZipEntry;
 
-// The central directory of a ZIP, ZIP64 too; false when the file is no whole ZIP.
-bool centralDirectory(std::FILE* f, std::vector<Found>& out, std::string& error) {
-    const uint64_t size = sizeOf(f);
+// The central directory of a ZIP, ZIP64 too; false when the file is no whole ZIP. 0.53: read through `read` (a file
+// here, HTTP ranges of a pack on the site in the settings app's download).
+}  // namespace
+
+bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<Found>& out, std::string& error) {
     if (size < 22) {
         error = "too short for a ZIP";
         return false;
     }
     const uint64_t tail = std::min<uint64_t>(size, 22 + 65535);
     std::vector<uint8_t> b(static_cast<size_t>(tail));
-    if (!readAt(f, size - tail, b.data(), b.size())) {
+    if (!read(size - tail, b.data(), b.size())) {
         error = "cannot be read";
         return false;
     }
@@ -91,8 +88,8 @@ bool centralDirectory(std::FILE* f, std::vector<Found>& out, std::string& error)
     uint64_t count = get16(&b[at + 10]), cdSize = get32(&b[at + 12]), cdOffset = get32(&b[at + 16]);
     if (count == 0xFFFF || cdSize == 0xFFFFFFFF || cdOffset == 0xFFFFFFFF) {
         uint8_t loc[20], end64[56];
-        if (endAt < 20 || !readAt(f, endAt - 20, loc, sizeof loc) || get32(loc) != kLocator64Sig ||
-            !readAt(f, get64(loc + 8), end64, sizeof end64) || get32(end64) != kEnd64Sig) {
+        if (endAt < 20 || !read(endAt - 20, loc, sizeof loc) || get32(loc) != kLocator64Sig ||
+            !read(get64(loc + 8), end64, sizeof end64) || get32(end64) != kEnd64Sig) {
             error = "no ZIP64 end record";
             return false;
         }
@@ -105,7 +102,7 @@ bool centralDirectory(std::FILE* f, std::vector<Found>& out, std::string& error)
         return false;
     }
     std::vector<uint8_t> cd(static_cast<size_t>(cdSize));
-    if (!cd.empty() && !readAt(f, cdOffset, cd.data(), cd.size())) {
+    if (!cd.empty() && !read(cdOffset, cd.data(), cd.size())) {
         error = "the central directory cannot be read";
         return false;
     }
@@ -146,6 +143,14 @@ bool centralDirectory(std::FILE* f, std::vector<Found>& out, std::string& error)
         p = extraEnd + commentLen;
     }
     return true;
+}
+
+namespace {
+
+bool centralDirectory(std::FILE* f, std::vector<Found>& out, std::string& error) {
+    return centralDirectoryOf(sizeOf(f), [f](uint64_t at, uint8_t* to, size_t n) { return readAt(f, at, to, n); },
+                              out, error);
+
 }
 
 // A pack whose last run stopped before its central directory: its pictures one after another from the start, each
