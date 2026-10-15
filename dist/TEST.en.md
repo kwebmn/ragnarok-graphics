@@ -1,3 +1,14 @@
+# uaRO Graphics 0.73.0 — testing
+
+What is new in 0.73.0 (Direct3D 12):
+- **Light in the air** (Effects → "Light in the air" and its strength; on by default). Around torches, lamps and
+  burning skills the air glows as in a light mist; a wall or a pillar in front of the fire hides the glow. At night it
+  shows more. On the fields and in the towns, where the edge of the map shows, rays of light stream from the sky - from
+  the sun, up and to the left.
+
+How to test: caves with torches (anthell, pay_dun), Geffen at night, Fire Wall in the dark; the edge of a field for the
+rays. Is it too bright, does it flicker.
+
 # uaRO Graphics 0.72.0 — testing
 
 What is new in 0.72.0 (Direct3D 12):
