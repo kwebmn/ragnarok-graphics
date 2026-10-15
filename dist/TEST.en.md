@@ -1,3 +1,15 @@
+# uaRO Graphics 0.66.0 — testing
+
+What is new in 0.66.0 (Direct3D 12):
+- **The characters' pictures first.** The texture pack's pictures were read in the order asked for: on a new map the
+  hundreds of its textures known ahead kept the characters' frames and the icons waiting behind them (blocky for a
+  moment). Now one at a time, the most urgent first - the sprite frames and the icons, then the textures in view, then
+  those known ahead; a texture asked for ahead and drawn meanwhile moves up. As Direct3D 11 does since 0.49.1.
+- The log says how long the frames wait: `sprite frames - ... read in N ms on average, M at most`.
+
+How to test: Direct3D 12, a town with many players, then another map: are the characters improved at once; send the
+log.
+
 # uaRO Graphics 0.65.0 — testing
 
 What is new in 0.65.0:
