@@ -1400,7 +1400,8 @@ void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown
 }
 
 void Renderer::setEffects(const EffectSettings& e) {
-    if (remix_ || d3d11_) return;
+    if (d3d11_) return d3d11_->setEffects(e);  // 0.59: the colours
+    if (remix_) return;
     if (remote_) return remote_->setEffects(e);
     Impl& m = *impl_;
     if (e == m.effects) return;

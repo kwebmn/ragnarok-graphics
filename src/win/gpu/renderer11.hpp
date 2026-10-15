@@ -59,6 +59,7 @@ public:
     bool readTarget(std::vector<uint32_t>& argb);
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
     void saveScreenshot(const std::string& path);  // 0.54: the back buffer as it is now, to a PNG
+    void setEffects(const EffectSettings& e) { effects_ = e; }  // 0.59: the colours (grade) are drawn here
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
@@ -81,6 +82,7 @@ private:
         ID3D11ShaderResourceView* srv = nullptr;
         int width = 0, height = 0;
     };
+    void applyGrade();  // 0.59
     bool compileShaders(const std::string& cacheFile, Renderer::StartSink sink, void* sinkContext, std::string& error);
     bool makeTarget(Target& t, int width, int height);
     void dropTarget(Target& t);
@@ -129,6 +131,7 @@ private:
     ID3D11PixelShader* drawPs_ = nullptr;
     ID3D11VertexShader* presentVs_ = nullptr;
     ID3D11PixelShader* presentPs_ = nullptr;
+    ID3D11PixelShader* gradePs_ = nullptr;  // 0.59
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
     ID3D11InputLayout* layout_[2] = {nullptr, nullptr};  // one UV set, two
@@ -147,6 +150,9 @@ private:
     std::unordered_map<uint64_t, ID3D11SamplerState*> samplers_;
 
     Target target_;  // the game's picture at the window's size (k times the game's)
+    Target scene_;   // 0.59: its copy the colours are read from
+    EffectSettings effects_;
+    bool worldDrawn_ = false, gradeDone_ = false;  // this frame
     ID3D11Texture2D* depth_ = nullptr;
     ID3D11DepthStencilView* dsv_ = nullptr;
     Target game_;  // the game's size: its own pixels on the way in, the picture on the way out

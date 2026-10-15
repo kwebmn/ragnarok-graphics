@@ -79,6 +79,7 @@ Renderer11::~Renderer11() {
     drop(white_.texture);
     dropTarget(target_);
     dropTarget(game_);
+    dropTarget(scene_);
     drop(dsv_);
     drop(depth_);
     drop(staging_);
@@ -99,6 +100,7 @@ Renderer11::~Renderer11() {
     drop(drawPs_);
     drop(presentVs_);
     drop(presentPs_);
+    drop(gradePs_);
     drop(clearVs_);
     drop(clearPs_);
     drop(factory_);
@@ -249,9 +251,10 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         const char* profile;
         const char* source;
         std::vector<uint8_t> code;
-    } wants[6] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[7] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                   {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
-                  {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}}};
+                  {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
+                  {"grade_ps", ps, shaderSource(), {}}};  // 0.59: the colours (Effects page)
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -326,7 +329,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         return SUCCEEDED(device_->CreatePixelShader(w.code.data(), w.code.size(), nullptr, &out));
     };
     if (!vsOf(wants[0], drawVs_) || !psOf(wants[1], drawPs_) || !vsOf(wants[2], presentVs_) ||
-        !psOf(wants[3], presentPs_) || !vsOf(wants[4], clearVs_) || !psOf(wants[5], clearPs_)) {
+        !psOf(wants[3], presentPs_) || !vsOf(wants[4], clearVs_) || !psOf(wants[5], clearPs_) ||
+        !psOf(wants[6], gradePs_)) {
         error = "the shaders' code was refused";
         return false;
     }
@@ -797,6 +801,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         (d.indexCount && size_t(d.firstIndex) + d.indexCount > rec.indices().size()))
         return;
     const DrawSetup& s = rec.states()[d.state];
+    // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade)
+    if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
+    if (!s.ui) worldDrawn_ = true;
     bindTarget();
     // Stage 6: a window tile whose twin was made at this scale is drawn from the twin, a texel per target pixel.
     const bool twin = d.twin && s.ui && twinMatches(d.twinScale, scale_) && textures_.count(d.twin);
@@ -1063,10 +1070,12 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     const auto tx = [this](int x) { return float(double(x) * target_.width / gameWidth_); };
     const auto ty = [this](int y) { return float(double(y) * target_.height / gameHeight_); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
+    if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
          options.sharpen);
     ctx_->OMSetRenderTargets(0, nullptr, nullptr);
     if (!options.screenshot.empty()) saveScreenshot(options.screenshot);  // 0.54
+    gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
     timeEnd();
     timeFrame();
     if (options.fpsLimit > 0) {  // simple pacing: wait until 1/limit seconds after the previous present
@@ -1087,6 +1096,50 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         failed("Present", hr);
     else if (hr == DXGI_STATUS_OCCLUDED)
         Sleep(15);  // the window is covered: Present does not wait for vblank
+}
+
+// 0.59: the Effects page's colours on Direct3D 11 - grade_ps from a copy of the picture into it, RGB only (as
+// Direct3D 12's Impl::applyGrade).
+void Renderer11::applyGrade() {
+    gradeDone_ = true;
+    if (!effects_.grade || !gradePs_ || !target_.texture) return;
+    if (scene_.width != target_.width || scene_.height != target_.height) {
+        dropTarget(scene_);
+        if (!makeTarget(scene_, target_.width, target_.height)) return;
+    }
+    ctx_->CopyResource(scene_.texture, target_.texture);
+    targetBound_ = false;
+    ID3D11ShaderResourceView* none[3] = {nullptr, nullptr, nullptr};
+    ctx_->PSSetShaderResources(0, 3, none);
+    ctx_->OMSetRenderTargets(1, &target_.rtv, nullptr);
+    const D3D11_VIEWPORT vp{0.0f, 0.0f, float(target_.width), float(target_.height), 0.0f, 1.0f};
+    ctx_->RSSetViewports(1, &vp);
+    const D3D11_RECT all{0, 0, target_.width, target_.height};
+    ctx_->RSSetScissorRects(1, &all);
+    Constants c{};
+    c.sharpen = float(std::clamp(effects_.gradeSaturation, 0, 200)) / 100.0f;
+    c.footprint = float(std::clamp(effects_.gradeContrast, 50, 150)) / 100.0f;
+    c.twin[0] = float(std::clamp(effects_.gradeBrightness, 50, 150)) / 100.0f;
+    c.twin[1] = float(std::clamp(effects_.gradeWarmth, 0, 100) - 50) / 50.0f;
+    c.twin[2] = float(std::clamp(effects_.gradeVignette, 0, 100)) / 100.0f;
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    setConstants(c);
+    ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO,
+                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
+                          nullptr, 0xFFFFFFFF);
+    ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
+    ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
+    ctx_->IASetInputLayout(nullptr);
+    ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx_->VSSetShader(presentVs_, nullptr, 0);
+    ctx_->PSSetShader(gradePs_, nullptr, 0);
+    ctx_->VSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
+    ctx_->Draw(3, 0);
+    ctx_->PSSetShaderResources(0, 3, none);
 }
 
 void Renderer11::saveScreenshot(const std::string& path) {
