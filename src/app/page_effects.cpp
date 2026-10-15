@@ -43,6 +43,7 @@ const Effect kEffects[] = {
     {"effects.foliage", {}, {"effects.foliage_strength"}, {}, false},                    // 0.64
     {"effects.soft_particles", {}, {}, {}, false},  // 0.67
     {"effects.rim_light", {}, {"effects.rim_strength"}, {}, false},  // 0.68
+    {"effects.sky", {}, {"effects.sky_clouds", "effects.sky_strength"}, {}, false},  // 0.69
     {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, false},
     {"effects.torch",
      {"effects.torch_flame"},

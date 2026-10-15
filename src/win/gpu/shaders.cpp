@@ -1111,6 +1111,40 @@ float4 haze_ps(PresentOut i) : SV_Target {
     return float4(c, a);
 }
 
+// 0.69, the sky (haze.cpp): on a map under the open sky, where nothing is drawn - past the map's edge - a sky
+// instead of the void: from the horizon's colour (fogColor) to the zenith's (sourceRect.rgb) by how far up the pixel
+// looks in the world (reproject: the camera's axes, up is -y), clouds drifting on a far layer (twinX how many; under
+// the map's edge looked down at, a sea of them), at night (twinW 0-1) darker and with stars. twinY its strength
+// (alpha), sharpen the time.
+float4 sky_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) < 0.99999) discard;
+    float2 g = (float2(wp) - float2(jitterX, jitterY)) / scale;
+    float3 dv = normalize(float3((g.x - cx) / f0, (g.y - cy) / f1, 1.0));
+    float3 d = normalize(dv.x * float3(r0, r1, r2) + dv.y * float3(r3, r4, r5) + dv.z * float3(r6, r7, r8));
+    float up = -d.y;
+    float night = twinW;
+    float t = sharpen;
+    float3 c = lerp(fogColor.rgb, sourceRect.rgb, smoothstep(-0.35, 0.6, up));
+    float2 layer = d.xz / (abs(d.y) + 0.3);
+    float2 uv = layer * 1.4 + float2(t * 0.010, t * 0.006);
+    float n = fbm4(uv);
+    float cover = smoothstep(0.62 - 0.3 * twinX, 0.92 - 0.2 * twinX, n) * saturate(twinX * 1.5);
+    float lit = saturate(0.55 + (n - fbm4(uv + float2(0.06, 0.04))) * 6.0);  // the side towards the light brighter
+    float3 day = lerp(float3(0.78, 0.80, 0.86), float3(1.0, 0.99, 0.96), lit);
+    float3 cloud = lerp(day, float3(0.16, 0.18, 0.26) + 0.08 * lit, night);
+    c = lerp(c, cloud, cover * smoothstep(-0.95, -0.2, -abs(up)));  // thinner straight up and straight down
+    if (night > 0.0) {
+        float2 cell = floor(layer * 70.0);
+        float h = hash12(cell);
+        float2 at = frac(layer * 70.0) - (0.25 + 0.5 * float2(hash12(cell + 7.1), hash12(cell + 3.7)));
+        float star = step(0.985, h) * saturate(1.0 - length(at) * 6.0);
+        star *= 0.6 + 0.4 * sin(t * (1.5 + 3.0 * hash12(cell + 1.3)) + h * 40.0);
+        c += star * night * (1.0 - cover) * float3(0.9, 0.95, 1.0);
+    }
+    return float4(c, twinY);
+}
+
 // 0.35, heat haze (heat.cpp): where the hot air rises - over the torches' flames, burning skills, lava, and far off
 // in the desert - the picture is read from its copy (t2) a little aside, the aside drifting up. t1 holds a texel a
 // spot - its middle (target pixels) .xy, radius .z, strength .w - footprint how many; twinX the desert's (0 none, by

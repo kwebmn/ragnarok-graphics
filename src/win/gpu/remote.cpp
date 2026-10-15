@@ -307,6 +307,9 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.softParticles ? 1 : 0);  // 0.67
     w.u8(e.rimLight ? 1 : 0);  // 0.68
     w.i32(e.rimStrength);
+    w.u8(e.sky ? 1 : 0);  // 0.69
+    w.i32(e.skyClouds);
+    w.i32(e.skyStrength);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

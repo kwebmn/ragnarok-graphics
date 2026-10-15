@@ -179,6 +179,11 @@ struct EffectSettings {
     // that faces them more: the flat sprites look round. On by default.
     bool rimLight = true;
     int rimStrength = 100;  // %, 0-200
+    // 0.69: the sky past the map's edge on the fields and in the towns - a sky with drifting clouds instead of
+    // the void, at night darker with stars. On by default.
+    bool sky = true;
+    int skyClouds = 60;  // %, 0-100
+    int skyStrength = 100;  // %, 0-100
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

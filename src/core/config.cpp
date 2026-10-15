@@ -111,6 +111,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.sky = false;
     e.rimLight = false;
     e.softParticles = false;
     e.nightNow = 0;
@@ -136,6 +137,7 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.sky ||
            e.rimLight ||
            e.softParticles;
 }
@@ -402,6 +404,12 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.rimLight);
         } else if (key == "effects.rim_strength") {
             toInt(val, 0, 200, c.effects.rimStrength);
+        } else if (key == "effects.sky") {
+            setBool(val, c.effects.sky);
+        } else if (key == "effects.sky_clouds") {
+            toInt(val, 0, 100, c.effects.skyClouds);
+        } else if (key == "effects.sky_strength") {
+            toInt(val, 0, 100, c.effects.skyStrength);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

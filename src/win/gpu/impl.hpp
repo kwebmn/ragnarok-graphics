@@ -446,6 +446,11 @@ struct Renderer::Impl {
     bool hazeDone = false;
     bool hazeLogged = false;
     haze::Look mapLook;
+    // 0.69, the sky past the map's edge (haze.cpp, sky_ps).
+    ID3DBlob* skyPs = nullptr;
+    ID3D12PipelineState* skyPipelines[4] = {};
+    bool skyDone = false;
+    bool skyLogged = false;
     // 0.35, heat haze (heat.cpp): the spots the torches' pass gathers, read aside from the picture's copy.
     ID3DBlob* heatPs = nullptr;
     ID3D12PipelineState* heatPipelines[4] = {};
@@ -702,6 +707,13 @@ struct Renderer::Impl {
     bool hazeDue() const { return hazeWanted() && groundDrawn && !hazeDone && viewToWorldValid; }
     bool applyHaze();  // once a frame, the world drawn and lit; false: lost
     ID3D12PipelineState* hazePipeline(UINT samples);
+    // 0.34, 0.69: a full-screen pass blended over the target (its samples) or the world by its alpha; ps released
+    // when the pipeline cannot be made.
+    ID3D12PipelineState* blendedPassPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&cache)[4], UINT samples,
+                                             const char* user);
+    bool skyWanted() const { return effects.sky && effects.skyStrength > 0 && skyPs && mapOutdoors; }
+    bool skyDue() const { return skyWanted() && groundDrawn && !skyDone && viewToWorldValid; }
+    bool applySky();  // once a frame, the world drawn; false: lost
     bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
     bool heatDue() const {
         return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));
@@ -746,6 +758,7 @@ struct Renderer::Impl {
         cloudsDone = false;
         sceneDepthFresh = false;
         hazeDone = false;
+        skyDone = false;  // 0.69
         heatDone = false;
         heatSpots.clear();
         portalSparks.clear();

@@ -1470,6 +1470,27 @@ const Entry kTexts[] = {
     {"How bright the lit edge is.",
      "Наскільки яскравий освітлений край.",
      "Насколько ярок освещённый край."},
+    {"Sky past the map's edge",
+     "Небо за краєм карти",
+     "Небо за краем карты"},
+    {"On the fields and in the towns the empty space past the edge of the map shows a sky with drifting clouds; at "
+     "night it is dark with stars. Direct3D 12.",
+     "На полях і в містах порожнеча за краєм карти показує небо з хмарами, що пливуть; уночі воно темне, із зорями. "
+     "Direct3D 12.",
+     "На полях и в городах пустота за краем карты показывает небо с плывущими облаками; ночью оно тёмное, со "
+     "звёздами. Direct3D 12."},
+    {"Clouds",
+     "Хмари",
+     "Облака"},
+    {"How much of the sky the clouds cover.",
+     "Яку частину неба вкривають хмари.",
+     "Какую часть неба закрывают облака."},
+    {"Sky strength",
+     "Сила неба",
+     "Сила неба"},
+    {"How much the sky covers the void: less lets the game's own colour show through.",
+     "Наскільки небо закриває порожнечу: менше — проступає власний колір гри.",
+     "Насколько небо закрывает пустоту: меньше — проступает собственный цвет игры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

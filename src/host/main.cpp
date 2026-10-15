@@ -408,6 +408,9 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.softParticles = rd.u8() != 0;  // 0.67
             e.rimLight = rd.u8() != 0;  // 0.68
             e.rimStrength = rd.i32();
+            e.sky = rd.u8() != 0;  // 0.69
+            e.skyClouds = rd.i32();
+            e.skyStrength = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

@@ -1193,6 +1193,8 @@ void Renderer::Impl::destroy() {
     releaseCom(cloudsApplyPs);
     for (ID3D12PipelineState*& p : hazePipelines) releaseCom(p);  // 0.34
     releaseCom(hazePs);
+    for (ID3D12PipelineState*& p : skyPipelines) releaseCom(p);  // 0.69
+    releaseCom(skyPs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
     for (ID3D12PipelineState*& p : splashPipelines) releaseCom(p);  // 0.64
     for (ID3D12PipelineState*& p : waterfallPipelines) releaseCom(p);  // 0.65
