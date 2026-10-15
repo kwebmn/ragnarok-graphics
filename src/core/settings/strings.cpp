@@ -1312,6 +1312,15 @@ const Entry kTexts[] = {
     {"Make the pack on this computer",
      "Зробити пакет на цьому комп'ютері",
      "Сделать пакет на этом компьютере"},
+    {"Frame counter",
+     "Лічильник кадрів",
+     "Счётчик кадров"},
+    {"Frames a second and the frame time in the game window's top left corner. Ctrl+Shift+F11 in the game shows and "
+     "hides it at any time.",
+     "Кадри за секунду й час кадру в лівому верхньому куті вікна гри. Ctrl+Shift+F11 у грі показує й ховає його "
+     "будь-коли.",
+     "Кадры в секунду и время кадра в левом верхнем углу окна игры. Ctrl+Shift+F11 в игре показывает и прячет его в "
+     "любой момент."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

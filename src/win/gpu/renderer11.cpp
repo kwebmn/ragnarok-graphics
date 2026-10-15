@@ -14,6 +14,7 @@
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/d3d_map.hpp"
+#include "core/png_write.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
 #include "core/twin_grid.hpp"
@@ -1065,6 +1066,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
          options.sharpen);
     ctx_->OMSetRenderTargets(0, nullptr, nullptr);
+    if (!options.screenshot.empty()) saveScreenshot(options.screenshot);  // 0.54
     timeEnd();
     timeFrame();
     if (options.fpsLimit > 0) {  // simple pacing: wait until 1/limit seconds after the previous present
@@ -1085,6 +1087,33 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         failed("Present", hr);
     else if (hr == DXGI_STATUS_OCCLUDED)
         Sleep(15);  // the window is covered: Present does not wait for vblank
+}
+
+void Renderer11::saveScreenshot(const std::string& path) {
+    ID3D11Texture2D* back = nullptr;
+    if (!swap_ || FAILED(swap_->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back)))) return;
+    D3D11_TEXTURE2D_DESC d{};
+    back->GetDesc(&d);
+    d.Usage = D3D11_USAGE_STAGING;
+    d.BindFlags = 0;
+    d.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    d.MiscFlags = 0;
+    ID3D11Texture2D* staging = nullptr;
+    bool ok = false;
+    if (SUCCEEDED(device_->CreateTexture2D(&d, nullptr, &staging))) {
+        ctx_->CopyResource(staging, back);
+        D3D11_MAPPED_SUBRESOURCE m{};
+        if (SUCCEEDED(ctx_->Map(staging, 0, D3D11_MAP_READ, 0, &m))) {
+            ok = writePng(path, static_cast<const uint8_t*>(m.pData), int(d.Width), int(d.Height), m.RowPitch);
+            ctx_->Unmap(staging, 0);
+        }
+    }
+    drop(staging);
+    drop(back);
+    if (ok)
+        LOG_INFO("screenshot: %s (%ux%u)", path.c_str(), d.Width, d.Height);
+    else
+        LOG_ERROR("screenshot: %s could not be saved", path.c_str());
 }
 
 void Renderer11::finish() {

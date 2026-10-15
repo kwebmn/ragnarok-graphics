@@ -122,6 +122,8 @@ enum class Text : uint16_t {
     // 0.53: the texture pack from the site
     PackFetchHeading, PackFetchNote, PackFetchButton, PackFetchStop, PackFetchListing, PackFetchProgress, PackFetchDone,
     PackFetchUpToDate, PackFetchFailed, PackFetchStopped, PackMakeHeading,
+    // 0.54
+    FramesFpsCounter, FramesFpsCounterHint,
     Count
 };
 

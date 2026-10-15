@@ -58,6 +58,7 @@ public:
     void execute(const FrameRecord& record);
     bool readTarget(std::vector<uint32_t>& argb);
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
+    void saveScreenshot(const std::string& path);  // 0.54: the back buffer as it is now, to a PNG
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.

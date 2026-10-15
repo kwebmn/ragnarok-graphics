@@ -12,6 +12,7 @@
 #include "core/scale.hpp"
 #include "core/throttle.hpp"
 #include "core/toggle_key.hpp"
+#include "win/fps_overlay.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/shadow.hpp"
 
@@ -76,6 +77,10 @@ private:
     bool renderScaleNoted_ = false;  // the log has said render_scale is not used with DLSS
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
+    ToggleKey fpsKey_;  // 0.54: Ctrl+Shift+F11 - the frame counter
+    ToggleKey shotKey_;  // 0.54: Ctrl+Shift+F12 - a screenshot at the picture's full size
+    bool fpsShown_ = false;
+    FpsOverlay fps_;
     Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)
     SIZE lastOut_{};
     ScalePlan lastPlan_;

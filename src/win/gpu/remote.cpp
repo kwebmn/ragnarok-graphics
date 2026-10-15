@@ -400,6 +400,7 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     w.i32(o.fpsLimit);
     w.f32(o.sharpen);
     w.u8(o.foreground ? 1 : 0);
+    w.str(o.screenshot);  // 0.54
     if (send(Msg::Present, buffer_)) ++presentsSent_;
 }
 

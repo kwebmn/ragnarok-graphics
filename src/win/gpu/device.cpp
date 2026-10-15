@@ -10,6 +10,7 @@
 #include <set>
 
 #include "core/d3d7.hpp"
+#include "core/png_write.hpp"
 #include "core/effect_light.hpp"
 #include "core/game_camera.hpp"
 #include "core/pipeline_key.hpp"
@@ -1137,6 +1138,7 @@ void Renderer::Impl::destroy() {
     releaseCom(presentVs);
     releaseCom(presentPs);
     releaseCom(readback);
+    releaseCom(shotBuffer);
     releaseCom(target);
     releaseCom(depth);
     releaseCom(resolved);
@@ -2031,6 +2033,33 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
             m.slots[m.slot].aiTimed = true;
         }
     }
+    if (!options.screenshot.empty()) {  // 0.54: the picture as shown, read after Present
+        const UINT pitch = UINT(alignUp(UINT64(m.swapWidth) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+        const UINT64 size = UINT64(pitch) * m.swapHeight;
+        if (m.shotSize < size) {
+            releaseCom(m.shotBuffer);
+            m.shotBuffer = createBuffer(m.device, D3D12_HEAP_TYPE_READBACK, size, D3D12_RESOURCE_STATE_COPY_DEST);
+            m.shotSize = m.shotBuffer ? size : 0;
+        }
+        if (m.shotBuffer) {
+            m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_COPY_SOURCE);
+            D3D12_TEXTURE_COPY_LOCATION dst{}, src{};
+            dst.pResource = m.shotBuffer;
+            dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+            dst.PlacedFootprint.Footprint.Width = m.swapWidth;
+            dst.PlacedFootprint.Footprint.Height = m.swapHeight;
+            dst.PlacedFootprint.Footprint.Depth = 1;
+            dst.PlacedFootprint.Footprint.RowPitch = pitch;
+            src.pResource = m.backBuffers[index];
+            src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            m.list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+            m.shotPath = options.screenshot;
+            m.shotPitch = pitch;
+            m.shotWidth = int(m.swapWidth);
+            m.shotHeight = int(m.swapHeight);
+        }
+    }
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
     m.submit();
 
@@ -2048,6 +2077,22 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = m.swapChain->Present(sync, flags);
+    if (!m.shotPath.empty()) {  // 0.54: the copy done, the PNG written
+        m.waitIdle();
+        uint8_t* data = nullptr;
+        D3D12_RANGE all{0, SIZE_T(m.shotSize)};
+        bool ok = false;
+        if (!m.lost && SUCCEEDED(m.shotBuffer->Map(0, &all, reinterpret_cast<void**>(&data)))) {
+            ok = writePng(m.shotPath, data, m.shotWidth, m.shotHeight, m.shotPitch);
+            D3D12_RANGE none{0, 0};
+            m.shotBuffer->Unmap(0, &none);
+        }
+        if (ok)
+            LOG_INFO("screenshot: %s (%dx%d)", m.shotPath.c_str(), m.shotWidth, m.shotHeight);
+        else
+            LOG_ERROR("screenshot: %s could not be saved", m.shotPath.c_str());
+        m.shotPath.clear();
+    }
     m.noteGpuFrame();
     if (m.upscaler && m.upscaler->generates()) m.upscaler->afterPresent();  // every frame: the next frame's token
     m.renderStarted = false;

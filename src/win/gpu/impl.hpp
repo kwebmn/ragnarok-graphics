@@ -508,6 +508,12 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES gameState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT gameSrv = 0;
     ID3D12Resource* readback = nullptr;
+    // 0.54: the screenshot - the back buffer copied before Present, written after it
+    ID3D12Resource* shotBuffer = nullptr;
+    UINT64 shotSize = 0;
+    UINT shotPitch = 0;
+    int shotWidth = 0, shotHeight = 0;
+    std::string shotPath;
     UINT64 readbackSize = 0;
 
     std::unordered_map<uint32_t, Texture> textures;

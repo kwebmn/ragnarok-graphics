@@ -41,6 +41,7 @@ struct PresentOptions {
     float sharpen = -1.0f;      // CAS sharpness 0..1 of the picture on screen; below 0 = none
     bool foreground = true;     // the game's window is in front: frame generation only then
     bool vsyncSetting = true;   // vsync as set (vsync above is off for a Blt that shows at once); Remix's interval
+    std::string screenshot;     // 0.54: the picture as shown, to this PNG file (Ctrl+Shift+F12); "" none
 };
 
 // Direct3D 12 behind the DirectDraw surfaces: plays frame records onto the render target the client draws into,

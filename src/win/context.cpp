@@ -126,6 +126,8 @@ bool Context::open(std::string& error) {
     renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
     LOG_INFO("%s renderer on %s", d3d11 ? "Direct3D 11" : "Direct3D 12", renderer->adapterName().c_str());
+    fpsShown_ = config.fpsCounter;  // 0.54
+    fps_.setLabel(std::string(d3d11 ? "Direct3D 11" : "Direct3D 12") + (config.dlss != "off" ? " + DLSS" : ""));
     // 0.47: the AI textures with Direct3D 11 - the texture pack's pictures, in the game's process.
     const bool aiHere = d3d11 && config.ai.enabled && renderer->startAiTextures(gameDir(), config.ai);
     crisp::setWindowArt(config.windowArt);  // 0.41: before the first twin
@@ -249,6 +251,24 @@ void Context::present(const Rect& source, bool waitForVblank) {
         enhanced_ = !enhanced_;
         LOG_INFO("compare key: improvements %s", enhanced_ ? "on" : "off");
     }
+    // 0.54: Ctrl+Shift+F11 - the frame counter
+    const bool fpsDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
+                         GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F11) < 0;
+    if (fpsKey_.pressed(fpsDown)) fpsShown_ = !fpsShown_;
+    // 0.54: Ctrl+Shift+F12 - the picture as shown (4K, not the game's 1920x1080) into the game's ScreenShot folder
+    const bool shotDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
+                          GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F12) < 0;
+    std::string screenshot;
+    if (shotKey_.pressed(shotDown)) {
+        const std::string folder = gameDir() + "\\ScreenShot";
+        CreateDirectoryA(folder.c_str(), nullptr);
+        SYSTEMTIME t{};
+        GetLocalTime(&t);
+        char name[64];
+        std::snprintf(name, sizeof name, "\\uaro-%04u%02u%02u-%02u%02u%02u.png", t.wYear, t.wMonth, t.wDay, t.wHour,
+                      t.wMinute, t.wSecond);
+        screenshot = folder + name;
+    }
     // Stage 3: the window's real pixels and the scale for them. The first present switches from the game's size:
     // the start-up calibration has run by then (spec §4.3).
     const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
@@ -324,7 +344,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.sharpen = enhanced_ && config.sharpen > 0 ? float(config.sharpen - 1) / 99.0f : -1.0f;  // 1-100 -> CAS 0..1
     o.foreground = foreground;
     o.vsyncSetting = config.vsync;
+    o.screenshot = screenshot;
     renderer->present(window, out.cx, out.cy, source, o);
+    fps_.present(window, fpsShown_);
     ++stats_.frames;
     logStats(false);
 }

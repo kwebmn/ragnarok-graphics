@@ -484,6 +484,7 @@ void Host::present(WireReader& rd) {
     o.fpsLimit = rd.i32();
     o.sharpen = rd.f32();
     o.foreground = rd.u8() != 0;
+    o.screenshot = rd.str();  // 0.54
     if (rd.ok() && (surface_ || presentMode_ != "composition")) {
         renderer_.present(window, width, height, source, o);
         if (!surface_ && renderer_.presentRefused() && !surfaceAsked_ && presentMode_ != "window") {
