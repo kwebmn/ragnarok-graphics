@@ -1,3 +1,16 @@
+# uaRO Graphics 0.79.0 — testing
+
+What is new in 0.79.0:
+- **Round characters (HD-2D)** - with "Rim light" (Direct3D 12 and 11). Torches, lamps and fire light a character or a
+  monster as if it were round: the side towards the fire brighter, the far one darker, smoothly across the sprite's
+  width instead of evenly.
+- **Colours of each region** (Effects → "Colours of each region" and strength; on by default; D3D12 and D3D11). Payon
+  warm and green, Niflheim cold and pale, Morroc sun-bleached, Lutie blue, Glast Heim grim, Einbroch smoky, and a dozen
+  more. Log: `region: Payon (pay_fild01)`.
+
+How to test: a torch next to a character (Payon's caves) - walk past the fire; travel the towns: is the colour too much
+(strength 0-100), which regions want changing.
+
 # uaRO Graphics 0.78.0 — testing
 
 What is new in 0.78.0 (Direct3D 12):
