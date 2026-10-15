@@ -218,9 +218,11 @@ float relief(float2 uv, float2 du, float2 dv) {
     float2 g = float2(hr - hl, hd - hu) * 0.5;
     float2 tx = du * size, ty = dv * size;  // texels a screen pixel
     float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(abs(tx.x * ty.y - tx.y * ty.x), 1e-6));
-    float3 n = normalize(float3(-gs * 5.0 * uiPixels.x, 1.0));
+    float3 n = normalize(float3(-gs * 3.5 * uiPixels.x, 1.0));
     const float3 light = float3(-0.4706, -0.5752, 0.6690);  // normalised (-0.45, -0.55, 0.64)
-    return clamp(dot(n, light) / light.z, 0.55, 1.3);
+    // 0.83.1: mostly darker on the sides away from the light - lit sides brightened little: light ground (paved
+    // squares) went white at 1.3
+    return clamp(dot(n, light) / light.z, 0.7, 1.1);
 }
 #endif
 

@@ -503,9 +503,11 @@ bool Renderer::Impl::applyBloom() {
     c.uiPixels[1] = float(h);
     c.uiPixels[2] = float(qw);
     c.uiPixels[3] = float(qh);
-    c.footprint = 0.72f;  // the bright parts: over this
+    // The bright parts: over this. 0.83.1: was 0.72 and 1.4 times - a light paved square (Prontera's) bloomed whole
+    // and went white; now only what is near white glows, and less.
+    c.footprint = 0.88f;
     const bool bloom = effects.bloom && effects.bloomStrength > 0;
-    c.sharpen = bloom ? 1.4f * float(std::clamp(effects.bloomStrength, 0, 200)) / 100.0f : 0.0f;
+    c.sharpen = bloom ? 0.6f * float(std::clamp(effects.bloomStrength, 0, 200)) / 100.0f : 0.0f;
     c.twin[1] = effects.filmic ? 1.0f : 0.0f;
     c.twin[2] = effects.filmGrain ? float(std::clamp(effects.filmGrainAmount, 0, 100)) / 100.0f : 0.0f;  // 0.83
     c.twin[3] = mapFadeNow();
