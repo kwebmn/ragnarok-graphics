@@ -324,72 +324,81 @@ void Ai11::noteCells(uint32_t id, int width, int height, const UploadCmd& u, con
     }
     if (!pictures_->anyCells()) return;
     auto a = atlases_.find(id);
-    const bool made = a == atlases_.end();
-    if (made) {
+    if (a == atlases_.end()) {
         if (!makeAtlas(id, width, height)) return;
         a = atlases_.find(id);
     }
-    if (!count) {  // a change of no frame: as it is
-        standIn(id, a->second, u.rect, argb, u.rect.width());
-        return;
-    }
-    if (made) {  // what it held already, as it is: where it has anything (the copy starts cleared)
-        Rect box{u.rect.right, u.rect.bottom, u.rect.left, u.rect.top};
-        for (int y = u.rect.top; y < u.rect.bottom; ++y)
-            for (int x = u.rect.left; x < u.rect.right; ++x)
-                if (argb[size_t(y - u.rect.top) * size_t(u.rect.width()) + size_t(x - u.rect.left)]) {
-                    box.left = std::min(box.left, x);
-                    box.top = std::min(box.top, y);
-                    box.right = std::max(box.right, x + 1);
-                    box.bottom = std::max(box.bottom, y + 1);
-                }
+    Atlas& at = a->second;
+    for (uint32_t i = 0; i < count; ++i) at.grid.noteCell(cells[i].rect);
+    // 0.49.3: what changed against what the cache held - the frames the game wrote past its call (or before the cache
+    // was seen) are whole cells that changed: looked up as frames too; what the game wrote again unchanged stays.
+    std::vector<Rect> changed;
+    Rect rest;
+    at.grid.update(u.rect, argb, cells, count, changed, rest);
+    const auto pixelsOf = [&](const Rect& c) { return argb + size_t(c.top - u.rect.top) * size_t(u.rect.width()) +
+                                                      size_t(c.left - u.rect.left); };
+    if (!rest.empty()) {  // no cell of the grid: as it is (smoothly: sprites)
         // A texel more on each side: the enlargement blends with its neighbours.
-        box = Rect{std::max(box.left - 1, u.rect.left), std::max(box.top - 1, u.rect.top),
-                   std::min(box.right + 1, u.rect.right), std::min(box.bottom + 1, u.rect.bottom)};
-        if (!box.empty())
-            standIn(id, a->second, box,
-                    argb + size_t(box.top - u.rect.top) * size_t(u.rect.width()) + size_t(box.left - u.rect.left),
-                    u.rect.width());
+        rest = Rect{std::max(rest.left - 1, u.rect.left), std::max(rest.top - 1, u.rect.top),
+                    std::min(rest.right + 1, u.rect.right), std::min(rest.bottom + 1, u.rect.bottom)};
+        standIn(id, at, rest, pixelsOf(rest), u.rect.width(), true);
+    }
+    for (const Rect& c : changed) {
+        const auto s = at.sources.find(uint32_t(c.top) << 16 | uint32_t(c.left));
+        cellWritten(id, at, c, pixelsOf(c), u.rect.width(), s == at.sources.end() ? 0 : s->second, false);
     }
     for (uint32_t i = 0; i < count; ++i) {
         const Rect c = cells[i].rect;
         if (c.empty() || c.left < u.rect.left || c.top < u.rect.top || c.right > u.rect.right ||
             c.bottom > u.rect.bottom)
             continue;
-        const int w = c.width(), h = c.height();
-        std::vector<uint32_t> pixels(size_t(w) * size_t(h));
-        for (int y = 0; y < h; ++y)
-            std::memcpy(pixels.data() + size_t(y) * size_t(w),
-                        argb + size_t(c.top - u.rect.top + y) * size_t(u.rect.width()) + size_t(c.left - u.rect.left),
-                        size_t(w) * 4);
-        // The frame at once: smoothly enlarged when its picture may come (0.49.2: texel by texel it looked blocky until
-        // then), as the game has it when its kind is off.
-        // A new cache's frames too (they were in its first piece, texel by texel).
-        standIn(id, a->second, c, pixels.data(), w, cellOn(cells[i].source));
-        ++cellsWritten_;
-        // Every new frame counts: a picture asked for the one before it is not taken any more.
-        const uint32_t frame = ++a->second.frames[uint32_t(c.top) << 16 | uint32_t(c.left)];
-        if (!cellOn(cells[i].source)) continue;  // a kind that is off: it stays as the game has it
-        if (ai::softPicture(pixels.data(), w, h) || ai::softAlpha(pixels.data(), w, h)) {
-            ++soft_;
-            continue;
-        }
-        Request r;
-        const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
-        if (!pictures_->cell(key, r.name)) {
-            ++cellsMissing_;
-            dump_.save(sprite_exe::sourceName(cells[i].source), key, pixels.data(), w, h);
-            continue;
-        }
-        r.want = Want::Cell;
-        r.id = id;
-        r.serial = frame;
-        r.width = w;
-        r.height = h;
-        r.cellX = c.left;
-        r.cellY = c.top;
-        request(std::move(r));
+        at.sources[uint32_t(c.top) << 16 | uint32_t(c.left)] = cells[i].source;
+        cellWritten(id, at, c, pixelsOf(c), u.rect.width(), cells[i].source, true);
     }
+}
+
+void Ai11::cellWritten(uint32_t id, Atlas& a, const Rect& c, const uint32_t* argb, int pitch, uint8_t source,
+                       bool seen) {
+    const int w = c.width(), h = c.height();
+    std::vector<uint32_t> pixels(size_t(w) * size_t(h));
+    for (int y = 0; y < h; ++y)
+        std::memcpy(pixels.data() + size_t(y) * size_t(w), argb + size_t(y) * size_t(pitch), size_t(w) * 4);
+    // A frame of no known sprite (written past the game's call): looked up when any sprite kind is on.
+    const bool on = source ? cellOn(source)
+                           : settings_.monsters || settings_.players || settings_.npcs || settings_.items;
+    // The frame at once: smoothly enlarged when its picture may come (0.49.2: texel by texel it looked blocky until
+    // then), as the game has it when its kind is off.
+    standIn(id, a, c, pixels.data(), w, on);
+    // Every new frame counts: a picture asked for the one before it is not taken any more.
+    const uint32_t frame = ++a.frames[uint32_t(c.top) << 16 | uint32_t(c.left)];
+    if (seen)
+        ++cellsWritten_;
+    else if (!ai::cleared(pixels.data(), w, h, w))
+        ++unseen_;
+    else
+        return;  // a cell the game cleared
+    if (!on) return;  // a kind that is off: it stays as the game has it
+    if (ai::softPicture(pixels.data(), w, h) || ai::softAlpha(pixels.data(), w, h)) {
+        ++soft_;
+        return;
+    }
+    Request r;
+    const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
+    if (!pictures_->cell(key, r.name)) {
+        if (!seen) return;  // perhaps no frame at all
+        ++cellsMissing_;
+        dump_.save(sprite_exe::sourceName(source), key, pixels.data(), w, h);
+        return;
+    }
+    if (!seen) ++unseenFound_;
+    r.want = Want::Cell;
+    r.id = id;
+    r.serial = frame;
+    r.width = w;
+    r.height = h;
+    r.cellX = c.left;
+    r.cellY = c.top;
+    request(std::move(r));
 }
 
 bool Ai11::makeAtlas(uint32_t id, int width, int height) {
@@ -420,6 +429,7 @@ bool Ai11::makeAtlas(uint32_t id, int width, int height) {
     Atlas a;
     a.width = width;
     a.height = height;
+    a.grid.reset(width, height);
     atlases_[id] = std::move(a);
     return true;
 }
@@ -735,7 +745,7 @@ void Ai11::logNow(bool final) {
     lastLog_ = now;
     uint32_t seen = 0;
     for (uint32_t n : seen_) seen += n;
-    if (!seen && !texturesTaken_ && !cellsWritten_ && icons_.empty() && !failed_) return;
+    if (!seen && !texturesTaken_ && !cellsWritten_ && !unseen_ && icons_.empty() && !failed_) return;
     std::string kinds, missing;
     for (int k = 0; k < ai::kKinds; ++k) {
         kinds += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " + std::to_string(seen_[k]) +
@@ -753,6 +763,10 @@ void Ai11::logNow(bool final) {
                  cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsTaken_,
                  static_cast<unsigned long long>(cellsTaken_ ? cellWait_ / cellsTaken_ : 0),
                  static_cast<unsigned long long>(cellWaitMost_));
+    if (unseen_)  // 0.49.3
+        LOG_INFO("AI textures: sprite frames - %u came past the game's call (found changed in their caches), %u of "
+                 "them in the pack",
+                 unseen_, unseenFound_);
     if (!icons_.empty())
         LOG_INFO("AI textures: icons - %u asked, %u from the pack, %u of none (xBR's)",
                  static_cast<unsigned>(icons_.size()), iconsTaken_, iconsNone_);

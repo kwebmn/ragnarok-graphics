@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "core/ai/cell_grid.hpp"
 #include "core/ai/kinds.hpp"
 #include "core/ai/ready.hpp"
 #include "core/ai/srvgg.hpp"
@@ -129,6 +130,8 @@ private:
     struct Atlas {
         int levels = 0;
         std::unordered_map<uint32_t, uint32_t> frames;  // a cell's corner (y << 16 | x) -> its frames so far
+        std::unordered_map<uint32_t, uint8_t> sources;  // a cell's corner -> its last frame's sprite_exe::Source
+        ai::CellGrid grid;                              // 0.49.3: the game texture as it is, cut into its cells
     };
     struct Readback {
         ID3D12Resource* buffer = nullptr;
@@ -178,7 +181,10 @@ private:
     void readBack(const Job& job, ID3D12Resource* image, const Level& top);  // for the pack (0.48)
     void noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const SpriteCell* cells,
                    uint32_t count);
-    bool cellOn(uint8_t source) const;  // a frame of this sprite file's kind goes to the network (sprite_exe)
+    bool cellOn(uint8_t source) const;
+    // A frame in the cell c of the cache (argb its top left texel): seen - through the game's call; else found changed.
+    void cellWritten(uint32_t id, Texture& t, Atlas& a, int net, const Rect& c, const uint32_t* argb, int pitch,
+                     uint8_t source, bool seen);  // a frame of this sprite file's kind goes to the network (sprite_exe)
     bool makeAtlas(uint32_t id, Texture& t);
     void standIn(Texture& t, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch);
     void writeRegion(Texture& t, int level, int x, int y, int w, int h, const std::vector<uint32_t>& argb);
@@ -279,6 +285,7 @@ private:
 
     uint32_t doneNetwork_ = 0, donePack_ = 0;
     uint32_t cellsPack_ = 0, iconsPack_ = 0;  // 0.42: from the texture pack
+    uint32_t unseen_ = 0, unseenFound_ = 0;  // 0.49.3: frames found changed past the game's call, of them in the pack
     uint32_t cellsWritten_ = 0, cellsNetwork_ = 0;  // sprite frames: by the game, by the network
     std::unordered_set<uint64_t> icons_;  // the icons asked for this run
     uint32_t iconsNetwork_ = 0;

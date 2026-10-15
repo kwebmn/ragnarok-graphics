@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "core/ai/cell_grid.hpp"
 #include "core/ai/kinds.hpp"
 #include "core/ai/ready.hpp"
 #include "core/config.hpp"
@@ -81,6 +82,8 @@ private:
     struct Atlas {  // the game's sprite cache: its copy (copies_) made cell by cell
         int width = 0, height = 0;  // the game texture's
         std::unordered_map<uint32_t, uint32_t> frames;  // a cell's corner (y << 16 | x) -> its frames so far
+        std::unordered_map<uint32_t, uint8_t> sources;  // a cell's corner -> its last frame's sprite_exe::Source
+        ai::CellGrid grid;                              // 0.49.3: the game texture as it is, cut into its cells
     };
     enum class Want : uint8_t { Texture, Cell, Icon };
     struct Request {
@@ -114,6 +117,8 @@ private:
     void noteCells(uint32_t id, int width, int height, const UploadCmd& u, const uint32_t* argb,
                    const SpriteCell* cells, uint32_t count);
     bool cellOn(uint8_t source) const;
+    // A frame in the cell c of the cache (argb its top left texel): seen - through the game's call; else found changed.
+    void cellWritten(uint32_t id, Atlas& a, const Rect& c, const uint32_t* argb, int pitch, uint8_t source, bool seen);
     bool makeAtlas(uint32_t id, int width, int height);
     // smooth (0.49.2): a frame whose picture is on its way - enlarged smoothly meanwhile, not texel by texel.
     void standIn(uint32_t id, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch, bool smooth = false);
@@ -169,6 +174,7 @@ private:
 
     uint32_t texturesTaken_ = 0, cellsWritten_ = 0, cellsTaken_ = 0, iconsTaken_ = 0, iconsNone_ = 0;
     uint32_t failed_ = 0, soft_ = 0, waiting_ = 0;
+    uint32_t unseen_ = 0, unseenFound_ = 0;  // 0.49.3: frames found changed past the game's call, of them in the pack
     ULONGLONG cellWait_ = 0, cellWaitMost_ = 0;  // 0.49.2: the frames' pictures from asked to in, all and the longest
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run
     // 0.48 (in place of the settings app's "Check the keys"): what the pack has no picture of, by kind; frames.
