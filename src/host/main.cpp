@@ -20,6 +20,7 @@
 #include "host/pack_builder.hpp"
 #include "host/streamline.hpp"
 #include "win/bridge/channel.hpp"
+#include "win/gpu/adapters.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
 
@@ -41,6 +42,7 @@ struct Args {
     bool motionInverted = false;
     int generation = 0;
     AiSettings ai;  // [ai]
+    std::string gpu;  // 0.50.2: [renderer] gpu ("" the fast card)
     host::PackArgs pack;  // 0.43: --pack
 };
 
@@ -74,6 +76,7 @@ Args parseArgs() {
         else if (k == "--dlss-motion") a.motionInverted = v == "inverted";
         else if (k == "--fg") a.generation = std::atoi(v.c_str());
         else if (k == "--ai") a.ai = parseAiArgument(v);
+        else if (k == "--gpu") a.gpu = v == "auto" ? "" : v;
         else if (k == "--pack") a.pack.mode = v;
         else if (k == "--kinds") a.pack.choice = pack::parseChoice(v);
         else if (k == "--quality") a.pack.quality = std::clamp(std::atoi(v.c_str()), 1, 100);
@@ -499,6 +502,7 @@ void Host::present(WireReader& rd) {
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     Args a = parseArgs();
+    gpu::setChosenAdapter(a.gpu);  // 0.50.2: the game's card, and the texture pack's
     if (!a.pack.mode.empty()) {  // 0.43: the texture pack, with a log of its own
         wlog::open(a.dir + "\\uaro-pack.log", LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log));
         a.pack.dir = a.dir;

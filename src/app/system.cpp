@@ -149,6 +149,7 @@ SystemInfo probeSystem() {
         s.d3d12Probed = true;
     }
     s.d3d11 = win::probeD3D11(true);
+    s.adapters = win::probeAdapters(true);
     std::vector<Found> found;
     EnumDisplayMonitors(nullptr, nullptr, collect, reinterpret_cast<LPARAM>(&found));
     std::vector<bool> primary;

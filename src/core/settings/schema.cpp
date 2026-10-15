@@ -32,6 +32,8 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::RenderUaro, Text::RenderDgVoodoo}, Text::RenderHeading, Text::RenderUaroHint, ""},
         {"renderer", "api", Page::Render, Control::Choice, 0, 0, 0, {"d3d12", "d3d11", "auto"},
          {Text::RenderApiD3d12, Text::RenderApiD3d11, Text::RenderApiAuto}, Text::RenderApi, Text::RenderApiHint, ""},
+        // 0.50.2: a card's name as the Renderer page lists them, or auto (a list of its own there, not a text field)
+        {"renderer", "gpu", Page::Render, Control::Line, 0, 0, 0, {}, {}, Text::RenderGpu, Text::RenderGpuHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         {"renderer", "remix", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
@@ -229,6 +231,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     const std::string k = sectionKey(s);
     if (k == "renderer.backend") return backendToken(c.backend);
     if (k == "renderer.api") return apiToken(c.api);
+    if (k == "renderer.gpu") return c.gpu.empty() ? "auto" : c.gpu;
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
     if (k == "renderer.remix") return c.remix ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";
@@ -328,6 +331,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
 }
 
 bool validToken(const IniSetting& s, const std::string& token) {
+    if (s.control == Control::Line)  // 0.50.2: a graphics card's name - one line, no comment or section in it
+        return !token.empty() && token.find_first_of("\r\n;[") == std::string::npos;
     if (s.control == Control::Slider || s.control == Control::Number) {
         char* end = nullptr;
         const long n = std::strtol(token.c_str(), &end, 10);

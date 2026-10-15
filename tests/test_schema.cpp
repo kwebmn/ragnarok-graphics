@@ -14,6 +14,8 @@ TEST(schema_every_word_reads_back_through_the_driver) {
         std::vector<std::string> words;
         if (s.control == Control::Slider || s.control == Control::Number)
             words = {std::to_string(s.min), std::to_string(s.max), std::to_string((s.min + s.max) / 2)};
+        else if (s.control == Control::Line)  // 0.50.2: [renderer] gpu - a card's name
+            words = {"auto", "NVIDIA GeForce RTX 5060 Ti"};
         else
             for (const char* t : s.tokens) words.push_back(t);
         for (const std::string& w : words) {
@@ -21,11 +23,13 @@ TEST(schema_every_word_reads_back_through_the_driver) {
             const Config c = parseConfig(std::string("[") + s.section + "]\n" + s.key + " = " + w + "\n");
             CHECK(tokenOf(s, c) == w);
         }
-        CHECK(!validToken(s, "nonsense"));
+        CHECK(s.control == Control::Line || !validToken(s, "nonsense"));
         CHECK(findSetting(sectionKey(s)) == &s);
     }
     CHECK(!validToken(*findSetting("quality.render_scale"), "99"));
     CHECK(!validToken(*findSetting("frames.fps_limit"), "1001"));
+    const IniSetting& gpu = *findSetting("renderer.gpu");  // one line of the ini, nothing else in it
+    CHECK(!validToken(gpu, "") && !validToken(gpu, "a\nb") && !validToken(gpu, "[x]") && !validToken(gpu, "a ; b"));
 }
 
 TEST(schema_compare_key_turns_every_effect_off) {
@@ -79,7 +83,7 @@ TEST(schema_live_keys_are_the_specs) {
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "renderer.remix" &&
-                                k != "renderer.api" &&
+                                k != "renderer.api" && k != "renderer.gpu" &&
                                 k != "quality.dlss" &&
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
                                 k.compare(0, 3, "ai.") != 0));

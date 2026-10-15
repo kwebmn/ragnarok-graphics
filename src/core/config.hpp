@@ -177,6 +177,9 @@ struct Config {
     // surface for Windows scaling of the game's window.
     bool bridge = false;
     std::string bridgePresent = "auto";
+    // 0.50.2: [renderer] gpu - the name of the graphics card to draw on (Windows' own, as the Renderer page lists
+    // them); "" (auto): the fast one of several (core/gpu_order.hpp).
+    std::string gpu;
     bool bridgeDpiScale = true;
     // Part 4 (test): [renderer] remix = 1 draws through Direct3D 9's fixed function, with the world in world space:
     // RTX Remix when its d3d9.dll is next to uaRO.exe, else the system's Direct3D 9.

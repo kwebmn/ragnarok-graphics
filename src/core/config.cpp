@@ -211,7 +211,8 @@ Config parseConfig(const std::string& text) {
         const size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
         const std::string key = section + "." + lower(trim(line.substr(0, eq)));
-        const std::string val = lower(trim(line.substr(eq + 1)));
+        const std::string raw = trim(line.substr(eq + 1));  // as written: a graphics card's name (0.50.2)
+        const std::string val = lower(raw);
         if (key == "renderer.backend") {
             if (val == "dgvoodoo") c.backend = Backend::DgVoodoo;
             if (val == "uaro") c.backend = Backend::Uaro;
@@ -221,6 +222,8 @@ Config parseConfig(const std::string& text) {
             if (val == "auto") c.api = Api::Auto;
         } else if (key == "renderer.bridge") {
             setBool(val, c.bridge);
+        } else if (key == "renderer.gpu") {
+            c.gpu = val == "auto" ? "" : raw;
         } else if (key == "renderer.bridge_present") {
             if (val == "auto" || val == "window" || val == "composition") c.bridgePresent = val;
         } else if (key == "renderer.remix") {

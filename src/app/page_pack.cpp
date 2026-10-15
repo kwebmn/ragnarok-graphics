@@ -290,6 +290,8 @@ private:
                             wide(aiArgument(a)) + L" --kinds " + wide(kinds.empty() ? "none" : kinds) +
                             L" --quality " + wide(num(kQualities[g_quality])) + L" --fresh " + (fresh ? L"1" : L"0") +
                             L" --log 1";
+        const std::string card = host_.model().pendingConfig().gpu;  // 0.50.2: the card chosen on the Renderer page
+        line += L" --gpu \"" + wide(card.empty() ? "auto" : card) + L"\"";
         DeleteFileW(statusPath_.c_str());
         DeleteFileW((statusPath_ + L".stop").c_str());
         STARTUPINFOW si{};

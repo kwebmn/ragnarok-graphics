@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 
 namespace uagfx::win {
 
@@ -35,5 +36,16 @@ struct D3D11Probe {
 };
 D3D11Probe probeD3D11(bool systemOnly = false);
 std::string featureLevelName(unsigned level);  // "11_0"
+
+// 0.50.2: every graphics card (no software one), in the order the renderer tries them with [renderer] gpu = auto -
+// the settings app's list of cards and the automatic setup's facts of the chosen one.
+struct AdapterProbe {
+    std::string name;
+    unsigned vendor = 0;
+    unsigned long long vramMb = 0;
+    bool d3d12 = false;
+    unsigned d3d11Level = 0;  // 0: no Direct3D 11 device
+};
+std::vector<AdapterProbe> probeAdapters(bool systemOnly = false);
 
 }  // namespace uagfx::win

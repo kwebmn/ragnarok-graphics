@@ -114,6 +114,8 @@ enum class Text : uint16_t {
     // 0.50: the automatic setup
     AutoHeading, AutoButton, AutoNote, AutoFound, AutoTierNoDriver, AutoTierOld, AutoTierLow, AutoTierMiddle,
     AutoTierHigh, AutoAiAll, AutoAiSprites, AutoAiNoPack, AutoAiOff, AutoAsk, AutoPending,
+    // 0.50.2: the graphics card
+    RenderGpu, RenderGpuHint, RenderGpuAuto, RenderGpuItem, RenderGpuMissing,
     Count
 };
 

@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/version.hpp"
+#include "win/gpu/adapters.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/system_probe.hpp"
@@ -53,12 +54,14 @@ Startup decide() {
              s.config.highResolution ? 1 : 0, uiFilterToken(s.config.uiFilter), s.config.renderScale, s.config.sharpen);
     const WindowsVersion v = windowsVersion();
     LOG_INFO("Windows %lu.%lu build %lu", v.major, v.minor, v.build);
+    if (!s.config.gpu.empty()) LOG_INFO("graphics card chosen: %s ([renderer] gpu)", s.config.gpu.c_str());
     logModule("dinput.dll");   // ROExt or uaRO Pad
     logModule("dinput8.dll");
     // The game's window black before anything that takes time - the Direct3D 12 probe, the renderer's start - so
     // that its white 640x480 start-up area does not stay on the screen meanwhile (window_mode.hpp).
     if (s.config.backend == Backend::Uaro) blackenGameWindow();
 
+    gpu::setChosenAdapter(s.config.gpu);  // 0.50.2: the probes look at the card the renderer will take
     SystemFacts facts;
     facts.windows10 = v.major >= 10;
     facts.dgvoodoo = fileExists(dir + "\\dgvoodoo\\DDraw.dll");

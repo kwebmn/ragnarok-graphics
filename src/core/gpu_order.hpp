@@ -17,8 +17,9 @@ struct AdapterFacts {
 };
 
 // The indexes of the adapters to try, best first; software ones left out. byPreference: the list is already in
-// Windows' order for high performance - kept as it is.
-std::vector<size_t> adapterOrder(const std::vector<AdapterFacts>& adapters, bool byPreference);
+// Windows' order for high performance - kept as it is. chosen (0.50.2, [renderer] gpu): the card of that name first.
+std::vector<size_t> adapterOrder(const std::vector<AdapterFacts>& adapters, bool byPreference,
+                                 const std::string& chosen = "");
 // "NVIDIA GeForce RTX 4070 (12282 MB), Intel(R) UHD Graphics 770 (128 MB)": for the log.
 std::string adaptersText(const std::vector<AdapterFacts>& adapters);
 

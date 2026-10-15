@@ -5,6 +5,8 @@
 namespace uagfx::gpu {
 namespace {
 
+std::string g_chosen;  // set once before the renderer is made
+
 AdapterFacts factsOf(IDXGIAdapter1* a) {
     AdapterFacts f;
     DXGI_ADAPTER_DESC1 d{};
@@ -46,7 +48,7 @@ std::vector<IDXGIAdapter1*> orderedAdapters(IDXGIFactory1* factory, std::vector<
         }
     }
     std::vector<IDXGIAdapter1*> out;
-    for (size_t i : adapterOrder(facts, byPreference)) {
+    for (size_t i : adapterOrder(facts, byPreference, g_chosen)) {
         found[i]->AddRef();
         out.push_back(found[i]);
     }
@@ -54,6 +56,8 @@ std::vector<IDXGIAdapter1*> orderedAdapters(IDXGIFactory1* factory, std::vector<
     if (all) *all = std::move(facts);
     return out;
 }
+
+void setChosenAdapter(const std::string& name) { g_chosen = name; }
 
 void releaseAdapters(std::vector<IDXGIAdapter1*>& adapters) {
     for (IDXGIAdapter1* a : adapters)

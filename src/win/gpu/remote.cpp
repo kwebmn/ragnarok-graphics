@@ -49,7 +49,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
                       std::to_string(o.logLevel) + " --present " + o.present + " --dlss " + o.dlss +
                       " --dlss-jitter " + (o.dlssJitterInverted ? "inverted" : "normal") + " --dlss-motion " +
                       (o.dlssMotionInverted ? "inverted" : "normal") + " --fg " + std::to_string(o.frameGeneration) +
-                      " --ai " + aiArgument(o.ai);
+                      " --ai " + aiArgument(o.ai) + " --gpu \"" + (o.gpu.empty() ? "auto" : o.gpu) + "\"";
     STARTUPINFOA si{};
     si.cb = sizeof si;
     si.dwFlags = STARTF_FORCEOFFFEEDBACK;  // it never shows a window: no "app starting" cursor over the game

@@ -14,6 +14,11 @@ TEST(gpu_order_takes_the_fast_card) {
     const std::vector<AdapterFacts> same = {{"a", 0x1002, 8192, false}, {"b", 0x1002, 8192, false}};
     CHECK(adapterOrder(same, false) == (std::vector<size_t>{0, 1}));  // a tie: Windows' order
     CHECK(adapterOrder({}, false).empty());
+    // 0.50.2: the player's card ([renderer] gpu) first, whatever the order; a name no card has changes nothing.
+    CHECK(adapterOrder(laptop, false, "intel(r) uhd graphics") == (std::vector<size_t>{0, 1}));  // any case
+    CHECK(adapterOrder(laptop, true, "NVIDIA GeForce RTX 3060 Laptop GPU") == (std::vector<size_t>{1, 0}));
+    CHECK(adapterOrder(laptop, false, "a card long gone") == (std::vector<size_t>{1, 0}));
+    CHECK(adapterOrder(laptop, false, "Microsoft Basic Render Driver") == (std::vector<size_t>{1, 0}));
     CHECK(adaptersText(laptop) == "Intel(R) UHD Graphics (128 MB), NVIDIA GeForce RTX 3060 Laptop GPU (6144 MB), "
                                   "Microsoft Basic Render Driver (0 MB, software)");
 }

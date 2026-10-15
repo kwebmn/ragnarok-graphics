@@ -18,6 +18,7 @@ constexpr int kRows = 1100;  // + 4 x the setting's index in iniSettings()
 constexpr int kForgetLogin = 1490;
 constexpr int kAsSetup = 1491;
 constexpr int kAuto = 1492;  // 0.50
+constexpr int kGpu = 1493;   // 0.50.2
 constexpr int kReg = 1500;  // + 4 x the setting's index in regSettings()
 
 std::string hresult(long hr) {
@@ -83,6 +84,12 @@ public:
             m.setToken(*findSetting("renderer.backend"), id == kUaro ? "uaro" : "dgvoodoo");
             host_.changed();
             host_.rebuild();  // 0.46: the graphics API goes with the uaRO renderer
+            return;
+        }
+        if (id == kGpu && code == CBN_SELCHANGE) {
+            const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
+            if (sel >= 0 && size_t(sel) < gpuWords_.size()) m.setToken(*findSetting("renderer.gpu"), gpuWords_[sel]);
+            host_.changed();
             return;
         }
         if (id == kAuto && code == BN_CLICKED) {
@@ -287,6 +294,15 @@ private:
         host_.reload();
     }
 
+    // 0.50.2: the card the Renderer page's choice names (pending or written), else the fast one; null: none listed.
+    const win::AdapterProbe* chosenCard() const {
+        const auto& cards = host_.model().system().adapters;
+        const std::string word = host_.model().token(*findSetting("renderer.gpu"));
+        for (const win::AdapterProbe& c : cards)
+            if (sameName(c.name, word)) return &c;
+        return cards.empty() ? nullptr : &cards.front();
+    }
+
     // 0.50: what this computer carries, at a press (core/settings/auto_setup) - for a client handed to other players.
     void autoSetupNow() {
         Model& m = host_.model();
@@ -300,6 +316,14 @@ private:
         x.vendor = sys.d3d12.vendor ? sys.d3d12.vendor : sys.d3d11.vendor;
         x.vramMb = sys.d3d12.vramMb ? sys.d3d12.vramMb : sys.d3d11.vramMb;
         x.adapter = !sys.d3d12.adapter.empty() ? sys.d3d12.adapter : sys.d3d11.adapter;
+        if (const win::AdapterProbe* card = chosenCard()) {  // 0.50.2: the card the game will draw on
+            x.d3d12 = card->d3d12;
+            x.d3d11 = card->d3d11Level != 0;
+            x.d3d11Level = card->d3d11Level;
+            x.vendor = card->vendor;
+            x.vramMb = card->vramMb;
+            x.adapter = card->name;
+        }
         if (!sys.monitors.empty()) {
             x.screenWidth = sys.monitors[0].pixels.width;
             x.screenHeight = sys.monitors[0].pixels.height;
@@ -366,6 +390,27 @@ private:
                 }
                 p.choice(kRows + int(i) * 4, t(s.label), items, selected, t(s.hint), uaro);
             }
+        // 0.50.2: the graphics card, when there are several (or one is chosen that is gone)
+        const auto& cards = sys.adapters;
+        const std::string card = m.token(*findSetting("renderer.gpu"));
+        gpuWords_.clear();
+        if (cards.size() > 1 || card != "auto") {
+            std::vector<std::wstring> items;
+            int selected = 0;
+            items.push_back(tf(Text::RenderGpuAuto, {cards.empty() ? utf8(t(Text::Unknown)) : cards.front().name}));
+            gpuWords_.push_back("auto");
+            for (const win::AdapterProbe& c : cards) {
+                if (sameName(c.name, card)) selected = int(items.size());
+                items.push_back(tf(Text::RenderGpuItem, {c.name, std::to_string(c.vramMb)}));
+                gpuWords_.push_back(c.name);
+            }
+            if (card != "auto" && !selected) {  // a card no longer there: the renderer takes the fast one
+                selected = int(items.size());
+                items.push_back(tf(Text::RenderGpuMissing, {card}));
+                gpuWords_.push_back(card);
+            }
+            p.choice(kGpu, t(Text::RenderGpu), items, selected, t(Text::RenderGpuHint), uaro);
+        }
         p.gap();
         for (size_t i = 0; i < all.size(); ++i)  // part 3 (test): the renderer in a 64-bit process; part 4: Remix
             if (sectionKey(all[i]) == "renderer.bridge" || sectionKey(all[i]) == "renderer.remix")
@@ -433,6 +478,7 @@ private:
     settings::Page which_;
     bool held_ = false;                   // a row is grey: the game runs and writes it itself
     std::vector<std::string> skinWords_;  // the skin list's words, in its order
+    std::vector<std::string> gpuWords_;   // 0.50.2: the graphics card list's [renderer] gpu words, in its order
 };
 
 }  // namespace

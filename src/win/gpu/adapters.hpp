@@ -11,5 +11,7 @@ namespace uagfx::gpu {
 // all: every adapter Windows has, for the log.
 std::vector<IDXGIAdapter1*> orderedAdapters(IDXGIFactory1* factory, std::vector<AdapterFacts>* all = nullptr);
 void releaseAdapters(std::vector<IDXGIAdapter1*>& adapters);
+// 0.50.2: [renderer] gpu - the card of this name first from now on in this process ("": the fast one).
+void setChosenAdapter(const std::string& name);
 
 }  // namespace uagfx::gpu

@@ -1210,6 +1210,26 @@ const Entry kTexts[] = {
     {"The settings are on the pages now; Apply writes them.",
      "Налаштування вже на сторінках; «Застосувати» запише їх.",
      "Настройки уже на страницах; «Применить» запишет их."},
+    {"Graphics card",
+     "Відеокарта",
+     "Видеокарта"},
+    {"Which graphics card draws the game when the computer has several (a laptop's integrated one and its NVIDIA or "
+     "AMD). Automatic takes the fast one - Windows' choice for high performance. The game, the 64-bit renderer and "
+     "the texture pack's builder use it.",
+     "Яка відеокарта малює гру, якщо їх кілька (вбудована в ноутбуці та NVIDIA чи AMD). «Автоматично» бере швидшу — "
+     "вибір Windows для високої продуктивності. Нею користуються гра, 64-бітний рендер і збирач пакета текстур.",
+     "Какая видеокарта рисует игру, если их несколько (встроенная в ноутбуке и NVIDIA или AMD). «Автоматически» берёт "
+     "быструю — выбор Windows для высокой производительности. Ею пользуются игра, 64-битный рендер и сборщик пакета "
+     "текстур."},
+    {"Automatic: {1}",
+     "Автоматично: {1}",
+     "Автоматически: {1}"},
+    {"{1}, {2} MB",
+     "{1}, {2} МБ",
+     "{1}, {2} МБ"},
+    {"{1} (not found)",
+     "{1} (не знайдено)",
+     "{1} (не найдена)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

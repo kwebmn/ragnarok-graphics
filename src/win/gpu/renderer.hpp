@@ -31,6 +31,7 @@ struct BridgeOptions {
     bool dlssMotionInverted = false;
     AiSettings ai;                    // AI textures ([ai])
     int logLevel = 1;                // LogLevel
+    std::string gpu;                 // 0.50.2: [renderer] gpu, "" the fast card
 };
 
 struct PresentOptions {

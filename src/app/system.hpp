@@ -13,6 +13,7 @@ struct SystemInfo {
     bool d3d12Probed = false;  // only on Windows 10 and newer
     win::D3D12Probe d3d12;
     win::D3D11Probe d3d11;                        // 0.46: on every Windows
+    std::vector<win::AdapterProbe> adapters;      // 0.50.2: every card, the fast one first
     std::string gpuDriver;                        // "32.0.15.6094": the main adapter's driver, "" when unknown
     std::vector<settings::MonitorInfo> monitors;  // as the driver numbers them: 0 = the main one
     settings::Frame frame;                        // the game window's frame: its own or ours, the larger

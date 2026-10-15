@@ -154,6 +154,54 @@ D3D11Probe probeD3D11(bool systemOnly) {
     return p;
 }
 
+std::vector<AdapterProbe> probeAdapters(bool systemOnly) {
+    std::vector<AdapterProbe> out;
+    HMODULE dxgi = load("dxgi.dll", systemOnly);
+    HMODULE d3d12 = load("d3d12.dll", systemOnly);  // none before Windows 10
+    HMODULE d3d11 = load("d3d11.dll", systemOnly);
+    using CreateFactoryFn = HRESULT(WINAPI*)(REFIID, void**);
+    const auto createFactory = dxgi ? reinterpret_cast<CreateFactoryFn>(reinterpret_cast<void*>(
+                                          GetProcAddress(dxgi, "CreateDXGIFactory1")))
+                                    : nullptr;
+    const auto create12 = d3d12 ? reinterpret_cast<PFN_D3D12_CREATE_DEVICE>(
+                                      reinterpret_cast<void*>(GetProcAddress(d3d12, "D3D12CreateDevice")))
+                                : nullptr;
+    const auto create11 = d3d11 ? reinterpret_cast<PFN_D3D11_CREATE_DEVICE>(
+                                      reinterpret_cast<void*>(GetProcAddress(d3d11, "D3D11CreateDevice")))
+                                : nullptr;
+    IDXGIFactory1* factory = nullptr;
+    if (!createFactory || FAILED(createFactory(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory))))
+        return out;
+    std::vector<IDXGIAdapter1*> adapters = gpu::orderedAdapters(factory);
+    for (IDXGIAdapter1* a : adapters) {
+        AdapterProbe p;
+        DXGI_ADAPTER_DESC1 desc{};
+        if (SUCCEEDED(a->GetDesc1(&desc))) {
+            p.name = utf8(desc.Description);
+            p.vendor = desc.VendorId;
+            p.vramMb = desc.DedicatedVideoMemory / (1024 * 1024);
+        }
+        ID3D12Device* device12 = nullptr;
+        if (create12 && SUCCEEDED(create12(a, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
+                                           reinterpret_cast<void**>(&device12)))) {
+            p.d3d12 = true;
+            device12->Release();
+        }
+        const D3D_FEATURE_LEVEL levels[3] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0};
+        ID3D11Device* device11 = nullptr;
+        D3D_FEATURE_LEVEL got = D3D_FEATURE_LEVEL_10_0;
+        if (create11 && SUCCEEDED(create11(a, D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, levels, 3, D3D11_SDK_VERSION,
+                                           &device11, &got, nullptr))) {
+            p.d3d11Level = unsigned(got);
+            device11->Release();
+        }
+        out.push_back(p);
+    }
+    gpu::releaseAdapters(adapters);
+    factory->Release();
+    return out;
+}
+
 std::string featureLevelName(unsigned level) {
     return std::to_string((level >> 12) & 15) + "_" + std::to_string((level >> 8) & 15);
 }

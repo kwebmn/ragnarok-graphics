@@ -7,6 +7,7 @@
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
 #include "win/effect_hook.hpp"
+#include "win/gpu/adapters.hpp"
 #include "win/game_camera.hpp"
 #include "win/sprite_hook.hpp"
 #include "win/start_screen.hpp"
@@ -94,6 +95,7 @@ bool Context::open(std::string& error) {
     }
     if (config.frameGeneration && config.dlss == "off")
         LOG_INFO("frame generation %dx: off - it needs NVIDIA DLSS on (Smoothing page)", config.frameGeneration);
+    gpu::setChosenAdapter(config.gpu);  // 0.50.2
     // Part 3: the 64-bit renderer - DLSS and the AI textures need it.
     if (!remote && (config.bridge || config.dlss != "off" || config.ai.enabled)) {
         gpu::BridgeOptions o;
@@ -107,6 +109,7 @@ bool Context::open(std::string& error) {
         o.dlssMotionInverted = config.dlssMotionInverted;
         o.frameGeneration = config.dlss != "off" ? config.frameGeneration : 0;  // it uses DLSS's depth and motion
         o.ai = config.ai;
+        o.gpu = config.gpu;
         std::string why;
         remote = r->createRemote(o, why);
         if (remote)
