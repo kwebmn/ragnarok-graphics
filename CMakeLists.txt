@@ -82,6 +82,15 @@ elseif(WIN32)
     target_compile_options(uaro-graphics PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
     target_link_libraries(uaro-graphics PRIVATE uagfx_app comdlg32)
     target_link_options(uaro-graphics PRIVATE -static -static-libgcc -static-libstdc++ -s -municode)
+
+    # 0.60: uaro-graphics-setup.exe - the release's zip appended by tools/package.sh; unpacks it into the uaRO
+    # folder, runs install.bat /quiet and opens the settings app.
+    add_executable(uaro-graphics-setup WIN32 src/setup/main.cpp src/setup/setup.rc)
+    target_include_directories(uaro-graphics-setup PRIVATE src/app)
+    target_compile_definitions(uaro-graphics-setup PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+    target_compile_options(uaro-graphics-setup PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
+    target_link_libraries(uaro-graphics-setup PRIVATE uagfx_core shell32 ole32)
+    target_link_options(uaro-graphics-setup PRIVATE -static -static-libgcc -static-libstdc++ -s -municode)
 else()
     enable_testing()
     file(GLOB UAGFX_TEST_SOURCES CONFIGURE_DEPENDS tests/*.cpp)

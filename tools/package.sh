@@ -28,4 +28,15 @@ cp dist/ai/realesr-general-x4v3.bin dist/ai/realesr-general-wdn-x4v3.bin dist/ai
 printf '%s build %s\r\n' "$version" "$(date '+%Y-%m-%d %H:%M')" > "$stage/uaro-graphics/version.txt"
 (cd "$stage" && zip -q -r "../uaro-graphics.zip" .)
 python3 tools/check_package.py "$out"
-echo "packed $out"
+# 0.60: the setup in one file - the stub, the zip, its size (eight bytes, little-endian) and "UAROSETP".
+setup="build-win/uaro-graphics-setup-full.exe"
+python3 - "build-win/uaro-graphics-setup.exe" "$out" "$setup" <<'PY'
+import struct, sys
+stub, zipf, out = sys.argv[1:4]
+data = open(zipf, "rb").read()
+with open(out, "wb") as f:
+    f.write(open(stub, "rb").read())
+    f.write(data)
+    f.write(struct.pack("<Q", len(data)) + b"UAROSETP")
+PY
+echo "packed $out and $setup"
