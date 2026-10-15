@@ -244,6 +244,8 @@ private:
     // 0.44: the copies' video memory - their bytes, the budget, the frames, what was put away and brought back.
     uint64_t frame_ = 0, aiBytes_ = 0, vramBudget_ = 0, systemBudget_ = 0, lastPutAway_ = 0;
     uint32_t putAway_ = 0, broughtBack_ = 0, packAhead_ = 0;
+    // 0.45: the keys of textures at the game's lower texture detail, to the pack's pictures of the whole textures.
+    std::unordered_map<std::string, std::string> aliases_;
     void putAwayOld();
     void bringBack(uint32_t id, Item& item);
     uint64_t systemMemory(uint64_t* used) const;  // DXGI's budget for the process, and what it uses

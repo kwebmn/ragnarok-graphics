@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -51,6 +52,23 @@ TEST(texture_pack_knows_the_key_of_a_picture) {
     for (const char* bad : {"index.txt", "world/256x256.webp", "other/8x8/1.webp", "world/8x8/1.png", "world//1.webp",
                             "world/8x8/.webp", "world/8x8/a/b.webp"})
         CHECK(!pack::keyOfPicture(bad, g, key));
+}
+
+TEST(texture_pack_index_holds_the_lower_details_keys) {
+    // 0.45: a texture at a lower detail (the game's TEXTUREMODE) has a key of its own; the index sends it to the
+    // picture of the whole texture - "=<key>\t<picture>" lines, which the pictures' lines leave alone.
+    const std::map<std::string, ai::Kind> kinds = {{"world/256x256/00000000000000aa.webp", ai::Kind::Objects}};
+    const std::map<std::string, std::string> aliases = {
+        {"128x128\\00000000000000bb", "world/256x256/00000000000000aa.webp"},
+        {"64x64\\00000000000000cc", "world/256x256/00000000000000aa.webp"}};
+    const std::string text = pack::indexText(kinds, aliases);
+    CHECK_EQ(text, std::string("world/256x256/00000000000000aa.webp\tobjects\n"
+                               "=128x128\\00000000000000bb\tworld/256x256/00000000000000aa.webp\n"
+                               "=64x64\\00000000000000cc\tworld/256x256/00000000000000aa.webp\n"));
+    const auto back = pack::parseIndex(text);
+    CHECK(back.size() == 1 && back.at("world/256x256/00000000000000aa.webp") == ai::Kind::Objects);
+    const auto alias = pack::parseAliases(text + "=broken\n=\tworld/1x1/1.webp\n");
+    CHECK(alias == aliases);
 }
 
 TEST(texture_pack_reads_back_what_it_wrote) {

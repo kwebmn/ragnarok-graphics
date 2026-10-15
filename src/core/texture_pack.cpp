@@ -255,10 +255,30 @@ std::string pictureName(Group g, const std::string& key) {
     return name;
 }
 
-std::string indexText(const std::map<std::string, ai::Kind>& kinds) {
+std::string indexText(const std::map<std::string, ai::Kind>& kinds) { return indexText(kinds, {}); }
+
+std::string indexText(const std::map<std::string, ai::Kind>& kinds, const std::map<std::string, std::string>& aliases) {
     std::string t;
     for (const auto& e : kinds) t += e.first + "\t" + ai::kindName(e.second) + "\n";
+    for (const auto& a : aliases) t += "=" + a.first + "\t" + a.second + "\n";
     return t;
+}
+
+std::map<std::string, std::string> parseAliases(const std::string& text) {
+    std::map<std::string, std::string> out;
+    size_t at = 0;
+    while (at < text.size()) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(at, end - at);
+        at = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.size() < 2 || line[0] != '=') continue;
+        const size_t tab = line.find('\t');
+        if (tab == std::string::npos || tab < 2 || tab + 1 >= line.size()) continue;
+        out[line.substr(1, tab - 1)] = line.substr(tab + 1);
+    }
+    return out;
 }
 
 std::map<std::string, ai::Kind> parseIndex(const std::string& text) {
@@ -271,7 +291,7 @@ std::map<std::string, ai::Kind> parseIndex(const std::string& text) {
         at = end + 1;
         if (!line.empty() && line.back() == '\r') line.pop_back();
         const size_t tab = line.find('\t');
-        if (tab == std::string::npos || tab == 0) continue;
+        if (tab == std::string::npos || tab == 0 || line[0] == '=') continue;  // 0.45: '=': a lower detail's key
         std::string kind = line.substr(tab + 1);
         const size_t more = kind.find('\t');  // the maps, later
         if (more != std::string::npos) kind.resize(more);

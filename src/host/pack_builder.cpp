@@ -239,7 +239,18 @@ private:
     std::vector<std::pair<std::string, pack::Source>> list_;
     pack::Writer writer_;
     std::map<std::string, ai::Kind> kinds_;  // every picture's of this run and of the pack's index
+    // 0.45: the keys of the world's textures at the game's lower texture details, to their whole textures' pictures.
+    std::map<std::string, std::string> aliases_;
+    void noteLowerDetails(const pack::Picture& p, const std::string& name);
 };
+
+void Builder::noteLowerDetails(const pack::Picture& p, const std::string& name) {
+    if (p.group != pack::Group::World) return;
+    for (int div : {2, 4}) {
+        pack::Picture low;
+        if (pack::lowerDetail(p, div, low) && low.key != p.key) aliases_.emplace(low.key, name);
+    }
+}
 
 bool Builder::listFiles() {
     std::string error;
@@ -269,7 +280,7 @@ int Builder::run() {
 int Builder::check() {
     if (!listFiles()) return 3;
     s_.state = pack::Status::Checking;
-    std::unordered_set<std::string> keys;
+    std::unordered_set<std::string> keys, lower[2];  // 0.45: and the world's at half and a quarter a side
     uint32_t groups[3] = {};
     std::vector<uint8_t> data;
     for (const auto& f : list_) {
@@ -280,8 +291,12 @@ int Builder::check() {
         }
         s_.current = utf8Of(f.first);
         if (files_.read(f.first, data))
-            for (const pack::Picture& p : picturesOf(f.first, f.second, data, a_.choice))
+            for (const pack::Picture& p : picturesOf(f.first, f.second, data, a_.choice)) {
                 if (keys.insert(p.key).second) ++groups[int(p.group)];
+                pack::Picture low;
+                for (int i = 0; i < 2 && p.group == pack::Group::World; ++i)
+                    if (pack::lowerDetail(p, 2 << i, low)) lower[i].insert(low.key);
+            }
         ++s_.filesDone;
         status_.write(s_);
     }
@@ -301,9 +316,21 @@ int Builder::check() {
         text = "no upscaled.grf to check against; ";
     }
     const pack::KeyCheck k = pack::checkKeys(cache, keys);
+    // The ones not found: made at a lower texture detail of the game?
+    uint32_t atLower[2] = {};
+    std::unordered_set<std::string> counted;
+    for (const std::string& name : cache) {
+        const ai::ParsedEntry e = ai::parseEntry(name);
+        if (e.type != ai::ParsedEntry::Picture || keys.count(e.key) || !counted.insert(e.key).second) continue;
+        if (lower[0].count(e.key))
+            ++atLower[0];
+        else if (lower[1].count(e.key))
+            ++atLower[1];
+    }
     text += "found " + pack::keyCheckText(k) + "; the pack would hold " + std::to_string(keys.size()) +
             " pictures (world " + std::to_string(groups[0]) + ", sprites " + std::to_string(groups[1]) +
-            ", interface " + std::to_string(groups[2]) + ")";
+            ", interface " + std::to_string(groups[2]) + "); of the rest, at a lower texture detail: half " +
+            std::to_string(atLower[0]) + ", a quarter " + std::to_string(atLower[1]);
     LOG_INFO("texture pack, the keys: %s", text.c_str());
     for (const std::string& m : k.missing) LOG_INFO("texture pack: no file gives %s", m.c_str());
     s_.state = pack::Status::Done;
@@ -320,8 +347,11 @@ bool Builder::checkpoint(Encoders* enc, bool last) {
         const auto it = kinds_.find(n);
         index[n] = it == kinds_.end() ? ai::Kind::None : it->second;
     }
+    std::map<std::string, std::string> aliases;  // to the pictures in the pack
+    for (const auto& a : aliases_)
+        if (index.count(a.second)) aliases.insert(a);
     std::string error;
-    const std::string text = pack::indexText(index);
+    const std::string text = pack::indexText(index, aliases);
     const bool ok = last ? writer_.close(text, error) : writer_.checkpoint(text, error);
     s_.inPack = uint32_t(index.size());
     s_.bytes = writer_.bytes();
@@ -349,8 +379,10 @@ int Builder::build() {
         pack::Reader old;
         std::string error;
         std::vector<uint8_t> index;
-        if (old.open(out, error) && old.read(pack::kIndexName, index))
+        if (old.open(out, error) && old.read(pack::kIndexName, index)) {
             kinds_ = pack::parseIndex(std::string(index.begin(), index.end()));
+            aliases_ = pack::parseAliases(std::string(index.begin(), index.end()));
+        }
     }
     std::string error;
     if (!writer_.open(out, !a_.fresh, error)) return fail(out + ": " + error);
@@ -373,6 +405,7 @@ int Builder::build() {
                 const std::string name = pack::pictureName(p.group, p.key);
                 if (!seen.insert(name).second) continue;
                 kinds_[name] = list_[i].second.kind;
+                noteLowerDetails(p, name);
                 if (!done.count(name)) {
                     ++s_.toMake;
                     some = true;
@@ -382,7 +415,8 @@ int Builder::build() {
         ++s_.filesDone;
         status_.write(s_);
     }
-    LOG_INFO("texture pack: %u pictures to make of %zu files", s_.toMake, todo.size());
+    LOG_INFO("texture pack: %u pictures to make of %zu files; %zu keys of the world's textures at a lower texture "
+             "detail", s_.toMake, todo.size(), aliases_.size());
     if (!s_.toMake) {
         checkpoint(nullptr, true);
         s_.state = pack::Status::Done;

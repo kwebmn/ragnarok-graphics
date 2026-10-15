@@ -126,6 +126,22 @@ bool worldTexture(const uint8_t* data, size_t size, bool tga, Picture& out) {
     return true;
 }
 
+bool lowerDetail(const Picture& in, int div, Picture& out) {
+    if ((div != 2 && div != 4) || in.width < div || in.height < div || in.width % div || in.height % div ||
+        in.argb.size() < size_t(in.width) * size_t(in.height))
+        return false;
+    out.group = in.group;
+    out.width = in.width / div;
+    out.height = in.height / div;
+    out.argb.resize(size_t(out.width) * size_t(out.height));
+    for (int y = 0; y < out.height; ++y)
+        for (int x = 0; x < out.width; ++x)
+            out.argb[size_t(y) * size_t(out.width) + size_t(x)] =
+                in.argb[size_t(y * div) * size_t(in.width) + size_t(x * div)];
+    out.key = ai::keyName(ai::textureKey(out.argb.data(), out.width, out.height));
+    return true;
+}
+
 bool interfacePicture(const uint8_t* data, size_t size, Picture& out) {
     if (!decodeBmp(data, size, out.argb, out.width, out.height)) return false;
     for (uint32_t& p : out.argb) p = transparentAtUpload(p) ? 0u : (p | 0xFF000000u);

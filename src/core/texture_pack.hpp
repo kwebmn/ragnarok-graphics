@@ -28,7 +28,10 @@ bool keyOfPicture(const std::string& name, Group& group, std::string& key);
 // A line a picture - its name, its kind (ai::kindName), the maps it is on, by tabs and commas; written last.
 constexpr const char* kIndexName = "index.txt";
 std::string indexText(const std::map<std::string, ai::Kind>& kinds);  // 0.43: the names and kinds
+// 0.45: and the keys of the textures at a lower detail, each to its whole texture's picture ("=<key>\t<picture>").
+std::string indexText(const std::map<std::string, ai::Kind>& kinds, const std::map<std::string, std::string>& aliases);
 std::map<std::string, ai::Kind> parseIndex(const std::string& text);  // a kind it does not know: ai::Kind::None
+std::map<std::string, std::string> parseAliases(const std::string& text);
 
 class Reader {
 public:

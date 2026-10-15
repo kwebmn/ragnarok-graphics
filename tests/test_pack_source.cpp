@@ -92,6 +92,27 @@ TEST(pack_source_tga_with_alpha_as_a4r4g4b4) {
     CHECK_EQ(p.argb[1], 0x88FF0000u);
 }
 
+TEST(pack_source_textures_at_a_lower_detail_as_the_game_takes_them) {
+    // 0.45: the game's texture detail (TEXTUREMODE 1, 0) makes a texture a half or a quarter a side, every second or
+    // fourth pixel of every second or fourth row from the top-left (FUN_004176c0) - its own key.
+    const std::vector<uint8_t> b = bmp(4, 4, 24, std::vector<uint32_t>{0x080808, 0x101010, 0x181818, 0x202020,
+                                                                       0x282828, 0x303030, 0x383838, 0x404040,
+                                                                       0x484848, 0x505050, 0x585858, 0x606060,
+                                                                       0x686868, 0x707070, 0x787878, 0x808080},
+                                       {});
+    pack::Picture full, half, quarter, none;
+    CHECK(pack::worldTexture(b.data(), b.size(), false, full));
+    CHECK(pack::lowerDetail(full, 2, half));
+    CHECK(half.width == 2 && half.height == 2 && half.group == pack::Group::World);
+    CHECK(half.argb[0] == full.argb[0] && half.argb[1] == full.argb[2] && half.argb[2] == full.argb[8] &&
+          half.argb[3] == full.argb[10]);
+    CHECK(half.key == ai::keyName(ai::textureKey(half.argb.data(), 2, 2)) && half.key != full.key);
+    CHECK(pack::lowerDetail(full, 4, quarter));
+    CHECK(quarter.width == 1 && quarter.height == 1 && quarter.argb[0] == full.argb[0]);
+    CHECK(!pack::lowerDetail(quarter, 2, none));  // no side left
+    CHECK(!pack::lowerDetail(full, 3, none));     // the game halves, twice at most
+}
+
 TEST(pack_source_refuses_a_tga_past_the_largest_side) {
     // 0.44: as a BMP - past 8192 a side a header is broken, not a texture: refused before anything is made of it.
     std::vector<uint8_t> t = {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0};

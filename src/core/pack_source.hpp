@@ -37,6 +37,9 @@ uint32_t spritePaletteColour(const uint8_t* rgba);
 int spriteCell(int side);  // the sprite cache's cell for a frame's side: 32, 64, 128 or 256; 0 past 256
 
 bool worldTexture(const uint8_t* data, size_t size, bool tga, Picture& out);
+// 0.45: a world texture at the game's lower texture detail ([TEXTUREMODE] 1: div 2, 0: div 4) - every div-th pixel of
+// every div-th row from the top-left, as the game copies it into its smaller texture (FUN_004176c0).
+bool lowerDetail(const Picture& in, int div, Picture& out);
 bool interfacePicture(const uint8_t* data, size_t size, Picture& out);
 // The palette frames of a sprite file (SPR), with its own palette or another (1024 bytes, a dye's).
 bool spriteFrames(const uint8_t* data, size_t size, std::vector<Picture>& out, const uint8_t* palette = nullptr);

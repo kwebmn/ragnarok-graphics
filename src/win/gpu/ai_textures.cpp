@@ -179,14 +179,25 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     // 0.44: the kinds of the pack's world pictures and big interface pictures, by their keys - ahead, a map's
     // textures come from the pack as the game loads them, before they are drawn.
     std::vector<uint8_t> index;
-    if (ahead_ && pack_.isOpen() && pack_.read(pack::kIndexName, index))
-        for (const auto& e : pack::parseIndex(std::string(index.begin(), index.end()))) {
+    if (pack_.isOpen() && pack_.read(pack::kIndexName, index)) {
+        const std::string text(index.begin(), index.end());
+        std::unordered_map<std::string, ai::Kind> pictureKinds;  // a picture's name -> its kind
+        for (const auto& e : pack::parseIndex(text)) {
             pack::Group g = pack::Group::World;
             std::string key;
             if (int(e.second) >= ai::kKinds || !pack::keyOfPicture(e.first, g, key) || g == pack::Group::Sprites)
                 continue;
-            if (kinds_.emplace(key, e.second).second) ++packAhead_;
+            pictureKinds[e.first] = e.second;
+            if (ahead_ && kinds_.emplace(key, e.second).second) ++packAhead_;
         }
+        // 0.45: a texture at a lower texture detail - its own key - takes its whole texture's picture.
+        for (const auto& a : pack::parseAliases(text)) {
+            if (!pack_.has(a.second)) continue;
+            aliases_.emplace(a.first, a.second);
+            const auto k = pictureKinds.find(a.second);
+            if (ahead_ && k != pictureKinds.end() && kinds_.emplace(a.first, k->second).second) ++packAhead_;
+        }
+    }
     // The copies' share of the video memory.
     systemBudget_ = systemMemory(nullptr);
     vramBudget_ = ai::copiesBudget(systemBudget_);
@@ -248,8 +259,9 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
              static_cast<unsigned>(known_.size()), note, writable_ ? "" : " (read only: another game writes it)");
     if (pack_.isOpen())
         LOG_INFO("AI textures: the texture pack uaro-textures.zip has %u pictures (%u of the world and the interface "
-                 "known ahead)",
-                 static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)), packAhead_);
+                 "known ahead, %u keys of a lower texture detail)",
+                 static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)), packAhead_,
+                 static_cast<unsigned>(aliases_.size()));
     else
         LOG_INFO("AI textures: no texture pack (uaro-textures.zip) in the game's folder");
     LOG_INFO("AI textures: the copies keep to %llu MB of video memory (the system gives the game %llu MB)",
@@ -1205,7 +1217,11 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     item.state = Item::Waiting;
     if (kinds_.emplace(item.key, kind).second) tag(ai::kindTag(kind, item.key));
     // 0.42: the texture pack first, then upscaled.grf, then - generating - the network.
-    const std::string packed = pack::pictureName(item.ui ? pack::Group::Ui : pack::Group::World, item.key);
+    std::string packed = pack::pictureName(item.ui ? pack::Group::Ui : pack::Group::World, item.key);
+    if (!pack_.has(packed) && !item.ui) {  // 0.45: at a lower texture detail - the whole texture's picture
+        const auto a = aliases_.find(item.key);
+        if (a != aliases_.end()) packed = a->second;
+    }
     if (pack_.has(packed)) {
         item.name = packed;
         item.loading = true;
@@ -1613,7 +1629,9 @@ void AiTextures::ioLoop() {
             if (r.pack) {  // 0.42: 4 times the game's texture - twice at x2
                 res.ok = pack_.read(r.name, blob) && webp::decode(blob.data(), blob.size(), res.argb, res.width,
                                                                   res.height);
-                if (res.ok && scale_ == 2 && res.width == r.width * 4 && res.height == r.height * 4)
+                // 0.45: and a whole texture's picture for one at a lower texture detail, 8 or 16 times its size.
+                while (res.ok && r.width > 0 && r.height > 0 && res.width > r.width * scale_ &&
+                       res.height > r.height * scale_ && res.width % 2 == 0 && res.height % 2 == 0)
                     ai::halve(res.argb, res.width, res.height);
             } else if (waiting != pending.end())
                 res.ok = ai::decodeTexture(batch[waiting->second].second, res.argb, res.width, res.height);
