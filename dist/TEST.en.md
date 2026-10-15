@@ -1,3 +1,15 @@
+# uaRO Graphics 0.54.0 — testing
+
+What is new in 0.54.0 (hotkeys):
+- **Ctrl+Shift+F11 - the frame counter**: "143 fps · 7.0 ms (16 max) · Direct3D 11" in the game window's top left
+  corner, twice a second; again to hide it. Settings → Frames → "Frame counter" shows it from the start
+  (`[frames] fps_counter`). It is a small window of its own over the game: the same with Direct3D 12, 11 and DLSS.
+- **Ctrl+Shift+F12 - a screenshot at the picture's full size** (3840x2160 on a 4K screen, not the game's 1920x1080)
+  as PNG into the game's ScreenShot folder (`uaro-YYYYMMDD-HHMMSS.png`); the log says where.
+- Pause or Scroll Lock stays the before/after key.
+
+How to test: in the game Ctrl+Shift+F11, Ctrl+Shift+F12 (Direct3D 11 and 12); look at ScreenShot.
+
 # uaRO Graphics 0.53.0 — testing
 
 What is new in 0.53.0 ("download the pack from the site"):
