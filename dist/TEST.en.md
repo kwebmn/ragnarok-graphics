@@ -1,3 +1,13 @@
+# uaRO Graphics 0.83.1 — testing
+
+Fixed by the square's screenshot (0.83.0): the sunlit tiles went nearly white.
+- **Bloom of bright places** glowed from any light surface (threshold 0.72) and strongly - a light square glowed whole.
+  Now only what is near white (0.88), 2.3 times weaker.
+- **Ground relief** brightened the stones' sides facing the light up to x1.3 - light tiles went white. Now at most
+  x1.1, the relief mostly from the shading.
+
+How to test: the same square by day - the tiles light but with the stones' pattern visible; Pause - compare.
+
 # uaRO Graphics 0.83.0 — testing
 
 What is new in 0.83.0 (Direct3D 12):
