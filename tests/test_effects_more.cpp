@@ -105,3 +105,9 @@ TEST(grass_off_by_default) {
     CHECK(!parseConfig("").effects.grass && parseConfig("").effects.grassAmount == 70);
     CHECK(parseConfig("[effects]\ngrass = 1\n").effects.grass);
 }
+
+TEST(skill_sparks_on_by_default) {
+    // 0.82
+    CHECK(parseConfig("").effects.skillSparks && parseConfig("").effects.skillSparksAmount == 100);
+    CHECK(!effectsOff().skillSparks);
+}

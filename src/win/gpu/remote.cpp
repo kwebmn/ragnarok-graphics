@@ -331,6 +331,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.storms ? 1 : 0);
     w.u8(e.grass ? 1 : 0);  // 0.81
     w.i32(e.grassAmount);
+    w.u8(e.skillSparks ? 1 : 0);  // 0.82
+    w.i32(e.skillSparksAmount);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

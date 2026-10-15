@@ -107,6 +107,72 @@ void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, float am
     fireSparks.push_back(s);
 }
 
+// 0.82: the skills' sparks about the places gathered (embers), added onto the world.
+bool Renderer::Impl::applyEmbers() {
+    const std::vector<Ember> places = std::move(embers);
+    embers.clear();
+    if (!ensureScene("skills' sparks")) return true;
+    ID3D12PipelineState* pso = addPipeline(embersPs, embersPipelines, upscale ? 1 : samples, "skills' sparks");
+    if (!pso) return true;
+    if (!embersData) {
+        embersData = createTexture2D(device, int(kMaxEmbers * 2), 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT,
+                                     D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+        embersDataSrv = embersData ? allocSrv() : kNoSrv;
+        if (!embersData || embersDataSrv == kNoSrv) {
+            releaseCom(embersData);
+            releaseCom(embersPs);
+            return true;
+        }
+        embersDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+        device->CreateShaderResourceView(embersData, nullptr, cpuSrvHandle(embersDataSrv));
+    }
+    float data[kMaxEmbers * 2][4] = {};
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f;
+    for (size_t i = 0; i < places.size() && i < kMaxEmbers; ++i) {
+        const Ember& e = places[i];
+        data[2 * i][0] = e.x;
+        data[2 * i][1] = e.y;
+        data[2 * i][2] = e.size;
+        data[2 * i][3] = e.strength;
+        std::copy(e.colour, e.colour + 3, data[2 * i + 1]);
+        data[2 * i + 1][3] = e.fire ? 1.0f : 0.0f;
+        x0 = std::min(x0, e.x - 3.0f * e.size);
+        y0 = std::min(y0, e.y - 3.0f * e.size);
+        x1 = std::max(x1, e.x + 3.0f * e.size);
+        y1 = std::max(y1, e.y + 3.0f * e.size);
+    }
+    const Upload u = allocUpload(sizeof data, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+    if (!u.cpu) return true;
+    std::memcpy(u.cpu, data, sizeof data);
+    D3D12_TEXTURE_COPY_LOCATION src{}, to{};
+    src.pResource = slots[slot].upload;
+    src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint.Offset = u.offset;
+    src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    src.PlacedFootprint.Footprint.Width = UINT(kMaxEmbers * 2);
+    src.PlacedFootprint.Footprint.Height = 1;
+    src.PlacedFootprint.Footprint.Depth = 1;
+    src.PlacedFootprint.Footprint.RowPitch = UINT(sizeof data);  // 768: a multiple of 256
+    to.pResource = embersData;
+    to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    transition(embersData, embersDataState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
+    transition(embersData, embersDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    c.scale = float(upscale ? worldScale : scale);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.footprint = float(std::min(places.size(), kMaxEmbers));
+    c.sharpen = waterTime();
+    const D3D12_RECT lit = clipped(x0, y0, x1, y1, w, h);
+    if (lit.right <= lit.left || lit.bottom <= lit.top) return true;
+    const UINT list1 = embersDataSrv;
+    if (upscale)
+        return effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, false, list1, &lit);
+    return effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, false, list1, &lit);
+}
+
 // 0.38: a portal's draw (draw.cpp): its middle in the view and on the screen, gathered by place for its glow and swirl.
 void Renderer::Impl::notePortal(const FrameRecord& rec, const DrawCmd& d) {
     if (portalSparks.size() >= 256) return;
@@ -577,6 +643,22 @@ bool Renderer::Impl::applyTorches() {
                 const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
                 heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 70.0f * hk, 0.6f * std::min(c.w, 1.0f) * heatUser()});
             }
+        }
+        embers.clear();  // 0.82: the places for the skills' sparks
+        const float ek = float(upscale ? worldScale : scale);
+        for (size_t i = 0; i < best.size() && embers.size() < kMaxEmbers && effects.skillSparks; ++i) {
+            const Cell& c = best[i];
+            const float vz = c.view[2] / c.w;
+            if (vz <= proj.nearZ) continue;
+            const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
+            Ember e{};
+            e.x = (c.view[0] / c.w / vz * proj.f0 + proj.cx) * ek + 0.5f + (upscale ? jitter[0] : 0.0f);
+            e.y = (c.view[1] / c.w / vz * proj.f1 + proj.cy) * ek + 0.5f + (upscale ? jitter[1] : 0.0f);
+            e.size = 7.0f * proj.f0 / vz * ek;  // about seven units across
+            e.strength = 0.55f * std::min(c.w, 1.0f) * float(std::clamp(effects.skillSparksAmount, 0, 200)) / 100.0f;
+            for (int k = 0; k < 3; ++k) e.colour[k] = c.colour[k] / top;
+            e.fire = e.colour[0] > 0.8f && e.colour[2] < 0.6f;
+            embers.push_back(e);
         }
         for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
             const Cell& c = best[i];

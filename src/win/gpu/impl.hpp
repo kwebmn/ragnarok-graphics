@@ -820,6 +820,20 @@ struct Renderer::Impl {
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }
     bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
+    // 0.82: the skills' sparks (torches.cpp applyEmbers) - the places the torches' pass gathered the skills' fire at
+    struct Ember {
+        float x, y, size, strength, colour[3];
+        bool fire;
+    };
+    std::vector<Ember> embers;
+    ID3DBlob* embersPs = nullptr;
+    ID3D12PipelineState* embersPipelines[4] = {};
+    ID3D12Resource* embersData = nullptr;  // R32G32B32A32, two texels an ember place
+    D3D12_RESOURCE_STATES embersDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT embersDataSrv = 0;
+    static constexpr size_t kMaxEmbers = 24;
+    bool embersDue() const { return effects.skillSparks && embersPs && !embers.empty(); }
+    bool applyEmbers();  // after the torches' pass; false: lost
     // 0.81: grass on the green ground (ao.cpp applyGrass), off by default: it is costly
     ID3DBlob* grassPs = nullptr;
     ID3D12PipelineState* grassPipelines[4] = {};

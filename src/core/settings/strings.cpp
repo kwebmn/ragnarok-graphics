@@ -1663,6 +1663,21 @@ const Entry kTexts[] = {
     {"How many blades grow.",
      "Скільки травинок росте.",
      "Сколько травинок растёт."},
+    {"Sparks of skills",
+     "Іскри вмінь",
+     "Искры умений"},
+    {"Embers rise from burning skills (Fire Wall, Fire Bolt, Meteor Storm), and glints of their colour spread from "
+     "the other bright skills. Needs the skills' light. Direct3D 12.",
+     "Від палаючих умінь (Fire Wall, Fire Bolt, Meteor Storm) здіймаються жаринки, а від інших яскравих умінь "
+     "розлітаються іскорки їхнього кольору. Потрібне світло вмінь. Direct3D 12.",
+     "От горящих умений (Fire Wall, Fire Bolt, Meteor Storm) поднимаются угольки, а от других ярких умений "
+     "разлетаются искорки их цвета. Нужен свет умений. Direct3D 12."},
+    {"Sparks brightness",
+     "Яскравість іскор",
+     "Яркость искр"},
+    {"How bright the sparks are.",
+     "Наскільки яскраві іскри.",
+     "Насколько ярки искры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

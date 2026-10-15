@@ -1249,6 +1249,44 @@ float4 sun_shadow_ps(PresentOut i) : SV_Target {
     return float4(s, s, s, 1.0);
 }
 
+// 0.82, the skills' sparks (torches.cpp applyEmbers), added on: about each place a skill burns or shines (t1, two
+// texels: its middle (target pixels) .xy, its size .z, strength .w; then its colour .rgb and kind .w - 1 fire, 0
+// another) - footprint how many - a dozen sparks: a fire's embers rise, swaying, and die out; another skill's
+// glints spread out around it and fade. sharpen the time, scale k.
+float4 embers_ps(PresentOut i) : SV_Target {
+    float2 p = i.pos.xy;
+    float t = sharpen;
+    float3 sum = float3(0.0, 0.0, 0.0);
+    int count = int(footprint);
+    [loop] for (int k = 0; k < count; ++k) {
+        float4 s = tex1.Load(int3(2 * k, 0, 0));
+        float2 d0 = p - s.xy;
+        if (dot(d0, d0) > 9.0 * s.z * s.z) continue;
+        float4 c = tex1.Load(int3(2 * k + 1, 0, 0));
+        bool fire = c.w > 0.5;
+        [unroll] for (int j = 0; j < 12; ++j) {
+            float seed = hash12(float2(float(k) * 13.1, float(j) * 7.7));
+            float phase = frac(t * (fire ? 0.55 : 0.8) * (0.7 + 0.6 * seed) + seed * 3.1);
+            float2 jitter = float2(hash12(float2(seed, 1.3)), hash12(float2(seed, 7.9))) - 0.5;
+            float2 pos;
+            if (fire) {
+                pos = s.xy + jitter * s.z * 1.4 + float2(sin(t * 2.3 + seed * 6.28) * s.z * 0.12, -phase * s.z * 2.2);
+            } else {
+                float a = seed * 6.28 + t * 0.6;
+                pos = s.xy + jitter * s.z * 0.5 + float2(cos(a), sin(a) * 0.6) * phase * s.z * 1.3;
+            }
+            float size = (0.9 + 1.4 * hash12(float2(seed, 4.2))) * scale;
+            float2 d = p - pos;
+            float glow = exp(-dot(d, d) / (size * size)) * sin(phase * 3.14159);
+            float3 colour = fire ? lerp(float3(1.0, 0.85, 0.45), c.rgb, phase)
+                                 : lerp(float3(1.0, 1.0, 1.0), c.rgb, 0.6);
+            sum += colour * glow * s.w;
+        }
+    }
+    if (dot(sum, sum) < 1e-6) discard;
+    return float4(sum, 1.0);
+}
+
 // 0.81, grass (ao.cpp applyGrass), before the characters are drawn: each pixel looks down the screen for a blade
 // rooted below it that reaches up to it - a root on green ground (the picture's copy, t2), at a spot of the world
 // that has a blade (its place on the ground, so the blades stay put as the camera moves), the nearest root (lowest on

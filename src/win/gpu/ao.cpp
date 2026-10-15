@@ -675,6 +675,7 @@ bool Renderer::Impl::finishWorld() {
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
+    if (embersDue() && !applyEmbers()) return false;  // 0.82: the skills' sparks
     if (waterfallsDue() && !applyWaterfalls()) return false;  // 0.65: the maps' waterfalls the game never shows
     if (floorReflectDue() && !applyFloorReflections()) return false;  // 0.72: lit, before the haze
     if (hazeDue() && !applyHaze()) return false;      // 0.34: far off and over the ground, before the colours

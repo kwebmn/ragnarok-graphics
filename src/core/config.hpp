@@ -226,6 +226,10 @@ struct EffectSettings {
     // characters walk. Off by default: it costs the card the most of the effects.
     bool grass = false;
     int grassAmount = 70;  // %, 0-100
+    // 0.82: the skills' sparks - embers rise from burning skills, glints of their colour spread from the others.
+    // On by default.
+    bool skillSparks = true;
+    int skillSparksAmount = 100;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };
