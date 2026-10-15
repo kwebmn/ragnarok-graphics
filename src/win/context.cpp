@@ -264,13 +264,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         }
     }
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);
-    EffectSettings none;  // Pause: the game's own picture, no effect
-    none.smoothLight = false;
-    none.torch = false;
-    none.smoke = false;
-    none.lamps = false;
-    none.fireLight = false;
-    renderer->setEffects(enhanced_ ? config.effects : none);
+    renderer->setEffects(enhanced_ ? config.effects : effectsOff());  // Pause: the game's own picture
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
     const bool changed = out.cx != lastOut_.cx || out.cy != lastOut_.cy || plan.k != lastPlan_.k ||

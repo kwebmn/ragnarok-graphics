@@ -19,6 +19,23 @@ namespace {
 using SerializeRootSignatureFn = HRESULT(WINAPI*)(const D3D12_ROOT_SIGNATURE_DESC*, D3D_ROOT_SIGNATURE_VERSION,
                                                   ID3DBlob**, ID3DBlob**);
 
+// 0.39.4: of what the compiler said, the line of its error (a warning may come first), without the game's folder
+// before the file's name; at most 200 letters.
+std::string errorLine(const std::string& said) {
+    std::string first;
+    for (size_t start = 0; start < said.size();) {
+        size_t end = said.find_first_of("\r\n", start);
+        if (end == std::string::npos) end = said.size();
+        std::string line = said.substr(start, end - start);
+        const size_t file = line.find("uaro-graphics.hlsl");
+        if (file != std::string::npos) line.erase(0, file);
+        if (first.empty()) first = line;
+        if (line.find("error") != std::string::npos) return line.substr(0, 200);
+        start = end + 1;
+    }
+    return first.substr(0, 200);
+}
+
 bool compile(pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& out, std::string& error) {
     const char* src = shaderSource();
     // 0.39.2: the compiler's optimiser fails now and then with an internal error ("argument pulled into unrelated
@@ -37,9 +54,8 @@ bool compile(pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& 
                           : std::string("compile failed");
             error = std::string("shader ") + entry + ": " + said;
         }
-        if (SUCCEEDED(hr) && i > 0)  // 0.39.3: the first line of it is enough then
-            LOG_INFO("shader %s: compiled with less optimisation - %s", entry,
-                     said.substr(0, std::min<size_t>(said.find_first_of("\r\n"), 200)).c_str());
+        if (SUCCEEDED(hr) && i > 0)  // 0.39.3: a line of it is enough then
+            LOG_INFO("shader %s: compiled with less optimisation - %s", entry, errorLine(said).c_str());
         releaseCom(errors);
     }
     return SUCCEEDED(hr);

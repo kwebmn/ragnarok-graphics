@@ -153,6 +153,8 @@ struct EffectSettings {
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };
+// Pause (the compare key): the game's own picture - every effect off.
+EffectSettings effectsOff();
 
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 struct Config {

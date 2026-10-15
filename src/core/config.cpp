@@ -100,6 +100,14 @@ bool AiSettings::operator==(const AiSettings& o) const {
            maxSize == o.maxSize && ahead == o.ahead;
 }
 
+EffectSettings effectsOff() {
+    EffectSettings e;  // every switch off (0.39.4: the ones added since 0.27 too), the sliders as they are
+    e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
+    e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
+    e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = false;
+    return e;
+}
+
 bool EffectSettings::operator==(const EffectSettings& o) const {
     return smoothLight == o.smoothLight && torch == o.torch && torchFlame == o.torchFlame &&
            torchBrightness == o.torchBrightness && torchGlow == o.torchGlow &&

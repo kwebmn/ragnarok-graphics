@@ -28,6 +28,21 @@ TEST(schema_every_word_reads_back_through_the_driver) {
     CHECK(!validToken(*findSetting("frames.fps_limit"), "1001"));
 }
 
+TEST(schema_compare_key_turns_every_effect_off) {
+    // 0.39.4: Pause shows the game's own picture - every switch of the Effects page off, the ones added last too
+    // (0.28-0.39 stayed on: clouds, haze, the characters' shadows, weather...).
+    Config c;
+    c.effects = effectsOff();
+    int switches = 0;
+    for (const IniSetting& s : iniSettings()) {
+        if (std::string(s.section) != "effects" || s.control != Control::Check) continue;
+        ++switches;
+        if (tokenOf(s, c) != s.tokens[0]) std::printf("  still on with Pause: effects.%s\n", s.key);
+        CHECK(tokenOf(s, c) == s.tokens[0]);
+    }
+    CHECK(switches >= 20);  // the page's switches were found
+}
+
 TEST(schema_defaults_match_the_driver) {
     const Config defaults;
     CHECK(tokenOf(*findSetting("quality.sharpen"), defaults) == "50");
