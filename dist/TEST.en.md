@@ -1,3 +1,12 @@
+# uaRO Graphics 0.56.0 — testing
+
+What is new in 0.56.0:
+- **Texture pack → "Clothes colours"** (off by default): the builder makes the characters' bodies in every clothes
+  dye too (`data\palette\몸\`), so players who dyed their clothes are improved as well - 4 to 9 times the bodies'
+  pictures, a bigger pack and a longer make. "Make the pack" adds only what is missing.
+
+How to test: tick "Clothes colours", "Make the pack"; in a town, players with dyed clothes smooth.
+
 # uaRO Graphics 0.55.0 — testing
 
 What is new in 0.55.0 (profiles):
