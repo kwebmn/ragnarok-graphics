@@ -26,16 +26,20 @@ bool compile(pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& 
     static const UINT kLevels[3] = {D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCOMPILE_OPTIMIZATION_LEVEL1,
                                     D3DCOMPILE_SKIP_OPTIMIZATION};
     HRESULT hr = E_FAIL;
+    std::string said;  // what the compiler said the first time
     for (int i = 0; i < 3 && FAILED(hr); ++i) {
         ID3DBlob* errors = nullptr;
         out = nullptr;
         hr = fn(src, std::strlen(src), "uaro-graphics.hlsl", nullptr, nullptr, entry, profile, kLevels[i], 0, &out,
                 &errors);
-        if (FAILED(hr) && i == 0)
-            error = std::string("shader ") + entry + ": " +
-                    (errors ? std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize())
-                            : std::string("compile failed"));
-        if (SUCCEEDED(hr) && i > 0) LOG_INFO("shader %s: compiled with less optimisation (%s)", entry, error.c_str());
+        if (FAILED(hr) && i == 0) {
+            said = errors ? std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize())
+                          : std::string("compile failed");
+            error = std::string("shader ") + entry + ": " + said;
+        }
+        if (SUCCEEDED(hr) && i > 0)  // 0.39.3: the first line of it is enough then
+            LOG_INFO("shader %s: compiled with less optimisation - %s", entry,
+                     said.substr(0, std::min<size_t>(said.find_first_of("\r\n"), 200)).c_str());
         releaseCom(errors);
     }
     return SUCCEEDED(hr);
@@ -116,7 +120,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"shadow_vs", "vs_5_0", &shadowVs},            {"shadow_ps", "ps_5_0", &shadowPs},
                    {"shadow_blur_ps", "ps_5_0", &shadowBlurPs},   {"shadow_apply_ps", "ps_5_0", &shadowApplyPs},
                    {"clouds_ps", "ps_5_0", &cloudsPs},            {"haze_ps", "ps_5_0", &hazePs},
-                   {"heat_ps", "ps_5_0", &heatPs},                {"weather_ps", "ps_5_0", &weatherPs}};
+                   {"heat_ps", "ps_5_0", &heatPs},                {"weather_ps", "ps_5_0", &weatherPs},
+                   {"clouds_apply_ps", "ps_5_0", &cloudsApplyPs}};
     for (const auto& e : effects) {
         std::string why;
         if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {

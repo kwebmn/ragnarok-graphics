@@ -568,8 +568,9 @@ float ao_ps(PresentOut i) : SV_Target {
         float3(-0.0421, 0.1821, 0.0711), float3(0.0986, -0.0906, 0.2185), float3(0.2057, -0.0826, 0.2377),
         float3(0.1547, -0.0847, 0.3660), float3(0.3701, 0.2501, 0.2247), float3(0.0994, 0.0337, 0.5971),
         float3(-0.7008, -0.0222, 0.1846), float3(0.3223, 0.5069, 0.6102), float3(0.3189, 0.2700, 0.9085)};
-    int2 wp = int2(i.pos.xy) * 2;
+    int ratio = int(uiPixels.x / uiPixels.z + 0.5);  // 0.39.3: 2, or 4 for a big world
     int2 last = int2(uiPixels.xy) - 1;
+    int2 wp = min(int2(i.pos.xy) * ratio + ratio / 2, last);  // the middle of its pixels
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) return 1.0;  // nothing drawn there
     float3 p = viewAt(wp);
     // The normal from the neighbours, each on the side nearer in depth, so that an edge does not bend it.
@@ -604,11 +605,12 @@ float ao_blur_ps(PresentOut i) : SV_Target {
     int2 p = int2(i.pos.xy);
     int2 dir = int2(sourceRect.xy);
     int2 last = int2(uiPixels.zw) - 1;
-    float z0 = viewDepth(sceneDepth.Load(int3(min(p * 2, int2(uiPixels.xy) - 1), 0)));
+    int ratio = int(uiPixels.x / uiPixels.z + 0.5);  // 0.39.3
+    float z0 = viewDepth(sceneDepth.Load(int3(min(p * ratio + ratio / 2, int2(uiPixels.xy) - 1), 0)));
     float sum = 0.0, weights = 0.0;
     [unroll] for (int k = -4; k <= 4; ++k) {
         int2 q = clamp(p + dir * k, int2(0, 0), last);
-        float zq = viewDepth(sceneDepth.Load(int3(min(q * 2, int2(uiPixels.xy) - 1), 0)));
+        float zq = viewDepth(sceneDepth.Load(int3(min(q * ratio + ratio / 2, int2(uiPixels.xy) - 1), 0)));
         float w = exp(-float(k * k) / 8.0) * saturate(1.0 - abs(zq - z0) / (0.04 * z0 + 1.0));
         sum += tex0.Load(int3(q, 0)).r * w;
         weights += w;
@@ -618,7 +620,8 @@ float ao_blur_ps(PresentOut i) : SV_Target {
 
 // Onto the picture: multiplied (blend ZERO, SRCCOLOR).
 float4 ao_apply_ps(PresentOut i) : SV_Target {
-    float ao = tex0.SampleLevel(samp0, i.pos.xy * 0.5 / uiPixels.zw, 0).r;
+    float ratio = floor(uiPixels.x / uiPixels.z + 0.5);  // 0.39.3: 2, or 4 for a big world
+    float ao = tex0.SampleLevel(samp0, i.pos.xy / (ratio * uiPixels.zw), 0).r;
     float f = lerp(1.0, ao, sharpen);
     return float4(f, f, f, 1.0);
 }
@@ -973,17 +976,24 @@ float4 shadow_ps(ShadowIn i) : SV_Target {
 
 // 0.33, the clouds' shadows (clouds.cpp): each pixel's place in the world from the picture's depth (t3; r0-r11 the
 // camera backwards, f0-farZ the projection), darker where the clouds' noise is high there, the clouds drifting with the
-// wind; multiplied into the picture (blend ZERO, SRC_COLOR). sharpen the time, footprint the darkness (1 = 100 %).
-float4 clouds_ps(PresentOut i) : SV_Target {
-    int2 wp = int2(i.pos.xy);
-    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) return float4(1.0, 1.0, 1.0, 1.0);  // nothing drawn there
+// wind. sharpen the time, footprint the darkness (1 = 100 %). 0.39.3: into a mask a quarter of a big world's size,
+// half of a smaller one's (uiPixels.xy the world's size, .zw the mask's) - the light they leave.
+float clouds_ps(PresentOut i) : SV_Target {
+    int ratio = int(uiPixels.x / uiPixels.z + 0.5);
+    int2 wp = min(int2(i.pos.xy) * ratio + ratio / 2, int2(uiPixels.xy) - 1);  // the middle of its pixels
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) return 1.0;  // nothing drawn there
     float3 v = viewAt(wp);
     float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
     float t = sharpen;
     float2 q = w.xz * 0.0035 + float2(t * 0.012, t * 0.005);
     float n = fbm4(q) * 0.7 + fbm4(q * 2.3 + float2(5.1, 1.7)) * 0.3;
-    float shade = smoothstep(0.46, 0.68, n) * footprint * 0.55;
-    float f = 1.0 - shade;
+    return 1.0 - smoothstep(0.46, 0.68, n) * footprint * 0.55;
+}
+
+// 0.39.3: the clouds' mask (t0) onto the picture, multiplied (blend ZERO, SRC_COLOR).
+float4 clouds_apply_ps(PresentOut i) : SV_Target {
+    float ratio = floor(uiPixels.x / uiPixels.z + 0.5);
+    float f = tex0.SampleLevel(samp0, i.pos.xy / (ratio * uiPixels.zw), 0).r;
     return float4(f * 0.985, f, min(f * 1.015, 1.0), 1.0);  // a touch cooler under the clouds
 }
 

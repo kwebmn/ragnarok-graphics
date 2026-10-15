@@ -1106,6 +1106,9 @@ void Renderer::Impl::destroy() {
     releaseCom(shadowApplyPs);
     for (ID3D12PipelineState*& p : cloudsPipelines) releaseCom(p);  // 0.33
     releaseCom(cloudsPs);
+    releaseCom(cloudsMask);  // 0.39.3
+    releaseCom(cloudsMaskPipeline);
+    releaseCom(cloudsApplyPs);
     for (ID3D12PipelineState*& p : hazePipelines) releaseCom(p);  // 0.34
     releaseCom(hazePs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
@@ -1338,6 +1341,7 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool dof = m.dofWanted();
     const bool ao = m.aoWanted();
     const bool actorShadows = m.actorShadowsWanted();
+    const bool clouds = m.cloudsWanted();
     m.effects = e;
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "
@@ -1365,6 +1369,7 @@ void Renderer::setEffects(const EffectSettings& e) {
     if (was && !m.glowWanted()) m.releaseGlow();  // its video memory back
     if (ao && !m.aoWanted()) m.releaseAo();
     if (actorShadows && !m.actorShadowsWanted()) m.releaseShadowMask();  // 0.32
+    if (clouds && !m.cloudsWanted()) m.releaseCloudsMask();               // 0.39.3
     if (dof && !m.dofWanted()) m.releaseDof();
     if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted() && !m.dofWanted() && !m.torchWanted() &&
         !m.fireflyWanted() && !m.mapGlowsWanted() && !m.actorShadowsWanted() && !m.cloudsWanted() && !m.hazeWanted() &&
@@ -1522,6 +1527,7 @@ bool Renderer::create(std::string& error) {
     m.sceneDepthSrv = m.allocSrv();
     for (UINT& srv : m.aoSrv) srv = m.allocSrv();  // 0.20: the soft shadows
     for (UINT& srv : m.shadowMaskSrv) srv = m.allocSrv();  // 0.32: the characters' shadows
+    m.cloudsMaskSrv = m.allocSrv();  // 0.39.3: the clouds' mask
     for (UINT& srv : m.dofSrv) srv = m.allocSrv();  // 0.22: the depth of field
     for (UINT& srv : m.dofFocusSrv) srv = m.allocSrv();
     m.biasSrv = m.allocSrv();  // 0.22.3: DLSS's mask

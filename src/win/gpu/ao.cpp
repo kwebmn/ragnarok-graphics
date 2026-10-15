@@ -91,7 +91,9 @@ bool Renderer::Impl::ensureAo(int w, int h) {
             return false;
         }
     }
-    const int aw = std::max(1, (w + 1) / 2), ah = std::max(1, (h + 1) / 2);
+    // 0.39.3: a quarter of a big world's size (4K: 0.65 ms a frame at half) - its blur evens it out.
+    const int div = w >= 3000 ? 4 : 2;
+    const int aw = std::max(1, (w + div - 1) / div), ah = std::max(1, (h + div - 1) / div);
     if (aoTarget[0] && aw == aoWidth && ah == aoHeight) return true;
     if (aoFailed && aw == aoWidth && ah == aoHeight) return false;
     releaseAo();

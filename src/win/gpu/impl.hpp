@@ -85,7 +85,8 @@ constexpr UINT kRtvDof = kRtvAo + 2;         // 0.22: the depth of field's two
 constexpr UINT kRtvDofFocus = kRtvDof + 2;   // 0.22.3: its focus, last frame's and this one's
 constexpr UINT kRtvBias = kRtvDofFocus + 2;  // 0.22.3: DLSS's mask of pixels whose history it is not to take
 constexpr UINT kRtvShadow = kRtvBias + 1;  // 0.32: the characters' shadows' two masks
-constexpr UINT kRtvCount = kRtvShadow + 2;
+constexpr UINT kRtvClouds = kRtvShadow + 2;  // 0.39.3: the clouds' mask
+constexpr UINT kRtvCount = kRtvClouds + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -439,9 +440,16 @@ struct Renderer::Impl {
     bool actorShadowsDrawn = false;  // and the game's round ones with them: not drawn on their own
     bool actorShadowsLogged = false;
     bool sceneDepthFresh = false;  // 0.39.2: sceneDepth holds the depth as it is now (copySceneDepth)
-    // 0.33, the clouds' shadows (clouds.cpp) over the open sky's maps.
+    // 0.33, the clouds' shadows (clouds.cpp) over the open sky's maps; 0.39.3: worked out into a smaller mask first.
     ID3DBlob* cloudsPs = nullptr;
-    ID3D12PipelineState* cloudsPipelines[4] = {};
+    ID3DBlob* cloudsApplyPs = nullptr;
+    ID3D12PipelineState* cloudsMaskPipeline = nullptr;
+    ID3D12PipelineState* cloudsPipelines[4] = {};  // the mask into the target of 1, 2, 4, 8 samples (the world: 1)
+    ID3D12Resource* cloudsMask = nullptr;          // R8: the light they leave
+    D3D12_RESOURCE_STATES cloudsMaskState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT cloudsMaskSrv = 0;
+    int cloudsMaskW = 0, cloudsMaskH = 0;
+    bool cloudsMaskFailed = false;
     bool cloudsDone = false;
     bool cloudsLogged = false;
     bool mapOutdoors = false;  // the map is a field or a town (core/outdoors.hpp)
@@ -676,9 +684,13 @@ struct Renderer::Impl {
     void releaseShadowMask();
     ID3D12PipelineState* shadowApplyPipeline(UINT samples);
     void noteSpriteCells(Texture& t, const SpriteCell* slots, uint32_t count);
-    bool cloudsWanted() const { return effects.clouds && effects.cloudsStrength > 0 && cloudsPs && mapOutdoors; }
+    bool cloudsWanted() const {
+        return effects.clouds && effects.cloudsStrength > 0 && cloudsPs && cloudsApplyPs && mapOutdoors;
+    }
     bool cloudsDue() const { return cloudsWanted() && groundDrawn && !cloudsDone && viewToWorldValid; }
     bool applyClouds();  // once a frame; false: lost
+    bool ensureCloudsMask(int w, int h);  // 0.39.3
+    void releaseCloudsMask();
     ID3D12PipelineState* cloudsPipeline(UINT samples);
     bool hazeWanted() const {
         return effects.haze && effects.hazeStrength > 0 && hazePs && (mapLook.haze > 0.0f || mapLook.fog > 0.0f);
