@@ -1,3 +1,13 @@
+# uaRO Graphics 0.55.0 — testing
+
+What is new in 0.55.0 (profiles):
+- **Settings app → Service → "Profiles".** "Save as a profile" keeps every setting of uaro-graphics.ini (the changes
+  not applied yet too) under a name - "Maximum for 4K", "Weak laptop", "Recording"; "Load" makes it
+  uaro-graphics.ini again (a backup of the present one first, the app's language kept); "Delete". Profiles live in
+  `uaro-graphics\profiles\`, so a profile can be handed to another player as a file.
+
+How to test: save two profiles with different settings, load each in turn, start the game.
+
 # uaRO Graphics 0.54.0 — testing
 
 What is new in 0.54.0 (hotkeys):
