@@ -107,6 +107,7 @@ bool Context::open(std::string& error) {
     renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
     LOG_INFO("Direct3D 12 renderer on %s", renderer->adapterName().c_str());
+    crisp::setWindowArt(config.windowArt);  // 0.41: before the first twin
     crisp::install(config.crispText);
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'
     // icons through crisp text's twins. 0.23: the torches' frames are known through it too - whenever the picture is
@@ -332,6 +333,7 @@ void Context::watchSettings() {
             LOG_INFO("crisp text: off (crisp_text = 0)");  // as at a start without it: the Diagnostics page reads it
         }
     }
+    if (config.windowArt != was.windowArt) crisp::setWindowArt(config.windowArt);  // 0.41: the windows redrawn
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
     std::string line = "settings: uaro-graphics.ini changed:";
     for (size_t i = 0; i < u.applied.size(); ++i) line += (i ? ", " : " ") + u.applied[i];

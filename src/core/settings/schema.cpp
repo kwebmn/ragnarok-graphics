@@ -43,6 +43,9 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::UiSharp, Text::UiSmooth}, Text::QualityUiFilter, Text::QualityUiFilterHint, ""},
         {"display", "crisp_text", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityCrispText,
          Text::QualityCrispTextHint, ""},
+        {"display", "window_art", Page::Quality, Control::Choice, 0, 0, 0, {"xbr", "ai", "pixels"},
+         {Text::WindowArtXbr, Text::WindowArtAi, Text::WindowArtPixels}, Text::QualityWindowArt,
+         Text::QualityWindowArtHint, ""},
         {"quality", "dlss", Page::Smoothing, Control::Choice, 0, 0, 0,
          {"off", "dlaa", "quality", "balanced", "performance", "ultra"},
          {Text::SmoothOff, Text::DlssDlaa, Text::DlssQuality, Text::DlssBalanced, Text::DlssPerformance,
@@ -226,6 +229,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.render_scale") return std::to_string(c.renderScale);
     if (k == "quality.sharpen") return std::to_string(c.sharpen);
     if (k == "display.ui_filter") return uiFilterToken(c.uiFilter);
+    if (k == "display.window_art") return windowArtToken(c.windowArt);
     if (k == "display.crisp_text") return c.crispText ? "1" : "0";
     if (k == "quality.dlss") return c.dlss;
     if (k == "quality.msaa") return std::to_string(c.msaa);

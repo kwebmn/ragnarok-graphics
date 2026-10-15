@@ -70,6 +70,16 @@ TEST(config_invalid_values_keep_defaults) {
     CHECK(c.logLevel == LogLevel::Info);
 }
 
+TEST(config_window_art) {
+    // 0.41: how the windows' buttons, frames and labels are enlarged - xBR unless the file says otherwise.
+    CHECK(parseConfig("").windowArt == WindowArt::Xbr);
+    CHECK(parseConfig("[display]\nwindow_art = ai\n").windowArt == WindowArt::Ai);
+    CHECK(parseConfig("[display]\nwindow_art = pixels\n").windowArt == WindowArt::Pixels);
+    CHECK(parseConfig("[display]\nwindow_art = xbr\n").windowArt == WindowArt::Xbr);
+    CHECK(parseConfig("[display]\nwindow_art = blurry\n").windowArt == WindowArt::Xbr);
+    CHECK(std::string(windowArtToken(WindowArt::Pixels)) == "pixels");
+}
+
 TEST(config_ai_denoise_is_a_percent) {
     // Below Real-ESRGAN's 50: a game texture's grain is its detail (sand at 100 came out softer than the game's own,
     // 0.11.2), and walls and floors look alike at every strength.

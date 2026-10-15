@@ -966,6 +966,19 @@ const Entry kTexts[] = {
     {"Weather's amount", "Кількість опадів", "Количество осадков"},
     {"How much snow, rain, leaves or sand there is.", "Скільки снігу, дощу, листя чи піску.",
      "Сколько снега, дождя, листьев или песка."},
+    {"Window buttons, frames and labels", "Кнопки, рамки й написи вікон", "Кнопки, рамки и надписи окон"},
+    {"How the windows' buttons, tabs, frames and the labels drawn on them are enlarged. Sharp (xBR) keeps letters "
+     "one pixel thick whole; the AI is softer but melts them (the icons and pictures stay the AI's either way, with AI "
+     "textures on). Needs crisp text.",
+     "Як збільшуються кнопки, вкладки, рамки вікон і написи, намальовані на них. Чіткі (xBR) зберігають літери "
+     "завтовшки в одну точку; нейромережа м'якша, але розмиває їх (іконки й картинки з ШІ-текстурами в будь-якому "
+     "разі збільшує вона). Потрібен чіткий текст.",
+     "Как увеличиваются кнопки, вкладки, рамки окон и надписи, нарисованные на них. Чёткие (xBR) сохраняют буквы "
+     "толщиной в одну точку; нейросеть мягче, но размывает их (иконки и картинки с ИИ-текстурами в любом случае "
+     "увеличивает она). Нужен чёткий текст."},
+    {"Sharp (xBR)", "Чіткі (xBR)", "Чёткие (xBR)"},
+    {"AI (with AI textures)", "Нейромережа (з ШІ-текстурами)", "Нейросеть (с ИИ-текстурами)"},
+    {"As in the game (pixels)", "Як у грі (пікселі)", "Как в игре (пиксели)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

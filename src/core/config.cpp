@@ -223,6 +223,10 @@ Config parseConfig(const std::string& text) {
         } else if (key == "display.ui_filter") {
             if (val == "sharp") c.uiFilter = UiFilter::Sharp;
             if (val == "smooth") c.uiFilter = UiFilter::Smooth;
+        } else if (key == "display.window_art") {
+            if (val == "xbr") c.windowArt = WindowArt::Xbr;
+            if (val == "ai") c.windowArt = WindowArt::Ai;
+            if (val == "pixels") c.windowArt = WindowArt::Pixels;
         } else if (key == "display.crisp_text") {
             setBool(val, c.crispText);
         } else if (key == "quality.render_scale") {
@@ -411,5 +415,9 @@ const char* displayModeToken(DisplayMode m) {
 }
 
 const char* uiFilterToken(UiFilter f) { return f == UiFilter::Smooth ? "smooth" : "sharp"; }
+
+const char* windowArtToken(WindowArt a) {
+    return a == WindowArt::Ai ? "ai" : a == WindowArt::Pixels ? "pixels" : "xbr";
+}
 
 }  // namespace uagfx

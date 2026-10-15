@@ -53,6 +53,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("crisp_text", flag(running.crispText), flag(file.crispText)));
         n.crispText = file.crispText;
     }
+    if (file.windowArt != running.windowArt) {
+        u.applied.push_back(
+            change("window_art", windowArtToken(running.windowArt), windowArtToken(file.windowArt)));
+        n.windowArt = file.windowArt;
+    }
     if (file.monitor != running.monitor) u.waiting.push_back("monitor");
     if (file.windowWidth != running.windowWidth) u.waiting.push_back("window_width");
     if (file.windowHeight != running.windowHeight) u.waiting.push_back("window_height");
@@ -171,6 +176,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
 
 bool appliesNow(const std::string& k) {
     return k == "display.high_resolution" || k == "display.ui_filter" || k == "display.crisp_text" ||
+           k == "display.window_art" ||
            k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "debug.log" || k.compare(0, 8, "effects.") == 0;

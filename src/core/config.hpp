@@ -9,6 +9,9 @@ enum class Backend { DgVoodoo, Uaro };          // [renderer] backend
 // borderless. Window and Borderless override what the game asks for.
 enum class DisplayMode { Auto, Window, Borderless };
 enum class UiFilter { Sharp, Smooth };  // [display] ui_filter: how magnified interface pictures are sampled
+// [display] window_art (0.41): how crisp text enlarges the windows' buttons, frames and labels - xBR (core/xbr.hpp),
+// the AI (with [ai] ui_pieces) or as the game's pixels.
+enum class WindowArt { Xbr, Ai, Pixels };
 
 // [ai] (0.12; 0.11's [quality] ai_textures, ai_budget and ai_denoise are read when [ai] has no such key): the world's
 // textures enlarged by a neural network on the GPU (Real-ESRGAN, experiment; it starts the 64-bit renderer) and kept
@@ -175,6 +178,7 @@ struct Config {
     bool highResolution = true;  // draw at the window's real pixels under Windows scaling (stage 3); false = 0.2
     UiFilter uiFilter = UiFilter::Sharp;
     bool crispText = true;       // window text and lines at the window's real pixels when k > 1 (stage 6)
+    WindowArt windowArt = WindowArt::Xbr;  // 0.41
     int renderScale = 100;       // %, 100-200: the frame is drawn this much larger and shrunk when shown
     int sharpen = 50;            // 0-100: contrast adaptive sharpening of the picture on screen; 0 = off
     int msaa = 4;                // stage 4: samples per pixel at polygon edges - 0 (off), 2, 4 or 8
@@ -200,5 +204,6 @@ Config parseConfig(const std::string& text);
 const char* backendToken(Backend b);
 const char* displayModeToken(DisplayMode m);
 const char* uiFilterToken(UiFilter f);
+const char* windowArtToken(WindowArt a);
 
 }  // namespace uagfx

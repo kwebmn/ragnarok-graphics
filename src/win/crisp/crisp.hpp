@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 
+#include "core/config.hpp"
 #include "core/frame.hpp"
 
 namespace uagfx::win::crisp {
@@ -25,6 +26,10 @@ std::string stats();
 // AI icons (0.14): on - an icon the game copies whole into a window (a square of 16 to 64 pixels: items, skills) goes
 // to the renderer to be made larger, and the larger one goes into the twin from then on.
 void setAiIcons(bool on, bool pieces);  // pieces (0.15): the windows' buttons, tabs, slots too
+// 0.41, [display] window_art: the windows' buttons, tabs, frames and labels - xBR's (core/xbr.hpp: sharp, made here
+// at once), the AI's (with pieces) or the game's pixels; with xBR the icons and pictures too while the AI is off. A
+// change redraws every window.
+void setWindowArt(WindowArt art);
 // Renderer::IconSink: an icon came back; the windows are redrawn with it at a present soon.
 void iconReady(void* context, uint64_t key, int width, int height, const uint32_t* argb);
 

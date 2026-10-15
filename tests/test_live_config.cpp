@@ -51,9 +51,18 @@ TEST(live_config_an_unchanged_file_changes_nothing) {
     CHECK_EQ(u.next.sharpen, 70);
 }
 
+TEST(live_config_window_art_applies_at_once) {
+    // 0.41: switched in a running game, to compare - the windows are redrawn with it.
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[display]\nwindow_art = ai\n"));
+    CHECK(u.next.windowArt == WindowArt::Ai);
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(1));
+    CHECK(u.applied[0] == "window_art xbr -> ai");
+}
+
 TEST(live_config_names_the_keys_that_apply_now) {
     for (const char* k : {"display.high_resolution", "display.ui_filter", "display.crisp_text", "quality.render_scale",
-                          "quality.sharpen", "frames.vsync", "frames.fps_limit", "debug.log"})
+                          "quality.sharpen", "frames.vsync", "frames.fps_limit", "debug.log", "display.window_art"})
         CHECK(appliesNow(k));
     for (const char* k : {"renderer.backend", "display.mode", "display.monitor", "display.window_width",
                           "display.window_height", "frames.allow_tearing", "utility.language", "nothing"})

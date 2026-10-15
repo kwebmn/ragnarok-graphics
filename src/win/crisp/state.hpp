@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "core/config.hpp"
 #include "core/crisp_exe.hpp"
 #include "core/glyph_cache.hpp"
 #include "core/guarded.hpp"
@@ -68,6 +69,7 @@ struct State {
     // 0.14, AI icons: the windows' icons the AI textures made larger, by the hash of the game's icon (TextureKey).
     bool aiIcons = false;
     bool aiPieces = false;  // 0.15: the windows' small pieces too
+    WindowArt art = WindowArt::Xbr;  // 0.41: [display] window_art - the pieces xBR's, the AI's or pixels
     struct Icon {
         int width = 0, height = 0;
         std::vector<uint32_t> argb;

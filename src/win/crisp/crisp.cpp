@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "core/ai/texture_cache.hpp"
+#include "core/xbr.hpp"
 #include "win/context.hpp"
 #include "win/crisp/state.hpp"
 #include "win/log.hpp"
@@ -152,14 +153,52 @@ uint32_t UAGFX_THISCALL onGetDc(void* p, HDC* out) {
     return result;
 }
 
-// 0.14, AI icons: what the AI may take of a window - an icon (a square of 16 to 64: items, skills), (0.14.1) a
-// picture (an item's picture in its description, a card's, an NPC's illustration) and (0.15) a piece of the window
-// (a button, a tab, a slot's oval, a sprite drawn into it) - (0.17) strips of the frames too, which the game repeats
-// edge to edge: their edges go on as their own pixels (ai::Border::Clamp), so the copies meet. 8 to 512 a side.
-bool aiPictureSize(int w, int h) {
-    if (w == h && w >= 16 && w <= 64) return true;  // an icon
-    if (w >= 32 && h >= 32 && w <= 512 && h <= 512 && std::max(w, h) <= 3 * std::min(w, h)) return true;  // a picture
-    return state().aiPieces && w >= 8 && h >= 8 && w <= 512 && h <= 512;
+// 0.14, AI icons: what a picture of a window is - an icon (a square of 16 to 64: items, skills), (0.14.1) a picture
+// (an item's picture in its description, a card's, an NPC's illustration) or (0.15) a piece of the window (a button,
+// a tab, a slot's oval, a label, a sprite drawn into it) - (0.17) strips of the frames too, which the game repeats
+// edge to edge: their edges go on as their own pixels (ai::Border::Clamp; xBR the same), so the copies meet.
+enum class Art { None, Icon, Picture, Piece };
+
+Art artOf(int w, int h) {
+    if (w == h && w >= 16 && w <= 64) return Art::Icon;
+    if (w >= 32 && h >= 32 && w <= 512 && h <= 512 && std::max(w, h) <= 3 * std::min(w, h)) return Art::Picture;
+    return w >= 2 && h >= 2 && w <= 512 && h <= 512 ? Art::Piece : Art::None;
+}
+
+// The AI takes the icons and the pictures, and (0.41: with window_art = ai) the pieces of 8 to 512 a side.
+bool aiTakes(int w, int h) {
+    const State& s = state();
+    const Art art = artOf(w, h);
+    if (!s.aiIcons || art == Art::None) return false;
+    return art != Art::Piece || (s.art == WindowArt::Ai && s.aiPieces && w >= 8 && h >= 8);
+}
+
+// 0.41: xBR the rest with window_art = xbr - the pieces, and the icons and pictures while the AI is off.
+bool xbrTakes(int w, int h) { return state().art == WindowArt::Xbr && artOf(w, h) != Art::None && !aiTakes(w, h); }
+
+constexpr uint64_t kXbrKey = 0x5842522058425221ull;  // xBR's picture of a key: never the AI's
+
+// Kept for the windows, the oldest going first past the budget (asked again or made again when drawn).
+const State::Icon& keepIcon(uint64_t key, int width, int height, std::vector<uint32_t> argb) {
+    State& s = state();
+    // The game's address space is 32-bit: 96 MB of them at most - an NPC's illustration made 4 times larger is some
+    // ten; the oldest go first and are asked for again when drawn (upscaled.grf has them by then).
+    const size_t bytes = size_t(width) * size_t(height) * 4, budget = size_t(96) << 20;
+    while (!s.iconOrder.empty() && s.iconBytes + bytes > budget) {
+        const auto old = s.icons.find(s.iconOrder.front());
+        if (old != s.icons.end()) {
+            s.iconBytes -= old->second.argb.size() * 4;
+            s.icons.erase(old);
+        }
+        s.iconOrder.pop_front();
+    }
+    State::Icon& icon = s.icons[key];
+    icon.width = width;
+    icon.height = height;
+    icon.argb = std::move(argb);
+    s.iconOrder.push_back(key);
+    s.iconBytes += bytes;
+    return icon;
 }
 
 // 0.22.8: waiting places past this many: the windows are drawn again when their pictures come; the twin pixels kept
@@ -206,13 +245,19 @@ void notePlace(uint64_t key, Picture& pic, const Rect& r, bool over) {
 bool aiPaint(Picture& pic, const Rect& r, const std::vector<uint32_t>& argb, bool over) {
     State& s = state();
     const int w = r.width(), h = r.height();
-    const uint64_t k = ai::textureKey(argb.data(), w, h).hash;
-    const auto it = s.icons.find(k);
+    const bool xbr = !aiTakes(w, h);  // 0.41: the callers have one of the two take it
+    const uint64_t k = ai::textureKey(argb.data(), w, h).hash ^ (xbr ? kXbrKey : 0);
+    auto it = s.icons.find(k);
+    if (it == s.icons.end() && xbr) {  // made here and now: no waiting for it
+        keepIcon(k, 4 * w, 4 * h, xbr::scale4(argb.data(), w, h));
+        it = s.icons.find(k);
+    }
     if (it != s.icons.end()) {
         pic.twin->absorb(pic.bits, r);
         pic.twin->paint(r, it->second.argb.data(), it->second.width, it->second.height, over);
         return true;
     }
+    if (xbr) return false;
     notePlace(k, pic, r, over);
     if (s.asked.insert(k).second)
         if (gpu::Renderer* renderer = Context::get().renderer) renderer->requestIcon(k, w, h, argb.data());
@@ -221,7 +266,7 @@ bool aiPaint(Picture& pic, const Rect& r, const std::vector<uint32_t>& argb, boo
 
 // A picture the game copied whole into the window (CopyPixels).
 bool aiIcon(Picture& pic, int x, int y, int w, int h, int rows, const uint32_t* src, bool key) {
-    if (!state().aiIcons || !aiPictureSize(w, h) || rows != h || x < 0 || y < 0 || x + w > pic.twin->width() ||
+    if (!(aiTakes(w, h) || xbrTakes(w, h)) || rows != h || x < 0 || y < 0 || x + w > pic.twin->width() ||
         y + h > pic.twin->height())
         return false;
     // Transparent: what the key skips, and (0.14.2) the magenta the window's upload makes a hole of - a picture copied
@@ -236,10 +281,11 @@ bool aiIcon(Picture& pic, int x, int y, int w, int h, int rows, const uint32_t* 
 // 0.15: a sprite the game drew into the window (slot 6: the equipment window's character; slot 7: animated
 // pictures) - what it changed, as a picture of its own over what was under it.
 bool aiDrawn(Picture& pic) {
-    if (!state().aiIcons) return false;
+    if (!state().aiIcons && state().art != WindowArt::Xbr) return false;
     Rect box;
     std::vector<uint32_t> argb;
-    if (!pic.twin->changedPicture(pic.bits, whole(pic), box, argb) || !aiPictureSize(box.width(), box.height()))
+    if (!pic.twin->changedPicture(pic.bits, whole(pic), box, argb) ||
+        !(aiTakes(box.width(), box.height()) || xbrTakes(box.width(), box.height())))
         return false;
     return aiPaint(pic, box, argb, true);
 }
@@ -663,11 +709,28 @@ void tileDraw(const void* surface, DrawCmd& cmd) {
 void forgetSurface(const void* surface) { state().tiles.erase(surface); }
 
 void setAiIcons(bool on, bool pieces) {
-    state().aiIcons = on;
-    state().aiPieces = on && pieces;
+    State& s = state();
+    s.aiIcons = on;
+    s.aiPieces = on && pieces;
     if (on)
         LOG_INFO("AI textures: icons and pictures of the windows go to the network (crisp text draws them)%s",
-                 pieces ? ", their frames and buttons too" : "");
+                 s.aiPieces && s.art == WindowArt::Ai ? ", their frames and buttons too" : "");
+}
+
+void setWindowArt(WindowArt art) {
+    State& s = state();
+    const bool changed = art != s.art;
+    s.art = art;
+    const char* how = art == WindowArt::Xbr  ? "sharp by xBR"
+                      : art == WindowArt::Ai ? "by the AI textures (with ai.ui_pieces)"
+                                             : "as the game's pixels";
+    if (!changed || !active()) {
+        LOG_INFO("crisp text: the windows' buttons, frames and labels %s", how);
+        return;
+    }
+    dropAll();  // every twin made again with it
+    const uintptr_t head = readable(ce::kWindowList, 4) ? field<uintptr_t>(ce::kWindowList, 0) : 0;
+    LOG_INFO("crisp text: the windows' buttons, frames and labels %s, %d windows redrawn", how, markWindows(head, 0));
 }
 
 void iconReady(void*, uint64_t key, int width, int height, const uint32_t* argb) {
@@ -677,23 +740,8 @@ void iconReady(void*, uint64_t key, int width, int height, const uint32_t* argb)
         forgetPlaces(key);
         return;
     }
-    // The game's address space is 32-bit: 96 MB of them at most - an NPC's illustration made 4 times larger is some
-    // ten; the oldest go first and are asked for again when drawn (upscaled.grf has them by then).
-    const size_t bytes = size_t(width) * size_t(height) * 4, budget = size_t(96) << 20;
-    while (!s.iconOrder.empty() && s.iconBytes + bytes > budget) {
-        const auto old = s.icons.find(s.iconOrder.front());
-        if (old != s.icons.end()) {
-            s.iconBytes -= old->second.argb.size() * 4;
-            s.icons.erase(old);
-        }
-        s.iconOrder.pop_front();
-    }
-    State::Icon& icon = s.icons[key];
-    icon.width = width;
-    icon.height = height;
-    icon.argb.assign(argb, argb + size_t(width) * size_t(height));
-    s.iconOrder.push_back(key);
-    s.iconBytes += bytes;
+    const State::Icon& icon =
+        keepIcon(key, width, height, std::vector<uint32_t>(argb, argb + size_t(width) * size_t(height)));
     // 0.22.8: into the twins where it waits and the window still shows what it did there - over the twin pixels it
     // went over, put back - and no window drawn again; where it shows something else now, or nothing was kept, that
     // window draws again (setScale). A window closed meanwhile draws it when it opens.
