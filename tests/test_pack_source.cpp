@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "core/ai/texture_cache.hpp"
+#include "core/pack_build.hpp"
 #include "core/pack_source.hpp"
 #include "core/pixel.hpp"
 #include "test.hpp"
@@ -111,6 +112,28 @@ TEST(pack_source_textures_at_a_lower_detail_as_the_game_takes_them) {
     CHECK(quarter.width == 1 && quarter.height == 1 && quarter.argb[0] == full.argb[0]);
     CHECK(!pack::lowerDetail(quarter, 2, none));  // no side left
     CHECK(!pack::lowerDetail(full, 3, none));     // the game halves, twice at most
+}
+
+TEST(pack_source_big_interface_pictures_also_as_the_games_textures) {
+    // 0.45: a big picture of the interface the game draws as a Direct3D texture (a minimap: 128 to 1024 a side, a
+    // power of two) - its 16-bit pixels, the key the driver finds it by - besides the crisp text's copy of it.
+    std::vector<uint32_t> top(128 * 128);
+    for (size_t i = 0; i < top.size(); ++i) top[i] = uint32_t(i * 2654435761u) & 0xFFFFFF;
+    const std::vector<uint8_t> big = bmp(128, 128, 24, top, {});
+    pack::Source ui{pack::Source::Interface, ai::Kind::Icons};
+    const auto two = pack::picturesOf(ui, big.data(), big.size(), pack::Choice());
+    CHECK_EQ(two.size(), size_t(2));
+    pack::Picture texture;
+    CHECK(pack::worldTexture(big.data(), big.size(), false, texture));
+    CHECK(two.size() == 2 && two[0].group == pack::Group::Ui && two[1].group == pack::Group::Ui);
+    CHECK(two.size() == 2 && two[1].key == texture.key && two[0].key != texture.key);
+    // An icon, or a big picture of no power of two (the game's texture of it is not whole): the crisp text's alone.
+    const std::vector<uint8_t> icon = bmp(32, 32, 24, std::vector<uint32_t>(32 * 32, 0x123456), {});
+    CHECK_EQ(pack::picturesOf(ui, icon.data(), icon.size(), pack::Choice()).size(), size_t(1));
+    std::vector<uint32_t> odd(160 * 128);
+    for (size_t i = 0; i < odd.size(); ++i) odd[i] = uint32_t(i * 40503u) & 0xFFFFFF;
+    const std::vector<uint8_t> wide = bmp(160, 128, 24, odd, {});
+    CHECK_EQ(pack::picturesOf(ui, wide.data(), wide.size(), pack::Choice()).size(), size_t(1));
 }
 
 TEST(pack_source_refuses_a_tga_past_the_largest_side) {

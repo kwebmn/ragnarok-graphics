@@ -187,6 +187,16 @@ std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t siz
             const bool icon = w == h && w >= 16 && w <= 64;
             const bool picture = w >= 32 && h >= 32 && w <= 512 && h <= 512 && std::max(w, h) <= 3 * std::min(w, h);
             if (icon || picture) out.push_back(std::move(p));
+            // 0.45: a big one the game draws as a Direct3D texture (a minimap): its 16-bit pixels too - the driver's
+            // big pictures of the interface (128 to 1024 a side, whole: a power of two), soft light left out.
+            Picture t;
+            const bool pow2 = (w & (w - 1)) == 0 && (h & (h - 1)) == 0;
+            if (w >= 128 && h >= 128 && w <= 1024 && h <= 1024 && pow2 && worldTexture(data, size, false, t) &&
+                !ai::softPicture(t.argb.data(), t.width, t.height) &&
+                !ai::softAlpha(t.argb.data(), t.width, t.height) && (out.empty() || out.back().key != t.key)) {
+                t.group = Group::Ui;
+                out.push_back(std::move(t));
+            }
             break;
         }
         case Source::Sprite: {
