@@ -276,6 +276,17 @@ void Panel::lines(const std::vector<LineItem>& items, int maxChars, const std::w
     }
 }
 
+HWND Panel::line(int id, const std::wstring& text, const std::wstring& cue, int maxChars, const std::wstring& hint) {
+    label(text, at(kRow));
+    HWND e = make(L"EDIT", L"", ES_AUTOHSCROLL | WS_TABSTOP, area_.left + at(kLabel), y_,
+                  area_.right - area_.left - at(kLabel), at(kRow), id, WS_EX_CLIENTEDGE);
+    SendMessageW(e, EM_LIMITTEXT, WPARAM(maxChars), 0);
+    SendMessageW(e, EM_SETCUEBANNER, FALSE, reinterpret_cast<LPARAM>(cue.c_str()));
+    tip(e, hint);
+    y_ += at(kRow) + at(kGap);
+    return e;
+}
+
 HWND Panel::note(const std::wstring& text, Tone tone) {
     const int width = area_.right - area_.left;
     const int h = textHeight(text, width);

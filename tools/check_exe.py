@@ -47,6 +47,8 @@ ALLOWED = {
         "WideCharToMultiByte", "WriteFile", "lstrcmpiW", "lstrcpyW",
         # 0.43, the texture pack page: its builder started and watched (Windows 2000 / Vista)
         "CreateProcessW", "GetTickCount64",
+        # 0.51: the watcher of a game for the reports (--watch)
+        "SetPriorityClass",
     },
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",
@@ -60,6 +62,7 @@ ALLOWED = {
         "wcslen", "wcsxfrm",
         # 0.43: the texture pack's reader (core/texture_pack.cpp), the builder's process name, libwebp
         "_chsize", "_wcsicmp", "islower", "isspace",
+        "wcsstr", "wcstoul", "time",  # 0.51: --watch, the reports sent
     },
     "ole32.dll": {
         "CoInitializeEx", "CoUninitialize",
@@ -67,11 +70,13 @@ ALLOWED = {
     "winhttp.dll": {  # 0.49: the update check
         "WinHttpCloseHandle", "WinHttpConnect", "WinHttpOpen", "WinHttpOpenRequest", "WinHttpQueryDataAvailable",
         "WinHttpQueryHeaders", "WinHttpReadData", "WinHttpReceiveResponse", "WinHttpSendRequest",
+        "WinHttpSetTimeouts",  # 0.51: the reports to the developers
     },
     "shell32.dll": {
         "SHGetFolderPathW", "ShellExecuteExW", "ShellExecuteW",
     },
     "user32.dll": {
+        "SetCursor",  # 0.51: waiting for uaro.kiev.ua
         "GetAncestor",  # 0.49: the update check
         "AdjustWindowRectEx", "CloseClipboard", "CreateWindowExW", "DefWindowProcW", "DestroyWindow",
         "DispatchMessageW", "DrawTextW", "EmptyClipboard", "EnableWindow", "EnumDisplayMonitors",

@@ -180,6 +180,9 @@ struct Config {
     // 0.50.2: [renderer] gpu - the name of the graphics card to draw on (Windows' own, as the Renderer page lists
     // them); "" (auto): the fast one of several (core/gpu_order.hpp).
     std::string gpu;
+    // 0.51: [report] auto - a report to the developers (uaro.kiev.ua) when a game ended badly: the settings app's
+    // watcher, started by the driver, sends it after the game (core/report_upload.hpp).
+    bool reportAuto = false;
     bool bridgeDpiScale = true;
     // Part 4 (test): [renderer] remix = 1 draws through Direct3D 9's fixed function, with the world in world space:
     // RTX Remix when its d3d9.dll is next to uaRO.exe, else the system's Direct3D 9.

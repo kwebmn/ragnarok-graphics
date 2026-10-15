@@ -83,7 +83,7 @@ TEST(schema_live_keys_are_the_specs) {
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "renderer.remix" &&
-                                k != "renderer.api" && k != "renderer.gpu" &&
+                                k != "renderer.api" && k != "renderer.gpu" && k != "report.auto" &&
                                 k != "quality.dlss" &&
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
                                 k.compare(0, 3, "ai.") != 0));

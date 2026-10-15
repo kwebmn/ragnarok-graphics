@@ -71,6 +71,8 @@ public:
     void checks(const std::vector<CheckItem>& items, int perRow = 2);  // two (or perRow) to a row
     // Text fields two to a row, a short label before each (the chat macros); at most maxChars letters.
     void lines(const std::vector<LineItem>& items, int maxChars, const std::wstring& hint, bool enabled);
+    // 0.51: one text field the width of the page under its label (the report's comment)
+    HWND line(int id, const std::wstring& label, const std::wstring& cue, int maxChars, const std::wstring& hint);
     HWND note(const std::wstring& text, Tone tone = Tone::Muted);
     HWND buttons(const std::vector<ButtonItem>& list);
     HWND listBox(int id, int rows);

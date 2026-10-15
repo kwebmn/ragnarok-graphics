@@ -116,6 +116,9 @@ enum class Text : uint16_t {
     AutoTierHigh, AutoAiAll, AutoAiSprites, AutoAiNoPack, AutoAiOff, AutoAsk, AutoPending,
     // 0.50.2: the graphics card
     RenderGpu, RenderGpuHint, RenderGpuAuto, RenderGpuItem, RenderGpuMissing,
+    // 0.51: reports to the developers
+    ReportHeading, ReportNote, ReportComment, ReportCommentCue, ReportSend, ReportAsk, ReportSent, ReportFailed,
+    ReportSentList, ReportAuto, ReportAutoHint,
     Count
 };
 

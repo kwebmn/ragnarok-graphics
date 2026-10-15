@@ -21,6 +21,28 @@ void logModule(const char* name) {
     if (HMODULE m = GetModuleHandleA(name)) LOG_INFO("%s: %s", name, modulePath(m).c_str());
 }
 
+// 0.51: [report] auto - the settings app waits for this game to end and, when its log says it went badly, sends a
+// report to the developers (app/report_send.hpp). The game itself never goes to the network.
+void startReportWatcher(const std::string& dir) {
+    const std::string exe = dir + "\\uaro-graphics.exe";
+    if (!fileExists(exe)) {
+        LOG_INFO("report: uaro-graphics.exe is not next to the game - no report when something goes wrong");
+        return;
+    }
+    std::string line = "\"" + exe + "\" --watch " + std::to_string(GetCurrentProcessId());
+    STARTUPINFOA si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (!CreateProcessA(exe.c_str(), &line[0], nullptr, nullptr, FALSE, BELOW_NORMAL_PRIORITY_CLASS, nullptr,
+                        dir.c_str(), &si, &pi)) {
+        LOG_ERROR("report: the watcher would not start (error %lu)", GetLastError());
+        return;
+    }
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    LOG_INFO("report: the settings app watches this game ([report] auto = 1)");
+}
+
 // dgVoodoo's DDraw.dll in the dgvoodoo folder; its D3DImm.dll sits next to it, so that folder is added to the
 // DLL search path for the rest of the process.
 HMODULE loadDgVoodoo(const std::string& dir) {
@@ -81,6 +103,7 @@ Startup decide() {
                  p.adapter.c_str(), p.ok ? featureLevelName(p.level).c_str() : "-", static_cast<unsigned long>(p.hr));
     }
     s.choice = chooseRenderer(s.config, facts, kUaroBuilt);
+    if (s.config.reportAuto && s.choice.renderer == Renderer::Uaro) startReportWatcher(dir);
     LOG_INFO("renderer: %s%s (%s)", rendererName(s.choice.renderer),
              s.choice.renderer == Renderer::Uaro && s.choice.api == Api::D3d11 ? " with Direct3D 11" : "",
              s.choice.reason.c_str());

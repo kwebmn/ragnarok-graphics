@@ -222,6 +222,8 @@ Config parseConfig(const std::string& text) {
             if (val == "auto") c.api = Api::Auto;
         } else if (key == "renderer.bridge") {
             setBool(val, c.bridge);
+        } else if (key == "report.auto") {
+            setBool(val, c.reportAuto);
         } else if (key == "renderer.gpu") {
             c.gpu = val == "auto" ? "" : raw;
         } else if (key == "renderer.bridge_present") {

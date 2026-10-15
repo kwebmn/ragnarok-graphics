@@ -3,10 +3,22 @@
 #include <commctrl.h>
 #include <objbase.h>
 
-#include "app/main_window.hpp"
+#include <cwchar>
 
-// uaro-graphics.exe: the uaRO Graphics Settings app (stage 2 spec).
-int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
+#include "app/main_window.hpp"
+#include "app/report_send.hpp"
+
+// uaro-graphics.exe: the uaRO Graphics Settings app (stage 2 spec). 0.51: "--watch <pid>" - no window: the driver's
+// watcher of a game, for [report] auto (app/report_send.hpp).
+int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
+    if (line) {
+        const wchar_t* w = std::wcsstr(line, L"--watch ");
+        if (w) {
+            const unsigned long pid = std::wcstoul(w + 8, nullptr, 10);
+            SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+            return pid ? uagfx::app::watchGame(pid) : 1;
+        }
+    }
     INITCOMMONCONTROLSEX icc{sizeof icc, ICC_STANDARD_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES |
                                           ICC_PROGRESS_CLASS};
     InitCommonControlsEx(&icc);

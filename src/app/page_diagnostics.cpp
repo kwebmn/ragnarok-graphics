@@ -3,6 +3,7 @@
 
 #include "app/files.hpp"
 #include "app/page.hpp"
+#include "app/report_send.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/compat_flags.hpp"
 #include "core/settings/report.hpp"
@@ -20,6 +21,9 @@ constexpr int kOpenFolder = 1304;
 constexpr int kReport = 1305;
 constexpr int kRecheck = 1306;
 constexpr int kVerbose = 1307;
+constexpr int kComment = 1308;  // 0.51: the report to the developers
+constexpr int kSend = 1309;
+constexpr int kAutoReport = 1310;
 
 struct Row {
     std::wstring check;
@@ -71,6 +75,19 @@ public:
         EnableWindow(GetDlgItem(host_.window(), kOpenLog), m.now().log.found);
         p.check(kVerbose, t(Text::DiagVerboseLog), m.token(*findSetting("debug.log")) == "verbose",
                 t(Text::DiagVerboseLogHint));
+        // 0.51: to uaro.kiev.ua, at a press or by itself when a game went badly
+        p.gap();
+        p.heading(t(Text::ReportHeading));
+        p.note(t(Text::ReportNote));
+        p.line(kComment, t(Text::ReportComment), t(Text::ReportCommentCue), 2000, t(Text::ReportNote));
+        p.buttons({{kSend, t(Text::ReportSend)}});
+        p.check(kAutoReport, t(Text::ReportAuto), m.token(*findSetting("report.auto")) == "1", t(Text::ReportAutoHint));
+        const std::vector<std::string> sent = sentCodes(m);
+        if (!sent.empty()) {
+            std::string list;
+            for (const std::string& c : sent) list += (list.empty() ? "" : ", ") + c;
+            p.note(tf(Text::ReportSentList, {list}));
+        }
     }
 
     void command(int id, int code) override {
@@ -90,10 +107,16 @@ public:
         } else if (id == kOpenFolder) {
             openInShell(m.paths().dir);
         } else if (id == kReport) {
-            const std::string text = makeReport(facts());
+            const std::string text = makeReport(reportFacts(m, problems()));
             const bool saved = writeFileAtomic(m.paths().report, text);
             copyToClipboard(host_.window(), wide(text));
             host_.message(saved ? t(Text::DiagReportDone) : tf(Text::ErrWriteFile, {"uaro-graphics-report.txt"}), !saved);
+        } else if (id == kSend) {
+            sendReport();
+        } else if (id == kAutoReport) {
+            const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
+            m.setToken(*findSetting("report.auto"), on ? "1" : "0");
+            host_.changed();
         } else if (id == kVerbose) {
             const IniSetting& s = *findSetting("debug.log");
             const std::string token =
@@ -230,42 +253,32 @@ private:
         return out;
     }
 
-    ReportFacts facts() {
-        Model& m = host_.model();
-        const SystemInfo& sys = m.system();
-        const Snapshot& s = m.now();
-        ReportFacts f;
-        f.utilityVersion = kVersion;
-        f.driverVersion = s.installedVersion;
-        f.windows = num(long(sys.windows.major)) + "." + num(long(sys.windows.minor)) + " build " +
-                    num(long(sys.windows.build));
-        f.gpu = sys.d3d12Probed ? sys.d3d12.adapter + ", " + vramText(sys.d3d12.vramMb) + ", driver " +
-                                      (sys.gpuDriver.empty() ? "unknown" : sys.gpuDriver) +
-                                      ", Direct3D 12: " + (sys.d3d12.ok ? "OK" : "failed " + hresult(sys.d3d12.hr))
-                                : "not checked (Windows before 10)";
-        for (const MonitorInfo& mon : sys.monitors)
-            f.monitors.push_back(num(mon.pixels.width) + "x" + num(mon.pixels.height) + ", " + num(mon.refresh) +
-                                 " Hz, " + num(mon.scale) + " %, HDR " + (mon.hdr ? "yes" : "no") +
-                                 (mon.primary ? ", main" : ""));
-        f.iniText = s.iniText;
-        const ScreenNow now = m.screenNow();
-        f.screen = now.choice.show == Show::Window
-                       ? "window " + num(now.choice.window.width) + "x" + num(now.choice.window.height) + ", interface " +
-                             num(now.choice.ui) + " %, game " + num(now.game.width) + "x" + num(now.game.height)
-                       : "full screen, game " + num(now.game.width) + "x" + num(now.game.height) + ", interface " +
-                             num(now.choice.ui) + " %";
-        if (now.roextOverride) f.screen += " (ROExt sets the window)";
-        for (const ModuleFile& mod : s.modules)
-            f.inputModules.push_back(utf8(mod.file) + ": " +
-                                     (mod.info.kind == ModuleKind::Roext     ? "ROExt (" + mod.info.ini + ")"
-                                      : mod.info.kind == ModuleKind::UaroPad ? std::string("uaRO Pad")
-                                                                             : std::string("unknown")) +
-                                     (mod.loaded ? "" : ", off"));
-        for (const CompatFlag& c : s.compat) f.compatFlags.push_back(std::string(c.allUsers ? "HKLM: " : "HKCU: ") + c.flag);
+    std::vector<std::string> problems() const {  // the red and yellow lines
+        std::vector<std::string> out;
         for (const Row& r : rows_)
-            if (r.tone == Tone::Bad || r.tone == Tone::Warn) f.problems.push_back(utf8(r.check + L": " + r.result));
-        f.log = s.log;
-        return f;
+            if (r.tone == Tone::Bad || r.tone == Tone::Warn) out.push_back(utf8(r.check + L": " + r.result));
+        return out;
+    }
+
+    // 0.51: the report to uaro.kiev.ua, its code back (copied for the player to name it)
+    void sendReport() {
+        Model& m = host_.model();
+        if (!host_.ask(t(Text::ReportAsk))) return;
+        const std::string comment = controlText(GetDlgItem(host_.window(), kComment));
+        const report::Upload u = makeUpload(m, "manual", false, comment, problems());
+        HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+        std::string code, error;
+        const bool ok = sendUpload(u, code, error);
+        SetCursor(old);
+        if (!ok) {
+            writeFileAtomic(m.paths().report, u.report);
+            host_.message(tf(Text::ReportFailed, {error}), true);
+            return;
+        }
+        noteSent(m, code, "manual", false);
+        copyToClipboard(host_.window(), wide(code));
+        host_.message(tf(Text::ReportSent, {code}), false);
+        host_.rebuild();  // the codes sent
     }
 
     std::vector<Row> rows_;

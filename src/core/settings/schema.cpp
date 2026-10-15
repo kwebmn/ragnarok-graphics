@@ -34,6 +34,9 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::RenderApiD3d12, Text::RenderApiD3d11, Text::RenderApiAuto}, Text::RenderApi, Text::RenderApiHint, ""},
         // 0.50.2: a card's name as the Renderer page lists them, or auto (a list of its own there, not a text field)
         {"renderer", "gpu", Page::Render, Control::Line, 0, 0, 0, {}, {}, Text::RenderGpu, Text::RenderGpuHint, ""},
+        // 0.51: the Diagnostics page's own check box
+        {"report", "auto", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ReportAuto,
+         Text::ReportAutoHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         {"renderer", "remix", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
@@ -232,6 +235,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "renderer.backend") return backendToken(c.backend);
     if (k == "renderer.api") return apiToken(c.api);
     if (k == "renderer.gpu") return c.gpu.empty() ? "auto" : c.gpu;
+    if (k == "report.auto") return c.reportAuto ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
     if (k == "renderer.remix") return c.remix ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";

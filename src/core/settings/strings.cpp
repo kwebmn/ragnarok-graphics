@@ -1230,6 +1230,49 @@ const Entry kTexts[] = {
     {"{1} (not found)",
      "{1} (не знайдено)",
      "{1} (не найдена)"},
+    {"Report to the developers",
+     "Звіт розробникам",
+     "Отчёт разработчикам"},
+    {"Sends this computer's graphics card, Windows, monitors, uaro-graphics.ini and the logs of uaRO Graphics to "
+     "uaro.kiev.ua - no login, no character; the Windows user name is hidden. The developers keep it 90 days.",
+     "Надсилає на uaro.kiev.ua відеокарту, Windows, монітори цього комп'ютера, uaro-graphics.ini та журнали uaRO "
+     "Graphics — без логіна й персонажа; ім'я користувача Windows приховано. Розробники зберігають його 90 днів.",
+     "Отправляет на uaro.kiev.ua видеокарту, Windows, мониторы этого компьютера, uaro-graphics.ini и логи uaRO "
+     "Graphics — без логина и персонажа; имя пользователя Windows скрыто. Разработчики хранят его 90 дней."},
+    {"What happened",
+     "Що сталося",
+     "Что случилось"},
+    {"for example: black screen after login, slow in Prontera",
+     "наприклад: чорний екран після входу, гальмує в Пронтері",
+     "например: чёрный экран после входа, тормозит в Пронтере"},
+    {"Send the report",
+     "Надіслати звіт",
+     "Отправить отчёт"},
+    {"Send the report to uaro.kiev.ua now?",
+     "Надіслати звіт на uaro.kiev.ua зараз?",
+     "Отправить отчёт на uaro.kiev.ua сейчас?"},
+    {"The report is sent. Its code: {1} (copied) - name it to the developers in the chat or on the forum.",
+     "Звіт надіслано. Його код: {1} (скопійовано) — назвіть його розробникам у чаті чи на форумі.",
+     "Отчёт отправлен. Его код: {1} (скопирован) — назовите его разработчикам в чате или на форуме."},
+    {"The report was not sent: {1}. Try again later, or send uaro-graphics-report.txt (saved next to the game) by "
+     "hand.",
+     "Звіт не надіслано: {1}. Спробуйте пізніше або надішліть uaro-graphics-report.txt (збережено поруч з грою) "
+     "вручну.",
+     "Отчёт не отправлен: {1}. Попробуйте позже или отправьте uaro-graphics-report.txt (сохранён рядом с игрой) "
+     "вручную."},
+    {"Sent from this computer: {1}",
+     "Надіслано з цього комп'ютера: {1}",
+     "Отправлено с этого компьютера: {1}"},
+    {"Send a report by itself when something goes wrong",
+     "Надсилати звіт самостійно, якщо щось пішло не так",
+     "Отправлять отчёт самостоятельно, если что-то пошло не так"},
+    {"After a game in which the renderer would not start, the graphics card was lost or the game closed without "
+     "closing the renderer, a report goes to the developers at uaro.kiev.ua (at most one in 6 hours). Takes effect at "
+     "the next start of the game.",
+     "Після гри, у якій рендер не запустився, відеокарта відпала або гра закрилася, не закривши рендер, звіт іде "
+     "розробникам на uaro.kiev.ua (не частіше одного на 6 годин). Діє з наступного запуску гри.",
+     "После игры, в которой рендер не запустился, видеокарта отвалилась или игра закрылась, не закрыв рендер, отчёт "
+     "уходит разработчикам на uaro.kiev.ua (не чаще одного в 6 часов). Действует со следующего запуска игры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
