@@ -1,4 +1,8 @@
+#include <cstdio>
+#include <string>
+
 #include "core/config.hpp"
+#include "core/settings/ini_edit.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -132,4 +136,24 @@ TEST(profile_off_unless_asked) {
     // 0.87: [debug] profile
     CHECK(!parseConfig("").profile);
     CHECK(parseConfig("[debug]\nprofile = 1\n").profile);
+}
+
+TEST(profile_switch_written_into_the_shipped_settings_file) {
+    // 0.87.1: the Diagnostics page's switch into an installed uaro-graphics.ini (no profile key in it yet) - read back
+    // on, in [debug], the log level kept.
+    std::string text;
+    {
+        FILE* f = std::fopen(UAGFX_SOURCE_DIR "/dist/uaro-graphics.ini", "rb");
+        CHECK(f != nullptr);
+        if (!f) return;
+        char buf[4096];
+        size_t n = 0;
+        while ((n = std::fread(buf, 1, sizeof buf, f)) > 0) text.append(buf, n);
+        std::fclose(f);
+    }
+    const std::string edited = settings::applyIniEdits(text, {{"debug", "profile", "1"}});
+    const Config c = parseConfig(edited);
+    CHECK(c.profile);
+    CHECK(c.logLevel == LogLevel::Info);
+    CHECK(!parseConfig(text).profile);
 }
