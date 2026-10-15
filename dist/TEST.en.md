@@ -13,8 +13,8 @@ send uaro-graphics.log.
 # uaRO Graphics 0.50.0 — testing
 
 What is new in 0.50.0 ("a button to hand the client to other people"):
-- **Settings app → Renderer → "Set up automatically".** It looks at the graphics card, its video memory and the screen and
-  picks the settings, says what it found and offers to write them and start the game:
+- **Settings app → Renderer → "Set up automatically".** It looks at the graphics card, its video memory and the
+  screen and picks the settings, says what it found and offers to write them and start the game:
   - no graphics driver (Windows' basic display adapter): the game's own look, and a word to install the driver;
   - a card without Direct3D 12 (Radeon HD 6000 and the like): Direct3D 11, the game's size, no smoothing;
   - Direct3D 12 under 4 GB: the light settings, the heavy effects off; 4 to 8 GB: balanced; 8 GB and more: drawn at
