@@ -1,3 +1,14 @@
+# uaRO Graphics 0.58.0 — testing
+
+What is new in 0.58.0 (an upscale for AMD and Intel):
+- **Render scale under 100 %** (Settings → Quality, 50-200 %): on a large screen a weaker card draws the world smaller
+  than the picture, and it is made larger sharply when shown - a Catmull-Rom filter and CAS sharpening, the way FSR 1
+  does it (our own filter, not AMD's code; any card, Direct3D 12 and 11). DLSS stays NVIDIA's.
+- "Set up automatically": a middle card on a screen past 2560x1440 gets 75 %, a small or old one past 1920x1200 67 %,
+  with sharpening.
+
+How to test: on a 4K (or 1440p) screen set 67 % and 100 %: the frame counter (Ctrl+Shift+F11) and the look.
+
 # uaRO Graphics 0.57.0 — testing
 
 What is new in 0.57.0 (weak graphics cards):
