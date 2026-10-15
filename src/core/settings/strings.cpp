@@ -1506,6 +1506,18 @@ const Entry kTexts[] = {
     {"How many motes float in the air.",
      "Скільки порошинок пливе в повітрі.",
      "Сколько частиц плывёт в воздухе."},
+    {"Ground relief",
+     "Рельєф землі",
+     "Рельеф земли"},
+    {"The cracks, stones and grass of the ground are lit from one side and look raised - best with the AI textures.",
+     "Тріщини, каміння й трава на землі освітлені з одного боку й виглядають рельєфними — найкраще з ШІ-текстурами.",
+     "Трещины, камни и трава на земле освещены с одной стороны и выглядят рельефными — лучше всего с ИИ-текстурами."},
+    {"Relief strength",
+     "Сила рельєфу",
+     "Сила рельефа"},
+    {"How deep the ground looks.",
+     "Наскільки глибокою виглядає земля.",
+     "Насколько глубокой выглядит земля."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

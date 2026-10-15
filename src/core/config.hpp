@@ -188,6 +188,10 @@ struct EffectSettings {
     // in the dungeons and the houses. On by default.
     bool motes = true;
     int motesAmount = 100;  // %, 0-200
+    // 0.71: the ground's relief - its picture's cracks and stones lit from one side (bump mapping from the
+    // texture's brightness; the AI textures' detail the most). On by default.
+    bool relief = true;
+    int reliefStrength = 100;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

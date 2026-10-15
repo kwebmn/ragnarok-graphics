@@ -201,11 +201,33 @@ float4 smoothLightmap(float2 uv, float4 sharp) {
     return float4(soft.rgb, lerp(sharp.a, soft.a, 0.3));
 }
 
+// 0.71, the ground's relief: its picture's brightness as height (the dark cracks low), its slope across a texel
+// turned into the screen's directions (du, dv: the texture's steps a pixel) and lit from up left - a factor about 1
+// for the ground's colour; strength uiPixels.x (a world draw has no interface quad).
+float relief(float2 uv, float2 du, float2 dv) {
+    float w, h;
+    tex0.GetDimensions(w, h);
+    float2 size = float2(w, h);
+    float2 o = 1.0 / size;
+    const float3 luma = float3(0.2126, 0.7152, 0.0722);
+    float hl = dot(tex0.SampleGrad(samp0, uv - float2(o.x, 0.0), du, dv).rgb, luma);
+    float hr = dot(tex0.SampleGrad(samp0, uv + float2(o.x, 0.0), du, dv).rgb, luma);
+    float hu = dot(tex0.SampleGrad(samp0, uv - float2(0.0, o.y), du, dv).rgb, luma);
+    float hd = dot(tex0.SampleGrad(samp0, uv + float2(0.0, o.y), du, dv).rgb, luma);
+    float2 g = float2(hr - hl, hd - hu) * 0.5;
+    float2 tx = du * size, ty = dv * size;  // texels a screen pixel
+    float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(abs(tx.x * ty.y - tx.y * ty.x), 1e-6));
+    float3 n = normalize(float3(-gs * 5.0 * uiPixels.x, 1.0));
+    const float3 light = float3(-0.4706, -0.5752, 0.6690);  // normalised (-0.45, -0.55, 0.64)
+    return clamp(dot(n, light) / light.z, 0.55, 1.3);
+}
+
 float4 shade(PsIn i) {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
     float2 dv = ddy(uv0);
     float4 t0 = tex0.Sample(samp0, uv0);
+    if (((stage1.y >> 26) & 1) != 0) t0.rgb *= relief(uv0, du, dv);  // 0.71: the ground
     if (uiMode == 3)
         t0 = twinTexel(i.pos.xy);
     else if (uiMode != 0)

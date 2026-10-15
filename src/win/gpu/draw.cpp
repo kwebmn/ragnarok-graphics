@@ -299,6 +299,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         uiPixels(rec, d, c.uiPixels);
     }
     c.scale = float(toWorld ? worldScale : scale);
+    if (!s.ui && d.fvf == d3d7::FVF_TL2 && c.uiMode == 0 && effects.relief && effects.reliefStrength > 0) {
+        c.stage1[1] |= 1u << 26;  // 0.71: the ground's relief (shaders.cpp relief())
+        c.uiPixels[0] = float(std::clamp(effects.reliefStrength, 0, 200)) / 100.0f;
+    }
     float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind
     if (!s.ui && !twin && c.uiMode == 0 && effects.foliage && effects.foliageStrength > 0 && t[0] && t[0]->leafy &&
         d.fvf != d3d7::FVF_TL2 && yExtent(rec, d, swayTop, swayBottom)) {
