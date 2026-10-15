@@ -1,3 +1,15 @@
+# uaRO Graphics 0.62.0 — testing
+
+What is new in 0.62.0 (a test, off by default):
+- **Settings → Quality → "Interface at the screen's pixels"** (`[display] ui_native`): with a render scale over 100 %
+  on Direct3D 12 without DLSS, only the world is drawn larger and made smaller; the windows and the text are drawn at
+  the screen's own pixels - so they are not softened by the shrinking (150 % shrinks by a step that is no whole
+  number). The way DLSS already draws them, with the world shrunk instead of upscaled. MSAA is not needed then
+  (the world is supersampled). The log: `supersampling (the interface at the screen's pixels): the world at ...`.
+
+How to test: Direct3D 12, DLSS off, render scale 150 %; the box on and off (restart the game): the windows' text,
+item icons, the chat; the frame counter (Ctrl+Shift+F11).
+
 # uaRO Graphics 0.61.0 — testing
 
 What is new in 0.61.0 (Direct3D 11, part 2):
