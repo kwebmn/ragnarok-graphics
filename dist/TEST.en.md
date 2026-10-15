@@ -1,3 +1,17 @@
+# uaRO Graphics 0.86.0 — testing
+
+What is new in 0.86.0 (Direct3D 12) - less load:
+- **Floor reflections at half the size**: a quarter of the rays, then laid over the picture smoothly (on a floor a
+  reflection is soft anyway). Log: `floor reflections: on <map>, at WxH`; the cost - `floor reflections` in the
+  `GPU: effects a frame` line.
+- **The driver's processor time** every half minute: `CPU: N ms a frame in the driver's drawing` - what the processor
+  spends on the drawing and the effects (not the waits).
+- The AI textures on D3D12 already go out of video memory when it runs short (since 0.44); the compression stays on
+  D3D11, where memory is small.
+
+How to test: Prontera's church or Glast Heim - the reflections in place, not smeared on the walls; send a minute of the
+game's log (the GPU and CPU lines).
+
 # uaRO Graphics 0.85.0 — testing
 
 What is new in 0.85.0 - less load:
