@@ -1,3 +1,12 @@
+# uaRO Graphics 0.70.0 — testing
+
+What is new in 0.70.0 (Direct3D 12):
+- **Motes in the air** (Effects → "Motes in the air" and how many; on by default). Where the map has no weather of its
+  own, tiny motes drift slowly in the air, now catching the light, now not: pollen over the fields and the towns (less
+  of it at night), dust in the dungeons and the houses. Log: `weather: pollen over <map>` or `dust`.
+
+How to test: Prontera and its fields by day, any dungeon; are the motes in the way, too many (the slider).
+
 # uaRO Graphics 0.69.0 — testing
 
 What is new in 0.69.0 (Direct3D 12):
