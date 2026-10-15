@@ -15,6 +15,7 @@
 #include "core/pipeline_key.hpp"
 #include "core/scale.hpp"
 #include "core/window_plan.hpp"
+#include "win/gpu/adapters.hpp"
 #include "win/gpu/ai_textures.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/gpu/remix9.hpp"
@@ -1495,16 +1496,20 @@ bool Renderer::create(std::string& error) {
         error = "no DXGI 1.4 factory";
         return false;
     }
-    IDXGIAdapter1* adapter = nullptr;
-    for (UINT i = 0; !m.device && m.factory->EnumAdapters1(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+    // 0.50.1: the fast card of several (a laptop's NVIDIA, not its integrated Intel); no WARP, no Basic Render.
+    std::vector<AdapterFacts> all;
+    std::vector<IDXGIAdapter1*> adapters = orderedAdapters(m.factory, &all);
+    for (IDXGIAdapter1* adapter : adapters) {
+        if (m.device) break;
         DXGI_ADAPTER_DESC1 d{};
         adapter->GetDesc1(&d);
-        if (!(d.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) &&  // WARP / Basic Render: not worth it
-            SUCCEEDED(createDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
+        if (SUCCEEDED(createDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
                                    reinterpret_cast<void**>(&m.device))))
             m.adapter = narrow(d.Description);
-        adapter->Release();
     }
+    releaseAdapters(adapters);
+    if (all.size() > 1)
+        LOG_INFO("graphics cards: %s - Direct3D 12 on %s", adaptersText(all).c_str(), m.adapter.c_str());
     if (!m.device) {
         error = "no hardware adapter with Direct3D 12";
         return false;

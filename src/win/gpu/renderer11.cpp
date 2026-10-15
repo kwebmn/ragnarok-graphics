@@ -18,6 +18,7 @@
 #include "core/shader_cache.hpp"
 #include "core/twin_grid.hpp"
 #include "core/window_plan.hpp"
+#include "win/gpu/adapters.hpp"
 #include "win/gpu/ai11.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/log.hpp"
@@ -134,11 +135,33 @@ bool Renderer11::create(const std::string& shaderCache, Renderer::StartSink sink
     const D3D_FEATURE_LEVEL levels[4] = {D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1,
                                          D3D_FEATURE_LEVEL_10_0};
     D3D_FEATURE_LEVEL got = D3D_FEATURE_LEVEL_10_0;
-    HRESULT hr = createDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels, 4,
-                              D3D11_SDK_VERSION, &device_, &got, &ctx_);
-    if (hr == E_INVALIDARG)
-        hr = createDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels + 1, 3,
-                          D3D11_SDK_VERSION, &device_, &got, &ctx_);
+    const auto make = [&](IDXGIAdapter* a) {
+        const D3D_DRIVER_TYPE type = a ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE;
+        HRESULT r = createDevice(a, type, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels, 4, D3D11_SDK_VERSION,
+                                 &device_, &got, &ctx_);
+        if (r == E_INVALIDARG)
+            r = createDevice(a, type, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels + 1, 3, D3D11_SDK_VERSION,
+                             &device_, &got, &ctx_);
+        return r;
+    };
+    // 0.50.1: the fast card of several (a laptop's NVIDIA or AMD, not its integrated Intel), else Windows' first.
+    HRESULT hr = E_FAIL;
+    std::vector<AdapterFacts> all;
+    const auto createFactory = reinterpret_cast<HRESULT(WINAPI*)(REFIID, void**)>(
+        reinterpret_cast<void*>(GetProcAddress(LoadLibraryA("dxgi.dll"), "CreateDXGIFactory1")));
+    IDXGIFactory1* listing = nullptr;
+    if (createFactory && SUCCEEDED(createFactory(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&listing)))) {
+        std::vector<IDXGIAdapter1*> adapters = orderedAdapters(listing, &all);
+        for (IDXGIAdapter1* a : adapters) {
+            hr = make(a);
+            if (SUCCEEDED(hr) && device_ && ctx_) break;
+            drop(ctx_);
+            drop(device_);
+        }
+        releaseAdapters(adapters);
+        listing->Release();
+    }
+    if (FAILED(hr) || !device_ || !ctx_) hr = make(nullptr);
     if (FAILED(hr) || !device_ || !ctx_) {
         char text[96];
         std::snprintf(text, sizeof text, "no Direct3D 11 device of feature level 10_0 or better (0x%08lx)",
@@ -161,6 +184,7 @@ bool Renderer11::create(const std::string& shaderCache, Renderer::StartSink sink
     }
     drop(adapter);
     drop(dxgi);
+    if (all.size() > 1) LOG_INFO("graphics cards: %s - Direct3D 11 on %s", adaptersText(all).c_str(), adapter_.c_str());
     if (!factory_) {
         error = "no DXGI factory of the Direct3D 11 device";
         return false;

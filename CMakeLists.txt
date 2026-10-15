@@ -59,7 +59,7 @@ elseif(WIN32)
     add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/registry.cpp
                 src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp src/app/ai_cache.cpp
                 src/app/update.cpp
-                src/win/system_probe.cpp)
+                src/win/system_probe.cpp src/win/gpu/adapters.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)

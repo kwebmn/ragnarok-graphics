@@ -6,6 +6,8 @@
 #include <d3d12.h>
 #include <dxgi1_4.h>
 
+#include "win/gpu/adapters.hpp"
+
 namespace uagfx::win {
 namespace {
 
@@ -62,25 +64,30 @@ D3D12Probe probeD3D12(bool systemOnly) {
     IDXGIFactory1* factory = nullptr;
     p.hr = createFactory(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory));
     if (FAILED(p.hr)) return p;
-    IDXGIAdapter1* adapter = nullptr;  // adapter 0 drives the main monitor
-    p.hr = factory->EnumAdapters1(0, &adapter);
-    if (SUCCEEDED(p.hr)) {
-        DXGI_ADAPTER_DESC1 desc{};
-        if (SUCCEEDED(adapter->GetDesc1(&desc))) {
-            p.adapter = utf8(desc.Description);
-            p.vendor = desc.VendorId;
-            p.device = desc.DeviceId;
-            p.vramMb = desc.DedicatedVideoMemory / (1024 * 1024);
-        }
+    // 0.50.1: the card the renderer takes - the fast one of several (win/gpu/adapters.hpp), else the first.
+    std::vector<IDXGIAdapter1*> adapters = gpu::orderedAdapters(factory);
+    if (adapters.empty()) p.hr = DXGI_ERROR_NOT_FOUND;
+    for (size_t i = 0; i < adapters.size() && !p.ok; ++i) {
+        IDXGIAdapter1* adapter = adapters[i];
         ID3D12Device* device = nullptr;
-        p.hr = createDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
-                            reinterpret_cast<void**>(&device));
-        if (SUCCEEDED(p.hr)) {
+        const HRESULT hr = createDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
+                                        reinterpret_cast<void**>(&device));
+        if (i == 0 || SUCCEEDED(hr)) {  // the card it is on, or the best one when none has Direct3D 12
+            DXGI_ADAPTER_DESC1 desc{};
+            if (SUCCEEDED(adapter->GetDesc1(&desc))) {
+                p.adapter = utf8(desc.Description);
+                p.vendor = desc.VendorId;
+                p.device = desc.DeviceId;
+                p.vramMb = desc.DedicatedVideoMemory / (1024 * 1024);
+            }
+            p.hr = hr;
+        }
+        if (SUCCEEDED(hr)) {
             p.ok = true;
             device->Release();
         }
-        adapter->Release();
     }
+    gpu::releaseAdapters(adapters);
     factory->Release();
     return p;
 }
@@ -100,11 +107,35 @@ D3D11Probe probeD3D11(bool systemOnly) {
                                          D3D_FEATURE_LEVEL_10_0};
     ID3D11Device* device = nullptr;
     D3D_FEATURE_LEVEL got = D3D_FEATURE_LEVEL_10_0;
-    p.hr = create(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels, 4,
-                  D3D11_SDK_VERSION, &device, &got, nullptr);
-    if (p.hr == E_INVALIDARG)
-        p.hr = create(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels + 1, 3,
-                      D3D11_SDK_VERSION, &device, &got, nullptr);
+    const auto make = [&](IDXGIAdapter* a) {
+        const D3D_DRIVER_TYPE type = a ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE;
+        HRESULT hr = create(a, type, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels, 4, D3D11_SDK_VERSION, &device,
+                            &got, nullptr);
+        if (hr == E_INVALIDARG)
+            hr = create(a, type, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels + 1, 3, D3D11_SDK_VERSION, &device,
+                        &got, nullptr);
+        return hr;
+    };
+    // 0.50.1: as the renderer - the fast card of several first.
+    p.hr = E_FAIL;
+    HMODULE dxgiDll = load("dxgi.dll", systemOnly);
+    using CreateFactoryFn = HRESULT(WINAPI*)(REFIID, void**);
+    const auto createFactory = dxgiDll ? reinterpret_cast<CreateFactoryFn>(reinterpret_cast<void*>(
+                                             GetProcAddress(dxgiDll, "CreateDXGIFactory1")))
+                                       : nullptr;
+    IDXGIFactory1* factory = nullptr;
+    if (createFactory && SUCCEEDED(createFactory(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory)))) {
+        std::vector<IDXGIAdapter1*> adapters = gpu::orderedAdapters(factory);
+        for (IDXGIAdapter1* a : adapters) {
+            p.hr = make(a);
+            if (SUCCEEDED(p.hr) && device) break;
+            if (device) device->Release();
+            device = nullptr;
+        }
+        gpu::releaseAdapters(adapters);
+        factory->Release();
+    }
+    if (FAILED(p.hr) || !device) p.hr = make(nullptr);
     if (FAILED(p.hr) || !device) return p;
     p.ok = true;
     p.level = unsigned(got);
