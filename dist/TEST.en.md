@@ -1,3 +1,19 @@
+# uaRO Graphics 0.85.0 — testing
+
+What is new in 0.85.0 - less load:
+- **60 frames by default** (Frames → "fps_limit"). Before, the game drew as many as it could (140-150 on the
+  developer's), though it looks the same. The limiter is exact now: a steady 60 without stutter (Sleep woke up to
+  16 ms late). **An installed game** has `fps_limit = 0` in uaro-graphics.ini - set 60 on the Frames page or press the
+  auto setup.
+- **Saving power in the background** (Frames → "Save power in the background"; on by default): while another window
+  is in front or the game is minimised - 15 frames; on the login and the character select - 30.
+- **The auto setup and the presets** no longer set render_scale over 100 % (150 % at 4K is 2.25 times the pixels for
+  slightly smoother edges); every preset sets 60 frames and the power saving; the Speed preset turns the costly effects
+  off (soft shadows, depth of field, glow, clouds, heat haze, floor reflections and more).
+
+How to test: the frame counter Ctrl+Shift+F11 - a steady 60; switch to another window and back; the log's
+`GPU: ... ms of work a frame` over a minute - compare with before.
+
 # uaRO Graphics 0.84.0 — testing
 
 The picture by default is as before 0.77 ("the lighting effects are too much"): off by default now - the shadows of
