@@ -157,3 +157,9 @@ TEST(profile_switch_written_into_the_shipped_settings_file) {
     CHECK(c.logLevel == LogLevel::Info);
     CHECK(!parseConfig(text).profile);
 }
+
+TEST(state_cache_on_unless_turned_off) {
+    // 0.88: [debug] state_cache - Direct3D 11 sets only what changed between draws
+    CHECK(parseConfig("").stateCache);
+    CHECK(!parseConfig("[debug]\nstate_cache = 0\n").stateCache);
+}

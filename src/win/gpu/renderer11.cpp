@@ -607,10 +607,17 @@ bool Renderer11::uploadGeometry(const FrameRecord& rec) {
 }
 
 void Renderer11::setConstants(const Constants& c) {
+    // 0.88: most of the game's draws in a row share their constants - what the buffer holds already is not written
+    if (stateCache_ && constantsKnown_ && std::memcmp(&c, &constantsNow_, sizeof c) == 0) return;
     D3D11_MAPPED_SUBRESOURCE m{};
-    if (FAILED(ctx_->Map(constants_, 0, D3D11_MAP_WRITE_DISCARD, 0, &m))) return;
+    if (FAILED(ctx_->Map(constants_, 0, D3D11_MAP_WRITE_DISCARD, 0, &m))) {
+        constantsKnown_ = false;
+        return;
+    }
     std::memcpy(m.pData, &c, sizeof c);
     ctx_->Unmap(constants_, 0);
+    constantsNow_ = c;
+    constantsKnown_ = true;
 }
 
 ID3D11BlendState* Renderer11::blendState(bool enable, uint32_t src, uint32_t dst, uint8_t writeMask) {
@@ -703,6 +710,7 @@ void Renderer11::applyViewport() {
 
 void Renderer11::bindTarget() {
     if (targetBound_) return;
+    bound_.valid = false;  // 0.88: another pass bound its own since
     ctx_->OMSetRenderTargets(1, &target_.rtv, dsv_);
     applyViewport();
     ctx_->VSSetShader(drawVs_, nullptr, 0);
@@ -957,28 +965,55 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         ctx_->PSSetShaderResources(3, 1, &depthSrv_);
     }
     setConstants(c);
+    // 0.88: only what differs from the last draw's (bound_)
     const int aniso = s.ui ? 0 : anisotropy_;
     ID3D11SamplerState* samplers[2] = {samplerState(sampled[0], aniso), samplerState(sampled[1], aniso)};
-    ctx_->OMSetBlendState(blendState(s.blend, d3dmap::blendOf(s.srcBlend, d3d7::BLEND_ONE),
-                                     d3dmap::blendOf(s.dstBlend, d3d7::BLEND_ZERO),
-                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
-                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
-                          nullptr, 0xFFFFFFFF);
-    ctx_->OMSetDepthStencilState(depthState(s.zEnable, s.zWrite, d3dmap::compareOf(s.zFunc)), 0);
-    ctx_->RSSetState(rasterState(d3dmap::cullOf(s.cull)));
-    ctx_->PSSetSamplers(0, 2, samplers);
-    ctx_->PSSetShaderResources(0, 2, srvs);
-    ctx_->IASetInputLayout(layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0]);
-    ctx_->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
-                                                                       : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    const UINT strides = UINT(stride), offsets = d.vertexOffset;
-    ctx_->IASetVertexBuffers(0, 1, &vertices_, &strides, &offsets);
+    ID3D11BlendState* blend = blendState(s.blend, d3dmap::blendOf(s.srcBlend, d3d7::BLEND_ONE),
+                                         d3dmap::blendOf(s.dstBlend, d3d7::BLEND_ZERO),
+                                         D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                                             D3D11_COLOR_WRITE_ENABLE_BLUE);
+    ID3D11DepthStencilState* depth = depthState(s.zEnable, s.zWrite, d3dmap::compareOf(s.zFunc));
+    ID3D11RasterizerState* raster = rasterState(d3dmap::cullOf(s.cull));
+    ID3D11InputLayout* layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
+    const D3D11_PRIMITIVE_TOPOLOGY topology = d.primitive == d3d7::PT_TRIANGLESTRIP
+                                                  ? D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
+                                                  : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    const bool all = !bound_.valid || !stateCache_;
+    if (all || blend != bound_.blend) ctx_->OMSetBlendState(blend, nullptr, 0xFFFFFFFF);
+    if (all || depth != bound_.depth) ctx_->OMSetDepthStencilState(depth, 0);
+    if (all || raster != bound_.raster) ctx_->RSSetState(raster);
+    if (all || samplers[0] != bound_.samplers[0] || samplers[1] != bound_.samplers[1])
+        ctx_->PSSetSamplers(0, 2, samplers);
+    if (all || srvs[0] != bound_.srvs[0] || srvs[1] != bound_.srvs[1]) ctx_->PSSetShaderResources(0, 2, srvs);
+    if (all || layout != bound_.layout) ctx_->IASetInputLayout(layout);
+    if (all || unsigned(topology) != bound_.topology) ctx_->IASetPrimitiveTopology(topology);
+    // The record's vertices lie one draw after another: the buffer stays bound at the phase of the draw's first
+    // vertex within its stride, the draw starting at its vertex number - bound again only when the stride or the
+    // phase changes (a draw of the other vertex kind in between).
+    const UINT strideBytes = UINT(stride), phase = d.vertexOffset % strideBytes, first = d.vertexOffset / strideBytes;
+    if (all || vertices_ != bound_.vertexBuffer || strideBytes != bound_.stride || phase != bound_.phase)
+        ctx_->IASetVertexBuffers(0, 1, &vertices_, &strideBytes, &phase);
     if (d.indexCount) {
-        ctx_->IASetIndexBuffer(indices_, DXGI_FORMAT_R16_UINT, 0);
-        ctx_->DrawIndexed(d.indexCount, d.firstIndex, 0);
+        if (all || indices_ != bound_.indexBuffer) ctx_->IASetIndexBuffer(indices_, DXGI_FORMAT_R16_UINT, 0);
+        bound_.indexBuffer = indices_;
+        ctx_->DrawIndexed(d.indexCount, d.firstIndex, INT(first));
     } else {
-        ctx_->Draw(d.vertexCount, 0);
+        if (all) bound_.indexBuffer = nullptr;
+        ctx_->Draw(d.vertexCount, first);
     }
+    bound_.valid = true;
+    bound_.blend = blend;
+    bound_.depth = depth;
+    bound_.raster = raster;
+    bound_.samplers[0] = samplers[0];
+    bound_.samplers[1] = samplers[1];
+    bound_.srvs[0] = srvs[0];
+    bound_.srvs[1] = srvs[1];
+    bound_.layout = layout;
+    bound_.topology = unsigned(topology);
+    bound_.vertexBuffer = vertices_;
+    bound_.stride = strideBytes;
+    bound_.phase = phase;
     if (soft) {  // the depth written again by the next draws
         ID3D11ShaderResourceView* none = nullptr;
         ctx_->PSSetShaderResources(3, 1, &none);

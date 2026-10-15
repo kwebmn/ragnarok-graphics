@@ -71,6 +71,7 @@ public:
     void setWindow(HWND window);  // the game's window, as soon as it is known (Direct3D 9 makes its device on it)
     std::string adapterName() const;
     void setUiSharp(bool sharp);  // [display] ui_filter for interface draws
+    void setStateCache(bool on);  // 0.88: [debug] state_cache (Direct3D 11)
     // 1B review M8: builds the pipelines whose keys file lists, so effects do not stutter the first time they are
     // drawn, and adds every new pipeline to it.
     void preparePipelines(const std::string& file);

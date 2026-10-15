@@ -66,6 +66,7 @@ public:
     void setMap(const std::string& map) { map_ = map; }         // 0.79: the region's look
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
+    void setStateCache(bool on) { stateCache_ = on; }  // 0.88: [debug] state_cache
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);
@@ -212,6 +213,26 @@ private:
     double scale_ = 1.0;
     ViewportCmd gameViewport_;
     bool targetBound_ = false;
+    // 0.88: what the game's draws bound last - a draw calls only for what differs (an old graphics driver spends much
+    // of the processor on each call, and on Direct3D 11 that is the game's own thread). Forgotten when the target is
+    // bound anew: every other pass resets targetBound_ before it binds anything of its own.
+    struct Bound {
+        bool valid = false;
+        ID3D11BlendState* blend = nullptr;
+        ID3D11DepthStencilState* depth = nullptr;
+        ID3D11RasterizerState* raster = nullptr;
+        ID3D11SamplerState* samplers[2] = {nullptr, nullptr};
+        ID3D11ShaderResourceView* srvs[2] = {nullptr, nullptr};
+        ID3D11InputLayout* layout = nullptr;
+        unsigned topology = 0;  // a D3D11_PRIMITIVE_TOPOLOGY (0 none)
+        ID3D11Buffer* vertexBuffer = nullptr;  // bound at an offset of `phase` bytes with `stride`
+        UINT stride = 0, phase = 0;
+        ID3D11Buffer* indexBuffer = nullptr;
+    } bound_;
+    // 0.88: what the constant buffer holds - the same constants are not written again
+    Constants constantsNow_{};
+    bool constantsKnown_ = false;
+    bool stateCache_ = true;
     bool uiSharp_ = true;
     int anisotropy_ = 0;
 

@@ -146,8 +146,11 @@ HRESULT STDMETHODCALLTYPE Device7::SetLight(DWORD, D3DLIGHT7*) { return D3D_OK; 
 
 HRESULT STDMETHODCALLTYPE Device7::LightEnable(DWORD, WINBOOL) { return D3D_OK; }
 
+// 0.88: the render and stage states without the global lock - the game sets them on its one thread tens of
+// thousands of times a frame (eight or nine stage states before each of its draws), and they touch only this device's
+// own state, which only its methods read on that thread: the lock's entry and exit cost about as much as the game's
+// own work a frame ([debug] profile on 0.87).
 HRESULT STDMETHODCALLTYPE Device7::SetRenderState(D3DRENDERSTATETYPE state, DWORD value) {
-    win::Guard guard;
     states_.setRender(uint32_t(state), value);
     scene_.renderState(uint32_t(state), value);
     static bool keyLogged = false;
@@ -159,7 +162,6 @@ HRESULT STDMETHODCALLTYPE Device7::SetRenderState(D3DRENDERSTATETYPE state, DWOR
 }
 
 HRESULT STDMETHODCALLTYPE Device7::GetRenderState(D3DRENDERSTATETYPE state, LPDWORD value) {
-    win::Guard guard;
     if (!value) return DDERR_INVALIDPARAMS;
     *value = states_.render(uint32_t(state));
     return D3D_OK;
@@ -251,14 +253,12 @@ HRESULT STDMETHODCALLTYPE Device7::SetTexture(DWORD stage, IDirectDrawSurface7* 
 }
 
 HRESULT STDMETHODCALLTYPE Device7::GetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE type, LPDWORD value) {
-    win::Guard guard;
     if (!value || stage >= d3d7::kStages) return DDERR_INVALIDPARAMS;
     *value = states_.stage(stage, uint32_t(type));
     return D3D_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Device7::SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE type, DWORD value) {
-    win::Guard guard;
     if (stage >= d3d7::kStages) return DDERR_INVALIDPARAMS;
     states_.setStage(stage, uint32_t(type), value);
     return D3D_OK;

@@ -1415,6 +1415,10 @@ std::string Renderer::adapterName() const {
                     : impl_->adapter;
 }
 
+void Renderer::setStateCache(bool on) {
+    if (d3d11_) d3d11_->setStateCache(on);
+}
+
 void Renderer::setUiSharp(bool sharp) {
     if (remix_) return;
     if (d3d11_) return d3d11_->setUiSharp(sharp);
