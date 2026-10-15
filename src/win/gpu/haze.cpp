@@ -94,12 +94,41 @@ bool Renderer::Impl::applyShafts() {
 bool Renderer::Impl::applyFloorReflections() {
     floorReflectDone = true;
     EffectTime timing(*this, kTimeFloor);
-    if (!ensureScene("floor reflections")) return true;
-    ID3D12PipelineState* pso =
-        alphaPipeline(floorReflectPs, floorReflectPipelines, upscale ? 1 : samples, "floor reflections");
-    if (!pso) return true;
-    if (!copySceneColor() || !copySceneDepth()) return false;
+    if (!ensureScene("floor reflections") || !halfOverPs || !floorReflectPs) return true;
+    // 0.86: at half the world's size (a quarter of the rays), then laid over it smoothly.
+    if (!floorReflectPipeline) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, floorReflectPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&floorReflectPipeline)))) {
+            floorReflectPipeline = nullptr;
+            releaseCom(floorReflectPs);
+            LOG_ERROR("floor reflections: the pipeline failed: none");
+            return true;
+        }
+    }
+    ID3D12PipelineState* over =
+        blendPipeline(halfOverPs, halfOverPipelines, upscale ? 1 : samples, "floor reflections", 3);
+    if (!over) return true;
     const int w = sceneWidth, h = sceneHeight;
+    const int hw = std::max(1, (w + 1) / 2), hh = std::max(1, (h + 1) / 2);
+    if (!floorTarget || hw != floorWidth || hh != floorHeight) {
+        if (floorTarget) slots[slot].garbage.push_back(floorTarget);
+        floorTarget = createTexture2D(device, hw, hh, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                      D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                      nullptr);
+        floorState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        floorWidth = hw;
+        floorHeight = hh;
+        if (!floorTarget) {
+            LOG_ERROR("floor reflections: no video memory at %dx%d", hw, hh);
+            releaseCom(floorReflectPs);
+            return true;
+        }
+        device->CreateRenderTargetView(floorTarget, nullptr, rtvHandle(kRtvFloor));
+        device->CreateShaderResourceView(floorTarget, nullptr, cpuSrvHandle(floorSrv));
+    }
+    if (!copySceneColor() || !copySceneDepth()) return false;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -113,10 +142,14 @@ bool Renderer::Impl::applyFloorReflections() {
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
     c.twin[0] = floorReflectAmount();
-    if (!floorReflectLogged) LOG_INFO("floor reflections: on %s", mapName.c_str());
+    if (!floorReflectLogged) LOG_INFO("floor reflections: on %s, at %dx%d", mapName.c_str(), hw, hh);
     floorReflectLogged = true;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+    if (!effectPass(floorReflectPipeline, floorTarget, floorState, rtvHandle(kRtvFloor), hw, hh, c, sceneColorSrv,
+                    true))
+        return false;
+    transition(floorTarget, floorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    return upscale ? effectPass(over, world, worldState, rtvHandle(kRtvWorld), w, h, c, floorSrv, false)
+                   : effectPass(over, target, targetState, rtvHandle(kRtvTarget), w, h, c, floorSrv, false);
 }
 
 // 0.69: past the map's edge on a map under the open sky - the sky, its clouds, at night its stars (sky_ps).

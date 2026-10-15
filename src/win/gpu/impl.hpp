@@ -91,7 +91,8 @@ constexpr UINT kRtvBias = kRtvDofFocus + 2;  // 0.22.3: DLSS's mask of pixels wh
 constexpr UINT kRtvShadow = kRtvBias + 1;  // 0.32: the characters' shadows' two masks
 constexpr UINT kRtvClouds = kRtvShadow + 2;  // 0.39.3: the clouds' mask
 constexpr UINT kRtvBloom = kRtvClouds + 1;  // 0.78: the bloom's two quarter-size targets
-constexpr UINT kRtvCount = kRtvBloom + 2;
+constexpr UINT kRtvFloor = kRtvBloom + 2;  // 0.86: the floors' reflections at half the size
+constexpr UINT kRtvCount = kRtvFloor + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -464,7 +465,13 @@ struct Renderer::Impl {
     UINT shaftLights = 0;
     // 0.72, reflections on the floor (haze.cpp, floor_reflect_ps).
     ID3DBlob* floorReflectPs = nullptr;
-    ID3D12PipelineState* floorReflectPipelines[4] = {};
+    ID3DBlob* halfOverPs = nullptr;  // 0.86: at half the size, then laid over
+    ID3D12PipelineState* floorReflectPipeline = nullptr;
+    ID3D12PipelineState* halfOverPipelines[4] = {};
+    ID3D12Resource* floorTarget = nullptr;
+    D3D12_RESOURCE_STATES floorState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT floorSrv = 0;
+    int floorWidth = 0, floorHeight = 0;
     bool floorReflectDone = false;
     bool floorReflectLogged = false;
     // 0.69, the sky past the map's edge (haze.cpp, sky_ps).
@@ -588,6 +595,21 @@ struct Renderer::Impl {
     bool surfaceNoted = false;        // the log has said frame generation stays off on it
     bool refused = false;             // the game's window took no swap chain from this process
     FramePacer pacer;  // 0.85: [frames] fps_limit
+    // 0.86: the processor's time in the driver's drawing (execute, present until its wait), for the log
+    LONGLONG cpuTicks = 0;
+    struct CpuTime {
+        LONGLONG& total;
+        LARGE_INTEGER start{};
+        explicit CpuTime(LONGLONG& t) : total(t) { QueryPerformanceCounter(&start); }
+        ~CpuTime() { stop(); }
+        void stop() {
+            if (!start.QuadPart) return;
+            LARGE_INTEGER now;
+            QueryPerformanceCounter(&now);
+            total += now.QuadPart - start.QuadPart;
+            start.QuadPart = 0;
+        }
+    };
 
     // Geometry of the record being executed, copied into the upload buffer once per execute().
     D3D12_GPU_VIRTUAL_ADDRESS vertexBase = 0;
@@ -735,7 +757,7 @@ struct Renderer::Impl {
     bool applySky();  // once a frame, the world drawn; false: lost
     // 0.72: indoors (a polished or wet floor) and in the rain; a field under a dry sky does not shine
     float floorReflectAmount() const {
-        if (!effects.floorReflections || !floorReflectPs) return 0.0f;
+        if (!effects.floorReflections || !floorReflectPs || !halfOverPs) return 0.0f;
         const float user = float(std::clamp(effects.floorReflectStrength, 0, 100)) / 100.0f;
         return mapWeather == weather::Kind::Rain && effects.weather ? std::min(1.0f, user * 1.6f)
                : mapOutdoors                                         ? 0.0f
@@ -772,7 +794,7 @@ struct Renderer::Impl {
                                      const char* what);  // 0.73
     ID3D12PipelineState* mulPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
                                      const char* what);  // 0.77
-    // mode: 0 by alpha, 1 added, 2 multiplied
+    // mode: 0 by alpha, 1 added, 2 multiplied, 3 premultiplied (0.86)
     ID3D12PipelineState* blendPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
                                        const char* what, int mode);
     void notePortal(const FrameRecord& rec, const DrawCmd& d);

@@ -41,7 +41,7 @@ ID3D12PipelineState* Renderer::Impl::blendPipeline(ID3DBlob*& ps, ID3D12Pipeline
         fullScreenPipeline(root, presentVs, ps, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
     D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
     b.BlendEnable = TRUE;
-    b.SrcBlend = mode == 1 ? D3D12_BLEND_ONE : mode == 2 ? D3D12_BLEND_ZERO : D3D12_BLEND_SRC_ALPHA;
+    b.SrcBlend = mode == 1 || mode == 3 ? D3D12_BLEND_ONE : mode == 2 ? D3D12_BLEND_ZERO : D3D12_BLEND_SRC_ALPHA;
     b.DestBlend = mode == 1 ? D3D12_BLEND_ONE : mode == 2 ? D3D12_BLEND_SRC_COLOR : D3D12_BLEND_INV_SRC_ALPHA;
     b.BlendOp = D3D12_BLEND_OP_ADD;
     b.SrcBlendAlpha = D3D12_BLEND_ZERO;

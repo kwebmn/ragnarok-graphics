@@ -538,26 +538,28 @@ float valueNoise(float2 p) {
     return lerp(bottom, top, u.y);
 }
 
-// A target pixel for a point of the game's view space; false when it is off the target or behind the camera.
-bool viewToPixel(float3 q, out float2 tp) {
+// A pixel of a picture of this size for a point of the game's view space; false when it is off the picture or behind
+// the camera. 0.86: the size given - the floor's reflections are drawn at half of the world's.
+bool viewToPixelIn(float3 q, float2 size, out float2 tp) {
     tp = float2(0.0, 0.0);
     if (q.z <= nearZ) return false;
     tp = float2(q.x / q.z * f0 + cx, q.y / q.z * f1 + cy) * scale + 0.5 + float2(jitterX, jitterY);
-    return all(tp >= 0.0) && all(tp < targetSize);
+    return all(tp >= 0.0) && all(tp < size);
 }
+bool viewToPixel(float3 q, out float2 tp) { return viewToPixelIn(q, targetSize, tp); }
 
-// What the reflected ray meets first in the picture before the water (screen-space reflection), and how sure that
-// is: 0 for the sky (the ray left the picture or met nothing).
-float3 waterReflection(float3 p, float3 r, out float weight) {
+// What the reflected ray meets first in the picture (size: its pixels) before the water (screen-space reflection),
+// and how sure that is: 0 for the sky (the ray left the picture or met nothing).
+float3 reflectionIn(float3 p, float3 r, float2 size, out float weight) {
     weight = 0.0;
     float dist = 2.0;
     float2 tp;
     [loop] for (int k = 0; k < 28; ++k) {
         float3 q = p + r * dist;
-        if (!viewToPixel(q, tp)) break;
+        if (!viewToPixelIn(q, size, tp)) break;
         float behind = q.z - viewDepth(sceneDepth.Load(int3(int2(tp), 0)));
         if (behind > 0.0 && behind < 3.0 + dist * 0.12) {
-            float2 edge = min(tp, targetSize - tp) / (0.08 * targetSize);
+            float2 edge = min(tp, size - tp) / (0.08 * size);
             weight = saturate(min(edge.x, edge.y)) * saturate(1.5 - dist / 400.0);
             return sceneColor.Load(int3(int2(tp), 0)).rgb;
         }
@@ -565,6 +567,7 @@ float3 waterReflection(float3 p, float3 r, out float weight) {
     }
     return float3(0.0, 0.0, 0.0);
 }
+float3 waterReflection(float3 p, float3 r, out float weight) { return reflectionIn(p, r, targetSize, weight); }
 
 float4 water(WaterIn i) {
     int2 px = int2(i.pos.xy);
@@ -1416,11 +1419,12 @@ float4 shafts_ps(PresentOut i) : SV_Target {
 
 // 0.72, reflections on the floor (haze.cpp): what faces up - the floors of the dungeons and houses, the ground in the
 // rain - reflects the picture (t2, before it) along the mirrored view (waterReflection), the more the flatter one looks
-// along it. twinX its strength, the alpha it blends with.
+// along it. twinX its strength. 0.86: drawn at half the world's size (a pixel for four: a quarter of the rays),
+// premultiplied - none where nothing reflects - then laid over the world by half_over_ps.
 float4 floor_reflect_ps(PresentOut i) : SV_Target {
-    int2 wp = int2(i.pos.xy);
-    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
     int2 last = int2(uiPixels.xy) - 1;
+    int2 wp = min(int2(i.pos.xy) * 2, last);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) return float4(0.0, 0.0, 0.0, 0.0);
     float3 p = viewAt(wp);
     float3 l = viewAt(max(wp - int2(1, 0), int2(0, 0))), r = viewAt(min(wp + int2(1, 0), last));
     float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
@@ -1430,14 +1434,20 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
     if (dot(n, p) > 0.0) n = -n;  // towards the camera
     float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
     float flat = smoothstep(0.88, 0.97, -nw.y);  // up is -y
-    if (flat <= 0.0) discard;
+    if (flat <= 0.0) return float4(0.0, 0.0, 0.0, 0.0);
     float3 v = normalize(p);
     float weight;
-    float3 c = waterReflection(p + n * 0.6, reflect(v, n), weight);
+    float3 c = reflectionIn(p + n * 0.6, reflect(v, n), uiPixels.xy, weight);
     float fresnel = 0.04 + 0.96 * pow(1.0 - saturate(dot(-v, n)), 5.0);
     float a = flat * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
-    if (a < 0.003) discard;
-    return float4(c, a);
+    return float4(c * a, a);
+}
+
+// 0.86: a half-size premultiplied picture (t0) laid over the world, smoothly (uiPixels.xy the world's size).
+float4 half_over_ps(PresentOut i) : SV_Target {
+    float4 c = tex0.SampleLevel(samp0, i.pos.xy / uiPixels.xy, 0);
+    if (c.a < 0.003) discard;
+    return c;
 }
 
 // 0.69, the sky (haze.cpp): on a map under the open sky, where nothing is drawn - past the map's edge - a sky

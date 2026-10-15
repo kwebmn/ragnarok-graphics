@@ -204,6 +204,11 @@ void Renderer::Impl::noteGpuFrame() {
         effectTicks[e] = 0;
     }
     if (!effects.empty()) LOG_INFO("GPU: effects a frame - %s", effects.c_str());
+    LARGE_INTEGER qpf;  // 0.86: and the processor's part
+    QueryPerformanceFrequency(&qpf);
+    LOG_INFO("CPU: %.2f ms a frame in the driver's drawing", double(cpuTicks) * 1000.0 / double(qpf.QuadPart) /
+                                                                 double(std::max<uint32_t>(gpuFrames, 1)));
+    cpuTicks = 0;
     effectMsKnown = true;
     gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
@@ -1279,7 +1284,10 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : hazePipelines) releaseCom(p);  // 0.34
     releaseCom(hazePs);
     for (ID3D12PipelineState*& p : skyPipelines) releaseCom(p);  // 0.69
-    for (ID3D12PipelineState*& p : floorReflectPipelines) releaseCom(p);  // 0.72
+    releaseCom(floorReflectPipeline);  // 0.72, 0.86
+    for (ID3D12PipelineState*& p : halfOverPipelines) releaseCom(p);
+    releaseCom(halfOverPs);
+    releaseCom(floorTarget);
     for (ID3D12PipelineState*& p : shaftsPipelines) releaseCom(p);  // 0.73
     releaseCom(shaftsPs);
     for (ID3D12PipelineState*& p : sunShadowPipelines) releaseCom(p);  // 0.77
@@ -1842,6 +1850,7 @@ bool Renderer::create(std::string& error) {
     m.motionSrv = m.allocSrv();  // 0.75: TAA's
     m.taaHistorySrv = m.allocSrv();
     for (UINT& srv : m.bloomSrv) srv = m.allocSrv();  // 0.78
+    m.floorSrv = m.allocSrv();  // 0.86
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).
@@ -2070,6 +2079,7 @@ void Renderer::execute(const FrameRecord& record) {
     if (d3d11_) return d3d11_->execute(record);
     if (remote_) return remote_->execute(record);
     Impl& m = *impl_;
+    Impl::CpuTime cpu(m.cpuTicks);  // 0.86
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
     if (m.upscale && m.upscaler && !m.renderStarted) {  // part 3: latency markers
         m.renderStarted = true;
@@ -2167,6 +2177,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (d3d11_) return d3d11_->present(window, outputWidth, outputHeight, source, options);
     if (remote_) return remote_->present(window, outputWidth, outputHeight, source, options);
     Impl& m = *impl_;
+    Impl::CpuTime presentCpu(m.cpuTicks);  // 0.86
     if (m.lost) {  // the GPU is gone (stage 3 review M2): no Present waits for vblank, keep the game's loop from spinning
         Sleep(15);
         return;
@@ -2310,6 +2321,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
     m.submit();
 
+    presentCpu.stop();  // 0.86: not the waits
     m.pacer.wait(options.fpsLimit);  // 0.85: kept to the frame
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
