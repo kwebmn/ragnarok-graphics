@@ -101,6 +101,19 @@ Renderer11::~Renderer11() {
     drop(presentVs_);
     drop(presentPs_);
     drop(gradePs_);
+    drop(torchLightPs_);
+    drop(lightDataSrv_);
+    drop(lightData_);
+    drop(shadowVs_);
+    drop(shadowPs_);
+    drop(shadowBlurPs_);
+    drop(shadowApplyPs_);
+    drop(shadowLayout_);
+    drop(shadowVb_);
+    drop(depthSrv_);
+    drop(maxBlend_);
+    drop(mulBlend_);
+    for (Target& m : shadowMask_) dropTarget(m);
     drop(clearVs_);
     drop(clearPs_);
     drop(factory_);
@@ -251,10 +264,13 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         const char* profile;
         const char* source;
         std::vector<uint8_t> code;
-    } wants[7] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
-                  {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
-                  {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
-                  {"grade_ps", ps, shaderSource(), {}}};  // 0.59: the colours (Effects page)
+    } wants[12] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+                   {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
+                   {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
+                   {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
+                   {"shadow_vs", vs, shaderSource(), {}},  {"shadow_ps", ps, shaderSource(), {}},  // 0.60.1
+                   {"shadow_blur_ps", ps, shaderSource(), {}}, {"shadow_apply_ps", ps, shaderSource(), {}},
+                   {"torch_light_ps", ps, shaderSource(), {}}};  // 0.61
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -330,9 +346,20 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     };
     if (!vsOf(wants[0], drawVs_) || !psOf(wants[1], drawPs_) || !vsOf(wants[2], presentVs_) ||
         !psOf(wants[3], presentPs_) || !vsOf(wants[4], clearVs_) || !psOf(wants[5], clearPs_) ||
-        !psOf(wants[6], gradePs_)) {
+        !psOf(wants[6], gradePs_) || !vsOf(wants[7], shadowVs_) || !psOf(wants[8], shadowPs_) ||
+        !psOf(wants[9], shadowBlurPs_) || !psOf(wants[10], shadowApplyPs_) || !psOf(wants[11], torchLightPs_)) {
         error = "the shaders' code was refused";
         return false;
+    }
+    {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
+        const D3D11_INPUT_ELEMENT_DESC layout[4] = {
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 2, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        };
+        if (FAILED(device_->CreateInputLayout(layout, 4, wants[7].code.data(), wants[7].code.size(), &shadowLayout_)))
+            shadowLayout_ = nullptr;
     }
     // FVF 0x1C4 has one UV set: TEXCOORD1 reads the same bytes as TEXCOORD0 (as pipeline.cpp has it).
     const DXGI_FORMAT colour = bgraVertices_ ? DXGI_FORMAT_B8G8R8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -387,12 +414,16 @@ bool Renderer11::makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D1
     d.Width = UINT(width);
     d.Height = UINT(height);
     d.MipLevels = d.ArraySize = 1;
-    d.Format = DXGI_FORMAT_D32_FLOAT;
+    // 0.60.1: readable too (the characters' shadows read the ground's depth): typeless, a D32 view to draw with
+    d.Format = DXGI_FORMAT_R32_TYPELESS;
     d.SampleDesc.Count = 1;
     d.Usage = D3D11_USAGE_DEFAULT;
-    d.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    d.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
     HRESULT hr = device_->CreateTexture2D(&d, nullptr, &depth);
-    if (SUCCEEDED(hr)) hr = device_->CreateDepthStencilView(depth, nullptr, &dsv);
+    D3D11_DEPTH_STENCIL_VIEW_DESC v{};
+    v.Format = DXGI_FORMAT_D32_FLOAT;
+    v.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    if (SUCCEEDED(hr)) hr = device_->CreateDepthStencilView(depth, &v, &dsv);
     if (FAILED(hr)) {
         failed("a depth buffer", hr);
         drop(dsv);
@@ -507,6 +538,7 @@ void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while qu
     const auto it = textures_.find(id);
     if (it == textures_.end()) return;
     if (ai_) ai_->forget(id);
+    objectTextures_.forget(id);  // 0.61
     drop(it->second.srv);
     drop(it->second.texture);
     textures_.erase(it);
@@ -767,6 +799,7 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     const D3D11_BOX box = boxOf(u.rect);
     ctx_->UpdateSubresource(t.texture, UINT(level), &box, rec.pixels().data() + u.pixels, UINT(u.rect.width()) * 4,
                             0);
+    if (u.slotCount) noteCells(it->second, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1: the shadows
     if (ai_)  // 0.47: its key, or the sprite cache's new frames with their sources
         ai_->noteUpload(u.texture, t.width, t.height, u, rec.pixels().data() + u.pixels,
                         u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);
@@ -801,9 +834,16 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         (d.indexCount && size_t(d.firstIndex) + d.indexCount > rec.indices().size()))
         return;
     const DrawSetup& s = rec.states()[d.state];
-    // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade)
+    // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
+    // torches' light before them
+    if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
+    if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && torchesWanted()) noteTorch(rec, d);
     if (!s.ui) worldDrawn_ = true;
+    // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
+    if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;
+    if (!s.ui && s.blend && groundDrawn_ && !shadowsDone_ && shadowsWanted())
+        applyActorShadows(rec, size_t(&d - rec.draws().data()));
     bindTarget();
     // Stage 6: a window tile whose twin was made at this scale is drawn from the twin, a texel per target pixel.
     const bool twin = d.twin && s.ui && twinMatches(d.twinScale, scale_) && textures_.count(d.twin);
@@ -1070,12 +1110,16 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     const auto tx = [this](int x) { return float(double(x) * target_.width / gameWidth_); };
     const auto ty = [this](int y) { return float(double(y) * target_.height / gameHeight_); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
+    if (worldDrawn_ && !lightDone_) applyTorchLight();  // 0.61
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
          options.sharpen);
     ctx_->OMSetRenderTargets(0, nullptr, nullptr);
     if (!options.screenshot.empty()) saveScreenshot(options.screenshot);  // 0.54
     gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
+    groundDrawn_ = shadowsDone_ = false;  // 0.60.1
+    lightDone_ = false;  // 0.61
+    flames_.clear();
     timeEnd();
     timeFrame();
     if (options.fpsLimit > 0) {  // simple pacing: wait until 1/limit seconds after the previous present

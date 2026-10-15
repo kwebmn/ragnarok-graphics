@@ -81,9 +81,9 @@ bool Context::open(std::string& error) {
         if (config.remix || config.bridge || config.dlss != "off")
             LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer and DLSS need Direct3D 12 - off");
         if (drawnByRenderer(config.effects))  // 0.46.1
-            LOG_INFO("Direct3D 11: the Effects page's colours are drawn (0.59); its lights, torches, water, shadows, "
-                     "weather and glow need Direct3D 12 - the game's own shown; the level 99 aura and the skills stay "
-                     "softer");
+            LOG_INFO("Direct3D 11: the Effects page's colours, the characters' shadows and the torches' light are "
+                     "drawn (0.59-0.61); the lamps, water, glow, weather and the rest need Direct3D 12 - the game's "
+                     "own shown there");
     } else if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if there
         const std::string local = gameDir() + "\\d3d9.dll";
         const std::string dll = fileExists(local) ? local : systemDir() + "\\d3d9.dll";
@@ -139,7 +139,9 @@ bool Context::open(std::string& error) {
     // 0.46.1: Direct3D 11 draws no torches; 0.47: its AI textures take the sprite frames when they are on.
     const AiSettings& ai = config.ai;
     const bool cells = ai.enabled && (ai.sprites() || ai.effects || ai.icons);
-    if (d3d11 ? (aiHere && cells) : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
+    // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
+    const bool d3d11Hook = (aiHere && cells) || config.effects.actorShadows || config.effects.torch;
+    if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)

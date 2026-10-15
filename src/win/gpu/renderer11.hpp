@@ -9,6 +9,8 @@
 
 #include "core/frame.hpp"
 #include "core/image.hpp"
+#include "core/map_objects.hpp"
+#include "core/torch.hpp"
 #include "core/retry_timer.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/gpu/shaders.hpp"
@@ -60,6 +62,7 @@ public:
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
     void saveScreenshot(const std::string& path);  // 0.54: the back buffer as it is now, to a PNG
     void setEffects(const EffectSettings& e) { effects_ = e; }  // 0.59: the colours (grade) are drawn here
+    void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
@@ -75,6 +78,7 @@ private:
         ID3D11Texture2D* texture = nullptr;
         ID3D11ShaderResourceView* srv = nullptr;
         int width = 0, height = 0, levels = 1;
+        std::vector<SpriteCell> cells;  // 0.60.1: a sprite cache's cells and what each holds (the shadows)
     };
     struct Target {  // a picture drawn into and read from
         ID3D11Texture2D* texture = nullptr;
@@ -83,6 +87,20 @@ private:
         int width = 0, height = 0;
     };
     void applyGrade();  // 0.59
+    // 0.60.1: the characters' shadows (actor_shadows11.cpp, as Direct3D 12's actor_shadows.cpp - the sun's light
+    // alone: no map's lamps without the camera)
+    bool shadowsWanted() const {
+        return effects_.actorShadows && effects_.actorShadowsStrength > 0 && shadowVs_ && shadowPs_ && shadowBlurPs_ &&
+               shadowApplyPs_ && shadowLayout_;
+    }
+    void applyActorShadows(const FrameRecord& rec, size_t from);
+    bool ensureShadowMask(int w, int h);
+    static void noteCells(Texture& t, const SpriteCell* slots, uint32_t count);
+    // 0.61: the torches' light (torches11.cpp, as Direct3D 12's torch_light_ps): the flames the game draws noted,
+    // their light onto the ground before the colours; the flames and their glow stay the game's.
+    void noteTorch(const FrameRecord& rec, const DrawCmd& d);
+    void applyTorchLight();
+    bool torchesWanted() const { return effects_.torch && effects_.torchLight > 0 && torchLightPs_; }
     bool compileShaders(const std::string& cacheFile, Renderer::StartSink sink, void* sinkContext, std::string& error);
     bool makeTarget(Target& t, int width, int height);
     void dropTarget(Target& t);
@@ -132,6 +150,27 @@ private:
     ID3D11VertexShader* presentVs_ = nullptr;
     ID3D11PixelShader* presentPs_ = nullptr;
     ID3D11PixelShader* gradePs_ = nullptr;  // 0.59
+    ID3D11VertexShader* shadowVs_ = nullptr;  // 0.60.1
+    ID3D11PixelShader* shadowPs_ = nullptr;
+    ID3D11PixelShader* shadowBlurPs_ = nullptr;
+    ID3D11PixelShader* shadowApplyPs_ = nullptr;
+    ID3D11InputLayout* shadowLayout_ = nullptr;
+    ID3D11Buffer* shadowVb_ = nullptr;
+    size_t shadowVbBytes_ = 0;
+    ID3D11ShaderResourceView* depthSrv_ = nullptr;
+    ID3D11Texture2D* depthSrvOf_ = nullptr;  // the depth buffer depthSrv_ reads
+    ID3D11BlendState* maxBlend_ = nullptr;   // the mask: the darkest shadow
+    ID3D11BlendState* mulBlend_ = nullptr;   // onto the picture: multiplied
+    Target shadowMask_[2];
+    bool groundDrawn_ = false, shadowsDone_ = false, shadowsLogged_ = false;
+    // 0.61: the torches' light
+    ID3D11PixelShader* torchLightPs_ = nullptr;
+    ID3D11Texture2D* lightData_ = nullptr;  // two texels a light (torch_light_ps's t1)
+    ID3D11ShaderResourceView* lightDataSrv_ = nullptr;
+    objects::Textures objectTextures_;
+    std::vector<torch::Flame> flames_;  // this frame's
+    bool lightDone_ = false, lightLogged_ = false;
+    unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
     ID3D11InputLayout* layout_[2] = {nullptr, nullptr};  // one UV set, two

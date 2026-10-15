@@ -1794,7 +1794,8 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
 }
 
 void Renderer::noteObjectTexture(uint32_t id, uint8_t kind) {
-    if (remix_ || d3d11_) return;
+    if (d3d11_) return d3d11_->noteObjectTexture(id, kind);  // 0.61: the torches' light
+    if (remix_) return;
     if (remote_) return remote_->noteObjectTexture(id, kind);
     impl_->objectTextures.note(id, objects::Kind(kind));
 }
