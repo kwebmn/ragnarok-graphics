@@ -111,6 +111,9 @@ enum class Text : uint16_t {
     AiCacheAskOld, AiCacheOldDeleted,
     ServiceUpdate, UpdateCheck, UpdateNow, UpdateChecking, UpdateNewer, UpdateLatest, UpdateFailed, UpdateAsk,
     UpdateGameRunning, UpdateNote, UpdateError,
+    // 0.50: the automatic setup
+    AutoHeading, AutoButton, AutoNote, AutoFound, AutoTierNoDriver, AutoTierOld, AutoTierLow, AutoTierMiddle,
+    AutoTierHigh, AutoAiAll, AutoAiSprites, AutoAiNoPack, AutoAiOff, AutoAsk, AutoPending,
     Count
 };
 

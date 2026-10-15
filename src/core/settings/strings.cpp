@@ -1156,6 +1156,60 @@ const Entry kTexts[] = {
     {"The update could not start: {1}",
      "Оновлення не запустилося: {1}",
      "Обновление не запустилось: {1}"},
+    {"Set up for this computer",
+     "Налаштувати під цей комп'ютер",
+     "Настроить под этот компьютер"},
+    {"Set up automatically",
+     "Налаштувати автоматично",
+     "Настроить автоматически"},
+    {"Looks at the graphics card, its video memory and the screen and picks what they carry; the texture pack is used "
+     "when uaro-textures.zip lies next to uaRO.exe. On a new computer: press it, then start the game.",
+     "Дивиться на відеокарту, її відеопам'ять та екран і вибирає те, що вони потягнуть; пакет текстур вмикається, "
+     "якщо uaro-textures.zip лежить поруч з uaRO.exe. На новому комп'ютері: натисніть, потім запустіть гру.",
+     "Смотрит на видеокарту, её видеопамять и экран и выбирает то, что они потянут; пакет текстур включается, если "
+     "uaro-textures.zip лежит рядом с uaRO.exe. На новом компьютере: нажмите, потом запустите игру."},
+    {"Graphics card: {1}, {2} MB of video memory; screen {3}.",
+     "Відеокарта: {1}, {2} МБ відеопам'яті; екран {3}.",
+     "Видеокарта: {1}, {2} МБ видеопамяти; экран {3}."},
+    {"No graphics driver is installed (Windows' basic display adapter) or the card is too old: the game's own look is "
+     "set. Install the graphics card's driver from its maker's site and press again.",
+     "Драйвер відеокарти не встановлено (базовий відеоадаптер Windows) або карта надто стара: встановлено власний "
+     "вигляд гри. Встановіть драйвер відеокарти з сайту виробника й натисніть ще раз.",
+     "Драйвер видеокарты не установлен (базовый видеоадаптер Windows) или карта слишком старая: установлен "
+     "собственный вид игры. Установите драйвер видеокарты с сайта производителя и нажмите ещё раз."},
+    {"The card has no Direct3D 12: Direct3D 11, the picture at the game's size, no smoothing. The Effects page needs "
+     "Direct3D 12.",
+     "Карта не має Direct3D 12: Direct3D 11, картинка в розмірі гри, без згладжування. Сторінці «Ефекти» потрібен "
+     "Direct3D 12.",
+     "У карты нет Direct3D 12: Direct3D 11, картинка в размере игры, без сглаживания. Странице «Эффекты» нужен "
+     "Direct3D 12."},
+    {"A small graphics card: the light settings, the heavy effects off.",
+     "Слабка відеокарта: легкі налаштування, важкі ефекти вимкнено.",
+     "Слабая видеокарта: лёгкие настройки, тяжёлые эффекты выключены."},
+    {"A middle graphics card: the balanced settings.",
+     "Середня відеокарта: збалансовані налаштування.",
+     "Средняя видеокарта: сбалансированные настройки."},
+    {"A strong graphics card: the picture drawn at {1}% and smoothed.",
+     "Потужна відеокарта: картинка малюється на {1}% і згладжується.",
+     "Мощная видеокарта: картинка рисуется на {1}% и сглаживается."},
+    {"AI textures: on, every kind (from the texture pack).",
+     "ШІ-текстури: увімкнено, усі види (з пакета текстур).",
+     "ИИ-текстуры: включены, все виды (из пакета текстур)."},
+    {"AI textures: characters, monsters, items and icons only - the card has under 2 GB of video memory.",
+     "ШІ-текстури: лише персонажі, монстри, предмети та іконки — у карти менше 2 ГБ відеопам'яті.",
+     "ИИ-текстуры: только персонажи, монстры, предметы и иконки — у карты меньше 2 ГБ видеопамяти."},
+    {"AI textures: off - uaro-textures.zip is not next to uaRO.exe.",
+     "ШІ-текстури: вимкнено — поруч з uaRO.exe немає uaro-textures.zip.",
+     "ИИ-текстуры: выключены — рядом с uaRO.exe нет uaro-textures.zip."},
+    {"AI textures: off.",
+     "ШІ-текстури: вимкнено.",
+     "ИИ-текстуры: выключены."},
+    {"Write these settings and start the game?",
+     "Записати ці налаштування й запустити гру?",
+     "Записать эти настройки и запустить игру?"},
+    {"The settings are on the pages now; Apply writes them.",
+     "Налаштування вже на сторінках; «Застосувати» запише їх.",
+     "Настройки уже на страницах; «Применить» запишет их."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

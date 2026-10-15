@@ -112,8 +112,11 @@ D3D11Probe probeD3D11(bool systemOnly) {
     IDXGIAdapter* adapter = nullptr;
     DXGI_ADAPTER_DESC desc{};
     if (SUCCEEDED(device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgi))) &&
-        SUCCEEDED(dxgi->GetAdapter(&adapter)) && SUCCEEDED(adapter->GetDesc(&desc)))
+        SUCCEEDED(dxgi->GetAdapter(&adapter)) && SUCCEEDED(adapter->GetDesc(&desc))) {
         p.adapter = utf8(desc.Description);
+        p.vendor = desc.VendorId;
+        p.vramMb = desc.DedicatedVideoMemory / (1024 * 1024);
+    }
     if (adapter) adapter->Release();
     if (dxgi) dxgi->Release();
     device->Release();

@@ -30,6 +30,8 @@ struct D3D11Probe {
     long hr = 0;
     unsigned level = 0;  // D3D_FEATURE_LEVEL: 0xb000 is 11_0
     std::string adapter;
+    unsigned vendor = 0;                // 0.50: 0x1414 - Microsoft's software adapter (no graphics driver)
+    unsigned long long vramMb = 0;      // 0.50: what an old card without Direct3D 12 has (the automatic setup)
 };
 D3D11Probe probeD3D11(bool systemOnly = false);
 std::string featureLevelName(unsigned level);  // "11_0"

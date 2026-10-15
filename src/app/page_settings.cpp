@@ -5,6 +5,7 @@
 
 #include "app/page.hpp"
 #include "core/live_config.hpp"
+#include "core/settings/auto_setup.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -16,6 +17,7 @@ constexpr int kDgVoodoo = 1002;
 constexpr int kRows = 1100;  // + 4 x the setting's index in iniSettings()
 constexpr int kForgetLogin = 1490;
 constexpr int kAsSetup = 1491;
+constexpr int kAuto = 1492;  // 0.50
 constexpr int kReg = 1500;  // + 4 x the setting's index in regSettings()
 
 std::string hresult(long hr) {
@@ -81,6 +83,10 @@ public:
             m.setToken(*findSetting("renderer.backend"), id == kUaro ? "uaro" : "dgvoodoo");
             host_.changed();
             host_.rebuild();  // 0.46: the graphics API goes with the uaRO renderer
+            return;
+        }
+        if (id == kAuto && code == BN_CLICKED) {
+            autoSetupNow();
             return;
         }
         if (id == kForgetLogin && code == BN_CLICKED) {
@@ -281,8 +287,64 @@ private:
         host_.reload();
     }
 
+    // 0.50: what this computer carries, at a press (core/settings/auto_setup) - for a client handed to other players.
+    void autoSetupNow() {
+        Model& m = host_.model();
+        const SystemInfo& sys = m.system();
+        Machine x;
+        x.windows10 = sys.windows.major >= 10;
+        x.d3d12 = sys.d3d12Probed && sys.d3d12.ok;
+        x.d3d11 = sys.d3d11.ok;
+        x.d3d11Level = sys.d3d11.level;
+        // The Direct3D 12 probe reads the main adapter even where it makes no device (an old Radeon).
+        x.vendor = sys.d3d12.vendor ? sys.d3d12.vendor : sys.d3d11.vendor;
+        x.vramMb = sys.d3d12.vramMb ? sys.d3d12.vramMb : sys.d3d11.vramMb;
+        x.adapter = !sys.d3d12.adapter.empty() ? sys.d3d12.adapter : sys.d3d11.adapter;
+        if (!sys.monitors.empty()) {
+            x.screenWidth = sys.monitors[0].pixels.width;
+            x.screenHeight = sys.monitors[0].pixels.height;
+        }
+        x.pack = GetFileAttributesW((m.paths().dir + L"\\uaro-textures.zip").c_str()) != INVALID_FILE_ATTRIBUTES;
+        const AutoSetup a = autoSetup(x);
+        m.applyPreset(a.preset);  // the game's own texture quality too
+        std::string scale = "100";
+        for (const IniEdit& e : a.edits) {
+            if (const IniSetting* s = findSetting(e.section + "." + e.key)) m.setToken(*s, e.value);
+            if (e.key == "render_scale") scale = e.value;
+        }
+        host_.changed();
+        std::wstring text = tf(Text::AutoFound, {x.adapter.empty() ? utf8(t(Text::Unknown)) : x.adapter,
+                                                 std::to_string(x.vramMb),
+                                                 std::to_string(x.screenWidth) + "x" + std::to_string(x.screenHeight)});
+        switch (a.tier) {
+            case Tier::NoDriver: text += L"\n\n" + t(Text::AutoTierNoDriver); break;
+            case Tier::Old: text += L"\n\n" + t(Text::AutoTierOld); break;
+            case Tier::Low: text += L"\n\n" + t(Text::AutoTierLow); break;
+            case Tier::Middle: text += L"\n\n" + t(Text::AutoTierMiddle); break;
+            case Tier::High: text += L"\n\n" + tf(Text::AutoTierHigh, {scale}); break;
+        }
+        const Text ai = a.aiWorld ? Text::AutoAiAll
+                        : a.ai    ? Text::AutoAiSprites
+                        : !x.pack ? Text::AutoAiNoPack
+                                  : Text::AutoAiOff;
+        text += L"\n" + t(ai) + L"\n\n" + t(Text::AutoAsk);
+        if (host_.ask(text)) {
+            std::wstring err = m.apply(host_.lang());
+            if (err.empty()) err = m.launchGame(host_.lang());
+            if (!err.empty()) host_.message(err, true);
+            host_.reload();
+            return;
+        }
+        host_.message(t(Text::AutoPending), false);
+        host_.rebuild();  // the page shows the new values
+    }
+
     void buildRender(Panel& p) {
         Model& m = host_.model();
+        p.heading(t(Text::AutoHeading));  // 0.50: first, for a player who only wants it to work
+        p.buttons({{kAuto, t(Text::AutoButton)}});
+        p.note(t(Text::AutoNote));
+        p.gap();
         const SystemInfo& sys = m.system();
         const bool win10 = sys.windows.major >= 10;
         const bool d3d12 = sys.d3d12Probed && sys.d3d12.ok;
