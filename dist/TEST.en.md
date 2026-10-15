@@ -1,3 +1,15 @@
+# uaRO Graphics 0.80.0 — testing
+
+What is new in 0.80.0 (Direct3D 12):
+- **Footprints and dust** (Effects → "Footprints and dust"; on by default; needs the characters' shadows). Characters
+  and monsters leave footprints in the snow (Lutie and other snowy maps, ~25 s) and in the sand (Morroc, ~14 s), left
+  and right by turns; on dry fields little puffs of dust rise under the feet. Log: `footprints: in the snow on xmas`.
+- **Thunderstorms** (Effects → "Thunderstorms"; on by default). Where it rains (Niflheim, Einbroch, with the weather
+  on), lightning flashes now and then - two flashes in a row, the picture lit for a moment.
+
+How to test: run through Lutie and Morroc's fields - are the prints visible, do any hang on walls; a Prontera field -
+the dust; Niflheim - lightning about every 10-20 seconds.
+
 # uaRO Graphics 0.79.0 — testing
 
 What is new in 0.79.0:
