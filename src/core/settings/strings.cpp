@@ -979,6 +979,17 @@ const Entry kTexts[] = {
     {"Sharp (xBR)", "Чіткі (xBR)", "Чёткие (xBR)"},
     {"AI (with AI textures)", "Нейромережа (з ШІ-текстурами)", "Нейросеть (с ИИ-текстурами)"},
     {"As in the game (pixels)", "Як у грі (пікселі)", "Как в игре (пиксели)"},
+    {"Make new ones while playing (debugging)", "Створювати нові під час гри (налагодження)",
+     "Создавать новые во время игры (отладка)"},
+    {"The network makes in the game what the texture pack and upscaled.grf do not have yet, a little every frame. For "
+     "the pack's maker; players take the ready pack - their graphics card makes nothing.",
+     "Нейромережа створює в грі те, чого ще немає в пакеті текстур і upscaled.grf, потроху кожен кадр. Для того, "
+     "хто збирає пакет; гравці беруть готовий пакет - їхня відеокарта нічого не створює.",
+     "Нейросеть создаёт в игре то, чего ещё нет в пакете текстур и upscaled.grf, понемногу каждый кадр. Для того, "
+     "кто собирает пакет; игроки берут готовый пакет - их видеокарта ничего не создаёт."},
+    {"The textures come from the texture pack uaro-textures.zip in the game's folder (and from upscaled.grf).",
+     "Текстури беруться з пакета текстур uaro-textures.zip у теці гри (і з upscaled.grf).",
+     "Текстуры берутся из пакета текстур uaro-textures.zip в папке игры (и из upscaled.grf)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

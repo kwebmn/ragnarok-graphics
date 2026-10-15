@@ -16,6 +16,7 @@
 #include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/grf/grf.hpp"
+#include "core/texture_pack.hpp"
 #include "win/gpu/renderer.hpp"
 
 namespace uagfx::gpu {
@@ -101,6 +102,7 @@ private:
         int phase = 0;  // 0 the colour, 1 the alpha
         bool icon = false;  // 0.14: an icon of a window - the picture goes back to the driver
         uint64_t iconKey = 0;
+        bool packed = false;  // 0.42: loaded from the texture pack
         uint32_t border = 0;  // past the picture's edge (ai_conv): 0 the other side, 1 zeros, 2 the edge again
         ID3D12Resource* image = nullptr;
         std::vector<Level> levels;
@@ -122,6 +124,7 @@ private:
     struct IoRequest {
         bool write = false;
         bool tag = false;  // an empty entry: a kind or a map (texture_cache.hpp)
+        bool pack = false;  // 0.42: a read from the texture pack; width x height the game texture's (its result's / 4)
         uint32_t id = 0;
         std::string name;
         std::vector<uint32_t> argb;  // to write; for a cell's read, the cell as the game has it
@@ -132,6 +135,7 @@ private:
         uint32_t id = 0;
         std::string name;
         bool ok = false;
+        bool pack = false;
         std::vector<uint32_t> argb;
         int width = 0, height = 0;
         Job cell;
@@ -177,12 +181,18 @@ private:
     static DWORD WINAPI ioMain(void* self);
     void ioLoop();
     void logNow(bool final);
+    // 0.42: a picture of the texture pack (pictureName) for a game texture of width x height: read on the I/O thread.
+    void requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell);
 
     Renderer::Impl& m_;
     bool ready_ = false;
     AiSettings settings_;
     std::vector<std::unique_ptr<Net>> nets_;
-    int netOf_[ai::kKinds] = {-1, -1, -1, -1};  // the network of each kind; -1: the kind is off
+    int netOf_[ai::kKinds] = {-1, -1, -1, -1};  // the network of each kind; -1: off, or (0.42) not generating
+    bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack or upscaled.grf
+    std::string folders_[ai::kKinds];           // upscaled.grf's folder of each kind's pictures (netFolder)
+    bool generate_ = false;                     // [ai] generate: the network makes what is missing
+    pack::Reader pack_;                         // 0.42: uaro-textures.zip, read by the I/O thread
     int scale_ = 4;                             // the result: 4 or 2 times the game's texture
     int minSide_ = 64, maxSide_ = 512;          // the textures taken
     bool ahead_ = true;
@@ -229,7 +239,8 @@ private:
     std::deque<IoRequest> ioIn_;
     std::deque<IoResult> ioOut_;
 
-    uint32_t doneNetwork_ = 0, doneLoaded_ = 0, written_ = 0;
+    uint32_t doneNetwork_ = 0, doneLoaded_ = 0, written_ = 0, donePack_ = 0;
+    uint32_t cellsPack_ = 0, iconsPack_ = 0;  // 0.42: from the texture pack
     uint32_t cellsWritten_ = 0, cellsNetwork_ = 0, cellsLoaded_ = 0;  // sprite frames: by the game, by us
     std::unordered_set<uint64_t> icons_;  // the icons asked for this run
     uint32_t iconsNetwork_ = 0, iconsLoaded_ = 0;

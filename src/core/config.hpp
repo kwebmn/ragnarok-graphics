@@ -38,6 +38,9 @@ struct AiSettings {
     int budget = 2;    // ms of GPU time a frame, 1-20
     int minSize = 16;  // the textures it takes: both sides from min_size to max_size, 16-1024 (0.17: 16, was 64)
     int maxSize = 512;
+    // 0.42: the network makes in the game what the texture pack (uaro-textures.zip) and upscaled.grf do not have - a
+    // debugging aid of the pack's maker. Off: no model is even loaded; the players' textures come from the pack.
+    bool generate = false;
     bool ahead = true;  // a map's textures known from earlier visits are done at once, not when they come into view
     bool operator==(const AiSettings& o) const;
     bool operator!=(const AiSettings& o) const { return !(*this == o); }

@@ -19,6 +19,7 @@ constexpr int kScale = 1040;
 constexpr int kBudget = 1050;
 constexpr int kSizes = 1060;  // from, and to at 1061
 constexpr int kAhead = 1070;
+constexpr int kGenerate = 1080;  // 0.42
 
 // What to improve, three to a row: the map, the sprites by their files (0.16), the interface.
 struct KindBox {
@@ -77,6 +78,8 @@ public:
         p.pair(kSizes, t(Text::AiSizes), std::atoi(m.token(setting("ai.min_size")).c_str()),
                std::atoi(m.token(setting("ai.max_size")).c_str()), t(Text::AiSizesHint), on, L"–");
         p.check(kAhead, t(Text::AiAhead), m.token(setting("ai.ahead")) == "1", t(Text::AiAheadHint), on);
+        p.note(t(Text::AiPackNote));  // 0.42
+        p.check(kGenerate, t(Text::AiGenerate), m.token(setting("ai.generate")) == "1", t(Text::AiGenerateHint), on);
         p.note(t(Text::AfterRestart));
         if (!on) p.note(t(Text::AiOffNote));
     }
@@ -92,6 +95,8 @@ public:
             m.setToken(setting(kBoxes[id - kKinds].key), checked ? "1" : "0");
         } else if (id == kAhead && clicked) {
             m.setToken(setting("ai.ahead"), checked ? "1" : "0");
+        } else if (id == kGenerate && clicked) {
+            m.setToken(setting("ai.generate"), checked ? "1" : "0");
         } else if (id == kPreset && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel == int(AiPreset::Custom) || sel < 0) return;  // Custom is what the rows hold: nothing to set

@@ -10,6 +10,7 @@
 
 #include "core/ai/texture_cache.hpp"
 #include "core/sprite_exe.hpp"
+#include "core/webp_image.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -139,20 +140,28 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     minSide_ = std::min(s.minSize, s.maxSize);
     maxSide_ = std::max(s.minSize, s.maxSize);
     ahead_ = s.ahead;
+    generate_ = s.generate;
     const std::string dir = gameDir + "\\uaro-graphics\\ai\\";
+    bool anyKind = false;
     for (int k = 0; k < ai::kKinds; ++k) {
         if (!aiKind(s, k)) continue;
+        kindOn_[k] = anyKind = true;
         const std::string& token = k < 2 ? s.model : s.spriteModel;  // the ground and objects, sprites and effects
+        // 0.42: the folder of the kind's pictures in upscaled.grf, also without its network.
+        folders_[k] = ai::netFolder(token, token == "general" ? std::clamp(s.denoise, 0, 100) : 100, scale_);
+        if (!generate_) continue;  // the pack and upscaled.grf only: no network is loaded
         for (size_t i = 0; i < nets_.size() && netOf_[k] < 0; ++i)
             if (nets_[i]->token == token) netOf_[k] = int(i);
-        if (netOf_[k] >= 0) continue;
-        auto net = std::make_unique<Net>();
-        if (!loadNet(dir, token, s.denoise, *net, error)) return false;
-        features_ = std::max(features_, net->model.features);
-        nets_.push_back(std::move(net));
-        netOf_[k] = int(nets_.size()) - 1;
+        if (netOf_[k] < 0) {
+            auto net = std::make_unique<Net>();
+            if (!loadNet(dir, token, s.denoise, *net, error)) return false;
+            features_ = std::max(features_, net->model.features);
+            nets_.push_back(std::move(net));
+            netOf_[k] = int(nets_.size()) - 1;
+        }
+        folders_[k] = nets_[size_t(netOf_[k])]->folder;
     }
-    if (nets_.empty()) {
+    if (!anyKind) {
         error = "no kind of texture is chosen (the AI textures page)";
         return false;
     }
@@ -161,6 +170,11 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     for (size_t i = 0; i < nets_.size(); ++i)
         if (!selfTest(int(i), error)) return false;
     const ULONGLONG tested = GetTickCount64() - t0;
+    // 0.42: the texture pack - read by the I/O thread, looked up here.
+    const std::string packPath = gameDir + "\\uaro-textures.zip";
+    std::string packError;
+    if (!pack_.open(packPath, packError) && GetFileAttributesA(packPath.c_str()) != INVALID_FILE_ATTRIBUTES)
+        LOG_ERROR("AI textures: the texture pack cannot be read (%s)", packError.c_str());
 
     // upscaled.grf: written by one game at a time (a second client reads it only).
     writerMutex_ = CreateMutexA(nullptr, FALSE, "Local\\uaro-graphics-upscaled-grf");
@@ -182,8 +196,9 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
             mapTags_.insert(std::move(name));
         } else if (e.type == ai::ParsedEntry::Picture) {
             bool ours = false;
-            for (const auto& n : nets_)
-                ours = ours || e.folder == n->folder || e.folder == ai::kindFolder(n->folder, ai::Kind::Icons);
+            for (int k = 0; k < ai::kKinds; ++k)
+                ours = ours || (kindOn_[k] && (e.folder == folders_[k] ||
+                                               e.folder == ai::kindFolder(folders_[k], ai::Kind::Icons)));
             if (ours)
                 known_.insert(std::move(name));
             else
@@ -202,18 +217,25 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     std::string kinds;
     for (int k = 0; k < ai::kKinds; ++k) {
         const Net* n = netOf_[k] >= 0 ? nets_[size_t(netOf_[k])].get() : nullptr;
-        kinds += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " + (n ? n->name : std::string("off"));
+        kinds += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " +
+                 (n ? n->name : kindOn_[k] ? std::string("ready ones") : std::string("off"));
         if (n && n->token == "general") kinds += " (denoise " + std::to_string(n->denoise) + "%)";
     }
     char note[112] = "";
     if (other)
         std::snprintf(note, sizeof note, " (and %u of other settings or older versions, not used: the Ready textures "
                       "page deletes them)", other);
-    LOG_INFO("AI textures: on - %s; x%d, textures %d-%d, ahead %s; on the GPU, self-test passed in %llu ms; "
-             "upscaled.grf has %u textures of these settings%s%s",
+    LOG_INFO("AI textures: on - %s; x%d, textures %d-%d, ahead %s; %s; upscaled.grf has %u textures of these "
+             "settings%s%s",
              kinds.c_str(), scale_, minSide_, maxSide_, ahead_ ? "on" : "off",
-             static_cast<unsigned long long>(tested), static_cast<unsigned>(known_.size()), note,
-             writable_ ? "" : " (read only: another game writes it)");
+             generate_ ? ("making new ones in the game, self-test passed in " + std::to_string(tested) + " ms").c_str()
+                       : "making none (the pack and upscaled.grf only)",
+             static_cast<unsigned>(known_.size()), note, writable_ ? "" : " (read only: another game writes it)");
+    if (pack_.isOpen())
+        LOG_INFO("AI textures: the texture pack uaro-textures.zip has %u pictures",
+                 static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)));
+    else
+        LOG_INFO("AI textures: no texture pack (uaro-textures.zip) in the game's folder");
     return true;
 }
 
@@ -635,7 +657,9 @@ bool AiTextures::finish(Job& job) {
     keptBytes_ -= item->second.argb.size() * 4;
     item->second.argb.clear();
     item->second.argb.shrink_to_fit();
-    if (job.loaded)
+    if (job.packed)
+        ++donePack_;
+    else if (job.loaded)
         ++doneLoaded_;
     else
         ++doneNetwork_;
@@ -666,11 +690,15 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         keptBytes_ -= item->second.argb.size() * 4;
         items_.erase(item);
     }
-    // The network for sprites (the model for characters): any kind of theirs that is on has made it.
-    int net = -1;
-    for (ai::Kind k : {ai::Kind::Sprites, ai::Kind::Effects, ai::Kind::Icons})
+    // The network for sprites (the model for characters): any kind of theirs that is on has made it (0.42: when
+    // generating); their pictures in upscaled.grf are in its folder.
+    int net = -1, folder = -1;
+    for (ai::Kind k : {ai::Kind::Sprites, ai::Kind::Effects, ai::Kind::Icons}) {
         if (net < 0) net = netOf_[int(k)];
-    if (net < 0) return;
+        if (folder < 0 && kindOn_[int(k)]) folder = int(k);
+    }
+    if (folder < 0) return;
+    if (net < 0 && !pack_.isOpen() && known_.empty()) return;  // 0.42: nothing to show and none made: as the game
     auto a = atlases_.find(id);
     const bool made = a == atlases_.end();
     if (made) {
@@ -730,7 +758,14 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
         j.alpha = ai::hasTransparency(pixels.data(), w, h);
         j.frame = ++a->second.frames[uint32_t(c.top) << 16 | uint32_t(c.left)];
         const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
-        j.name = ai::entryName(nets_[size_t(net)]->folder, key);
+        // 0.42: from the texture pack first.
+        const std::string packed = pack::pictureName(pack::Group::Sprites, key);
+        if (pack_.has(packed)) {
+            j.pixels = std::move(pixels);
+            requestPacked(id, packed, w, h, std::move(j));
+            continue;
+        }
+        j.name = ai::entryName(net >= 0 ? nets_[size_t(net)]->folder : folders_[folder], key);
         const sprite_exe::Source source = sprite_exe::Source(cells[i].source);
         const ai::Kind kind = source == sprite_exe::Source::Effect      ? ai::Kind::Effects
                               : source == sprite_exe::Source::Interface ? ai::Kind::Icons
@@ -747,11 +782,11 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
             j.pixels = std::move(pixels);
             r.cell = std::move(j);
             request(std::move(r));
-        } else {
+        } else if (net >= 0) {
             j.pixels = std::move(pixels);
             cells_.push_back(std::move(j));
             if (cells_.size() > 4096) cells_.pop_front();  // a crowd: the oldest frames are likely gone anyway
-        }
+        }  // 0.42: else not generating - the frame stays as the game has it
     }
 }
 
@@ -851,7 +886,7 @@ bool AiTextures::finishIcon(Job& job) {
 
 void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* argb) {
     const int net = netOf_[int(ai::Kind::Icons)];
-    if (!ready_ || net < 0 || width <= 0 || height <= 0 || !icons_.insert(key).second) return;
+    if (!ready_ || !kindOn_[int(ai::Kind::Icons)] || width <= 0 || height <= 0 || !icons_.insert(key).second) return;
     Job j;
     j.net = net;
     j.width = width;
@@ -862,14 +897,19 @@ void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* a
     j.pixels.assign(argb, argb + size_t(width) * size_t(height));
     j.alpha = ai::hasTransparency(j.pixels.data(), width, height);
     const std::string k = ai::keyName(ai::textureKey(j.pixels.data(), width, height));
-    j.name = ai::entryName(ai::kindFolder(nets_[size_t(net)]->folder, ai::Kind::Icons), k);
+    const std::string packed = pack::pictureName(pack::Group::Ui, k);  // 0.42: the texture pack first
+    if (pack_.has(packed)) {
+        requestPacked(0, packed, width, height, std::move(j));
+        return;
+    }
+    j.name = ai::entryName(ai::kindFolder(folders_[int(ai::Kind::Icons)], ai::Kind::Icons), k);
     if (kinds_.emplace(k, ai::Kind::Icons).second) tag(ai::kindTag(ai::Kind::Icons, k));
     if (known_.count(j.name)) {  // made before: from upscaled.grf
         IoRequest r;
         r.name = j.name;
         r.cell = std::move(j);
         request(std::move(r));
-    } else {  // in turn with the sprite frames - ahead of them (0.22.8): a window shows blocks while it waits
+    } else if (net >= 0) {  // in turn with the sprite frames - ahead of them (0.22.8): a window shows blocks meanwhile
         cells_.insert(std::find_if(cells_.begin(), cells_.end(), [](const Job& c) { return !c.icon; }), std::move(j));
     }
 }
@@ -904,7 +944,9 @@ bool AiTextures::finishCell(Job& job) {
         const D3D12_BOX box{0, 0, 0, UINT(std::min(l.width, dw - x)), UINT(std::min(l.height, dh - y)), 1};
         m_.list->CopyTextureRegion(&dst, UINT(x), UINT(y), 0, &src, &box);
     }
-    if (job.loaded)
+    if (job.packed)
+        ++cellsPack_;
+    else if (job.loaded)
         ++cellsLoaded_;
     else
         ++cellsNetwork_;
@@ -976,7 +1018,7 @@ void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const u
 void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     item.kind = kind;
     const int k = int(kind);
-    if (k >= ai::kKinds || netOf_[k] < 0) {  // a lightmap, no world texture, or a kind that is off
+    if (k >= ai::kKinds || !kindOn_[k]) {  // a lightmap, no world texture, or a kind that is off
         drop(item);
         return;
     }
@@ -995,16 +1037,26 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         drop(item);
         return;
     }
-    item.net = netOf_[k];
-    item.name = ai::entryName(ai::kindFolder(nets_[size_t(item.net)]->folder, kind), item.key);
+    item.net = netOf_[k];  // -1 when not generating (0.42)
     item.state = Item::Waiting;
     if (kinds_.emplace(item.key, kind).second) tag(ai::kindTag(kind, item.key));
+    // 0.42: the texture pack first, then upscaled.grf, then - generating - the network.
+    const std::string packed = pack::pictureName(item.ui ? pack::Group::Ui : pack::Group::World, item.key);
+    if (pack_.has(packed)) {
+        item.name = packed;
+        item.loading = true;
+        requestPacked(id, packed, item.width, item.height, Job());
+        return;
+    }
+    item.name = ai::entryName(ai::kindFolder(folders_[k], kind), item.key);
     if (known_.count(item.name)) {  // done before: from upscaled.grf
         item.loading = true;
         IoRequest r;
         r.id = id;
         r.name = item.name;
         request(std::move(r));
+    } else if (item.net < 0) {  // not generating: it stays the game's
+        drop(item);
     } else if (later) {
         item.later = true;
         later_.push_back(id);
@@ -1013,8 +1065,19 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     }
 }
 
+void AiTextures::requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell) {
+    IoRequest r;
+    r.pack = true;
+    r.id = id;
+    r.name = name;
+    r.width = width;
+    r.height = height;
+    r.cell = std::move(cell);
+    request(std::move(r));
+}
+
 void AiTextures::tag(const std::string& name) {
-    if (!writable_) return;
+    if (!writable_ || !generate_) return;  // 0.42: the tags are the generating game's
     IoRequest r;
     r.write = true;
     r.tag = true;
@@ -1122,24 +1185,25 @@ void AiTextures::takeLoaded() {
     results.swap(ioOut_);
     LeaveCriticalSection(&ioLock_);
     for (IoResult& r : results) {
-        if (r.cell.icon) {  // an icon: straight back to the driver, or the network after all
+        if (r.cell.icon) {  // an icon: straight back to the driver, or the network after all (0.42: generating)
             Job j = std::move(r.cell);
             if (r.ok && r.width == j.width * scale_ && r.height == j.height * scale_ && m_.iconSink) {
                 m_.iconSink(m_.iconContext, j.iconKey, r.width, r.height, r.argb.data());
-                ++iconsLoaded_;
-            } else {
+                ++(r.pack ? iconsPack_ : iconsLoaded_);
+            } else if (j.net >= 0) {
                 cells_.push_back(std::move(j));
             }
             continue;
         }
-        if (r.cell.cell) {  // a sprite cache's cell: the picture, or the network after all
+        if (r.cell.cell) {  // a sprite cache's cell: the picture, or the network after all (0.42: generating)
             Job j = std::move(r.cell);
             if (!cellCurrent(j)) continue;
             if (r.ok && r.width == j.width * scale_ && r.height == j.height * scale_) {
                 j.loaded = true;
+                j.packed = r.pack;
                 j.pixels = std::move(r.argb);
                 loaded_.push_back(std::move(j));
-            } else {
+            } else if (j.net >= 0) {
                 cells_.push_back(std::move(j));
             }
             continue;
@@ -1150,6 +1214,10 @@ void AiTextures::takeLoaded() {
         if (item.state != Item::Waiting || !item.loading || item.name != r.name) continue;
         item.loading = false;
         if (!r.ok || r.width != item.width * scale_ || r.height != item.height * scale_) {
+            if (item.net < 0) {  // 0.42: not generating - it stays the game's
+                drop(item);
+                continue;
+            }
             (item.later ? later_ : queue_).push_back(r.id);  // not usable: the network makes it again
             continue;
         }
@@ -1161,6 +1229,7 @@ void AiTextures::takeLoaded() {
         j.width = item.width;
         j.height = item.height;
         j.loaded = true;
+        j.packed = r.pack;
         j.pixels = std::move(r.argb);
         loaded_.push_back(std::move(j));
     }
@@ -1281,25 +1350,26 @@ void AiTextures::logNow(bool final) {
     const ULONGLONG now = GetTickCount64();
     if (!final && now - lastLog_ < 30000) return;
     lastLog_ = now;
-    if (!doneNetwork_ && !doneLoaded_ && queue_.empty() && later_.empty() && !cellsWritten_ && icons_.empty())
+    if (!doneNetwork_ && !doneLoaded_ && !donePack_ && queue_.empty() && later_.empty() && !cellsWritten_ &&
+        icons_.empty())
         return;
     // What the draws showed: how the kinds come out in the game (the network takes only the ones that are on).
     std::string seen;
     for (int k = 0; k < ai::kKinds; ++k)
         seen += std::string(k ? ", " : "") + ai::kindName(ai::Kind(k)) + " " + std::to_string(seen_[k]) +
-                (netOf_[k] < 0 ? " (off)" : "");
-    LOG_INFO("AI textures: %u made by the network, %u from upscaled.grf, %u waiting, %u ahead, %u written; seen %s, "
-             "lightmaps %u; %u of soft light left as the game's",
-             doneNetwork_, doneLoaded_, static_cast<unsigned>(queue_.size() + (job_ ? 1 : 0)),
+                (!kindOn_[k] ? " (off)" : "");
+    LOG_INFO("AI textures: %u from the pack, %u made by the network, %u from upscaled.grf, %u waiting, %u ahead, %u "
+             "written; seen %s, lightmaps %u; %u of soft light left as the game's",
+             donePack_, doneNetwork_, doneLoaded_, static_cast<unsigned>(queue_.size() + (job_ ? 1 : 0)),
              static_cast<unsigned>(later_.size()), written_, seen.c_str(), seen_[int(ai::Kind::Lightmap)], soft_);
     if (cellsWritten_)
-        LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u made by the network, %u from "
-                 "upscaled.grf, %u waiting",
-                 cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsNetwork_, cellsLoaded_,
+        LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack, %u made by the "
+                 "network, %u from upscaled.grf, %u waiting",
+                 cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsPack_, cellsNetwork_, cellsLoaded_,
                  static_cast<unsigned>(cells_.size()));
     if (!icons_.empty())
-        LOG_INFO("AI textures: icons - %u asked, %u made by the network, %u from upscaled.grf",
-                 static_cast<unsigned>(icons_.size()), iconsNetwork_, iconsLoaded_);
+        LOG_INFO("AI textures: icons - %u asked, %u from the pack, %u made by the network, %u from upscaled.grf",
+                 static_cast<unsigned>(icons_.size()), iconsPack_, iconsNetwork_, iconsLoaded_);
 }
 
 void AiTextures::request(IoRequest r) {
@@ -1348,11 +1418,17 @@ void AiTextures::ioLoop() {
             IoResult res;
             res.id = r.id;
             res.name = r.name;
+            res.pack = r.pack;
             res.cell = std::move(r.cell);
             std::vector<uint8_t> blob;
             std::string error;
             const auto waiting = pending.find(r.name);  // made a moment ago, not in the file yet
-            if (waiting != pending.end())
+            if (r.pack) {  // 0.42: 4 times the game's texture - twice at x2
+                res.ok = pack_.read(r.name, blob) && webp::decode(blob.data(), blob.size(), res.argb, res.width,
+                                                                  res.height);
+                if (res.ok && scale_ == 2 && res.width == r.width * 4 && res.height == r.height * 4)
+                    ai::halve(res.argb, res.width, res.height);
+            } else if (waiting != pending.end())
                 res.ok = ai::decodeTexture(batch[waiting->second].second, res.argb, res.width, res.height);
             else
                 res.ok = archive_.read(r.name, blob, error) &&

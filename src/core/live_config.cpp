@@ -37,7 +37,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         {"ai.sprite_model", fa.spriteModel != ra.spriteModel}, {"ai.denoise", fa.denoise != ra.denoise},
         {"ai.scale", fa.scale != ra.scale}, {"ai.budget", fa.budget != ra.budget},
         {"ai.min_size", fa.minSize != ra.minSize}, {"ai.max_size", fa.maxSize != ra.maxSize},
-        {"ai.ahead", fa.ahead != ra.ahead}};
+        {"ai.ahead", fa.ahead != ra.ahead}, {"ai.generate", fa.generate != ra.generate}};
     for (const auto& k : ai)
         if (k.second) u.waiting.push_back(k.first);
     if (file.mode != running.mode) u.waiting.push_back("mode");

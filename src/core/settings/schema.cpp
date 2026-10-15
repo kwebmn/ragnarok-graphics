@@ -197,6 +197,8 @@ const std::vector<IniSetting>& iniSettings() {
         {"ai", "min_size", Page::Ai, Control::Number, 16, 1024, 1, {}, {}, Text::AiSizes, Text::AiSizesHint, ""},
         {"ai", "max_size", Page::Ai, Control::Number, 16, 1024, 1, {}, {}, Text::AiSizes, Text::AiSizesHint, ""},
         {"ai", "ahead", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiAhead, Text::AiAheadHint, ""},
+        {"ai", "generate", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiGenerate, Text::AiGenerateHint,
+         ""},
         {"frames", "vsync", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesVsync,
          Text::FramesVsyncHint, ""},
         {"frames", "frame_generation", Page::Frames, Control::Choice, 0, 0, 0, {"off", "2x", "3x", "4x"},
@@ -253,6 +255,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.min_size") return std::to_string(a.minSize);
     if (k == "ai.max_size") return std::to_string(a.maxSize);
     if (k == "ai.ahead") return a.ahead ? "1" : "0";
+    if (k == "ai.generate") return a.generate ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
     if (k == "effects.smooth_light") return c.effects.smoothLight ? "1" : "0";
     if (k == "effects.torch") return c.effects.torch ? "1" : "0";

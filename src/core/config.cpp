@@ -86,6 +86,8 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
         toInt(v, 16, 1024, a.maxSize);
     } else if (k == "ahead") {
         setBool(v, a.ahead);
+    } else if (k == "generate") {
+        setBool(v, a.generate);
     }
 }
 
@@ -97,7 +99,7 @@ bool AiSettings::operator==(const AiSettings& o) const {
            effects == o.effects && icons == o.icons && uiPieces == o.uiPieces && model == o.model &&
            spriteModel == o.spriteModel &&
            denoise == o.denoise && scale == o.scale && budget == o.budget && minSize == o.minSize &&
-           maxSize == o.maxSize && ahead == o.ahead;
+           maxSize == o.maxSize && ahead == o.ahead && generate == o.generate;
 }
 
 EffectSettings effectsOff() {
@@ -166,7 +168,8 @@ std::string aiArgument(const AiSettings& a) {
            ";ui_pieces=" + b(a.uiPieces) + ";model=" + a.model +
            ";sprite_model=" + a.spriteModel + ";denoise=" + std::to_string(a.denoise) +
            ";scale=" + std::to_string(a.scale) + ";budget=" + std::to_string(a.budget) +
-           ";min_size=" + std::to_string(a.minSize) + ";max_size=" + std::to_string(a.maxSize) + ";ahead=" + b(a.ahead);
+           ";min_size=" + std::to_string(a.minSize) + ";max_size=" + std::to_string(a.maxSize) +
+           ";ahead=" + b(a.ahead) + ";generate=" + b(a.generate);
 }
 
 AiSettings parseAiArgument(const std::string& word) {
