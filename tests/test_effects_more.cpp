@@ -127,3 +127,9 @@ TEST(frames_limited_and_saving_power_by_default) {
     CHECK(parseConfig("[frames]\nfps_limit = 0\nsave_power = 0\n").fpsLimit == 0);
     CHECK(!parseConfig("[frames]\nsave_power = 0\n").savePower);
 }
+
+TEST(profile_off_unless_asked) {
+    // 0.87: [debug] profile
+    CHECK(!parseConfig("").profile);
+    CHECK(parseConfig("[debug]\nprofile = 1\n").profile);
+}

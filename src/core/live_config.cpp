@@ -99,6 +99,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("save_power", flag(running.savePower), flag(file.savePower)));
         n.savePower = file.savePower;
     }
+    if (file.profile != running.profile) {  // 0.87
+        u.applied.push_back(change("profile", flag(running.profile), flag(file.profile)));
+        n.profile = file.profile;
+    }
     if (file.keepFps != running.keepFps) {  // 0.76
         u.applied.push_back(change("keep_fps", std::to_string(running.keepFps), std::to_string(file.keepFps)));
         n.keepFps = file.keepFps;
@@ -192,6 +196,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
+           k == "debug.profile" ||
            k.compare(0, 8, "effects.") == 0;
 }
 

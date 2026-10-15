@@ -15,6 +15,7 @@
 #include "win/start_screen.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/profiler.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
 
@@ -153,6 +154,7 @@ bool Context::open(std::string& error) {
 }
 
 void Context::close() {
+    Profiler::get().stop();  // 0.87
     flush();
     if (scaleLog_.pending()) LOG_INFO("%s", scaleLine_.c_str());  // the last change, before the final stats
     logStats(true);
@@ -337,6 +339,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);
     keepFrameRate(config, window);
+    Profiler::get().run(GetCurrentThreadId(), config.profile);  // 0.87: [debug] profile
     EffectSettings fx = config.effects;  // 0.63: how much night now, by the clock; 0.74: the minute of the day
     if (fx.night || fx.dayCycle) {
         SYSTEMTIME t{};

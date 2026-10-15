@@ -309,6 +309,7 @@ struct Config {
     int frameGeneration = 0;  // part 3: [frames] frame_generation = off, 2x, 3x, 4x - DLSS frame generation (DLSS on)
     bool allowTearing = false;  // let G-SYNC / FreeSync monitors show frames as soon as they are ready
     LogLevel logLevel = LogLevel::Info;
+    bool profile = false;  // 0.87: [debug] profile - where the game's thread spends its time, into the log
 };
 
 Config parseConfig(const std::string& text);

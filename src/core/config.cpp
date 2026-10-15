@@ -527,6 +527,8 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 240, c.keepFps);
         } else if (key == "frames.allow_tearing") {
             setBool(val, c.allowTearing);
+        } else if (key == "debug.profile") {
+            setBool(val, c.profile);
         } else if (key == "debug.log") {
             if (val == "normal") c.logLevel = LogLevel::Info;
             if (val == "verbose") c.logLevel = LogLevel::Debug;

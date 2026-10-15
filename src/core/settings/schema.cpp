@@ -304,6 +304,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FramesKeepFpsHint, ""},
         {"frames", "allow_tearing", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesTearing,
          Text::FramesTearingHint, ""},
+        {"debug", "profile", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagProfile,
+         Text::DiagProfileHint, ""},
         {"debug", "log", Page::Diagnostics, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
          Text::DiagVerboseLogHint, ""},
     };
@@ -456,6 +458,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.keep_fps") return std::to_string(c.keepFps);
+    if (k == "debug.profile") return c.profile ? "1" : "0";
     if (k == "frames.save_power") return c.savePower ? "1" : "0";
     if (k == "frames.fps_counter") return c.fpsCounter ? "1" : "0";
     if (k == "display.ui_native") return c.uiNative ? "1" : "0";

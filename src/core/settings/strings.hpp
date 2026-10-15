@@ -177,6 +177,8 @@ enum class Text : uint16_t {
     FxRoundLight, FxRoundLightHint,
     // 0.85
     FramesSavePower, FramesSavePowerHint,
+    // 0.87
+    DiagProfile, DiagProfileHint,
     Count
 };
 

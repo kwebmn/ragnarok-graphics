@@ -1710,6 +1710,15 @@ const Entry kTexts[] = {
      "character select 30.",
      "Поки попереду інше вікно або гру згорнуто, вона малює 15 кадрів на секунду; на вході й виборі персонажа — 30.",
      "Пока впереди другое окно или игра свёрнута, она рисует 15 кадров в секунду; на входе и выборе персонажа — 30."},
+    {"Measure where the game spends its time",
+     "Заміряти, на що гра витрачає час",
+     "Замерять, на что игра тратит время"},
+    {"For the developers: about a thousand times a second the driver notes where uaRO.exe is busy and writes the "
+     "busiest places into the log every 10 seconds. Costs a little speed - turn it off afterwards.",
+     "Для розробників: приблизно тисячу разів на секунду драйвер помічає, чим зайнятий uaRO.exe, і кожні 10 секунд "
+     "пише в лог найзавантаженіші місця. Трохи сповільнює — потім вимкніть.",
+     "Для разработчиков: примерно тысячу раз в секунду драйвер отмечает, чем занят uaRO.exe, и каждые 10 секунд пишет "
+     "в лог самые загруженные места. Немного замедляет — потом выключите."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

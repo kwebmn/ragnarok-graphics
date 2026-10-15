@@ -25,6 +25,7 @@ constexpr int kVerbose = 1307;
 constexpr int kComment = 1308;  // 0.51: the report to the developers
 constexpr int kSend = 1309;
 constexpr int kAutoReport = 1310;
+constexpr int kProfile = 1311;  // 0.87
 
 struct Row {
     std::wstring check;
@@ -76,6 +77,8 @@ public:
         EnableWindow(GetDlgItem(host_.window(), kOpenLog), m.now().log.found);
         p.check(kVerbose, t(Text::DiagVerboseLog), m.token(*findSetting("debug.log")) == "verbose",
                 t(Text::DiagVerboseLogHint));
+        p.check(kProfile, t(Text::DiagProfile), m.token(*findSetting("debug.profile")) == "1",
+                t(Text::DiagProfileHint));  // 0.87
         // 0.51: to uaro.kiev.ua, at a press or by itself when a game went badly
         p.gap();
         p.heading(t(Text::ReportHeading));
@@ -117,6 +120,17 @@ public:
         } else if (id == kAutoReport) {
             const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
             m.setToken(*findSetting("report.auto"), on ? "1" : "0");
+            host_.changed();
+        } else if (id == kProfile) {  // 0.87: at once in a running game
+            const IniSetting& s = *findSetting("debug.profile");
+            const std::string token = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED
+                                          ? "1"
+                                          : "0";
+            m.setToken(s, token);
+            if (m.now().gameRunning) {
+                const std::wstring err = m.writeNow(s, token, host_.lang());
+                if (!err.empty()) host_.message(err, true);
+            }
             host_.changed();
         } else if (id == kVerbose) {
             const IniSetting& s = *findSetting("debug.log");
