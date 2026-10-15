@@ -1,3 +1,16 @@
+# uaRO Graphics 0.63.0 — testing
+
+What is new in 0.63.0:
+- **/aura at once (off).** The game reads /aura only when it makes an aura (a map entered): now the level 99 aura's
+  ring and bubbles go the moment /aura is off; its circles stay, as the game shows them. On again: the game brings
+  the ring back as it makes the aura anew (another map, the player out of view and back) - that it does itself.
+- **Night** (Effects → Night, strength, "By the clock"): the world darker and colder, the torches, lamps, skills and
+  fireflies shining out of it; the interface as it is. By the clock: only 20:00-6:00 by the computer's time, with an
+  hour of dusk and of dawn. Direct3D 12 and 11.
+
+How to test: a level 99 character, /aura - the ring at once off; Night on in Prontera, then in a dungeon with
+torches.
+
 # uaRO Graphics 0.62.0 — testing
 
 What is new in 0.62.0 (a test, off by default):
