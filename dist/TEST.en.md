@@ -1,3 +1,14 @@
+# uaRO Graphics 0.60.0 — testing
+
+What is new in 0.60.0 (one file for a player):
+- **uaro-graphics-setup.exe** (release/, next to the zip): the whole release in one program. Put it in the uaRO folder
+  and run it - or run it anywhere and choose the uaRO folder; it unpacks uaRO Graphics there, runs install.bat
+  without its questions, says what is next and opens the settings app: "Set up automatically", then "Download the
+  pack", then the game. In English, Ukrainian or Russian by Windows' language.
+- uaro-graphics.zip and update.bat stay as they were.
+
+How to test: on another computer (or a copy of the client) run uaro-graphics-setup.exe; then the two presses.
+
 # uaRO Graphics 0.59.0 — testing
 
 What is new in 0.59.0:
