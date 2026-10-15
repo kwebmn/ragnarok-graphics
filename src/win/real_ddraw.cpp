@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/version.hpp"
+#include "win/crash.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -68,6 +69,7 @@ Startup decide() {
     const bool haveIni = readTextFile(dir + "\\uaro-graphics.ini", ini);
     s.config = parseConfig(ini);
     wlog::open(dir + "\\uaro-graphics.log", s.config.logLevel);
+    installCrashHandler(dir);  // 0.52: where a crash happened, and a minidump
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
     LOG_INFO("settings: %s; backend = %s, api = %s, mode = %s",
              haveIni ? "uaro-graphics.ini" : "no uaro-graphics.ini, defaults", backendToken(s.config.backend),

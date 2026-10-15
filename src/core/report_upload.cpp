@@ -1,5 +1,6 @@
 #include "core/report_upload.hpp"
 
+#include <cstdint>
 #include <cstdio>
 
 namespace uagfx::report {
@@ -86,7 +87,36 @@ std::string uploadJson(const Upload& u) {
         quoted(out, u.files[i].second);
         out += '}';
     }
-    out += "]}";
+    out += "],\"images\":[";
+    size_t sent = 0;
+    for (const auto& image : u.images) {
+        if (sent == kMostImages || image.second.size() > 140000 || image.second.compare(0, 2, "BM") != 0) continue;
+        if (sent++) out += ',';
+        out += "{\"name\":";
+        quoted(out, image.first);
+        out += ",\"data\":\"" + base64(image.second) + "\"}";
+    }
+    out += "]";
+    if (!u.dump.empty() && u.dump.size() <= kMostDump && u.dump.compare(0, 4, "MDMP") == 0)
+        out += ",\"dump\":\"" + base64(u.dump) + "\"";
+    out += "}";
+    return out;
+}
+
+std::string base64(const std::string& bytes) {
+    static const char* k = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    out.reserve((bytes.size() + 2) / 3 * 4);
+    for (size_t i = 0; i < bytes.size(); i += 3) {
+        const uint32_t a = static_cast<unsigned char>(bytes[i]);
+        const uint32_t b = i + 1 < bytes.size() ? static_cast<unsigned char>(bytes[i + 1]) : 0;
+        const uint32_t c = i + 2 < bytes.size() ? static_cast<unsigned char>(bytes[i + 2]) : 0;
+        const uint32_t n = a << 16 | b << 8 | c;
+        out += k[n >> 18 & 63];
+        out += k[n >> 12 & 63];
+        out += i + 1 < bytes.size() ? k[n >> 6 & 63] : '=';
+        out += i + 2 < bytes.size() ? k[n & 63] : '=';
+    }
     return out;
 }
 
@@ -109,6 +139,7 @@ bool codeOf(const std::string& answer, std::string& code) {
 }
 
 std::string reasonOfLog(const std::string& log) {
+    if (log.find("crash: exception 0x") != std::string::npos) return "crash";  // 0.52: win/crash.cpp
     if (log.find("the uaRO renderer could not start") != std::string::npos) return "start-failed";
     if (log.find("the GPU device was removed") != std::string::npos ||
         log.find("the graphics card was lost") != std::string::npos)

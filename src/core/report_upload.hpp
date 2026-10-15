@@ -17,7 +17,13 @@ struct Upload {
     std::string version, gpu, windows, api, comment;
     std::string report;                                       // the Diagnostics page's report
     std::vector<std::pair<std::string, std::string>> files;   // name -> text (logs, the ini)
+    // 0.52: name -> a BMP's bytes - the pictures the texture pack has none of (uaro-graphics\missing\, 0.49.1)
+    std::vector<std::pair<std::string, std::string>> images;
+    std::string dump;  // 0.52: uaro-graphics\crash.dmp's bytes (win/crash.cpp), "" none
 };
+constexpr size_t kMostDump = 2u << 20;  // a bigger one stays at home
+constexpr size_t kMostImages = 64;
+std::string base64(const std::string& bytes);
 
 // The request's JSON (the site's fields; text made valid UTF-8).
 std::string uploadJson(const Upload& u);

@@ -21,8 +21,25 @@ TEST(report_upload_json_has_the_sites_fields) {
     CHECK(j.find("\"gpu\":\"Radeon \\\"HD\\\" 6570\"") != std::string::npos);
     CHECK(j.find("\"comment\":\"line 1\\nline\\t2\\\\\"") != std::string::npos);
     CHECK(j.find("{\"name\":\"uaro-graphics.log\",\"text\":\"a\\r\\nb\\u0001\"}") != std::string::npos);
-    CHECK(j.find("{\"name\":\"uaro-graphics.ini\",\"text\":\"\"}]}") != std::string::npos);
+    CHECK(j.find("{\"name\":\"uaro-graphics.ini\",\"text\":\"\"}],\"images\":[]}") != std::string::npos);
     CHECK(j.front() == '{' && j.back() == '}');
+}
+
+TEST(report_upload_sends_the_missing_pictures) {
+    // 0.52: BMPs as base64; anything else, or past the count, is left out.
+    CHECK(base64("") == "" && base64("M") == "TQ==" && base64("Ma") == "TWE=" && base64("Man") == "TWFu");
+    Upload u;
+    u.images = {{"player-32x32_ab.bmp", "BMxx"}, {"not.bmp", "PNG"}};
+    for (size_t i = 0; i < kMostImages + 3; ++i) u.images.emplace_back("m" + std::to_string(i) + ".bmp", "BM");
+    const std::string j = uploadJson(u);
+    CHECK(j.find("{\"name\":\"player-32x32_ab.bmp\",\"data\":\"Qk14eA==\"}") != std::string::npos);
+    CHECK(j.find("not.bmp") == std::string::npos);
+    CHECK(j.find("\"m62.bmp\"") != std::string::npos && j.find("\"m63.bmp\"") == std::string::npos);
+    CHECK(j.find("\"dump\"") == std::string::npos);
+    u.dump = "MDMPxx";  // a minidump (0.52)
+    CHECK(uploadJson(u).find(",\"dump\":\"TURNUHh4\"}") != std::string::npos);
+    u.dump = "nonsense";
+    CHECK(uploadJson(u).find("\"dump\"") == std::string::npos);
 }
 
 TEST(report_upload_text_is_made_valid_utf8) {
@@ -59,6 +76,7 @@ TEST(report_upload_tells_what_went_wrong_from_the_log) {
     // Closed, opened again (a change of mode) and not closed: a crash.
     CHECK(reasonOfLog(ok + "z DirectDrawCreateEx = 0x00000000 (uaRO renderer)\n") == "crash");
     CHECK(reasonOfLog("ERROR the uaRO renderer could not start (no adapter): falling back") == "start-failed");
+    CHECK(reasonOfLog(ok + "ERROR crash: exception 0xc0000005 at uaRO.exe+0x1234 (thread 7)") == "crash");
     CHECK(reasonOfLog(ok + "ERROR Present: the GPU device was removed (0x887a0005") == "gpu-lost");
     CHECK(reasonOfLog(ok + "ERROR Direct3D 11: Present - the graphics card was lost (0x") == "gpu-lost");
 }

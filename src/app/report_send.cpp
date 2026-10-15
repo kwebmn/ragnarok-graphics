@@ -126,6 +126,25 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         const std::string text = fileFor(dir + L"\\" + f.first, f.second);
         if (!text.empty()) u.files.emplace_back(utf8(f.first), text);
     }
+    // 0.52: the pictures the pack had none of (the driver saves the first 64 of a game, uaro-graphics\missing)
+    const std::wstring missing = dir + L"\\uaro-graphics\\missing";
+    for (const std::wstring& name : listFolder(missing, false)) {
+        if (u.images.size() == report::kMostImages) break;
+        std::string bytes;
+        const bool bmp = name.size() > 4 && name.compare(name.size() - 4, 4, L".bmp") == 0;
+        if (bmp && readFile(missing + L"\\" + name, bytes))
+            u.images.emplace_back(utf8(name), bytes);
+    }
+    // 0.52: a crash's minidump (win/crash.cpp) of the last week
+    const std::wstring dump = dir + L"\\uaro-graphics\\crash.dmp";
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    if (GetFileAttributesExW(dump.c_str(), GetFileExInfoStandard, &a)) {
+        FILETIME now{};
+        GetSystemTimeAsFileTime(&now);
+        const auto ticks = [](const FILETIME& t) { return (static_cast<unsigned long long>(t.dwHighDateTime) << 32) |
+                                                          t.dwLowDateTime; };
+        if (ticks(now) - ticks(a.ftLastWriteTime) < 7ull * 24 * 3600 * 10000000ull) readFile(dump, u.dump);
+    }
     return u;
 }
 
@@ -175,6 +194,7 @@ bool sendUpload(const report::Upload& u, std::string& code, std::string& error) 
 }
 
 void noteSent(const Model& m, const std::string& code, const std::string& reason, bool automatic) {
+    DeleteFileW((m.paths().dir + L"\\uaro-graphics\\crash.dmp").c_str());  // 0.52: on the site now
     std::string text;
     readFile(sentFile(m), text);
     text += std::to_string(static_cast<long long>(std::time(nullptr))) + " " + code + " " + reason + " " +

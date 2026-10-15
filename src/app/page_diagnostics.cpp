@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <functional>
+#include <optional>
 
 #include "app/files.hpp"
 #include "app/page.hpp"
@@ -253,12 +254,22 @@ private:
         return out;
     }
 
-    std::vector<std::string> problems() const {  // the red and yellow lines
+    // The red and yellow lines - 0.52: in English for the report (the developers read every report alike).
+    std::vector<std::string> problems() {
+        lang_ = Lang::En;
+        const std::vector<Row> english = rows();
+        lang_.reset();
         std::vector<std::string> out;
-        for (const Row& r : rows_)
+        for (const Row& r : english)
             if (r.tone == Tone::Bad || r.tone == Tone::Warn) out.push_back(utf8(r.check + L": " + r.result));
         return out;
     }
+    // The page's texts in its language, or in lang_ while the report's lines are made.
+    std::wstring t(Text x) const { return wtr(lang_ ? *lang_ : host_.lang(), x); }
+    std::wstring tf(Text x, const std::vector<std::string>& args) const {
+        return wtrf(lang_ ? *lang_ : host_.lang(), x, args);
+    }
+    std::optional<Lang> lang_;
 
     // 0.51: the report to uaro.kiev.ua, its code back (copied for the player to name it)
     void sendReport() {

@@ -49,7 +49,7 @@ ALLOWED = {
         # 0.43, the texture pack page: its builder started and watched (Windows 2000 / Vista)
         "CreateProcessW", "GetTickCount64",
         # 0.51: the watcher of a game for the reports (--watch)
-        "SetPriorityClass",
+        "SetPriorityClass", "GetSystemTimeAsFileTime",  # 0.52: a crash dump of the last week
     },
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",
