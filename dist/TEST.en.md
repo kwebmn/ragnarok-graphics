@@ -1,3 +1,14 @@
+# uaRO Graphics 0.81.0 — testing
+
+What is new in 0.81.0 (Direct3D 12):
+- **Grass** (Effects → "Grass" and how thick; **off** by default - the costliest effect). Blades of grass grow on the
+  green ground of the fields and towns: they stay put as the camera moves, sway in the wind and lie down where
+  characters just walked (with "Footprints and dust"). Characters stand over the grass. Log: `grass: on <map>, blades
+  up to N pixels`; the cost - `grass` in the `GPU: effects a frame` line.
+
+How to test: turn it on, a Prontera or Payon field; does it shimmer, does grass grow on green walls and roofs, what it
+costs (the frame counter).
+
 # uaRO Graphics 0.80.0 — testing
 
 What is new in 0.80.0 (Direct3D 12):
