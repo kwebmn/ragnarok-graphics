@@ -111,6 +111,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.dayCycle = false;
     e.shafts = false;
     e.floorReflections = false;
     e.relief = false;
@@ -119,6 +120,7 @@ EffectSettings effectsOff() {
     e.rimLight = false;
     e.softParticles = false;
     e.nightNow = 0;
+    e.dayNow = -1;
     return e;
 }
 
@@ -141,6 +143,7 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.dayCycle ||
            e.shafts ||
            e.floorReflections ||
            e.relief ||
@@ -174,7 +177,8 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
            gradeBrightness == o.gradeBrightness && gradeWarmth == o.gradeWarmth && gradeVignette == o.gradeVignette &&
            foliage == o.foliage && foliageStrength == o.foliageStrength && night == o.night &&
            nightStrength == o.nightStrength && nightClock == o.nightClock &&
-           nightNow == o.nightNow && dof == o.dof && dofStrength == o.dofStrength && dofRange == o.dofRange &&
+           nightNow == o.nightNow && dayNow == o.dayNow && dof == o.dof && dofStrength == o.dofStrength &&
+           dofRange == o.dofRange &&
            water == o.water &&
            waterWaves == o.waterWaves && waterReflections == o.waterReflections && waterClarity == o.waterClarity &&
            softParticles == o.softParticles;
@@ -434,6 +438,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.shafts);
         } else if (key == "effects.shafts_strength") {
             toInt(val, 0, 200, c.effects.shaftsStrength);
+        } else if (key == "effects.day_cycle") {
+            setBool(val, c.effects.dayCycle);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

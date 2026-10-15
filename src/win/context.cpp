@@ -329,11 +329,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
         }
     }
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);
-    EffectSettings fx = config.effects;  // 0.63: how much night now, by the clock
-    if (fx.night) {
+    EffectSettings fx = config.effects;  // 0.63: how much night now, by the clock; 0.74: the minute of the day
+    if (fx.night || fx.dayCycle) {
         SYSTEMTIME t{};
         GetLocalTime(&t);
         fx.nightNow = nightAmount(fx, t.wHour, t.wMinute);
+        if (fx.dayCycle) fx.dayNow = t.wHour * 60 + t.wMinute;
     }
     renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the

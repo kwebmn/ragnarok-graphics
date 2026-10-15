@@ -14,6 +14,7 @@
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/d3d_map.hpp"
+#include "core/daylight.hpp"
 #include "core/effect_exe.hpp"
 #include "core/foliage.hpp"
 #include "core/game_camera.hpp"
@@ -1217,9 +1218,12 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
 // Direct3D 12's Impl::applyGrade).
 void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its strength now
     nightDone_ = true;
-    if (!effects_.night || effects_.nightNow <= 0 || !nightPs_ || !target_.texture) return;
+    const bool night = effects_.night && effects_.nightNow > 0, day = effects_.dayCycle && effects_.dayNow >= 0;
+    if ((!night && !day) || !nightPs_ || !target_.texture) return;
     Constants c{};
-    c.sharpen = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    c.sharpen = night ? float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f : 0.0f;
+    const daylight::Light light = daylight::at(day ? effects_.dayNow : -1);  // 0.74: the time of day's tint
+    std::copy(light.tint, light.tint + 3, c.twin);
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
     worldPass(nightPs_, c);

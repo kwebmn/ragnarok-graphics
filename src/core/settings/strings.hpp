@@ -153,6 +153,8 @@ enum class Text : uint16_t {
     FxFloorReflections, FxFloorReflectionsHint, FxFloorReflectStrength, FxFloorReflectStrengthHint,
     // 0.73
     FxShafts, FxShaftsHint, FxShaftsStrength, FxShaftsStrengthHint,
+    // 0.74
+    FxDayCycle, FxDayCycleHint,
     Count
 };
 

@@ -1548,6 +1548,16 @@ const Entry kTexts[] = {
     {"How bright the glowing air and the rays are.",
      "Наскільки яскраві повітря, що світиться, і промені.",
      "Насколько ярки светящийся воздух и лучи."},
+    {"Time of day",
+     "Час доби",
+     "Время суток"},
+    {"By the computer's clock the sun moves: the characters' shadows turn and are long in the morning and the "
+     "evening, short at noon; the light is pink in the morning and golden in the evening. With \"Night by the clock\" "
+     "the day ends in night.",
+     "За годинником комп’ютера сонце рухається: тіні персонажів повертаються, довгі вранці й увечері, короткі "
+     "опівдні; світло рожеве вранці й золоте ввечері. Разом із «Ніч за годинником» день переходить у ніч.",
+     "По часам компьютера солнце движется: тени персонажей поворачиваются, длинные утром и вечером, короткие в "
+     "полдень; свет розовый утром и золотой вечером. Вместе с «Ночь по часам» день переходит в ночь."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

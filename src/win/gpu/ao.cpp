@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "core/d3d7.hpp"
+#include "core/daylight.hpp"
 #include "core/game_camera.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -241,7 +242,9 @@ bool Renderer::Impl::applyNight() {
     }
     if (!copySceneColor()) return false;
     Constants c{};
-    c.sharpen = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    c.sharpen = effects.night ? float(std::clamp(effects.nightNow, 0, 100)) / 100.0f : 0.0f;
+    const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);  // 0.74
+    std::copy(day.tint, day.tint + 3, c.twin);
     c.uiPixels[0] = float(sceneWidth);
     c.uiPixels[1] = float(sceneHeight);
     return upscale ? effectPass(nightPipelines[code], world, worldState, rtvHandle(kRtvWorld), sceneWidth,

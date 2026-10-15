@@ -726,9 +726,10 @@ float4 grade_ps(PresentOut i) : SV_Target {
 }
 
 // 0.63, night: the world from its copy (t2) darker and colder - the bright stays (a fire, a lamp, a spark), and the
-// torches' light (after this) shines out of it. sharpen how much (0-1).
+// torches' light (after this) shines out of it. sharpen how much (0-1). 0.74: first the time of day's light (twinX,
+// twinY, twinW: its tint, 1 none).
 float4 night_ps(PresentOut i) : SV_Target {
-    float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb;
+    float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb * float3(twinX, twinY, twinW);
     float l = dot(c, float3(0.2126, 0.7152, 0.0722));
     float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * 0.45;
     float keep = smoothstep(0.72, 0.97, l);

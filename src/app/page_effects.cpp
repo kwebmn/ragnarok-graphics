@@ -48,6 +48,7 @@ const Effect kEffects[] = {
     {"effects.relief", {}, {"effects.relief_strength"}, {}, false},  // 0.71
     {"effects.floor_reflections", {}, {"effects.floor_reflect_strength"}, {}, false},  // 0.72
     {"effects.shafts", {}, {"effects.shafts_strength"}, {}, false},  // 0.73
+    {"effects.day_cycle", {}, {}, {}, false},  // 0.74
     {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, false},
     {"effects.torch",
      {"effects.torch_flame"},

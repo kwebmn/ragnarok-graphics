@@ -200,6 +200,11 @@ struct EffectSettings {
     // front), and on the fields rays stream from the sky past the map's edge. On by default.
     bool shafts = true;
     int shaftsStrength = 100;  // %, 0-200
+    // 0.74: the day going round (core/daylight.hpp): by the computer's clock the sun's shadows turn and lengthen
+    // and its light warms in the morning and the evening. dayNow: the minute of the day now - the driver's, each
+    // frame, not the file's (-1 off).
+    bool dayCycle = false;
+    int dayNow = -1;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

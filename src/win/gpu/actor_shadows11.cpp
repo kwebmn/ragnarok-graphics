@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "core/actor_shadows.hpp"
+#include "core/daylight.hpp"
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/effect_exe.hpp"
@@ -31,7 +32,6 @@ struct MaskVertex {  // as actor_shadows.cpp's (shadow_vs)
     float feet[2];
 };
 
-constexpr float kSun[2] = {0.83f, 0.56f};
 constexpr float kLength = 0.45f;
 
 template <typename T>
@@ -201,8 +201,11 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
             layers.push_back(l);
     }
     if (blobs.empty()) return;  // no character in view: the game's round shadows stay
-    std::vector<std::array<float, 2>> dirs(blobs.size(), std::array<float, 2>{kSun[0], kSun[1]});
-    std::vector<actor_shadows::ShadowQuad> quads = actor_shadows::cast(blobs, layers, dirs, kSun, kLength);
+    // 0.74: the sun's way and the shadows' length by the time of day (core/daylight.hpp)
+    const daylight::Light sun = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
+    std::vector<std::array<float, 2>> dirs(blobs.size(), std::array<float, 2>{sun.shadow[0], sun.shadow[1]});
+    std::vector<actor_shadows::ShadowQuad> quads =
+        actor_shadows::cast(blobs, layers, dirs, sun.shadow, kLength * sun.length);
     for (size_t i = 0; i < rounds.size(); ++i) {  // the round ones, under the feet
         const actor_shadows::Layer& r = rounds[i];
         actor_shadows::ShadowQuad sq{};

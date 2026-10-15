@@ -54,3 +54,10 @@ TEST(light_in_the_air_on_by_default) {
     CHECK(!parseConfig("[effects]\nshafts = 0\n").effects.shafts);
     CHECK(!effectsOff().shafts);
 }
+
+TEST(time_of_day_off_by_default_its_minute_the_drivers) {
+    // 0.74: the sun by the clock - off unless asked; the minute now is not the file's.
+    CHECK(!parseConfig("").effects.dayCycle && parseConfig("").effects.dayNow == -1);
+    CHECK(parseConfig("[effects]\nday_cycle = 1\n").effects.dayCycle);
+    CHECK(!effectsOff().dayCycle && effectsOff().dayNow == -1);
+}
