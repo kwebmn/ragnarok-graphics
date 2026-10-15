@@ -68,12 +68,16 @@ TEST(pack_build_sorts_the_games_files) {
 TEST(pack_build_takes_a_file_from_the_first_archive) {
     const std::string dir = tempDir();
     grfWith(dir + "/uaro.grf", {{"data\\texture\\a.bmp", "new"}, {"data\\texture\\b.bmp", "only here"}});
-    grfWith(dir + "/data.grf", {{"DATA\\TEXTURE\\A.BMP", "old"}, {"data\\model\\x.rsm", "not a picture"}});
+    grfWith(dir + "/data.grf", {{"DATA\\TEXTURE\\A.BMP", "old"}, {"data\\model\\x.rsm", "not a picture"},
+                                {"data\\palette\\hair.pal", "a palette"}});
     writeFile(dir + "/DATA.INI", "[Data]\n0=uaro.grf\n1=data.grf\n");
     pack::GameFiles files;
     std::string error;
     CHECK(files.open(dir, error));
-    CHECK(files.names() == (std::vector<std::string>{"data\\texture\\a.bmp", "data\\texture\\b.bmp"}));
+    // 0.49.4: the palettes too (the hair colours), though no picture of their own.
+    CHECK(files.names() == (std::vector<std::string>{"data\\palette\\hair.pal", "data\\texture\\a.bmp",
+                                                     "data\\texture\\b.bmp"}));
+    CHECK(pack::sourceOf("data\\palette\\hair.pal", pack::Choice()).type == pack::Source::None);
     std::vector<uint8_t> out;
     CHECK(files.read("data\\texture\\a.bmp", out) && std::string(out.begin(), out.end()) == "new");
     CHECK(files.read("data\\texture\\b.bmp", out) && std::string(out.begin(), out.end()) == "only here");

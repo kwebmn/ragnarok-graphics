@@ -36,6 +36,12 @@ bool wanted(const std::string& n) {
            (n.rfind("data\\sprite\\", 0) == 0 && endsWith(n, ".spr"));
 }
 
+// 0.49.4: what the game's archives are opened for - the pictures, and the palettes their frames are drawn with
+// (palettesOf: until 0.49.4 none was listed, so the hair colours were never made).
+bool listed(const std::string& n) {
+    return wanted(n) || (n.rfind("data\\palette\\", 0) == 0 && endsWith(n, ".pal"));
+}
+
 const std::string kInterface = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
 
 }  // namespace
@@ -88,7 +94,7 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
         size_t count = 0;
         if (ext == ".zip") {
             auto z = std::make_unique<zip::Index>();
-            if (!z->open(path, [](const std::string& n) { return wanted(n); }, why)) continue;
+            if (!z->open(path, [](const std::string& n) { return listed(n); }, why)) continue;
             for (const std::string& n : z->names())
                 if (!where_.count(n)) {
                     where_[n] = Place{archive, n};
@@ -101,7 +107,7 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
             if (!g->open(path, false, why)) continue;
             for (const std::string& stored : g->names()) {
                 const std::string n = zip::normalName(stored);
-                if (!wanted(n) || where_.count(n)) continue;
+                if (!listed(n) || where_.count(n)) continue;
                 where_[n] = Place{archive, stored};
                 ++count;
             }
