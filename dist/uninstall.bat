@@ -20,6 +20,9 @@ if exist "dgvoodoo\dgVoodoo.conf" del /f "dgvoodoo\dgVoodoo.conf"
 if exist "uaro-graphics.exe" del /f "uaro-graphics.exe"
 rem The list of pipelines met in the game is a cache of uaRO Graphics: it goes too.
 if exist "uaro-graphics-pipelines.txt" del /f "uaro-graphics-pipelines.txt"
+rem The shaders compiled at the first start and kept for the next ones are a cache too.
+if exist "uaro-graphics\shaders-32.bin" del /f "uaro-graphics\shaders-32.bin"
+if exist "uaro-graphics\shaders-64.bin" del /f "uaro-graphics\shaders-64.bin"
 rmdir "dgvoodoo" 2>nul
 echo.
 echo uaRO Graphics is removed and dgVoodoo is back in place.

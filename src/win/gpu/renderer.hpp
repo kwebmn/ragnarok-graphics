@@ -97,6 +97,8 @@ public:
     // way to show the picture; whether the GPU is lost.
     bool createTextureAs(uint32_t id, int width, int height, int levels);
     void setUpscaler(Upscaler* u);   // before setScale
+    // 0.39.5, before create(): the shaders' code is kept in this file between starts - compiled once, not each time.
+    void setShaderCache(const std::string& file);
     // Before create(): Direct3D 12 and DXGI from this module (Streamline's sl.interposer.dll, so that frame
     // generation can take over the swap chain) instead of the system's.
     void setApi(HMODULE module);

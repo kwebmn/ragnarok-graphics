@@ -191,6 +191,7 @@ int Host::run(const Args& a) {
     }
     out_.clear();
     WireWriter hello(out_);
+    renderer_.setShaderCache(a.dir + "\\uaro-graphics\\shaders-64.bin");  // 0.39.5
     if (!renderer_.create(error)) {
         LOG_ERROR("Direct3D 12: %s", error.c_str());
         hello.u8(0);

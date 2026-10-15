@@ -212,6 +212,7 @@ struct Renderer::Impl {
     HMODULE d3d12 = nullptr;
     HMODULE dxgi = nullptr;
     HMODULE compiler = nullptr;
+    std::string shaderCacheFile;  // 0.39.5: the shaders' code kept between starts (pipeline.cpp); "" none
     IDXGIFactory4* factory = nullptr;
     ID3D12Device* device = nullptr;
     ID3D12CommandQueue* queue = nullptr;

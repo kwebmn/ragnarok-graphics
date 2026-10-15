@@ -1270,6 +1270,8 @@ void Renderer::setMap(const std::string& map) {
     if (impl_->ai) impl_->ai->setMap(map);
 }
 
+void Renderer::setShaderCache(const std::string& file) { impl_->shaderCacheFile = file; }
+
 void Renderer::setGameDir(const std::string& dir) {
     if (remix_ || remote_) return;  // uaro-render64.exe is given it at its start
     impl_->mapWorld.setGameDir(dir);

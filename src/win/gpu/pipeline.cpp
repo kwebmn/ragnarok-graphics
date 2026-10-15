@@ -9,9 +9,11 @@
 
 #include "core/d3d7.hpp"
 #include "core/pipeline_key.hpp"
+#include "core/shader_cache.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/gpu/shaders.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::gpu {
 namespace {
@@ -36,7 +38,39 @@ std::string errorLine(const std::string& said) {
     return first.substr(0, 200);
 }
 
-bool compile(pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& out, std::string& error) {
+// 0.39.5: the shaders' code kept from the last start (core/shader_cache.hpp) and this start's, written back when any
+// of it had to be compiled.
+struct ShaderStore {
+    using CreateBlobFn = HRESULT(WINAPI*)(SIZE_T, ID3DBlob**);
+    CreateBlobFn createBlob = nullptr;
+    std::vector<shader_cache::Shader> kept;
+    std::vector<shader_cache::Shader> made;
+    int reused = 0;
+    int compiled = 0;
+};
+
+// Into a file of its own, then over the old one in one step: another client starting meanwhile reads the old one or
+// the new one, never a part of one.
+void keepShaders(const std::string& file, const std::vector<uint8_t>& bytes) {
+    const std::string part = file + "." + std::to_string(GetCurrentProcessId()) + ".tmp";
+    std::ofstream f(part, std::ios::binary | std::ios::trunc);
+    f.write(reinterpret_cast<const char*>(bytes.data()), std::streamsize(bytes.size()));
+    f.close();
+    if (!f || !MoveFileExA(part.c_str(), file.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+        DeleteFileA(part.c_str());
+        LOG_INFO("shaders: cannot keep them in %s - compiled again at the next start", file.c_str());
+    }
+}
+
+bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& out,
+             std::string& error) {
+    for (const shader_cache::Shader& s : store.kept) {
+        if (s.entry != entry || s.profile != profile || FAILED(store.createBlob(s.code.size(), &out))) continue;
+        std::memcpy(out->GetBufferPointer(), s.code.data(), s.code.size());
+        store.made.push_back(s);
+        ++store.reused;
+        return true;
+    }
     const char* src = shaderSource();
     // 0.39.2: the compiler's optimiser fails now and then with an internal error ("argument pulled into unrelated
     // predicate": ray_glow_ps on a player's machine) - then again with less of it.
@@ -58,7 +92,11 @@ bool compile(pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& 
             LOG_INFO("shader %s: compiled with less optimisation - %s", entry, errorLine(said).c_str());
         releaseCom(errors);
     }
-    return SUCCEEDED(hr);
+    if (FAILED(hr)) return false;
+    const auto* code = static_cast<const uint8_t*>(out->GetBufferPointer());
+    store.made.push_back({entry, profile, std::vector<uint8_t>(code, code + out->GetBufferSize())});
+    ++store.compiled;
+    return true;
 }
 
 // One D3D12 sampler from a D3D7 stage. D3D7 address modes and D3D12's share their numbers (WRAP 1 ... BORDER 4).
@@ -102,17 +140,30 @@ uint64_t samplerKey(const StageSetup& s, int aniso) {
 
 bool Renderer::Impl::createPipelines(std::string& error) {
     compiler = LoadLibraryA("d3dcompiler_47.dll");
-    const auto compileFn = compiler ? reinterpret_cast<pD3DCompile>(reinterpret_cast<void*>(GetProcAddress(compiler, "D3DCompile")))
+    const auto compileFn = compiler ? reinterpret_cast<pD3DCompile>(
+                                          reinterpret_cast<void*>(GetProcAddress(compiler, "D3DCompile")))
                                     : nullptr;
     if (!compileFn) {
         error = "d3dcompiler_47.dll is missing";
         return false;
     }
-    if (!compile(compileFn, "draw_vs", "vs_5_0", drawVs, error) || !compile(compileFn, "draw_ps", "ps_5_0", drawPs, error) ||
-        !compile(compileFn, "present_vs", "vs_5_0", presentVs, error) ||
-        !compile(compileFn, "present_ps", "ps_5_0", presentPs, error) ||
-        !compile(compileFn, "motion_ps", "ps_5_0", motionPs, error) ||
-        !compile(compileFn, "copy_ps", "ps_5_0", copyPs, error))
+    // 0.39.5: the code the last start compiled from this source, if it is kept.
+    LARGE_INTEGER freq, t0, t1;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&t0);
+    ShaderStore store;
+    store.createBlob = reinterpret_cast<ShaderStore::CreateBlobFn>(
+        reinterpret_cast<void*>(GetProcAddress(compiler, "D3DCreateBlob")));
+    const uint64_t key = shader_cache::keyOf(shaderSource());
+    std::string kept;
+    if (store.createBlob && !shaderCacheFile.empty() && win::readTextFile(shaderCacheFile, kept))
+        store.kept = shader_cache::unpack(key, std::vector<uint8_t>(kept.begin(), kept.end()));
+    if (!compile(store, compileFn, "draw_vs", "vs_5_0", drawVs, error) ||
+        !compile(store, compileFn, "draw_ps", "ps_5_0", drawPs, error) ||
+        !compile(store, compileFn, "present_vs", "vs_5_0", presentVs, error) ||
+        !compile(store, compileFn, "present_ps", "ps_5_0", presentPs, error) ||
+        !compile(store, compileFn, "motion_ps", "ps_5_0", motionPs, error) ||
+        !compile(store, compileFn, "copy_ps", "ps_5_0", copyPs, error))
         return false;
     // 0.18, 0.19: the effects' shaders - one that does not compile leaves its effect off, the rest draws on.
     const struct {
@@ -140,11 +191,16 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"clouds_apply_ps", "ps_5_0", &cloudsApplyPs}};
     for (const auto& e : effects) {
         std::string why;
-        if (!compile(compileFn, e.entry, e.profile, *e.blob, why)) {
+        if (!compile(store, compileFn, e.entry, e.profile, *e.blob, why)) {
             *e.blob = nullptr;
             LOG_ERROR("%s: its effect stays off", why.c_str());
         }
     }
+    QueryPerformanceCounter(&t1);
+    LOG_INFO("shaders: %d kept from the last start, %d compiled, in %.0f ms", store.reused, store.compiled,
+             double(t1.QuadPart - t0.QuadPart) * 1000.0 / double(freq.QuadPart));
+    if (store.compiled > 0 && !shaderCacheFile.empty())
+        keepShaders(shaderCacheFile, shader_cache::pack(key, store.made));
 
     D3D12_DESCRIPTOR_RANGE srvRange{};
     srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;

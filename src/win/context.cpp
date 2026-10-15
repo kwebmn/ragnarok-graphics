@@ -90,6 +90,7 @@ bool Context::open(std::string& error) {
         else
             LOG_ERROR("bridge: %s; drawing in the game's process", why.c_str());
     }
+    r->setShaderCache(gameDir() + "\\uaro-graphics\\shaders-32.bin");  // 0.39.5
     if (!remote && !r->create(error)) {
         delete r;
         return false;
