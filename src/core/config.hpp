@@ -214,6 +214,10 @@ struct EffectSettings {
     bool bloom = true;
     int bloomStrength = 60;  // %, 0-200
     bool filmic = true;
+    // 0.79: each region its colours (core/region_look.hpp): Payon warm and green, Niflheim cold and pale, Morroc
+    // sun-bleached... On by default.
+    bool regionLooks = true;
+    int regionLooksStrength = 100;  // %, 0-100
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

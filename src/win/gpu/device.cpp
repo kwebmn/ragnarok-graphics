@@ -12,6 +12,7 @@
 #include "core/d3d7.hpp"
 #include "core/foliage.hpp"
 #include "core/png_write.hpp"
+#include "core/region_look.hpp"
 #include "core/effect_light.hpp"
 #include "core/game_camera.hpp"
 #include "core/pipeline_key.hpp"
@@ -1538,7 +1539,8 @@ void Renderer::setIconSink(IconSink sink, void* context) {
 }
 
 void Renderer::setMap(const std::string& map) {
-    if (remix_ || d3d11_) return;
+    if (remix_) return;
+    if (d3d11_) return d3d11_->setMap(map);  // 0.79: the region's look
     if (remote_) return remote_->setMap(map);
     impl_->mapWorld.setMap(map);
     impl_->mapName = map;  // 0.31: lava's maps
@@ -1546,6 +1548,8 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
     impl_->mapWeather = weather::of(map);  // 0.39: its weather
+    impl_->mapRegion = region_look::of(map, 100).region[0] != 0;  // 0.79: its look
+    if (impl_->mapRegion) LOG_INFO("region: %s (%s)", region_look::of(map, 100).region, map.c_str());
     impl_->weatherLogged = false;
     if (impl_->ai) impl_->ai->setMap(map);
 }

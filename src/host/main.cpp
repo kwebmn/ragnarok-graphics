@@ -426,6 +426,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.bloom = rd.u8() != 0;  // 0.78
             e.bloomStrength = rd.i32();
             e.filmic = rd.u8() != 0;
+            e.regionLooks = rd.u8() != 0;  // 0.79
+            e.regionLooksStrength = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

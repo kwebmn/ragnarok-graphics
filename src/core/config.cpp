@@ -111,6 +111,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.regionLooks = false;
     e.filmic = false;
     e.bloom = false;
     e.sunShadows = false;
@@ -139,6 +140,7 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.regionLooks ||
            e.filmic ||
            e.bloom ||
            e.sunShadows || e.softParticles || e.rimLight || e.sky || e.motes ||
@@ -444,6 +446,10 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 200, c.effects.bloomStrength);
         } else if (key == "effects.filmic") {
             setBool(val, c.effects.filmic);
+        } else if (key == "effects.region_looks") {
+            setBool(val, c.effects.regionLooks);
+        } else if (key == "effects.region_looks_strength") {
+            toInt(val, 0, 100, c.effects.regionLooksStrength);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

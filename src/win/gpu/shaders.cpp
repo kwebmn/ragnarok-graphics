@@ -733,9 +733,11 @@ float4 grade_ps(PresentOut i) : SV_Target {
 
 // 0.63, night: the world from its copy (t2) darker and colder - the bright stays (a fire, a lamp, a spark), and the
 // torches' light (after this) shines out of it. sharpen how much (0-1). 0.74: first the time of day's light (twinX,
-// twinY, twinW: its tint, 1 none).
+// twinY, twinW: its tint, 1 none); 0.79: and the region's look - its tint in that too, its saturation 1 + sourceRect.w.
 float4 night_ps(PresentOut i) : SV_Target {
     float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb * float3(twinX, twinY, twinW);
+    float grey = dot(c, float3(0.2126, 0.7152, 0.0722));
+    c = max(lerp(float3(grey, grey, grey), c, 1.0 + sourceRect.w), 0.0);
     float l = dot(c, float3(0.2126, 0.7152, 0.0722));
     float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * 0.45;
     float keep = smoothstep(0.72, 0.97, l);
@@ -908,6 +910,21 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
     float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
     float3 n = normalize(cross(dy, dx));
     if (dot(n, p) > 0.0) n = -n;  // towards the camera
+    // 0.79, round characters (with the rim light, sharpen): something narrow in front of what is behind it - a
+    // character, a monster, a post - is lit as if round across: its normal turns towards the nearer of its edges.
+    if (sharpen > 0.0) {
+        float stepPx = max(1.0, scale * 1.5);
+        float dl = 0.0, dr = 0.0;
+        [loop] for (int k = 1; k <= 16 && (dl == 0.0 || dr == 0.0); ++k) {
+            int2 o = int2(int(round(float(k) * stepPx)), 0);
+            if (dl == 0.0 && viewDepth(sceneDepth.Load(int3(max(wp - o, int2(0, 0)), 0))) - p.z > 4.0) dl = float(k);
+            if (dr == 0.0 && viewDepth(sceneDepth.Load(int3(min(wp + o, last), 0))) - p.z > 4.0) dr = float(k);
+        }
+        if (dl > 0.0 && dr > 0.0) {
+            float across = (dl - dr) / (dl + dr);  // -1 at the left edge, 1 at the right
+            n = normalize(n + float3(across * 1.3, 0.0, 0.0) * length(n));
+        }
+    }
     float light = 0.0;
     float3 colour = float3(0.0, 0.0, 0.0);
     int count = int(footprint);

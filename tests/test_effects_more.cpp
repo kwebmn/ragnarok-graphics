@@ -87,3 +87,9 @@ TEST(bloom_and_filmic_on_by_default) {
     CHECK(c.effects.bloom && c.effects.bloomStrength == 60 && c.effects.filmic);
     CHECK(!effectsOff().bloom && !effectsOff().filmic);
 }
+
+TEST(region_looks_on_by_default) {
+    // 0.79
+    CHECK(parseConfig("").effects.regionLooks && parseConfig("").effects.regionLooksStrength == 100);
+    CHECK(!effectsOff().regionLooks);
+}

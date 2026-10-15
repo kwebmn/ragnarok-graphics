@@ -217,6 +217,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxBloomStrengthHint, " %"},
         {"effects", "filmic", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFilmic,
          Text::FxFilmicHint, ""},
+        {"effects", "region_looks", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRegionLooks,
+         Text::FxRegionLooksHint, ""},
+        {"effects", "region_looks_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {},
+         Text::FxRegionLooksStrength, Text::FxRegionLooksStrengthHint, " %"},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -403,6 +407,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.bloom") return c.effects.bloom ? "1" : "0";
     if (k == "effects.bloom_strength") return std::to_string(c.effects.bloomStrength);
     if (k == "effects.filmic") return c.effects.filmic ? "1" : "0";
+    if (k == "effects.region_looks") return c.effects.regionLooks ? "1" : "0";
+    if (k == "effects.region_looks_strength") return std::to_string(c.effects.regionLooksStrength);
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

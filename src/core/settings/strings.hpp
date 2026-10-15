@@ -163,6 +163,8 @@ enum class Text : uint16_t {
     FxSunShadows, FxSunShadowsHint, FxSunShadowsStrength, FxSunShadowsStrengthHint,
     // 0.78
     FxBloom, FxBloomHint, FxBloomStrength, FxBloomStrengthHint, FxFilmic, FxFilmicHint,
+    // 0.79
+    FxRegionLooks, FxRegionLooksHint, FxRegionLooksStrength, FxRegionLooksStrengthHint,
     Count
 };
 

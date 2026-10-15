@@ -19,6 +19,7 @@
 #include "core/foliage.hpp"
 #include "core/game_camera.hpp"
 #include "core/png_write.hpp"
+#include "core/region_look.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
 #include "core/twin_grid.hpp"
@@ -1223,11 +1224,13 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
 void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its strength now
     nightDone_ = true;
     const bool night = effects_.night && effects_.nightNow > 0, day = effects_.dayCycle && effects_.dayNow >= 0;
-    if ((!night && !day) || !nightPs_ || !target_.texture) return;
+    const region_look::Look look = region_look::of(map_, effects_.regionLooks ? effects_.regionLooksStrength : 0);
+    if ((!night && !day && !look.region[0]) || !nightPs_ || !target_.texture) return;
     Constants c{};
     c.sharpen = night ? float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f : 0.0f;
     const daylight::Light light = daylight::at(day ? effects_.dayNow : -1);  // 0.74: the time of day's tint
-    std::copy(light.tint, light.tint + 3, c.twin);
+    for (int k = 0; k < 3; ++k) c.twin[k] = light.tint[k] * look.tint[k];  // 0.79: and the region's look
+    c.sourceRect[3] = look.saturation - 1.0f;
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
     worldPass(nightPs_, c);

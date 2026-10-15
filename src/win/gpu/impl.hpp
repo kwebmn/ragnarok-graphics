@@ -848,10 +848,12 @@ struct Renderer::Impl {
     bool applySunShadows();  // once a frame, before the characters (as the soft shadows); false: lost
     bool applyAo();  // once a frame (aoDone); false: lost
     bool gradeWanted() const { return effects.grade; }
-    bool nightDue() const {  // 0.74: also for the time of day's tint
-        return ((effects.night && effects.nightNow > 0) || (effects.dayCycle && effects.dayNow >= 0)) && nightPs &&
-               groundDrawn && !nightDone;
+    bool nightDue() const {  // 0.74: also for the time of day's tint; 0.79: and the region's look
+        return ((effects.night && effects.nightNow > 0) || (effects.dayCycle && effects.dayNow >= 0) ||
+                (effects.regionLooks && mapRegion)) &&
+               nightPs && groundDrawn && !nightDone;
     }
+    bool mapRegion = false;  // 0.79: the map is of a region with a look of its own (core/region_look.hpp)
     bool applyNight();  // 0.63: once a frame, before the torches' light; false: lost
     bool waterfallsDue() const { return effects.water && waterfallPs && groundDrawn && !waterfallsDone; }
     bool applyWaterfalls();  // 0.65: once a frame, after the torches; false: lost
