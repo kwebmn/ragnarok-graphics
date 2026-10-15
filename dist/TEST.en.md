@@ -1,3 +1,15 @@
+# uaRO Graphics 0.78.0 — testing
+
+What is new in 0.78.0 (Direct3D 12):
+- **Bloom of bright places** (Effects → "Bloom of bright places" and its strength; on by default, 60 %). The brightest
+  parts of the picture - sunlit tiles, snow, windows, fire - glow softly around (before, only the effects glowed).
+- **Film-like colours** (Effects; on by default). What is bright (with the bloom) rolls off softly into white instead
+  of clipping into a flat patch; a light contrast, the middle tones stay as they were.
+- In the `GPU: effects a frame` line - `bloom`.
+
+How to test: Lutie (snow), Morroc by day, fires at night; is it too soft or bright; Pause - compare; if the picture got
+darker or more contrasty than you like, turn "Film-like colours" off and tell.
+
 # uaRO Graphics 0.77.0 — testing
 
 What is new in 0.77.0 (Direct3D 12):
