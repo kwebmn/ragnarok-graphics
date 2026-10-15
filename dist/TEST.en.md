@@ -1,3 +1,13 @@
+# uaRO Graphics 0.51.1 — testing
+
+What is new in 0.51.1 (from the first report, R-4ZK5KR):
+- **The real video memory.** Windows tells a 32-bit program (the settings app) no more than 3072 MB: the report said
+  "at least 3072 MB" of a 16 GB card, and "Set up automatically" would have taken it for a small card (under 4 GB).
+  Now the number comes from the display driver's own key in the registry (16 GB is 16 GB); where there is none, the
+  automatic setup counts such a card as a middle one, not a small one.
+
+How to test: Diagnostics shows the card's full memory; "Set up automatically" says "a strong graphics card".
+
 # uaRO Graphics 0.51.0 — testing
 
 What is new in 0.51.0 ("logs and settings to the site, to debug for each device"):
