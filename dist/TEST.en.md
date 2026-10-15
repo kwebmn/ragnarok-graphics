@@ -1,3 +1,15 @@
+# uaRO Graphics 0.84.0 — testing
+
+The picture by default is as before 0.77 ("the lighting effects are too much"): off by default now - the shadows of
+houses and trees, the bloom of bright places, film-like colours, the regions' colours, footprints and dust,
+thunderstorms, the skills' sparks, the smooth map change and the light in the air (the halo about fire and skills). The
+round characters (0.79) are apart from the rim light - their own box "Round characters", off as well. The code stays:
+any of them comes back with its box on the Effects page.
+
+One turned on by hand in the settings app is written in uaro-graphics.ini and stays on - clear its box.
+
+How to test: the same square - it should look as before 0.77 (no big shadows on the tiles, no halo by Blessing).
+
 # uaRO Graphics 0.83.1 — testing
 
 Fixed by the square's screenshot (0.83.0): the sunlit tiles went nearly white.
