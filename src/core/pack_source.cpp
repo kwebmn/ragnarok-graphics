@@ -47,9 +47,13 @@ bool decodeTga(const uint8_t* data, size_t size, std::vector<uint32_t>& argb, in
     if (!data || size < 18) return false;
     const uint32_t idLength = data[0], mapType = data[1], type = data[2], depth = data[16], descriptor = data[17];
     const int w = int(le16(data + 12)), h = int(le16(data + 14));
-    if (mapType != 0 || (type != 2 && type != 10) || (depth != 24 && depth != 32) || w <= 0 || h <= 0) return false;
+    if (mapType != 0 || (type != 2 && type != 10) || (depth != 24 && depth != 32) || w <= 0 || h <= 0 || w > 8192 ||
+        h > 8192)
+        return false;
     const size_t bpp = depth / 8, n = size_t(w) * size_t(h);
     size_t at = 18 + idLength;
+    // No more pixels than the data can hold - a packet of 128 at most per 1 + bpp bytes - before any are made.
+    if (at > size || (type == 10 && n > (size - at) / (1 + bpp) * 128)) return false;
     std::vector<uint32_t> pixels(n);
     const auto pixel = [&](size_t i) -> uint32_t {
         const uint8_t* p = data + i;

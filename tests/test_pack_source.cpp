@@ -92,6 +92,23 @@ TEST(pack_source_tga_with_alpha_as_a4r4g4b4) {
     CHECK_EQ(p.argb[1], 0x88FF0000u);
 }
 
+TEST(pack_source_refuses_a_tga_past_the_largest_side) {
+    // 0.44: as a BMP - past 8192 a side a header is broken, not a texture: refused before anything is made of it.
+    std::vector<uint8_t> t = {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    put16(t, 8193);
+    put16(t, 1);
+    t.push_back(24);
+    t.push_back(0x20);
+    t.resize(t.size() + 8193 * 3, 0x40);
+    std::vector<uint32_t> argb;
+    int w = 0, h = 0;
+    bool alpha = false;
+    CHECK(!pack::decodeTga(t.data(), t.size(), argb, w, h, alpha));
+    t[12] = 0x00;  // 8192: taken
+    t[13] = 0x20;
+    CHECK(pack::decodeTga(t.data(), t.size(), argb, w, h, alpha) && w == 8192 && h == 1);
+}
+
 TEST(pack_source_interface_pictures_as_crisp_text_sees_them) {
     const std::vector<uint8_t> b = bmp(2, 1, 24, {0xFA05FC, 0x203040}, {});  // magenta at 5 bits, a colour
     pack::Picture p;

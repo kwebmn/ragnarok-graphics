@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <deque>
+#include <exception>
 #include <map>
 #include <unordered_set>
 #include <utility>
@@ -35,6 +36,18 @@ std::string utf8Of(const std::string& cp949) {
 }
 
 bool exists(const std::string& path) { return GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES; }
+
+// A file broken past what the readers check (no memory for what its header claims): none of its pictures, a line in
+// the log - the rest of the game's files go on.
+std::vector<pack::Picture> picturesOf(const std::string& name, const pack::Source& s, const std::vector<uint8_t>& data,
+                                      const pack::Choice& c) {
+    try {
+        return pack::picturesOf(s, data.data(), data.size(), c);
+    } catch (const std::exception& e) {
+        LOG_ERROR("texture pack: %s left out (%s)", utf8Of(name).c_str(), e.what());
+        return {};
+    }
+}
 
 // The status file, replaced whole (the settings app never reads half of one); at most every half second unless now.
 class StatusFile {
@@ -267,7 +280,7 @@ int Builder::check() {
         }
         s_.current = utf8Of(f.first);
         if (files_.read(f.first, data))
-            for (const pack::Picture& p : pack::picturesOf(f.second, data.data(), data.size(), a_.choice))
+            for (const pack::Picture& p : picturesOf(f.first, f.second, data, a_.choice))
                 if (keys.insert(p.key).second) ++groups[int(p.group)];
         ++s_.filesDone;
         status_.write(s_);
@@ -356,7 +369,7 @@ int Builder::build() {
         s_.current = utf8Of(list_[i].first);
         bool some = false;
         if (files_.read(list_[i].first, data))
-            for (const pack::Picture& p : pack::picturesOf(list_[i].second, data.data(), data.size(), a_.choice)) {
+            for (const pack::Picture& p : picturesOf(list_[i].first, list_[i].second, data, a_.choice)) {
                 const std::string name = pack::pictureName(p.group, p.key);
                 if (!seen.insert(name).second) continue;
                 kinds_[name] = list_[i].second.kind;
@@ -405,7 +418,7 @@ int Builder::build() {
     for (size_t i : todo) {
         s_.current = utf8Of(list_[i].first);
         if (!files_.read(list_[i].first, data)) data.clear();
-        for (pack::Picture& p : pack::picturesOf(list_[i].second, data.data(), data.size(), a_.choice)) {
+        for (pack::Picture& p : picturesOf(list_[i].first, list_[i].second, data, a_.choice)) {
             const std::string name = pack::pictureName(p.group, p.key);
             if (!done.insert(name).second) continue;
             std::string why;
