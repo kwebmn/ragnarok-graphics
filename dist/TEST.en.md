@@ -1,3 +1,22 @@
+# uaRO Graphics 0.49.0 — testing
+
+What is new in 0.49.0 (after "the hair and the loading screens are not upscaled"):
+- **Hair in every colour.** The game draws a head with its hair colour's palette (`palette\머리\...`), so its frames
+  were not the pack's. The builder now makes every head with every hair palette of the game's files.
+- **The .jpg pictures: the loading screens and the water.** The builder reads them now (it read only BMP, TGA and SPR).
+  The game decodes .jpg with its own ijl15.dll, a level or two apart from ours, so these pictures are found by their
+  likeness (a small copy kept in the pack's index), not by their exact key.
+- **Updates from the settings app:** Service → Updates → "Check for updates" asks GitHub for the newest version;
+  "Update now" starts update.bat and closes the app.
+
+How to test:
+1. update.bat (or Update now in the settings, once 0.49 is installed).
+2. Texture pack page → "Make the pack": it goes on with the pictures already made and adds the hair colours and the
+   .jpg ones. Send the speed and the time it shows.
+3. In the game: hair of different colours, the loading screens, water - improved (Pause to compare). In the log
+   `not in the pack - ...` should show fewer.
+4. Service → Updates → Check for updates: it shows 0.49.0 as the newest.
+
 # uaRO Graphics 0.48.0 — testing
 
 What is new in 0.48.0:
