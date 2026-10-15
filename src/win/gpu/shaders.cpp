@@ -344,12 +344,28 @@ float4 copy_ps(PresentOut i) : SV_Target {
     return tex0.SampleGrad(samp0, clamp(i.uv, sourceClamp.xy, sourceClamp.zw), dx, dy);
 }
 
+// 0.65: [display] hdr - the picture (sRGB) to HDR10 (PQ, the BT.2020 colours): white at twinX nits, what is near
+// white a little brighter (the fires, the sparks, the lamps) - up to twice it.
+float3 toPq(float3 srgb, float paper) {
+    float3 lin = lerp(pow((srgb + 0.055) / 1.055, 2.4), srgb / 12.92, step(srgb, 0.04045));
+    float top = max(lin.r, max(lin.g, lin.b));
+    lin *= 1.0 + smoothstep(0.75, 1.0, top);
+    float3 c;
+    c.r = dot(lin, float3(0.6274, 0.3293, 0.0433));
+    c.g = dot(lin, float3(0.0691, 0.9195, 0.0114));
+    c.b = dot(lin, float3(0.0164, 0.0880, 0.8956));
+    c *= paper / 10000.0;
+    float3 p = pow(max(c, 0.0), 0.1593017578125);
+    return pow((0.8359375 + 18.8515625 * p) / (1.0 + 18.6875 * p), 78.84375);
+}
+
 float4 present_ps(PresentOut i) : SV_Target {
     float2 dx = ddx(i.uv);  // one destination pixel in the source; outside any branch
     float2 dy = ddy(i.uv);
     float3 c = fetch(i.uv, dx, dy);
     if (sharpen >= 0.0)
         c = cas(c, fetch(i.uv - dy, dx, dy), fetch(i.uv + dy, dx, dy), fetch(i.uv - dx, dx, dy), fetch(i.uv + dx, dx, dy));
+    if (twinX > 0.0) c = toPq(saturate(c), twinX);  // 0.65: onto an HDR10 back buffer
     return float4(c, 1);
 }
 
@@ -1194,6 +1210,26 @@ float4 splash_ps(PresentOut i) : SV_Target {
     float ring = exp(-(dist - radius) * (dist - radius) / 0.0012) * (1.0 - phase);
     if (ring < 0.02) discard;
     return float4(0.86, 0.9, 1.0, saturate(ring * 0.4));
+}
+
+// 0.65, the waterfalls the maps' makers placed (821: bra_fild01's), which uaRO.exe never shows (waterfalls.cpp): a
+// sheet of falling water - streaks running down it, foam and mist at its foot - hidden behind what stands nearer (the
+// picture's depth, t3). uv: across 0-1, down 0-1; az.x how much, az.y the sheet's view depth; sharpen the time.
+float4 waterfall_ps(ShadowIn i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    float z = viewDepth(sceneDepth.Load(int3(wp, 0)));
+    if (z < i.az.y - 4.0) discard;  // a rock, a tree in front of it
+    float u = i.uv.x, v = i.uv.y, t = sharpen;
+    float lane = floor(u * 36.0);
+    float speed = 1.1 + 0.9 * hash12(float2(lane, 3.0));
+    float fall = frac(v * 2.5 - t * speed + hash12(float2(lane, 9.0)));
+    float streak = smoothstep(0.0, 0.2, fall) * (1.0 - smoothstep(0.5, 1.0, fall));
+    float edge = smoothstep(0.0, 0.15, u) * smoothstep(0.0, 0.15, 1.0 - u) * smoothstep(0.0, 0.05, v);
+    float foam = smoothstep(0.7, 1.0, v) * (0.75 + 0.25 * sin(t * 3.0 + u * 23.0));
+    float a = ((0.3 + 0.35 * streak) * i.az.x + foam * 0.45) * edge;
+    if (a < 0.01) discard;
+    float3 c = lerp(float3(0.58, 0.74, 0.86), float3(0.94, 0.97, 1.0), saturate(streak * 0.6 + foam));
+    return float4(c, saturate(a));
 }
 
 // The mask softened: nine taps along sourceRect.xy (across, then down), uiPixels.zw the mask's size.

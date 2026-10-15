@@ -438,6 +438,8 @@ Config parseConfig(const std::string& text) {
         } else if (key == "frames.frame_generation") {
             if (val == "off") c.frameGeneration = 0;
             if (val == "2x" || val == "3x" || val == "4x") c.frameGeneration = val[0] - '0';
+        } else if (key == "display.hdr") {
+            setBool(val, c.hdr);
         } else if (key == "display.ui_native") {
             setBool(val, c.uiNative);
         } else if (key == "frames.fps_counter") {

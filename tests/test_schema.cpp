@@ -85,6 +85,7 @@ TEST(schema_live_keys_are_the_specs) {
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "renderer.remix" &&
                                 k != "renderer.api" && k != "renderer.gpu" && k != "report.auto" &&
                                 k != "frames.fps_counter" && k != "display.ui_native" &&
+                                k != "display.hdr" &&
                                 k != "quality.dlss" &&
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
                                 k.compare(0, 3, "ai.") != 0));

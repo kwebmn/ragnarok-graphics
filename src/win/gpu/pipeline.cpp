@@ -193,7 +193,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"clouds_ps", "ps_5_0", &cloudsPs},            {"haze_ps", "ps_5_0", &hazePs},
                    {"heat_ps", "ps_5_0", &heatPs},                {"weather_ps", "ps_5_0", &weatherPs},
                    {"clouds_apply_ps", "ps_5_0", &cloudsApplyPs}, {"night_ps", "ps_5_0", &nightPs},
-                   {"splash_ps", "ps_5_0", &splashPs}};
+                   {"splash_ps", "ps_5_0", &splashPs},            {"waterfall_ps", "ps_5_0", &waterfallPs}};
     store.sink = startSink;  // 0.40
     store.context = startContext;
     store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'
@@ -326,6 +326,30 @@ bool Renderer::Impl::createUpscalePipelines() {
         }
     }
     return true;
+}
+
+// 0.65: the picture onto the HDR10 back buffer (present_ps, toPq).
+ID3D12PipelineState* Renderer::Impl::hdrPipeline() {
+    if (presentHdrPipeline) return presentHdrPipeline;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
+    p.pRootSignature = root;
+    p.VS = {presentVs->GetBufferPointer(), presentVs->GetBufferSize()};
+    p.PS = {presentPs->GetBufferPointer(), presentPs->GetBufferSize()};
+    p.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    p.SampleMask = UINT_MAX;
+    p.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+    p.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    p.RasterizerState.DepthClipEnable = TRUE;
+    p.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    p.NumRenderTargets = 1;
+    p.RTVFormats[0] = DXGI_FORMAT_R10G10B10A2_UNORM;
+    p.SampleDesc.Count = 1;
+    if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                   reinterpret_cast<void**>(&presentHdrPipeline)))) {
+        LOG_ERROR("HDR: the present pipeline failed");
+        presentHdrPipeline = nullptr;
+    }
+    return presentHdrPipeline;
 }
 
 ID3D12PipelineState* Renderer::Impl::presentPipelineFor(UINT n) {

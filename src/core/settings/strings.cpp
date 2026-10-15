@@ -1439,6 +1439,15 @@ const Entry kTexts[] = {
     {"100 % a light breeze, 200 % a strong wind.",
      "100 % — легкий вітерець, 200 % — сильний вітер.",
      "100 % — лёгкий ветерок, 200 % — сильный ветер."},
+    {"HDR",
+     "HDR",
+     "HDR"},
+    {"Direct3D 12 on a monitor with Windows' HDR on: the picture in HDR10, white at 200 nits, the fires and sparks a "
+     "little brighter than white. Not with DLSS frame generation. A test.",
+     "Direct3D 12 на моніторі з увімкненим HDR у Windows: картинка в HDR10, білий 200 ніт, вогні й іскри трохи "
+     "яскравіші за білий. Не з генерацією кадрів DLSS. Перевірка.",
+     "Direct3D 12 на мониторе с включённым HDR в Windows: картинка в HDR10, белый 200 нит, огни и искры чуть ярче "
+     "белого. Не с генерацией кадров DLSS. Проверка."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

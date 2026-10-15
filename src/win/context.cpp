@@ -363,6 +363,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.foreground = foreground;
     o.vsyncSetting = config.vsync;
     o.screenshot = screenshot;
+    o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
     renderer->present(window, out.cx, out.cy, source, o);
     fps_.present(window, fpsShown_);
     ++stats_.frames;

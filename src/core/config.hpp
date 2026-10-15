@@ -230,7 +230,10 @@ struct Config {
     bool fpsCounter = false;
     // 0.62: [display] ui_native - with render_scale over 100 % on Direct3D 12 (no DLSS): the world drawn larger and
     // made smaller, the interface drawn at the screen's own pixels (not drawn larger and made smaller with it)
-    bool uiNative = false;  // 0.54: [frames] fps_counter - the frame counter at the start (win/fps_overlay.hpp)
+    bool uiNative = false;
+    // 0.65: [display] hdr - Direct3D 12 on a monitor with Windows' HDR on: an HDR10 picture, the brightest a little
+    // over white
+    bool hdr = false;  // 0.54: [frames] fps_counter - the frame counter at the start (win/fps_overlay.hpp)
     int frameGeneration = 0;  // part 3: [frames] frame_generation = off, 2x, 3x, 4x - DLSS frame generation (DLSS on)
     bool allowTearing = false;  // let G-SYNC / FreeSync monitors show frames as soon as they are ready
     LogLevel logLevel = LogLevel::Info;

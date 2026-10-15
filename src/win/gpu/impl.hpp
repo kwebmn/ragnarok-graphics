@@ -462,6 +462,15 @@ struct Renderer::Impl {
     ID3DBlob* weatherPs = nullptr;
     ID3D12PipelineState* weatherPipelines[4] = {};
     ID3DBlob* splashPs = nullptr;  // 0.64: the rain's splashes
+    ID3DBlob* waterfallPs = nullptr;  // 0.65: the maps' waterfalls (waterfalls.cpp)
+    // 0.65: [display] hdr - the back buffer HDR10 (R10G10B10A2, PQ) where the window's monitor shows HDR
+    bool hdrWanted = false, hdrOn = false, hdrDecided = false, blitHdr = false;
+    DXGI_FORMAT swapFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+    ID3D12PipelineState* presentHdrPipeline = nullptr;
+    void decideHdr();
+    ID3D12PipelineState* hdrPipeline();
+    ID3D12PipelineState* waterfallPipelines[4] = {};
+    bool waterfallsDone = false, waterfallsLogged = false;
     ID3D12PipelineState* splashPipelines[4] = {};
     bool weatherDone = false;
     bool weatherLogged = false;
@@ -725,6 +734,7 @@ struct Renderer::Impl {
         waterCopied = false;  // 0.19: its water copies what is under it anew
         aoDone = groundDrawn = gradeDone = dofDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
+        waterfallsDone = false;  // 0.65
         torchFlames.clear();
         fireSparks.clear();
         fireflyDraws.clear();
@@ -746,6 +756,9 @@ struct Renderer::Impl {
     bool gradeWanted() const { return effects.grade; }
     bool nightDue() const { return effects.night && effects.nightNow > 0 && nightPs && groundDrawn && !nightDone; }
     bool applyNight();  // 0.63: once a frame, before the torches' light; false: lost
+    bool waterfallsDue() const { return effects.water && waterfallPs && groundDrawn && !waterfallsDone; }
+    bool applyWaterfalls();  // 0.65: once a frame, after the torches; false: lost
+    ID3D12PipelineState* waterfallPipeline(UINT samples);
     bool gradeDue() const { return gradeWanted() && groundDrawn && !gradeDone; }
     bool applyGrade();  // once a frame (gradeDone), the world drawn: before its glow and the interface; false: lost
     // The world's shadows if they are due, then its colours: before the interface, a present or a read of the

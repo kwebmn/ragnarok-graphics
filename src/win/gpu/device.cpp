@@ -519,7 +519,10 @@ bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
                           const float srcRect[4], D3D12_CPU_DESCRIPTOR_HANDLE dst, const Rect& dstRect, int dstW,
                           int dstH, float sharpen, UINT dstSamples, bool over, bool copy) {
     if (dstRect.empty() || srcW <= 0 || srcH <= 0) return true;  // nothing to copy
-    ID3D12PipelineState* pso = copy ? copyPipeline : over ? overPipeline : presentPipelineFor(dstSamples);
+    ID3D12PipelineState* pso = copy       ? copyPipeline
+                               : over     ? overPipeline
+                               : blitHdr  ? hdrPipeline()  // 0.65
+                                          : presentPipelineFor(dstSamples);
     if (!pso) return true;  // logged when it failed: the copy is skipped
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
@@ -554,6 +557,7 @@ bool Renderer::Impl::blit(ID3D12Resource* src, D3D12_RESOURCE_STATES& srcState, 
     c.footprint = std::max((srcRect[2] - srcRect[0]) / float(dstRect.width()),
                            (srcRect[3] - srcRect[1]) / float(dstRect.height()));
     c.sharpen = sharpen;  // only the picture on screen: reads and writes of the frame stay as the game drew it
+    if (blitHdr && !copy && !over) c.twin[0] = 200.0f;  // 0.65: white's nits on the HDR10 back buffer
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
     list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
@@ -966,16 +970,71 @@ void Renderer::Impl::releaseSwapChain() {
     releaseCom(swapChain);
     window = nullptr;
     swapWidth = swapHeight = 0;
+    swapFormat = DXGI_FORMAT_B8G8R8A8_UNORM;  // 0.65: a new one starts as SDR
+    hdrOn = hdrDecided = false;
+}
+
+// 0.65: HDR10 where it is asked for and the monitor shows HDR (Windows' HDR on): the back buffers become 10 bits a
+// channel and the swap chain PQ / BT.2020; else (again) the 8-bit sRGB ones. Not with frame generation or a
+// composition surface.
+void Renderer::Impl::decideHdr() {
+    hdrDecided = true;
+    if (!swapChain) return;
+    bool can = false;
+    if (hdrWanted && !presentSurface && !(upscaler && upscaler->generates())) {
+        IDXGIOutput* out = nullptr;
+        IDXGIOutput6* out6 = nullptr;
+        DXGI_OUTPUT_DESC1 d{};
+        if (SUCCEEDED(swapChain->GetContainingOutput(&out)) &&
+            SUCCEEDED(out->QueryInterface(__uuidof(IDXGIOutput6), reinterpret_cast<void**>(&out6))) &&
+            SUCCEEDED(out6->GetDesc1(&d)))
+            can = d.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+        releaseCom(out6);
+        releaseCom(out);
+        UINT support = 0;
+        can = can && SUCCEEDED(swapChain->CheckColorSpaceSupport(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020,
+                                                                 &support)) &&
+              (support & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT);
+        if (!can) LOG_INFO("HDR: the monitor does not show HDR now (Windows' HDR off?) - the picture stays SDR");
+    }
+    const DXGI_FORMAT want = can ? DXGI_FORMAT_R10G10B10A2_UNORM : DXGI_FORMAT_B8G8R8A8_UNORM;
+    if (want != swapFormat) {
+        waitIdle();
+        for (ID3D12Resource*& b : backBuffers) releaseCom(b);
+        const UINT flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+        if (FAILED(swapChain->ResizeBuffers(2, swapWidth, swapHeight, want, flags))) {
+            LOG_ERROR("HDR: the swap chain would not change its format");
+            releaseSwapChain();
+            return;
+        }
+        for (UINT i = 0; i < 2; ++i) {
+            if (FAILED(swapChain->GetBuffer(i, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&backBuffers[i])))) {
+                releaseSwapChain();
+                return;
+            }
+            device->CreateRenderTargetView(backBuffers[i], nullptr, rtvHandle(1 + i));
+            backStates[i] = D3D12_RESOURCE_STATE_PRESENT;
+        }
+        swapFormat = want;
+    }
+    swapChain->SetColorSpace1(can ? DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020
+                                  : DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709);
+    if (can != hdrOn)
+        LOG_INFO("HDR: %s", can ? "on - HDR10, white at 200 nits, the brightest a little over it" : "off");
+    hdrOn = can;
 }
 
 bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing) {
-    if (swapChain && hwnd == window && w == swapWidth && h == swapHeight) return true;
+    if (swapChain && hwnd == window && w == swapWidth && h == swapHeight) {
+        if (!hdrDecided) decideHdr();  // 0.65
+        return swapChain != nullptr;
+    }
     if (!swapChain && w == failedWidth && h == failedHeight && !swapRetry.mayTry(GetTickCount64())) return false;
     waitIdle();
     const UINT flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     if (swapChain && hwnd == window) {  // the window changed size
         for (ID3D12Resource*& b : backBuffers) releaseCom(b);
-        const HRESULT hr = swapChain->ResizeBuffers(2, w, h, DXGI_FORMAT_B8G8R8A8_UNORM, flags);
+        const HRESULT hr = swapChain->ResizeBuffers(2, w, h, swapFormat, flags);  // 0.65: HDR keeps its format
         if (FAILED(hr)) {
             failed(3, "swap chain resize", hr);
             releaseSwapChain();
@@ -1045,7 +1104,8 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
     swapHeight = h;
     failedWidth = failedHeight = 0;
     swapRetry.succeeded();
-    return true;
+    if (!hdrDecided) decideHdr();  // 0.65
+    return swapChain != nullptr;
 }
 
 void Renderer::Impl::destroy() {
@@ -1061,6 +1121,7 @@ void Renderer::Impl::destroy() {
     for (auto& p : pipelines) releaseCom(p.second);
     pipelines.clear();
     for (ID3D12PipelineState*& p : presentPipelines) releaseCom(p);
+    releaseCom(presentHdrPipeline);  // 0.65
     releaseCom(motionPipeline);
     releaseCom(timer);
     releaseCom(timerBuffer);
@@ -1134,6 +1195,8 @@ void Renderer::Impl::destroy() {
     releaseCom(hazePs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
     for (ID3D12PipelineState*& p : splashPipelines) releaseCom(p);  // 0.64
+    for (ID3D12PipelineState*& p : waterfallPipelines) releaseCom(p);  // 0.65
+    releaseCom(waterfallPs);
     releaseCom(splashPs);
     releaseCom(weatherPs);
     for (ID3D12PipelineState*& p : heatPipelines) releaseCom(p);  // 0.35
@@ -1989,6 +2052,10 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         }
         m.upscaler->suspend();
     }
+    if (options.hdr != m.hdrWanted) {  // 0.65: asked for or not any more
+        m.hdrWanted = options.hdr;
+        m.hdrDecided = false;
+    }
     if (!m.ensureSwapChain(window, wantW, wantH, options.allowTearing)) {
         Sleep(15);  // no swap chain (0.4.1 review): no Present waits for vblank, keep the game's loop from spinning
         return;
@@ -2057,9 +2124,12 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         m.boundPipeline = nullptr;
         m.boundTextures = m.boundSamplers = ~0ull;
         m.pass = kPassNone;
-    } else if (!m.blit(shown.resource, *shown.state, m.targetSrv, m.width, m.height, from, rtv, fit,
-                       int(m.swapWidth), int(m.swapHeight), options.sharpen)) {
-        return;
+    } else {
+        m.blitHdr = m.hdrOn;  // 0.65: onto the HDR10 back buffer
+        const bool ok = m.blit(shown.resource, *shown.state, m.targetSrv, m.width, m.height, from, rtv, fit,
+                               int(m.swapWidth), int(m.swapHeight), options.sharpen);
+        m.blitHdr = false;
+        if (!ok) return;
     }
     if (m.ai) {  // a slice of the AI textures' network, in this frame's list, timed so that it keeps to its share
         if (m.timer) m.list->EndQuery(m.timer, D3D12_QUERY_TYPE_TIMESTAMP, m.slot * kTimes + 4);
@@ -2069,7 +2139,9 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
             m.slots[m.slot].aiTimed = true;
         }
     }
-    if (!options.screenshot.empty()) {  // 0.54: the picture as shown, read after Present
+    if (!options.screenshot.empty() && m.hdrOn)  // 0.65: a PNG has no HDR10's colours
+        LOG_INFO("screenshot: not taken with HDR on - turn HDR off for it ([display] hdr)");
+    if (!options.screenshot.empty() && !m.hdrOn) {  // 0.54: the picture as shown, read after Present
         const UINT pitch = UINT(alignUp(UINT64(m.swapWidth) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
         const UINT64 size = UINT64(pitch) * m.swapHeight;
         if (m.shotSize < size) {
