@@ -1,3 +1,18 @@
+# uaRO Graphics 0.49.1 — testing
+
+What is new in 0.49.1 (Direct3D 11: "characters are blocky at first and get rendered after a while"):
+- **The characters first.** The pictures of the sprite frames and the windows' icons are read before the textures,
+  and a texture on screen before the ones known ahead (a map's hundreds as it loads) - the frames waited behind them.
+- **Frames read lately stay in memory** (48 MB): an animation shows the same frames again and again - at once now.
+- **What the pack has no picture of is saved** in `uaro-graphics\missing\` (the first 64 of a run, as BMP): send that
+  folder - from it the developers see why (the hair, say).
+
+How to test:
+1. update.bat (or Settings → Service → Update now). If not yet done with 0.49: Texture pack → "Make the pack" (the hair
+   colours, the .jpg pictures).
+2. Direct3D 11, a town with many players: do the characters turn improved at once, or after how long?
+3. If something stays blocky: send uaro-graphics.log and the uaro-graphics\missing folder (zipped).
+
 # uaRO Graphics 0.49.0 — testing
 
 What is new in 0.49.0 (after "the hair and the loading screens are not upscaled"):
