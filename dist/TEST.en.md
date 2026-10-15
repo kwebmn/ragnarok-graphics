@@ -1,3 +1,14 @@
+# uaRO Graphics 0.87.1 — testing
+
+Fixed by a tester's report (Radeon HD 6570, Direct3D 11):
+- The Speed preset (which the auto setup also picks on small cards) no longer lowers the game's own texture quality
+  (`TEXTUREMODE` = 1, textures at half size). The first game after it crashed within 8 seconds in the game's own sprite
+  unpacking code (uaRO.exe 0x417B94). Every preset now keeps the game's textures and sprites at full size
+  (`SPRITEMODE` = 2, `TEXTUREMODE` = 2) - our textures fit a 2 GB card, they are kept compressed.
+
+How to test: on a small computer "Service" → "Update now", then "Renderer" → "Set up automatically" → "Apply", start
+the game and enter a map.
+
 # uaRO Graphics 0.87.0 — testing
 
 What is new in 0.87.0:
