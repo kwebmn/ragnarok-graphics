@@ -94,6 +94,7 @@ private:
         uint32_t mapSerial = 0;  // the map whose tag it has been seen to
         bool later = false;      // in later_: done ahead, before it is drawn
         bool loading = false;    // its picture is being read from the pack
+        bool aheadRead = false;  // 0.66: that read asked for ahead - drawn meanwhile, it goes first
         bool ui = false;         // a picture of the interface: it stands in for interface draws, not the world's
         uint64_t lastUse = 0;    // 0.44: the frame it was last drawn in (frame_)
         uint64_t bytes = 0;      // its copy's in video memory (Texture::ai), all its levels
@@ -154,6 +155,10 @@ private:
         ai::Kind kind = ai::Kind::None;  // Write, Note
         std::string map;                 // Write, Note: "" none
         Job cell;  // a cell's or an icon's read: the job it becomes (its pixels the network's input should it fail)
+        // 0.66: read in this order - 0 a sprite frame or an icon, 1 a texture in view, 2 one known ahead (a map's
+        // hundreds as it loads), 3 a picture made, to write
+        uint8_t rank = 1;
+        ULONGLONG asked = 0;  // 0.66: when (the log's waits)
     };
     struct IoResult {
         uint32_t id = 0;
@@ -162,6 +167,7 @@ private:
         std::vector<uint32_t> argb;
         int width = 0, height = 0;
         Job cell;
+        ULONGLONG asked = 0;  // 0.66: its request's
     };
 
     bool loadNet(const std::string& dir, const std::string& token, int denoise, Net& net, std::string& error);
@@ -211,7 +217,8 @@ private:
     std::string packIndex() const;                   // the I/O thread's
     void logNow(bool final);
     // 0.42: a picture of the texture pack (pictureName) for a game texture of width x height: read on the I/O thread.
-    void requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell);
+    void requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell, uint8_t rank = 1);
+    bool nextIo(IoRequest& r);  // 0.66: under ioLock_: the most urgent request, taken out
 
     Renderer::Impl& m_;
     bool ready_ = false;
@@ -281,12 +288,15 @@ private:
     bool ioLockMade_ = false;
     bool ioStop_ = false;
     std::deque<IoRequest> ioIn_;
+    std::unordered_set<uint32_t> urgent_;  // 0.66: textures read ahead and in view since: their turn first
     std::deque<IoResult> ioOut_;
 
     uint32_t doneNetwork_ = 0, donePack_ = 0;
     uint32_t cellsPack_ = 0, iconsPack_ = 0;  // 0.42: from the texture pack
     uint32_t unseen_ = 0, unseenFound_ = 0;  // 0.49.3: frames found changed past the game's call, of them in the pack
-    uint32_t cellsWritten_ = 0, cellsNetwork_ = 0;  // sprite frames: by the game, by the network
+    uint32_t cellsWritten_ = 0, cellsNetwork_ = 0;
+    ULONGLONG cellWait_ = 0, cellWaitMost_ = 0;  // 0.66: the frames' pictures from asked to in, all and the longest
+    uint32_t cellWaits_ = 0;  // sprite frames: by the game, by the network
     std::unordered_set<uint64_t> icons_;  // the icons asked for this run
     uint32_t iconsNetwork_ = 0;
     // 0.48 (in place of the settings app's "Check the keys"): what the pack had no picture of, by kind; frames; icons.

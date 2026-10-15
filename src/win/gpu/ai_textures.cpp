@@ -1179,8 +1179,9 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         pictures_->alike(item.argb.data(), item.width, item.height, kind, name)) {  // 0.49: a .jpg's, by likeness
         item.name = name;
         item.loading = true;
+        item.aheadRead = later;
         note(name, kind);
-        requestPacked(id, name, item.width, item.height, Job());
+        requestPacked(id, name, item.width, item.height, Job(), later ? 2 : 1);
         return;
     }
     item.name = pack::pictureName(item.ui ? pack::Group::Ui : pack::Group::World, item.key);
@@ -1196,14 +1197,36 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     }
 }
 
-void AiTextures::requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell) {
+void AiTextures::requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell,
+                               uint8_t rank) {
     IoRequest r;
     r.id = id;
     r.name = name;
     r.width = width;
     r.height = height;
+    r.rank = cell.cell || cell.icon ? 0 : rank;  // 0.66: the characters' frames and the icons first
     r.cell = std::move(cell);
     request(std::move(r));
+}
+
+bool AiTextures::nextIo(IoRequest& r) {
+    if (ioIn_.empty()) return false;
+    size_t best = 0;
+    int bestRank = 9;
+    for (size_t i = 0; i < ioIn_.size(); ++i) {
+        const IoRequest& q = ioIn_[i];
+        int rank = q.type == IoRequest::Note ? -1 : q.type == IoRequest::Write ? 3 : q.rank;
+        if (rank == 2 && urgent_.count(q.id)) rank = 1;  // read ahead, in view now
+        if (rank < bestRank) {
+            bestRank = rank;
+            best = i;
+            if (rank < 0) break;
+        }
+    }
+    r = std::move(ioIn_[best]);
+    ioIn_.erase(ioIn_.begin() + long(best));
+    if (r.type == IoRequest::Read) urgent_.erase(r.id);
+    return true;
 }
 
 // 0.48: the pack's index told of the kind and the map a picture was seen as and on - the generating game's alone.
@@ -1233,6 +1256,11 @@ void AiTextures::noteWorldUse(uint32_t id, ai::Kind kind) {
     } else if (item.state == Item::Waiting && item.later) {  // done ahead, and in view now: its turn now
         item.later = false;
         if (!item.loading) queue_.push_back(id);
+    } else if (item.state == Item::Waiting && item.loading && item.aheadRead) {  // 0.66: its read first now
+        item.aheadRead = false;
+        EnterCriticalSection(&ioLock_);
+        urgent_.insert(id);
+        LeaveCriticalSection(&ioLock_);
     }
     // The maps a texture of the kinds on is seen on, once a map each - into the pack's index (0.48).
     if (item.mapSerial != mapSerial_ && (item.state == Item::Waiting || item.state == Item::Done)) {
@@ -1344,6 +1372,10 @@ void AiTextures::takeLoaded() {
             Job j = std::move(r.cell);
             if (!cellCurrent(j)) continue;
             if (r.ok && r.width == j.width * scale_ && r.height == j.height * scale_) {
+                const ULONGLONG waited = GetTickCount64() - r.asked;  // 0.66
+                cellWait_ += waited;
+                cellWaitMost_ = std::max(cellWaitMost_, waited);
+                ++cellWaits_;
                 j.loaded = true;
                 j.pixels = std::move(r.argb);
                 loaded_.push_back(std::move(j));
@@ -1524,9 +1556,11 @@ void AiTextures::logNow(bool final) {
                  iconsMissing_);
     if (cellsWritten_)
         LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack, %u made by the "
-                 "network, %u waiting",
+                 "network, %u waiting; read in %llu ms on average, %llu at most",
                  cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsPack_, cellsNetwork_,
-                 static_cast<unsigned>(cells_.size()));
+                 static_cast<unsigned>(cells_.size()),
+                 static_cast<unsigned long long>(cellWaits_ ? cellWait_ / cellWaits_ : 0),
+                 static_cast<unsigned long long>(cellWaitMost_));
     if (unseen_)  // 0.49.3
         LOG_INFO("AI textures: sprite frames - %u came past the game's call (found changed in their caches), %u of "
                  "them in the pack",
@@ -1546,6 +1580,7 @@ void AiTextures::logNow(bool final) {
 }
 
 void AiTextures::request(IoRequest r) {
+    r.asked = GetTickCount64();
     EnterCriticalSection(&ioLock_);
     ioIn_.push_back(std::move(r));
     LeaveCriticalSection(&ioLock_);
@@ -1565,12 +1600,16 @@ void AiTextures::ioLoop() {
     bool failed = false;  // the pack would not take a picture: the rest of this run are not kept either
     for (;;) {
         WaitForSingleObject(ioWake_, since ? 1000 : INFINITE);
-        std::deque<IoRequest> work;
-        EnterCriticalSection(&ioLock_);
-        work.swap(ioIn_);
-        const bool stop = ioStop_;
-        LeaveCriticalSection(&ioLock_);
-        for (IoRequest& r : work) {
+        bool stop = false;
+        // 0.66: one request at a time, the most urgent first (nextIo) - a map's hundreds of textures known ahead no
+        // longer keep the characters' frames waiting behind them.
+        for (;;) {
+            IoRequest r;
+            EnterCriticalSection(&ioLock_);
+            const bool have = nextIo(r);
+            stop = ioStop_;
+            LeaveCriticalSection(&ioLock_);
+            if (!have) break;
             if (r.type == IoRequest::Note) {
                 pack::IndexEntry& e = index_.pictures[r.name];
                 if (e.kind == ai::Kind::None) e.kind = r.kind;
@@ -1605,6 +1644,7 @@ void AiTextures::ioLoop() {
             res.name = r.name;
             res.cell = std::move(r.cell);
             res.ok = ioRead(r, res);
+            res.asked = r.asked;
             EnterCriticalSection(&ioLock_);
             ioOut_.push_back(std::move(res));
             LeaveCriticalSection(&ioLock_);
