@@ -1,3 +1,12 @@
+# uaRO Graphics 0.49.2 — testing
+
+What is new in 0.49.2 (Direct3D 11: "at the start the character is blocky, after a while it is fine"):
+- A sprite frame waiting for its picture from the pack is shown **smoothly enlarged** meanwhile, not texel by texel
+  (that was the blocky look) - also the first frames of a new sprite cache, which went in as one blocky piece.
+- The log says how long the frames wait: `sprite frames - ... from the pack (waited N ms on average, M at most)`.
+
+How to test: update, start the game on Direct3D 11 - the character at the start; send the log.
+
 # uaRO Graphics 0.49.1 — testing
 
 What is new in 0.49.1 (Direct3D 11: "characters are blocky at first and get rendered after a while"):
