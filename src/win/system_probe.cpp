@@ -95,11 +95,16 @@ D3D11Probe probeD3D11(bool systemOnly) {
         p.hr = d3d11 ? E_NOINTERFACE : HRESULT_FROM_WIN32(GetLastError());
         return p;
     }
-    const D3D_FEATURE_LEVEL levels[3] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0};
+    // 0.46.1: 11_1 first, as the renderer asks (E_INVALIDARG where the runtime does not know it: Windows 7).
+    const D3D_FEATURE_LEVEL levels[4] = {D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1,
+                                         D3D_FEATURE_LEVEL_10_0};
     ID3D11Device* device = nullptr;
     D3D_FEATURE_LEVEL got = D3D_FEATURE_LEVEL_10_0;
-    p.hr = create(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels, 3,
+    p.hr = create(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels, 4,
                   D3D11_SDK_VERSION, &device, &got, nullptr);
+    if (p.hr == E_INVALIDARG)
+        p.hr = create(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels + 1, 3,
+                      D3D11_SDK_VERSION, &device, &got, nullptr);
     if (FAILED(p.hr) || !device) return p;
     p.ok = true;
     p.level = unsigned(got);

@@ -163,6 +163,9 @@ struct EffectSettings {
 };
 // Pause (the compare key): the game's own picture - every effect off.
 EffectSettings effectsOff();
+// 0.46.1: one of the effects the Direct3D 12 renderer draws itself is on (all but the aura's and the skills'
+// softness, which the game's draws get on their way).
+bool drawnByRenderer(const EffectSettings& e);
 
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 struct Config {

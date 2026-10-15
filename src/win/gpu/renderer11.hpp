@@ -27,6 +27,7 @@ struct ID3D11BlendState;
 struct ID3D11DepthStencilState;
 struct ID3D11RasterizerState;
 struct ID3D11SamplerState;
+struct ID3D11Query;
 struct IDXGIFactory1;
 struct IDXGISwapChain;
 
@@ -96,6 +97,13 @@ private:
     bool ensureSwapChain(HWND window, UINT width, UINT height, bool wantTearing);
     void releaseSwapChain();
     void failed(const char* what, long hr);
+    // 0.46.1: the GPU's time a frame, as Direct3D 12 logs it - timestamps around each record's work and the
+    // picture's, summed (the GPU waits for the game between them); read 4 frames on, never waited for.
+    void timeBegin();
+    void timeEnd();
+    void timeFrame();
+    bool readTimes(UINT slot, bool wait);
+    void logGpu(ULONGLONG now);
 
     HMODULE dll_ = nullptr;
     ID3D11Device* device_ = nullptr;
@@ -148,6 +156,24 @@ private:
     bool tearing_ = false;
     Rect picture_;
     LARGE_INTEGER lastPresent_{};
+
+    static constexpr UINT kTimedFrames = 4;
+    static constexpr UINT kStamps = 16;  // 8 spans a frame; more of them stretch the last
+    struct FrameTimes {
+        ID3D11Query* disjoint = nullptr;
+        ID3D11Query* stamps[kStamps] = {};
+        UINT used = 0;          // stamps ended
+        bool open = false;      // its disjoint begun: this frame is timed
+        bool inSpan = false;    // a span begun, its end not yet
+        bool pending = false;   // ended, its data not read yet
+    };
+    FrameTimes times_[kTimedFrames];
+    UINT timeSlot_ = 0;
+    bool timing_ = false;   // the queries were made
+    bool untimed_ = false;  // this frame's slot was still busy: the frame is not timed
+    double gpuMs_ = 0.0;
+    uint32_t gpuFrames_ = 0;
+    ULONGLONG gpuSince_ = 0;
     std::map<std::pair<std::string, long>, int> failures_;  // a failure of each place and code logged once
 };
 

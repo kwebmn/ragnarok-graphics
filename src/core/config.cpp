@@ -110,6 +110,12 @@ EffectSettings effectsOff() {
     return e;
 }
 
+bool drawnByRenderer(const EffectSettings& e) {
+    return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
+           e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
+           e.grade || e.dof || e.water;
+}
+
 bool EffectSettings::operator==(const EffectSettings& o) const {
     return smoothLight == o.smoothLight && torch == o.torch && torchFlame == o.torchFlame &&
            torchBrightness == o.torchBrightness && torchGlow == o.torchGlow &&

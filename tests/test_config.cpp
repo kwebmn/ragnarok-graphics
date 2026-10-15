@@ -524,3 +524,19 @@ TEST(config_reads_the_graphics_api) {
     CHECK(std::strcmp(apiToken(Api::D3d11), "d3d11") == 0);
     CHECK(std::strcmp(apiToken(Api::Auto), "auto") == 0);
 }
+
+TEST(config_effects_drawn_by_the_renderer) {
+    // 0.46.1: Direct3D 11 draws none of the Effects page's own - only the aura's and the skills' softness (the
+    // game's draws made softer on their way) stay; the log says so when one of the others is on.
+    CHECK(drawnByRenderer(parseConfig("").effects));
+    CHECK(!drawnByRenderer(effectsOff()));
+    EffectSettings soft = effectsOff();
+    soft.aura = soft.skillsSoft = true;
+    CHECK(!drawnByRenderer(soft));
+    EffectSettings water = effectsOff();
+    water.water = true;
+    CHECK(drawnByRenderer(water));
+    EffectSettings glow = effectsOff();
+    glow.glow = true;
+    CHECK(drawnByRenderer(glow));
+}

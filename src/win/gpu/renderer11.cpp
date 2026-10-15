@@ -59,6 +59,10 @@ std::string levelName(unsigned level) {  // D3D_FEATURE_LEVEL 0xb000 -> "11_0"
 }  // namespace
 
 Renderer11::~Renderer11() {
+    if (timing_ && ctx_ && !lost_) {  // 0.46.1: the frames still on their way, then the GPU's time since the last line
+        for (UINT i = 0; i < kTimedFrames; ++i) readTimes((timeSlot_ + i) % kTimedFrames, true);
+        logGpu(GetTickCount64());
+    }
     if (ctx_) ctx_->ClearState();
     releaseSwapChain();
     for (auto& t : textures_) {
@@ -76,6 +80,10 @@ Renderer11::~Renderer11() {
     for (auto& d : depths_) drop(d.second);
     for (auto& r : rasters_) drop(r.second);
     for (auto& s : samplers_) drop(s.second);
+    for (FrameTimes& f : times_) {
+        drop(f.disjoint);
+        for (ID3D11Query*& q : f.stamps) drop(q);
+    }
     drop(vertices_);
     drop(indices_);
     drop(constants_);
@@ -188,6 +196,14 @@ bool Renderer11::create(const std::string& shaderCache, Renderer::StartSink sink
         return false;
     }
     white_.width = white_.height = 1;
+    // 0.46.1: the GPU's time a frame - a disjoint query and its timestamps for each of the frames in flight.
+    timing_ = true;
+    for (FrameTimes& f : times_) {
+        D3D11_QUERY_DESC q{D3D11_QUERY_TIMESTAMP_DISJOINT, 0};
+        timing_ = timing_ && SUCCEEDED(device_->CreateQuery(&q, &f.disjoint));
+        q.Query = D3D11_QUERY_TIMESTAMP;
+        for (ID3D11Query*& t : f.stamps) timing_ = timing_ && SUCCEEDED(device_->CreateQuery(&q, &t));
+    }
     LOG_INFO("Direct3D 11: %s, feature level %s%s", adapter_.c_str(), levelName(level_).c_str(),
              bgraVertices_ ? "" : ", vertex colours turned around for it");
     return true;
@@ -810,6 +826,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
 
 void Renderer11::execute(const FrameRecord& record) {
     if (lost_ || !target_.texture || record.empty()) return;
+    timeBegin();
     geometry_ = uploadGeometry(record);
     targetBound_ = false;
     for (const Command& c : record.commands()) {
@@ -825,6 +842,7 @@ void Renderer11::execute(const FrameRecord& record) {
         }
     }
     geometry_ = false;
+    timeEnd();
 }
 
 bool Renderer11::readTarget(std::vector<uint32_t>& argb) {
@@ -968,6 +986,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         Sleep(15);
         return;
     }
+    timeBegin();
     const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     ctx_->ClearRenderTargetView(backRtv_, black);
     // Fit the source into the window, keeping its shape, on whole pixels: bars where the shapes differ.
@@ -984,6 +1003,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
          options.sharpen);
     ctx_->OMSetRenderTargets(0, nullptr, nullptr);
+    timeEnd();
+    timeFrame();
     if (options.fpsLimit > 0) {  // simple pacing: wait until 1/limit seconds after the previous present
         LARGE_INTEGER now, freq;
         QueryPerformanceFrequency(&freq);
@@ -1006,6 +1027,87 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
 
 void Renderer11::finish() {
     if (ctx_) ctx_->Flush();
+}
+
+void Renderer11::timeBegin() {
+    if (!timing_ || untimed_) return;
+    FrameTimes& f = times_[timeSlot_];
+    if (!f.open) {  // the frame's first work
+        if (!readTimes(timeSlot_, false)) {  // the slot's frame of 4 frames ago is still on the GPU
+            untimed_ = true;
+            return;
+        }
+        ctx_->Begin(f.disjoint);
+        f.open = true;
+        f.used = 0;
+    }
+    if (f.inSpan || f.used + 2 > kStamps) return;  // no stamps left: timeEnd stretches the last span
+    ctx_->End(f.stamps[f.used]);
+    f.inSpan = true;
+}
+
+void Renderer11::timeEnd() {
+    if (!timing_ || untimed_) return;
+    FrameTimes& f = times_[timeSlot_];
+    if (!f.open) return;
+    if (f.inSpan) {
+        ctx_->End(f.stamps[f.used + 1]);
+        f.used += 2;
+        f.inSpan = false;
+    } else if (f.used >= 2) {
+        ctx_->End(f.stamps[f.used - 1]);  // the last span ends here now
+    }
+}
+
+void Renderer11::timeFrame() {
+    if (!timing_) return;
+    FrameTimes& f = times_[timeSlot_];
+    if (!untimed_ && f.open) {
+        if (f.inSpan) timeEnd();
+        ctx_->End(f.disjoint);
+        f.open = false;
+        f.pending = true;
+        timeSlot_ = (timeSlot_ + 1) % kTimedFrames;
+    }
+    untimed_ = false;
+    const ULONGLONG now = GetTickCount64();
+    if (!gpuSince_) gpuSince_ = now;
+    if (now - gpuSince_ >= 30000) logGpu(now);
+}
+
+// A frame's spans summed into the count; false while its work is still on the GPU (wait: up to 0.1 s for it).
+bool Renderer11::readTimes(UINT slot, bool wait) {
+    FrameTimes& f = times_[slot];
+    if (!f.pending) return true;
+    D3D11_QUERY_DATA_TIMESTAMP_DISJOINT d{};
+    HRESULT hr = ctx_->GetData(f.disjoint, &d, sizeof d, wait ? 0 : D3D11_ASYNC_GETDATA_DONOTFLUSH);
+    for (int i = 0; wait && hr == S_FALSE && i < 100; ++i) {
+        Sleep(1);
+        hr = ctx_->GetData(f.disjoint, &d, sizeof d, 0);
+    }
+    if (hr == S_FALSE) return false;
+    f.pending = false;
+    if (FAILED(hr) || d.Disjoint || !d.Frequency) return true;  // the GPU's clock changed meanwhile: not counted
+    UINT64 ticks = 0;
+    for (UINT i = 0; i + 1 < f.used; i += 2) {
+        UINT64 a = 0, b = 0;
+        if (ctx_->GetData(f.stamps[i], &a, sizeof a, D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK ||
+            ctx_->GetData(f.stamps[i + 1], &b, sizeof b, D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK)
+            return true;
+        if (b > a) ticks += b - a;
+    }
+    gpuMs_ += double(ticks) * 1000.0 / double(d.Frequency);
+    ++gpuFrames_;
+    return true;
+}
+
+void Renderer11::logGpu(ULONGLONG now) {
+    if (gpuFrames_ && gpuSince_)
+        LOG_INFO("GPU: %.2f ms of work a frame (%u frames in %.0f s)", gpuMs_ / gpuFrames_, gpuFrames_,
+                 double(now - gpuSince_) / 1000.0);
+    gpuMs_ = 0.0;
+    gpuFrames_ = 0;
+    gpuSince_ = now;
 }
 
 }  // namespace uagfx::gpu

@@ -79,6 +79,9 @@ bool Context::open(std::string& error) {
         remote = true;  // made: no other renderer
         if (config.remix || config.bridge || config.dlss != "off" || config.ai.enabled)
             LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer, DLSS and the AI textures need Direct3D 12 - off");
+        if (drawnByRenderer(config.effects))  // 0.46.1
+            LOG_INFO("Direct3D 11: the Effects page's lights, torches, water, shadows, weather and glow need "
+                     "Direct3D 12 - the game's own effects shown; the level 99 aura and the skills stay softer");
     } else if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if there
         const std::string local = gameDir() + "\\d3d9.dll";
         const std::string dll = fileExists(local) ? local : systemDir() + "\\d3d9.dll";
@@ -125,8 +128,9 @@ bool Context::open(std::string& error) {
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'
     // icons through crisp text's twins. 0.23: the torches' frames are known through it too - whenever the picture is
     // ours (not RTX Remix's), as the torches can be turned on in a running game.
+    // 0.46.1: Direct3D 11 draws neither of them.
     const AiSettings& ai = config.ai;
-    if ((ai.enabled && (ai.sprites() || ai.effects || ai.icons) && renderer->remote()) || !config.remix)
+    if (!d3d11 && ((ai.enabled && (ai.sprites() || ai.effects || ai.icons) && renderer->remote()) || !config.remix))
         installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     renderer->setIconSink(&crisp::iconReady, nullptr);
@@ -185,10 +189,11 @@ void Context::flush() {
     // Part 4: the world goes back into world space with the camera of this frame; 0.19: the modern water draws its
     // waves and reflections in the world, with the same camera; 0.23, 0.24: the torches' flicker and the smoke's
     // wisps keep to their places in the world with it; 0.25, 0.28: the map file's lamps and fireflies stand in it.
+    // 0.46.1: Direct3D 11 draws none of them.
     const EffectSettings& fx = config.effects;
-    if (renderer->remix() ||
-        (enhanced_ && (fx.water || fx.torch || fx.smoke || fx.lamps || fx.fireflies || fx.mapGlows || fx.rays ||
-                       fx.lava || fx.actorShadows || fx.clouds || fx.haze || fx.heat || fx.portals || fx.weather))) {
+    const bool world = fx.water || fx.torch || fx.smoke || fx.lamps || fx.fireflies || fx.mapGlows || fx.rays ||
+                       fx.lava || fx.actorShadows || fx.clouds || fx.haze || fx.heat || fx.portals || fx.weather;
+    if (renderer->remix() || (enhanced_ && world && !renderer->d3d11())) {
         float view[12];
         const bool known = readGameCamera(view);
         renderer->setCamera(known, view);
