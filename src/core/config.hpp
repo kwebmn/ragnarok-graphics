@@ -175,6 +175,10 @@ struct EffectSettings {
     // 0.67: soft particles - the effects (skills, sparks, portals) fade where they meet the ground and the walls
     // instead of being cut along a line. On by default.
     bool softParticles = true;
+    // 0.68: rim light - the torches, lamps and burning skills light the edge of a character (and of a model)
+    // that faces them more: the flat sprites look round. On by default.
+    bool rimLight = true;
+    int rimStrength = 100;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

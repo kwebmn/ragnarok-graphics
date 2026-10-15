@@ -177,6 +177,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFoliageStrengthHint, " %"},
         {"effects", "soft_particles", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSoftParticles,
          Text::FxSoftParticlesHint, ""},
+        {"effects", "rim_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRimLight,
+         Text::FxRimLightHint, ""},
+        {"effects", "rim_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxRimStrength,
+         Text::FxRimStrengthHint, " %"},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -341,6 +345,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.grade_warmth") return std::to_string(c.effects.gradeWarmth);
     if (k == "effects.grade_vignette") return std::to_string(c.effects.gradeVignette);
     if (k == "effects.soft_particles") return c.effects.softParticles ? "1" : "0";
+    if (k == "effects.rim_light") return c.effects.rimLight ? "1" : "0";
+    if (k == "effects.rim_strength") return std::to_string(c.effects.rimStrength);
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

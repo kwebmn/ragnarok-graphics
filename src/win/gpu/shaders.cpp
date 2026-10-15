@@ -827,6 +827,17 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
         float f = 1.0 - d2 / reach2;
         float facing = saturate(dot(n, v * rsqrt(max(d2, 1e-4))) * 0.7 + 0.3);  // wrapped: soft on what turns away
         float a = c.w * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;  // brighter near the source
+        // 0.68, rim light (sharpen: its strength): the flat characters and the models' outlines lit more on the side
+        // that faces the light - where the depth a few pixels towards the light on the screen is far behind.
+        if (sharpen > 0.0) {
+            float2 sd = float2(f0 * (v.x * p.z - p.x * v.z), f1 * (v.y * p.z - p.y * v.z));
+            float sl = length(sd);
+            if (sl > 1e-4) {
+                int2 q = clamp(wp + int2(round(sd / sl * 3.0 * scale)), int2(0, 0), last);
+                float gap = viewDepth(sceneDepth.Load(int3(q, 0))) - p.z;
+                a += c.w * f * smoothstep(3.0, 12.0, gap) * sharpen;
+            }
+        }
         light += a;
         colour += a * c.rgb;
     }

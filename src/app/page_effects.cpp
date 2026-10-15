@@ -42,6 +42,7 @@ const Effect kEffects[] = {
     {"effects.night", {"effects.night_clock"}, {"effects.night_strength"}, {}, false},  // 0.63
     {"effects.foliage", {}, {"effects.foliage_strength"}, {}, false},                    // 0.64
     {"effects.soft_particles", {}, {}, {}, false},  // 0.67
+    {"effects.rim_light", {}, {"effects.rim_strength"}, {}, false},  // 0.68
     {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, false},
     {"effects.torch",
      {"effects.torch_flame"},

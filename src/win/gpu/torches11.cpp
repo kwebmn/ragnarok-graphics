@@ -138,6 +138,7 @@ void Renderer11::applyTorchLight() {
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
     c.footprint = float(count);
+    c.sharpen = effects_.rimLight ? 0.6f * float(std::clamp(effects_.rimStrength, 0, 200)) / 100.0f : 0.0f;  // 0.68
     setConstants(c);
     ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO,
                                      D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |

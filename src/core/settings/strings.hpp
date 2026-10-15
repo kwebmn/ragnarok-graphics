@@ -141,6 +141,8 @@ enum class Text : uint16_t {
     QualityHdr, QualityHdrHint,
     // 0.67
     FxSoftParticles, FxSoftParticlesHint,
+    // 0.68
+    FxRimLight, FxRimLightHint, FxRimStrength, FxRimStrengthHint,
     Count
 };
 

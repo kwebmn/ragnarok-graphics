@@ -815,6 +815,7 @@ bool Renderer::Impl::applyTorches() {
         list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
         transition(torchData, torchDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         c.footprint = float(lights.size());
+        c.sharpen = effects.rimLight ? 0.6f * float(std::clamp(effects.rimStrength, 0, 200)) / 100.0f : 0.0f;  // 0.68
         const D3D12_RECT lit = clipped(lx0, ly0, lx1, ly1, w, h);
         if (lit.right > lit.left && lit.bottom > lit.top &&
             !effectPass(torchLightPipelines[code], dst, dstState, rtv, w, h, c, sceneColorSrv, true, torchDataSrv,
