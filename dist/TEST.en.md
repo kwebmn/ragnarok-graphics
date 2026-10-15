@@ -1,3 +1,22 @@
+# uaRO Graphics 0.76.0 — testing
+
+What is new in 0.76.0:
+- **Keep the frame rate** (Settings → Frames → "Keep the frame rate", 0 = off). When the game runs slower than this
+  for 10 seconds (under 90 % of it), the costliest effect is turned off for the rest of the game, ten seconds later
+  the next if needed. On D3D12 by the graphics card's measures, on D3D11 by a list. The settings file is not changed;
+  restarting the game brings everything back. Log: `keep_fps: 38 fps, under 45 - effects.ao off for this game (it cost
+  1.20 ms)`. The auto setup sets 45 on small and middle cards.
+- **What the effects cost, in the settings app.** The game (D3D12) writes every half minute how many milliseconds each
+  effect cost (`uaro-graphics\effect-costs.txt`), and the Effects page shows it next to the box: "Reflections on the
+  floor · ~0.8 ms". The sky, the light in the air and the floor reflections now have their own measures in the log
+  (`GPU: effects a frame`).
+- **Shader safety.** If the shader compiler on someone's computer will not take the newest parts of the main shader
+  (soft effects, ground relief), the driver builds it without them instead of showing no picture. Log:
+  `shader draw_ps: compiled without the newest features ...` - send that line if you see it.
+
+How to test: set "Keep the frame rate" well above your frame rate (say 500), play a minute - the log turns effects
+off one by one; set 0 - they come back. After the game open the Effects page - the numbers by the boxes.
+
 # uaRO Graphics 0.75.0 — testing
 
 What is new in 0.75.0 (Direct3D 12):
