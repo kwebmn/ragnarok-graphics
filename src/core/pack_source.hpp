@@ -22,6 +22,9 @@ struct Picture {
     int width = 0, height = 0;
     std::vector<uint32_t> argb;
     std::string key;  // ai::keyName
+    // 0.49: a .jpg's - the picture in the texture's top left corner, found by its likeness (near_picture.hpp); 0
+    // for the rest, found by their keys.
+    int contentWidth = 0, contentHeight = 0;
 };
 
 // The game's BMP reader: 8-bit (its palette at 0x36) or 24-bit, bottom-up; every pixel opaque.

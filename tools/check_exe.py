@@ -27,6 +27,9 @@ ALLOWED = {
         "SetBkMode", "SetTextColor",
     },
     "kernel32.dll": {
+        # 0.49: the update check's thread and its lock
+        "AcquireSRWLockExclusive", "AcquireSRWLockShared", "CreateThread", "ReleaseSRWLockExclusive",
+        "ReleaseSRWLockShared",
         "CloseHandle", "CreateDirectoryW", "CreateFileW", "CreateSemaphoreW", "CreateToolhelp32Snapshot",
         "DeleteCriticalSection", "DeleteFileW", "EnterCriticalSection", "FindClose", "FindFirstFileW",
         "FindNextFileW", "FindResourceW", "FlushFileBuffers", "FormatMessageA", "FreeLibrary", "GetCurrentProcess",
@@ -61,10 +64,15 @@ ALLOWED = {
     "ole32.dll": {
         "CoInitializeEx", "CoUninitialize",
     },
+    "winhttp.dll": {  # 0.49: the update check
+        "WinHttpCloseHandle", "WinHttpConnect", "WinHttpOpen", "WinHttpOpenRequest", "WinHttpQueryDataAvailable",
+        "WinHttpQueryHeaders", "WinHttpReadData", "WinHttpReceiveResponse", "WinHttpSendRequest",
+    },
     "shell32.dll": {
         "SHGetFolderPathW", "ShellExecuteExW", "ShellExecuteW",
     },
     "user32.dll": {
+        "GetAncestor",  # 0.49: the update check
         "AdjustWindowRectEx", "CloseClipboard", "CreateWindowExW", "DefWindowProcW", "DestroyWindow",
         "DispatchMessageW", "DrawTextW", "EmptyClipboard", "EnableWindow", "EnumDisplayMonitors",
         "EnumDisplaySettingsExW", "FindWindowW", "GetClientRect", "GetDC", "GetDlgCtrlID", "GetDlgItem", "GetFocus",

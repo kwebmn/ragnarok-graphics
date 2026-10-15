@@ -275,15 +275,15 @@ void AiTextures::putAwayOld() {
 
 void AiTextures::bringBack(uint32_t id, Item& item) {
     item.later = false;
-    std::string name;
-    if (!pictures_->texture(item.key, item.kind, name)) {
-        item.state = Item::Skipped;  // made by the network and not kept: the game's own now
+    // Its picture as it was found the first time (its key's, a whole texture's of a lower detail, or a .jpg's by its
+    // likeness - its pixels are gone by now): put away, it was in the pack or written there.
+    if (item.name.empty()) {
+        item.state = Item::Skipped;
         return;
     }
-    item.name = name;
     item.state = Item::Waiting;
     item.loading = true;
-    requestPacked(id, name, item.width, item.height, Job());
+    requestPacked(id, item.name, item.width, item.height, Job());
     ++broughtBack_;
 }
 
@@ -1162,7 +1162,8 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     // 0.42: the texture pack first (0.45: at a lower texture detail the whole texture's picture); 0.48: the pack
     // alone - generating, the network makes what it has not.
     std::string name;
-    if (pictures_->texture(item.key, kind, name)) {
+    if (pictures_->texture(item.key, kind, name) ||
+        pictures_->alike(item.argb.data(), item.width, item.height, kind, name)) {  // 0.49: a .jpg's, by likeness
         item.name = name;
         item.loading = true;
         note(name, kind);

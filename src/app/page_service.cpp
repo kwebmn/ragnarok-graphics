@@ -1,5 +1,7 @@
 #include "app/page.hpp"
+#include "app/update.hpp"
 #include "core/settings/presets.hpp"
+#include "core/update_check.hpp"
 #include "core/version.hpp"
 
 namespace uagfx::app {
@@ -15,6 +17,8 @@ constexpr int kReset = 1420;
 constexpr int kGameSave = 1430;
 constexpr int kGameLoad = 1431;
 constexpr int kLayoutReset = 1432;
+constexpr int kUpdateCheck = 1440;  // 0.49
+constexpr int kUpdateNow = 1441;
 
 Text presetName(Preset p) {
     switch (p) {
@@ -76,6 +80,29 @@ public:
         p.note(tf(Text::VersionsValue,
                   {kVersion, m.now().installedVersion.empty() ? utf8(t(Text::Unknown)) : m.now().installedVersion}),
                Tone::Normal);
+        // 0.49: the newest version on GitHub, and update.bat started from here.
+        p.gap();
+        p.heading(t(Text::ServiceUpdate));
+        const UpdateState u = updateState();
+        p.buttons({{kUpdateCheck, t(Text::UpdateCheck), u.kind != UpdateState::Checking},
+                   {kUpdateNow, t(Text::UpdateNow), !running}});
+        if (u.kind == UpdateState::Checking)
+            p.note(t(Text::UpdateChecking));
+        else if (u.kind == UpdateState::Failed)
+            p.note(tf(Text::UpdateFailed, {u.error}), Tone::Bad);
+        else if (u.kind == UpdateState::Done && update::newer(u.latest, kVersion))
+            p.note(tf(Text::UpdateNewer, {u.latest, kVersion}), Tone::Warn);
+        else if (u.kind == UpdateState::Done)
+            p.note(tf(Text::UpdateLatest, {kVersion}), Tone::Good);
+        if (running)
+            p.note(t(Text::UpdateGameRunning), Tone::Warn);
+        else
+            p.note(t(Text::UpdateNote));
+    }
+
+    bool ticks() const override { return updateState().kind == UpdateState::Checking; }
+    void tick() override {
+        if (updateState().kind != UpdateState::Checking) host_.rebuild();  // the answer came
     }
 
     void command(int id, int code) override {
@@ -97,6 +124,21 @@ public:
         } else if (id == kKeepFive) {
             m.keepNewestBackups(5);
             host_.reload();
+        } else if (id == kUpdateCheck) {
+            startUpdateCheck();
+            host_.rebuild();
+        } else if (id == kUpdateNow) {
+            if (m.now().gameRunning) {
+                host_.message(t(Text::UpdateGameRunning), true);
+                return;
+            }
+            if (!host_.ask(t(Text::UpdateAsk))) return;
+            const std::string err = startUpdate(m.paths().dir);
+            if (!err.empty()) {
+                host_.message(tf(Text::UpdateError, {err}), true);
+                return;
+            }
+            PostMessageW(GetAncestor(host_.window(), GA_ROOT), WM_CLOSE, 0, 0);  // update.bat replaces this exe too
         } else if (id == kReset) {
             if (!host_.ask(t(Text::ResetAsk))) return;
             const std::wstring err = m.resetDefaults(l);

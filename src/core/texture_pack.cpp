@@ -299,6 +299,7 @@ std::string indexText(const Index& index) {
         t += "\n";
     }
     for (const auto& a : index.aliases) t += "=" + a.first + "\t" + a.second + "\n";
+    for (const auto& n : index.alike) t += "~" + n.first + "\t" + n.second + "\n";
     return t;
 }
 
@@ -314,6 +315,10 @@ Index parseIndexFile(const std::string& text) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
         const size_t tab = line.find('\t');
         if (tab == std::string::npos || tab == 0 || line[0] == '=') continue;  // 0.45: '=': a lower detail's key
+        if (line[0] == '~') {  // 0.49: a picture found by its likeness
+            if (tab > 1) out.alike[line.substr(1, tab - 1)] = line.substr(tab + 1);
+            continue;
+        }
         std::string kind = line.substr(tab + 1), maps;
         const size_t more = kind.find('\t');  // 0.48: the maps it was shown on
         if (more != std::string::npos) {

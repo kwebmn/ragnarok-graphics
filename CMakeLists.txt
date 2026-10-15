@@ -23,11 +23,15 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
 endif()
 
 # Portable core: formats, surfaces, config, decisions. No Windows headers; unit-tested on Linux.
+# 0.49: stb_image's JPEG decoder (the game's .jpg pictures for the texture pack).
+add_library(uagfx_stb STATIC third_party/stb/stb_image_jpeg.c)
+target_include_directories(uagfx_stb PUBLIC third_party/stb)
+target_compile_options(uagfx_stb PRIVATE -w)
 file(GLOB_RECURSE UAGFX_CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(uagfx_core STATIC ${UAGFX_CORE_SOURCES})
 target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
-target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp)
+target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp uagfx_stb)
 
 if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # uaro-render64.exe (part 3): the renderer in a 64-bit process the driver hands its calls to; the rest of the
@@ -54,12 +58,13 @@ elseif(WIN32)
     # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
     add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/registry.cpp
                 src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp src/app/ai_cache.cpp
+                src/app/update.cpp
                 src/win/system_probe.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)
     target_compile_options(uagfx_app PRIVATE -Wall -Wextra)
-    target_link_libraries(uagfx_app PUBLIC uagfx_core comctl32 shell32 ole32 advapi32)
+    target_link_libraries(uagfx_app PUBLIC uagfx_core comctl32 shell32 ole32 advapi32 winhttp)
 
     # uaro-graphics.exe, the settings app (stage 2 spec): its version comes from src/core/version.cpp.
     enable_language(RC)

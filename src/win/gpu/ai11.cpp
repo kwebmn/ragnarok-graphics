@@ -167,6 +167,8 @@ void Ai11::noteUpload(uint32_t id, int width, int height, const UploadCmd& u, co
     item.height = height;
     item.key = ai::keyName(ai::textureKey(argb, width, height));
     item.soft = ai::softPicture(argb, width, height) || ai::softAlpha(argb, width, height);
+    item.alike.clear();
+    if (pictures_->hasAlike(width, height)) pictures_->alikeName(argb, width, height, item.alike);
     ai::Kind kind = ai::Kind::None;
     if (pictures_->knownKind(item.key, kind)) begin(id, item, kind);  // ahead: on its way before it is drawn
 }
@@ -183,9 +185,12 @@ void Ai11::begin(uint32_t id, Item& item, ai::Kind kind) {
         return;
     }
     Request r;
-    if (!pictures_->texture(item.key, kind, r.name)) {  // none made: the game's
-        ++missing_[int(kind)];
-        return;
+    if (!pictures_->texture(item.key, kind, r.name)) {
+        if (item.alike.empty() || !pictures_->alikeFits(item.alike, kind)) {  // none made: the game's
+            ++missing_[int(kind)];
+            return;
+        }
+        r.name = item.alike;  // 0.49: a .jpg's, by its likeness
     }
     item.state = Item::Waiting;
     r.id = id;
@@ -227,8 +232,11 @@ void Ai11::noteUiUse(uint32_t id) {
 void Ai11::bringBack(uint32_t id, Item& item) {
     Request r;
     if (!pictures_->texture(item.key, item.kind, r.name)) {
-        item.state = Item::Skipped;
-        return;
+        if (item.alike.empty() || !pictures_->alikeFits(item.alike, item.kind)) {
+            item.state = Item::Skipped;
+            return;
+        }
+        r.name = item.alike;
     }
     item.state = Item::Waiting;
     r.id = id;

@@ -7,6 +7,7 @@
 
 #include "core/ai/kinds.hpp"
 #include "core/config.hpp"
+#include "core/near_picture.hpp"
 
 namespace uagfx::ai {
 
@@ -30,6 +31,13 @@ public:
     bool texture(const std::string& key, Kind kind, std::string& name) const;
     bool cell(const std::string& key, std::string& name) const;
     bool icon(const std::string& key, std::string& name) const;
+    // 0.49: a texture the game decoded itself (a .jpg) by its likeness to the pack's ones of its size - drawn as kind:
+    // the interface's pictures for Icons, the world's for the rest.
+    bool hasAlike(int width, int height) const { return alike_.has(width, height); }
+    bool alike(const uint32_t* argb, int width, int height, Kind kind, std::string& name) const;
+    // The same in two steps - the likeness found as the texture is uploaded, the kind known when it is drawn.
+    bool alikeName(const uint32_t* argb, int width, int height, std::string& name) const;
+    bool alikeFits(const std::string& name, Kind kind) const;
     size_t ahead() const { return kinds_.size(); }
     size_t aliases() const { return aliases_.size(); }
 
@@ -42,6 +50,7 @@ private:
     std::unordered_set<std::string> made_;
     std::unordered_map<std::string, Kind> kinds_;           // a key -> its kind, known ahead
     std::unordered_map<std::string, std::string> aliases_;  // a key of a lower texture detail -> the pack's picture
+    pack::NearPictures alike_;  // 0.49
 };
 
 }  // namespace uagfx::ai

@@ -86,13 +86,18 @@ bool parseStatus(const std::string& text, Status& out);  // false: no state in i
 
 // A file's part in the pack.
 struct Source {
-    enum Type : uint8_t { None, Texture, Tga, Interface, Sprite } type = None;
+    enum Type : uint8_t { None, Texture, Tga, Interface, Sprite, Jpeg } type = None;  // 0.49: Jpeg
     ai::Kind kind = ai::Kind::None;  // what the driver takes it as: the network for it, the index's kind
 };
 Source sourceOf(const std::string& name, const Choice& c);  // a normal name ("data\texture\...")
 
 // The pictures of a file the driver would give the network, in order: none of soft light (the driver leaves those as
 // the game's), the world's within the sides, the interface's of an icon's or a picture's size (pieces are xBR's).
-std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t size, const Choice& c);
+// 0.49: a sprite's frames with another palette (1024 bytes, RGBA): a head's in its hair colour (palettesOf).
+std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t size, const Choice& c,
+                                const uint8_t* palette = nullptr);
+// 0.49: the palettes the game draws a sprite with besides its own, among the game's files (sorted names): a head's
+// hair colours - data\palette\머리\머리<N>_<sex>_<colour>.pal for data\sprite\인간족\머리통\<sex>\<N>_<sex>.spr.
+std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names);
 
 }  // namespace uagfx::pack

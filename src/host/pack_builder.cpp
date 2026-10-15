@@ -13,6 +13,7 @@
 
 #include "core/ai/kinds.hpp"
 #include "core/ai/texture_cache.hpp"
+#include "core/near_picture.hpp"
 #include "core/texture_pack.hpp"
 #include "core/webp_image.hpp"
 #include "win/gpu/renderer.hpp"
@@ -38,10 +39,18 @@ bool exists(const std::string& path) { return GetFileAttributesA(path.c_str()) !
 
 // A file broken past what the readers check (no memory for what its header claims): none of its pictures, a line in
 // the log - the rest of the game's files go on.
-std::vector<pack::Picture> picturesOf(const std::string& name, const pack::Source& s, const std::vector<uint8_t>& data,
-                                      const pack::Choice& c) {
+// 0.49: a head's frames in every hair colour the game has too (palettesOf) - the game draws it with one of them.
+std::vector<pack::Picture> picturesOf(pack::GameFiles& files, const std::string& name, const pack::Source& s,
+                                      const std::vector<uint8_t>& data, const pack::Choice& c) {
     try {
-        return pack::picturesOf(s, data.data(), data.size(), c);
+        std::vector<pack::Picture> out = pack::picturesOf(s, data.data(), data.size(), c);
+        if (s.type != pack::Source::Sprite) return out;
+        std::vector<uint8_t> palette;
+        for (const std::string& p : pack::palettesOf(name, files.names()))
+            if (files.read(p, palette) && palette.size() >= 1024)
+                for (pack::Picture& f : pack::picturesOf(s, data.data(), data.size(), c, palette.data()))
+                    out.push_back(std::move(f));
+        return out;
     } catch (const std::exception& e) {
         LOG_ERROR("texture pack: %s left out (%s)", utf8Of(name).c_str(), e.what());
         return {};
@@ -280,6 +289,8 @@ bool Builder::checkpoint(Encoders* enc, bool last) {
     }
     for (const auto& a : index_.aliases)
         if (index.pictures.count(a.second)) index.aliases.insert(a);
+    for (const auto& n : index_.alike)
+        if (index.pictures.count(n.first)) index.alike.insert(n);
     std::string error;
     const std::string text = pack::indexText(index);
     const bool ok = last ? writer_.close(text, error) : writer_.checkpoint(text, error);
@@ -329,10 +340,13 @@ int Builder::build() {
         s_.current = utf8Of(list_[i].first);
         bool some = false;
         if (files_.read(list_[i].first, data))
-            for (const pack::Picture& p : picturesOf(list_[i].first, list_[i].second, data, a_.choice)) {
+            for (const pack::Picture& p : picturesOf(files_, list_[i].first, list_[i].second, data, a_.choice)) {
                 const std::string name = pack::pictureName(p.group, p.key);
                 if (!seen.insert(name).second) continue;
                 index_.pictures[name].kind = list_[i].second.kind;
+                if (p.contentWidth)  // 0.49: a .jpg's - the game finds it by its likeness
+                    index_.alike[name] = pack::likenessText(
+                        pack::likenessOf(p.argb.data(), p.width, p.height, p.contentWidth, p.contentHeight));
                 noteLowerDetails(p, name);
                 if (!done.count(name)) {
                     ++s_.toMake;
@@ -380,7 +394,7 @@ int Builder::build() {
     for (size_t i : todo) {
         s_.current = utf8Of(list_[i].first);
         if (!files_.read(list_[i].first, data)) data.clear();
-        for (pack::Picture& p : picturesOf(list_[i].first, list_[i].second, data, a_.choice)) {
+        for (pack::Picture& p : picturesOf(files_, list_[i].first, list_[i].second, data, a_.choice)) {
             const std::string name = pack::pictureName(p.group, p.key);
             if (!done.insert(name).second) continue;
             std::string why;

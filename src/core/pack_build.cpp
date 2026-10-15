@@ -6,6 +6,7 @@
 
 #include "core/ai/texture_cache.hpp"
 #include "core/grf/grf.hpp"
+#include "core/jpeg_image.hpp"
 #include "core/sprite_exe.hpp"
 #include "core/zip.hpp"
 
@@ -30,7 +31,8 @@ bool endsWith(const std::string& s, const char* tail) {
 
 // A file name the builder may take: the textures' and the sprites' (normal names).
 bool wanted(const std::string& n) {
-    return (n.rfind("data\\texture\\", 0) == 0 && (endsWith(n, ".bmp") || endsWith(n, ".tga"))) ||
+    return (n.rfind("data\\texture\\", 0) == 0 &&
+            (endsWith(n, ".bmp") || endsWith(n, ".tga") || endsWith(n, ".jpg"))) ||
            (n.rfind("data\\sprite\\", 0) == 0 && endsWith(n, ".spr"));
 }
 
@@ -160,16 +162,44 @@ Source sourceOf(const std::string& n, const Choice& c) {
     }
     if (n.find("\\" + kInterface + "\\") != std::string::npos) {
         if (c.interface && endsWith(n, ".bmp")) s = Source{Source::Interface, ai::Kind::Icons};
+        if (c.interface && endsWith(n, ".jpg")) s = Source{Source::Jpeg, ai::Kind::Icons};  // 0.49: loading screens
         return s;
     }
     const bool effect = n.find("\\effect\\") != std::string::npos;
     if (effect ? !c.effects : !c.world) return s;
+    if (endsWith(n, ".jpg")) return Source{Source::Jpeg, effect ? ai::Kind::Effects : ai::Kind::Objects};  // water
     s.type = endsWith(n, ".tga") ? Source::Tga : Source::Texture;
     s.kind = effect ? ai::Kind::Effects : ai::Kind::Ground;
     return s;
 }
 
-std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t size, const Choice& c) {
+std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names) {
+    const std::string human = "\xC0\xCE\xB0\xA3\xC1\xB7", head = "\xB8\xD3\xB8\xAE\xC5\xEB",
+                      hair = "\xB8\xD3\xB8\xAE";  // 인간족, 머리통, 머리
+    const std::string dir = "data\\sprite\\" + human + "\\" + head + "\\";
+    std::vector<std::string> out;
+    if (sprite.rfind(dir, 0) != 0 || !endsWith(sprite, ".spr")) return out;
+    const std::string rest = sprite.substr(dir.size());  // "<sex>\<N>_<sex>.spr"
+    const size_t slash = rest.find('\\');
+    if (slash == std::string::npos) return out;
+    const std::string sex = rest.substr(0, slash), file = rest.substr(slash + 1);
+    const std::string tail = "_" + sex + ".spr";
+    if (file.size() <= tail.size() || file.compare(file.size() - tail.size(), tail.size(), tail) != 0) return out;
+    const std::string style = file.substr(0, file.size() - tail.size());
+    const std::string prefix = "data\\palette\\" + hair + "\\" + hair + style + "_" + sex + "_";
+    for (auto it = std::lower_bound(names.begin(), names.end(), prefix); it != names.end(); ++it) {
+        if (it->compare(0, prefix.size(), prefix) != 0) break;
+        const std::string colour = it->substr(prefix.size());
+        if (colour.size() <= 4 || !endsWith(colour, ".pal")) continue;
+        bool digits = true;
+        for (size_t i = 0; i + 4 < colour.size(); ++i) digits = digits && colour[i] >= '0' && colour[i] <= '9';
+        if (digits) out.push_back(*it);
+    }
+    return out;
+}
+
+std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t size, const Choice& c,
+                                const uint8_t* palette) {
     std::vector<Picture> out;
     Picture p;
     switch (s.type) {
@@ -199,9 +229,37 @@ std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t siz
             }
             break;
         }
+        case Source::Jpeg: {  // 0.49
+            std::vector<uint32_t> pixels;
+            int w = 0, h = 0;
+            if (!jpeg::decode(data, size, pixels, w, h)) break;
+            int tw = w, th = h;
+            if (s.kind == ai::Kind::Icons) {  // the game's texture: a power of two a side, the picture in its corner
+                tw = th = 1;
+                while (tw < w) tw *= 2;
+                while (th < h) th *= 2;
+                if (tw < 128 || th < 128 || tw > 1024 || th > 1024) break;
+            } else if ((w & (w - 1)) || (h & (h - 1)) || w < c.minSide || h < c.minSide || w > c.maxSide ||
+                       h > c.maxSide) {
+                break;
+            }
+            Picture p;
+            p.group = s.kind == ai::Kind::Icons ? Group::Ui : Group::World;
+            p.width = tw;
+            p.height = th;
+            p.argb.assign(size_t(tw) * size_t(th), 0);
+            for (int y = 0; y < h; ++y)
+                std::copy(pixels.begin() + std::ptrdiff_t(y) * w, pixels.begin() + std::ptrdiff_t(y + 1) * w,
+                          p.argb.begin() + std::ptrdiff_t(y) * tw);
+            p.contentWidth = w;
+            p.contentHeight = h;
+            p.key = ai::keyName(ai::textureKey(p.argb.data(), tw, th));
+            out.push_back(std::move(p));
+            break;
+        }
         case Source::Sprite: {
             std::vector<Picture> frames;
-            spriteFrames(data, size, frames);
+            spriteFrames(data, size, frames, palette);
             for (Picture& f : frames)
                 if (!ai::softPicture(f.argb.data(), f.width, f.height) &&
                     !ai::softAlpha(f.argb.data(), f.width, f.height))

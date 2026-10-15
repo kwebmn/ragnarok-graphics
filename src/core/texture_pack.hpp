@@ -47,6 +47,8 @@ struct IndexEntry {
 struct Index {
     std::map<std::string, IndexEntry> pictures;
     std::map<std::string, std::string> aliases;  // a key of a lower texture detail -> its whole texture's picture
+    // 0.49: the pictures the game finds by their likeness ("~name\t<likenessText>" lines, near_picture.hpp).
+    std::map<std::string, std::string> alike;
 };
 std::string indexText(const Index& index);
 Index parseIndexFile(const std::string& text);

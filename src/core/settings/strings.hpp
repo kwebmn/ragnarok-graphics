@@ -109,6 +109,8 @@ enum class Text : uint16_t {
     RenderApi, RenderApiHint, RenderApiD3d12, RenderApiD3d11, RenderApiAuto, RenderUseD3d11, DiagD3D11,
     DiagD3D11Ok, DiagD3D11Failed, AiD3d11Note,
     AiCacheAskOld, AiCacheOldDeleted,
+    ServiceUpdate, UpdateCheck, UpdateNow, UpdateChecking, UpdateNewer, UpdateLatest, UpdateFailed, UpdateAsk,
+    UpdateGameRunning, UpdateNote, UpdateError,
     Count
 };
 

@@ -65,6 +65,7 @@ private:
         int uploads = 0;
         bool soft = false;  // soft light alone or a soft alpha (0.22.2, 0.39.2): it stays the game's
         bool ui = false;    // a picture of the interface: it stands in for the interface's draws
+        std::string alike;  // 0.49: a .jpg's: the pack's picture most like it (found as it was uploaded)
         uint32_t serial = 0;   // its pixels': a picture asked for older ones is not taken
         uint64_t lastUse = 0;  // the frame it was last drawn in
     };

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/ai/ready.hpp"
+#include "core/near_picture.hpp"
 #include "core/texture_pack.hpp"
 #include "test.hpp"
 
@@ -149,4 +150,32 @@ TEST(ai_ready_kinds_known_ahead) {
     ReadyPictures off(a);
     addPack(off, {world}, index);
     CHECK(!off.knownKind(kKey, k));
+}
+
+TEST(ai_ready_jpg_pictures_found_by_their_likeness) {
+    // 0.49: a loading screen decoded by the game itself (ijl15.dll) has another key than the builder's: the pack's
+    // index keeps its likeness ("~" lines) and the game takes the picture most like its texture - of its group only.
+    std::vector<uint32_t> screen(256 * 256, 0);
+    for (int y = 0; y < 150; ++y)
+        for (int x = 0; x < 200; ++x)
+            screen[size_t(y) * 256 + size_t(x)] = 0xFF000000u | uint32_t(x) << 16 | uint32_t(y);
+    const std::string ui = "ui/256x256/00000000000000aa.webp";
+    pack::Index x;
+    x.pictures[ui] = pack::IndexEntry{Kind::Icons, {}};
+    x.alike[ui] = pack::likenessText(pack::likenessOf(screen.data(), 256, 256, 200, 150));
+    ReadyPictures r(settings());
+    addPack(r, {ui}, pack::indexText(x));
+    CHECK(r.hasAlike(256, 256));
+    CHECK(!r.hasAlike(128, 128));
+    std::vector<uint32_t> game = screen;
+    for (uint32_t& p : game) p = p ? (p & 0xFFF8F8F8u) : 0xFF336699u;  // 16 bits; the rest of the texture anything
+    std::string name;
+    CHECK(r.alike(game.data(), 256, 256, Kind::Icons, name));
+    CHECK(name == ui);
+    CHECK(!r.alike(game.data(), 256, 256, Kind::Ground, name));  // a picture of the interface: not for the world
+    AiSettings off = settings();
+    off.icons = false;
+    ReadyPictures r2(off);
+    addPack(r2, {ui}, pack::indexText(x));
+    CHECK(!r2.alike(game.data(), 256, 256, Kind::Icons, name));
 }

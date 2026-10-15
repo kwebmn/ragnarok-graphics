@@ -184,6 +184,12 @@ TEST(texture_pack_index_holds_the_maps_of_its_pictures) {
     const pack::IndexEntry& odd = back.pictures.at("world/1x1/1.webp");
     CHECK(odd.kind == ai::Kind::None && odd.maps == std::set<std::string>{"payon"});
     CHECK(back.aliases == x.aliases);
+    // 0.49: the likeness of a picture of a .jpg, on a line of its own.
+    pack::Index withNear = x;
+    withNear.alike["ui/1024x1024/0000000000000001.webp"] = "1024\t1024\t800\t600\tab";
+    const pack::Index nearBack = pack::parseIndexFile(pack::indexText(withNear));
+    CHECK(nearBack.alike == withNear.alike);
+    CHECK(nearBack.pictures.size() == 2 && !nearBack.pictures.count("~ui/1024x1024/0000000000000001.webp"));
     // The kinds alone, as before (0.43): the maps after the kind do not change it.
     CHECK(pack::parseIndex(text).at("world/256x256/00000000000000aa.webp") == ai::Kind::Ground);
 }
