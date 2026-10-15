@@ -49,6 +49,9 @@ public:
         (void)n;
         return 0;
     }
+    // 0.43: a page that shows work going on elsewhere (the texture pack's builder) - tick() twice a second.
+    virtual bool ticks() const { return false; }
+    virtual void tick() {}
 
 protected:
     std::wstring t(settings::Text x) const { return wtr(host_.lang(), x); }
@@ -65,6 +68,7 @@ std::unique_ptr<Page> makeServicePage(PageHost& host);
 std::unique_ptr<Page> makeAiPage(PageHost& host);       // 0.12: the [ai] section
 std::unique_ptr<Page> makeAiCachePage(PageHost& host);  // 0.12: what upscaled.grf holds
 std::unique_ptr<Page> makeEffectsPage(PageHost& host);  // 0.18: the [effects] section
+std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pack's builder
 
 // The window text of a control, as UTF-8 (number fields).
 std::string controlText(HWND ctl);

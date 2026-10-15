@@ -33,8 +33,8 @@ if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # uaro-render64.exe (part 3): the renderer in a 64-bit process the driver hands its calls to; the rest of the
     # project is 32-bit (cmake/mingw-x86_64.cmake builds only this).
     file(GLOB UAGFX_HOST_SOURCES CONFIGURE_DEPENDS src/win/gpu/*.cpp src/win/bridge/*.cpp)
-    add_executable(uaro-render64 WIN32 src/host/main.cpp src/host/streamline.cpp ${UAGFX_HOST_SOURCES} src/win/log.cpp
-                   src/win/paths.cpp)
+    add_executable(uaro-render64 WIN32 src/host/main.cpp src/host/pack_builder.cpp src/host/streamline.cpp
+                   ${UAGFX_HOST_SOURCES} src/win/log.cpp src/win/paths.cpp)
     # NVIDIA Streamline's headers (MIT); its DLLs are loaded at run time from uaro-graphics\dlss\.
     target_include_directories(uaro-render64 PRIVATE third_party/streamline/include)
     target_compile_definitions(uaro-render64 PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS)
@@ -72,7 +72,7 @@ elseif(WIN32)
     add_executable(uaro-graphics WIN32 src/app/main.cpp src/app/main_window.cpp src/app/ui.cpp src/app/page.cpp
                    src/app/page_settings.cpp src/app/page_screen.cpp src/app/page_diagnostics.cpp
                    src/app/page_service.cpp src/app/page_ai.cpp src/app/page_ai_cache.cpp
-                   src/app/page_effects.cpp src/app/app.rc)
+                   src/app/page_effects.cpp src/app/page_pack.cpp src/app/app.rc)
     target_include_directories(uaro-graphics PRIVATE src/app dist ${CMAKE_BINARY_DIR}/app)
     target_compile_options(uaro-graphics PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
     target_link_libraries(uaro-graphics PRIVATE uagfx_app comdlg32)

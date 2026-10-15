@@ -42,6 +42,8 @@ ALLOWED = {
         "SetLastError", "SetUnhandledExceptionFilter", "SizeofResource", "Sleep", "TlsAlloc", "TlsFree",
         "TlsGetValue", "TlsSetValue", "VirtualProtect", "VirtualQuery", "WaitForSingleObject",
         "WideCharToMultiByte", "WriteFile", "lstrcmpiW", "lstrcpyW",
+        # 0.43, the texture pack page: its builder started and watched (Windows 2000 / Vista)
+        "CreateProcessW", "GetTickCount64",
     },
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",
@@ -53,6 +55,8 @@ ALLOWED = {
         "setlocale", "signal", "strchr", "strcmp", "strcoll", "strerror", "strftime", "strlen", "strncmp", "strtol",
         "strtoul", "strxfrm", "tolower", "toupper", "towlower", "towupper", "vfprintf", "wcscoll", "wcsftime",
         "wcslen", "wcsxfrm",
+        # 0.43: the texture pack's reader (core/texture_pack.cpp), the builder's process name, libwebp
+        "_chsize", "_wcsicmp", "islower", "isspace",
     },
     "ole32.dll": {
         "CoInitializeEx", "CoUninitialize",
@@ -73,6 +77,8 @@ ALLOWED = {
         # 0.22.1, the page view that scrolls (all of them in Windows since 95 / NT 3.1)
         "GetClassNameW", "GetScrollInfo", "GetSystemMetrics", "ScrollWindowEx", "SetScrollInfo", "SetScrollPos",
         "WindowFromPoint",
+        # 0.43, the texture pack page's lines
+        "GetWindowTextLengthW",
     },
 }
 # Newer than Windows 7: never on the list above (a check of the list itself).

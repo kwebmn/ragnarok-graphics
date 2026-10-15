@@ -56,6 +56,16 @@ public:
     void work();                                    // with the frame's list open, before its present: a slice
     bool shown = true;                              // Pause: the game's own textures
 
+    // 0.43, the pack builder (Renderer::buildPack): the networks of the settings' kinds - no upscaled.grf, no pack.
+    bool startForPack(const std::string& gameDir, const AiSettings& settings, std::string& error);
+    int netFor(ai::Kind kind) const { return int(kind) < ai::kKinds ? netOf_[int(kind)] : -1; }
+    const std::string& netName(int net) const { return nets_[size_t(net)]->name; }
+    // The network's picture of argb (w x h) at once, on the renderer's list, waiting for the GPU: 4 times its size;
+    // border 0 the other side past the edges, 1 nothing, 2 the edge again (a world texture, a sprite's cell, an
+    // interface picture).
+    bool enlarge(int net, const uint32_t* argb, int w, int h, uint32_t border, std::vector<uint32_t>& out,
+                 std::string& error);
+
 private:
     struct Net {
         std::string token;  // [ai] model: general, anime

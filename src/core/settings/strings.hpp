@@ -97,6 +97,13 @@ enum class Text : uint16_t {
     FxPortalsStrength, FxPortalsStrengthHint, FxWeather, FxWeatherHint, FxWeatherAmount, FxWeatherAmountHint,
     QualityWindowArt, QualityWindowArtHint, WindowArtXbr, WindowArtAi, WindowArtPixels,
     AiGenerate, AiGenerateHint, AiPackNote,
+    PagePack, PackIntro, PackHas, PackNone, PackWhat, PackWorld, PackWorldHint, PackEffects, PackEffectsHint,
+    PackMonsters, PackMonstersHint, PackPlayers, PackPlayersHint, PackNpcs, PackNpcsHint, PackItems, PackItemsHint,
+    PackInterface, PackInterfaceHint, PackQuality, PackQualityHint, PackQualitySmall, PackQualityBalanced,
+    PackQualityLossless, PackNets, PackMake, PackStop, PackCheck, PackAnew, PackCopy, PackAskAnew, PackNoHost,
+    PackNothing, PackStarting, PackReading, PackBuilding, PackBuildingNoEta, PackFile, PackChecking, PackDone,
+    PackStopped, PackFailed, PackGone, PackChecked, PackMissing, PackGameRunning, PackBackground, PackCheckNote,
+    TimeHoursMinutes, TimeMinutes, TimeSeconds,
     Count
 };
 

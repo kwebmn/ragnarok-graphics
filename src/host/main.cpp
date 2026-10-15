@@ -2,9 +2,12 @@
 // what exists only for 64-bit programs - DLSS, frame generation - can come next. The driver starts it with
 //   uaro-render64.exe --channel <shared block> --parent <game pid> --dir "<game folder>" --log <level>
 //                     --present auto|window|composition
-// and it ends with the game.
+// and it ends with the game. 0.43: the settings app starts it to make the texture pack (host/pack_builder.hpp):
+//   uaro-render64.exe --pack check|build --dir "<game folder>" --ai <[ai] settings> --kinds <what>
+//                     [--quality 90] [--fresh 1] [--out "<pack>"] [--status "<file>"]
 #include <windows.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -14,6 +17,7 @@
 #include "core/bridge_protocol.hpp"
 #include "core/bridge_wire.hpp"
 #include "core/version.hpp"
+#include "host/pack_builder.hpp"
 #include "host/streamline.hpp"
 #include "win/bridge/channel.hpp"
 #include "win/gpu/renderer.hpp"
@@ -37,6 +41,7 @@ struct Args {
     bool motionInverted = false;
     int generation = 0;
     AiSettings ai;  // [ai]
+    host::PackArgs pack;  // 0.43: --pack
 };
 
 // The driver's command line: words, "quoted words".
@@ -69,6 +74,12 @@ Args parseArgs() {
         else if (k == "--dlss-motion") a.motionInverted = v == "inverted";
         else if (k == "--fg") a.generation = std::atoi(v.c_str());
         else if (k == "--ai") a.ai = parseAiArgument(v);
+        else if (k == "--pack") a.pack.mode = v;
+        else if (k == "--kinds") a.pack.choice = pack::parseChoice(v);
+        else if (k == "--quality") a.pack.quality = std::clamp(std::atoi(v.c_str()), 1, 100);
+        else if (k == "--fresh") a.pack.fresh = v == "1";
+        else if (k == "--out") a.pack.out = v;
+        else if (k == "--status") a.pack.status = v;
         else continue;
         ++i;
     }
@@ -487,7 +498,15 @@ void Host::present(WireReader& rd) {
 }  // namespace
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
-    const Args a = parseArgs();
+    Args a = parseArgs();
+    if (!a.pack.mode.empty()) {  // 0.43: the texture pack, with a log of its own
+        wlog::open(a.dir + "\\uaro-pack.log", LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log));
+        a.pack.dir = a.dir;
+        a.pack.ai = a.ai;
+        a.pack.choice.minSide = std::min(a.ai.minSize, a.ai.maxSize);
+        a.pack.choice.maxSide = std::max(a.ai.minSize, a.ai.maxSize);
+        return host::runPack(a.pack);
+    }
     wlog::open(a.dir + "\\uaro-render64.log", LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log));
     if (a.channel.empty() || !a.parent) {
         LOG_ERROR("uaro-render64.exe is started by the uaRO Graphics driver in the game, not by hand");

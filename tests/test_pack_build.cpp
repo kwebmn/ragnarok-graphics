@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <map>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -95,4 +96,73 @@ TEST(pack_build_checks_its_keys_against_upscaled_grf) {
     CHECK(k.seen[int(ai::Kind::Sprites)] == 2 && k.found[int(ai::Kind::Sprites)] == 1);
     CHECK(k.missing.size() == 1 && k.missing[0] == "sprites 32x32\\0000000000000003");
     CHECK(pack::keyCheckText(k).find("sprites 1 of 2") != std::string::npos);
+}
+
+TEST(pack_build_passes_its_choice_as_words) {
+    // 0.43: the settings app starts the builder with the kinds ticked on its page, as words.
+    pack::Choice c;
+    CHECK_EQ(pack::choiceText(c), std::string("world,effects,monsters,players,npcs,items,interface"));
+    pack::Choice some = pack::parseChoice("monsters,interface,nonsense,,world");
+    CHECK(some.world && some.monsters && some.interface);
+    CHECK(!some.effects && !some.players && !some.npcs && !some.items);
+    CHECK_EQ(pack::choiceText(some), std::string("world,monsters,interface"));
+    const pack::Choice none = pack::parseChoice("");
+    CHECK(!none.world && !none.effects && !none.monsters && !none.players && !none.npcs && !none.items &&
+          !none.interface);
+    CHECK_EQ(pack::choiceText(none), std::string(""));
+    CHECK(pack::anyChosen(some) && !pack::anyChosen(none));
+}
+
+TEST(pack_build_writes_and_reads_its_status) {
+    // What the builder does, in a file the settings app reads twice a second: a line a value.
+    pack::Status s;
+    s.state = pack::Status::Building;
+    s.check = true;  // the check's run, not the pack's
+    s.filesDone = 120;
+    s.filesTotal = 11253;
+    s.made = 5000;
+    s.toMake = 80000;
+    s.inPack = 7000;
+    s.bytes = 123456789012ull;
+    s.rate = 41.5;
+    s.eta = 1807;
+    s.pid = 4242;
+    s.current = "data\\sprite\\poring.spr\nsecond line";  // never two lines
+    s.message = "";
+    s.missing = {"sprites 64x64\\0123456789abcdef", "ground 256x256\\fedcba9876543210"};
+    const std::string text = pack::statusText(s);
+    pack::Status r;
+    CHECK(pack::parseStatus(text, r));
+    CHECK(r.state == pack::Status::Building && r.check);
+    CHECK(r.filesDone == 120 && r.filesTotal == 11253 && r.made == 5000 && r.toMake == 80000 && r.inPack == 7000);
+    CHECK(r.bytes == 123456789012ull && r.eta == 1807 && r.pid == 4242);
+    CHECK(r.rate > 41.4 && r.rate < 41.6);
+    CHECK_EQ(r.current, std::string("data\\sprite\\poring.spr second line"));
+    CHECK(r.missing.size() == 2 && r.missing[1] == "ground 256x256\\fedcba9876543210");
+    for (int st = 0; st <= int(pack::Status::Failed); ++st) {
+        pack::Status a;
+        a.state = pack::Status::State(st);
+        a.message = "why";
+        pack::Status b;
+        CHECK(pack::parseStatus(pack::statusText(a), b) && b.state == a.state && b.message == "why" && !b.check);
+    }
+    pack::Status bad;
+    CHECK(!pack::parseStatus("", bad));
+    CHECK(!pack::parseStatus("state=nonsense\n", bad));
+}
+
+TEST(pack_build_writes_and_reads_the_packs_index) {
+    // index.txt: a line a picture - its name and its kind - so that a pack goes on with its kinds known.
+    std::map<std::string, ai::Kind> kinds = {{"world/256x256/0123456789abcdef.webp", ai::Kind::Ground},
+                                             {"sprites/64x128/fedcba9876543210.webp", ai::Kind::Sprites},
+                                             {"ui/24x24/00000000000000aa.webp", ai::Kind::Icons}};
+    const std::string text = pack::indexText(kinds);
+    CHECK_EQ(text, std::string("sprites/64x128/fedcba9876543210.webp\tsprites\n"
+                               "ui/24x24/00000000000000aa.webp\ticons\n"
+                               "world/256x256/0123456789abcdef.webp\tground\n"));
+    const auto back = pack::parseIndex(text + "broken line\nworld/32x32/1111111111111111.webp\tnonsense\n");
+    CHECK_EQ(back.size(), size_t(4));
+    CHECK(back.at("world/256x256/0123456789abcdef.webp") == ai::Kind::Ground);
+    CHECK(back.at("ui/24x24/00000000000000aa.webp") == ai::Kind::Icons);
+    CHECK(back.at("world/32x32/1111111111111111.webp") == ai::Kind::None);  // a kind it does not know
 }

@@ -23,10 +23,14 @@ if exist "uaro-graphics-pipelines.txt" del /f "uaro-graphics-pipelines.txt"
 rem The shaders compiled at the first start and kept for the next ones are a cache too.
 if exist "uaro-graphics\shaders-32.bin" del /f "uaro-graphics\shaders-32.bin"
 if exist "uaro-graphics\shaders-64.bin" del /f "uaro-graphics\shaders-64.bin"
+rem The texture pack builder's status for the settings app goes too.
+if exist "uaro-graphics\pack-status.txt" del /f "uaro-graphics\pack-status.txt"
+if exist "uaro-graphics\pack-status.txt.part" del /f "uaro-graphics\pack-status.txt.part"
+if exist "uaro-graphics\pack-status.txt.stop" del /f "uaro-graphics\pack-status.txt.stop"
 rmdir "dgvoodoo" 2>nul
 echo.
 echo uaRO Graphics is removed and dgVoodoo is back in place.
-echo uaro-graphics.ini and uaro-graphics.log stay here; delete them if you like.
+echo uaro-graphics.ini, uaro-graphics.log and uaro-pack.log stay here; delete them if you like.
 echo The uaro-graphics-backup folder keeps the copies of your settings the settings app made.
 echo upscaled.grf keeps the AI textures made so far; delete it if you like.
 echo uaro-textures.zip is the texture pack; delete it if you like.

@@ -15,6 +15,7 @@ Text pageName(Page p) {
         case Page::Effects: return Text::PageEffects;
         case Page::Ai: return Text::PageAi;
         case Page::AiCache: return Text::PageAiCache;
+        case Page::Pack: return Text::PagePack;
         case Page::Frames: return Text::PageFrames;
         case Page::Sound: return Text::PageSound;
         case Page::Game: return Text::PageGame;

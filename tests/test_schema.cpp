@@ -79,7 +79,7 @@ TEST(schema_live_keys_are_the_specs) {
 TEST(schema_pages_follow_the_spec) {
     // Stage 2 spec §6.1 with 0.6.2: Sound, Game, and Chat and login after Frames - the last holds the whisper, login
     // and chat macro rows the Game page has no room for.
-    CHECK_EQ(kPageCount, 13);
+    CHECK_EQ(kPageCount, 14);
     CHECK(pageName(Page::Sound) == Text::PageSound);
     CHECK(pageName(Page::Game) == Text::PageGame);
     CHECK(pageName(Page::Chat) == Text::PageChat);
@@ -92,6 +92,9 @@ TEST(schema_pages_follow_the_spec) {
     CHECK(pageName(Page::AiCache) == Text::PageAiCache);
     CHECK_EQ(int(Page::Ai), 5);
     CHECK_EQ(int(Page::AiCache), 6);
-    CHECK_EQ(int(Page::Diagnostics), 11);
-    CHECK_EQ(int(Page::Service), 12);
+    // 0.43: the texture pack after them.
+    CHECK(pageName(Page::Pack) == Text::PagePack);
+    CHECK_EQ(int(Page::Pack), 7);
+    CHECK_EQ(int(Page::Diagnostics), 12);
+    CHECK_EQ(int(Page::Service), 13);
 }

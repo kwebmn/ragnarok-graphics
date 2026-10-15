@@ -239,6 +239,90 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     return true;
 }
 
+bool AiTextures::startForPack(const std::string& gameDir, const AiSettings& s, std::string& error) {
+    settings_ = s;
+    scale_ = 4;
+    generate_ = true;
+    const std::string dir = gameDir + "\\uaro-graphics\\ai\\";
+    for (int k = 0; k < ai::kKinds; ++k) {
+        kindOn_[k] = true;
+        const std::string& token = k < 2 ? s.model : s.spriteModel;  // the ground and objects, sprites and the rest
+        for (size_t i = 0; i < nets_.size() && netOf_[k] < 0; ++i)
+            if (nets_[i]->token == token) netOf_[k] = int(i);
+        if (netOf_[k] >= 0) continue;
+        auto net = std::make_unique<Net>();
+        if (!loadNet(dir, token, s.denoise, *net, error)) return false;
+        features_ = std::max(features_, net->model.features);
+        nets_.push_back(std::move(net));
+        netOf_[k] = int(nets_.size()) - 1;
+    }
+    if (!createGpu(error)) return false;
+    for (size_t i = 0; i < nets_.size(); ++i)
+        if (!selfTest(int(i), error)) return false;
+    ready_ = true;
+    return true;
+}
+
+bool AiTextures::enlarge(int net, const uint32_t* argb, int w, int h, uint32_t border, std::vector<uint32_t>& out,
+                         std::string& error) {
+    if (net < 0 || size_t(net) >= nets_.size() || w <= 0 || h <= 0) {
+        error = "no network for it";
+        return false;
+    }
+    const ai::Model& model = nets_[size_t(net)]->model;
+    Job j;
+    j.net = net;
+    j.width = w;
+    j.height = h;
+    j.border = border;
+    j.pixels.assign(argb, argb + size_t(w) * size_t(h));
+    j.alpha = ai::hasTransparency(j.pixels.data(), w, h);
+    const int ow = w * kNetScale, oh = h * kNetScale;
+    std::vector<Level> levels;
+    UINT64 bytes = 0;
+    layout(ow, oh, levels, bytes);
+    if (!ensureBuffers(w, h) || !m_.begin() || !uploadInput(j)) {
+        error = "no GPU memory for a " + std::to_string(w) + "x" + std::to_string(h) + " picture";
+        return false;
+    }
+    computeBound_ = false;
+    for (j.conv = 0; size_t(j.conv) < model.convs.size();) runBand(j, 1e18);
+    ID3D12Resource* image =
+        buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
+    const UINT64 pitch = levels[0].pitch;
+    ID3D12Resource* back = buffer(m_.device, D3D12_HEAP_TYPE_READBACK, pitch * UINT64(oh),
+                                  D3D12_RESOURCE_STATE_COPY_DEST, false);
+    bool ok = image && back;
+    if (ok) dispatchShuffle(j, image, levels[0]);
+    if (ok && j.alpha) {  // the alpha's own pass, as in the game
+        ok = uploadAlphaInput(j);
+        if (ok) {
+            for (j.conv = 0; size_t(j.conv) < model.convs.size();) runBand(j, 1e18);
+            dispatchAlpha(j, image, levels[0]);
+        }
+    }
+    if (ok) {
+        D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        m_.transition(image, state, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        m_.list->CopyBufferRegion(back, 0, image, 0, pitch * UINT64(oh));
+    }
+    m_.waitIdle();
+    computeBound_ = false;
+    void* mapped = nullptr;
+    ok = ok && !m_.lost && SUCCEEDED(back->Map(0, nullptr, &mapped));
+    if (ok) {
+        out.resize(size_t(ow) * size_t(oh));
+        for (int y = 0; y < oh; ++y)
+            std::memcpy(out.data() + size_t(y) * size_t(ow), static_cast<const uint8_t*>(mapped) + size_t(y) * pitch,
+                        size_t(ow) * 4);
+        back->Unmap(0, nullptr);
+    }
+    releaseCom(image);
+    releaseCom(back);
+    if (!ok) error = m_.lost ? "the graphics card was lost" : "no GPU memory for the picture";
+    return ok;
+}
+
 bool AiTextures::createGpu(std::string& error) {
     ID3D12Device* device = m_.device;
     const auto compileFn = m_.compiler ? reinterpret_cast<pD3DCompile>(

@@ -306,6 +306,14 @@ HWND Panel::buttons(const std::vector<ButtonItem>& list) {
     return first;
 }
 
+HWND Panel::progress(int id) {
+    const int h = at(16);
+    HWND c = make(PROGRESS_CLASSW, L"", 0, area_.left, y_, area_.right - area_.left, h, id, 0, false);
+    SendMessageW(c, PBM_SETRANGE32, 0, 1000);
+    y_ += h + at(kGap);
+    return c;
+}
+
 HWND Panel::listBox(int id, int rows) {
     const int h = at(rows * 20 + 8);
     HWND c = make(L"LISTBOX", L"", LBS_NOTIFY | WS_VSCROLL | WS_TABSTOP | LBS_NOINTEGRALHEIGHT, area_.left, y_,

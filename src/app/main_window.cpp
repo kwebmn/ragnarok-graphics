@@ -24,6 +24,7 @@ constexpr int kUndo = 22;
 constexpr int kCloseButton = 23;
 constexpr UINT kRebuild = WM_APP + 1;
 constexpr UINT_PTR kTimer = 1;
+constexpr UINT_PTR kTickTimer = 2;  // 0.43: a page's tick()
 
 }  // namespace
 
@@ -313,9 +314,14 @@ void MainWindow::buildPage() {
         case settings::Page::Ai: current_ = makeAiPage(*this); break;
         case settings::Page::AiCache: current_ = makeAiCachePage(*this); break;
         case settings::Page::Effects: current_ = makeEffectsPage(*this); break;
+        case settings::Page::Pack: current_ = makePackPage(*this); break;
         default: current_ = makeSettingsPage(*this, settings::Page(page_)); break;
     }
     current_->build(*panel_);
+    if (current_->ticks())
+        SetTimer(hwnd_, kTickTimer, 500, nullptr);
+    else
+        KillTimer(hwnd_, kTickTimer);
     pageHeight_ = panel_->height() + px(8, dpi_);
     updateScrollBar();
     scrollTo(scroll_);  // a page that got shorter: back up to its end
@@ -496,6 +502,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_TIMER:
             if (wp == kTimer && model_->refreshRunning()) rebuild();  // the game started or closed
+            if (wp == kTickTimer && current_) current_->tick();
             return 0;
         case WM_DPICHANGED: {
             dpi_ = HIWORD(wp);
@@ -523,6 +530,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_DESTROY:
             KillTimer(hwnd_, kTimer);
+            KillTimer(hwnd_, kTickTimer);
             current_.reset();
             panel_.reset();
             PostQuitMessage(0);

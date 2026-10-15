@@ -232,6 +232,147 @@ KeyCheck checkKeys(const std::vector<std::string>& cacheNames, const std::unorde
     return k;
 }
 
+namespace {
+
+const char* const kChoiceWords[7] = {"world", "effects", "monsters", "players", "npcs", "items", "interface"};
+bool* choiceField(Choice& c, int i) {
+    bool* const fields[7] = {&c.world, &c.effects, &c.monsters, &c.players, &c.npcs, &c.items, &c.interface};
+    return fields[i];
+}
+const char* const kStates[7] = {"starting", "reading", "building", "checking", "done", "stopped", "failed"};
+
+std::string oneLine(const std::string& s) {
+    std::string out = s;
+    for (char& ch : out)
+        if (ch == '\n' || ch == '\r') ch = ' ';
+    return out;
+}
+
+}  // namespace
+
+std::string choiceText(const Choice& c) {
+    Choice copy = c;
+    std::string s;
+    for (int i = 0; i < 7; ++i)
+        if (*choiceField(copy, i)) s += std::string(s.empty() ? "" : ",") + kChoiceWords[i];
+    return s;
+}
+
+Choice parseChoice(const std::string& words) {
+    Choice c;
+    for (int i = 0; i < 7; ++i) *choiceField(c, i) = false;
+    size_t at = 0;
+    while (at <= words.size()) {
+        size_t end = words.find(',', at);
+        if (end == std::string::npos) end = words.size();
+        const std::string w = words.substr(at, end - at);
+        for (int i = 0; i < 7; ++i)
+            if (w == kChoiceWords[i]) *choiceField(c, i) = true;
+        at = end + 1;
+    }
+    return c;
+}
+
+bool anyChosen(const Choice& c) {
+    return c.world || c.effects || c.monsters || c.players || c.npcs || c.items || c.interface;
+}
+
+std::string statusText(const Status& s) {
+    char rate[32];
+    std::snprintf(rate, sizeof rate, "%.2f", s.rate);
+    std::string t = std::string("state=") + kStates[std::min<int>(s.state, 6)] + "\n";
+    t += std::string("mode=") + (s.check ? "check" : "build") + "\n";
+    t += "files=" + std::to_string(s.filesDone) + "/" + std::to_string(s.filesTotal) + "\n";
+    t += "pictures=" + std::to_string(s.made) + "/" + std::to_string(s.toMake) + "\n";
+    t += "in_pack=" + std::to_string(s.inPack) + "\n";
+    t += "bytes=" + std::to_string(s.bytes) + "\n";
+    t += std::string("rate=") + rate + "\n";
+    t += "eta=" + std::to_string(s.eta) + "\n";
+    t += "pid=" + std::to_string(s.pid) + "\n";
+    t += "current=" + oneLine(s.current) + "\n";
+    t += "message=" + oneLine(s.message) + "\n";
+    for (const std::string& m : s.missing) t += "missing=" + oneLine(m) + "\n";
+    return t;
+}
+
+bool parseStatus(const std::string& text, Status& out) {
+    Status s;
+    bool state = false;
+    size_t at = 0;
+    while (at < text.size()) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        const std::string line = text.substr(at, end - at);
+        at = end + 1;
+        const size_t eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        const std::string k = line.substr(0, eq), v = line.substr(eq + 1);
+        const auto pair = [&](uint32_t& a, uint32_t& b) {
+            const size_t slash = v.find('/');
+            a = uint32_t(std::strtoul(v.c_str(), nullptr, 10));
+            b = slash == std::string::npos ? 0 : uint32_t(std::strtoul(v.c_str() + slash + 1, nullptr, 10));
+        };
+        if (k == "state") {
+            for (int i = 0; i < 7; ++i)
+                if (v == kStates[i]) {
+                    s.state = Status::State(i);
+                    state = true;
+                }
+        } else if (k == "mode") {
+            s.check = v == "check";
+        } else if (k == "files") {
+            pair(s.filesDone, s.filesTotal);
+        } else if (k == "pictures") {
+            pair(s.made, s.toMake);
+        } else if (k == "in_pack") {
+            s.inPack = uint32_t(std::strtoul(v.c_str(), nullptr, 10));
+        } else if (k == "bytes") {
+            s.bytes = std::strtoull(v.c_str(), nullptr, 10);
+        } else if (k == "rate") {
+            s.rate = std::strtod(v.c_str(), nullptr);
+        } else if (k == "eta") {
+            s.eta = int(std::strtol(v.c_str(), nullptr, 10));
+        } else if (k == "pid") {
+            s.pid = uint32_t(std::strtoul(v.c_str(), nullptr, 10));
+        } else if (k == "current") {
+            s.current = v;
+        } else if (k == "message") {
+            s.message = v;
+        } else if (k == "missing") {
+            s.missing.push_back(v);
+        }
+    }
+    if (state) out = std::move(s);
+    return state;
+}
+
+std::string indexText(const std::map<std::string, ai::Kind>& kinds) {
+    std::string t;
+    for (const auto& e : kinds) t += e.first + "\t" + ai::kindName(e.second) + "\n";
+    return t;
+}
+
+std::map<std::string, ai::Kind> parseIndex(const std::string& text) {
+    std::map<std::string, ai::Kind> out;
+    size_t at = 0;
+    while (at < text.size()) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(at, end - at);
+        at = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        const size_t tab = line.find('\t');
+        if (tab == std::string::npos || tab == 0) continue;
+        std::string kind = line.substr(tab + 1);
+        const size_t more = kind.find('\t');  // the maps, later
+        if (more != std::string::npos) kind.resize(more);
+        ai::Kind k = ai::Kind::None;
+        if (!ai::parseKind(kind, k)) k = ai::Kind::None;
+        out[line.substr(0, tab)] = k;
+    }
+    return out;
+}
+
 std::string keyCheckText(const KeyCheck& k) {
     std::string s;
     for (int i = 0; i < ai::kKinds; ++i)

@@ -1243,6 +1243,37 @@ bool Renderer::startAiTextures(const std::string& gameDir, const AiSettings& set
     return true;
 }
 
+bool Renderer::startAiForPack(const std::string& gameDir, const AiSettings& settings, std::string& error) {
+    Impl& m = *impl_;
+    if (remote_ || remix_ || m.ai || !m.device) {
+        error = "the renderer is not for it";
+        return false;
+    }
+    m.ai = new AiTextures(m);
+    if (!m.ai->startForPack(gameDir, settings, error)) {
+        delete m.ai;
+        m.ai = nullptr;
+        return false;
+    }
+    return true;
+}
+
+bool Renderer::enlargeForPack(int kind, const uint32_t* argb, int width, int height, uint32_t border,
+                              std::vector<uint32_t>& out, std::string& error) {
+    Impl& m = *impl_;
+    if (!m.ai) {
+        error = "no networks";
+        return false;
+    }
+    return m.ai->enlarge(m.ai->netFor(ai::Kind(kind)), argb, width, height, border, out, error);
+}
+
+std::string Renderer::packNetName(int kind) const {
+    const Impl& m = *impl_;
+    const int net = m.ai ? m.ai->netFor(ai::Kind(kind)) : -1;
+    return net < 0 ? std::string() : m.ai->netName(net);
+}
+
 void Renderer::finish() {
     if (!remote_ && impl_->device && impl_->fence) impl_->waitIdle();
 }

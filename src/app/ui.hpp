@@ -74,6 +74,7 @@ public:
     HWND note(const std::wstring& text, Tone tone = Tone::Muted);
     HWND buttons(const std::vector<ButtonItem>& list);
     HWND listBox(int id, int rows);
+    HWND progress(int id);  // 0.43: a bar the width of the page, 0-1000
     // checkboxes: a check box before every row (LVS_EX_CHECKBOXES).
     HWND listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows, bool checkboxes = false);
     void gap(int at96 = 8);
