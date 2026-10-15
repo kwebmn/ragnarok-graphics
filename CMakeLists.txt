@@ -11,12 +11,23 @@ target_include_directories(uagfx_miniz PUBLIC third_party/miniz)
 target_compile_options(uagfx_miniz PRIVATE -w)
 target_compile_definitions(uagfx_miniz PUBLIC MINIZ_NO_STDIO MINIZ_NO_ARCHIVE_APIS MINIZ_NO_TIME)  # only (in)flate
 
+# libwebp 1.5.0 (BSD): the texture pack's pictures (0.42) - encoded by the pack builder, decoded by the renderer.
+# Only its decoder, encoder and their helpers; third-party code: its own warnings are not ours.
+file(GLOB UAGFX_WEBP_SOURCES CONFIGURE_DEPENDS third_party/libwebp/src/dec/*.c third_party/libwebp/src/dsp/*.c
+     third_party/libwebp/src/enc/*.c third_party/libwebp/src/utils/*.c third_party/libwebp/sharpyuv/*.c)
+add_library(uagfx_webp STATIC ${UAGFX_WEBP_SOURCES})
+target_include_directories(uagfx_webp PUBLIC third_party/libwebp/src PRIVATE third_party/libwebp)
+target_compile_options(uagfx_webp PRIVATE -w)
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    target_compile_options(uagfx_webp PRIVATE -msse2)  # every processor Windows 10 runs on has it
+endif()
+
 # Portable core: formats, surfaces, config, decisions. No Windows headers; unit-tested on Linux.
 file(GLOB_RECURSE UAGFX_CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(uagfx_core STATIC ${UAGFX_CORE_SOURCES})
 target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
-target_link_libraries(uagfx_core PUBLIC uagfx_miniz)
+target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp)
 
 if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # uaro-render64.exe (part 3): the renderer in a 64-bit process the driver hands its calls to; the rest of the
