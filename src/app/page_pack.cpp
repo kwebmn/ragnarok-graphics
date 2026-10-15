@@ -29,11 +29,12 @@ constexpr int kFetchBar = 1042;
 struct KindBox {
     Text label, hint;
 };
-const KindBox kKindBoxes[7] = {
+constexpr int kBoxes = 8;
+const KindBox kKindBoxes[kBoxes] = {
     {Text::PackWorld, Text::PackWorldHint},     {Text::PackEffects, Text::PackEffectsHint},
     {Text::PackMonsters, Text::PackMonstersHint}, {Text::PackPlayers, Text::PackPlayersHint},
     {Text::PackNpcs, Text::PackNpcsHint},       {Text::PackItems, Text::PackItemsHint},
-    {Text::PackInterface, Text::PackInterfaceHint}};
+    {Text::PackInterface, Text::PackInterfaceHint}, {Text::PackBodyColours, Text::PackBodyColoursHint}};
 const int kQualities[3] = {85, 92, 100};
 
 // What the page's choices were: it is made again after every change and keeps them across.
@@ -44,7 +45,8 @@ DWORD g_launched = 0;
 ULONGLONG g_launchedAt = 0;
 
 bool* kindOf(pack::Choice& c, int i) {
-    bool* const fields[7] = {&c.world, &c.effects, &c.monsters, &c.players, &c.npcs, &c.items, &c.interface};
+    bool* const fields[kBoxes] = {&c.world, &c.effects, &c.monsters, &c.players,
+                                  &c.npcs,  &c.items,   &c.interface, &c.bodyColours};
     return fields[i];
 }
 
@@ -113,7 +115,7 @@ public:
         p.note(t(Text::PackIntro));
         p.note(t(Text::PackWhat), Tone::Normal);
         std::vector<CheckItem> kinds;
-        for (int i = 0; i < 7; ++i)
+        for (int i = 0; i < kBoxes; ++i)
             kinds.push_back({kKinds + i, t(kKindBoxes[i].label), *kindOf(g_choice, i), t(kKindBoxes[i].hint),
                              !running_});
         p.checks(kinds, 3);
@@ -161,7 +163,7 @@ public:
 
     void command(int id, int code) override {
         HWND ctl = GetDlgItem(host_.window(), id);
-        if (id >= kKinds && id < kKinds + 7 && code == BN_CLICKED) {
+        if (id >= kKinds && id < kKinds + kBoxes && code == BN_CLICKED) {
             *kindOf(g_choice, id - kKinds) = SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED;
             host_.rebuild();  // Make with at least one kind
             return;

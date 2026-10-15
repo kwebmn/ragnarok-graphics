@@ -1366,6 +1366,15 @@ const Entry kTexts[] = {
     {"A profile's name: letters, digits, spaces, - and _, up to 40.",
      "Назва профілю: літери, цифри, пробіли, - і _, до 40.",
      "Имя профиля: буквы, цифры, пробелы, - и _, до 40."},
+    {"Clothes colours",
+     "Кольори одягу",
+     "Цвета одежды"},
+    {"The characters' bodies in every clothes dye too (players who dyed their clothes): 4 to 9 times the bodies' "
+     "pictures - a bigger pack and a longer make.",
+     "Тіла персонажів також у кожному кольорі фарби одягу (гравці, що пофарбували одяг): у 4–9 разів більше картинок "
+     "тіл — більший пакет і довше створення.",
+     "Тела персонажей также в каждом цвете краски одежды (игроки, покрасившие одежду): в 4–9 раз больше картинок тел "
+     "— больше пакет и дольше создание."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

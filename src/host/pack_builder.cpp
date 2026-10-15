@@ -46,7 +46,7 @@ std::vector<pack::Picture> picturesOf(pack::GameFiles& files, const std::string&
         std::vector<pack::Picture> out = pack::picturesOf(s, data.data(), data.size(), c);
         if (s.type != pack::Source::Sprite) return out;
         std::vector<uint8_t> palette;
-        for (const std::string& p : pack::palettesOf(name, files.names()))
+        for (const std::string& p : pack::palettesOf(name, files.names(), c.bodyColours))
             if (files.read(p, palette) && palette.size() >= 1024)
                 for (pack::Picture& f : pack::picturesOf(s, data.data(), data.size(), c, palette.data()))
                     out.push_back(std::move(f));

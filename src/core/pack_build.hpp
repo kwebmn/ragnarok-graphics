@@ -57,6 +57,9 @@ struct Choice {
     bool npcs = true;
     bool items = true;
     bool interface = true;  // the windows' icons and pictures, the cursor
+    // 0.56: the bodies' frames in every clothes colour too (data\palette\몸\) - 4 to 9 times their frames: off
+    // unless asked for ("bodycolours")
+    bool bodyColours = false;
     int minSide = 16, maxSide = 512;  // the world's textures ([ai] min_size, max_size)
 };
 // The kinds as the settings app passes them to the builder: "world,effects,monsters,players,npcs,items,interface"
@@ -98,6 +101,7 @@ std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t siz
                                 const uint8_t* palette = nullptr);
 // 0.49: the palettes the game draws a sprite with besides its own, among the game's files (sorted names): a head's
 // hair colours - data\palette\머리\머리<N>_<sex>_<colour>.pal for data\sprite\인간족\머리통\<sex>\<N>_<sex>.spr.
-std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names);
+std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names,
+                                    bool bodies = false);
 
 }  // namespace uagfx::pack

@@ -179,10 +179,14 @@ Source sourceOf(const std::string& n, const Choice& c) {
     return s;
 }
 
-std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names) {
+std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names, bool bodies) {
     const std::string human = "\xC0\xCE\xB0\xA3\xC1\xB7", head = "\xB8\xD3\xB8\xAE\xC5\xEB",
                       hair = "\xB8\xD3\xB8\xAE";  // 인간족, 머리통, 머리
-    const std::string dir = "data\\sprite\\" + human + "\\" + head + "\\";
+    // 0.56: the bodies (몸통) and the clothes' colours (몸): "<job>_<sex>_<n>.pal" for "<job>_<sex>.spr", as the hair's
+    const std::string body = "\xB8\xF6\xC5\xEB", clothes = "\xB8\xF6";
+    const bool isBody = bodies && sprite.rfind("data\\sprite\\" + human + "\\" + body + "\\", 0) == 0;
+    const std::string dir = "data\\sprite\\" + human + "\\" + (isBody ? body : head) + "\\";
+    const std::string folder = isBody ? clothes : hair;
     std::vector<std::string> out;
     if (sprite.rfind(dir, 0) != 0 || !endsWith(sprite, ".spr")) return out;
     const std::string rest = sprite.substr(dir.size());  // "<sex>\<N>_<sex>.spr"
@@ -192,7 +196,7 @@ std::vector<std::string> palettesOf(const std::string& sprite, const std::vector
     const std::string tail = "_" + sex + ".spr";
     if (file.size() <= tail.size() || file.compare(file.size() - tail.size(), tail.size(), tail) != 0) return out;
     const std::string style = file.substr(0, file.size() - tail.size());
-    const std::string prefix = "data\\palette\\" + hair + "\\" + hair + style + "_" + sex + "_";
+    const std::string prefix = "data\\palette\\" + folder + "\\" + (isBody ? "" : hair) + style + "_" + sex + "_";
     for (auto it = std::lower_bound(names.begin(), names.end(), prefix); it != names.end(); ++it) {
         if (it->compare(0, prefix.size(), prefix) != 0) break;
         const std::string colour = it->substr(prefix.size());
@@ -279,9 +283,12 @@ std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t siz
 
 namespace {
 
-const char* const kChoiceWords[7] = {"world", "effects", "monsters", "players", "npcs", "items", "interface"};
+constexpr int kChoiceCount = 8;
+const char* const kChoiceWords[kChoiceCount] = {"world", "effects", "monsters", "players",
+                                                "npcs",  "items",   "interface", "bodycolours"};
 bool* choiceField(Choice& c, int i) {
-    bool* const fields[7] = {&c.world, &c.effects, &c.monsters, &c.players, &c.npcs, &c.items, &c.interface};
+    bool* const fields[kChoiceCount] = {&c.world, &c.effects, &c.monsters, &c.players,
+                                        &c.npcs,  &c.items,   &c.interface, &c.bodyColours};
     return fields[i];
 }
 const char* const kStates[6] = {"starting", "reading", "building", "done", "stopped", "failed"};
@@ -298,20 +305,20 @@ std::string oneLine(const std::string& s) {
 std::string choiceText(const Choice& c) {
     Choice copy = c;
     std::string s;
-    for (int i = 0; i < 7; ++i)
+    for (int i = 0; i < kChoiceCount; ++i)
         if (*choiceField(copy, i)) s += std::string(s.empty() ? "" : ",") + kChoiceWords[i];
     return s;
 }
 
 Choice parseChoice(const std::string& words) {
     Choice c;
-    for (int i = 0; i < 7; ++i) *choiceField(c, i) = false;
+    for (int i = 0; i < kChoiceCount; ++i) *choiceField(c, i) = false;
     size_t at = 0;
     while (at <= words.size()) {
         size_t end = words.find(',', at);
         if (end == std::string::npos) end = words.size();
         const std::string w = words.substr(at, end - at);
-        for (int i = 0; i < 7; ++i)
+        for (int i = 0; i < kChoiceCount; ++i)
             if (w == kChoiceWords[i]) *choiceField(c, i) = true;
         at = end + 1;
     }

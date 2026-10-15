@@ -127,6 +127,8 @@ enum class Text : uint16_t {
     // 0.55: profiles
     ServiceProfiles, ProfileNote, ProfileName, ProfileNameCue, ProfileSave, ProfileLoad, ProfileDelete, ProfileNone,
     ProfileSaved, ProfileLoaded, ProfileAskLoad, ProfileAskDelete, ProfileBadName,
+    // 0.56
+    PackBodyColours, PackBodyColoursHint,
     Count
 };
 

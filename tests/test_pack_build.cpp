@@ -178,6 +178,27 @@ TEST(pack_build_finds_the_hair_palettes_of_a_head) {
     CHECK(pack::palettesOf("data\\sprite\\monster\\poring.spr", names).empty());
 }
 
+TEST(pack_build_finds_the_clothes_colours_of_a_body_when_asked) {
+    // 0.56: a body is drawn with its clothes' dye ("몸\%s%s_%d.pal"): "<job>_<sex>_<n>.pal" - only with
+    // Choice::bodyColours, since it makes 4 to 9 times the bodies' frames.
+    const std::string human = "\xC0\xCE\xB0\xA3\xC1\xB7", body = "\xB8\xF6\xC5\xEB", clothes = "\xB8\xF6",
+                      male = "\xB3\xB2", job = "\xB0\xCB\xBB\xE7";  // 몸통, 몸, 남, 검사 (swordman)
+    const std::string sprite = "data\\sprite\\" + human + "\\" + body + "\\" + male + "\\" + job + "_" + male + ".spr";
+    std::vector<std::string> names = {
+        "data\\palette\\" + clothes + "\\" + job + "_" + male + "_1.pal",
+        "data\\palette\\" + clothes + "\\" + job + "_" + male + "_2.pal",
+        "data\\palette\\" + clothes + "\\" + job + "_" + male + "_x.pal",
+        sprite,
+    };
+    std::sort(names.begin(), names.end());
+    CHECK(pack::palettesOf(sprite, names).empty());  // not asked for
+    CHECK_EQ(pack::palettesOf(sprite, names, true).size(), size_t(2));
+    pack::Choice c = pack::parseChoice("players,bodycolours");
+    CHECK(c.players && c.bodyColours && !c.monsters);
+    CHECK_EQ(pack::choiceText(c), std::string("players,bodycolours"));
+    CHECK(!pack::Choice().bodyColours);
+}
+
 namespace {
 // 0.49: a 200 x 150 loading screen and a 32 x 32 frame of the water (PIL).
 const uint8_t kLoadingJpg[] = {
