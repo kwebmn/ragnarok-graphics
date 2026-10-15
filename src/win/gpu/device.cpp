@@ -18,6 +18,7 @@
 #include "win/gpu/ai_textures.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/gpu/remix9.hpp"
+#include "win/gpu/renderer11.hpp"
 #include "win/gpu/remote.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -1167,6 +1168,7 @@ Renderer::Renderer() : impl_(new Impl) {}
 Renderer::~Renderer() {
     delete remote_;  // the renderer process finishes first
     delete remix_;
+    delete d3d11_;
     impl_->destroy();
     delete impl_;
 }
@@ -1190,23 +1192,38 @@ bool Renderer::createRemix(const std::string& d3d9Path, HWND window, std::string
     return false;
 }
 
+bool Renderer::createD3D11(const std::string& shaderCache, std::string& error) {
+    if (d3d11_) return true;
+    d3d11_ = new Renderer11;
+    if (d3d11_->create(shaderCache, impl_->startSink, impl_->startContext, error)) return true;
+    delete d3d11_;
+    d3d11_ = nullptr;
+    return false;
+}
+
 void Renderer::setWindow(HWND window) {
     if (remix_) remix_->setWindow(window);
 }
 
 std::string Renderer::adapterName() const {
-    return remote_ ? remote_->adapterName() : remix_ ? remix_->adapterName() : impl_->adapter;
+    return remote_ ? remote_->adapterName()
+           : remix_ ? remix_->adapterName()
+           : d3d11_ ? d3d11_->adapterName()
+                    : impl_->adapter;
 }
 
 void Renderer::setUiSharp(bool sharp) {
     if (remix_) return;
+    if (d3d11_) return d3d11_->setUiSharp(sharp);
     if (remote_) return remote_->setUiSharp(sharp);
     impl_->uiSharp = sharp;
 }
 
 bool Renderer::upscales() const { return remote_ && remote_->upscales(); }
 
-int Renderer::samples() const { return remix_ ? 1 : remote_ ? remote_->samples() : int(impl_->samples); }
+int Renderer::samples() const {
+    return remix_ || d3d11_ ? 1 : remote_ ? remote_->samples() : int(impl_->samples);
+}
 
 void Renderer::setUpscaler(Upscaler* u) { impl_->upscaler = u; }
 
@@ -1219,7 +1236,7 @@ void Renderer::setOnDevice(void (*fn)(void* context, ID3D12Device* device), void
 
 bool Renderer::upgradeFactory(bool (*upgrade)(void** object)) {
     Impl& m = *impl_;
-    if (remote_ || remix_ || !m.factory || !upgrade) return false;
+    if (remote_ || remix_ || d3d11_ || !m.factory || !upgrade) return false;
     void* object = m.factory;
     if (!upgrade(&object) || !object || object == m.factory) return false;
     m.waitIdle();
@@ -1231,7 +1248,7 @@ bool Renderer::upgradeFactory(bool (*upgrade)(void** object)) {
 
 bool Renderer::startAiTextures(const std::string& gameDir, const AiSettings& settings) {
     Impl& m = *impl_;
-    if (remote_ || remix_ || m.ai) return m.ai != nullptr;
+    if (remote_ || remix_ || d3d11_ || m.ai) return m.ai != nullptr;
     m.ai = new AiTextures(m);
     std::string error;
     if (!m.ai->start(gameDir, settings, error)) {
@@ -1275,6 +1292,7 @@ std::string Renderer::packNetName(int kind) const {
 }
 
 void Renderer::finish() {
+    if (d3d11_) return d3d11_->finish();
     if (!remote_ && impl_->device && impl_->fence) impl_->waitIdle();
 }
 
@@ -1296,7 +1314,7 @@ void Renderer::setIconSink(IconSink sink, void* context) {
 }
 
 void Renderer::setMap(const std::string& map) {
-    if (remix_) return;
+    if (remix_ || d3d11_) return;
     if (remote_) return remote_->setMap(map);
     impl_->mapWorld.setMap(map);
     impl_->mapName = map;  // 0.31: lava's maps
@@ -1311,12 +1329,13 @@ void Renderer::setMap(const std::string& map) {
 void Renderer::setShaderCache(const std::string& file) { impl_->shaderCacheFile = file; }
 
 void Renderer::setGameDir(const std::string& dir) {
-    if (remix_ || remote_) return;  // uaro-render64.exe is given it at its start
+    if (remix_ || remote_ || d3d11_) return;  // uaro-render64.exe is given it at its start
     impl_->mapWorld.setGameDir(dir);
 }
 
 void Renderer::setCamera(bool valid, const float view[12]) {
     if (remix_) return remix_->setCamera(valid, view);
+    if (d3d11_) return;
     if (remote_) return remote_->setCamera(valid, view);
     Impl& m = *impl_;
     m.cameraValid = valid;
@@ -1334,6 +1353,7 @@ ID3D12Device* Renderer::device() const { return impl_->device; }
 bool Renderer::upscaling() const { return impl_->upscale; }
 
 bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
+    if (d3d11_ || remix_ || remote_) return false;  // uaro-render64.exe's
     Impl& m = *impl_;
     if (!id || m.textures.count(id)) return false;
     const uint32_t made = createTexture(width, height, levels);
@@ -1356,10 +1376,11 @@ void Renderer::setPresentSurface(HANDLE surface) {
 
 bool Renderer::presentRefused() const { return impl_->refused; }
 
-bool Renderer::lost() const { return impl_->lost; }
+bool Renderer::lost() const { return d3d11_ ? d3d11_->lost() : impl_->lost; }
 
 void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown) {
     if (remix_) return;
+    if (d3d11_) return d3d11_->setAnisotropy(anisotropy);
     if (remote_) return remote_->setDrawQuality(anisotropy, alphaToCoverage, aiShown);
     Impl& m = *impl_;
     if (m.ai) m.ai->shown = aiShown;
@@ -1370,7 +1391,7 @@ void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown
 }
 
 void Renderer::setEffects(const EffectSettings& e) {
-    if (remix_) return;
+    if (remix_ || d3d11_) return;
     if (remote_) return remote_->setEffects(e);
     Impl& m = *impl_;
     if (e == m.effects) return;
@@ -1418,7 +1439,7 @@ void Renderer::setEffects(const EffectSettings& e) {
 }
 
 void Renderer::preparePipelines(const std::string& file) {
-    if (remix_) return;
+    if (remix_ || d3d11_) return;
     if (remote_) return remote_->preparePipelines(file);
     Impl& m = *impl_;
     std::string text;
@@ -1589,6 +1610,7 @@ bool Renderer::create(std::string& error) {
 
 bool Renderer::setTarget(int width, int height) {
     if (remix_) return remix_->setTarget(width, height);
+    if (d3d11_) return d3d11_->setTarget(width, height);
     if (remote_) return remote_->setTarget(width, height);
     Impl& m = *impl_;
     if (width <= 0 || height <= 0) return false;
@@ -1642,6 +1664,7 @@ bool Renderer::setTarget(int width, int height) {
 
 bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples, bool upscale) {
     if (remix_) return true;  // Remix draws at its own size
+    if (d3d11_) return d3d11_->setScale(k, targetWidth, targetHeight);  // one sample, no DLSS
     if (remote_) return remote_->setScale(k, targetWidth, targetHeight, samples, upscale);
     Impl& m = *impl_;
     if (m.lost || !m.target || targetWidth <= 0 || targetHeight <= 0) return false;
@@ -1731,6 +1754,7 @@ bool Renderer::setScale(double k, int targetWidth, int targetHeight, int samples
 
 uint32_t Renderer::createTexture(int width, int height, int levels) {
     if (remix_) return remix_->createTexture(width, height, levels);
+    if (d3d11_) return d3d11_->createTexture(width, height, levels);
     if (remote_) return remote_->createTexture(width, height, levels);
     Impl& m = *impl_;
     Texture t;
@@ -1756,13 +1780,14 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
 }
 
 void Renderer::noteObjectTexture(uint32_t id, uint8_t kind) {
-    if (remix_) return;
+    if (remix_ || d3d11_) return;
     if (remote_) return remote_->noteObjectTexture(id, kind);
     impl_->objectTextures.note(id, objects::Kind(kind));
 }
 
 void Renderer::releaseTexture(uint32_t id) {
     if (remix_) return remix_->releaseTexture(id);
+    if (d3d11_) return d3d11_->releaseTexture(id);
     if (remote_) return remote_->releaseTexture(id);
     Impl& m = *impl_;
     // Draws recorded before the client let go of the texture have not been played yet: it stays until they have.
@@ -1791,6 +1816,7 @@ void Renderer::Impl::retireDying() {
 
 void Renderer::execute(const FrameRecord& record) {
     if (remix_) return remix_->execute(record);
+    if (d3d11_) return d3d11_->execute(record);
     if (remote_) return remote_->execute(record);
     Impl& m = *impl_;
     if (m.lost || !m.target || record.empty() || !m.begin()) return;
@@ -1816,6 +1842,7 @@ void Renderer::execute(const FrameRecord& record) {
 
 bool Renderer::readTarget(std::vector<uint32_t>& argb) {
     if (remix_) return remix_->readTarget(argb);
+    if (d3d11_) return d3d11_->readTarget(argb);
     if (remote_) return remote_->readTarget(argb);
     Impl& m = *impl_;
     if (m.lost || !m.target || !m.begin()) return false;
@@ -1886,6 +1913,7 @@ bool Renderer::readTarget(std::vector<uint32_t>& argb) {
 void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rect& source,
                        const PresentOptions& options) {
     if (remix_) return remix_->present(window, options);
+    if (d3d11_) return d3d11_->present(window, outputWidth, outputHeight, source, options);
     if (remote_) return remote_->present(window, outputWidth, outputHeight, source, options);
     Impl& m = *impl_;
     if (m.lost) {  // the GPU is gone (stage 3 review M2): no Present waits for vblank, keep the game's loop from spinning

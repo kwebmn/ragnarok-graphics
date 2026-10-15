@@ -209,6 +209,10 @@ Config parseConfig(const std::string& text) {
         if (key == "renderer.backend") {
             if (val == "dgvoodoo") c.backend = Backend::DgVoodoo;
             if (val == "uaro") c.backend = Backend::Uaro;
+        } else if (key == "renderer.api") {
+            if (val == "d3d12") c.api = Api::D3d12;
+            if (val == "d3d11") c.api = Api::D3d11;
+            if (val == "auto") c.api = Api::Auto;
         } else if (key == "renderer.bridge") {
             setBool(val, c.bridge);
         } else if (key == "renderer.bridge_present") {
@@ -407,6 +411,8 @@ Config parseConfig(const std::string& text) {
 }
 
 const char* backendToken(Backend b) { return b == Backend::Uaro ? "uaro" : "dgvoodoo"; }
+
+const char* apiToken(Api a) { return a == Api::D3d11 ? "d3d11" : a == Api::Auto ? "auto" : "d3d12"; }
 
 const char* displayModeToken(DisplayMode m) {
     switch (m) {

@@ -16,6 +16,7 @@ namespace uagfx::gpu {
 
 class Remote;
 class Remix9;
+class Renderer11;
 class Upscaler;
 
 // Part 3: the renderer in the 64-bit process uaro-render64.exe ([renderer] bridge = 1).
@@ -58,6 +59,9 @@ public:
     // Part 4: through Direct3D 9's fixed function - RTX Remix when d3d9Path is its d3d9.dll (remix9.hpp).
     bool createRemix(const std::string& d3d9Path, HWND window, std::string& error);  // window: the game's, or null
     bool remix() const { return remix_ != nullptr; }
+    // 0.46: with Direct3D 11 (renderer11.hpp) - graphics cards without Direct3D 12; its shaders kept in shaderCache.
+    bool createD3D11(const std::string& shaderCache, std::string& error);
+    bool d3d11() const { return d3d11_ != nullptr; }
     void setWindow(HWND window);  // the game's window, as soon as it is known (Direct3D 9 makes its device on it)
     std::string adapterName() const;
     void setUiSharp(bool sharp);  // [display] ui_filter for interface draws
@@ -145,6 +149,7 @@ private:
     Impl* impl_;
     Remote* remote_ = nullptr;
     Remix9* remix_ = nullptr;
+    Renderer11* d3d11_ = nullptr;
 };
 
 }  // namespace uagfx::gpu

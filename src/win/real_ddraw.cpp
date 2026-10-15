@@ -46,8 +46,9 @@ Startup decide() {
     s.config = parseConfig(ini);
     wlog::open(dir + "\\uaro-graphics.log", s.config.logLevel);
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
-    LOG_INFO("settings: %s; backend = %s, mode = %s", haveIni ? "uaro-graphics.ini" : "no uaro-graphics.ini, defaults",
-             backendToken(s.config.backend), displayModeToken(s.config.mode));
+    LOG_INFO("settings: %s; backend = %s, api = %s, mode = %s",
+             haveIni ? "uaro-graphics.ini" : "no uaro-graphics.ini, defaults", backendToken(s.config.backend),
+             apiToken(s.config.api), displayModeToken(s.config.mode));
     LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%, sharpen = %d",
              s.config.highResolution ? 1 : 0, uiFilterToken(s.config.uiFilter), s.config.renderScale, s.config.sharpen);
     const WindowsVersion v = windowsVersion();
@@ -68,8 +69,18 @@ Startup decide() {
                  p.ok ? "OK" : "FAILED", p.adapter.c_str(), p.vendor, p.device, p.vramMb,
                  static_cast<unsigned long>(p.hr));
     }
+    // 0.46: Direct3D 11 - asked for, or (auto) where Direct3D 12 is not there.
+    if (s.config.backend == Backend::Uaro &&
+        (s.config.api == Api::D3d11 || (s.config.api == Api::Auto && !(facts.windows10 && facts.d3d12)))) {
+        const D3D11Probe p = probeD3D11();
+        facts.d3d11 = p.ok;
+        LOG_INFO("Direct3D 11: %s, adapter %s, feature level %s, hr 0x%08lx", p.ok ? "OK" : "FAILED",
+                 p.adapter.c_str(), p.ok ? featureLevelName(p.level).c_str() : "-", static_cast<unsigned long>(p.hr));
+    }
     s.choice = chooseRenderer(s.config, facts, kUaroBuilt);
-    LOG_INFO("renderer: %s (%s)", rendererName(s.choice.renderer), s.choice.reason.c_str());
+    LOG_INFO("renderer: %s%s (%s)", rendererName(s.choice.renderer),
+             s.choice.renderer == Renderer::Uaro && s.choice.api == Api::D3d11 ? " with Direct3D 11" : "",
+             s.choice.reason.c_str());
     return s;
 }
 

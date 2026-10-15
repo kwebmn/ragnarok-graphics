@@ -142,6 +142,12 @@ private:
                            sys.d3d12.ok ? t(Text::DiagD3D12Ok) : tf(Text::DiagD3D12Failed, {hresult(sys.d3d12.hr)}),
                            sys.d3d12.ok ? Tone::Good : Tone::Bad, {}});
         }
+        // 0.46: Direct3D 11, for graphics cards without Direct3D 12.
+        const bool d3d12 = sys.d3d12Probed && sys.d3d12.ok;
+        out.push_back({t(Text::DiagD3D11),
+                       sys.d3d11.ok ? tf(Text::DiagD3D11Ok, {win::featureLevelName(sys.d3d11.level)})
+                                    : tf(Text::DiagD3D11Failed, {hresult(sys.d3d11.hr)}),
+                       sys.d3d11.ok ? Tone::Good : d3d12 ? Tone::Normal : Tone::Bad, {}});
         for (size_t i = 0; i < sys.monitors.size(); ++i) {
             const MonitorInfo& mon = sys.monitors[i];
             out.push_back({tf(Text::DiagMonitor, {num(long(i) + 1)}),

@@ -75,3 +75,58 @@ TEST(renderer_names) {
     CHECK(std::strcmp(rendererName(Renderer::DgVoodoo), "dgVoodoo") == 0);
     CHECK(std::strcmp(rendererName(Renderer::System), "system DirectDraw") == 0);
 }
+
+// 0.46: [renderer] api - Direct3D 12 (as before), Direct3D 11 (graphics cards without Direct3D 12) or auto (12, else
+// 11). Direct3D 11 needs no Windows 10 - a device of feature level 10_0 or better is enough.
+namespace {
+Config wantsApi(Api api) {
+    Config c = wants(Backend::Uaro);
+    c.api = api;
+    return c;
+}
+}  // namespace
+
+TEST(choose_direct3d_12_by_default) {
+    SystemFacts f = everything();
+    f.d3d11 = true;
+    const RendererChoice r = chooseRenderer(wants(Backend::Uaro), f, true);
+    CHECK(r.renderer == Renderer::Uaro && r.api == Api::D3d12);
+}
+
+TEST(choose_direct3d_11_when_asked) {
+    SystemFacts f = everything();
+    f.d3d11 = true;
+    const RendererChoice r = chooseRenderer(wantsApi(Api::D3d11), f, true);
+    CHECK(r.renderer == Renderer::Uaro && r.api == Api::D3d11);
+    CHECK(mentions(r.reason, "api = d3d11"));
+    // Before Windows 10 too.
+    f.windows10 = false;
+    f.d3d12 = false;
+    const RendererChoice old = chooseRenderer(wantsApi(Api::D3d11), f, true);
+    CHECK(old.renderer == Renderer::Uaro && old.api == Api::D3d11);
+}
+
+TEST(choose_direct3d_11_needs_its_device) {
+    SystemFacts f = everything();  // no Direct3D 11 device
+    const RendererChoice r = chooseRenderer(wantsApi(Api::D3d11), f, true);
+    CHECK(r.renderer == Renderer::DgVoodoo);
+    CHECK(mentions(r.reason, "Direct3D 11"));
+}
+
+TEST(choose_auto_takes_direct3d_12_then_11) {
+    SystemFacts f = everything();
+    f.d3d11 = true;
+    RendererChoice r = chooseRenderer(wantsApi(Api::Auto), f, true);
+    CHECK(r.renderer == Renderer::Uaro && r.api == Api::D3d12);
+    f.d3d12 = false;
+    r = chooseRenderer(wantsApi(Api::Auto), f, true);
+    CHECK(r.renderer == Renderer::Uaro && r.api == Api::D3d11);
+    CHECK(mentions(r.reason, "no Direct3D 12"));
+    f.windows10 = false;
+    r = chooseRenderer(wantsApi(Api::Auto), f, true);
+    CHECK(r.renderer == Renderer::Uaro && r.api == Api::D3d11);
+    f.d3d11 = false;
+    r = chooseRenderer(wantsApi(Api::Auto), f, true);
+    CHECK(r.renderer == Renderer::DgVoodoo);
+    CHECK(mentions(r.reason, "Direct3D 11"));
+}

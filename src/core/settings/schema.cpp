@@ -30,6 +30,8 @@ const std::vector<IniSetting>& iniSettings() {
     static const std::vector<IniSetting> list{
         {"renderer", "backend", Page::Render, Control::Choice, 0, 0, 0, {"uaro", "dgvoodoo"},
          {Text::RenderUaro, Text::RenderDgVoodoo}, Text::RenderHeading, Text::RenderUaroHint, ""},
+        {"renderer", "api", Page::Render, Control::Choice, 0, 0, 0, {"d3d12", "d3d11", "auto"},
+         {Text::RenderApiD3d12, Text::RenderApiD3d11, Text::RenderApiAuto}, Text::RenderApi, Text::RenderApiHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         {"renderer", "remix", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
@@ -226,6 +228,7 @@ std::string sectionKey(const IniSetting& s) { return std::string(s.section) + ".
 std::string tokenOf(const IniSetting& s, const Config& c) {
     const std::string k = sectionKey(s);
     if (k == "renderer.backend") return backendToken(c.backend);
+    if (k == "renderer.api") return apiToken(c.api);
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
     if (k == "renderer.remix") return c.remix ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";

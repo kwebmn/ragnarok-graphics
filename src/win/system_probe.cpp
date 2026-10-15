@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <d3d11.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
 
@@ -82,6 +83,40 @@ D3D12Probe probeD3D12(bool systemOnly) {
     }
     factory->Release();
     return p;
+}
+
+D3D11Probe probeD3D11(bool systemOnly) {
+    D3D11Probe p;
+    HMODULE d3d11 = load("d3d11.dll", systemOnly);
+    const auto create = d3d11 ? reinterpret_cast<PFN_D3D11_CREATE_DEVICE>(
+                                    reinterpret_cast<void*>(GetProcAddress(d3d11, "D3D11CreateDevice")))
+                              : nullptr;
+    if (!create) {
+        p.hr = d3d11 ? E_NOINTERFACE : HRESULT_FROM_WIN32(GetLastError());
+        return p;
+    }
+    const D3D_FEATURE_LEVEL levels[3] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0};
+    ID3D11Device* device = nullptr;
+    D3D_FEATURE_LEVEL got = D3D_FEATURE_LEVEL_10_0;
+    p.hr = create(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels, 3,
+                  D3D11_SDK_VERSION, &device, &got, nullptr);
+    if (FAILED(p.hr) || !device) return p;
+    p.ok = true;
+    p.level = unsigned(got);
+    IDXGIDevice* dxgi = nullptr;
+    IDXGIAdapter* adapter = nullptr;
+    DXGI_ADAPTER_DESC desc{};
+    if (SUCCEEDED(device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgi))) &&
+        SUCCEEDED(dxgi->GetAdapter(&adapter)) && SUCCEEDED(adapter->GetDesc(&desc)))
+        p.adapter = utf8(desc.Description);
+    if (adapter) adapter->Release();
+    if (dxgi) dxgi->Release();
+    device->Release();
+    return p;
+}
+
+std::string featureLevelName(unsigned level) {
+    return std::to_string((level >> 12) & 15) + "_" + std::to_string((level >> 8) & 15);
 }
 
 }  // namespace uagfx::win

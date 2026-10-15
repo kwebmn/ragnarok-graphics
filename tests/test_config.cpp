@@ -512,3 +512,15 @@ TEST(config_effects_chimney_smoke) {
     CHECK(parseConfig("[effects]\nsmoke_density = 201\n").effects == d);
 }
 
+TEST(config_reads_the_graphics_api) {
+    // 0.46: [renderer] api - d3d12 (the default), d3d11 or auto; anything else keeps the default.
+    CHECK(parseConfig("").api == Api::D3d12);
+    CHECK(parseConfig("[renderer]\napi = d3d11\n").api == Api::D3d11);
+    CHECK(parseConfig("[renderer]\napi = AUTO\n").api == Api::Auto);
+    CHECK(parseConfig("[renderer]\napi = d3d12\n").api == Api::D3d12);
+    CHECK(parseConfig("[renderer]\napi = vulkan\n").api == Api::D3d12);
+    CHECK(parseConfig("api = d3d11\n").api == Api::D3d12);  // outside [renderer]
+    CHECK(std::strcmp(apiToken(Api::D3d12), "d3d12") == 0);
+    CHECK(std::strcmp(apiToken(Api::D3d11), "d3d11") == 0);
+    CHECK(std::strcmp(apiToken(Api::Auto), "auto") == 0);
+}

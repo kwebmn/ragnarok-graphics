@@ -12,6 +12,7 @@
 #include "win/start_screen.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
 
 namespace uagfx::win {
@@ -66,7 +67,19 @@ bool Context::open(std::string& error) {
     gpu::Renderer* r = new gpu::Renderer;
     r->setStartSink([](void*, const start::Progress& p) { showStart(p); }, nullptr);
     bool remote = false;
-    if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if it is there
+    // 0.46: Direct3D 11 (graphics cards without Direct3D 12) - none of what needs Direct3D 12 or the 64-bit process.
+    const bool d3d11 = startup().choice.api == Api::D3d11;
+    if (d3d11) {
+        std::string why;
+        if (!r->createD3D11(gameDir() + "\\uaro-graphics\\shaders-d3d11.bin", why)) {
+            error = "Direct3D 11: " + why;
+            delete r;
+            return false;
+        }
+        remote = true;  // made: no other renderer
+        if (config.remix || config.bridge || config.dlss != "off" || config.ai.enabled)
+            LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer, DLSS and the AI textures need Direct3D 12 - off");
+    } else if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if there
         const std::string local = gameDir() + "\\d3d9.dll";
         const std::string dll = fileExists(local) ? local : systemDir() + "\\d3d9.dll";
         std::string why;
@@ -106,7 +119,7 @@ bool Context::open(std::string& error) {
     renderer = r;
     renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
-    LOG_INFO("Direct3D 12 renderer on %s", renderer->adapterName().c_str());
+    LOG_INFO("%s renderer on %s", d3d11 ? "Direct3D 11" : "Direct3D 12", renderer->adapterName().c_str());
     crisp::setWindowArt(config.windowArt);  // 0.41: before the first twin
     crisp::install(config.crispText);
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'

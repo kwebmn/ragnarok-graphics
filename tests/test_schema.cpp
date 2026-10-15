@@ -47,6 +47,15 @@ TEST(schema_defaults_match_the_driver) {
     const Config defaults;
     CHECK(tokenOf(*findSetting("quality.sharpen"), defaults) == "50");
     CHECK(tokenOf(*findSetting("renderer.backend"), defaults) == "dgvoodoo");
+    // 0.46: the graphics API on the Render page - Direct3D 12 by default; 11 and auto for older graphics cards.
+    const IniSetting* api = findSetting("renderer.api");
+    CHECK(api && api->page == Page::Render && api->control == Control::Choice);
+    CHECK(api && api->tokens.size() == 3 && std::string(api->tokens[0]) == "d3d12" &&
+          std::string(api->tokens[1]) == "d3d11" && std::string(api->tokens[2]) == "auto");
+    CHECK(api && tokenOf(*api, defaults) == "d3d12");
+    Config eleven;
+    eleven.api = Api::D3d11;
+    CHECK(api && tokenOf(*api, eleven) == "d3d11");
     CHECK(tokenOf(*findSetting("debug.log"), defaults) == "normal");
 }
 
@@ -70,6 +79,7 @@ TEST(schema_live_keys_are_the_specs) {
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "renderer.remix" &&
+                                k != "renderer.api" &&
                                 k != "quality.dlss" &&
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
                                 k.compare(0, 3, "ai.") != 0));

@@ -24,4 +24,14 @@ struct D3D12Probe {
 // hold (ReShade), 0.6.0 review M8.
 D3D12Probe probeD3D12(bool systemOnly = false);
 
+// 0.46: a Direct3D 11 device of feature level 10_0 or better on the main adapter (made and released).
+struct D3D11Probe {
+    bool ok = false;
+    long hr = 0;
+    unsigned level = 0;  // D3D_FEATURE_LEVEL: 0xb000 is 11_0
+    std::string adapter;
+};
+D3D11Probe probeD3D11(bool systemOnly = false);
+std::string featureLevelName(unsigned level);  // "11_0"
+
 }  // namespace uagfx::win

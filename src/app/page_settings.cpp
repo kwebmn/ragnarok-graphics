@@ -80,6 +80,7 @@ public:
         if ((id == kUaro || id == kDgVoodoo) && code == BN_CLICKED) {
             m.setToken(*findSetting("renderer.backend"), id == kUaro ? "uaro" : "dgvoodoo");
             host_.changed();
+            host_.rebuild();  // 0.46: the graphics API goes with the uaRO renderer
             return;
         }
         if (id == kForgetLogin && code == BN_CLICKED) {
@@ -285,18 +286,33 @@ private:
         const SystemInfo& sys = m.system();
         const bool win10 = sys.windows.major >= 10;
         const bool d3d12 = sys.d3d12Probed && sys.d3d12.ok;
+        const bool d3d11 = sys.d3d11.ok;  // 0.46: graphics cards without Direct3D 12
         const bool uaro = m.token(*findSetting("renderer.backend")) == "uaro";
         p.radio(kUaro, t(Text::RenderHeading), t(Text::RenderUaro), uaro, true, t(Text::RenderUaroHint),
-                (win10 && d3d12) || uaro);
+                (win10 && d3d12) || d3d11 || uaro);
         p.radio(kDgVoodoo, L"", t(Text::RenderDgVoodoo), !uaro, false, t(Text::RenderDgVoodooHint));
-        p.gap();
         const auto& all = iniSettings();
+        for (size_t i = 0; i < all.size(); ++i)  // 0.46: Direct3D 12, 11, or 12 and else 11
+            if (sectionKey(all[i]) == "renderer.api") {
+                const IniSetting& s = all[i];
+                std::vector<std::wstring> items;
+                int selected = 0;
+                const std::string token = m.token(s);
+                for (size_t c = 0; c < s.choices.size(); ++c) {
+                    items.push_back(t(s.choices[c]));
+                    if (token == s.tokens[c]) selected = int(c);
+                }
+                p.choice(kRows + int(i) * 4, t(s.label), items, selected, t(s.hint), uaro);
+            }
+        p.gap();
         for (size_t i = 0; i < all.size(); ++i)  // part 3 (test): the renderer in a 64-bit process; part 4: Remix
             if (sectionKey(all[i]) == "renderer.bridge" || sectionKey(all[i]) == "renderer.remix")
                 p.check(kRows + int(i) * 4, t(all[i].label), m.token(all[i]) == "1", t(all[i].hint));
-        if (!win10)
+        if ((!win10 || !d3d12) && d3d11 && m.token(*findSetting("renderer.api")) == "d3d12")
+            p.note(t(Text::RenderUseD3d11), Tone::Warn);  // 0.46: Direct3D 11 works here
+        else if (!win10 && !d3d11)
             p.note(t(Text::RenderNeedsWindows10), Tone::Bad);
-        else if (!d3d12)
+        else if (!d3d12 && !d3d11)
             p.note(tf(Text::RenderNoD3D12, {hresult(sys.d3d12.hr)}), Tone::Bad);
         p.note(t(Text::AfterRestart));
         p.gap();
