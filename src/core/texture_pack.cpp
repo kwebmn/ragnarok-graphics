@@ -255,6 +255,57 @@ std::string pictureName(Group g, const std::string& key) {
     return name;
 }
 
+std::string indexText(const std::map<std::string, ai::Kind>& kinds) {
+    std::string t;
+    for (const auto& e : kinds) t += e.first + "\t" + ai::kindName(e.second) + "\n";
+    return t;
+}
+
+std::map<std::string, ai::Kind> parseIndex(const std::string& text) {
+    std::map<std::string, ai::Kind> out;
+    size_t at = 0;
+    while (at < text.size()) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(at, end - at);
+        at = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        const size_t tab = line.find('\t');
+        if (tab == std::string::npos || tab == 0) continue;
+        std::string kind = line.substr(tab + 1);
+        const size_t more = kind.find('\t');  // the maps, later
+        if (more != std::string::npos) kind.resize(more);
+        ai::Kind k = ai::Kind::None;
+        if (!ai::parseKind(kind, k)) k = ai::Kind::None;
+        out[line.substr(0, tab)] = k;
+    }
+    return out;
+}
+
+bool keyOfPicture(const std::string& name, Group& group, std::string& key) {
+    const size_t first = name.find('/');
+    if (first == std::string::npos) return false;
+    const std::string g = name.substr(0, first);
+    Group found = Group::World;
+    if (g == groupName(Group::World))
+        found = Group::World;
+    else if (g == groupName(Group::Sprites))
+        found = Group::Sprites;
+    else if (g == groupName(Group::Ui))
+        found = Group::Ui;
+    else
+        return false;
+    const size_t second = name.find('/', first + 1);
+    const std::string ext = ".webp";
+    if (second == std::string::npos || second == first + 1 || name.find('/', second + 1) != std::string::npos ||
+        name.size() <= second + 1 + ext.size() || name.compare(name.size() - ext.size(), ext.size(), ext) != 0)
+        return false;
+    group = found;
+    key = name.substr(first + 1, second - first - 1) + "\\" +
+          name.substr(second + 1, name.size() - second - 1 - ext.size());
+    return true;
+}
+
 bool Reader::open(const std::string& path, std::string& error) {
     close();
     file_ = std::fopen(path.c_str(), "rb");

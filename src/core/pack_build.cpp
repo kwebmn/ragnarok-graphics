@@ -346,33 +346,6 @@ bool parseStatus(const std::string& text, Status& out) {
     return state;
 }
 
-std::string indexText(const std::map<std::string, ai::Kind>& kinds) {
-    std::string t;
-    for (const auto& e : kinds) t += e.first + "\t" + ai::kindName(e.second) + "\n";
-    return t;
-}
-
-std::map<std::string, ai::Kind> parseIndex(const std::string& text) {
-    std::map<std::string, ai::Kind> out;
-    size_t at = 0;
-    while (at < text.size()) {
-        size_t end = text.find('\n', at);
-        if (end == std::string::npos) end = text.size();
-        std::string line = text.substr(at, end - at);
-        at = end + 1;
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        const size_t tab = line.find('\t');
-        if (tab == std::string::npos || tab == 0) continue;
-        std::string kind = line.substr(tab + 1);
-        const size_t more = kind.find('\t');  // the maps, later
-        if (more != std::string::npos) kind.resize(more);
-        ai::Kind k = ai::Kind::None;
-        if (!ai::parseKind(kind, k)) k = ai::Kind::None;
-        out[line.substr(0, tab)] = k;
-    }
-    return out;
-}
-
 std::string keyCheckText(const KeyCheck& k) {
     std::string s;
     for (int i = 0; i < ai::kKinds; ++i)

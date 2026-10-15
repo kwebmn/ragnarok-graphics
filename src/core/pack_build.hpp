@@ -83,9 +83,6 @@ struct Status {
 std::string statusText(const Status& s);
 bool parseStatus(const std::string& text, Status& out);  // false: no state in it
 
-// index.txt of a pack: a line a picture, its name and its kind (ai::kindName) by a tab.
-std::string indexText(const std::map<std::string, ai::Kind>& kinds);
-std::map<std::string, ai::Kind> parseIndex(const std::string& text);
 
 // A file's part in the pack.
 struct Source {

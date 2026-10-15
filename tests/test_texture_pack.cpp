@@ -37,6 +37,22 @@ TEST(texture_pack_names_its_pictures) {
     CHECK(pack::pictureName(pack::Group::Ui, "24x24\\1") == "ui/24x24/1.webp");
 }
 
+TEST(texture_pack_knows_the_key_of_a_picture) {
+    // 0.44: the index's names back to the game texture's key - the driver takes a map's textures from the pack as the
+    // game loads them, before they are drawn.
+    pack::Group g = pack::Group::Sprites;
+    std::string key;
+    CHECK(pack::keyOfPicture("world/256x256/0123456789abcdef.webp", g, key));
+    CHECK(g == pack::Group::World && key == "256x256\\0123456789abcdef");
+    CHECK(pack::keyOfPicture("ui/24x24/00000000000000aa.webp", g, key));
+    CHECK(g == pack::Group::Ui && key == "24x24\\00000000000000aa");
+    CHECK(pack::keyOfPicture("sprites/64x128/fedcba9876543210.webp", g, key));
+    CHECK(g == pack::Group::Sprites && key == "64x128\\fedcba9876543210");
+    for (const char* bad : {"index.txt", "world/256x256.webp", "other/8x8/1.webp", "world/8x8/1.png", "world//1.webp",
+                            "world/8x8/.webp", "world/8x8/a/b.webp"})
+        CHECK(!pack::keyOfPicture(bad, g, key));
+}
+
 TEST(texture_pack_reads_back_what_it_wrote) {
     const std::string path = tempPath();
     std::string error;

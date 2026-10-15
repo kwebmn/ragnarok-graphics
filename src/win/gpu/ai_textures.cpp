@@ -9,6 +9,7 @@
 #include <iterator>
 
 #include "core/ai/texture_cache.hpp"
+#include "core/ai/vram.hpp"
 #include "core/sprite_exe.hpp"
 #include "core/webp_image.hpp"
 #include "win/gpu/impl.hpp"
@@ -175,6 +176,20 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     std::string packError;
     if (!pack_.open(packPath, packError) && GetFileAttributesA(packPath.c_str()) != INVALID_FILE_ATTRIBUTES)
         LOG_ERROR("AI textures: the texture pack cannot be read (%s)", packError.c_str());
+    // 0.44: the kinds of the pack's world pictures and big interface pictures, by their keys - ahead, a map's
+    // textures come from the pack as the game loads them, before they are drawn.
+    std::vector<uint8_t> index;
+    if (ahead_ && pack_.isOpen() && pack_.read(pack::kIndexName, index))
+        for (const auto& e : pack::parseIndex(std::string(index.begin(), index.end()))) {
+            pack::Group g = pack::Group::World;
+            std::string key;
+            if (int(e.second) >= ai::kKinds || !pack::keyOfPicture(e.first, g, key) || g == pack::Group::Sprites)
+                continue;
+            if (kinds_.emplace(key, e.second).second) ++packAhead_;
+        }
+    // The copies' share of the video memory.
+    systemBudget_ = systemMemory(nullptr);
+    vramBudget_ = ai::copiesBudget(systemBudget_);
 
     // upscaled.grf: written by one game at a time (a second client reads it only).
     writerMutex_ = CreateMutexA(nullptr, FALSE, "Local\\uaro-graphics-upscaled-grf");
@@ -232,11 +247,66 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
                        : "making none (the pack and upscaled.grf only)",
              static_cast<unsigned>(known_.size()), note, writable_ ? "" : " (read only: another game writes it)");
     if (pack_.isOpen())
-        LOG_INFO("AI textures: the texture pack uaro-textures.zip has %u pictures",
-                 static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)));
+        LOG_INFO("AI textures: the texture pack uaro-textures.zip has %u pictures (%u of the world and the interface "
+                 "known ahead)",
+                 static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)), packAhead_);
     else
         LOG_INFO("AI textures: no texture pack (uaro-textures.zip) in the game's folder");
+    LOG_INFO("AI textures: the copies keep to %llu MB of video memory (the system gives the game %llu MB)",
+             static_cast<unsigned long long>(vramBudget_ >> 20), static_cast<unsigned long long>(systemBudget_ >> 20));
     return true;
+}
+
+uint64_t AiTextures::systemMemory(uint64_t* used) const {
+    if (used) *used = 0;
+    if (!m_.factory || !m_.device) return 0;
+    IDXGIAdapter3* adapter = nullptr;
+    if (FAILED(m_.factory->EnumAdapterByLuid(m_.device->GetAdapterLuid(), __uuidof(IDXGIAdapter3),
+                                             reinterpret_cast<void**>(&adapter))))
+        return 0;
+    DXGI_QUERY_VIDEO_MEMORY_INFO info{};
+    const bool ok = SUCCEEDED(adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &info));
+    adapter->Release();
+    if (!ok) return 0;
+    if (used) *used = info.CurrentUsage;
+    return info.Budget;
+}
+
+// 0.44: over the budget, the copies of the textures not drawn for longest (two seconds and more) go.
+void AiTextures::putAwayOld() {
+    if (!vramBudget_ || aiBytes_ <= vramBudget_ || frame_ - lastPutAway_ < 30) return;
+    lastPutAway_ = frame_;
+    std::vector<ai::Copy> copies;
+    for (const auto& e : items_)
+        if (e.second.state == Item::Done && e.second.bytes)
+            copies.push_back({e.first, e.second.bytes, e.second.lastUse});
+    for (uint32_t id : ai::putAway(copies, aiBytes_, vramBudget_, frame_, 120)) {
+        const auto it = items_.find(id);
+        if (it == items_.end()) continue;
+        dropAi(id);
+        it->second.state = Item::Away;
+        ++putAway_;
+    }
+}
+
+void AiTextures::bringBack(uint32_t id, Item& item) {
+    item.later = false;
+    if (pack_.has(item.name)) {
+        item.state = Item::Waiting;
+        item.loading = true;
+        requestPacked(id, item.name, item.width, item.height, Job());
+    } else if (known_.count(item.name)) {
+        item.state = Item::Waiting;
+        item.loading = true;
+        IoRequest r;
+        r.id = id;
+        r.name = item.name;
+        request(std::move(r));
+    } else {
+        item.state = Item::Skipped;  // made by the network and not kept: the game's own now
+        return;
+    }
+    ++broughtBack_;
 }
 
 bool AiTextures::startForPack(const std::string& gameDir, const AiSettings& s, std::string& error) {
@@ -738,6 +808,11 @@ bool AiTextures::finish(Job& job) {
     t.aiUi = item->second.ui;
     m_.device->CreateShaderResourceView(tex, nullptr, m_.cpuSrvHandle(srv));
     item->second.state = Item::Done;
+    item->second.bytes = 0;  // 0.44: the copy's video memory
+    for (size_t i = skip; i < levels.size(); ++i)
+        item->second.bytes += uint64_t(levels[i].width) * uint64_t(levels[i].height) * 4;
+    aiBytes_ += item->second.bytes;
+    item->second.lastUse = frame_;
     keptBytes_ -= item->second.argb.size() * 4;
     item->second.argb.clear();
     item->second.argb.shrink_to_fit();
@@ -1038,6 +1113,11 @@ bool AiTextures::finishCell(Job& job) {
 }
 
 void AiTextures::dropAi(uint32_t id) {
+    const auto item = items_.find(id);
+    if (item != items_.end() && item->second.bytes) {
+        aiBytes_ -= std::min(aiBytes_, item->second.bytes);
+        item->second.bytes = 0;
+    }
     const auto it = m_.textures.find(id);
     if (it == m_.textures.end() || !it->second.ai) return;
     m_.slots[m_.slot].garbage.push_back(it->second.ai);
@@ -1174,6 +1254,11 @@ void AiTextures::noteWorldUse(uint32_t id, ai::Kind kind) {
     if (it == items_.end()) return;
     Item& item = it->second;
     if (kind == ai::Kind::None) return;  // a second stage of a draw that is no ground: says nothing of the texture
+    item.lastUse = frame_;
+    if (item.state == Item::Away) {  // 0.44: its copy was put away - back from the pack or upscaled.grf
+        bringBack(id, item);
+        return;
+    }
     if (item.state == Item::Kept) {
         ++seen_[size_t(kind)];
         begin(id, item, kind, false);
@@ -1193,8 +1278,14 @@ void AiTextures::noteWorldUse(uint32_t id, ai::Kind kind) {
 
 void AiTextures::noteUiUse(uint32_t id) {
     const auto it = items_.find(id);
-    if (it == items_.end() || it->second.state != Item::Kept) return;
+    if (it == items_.end()) return;
     Item& item = it->second;
+    item.lastUse = frame_;
+    if (item.state == Item::Away) {
+        bringBack(id, item);
+        return;
+    }
+    if (item.state != Item::Kept) return;
     if (item.width < kUiPictureSide || item.height < kUiPictureSide) return;  // no big picture: maybe a world one
     ++seen_[int(ai::Kind::Icons)];
     begin(id, item, ai::Kind::Icons, false);
@@ -1209,6 +1300,7 @@ void AiTextures::setMap(const std::string& map) {
 void AiTextures::forget(uint32_t id) {
     const auto it = items_.find(id);
     if (it != items_.end()) {
+        aiBytes_ -= std::min(aiBytes_, it->second.bytes);  // its copy goes with the texture (Renderer::retireDying)
         keptBytes_ -= it->second.argb.size() * 4;
         items_.erase(it);
     }
@@ -1298,7 +1390,7 @@ void AiTextures::takeLoaded() {
         if (item.state != Item::Waiting || !item.loading || item.name != r.name) continue;
         item.loading = false;
         if (!r.ok || r.width != item.width * scale_ || r.height != item.height * scale_) {
-            if (item.net < 0) {  // 0.42: not generating - it stays the game's
+            if (item.net < 0 || item.argb.empty()) {  // 0.42: not generating (0.44: or brought back) - the game's
                 drop(item);
                 continue;
             }
@@ -1353,6 +1445,8 @@ void AiTextures::finishReadbacks() {
 void AiTextures::work() {
     if (!ready_ || m_.lost || !m_.open) return;
     computeBound_ = false;
+    ++frame_;
+    putAwayOld();
     takeLoaded();
     finishReadbacks();
     double budget = budget_;
@@ -1454,6 +1548,15 @@ void AiTextures::logNow(bool final) {
     if (!icons_.empty())
         LOG_INFO("AI textures: icons - %u asked, %u from the pack, %u made by the network, %u from upscaled.grf",
                  static_cast<unsigned>(icons_.size()), iconsPack_, iconsNetwork_, iconsLoaded_);
+    uint64_t used = 0;
+    const uint64_t system = systemMemory(&used);
+    size_t copies = 0;
+    for (const auto& e : items_) copies += e.second.bytes ? 1 : 0;
+    LOG_INFO("AI textures: video memory - the copies %llu MB of their %llu MB (%u textures), %u put away, %u brought "
+             "back; the game %llu MB of the %llu MB the system gives it",
+             static_cast<unsigned long long>(aiBytes_ >> 20), static_cast<unsigned long long>(vramBudget_ >> 20),
+             static_cast<unsigned>(copies), putAway_, broughtBack_, static_cast<unsigned long long>(used >> 20),
+             static_cast<unsigned long long>(system >> 20));
 }
 
 void AiTextures::request(IoRequest r) {

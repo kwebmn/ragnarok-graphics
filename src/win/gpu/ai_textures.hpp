@@ -76,7 +76,9 @@ private:
         std::string folder;  // of its pictures in upscaled.grf (ai::netFolder)
     };
     struct Item {
-        enum State { Kept, Waiting, Done, Skipped } state = Kept;
+        // Away (0.44): done, its copy put away over the video memory's budget - drawn again, it comes back from the
+        // texture pack or upscaled.grf.
+        enum State { Kept, Waiting, Done, Skipped, Away } state = Kept;
         std::string key;                 // the game texture's (ai::keyName)
         ai::Kind kind = ai::Kind::None;  // as first drawn, or its tag in upscaled.grf (ahead)
         int net = -1;
@@ -88,6 +90,8 @@ private:
         bool later = false;      // in later_: done ahead, before it is drawn
         bool loading = false;    // its picture is being read from upscaled.grf
         bool ui = false;         // a picture of the interface: it stands in for interface draws, not the world's
+        uint64_t lastUse = 0;    // 0.44: the frame it was last drawn in (frame_)
+        uint64_t bytes = 0;      // its copy's in video memory (Texture::ai), all its levels
     };
     struct Level {
         UINT64 at = 0;  // bytes into the image
@@ -237,6 +241,12 @@ private:
     std::unordered_set<std::string> mapTags_;          // the map tags in upscaled.grf or on their way
     std::string map_;
     uint32_t mapSerial_ = 1;
+    // 0.44: the copies' video memory - their bytes, the budget, the frames, what was put away and brought back.
+    uint64_t frame_ = 0, aiBytes_ = 0, vramBudget_ = 0, systemBudget_ = 0, lastPutAway_ = 0;
+    uint32_t putAway_ = 0, broughtBack_ = 0, packAhead_ = 0;
+    void putAwayOld();
+    void bringBack(uint32_t id, Item& item);
+    uint64_t systemMemory(uint64_t* used) const;  // DXGI's budget for the process, and what it uses
 
     grf::Archive archive_;  // the I/O thread's once started
     bool writable_ = false;

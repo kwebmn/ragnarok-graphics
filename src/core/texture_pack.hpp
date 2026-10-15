@@ -1,10 +1,13 @@
 #pragma once
 #include <cstdint>
 #include <cstdio>
+#include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "core/ai/kinds.hpp"
 
 namespace uagfx::pack {
 
@@ -20,8 +23,12 @@ const char* groupName(Group g);  // "world", "sprites", "ui"
 // The picture of a game texture's key (ai::keyName, "256x256\0123456789abcdef"):
 // "world/256x256/0123456789abcdef.webp".
 std::string pictureName(Group g, const std::string& key);
+// 0.44: back from a picture's name to its group and key; false for any other name.
+bool keyOfPicture(const std::string& name, Group& group, std::string& key);
 // A line a picture - its name, its kind (ai::kindName), the maps it is on, by tabs and commas; written last.
 constexpr const char* kIndexName = "index.txt";
+std::string indexText(const std::map<std::string, ai::Kind>& kinds);  // 0.43: the names and kinds
+std::map<std::string, ai::Kind> parseIndex(const std::string& text);  // a kind it does not know: ai::Kind::None
 
 class Reader {
 public:
