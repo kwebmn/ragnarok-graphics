@@ -1,3 +1,15 @@
+# uaRO Graphics 0.50.1 — testing
+
+What is new in 0.50.1 ("there can be strong cards of other makers, and several cards"):
+- **Several graphics cards: the game is drawn on the fast one** - a laptop's NVIDIA or AMD, not its integrated
+  Intel; Windows' own choice for high performance (Settings → System → Display → Graphics, where a player can pick
+  the card for uaRO.exe) comes first, else the card with the most video memory. Direct3D 12 and 11 alike, and the
+  automatic setup looks at that same card. The log names them: `graphics cards: ... - Direct3D 11 on ...`.
+- Strong cards of AMD and Intel get the same settings as NVIDIA's of their memory (DLSS is NVIDIA's alone).
+
+How to test: on a laptop with two graphics cards - press "Set up automatically" (it should name the fast card), play,
+send uaro-graphics.log.
+
 # uaRO Graphics 0.50.0 — testing
 
 What is new in 0.50.0 ("a button to hand the client to other people"):
