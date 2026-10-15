@@ -89,6 +89,7 @@ private:
         uint32_t serial = 0;  // a texture's Item::serial, a cell's frame
         std::string name;     // the picture's in the pack
         bool ahead = false;   // 0.49.1: a texture known ahead, not drawn yet: after the rest
+        ULONGLONG asked = 0;  // 0.49.2: when it was asked for (the log's waits)
         int width = 0, height = 0;  // the game texture's, the cell's, the icon's
         int cellX = 0, cellY = 0;
         uint64_t iconKey = 0;
@@ -114,7 +115,8 @@ private:
                    const SpriteCell* cells, uint32_t count);
     bool cellOn(uint8_t source) const;
     bool makeAtlas(uint32_t id, int width, int height);
-    void standIn(uint32_t id, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch);
+    // smooth (0.49.2): a frame whose picture is on its way - enlarged smoothly meanwhile, not texel by texel.
+    void standIn(uint32_t id, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch, bool smooth = false);
     void writeLevel(uint32_t id, const Atlas& a, int level, int x, int y, int w, int h, const uint32_t* argb);
     bool cellCurrent(const Request& r) const;
     void take(Result& r);
@@ -167,6 +169,7 @@ private:
 
     uint32_t texturesTaken_ = 0, cellsWritten_ = 0, cellsTaken_ = 0, iconsTaken_ = 0, iconsNone_ = 0;
     uint32_t failed_ = 0, soft_ = 0, waiting_ = 0;
+    ULONGLONG cellWait_ = 0, cellWaitMost_ = 0;  // 0.49.2: the frames' pictures from asked to in, all and the longest
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run
     // 0.48 (in place of the settings app's "Check the keys"): what the pack has no picture of, by kind; frames.
     uint32_t missing_[ai::kKinds] = {}, cellsMissing_ = 0;

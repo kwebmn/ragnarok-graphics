@@ -362,7 +362,10 @@ void Ai11::noteCells(uint32_t id, int width, int height, const UploadCmd& u, con
             std::memcpy(pixels.data() + size_t(y) * size_t(w),
                         argb + size_t(c.top - u.rect.top + y) * size_t(u.rect.width()) + size_t(c.left - u.rect.left),
                         size_t(w) * 4);
-        if (!made) standIn(id, a->second, c, pixels.data(), w);  // the frame as the game has it, at once
+        // The frame at once: smoothly enlarged when its picture may come (0.49.2: texel by texel it looked blocky until
+        // then), as the game has it when its kind is off.
+        // A new cache's frames too (they were in its first piece, texel by texel).
+        standIn(id, a->second, c, pixels.data(), w, cellOn(cells[i].source));
         ++cellsWritten_;
         // Every new frame counts: a picture asked for the one before it is not taken any more.
         const uint32_t frame = ++a->second.frames[uint32_t(c.top) << 16 | uint32_t(c.left)];
@@ -421,14 +424,17 @@ bool Ai11::makeAtlas(uint32_t id, int width, int height) {
     return true;
 }
 
-void Ai11::standIn(uint32_t id, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch) {
+void Ai11::standIn(uint32_t id, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch, bool smooth) {
     const int w = r.width(), h = r.height();
     if (w <= 0 || h <= 0) return;
     std::vector<uint32_t> src(size_t(w) * size_t(h));
     for (int y = 0; y < h; ++y)
         std::memcpy(src.data() + size_t(y) * size_t(w), argb + size_t(y) * size_t(pitch), size_t(w) * 4);
     std::vector<uint32_t> level, next;
-    ai::enlargeNearest(src.data(), w, h, scale_, level);  // the game's own look until the frame's picture comes
+    if (smooth)
+        ai::enlargeCell(src.data(), w, h, scale_, level);
+    else
+        ai::enlargeNearest(src.data(), w, h, scale_, level);  // the game's own look
     int lw = w * scale_, lh = h * scale_;
     for (int i = 0; i < atlasLevels_; ++i) {
         writeLevel(id, a, i, (r.left * scale_) >> i, (r.top * scale_) >> i, lw, lh, level.data());
@@ -530,6 +536,9 @@ void Ai11::take(Result& r) {
             writeLevel(q.id, a, int(i), (q.cellX * scale_) >> i, (q.cellY * scale_) >> i, r.levels[i].width,
                        r.levels[i].height, r.levels[i].argb.data());
         ++cellsTaken_;
+        const ULONGLONG waited = GetTickCount64() - q.asked;
+        cellWait_ += waited;
+        cellWaitMost_ = std::max(cellWaitMost_, waited);
         return;
     }
     const auto it = items_.find(q.id);
@@ -560,6 +569,7 @@ void Ai11::take(Result& r) {
 }
 
 void Ai11::request(Request r) {
+    r.asked = GetTickCount64();
     EnterCriticalSection(&lock_);
     in_.push_back(std::move(r));
     LeaveCriticalSection(&lock_);
@@ -738,8 +748,11 @@ void Ai11::logNow(bool final) {
     LOG_INFO("AI textures: not in the pack - %s; sprite frames %u, icons %u", missing.c_str(), cellsMissing_,
              iconsNone_);
     if (cellsWritten_)
-        LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack", cellsWritten_,
-                 static_cast<unsigned>(atlases_.size()), cellsTaken_);
+        LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack (waited %llu ms "
+                 "on average, %llu at most)",
+                 cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsTaken_,
+                 static_cast<unsigned long long>(cellsTaken_ ? cellWait_ / cellsTaken_ : 0),
+                 static_cast<unsigned long long>(cellWaitMost_));
     if (!icons_.empty())
         LOG_INFO("AI textures: icons - %u asked, %u from the pack, %u of none (xBR's)",
                  static_cast<unsigned>(icons_.size()), iconsTaken_, iconsNone_);
