@@ -1,3 +1,15 @@
+# uaRO Graphics 0.74.0 — testing
+
+What is new in 0.74.0 (Direct3D 12 and Direct3D 11):
+- **Time of day** (Effects → "Time of day", off by default). By the computer's clock the sun moves: it rises on the
+  right at 6:00 and sets on the left by 20:00. The characters' shadows turn with it - in the morning they fall left, in
+  the evening right, long in the morning and the evening, short at noon. The light is pinkish in the morning, white by
+  day, golden in the evening. With "Night by the clock" the evening turns into night. The rays from the sky (0.73) come
+  from the sun.
+
+How to test: turn it on, look at the characters' shadows and the colour (a field by day); set the Windows clock to
+7:00, 13:00, 19:00 and re-enter the map - do the shadows and the colour change.
+
 # uaRO Graphics 0.73.0 — testing
 
 What is new in 0.73.0 (Direct3D 12):
