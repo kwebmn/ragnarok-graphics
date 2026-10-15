@@ -307,11 +307,10 @@ int Builder::check() {
     if (std::FILE* f = std::fopen(grfPath.c_str(), "rb")) {
         grf::Archive archive;
         std::string error;
-        if (archive.open(f, false, error))
+        if (archive.open(f, false, error))  // the archive closes the file, also when it does not open
             cache = archive.names();
         else
             text = "upscaled.grf: " + error + "; ";
-        std::fclose(f);
     } else {
         text = "no upscaled.grf to check against; ";
     }
