@@ -1,3 +1,14 @@
+# uaRO Graphics 0.67.0 — testing
+
+What is new in 0.67.0 (Direct3D 12 and Direct3D 11):
+- **Soft effects at the ground** (Effects → "Soft effects at the ground", on by default). Skills, sparks and portals
+  facing the screen were cut along a straight line where they went into the ground or a wall. Now they fade softly
+  over the last few steps before the surface. The characters are not touched - their feet stand on the ground as
+  before.
+
+How to test: skills by a wall and on the ground (Fire Wall, Soul Strike next to a wall, Warp Portal) - is there a
+hard line; Pause - compare with the old look.
+
 # uaRO Graphics 0.66.0 — testing
 
 What is new in 0.66.0 (Direct3D 12):
