@@ -69,7 +69,8 @@ public:
                 std::sort(uis_.begin(), uis_.end());
             }
             items.clear();
-            for (int u : uis_) items.push_back(wide(num(u) + " %"));
+            for (int u : uis_)  // 0.41: x2, x3 - each game pixel a whole square of the screen's
+                items.push_back(wide(num(u) + " %") + (u % 100 == 0 && u >= 200 ? t(Text::ScreenCrispest) : L""));
             p.choice(kUi, t(Text::ScreenUi), items, int(std::find(uis_.begin(), uis_.end(), ui) - uis_.begin()),
                      t(Text::ScreenUiHint), !fixed && open);
             if (fixed)
