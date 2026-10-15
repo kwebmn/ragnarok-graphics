@@ -1,3 +1,15 @@
+# uaRO Graphics 0.49.3 — testing
+
+What is new in 0.49.3 ("the character facing us stays blocky; walking, the improved frames show"):
+- The game caches a sprite frame once and draws it from its cache until the cell is needed for another frame. A frame
+  that got there past the place the driver watches (say, before the cache was known to be one) stayed blocky all that
+  time. Now the driver keeps a copy of every sprite cache and finds **every cell that changed**: such a frame is looked
+  up in the pack like the rest. A frame the game writes again unchanged is no longer drawn over.
+- Both Direct3D 11 and Direct3D 12. The log says how many such frames came:
+  `sprite frames - N came past the game's call (found changed in their caches), M of them in the pack`.
+
+How to test: update, start the game - the character standing facing us, at the start and after a while; send the log.
+
 # uaRO Graphics 0.49.2 — testing
 
 What is new in 0.49.2 (Direct3D 11: "at the start the character is blocky, after a while it is fine"):
