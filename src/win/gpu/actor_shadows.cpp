@@ -159,6 +159,12 @@ ID3D12PipelineState* Renderer::Impl::shadowApplyPipeline(UINT n) {
 // The frame's characters (from this draw on: the game's round shadows, known by the driver, and the sprite layers
 // that stand on them) cast their shadows into the mask, which is softened and multiplied into the picture - before
 // the characters are drawn. The round shadows go into it too, and are not drawn on their own.
+// The way the sun's shadows fall on the screen (a unit vector, game pixels' axes).
+void Renderer::Impl::sunOnScreen(float out[2]) const {
+    out[0] = kSun[0];
+    out[1] = kSun[1];
+}
+
 bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     actorShadowsDone = true;  // tried once a frame, whatever comes of it
     EffectTime timing(*this, kTimeActorShadows);  // 0.39.2
@@ -166,6 +172,8 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     const int w = sceneWidth, h = sceneHeight;
     ID3D12PipelineState* apply = shadowApplyPipeline(upscale ? 1 : samples);
     if (!ensureShadowMask(w, h) || !apply) return true;
+    float sun[2];
+    sunOnScreen(sun);
     // What each sprite cache cell holds as the record goes on (its uploads write cells before their draws).
     std::unordered_map<uint32_t, std::vector<SpriteCell>> cells;
     const std::vector<uint8_t>& v = rec.vertexBytes();
@@ -270,7 +278,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
                     nearest = &p;
                 }
             }
-            std::array<float, 2> dir = {kSun[0], kSun[1]};
+            std::array<float, 2> dir = {sun[0], sun[1]};
             if (nearest) {  // the feet and a point a little away from the light, on the screen
                 const float ax = (feet.x - nearest->x) / best, az = (feet.z - nearest->z) / best;
                 const map::Point a{feet.x + ax * 5.0f, feet.y, feet.z + az * 5.0f};
@@ -286,7 +294,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
             dirs.push_back(dir);
         }
     }
-    std::vector<actor_shadows::ShadowQuad> quads = actor_shadows::cast(blobs, layers, dirs, kSun, kLength);
+    std::vector<actor_shadows::ShadowQuad> quads = actor_shadows::cast(blobs, layers, dirs, sun, kLength);
     for (size_t i = 0; i < rounds.size(); ++i) {  // the round ones, under the feet
         const actor_shadows::Layer& r = rounds[i];
         actor_shadows::ShadowQuad q{};

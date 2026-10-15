@@ -446,6 +446,11 @@ struct Renderer::Impl {
     bool hazeDone = false;
     bool hazeLogged = false;
     haze::Look mapLook;
+    // 0.73, light in the air (haze.cpp, shafts_ps): the torches' pass leaves its lights' count.
+    ID3DBlob* shaftsPs = nullptr;
+    ID3D12PipelineState* shaftsPipelines[4] = {};
+    bool shaftsDone = false;
+    UINT shaftLights = 0;
     // 0.72, reflections on the floor (haze.cpp, floor_reflect_ps).
     ID3DBlob* floorReflectPs = nullptr;
     ID3D12PipelineState* floorReflectPipelines[4] = {};
@@ -727,6 +732,12 @@ struct Renderer::Impl {
         return floorReflectAmount() > 0.0f && groundDrawn && !floorReflectDone && viewToWorldValid;
     }
     bool applyFloorReflections();  // once a frame, the world drawn and lit; false: lost
+    bool shaftsWanted() const { return effects.shafts && effects.shaftsStrength > 0 && shaftsPs; }
+    bool shaftsDue() const {
+        return shaftsWanted() && groundDrawn && !shaftsDone && viewToWorldValid && (shaftLights > 0 || mapOutdoors);
+    }
+    bool applyShafts();  // once a frame, after the haze and the sky; false: lost
+    void sunOnScreen(float out[2]) const;  // 0.73: the way the sun's shadows fall on the screen (actor_shadows.cpp)
     bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
     bool heatDue() const {
         return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));
@@ -744,6 +755,10 @@ struct Renderer::Impl {
     ID3D12PipelineState* weatherPipeline(UINT samples);
     ID3D12PipelineState* alphaPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
                                        const char* what);  // 0.64
+    ID3D12PipelineState* addPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
+                                     const char* what);  // 0.73
+    ID3D12PipelineState* blendPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
+                                       const char* what, bool add);
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
     bool applyHeat();  // once a frame, after the torches' pass and the haze; false: lost
     ID3D12PipelineState* heatPipeline(UINT samples);
@@ -776,6 +791,8 @@ struct Renderer::Impl {
         hazeDone = false;
         skyDone = false;  // 0.69
         floorReflectDone = false;  // 0.72
+        shaftsDone = false;  // 0.73
+        shaftLights = 0;
         heatDone = false;
         heatSpots.clear();
         portalSparks.clear();

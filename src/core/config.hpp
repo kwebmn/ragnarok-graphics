@@ -196,6 +196,10 @@ struct EffectSettings {
     // floor is reflected in it (screen-space). On by default.
     bool floorReflections = true;
     int floorReflectStrength = 35;  // %, 0-100 (in the rain 1.6 times)
+    // 0.73: light in the air - the air glows about the torches, lamps and burning skills (hidden by the walls in
+    // front), and on the fields rays stream from the sky past the map's edge. On by default.
+    bool shafts = true;
+    int shaftsStrength = 100;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

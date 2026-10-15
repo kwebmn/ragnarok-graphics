@@ -151,6 +151,8 @@ enum class Text : uint16_t {
     FxRelief, FxReliefHint, FxReliefStrength, FxReliefStrengthHint,
     // 0.72
     FxFloorReflections, FxFloorReflectionsHint, FxFloorReflectStrength, FxFloorReflectStrengthHint,
+    // 0.73
+    FxShafts, FxShaftsHint, FxShaftsStrength, FxShaftsStrengthHint,
     Count
 };
 

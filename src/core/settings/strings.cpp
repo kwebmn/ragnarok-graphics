@@ -1533,6 +1533,21 @@ const Entry kTexts[] = {
     {"How much the floor reflects; in the rain more.",
      "Наскільки підлога відбиває; під дощем більше.",
      "Насколько пол отражает; под дождём больше."},
+    {"Light in the air",
+     "Світло в повітрі",
+     "Свет в воздухе"},
+    {"The air glows around torches, lamps and burning skills, as in a light mist (walls in front hide it); on the "
+     "fields rays of light stream from the sky past the edge of the map. Direct3D 12.",
+     "Повітря світиться навколо факелів, ламп і палаючих умінь, як у легкому серпанку (стіни попереду його ховають); "
+     "на полях промені світла ллються з неба за краєм карти. Direct3D 12.",
+     "Воздух светится вокруг факелов, ламп и горящих умений, как в лёгкой дымке (стены впереди его прячут); на полях "
+     "лучи света льются с неба за краем карты. Direct3D 12."},
+    {"Light in the air strength",
+     "Сила світла в повітрі",
+     "Сила света в воздухе"},
+    {"How bright the glowing air and the rays are.",
+     "Наскільки яскраві повітря, що світиться, і промені.",
+     "Насколько ярки светящийся воздух и лучи."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

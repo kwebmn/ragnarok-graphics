@@ -47,6 +47,7 @@ const Effect kEffects[] = {
     {"effects.motes", {}, {"effects.motes_amount"}, {}, false},  // 0.70
     {"effects.relief", {}, {"effects.relief_strength"}, {}, false},  // 0.71
     {"effects.floor_reflections", {}, {"effects.floor_reflect_strength"}, {}, false},  // 0.72
+    {"effects.shafts", {}, {"effects.shafts_strength"}, {}, false},  // 0.73
     {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, false},
     {"effects.torch",
      {"effects.torch_flame"},

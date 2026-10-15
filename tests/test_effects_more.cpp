@@ -47,3 +47,10 @@ TEST(floor_reflections_on_by_default_their_shine_bounded) {
     CHECK(parseConfig("[effects]\nfloor_reflect_strength = 101\n").effects.floorReflectStrength == 35);
     CHECK(!effectsOff().floorReflections);
 }
+
+TEST(light_in_the_air_on_by_default) {
+    // 0.73: the air glows about the lights, rays from the sky.
+    CHECK(parseConfig("").effects.shafts && parseConfig("").effects.shaftsStrength == 100);
+    CHECK(!parseConfig("[effects]\nshafts = 0\n").effects.shafts);
+    CHECK(!effectsOff().shafts);
+}

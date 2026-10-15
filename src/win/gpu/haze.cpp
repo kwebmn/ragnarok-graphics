@@ -51,6 +51,45 @@ bool Renderer::Impl::applyHaze() {
                    : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneDepthSrv, true);
 }
 
+// 0.73: the light in the air - about the torches' pass's lights (their list left in torchData) and, under the open
+// sky, rays from where the sky shows past the map's edge (shafts_ps), added on.
+bool Renderer::Impl::applyShafts() {
+    shaftsDone = true;
+    EffectTime timing(*this, kTimeLights);
+    if (!ensureScene("light in the air") || !torchReady()) return true;
+    ID3D12PipelineState* pso = addPipeline(shaftsPs, shaftsPipelines, upscale ? 1 : samples, "light in the air");
+    if (!pso) return true;
+    if (!copySceneDepth()) return false;
+    transition(torchData, torchDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const int w = sceneWidth, h = sceneHeight;
+    const float user = float(std::clamp(effects.shaftsStrength, 0, 200)) / 100.0f;
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.footprint = float(shaftLights);
+    c.twin[0] = 0.22f * user * (1.0f + 0.6f * night);  // the glow shows more in the dark
+    c.twin[1] = mapOutdoors ? 0.5f * user * (1.0f - night) : 0.0f;
+    // The sun up and to the left past the screen - against the way the characters' shadows fall (actor_shadows.cpp)
+    float sun[2];
+    sunOnScreen(sun);
+    c.sourceRect[0] = float(w) * (0.5f - sun[0] * 1.6f);
+    c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
+    c.sourceRect[2] = 1.0f;
+    const UINT lights = torchDataSrv;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, lights)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, lights);
+}
+
 // 0.72: the floors reflect what stands on them - indoors and in the rain (floor_reflect_ps, from the picture's copy).
 bool Renderer::Impl::applyFloorReflections() {
     floorReflectDone = true;

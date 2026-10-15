@@ -397,6 +397,7 @@ bool Renderer::Impl::finishWorld() {
     if (floorReflectDue() && !applyFloorReflections()) return false;  // 0.72: lit, before the haze
     if (hazeDue() && !applyHaze()) return false;      // 0.34: far off and over the ground, before the colours
     if (skyDue() && !applySky()) return false;        // 0.69: the sky where the haze filled the void
+    if (shaftsDue() && !applyShafts()) return false;  // 0.73: the light in the air
     if (heatDue() && !applyHeat()) return false;      // 0.35: the hot air shimmering over all of that
     if (gradeDue() && !applyGrade()) return false;
     if (dofDue() && !applyDof()) return false;

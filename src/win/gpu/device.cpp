@@ -1195,6 +1195,8 @@ void Renderer::Impl::destroy() {
     releaseCom(hazePs);
     for (ID3D12PipelineState*& p : skyPipelines) releaseCom(p);  // 0.69
     for (ID3D12PipelineState*& p : floorReflectPipelines) releaseCom(p);  // 0.72
+    for (ID3D12PipelineState*& p : shaftsPipelines) releaseCom(p);  // 0.73
+    releaseCom(shaftsPs);
     releaseCom(floorReflectPs);
     releaseCom(skyPs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39

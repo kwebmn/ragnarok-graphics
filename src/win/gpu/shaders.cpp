@@ -1133,6 +1133,46 @@ float4 haze_ps(PresentOut i) : SV_Target {
     return float4(c, a);
 }
 
+// 0.73, light in the air (haze.cpp), added onto the picture: about each light of the torches' pass (t1, footprint of
+// them, as torch_light_ps reads them) the air glows - the light scattered along the view up to what the pixel shows
+// (its depth), so a wall hides the glow behind it - twinX its strength; and under the open sky (twinY its strength)
+// rays from the sky where the map's edge shows it, streaming away from the sun (sourceRect.xy, target pixels).
+float4 shafts_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    float raw = sceneDepth.Load(int3(wp, 0));
+    float2 g = (float2(wp) - float2(jitterX, jitterY)) / scale;
+    float3 dir = normalize(float3((g.x - cx) / f0, (g.y - cy) / f1, 1.0));
+    float far = raw >= 0.99999 ? 1e4 : length(viewAt(wp));
+    float3 sum = float3(0.0, 0.0, 0.0);
+    int count = int(footprint);
+    [loop] for (int k = 0; k < count; ++k) {
+        float4 t = tex1.Load(int3(2 * k, 0, 0));
+        float t0 = dot(t.xyz, dir);
+        float h = sqrt(max(dot(t.xyz, t.xyz) - t0 * t0, 0.0));
+        if (h >= t.w) continue;
+        h = max(h, 2.0);
+        float along = (atan((far - t0) / h) + atan(t0 / h)) / h;  // the integral of 1 / distance^2 along the view
+        float4 c = tex1.Load(int3(2 * k + 1, 0, 0));
+        float fall = 1.0 - h / t.w;
+        sum += c.rgb * (c.w * along * fall * fall * twinX);
+    }
+    if (twinY > 0.0) {
+        float2 toSun = sourceRect.xy - float2(wp);
+        float2 stride = toSun / max(length(toSun), 1.0) * min(length(toSun), 0.45 * length(uiPixels.xy)) / 24.0;
+        float2 q = float2(wp) + stride * hash12(float2(wp));  // dithered: no bands
+        float rays = 0.0, decay = 1.0;
+        int2 last = int2(uiPixels.xy) - 1;
+        [loop] for (int s = 0; s < 24; ++s) {
+            q += stride;
+            rays += (sceneDepth.Load(int3(clamp(int2(q), int2(0, 0), last), 0)) >= 0.99999 ? 1.0 : 0.0) * decay;
+            decay *= 0.94;
+        }
+        sum += sourceRect.z * float3(1.0, 0.93, 0.78) * (rays / 24.0 * twinY * (raw >= 0.99999 ? 0.3 : 1.0));
+    }
+    if (dot(sum, sum) < 1e-6) discard;
+    return float4(sum, 1.0);
+}
+
 // 0.72, reflections on the floor (haze.cpp): what faces up - the floors of the dungeons and houses, the ground in the
 // rain - reflects the picture (t2, before it) along the mirrored view (waterReflection), the more the flatter one looks
 // along it. twinX its strength, the alpha it blends with.
