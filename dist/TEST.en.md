@@ -1,3 +1,14 @@
+# uaRO Graphics 0.72.0 — testing
+
+What is new in 0.72.0 (Direct3D 12):
+- **Reflections on the floor** (Effects → "Reflections on the floor" and the floor's shine; on by default, shine 35 %).
+  Indoors - dungeons, castles, houses - and in the rain (Niflheim, Einbroch) the floor reflects the characters, the
+  monsters and what stands on it; more in the rain. Dry fields and towns do not shine. Log:
+  `floor reflections: on <map>`.
+
+How to test: Glast Heim (gl_church, gl_cas01), Prontera's church (prt_church), Niflheim; does it slow down (the frame
+counter Ctrl+Shift+F11), are there doubled stripes on the walls.
+
 # uaRO Graphics 0.71.0 — testing
 
 What is new in 0.71.0 (Direct3D 12 and Direct3D 11):
