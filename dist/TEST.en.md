@@ -1,3 +1,13 @@
+# uaRO Graphics 0.82.0 — testing
+
+What is new in 0.82.0 (Direct3D 12):
+- **Sparks of skills** (Effects → "Sparks of skills" and their brightness; on by default; needs the skills' light).
+  Embers rise from burning skills (Fire Wall, Fire Bolt, Meteor Storm), swaying and dying out; glints of their colour
+  spread from the other bright skills (Soul Strike, Heal, lightning).
+
+How to test: Fire Wall and Meteor Storm, Soul Strike, Heal - are the sparks visible, too many or too bright; do sparks
+hang where the skill is gone.
+
 # uaRO Graphics 0.81.0 — testing
 
 What is new in 0.81.0 (Direct3D 12):
