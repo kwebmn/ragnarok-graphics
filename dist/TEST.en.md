@@ -1,3 +1,15 @@
+# uaRO Graphics 0.50.2 — testing
+
+What is new in 0.50.2 ("can the card be chosen somewhere?"):
+- **Settings app → Renderer → "Graphics card"**, shown when the computer has several: "Automatic: <the fast one>"
+  or any card by name (with its video memory). The game, the 64-bit renderer and the texture pack's builder draw on
+  it; "Set up automatically" looks at the card chosen there. A card that is gone shows "(not found)" and the fast
+  one is taken. In uaro-graphics.ini: `[renderer] gpu = auto` or the card's name; the log says
+  `graphics card chosen: ...`.
+
+How to test: on a computer with two cards - choose each in turn, start the game, check the log's
+`Direct3D 1x renderer on ...` line names it.
+
 # uaRO Graphics 0.50.1 — testing
 
 What is new in 0.50.1 ("there can be strong cards of other makers, and several cards"):
