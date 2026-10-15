@@ -1,3 +1,14 @@
+# uaRO Graphics 0.49.4 — testing
+
+What is new in 0.49.4 ("rebuilt the pack - other players' hair still blocky"):
+- **Fixed: the hair colours were never made.** The builder opened the game's archives for pictures only, so it saw
+  none of the palettes (`data\palette\...`) - 0.49's hair colours came out empty, and the pack stayed at the same
+  number of pictures.
+
+How to test: update; Texture pack → "Make the pack" (it only adds what is missing: the hairstyles in every colour) -
+the number of pictures should grow. Then Prontera: other players' hair smooth, `uaro-graphics\missing` without new
+`player-...` files; send the log.
+
 # uaRO Graphics 0.49.3 — testing
 
 What is new in 0.49.3 ("the character facing us stays blocky; walking, the improved frames show"):
