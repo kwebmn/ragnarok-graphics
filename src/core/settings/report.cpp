@@ -8,7 +8,8 @@ namespace uagfx::settings {
 
 std::string vramText(unsigned long long mb) {
     const std::string text = std::to_string(mb) + " MB";
-    return mb >= kVramSeenAtMost ? "at least " + text + " (a 32-bit program sees no more)" : text;
+    // 0.51.1: exactly DXGI's cap - the settings app reads the driver's own number where it can (app/system.cpp)
+    return mb == kVramSeenAtMost ? "at least " + text + " (a 32-bit program sees no more)" : text;
 }
 
 std::string maskUserPaths(const std::string& text) {

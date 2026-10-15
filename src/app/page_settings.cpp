@@ -6,6 +6,7 @@
 #include "app/page.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/auto_setup.hpp"
+#include "core/settings/report.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -324,6 +325,7 @@ private:
             x.vramMb = card->vramMb;
             x.adapter = card->name;
         }
+        x.vramCapped = x.vramMb == kVramSeenAtMost;  // 0.51.1: no better number from the driver's registry
         if (!sys.monitors.empty()) {
             x.screenWidth = sys.monitors[0].pixels.width;
             x.screenHeight = sys.monitors[0].pixels.height;

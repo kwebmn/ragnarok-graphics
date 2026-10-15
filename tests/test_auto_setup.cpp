@@ -102,4 +102,7 @@ TEST(auto_setup_small_and_middle_cards) {
     CHECK(valueOf(a, "effects", "ao").empty());  // the player's choice stays
     CHECK(a.aiWorld);
     CHECK(std::string(tierName(Tier::Old)) == "old");
+    m.vramMb = 3072;  // 0.51.1: DXGI's cap for a 32-bit program, the driver's number unknown
+    m.vramCapped = true;
+    CHECK(autoSetup(m).tier == Tier::Middle);
 }

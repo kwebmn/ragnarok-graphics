@@ -16,6 +16,7 @@ struct Machine {
     unsigned d3d11Level = 0;  // D3D_FEATURE_LEVEL (0xb000 is 11_0)
     unsigned vendor = 0;      // PCI: 0x10de NVIDIA, 0x1002 AMD, 0x8086 Intel, 0x1414 Microsoft's software adapter
     unsigned long long vramMb = 0;  // dedicated video memory
+    bool vramCapped = false;  // 0.51.1: DXGI's 3072 MB for a 32-bit program and no better number: at least that
     std::string adapter;
     int screenWidth = 0, screenHeight = 0;  // the main monitor's pixels
     bool pack = false;                      // uaro-textures.zip next to uaRO.exe

@@ -9,6 +9,7 @@
 
 #include "app/text.hpp"
 #include "core/settings/compat_flags.hpp"
+#include "core/settings/report.hpp"
 #include "core/window_plan.hpp"
 
 namespace uagfx::app {
@@ -100,6 +101,53 @@ std::vector<HMONITOR> dxgiFacts(std::string& driver) {
     return out;
 }
 
+// 0.51.1: DXGI tells a 32-bit program no more than 3072 MB of video memory: the display driver's own number from the
+// registry (HardwareInformation.qwMemorySize, else .MemorySize) of the card of this name; 0 when not found.
+unsigned long long registryVramMb(const std::string& name) {
+    const wchar_t* kDisplays = L"SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}";
+    HKEY root = nullptr;
+    if (name.empty() ||
+        RegOpenKeyExW(HKEY_LOCAL_MACHINE, kDisplays, 0, KEY_READ | KEY_WOW64_64KEY, &root) != ERROR_SUCCESS)
+        return 0;
+    unsigned long long found = 0;
+    wchar_t sub[64];
+    for (DWORD i = 0; !found; ++i) {
+        DWORD n = 64;
+        if (RegEnumKeyExW(root, i, sub, &n, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) break;
+        HKEY key = nullptr;
+        if (RegOpenKeyExW(root, sub, 0, KEY_READ | KEY_WOW64_64KEY, &key) != ERROR_SUCCESS) continue;
+        wchar_t desc[256] = {};
+        DWORD size = sizeof desc - sizeof(wchar_t), type = 0;
+        if (RegQueryValueExW(key, L"DriverDesc", nullptr, &type, reinterpret_cast<BYTE*>(desc), &size) ==
+                ERROR_SUCCESS &&
+            type == REG_SZ && utf8(desc) == name) {
+            unsigned long long bytes = 0;
+            DWORD small = 0;
+            size = sizeof bytes;
+            if (RegQueryValueExW(key, L"HardwareInformation.qwMemorySize", nullptr, &type,
+                                 reinterpret_cast<BYTE*>(&bytes), &size) == ERROR_SUCCESS &&
+                size == sizeof bytes) {
+                found = bytes / (1024 * 1024);
+            } else {
+                size = sizeof small;
+                if (RegQueryValueExW(key, L"HardwareInformation.MemorySize", nullptr, &type,
+                                     reinterpret_cast<BYTE*>(&small), &size) == ERROR_SUCCESS && size == sizeof small)
+                    found = small / (1024 * 1024);
+            }
+        }
+        RegCloseKey(key);
+    }
+    RegCloseKey(root);
+    return found;
+}
+
+// DXGI's capped number made the driver's, where the registry has it.
+void realVram(unsigned long long& mb, const std::string& name) {
+    if (mb != settings::kVramSeenAtMost) return;
+    const unsigned long long r = registryVramMb(name);
+    if (r > mb) mb = r;
+}
+
 // The frame of a window style at 96 DPI: the game is not DPI-aware, so it measures in those pixels.
 settings::Frame frameOf(DWORD style) {
     RECT r{0, 0, 0, 0};
@@ -150,6 +198,9 @@ SystemInfo probeSystem() {
     }
     s.d3d11 = win::probeD3D11(true);
     s.adapters = win::probeAdapters(true);
+    realVram(s.d3d12.vramMb, s.d3d12.adapter);  // 0.51.1
+    realVram(s.d3d11.vramMb, s.d3d11.adapter);
+    for (win::AdapterProbe& a : s.adapters) realVram(a.vramMb, a.name);
     std::vector<Found> found;
     EnumDisplayMonitors(nullptr, nullptr, collect, reinterpret_cast<LPARAM>(&found));
     std::vector<bool> primary;

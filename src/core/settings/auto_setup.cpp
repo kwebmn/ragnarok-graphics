@@ -10,6 +10,7 @@ constexpr unsigned kLevel11 = 0xb000;
 Tier tierOf(const Machine& m) {
     if (m.vendor == kMicrosoft) return Tier::NoDriver;
     if (m.windows10 && m.d3d12) {
+        if (m.vramCapped) return Tier::Middle;  // 3 GB or more, how much more unknown
         if (m.vramMb < 4096) return Tier::Low;
         return m.vramMb < 8192 ? Tier::Middle : Tier::High;
     }

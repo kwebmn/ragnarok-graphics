@@ -159,7 +159,7 @@ private:
             const std::vector<std::string> gpu{sys.d3d12.adapter, num(static_cast<long long>(sys.d3d12.vramMb)),
                                                sys.gpuDriver.empty() ? utf8(t(Text::Unknown)) : sys.gpuDriver};
             out.push_back({t(Text::DiagGpu),
-                           tf(sys.d3d12.vramMb >= kVramSeenAtMost ? Text::DiagGpuValueCapped : Text::DiagGpuValue, gpu),
+                           tf(sys.d3d12.vramMb == kVramSeenAtMost ? Text::DiagGpuValueCapped : Text::DiagGpuValue, gpu),
                            Tone::Normal, {}});
             out.push_back({t(Text::DiagD3D12),
                            sys.d3d12.ok ? t(Text::DiagD3D12Ok) : tf(Text::DiagD3D12Failed, {hresult(sys.d3d12.hr)}),

@@ -13,6 +13,7 @@ import sys
 # Every function the settings app imports, each one Windows 7 has.
 ALLOWED = {
     "advapi32.dll": {
+        "RegQueryValueExW",  # 0.51.1: the video memory from the display driver's key
         "GetTokenInformation", "OpenProcessToken", "RegCloseKey", "RegCreateKeyExW", "RegDeleteTreeW",
         "RegDeleteValueW", "RegEnumKeyExW", "RegEnumValueW", "RegOpenKeyExW", "RegSetValueExW",
     },
