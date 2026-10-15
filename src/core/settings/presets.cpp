@@ -46,10 +46,13 @@ std::vector<IniEdit> presetEdits(Preset p) {
 }
 
 std::vector<std::pair<std::string, std::string>> presetRegWords(Preset p) {
+    // 0.87.1: Speed too keeps the game's textures and sprites at full size - it lowered TEXTUREMODE to 1 (the game's
+    // textures at half size), and the first game after it on a Radeon HD 6570 (Direct3D 11) crashed in the game's own
+    // sprite writer within seconds; the textures cost a card little since they are kept compressed (0.57).
     switch (p) {
         case Preset::Maximum:
-        case Preset::Balance: return {{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}};
-        case Preset::Speed: return {{"TEXTUREMODE", "1"}};
+        case Preset::Balance:
+        case Preset::Speed: return {{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}};
         case Preset::Plain: break;
     }
     return {};

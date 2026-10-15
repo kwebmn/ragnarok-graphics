@@ -347,8 +347,9 @@ TEST(model_presets_and_revert_take_the_game_s_quality_too) {
     fake::Windows& w = fake::reset();
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
+    m.setRegWord(*findRegSetting("TEXTUREMODE"), "1");
     m.applyPreset(Preset::Speed);
-    CHECK(m.regWord(*findRegSetting("TEXTUREMODE")) == "1");
+    CHECK(m.regWord(*findRegSetting("TEXTUREMODE")) == "2");  // 0.87.1: full size, as the others
     m.applyPreset(Preset::Maximum);
     CHECK(m.regWord(*findRegSetting("TEXTUREMODE")) == "2");
     CHECK(m.regWord(*findRegSetting("SPRITEMODE")) == "2");
@@ -366,7 +367,7 @@ TEST(model_the_preset_shown_counts_the_game_s_quality) {
     app::Model m;
     m.applyPreset(Preset::Speed);
     CHECK(m.preset() == Preset::Speed);
-    m.setRegWord(*findRegSetting("TEXTUREMODE"), "2");
+    m.setRegWord(*findRegSetting("TEXTUREMODE"), "1");
     CHECK(!m.preset());
     m.applyPreset(Preset::Maximum);
     CHECK(m.preset() == Preset::Maximum);

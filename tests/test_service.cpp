@@ -94,11 +94,11 @@ TEST(log_digest_reads_the_crisp_text_lines_of_the_last_start) {
 }
 
 TEST(presets_set_the_game_s_own_quality) {
-    // Spec §8 from 0.6.2: Maximum and Balance - sprites and textures high; Speed - textures half; mipmaps never.
+    // Spec §8 from 0.6.2: sprites and textures high; 0.87.1: Speed too (it halved the textures); mipmaps never.
     using Words = std::vector<std::pair<std::string, std::string>>;
     CHECK(presetRegWords(Preset::Maximum) == (Words{{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}}));
     CHECK(presetRegWords(Preset::Balance) == (Words{{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}}));
-    CHECK(presetRegWords(Preset::Speed) == (Words{{"TEXTUREMODE", "1"}}));
+    CHECK(presetRegWords(Preset::Speed) == (Words{{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}}));
     CHECK(presetRegWords(Preset::Plain).empty());
     const Config balance = parseConfig(applyIniEdits("", presetEdits(Preset::Balance)));
     CHECK(presetOf(balance, {{"SPRITEMODE", "2"}, {"TEXTUREMODE", "2"}}) == Preset::Balance);
