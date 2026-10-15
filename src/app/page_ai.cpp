@@ -80,6 +80,7 @@ public:
         p.check(kAhead, t(Text::AiAhead), m.token(setting("ai.ahead")) == "1", t(Text::AiAheadHint), on);
         p.note(t(Text::AiPackNote));  // 0.42
         p.check(kGenerate, t(Text::AiGenerate), m.token(setting("ai.generate")) == "1", t(Text::AiGenerateHint), on);
+        if (m.token(setting("renderer.api")) == "d3d11") p.note(t(Text::AiD3d11Note));  // 0.47
         p.note(t(Text::AfterRestart));
         if (!on) p.note(t(Text::AiOffNote));
     }

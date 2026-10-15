@@ -1248,7 +1248,8 @@ bool Renderer::upgradeFactory(bool (*upgrade)(void** object)) {
 
 bool Renderer::startAiTextures(const std::string& gameDir, const AiSettings& settings) {
     Impl& m = *impl_;
-    if (remote_ || remix_ || d3d11_ || m.ai) return m.ai != nullptr;
+    if (d3d11_) return d3d11_->startAi(gameDir, settings);  // 0.47: the ready pictures alone
+    if (remote_ || remix_ || m.ai) return m.ai != nullptr;
     m.ai = new AiTextures(m);
     std::string error;
     if (!m.ai->start(gameDir, settings, error)) {
@@ -1297,6 +1298,7 @@ void Renderer::finish() {
 }
 
 void Renderer::requestIcon(uint64_t key, int width, int height, const uint32_t* argb) {
+    if (d3d11_) return d3d11_->requestIcon(key, width, height, argb);
     if (remote_) return remote_->sendIcon(key, width, height, argb);
     if (impl_->ai) impl_->ai->noteIcon(key, width, height, argb);
 }
@@ -1310,6 +1312,7 @@ void Renderer::setStartSink(StartSink sink, void* context) {
 void Renderer::setIconSink(IconSink sink, void* context) {
     impl_->iconSink = sink;
     impl_->iconContext = context;
+    if (d3d11_) d3d11_->setIconSink(sink, context);
     if (remote_) remote_->setIconSink(sink, context);
 }
 
@@ -1380,7 +1383,10 @@ bool Renderer::lost() const { return d3d11_ ? d3d11_->lost() : impl_->lost; }
 
 void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown) {
     if (remix_) return;
-    if (d3d11_) return d3d11_->setAnisotropy(anisotropy);
+    if (d3d11_) {
+        d3d11_->setAnisotropy(anisotropy);
+        return d3d11_->setAiShown(aiShown);
+    }
     if (remote_) return remote_->setDrawQuality(anisotropy, alphaToCoverage, aiShown);
     Impl& m = *impl_;
     if (m.ai) m.ai->shown = aiShown;

@@ -33,11 +33,13 @@ struct IDXGISwapChain;
 
 namespace uagfx::gpu {
 
+class Ai11;
+
 // 0.46: the game drawn with Direct3D 11 - for graphics cards without Direct3D 12 (Radeon HD 5000-7000, GeForce GTX
 // 400-600 with old drivers, Intel HD 4000) and Windows 7 and 8. The same shaders as Direct3D 12's (shaders.cpp): the
 // game's fixed function, the target at the window's size with the interface's filter, crisp text's twins, the
-// picture fitted into the window with its sharpening; no DLSS, effects or AI textures yet. Feature level 11_0 takes
-// shader model 5, 10_0 and 10_1 shader model 4 (when the shaders compile for it).
+// picture fitted into the window with its sharpening; no DLSS or effects yet. Feature level 11_0 takes shader model 5,
+// 10_0 and 10_1 shader model 4 (when the shaders compile for it). 0.47: the AI textures' ready pictures (ai11.hpp).
 class Renderer11 {
 public:
     Renderer11() = default;
@@ -58,6 +60,11 @@ public:
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
+    // 0.47: the AI textures from the texture pack and upscaled.grf (none made); false: off, the reason in the log.
+    bool startAi(const std::string& gameDir, const AiSettings& settings);
+    void setAiShown(bool shown);  // Pause: the game's own textures
+    void requestIcon(uint64_t key, int width, int height, const uint32_t* argb);
+    void setIconSink(Renderer::IconSink sink, void* context);
     void finish();
     bool lost() const { return lost_; }
 
@@ -106,6 +113,9 @@ private:
     void logGpu(ULONGLONG now);
 
     HMODULE dll_ = nullptr;
+    Ai11* ai_ = nullptr;  // 0.47
+    Renderer::IconSink iconSink_ = nullptr;
+    void* iconContext_ = nullptr;
     ID3D11Device* device_ = nullptr;
     ID3D11DeviceContext* ctx_ = nullptr;
     unsigned level_ = 0;  // D3D_FEATURE_LEVEL

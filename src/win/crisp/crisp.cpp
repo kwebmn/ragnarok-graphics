@@ -245,8 +245,10 @@ void notePlace(uint64_t key, Picture& pic, const Rect& r, bool over) {
 bool aiPaint(Picture& pic, const Rect& r, const std::vector<uint32_t>& argb, bool over) {
     State& s = state();
     const int w = r.width(), h = r.height();
-    const bool xbr = !aiTakes(w, h);  // 0.41: the callers have one of the two take it
-    const uint64_t k = ai::textureKey(argb.data(), w, h).hash ^ (xbr ? kXbrKey : 0);
+    const uint64_t hash = ai::textureKey(argb.data(), w, h).hash;
+    const bool none = s.noAi.count(hash) != 0;  // 0.47: the renderer has none of it
+    const bool xbr = !aiTakes(w, h) || (none && s.art == WindowArt::Xbr);  // 0.41: aiTakes or xbrTakes
+    const uint64_t k = hash ^ (xbr ? kXbrKey : 0);
     auto it = s.icons.find(k);
     if (it == s.icons.end() && xbr) {  // made here and now: no waiting for it
         keepIcon(k, 4 * w, 4 * h, xbr::scale4(argb.data(), w, h));
@@ -257,7 +259,7 @@ bool aiPaint(Picture& pic, const Rect& r, const std::vector<uint32_t>& argb, boo
         pic.twin->paint(r, it->second.argb.data(), it->second.width, it->second.height, over);
         return true;
     }
-    if (xbr) return false;
+    if (xbr || none) return false;
     notePlace(k, pic, r, over);
     if (s.asked.insert(k).second)
         if (gpu::Renderer* renderer = Context::get().renderer) renderer->requestIcon(k, w, h, argb.data());
@@ -640,6 +642,7 @@ void uninstall() {
     s.iconOrder.clear();
     s.iconBytes = 0;
     s.asked.clear();
+    s.noAi.clear();
     s.placements.clear();
     s.underBytes = 0;
     s.redraw.clear();
@@ -736,7 +739,15 @@ void setWindowArt(WindowArt art) {
 void iconReady(void*, uint64_t key, int width, int height, const uint32_t* argb) {
     State& s = state();
     s.asked.erase(key);
-    if (width <= 0 || height <= 0 || s.icons.count(key)) {
+    if (width <= 0 || height <= 0) {  // 0.47: there is none - the windows that wait for it draw it again by xBR
+        s.noAi.insert(key);
+        const auto places = s.placements.equal_range(key);
+        if (places.first == places.second) s.iconsArrived = true;  // nowhere known: every window draws again
+        for (auto p = places.first; p != places.second; ++p) s.redraw[p->second.picture] = false;
+        forgetPlaces(key);
+        return;
+    }
+    if (s.icons.count(key)) {
         forgetPlaces(key);
         return;
     }

@@ -1090,16 +1090,16 @@ const Entry kTexts[] = {
     {"Graphics API", "Графічний API", "Графический API"},
     {"How uaRO Graphics draws. Direct3D 12 has every feature (DLSS, effects, AI textures). Direct3D 11 is for graphics "
      "cards without Direct3D 12 (Radeon HD 5000-7000, GeForce GTX 400-600 with old drivers, Intel HD 4000) and "
-     "Windows 7 and 8: the game, the window's size and crisp text, without DLSS, effects and AI textures yet. Auto "
-     "takes Direct3D 12 and else 11.",
+     "Windows 7 and 8: the game, the window's size, crisp text and the AI textures of the texture pack, without DLSS "
+     "and effects yet. Auto takes Direct3D 12 and else 11.",
      "Як малює uaRO Graphics. Direct3D 12 має всі можливості (DLSS, ефекти, ШІ-текстури). Direct3D 11 - для "
      "відеокарт без Direct3D 12 (Radeon HD 5000-7000, GeForce GTX 400-600 зі старими драйверами, Intel HD 4000) і "
-     "Windows 7 та 8: гра, розмір вікна й чіткий текст, поки без DLSS, ефектів і ШІ-текстур. «Авто» бере Direct3D 12, "
-     "а без нього - 11.",
+     "Windows 7 та 8: гра, розмір вікна, чіткий текст і ШІ-текстури з пакета текстур, поки без DLSS і ефектів. "
+     "«Авто» бере Direct3D 12, а без нього - 11.",
      "Как рисует uaRO Graphics. Direct3D 12 умеет всё (DLSS, эффекты, ИИ-текстуры). Direct3D 11 - для видеокарт без "
      "Direct3D 12 (Radeon HD 5000-7000, GeForce GTX 400-600 со старыми драйверами, Intel HD 4000) и Windows 7 и 8: "
-     "игра, размер окна и чёткий текст, пока без DLSS, эффектов и ИИ-текстур. «Авто» берёт Direct3D 12, а без него "
-     "- 11."},
+     "игра, размер окна, чёткий текст и ИИ-текстуры из пакета текстур, пока без DLSS и эффектов. «Авто» берёт "
+     "Direct3D 12, а без него - 11."},
     {"Direct3D 12 (all features)", "Direct3D 12 (усі можливості)", "Direct3D 12 (все возможности)"},
     {"Direct3D 11 (older graphics cards, test)", "Direct3D 11 (старші відеокарти, тест)",
      "Direct3D 11 (старые видеокарты, тест)"},
@@ -1110,6 +1110,12 @@ const Entry kTexts[] = {
     {"Direct3D 11", "Direct3D 11", "Direct3D 11"},
     {"works, feature level {1}", "працює, рівень можливостей {1}", "работает, уровень возможностей {1}"},
     {"does not work ({1})", "не працює ({1})", "не работает ({1})"},
+    {"With Direct3D 11 (the Render page) the game shows the ready pictures of the texture pack and upscaled.grf; "
+     "making new ones while playing needs Direct3D 12.",
+     "З Direct3D 11 (вкладка «Рендер») гра показує готові картинки пакета текстур і upscaled.grf; створення нових під "
+     "час гри потребує Direct3D 12.",
+     "С Direct3D 11 (вкладка «Рендер») игра показывает готовые картинки пакета текстур и upscaled.grf; создание новых "
+     "во время игры требует Direct3D 12."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

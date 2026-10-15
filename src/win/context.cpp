@@ -77,8 +77,8 @@ bool Context::open(std::string& error) {
             return false;
         }
         remote = true;  // made: no other renderer
-        if (config.remix || config.bridge || config.dlss != "off" || config.ai.enabled)
-            LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer, DLSS and the AI textures need Direct3D 12 - off");
+        if (config.remix || config.bridge || config.dlss != "off")
+            LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer and DLSS need Direct3D 12 - off");
         if (drawnByRenderer(config.effects))  // 0.46.1
             LOG_INFO("Direct3D 11: the Effects page's lights, torches, water, shadows, weather and glow need "
                      "Direct3D 12 - the game's own effects shown; the level 99 aura and the skills stay softer");
@@ -123,19 +123,21 @@ bool Context::open(std::string& error) {
     renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
     LOG_INFO("%s renderer on %s", d3d11 ? "Direct3D 11" : "Direct3D 12", renderer->adapterName().c_str());
+    // 0.47: the AI textures with Direct3D 11 - the texture pack's and upscaled.grf's pictures, in the game's process.
+    const bool aiHere = d3d11 && config.ai.enabled && renderer->startAiTextures(gameDir(), config.ai);
     crisp::setWindowArt(config.windowArt);  // 0.41: before the first twin
     crisp::install(config.crispText);
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'
     // icons through crisp text's twins. 0.23: the torches' frames are known through it too - whenever the picture is
     // ours (not RTX Remix's), as the torches can be turned on in a running game.
-    // 0.46.1: Direct3D 11 draws neither of them.
+    // 0.46.1: Direct3D 11 draws no torches; 0.47: its AI textures take the sprite frames when they are on.
     const AiSettings& ai = config.ai;
-    if (!d3d11 && ((ai.enabled && (ai.sprites() || ai.effects || ai.icons) && renderer->remote()) || !config.remix))
-        installSpriteHook();
+    const bool cells = ai.enabled && (ai.sprites() || ai.effects || ai.icons);
+    if (d3d11 ? (aiHere && cells) : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)
-    crisp::setAiIcons(config.ai.enabled && config.ai.icons && renderer->remote() && config.crispText,
+    crisp::setAiIcons(config.ai.enabled && config.ai.icons && (renderer->remote() || aiHere) && config.crispText,
                       config.ai.uiPieces);
     return true;
 }

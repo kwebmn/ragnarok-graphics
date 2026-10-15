@@ -105,7 +105,7 @@ enum class Text : uint16_t {
     PackStopped, PackFailed, PackGone, PackChecked, PackMissing, PackGameRunning, PackBackground, PackCheckNote,
     TimeHoursMinutes, TimeMinutes, TimeSeconds,
     RenderApi, RenderApiHint, RenderApiD3d12, RenderApiD3d11, RenderApiAuto, RenderUseD3d11, DiagD3D11,
-    DiagD3D11Ok, DiagD3D11Failed,
+    DiagD3D11Ok, DiagD3D11Failed, AiD3d11Note,
     Count
 };
 

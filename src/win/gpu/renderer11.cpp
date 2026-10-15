@@ -11,12 +11,14 @@
 #include <fstream>
 #include <iterator>
 
+#include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/d3d_map.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
 #include "core/twin_grid.hpp"
 #include "core/window_plan.hpp"
+#include "win/gpu/ai11.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/log.hpp"
 
@@ -63,6 +65,8 @@ Renderer11::~Renderer11() {
         for (UINT i = 0; i < kTimedFrames; ++i) readTimes((timeSlot_ + i) % kTimedFrames, true);
         logGpu(GetTickCount64());
     }
+    delete ai_;  // its thread first: it makes textures on the device
+    ai_ = nullptr;
     if (ctx_) ctx_->ClearState();
     releaseSwapChain();
     for (auto& t : textures_) {
@@ -473,6 +477,7 @@ uint32_t Renderer11::createTexture(int width, int height, int levels) {
 void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while queued work still reads it
     const auto it = textures_.find(id);
     if (it == textures_.end()) return;
+    if (ai_) ai_->forget(id);
     drop(it->second.srv);
     drop(it->second.texture);
     textures_.erase(it);
@@ -733,6 +738,9 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     const D3D11_BOX box = boxOf(u.rect);
     ctx_->UpdateSubresource(t.texture, UINT(level), &box, rec.pixels().data() + u.pixels, UINT(u.rect.width()) * 4,
                             0);
+    if (ai_)  // 0.47: its key, or the sprite cache's new frames with their sources
+        ai_->noteUpload(u.texture, t.width, t.height, u, rec.pixels().data() + u.pixels,
+                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);
 }
 
 void Renderer11::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
@@ -773,6 +781,35 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         const auto it = id ? textures_.find(id) : textures_.end();
         if (it != textures_.end()) t[i] = &it->second;
     }
+    // 0.47: AI textures - a texture with a picture of its own is drawn from it (the world's; the interface's big
+    // pictures), its mip levels sampled also where the game uses none: four times the texels would shimmer.
+    ID3D11ShaderResourceView* srvs[2] = {t[0]->srv, t[1]->srv};
+    StageSetup sampled[2] = {s.stage[0], s.stage[1]};
+    bool aiDrawn[2] = {false, false};
+    if (ai_) {
+        for (int i = 0; i < 2 && !(d.twin && s.ui); ++i) {
+            ID3D11ShaderResourceView* copy = t[i] != &white_ ? ai_->copyOf(d.texture[i], s.ui) : nullptr;
+            if (!copy) continue;
+            srvs[i] = copy;
+            aiDrawn[i] = true;
+            if (sampled[i].mipFilter != d3d7::TFP_POINT && sampled[i].mipFilter != d3d7::TFP_LINEAR)
+                sampled[i].mipFilter = d3d7::TFP_LINEAR;
+        }
+        if (!s.ui) {  // what the draw shows: the ground, its lightmap, a sprite, an effect, the rest of the world
+            ai::DrawFacts facts;
+            facts.uvSets = d.fvf == d3d7::FVF_TL2 ? 2 : 1;
+            facts.additive = s.blend && s.dstBlend == d3d7::BLEND_ONE;
+            facts.flatQuad = d.vertexCount == 4 && ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride,
+                                                                d.vertexCount, d.indexCount);
+            for (int i = 0; i < 2; ++i) {
+                if (!d.texture[i] || t[i] == &white_) continue;
+                facts.stage = i;
+                ai_->noteWorldUse(d.texture[i], ai::drawKind(facts));
+            }
+        } else if (!twin && d.texture[0] && t[0] != &white_) {
+            ai_->noteUiUse(d.texture[0]);
+        }
+    }
     Constants c{};
     c.targetSize[0] = float(target_.width);
     c.targetSize[1] = float(target_.height);
@@ -786,6 +823,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[3] = 1.0f;
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale_, uiSharp_ ? UiFilter::Sharp : UiFilter::Smooth));
+    if (aiDrawn[0]) c.uiMode = 0;  // the AI's picture has the detail the game's pixels lack: sampled as it is
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
         float quad[4];
         uiPixels(rec, d, quad);
@@ -800,8 +838,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.scale = float(scale_);
     setConstants(c);
     const int aniso = s.ui ? 0 : anisotropy_;
-    ID3D11SamplerState* samplers[2] = {samplerState(s.stage[0], aniso), samplerState(s.stage[1], aniso)};
-    ID3D11ShaderResourceView* srvs[2] = {t[0]->srv, t[1]->srv};
+    ID3D11SamplerState* samplers[2] = {samplerState(sampled[0], aniso), samplerState(sampled[1], aniso)};
     ctx_->OMSetBlendState(blendState(s.blend, d3dmap::blendOf(s.srcBlend, d3d7::BLEND_ONE),
                                      d3dmap::blendOf(s.dstBlend, d3d7::BLEND_ZERO),
                                      D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
@@ -980,6 +1017,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         Sleep(15);
         return;
     }
+    if (ai_) ai_->work();  // 0.47: the AI textures' pictures read meanwhile go in
     if (!target_.texture || !window || source.empty()) return;
     if (!ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),
                          options.allowTearing)) {
@@ -1027,6 +1065,40 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
 
 void Renderer11::finish() {
     if (ctx_) ctx_->Flush();
+}
+
+bool Renderer11::startAi(const std::string& gameDir, const AiSettings& settings) {
+    if (ai_ || !device_) return ai_ != nullptr;
+    IDXGIDevice* dxgi = nullptr;
+    IDXGIAdapter* adapter = nullptr;
+    if (SUCCEEDED(device_->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgi))))
+        dxgi->GetAdapter(&adapter);
+    drop(dxgi);
+    ai_ = new Ai11(device_, ctx_, adapter);
+    drop(adapter);
+    ai_->setIconSink(iconSink_, iconContext_);
+    std::string error;
+    if (!ai_->start(gameDir, settings, error)) {
+        LOG_ERROR("AI textures: %s; they stay off", error.c_str());
+        delete ai_;
+        ai_ = nullptr;
+        return false;
+    }
+    return true;
+}
+
+void Renderer11::setAiShown(bool shown) {
+    if (ai_) ai_->shown = shown;
+}
+
+void Renderer11::requestIcon(uint64_t key, int width, int height, const uint32_t* argb) {
+    if (ai_) ai_->noteIcon(key, width, height, argb);
+}
+
+void Renderer11::setIconSink(Renderer::IconSink sink, void* context) {
+    iconSink_ = sink;
+    iconContext_ = context;
+    if (ai_) ai_->setIconSink(sink, context);
 }
 
 void Renderer11::timeBegin() {

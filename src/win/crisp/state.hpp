@@ -78,6 +78,9 @@ struct State {
     std::deque<uint64_t> iconOrder;      // the oldest first: past kIconBytes they go (asked again when drawn)
     size_t iconBytes = 0;
     std::unordered_set<uint64_t> asked;  // sent to the renderer, not back yet
+    // 0.47: the renderer has no picture of them (Direct3D 11: none in the pack or upscaled.grf) - xBR's instead
+    // (window_art = xbr), else the game's pixels; not asked again.
+    std::unordered_set<uint64_t> noAi;
     bool iconsArrived = false;           // the windows are redrawn at a present soon
     ULONGLONG iconsMarked = 0;           // when they were last
     // 0.22.8: where an asked picture went - the window picture, its place, its colours there just after the game's
