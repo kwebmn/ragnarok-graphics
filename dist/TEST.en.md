@@ -1,3 +1,13 @@
+# uaRO Graphics 0.59.0 — testing
+
+What is new in 0.59.0:
+- **The Effects page's colours on Direct3D 11** (brightness, contrast, saturation, warmth, vignette): drawn over the
+  world before the interface, as with Direct3D 12 - the first of the Effects page on Direct3D 11. The others (lights,
+  torches, water, shadows, weather, glow) still need Direct3D 12; the log says so.
+
+How to test: Direct3D 11, Effects → colours on, saturation 150 %, vignette 60 %: the world changes, the windows not;
+Pause shows the game's own.
+
 # uaRO Graphics 0.58.0 — testing
 
 What is new in 0.58.0 (an upscale for AMD and Intel):
