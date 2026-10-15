@@ -1,3 +1,19 @@
+# uaRO Graphics 0.50.0 — testing
+
+What is new in 0.50.0 ("a button to hand the client to other people"):
+- **Settings app → Renderer → "Set up automatically".** It looks at the graphics card, its video memory and the screen and
+  picks the settings, says what it found and offers to write them and start the game:
+  - no graphics driver (Windows' basic display adapter): the game's own look, and a word to install the driver;
+  - a card without Direct3D 12 (Radeon HD 6000 and the like): Direct3D 11, the game's size, no smoothing;
+  - Direct3D 12 under 4 GB: the light settings, the heavy effects off; 4 to 8 GB: balanced; 8 GB and more: drawn at
+    200 % (150 % past 2560x1440);
+  - DLSS and frame generation off on cards that are not NVIDIA's;
+  - AI textures on when uaro-textures.zip lies next to uaRO.exe (under 2 GB: characters, monsters, items and icons
+    only); the game never makes pictures itself.
+
+How to test: press the button on your computer (expected: "a strong graphics card", 150 %, AI textures on) and on
+the other computers; send what the window said and each one's uaro-graphics.log after a game.
+
 # uaRO Graphics 0.49.4 — testing
 
 What is new in 0.49.4 ("rebuilt the pack - other players' hair still blocky"):
