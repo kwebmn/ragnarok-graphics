@@ -53,8 +53,8 @@ AutoSetup autoSetup(const Machine& m) {
     std::vector<IniEdit>& e = a.edits;
     e = presetEdits(a.preset);
     const long long pixels = static_cast<long long>(m.screenWidth) * m.screenHeight;
-    if (a.tier == Tier::High)  // drawn larger and made smaller again: a screen past 2560x1440 asks a lot of it
-        set(e, "quality", "render_scale", pixels <= 2560LL * 1440 ? "200" : "150");
+    // 0.85: no card is given the world drawn larger and made smaller (render_scale over 100 %: 150 % at 4K was 2.25
+    // times the pixels for an edge a little smoother) - MSAA and the sharpening do it for far less.
     // 0.58: a large screen for a smaller card - drawn smaller and made larger sharply (render_scale under 100 %)
     if (a.tier == Tier::Middle && pixels > 2560LL * 1440) set(e, "quality", "render_scale", "75");
     if ((a.tier == Tier::Low || a.tier == Tier::Old) && pixels > 1920LL * 1200) set(e, "quality", "render_scale", "67");

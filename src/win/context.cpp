@@ -368,7 +368,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     gpu::PresentOptions o;
     o.vsync = config.vsync && waitForVblank;
     o.allowTearing = config.allowTearing;
+    // 0.85, [frames] save_power: in the background (another window in front, minimised) 15 frames a second, with no
+    // map shown (the login, the character select) 30 - what the player is not looking at needs no more.
     o.fpsLimit = config.fpsLimit;
+    const int idle = !foreground ? 15 : map_.empty() ? 30 : 0;
+    if (config.savePower && idle && (o.fpsLimit <= 0 || o.fpsLimit > idle)) o.fpsLimit = idle;
     o.sharpen = enhanced_ && config.sharpen > 0 ? float(config.sharpen - 1) / 99.0f : -1.0f;  // 1-100 -> CAS 0..1
     o.foreground = foreground;
     o.vsyncSetting = config.vsync;

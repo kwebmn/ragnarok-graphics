@@ -175,6 +175,8 @@ enum class Text : uint16_t {
     FxFilmGrain, FxFilmGrainHint, FxFilmGrainAmount, FxFilmGrainAmountHint, FxMapFade, FxMapFadeHint,
     // 0.84
     FxRoundLight, FxRoundLightHint,
+    // 0.85
+    FramesSavePower, FramesSavePowerHint,
     Count
 };
 

@@ -7,7 +7,7 @@ TEST(live_config_applies_what_can_change_in_a_running_game) {
     const Config running = parseConfig("[quality]\nsharpen = 50\n");
     const LiveUpdate u = liveUpdate(
         running, parseConfig("[quality]\nsharpen = 80\nrender_scale = 150\n[display]\nui_filter = smooth\n"
-                             "crisp_text = 0\nhigh_resolution = 0\n[frames]\nvsync = 0\nfps_limit = 60\n"
+                             "crisp_text = 0\nhigh_resolution = 0\n[frames]\nvsync = 0\nfps_limit = 45\n"
                              "[debug]\nlog = verbose\n"));
     CHECK_EQ(u.next.sharpen, 80);
     CHECK_EQ(u.next.renderScale, 150);
@@ -15,7 +15,7 @@ TEST(live_config_applies_what_can_change_in_a_running_game) {
     CHECK(!u.next.crispText);
     CHECK(!u.next.highResolution);
     CHECK(!u.next.vsync);
-    CHECK_EQ(u.next.fpsLimit, 60);
+    CHECK_EQ(u.next.fpsLimit, 45);
     CHECK(u.next.logLevel == LogLevel::Debug);
     CHECK(u.waiting.empty());
     CHECK_EQ(u.applied.size(), size_t(8));

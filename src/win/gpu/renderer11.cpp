@@ -1199,17 +1199,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     flames_.clear();
     timeEnd();
     timeFrame();
-    if (options.fpsLimit > 0) {  // simple pacing: wait until 1/limit seconds after the previous present
-        LARGE_INTEGER now, freq;
-        QueryPerformanceFrequency(&freq);
-        QueryPerformanceCounter(&now);
-        const LONGLONG period = freq.QuadPart / options.fpsLimit;
-        if (lastPresent_.QuadPart) {
-            const LONGLONG wait = lastPresent_.QuadPart + period - now.QuadPart;
-            if (wait > 0) Sleep(DWORD(wait * 1000 / freq.QuadPart));
-        }
-        QueryPerformanceCounter(&lastPresent_);
-    }
+    pacer_.wait(options.fpsLimit);  // 0.85: kept to the frame
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && tearing_ ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = swap_->Present(sync, flags);

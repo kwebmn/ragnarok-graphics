@@ -2310,17 +2310,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);
     m.submit();
 
-    if (options.fpsLimit > 0) {  // simple pacing: wait until 1/limit seconds after the previous present
-        LARGE_INTEGER now, freq;
-        QueryPerformanceFrequency(&freq);
-        QueryPerformanceCounter(&now);
-        const LONGLONG period = freq.QuadPart / options.fpsLimit;
-        if (m.lastPresent.QuadPart) {
-            const LONGLONG wait = m.lastPresent.QuadPart + period - now.QuadPart;
-            if (wait > 0) Sleep(DWORD(wait * 1000 / freq.QuadPart));
-        }
-        QueryPerformanceCounter(&m.lastPresent);
-    }
+    m.pacer.wait(options.fpsLimit);  // 0.85: kept to the frame
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = m.swapChain->Present(sync, flags);

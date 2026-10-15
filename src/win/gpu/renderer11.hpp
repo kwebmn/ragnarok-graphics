@@ -12,6 +12,7 @@
 #include "core/map_objects.hpp"
 #include "core/torch.hpp"
 #include "core/retry_timer.hpp"
+#include "win/gpu/frame_pacer.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/gpu/shaders.hpp"
 
@@ -222,7 +223,7 @@ private:
     RetryTimer swapRetry_{2000};
     bool tearing_ = false;
     Rect picture_;
-    LARGE_INTEGER lastPresent_{};
+    FramePacer pacer_;  // 0.85: [frames] fps_limit
 
     static constexpr UINT kTimedFrames = 4;
     static constexpr UINT kStamps = 16;  // 8 spans a frame; more of them stretch the last

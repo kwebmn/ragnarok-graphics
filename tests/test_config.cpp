@@ -17,7 +17,7 @@ TEST(config_defaults_without_a_file) {
     CHECK_EQ(c.renderScale, 100);
     CHECK_EQ(c.sharpen, 50);
     CHECK(c.vsync);
-    CHECK_EQ(c.fpsLimit, 0);
+    CHECK_EQ(c.fpsLimit, 60);  // 0.85
     CHECK(!c.allowTearing);
     CHECK(c.crispText);
     CHECK(c.logLevel == LogLevel::Info);
@@ -65,7 +65,7 @@ TEST(config_invalid_values_keep_defaults) {
     CHECK_EQ(c.renderScale, 100);
     CHECK_EQ(c.sharpen, 50);
     CHECK(c.vsync);
-    CHECK_EQ(c.fpsLimit, 0);
+    CHECK_EQ(c.fpsLimit, 60);  // 0.85
     CHECK(c.crispText);
     CHECK(c.logLevel == LogLevel::Info);
 }

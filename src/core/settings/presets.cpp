@@ -27,14 +27,22 @@ Values valuesOf(Preset p) {
 
 std::vector<IniEdit> presetEdits(Preset p) {
     const Values v = valuesOf(p);
-    return {{"display", "high_resolution", v.highResolution ? "1" : "0"},
-            {"quality", "render_scale", std::to_string(v.renderScale)},
-            {"quality", "sharpen", std::to_string(v.sharpen)},
-            {"display", "ui_filter", "sharp"},
-            {"display", "crisp_text", v.crispText ? "1" : "0"},
-            {"quality", "msaa", std::to_string(v.msaa)},
-            {"quality", "alpha_to_coverage", v.alphaToCoverage ? "1" : "0"},
-            {"quality", "anisotropy", std::to_string(v.anisotropy)}};
+    std::vector<IniEdit> e = {{"display", "high_resolution", v.highResolution ? "1" : "0"},
+                              {"quality", "render_scale", std::to_string(v.renderScale)},
+                              {"quality", "sharpen", std::to_string(v.sharpen)},
+                              {"display", "ui_filter", "sharp"},
+                              {"display", "crisp_text", v.crispText ? "1" : "0"},
+                              {"quality", "msaa", std::to_string(v.msaa)},
+                              {"quality", "alpha_to_coverage", v.alphaToCoverage ? "1" : "0"},
+                              {"quality", "anisotropy", std::to_string(v.anisotropy)},
+                              // 0.85: every preset keeps the card from working for frames no one sees
+                              {"frames", "fps_limit", "60"},
+                              {"frames", "save_power", "1"}};
+    if (p == Preset::Speed)  // 0.85: and the light one leaves out the costly effects
+        for (const char* k : {"ao", "dof", "glow", "clouds", "heat", "floor_reflections", "shafts", "sun_shadows",
+                              "bloom", "grass"})
+            e.push_back({"effects", k, "0"});
+    return e;
 }
 
 std::vector<std::pair<std::string, std::string>> presetRegWords(Preset p) {

@@ -1703,6 +1703,13 @@ const Entry kTexts[] = {
      "darker.",
      "Факели, лампи й вогонь освітлюють персонажа як округлого: бік до вогню світліший, дальній темніший.",
      "Факелы, лампы и огонь освещают персонажа как округлого: сторона к огню светлее, дальняя темнее."},
+    {"Save power in the background",
+     "Економити енергію у фоні",
+     "Экономить энергию в фоне"},
+    {"While another window is in front or the game is minimised it draws 15 frames a second; on the login and the "
+     "character select 30.",
+     "Поки попереду інше вікно або гру згорнуто, вона малює 15 кадрів на секунду; на вході й виборі персонажа — 30.",
+     "Пока впереди другое окно или игра свёрнута, она рисует 15 кадров в секунду; на входе и выборе персонажа — 30."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -20,6 +20,7 @@
 #include "core/pipeline_key.hpp"
 #include "core/weather.hpp"
 #include "core/torch.hpp"
+#include "win/gpu/frame_pacer.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/gpu/shaders.hpp"
 #include "win/gpu/map_world.hpp"
@@ -586,7 +587,7 @@ struct Renderer::Impl {
     HANDLE presentSurface = nullptr;  // part 3: a composition surface instead of the game's window
     bool surfaceNoted = false;        // the log has said frame generation stays off on it
     bool refused = false;             // the game's window took no swap chain from this process
-    LARGE_INTEGER lastPresent{};
+    FramePacer pacer;  // 0.85: [frames] fps_limit
 
     // Geometry of the record being executed, copied into the upload buffer once per execute().
     D3D12_GPU_VIRTUAL_ADDRESS vertexBase = 0;

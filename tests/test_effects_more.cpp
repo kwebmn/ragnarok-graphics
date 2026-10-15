@@ -119,3 +119,11 @@ TEST(film_grain_and_map_fade_off_by_default) {
     CHECK(!parseConfig("").effects.filmGrain && !parseConfig("").effects.mapFade);
     CHECK(!effectsOff().filmGrain && !effectsOff().mapFade);
 }
+
+TEST(frames_limited_and_saving_power_by_default) {
+    // 0.85: 60 frames a second, 15 in the background and 30 with no map
+    const Config c = parseConfig("");
+    CHECK(c.fpsLimit == 60 && c.savePower);
+    CHECK(parseConfig("[frames]\nfps_limit = 0\nsave_power = 0\n").fpsLimit == 0);
+    CHECK(!parseConfig("[frames]\nsave_power = 0\n").savePower);
+}

@@ -31,7 +31,7 @@ TEST(auto_setup_a_strong_nvidia_card) {
     const AutoSetup a = autoSetup(rtx5060());
     CHECK(a.tier == Tier::High && a.preset == Preset::Balance);
     CHECK(valueOf(a, "renderer", "api") == "auto");
-    CHECK(valueOf(a, "quality", "render_scale") == "150");  // 4K: not twice
+    CHECK(valueOf(a, "quality", "render_scale") == "100");  // 0.85: not drawn larger
     CHECK(valueOf(a, "quality", "msaa") == "4");
     CHECK(valueOf(a, "quality", "dlss").empty());  // NVIDIA's own choice stays
     CHECK(a.ai && a.aiWorld);
@@ -40,7 +40,8 @@ TEST(auto_setup_a_strong_nvidia_card) {
     Machine full_hd = rtx5060();
     full_hd.screenWidth = 1920;
     full_hd.screenHeight = 1080;
-    CHECK(valueOf(autoSetup(full_hd), "quality", "render_scale") == "200");
+    CHECK(valueOf(autoSetup(full_hd), "quality", "render_scale") == "100");
+    CHECK(valueOf(a, "frames", "fps_limit") == "60" && valueOf(a, "frames", "save_power") == "1");
 }
 
 TEST(auto_setup_an_old_radeon_on_direct3d_11) {

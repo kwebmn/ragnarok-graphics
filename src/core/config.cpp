@@ -521,6 +521,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.fpsCounter);
         } else if (key == "frames.fps_limit") {
             toInt(val, 0, 1000, c.fpsLimit);
+        } else if (key == "frames.save_power") {
+            setBool(val, c.savePower);
         } else if (key == "frames.keep_fps") {
             toInt(val, 0, 240, c.keepFps);
         } else if (key == "frames.allow_tearing") {

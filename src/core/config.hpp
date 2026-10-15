@@ -293,7 +293,9 @@ struct Config {
     bool dlssJitterInverted = false;
     bool dlssMotionInverted = false;
     bool vsync = true;
-    int fpsLimit = 0;      // 0 = no limit
+    // 0 = no limit; 0.85: 60 by default (was none: 150 frames of a game that looks the same at 60)
+    int fpsLimit = 60;
+    bool savePower = true;  // 0.85: [frames] save_power - 15 frames a second in the background, 30 with no map
     // 0.76: [frames] keep_fps - below this for ten seconds, the costliest effect goes off for the rest of the game
     // (core/effect_costs.hpp); 0 = never
     int keepFps = 0;
