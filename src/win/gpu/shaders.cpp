@@ -788,7 +788,12 @@ float4 bloom_apply_ps(PresentOut i) : SV_Target {
     float3 c = sceneColor.Load(int3(p, 0)).rgb;
     float3 glow = tex0.SampleLevel(samp0, i.pos.xy * 0.25 / uiPixels.zw, 0).rgb;
     c += glow * sharpen;
-    return float4(lerp(saturate(c), filmic(c), twinY), 1.0);
+    c = lerp(saturate(c), filmic(c), twinY);
+    // 0.83: film grain (twinW how much: a fine noise, new each frame, less in the bright parts) and the world coming
+    // in from black after a new map (twinH, 0-1)
+    float n = hash12(i.pos.xy + float2(sourceRect.z * 1.618, sourceRect.z * 0.618)) - 0.5;
+    c += n * twinW * 0.09 * (1.0 - 0.6 * dot(c, float3(0.2126, 0.7152, 0.0722)));
+    return float4(saturate(c) * twinH, 1.0);
 }
 
 float4 dof_blur_ps(PresentOut i) : SV_Target {  // nine taps along one direction

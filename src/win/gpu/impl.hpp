@@ -873,8 +873,16 @@ struct Renderer::Impl {
     int bloomWidth = 0, bloomHeight = 0;
     bool bloomFailed = false;
     bool bloomDone = false;
-    bool bloomWanted() const {
-        return (effects.bloom || effects.filmic) && bloomDownPs && bloomApplyPs && dofBlurPs;
+    bool bloomWanted() const {  // 0.83: the film's grain and the new map's fade go with it
+        return (effects.bloom || effects.filmic || (effects.filmGrain && effects.filmGrainAmount > 0) ||
+                mapFadeNow() < 1.0f) &&
+               bloomDownPs && bloomApplyPs && dofBlurPs;
+    }
+    float mapFadeStart = -1.0f;  // 0.83: the effects' clock when the map changed; below 0 none
+    float mapFadeNow() const {  // 1 when done
+        if (!effects.mapFade || mapFadeStart < 0.0f) return 1.0f;
+        const float t = (const_cast<Impl*>(this)->waterTime() - mapFadeStart) / 0.7f;
+        return t >= 1.0f ? 1.0f : t <= 0.0f ? 0.0f : t * t * (3.0f - 2.0f * t);
     }
     bool bloomDue() const { return bloomWanted() && groundDrawn && !bloomDone; }
     bool applyBloom();  // once a frame, the world finished, before its colours; false: lost

@@ -111,15 +111,9 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
-    e.skillSparks = false;
-    e.grass = false;
-    e.storms = false;
-    e.footprints = false;
-    e.regionLooks = false;
-    e.filmic = false;
-    e.bloom = false;
-    e.sunShadows = false;
     e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
+    e.sunShadows = e.bloom = e.filmic = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
+    e.filmGrain = e.mapFade = false;
     e.nightNow = 0;
     e.dayNow = -1;
     return e;
@@ -143,16 +137,9 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
 bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
-           e.grade || e.dof || e.water || e.night || e.foliage ||
-           e.skillSparks ||
-           e.grass ||
-           e.storms ||
-           e.footprints ||
-           e.regionLooks ||
-           e.filmic ||
-           e.bloom ||
-           e.sunShadows || e.softParticles || e.rimLight || e.sky || e.motes ||
-           e.relief || e.floorReflections || e.shafts || e.dayCycle;
+           e.grade || e.dof || e.water || e.night || e.foliage || e.softParticles || e.rimLight || e.sky || e.motes ||
+           e.relief || e.floorReflections || e.shafts || e.dayCycle || e.sunShadows || e.bloom || e.filmic ||
+           e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks || e.filmGrain;
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
@@ -470,6 +457,12 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.skillSparks);
         } else if (key == "effects.skill_sparks_amount") {
             toInt(val, 0, 200, c.effects.skillSparksAmount);
+        } else if (key == "effects.film_grain") {
+            setBool(val, c.effects.filmGrain);
+        } else if (key == "effects.film_grain_amount") {
+            toInt(val, 0, 100, c.effects.filmGrainAmount);
+        } else if (key == "effects.map_fade") {
+            setBool(val, c.effects.mapFade);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

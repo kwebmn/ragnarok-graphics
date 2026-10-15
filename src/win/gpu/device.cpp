@@ -1557,6 +1557,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
     impl_->mapWeather = weather::of(map);  // 0.39: its weather
     impl_->footTracker.clear();  // 0.80
+    if (!map.empty()) impl_->mapFadeStart = impl_->waterTime();  // 0.83: the world comes in from black
     impl_->mapRegion = region_look::of(map, 100).region[0] != 0;  // 0.79: its look
     if (impl_->mapRegion) LOG_INFO("region: %s (%s)", region_look::of(map, 100).region, map.c_str());
     impl_->weatherLogged = false;

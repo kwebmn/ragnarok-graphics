@@ -230,6 +230,10 @@ struct EffectSettings {
     // On by default.
     bool skillSparks = true;
     int skillSparksAmount = 100;  // %, 0-200
+    // 0.83: film grain (off by default) and the world coming in from black after a new map (on by default).
+    bool filmGrain = false;
+    int filmGrainAmount = 30;  // %, 0-100
+    bool mapFade = true;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

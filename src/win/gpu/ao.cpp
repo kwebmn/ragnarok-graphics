@@ -507,6 +507,9 @@ bool Renderer::Impl::applyBloom() {
     const bool bloom = effects.bloom && effects.bloomStrength > 0;
     c.sharpen = bloom ? 1.4f * float(std::clamp(effects.bloomStrength, 0, 200)) / 100.0f : 0.0f;
     c.twin[1] = effects.filmic ? 1.0f : 0.0f;
+    c.twin[2] = effects.filmGrain ? float(std::clamp(effects.filmGrainAmount, 0, 100)) / 100.0f : 0.0f;  // 0.83
+    c.twin[3] = mapFadeNow();
+    c.sourceRect[2] = std::fmod(waterTime() * 60.0f, 4096.0f);  // the grain's seed, new each frame
     if (bloom) {
         if (!effectPass(bloomDownPipeline, bloomTarget[0], bloomState[0], rtvHandle(kRtvBloom), qw, qh, c,
                         sceneColorSrv, true))

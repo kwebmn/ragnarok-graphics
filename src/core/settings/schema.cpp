@@ -233,6 +233,12 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSkillSparksHint, ""},
         {"effects", "skill_sparks_amount", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
          Text::FxSkillSparksAmount, Text::FxSkillSparksAmountHint, " %"},
+        {"effects", "film_grain", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFilmGrain,
+         Text::FxFilmGrainHint, ""},
+        {"effects", "film_grain_amount", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxFilmGrainAmount,
+         Text::FxFilmGrainAmountHint, " %"},
+        {"effects", "map_fade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMapFade,
+         Text::FxMapFadeHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -427,6 +433,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.grass_amount") return std::to_string(c.effects.grassAmount);
     if (k == "effects.skill_sparks") return c.effects.skillSparks ? "1" : "0";
     if (k == "effects.skill_sparks_amount") return std::to_string(c.effects.skillSparksAmount);
+    if (k == "effects.film_grain") return c.effects.filmGrain ? "1" : "0";
+    if (k == "effects.film_grain_amount") return std::to_string(c.effects.filmGrainAmount);
+    if (k == "effects.map_fade") return c.effects.mapFade ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

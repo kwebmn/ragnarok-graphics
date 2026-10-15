@@ -111,3 +111,9 @@ TEST(skill_sparks_on_by_default) {
     CHECK(parseConfig("").effects.skillSparks && parseConfig("").effects.skillSparksAmount == 100);
     CHECK(!effectsOff().skillSparks);
 }
+
+TEST(film_grain_off_map_fade_on_by_default) {
+    // 0.83
+    CHECK(!parseConfig("").effects.filmGrain && parseConfig("").effects.mapFade);
+    CHECK(!effectsOff().filmGrain && !effectsOff().mapFade);
+}
