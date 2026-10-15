@@ -1,3 +1,20 @@
+# uaRO Graphics 0.88.0 — testing
+
+What is new in 0.88.0 - less processor work a frame:
+- **Direct3D 11 (small cards such as the Radeon HD 6570).** Before each of the game's draws we set everything anew:
+  blending, depth, rasterizer, samplers, textures, vertex layout, buffers and constants - about 12 calls even when
+  nothing changed. Now only what differs from the previous draw is set, the constants are written only when they
+  change, the vertex buffer is bound once. Old AMD drivers spend noticeable processor time on each call, and on D3D11
+  that is the game's own thread.
+- **Both renderers.** Setting render and texture stage states (the client does it tens of thousands of times a frame)
+  no longer takes the global lock - about 1 ms a frame on a fast processor.
+- Should the D3D11 picture come out wrong (wrong textures or blending), set `state_cache = 0` in the `[debug]` section
+  of uaro-graphics.ini - everything is set every time as before; and send a report.
+
+How to test: on a small computer with D3D11 - the same place (the prt_fild08 field, Prontera), the frame counter
+Ctrl+Shift+F11 before and after updating; a report with the measurement (Diagnostics → "Measure where the game spends
+its time").
+
 # uaRO Graphics 0.87.1 — testing
 
 Fixed by a tester's report (Radeon HD 6570, Direct3D 11):
