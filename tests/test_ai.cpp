@@ -459,3 +459,16 @@ TEST(ai_soft_alpha_pictures_stay_the_games) {
     CHECK(!softAlpha(edge.data(), 64, 64));
     CHECK(!softAlpha(nullptr, 0, 0));
 }
+
+TEST(ai_halves_a_pack_picture_without_dark_edges) {
+    // 0.42: the texture pack's pictures are 4 times the game's - at [ai] scale = 2 half of that. A red texel beside
+    // transparent ones stays red (only less opaque): nothing transparent darkens the colour.
+    std::vector<uint32_t> argb = {0xFFFF0000u, 0x00000000u, 0xFF0000FFu, 0xFF0000FFu,
+                                  0x00000000u, 0x00000000u, 0xFF0000FFu, 0xFF0000FFu};
+    int w = 4, h = 2;
+    halve(argb, w, h);
+    CHECK(w == 2 && h == 1 && argb.size() == 2);
+    CHECK_EQ(argb[0] >> 24, 64u);                // a quarter opaque
+    CHECK_EQ(argb[0] & 0xFFFFFFu, 0xFF0000u);    // and still red
+    CHECK_EQ(argb[1], 0xFF0000FFu);
+}

@@ -51,6 +51,9 @@ std::string mapName(const char* raw, size_t size);
 // An upscaled texture as stored: "UATX", version 1, width, height, then width * height ARGB values.
 std::vector<uint8_t> encodeTexture(const uint32_t* argb, int width, int height);
 bool decodeTexture(const std::vector<uint8_t>& blob, std::vector<uint32_t>& argb, int& width, int& height);
+// 0.42: half the size, each pixel the average of four (premultiplied: a transparent one lends no colour) - the
+// texture pack's pictures at [ai] scale = 2.
+void halve(std::vector<uint32_t>& argb, int& width, int& height);
 
 // The network's input for a game texture: planar R, G, B (0..1) and A (0 or 1). Texels the game keyed away (alpha 0,
 // its magenta) take their visible neighbours' average first, so the network does not smear magenta into the picture;

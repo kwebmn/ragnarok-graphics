@@ -141,6 +141,30 @@ std::vector<uint8_t> encodeTexture(const uint32_t* argb, int width, int height) 
     return b;
 }
 
+void halve(std::vector<uint32_t>& argb, int& width, int& height) {
+    const int w = std::max(1, width / 2), h = std::max(1, height / 2);
+    if (argb.size() < size_t(width) * size_t(height) || width < 2 || height < 2) return;
+    std::vector<uint32_t> out(size_t(w) * size_t(h));
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            uint32_t a = 0, c[3] = {0, 0, 0};
+            for (int dy = 0; dy < 2; ++dy)
+                for (int dx = 0; dx < 2; ++dx) {
+                    const uint32_t p = argb[size_t(2 * y + dy) * size_t(width) + size_t(2 * x + dx)];
+                    const uint32_t pa = p >> 24;
+                    a += pa;
+                    for (int k = 0; k < 3; ++k) c[k] += ((p >> (8 * k)) & 255) * pa;
+                }
+            uint32_t v = (a + 2) / 4 << 24;
+            if (a)
+                for (int k = 0; k < 3; ++k) v |= std::min<uint32_t>((c[k] + a / 2) / a, 255) << (8 * k);
+            out[size_t(y) * size_t(w) + size_t(x)] = a ? v : 0;
+        }
+    argb = std::move(out);
+    width = w;
+    height = h;
+}
+
 bool decodeTexture(const std::vector<uint8_t>& blob, std::vector<uint32_t>& argb, int& width, int& height) {
     if (blob.size() < 16 || std::memcmp(blob.data(), "UATX", 4) != 0 || get32(blob.data() + 4) != 1) return false;
     const uint32_t w = get32(blob.data() + 8), h = get32(blob.data() + 12);
