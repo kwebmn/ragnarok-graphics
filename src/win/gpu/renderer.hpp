@@ -19,6 +19,7 @@ class Remix9;
 class Renderer11;
 class Upscaler;
 class Supersample;
+class Taa;
 
 // Part 3: the renderer in the 64-bit process uaro-render64.exe ([renderer] bridge = 1).
 struct BridgeOptions {
@@ -109,6 +110,7 @@ public:
     // 0.62: [display] ui_native - the world `ratio` times the picture, made smaller into it, the interface at the
     // picture's pixels (setScale with upscale then); false where it cannot (Direct3D 11, the 64-bit renderer).
     bool setSupersample(double ratio);
+    bool setTaa(bool on);  // 0.75: [display] taa - Direct3D 12 in the game's process; false when it is not used
     bool canSupersample() const { return !remote_ && !d3d11_ && !remix_; }
     // 0.39.5, before create(): the shaders' code is kept in this file between starts - compiled once, not each time.
     void setShaderCache(const std::string& file);
@@ -159,6 +161,7 @@ private:
     Remix9* remix_ = nullptr;
     Renderer11* d3d11_ = nullptr;
     Supersample* supersample_ = nullptr;  // 0.62
+    Taa* taa_ = nullptr;                  // 0.75
 };
 
 }  // namespace uagfx::gpu

@@ -70,6 +70,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("sharpen", std::to_string(running.sharpen), std::to_string(file.sharpen)));
         n.sharpen = file.sharpen;
     }
+    if (file.taa != running.taa) {  // 0.75
+        u.applied.push_back(change("taa", flag(running.taa), flag(file.taa)));
+        n.taa = file.taa;
+    }
     if (file.msaa != running.msaa) {
         u.applied.push_back(change("msaa", std::to_string(running.msaa), std::to_string(file.msaa)));
         n.msaa = file.msaa;
@@ -177,7 +181,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
 bool appliesNow(const std::string& k) {
     return k == "display.high_resolution" || k == "display.ui_filter" || k == "display.crisp_text" ||
            k == "display.window_art" ||
-           k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" ||
+           k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "debug.log" || k.compare(0, 8, "effects.") == 0;
 }

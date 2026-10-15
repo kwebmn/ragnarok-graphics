@@ -1558,6 +1558,16 @@ const Entry kTexts[] = {
      "опівдні; світло рожеве вранці й золоте ввечері. Разом із «Ніч за годинником» день переходить у ніч.",
      "По часам компьютера солнце движется: тени персонажей поворачиваются, длинные утром и вечером, короткие в "
      "полдень; свет розовый утром и золотой вечером. Вместе с «Ночь по часам» день переходит в ночь."},
+    {"TAA (any graphics card)",
+     "TAA (будь-яка відеокарта)",
+     "TAA (любая видеокарта)"},
+    {"Temporal anti-aliasing of the renderer's own for cards without DLSS (AMD, Intel): each frame is blended with "
+     "the last, so edges and thin lines stop shimmering. Direct3D 12; DLSS goes first; MSAA is not used with it.",
+     "Власне часове згладжування рендера для карт без DLSS (AMD, Intel): кожен кадр змішується з попереднім, тож краї "
+     "й тонкі лінії перестають мерехтіти. Direct3D 12; DLSS має перевагу; MSAA разом із ним не використовується.",
+     "Собственное временное сглаживание рендера для карт без DLSS (AMD, Intel): каждый кадр смешивается с предыдущим, "
+     "поэтому края и тонкие линии перестают мерцать. Direct3D 12; DLSS в приоритете; MSAA вместе с ним не "
+     "используется."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

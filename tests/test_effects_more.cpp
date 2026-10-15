@@ -61,3 +61,9 @@ TEST(time_of_day_off_by_default_its_minute_the_drivers) {
     CHECK(parseConfig("[effects]\nday_cycle = 1\n").effects.dayCycle);
     CHECK(!effectsOff().dayCycle && effectsOff().dayNow == -1);
 }
+
+TEST(taa_off_unless_asked) {
+    // 0.75: [quality] taa
+    CHECK(!parseConfig("").taa);
+    CHECK(parseConfig("[quality]\ntaa = 1\n").taa);
+}

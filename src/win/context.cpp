@@ -285,7 +285,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool uiNative =
         nativeWanted && renderer->setSupersample(enhanced_ ? config.renderScale / 100.0 : 1.0) && enhanced_;
     if (!nativeWanted) renderer->setSupersample(1.0);  // turned off in a running game
-    const int renderScale = dlss || uiNative ? 100 : config.renderScale;
+    // 0.75: [quality] taa - the renderer's own, where neither DLSS nor ui_native is used
+    const bool taaWanted = !dlss && !nativeWanted && config.taa && renderer->canSupersample();
+    const bool taa = taaWanted && renderer->setTaa(enhanced_) && enhanced_;
+    if (!taaWanted) renderer->setTaa(false);
+    const int renderScale = dlss || uiNative || taa ? 100 : config.renderScale;
     if (dlss && config.renderScale > 100 && !renderScaleNoted_) {
         renderScaleNoted_ = true;
         LOG_INFO("render_scale %d%% is not used with DLSS: it draws the world at its own size", config.renderScale);
@@ -299,7 +303,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Stage 4: MSAA comes with the scale, so the calibration has drawn without it; Pause turns it off too.
     // Part 3: DLSS (in the 64-bit renderer) draws the world instead of MSAA; Pause turns it off as well. Without
     // DLSS in the renderer (no RTX card, no files) MSAA stays (0.8 review M4).
-    const bool upscale = enhanced_ && (dlss || uiNative);
+    const bool upscale = enhanced_ && (dlss || uiNative || taa);
     const int samples = enhanced_ && !upscale && config.msaa > 1 ? config.msaa : 1;
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_ || samples != scaledSamples_ ||
         upscale != scaledUpscale_) {
@@ -309,13 +313,14 @@ void Context::present(const Rect& source, bool waitForVblank) {
         scaledUpscale_ = upscale;
         scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight, samples, upscale);
     }
-    if (upscale && dlss) {  // the camera of the frame being shown: the motion of its pixels
+    if (upscale && (dlss || taa)) {  // the camera of the frame being shown: the motion of its pixels
         float view[12];
         const bool known = readGameCamera(view);
         renderer->setCamera(known, view);
         if (known != cameraKnown_) {
             cameraKnown_ = known;
-            LOG_INFO("DLSS: the game's camera %s", known ? "found" : "not in view (no world shown, or another exe)");
+            LOG_INFO("%s: the game's camera %s", taa ? "TAA" : "DLSS",
+                     known ? "found" : "not in view (no world shown, or another exe)");
         }
     }
     // AI textures: the pack's index notes the maps textures are seen on (making them); 0.25: the map's file - its lamps

@@ -622,6 +622,7 @@ void Renderer::Impl::releaseUpscaleTargets() {
     releaseCom(motion);
     releaseCom(upscaled);
     releaseCom(layer);
+    releaseCom(taaHistory);  // 0.75
     renderWidth = renderHeight = 0;
     upscaledValid = upscaledNow = worldValid = false;
 }
@@ -682,6 +683,18 @@ bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
     sv.Texture2D.MipLevels = 1;
     device->CreateShaderResourceView(worldDepth, &sv, cpuSrvHandle(depthSrv));
     device->CreateRenderTargetView(motion, nullptr, rtvHandle(kRtvMotion));
+    device->CreateShaderResourceView(motion, nullptr, cpuSrvHandle(motionSrv));  // 0.75: TAA reads it
+    if (upscaler->inRenderer()) {  // 0.75: TAA's last result
+        taaHistory = createTexture2D(device, targetW, targetH, 1, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_NONE,
+                                     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr);
+        taaHistoryState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        if (!taaHistory) {
+            LOG_ERROR("cannot create TAA's %dx%d history", targetW, targetH);
+            releaseUpscaleTargets();
+            return false;
+        }
+        device->CreateShaderResourceView(taaHistory, nullptr, cpuSrvHandle(taaHistorySrv));
+    }
     device->CreateShaderResourceView(upscaled, nullptr, cpuSrvHandle(upscaledSrv));
     device->CreateRenderTargetView(upscaled, nullptr, rtvHandle(kRtvUpscaled));  // 0.18: the glow goes onto it
     device->CreateRenderTargetView(layer, nullptr, rtvHandle(kRtvLayer));
@@ -694,6 +707,69 @@ bool Renderer::Impl::createUpscaleTargets(int targetW, int targetH) {
     frameEnded = true;
     upscaleFrame = 0;
     nextJitter();
+    return true;
+}
+
+// 0.75, TAA: the world blended into the last result along its motion (taa_ps) into the upscaled picture, which is
+// then kept as the next frame's history.
+bool Renderer::Impl::applyTaa(bool reset, bool masked) {
+    if (!taaPs || !taaHistory || !world || !motion || !upscaled) return false;
+    if (!taaPipeline) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, taaPs, DXGI_FORMAT_R8G8B8A8_UNORM, 1);
+        p.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&taaPipeline)))) {
+            taaPipeline = nullptr;
+            releaseCom(taaPs);  // not tried again
+            LOG_ERROR("TAA's pipeline failed: the world is shown without it");
+            return false;
+        }
+    }
+    StageSetup linearClamp;
+    linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
+    linearClamp.magFilter = d3d7::TFG_LINEAR;
+    linearClamp.minFilter = d3d7::TFN_LINEAR;
+    linearClamp.mipFilter = d3d7::TFP_NONE;
+    if (!makeRoom(linearClamp, linearClamp, 0, 5)) return false;
+    transition(world, worldState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    transition(motion, motionState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    transition(taaHistory, taaHistoryState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    if (masked) transition(biasMask, biasState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    transition(upscaled, upscaledState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp, 0);
+    const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(worldSrv, motionSrv);
+    const D3D12_GPU_DESCRIPTOR_HANDLE scene =
+        sceneTable(taaHistorySrv, masked ? biasSrv : taaHistorySrv, taaHistorySrv);
+    const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(kRtvUpscaled);
+    list->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+    const D3D12_VIEWPORT vp{0.0f, 0.0f, float(width), float(height), 0.0f, 1.0f};
+    const D3D12_RECT all{0, 0, width, height};
+    list->RSSetViewports(1, &vp);
+    list->RSSetScissorRects(1, &all);
+    list->SetGraphicsRootSignature(root);
+    list->SetPipelineState(taaPipeline);
+    Constants c{};
+    c.targetSize[0] = float(width);
+    c.targetSize[1] = float(height);
+    c.sourceRect[2] = c.sourceRect[3] = 1.0f;
+    c.uiPixels[0] = float(width);
+    c.uiPixels[1] = float(height);
+    c.twin[0] = reset ? 1.0f : 0.0f;
+    c.twin[1] = masked ? 1.0f : 0.0f;
+    list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
+    list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
+    list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
+    list->SetGraphicsRootDescriptorTable(kRootScene, scene);
+    list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    list->DrawInstanced(3, 1, 0, 0);
+    transition(upscaled, upscaledState, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    transition(taaHistory, taaHistoryState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyResource(taaHistory, upscaled);
+    transition(taaHistory, taaHistoryState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    static bool logged = false;
+    if (!logged) LOG_INFO("TAA: on, %dx%d", width, height);
+    logged = true;
     return true;
 }
 
@@ -879,7 +955,10 @@ bool Renderer::Impl::composite() {
         const float jump = std::fabs(c.reproject[9]) + std::fabs(c.reproject[10]) + std::fabs(c.reproject[11]);
         f.reset = historyReset || !moving || jump > 400.0f;
         if (timer) list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 2);
-        const bool ok = upscaler->evaluate(f);
+        // 0.75: TAA keeps its history while the camera is not known (no motion: it stands still) - else the jitter
+        // would show.
+        const bool ok =
+            upscaler->inRenderer() ? applyTaa(historyReset || jump > 400.0f, masked) : upscaler->evaluate(f);
         if (timer) {
             list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 3);
             slots[slot].upscaleTimed = true;
@@ -1166,6 +1245,8 @@ void Renderer::Impl::destroy() {
     releaseCom(dofFocusPs);
     releaseCom(maskPipeline);  // 0.22.3
     releaseCom(maskPs);
+    releaseCom(taaPipeline);  // 0.75
+    releaseCom(taaPs);
     for (ID3D12PipelineState*& p : torchLightPipelines) releaseCom(p);  // 0.23
     for (ID3D12PipelineState*& p : torchFirePipelines) releaseCom(p);
     for (ID3D12PipelineState*& p : fireflyPipelines) releaseCom(p);  // 0.28
@@ -1264,6 +1345,7 @@ Renderer::~Renderer() {
     impl_->destroy();
     delete impl_;
     delete supersample_;  // 0.62: after the renderer that used it
+    delete taa_;          // 0.75
 }
 
 bool Renderer::createRemote(const BridgeOptions& o, std::string& error) {
@@ -1329,6 +1411,17 @@ bool Renderer::setSupersample(double ratio) {
     if (!supersample_) supersample_ = new Supersample();
     supersample_->setRatio(ratio);
     impl_->upscaler = supersample_;
+    return true;
+}
+
+bool Renderer::setTaa(bool on) {
+    if (remote_ || d3d11_ || remix_) return false;  // 0.75: Direct3D 12 in the game's process only
+    if (!on) {
+        if (taa_ && impl_->upscaler == taa_) impl_->upscaler = nullptr;
+        return false;
+    }
+    if (!taa_) taa_ = new Taa();
+    impl_->upscaler = taa_;
     return true;
 }
 
@@ -1709,6 +1802,8 @@ bool Renderer::create(std::string& error) {
     for (UINT& srv : m.dofSrv) srv = m.allocSrv();  // 0.22: the depth of field
     for (UINT& srv : m.dofFocusSrv) srv = m.allocSrv();
     m.biasSrv = m.allocSrv();  // 0.22.3: DLSS's mask
+    m.motionSrv = m.allocSrv();  // 0.75: TAA's
+    m.taaHistorySrv = m.allocSrv();
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).

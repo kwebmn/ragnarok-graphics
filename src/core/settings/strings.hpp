@@ -155,6 +155,8 @@ enum class Text : uint16_t {
     FxShafts, FxShaftsHint, FxShaftsStrength, FxShaftsStrengthHint,
     // 0.74
     FxDayCycle, FxDayCycleHint,
+    // 0.75
+    SmoothTaa, SmoothTaaHint,
     Count
 };
 

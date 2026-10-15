@@ -254,6 +254,8 @@ struct Config {
     // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance or ultra - NVIDIA DLSS in the 64-bit
     // renderer (it starts that renderer; MSAA is off then).
     std::string dlss = "off";
+    // 0.75: [quality] taa - the renderer's own temporal anti-aliasing (Direct3D 12, any card; DLSS goes first)
+    bool taa = false;
     // Test switches (not on a page): dlss_jitter, dlss_motion = normal or inverted - the sign conventions DLSS
     // expects, should the picture come out blurred (jitter) or smeared (motion).
     bool dlssJitterInverted = false;

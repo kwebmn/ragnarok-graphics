@@ -256,6 +256,13 @@ struct Renderer::Impl {
     ID3D12Resource* biasMask = nullptr;
     D3D12_RESOURCE_STATES biasState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     UINT biasSrv = 0;
+    // 0.75, TAA (applyTaa): the motion read, the last result
+    UINT motionSrv = 0, taaHistorySrv = 0;
+    ID3D12Resource* taaHistory = nullptr;
+    D3D12_RESOURCE_STATES taaHistoryState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    ID3DBlob* taaPs = nullptr;
+    ID3D12PipelineState* taaPipeline = nullptr;
+    bool applyTaa(bool reset, bool masked);  // into upscaled, then kept as the history; false: not run
     ID3DBlob* maskPs = nullptr;
     ID3D12PipelineState* maskPipeline = nullptr;
     D3D12_RESOURCE_STATES worldState = D3D12_RESOURCE_STATE_RENDER_TARGET;

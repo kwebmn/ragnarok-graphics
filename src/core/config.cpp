@@ -301,6 +301,8 @@ Config parseConfig(const std::string& text) {
             if (val == "off" || val == "dlaa" || val == "quality" || val == "balanced" || val == "performance" ||
                 val == "ultra")
                 c.dlss = val;
+        } else if (key == "quality.taa") {
+            setBool(val, c.taa);
         } else if (key == "quality.dlss_jitter") {
             if (val == "normal" || val == "inverted") c.dlssJitterInverted = val == "inverted";
         } else if (key == "quality.dlss_motion") {

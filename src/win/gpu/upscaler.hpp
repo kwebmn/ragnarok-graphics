@@ -51,6 +51,8 @@ public:
     // 0.62: the world drawn larger than the picture and only made smaller (supersampling with the interface at the
     // screen's pixels): no motion, no jitter, no evaluate - the renderer shrinks the world into the picture itself.
     virtual bool passthrough() const { return false; }
+    // 0.75: the renderer runs it itself (its TAA) instead of evaluate()
+    virtual bool inRenderer() const { return false; }
     virtual bool generates() const { return false; }
     virtual bool generating() const { return false; }   // on as of the last present: off takes a present to apply
     virtual void renderStart() {}                        // the frame's first commands arrived
@@ -75,6 +77,20 @@ public:
 
 private:
     double ratio_ = 1.0;
+};
+
+// 0.75: [display] taa - the renderer's own temporal anti-aliasing, for any graphics card (DLSS needs an NVIDIA RTX
+// one): the world jittered at the picture's size, each frame blended into the last along its motion (taa_ps).
+class Taa : public Upscaler {
+public:
+    const char* name() const override { return "TAA"; }
+    bool renderSize(int outW, int outH, int& renderW, int& renderH) override {
+        renderW = outW;
+        renderH = outH;
+        return outW > 0 && outH > 0;
+    }
+    bool evaluate(const Frame&) override { return false; }
+    bool inRenderer() const override { return true; }
 };
 
 }  // namespace uagfx::gpu

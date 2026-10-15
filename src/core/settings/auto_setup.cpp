@@ -69,6 +69,11 @@ AutoSetup autoSetup(const Machine& m) {
         set(e, "quality", "dlss", "off");
         set(e, "frames", "frame_generation", "off");
     }
+    // 0.75: TAA where there is no DLSS - a strong card, or a middle one on a screen up to 2560x1440 (it draws the
+    // world at the screen's size).
+    const bool taa =
+        m.vendor != kNvidia && (a.tier == Tier::High || (a.tier == Tier::Middle && pixels <= 2560LL * 1440));
+    set(e, "quality", "taa", taa ? "1" : "0");
     // The effects of the Effects page: Direct3D 12's. A small card keeps the light ones.
     if (a.tier == Tier::Low)
         for (const char* k : {"ao", "dof", "clouds", "rays", "haze", "heat", "weather", "glow"})

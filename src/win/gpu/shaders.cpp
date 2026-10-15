@@ -807,6 +807,38 @@ float4 dof_apply_ps(PresentOut i) : SV_Target {
     return float4(lerp(sharp, soft, blur), 1.0);
 }
 
+// 0.75, TAA (device.cpp applyTaa) for any graphics card: the world (t0, drawn with a sub-pixel jitter at the
+// picture's size) blended into the last frame's result (t2) fetched where each pixel was (t1, the motion), that
+// history first held within the colours around the pixel (a box of their mean and spread in YCoCg) so that what moved
+// or appeared leaves no trail. twinX 1: no history (a jump, a new size); twinY 1: t3 holds the characters' and the
+// effects' mask - they move on their own, so less of their history is taken. uiPixels.xy the size.
+float3 toYCoCg(float3 c) {
+    return float3(dot(c, float3(0.25, 0.5, 0.25)), dot(c, float3(0.5, 0.0, -0.5)), dot(c, float3(-0.25, 0.5, -0.25)));
+}
+float3 fromYCoCg(float3 c) { return float3(c.x + c.y - c.z, c.x + c.z, c.x - c.y - c.z); }
+
+float4 taa_ps(PresentOut i) : SV_Target {
+    int2 p = int2(i.pos.xy);
+    int2 last = int2(uiPixels.xy) - 1;
+    float3 now = tex0.Load(int3(p, 0)).rgb;
+    float3 mean = float3(0.0, 0.0, 0.0), square = float3(0.0, 0.0, 0.0);
+    [unroll] for (int y = -1; y <= 1; ++y)
+        [unroll] for (int x = -1; x <= 1; ++x) {
+            float3 s = toYCoCg(tex0.Load(int3(clamp(p + int2(x, y), int2(0, 0), last), 0)).rgb);
+            mean += s;
+            square += s * s;
+        }
+    mean /= 9.0;
+    float3 spread = sqrt(max(square / 9.0 - mean * mean, 0.0));
+    float2 was = float2(p) + 0.5 + tex1.Load(int3(p, 0)).rg;
+    bool outside = any(was < 0.0) || any(was > uiPixels.xy);
+    float3 history = sceneColor.SampleLevel(samp0, was / uiPixels.xy, 0).rgb;
+    history = fromYCoCg(clamp(toYCoCg(history), mean - 1.25 * spread, mean + 1.25 * spread));
+    float w = twinX > 0.5 || outside ? 1.0 : 0.1;
+    if (twinY > 0.5) w = max(w, lerp(0.1, 0.35, sceneDepth.Load(int3(p, 0))));
+    return float4(lerp(history, now, w), 1.0);
+}
+
 // 0.22.3: the world's alpha - the coverage of its characters and effects - as DLSS's mask.
 float mask_ps(PresentOut i) : SV_Target { return tex0.Load(int3(int2(i.pos.xy), 0)).a; }
 

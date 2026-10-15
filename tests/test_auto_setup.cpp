@@ -112,3 +112,16 @@ TEST(auto_setup_small_and_middle_cards) {
     m.vramCapped = true;
     CHECK(autoSetup(m).tier == Tier::Middle);
 }
+
+TEST(auto_setup_taa_for_cards_without_dlss) {
+    // 0.75: the renderer's TAA where there is no DLSS - a strong AMD card; not NVIDIA's (DLSS), not the old Radeon.
+    Machine amd = rtx5060();
+    amd.vendor = 0x1002;
+    CHECK(valueOf(autoSetup(amd), "quality", "taa") == "1");
+    CHECK(valueOf(autoSetup(rtx5060()), "quality", "taa") == "0");
+    Machine old = amd;
+    old.d3d12 = false;
+    old.d3d11Level = 0xb000;
+    old.vramMb = 1024;
+    CHECK(valueOf(autoSetup(old), "quality", "taa") == "0");
+}
