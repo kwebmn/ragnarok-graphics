@@ -26,7 +26,7 @@ TEST(schema_every_word_reads_back_through_the_driver) {
         CHECK(s.control == Control::Line || !validToken(s, "nonsense"));
         CHECK(findSetting(sectionKey(s)) == &s);
     }
-    CHECK(!validToken(*findSetting("quality.render_scale"), "99"));
+    CHECK(!validToken(*findSetting("quality.render_scale"), "49"));  // 0.58: from 50
     CHECK(!validToken(*findSetting("frames.fps_limit"), "1001"));
     const IniSetting& gpu = *findSetting("renderer.gpu");  // one line of the ini, nothing else in it
     CHECK(!validToken(gpu, "") && !validToken(gpu, "a\nb") && !validToken(gpu, "[x]") && !validToken(gpu, "a ; b"));

@@ -43,7 +43,7 @@ const std::vector<IniSetting>& iniSettings() {
          Text::RenderRemixHint, ""},
         {"display", "high_resolution", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityHighRes,
          Text::QualityHighResHint, ""},
-        {"quality", "render_scale", Page::Quality, Control::Slider, 100, 200, 10, {}, {}, Text::QualityRenderScale,
+        {"quality", "render_scale", Page::Quality, Control::Slider, 50, 200, 10, {}, {}, Text::QualityRenderScale,
          Text::QualityRenderScaleHint, " %"},
         {"quality", "sharpen", Page::Quality, Control::Slider, 0, 100, 5, {}, {}, Text::QualitySharpen,
          Text::QualitySharpenHint, ""},

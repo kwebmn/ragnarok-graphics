@@ -171,3 +171,13 @@ TEST(ui_filter_mode_only_above_scale_1) {  // review I2: high_resolution = 0 and
     CHECK_EQ(uiFilterMode(true, 1.75, UiFilter::Smooth), 2);
     CHECK_EQ(uiFilterMode(false, 1.75, UiFilter::Sharp), 0);  // the world keeps its sampling
 }
+
+TEST(scale_under_100_draws_smaller_than_the_picture) {
+    // 0.58: render_scale under 100 % - the world smaller than the 4K picture, made larger sharply when shown; never
+    // below the game's own size.
+    const ScalePlan p = planScale(1920, 1080, 3840, 2160, 75, true);
+    CHECK(p.targetWidth == 2880 && p.targetHeight == 1620);
+    const ScalePlan full = planScale(1920, 1080, 1920, 1080, 50, true);  // a 1080p screen: the game's size
+    CHECK(full.targetWidth == 1920 && full.k == 1.0);
+    CHECK(planScale(1920, 1080, 3840, 2160, 10, true).targetWidth == 1920);  // 50 % at most: 4K / 2
+}

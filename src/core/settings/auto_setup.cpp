@@ -52,10 +52,14 @@ AutoSetup autoSetup(const Machine& m) {
     }
     std::vector<IniEdit>& e = a.edits;
     e = presetEdits(a.preset);
-    if (a.tier == Tier::High) {  // drawn larger and made smaller again: a screen past 2560x1440 asks a lot of it
-        const long long pixels = static_cast<long long>(m.screenWidth) * m.screenHeight;
+    const long long pixels = static_cast<long long>(m.screenWidth) * m.screenHeight;
+    if (a.tier == Tier::High)  // drawn larger and made smaller again: a screen past 2560x1440 asks a lot of it
         set(e, "quality", "render_scale", pixels <= 2560LL * 1440 ? "200" : "150");
-    }
+    // 0.58: a large screen for a smaller card - drawn smaller and made larger sharply (render_scale under 100 %)
+    if (a.tier == Tier::Middle && pixels > 2560LL * 1440) set(e, "quality", "render_scale", "75");
+    if ((a.tier == Tier::Low || a.tier == Tier::Old) && pixels > 1920LL * 1200) set(e, "quality", "render_scale", "67");
+    if (a.tier != Tier::High && pixels > 1920LL * 1200 && a.tier != Tier::NoDriver)
+        set(e, "quality", "sharpen", "50");  // the sharp upscale's CAS
     set(e, "renderer", "backend", "uaro");
     set(e, "renderer", "api", a.tier == Tier::Old ? "d3d11" : "auto");
     set(e, "renderer", "remix", "0");

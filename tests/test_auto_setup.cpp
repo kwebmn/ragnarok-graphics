@@ -103,7 +103,8 @@ TEST(auto_setup_small_and_middle_cards) {
     m.vramMb = 6144;
     a = autoSetup(m);
     CHECK(a.tier == Tier::Middle && a.preset == Preset::Balance);
-    CHECK(valueOf(a, "quality", "render_scale") == "100");
+    CHECK(valueOf(a, "quality", "render_scale") == "75");  // 0.58: 4K on a middle card - drawn smaller
+    CHECK(valueOf(a, "quality", "sharpen") == "50");
     CHECK(valueOf(a, "effects", "ao").empty());  // the player's choice stays
     CHECK(a.aiWorld);
     CHECK(std::string(tierName(Tier::Old)) == "old");

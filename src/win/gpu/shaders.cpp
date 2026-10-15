@@ -261,7 +261,33 @@ PresentOut present_vs(uint id : SV_VertexID) {
 // One destination pixel of a copy: a bilinear sample when the source is not shrunk, else the average of n x n
 // samples over the pixel's footprint (supersampling; the target read back at the game's size). Every tap stays
 // inside the source rectangle (stage 3 review M6).
+// 0.58: the world drawn smaller than the screen (render_scale under 100 %) made larger again with sharpening on: a
+// Catmull-Rom spline (nine bilinear taps, after Jimenez's and Pettineo's) - sharper than bilinear, then CAS on it, as
+// AMD's FSR 1 sharpens its upscale (our own filter, not AMD's EASU).
+float3 crTap(float2 p) { return tex0.SampleLevel(samp0, clamp(p, sourceClamp.xy, sourceClamp.zw), 0).rgb; }
+float3 catmullRom(float2 uv) {
+    float w, h;
+    tex0.GetDimensions(w, h);
+    float2 size = float2(w, h);
+    float2 at = uv * size;
+    float2 t1 = floor(at - 0.5) + 0.5;
+    float2 f = at - t1;
+    float2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+    float2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+    float2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+    float2 w3 = f * f * (-0.5 + 0.5 * f);
+    float2 w12 = w1 + w2;
+    float2 p0 = (t1 - 1.0) / size, p3 = (t1 + 2.0) / size, p12 = (t1 + w2 / w12) / size;
+    float3 r = crTap(float2(p0.x, p0.y)) * w0.x * w0.y + crTap(float2(p12.x, p0.y)) * w12.x * w0.y +
+               crTap(float2(p3.x, p0.y)) * w3.x * w0.y + crTap(float2(p0.x, p12.y)) * w0.x * w12.y +
+               crTap(float2(p12.x, p12.y)) * w12.x * w12.y + crTap(float2(p3.x, p12.y)) * w3.x * w12.y +
+               crTap(float2(p0.x, p3.y)) * w0.x * w3.y + crTap(float2(p12.x, p3.y)) * w12.x * w3.y +
+               crTap(float2(p3.x, p3.y)) * w3.x * w3.y;
+    return max(r, 0.0);
+}
+
 float3 fetch(float2 uv, float2 dx, float2 dy) {
+    if (footprint < 0.999 && sharpen >= 0.0) return catmullRom(uv);
     if (footprint <= 1.0001) return tex0.SampleGrad(samp0, clamp(uv, sourceClamp.xy, sourceClamp.zw), dx, dy).rgb;
     int n = min((int)ceil(footprint), 4);
     float3 sum = 0;

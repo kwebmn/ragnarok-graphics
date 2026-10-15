@@ -18,7 +18,7 @@ ScalePlan planScale(int gameWidth, int gameHeight, int outputWidth, int outputHe
     const bool byWidth = p.picture.width() == outputWidth;  // the axis that limits the picture
     const int64_t game = byWidth ? gameWidth : gameHeight;
     const int64_t out = byWidth ? outputWidth : outputHeight;
-    const int percent = std::clamp(renderScale, 100, 200);
+    const int percent = std::clamp(renderScale, 50, 200);  // 0.58: under 100 % drawn smaller, made larger sharply
     p.s = double(out) / double(game);
     p.r = percent / 100.0;
     p.k = p.s * p.r;

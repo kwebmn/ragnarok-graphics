@@ -18,7 +18,8 @@ struct ScalePlan {
 constexpr int kMaxTarget = 16384;  // the largest Direct3D 12 texture side
 
 // game: the client's resolution; output: the window's client area (real pixels when highResolution is on);
-// renderScale: percent, 100-200. Never below the game's size: a smaller window shrinks a full-size frame. With
+// renderScale: percent, 50-200 (0.58: under 100 drawn smaller than the picture). Never below the game's size: a
+// smaller window shrinks a full-size frame. With
 // highResolution off the frame is drawn at the game's size (k = 1), as in version 0.2. The target is size * k rounded
 // in whole numbers, as fitPicture rounds: at 100 % it is exactly the picture, shown pixel for pixel.
 ScalePlan planScale(int gameWidth, int gameHeight, int outputWidth, int outputHeight, int renderScale,

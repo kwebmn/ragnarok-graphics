@@ -120,9 +120,15 @@ const Entry kTexts[] = {
      "Малювати гру в справжніх точках вікна: при масштабі Windows світ чіткіший.",
      "Рисовать игру в настоящих точках окна: при масштабе Windows мир чётче."},
     {"Render scale", "Масштаб рендера", "Масштаб рендера"},
-    {"The frame is drawn larger and shrunk when shown: smoother edges, more work for the graphics card.",
-     "Кадр малюється більшим і зменшується при показі: гладші краї, відеокарта працює більше.",
-     "Кадр рисуется больше и уменьшается при показе: глаже края, видеокарта работает больше."},
+    {"Over 100 %: the frame is drawn larger and shrunk when shown - smoother edges, more work for the graphics card. "
+     "Under 100 % (a large screen, a weaker card): drawn smaller and made larger sharply (a Catmull-Rom filter and "
+     "CAS sharpening, like FSR 1) - less work, a little softer.",
+     "Понад 100 %: кадр малюється більшим і зменшується при показі — гладші краї, відеокарта працює більше. Менше 100 "
+     "% (великий екран, слабша карта): малюється меншим і збільшується різко (фільтр Catmull-Rom і різкість CAS, як "
+     "FSR 1) — менше роботи, трохи м'якше.",
+     "Больше 100 %: кадр рисуется больше и уменьшается при показе — глаже края, видеокарта работает больше. Меньше "
+     "100 % (большой экран, слабая карта): рисуется меньше и увеличивается резко (фильтр Catmull-Rom и резкость CAS, "
+     "как FSR 1) — меньше работы, чуть мягче."},
     {"Sharpening", "Різкість", "Резкость"},
     {"Sharpening of the picture on screen; 0 = off. Screenshots are not sharpened.",
      "Різкість картинки на екрані; 0 — вимкнено. Скриншоти не змінюються.",
