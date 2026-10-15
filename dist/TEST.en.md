@@ -1,3 +1,17 @@
+# uaRO Graphics 0.75.0 — testing
+
+What is new in 0.75.0 (Direct3D 12):
+- **TAA for any graphics card** (Settings → Smoothing → "TAA (any graphics card)", off by default). The renderer's own
+  temporal anti-aliasing for cards without DLSS (AMD, Intel): the world is drawn with a sub-pixel jitter and each frame
+  is blended with the last along the camera's motion - edges, fences, grass and thin lines stop shimmering. The history
+  is held within the colours of the pixels around, so moving characters leave no trail. DLSS goes first; MSAA and
+  render_scale are not used with TAA. Applies at once. The auto setup turns it on for strong and middle cards that are
+  not NVIDIA's (middle ones up to 2560x1440). Log: `TAA: on, WxH`, `TAA: the game's camera found`.
+
+How to test: turn TAA on (an NVIDIA card can too, with DLSS off), stand and walk on a field with a fence and grass,
+turn the camera; are there trails behind the characters, a shaking picture, blurred text (the interface is not
+smoothed). The frame counter - what it costs.
+
 # uaRO Graphics 0.74.0 — testing
 
 What is new in 0.74.0 (Direct3D 12 and Direct3D 11):
