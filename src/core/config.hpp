@@ -209,6 +209,11 @@ struct EffectSettings {
     // ground away from the sun (with the time of day they turn). On by default.
     bool sunShadows = true;
     int sunShadowsStrength = 60;  // %, 0-100
+    // 0.78: bloom - the bright parts of the picture (sunlit tiles, snow, windows, fire) glow softly; the filmic
+    // curve - the highlights roll off instead of clipping, as in modern games. Both on by default.
+    bool bloom = true;
+    int bloomStrength = 60;  // %, 0-200
+    bool filmic = true;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

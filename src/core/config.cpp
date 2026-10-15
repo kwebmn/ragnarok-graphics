@@ -111,6 +111,8 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.filmic = false;
+    e.bloom = false;
     e.sunShadows = false;
     e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.nightNow = 0;
@@ -137,6 +139,8 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.filmic ||
+           e.bloom ||
            e.sunShadows || e.softParticles || e.rimLight || e.sky || e.motes ||
            e.relief || e.floorReflections || e.shafts || e.dayCycle;
 }
@@ -434,6 +438,12 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.sunShadows);
         } else if (key == "effects.sun_shadows_strength") {
             toInt(val, 0, 100, c.effects.sunShadowsStrength);
+        } else if (key == "effects.bloom") {
+            setBool(val, c.effects.bloom);
+        } else if (key == "effects.bloom_strength") {
+            toInt(val, 0, 200, c.effects.bloomStrength);
+        } else if (key == "effects.filmic") {
+            setBool(val, c.effects.filmic);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

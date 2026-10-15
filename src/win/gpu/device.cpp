@@ -191,7 +191,7 @@ void Renderer::Impl::noteGpuFrame() {
     static const char* const kEffectNames[kEffectTimes] = {
         "soft shadows", "clouds", "characters' shadows", "lights and torches", "haze", "heat haze", "colour",
         "depth of field", "weather", "glow", "water's copies", "sky", "light in the air", "floor reflections",
-        "sun's shadows"};
+        "sun's shadows", "bloom"};
     std::string effects;
     for (UINT e = 0; e < kEffectTimes; ++e) {
         effectMs[e] = double(effectTicks[e]) * ms;  // 0.76: for keep_fps and the settings app
@@ -1283,6 +1283,12 @@ void Renderer::Impl::destroy() {
     releaseCom(shaftsPs);
     for (ID3D12PipelineState*& p : sunShadowPipelines) releaseCom(p);  // 0.77
     releaseCom(sunShadowPs);
+    releaseBloom();  // 0.78
+    releaseCom(bloomDownPipeline);
+    releaseCom(bloomBlurPipeline);
+    for (ID3D12PipelineState*& p : bloomApplyPipelines) releaseCom(p);
+    releaseCom(bloomDownPs);
+    releaseCom(bloomApplyPs);
     releaseCom(floorReflectPs);
     releaseCom(skyPs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
@@ -1423,7 +1429,7 @@ bool Renderer::effectCosts(effect_costs::Costs& out) const {
     // 0.76: the names effect_costs.cpp knows the passes by (kEffectNames' order)
     static const char* const kNames[kEffectTimes] = {"ao",   "clouds", "actor_shadows", "lights", "haze",
                                                      "heat", "grade",  "dof",           "weather", "glow",
-                                                     "water", "sky",   "shafts",        "floor", "sun"};
+                                                     "water", "sky",   "shafts",        "floor", "sun", "bloom"};
     out.clear();
     if (remote_ || d3d11_ || remix_ || !impl_->effectMsKnown) return false;
     for (UINT e = 0; e < kEffectTimes; ++e)
@@ -1821,6 +1827,7 @@ bool Renderer::create(std::string& error) {
     m.biasSrv = m.allocSrv();  // 0.22.3: DLSS's mask
     m.motionSrv = m.allocSrv();  // 0.75: TAA's
     m.taaHistorySrv = m.allocSrv();
+    for (UINT& srv : m.bloomSrv) srv = m.allocSrv();  // 0.78
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).

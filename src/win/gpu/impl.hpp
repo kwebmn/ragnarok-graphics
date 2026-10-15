@@ -50,7 +50,7 @@ constexpr UINT kSlots = 2;              // submissions in flight
 // and the floors' reflections their own.
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
-    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeSun, kEffectTimes
+    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeSun, kTimeBloom, kEffectTimes
 };
 // GPU timestamps a slot: its list, the upscale, the AI textures' work, (0.39.2) a pair an effect.
 constexpr UINT kTimes = 6 + 2 * kEffectTimes;
@@ -88,7 +88,8 @@ constexpr UINT kRtvDofFocus = kRtvDof + 2;   // 0.22.3: its focus, last frame's 
 constexpr UINT kRtvBias = kRtvDofFocus + 2;  // 0.22.3: DLSS's mask of pixels whose history it is not to take
 constexpr UINT kRtvShadow = kRtvBias + 1;  // 0.32: the characters' shadows' two masks
 constexpr UINT kRtvClouds = kRtvShadow + 2;  // 0.39.3: the clouds' mask
-constexpr UINT kRtvCount = kRtvClouds + 1;
+constexpr UINT kRtvBloom = kRtvClouds + 1;  // 0.78: the bloom's two quarter-size targets
+constexpr UINT kRtvCount = kRtvBloom + 2;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -805,6 +806,7 @@ struct Renderer::Impl {
         skyDone = false;  // 0.69
         floorReflectDone = false;  // 0.72
         sunShadowDone = false;  // 0.77
+        bloomDone = false;  // 0.78
         shaftsDone = false;  // 0.73
         shaftLights = 0;
         heatDone = false;
@@ -815,6 +817,24 @@ struct Renderer::Impl {
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }
     bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
+    // 0.78: bloom and the filmic curve (ao.cpp)
+    ID3DBlob* bloomDownPs = nullptr;
+    ID3DBlob* bloomApplyPs = nullptr;
+    ID3D12PipelineState* bloomDownPipeline = nullptr;
+    ID3D12PipelineState* bloomBlurPipeline = nullptr;
+    ID3D12PipelineState* bloomApplyPipelines[4] = {};
+    ID3D12Resource* bloomTarget[2] = {};
+    D3D12_RESOURCE_STATES bloomState[2] = {D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET};
+    UINT bloomSrv[2] = {};
+    int bloomWidth = 0, bloomHeight = 0;
+    bool bloomFailed = false;
+    bool bloomDone = false;
+    bool bloomWanted() const {
+        return (effects.bloom || effects.filmic) && bloomDownPs && bloomApplyPs && dofBlurPs;
+    }
+    bool bloomDue() const { return bloomWanted() && groundDrawn && !bloomDone; }
+    bool applyBloom();  // once a frame, the world finished, before its colours; false: lost
+    void releaseBloom();
     // 0.77: the sun's shadows of the houses, walls and trees - under the open sky, by day
     ID3DBlob* sunShadowPs = nullptr;
     ID3D12PipelineState* sunShadowPipelines[4] = {};

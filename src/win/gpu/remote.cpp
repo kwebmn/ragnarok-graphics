@@ -322,6 +322,9 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.dayNow);
     w.u8(e.sunShadows ? 1 : 0);  // 0.77
     w.i32(e.sunShadowsStrength);
+    w.u8(e.bloom ? 1 : 0);  // 0.78
+    w.i32(e.bloomStrength);
+    w.u8(e.filmic ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

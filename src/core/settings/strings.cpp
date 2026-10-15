@@ -1595,6 +1595,28 @@ const Entry kTexts[] = {
     {"How dark the shadows are.",
      "Наскільки темні тіні.",
      "Насколько темны тени."},
+    {"Bloom of bright places",
+     "Сяйво яскравих місць",
+     "Свечение ярких мест"},
+    {"The brightest parts of the picture - sunlit tiles, snow, windows, fire - glow softly around. Direct3D 12.",
+     "Найяскравіші частини картинки — освітлена сонцем плитка, сніг, вікна, вогонь — м’яко світяться навколо. "
+     "Direct3D 12.",
+     "Самые яркие части картинки — освещённая солнцем плитка, снег, окна, огонь — мягко светятся вокруг. Direct3D 12."},
+    {"Bloom strength",
+     "Сила сяйва",
+     "Сила свечения"},
+    {"How much the bright places glow.",
+     "Наскільки сяють яскраві місця.",
+     "Насколько светятся яркие места."},
+    {"Film-like colours",
+     "Кольори як у кіно",
+     "Цвета как в кино"},
+    {"A film camera's curve over the picture: the bright parts roll off softly instead of turning flat white, the "
+     "shadows keep their depth. Direct3D 12.",
+     "Крива кінокамери над картинкою: яскраві місця м’яко згасають, а не стають пласко-білими, тіні зберігають "
+     "глибину. Direct3D 12.",
+     "Кривая кинокамеры поверх картинки: яркие места мягко сходят на нет, а не становятся плоско-белыми, тени "
+     "сохраняют глубину. Direct3D 12."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -27,6 +27,8 @@ const Effect kEffects[] = {
     {"effects.smooth_light", {}, {}, {}, false},
     {"effects.ao", {}, {"effects.ao_strength", "effects.ao_size"}, {}, false},
     {"effects.sun_shadows", {}, {"effects.sun_shadows_strength"}, {}, false},  // 0.77
+    {"effects.bloom", {}, {"effects.bloom_strength"}, {}, false},  // 0.78
+    {"effects.filmic", {}, {}, {}, false},                           // 0.78
     {"effects.glow", {}, {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}, {}, false},
     {"effects.fire_light", {"effects.skill_colours"}, {"effects.fire_light_strength"}, {}, false},
     {"effects.actor_shadows", {}, {"effects.actor_shadows_strength"}, {}, false},

@@ -211,6 +211,12 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSunShadowsHint, ""},
         {"effects", "sun_shadows_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {},
          Text::FxSunShadowsStrength, Text::FxSunShadowsStrengthHint, " %"},
+        {"effects", "bloom", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBloom,
+         Text::FxBloomHint, ""},
+        {"effects", "bloom_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxBloomStrength,
+         Text::FxBloomStrengthHint, " %"},
+        {"effects", "filmic", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFilmic,
+         Text::FxFilmicHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -394,6 +400,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.day_cycle") return c.effects.dayCycle ? "1" : "0";
     if (k == "effects.sun_shadows") return c.effects.sunShadows ? "1" : "0";
     if (k == "effects.sun_shadows_strength") return std::to_string(c.effects.sunShadowsStrength);
+    if (k == "effects.bloom") return c.effects.bloom ? "1" : "0";
+    if (k == "effects.bloom_strength") return std::to_string(c.effects.bloomStrength);
+    if (k == "effects.filmic") return c.effects.filmic ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

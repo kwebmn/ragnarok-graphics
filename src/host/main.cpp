@@ -423,6 +423,9 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.dayNow = rd.i32();
             e.sunShadows = rd.u8() != 0;  // 0.77
             e.sunShadowsStrength = rd.i32();
+            e.bloom = rd.u8() != 0;  // 0.78
+            e.bloomStrength = rd.i32();
+            e.filmic = rd.u8() != 0;
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

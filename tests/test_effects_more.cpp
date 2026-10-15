@@ -80,3 +80,10 @@ TEST(sun_shadows_on_by_default) {
     CHECK(parseConfig("").effects.sunShadows && parseConfig("").effects.sunShadowsStrength == 60);
     CHECK(!effectsOff().sunShadows);
 }
+
+TEST(bloom_and_filmic_on_by_default) {
+    // 0.78
+    const Config c = parseConfig("");
+    CHECK(c.effects.bloom && c.effects.bloomStrength == 60 && c.effects.filmic);
+    CHECK(!effectsOff().bloom && !effectsOff().filmic);
+}

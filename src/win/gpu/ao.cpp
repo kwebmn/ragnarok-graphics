@@ -306,6 +306,107 @@ bool Renderer::Impl::applyNight() {
                                 sceneHeight, c, sceneColorSrv, true);
 }
 
+void Renderer::Impl::releaseBloom() {
+    Slot& s = slots[slot];  // what the open list recorded may still read them
+    for (ID3D12Resource*& r : bloomTarget) {
+        if (r) s.garbage.push_back(r);
+        r = nullptr;
+    }
+    bloomWidth = bloomHeight = 0;
+}
+
+// 0.78: the bright parts at a quarter of the size, blurred twice each way, added; the filmic curve over all.
+bool Renderer::Impl::applyBloom() {
+    bloomDone = true;
+    EffectTime timing(*this, kTimeBloom);
+    const UINT n = upscale ? 1 : samples;
+    const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
+    if (!ensureScene("bloom")) return true;
+    const int w = sceneWidth, h = sceneHeight;
+    if (!bloomDownPipeline) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, bloomDownPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&bloomDownPipeline))))
+            bloomDownPipeline = nullptr;
+        p = fullScreenPipeline(root, presentVs, dofBlurPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&bloomBlurPipeline))))
+            bloomBlurPipeline = nullptr;
+        if (!bloomDownPipeline || !bloomBlurPipeline) {
+            LOG_ERROR("bloom: its pipelines failed: it stays off");
+            releaseCom(bloomDownPs);
+            return true;
+        }
+    }
+    if (!bloomApplyPipelines[code]) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, bloomApplyPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
+        p.BlendState.RenderTarget[0].RenderTargetWriteMask =
+            D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&bloomApplyPipelines[code])))) {
+            bloomApplyPipelines[code] = nullptr;
+            LOG_ERROR("bloom: the pipeline onto %u samples failed", 1u << code);
+            return true;
+        }
+    }
+    const int qw = std::max(1, (w + 3) / 4), qh = std::max(1, (h + 3) / 4);
+    if (!bloomTarget[0] || qw != bloomWidth || qh != bloomHeight) {
+        if (bloomFailed && qw == bloomWidth && qh == bloomHeight) return true;
+        releaseBloom();
+        bloomWidth = qw;
+        bloomHeight = qh;
+        bloomFailed = true;
+        for (int i = 0; i < 2; ++i) {
+            bloomTarget[i] = createTexture2D(device, qw, qh, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                             D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+                                             D3D12_RESOURCE_STATE_RENDER_TARGET, nullptr);
+            bloomState[i] = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            if (!bloomTarget[i]) {
+                LOG_ERROR("bloom: no video memory at %dx%d: it stays off at this size", qw, qh);
+                releaseBloom();
+                bloomWidth = qw;
+                bloomHeight = qh;
+                return true;
+            }
+            device->CreateRenderTargetView(bloomTarget[i], nullptr, rtvHandle(kRtvBloom + UINT(i)));
+            device->CreateShaderResourceView(bloomTarget[i], nullptr, cpuSrvHandle(bloomSrv[i]));
+        }
+        bloomFailed = false;
+    }
+    if (!copySceneColor()) return false;
+    Constants c{};
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.uiPixels[2] = float(qw);
+    c.uiPixels[3] = float(qh);
+    c.footprint = 0.72f;  // the bright parts: over this
+    const bool bloom = effects.bloom && effects.bloomStrength > 0;
+    c.sharpen = bloom ? 1.4f * float(std::clamp(effects.bloomStrength, 0, 200)) / 100.0f : 0.0f;
+    c.twin[1] = effects.filmic ? 1.0f : 0.0f;
+    if (bloom) {
+        if (!effectPass(bloomDownPipeline, bloomTarget[0], bloomState[0], rtvHandle(kRtvBloom), qw, qh, c,
+                        sceneColorSrv, true))
+            return false;
+        for (int k = 0; k < 4; ++k) {  // across, down, then again twice as wide
+            const int i = k % 2;
+            transition(bloomTarget[i], bloomState[i], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            c.sourceRect[0] = i == 0 ? float(1 + k / 2) : 0.0f;
+            c.sourceRect[1] = i == 0 ? 0.0f : float(1 + k / 2);
+            const D3D12_CPU_DESCRIPTOR_HANDLE rtv = rtvHandle(kRtvBloom + UINT(1 - i));
+            if (!effectPass(bloomBlurPipeline, bloomTarget[1 - i], bloomState[1 - i], rtv, qw, qh, c, bloomSrv[i],
+                            true))
+                return false;
+        }
+    }
+    transition(bloomTarget[0], bloomState[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    return upscale ? effectPass(bloomApplyPipelines[code], world, worldState, rtvHandle(kRtvWorld), w, h, c,
+                                bloomSrv[0], true)
+                   : effectPass(bloomApplyPipelines[code], target, targetState, rtvHandle(kRtvTarget), w, h, c,
+                                bloomSrv[0], true);
+}
+
 void Renderer::Impl::releaseDof() {
     Slot& s = slots[slot];  // what the open list recorded may still read them
     for (ID3D12Resource*& r : dofTarget) {
@@ -456,6 +557,7 @@ bool Renderer::Impl::finishWorld() {
     if (skyDue() && !applySky()) return false;        // 0.69: the sky where the haze filled the void
     if (shaftsDue() && !applyShafts()) return false;  // 0.73: the light in the air
     if (heatDue() && !applyHeat()) return false;      // 0.35: the hot air shimmering over all of that
+    if (bloomDue() && !applyBloom()) return false;  // 0.78: before the colours
     if (gradeDue() && !applyGrade()) return false;
     if (dofDue() && !applyDof()) return false;
     return !weatherDue() || applyWeather();  // 0.39: the weather in front of all of it, sharp
