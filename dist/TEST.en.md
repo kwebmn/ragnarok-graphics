@@ -1,3 +1,13 @@
+# uaRO Graphics 0.83.0 — testing
+
+What is new in 0.83.0 (Direct3D 12):
+- **Smooth map change** (Effects; on by default). After a warp or entering a new map the world comes in from black
+  over 0.7 seconds; the interface shows at once.
+- **Film grain** (Effects → "Film grain" and strength; off by default). A fine noise over the picture as on film,
+  weaker in the bright parts.
+
+How to test: several warps - any black flashes or the world staying dark; the grain - turn it on, strength 30-60.
+
 # uaRO Graphics 0.82.0 — testing
 
 What is new in 0.82.0 (Direct3D 12):
