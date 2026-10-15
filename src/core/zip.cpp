@@ -42,6 +42,13 @@ struct File {
 
 }  // namespace
 
+std::vector<std::string> Index::names() const {
+    std::vector<std::string> out;
+    out.reserve(entries_.size());
+    for (const auto& e : entries_) out.push_back(e.first);
+    return out;
+}
+
 std::string normalName(const std::string& name) {
     std::string out = name;
     for (char& c : out) c = c == '/' ? '\\' : c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c;

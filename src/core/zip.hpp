@@ -17,6 +17,7 @@ public:
     bool open(const std::string& path, const std::function<bool(const std::string&)>& keep, std::string& error);
     size_t count() const { return entries_.size(); }
     bool has(const std::string& name) const { return entries_.count(name) != 0; }  // a normal name
+    std::vector<std::string> names() const;  // 0.43: the normal names kept
     // Opens the archive again: an Index holds no file.
     bool read(const std::string& name, std::vector<uint8_t>& out, std::string& error) const;
 
