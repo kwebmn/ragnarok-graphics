@@ -1,3 +1,13 @@
+# uaRO Graphics 0.68.0 — testing
+
+What is new in 0.68.0 (Direct3D 12 and Direct3D 11, with the torches or the lamps on):
+- **Rim light on characters** (Effects → "Rim light on characters" and its strength, on by default). The light of
+  torches, lamps and burning skills fell on the characters before, but a flat sprite was lit evenly. Now the edge of a
+  character (and of the models) that faces the fire is lit more - near a fire the sprites look rounder.
+
+How to test: stand by a torch or a lamp (Payon, the caves, Geffen at night), walk around the fire; Fire Wall next to
+monsters. Are there bright outlines where there is no fire.
+
 # uaRO Graphics 0.67.0 — testing
 
 What is new in 0.67.0 (Direct3D 12 and Direct3D 11):
