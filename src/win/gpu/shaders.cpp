@@ -1172,6 +1172,33 @@ float4 haze_ps(PresentOut i) : SV_Target {
     return float4(c, a);
 }
 
+// 0.77, the sun's shadows (ao.cpp applySunShadows): before the characters are drawn, each pixel of the map and its
+// models looks along the way to the sun (twinX, twinY, twinW: view space, a unit vector) for something of the picture
+// in front of that ray - a house, a wall, a tree - and is in its shadow then, the farther the softer. Multiplied onto
+// the picture: sharpen the shadow's darkness, footprint the ray's reach (units).
+float4 sun_shadow_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
+    float3 p = viewAt(wp);
+    float3 l = float3(twinX, twinY, twinW);
+    float shade = 0.0;
+    float t = 1.5;
+    float grow = pow(footprint / 1.5, 1.0 / 15.0);
+    float2 tp;
+    [loop] for (int k = 0; k < 16; ++k) {
+        float3 q = p + l * t;
+        if (!viewToPixel(q, tp)) break;
+        float gap = q.z - viewDepth(sceneDepth.Load(int3(int2(tp), 0)));
+        if (gap > 0.6 + t * 0.02 && gap < 25.0) {
+            shade = 1.0 - 0.5 * t / footprint;
+            break;
+        }
+        t *= grow;
+    }
+    float s = 1.0 - shade * sharpen;
+    return float4(s, s, s, 1.0);
+}
+
 // 0.73, light in the air (haze.cpp), added onto the picture: about each light of the torches' pass (t1, footprint of
 // them, as torch_light_ps reads them) the air glows - the light scattered along the view up to what the pixel shows
 // (its depth), so a wall hides the glow behind it - twinX its strength; and under the open sky (twinY its strength)

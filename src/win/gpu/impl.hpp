@@ -50,7 +50,7 @@ constexpr UINT kSlots = 2;              // submissions in flight
 // and the floors' reflections their own.
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
-    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kEffectTimes
+    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeSun, kEffectTimes
 };
 // GPU timestamps a slot: its list, the upscale, the AI textures' work, (0.39.2) a pair an effect.
 constexpr UINT kTimes = 6 + 2 * kEffectTimes;
@@ -767,8 +767,11 @@ struct Renderer::Impl {
                                        const char* what);  // 0.64
     ID3D12PipelineState* addPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
                                      const char* what);  // 0.73
+    ID3D12PipelineState* mulPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
+                                     const char* what);  // 0.77
+    // mode: 0 by alpha, 1 added, 2 multiplied
     ID3D12PipelineState* blendPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
-                                       const char* what, bool add);
+                                       const char* what, int mode);
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
     bool applyHeat();  // once a frame, after the torches' pass and the haze; false: lost
     ID3D12PipelineState* heatPipeline(UINT samples);
@@ -801,6 +804,7 @@ struct Renderer::Impl {
         hazeDone = false;
         skyDone = false;  // 0.69
         floorReflectDone = false;  // 0.72
+        sunShadowDone = false;  // 0.77
         shaftsDone = false;  // 0.73
         shaftLights = 0;
         heatDone = false;
@@ -811,6 +815,17 @@ struct Renderer::Impl {
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }
     bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
+    // 0.77: the sun's shadows of the houses, walls and trees - under the open sky, by day
+    ID3DBlob* sunShadowPs = nullptr;
+    ID3D12PipelineState* sunShadowPipelines[4] = {};
+    bool sunShadowDone = false;
+    bool sunShadowLogged = false;
+    bool sunShadowWanted() const {
+        return effects.sunShadows && effects.sunShadowsStrength > 0 && sunShadowPs && mapOutdoors &&
+               effects.nightNow < 100;
+    }
+    bool sunShadowDue() const { return sunShadowWanted() && groundDrawn && !sunShadowDone && viewToWorldValid; }
+    bool applySunShadows();  // once a frame, before the characters (as the soft shadows); false: lost
     bool applyAo();  // once a frame (aoDone); false: lost
     bool gradeWanted() const { return effects.grade; }
     bool nightDue() const {  // 0.74: also for the time of day's tint

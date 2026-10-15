@@ -205,6 +205,10 @@ struct EffectSettings {
     // frame, not the file's (-1 off).
     bool dayCycle = false;
     int dayNow = -1;
+    // 0.77: the sun's shadows - on the fields and in the towns the houses, walls and trees cast shadows on the
+    // ground away from the sun (with the time of day they turn). On by default.
+    bool sunShadows = true;
+    int sunShadowsStrength = 60;  // %, 0-100
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

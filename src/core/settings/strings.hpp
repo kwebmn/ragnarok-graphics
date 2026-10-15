@@ -159,6 +159,8 @@ enum class Text : uint16_t {
     SmoothTaa, SmoothTaaHint,
     // 0.76
     FramesKeepFps, FramesKeepFpsHint, FxCostMs,
+    // 0.77
+    FxSunShadows, FxSunShadowsHint, FxSunShadowsStrength, FxSunShadowsStrengthHint,
     Count
 };
 

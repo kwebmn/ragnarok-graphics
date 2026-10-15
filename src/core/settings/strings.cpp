@@ -1580,6 +1580,21 @@ const Entry kTexts[] = {
     {" · ~{1} ms",
      " · ~{1} мс",
      " · ~{1} мс"},
+    {"Shadows of houses and trees",
+     "Тіні будинків і дерев",
+     "Тени домов и деревьев"},
+    {"On the fields and in the towns houses, walls and trees cast shadows on the ground away from the sun; with "
+     "\"Time of day\" they turn and lengthen. Direct3D 12.",
+     "На полях і в містах будинки, стіни й дерева відкидають тіні на землю від сонця; із «Часом доби» вони "
+     "повертаються й видовжуються. Direct3D 12.",
+     "На полях и в городах дома, стены и деревья отбрасывают тени на землю от солнца; со «Временем суток» они "
+     "поворачиваются и удлиняются. Direct3D 12."},
+    {"Shadow darkness",
+     "Темрява тіней",
+     "Темнота теней"},
+    {"How dark the shadows are.",
+     "Наскільки темні тіні.",
+     "Насколько темны тени."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -18,25 +18,31 @@ ID3D12PipelineState* Renderer::Impl::weatherPipeline(UINT n) {
 // Blended over by its alpha, RGB only (the weather, 0.64 the rain's splashes); null, and ps dropped, when it fails.
 ID3D12PipelineState* Renderer::Impl::alphaPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT n,
                                                    const char* what) {
-    return blendPipeline(ps, pipelines, n, what, false);
+    return blendPipeline(ps, pipelines, n, what, 0);
 }
 
 // 0.73: added on, RGB only (the light in the air)
 ID3D12PipelineState* Renderer::Impl::addPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT n,
                                                  const char* what) {
-    return blendPipeline(ps, pipelines, n, what, true);
+    return blendPipeline(ps, pipelines, n, what, 1);
+}
+
+// 0.77: multiplied onto the picture, RGB only (the sun's shadows)
+ID3D12PipelineState* Renderer::Impl::mulPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT n,
+                                                 const char* what) {
+    return blendPipeline(ps, pipelines, n, what, 2);
 }
 
 ID3D12PipelineState* Renderer::Impl::blendPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT n,
-                                                   const char* what, bool add) {
+                                                   const char* what, int mode) {
     const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
     if (pipelines[code] || !ps) return pipelines[code];
     D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
         fullScreenPipeline(root, presentVs, ps, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
     D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
     b.BlendEnable = TRUE;
-    b.SrcBlend = add ? D3D12_BLEND_ONE : D3D12_BLEND_SRC_ALPHA;
-    b.DestBlend = add ? D3D12_BLEND_ONE : D3D12_BLEND_INV_SRC_ALPHA;
+    b.SrcBlend = mode == 1 ? D3D12_BLEND_ONE : mode == 2 ? D3D12_BLEND_ZERO : D3D12_BLEND_SRC_ALPHA;
+    b.DestBlend = mode == 1 ? D3D12_BLEND_ONE : mode == 2 ? D3D12_BLEND_SRC_COLOR : D3D12_BLEND_INV_SRC_ALPHA;
     b.BlendOp = D3D12_BLEND_OP_ADD;
     b.SrcBlendAlpha = D3D12_BLEND_ZERO;
     b.DestBlendAlpha = D3D12_BLEND_ONE;

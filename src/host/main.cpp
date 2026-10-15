@@ -421,6 +421,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.shaftsStrength = rd.i32();
             e.dayCycle = rd.u8() != 0;  // 0.74
             e.dayNow = rd.i32();
+            e.sunShadows = rd.u8() != 0;  // 0.77
+            e.sunShadowsStrength = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

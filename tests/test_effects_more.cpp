@@ -74,3 +74,9 @@ TEST(keep_fps_off_unless_asked_and_bounded) {
     CHECK(parseConfig("[frames]\nkeep_fps = 45\n").keepFps == 45);
     CHECK(parseConfig("[frames]\nkeep_fps = 999\n").keepFps == 0);
 }
+
+TEST(sun_shadows_on_by_default) {
+    // 0.77: the houses' and trees' shadows from the sun.
+    CHECK(parseConfig("").effects.sunShadows && parseConfig("").effects.sunShadowsStrength == 60);
+    CHECK(!effectsOff().sunShadows);
+}

@@ -188,6 +188,59 @@ bool Renderer::Impl::applyAo() {
                    : effectPass(apply, target, targetState, rtvHandle(kRtvTarget), w, h, c, aoSrv[0], false);
 }
 
+// 0.77: the way to the sun in the view - from the way the shadows fall on the screen (sunOnScreen) along the ground
+// (up is -y) and its height (the time of day's, or 40 degrees).
+bool Renderer::Impl::applySunShadows() {
+    sunShadowDone = true;
+    EffectTime timing(*this, kTimeSun);
+    if (!ensureScene("sun's shadows")) return true;
+    ID3D12PipelineState* pso = mulPipeline(sunShadowPs, sunShadowPipelines, upscale ? 1 : samples, "sun's shadows");
+    if (!pso) return true;
+    if (!copySceneDepth()) return false;
+    const float* m = viewToWorld;
+    const auto flat = [](float x, float z, float out[3]) {  // along the ground, a unit vector
+        const float len = std::sqrt(x * x + z * z);
+        out[0] = len > 1e-4f ? x / len : 0.0f;
+        out[1] = 0.0f;
+        out[2] = len > 1e-4f ? z / len : 0.0f;
+    };
+    float right[3], down[3];
+    flat(m[0], m[2], right);
+    flat(m[3], m[5], down);
+    float sun[2];
+    sunOnScreen(sun);
+    const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
+    const float height = (effects.dayCycle && effects.dayNow >= 0 ? 15.0f + 50.0f / day.length * 0.55f : 40.0f) *
+                         3.14159265f / 180.0f;
+    float g[3], toSun[3], view[3];
+    for (int k = 0; k < 3; ++k) g[k] = sun[0] * right[k] + sun[1] * down[k];
+    const float gl = std::sqrt(g[0] * g[0] + g[2] * g[2]);
+    if (gl < 1e-4f) return true;
+    for (int k = 0; k < 3; ++k) toSun[k] = -g[k] / gl * std::cos(height);
+    toSun[1] = -std::sin(height);  // up
+    for (int k = 0; k < 3; ++k) view[k] = toSun[0] * m[3 * k] + toSun[1] * m[3 * k + 1] + toSun[2] * m[3 * k + 2];
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    std::copy(view, view + 3, c.twin);
+    c.footprint = 90.0f;
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    c.sharpen = 0.45f * float(std::clamp(effects.sunShadowsStrength, 0, 100)) / 100.0f * (1.0f - night);
+    if (!sunShadowLogged) LOG_INFO("sun's shadows: over %s", mapName.c_str());
+    sunShadowLogged = true;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneDepthSrv, true)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneDepthSrv, true);
+}
+
 // Into the target (its samples) or the world under DLSS (one sample), as it is: the colours are made in the shader.
 bool Renderer::Impl::applyGrade() {
     gradeDone = true;  // tried once a frame, whatever comes of it
@@ -394,6 +447,7 @@ bool Renderer::Impl::applyDof() {
 
 bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
+    if (sunShadowDue() && !applySunShadows()) return false;  // 0.77
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
     if (waterfallsDue() && !applyWaterfalls()) return false;  // 0.65: the maps' waterfalls the game never shows

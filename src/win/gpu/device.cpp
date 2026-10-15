@@ -190,7 +190,8 @@ void Renderer::Impl::noteGpuFrame() {
     // 0.39.2: the effects one by one - what each of them costs a frame.
     static const char* const kEffectNames[kEffectTimes] = {
         "soft shadows", "clouds", "characters' shadows", "lights and torches", "haze", "heat haze", "colour",
-        "depth of field", "weather", "glow", "water's copies", "sky", "light in the air", "floor reflections"};
+        "depth of field", "weather", "glow", "water's copies", "sky", "light in the air", "floor reflections",
+        "sun's shadows"};
     std::string effects;
     for (UINT e = 0; e < kEffectTimes; ++e) {
         effectMs[e] = double(effectTicks[e]) * ms;  // 0.76: for keep_fps and the settings app
@@ -1280,6 +1281,8 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : floorReflectPipelines) releaseCom(p);  // 0.72
     for (ID3D12PipelineState*& p : shaftsPipelines) releaseCom(p);  // 0.73
     releaseCom(shaftsPs);
+    for (ID3D12PipelineState*& p : sunShadowPipelines) releaseCom(p);  // 0.77
+    releaseCom(sunShadowPs);
     releaseCom(floorReflectPs);
     releaseCom(skyPs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
@@ -1420,7 +1423,7 @@ bool Renderer::effectCosts(effect_costs::Costs& out) const {
     // 0.76: the names effect_costs.cpp knows the passes by (kEffectNames' order)
     static const char* const kNames[kEffectTimes] = {"ao",   "clouds", "actor_shadows", "lights", "haze",
                                                      "heat", "grade",  "dof",           "weather", "glow",
-                                                     "water", "sky",   "shafts",        "floor"};
+                                                     "water", "sky",   "shafts",        "floor", "sun"};
     out.clear();
     if (remote_ || d3d11_ || remix_ || !impl_->effectMsKnown) return false;
     for (UINT e = 0; e < kEffectTimes; ++e)

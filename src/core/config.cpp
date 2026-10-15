@@ -111,6 +111,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.sunShadows = false;
     e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.nightNow = 0;
     e.dayNow = -1;
@@ -135,7 +136,8 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
 bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
-           e.grade || e.dof || e.water || e.night || e.foliage || e.softParticles || e.rimLight || e.sky || e.motes ||
+           e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.sunShadows || e.softParticles || e.rimLight || e.sky || e.motes ||
            e.relief || e.floorReflections || e.shafts || e.dayCycle;
 }
 
@@ -428,6 +430,10 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 200, c.effects.shaftsStrength);
         } else if (key == "effects.day_cycle") {
             setBool(val, c.effects.dayCycle);
+        } else if (key == "effects.sun_shadows") {
+            setBool(val, c.effects.sunShadows);
+        } else if (key == "effects.sun_shadows_strength") {
+            toInt(val, 0, 100, c.effects.sunShadowsStrength);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {
