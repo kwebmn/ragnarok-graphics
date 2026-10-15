@@ -1,3 +1,18 @@
+# uaRO Graphics 0.53.0 — testing
+
+What is new in 0.53.0 ("download the pack from the site"):
+- **Settings app → Texture pack → "Download from uaro.kiev.ua".** The pack the developers made, nothing to make on
+  the player's computer: the settings app reads the pack on the site (its list of pictures, by HTTP ranges) and fetches
+  only the pictures this computer lacks, each checked (CRC-32) as it comes and written into uaro-textures.zip at once.
+  "Stop", a closed app or a lost connection keep what came - "Download the pack" again goes on from there; a newer pack
+  on the site brings only its new pictures. Pictures the player's own game made stay, and both indexes are merged.
+- The progress: pictures, MB, speed and the minutes left.
+- For the developers: the pack goes to `/var/www/uaro.kiev.ua/web/files/graphics/uaro-textures.zip` on the server
+  (https://uaro.kiev.ua/files/graphics/uaro-textures.zip).
+
+How to test: put the pack on the site; on another computer (or after renaming uaro-textures.zip) press "Download the
+pack", stop in the middle, press again - it goes on; then start the game.
+
 # uaRO Graphics 0.52.0 — testing
 
 What is new in 0.52.0 (reports, part 2):
