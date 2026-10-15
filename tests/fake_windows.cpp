@@ -113,6 +113,8 @@ bool removeTree(const std::wstring& path) {
     return w.folders.erase(path) > 0;
 }
 
+bool deleteFile(const std::wstring& path) { return windows().files.erase(path) > 0; }
+
 bool folderWritable(const std::wstring&) { return true; }
 
 bool underProgramFiles(const std::wstring&) { return false; }

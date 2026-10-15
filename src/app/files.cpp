@@ -84,6 +84,8 @@ std::vector<std::wstring> listFolder(const std::wstring& dir, bool folders) {
 
 bool makeFolder(const std::wstring& path) { return CreateDirectoryW(path.c_str(), nullptr) || dirExists(path); }
 
+bool deleteFile(const std::wstring& path) { return DeleteFileW(path.c_str()) != 0; }
+
 bool removeTree(const std::wstring& path) {
     // A junction or a link to a folder goes itself: what it leads to is not ours (0.6.0 review M9).
     const DWORD a = GetFileAttributesW(path.c_str());

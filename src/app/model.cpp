@@ -466,6 +466,57 @@ std::wstring Model::resetDefaults(Lang l) {
     return L"";
 }
 
+std::vector<std::wstring> Model::profiles() const {
+    std::vector<std::wstring> out;
+    for (const std::wstring& f : listFolder(paths_.dir + L"\\uaro-graphics\\profiles", false))
+        if (f.size() > 4 && f.compare(f.size() - 4, 4, L".ini") == 0) out.push_back(f.substr(0, f.size() - 4));
+    return out;
+}
+
+bool Model::profileNameOk(const std::wstring& name) {
+    if (name.empty() || name.size() > 40 || name.front() == L' ' || name.back() == L' ') return false;
+    // Letters of any script (a Ukrainian name too, whatever the C library's locale), digits, spaces, - and _.
+    for (const wchar_t c : name) {
+        const bool ascii = (c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z') || (c >= L'0' && c <= L'9') ||
+                           c == L' ' || c == L'-' || c == L'_';
+        if (!ascii && c < 0xC0) return false;  // no punctuation, no control characters, nothing Windows forbids
+    }
+    return true;
+}
+
+std::wstring Model::saveProfile(const std::wstring& name, Lang l) {
+    if (!profileNameOk(name)) return wtr(l, Text::ProfileBadName);
+    const std::wstring folder = paths_.dir + L"\\uaro-graphics\\profiles";
+    makeFolder(paths_.dir + L"\\uaro-graphics");
+    makeFolder(folder);
+    const std::string text = applyIniEdits(currentIni(), pendingIniEdits());
+    if (!writeFileAtomic(folder + L"\\" + name + L".ini", text))
+        return wtrf(l, Text::ErrWriteFile, {utf8(name) + ".ini"});
+    return L"";
+}
+
+std::wstring Model::loadProfile(const std::wstring& name, Lang l) {
+    std::string text;
+    if (!profileNameOk(name) || !readFile(paths_.dir + L"\\uaro-graphics\\profiles\\" + name + L".ini", text))
+        return wtrf(l, Text::ErrWriteFile, {utf8(name) + ".ini"});
+    std::wstring err = backupOnce(l);
+    if (!err.empty()) return err;
+    std::vector<IniEdit> keep;
+    if (const auto lang = savedLanguage()) keep.push_back({"utility", "language", langToken(*lang)});
+    if (!writeFileAtomic(paths_.ini, applyIniEdits(text, keep)))
+        return wtrf(l, Text::ErrWriteFile, {"uaro-graphics.ini"});
+    ini_.clear();
+    wroteNow_.clear();
+    load();
+    return L"";
+}
+
+std::wstring Model::deleteProfile(const std::wstring& name, Lang l) {
+    if (!profileNameOk(name) || !deleteFile(paths_.dir + L"\\uaro-graphics\\profiles\\" + name + L".ini"))
+        return wtrf(l, Text::ErrWriteFile, {utf8(name) + ".ini"});
+    return L"";
+}
+
 std::wstring Model::removeCompatFlag(const CompatFlag& f, Lang l) {
     if (f.allUsers) return L"";  // only from uaRO.exe's properties, as administrator
     for (const CompatEntry& e : readCompat(paths_.game)) {

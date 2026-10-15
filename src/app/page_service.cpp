@@ -19,6 +19,11 @@ constexpr int kGameLoad = 1431;
 constexpr int kLayoutReset = 1432;
 constexpr int kUpdateCheck = 1440;  // 0.49
 constexpr int kUpdateNow = 1441;
+constexpr int kProfiles = 1450;  // 0.55
+constexpr int kProfileName = 1451;
+constexpr int kProfileSave = 1452;
+constexpr int kProfileLoad = 1453;
+constexpr int kProfileDelete = 1454;
 
 Text presetName(Preset p) {
     switch (p) {
@@ -53,6 +58,20 @@ public:
         p.buttons(presets);
         const auto now = m.preset();
         p.note(tf(Text::PresetNote, {utf8(now ? t(presetName(*now)) : t(Text::PresetCustom))}));
+        // 0.55: profiles - every setting under a name
+        p.gap();
+        p.heading(t(Text::ServiceProfiles));
+        p.note(t(Text::ProfileNote));
+        const std::vector<std::wstring> profiles = m.profiles();
+        profiles_ = p.listBox(kProfiles, 3);
+        for (const std::wstring& name : profiles)
+            SendMessageW(profiles_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(name.c_str()));
+        if (profiles.empty())
+            SendMessageW(profiles_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(t(Text::ProfileNone).c_str()));
+        p.buttons({{kProfileLoad, t(Text::ProfileLoad), !profiles.empty()},
+                   {kProfileDelete, t(Text::ProfileDelete), !profiles.empty()}});
+        p.line(kProfileName, t(Text::ProfileName), t(Text::ProfileNameCue), 40, t(Text::ProfileBadName));
+        p.buttons({{kProfileSave, t(Text::ProfileSave)}});
         p.gap();
         p.heading(t(Text::ServiceBackups));
         list_ = p.listBox(kBackups, 3);
@@ -121,6 +140,27 @@ public:
             const std::wstring err = m.restore(name, l);
             if (!err.empty()) host_.message(err, true);
             host_.reload();
+        } else if (id == kProfileSave) {
+            const std::wstring name = wide(controlText(GetDlgItem(host_.window(), kProfileName)));
+            const std::wstring err = m.saveProfile(name, l);
+            host_.message(err.empty() ? tf(Text::ProfileSaved, {utf8(name)}) : err, !err.empty());
+            if (err.empty()) host_.rebuild();
+        } else if (id == kProfileLoad || id == kProfileDelete) {
+            const std::vector<std::wstring> profiles = m.profiles();
+            const LRESULT sel = SendMessageW(profiles_, LB_GETCURSEL, 0, 0);
+            if (sel < 0 || size_t(sel) >= profiles.size()) return;
+            const std::wstring name = profiles[size_t(sel)];
+            if (id == kProfileDelete) {
+                if (!host_.ask(tf(Text::ProfileAskDelete, {utf8(name)}))) return;
+                const std::wstring err = m.deleteProfile(name, l);
+                if (!err.empty()) host_.message(err, true);
+                host_.rebuild();
+                return;
+            }
+            if (!host_.ask(tf(Text::ProfileAskLoad, {utf8(name)}))) return;
+            const std::wstring err = m.loadProfile(name, l);
+            host_.message(err.empty() ? tf(Text::ProfileLoaded, {utf8(name)}) : err, !err.empty());
+            host_.reload();
         } else if (id == kKeepFive) {
             m.keepNewestBackups(5);
             host_.reload();
@@ -165,6 +205,7 @@ public:
 
 private:
     HWND list_ = nullptr;
+    HWND profiles_ = nullptr;
 };
 
 }  // namespace

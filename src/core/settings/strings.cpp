@@ -1321,6 +1321,51 @@ const Entry kTexts[] = {
      "будь-коли.",
      "Кадры в секунду и время кадра в левом верхнем углу окна игры. Ctrl+Shift+F11 в игре показывает и прячет его в "
      "любой момент."},
+    {"Profiles",
+     "Профілі",
+     "Профили"},
+    {"A profile keeps every setting of uaro-graphics.ini under a name - one for playing, one for a weak laptop, one "
+     "for recording - and brings them all back at a press.",
+     "Профіль зберігає всі налаштування uaro-graphics.ini під назвою — для гри, для слабкого ноутбука, для запису — і "
+     "повертає їх одним натисканням.",
+     "Профиль хранит все настройки uaro-graphics.ini под именем — для игры, для слабого ноутбука, для записи — и "
+     "возвращает их одним нажатием."},
+    {"Name",
+     "Назва",
+     "Имя"},
+    {"for example: Maximum for 4K",
+     "наприклад: Максимум для 4K",
+     "например: Максимум для 4K"},
+    {"Save as a profile",
+     "Зберегти як профіль",
+     "Сохранить как профиль"},
+    {"Load",
+     "Завантажити",
+     "Загрузить"},
+    {"Delete",
+     "Видалити",
+     "Удалить"},
+    {"(no profiles yet)",
+     "(профілів ще немає)",
+     "(профилей пока нет)"},
+    {"The profile \"{1}\" is saved.",
+     "Профіль «{1}» збережено.",
+     "Профиль «{1}» сохранён."},
+    {"The profile \"{1}\" is in uaro-graphics.ini now: most settings take effect at once, the renderer's at the next "
+     "start of the game.",
+     "Профіль «{1}» тепер в uaro-graphics.ini: більшість налаштувань діє одразу, налаштування рендера — з наступного "
+     "запуску гри.",
+     "Профиль «{1}» теперь в uaro-graphics.ini: большинство настроек действует сразу, настройки рендера — со "
+     "следующего запуска игры."},
+    {"Replace the settings with the profile \"{1}\"? The present ones go to a backup first.",
+     "Замінити налаштування профілем «{1}»? Поточні спершу підуть у резервну копію.",
+     "Заменить настройки профилем «{1}»? Текущие сначала уйдут в резервную копию."},
+    {"Delete the profile \"{1}\"?",
+     "Видалити профіль «{1}»?",
+     "Удалить профиль «{1}»?"},
+    {"A profile's name: letters, digits, spaces, - and _, up to 40.",
+     "Назва профілю: літери, цифри, пробіли, - і _, до 40.",
+     "Имя профиля: буквы, цифры, пробелы, - и _, до 40."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

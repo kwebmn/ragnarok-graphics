@@ -500,3 +500,28 @@ TEST(model_a_window_layout_reset_writes_the_personal_copy) {
     CHECK(x && x->asDword() && *x->asDword() == 0xFFFFFFFFu);
     CHECK(!m.now().backups.empty());
 }
+
+TEST(model_profiles_keep_and_bring_back_every_setting) {
+    // 0.55: a profile is uaro-graphics.ini with the player's changes in, under a name; loading one writes it back.
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    w.files[ini] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 70\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(m.profiles().empty());
+    m.setToken(setting("quality.sharpen"), "40");  // not applied yet: the profile takes it
+    CHECK(m.saveProfile(L"Слабкий ноутбук", Lang::En).empty());
+    CHECK(!m.saveProfile(L"bad/name", Lang::En).empty());
+    CHECK(!m.saveProfile(L"", Lang::En).empty());
+    CHECK(m.profiles() == (std::vector<std::wstring>{L"Слабкий ноутбук"}));
+    CHECK_EQ(valueOf(w.files[ini], "quality.sharpen"), std::string("70"));  // the ini as it was
+    CHECK(m.loadProfile(L"Слабкий ноутбук", Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[ini], "quality.sharpen"), std::string("40"));
+    CHECK_EQ(m.pendingCount(), size_t(0));
+    CHECK(!m.loadProfile(L"gone", Lang::En).empty());
+    CHECK(m.deleteProfile(L"Слабкий ноутбук", Lang::En).empty());
+    CHECK(m.profiles().empty());
+    CHECK(app::Model::profileNameOk(L"Max 4K_v2-b"));
+    CHECK(!app::Model::profileNameOk(L" leading"));
+    CHECK(!app::Model::profileNameOk(std::wstring(41, L'a')));
+}

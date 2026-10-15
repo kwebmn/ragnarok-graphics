@@ -116,6 +116,13 @@ public:
     std::wstring restore(const std::wstring& backup, settings::Lang l);
     void keepNewestBackups(size_t count);
     std::wstring resetDefaults(settings::Lang l);
+    // 0.55: profiles - every setting of uaro-graphics.ini (the player's changes in) under a name, in
+    // uaro-graphics\profiles\<name>.ini; loading one makes it uaro-graphics.ini (a backup first, the language kept).
+    std::vector<std::wstring> profiles() const;  // names, sorted
+    static bool profileNameOk(const std::wstring& name);  // letters, digits, spaces, - and _; up to 40
+    std::wstring saveProfile(const std::wstring& name, settings::Lang l);
+    std::wstring loadProfile(const std::wstring& name, settings::Lang l);
+    std::wstring deleteProfile(const std::wstring& name, settings::Lang l);
     std::wstring removeCompatFlag(const CompatFlag& f, settings::Lang l);
     std::wstring resetRegistryValue(const std::string& name, settings::Lang l);
     std::wstring forgetLogin(settings::Lang l);  // the saved login goes; only while the game is closed (§4.1)

@@ -124,6 +124,9 @@ enum class Text : uint16_t {
     PackFetchUpToDate, PackFetchFailed, PackFetchStopped, PackMakeHeading,
     // 0.54
     FramesFpsCounter, FramesFpsCounterHint,
+    // 0.55: profiles
+    ServiceProfiles, ProfileNote, ProfileName, ProfileNameCue, ProfileSave, ProfileLoad, ProfileDelete, ProfileNone,
+    ProfileSaved, ProfileLoaded, ProfileAskLoad, ProfileAskDelete, ProfileBadName,
     Count
 };
 

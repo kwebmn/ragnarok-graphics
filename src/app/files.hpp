@@ -13,6 +13,7 @@ bool dirExists(const std::wstring& path);
 std::vector<std::wstring> listFolder(const std::wstring& dir, bool folders);  // names, sorted
 bool makeFolder(const std::wstring& path);   // also when it exists
 bool removeTree(const std::wstring& path);
+bool deleteFile(const std::wstring& path);  // 0.55
 bool folderWritable(const std::wstring& dir);
 bool underProgramFiles(const std::wstring& dir);
 std::wstring timestampName();  // "2026-10-13-192033", for a backup folder
