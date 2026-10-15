@@ -1174,6 +1174,7 @@ Renderer::~Renderer() {
 bool Renderer::createRemote(const BridgeOptions& o, std::string& error) {
     if (remote_) return true;
     remote_ = new Remote;
+    remote_->setStartSink(impl_->startSink, impl_->startContext);  // 0.40: its start is shown as it goes
     if (remote_->start(o, error)) return true;
     delete remote_;
     remote_ = nullptr;
@@ -1249,6 +1250,12 @@ void Renderer::finish() {
 void Renderer::requestIcon(uint64_t key, int width, int height, const uint32_t* argb) {
     if (remote_) return remote_->sendIcon(key, width, height, argb);
     if (impl_->ai) impl_->ai->noteIcon(key, width, height, argb);
+}
+
+void Renderer::setStartSink(StartSink sink, void* context) {
+    impl_->startSink = sink;
+    impl_->startContext = context;
+    if (remote_) remote_->setStartSink(sink, context);
 }
 
 void Renderer::setIconSink(IconSink sink, void* context) {

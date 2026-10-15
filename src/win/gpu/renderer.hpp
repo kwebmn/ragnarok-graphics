@@ -8,6 +8,7 @@
 #include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
+#include "core/start_screen.hpp"
 
 struct ID3D12Device;
 
@@ -116,6 +117,10 @@ public:
     // key skips - for the network; the picture made larger comes to the sink, keyed as asked. In the driver the sink
     // gets it from the bridge; in uaro-render64.exe the sink sends it over the bridge.
     using IconSink = void (*)(void* context, uint64_t key, int width, int height, const uint32_t* argb);
+    // 0.40, before create() or createRemote(): told what the start does (core/start_screen.hpp) - the shaders loaded
+    // or compiled one by one; through the bridge uaro-render64.exe's DLSS and AI textures too.
+    using StartSink = void (*)(void* context, const start::Progress& progress);
+    void setStartSink(StartSink sink, void* context);
     void requestIcon(uint64_t key, int width, int height, const uint32_t* argb);
     void setIconSink(IconSink sink, void* context);
     // Part 3, DLSS started after the device (in the background, so that the game does not wait for it): the DXGI

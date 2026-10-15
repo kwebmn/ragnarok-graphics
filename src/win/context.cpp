@@ -9,6 +9,7 @@
 #include "win/effect_hook.hpp"
 #include "win/game_camera.hpp"
 #include "win/sprite_hook.hpp"
+#include "win/start_screen.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/window_mode.hpp"
@@ -56,7 +57,14 @@ Context::Context() {
 
 bool Context::open(std::string& error) {
     if (renderer) return true;
+    // 0.40: what the start does, over the game's black window, until the renderer is ready (or is not).
+    openStart(findGameWindow());
+    struct CloseStart {
+        ~CloseStart() { closeStart(); }
+    } closeStartAtEnd;
+    showStart(start::Progress{start::Stage::Renderer, 0, 0});
     gpu::Renderer* r = new gpu::Renderer;
+    r->setStartSink([](void*, const start::Progress& p) { showStart(p); }, nullptr);
     bool remote = false;
     if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if it is there
         const std::string local = gameDir() + "\\d3d9.dll";

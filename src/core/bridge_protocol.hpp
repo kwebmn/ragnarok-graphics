@@ -8,7 +8,7 @@ namespace uagfx::bridge {
 // process (DLSS and frame generation exist only for 64-bit programs). They share one block of memory: BlockHeader,
 // the ring from the driver to the renderer, then the ring back (core/bridge_ring.hpp).
 constexpr uint32_t kMagic = 0x52423455;  // "U4BR"
-constexpr uint32_t kVersion = 27;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
+constexpr uint32_t kVersion = 28;  // 2: uploads carry the sprite cache's cells (0.13); 3: icons (0.14); 4: what
                                   // sprite a cell's frame is of (0.16); 5: effects (0.18); 6: the water (0.19);
                                   // 7: soft shadows, the glow's light (0.20); 8: colours (0.21); 9: depth of
                                   // field (0.22); 10: smooth map light (0.22.6); 11: torches (0.23); 12: the
@@ -18,7 +18,7 @@ constexpr uint32_t kVersion = 27;  // 2: uploads carry the sprite cache's cells 
                                   // maps' hidden lights (0.29); 19: the forest's beams of light (0.30); 20:
                                   // lava (0.31); 21: the characters' shadows (0.32); 22: clouds (0.33); 23: haze
                                   // and fog (0.34); 24: heat haze (0.35); 25: the skills' colours (0.36); 26:
-                                  // the portals (0.38); 27: weather (0.39)
+                                  // the portals (0.38); 27: weather (0.39); 28: the start's progress (0.40)
 
 struct alignas(16) BlockHeader {
     uint32_t magic;
@@ -69,6 +69,7 @@ enum class Msg : uint32_t {
     Lost,               // str why: the renderer cannot draw any more
     UpscalerReady,      // DLSS came up after the Hello (it starts in the background)
     IconDone,           // u64 key, i32 width, height, then width * height ARGB: that icon made larger
+    StartProgress,      // u8 stage, i32 shaders done, i32 of them (core/start_screen.hpp): what its start does
 };
 
 }  // namespace uagfx::bridge

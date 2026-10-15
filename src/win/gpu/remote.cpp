@@ -125,6 +125,16 @@ void Remote::handle(Msg type, const uint8_t* data, uint32_t size) {
             iconSink_(iconContext_, key, w, h, argb.data());
             break;
         }
+        case Msg::StartProgress: {  // 0.40: shown over the game's window while it waits for the Hello
+            start::Progress p;
+            const uint8_t stage = rd.u8();
+            p.done = rd.i32();
+            p.total = rd.i32();
+            if (!rd.ok() || stage > uint8_t(start::Stage::AiTextures) || !startSink_) break;
+            p.stage = start::Stage(stage);
+            startSink_(startContext_, p);
+            break;
+        }
         default: break;  // an answer nobody waits for any more
     }
 }

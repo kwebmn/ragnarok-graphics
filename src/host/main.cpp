@@ -121,6 +121,8 @@ private:
     void present(WireReader& rd);
     // AI icons (0.14): one made larger goes back to the driver.
     static void iconDone(void* self, uint64_t key, int width, int height, const uint32_t* argb);
+    // 0.40: what the start does, to the driver: it shows it over the game's window until the Hello.
+    static void startProgress(void* self, const start::Progress& p);
     void checkLateDlss();  // DLSS started in the background: on, or the reason it is not
 
     win::bridge::Channel channel_;
@@ -136,8 +138,19 @@ private:
     std::vector<uint32_t> pixels_;
     std::vector<uint8_t> out_;
     std::vector<uint8_t> iconOut_;  // its own: an icon comes back in the middle of other work
+    std::vector<uint8_t> startOut_;  // 0.40
     LateDlss late_;
 };
+
+void Host::startProgress(void* self, const start::Progress& p) {
+    Host& h = *static_cast<Host*>(self);
+    h.startOut_.clear();
+    WireWriter w(h.startOut_);
+    w.u8(uint8_t(p.stage));
+    w.i32(p.done);
+    w.i32(p.total);
+    h.channel_.send(Msg::StartProgress, h.startOut_);
+}
 
 void Host::iconDone(void* self, uint64_t key, int width, int height, const uint32_t* argb) {
     Host& h = *static_cast<Host*>(self);
@@ -176,6 +189,7 @@ int Host::run(const Args& a) {
     } attach{&dlss_, false, "the device was not made"};
     dlss_.setSigns(a.jitterInverted ? -1.0f : 1.0f, a.motionInverted ? -1.0f : 1.0f);
     if (early) {
+        startProgress(this, start::Progress{start::Stage::Dlss, 0, 0});  // 0.40
         std::string why;
         dlss = dlss_.init(folder, a.dir, a.dlss, a.generation, false, why);
         if (dlss) {
@@ -192,6 +206,7 @@ int Host::run(const Args& a) {
     out_.clear();
     WireWriter hello(out_);
     renderer_.setShaderCache(a.dir + "\\uaro-graphics\\shaders-64.bin");  // 0.39.5
+    renderer_.setStartSink(&Host::startProgress, this);                         // 0.40
     if (!renderer_.create(error)) {
         LOG_ERROR("Direct3D 12: %s", error.c_str());
         hello.u8(0);
@@ -201,7 +216,10 @@ int Host::run(const Args& a) {
     }
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
     renderer_.setIconSink(&Host::iconDone, this);
-    if (a.ai.enabled) renderer_.startAiTextures(a.dir, a.ai);  // its own log line, on or why not
+    if (a.ai.enabled) {
+        startProgress(this, start::Progress{start::Stage::AiTextures, 0, 0});  // 0.40
+        renderer_.startAiTextures(a.dir, a.ai);  // its own log line, on or why not
+    }
     renderer_.setGameDir(a.dir);  // 0.25: the maps' files and the axes file
     bool upscales = false;
     if (dlss) {  // Streamline got the device the moment it was made (setOnDevice)

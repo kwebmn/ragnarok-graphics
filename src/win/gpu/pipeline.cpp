@@ -47,6 +47,15 @@ struct ShaderStore {
     std::vector<shader_cache::Shader> made;
     int reused = 0;
     int compiled = 0;
+    // 0.40: each one done is told (the start screen): loaded or compiled, how many of how many.
+    Renderer::StartSink sink = nullptr;
+    void* context = nullptr;
+    int total = 0;
+    void told(bool loaded) const {
+        if (sink)
+            sink(context, start::Progress{loaded ? start::Stage::ShadersLoad : start::Stage::ShadersBuild,
+                                          reused + compiled, total});
+    }
 };
 
 // Into a file of its own, then over the old one in one step: another client starting meanwhile reads the old one or
@@ -69,6 +78,7 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
         std::memcpy(out->GetBufferPointer(), s.code.data(), s.code.size());
         store.made.push_back(s);
         ++store.reused;
+        store.told(true);
         return true;
     }
     const char* src = shaderSource();
@@ -96,6 +106,7 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
     const auto* code = static_cast<const uint8_t*>(out->GetBufferPointer());
     store.made.push_back({entry, profile, std::vector<uint8_t>(code, code + out->GetBufferSize())});
     ++store.compiled;
+    store.told(false);
     return true;
 }
 
@@ -158,13 +169,6 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     std::string kept;
     if (store.createBlob && !shaderCacheFile.empty() && win::readTextFile(shaderCacheFile, kept))
         store.kept = shader_cache::unpack(key, std::vector<uint8_t>(kept.begin(), kept.end()));
-    if (!compile(store, compileFn, "draw_vs", "vs_5_0", drawVs, error) ||
-        !compile(store, compileFn, "draw_ps", "ps_5_0", drawPs, error) ||
-        !compile(store, compileFn, "present_vs", "vs_5_0", presentVs, error) ||
-        !compile(store, compileFn, "present_ps", "ps_5_0", presentPs, error) ||
-        !compile(store, compileFn, "motion_ps", "ps_5_0", motionPs, error) ||
-        !compile(store, compileFn, "copy_ps", "ps_5_0", copyPs, error))
-        return false;
     // 0.18, 0.19: the effects' shaders - one that does not compile leaves its effect off, the rest draws on.
     const struct {
         const char* entry;
@@ -189,6 +193,16 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"clouds_ps", "ps_5_0", &cloudsPs},            {"haze_ps", "ps_5_0", &hazePs},
                    {"heat_ps", "ps_5_0", &heatPs},                {"weather_ps", "ps_5_0", &weatherPs},
                    {"clouds_apply_ps", "ps_5_0", &cloudsApplyPs}};
+    store.sink = startSink;  // 0.40
+    store.context = startContext;
+    store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'
+    if (!compile(store, compileFn, "draw_vs", "vs_5_0", drawVs, error) ||
+        !compile(store, compileFn, "draw_ps", "ps_5_0", drawPs, error) ||
+        !compile(store, compileFn, "present_vs", "vs_5_0", presentVs, error) ||
+        !compile(store, compileFn, "present_ps", "ps_5_0", presentPs, error) ||
+        !compile(store, compileFn, "motion_ps", "ps_5_0", motionPs, error) ||
+        !compile(store, compileFn, "copy_ps", "ps_5_0", copyPs, error))
+        return false;
     for (const auto& e : effects) {
         std::string why;
         if (!compile(store, compileFn, e.entry, e.profile, *e.blob, why)) {

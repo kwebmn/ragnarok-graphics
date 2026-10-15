@@ -36,6 +36,10 @@ public:
         iconSink_ = sink;
         iconContext_ = context;
     }
+    void setStartSink(Renderer::StartSink sink, void* context) {  // 0.40
+        startSink_ = sink;
+        startContext_ = context;
+    }
     int samples() const { return samples_; }
     void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown);
     void setEffects(const EffectSettings& e);  // sent when they change
@@ -70,6 +74,8 @@ private:
     bool effectsSent_ = false;
     Renderer::IconSink iconSink_ = nullptr;  // AI icons that came back (Msg::IconDone)
     void* iconContext_ = nullptr;
+    Renderer::StartSink startSink_ = nullptr;  // 0.40: what the renderer's start does (Msg::StartProgress)
+    void* startContext_ = nullptr;
     std::vector<uint8_t> buffer_;  // a message being written; kept to keep its memory
 };
 

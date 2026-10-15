@@ -213,6 +213,8 @@ struct Renderer::Impl {
     HMODULE dxgi = nullptr;
     HMODULE compiler = nullptr;
     std::string shaderCacheFile;  // 0.39.5: the shaders' code kept between starts (pipeline.cpp); "" none
+    Renderer::StartSink startSink = nullptr;  // 0.40: told of the shaders loaded or compiled
+    void* startContext = nullptr;
     IDXGIFactory4* factory = nullptr;
     ID3D12Device* device = nullptr;
     ID3D12CommandQueue* queue = nullptr;
