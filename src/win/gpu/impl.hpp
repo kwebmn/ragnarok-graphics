@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/footsteps.hpp"
 #include "core/frame.hpp"
 #include "core/key_pair.hpp"
 #include "core/log_once.hpp"
@@ -807,6 +808,7 @@ struct Renderer::Impl {
         floorReflectDone = false;  // 0.72
         sunShadowDone = false;  // 0.77
         bloomDone = false;  // 0.78
+        stepsDone = false;  // 0.80
         shaftsDone = false;  // 0.73
         shaftLights = 0;
         heatDone = false;
@@ -817,6 +819,23 @@ struct Renderer::Impl {
     // ao.cpp (0.20)
     bool aoWanted() const { return effects.ao && effects.aoStrength > 0; }
     bool aoDue() const { return aoWanted() && groundDrawn && !aoDone; }
+    // 0.80: footprints and dust (ao.cpp applySteps) - the characters' feet followed (actor_shadows.cpp)
+    footsteps::Tracker footTracker;
+    ID3DBlob* stepsPs = nullptr;
+    ID3D12PipelineState* stepsPipelines[4] = {};
+    ID3D12Resource* stepsData = nullptr;  // R32G32B32A32, two texels a step
+    D3D12_RESOURCE_STATES stepsDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT stepsDataSrv = 0;
+    bool stepsDone = false;
+    bool stepsLogged = false;
+    int stepKind() const {  // 1 snow, 2 sand, 3 dust, 0 none
+        if (!effects.footprints || !stepsPs) return 0;
+        return mapWeather == weather::Kind::Snow ? 1 : mapDesert ? 2 : mapOutdoors ? 3 : 0;
+    }
+    float stepLife() const { return stepKind() == 3 ? 0.9f : stepKind() == 1 ? 25.0f : 14.0f; }
+    bool stepsDue() const { return stepKind() && groundDrawn && !stepsDone && viewToWorldValid; }
+    bool applySteps();  // once a frame, the world finished; false: lost
+    float flashNow() const;  // 0.80: the thunderstorm's lightning now (0-1), where it rains
     // 0.78: bloom and the filmic curve (ao.cpp)
     ID3DBlob* bloomDownPs = nullptr;
     ID3DBlob* bloomApplyPs = nullptr;
@@ -850,7 +869,7 @@ struct Renderer::Impl {
     bool gradeWanted() const { return effects.grade; }
     bool nightDue() const {  // 0.74: also for the time of day's tint; 0.79: and the region's look
         return ((effects.night && effects.nightNow > 0) || (effects.dayCycle && effects.dayNow >= 0) ||
-                (effects.regionLooks && mapRegion)) &&
+                (effects.regionLooks && mapRegion) || flashNow() > 0.0f) &&
                nightPs && groundDrawn && !nightDone;
     }
     bool mapRegion = false;  // 0.79: the map is of a region with a look of its own (core/region_look.hpp)

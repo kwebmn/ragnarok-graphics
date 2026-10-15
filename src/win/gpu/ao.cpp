@@ -4,10 +4,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "core/d3d7.hpp"
 #include "core/daylight.hpp"
 #include "core/game_camera.hpp"
+#include "core/lightning.hpp"
 #include "core/region_look.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -301,12 +303,93 @@ bool Renderer::Impl::applyNight() {
     const region_look::Look look = region_look::of(mapName, effects.regionLooks ? effects.regionLooksStrength : 0);
     for (int k = 0; k < 3; ++k) c.twin[k] = day.tint[k] * look.tint[k];  // 0.79: and the region's
     c.sourceRect[3] = look.saturation - 1.0f;
+    c.sourceRect[0] = flashNow();  // 0.80
     c.uiPixels[0] = float(sceneWidth);
     c.uiPixels[1] = float(sceneHeight);
     return upscale ? effectPass(nightPipelines[code], world, worldState, rtvHandle(kRtvWorld), sceneWidth,
                                 sceneHeight, c, sceneColorSrv, true)
                    : effectPass(nightPipelines[code], target, targetState, rtvHandle(kRtvTarget), sceneWidth,
                                 sceneHeight, c, sceneColorSrv, true);
+}
+
+float Renderer::Impl::flashNow() const {
+    if (!effects.storms || !effects.weather || mapWeather != weather::Kind::Rain || !nightPs) return 0.0f;
+    return lightning::flash(double(const_cast<Impl*>(this)->waterTime()));
+}
+
+// 0.80: the steps the characters left - prints in the snow and the sand, dust on dry ground - onto the ground.
+bool Renderer::Impl::applySteps() {
+    stepsDone = true;
+    const int kind = stepKind();
+    const std::deque<footsteps::Step>& steps = footTracker.steps();
+    if (steps.empty() || !ensureScene("footprints")) return true;
+    ID3D12PipelineState* pso = alphaPipeline(stepsPs, stepsPipelines, upscale ? 1 : samples, "footprints");
+    if (!pso) return true;
+    if (!stepsData) {
+        stepsData = createTexture2D(device, int(footsteps::Tracker::kMax * 2), 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT,
+                                    D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+        stepsDataSrv = stepsData ? allocSrv() : kNoSrv;
+        if (!stepsData || stepsDataSrv == kNoSrv) {
+            LOG_ERROR("footprints: no memory for their list: none");
+            releaseCom(stepsData);
+            releaseCom(stepsPs);
+            return true;
+        }
+        stepsDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+        device->CreateShaderResourceView(stepsData, nullptr, cpuSrvHandle(stepsDataSrv));
+    }
+    const float now = waterTime(), life = stepLife();
+    float data[footsteps::Tracker::kMax * 2][4] = {};
+    size_t n = 0;
+    for (const footsteps::Step& s : steps) {
+        if (n >= footsteps::Tracker::kMax) break;
+        data[2 * n][0] = s.x;
+        data[2 * n][1] = s.y;
+        data[2 * n][2] = s.z;
+        data[2 * n][3] = s.angle;
+        data[2 * n + 1][0] = std::clamp((now - s.born) / life, 0.0f, 1.0f);
+        ++n;
+    }
+    const Upload u = allocUpload(sizeof data, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+    if (!u.cpu) return true;
+    std::memcpy(u.cpu, data, sizeof data);
+    D3D12_TEXTURE_COPY_LOCATION src{}, to{};
+    src.pResource = slots[slot].upload;
+    src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint.Offset = u.offset;
+    src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    src.PlacedFootprint.Footprint.Width = UINT(footsteps::Tracker::kMax * 2);
+    src.PlacedFootprint.Footprint.Height = 1;
+    src.PlacedFootprint.Footprint.Depth = 1;
+    src.PlacedFootprint.Footprint.RowPitch = UINT(sizeof data);  // 2048: a multiple of 256
+    to.pResource = stepsData;
+    to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    if (!copySceneDepth()) return false;
+    transition(stepsData, stepsDataState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
+    transition(stepsData, stepsDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.footprint = float(n);
+    c.twin[0] = float(kind);
+    if (!stepsLogged)
+        LOG_INFO("footprints: %s on %s", kind == 1 ? "in the snow" : kind == 2 ? "in the sand" : "dust",
+                 mapName.c_str());
+    stepsLogged = true;
+    const UINT list1 = stepsDataSrv;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, list1)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, list1);
 }
 
 void Renderer::Impl::releaseBloom() {
@@ -552,6 +635,7 @@ bool Renderer::Impl::applyDof() {
 bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
     if (sunShadowDue() && !applySunShadows()) return false;  // 0.77
+    if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
     if (waterfallsDue() && !applyWaterfalls()) return false;  // 0.65: the maps' waterfalls the game never shows

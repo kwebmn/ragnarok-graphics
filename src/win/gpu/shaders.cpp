@@ -738,6 +738,7 @@ float4 night_ps(PresentOut i) : SV_Target {
     float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb * float3(twinX, twinY, twinW);
     float grey = dot(c, float3(0.2126, 0.7152, 0.0722));
     c = max(lerp(float3(grey, grey, grey), c, 1.0 + sourceRect.w), 0.0);
+    c += (c * 1.3 + float3(0.10, 0.11, 0.15)) * sourceRect.x;  // 0.80: a flash of lightning
     float l = dot(c, float3(0.2126, 0.7152, 0.0722));
     float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * 0.45;
     float keep = smoothstep(0.72, 0.97, l);
@@ -1246,6 +1247,42 @@ float4 sun_shadow_ps(PresentOut i) : SV_Target {
     }
     float s = 1.0 - shade * sharpen;
     return float4(s, s, s, 1.0);
+}
+
+// 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of
+// t1 - two texels: its place (xyz) and way (w), then its age 0-1 (x) - footprint how many; twinX the kind: 1 snow,
+// 2 sand (a foot's print, fading), 3 dust (a puff spreading and thinning). Blended over by its alpha.
+float4 steps_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
+    float3 v = viewAt(wp);
+    float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    int kind = int(twinX + 0.5);
+    float a = 0.0;
+    int count = int(footprint);
+    [loop] for (int k = 0; k < count; ++k) {
+        float4 s = tex1.Load(int3(2 * k, 0, 0));
+        if (abs(w.y - s.y) > 3.0) continue;
+        float2 d = w.xz - s.xz;
+        if (dot(d, d) > 40.0) continue;
+        float age = tex1.Load(int3(2 * k + 1, 0, 0)).x;
+        if (kind == 3) {
+            float r = 1.0 + 4.0 * age;
+            float puff = exp(-dot(d, d) / (r * r)) * (1.0 - age) * (1.0 - age);
+            a = max(a, puff * (0.7 + 0.3 * valueNoise(w.xz * 0.8 + s.xz)));
+        } else {
+            float ca = cos(s.w), sa = sin(s.w);
+            float2 l = float2(d.x * ca + d.y * sa, -d.x * sa + d.y * ca);
+            float e = length(l / float2(1.1, 0.5));
+            a = max(a, smoothstep(1.0, 0.65, e) * (1.0 - age * age));
+        }
+    }
+    if (a < 0.01) discard;
+    float3 colour = kind == 1   ? float3(0.42, 0.48, 0.62)
+                    : kind == 2 ? float3(0.50, 0.38, 0.24)
+                                : float3(0.82, 0.74, 0.60);
+    float most = kind == 1 ? 0.5 : kind == 2 ? 0.4 : 0.35;
+    return float4(colour, a * most);
 }
 
 // 0.73, light in the air (haze.cpp), added onto the picture: about each light of the torches' pass (t1, footprint of

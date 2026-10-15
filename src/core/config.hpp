@@ -218,6 +218,10 @@ struct EffectSettings {
     // sun-bleached... On by default.
     bool regionLooks = true;
     int regionLooksStrength = 100;  // %, 0-100
+    // 0.80: footprints in the snow and the sand, dust under the feet on dry ground; a thunderstorm's lightning
+    // where it rains. Both on by default.
+    bool footprints = true;
+    bool storms = true;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

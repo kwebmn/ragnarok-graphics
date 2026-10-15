@@ -93,3 +93,9 @@ TEST(region_looks_on_by_default) {
     CHECK(parseConfig("").effects.regionLooks && parseConfig("").effects.regionLooksStrength == 100);
     CHECK(!effectsOff().regionLooks);
 }
+
+TEST(footprints_and_storms_on_by_default) {
+    // 0.80
+    CHECK(parseConfig("").effects.footprints && parseConfig("").effects.storms);
+    CHECK(!effectsOff().footprints && !effectsOff().storms);
+}

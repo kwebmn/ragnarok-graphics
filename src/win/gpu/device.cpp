@@ -1284,6 +1284,9 @@ void Renderer::Impl::destroy() {
     releaseCom(shaftsPs);
     for (ID3D12PipelineState*& p : sunShadowPipelines) releaseCom(p);  // 0.77
     releaseCom(sunShadowPs);
+    for (ID3D12PipelineState*& p : stepsPipelines) releaseCom(p);  // 0.80
+    releaseCom(stepsPs);
+    releaseCom(stepsData);
     releaseBloom();  // 0.78
     releaseCom(bloomDownPipeline);
     releaseCom(bloomBlurPipeline);
@@ -1548,6 +1551,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
     impl_->mapWeather = weather::of(map);  // 0.39: its weather
+    impl_->footTracker.clear();  // 0.80
     impl_->mapRegion = region_look::of(map, 100).region[0] != 0;  // 0.79: its look
     if (impl_->mapRegion) LOG_INFO("region: %s (%s)", region_look::of(map, 100).region, map.c_str());
     impl_->weatherLogged = false;

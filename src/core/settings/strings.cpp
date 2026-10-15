@@ -1632,6 +1632,22 @@ const Entry kTexts[] = {
     {"How strong the region's colour mood is.",
      "Наскільки сильний настрій кольорів регіону.",
      "Насколько сильно настроение цветов региона."},
+    {"Footprints and dust",
+     "Сліди й пил",
+     "Следы и пыль"},
+    {"Characters leave footprints in the snow and the sand that slowly fade, and raise a little dust as they walk on "
+     "dry fields. Needs the characters' shadows. Direct3D 12.",
+     "Персонажі лишають сліди на снігу й піску, що поволі зникають, а на сухих полях здіймають трохи пилу. Потрібні "
+     "тіні персонажів. Direct3D 12.",
+     "Персонажи оставляют следы на снегу и песке, которые понемногу исчезают, а на сухих полях поднимают немного "
+     "пыли. Нужны тени персонажей. Direct3D 12."},
+    {"Thunderstorms",
+     "Грози",
+     "Грозы"},
+    {"Where it rains (with the weather on), lightning flashes now and then and lights up everything for a moment. "
+     "Direct3D 12.",
+     "Де йде дощ (з увімкненою погодою), час від часу спалахує блискавка й на мить освітлює все. Direct3D 12.",
+     "Где идёт дождь (с включённой погодой), время от времени сверкает молния и на миг освещает всё. Direct3D 12."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

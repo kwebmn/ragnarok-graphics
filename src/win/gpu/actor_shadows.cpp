@@ -254,6 +254,17 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
             source == uint8_t(sprite_exe::Source::Npc))
             layers.push_back(l);
     }
+    if (stepKind() && viewToWorldValid) {  // 0.80: the feet followed for the footprints
+        std::vector<map::Point> feet;
+        const float* fm = viewToWorld;
+        for (const actor_shadows::Blob& b : blobs) {
+            const float vz = b.viewZ, vx = (b.x - proj.cx) * vz / proj.f0, vy = (b.y - proj.cy) * vz / proj.f1;
+            feet.push_back(map::Point{vx * fm[0] + vy * fm[3] + vz * fm[6] + fm[9],
+                                      vx * fm[1] + vy * fm[4] + vz * fm[7] + fm[10],
+                                      vx * fm[2] + vy * fm[5] + vz * fm[8] + fm[11]});
+        }
+        footTracker.update(feet, waterTime(), stepLife());
+    }
     if (blobs.empty()) return true;  // no character in view: the game's round shadows, if any, stay
     // Each character's light: away from the map's nearest torch or lamp within 50 units, else the sun's way.
     std::vector<std::array<float, 2>> dirs;
