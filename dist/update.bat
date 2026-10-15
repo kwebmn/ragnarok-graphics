@@ -28,6 +28,12 @@ timeout /t 1 /nobreak >nul
 set /a waited+=1
 goto :waitapp
 :appclosed
+rem 0.45.2: the texture pack being made keeps uaro-graphics\uaro-render64.exe open - it would not be replaced.
+tasklist /fi "imagename eq uaro-render64.exe" 2>nul | find /i "uaro-render64.exe" >nul && (
+    echo uaro-render64.exe is running - the texture pack is being made, or the game left it behind.
+    echo Stop it on the Texture pack page of the settings or in the Task Manager, then run update.bat again.
+    goto :fail
+)
 where curl >nul 2>&1 || goto :oldwindows
 where tar >nul 2>&1 || goto :oldwindows
 rem A client under Program Files can only be changed with administrator rights.

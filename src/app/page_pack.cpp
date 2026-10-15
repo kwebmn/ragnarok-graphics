@@ -99,7 +99,7 @@ public:
         Model& m = host_.model();
         dir_ = m.paths().dir;
         statusPath_ = dir_ + L"\\uaro-graphics\\pack-status.txt";
-        const bool host = GetFileAttributesW((dir_ + L"\\uaro-render64.exe").c_str()) != INVALID_FILE_ATTRIBUTES;
+        const bool host = GetFileAttributesW(builderExe().c_str()) != INVALID_FILE_ATTRIBUTES;
         look();
         p.heading(t(Text::PagePack));
         p.note(t(Text::PackIntro));
@@ -183,6 +183,9 @@ public:
     }
 
 private:
+    // The builder: the 64-bit renderer in the uaro-graphics folder, as the driver starts it (context.cpp).
+    std::wstring builderExe() const { return dir_ + L"\\uaro-graphics\\uaro-render64.exe"; }
+
     // The status file and whether its builder is still at work.
     void look() {
         pack::Status s;
@@ -307,7 +310,7 @@ private:
 
     void start(const char* mode, const pack::Choice& choice, bool fresh) {
         const AiSettings a = host_.model().pendingConfig().ai;
-        const std::wstring exe = dir_ + L"\\uaro-render64.exe";
+        const std::wstring exe = builderExe();
         const std::string kinds = pack::choiceText(choice);
         std::wstring line = L"\"" + exe + L"\" --pack " + wide(mode) + L" --dir \"" + dir_ + L"\" --ai " +
                             wide(aiArgument(a)) + L" --kinds " + wide(kinds.empty() ? "none" : kinds) +
