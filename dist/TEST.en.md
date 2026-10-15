@@ -1,3 +1,13 @@
+# uaRO Graphics 0.71.0 — testing
+
+What is new in 0.71.0 (Direct3D 12 and Direct3D 11):
+- **Ground relief** (Effects → "Ground relief" and its strength; on by default). The brightness of the ground's
+  picture is taken as height: cracks, stones and grass are lit from the side (light from the screen's upper left) and
+  look raised. Best with the AI textures - they have more detail. Walls and models are unchanged.
+
+How to test: Prontera's road and tiles, Morroc's sand, a dungeon's stone floor; strength 0-200 - where it starts to
+look dirty. Pause - compare.
+
 # uaRO Graphics 0.70.0 — testing
 
 What is new in 0.70.0 (Direct3D 12):
