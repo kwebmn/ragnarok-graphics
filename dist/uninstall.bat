@@ -26,6 +26,8 @@ if exist "uaro-graphics\shaders-64.bin" del /f "uaro-graphics\shaders-64.bin"
 if exist "uaro-graphics\shaders-d3d11.bin" del /f "uaro-graphics\shaders-d3d11.bin"
 rem 0.49.1: the pictures the texture pack had none of, saved for the developers.
 if exist "uaro-graphics\missing" rmdir /s /q "uaro-graphics\missing"
+if exist "uaro-graphics\crash.dmp" del /f "uaro-graphics\crash.dmp"
+if exist "uaro-graphics\reports.txt" del /f "uaro-graphics\reports.txt"
 rem The texture pack builder's status for the settings app goes too.
 if exist "uaro-graphics\pack-status.txt" del /f "uaro-graphics\pack-status.txt"
 if exist "uaro-graphics\pack-status.txt.part" del /f "uaro-graphics\pack-status.txt.part"

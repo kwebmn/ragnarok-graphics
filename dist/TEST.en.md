@@ -1,3 +1,16 @@
+# uaRO Graphics 0.52.0 — testing
+
+What is new in 0.52.0 (reports, part 2):
+- **A crash says where.** When the game crashes, the log has `crash: exception 0x... at <module>+0x...` and
+  `uaro-graphics\crash.dmp` keeps a small minidump; the report (by hand or automatic) takes it along, and the site's
+  admin offers it for download (WinDbg / Visual Studio).
+- **The pictures the pack has none of** (`uaro-graphics\missing\`, up to 64) go with the report; the admin shows
+  them in the report's card.
+- The report's "Problem" lines are in English whatever the settings app's language.
+- The site's admin has a "Зведення" tab: reports by reason, API, version and graphics card, those with errors.
+
+How to test: send a report from Diagnostics; in the admin, the missing pictures show in its card.
+
 # uaRO Graphics 0.51.1 — testing
 
 What is new in 0.51.1 (from the first report, R-4ZK5KR):
