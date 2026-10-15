@@ -111,14 +111,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
-    e.dayCycle = false;
-    e.shafts = false;
-    e.floorReflections = false;
-    e.relief = false;
-    e.motes = false;
-    e.sky = false;
-    e.rimLight = false;
-    e.softParticles = false;
+    e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.nightNow = 0;
     e.dayNow = -1;
     return e;
@@ -142,15 +135,8 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
 bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
-           e.grade || e.dof || e.water || e.night || e.foliage ||
-           e.dayCycle ||
-           e.shafts ||
-           e.floorReflections ||
-           e.relief ||
-           e.motes ||
-           e.sky ||
-           e.rimLight ||
-           e.softParticles;
+           e.grade || e.dof || e.water || e.night || e.foliage || e.softParticles || e.rimLight || e.sky || e.motes ||
+           e.relief || e.floorReflections || e.shafts || e.dayCycle;
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
