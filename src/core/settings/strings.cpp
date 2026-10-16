@@ -467,8 +467,8 @@ const Entry kTexts[] = {
      "Добавляет придуманные кадры между кадрами игры: GeForce RTX 40 и 50 (3x и 4x — RTX 50), только с DLSS в "
      "«Сглаживании». Плавнее движение, чуть больше задержка; в меню выключается сама."},
     {"3×", "3×", "3×"},
-    {"Improve textures with a neural network (experiment)", "Покращувати текстури нейромережею (експеримент)",
-     "Улучшать текстуры нейросетью (эксперимент)"},
+    {"HD textures from the texture pack (uaro-textures.zip)", "HD-текстури з пакета текстур (uaro-textures.zip)",
+     "HD-текстуры из пакета текстур (uaro-textures.zip)"},
     {"The game's textures redrawn larger and sharper by a neural network (Real-ESRGAN): the ready pictures of the "
      "texture pack uaro-textures.zip, which the Texture pack page makes once on a graphics card with Direct3D 12 - a "
      "player's card makes nothing. Pause shows the game's own. Direct3D 12 draws them in the 64-bit renderer, "
