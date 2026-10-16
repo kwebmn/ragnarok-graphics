@@ -1,3 +1,9 @@
+# uaRO Graphics 1.3.1 — testing
+
+- **"Update now" without update.bat.** With a client copied without the install's files, the Service page's button
+  said "no update.bat in the game's folder". The app now puts its own update.bat into the game's folder and runs it.
+- How to check: delete update.bat from the game's folder, press "Update now" — the file appears, the update runs.
+
 # uaRO Graphics 1.3.0 — testing
 
 - **Music makes way in a fight** (the Sound page, on by default; works without the new engine too). While many
