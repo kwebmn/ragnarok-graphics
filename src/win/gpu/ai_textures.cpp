@@ -1468,8 +1468,9 @@ void AiTextures::finishReadbacks() {
     }
 }
 
-void AiTextures::work() {
+void AiTextures::work(bool foreground) {
     if (!ready_ || m_.lost || !m_.open) return;
+    background_ = !foreground && generate_;
     computeBound_ = false;
     ++frame_;
     putAwayOld();
@@ -1560,7 +1561,9 @@ void AiTextures::observe(UINT slot, double ms) {
     const double macs = scheduled_[slot % 2];
     scheduled_[slot % 2] = 0;
     if (macs < 1e7 || ms < 0.02) return;  // too little to measure
-    const double want = macs / ms * targetMs_;
+    // 1.5.4: behind other windows a generating network may take most of the 15 frames' time (66 ms each).
+    constexpr double kBackgroundMs = 40.0;
+    const double want = macs / ms * (background_ ? std::max(targetMs_, kBackgroundMs) : targetMs_);
     budget_ = std::clamp(budget_ * 0.5 + want * 0.5, 5e7, 5e10);
 }
 

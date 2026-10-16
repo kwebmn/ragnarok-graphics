@@ -2296,7 +2296,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     }
     if (m.ai) {  // a slice of the AI textures' network, in this frame's list, timed so that it keeps to its share
         if (m.timer) m.list->EndQuery(m.timer, D3D12_QUERY_TYPE_TIMESTAMP, m.slot * kTimes + 4);
-        m.ai->work();
+        m.ai->work(options.foreground);
         if (m.timer) {
             m.list->EndQuery(m.timer, D3D12_QUERY_TYPE_TIMESTAMP, m.slot * kTimes + 5);
             m.slots[m.slot].aiTimed = true;

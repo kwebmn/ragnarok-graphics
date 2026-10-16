@@ -60,7 +60,9 @@ public:
     void setMap(const std::string& map);            // the map the game shows now, "" none
     // 0.14: an icon of the game's windows (Renderer::requestIcon); made larger, it goes to Impl::iconSink.
     void noteIcon(uint64_t key, int width, int height, const uint32_t* argb);
-    void work();                                    // with the frame's list open, before its present: a slice
+    // With the frame's list open, before its present: a slice. 1.5.4: foreground false - the game behind other
+    // windows draws 15 frames a second (save_power), so a generating network takes up to kBackgroundMs of each.
+    void work(bool foreground = true);
     bool shown = true;                              // Pause: the game's own textures
 
     // 0.43, the pack builder (Renderer::buildPack): the networks of the settings' kinds - no pack.
@@ -257,6 +259,7 @@ private:
     std::string weakName_ = "realesr-general-wdn-x4v3";  // general's weak-denoise twin
     double budget_ = 3e8;          // multiply-adds a frame, adjusted to targetMs_
     double targetMs_ = 2.0;
+    bool background_ = false;  // 1.5.4: the last frame was drawn with the game behind other windows
     double scheduled_[2] = {0, 0};  // multiply-adds put into each slot's list (kSlots)
     ID3D12RootSignature* root_ = nullptr;
     ID3D12PipelineState* conv_ = nullptr;
