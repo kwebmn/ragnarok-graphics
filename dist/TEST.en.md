@@ -1,3 +1,11 @@
+# uaRO Graphics 1.5.9 — testing
+
+- **Auto setup for small cards (Direct3D 11, and up to 4 GB):** the texture pack's pictures at twice the game's
+  size, not four times (`[ai] scale = 2`), and on Direct3D 11 no day and night. From the reports of the tester with a
+  Radeon HD 6570 in Prontera: x4 - 25.7 ms of the card's work a frame and 33 frames a second, x2 - 21.2 ms and 42;
+  day and night - about 1 ms.
+- How to check: Auto setup on a small card - the AI page's scale "2 times", day and night off on the Effects page.
+
 # uaRO Graphics 1.5.8 — testing
 
 - **Two switches of their own on the AI page:**
