@@ -72,4 +72,20 @@ std::vector<Tile> rrdbTiles(int width, int height);
 void tileInput(const float* planes, int channels, int width, int height, const Tile& t, Border border,
                std::vector<float>& out);
 
+// The GPU's side (ai_shaders.cpp): where each buffer's planes begin in the scratch buffer (words) for a tile's input
+// of width x height - the last step's three planes where Up2's were, done with by then - and the sixteen constants
+// of ai_conv for rows [row, end) of a step, and of ai_place for a tile (the image's level 0: pitch and start, words).
+struct RrdbLayout {
+    uint32_t at[int(Buf::Count)] = {};
+    uint64_t words = 0;
+};
+RrdbLayout rrdbLayout(const RrdbModel& m, int width, int height);
+void convConstants(const RrdbModel& m, const Op& o, const Tile& t, const RrdbLayout& l, uint32_t border, int row,
+                   int end, uint32_t out[16]);
+void placeConstants(const Tile& t, const RrdbLayout& l, uint32_t pitch, uint32_t at, int phase, uint32_t out[16]);
+// ai_conv and ai_place as the GPU runs them, word for word (u: the scratch buffer, image: ARGB words) - the tests'
+// and the GPU self-test's reference for each step.
+void convReference(const uint32_t* k, const float* weights, std::vector<float>& u);
+void placeReference(const uint32_t* k, const std::vector<float>& u, std::vector<uint32_t>& image);
+
 }  // namespace uagfx::ai

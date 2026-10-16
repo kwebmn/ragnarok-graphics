@@ -50,9 +50,9 @@ groupshared float tile[10][10];
 void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
     const uint plane = CONV_WIDTH * CONV_HEIGHT;
     const uint border = CONV_BORDER & 3;
-    const bool half = (CONV_BORDER & 4) != 0;
-    const uint inWidth = half ? CONV_WIDTH / 2 : CONV_WIDTH;
-    const uint inPlane = half ? inWidth * (CONV_HEIGHT / 2) : plane;
+    const bool halfIn = (CONV_BORDER & 4) != 0;  // not "half": a type of HLSL
+    const uint inWidth = halfIn ? CONV_WIDTH / 2 : CONV_WIDTH;
+    const uint inPlane = halfIn ? inWidth * (CONV_HEIGHT / 2) : plane;
     const int x = int(g.x * 8 + t.x);
     const int y = int(CONV_ROW_BEGIN + g.y * 8 + t.y);
     const uint o0 = g.z * 16;
@@ -71,7 +71,7 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
                 sx = uint(clamp(lx, 0, int(CONV_WIDTH) - 1));
                 sy = uint(clamp(ly, 0, int(CONV_HEIGHT) - 1));
             }
-            const uint at = half ? (sy / 2) * inWidth + sx / 2 : sy * CONV_WIDTH + sx;
+            const uint at = halfIn ? (sy / 2) * inWidth + sx / 2 : sy * CONV_WIDTH + sx;
             tile[l / 10][l % 10] = border == 1 && outside ? 0.0 : asfloat(U0.Load((inAt + at) * 4));
         }
         GroupMemoryBarrierWithGroupSync();

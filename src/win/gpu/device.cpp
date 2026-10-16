@@ -593,7 +593,9 @@ bool Renderer::Impl::createTarget(int w, int h, UINT n, ID3D12Resource*& rt, ID3
     if (rt && ds) return true;
     releaseCom(rt);
     releaseCom(ds);
-    LOG_ERROR("cannot create a %dx%d render target with %u samples", w, h, n);
+    // 1.5.1: the card's own word, when it has stopped (removed, hung) - the reason the rest fails with it.
+    LOG_ERROR("cannot create a %dx%d render target with %u samples (the graphics card says 0x%08lx)", w, h, n,
+              static_cast<unsigned long>(device->GetDeviceRemovedReason()));
     return false;
 }
 

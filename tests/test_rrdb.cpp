@@ -155,3 +155,77 @@ TEST(rrdb_tiles_cover_the_picture_with_margins) {
     tileInput(planes.data(), 1, 4, 3, t, Border::Zero, out);
     CHECK(out[0] == 0.0f && out[5] == planes[0]);
 }
+
+namespace {
+
+// The GPU's way through a picture (stepRrdb): tile by tile, step by step, placed into an image of 4x its size.
+std::vector<uint32_t> emulateRrdb(const RrdbModel& m, const std::vector<float>& planes, int width, int height,
+                                  uint32_t jobBorder) {
+    const Border edge = jobBorder == 1 ? Border::Zero : jobBorder == 2 ? Border::Clamp : Border::Wrap;
+    const std::vector<Tile> tiles = rrdbTiles(width, height);
+    const std::vector<Op> program = rrdbProgram(m);
+    std::vector<uint32_t> image(size_t(16) * size_t(width) * size_t(height));
+    for (const Tile& t : tiles) {
+        const RrdbLayout l = rrdbLayout(m, t.inWidth, t.inHeight);
+        std::vector<float> u(l.words, 0.0f), in;
+        tileInput(planes.data(), 3, width, height, t, edge, in);
+        std::copy(in.begin(), in.end(), u.begin() + l.at[int(Buf::Img)]);
+        uint32_t k[16];
+        for (const Op& o : program) {
+            convConstants(m, o, t, l, tiles.size() == 1 ? jobBorder : 1u, 0, t.inHeight * o.scale, k);
+            convReference(k, m.net.data.data(), u);
+        }
+        placeConstants(t, l, uint32_t(width * 4), 0, 0, k);
+        placeReference(k, u, image);
+    }
+    return image;
+}
+
+}  // namespace
+
+TEST(rrdb_gpu_steps_match_the_cpu) {
+    std::vector<std::vector<float>> w;
+    std::vector<int> ins, outs;
+    RrdbModel m;
+    std::string error;
+    CHECK(parseRrdb(smallModel(w, ins, outs), m, error));
+    // One tile: the picture's own edges, each way.
+    const int width = 9, height = 7;
+    std::vector<float> planes(size_t(3 * width * height));
+    for (size_t i = 0; i < planes.size(); ++i) planes[i] = float((i * 53) % 101) / 100.0f;
+    const Border borders[3] = {Border::Wrap, Border::Zero, Border::Clamp};
+    for (uint32_t mode = 0; mode < 3; ++mode) {
+        std::vector<float> want(size_t(48 * width * height));
+        runRrdb(m, planes.data(), width, height, want.data(), borders[mode]);
+        const std::vector<uint32_t> got = emulateRrdb(m, planes, width, height, mode);
+        int worst = 0;
+        const size_t plane = size_t(16 * width * height);
+        for (size_t i = 0; i < plane; ++i)
+            for (int c = 0; c < 3; ++c)
+                worst = std::max(worst, std::abs(int(want[size_t(c) * plane + i] * 255.0f + 0.5f) -
+                                                 int((got[i] >> (16 - 8 * c)) & 255)));
+        CHECK(worst <= 1);
+    }
+    // Tiles: each tile's middle as the CPU makes it from the same margins.
+    const int bw = 130, bh = 12;
+    std::vector<float> big(size_t(3 * bw * bh));
+    for (size_t i = 0; i < big.size(); ++i) big[i] = float((i * 29) % 97) / 96.0f;
+    const std::vector<uint32_t> got = emulateRrdb(m, big, bw, bh, 0);
+    int worst = 0;
+    for (const Tile& t : rrdbTiles(bw, bh)) {
+        std::vector<float> in;
+        tileInput(big.data(), 3, bw, bh, t, Border::Wrap, in);
+        std::vector<float> out(size_t(48) * size_t(t.inWidth) * size_t(t.inHeight));
+        runRrdb(m, in.data(), t.inWidth, t.inHeight, out.data(), Border::Zero);
+        const size_t plane = size_t(16) * size_t(t.inWidth) * size_t(t.inHeight);
+        for (int y = 0; y < 4 * t.height; ++y)
+            for (int x = 0; x < 4 * t.width; ++x) {
+                const size_t s = size_t(y + 4 * t.top) * size_t(4 * t.inWidth) + size_t(x + 4 * t.left);
+                const uint32_t g = got[size_t(4 * t.y + y) * size_t(4 * bw) + size_t(4 * t.x + x)];
+                for (int c = 0; c < 3; ++c)
+                    worst = std::max(worst, std::abs(int(out[size_t(c) * plane + s] * 255.0f + 0.5f) -
+                                                     int((g >> (16 - 8 * c)) & 255)));
+            }
+    }
+    CHECK(worst <= 1);
+}

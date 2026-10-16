@@ -251,4 +251,110 @@ void tileInput(const float* planes, int channels, int width, int height, const T
             }
 }
 
+RrdbLayout rrdbLayout(const RrdbModel& m, int width, int height) {
+    RrdbLayout l;
+    for (int b = 0; b < int(Buf::Count); ++b) {
+        const Buf buf = Buf(b);
+        if (buf == Buf::Out) continue;
+        l.at[b] = uint32_t(l.words);
+        const uint64_t s = uint64_t(bufScale(buf));
+        l.words += uint64_t(bufChannels(m, buf)) * uint64_t(width) * s * uint64_t(height) * s;
+    }
+    l.at[int(Buf::Out)] = l.at[int(Buf::Up2)];
+    return l;
+}
+
+void convConstants(const RrdbModel& m, const Op& o, const Tile& t, const RrdbLayout& l, uint32_t border, int row,
+                   int end, uint32_t k[16]) {
+    const Model::Conv& c = m.net.convs[size_t(o.conv)];
+    const uint32_t w = uint32_t(t.inWidth * o.scale), h = uint32_t(t.inHeight * o.scale);
+    k[0] = w;
+    k[1] = h;
+    k[2] = uint32_t(c.in);
+    k[3] = uint32_t(c.out);
+    k[4] = uint32_t(c.bias);
+    k[5] = uint32_t(c.weight);
+    k[6] = o.lrelu ? uint32_t(m.net.prelu[0]) : 0xFFFFFFFFu;
+    k[7] = uint32_t(row);
+    k[8] = uint32_t(end);
+    k[9] = border | (o.upsample ? 4u : 0u) | (o.res1Fifth ? 8u : 0u);
+    k[10] = l.at[int(o.inA)];
+    k[11] = o.inB != Buf::Count ? l.at[int(o.inB)] : 0u;
+    k[12] = uint32_t(o.split);
+    k[13] = l.at[int(o.out)] + uint32_t(o.outOffset) * w * h;
+    k[14] = o.res1 != Buf::Count ? l.at[int(o.res1)] : 0xFFFFFFFFu;
+    k[15] = o.res2 != Buf::Count ? l.at[int(o.res2)] : 0xFFFFFFFFu;
+}
+
+void placeConstants(const Tile& t, const RrdbLayout& l, uint32_t pitch, uint32_t at, int phase, uint32_t k[16]) {
+    std::memset(k, 0, 16 * 4);
+    k[0] = uint32_t(t.inWidth * 4);
+    k[1] = uint32_t(t.inHeight * 4);
+    k[2] = uint32_t(t.left * 4);
+    k[3] = uint32_t(t.top * 4);
+    k[4] = uint32_t(t.width * 4);
+    k[5] = uint32_t(t.height * 4);
+    k[6] = uint32_t(t.x * 4);
+    k[7] = uint32_t(t.y * 4);
+    k[8] = pitch;
+    k[9] = at;
+    k[10] = l.at[int(Buf::Out)];
+    k[11] = uint32_t(phase);
+}
+
+void convReference(const uint32_t* k, const float* weights, std::vector<float>& u) {
+    const uint32_t width = k[0], height = k[1], in = k[2], outC = k[3];
+    const uint32_t border = k[9] & 3;
+    const bool halfIn = (k[9] & 4) != 0;
+    const uint32_t inWidth = halfIn ? width / 2 : width;
+    const uint32_t plane = width * height, inPlane = halfIn ? inWidth * (height / 2) : plane;
+    std::vector<float> out(size_t(outC) * plane);
+    for (uint32_t y = k[7]; y < k[8] && y < height; ++y)
+        for (uint32_t x = 0; x < width; ++x)
+            for (uint32_t o = 0; o < outC; ++o) {
+                float a = weights[k[4] + o];
+                for (uint32_t i = 0; i < in; ++i) {
+                    const uint32_t inAt = i < k[12] ? k[10] + i * inPlane : k[11] + (i - k[12]) * inPlane;
+                    for (int q = 0; q < 9; ++q) {
+                        const int lx = int(x) + q % 3 - 1, ly = int(y) + q / 3 - 1;
+                        const bool outside = lx < 0 || ly < 0 || lx >= int(width) || ly >= int(height);
+                        uint32_t sx = uint32_t(lx + int(width)) % width, sy = uint32_t(ly + int(height)) % height;
+                        if (border == 2) {
+                            sx = uint32_t(std::min(std::max(lx, 0), int(width) - 1));
+                            sy = uint32_t(std::min(std::max(ly, 0), int(height) - 1));
+                        }
+                        const uint32_t at = halfIn ? (sy / 2) * inWidth + sx / 2 : sy * width + sx;
+                        const float v = border == 1 && outside ? 0.0f : u[inAt + at];
+                        a += weights[k[5] + (o * in + i) * 9 + uint32_t(q)] * v;
+                    }
+                }
+                if (k[6] != 0xFFFFFFFFu && a < 0.0f) a *= weights[k[6] + o];
+                const uint32_t p = o * plane + y * width + x;
+                if (k[14] != 0xFFFFFFFFu) a += u[k[14] + p] * ((k[9] & 8) != 0 ? 0.2f : 1.0f);
+                if (k[15] != 0xFFFFFFFFu) a += u[k[15] + p];
+                out[p] = a;
+            }
+    // Written after all of it is read: the GPU's writes go where no read of the same step looks.
+    for (uint32_t y = k[7]; y < k[8] && y < height; ++y)
+        for (uint32_t o = 0; o < outC; ++o)
+            for (uint32_t x = 0; x < width; ++x) u[k[13] + o * plane + y * width + x] = out[o * plane + y * width + x];
+}
+
+void placeReference(const uint32_t* k, const std::vector<float>& u, std::vector<uint32_t>& image) {
+    const uint32_t plane = k[0] * k[1];
+    for (uint32_t y = 0; y < k[5]; ++y)
+        for (uint32_t x = 0; x < k[4]; ++x) {
+            const uint32_t src = (y + k[3]) * k[0] + x + k[2];
+            float v[3];
+            for (uint32_t c = 0; c < 3; ++c) v[c] = std::min(1.0f, std::max(0.0f, u[k[10] + c * plane + src]));
+            uint32_t& d = image[k[9] + (k[7] + y) * k[8] + k[6] + x];
+            if (k[11] == 0) {
+                d = 0xFF000000u | uint32_t(v[0] * 255.0f + 0.5f) << 16 | uint32_t(v[1] * 255.0f + 0.5f) << 8 |
+                    uint32_t(v[2] * 255.0f + 0.5f);
+            } else {
+                d = (v[0] + v[1] + v[2] >= 1.5f ? 0xFF000000u : 0u) | (d & 0x00FFFFFFu);
+            }
+        }
+}
+
 }  // namespace uagfx::ai

@@ -196,6 +196,9 @@ private:
     double stepRrdb(Job& job, double budget, bool& failed);
     bool ensureScratch(UINT64 words);
     bool selfTestRrdb(int net, std::string& error);
+    // 1.5.1: the steps one by one, each step's output read back and compared with ai::convReference.
+    bool traceRrdb(int net, const std::vector<uint32_t>& argb, int width, int height, std::string& error);
+    void dispatchRrdbConv(const Net& net, const uint32_t k[16]);
     bool finish(Job& job);
     ID3D12Resource* makeImage(Job& job, std::vector<Level>& levels);  // in COPY_SOURCE, all its levels
     void readBack(const Job& job, ID3D12Resource* image, const Level& top);  // for the pack (0.48)
