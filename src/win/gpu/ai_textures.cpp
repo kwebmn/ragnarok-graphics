@@ -189,7 +189,8 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     dump_.setGameDir(gameDir);
     const bool packThere = GetFileAttributesA(packPath_.c_str()) != INVALID_FILE_ATTRIBUTES;
     std::string packError;
-    if (!pack_.open(packPath_, packError) && packThere)
+    // 1.5.8: with the pack's pictures off ([ai] enabled = 0, generate = 1) the pack stays closed: all is made anew.
+    if (s.enabled && !pack_.open(packPath_, packError) && packThere)
         LOG_ERROR("AI textures: the texture pack cannot be read (%s)", packError.c_str());
     if (!pack_.isOpen() && !generate_) {
         error = "no texture pack (uaro-textures.zip) in the game's folder - its builder is on the Texture pack page of "
@@ -210,7 +211,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     // that reads as one (a writer goes on after its last picture: anything else would be cut away).
     if (generate_) {
         writerMutex_ = CreateMutexA(nullptr, FALSE, pack::kWriterMutex);
-        writable_ = writerMutex_ && WaitForSingleObject(writerMutex_, 0) == WAIT_OBJECT_0;
+        writable_ = s.enabled && writerMutex_ && WaitForSingleObject(writerMutex_, 0) == WAIT_OBJECT_0;
         if (writable_ && packThere && !pack_.isOpen()) {
             ReleaseMutex(writerMutex_);
             writable_ = false;
@@ -235,9 +236,10 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     const std::string making =
         !generate_ ? std::string("making none (the pack's pictures only)")
                    : "making new ones in the game, self-test passed in " + std::to_string(tested) + " ms, " +
-                         (writable_ ? "written into uaro-textures.zip"
-                                    : "not kept: the pack is being written by its builder or another game, or cannot "
-                                      "be read");
+                         (writable_    ? "written into uaro-textures.zip"
+                          : !s.enabled ? "not kept: the pack's pictures are off - all made anew, the pack untouched"
+                                       : "not kept: the pack is being written by its builder or another game, or "
+                                         "cannot be read");
     LOG_INFO("AI textures: on - %s; x%d, textures %d-%d, ahead %s; %s", kinds.c_str(), scale_, minSide_, maxSide_,
              ahead_ ? "on" : "off", making.c_str());
     if (pack_.isOpen())
@@ -246,6 +248,8 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
                  static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)),
                  static_cast<unsigned>(pictures_->ahead()), static_cast<unsigned>(pictures_->aliases()),
                  pack_.recovered() ? " - cut short, read by its pictures' headers, without its index" : "");
+    else if (!s.enabled)
+        LOG_INFO("AI textures: the texture pack is not read - its pictures are off, the network makes them all");
     else
         LOG_INFO("AI textures: no texture pack (uaro-textures.zip) in the game's folder yet");
     WIN32_FILE_ATTRIBUTE_DATA old{};

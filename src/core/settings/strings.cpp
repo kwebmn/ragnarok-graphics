@@ -1001,11 +1001,14 @@ const Entry kTexts[] = {
     {"Make new ones while playing (debugging)", "Створювати нові під час гри (налагодження)",
      "Создавать новые во время игры (отладка)"},
     {"Direct3D 12: the network makes in the game what the texture pack does not have yet, a little every frame, and "
-     "writes it into the pack. For the pack's maker; players take the ready pack - their graphics card makes nothing.",
+     "writes it into the pack. With the pack's HD textures off it makes every picture anew and keeps none - a model "
+     "tried without touching the pack. For the pack's maker; players take the ready pack.",
      "Direct3D 12: нейромережа створює в грі те, чого ще немає в пакеті текстур, потроху кожен кадр, і дописує це в "
-     "пакет. Для того, хто збирає пакет; гравці беруть готовий пакет - їхня відеокарта нічого не створює.",
+     "пакет. З вимкненими HD-текстурами з пакета вона створює всі картинки наново й нічого не зберігає - так модель "
+     "пробується, не чіпаючи пакета. Для того, хто збирає пакет; гравці беруть готовий пакет.",
      "Direct3D 12: нейросеть создаёт в игре то, чего ещё нет в пакете текстур, понемногу каждый кадр, и дописывает "
-     "это в пакет. Для того, кто собирает пакет; игроки берут готовый пакет - их видеокарта ничего не создаёт."},
+     "это в пакет. С выключенными HD-текстурами из пакета она создаёт все картинки заново и ничего не сохраняет - так "
+     "модель пробуется, не трогая пакет. Для того, кто собирает пакет; игроки берут готовый пакет."},
     {"The textures come from the texture pack uaro-textures.zip in the game's folder. What it lacks the game's log "
      "says (\"not in the pack\").",
      "Текстури беруться з пакета текстур uaro-textures.zip у теці гри. Чого в ньому бракує, пише журнал гри (\"not in "

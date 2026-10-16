@@ -19,7 +19,10 @@ enum class WindowArt { Xbr, Ai, Pixels };
 // textures enlarged by a neural network (Real-ESRGAN): 0.48 - the pictures of the texture pack uaro-textures.zip next
 // to uaRO.exe (upscaled.grf until 0.47), its builder on the Texture pack page.
 struct AiSettings {
+    // 1.5.8: the texture pack's pictures shown; generate (below) is a switch of its own, either one turns the AI
+    // textures on.
     bool enabled = false;
+    bool on() const { return enabled || generate; }
     // What it works on, the kinds the driver tells apart by how the game draws them (core/ai/kinds.hpp).
     bool ground = true;
     bool objects = true;   // buildings, trees, water
@@ -42,7 +45,8 @@ struct AiSettings {
     int maxSize = 512;
     // 0.42: the network makes in the game what the texture pack (uaro-textures.zip) does not have (0.48: and writes it
     // into the pack) - a debugging aid of the pack's maker. Off: no model is even loaded; the players' textures come
-    // from the pack.
+    // from the pack. 1.5.8: with the pack off (enabled 0) it makes every picture anew and keeps none - the models
+    // tried without touching the pack.
     bool generate = false;
     bool ahead = true;  // a map's textures the pack's index knows are taken at once, not when they come into view
     // 0.57: Direct3D 11 keeps the pictures compressed in video memory (BC1/BC3): "on", "off", "auto" (a card under

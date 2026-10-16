@@ -104,7 +104,7 @@ bool Context::open(std::string& error) {
         LOG_INFO("frame generation %dx: off - it needs NVIDIA DLSS on (Smoothing page)", config.frameGeneration);
     gpu::setChosenAdapter(config.gpu);  // 0.50.2
     // Part 3: the 64-bit renderer - DLSS and the AI textures need it.
-    if (!remote && (config.bridge || config.dlss != "off" || config.ai.enabled)) {
+    if (!remote && (config.bridge || config.dlss != "off" || config.ai.on())) {
         gpu::BridgeOptions o;
         o.hostExe = gameDir() + "\\uaro-graphics\\uaro-render64.exe";
         o.gameDir = gameDir();
@@ -149,7 +149,7 @@ bool Context::open(std::string& error) {
     // ours (not RTX Remix's), as the torches can be turned on in a running game.
     // 0.46.1: Direct3D 11 draws no torches; 0.47: its AI textures take the sprite frames when they are on.
     const AiSettings& ai = config.ai;
-    const bool cells = ai.enabled && (ai.sprites() || ai.effects || ai.icons);
+    const bool cells = ai.on() && (ai.sprites() || ai.effects || ai.icons);
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
     const bool d3d11Hook = (aiHere && cells) || config.effects.actorShadows || config.effects.torch ||
                            config.effects.appear || config.effects.glint ||
@@ -160,7 +160,7 @@ bool Context::open(std::string& error) {
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)
-    crisp::setAiIcons(config.ai.enabled && config.ai.icons && (renderer->remote() || aiHere) && config.crispText,
+    crisp::setAiIcons(config.ai.on() && config.ai.icons && (renderer->remote() || aiHere) && config.crispText,
                       config.ai.uiPieces);
     return true;
 }
@@ -360,7 +360,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     // AI textures: the pack's index notes the maps textures are seen on (making them); 0.25: the map's file - its lamps
     // and the torches the game does not show.
-    if ((config.ai.enabled && renderer->remote()) || !config.remix) {
+    if ((config.ai.on() && renderer->remote()) || !config.remix) {
         const std::string map = readGameMap();
         if (map != map_) {
             map_ = map;

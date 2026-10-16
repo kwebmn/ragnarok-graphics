@@ -230,7 +230,7 @@ int Host::run(const Args& a) {
     }
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
     renderer_.setIconSink(&Host::iconDone, this);
-    if (a.ai.enabled) {
+    if (a.ai.on()) {
         startProgress(this, start::Progress{start::Stage::AiTextures, 0, 0});  // 0.40
         renderer_.startAiTextures(a.dir, a.ai);  // its own log line, on or why not
     }

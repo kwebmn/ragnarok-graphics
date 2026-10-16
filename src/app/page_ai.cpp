@@ -48,9 +48,9 @@ public:
     void build(Panel& p) override {
         Model& m = host_.model();
         const AiSettings a = m.pendingConfig().ai;
-        const bool on = a.enabled;
+        const bool on = a.on();  // 1.5.8: the pack's pictures or the network making them
         p.heading(t(Text::PageAi));
-        p.check(kEnable, t(Text::AiEnable), on, t(Text::AiEnableHint));
+        p.check(kEnable, t(Text::AiEnable), a.enabled, t(Text::AiEnableHint));
         const AiPreset preset = aiPresetOf(a);
         p.choice(kPreset, t(Text::AiPreset),
                  {t(Text::AiPresetRecommended), t(Text::AiPresetAll), t(Text::AiPresetCustom)}, int(preset),
@@ -79,7 +79,8 @@ public:
                std::atoi(m.token(setting("ai.max_size")).c_str()), t(Text::AiSizesHint), on, L"–");
         p.check(kAhead, t(Text::AiAhead), m.token(setting("ai.ahead")) == "1", t(Text::AiAheadHint), on);
         p.note(t(Text::AiPackNote));  // 0.42
-        p.check(kGenerate, t(Text::AiGenerate), m.token(setting("ai.generate")) == "1", t(Text::AiGenerateHint), on);
+        // 1.5.8: a switch of its own - without the pack's pictures it makes them all anew and keeps none.
+        p.check(kGenerate, t(Text::AiGenerate), a.generate, t(Text::AiGenerateHint));
         if (m.token(setting("renderer.api")) == "d3d11") p.note(t(Text::AiD3d11Note));  // 0.47
         p.note(t(Text::AfterRestart));
         if (!on) p.note(t(Text::AiOffNote));
@@ -158,7 +159,8 @@ private:
         Config c;
         c.ai = aiPresetSettings(preset, m.pendingConfig().ai.enabled);
         for (const IniSetting& s : iniSettings())
-            if (std::string(s.section) == "ai" && std::string(s.key) != "enabled") m.setToken(s, tokenOf(s, c));
+            if (std::string(s.section) == "ai" && std::string(s.key) != "enabled" && std::string(s.key) != "generate")
+                m.setToken(s, tokenOf(s, c));  // 1.5.8: both switches stay as the player set them
     }
 };
 
