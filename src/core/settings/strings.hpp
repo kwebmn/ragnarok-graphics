@@ -182,6 +182,7 @@ enum class Text : uint16_t {
     GfxSoundOurs, GfxSoundRate, GfxSoundRateHint, GfxSoundRateGame, GfxSoundRate44, GfxSoundRate48, GfxSoundVoices,
     GfxSoundVoicesHint,
     GfxSoundBackground, GfxSoundBackgroundHint, GfxSoundLimiter, GfxSoundLimiterHint,
+    GfxSoundStereo, GfxSoundStereoHint, GfxSoundSteal, GfxSoundStealHint, GfxSoundCrossfade, GfxSoundCrossfadeHint,
     Count
 };
 

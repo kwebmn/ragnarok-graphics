@@ -314,6 +314,12 @@ const std::vector<IniSetting>& iniSettings() {
          Text::GfxSoundBackgroundHint, "%"},
         {"sound", "limiter", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundLimiter,
          Text::GfxSoundLimiterHint, ""},
+        {"sound", "stereo", Page::Sound, Control::Slider, 0, 100, 5, {}, {}, Text::GfxSoundStereo,
+         Text::GfxSoundStereoHint, "%"},  // 0.92
+        {"sound", "steal", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundSteal,
+         Text::GfxSoundStealHint, ""},
+        {"sound", "crossfade", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundCrossfade,
+         Text::GfxSoundCrossfadeHint, ""},
         {"debug", "profile", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagProfile,
          Text::DiagProfileHint, ""},
         {"debug", "log", Page::Diagnostics, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
@@ -479,6 +485,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "sound.voices") return c.sound.voices ? "1" : "0";
     if (k == "sound.background") return std::to_string(c.sound.background);
     if (k == "sound.limiter") return c.sound.limiter ? "1" : "0";
+    if (k == "sound.stereo") return std::to_string(c.sound.stereo);  // 0.92
+    if (k == "sound.steal") return c.sound.steal ? "1" : "0";
+    if (k == "sound.crossfade") return c.sound.crossfade ? "1" : "0";
     if (k == "debug.log") return c.logLevel == LogLevel::Debug ? "verbose" : "normal";
     return "";
 }

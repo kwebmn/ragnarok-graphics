@@ -539,6 +539,14 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 100, c.sound.background);
         } else if (key == "sound.limiter") {
             setBool(val, c.sound.limiter);
+        } else if (key == "sound.stereo") {  // 0.92
+            toInt(val, 0, 100, c.sound.stereo);
+        } else if (key == "sound.stereo_flip") {
+            setBool(val, c.sound.stereoFlip);
+        } else if (key == "sound.steal") {
+            setBool(val, c.sound.steal);
+        } else if (key == "sound.crossfade") {
+            setBool(val, c.sound.crossfade);
         } else if (key == "debug.merge_draws") {
             setBool(val, c.mergeDraws);
         } else if (key == "debug.profile") {

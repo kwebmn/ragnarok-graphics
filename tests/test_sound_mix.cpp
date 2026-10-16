@@ -29,3 +29,33 @@ TEST(sound_settings_read) {
     CHECK(parseConfig("[sound]\nrate = 12345\n").sound.rate == 44100);  // not one of the rates: the default
     CHECK(parseConfig("[sound]\nbackground = 150\n").sound.background == 30);
 }
+
+TEST(sound_pan_by_the_screens_right) {
+    // 0.92: the screen's right along the world's x: a sound at +x is on the right, at -x on the left, ahead central
+    CHECK(sound::panOf(100, 0, 1, 0, 100) == 127);
+    CHECK(sound::panOf(-100, 0, 1, 0, 100) == 1);
+    CHECK(sound::panOf(0, 100, 1, 0, 100) == 64);
+    CHECK(sound::panOf(0.2f, 0.1f, 1, 0, 100) == 64);  // at the player
+    CHECK(sound::panOf(100, 0, 1, 0, 60) == 102);      // 60 % of the way
+    CHECK(sound::panOf(0, 100, 0, -1, 100) == 1);      // the camera turned: the right is -z
+    CHECK(sound::panOf(100, 0, 1, 0, 0) == 64);
+}
+
+TEST(sound_fades_cross_at_even_power) {
+    CHECK(sound::fadeIn(0) == 0.0 && sound::fadeOut(0) == 1.0);
+    CHECK(sound::fadeIn(sound::kFadeMs) > 0.999 && sound::fadeOut(sound::kFadeMs) < 0.001);
+    const double a = sound::fadeIn(700), b = sound::fadeOut(700);
+    CHECK(a * a + b * b > 0.999 && a * a + b * b < 1.001);
+    CHECK(sound::fadeIn(-5) == 0.0 && sound::fadeOut(99999) < 0.001);
+}
+
+TEST(sound_quietest_sample_stopped_first) {
+    const int v[] = {90, 20, -1, 50};
+    CHECK(sound::quietest(v, 4) == 1);
+    const int none[] = {-1, -1};
+    CHECK(sound::quietest(none, 2) == -1);
+    const Config c = parseConfig("[sound]\nstereo = 0\nsteal = 0\ncrossfade = 0\nstereo_flip = 1\n");
+    CHECK(c.sound.stereo == 0 && !c.sound.steal && !c.sound.crossfade && c.sound.stereoFlip);
+    const Config d = parseConfig("");
+    CHECK(d.sound.stereo == 60 && d.sound.steal && d.sound.crossfade && !d.sound.stereoFlip);
+}

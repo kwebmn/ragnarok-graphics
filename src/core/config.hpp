@@ -256,6 +256,10 @@ struct SoundSettings {
     bool voices = true;   // voices: the most sounds at once the game holds (48)
     int background = 30;  // background: % of the volume while the game is not in front (100 = as it is)
     bool limiter = true;  // limiter: a crowd's sounds made quieter together
+    int stereo = 60;        // 0.92, stereo: % of the way to the left or right a sound beside the player goes
+    bool stereoFlip = false;  // stereo_flip (not on the page): left and right the other way round
+    bool steal = true;      // steal: all samples busy - the quietest stopped for a new sound
+    bool crossfade = true;  // crossfade: the music's pieces change over 1.5 s
 };
 
 struct Config {

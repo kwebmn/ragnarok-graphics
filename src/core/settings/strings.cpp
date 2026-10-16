@@ -1758,6 +1758,27 @@ const Entry kTexts[] = {
     {"Past six sounds at once each is made a little quieter, so that many skills together do not crackle.",
      "Понад шість звуків одночасно кожен стає трохи тихішим, щоб багато вмінь разом не хрипіли.",
      "Больше шести звуков одновременно - каждый становится чуть тише, чтобы много умений вместе не хрипели."},
+    {"Left and right",
+     "Ліворуч і праворуч",
+     "Слева и справа"},
+    {"A sound beside your character comes from that side of the screen: how far to the side. 0 is the game's "
+     "(everything in the middle).",
+     "Звук збоку від персонажа лунає з того боку екрана: наскільки сильно. 0 - як у грі (усе посередині).",
+     "Звук сбоку от персонажа звучит с той стороны экрана: насколько сильно. 0 - как в игре (всё посередине)."},
+    {"Never lose a new sound",
+     "Не губити нові звуки",
+     "Не терять новые звуки"},
+    {"When every sound channel is busy the quietest (the farthest) stops for the new one - the game dropped the new "
+     "one.",
+     "Коли всі звукові канали зайняті, найтихіший (найдальший) зупиняється заради нового - гра відкидала новий.",
+     "Когда все звуковые каналы заняты, самый тихий (самый дальний) останавливается ради нового - игра отбрасывала "
+     "новый."},
+    {"Smooth change of music",
+     "Плавна зміна музики",
+     "Плавная смена музыки"},
+    {"Moving to another map the old music fades out and the new one in over 1.5 seconds instead of breaking off.",
+     "Під час переходу на іншу мапу стара музика затихає, а нова наростає за 1,5 секунди, а не обривається.",
+     "При переходе на другую карту старая музыка затихает, а новая нарастает за 1,5 секунды, а не обрывается."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
