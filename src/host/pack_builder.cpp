@@ -332,8 +332,15 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
     out.assign(list_.size(), {});
     SYSTEM_INFO si{};
     GetSystemInfo(&si);
-    // At most 8: each thread holds the archives' directories of its own (tens of MB each).
-    const size_t threads = size_t(std::clamp(int(si.dwNumberOfProcessors) - 1, 1, 8));
+    // 1.6.6: every core but one, as far as the memory goes - each thread holds the archives' directories of its own
+    // (about 100 MB with Palettes.grf's colours); 1.6.4 stopped at 8.
+    MEMORYSTATUSEX mem{};
+    mem.dwLength = sizeof mem;
+    const uint64_t free = GlobalMemoryStatusEx(&mem) ? mem.ullAvailPhys : (uint64_t(2) << 30);
+    const int byMemory = int(std::max<uint64_t>(1, free / 2 / (uint64_t(100) << 20)));  // half of what is free
+    const size_t threads = size_t(std::clamp(std::min(int(si.dwNumberOfProcessors) - 1, byMemory), 1, 32));
+    LOG_INFO("texture pack: reading the game's files in %zu threads (%lu cores, %llu MB free)", threads,
+             static_cast<unsigned long>(si.dwNumberOfProcessors), static_cast<unsigned long long>(free >> 20));
     std::atomic<uint32_t> filesDone{0};
     std::atomic<bool> stop{false};
     std::vector<ListWork> work(threads);
