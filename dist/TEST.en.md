@@ -1,3 +1,13 @@
+# uaRO Graphics 1.4.2 — testing
+
+- **Depth of field: the ground went soft when the character stood under a tree or a roof.** The focus came from
+  the depths seen in the middle of the screen, and there a tree's crown, much nearer the camera than the ground,
+  took it — all the ground around blurred; a step away and it was sharp again. The focus now comes from the game's
+  camera — exactly the point it looks at, the character, whatever covers it. Without the camera (another exe) — as
+  before.
+- How to check: turn on the depth of field, step under a tree's crown or an awning — the ground around the
+  character stays sharp, only the distance is soft.
+
 # uaRO Graphics 1.4.1 — testing
 
 - **uaRO Pad 0.7.0 comes along: talking to NPCs from the gamepad.** D-pad ↓ talks to the nearest NPC (with the right
