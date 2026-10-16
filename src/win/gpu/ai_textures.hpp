@@ -198,6 +198,9 @@ private:
     double stepRrdb(Job& job, double budget, bool& failed);
     bool ensureScratch(UINT64 words);
     bool selfTestRrdb(int net, std::string& error);
+    // 1.5.5: the texture pack's builder (enlarge) through RRDB - tile by tile, a submission every so much work.
+    bool enlargeRrdb(int net, const uint32_t* argb, int w, int h, uint32_t border, std::vector<uint32_t>& out,
+                     std::string& error);
     // 1.5.1: the steps one by one, each step's output read back and compared with ai::convReference.
     bool traceRrdb(int net, const std::vector<uint32_t>& argb, int width, int height, std::string& error);
     void dispatchRrdbConv(const Net& net, const uint32_t k[16]);

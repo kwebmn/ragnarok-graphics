@@ -334,6 +334,7 @@ bool AiTextures::enlarge(int net, const uint32_t* argb, int w, int h, uint32_t b
         error = "no network for it";
         return false;
     }
+    if (nets_[size_t(net)]->rrdb) return enlargeRrdb(net, argb, w, h, border, out, error);  // 1.5.5
     const ai::Model& model = nets_[size_t(net)]->model;
     Job j;
     j.net = net;
@@ -384,6 +385,61 @@ bool AiTextures::enlarge(int net, const uint32_t* argb, int w, int h, uint32_t b
     }
     releaseCom(image);
     releaseCom(back);
+    if (!ok) error = m_.lost ? "the graphics card was lost" : "no GPU memory for the picture";
+    return ok;
+}
+
+bool AiTextures::enlargeRrdb(int net, const uint32_t* argb, int w, int h, uint32_t border,
+                             std::vector<uint32_t>& out, std::string& error) {
+    Job j;
+    j.net = net;
+    j.width = w;
+    j.height = h;
+    j.border = border;
+    j.pixels.assign(argb, argb + size_t(w) * size_t(h));
+    j.alpha = ai::hasTransparency(j.pixels.data(), w, h);
+    if (!m_.begin()) {
+        error = "the graphics card was lost";
+        return false;
+    }
+    computeBound_ = false;
+    // A 512x512 texture is over a trillion multiply-adds: submitted in parts, so that no list runs long enough for
+    // Windows to take the card for hung.
+    constexpr double kPerList = 1e11;
+    double inList = 0;
+    bool failed = false;
+    while (!j.rrdbDone && !failed && !m_.lost) {
+        inList += stepRrdb(j, 1e18, failed);
+        if (inList >= kPerList && !j.rrdbDone && !failed) {
+            m_.waitIdle();
+            inList = 0;
+            if (!m_.begin()) break;
+            computeBound_ = false;
+        }
+    }
+    const int oh = h * kNetScale, ow = w * kNetScale;
+    ID3D12Resource* back = !failed && j.rrdbDone ? buffer(m_.device, D3D12_HEAP_TYPE_READBACK,
+                                                          UINT64(j.levels[0].pitch) * UINT64(oh),
+                                                          D3D12_RESOURCE_STATE_COPY_DEST, false)
+                                                 : nullptr;
+    if (back) {
+        D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        m_.transition(j.image, state, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        m_.list->CopyBufferRegion(back, 0, j.image, 0, UINT64(j.levels[0].pitch) * UINT64(oh));
+    }
+    m_.waitIdle();
+    computeBound_ = false;
+    void* mapped = nullptr;
+    const bool ok = back && !m_.lost && SUCCEEDED(back->Map(0, nullptr, &mapped));
+    if (ok) {
+        out.resize(size_t(ow) * size_t(oh));
+        for (int y = 0; y < oh; ++y)
+            std::memcpy(out.data() + size_t(y) * size_t(ow),
+                        static_cast<const uint8_t*>(mapped) + size_t(y) * j.levels[0].pitch, size_t(ow) * 4);
+        back->Unmap(0, nullptr);
+    }
+    releaseCom(back);
+    releaseCom(j.image);
     if (!ok) error = m_.lost ? "the graphics card was lost" : "no GPU memory for the picture";
     return ok;
 }
