@@ -1,3 +1,12 @@
+# uaRO Graphics 1.3.2 — testing
+
+- **The settings app started from the uaro-graphics folder.** Opened not from the client folder but from its
+  uaro-graphics subfolder, it did not see the game: "Cannot start uaRO.exe (error 2)", "driver unknown", the update
+  without update.bat. The app now finds the client in the folder above. With no game there either, the start's error
+  says where the app belongs.
+- How to check: run uaro-graphics\uaro-graphics.exe — the driver's version shows, "Apply and play" starts the game,
+  "Update now" works.
+
 # uaRO Graphics 1.3.1 — testing
 
 - **"Update now" without update.bat.** With a client copied without the install's files, the Service page's button
