@@ -1,3 +1,9 @@
+# uaRO Graphics 0.90.2 — testing
+
+- The fast cell under the mouse: in a new map's first 60 picks the client is still setting the map up and answers
+  "no cell" with the mouse over the ground. Such disagreements no longer count towards turning it off (the map is
+  just checked anew). Check: the log has no `pick: the game's own cell under the mouse from now on` line.
+
 # uaRO Graphics 0.90.1 — testing
 
 What is new in 0.90.1 — the fast cell under the mouse fixed:
