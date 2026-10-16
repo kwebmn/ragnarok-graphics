@@ -1,3 +1,12 @@
+# uaRO Graphics 1.3.4 — testing
+
+- **Text jumped while typed** (the login, the chat). Crisp text spread its large letters evenly over the whole line
+  since 0.41: every new letter changed the line's width and moved the ones already typed a little. Each letter now
+  sits in the middle of its own place in the game's line — the typed ones stay, the room after "m" and "w" split
+  either side.
+- How to check: type the login and a chat message — the letters stay put, the windows' text reads evenly. Should it
+  still jump — turn off crisp text on the Quality page and tell us.
+
 # uaRO Graphics 1.3.3 — testing
 
 The auto setup ("Set up for this computer") now sets these too:
