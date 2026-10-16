@@ -1,3 +1,12 @@
+# uaRO Graphics 0.98.0 — testing
+
+- **Sun flare** (Effects page, off by default; Direct3D 12). Under the open sky in the day, when the sky shows towards
+  the sun (up and to the left, against the way the shadows fall), a soft glow at the screen's edge and a few faint
+  coloured rings on the line through the middle. None in dungeons, in towns without sky, or at night.
+- How to check: turn it on, in a field turn the camera so that the sky past the map's edge shows at the top left —
+  the glow and the rings come; cover the sky (turn towards houses or trees) — the flare goes. Should it be too bright
+  — tell us.
+
 # uaRO Graphics 0.97.0 — testing
 
 - **Wet ground in the rain** (Effects page, off by default; Direct3D 12, needs "Weather" on). On maps where it rains
