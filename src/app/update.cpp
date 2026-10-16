@@ -99,22 +99,28 @@ UpdateState updateState() {
 
 std::string startUpdate(const std::wstring& gameDir) {
     const std::wstring bat = gameDir + L"\\update.bat";
-    if (GetFileAttributesW(bat.c_str()) == INVALID_FILE_ATTRIBUTES) {
-        // 1.3.1: a client copied without it - the one this app carries goes there first
+    {
+        // 1.3.1: a client copied without it - the one this app carries goes there first. 1.5.11: always, over an
+        // older one too - a fix of it (curl's certificate check) reaches the players with this app, not one update
+        // late.
         HRSRC r = FindResourceW(nullptr, L"UPDATE_BAT", MAKEINTRESOURCEW(10));  // RT_RCDATA
         HGLOBAL g = r ? LoadResource(nullptr, r) : nullptr;
         const void* p = g ? LockResource(g) : nullptr;
         const DWORD size = r ? SizeofResource(nullptr, r) : 0;
-        HANDLE f = p && size ? CreateFileW(bat.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL,
-                                           nullptr)
+        const bool there = GetFileAttributesW(bat.c_str()) != INVALID_FILE_ATTRIBUTES;
+        HANDLE f = p && size ? CreateFileW(bat.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                                           FILE_ATTRIBUTE_NORMAL, nullptr)
                              : INVALID_HANDLE_VALUE;
-        if (f == INVALID_HANDLE_VALUE) return "no update.bat in the game's folder, and it could not be written there";
-        DWORD wrote = 0;
-        const bool ok = WriteFile(f, p, size, &wrote, nullptr) && wrote == size;
-        CloseHandle(f);
-        if (!ok) {
-            DeleteFileW(bat.c_str());
-            return "update.bat could not be written into the game's folder";
+        if (f == INVALID_HANDLE_VALUE && !there)
+            return "no update.bat in the game's folder, and it could not be written there";
+        if (f != INVALID_HANDLE_VALUE) {  // else the one there (read-only, say) runs
+            DWORD wrote = 0;
+            const bool ok = WriteFile(f, p, size, &wrote, nullptr) && wrote == size;
+            CloseHandle(f);
+            if (!ok) {
+                DeleteFileW(bat.c_str());
+                return "update.bat could not be written into the game's folder";
+            }
         }
     }
     // In a console of its own, from the game's folder (it checks for uaRO.exe there).

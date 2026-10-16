@@ -22,7 +22,9 @@ where tar >nul 2>&1 || goto :done
 echo Downloading NVIDIA DLSS for uaRO Graphics (34 MB)...
 if exist "%work%" rmdir /s /q "%work%"
 mkdir "%work%\files" || goto :failed
-curl -fsSL -o "%work%\dlss.zip" "%url%" || goto :failed
+rem 1.5.11: as update.bat - where the certificate's revocation cannot be checked, best effort, or none
+curl -fsSL -o "%work%\dlss.zip" "%url%" 2>nul || curl -fsSL --ssl-revoke-best-effort -o "%work%\dlss.zip" "%url%" 2>nul ^
+    || curl -fsSL --ssl-no-revoke -o "%work%\dlss.zip" "%url%" || goto :failed
 tar -xf "%work%\dlss.zip" -C "%work%\files" 2>nul || goto :failed
 if not exist "%work%\files\uaro-graphics\dlss\sl.interposer.dll" goto :failed
 if not exist "uaro-graphics\dlss" mkdir "uaro-graphics\dlss" || goto :failed
