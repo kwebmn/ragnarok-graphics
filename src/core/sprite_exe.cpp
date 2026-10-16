@@ -64,6 +64,12 @@ Source sourceOf(const char* path) {
     return Source::Unknown;
 }
 
+bool cardOnGround(const char* path) {
+    if (!path || sourceOf(path) != Source::Item) return false;
+    const std::string p = normal(path), card = "\xC4\xAB\xB5\xE5.spr";  // 카드.spr
+    return p.size() >= card.size() && p.compare(p.size() - card.size(), card.size(), card) == 0;
+}
+
 const char* sourceName(uint8_t source) {
     switch (Source(source)) {
         case Source::Monster: return "monster";

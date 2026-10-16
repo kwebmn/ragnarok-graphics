@@ -119,10 +119,13 @@ Surface7* Surface7::create(const SurfacePlan& plan, DWORD caps, std::string& err
     return s;
 }
 
-uint8_t Surface7::spriteAt(float x, float y) const {
-    for (const SpriteCell& s : top()->cells_)
-        if (x >= float(s.rect.left) && x < float(s.rect.right) && y >= float(s.rect.top) && y < float(s.rect.bottom))
+uint8_t Surface7::spriteAt(float x, float y, bool* card) const {
+    for (const Cell& s : top()->cells_)
+        if (x >= float(s.rect.left) && x < float(s.rect.right) && y >= float(s.rect.top) && y < float(s.rect.bottom)) {
+            if (card) *card = s.card;
             return s.source;
+        }
+    if (card) *card = false;
     return 0;
 }
 
@@ -500,14 +503,16 @@ HRESULT STDMETHODCALLTYPE Surface7::Unlock(LPRECT) {
         uint8_t source = 0;
         if (level_ == 0 && win::spriteCell(cell, source)) {
             top()->levels_->slotWritten(cell, source);
-            std::vector<SpriteCell>& cells = top()->cells_;  // 0.93
+            std::vector<Cell>& cells = top()->cells_;  // 0.93
+            const bool card = win::spriteCellCard();
             bool known = false;
-            for (SpriteCell& s : cells)
+            for (Cell& s : cells)
                 if (s.rect == cell) {
                     s.source = source;
+                    s.card = card;
                     known = true;
                 }
-            if (!known && cells.size() < 1024) cells.push_back(SpriteCell{cell, source});
+            if (!known && cells.size() < 1024) cells.push_back(Cell{cell, source, card});
         }
     }
     if (role_ == SurfaceRole::RenderTarget) {

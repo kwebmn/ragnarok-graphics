@@ -11,5 +11,6 @@ bool installSpriteHook();
 // While the game writes a frame: the cell (in the texture's texels) and what the frame is of (sprite_exe::Source);
 // false at any other time.
 bool spriteCell(Rect& cell, uint8_t& source);
+bool spriteCellCard();  // 0.95: ... and it is a card lying on the ground
 
 }  // namespace uagfx::win

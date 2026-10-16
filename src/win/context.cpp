@@ -151,7 +151,7 @@ bool Context::open(std::string& error) {
     const bool cells = ai.enabled && (ai.sprites() || ai.effects || ai.icons);
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
     const bool d3d11Hook = (aiHere && cells) || config.effects.actorShadows || config.effects.torch ||
-                           config.effects.appear;  // 0.93: the sprites' kinds
+                           config.effects.appear || config.effects.glint;  // 0.93, 0.95: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map

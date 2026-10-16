@@ -1,9 +1,11 @@
 #include "win/dx7/device7.hpp"
 
+#include <algorithm>
 #include <cstring>
 
 #include "core/device_caps.hpp"
 #include "core/frame.hpp"
+#include "core/glint.hpp"
 #include "core/sprite_exe.hpp"
 #include "win/context.hpp"
 #include "win/crisp/crisp.hpp"
@@ -232,44 +234,83 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         vertices = soft_.data();
     }
     // 0.93: a monster, a character, an NPC or an item coming into view fades in - its vertices' alpha, in a copy.
-    if (fx.appear && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 && vertexCount == 4 && !indices &&
-        textures_[0]) {
+    // 0.95: a card lying on the ground sparkles - a star drawn after it.
+    bool sparkle = false;
+    glint::Vertex star[8];
+    if ((fx.appear || fx.glint) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 && vertexCount == 4 &&
+        !indices && textures_[0]) {
         const auto* v = static_cast<const uint8_t*>(vertices);
-        float x = 0, y = 0, u = 0, w = 0;
+        float x = 0, y = 0, u = 0, w = 0, z = 0, rhw = 0, x0 = 1e9f, x1 = -1e9f, y0 = 1e9f;
         for (DWORD i = 0; i < 4; ++i) {
-            float f[2], t[2];
+            float f[4], t[2];
             std::memcpy(f, v + i * 32, sizeof f);
             std::memcpy(t, v + i * 32 + 24, sizeof t);
             x += f[0] / 4;
             y += f[1] / 4;
+            z += f[2] / 4;
+            rhw += f[3] / 4;
             u += t[0] / 4;
             w += t[1] / 4;
+            x0 = std::min(x0, f[0]);
+            x1 = std::max(x1, f[0]);
+            y0 = std::min(y0, f[1]);
         }
         const Surface7* tex = textures_[0];
-        const uint8_t kind = tex->spriteAt(u * float(tex->width()), w * float(tex->height()));
+        bool card = false;
+        const uint8_t kind = tex->spriteAt(u * float(tex->width()), w * float(tex->height()), &card);
         const bool sprite = kind >= uint8_t(sprite_exe::Source::Monster) && kind <= uint8_t(sprite_exe::Source::Item);
         // Its alpha must reach the picture: blended, the vertices' alpha times the texture's.
         const bool fades = setup.blend && setup.stage[0].alphaOp == d3d7::TOP_MODULATE;
         static bool told = false;
-        if (sprite && !told) {
+        if (fx.appear && sprite && !told) {
             told = true;
             LOG_INFO("effects: sprites fade in as they come into view%s (blend %d, alpha op %u)",
                      fades ? "" : " - not this one: its alpha is not the vertices'", setup.blend ? 1 : 0,
                      unsigned(setup.stage[0].alphaOp));
         }
-        if (sprite && fades) {
-            const float a = c.appear.alpha(kind, x, y, c.nowMs());
-            if (a < 1.0f) {
+        float shown = 1.0f;
+        if (fx.appear && sprite && fades) {
+            shown = c.appear.alpha(kind, x, y, c.nowMs());
+            if (shown < 1.0f) {
                 if (vertices != soft_.data()) soft_.assign(v, v + 4 * 32);
                 for (int i = 0; i < 4; ++i) {
                     uint8_t& alpha = soft_[size_t(i) * 32 + 19];  // the diffuse colour's alpha (ARGB)
-                    alpha = uint8_t(float(alpha) * a + 0.5f);
+                    alpha = uint8_t(float(alpha) * shown + 0.5f);
                 }
                 vertices = soft_.data();
             }
         }
+        if (fx.glint && card && kind == uint8_t(sprite_exe::Source::Item)) {
+            const uint32_t seed = uint32_t(int(x) / 8 * 7919 + int(y) / 8 * 104729);
+            const float flare = glint::flare(c.nowMs() / 1000.0, seed) * shown;
+            if (flare > 0.01f) {
+                const float size = std::max(x1 - x0, 8.0f) * 1.1f;
+                glint::star(x + (x1 - x0) * 0.18f, y0 + (y - y0) * 0.6f, z, rhw, size * (0.6f + 0.4f * flare), flare,
+                            star);
+                sparkle = true;
+            }
+        }
     }
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
+    if (sparkle) {  // 0.95: adding light, untextured (white), tested against the depth but not written to it
+        DrawSetup add = setup;
+        add.blend = true;
+        add.srcBlend = d3d7::BLEND_SRCALPHA;
+        add.dstBlend = d3d7::BLEND_ONE;
+        add.alphaTest = false;
+        add.zWrite = false;
+        add.fog = false;
+        add.colorKey = false;
+        add.stage[0].colorOp = add.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+        add.stage[0].colorArg1 = add.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
+        add.stage[1].colorOp = add.stage[1].alphaOp = d3d7::TOP_DISABLE;
+        DrawCmd bar;
+        bar.state = c.record.addState(add);
+        bar.primitive = d3d7::PT_TRIANGLESTRIP;
+        bar.fvf = d3d7::FVF_TL1;
+        c.record.draw(bar, star, 4, nullptr, 0);
+        c.record.draw(bar, star + 4, 4, nullptr, 0);
+    }
     c.flushIfFull();  // the textures this draw sent may have filled the record
     return D3D_OK;
 }

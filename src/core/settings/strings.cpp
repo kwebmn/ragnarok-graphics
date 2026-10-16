@@ -1792,6 +1792,12 @@ const Entry kTexts[] = {
     {"Rings spread on the water where characters and monsters walk through it (with the modern water, Direct3D 12).",
      "По воді розходяться кола там, де крізь неї йдуть персонажі й монстри (із сучасною водою, Direct3D 12).",
      "По воде расходятся круги там, где через неё идут персонажи и монстры (с современной водой, Direct3D 12)."},
+    {"Cards on the ground sparkle",
+     "Картки на землі виблискують",
+     "Карты на земле поблёскивают"},
+    {"A card that dropped flashes a small star now and then, so that it is not missed among the loot.",
+     "Картка, що випала, час від часу спалахує маленькою зіркою, щоб її не пропустити серед здобичі.",
+     "Выпавшая карта время от времени вспыхивает маленькой звёздочкой, чтобы её не пропустить среди добычи."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

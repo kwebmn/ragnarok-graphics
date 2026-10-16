@@ -187,6 +187,8 @@ enum class Text : uint16_t {
     FxAppear, FxAppearHint,
     // 0.94
     FxRipples, FxRipplesHint,
+    // 0.95
+    FxGlint, FxGlintHint,
     Count
 };
 

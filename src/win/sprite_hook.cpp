@@ -27,6 +27,8 @@ uint8_t g_source = 0;
 // 0.16: every frame the sprite loader read (SprImg*) -> what its file is (sprite_exe::Source). A frame freed and its
 // memory taken by another file's is written again by that file's load.
 std::unordered_map<uint32_t, uint8_t> g_frames;
+std::unordered_map<uint32_t, bool> g_cards;  // 0.95: the frames of a card lying on the ground
+bool g_card = false;
 uintptr_t g_load = 0;  // the loader the vtable held
 
 using LoadFn = uint32_t(__attribute__((thiscall)) *)(uint32_t sprite, const char* name);
@@ -85,6 +87,15 @@ uint32_t __attribute__((thiscall)) spriteLoad(uint32_t sprite, const char* name)
     const uint8_t source = uint8_t(sprite_exe::sourceOf(name));
     noteFrames(sprite + sprite_exe::kImages, source);
     noteFrames(sprite + sprite_exe::kRgbaImages, source);
+    if (source == uint8_t(sprite_exe::Source::Item)) {  // 0.95: whether it is a card's, every frame of it
+        const bool card = sprite_exe::cardOnGround(name);
+        const uint32_t list = sprite + sprite_exe::kImages;
+        const uint32_t* begin = *reinterpret_cast<uint32_t* const*>(uintptr_t(list));
+        const uint32_t* end = *reinterpret_cast<uint32_t* const*>(uintptr_t(list) + 4);
+        if (begin && end >= begin && end - begin <= 65536)
+            for (const uint32_t* f = begin; f != end; ++f)
+                if (*f) g_cards[*f] = card;
+    }
     const objects::File object = sprite_exe::objectFile(name);  // 0.23, 0.24
     if (object != objects::File::None) noteObjectTextures(sprite, object);
     return result;
@@ -95,6 +106,8 @@ void __attribute__((thiscall)) spriteWrite(uint32_t texture, int x, int y, unsig
     g_cell = Rect{x, y, x + int(width), y + height};
     const auto f = g_frames.find(uint32_t(reinterpret_cast<uintptr_t>(image)));
     g_source = f == g_frames.end() ? 0 : f->second;
+    const auto c = g_cards.find(uint32_t(reinterpret_cast<uintptr_t>(image)));
+    g_card = c != g_cards.end() && c->second;
     g_writing = true;
     reinterpret_cast<WriteFn>(uintptr_t(sprite_exe::kWrite))(texture, x, y, width, height, image, palette);
     g_writing = false;
@@ -147,5 +160,7 @@ bool spriteCell(Rect& cell, uint8_t& source) {
     source = g_source;
     return true;
 }
+
+bool spriteCellCard() { return g_writing && g_card; }
 
 }  // namespace uagfx::win
