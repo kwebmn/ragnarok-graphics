@@ -250,6 +250,9 @@ struct EffectSettings {
     // 0.97: wet_ground - where it rains the ground is darker and puddles mirror the world (floor_reflect_ps, Direct3D
     // 12). Off by default.
     bool wetGround = false;
+    // 0.98: flare - under the open sky in the day, the sun's flare across the screen when the sky shows towards it
+    // (flare_ps, Direct3D 12). Off by default.
+    bool flare = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

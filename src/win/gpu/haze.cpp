@@ -90,6 +90,30 @@ bool Renderer::Impl::applyShafts() {
                    : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, lights);
 }
 
+// 0.98: the sun's flare - where the sky shows towards the sun (up and to the left past the screen, against the way
+// the characters' shadows fall), a glow at that edge and a few rings along the line through the middle (flare_ps).
+bool Renderer::Impl::applyFlare() {
+    flareDone = true;
+    if (!ensureScene("sun flare")) return true;
+    ID3D12PipelineState* pso = addPipeline(flarePs, flarePipelines, upscale ? 1 : samples, "sun flare");
+    if (!pso) return true;
+    if (!copySceneDepth()) return false;
+    const int w = sceneWidth, h = sceneHeight;
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    Constants c{};
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    float sun[2];
+    sunOnScreen(sun);
+    c.sourceRect[0] = float(w) * (0.5f - sun[0] * 1.6f);
+    c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
+    c.twin[0] = 0.35f * (1.0f - night / 0.6f);
+    if (!flareLogged) LOG_INFO("sun flare: on %s", mapName.c_str());
+    flareLogged = true;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+}
+
 // 0.72: the floors reflect what stands on them - indoors and in the rain (floor_reflect_ps, from the picture's copy).
 bool Renderer::Impl::applyFloorReflections() {
     floorReflectDone = true;

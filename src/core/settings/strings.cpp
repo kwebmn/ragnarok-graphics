@@ -1816,6 +1816,15 @@ const Entry kTexts[] = {
      "увімкненою погодою, Direct3D 12).",
      "На картах, где идёт дождь, земля чуть темнее, а лужи кое-где отражают дома, деревья и персонажей (с включённой "
      "погодой, Direct3D 12)."},
+    {"Sun flare",
+     "Відблиск сонця",
+     "Блик солнца"},
+    {"Under the open sky in the day a soft glow and a few faint rings of the sun's light cross the screen where the "
+     "sky shows towards the sun (Direct3D 12).",
+     "Просто неба вдень м'яке сяйво й кілька ледь помітних кілець сонячного світла перетинають екран там, де до сонця "
+     "видно небо (Direct3D 12).",
+     "Под открытым небом днём мягкое сияние и несколько едва заметных колец солнечного света пересекают экран там, "
+     "где к солнцу видно небо (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

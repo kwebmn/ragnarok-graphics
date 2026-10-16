@@ -1469,6 +1469,38 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
     return float4(c * a, 1.0 - (1.0 - dark) * (1.0 - a));
 }
 
+// 0.98, the sun's flare (haze.cpp): sourceRect.xy the sun past the screen, uiPixels.xy the world's size, twinX the
+// strength. How much sky shows on the way to the sun (the depth's far plane) scales a glow at that edge and rings
+// along the line from the sun through the middle - added on.
+float4 flare_ps(PresentOut i) : SV_Target {
+    float2 size = uiPixels.xy;
+    float2 sun = sourceRect.xy;
+    float2 mid = size * 0.5;
+    float sky = 0.0;
+    [unroll] for (int k = 0; k < 12; ++k) {
+        float2 q = clamp(lerp(mid, sun, 0.5 + 0.045 * float(k)), float2(1.0, 1.0), size - 2.0);
+        sky += sceneDepth.Load(int3(int2(q), 0)) >= 0.99999 ? 1.0 : 0.0;
+    }
+    sky /= 12.0;
+    if (sky <= 0.0) discard;
+    float2 p = i.pos.xy;
+    float span = length(size);
+    float2 axis = mid - sun;
+    float3 sum = float3(0.0, 0.0, 0.0);
+    [unroll] for (int g = 0; g < 5; ++g) {
+        float at = g == 0 ? 0.62 : g == 1 ? 0.86 : g == 2 ? 1.18 : g == 3 ? 1.46 : 1.85;
+        float radius = (g == 0 ? 0.03 : g == 1 ? 0.055 : g == 2 ? 0.02 : g == 3 ? 0.08 : 0.045) * span;
+        float3 tint = g == 0 ? float3(1.0, 0.85, 0.6) : g == 1 ? float3(0.6, 0.8, 1.0) : g == 2 ? float3(1.0, 0.7, 0.5)
+                                                    : g == 3 ? float3(0.55, 1.0, 0.7) : float3(0.8, 0.7, 1.0);
+        float d = length(p - (sun + axis * at)) / radius;
+        sum += tint * (smoothstep(1.0, 0.75, d) * 0.08 + exp(-d * d * 2.5) * 0.05);
+    }
+    float2 edge = clamp(sun, float2(0.0, 0.0), size);
+    float e = length(p - edge) / (0.45 * span);
+    sum += float3(1.0, 0.92, 0.75) * exp(-e * e * 2.0) * 0.35;
+    return float4(sum * (twinX * sky), 0.0);
+}
+
 // 0.86: a half-size premultiplied picture (t0) laid over the world, smoothly (uiPixels.xy the world's size).
 float4 half_over_ps(PresentOut i) : SV_Target {
     float4 c = tex0.SampleLevel(samp0, i.pos.xy / uiPixels.xy, 0);

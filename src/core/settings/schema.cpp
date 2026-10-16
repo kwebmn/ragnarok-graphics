@@ -251,6 +251,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxHitFlashHint, ""},
         {"effects", "wet_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetGround,
          Text::FxWetGroundHint, ""},
+        {"effects", "flare", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFlare,
+         Text::FxFlareHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -474,6 +476,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.glint") return c.effects.glint ? "1" : "0";
     if (k == "effects.hit_flash") return c.effects.hitFlash ? "1" : "0";
     if (k == "effects.wet_ground") return c.effects.wetGround ? "1" : "0";
+    if (k == "effects.flare") return c.effects.flare ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

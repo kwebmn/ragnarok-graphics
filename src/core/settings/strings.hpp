@@ -193,6 +193,8 @@ enum class Text : uint16_t {
     FxHitFlash, FxHitFlashHint,
     // 0.97
     FxWetGround, FxWetGroundHint,
+    // 0.98
+    FxFlare, FxFlareHint,
     Count
 };
 

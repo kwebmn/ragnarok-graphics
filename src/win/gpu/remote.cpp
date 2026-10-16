@@ -342,6 +342,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.glint ? 1 : 0);  // 0.95
     w.u8(e.hitFlash ? 1 : 0);  // 0.96
     w.u8(e.wetGround ? 1 : 0);  // 0.97
+    w.u8(e.flare ? 1 : 0);  // 0.98
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;
