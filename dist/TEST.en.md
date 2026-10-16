@@ -1,3 +1,12 @@
+# uaRO Graphics 1.0.1 — testing
+
+- **Fireflies in Direct3D 11.** The fireflies the game draws itself (forests, night maps) are now drawn anew in
+  Direct3D 11 too — soft twinkling lights, hidden behind trees and houses, as bright as the slider says. The maps'
+  hidden fireflies from their files are not there in D3D11 yet (they need the map read, which D3D12 alone does). The
+  log has `fireflies: the game's fireflies drawn anew (Direct3D 11)`.
+- How to check: Direct3D 11, turn the fireflies on, go to a map that has them (the woods by Payon at night, say) —
+  soft blinking lights instead of the game's squares.
+
 # uaRO Graphics 1.0.0 — testing
 
 - **The effects' glow in Direct3D 11.** The "Glow of effects" switch (with its sliders) now
