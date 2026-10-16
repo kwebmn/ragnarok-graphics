@@ -276,6 +276,8 @@ struct SoundSettings {
     bool stereoFlip = false;  // stereo_flip (not on the page): left and right the other way round
     bool steal = true;      // steal: all samples busy - the quietest stopped for a new sound
     bool crossfade = true;  // crossfade: the music's pieces change over 1.5 s
+    bool engine = false;    // 1.1, engine: the sounds at a place by the driver's engine (XAudio2): around the player
+    int reverb = 60;        // reverb: the place's reverberation with the engine, 0-100
 };
 
 struct Config {

@@ -571,6 +571,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.sound.steal);
         } else if (key == "sound.crossfade") {
             setBool(val, c.sound.crossfade);
+        } else if (key == "sound.engine") {  // 1.1
+            setBool(val, c.sound.engine);
+        } else if (key == "sound.reverb") {
+            toInt(val, 0, 100, c.sound.reverb);
         } else if (key == "debug.merge_draws") {
             setBool(val, c.mergeDraws);
         } else if (key == "debug.profile") {

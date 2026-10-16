@@ -10,8 +10,10 @@
 
 #include "core/config.hpp"
 #include "core/sound_mix.hpp"
+#include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/sound_engine.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -43,6 +45,8 @@ HandleFn g_end = nullptr, g_startStream = nullptr;
 using Play2DFn = char(__cdecl*)(void* file, float* x, float* y, float* z, int farthest, int nearest, uint32_t extra);
 constexpr uint32_t kPlay2D = 0x421AF0;                               // a sound at a place (FUN_00421af0)
 const uint32_t kPlay2DCalls[] = {0x421D6B, 0x439729, 0x439BF8};       // its three calls, each `add esp, 1Ch` after
+constexpr uint32_t kPlay3D = 0x421C20;                               // 1.1: the 3D one (FUN_00421c20)
+const uint32_t kPlay3DCalls[] = {0x439700, 0x439BCD};
 constexpr uint32_t kModeKind = 0x74B5D0, kModeNow = 0x74B57C;         // the mode manager's: 1 = the game itself
 const uint8_t kGetGameMode[] = {0x83, 0x79, 0x58, 0x01, 0x75, 0x04, 0x8B, 0x41, 0x04, 0xC3};  // 0x4F6AD0
 const uint8_t kViewMatrix[] = {0x8D, 0x90, 0xC4, 0x00, 0x00, 0x00};  // 0x564A58: lea edx, [view+0C4h] (the ray's)
@@ -83,6 +87,7 @@ void readSettings() {
     g_read = true;
     std::string text;
     if (readTextFile(gameDir() + "\\uaro-graphics.ini", text)) g_set = parseConfig(text).sound;
+    audio::configure(g_set.engine, g_set.reverb, g_set.background, g_set.limiter);  // 1.1
 }
 
 Tracked* track(void* handle, uint8_t kind) {
@@ -216,8 +221,16 @@ void stealFor() {
     ++g_stolen;
 }
 
+float factorOf(uint32_t bits) {
+    float f = 1.0f;
+    std::memcpy(&f, &bits, sizeof f);
+    return f;
+}
+
 char __cdecl play2D(void* file, float* x, float* y, float* z, int farthest, int nearest, uint32_t extra) {
     readSettings();
+    // 1.1: the driver's own engine first - around the player, the place's echo
+    if (g_set.engine && audio::play(file, *x, *y, *z, farthest, nearest, factorOf(extra))) return 1;
     const double distance = std::sqrt(double(*x) * *x + double(*y) * *y + double(*z) * *z);
     if (g_set.steal && g_end && g_status && distance < double(farthest)) stealFor();
     float rx = 0, rz = 0;
@@ -228,6 +241,13 @@ char __cdecl play2D(void* file, float* x, float* y, float* z, int farthest, int 
     const char played = reinterpret_cast<Play2DFn>(uintptr_t(kPlay2D))(file, x, y, z, farthest, nearest, extra);
     g_pendingPan = -1;
     return played;
+}
+
+// 1.1: likewise the game's 3D sound (setup.exe's 3D: its provider places it) - the engine's when it is on.
+char __cdecl play3D(void* file, float* x, float* y, float* z, int farthest, int nearest, uint32_t extra) {
+    readSettings();
+    if (g_set.engine && audio::play(file, *x, *y, *z, farthest, nearest, factorOf(extra))) return 1;
+    return reinterpret_cast<Play2DFn>(uintptr_t(kPlay3D))(file, x, y, z, farthest, nearest, extra);
 }
 
 // 0.92: a piece of music fades in; closed by the game, it fades out first (the next one fading in meanwhile).
@@ -371,29 +391,37 @@ void readImport(const char* name, Fn& out) {
 }
 
 // The three calls of the game's sound at a place to play2D - each checked to be `call 0x421AF0; add esp, 1Ch`.
-void installPlay2D() {
-    const bool known = std::memcmp(reinterpret_cast<const void*>(uintptr_t(0x4F6AD0)), kGetGameMode,
-                                   sizeof kGetGameMode) == 0 &&
-                       std::memcmp(reinterpret_cast<const void*>(uintptr_t(0x564A58)), kViewMatrix,
-                                   sizeof kViewMatrix) == 0;
-    for (uint32_t at : kPlay2DCalls) {
+// Calls to `target` at `sites` to `hook`, each checked to be `call target; add esp, 1Ch` first (all or none).
+template <size_t N>
+void redirect(const uint32_t (&sites)[N], uint32_t target, const void* hook) {
+    for (uint32_t at : sites) {
         auto* code = reinterpret_cast<uint8_t*>(uintptr_t(at));
         int32_t rel = 0;
         std::memcpy(&rel, code + 1, 4);
-        if (!known || code[0] != 0xE8 || uint32_t(int32_t(at + 5) + rel) != kPlay2D || code[5] != 0x83 ||
-            code[6] != 0xC4 || code[7] != 0x1C)
+        if (code[0] != 0xE8 || uint32_t(int32_t(at + 5) + rel) != target || code[5] != 0x83 || code[6] != 0xC4 ||
+            code[7] != 0x1C)
             return;
     }
-    for (uint32_t at : kPlay2DCalls) {
+    for (uint32_t at : sites) {
         auto* code = reinterpret_cast<uint8_t*>(uintptr_t(at));
         DWORD was = 0;
         if (!VirtualProtect(code + 1, 4, PAGE_EXECUTE_READWRITE, &was)) return;
-        const int32_t to = int32_t(reinterpret_cast<uintptr_t>(&play2D) - (uintptr_t(at) + 5));
+        const int32_t to = int32_t(reinterpret_cast<uintptr_t>(hook) - (uintptr_t(at) + 5));
         std::memcpy(code + 1, &to, 4);
         DWORD unused = 0;
         VirtualProtect(code + 1, 4, was, &unused);
         FlushInstructionCache(GetCurrentProcess(), code, 5);
     }
+}
+
+void installPlay2D() {
+    const bool known = std::memcmp(reinterpret_cast<const void*>(uintptr_t(0x4F6AD0)), kGetGameMode,
+                                   sizeof kGetGameMode) == 0 &&
+                       std::memcmp(reinterpret_cast<const void*>(uintptr_t(0x564A58)), kViewMatrix,
+                                   sizeof kViewMatrix) == 0;
+    if (!known) return;
+    redirect(kPlay2DCalls, kPlay2D, reinterpret_cast<const void*>(&play2D));
+    redirect(kPlay3DCalls, kPlay3D, reinterpret_cast<const void*>(&play3D));  // 1.1
 }
 
 }  // namespace
@@ -435,6 +463,16 @@ void installSoundHooks() {
 
 void soundFrame(bool foreground) {
     if (!g_open) return;
+    {  // 1.1: the engine's frame - its voices, the background, the place (the map looked at twice a second)
+        static std::string map;
+        static ULONGLONG looked = 0;
+        const ULONGLONG t = GetTickCount64();
+        if (t - looked > 500) {
+            looked = t;
+            map = readGameMap();
+        }
+        audio::frame(foreground, map);
+    }
     if (!g_logged && g_askedRate) {
         g_logged = true;
         const std::string voices =

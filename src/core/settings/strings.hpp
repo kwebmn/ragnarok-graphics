@@ -195,6 +195,7 @@ enum class Text : uint16_t {
     FxWetGround, FxWetGroundHint,
     // 0.98
     FxFlare, FxFlareHint,
+    GfxSoundEngine, GfxSoundEngineHint, GfxSoundReverb, GfxSoundReverbHint,
     Count
 };
 

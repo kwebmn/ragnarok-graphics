@@ -1825,6 +1825,24 @@ const Entry kTexts[] = {
      "видно небо (Direct3D 12).",
      "Под открытым небом днём мягкое сияние и несколько едва заметных колец солнечного света пересекают экран там, "
      "где к солнцу видно небо (Direct3D 12)."},
+    {"Surround sound (new engine)",
+     "Об'ємний звук (новий рушій)",
+     "Объёмный звук (новый движок)"},
+    {"The sounds of monsters, skills and hits played by uaRO Graphics itself: around you on any speakers (stereo, "
+     "5.1, 7.1), quieter and duller far off, with the echo of the place. Windows 10 and later; without it the game's "
+     "own sound.",
+     "Звуки монстрів, умінь і ударів грає сам uaRO Graphics: навколо вас на будь-яких колонках (стерео, 5.1, 7.1), "
+     "далекі тихіші й глухіші, з відлунням місця. Windows 10 і новіші; без цього — власний звук гри.",
+     "Звуки монстров, умений и ударов играет сам uaRO Graphics: вокруг вас на любых колонках (стерео, 5.1, 7.1), "
+     "дальние тише и глуше, с эхом места. Windows 10 и новее; без этого — собственный звук игры."},
+    {"Echo of the place",
+     "Відлуння місця",
+     "Эхо места"},
+    {"With the new engine: caves and dungeons echo long, houses short, towns a little, fields hardly. 0 is none.",
+     "З новим рушієм: печери й підземелля відлунюють довго, будинки коротко, міста трохи, поля майже ні. 0 — без "
+     "відлуння.",
+     "С новым движком: пещеры и подземелья отдаются долгим эхом, дома коротким, города немного, поля почти нет. 0 — "
+     "без эха."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
