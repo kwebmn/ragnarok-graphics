@@ -1962,11 +1962,6 @@ bool AiTextures::selfTestRrdb(int net, std::string& error) {
             const uint32_t a = (x + y > 12 && x + y < 17) ? 0u : 255u;
             argb[size_t(y * w + x)] = a << 24 | r << 16 | g << 8 | b;
         }
-    // 1.5.1: step by step first - which step the card goes its own way at, if any.
-    if (!traceRrdb(net, argb, w, h, error)) {
-        error = nets_[size_t(net)]->name + ": " + error;
-        return false;
-    }
     std::vector<float> planes;
     ai::prepareInput(argb.data(), w, h, planes);
     const size_t n = size_t(w) * size_t(h), plane = size_t(ow) * size_t(oh);
@@ -2038,6 +2033,9 @@ bool AiTextures::selfTestRrdb(int net, std::string& error) {
                           "difference %d of 255, %d transparency differences)", nets_[size_t(net)]->name.c_str(),
                           mode, worst, alphaDiffers);
             error = ok ? text : "the self-test could not be read";
+            // 1.5.3: then step by step (some seconds) - which step the card goes its own way at, for the log.
+            std::string step;
+            if (ok && !traceRrdb(net, argb, w, h, step)) error += "; " + step;
             return false;
         }
     }
