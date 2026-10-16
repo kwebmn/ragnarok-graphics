@@ -237,10 +237,12 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 0.95: a card lying on the ground sparkles - a star drawn after it.
     bool sparkle = false;
     glint::Vertex star[8];
-    if ((fx.appear || fx.glint) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 && vertexCount == 4 &&
-        !indices && textures_[0]) {
+    float flash = 0.0f;  // 0.96: a monster just hit - drawn once more, adding light
+    if ((fx.appear || fx.glint || fx.hitFlash) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
+        vertexCount == 4 && !indices && textures_[0]) {
         const auto* v = static_cast<const uint8_t*>(vertices);
-        float x = 0, y = 0, u = 0, w = 0, z = 0, rhw = 0, x0 = 1e9f, x1 = -1e9f, y0 = 1e9f;
+        float x = 0, y = 0, u = 0, w = 0, z = 0, rhw = 0;
+        float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
         for (DWORD i = 0; i < 4; ++i) {
             float f[4], t[2];
             std::memcpy(f, v + i * 32, sizeof f);
@@ -254,6 +256,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             x0 = std::min(x0, f[0]);
             x1 = std::max(x1, f[0]);
             y0 = std::min(y0, f[1]);
+            y1 = std::max(y1, f[1]);
         }
         const Surface7* tex = textures_[0];
         bool card = false;
@@ -280,6 +283,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                 vertices = soft_.data();
             }
         }
+        if (fx.hitFlash && kind == uint8_t(sprite_exe::Source::Monster))
+            flash = c.flashes.strength(x0, x1, y0, y1, c.nowMs()) * shown;
         if (fx.glint && card && kind == uint8_t(sprite_exe::Source::Item)) {
             const uint32_t seed = uint32_t(int(x) / 8 * 7919 + int(y) / 8 * 104729);
             const float flare = glint::flare(c.nowMs() / 1000.0, seed) * shown;
@@ -292,6 +297,29 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         }
     }
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
+    if (flash > 0.01f) {  // 0.96: the sprite's shape once more in white, added, as strong as the flash is now
+        if (vertices != soft_.data()) {
+            const auto* v = static_cast<const uint8_t*>(vertices);
+            soft_.assign(v, v + 4 * 32);
+        }
+        for (int i = 0; i < 4; ++i) {
+            uint8_t* colour = &soft_[size_t(i) * 32 + 16];  // the diffuse colour (BGRA bytes): white, the flash's alpha
+            colour[0] = colour[1] = colour[2] = 255;
+            colour[3] = uint8_t(std::min(255.0f, 255.0f * flash * 0.85f));
+        }
+        DrawSetup add = setup;
+        add.blend = true;
+        add.srcBlend = d3d7::BLEND_SRCALPHA;
+        add.dstBlend = d3d7::BLEND_ONE;
+        add.zWrite = false;
+        add.fog = false;
+        add.stage[0].colorOp = d3d7::TOP_SELECTARG1;  // white where the sprite is (its alpha times the flash's)
+        add.stage[0].colorArg1 = d3d7::TA_DIFFUSE;
+        add.stage[1].colorOp = add.stage[1].alphaOp = d3d7::TOP_DISABLE;
+        DrawCmd again = cmd;
+        again.state = c.record.addState(add);
+        c.record.draw(again, soft_.data(), 4, nullptr, 0);
+    }
     if (sparkle) {  // 0.95: adding light, untextured (white), tested against the depth but not written to it
         DrawSetup add = setup;
         add.blend = true;

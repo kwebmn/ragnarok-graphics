@@ -189,6 +189,8 @@ enum class Text : uint16_t {
     FxRipples, FxRipplesHint,
     // 0.95
     FxGlint, FxGlintHint,
+    // 0.96
+    FxHitFlash, FxHitFlashHint,
     Count
 };
 

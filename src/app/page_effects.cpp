@@ -47,6 +47,7 @@ const Effect kEffects[] = {
     {"effects.appear", {}, {}, {}, false},  // 0.93
     {"effects.ripples", {}, {}, {}, false},  // 0.94
     {"effects.glint", {}, {}, {}, false},  // 0.95
+    {"effects.hit_flash", {}, {}, {}, false},  // 0.96
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, false},
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, false},
     {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, false},

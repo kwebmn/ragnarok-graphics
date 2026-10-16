@@ -9,6 +9,7 @@
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
 #include "win/effect_hook.hpp"
+#include "win/hit_hook.hpp"
 #include "win/pick_hook.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
@@ -151,10 +152,12 @@ bool Context::open(std::string& error) {
     const bool cells = ai.enabled && (ai.sprites() || ai.effects || ai.icons);
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
     const bool d3d11Hook = (aiHere && cells) || config.effects.actorShadows || config.effects.torch ||
-                           config.effects.appear || config.effects.glint;  // 0.93, 0.95: the sprites' kinds
+                           config.effects.appear || config.effects.glint ||
+                           config.effects.hitFlash;  // 0.93, 0.95, 0.96: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
+    installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)
     crisp::setAiIcons(config.ai.enabled && config.ai.icons && (renderer->remote() || aiHere) && config.crispText,

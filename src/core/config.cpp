@@ -111,6 +111,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.hitFlash = false;
     e.glint = false;
     e.ripples = false;
     e.appear = false;
@@ -141,6 +142,7 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.hitFlash ||
            e.glint ||
            e.ripples ||
            e.appear || e.softParticles || e.rimLight || e.sky || e.motes ||
@@ -478,6 +480,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.ripples);
         } else if (key == "effects.glint") {
             setBool(val, c.effects.glint);
+        } else if (key == "effects.hit_flash") {
+            setBool(val, c.effects.hitFlash);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

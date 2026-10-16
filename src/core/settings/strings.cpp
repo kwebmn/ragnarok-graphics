@@ -1798,6 +1798,15 @@ const Entry kTexts[] = {
     {"A card that dropped flashes a small star now and then, so that it is not missed among the loot.",
      "Картка, що випала, час від часу спалахує маленькою зіркою, щоб її не пропустити серед здобичі.",
      "Выпавшая карта время от времени вспыхивает маленькой звёздочкой, чтобы её не пропустить среди добычи."},
+    {"Flash on a hit",
+     "Спалах від удару",
+     "Вспышка при ударе"},
+    {"A monster that is hit lights up white for a moment, as in today's 2D games. Needs the game's sound on: the hit "
+     "is known by its sound.",
+     "Монстр, по якому влучили, на мить спалахує білим, як у сучасних 2D-іграх. Потрібен увімкнений звук гри: удар "
+     "впізнається за звуком.",
+     "Монстр, по которому попали, на мгновение вспыхивает белым, как в современных 2D-играх. Нужен включённый звук "
+     "игры: удар узнаётся по звуку."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -441,6 +441,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.appear = rd.u8() != 0;  // 0.93
             e.ripples = rd.u8() != 0;  // 0.94
             e.glint = rd.u8() != 0;  // 0.95
+            e.hitFlash = rd.u8() != 0;  // 0.96
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

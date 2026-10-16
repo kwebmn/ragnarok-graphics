@@ -244,6 +244,9 @@ struct EffectSettings {
     bool ripples = false;
     // 0.95: glint - a card lying on the ground sparkles now and then (core/glint.hpp). Off by default.
     bool glint = false;
+    // 0.96: hit_flash - a monster hit flashes white for a moment (core/hit_flash.hpp, win/hit_hook.cpp). Off by
+    // default.
+    bool hitFlash = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };
