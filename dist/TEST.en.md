@@ -1,3 +1,10 @@
+# uaRO Graphics 1.5.3 — testing
+
+- **anime 6B works** (1.5.2: the check passed, the textures are made). The start with this model took 10 seconds
+  longer: the step-by-step check always ran. It now runs only when the usual check fails (for the log) - the start
+  takes about a second.
+- How to check: start with "anime 6B" - the log says `self-test passed in ... ms` around 1000 ms, not 10000.
+
 # uaRO Graphics 1.5.2 — testing
 
 - **anime 6B: the graphics card hung at the check's very first step** (0x887a0006 - DXGI_ERROR_DEVICE_HUNG), and the
