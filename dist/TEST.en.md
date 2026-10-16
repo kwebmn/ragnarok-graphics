@@ -1,3 +1,22 @@
+# uaRO Graphics 0.90.0 — testing
+
+What is new in 0.90.0 — draws merged (Direct3D 11):
+- The client draws almost everything as quads of their own: a sprite's layer, a piece of a window, a ground cell —
+  each a call of its own. Draws one after another with the same textures and settings, their vertices one after
+  another, now go to the driver as one call. The order and the triangles are the same; the picture should not change.
+- The gain is the processor's time in the driver on weak computers with old drivers. The card's load does not change.
+- The log line `Direct3D 11: N draws a frame in M draw calls ...`: N is the game's draws a frame, M the calls they
+  became.
+- Switch: `[debug] merge_draws = 0` in uaro-graphics.ini — each draw by itself, as in 0.89.
+- Direct3D 12 is unchanged.
+
+How to check:
+1. With D3D11 walk around a town and a field, open windows, the inventory, use skills: nothing disappears or flickers,
+   sprites and windows are where they belong.
+2. Should something be drawn wrong — set `merge_draws = 0`, check whether it is gone, and send a report.
+3. The frame counter Ctrl+Shift+F11 before and after; a report with a measurement (Diagnostics → "Measure where the
+   game spends its time").
+
 # uaRO Graphics 0.89.0 — testing
 
 What is new in 0.89.0 — weak computers and the cell under the mouse:
