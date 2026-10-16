@@ -18,7 +18,16 @@ std::wstring exeFolder() {
     const DWORD n = GetModuleFileNameW(nullptr, path, MAX_PATH);
     std::wstring p(path, n < MAX_PATH ? n : 0);
     const size_t slash = p.find_last_of(L"\\/");
-    return slash == std::wstring::npos ? L"." : p.substr(0, slash);
+    const std::wstring dir = slash == std::wstring::npos ? L"." : p.substr(0, slash);
+    // 1.3.2: started from the package's own uaro-graphics folder (or another one inside the client): the client is
+    // the folder above, where uaRO.exe is
+    const auto has = [](const std::wstring& d) {
+        return GetFileAttributesW((d + L"\\uaRO.exe").c_str()) != INVALID_FILE_ATTRIBUTES;
+    };
+    if (has(dir)) return dir;
+    const size_t up = dir.find_last_of(L"\\/");
+    if (up != std::wstring::npos && has(dir.substr(0, up))) return dir.substr(0, up);
+    return dir;
 }
 
 bool readFile(const std::wstring& path, std::string& out) {

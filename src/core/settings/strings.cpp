@@ -273,8 +273,12 @@ const Entry kTexts[] = {
     {"Cannot make the backup ({1}): nothing was written.", "Не вдалося зробити резервну копію ({1}): нічого не записано.",
      "Не удалось сделать резервную копию ({1}): ничего не записано."},
     {"Screen: {1}", "Екран: {1}", "Экран: {1}"},
-    {"Cannot start uaRO.exe (error {1}).", "Не вдалося запустити uaRO.exe (помилка {1}).",
-     "Не удалось запустить uaRO.exe (ошибка {1})."},
+    {"Cannot start uaRO.exe (error {1}). The settings app must be in the uaRO client folder, next to uaRO.exe (or in "
+     "its uaro-graphics folder).",
+     "Не вдалося запустити uaRO.exe (помилка {1}). Утиліта має бути в теці клієнта uaRO, поруч з uaRO.exe (або в її "
+     "теці uaro-graphics).",
+     "Не удалось запустить uaRO.exe (ошибка {1}). Утилита должна быть в папке клиента uaRO, рядом с uaRO.exe (или в "
+     "её папке uaro-graphics)."},
     {"Cannot restore {1}.", "Не вдалося відновити {1}.", "Не удалось восстановить {1}."},
     {"Sound", "Звук", "Звук"},
     {"Game", "Гра", "Игра"},
