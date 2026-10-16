@@ -103,6 +103,11 @@ AutoSetup autoSetup(const Machine& m) {
     set(e, "ai", "enabled", a.ai ? "1" : "0");
     set(e, "ai", "generate", "0");
     set(e, "ai", "compress", "auto");
+    // 1.5.9: a small card takes the pack's pictures at twice the game's size, not four times - a Radeon HD 6570 at
+    // 1600x891 in Prontera: 25.7 ms of its work a frame with x4, 21.2 with x2 (33 frames a second, 42).
+    set(e, "ai", "scale", a.tier == Tier::Old || a.tier == Tier::Low ? "2" : "4");
+    // ... and on Direct3D 11 no day and night: about 1 ms of such a card's frame.
+    if (a.tier == Tier::Old) set(e, "effects", "day_cycle", "0");
     if (a.ai) {
         for (const char* k : {"monsters", "players", "npcs", "items", "icons"}) set(e, "ai", k, "1");
         for (const char* k : {"ground", "objects", "effects"}) set(e, "ai", k, a.aiWorld ? "1" : "0");

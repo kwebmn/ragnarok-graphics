@@ -39,6 +39,7 @@ TEST(auto_setup_a_strong_nvidia_card) {
     CHECK(a.ai && a.aiWorld);
     CHECK(valueOf(a, "ai", "enabled") == "1" && valueOf(a, "ai", "ground") == "1");
     CHECK(valueOf(a, "ai", "generate") == "0");
+    CHECK(valueOf(a, "ai", "scale") == "4" && valueOf(a, "effects", "day_cycle").empty());  // 1.5.9
     Machine full_hd = rtx5060();
     full_hd.screenWidth = 1920;
     full_hd.screenHeight = 1080;
@@ -77,6 +78,8 @@ TEST(auto_setup_an_old_radeon_on_direct3d_11) {
     CHECK(valueOf(a, "renderer", "bridge") == "0");
     CHECK(a.ai && a.aiWorld);  // 0.57: 1 GB and the textures compressed - the world's too
     CHECK(valueOf(a, "ai", "compress") == "auto");
+    // 1.5.9: the tester's reports - x2 pictures and no day and night take a fifth of the card's frame
+    CHECK(valueOf(a, "ai", "scale") == "2" && valueOf(a, "effects", "day_cycle") == "0");
     m.vramMb = 512;
     const AutoSetup small = autoSetup(m);
     CHECK(small.ai && !small.aiWorld);  // under 1 GB: sprites and icons only
