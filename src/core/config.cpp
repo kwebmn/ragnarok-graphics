@@ -75,7 +75,7 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
     } else if (k == "ui_pieces") {
         setBool(v, a.uiPieces);
     } else if (k == "model" || k == "sprite_model") {
-        if (v == "general" || v == "anime") (k == "model" ? a.model : a.spriteModel) = v;
+        if (v == "general" || v == "anime" || v == "anime6b") (k == "model" ? a.model : a.spriteModel) = v;  // 1.5
     } else if (k == "denoise") {
         denoise = toInt(v, 0, 100, a.denoise) || denoise;
     } else if (k == "scale") {

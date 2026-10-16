@@ -206,6 +206,7 @@ enum class Text : uint16_t {
     ColourOrange, ColourWhite, ColourOff, ColourOwn, PadTouchpad, PadTouchpadHint, TouchNothing, TouchBack, TouchStart,
     PadRumble, PadRumbleHint, PadStartsOn, PadStartsOnHint, PadMenuLanguage, PadMenuLanguageHint, PadSettingsNote,
     PadNpcHint, PadNpcHintHint,
+    AiModelAnime6b,  // 1.5
     Count
 };
 

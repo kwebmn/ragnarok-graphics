@@ -83,7 +83,9 @@ AiTextures::~AiTextures() {
     releaseCom(shuffle_);
     releaseCom(mip_);
     releaseCom(alpha_);
+    releaseCom(place_);
     releaseCom(root_);
+    releaseCom(scratch_);
     for (auto& n : nets_) releaseCom(n->weights);
     releaseCom(planes_);
     releaseCom(feat_[0]);
@@ -104,7 +106,22 @@ bool loadModel(const std::string& path, ai::Model& m, std::string& error) {
 
 // The model file of an [ai] model word.
 const char* modelFile(const std::string& token) {
+    if (token == "anime6b") return "realesrgan-x4plus-anime-6b";  // 1.5
     return token == "anime" ? "realesr-animevideov3" : "realesr-general-x4v3";
+}
+
+// 1.5, RRDB: where each of a tile's planes (ai::Buf) begins in the scratch buffer, in words, for an input of
+// width x height; the last step's three planes go where Up2's were (it reads Up3, and Up2 is done with). words: all.
+void rrdbOffsets(const ai::RrdbModel& m, int width, int height, uint32_t at[], UINT64& words) {
+    words = 0;
+    for (int b = 0; b < int(ai::Buf::Count); ++b) {
+        const ai::Buf buf = ai::Buf(b);
+        if (buf == ai::Buf::Out) continue;
+        at[b] = uint32_t(words);
+        const UINT64 s = UINT64(ai::bufScale(buf));
+        words += UINT64(ai::bufChannels(m, buf)) * UINT64(width) * s * UINT64(height) * s;
+    }
+    at[int(ai::Buf::Out)] = at[int(ai::Buf::Up2)];
 }
 
 }  // namespace
@@ -113,6 +130,19 @@ bool AiTextures::loadNet(const std::string& dir, const std::string& token, int d
                          std::string& error) {
     net.token = token;
     net.name = modelFile(token);
+    if (token == "anime6b") {  // 1.5: Real-ESRGAN's RRDBNet for drawn pictures
+        std::ifstream f(dir + net.name + ".bin", std::ios::binary);
+        const std::vector<uint8_t> file((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+        if (file.empty()) {
+            error = "no model " + dir + net.name + ".bin (update.bat installs it)";
+            return false;
+        }
+        if (!ai::parseRrdb(file, net.rrdbModel, error)) return false;
+        net.rrdb = true;
+        net.model = net.rrdbModel.net;
+        net.program = ai::rrdbProgram(net.rrdbModel);
+        return true;
+    }
     if (!loadModel(dir + net.name + ".bin", net.model, error)) return false;
     if (net.model.scale != kNetScale) {
         error = net.name + " does not enlarge 4 times";
@@ -154,7 +184,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
         if (netOf_[k] < 0) {
             auto net = std::make_unique<Net>();
             if (!loadNet(dir, token, s.denoise, *net, error)) return false;
-            features_ = std::max(features_, net->model.features);
+            if (!net->rrdb) features_ = std::max(features_, net->model.features);
             nets_.push_back(std::move(net));
             netOf_[k] = int(nets_.size()) - 1;
         }
@@ -430,7 +460,8 @@ bool AiTextures::createGpu(std::string& error) {
         releaseCom(msg);
         return SUCCEEDED(r);
     };
-    if (!pso("ai_conv", conv_) || !pso("ai_shuffle", shuffle_) || !pso("ai_mip", mip_) || !pso("ai_alpha", alpha_))
+    if (!pso("ai_conv", conv_) || !pso("ai_shuffle", shuffle_) || !pso("ai_mip", mip_) || !pso("ai_alpha", alpha_) ||
+        !pso("ai_place", place_))
         return false;
     for (auto& n : nets_)
         if (!uploadWeights(*n, error)) return false;
@@ -595,6 +626,7 @@ double AiTextures::runBand(Job& job, double budget) {
     k.v[8] = uint32_t(end);
     // Past the edge: a world texture repeats, a sprite cell stands in nothing, an interface picture's edge goes on.
     k.v[9] = job.border;
+    k.v[14] = k.v[15] = 0xFFFFFFFFu;  // nothing added (1.5: RRDB's steps add)
     bindCompute();
     m_.list->SetComputeRootShaderResourceView(kAiWeights, net.weights->GetGPUVirtualAddress());
     m_.list->SetPipelineState(conv_);
@@ -677,7 +709,7 @@ ID3D12Resource* AiTextures::makeImage(Job& job, std::vector<Level>& levels) {
         levels = job.levels;
         m_.slots[m_.slot].garbage.push_back(image);  // freed once this list has run
         D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        dispatchAlpha(job, image, levels[0]);
+        if (!job.rrdbDone) dispatchAlpha(job, image, levels[0]);  // 1.5: RRDB's tiles placed the alpha too
         dispatchMips(image, levels);
         m_.transition(image, state, D3D12_RESOURCE_STATE_COPY_SOURCE);
         return image;
@@ -1482,7 +1514,21 @@ void AiTextures::work() {
             dropJob();
             continue;
         }
-        if (j.conv < 0) {
+        if (nets_[size_t(j.net)]->rrdb && !j.rrdbDone) {  // 1.5: tile by tile, step by step
+            bool failed = false;
+            const double macs = stepRrdb(j, budget, failed);
+            if (failed) {
+                LOG_ERROR("AI textures: no GPU memory for a %dx%d texture; it stays as it is", j.width, j.height);
+                const auto it = j.cell || j.icon ? items_.end() : items_.find(j.id);
+                if (it != items_.end()) drop(it->second);
+                dropJob();
+                continue;
+            }
+            budget -= std::max(macs, 1e6);  // an upload or a tile's placing is work too
+            spent += macs;
+            continue;
+        }
+        if (!j.rrdbDone && j.conv < 0) {  // an RRDB job here is done: to the finishing below
             if (!ensureBuffers(j.width, j.height) || !uploadInput(j)) {
                 LOG_ERROR("AI textures: no GPU memory for a %dx%d texture; it stays as it is", j.width, j.height);
                 const auto it = j.cell || j.icon ? items_.end() : items_.find(j.id);
@@ -1711,7 +1757,240 @@ bool AiTextures::ioCheckpoint() {
     return true;
 }
 
+bool AiTextures::ensureScratch(UINT64 words) {
+    const UINT64 bytes = words * 4;
+    if (bytes <= scratchBytes_ && scratch_) return true;
+    if (scratch_) m_.slots[m_.slot].garbage.push_back(scratch_);  // freed once this list has run
+    scratch_ = buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
+    scratchBytes_ = scratch_ ? bytes : 0;
+    scratchState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    return scratch_ != nullptr;
+}
+
+double AiTextures::stepRrdb(Job& job, double budget, bool& failed) {
+    const Net& net = *nets_[size_t(job.net)];
+    const ai::RrdbModel& rm = net.rrdbModel;
+    if (job.tiles.empty()) {  // the start: the picture's planes, its tiles and its image
+        job.tiles = ai::rrdbTiles(job.width, job.height);
+        ai::prepareInput(job.pixels.data(), job.width, job.height, job.source);
+        UINT64 bytes = 0;
+        layout(job.width * kNetScale, job.height * kNetScale, job.levels, bytes);
+        job.image = buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
+        if (!job.image) {
+            failed = true;
+            return 0;
+        }
+        job.tile = 0;
+        job.phase = 0;
+        job.conv = -1;
+        return 0;
+    }
+    const ai::Tile& t = job.tiles[job.tile];
+    // Past the picture's edge as the job says when the tile is all of it; else the margins hold it, zeros past them.
+    const bool whole = job.tiles.size() == 1;
+    const ai::Border edge = job.border == 1 ? ai::Border::Zero : job.border == 2 ? ai::Border::Clamp : ai::Border::Wrap;
+    uint32_t at[int(ai::Buf::Count)];
+    UINT64 words = 0;
+    rrdbOffsets(rm, t.inWidth, t.inHeight, at, words);
+    if (job.conv < 0) {  // the tile's input: the colour, or (phase 1) the alpha as a grey picture
+        if (!ensureScratch(words)) {
+            failed = true;
+            return 0;
+        }
+        std::vector<float> in;
+        const size_t n = size_t(job.width) * size_t(job.height);
+        ai::tileInput(job.source.data() + (job.phase ? 3 * n : 0), job.phase ? 1 : 3, job.width, job.height, t,
+                      edge, in);
+        if (job.phase) {
+            const size_t m = in.size();
+            in.resize(3 * m);
+            std::copy(in.begin(), in.begin() + long(m), in.begin() + long(m));
+            std::copy(in.begin(), in.begin() + long(m), in.begin() + long(2 * m));
+        }
+        const UINT64 bytes = UINT64(in.size()) * 4;
+        const Upload u = m_.allocUpload(bytes, 256);
+        if (!u.cpu) {
+            failed = true;
+            return 0;
+        }
+        std::memcpy(u.cpu, in.data(), bytes);
+        m_.transition(scratch_, scratchState_, D3D12_RESOURCE_STATE_COPY_DEST);
+        m_.list->CopyBufferRegion(scratch_, UINT64(at[int(ai::Buf::Img)]) * 4, m_.slots[m_.slot].upload, u.offset,
+                                  bytes);
+        m_.transition(scratch_, scratchState_, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        job.conv = 0;
+        job.row = 0;
+        return 0;
+    }
+    if (size_t(job.conv) < net.program.size()) {  // a band of rows of the next step
+        const ai::Op& o = net.program[size_t(job.conv)];
+        const ai::Model::Conv& c = net.model.convs[size_t(o.conv)];
+        const int w = t.inWidth * o.scale, h = t.inHeight * o.scale;
+        const double perRow = double(w) * c.out * c.in * 9;
+        const double fits = budget / perRow;
+        const int rows = fits >= double(h) ? h : std::max(8, int(fits) / 8 * 8);
+        const int end = std::min(job.row + rows, h);
+        const uint32_t plane = uint32_t(w) * uint32_t(h);
+        AiConstants k;
+        k.v[0] = uint32_t(w);
+        k.v[1] = uint32_t(h);
+        k.v[2] = uint32_t(c.in);
+        k.v[3] = uint32_t(c.out);
+        k.v[4] = uint32_t(c.bias);
+        k.v[5] = uint32_t(c.weight);
+        k.v[6] = o.lrelu ? uint32_t(net.model.prelu[0]) : 0xFFFFFFFFu;
+        k.v[7] = uint32_t(job.row);
+        k.v[8] = uint32_t(end);
+        k.v[9] = (whole ? job.border : 1u) | (o.upsample ? 4u : 0u) | (o.res1Fifth ? 8u : 0u);
+        k.v[10] = at[int(o.inA)];
+        k.v[11] = o.inB != ai::Buf::Count ? at[int(o.inB)] : 0u;
+        k.v[12] = uint32_t(o.split);
+        k.v[13] = at[int(o.out)] + uint32_t(o.outOffset) * plane;
+        k.v[14] = o.res1 != ai::Buf::Count ? at[int(o.res1)] : 0xFFFFFFFFu;
+        k.v[15] = o.res2 != ai::Buf::Count ? at[int(o.res2)] : 0xFFFFFFFFu;
+        bindCompute();
+        m_.list->SetComputeRootShaderResourceView(kAiWeights, net.weights->GetGPUVirtualAddress());
+        m_.list->SetPipelineState(conv_);
+        m_.list->SetComputeRoot32BitConstants(kAiConstants, 16, k.v, 0);
+        m_.list->SetComputeRootUnorderedAccessView(kAiU0, scratch_->GetGPUVirtualAddress());
+        m_.list->SetComputeRootUnorderedAccessView(kAiU1, scratch_->GetGPUVirtualAddress());
+        m_.list->SetComputeRootUnorderedAccessView(kAiU2, scratch_->GetGPUVirtualAddress());
+        m_.list->Dispatch(UINT((w + 7) / 8), UINT((end - job.row + 7) / 8), UINT((c.out + 15) / 16));
+        uavBarrier();
+        const double macs = perRow * (end - job.row);
+        job.row = end;
+        if (job.row >= h) {
+            ++job.conv;
+            job.row = 0;
+        }
+        return macs;
+    }
+    // The tile's middle into the image; the next tile, the alpha's pass, or done.
+    AiConstants k;
+    k.v[0] = uint32_t(t.inWidth * kNetScale);
+    k.v[1] = uint32_t(t.inHeight * kNetScale);
+    k.v[2] = uint32_t(t.left * kNetScale);
+    k.v[3] = uint32_t(t.top * kNetScale);
+    k.v[4] = uint32_t(t.width * kNetScale);
+    k.v[5] = uint32_t(t.height * kNetScale);
+    k.v[6] = uint32_t(t.x * kNetScale);
+    k.v[7] = uint32_t(t.y * kNetScale);
+    k.v[8] = job.levels[0].pitch / 4;
+    k.v[9] = uint32_t(job.levels[0].at / 4);
+    k.v[10] = at[int(ai::Buf::Out)];
+    k.v[11] = uint32_t(job.phase);
+    bindCompute();
+    m_.list->SetPipelineState(place_);
+    m_.list->SetComputeRoot32BitConstants(kAiConstants, 16, k.v, 0);
+    m_.list->SetComputeRootUnorderedAccessView(kAiU0, scratch_->GetGPUVirtualAddress());
+    m_.list->SetComputeRootUnorderedAccessView(kAiU1, job.image->GetGPUVirtualAddress());
+    m_.list->SetComputeRootUnorderedAccessView(kAiU2, scratch_->GetGPUVirtualAddress());
+    m_.list->Dispatch(UINT((t.width * kNetScale + 7) / 8), UINT((t.height * kNetScale + 7) / 8), 1);
+    uavBarrier();
+    job.conv = -1;
+    if (++job.tile < job.tiles.size()) return 0;
+    if (job.alpha && job.phase == 0) {
+        job.phase = 1;
+        job.tile = 0;
+    } else {
+        job.rrdbDone = true;
+        job.source.clear();
+        job.source.shrink_to_fit();
+    }
+    return 0;
+}
+
+bool AiTextures::selfTestRrdb(int net, std::string& error) {
+    // As selfTest: a 16x16 texture with a transparent band through the GPU's steps and the CPU's (core/ai/rrdb), each
+    // way past the edge, the alpha's pass with the interface's.
+    const ai::RrdbModel& rm = nets_[size_t(net)]->rrdbModel;
+    const int w = 16, h = 16, ow = w * kNetScale, oh = h * kNetScale;
+    std::vector<uint32_t> argb(size_t(w * h));
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const uint32_t r = uint32_t(x * 15), g = uint32_t(y * 15), b = uint32_t((x * 7 + y * 11) % 256);
+            const uint32_t a = (x + y > 12 && x + y < 17) ? 0u : 255u;
+            argb[size_t(y * w + x)] = a << 24 | r << 16 | g << 8 | b;
+        }
+    std::vector<float> planes;
+    ai::prepareInput(argb.data(), w, h, planes);
+    const size_t n = size_t(w) * size_t(h), plane = size_t(ow) * size_t(oh);
+    const ai::Border borders[3] = {ai::Border::Wrap, ai::Border::Zero, ai::Border::Clamp};  // as Job::border
+    for (uint32_t mode = 0; mode < 3; ++mode) {
+        std::vector<float> out(3 * plane), alphaOut;
+        ai::runRrdb(rm, planes.data(), w, h, out.data(), borders[mode]);
+        if (mode == 2) {
+            std::vector<float> grey(3 * n);
+            for (size_t c = 0; c < 3; ++c) std::copy(planes.begin() + long(3 * n), planes.begin() + long(4 * n),
+                                                    grey.begin() + long(c * n));
+            alphaOut.resize(3 * plane);
+            ai::runRrdb(rm, grey.data(), w, h, alphaOut.data(), ai::Border::Clamp);
+        }
+        Job j;
+        j.net = net;
+        j.width = w;
+        j.height = h;
+        j.pixels = argb;
+        j.border = mode;
+        j.alpha = mode == 2;
+        if (!m_.begin()) {
+            error = "no GPU for the self-test";
+            return false;
+        }
+        computeBound_ = false;
+        bool failed = false;
+        while (!j.rrdbDone && !failed) stepRrdb(j, 1e18, failed);
+        ID3D12Resource* back = failed ? nullptr
+                                      : buffer(m_.device, D3D12_HEAP_TYPE_READBACK,
+                                               UINT64(j.levels[0].pitch) * UINT64(oh), D3D12_RESOURCE_STATE_COPY_DEST,
+                                               false);
+        if (failed || !back) {
+            m_.submit();
+            releaseCom(j.image);
+            error = "no GPU memory for the self-test";
+            return false;
+        }
+        D3D12_RESOURCE_STATES imageState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        m_.transition(j.image, imageState, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        m_.list->CopyBufferRegion(back, 0, j.image, 0, UINT64(j.levels[0].pitch) * UINT64(oh));
+        m_.waitIdle();
+        computeBound_ = false;
+        int worst = 0, alphaDiffers = 0;
+        void* mapped = nullptr;
+        const bool ok = !m_.lost && SUCCEEDED(back->Map(0, nullptr, &mapped));
+        if (ok) {
+            for (int y = 0; y < oh; ++y)
+                for (int x = 0; x < ow; ++x) {
+                    const uint32_t g =
+                        static_cast<const uint32_t*>(mapped)[size_t(y) * (j.levels[0].pitch / 4) + size_t(x)];
+                    const size_t i = size_t(y) * size_t(ow) + size_t(x);
+                    for (int c = 0; c < 3; ++c) {
+                        const int want = int(out[size_t(c) * plane + i] * 255.0f + 0.5f);
+                        worst = std::max(worst, std::abs(want - int((g >> (16 - 8 * c)) & 255)));
+                    }
+                    if (mode == 2) {
+                        const float v = alphaOut[i] + alphaOut[plane + i] + alphaOut[2 * plane + i];
+                        if (((g >> 24) != 0) != (v >= 1.5f)) ++alphaDiffers;
+                    }
+                }
+            back->Unmap(0, nullptr);
+        }
+        releaseCom(back);
+        releaseCom(j.image);
+        if (!ok || worst > 2 || alphaDiffers > ow * oh / 50) {
+            char text[220];
+            std::snprintf(text, sizeof text, "%s: the GPU's network does not match the CPU's (border %u: largest "
+                          "difference %d of 255, %d transparency differences)", nets_[size_t(net)]->name.c_str(),
+                          mode, worst, alphaDiffers);
+            error = ok ? text : "the self-test could not be read";
+            return false;
+        }
+    }
+    return true;
+}
+
 bool AiTextures::selfTest(int net, std::string& error) {
+    if (nets_[size_t(net)]->rrdb) return selfTestRrdb(net, error);  // 1.5
     // A 16x16 texture with a transparent band through the network on the GPU, and the same on the CPU (core/ai): the
     // colour with each way past the edge (a world texture's, a sprite cell's, an interface picture's) and the alpha's
     // own pass - every channel within 2 of 255 and nearly the same transparency, or the feature stays off.

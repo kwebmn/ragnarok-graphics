@@ -15,6 +15,7 @@ EXPECTED = {"install.bat", "uninstall.bat", "use-uaro.bat", "use-dgvoodoo.bat", 
             "uaro-graphics/dlss-version.txt", "uaro-graphics/remix/rtx.conf",
             "uaro-graphics/ai/realesr-general-x4v3.bin", "uaro-graphics/ai/realesr-general-wdn-x4v3.bin",
             "uaro-graphics/ai/realesr-animevideov3.bin", "uaro-graphics/ai/LICENSE-Real-ESRGAN.txt",
+            "uaro-graphics/ai/realesrgan-x4plus-anime-6b.bin",
             "uaro-graphics/pad/dinput.dll", "uaro-graphics/pad/uaro-pad.ini", "uaro-graphics/pad/version.txt"}
 VERSION_CPP = Path(__file__).resolve().parent.parent / "src" / "core" / "version.cpp"
 

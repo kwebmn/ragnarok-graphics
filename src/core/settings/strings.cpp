@@ -2025,6 +2025,9 @@ const Entry kTexts[] = {
     {"While an NPC window is open, a line at the bottom of the game says what the buttons do there.",
      "Поки відкрите вікно NPC, рядок унизу гри підказує, що там роблять кнопки.",
      "Пока открыто окно NPC, строка внизу игры подсказывает, что там делают кнопки."},
+    {"anime 6B (drawn: finer lines, keeps details; 5-7 times slower)",
+     "anime 6B (мальоване: тонші лінії, зберігає деталі; у 5-7 разів повільніша)",
+     "anime 6B (рисованное: тоньше линии, сохраняет детали; в 5-7 раз медленнее)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

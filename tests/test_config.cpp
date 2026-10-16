@@ -116,6 +116,8 @@ TEST(config_ai_section_reads_every_key) {
     CHECK_EQ(d.scale, 4);
     CHECK_EQ(d.minSize, 16);  // 0.17: shadows and the small things of a map too
     CHECK_EQ(d.maxSize, 512);
+    // 1.5: Real-ESRGAN's RRDBNet for drawn pictures.
+    CHECK(parseConfig("[ai]\nsprite_model = anime6b\n").ai.spriteModel == "anime6b");
 }
 
 TEST(config_ai_reads_0_11_keys_where_ai_has_none) {

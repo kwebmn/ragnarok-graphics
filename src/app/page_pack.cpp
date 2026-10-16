@@ -124,7 +124,9 @@ public:
                  t(Text::PackQualityHint), !running_);
         const AiSettings a = m.pendingConfig().ai;
         const auto modelName = [&](const std::string& token) {
-            return utf8(t(token == "anime" ? Text::AiModelAnime : Text::AiModelGeneral));
+            return utf8(t(token == "anime6b" ? Text::AiModelAnime6b
+                          : token == "anime" ? Text::AiModelAnime
+                                             : Text::AiModelGeneral));
         };
         p.note(tf(Text::PackNets, {modelName(a.model), modelName(a.spriteModel)}));
         const bool chosen = pack::anyChosen(g_choice);

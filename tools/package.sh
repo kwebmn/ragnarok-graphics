@@ -26,6 +26,7 @@ cp dist/pad/dinput.dll dist/pad/uaro-pad.ini dist/pad/version.txt "$stage/uaro-g
 # AI textures: the neural network's model and its weak-denoise twin, mixed by [quality] ai_denoise (Real-ESRGAN,
 # BSD-3-Clause), and their licence.
 cp dist/ai/realesr-general-x4v3.bin dist/ai/realesr-general-wdn-x4v3.bin dist/ai/realesr-animevideov3.bin \
+   dist/ai/realesrgan-x4plus-anime-6b.bin \
    dist/ai/LICENSE-Real-ESRGAN.txt "$stage/uaro-graphics/ai/"
 printf '%s build %s\r\n' "$version" "$(date '+%Y-%m-%d %H:%M')" > "$stage/uaro-graphics/version.txt"
 (cd "$stage" && zip -q -r "../uaro-graphics.zip" .)

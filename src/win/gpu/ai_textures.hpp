@@ -17,6 +17,7 @@
 #include "core/ai/cell_grid.hpp"
 #include "core/ai/kinds.hpp"
 #include "core/ai/ready.hpp"
+#include "core/ai/rrdb.hpp"
 #include "core/ai/srvgg.hpp"
 #include "core/config.hpp"
 #include "core/frame.hpp"
@@ -77,7 +78,10 @@ private:
         std::string token;  // [ai] model: general, anime
         std::string name;   // its file in uaro-graphics\ai: realesr-general-x4v3
         int denoise = 100;  // general: % of it in the mix with its weak-denoise twin
-        ai::Model model;
+        ai::Model model;    // 1.5, RRDB: rrdb.net - its convolutions and weights
+        bool rrdb = false;  // 1.5: anime6b, Real-ESRGAN's RRDBNet: tiles through its steps (stepRrdb)
+        ai::RrdbModel rrdbModel;
+        std::vector<ai::Op> program;
         ID3D12Resource* weights = nullptr;
     };
     struct Item {
@@ -126,6 +130,11 @@ private:
         uint32_t border = 0;  // past the picture's edge (ai_conv): 0 the other side, 1 zeros, 2 the edge again
         ID3D12Resource* image = nullptr;
         std::vector<Level> levels;
+        // 1.5, RRDB: the picture's planes (ai::prepareInput), its tiles, the one going through, done with all.
+        std::vector<float> source;
+        std::vector<ai::Tile> tiles;
+        size_t tile = 0;
+        bool rrdbDone = false;
     };
     // A sprite cache of the game (0.13): its enlarged copy is the texture's Texture::ai, made cell by cell.
     struct Atlas {
@@ -182,6 +191,11 @@ private:
     void dropJob();                         // the running job goes, its image with it
     void trimBuffers();                     // after a big picture: its half a gigabyte of buffers goes
     double runBand(Job& job, double budget);  // MACs dispatched
+    // 1.5, RRDB: the job's next piece of work - its image made, a tile's input up, a band of a step, a tile placed;
+    // MACs dispatched. failed: no GPU memory for it.
+    double stepRrdb(Job& job, double budget, bool& failed);
+    bool ensureScratch(UINT64 words);
+    bool selfTestRrdb(int net, std::string& error);
     bool finish(Job& job);
     ID3D12Resource* makeImage(Job& job, std::vector<Level>& levels);  // in COPY_SOURCE, all its levels
     void readBack(const Job& job, ID3D12Resource* image, const Level& top);  // for the pack (0.48)
@@ -246,6 +260,10 @@ private:
     ID3D12PipelineState* shuffle_ = nullptr;
     ID3D12PipelineState* mip_ = nullptr;
     ID3D12PipelineState* alpha_ = nullptr;
+    ID3D12PipelineState* place_ = nullptr;  // 1.5: a tile of RRDB into the image
+    ID3D12Resource* scratch_ = nullptr;     // 1.5: RRDB's planes (ai::Buf), one tile's
+    UINT64 scratchBytes_ = 0;
+    D3D12_RESOURCE_STATES scratchState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     ID3D12Resource* planes_ = nullptr;  // the input: R, G, B, A planes
     ID3D12Resource* feat_[2] = {nullptr, nullptr};
     UINT64 planesBytes_ = 0, featBytes_ = 0;
