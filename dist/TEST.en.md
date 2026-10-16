@@ -1,3 +1,11 @@
+# uaRO Graphics 1.5.7 — testing
+
+- **The AI page's main box was called "Improve textures with a neural network (experiment)"** - it did not say it
+  turns all the improved textures on and off, the ready ones of the pack `uaro-textures.zip` too: a tester took it
+  off thinking it stops making them, and the pack's pictures went. It is now "HD textures from the texture pack
+  (uaro-textures.zip)". Making them in the game is its own box, "Make new ones while playing (debugging)".
+- How to check: the AI page - the first box under its new name.
+
 # uaRO Graphics 1.5.6 — testing
 
 - **The AI textures are worked out faster, anime 6B most.** The convolution shader read the network's weights in
