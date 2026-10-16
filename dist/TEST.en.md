@@ -1,3 +1,32 @@
+# uaRO Graphics 0.89.0 — testing
+
+What is new in 0.89.0 — weak computers and the cell under the mouse:
+- **The cell under the mouse (both renderers).** Every frame the client tested every cell of every piece of the map
+  the mouse's ray passes over — thousands of cells when the camera looks far (14–15 % of the game's thread while
+  loading and with the mouse far away, as measured). Now the ray goes from cell to cell in order and stops at the
+  first one it hits. On each map the first 240 picks are checked against the client's own answer, then every
+  120th; at the first disagreement only the client's own way is used until the game is restarted. Switch:
+  `[debug] fast_pick = 0` in uaro-graphics.ini.
+- **Direct3D 11: textures reused.** The game keeps deleting and creating small textures of the same sizes; an old
+  driver takes long to create each. Textures up to 512×512 that the game lets go (32 MB at most) now go to its next
+  texture of the same size.
+- **Direct3D 11: statistics in the log** every half minute: draws and driver calls a frame (how many were spared), the
+  processor's time in drawing, textures made/reused/freed, MB uploaded a second; the card's time for each effect
+  (characters' shadows, torches' light, night, colour).
+- **Blurry status icons on the right.** When the interface is not enlarged (for example a 1600×900 window without
+  scaling), the AI pictures of the interface are not used any more: they were pictures four times larger, shrunk back
+  with smoothing — the icons came out soft. The interface's AI pictures are used only with the interface enlarged
+  (1.2× and up).
+
+How to check:
+1. Move the mouse over the ground far away (camera raised), walk by clicking: the cell cursor and the clicks go where
+   they used to. The log has `pick: the cell under the mouse found the fast way on this map ... ms a time, the game's
+   own ... ms`. Should `pick: the game's own cell under the mouse from now on` appear — send a report.
+2. On a weak computer with D3D11: the `Direct3D 11: ... draws a frame` and `GPU: effects a frame` lines in the log;
+   the frame counter Ctrl+Shift+F11 before and after the update; a report with a measurement (Diagnostics → "Measure
+   where the game spends its time").
+3. In a 1600×900 window without scaling the status icons on the right are as sharp as in the original client.
+
 # uaRO Graphics 0.88.0 — testing
 
 What is new in 0.88.0 - less processor work a frame:
