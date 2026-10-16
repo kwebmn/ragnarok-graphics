@@ -1,3 +1,10 @@
+# uaRO Graphics 1.6.5 — testing
+
+- **The pack builder names DATA.INI's archives that did not open.** Such a line of DATA.INI was passed over silently;
+  the log now says `not read: <file> (<why>)` after the archives, also for a file that is no GRF, GPF or ZIP.
+- How to check: Make the pack - the line `texture pack: ... pictures' files` shows every archive of DATA.INI, the ones
+  that did not open with the reason.
+
 # uaRO Graphics 1.6.4 — testing
 
 - **The pack builder reads the game's files in several threads.** The first pass (open every file, take the sprites'
