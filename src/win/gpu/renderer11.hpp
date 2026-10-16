@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <dxgiformat.h>
 
 #include <cstdint>
 #include <map>
@@ -93,6 +94,29 @@ private:
         ID3D11ShaderResourceView* srv = nullptr;
         int width = 0, height = 0;
     };
+    // 1.0: the glow of the effects (glow11.cpp, as Direct3D 12's effects.cpp): from the world's first draw that adds
+    // light the draws write that light into a second target too; at the interface it is shrunk level by level,
+    // blurred back up and added onto the picture.
+    static constexpr int kGlowLevels11 = 8;
+    bool glowWanted() const {
+        return effects_.glow && effects_.glowStrength > 0 && drawGlowPs_ && glowDownPs_ && glowUpPs_ && glowAddPs_;
+    }
+    bool startGlow();
+    void addGlow();
+    void glowPass(ID3D11PixelShader* ps, ID3D11ShaderResourceView* src, int srcW, int srcH, ID3D11RenderTargetView* dst,
+                  int dstW, int dstH, ID3D11BlendState* blend, float factor, float strength, bool first);
+    ID3D11PixelShader* drawGlowPs_ = nullptr;
+    ID3D11PixelShader* waterGlowPs_ = nullptr;
+    ID3D11PixelShader* glowDownPs_ = nullptr;
+    ID3D11PixelShader* glowUpPs_ = nullptr;
+    ID3D11PixelShader* glowAddPs_ = nullptr;
+    Target glow_;
+    Target glowChain_[kGlowLevels11];
+    int glowLevels_ = 0;
+    bool glowActive_ = false;  // the world's draws write into glow_ too
+    bool glowDrawn_ = false;   // ... and some did this frame
+    bool glowFailed_ = false;  // not made at this size
+    bool makeTarget(Target& t, int width, int height, DXGI_FORMAT format);
     void applyGrade();  // 0.59
     void applyNight();  // 0.63
     void worldPass(ID3D11PixelShader* ps, const Constants& c);
@@ -111,7 +135,9 @@ private:
     void applyTorchLight();
     bool torchesWanted() const { return effects_.torch && effects_.torchLight > 0 && torchLightPs_; }
     bool compileShaders(const std::string& cacheFile, Renderer::StartSink sink, void* sinkContext, std::string& error);
-    bool makeTarget(Target& t, int width, int height);
+    bool makeTarget(Target& t, int width, int height) {
+        return makeTarget(t, width, height, DXGI_FORMAT_B8G8R8A8_UNORM);
+    }
     void dropTarget(Target& t);
     bool makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D11DepthStencilView*& dsv);
     bool makeStaging(int width, int height);

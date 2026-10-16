@@ -126,6 +126,13 @@ Renderer11::~Renderer11() {
     drop(drawPs_);
     drop(waterVs_);  // 0.99
     drop(waterPs_);
+    drop(drawGlowPs_);  // 1.0
+    drop(waterGlowPs_);
+    drop(glowDownPs_);
+    drop(glowUpPs_);
+    drop(glowAddPs_);
+    dropTarget(glow_);
+    for (Target& t : glowChain_) dropTarget(t);
     drop(depthCopySrv_);
     drop(depthCopyDsv_);
     drop(depthCopy_);
@@ -311,7 +318,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         const char* source;
         std::vector<uint8_t> code;
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
-    } wants[15] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[20] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -319,7 +326,10 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"shadow_blur_ps", ps, shaderSource(), {}}, {"shadow_apply_ps", ps, shaderSource(), {}},
                    {"torch_light_ps", ps, shaderSource(), {}},  // 0.61
                    {"night_ps", ps, shaderSource(), {}},        // 0.63
-                   {"water_vs", vs, shaderSource(), {}, true},  {"water_ps", ps, shaderSource(), {}, true}};  // 0.99
+                   {"water_vs", vs, shaderSource(), {}, true},  {"water_ps", ps, shaderSource(), {}, true},  // 0.99
+                   {"draw_glow_ps", ps, shaderSource(), {}, true}, {"water_glow_ps", ps, shaderSource(), {}, true},
+                   {"glow_down_ps", ps, shaderSource(), {}, true}, {"glow_up_ps", ps, shaderSource(), {}, true},
+                   {"glow_add_ps", ps, shaderSource(), {}, true}};  // 1.0
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -413,6 +423,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         drop(waterVs_);  // 0.99: the water as the game draws it
         drop(waterPs_);
     }
+    ID3D11PixelShader** glows[5] = {&drawGlowPs_, &waterGlowPs_, &glowDownPs_, &glowUpPs_, &glowAddPs_};  // 1.0
+    for (int k = 0; k < 5; ++k)
+        if (wants[15 + k].code.empty() || !psOf(wants[15 + k], *glows[k])) *glows[k] = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -442,12 +455,12 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     return true;
 }
 
-bool Renderer11::makeTarget(Target& t, int width, int height) {
+bool Renderer11::makeTarget(Target& t, int width, int height, DXGI_FORMAT format) {
     D3D11_TEXTURE2D_DESC d{};
     d.Width = UINT(width);
     d.Height = UINT(height);
     d.MipLevels = d.ArraySize = 1;
-    d.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    d.Format = format;
     d.SampleDesc.Count = 1;
     d.Usage = D3D11_USAGE_DEFAULT;
     d.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
@@ -787,7 +800,8 @@ void Renderer11::applyViewport() {
 void Renderer11::bindTarget() {
     if (targetBound_) return;
     bound_.valid = false;  // 0.88: another pass bound its own since
-    ctx_->OMSetRenderTargets(1, &target_.rtv, dsv_);
+    ID3D11RenderTargetView* rtvs[2] = {target_.rtv, glowActive_ ? glow_.rtv : nullptr};  // 1.0: the glow too
+    ctx_->OMSetRenderTargets(glowActive_ ? 2 : 1, rtvs, dsv_);
     applyViewport();
     ctx_->VSSetShader(drawVs_, nullptr, 0);
     ctx_->PSSetShader(drawPs_, nullptr, 0);
@@ -941,6 +955,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
+    if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
+    // 1.0: from the world's first draw that adds light, its draws write into the glow too
+    if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
+    const bool toGlow = !s.ui && glowActive_;
     if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && torchesWanted()) noteTorch(rec, d);
     if (!s.ui) worldDrawn_ = true;
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
@@ -1036,7 +1054,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         s.dstBlend == d3d7::BLEND_INVSRCALPHA &&
         water::isWaterQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
                            d.primitive == d3d7::PT_TRIANGLESTRIP))
-        water = copyForWater();
+        water = (!toGlow || waterGlowPs_) && copyForWater();  // 1.0: in the glow, its own glow shader
     if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
         std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
         const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
@@ -1051,6 +1069,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.67, soft particles (as draw.cpp): an effect facing the screen fades where it goes into the ground; the
     // depth read while it is tested only.
     const bool adds = s.blend && s.dstBlend == d3d7::BLEND_ONE;
+    // 1.0: its colour into the glow - light it adds, or a factor it multiplies the light under it by (as draw.cpp)
+    if (toGlow && (adds || (s.blend && (s.srcBlend == d3d7::BLEND_ZERO || s.srcBlend == d3d7::BLEND_DESTCOLOR))))
+        c.alphaTest |= 1u << 19;
+    if (toGlow) glowDrawn_ = true;
     const bool effectDraw = adds || d.effect == uint8_t(effect_exe::Kind::Skill) ||
                             d.effect == uint8_t(effect_exe::Kind::Portal);
     const bool soft = !water && !s.ui && effects_.softParticles && d.vertexCount == 4 && s.blend && s.zEnable &&
@@ -1081,7 +1103,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.srvs[1] = srvs[1];
     is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
     is.vs = water ? waterVs_ : drawVs_;
-    is.ps = water ? waterPs_ : drawPs_;
+    is.ps = water ? (toGlow ? waterGlowPs_ : waterPs_) : toGlow ? drawGlowPs_ : drawPs_;
     is.primitive = d.primitive;
     is.firstIndex = d.firstIndex;
     is.indexCount = d.indexCount;
@@ -1096,8 +1118,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         return;
     }
     flushBatch();
+    ID3D11RenderTargetView* rtvs[2] = {target_.rtv, glowActive_ ? glow_.rtv : nullptr};  // 1.0: and the glow
+    const UINT rtvCount = glowActive_ ? 2 : 1;
     if (soft) {  // the depth read, not written, while it is tested
-        ctx_->OMSetRenderTargets(1, &target_.rtv, readOnlyDsv_);
+        ctx_->OMSetRenderTargets(rtvCount, rtvs, readOnlyDsv_);
         ctx_->PSSetShaderResources(3, 1, &depthSrv_);
     }
     issue_ = is;
@@ -1108,7 +1132,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (soft) {  // the depth written again by the next draws
         ID3D11ShaderResourceView* none = nullptr;
         ctx_->PSSetShaderResources(3, 1, &none);
-        ctx_->OMSetRenderTargets(1, &target_.rtv, dsv_);
+        ctx_->OMSetRenderTargets(rtvCount, rtvs, dsv_);
     }
 }
 
@@ -1460,6 +1484,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (worldDrawn_ && !nightDone_) applyNight();  // 0.63
     if (worldDrawn_ && !lightDone_) applyTorchLight();  // 0.61
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
+    if (glowDrawn_) addGlow();  // 1.0: likewise
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
          options.sharpen);
     ctx_->OMSetRenderTargets(0, nullptr, nullptr);
