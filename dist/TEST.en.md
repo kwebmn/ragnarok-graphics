@@ -1,3 +1,12 @@
+# uaRO Graphics 1.5.2 — testing
+
+- **anime 6B: the graphics card hung at the check's very first step** (0x887a0006 - DXGI_ERROR_DEVICE_HUNG), and the
+  game did not start after it. The likely cause: the shader read "no such" stand-in addresses (0xFFFFFFFF) under a
+  condition, and the game's compiler may read them before testing it - far past the buffer's end. Every read of the
+  shader now stays inside its buffer; what is not wanted is multiplied by zero.
+- How to check: as for 1.5.0 - the "anime 6B" model, "Make new ones while playing", Direct3D 12. Should it fail
+  again - send the log (the line with `anime-6b`).
+
 # uaRO Graphics 1.5.1 — testing
 
 - **anime 6B: the graphics card's check against the CPU failed** (a difference of 255 of 255), and the game made
