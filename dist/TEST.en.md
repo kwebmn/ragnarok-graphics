@@ -1,3 +1,15 @@
+# uaRO Graphics 1.6.3 — testing
+
+- **Small pictures by a model of their own.** "Models by group" has "Small pictures by a model of their own": a
+  picture smaller than the given points on both sides (the game's: an icon is 24, an item on the ground about 23, a
+  character's frame 30-80) is made by the chosen model ("Their model", anime by default) whatever its group has. So
+  anime 6B stays for the large ones while icons and small frames are not redrawn. Off by default; the side 16-256, 48
+  by default. In the ini: `[ai] small_pictures`, `small_side`, `small_model`.
+- It holds in the game ("Make new ones while playing"), in the pack builder and in the ⚠ counts: once on, small
+  pictures 6B made count as "another model's", and "Make again ⚠" makes them again.
+- How to check: tick it, Apply - "Icons and windows" shows ⚠ (if 6B made the icons); "Make again ⚠" → Make the pack
+  - the icons as anime makes them again.
+
 # uaRO Graphics 1.6.2 — testing
 
 - **A viewer for the models.** The AI page's preview has "Open the viewer": a window of its own (it can fill the
