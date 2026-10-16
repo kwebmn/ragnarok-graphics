@@ -1,3 +1,24 @@
+# uaRO Graphics 1.6.0 — testing
+
+- **A model of its own for each group of pictures.** The AI page has "Models by group" in place of two models:
+  World (ground, buildings, water), Monsters and pets, Players, NPCs, Items on the ground, Skills' effects, Icons and
+  windows, Loading screens and backgrounds - each with general / anime / anime 6B. Above them "Models": Fast (anime
+  everywhere), Balanced (general for the world, anime for the rest, anime 6B for the loading screens), Maximum
+  (general for the world, anime 6B for the rest), Own. In the ini: `[ai] model_world`, `model_monsters` ... (the old
+  `model`, `sprite_model` stay the defaults).
+- **The pack remembers each picture's model** (its index: the model and the group). Under each group - how many of
+  its pictures the pack holds and how many another model made (⚠). Pictures of before 1.6 count as made by the models
+  of then (model / sprite_model); the sprites' frames of before 1.6 get their group at the next build.
+- **Making again.** "Make again ⚠ (N)" opens the Texture pack page with "Make again what another model made" ticked:
+  the build makes such pictures again by their group's model, each into its place in the pack.
+- **Preview.** At the bottom of the page: a group → "Show an example" - a picture of the group from the game's files
+  (its middle, up to 128) as the game has it and through general, anime, anime 6B, made by the graphics card in a few
+  seconds (Direct3D 12).
+- In the game with "Make new ones while playing" each group is made by its own model.
+- How to check: choose "Balanced" and, say, anime 6B for "Players" → Apply; "Players" shows ⚠ with a number; "Make
+  again ⚠" → the Texture pack page, the box ticked → Make the pack - the log says `made again by another model`; the
+  preview of "Monsters" shows four pictures.
+
 # uaRO Graphics 1.5.11 — testing
 
 - **The update did not download: `CRYPT_E_NO_REVOCATION_CHECK`.** Windows' own curl checks that GitHub's
