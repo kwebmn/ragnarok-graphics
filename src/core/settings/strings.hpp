@@ -196,6 +196,7 @@ enum class Text : uint16_t {
     // 0.98
     FxFlare, FxFlareHint,
     GfxSoundEngine, GfxSoundEngineHint, GfxSoundReverb, GfxSoundReverbHint,
+    GfxSoundHeadphones, GfxSoundHeadphonesHint,
     Count
 };
 

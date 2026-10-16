@@ -114,7 +114,30 @@ TEST(sound_engine_rooms_by_the_map) {
 
 TEST(sound_engine_settings) {
     const Config d = parseConfig("");
-    CHECK(!d.sound.engine && d.sound.reverb == 60);
+    CHECK(!d.sound.engine && d.sound.reverb == 60 && d.sound.headphones);
+    CHECK(!parseConfig("[sound]\nheadphones = 0\n").sound.headphones);
     const Config c = parseConfig("[sound]\nengine = 1\nreverb = 20\n");
     CHECK(c.sound.engine && c.sound.reverb == 20);
+}
+
+#include "core/resample.hpp"
+
+TEST(sound_engine_reads_a_sound_at_48k) {
+    // A 24 kHz 16-bit stereo sound of a constant level, read at 48 kHz: twice the samples, the level kept, mono.
+    std::vector<uint8_t> f = wavFile(2, 24000, 16, 100, false);
+    wav::Sound s;
+    CHECK(wav::parse(f.data(), uint32_t(f.size()), s));
+    for (uint32_t i = 0; i < s.bytes / 2; ++i) {
+        const int16_t v = 16384;
+        std::memcpy(const_cast<uint8_t*>(s.data) + i * 2, &v, 2);
+    }
+    sound::Reader r(s, 48000);
+    float out[256];
+    const uint32_t n = r.read(out, 256);
+    CHECK(n == 200 && r.done());
+    CHECK(std::fabs(out[50] - 0.5f) < 1e-3f);
+    sound::Reader muffled(s, 48000);
+    muffled.setCutoff(500.0f);
+    muffled.read(out, 4);
+    CHECK(out[0] < 0.1f && out[3] > out[0]);  // the low-pass rises to the level
 }

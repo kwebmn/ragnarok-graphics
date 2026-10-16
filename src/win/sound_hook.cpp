@@ -87,7 +87,7 @@ void readSettings() {
     g_read = true;
     std::string text;
     if (readTextFile(gameDir() + "\\uaro-graphics.ini", text)) g_set = parseConfig(text).sound;
-    audio::configure(g_set.engine, g_set.reverb, g_set.background, g_set.limiter);  // 1.1
+    audio::configure(g_set.engine, g_set.reverb, g_set.background, g_set.limiter, g_set.headphones);  // 1.1, 1.2
 }
 
 Tracked* track(void* handle, uint8_t kind) {

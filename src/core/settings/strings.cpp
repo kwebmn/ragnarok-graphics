@@ -1843,6 +1843,16 @@ const Entry kTexts[] = {
      "відлуння.",
      "С новым движком: пещеры и подземелья отдаются долгим эхом, дома коротким, города немного, поля почти нет. 0 — "
      "без эха."},
+    {"Headphones: Windows' spatial sound",
+     "Навушники: просторовий звук Windows",
+     "Наушники: пространственный звук Windows"},
+    {"With the new engine, when Windows Sonic for Headphones or Dolby Atmos is turned on in Windows (the speaker's "
+     "properties, Spatial sound): the sounds placed in three dimensions - behind, in front, beside - in headphones "
+     "too.",
+     "З новим рушієм, коли у Windows увімкнено Windows Sonic для навушників або Dolby Atmos (властивості динаміка, "
+     "«Просторовий звук»): звуки розставлено в трьох вимірах — позаду, попереду, збоку — і в навушниках.",
+     "С новым движком, когда в Windows включён Windows Sonic для наушников или Dolby Atmos (свойства динамика, "
+     "«Пространственный звук»): звуки расставлены в трёх измерениях — сзади, спереди, сбоку — и в наушниках."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

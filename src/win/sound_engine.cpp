@@ -14,6 +14,7 @@
 #include "core/sound_space.hpp"
 #include "core/wav.hpp"
 #include "win/log.hpp"
+#include "win/spatial_audio.hpp"
 
 namespace uagfx::win::audio {
 namespace {
@@ -50,6 +51,7 @@ struct Voice {
 
 struct Engine {
     bool tried = false, on = false, wanted = false, logged = false, front = true, limiter = true;
+    bool headphones = true;  // 1.2: Windows' spatial sound when it is on
     int reverbStrength = 60, background = 30;
     HMODULE dll = nullptr;
     IXAudio2* x = nullptr;
@@ -61,7 +63,7 @@ struct Engine {
     std::vector<Voice> voices;
     sound::Room room = sound::Room::Open;
     std::string map = "-";
-    unsigned played = 0, refused = 0, stolen = 0;
+    unsigned played = 0, refused = 0, stolen = 0, spatial = 0;
 };
 
 Engine& engine() {
@@ -113,6 +115,7 @@ bool start(Engine& e) {
     LOG_INFO("sound engine: XAudio2 at %u Hz on %u channels (mask 0x%lx)%s", e.outRate, e.outChannels,
              static_cast<unsigned long>(e.mask), e.reverb ? ", reverberation" : ", no reverberation");
     e.on = true;
+    if (e.headphones) spatial::start();  // 1.2
     return true;
 }
 
@@ -217,9 +220,10 @@ Voice* voiceFor(Engine& e, const wav::Sound& s) {
 
 }  // namespace
 
-void configure(bool on, int reverb, int background, bool limiter) {
+void configure(bool on, int reverb, int background, bool limiter, bool headphones) {
     Engine& e = engine();
     e.wanted = on;
+    e.headphones = headphones;
     e.limiter = limiter;
     e.reverbStrength = reverb;
     e.background = background;
@@ -251,6 +255,14 @@ bool play(const void* image, float x, float y, float z, int reach, int inner, fl
     const float gain = master * sound::distanceGain(distance, full, outer) * (std::isfinite(factor) ? factor : 1.0f) *
                        float(e.limiter ? sound::crowdGain(playing) : 1.0);
     if (gain <= 0.001f) return true;  // out of reach, or the effects turned down: nothing, as the game
+    const float cutoff = sound::muffleHz(distance, full, outer);
+    // 1.2: Windows' spatial sound has it - in three dimensions; the voice here then gives its echo alone
+    const bool inSpace = e.headphones && spatial::active() && spatial::add(s, azimuth, distance / 5.0f, gain, cutoff);
+    if (inSpace && !e.reverb) {
+        ++e.played;
+        ++e.spatial;
+        return true;
+    }
     Voice* v = voiceFor(e, s);
     if (!v) {
         ++e.refused;
@@ -263,15 +275,15 @@ bool play(const void* image, float x, float y, float z, int reach, int inner, fl
     std::vector<float> matrix(size_t(e.outChannels) * s.channels);
     for (UINT32 out = 0; out < e.outChannels && out < 16; ++out)
         for (UINT32 in = 0; in < s.channels; ++in)
-            matrix[size_t(out) * s.channels + in] = pan[out] * (s.channels == 2 ? 0.7071f : 1.0f);
+            matrix[size_t(out) * s.channels + in] = inSpace ? 0.0f : pan[out] * (s.channels == 2 ? 0.7071f : 1.0f);
     v->voice->SetOutputMatrix(e.master, s.channels, e.outChannels, matrix.data(), XAUDIO2_COMMIT_NOW);
     if (e.reverb) {
         const float wet = sendFor(e) * std::sqrt(std::clamp(gain, 0.0f, 1.0f)) / std::max(gain, 0.05f);
         const float send[4] = {wet, wet, wet, wet};  // relative to the voice's own volume, the farther the more of it
         v->voice->SetOutputMatrix(e.reverb, s.channels, 2, send, XAUDIO2_COMMIT_NOW);
     }
-    XAUDIO2_FILTER_PARAMETERS lp{LowPassFilter, std::min(1.0f, 2.0f * std::sin(3.14159265f *
-                                     sound::muffleHz(distance, full, outer) / float(s.rate))), 1.0f};
+    XAUDIO2_FILTER_PARAMETERS lp{LowPassFilter, std::min(1.0f, 2.0f * std::sin(3.14159265f * cutoff / float(s.rate))),
+                                 1.0f};
     v->voice->SetFilterParameters(&lp, XAUDIO2_COMMIT_NOW);
     v->gain = gain;
     v->voice->SetVolume(gain, XAUDIO2_COMMIT_NOW);
@@ -285,6 +297,7 @@ bool play(const void* image, float x, float y, float z, int reach, int inner, fl
     }
     v->busy = true;
     ++e.played;
+    e.spatial += inSpace ? 1 : 0;
     return true;
 }
 
@@ -303,8 +316,9 @@ void frame(bool foreground, const std::string& map) {
     }
     if (foreground != e.front) {
         e.front = foreground;
-        e.master->SetVolume(foreground ? 1.0f : float(std::clamp(e.background, 0, 100)) / 100.0f,
-                            XAUDIO2_COMMIT_NOW);
+        const float level = foreground ? 1.0f : float(std::clamp(e.background, 0, 100)) / 100.0f;
+        e.master->SetVolume(level, XAUDIO2_COMMIT_NOW);
+        spatial::setMaster(level);  // 1.2
     }
     static ULONGLONG last = 0;
     const ULONGLONG now = GetTickCount64();
@@ -312,13 +326,18 @@ void frame(bool foreground, const std::string& map) {
         e.logged = true;
         last = now;
         LOG_INFO("sound engine: the game's sounds placed around the player (%s, the place %d)",
-                 e.outChannels == 2 ? "stereo" : e.outChannels == 6 ? "5.1" : e.outChannels == 8 ? "7.1" : "speakers",
+                 spatial::active() ? spatial::name()
+                 : e.outChannels == 2 ? "stereo"
+                 : e.outChannels == 6 ? "5.1"
+                 : e.outChannels == 8 ? "7.1"
+                                      : "speakers",
                  int(e.room));
     } else if (e.logged && now - last > 60000) {
         last = now;
-        LOG_INFO("sound engine: %u sounds played, %u left to Miles, %u stopped for newer ones in the last minute",
-                 e.played, e.refused, e.stolen);
-        e.played = e.refused = e.stolen = 0;
+        LOG_INFO("sound engine: %u sounds played (%u in Windows' spatial sound), %u left to Miles, %u stopped for "
+                 "newer ones in the last minute",
+                 e.played, e.spatial, e.refused, e.stolen);
+        e.played = e.refused = e.stolen = e.spatial = 0;
         e.logged = true;
     }
 }

@@ -575,6 +575,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.sound.engine);
         } else if (key == "sound.reverb") {
             toInt(val, 0, 100, c.sound.reverb);
+        } else if (key == "sound.headphones") {  // 1.2
+            setBool(val, c.sound.headphones);
         } else if (key == "debug.merge_draws") {
             setBool(val, c.mergeDraws);
         } else if (key == "debug.profile") {

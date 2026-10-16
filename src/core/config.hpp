@@ -278,6 +278,7 @@ struct SoundSettings {
     bool crossfade = true;  // crossfade: the music's pieces change over 1.5 s
     bool engine = false;    // 1.1, engine: the sounds at a place by the driver's engine (XAudio2): around the player
     int reverb = 60;        // reverb: the place's reverberation with the engine, 0-100
+    bool headphones = true;  // 1.2, headphones: Windows' spatial sound (Sonic, Atmos) when it is on in Windows
 };
 
 struct Config {
