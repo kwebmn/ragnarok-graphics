@@ -191,6 +191,8 @@ enum class Text : uint16_t {
     FxGlint, FxGlintHint,
     // 0.96
     FxHitFlash, FxHitFlashHint,
+    // 0.97
+    FxWetGround, FxWetGroundHint,
     Count
 };
 

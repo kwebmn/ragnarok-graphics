@@ -763,8 +763,13 @@ struct Renderer::Impl {
                : mapOutdoors                                         ? 0.0f
                                                                      : user;
     }
+    // 0.97: the ground wet where it rains - darker, puddles mirroring - by the floor's own pass
+    bool wetWanted() const {
+        return effects.wetGround && effects.weather && mapWeather == weather::Kind::Rain && floorReflectPs &&
+               halfOverPs;
+    }
     bool floorReflectDue() const {
-        return floorReflectAmount() > 0.0f && groundDrawn && !floorReflectDone && viewToWorldValid;
+        return (floorReflectAmount() > 0.0f || wetWanted()) && groundDrawn && !floorReflectDone && viewToWorldValid;
     }
     bool applyFloorReflections();  // once a frame, the world drawn and lit; false: lost
     bool shaftsWanted() const { return effects.shafts && effects.shaftsStrength > 0 && shaftsPs; }

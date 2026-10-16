@@ -142,6 +142,7 @@ bool Renderer::Impl::applyFloorReflections() {
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
     c.twin[0] = floorReflectAmount();
+    c.twin[1] = wetWanted() ? 1.0f : 0.0f;  // 0.97
     if (!floorReflectLogged) LOG_INFO("floor reflections: on %s, at %dx%d", mapName.c_str(), hw, hh);
     floorReflectLogged = true;
     if (!effectPass(floorReflectPipeline, floorTarget, floorState, rtvHandle(kRtvFloor), hw, hh, c, sceneColorSrv,

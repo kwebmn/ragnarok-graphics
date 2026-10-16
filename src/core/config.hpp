@@ -247,6 +247,9 @@ struct EffectSettings {
     // 0.96: hit_flash - a monster hit flashes white for a moment (core/hit_flash.hpp, win/hit_hook.cpp). Off by
     // default.
     bool hitFlash = false;
+    // 0.97: wet_ground - where it rains the ground is darker and puddles mirror the world (floor_reflect_ps, Direct3D
+    // 12). Off by default.
+    bool wetGround = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

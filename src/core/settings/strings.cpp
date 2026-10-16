@@ -1807,6 +1807,15 @@ const Entry kTexts[] = {
      "впізнається за звуком.",
      "Монстр, по которому попали, на мгновение вспыхивает белым, как в современных 2D-играх. Нужен включённый звук "
      "игры: удар узнаётся по звуку."},
+    {"Wet ground in the rain",
+     "Мокра земля в дощ",
+     "Мокрая земля в дождь"},
+    {"On maps where it rains the ground is a little darker and puddles here and there mirror the houses, the trees "
+     "and the characters (with the weather on, Direct3D 12).",
+     "На мапах, де йде дощ, земля трохи темніша, а калюжі подекуди віддзеркалюють будинки, дерева й персонажів (з "
+     "увімкненою погодою, Direct3D 12).",
+     "На картах, где идёт дождь, земля чуть темнее, а лужи кое-где отражают дома, деревья и персонажей (с включённой "
+     "погодой, Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

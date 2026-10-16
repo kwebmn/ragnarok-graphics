@@ -1454,7 +1454,19 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
     float3 c = reflectionIn(p + n * 0.6, reflect(v, n), uiPixels.xy, weight);
     float fresnel = 0.04 + 0.96 * pow(1.0 - saturate(dot(-v, n)), 5.0);
     float a = flat * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
-    return float4(c * a, a);
+    // 0.97, wet ground (twinY): the ground a little darker all over, and puddles - patches of noise over the world,
+    // the same wherever the camera goes - mirroring nearly as water does.
+    float dark = 0.0;
+    if (twinY > 0.0) {
+        float3 world = p.x * float3(r0, r1, r2) + p.y * float3(r3, r4, r5) + p.z * float3(r6, r7, r8) +
+                       float3(r9, r10, r11);
+        float n0 = valueNoise(world.xz * 0.045) * 0.7 + valueNoise(world.xz * 0.17 + 3.1) * 0.3;
+        float puddle = smoothstep(0.58, 0.66, n0) * flat;
+        dark = 0.16 * flat * twinY;
+        a = max(a, puddle * weight * (0.45 + 0.4 * saturate(fresnel * 3.0)) * twinY);
+    }
+    // Premultiplied over: the ground darkened by `dark`, then the reflection over it by `a`.
+    return float4(c * a, 1.0 - (1.0 - dark) * (1.0 - a));
 }
 
 // 0.86: a half-size premultiplied picture (t0) laid over the world, smoothly (uiPixels.xy the world's size).
