@@ -1,3 +1,11 @@
+# uaRO Graphics 0.94.0 — testing
+
+- **Ripples from steps** (Effects page, off by default; Direct3D 12, needs "Modern water" on). Where characters and
+  monsters walk through water, rings of waves spread (the three newest steps). The steps are now followed without the
+  characters' shadows too — footprints in snow and sand work with the shadows off as well.
+- How to check: turn on "Modern water" and "Ripples from steps", walk through shallow water (Comodo's beach, say) —
+  rings spread behind the character; on land nothing changes.
+
 # uaRO Graphics 0.93.0 — testing
 
 - **Fade in monsters and items** (Effects page, off by default). Monsters, characters, NPCs and items on the ground
