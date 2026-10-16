@@ -1,3 +1,9 @@
+# uaRO Graphics 1.6.1 — testing
+
+- **Preview: zoom.** Under the example's pictures - "Zoom": whole, x2, x4, x8. Zoomed, all four show the same middle,
+  pixel by pixel (no smoothing), two to a row and larger - to compare the models' lines and details.
+- How to check: the AI page → preview → Show an example → Zoom x4: four large pictures two to a row, sharp pixels.
+
 # uaRO Graphics 1.6.0 — testing
 
 - **A model of its own for each group of pictures.** The AI page has "Models by group" in place of two models:
