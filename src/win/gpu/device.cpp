@@ -1415,6 +1415,10 @@ std::string Renderer::adapterName() const {
                     : impl_->adapter;
 }
 
+void Renderer::setMergeDraws(bool on) {
+    if (d3d11_) d3d11_->setMergeDraws(on);
+}
+
 void Renderer::setStateCache(bool on) {
     if (d3d11_) d3d11_->setStateCache(on);
 }

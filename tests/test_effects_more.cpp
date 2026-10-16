@@ -165,4 +165,7 @@ TEST(state_cache_on_unless_turned_off) {
     // 0.89: [debug] fast_pick - the cell under the mouse along its ray
     CHECK(parseConfig("").fastPick);
     CHECK(!parseConfig("[debug]\nfast_pick = 0\n").fastPick);
+    // 0.90: [debug] merge_draws - Direct3D 11's draw calls gathered
+    CHECK(parseConfig("").mergeDraws);
+    CHECK(!parseConfig("[debug]\nmerge_draws = 0\n").mergeDraws);
 }

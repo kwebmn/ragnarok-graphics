@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/draw_batch.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
 #include "core/map_objects.hpp"
@@ -67,6 +68,7 @@ public:
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setStateCache(bool on) { stateCache_ = on; }  // 0.88: [debug] state_cache
+    void setMergeDraws(bool on) { mergeDraws_ = on; }  // 0.90: [debug] merge_draws
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);
@@ -229,6 +231,24 @@ private:
         UINT stride = 0, phase = 0;
         ID3D11Buffer* indexBuffer = nullptr;
     } bound_;
+    // 0.90: a draw call's state - the game's draws with the same one and their vertices one after another go to the
+    // driver as one draw call (core/draw_batch.hpp); the views it reads are held while it is gathered
+    struct Issue {
+        Constants c{};
+        ID3D11BlendState* blend = nullptr;
+        ID3D11DepthStencilState* depth = nullptr;
+        ID3D11RasterizerState* raster = nullptr;
+        ID3D11SamplerState* samplers[2] = {nullptr, nullptr};
+        ID3D11ShaderResourceView* srvs[2] = {nullptr, nullptr};
+        ID3D11InputLayout* layout = nullptr;
+        uint32_t primitive = 0, firstIndex = 0, indexCount = 0;  // a draw by itself: its own
+        bool sameState(const Issue& o) const;
+    };
+    void flushBatch();  // the gathered draw call to the driver
+    Issue issue_;
+    batch::Batch batch_;
+    ID3D11Buffer* quadIndices_ = nullptr;  // batch::quadIndices: the quads as lists of triangles
+    bool mergeDraws_ = true;
     // 0.88: what the constant buffer holds - the same constants are not written again
     Constants constantsNow_{};
     bool constantsKnown_ = false;
@@ -276,6 +296,7 @@ private:
     // calls made and spared, the processor's time in drawing; the game's textures made, reused, freed
     struct Stats {
         uint64_t frames = 0, draws = 0, calls = 0, spared = 0, made = 0, reused = 0, freed = 0, uploaded = 0;
+        uint64_t batches = 0;  // 0.90: the draw calls the game's draws went in
         LONGLONG ticks = 0;
     } stats_;
     // 0.89: textures the game let go, kept for its next one of the same size and levels - it makes and frees small

@@ -112,8 +112,12 @@ Renderer11::~Renderer11() {
         for (auto& pair : f.effect)
             for (ID3D11Query*& q : pair) drop(q);
     }
+    if (batch_.open())  // 0.90: the views a gathered call held
+        for (ID3D11ShaderResourceView* v : issue_.srvs)
+            if (v) v->Release();
     drop(vertices_);
     drop(indices_);
+    drop(quadIndices_);
     drop(constants_);
     drop(clearConstants_);
     for (ID3D11InputLayout*& l : layout_) drop(l);
@@ -246,6 +250,17 @@ bool Renderer11::create(const std::string& shaderCache, Renderer::StartSink sink
     if (FAILED(device_->CreateBuffer(&b, nullptr, &clearConstants_))) {
         error = "no constant buffer";
         return false;
+    }
+    // 0.90: the quads' index pattern (core/draw_batch.hpp); without it each quad is drawn by itself as before
+    const std::vector<uint16_t> quads = batch::quadIndices(batch::kMaxQuads);
+    D3D11_BUFFER_DESC q{};
+    q.ByteWidth = UINT(quads.size() * sizeof(uint16_t));
+    q.Usage = D3D11_USAGE_IMMUTABLE;
+    q.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    const D3D11_SUBRESOURCE_DATA quadData{quads.data(), 0, 0};
+    if (FAILED(device_->CreateBuffer(&q, &quadData, &quadIndices_))) {
+        quadIndices_ = nullptr;
+        LOG_INFO("Direct3D 11: no index pattern for the quads - each of the game's draws goes by itself");
     }
     // A texture the game has not given (or not yet): white, as Direct3D 7 reads a missing one (states.md §5).
     D3D11_TEXTURE2D_DESC t{};
@@ -905,6 +920,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const DrawSetup& s = rec.states()[d.state];
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
+    // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
+    if (s.ui && worldDrawn_ && (!nightDone_ || !lightDone_ || !gradeDone_)) flushBatch();
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
@@ -912,8 +929,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui) worldDrawn_ = true;
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;
-    if (!s.ui && s.blend && groundDrawn_ && !shadowsDone_ && shadowsWanted())
+    if (!s.ui && s.blend && groundDrawn_ && !shadowsDone_ && shadowsWanted()) {
+        flushBatch();  // 0.90
         applyActorShadows(rec, size_t(&d - rec.draws().data()));
+    }
     bindTarget();
     // Stage 6: a window tile whose twin was made at this scale is drawn from the twin, a texel per target pixel.
     const bool twin = d.twin && s.ui && twinMatches(d.twinScale, scale_) && textures_.count(d.twin);
@@ -1008,21 +1027,66 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
         const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
         std::memcpy(c.projection, proj, sizeof proj);
+    }
+    // 0.90: the draw call's state; the draw goes on the gathered call when it is the same and its vertices follow
+    Issue is;
+    is.c = c;
+    const int aniso = s.ui ? 0 : anisotropy_;
+    is.samplers[0] = samplerState(sampled[0], aniso);
+    is.samplers[1] = samplerState(sampled[1], aniso);
+    is.blend = blendState(s.blend, d3dmap::blendOf(s.srcBlend, d3d7::BLEND_ONE),
+                          d3dmap::blendOf(s.dstBlend, d3d7::BLEND_ZERO),
+                          D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                              D3D11_COLOR_WRITE_ENABLE_BLUE);
+    is.depth = depthState(s.zEnable, s.zWrite, d3dmap::compareOf(s.zFunc));
+    is.raster = rasterState(d3dmap::cullOf(s.cull));
+    is.srvs[0] = srvs[0];
+    is.srvs[1] = srvs[1];
+    is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
+    is.primitive = d.primitive;
+    is.firstIndex = d.firstIndex;
+    is.indexCount = d.indexCount;
+    batch::Draw shape{batch::kindOf(d.primitive, d.vertexCount, d.indexCount != 0), d.vertexOffset, d.vertexCount,
+                      uint32_t(stride)};
+    // By itself as before: merging off, a soft particle (its depth bound for it alone), quads without the pattern.
+    if (!mergeDraws_ || soft || (shape.kind == batch::Kind::Quads && !quadIndices_))
+        shape.kind = batch::Kind::Single;
+    ++stats_.draws;
+    if (batch_.joins(shape) && is.sameState(issue_)) {
+        batch_.add(shape);
+        return;
+    }
+    flushBatch();
+    if (soft) {  // the depth read, not written, while it is tested
         ctx_->OMSetRenderTargets(1, &target_.rtv, readOnlyDsv_);
         ctx_->PSSetShaderResources(3, 1, &depthSrv_);
     }
-    setConstants(c);
-    // 0.88: only what differs from the last draw's (bound_)
-    const int aniso = s.ui ? 0 : anisotropy_;
-    ID3D11SamplerState* samplers[2] = {samplerState(sampled[0], aniso), samplerState(sampled[1], aniso)};
-    ID3D11BlendState* blend = blendState(s.blend, d3dmap::blendOf(s.srcBlend, d3d7::BLEND_ONE),
-                                         d3dmap::blendOf(s.dstBlend, d3d7::BLEND_ZERO),
-                                         D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
-                                             D3D11_COLOR_WRITE_ENABLE_BLUE);
-    ID3D11DepthStencilState* depth = depthState(s.zEnable, s.zWrite, d3dmap::compareOf(s.zFunc));
-    ID3D11RasterizerState* raster = rasterState(d3dmap::cullOf(s.cull));
-    ID3D11InputLayout* layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
-    const D3D11_PRIMITIVE_TOPOLOGY topology = d.primitive == d3d7::PT_TRIANGLESTRIP
+    issue_ = is;
+    for (ID3D11ShaderResourceView* v : issue_.srvs)
+        if (v) v->AddRef();  // held while gathered: an AI copy put away in the meantime stays alive for it
+    batch_.start(shape);
+    if (shape.kind == batch::Kind::Single) flushBatch();
+    if (soft) {  // the depth written again by the next draws
+        ID3D11ShaderResourceView* none = nullptr;
+        ctx_->PSSetShaderResources(3, 1, &none);
+        ctx_->OMSetRenderTargets(1, &target_.rtv, dsv_);
+    }
+}
+
+bool Renderer11::Issue::sameState(const Issue& o) const {
+    return blend == o.blend && depth == o.depth && raster == o.raster && samplers[0] == o.samplers[0] &&
+           samplers[1] == o.samplers[1] && srvs[0] == o.srvs[0] && srvs[1] == o.srvs[1] && layout == o.layout &&
+           std::memcmp(&c, &o.c, sizeof c) == 0;
+}
+
+// 0.90: the gathered draws as one draw call - the quads through their index pattern, a list as it is, a draw by
+// itself as the game made it. 0.88: only what differs from the last call's is called (bound_).
+void Renderer11::flushBatch() {
+    if (!batch_.open()) return;
+    const Issue& is = issue_;
+    const batch::Kind kind = batch_.kind();
+    setConstants(is.c);
+    const D3D11_PRIMITIVE_TOPOLOGY topology = kind == batch::Kind::Single && is.primitive == d3d7::PT_TRIANGLESTRIP
                                                   ? D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
                                                   : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
     const bool all = !bound_.valid || !stateCache_;
@@ -1031,49 +1095,55 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         ++(differs ? issued : spared);
         return differs;
     };
-    if (need(all || blend != bound_.blend)) ctx_->OMSetBlendState(blend, nullptr, 0xFFFFFFFF);
-    if (need(all || depth != bound_.depth)) ctx_->OMSetDepthStencilState(depth, 0);
-    if (need(all || raster != bound_.raster)) ctx_->RSSetState(raster);
-    if (need(all || samplers[0] != bound_.samplers[0] || samplers[1] != bound_.samplers[1]))
-        ctx_->PSSetSamplers(0, 2, samplers);
-    if (need(all || srvs[0] != bound_.srvs[0] || srvs[1] != bound_.srvs[1])) ctx_->PSSetShaderResources(0, 2, srvs);
-    if (need(all || layout != bound_.layout)) ctx_->IASetInputLayout(layout);
+    if (need(all || is.blend != bound_.blend)) ctx_->OMSetBlendState(is.blend, nullptr, 0xFFFFFFFF);
+    if (need(all || is.depth != bound_.depth)) ctx_->OMSetDepthStencilState(is.depth, 0);
+    if (need(all || is.raster != bound_.raster)) ctx_->RSSetState(is.raster);
+    if (need(all || is.samplers[0] != bound_.samplers[0] || is.samplers[1] != bound_.samplers[1]))
+        ctx_->PSSetSamplers(0, 2, is.samplers);
+    if (need(all || is.srvs[0] != bound_.srvs[0] || is.srvs[1] != bound_.srvs[1]))
+        ctx_->PSSetShaderResources(0, 2, is.srvs);
+    if (need(all || is.layout != bound_.layout)) ctx_->IASetInputLayout(is.layout);
     if (need(all || unsigned(topology) != bound_.topology)) ctx_->IASetPrimitiveTopology(topology);
-    // The record's vertices lie one draw after another: the buffer stays bound at the phase of the draw's first
-    // vertex within its stride, the draw starting at its vertex number - bound again only when the stride or the
+    // The record's vertices lie one draw after another: the buffer stays bound at the phase of the call's first
+    // vertex within its stride, the call starting at its vertex number - bound again only when the stride or the
     // phase changes (a draw of the other vertex kind in between).
-    const UINT strideBytes = UINT(stride), phase = d.vertexOffset % strideBytes, first = d.vertexOffset / strideBytes;
+    const UINT strideBytes = batch_.stride(), phase = batch_.firstByte() % strideBytes,
+               first = batch_.firstByte() / strideBytes;
     if (need(all || vertices_ != bound_.vertexBuffer || strideBytes != bound_.stride || phase != bound_.phase))
         ctx_->IASetVertexBuffers(0, 1, &vertices_, &strideBytes, &phase);
-    if (d.indexCount) {
-        if (need(all || indices_ != bound_.indexBuffer)) ctx_->IASetIndexBuffer(indices_, DXGI_FORMAT_R16_UINT, 0);
-        bound_.indexBuffer = indices_;
-        ctx_->DrawIndexed(d.indexCount, d.firstIndex, INT(first));
+    ID3D11Buffer* indices = kind == batch::Kind::Quads ? quadIndices_
+                            : kind == batch::Kind::Single && is.indexCount ? indices_
+                                                                           : nullptr;
+    if (indices) {
+        if (need(all || indices != bound_.indexBuffer)) ctx_->IASetIndexBuffer(indices, DXGI_FORMAT_R16_UINT, 0);
+        bound_.indexBuffer = indices;
+        if (kind == batch::Kind::Quads)
+            ctx_->DrawIndexed(batch_.vertices() / 4 * 6, 0, INT(first));
+        else
+            ctx_->DrawIndexed(is.indexCount, is.firstIndex, INT(first));
     } else {
         if (all) bound_.indexBuffer = nullptr;
-        ctx_->Draw(d.vertexCount, first);
+        ctx_->Draw(batch_.vertices(), first);
     }
-    ++stats_.draws;
+    ++stats_.batches;
     stats_.calls += issued;
     stats_.spared += spared;
     bound_.valid = true;
-    bound_.blend = blend;
-    bound_.depth = depth;
-    bound_.raster = raster;
-    bound_.samplers[0] = samplers[0];
-    bound_.samplers[1] = samplers[1];
-    bound_.srvs[0] = srvs[0];
-    bound_.srvs[1] = srvs[1];
-    bound_.layout = layout;
+    bound_.blend = is.blend;
+    bound_.depth = is.depth;
+    bound_.raster = is.raster;
+    bound_.samplers[0] = is.samplers[0];
+    bound_.samplers[1] = is.samplers[1];
+    bound_.srvs[0] = is.srvs[0];
+    bound_.srvs[1] = is.srvs[1];
+    bound_.layout = is.layout;
     bound_.topology = unsigned(topology);
     bound_.vertexBuffer = vertices_;
     bound_.stride = strideBytes;
     bound_.phase = phase;
-    if (soft) {  // the depth written again by the next draws
-        ID3D11ShaderResourceView* none = nullptr;
-        ctx_->PSSetShaderResources(3, 1, &none);
-        ctx_->OMSetRenderTargets(1, &target_.rtv, dsv_);
-    }
+    for (ID3D11ShaderResourceView* v : issue_.srvs)
+        if (v) v->Release();  // bound now: Direct3D holds them
+    batch_.close();
 }
 
 bool Renderer11::depthViews() {
@@ -1107,6 +1177,7 @@ void Renderer11::execute(const FrameRecord& record) {
     geometry_ = uploadGeometry(record);
     targetBound_ = false;
     for (const Command& c : record.commands()) {
+        if (c.type != Cmd::Draw) flushBatch();  // 0.90: the game's draws before it go first
         switch (c.type) {
             case Cmd::Clear: clear(record.clears()[c.index]); break;
             case Cmd::Viewport:
@@ -1118,6 +1189,7 @@ void Renderer11::execute(const FrameRecord& record) {
             case Cmd::Draw: draw(record, record.draws()[c.index]); break;
         }
     }
+    flushBatch();
     geometry_ = false;
     timeEnd();
     LARGE_INTEGER ended;
@@ -1559,10 +1631,11 @@ void Renderer11::logGpu(ULONGLONG now) {
         LARGE_INTEGER freq;
         QueryPerformanceFrequency(&freq);
         const double n = double(stats_.frames), seconds = double(now - gpuSince_) / 1000.0;
-        LOG_INFO("Direct3D 11: %.0f draws a frame, %.0f calls to the driver (%.0f spared), %.2f ms of the processor "
-                 "in drawing; the game's textures %llu made, %llu reused, %llu freed, %u alive (%u MB kept for "
-                 "reuse); %.1f MB uploaded a second",
-                 double(stats_.draws) / n, double(stats_.calls) / n, double(stats_.spared) / n,
+        LOG_INFO("Direct3D 11: %.0f draws a frame in %.0f draw calls, %.0f calls to the driver (%.0f spared), %.2f "
+                 "ms of the processor in drawing; the game's textures %llu made, %llu reused, %llu freed, %u alive "
+                 "(%u MB kept for reuse); %.1f MB uploaded a second",
+                 double(stats_.draws) / n, double(stats_.batches) / n, double(stats_.calls) / n,
+                 double(stats_.spared) / n,
                  double(stats_.ticks) * 1000.0 / double(freq.QuadPart) / n,
                  static_cast<unsigned long long>(stats_.made), static_cast<unsigned long long>(stats_.reused),
                  static_cast<unsigned long long>(stats_.freed), static_cast<unsigned>(textures_.size()),

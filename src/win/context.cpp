@@ -131,6 +131,9 @@ bool Context::open(std::string& error) {
     renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     renderer->setStateCache(config.stateCache);  // 0.88
     if (!config.stateCache) LOG_INFO("Direct3D 11: every state set again each draw ([debug] state_cache = 0)");
+    renderer->setMergeDraws(config.mergeDraws);  // 0.90
+    if (!config.mergeDraws && d3d11)
+        LOG_INFO("Direct3D 11: each of the game's draws by itself ([debug] merge_draws = 0)");
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
     LOG_INFO("%s renderer on %s", d3d11 ? "Direct3D 11" : "Direct3D 12", renderer->adapterName().c_str());
     fpsShown_ = config.fpsCounter;  // 0.54

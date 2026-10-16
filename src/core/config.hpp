@@ -316,6 +316,9 @@ struct Config {
     // 0.89: [debug] fast_pick - the cell under the mouse found along the mouse's ray (win/pick_hook.hpp); 0 leaves the
     // game's own, which tests every cell of the map's pieces the ray passes over
     bool fastPick = true;
+    // 0.90: [debug] merge_draws - Direct3D 11 sends the game's draws that follow one another with the same state as
+    // one draw call (core/draw_batch.hpp); 0 sends each by itself as before
+    bool mergeDraws = true;
 };
 
 Config parseConfig(const std::string& text);
