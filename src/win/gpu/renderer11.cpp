@@ -25,6 +25,7 @@
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
 #include "core/twin_grid.hpp"
+#include "core/water.hpp"
 #include "core/window_plan.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/ai11.hpp"
@@ -123,6 +124,11 @@ Renderer11::~Renderer11() {
     for (ID3D11InputLayout*& l : layout_) drop(l);
     drop(drawVs_);
     drop(drawPs_);
+    drop(waterVs_);  // 0.99
+    drop(waterPs_);
+    drop(depthCopySrv_);
+    drop(depthCopyDsv_);
+    drop(depthCopy_);
     drop(presentVs_);
     drop(presentPs_);
     drop(gradePs_);
@@ -304,14 +310,16 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         const char* profile;
         const char* source;
         std::vector<uint8_t> code;
-    } wants[13] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+        bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
+    } wants[15] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
                    {"shadow_vs", vs, shaderSource(), {}},  {"shadow_ps", ps, shaderSource(), {}},  // 0.60.1
                    {"shadow_blur_ps", ps, shaderSource(), {}}, {"shadow_apply_ps", ps, shaderSource(), {}},
                    {"torch_light_ps", ps, shaderSource(), {}},  // 0.61
-                   {"night_ps", ps, shaderSource(), {}}};       // 0.63
+                   {"night_ps", ps, shaderSource(), {}},        // 0.63
+                   {"water_vs", vs, shaderSource(), {}, true},  {"water_ps", ps, shaderSource(), {}, true}};  // 0.99
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -363,6 +371,10 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                 drop(code);
                 drop(errors);
             }
+            if (w.code.empty() && w.optional) {  // 0.99
+                LOG_ERROR("Direct3D 11: shader %s did not compile - its effect is not drawn", w.entry);
+                continue;
+            }
             if (w.code.empty()) {
                 const size_t line = said.find("error");
                 const std::string why =
@@ -396,6 +408,10 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         !psOf(wants[12], nightPs_)) {
         error = "the shaders' code was refused";
         return false;
+    }
+    if (wants[13].code.empty() || wants[14].code.empty() || !vsOf(wants[13], waterVs_) || !psOf(wants[14], waterPs_)) {
+        drop(waterVs_);  // 0.99: the water as the game draws it
+        drop(waterPs_);
     }
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
@@ -1012,13 +1028,34 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = float(double(now - clockStart_) / 1000.0);
     }
+    // 0.99, the modern water (as draw.cpp): a cell of the map's water by water_vs/water_ps, from the picture and the
+    // depth before the frame's first water; without them as the game draws it.
+    bool water = false;
+    if (!s.ui && effects_.water && waterVs_ && waterPs_ && cameraValid_ && d.fvf == d3d7::FVF_TL1 &&
+        d.vertexCount == 4 && s.blend && s.srcBlend == d3d7::BLEND_SRCALPHA &&
+        s.dstBlend == d3d7::BLEND_INVSRCALPHA &&
+        water::isWaterQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
+                           d.primitive == d3d7::PT_TRIANGLESTRIP))
+        water = copyForWater();
+    if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
+        std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
+        const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        c.sharpen = waterTime();
+        c.footprint = float(effects_.waterWaves) / 100.0f;
+        c.twin[0] = float(effects_.waterReflections) / 100.0f;
+        c.twin[1] = float(effects_.waterClarity) / 100.0f;
+        if (!waterCells_++) LOG_INFO("water: the map's water found, drawn anew (Direct3D 11)");
+    }
     // 0.67, soft particles (as draw.cpp): an effect facing the screen fades where it goes into the ground; the
     // depth read while it is tested only.
     const bool adds = s.blend && s.dstBlend == d3d7::BLEND_ONE;
     const bool effectDraw = adds || d.effect == uint8_t(effect_exe::Kind::Skill) ||
                             d.effect == uint8_t(effect_exe::Kind::Portal);
-    const bool soft = !s.ui && effects_.softParticles && d.vertexCount == 4 && s.blend && s.zEnable && !s.zWrite &&
-                      effectDraw && s.srcBlend != d3d7::BLEND_ZERO && s.srcBlend != d3d7::BLEND_DESTCOLOR &&
+    const bool soft = !water && !s.ui && effects_.softParticles && d.vertexCount == 4 && s.blend && s.zEnable &&
+                      !s.zWrite && effectDraw && s.srcBlend != d3d7::BLEND_ZERO &&
+                      s.srcBlend != d3d7::BLEND_DESTCOLOR &&
                       ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount) &&
                       depthViews();
     if (soft) {
@@ -1043,6 +1080,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.srvs[0] = srvs[0];
     is.srvs[1] = srvs[1];
     is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
+    is.vs = water ? waterVs_ : drawVs_;
+    is.ps = water ? waterPs_ : drawPs_;
     is.primitive = d.primitive;
     is.firstIndex = d.firstIndex;
     is.indexCount = d.indexCount;
@@ -1074,7 +1113,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
 }
 
 bool Renderer11::Issue::sameState(const Issue& o) const {
-    return blend == o.blend && depth == o.depth && raster == o.raster && samplers[0] == o.samplers[0] &&
+    return vs == o.vs && ps == o.ps && blend == o.blend && depth == o.depth && raster == o.raster &&
+           samplers[0] == o.samplers[0] &&
            samplers[1] == o.samplers[1] && srvs[0] == o.srvs[0] && srvs[1] == o.srvs[1] && layout == o.layout &&
            std::memcmp(&c, &o.c, sizeof c) == 0;
 }
@@ -1095,6 +1135,12 @@ void Renderer11::flushBatch() {
         ++(differs ? issued : spared);
         return differs;
     };
+    if (is.ps == waterPs_ && waterPs_) {  // 0.99: the picture and the depth under the water (t2, t3)
+        ID3D11ShaderResourceView* under[2] = {scene_.srv, depthCopySrv_};
+        ctx_->PSSetShaderResources(2, 2, under);
+    }
+    if (need(all || is.vs != bound_.vs)) ctx_->VSSetShader(is.vs, nullptr, 0);  // 0.99: the water's, or the game's
+    if (need(all || is.ps != bound_.ps)) ctx_->PSSetShader(is.ps, nullptr, 0);
     if (need(all || is.blend != bound_.blend)) ctx_->OMSetBlendState(is.blend, nullptr, 0xFFFFFFFF);
     if (need(all || is.depth != bound_.depth)) ctx_->OMSetDepthStencilState(is.depth, 0);
     if (need(all || is.raster != bound_.raster)) ctx_->RSSetState(is.raster);
@@ -1129,6 +1175,8 @@ void Renderer11::flushBatch() {
     stats_.calls += issued;
     stats_.spared += spared;
     bound_.valid = true;
+    bound_.vs = is.vs;
+    bound_.ps = is.ps;
     bound_.blend = is.blend;
     bound_.depth = is.depth;
     bound_.raster = is.raster;
@@ -1144,6 +1192,60 @@ void Renderer11::flushBatch() {
     for (ID3D11ShaderResourceView* v : issue_.srvs)
         if (v) v->Release();  // bound now: Direct3D holds them
     batch_.close();
+}
+
+// 0.99: before the frame's first water - its picture and depth so far copied (once a frame); false: no water anew.
+bool Renderer11::copyForWater() {
+    if (waterCopied_) return waterReady_;
+    waterCopied_ = true;
+    waterReady_ = false;
+    if (!depth_ || !target_.texture) return false;
+    flushBatch();  // the draws before the water go into the copies
+    if (scene_.width != target_.width || scene_.height != target_.height) {
+        dropTarget(scene_);
+        if (!makeTarget(scene_, target_.width, target_.height)) return false;
+    }
+    D3D11_TEXTURE2D_DESC dd{};
+    depth_->GetDesc(&dd);
+    D3D11_TEXTURE2D_DESC cd{};
+    if (depthCopy_) depthCopy_->GetDesc(&cd);
+    if (!depthCopy_ || cd.Width != dd.Width || cd.Height != dd.Height) {
+        drop(depthCopySrv_);
+        drop(depthCopyDsv_);
+        drop(depthCopy_);
+        if (!makeDepth(int(dd.Width), int(dd.Height), depthCopy_, depthCopyDsv_)) return false;
+        D3D11_SHADER_RESOURCE_VIEW_DESC v{};
+        v.Format = DXGI_FORMAT_R32_FLOAT;
+        v.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        v.Texture2D.MipLevels = 1;
+        if (FAILED(device_->CreateShaderResourceView(depthCopy_, &v, &depthCopySrv_))) {
+            depthCopySrv_ = nullptr;
+            return false;
+        }
+    }
+    ID3D11ShaderResourceView* none[2] = {nullptr, nullptr};
+    ctx_->PSSetShaderResources(2, 2, none);  // neither copy bound while it is written
+    ctx_->CopyResource(scene_.texture, target_.texture);
+    ctx_->CopyResource(depthCopy_, depth_);
+    waterReady_ = true;
+    return true;
+}
+
+float Renderer11::waterTime() {
+    LARGE_INTEGER now, freq;
+    QueryPerformanceCounter(&now);
+    QueryPerformanceFrequency(&freq);
+    if (!waterClock_.QuadPart) waterClock_ = now;
+    return float(double(now.QuadPart - waterClock_.QuadPart) / double(freq.QuadPart));
+}
+
+void Renderer11::setCamera(bool valid, const float view[12]) {
+    float v4[16], inv[16];
+    camera::affine4(view, v4);
+    cameraValid_ = valid && camera::inverse4(v4, inv);
+    if (cameraValid_)
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 3; ++c) viewToWorld_[3 * r + c] = inv[4 * r + c];
 }
 
 bool Renderer11::depthViews() {
@@ -1365,6 +1467,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
+    waterCopied_ = waterReady_ = false;  // 0.99
     flames_.clear();
     timeEnd();
     LARGE_INTEGER ended;  // 0.89

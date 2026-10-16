@@ -87,9 +87,9 @@ bool Context::open(std::string& error) {
         if (config.remix || config.bridge || config.dlss != "off")
             LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer and DLSS need Direct3D 12 - off");
         if (drawnByRenderer(config.effects))  // 0.46.1
-            LOG_INFO("Direct3D 11: the Effects page's colours, the characters' shadows and the torches' light are "
-                     "drawn (0.59-0.61); the lamps, water, glow, weather and the rest need Direct3D 12 - the game's "
-                     "own shown there");
+            LOG_INFO("Direct3D 11: the Effects page's colours, the characters' shadows, the torches' light and "
+                     "(0.99) the water are drawn; the lamps, glow, weather and the rest need Direct3D 12 - the "
+                     "game's own shown there");
     } else if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if there
         const std::string local = gameDir() + "\\d3d9.dll";
         const std::string dll = fileExists(local) ? local : systemDir() + "\\d3d9.dll";

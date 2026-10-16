@@ -69,6 +69,7 @@ public:
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setStateCache(bool on) { stateCache_ = on; }  // 0.88: [debug] state_cache
     void setMergeDraws(bool on) { mergeDraws_ = on; }  // 0.90: [debug] merge_draws
+    void setCamera(bool valid, const float view[12]);  // 0.99: the game's camera (the modern water)
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);
@@ -155,6 +156,21 @@ private:
 
     ID3D11VertexShader* drawVs_ = nullptr;
     ID3D11PixelShader* drawPs_ = nullptr;
+    // 0.99: the modern water (water_vs/water_ps as Direct3D 12's): the picture and the depth as they were before the
+    // frame's first water (scene_, depthCopy_), the game's camera backwards
+    ID3D11VertexShader* waterVs_ = nullptr;
+    ID3D11PixelShader* waterPs_ = nullptr;
+    ID3D11Texture2D* depthCopy_ = nullptr;
+    ID3D11DepthStencilView* depthCopyDsv_ = nullptr;
+    ID3D11ShaderResourceView* depthCopySrv_ = nullptr;
+    bool waterCopied_ = false;  // this frame's copies made (or could not be)
+    bool waterReady_ = false;   // ... and the water is drawn from them
+    bool cameraValid_ = false;
+    float viewToWorld_[12] = {};
+    LARGE_INTEGER waterClock_{};
+    unsigned long long waterCells_ = 0;
+    float waterTime();
+    bool copyForWater();
     ID3D11VertexShader* presentVs_ = nullptr;
     ID3D11PixelShader* presentPs_ = nullptr;
     ID3D11PixelShader* gradePs_ = nullptr;  // 0.59
@@ -230,6 +246,8 @@ private:
         ID3D11Buffer* vertexBuffer = nullptr;  // bound at an offset of `phase` bytes with `stride`
         UINT stride = 0, phase = 0;
         ID3D11Buffer* indexBuffer = nullptr;
+        ID3D11VertexShader* vs = nullptr;  // 0.99
+        ID3D11PixelShader* ps = nullptr;
     } bound_;
     // 0.90: a draw call's state - the game's draws with the same one and their vertices one after another go to the
     // driver as one draw call (core/draw_batch.hpp); the views it reads are held while it is gathered
@@ -241,6 +259,8 @@ private:
         ID3D11SamplerState* samplers[2] = {nullptr, nullptr};
         ID3D11ShaderResourceView* srvs[2] = {nullptr, nullptr};
         ID3D11InputLayout* layout = nullptr;
+        ID3D11VertexShader* vs = nullptr;  // 0.99: the game's draw's, or the water's
+        ID3D11PixelShader* ps = nullptr;
         uint32_t primitive = 0, firstIndex = 0, indexCount = 0;  // a draw by itself: its own
         bool sameState(const Issue& o) const;
     };

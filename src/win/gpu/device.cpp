@@ -1591,7 +1591,7 @@ void Renderer::setGameDir(const std::string& dir) {
 
 void Renderer::setCamera(bool valid, const float view[12]) {
     if (remix_) return remix_->setCamera(valid, view);
-    if (d3d11_) return;
+    if (d3d11_) return d3d11_->setCamera(valid, view);  // 0.99: the modern water
     if (remote_) return remote_->setCamera(valid, view);
     Impl& m = *impl_;
     m.cameraValid = valid;
