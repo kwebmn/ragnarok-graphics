@@ -63,7 +63,9 @@ PackCounts countPack(const pack::Index& index, const AiSettings& a) {
         const std::string model = modelOfEntry(p.second, *g, a);
         const int m = modelIndex(model);
         if (m >= 0) ++gc.byModel[size_t(m)];
-        if (model != a.modelFor(*g)) ++gc.other;
+        int w = 0, h = 0;  // 1.6.3: the model it should have, small pictures too
+        const std::string& want = sizeOfName(p.first, w, h) ? a.modelForPicture(*g, w, h) : a.modelFor(*g);
+        if (model != want) ++gc.other;
     }
     return c;
 }

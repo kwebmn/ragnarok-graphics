@@ -198,6 +198,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     netOf_[int(ai::Kind::Sprites)] = groupNet_[int(ai::Group::Monsters)];
     netOf_[int(ai::Kind::Effects)] = groupNet_[int(ai::Group::Effects)];
     netOf_[int(ai::Kind::Icons)] = groupNet_[int(ai::Group::Icons)];
+    if (generate_ && s.smallPictures && (smallNet_ = netOfToken(dir, s.smallModel, error)) < 0) return false;  // 1.6.3
     if (!anyKind) {
         error = "no kind of texture is chosen (the AI textures page)";
         return false;
@@ -346,6 +347,7 @@ bool AiTextures::startForPack(const std::string& gameDir, const AiSettings& s, s
     netOf_[int(ai::Kind::Sprites)] = groupNet_[int(ai::Group::Monsters)];
     netOf_[int(ai::Kind::Effects)] = groupNet_[int(ai::Group::Effects)];
     netOf_[int(ai::Kind::Icons)] = groupNet_[int(ai::Group::Icons)];
+    if (s.smallPictures && (smallNet_ = netOfToken(dir, s.smallModel, error)) < 0) return false;  // 1.6.3
     if (!createGpu(error)) return false;
     for (size_t i = 0; i < nets_.size(); ++i)
         if (!selfTest(int(i), error)) return false;
@@ -994,7 +996,7 @@ void AiTextures::cellWritten(uint32_t id, Texture& t, Atlas& a, int net, const R
     Job j;
     j.id = id;
     j.group = ai::groupOfSource(source);  // 1.6: its group's model
-    j.net = net >= 0 ? groupNet_[int(j.group)] : -1;
+    j.net = net >= 0 ? netForPicture(j.group, w, h) : -1;  // 1.6.3: a small frame by the small pictures' model
     j.width = w;
     j.height = h;
     j.cell = true;
@@ -1126,7 +1128,7 @@ bool AiTextures::finishIcon(Job& job) {
 }
 
 void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* argb) {
-    const int net = groupNet_[int(ai::Group::Icons)];
+    const int net = netForPicture(ai::Group::Icons, width, height);
     if (!ready_ || !kindOn_[int(ai::Kind::Icons)] || width <= 0 || height <= 0 || !icons_.insert(key).second) return;
     Job j;
     j.net = net;
@@ -1274,7 +1276,7 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         return;
     }
     item.group = ai::groupOfKind(kind);  // 1.6: by its group's model
-    item.net = groupNet_[int(item.group)];  // -1 when not generating (0.42)
+    item.net = netForPicture(item.group, item.width, item.height);  // -1 when not generating (0.42); 1.6.3: small
     item.state = Item::Waiting;
     pictures_->noteKind(item.key, kind);
     // 0.42: the texture pack first (0.45: at a lower texture detail the whole texture's picture); 0.48: the pack

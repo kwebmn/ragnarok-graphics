@@ -1533,7 +1533,8 @@ bool Renderer::enlargeForPack(int group, const uint32_t* argb, int width, int he
         error = "no networks";
         return false;
     }
-    return m.ai->enlarge(m.ai->netForGroup(ai::Group(group)), argb, width, height, border, out, error);  // 1.6
+    return m.ai->enlarge(m.ai->netForPicture(ai::Group(group), width, height), argb, width, height, border, out,
+                         error);  // 1.6, 1.6.3
 }
 
 std::string Renderer::packNetName(int group) const {

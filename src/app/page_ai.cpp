@@ -30,6 +30,9 @@ constexpr int kPreviewGroup = 1130;
 constexpr int kPreviewShow = 1131;
 constexpr int kPreviewZoom = 1132;  // 1.6.1
 constexpr int kPreviewOpen = 1133;  // 1.6.2: the viewer window
+constexpr int kSmall = 1140;  // 1.6.3: small pictures by their own model
+constexpr int kSmallSide = 1141;
+constexpr int kSmallModel = 1142;
 
 const Text kGroupLabels[ai::kGroups] = {Text::AiGroupWorld,   Text::AiGroupMonsters, Text::AiGroupPlayers,
                                         Text::AiGroupNpcs,    Text::AiGroupItems,    Text::AiGroupEffects,
@@ -176,6 +179,21 @@ public:
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel == int(AiPreset::Custom) || sel < 0) return;  // Custom is what the rows hold: nothing to set
             applyPreset(AiPreset(sel));
+        } else if (id == kSmall && clicked) {  // 1.6.3
+            m.setToken(setting("ai.small_pictures"), checked ? "1" : "0");
+        } else if (id == kSmallModel && code == CBN_SELCHANGE) {
+            const IniSetting& s = setting("ai.small_model");
+            const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
+            if (sel < 0 || size_t(sel) >= s.tokens.size()) return;
+            m.setToken(s, s.tokens[size_t(sel)]);
+        } else if (id == kSmallSide && code == EN_KILLFOCUS) {
+            const IniSetting& s = setting("ai.small_side");
+            const std::string text = controlText(ctl);
+            if (!validToken(s, text) || text == m.token(s)) {
+                if (text != m.token(s)) host_.rebuild();
+                return;
+            }
+            m.setToken(s, text);
         } else if (id == kModelSet && code == CBN_SELCHANGE) {  // 1.6
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel < 0 || sel >= int(ai::ModelSet::Own)) return;  // Own is what the rows hold
@@ -271,6 +289,12 @@ private:
                 p.note(tf(Text::AiGroupInPack, {num(c.pictures)}));
             }
         }
+        // 1.6.3: the small pictures' own model, over their group's
+        const bool small = a.smallPictures;
+        p.check(kSmall, t(Text::AiSmall), small, t(Text::AiSmallHint), on);
+        p.number(kSmallSide, t(Text::AiSmallSide), wide(host_.model().token(setting("ai.small_side"))),
+                 t(Text::AiSmallHint), on && small);
+        choiceRow(p, kSmallModel, "ai.small_model", on && small);
         if (!index) p.note(t(Text::AiNoPackYet));
         if (counts.unknown) p.note(tf(Text::AiUnknownSprites, {num(counts.unknown)}));
         if (other) {
@@ -371,7 +395,7 @@ private:
         c.ai = aiPresetSettings(preset, m.pendingConfig().ai.enabled);
         for (const IniSetting& s : iniSettings())
             if (std::string(s.section) == "ai" && std::string(s.key) != "enabled" && std::string(s.key) != "generate" &&
-                std::string(s.key).rfind("model_", 0) != 0)
+                std::string(s.key).rfind("model_", 0) != 0 && std::string(s.key).rfind("small_", 0) != 0)
                 m.setToken(s, tokenOf(s, c));  // 1.5.8: both switches as the player set them; 1.6: the groups' models
     }
 };

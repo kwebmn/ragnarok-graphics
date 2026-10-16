@@ -74,6 +74,12 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
         setBool(v, a.icons);
     } else if (k == "ui_pieces") {
         setBool(v, a.uiPieces);
+    } else if (k == "small_pictures") {  // 1.6.3
+        setBool(v, a.smallPictures);
+    } else if (k == "small_side") {
+        toInt(v, 16, 256, a.smallSide);
+    } else if (k == "small_model") {
+        if (ai::validModel(v)) a.smallModel = v;
     } else if (k.rfind("model_", 0) == 0) {  // 1.6: a group's own
         ai::Group g;
         if (ai::parseGroup(k.substr(6), g) && ai::validModel(v)) a.models[size_t(g)] = v;
@@ -107,7 +113,8 @@ bool AiSettings::operator==(const AiSettings& o) const {
            spriteModel == o.spriteModel &&
            denoise == o.denoise && scale == o.scale && budget == o.budget && minSize == o.minSize &&
            maxSize == o.maxSize && ahead == o.ahead && generate == o.generate && compress == o.compress &&
-           models == o.models;
+           models == o.models && smallPictures == o.smallPictures && smallSide == o.smallSide &&
+           smallModel == o.smallModel;
 }
 
 EffectSettings effectsOff() {
@@ -221,6 +228,8 @@ std::string groupModels(const AiSettings& a) {  // 1.6
     for (int g = 0; g < ai::kGroups; ++g)
         if (!a.models[size_t(g)].empty())
             t += std::string(";model_") + ai::groupName(ai::Group(g)) + "=" + a.models[size_t(g)];
+    t += std::string(";small_pictures=") + (a.smallPictures ? "1" : "0") + ";small_side=" +
+         std::to_string(a.smallSide) + ";small_model=" + a.smallModel;  // 1.6.3
     return t;
 }
 

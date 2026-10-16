@@ -328,6 +328,7 @@ int Builder::preview() {
     AiSettings s = a_.ai;
     const char* const models[3] = {"general", "anime", "anime6b"};
     for (int g = 0; g < ai::kGroups; ++g) s.models[size_t(g)] = models[std::min(g, 2)];
+    s.smallPictures = false;  // 1.6.3: each model as it is, also on a small picture
     gpu::Renderer renderer;
     renderer.setShaderCache(a_.dir + "\\uaro-graphics\\shaders-64.bin");
     if (!renderer.create(error) || !renderer.startAiForPack(a_.dir, s, error))
@@ -457,7 +458,7 @@ int Builder::build() {
                 const ai::Group g = ai::groupOfPicture(list_[i].first, list_[i].second, p.width, p.height);
                 entry.group = ai::groupName(g);
                 if (a_.redo[size_t(g)] && done.count(name) &&
-                    ai::modelOfEntry(entry, g, a_.ai) != a_.ai.modelFor(g)) {
+                    ai::modelOfEntry(entry, g, a_.ai) != a_.ai.modelForPicture(g, p.width, p.height)) {
                     done.erase(name);
                     redo_.insert(name);
                 }
@@ -531,7 +532,7 @@ int Builder::build() {
             m.name = name;
             m.replace = redo_.count(name) != 0;
             pack::IndexEntry& made = index_.pictures[name];  // 1.6: the model that made it
-            made.model = a_.ai.modelFor(g);
+            made.model = a_.ai.modelForPicture(g, p.width, p.height);  // 1.6.3
             made.group = ai::groupName(g);
             m.width = p.width * 4;
             m.height = p.height * 4;

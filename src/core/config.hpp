@@ -48,6 +48,14 @@ struct AiSettings {
         const std::string& own = models[size_t(g)];
         return !own.empty() ? own : g == ai::Group::World ? model : spriteModel;
     }
+    // 1.6.3: pictures smaller than small_side a side (both sides, the game's pixels) by small_model whatever their
+    // group's - anime 6B redraws a 24x24 icon its own way.
+    bool smallPictures = false;
+    int smallSide = 48;  // 16-256
+    std::string smallModel = "anime";
+    const std::string& modelForPicture(ai::Group g, int width, int height) const {
+        return smallPictures && width < smallSide && height < smallSide ? smallModel : modelFor(g);
+    }
     int denoise = 25;  // % of the grain the general model smooths away (Real-ESRGAN's denoise strength)
     int scale = 4;     // the result 4 or 2 times the game's texture (2: a quarter of the video memory)
     int budget = 2;    // ms of GPU time a frame, 1-20

@@ -293,6 +293,12 @@ const std::vector<IniSetting>& iniSettings() {
         {"ai", "sprite_model", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
          {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b},
          Text::AiModelSprites, Text::AiModelSpritesHint, ""},
+        // 1.6.3: small pictures by a model of their own
+        {"ai", "small_pictures", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiSmall, Text::AiSmallHint,
+         ""},
+        {"ai", "small_side", Page::Ai, Control::Number, 16, 256, 1, {}, {}, Text::AiSmallSide, Text::AiSmallHint, ""},
+        {"ai", "small_model", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiSmallModel, Text::AiSmallHint, ""},
         // 1.6: a model for each group of pictures
         {"ai", "model_world", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
          {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupWorld,
@@ -415,6 +421,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.ui_pieces") return a.uiPieces ? "1" : "0";
     if (k == "ai.model") return a.model;
     if (k == "ai.sprite_model") return a.spriteModel;
+    if (k == "ai.small_pictures") return a.smallPictures ? "1" : "0";  // 1.6.3
+    if (k == "ai.small_side") return std::to_string(a.smallSide);
+    if (k == "ai.small_model") return a.smallModel;
     if (k.rfind("ai.model_", 0) == 0) {  // 1.6: a group's, as it comes out (its own, or model / sprite_model)
         ai::Group g;
         if (ai::parseGroup(k.substr(9), g)) return a.modelFor(g);

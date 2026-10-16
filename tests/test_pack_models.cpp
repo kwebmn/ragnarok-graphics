@@ -53,3 +53,18 @@ TEST(groups_a_packs_counts_by_group_and_model) {
     CHECK(groupOfPicture("x.bmp", ui, 24, 24) == Group::Icons);
     CHECK(groupOfPicture("x.bmp", ui, 256, 192) == Group::Screens);
 }
+
+TEST(groups_small_pictures_by_their_own_model) {
+    AiSettings a = parseConfig("[ai]\nsprite_model = anime6b\nsmall_pictures = 1\nsmall_side = 48\n"
+                               "small_model = anime\n").ai;
+    CHECK(a.modelForPicture(Group::Icons, 24, 24) == "anime");
+    CHECK(a.modelForPicture(Group::Players, 40, 90) == "anime6b");  // tall: not small on both sides
+    CHECK(parseAiArgument(aiArgument(a)) == a);
+    pack::Index index;
+    index.pictures["ui/24x24/c.webp"].model = "anime6b";  // made before the rule
+    index.pictures["ui/24x24/c.webp"].group = "icons";
+    CHECK_EQ(int(countPack(index, a).groups[size_t(Group::Icons)].other), 1);
+    a.smallPictures = false;
+    CHECK(a.modelForPicture(Group::Icons, 24, 24) == "anime6b");
+    CHECK_EQ(int(countPack(index, a).groups[size_t(Group::Icons)].other), 0);
+}

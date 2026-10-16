@@ -73,6 +73,12 @@ public:
     int netFor(ai::Kind kind) const { return int(kind) < ai::kKinds ? netOf_[int(kind)] : -1; }
     // 1.6: the network of a group of pictures (its own model); -1 none.
     int netForGroup(ai::Group g) const { return int(g) < ai::kGroups ? groupNet_[int(g)] : -1; }
+    // 1.6.3: a picture's - the small pictures' model below [ai] small_side, else its group's.
+    int netForPicture(ai::Group g, int width, int height) const {
+        const int group = netForGroup(g);
+        if (group < 0 || smallNet_ < 0 || width >= settings_.smallSide || height >= settings_.smallSide) return group;
+        return smallNet_;
+    }
     const std::string& netName(int net) const { return nets_[size_t(net)]->name; }
     // The network's picture of argb (w x h) at once, on the renderer's list, waiting for the GPU: 4 times its size;
     // border 0 the other side past the edges, 1 nothing, 2 the edge again (a world texture, a sprite's cell, an
@@ -260,6 +266,7 @@ private:
     // none and uaro-render64.exe fell (0xc0000005) whenever the AI textures were on.
     int netOf_[ai::kKinds];
     int groupNet_[ai::kGroups];  // 1.6
+    int smallNet_ = -1;          // 1.6.3: [ai] small_model with small_pictures on
     // 1.6: the network of a model word, loaded once (the same model for several groups is one network); -1, error.
     int netOfToken(const std::string& dir, const std::string& token, std::string& error);
     bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack

@@ -2166,6 +2166,22 @@ const Entry kTexts[] = {
     {"the wheel zooms, a drag moves, a double click shows it whole",
      "коліщатко - збільшення, перетягування - зсув, подвійний клік - цілком",
      "колесо - увеличение, перетаскивание - сдвиг, двойной щелчок - целиком"},
+    {"Small pictures by a model of their own",
+     "Малі картинки - своєю моделлю",
+     "Маленькие картинки - своей моделью"},
+    {"A picture smaller than this on both sides (the game's pixels: an icon is 24, an item on the ground about 23, a "
+     "character's frame 30-80) is made by the model below, whatever its group has - anime 6B redraws the smallest "
+     "ones its own way.",
+     "Картинка, менша за це з обох боків (точки гри: іконка - 24, предмет на землі - близько 23, кадр персонажа - "
+     "30-80), робиться моделлю нижче, хоч би яку мала її група - anime 6B перемальовує найменші по-своєму.",
+     "Картинка меньше этого по обеим сторонам (точки игры: иконка - 24, предмет на земле - около 23, кадр персонажа - "
+     "30-80) делается моделью ниже, какая бы ни была у её группы - anime 6B перерисовывает самые маленькие по-своему."},
+    {"Smaller than, points",
+     "Менше ніж, точок",
+     "Меньше чем, точек"},
+    {"Their model",
+     "Їхня модель",
+     "Их модель"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

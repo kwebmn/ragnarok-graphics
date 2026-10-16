@@ -216,6 +216,7 @@ enum class Text : uint16_t {
     PackNetsGroups,
     AiPreviewZoom, AiPreviewWhole, AiPreviewZoomHint,  // 1.6.1
     AiPreviewOpen, AiPreviewWindowHint,  // 1.6.2
+    AiSmall, AiSmallHint, AiSmallSide, AiSmallModel,  // 1.6.3
     Count
 };
 
