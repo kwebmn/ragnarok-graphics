@@ -11,11 +11,14 @@ namespace uagfx::pick {
 // ray: origin x, y, z then direction x, y, z (the game's world; y is height, not used here); w, h: the ground's cells
 // across x and z; size: a cell's side in world units; the map is centred as the game has it - cell x spans
 // (x - w / 2) * size to one size further (an integer half), cell z likewise with h. test(x, z) returns the distance
-// along the ray to the cell's ground, or none (no hit). True and the cell when one is hit.
+// along the ray to the cell's ground, or none (no hit). True and the cell when one is hit. 0.90.1: hits nearer than
+// minDistance are not counted (the game tests only the map's pieces that reach in front of the eye: 0x4ED660 drops a
+// box whose far side is behind it - a hit behind the eye is not the mouse's).
 constexpr float kNone = 999999.0f;  // uaRO.exe's own "no hit" (0x6958BC, 0x69F380)
 
 template <typename Test>
-bool walk(const float ray[6], int w, int h, float size, Test&& test, int& cellX, int& cellZ, float& distance) {
+bool walk(const float ray[6], int w, int h, float size, Test&& test, int& cellX, int& cellZ, float& distance,
+          float minDistance = -1e30f) {
     if (w <= 0 || h <= 0 || !(size > 0.0f)) return false;
     // In cell units: the map's square is [0, w) x [0, h).
     const double ox = double(ray[0]) / size + double(w / 2), oz = double(ray[2]) / size + double(h / 2);
@@ -24,7 +27,7 @@ bool walk(const float ray[6], int w, int h, float size, Test&& test, int& cellX,
     const auto tryCell = [&](int x, int z) {
         if (x < 0 || z < 0 || x >= w || z >= h) return false;
         const float t = test(x, z);
-        if (!(t < kNone)) return false;
+        if (!(t < kNone) || t < minDistance) return false;
         cellX = x;
         cellZ = z;
         distance = t;
@@ -35,8 +38,7 @@ bool walk(const float ray[6], int w, int h, float size, Test&& test, int& cellX,
         if (fx < 0 || fz < 0 || fx >= w || fz >= h) return false;
         return tryCell(int(fx), int(fz));
     }
-    // Where the ray's line is over the map's square: the slabs of x and z (the whole line - the game counts a hit
-    // behind the origin too, should there be one).
+    // Where the ray's line is over the map's square: the slabs of x and z.
     double t0 = -1e300, t1 = 1e300;
     const auto slab = [&](double o, double d, double hi) {
         if (d > -tiny && d < tiny) return o >= 0.0 && o < hi;
@@ -47,6 +49,10 @@ bool walk(const float ray[6], int w, int h, float size, Test&& test, int& cellX,
         return t0 <= t1;
     };
     if (!slab(ox, dx, w) || !slab(oz, dz, h)) return false;
+    // Not before the nearest that counts: the cells there are crossed before it. Units: the ray's direction is per
+    // world unit along it, the cell units per world unit across - the same parameter t.
+    if (double(minDistance) > t0) t0 = double(minDistance);
+    if (t0 > t1) return false;
     // Into the square a hair past its edge, then cell by cell.
     const double start = t0 + 1e-9 * (1.0 + (t0 < 0 ? -t0 : t0));
     double px = ox + dx * start, pz = oz + dz * start;
@@ -79,11 +85,11 @@ inline bool sameDistance(float a, float b) {
 }
 
 // 0.89: whether the walk is used on the map now: once it has agreed with the game's own answer kAgree times running
-// on it, and then checked again every kEvery picks; one disagreement and the game's own pick is used from then on,
-// on every map.
+// on it, and then checked again every kEvery picks. 0.90.1: a disagreement checks the map anew (a ray grazing the
+// eye's own cell may go either way); the kOff-th and the game's own pick is used from then on, on every map.
 class Trust {
 public:
-    static constexpr int kAgree = 240, kEvery = 120;
+    static constexpr int kAgree = 240, kEvery = 120, kOff = 3;
     // The map now (its ground's address, cells and size): another map's is checked anew (true).
     bool on(unsigned long map) {
         if (map == map_) return false;
@@ -97,7 +103,11 @@ public:
     bool check() { return !trusted() || ++picks_ % kEvery == 0; }
     // A checked pick: whether both answers were the same. True when it is the one that makes the walk trusted.
     bool result(bool same) {
-        if (!same) off_ = true;
+        if (!same) {
+            agreed_ = 0;
+            off_ = off_ || ++disagreed_ >= kOff;
+            return false;
+        }
         if (off_ || agreed_ >= kAgree) return false;
         return ++agreed_ == kAgree;
     }
@@ -106,6 +116,7 @@ private:
     unsigned long map_ = 0;
     int agreed_ = 0;
     unsigned picks_ = 0;
+    int disagreed_ = 0;
     bool off_ = false;
 };
 

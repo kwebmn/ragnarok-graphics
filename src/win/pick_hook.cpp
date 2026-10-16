@@ -83,7 +83,7 @@ unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) 
     int cx = 0, cy = 0;
     float distance = 0;
     const bool hit = pick::walk(ray, w, h, float(size), [&](int i, int j) { return cell(ground, ray, i, j); }, cx, cy,
-                                distance);
+                                distance, 0.0f);  // 0.90.1: in front of the eye, as the game's pieces of the map
     if (!checking) {
         if (hit) {
             *x = cx;
@@ -110,8 +110,11 @@ unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) 
                  "game's own %.3f ms", w, h, double(g_ours) / n, double(g_theirs) / n);
         g_ours = g_theirs = 0;
     } else if (!same) {
-        LOG_INFO("pick: the game's own cell under the mouse from now on - the fast one was %s (%d, %d), the game's %s "
-                 "(%d, %d) on a map of %dx%d cells", hit ? "at" : "none", cx, cy, theirs ? "at" : "none", gx, gy, w, h);
+        const float their = theirs ? cell(ground, ray, gx, gy) : pick::kNone;
+        LOG_INFO("pick: %s - the fast one was %s (%d, %d) at %.1f, the game's %s (%d, %d) at %.1f on a map of %dx%d "
+                 "cells", g_trust.off() ? "the game's own cell under the mouse from now on" : "checked anew",
+                 hit ? "at" : "none", cx, cy, double(hit ? distance : 0.0f), theirs ? "at" : "none", gx, gy,
+                 double(theirs ? their : 0.0f), w, h);
     }
     if (theirs) {
         *x = gx;

@@ -99,6 +99,36 @@ TEST(ground_pick_walk_finds_what_testing_every_cell_finds) {
     }
 }
 
+TEST(ground_pick_walk_not_behind_the_eye) {
+    // 0.90.1: the game's pick counts no hit behind the eye (its pieces of the map wholly behind it are dropped): the
+    // walk from the eye on finds what every cell's test finds among the hits in front of it.
+    Ground g{60, 50, 10.0f, {}};
+    g.heights.resize(size_t(g.w * g.h) * 4);
+    for (size_t i = 0; i < g.heights.size(); ++i) g.heights[i] = -40.0f * std::sin(float(i % 977) * 0.01f);
+    int behind = 0;
+    for (int i = 0; i < 3000; ++i) {
+        float r[6] = {rnd(-300, 300), rnd(-80, 40), rnd(-250, 250), rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)};
+        const float len = std::sqrt(r[3] * r[3] + r[4] * r[4] + r[5] * r[5]);
+        for (int k = 3; k < 6; ++k) r[k] /= len;
+        int bx = -1, bz = -1;
+        float best = pick::kNone, any = pick::kNone;
+        for (int z = 0; z < g.h; ++z)
+            for (int x = 0; x < g.w; ++x) {
+                const float t = g.cell(r, x, z);
+                if (t < any) any = t;
+                if (t >= 0.0f && t < best) best = t, bx = x, bz = z;
+            }
+        behind += any < 0.0f ? 1 : 0;
+        int wx = -1, wz = -1;
+        float wt = 0;
+        const auto test = [&](int x, int z) { return g.cell(r, x, z); };
+        const bool found = pick::walk(r, g.w, g.h, g.size, test, wx, wz, wt, 0.0f);
+        CHECK(found == (best < pick::kNone));
+        if (found && best < pick::kNone) CHECK((wx == bx && wz == bz) || std::fabs(wt - best) < 1e-3f);
+    }
+    CHECK(behind > 100);  // rays that would have hit behind the eye were there
+}
+
 TEST(ground_pick_walk_no_map_no_cell) {
     const float r[6] = {0, -100, 0, 0.3f, 0.9f, 0.3f};
     int x = 0, z = 0;
@@ -124,7 +154,11 @@ TEST(ground_pick_trusted_after_agreeing_on_each_map) {
     trust.on(0x2000);  // another: checked anew, every pick
     CHECK(!trust.trusted());
     CHECK(trust.check() && trust.check());
-    CHECK(!trust.result(false));  // a disagreement: the game's own from then on
+    CHECK(!trust.result(false));  // a disagreement: checked anew
+    CHECK(!trust.off() && !trust.trusted());
+    for (int i = 1; i < pick::Trust::kAgree; ++i) trust.result(true);
+    CHECK(trust.result(true));
+    CHECK(!trust.result(false) && !trust.result(false));  // the third: the game's own from then on
     CHECK(trust.off());
     for (int i = 0; i < 300; ++i) trust.result(true);
     trust.on(0x3000);
