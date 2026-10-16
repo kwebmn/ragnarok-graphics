@@ -1,3 +1,17 @@
+# uaRO Graphics 1.5.0 — testing
+
+- **A third model for the AI textures: anime 6B** (RealESRGAN_x4plus_anime_6B, Real-ESRGAN, BSD-3). Made for drawn
+  pictures: finer lines, details kept, less of the "plasticine" look. 5-7 times slower than anime. Chosen on the AI
+  page in both model lists (the ground and buildings; characters and effects). Direct3D 12 only.
+- A pack made before stays as it is: the model shapes new pictures (in the game with "Make new ones while playing",
+  or when the pack is built).
+- Large textures go in pieces of 96x96 with margins of 10 pixels; small ones (up to 116x116) whole.
+- At the start with this model the graphics card is checked against the CPU; should they differ, the log says
+  `the GPU's network does not match the CPU's` and the AI textures stay off.
+- How to check: move `uaro-textures.zip` away (rename it), choose "anime 6B" on the AI page, turn on "Make new ones
+  while playing", the card's time 8-10 ms, start on Direct3D 12 — the textures sharpen step by step. The log says
+  `AI textures: on - ... realesrgan-x4plus-anime-6b`. Put the pack back after the test.
+
 # uaRO Graphics 1.4.2 — testing
 
 - **Depth of field: the ground went soft when the character stood under a tree or a roof.** The focus came from
