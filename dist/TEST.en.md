@@ -1,3 +1,15 @@
+# uaRO Graphics 1.5.6 — testing
+
+- **The AI textures are worked out faster, anime 6B most.** The convolution shader read the network's weights in
+  each of a group's 64 threads on its own and waited for the group at every input channel; anime 6B has up to 192,
+  and the card worked at 3-4 % of its strength. The group's weights are now read once into the group's memory, four
+  channels a pass. The shader is every model's: at the start the card is checked against the CPU, and should it
+  differ the AI textures go off, not the game.
+- In the game the network still takes only "The card's time a frame" (2 ms) - so the card is hardly busy; for a
+  test raise it to 15-20 ms. The pack builder has no such limit.
+- How to check: making with anime 6B and with anime - the log says `self-test passed`; in a minute more "made by the
+  network" than in 1.5.4; `GPU: ... ms of it AI textures` close to the time set.
+
 # uaRO Graphics 1.5.5 — testing
 
 - **The pack builder (Texture pack page → Make the pack) did not work with anime 6B:** it has its own way through
