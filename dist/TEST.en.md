@@ -1,3 +1,11 @@
+# uaRO Graphics 1.6.4 — testing
+
+- **The pack builder reads the game's files in several threads.** The first pass (open every file, take the sprites'
+  frames and hair colours apart, work out the keys - what the pack lacks) ran in one thread and stood long on
+  `data\sprite\*.spr`. Up to 8 threads now (the CPU's cores but one), each with the archives open on its own; the
+  same result. The log: `the game's files read by N threads`.
+- How to check: Make the pack - the reading much faster, several cores busy.
+
 # uaRO Graphics 1.6.3 — testing
 
 - **Small pictures by a model of their own.** "Models by group" has "Small pictures by a model of their own": a
