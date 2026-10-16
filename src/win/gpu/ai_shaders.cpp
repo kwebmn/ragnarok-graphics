@@ -44,7 +44,10 @@ float weight(uint i) { return asfloat(W.Load(i * 4)); }
 #define CONV_RES1 c3.z
 #define CONV_RES2 c3.w
 
-groupshared float tile[10][10];
+// 1.5.6: four input channels a pass, and the group's sixteen outputs' weights for them read into the group's memory
+// once (by all 64 threads together) instead of by every thread - RRDB's 192 input channels made the old way crawl.
+groupshared float tile[4][10][10];
+groupshared float wsh[16][4][9];
 
 [numthreads(8, 8, 1)]
 void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
@@ -62,11 +65,13 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
     [unroll] for (uint k = 0; k < 16; ++k)
         acc[k] = weight(CONV_BIAS + min(o0 + k, CONV_OUT - 1)) * (o0 + k < CONV_OUT ? 1.0 : 0.0);
     const uint flat = t.y * 8 + t.x;
-    for (uint i = 0; i < CONV_IN; ++i) {
-        const uint inAt = i < CONV_SPLIT ? CONV_IN_A + i * inPlane : CONV_IN_B + (i - CONV_SPLIT) * inPlane;
-        for (uint l = flat; l < 100; l += 64) {
-            const int lx = int(g.x * 8) + int(l % 10) - 1;
-            const int ly = int(CONV_ROW_BEGIN + g.y * 8) + int(l / 10) - 1;
+    for (uint i0 = 0; i0 < CONV_IN; i0 += 4) {
+        for (uint l = flat; l < 400; l += 64) {
+            const uint c = l / 100, r = l % 100;
+            const uint ic = min(i0 + c, CONV_IN - 1);
+            const uint inAt = ic < CONV_SPLIT ? CONV_IN_A + ic * inPlane : CONV_IN_B + (ic - CONV_SPLIT) * inPlane;
+            const int lx = int(g.x * 8) + int(r % 10) - 1;
+            const int ly = int(CONV_ROW_BEGIN + g.y * 8) + int(r / 10) - 1;
             const bool outside = lx < 0 || ly < 0 || lx >= int(CONV_WIDTH) || ly >= int(CONV_HEIGHT);
             uint sx = uint(lx + int(CONV_WIDTH)) % CONV_WIDTH;
             uint sy = uint(ly + int(CONV_HEIGHT)) % CONV_HEIGHT;
@@ -75,17 +80,22 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
                 sy = uint(clamp(ly, 0, int(CONV_HEIGHT) - 1));
             }
             const uint at = halfIn ? (sy / 2) * inWidth + sx / 2 : sy * CONV_WIDTH + sx;
-            tile[l / 10][l % 10] = border == 1 && outside ? 0.0 : asfloat(U0.Load((inAt + at) * 4));
+            const float v = asfloat(U0.Load((inAt + at) * 4));
+            tile[c][r / 10][r % 10] = i0 + c >= CONV_IN || (border == 1 && outside) ? 0.0 : v;
+        }
+        for (uint l2 = flat; l2 < 576; l2 += 64) {
+            const uint k = l2 / 36, c = (l2 % 36) / 9, q = l2 % 9;
+            const uint o = min(o0 + k, CONV_OUT - 1), i = min(i0 + c, CONV_IN - 1);
+            const float wv = weight(CONV_WEIGHT + (o * CONV_IN + i) * 9 + q);
+            wsh[k][c][q] = o0 + k < CONV_OUT && i0 + c < CONV_IN ? wv : 0.0;
         }
         GroupMemoryBarrierWithGroupSync();
-        float v9[9];
-        [unroll] for (uint q = 0; q < 9; ++q) v9[q] = tile[t.y + q / 3][t.x + q % 3];
-        [unroll] for (uint k2 = 0; k2 < 16; ++k2) {
-            const uint o = o0 + k2;
-            if (o < CONV_OUT) {
-                const uint base = CONV_WEIGHT + (min(o, CONV_OUT - 1) * CONV_IN + i) * 9;
+        [unroll] for (uint c2 = 0; c2 < 4; ++c2) {
+            float v9[9];
+            [unroll] for (uint q = 0; q < 9; ++q) v9[q] = tile[c2][t.y + q / 3][t.x + q % 3];
+            [unroll] for (uint k2 = 0; k2 < 16; ++k2) {
                 float s = 0.0;
-                [unroll] for (uint q2 = 0; q2 < 9; ++q2) s += weight(base + q2) * v9[q2];
+                [unroll] for (uint q2 = 0; q2 < 9; ++q2) s += wsh[k2][c2][q2] * v9[q2];
                 acc[k2] += s;
             }
         }
