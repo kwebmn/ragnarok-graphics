@@ -5,6 +5,7 @@
 #include "app/ai_cache.hpp"
 #include "app/files.hpp"
 #include "app/page.hpp"
+#include "app/preview_window.hpp"
 #include "core/ai/pack_models.hpp"
 #include "core/pack_build.hpp"
 
@@ -28,6 +29,7 @@ constexpr int kRedo = 1120;
 constexpr int kPreviewGroup = 1130;
 constexpr int kPreviewShow = 1131;
 constexpr int kPreviewZoom = 1132;  // 1.6.1
+constexpr int kPreviewOpen = 1133;  // 1.6.2: the viewer window
 
 const Text kGroupLabels[ai::kGroups] = {Text::AiGroupWorld,   Text::AiGroupMonsters, Text::AiGroupPlayers,
                                         Text::AiGroupNpcs,    Text::AiGroupItems,    Text::AiGroupEffects,
@@ -200,6 +202,10 @@ public:
             if (sel >= 0 && sel < 4) g_preview.zoom = int(sel);
             host_.rebuild();
             return;
+        } else if (id == kPreviewOpen && clicked) {  // 1.6.2
+            showPreviewWindow(GetAncestor(host_.window(), GA_ROOT), previewFiles(),
+                              t(kGroupLabels[g_preview.group]) + L" - " + t(Text::AiPreviewWindowHint));
+            return;
         } else if (id == kPreviewShow && clicked) {
             startPreview();
             host_.rebuild();
@@ -300,14 +306,18 @@ private:
             p.choice(kPreviewZoom, t(Text::AiPreviewZoom),
                      {t(Text::AiPreviewWhole), L"\u00D72", L"\u00D74", L"\u00D78"}, g_preview.zoom,
                      t(Text::AiPreviewZoomHint));
-            const std::wstring d = previewDir() + L"\\";
+            p.buttons({{kPreviewOpen, t(Text::AiPreviewOpen)}});
             const int zoom = g_preview.zoom == 0 ? 1 : 1 << g_preview.zoom;  // 1, 2, 4, 8
-            p.images({{d + L"source.bmp", t(Text::AiPreviewGame)},
-                      {d + L"general.bmp", L"general"},
-                      {d + L"anime.bmp", L"anime"},
-                      {d + L"anime6b.bmp", L"anime 6B"}},
-                     zoom, zoom > 1 ? 2 : 0);
+            p.images(previewFiles(), zoom, zoom > 1 ? 2 : 0);
         }
+    }
+
+    std::vector<std::pair<std::wstring, std::wstring>> previewFiles() const {
+        const std::wstring d = previewDir() + L"\\";
+        return {{d + L"source.bmp", t(Text::AiPreviewGame)},
+                {d + L"general.bmp", L"general"},
+                {d + L"anime.bmp", L"anime"},
+                {d + L"anime6b.bmp", L"anime 6B"}};
     }
 
     std::wstring previewDir() const { return host_.model().paths().dir + L"\\uaro-graphics\\preview"; }

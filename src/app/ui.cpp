@@ -350,9 +350,17 @@ void Panel::images(const std::vector<std::pair<std::wstring, std::wstring>>& fil
             HDC from = CreateCompatibleDC(screen), to = CreateCompatibleDC(screen);
             b = CreateCompatibleBitmap(screen, side, side);
             HGDIOBJ oldFrom = SelectObject(from, src), oldTo = SelectObject(to, b);
+            RECT all{0, 0, side, side};
+            HBRUSH ground = CreateSolidBrush(RGB(52, 56, 62));  // as the preview's transparent texels
+            FillRect(to, &all, ground);
+            DeleteObject(ground);
+            // 1.6.2: in its own proportions, centred in the square
+            const double k = std::min(double(side) / cw, double(side) / ch);
+            const int dw = std::max(1, int(cw * k)), dh = std::max(1, int(ch * k));
             SetStretchBltMode(to, z > 1 ? COLORONCOLOR : HALFTONE);
             SetBrushOrgEx(to, 0, 0, nullptr);
-            StretchBlt(to, 0, 0, side, side, from, (bw - cw) / 2, (bh - ch) / 2, cw, ch, SRCCOPY);
+            StretchBlt(to, (side - dw) / 2, (side - dh) / 2, dw, dh, from, (bw - cw) / 2, (bh - ch) / 2, cw, ch,
+                       SRCCOPY);
             SelectObject(from, oldFrom);
             SelectObject(to, oldTo);
             DeleteDC(from);

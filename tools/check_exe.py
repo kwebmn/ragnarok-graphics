@@ -29,6 +29,7 @@ ALLOWED = {
         # 1.6.1: the preview's zoom (all of them since Windows 2000)
         "CreateCompatibleBitmap", "CreateCompatibleDC", "DeleteDC", "GetObjectW", "SetBrushOrgEx", "SetStretchBltMode",
         "StretchBlt",
+        "BitBlt", "CreateSolidBrush",  # 1.6.2: the preview's window
     },
     "kernel32.dll": {
         # 0.49: the update check's thread and its lock
@@ -81,6 +82,8 @@ ALLOWED = {
         "SHGetFolderPathW", "ShellExecuteExW", "ShellExecuteW",
     },
     "user32.dll": {
+        # 1.6.2: the preview's window
+        "BeginPaint", "EndPaint", "FillRect", "InvalidateRect", "ReleaseCapture", "ScreenToClient", "SetCapture",
         "SetCursor",  # 0.51: waiting for uaro.kiev.ua
         "GetAncestor",  # 0.49: the update check
         "AdjustWindowRectEx", "CloseClipboard", "CreateWindowExW", "DefWindowProcW", "DestroyWindow",
