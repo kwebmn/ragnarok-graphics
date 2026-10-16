@@ -1,3 +1,11 @@
+# uaRO Graphics 1.5.10 — testing
+
+- **The ground's relief faded under the pack's HD textures** (Prontera's paving went flat). The relief comes from
+  the brightness changing between neighbouring texels; an HD picture has 2-4 times as many, the neighbours nearly
+  alike - x4 kept a quarter of the relief, x2 half. The change is now taken across one texel of the game's own
+  texture, whatever picture lies over it: the relief as with the game's textures. Direct3D 11 and 12.
+- How to check: Prontera, the pack at x4, the ground's relief on - the paving raised again (Pause to compare).
+
 # uaRO Graphics 1.5.9 — testing
 
 - **Auto setup for small cards (Direct3D 11, and up to 4 GB):** the texture pack's pictures at twice the game's
