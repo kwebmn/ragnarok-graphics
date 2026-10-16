@@ -1,3 +1,16 @@
+# uaRO Graphics 0.90.1 — testing
+
+What is new in 0.90.1 — the fast cell under the mouse fixed:
+- In 0.90.0 the fast pick turned itself off at its first check: the client does not count the ray's hits behind the
+  camera (it drops the pieces of the map wholly behind it) and ours did. Now only hits in front of the camera count,
+  as the client's.
+- One disagreement no longer turns it off: the map is checked anew (240 picks); it is turned off after three. The
+  log's line about a disagreement now has both answers' distances.
+
+How to check: after entering a map the log has `pick: the cell under the mouse found the fast way on this map ... ms
+a time, the game's own ... ms`; there should be no `pick: ... checked anew` or `from now on` lines — if there are,
+send a report.
+
 # uaRO Graphics 0.90.0 — testing
 
 What is new in 0.90.0 — draws merged (Direct3D 11):
