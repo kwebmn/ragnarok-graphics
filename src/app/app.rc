@@ -7,6 +7,8 @@
 1 ICON "app.ico"
 1 24 "app.manifest"
 DEFAULT_INI RCDATA "uaro-graphics.ini"
+// 1.3.1: update.bat, put into the game's folder when it is not there (a client copied without it)
+UPDATE_BAT RCDATA "update.bat"
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION UAGFX_VERSION_NUMBERS
