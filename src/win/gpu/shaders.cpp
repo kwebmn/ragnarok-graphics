@@ -768,14 +768,22 @@ float4 night_ps(PresentOut i) : SV_Target {
 // screen - softer with the distance in depth from it, near and far, as if the map were a model. uiPixels the
 // world's size and its blurred copy's (a quarter); footprint where the blur starts (0.22.5: a share of the focus's
 // distance), sharpen its strength (0-1); sourceRect.xy the blur's direction.
-float4 dof_down_ps(PresentOut i) : SV_Target {  // four by four of the picture: four bilinear taps
+// 1.3.5: eight by eight of the picture under a tent (sixteen bilinear taps, the middle ones the most) - a box of four
+// by four made the far blur swim as the camera followed a walk: each step of the picture across the quarter's grid
+// changed which pixels went into which.
+float4 dof_down_ps(PresentOut i) : SV_Target {
     float2 c = i.pos.xy * 4.0;
     float2 t = 1.0 / uiPixels.xy;
-    float3 s = sceneColor.SampleLevel(samp0, (c + float2(-1.0, -1.0)) * t, 0).rgb +
-               sceneColor.SampleLevel(samp0, (c + float2(1.0, -1.0)) * t, 0).rgb +
-               sceneColor.SampleLevel(samp0, (c + float2(-1.0, 1.0)) * t, 0).rgb +
-               sceneColor.SampleLevel(samp0, (c + float2(1.0, 1.0)) * t, 0).rgb;
-    return float4(s * 0.25, 1.0);
+    float3 s = float3(0.0, 0.0, 0.0);
+    float weights = 0.0;
+    [unroll] for (int y = 0; y < 4; ++y)
+        [unroll] for (int x = 0; x < 4; ++x) {
+            float2 o = float2(float(x) * 2.0 - 3.0, float(y) * 2.0 - 3.0);  // -3, -1, 1, 3
+            float w = (4.0 - abs(o.x)) * (4.0 - abs(o.y));
+            s += sceneColor.SampleLevel(samp0, (c + o) * t, 0).rgb * w;
+            weights += w;
+        }
+    return float4(s / weights, 1.0);
 }
 
 // 0.78, bloom (ao.cpp applyBloom): the picture's bright parts at a quarter of its size - over footprint, the brighter
