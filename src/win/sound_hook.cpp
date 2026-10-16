@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -29,11 +30,23 @@ StatusFn g_status = nullptr, g_status3D = nullptr;
 HandleFn g_closeStream = nullptr, g_release = nullptr, g_release3D = nullptr, g_closeDriver = nullptr,
          g_close3D = nullptr;
 VoidFn g_shutdown = nullptr;
+using EnumFn = int(WINAPI*)(void* next, void* provider, char** name);
+using AllocFn = void*(WINAPI*)(void* driver);
+EnumFn g_enum3D = nullptr;
+AllocFn g_allocate = nullptr;
+std::string g_providers;  // 0.91.1: the 3D providers Miles offered, for the log
 
 // The game's voice counts (FUN_004214f0: 48, 32 or 16 by setup.exe) - its tables hold 51 2D and 48 3D handles.
 constexpr uint32_t kVoices2D = 0x70E930, kVoices3D = 0x70EC08;
 const uint8_t kVoicesCode[] = {0xB8, 0x30, 0x00, 0x00, 0x00, 0xA3, 0x30, 0xE9, 0x70, 0x00};  // 0x421520
 constexpr uint32_t kVoicesAt = 0x421520;
+
+// 0.91.1: setup.exe's 3D sound (SOUNDMODE 2) plays the effects through a 3D provider alone - the game looks for
+// "Miles Fast 2D Positional Audio" and allocates no 2D samples; without that provider the effects were silent, the
+// music alone heard. The 2D samples are allocated then, as SOUNDMODE 1 has them (FUN_00421af0 plays through them).
+constexpr uint32_t kSoundMode = 0x7731A8, kDriver = 0x70E748, kSamples2D = 0x70E750, kProvider3D = 0x70EB34;
+const uint8_t kModeCode[] = {0xA1, 0xA8, 0x31, 0x77, 0x00};  // 0x421559: mov eax, [SOUNDMODE]
+constexpr uint32_t kModeAt = 0x421559;
 
 SoundSettings g_set;
 bool g_read = false, g_logged = false, g_front = true;
@@ -156,6 +169,30 @@ void WINAPI start3D(void* s) {
     g_start3D(s);
 }
 
+int WINAPI enum3D(void* next, void* provider, char** name) {
+    const int more = g_enum3D(next, provider, name);
+    if (more && name && *name && g_providers.size() < 400)
+        g_providers += (g_providers.empty() ? "" : ", ") + std::string(*name);
+    return more;
+}
+
+// The game's sound set up (its first frame): 3D sound without its provider gets the 2D samples.
+std::string fixMissing3D() {
+    if (std::memcmp(reinterpret_cast<const void*>(uintptr_t(kModeAt)), kModeCode, sizeof kModeCode) != 0) return "";
+    if (*reinterpret_cast<const int*>(uintptr_t(kSoundMode)) != 2) return "";
+    if (*reinterpret_cast<void* const*>(uintptr_t(kProvider3D)))
+        return "; 3D sound through its provider (offered: " + (g_providers.empty() ? "none" : g_providers) + ")";
+    void* driver = *reinterpret_cast<void* const*>(uintptr_t(kDriver));
+    const int count = std::min(*reinterpret_cast<const int*>(uintptr_t(kVoices2D)), 48);
+    int made = 0;
+    auto* table = reinterpret_cast<void**>(uintptr_t(kSamples2D));
+    for (int i = 0; driver && g_allocate && i < count; ++i)
+        if (!table[i] && (table[i] = g_allocate(driver)) != nullptr) ++made;
+    return "; 3D sound without \"Miles Fast 2D Positional Audio\" (offered: " +
+           (g_providers.empty() ? "none" : g_providers) + ") - the effects through " + std::to_string(made) +
+           " 2D samples";
+}
+
 void WINAPI closeStream(void* s) {
     forget(s, 2);
     g_closeStream(s);
@@ -236,6 +273,8 @@ void installSoundHooks() {
         if (!slotOf(name)) return;  // no Miles, or not this one: the game's sound as it is
     readImport("_AIL_sample_status@4", g_status);  // the limiter counts by them
     readImport("_AIL_3D_sample_status@4", g_status3D);
+    readImport("_AIL_allocate_sample_handle@4", g_allocate);  // 0.91.1
+    hookImport("_AIL_enumerate_3D_providers@12", &enum3D, g_enum3D);
     hookImport("_AIL_close_stream@4", &closeStream, g_closeStream);
     hookImport("_AIL_release_sample_handle@4", &releaseSample, g_release);
     hookImport("_AIL_release_3D_sample_handle@4", &release3D, g_release3D);
@@ -256,8 +295,10 @@ void soundFrame(bool foreground) {
         g_logged = true;
         const std::string voices =
             g_voicesWere ? ", 48 sounds at once (the game's " + std::to_string(g_voicesWere) + ")" : "";
-        LOG_INFO("sound: Miles opened at %u Hz (the game asked %u)%s; limiter %s, %d%% in the background", g_openedRate,
-                 g_askedRate, voices.c_str(), g_set.limiter ? "on" : "off", g_set.background);
+        const std::string threeD = fixMissing3D();
+        LOG_INFO("sound: Miles opened at %u Hz (the game asked %u)%s; limiter %s, %d%% in the background%s",
+                 g_openedRate, g_askedRate, voices.c_str(), g_set.limiter ? "on" : "off", g_set.background,
+                 threeD.c_str());
     }
     const ULONGLONG now = GetTickCount64();
     if (foreground == g_front && now - g_lastTick < 100) return;
