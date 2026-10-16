@@ -203,18 +203,23 @@ float4 smoothLightmap(float2 uv, float4 sharp) {
 
 // 0.71, the ground's relief: its picture's brightness as height (the dark cracks low), its slope across a texel
 // turned into the screen's directions (du, dv: the texture's steps a pixel) and lit from up left - a factor about 1
-// for the ground's colour; strength uiPixels.x (a world draw has no interface quad).
+// for the ground's colour; strength uiPixels.x (a world draw has no interface quad). 1.5.10: uiPixels.y the game
+// texture's width - its slope taken across one of the game's texels, so that an AI picture (2 or 4 times as many,
+// smooth between them) under it keeps the relief the game's texture gives (x4 had a quarter of it).
 #ifndef UAGFX_SAFE  // 0.76: the newest features, left out when a compiler will not take them (pipeline.cpp)
 float relief(float2 uv, float2 du, float2 dv) {
     float w, h;
     tex0.GetDimensions(w, h);
     float2 size = float2(w, h);
-    float2 o = 1.0 / size;
+    const float k = uiPixels.y > 0.0 ? max(1.0, floor(w / uiPixels.y + 0.5)) : 1.0;  // AI texels a game texel
+    float2 o = k / size;
     const float3 luma = float3(0.2126, 0.7152, 0.0722);
     float hl = dot(tex0.SampleGrad(samp0, uv - float2(o.x, 0.0), du, dv).rgb, luma);
     float hr = dot(tex0.SampleGrad(samp0, uv + float2(o.x, 0.0), du, dv).rgb, luma);
     float hu = dot(tex0.SampleGrad(samp0, uv - float2(0.0, o.y), du, dv).rgb, luma);
     float hd = dot(tex0.SampleGrad(samp0, uv + float2(0.0, o.y), du, dv).rgb, luma);
+    // The height across a game texel against the picture's texels a screen pixel (tx, ty, k times as many) and their
+    // area (k squared): k goes out, the relief the game's texture gives.
     float2 g = float2(hr - hl, hd - hu) * 0.5;
     float2 tx = du * size, ty = dv * size;  // texels a screen pixel
     float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(abs(tx.x * ty.y - tx.y * ty.x), 1e-6));
