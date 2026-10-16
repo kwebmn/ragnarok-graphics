@@ -1,3 +1,15 @@
+# uaRO Graphics 1.5.1 — testing
+
+- **anime 6B: the graphics card's check against the CPU failed** (a difference of 255 of 255), and the game made
+  no picture after it. The likely cause: a shader variable named `half`, a type in HLSL - the game's compiler could
+  read it otherwise. Renamed. The steps' logic is checked by tests against an exact copy of the shaders in C++, whole
+  and in tiles.
+- The check now goes step by step first: should the card go its own way somewhere, the log names the step and the
+  values (`step N of 96 ... differs: GPU ..., CPU ...`) or the card's stop code (`the graphics card stopped at step`).
+- A render target that cannot be made logs the card's state.
+- How to check: as for 1.5.0 - the "anime 6B" model, "Make new ones while playing", Direct3D 12. Should the check
+  fail again - send the log (the line with `anime-6b`).
+
 # uaRO Graphics 1.5.0 — testing
 
 - **A third model for the AI textures: anime 6B** (RealESRGAN_x4plus_anime_6B, Real-ESRGAN, BSD-3). Made for drawn
