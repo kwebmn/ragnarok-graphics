@@ -1,9 +1,9 @@
 # uaRO Graphics 1.0.0 — testing
 
-- **The effects' glow in Direct3D 11.** The "Glow" switch (with its strength, size and light-around sliders) now
+- **The effects' glow in Direct3D 11.** The "Glow of effects" switch (with its sliders) now
   works in Direct3D 11 as in D3D12: skills, fire, auras shine with a soft halo. Water under the glow is drawn by its
   own shader. The log has `glow: ...x..., N levels (Direct3D 11)`.
-- How to check: Direct3D 11 on the Render page, turn on "Glow", use fire skills or stand by a portal — a soft halo
+- How to check: Direct3D 11 on the Render page, turn on "Glow of effects", use fire skills or stand by a portal — a soft halo
   around the bright effects; the frame counter Ctrl+Shift+F11 before and after (on a weak card the glow costs
   noticeably). Should the picture darken, flicker or effects vanish — turn the switch off and send a report.
 
