@@ -220,6 +220,12 @@ Voice* voiceFor(Engine& e, const wav::Sound& s) {
 
 }  // namespace
 
+int playing() {
+    int n = 0;
+    for (const Voice& v : engine().voices) n += v.busy ? 1 : 0;
+    return n;
+}
+
 void configure(bool on, int reverb, int background, bool limiter, bool headphones) {
     Engine& e = engine();
     e.wanted = on;

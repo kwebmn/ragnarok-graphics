@@ -13,6 +13,8 @@ namespace uagfx::win::audio {
 bool play(const void* image, float x, float y, float z, int reach, int inner, float factor);
 // Each frame: the game in front or not, the map (its reverberation); the finished voices freed. The first one logs.
 void frame(bool foreground, const std::string& map);
+// 1.3: the sounds it plays now (the music's ducking counts them with Miles').
+int playing();
 // Its settings: on, the reverberation's strength (0-100), the background's volume (%), the crowd's limiter, (1.2)
 // Windows' spatial sound when it is on (headphones).
 void configure(bool on, int reverb, int background, bool limiter, bool headphones);

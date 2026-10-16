@@ -279,6 +279,7 @@ struct SoundSettings {
     bool engine = false;    // 1.1, engine: the sounds at a place by the driver's engine (XAudio2): around the player
     int reverb = 60;        // reverb: the place's reverberation with the engine, 0-100
     bool headphones = true;  // 1.2, headphones: Windows' spatial sound (Sonic, Atmos) when it is on in Windows
+    bool duck = true;        // 1.3, duck: the music quieter (to 65 %) while many sounds play at once
 };
 
 struct Config {

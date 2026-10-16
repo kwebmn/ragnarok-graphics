@@ -338,6 +338,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::GfxSoundReverbHint, "%"},
         {"sound", "headphones", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundHeadphones,
          Text::GfxSoundHeadphonesHint, ""},  // 1.2
+        {"sound", "duck", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundDuck,
+         Text::GfxSoundDuckHint, ""},  // 1.3
         {"debug", "profile", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagProfile,
          Text::DiagProfileHint, ""},
         {"debug", "log", Page::Diagnostics, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
@@ -515,6 +517,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "sound.engine") return c.sound.engine ? "1" : "0";  // 1.1
     if (k == "sound.reverb") return std::to_string(c.sound.reverb);
     if (k == "sound.headphones") return c.sound.headphones ? "1" : "0";  // 1.2
+    if (k == "sound.duck") return c.sound.duck ? "1" : "0";              // 1.3
     if (k == "debug.log") return c.logLevel == LogLevel::Debug ? "verbose" : "normal";
     return "";
 }

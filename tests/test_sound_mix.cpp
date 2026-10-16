@@ -1,3 +1,4 @@
+#include <cmath>
 #include "core/config.hpp"
 #include "core/sound_mix.hpp"
 #include "test.hpp"
@@ -58,4 +59,16 @@ TEST(sound_quietest_sample_stopped_first) {
     CHECK(c.sound.stereo == 0 && !c.sound.steal && !c.sound.crossfade && c.sound.stereoFlip);
     const Config d = parseConfig("");
     CHECK(d.sound.stereo == 60 && d.sound.steal && d.sound.crossfade && !d.sound.stereoFlip);
+}
+
+TEST(sound_music_ducks_in_a_fight) {
+    CHECK(sound::duckTarget(0) == 1.0 && sound::duckTarget(4) == 1.0);
+    CHECK(std::fabs(sound::duckTarget(14) - 0.65) < 1e-9 && sound::duckTarget(40) == sound::duckTarget(14));
+    double d = 1.0;
+    d = sound::duckStep(d, 0.65, 0.1);  // a tenth of a second: a third of the way down
+    CHECK(d < 0.92 && d > 0.85);
+    for (int i = 0; i < 10; ++i) d = sound::duckStep(d, 0.65, 0.1);
+    CHECK(d == 0.65);
+    d = sound::duckStep(d, 1.0, 1.0);  // a second back up: half way
+    CHECK(d > 0.8 && d < 0.85);
 }

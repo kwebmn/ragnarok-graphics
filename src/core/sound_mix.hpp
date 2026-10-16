@@ -56,4 +56,15 @@ inline int quietest(const int* volumes, int count) {
     return best;
 }
 
+// 1.3: the music made way for a fight - from four sounds at once down to 65 % at fourteen and more.
+inline double duckTarget(int playing) {
+    const double t = std::clamp((double(playing) - 4.0) / 10.0, 0.0, 1.0);
+    return 1.0 - 0.35 * t * t * (3.0 - 2.0 * t);
+}
+// Towards the target: down in a third of a second, back up in two.
+inline double duckStep(double now, double target, double seconds) {
+    const double rate = 0.35 * seconds / (target < now ? 0.33 : 2.0);  // the whole way (0.35) in that time
+    return target < now ? std::max(target, now - rate) : std::min(target, now + rate);
+}
+
 }  // namespace uagfx::sound
