@@ -1,3 +1,21 @@
+# uaRO Graphics 0.91.0 — testing
+
+What is new in 0.91.0 — sound (the Sound page, "Sound through uaRO Graphics", after the game is restarted):
+- **Sound quality.** The client mixes its sound at 22050 Hz at most while the music is recorded at 44100 Hz — the highs
+  were lost. The sound is now opened at 44100 Hz (or 48000, or the game's).
+- **48 sounds at once** whatever setup.exe says (16 or 32 there): skills in a crowd are not cut short.
+- **Volume in the background** — with another window in front or the game minimised, 30 % by default (100 = as it
+  is, 0 = silence).
+- **Even out the loudness in a crowd** — past six sounds at once each is a little quieter, so it does not crackle.
+- It works through uaRO.exe's calls of Miles Sound System (`mss32.dll`); the videos (Bink) are untouched. The log
+  has `sound: Miles opened at 44100 Hz (the game asked 22050), 48 sounds at once ...`.
+
+How to check:
+1. The music in a town sounds brighter than before (compare with "the game's").
+2. Many skills in a crowd: no sounds missing, no crackling.
+3. Minimise the game or switch to another window — quieter; back — as before.
+4. Should the sound be gone or the game crash at start — set "Sound quality: the game's" and send a report.
+
 # uaRO Graphics 0.90.3 — testing
 
 - The Speed preset (the auto setup's for old and small cards) now turns the characters' shadows off too: in a crowd
