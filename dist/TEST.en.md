@@ -1,3 +1,19 @@
+# uaRO Graphics 0.92.0 — testing
+
+What is new in 0.92.0 — sound (the Sound page, "Sound through uaRO Graphics", after the game is restarted):
+- **Left and right.** The client changed only a sound's loudness by distance — a monster on the left was heard from
+  both speakers. A sound beside the character now comes from that side of the screen (the camera's turn counted).
+  The "Left and right" slider, 60 % by default, 0 = the game's. Should the sides be swapped — set
+  `stereo_flip = 1` in `[sound]` of uaro-graphics.ini and tell us.
+- **Never lose a new sound.** With every sound channel busy the client simply did not play a new sound. Now the
+  quietest (the farthest) stops and gives its channel to the new one.
+- **Smooth change of music.** Moving to another map the old piece fades out and the new one in over 1.5 seconds.
+
+How to check:
+1. Stand with a monster on your character's left and hit it: the sound is on the left; turn the camera — it moves.
+2. Many skills in a crowd: your own hits are heard.
+3. Take a portal to a map with other music: the change is smooth, not cut off.
+
 # uaRO Graphics 0.91.1 — testing
 
 - **3D sound without effects.** In 3D mode (setup.exe) the client plays the skills' and monsters' sounds only through
