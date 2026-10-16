@@ -1,3 +1,12 @@
+# uaRO Graphics 1.5.5 — testing
+
+- **The pack builder (Texture pack page → Make the pack) did not work with anime 6B:** it has its own way through
+  the network, which knew only the old kind - anime 6B went through as a compact model, the pictures came out as
+  garbage and the card hardly worked. The builder now takes the same tiled way as the game, the work handed to the
+  card in parts (a large texture is over a trillion multiply-adds).
+- anime 6B pictures the 1.5.4 builder or older wrote into a pack are wrong: delete that pack.
+- How to check: Make the pack with anime 6B - the card busy, proper pictures in the pack.
+
 # uaRO Graphics 1.5.4 — testing
 
 - **Making textures nearly stopped in the background.** Behind other windows the game draws 15 frames a second
