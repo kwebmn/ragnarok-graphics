@@ -1,3 +1,11 @@
+# uaRO Graphics 1.6.6 — testing
+
+- **The builder reads the game's files on every core but one** (1.6.4 stopped at 8 threads: 20-50 % of a CPU with
+  16-32 threads). The threads are bounded by the memory: each needs the archives' directories of its own (about
+  100 MB with Palettes.grf's palettes), at most half of the free memory is taken. The log at the start of reading:
+  `reading the game's files in N threads (M cores, K MB free)`.
+- How to check: Make the pack - during the reading the CPU nearly fully busy.
+
 # uaRO Graphics 1.6.5 — testing
 
 - **The pack builder names DATA.INI's archives that did not open.** Such a line of DATA.INI was passed over silently;
