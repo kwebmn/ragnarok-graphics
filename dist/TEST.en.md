@@ -1,3 +1,13 @@
+# uaRO Graphics 0.99.0 — testing
+
+- **Modern water in Direct3D 11.** The water with waves, reflections and clarity was Direct3D 12's alone; old cards
+  (Radeon HD 5000/6000 and the like) showed the game's water. The "Modern water" switch now works in Direct3D 11 too —
+  the same shaders, the waves', reflections' and clarity's sliders. No ripples from steps in D3D11 yet. The log has
+  `water: the map's water found, drawn anew (Direct3D 11)`.
+- How to check: choose Direct3D 11 on the Render page, turn on "Modern water", go to a map with water (Comodo's beach,
+  Izlude) — waves and reflections as in D3D12; the frame counter Ctrl+Shift+F11 — what it costs on a weak card. Should
+  the water turn black or vanish — turn the switch off and send a report.
+
 # uaRO Graphics 0.98.0 — testing
 
 - **Sun flare** (Effects page, off by default; Direct3D 12). Under the open sky in the day, when the sky shows towards
