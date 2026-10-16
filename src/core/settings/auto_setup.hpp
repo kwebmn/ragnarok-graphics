@@ -20,6 +20,7 @@ struct Machine {
     std::string adapter;
     int screenWidth = 0, screenHeight = 0;  // the main monitor's pixels
     bool pack = false;                      // uaro-textures.zip next to uaRO.exe
+    bool hdr = false;                       // 1.3.3: the main monitor shows HDR now (Windows' HDR on)
 };
 
 enum class Tier {
@@ -36,6 +37,12 @@ struct AutoSetup {
     std::vector<IniEdit> edits;  // the preset's and the rest, every one of uaro-graphics.ini
     bool ai = false;             // the AI textures on (the pack is there and the card carries them)
     bool aiWorld = false;        // the ground's, the objects' and the effects' too (not only sprites and icons)
+    // 1.3.3: the interface's size on the Screen page - a whole number of times the game's pixels (the crispest),
+    // the game at about 1000 lines or more: 100 % up to 1440p, 200 % at 4K
+    int ui = 100;
+    std::string dlss;  // 1.3.3: NVIDIA RTX - "dlaa" up to 2560x1440, "quality" above; "" untouched
+    bool hdrOn = false;
+    bool soundEngine = false;  // Windows 10 and later: the sound placed around the player
 };
 
 AutoSetup autoSetup(const Machine& m);

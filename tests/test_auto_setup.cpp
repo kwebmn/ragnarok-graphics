@@ -15,6 +15,7 @@ std::string valueOf(const AutoSetup& a, const std::string& section, const std::s
 
 Machine rtx5060() {  // the developer's: Windows 11, RTX 5060 Ti 16 GB, 4K
     Machine m;
+    m.adapter = "NVIDIA GeForce RTX 5060 Ti";
     m.windows10 = m.d3d12 = m.d3d11 = true;
     m.d3d11Level = 0xb100;
     m.vendor = 0x10de;
@@ -33,7 +34,8 @@ TEST(auto_setup_a_strong_nvidia_card) {
     CHECK(valueOf(a, "renderer", "api") == "auto");
     CHECK(valueOf(a, "quality", "render_scale") == "100");  // 0.85: not drawn larger
     CHECK(valueOf(a, "quality", "msaa") == "4");
-    CHECK(valueOf(a, "quality", "dlss").empty());  // NVIDIA's own choice stays
+    CHECK(valueOf(a, "quality", "dlss") == "quality");  // 1.3.3: 4K - Quality
+    CHECK(a.ui == 200 && valueOf(a, "sound", "engine") == "1" && valueOf(a, "display", "hdr") == "0");
     CHECK(a.ai && a.aiWorld);
     CHECK(valueOf(a, "ai", "enabled") == "1" && valueOf(a, "ai", "ground") == "1");
     CHECK(valueOf(a, "ai", "generate") == "0");
@@ -41,6 +43,16 @@ TEST(auto_setup_a_strong_nvidia_card) {
     full_hd.screenWidth = 1920;
     full_hd.screenHeight = 1080;
     CHECK(valueOf(autoSetup(full_hd), "quality", "render_scale") == "100");
+    // 1.3.3: an RTX 3060 on a 1080p HDR monitor - DLAA, the interface at 100 %, HDR
+    full_hd.adapter = "NVIDIA GeForce RTX 3060";
+    full_hd.vramMb = 12288;
+    full_hd.hdr = true;
+    const AutoSetup b = autoSetup(full_hd);
+    CHECK(valueOf(b, "quality", "dlss") == "dlaa" && b.ui == 100 && valueOf(b, "display", "hdr") == "1");
+    Machine gtx = full_hd;  // no RTX: no DLSS
+    gtx.adapter = "NVIDIA GeForce GTX 1660";
+    gtx.vramMb = 6144;
+    CHECK(valueOf(autoSetup(gtx), "quality", "dlss").empty());
     CHECK(valueOf(a, "frames", "fps_limit") == "60" && valueOf(a, "frames", "save_power") == "1");
 }
 

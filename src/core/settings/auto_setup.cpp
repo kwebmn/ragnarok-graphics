@@ -84,6 +84,20 @@ AutoSetup autoSetup(const Machine& m) {
     // The AI textures: the pack's pictures only (the game makes none: that is for debugging). The world's take the
     // most video memory: a card under 1 GB keeps to the sprites and the icons (0.57: 2 GB before the compression,
     // [ai] compress = auto, which a card under 3 GB gets).
+    // 1.3.3: the interface a whole number of times the game's pixels - a fraction (167 %) softens every letter
+    a.ui = m.screenHeight >= 2000 ? 200 : 100;
+    // NVIDIA RTX with Direct3D 12: DLAA (the picture at its own size, smoothed by the network) where the screen is up
+    // to 2560x1440 - DLSS Quality there draws the world at 720p and it shows; Quality on larger screens.
+    const bool rtx = m.vendor == kNvidia && m.adapter.find("RTX") != std::string::npos;
+    if (rtx && (a.tier == Tier::High || a.tier == Tier::Middle)) {
+        a.dlss = pixels <= 2560LL * 1440 ? "dlaa" : "quality";
+        set(e, "quality", "dlss", a.dlss);
+    }
+    a.hdrOn = m.hdr && (a.tier == Tier::High || a.tier == Tier::Middle);  // Direct3D 12's HDR10 picture
+    set(e, "display", "hdr", a.hdrOn ? "1" : "0");
+    a.soundEngine = m.windows10;  // XAudio2 2.9 is there
+    set(e, "sound", "engine", a.soundEngine ? "1" : "0");
+    if (a.soundEngine) set(e, "sound", "headphones", "1");
     a.ai = m.pack && a.tier != Tier::NoDriver;
     a.aiWorld = a.ai && m.vramMb >= 1024;
     set(e, "ai", "enabled", a.ai ? "1" : "0");

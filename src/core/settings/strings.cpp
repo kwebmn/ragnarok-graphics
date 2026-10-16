@@ -1866,6 +1866,21 @@ const Entry kTexts[] = {
      "повертається.",
      "Когда одновременно звучит много звуков (бой, умения толпы), музыка становится тише, до 65 %, и за две секунды "
      "возвращается."},
+    {"The interface at {1} % - a whole number of times the game's pixels, the crispest letters.",
+     "Інтерфейс {1} % - ціле збільшення пікселів гри, найчіткіші літери.",
+     "Интерфейс {1} % - целое увеличение пикселей игры, самые чёткие буквы."},
+    {"Smoothing: NVIDIA DLAA (the picture at its own size).",
+     "Згладжування: NVIDIA DLAA (картинка у власному розмірі).",
+     "Сглаживание: NVIDIA DLAA (картинка в собственном размере)."},
+    {"Smoothing: NVIDIA DLSS Quality.",
+     "Згладжування: NVIDIA DLSS Quality.",
+     "Сглаживание: NVIDIA DLSS Quality."},
+    {"HDR: on (the monitor shows it).",
+     "HDR: увімкнено (монітор його показує).",
+     "HDR: включено (монитор его показывает)."},
+    {"Sound: around you on any speakers; with Windows Sonic in headphones too.",
+     "Звук: навколо вас на будь-яких колонках; з Windows Sonic і в навушниках.",
+     "Звук: вокруг вас на любых колонках; с Windows Sonic и в наушниках."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

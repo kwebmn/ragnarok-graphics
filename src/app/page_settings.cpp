@@ -332,6 +332,7 @@ private:
         if (!sys.monitors.empty()) {
             x.screenWidth = sys.monitors[0].pixels.width;
             x.screenHeight = sys.monitors[0].pixels.height;
+            x.hdr = sys.monitors[0].hdr;  // 1.3.3
         }
         x.pack = GetFileAttributesW((m.paths().dir + L"\\uaro-textures.zip").c_str()) != INVALID_FILE_ATTRIBUTES;
         const AutoSetup a = autoSetup(x);
@@ -340,6 +341,18 @@ private:
         for (const IniEdit& e : a.edits) {
             if (const IniSetting* s = findSetting(e.section + "." + e.key)) m.setToken(*s, e.value);
             if (e.key == "render_scale") scale = e.value;
+        }
+        // 1.3.3: the interface a whole number of times the game's pixels, where it is a fraction now (167 %)
+        bool uiChanged = false;
+        if (m.backend() == Backend::Uaro && !integerScale(m.screenPlan().s)) {
+            const ScreenChoice before = m.screenChoice();
+            ScreenChoice c = before;
+            if (c.ui != a.ui) {
+                c.ui = a.ui;
+                m.setScreen(c);
+                uiChanged = m.screenPlan().problem == ScreenProblem::None;
+                if (!uiChanged) m.setScreen(before);  // too small a game at that size: as it was
+            }
         }
         host_.changed();
         std::wstring text = tf(Text::AutoFound, {x.adapter.empty() ? utf8(t(Text::Unknown)) : x.adapter,
@@ -356,7 +369,13 @@ private:
                         : a.ai    ? Text::AutoAiSprites
                         : !x.pack ? Text::AutoAiNoPack
                                   : Text::AutoAiOff;
-        text += L"\n" + t(ai) + L"\n\n" + t(Text::AutoAsk);
+        text += L"\n" + t(ai);
+        if (uiChanged) text += L"\n" + tf(Text::AutoUiWhole, {std::to_string(a.ui)});  // 1.3.3
+        if (a.dlss == "dlaa") text += L"\n" + t(Text::AutoDlaa);
+        if (a.dlss == "quality") text += L"\n" + t(Text::AutoDlssQuality);
+        if (a.hdrOn) text += L"\n" + t(Text::AutoHdr);
+        if (a.soundEngine) text += L"\n" + t(Text::AutoSoundEngine);
+        text += L"\n\n" + t(Text::AutoAsk);
         if (host_.ask(text)) {
             std::wstring err = m.apply(host_.lang());
             if (err.empty()) err = m.launchGame(host_.lang());
