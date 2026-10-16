@@ -862,6 +862,8 @@ float dof_focus_ps(PresentOut i) : SV_Target {
             z[m] = lo;
         }
     float before = tex0.Load(int3(0, 0, 0)).r;
+    // 1.4.2: the depth of the point the camera looks at (the character), when the game's camera could be read (r0).
+    if (r0 > 0.0) return before <= 0.0 || abs(r0 - before) > 300.0 ? r0 : lerp(before, r0, twinH);
     if (valid < 4.0) return before;  // too little of the ground in view: as it was (0 until there is a focus)
     float now = z[int(valid) / 2];
     return before <= 0.0 || abs(now - before) > 300.0 ? now : lerp(before, now, twinH);

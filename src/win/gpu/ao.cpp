@@ -648,6 +648,9 @@ bool Renderer::Impl::applyDof() {
         dofFocusTime.QuadPart ? double(now.QuadPart - dofFocusTime.QuadPart) / double(freq.QuadPart) : 1.0;
     dofFocusTime = now;
     c.twin[3] = dt > 0.5 ? 1.0f : float(1.0 - std::exp(-dt / 0.06));
+    // 1.4.2: the focus where the camera looks - the character - read from the game: the depths around the middle
+    // of the screen took a tree's crown or a roof the character stood under, and the ground around went soft.
+    c.reproject[0] = cameraValid ? cameraTargetZ : 0.0f;
     const int was = dofFocusNow;
     dofFocusNow = 1 - dofFocusNow;
     transition(dofFocus[was], dofFocusState[was], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

@@ -218,11 +218,14 @@ void Context::flush() {
     // 0.46.1: Direct3D 11 draws none of them.
     const EffectSettings& fx = config.effects;
     const bool world = fx.water || fx.torch || fx.smoke || fx.lamps || fx.fireflies || fx.mapGlows || fx.rays ||
-                       fx.lava || fx.actorShadows || fx.clouds || fx.haze || fx.heat || fx.portals || fx.weather;
+                       fx.lava || fx.actorShadows || fx.clouds || fx.haze || fx.heat || fx.portals || fx.weather ||
+                       fx.dof;  // 1.4.2: the depth of field's focus on the character
     if (renderer->remix() || (enhanced_ && world && !renderer->d3d11())) {
         float view[12];
+        float targetZ = 0;
         const bool known = readGameCamera(view);
-        renderer->setCamera(known, view);
+        if (!known || !readCameraTargetDepth(targetZ)) targetZ = 0;
+        renderer->setCamera(known, view, targetZ);
     }
     renderer->execute(record);
 }
@@ -345,8 +348,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     if (upscale && (dlss || taa)) {  // the camera of the frame being shown: the motion of its pixels
         float view[12];
+        float targetZ = 0;
         const bool known = readGameCamera(view);
-        renderer->setCamera(known, view);
+        if (!known || !readCameraTargetDepth(targetZ)) targetZ = 0;
+        renderer->setCamera(known, view, targetZ);
         if (known != cameraKnown_) {
             cameraKnown_ = known;
             LOG_INFO("%s: the game's camera %s", taa ? "TAA" : "DLSS",

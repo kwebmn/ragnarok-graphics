@@ -48,7 +48,8 @@ enum class Msg : uint32_t {
     Present,            // u64 window, i32 output width, height, rect source, u8 vsync, u8 tearing, i32 fps limit,
                         // f32 sharpen, u8 the window in front
     SetSurface,         // u64 a DirectComposition surface handle, valid in the renderer's process
-    Camera,             // u8 valid, 12 f32: the game's view matrix of the frame being drawn (DLSS)
+    Camera,             // u8 valid, 12 f32: the game's view matrix of the frame being drawn (DLSS), f32 (1.4.2) the
+                        // depth of the point it looks at
     Quit,
     Map,                // str: the map the game shows, "" none (AI textures note the textures seen on it)
     IconWanted,         // u64 key, i32 width, height, then width * height ARGB: an icon of a window for the network

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <cmath>
 #include <cstdint>
 
 #include "core/ai/texture_cache.hpp"
@@ -40,6 +41,18 @@ bool readGameCamera(float view[12]) {
     if (!mode || !read(mode + camera::kModeView, &cview, 4) || !read(cview + camera::kViewMatrix, view, 12 * 4))
         return false;
     return camera::plausibleView(view);
+}
+
+bool readCameraTargetDepth(float& z) {
+    uint32_t cview = 0;
+    float view[12];
+    float at[3];
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + camera::kModeView, &cview, 4) || !read(cview + camera::kViewMatrix, view, sizeof view) ||
+        !read(cview + camera::kViewAt, at, sizeof at) || !camera::plausibleView(view))
+        return false;
+    z = camera::viewZ(view, at);
+    return std::isfinite(z) && z > camera::kNear && z < camera::kFar;
 }
 
 std::string readGameMap() {

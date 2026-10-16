@@ -206,11 +206,12 @@ bool Remote::setScale(double k, int width, int height, int samples, bool upscale
     return ok && rd.ok();
 }
 
-void Remote::setCamera(bool valid, const float view[12]) {
+void Remote::setCamera(bool valid, const float view[12], float targetZ) {
     buffer_.clear();
     WireWriter w(buffer_);
     w.u8(valid ? 1 : 0);
     for (int i = 0; i < 12; ++i) w.f32(valid ? view[i] : 0.0f);
+    w.f32(valid ? targetZ : 0.0f);  // 1.4.2
     send(Msg::Camera, buffer_);
 }
 

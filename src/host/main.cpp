@@ -487,7 +487,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             const bool valid = rd.u8() != 0;
             float view[12];
             for (float& v : view) v = rd.f32();
-            if (rd.ok()) renderer_.setCamera(valid, view);
+            const float targetZ = rd.left() >= 4 ? rd.f32() : 0.0f;  // 1.4.2: the character's depth
+            if (rd.ok()) renderer_.setCamera(valid, view, targetZ);
             break;
         }
         case Msg::IconWanted: {

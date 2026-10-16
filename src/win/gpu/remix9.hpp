@@ -42,7 +42,7 @@ public:
     void execute(const FrameRecord& record);
     bool readTarget(std::vector<uint32_t>& argb);
     void present(HWND window, const PresentOptions& options);
-    void setCamera(bool valid, const float view[12]);
+    void setCamera(bool valid, const float view[12], float targetZ = 0);
 
 private:
     struct Pending {  // pixels the game gave before the texture could be made

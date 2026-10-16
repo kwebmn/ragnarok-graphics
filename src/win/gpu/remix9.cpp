@@ -231,7 +231,7 @@ void Remix9::upload(const FrameRecord& rec, const UploadCmd& u) {
     t.pending.push_back(Pending{level, u.rect, std::vector<uint32_t>(argb, argb + count)});
 }
 
-void Remix9::setCamera(bool valid, const float view[12]) {
+void Remix9::setCamera(bool valid, const float view[12], float) {
     cameraValid_ = valid && camera::plausibleView(view);
     if (!cameraValid_) return;
     std::memcpy(camera_, view, sizeof camera_);

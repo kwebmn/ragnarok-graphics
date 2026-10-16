@@ -70,7 +70,7 @@ public:
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setStateCache(bool on) { stateCache_ = on; }  // 0.88: [debug] state_cache
     void setMergeDraws(bool on) { mergeDraws_ = on; }  // 0.90: [debug] merge_draws
-    void setCamera(bool valid, const float view[12]);  // 0.99: the game's camera (the modern water)
+    void setCamera(bool valid, const float view[12], float targetZ = 0);  // 0.99: the game's camera (the modern water)
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);

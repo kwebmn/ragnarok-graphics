@@ -1589,12 +1589,13 @@ void Renderer::setGameDir(const std::string& dir) {
     impl_->mapWorld.setGameDir(dir);
 }
 
-void Renderer::setCamera(bool valid, const float view[12]) {
+void Renderer::setCamera(bool valid, const float view[12], float targetZ) {
     if (remix_) return remix_->setCamera(valid, view);
     if (d3d11_) return d3d11_->setCamera(valid, view);  // 0.99: the modern water
-    if (remote_) return remote_->setCamera(valid, view);
+    if (remote_) return remote_->setCamera(valid, view, targetZ);
     Impl& m = *impl_;
     m.cameraValid = valid;
+    m.cameraTargetZ = valid ? targetZ : 0.0f;
     if (valid) std::memcpy(m.camera, view, sizeof m.camera);
     float v4[16], inv[16];  // 0.19: view -> world for the water
     camera::affine4(m.camera, v4);

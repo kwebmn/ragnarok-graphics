@@ -84,7 +84,7 @@ public:
     // makes the target's size of it; MSAA is off then.
     bool setScale(double k, int targetWidth, int targetHeight, int samples = 1, bool upscale = false);
     // Part 3: the game's view matrix of the frame being drawn (false: not known - no motion).
-    void setCamera(bool valid, const float view[12]);
+    void setCamera(bool valid, const float view[12], float targetZ = 0);  // 1.4.2: targetZ - the character's depth
     bool upscaling() const;
     int samples() const;  // of the target now
     // Stage 4: anisotropic filtering of the world's textures (0 = off, else 2-16), and alpha testing as coverage in

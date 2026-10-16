@@ -1269,7 +1269,7 @@ float Renderer11::waterTime() {
     return float(double(now.QuadPart - waterClock_.QuadPart) / double(freq.QuadPart));
 }
 
-void Renderer11::setCamera(bool valid, const float view[12]) {
+void Renderer11::setCamera(bool valid, const float view[12], float) {
     float v4[16], inv[16];
     camera::affine4(view, v4);
     cameraValid_ = valid && camera::inverse4(v4, inv);

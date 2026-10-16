@@ -14,6 +14,7 @@ constexpr uint32_t kModeType = 0x58;     // 1 in the game, 0 at the login
 constexpr uint32_t kModeView = 0xC8;     // CView* of the game mode
 constexpr uint32_t kModeMap = 0x60;      // the map's file name, "prontera.rsw" (copied there as the world loads)
 constexpr uint32_t kViewMatrix = 0x94;   // 4 x 3 floats: world -> view for row vectors (D3D), the last row a move
+constexpr uint32_t kViewAt = 0x28;       // 3 floats: the point the camera looks at - the character (0x4faf00)
 constexpr uint32_t kConstants = 0x695740;  // pi, far, near, horizontal and vertical field of view in degrees
 constexpr float kPi = 3.141592025756836f;  // as the exe holds it
 constexpr float kFar = 1500.0f;
@@ -30,6 +31,11 @@ struct Projection {
 };
 // As SetSize makes it for the game's size.
 Projection projectionFor(int width, int height);
+
+// 1.4.2: how far in front of the camera the point `at` is (view-space z), by the view matrix.
+inline float viewZ(const float view[12], const float at[3]) {
+    return at[0] * view[2] + at[1] * view[5] + at[2] * view[8] + view[11];
+}
 
 // The view matrix of a LookAt: an orthonormal rotation and a move; false for anything else (a stale pointer).
 bool plausibleView(const float view[12]);

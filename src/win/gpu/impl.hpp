@@ -294,6 +294,7 @@ struct Renderer::Impl {
     int upscaleFailures = 0;     // the upscale failed this many frames in a row
     bool dropUpscale = false;    // so many that it stops after this present
     bool cameraValid = false, prevCameraValid = false;
+    float cameraTargetZ = 0;  // 1.4.2: the depth of the point the game's camera looks at (the character), 0 unknown
     float camera[12]{}, prevCamera[12]{};
     ID3DBlob* motionPs = nullptr;
     ID3DBlob* copyPs = nullptr;  // copy_ps: alpha kept
