@@ -1,3 +1,11 @@
+# uaRO Graphics 0.95.0 — testing
+
+- **Cards on the ground sparkle** (Effects page, off by default; Direct3D 12 and 11). A dropped card flashes a small
+  golden star now and then (about every 2 seconds, each at its own moment). A card is known by its sprite on the
+  ground (every card has the same one, "이름없는카드"); other items do not sparkle.
+- How to check: turn it on, get a card to drop (or drop one of yours) — a star flashes over it; nothing over other
+  items.
+
 # uaRO Graphics 0.94.0 — testing
 
 - **Ripples from steps** (Effects page, off by default; Direct3D 12, needs "Modern water" on). Where characters and
