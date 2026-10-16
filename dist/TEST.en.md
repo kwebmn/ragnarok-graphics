@@ -1,3 +1,12 @@
+# uaRO Graphics 0.93.0 — testing
+
+- **Fade in monsters and items** (Effects page, off by default). Monsters, characters, NPCs and items on the ground
+  fade in over a quarter of a second where they come into view instead of popping up. Entering a map nothing fades —
+  the map is shown at once. Direct3D 12 and 11.
+- How to check: turn it on, walk across a field towards the screen's edge — new monsters fade in; turning the camera
+  and running, the ones in view do not flicker. The log has `effects: sprites fade in as they come into view`; should
+  it say `not this one`, the effect cannot work with this client — send a report.
+
 # uaRO Graphics 0.92.0 — testing
 
 What is new in 0.92.0 — sound (the Sound page, "Sound through uaRO Graphics", after the game is restarted):
