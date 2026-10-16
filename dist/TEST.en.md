@@ -1,3 +1,11 @@
+# uaRO Graphics 0.97.0 — testing
+
+- **Wet ground in the rain** (Effects page, off by default; Direct3D 12, needs "Weather" on). On maps where it rains
+  the ground is a little darker, and here and there puddles mirror the houses, the trees and the characters. The
+  puddles keep their places on the map; they do not travel with the camera.
+- How to check: turn on "Weather" and "Wet ground in the rain", go to a map with rain — the ground is darker, the
+  puddles reflect; maps without rain do not change.
+
 # uaRO Graphics 0.96.0 — testing
 
 - **Flash on a hit** (Effects page, off by default; Direct3D 12 and 11). A monster that is hit lights up white for a
