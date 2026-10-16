@@ -1,3 +1,12 @@
+# uaRO Graphics 1.0.2 — testing
+
+- **Monsters and the character blinking with the fade-in.** A sprite already shown was now and then taken for a new
+  one and faded in again: when it gained a layer (a weapon in an attack, a head turned), when it was missing from one
+  frame or a frame was shown twice. A sprite is now remembered for 0.4 s after it was last drawn, and a new layer
+  next to a shown sprite of the same kind is shown at once.
+- How to check: turn on the fade-in, hit monsters, walk in a crowd, turn the camera — nobody blinks; monsters coming
+  into view at the screen's edge still fade in.
+
 # uaRO Graphics 1.0.1 — testing
 
 - **Fireflies in Direct3D 11.** The fireflies the game draws itself (forests, night maps) are now drawn anew in
