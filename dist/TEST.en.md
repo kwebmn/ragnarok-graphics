@@ -1,3 +1,21 @@
+# uaRO Graphics 1.1.0 — testing
+
+- **Surround sound (new engine)** — the Sound page, "Sound through uaRO Graphics", off by default, after the game is
+  restarted; Windows 10 and later (Windows 7 keeps the game's sound). The sounds of monsters, skills and hits are
+  played by uaRO Graphics itself through XAudio2 instead of Miles:
+  - around you on any speakers — stereo, 5.1, 7.1: what is behind sounds behind (the camera's turn counted);
+  - far sounds quieter and duller (the highs fade with the distance), at the edge of hearing a sound fades out instead
+    of breaking off;
+  - the place's echo: caves and dungeons long, houses short, towns a little, fields hardly; the "Echo of the place"
+    slider;
+  - quieter in the background and the crowd's even loudness — as before.
+  The music stays Miles'. Sounds the engine cannot play (not PCM) play as before.
+- The log: `sound engine: XAudio2 at ... Hz on N channels ..., reverberation`, then
+  `sound engine: the game's sounds placed around the player (stereo|5.1|7.1, the place N)` and a count every minute.
+- How to check: turn it on, restart the game; stand with a monster on the left/right/behind — the sound comes from
+  there (in headphones left/right; surround for headphones is the next step); go into a cave — the echo; walk away
+  from a monster — duller. Should sounds be missing or distorted — turn it off and send a report.
+
 # uaRO Graphics 1.0.2 — testing
 
 - **Monsters and the character blinking with the fade-in.** A sprite already shown was now and then taken for a new
