@@ -1,3 +1,15 @@
+# uaRO Graphics 1.3.0 — testing
+
+- **Music makes way in a fight** (the Sound page, on by default; works without the new engine too). While many
+  sounds play at once — a fight, a crowd's skills — the music goes quieter, down to 65 % at 14 sounds and more, and
+  comes back over two seconds when the fight is over.
+- **The maps' ambient sounds** (birds, water, machines — placed by the maps' makers: 22 thousand sources in 480 maps)
+  are played by the game itself; with "Surround sound (new engine)" they now come from their side too, duller far
+  off and with the place's echo.
+- How to check: in a fight with several monsters or in a crowd with skills the music is quieter and comes back after;
+  on a map with ambient sounds (1@gef, towns with fountains) the birds and the water come from their side with the
+  new engine.
+
 # uaRO Graphics 1.2.0 — testing
 
 - **Headphones: Windows' spatial sound** (the Sound page, on by default, works with "Surround sound (new engine)").
