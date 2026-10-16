@@ -1,3 +1,17 @@
+# uaRO Graphics 1.4.0 — testing
+
+- **The gamepad comes along: uaRO Pad 0.6.0 and a new Gamepad page.** The pad travels in the package
+  (uaro-graphics\pad\). Switch on puts its dinput.dll into the game's folder; the client's dinput.dll (ROExt) becomes
+  dinput8.dll and goes on working, Switch off puts everything back. The game has to be closed.
+- **PlayStation controllers (DualShock 4, DualSense) over USB and Bluetooth** — read directly, no DS4Windows or Steam;
+  rumble and the light bar. On the page: which controller (any / Xbox / PlayStation), the light bar's colour, what the
+  touchpad's click does, vibration, whether the pad is on at the start, its menu's language. Saved to uaro-pad.ini at
+  once.
+- update.bat updates a switched-on pad together with the graphics.
+- How to check: Gamepad → Switch on → connect the controller → start the game: the stick walks, Start opens the pad's
+  menu (with a PlayStation controller it names Cross/Circle/Square/Triangle). Change the light bar's colour — after a
+  restart of the game it shines in the new one. Switch off — the old dinput.dll is back, the game as before.
+
 # uaRO Graphics 1.3.5 — testing
 
 - **Depth of field: the distance "swam" while walking.** The blurred distance came from the picture made four times
