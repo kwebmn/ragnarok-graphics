@@ -154,6 +154,12 @@ TEST(ground_pick_trusted_after_agreeing_on_each_map) {
     trust.on(0x2000);  // another: checked anew, every pick
     CHECK(!trust.trusted());
     CHECK(trust.check() && trust.check());
+    for (int i = 0; i < 10; ++i) {  // 0.90.2: while the map settles, not counted
+        trust.check();
+        CHECK(!trust.result(false));
+    }
+    CHECK(!trust.off());
+    for (int i = 0; i < pick::Trust::kSettle; ++i) trust.check();
     CHECK(!trust.result(false));  // a disagreement: checked anew
     CHECK(!trust.off() && !trust.trusted());
     for (int i = 1; i < pick::Trust::kAgree; ++i) trust.result(true);

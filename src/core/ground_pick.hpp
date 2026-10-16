@@ -86,26 +86,31 @@ inline bool sameDistance(float a, float b) {
 
 // 0.89: whether the walk is used on the map now: once it has agreed with the game's own answer kAgree times running
 // on it, and then checked again every kEvery picks. 0.90.1: a disagreement checks the map anew (a ray grazing the
-// eye's own cell may go either way); the kOff-th and the game's own pick is used from then on, on every map.
+// eye's own cell may go either way); the kOff-th and the game's own pick is used from then on, on every map. 0.90.2:
+// in a map's first kSettle picks the game's answer is none while it is still setting the map up - not counted.
 class Trust {
 public:
-    static constexpr int kAgree = 240, kEvery = 120, kOff = 3;
+    static constexpr int kAgree = 240, kEvery = 120, kOff = 3, kSettle = 60;
     // The map now (its ground's address, cells and size): another map's is checked anew (true).
     bool on(unsigned long map) {
         if (map == map_) return false;
         map_ = map;
         agreed_ = 0;
+        onMap_ = 0;
         return true;
     }
     bool trusted() const { return !off_ && agreed_ >= kAgree; }
     bool off() const { return off_; }
     // Whether this pick is checked against the game's own.
-    bool check() { return !trusted() || ++picks_ % kEvery == 0; }
+    bool check() {
+        ++onMap_;
+        return !trusted() || ++picks_ % kEvery == 0;
+    }
     // A checked pick: whether both answers were the same. True when it is the one that makes the walk trusted.
     bool result(bool same) {
         if (!same) {
             agreed_ = 0;
-            off_ = off_ || ++disagreed_ >= kOff;
+            if (onMap_ > kSettle) off_ = off_ || ++disagreed_ >= kOff;
             return false;
         }
         if (off_ || agreed_ >= kAgree) return false;
@@ -116,7 +121,7 @@ private:
     unsigned long map_ = 0;
     int agreed_ = 0;
     unsigned picks_ = 0;
-    int disagreed_ = 0;
+    int disagreed_ = 0, onMap_ = 0;
     bool off_ = false;
 };
 
