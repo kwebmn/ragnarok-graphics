@@ -1,3 +1,9 @@
+# uaRO Graphics 0.90.3 — testing
+
+- The Speed preset (the auto setup's for old and small cards) now turns the characters' shadows off too: in a crowd
+  they took 5–10 ms of the card's time a frame even on an RTX with Direct3D 11. Check: on a weak computer press the
+  auto setup — the characters' shadows are off on the Effects page.
+
 # uaRO Graphics 0.90.2 — testing
 
 - The fast cell under the mouse: in a new map's first 60 picks the client is still setting the map up and answers
