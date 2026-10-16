@@ -1,3 +1,16 @@
+# uaRO Graphics 1.5.11 — testing
+
+- **The update did not download: `CRYPT_E_NO_REVOCATION_CHECK`.** Windows' own curl checks that GitHub's
+  certificate is not revoked; where an antivirus, a firewall or the provider blocks that check, the download failed.
+  update.bat and get-dlss.bat now try again with the check as far as it can go, and failing that without the
+  revocation check (the connection itself is still encrypted and checked).
+- Update now always puts its own update.bat into the game's folder (before: only when there was none), so a fix of
+  update.bat arrives with the new settings app at once.
+- Whoever's update already fails with this error - once, by hand: download
+  https://github.com/kwebmn/ragnarok-graphics/raw/main/release/uaro-graphics.zip in a browser, unpack it over the
+  game's folder and run install.bat.
+- How to check: Update now on a computer that had the error - the download goes through.
+
 # uaRO Graphics 1.5.10 — testing
 
 - **The ground's relief faded under the pack's HD textures** (Prontera's paving went flat). The relief comes from
