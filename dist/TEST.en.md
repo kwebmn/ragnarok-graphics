@@ -1,3 +1,12 @@
+# uaRO Graphics 1.5.4 — testing
+
+- **Making textures nearly stopped in the background.** Behind other windows the game draws 15 frames a second
+  (power saving), and the network got its share of each frame - four times less work in the background while the
+  card stood idle. With "Make new ones while playing" the network now takes up to 40 ms of each frame there. In
+  front - as before, by "The card's time a frame".
+- How to check: turn on making, put the game behind another window for a minute - the log's "made by the network"
+  grows faster than it did in the background.
+
 # uaRO Graphics 1.5.3 — testing
 
 - **anime 6B works** (1.5.2: the check passed, the textures are made). The start with this model took 10 seconds
