@@ -1,3 +1,11 @@
+# uaRO Graphics 1.3.5 — testing
+
+- **Depth of field: the distance "swam" while walking.** The blurred distance came from the picture made four times
+  smaller by averaging 4×4 squares; as the camera followed a walk the picture moved across that grid and the blur
+  shook. The reduction is now soft (8×8 with smooth weights) — a pixel's move hardly changes it. Direct3D 12.
+- How to check: turn on the depth of field, walk through a town — the far houses evenly blurred, not shaking. Should
+  it still swim — tell us (and check whether it goes with the depth of field off).
+
 # uaRO Graphics 1.3.4 — testing
 
 - **Text jumped while typed** (the login, the chat). Crisp text spread its large letters evenly over the whole line
