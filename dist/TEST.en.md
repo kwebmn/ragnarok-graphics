@@ -1,3 +1,16 @@
+# uaRO Graphics 1.5.8 — testing
+
+- **Two switches of their own on the AI page:**
+  - "HD textures from the texture pack (uaro-textures.zip)" - the pack's ready pictures shown;
+  - "Make new ones while playing (debugging)" - making them in the game (Direct3D 12), now on its own.
+- Both on - as before: from the pack, and what it lacks is made and written into it.
+- Making alone (the pack off) - the pack is neither read nor changed, the network makes every picture anew and keeps
+  none. A model can be tried that way without renaming `uaro-textures.zip`.
+- The pack alone - as the players have it. Both off - no AI textures.
+- Choosing a set ("Recommended", "All") no longer touches either switch.
+- How to check: the pack off, making on, the anime 6B model - the log says `the texture pack is not read` and
+  `not kept: the pack's pictures are off`, the textures sharpen; the pack unchanged after it (size and date).
+
 # uaRO Graphics 1.5.7 — testing
 
 - **The AI page's main box was called "Improve textures with a neural network (experiment)"** - it did not say it
