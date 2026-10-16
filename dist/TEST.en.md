@@ -1,3 +1,17 @@
+# uaRO Graphics 1.2.0 — testing
+
+- **Headphones: Windows' spatial sound** (the Sound page, on by default, works with "Surround sound (new engine)").
+  When spatial sound is on in Windows — "Windows Sonic for Headphones" (free, built in) or Dolby Atmos / DTS
+  Headphone:X — the sounds of monsters, skills and hits go to Windows as objects in space, and Windows itself makes
+  them surround in headphones: behind, in front, beside. The place's echo stays. With Windows' spatial sound off —
+  as in 1.1 (placed on the speakers).
+- To turn it on in Windows: right-click the sound icon → Sound settings → the output device → Spatial sound →
+  Windows Sonic for Headphones.
+- The log: `spatial sound: Windows spatial sound, N objects - ...` (or `not on in Windows`), and
+  `sound engine: the game's sounds placed around the player (Windows spatial sound, ...)`; every minute how many sounds
+  went to the spatial sound.
+- How to check: in headphones turn your back to a monster — the hits sound behind; turn the camera — the sound moves.
+
 # uaRO Graphics 1.1.0 — testing
 
 - **Surround sound (new engine)** — the Sound page, "Sound through uaRO Graphics", off by default, after the game is
