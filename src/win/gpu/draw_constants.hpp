@@ -10,6 +10,11 @@
 
 namespace uagfx::gpu {
 
+// 0.89: the AI's pictures of the interface (icons, the windows' pictures) only where the interface is enlarged - at
+// the game's own size a picture four times larger is shrunk back with smoothing, and the game's sharp pixel icons
+// came out soft (the status icons on the right, at 1600x900 on a Radeon HD 6570).
+inline bool aiInterfaceAt(double scale) { return scale >= 1.2; }
+
 // A texture stage for the shaders' stage0/stage1 (shaders.cpp): the Direct3D 12 renderer's draws and (0.46) the
 // Direct3D 11 one's.
 inline void packStage(const StageSetup& st, bool keyed, uint32_t out[2]) {

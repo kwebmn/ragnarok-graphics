@@ -48,6 +48,7 @@ void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
 }
 
 void Renderer11::applyTorchLight() {
+    EffectSpan span(*this, kTimeLight11);  // 0.89
     lightDone_ = true;
     if (flames_.empty() || !torchesWanted() || !depth_ || !target_.texture) return;
     if (!lightData_) {

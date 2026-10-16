@@ -9,6 +9,7 @@
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
 #include "win/effect_hook.hpp"
+#include "win/pick_hook.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/game_camera.hpp"
 #include "win/sprite_hook.hpp"
@@ -148,6 +149,7 @@ bool Context::open(std::string& error) {
     const bool d3d11Hook = (aiHere && cells) || config.effects.actorShadows || config.effects.torch;
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
+    installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)
     crisp::setAiIcons(config.ai.enabled && config.ai.icons && (renderer->remote() || aiHere) && config.crispText,

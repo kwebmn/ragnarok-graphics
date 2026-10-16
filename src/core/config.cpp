@@ -529,6 +529,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.allowTearing);
         } else if (key == "debug.state_cache") {
             setBool(val, c.stateCache);
+        } else if (key == "debug.fast_pick") {
+            setBool(val, c.fastPick);
         } else if (key == "debug.profile") {
             setBool(val, c.profile);
         } else if (key == "debug.log") {

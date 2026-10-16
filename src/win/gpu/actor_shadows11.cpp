@@ -106,6 +106,7 @@ bool Renderer11::ensureShadowMask(int w, int h) {
 }
 
 void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
+    EffectSpan span(*this, kTimeShadows11);  // 0.89
     shadowsDone_ = true;  // tried once a frame
     const int w = target_.width, h = target_.height;
     if (!depth_ || !ensureShadowMask(w, h)) return;

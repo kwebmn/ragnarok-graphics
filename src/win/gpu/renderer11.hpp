@@ -251,12 +251,42 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
+        ID3D11Query* effect[4][2] = {};  // 0.89: the effects' own spans (EffectTime11)
+        unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
         bool inSpan = false;    // a span begun, its end not yet
         bool pending = false;   // ended, its data not read yet
     };
     FrameTimes times_[kTimedFrames];
+    // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
+    enum EffectTime11 { kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kEffectTimes11 };
+    void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
+    void effectEnd(EffectTime11 e);
+    struct EffectSpan {  // the scope of an effect's pass
+        Renderer11& r;
+        EffectTime11 e;
+        EffectSpan(Renderer11& renderer, EffectTime11 effect) : r(renderer), e(effect) { r.effectBegin(e); }
+        ~EffectSpan() { r.effectEnd(e); }
+        EffectSpan(const EffectSpan&) = delete;
+        EffectSpan& operator=(const EffectSpan&) = delete;
+    };
+    double effectMs_[kEffectTimes11] = {};
+    // 0.89: what the frames ask of the processor and the driver, the log every half minute - draws, the driver's
+    // calls made and spared, the processor's time in drawing; the game's textures made, reused, freed
+    struct Stats {
+        uint64_t frames = 0, draws = 0, calls = 0, spared = 0, made = 0, reused = 0, freed = 0, uploaded = 0;
+        LONGLONG ticks = 0;
+    } stats_;
+    // 0.89: textures the game let go, kept for its next one of the same size and levels - it makes and frees small
+    // ones again and again, and an old driver takes long to make each
+    struct Pooled {
+        ID3D11Texture2D* texture = nullptr;
+        ID3D11ShaderResourceView* srv = nullptr;
+        int width = 0, height = 0, levels = 1;
+    };
+    std::vector<Pooled> pool_;
+    size_t pooledBytes_ = 0;
     UINT timeSlot_ = 0;
     bool timing_ = false;   // the queries were made
     bool untimed_ = false;  // this frame's slot was still busy: the frame is not timed

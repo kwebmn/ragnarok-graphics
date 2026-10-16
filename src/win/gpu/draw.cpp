@@ -173,7 +173,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (ai && ai->shown && !(d.twin && s.ui))
         for (int i = 0; i < 2; ++i) {
             const auto it = d.texture[i] ? textures.find(d.texture[i]) : textures.end();
-            aiDrawn[i] = it != textures.end() && it->second.ai && (s.ui ? it->second.aiUi : it->second.aiWorld);
+            aiDrawn[i] = it != textures.end() && it->second.ai && (s.ui ? it->second.aiUi : it->second.aiWorld) &&
+                         (!s.ui || aiInterfaceAt(scale));  // 0.89: not the interface at the game's own size
             const bool mips = sampled[i].mipFilter == d3d7::TFP_POINT || sampled[i].mipFilter == d3d7::TFP_LINEAR;
             if (aiDrawn[i] && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
         }
@@ -207,7 +208,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (ai && !s.ui && id && id != white) {
             facts.stage = i;
             ai->noteWorldUse(id, ai::drawKind(facts));
-        } else if (ai && s.ui && !twin && i == 0 && id && id != white) {
+        } else if (ai && s.ui && !twin && i == 0 && id && id != white && aiInterfaceAt(scale)) {
             ai->noteUiUse(id);
         }
         if (aiDrawn[i]) {

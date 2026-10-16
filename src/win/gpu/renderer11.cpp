@@ -7,9 +7,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <string>
 
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
@@ -65,6 +67,13 @@ std::string levelName(unsigned level) {  // D3D_FEATURE_LEVEL 0xb000 -> "11_0"
     return std::to_string((level >> 12) & 15) + "_" + std::to_string((level >> 8) & 15);
 }
 
+// 0.89: a B8G8R8A8 texture's bytes with its levels (the pool's measure)
+size_t textureBytes(int width, int height, int levels) {
+    size_t bytes = 0;
+    for (int i = 0; i < levels; ++i) bytes += size_t(std::max(1, width >> i)) * size_t(std::max(1, height >> i)) * 4;
+    return bytes;
+}
+
 }  // namespace
 
 Renderer11::~Renderer11() {
@@ -80,6 +89,11 @@ Renderer11::~Renderer11() {
         drop(t.second.srv);
         drop(t.second.texture);
     }
+    for (Pooled& p : pool_) {  // 0.89
+        drop(p.srv);
+        drop(p.texture);
+    }
+    pool_.clear();
     drop(white_.srv);
     drop(white_.texture);
     dropTarget(target_);
@@ -95,6 +109,8 @@ Renderer11::~Renderer11() {
     for (FrameTimes& f : times_) {
         drop(f.disjoint);
         for (ID3D11Query*& q : f.stamps) drop(q);
+        for (auto& pair : f.effect)
+            for (ID3D11Query*& q : pair) drop(q);
     }
     drop(vertices_);
     drop(indices_);
@@ -254,6 +270,8 @@ bool Renderer11::create(const std::string& shaderCache, Renderer::StartSink sink
         timing_ = timing_ && SUCCEEDED(device_->CreateQuery(&q, &f.disjoint));
         q.Query = D3D11_QUERY_TIMESTAMP;
         for (ID3D11Query*& t : f.stamps) timing_ = timing_ && SUCCEEDED(device_->CreateQuery(&q, &t));
+        for (auto& pair : f.effect)  // 0.89
+            for (ID3D11Query*& t : pair) timing_ = timing_ && SUCCEEDED(device_->CreateQuery(&q, &t));
     }
     LOG_INFO("Direct3D 11: %s, feature level %s%s", adapter_.c_str(), levelName(level_).c_str(),
              bgraVertices_ ? "" : ", vertex colours turned around for it");
@@ -525,6 +543,19 @@ uint32_t Renderer11::createTexture(int width, int height, int levels) {
     t.width = width;
     t.height = height;
     t.levels = std::max(1, levels);
+    for (size_t i = 0; i < pool_.size(); ++i) {  // 0.89: one the game let go of this size and levels
+        const Pooled& p = pool_[i];
+        if (p.width != width || p.height != height || p.levels != t.levels) continue;
+        t.texture = p.texture;
+        t.srv = p.srv;
+        pooledBytes_ -= textureBytes(width, height, t.levels);
+        pool_.erase(pool_.begin() + long(i));
+        ++stats_.reused;
+        const uint32_t id = nextTexture_++;
+        textures_.emplace(id, t);
+        return id;
+    }
+    ++stats_.made;
     D3D11_TEXTURE2D_DESC d{};
     d.Width = UINT(width);
     d.Height = UINT(height);
@@ -552,8 +583,18 @@ void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while qu
     if (it == textures_.end()) return;
     if (ai_) ai_->forget(id);
     objectTextures_.forget(id);  // 0.61
-    drop(it->second.srv);
-    drop(it->second.texture);
+    ++stats_.freed;
+    // 0.89: a small one kept for the game's next of its size (32 MB of them at most) - a new surface's levels are
+    // uploaded whole before it is first drawn (TextureLevels starts with all of them to upload), the old picture gone
+    const Texture& t = it->second;
+    const size_t bytes = textureBytes(t.width, t.height, t.levels);
+    if (t.width * t.height <= 512 * 512 && pooledBytes_ + bytes <= (size_t(32) << 20) && pool_.size() < 256) {
+        pool_.push_back(Pooled{t.texture, t.srv, t.width, t.height, t.levels});
+        pooledBytes_ += bytes;
+    } else {
+        drop(it->second.srv);
+        drop(it->second.texture);
+    }
     textures_.erase(it);
 }
 
@@ -608,7 +649,11 @@ bool Renderer11::uploadGeometry(const FrameRecord& rec) {
 
 void Renderer11::setConstants(const Constants& c) {
     // 0.88: most of the game's draws in a row share their constants - what the buffer holds already is not written
-    if (stateCache_ && constantsKnown_ && std::memcmp(&c, &constantsNow_, sizeof c) == 0) return;
+    if (stateCache_ && constantsKnown_ && std::memcmp(&c, &constantsNow_, sizeof c) == 0) {
+        stats_.spared += 2;  // 0.89: a map and an unmap spared
+        return;
+    }
+    stats_.calls += 2;
     D3D11_MAPPED_SUBRESOURCE m{};
     if (FAILED(ctx_->Map(constants_, 0, D3D11_MAP_WRITE_DISCARD, 0, &m))) {
         constantsKnown_ = false;
@@ -820,6 +865,7 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     const D3D11_BOX box = boxOf(u.rect);
     ctx_->UpdateSubresource(t.texture, UINT(level), &box, rec.pixels().data() + u.pixels, UINT(u.rect.width()) * 4,
                             0);
+    stats_.uploaded += uint64_t(u.rect.width()) * uint64_t(u.rect.height()) * 4;  // 0.89
     if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height)
         it->second.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
     if (u.slotCount) noteCells(it->second, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1: the shadows
@@ -882,7 +928,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     ID3D11ShaderResourceView* srvs[2] = {t[0]->srv, t[1]->srv};
     StageSetup sampled[2] = {s.stage[0], s.stage[1]};
     bool aiDrawn[2] = {false, false};
-    if (ai_) {
+    const bool aiHere = !s.ui || aiInterfaceAt(scale_);  // 0.89: not the interface at the game's own size
+    if (ai_ && aiHere) {
         for (int i = 0; i < 2 && !(d.twin && s.ui); ++i) {
             ID3D11ShaderResourceView* copy = t[i] != &white_ ? ai_->copyOf(d.texture[i], s.ui) : nullptr;
             if (!copy) continue;
@@ -979,28 +1026,36 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
                                                   ? D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
                                                   : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
     const bool all = !bound_.valid || !stateCache_;
-    if (all || blend != bound_.blend) ctx_->OMSetBlendState(blend, nullptr, 0xFFFFFFFF);
-    if (all || depth != bound_.depth) ctx_->OMSetDepthStencilState(depth, 0);
-    if (all || raster != bound_.raster) ctx_->RSSetState(raster);
-    if (all || samplers[0] != bound_.samplers[0] || samplers[1] != bound_.samplers[1])
+    unsigned issued = 1, spared = 0;  // 0.89: counted for the log (the draw itself is one)
+    const auto need = [&](bool differs) {
+        ++(differs ? issued : spared);
+        return differs;
+    };
+    if (need(all || blend != bound_.blend)) ctx_->OMSetBlendState(blend, nullptr, 0xFFFFFFFF);
+    if (need(all || depth != bound_.depth)) ctx_->OMSetDepthStencilState(depth, 0);
+    if (need(all || raster != bound_.raster)) ctx_->RSSetState(raster);
+    if (need(all || samplers[0] != bound_.samplers[0] || samplers[1] != bound_.samplers[1]))
         ctx_->PSSetSamplers(0, 2, samplers);
-    if (all || srvs[0] != bound_.srvs[0] || srvs[1] != bound_.srvs[1]) ctx_->PSSetShaderResources(0, 2, srvs);
-    if (all || layout != bound_.layout) ctx_->IASetInputLayout(layout);
-    if (all || unsigned(topology) != bound_.topology) ctx_->IASetPrimitiveTopology(topology);
+    if (need(all || srvs[0] != bound_.srvs[0] || srvs[1] != bound_.srvs[1])) ctx_->PSSetShaderResources(0, 2, srvs);
+    if (need(all || layout != bound_.layout)) ctx_->IASetInputLayout(layout);
+    if (need(all || unsigned(topology) != bound_.topology)) ctx_->IASetPrimitiveTopology(topology);
     // The record's vertices lie one draw after another: the buffer stays bound at the phase of the draw's first
     // vertex within its stride, the draw starting at its vertex number - bound again only when the stride or the
     // phase changes (a draw of the other vertex kind in between).
     const UINT strideBytes = UINT(stride), phase = d.vertexOffset % strideBytes, first = d.vertexOffset / strideBytes;
-    if (all || vertices_ != bound_.vertexBuffer || strideBytes != bound_.stride || phase != bound_.phase)
+    if (need(all || vertices_ != bound_.vertexBuffer || strideBytes != bound_.stride || phase != bound_.phase))
         ctx_->IASetVertexBuffers(0, 1, &vertices_, &strideBytes, &phase);
     if (d.indexCount) {
-        if (all || indices_ != bound_.indexBuffer) ctx_->IASetIndexBuffer(indices_, DXGI_FORMAT_R16_UINT, 0);
+        if (need(all || indices_ != bound_.indexBuffer)) ctx_->IASetIndexBuffer(indices_, DXGI_FORMAT_R16_UINT, 0);
         bound_.indexBuffer = indices_;
         ctx_->DrawIndexed(d.indexCount, d.firstIndex, INT(first));
     } else {
         if (all) bound_.indexBuffer = nullptr;
         ctx_->Draw(d.vertexCount, first);
     }
+    ++stats_.draws;
+    stats_.calls += issued;
+    stats_.spared += spared;
     bound_.valid = true;
     bound_.blend = blend;
     bound_.depth = depth;
@@ -1046,6 +1101,8 @@ bool Renderer11::depthViews() {
 
 void Renderer11::execute(const FrameRecord& record) {
     if (lost_ || !target_.texture || record.empty()) return;
+    LARGE_INTEGER started;  // 0.89: the processor's time in drawing, for the log
+    QueryPerformanceCounter(&started);
     timeBegin();
     geometry_ = uploadGeometry(record);
     targetBound_ = false;
@@ -1063,6 +1120,9 @@ void Renderer11::execute(const FrameRecord& record) {
     }
     geometry_ = false;
     timeEnd();
+    LARGE_INTEGER ended;
+    QueryPerformanceCounter(&ended);
+    stats_.ticks += ended.QuadPart - started.QuadPart;
 }
 
 bool Renderer11::readTarget(std::vector<uint32_t>& argb) {
@@ -1196,6 +1256,8 @@ bool Renderer11::ensureSwapChain(HWND window, UINT width, UINT height, bool want
 
 void Renderer11::present(HWND window, int outputWidth, int outputHeight, const Rect& source,
                          const PresentOptions& options) {
+    LARGE_INTEGER started;  // 0.89: the processor's time in drawing (not the waits for the frame's turn)
+    QueryPerformanceCounter(&started);
     if (lost_) {  // no Present waits for vblank: keep the game's loop from spinning
         Sleep(15);
         return;
@@ -1233,6 +1295,10 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
     flames_.clear();
     timeEnd();
+    LARGE_INTEGER ended;  // 0.89
+    QueryPerformanceCounter(&ended);
+    stats_.ticks += ended.QuadPart - started.QuadPart;
+    ++stats_.frames;
     timeFrame();
     pacer_.wait(options.fpsLimit);  // 0.85: kept to the frame
     const UINT sync = options.vsync ? 1 : 0;
@@ -1247,6 +1313,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
 // 0.59: the Effects page's colours on Direct3D 11 - grade_ps from a copy of the picture into it, RGB only (as
 // Direct3D 12's Impl::applyGrade).
 void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its strength now
+    EffectSpan span(*this, kTimeNight11);  // 0.89
     nightDone_ = true;
     const bool night = effects_.night && effects_.nightNow > 0, day = effects_.dayCycle && effects_.dayNow >= 0;
     const region_look::Look look = region_look::of(map_, effects_.regionLooks ? effects_.regionLooksStrength : 0);
@@ -1262,6 +1329,7 @@ void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its streng
 }
 
 void Renderer11::applyGrade() {
+    EffectSpan span(*this, kTimeGrade11);  // 0.89
     gradeDone_ = true;
     if (!effects_.grade || !gradePs_ || !target_.texture) return;
     Constants c{};
@@ -1384,6 +1452,7 @@ void Renderer11::timeBegin() {
         ctx_->Begin(f.disjoint);
         f.open = true;
         f.used = 0;
+        f.effectBegun = f.effectEnded = 0;  // 0.89
     }
     if (f.inSpan || f.used + 2 > kStamps) return;  // no stamps left: timeEnd stretches the last span
     ctx_->End(f.stamps[f.used]);
@@ -1442,13 +1511,66 @@ bool Renderer11::readTimes(UINT slot, bool wait) {
     }
     gpuMs_ += double(ticks) * 1000.0 / double(d.Frequency);
     ++gpuFrames_;
+    for (int e = 0; e < kEffectTimes11; ++e) {  // 0.89: the effects' own spans
+        if (!(f.effectEnded >> e & 1)) continue;
+        UINT64 a = 0, b = 0;
+        if (ctx_->GetData(f.effect[e][0], &a, sizeof a, D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK &&
+            ctx_->GetData(f.effect[e][1], &b, sizeof b, D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK && b > a)
+            effectMs_[e] += double(b - a) * 1000.0 / double(d.Frequency);
+    }
     return true;
 }
 
+void Renderer11::effectBegin(EffectTime11 e) {
+    if (!timing_ || untimed_) return;
+    FrameTimes& f = times_[timeSlot_];
+    if (!f.open || (f.effectBegun >> e & 1)) return;
+    ctx_->End(f.effect[e][0]);
+    f.effectBegun |= 1u << e;
+}
+
+void Renderer11::effectEnd(EffectTime11 e) {
+    if (!timing_ || untimed_) return;
+    FrameTimes& f = times_[timeSlot_];
+    if (!f.open || !(f.effectBegun >> e & 1) || (f.effectEnded >> e & 1)) return;
+    ctx_->End(f.effect[e][1]);
+    f.effectEnded |= 1u << e;
+}
+
 void Renderer11::logGpu(ULONGLONG now) {
-    if (gpuFrames_ && gpuSince_)
+    if (gpuFrames_ && gpuSince_) {
         LOG_INFO("GPU: %.2f ms of work a frame (%u frames in %.0f s)", gpuMs_ / gpuFrames_, gpuFrames_,
                  double(now - gpuSince_) / 1000.0);
+        // 0.89: the effects one by one, as Direct3D 12's log has them
+        static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
+                                                            "colour"};
+        std::string effects;
+        for (int e = 0; e < kEffectTimes11; ++e) {
+            if (effectMs_[e] <= 0.0) continue;
+            char part[64];
+            std::snprintf(part, sizeof part, "%s%s %.2f ms", effects.empty() ? "" : ", ", kNames[e],
+                          effectMs_[e] / gpuFrames_);
+            effects += part;
+        }
+        if (!effects.empty()) LOG_INFO("GPU: effects a frame - %s", effects.c_str());
+    }
+    // 0.89: what the frames asked of the processor and the driver
+    if (stats_.frames && gpuSince_) {
+        LARGE_INTEGER freq;
+        QueryPerformanceFrequency(&freq);
+        const double n = double(stats_.frames), seconds = double(now - gpuSince_) / 1000.0;
+        LOG_INFO("Direct3D 11: %.0f draws a frame, %.0f calls to the driver (%.0f spared), %.2f ms of the processor "
+                 "in drawing; the game's textures %llu made, %llu reused, %llu freed, %u alive (%u MB kept for "
+                 "reuse); %.1f MB uploaded a second",
+                 double(stats_.draws) / n, double(stats_.calls) / n, double(stats_.spared) / n,
+                 double(stats_.ticks) * 1000.0 / double(freq.QuadPart) / n,
+                 static_cast<unsigned long long>(stats_.made), static_cast<unsigned long long>(stats_.reused),
+                 static_cast<unsigned long long>(stats_.freed), static_cast<unsigned>(textures_.size()),
+                 static_cast<unsigned>(pooledBytes_ >> 20),
+                 seconds > 0 ? double(stats_.uploaded) / 1048576.0 / seconds : 0.0);
+    }
+    stats_ = Stats{};
+    for (double& ms : effectMs_) ms = 0.0;
     gpuMs_ = 0.0;
     gpuFrames_ = 0;
     gpuSince_ = now;

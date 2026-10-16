@@ -313,6 +313,9 @@ struct Config {
     // 0.88: [debug] state_cache - Direct3D 11 calls only for what changed between the game's draws; 0 calls everything
     // each draw as before (should a picture come out wrong with it)
     bool stateCache = true;
+    // 0.89: [debug] fast_pick - the cell under the mouse found along the mouse's ray (win/pick_hook.hpp); 0 leaves the
+    // game's own, which tests every cell of the map's pieces the ray passes over
+    bool fastPick = true;
 };
 
 Config parseConfig(const std::string& text);

@@ -162,4 +162,7 @@ TEST(state_cache_on_unless_turned_off) {
     // 0.88: [debug] state_cache - Direct3D 11 sets only what changed between draws
     CHECK(parseConfig("").stateCache);
     CHECK(!parseConfig("[debug]\nstate_cache = 0\n").stateCache);
+    // 0.89: [debug] fast_pick - the cell under the mouse along its ray
+    CHECK(parseConfig("").fastPick);
+    CHECK(!parseConfig("[debug]\nfast_pick = 0\n").fastPick);
 }
