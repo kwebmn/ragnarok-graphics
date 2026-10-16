@@ -1888,14 +1888,14 @@ const Entry kTexts[] = {
      "uaRO Pad: гра з геймпадом",
      "uaRO Pad: игра с геймпадом"},
     {"Xbox controllers and PlayStation ones (DualShock 4, DualSense - over USB or Bluetooth) play the game: the stick "
-     "walks, the buttons attack the nearest monster and use the skills of the hotkey bar. Start on the controller "
-     "opens its menu in the game.",
+     "walks, the buttons attack the nearest monster and use the skills of the hotkey bar, D-pad down talks to the "
+     "nearest NPC and the buttons answer its windows. Start on the controller opens its menu in the game.",
      "Геймпади Xbox і PlayStation (DualShock 4, DualSense - через USB або Bluetooth) керують грою: стік веде "
-     "персонажа, кнопки атакують найближчого монстра і застосовують уміння з панелі швидкого доступу. Start на "
-     "геймпаді відкриває його меню в грі.",
+     "персонажа, кнопки атакують найближчого монстра і застосовують уміння з панелі швидкого доступу, D-pad вниз "
+     "говорить із найближчим NPC, а кнопки відповідають його вікнам. Start на геймпаді відкриває його меню в грі.",
      "Геймпады Xbox и PlayStation (DualShock 4, DualSense - по USB или Bluetooth) управляют игрой: стик ведёт "
-     "персонажа, кнопки атакуют ближайшего монстра и применяют умения с панели быстрого доступа. Start на геймпаде "
-     "открывает его меню в игре."},
+     "персонажа, кнопки атакуют ближайшего монстра и применяют умения с панели быстрого доступа, D-pad вниз говорит с "
+     "ближайшим NPC, а кнопки отвечают его окнам. Start на геймпаде открывает его меню в игре."},
     {"Off: there is no dinput.dll in the game's folder.",
      "Вимкнено: у теці гри немає dinput.dll.",
      "Выключено: в папке игры нет dinput.dll."},
@@ -2019,6 +2019,12 @@ const Entry kTexts[] = {
      "Start у грі.",
      "Это сохраняется в uaro-pad.ini сразу; игра читает их при запуске. Раскладки кнопок и остальное - в меню "
      "геймпада: Start в игре."},
+    {"Hint in NPC windows",
+     "Підказка у вікнах NPC",
+     "Подсказка в окнах NPC"},
+    {"While an NPC window is open, a line at the bottom of the game says what the buttons do there.",
+     "Поки відкрите вікно NPC, рядок унизу гри підказує, що там роблять кнопки.",
+     "Пока открыто окно NPC, строка внизу игры подсказывает, что там делают кнопки."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -15,6 +15,7 @@ constexpr int kTouchpad = 1512;
 constexpr int kRumble = 1513;
 constexpr int kStartsOn = 1514;
 constexpr int kLanguage = 1515;
+constexpr int kNpcHint = 1516;  // 0.7 of the pad
 
 const char* const kTypes[] = {"auto", "xbox", "sony"};
 const char* const kColours[] = {"blue", "red", "green", "purple", "orange", "white", "off"};
@@ -94,6 +95,7 @@ public:
         p.check(kStartsOn, t(Text::PadStartsOn), value("general.enabled", "1") != "0", t(Text::PadStartsOnHint));
         p.choice(kLanguage, t(Text::PadMenuLanguage), {L"English", L"Українська", L"Русский"},
                  indexOf(kLanguages, value("general.language", "en"), 0), t(Text::PadMenuLanguageHint));
+        p.check(kNpcHint, t(Text::PadNpcHint), value("npc.hint", "1") != "0", t(Text::PadNpcHintHint));
         p.note(t(Text::PadSettingsNote));
     }
 
@@ -109,6 +111,8 @@ public:
         const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
         if ((id == kRumble || id == kStartsOn) && code == BN_CLICKED) {
             write(id == kRumble ? "rumble" : "general", "enabled", checked ? "1" : "0");
+        } else if (id == kNpcHint && code == BN_CLICKED) {
+            write("npc", "hint", checked ? "1" : "0");
         } else if (code == CBN_SELCHANGE && sel >= 0) {
             if (id == kType && sel < 3) write("pad", "type", kTypes[sel]);
             if (id == kLightbar && sel < 7) write("sony", "lightbar", kColours[sel]);

@@ -205,6 +205,7 @@ enum class Text : uint16_t {
     PadTypeAuto, PadTypeSony, PadLightbar, PadLightbarHint, ColourBlue, ColourRed, ColourGreen, ColourPurple,
     ColourOrange, ColourWhite, ColourOff, ColourOwn, PadTouchpad, PadTouchpadHint, TouchNothing, TouchBack, TouchStart,
     PadRumble, PadRumbleHint, PadStartsOn, PadStartsOnHint, PadMenuLanguage, PadMenuLanguageHint, PadSettingsNote,
+    PadNpcHint, PadNpcHintHint,
     Count
 };
 
