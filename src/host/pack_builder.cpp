@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstdio>
 #include <deque>
 #include <exception>
@@ -219,6 +220,55 @@ private:
 
 uint32_t borderOf(pack::Group g) { return g == pack::Group::World ? 0u : g == pack::Group::Sprites ? 1u : 2u; }
 
+// 1.6.4: a picture of a file as the reading pass finds it, and one reading thread's share of the files.
+struct Listed {
+    std::string name;
+    ai::Group group = ai::Group::World;
+    int width = 0, height = 0;
+    std::string alike;                 // a .jpg's likeness (0.49)
+    std::vector<std::string> lowKeys;  // its keys at a lower texture detail (0.45)
+};
+
+struct ListWork {
+    const std::vector<std::pair<std::string, pack::Source>>* list = nullptr;
+    const pack::Choice* choice = nullptr;
+    std::string dir;
+    size_t first = 0, step = 1;
+    std::atomic<uint32_t>* done = nullptr;
+    std::atomic<bool>* stop = nullptr;
+    std::vector<std::vector<Listed>>* out = nullptr;
+};
+
+DWORD WINAPI listMain(void* arg) {
+    ListWork& w = *static_cast<ListWork*>(arg);
+    pack::GameFiles files;  // its own: an archive is read by one thread at a time
+    std::string error;
+    if (!files.open(w.dir, error)) return 1;
+    std::vector<uint8_t> data;
+    for (size_t i = w.first; i < w.list->size() && !*w.stop; i += w.step) {
+        const auto& f = (*w.list)[i];
+        if (files.read(f.first, data))
+            for (const pack::Picture& p : picturesOf(files, f.first, f.second, data, *w.choice)) {
+                Listed l;
+                l.name = pack::pictureName(p.group, p.key);
+                l.group = ai::groupOfPicture(f.first, f.second, p.width, p.height);
+                l.width = p.width;
+                l.height = p.height;
+                if (p.contentWidth)
+                    l.alike = pack::likenessText(
+                        pack::likenessOf(p.argb.data(), p.width, p.height, p.contentWidth, p.contentHeight));
+                if (p.group == pack::Group::World)
+                    for (int div : {2, 4}) {
+                        pack::Picture low;
+                        if (pack::lowerDetail(p, div, low) && low.key != p.key) l.lowKeys.push_back(low.key);
+                    }
+                (*w.out)[i].push_back(std::move(l));
+            }
+        ++*w.done;
+    }
+    return 0;
+}
+
 class Builder {
 public:
     explicit Builder(const PackArgs& a) : a_(a), status_(a.status) {
@@ -237,6 +287,8 @@ private:
     bool listFiles();  // the game's files of the choice
     int build();
     int preview();  // 1.6: one picture of a group through every model, for the AI page
+    // 1.6.4: what each file of list_ holds, read by several threads; false when stopped
+    bool listPictures(std::vector<std::vector<Listed>>& out);
     // The index and the central directory after the last picture: a whole ZIP (last: and the file closed).
     bool checkpoint(Encoders* enc, bool last);
     int stopped();  // in the middle: the pack whole again, the status says so
@@ -251,16 +303,7 @@ private:
     // (0.45) the keys of the world's textures at the game's lower texture details, to their whole textures' pictures.
     pack::Index index_;
     std::unordered_set<std::string> redo_;  // 1.6: pictures made again by their group's model
-    void noteLowerDetails(const pack::Picture& p, const std::string& name);
 };
-
-void Builder::noteLowerDetails(const pack::Picture& p, const std::string& name) {
-    if (p.group != pack::Group::World) return;
-    for (int div : {2, 4}) {
-        pack::Picture low;
-        if (pack::lowerDetail(p, div, low) && low.key != p.key) index_.aliases.emplace(low.key, name);
-    }
-}
 
 bool Builder::listFiles() {
     std::string error;
@@ -283,6 +326,46 @@ int Builder::run() {
     if (a_.mode == "build") return build();
     if (a_.mode == "preview") return preview();
     return fail("no such work: " + a_.mode);
+}
+
+bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
+    out.assign(list_.size(), {});
+    SYSTEM_INFO si{};
+    GetSystemInfo(&si);
+    // At most 8: each thread holds the archives' directories of its own (tens of MB each).
+    const size_t threads = size_t(std::clamp(int(si.dwNumberOfProcessors) - 1, 1, 8));
+    std::atomic<uint32_t> filesDone{0};
+    std::atomic<bool> stop{false};
+    std::vector<ListWork> work(threads);
+    std::vector<HANDLE> handles;
+    for (size_t t = 0; t < threads; ++t) {
+        ListWork& w = work[t];
+        w.list = &list_;
+        w.choice = &a_.choice;
+        w.dir = a_.dir;
+        w.first = t;
+        w.step = threads;
+        w.done = &filesDone;
+        w.stop = &stop;
+        w.out = &out;
+        HANDLE h = CreateThread(nullptr, 0, listMain, &w, 0, nullptr);
+        if (h) handles.push_back(h);
+    }
+    if (handles.empty()) {  // no thread: this one
+        ListWork& w = work[0];
+        w.step = 1;
+        listMain(&w);
+    }
+    // Meanwhile the status, and a stop asked.
+    while (!handles.empty() &&
+           WaitForMultipleObjects(DWORD(handles.size()), handles.data(), TRUE, 500) == WAIT_TIMEOUT) {
+        s_.filesDone = filesDone.load();
+        status_.write(s_);
+        if (status_.stopAsked()) stop = true;
+    }
+    for (HANDLE h : handles) CloseHandle(h);
+    LOG_INFO("texture pack: the game's files read by %zu threads", handles.empty() ? size_t(1) : handles.size());
+    return !stop;
 }
 
 // 1.6: the AI page's preview - a picture of the group (a well-known one where the game has it: a poring, a Kafra),
@@ -443,38 +526,35 @@ int Builder::build() {
     s_.inPack = uint32_t(done.size());
     std::vector<size_t> todo;  // the files with pictures to make
     std::vector<uint8_t> data;
+    // 1.6.4: the files read on every core but one, each thread with the archives open on its own; then what they
+    // found taken in the files' order (the first file of a picture gives its kind, as one thread did it).
+    std::vector<std::vector<Listed>> found;
+    if (!listPictures(found)) return stopped();
     std::unordered_set<std::string> seen;
-    for (size_t i = 0; i < list_.size(); ++i) {
-        if (status_.stopAsked()) return stopped();
-        s_.current = utf8Of(list_[i].first);
+    for (size_t i = 0; i < found.size(); ++i) {
         bool some = false;
-        if (files_.read(list_[i].first, data))
-            for (const pack::Picture& p : picturesOf(files_, list_[i].first, list_[i].second, data, a_.choice)) {
-                const std::string name = pack::pictureName(p.group, p.key);
-                if (!seen.insert(name).second) continue;
-                pack::IndexEntry& entry = index_.pictures[name];
-                entry.kind = list_[i].second.kind;
-                // 1.6: its group, written for every picture; one another model made is made again when asked
-                const ai::Group g = ai::groupOfPicture(list_[i].first, list_[i].second, p.width, p.height);
-                entry.group = ai::groupName(g);
-                if (a_.redo[size_t(g)] && done.count(name) &&
-                    ai::modelOfEntry(entry, g, a_.ai) != a_.ai.modelForPicture(g, p.width, p.height)) {
-                    done.erase(name);
-                    redo_.insert(name);
-                }
-                if (p.contentWidth)  // 0.49: a .jpg's - the game finds it by its likeness
-                    index_.alike[name] = pack::likenessText(
-                        pack::likenessOf(p.argb.data(), p.width, p.height, p.contentWidth, p.contentHeight));
-                noteLowerDetails(p, name);
-                if (!done.count(name)) {
-                    ++s_.toMake;
-                    some = true;
-                }
+        for (const Listed& l : found[i]) {
+            if (!seen.insert(l.name).second) continue;
+            pack::IndexEntry& entry = index_.pictures[l.name];
+            entry.kind = list_[i].second.kind;
+            // 1.6: its group, written for every picture; one another model made is made again when asked
+            entry.group = ai::groupName(l.group);
+            if (a_.redo[size_t(l.group)] && done.count(l.name) &&
+                ai::modelOfEntry(entry, l.group, a_.ai) != a_.ai.modelForPicture(l.group, l.width, l.height)) {
+                done.erase(l.name);
+                redo_.insert(l.name);
             }
+            if (!l.alike.empty()) index_.alike[l.name] = l.alike;  // 0.49: a .jpg's - found by its likeness
+            for (const std::string& low : l.lowKeys) index_.aliases.emplace(low, l.name);
+            if (!done.count(l.name)) {
+                ++s_.toMake;
+                some = true;
+            }
+        }
         if (some) todo.push_back(i);
-        ++s_.filesDone;
-        status_.write(s_);
     }
+    s_.filesDone = uint32_t(list_.size());
+    status_.write(s_, true);
     LOG_INFO("texture pack: %u pictures to make of %zu files (%zu made again by another model); %zu keys of the "
              "world's textures at a lower texture detail", s_.toMake, todo.size(), redo_.size(), index_.aliases.size());
     if (!s_.toMake) {
