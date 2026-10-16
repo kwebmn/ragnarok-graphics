@@ -199,6 +199,12 @@ enum class Text : uint16_t {
     GfxSoundHeadphones, GfxSoundHeadphonesHint,
     GfxSoundDuck, GfxSoundDuckHint,
     AutoUiWhole, AutoDlaa, AutoDlssQuality, AutoHdr, AutoSoundEngine,
+    // 1.4: the Gamepad page (uaRO Pad)
+    PagePad, PadHeading, PadIntro, PadStateOff, PadStateOn, PadStateOld, PadStateOther, PadSwitchOn, PadSwitchOff,
+    PadUpdate, PadNoPackage, PadOnDone, PadOffDone, PadFailed, PadRunning, PadController, PadType, PadTypeHint,
+    PadTypeAuto, PadTypeSony, PadLightbar, PadLightbarHint, ColourBlue, ColourRed, ColourGreen, ColourPurple,
+    ColourOrange, ColourWhite, ColourOff, ColourOwn, PadTouchpad, PadTouchpadHint, TouchNothing, TouchBack, TouchStart,
+    PadRumble, PadRumbleHint, PadStartsOn, PadStartsOnHint, PadMenuLanguage, PadMenuLanguageHint, PadSettingsNote,
     Count
 };
 

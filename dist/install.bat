@@ -379,6 +379,11 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how much of it
     >>"uaro-graphics.ini" echo weather_amount = 100
 )
+rem 1.4: uaRO Pad, the gamepad, switched on on the Gamepad page gets the package's version. A running game keeps
+rem the old one in use: it is updated next time.
+if exist "dinput.dll" if exist "uaro-graphics\pad\dinput.dll" (
+    findstr /m /c:"uaro-pad.ini" "dinput.dll" >nul 2>&1 && copy /y "uaro-graphics\pad\dinput.dll" "dinput.dll" >nul 2>&1
+)
 rem Part 3: NVIDIA DLSS's own package, downloaded when it is missing or another version (get-dlss.bat).
 if exist "get-dlss.bat" call get-dlss.bat /quiet
 rem update.bat calls install.bat /quiet and reports the result itself.

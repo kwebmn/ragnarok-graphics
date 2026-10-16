@@ -69,6 +69,7 @@ std::unique_ptr<Page> makeAiPage(PageHost& host);       // 0.12: the [ai] sectio
 std::unique_ptr<Page> makeAiCachePage(PageHost& host);  // 0.12: what the texture pack holds (0.48)
 std::unique_ptr<Page> makeEffectsPage(PageHost& host);  // 0.18: the [effects] section
 std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pack's builder
+std::unique_ptr<Page> makePadPage(PageHost& host);      // 1.4: uaRO Pad, the gamepad
 
 // The window text of a control, as UTF-8 (number fields).
 std::string controlText(HWND ctl);

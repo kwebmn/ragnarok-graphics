@@ -15,12 +15,14 @@ python3 tools/check_exe.py build-win/uaro-graphics.exe
 out="build-win/uaro-graphics.zip"
 stage="build-win/package"
 rm -rf "$out" "$stage"
-mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai"
+mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/pad"
 cp dist/install.bat dist/uninstall.bat dist/use-uaro.bat dist/use-dgvoodoo.bat dist/update.bat dist/get-dlss.bat \
    dist/TEST.en.md dist/TEST.uk.md dist/TEST.ru.md "$stage/"
 cp build-win/ddraw.dll build-win/uaro-graphics.exe dist/uaro-graphics.ini build-win64/uaro-render64.exe \
    dist/dlss-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
+# 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.
+cp dist/pad/dinput.dll dist/pad/uaro-pad.ini dist/pad/version.txt "$stage/uaro-graphics/pad/"
 # AI textures: the neural network's model and its weak-denoise twin, mixed by [quality] ai_denoise (Real-ESRGAN,
 # BSD-3-Clause), and their licence.
 cp dist/ai/realesr-general-x4v3.bin dist/ai/realesr-general-wdn-x4v3.bin dist/ai/realesr-animevideov3.bin \

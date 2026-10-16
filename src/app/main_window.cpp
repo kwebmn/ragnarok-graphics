@@ -315,6 +315,7 @@ void MainWindow::buildPage() {
         case settings::Page::AiCache: current_ = makeAiCachePage(*this); break;
         case settings::Page::Effects: current_ = makeEffectsPage(*this); break;
         case settings::Page::Pack: current_ = makePackPage(*this); break;
+        case settings::Page::Pad: current_ = makePadPage(*this); break;
         default: current_ = makeSettingsPage(*this, settings::Page(page_)); break;
     }
     current_->build(*panel_);
