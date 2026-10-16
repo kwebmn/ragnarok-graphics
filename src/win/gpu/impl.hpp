@@ -832,6 +832,10 @@ struct Renderer::Impl {
         sunShadowDone = false;  // 0.77
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80
+        if (!frameFeet.empty()) {  // 0.94: the last frame's feet (they were drawn with it)
+            footTracker.update(frameFeet, waterTime(), stepLife());
+            frameFeet.clear();
+        }
         grassDone = false;  // 0.81
         shaftsDone = false;  // 0.73
         shaftLights = 0;
@@ -880,7 +884,16 @@ struct Renderer::Impl {
         if (!effects.footprints || !stepsPs) return 0;
         return mapWeather == weather::Kind::Snow ? 1 : mapDesert ? 2 : mapOutdoors ? 3 : 0;
     }
-    float stepLife() const { return stepKind() == 3 ? 0.9f : stepKind() == 1 ? 25.0f : 14.0f; }
+    float stepLife() const {
+        const float prints = stepKind() == 3 ? 0.9f : stepKind() == 1 ? 25.0f : stepKind() ? 14.0f : 0.0f;
+        return std::max(prints, ripplesWanted() ? kRippleLife : 0.0f);
+    }
+    // 0.94: rings on the water where the steps go (water_ps) - the feet followed for them too, shadows on or off
+    static constexpr float kRippleLife = 1.6f;
+    bool ripplesWanted() const { return effects.ripples && effects.water && waterPs; }
+    bool feetWanted() const { return stepKind() || ripplesWanted(); }
+    std::vector<map::Point> frameFeet;  // the round shadows' middles drawn this frame, in the world
+    void noteFoot(const FrameRecord& rec, const DrawCmd& d);
     bool stepsDue() const { return stepKind() && groundDrawn && !stepsDone && viewToWorldValid; }
     bool applySteps();  // once a frame, the world finished; false: lost
     float flashNow() const;  // 0.80: the thunderstorm's lightning now (0-1), where it rains

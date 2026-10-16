@@ -240,6 +240,8 @@ struct EffectSettings {
     // 0.93: appear - monsters, characters, NPCs and items fade in where they come into view (core/appear.hpp). Off
     // by default.
     bool appear = false;
+    // 0.94: ripples - rings on the modern water where characters and monsters step (Direct3D 12). Off by default.
+    bool ripples = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

@@ -1786,6 +1786,12 @@ const Entry kTexts[] = {
      "view, instead of popping up.",
      "Монстри, персонажі, NPC і предмети на землі з’являються за чверть секунди, а не виникають миттєво.",
      "Монстры, персонажи, NPC и предметы на земле появляются за четверть секунды, а не возникают мгновенно."},
+    {"Ripples from steps",
+     "Кола від кроків",
+     "Круги от шагов"},
+    {"Rings spread on the water where characters and monsters walk through it (with the modern water, Direct3D 12).",
+     "По воді розходяться кола там, де крізь неї йдуть персонажі й монстри (із сучасною водою, Direct3D 12).",
+     "По воде расходятся круги там, где через неё идут персонажи и монстры (с современной водой, Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

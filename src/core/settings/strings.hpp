@@ -185,6 +185,8 @@ enum class Text : uint16_t {
     GfxSoundStereo, GfxSoundStereoHint, GfxSoundSteal, GfxSoundStealHint, GfxSoundCrossfade, GfxSoundCrossfadeHint,
     // 0.93
     FxAppear, FxAppearHint,
+    // 0.94
+    FxRipples, FxRipplesHint,
     Count
 };
 

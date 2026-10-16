@@ -82,6 +82,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
     // the game's round ones are in them.
     if (!s.ui && s.blend && actorShadowsDue() && !applyActorShadows(rec, size_t(&d - rec.draws().data()))) return;
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && feetWanted()) noteFoot(rec, d);  // 0.94
     if (!s.ui && actorShadowsDrawn && d.effect == uint8_t(effect_exe::Kind::Shadow)) return;
     // 0.21: the world done - at the interface - its colours, then its glow.
     if (s.ui && !upscale && !finishWorld()) return;
@@ -323,6 +324,21 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.footprint = float(effects.waterWaves) / 100.0f;
         c.twin[0] = float(effects.waterReflections) / 100.0f;
         c.twin[1] = float(effects.waterClarity) / 100.0f;
+        if (ripplesWanted()) {  // 0.94: the three newest steps (x, z, age), one in each free vector
+            float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};
+            int n = 0;
+            const float now = waterTime();
+            const std::deque<footsteps::Step>& steps = footTracker.steps();
+            for (auto it = steps.rbegin(); it != steps.rend() && n < 3; ++it) {
+                const float age = now - it->born;
+                if (age < 0.0f || age > kRippleLife) continue;
+                slot[n][0] = it->x;
+                slot[n][1] = it->z;
+                slot[n][2] = age;
+                ++n;
+            }
+            c.twin[2] = float(n);
+        }
     }
     if (smoke) {  // its depth, the camera backwards, the time and the density (smoke_ps)
         const uint8_t* v = rec.vertexBytes().data() + d.vertexOffset;

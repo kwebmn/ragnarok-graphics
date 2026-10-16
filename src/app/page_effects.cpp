@@ -45,6 +45,7 @@ const Effect kEffects[] = {
     {"effects.map_fade", {}, {}, {}, false},                                // 0.83
     {"effects.round_light", {}, {}, {}, false},  // 0.84
     {"effects.appear", {}, {}, {}, false},  // 0.93
+    {"effects.ripples", {}, {}, {}, false},  // 0.94
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, false},
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, false},
     {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, false},

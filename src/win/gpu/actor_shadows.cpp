@@ -166,6 +166,32 @@ void Renderer::Impl::sunOnScreen(float out[2]) const {
     out[1] = l.shadow[1];
 }
 
+// 0.94: a round shadow under a character or a monster: its middle, in the world, for the footprints and the ripples.
+void Renderer::Impl::noteFoot(const FrameRecord& rec, const DrawCmd& d) {
+    if (!viewToWorldValid || d.vertexCount != 4 || frameFeet.size() >= 256) return;
+    const size_t stride = FrameRecord::stride(d.fvf);
+    if (d.vertexOffset + 4 * stride > rec.vertexBytes().size()) return;
+    const uint8_t* q = rec.vertexBytes().data() + d.vertexOffset;
+    float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f, rhw = 0.0f;
+    for (int i = 0; i < 4; ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, q + size_t(i) * stride, sizeof xyzw);
+        x0 = std::min(x0, xyzw[0]);
+        x1 = std::max(x1, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3] * 0.25f;
+    }
+    if (rhw <= 0.0f) return;
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float* fm = viewToWorld;
+    const float vz = 1.0f / rhw, vx = ((x0 + x1) * 0.5f - proj.cx) * vz / proj.f0,
+                vy = ((y0 + y1) * 0.5f - proj.cy) * vz / proj.f1;
+    frameFeet.push_back(map::Point{vx * fm[0] + vy * fm[3] + vz * fm[6] + fm[9],
+                                   vx * fm[1] + vy * fm[4] + vz * fm[7] + fm[10],
+                                   vx * fm[2] + vy * fm[5] + vz * fm[8] + fm[11]});
+}
+
 bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     actorShadowsDone = true;  // tried once a frame, whatever comes of it
     EffectTime timing(*this, kTimeActorShadows);  // 0.39.2
@@ -254,17 +280,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
             source == uint8_t(sprite_exe::Source::Npc))
             layers.push_back(l);
     }
-    if (stepKind() && viewToWorldValid) {  // 0.80: the feet followed for the footprints
-        std::vector<map::Point> feet;
-        const float* fm = viewToWorld;
-        for (const actor_shadows::Blob& b : blobs) {
-            const float vz = b.viewZ, vx = (b.x - proj.cx) * vz / proj.f0, vy = (b.y - proj.cy) * vz / proj.f1;
-            feet.push_back(map::Point{vx * fm[0] + vy * fm[3] + vz * fm[6] + fm[9],
-                                      vx * fm[1] + vy * fm[4] + vz * fm[7] + fm[10],
-                                      vx * fm[2] + vy * fm[5] + vz * fm[8] + fm[11]});
-        }
-        footTracker.update(feet, waterTime(), stepLife());
-    }
+    // 0.94: the feet for the footprints are noted as the round shadows are drawn (noteFoot)
     if (blobs.empty()) return true;  // no character in view: the game's round shadows, if any, stay
     // Each character's light: away from the map's nearest torch or lamp within 50 units, else the sun's way.
     std::vector<std::array<float, 2>> dirs;
