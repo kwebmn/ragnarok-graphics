@@ -1,3 +1,14 @@
+# uaRO Graphics 1.4.1 — testing
+
+- **uaRO Pad 0.7.0 comes along: talking to NPCs from the gamepad.** D-pad ↓ talks to the nearest NPC (with the right
+  stick pushed — to the one it points at). While the NPC's window is open the buttons answer it: A — Next / Close /
+  OK, D-pad ↑ ↓ — choose in a menu, B — cancel; a number (how many to buy, store): ↑ ↓ by 1, RB / LB by 10, → ← by
+  100. A hint line at the bottom of the screen. The pad presses the client windows' own buttons.
+- The Gamepad page has a "Hint in NPC windows" box.
+- To update the pad: Gamepad → Update (or update.bat updates a switched-on pad itself).
+- How to check: go to a Kafra, D-pad ↓ — her window opens; A pages on, ↑ ↓ choose a line, A takes it; at a shop or
+  the storage — the number field. Should something not press — send uaro-pad.log (the `NPC window` lines).
+
 # uaRO Graphics 1.4.0 — testing
 
 - **The gamepad comes along: uaRO Pad 0.6.0 and a new Gamepad page.** The pad travels in the package
