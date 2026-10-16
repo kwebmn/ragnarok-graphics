@@ -87,14 +87,20 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
     }
     for (const std::string& file : dataArchives(ini)) {
         const std::string ext = lower(file.size() > 4 ? file.substr(file.size() - 4) : "");
-        if (ext != ".grf" && ext != ".gpf" && ext != ".zip") continue;
+        if (ext != ".grf" && ext != ".gpf" && ext != ".zip") {
+            failed_.push_back(file + " (not a GRF, GPF or ZIP)");  // 1.6.5
+            continue;
+        }
         const std::string path = file.find(':') != std::string::npos ? file : dir + sep + file;
         std::string why;
         const int archive = int(order_.size());
         size_t count = 0;
         if (ext == ".zip") {
             auto z = std::make_unique<zip::Index>();
-            if (!z->open(path, [](const std::string& n) { return listed(n); }, why)) continue;
+            if (!z->open(path, [](const std::string& n) { return listed(n); }, why)) {
+                failed_.push_back(file + " (" + why + ")");  // 1.6.5: said in the log
+                continue;
+            }
             for (const std::string& n : z->names())
                 if (!where_.count(n)) {
                     where_[n] = Place{archive, n};
@@ -104,7 +110,10 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
             order_.emplace_back(true, int(zips_.size()) - 1);
         } else {
             auto g = std::make_unique<grf::Archive>();
-            if (!g->open(path, false, why)) continue;
+            if (!g->open(path, false, why)) {
+                failed_.push_back(file + " (" + why + ")");  // 1.6.5
+                continue;
+            }
             for (const std::string& stored : g->names()) {
                 const std::string n = zip::normalName(stored);
                 if (!listed(n) || where_.count(n)) continue;
@@ -140,6 +149,7 @@ std::string GameFiles::report() const {
     std::string s;
     for (size_t i = 0; i < paths_.size(); ++i)
         s += (i ? ", " : "") + paths_[i] + " (" + std::to_string(counts_[i]) + " pictures' files)";
+    for (const std::string& f : failed_) s += "; not read: " + f;  // 1.6.5: a DATA.INI line whose archive did not open
     return s;
 }
 

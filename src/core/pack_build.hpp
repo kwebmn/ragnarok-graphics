@@ -43,6 +43,7 @@ private:
     std::vector<std::unique_ptr<zip::Index>> zips_;
     std::vector<std::pair<bool, int>> order_;  // per archive: a zip?, its index in grfs_ or zips_
     std::vector<std::string> paths_;
+    std::vector<std::string> failed_;  // 1.6.5: DATA.INI's archives that did not open, and why
     std::vector<size_t> counts_;
     std::unordered_map<std::string, Place> where_;
     std::vector<std::string> names_;
