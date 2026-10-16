@@ -17,23 +17,29 @@ TEST(appear_a_new_sprite_fades_in_a_known_one_stays) {
     CHECK(t.alpha(1, 600, 300, 400) == 1.0f);
 }
 
-TEST(appear_kinds_and_places_kept_apart) {
+TEST(appear_no_blink_for_a_frame_missed_or_a_new_layer) {
+    // 1.0.2: a monster shown, then a frame without it (or a frame shown twice), then it again - still shown
     appear::Tracker t;
     t.alpha(1, 100, 100, 0);
-    t.frame(2000);
-    t.frame(16);  // nothing in that frame: a sprite gone for a frame comes back new
-    CHECK(t.alpha(1, 100, 100, 50) == 0.0f);
     t.frame(16);
-    CHECK(t.alpha(4, 100, 100, 60) == 0.0f);  // an item where the monster was: its own
-    CHECK(t.alpha(1, 100, 100, 60) > 0.0f);   // the monster goes on fading in
+    t.alpha(1, 100, 100, 300);  // fully shown by now
     t.frame(16);
-    // Two layers of one character at one place: each its own.
-    CHECK(t.alpha(1, 101, 100, 70) > 0.0f);
-    CHECK(t.alpha(1, 101, 100, 70) == 0.0f);
+    t.frame(16);  // drawn in no sprites
+    CHECK(t.alpha(1, 102, 100, 340) == 1.0f);
+    t.frame(16);
+    // A layer more next to it (a weapon in an attack): shown at once, the monster too.
+    CHECK(t.alpha(1, 104, 100, 360) == 1.0f);
+    CHECK(t.alpha(1, 110, 90, 360) == 1.0f);
+    t.frame(16);
+    // Long gone, back: new.
+    CHECK(t.alpha(1, 100, 100, 2000) == 0.0f);
 }
 
-TEST(appear_after_a_pause_nothing_fades) {
+TEST(appear_kinds_kept_apart_and_after_a_pause_nothing_fades) {
     appear::Tracker t;
+    t.alpha(1, 100, 100, 0);
+    t.frame(16);
+    CHECK(t.alpha(4, 100, 100, 300) == 0.0f);  // an item where a monster is: its own
     t.frame(5000);  // a map loaded
     CHECK(t.alpha(2, 300, 300, 10000) == 1.0f);
 }
