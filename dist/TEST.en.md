@@ -1,3 +1,11 @@
+# uaRO Graphics 0.91.1 — testing
+
+- **3D sound without effects.** In 3D mode (setup.exe) the client plays the skills' and monsters' sounds only through
+  the "Miles Fast 2D Positional Audio" provider and makes no ordinary sounds; without that provider only the music is
+  heard. The driver now makes the ordinary sounds then and the effects play through them. The log's `sound: ...`
+  line says which 3D providers there are and what the effects go through.
+- Check: set 3D sound, enter the game — both the music and the hits/skills are heard; send a report (the `sound:` line).
+
 # uaRO Graphics 0.91.0 — testing
 
 What is new in 0.91.0 — sound (the Sound page, "Sound through uaRO Graphics", after the game is restarted):
