@@ -1,3 +1,16 @@
+# uaRO Graphics 1.3.3 — testing
+
+The auto setup ("Set up for this computer") now sets these too:
+- **The interface a whole number of times.** Where it is a fraction now (167 %: the game at 1150×647 on 1920×1080 —
+  soft letters), 100 % (up to 1440p) or 200 % (4K) — the crispest letters.
+- **NVIDIA RTX:** DLAA on screens up to 2560×1440 (the picture at its own size, smoothed by the network; DLSS Quality
+  at 1080p draws the world at 720p and it shows), DLSS Quality on larger ones. GTX and other cards: DLSS untouched.
+- **HDR**, when Windows' HDR is on for the main monitor and the card draws with D3D12.
+- **Sound:** the new surround engine (Windows 10 and later) and spatial sound for headphones.
+- The auto setup's window lists what of these it chose.
+- How to check: on a computer with a fractional interface press the auto setup — the window says "The interface at
+  100 %", the game then at the screen's own size; on an RTX 3060 at 1080p — "Smoothing: NVIDIA DLAA".
+
 # uaRO Graphics 1.3.2 — testing
 
 - **The settings app started from the uaro-graphics folder.** Opened not from the client folder but from its
