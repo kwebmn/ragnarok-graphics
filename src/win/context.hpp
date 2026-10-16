@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "core/appear.hpp"
 #include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
@@ -51,6 +52,8 @@ public:
     // (spec §4.1), and so does Bink's.
     void present(const Rect& source, bool waitForVblank);
     bool enhanced() const { return enhanced_; }  // not paused (Pause or Scroll Lock: the game's own picture)
+    appear::Tracker appear;  // 0.93: the sprites coming into view (Device7::record)
+    double nowMs() const;    // a millisecond clock for the effects made as the game draws
 
 private:
     Context();

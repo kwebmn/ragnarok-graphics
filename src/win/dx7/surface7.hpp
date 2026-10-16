@@ -63,6 +63,10 @@ public:
     uint32_t gpuTexture() const { return top()->gpuTexture_; }
     bool colorKeyed() const { return colorKey().enabled; }
     void sync(FrameRecord& record);
+    // 0.93: a sprite cache's: what the game wrote into the cell at texel (x, y) - sprite_exe::Source, 0 none.
+    uint8_t spriteAt(float x, float y) const;
+    int width() const { return width_; }
+    int height() const { return height_; }
 
 private:
     Surface7(SurfaceRole role, DWORD caps, int width, int height, PixelFormat format);
@@ -98,6 +102,7 @@ private:
     IDirectDrawClipper* clipper_ = nullptr;  // counted
     bool locked_ = false;
     Rect lockRect_;
+    std::vector<SpriteCell> cells_;  // 0.93: top level of a sprite cache - its cells and what each holds now
     HDC dc_ = nullptr;
     HBITMAP dib_ = nullptr;
     HGDIOBJ oldBitmap_ = nullptr;

@@ -119,6 +119,13 @@ Surface7* Surface7::create(const SurfacePlan& plan, DWORD caps, std::string& err
     return s;
 }
 
+uint8_t Surface7::spriteAt(float x, float y) const {
+    for (const SpriteCell& s : top()->cells_)
+        if (x >= float(s.rect.left) && x < float(s.rect.right) && y >= float(s.rect.top) && y < float(s.rect.bottom))
+            return s.source;
+    return 0;
+}
+
 Surface7* Surface7::from(IDirectDrawSurface7* s) {
     Surface7* p = static_cast<Surface7*>(s);
     return p && p->magic_ == kMagic ? p : nullptr;
@@ -491,7 +498,17 @@ HRESULT STDMETHODCALLTYPE Surface7::Unlock(LPRECT) {
         changed(lockRect_);
         Rect cell;  // AI textures: a frame the game wrote into a cell of its sprite cache (sprite_hook.hpp)
         uint8_t source = 0;
-        if (level_ == 0 && win::spriteCell(cell, source)) top()->levels_->slotWritten(cell, source);
+        if (level_ == 0 && win::spriteCell(cell, source)) {
+            top()->levels_->slotWritten(cell, source);
+            std::vector<SpriteCell>& cells = top()->cells_;  // 0.93
+            bool known = false;
+            for (SpriteCell& s : cells)
+                if (s.rect == cell) {
+                    s.source = source;
+                    known = true;
+                }
+            if (!known && cells.size() < 1024) cells.push_back(SpriteCell{cell, source});
+        }
     }
     if (role_ == SurfaceRole::RenderTarget) {
         win::Context& c = win::Context::get();

@@ -1,7 +1,10 @@
 #include "win/dx7/device7.hpp"
 
+#include <cstring>
+
 #include "core/device_caps.hpp"
 #include "core/frame.hpp"
+#include "core/sprite_exe.hpp"
 #include "win/context.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dx7/caps.hpp"
@@ -227,6 +230,44 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                            aura ? fx.auraBrightness : fx.skillBrightness,
                            effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();
+    }
+    // 0.93: a monster, a character, an NPC or an item coming into view fades in - its vertices' alpha, in a copy.
+    if (fx.appear && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 && vertexCount == 4 && !indices &&
+        textures_[0]) {
+        const auto* v = static_cast<const uint8_t*>(vertices);
+        float x = 0, y = 0, u = 0, w = 0;
+        for (DWORD i = 0; i < 4; ++i) {
+            float f[2], t[2];
+            std::memcpy(f, v + i * 32, sizeof f);
+            std::memcpy(t, v + i * 32 + 24, sizeof t);
+            x += f[0] / 4;
+            y += f[1] / 4;
+            u += t[0] / 4;
+            w += t[1] / 4;
+        }
+        const Surface7* tex = textures_[0];
+        const uint8_t kind = tex->spriteAt(u * float(tex->width()), w * float(tex->height()));
+        const bool sprite = kind >= uint8_t(sprite_exe::Source::Monster) && kind <= uint8_t(sprite_exe::Source::Item);
+        // Its alpha must reach the picture: blended, the vertices' alpha times the texture's.
+        const bool fades = setup.blend && setup.stage[0].alphaOp == d3d7::TOP_MODULATE;
+        static bool told = false;
+        if (sprite && !told) {
+            told = true;
+            LOG_INFO("effects: sprites fade in as they come into view%s (blend %d, alpha op %u)",
+                     fades ? "" : " - not this one: its alpha is not the vertices'", setup.blend ? 1 : 0,
+                     unsigned(setup.stage[0].alphaOp));
+        }
+        if (sprite && fades) {
+            const float a = c.appear.alpha(kind, x, y, c.nowMs());
+            if (a < 1.0f) {
+                if (vertices != soft_.data()) soft_.assign(v, v + 4 * 32);
+                for (int i = 0; i < 4; ++i) {
+                    uint8_t& alpha = soft_[size_t(i) * 32 + 19];  // the diffuse colour's alpha (ARGB)
+                    alpha = uint8_t(float(alpha) * a + 0.5f);
+                }
+                vertices = soft_.data();
+            }
+        }
     }
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
     c.flushIfFull();  // the textures this draw sent may have filled the record

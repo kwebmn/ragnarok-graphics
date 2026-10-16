@@ -438,6 +438,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.filmGrainAmount = rd.i32();
             e.mapFade = rd.u8() != 0;
             e.roundLight = rd.u8() != 0;  // 0.84
+            e.appear = rd.u8() != 0;  // 0.93
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

@@ -150,7 +150,8 @@ bool Context::open(std::string& error) {
     const AiSettings& ai = config.ai;
     const bool cells = ai.enabled && (ai.sprites() || ai.effects || ai.icons);
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
-    const bool d3d11Hook = (aiHere && cells) || config.effects.actorShadows || config.effects.torch;
+    const bool d3d11Hook = (aiHere && cells) || config.effects.actorShadows || config.effects.torch ||
+                           config.effects.appear;  // 0.93: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
@@ -235,6 +236,14 @@ void Context::writeTarget(const Rect& rect, const uint32_t* argb) {
     flushIfFull();
 }
 
+double Context::nowMs() const {
+    static LARGE_INTEGER freq{};
+    if (!freq.QuadPart) QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER t;
+    QueryPerformanceCounter(&t);
+    return double(t.QuadPart) * 1000.0 / double(freq.QuadPart);
+}
+
 void Context::flushIfFull() {
     if (record.full()) flush();
 }
@@ -242,6 +251,12 @@ void Context::flushIfFull() {
 void Context::present(const Rect& source, bool waitForVblank) {
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
+    {
+        static double last = 0;  // 0.93: the sprites drawn are the next frame's known ones
+        const double now = nowMs();
+        appear.frame(last ? now - last : 1e9);
+        last = now;
+    }
     if (!renderer) return;
     watchSettings();
     if (window && IsIconic(window)) {  // minimised: nothing to show, and no vsync to hold the game's loop back

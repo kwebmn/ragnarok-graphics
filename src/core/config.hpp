@@ -237,6 +237,9 @@ struct EffectSettings {
     // 0.84: round characters - the torches' light across a character as if it were round (0.79 with the rim light;
     // now its own switch). Off by default.
     bool roundLight = false;
+    // 0.93: appear - monsters, characters, NPCs and items fade in where they come into view (core/appear.hpp). Off
+    // by default.
+    bool appear = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

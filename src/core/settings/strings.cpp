@@ -1779,6 +1779,13 @@ const Entry kTexts[] = {
     {"Moving to another map the old music fades out and the new one in over 1.5 seconds instead of breaking off.",
      "Під час переходу на іншу мапу стара музика затихає, а нова наростає за 1,5 секунди, а не обривається.",
      "При переходе на другую карту старая музыка затихает, а новая нарастает за 1,5 секунды, а не обрывается."},
+    {"Fade in monsters and items",
+     "Плавна поява монстрів і предметів",
+     "Плавное появление монстров и предметов"},
+    {"Monsters, characters, NPCs and items on the ground fade in over a quarter of a second where they come into "
+     "view, instead of popping up.",
+     "Монстри, персонажі, NPC і предмети на землі з’являються за чверть секунди, а не виникають миттєво.",
+     "Монстры, персонажи, NPC и предметы на земле появляются за четверть секунды, а не возникают мгновенно."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
