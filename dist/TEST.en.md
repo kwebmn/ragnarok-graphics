@@ -1,3 +1,13 @@
+# uaRO Graphics 1.6.2 — testing
+
+- **A viewer for the models.** The AI page's preview has "Open the viewer": a window of its own (it can fill the
+  screen), the four side by side in their own proportions. The wheel zooms all four about the point under the mouse,
+  a drag moves them together, a double click shows them whole again; keys +, -, 0, Esc. Zoomed in, sharp pixels, no
+  smoothing. The zoom is in the window's title.
+- The page's small pictures are no longer squashed: a narrow picture (a Kafra) stays narrow.
+- How to check: Show an example for NPCs → Open the viewer → zoom into the face with the wheel, drag - all four move
+  together, the proportions right.
+
 # uaRO Graphics 1.6.1 — testing
 
 - **Preview: zoom.** Under the example's pictures - "Zoom": whole, x2, x4, x8. Zoomed, all four show the same middle,
