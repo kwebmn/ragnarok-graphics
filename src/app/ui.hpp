@@ -77,8 +77,9 @@ public:
     HWND buttons(const std::vector<ButtonItem>& list);
     HWND listBox(int id, int rows);
     HWND progress(int id);  // 0.43: a bar the width of the page, 0-1000
-    // 1.6: pictures side by side across the page (BMP files, each scaled into a square), a caption under each.
-    void images(const std::vector<std::pair<std::wstring, std::wstring>>& files);
+    // 1.6: pictures side by side across the page (BMP files, each scaled into a square), a caption under each;
+    // 1.6.1: zoom 2, 4, 8 - each picture's middle that much larger, pixel by pixel, perRow to a row.
+    void images(const std::vector<std::pair<std::wstring, std::wstring>>& files, int zoom = 1, int perRow = 0);
     // checkboxes: a check box before every row (LVS_EX_CHECKBOXES).
     HWND listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows, bool checkboxes = false);
     void gap(int at96 = 8);

@@ -27,6 +27,7 @@ constexpr int kGroupModel = 1100;  // 1.6: + the group
 constexpr int kRedo = 1120;
 constexpr int kPreviewGroup = 1130;
 constexpr int kPreviewShow = 1131;
+constexpr int kPreviewZoom = 1132;  // 1.6.1
 
 const Text kGroupLabels[ai::kGroups] = {Text::AiGroupWorld,   Text::AiGroupMonsters, Text::AiGroupPlayers,
                                         Text::AiGroupNpcs,    Text::AiGroupItems,    Text::AiGroupEffects,
@@ -65,6 +66,7 @@ const pack::Index* packIndex(const std::wstring& path) {
 // 1.6: the preview - uaro-render64.exe --pack preview making uaro-graphics\preview\*.bmp.
 struct Preview {
     int group = int(ai::Group::Monsters);
+    int zoom = 0;  // 1.6.1: 0 whole, then x2, x4, x8
     HANDLE process = nullptr;
     bool shown = false;  // the pictures there are this run's
     std::string error;
@@ -193,6 +195,11 @@ public:
             g_preview.error.clear();
             host_.rebuild();
             return;
+        } else if (id == kPreviewZoom && code == CBN_SELCHANGE) {
+            const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
+            if (sel >= 0 && sel < 4) g_preview.zoom = int(sel);
+            host_.rebuild();
+            return;
         } else if (id == kPreviewShow && clicked) {
             startPreview();
             host_.rebuild();
@@ -290,11 +297,16 @@ private:
                     f.push_back(text.substr(from, tab - from));
                 if (f.size() >= 4) p.note(tf(Text::AiPreviewFrom, {f[1], f[2], f[3]}));
             }
+            p.choice(kPreviewZoom, t(Text::AiPreviewZoom),
+                     {t(Text::AiPreviewWhole), L"\u00D72", L"\u00D74", L"\u00D78"}, g_preview.zoom,
+                     t(Text::AiPreviewZoomHint));
             const std::wstring d = previewDir() + L"\\";
+            const int zoom = g_preview.zoom == 0 ? 1 : 1 << g_preview.zoom;  // 1, 2, 4, 8
             p.images({{d + L"source.bmp", t(Text::AiPreviewGame)},
                       {d + L"general.bmp", L"general"},
                       {d + L"anime.bmp", L"anime"},
-                      {d + L"anime6b.bmp", L"anime 6B"}});
+                      {d + L"anime6b.bmp", L"anime 6B"}},
+                     zoom, zoom > 1 ? 2 : 0);
         }
     }
 

@@ -326,25 +326,51 @@ HWND Panel::progress(int id) {
     return c;
 }
 
-void Panel::images(const std::vector<std::pair<std::wstring, std::wstring>>& files) {
+void Panel::images(const std::vector<std::pair<std::wstring, std::wstring>>& files, int zoom, int perRow) {
     if (files.empty()) return;
-    const int n = int(files.size()), gapX = at(8);
-    const int side = std::min(at(220), (int(area_.right - area_.left) - gapX * (n - 1)) / n);
+    const int n = int(files.size()), across = perRow > 0 ? std::min(perRow, n) : n, gapX = at(8);
+    const int width = int(area_.right - area_.left);
+    const int side = std::min(at(perRow > 0 ? 400 : 220), (width - gapX * (across - 1)) / across);
     const int captionH = textHeight(L"Ag", side);
-    int x = area_.left;
-    for (const auto& f : files) {
-        HBITMAP b = static_cast<HBITMAP>(
-            LoadImageW(nullptr, f.first.c_str(), IMAGE_BITMAP, side, side, LR_LOADFROMFILE | LR_CREATEDIBSECTION));
-        HWND c = make(L"STATIC", L"", SS_BITMAP | SS_CENTERIMAGE, x, y_, side, side, 0, WS_EX_CLIENTEDGE, false);
+    HDC screen = GetDC(owner_);
+    for (int i = 0; i < n; ++i) {
+        const int x = area_.left + (i % across) * (side + gapX);
+        const int y = y_ + (i / across) * (side + at(2) + captionH + at(kGap));
+        // The picture as it is, then its middle (all of it at zoom 1) into a square of `side`: smoothly when whole,
+        // pixel by pixel when zoomed - the network's lines as they are.
+        HBITMAP src = static_cast<HBITMAP>(LoadImageW(nullptr, files[size_t(i)].first.c_str(), IMAGE_BITMAP, 0, 0,
+                                                      LR_LOADFROMFILE | LR_CREATEDIBSECTION));
+        HBITMAP b = nullptr;
+        if (src) {
+            BITMAP info{};
+            GetObjectW(src, sizeof info, &info);
+            const int z = std::max(1, zoom);
+            const int bw = int(info.bmWidth), bh = int(info.bmHeight);
+            const int cw = std::max(1, bw / z), ch = std::max(1, bh / z);
+            HDC from = CreateCompatibleDC(screen), to = CreateCompatibleDC(screen);
+            b = CreateCompatibleBitmap(screen, side, side);
+            HGDIOBJ oldFrom = SelectObject(from, src), oldTo = SelectObject(to, b);
+            SetStretchBltMode(to, z > 1 ? COLORONCOLOR : HALFTONE);
+            SetBrushOrgEx(to, 0, 0, nullptr);
+            StretchBlt(to, 0, 0, side, side, from, (bw - cw) / 2, (bh - ch) / 2, cw, ch, SRCCOPY);
+            SelectObject(from, oldFrom);
+            SelectObject(to, oldTo);
+            DeleteDC(from);
+            DeleteDC(to);
+            DeleteObject(src);
+        }
+        HWND c = make(L"STATIC", L"", SS_BITMAP | SS_CENTERIMAGE, x, y, side, side, 0, WS_EX_CLIENTEDGE, false);
         if (b) {
             bitmaps_.push_back(b);
             SendMessageW(c, STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(b));
-            SetWindowPos(c, nullptr, x, y_, side, side, SWP_NOZORDER | SWP_NOACTIVATE);  // as it was placed
+            SetWindowPos(c, nullptr, x, y, side, side, SWP_NOZORDER | SWP_NOACTIVATE);  // as it was placed
         }
-        make(L"STATIC", f.second, SS_CENTER | SS_NOPREFIX, x, y_ + side + at(2), side, captionH, 0, 0, false);
-        x += side + gapX;
+        make(L"STATIC", files[size_t(i)].second, SS_CENTER | SS_NOPREFIX, x, y + side + at(2), side, captionH, 0, 0,
+             false);
     }
-    y_ += side + at(2) + captionH + at(kGap);
+    ReleaseDC(owner_, screen);
+    const int rows = (n + across - 1) / across;
+    y_ += rows * (side + at(2) + captionH + at(kGap));
 }
 
 HWND Panel::listBox(int id, int rows) {

@@ -2148,6 +2148,18 @@ const Entry kTexts[] = {
     {"Models (the AI page): {1}.",
      "Моделі (вкладка «Нейромережа»): {1}.",
      "Модели (вкладка «Нейросеть»): {1}."},
+    {"Zoom",
+     "Масштаб",
+     "Масштаб"},
+    {"Whole",
+     "Цілком",
+     "Целиком"},
+    {"The pictures' middle that many times larger, pixel by pixel, two to a row - the same part of each, to compare "
+     "the lines and details.",
+     "Середина картинок у стільки разів більша, точка в точку, по дві в ряд - та сама частина кожної, щоб порівняти "
+     "лінії й деталі.",
+     "Середина картинок во столько раз крупнее, точка в точку, по две в ряд - одна и та же часть каждой, чтобы "
+     "сравнить линии и детали."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

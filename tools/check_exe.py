@@ -26,6 +26,9 @@ ALLOWED = {
     "gdi32.dll": {
         "CreateFontIndirectW", "DeleteObject", "GetDeviceCaps", "GetTextExtentPoint32W", "SelectObject",
         "SetBkMode", "SetTextColor",
+        # 1.6.1: the preview's zoom (all of them since Windows 2000)
+        "CreateCompatibleBitmap", "CreateCompatibleDC", "DeleteDC", "GetObjectW", "SetBrushOrgEx", "SetStretchBltMode",
+        "StretchBlt",
     },
     "kernel32.dll": {
         # 0.49: the update check's thread and its lock
