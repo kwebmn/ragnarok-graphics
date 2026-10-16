@@ -57,7 +57,10 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
     const int y = int(CONV_ROW_BEGIN + g.y * 8 + t.y);
     const uint o0 = g.z * 16;
     float acc[16];
-    [unroll] for (uint k = 0; k < 16; ++k) acc[k] = o0 + k < CONV_OUT ? weight(CONV_BIAS + o0 + k) : 0.0;
+    // 1.5.2: every address read is one of the buffer's whatever the conditions - the compiler may read before it
+    // tests (a read past the buffer hangs the graphics card): channels past the last read the last, times 0.
+    [unroll] for (uint k = 0; k < 16; ++k)
+        acc[k] = weight(CONV_BIAS + min(o0 + k, CONV_OUT - 1)) * (o0 + k < CONV_OUT ? 1.0 : 0.0);
     const uint flat = t.y * 8 + t.x;
     for (uint i = 0; i < CONV_IN; ++i) {
         const uint inAt = i < CONV_SPLIT ? CONV_IN_A + i * inPlane : CONV_IN_B + (i - CONV_SPLIT) * inPlane;
@@ -80,7 +83,7 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
         [unroll] for (uint k2 = 0; k2 < 16; ++k2) {
             const uint o = o0 + k2;
             if (o < CONV_OUT) {
-                const uint base = CONV_WEIGHT + (o * CONV_IN + i) * 9;
+                const uint base = CONV_WEIGHT + (min(o, CONV_OUT - 1) * CONV_IN + i) * 9;
                 float s = 0.0;
                 [unroll] for (uint q2 = 0; q2 < 9; ++q2) s += weight(base + q2) * v9[q2];
                 acc[k2] += s;
@@ -92,12 +95,16 @@ void ai_conv(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID) {
         [unroll] for (uint k3 = 0; k3 < 16; ++k3) {
             const uint o = o0 + k3;
             if (o < CONV_OUT) {
+                const uint oc = min(o, CONV_OUT - 1);
                 float a = acc[k3];
-                if (CONV_PRELU != 0xFFFFFFFF && a < 0.0) a *= weight(CONV_PRELU + o);
-                const uint p = o * plane + uint(y) * CONV_WIDTH + uint(x);
-                if (CONV_RES1 != 0xFFFFFFFF)
-                    a += asfloat(U0.Load((CONV_RES1 + p) * 4)) * ((CONV_BORDER & 8) != 0 ? 0.2 : 1.0);
-                if (CONV_RES2 != 0xFFFFFFFF) a += asfloat(U0.Load((CONV_RES2 + p) * 4));
+                const bool slope = CONV_PRELU != 0xFFFFFFFF;
+                const float s = weight(slope ? CONV_PRELU + oc : 0);
+                if (slope && a < 0.0) a *= s;
+                const uint p = oc * plane + uint(y) * CONV_WIDTH + uint(x);
+                const bool r1 = CONV_RES1 != 0xFFFFFFFF, r2 = CONV_RES2 != 0xFFFFFFFF;
+                const float v1 = asfloat(U0.Load((r1 ? CONV_RES1 + p : 0) * 4));
+                const float v2 = asfloat(U0.Load((r2 ? CONV_RES2 + p : 0) * 4));
+                a += (r1 ? v1 * ((CONV_BORDER & 8) != 0 ? 0.2 : 1.0) : 0.0) + (r2 ? v2 : 0.0);
                 U1.Store((CONV_OUT_AT + p) * 4, asuint(a));
             }
         }
