@@ -117,6 +117,16 @@ private:
     bool glowDrawn_ = false;   // ... and some did this frame
     bool glowFailed_ = false;  // not made at this size
     bool makeTarget(Target& t, int width, int height, DXGI_FORMAT format);
+    // 1.0.1: the game's fireflies drawn anew (torches11.cpp, firefly_ps as Direct3D 12's): taken from its draws, each
+    // a soft blinking light added at the interface, behind what stands in front of it
+    struct Fly11 {
+        float x, y, rhw, size, alpha, colour[3], seed;
+    };
+    std::vector<Fly11> flies_;
+    ID3D11PixelShader* fireflyPs_ = nullptr;
+    bool firefliesWanted() const { return effects_.fireflies && effects_.firefliesBrightness > 0 && fireflyPs_; }
+    bool takeFirefly(const FrameRecord& rec, const DrawCmd& d);
+    void applyFireflies();
     void applyGrade();  // 0.59
     void applyNight();  // 0.63
     void worldPass(ID3D11PixelShader* ps, const Constants& c);

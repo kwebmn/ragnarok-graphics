@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "core/d3d7.hpp"
+#include "core/fireflies.hpp"
 #include "core/game_camera.hpp"
 #include "core/torch.hpp"
 #include "win/gpu/renderer11.hpp"
@@ -25,6 +26,106 @@ constexpr float kLightColor[3] = {1.0f, 0.58f, 0.28f};
 constexpr float kMiddle = 0.38f;
 
 }  // namespace
+
+// 1.0.1: one of the game's fireflies (effect 45, known by the driver): its middle, size, fade and tint.
+bool Renderer11::takeFirefly(const FrameRecord& rec, const DrawCmd& d) {
+    if (flies_.size() >= 128) return false;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const uint32_t n = std::min<uint32_t>(d.vertexCount, 8);
+    if (n < 3 || d.vertexOffset + size_t(n) * stride > v.size() || !depthViews()) return false;
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, rhw = 0.0f;
+    uint32_t diffuse = 0;
+    for (uint32_t i = 0; i < n; ++i) {
+        const uint8_t* p = v.data() + d.vertexOffset + size_t(i) * stride;
+        float xyzw[4];
+        std::memcpy(xyzw, p, sizeof xyzw);
+        if (i == 0) std::memcpy(&diffuse, p + 16, sizeof diffuse);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3];
+    }
+    rhw /= float(n);
+    if (rhw <= 0.0f) return false;
+    Fly11 f{};
+    f.x = (x0 + x1) * 0.5f;
+    f.y = (y0 + y1) * 0.5f;
+    f.rhw = rhw;
+    f.size = std::sqrt(std::max(0.0f, (x1 - x0) * (y1 - y0)));
+    f.alpha = float(diffuse >> 24) / 255.0f;
+    fireflies::colourOf(diffuse, f.colour);
+    f.seed = float(d.effectSeed) / 255.0f;
+    flies_.push_back(f);
+    static bool logged = false;
+    if (!logged) LOG_INFO("fireflies: the game's fireflies drawn anew (Direct3D 11)");
+    logged = true;
+    return true;
+}
+
+// Each firefly a light added within a box of eight of its radii (the scissor), hidden behind what stands in front of
+// it by the depth.
+void Renderer11::applyFireflies() {
+    flushBatch();
+    std::vector<Fly11> flies;
+    flies.swap(flies_);
+    if (!firefliesWanted() || !depthViews() || !target_.rtv) return;
+    targetBound_ = false;
+    ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
+    ctx_->PSSetShaderResources(0, 4, none);
+    ctx_->OMSetRenderTargets(1, &target_.rtv, nullptr);
+    const D3D11_VIEWPORT vp{0.0f, 0.0f, float(target_.width), float(target_.height), 0.0f, 1.0f};
+    ctx_->RSSetViewports(1, &vp);
+    ctx_->OMSetBlendState(blendState(true, D3D11_BLEND_ONE, D3D11_BLEND_ONE,
+                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
+                          nullptr, 0xFFFFFFFF);
+    ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
+    ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
+    ctx_->IASetInputLayout(nullptr);
+    ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx_->VSSetShader(presentVs_, nullptr, 0);
+    ctx_->PSSetShader(fireflyPs_, nullptr, 0);
+    ctx_->VSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetShaderResources(3, 1, &depthSrv_);  // sceneDepth : register(t3)
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float user = float(std::clamp(effects_.firefliesBrightness, 0, 200)) / 100.0f;
+    const double time = double(GetTickCount64()) / 1000.0;
+    const float k = float(scale_);
+    for (const Fly11& f : flies) {
+        Constants c{};
+        c.targetSize[0] = float(target_.width);
+        c.targetSize[1] = float(target_.height);
+        const float proj6[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+        std::memcpy(c.projection, proj6, sizeof proj6);
+        const float r = std::max(f.size * 0.06f, 0.4f) * k;
+        c.sourceRect[0] = f.x * k;
+        c.sourceRect[1] = f.y * k;
+        c.sourceRect[2] = r;
+        c.sourceRect[3] = 1.2f;
+        c.sourceClamp[1] = 1.0f / f.rhw;
+        c.fogColor[0] = f.colour[0];
+        c.fogColor[1] = f.colour[1];
+        c.fogColor[2] = f.colour[2];
+        c.twin[0] = user * f.alpha * fireflies::blink(time, f.seed);
+        c.twin[1] = 1.0f;
+        if (c.twin[0] <= 0.001f) continue;
+        const LONG reach = LONG(std::ceil(r * 8.0f)) + 1;
+        const D3D11_RECT box{std::max<LONG>(0, LONG(c.sourceRect[0]) - reach),
+                             std::max<LONG>(0, LONG(c.sourceRect[1]) - reach),
+                             std::min<LONG>(target_.width, LONG(c.sourceRect[0]) + reach),
+                             std::min<LONG>(target_.height, LONG(c.sourceRect[1]) + reach)};
+        if (box.left >= box.right || box.top >= box.bottom) continue;
+        ctx_->RSSetScissorRects(1, &box);
+        setConstants(c);
+        ctx_->Draw(3, 0);
+    }
+    ctx_->PSSetShaderResources(3, 1, none);
+    const D3D11_RECT all{0, 0, target_.width, target_.height};
+    ctx_->RSSetScissorRects(1, &all);
+}
 
 void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
     if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame || flames_.size() >= size_t(kMaxLights)) return;

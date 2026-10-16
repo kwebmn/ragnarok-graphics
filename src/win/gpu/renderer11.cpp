@@ -126,6 +126,7 @@ Renderer11::~Renderer11() {
     drop(drawPs_);
     drop(waterVs_);  // 0.99
     drop(waterPs_);
+    drop(fireflyPs_);  // 1.0.1
     drop(drawGlowPs_);  // 1.0
     drop(waterGlowPs_);
     drop(glowDownPs_);
@@ -318,7 +319,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         const char* source;
         std::vector<uint8_t> code;
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
-    } wants[20] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[21] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -329,7 +330,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"water_vs", vs, shaderSource(), {}, true},  {"water_ps", ps, shaderSource(), {}, true},  // 0.99
                    {"draw_glow_ps", ps, shaderSource(), {}, true}, {"water_glow_ps", ps, shaderSource(), {}, true},
                    {"glow_down_ps", ps, shaderSource(), {}, true}, {"glow_up_ps", ps, shaderSource(), {}, true},
-                   {"glow_add_ps", ps, shaderSource(), {}, true}};  // 1.0
+                   {"glow_add_ps", ps, shaderSource(), {}, true},  // 1.0
+                   {"firefly_ps", ps, shaderSource(), {}, true}};  // 1.0.1
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -426,6 +428,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     ID3D11PixelShader** glows[5] = {&drawGlowPs_, &waterGlowPs_, &glowDownPs_, &glowUpPs_, &glowAddPs_};  // 1.0
     for (int k = 0; k < 5; ++k)
         if (wants[15 + k].code.empty() || !psOf(wants[15 + k], *glows[k])) *glows[k] = nullptr;
+    if (wants[20].code.empty() || !psOf(wants[20], fireflyPs_)) fireflyPs_ = nullptr;  // 1.0.1
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -955,11 +958,14 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
+    if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
     // 1.0: from the world's first draw that adds light, its draws write into the glow too
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
     const bool toGlow = !s.ui && glowActive_;
     if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && torchesWanted()) noteTorch(rec, d);
+    // 1.0.1: a firefly the game draws - drawn anew at the interface instead
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Firefly) && firefliesWanted() && takeFirefly(rec, d)) return;
     if (!s.ui) worldDrawn_ = true;
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;
@@ -1483,6 +1489,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
     if (worldDrawn_ && !nightDone_) applyNight();  // 0.63
     if (worldDrawn_ && !lightDone_) applyTorchLight();  // 0.61
+    if (!flies_.empty()) applyFireflies();  // 1.0.1
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
     if (glowDrawn_) addGlow();  // 1.0: likewise
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
