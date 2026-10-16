@@ -305,6 +305,8 @@ std::string indexText(const Index& index) {
     }
     for (const auto& a : index.aliases) t += "=" + a.first + "\t" + a.second + "\n";
     for (const auto& n : index.alike) t += "~" + n.first + "\t" + n.second + "\n";
+    for (const auto& e : index.pictures)  // 1.6
+        if (!e.second.model.empty()) t += "^" + e.first + "\t" + e.second.model + "\t" + e.second.group + "\n";
     return t;
 }
 
@@ -322,6 +324,14 @@ Index parseIndexFile(const std::string& text) {
         if (tab == std::string::npos || tab == 0 || line[0] == '=') continue;  // 0.45: '=': a lower detail's key
         if (line[0] == '~') {  // 0.49: a picture found by its likeness
             if (tab > 1) out.alike[line.substr(1, tab - 1)] = line.substr(tab + 1);
+            continue;
+        }
+        if (line[0] == '^') {  // 1.6: its model and group
+            const std::string rest = line.substr(tab + 1);
+            const size_t t2 = rest.find('\t');
+            IndexEntry& e = out.pictures[line.substr(1, tab - 1)];
+            e.model = rest.substr(0, t2);
+            e.group = t2 == std::string::npos ? std::string() : rest.substr(t2 + 1);
             continue;
         }
         std::string kind = line.substr(tab + 1), maps;
@@ -496,20 +506,25 @@ bool Writer::writeLocal(const std::string& name, const uint8_t* data, size_t siz
     return true;
 }
 
-bool Writer::add(const std::string& name, const uint8_t* data, size_t size, std::string& error) {
+bool Writer::add(const std::string& name, const uint8_t* data, size_t size, std::string& error, bool replace) {
     if (!file_) {
         error = "the pack is not open";
         return false;
     }
-    if (has(name)) return true;
+    if (has(name) && !replace) return true;
     if (name.empty() || name.size() > 0xFFFF || uint64_t(size) >= 0xFFFFFFFF || name == kIndexName) {
         error = "not a picture of the pack: " + name;
         return false;
     }
     const uint32_t crc = uint32_t(mz_crc32(MZ_CRC32_INIT, data, size));
     if (!writeLocal(name, data, size, crc, error)) return false;
-    names_[name] = entries_.size();
-    entries_.push_back(Central{name, end_, uint64_t(size), crc});
+    const auto there = names_.find(name);
+    if (there != names_.end()) {
+        entries_[there->second] = Central{name, end_, uint64_t(size), crc};
+    } else {
+        names_[name] = entries_.size();
+        entries_.push_back(Central{name, end_, uint64_t(size), crc});
+    }
     end_ += 30 + name.size() + size;
     return true;
 }

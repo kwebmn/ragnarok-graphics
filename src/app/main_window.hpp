@@ -26,6 +26,7 @@ public:
     void message(const std::wstring& text, bool error) override;
     bool ask(const std::wstring& text) override;
     std::wstring pickFile(bool save) override;
+    void showPage(settings::Page which) override;
 
 private:
     static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);

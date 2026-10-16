@@ -276,3 +276,31 @@ TEST(webp_keeps_a_picture_and_its_transparency) {
     CHECK(mid >> 24 == 255u && ((mid >> 16) & 255) > 170 && ((mid >> 8) & 255) < 60);
     CHECK(!webp::decode(exact.data(), exact.size() / 2, back, bw, bh));  // cut short: nothing
 }
+
+TEST(pack_writer_replaces_a_picture_and_the_index_keeps_its_model) {
+    const std::string path = tempPath();
+    std::string error;
+    {
+        uagfx::pack::Writer w;
+        CHECK(w.open(path, false, error));
+        const uint8_t a[3] = {1, 2, 3}, b[4] = {9, 8, 7, 6};
+        CHECK(w.add("sprites/32x32/aa.webp", a, 3, error));
+        CHECK(w.add("sprites/32x32/aa.webp", b, 4, error));  // kept as it was
+        CHECK(w.add("sprites/32x32/aa.webp", b, 4, error, true));  // 1.6: replaced
+        CHECK_EQ(int(w.count()), 1);
+        uagfx::pack::Index index;
+        index.pictures["sprites/32x32/aa.webp"].kind = uagfx::ai::Kind::Sprites;
+        index.pictures["sprites/32x32/aa.webp"].model = "anime6b";
+        index.pictures["sprites/32x32/aa.webp"].group = "players";
+        CHECK(w.close(uagfx::pack::indexText(index), error));
+    }
+    uagfx::pack::Reader r;
+    CHECK(r.open(path, error));
+    std::vector<uint8_t> data;
+    CHECK(r.read("sprites/32x32/aa.webp", data) && data.size() == 4 && data[0] == 9);
+    CHECK(r.read(uagfx::pack::kIndexName, data));
+    const uagfx::pack::Index back = uagfx::pack::parseIndexFile(std::string(data.begin(), data.end()));
+    const auto& e = back.pictures.at("sprites/32x32/aa.webp");
+    CHECK(e.kind == uagfx::ai::Kind::Sprites && e.model == "anime6b" && e.group == "players");
+    CHECK_EQ(int(back.pictures.size()), 1);
+}

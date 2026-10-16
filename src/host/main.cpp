@@ -81,6 +81,15 @@ Args parseArgs() {
         else if (k == "--kinds") a.pack.choice = pack::parseChoice(v);
         else if (k == "--quality") a.pack.quality = std::clamp(std::atoi(v.c_str()), 1, 100);
         else if (k == "--fresh") a.pack.fresh = v == "1";
+        else if (k == "--redo") {  // 1.6
+            for (size_t from = 0; from <= v.size();) {
+                size_t comma = v.find(',', from);
+                if (comma == std::string::npos) comma = v.size();
+                ai::Group g;
+                if (ai::parseGroup(v.substr(from, comma - from), g)) a.pack.redo[size_t(g)] = true;
+                from = comma + 1;
+            }
+        }
         else if (k == "--out") a.pack.out = v;
         else if (k == "--status") a.pack.status = v;
         else continue;

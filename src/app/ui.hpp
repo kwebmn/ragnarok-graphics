@@ -77,6 +77,8 @@ public:
     HWND buttons(const std::vector<ButtonItem>& list);
     HWND listBox(int id, int rows);
     HWND progress(int id);  // 0.43: a bar the width of the page, 0-1000
+    // 1.6: pictures side by side across the page (BMP files, each scaled into a square), a caption under each.
+    void images(const std::vector<std::pair<std::wstring, std::wstring>>& files);
     // checkboxes: a check box before every row (LVS_EX_CHECKBOXES).
     HWND listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows, bool checkboxes = false);
     void gap(int at96 = 8);
@@ -102,6 +104,7 @@ private:
     RECT area_;
     int y_;
     std::vector<HWND> made_;
+    std::vector<HBITMAP> bitmaps_;  // 1.6: images'; freed with the panel
     std::vector<HWND> tipped_;  // the controls with a hint over their rectangle too (tip())
     std::map<HWND, Tone> tones_;
     std::wstring taken_;  // the letters for Alt+letter taken so far

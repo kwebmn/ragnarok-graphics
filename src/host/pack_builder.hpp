@@ -1,6 +1,8 @@
 #pragma once
+#include <array>
 #include <string>
 
+#include "core/ai/groups.hpp"
 #include "core/config.hpp"
 #include "core/pack_build.hpp"
 
@@ -18,6 +20,9 @@ struct PackArgs {
     AiSettings ai;       // the networks (model, sprite model, denoise) and the world's sides
     int quality = 90;    // WebP: 1-99 lossy, 100 lossless
     bool fresh = false;  // a new pack in place of the one there; else the one there goes on
+    // 1.6, --redo world,players...: of these groups the pictures another model made than the group's are made again
+    // (ai::modelOfEntry), each into its place in the pack.
+    std::array<bool, ai::kGroups> redo{};
 };
 
 int runPack(const PackArgs& a);  // the process's exit code: 0 done or stopped

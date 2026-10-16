@@ -23,6 +23,7 @@ constexpr int kPlay = 21;
 constexpr int kUndo = 22;
 constexpr int kCloseButton = 23;
 constexpr UINT kRebuild = WM_APP + 1;
+constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page
 constexpr UINT_PTR kTimer = 1;
 constexpr UINT_PTR kTickTimer = 2;  // 0.43: a page's tick()
 
@@ -359,6 +360,8 @@ void MainWindow::changed() {
     updateStatus();
 }
 
+void MainWindow::showPage(settings::Page which) { PostMessageW(hwnd_, kShowPage, WPARAM(which), 0); }
+
 void MainWindow::rebuild() {
     // After this message: the control that asked is not taken down under it.
     if (rebuilds_.request()) PostMessageW(hwnd_, kRebuild, 0, 0);
@@ -498,6 +501,14 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             SetBkMode(dc, TRANSPARENT);
             return reinterpret_cast<LRESULT>(GetSysColorBrush(COLOR_WINDOW));
         }
+        case kShowPage:
+            if (int(wp) < kPageCount && int(wp) != page_) {
+                page_ = int(wp);
+                scroll_ = 0;
+                SendMessageW(sidebar_, LB_SETCURSEL, wp, 0);
+                buildPage();
+            }
+            return 0;
         case kRebuild:
             if (rebuilds_.arrived()) buildPage();
             return 0;

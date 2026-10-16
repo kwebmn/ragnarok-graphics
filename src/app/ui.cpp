@@ -76,6 +76,7 @@ Panel::Panel(HWND owner, HFONT font, HFONT heading, HWND tooltip, int dpi, RECT 
       taken_(std::move(taken)) {}
 
 Panel::~Panel() {
+    for (HBITMAP b : bitmaps_) DeleteObject(b);
     for (HWND h : made_) {
         if (tooltip_) {  // both of tip()'s tools
             TOOLINFOW ti{};
@@ -323,6 +324,27 @@ HWND Panel::progress(int id) {
     SendMessageW(c, PBM_SETRANGE32, 0, 1000);
     y_ += h + at(kGap);
     return c;
+}
+
+void Panel::images(const std::vector<std::pair<std::wstring, std::wstring>>& files) {
+    if (files.empty()) return;
+    const int n = int(files.size()), gapX = at(8);
+    const int side = std::min(at(220), (int(area_.right - area_.left) - gapX * (n - 1)) / n);
+    const int captionH = textHeight(L"Ag", side);
+    int x = area_.left;
+    for (const auto& f : files) {
+        HBITMAP b = static_cast<HBITMAP>(
+            LoadImageW(nullptr, f.first.c_str(), IMAGE_BITMAP, side, side, LR_LOADFROMFILE | LR_CREATEDIBSECTION));
+        HWND c = make(L"STATIC", L"", SS_BITMAP | SS_CENTERIMAGE, x, y_, side, side, 0, WS_EX_CLIENTEDGE, false);
+        if (b) {
+            bitmaps_.push_back(b);
+            SendMessageW(c, STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(b));
+            SetWindowPos(c, nullptr, x, y_, side, side, SWP_NOZORDER | SWP_NOACTIVATE);  // as it was placed
+        }
+        make(L"STATIC", f.second, SS_CENTER | SS_NOPREFIX, x, y_ + side + at(2), side, captionH, 0, 0, false);
+        x += side + gapX;
+    }
+    y_ += side + at(2) + captionH + at(kGap);
 }
 
 HWND Panel::listBox(int id, int rows) {

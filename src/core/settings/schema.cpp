@@ -293,6 +293,31 @@ const std::vector<IniSetting>& iniSettings() {
         {"ai", "sprite_model", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
          {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b},
          Text::AiModelSprites, Text::AiModelSpritesHint, ""},
+        // 1.6: a model for each group of pictures
+        {"ai", "model_world", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupWorld,
+         Text::AiGroupModelHint, ""},
+        {"ai", "model_monsters", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupMonsters,
+         Text::AiGroupModelHint, ""},
+        {"ai", "model_players", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupPlayers,
+         Text::AiGroupModelHint, ""},
+        {"ai", "model_npcs", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupNpcs,
+         Text::AiGroupModelHint, ""},
+        {"ai", "model_items", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupItems,
+         Text::AiGroupModelHint, ""},
+        {"ai", "model_effects", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupEffects,
+         Text::AiGroupModelHint, ""},
+        {"ai", "model_icons", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupIcons,
+         Text::AiGroupModelHint, ""},
+        {"ai", "model_screens", Page::Ai, Control::Choice, 0, 0, 0, {"general", "anime", "anime6b"},
+         {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b}, Text::AiGroupScreens,
+         Text::AiGroupModelHint, ""},
         {"ai", "denoise", Page::Ai, Control::Slider, 0, 100, 5, {}, {}, Text::AiDenoise, Text::AiDenoiseHint, " %"},
         {"ai", "scale", Page::Ai, Control::Choice, 0, 0, 0, {"4", "2"}, {Text::AiScale4, Text::AiScale2},
          Text::AiScale, Text::AiScaleHint, ""},
@@ -390,6 +415,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.ui_pieces") return a.uiPieces ? "1" : "0";
     if (k == "ai.model") return a.model;
     if (k == "ai.sprite_model") return a.spriteModel;
+    if (k.rfind("ai.model_", 0) == 0) {  // 1.6: a group's, as it comes out (its own, or model / sprite_model)
+        ai::Group g;
+        if (ai::parseGroup(k.substr(9), g)) return a.modelFor(g);
+    }
     if (k == "ai.denoise") return std::to_string(a.denoise);
     if (k == "ai.scale") return std::to_string(a.scale);
     if (k == "ai.budget") return std::to_string(a.budget);

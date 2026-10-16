@@ -39,7 +39,10 @@ const char* aiShaderSource();  // ai_shaders.cpp
 // kinds and the maps they were seen as and on, for the settings app. The game knows nothing of it.
 class AiTextures {
 public:
-    explicit AiTextures(Renderer::Impl& m) : m_(m) { std::fill(std::begin(netOf_), std::end(netOf_), -1); }
+    explicit AiTextures(Renderer::Impl& m) : m_(m) {
+        std::fill(std::begin(netOf_), std::end(netOf_), -1);
+        std::fill(std::begin(groupNet_), std::end(groupNet_), -1);
+    }
     ~AiTextures();
     AiTextures(const AiTextures&) = delete;
     AiTextures& operator=(const AiTextures&) = delete;
@@ -68,6 +71,8 @@ public:
     // 0.43, the pack builder (Renderer::buildPack): the networks of the settings' kinds - no pack.
     bool startForPack(const std::string& gameDir, const AiSettings& settings, std::string& error);
     int netFor(ai::Kind kind) const { return int(kind) < ai::kKinds ? netOf_[int(kind)] : -1; }
+    // 1.6: the network of a group of pictures (its own model); -1 none.
+    int netForGroup(ai::Group g) const { return int(g) < ai::kGroups ? groupNet_[int(g)] : -1; }
     const std::string& netName(int net) const { return nets_[size_t(net)]->name; }
     // The network's picture of argb (w x h) at once, on the renderer's list, waiting for the GPU: 4 times its size;
     // border 0 the other side past the edges, 1 nothing, 2 the edge again (a world texture, a sprite's cell, an
@@ -104,6 +109,7 @@ private:
         bool ui = false;         // a picture of the interface: it stands in for interface draws, not the world's
         uint64_t lastUse = 0;    // 0.44: the frame it was last drawn in (frame_)
         uint64_t bytes = 0;      // its copy's in video memory (Texture::ai), all its levels
+        ai::Group group = ai::Group::World;  // 1.6
     };
     struct Level {
         UINT64 at = 0;  // bytes into the image
@@ -130,6 +136,7 @@ private:
         bool icon = false;  // 0.14: an icon of a window - the picture goes back to the driver
         uint64_t iconKey = 0;
         uint32_t border = 0;  // past the picture's edge (ai_conv): 0 the other side, 1 zeros, 2 the edge again
+        ai::Group group = ai::Group::World;  // 1.6: whose model makes it, the index's word
         ID3D12Resource* image = nullptr;
         std::vector<Level> levels;
         // 1.5, RRDB: the picture's planes (ai::prepareInput), its tiles, the one going through, done with all.
@@ -150,6 +157,7 @@ private:
         UINT64 fence = 0;
         std::string name;
         ai::Kind kind = ai::Kind::None;
+        std::string model, group;  // 1.6: for the index
         int width = 0, height = 0;
         UINT pitch = 0;
         bool icon = false;  // also to the driver, as iconKey
@@ -165,6 +173,7 @@ private:
         int width = 0, height = 0;
         ai::Kind kind = ai::Kind::None;  // Write, Note
         std::string map;                 // Write, Note: "" none
+        std::string model, group;        // 1.6, Write: the index's words
         Job cell;  // a cell's or an icon's read: the job it becomes (its pixels the network's input should it fail)
         // 0.66: read in this order - 0 a sprite frame or an icon, 1 a texture in view, 2 one known ahead (a map's
         // hundreds as it loads), 3 a picture made, to write
@@ -250,6 +259,9 @@ private:
     // the icons' was 0 since 0.14: the first network made them, and without one (0.42) the start read nets_[0] of
     // none and uaro-render64.exe fell (0xc0000005) whenever the AI textures were on.
     int netOf_[ai::kKinds];
+    int groupNet_[ai::kGroups];  // 1.6
+    // 1.6: the network of a model word, loaded once (the same model for several groups is one network); -1, error.
+    int netOfToken(const std::string& dir, const std::string& token, std::string& error);
     bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack
     bool generate_ = false;                     // [ai] generate: the network makes what is missing
     pack::Reader pack_;                         // 0.42: uaro-textures.zip, read by the I/O thread

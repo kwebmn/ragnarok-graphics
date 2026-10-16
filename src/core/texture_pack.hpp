@@ -39,10 +39,16 @@ std::map<std::string, ai::Kind> parseIndex(const std::string& text);  // a kind 
 std::map<std::string, std::string> parseAliases(const std::string& text);
 // 0.48: a picture's line whole - its kind and the maps the game showed it on (the game's own making notes them, the
 // builder's pictures have none) - and the index whole: "name\tkind\tmap,map" lines, then the aliases' lines.
+// 1.6: and the model that made it and its group (ai::groupName) - "^name\tmodel\tgroup" lines, which an older
+// index reader takes for a picture of no kind that the pack does not have.
 struct IndexEntry {
     ai::Kind kind = ai::Kind::None;
     std::set<std::string> maps;
-    bool operator==(const IndexEntry& o) const { return kind == o.kind && maps == o.maps; }
+    std::string model;  // "" not known: made before 1.6
+    std::string group;
+    bool operator==(const IndexEntry& o) const {
+        return kind == o.kind && maps == o.maps && model == o.model && group == o.group;
+    }
 };
 struct Index {
     std::map<std::string, IndexEntry> pictures;
@@ -111,7 +117,9 @@ public:
     size_t count() const { return entries_.size(); }
     uint64_t bytes() const { return end_; }  // the pictures so far
     std::vector<std::string> names() const;
-    bool add(const std::string& name, const uint8_t* data, size_t size, std::string& error);
+    // replace (1.6): a picture already there gets the new one - its directory entry points at the new bytes, the old
+    // stay unread until the Ready textures page rewrites the pack; else a name there is left as it is.
+    bool add(const std::string& name, const uint8_t* data, size_t size, std::string& error, bool replace = false);
     // The index (when not empty) and the central directory after the last picture: a whole ZIP from here on - the next
     // add() goes over them.
     bool checkpoint(const std::string& index, std::string& error);

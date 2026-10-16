@@ -207,6 +207,13 @@ enum class Text : uint16_t {
     PadRumble, PadRumbleHint, PadStartsOn, PadStartsOnHint, PadMenuLanguage, PadMenuLanguageHint, PadSettingsNote,
     PadNpcHint, PadNpcHintHint,
     AiModelAnime6b,  // 1.5
+    // 1.6: a model for each group, the preview
+    AiGroupsHeading, AiGroupWorld, AiGroupMonsters, AiGroupPlayers, AiGroupNpcs, AiGroupItems, AiGroupEffects,
+    AiGroupIcons, AiGroupScreens, AiGroupModelHint, AiModelSet, AiModelSetHint, AiModelSetFast, AiModelSetBalanced,
+    AiModelSetMaximum, AiModelSetCustom, AiGroupInPack, AiGroupInPackOther, AiNoPackYet, AiUnknownSprites, AiRedo,
+    AiRedoHint, AiPreviewHeading, AiPreviewGroup, AiPreviewShow, AiPreviewHint, AiPreviewWorking, AiPreviewFailed,
+    AiPreviewFrom, AiPreviewGame, PackRedo, PackRedoHint,
+    PackNetsGroups,
     Count
 };
 

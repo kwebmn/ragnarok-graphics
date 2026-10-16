@@ -25,6 +25,7 @@ constexpr int kBar = 1030;
 constexpr int kFetch = 1040;  // 0.53: the pack from the site
 constexpr int kFetchStop = 1041;
 constexpr int kFetchBar = 1042;
+constexpr int kRedoBox = 1050;  // 1.6
 
 struct KindBox {
     Text label, hint;
@@ -123,12 +124,18 @@ public:
                  {t(Text::PackQualitySmall), t(Text::PackQualityBalanced), t(Text::PackQualityLossless)}, g_quality,
                  t(Text::PackQualityHint), !running_);
         const AiSettings a = m.pendingConfig().ai;
-        const auto modelName = [&](const std::string& token) {
-            return utf8(t(token == "anime6b" ? Text::AiModelAnime6b
-                          : token == "anime" ? Text::AiModelAnime
-                                             : Text::AiModelGeneral));
-        };
-        p.note(tf(Text::PackNets, {modelName(a.model), modelName(a.spriteModel)}));
+        // 1.6: each group by its own model
+        const Text groupLabels[ai::kGroups] = {Text::AiGroupWorld,   Text::AiGroupMonsters, Text::AiGroupPlayers,
+                                               Text::AiGroupNpcs,    Text::AiGroupItems,    Text::AiGroupEffects,
+                                               Text::AiGroupIcons,   Text::AiGroupScreens};
+        std::string nets;
+        for (int g = 0; g < ai::kGroups; ++g) {
+            const std::string& token = a.modelFor(ai::Group(g));
+            nets += std::string(g ? "; " : "") + utf8(t(groupLabels[g])) + " - " +
+                    (token == "anime6b" ? "anime 6B" : token);
+        }
+        p.note(tf(Text::PackNetsGroups, {nets}));
+        p.check(kRedoBox, t(Text::PackRedo), packRedo(), t(Text::PackRedoHint), !running_);
         const bool chosen = pack::anyChosen(g_choice);
         p.buttons({{kMake, t(Text::PackMake), host && chosen && !running_}, {kStop, t(Text::PackStop), running_}});
         bar_ = p.progress(kBar);
@@ -168,6 +175,10 @@ public:
         if (id >= kKinds && id < kKinds + kBoxes && code == BN_CLICKED) {
             *kindOf(g_choice, id - kKinds) = SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED;
             host_.rebuild();  // Make with at least one kind
+            return;
+        }
+        if (id == kRedoBox && code == BN_CLICKED) {  // 1.6
+            packRedo() = SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED;
             return;
         }
         if (id == kQuality && code == CBN_SELCHANGE) {
@@ -360,6 +371,12 @@ private:
                             wide(aiArgument(a)) + L" --kinds " + wide(kinds.empty() ? "none" : kinds) +
                             L" --quality " + wide(num(kQualities[g_quality])) + L" --fresh " + (fresh ? L"1" : L"0") +
                             L" --log 1";
+        if (packRedo()) {  // 1.6: every group - the builder touches only the files of the kinds chosen
+            std::string groups;
+            for (int g = 0; g < ai::kGroups; ++g) groups += std::string(g ? "," : "") + ai::groupName(ai::Group(g));
+            line += L" --redo " + wide(groups);
+            packRedo() = false;
+        }
         const std::string card = host_.model().pendingConfig().gpu;  // 0.50.2: the card chosen on the Renderer page
         line += L" --gpu \"" + wide(card.empty() ? "auto" : card) + L"\"";
         DeleteFileW(statusPath_.c_str());
@@ -387,6 +404,11 @@ private:
 };
 
 }  // namespace
+
+bool& packRedo() {
+    static bool on = false;
+    return on;
+}
 
 std::unique_ptr<Page> makePackPage(PageHost& host) { return std::make_unique<PackPage>(host); }
 

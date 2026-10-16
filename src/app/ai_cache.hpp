@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/ai/cache_index.hpp"
+#include "core/texture_pack.hpp"
 
 namespace uagfx::app {
 
@@ -16,6 +17,8 @@ struct PackFile {
     std::string error;  // when it is there but cannot be read
 };
 PackFile readPack(const std::wstring& path);
+// 1.6: its index alone (the AI page's counts by group and model); false when there is no pack or it cannot be read.
+bool readPackIndex(const std::wstring& path, pack::Index& out);
 
 // The pack again with only the pictures `keep` names (through "<path>.new" moved over it); removed when none stays.
 // "" or what went wrong, in English (it goes into a message after a translated sentence).

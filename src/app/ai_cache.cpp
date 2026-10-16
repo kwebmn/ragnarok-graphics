@@ -15,6 +15,16 @@ uint64_t fileBytes(const std::wstring& path) {
     return uint64_t(a.nFileSizeHigh) << 32 | a.nFileSizeLow;
 }
 
+bool readPackIndex(const std::wstring& path, pack::Index& out) {
+    if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) return false;
+    pack::Reader r;
+    std::string error;
+    std::vector<uint8_t> data;
+    if (!r.open(ansi(path), error) || !r.read(pack::kIndexName, data)) return false;
+    out = pack::parseIndexFile(std::string(data.begin(), data.end()));
+    return true;
+}
+
 PackFile readPack(const std::wstring& path) {
     PackFile f;
     if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) return f;

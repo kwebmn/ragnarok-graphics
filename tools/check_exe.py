@@ -31,7 +31,7 @@ ALLOWED = {
         # 0.49: the update check's thread and its lock
         "AcquireSRWLockExclusive", "AcquireSRWLockShared", "CreateThread", "ReleaseSRWLockExclusive",
         "ReleaseSRWLockShared",
-        "CloseHandle", "CreateDirectoryW", "CreateFileW", "CreateSemaphoreW", "CreateToolhelp32Snapshot",
+        "CloseHandle", "CompareFileTime", "CreateDirectoryW", "CreateFileW", "CreateSemaphoreW", "CreateToolhelp32Snapshot",
         "DeleteCriticalSection", "DeleteFileW", "EnterCriticalSection", "FindClose", "FindFirstFileW",
         "FindNextFileW", "FindResourceW", "FlushFileBuffers", "FormatMessageA", "FreeLibrary", "GetCurrentProcess",
         "GetCurrentThreadId", "GetEnvironmentVariableW", "GetFileAttributesExW", "GetFileAttributesW",
@@ -84,7 +84,7 @@ ALLOWED = {
         "DispatchMessageW", "DrawTextW", "EmptyClipboard", "EnableWindow", "EnumDisplayMonitors",
         "EnumDisplaySettingsExW", "FindWindowW", "GetClientRect", "GetDC", "GetDlgCtrlID", "GetDlgItem", "GetFocus",
         "GetMessageW", "GetMonitorInfoW", "GetNextDlgTabItem", "GetSysColor", "GetSysColorBrush", "GetWindowLongW",
-        "GetWindowRect", "GetWindowTextW", "IsChild", "IsDialogMessageW", "KillTimer", "LoadCursorW", "LoadIconW",
+        "GetWindowRect", "GetWindowTextW", "IsChild", "IsDialogMessageW", "KillTimer", "LoadCursorW", "LoadIconW", "LoadImageW",
         "MapWindowPoints", "MessageBoxW", "MoveWindow", "OpenClipboard", "PostMessageW", "PostQuitMessage",
         "RegisterClassExW", "ReleaseDC", "SendMessageW", "SetClipboardData", "SetDlgItemTextW", "SetFocus",
         "SetForegroundWindow", "SetTimer", "SetWindowLongW", "SetWindowPos", "SetWindowTextW", "ShowWindow",

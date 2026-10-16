@@ -128,11 +128,11 @@ public:
     // AI textures (ai_textures.hpp, uaro-render64.exe): after create(). false: off, the reason in the log.
     bool startAiTextures(const std::string& gameDir, const AiSettings& settings);
     // 0.43, the pack builder (uaro-render64.exe --pack): the networks alone, after create(); then a picture at a time,
-    // waiting for it - 4 times the size, by the network of its kind (ai::Kind), border as AiTextures::enlarge's.
+    // waiting for it - 4 times the size, by the network of its group (1.6: ai::Group), border as AiTextures::enlarge's.
     bool startAiForPack(const std::string& gameDir, const AiSettings& settings, std::string& error);
-    bool enlargeForPack(int kind, const uint32_t* argb, int width, int height, uint32_t border,
+    bool enlargeForPack(int group, const uint32_t* argb, int width, int height, uint32_t border,
                         std::vector<uint32_t>& out, std::string& error);
-    std::string packNetName(int kind) const;
+    std::string packNetName(int group) const;
     // The map the game shows ("prontera"; "" none): the texture pack's index notes the textures seen on it (AI
     // textures made); 0.25: its file is read for its lamps and the torches the game does not show.
     void setMap(const std::string& map);

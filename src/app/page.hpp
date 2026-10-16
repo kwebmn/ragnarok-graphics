@@ -28,6 +28,8 @@ public:
     virtual bool ask(const std::wstring& text) = 0;  // Yes or No
     // A .reg file to save the game's settings to (save) or to load them from; "" when the player cancels.
     virtual std::wstring pickFile(bool save) = 0;
+    // 1.6: another page, once the page's code has returned (the AI page's "Make again" opens the Texture pack page).
+    virtual void showPage(settings::Page which) = 0;
 };
 
 // One page of the list on the left (stage 2 spec §6.1). Its controls' ids start at 1000.
@@ -70,6 +72,9 @@ std::unique_ptr<Page> makeAiCachePage(PageHost& host);  // 0.12: what the textur
 std::unique_ptr<Page> makeEffectsPage(PageHost& host);  // 0.18: the [effects] section
 std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pack's builder
 std::unique_ptr<Page> makePadPage(PageHost& host);      // 1.4: uaRO Pad, the gamepad
+
+// 1.6: the Texture pack page's "make again what another model made", ticked from the AI page.
+bool& packRedo();
 
 // The window text of a control, as UTF-8 (number fields).
 std::string controlText(HWND ctl);

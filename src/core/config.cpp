@@ -74,6 +74,9 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
         setBool(v, a.icons);
     } else if (k == "ui_pieces") {
         setBool(v, a.uiPieces);
+    } else if (k.rfind("model_", 0) == 0) {  // 1.6: a group's own
+        ai::Group g;
+        if (ai::parseGroup(k.substr(6), g) && ai::validModel(v)) a.models[size_t(g)] = v;
     } else if (k == "model" || k == "sprite_model") {
         if (v == "general" || v == "anime" || v == "anime6b") (k == "model" ? a.model : a.spriteModel) = v;  // 1.5
     } else if (k == "denoise") {
@@ -103,7 +106,8 @@ bool AiSettings::operator==(const AiSettings& o) const {
            effects == o.effects && icons == o.icons && uiPieces == o.uiPieces && model == o.model &&
            spriteModel == o.spriteModel &&
            denoise == o.denoise && scale == o.scale && budget == o.budget && minSize == o.minSize &&
-           maxSize == o.maxSize && ahead == o.ahead && generate == o.generate && compress == o.compress;
+           maxSize == o.maxSize && ahead == o.ahead && generate == o.generate && compress == o.compress &&
+           models == o.models;
 }
 
 EffectSettings effectsOff() {
@@ -210,6 +214,18 @@ bool aiKind(const AiSettings& a, int kind) {
     }
 }
 
+namespace {
+
+std::string groupModels(const AiSettings& a) {  // 1.6
+    std::string t;
+    for (int g = 0; g < ai::kGroups; ++g)
+        if (!a.models[size_t(g)].empty())
+            t += std::string(";model_") + ai::groupName(ai::Group(g)) + "=" + a.models[size_t(g)];
+    return t;
+}
+
+}  // namespace
+
 std::string aiArgument(const AiSettings& a) {
     const auto b = [](bool v) { return v ? "1" : "0"; };
     return std::string("enabled=") + b(a.enabled) + ";ground=" + b(a.ground) + ";objects=" + b(a.objects) +
@@ -219,7 +235,7 @@ std::string aiArgument(const AiSettings& a) {
            ";sprite_model=" + a.spriteModel + ";denoise=" + std::to_string(a.denoise) +
            ";scale=" + std::to_string(a.scale) + ";budget=" + std::to_string(a.budget) +
            ";min_size=" + std::to_string(a.minSize) + ";max_size=" + std::to_string(a.maxSize) +
-           ";ahead=" + b(a.ahead) + ";generate=" + b(a.generate) + ";compress=" + a.compress;
+           ";ahead=" + b(a.ahead) + ";generate=" + b(a.generate) + ";compress=" + a.compress + groupModels(a);
 }
 
 AiSettings parseAiArgument(const std::string& word) {

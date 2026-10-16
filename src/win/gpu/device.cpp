@@ -1526,19 +1526,19 @@ bool Renderer::startAiForPack(const std::string& gameDir, const AiSettings& sett
     return true;
 }
 
-bool Renderer::enlargeForPack(int kind, const uint32_t* argb, int width, int height, uint32_t border,
+bool Renderer::enlargeForPack(int group, const uint32_t* argb, int width, int height, uint32_t border,
                               std::vector<uint32_t>& out, std::string& error) {
     Impl& m = *impl_;
     if (!m.ai) {
         error = "no networks";
         return false;
     }
-    return m.ai->enlarge(m.ai->netFor(ai::Kind(kind)), argb, width, height, border, out, error);
+    return m.ai->enlarge(m.ai->netForGroup(ai::Group(group)), argb, width, height, border, out, error);  // 1.6
 }
 
-std::string Renderer::packNetName(int kind) const {
+std::string Renderer::packNetName(int group) const {
     const Impl& m = *impl_;
-    const int net = m.ai ? m.ai->netFor(ai::Kind(kind)) : -1;
+    const int net = m.ai ? m.ai->netForGroup(ai::Group(group)) : -1;
     return net < 0 ? std::string() : m.ai->netName(net);
 }
 

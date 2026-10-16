@@ -1,5 +1,8 @@
 #pragma once
+#include <array>
 #include <string>
+
+#include "core/ai/groups.hpp"
 
 namespace uagfx {
 
@@ -38,6 +41,13 @@ struct AiSettings {
     bool uiPieces = true;  // 0.15: with icons, the windows' small pieces too - buttons, tabs, slots (baked-in text)
     std::string model = "general";      // ground and objects: general (realistic) or anime (drawn)
     std::string spriteModel = "anime";  // sprites and effects
+    // 1.6: a model for each group of pictures ([ai] model_world, model_monsters ...); "" - as model (the world) or
+    // sprite_model (the rest) say.
+    std::array<std::string, ai::kGroups> models{};
+    const std::string& modelFor(ai::Group g) const {
+        const std::string& own = models[size_t(g)];
+        return !own.empty() ? own : g == ai::Group::World ? model : spriteModel;
+    }
     int denoise = 25;  // % of the grain the general model smooths away (Real-ESRGAN's denoise strength)
     int scale = 4;     // the result 4 or 2 times the game's texture (2: a quarter of the video memory)
     int budget = 2;    // ms of GPU time a frame, 1-20

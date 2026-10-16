@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "core/ai/kinds.hpp"
+#include "core/ai/pack_models.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "core/near_picture.hpp"
 #include "core/texture_pack.hpp"
@@ -91,6 +92,7 @@ private:
 // A picture the network made, to be WebP and in the pack.
 struct Made {
     std::string name;
+    bool replace = false;  // 1.6: made again, into its place
     int width = 0, height = 0;
     std::vector<uint32_t> argb;
 };
@@ -167,7 +169,7 @@ private:
             const std::vector<uint8_t> data = webp::encode(m.argb.data(), m.width, m.height, quality_);
             lockWriter();
             std::string why;
-            if (!data.empty() && writer_.add(m.name, data.data(), data.size(), why))
+            if (!data.empty() && writer_.add(m.name, data.data(), data.size(), why, m.replace))
                 ++written_;
             else if (error_.empty())
                 error_ = data.empty() ? "WebP did not take " + m.name : why;
@@ -234,6 +236,7 @@ private:
     }
     bool listFiles();  // the game's files of the choice
     int build();
+    int preview();  // 1.6: one picture of a group through every model, for the AI page
     // The index and the central directory after the last picture: a whole ZIP (last: and the file closed).
     bool checkpoint(Encoders* enc, bool last);
     int stopped();  // in the middle: the pack whole again, the status says so
@@ -247,6 +250,7 @@ private:
     // Every picture's kind of this run and of the pack's index (0.48: with the maps the game's own making noted), and
     // (0.45) the keys of the world's textures at the game's lower texture details, to their whole textures' pictures.
     pack::Index index_;
+    std::unordered_set<std::string> redo_;  // 1.6: pictures made again by their group's model
     void noteLowerDetails(const pack::Picture& p, const std::string& name);
 };
 
@@ -277,7 +281,111 @@ int Builder::run() {
     s_.state = pack::Status::Starting;
     status_.write(s_, true);
     if (a_.mode == "build") return build();
+    if (a_.mode == "preview") return preview();
     return fail("no such work: " + a_.mode);
+}
+
+// 1.6: the AI page's preview - a picture of the group (a well-known one where the game has it: a poring, a Kafra),
+// at most 128 a side (its middle), through each model; into a_.out: source.bmp (the game's, 4 times by its pixels),
+// general.bmp, anime.bmp, anime6b.bmp - on a grey ground where it is transparent - and preview.txt (where it is from).
+int Builder::preview() {
+    ai::Group want = ai::Group::Monsters;
+    for (int g = 0; g < ai::kGroups; ++g)
+        if (a_.redo[size_t(g)]) want = ai::Group(g);  // the group comes as --redo's one
+    std::string error;
+    if (!files_.open(a_.dir, error)) return fail("the game's files: " + error);
+    const pack::Choice all;
+    const char* const hints[ai::kGroups] = {"prontera", "poring", "novice", "kafra",
+                                            "apple",    "fire",   "item",   "loading"};
+    pack::Picture found;
+    std::string from;
+    std::vector<uint8_t> data;
+    for (int pass = 0; pass < 2 && from.empty(); ++pass) {  // the hint's files first, then any of the group
+        int tried = 0;
+        for (const std::string& n : files_.names()) {
+            const pack::Source src = pack::sourceOf(n, all);
+            if (src.type == pack::Source::None) continue;
+            if (pass == 0 && n.find(hints[int(want)]) == std::string::npos) continue;
+            if (++tried > 400 || !files_.read(n, data)) continue;
+            for (pack::Picture& p : picturesOf(files_, n, src, data, all))
+                if (ai::groupOfPicture(n, src, p.width, p.height) == want && p.width >= 24 && p.height >= 24) {
+                    found = std::move(p);
+                    from = n;
+                    break;
+                }
+            if (!from.empty()) break;
+        }
+    }
+    if (from.empty()) return fail(std::string("no picture of ") + ai::groupName(want) + " among the game's files");
+    // Its middle, 128 a side at most: the big ones would take the anime 6B model long.
+    const int w = std::min(found.width, 128), h = std::min(found.height, 128);
+    const int x0 = (found.width - w) / 2, y0 = (found.height - h) / 2;
+    std::vector<uint32_t> part(size_t(w) * size_t(h));
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x)
+            part[size_t(y) * size_t(w) + size_t(x)] = found.argb[size_t(y0 + y) * size_t(found.width) + size_t(x0 + x)];
+    // Every model, each as the network of a group (the pack's own way of loading them).
+    AiSettings s = a_.ai;
+    const char* const models[3] = {"general", "anime", "anime6b"};
+    for (int g = 0; g < ai::kGroups; ++g) s.models[size_t(g)] = models[std::min(g, 2)];
+    gpu::Renderer renderer;
+    renderer.setShaderCache(a_.dir + "\\uaro-graphics\\shaders-64.bin");
+    if (!renderer.create(error) || !renderer.startAiForPack(a_.dir, s, error))
+        return fail("the graphics card: " + error);
+    CreateDirectoryA(a_.out.c_str(), nullptr);
+    const auto save = [&](const char* name, const std::vector<uint32_t>& argb, int sw, int sh) {
+        std::vector<uint32_t> shown(argb);  // on a grey ground: the page shows no alpha
+        for (uint32_t& p : shown)
+            if ((p >> 24) < 128) p = 0xFF34383Eu;
+        // 24-bit, bottom-up: the plainest BMP, which LoadImage takes everywhere
+        const uint32_t row = uint32_t(sw * 3 + 3) & ~3u, size = 54 + row * uint32_t(sh);
+        std::vector<uint8_t> bmp(size, 0);
+        const auto put = [&](size_t at, uint32_t v, int n) {
+            for (int i = 0; i < n; ++i) bmp[at + size_t(i)] = uint8_t(v >> (8 * i));
+        };
+        bmp[0] = 'B';
+        bmp[1] = 'M';
+        put(2, size, 4);
+        put(10, 54, 4);
+        put(14, 40, 4);
+        put(18, uint32_t(sw), 4);
+        put(22, uint32_t(sh), 4);
+        put(26, 1, 2);
+        put(28, 24, 2);
+        for (int y = 0; y < sh; ++y)
+            for (int x = 0; x < sw; ++x) {
+                const uint32_t p = shown[size_t(sh - 1 - y) * size_t(sw) + size_t(x)];
+                const size_t at = 54 + size_t(y) * row + size_t(x) * 3;
+                bmp[at] = uint8_t(p);
+                bmp[at + 1] = uint8_t(p >> 8);
+                bmp[at + 2] = uint8_t(p >> 16);
+            }
+        std::FILE* f = std::fopen((a_.out + "\\" + name).c_str(), "wb");
+        if (!f) return false;
+        const bool ok = std::fwrite(bmp.data(), 1, bmp.size(), f) == bmp.size();
+        std::fclose(f);
+        return ok;
+    };
+    std::vector<uint32_t> big(size_t(w) * 4 * size_t(h) * 4);
+    for (int y = 0; y < h * 4; ++y)
+        for (int x = 0; x < w * 4; ++x)
+            big[size_t(y) * size_t(w * 4) + size_t(x)] = part[size_t(y / 4) * size_t(w) + size_t(x / 4)];
+    if (!save("source.bmp", big, w * 4, h * 4)) return fail("the preview cannot be written into " + a_.out);
+    for (int m = 0; m < 3; ++m) {
+        std::string why;
+        if (!renderer.enlargeForPack(m, part.data(), w, h, borderOf(found.group), big, why))
+            return fail(std::string(models[m]) + ": " + why);
+        save((std::string(models[m]) + ".bmp").c_str(), big, w * 4, h * 4);
+    }
+    std::FILE* f = std::fopen((a_.out + "\\preview.txt").c_str(), "wb");
+    if (f) {
+        std::fprintf(f, "%s\t%s\t%d\t%d\n", ai::groupName(want), utf8Of(from).c_str(), found.width, found.height);
+        std::fclose(f);
+    }
+    s_.state = pack::Status::Done;
+    status_.write(s_, true);
+    LOG_INFO("texture pack: preview of %s from %s (%dx%d)", ai::groupName(want), utf8Of(from).c_str(), w, h);
+    return 0;
 }
 
 bool Builder::checkpoint(Encoders* enc, bool last) {
@@ -343,7 +451,16 @@ int Builder::build() {
             for (const pack::Picture& p : picturesOf(files_, list_[i].first, list_[i].second, data, a_.choice)) {
                 const std::string name = pack::pictureName(p.group, p.key);
                 if (!seen.insert(name).second) continue;
-                index_.pictures[name].kind = list_[i].second.kind;
+                pack::IndexEntry& entry = index_.pictures[name];
+                entry.kind = list_[i].second.kind;
+                // 1.6: its group, written for every picture; one another model made is made again when asked
+                const ai::Group g = ai::groupOfPicture(list_[i].first, list_[i].second, p.width, p.height);
+                entry.group = ai::groupName(g);
+                if (a_.redo[size_t(g)] && done.count(name) &&
+                    ai::modelOfEntry(entry, g, a_.ai) != a_.ai.modelFor(g)) {
+                    done.erase(name);
+                    redo_.insert(name);
+                }
                 if (p.contentWidth)  // 0.49: a .jpg's - the game finds it by its likeness
                     index_.alike[name] = pack::likenessText(
                         pack::likenessOf(p.argb.data(), p.width, p.height, p.contentWidth, p.contentHeight));
@@ -357,8 +474,8 @@ int Builder::build() {
         ++s_.filesDone;
         status_.write(s_);
     }
-    LOG_INFO("texture pack: %u pictures to make of %zu files; %zu keys of the world's textures at a lower texture "
-             "detail", s_.toMake, todo.size(), index_.aliases.size());
+    LOG_INFO("texture pack: %u pictures to make of %zu files (%zu made again by another model); %zu keys of the "
+             "world's textures at a lower texture detail", s_.toMake, todo.size(), redo_.size(), index_.aliases.size());
     if (!s_.toMake) {
         checkpoint(nullptr, true);
         s_.state = pack::Status::Done;
@@ -376,9 +493,10 @@ int Builder::build() {
         checkpoint(nullptr, true);
         return fail("the graphics card: " + error);
     }
-    LOG_INFO("texture pack: %s; the ground and objects by %s, the rest by %s, WebP quality %d",
-             renderer.adapterName().c_str(), renderer.packNetName(int(ai::Kind::Ground)).c_str(),
-             renderer.packNetName(int(ai::Kind::Sprites)).c_str(), a_.quality);
+    std::string nets;  // 1.6: each group by its own model
+    for (int g = 0; g < ai::kGroups; ++g)
+        nets += std::string(g ? ", " : "") + ai::groupName(ai::Group(g)) + " " + renderer.packNetName(g);
+    LOG_INFO("texture pack: %s; %s; WebP quality %d", renderer.adapterName().c_str(), nets.c_str(), a_.quality);
     SYSTEM_INFO si{};
     GetSystemInfo(&si);
     const int threads = std::clamp(int(si.dwNumberOfProcessors) - 1, 1, 16);
@@ -398,8 +516,8 @@ int Builder::build() {
             const std::string name = pack::pictureName(p.group, p.key);
             if (!done.insert(name).second) continue;
             std::string why;
-            if (!renderer.enlargeForPack(int(list_[i].second.kind), p.argb.data(), p.width, p.height,
-                                         borderOf(p.group), big, why)) {
+            const ai::Group g = ai::groupOfPicture(list_[i].first, list_[i].second, p.width, p.height);
+            if (!renderer.enlargeForPack(int(g), p.argb.data(), p.width, p.height, borderOf(p.group), big, why)) {
                 if (renderer.lost()) {
                     enc.drain();
                     checkpoint(&enc, true);
@@ -411,6 +529,10 @@ int Builder::build() {
             }
             Made m;
             m.name = name;
+            m.replace = redo_.count(name) != 0;
+            pack::IndexEntry& made = index_.pictures[name];  // 1.6: the model that made it
+            made.model = a_.ai.modelFor(g);
+            made.group = ai::groupName(g);
             m.width = p.width * 4;
             m.height = p.height * 4;
             m.argb = std::move(big);
@@ -458,6 +580,12 @@ int runPack(const PackArgs& args) {
     PackArgs a = args;
     if (a.out.empty()) a.out = a.dir + "\\uaro-textures.zip";
     if (a.status.empty()) a.status = a.dir + "\\uaro-graphics\\pack-status.txt";
+    if (a.mode == "preview") {  // 1.6: writes no pack - neither mutex; its pictures into uaro-graphics\preview
+        a.out = a.dir + "\\uaro-graphics\\preview";
+        if (args.status.empty()) a.status = a.out + "-status.txt";
+        Builder b(a);
+        return b.run();
+    }
     // One builder at a time: a second would write the same pack.
     HANDLE one = CreateMutexA(nullptr, FALSE, "Local\\uaro-texture-pack-builder");
     if (one && GetLastError() == ERROR_ALREADY_EXISTS) {
