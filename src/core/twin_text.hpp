@@ -23,10 +23,8 @@ struct GlyphBitmap {
 // the block of game pixel x + advance, advance being the width of the letters before it in the game's font.
 int letterPen(int x, int advance, double K);
 // 0.41: the pens of a TextOutW's letters at game x - ends the widths of its first 1, 2, ... letters in the game's
-// font, advances the large letters' own. They follow each other at their own advances, the difference to the
-// game's run (its small letters x K) spread evenly over them: the run starts and ends where the game's does, the
-// letters evenly spaced. (letterPen put each where the game put its small one: the small font's whole-pixel widths
-// left gaps after m and w - "Com mand".)
+// font, advances the large letters' own. 1.3.4: each large letter centred in its small one's place x K - no gap
+// after m and w all on one side ("Com mand", letterPen's), and no letter moved by those after it (typed text).
 std::vector<int> letterPens(int x, const std::vector<int>& ends, const std::vector<int>& advances, double K);
 // The baseline: the top of game pixel row y + ascent (the game's font) in the twin.
 int baselineRow(int y, int ascent, double K);

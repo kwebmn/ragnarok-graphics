@@ -14,14 +14,11 @@ std::vector<int> letterPens(int x, const std::vector<int>& ends, const std::vect
     const size_t n = std::min(ends.size(), advances.size());
     std::vector<int> pens(n);
     if (n == 0) return pens;
-    const int start = twinEdge(x, K);
-    double own = 0.0;
-    for (size_t i = 0; i < n; ++i) own += advances[i];
-    const double spread = (double(twinEdge(x + ends[n - 1], K) - start) - own) / double(n);
-    double at = 0.0;
+    // 1.3.4: each letter in the middle of the game's own place for it - the letters before it stay where they were as
+    // the text grows (0.41 spread the whole run's difference over every letter: typed text jumped at each key)
     for (size_t i = 0; i < n; ++i) {
-        pens[i] = start + int(std::lround(at));
-        at += advances[i] + spread;
+        const int from = twinEdge(x + (i ? ends[i - 1] : 0), K), to = twinEdge(x + ends[i], K);
+        pens[i] = from + int(std::lround(double(to - from - advances[i]) / 2.0));
     }
     return pens;
 }

@@ -30,32 +30,27 @@ TEST(twin_text_letters_start_at_their_game_pixel_blocks) {
     CHECK_EQ(letterPen(4, 0, 2.0), 8);
 }
 
-TEST(twin_text_letters_are_evenly_spaced_within_the_game_run) {
-    // 0.41: "Command" in the game's hinted 15 px Arial (m 13 px wide) and its large letters at k 1.75 (m 19 px): the
-    // large ones follow each other at their own widths, the 3.5 px the run is short of the game's spread evenly.
+TEST(twin_text_letters_centred_in_their_game_places_and_stay_as_text_grows) {
+    // "Command" in the game's hinted 15 px Arial (m 13 px wide) and its large letters at k 1.75 (m 19 px).
     const std::vector<int> ends = {10, 18, 31, 44, 51, 59, 67};
     const std::vector<int> advances = {16, 13, 19, 19, 12, 13, 13};
     const double K = 1.75;
     const std::vector<int> pens = letterPens(100, ends, advances, K);
     CHECK_EQ(int(pens.size()), 7);
-    CHECK_EQ(pens[0], 175);  // where the game's run starts
-    int smallest = 1000, largest = -1000;
-    for (size_t i = 0; i + 1 < pens.size(); ++i) {
-        const int gap = pens[i + 1] - pens[i] - advances[i];  // what each letter gets past its own width
-        smallest = std::min(smallest, gap);
-        largest = std::max(largest, gap);
+    for (size_t i = 0; i < pens.size(); ++i) {  // each within its own game place, in its middle
+        const int from = letterPen(100, i ? ends[i - 1] : 0, K), to = letterPen(100, ends[i], K);
+        const int before = pens[i] - from, after = to - (pens[i] + advances[i]);
+        CHECK(std::abs(before - after) <= 1);
     }
-    CHECK(largest - smallest <= 1);  // even: no hole after the m's
-    // The last letter gets as much after it, up to where the game's run ends.
-    const int trailing = letterPen(100, 67, K) - (pens[6] + advances[6]);
-    CHECK(trailing >= smallest && trailing <= largest + 1);
-    // Where the game put the small letters, the large m had 4 px of nothing after it.
-    CHECK_EQ(letterPen(100, ends[3], K) - letterPen(100, ends[2], K) - advances[3], 4);
-    // One letter: where the game's is. A run wider than the game's: its letters a little closer, evenly.
-    CHECK(letterPens(7, {9}, {20}, K) == std::vector<int>{12});
-    const std::vector<int> tight = letterPens(0, {10, 20, 30}, {20, 20, 20}, K);
-    CHECK(tight[0] == 0 && tight[1] > 0 && tight[2] > tight[1]);
-    CHECK(std::abs((tight[2] - tight[1]) - (tight[1] - tight[0])) <= 1);
+    // 1.3.4: typed letter by letter, the ones already there do not move (the login's and the chat's field).
+    for (size_t k = 1; k <= ends.size(); ++k) {
+        const std::vector<int> part = letterPens(100, std::vector<int>(ends.begin(), ends.begin() + long(k)),
+                                                 std::vector<int>(advances.begin(), advances.begin() + long(k)), K);
+        for (size_t i = 0; i < k; ++i) CHECK_EQ(part[i], pens[i]);
+    }
+    // The gap after the m's split either side of it, not all after it (letterPen left 4 px after it).
+    const int mFrom = letterPen(100, ends[2], K), mTo = letterPen(100, ends[3], K);
+    CHECK(pens[3] - mFrom >= 1 && mTo - (pens[3] + advances[3]) <= 3);
     CHECK(letterPens(0, {}, {}, K).empty());
 }
 
