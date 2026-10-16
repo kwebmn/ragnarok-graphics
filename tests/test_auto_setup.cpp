@@ -57,6 +57,7 @@ TEST(auto_setup_an_old_radeon_on_direct3d_11) {
     m.pack = true;
     const AutoSetup a = autoSetup(m);
     CHECK(a.tier == Tier::Old && a.preset == Preset::Speed);
+    CHECK(valueOf(a, "effects", "actor_shadows") == "0");  // 0.90.3: costly in a crowd
     CHECK(valueOf(a, "renderer", "api") == "d3d11");
     CHECK(valueOf(a, "quality", "render_scale") == "100");
     CHECK(valueOf(a, "quality", "msaa") == "0");
