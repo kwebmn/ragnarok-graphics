@@ -1,3 +1,11 @@
+# uaRO Graphics 0.96.0 — testing
+
+- **Flash on a hit** (Effects page, off by default; Direct3D 12 and 11). A monster that is hit lights up white for a
+  moment (0.14 s). The hit is known by the sound the game plays where it lands (a weapon's `_hit_...` or the
+  monster's `..._damage`), so the game's effect sounds must be on. The log has `effects: a monster hit flashes`.
+- How to check: turn it on, hit a monster — it flashes at every hit; monsters next to it do not. Should the wrong one
+  flash or none — send a report and a screenshot.
+
 # uaRO Graphics 0.95.0 — testing
 
 - **Cards on the ground sparkle** (Effects page, off by default; Direct3D 12 and 11). A dropped card flashes a small
