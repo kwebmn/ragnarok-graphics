@@ -250,6 +250,14 @@ bool drawnByRenderer(const EffectSettings& e);
 int nightAmount(const EffectSettings& e, int hour, int minute);
 
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
+// 0.91: [sound] - the game's sound through the driver (core/sound_mix.hpp, win/sound_hook.cpp)
+struct SoundSettings {
+    int rate = 44100;     // rate: 0 the game's (22050 Hz at most), 44100 or 48000
+    bool voices = true;   // voices: the most sounds at once the game holds (48)
+    int background = 30;  // background: % of the volume while the game is not in front (100 = as it is)
+    bool limiter = true;  // limiter: a crowd's sounds made quieter together
+};
+
 struct Config {
     Backend backend = Backend::DgVoodoo;
     Api api = Api::D3d12;
@@ -319,6 +327,7 @@ struct Config {
     // 0.90: [debug] merge_draws - Direct3D 11 sends the game's draws that follow one another with the same state as
     // one draw call (core/draw_batch.hpp); 0 sends each by itself as before
     bool mergeDraws = true;
+    SoundSettings sound;  // 0.91
 };
 
 Config parseConfig(const std::string& text);

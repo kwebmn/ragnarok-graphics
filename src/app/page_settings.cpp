@@ -58,6 +58,9 @@ public:
                 p.gap();
                 regRows(p, [](const RegSetting& s) { return s.control == Control::Check; });  // music, effects
                 regRows(p, [](const RegSetting& s) { return s.control == Control::Slider; });
+                p.gap();
+                p.heading(t(Text::GfxSoundOurs));  // 0.91: uaro-graphics.ini's [sound]
+                buildRows(p);
                 break;
             case settings::Page::Game:
                 regRows(p, [](const RegSetting&) { return true; });

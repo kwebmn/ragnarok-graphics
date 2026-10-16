@@ -5,6 +5,7 @@
 #include <string>
 
 #include "core/renderer_choice.hpp"
+#include "win/sound_hook.hpp"
 #include "win/context.hpp"
 #include "win/dx7/ddraw7.hpp"
 #include "win/log.hpp"
@@ -192,7 +193,10 @@ extern "C" HRESULT WINAPI Proxy_SetAppCompatData(DWORD a, DWORD b) {
 }
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
-    if (reason == DLL_PROCESS_ATTACH) DisableThreadLibraryCalls(inst);
+    if (reason == DLL_PROCESS_ATTACH) {
+        DisableThreadLibraryCalls(inst);
+        uagfx::win::installSoundHooks();  // 0.91: before the game opens its sound (its import slots only)
+    }
     if (reason == DLL_PROCESS_DETACH) uagfx::win::logModulesAtExit();
     return TRUE;
 }

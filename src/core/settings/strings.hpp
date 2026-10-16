@@ -179,6 +179,9 @@ enum class Text : uint16_t {
     FramesSavePower, FramesSavePowerHint,
     // 0.87
     DiagProfile, DiagProfileHint,
+    GfxSoundOurs, GfxSoundRate, GfxSoundRateHint, GfxSoundRateGame, GfxSoundRate44, GfxSoundRate48, GfxSoundVoices,
+    GfxSoundVoicesHint,
+    GfxSoundBackground, GfxSoundBackgroundHint, GfxSoundLimiter, GfxSoundLimiterHint,
     Count
 };
 

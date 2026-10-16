@@ -10,6 +10,7 @@
 #include "win/dpi.hpp"
 #include "win/effect_hook.hpp"
 #include "win/pick_hook.hpp"
+#include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/game_camera.hpp"
 #include "win/sprite_hook.hpp"
@@ -388,6 +389,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.vsyncSetting = config.vsync;
     o.screenshot = screenshot;
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
+    soundFrame(foreground);  // 0.91: quieter in the background; the crowd's limiter thinned out
     renderer->present(window, out.cx, out.cy, source, o);
     fps_.present(window, fpsShown_);
     ++stats_.frames;

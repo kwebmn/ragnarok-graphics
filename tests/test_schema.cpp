@@ -88,7 +88,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "display.hdr" &&
                                 k != "quality.dlss" &&
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
-                                k.compare(0, 3, "ai.") != 0));
+                                k.compare(0, 3, "ai.") != 0 && k.compare(0, 6, "sound.") != 0));
     }
 }
 

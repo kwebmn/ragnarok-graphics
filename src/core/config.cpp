@@ -531,6 +531,14 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.stateCache);
         } else if (key == "debug.fast_pick") {
             setBool(val, c.fastPick);
+        } else if (key == "sound.rate") {  // 0.91
+            if (val == "0" || val == "44100" || val == "48000") c.sound.rate = std::atoi(val.c_str());
+        } else if (key == "sound.voices") {
+            setBool(val, c.sound.voices);
+        } else if (key == "sound.background") {
+            toInt(val, 0, 100, c.sound.background);
+        } else if (key == "sound.limiter") {
+            setBool(val, c.sound.limiter);
         } else if (key == "debug.merge_draws") {
             setBool(val, c.mergeDraws);
         } else if (key == "debug.profile") {

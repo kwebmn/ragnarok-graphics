@@ -304,6 +304,16 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FramesKeepFpsHint, ""},
         {"frames", "allow_tearing", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesTearing,
          Text::FramesTearingHint, ""},
+        // 0.91: the game's sound through the driver
+        {"sound", "rate", Page::Sound, Control::Choice, 0, 0, 0, {"0", "44100", "48000"},
+         {Text::GfxSoundRateGame, Text::GfxSoundRate44, Text::GfxSoundRate48}, Text::GfxSoundRate,
+         Text::GfxSoundRateHint, ""},
+        {"sound", "voices", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundVoices,
+         Text::GfxSoundVoicesHint, ""},
+        {"sound", "background", Page::Sound, Control::Slider, 0, 100, 5, {}, {}, Text::GfxSoundBackground,
+         Text::GfxSoundBackgroundHint, "%"},
+        {"sound", "limiter", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundLimiter,
+         Text::GfxSoundLimiterHint, ""},
         {"debug", "profile", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagProfile,
          Text::DiagProfileHint, ""},
         {"debug", "log", Page::Diagnostics, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
@@ -465,6 +475,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "display.hdr") return c.hdr ? "1" : "0";
     if (k == "frames.frame_generation") return c.frameGeneration ? std::to_string(c.frameGeneration) + "x" : "off";
     if (k == "frames.allow_tearing") return c.allowTearing ? "1" : "0";
+    if (k == "sound.rate") return std::to_string(c.sound.rate);  // 0.91
+    if (k == "sound.voices") return c.sound.voices ? "1" : "0";
+    if (k == "sound.background") return std::to_string(c.sound.background);
+    if (k == "sound.limiter") return c.sound.limiter ? "1" : "0";
     if (k == "debug.log") return c.logLevel == LogLevel::Debug ? "verbose" : "normal";
     return "";
 }
