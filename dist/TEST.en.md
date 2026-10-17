@@ -1,3 +1,13 @@
+# uaRO Graphics 1.9.8 — testing
+
+- **Pebbles on the ground** (`effects.ground_clutter`, the Remaster block, off by default, Direct3D 12): small stones
+  here and there on bare earth, roads and sand, each lit from its side with a little shadow, staying put as the
+  camera moves. Not on snow.
+- **Rounded tree crowns** now with the leaves' relief too: the picture's light parts stand out, the dark ones sink,
+  from the sun's side.
+- How to check: prt_fild08 (paths), moc_fild01 (sand) - Pebbles on the ground in the console; any field with trees -
+  Rounded tree crowns with Tab.
+
 # uaRO Graphics 1.9.7 — testing
 
 - **Full tree crowns** (`effects.full_crowns`, the Remaster block, off by default, Direct3D 12): each crown is drawn
