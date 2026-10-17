@@ -1,3 +1,13 @@
+# uaRO Graphics 1.9.2 — testing
+
+- **The ground's seams cover the thin lines along the cells' edges.** After R-PKXZT5's screenshots: the desert shows
+  a grid of thin dark lines along the cells - the textures' outermost texels (their dark rim and what bleeds in
+  from the next quarter of a shared picture). 1.9.1's seams only broke them into dashes: where the noise kept a
+  cell's own texture, the line stayed. Now at the edge each cell also covers a narrow band with its own texture
+  taken from a little inside - no line stays on either side. The neighbour's texture is taken without its rim too.
+- How to check: moc_fild01 - the grid of lines on the sand gone; prt_fild08 - the paths' edges. A pair on/off in one
+  run.
+
 # uaRO Graphics 1.9.1 — testing
 
 - **Smooth seams of the ground without dark "bricks".** 1.9.0's strip carried the neighbour's texture on past its
