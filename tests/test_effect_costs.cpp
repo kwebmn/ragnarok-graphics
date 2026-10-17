@@ -32,3 +32,13 @@ TEST(effect_costs_on_direct3d_11_only_what_it_draws) {
     e.ao = e.dof = true;
     CHECK(effect_costs::pickToDrop(e, {}, {}, true) == "actor_shadows");
 }
+
+TEST(effect_costs_keep_fps_blames_the_card_only_when_it_is_the_card) {
+    // 2.2.2: a window under 90 % of the frames wanted is the card's fault only when its own work fills the frame
+    // (85 % of the frame's time at that rate) - a game slow for the processor's part keeps its effects
+    CHECK(effect_costs::slowForCard(45.0, 60, 15.5));   // 15.5 ms of 16.7: the card
+    CHECK(!effect_costs::slowForCard(45.0, 60, 7.0));   // the card idles half the frame: the processor
+    CHECK(!effect_costs::slowForCard(58.0, 60, 16.5));  // 58 is not slow (54 is)
+    CHECK(effect_costs::slowForCard(45.0, 60, -1.0));   // nothing measured: by the frames alone, as before
+    CHECK(!effect_costs::slowForCard(70.0, 60, -1.0));
+}

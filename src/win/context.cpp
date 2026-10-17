@@ -565,7 +565,9 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     const double fps = double(keepFrames_) * 1000.0 / double(now - keepSince_);
     keepSince_ = now;
     keepFrames_ = 0;
-    keepSlow_ = fps < 0.9 * double(config.keepFps) ? keepSlow_ + 1 : 0;
+    GpuTiming gpu;  // 2.2.2: the card's own work - a game slow for the processor's part keeps its effects
+    const double gpuMs = renderer && renderer->gpuTiming(gpu) ? gpu.gpuMs : -1.0;
+    keepSlow_ = effect_costs::slowForCard(fps, config.keepFps, gpuMs) ? keepSlow_ + 1 : 0;
     if (keepSlow_ < 2) return;
     keepSlow_ = 0;
     EffectSettings fx = effects();
@@ -575,9 +577,11 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     if (key.empty()) return;
     keepOff_.insert(key);
     const double ms = effect_costs::costOf(costs, key);
-    char cost[48] = "";
+    char cost[48] = "", card[48] = "";
     if (ms >= 0) std::snprintf(cost, sizeof cost, " (it cost %.2f ms)", ms);
-    LOG_INFO("keep_fps: %.0f fps, under %d - effects.%s off for this game%s", fps, config.keepFps, key.c_str(), cost);
+    if (gpuMs >= 0) std::snprintf(card, sizeof card, ", the card %.1f ms a frame", gpuMs);
+    LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.%s off for this game%s", fps, config.keepFps, card, key.c_str(),
+             cost);
 }
 
 void Context::watchSettings() {

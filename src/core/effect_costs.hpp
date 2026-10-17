@@ -40,5 +40,10 @@ std::string passOf(const std::string& key);
 std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped,
                        bool d3d11 = false);
 void drop(EffectSettings& e, const std::string& key);  // its switch off
+// 2.2.2, keep_fps: whether a five-second window was too slow because of the graphics card - under 90 % of the frames
+// a second wanted (`target`), and the card's own work a frame (`gpuMs`, below 0 when not measured: the frames alone
+// decide) over 85 % of a frame's time at that rate. A game slow for the processor's part (a crowd, a town) keeps its
+// effects: turning them off would not help.
+bool slowForCard(double fps, int target, double gpuMs);
 
 }  // namespace uagfx::effect_costs

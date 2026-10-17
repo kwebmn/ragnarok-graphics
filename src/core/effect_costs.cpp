@@ -67,6 +67,11 @@ Costs parse(const std::string& text) {
     return c;
 }
 
+bool slowForCard(double fps, int target, double gpuMs) {
+    if (target <= 0 || fps >= 0.9 * double(target)) return false;
+    return gpuMs < 0.0 || gpuMs > 0.85 * 1000.0 / double(target);
+}
+
 std::string passOf(const std::string& key) {
     const Costly* k = find(key);
     return k ? k->pass : "";

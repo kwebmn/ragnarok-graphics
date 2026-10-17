@@ -1549,12 +1549,16 @@ const Entry kTexts[] = {
     {"Keep the frame rate",
      "Тримати частоту кадрів",
      "Держать частоту кадров"},
-    {"When the game runs below this many frames a second for ten seconds, the costliest effect is turned off for the "
-     "rest of the game (the log says which), then the next if needed. The settings file is not changed. 0 = never.",
-     "Якщо гра десять секунд іде повільніше за стільки кадрів на секунду, найдорожчий ефект вимикається до кінця гри "
-     "(лог каже, який), за потреби наступний. Файл налаштувань не змінюється. 0 — ніколи.",
-     "Если игра десять секунд идёт медленнее стольких кадров в секунду, самый дорогой эффект выключается до конца "
-     "игры (лог говорит, какой), при необходимости следующий. Файл настроек не меняется. 0 — никогда."},
+    {"When the game runs below this many frames a second for ten seconds because of the graphics card, the costliest "
+     "effect is turned off for the rest of the game (the log says which), then the next if needed. Slow for the "
+     "processor's part (a crowd, a town), the effects stay: turning them off would not help. The settings file is not "
+     "changed. 0 = never.",
+     "Якщо гра десять секунд іде повільніше за стільки кадрів на секунду через відеокарту, найдорожчий ефект "
+     "вимикається до кінця гри (лог каже, який), за потреби наступний. Коли гальмує процесор (натовп, місто), ефекти "
+     "лишаються: вимикати їх марно. Файл налаштувань не змінюється. 0 — ніколи.",
+     "Если игра десять секунд идёт медленнее стольких кадров в секунду из-за видеокарты, самый дорогой эффект "
+     "выключается до конца игры (лог говорит, какой), при необходимости следующий. Когда тормозит процессор (толпа, "
+     "город), эффекты остаются: выключать их бесполезно. Файл настроек не меняется. 0 — никогда."},
     {" · ~{1} ms",
      " · ~{1} мс",
      " · ~{1} мс"},
