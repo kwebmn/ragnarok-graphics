@@ -1,3 +1,10 @@
+# uaRO Graphics 2.1.5 — testing
+
+- **No rainbow floors:** the map's lamps light with a third of their colour - the game has their colours in its
+  light already; full ones laid orange, green, blue and violet patches over c_tower2's floor.
+- **No smears at the tiles' edges:** the materials' relief (Remaster) moves the texture by at most a pixel and a half
+  on the screen - farther, it took the next tile's part of the texture (coloured stripes, torn edges).
+
 # uaRO Graphics 2.1.4 — testing
 
 - **No moving shadows:** "Sun shadows" and "Real shadows" are gone - they turned and jumped with the camera and
