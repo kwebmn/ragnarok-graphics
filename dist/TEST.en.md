@@ -1,3 +1,11 @@
+# uaRO Graphics 1.21.0 — testing
+
+- **Windows at night** (Effects → Living world, off by default, needs Materials of the world and the night,
+  Direct3D 12): as the night comes the houses' windows light up warm, about two in three. The panes are found in the
+  walls' pictures by themselves - dark even patches in a lighter wall - so check what lights up: Prontera, Payon,
+  Alberta at night (the console's night or Night clock). Wanted: windows and maybe doors glowing; not wanted: roofs,
+  shadows painted on walls, whole dark walls. A screenshot of anything wrong helps.
+
 # uaRO Graphics 1.20.0 — testing
 
 - **Seasons on the map** (Effects → Living world, off by default, Direct3D 12): by the computer's calendar - winter
