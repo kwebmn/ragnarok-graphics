@@ -13,7 +13,7 @@ namespace uagfx::app {
 settings::ReportFacts reportFacts(const Model& m, const std::vector<std::string>& problems);
 // What goes to uaro.kiev.ua: the report, uaro-graphics.ini and the logs' ends, the Windows user name hidden.
 report::Upload makeUpload(const Model& m, const std::string& reason, bool automatic, const std::string& comment,
-                          const std::vector<std::string>& problems);
+                          const std::vector<std::string>& problems, bool shots = false);  // 1.8.1: and screenshots
 // POST to uaro.kiev.ua: true and the report's code, or false and why (in English).
 bool sendUpload(const report::Upload& u, std::string& code, std::string& error);
 // uaro-graphics\reports.txt: the codes sent from this computer, newest first.

@@ -1797,15 +1797,18 @@ float4 critters_ps(CritterIn i) : SV_Target {
 // its brightness at four scales, its height against its far average, its gloss where it is grey and light (stone,
 // tiles, metal) - rgba: the normal's xy, the height, the gloss.
 float matLuma(int2 p, int lod) {
-    int2 size = max(int2(sourceRect.xy) >> lod, int2(1, 1));
-    int2 q = ((p % size) + size) % size;
-    return dot(tex0.Load(int3(q, lod)).rgb, float3(0.299, 0.587, 0.114));
+    int have = max(int(uiPixels.w + 0.5) - 1, 0);  // 1.8.1: past the source's levels, every 2^n-th texel of its last
+    int at = min(lod, have);
+    int2 size = max(int2(sourceRect.xy) >> at, int2(1, 1));
+    int2 q = p << (lod - at);
+    q = ((q % size) + size) % size;
+    return dot(tex0.Load(int3(q, at)).rgb, float3(0.299, 0.587, 0.114));
 }
 
 float4 material_ps(PresentOut i) : SV_Target {
     int2 p = int2(i.pos.xy);
-    int base = int(uiPixels.z + 0.5), most = max(int(uiPixels.w + 0.5) - 1, base);
-    int top = min(base + 5, most);
+    int base = int(uiPixels.z + 0.5), most = base + 5;
+    int top = most;
     float far = matLuma(p >> (top - base), top);
     float2 slope = float2(0.0, 0.0);
     float h = 0.0, weights = 0.0;
@@ -1820,8 +1823,10 @@ float4 material_ps(PresentOut i) : SV_Target {
         weights += w;
     }
     float3 n = normalize(float3(-slope * 5.0, 1.0));
-    int2 size = max(int2(sourceRect.xy) >> base, int2(1, 1));
-    float3 rgb = tex0.Load(int3(((p % size) + size) % size, base)).rgb;
+    int have = max(int(uiPixels.w + 0.5) - 1, 0), at = min(base, have);
+    int2 size = max(int2(sourceRect.xy) >> at, int2(1, 1));
+    int2 q0 = p << (base - at);
+    float3 rgb = tex0.Load(int3(((q0 % size) + size) % size, at)).rgb;
     float sat = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
     float lum = dot(rgb, float3(0.299, 0.587, 0.114));
     float gloss = saturate((0.22 - sat) * 4.0) * smoothstep(0.2, 0.6, lum) * 0.7;

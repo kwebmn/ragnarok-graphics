@@ -50,10 +50,9 @@ bool Renderer::Impl::ensureMaterial(Texture& t, bool fromAi) {
     // The material's size: the picture's, halved down to materialSide; `shift` source levels above its first.
     int shift = 0;
     while ((sw >> shift) > materialSide || (sh >> shift) > materialSide) ++shift;
-    shift = std::min(shift, sourceLevels - 1);
     const int mw = std::max(1, sw >> shift), mh = std::max(1, sh >> shift);
     int levels = 1;
-    while (levels + shift < sourceLevels && (mw >> levels) >= 4 && (mh >> levels) >= 4) ++levels;
+    while ((mw >> levels) >= 4 && (mh >> levels) >= 4) ++levels;  // 1.8.1: also past the source's own levels
     ID3D12Resource* mat = createTexture2D(device, mw, mh, levels, DXGI_FORMAT_R8G8B8A8_UNORM,
                                           D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
                                           D3D12_RESOURCE_STATE_RENDER_TARGET, nullptr);

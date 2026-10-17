@@ -231,6 +231,7 @@ enum class Text : uint16_t {
     // 1.8
     FxMaterials, FxMaterialsHint, FxMaterialsStrength, FxMaterialsStrengthHint,
     FxRemaster, FxRemasterIntro, FxTier, FxTierHint, FxTierAuto, FxTierClassic, FxTierRemaster,
+    ReportShots, ReportShotsHint, ReportSentShots,
     Count
 };
 

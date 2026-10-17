@@ -2420,6 +2420,21 @@ const Entry kTexts[] = {
     {"Remaster (a strong card)",
      "Ремастер (сильна відеокарта)",
      "Ремастер (сильная видеокарта)"},
+    {"Attach screenshots",
+     "Додати знімки екрана",
+     "Приложить скриншоты"},
+    {"The 6 newest of the last day from the game's ScreenShot folder (Print Screen in the game) and Windows' "
+     "Screenshots (Win + Print Screen), made smaller.",
+     "6 найновіших за добу з теки гри ScreenShot (Print Screen у грі) та «Знімки екрана» Windows (Win + Print "
+     "Screen), зменшені.",
+     "6 самых новых за сутки из папки игры ScreenShot (Print Screen в игре) и «Снимки экрана» Windows (Win + Print "
+     "Screen), уменьшенные."},
+    {"The report is sent with {2} screenshots. Its code: {1} (copied) - name it to the developers in the chat or on "
+     "the forum.",
+     "Звіт надіслано разом із {2} знімками екрана. Його код: {1} (скопійовано) — назвіть його розробникам у чаті чи "
+     "на форумі.",
+     "Отчёт отправлен вместе со скриншотами ({2}). Его код: {1} (скопирован) — назовите его разработчикам в чате или "
+     "на форуме."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

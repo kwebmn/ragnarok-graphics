@@ -63,7 +63,9 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
     }
     channel_.setPeer(process_.hProcess);
     std::vector<uint8_t> hello;
-    if (!await(Msg::Hello, hello, 20000)) {
+    // 1.8.1: up to 90 s - the first start after an update compiles its shaders, and a big texture pack's index is read
+    // before the answer (1.8.0: 7 + 14 s ran past the 20 s it had, and the game drew in its own process)
+    if (!await(Msg::Hello, hello, 90000)) {
         error = lost_ ? "the 64-bit renderer exited at its start" : "the 64-bit renderer did not answer";
         return false;
     }

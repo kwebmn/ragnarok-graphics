@@ -97,6 +97,19 @@ std::string uploadJson(const Upload& u) {
         out += ",\"data\":\"" + base64(image.second) + "\"}";
     }
     out += "]";
+    if (!u.shots.empty()) {  // 1.8.1
+        out += ",\"screenshots\":[";
+        size_t n = 0;
+        for (const auto& shot : u.shots) {
+            if (n == kMostShots || shot.second.size() > 600000 || shot.second.compare(0, 3, "\xFF\xD8\xFF") != 0)
+                continue;  // a JPEG of at most 600 KB
+            if (n++) out += ',';
+            out += "{\"name\":";
+            quoted(out, shot.first);
+            out += ",\"data\":\"" + base64(shot.second) + "\"}";
+        }
+        out += "]";
+    }
     if (!u.dump.empty() && u.dump.size() <= kMostDump && u.dump.compare(0, 4, "MDMP") == 0)
         out += ",\"dump\":\"" + base64(u.dump) + "\"";
     out += "}";

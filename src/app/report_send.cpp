@@ -8,6 +8,7 @@
 #include <sstream>
 
 #include "app/files.hpp"
+#include "app/shots.hpp"
 #include "app/text.hpp"
 #include "core/version.hpp"
 
@@ -101,7 +102,7 @@ ReportFacts reportFacts(const Model& m, const std::vector<std::string>& problems
 }
 
 report::Upload makeUpload(const Model& m, const std::string& reason, bool automatic, const std::string& comment,
-                          const std::vector<std::string>& problems) {
+                          const std::vector<std::string>& problems, bool shots) {
     const SystemInfo& sys = m.system();
     report::Upload u;
     u.reason = reason;
@@ -135,6 +136,7 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         if (bmp && readFile(missing + L"\\" + name, bytes))
             u.images.emplace_back(utf8(name), bytes);
     }
+    if (shots) u.shots = recentShots(shotFolders(dir), report::kMostShots);  // 1.8.1
     // 0.52: a crash's minidump (win/crash.cpp) of the last week
     const std::wstring dump = dir + L"\\uaro-graphics\\crash.dmp";
     WIN32_FILE_ATTRIBUTE_DATA a{};

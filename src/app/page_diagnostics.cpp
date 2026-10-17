@@ -25,6 +25,8 @@ constexpr int kVerbose = 1307;
 constexpr int kComment = 1308;  // 0.51: the report to the developers
 constexpr int kSend = 1309;
 constexpr int kAutoReport = 1310;
+constexpr int kShots = 1311;  // 1.8.1
+bool g_shots = true;           // the box, while the settings app runs
 constexpr int kProfile = 1311;  // 0.87
 
 struct Row {
@@ -84,6 +86,7 @@ public:
         p.heading(t(Text::ReportHeading));
         p.note(t(Text::ReportNote));
         p.line(kComment, t(Text::ReportComment), t(Text::ReportCommentCue), 2000, t(Text::ReportNote));
+        p.check(kShots, t(Text::ReportShots), g_shots, t(Text::ReportShotsHint));
         p.buttons({{kSend, t(Text::ReportSend)}});
         p.check(kAutoReport, t(Text::ReportAuto), m.token(*findSetting("report.auto")) == "1", t(Text::ReportAutoHint));
         const std::vector<std::string> sent = sentCodes(m);
@@ -117,6 +120,8 @@ public:
             host_.message(saved ? t(Text::DiagReportDone) : tf(Text::ErrWriteFile, {"uaro-graphics-report.txt"}), !saved);
         } else if (id == kSend) {
             sendReport();
+        } else if (id == kShots) {
+            g_shots = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
         } else if (id == kAutoReport) {
             const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
             m.setToken(*findSetting("report.auto"), on ? "1" : "0");
@@ -290,7 +295,7 @@ private:
         Model& m = host_.model();
         if (!host_.ask(t(Text::ReportAsk))) return;
         const std::string comment = controlText(GetDlgItem(host_.window(), kComment));
-        const report::Upload u = makeUpload(m, "manual", false, comment, problems());
+        const report::Upload u = makeUpload(m, "manual", false, comment, problems(), g_shots);
         HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
         std::string code, error;
         const bool ok = sendUpload(u, code, error);
@@ -302,7 +307,9 @@ private:
         }
         noteSent(m, code, "manual", false);
         copyToClipboard(host_.window(), wide(code));
-        host_.message(tf(Text::ReportSent, {code}), false);
+        host_.message(u.shots.empty() ? tf(Text::ReportSent, {code})
+                                       : tf(Text::ReportSentShots, {code, std::to_string(u.shots.size())}),
+                      false);
         host_.rebuild();  // the codes sent
     }
 
