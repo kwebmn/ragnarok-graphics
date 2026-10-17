@@ -61,7 +61,9 @@ constexpr UINT kSlots = 2;              // submissions in flight
 // and the floors' reflections their own.
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
-    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeSun, kTimeBloom, kTimeGrass, kEffectTimes
+    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeSun, kTimeBloom, kTimeGrass,
+    kTimeForest,  // 2.1: the new trees
+    kEffectTimes
 };
 // GPU timestamps a slot: its list, the upscale, the AI textures' work, (0.39.2) a pair an effect.
 constexpr UINT kTimes = 6 + 2 * kEffectTimes;
@@ -1040,7 +1042,18 @@ struct Renderer::Impl {
     };
     struct ForestCall {
         uint32_t indexCount = 0, firstIndex = 0, baseVertex = 0, firstInstance = 0, instances = 0;
+        uint32_t farCount = 0;  // 2.1: the indices a far tree is drawn with (its trunk and part of its leaves)
     };
+    // 2.1: a frame's call - the trees kept (in view, or in the sun's box), near or far, their instances uploaded
+    struct ForestDraw {
+        uint32_t indexCount = 0, firstIndex = 0, baseVertex = 0, firstInstance = 0, instances = 0, model = 0;
+    };
+    std::vector<std::array<float, 16>> forestData;  // 2.1: each tree's instance (forest_vs), as the buffer holds them
+    // the trees `keep` says (-1 left out, 0 near, 1 far): their instances uploaded for this frame (at, bytes) and a
+    // call for each model's variant and nearness; false when none is kept or no memory
+    bool forestPick(int (*keep)(const ForestPlaced&, const void*), const void* with, D3D12_GPU_VIRTUAL_ADDRESS& at,
+                    UINT& bytes, std::vector<ForestDraw>& draws);
+    size_t forestDrawnTrees = 0, forestFarTrees = 0;  // 2.1: the last frame's, for the log
     ID3DBlob* forestVs = nullptr;
     ID3DBlob* forestPs = nullptr;
     ID3D12PipelineState* forestPipelines[4] = {};

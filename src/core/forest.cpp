@@ -226,6 +226,7 @@ Mesh grow(const Shape& shape, uint32_t seed, bool anime) {
         top = path.back();
         b.tube(path, rad, shape.kind == Kind::Palm ? 6 : 8, 0.6f);
     }
+    m.leafStart = uint32_t(m.indices.size());  // 2.1
     if (shape.kind == Kind::Palm) {
         // fronds from the top: long strips arching out and down
         const int fronds = int(rnd.range(8.0f, 11.0f));
@@ -291,6 +292,7 @@ Mesh grow(const Shape& shape, uint32_t seed, bool anime) {
             tips.push_back(path.back());
         }
     }
+    m.leafStart = uint32_t(m.indices.size());  // 2.1: after the branches
     // the leaves: clumps - about the branches' tips, one on top, a few more - each a ball of cards most of them on
     // its skin; a crown of clumps has a lumpy outline and gaps where the branches show, not one ball
     struct Clump {

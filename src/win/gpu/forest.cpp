@@ -43,6 +43,7 @@ struct InstanceData {
     float bark[4];
 };
 static_assert(sizeof(InstanceData) == 64, "the forest's instance");
+static_assert(sizeof(InstanceData) == sizeof(std::array<float, 16>), "forestData's");
 
 // A buffer the processor writes and the card reads (the forest's: written once a map, its colours now and then).
 ID3D12Resource* uploadBuffer(ID3D12Device* device, size_t size) {
@@ -61,6 +62,37 @@ ID3D12Resource* uploadBuffer(ID3D12Device* device, size_t size) {
                                                nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&r))))
         return nullptr;
     return r;
+}
+
+// 2.1: which trees a frame draws. In view: its ball (its middle, its crown's and half its height's reach, the wind's
+// sway) in front of the camera and on the screen with a margin of its size; far when it shows under 70 game pixels
+// across its half. In the sun's map: its ball within the sun's box.
+struct ViewKeep {
+    float inv[9], at[3];
+    camera::Projection p;
+    float width, height;
+};
+
+int keepInView(const Renderer::Impl::ForestPlaced& t, const void* with) {
+    const ViewKeep& k = *static_cast<const ViewKeep*>(with);
+    const float r = std::max(t.radius, t.height * 0.5f) * 1.1f + 2.0f;
+    const float x = t.pos[0] - k.at[0], y = t.pos[1] - t.height * 0.5f - k.at[1], z = t.pos[2] - k.at[2];
+    const float vx = x * k.inv[0] + y * k.inv[3] + z * k.inv[6], vy = x * k.inv[1] + y * k.inv[4] + z * k.inv[7];
+    const float vz = x * k.inv[2] + y * k.inv[5] + z * k.inv[8];
+    if (vz + r < k.p.nearZ) return -1;  // behind the camera
+    const float zc = std::max(vz, k.p.nearZ + 0.5f);
+    const float sx = vx / zc * k.p.f0 + k.p.cx, sy = vy / zc * k.p.f1 + k.p.cy, reach = r * k.p.f0 / zc;
+    if (sx + reach < 0.0f || sx - reach > k.width || sy + reach < 0.0f || sy - reach > k.height) return -1;
+    return reach < 70.0f && vz > r ? 1 : 0;
+}
+
+int keepInSunBox(const Renderer::Impl::ForestPlaced& t, const void* with) {
+    const float* l = static_cast<const float*>(with);  // the world into the box: rows x, y (z the light's way)
+    const float r = (std::max(t.radius, t.height * 0.5f) * 1.1f + 2.0f) / 75.0f;  // sun_map.cpp's kSunHalf
+    const float w[3] = {t.pos[0], t.pos[1] - t.height * 0.5f, t.pos[2]};
+    const float bx = l[0] * w[0] + l[1] * w[1] + l[2] * w[2] + l[3];
+    const float by = l[4] * w[0] + l[5] * w[1] + l[6] * w[2] + l[7];
+    return std::fabs(bx) <= 1.0f + r && std::fabs(by) <= 1.0f + r ? 1 : -1;  // the shadows: a far tree's cards do
 }
 
 const float kLeafDefault[3] = {0.30f, 0.47f, 0.18f}, kBarkDefault[3] = {0.36f, 0.27f, 0.20f};
@@ -277,13 +309,17 @@ void Renderer::Impl::updateForest() {
         // the meshes: each model's variants, one after another
         std::vector<forest::Vertex> verts;
         std::vector<uint32_t> indices;
-        std::vector<std::array<uint32_t, 3>> range(models.size() * kVariants);  // first index, count, base vertex
+        // first index, count, base vertex, a far tree's count
+        std::vector<std::array<uint32_t, 4>> range(models.size() * kVariants);
         for (size_t mdl = 0; mdl < models.size(); ++mdl)
             for (int v = 0; v < kVariants; ++v) {
                 const uint32_t seed = uint32_t(mdl) * 7919u + uint32_t(v) * 104729u;
                 const forest::Mesh mesh = forest::grow(models[mdl].shape, seed, effects.animeTrees);
+                // 2.1: far - its trunk and branches and two leaf cards in five (the cards lie in no order)
+                const uint32_t leaves = uint32_t(mesh.indices.size()) - mesh.leafStart;
+                const uint32_t farCount = mesh.leafStart + leaves * 2 / 5 / 6 * 6;
                 range[mdl * kVariants + size_t(v)] = {uint32_t(indices.size()), uint32_t(mesh.indices.size()),
-                                                      uint32_t(verts.size())};
+                                                      uint32_t(verts.size()), farCount};
                 verts.insert(verts.end(), mesh.verts.begin(), mesh.verts.end());
                 indices.insert(indices.end(), mesh.indices.begin(), mesh.indices.end());
             }
@@ -294,7 +330,7 @@ void Renderer::Impl::updateForest() {
                    forestPlaced[e].variant == forestPlaced[k].variant)
                 ++e;
             const auto& rg = range[size_t(forestPlaced[k].model) * kVariants + forestPlaced[k].variant];
-            if (rg[1]) forestCalls.push_back(ForestCall{rg[1], rg[0], rg[2], k, e - k});
+            if (rg[1]) forestCalls.push_back(ForestCall{rg[1], rg[0], rg[2], k, e - k, rg[3]});
             k = e;
         }
         const auto make = [this](ID3D12Resource*& r, uint32_t& bytes, const void* data, size_t size) {
@@ -328,12 +364,11 @@ void Renderer::Impl::updateForest() {
                  mapName.c_str(), forestPlaced.size(), models.size(), indices.size() / 3, forestCalls.size(),
                  forestYSign);
     }
-    if (forestBuilt && forestColoursDirty && forestInstances) {  // the instances, their colours as seen so far
+    if (forestBuilt && forestColoursDirty) {  // the instances, their colours as seen so far
         forestColoursDirty = false;
-        void* to = nullptr;
-        const D3D12_RANGE none{0, 0};
-        if (SUCCEEDED(forestInstances->Map(0, &none, &to))) {
-            auto* out = static_cast<InstanceData*>(to);
+        forestData.resize(forestPlaced.size());
+        {
+            InstanceData* out = reinterpret_cast<InstanceData*>(forestData.data());
             for (size_t k = 0; k < forestPlaced.size(); ++k) {
                 const ForestPlaced& f = forestPlaced[k];
                 InstanceData d{};
@@ -356,9 +391,51 @@ void Renderer::Impl::updateForest() {
                 }
                 std::memcpy(out + k, &d, sizeof d);
             }
-            forestInstances->Unmap(0, nullptr);
         }
     }
+}
+
+// 2.1: the frame's trees - each kept by `keep` (left out, near, far), their instances copied into the frame's upload
+// in the calls' order, a call for each model's variant and nearness. Only what is in view is drawn, the far trees
+// with part of their leaves (on prt_fild08 a frame shows some 40 of its 491 trees).
+bool Renderer::Impl::forestPick(int (*keep)(const ForestPlaced&, const void*), const void* with,
+                                D3D12_GPU_VIRTUAL_ADDRESS& at, UINT& bytes, std::vector<ForestDraw>& draws) {
+    draws.clear();
+    if (forestData.size() != forestPlaced.size()) return false;
+    std::vector<uint32_t> nearOnes, farOnes;
+    std::vector<uint32_t> order;
+    for (const ForestCall& call : forestCalls) {
+        nearOnes.clear();
+        farOnes.clear();
+        for (uint32_t k = call.firstInstance; k < call.firstInstance + call.instances; ++k) {
+            const int how = keep(forestPlaced[k], with);
+            if (how == 0) nearOnes.push_back(k);
+            if (how == 1) farOnes.push_back(k);
+        }
+        const uint32_t model = forestPlaced[call.firstInstance].model;
+        if (!nearOnes.empty()) {
+            draws.push_back(ForestDraw{call.indexCount, call.firstIndex, call.baseVertex, uint32_t(order.size()),
+                                       uint32_t(nearOnes.size()), model});
+            order.insert(order.end(), nearOnes.begin(), nearOnes.end());
+        }
+        if (!farOnes.empty()) {
+            draws.push_back(ForestDraw{call.farCount, call.firstIndex, call.baseVertex, uint32_t(order.size()),
+                                       uint32_t(farOnes.size()), model});
+            order.insert(order.end(), farOnes.begin(), farOnes.end());
+        }
+    }
+    if (order.empty()) return false;
+    bytes = UINT(order.size() * sizeof(InstanceData));
+    const Upload u = allocUpload(bytes, 16);
+    if (!u.cpu) {
+        draws.clear();
+        return false;
+    }
+    for (size_t i = 0; i < order.size(); ++i)
+        std::memcpy(static_cast<uint8_t*>(u.cpu) + i * sizeof(InstanceData), forestData[order[i]].data(),
+                    sizeof(InstanceData));
+    at = u.gpu;
+    return true;
 }
 
 namespace {
@@ -450,6 +527,11 @@ void Renderer::Impl::forestIntoSunMap(const float light[12]) {
             return;
         }
     }
+    // 2.1: only the trees in the sun's box, each with part of its leaves (enough for a shadow)
+    D3D12_GPU_VIRTUAL_ADDRESS at = 0;
+    UINT bytes = 0;
+    std::vector<ForestDraw> draws;
+    if (!forestPick(&keepInSunBox, light, at, bytes, draws)) return;
     Constants c{};
     std::copy(light, light + 12, c.reproject);
     forestWind(c);
@@ -459,20 +541,20 @@ void Renderer::Impl::forestIntoSunMap(const float light[12]) {
     list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     const D3D12_VERTEX_BUFFER_VIEW views[2] = {
         {forestVb->GetGPUVirtualAddress(), forestVbBytes, UINT(sizeof(forest::Vertex))},
-        {forestInstances->GetGPUVirtualAddress(), forestInstanceBytes, UINT(sizeof(InstanceData))}};
+        {at, bytes, UINT(sizeof(InstanceData))}};
     list->IASetVertexBuffers(0, 2, views);
     const D3D12_INDEX_BUFFER_VIEW ib{forestIb->GetGPUVirtualAddress(), forestIbBytes, DXGI_FORMAT_R32_UINT};
     list->IASetIndexBuffer(&ib);
-    for (const ForestCall& call : forestCalls)
-        list->DrawIndexedInstanced(call.indexCount, call.instances, call.firstIndex, INT(call.baseVertex),
-                                   call.firstInstance);
+    for (const ForestDraw& draw : draws)
+        list->DrawIndexedInstanced(draw.indexCount, draw.instances, draw.firstIndex, INT(draw.baseVertex),
+                                   draw.firstInstance);
 }
 
 // 2.0: the forest drawn into the world (with its depth) after the grass, before the characters - all its trees in a
 // call for each model's variant.
 bool Renderer::Impl::applyForest() {
     forestDone = true;
-    crumb("new trees");
+    EffectTime timing(*this, kTimeForest);  // 2.1: its cost in the log and on the Effects page
     ID3D12PipelineState* pso = forestPipeline(upscale ? 1 : samples);
     if (!pso || !forestVb || !forestIb || !forestInstances) return true;
     // 2.0.4: the room for all of it first - the leaves' pictures' tables, the sampler - so that no new list starts in
@@ -508,6 +590,23 @@ bool Renderer::Impl::applyForest() {
         c.jitter[0] = jitter[0];
         c.jitter[1] = jitter[1];
     }
+    // 2.1: only the trees in view, the far ones with part of their leaves
+    ViewKeep view;
+    std::copy(inv, inv + 9, view.inv);
+    std::copy(m + 9, m + 12, view.at);
+    view.p = proj;
+    view.width = float(gameWidth);
+    view.height = float(gameHeight);
+    D3D12_GPU_VIRTUAL_ADDRESS instancesAt = 0;
+    UINT instanceBytes = 0;
+    std::vector<ForestDraw> draws;
+    if (!forestPick(&keepInView, &view, instancesAt, instanceBytes, draws)) return true;
+    forestDrawnTrees = instanceBytes / sizeof(InstanceData);
+    forestFarTrees = 0;
+    for (const ForestDraw& draw : draws)
+        for (const ForestCall& call : forestCalls)
+            if (call.firstIndex == draw.firstIndex && call.indexCount != draw.indexCount)
+                forestFarTrees += draw.instances;
     sunInWorld(c.sourceRect);
     forestWind(c);
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
@@ -528,7 +627,7 @@ bool Renderer::Impl::applyForest() {
     list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     const D3D12_VERTEX_BUFFER_VIEW views[2] = {
         {forestVb->GetGPUVirtualAddress(), forestVbBytes, UINT(sizeof(forest::Vertex))},
-        {forestInstances->GetGPUVirtualAddress(), forestInstanceBytes, UINT(sizeof(InstanceData))}};
+        {instancesAt, instanceBytes, UINT(sizeof(InstanceData))}};
     list->IASetVertexBuffers(0, 2, views);
     const D3D12_INDEX_BUFFER_VIEW ib{forestIb->GetGPUVirtualAddress(), forestIbBytes, DXGI_FORMAT_R32_UINT};
     list->IASetIndexBuffer(&ib);
@@ -536,8 +635,8 @@ bool Renderer::Impl::applyForest() {
     // cards - footprint 1, the picture's average colour in stage0.x, stage0.y, stage1.x (asfloat) - so the crowns
     // are the game's leaves in the trees' own shapes; a model whose picture is not known yet keeps the drawn leaves.
     uint32_t bound = ~0u;
-    for (const ForestCall& call : forestCalls) {
-        const uint32_t model = forestPlaced[call.firstInstance].model;
+    for (const ForestDraw& call : draws) {
+        const uint32_t model = call.model;
         const uint32_t id = model < forestTexture.size() ? forestTexture[model] : 0;
         const auto tex = id ? textures.find(id) : textures.end();
         const bool textured = tex != textures.end() && tex->second.resource && tex->second.averaged;
@@ -567,7 +666,8 @@ bool Renderer::Impl::applyForest() {
     boundPipeline = nullptr;  // the game's next draw binds its own
     boundTextures = boundSamplers = ~0ull;
     if (!forestLogged)
-        LOG_INFO("new trees: %s's forest drawn, %zu of the game's tree draws left out", mapName.c_str(),
+        LOG_INFO("new trees: %s's forest drawn - %zu of its %zu trees in view (%zu of them far), %zu of the game's "
+                 "tree draws left out", mapName.c_str(), forestDrawnTrees, forestPlaced.size(), forestFarTrees,
                  forestHidden);
     forestLogged = true;
     return !lost;

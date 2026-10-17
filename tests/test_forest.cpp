@@ -45,6 +45,7 @@ TEST(forest_grows_a_tree_of_the_models_size) {
     }
     CHECK(inside && leaves);
     for (uint32_t i : a.indices) CHECK(i < a.verts.size());
+    CHECK(a.leafStart > 0 && a.leafStart < a.indices.size() && a.leafStart % 6 == 0);  // 2.1: the trunk's first
 }
 
 TEST(forest_a_tree_without_a_trunk_is_a_bush_and_a_palm_has_fronds) {

@@ -165,7 +165,7 @@ void Renderer::Impl::effectBegin(EffectTimer e) {
     static const char* const kCrumbs[kEffectTimes] = {
         "soft shadows", "clouds", "characters' shadows", "lights and torches", "haze", "heat haze", "colour",
         "depth of field", "weather", "glow", "water's copies", "sky", "light in the air", "floor reflections",
-        "sun's shadows", "bloom", "grass"};
+        "sun's shadows", "bloom", "grass", "new trees"};
     crumb(kCrumbs[e]);
     if (!timer || !open) return;
     list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 6 + 2 * e);
@@ -231,7 +231,7 @@ void Renderer::Impl::noteGpuFrame() {
     static const char* const kEffectNames[kEffectTimes] = {
         "soft shadows", "clouds", "characters' shadows", "lights and torches", "haze", "heat haze", "colour",
         "depth of field", "weather", "glow", "water's copies", "sky", "light in the air", "floor reflections",
-        "sun's shadows", "bloom", "grass"};
+        "sun's shadows", "bloom", "grass", "new trees"};
     std::string effects;
     for (UINT e = 0; e < kEffectTimes; ++e) {
         effectMs[e] = double(effectTicks[e]) * ms;  // 0.76: for keep_fps and the settings app
@@ -1541,7 +1541,7 @@ bool Renderer::effectCosts(effect_costs::Costs& out) const {
     // 0.76: the names effect_costs.cpp knows the passes by (kEffectNames' order)
     static const char* const kNames[kEffectTimes] = {
         "ao",    "clouds", "actor_shadows", "lights", "haze", "heat",  "grade", "dof",
-        "weather", "glow", "water",         "sky",    "shafts", "floor", "sun",  "bloom", "grass"};
+        "weather", "glow", "water",         "sky",    "shafts", "floor", "sun",  "bloom", "grass", "new_trees"};
     out.clear();
     if (remote_ || d3d11_ || remix_ || !impl_->effectMsKnown) return false;
     for (UINT e = 0; e < kEffectTimes; ++e)

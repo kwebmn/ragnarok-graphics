@@ -48,6 +48,8 @@ static_assert(sizeof(Vertex) == 48, "the forest's vertex");
 struct Mesh {
     std::vector<Vertex> verts;
     std::vector<uint32_t> indices;
+    // 2.1: where its foliage's indices start (the trunk and branches before) - a far tree drawn with a part of them
+    uint32_t leafStart = 0;
 };
 
 // The tree of a shape, its own by the seed (the same seed, the same tree). 2.0.3, anime: its crown of fewer, larger
