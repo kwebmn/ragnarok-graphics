@@ -1,3 +1,31 @@
+# uaRO Graphics 2.2.1 — testing
+
+- **The Effects page works:** the quality choice, the groups' boxes and the effects inside them did nothing in 2.2.0
+  (the main window passed their clicks on to no page). Now each group has a button "The group's effects ▸" that opens
+  it to its effects, each with its own box and settings; the open groups stay open.
+- **Effects quality as in any game:** Auto, Off, Low, Medium, High, Custom (Low - built-in graphics and cards under
+  4 GB, Medium 4-8 GB, High 8 GB and more). A new group, **Fixes of the picture** (the map's light smooth, effects soft
+  at the walls, the fade between maps), is in every quality.
+- **The console (~) by groups:** the frame counter, the AI textures, the quality, then the ten groups - each with its
+  strength and a row that opens it (Space, Enter, right arrow). About thirty rows instead of a hundred and fifty.
+- **AI textures in the game:** the console turns the pack's pictures on and off by kind - ground, buildings,
+  characters and items, skills, icons. Off at once; on at once when the game started with them, otherwise at the next
+  start (↻).
+- **What an effect costs:** the frame counter (Ctrl+Shift+F11, now remembered) shows the graphics card's work a frame
+  - "60 fps · 16.7 ms · GPU 7.1 ms (DLSS Quality 2.6)": at the frame limit the frames a second stay the same, the GPU's
+  milliseconds do not. The console shows each effect's and group's own milliseconds; hold Tab on one to see the GPU
+  time drop. The frame counter's box in the settings applies at once.
+- **Bridges are bridges:** 나무 is "wood" as well as "tree" - umbala's bridge, field bridges, boxes, fences, stumps
+  and more (64 models) were grown as bushes. Fixed.
+- **No grass on decks:** the grass grows only on the map's own ground, not on umbala's green decks and bridges.
+- **No cracks on tiled floors:** smooth seams of the ground only on fields and in towns - in dungeons (Glast Heim's
+  church, the Clock Tower) they spread the black broken tiles over the stones and blinked.
+- **Anonymous statistics (asked once):** with your leave, the settings app sends once a day which effects and
+  textures are on, what is turned off after a try, the card and its frames a second - no name, no login. The best
+  settings for each kind of card are made from it. Diagnostics page: change your mind any time.
+- Check, please: the Effects page (quality, groups, the group's effects); the console (~) and its textures section;
+  the frame counter's GPU milliseconds; umbala's bridge and decks; gl_church and c_tower2's floors.
+
 # uaRO Graphics 2.2.0 — testing
 
 - **A simpler Effects page.** At the top, the set of effects for your graphics card: Auto (picked by the card - it
