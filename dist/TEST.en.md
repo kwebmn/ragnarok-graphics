@@ -1,3 +1,15 @@
+# uaRO Graphics 2.0.4 — testing
+
+- **Realistic trees of the game's own leaves:** the cards of the new trees' crowns carry pieces of the model's own
+  leaves picture (the AI's when shown) with a ragged round edge - the trees' shapes the driver's, steady as you walk,
+  the leaves RO's. A model whose picture is not seen yet shows the drawn leaves for a moment.
+- **Anime-style trees off by default** (the setting stays) - they did not fit the game's pictures.
+- **Sakura:** no autumn on it, its crown pink and white (its one picture is bark and blossom - it went brown); the
+  blossom clouds in their own pictures' colours.
+- **Autumn softer**, on the broadleaf trees only - no whole crowns of orange; firs, palms and sakura keep their colours.
+- Check: prt_fild08, pay_fild01/02, Prontera with New trees on - do the crowns look like RO's leaves, do they fit the
+  ground and the houses; the sakura.
+
 # uaRO Graphics 2.0.3 — testing
 
 - **Anime-style trees** (Effects → Remaster, on by default, needs New trees): the crowns are large soft puffs with a
