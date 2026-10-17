@@ -391,7 +391,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
         std::string text;
         readTextFile(gameDir() + "\\uaro-graphics.ini", text);
         if (!comparing.empty()) {  // 2.2: after the set and the groups - the switch as it comes out, then off
-            compareFx_ = effect_groups::effective(parseConfig(text).effects, startup().cardLevel);
+            EffectSettings file = parseConfig(text).effects;
+            for (int g = 0; g < kEffectGroups; ++g)  // a group held: all of it off
+                if (comparing == std::string("effects.group_") + effect_groups::groupWord(g)) file.groups[g] = false;
+            compareFx_ = effect_groups::effective(file, startup().cardLevel);
             if (const effect_groups::Member* fxm = effect_groups::memberOf(comparing)) compareFx_.*fxm->on = false;
         }
     }

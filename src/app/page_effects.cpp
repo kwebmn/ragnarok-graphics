@@ -111,7 +111,8 @@ public:
                     p.buttons({{kBlockOn + block, t(Text::FxBlockOn)}, {kBlockOff + block, t(Text::FxBlockOff)}});
                 if (block == 3) {  // 1.8: the mode, for all of the block
                     const IniSetting& tier = setting("effects.tier");
-                    const std::string token = host_.model().token(tier);
+                    const std::string token = setSwitches() ? (setSwitches()->tier == 2 ? "remaster" : "classic")
+                                                            : host_.model().token(tier);
                     p.choice(kTier, t(tier.label),
                              {t(Text::FxTierAuto), t(Text::FxTierClassic), t(Text::FxTierRemaster)},
                              token == "classic" ? 1 : token == "remaster" ? 2 : 0, t(tier.hint));
@@ -206,7 +207,23 @@ public:
 private:
     bool details_ = false;  // 2.2: every effect on its own shown
 
-    bool isOn(const char* key) { return host_.model().token(setting(key)) == "1"; }
+    // An effect's switch as it works: a set other than custom decides them (shown as it has them), else the file's.
+    bool isOn(const char* key) {
+        const effect_groups::Member* m = effect_groups::memberOf(key);
+        if (m && setSwitches()) return setSwitches()->*m->on;
+        return host_.model().token(setting(key)) == "1";
+    }
+
+    // 2.2: the switches of the set chosen (the groups aside: they stay over them); nullptr for custom
+    const EffectSettings* setSwitches() {
+        Model& m = host_.model();
+        if (m.token(setting("effects.preset")) == "custom") return nullptr;
+        EffectSettings e = m.pendingConfig().effects;
+        for (bool& g : e.groups) g = true;
+        set_ = effect_groups::effective(e, cardLevel());
+        return &set_;
+    }
+    EffectSettings set_;
 
     static std::string sliderKey(int id) {
         for (int g = 0; g < kEffectGroups; ++g)
@@ -226,18 +243,25 @@ private:
     }
 
     // 2.2: a set made the player's own - each switch written as the set has it now, then "custom"
+    // (one write of the file in a running game: the switches, the mode, then "custom")
     void makeCustom() {
-        Model& m = host_.model();
-        if (m.token(setting("effects.preset")) == "custom") return;
-        EffectSettings e = m.pendingConfig().effects;
-        for (bool& g : e.groups) g = true;  // the groups stay as they are, over the switches
-        const EffectSettings now = effect_groups::effective(e, cardLevel());
+        const EffectSettings* chosen = setSwitches();
+        if (!chosen) return;
+        const EffectSettings now = *chosen;
+        std::vector<std::pair<const IniSetting*, std::string>> changes;
         for (int i = 0; i < effect_groups::memberCount(); ++i) {
             const effect_groups::Member& x = effect_groups::members()[i];
-            set(setting(std::string("effects.") + x.key), now.*x.on ? "1" : "0", true);
+            changes.push_back({&setting(std::string("effects.") + x.key), now.*x.on ? "1" : "0"});
         }
-        set(setting("effects.tier"), now.tier == 2 ? "remaster" : now.tier == 1 ? "classic" : "auto", true);
-        set(setting("effects.preset"), "custom", true);
+        changes.push_back({&setting("effects.tier"), now.tier == 2 ? "remaster" : "classic"});
+        changes.push_back({&setting("effects.preset"), "custom"});
+        Model& m = host_.model();
+        for (const auto& [s, token] : changes) m.setToken(*s, token);
+        if (m.now().gameRunning) {
+            const std::wstring err = m.writeNow(changes, host_.lang());
+            if (!err.empty()) host_.message(err, true);
+        }
+        host_.changed();
     }
 
     void slider(Panel& p, int id, const char* key, bool enabled) {

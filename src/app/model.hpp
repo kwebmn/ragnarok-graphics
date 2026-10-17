@@ -110,6 +110,9 @@ public:
     std::wstring apply(settings::Lang l);
     // While the game runs, one key of uaro-graphics.ini now (a slider let go, spec §6); "Undo" brings it back.
     std::wstring writeNow(const settings::IniSetting& s, const std::string& token, settings::Lang l);
+    // 2.2: several keys in one write (a set made the player's own: every switch at once)
+    std::wstring writeNow(const std::vector<std::pair<const settings::IniSetting*, std::string>>& changes,
+                          settings::Lang l);
     std::wstring revert(settings::Lang l);
     std::wstring restore(const std::wstring& backup, settings::Lang l);
     void keepNewestBackups(size_t count);

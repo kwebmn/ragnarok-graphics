@@ -4,11 +4,13 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "core/effect_groups.hpp"
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/schema.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/real_ddraw.hpp"
 
 namespace uagfx::win {
 
@@ -51,6 +53,23 @@ bool writeAtomic(const std::string& path, const std::string& text) {
 
 const IniSetting* settingOf(const std::string& key) { return findSetting(key); }
 
+std::string groupKey(int g) { return std::string("effects.group_") + effect_groups::groupWord(g); }
+
+// 2.2: the settings as the console shows them - each effect's switch as the set has it (the groups aside: they
+// stay over the switches, as on the Effects page); a set other than custom decides them, not the file's lines.
+Config shownConfig(const Config& c) {
+    Config shown = c;
+    EffectSettings e = c.effects;
+    for (bool& g : e.groups) g = true;
+    const EffectSettings set = effect_groups::effective(e, startup().cardLevel);
+    for (int i = 0; i < effect_groups::memberCount(); ++i) {
+        const effect_groups::Member& m = effect_groups::members()[i];
+        shown.effects.*m.on = set.*m.on;
+    }
+    shown.effects.tier = set.tier;
+    return shown;
+}
+
 }  // namespace
 
 Console::~Console() {
@@ -69,6 +88,14 @@ LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
 
 void Console::build(Lang lang) {
     rows_.clear();
+    // 2.2: the set for the card and the groups first, then every effect on its own
+    rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
+    rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
+    for (int g = 0; g < kEffectGroups; ++g) {
+        if (!settingOf(groupKey(g))) continue;
+        rows_.push_back(Row{Kind::Box, groupKey(g), 0});
+        if (effect_groups::hasStrength(g)) rows_.push_back(Row{Kind::Slider, groupKey(g) + "_strength", 1});
+    }
     const EffectLayout* fx = effectLayout();
     int block = -1;
     for (int e = 0; e < effectLayoutCount(); ++e) {
@@ -111,7 +138,8 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
     const Row& r = rows_[size_t(at_)];
     const IniSetting* s = r.kind == Kind::Heading ? nullptr : settingOf(r.key);
     if (!s) return false;
-    const std::string now = tokenOf(*s, config);
+    const Config shown = shownConfig(config);
+    const std::string now = tokenOf(*s, shown);
     std::string next = now;
     if (s->control == Control::Check) {
         const bool on = now == s->tokens[1];
@@ -129,9 +157,22 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
         next = s->tokens[size_t(i)];
     }
     if (next == now) return false;
+    std::vector<IniEdit> edits;
+    const std::string key = sectionKey(*s);
+    // 2.2: an effect's own switch while a set decides them - the set made the player's own first (as it has them)
+    if (config.effects.preset != EffectPreset::Custom && (effect_groups::memberOf(key) || key == "effects.tier")) {
+        for (int i = 0; i < effect_groups::memberCount(); ++i) {
+            const std::string k = std::string("effects.") + effect_groups::members()[i].key;
+            if (k == key) continue;
+            if (const IniSetting* m = settingOf(k)) edits.push_back({m->section, m->key, tokenOf(*m, shown)});
+        }
+        if (key != "effects.tier") edits.push_back({"effects", "tier", tokenOf(*settingOf("effects.tier"), shown)});
+        edits.push_back({"effects", "preset", "custom"});
+    }
+    edits.push_back({s->section, s->key, next});
     std::string text;
     readTextFile(iniPath, text);
-    if (!writeAtomic(iniPath, applyIniEdits(text, {{s->section, s->key, next}}))) {
+    if (!writeAtomic(iniPath, applyIniEdits(text, edits))) {
         LOG_ERROR("console: uaro-graphics.ini could not be written");
         return false;
     }
@@ -226,8 +267,9 @@ void Console::hide() {
     shownText_.clear();
 }
 
-void Console::draw(HWND game, const Config& config) {
-    // Redrawn when anything shown changed: the values come from the config the driver read.
+void Console::draw(HWND game, const Config& file) {
+    // Redrawn when anything shown changed: the values come from the config the driver read (2.2: as the set has them).
+    const Config config = shownConfig(file);
     std::string state = std::to_string(at_) + "|" + comparing_;
     for (const Row& r : rows_)
         if (r.kind != Kind::Heading)

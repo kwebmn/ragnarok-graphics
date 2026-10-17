@@ -383,6 +383,20 @@ std::wstring Model::writeNow(const IniSetting& s, const std::string& token, Lang
     return writeIni({{s.section, s.key, token}}, l);
 }
 
+std::wstring Model::writeNow(const std::vector<std::pair<const IniSetting*, std::string>>& changes, Lang l) {
+    std::wstring err = backupOnce(l);
+    if (!err.empty()) return err;
+    std::vector<IniEdit> edits;
+    for (const auto& [s, token] : changes) {
+        if (!s || !validToken(*s, token)) continue;
+        const std::string key = sectionKey(*s);
+        if (!wroteNow_.count(key)) wroteNow_[key] = tokenOf(*s, now_.config);
+        ini_.erase(key);
+        edits.push_back({s->section, s->key, token});
+    }
+    return edits.empty() ? L"" : writeIni(edits, l);
+}
+
 std::wstring Model::revert(Lang l) {
     ini_.clear();
     reg_.clear();

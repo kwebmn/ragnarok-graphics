@@ -1,6 +1,6 @@
 @echo off
 rem uaRO Graphics: puts our ddraw.dll into this uaRO client folder.
-rem dgVoodoo's DDraw.dll and D3DImm.dll move into the dgvoodoo folder: uaRO Graphics passes the game to them.
+rem dgVoodoo's DDraw.dll and D3DImm.dll move into the dgvoodoo folder, kept there for uninstall.bat (2.2: unused).
 rem Running it again is safe. uninstall.bat puts everything back.
 setlocal
 cd /d "%~dp0"

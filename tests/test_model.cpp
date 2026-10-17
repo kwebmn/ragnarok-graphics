@@ -484,3 +484,20 @@ TEST(model_profiles_keep_and_bring_back_every_setting) {
     CHECK(!app::Model::profileNameOk(L" leading"));
     CHECK(!app::Model::profileNameOk(std::wstring(41, L'a')));
 }
+
+TEST(model_writes_several_keys_now_and_undo_brings_them_back) {
+    // 2.2: a set made the player's own in a running game - every switch in one write, Undo takes them all back
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    w.files[ini] = "[effects]\r\npreset = strong\r\ngrass = 0\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    const std::vector<std::pair<const IniSetting*, std::string>> changes = {
+        {&setting("effects.grass"), "1"}, {&setting("effects.preset"), "custom"}};
+    CHECK(m.writeNow(changes, Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[ini], "effects.grass"), std::string("1"));
+    CHECK_EQ(valueOf(w.files[ini], "effects.preset"), std::string("custom"));
+    CHECK(m.revert(Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[ini], "effects.grass"), std::string("0"));
+    CHECK_EQ(valueOf(w.files[ini], "effects.preset"), std::string("strong"));
+}
