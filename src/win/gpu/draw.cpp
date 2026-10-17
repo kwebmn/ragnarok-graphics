@@ -78,6 +78,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
     if (!s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!s.ui && s.blend && sunShadowDue() && !applySunShadows()) return;  // 0.77: likewise
+    if (!s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
     if (!s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
     if (!s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and

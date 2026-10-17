@@ -122,6 +122,12 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.wetWalls = false;
+    e.snowSparkle = false;
+    e.sandDrift = false;
+    e.morningFog = false;
+    e.dew = false;
+    e.flowers = false;
     e.dapple = false;
     e.gusts = false;
     e.treeTints = false;
@@ -160,6 +166,12 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.wetWalls ||
+           e.snowSparkle ||
+           e.sandDrift ||
+           e.morningFog ||
+           e.dew ||
+           e.flowers ||
            e.dapple ||
            e.gusts ||
            e.treeTints ||
@@ -535,6 +547,18 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.gusts);
         } else if (key == "effects.dapple") {
             setBool(val, c.effects.dapple);
+        } else if (key == "effects.flowers") {
+            setBool(val, c.effects.flowers);
+        } else if (key == "effects.dew") {
+            setBool(val, c.effects.dew);
+        } else if (key == "effects.morning_fog") {
+            setBool(val, c.effects.morningFog);
+        } else if (key == "effects.sand_drift") {
+            setBool(val, c.effects.sandDrift);
+        } else if (key == "effects.snow_sparkle") {
+            setBool(val, c.effects.snowSparkle);
+        } else if (key == "effects.wet_walls") {
+            setBool(val, c.effects.wetWalls);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

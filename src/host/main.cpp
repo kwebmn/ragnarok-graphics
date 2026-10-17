@@ -458,6 +458,12 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.treeTints = rd.u8() != 0;
             e.gusts = rd.u8() != 0;
             e.dapple = rd.u8() != 0;
+            e.flowers = rd.u8() != 0;  // 1.7.1
+            e.dew = rd.u8() != 0;
+            e.morningFog = rd.u8() != 0;
+            e.sandDrift = rd.u8() != 0;
+            e.snowSparkle = rd.u8() != 0;
+            e.wetWalls = rd.u8() != 0;
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

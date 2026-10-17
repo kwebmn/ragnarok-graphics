@@ -1388,6 +1388,17 @@ float4 embers_ps(PresentOut i) : SV_Target {
 // that has a blade (its place on the ground, so the blades stay put as the camera moves), the nearest root (lowest on
 // the screen) in front. The blades sway in the wind and lie down where a step was left lately (t1, as steps_ps reads
 // it; footprint how many). twinX the blades' longest (target pixels), twinY how many (0-1), sharpen the time.
+// 1.7: the trodden blades lean away from the step; twinW the share of flowers (flowers), sourceRect.y their colours
+// (living::Place::flowers); twinH the dew (dew) glinting on the tips; sourceRect.x the gusts (gusts): a band of
+// wind crossing the screen bends the blades and lightens them.
+float3 flowerColour(float pick, int palette) {
+    float3 a = float3(0.98, 0.86, 0.25), b = float3(0.97, 0.96, 0.92), c = float3(0.72, 0.58, 0.92);  // a meadow
+    if (palette == 1) { a = float3(0.92, 0.28, 0.18); b = float3(0.98, 0.62, 0.20); c = float3(0.98, 0.88, 0.40); }
+    else if (palette == 2) { a = float3(0.98, 0.72, 0.82); b = float3(0.99, 0.93, 0.95); c = float3(0.90, 0.50, 0.70); }
+    else if (palette == 3) { a = float3(0.95, 0.25, 0.55); b = float3(0.99, 0.60, 0.15); c = float3(0.98, 0.92, 0.30); }
+    return pick < 0.4 ? a : pick < 0.75 ? b : c;
+}
+
 float4 grass_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     int2 last = int2(uiPixels.xy) - 1;
@@ -1395,9 +1406,28 @@ float4 grass_ps(PresentOut i) : SV_Target {
     float hereZ = here >= 0.99999 ? 1e6 : viewDepth(here);
     int longest = int(twinX);
     float t = sharpen;
+    int count = int(footprint);
+    // 1.7: the way the steps near here push the blades, along the screen (the view's x axis in the world: r0-r2)
+    float lean = 0.0;
+    if (here < 0.99999 && count > 0) {
+        float3 hv = viewAt(wp);
+        float3 hw = hv.x * float3(r0, r1, r2) + hv.y * float3(r3, r4, r5) + hv.z * float3(r6, r7, r8) +
+                    float3(r9, r10, r11);
+        float2 push = float2(0.0, 0.0);
+        [loop] for (int s = 0; s < count; ++s) {
+            float4 st = tex1.Load(int3(2 * s, 0, 0));
+            float age = tex1.Load(int3(2 * s + 1, 0, 0)).x;
+            float2 d = hw.xz - st.xz;
+            float dd = dot(d, d);
+            if (dd < 12.0 && dd > 1e-4) push += d * rsqrt(dd) * (1.0 - age) * (1.0 - dd / 12.0);
+        }
+        lean = clamp(dot(float3(push.x, 0.0, push.y), float3(r0, r1, r2)), -1.0, 1.0);
+    }
+    float gust = sourceRect.x > 0.0 ? gustAt((float(wp.x) - jitterX) / scale, t) * sourceRect.x : 0.0;
     [loop] for (int k = longest; k >= 1; --k) {
         float up = float(k) / twinX;
         float sway = sin(t * 1.7 + float(wp.x) * 0.021 + float(wp.y) * 0.013) * 0.25 * twinX * up * up;
+        sway += (gust * 0.55 + lean * 0.7) * twinX * up * up;
         int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
         float rd = sceneDepth.Load(int3(root, 0));
         if (rd >= 0.99999) continue;
@@ -1410,9 +1440,11 @@ float4 grass_ps(PresentOut i) : SV_Target {
         float2 cell = w.xz * 2.0;  // a blade or none every half unit
         float2 id = floor(cell);
         float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
-        if (hash12(id) > twinY || dot(at, at) > 0.05) continue;  // no blade here
-        float height = 0.45 + 0.55 * hash12(id + 2.1);
-        int count = int(footprint);
+        if (hash12(id) > twinY) continue;  // no blade here
+        bool flower = hash12(id + 31.7) < twinW;
+        float height = (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0);
+        bool head = flower && up > height * 0.8;
+        if (dot(at, at) > (head ? 0.16 : 0.05)) continue;
         [loop] for (int s = 0; s < count; ++s) {  // trodden down
             float4 st = tex1.Load(int3(2 * s, 0, 0));
             float age = tex1.Load(int3(2 * s + 1, 0, 0)).x;
@@ -1420,11 +1452,76 @@ float4 grass_ps(PresentOut i) : SV_Target {
             height *= lerp(1.0, saturate(dot(d, d) / 9.0), 1.0 - age);
         }
         if (up > height) continue;
-        float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3));
+        float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3)) * (1.0 + 0.2 * gust * up);
+        if (head) colour = flowerColour(hash12(id + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * rc.g);
+        if (twinH > 0.0 && up > height * 0.85) {  // a dew drop on the tip, now and then catching the sun
+            float seed = hash12(id + 43.1);
+            float glint = pow(saturate(sin(t * (0.9 + seed * 1.7) + seed * 40.0)), 24.0) * step(0.8, seed);
+            colour = lerp(colour, float3(1.0, 1.0, 0.97), glint * twinH);
+        }
         return float4(colour, 1.0);
     }
     discard;
     return float4(0.0, 0.0, 0.0, 0.0);
+}
+
+// 1.7, the ground of the living world (ao.cpp applyGroundLife), before the characters, blended over by its alpha:
+// twinX sand drifting over desert ground in the wind (sand_drift), twinY snow glittering (snow_sparkle), twinW the
+// walls of a damp cave glistening where light falls on them and water running down (wet_walls). sharpen the time;
+// r0-r11 the view -> the world; the picture's copy t2.
+float4 ground_life_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
+    int2 last = int2(uiPixels.xy) - 1;
+    float3 v = viewAt(wp);
+    float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    float3 col = sceneColor.Load(int3(wp, 0)).rgb;
+    float luma = dot(col, float3(0.299, 0.587, 0.114));
+    float t = sharpen;
+    float3 o = col;
+    float a = 0.0;
+    if (twinX > 0.0 && col.r > col.g * 1.02 && col.g > col.b * 1.05 && col.r > 0.22) {  // sand
+        float2 wind = float2(0.94, 0.34);
+        float2 q = float2(dot(w.xz, wind), dot(w.xz, float2(-wind.y, wind.x)));
+        float n = valueNoise(float2(q.x * 0.07 - t * 1.4, q.y * 0.8)) * 0.6 +
+                  valueNoise(float2(q.x * 0.16 - t * 2.3 + 3.1, q.y * 1.9)) * 0.4;
+        float streak = smoothstep(0.6, 0.82, n) * twinX;
+        o = lerp(o, min(col * 1.25 + 0.08, 1.0), streak);
+        a = max(a, streak * 0.55);
+    }
+    if (twinY > 0.0 && luma > 0.5 && max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b)) < 0.18) {  // snow
+        float2 cell = floor(w.xz * 3.0);
+        float seed = hash12(cell);
+        if (seed > 0.86) {
+            float2 f = frac(w.xz * 3.0) - (0.25 + 0.5 * float2(hash12(cell + 3.7), hash12(cell + 8.1)));
+            float tw = pow(saturate(sin(t * (0.8 + seed * 2.0) + seed * 60.0 + (v.x + v.y) * 0.02)), 16.0);
+            float g = exp(-dot(f, f) * 90.0) * tw * twinY;
+            o = lerp(o, float3(1.0, 1.0, 1.0), g);
+            a = max(a, g);
+        }
+    }
+    if (twinW > 0.0) {  // a damp cave
+        float3 l = viewAt(max(wp - int2(1, 0), int2(0, 0))), r = viewAt(min(wp + int2(1, 0), last));
+        float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
+        float3 n = normalize(cross(d - u, r - l));
+        float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
+        float wall = 1.0 - smoothstep(0.55, 0.85, abs(nw.y));
+        float2 s = float2(w.x + w.z, w.y);
+        float2 cell = floor(s * 2.2);
+        float seed = hash12(cell);
+        float lit = smoothstep(0.12, 0.45, luma);
+        float g = 0.0;
+        if (seed > 0.8) {
+            float2 f = frac(s * 2.2) - 0.5;
+            g = exp(-dot(f, f) * 30.0) * pow(saturate(sin(t * 0.7 + seed * 50.0)), 6.0) * lit;
+        }
+        float run = smoothstep(0.93, 1.0, valueNoise(float2(s.x * 2.5, s.y * 0.12 + t * 0.35))) * 0.5 * lit;
+        float wet = (g + run) * wall * twinW;
+        o = lerp(o, min(col * 1.6 + 0.12, 1.0), saturate(wet));
+        a = max(a, saturate(wet));
+    }
+    if (a < 0.004) discard;
+    return float4(o, a);
 }
 
 // 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of
@@ -1536,6 +1633,14 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
         float puddle = smoothstep(0.58, 0.66, n0) * flat;
         dark = 0.16 * flat * twinY;
         a = max(a, puddle * weight * (0.45 + 0.4 * saturate(fresnel * 3.0)) * twinY);
+        // 1.7: rings where the rain's drops fall into the puddles (sharpen the time)
+        float2 rc = world.xz * 0.6;
+        float2 cid = floor(rc);
+        float2 cf = frac(rc) - (0.3 + 0.4 * float2(hash12(cid + 1.3), hash12(cid + 4.1)));
+        float age = frac(sharpen * 0.9 + hash12(cid));
+        float ring = exp(-pow((length(cf) - age * 0.45) * 30.0, 2.0)) * (1.0 - age) * puddle * twinY;
+        c = lerp(c, float3(0.92, 0.95, 1.0), saturate(ring * 0.7));
+        a = max(a, ring * 0.45);
     }
     // Premultiplied over: the ground darkened by `dark`, then the reflection over it by `a`.
     return float4(c * a, 1.0 - (1.0 - dark) * (1.0 - a));

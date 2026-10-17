@@ -1300,6 +1300,8 @@ void Renderer::Impl::destroy() {
     releaseCom(embersPs);
     releaseCom(embersData);
     for (ID3D12PipelineState*& p : grassPipelines) releaseCom(p);  // 0.81
+    for (ID3D12PipelineState*& p : groundLifePipelines) releaseCom(p);  // 1.7
+    releaseCom(groundLifePs);
     releaseCom(grassPs);
     for (ID3D12PipelineState*& p : stepsPipelines) releaseCom(p);  // 0.80
     releaseCom(stepsPs);
@@ -1574,6 +1576,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapWorld.setMap(map);
     impl_->mapName = map;  // 0.31: lava's maps
     impl_->mapSeason = trees::seasonOf(map, trees::monthNow());  // 1.7
+    impl_->mapPlace = living::placeOf(map, outdoors(map), impl_->mapSeason == trees::Season::Autumn);
     impl_->mapOutdoors = outdoors(map);  // 0.33: the clouds' shadows
     impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off

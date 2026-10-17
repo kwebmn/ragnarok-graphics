@@ -2236,6 +2236,54 @@ const Entry kTexts[] = {
      "будинків і дерев» (Direct3D 12).",
      "Тень дерева не сплошная: сквозь листву пробиваются солнечные пятна и шевелятся от ветра. Нужны «Тени домов "
      "и деревьев» (Direct3D 12)."},
+    {"Flowers in the grass",
+     "Квіти в траві",
+     "Цветы в траве"},
+    {"Here and there among the blades a flower sways with them, its colours the region's: Prontera's meadows, Payon's "
+     "reds, Amatsu's pinks. Needs Grass.",
+     "Подекуди серед травинок гойдається квітка, кольори свого краю: луки Пронтери, червоні Пайону, рожеві Амацу. "
+     "Потрібна «Трава».",
+     "Кое-где среди травинок качается цветок, цвета своего края: луга Пронтеры, красные Пайона, розовые Амацу. Нужна "
+     "«Трава»."},
+    {"Morning dew",
+     "Ранкова роса",
+     "Утренняя роса"},
+    {"From dawn until about noon (the computer's clock) drops on the tips of the grass flash in the sun now and then. "
+     "Needs Grass.",
+     "Від світанку до полудня (за годинником комп'ютера) краплі на кінчиках трави час від часу спалахують на сонці. "
+     "Потрібна «Трава».",
+     "От рассвета до полудня (по часам компьютера) капли на кончиках травы время от времени вспыхивают на солнце. "
+     "Нужна «Трава»."},
+    {"Morning fog",
+     "Ранковий туман",
+     "Утренний туман"},
+    {"A low fog lies over the fields and the towns at dawn: thick from 6 to 8, gone by half past ten (the computer's "
+     "clock). Needs Haze and fog.",
+     "На світанку над полями й містами стелиться низький туман: густий з 6 до 8, зникає до пів на одинадцяту (за "
+     "годинником комп'ютера). Потрібен «Серпанок і туман».",
+     "На рассвете над полями и городами стелется низкий туман: густой с 6 до 8, тает к половине одиннадцатого (по "
+     "часам компьютера). Нужна «Дымка и туман»."},
+    {"Drifting sand",
+     "Позмінка піску",
+     "Позёмка песка"},
+    {"In the desert about Morroc and Veins the wind drives thin streams of sand over the ground (Direct3D 12).",
+     "У пустелі довкола Морока й Вейнсу вітер жене по землі тонкі струмені піску (Direct3D 12).",
+     "В пустыне вокруг Морока и Вейнса ветер гонит по земле тонкие струйки песка (Direct3D 12)."},
+    {"Glittering snow",
+     "Іскристий сніг",
+     "Искрящийся снег"},
+    {"The snow of Lutie and the ice caves glitters: points of light flash and go out as you walk (Direct3D 12).",
+     "Сніг Лютії та крижаних печер іскриться: світлі точки спалахують і гаснуть, поки йдеш (Direct3D 12).",
+     "Снег Лютие и ледяных пещер искрится: светлые точки вспыхивают и гаснут, пока идёшь (Direct3D 12)."},
+    {"Damp cave walls",
+     "Вологі стіни печер",
+     "Влажные стены пещер"},
+    {"In damp caves and dungeons the stone glistens where the light falls on it, and thin trickles of water run down "
+     "the walls (Direct3D 12).",
+     "У вологих печерах і підземеллях камінь вилискує там, де на нього падає світло, а стінами стікають тонкі струмки "
+     "води (Direct3D 12).",
+     "Во влажных пещерах и подземельях камень поблёскивает там, где на него падает свет, а по стенам стекают тонкие "
+     "струйки воды (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

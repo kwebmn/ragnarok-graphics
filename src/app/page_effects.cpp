@@ -87,6 +87,12 @@ const Effect kEffects[] = {
     {"effects.tree_tints", {}, {}, {}, 2},  // 1.7
     {"effects.gusts", {}, {}, {}, 2},  // 1.7
     {"effects.dapple", {}, {}, {}, 2},  // 1.7
+    {"effects.flowers", {}, {}, {}, 2},  // 1.7.1
+    {"effects.dew", {}, {}, {}, 2},  // 1.7.1
+    {"effects.morning_fog", {}, {}, {}, 2},  // 1.7.1
+    {"effects.sand_drift", {}, {}, {}, 2},  // 1.7.1
+    {"effects.snow_sparkle", {}, {}, {}, 2},  // 1.7.1
+    {"effects.wet_walls", {}, {}, {}, 2},  // 1.7.1
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 

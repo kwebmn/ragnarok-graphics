@@ -12,6 +12,7 @@
 #include "core/footsteps.hpp"
 #include "core/frame.hpp"
 #include "core/key_pair.hpp"
+#include "core/living.hpp"
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
 #include "core/map_objects.hpp"
@@ -521,6 +522,8 @@ struct Renderer::Impl {
     ID3DBlob* lavaGlowPs = nullptr;
     std::string mapName;                    // the map the game shows (setMap)
     trees::Season mapSeason = trees::Season::Green;  // 1.7: its trees' (core/trees.hpp)
+    living::Place mapPlace;                          // 1.7: its small details (core/living.hpp)
+    int minuteNow() const { return effects.dayCycle && effects.dayNow >= 0 ? effects.dayNow : living::localMinute(); }
     LeafLook leafLook() const;  // 1.7: the trees' settings for leafShading (draw.cpp)
     std::vector<FireSpark> lavaCells;       // 0.31: this frame's cells of lava: their middles light around them
     bool lavaLogged = false;
@@ -852,6 +855,7 @@ struct Renderer::Impl {
             frameFeet.clear();
         }
         grassDone = false;  // 0.81
+        groundLifeDone = false;  // 1.7
         shaftsDone = false;  // 0.73
         flareDone = false;   // 0.98
         shaftLights = 0;
@@ -887,6 +891,16 @@ struct Renderer::Impl {
                viewToWorldValid;
     }
     bool applyGrass();  // once a frame, before the characters; false: lost
+    // 1.7: the living world's ground (ao.cpp applyGroundLife): sand drifting, snow glittering, damp walls glistening
+    ID3DBlob* groundLifePs = nullptr;
+    ID3D12PipelineState* groundLifePipelines[4] = {};
+    bool groundLifeDone = false, groundLifeLogged = false;
+    bool groundLifeWanted() const {
+        return groundLifePs && ((effects.sandDrift && mapPlace.sand) || (effects.snowSparkle && mapPlace.snow) ||
+                                (effects.wetWalls && mapPlace.cave));
+    }
+    bool groundLifeDue() const { return groundLifeWanted() && groundDrawn && !groundLifeDone && viewToWorldValid; }
+    bool applyGroundLife();  // once a frame, before the characters; false: lost
     // 0.80: footprints and dust (ao.cpp applySteps) - the characters' feet followed (actor_shadows.cpp)
     footsteps::Tracker footTracker;
     ID3DBlob* stepsPs = nullptr;

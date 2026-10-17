@@ -351,11 +351,53 @@ bool Renderer::Impl::applyGrass() {
     c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, 28.0f);
     c.twin[1] = 0.65f * float(std::clamp(effects.grassAmount, 0, 100)) / 100.0f;
     c.sharpen = waterTime();
+    // 1.7: flowers among the blades, dew on their tips in the morning, the gusts bending them
+    if (effects.flowers && mapPlace.flowers >= 0) {
+        c.twin[2] = 0.05f;
+        c.sourceRect[1] = float(mapPlace.flowers);
+    }
+    if (effects.dew) c.twin[3] = living::dew(minuteNow()) *
+                                 (1.0f - float(std::clamp(effects.nightNow, 0, 100)) / 100.0f);
+    if (effects.gusts) c.sourceRect[0] = 1.0f;
     if (!grassLogged) LOG_INFO("grass: on %s, blades up to %.0f pixels", mapName.c_str(), c.twin[0]);
     grassLogged = true;
     const UINT list1 = steps ? stepsDataSrv : sceneColorSrv;
     return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, list1)
                    : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, list1);
+}
+
+// 1.7: the living world's ground (ground_life_ps) - sand drifting over the desert, snow glittering, the walls of a damp
+// cave glistening - blended over, before the characters.
+bool Renderer::Impl::applyGroundLife() {
+    groundLifeDone = true;
+    if (!ensureScene("living ground")) return true;
+    ID3D12PipelineState* pso = alphaPipeline(groundLifePs, groundLifePipelines, upscale ? 1 : samples, "living ground");
+    if (!pso) return true;
+    if (!copySceneColor() || !copySceneDepth()) return false;
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    c.twin[0] = effects.sandDrift && mapPlace.sand ? 1.0f : 0.0f;
+    c.twin[1] = effects.snowSparkle && mapPlace.snow ? 1.0f - 0.6f * night : 0.0f;
+    c.twin[2] = effects.wetWalls && mapPlace.cave ? 1.0f : 0.0f;
+    c.sharpen = waterTime();
+    if (!groundLifeLogged)
+        LOG_INFO("living ground: on %s (%s)", mapName.c_str(),
+                 c.twin[0] > 0.0f ? "sand" : c.twin[1] > 0.0f ? "snow" : "damp walls");
+    groundLifeLogged = true;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
 }
 
 // 0.80: the steps the characters left - prints in the snow and the sand, dust on dry ground - onto the ground.
@@ -684,6 +726,7 @@ bool Renderer::Impl::applyDof() {
 bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
     if (sunShadowDue() && !applySunShadows()) return false;  // 0.77
+    if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
     if (grassDue() && !applyGrass()) return false;            // 0.81
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it

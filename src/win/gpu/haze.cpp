@@ -44,6 +44,14 @@ bool Renderer::Impl::applyHaze() {
     std::copy(mapLook.hazeColour, mapLook.hazeColour + 3, c.fogColor);
     std::copy(mapLook.fogColour, mapLook.fogColour + 3, c.sourceRect);
     c.sourceRect[3] = std::min(1.0f, mapLook.fog * user);
+    // 1.7: a low fog in the morning over the fields and the towns (morning_fog)
+    const float morning = effects.morningFog && mapOutdoors && !mapDesert ? living::morningFog(minuteNow()) : 0.0f;
+    if (morning * 0.6f > c.sourceRect[3]) {
+        static const float kMist[3] = {0.84f, 0.87f, 0.9f};
+        const float k = mapLook.fog > 0.0f ? 0.5f : 1.0f;  // the map's own fog's colour kept, half
+        for (int i = 0; i < 3; ++i) c.sourceRect[i] = c.sourceRect[i] * (1.0f - k) + kMist[i] * k;
+        c.sourceRect[3] = std::min(1.0f, morning * 0.6f * std::max(user, 0.5f));
+    }
     c.sharpen = waterTime();
     if (!hazeLogged) LOG_INFO("haze: over %s%s", mapName.c_str(), mapLook.fog > 0.0f ? ", with a low fog" : "");
     hazeLogged = true;
@@ -167,6 +175,7 @@ bool Renderer::Impl::applyFloorReflections() {
     c.uiPixels[1] = float(h);
     c.twin[0] = floorReflectAmount();
     c.twin[1] = wetWanted() ? 1.0f : 0.0f;  // 0.97
+    c.sharpen = waterTime();                // 1.7: the drops' rings in the puddles
     if (!floorReflectLogged) LOG_INFO("floor reflections: on %s, at %dx%d", mapName.c_str(), hw, hh);
     floorReflectLogged = true;
     if (!effectPass(floorReflectPipeline, floorTarget, floorState, rtvHandle(kRtvFloor), hw, hh, c, sceneColorSrv,
