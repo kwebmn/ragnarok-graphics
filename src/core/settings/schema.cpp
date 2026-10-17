@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <unordered_map>
 
 namespace uagfx::settings {
 
@@ -30,6 +31,7 @@ Text pageName(Page p) {
 }
 
 const std::vector<IniSetting>& iniSettings() {
+    using E = EffectSettings;  // 2.2.2: [effects] entries bound to their fields
     static const std::vector<IniSetting> list{
         {"renderer", "api", Page::Render, Control::Choice, 0, 0, 0, {"d3d12", "d3d11", "auto"},
          {Text::RenderApiD3d12, Text::RenderApiD3d11, Text::RenderApiAuto}, Text::RenderApi, Text::RenderApiHint, ""},
@@ -76,226 +78,227 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::SmoothOff, Text::Factor2, Text::Factor4, Text::Factor8, Text::Factor16}, Text::SmoothAniso,
          Text::SmoothAnisoHint, ""},
         {"effects", "smooth_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothLight,
-         Text::FxSmoothLightHint, ""},
+         Text::FxSmoothLightHint, "", &E::smoothLight},
         {"effects", "torch", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTorch, Text::FxTorchHint,
-         ""},
+         "", &E::torch},
         {"effects", "torch_flame", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTorchFlame,
-         Text::FxTorchFlameHint, ""},
+         Text::FxTorchFlameHint, "", &E::torchFlame},
         {"effects", "torch_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxTorchBrightness,
-         Text::FxTorchBrightnessHint, " %"},
+         Text::FxTorchBrightnessHint, " %", nullptr, &E::torchBrightness},
         {"effects", "torch_glow", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxTorchGlow,
-         Text::FxTorchGlowHint, " %"},
+         Text::FxTorchGlowHint, " %", nullptr, &E::torchGlow},
         {"effects", "torch_light", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxTorchLight,
-         Text::FxTorchLightHint, " %"},
+         Text::FxTorchLightHint, " %", nullptr, &E::torchLight},
         {"effects", "torch_flicker", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxTorchFlicker,
-         Text::FxTorchFlickerHint, " %"},
+         Text::FxTorchFlickerHint, " %", nullptr, &E::torchFlicker},
         {"effects", "smoke", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoke, Text::FxSmokeHint,
-         ""},
+         "", &E::smoke},
         {"effects", "smoke_density", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxSmokeDensity,
-         Text::FxSmokeDensityHint, " %"},
+         Text::FxSmokeDensityHint, " %", nullptr, &E::smokeDensity},
         {"effects", "lamps", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLamps, Text::FxLampsHint,
-         ""},
+         "", &E::lamps},
         {"effects", "lamps_light", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxLampsLight,
-         Text::FxLampsLightHint, " %"},
-        {"effects", "ao", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAo, Text::FxAoHint, ""},
+         Text::FxLampsLightHint, " %", nullptr, &E::lampsLight},
+        {"effects", "ao", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAo, Text::FxAoHint, "",
+         &E::ao},
         {"effects", "ao_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAoStrength,
-         Text::FxAoStrengthHint, " %"},
+         Text::FxAoStrengthHint, " %", nullptr, &E::aoStrength},
         {"effects", "ao_size", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAoSize, Text::FxAoSizeHint,
-         " %"},
+         " %", nullptr, &E::aoSize},
         {"effects", "glow", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGlow, Text::FxGlowHint,
-         ""},
+         "", &E::glow},
         {"effects", "glow_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGlowStrength,
-         Text::FxGlowStrengthHint, " %"},
+         Text::FxGlowStrengthHint, " %", nullptr, &E::glowStrength},
         {"effects", "glow_size", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxGlowSize,
-         Text::FxGlowSizeHint, " %"},
+         Text::FxGlowSizeHint, " %", nullptr, &E::glowSize},
         {"effects", "glow_light", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxGlowLight,
-         Text::FxGlowLightHint, " %"},
+         Text::FxGlowLightHint, " %", nullptr, &E::glowLight},
         {"effects", "fire_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFireLight,
-         Text::FxFireLightHint, ""},
+         Text::FxFireLightHint, "", &E::fireLight},
         {"effects", "fire_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
-         Text::FxFireLightStrength, Text::FxFireLightStrengthHint, " %"},
+         Text::FxFireLightStrength, Text::FxFireLightStrengthHint, " %", nullptr, &E::fireLightStrength},
         {"effects", "skill_colours", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkillColours,
-         Text::FxSkillColoursHint, ""},
+         Text::FxSkillColoursHint, "", &E::skillColours},
         {"effects", "aura", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAura, Text::FxAuraHint,
-         ""},
+         "", &E::aura},
         {"effects", "aura_brightness", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAuraBrightness,
-         Text::FxAuraBrightnessHint, " %"},
+         Text::FxAuraBrightnessHint, " %", nullptr, &E::auraBrightness},
         {"effects", "skills_soft", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkillsSoft,
-         Text::FxSkillsSoftHint, ""},
+         Text::FxSkillsSoftHint, "", &E::skillsSoft},
         {"effects", "skill_brightness", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxSkillBrightness,
-         Text::FxSkillBrightnessHint, " %"},
+         Text::FxSkillBrightnessHint, " %", nullptr, &E::skillBrightness},
         {"effects", "fireflies", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFireflies,
-         Text::FxFirefliesHint, ""},
+         Text::FxFirefliesHint, "", &E::fireflies},
         {"effects", "fireflies_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
-         Text::FxFirefliesBrightness, Text::FxFirefliesBrightnessHint, " %"},
+         Text::FxFirefliesBrightness, Text::FxFirefliesBrightnessHint, " %", nullptr, &E::firefliesBrightness},
         {"effects", "map_glows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMapGlows,
-         Text::FxMapGlowsHint, ""},
+         Text::FxMapGlowsHint, "", &E::mapGlows},
         {"effects", "map_glows_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
-         Text::FxMapGlowsBrightness, Text::FxMapGlowsBrightnessHint, " %"},
+         Text::FxMapGlowsBrightness, Text::FxMapGlowsBrightnessHint, " %", nullptr, &E::mapGlowsBrightness},
         {"effects", "rays", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRays, Text::FxRaysHint,
-         ""},
+         "", &E::rays},
         {"effects", "rays_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxRaysBrightness,
-         Text::FxRaysBrightnessHint, " %"},
+         Text::FxRaysBrightnessHint, " %", nullptr, &E::raysBrightness},
         {"effects", "lava", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLava, Text::FxLavaHint,
-         ""},
+         "", &E::lava},
         {"effects", "lava_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxLavaBrightness,
-         Text::FxLavaBrightnessHint, " %"},
+         Text::FxLavaBrightnessHint, " %", nullptr, &E::lavaBrightness},
         {"effects", "actor_shadows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxActorShadows,
-         Text::FxActorShadowsHint, ""},
+         Text::FxActorShadowsHint, "", &E::actorShadows},
         {"effects", "actor_shadows_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {},
-         Text::FxActorShadowsStrength, Text::FxActorShadowsStrengthHint, " %"},
+         Text::FxActorShadowsStrength, Text::FxActorShadowsStrengthHint, " %", nullptr, &E::actorShadowsStrength},
         {"effects", "clouds", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxClouds,
-         Text::FxCloudsHint, ""},
+         Text::FxCloudsHint, "", &E::clouds},
         {"effects", "clouds_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxCloudsStrength,
-         Text::FxCloudsStrengthHint, " %"},
+         Text::FxCloudsStrengthHint, " %", nullptr, &E::cloudsStrength},
         {"effects", "haze", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxHaze, Text::FxHazeHint,
-         ""},
+         "", &E::haze},
         {"effects", "haze_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxHazeStrength,
-         Text::FxHazeStrengthHint, " %"},
+         Text::FxHazeStrengthHint, " %", nullptr, &E::hazeStrength},
         {"effects", "heat", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxHeat, Text::FxHeatHint,
-         ""},
+         "", &E::heat},
         {"effects", "heat_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxHeatStrength,
-         Text::FxHeatStrengthHint, " %"},
+         Text::FxHeatStrengthHint, " %", nullptr, &E::heatStrength},
         {"effects", "portals", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxPortals,
-         Text::FxPortalsHint, ""},
+         Text::FxPortalsHint, "", &E::portals},
         {"effects", "portals_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxPortalsStrength,
-         Text::FxPortalsStrengthHint, " %"},
+         Text::FxPortalsStrengthHint, " %", nullptr, &E::portalsStrength},
         {"effects", "weather", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWeather,
-         Text::FxWeatherHint, ""},
+         Text::FxWeatherHint, "", &E::weather},
         {"effects", "weather_amount", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxWeatherAmount,
-         Text::FxWeatherAmountHint, " %"},
+         Text::FxWeatherAmountHint, " %", nullptr, &E::weatherAmount},
         {"effects", "grade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrade, Text::FxGradeHint,
-         ""},
+         "", &E::grade},
         {"effects", "grade_saturation", Page::Effects, Control::Slider, 0, 200, 5, {}, {}, Text::FxGradeSaturation,
-         Text::FxGradeSaturationHint, " %"},
+         Text::FxGradeSaturationHint, " %", nullptr, &E::gradeSaturation},
         {"effects", "grade_contrast", Page::Effects, Control::Slider, 50, 150, 2, {}, {}, Text::FxGradeContrast,
-         Text::FxGradeContrastHint, " %"},
+         Text::FxGradeContrastHint, " %", nullptr, &E::gradeContrast},
         {"effects", "grade_brightness", Page::Effects, Control::Slider, 50, 150, 2, {}, {}, Text::FxGradeBrightness,
-         Text::FxGradeBrightnessHint, " %"},
+         Text::FxGradeBrightnessHint, " %", nullptr, &E::gradeBrightness},
         {"effects", "grade_warmth", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxGradeWarmth,
-         Text::FxGradeWarmthHint, " %"},
+         Text::FxGradeWarmthHint, " %", nullptr, &E::gradeWarmth},
         {"effects", "grade_vignette", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxGradeVignette,
-         Text::FxGradeVignetteHint, " %"},
+         Text::FxGradeVignetteHint, " %", nullptr, &E::gradeVignette},
         {"effects", "foliage", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFoliage,
-         Text::FxFoliageHint, ""},
+         Text::FxFoliageHint, "", &E::foliage},
         {"effects", "foliage_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxFoliageStrength,
-         Text::FxFoliageStrengthHint, " %"},
+         Text::FxFoliageStrengthHint, " %", nullptr, &E::foliageStrength},
         {"effects", "soft_particles", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSoftParticles,
-         Text::FxSoftParticlesHint, ""},
+         Text::FxSoftParticlesHint, "", &E::softParticles},
         {"effects", "rim_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRimLight,
-         Text::FxRimLightHint, ""},
+         Text::FxRimLightHint, "", &E::rimLight},
         {"effects", "rim_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxRimStrength,
-         Text::FxRimStrengthHint, " %"},
+         Text::FxRimStrengthHint, " %", nullptr, &E::rimStrength},
         {"effects", "sky", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSky,
-         Text::FxSkyHint, ""},
+         Text::FxSkyHint, "", &E::sky},
         {"effects", "sky_clouds", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxSkyClouds,
-         Text::FxSkyCloudsHint, " %"},
+         Text::FxSkyCloudsHint, " %", nullptr, &E::skyClouds},
         {"effects", "sky_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxSkyStrength,
-         Text::FxSkyStrengthHint, " %"},
+         Text::FxSkyStrengthHint, " %", nullptr, &E::skyStrength},
         {"effects", "motes", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMotes,
-         Text::FxMotesHint, ""},
+         Text::FxMotesHint, "", &E::motes},
         {"effects", "motes_amount", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMotesAmount,
-         Text::FxMotesAmountHint, " %"},
+         Text::FxMotesAmountHint, " %", nullptr, &E::motesAmount},
         {"effects", "relief", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRelief,
-         Text::FxReliefHint, ""},
+         Text::FxReliefHint, "", &E::relief},
         {"effects", "relief_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxReliefStrength,
-         Text::FxReliefStrengthHint, " %"},
+         Text::FxReliefStrengthHint, " %", nullptr, &E::reliefStrength},
         {"effects", "floor_reflections", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
-         Text::FxFloorReflections, Text::FxFloorReflectionsHint, ""},
+         Text::FxFloorReflections, Text::FxFloorReflectionsHint, "", &E::floorReflections},
         {"effects", "floor_reflect_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {},
-         Text::FxFloorReflectStrength, Text::FxFloorReflectStrengthHint, " %"},
+         Text::FxFloorReflectStrength, Text::FxFloorReflectStrengthHint, " %", nullptr, &E::floorReflectStrength},
         {"effects", "shafts", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxShafts,
-         Text::FxShaftsHint, ""},
+         Text::FxShaftsHint, "", &E::shafts},
         {"effects", "shafts_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxShaftsStrength,
-         Text::FxShaftsStrengthHint, " %"},
+         Text::FxShaftsStrengthHint, " %", nullptr, &E::shaftsStrength},
         {"effects", "day_cycle", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDayCycle,
-         Text::FxDayCycleHint, ""},
+         Text::FxDayCycleHint, "", &E::dayCycle},
         {"effects", "bloom", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBloom,
-         Text::FxBloomHint, ""},
+         Text::FxBloomHint, "", &E::bloom},
         {"effects", "bloom_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxBloomStrength,
-         Text::FxBloomStrengthHint, " %"},
+         Text::FxBloomStrengthHint, " %", nullptr, &E::bloomStrength},
         {"effects", "filmic", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFilmic,
-         Text::FxFilmicHint, ""},
+         Text::FxFilmicHint, "", &E::filmic},
         {"effects", "region_looks", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRegionLooks,
-         Text::FxRegionLooksHint, ""},
+         Text::FxRegionLooksHint, "", &E::regionLooks},
         {"effects", "region_looks_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {},
-         Text::FxRegionLooksStrength, Text::FxRegionLooksStrengthHint, " %"},
+         Text::FxRegionLooksStrength, Text::FxRegionLooksStrengthHint, " %", nullptr, &E::regionLooksStrength},
         {"effects", "footprints", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFootprints,
-         Text::FxFootprintsHint, ""},
+         Text::FxFootprintsHint, "", &E::footprints},
         {"effects", "storms", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxStorms,
-         Text::FxStormsHint, ""},
+         Text::FxStormsHint, "", &E::storms},
         {"effects", "grass", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGrass,
-         Text::FxGrassHint, ""},
+         Text::FxGrassHint, "", &E::grass},
         {"effects", "grass_amount", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxGrassAmount,
-         Text::FxGrassAmountHint, " %"},
+         Text::FxGrassAmountHint, " %", nullptr, &E::grassAmount},
         {"effects", "skill_sparks", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkillSparks,
-         Text::FxSkillSparksHint, ""},
+         Text::FxSkillSparksHint, "", &E::skillSparks},
         {"effects", "skill_sparks_amount", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
-         Text::FxSkillSparksAmount, Text::FxSkillSparksAmountHint, " %"},
+         Text::FxSkillSparksAmount, Text::FxSkillSparksAmountHint, " %", nullptr, &E::skillSparksAmount},
         {"effects", "film_grain", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFilmGrain,
-         Text::FxFilmGrainHint, ""},
+         Text::FxFilmGrainHint, "", &E::filmGrain},
         {"effects", "film_grain_amount", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxFilmGrainAmount,
-         Text::FxFilmGrainAmountHint, " %"},
+         Text::FxFilmGrainAmountHint, " %", nullptr, &E::filmGrainAmount},
         {"effects", "map_fade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMapFade,
-         Text::FxMapFadeHint, ""},
+         Text::FxMapFadeHint, "", &E::mapFade},
         {"effects", "round_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRoundLight,
-         Text::FxRoundLightHint, ""},
+         Text::FxRoundLightHint, "", &E::roundLight},
         {"effects", "appear", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAppear,
-         Text::FxAppearHint, ""},
+         Text::FxAppearHint, "", &E::appear},
         {"effects", "ripples", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRipples,
-         Text::FxRipplesHint, ""},
+         Text::FxRipplesHint, "", &E::ripples},
         {"effects", "glint", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGlint,
-         Text::FxGlintHint, ""},
+         Text::FxGlintHint, "", &E::glint},
         {"effects", "hit_flash", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxHitFlash,
-         Text::FxHitFlashHint, ""},
+         Text::FxHitFlashHint, "", &E::hitFlash},
         {"effects", "wet_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetGround,
-         Text::FxWetGroundHint, ""},
+         Text::FxWetGroundHint, "", &E::wetGround},
         {"effects", "flare", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFlare,
-         Text::FxFlareHint, ""},
+         Text::FxFlareHint, "", &E::flare},
         {"effects", "tree_volume", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeVolume,
-         Text::FxTreeVolumeHint, ""},
+         Text::FxTreeVolumeHint, "", &E::treeVolume},
         {"effects", "leaf_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLeafLight,
-         Text::FxLeafLightHint, ""},
+         Text::FxLeafLightHint, "", &E::leafLight},
         {"effects", "tree_tints", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeTints,
-         Text::FxTreeTintsHint, ""},
+         Text::FxTreeTintsHint, "", &E::treeTints},
         {"effects", "gusts", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGusts,
-         Text::FxGustsHint, ""},
+         Text::FxGustsHint, "", &E::gusts},
         {"effects", "dapple", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDapple,
-         Text::FxDappleHint, ""},
+         Text::FxDappleHint, "", &E::dapple},
         {"effects", "flowers", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFlowers,
-         Text::FxFlowersHint, ""},
+         Text::FxFlowersHint, "", &E::flowers},
         {"effects", "dew", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDew,
-         Text::FxDewHint, ""},
+         Text::FxDewHint, "", &E::dew},
         {"effects", "morning_fog", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMorningFog,
-         Text::FxMorningFogHint, ""},
+         Text::FxMorningFogHint, "", &E::morningFog},
         {"effects", "sand_drift", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSandDrift,
-         Text::FxSandDriftHint, ""},
+         Text::FxSandDriftHint, "", &E::sandDrift},
         {"effects", "snow_sparkle", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSnowSparkle,
-         Text::FxSnowSparkleHint, ""},
+         Text::FxSnowSparkleHint, "", &E::snowSparkle},
         {"effects", "wet_walls", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetWalls,
-         Text::FxWetWallsHint, ""},
+         Text::FxWetWallsHint, "", &E::wetWalls},
         {"effects", "shore_foam", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxShoreFoam,
-         Text::FxShoreFoamHint, ""},
+         Text::FxShoreFoamHint, "", &E::shoreFoam},
         {"effects", "fish", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFish,
-         Text::FxFishHint, ""},
+         Text::FxFishHint, "", &E::fish},
         {"effects", "swamp", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSwamp,
-         Text::FxSwampHint, ""},
+         Text::FxSwampHint, "", &E::swamp},
         {"effects", "butterflies", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxButterflies,
-         Text::FxButterfliesHint, ""},
+         Text::FxButterfliesHint, "", &E::butterflies},
         {"effects", "birds", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBirds,
-         Text::FxBirdsHint, ""},
+         Text::FxBirdsHint, "", &E::birds},
         {"effects", "leaf_fall", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLeafFall,
-         Text::FxLeafFallHint, ""},
+         Text::FxLeafFallHint, "", &E::leafFall},
         {"effects", "embers", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxEmbers,
-         Text::FxEmbersHint, ""},
+         Text::FxEmbersHint, "", &E::embers},
         {"effects", "breath", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBreath,
-         Text::FxBreathHint, ""},
+         Text::FxBreathHint, "", &E::breath},
         {"effects", "splashes", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSplashes,
-         Text::FxSplashesHint, ""},
+         Text::FxSplashesHint, "", &E::splashes},
         {"effects", "cave_drips", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxCaveDrips,
-         Text::FxCaveDripsHint, ""},
+         Text::FxCaveDripsHint, "", &E::caveDrips},
         {"effects", "underwater", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxUnderwater,
-         Text::FxUnderwaterHint, ""},
+         Text::FxUnderwaterHint, "", &E::underwater},
         // 2.2: the set for the card, the groups and their strength (core/effect_groups.hpp)
         {"effects", "preset", Page::Effects, Control::Choice, 0, 0, 0,
          {"auto", "off", "weak", "medium", "strong", "custom"},
@@ -343,68 +346,69 @@ const std::vector<IniSetting>& iniSettings() {
         {"effects", "tier", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "classic", "remaster"},
          {Text::FxTierAuto, Text::FxTierClassic, Text::FxTierRemaster}, Text::FxTier, Text::FxTierHint, ""},
         {"effects", "materials", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMaterials,
-         Text::FxMaterialsHint, ""},
+         Text::FxMaterialsHint, "", &E::materials},
         {"effects", "materials_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMaterialsStrength,
-         Text::FxMaterialsStrengthHint, " %"},
+         Text::FxMaterialsStrengthHint, " %", nullptr, &E::materialsStrength},
         {"effects", "ground_seams", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroundSeams,
-         Text::FxGroundSeamsHint, ""},
+         Text::FxGroundSeamsHint, "", &E::groundSeams},
         {"effects", "ground_clutter", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroundClutter,
-         Text::FxGroundClutterHint, ""},
+         Text::FxGroundClutterHint, "", &E::groundClutter},
         {"effects", "new_trees", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNewTrees,
-         Text::FxNewTreesHint, ""},
+         Text::FxNewTreesHint, "", &E::newTrees},
         {"effects", "sky_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkyLight,
-         Text::FxSkyLightHint, ""},
+         Text::FxSkyLightHint, "", &E::skyLight},
         {"effects", "bounce_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBounceLight,
-         Text::FxBounceLightHint, ""},
+         Text::FxBounceLightHint, "", &E::bounceLight},
         {"effects", "volumetric_fog", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxVolumetricFog,
-         Text::FxVolumetricFogHint, ""},
+         Text::FxVolumetricFogHint, "", &E::volumetricFog},
         {"effects", "volumetric_fog_density", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
-         Text::FxVolumetricFogDensity, Text::FxVolumetricFogDensityHint, " %"},
+         Text::FxVolumetricFogDensity, Text::FxVolumetricFogDensityHint, " %", nullptr, &E::volumetricFogDensity},
         {"effects", "smooth_hills", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothHills,
-         Text::FxSmoothHillsHint, ""},
+         Text::FxSmoothHillsHint, "", &E::smoothHills},
         {"effects", "smooth_hills_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
-         Text::FxSmoothHillsStrength, Text::FxSmoothHillsStrengthHint, " %"},
+         Text::FxSmoothHillsStrength, Text::FxSmoothHillsStrengthHint, " %", nullptr, &E::smoothHillsStrength},
         {"effects", "world_reflections", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
-         Text::FxWorldReflections, Text::FxWorldReflectionsHint, ""},
+         Text::FxWorldReflections, Text::FxWorldReflectionsHint, "", &E::worldReflections},
         {"effects", "sprite_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSpriteLight,
-         Text::FxSpriteLightHint, ""},
+         Text::FxSpriteLightHint, "", &E::spriteLight},
         {"effects", "sprite_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
-         Text::FxSpriteLightStrength, Text::FxSpriteLightStrengthHint, " %"},
+         Text::FxSpriteLightStrength, Text::FxSpriteLightStrengthHint, " %", nullptr, &E::spriteLightStrength},
         {"effects", "edge_land", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxEdgeLand,
-         Text::FxEdgeLandHint, ""},
+         Text::FxEdgeLandHint, "", &E::edgeLand},
         {"effects", "smooth_models", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothModels,
-         Text::FxSmoothModelsHint, ""},
+         Text::FxSmoothModelsHint, "", &E::smoothModels},
         {"effects", "seasons", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSeasons,
-         Text::FxSeasonsHint, ""},
+         Text::FxSeasonsHint, "", &E::seasons},
         {"effects", "rain_wet", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRainWet,
-         Text::FxRainWetHint, ""},
+         Text::FxRainWetHint, "", &E::rainWet},
         {"effects", "night_windows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNightWindows,
-         Text::FxNightWindowsHint, ""},
+         Text::FxNightWindowsHint, "", &E::nightWindows},
         {"effects", "shared_wind", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSharedWind,
-         Text::FxSharedWindHint, ""},
+         Text::FxSharedWindHint, "", &E::sharedWind},
         {"effects", "lit_dust", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLitDust,
-         Text::FxLitDustHint, ""},
+         Text::FxLitDustHint, "", &E::litDust},
         {"effects", "anime_trees", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAnimeTrees,
-         Text::FxAnimeTreesHint, ""},
+         Text::FxAnimeTreesHint, "", &E::animeTrees},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
-         ""},
+         "", &E::night},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
-         Text::FxNightStrengthHint, " %"},
+         Text::FxNightStrengthHint, " %", nullptr, &E::nightStrength},
         {"effects", "night_clock", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNightClock,
-         Text::FxNightClockHint, ""},
-        {"effects", "dof", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDof, Text::FxDofHint, ""},
+         Text::FxNightClockHint, "", &E::nightClock},
+        {"effects", "dof", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDof, Text::FxDofHint, "",
+         &E::dof},
         {"effects", "dof_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxDofStrength,
-         Text::FxDofStrengthHint, " %"},
+         Text::FxDofStrengthHint, " %", nullptr, &E::dofStrength},
         {"effects", "dof_range", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxDofRange,
-         Text::FxDofRangeHint, " %"},
+         Text::FxDofRangeHint, " %", nullptr, &E::dofRange},
         {"effects", "water", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWater, Text::FxWaterHint,
-         ""},
+         "", &E::water},
         {"effects", "water_waves", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxWaterWaves,
-         Text::FxWaterWavesHint, " %"},
+         Text::FxWaterWavesHint, " %", nullptr, &E::waterWaves},
         {"effects", "water_reflections", Page::Effects, Control::Slider, 0, 100, 10, {}, {},
-         Text::FxWaterReflections, Text::FxWaterReflectionsHint, " %"},
+         Text::FxWaterReflections, Text::FxWaterReflectionsHint, " %", nullptr, &E::waterReflections},
         {"effects", "water_clarity", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxWaterClarity,
-         Text::FxWaterClarityHint, " %"},
+         Text::FxWaterClarityHint, " %", nullptr, &E::waterClarity},
         {"ai", "enabled", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiEnable, Text::AiEnableHint, ""},
         {"ai", "ground", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiGround, Text::AiGroundHint, ""},
         {"ai", "objects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiObjects, Text::AiObjectsHint,
@@ -515,14 +519,21 @@ const std::vector<IniSetting>& iniSettings() {
 }
 
 const IniSetting* findSetting(const std::string& sectionKey) {
-    for (const IniSetting& s : iniSettings())
-        if (sectionKey == std::string(s.section) + "." + s.key) return &s;
-    return nullptr;
+    // 2.2.2: by an index made once - parseConfig asks for each [effects] line now
+    static const std::unordered_map<std::string, const IniSetting*> index = [] {
+        std::unordered_map<std::string, const IniSetting*> m;
+        for (const IniSetting& s : iniSettings()) m.emplace(std::string(s.section) + "." + s.key, &s);
+        return m;
+    }();
+    const auto it = index.find(sectionKey);
+    return it == index.end() ? nullptr : it->second;
 }
 
 std::string sectionKey(const IniSetting& s) { return std::string(s.section) + "." + s.key; }
 
 std::string tokenOf(const IniSetting& s, const Config& c) {
+    if (s.flag) return c.effects.*s.flag ? s.tokens[1] : s.tokens[0];  // 2.2.2: [effects] by the entry's field
+    if (s.number) return std::to_string(c.effects.*s.number);
     const std::string k = sectionKey(s);
     if (k == "renderer.api") return apiToken(c.api);
     if (k == "renderer.gpu") return c.gpu.empty() ? "auto" : c.gpu;
@@ -569,115 +580,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.compress") return a.compress;
     if (k == "ai.generate") return a.generate ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);
-    if (k == "effects.smooth_light") return c.effects.smoothLight ? "1" : "0";
-    if (k == "effects.torch") return c.effects.torch ? "1" : "0";
-    if (k == "effects.torch_flame") return c.effects.torchFlame ? "1" : "0";
-    if (k == "effects.torch_brightness") return std::to_string(c.effects.torchBrightness);
-    if (k == "effects.torch_glow") return std::to_string(c.effects.torchGlow);
-    if (k == "effects.torch_light") return std::to_string(c.effects.torchLight);
-    if (k == "effects.torch_flicker") return std::to_string(c.effects.torchFlicker);
-    if (k == "effects.smoke") return c.effects.smoke ? "1" : "0";
-    if (k == "effects.smoke_density") return std::to_string(c.effects.smokeDensity);
-    if (k == "effects.fire_light") return c.effects.fireLight ? "1" : "0";
-    if (k == "effects.fire_light_strength") return std::to_string(c.effects.fireLightStrength);
-    if (k == "effects.skill_colours") return c.effects.skillColours ? "1" : "0";
-    if (k == "effects.aura") return c.effects.aura ? "1" : "0";
-    if (k == "effects.aura_brightness") return std::to_string(c.effects.auraBrightness);
-    if (k == "effects.skills_soft") return c.effects.skillsSoft ? "1" : "0";
-    if (k == "effects.skill_brightness") return std::to_string(c.effects.skillBrightness);
-    if (k == "effects.fireflies") return c.effects.fireflies ? "1" : "0";
-    if (k == "effects.fireflies_brightness") return std::to_string(c.effects.firefliesBrightness);
-    if (k == "effects.map_glows") return c.effects.mapGlows ? "1" : "0";
-    if (k == "effects.map_glows_brightness") return std::to_string(c.effects.mapGlowsBrightness);
-    if (k == "effects.rays") return c.effects.rays ? "1" : "0";
-    if (k == "effects.rays_brightness") return std::to_string(c.effects.raysBrightness);
-    if (k == "effects.lava") return c.effects.lava ? "1" : "0";
-    if (k == "effects.lava_brightness") return std::to_string(c.effects.lavaBrightness);
-    if (k == "effects.actor_shadows") return c.effects.actorShadows ? "1" : "0";
-    if (k == "effects.actor_shadows_strength") return std::to_string(c.effects.actorShadowsStrength);
-    if (k == "effects.clouds") return c.effects.clouds ? "1" : "0";
-    if (k == "effects.clouds_strength") return std::to_string(c.effects.cloudsStrength);
-    if (k == "effects.haze") return c.effects.haze ? "1" : "0";
-    if (k == "effects.haze_strength") return std::to_string(c.effects.hazeStrength);
-    if (k == "effects.heat") return c.effects.heat ? "1" : "0";
-    if (k == "effects.heat_strength") return std::to_string(c.effects.heatStrength);
-    if (k == "effects.portals") return c.effects.portals ? "1" : "0";
-    if (k == "effects.portals_strength") return std::to_string(c.effects.portalsStrength);
-    if (k == "effects.weather") return c.effects.weather ? "1" : "0";
-    if (k == "effects.weather_amount") return std::to_string(c.effects.weatherAmount);
-    if (k == "effects.lamps") return c.effects.lamps ? "1" : "0";
-    if (k == "effects.lamps_light") return std::to_string(c.effects.lampsLight);
-    if (k == "effects.glow") return c.effects.glow ? "1" : "0";
-    if (k == "effects.glow_strength") return std::to_string(c.effects.glowStrength);
-    if (k == "effects.glow_size") return std::to_string(c.effects.glowSize);
-    if (k == "effects.glow_light") return std::to_string(c.effects.glowLight);
-    if (k == "effects.ao") return c.effects.ao ? "1" : "0";
-    if (k == "effects.ao_strength") return std::to_string(c.effects.aoStrength);
-    if (k == "effects.ao_size") return std::to_string(c.effects.aoSize);
-    if (k == "effects.grade") return c.effects.grade ? "1" : "0";
-    if (k == "effects.grade_saturation") return std::to_string(c.effects.gradeSaturation);
-    if (k == "effects.grade_contrast") return std::to_string(c.effects.gradeContrast);
-    if (k == "effects.grade_brightness") return std::to_string(c.effects.gradeBrightness);
-    if (k == "effects.grade_warmth") return std::to_string(c.effects.gradeWarmth);
-    if (k == "effects.grade_vignette") return std::to_string(c.effects.gradeVignette);
-    if (k == "effects.soft_particles") return c.effects.softParticles ? "1" : "0";
-    if (k == "effects.rim_light") return c.effects.rimLight ? "1" : "0";
-    if (k == "effects.rim_strength") return std::to_string(c.effects.rimStrength);
-    if (k == "effects.sky") return c.effects.sky ? "1" : "0";
-    if (k == "effects.sky_clouds") return std::to_string(c.effects.skyClouds);
-    if (k == "effects.sky_strength") return std::to_string(c.effects.skyStrength);
-    if (k == "effects.motes") return c.effects.motes ? "1" : "0";
-    if (k == "effects.motes_amount") return std::to_string(c.effects.motesAmount);
-    if (k == "effects.relief") return c.effects.relief ? "1" : "0";
-    if (k == "effects.relief_strength") return std::to_string(c.effects.reliefStrength);
-    if (k == "effects.floor_reflections") return c.effects.floorReflections ? "1" : "0";
-    if (k == "effects.floor_reflect_strength") return std::to_string(c.effects.floorReflectStrength);
-    if (k == "effects.shafts") return c.effects.shafts ? "1" : "0";
-    if (k == "effects.shafts_strength") return std::to_string(c.effects.shaftsStrength);
-    if (k == "effects.day_cycle") return c.effects.dayCycle ? "1" : "0";
-    if (k == "effects.bloom") return c.effects.bloom ? "1" : "0";
-    if (k == "effects.bloom_strength") return std::to_string(c.effects.bloomStrength);
-    if (k == "effects.filmic") return c.effects.filmic ? "1" : "0";
-    if (k == "effects.region_looks") return c.effects.regionLooks ? "1" : "0";
-    if (k == "effects.region_looks_strength") return std::to_string(c.effects.regionLooksStrength);
-    if (k == "effects.footprints") return c.effects.footprints ? "1" : "0";
-    if (k == "effects.storms") return c.effects.storms ? "1" : "0";
-    if (k == "effects.grass") return c.effects.grass ? "1" : "0";
-    if (k == "effects.grass_amount") return std::to_string(c.effects.grassAmount);
-    if (k == "effects.skill_sparks") return c.effects.skillSparks ? "1" : "0";
-    if (k == "effects.skill_sparks_amount") return std::to_string(c.effects.skillSparksAmount);
-    if (k == "effects.film_grain") return c.effects.filmGrain ? "1" : "0";
-    if (k == "effects.film_grain_amount") return std::to_string(c.effects.filmGrainAmount);
-    if (k == "effects.map_fade") return c.effects.mapFade ? "1" : "0";
-    if (k == "effects.round_light") return c.effects.roundLight ? "1" : "0";
-    if (k == "effects.appear") return c.effects.appear ? "1" : "0";
-    if (k == "effects.ripples") return c.effects.ripples ? "1" : "0";
-    if (k == "effects.glint") return c.effects.glint ? "1" : "0";
-    if (k == "effects.hit_flash") return c.effects.hitFlash ? "1" : "0";
-    if (k == "effects.wet_ground") return c.effects.wetGround ? "1" : "0";
-    if (k == "effects.flare") return c.effects.flare ? "1" : "0";
-    if (k == "effects.tree_volume") return c.effects.treeVolume ? "1" : "0";
-    if (k == "effects.leaf_light") return c.effects.leafLight ? "1" : "0";
-    if (k == "effects.tree_tints") return c.effects.treeTints ? "1" : "0";
-    if (k == "effects.gusts") return c.effects.gusts ? "1" : "0";
-    if (k == "effects.dapple") return c.effects.dapple ? "1" : "0";
-    if (k == "effects.flowers") return c.effects.flowers ? "1" : "0";
-    if (k == "effects.dew") return c.effects.dew ? "1" : "0";
-    if (k == "effects.morning_fog") return c.effects.morningFog ? "1" : "0";
-    if (k == "effects.sand_drift") return c.effects.sandDrift ? "1" : "0";
-    if (k == "effects.snow_sparkle") return c.effects.snowSparkle ? "1" : "0";
-    if (k == "effects.wet_walls") return c.effects.wetWalls ? "1" : "0";
-    if (k == "effects.shore_foam") return c.effects.shoreFoam ? "1" : "0";
-    if (k == "effects.fish") return c.effects.fish ? "1" : "0";
-    if (k == "effects.swamp") return c.effects.swamp ? "1" : "0";
-    if (k == "effects.butterflies") return c.effects.butterflies ? "1" : "0";
-    if (k == "effects.birds") return c.effects.birds ? "1" : "0";
-    if (k == "effects.leaf_fall") return c.effects.leafFall ? "1" : "0";
-    if (k == "effects.embers") return c.effects.embers ? "1" : "0";
-    if (k == "effects.breath") return c.effects.breath ? "1" : "0";
-    if (k == "effects.splashes") return c.effects.splashes ? "1" : "0";
-    if (k == "effects.cave_drips") return c.effects.caveDrips ? "1" : "0";
-    if (k == "effects.underwater") return c.effects.underwater ? "1" : "0";
     if (k == "effects.preset") return effect_groups::presetToken(c.effects.preset);  // 2.2
     for (int g = 0; g < kEffectGroups; ++g) {
         const std::string word = std::string("effects.group_") + effect_groups::groupWord(g);
@@ -685,40 +587,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
         if (k == word + "_strength") return std::to_string(c.effects.groupStrength[g]);
     }
     if (k == "effects.tier") return c.effects.tier == 1 ? "classic" : c.effects.tier == 2 ? "remaster" : "auto";
-    if (k == "effects.materials") return c.effects.materials ? "1" : "0";
-    if (k == "effects.materials_strength") return std::to_string(c.effects.materialsStrength);
-    if (k == "effects.ground_seams") return c.effects.groundSeams ? "1" : "0";
-    if (k == "effects.ground_clutter") return c.effects.groundClutter ? "1" : "0";
-    if (k == "effects.new_trees") return c.effects.newTrees ? "1" : "0";
-    if (k == "effects.sky_light") return c.effects.skyLight ? "1" : "0";
-    if (k == "effects.bounce_light") return c.effects.bounceLight ? "1" : "0";
-    if (k == "effects.volumetric_fog") return c.effects.volumetricFog ? "1" : "0";
-    if (k == "effects.volumetric_fog_density") return std::to_string(c.effects.volumetricFogDensity);
-    if (k == "effects.smooth_hills") return c.effects.smoothHills ? "1" : "0";
-    if (k == "effects.smooth_hills_strength") return std::to_string(c.effects.smoothHillsStrength);
-    if (k == "effects.world_reflections") return c.effects.worldReflections ? "1" : "0";
-    if (k == "effects.sprite_light") return c.effects.spriteLight ? "1" : "0";
-    if (k == "effects.sprite_light_strength") return std::to_string(c.effects.spriteLightStrength);
-    if (k == "effects.edge_land") return c.effects.edgeLand ? "1" : "0";
-    if (k == "effects.smooth_models") return c.effects.smoothModels ? "1" : "0";
-    if (k == "effects.seasons") return c.effects.seasons ? "1" : "0";
-    if (k == "effects.rain_wet") return c.effects.rainWet ? "1" : "0";
-    if (k == "effects.night_windows") return c.effects.nightWindows ? "1" : "0";
-    if (k == "effects.shared_wind") return c.effects.sharedWind ? "1" : "0";
-    if (k == "effects.lit_dust") return c.effects.litDust ? "1" : "0";
-    if (k == "effects.anime_trees") return c.effects.animeTrees ? "1" : "0";
-    if (k == "effects.night") return c.effects.night ? "1" : "0";
-    if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
-    if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);
-    if (k == "effects.night_strength") return std::to_string(c.effects.nightStrength);
-    if (k == "effects.night_clock") return c.effects.nightClock ? "1" : "0";
-    if (k == "effects.dof") return c.effects.dof ? "1" : "0";
-    if (k == "effects.dof_strength") return std::to_string(c.effects.dofStrength);
-    if (k == "effects.dof_range") return std::to_string(c.effects.dofRange);
-    if (k == "effects.water") return c.effects.water ? "1" : "0";
-    if (k == "effects.water_waves") return std::to_string(c.effects.waterWaves);
-    if (k == "effects.water_reflections") return std::to_string(c.effects.waterReflections);
-    if (k == "effects.water_clarity") return std::to_string(c.effects.waterClarity);
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.keep_fps") return std::to_string(c.keepFps);

@@ -1,6 +1,7 @@
 #include "core/config.hpp"
 
 #include "core/effect_groups.hpp"
+#include "core/settings/schema.hpp"
 
 #include <algorithm>
 
@@ -397,6 +398,20 @@ Config parseConfig(const std::string& text) {
         const std::string key = section + "." + lower(trim(line.substr(0, eq)));
         const std::string raw = trim(line.substr(eq + 1));  // as written: a graphics card's name (0.50.2)
         const std::string val = lower(raw);
+        // 2.2.2: a switch or a number of [effects] the settings' schema binds to its field - read by its entry there
+        // (a number from its min to its max, else the default stays), not by a branch of its own below
+        if (section == "effects") {
+            if (const settings::IniSetting* s = settings::findSetting(key)) {
+                if (s->flag) {
+                    setBool(val, c.effects.*s->flag);
+                    continue;
+                }
+                if (s->number) {
+                    toInt(val, s->min, s->max, c.effects.*s->number);
+                    continue;
+                }
+            }
+        }
         if (key == "renderer.backend") {
             // 2.2: dgVoodoo is gone - the uaRO renderer always; the old line is read and left alone
         } else if (key == "renderer.api") {
@@ -468,215 +483,9 @@ Config parseConfig(const std::string& text) {
             const std::string k = key.substr(3);
             newSprites = newSprites || k == "monsters" || k == "players" || k == "npcs" || k == "items";
             parseAi(k, val, c.ai, newEnabled, newBudget, newDenoise);
-        } else if (key == "effects.smooth_light") {
-            setBool(val, c.effects.smoothLight);
-        } else if (key == "effects.torch") {
-            setBool(val, c.effects.torch);
-        } else if (key == "effects.torch_flame") {
-            setBool(val, c.effects.torchFlame);
-        } else if (key == "effects.torch_brightness") {
-            toInt(val, 0, 200, c.effects.torchBrightness);
-        } else if (key == "effects.torch_glow") {
-            toInt(val, 0, 200, c.effects.torchGlow);
-        } else if (key == "effects.torch_light") {
-            toInt(val, 0, 200, c.effects.torchLight);
-        } else if (key == "effects.torch_flicker") {
-            toInt(val, 0, 100, c.effects.torchFlicker);
-        } else if (key == "effects.fire_light") {
-            setBool(val, c.effects.fireLight);
-        } else if (key == "effects.fire_light_strength") {
-            toInt(val, 0, 200, c.effects.fireLightStrength);
-        } else if (key == "effects.skill_colours") {
-            setBool(val, c.effects.skillColours);
-        } else if (key == "effects.skills_soft") {
-            setBool(val, c.effects.skillsSoft);
-        } else if (key == "effects.skill_brightness") {
-            toInt(val, 0, 100, c.effects.skillBrightness);
-        } else if (key == "effects.aura") {
-            setBool(val, c.effects.aura);
-        } else if (key == "effects.aura_brightness") {
-            toInt(val, 0, 100, c.effects.auraBrightness);
-        } else if (key == "effects.fireflies") {
-            setBool(val, c.effects.fireflies);
-        } else if (key == "effects.fireflies_brightness") {
-            toInt(val, 0, 200, c.effects.firefliesBrightness);
-        } else if (key == "effects.map_glows") {
-            setBool(val, c.effects.mapGlows);
-        } else if (key == "effects.map_glows_brightness") {
-            toInt(val, 0, 200, c.effects.mapGlowsBrightness);
-        } else if (key == "effects.rays") {
-            setBool(val, c.effects.rays);
-        } else if (key == "effects.rays_brightness") {
-            toInt(val, 0, 200, c.effects.raysBrightness);
-        } else if (key == "effects.lava") {
-            setBool(val, c.effects.lava);
-        } else if (key == "effects.lava_brightness") {
-            toInt(val, 0, 200, c.effects.lavaBrightness);
-        } else if (key == "effects.actor_shadows") {
-            setBool(val, c.effects.actorShadows);
-        } else if (key == "effects.actor_shadows_strength") {
-            toInt(val, 0, 100, c.effects.actorShadowsStrength);
-        } else if (key == "effects.clouds") {
-            setBool(val, c.effects.clouds);
-        } else if (key == "effects.clouds_strength") {
-            toInt(val, 0, 100, c.effects.cloudsStrength);
-        } else if (key == "effects.haze") {
-            setBool(val, c.effects.haze);
-        } else if (key == "effects.haze_strength") {
-            toInt(val, 0, 100, c.effects.hazeStrength);
-        } else if (key == "effects.heat") {
-            setBool(val, c.effects.heat);
-        } else if (key == "effects.heat_strength") {
-            toInt(val, 0, 200, c.effects.heatStrength);
-        } else if (key == "effects.portals") {
-            setBool(val, c.effects.portals);
-        } else if (key == "effects.portals_strength") {
-            toInt(val, 0, 200, c.effects.portalsStrength);
-        } else if (key == "effects.weather") {
-            setBool(val, c.effects.weather);
-        } else if (key == "effects.weather_amount") {
-            toInt(val, 0, 200, c.effects.weatherAmount);
-        } else if (key == "effects.lamps") {
-            setBool(val, c.effects.lamps);
-        } else if (key == "effects.lamps_light") {
-            toInt(val, 0, 200, c.effects.lampsLight);
-        } else if (key == "effects.smoke") {
-            setBool(val, c.effects.smoke);
-        } else if (key == "effects.smoke_density") {
-            toInt(val, 0, 200, c.effects.smokeDensity);
-        } else if (key == "effects.glow") {
-            setBool(val, c.effects.glow);
-        } else if (key == "effects.glow_strength") {
-            toInt(val, 0, 200, c.effects.glowStrength);
-        } else if (key == "effects.glow_size") {
-            toInt(val, 0, 100, c.effects.glowSize);
-        } else if (key == "effects.glow_light") {
-            toInt(val, 0, 100, c.effects.glowLight);
-        } else if (key == "effects.ao") {
-            setBool(val, c.effects.ao);
-        } else if (key == "effects.ao_strength") {
-            toInt(val, 0, 100, c.effects.aoStrength);
-        } else if (key == "effects.ao_size") {
-            toInt(val, 0, 100, c.effects.aoSize);
-        } else if (key == "effects.soft_particles") {
-            setBool(val, c.effects.softParticles);
-        } else if (key == "effects.rim_light") {
-            setBool(val, c.effects.rimLight);
-        } else if (key == "effects.rim_strength") {
-            toInt(val, 0, 200, c.effects.rimStrength);
-        } else if (key == "effects.sky") {
-            setBool(val, c.effects.sky);
-        } else if (key == "effects.sky_clouds") {
-            toInt(val, 0, 100, c.effects.skyClouds);
-        } else if (key == "effects.sky_strength") {
-            toInt(val, 0, 100, c.effects.skyStrength);
-        } else if (key == "effects.motes") {
-            setBool(val, c.effects.motes);
-        } else if (key == "effects.motes_amount") {
-            toInt(val, 0, 200, c.effects.motesAmount);
-        } else if (key == "effects.relief") {
-            setBool(val, c.effects.relief);
-        } else if (key == "effects.relief_strength") {
-            toInt(val, 0, 200, c.effects.reliefStrength);
-        } else if (key == "effects.floor_reflections") {
-            setBool(val, c.effects.floorReflections);
-        } else if (key == "effects.floor_reflect_strength") {
-            toInt(val, 0, 100, c.effects.floorReflectStrength);
-        } else if (key == "effects.shafts") {
-            setBool(val, c.effects.shafts);
-        } else if (key == "effects.shafts_strength") {
-            toInt(val, 0, 200, c.effects.shaftsStrength);
-        } else if (key == "effects.day_cycle") {
-            setBool(val, c.effects.dayCycle);
         } else if (key == "effects.sun_shadows" || key == "effects.sun_shadows_strength" ||
                    key == "effects.real_shadows") {
             // 2.1.4: the moving shadows are gone (the map's painted ones are enough); 2.2: their code too
-        } else if (key == "effects.bloom") {
-            setBool(val, c.effects.bloom);
-        } else if (key == "effects.bloom_strength") {
-            toInt(val, 0, 200, c.effects.bloomStrength);
-        } else if (key == "effects.filmic") {
-            setBool(val, c.effects.filmic);
-        } else if (key == "effects.region_looks") {
-            setBool(val, c.effects.regionLooks);
-        } else if (key == "effects.region_looks_strength") {
-            toInt(val, 0, 100, c.effects.regionLooksStrength);
-        } else if (key == "effects.footprints") {
-            setBool(val, c.effects.footprints);
-        } else if (key == "effects.storms") {
-            setBool(val, c.effects.storms);
-        } else if (key == "effects.grass") {
-            setBool(val, c.effects.grass);
-        } else if (key == "effects.grass_amount") {
-            toInt(val, 0, 100, c.effects.grassAmount);
-        } else if (key == "effects.skill_sparks") {
-            setBool(val, c.effects.skillSparks);
-        } else if (key == "effects.skill_sparks_amount") {
-            toInt(val, 0, 200, c.effects.skillSparksAmount);
-        } else if (key == "effects.film_grain") {
-            setBool(val, c.effects.filmGrain);
-        } else if (key == "effects.film_grain_amount") {
-            toInt(val, 0, 100, c.effects.filmGrainAmount);
-        } else if (key == "effects.map_fade") {
-            setBool(val, c.effects.mapFade);
-        } else if (key == "effects.round_light") {
-            setBool(val, c.effects.roundLight);
-        } else if (key == "effects.appear") {
-            setBool(val, c.effects.appear);
-        } else if (key == "effects.ripples") {
-            setBool(val, c.effects.ripples);
-        } else if (key == "effects.glint") {
-            setBool(val, c.effects.glint);
-        } else if (key == "effects.hit_flash") {
-            setBool(val, c.effects.hitFlash);
-        } else if (key == "effects.wet_ground") {
-            setBool(val, c.effects.wetGround);
-        } else if (key == "effects.flare") {
-            setBool(val, c.effects.flare);
-        } else if (key == "effects.tree_volume") {
-            setBool(val, c.effects.treeVolume);
-        } else if (key == "effects.leaf_light") {
-            setBool(val, c.effects.leafLight);
-        } else if (key == "effects.tree_tints") {
-            setBool(val, c.effects.treeTints);
-        } else if (key == "effects.gusts") {
-            setBool(val, c.effects.gusts);
-        } else if (key == "effects.dapple") {
-            setBool(val, c.effects.dapple);
-        } else if (key == "effects.flowers") {
-            setBool(val, c.effects.flowers);
-        } else if (key == "effects.dew") {
-            setBool(val, c.effects.dew);
-        } else if (key == "effects.morning_fog") {
-            setBool(val, c.effects.morningFog);
-        } else if (key == "effects.sand_drift") {
-            setBool(val, c.effects.sandDrift);
-        } else if (key == "effects.snow_sparkle") {
-            setBool(val, c.effects.snowSparkle);
-        } else if (key == "effects.wet_walls") {
-            setBool(val, c.effects.wetWalls);
-        } else if (key == "effects.shore_foam") {
-            setBool(val, c.effects.shoreFoam);
-        } else if (key == "effects.fish") {
-            setBool(val, c.effects.fish);
-        } else if (key == "effects.swamp") {
-            setBool(val, c.effects.swamp);
-        } else if (key == "effects.butterflies") {
-            setBool(val, c.effects.butterflies);
-        } else if (key == "effects.birds") {
-            setBool(val, c.effects.birds);
-        } else if (key == "effects.leaf_fall") {
-            setBool(val, c.effects.leafFall);
-        } else if (key == "effects.embers") {
-            setBool(val, c.effects.embers);
-        } else if (key == "effects.breath") {
-            setBool(val, c.effects.breath);
-        } else if (key == "effects.splashes") {
-            setBool(val, c.effects.splashes);
-        } else if (key == "effects.cave_drips") {
-            setBool(val, c.effects.caveDrips);
-        } else if (key == "effects.underwater") {
-            setBool(val, c.effects.underwater);
         } else if (key == "effects.preset") {  // 2.2
             effect_groups::presetFrom(val, c.effects.preset);
         } else if (key.compare(0, 14, "effects.group_") == 0 && groupKey(key, val, c.effects)) {  // 2.2
@@ -684,88 +493,8 @@ Config parseConfig(const std::string& text) {
             if (val == "auto") c.effects.tier = 0;
             if (val == "classic") c.effects.tier = 1;
             if (val == "remaster") c.effects.tier = 2;
-        } else if (key == "effects.materials") {
-            setBool(val, c.effects.materials);
-        } else if (key == "effects.materials_strength") {
-            toInt(val, 0, 200, c.effects.materialsStrength);
-        } else if (key == "effects.ground_seams") {
-            setBool(val, c.effects.groundSeams);
         } else if (key == "effects.full_crowns") {
             // 2.2: the old crowns are gone (the new trees grow whole ones) - read and left alone
-        } else if (key == "effects.ground_clutter") {
-            setBool(val, c.effects.groundClutter);
-        } else if (key == "effects.new_trees") {
-            setBool(val, c.effects.newTrees);
-        } else if (key == "effects.sky_light") {
-            setBool(val, c.effects.skyLight);
-        } else if (key == "effects.bounce_light") {
-            setBool(val, c.effects.bounceLight);
-        } else if (key == "effects.volumetric_fog") {
-            setBool(val, c.effects.volumetricFog);
-        } else if (key == "effects.volumetric_fog_density") {
-            toInt(val, 0, 200, c.effects.volumetricFogDensity);
-        } else if (key == "effects.smooth_hills") {
-            setBool(val, c.effects.smoothHills);
-        } else if (key == "effects.smooth_hills_strength") {
-            toInt(val, 0, 200, c.effects.smoothHillsStrength);
-        } else if (key == "effects.world_reflections") {
-            setBool(val, c.effects.worldReflections);
-        } else if (key == "effects.sprite_light") {
-            setBool(val, c.effects.spriteLight);
-        } else if (key == "effects.sprite_light_strength") {
-            toInt(val, 0, 200, c.effects.spriteLightStrength);
-        } else if (key == "effects.edge_land") {
-            setBool(val, c.effects.edgeLand);
-        } else if (key == "effects.smooth_models") {
-            setBool(val, c.effects.smoothModels);
-        } else if (key == "effects.seasons") {
-            setBool(val, c.effects.seasons);
-        } else if (key == "effects.rain_wet") {
-            setBool(val, c.effects.rainWet);
-        } else if (key == "effects.night_windows") {
-            setBool(val, c.effects.nightWindows);
-        } else if (key == "effects.shared_wind") {
-            setBool(val, c.effects.sharedWind);
-        } else if (key == "effects.lit_dust") {
-            setBool(val, c.effects.litDust);
-        } else if (key == "effects.anime_trees") {
-            setBool(val, c.effects.animeTrees);
-        } else if (key == "effects.foliage") {
-            setBool(val, c.effects.foliage);
-        } else if (key == "effects.foliage_strength") {
-            toInt(val, 0, 200, c.effects.foliageStrength);
-        } else if (key == "effects.night") {
-            setBool(val, c.effects.night);
-        } else if (key == "effects.night_strength") {
-            toInt(val, 0, 100, c.effects.nightStrength);
-        } else if (key == "effects.night_clock") {
-            setBool(val, c.effects.nightClock);
-        } else if (key == "effects.grade") {
-            setBool(val, c.effects.grade);
-        } else if (key == "effects.grade_saturation") {
-            toInt(val, 0, 200, c.effects.gradeSaturation);
-        } else if (key == "effects.grade_contrast") {
-            toInt(val, 50, 150, c.effects.gradeContrast);
-        } else if (key == "effects.grade_brightness") {
-            toInt(val, 50, 150, c.effects.gradeBrightness);
-        } else if (key == "effects.grade_warmth") {
-            toInt(val, 0, 100, c.effects.gradeWarmth);
-        } else if (key == "effects.grade_vignette") {
-            toInt(val, 0, 100, c.effects.gradeVignette);
-        } else if (key == "effects.dof") {
-            setBool(val, c.effects.dof);
-        } else if (key == "effects.dof_strength") {
-            toInt(val, 0, 100, c.effects.dofStrength);
-        } else if (key == "effects.dof_range") {
-            toInt(val, 0, 100, c.effects.dofRange);
-        } else if (key == "effects.water") {
-            setBool(val, c.effects.water);
-        } else if (key == "effects.water_waves") {
-            toInt(val, 0, 100, c.effects.waterWaves);
-        } else if (key == "effects.water_reflections") {
-            toInt(val, 0, 100, c.effects.waterReflections);
-        } else if (key == "effects.water_clarity") {
-            toInt(val, 0, 100, c.effects.waterClarity);
         } else if (key == "display.monitor") {
             toInt(val, 0, 16, c.monitor);
         } else if (key == "display.window_width") {

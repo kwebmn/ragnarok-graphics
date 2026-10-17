@@ -36,6 +36,10 @@ struct IniSetting {
     Text label;
     Text hint;
     const char* unit;                 // after a slider's number
+    // 2.2.2: a switch or a number of [effects] bound to its field - parseConfig reads it and tokenOf gives it by this
+    // entry (a number taken from min to max, else the default stays), not by branches of their own
+    bool EffectSettings::*flag = nullptr;
+    int EffectSettings::*number = nullptr;
 };
 const std::vector<IniSetting>& iniSettings();
 const IniSetting* findSetting(const std::string& sectionKey);

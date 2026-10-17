@@ -118,3 +118,24 @@ TEST(schema_pages_follow_the_spec) {
     CHECK_EQ(int(Page::Diagnostics), 13);
     CHECK_EQ(int(Page::Service), 14);
 }
+
+TEST(schema_effects_keys_read_and_write_within_their_ranges) {
+    // 2.2.2 (before the schema became the parser of [effects]): every key of the section reads back what was written,
+    // a slider's number kept to the schema's range - what the pages offer is what the driver takes
+    for (const IniSetting& s : iniSettings()) {
+        if (std::string(s.section) != "effects") continue;
+        const std::string head = std::string("[effects]\n") + s.key + " = ";
+        if (s.control == Control::Check) {
+            for (const char* word : s.tokens) CHECK(tokenOf(s, parseConfig(head + word + "\n")) == word);
+        } else if (s.control == Control::Slider) {  // its ends taken, a number past them leaves the default
+            const std::string fallback = tokenOf(s, parseConfig(""));
+            const auto read = [&](int v) { return tokenOf(s, parseConfig(head + std::to_string(v) + "\n")); };
+            const bool range = read(s.min) == std::to_string(s.min) && read(s.max) == std::to_string(s.max) &&
+                               read(s.min - 1) == fallback && read(s.max + 1) == fallback;
+            if (!range) std::printf("  range of effects.%s\n", s.key);
+            CHECK(range);
+        } else if (s.control == Control::Choice) {
+            for (const char* word : s.tokens) CHECK(tokenOf(s, parseConfig(head + word + "\n")) == word);
+        }
+    }
+}
