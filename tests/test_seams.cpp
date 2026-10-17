@@ -41,7 +41,8 @@ TEST(seams_strips_where_two_textures_meet_none_where_one_goes_on) {
         if (s.inside == 0 && s.shows == 1) {
             CHECK(s.vertices[0].pos[0] > 14.9f && s.vertices[0].uv0[0] > 0.11f && s.vertices[0].uv0[0] < 0.13f);
             CHECK(s.vertices[14].uv0[0] > 0.44f && s.vertices[14].uv0[0] < 0.46f);
-            CHECK_EQ(int(s.vertices[0].diffuse >> 24), 255);
-            CHECK_EQ(int(s.vertices[14].diffuse >> 24), 0);
+            // half the neighbour's at the edge's middle, 0.05 inside at 0.45 of the cell
+            CHECK_EQ(int(s.vertices[2].diffuse >> 24), 128);
+            CHECK(int(s.vertices[12].diffuse >> 24) > 10 && int(s.vertices[12].diffuse >> 24) < 16);
         }
 }

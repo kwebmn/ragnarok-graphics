@@ -364,17 +364,17 @@ float4 shade(PsIn i) {
         c.rgb *= (0.88 + 0.24 * mnoise(w.xz * 0.012)) * float3(1.0 + warm * 0.6, 1.0 + warm * 0.15, 1.0 - warm * 0.5);
     }
     // 1.9, a strip across a seam of the ground (seams.cpp): the other cell's texture where the noise over the world
-    // says - low on the side whose specular green is set, high on the other - fading in from its inner side
-    // (diffuse alpha 0) to the edge (1): one wandering line between the two textures.
+    // says: one wandering line between the two textures.
     if (((stage1.y >> 31) & 1) != 0) {
         float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
                    float3(r9, r10, r11);
         float n = mnoise(w.xz * 0.22) * 0.65 + mnoise(w.xz * 0.7 + 5.1) * 0.35;
+        // 1.9.5: diffuse alpha how much the place is the other's (bilinear between the cells' middles: corners
+        // round off), the noise up on one side and down on the other - one line both sides agree on
         float side = i.specular.g > 0.5 ? 1.0 : -1.0;
-        float g = 1.0 - i.diffuse.a;
-        bool self = i.specular.r > 0.5;  // 1.9.2: the cell's own band at the edge, 0.12 of the cell (0.45 the other)
-        float other = smoothstep(-0.04, 0.04, side * (0.5 - n) * 1.7 - (self ? g * 0.267 : g));
-        c.a = self ? (1.0 - other) * (1.0 - smoothstep(0.55, 1.0, g)) : other;
+        bool self = i.specular.r > 0.5;  // 1.9.2: the cell's own band at the edge, its rim covered
+        float other = smoothstep(-0.05, 0.05, i.diffuse.a - 0.5 + side * (n - 0.5) * 0.9);
+        c.a = self ? (1.0 - other) * (1.0 - smoothstep(0.55, 1.0, i.specular.b)) : other;
     }
 #endif
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);

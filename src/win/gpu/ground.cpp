@@ -88,7 +88,7 @@ void Renderer::Impl::noteGround(const FrameRecord& rec, const DrawCmd& d) {
 bool Renderer::Impl::applySeams() {
     seamsDone = true;
     crumb("ground seams");
-    const std::vector<seams::Strip> strips = seams::build(groundTris, groundTextures, 0.45f);
+    const std::vector<seams::Strip> strips = seams::build(groundTris, groundTextures, 0.5f);
     if (strips.empty()) return true;
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
@@ -99,30 +99,34 @@ bool Renderer::Impl::applySeams() {
                           (g * h - d * k) / det, (a * k - c3 * h) / det, (c3 * d - a * g) / det,
                           (d * i - e * h) / det, (b * h - a * i) / det, (a * e - b * d) / det};
     seamRec.reset();
-    std::vector<Tl2> verts;
-    size_t drawn = 0;
+    // 1.9.5: the strips in batches - one draw for each state, lightmap and texture shown (1.9.0-1.9.4 drew each kind
+    // of strip apart: 600 and more draws a frame took moc_fild01 to 35 frames a second)
+    struct Batch {
+        const GroundGroup* in;
+        const GroundGroup* shows;
+        std::vector<Tl2> verts;
+        std::vector<uint16_t> indices;
+    };
+    std::vector<Batch> batches;
     for (const seams::Strip& s : strips) {
         if (s.inside >= groundGroups.size() || s.shows >= groundGroups.size()) continue;
         const GroundGroup& in = groundGroups[s.inside];
         const GroundGroup& shows = groundGroups[s.shows];
-        DrawSetup st = in.state;
-        st.blend = true;
-        st.srcBlend = d3d7::BLEND_SRCALPHA;
-        st.dstBlend = d3d7::BLEND_INVSRCALPHA;
-        st.zWrite = false;
-        st.zFunc = d3d7::CMP_LESSEQUAL;
-        st.cull = d3d7::CULL_NONE;
-        st.alphaTest = false;
-        DrawCmd cmd;
-        cmd.state = seamRec.addState(st);
-        cmd.texture[0] = shows.texture[0];
-        cmd.keyed[0] = shows.keyed[0];
-        cmd.texture[1] = in.texture[1];
-        cmd.keyed[1] = in.keyed[1];
-        cmd.primitive = d3d7::PT_TRIANGLELIST;
-        cmd.fvf = d3d7::FVF_TL2;
-        verts.clear();
+        Batch* into = nullptr;
+        for (Batch& bt : batches)
+            if (bt.in->texture[1] == in.texture[1] && bt.in->keyed[1] == in.keyed[1] &&
+                bt.shows->texture[0] == shows.texture[0] && bt.shows->keyed[0] == shows.keyed[0] &&
+                bt.in->state == in.state && bt.verts.size() + s.vertices.size() <= 60000) {
+                into = &bt;
+                break;
+            }
+        if (!into) {
+            batches.push_back(Batch{&in, &shows, {}, {}});
+            into = &batches.back();
+        }
+        const uint16_t base = uint16_t(into->verts.size());
         bool behind = false;
+        std::vector<Tl2> verts;
         for (const seams::Vertex& v : s.vertices) {
             const float x = v.pos[0] - m[9], y = v.pos[1] - m[10], z = v.pos[2] - m[11];
             const float vx = x * inv[0] + y * inv[3] + z * inv[6], vy = x * inv[1] + y * inv[4] + z * inv[7];
@@ -145,7 +149,29 @@ bool Renderer::Impl::applySeams() {
             verts.push_back(t);
         }
         if (behind || verts.empty()) continue;
-        seamRec.draw(cmd, verts.data(), uint32_t(verts.size()), s.indices.data(), uint32_t(s.indices.size()));
+        into->verts.insert(into->verts.end(), verts.begin(), verts.end());
+        for (uint16_t k : s.indices) into->indices.push_back(uint16_t(base + k));
+    }
+    size_t drawn = 0;
+    for (const Batch& bt : batches) {
+        if (bt.verts.empty()) continue;
+        DrawSetup st = bt.in->state;
+        st.blend = true;
+        st.srcBlend = d3d7::BLEND_SRCALPHA;
+        st.dstBlend = d3d7::BLEND_INVSRCALPHA;
+        st.zWrite = false;
+        st.zFunc = d3d7::CMP_LESSEQUAL;
+        st.cull = d3d7::CULL_NONE;
+        st.alphaTest = false;
+        DrawCmd cmd;
+        cmd.state = seamRec.addState(st);
+        cmd.texture[0] = bt.shows->texture[0];
+        cmd.keyed[0] = bt.shows->keyed[0];
+        cmd.texture[1] = bt.in->texture[1];
+        cmd.keyed[1] = bt.in->keyed[1];
+        cmd.primitive = d3d7::PT_TRIANGLELIST;
+        cmd.fvf = d3d7::FVF_TL2;
+        seamRec.draw(cmd, bt.verts.data(), uint32_t(bt.verts.size()), bt.indices.data(), uint32_t(bt.indices.size()));
         ++drawn;
     }
     if (!drawn) return true;
@@ -157,8 +183,8 @@ bool Renderer::Impl::applySeams() {
     }
     geometryList = 0;  // the game's record's vertices go up again with its next draw
     if (!seamsLogged)
-        LOG_INFO("ground seams: %zu kinds of strips over %zu triangles of %s's ground", drawn, groundTris.size(),
-                 mapName.c_str());
+        LOG_INFO("ground seams: %zu kinds of strips in %zu draws over %zu triangles of %s's ground", strips.size(),
+                 drawn, groundTris.size(), mapName.c_str());
     seamsLogged = true;
     return !lost;
 }

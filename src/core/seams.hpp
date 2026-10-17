@@ -20,8 +20,9 @@ struct Triangle {
     uint32_t group = 0;  // the caller's: its draw's state and textures
 };
 
-// A strip's corner: as Vertex, the diffuse alpha 255 at the edge and 0 at the strip's inner side, the specular's green
-// 255 on the side that shows the other where the noise is low, 0 on the other.
+// A strip's corner: as Vertex; the diffuse alpha how much the place is the other texture's (1.9.5: bilinear between
+// the cells' middles, 0.5 at the edge); the specular's blue the way across the strip (0 at the edge), green 255 on the
+// side whose noise counts up for the other, red 255 on a cell's own band at its edge (1.9.2).
 struct Strip {
     uint32_t inside = 0;  // the group of the cell it lies in: the state, the lightmap (stage 1)
     uint32_t shows = 0;   // the group whose texture (stage 0) it shows

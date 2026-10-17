@@ -135,7 +135,25 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                 }
                 if (alike) continue;
             }
-            const bool low = entry.first < nb->first;  // the side that shows the other where the noise is low
+            const bool low = entry.first < nb->first;  // the side whose noise counts up for the other
+            // 1.9.5: how much a place belongs to the neighbour's texture - its cells (the neighbour alone where both
+            // have one texture) as 1 at their middles, bilinear between the cells' middles: 0.5 at the edge, more at
+            // a corner the neighbour's texture goes round - the line rounds the cells' corners off (shade(), bit 31).
+            const auto theirs = [&](int cx, int cz) {
+                if (cx == ix + w.dx && cz == iz + w.dz) return 1.0f;
+                if (ta == tb) return 0.0f;
+                const auto c = cells.find(keyOf(cx, cz));
+                return c != cells.end() && c->second.group < texture.size() && texture[c->second.group] == tb ? 1.0f
+                                                                                                                : 0.0f;
+            };
+            const auto claim = [&](float u, float v) {
+                const float gx = float(ix) + u - 0.5f, gz = float(iz) + v - 0.5f;
+                const int x0 = int(std::floor(gx)), z0 = int(std::floor(gz));
+                const float fx = gx - float(x0), fz = gz - float(z0);
+                const float top = theirs(x0, z0) + (theirs(x0 + 1, z0) - theirs(x0, z0)) * fx;
+                const float bottom = theirs(x0, z0 + 1) + (theirs(x0 + 1, z0 + 1) - theirs(x0, z0 + 1)) * fx;
+                return top + (bottom - top) * fz;
+            };
             // 1.9.2: two strips inside this cell - the neighbour's texture by the noise, and over the band at the
             // edge its own texture taken from a little inside (`self`): the textures' outer texels - their dark rims
             // and what the next quarter of an atlas bleeds in - showed as a dashed line along every seam.
@@ -166,9 +184,10 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                                               : at(b, inset(fold(u - float(w.dx))), inset(fold(v - float(w.dz))));
                         p.uv0[0] = q.uv0[0];
                         p.uv0[1] = q.uv0[1];
-                        const uint32_t edge = uint32_t(255.0f * (1.0f - float(j) / kAcross) + 0.5f);
-                        p.diffuse = (p.diffuse & 0x00ffffffu) | edge << 24;
-                        p.specular = (p.specular & 0xff0000ffu) | (low ? 0xff00u : 0u) | (self ? 0xff0000u : 0u);
+                        const uint32_t f = uint32_t(255.0f * std::clamp(claim(u, v), 0.0f, 1.0f) + 0.5f);
+                        const uint32_t g = uint32_t(255.0f * float(j) / kAcross + 0.5f);
+                        p.diffuse = (p.diffuse & 0x00ffffffu) | f << 24;
+                        p.specular = (p.specular & 0xff000000u) | (self ? 0xff0000u : 0u) | (low ? 0xff00u : 0u) | g;
                         s.vertices.push_back(p);
                     }
                 for (int j = 0; j < kAcross; ++j)
