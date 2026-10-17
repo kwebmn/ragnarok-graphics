@@ -1,3 +1,15 @@
+# uaRO Graphics 2.1.2 — testing
+
+- **Shadows that came out of nowhere:** the real sun's map covered about 150 x 150 units about the player - the far
+  part of the screen had no shadows, and those of the houses and trees at its edge came and went as one walked or
+  turned. It now covers the ground the screen shows (75-250 units, in steps of 25 so that zooming does not shimmer),
+  and the shadows fade out towards its edge instead of being cut off.
+- **Blinking where two ground textures meet** (Smooth seams of the ground): the strip across a seam was laid between
+  the cell's four corners, the game's ground on its two triangles - on a slope they part by tenths of a unit and the
+  ground hid the strip now and then. The strip lies on the game's own triangles now, a little higher.
+- Check: walk and turn on prt_fild08 and in Prontera - the shadows lie still, none pop in at the screen's far edge;
+  the seams on slopes do not blink.
+
 # uaRO Graphics 2.1.1 — testing
 
 - **Where a frame's time goes, in the log** (to find the drops to ~46 fps): every 30 s
