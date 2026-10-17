@@ -144,6 +144,12 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
             if (nb == cells.end()) continue;
             const Cell& b = nb->second;
             if (!(b.have[0] && b.have[1] && b.have[2] && b.have[3])) continue;
+            // 2.1.6: no seam over a step - a wall stands between the two; the strip at its foot, against the wall's
+            // own faces, blinked on c_tower2's floors
+            bool step = false;
+            for (int k = 0; k < 2; ++k)
+                step = step || std::fabs(a.corner[w.mine[k]].pos[1] - b.corner[w.theirs[k]].pos[1]) > 0.05f * side;
+            if (step) continue;
             const uint32_t ta = a.group < texture.size() ? texture[a.group] : 0;
             const uint32_t tb = b.group < texture.size() ? texture[b.group] : 0;
             if (ta == tb) {  // one texture: a seam only where its coordinates jump at the edge

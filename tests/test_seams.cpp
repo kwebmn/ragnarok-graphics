@@ -69,3 +69,14 @@ TEST(seams_strips_lie_on_the_games_triangles) {
         }
     }
 }
+
+TEST(seams_none_over_a_step) {
+    // 2.1.6: two textures, the second cell a step higher - a wall between them, no seam (it blinked at the wall's foot)
+    std::vector<seams::Triangle> ground;
+    cell(ground, 0, 0, 10.0f, 0);
+    cell(ground, 1, 0, 10.0f, 1);
+    for (size_t k = 2; k < ground.size(); ++k)
+        for (seams::Vertex& v : ground[k].v) v.pos[1] = -3.0f;
+    const std::vector<uint32_t> textures = {1, 2};
+    CHECK(seams::build(ground, textures, 0.45f).empty());
+}
