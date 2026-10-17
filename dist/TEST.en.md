@@ -1,3 +1,22 @@
+# uaRO Graphics 1.7.3 — testing
+
+- **Living world, creatures and particles** (Direct3D 12, all off by default):
+  - **Butterflies and dragonflies** (`effects.butterflies`): by day butterflies over the fields and green towns, their
+    shadows on the ground; dragonflies over the water only.
+  - **Birds** (`effects.birds`): by day a flock pecks on the ground and flies off when you come near; another comes
+    later.
+  - **Leaves from the trees** (`effects.leaf_fall`): leaves come off the trees in sight, turn and lie on the ground -
+    golden in autumn, sakura petals in Amatsu.
+  - **Embers from the fires** (`effects.embers`, needs Live torches): sparks rise from the torches.
+  - **Breath in the cold** (`effects.breath`): in Lutie the characters' breath shows.
+  - **Splashes** (`effects.splashes`): a step through shallow water throws up drops.
+  - **Drips in the caves** (`effects.cave_drips`): in damp dungeons drops fall and rings spread on the floor.
+  - **Under the sea** (`effects.underwater`): in Byalan's dungeon bubbles rise and light falls in bands.
+- The creatures are drawn as small quads each (not over the whole screen): they cost little.
+- How to check: prt_fild08 by day (butterflies, birds - walk up to the flock), pay_fild01 (leaves), payon or
+  prontera at night by the torches (embers), xmas (breath), comodo through the water (splashes, dragonflies),
+  pay_dun00 (drips), iz_dun01 (under the sea). The log: `living creatures: on <map>`.
+
 # uaRO Graphics 1.7.2 — testing
 
 - **Living world, the water** (needs Modern water, all off by default):
