@@ -1,3 +1,16 @@
+# uaRO Graphics 1.10.0 — testing
+
+- **The remaster's phase C: new trees** (`effects.new_trees`, the Remaster block, Remaster mode only, Direct3D 12, off
+  by default). A tree's flat crown (a few cards with a picture of leaves) is not drawn - the driver builds a volume
+  crown of 24-140 bunches of its own leaves instead: pieces of the picture where it is leaves, in the crown's volume
+  in the world, each a card facing the camera. The bunches are lit as parts of a ball (lighter to the sun, darker
+  inside and below) and sway in the wind, the top more. Turning the camera shows the crown round. The trunks are the
+  game's. All automatic - no models, no artist. Tiny sprigs and long hedges stay as the game draws them.
+- The log: `new trees: N crowns of <map> drawn as M bunches of leaves in K draws`; the console: New trees.
+- How to check: prt_fild08, pay_fild01, Geffen's fields - switch it in the console, turn the camera, compare with
+  Tab. To know: how the crowns look (too "fluffy"? see-through?), bunches hanging apart, trees missing, the frame's
+  cost.
+
 # uaRO Graphics 1.9.9 — testing
 
 - **Cheaper grass.** The costliest effect (1.3-3.2 ms a frame at 4K): how far the steps trod the grass down was
