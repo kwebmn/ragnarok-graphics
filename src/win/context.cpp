@@ -235,6 +235,11 @@ bool Context::open(std::string& error) {
 
 void Context::close() {
     Profiler::get().stop();  // 0.87
+    if (usage_.begun()) {  // 2.2.1: the last stretch of the statistics, the game ending
+        std::string lines;
+        usage_.close(lines);
+        writeUsage(lines);
+    }
     flush();
     if (scaleLog_.pending()) LOG_INFO("%s", scaleLine_.c_str());  // the last change, before the final stats
     logStats(true);
