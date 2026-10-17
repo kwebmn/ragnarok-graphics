@@ -1,3 +1,17 @@
+# uaRO Graphics 2.0.2 — testing
+
+- **Sakura is back, grown anew.** Prontera's cherries are a cherry's trunk and branches (벗나무01) with clouds of
+  pink and white blossom hung about them (분홍벗꽃, 하얀벗꽃); 2.0.0 took the cherry for a plain tree and hid the
+  blossom in its crown - all green. Now a cherry is its own kind - a dark trunk, wide low branches - and each blossom
+  cloud is grown where the map hangs it, of small five-petal flowers in its own colour (pink, white).
+- **The trees' light:** the crowns' upper clumps shade the lower ones and the branches - the real sun's map, with
+  Real sun shadows; other trees and houses shade them too. The leaves let a little sun through: their far side
+  glows warm green.
+- **The ground's seams:** the light straight lines along the cells on even ground (Comodo's beach, 1.25-2.0.1) are
+  gone - the band that covers a cell's rim is narrower and fades out.
+- Check: Prontera (pink and white sakura where they were), prt_fild08 (crowns lighter on top, shaded below),
+  cmd_fild02 (no grid of light lines on the sand).
+
 # uaRO Graphics 2.0.1 — testing
 
 - **Shadows no longer turn with the camera.** The sun's way was taken from the screen (the shadows always fell, say,
