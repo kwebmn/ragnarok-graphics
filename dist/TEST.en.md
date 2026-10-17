@@ -1,13 +1,13 @@
 # uaRO Graphics 1.24.0 — testing
 
-- **Trees from above, by the screenshots** (Living world: Tree volume, Tree tints):
+- **Trees from above, by the screenshots** (Living world: Rounded tree crowns, Every tree its own, seasons):
   - autumn no longer paints whole crowns one orange: fewer trees turn, and each only in patches with green left
     between; the turned leaves keep their own light and shade (the old formula lifted the shade - flat orange);
   - each crown in clumps of its own - lighter and yellower, deeper and bluer - so the same leaf picture on every
     layer shows less;
   - the crown's lower layers in the shade of the upper ones, darker and cooler; the top lit by the sky.
   Check on prt_fild maps from the usual camera: the crowns look deeper, layered, the autumn ones mixed green and
-  gold; compare with the console's Tree volume and Tree tints switches.
+  gold; compare with the console's Rounded tree crowns and Every tree its own switches.
 
 # uaRO Graphics 1.23.0 — testing
 
