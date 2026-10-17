@@ -336,6 +336,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxEdgeLandHint, ""},
         {"effects", "smooth_models", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothModels,
          Text::FxSmoothModelsHint, ""},
+        {"effects", "seasons", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSeasons,
+         Text::FxSeasonsHint, ""},
+        {"effects", "rain_wet", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRainWet,
+         Text::FxRainWetHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -649,6 +653,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.sprite_light_strength") return std::to_string(c.effects.spriteLightStrength);
     if (k == "effects.edge_land") return c.effects.edgeLand ? "1" : "0";
     if (k == "effects.smooth_models") return c.effects.smoothModels ? "1" : "0";
+    if (k == "effects.seasons") return c.effects.seasons ? "1" : "0";
+    if (k == "effects.rain_wet") return c.effects.rainWet ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

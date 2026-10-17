@@ -398,14 +398,22 @@ bool Renderer::Impl::applyGroundLife() {
         c.twin[3] = 1.0f;
         c.sourceClamp[0] = waterLevel;
     }
+    if (seasonsShown()) {  // 1.20
+        c.sourceRect[0] = mapYear.snow;
+        c.sourceRect[1] = mapYear.leaves;
+        c.sourceRect[2] = mapYear.dry;
+        c.sourceRect[3] = mapYear.lush;
+    }
+    if (rainWetShown()) c.sourceClamp[2] = 1.0f;
     c.sharpen = waterTime();
     if (!groundLifeLogged)
-        LOG_INFO("living ground: on %s (%s)", mapName.c_str(),
+        LOG_INFO("living ground: on %s (%s%s%s)", mapName.c_str(),
                  c.twin[0] > 0.0f   ? "sand"
                  : c.twin[1] > 0.0f ? "snow"
                  : c.twin[2] > 0.0f ? "damp walls"
                  : c.twin[3] > 0.0f ? "wet sand"
-                                    : "pebbles");
+                                    : "pebbles",
+                 seasonsShown() ? ", the season" : "", rainWetShown() ? ", wet in the rain" : "");
     groundLifeLogged = true;
     return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
                    : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);

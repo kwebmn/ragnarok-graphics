@@ -387,6 +387,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.spriteLightStrength);
     w.u8(e.edgeLand ? 1 : 0);  // 1.18
     w.u8(e.smoothModels ? 1 : 0);  // 1.19
+    w.u8(e.seasons ? 1 : 0);  // 1.20
+    w.u8(e.rainWet ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

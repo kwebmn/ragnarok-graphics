@@ -494,6 +494,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.spriteLightStrength = rd.i32();
             e.edgeLand = rd.u8() != 0;  // 1.18
             e.smoothModels = rd.u8() != 0;  // 1.19
+            e.seasons = rd.u8() != 0;  // 1.20
+            e.rainWet = rd.u8() != 0;
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

@@ -12,6 +12,8 @@ enum class Season { Green, Autumn, Rime };
 // trees are of the kind that turns (not the desert's palms, the jungle, the dead woods of Niflheim).
 Season seasonOf(const std::string& map, int month);
 int monthNow();  // the computer's calendar, 1-12
+// 1.20: a map whose land has no seasons - the desert's, the jungle's, the dead woods', the tropics'
+bool evergreen(const std::string& map);
 
 struct Shade {
     float tint[3] = {1.0f, 1.0f, 1.0f};    // multiplies the leaves' colour: each tree its own

@@ -1811,6 +1811,61 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
             a = saturate(max(a, wet));
         }
     }
+#ifndef UAGFX_SAFE
+    // 1.20, the year and the rain on the whole map (core/seasons.hpp): sourceRect.x winter's snow on what faces up,
+    // .y autumn's fallen leaves, .z the green ground drier (autumn, winter), .w greener (spring); sourceClamp.z the
+    // rain's wet on the walls, the roofs and the models (rain_wet) - darker, a sheen where one looks along them.
+    if (any(sourceRect > 0.0) || sourceClamp.z > 0.0) {
+        float3 l = viewAt(max(wp - int2(1, 0), int2(0, 0))), r = viewAt(min(wp + int2(1, 0), last));
+        float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
+        float3 n = normalize(cross(d - u, r - l));
+        float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
+        float up = smoothstep(0.55, 0.85, abs(nw.y));
+        float green = saturate((col.g - max(col.r, col.b)) * 6.0);
+        if (sourceRect.z > 0.0 || sourceRect.w > 0.0) {  // the grass's colour by the season
+            float3 straw = float3(luma * 1.2, luma * 1.05, luma * 0.55);
+            float3 c2 = lerp(col, straw, sourceRect.z * 0.7);
+            c2 = lerp(c2, col * float3(0.9, 1.12, 0.88), sourceRect.w * 0.6);
+            float k = green * up;
+            o = lerp(o, c2, k / max(a + k, 1e-3));
+            a = saturate(max(a, k));
+        }
+        if (sourceRect.y > 0.0) {  // fallen leaves on the ground
+            float2 cell = floor(w.xz * 2.4);
+            float seed = hash12(cell + 23.7);
+            if (seed < sourceRect.y * 0.6 * up) {
+                float2 at = (cell + 0.2 + 0.6 * float2(hash12(cell + 1.7), hash12(cell + 6.1))) / 2.4;
+                float ang = hash12(cell + 9.9) * 6.283;
+                float2 dd = w.xz - at;
+                dd = float2(dd.x * cos(ang) - dd.y * sin(ang), dd.x * sin(ang) + dd.y * cos(ang)) / 0.09;
+                float leaf = smoothstep(1.0, 0.75, length(dd * float2(1.0, 1.9)));
+                float hue = hash12(cell + 3.3);
+                float3 lc = hue < 0.4 ? float3(0.85, 0.55, 0.15) : hue < 0.75 ? float3(0.72, 0.28, 0.1)
+                                                                           : float3(0.55, 0.42, 0.18);
+                lc *= clamp(luma * 2.2, 0.35, 1.1);
+                o = lerp(o, lc, leaf / max(a + leaf, 1e-3));
+                a = saturate(max(a, leaf));
+            }
+        }
+        if (sourceRect.x > 0.0) {  // snow on what faces up
+            float drift = valueNoise(w.xz * 0.35) * 0.6 + valueNoise(w.xz * 1.3 + 4.1) * 0.4;
+            float cover = saturate(up * smoothstep(0.3, 0.6, drift + 0.3 * (up - 0.5))) * sourceRect.x;
+            cover *= 1.0 - smoothstep(0.7, 0.88, luma);  // already white
+            float3 snow = float3(0.9, 0.93, 0.98) * clamp(luma * 1.6 + 0.25, 0.4, 1.0);
+            o = lerp(o, snow, cover / max(a + cover, 1e-3));
+            a = saturate(max(a, cover));
+        }
+        if (sourceClamp.z > 0.0) {  // wet in the rain
+            float along = pow(1.0 - saturate(abs(dot(normalize(v), n))), 3.0);
+            float wall = 1.0 - up;
+            float run = smoothstep(0.9, 1.0, valueNoise(float2((w.x + w.z) * 2.0, w.y * 0.1 + t * 0.6))) * wall;
+            float3 wet = col * lerp(0.78, 0.9, up) + float3(0.55, 0.6, 0.65) * (along * 0.25 + run * 0.15);
+            float k = sourceClamp.z * 0.8;
+            o = lerp(o, wet, k / max(a + k, 1e-3));
+            a = saturate(max(a, k));
+        }
+    }
+#endif
     if (a < 0.004) discard;
     return float4(o, a);
 }

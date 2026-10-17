@@ -356,6 +356,10 @@ struct EffectSettings {
     // 1.19: smooth light on the models (core/smooth_shade.hpp): a model the game lights face by face gets its
     // corners' light spread over the faces around them - rocks and bark round off, edges stay. Off by default.
     bool smoothModels = false;
+    // 1.20: the year on the whole map (core/seasons.hpp) and the rain's wet on the walls and roofs
+    // (ground_life_ps). Off by default.
+    bool seasons = false;
+    bool rainWet = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

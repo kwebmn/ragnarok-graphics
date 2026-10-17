@@ -258,6 +258,8 @@ enum class Text : uint16_t {
     FxEdgeLand, FxEdgeLandHint,
     // 1.19
     FxSmoothModels, FxSmoothModelsHint,
+    // 1.20
+    FxSeasons, FxSeasonsHint, FxRainWet, FxRainWetHint,
     Count
 };
 

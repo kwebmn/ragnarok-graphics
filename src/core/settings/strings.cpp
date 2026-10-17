@@ -2595,6 +2595,27 @@ const Entry kTexts[] = {
      "плавно розтікається по округлих частинах, а гострі ребра стін і дахів лишаються (Direct3D 12).",
      "Игра освещает скалы, стволы и дома грань за гранью, и скала выглядит кучей плоских граней. Вместо этого свет "
      "плавно растекается по округлым частям, а острые рёбра стен и крыш остаются (Direct3D 12)."},
+    {"Seasons on the map",
+     "Пори року на карті",
+     "Времена года на карте"},
+    {"By the computer's calendar: in winter snow lies on the roofs, the tops of the rocks and the ground; in autumn "
+     "fallen leaves and drier grass; in spring greener fields. Snowy maps keep snow on their roofs all year; the "
+     "desert and the tropics have no seasons (Direct3D 12).",
+     "За календарем комп'ютера: узимку сніг лежить на дахах, верхівках скель і землі; восени опале листя й сухіша "
+     "трава; навесні зеленіші поля. Сніжні карти тримають сніг на дахах увесь рік; пустеля й тропіки без пір року "
+     "(Direct3D 12).",
+     "По календарю компьютера: зимой снег лежит на крышах, верхушках скал и земле; осенью опавшие листья и более "
+     "сухая трава; весной зеленее поля. Снежные карты держат снег на крышах весь год; пустыня и тропики без времён "
+     "года (Direct3D 12)."},
+    {"Wet in the rain",
+     "Мокре під дощем",
+     "Мокрое под дождём"},
+    {"Where it rains, the walls, roofs and models get wet too, not only the ground: darker, with a sheen where you "
+     "look along them and water running down the walls. Needs the weather (Direct3D 12).",
+     "Де йде дощ, мокнуть не лише земля, а й стіни, дахи й моделі: темніші, з полиском, коли дивишся вздовж них, і "
+     "водою, що стікає стінами. Потрібна погода (Direct3D 12).",
+     "Где идёт дождь, мокнет не только земля, но и стены, крыши и модели: темнее, с блеском, когда смотришь вдоль "
+     "них, и водой, стекающей по стенам. Нужна погода (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

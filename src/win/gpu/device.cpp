@@ -1647,6 +1647,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapName = map;  // 0.31: lava's maps
     impl_->mapSeason = trees::seasonOf(map, trees::monthNow());  // 1.7
     impl_->mapPlace = living::placeOf(map, outdoors(map), impl_->mapSeason == trees::Season::Autumn);
+    impl_->mapYear = seasons::of(map, trees::monthNow(), outdoors(map), impl_->mapPlace);  // 1.20
     impl_->mapOutdoors = outdoors(map);  // 0.33: the clouds' shadows
     impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off

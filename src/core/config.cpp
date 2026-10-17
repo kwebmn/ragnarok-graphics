@@ -122,6 +122,8 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.rainWet = false;
+    e.seasons = false;
     e.smoothModels = false;
     e.edgeLand = false;
     e.spriteLight = false;
@@ -191,6 +193,8 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.rainWet ||
+           e.seasons ||
            e.smoothModels ||
            e.edgeLand ||
            e.spriteLight ||
@@ -685,6 +689,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.edgeLand);
         } else if (key == "effects.smooth_models") {
             setBool(val, c.effects.smoothModels);
+        } else if (key == "effects.seasons") {
+            setBool(val, c.effects.seasons);
+        } else if (key == "effects.rain_wet") {
+            setBool(val, c.effects.rainWet);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

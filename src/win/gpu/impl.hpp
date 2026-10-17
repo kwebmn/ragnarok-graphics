@@ -16,6 +16,7 @@
 #include "core/new_trees.hpp"
 #include "core/hills.hpp"
 #include "core/seams.hpp"
+#include "core/seasons.hpp"
 #include "core/living.hpp"
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
@@ -547,6 +548,7 @@ struct Renderer::Impl {
     ID3DBlob* lavaGlowPs = nullptr;
     std::string mapName;                    // the map the game shows (setMap)
     trees::Season mapSeason = trees::Season::Green;  // 1.7: its trees' (core/trees.hpp)
+    seasons::Look mapYear;  // 1.20: the year on its ground (core/seasons.hpp)
     living::Place mapPlace;                          // 1.7: its small details (core/living.hpp)
     int minuteNow() const { return effects.dayCycle && effects.dayNow >= 0 ? effects.dayNow : living::localMinute(); }
     LeafLook leafLook() const;  // 1.7: the trees' settings for leafShading (draw.cpp)
@@ -1102,8 +1104,14 @@ struct Renderer::Impl {
     bool groundLifeWanted() const {
         return groundLifePs && ((effects.sandDrift && mapPlace.sand) || (effects.snowSparkle && mapPlace.snow) ||
                                 (effects.wetWalls && mapPlace.cave) || wetSandWanted() ||
-                                (effects.groundClutter && !mapPlace.snow));
+                                (effects.groundClutter && !mapPlace.snow) || seasonsShown() || rainWetShown());
     }
+    // 1.20: the year on the whole map, the rain's wet on the walls and roofs (ground_life_ps)
+    bool seasonsShown() const {
+        return effects.seasons && (mapYear.snow > 0.0f || mapYear.leaves > 0.0f || mapYear.dry > 0.0f ||
+                                   mapYear.lush > 0.0f);
+    }
+    bool rainWetShown() const { return effects.rainWet && effects.weather && mapWeather == weather::Kind::Rain; }
     bool wetSandWanted() const { return effects.shoreFoam && waterLevelKnown && mapOutdoors; }
     bool groundLifeDue() const { return groundLifeWanted() && groundDrawn && !groundLifeDone && viewToWorldValid; }
     bool applyGroundLife();  // once a frame, before the characters; false: lost

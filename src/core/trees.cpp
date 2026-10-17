@@ -35,11 +35,15 @@ float noise(float x, float z, float cell, uint32_t salt) {
 Season seasonOf(const std::string& map, int month) {
     if (startsWith(map, "xmas")) return Season::Rime;
     if (month < 9 || month > 11) return Season::Green;
+    return evergreen(map) ? Season::Green : Season::Autumn;
+}
+
+bool evergreen(const std::string& map) {
     static const char* const kEvergreen[] = {"moc", "morocc", "ve_", "veins", "cmd", "comodo", "um_", "umbala",
                                              "bra", "dew", "mal", "ayo", "nif", "gl_", "glast", "ein", "lhz"};
     for (const char* p : kEvergreen)
-        if (startsWith(map, p)) return Season::Green;
-    return Season::Autumn;
+        if (startsWith(map, p)) return true;
+    return false;
 }
 
 int monthNow() {
