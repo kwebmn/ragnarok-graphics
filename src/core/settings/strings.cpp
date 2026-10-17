@@ -2435,6 +2435,15 @@ const Entry kTexts[] = {
      "на форумі.",
      "Отчёт отправлен вместе со скриншотами ({2}). Его код: {1} (скопирован) — назовите его разработчикам в чате или "
      "на форуме."},
+    {"Smooth seams of the ground",
+     "Плавні стики землі",
+     "Плавные стыки земли"},
+    {"Where grass meets a road or sand, the line between them no longer runs in steps along the ground's cells: it "
+     "wanders, one texture reaching into the other (Direct3D 12).",
+     "Там, де трава зустрічається з дорогою чи піском, межа між ними більше не йде сходинками вздовж клітинок землі: "
+     "вона петляє, одна текстура заходить в іншу (Direct3D 12).",
+     "Там, где трава встречается с дорогой или песком, граница между ними больше не идёт ступеньками вдоль клеток "
+     "земли: она петляет, одна текстура заходит в другую (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

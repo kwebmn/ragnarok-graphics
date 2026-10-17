@@ -371,6 +371,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.materials ? 1 : 0);  // 1.8
     w.i32(e.materialsStrength);
     w.i32(e.tier);
+    w.u8(e.groundSeams ? 1 : 0);  // 1.9
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

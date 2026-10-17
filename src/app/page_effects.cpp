@@ -105,6 +105,7 @@ const Effect kEffects[] = {
     {"effects.cave_drips", {}, {}, {}, 2},  // 1.7.3
     {"effects.underwater", {}, {}, {}, 2},  // 1.7.3
     {"effects.materials", {}, {"effects.materials_strength"}, {}, 3},  // 1.8
+    {"effects.ground_seams", {}, {}, {}, 3},  // 1.9
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 

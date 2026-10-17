@@ -363,6 +363,16 @@ float4 shade(PsIn i) {
         float warm = (mnoise(w.xz * 0.03 + 17.0) - 0.5) * 0.35;
         c.rgb *= (0.88 + 0.24 * mnoise(w.xz * 0.012)) * float3(1.0 + warm * 0.6, 1.0 + warm * 0.15, 1.0 - warm * 0.5);
     }
+    // 1.9, a strip across a seam of the ground (seams.cpp): the other cell's texture where the noise over the world
+    // says - low on the side whose specular green is set, high on the other - fading in from its inner side
+    // (diffuse alpha 0) to the edge (1): one wandering line between the two textures.
+    if (((stage1.y >> 31) & 1) != 0) {
+        float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
+                   float3(r9, r10, r11);
+        float n = mnoise(w.xz * 0.22) * 0.65 + mnoise(w.xz * 0.7 + 5.1) * 0.35;
+        float side = i.specular.g > 0.5 ? 1.0 : -1.0;
+        c.a = smoothstep(-0.04, 0.04, side * (0.5 - n) * 1.7 - (1.0 - i.diffuse.a));
+    }
 #endif
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
     float alphaStep = fwidth(c.a);  // outside any branch

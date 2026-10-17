@@ -314,6 +314,9 @@ struct EffectSettings {
     int tier = 0;  // 1.8: [effects] tier - 0 auto (by the card), 1 classic+ (any card), 2 remaster (a strong one)
     bool materials = false;
     int materialsStrength = 100;  // %, 0-200
+    // 1.9: the remaster's ground: ground_seams - where two cells of the ground with different textures meet, the line
+    // between them wanders over the world instead of running along the cells (core/seams.hpp). Off by default.
+    bool groundSeams = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

@@ -76,14 +76,18 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // characters' list comes first of those - or at the interface, the shadows go onto what is drawn so far: the
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
-    if (!s.ui && s.blend && aoDue() && !applyAo()) return;
-    if (!s.ui && s.blend && sunShadowDue() && !applySunShadows()) return;  // 0.77: likewise
-    if (!s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
-    if (!s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
-    if (!s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
+    if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && seamsWanted()) noteGround(rec, d);  // 1.9
+    if (!seamPass && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
+    if (!seamPass && !s.ui && s.blend && aoDue() && !applyAo()) return;
+    if (!seamPass && !s.ui && s.blend && sunShadowDue() && !applySunShadows()) return;  // 0.77: likewise
+    if (!seamPass && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
+    if (!seamPass && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
+    if (!seamPass && !s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
     // the game's round ones are in them.
-    if (!s.ui && s.blend && actorShadowsDue() && !applyActorShadows(rec, size_t(&d - rec.draws().data()))) return;
+    if (!seamPass && !s.ui && s.blend && actorShadowsDue() &&
+        !applyActorShadows(rec, size_t(&d - rec.draws().data())))
+        return;
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && feetWanted()) noteFoot(rec, d);  // 0.94
     if (!s.ui && actorShadowsDrawn && d.effect == uint8_t(effect_exe::Kind::Shadow)) return;
     // 0.21: the world done - at the interface - its colours, then its glow.
@@ -187,7 +191,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // material made first, in a pass of its own, then read with it (t2).
     Texture* matTex = nullptr;
     if (materialsWanted() && !s.ui && !water && !smoke && !lava && !ray && !soft && !quad && !adds && !d.twin &&
-        s.zWrite && d.texture[0] && d.texture[0] != white) {
+        (s.zWrite || seamPass) && d.texture[0] && d.texture[0] != white) {
         const auto it = textures.find(d.texture[0]);
         if (it != textures.end() && !it->second.leafy && ensureMaterial(it->second, aiDrawn[0])) matTex = &it->second;
     }
@@ -334,6 +338,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (effects.leafFall) noteCrown(rec, d);
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
+    if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())
+        c.stage1[1] |= 1u << 31;
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
+    }
     if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
         std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);

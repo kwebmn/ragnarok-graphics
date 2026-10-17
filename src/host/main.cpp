@@ -478,6 +478,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.materials = rd.u8() != 0;  // 1.8
             e.materialsStrength = rd.i32();
             e.tier = rd.i32();
+            e.groundSeams = rd.u8() != 0;  // 1.9
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

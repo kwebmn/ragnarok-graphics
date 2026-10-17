@@ -13,6 +13,7 @@
 #include "core/frame.hpp"
 #include "core/critters.hpp"
 #include "core/key_pair.hpp"
+#include "core/seams.hpp"
 #include "core/living.hpp"
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
@@ -866,6 +867,10 @@ struct Renderer::Impl {
         groundLifeDone = false;  // 1.7
         crittersDone = false;
         materialsMade = 0;  // 1.8
+        groundTris.clear();  // 1.9
+        groundGroups.clear();
+        groundTextures.clear();
+        seamsDone = false;
         frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
@@ -921,6 +926,21 @@ struct Renderer::Impl {
     void dropMaterial(Texture& t);
     bool materialsWanted() const { return effects.materials && effects.materialsStrength > 0 && materialPs; }
     void materialConstants(bool ground, Constants& c) const;  // a draw with its material
+    // 1.9: the ground's seams (seams.cpp) - the frame's ground cells in the world, then strips across their edges
+    struct GroundGroup {
+        DrawSetup state;
+        uint32_t texture[2] = {0, 0};
+        bool keyed[2] = {false, false};
+    };
+    std::vector<seams::Triangle> groundTris;
+    std::vector<GroundGroup> groundGroups;
+    std::vector<uint32_t> groundTextures;
+    FrameRecord seamRec;
+    bool seamPass = false, seamsDone = false, seamsLogged = false;
+    bool seamsWanted() const { return effects.groundSeams && viewToWorldValid; }
+    bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty(); }
+    void noteGround(const FrameRecord& rec, const DrawCmd& d);
+    bool applySeams();  // once a frame, the ground drawn; false: lost
     bool remaster() const {
         return effects.tier == 2 || (effects.tier == 0 && adapterMb >= 6000);  // auto: a card of 6 GB and more
     }

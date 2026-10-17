@@ -304,6 +304,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMaterialsHint, ""},
         {"effects", "materials_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMaterialsStrength,
          Text::FxMaterialsStrengthHint, " %"},
+        {"effects", "ground_seams", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroundSeams,
+         Text::FxGroundSeamsHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -601,6 +603,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.tier") return c.effects.tier == 1 ? "classic" : c.effects.tier == 2 ? "remaster" : "auto";
     if (k == "effects.materials") return c.effects.materials ? "1" : "0";
     if (k == "effects.materials_strength") return std::to_string(c.effects.materialsStrength);
+    if (k == "effects.ground_seams") return c.effects.groundSeams ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);
