@@ -1,6 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <vector>
+
+#include "core/config.hpp"
 
 namespace uagfx::usage {
 
@@ -52,6 +55,13 @@ private:
 };
 
 std::string jsonString(const std::string& text);  // "..." with the escapes JSON needs
+
+// 2.2.2: the changes worth a line (Recorder::change) from the live update's (`applied`, "grass 1 -> 0" in the file's
+// words): the effects' switches and the mode by what the set shows (effect_groups::shown) and only while they are the
+// player's own (custom) - a set made the player's own rewrites every switch while nothing drawn changes, and a set
+// chosen switches many at once (its own line says so); every other line as it is.
+std::vector<std::string> changes(const EffectSettings& was, const EffectSettings& now, int cardLevel,
+                                 const std::vector<std::string>& applied);
 
 // What the settings app sends (POST uaro.kiev.ua/api/graphics/stats): {"id","version","lines"} - the lines from the
 // start, whole ones, at most `most` bytes of them; `taken` how many bytes of `lines` went in (0: none fit).

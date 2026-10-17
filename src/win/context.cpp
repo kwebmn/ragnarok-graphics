@@ -616,8 +616,9 @@ void Context::watchSettings() {
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
     if (config.fpsCounter != was.fpsCounter) fpsShown_ = config.fpsCounter;  // 2.2.1: at once
     if (config.statsSend && usage_.begun()) {  // 2.2.1: what was changed in the game - what was liked, or not
-        std::string lines;
-        for (const std::string& a : u.applied) usage_.change(a, lines);
+        std::string lines;  // 2.2.2: the effects by what is drawn (a set made the player's own changes nothing)
+        for (const std::string& a : usage::changes(was.effects, config.effects, startup().cardLevel, u.applied))
+            usage_.change(a, lines);
         writeUsage(lines);
     } else if (!config.statsSend && was.statsSend && usage_.begun()) {
         std::string lines;

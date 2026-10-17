@@ -1,6 +1,9 @@
 #include "core/usage.hpp"
 
+#include <algorithm>
 #include <cstdio>
+
+#include "core/effect_groups.hpp"
 
 namespace uagfx::usage {
 
@@ -29,6 +32,26 @@ std::string uploadBody(const std::string& id, const std::string& version, const 
         taken = at + 1;
     return "{\"id\":" + jsonString(id) + ",\"version\":" + jsonString(version) +
            ",\"lines\":" + jsonString(lines.substr(0, taken)) + "}";
+}
+
+std::vector<std::string> changes(const EffectSettings& was, const EffectSettings& now, int card,
+                                 const std::vector<std::string>& applied) {
+    std::vector<std::string> out;
+    for (const std::string& line : applied) {
+        const std::string key = line.substr(0, line.find(' '));
+        if (!effect_groups::memberOf(key) && key != "tier") out.push_back(line);
+    }
+    if (now.preset != EffectPreset::Custom) return out;
+    const EffectSettings a = effect_groups::shown(was, card), b = effect_groups::shown(now, card);
+    for (int i = 0; i < effect_groups::memberCount(); ++i) {
+        const effect_groups::Member& m = effect_groups::members()[i];
+        if (a.*m.on != b.*m.on) out.push_back(std::string(m.key) + (a.*m.on ? " 1 -> 0" : " 0 -> 1"));
+    }
+    static const char* const kTiers[] = {"auto", "classic", "remaster"};
+    if (a.tier != b.tier)
+        out.push_back(std::string("tier ") + kTiers[std::clamp(a.tier, 0, 2)] + " -> " +
+                      kTiers[std::clamp(b.tier, 0, 2)]);
+    return out;
 }
 
 void Recorder::begin(const Machine& m, uint64_t session) {
