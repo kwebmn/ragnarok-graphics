@@ -1,3 +1,9 @@
+# uaRO Graphics 1.25.2 — testing
+
+- **New trees: no grass and flowers on the crowns.** The new trees were drawn before the grass, and the grass took
+  their green for green ground - blades and flowers grew on the crowns, their edges went to steps. They are drawn
+  after the grass now. Check prt_fild08 with New trees and Grass on.
+
 # uaRO Graphics 1.25.1 — testing
 
 - **Important: since 1.15.0 the game's shader compiler stopped at one mistake of mine** (a name used twice in the
