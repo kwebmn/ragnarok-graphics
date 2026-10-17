@@ -1,3 +1,9 @@
+# uaRO Graphics 1.16.1 — testing
+
+- **Lighter grass in Classic+** (Direct3D 12, the Remaster mode off or the card under 6 GB): its blades are at most
+  16 pixels long instead of 28 - the grass pass costs up to 1.7 times less at high resolutions. Check: grass on,
+  Classic+, the frame rate on a grassy field against 1.16.0; the log says "grass: on <map>, blades up to N pixels".
+
 # uaRO Graphics 1.16.0 — testing
 
 - **World reflections in water** (Effects → Remaster, off by default, Direct3D 12, needs Modern water): the water
