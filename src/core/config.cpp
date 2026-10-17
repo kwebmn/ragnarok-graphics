@@ -122,6 +122,8 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.bounceLight = false;
+    e.skyLight = false;
     e.newTrees = false;
     e.groundClutter = false;
     e.fullCrowns = false;
@@ -182,6 +184,8 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.bounceLight ||
+           e.skyLight ||
            e.newTrees ||
            e.groundClutter ||
            e.fullCrowns ||
@@ -643,6 +647,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.groundClutter);
         } else if (key == "effects.new_trees") {
             setBool(val, c.effects.newTrees);
+        } else if (key == "effects.sky_light") {
+            setBool(val, c.effects.skyLight);
+        } else if (key == "effects.bounce_light") {
+            setBool(val, c.effects.bounceLight);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

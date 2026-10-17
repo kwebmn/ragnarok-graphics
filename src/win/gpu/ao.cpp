@@ -733,7 +733,51 @@ bool Renderer::Impl::applyDof() {
                                 dofSrv[0], true, focus);
 }
 
+// 1.11: light from the sky and from around (sky_light_ps) - the picture's copy put back lit by the sky above and the
+// ground below, and by the colours around it - before the soft shadows and the characters.
+bool Renderer::Impl::applySkyLight() {
+    skyLightDone = true;
+    crumb("light from the sky");
+    if (!ensureScene("light from the sky")) return true;
+    ID3D12PipelineState* pso =
+        alphaPipeline(skyLightPs, skyLightPipelines, upscale ? 1 : samples, "light from the sky");
+    if (!pso) return true;
+    if (!copySceneColor() || !copySceneDepth()) return false;
+    const int w = sceneWidth, h = sceneHeight;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
+    // the sky's colour from above - bluish by day, its tint with the time of day, deeper blue at night - and the
+    // ground's from below, warm; under a roof (indoors) both near white
+    const float k = mapOutdoors ? 1.0f : 0.35f;
+    const float sky[3] = {0.94f * day.tint[0], 0.99f * day.tint[1], 1.09f * day.tint[2]};
+    const float ground[3] = {1.06f, 1.02f, 0.93f};
+    for (int q = 0; q < 3; ++q) {
+        c.sourceRect[q] = 1.0f + ((sky[q] - 1.0f) * (1.0f + 0.5f * night)) * k;
+        c.sourceClamp[q] = 1.0f + (ground[q] - 1.0f) * k * (1.0f - night);
+    }
+    c.twin[0] = effects.skyLight ? 1.0f : 0.0f;
+    c.twin[1] = effects.bounceLight ? 1.0f : 0.0f;
+    c.twin[2] = 6.0f;  // world units around
+    if (!skyLightLogged) LOG_INFO("light from the sky: on %s", mapName.c_str());
+    skyLightLogged = true;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+}
+
 bool Renderer::Impl::finishWorld() {
+    if (skyLightDue() && !applySkyLight()) return false;  // 1.11
     if (aoDue() && !applyAo()) return false;
     if (sunShadowDue() && !applySunShadows()) return false;  // 0.77
     if (seamsDue() && !applySeams()) return false;            // 1.9

@@ -885,6 +885,7 @@ struct Renderer::Impl {
         seamsDone = false;
         frameTrees.clear();  // 1.10
         treesDone = false;
+        skyLightDone = false;  // 1.11
         frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
@@ -969,6 +970,13 @@ struct Renderer::Impl {
     bool treesDue() const { return treesWanted() && !treesDone && !frameTrees.empty(); }
     bool takeTree(const FrameRecord& rec, const DrawCmd& d);  // true: a crown, kept for applyTrees
     bool applyTrees();  // once a frame, before the characters; false: lost
+    // 1.11: light from the sky and from around (ao.cpp applySkyLight, sky_light_ps)
+    ID3DBlob* skyLightPs = nullptr;
+    ID3D12PipelineState* skyLightPipelines[4] = {};
+    bool skyLightDone = false, skyLightLogged = false;
+    bool skyLightWanted() const { return skyLightPs && (effects.skyLight || effects.bounceLight); }
+    bool skyLightDue() const { return skyLightWanted() && groundDrawn && !skyLightDone && viewToWorldValid; }
+    bool applySkyLight();  // once a frame, before the characters; false: lost
     bool remaster() const {
         return effects.tier == 2 || (effects.tier == 0 && adapterMb >= 6000);  // auto: a card of 6 GB and more
     }

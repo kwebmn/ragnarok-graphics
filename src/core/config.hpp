@@ -327,6 +327,10 @@ struct EffectSettings {
     // instead as a volume of small bunches of its own leaves, lit as a crown and swaying; the trunk stays the game's.
     // Remaster mode, Direct3D 12. Off by default.
     bool newTrees = false;
+    // 1.11: the remaster's light (sky_light_ps): sky_light - what faces up takes the sky's colour, what faces down the
+    // ground's; bounce_light - the colours around light a surface a little in their colour. Off by default.
+    bool skyLight = false;
+    bool bounceLight = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

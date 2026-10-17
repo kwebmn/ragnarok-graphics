@@ -375,6 +375,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.fullCrowns ? 1 : 0);  // 1.9.7
     w.u8(e.groundClutter ? 1 : 0);  // 1.9.8
     w.u8(e.newTrees ? 1 : 0);  // 1.10
+    w.u8(e.skyLight ? 1 : 0);  // 1.11
+    w.u8(e.bounceLight ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;
