@@ -1,3 +1,14 @@
+# uaRO Graphics 1.20.0 — testing
+
+- **Seasons on the map** (Effects → Living world, off by default, Direct3D 12): by the computer's calendar - winter
+  snow on the roofs, the rocks' tops and the ground; autumn's fallen leaves and drier grass; spring's greener
+  fields. Snowy maps keep snow on their roofs all year; the desert and the tropics have none. Now (October): leaves
+  on the ground of prt_fild maps and Prontera, the grass a little towards straw. Check: leaves only on what faces
+  up, not on walls, nothing on the characters; Lutie's roofs white. To see the winter, set the computer's date to
+  January for a minute.
+- **Wet in the rain** (Effects → Living world, off by default, needs the weather): where it rains the walls, roofs
+  and models get wet too - darker, a sheen along them, water running down the walls.
+
 # uaRO Graphics 1.19.0 — testing
 
 - **Smooth light on the models** (Effects → Remaster, off by default, Direct3D 12): rocks, trunks and other models
