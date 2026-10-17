@@ -1,3 +1,13 @@
+# uaRO Graphics 1.16.0 — testing
+
+- **World reflections in water** (Effects → Remaster, off by default, Direct3D 12, needs Modern water): the water
+  reflects the houses, rocks and trees along its shores, also what is above the screen's top edge. Check on maps
+  with water by houses and cliffs (alberta, comodo, payon's pond, izlude): the reflections stand upside down at the
+  shore, move with the waves, nothing from under the water shows in them, no flicker when the camera turns. The log
+  says "world reflections: N draws ... mirrored at WxH".
+- Under the hood: the scene table of the Direct3D 12 renderer holds four textures now, the sun map's vertices carry
+  their colour. If anything about water, soft shadows, real sun shadows or the effects broke since 1.15 - say so.
+
 # uaRO Graphics 1.15.0 — testing
 
 - **Smooth hills** (Effects → Remaster, off by default, Direct3D 12): the ground is lit by the sun over smooth slopes
