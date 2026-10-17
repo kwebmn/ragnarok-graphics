@@ -1,3 +1,25 @@
+# uaRO Graphics 2.2.0 — testing
+
+- **A simpler Effects page.** At the top, the set of effects for your graphics card: Auto (picked by the card - it
+  says which), Off, Weak, Medium, Strong graphics card, or Custom. Under it nine groups - Light, Shadows and depth,
+  Surfaces, Nature, Water, Air and weather, Living world, Skills, Picture - each with its own box and a Strength
+  slider (100 % as made, less gentler, more stronger; the living world has none). The milliseconds a group cost in
+  the last game are shown by its name. Every effect on its own is under **Details**; a change there makes the set
+  Custom, starting from what the set had on. The Strong set is the Remaster mode, the others Classic+.
+- **Your settings stay:** an existing uaro-graphics.ini has no set yet, so it is Custom - everything as you had it.
+  A new installation, Reset and "Set up for this computer" choose the set by the card.
+- **The console (~)** has the set and the groups at the top; an effect switched there under a set makes the set
+  Custom too. Tab held on a group turns the whole group off while held.
+- **dgVoodoo is gone:** the game always draws with uaRO Graphics (if it cannot start - no Direct3D 12 or 11 - with
+  Windows' own DirectDraw). The renderer choice, use-dgvoodoo.bat and use-uaro.bat are gone; uninstall.bat still
+  puts dgVoodoo back.
+- **Lighter driver:** the code of the moving shadows (off since 2.1.4) and the old ways of the trees (the bunches of
+  1.10 and the full crowns of 1.9.7 - the new trees replace them) are removed: 6 shaders fewer to compile at the
+  game's start.
+- Check, please: the Effects page (the set, the groups, Details) - what Auto says for your card; that after the
+  update your old boxes are as they were (the set shows Custom); a group off and its strength in a running game; the
+  console with a set chosen.
+
 # uaRO Graphics 2.1.7 — testing
 
 - **No white flashes in dark gaps:** the materials' glint is no brighter than the place it is on - it was added as
