@@ -95,7 +95,8 @@ constexpr UINT kRtvShadow = kRtvBias + 1;  // 0.32: the characters' shadows' two
 constexpr UINT kRtvClouds = kRtvShadow + 2;  // 0.39.3: the clouds' mask
 constexpr UINT kRtvBloom = kRtvClouds + 1;  // 0.78: the bloom's two quarter-size targets
 constexpr UINT kRtvFloor = kRtvBloom + 2;  // 0.86: the floors' reflections at half the size
-constexpr UINT kRtvCount = kRtvFloor + 1;
+constexpr UINT kRtvMaterial = kRtvFloor + 1;  // 1.8: a level of a texture's material, made anew for each
+constexpr UINT kRtvCount = kRtvMaterial + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 
@@ -133,6 +134,11 @@ struct Texture {
     float lightColour[3] = {0, 0, 0};
     // 0.32: a sprite cache's cells and what each holds now (sprite_exe::Source) - the characters cast shadows.
     std::vector<SpriteCell> spriteCells;
+    // 1.8: its material (materials.cpp) - relief, height, gloss - made from the picture matFor (the game's or the AI's)
+    ID3D12Resource* mat = nullptr;
+    D3D12_RESOURCE_STATES matState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT matSrv = 0;
+    const void* matFor = nullptr;
 };
 
 // 0.26: a draw of a fire-coloured effect this frame: its middle in the view, how much it lights, its colour.
@@ -218,6 +224,7 @@ struct Renderer::Impl {
     UINT slot = 0;
     bool open = false;
     std::string adapter;
+    uint64_t adapterMb = 0;  // 1.8: its own memory, for the remaster's automatic choice
     LogOnce failures;
     bool lost = false;  // the device was removed (driver crash, TDR): no more GPU work, the reason is in the log
 
@@ -858,6 +865,7 @@ struct Renderer::Impl {
         grassDone = false;  // 0.81
         groundLifeDone = false;  // 1.7
         crittersDone = false;
+        materialsMade = 0;  // 1.8
         frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
@@ -902,6 +910,20 @@ struct Renderer::Impl {
     bool crittersDue() const { return !crittersDone && groundDrawn && crittersWanted(); }
     bool crittersNeedFeet() const { return effects.birds || effects.breath || effects.splashes; }
     void noteCrown(const FrameRecord& rec, const DrawCmd& d);
+    // 1.8: the materials (materials.cpp) and the remaster (effects.tier)
+    ID3DBlob* materialPs = nullptr;
+    ID3D12PipelineState* materialPso = nullptr;
+    int materialsMade = 0;  // this frame
+    bool materialsLogged = false;
+    int materialSide = 512;
+    ID3D12PipelineState* materialPipeline();
+    bool ensureMaterial(Texture& t, bool fromAi);  // false: not ready yet
+    void dropMaterial(Texture& t);
+    bool materialsWanted() const { return effects.materials && effects.materialsStrength > 0 && materialPs; }
+    void materialConstants(bool ground, Constants& c) const;  // a draw with its material
+    bool remaster() const {
+        return effects.tier == 2 || (effects.tier == 0 && adapterMb >= 6000);  // auto: a card of 6 GB and more
+    }
     bool applyCritters();  // after the torches' pass; false: lost
     // 0.81: grass on the green ground (ao.cpp applyGrass), off by default: it is costly
     ID3DBlob* grassPs = nullptr;

@@ -122,6 +122,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.materials = false;
     e.underwater = false;
     e.caveDrips = false;
     e.splashes = false;
@@ -177,6 +178,7 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.materials ||
            e.underwater ||
            e.caveDrips ||
            e.splashes ||
@@ -211,34 +213,48 @@ bool drawnByRenderer(const EffectSettings& e) {
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
+    // 1.8: every field (until 1.7.3 the newer ones were left out, and a change of one alone did not reach the 64-bit
+    // renderer until another changed)
     return smoothLight == o.smoothLight && torch == o.torch && torchFlame == o.torchFlame &&
-           torchBrightness == o.torchBrightness && torchGlow == o.torchGlow &&
-           torchLight == o.torchLight && torchFlicker == o.torchFlicker && smoke == o.smoke &&
-           smokeDensity == o.smokeDensity && lamps == o.lamps && lampsLight == o.lampsLight &&
-           fireLight == o.fireLight && fireLightStrength == o.fireLightStrength && skillColours == o.skillColours &&
-           skillsSoft == o.skillsSoft && skillBrightness == o.skillBrightness &&
-           aura == o.aura &&
-           auraBrightness == o.auraBrightness && fireflies == o.fireflies &&
+           torchBrightness == o.torchBrightness && torchGlow == o.torchGlow && torchLight == o.torchLight &&
+           torchFlicker == o.torchFlicker && smoke == o.smoke && smokeDensity == o.smokeDensity && lamps == o.lamps &&
+           lampsLight == o.lampsLight && fireLight == o.fireLight && fireLightStrength == o.fireLightStrength &&
+           skillColours == o.skillColours && skillsSoft == o.skillsSoft && skillBrightness == o.skillBrightness &&
+           aura == o.aura && auraBrightness == o.auraBrightness && fireflies == o.fireflies &&
            firefliesBrightness == o.firefliesBrightness && mapGlows == o.mapGlows &&
            mapGlowsBrightness == o.mapGlowsBrightness && rays == o.rays && raysBrightness == o.raysBrightness &&
            lava == o.lava && lavaBrightness == o.lavaBrightness && actorShadows == o.actorShadows &&
-           actorShadowsStrength == o.actorShadowsStrength && clouds == o.clouds && cloudsStrength == o.cloudsStrength &&
-           haze == o.haze && hazeStrength == o.hazeStrength && heat == o.heat && heatStrength == o.heatStrength &&
-           portals == o.portals && portalsStrength == o.portalsStrength && weather == o.weather &&
-           weatherAmount == o.weatherAmount &&
-           glow == o.glow &&
-           glowStrength == o.glowStrength &&
-           glowSize == o.glowSize && glowLight == o.glowLight &&
-           ao == o.ao && aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
+           actorShadowsStrength == o.actorShadowsStrength && clouds == o.clouds &&
+           cloudsStrength == o.cloudsStrength && haze == o.haze && hazeStrength == o.hazeStrength && heat == o.heat &&
+           heatStrength == o.heatStrength && portals == o.portals && portalsStrength == o.portalsStrength &&
+           weather == o.weather && weatherAmount == o.weatherAmount && glow == o.glow &&
+           glowStrength == o.glowStrength && glowSize == o.glowSize && glowLight == o.glowLight && ao == o.ao &&
+           aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
            gradeSaturation == o.gradeSaturation && gradeContrast == o.gradeContrast &&
            gradeBrightness == o.gradeBrightness && gradeWarmth == o.gradeWarmth && gradeVignette == o.gradeVignette &&
            foliage == o.foliage && foliageStrength == o.foliageStrength && night == o.night &&
-           nightStrength == o.nightStrength && nightClock == o.nightClock &&
-           nightNow == o.nightNow && dayNow == o.dayNow && dof == o.dof && dofStrength == o.dofStrength &&
-           dofRange == o.dofRange &&
-           water == o.water &&
-           waterWaves == o.waterWaves && waterReflections == o.waterReflections && waterClarity == o.waterClarity &&
-           softParticles == o.softParticles;
+           nightStrength == o.nightStrength && nightClock == o.nightClock && nightNow == o.nightNow && dof == o.dof &&
+           dofStrength == o.dofStrength && dofRange == o.dofRange && water == o.water && waterWaves == o.waterWaves &&
+           waterReflections == o.waterReflections && waterClarity == o.waterClarity &&
+           softParticles == o.softParticles && rimLight == o.rimLight && rimStrength == o.rimStrength &&
+           sky == o.sky && skyClouds == o.skyClouds && skyStrength == o.skyStrength && motes == o.motes &&
+           motesAmount == o.motesAmount && relief == o.relief && reliefStrength == o.reliefStrength &&
+           floorReflections == o.floorReflections && floorReflectStrength == o.floorReflectStrength &&
+           shafts == o.shafts && shaftsStrength == o.shaftsStrength && dayCycle == o.dayCycle && dayNow == o.dayNow &&
+           sunShadows == o.sunShadows && sunShadowsStrength == o.sunShadowsStrength && bloom == o.bloom &&
+           bloomStrength == o.bloomStrength && filmic == o.filmic && regionLooks == o.regionLooks &&
+           regionLooksStrength == o.regionLooksStrength && footprints == o.footprints && storms == o.storms &&
+           grass == o.grass && grassAmount == o.grassAmount && skillSparks == o.skillSparks &&
+           skillSparksAmount == o.skillSparksAmount && filmGrain == o.filmGrain &&
+           filmGrainAmount == o.filmGrainAmount && mapFade == o.mapFade && roundLight == o.roundLight &&
+           appear == o.appear && ripples == o.ripples && glint == o.glint && hitFlash == o.hitFlash &&
+           wetGround == o.wetGround && flare == o.flare && treeVolume == o.treeVolume && leafLight == o.leafLight &&
+           treeTints == o.treeTints && gusts == o.gusts && dapple == o.dapple && flowers == o.flowers &&
+           dew == o.dew && morningFog == o.morningFog && sandDrift == o.sandDrift && snowSparkle == o.snowSparkle &&
+           wetWalls == o.wetWalls && shoreFoam == o.shoreFoam && fish == o.fish && swamp == o.swamp &&
+           butterflies == o.butterflies && birds == o.birds && leafFall == o.leafFall && embers == o.embers &&
+           breath == o.breath && splashes == o.splashes && caveDrips == o.caveDrips && underwater == o.underwater &&
+           tier == o.tier && materials == o.materials && materialsStrength == o.materialsStrength;
 }
 
 AiPreset aiPresetOf(const AiSettings& a) {
@@ -603,6 +619,14 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.caveDrips);
         } else if (key == "effects.underwater") {
             setBool(val, c.effects.underwater);
+        } else if (key == "effects.tier") {  // 1.8
+            if (val == "auto") c.effects.tier = 0;
+            if (val == "classic") c.effects.tier = 1;
+            if (val == "remaster") c.effects.tier = 2;
+        } else if (key == "effects.materials") {
+            setBool(val, c.effects.materials);
+        } else if (key == "effects.materials_strength") {
+            toInt(val, 0, 200, c.effects.materialsStrength);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

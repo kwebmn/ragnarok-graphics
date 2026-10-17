@@ -475,6 +475,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + u.pixels, UINT(u.rect.width()),
                                                   UINT(u.rect.height()));
     if (!src.pResource) return;
+    if (u.level == 0 && t.mat && t.matFor == t.resource) dropMaterial(t);  // 1.8: new pixels, a new material
     transition(t.resource, t.state, D3D12_RESOURCE_STATE_COPY_DEST);
     D3D12_TEXTURE_COPY_LOCATION dst{};
     dst.pResource = t.resource;
@@ -1206,6 +1207,7 @@ void Renderer::Impl::destroy() {
     for (auto& t : textures) {
         releaseCom(t.second.resource);
         releaseCom(t.second.ai);
+        releaseCom(t.second.mat);  // 1.8
     }
     textures.clear();
     for (auto& p : pipelines) releaseCom(p.second);
@@ -1302,6 +1304,8 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : grassPipelines) releaseCom(p);  // 0.81
     for (ID3D12PipelineState*& p : groundLifePipelines) releaseCom(p);  // 1.7
     for (ID3D12PipelineState*& p : crittersPipelines) releaseCom(p);
+    releaseCom(materialPso);  // 1.8
+    releaseCom(materialPs);
     releaseCom(crittersPs);
     releaseCom(crittersVs);
     releaseCom(crittersData);
@@ -1774,7 +1778,10 @@ bool Renderer::create(std::string& error) {
         adapter->GetDesc1(&d);
         if (SUCCEEDED(createDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
                                    reinterpret_cast<void**>(&m.device))))
+        {
             m.adapter = narrow(d.Description);
+            m.adapterMb = uint64_t(d.DedicatedVideoMemory) >> 20;
+        }
     }
     releaseAdapters(adapters);
     if (all.size() > 1)
@@ -2091,6 +2098,10 @@ void Renderer::Impl::retireDying() {
         if (it->second.ai) {
             s.garbage.push_back(it->second.ai);
             freeSrv.push_back(it->second.aiSrv);
+        }
+        if (it->second.mat) {  // 1.8
+            s.garbage.push_back(it->second.mat);
+            freeSrv.push_back(it->second.matSrv);
         }
         if (ai) ai->forget(id);
         objectTextures.forget(id);  // 0.23.1

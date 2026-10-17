@@ -228,6 +228,9 @@ enum class Text : uint16_t {
     // 1.7.3
     FxButterflies, FxButterfliesHint, FxBirds, FxBirdsHint, FxLeafFall, FxLeafFallHint, FxEmbers, FxEmbersHint,
     FxBreath, FxBreathHint, FxSplashes, FxSplashesHint, FxCaveDrips, FxCaveDripsHint, FxUnderwater, FxUnderwaterHint,
+    // 1.8
+    FxMaterials, FxMaterialsHint, FxMaterialsStrength, FxMaterialsStrengthHint,
+    FxRemaster, FxRemasterIntro, FxTier, FxTierHint, FxTierAuto, FxTierClassic, FxTierRemaster,
     Count
 };
 

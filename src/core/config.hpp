@@ -308,6 +308,12 @@ struct EffectSettings {
     bool splashes = false;
     bool caveDrips = false;
     bool underwater = false;
+    // 1.8: the remaster's first step, the materials: each texture of the ground and the models gets its relief, height
+    // and gloss, made on the card from its picture; the sun lights them, smooth stone glints, the ground's
+    // repeats hidden under large patches; with the remaster (tier) also its depth (parallax). Off by default.
+    int tier = 0;  // 1.8: [effects] tier - 0 auto (by the card), 1 classic+ (any card), 2 remaster (a strong one)
+    bool materials = false;
+    int materialsStrength = 100;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

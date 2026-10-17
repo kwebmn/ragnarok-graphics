@@ -271,13 +271,72 @@ float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
 }
 #endif
 
+#ifndef UAGFX_SAFE
+// 1.8, the materials (materials.cpp, effects.materials). A draw of the ground or a model with bit 28: its texture's
+// material in t2 (relief as a normal xy, height, gloss); the point and the surface from the game's projection
+// (f0-farZ) and the draw's depth; twinX-twinW the way to the sun in the view and twinH the strength; uiPixels.x the
+// sun's light here (0 indoors and at night), .y the gloss's. The game's light stays: what the relief adds is the
+// sunlit side brighter and the far side darker against the flat surface's, the hollows darker and the smooth stone
+// with a glint. Bit 29: the texture taken a little along the view by its height (parallax); bit 30, the ground: large
+// patches of shade over the world (r0-r11 the view -> the world) so that one tile's repeats do not show.
+float mhash(float2 p) { return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+float mnoise(float2 p) {
+    float2 i = floor(p), f = frac(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return lerp(lerp(mhash(i), mhash(i + float2(1, 0)), f.x), lerp(mhash(i + float2(0, 1)), mhash(i + 1.0), f.x), f.y);
+}
+
+float3 materialLight(float3 c, float4 m, float3 P, float3 N, float3 T, float3 B) {
+    float2 xy = m.xy * 2.0 - 1.0;
+    float3 n = normalize(T * xy.x + B * xy.y + N * sqrt(saturate(1.0 - dot(xy, xy))));
+    float3 L = normalize(float3(twinX, twinY, twinW));
+    float sunLight = uiPixels.x;
+    float amb = lerp(0.85, 0.5, sunLight);
+    float k = (amb + (1.0 - amb) * saturate(dot(n, L))) / (amb + (1.0 - amb) * saturate(dot(N, L)));
+    float hollow = lerp(0.8, 1.0, saturate(m.z * 1.8));
+    float s = twinH;
+    c *= lerp(1.0, clamp(k, 0.55, 1.6) * hollow, s);
+    float3 V = normalize(-P);
+    float3 H = normalize(L + V);
+    float spec = pow(saturate(dot(n, H)), 10.0 + 70.0 * m.w) * m.w * uiPixels.y * (0.3 + 0.7 * sunLight);
+    return c + spec * 0.45 * s;
+}
+#endif
+
 float4 shade(PsIn i) {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
     float2 dv = ddy(uv0);
-    float4 t0 = tex0.Sample(samp0, uv0);
 #ifndef UAGFX_SAFE
+    // 1.8: the point in the view and its surface's slopes, also outside any branch (garbage where unused)
+    float pz = i.pos.w;
+    float2 pg = (i.pos.xy - 0.5 - float2(jitterX, jitterY)) / max(scale, 1e-3);
+    float3 P = float3((pg.x - cx) * pz / max(f0, 1e-3), (pg.y - cy) * pz / max(f1, 1e-3), pz);
+    float3 dp1 = ddx(P), dp2 = ddy(P);
+    bool material = ((stage1.y >> 28) & 1) != 0;
+    float4 m = float4(0.5, 0.5, 0.5, 0.0);
+    float3 N = float3(0.0, 0.0, -1.0), T = float3(1.0, 0.0, 0.0), B = float3(0.0, 1.0, 0.0);
+    if (material) {
+        N = normalize(cross(dp1, dp2));
+        if (dot(N, P) > 0.0) N = -N;  // towards the camera
+        float3 dp2perp = cross(dp2, N), dp1perp = cross(N, dp1);
+        T = dp2perp * du.x + dp1perp * dv.x;
+        B = dp2perp * du.y + dp1perp * dv.y;
+        float im = rsqrt(max(max(dot(T, T), dot(B, B)), 1e-12));
+        T *= im;
+        B *= im;
+        m = sceneColor.SampleGrad(samp0, uv0, du, dv);
+        if (((stage1.y >> 29) & 1) != 0) {  // parallax: one step along the view by the height
+            float3 V = normalize(-P);
+            float3 vt = float3(dot(V, T), dot(V, B), dot(V, N));
+            uv0 += (m.z - 0.5) * 0.035 * vt.xy / (vt.z + 0.42);
+            m = sceneColor.SampleGrad(samp0, uv0, du, dv);
+        }
+    }
+    float4 t0 = tex0.SampleGrad(samp0, uv0, du, dv);
     if (((stage1.y >> 26) & 1) != 0) t0.rgb *= relief(uv0, du, dv);  // 0.71: the ground
+#else
+    float4 t0 = tex0.Sample(samp0, uv0);
 #endif
     if (uiMode == 3)
         t0 = twinTexel(i.pos.xy);
@@ -297,6 +356,13 @@ float4 shade(PsIn i) {
     }
 #ifndef UAGFX_SAFE
     if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
+    if (material) c.rgb = materialLight(c.rgb, m, P, N, T, B);                       // 1.8: the materials
+    if (((stage1.y >> 30) & 1) != 0) {  // 1.8: the ground's large patches
+        float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
+                   float3(r9, r10, r11);
+        float warm = (mnoise(w.xz * 0.03 + 17.0) - 0.5) * 0.35;
+        c.rgb *= (0.88 + 0.24 * mnoise(w.xz * 0.012)) * float3(1.0 + warm * 0.6, 1.0 + warm * 0.15, 1.0 - warm * 0.5);
+    }
 #endif
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
     float alphaStep = fwidth(c.a);  // outside any branch
@@ -1724,6 +1790,42 @@ float4 critters_ps(CritterIn i) : SV_Target {
     float3 o = c * a + glow * q.w;
     if (a < 0.002 && dot(o, o) < 1e-6) discard;
     return float4(o, a);
+}
+
+// 1.8, a level of a texture's material (materials.cpp): from the picture (t0, its levels read whole, wrapped - the
+// textures tile) at its level uiPixels.z (uiPixels.w levels; sourceRect.xy its size): its relief from the slopes of
+// its brightness at four scales, its height against its far average, its gloss where it is grey and light (stone,
+// tiles, metal) - rgba: the normal's xy, the height, the gloss.
+float matLuma(int2 p, int lod) {
+    int2 size = max(int2(sourceRect.xy) >> lod, int2(1, 1));
+    int2 q = ((p % size) + size) % size;
+    return dot(tex0.Load(int3(q, lod)).rgb, float3(0.299, 0.587, 0.114));
+}
+
+float4 material_ps(PresentOut i) : SV_Target {
+    int2 p = int2(i.pos.xy);
+    int base = int(uiPixels.z + 0.5), most = max(int(uiPixels.w + 0.5) - 1, base);
+    int top = min(base + 5, most);
+    float far = matLuma(p >> (top - base), top);
+    float2 slope = float2(0.0, 0.0);
+    float h = 0.0, weights = 0.0;
+    [unroll] for (int s = 0; s < 4; ++s) {
+        int lod = min(base + s, most);
+        int2 q = p >> (lod - base);
+        float w = s == 0 ? 1.0 : s == 1 ? 0.75 : s == 2 ? 0.55 : 0.4;
+        float gx = matLuma(q + int2(1, 0), lod) - matLuma(q - int2(1, 0), lod);
+        float gy = matLuma(q + int2(0, 1), lod) - matLuma(q - int2(0, 1), lod);
+        slope += float2(gx, gy) * 0.5 * w / float(1 << (lod - base));
+        h += (matLuma(q, lod) - far) * w;
+        weights += w;
+    }
+    float3 n = normalize(float3(-slope * 5.0, 1.0));
+    int2 size = max(int2(sourceRect.xy) >> base, int2(1, 1));
+    float3 rgb = tex0.Load(int3(((p % size) + size) % size, base)).rgb;
+    float sat = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
+    float lum = dot(rgb, float3(0.299, 0.587, 0.114));
+    float gloss = saturate((0.22 - sat) * 4.0) * smoothstep(0.2, 0.6, lum) * 0.7;
+    return float4(n.xy * 0.5 + 0.5, saturate(0.5 + h / weights * 1.6), gloss);
 }
 
 // 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of

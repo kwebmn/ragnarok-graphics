@@ -475,6 +475,9 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.splashes = rd.u8() != 0;
             e.caveDrips = rd.u8() != 0;
             e.underwater = rd.u8() != 0;
+            e.materials = rd.u8() != 0;  // 1.8
+            e.materialsStrength = rd.i32();
+            e.tier = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

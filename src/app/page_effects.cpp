@@ -104,9 +104,11 @@ const Effect kEffects[] = {
     {"effects.splashes", {}, {}, {}, 2},  // 1.7.3
     {"effects.cave_drips", {}, {}, {}, 2},  // 1.7.3
     {"effects.underwater", {}, {}, {}, 2},  // 1.7.3
+    {"effects.materials", {}, {"effects.materials_strength"}, {}, 3},  // 1.8
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 
+constexpr int kTier = 990;  // 1.8: the remaster's mode
 int boxId(int e) { return 1001 + 100 * e; }
 int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
 int checkId(int e, int k) { return 1070 + 100 * e + 2 * k; }
@@ -134,8 +136,18 @@ public:
             if (fx.block != block) {  // 0.23.2: the map's objects, 1.7: the living world - blocks of their own
                 block = fx.block;
                 p.gap(16);
-                p.heading(t(block == 1 ? Text::FxObjects : Text::FxLiving));
-                p.note(t(block == 1 ? Text::FxObjectsIntro : Text::FxLivingIntro), Tone::Normal);
+                p.heading(t(block == 1 ? Text::FxObjects : block == 2 ? Text::FxLiving : Text::FxRemaster));
+                p.note(t(block == 1   ? Text::FxObjectsIntro
+                         : block == 2 ? Text::FxLivingIntro
+                                      : Text::FxRemasterIntro),
+                       Tone::Normal);
+                if (block == 3) {  // 1.8: the mode, for all of the block
+                    const IniSetting& tier = setting("effects.tier");
+                    const std::string token = host_.model().token(tier);
+                    p.choice(kTier, t(tier.label),
+                             {t(Text::FxTierAuto), t(Text::FxTierClassic), t(Text::FxTierRemaster)},
+                             token == "classic" ? 1 : token == "remaster" ? 2 : 0, t(tier.hint));
+                }
             }
             p.gap();
             const IniSetting& box = setting(fx.box);
@@ -160,6 +172,12 @@ public:
     }
 
     void command(int id, int code) override {
+        if (id == kTier && code == CBN_SELCHANGE) {  // 1.8
+            const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
+            static const char* const kTiers[] = {"auto", "classic", "remaster"};
+            if (sel >= 0 && sel < 3) set(setting("effects.tier"), kTiers[sel], true);
+            return;
+        }
         if (code != BN_CLICKED) return;
         for (int e = 0; e < kEffectCount; ++e) {
             const char* key = id == boxId(e) ? kEffects[e].box : nullptr;

@@ -366,6 +366,9 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.splashes ? 1 : 0);
     w.u8(e.caveDrips ? 1 : 0);
     w.u8(e.underwater ? 1 : 0);
+    w.u8(e.materials ? 1 : 0);  // 1.8
+    w.i32(e.materialsStrength);
+    w.i32(e.tier);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

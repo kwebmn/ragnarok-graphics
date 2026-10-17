@@ -2374,6 +2374,52 @@ const Entry kTexts[] = {
      "(Direct3D 12).",
      "На подводных картах (подземелье Бьялана) поднимаются цепочки пузырьков, а сверху колышущимися полосами падает "
      "свет (Direct3D 12)."},
+    {"Materials of the world",
+     "Матеріали світу",
+     "Материалы мира"},
+    {"Each texture of the ground, the houses and the rocks gets its relief, height and gloss, made by the card from "
+     "its picture: the sun lights stones, bricks and bark from their side, the hollows are darker, smooth stone "
+     "glints, the repeats of the ground's tiles hide under large patches of shade. With the remaster also depth "
+     "(Direct3D 12).",
+     "Кожна текстура землі, будинків і скель отримує рельєф, висоту й блиск, які відеокарта робить із її картинки: "
+     "сонце освітлює камінь, цеглу й кору збоку, западини темніші, гладкий камінь виблискує, повтори плиток землі "
+     "ховаються під великими плямами відтінку. З ремастером ще й глибина (Direct3D 12).",
+     "Каждая текстура земли, домов и скал получает рельеф, высоту и блеск, которые видеокарта делает из её картинки: "
+     "солнце освещает камень, кирпич и кору сбоку, впадины темнее, гладкий камень блестит, повторы плиток земли "
+     "прячутся под крупными пятнами оттенка. С ремастером ещё и глубина (Direct3D 12)."},
+    {"Strength of the materials",
+     "Сила матеріалів",
+     "Сила материалов"},
+    {"How much the relief and the gloss show.",
+     "Наскільки помітні рельєф і блиск.",
+     "Насколько заметны рельеф и блеск."},
+    {"Remaster",
+     "Ремастер",
+     "Ремастер"},
+    {"The world made modern by the driver: materials now; a world of its own, new trees and light next. The mode "
+     "below chooses what a card can carry: Classic+ keeps the game's picture and adds what costs little, Remaster "
+     "asks for a strong card and goes further.",
+     "Світ, осучаснений драйвером: зараз матеріали; далі власний світ, нові дерева й світло. Режим нижче вибирає, що "
+     "потягне відеокарта: «Класика+» лишає картинку гри й додає недороге, «Ремастер» вимагає сильної відеокарти й іде "
+     "далі.",
+     "Мир, осовремененный драйвером: сейчас материалы; дальше собственный мир, новые деревья и свет. Режим ниже "
+     "выбирает, что потянет видеокарта: «Классика+» оставляет картинку игры и добавляет недорогое, «Ремастер» требует "
+     "сильной видеокарты и идёт дальше."},
+    {"Mode",
+     "Режим",
+     "Режим"},
+    {"Automatic: Remaster on a card with 6 GB of its own memory or more, else Classic+.",
+     "Автоматично: «Ремастер» на відеокарті з 6 ГБ власної пам'яті й більше, інакше «Класика+».",
+     "Автоматически: «Ремастер» на видеокарте с 6 ГБ собственной памяти и больше, иначе «Классика+»."},
+    {"Automatic",
+     "Автоматично",
+     "Автоматически"},
+    {"Classic+ (any card)",
+     "Класика+ (будь-яка відеокарта)",
+     "Классика+ (любая видеокарта)"},
+    {"Remaster (a strong card)",
+     "Ремастер (сильна відеокарта)",
+     "Ремастер (сильная видеокарта)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

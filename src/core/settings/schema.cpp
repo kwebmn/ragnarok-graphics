@@ -298,6 +298,12 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxCaveDripsHint, ""},
         {"effects", "underwater", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxUnderwater,
          Text::FxUnderwaterHint, ""},
+        {"effects", "tier", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "classic", "remaster"},
+         {Text::FxTierAuto, Text::FxTierClassic, Text::FxTierRemaster}, Text::FxTier, Text::FxTierHint, ""},
+        {"effects", "materials", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMaterials,
+         Text::FxMaterialsHint, ""},
+        {"effects", "materials_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMaterialsStrength,
+         Text::FxMaterialsStrengthHint, " %"},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -592,6 +598,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.splashes") return c.effects.splashes ? "1" : "0";
     if (k == "effects.cave_drips") return c.effects.caveDrips ? "1" : "0";
     if (k == "effects.underwater") return c.effects.underwater ? "1" : "0";
+    if (k == "effects.tier") return c.effects.tier == 1 ? "classic" : c.effects.tier == 2 ? "remaster" : "auto";
+    if (k == "effects.materials") return c.effects.materials ? "1" : "0";
+    if (k == "effects.materials_strength") return std::to_string(c.effects.materialsStrength);
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);
