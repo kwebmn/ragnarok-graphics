@@ -117,11 +117,18 @@ TEST(live_config_shadows_apply_now) {
     CHECK(u.waiting.empty());
     CHECK(u.next.effects.ao);
     CHECK_EQ(u.applied.size(), size_t(3));
-    CHECK(u.applied[0] == "ao 0 -> 1");
-    CHECK(u.applied[1] == "glow_light 50 -> 20");
-    CHECK(u.applied[2] == "ao_size 50 -> 70");
+    CHECK(u.applied[0] == "ao 0 -> 1");  // in the settings' order (1.9.6)
+    CHECK(u.applied[1] == "ao_size 50 -> 70");
+    CHECK(u.applied[2] == "glow_light 50 -> 20");
     for (const char* k : {"effects.ao", "effects.ao_strength", "effects.ao_size", "effects.glow_light"})
         CHECK(appliesNow(k));
+}
+
+TEST(live_config_a_newer_effect_alone_applies_now) {  // 1.9.6: the console switched grass, nothing happened
+    const LiveUpdate u = liveUpdate(parseConfig("[effects]\ngrass = 1\n"), parseConfig("[effects]\ngrass = 0\n"));
+    CHECK(!u.next.effects.grass);
+    CHECK_EQ(u.applied.size(), size_t(1));
+    CHECK(u.applied[0] == "grass 1 -> 0");
 }
 
 TEST(live_config_colour_applies_now) {
