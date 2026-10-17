@@ -370,16 +370,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                          GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F11) < 0;
     if (fpsKey_.pressed(fpsDown)) {  // 2.2.1: written too - the console, the settings and the next start see it
         fpsShown_ = !fpsShown_;
-        const std::string path = gameDir() + "\\uaro-graphics.ini";
-        std::string text;
-        readTextFile(path, text);
-        const std::string next = settings::applyIniEdits(text, {{"frames", "fps_counter", fpsShown_ ? "1" : "0"}});
-        bool written = false;
-        {
-            std::ofstream f(path + ".fps", std::ios::binary | std::ios::trunc);  // whole, then in its place
-            written = f && f.write(next.data(), std::streamsize(next.size()));
-        }
-        if (written && MoveFileExA((path + ".fps").c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+        if (editIniFile(gameDir() + "\\uaro-graphics.ini", {{"frames", "fps_counter", fpsShown_ ? "1" : "0"}})) {
             config.fpsCounter = fpsShown_;  // what the file says now: not taken for a change of it
             LOG_INFO("frame counter: %s (Ctrl+Shift+F11)", fpsShown_ ? "on" : "off");
         }
@@ -552,9 +543,8 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     effect_costs::Costs costs;
     const bool measured = renderer && renderer->effectCosts(costs);
     if (measured && now - costsWritten_ >= 30000) {
-        costsWritten_ = now;
-        std::ofstream f(gameDir() + "\\uaro-graphics\\effect-costs.txt", std::ios::binary | std::ios::trunc);
-        f << effect_costs::format(costs);
+        costsWritten_ = now;  // whole: the settings app may read it this moment
+        writeFileAtomic(gameDir() + "\\uaro-graphics\\effect-costs.txt", effect_costs::format(costs));
     }
     if (config.keepFps <= 0) {
         keepOff_.clear();  // turned off: the effects come back

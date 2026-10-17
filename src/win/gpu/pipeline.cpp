@@ -62,14 +62,8 @@ struct ShaderStore {
 // Into a file of its own, then over the old one in one step: another client starting meanwhile reads the old one or
 // the new one, never a part of one.
 void keepShaders(const std::string& file, const std::vector<uint8_t>& bytes) {
-    const std::string part = file + "." + std::to_string(GetCurrentProcessId()) + ".tmp";
-    std::ofstream f(part, std::ios::binary | std::ios::trunc);
-    f.write(reinterpret_cast<const char*>(bytes.data()), std::streamsize(bytes.size()));
-    f.close();
-    if (!f || !MoveFileExA(part.c_str(), file.c_str(), MOVEFILE_REPLACE_EXISTING)) {
-        DeleteFileA(part.c_str());
+    if (!win::writeFileAtomic(file, bytes.data(), bytes.size()))
         LOG_INFO("shaders: cannot keep them in %s - compiled again at the next start", file.c_str());
-    }
 }
 
 bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& out,

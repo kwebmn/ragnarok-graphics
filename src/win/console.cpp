@@ -46,14 +46,6 @@ std::wstring wide(const std::string& utf8) {
     return w;
 }
 
-bool writeAtomic(const std::string& path, const std::string& text) {
-    const std::string part = path + ".console";
-    std::FILE* f = std::fopen(part.c_str(), "wb");
-    if (!f) return false;
-    const bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
-    std::fclose(f);
-    return ok && MoveFileExA(part.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING);
-}
 
 const IniSetting* settingOf(const std::string& key) { return findSetting(key); }
 
@@ -179,9 +171,7 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
             edits.push_back({"effects", k, v});
     }
     edits.push_back({s->section, s->key, next});
-    std::string text;
-    readTextFile(iniPath, text);
-    if (!writeAtomic(iniPath, applyIniEdits(text, edits))) {
+    if (!editIniFile(iniPath, edits)) {  // 2.2.2: read again when the settings app wrote it meanwhile
         LOG_ERROR("console: uaro-graphics.ini could not be written");
         return false;
     }

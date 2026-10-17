@@ -33,6 +33,7 @@
 #include "win/gpu/ai11.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::gpu {
 namespace {
@@ -409,11 +410,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
         const std::vector<uint8_t> bytes = shader_cache::pack(key, all);
-        const std::string part = cacheFile + "." + std::to_string(GetCurrentProcessId()) + ".tmp";
-        std::ofstream f(part, std::ios::binary | std::ios::trunc);
-        f.write(reinterpret_cast<const char*>(bytes.data()), std::streamsize(bytes.size()));
-        f.close();
-        if (!f || !MoveFileExA(part.c_str(), cacheFile.c_str(), MOVEFILE_REPLACE_EXISTING)) DeleteFileA(part.c_str());
+        win::writeFileAtomic(cacheFile, bytes.data(), bytes.size());  // another client starting reads it whole or not
     }
     LOG_INFO("Direct3D 11: shaders (%s) %s", ps, missing ? "compiled and kept for the next start" : "kept from the "
                                                                                                   "last start");

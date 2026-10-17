@@ -20,6 +20,7 @@
 #include "core/webp_image.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::host {
 namespace {
@@ -67,12 +68,7 @@ public:
         const ULONGLONG t = GetTickCount64();
         if (!now && t - last_ < 500) return;
         last_ = t;
-        const std::string text = pack::statusText(s), part = path_ + ".part";
-        std::FILE* f = std::fopen(part.c_str(), "wb");
-        if (!f) return;
-        const bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
-        std::fclose(f);
-        if (ok) MoveFileExA(part.c_str(), path_.c_str(), MOVEFILE_REPLACE_EXISTING);
+        win::writeFileAtomic(path_, pack::statusText(s));
     }
     // The settings app's stop: its file, gone once seen. Looked for at most every 300 ms.
     bool stopAsked() {

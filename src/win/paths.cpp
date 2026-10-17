@@ -44,4 +44,41 @@ bool readTextFile(const std::string& path, std::string& out) {
     return ok;
 }
 
+bool writeFileAtomic(const std::string& path, const void* data, size_t size) {
+    const std::string part = path + "." + std::to_string(GetCurrentProcessId()) + ".tmp";
+    HANDLE f = CreateFileA(part.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return false;
+    DWORD put = 0;
+    const bool ok = !size || (WriteFile(f, data, DWORD(size), &put, nullptr) && put == size);
+    CloseHandle(f);
+    if (ok && MoveFileExA(part.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) return true;
+    DeleteFileA(part.c_str());
+    return false;
+}
+
+bool writeFileAtomic(const std::string& path, const std::string& text) {
+    return writeFileAtomic(path, text.data(), text.size());
+}
+
+bool editIniFile(const std::string& path, const std::vector<settings::IniEdit>& edits) {
+    const auto stamp = [&](WIN32_FILE_ATTRIBUTE_DATA& a) {
+        return GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &a) != 0;
+    };
+    for (int attempt = 0; attempt < 3; ++attempt) {
+        if (attempt) Sleep(20);
+        WIN32_FILE_ATTRIBUTE_DATA before{}, after{};
+        const bool existed = stamp(before);
+        std::string text;
+        if (existed && !readTextFile(path, text)) continue;  // being replaced this moment
+        const std::string next = settings::applyIniEdits(text, edits);
+        const bool exists = stamp(after);
+        const bool same = exists == existed &&
+                          (!exists || (CompareFileTime(&before.ftLastWriteTime, &after.ftLastWriteTime) == 0 &&
+                                       before.nFileSizeLow == after.nFileSizeLow &&
+                                       before.nFileSizeHigh == after.nFileSizeHigh));
+        if (same) return writeFileAtomic(path, next);
+    }
+    return false;
+}
+
 }  // namespace uagfx::win
