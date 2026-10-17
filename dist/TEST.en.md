@@ -1,3 +1,11 @@
+# uaRO Graphics 1.17.0 — testing
+
+- **Living characters** (Effects → Living world, off by default, Direct3D 12): characters and monsters are lit by the
+  sun from the side - the edge towards it brighter with a warm rim, the far side a little darker. With Real sun
+  shadows on they also darken in the shadow of a house or a tree. Check in a town by day: the rim sits on the side
+  the shadows fall away from, the heads and the bodies alike, no bright seam between a head and its body, no flicker
+  while walking; walk into a house's shadow - the character darkens smoothly, not with a jump.
+
 # uaRO Graphics 1.16.1 — testing
 
 - **Lighter grass in Classic+** (Direct3D 12, the Remaster mode off or the card under 6 GB): its blades are at most
