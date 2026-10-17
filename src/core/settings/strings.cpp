@@ -2526,6 +2526,12 @@ const Entry kTexts[] = {
     {"How thick the fog is.",
      "Наскільки густий туман.",
      "Насколько густой туман."},
+    {"Turn all of these on",
+     "Увімкнути все тут",
+     "Включить всё здесь"},
+    {"Turn all of these off",
+     "Вимкнути все тут",
+     "Выключить всё здесь"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

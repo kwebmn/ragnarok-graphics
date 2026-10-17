@@ -247,6 +247,7 @@ enum class Text : uint16_t {
     FxRealShadows, FxRealShadowsHint,
     // 1.13
     FxVolumetricFog, FxVolumetricFogHint, FxVolumetricFogDensity, FxVolumetricFogDensityHint,
+    FxBlockOn, FxBlockOff,
     Count
 };
 

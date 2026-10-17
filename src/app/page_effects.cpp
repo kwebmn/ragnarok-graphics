@@ -19,6 +19,7 @@ const Effect* const kEffects = effectLayout();
 const int kEffectCount = effectLayoutCount();
 
 constexpr int kTier = 990;  // 1.8: the remaster's mode
+constexpr int kBlockOn = 970, kBlockOff = 975;  // 1.13: a block's boxes all on, all off (+ the block)
 int boxId(int e) { return 1001 + 100 * e; }
 int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
 int checkId(int e, int k) { return 1070 + 100 * e + 2 * k; }
@@ -51,6 +52,8 @@ public:
                          : block == 2 ? Text::FxLivingIntro
                                       : Text::FxRemasterIntro),
                        Tone::Normal);
+                if (block >= 2)  // 1.13: the whole block on or off at once
+                    p.buttons({{kBlockOn + block, t(Text::FxBlockOn)}, {kBlockOff + block, t(Text::FxBlockOff)}});
                 if (block == 3) {  // 1.8: the mode, for all of the block
                     const IniSetting& tier = setting("effects.tier");
                     const std::string token = host_.model().token(tier);
@@ -89,6 +92,14 @@ public:
             return;
         }
         if (code != BN_CLICKED) return;
+        if ((id >= kBlockOn && id < kBlockOn + 4) || (id >= kBlockOff && id < kBlockOff + 4)) {  // 1.13
+            const bool on = id < kBlockOff;
+            const int block = id - (on ? kBlockOn : kBlockOff);
+            for (int e = 0; e < kEffectCount; ++e)
+                if (kEffects[e].block == block) set(setting(kEffects[e].box), on ? "1" : "0", true);
+            host_.rebuild();
+            return;
+        }
         for (int e = 0; e < kEffectCount; ++e) {
             const char* key = id == boxId(e) ? kEffects[e].box : nullptr;
             for (int k = 0; k < 2 && !key && kEffects[e].checks[k]; ++k)
