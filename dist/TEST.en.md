@@ -1,3 +1,11 @@
+# uaRO Graphics 1.22.0 — testing
+
+- **One wind for everything** (Effects → Living world, off by default, Direct3D 12): the grass, the leaves'
+  gusts, drifting sand, rain, snow, falling leaves and both kinds of clouds go one way with one wind; it turns
+  slowly over minutes and blows stronger and weaker. Check on a grassy field with gusts and the sky on: the grass
+  leans and the gusts run the way the clouds go; turn the camera - everything keeps the world's way, nothing jumps;
+  in the rain the drops slant with it. Without the setting everything is as before.
+
 # uaRO Graphics 1.21.0 — testing
 
 - **Windows at night** (Effects → Living world, off by default, needs Materials of the world and the night,
