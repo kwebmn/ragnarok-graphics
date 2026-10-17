@@ -50,6 +50,10 @@ bool same(float a, float b) { return std::fabs(a - b) < 0.02f; }
 // of four, and the strip showed the next quarter's cracks and stones as dark blocks.
 float fold(float x) { return x < 0.0f ? -x : x > 1.0f ? 2.0f - x : x; }
 
+// 1.9.2: a place of a cell's square kept off its outermost kBand - mirrored back from it.
+constexpr float kBand = 0.06f;
+float inset(float x) { return x < kBand ? 2.0f * kBand - x : x > 1.0f - kBand ? 2.0f * (1.0f - kBand) - x : x; }
+
 }  // namespace
 
 float cellSide(const std::vector<Triangle>& ground) {
@@ -131,43 +135,51 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                 }
                 if (alike) continue;
             }
-            const uint64_t id = uint64_t(a.group) << 32 | b.group;
-            auto found = strips.find(id);
-            if (found == strips.end()) {
-                found = strips.emplace(id, out.size()).first;
-                Strip s;
-                s.inside = a.group;
-                s.shows = b.group;
-                out.push_back(s);
-            }
-            Strip& s = out[found->second];
-            if (s.vertices.size() + (kAlong + 1) * (kAcross + 1) > 65535) continue;
-            const uint16_t first = uint16_t(s.vertices.size());
             const bool low = entry.first < nb->first;  // the side that shows the other where the noise is low
-            for (int j = 0; j <= kAcross; ++j)
-                for (int i = 0; i <= kAlong; ++i) {
-                    const float along = float(i) / kAlong, into = width * float(j) / kAcross;
-                    // (u, v) in this cell and in the neighbour's, for the point `into` from the shared edge
-                    float u = 0, v = 0;
-                    if (w.dx == 1) { u = 1.0f - into; v = along; }
-                    if (w.dx == -1) { u = into; v = along; }
-                    if (w.dz == 1) { u = along; v = 1.0f - into; }
-                    if (w.dz == -1) { u = along; v = into; }
-                    Vertex p = at(a, u, v);
-                    const Vertex q = at(b, fold(u - float(w.dx)), fold(v - float(w.dz)));
-                    p.uv0[0] = q.uv0[0];
-                    p.uv0[1] = q.uv0[1];
-                    const uint32_t edge = uint32_t(255.0f * (1.0f - float(j) / kAcross) + 0.5f);
-                    p.diffuse = (p.diffuse & 0x00ffffffu) | edge << 24;
-                    p.specular = (p.specular & 0xffff00ffu) | (low ? 0xff00u : 0u);
-                    s.vertices.push_back(p);
+            // 1.9.2: two strips inside this cell - the neighbour's texture by the noise, and over the band at the
+            // edge its own texture taken from a little inside (`self`): the textures' outer texels - their dark rims
+            // and what the next quarter of an atlas bleeds in - showed as a dashed line along every seam.
+            const auto emit = [&](uint32_t shows, bool self, float stripWidth) {
+                const uint64_t id = uint64_t(a.group) << 32 | shows;
+                auto found = strips.find(id);
+                if (found == strips.end()) {
+                    found = strips.emplace(id, out.size()).first;
+                    Strip st;
+                    st.inside = a.group;
+                    st.shows = shows;
+                    out.push_back(st);
                 }
-            for (int j = 0; j < kAcross; ++j)
-                for (int i = 0; i < kAlong; ++i) {
-                    const uint16_t q0 = uint16_t(first + j * (kAlong + 1) + i), q1 = uint16_t(q0 + 1),
-                                   q2 = uint16_t(q0 + kAlong + 1), q3 = uint16_t(q2 + 1);
-                    for (uint16_t k : {q0, q1, q2, q2, q1, q3}) s.indices.push_back(k);
-                }
+                Strip& s = out[found->second];
+                if (s.vertices.size() + (kAlong + 1) * (kAcross + 1) > 65535) return;
+                const uint16_t first = uint16_t(s.vertices.size());
+                for (int j = 0; j <= kAcross; ++j)
+                    for (int i = 0; i <= kAlong; ++i) {
+                        const float along = float(i) / kAlong, into = stripWidth * float(j) / kAcross;
+                        // (u, v) in this cell for the point `into` from the shared edge
+                        float u = 0, v = 0;
+                        if (w.dx == 1) { u = 1.0f - into; v = along; }
+                        if (w.dx == -1) { u = into; v = along; }
+                        if (w.dz == 1) { u = along; v = 1.0f - into; }
+                        if (w.dz == -1) { u = along; v = into; }
+                        Vertex p = at(a, u, v);
+                        const Vertex q = self ? at(a, inset(u), inset(v))
+                                              : at(b, inset(fold(u - float(w.dx))), inset(fold(v - float(w.dz))));
+                        p.uv0[0] = q.uv0[0];
+                        p.uv0[1] = q.uv0[1];
+                        const uint32_t edge = uint32_t(255.0f * (1.0f - float(j) / kAcross) + 0.5f);
+                        p.diffuse = (p.diffuse & 0x00ffffffu) | edge << 24;
+                        p.specular = (p.specular & 0xff0000ffu) | (low ? 0xff00u : 0u) | (self ? 0xff0000u : 0u);
+                        s.vertices.push_back(p);
+                    }
+                for (int j = 0; j < kAcross; ++j)
+                    for (int i = 0; i < kAlong; ++i) {
+                        const uint16_t q0 = uint16_t(first + j * (kAlong + 1) + i), q1 = uint16_t(q0 + 1),
+                                       q2 = uint16_t(q0 + kAlong + 1), q3 = uint16_t(q2 + 1);
+                        for (uint16_t k : {q0, q1, q2, q2, q1, q3}) s.indices.push_back(k);
+                    }
+            };
+            emit(b.group, false, width);
+            emit(a.group, true, kBand * 2.0f);
         }
     }
     return out;

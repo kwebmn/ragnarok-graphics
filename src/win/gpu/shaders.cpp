@@ -371,7 +371,10 @@ float4 shade(PsIn i) {
                    float3(r9, r10, r11);
         float n = mnoise(w.xz * 0.22) * 0.65 + mnoise(w.xz * 0.7 + 5.1) * 0.35;
         float side = i.specular.g > 0.5 ? 1.0 : -1.0;
-        c.a = smoothstep(-0.04, 0.04, side * (0.5 - n) * 1.7 - (1.0 - i.diffuse.a));
+        float g = 1.0 - i.diffuse.a;
+        bool self = i.specular.r > 0.5;  // 1.9.2: the cell's own band at the edge, 0.12 of the cell (0.45 the other)
+        float other = smoothstep(-0.04, 0.04, side * (0.5 - n) * 1.7 - (self ? g * 0.267 : g));
+        c.a = self ? (1.0 - other) * (1.0 - smoothstep(0.55, 1.0, g)) : other;
     }
 #endif
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);

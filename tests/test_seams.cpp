@@ -32,16 +32,14 @@ TEST(seams_strips_where_two_textures_meet_none_where_one_goes_on) {
     const std::vector<uint32_t> textures = {7, 8, 7};  // groups 0 and 2: one texture, but its coordinates restart
     CHECK(seams::cellSide(ground) > 9.9f);
     const std::vector<seams::Strip> strips = seams::build(ground, textures, 0.45f);
-    // 0|1 both ways, 0|2 both ways (the coordinates jump at their edge)
-    CHECK_EQ(int(strips.size()), 4);
-    for (const seams::Strip& s : strips) {
-        CHECK_EQ(int(s.vertices.size()), 15);
-        CHECK_EQ(int(s.indices.size()), 48);
-    }
-    // the strip inside cell 0 showing cell 1: at its edge (x 15) cell 1's u is 0, mirrored to 0.45 inside
+    // 0|1 both ways, 0|2 both ways (the coordinates jump at their edge), and each cell's own band at its seams
+    CHECK_EQ(int(strips.size()), 7);
+    for (const seams::Strip& s : strips) CHECK_EQ(int(s.vertices.size()), s.inside == 0 && s.shows == 0 ? 30 : 15);
+    // the strip inside cell 0 showing cell 1: at its edge (x 15) cell 1's u kept off its rim (0.12), mirrored to 0.45
+    // inside
     for (const seams::Strip& s : strips)
         if (s.inside == 0 && s.shows == 1) {
-            CHECK(s.vertices[0].pos[0] > 14.9f && s.vertices[0].uv0[0] > -0.01f && s.vertices[0].uv0[0] < 0.01f);
+            CHECK(s.vertices[0].pos[0] > 14.9f && s.vertices[0].uv0[0] > 0.11f && s.vertices[0].uv0[0] < 0.13f);
             CHECK(s.vertices[14].uv0[0] > 0.44f && s.vertices[14].uv0[0] < 0.46f);
             CHECK_EQ(int(s.vertices[0].diffuse >> 24), 255);
             CHECK_EQ(int(s.vertices[14].diffuse >> 24), 0);
