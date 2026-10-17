@@ -1,3 +1,11 @@
+# uaRO Graphics 1.9.9 — testing
+
+- **Cheaper grass.** The costliest effect (1.3-3.2 ms a frame at 4K): how far the steps trod the grass down was
+  worked out for every blade a pixel looked at (up to 28 blades times 64 steps), now once a pixel. It should help
+  most where there are many characters and steps. It looks nearly the same.
+- How to check: `GPU: effects a frame ... grass N ms` in the log (debug.profile = 1) against earlier reports on the
+  same maps (prt_fild08 ~1.3 ms, pay_fild01 ~3.2 ms).
+
 # uaRO Graphics 1.9.8 — testing
 
 - **Pebbles on the ground** (`effects.ground_clutter`, the Remaster block, off by default, Direct3D 12): small stones
