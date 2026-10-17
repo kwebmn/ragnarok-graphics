@@ -392,6 +392,8 @@ float3 materialLight(float3 c, float4 m, float3 P, float3 N, float3 T, float3 B)
     float3 V = normalize(-P);
     float3 H = normalize(L + V);
     float spec = pow(saturate(dot(n, H)), 10.0 + 70.0 * m.w) * m.w * uiPixels.y * (0.3 + 0.7 * sunLight);
+    // 2.1.7: a glint only as bright as the place - white over a dark gap, it flashed as the camera turned
+    spec *= saturate(dot(c, float3(0.3, 0.59, 0.11)) * 2.5);
     return c + spec * 0.45 * s;
 }
 
@@ -452,7 +454,11 @@ float4 shade(PsIn i) {
         T *= im;
         B *= im;
         m = sceneColor.SampleGrad(samp0, uv0, du, dv);
-        if (((stage1.y >> 29) & 1) != 0) {  // parallax: one step along the view by the height
+        // 2.1.7: a face the game stretches its texture along (a step's side: stripes) - its relief and gloss as
+        // garbled as its picture, no material there (it flashed white in c_tower2's gaps)
+        float even = saturate(min(length(T), length(B)) * 4.0 - 0.4);
+        m = lerp(float4(0.5, 0.5, 0.5, 0.0), m, even);
+        if (even > 0.99 && ((stage1.y >> 29) & 1) != 0) {  // parallax: one step along the view by the height
             float3 V = normalize(-P);
             float3 vt = float3(dot(V, T), dot(V, B), dot(V, N));
             // 2.1.5: at most a pixel and a half on the screen - farther, the step left a tile's part of its
