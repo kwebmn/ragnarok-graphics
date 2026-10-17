@@ -332,6 +332,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSpriteLightHint, ""},
         {"effects", "sprite_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
          Text::FxSpriteLightStrength, Text::FxSpriteLightStrengthHint, " %"},
+        {"effects", "edge_land", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxEdgeLand,
+         Text::FxEdgeLandHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -643,6 +645,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.world_reflections") return c.effects.worldReflections ? "1" : "0";
     if (k == "effects.sprite_light") return c.effects.spriteLight ? "1" : "0";
     if (k == "effects.sprite_light_strength") return std::to_string(c.effects.spriteLightStrength);
+    if (k == "effects.edge_land") return c.effects.edgeLand ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

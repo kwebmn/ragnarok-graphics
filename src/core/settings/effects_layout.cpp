@@ -96,6 +96,7 @@ const EffectLayout kEffects[] = {
     {"effects.smooth_hills", {}, {"effects.smooth_hills_strength"}, {}, 3},  // 1.15
     {"effects.world_reflections", {}, {}, {}, 3},  // 1.16
     {"effects.sprite_light", {}, {"effects.sprite_light_strength"}, {}, 2},  // 1.17
+    {"effects.edge_land", {}, {}, {}, 3},  // 1.18
 };
 
 }  // namespace

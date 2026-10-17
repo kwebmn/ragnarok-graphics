@@ -350,6 +350,9 @@ struct EffectSettings {
     // sides, a warm rim towards it; with Real sun shadows darker in a house's or a crown's shadow. Off by default.
     bool spriteLight = false;
     int spriteLightStrength = 60;  // %, 0-200
+    // 1.18: land past the map's edge (sky_ps): looked down at, the ground goes on in the colours of the ground on
+    // the screen, fading into the haze - instead of a sea of clouds. Needs the sky. Off by default.
+    bool edgeLand = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

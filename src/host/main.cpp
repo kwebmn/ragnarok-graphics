@@ -492,6 +492,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.worldReflections = rd.u8() != 0;  // 1.16
             e.spriteLight = rd.u8() != 0;  // 1.17
             e.spriteLightStrength = rd.i32();
+            e.edgeLand = rd.u8() != 0;  // 1.18
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

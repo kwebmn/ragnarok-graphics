@@ -40,7 +40,7 @@ bool Renderer::Impl::applyHaze() {
     c.uiPixels[1] = float(h);
     c.twin[0] = mapLook.hazeStart;
     c.twin[1] = mapLook.hazeEnd;
-    c.twin[3] = std::min(1.0f, mapLook.haze * user);
+    c.twin[2] = std::min(1.0f, mapLook.haze * user);  // twinW (1.18: until now into twinH - no haze far off)
     std::copy(mapLook.hazeColour, mapLook.hazeColour + 3, c.fogColor);
     std::copy(mapLook.fogColour, mapLook.fogColour + 3, c.sourceRect);
     c.sourceRect[3] = std::min(1.0f, mapLook.fog * user);
@@ -224,7 +224,14 @@ bool Renderer::Impl::applySky() {
     }
     c.twin[0] = float(std::clamp(effects.skyClouds, 0, 100)) / 100.0f;
     c.twin[1] = float(std::clamp(effects.skyStrength, 0, 100)) / 100.0f;
-    c.twin[3] = night;
+    c.twin[2] = night;  // twinW (1.17.1: until now into twinH - the sky never went dark, no stars)
+    // 1.17.1: land past the map's edge, below the horizon (sky_ps): how much, the ground's height at the player
+    const bool land = effects.edgeLand && cameraValid && cameraTargetZ > 0.0f;
+    if (land) {
+        c.twin[3] = 1.0f;
+        c.sourceClamp[0] = cameraTargetZ * viewToWorld[7] + viewToWorld[10];
+        if (!copySceneColor()) return false;
+    }
     c.sharpen = waterTime();
     if (!skyLogged) LOG_INFO("sky: over %s", mapName.c_str());
     skyLogged = true;

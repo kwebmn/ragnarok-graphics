@@ -2576,6 +2576,15 @@ const Entry kTexts[] = {
     {"How much the sun's side and the rim show on the characters.",
      "Наскільки помітні сонячний бік і обідок на персонажах.",
      "Насколько заметны солнечная сторона и ободок на персонажах."},
+    {"Land past the map's edge",
+     "Земля за краєм карти",
+     "Земля за краем карты"},
+    {"At the edge of a field map the ground goes on - fields and darker woods in the colours of the map's own ground, "
+     "fading into the haze far off - instead of the void or a sea of clouds. Needs the Sky (Direct3D 12).",
+     "На краю польової карти земля продовжується — поля й темніші ліси в кольорах самої карти, що вдалині тануть у "
+     "серпанку, — замість порожнечі чи моря хмар. Потрібне «Небо» (Direct3D 12).",
+     "На краю полевой карты земля продолжается — поля и более тёмные леса в цветах самой карты, вдали тающие в дымке, "
+     "— вместо пустоты или моря облаков. Нужно «Небо» (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

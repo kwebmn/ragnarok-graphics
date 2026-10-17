@@ -2353,6 +2353,34 @@ float4 sky_ps(PresentOut i) : SV_Target {
         star *= 0.6 + 0.4 * sin(t * (1.5 + 3.0 * hash12(cell + 1.3)) + h * 40.0);
         c += star * night * (1.0 - cover) * float3(0.9, 0.95, 1.0);
     }
+#ifndef UAGFX_SAFE
+    // 1.18, land past the map's edge (edge_land, twinH): looked down at, the ground goes on - the plane of the
+    // ground's height at the player (sourceClamp.x) in the colours of the ground drawn on the screen (5 x 5 of it,
+    // t2), in fields and darker woods, fading into the horizon's haze far off - instead of a sea of clouds.
+    if (twinH > 0.0 && d.y > 0.02) {
+        float3 eye = float3(r9, r10, r11);
+        float dist = (sourceClamp.x - eye.y) / d.y;
+        float3 ground = float3(0.0, 0.0, 0.0);
+        float found = 0.0;
+        [unroll] for (int gy = 0; gy < 5; ++gy)
+            [unroll] for (int gx = 0; gx < 5; ++gx) {
+                int2 q = int2((float2(gx, gy) + 0.5) / 5.0 * uiPixels.xy);
+                if (sceneDepth.Load(int3(q, 0)) < 0.99999) {
+                    ground += sceneColor.Load(int3(q, 0)).rgb;
+                    found += 1.0;
+                }
+            }
+        if (dist > 0.0 && found > 0.0) {
+            float3 p = eye + d * dist;
+            ground /= found;
+            float grain = fbm4(p.xz * 0.012);
+            float wood = smoothstep(0.5, 0.7, fbm4(p.xz * 0.004 + 7.3));
+            float3 land = ground * (0.75 + 0.5 * grain) * lerp(float3(1.0, 1.0, 1.0), float3(0.55, 0.68, 0.5), wood);
+            land = lerp(land, fogColor.rgb, smoothstep(150.0, 1200.0, dist));
+            c = lerp(c, land, twinH * smoothstep(0.02, 0.12, d.y));
+        }
+    }
+#endif
     return float4(c, twinY);
 }
 

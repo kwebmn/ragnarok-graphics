@@ -308,8 +308,7 @@ void Renderer::Impl::spriteConstants(const FrameRecord& rec, const DrawCmd& d, b
     const float height = mapOutdoors ? std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) * 0.0174533f : 1.2f;
     c.twin[0] = -sun[0];
     c.twin[1] = -sun[1];
-    c.twin[2] = 0.0f;
-    c.twin[3] = std::sin(height) * 0.6f;
+    c.twin[2] = std::sin(height) * 0.6f;  // twinW (1.17.1: was set into twinH, the height read as 0)
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     c.uiPixels[0] = float(std::clamp(effects.spriteLightStrength, 0, 200)) / 100.0f;
     c.uiPixels[1] = mapOutdoors ? 1.0f - 0.8f * night : 0.3f;
