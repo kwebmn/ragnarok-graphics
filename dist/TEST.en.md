@@ -1,3 +1,15 @@
+# uaRO Graphics 1.18.0 — testing
+
+- **Land past the map's edge** (Effects → Remaster, off by default, needs the Sky, Direct3D 12): at the edge of a
+  field map the ground goes on - fields and darker woods in the map's own colours, fading into the haze - instead
+  of the void or a sea of clouds. Check at the edges of prt_fild maps: no hard line where the map ends, the colour
+  close to the map's ground, nothing over the map itself.
+- **Fixed, worth a look:** three settings passed one of their values into the wrong place of the shaders.
+  - **Haze far off** (since 0.34) was never shown on Direct3D 12 - now it is: if it is on, the far part of the
+    picture goes into the map's haze colour. Too much - lower Haze or turn it off and say so.
+  - **The sky at night** (since 0.69) never went dark and had no stars - now it does.
+  - **Living characters** (1.17.0) took the sun as on the horizon - now at its real height, the rim softer.
+
 # uaRO Graphics 1.17.0 — testing
 
 - **Living characters** (Effects → Living world, off by default, Direct3D 12): characters and monsters are lit by the
