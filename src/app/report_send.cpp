@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <winhttp.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -226,38 +227,91 @@ std::vector<std::string> sentCodes(const Model& m, size_t most) {
     return out;
 }
 
-bool sendUsage(const std::wstring& dir, bool force, std::string& error) {
+namespace {
+
+unsigned long long sizeOf(const std::wstring& path) {
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &a)) return 0;
+    return (static_cast<unsigned long long>(a.nFileSizeHigh) << 32) | a.nFileSizeLow;
+}
+
+}  // namespace
+
+bool sendUsage(const std::wstring& dir, bool force, std::string& error, size_t* lines) {
+    if (lines) *lines = 0;
     std::string ini;
     readFile(dir + L"\\uaro-graphics.ini", ini);
     const Config c = parseConfig(ini);
     if (!c.statsSend || c.statsId.empty()) return false;  // no leave: nothing goes
-    const std::wstring file = dir + L"\\uaro-graphics\\usage.jsonl";
-    const std::wstring sentAt = dir + L"\\uaro-graphics\\stats-sent.txt";
-    std::string lines, last;
-    if (!readFile(file, lines) || lines.empty()) return true;
-    readFile(sentAt, last);
-    long long then = 0;
-    for (const char c : last)  // the time it was last sent, seconds
-        if (c >= '0' && c <= '9') then = then * 10 + (c - '0');
-    const long long now = static_cast<long long>(std::time(nullptr));
-    if (!force && now - then < 20 * 3600 && lines.size() < (512u << 10)) return true;  // once a day
-    size_t taken = 0;
-    const std::string body = usage::uploadBody(c.statsId, kVersion, lines, usage::kMostUpload, taken);
-    if (!taken) return true;  // no whole line yet
-    DWORD status = 0;
-    std::string answer;
-    if (!postJson(L"/api/graphics/stats", body, status, answer, error)) return false;
-    if (status != 200 && status != 201) {
-        error = "uaro.kiev.ua answered " + std::to_string(status);
-        return false;
+    HANDLE lock = CreateMutexA(nullptr, FALSE, "Local\\uaro-graphics-stats");
+    if (!lock) return true;
+    const DWORD got = WaitForSingleObject(lock, 0);
+    if (got != WAIT_OBJECT_0 && got != WAIT_ABANDONED) {
+        CloseHandle(lock);
+        return true;  // the other one sends them
     }
-    // what was sent goes; what the game wrote meanwhile after it stays (the file is read again)
-    std::string after;
-    readFile(file, after);
-    const bool same = after.size() >= taken && after.compare(0, taken, lines, 0, taken) == 0;
-    writeFileAtomic(file, same ? after.substr(taken) : after);
-    writeFileAtomic(sentAt, std::to_string(now));
+    struct Unlock {
+        HANDLE h;
+        ~Unlock() {
+            ReleaseMutex(h);
+            CloseHandle(h);
+        }
+    } unlock{lock};
+    const std::wstring folder = dir + L"\\uaro-graphics";
+    const std::wstring file = folder + L"\\usage.jsonl", sending = folder + L"\\usage-sending.jsonl";
+    const std::wstring sentAt = folder + L"\\stats-sent.txt";
+    std::string stamp, local, text;
+    readFile(sentAt, stamp);
+    long long then = 0;
+    usage::readSentStamp(stamp, then, local);
+    const long long now = static_cast<long long>(std::time(nullptr));
+    if (!readFile(sending, text) || text.empty()) {  // none left from a send cut short: the game's, when due
+        if (!usage::due(now, then, size_t(std::min<unsigned long long>(sizeOf(file), 1u << 30)), force)) return true;
+        // taken whole: the game only adds to it, opening it for each line, and starts a new one from now on
+        if (!MoveFileExW(file.c_str(), sending.c_str(), 0)) return true;  // being written this moment: next time
+        if (!readFile(sending, text) || text.empty()) {
+            DeleteFileW(sending.c_str());
+            return true;
+        }
+    }
+    for (size_t at = 0; at < text.size();) {
+        size_t taken = 0;
+        const std::string body = usage::uploadBody(c.statsId, kVersion, text.substr(at), usage::kMostUpload, taken);
+        if (!taken) break;  // the rest no whole line (a game cut off in the middle of one): it goes with the file
+        DWORD status = 0;
+        std::string answer;
+        const bool answered = postJson(L"/api/graphics/stats", body, status, answer, error);
+        if (answered && status >= 400 && status < 500 && status != 408 && status != 429) {
+            at += taken;  // refused for good (not a busy or a down site): it would never go, the rest would wait
+            continue;
+        }
+        if (!answered || (status != 200 && status != 201)) {
+            if (answered) error = "uaro.kiev.ua answered " + std::to_string(status);
+            if (at) writeFileAtomic(sending, text.substr(at));  // what went leaves the file
+            return false;
+        }
+        if (lines) *lines += size_t(std::count(text.begin() + std::ptrdiff_t(at),
+                                               text.begin() + std::ptrdiff_t(at + taken), '\n'));
+        at += taken;
+    }
+    DeleteFileW(sending.c_str());
+    SYSTEMTIME t{};
+    GetLocalTime(&t);
+    char when[64];
+    std::snprintf(when, sizeof when, "%04u-%02u-%02u %02u:%02u", unsigned(t.wYear), unsigned(t.wMonth),
+                  unsigned(t.wDay), unsigned(t.wHour), unsigned(t.wMinute));
+    writeFileAtomic(sentAt, usage::sentStamp(now, when));
     return true;
+}
+
+void usageState(const std::wstring& dir, std::string& lastSent, unsigned long long& waiting) {
+    const std::wstring folder = dir + L"\\uaro-graphics";
+    std::string stamp;
+    readFile(folder + L"\\stats-sent.txt", stamp);
+    long long seconds = 0;
+    usage::readSentStamp(stamp, seconds, lastSent);
+    if (lastSent.empty() && seconds > 0) lastSent = usage::utcText(seconds);  // 2.2.1 wrote the seconds alone
+    waiting = sizeOf(folder + L"\\usage.jsonl") + sizeOf(folder + L"\\usage-sending.jsonl");
 }
 
 int watchGame(unsigned long pid) {

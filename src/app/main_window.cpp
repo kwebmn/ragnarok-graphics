@@ -531,10 +531,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 if (!err.empty()) message(err, true);
                 rebuild();
             }
-            if (model_->now().config.statsSend && !model_->now().gameRunning) {
-                const std::wstring dir = model_->paths().dir;
-                HANDLE t = CreateThread(nullptr, 0, &sendStats, new std::wstring(dir), 0, nullptr);
-                if (t) CloseHandle(t);
+            if (model_->now().config.statsSend && !model_->now().gameRunning && !statsThread_) {
+                auto* dir = new std::wstring(model_->paths().dir);
+                statsThread_ = CreateThread(nullptr, 0, &sendStats, dir, 0, nullptr);
+                if (!statsThread_) delete dir;
             }
             return 0;
         }
@@ -569,6 +569,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case WM_DESTROY:
             KillTimer(hwnd_, kTimer);
             KillTimer(hwnd_, kTickTimer);
+            if (statsThread_) {  // 2.2.2: a send under way finishes (its files whole), at most 3 s more
+                WaitForSingleObject(statsThread_, 3000);
+                CloseHandle(statsThread_);
+                statsThread_ = nullptr;
+            }
             current_.reset();
             panel_.reset();
             PostQuitMessage(0);

@@ -23,7 +23,12 @@ std::vector<std::string> sentCodes(const Model& m, size_t most = 5);
 // when its log says it went badly (report::reasonOfLog), sends a report - at most one in 6 hours. No window.
 int watchGame(unsigned long pid);
 // 2.2.1: uaro-graphics\usage.jsonl (core/usage.hpp) to uaro.kiev.ua, with the player's leave ([stats] send) - once a
-// day (force: now); what was sent leaves the file. false: not sent (error says why, "" no leave).
-bool sendUsage(const std::wstring& dir, bool force, std::string& error);
+// day (force: now). 2.2.2: the driver's file is taken whole first (renamed usage-sending.jsonl: a running game starts
+// a new one, nothing it writes meanwhile is lost), sent in parts, then deleted - a part not sent stays for the next
+// time; one sender at a time (the app and a game's watcher). false: not sent (error says why, "" no leave);
+// `lines`: how many went.
+bool sendUsage(const std::wstring& dir, bool force, std::string& error, size_t* lines = nullptr);
+// 2.2.2: when the statistics last went ("" never) and how many bytes of them wait - the Diagnostics page.
+void usageState(const std::wstring& dir, std::string& lastSent, unsigned long long& waiting);
 
 }  // namespace uagfx::app

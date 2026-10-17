@@ -54,6 +54,37 @@ std::vector<std::string> changes(const EffectSettings& was, const EffectSettings
     return out;
 }
 
+bool due(long long now, long long lastSent, size_t waiting, bool force) {
+    if (!waiting) return false;
+    return force || now - lastSent >= 20 * 3600 || waiting >= (512u << 10);
+}
+
+std::string sentStamp(long long seconds, const std::string& local) {
+    return std::to_string(seconds) + (local.empty() ? "" : " " + local);
+}
+
+void readSentStamp(const std::string& text, long long& seconds, std::string& local) {
+    seconds = 0;
+    size_t i = 0;
+    for (; i < text.size() && text[i] >= '0' && text[i] <= '9'; ++i) seconds = seconds * 10 + (text[i] - '0');
+    while (i < text.size() && text[i] == ' ') ++i;
+    size_t end = text.size();
+    while (end > i && (text[end - 1] == '\n' || text[end - 1] == '\r' || text[end - 1] == ' ')) --end;
+    local = text.substr(i, end - i);
+}
+
+std::string utcText(long long seconds) {
+    // the days since 1970 to a date (H. Hinnant's civil_from_days)
+    const long long days = (seconds >= 0 ? seconds : seconds - 86399) / 86400, rest = seconds - days * 86400;
+    const long long z = days + 719468, era = (z >= 0 ? z : z - 146096) / 146097;
+    const long long doe = z - era * 146097, yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    const long long doy = doe - (365 * yoe + yoe / 4 - yoe / 100), mp = (5 * doy + 2) / 153;
+    const long long d = doy - (153 * mp + 2) / 5 + 1, m = mp < 10 ? mp + 3 : mp - 9, y = yoe + era * 400 + (m <= 2);
+    char text[112];
+    std::snprintf(text, sizeof text, "%04lld-%02lld-%02lld %02lld:%02lld UTC", y, m, d, rest / 3600, rest % 3600 / 60);
+    return text;
+}
+
 void Recorder::begin(const Machine& m, uint64_t session) {
     machine_ = m;
     char id[24];

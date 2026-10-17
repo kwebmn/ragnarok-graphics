@@ -76,6 +76,7 @@ private:
     Rebuilds rebuilds_;
     bool typing_ = false;  // a number field holds text it has not taken yet: Apply takes it first (0.6.0 review M5)
     std::wstring flash_;          // the last result in the status line, until the next change
+    HANDLE statsThread_ = nullptr;  // 2.2.2: the day's statistics going - waited for (a while) at the end
 };
 
 }  // namespace uagfx::app

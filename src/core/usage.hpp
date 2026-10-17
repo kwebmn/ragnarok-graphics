@@ -77,4 +77,12 @@ std::string uploadBody(const std::string& id, const std::string& version, const 
                        size_t& taken);
 constexpr size_t kMostUpload = 1500000;
 
+// 2.2.2: whether the statistics go now - `waiting` bytes of them: a day since the last time (`lastSent`, seconds;
+// 20 hours, as the hour the app is opened slips), half a megabyte waiting, or asked (`force`); never with none.
+bool due(long long now, long long lastSent, size_t waiting, bool force);
+// uaro-graphics\stats-sent.txt: "<seconds> <the local date and time>" (2.2.1 wrote the seconds alone).
+std::string sentStamp(long long seconds, const std::string& local);
+void readSentStamp(const std::string& text, long long& seconds, std::string& local);
+std::string utcText(long long seconds);  // "2026-10-18 09:53 UTC" - a stamp without its local time
+
 }  // namespace uagfx::usage

@@ -26,6 +26,7 @@ constexpr int kComment = 1308;  // 0.51: the report to the developers
 constexpr int kSend = 1309;
 constexpr int kAutoReport = 1310;
 constexpr int kStats = 1315;  // 2.2.1: the anonymous statistics
+constexpr int kStatsNow = 1316;  // 2.2.2: sent at a press
 constexpr int kShots = 1311;  // 1.8.1
 bool g_shots = true;           // the box, while the settings app runs
 // 0.87; 2.2.1: was 1311, the screenshots' box's too - a click on it switched them
@@ -92,6 +93,15 @@ public:
         p.buttons({{kSend, t(Text::ReportSend)}});
         p.check(kAutoReport, t(Text::ReportAuto), m.token(*findSetting("report.auto")) == "1", t(Text::ReportAutoHint));
         p.check(kStats, t(Text::StatsSend), m.now().config.statsSend, t(Text::StatsSendHint));  // 2.2.1
+        if (m.now().config.statsSend) {  // 2.2.2: when they last went, what waits, and sent at a press
+            std::string last;
+            unsigned long long waiting = 0;
+            usageState(m.paths().dir, last, waiting);
+            p.note(tf(Text::StatsState, {last.empty() ? utf8(t(Text::StatsNever)) : last,
+                                         std::to_string((waiting + 1023) / 1024)}),
+                   Tone::Muted);
+            p.buttons({{kStatsNow, t(Text::StatsSendNow)}});
+        }
         const std::vector<std::string> sent = sentCodes(m);
         if (!sent.empty()) {
             std::string list;
@@ -130,6 +140,17 @@ public:
             const std::wstring err = m.setStats(on, host_.lang());
             if (!err.empty()) host_.message(err, true);
             host_.reload();
+        } else if (id == kStatsNow) {  // 2.2.2
+            HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
+            std::string error;
+            size_t lines = 0;
+            const bool sent = sendUsage(m.paths().dir, true, error, &lines);
+            SetCursor(old);
+            if (!sent && !error.empty())
+                host_.message(tf(Text::StatsFailed, {error}), true);
+            else
+                host_.message(lines ? tf(Text::StatsSentNow, {std::to_string(lines)}) : t(Text::StatsNothing), false);
+            host_.rebuild();
         } else if (id == kAutoReport) {
             const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
             m.setToken(*findSetting("report.auto"), on ? "1" : "0");

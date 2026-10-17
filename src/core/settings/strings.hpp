@@ -278,6 +278,8 @@ enum class Text : uint16_t {
     // 2.2.1
     FxGroupFixes, FxGroupFixesHint,
     StatsSend, StatsSendHint, StatsAsk,
+    // 2.2.2
+    StatsSendNow, StatsState, StatsNever, StatsSentNow, StatsNothing, StatsFailed,
     Count
 };
 

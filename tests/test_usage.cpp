@@ -135,3 +135,28 @@ TEST(usage_lines_carry_the_renderer_and_the_frame_limit) {
     CHECK(out.find("\"remote\":1") != std::string::npos && out.find("\"safe\":1") != std::string::npos);
     CHECK(out.find("\"limit\":60") != std::string::npos && out.find("\"vsync\":1") != std::string::npos);
 }
+
+TEST(usage_goes_once_a_day_or_when_much_waits) {
+    // 2.2.2: a day since the last time (20 hours: the hour the app is opened slips), half a megabyte waiting, or the
+    // Diagnostics page's button; never with nothing waiting
+    const long long day = 100000;
+    CHECK(!usage::due(day, day - 3600, 1000, false));
+    CHECK(usage::due(day + 20 * 3600, day, 1000, false));
+    CHECK(usage::due(day, day - 60, 600u << 10, false));
+    CHECK(usage::due(day, day - 1, 10, true));
+    CHECK(!usage::due(day, 0, 0, true));
+}
+
+TEST(usage_remembers_when_it_was_sent) {
+    long long seconds = -1;
+    std::string local = "x";
+    usage::readSentStamp(usage::sentStamp(1760781234, "2026-10-18 14:05"), seconds, local);
+    CHECK(seconds == 1760781234 && local == "2026-10-18 14:05");
+    usage::readSentStamp("1760781234", seconds, local);  // 2.2.1 wrote the seconds alone
+    CHECK(seconds == 1760781234 && local.empty());
+    usage::readSentStamp("", seconds, local);
+    CHECK(seconds == 0 && local.empty());
+    CHECK(usage::utcText(1760781234) == "2025-10-18 09:53 UTC");  // a 2.2.1 stamp shown
+    CHECK(usage::utcText(0) == "1970-01-01 00:00 UTC");
+    CHECK(usage::utcText(951782400) == "2000-02-29 00:00 UTC");
+}
