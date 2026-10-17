@@ -151,7 +151,8 @@ bool Renderer::Impl::applySeams() {
             t.x = vx / zv * p.f0 + p.cx;
             t.y = vy / zv * p.f1 + p.cy;
             // the game's depth, a little towards the camera: the strip lies on its cell's surface, not under it
-            const float zd = std::max(zv - 0.08f, p.nearZ + 0.005f);
+            // (2.1.2: 0.15 - where the strip's grid crosses the cell's diagonal it runs a hair under the ground)
+            const float zd = std::max(zv - 0.15f, p.nearZ + 0.005f);
             t.z = p.farZ * (1.0f - p.nearZ / zd) / (p.farZ - p.nearZ);
             t.rhw = 1.0f / zv;
             t.diffuse = v.diffuse;

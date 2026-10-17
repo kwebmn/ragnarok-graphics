@@ -1,3 +1,4 @@
+#include <cmath>
 #include "core/seams.hpp"
 #include "test.hpp"
 
@@ -45,4 +46,26 @@ TEST(seams_strips_where_two_textures_meet_none_where_one_goes_on) {
             CHECK_EQ(int(s.vertices[2].diffuse >> 24), 128);
             CHECK(int(s.vertices[12].diffuse >> 24) > 10 && int(s.vertices[12].diffuse >> 24) < 16);
         }
+}
+
+TEST(seams_strips_lie_on_the_games_triangles) {
+    // 2.1.2: a cell whose corners do not lie in one plane (corner 3 raised) - the strip's points on its two triangles
+    std::vector<seams::Triangle> ground;
+    cell(ground, 0, 0, 10.0f, 0);
+    cell(ground, 1, 0, 10.0f, 1);
+    for (seams::Triangle& t : ground)
+        for (seams::Vertex& v : t.v)
+            if (v.pos[0] > 14.0f && v.pos[0] < 16.0f && v.pos[2] > 4.0f) v.pos[1] = -4.0f;  // the shared edge's end
+    const std::vector<uint32_t> textures = {1, 2};
+    for (const seams::Strip& s : seams::build(ground, textures, 0.5f)) {
+        if (s.inside != 0) continue;
+        for (const seams::Vertex& v : s.vertices) {
+            // cell 0 is split along its corners 1-2 (x 15, z -5 to x 5, z 5): on its far triangle the height runs
+            // from the raised corner 3 (x 15, z 5) - linear in x and z there, never above it
+            CHECK(v.pos[1] <= 0.0f && v.pos[1] >= -4.001f);
+            const float u = (v.pos[0] - 5.0f) / 10.0f, w = (v.pos[2] + 5.0f) / 10.0f;
+            if (u + w > 1.0f) CHECK(std::fabs(v.pos[1] + 4.0f * (u + w - 1.0f)) < 1e-3f);
+            else CHECK(std::fabs(v.pos[1]) < 1e-3f);
+        }
+    }
 }

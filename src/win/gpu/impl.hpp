@@ -1156,6 +1156,7 @@ struct Renderer::Impl {
     bool applyRealShadows();  // once a frame, before the characters; false: lost
     float sunViewToBox[12] = {};  // this frame's map: the view into the sun's box (applyFog)
     float sunWorldToBox[12] = {};  // 1.17: and the world into it (the characters' feet, spriteConstants)
+    float sunBoxHalf = 75.0f;      // 2.1.2: its half across this frame (world units): the ground the screen shows
     // 1.17, living characters (draw.cpp): a sprite lit by the sun from its silhouette's sides, darker in the real
     // shadows (shaders.cpp spriteLight, stage 0 bit 28)
     bool spriteLightWanted() const { return effects.spriteLight && effects.spriteLightStrength > 0; }

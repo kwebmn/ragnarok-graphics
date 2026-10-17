@@ -12,7 +12,24 @@ struct Cell {
     Vertex corner[4];
     bool have[4] = {false, false, false, false};
     uint32_t group = 0;
+    bool across03 = false;  // 2.1.2: the game's two triangles meet along corners 0-3 (else 1-2)
 };
+
+// 2.1.2: the place on the cell's ground at (u, v) - on the game's own two triangles, not between the four corners: on a
+// slope the two differ by tenths of a unit, the ground hid the strip there now and then and it blinked as the camera
+// moved.
+void onGround(const Cell& c, float u, float v, float out[3]) {
+    const auto p = [&](int k, int a) { return c.corner[k].pos[a]; };
+    for (int a = 0; a < 3; ++a) {
+        if (!c.across03) {
+            out[a] = u + v <= 1.0f ? p(0, a) + u * (p(1, a) - p(0, a)) + v * (p(2, a) - p(0, a))
+                                   : p(3, a) + (1.0f - u) * (p(2, a) - p(3, a)) + (1.0f - v) * (p(1, a) - p(3, a));
+        } else {
+            out[a] = u >= v ? p(0, a) + u * (p(1, a) - p(0, a)) + v * (p(3, a) - p(1, a))
+                            : p(0, a) + v * (p(2, a) - p(0, a)) + u * (p(3, a) - p(2, a));
+        }
+    }
+}
 
 int64_t keyOf(int x, int z) { return (int64_t(x) << 32) ^ int64_t(uint32_t(z)); }
 
@@ -97,13 +114,16 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
         Cell& c = cells[keyOf(ix, iz)];
         c.group = t.group;
         const float x0 = ox + float(ix) * side, z0 = oz + float(iz) * side;
+        bool used[4] = {false, false, false, false};
         for (const Vertex& v : t.v) {
             const int cx1 = std::fabs(v.pos[0] - x0) < std::fabs(v.pos[0] - x0 - side) ? 0 : 1;
             const int cz1 = std::fabs(v.pos[2] - z0) < std::fabs(v.pos[2] - z0 - side) ? 0 : 1;
             const int k = cz1 * 2 + cx1;
             c.corner[k] = v;
             c.have[k] = true;
+            used[k] = true;
         }
+        if (used[0] && used[3]) c.across03 = true;  // a triangle with both ends of a diagonal: that one
     }
     std::unordered_map<uint64_t, size_t> strips;  // (inside, shows) -> its strip
     // The four neighbours: the direction in the grid, this cell's corners on the shared edge (in the order along
@@ -180,6 +200,7 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                         if (w.dz == 1) { u = along; v = 1.0f - into; }
                         if (w.dz == -1) { u = along; v = into; }
                         Vertex p = at(a, u, v);
+                        onGround(a, u, v, p.pos);  // 2.1.2: on the game's triangles
                         const Vertex q = self ? at(a, inset(u), inset(v))
                                               : at(b, inset(fold(u - float(w.dx))), inset(fold(v - float(w.dz))));
                         p.uv0[0] = q.uv0[0];

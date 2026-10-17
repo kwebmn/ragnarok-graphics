@@ -16,7 +16,7 @@ namespace uagfx::gpu {
 namespace {
 
 constexpr int kSunMap = 2048;          // the map's side, texels
-constexpr float kSunHalf = 75.0f;      // half the box across, world units: about the screen's ground
+constexpr float kSunHalf = 75.0f;      // half the box across, world units, at the least (2.1.2: sunBoxHalf)
 constexpr float kSunDepth = 400.0f;    // the box along the light
 constexpr size_t kMostSunVerts = 600000;
 
@@ -158,7 +158,31 @@ bool Renderer::Impl::applyRealShadows() {
                          right[0] * fwd[1] - right[1] * fwd[0]};
     // 2.0.1: the box's middle on the map's texels across the light - moved smoothly with the player, the shadows'
     // edges crept from texel to texel
-    const float texel = 2.0f * kSunHalf / float(kSunMap);
+    // 2.1.2: the box as large as the ground the screen shows - 75 units, the camera's usual sight, left the far part
+    // of the screen without shadows, and those of the houses and trees at the box's edge came and went as one walked
+    // or turned. The screen's corners' rays met with the ground's height at the player; the largest reach from the
+    // player, in steps of 25 units (a step only when the camera zooms) between 75 and 250.
+    float reach = kSunHalf;
+    {
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float corner[4][2] = {{0.0f, 0.0f}, {float(gameWidth), 0.0f}, {0.0f, float(gameHeight)},
+                                    {float(gameWidth), float(gameHeight)}};
+        for (const auto& c : corner) {
+            const float dx = (c[0] - p.cx) / p.f0, dy = (c[1] - p.cy) / p.f1;
+            const float dir[3] = {dx * m[0] + dy * m[3] + m[6], dx * m[1] + dy * m[4] + m[7],
+                                  dx * m[2] + dy * m[5] + m[8]};
+            if (dir[1] <= 1e-3f) {  // a ray above the horizon: as far as the box goes
+                reach = 250.0f;
+                continue;
+            }
+            const float t = (mid[1] - m[10]) / dir[1];
+            if (t <= 0.0f) continue;
+            const float gx = m[9] + dir[0] * t - mid[0], gz = m[11] + dir[2] * t - mid[2];
+            reach = std::max(reach, std::sqrt(gx * gx + gz * gz) * 1.08f);
+        }
+    }
+    sunBoxHalf = std::clamp(std::ceil(reach / 25.0f) * 25.0f, kSunHalf, 250.0f);
+    const float texel = 2.0f * sunBoxHalf / float(kSunMap);
     const float across[2] = {mid[0] * right[0] + mid[1] * right[1] + mid[2] * right[2],
                              mid[0] * up[0] + mid[1] * up[1] + mid[2] * up[2]};
     const float snap[2] = {std::round(across[0] / texel) * texel - across[0],
@@ -172,8 +196,8 @@ bool Renderer::Impl::applyRealShadows() {
         out[2] = axis[2] * scaleBy;
         out[3] = -(axis[0] * mid[0] + axis[1] * mid[1] + axis[2] * mid[2]) * scaleBy + add;
     };
-    row(right, 1.0f / kSunHalf, 0.0f, light);
-    row(up, 1.0f / kSunHalf, 0.0f, light + 4);
+    row(right, 1.0f / sunBoxHalf, 0.0f, light);
+    row(up, 1.0f / sunBoxHalf, 0.0f, light + 4);
     row(fwd, 1.0f / kSunDepth, 0.5f, light + 8);
     std::copy(light, light + 12, sunWorldToBox);  // 1.17
     // the map: the casters' vertices up once, each draw its texture (its holes)

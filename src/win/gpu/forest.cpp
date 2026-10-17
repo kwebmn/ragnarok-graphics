@@ -86,9 +86,15 @@ int keepInView(const Renderer::Impl::ForestPlaced& t, const void* with) {
     return reach < 70.0f && vz > r ? 1 : 0;
 }
 
+struct SunKeep {
+    const float* light;  // the world into the box: rows x, y (z the light's way)
+    float half;          // the box's half across (sunBoxHalf)
+};
+
 int keepInSunBox(const Renderer::Impl::ForestPlaced& t, const void* with) {
-    const float* l = static_cast<const float*>(with);  // the world into the box: rows x, y (z the light's way)
-    const float r = (std::max(t.radius, t.height * 0.5f) * 1.1f + 2.0f) / 75.0f;  // sun_map.cpp's kSunHalf
+    const SunKeep& k = *static_cast<const SunKeep*>(with);
+    const float* l = k.light;
+    const float r = (std::max(t.radius, t.height * 0.5f) * 1.1f + 2.0f) / k.half;
     const float w[3] = {t.pos[0], t.pos[1] - t.height * 0.5f, t.pos[2]};
     const float bx = l[0] * w[0] + l[1] * w[1] + l[2] * w[2] + l[3];
     const float by = l[4] * w[0] + l[5] * w[1] + l[6] * w[2] + l[7];
@@ -537,7 +543,8 @@ void Renderer::Impl::forestIntoSunMap(const float light[12]) {
     D3D12_GPU_VIRTUAL_ADDRESS at = 0;
     UINT bytes = 0;
     std::vector<ForestDraw> draws;
-    if (!forestPick(&keepInSunBox, light, at, bytes, draws)) return;
+    const SunKeep box{light, sunBoxHalf};
+    if (!forestPick(&keepInSunBox, &box, at, bytes, draws)) return;
     Constants c{};
     std::copy(light, light + 12, c.reproject);
     forestWind(c);

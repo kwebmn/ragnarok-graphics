@@ -2231,7 +2231,9 @@ float4 sun_apply_ps(PresentOut i) : SV_Target {
             int2 q = clamp(int2(at) + int2(x, y), int2(0, 0), int2(int(twinY) - 1, int(twinY) - 1));
             shade += tex1.Load(int3(q, 0)).r < l.z - twinW ? 1.0 : 0.0;
         }
-    float s = 1.0 - sharpen * shade / 9.0;
+    // 2.1.2: towards the box's edge the shadows fade out - cut off there, they came and went as one walked
+    float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+    float s = 1.0 - sharpen * shade / 9.0 * smoothstep(0.0, 0.06, edge);
     return float4(s, s, s, 1.0);
 }
 #endif
