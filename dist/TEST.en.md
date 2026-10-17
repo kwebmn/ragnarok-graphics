@@ -1,3 +1,13 @@
+# uaRO Graphics 2.0.1 — testing
+
+- **Shadows no longer turn with the camera.** The sun's way was taken from the screen (the shadows always fell, say,
+  down-right on the screen) - right for the old screen shadows, wrong for real shadows in the world: turning the
+  camera turned the sun. The sun now stands still in the world; every shadow (the trees', the houses', the
+  characters') falls the same way on the ground however the camera turns.
+- **Shadows no longer creep as you walk.** The sun's map followed the player smoothly and the shadows' edges jumped
+  from texel to texel; it now moves in its own texels' steps.
+- Check: Real sun shadows on, walk and turn the camera on prt_fild08 - the shadows lie still on the ground.
+
 # uaRO Graphics 2.0.0 — testing
 
 - **Trees 2.0** (Effects → Remaster → New trees, Direct3D 12, Remaster mode): the map's trees are no longer guessed
