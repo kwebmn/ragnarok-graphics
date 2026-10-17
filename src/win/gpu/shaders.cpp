@@ -2791,7 +2791,7 @@ float3 forestWorld(ForestIn i, out float3 n) {
     float phase = dot(i.at.xz, float2(0.05, 0.07)) + i.size.w * 6.28;
     float bend = (sin(t * 0.9 + phase) * 0.5 + sin(t * 2.3 + phase * 1.7) * 0.2 + 0.45) * (0.4 + strength);
     w.xz += way * bend * i.info.y * 1.4 * i.size.y;
-    if (i.info.z > 0.5) w += n * sin(t * 5.5 + i.info.w * 40.0) * 0.06;
+    if (i.info.z > 0.5 && i.info.z < 4.5) w += normalize(n) * sin(t * 5.5 + i.info.w * 40.0) * 0.06;  // not a puff
     return w;
 }
 
@@ -2816,6 +2816,15 @@ ForestOut forest_vs(ForestIn i) {
     return o;
 }
 
+// 2.0.3: an anime crown's puff - a round cloud with a scalloped rim; how much of the place is in it, how near its rim
+float forestPuff(float2 uv, float own, out float edge) {
+    float2 d = uv - 0.5;
+    float r = length(d) * 2.0, ang = atan2(d.y, d.x);
+    float rim = 0.86 + 0.05 * sin(ang * 9.0 + own * 20.0) + 0.03 * sin(ang * 17.0 + own * 7.0);
+    edge = smoothstep(rim - 0.2, rim - 0.04, r);
+    return smoothstep(rim, rim - 0.05, r);
+}
+
 // 2.0.2: a card of blossom - seven small flowers of five petals; how much of the place is petal, its flower's heart
 float forestBlossom(float2 uv, float own, out float heart) {
     float best = 0.0;
@@ -2836,23 +2845,27 @@ float forestBlossom(float2 uv, float own, out float heart) {
 
 // A card's leaves: one in the middle and eight about it, each an ellipse turned its way; how much of the place is leaf
 // and how far into the leaf (for its vein and its edge's light).
+// 2.0.3: small leaves - one in each cell of a 4 x 4 grid over the card, shifted and turned its own way (the nine cells
+// about the place looked at), the card's corners left out: a round tuft, not 1.10's nine big leaves of a square card.
 float forestLeaves(float2 uv, float own, out float vein) {
+    float2 g = uv * 4.0;
+    float2 cell = floor(g);
     float best = 0.0;
     vein = 0.0;
     [unroll] for (int k = 0; k < 9; ++k) {
-        float a = float(k) * 0.77 + own * 6.28;
-        float r = k == 0 ? 0.0 : (k < 5 ? 0.2 : 0.34);
-        float2 d = uv - (0.5 + float2(cos(a), sin(a)) * r);
-        float ang = a + 0.6;
+        float2 c = cell + float2(float(k % 3) - 1.0, float(k / 3) - 1.0);
+        float h1 = hash12(c + own * 13.7), h2 = hash12(c * 1.7 + own * 5.3), h3 = hash12(c * 2.3 + own * 9.1);
+        float2 d = g - (c + 0.5 + (float2(h1, h2) - 0.5) * 0.6);
+        float ang = h3 * 6.2831853;
         float2 l = float2(d.x * cos(ang) + d.y * sin(ang), -d.x * sin(ang) + d.y * cos(ang));
-        float e = (l.x * l.x) / (0.19 * 0.19) + (l.y * l.y) / (0.085 * 0.085);
+        float e = (l.x * l.x) / (0.62 * 0.62) + (l.y * l.y) / (0.26 * 0.26);
         float leaf = saturate(1.0 - e);
         if (leaf > best) {
             best = leaf;
-            vein = 1.0 - smoothstep(0.0, 0.012, abs(l.y));
+            vein = 1.0 - smoothstep(0.0, 0.05, abs(l.y));
         }
     }
-    return best;
+    return best * smoothstep(0.52, 0.36, length(uv - 0.5));
 }
 
 float4 forest_ps(ForestOut i) : SV_Target {
@@ -2861,6 +2874,33 @@ float4 forest_ps(ForestOut i) : SV_Target {
     float3 n = normalize(i.normal);
     float sun = sourceClamp.z;
     float3 base;
+    if (part > 4.5) {  // 2.0.3, an anime puff: cel shading - shade, light and a highlight in steps over the clump's
+        // ball, warm in the light and cool in the shade, a bright rim where the ball turns from the camera, a soft ink
+        // at the puff's edge
+        float edge;
+        float mask = forestPuff(i.uv, own, edge);
+        clip(mask - 0.5);
+        float lit1 = 1.0;
+        if (sourceClamp.w > 0.0) {
+            float4 w4 = float4(i.world, 1.0);
+            float3 l = float3(dot(w4, uiPixels), dot(w4, float4(twinX, twinY, twinW, twinH)), dot(w4, fogColor));
+            float2 at = float2(l.x * 0.5 + 0.5, 0.5 - l.y * 0.5) * 2048.0;
+            if (all(at > 1.0) && all(at < 2046.0))
+                lit1 = sceneDepth.Load(int3(int2(at), 0)) < l.z - 0.002 ? 1.0 - sourceClamp.w : 1.0;
+        }
+        float t = (dot(n, L) * 0.5 + 0.5) * (0.55 + 0.45 * open) * lerp(1.0, lit1, 0.8);
+        t = lerp(0.42, t, sun);  // at night and indoors flatter
+        float band = smoothstep(0.36, 0.42, t), high = smoothstep(0.62, 0.66, t);
+        float3 shade = i.leaf * float3(0.55, 0.68, 1.05) * 0.72;
+        float3 lightC = min(i.leaf * 1.25 + float3(0.1, 0.08, -0.02), 1.0);
+        float3 c5 = lerp(lerp(shade, i.leaf, band), lightC, high);
+        float3 V = -normalize(float3(r8, r9, r10));  // towards the camera
+        float rim = pow(1.0 - saturate(abs(dot(n, V))), 3.0) * 0.45 * smoothstep(0.3, 0.6, t);
+        c5 += rim * float3(0.9, 0.9, 0.6) * sun;
+        c5 *= 1.0 - 0.08 * edge;
+        float grey = dot(c5, float3(0.299, 0.587, 0.114));
+        return float4(lerp(float3(grey, grey, grey), c5, 1.12), 1.0);
+    }
     if (part < 0.5) {  // bark: furrows along the trunk
         float furrow = valueNoise(float2(i.uv.x * 7.0, i.uv.y * 1.5)) * 0.6 +
                        valueNoise(float2(i.uv.x * 19.0, i.uv.y * 4.0)) * 0.4;
@@ -2930,7 +2970,10 @@ ForestSunOut forest_sun_vs(ForestIn i) {
 }
 
 void forest_sun_ps(ForestSunOut i) {
-    if (i.info.x > 1.5 && i.info.x < 2.5) {
+    if (i.info.x > 4.5) {  // 2.0.3: an anime puff
+        float edge;
+        clip(forestPuff(i.uv, i.info.y, edge) - 0.5);
+    } else if (i.info.x > 1.5 && i.info.x < 2.5) {
         float across = abs(i.uv.x - 0.5) * 2.0;
         clip(0.1 + 0.9 * (1.0 - i.uv.y * 0.6) * (0.5 + 0.5 * sin(i.uv.y * 60.0 + i.info.y * 20.0)) - across);
     } else if (i.info.x > 0.5) {

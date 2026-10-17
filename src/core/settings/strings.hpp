@@ -267,6 +267,8 @@ enum class Text : uint16_t {
     // 1.23
     FxLitDust, FxLitDustHint,
     FxRecommended, FxRecommendedNote,
+    // 2.0.3
+    FxAnimeTrees, FxAnimeTreesHint,
     Count
 };
 

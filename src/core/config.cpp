@@ -122,6 +122,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.animeTrees = false;
     e.litDust = false;
     e.sharedWind = false;
     e.nightWindows = false;
@@ -196,6 +197,7 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.animeTrees ||
            e.litDust ||
            e.sharedWind ||
            e.nightWindows ||
@@ -705,6 +707,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.sharedWind);
         } else if (key == "effects.lit_dust") {
             setBool(val, c.effects.litDust);
+        } else if (key == "effects.anime_trees") {
+            setBool(val, c.effects.animeTrees);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

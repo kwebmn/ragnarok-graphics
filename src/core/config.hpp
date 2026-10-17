@@ -369,6 +369,9 @@ struct EffectSettings {
     // 1.23: dust in the light (weather_ps): indoors the motes show where light falls - the beams, the torches - and
     // hardly in the dark. Needs the motes. Off by default.
     bool litDust = false;
+    // 2.0.3: the new trees drawn as in an anime (core/forest.hpp grow, shaders.cpp forest_ps part 5): crowns of large
+    // soft puffs in cel-shaded steps, warm light, cool shade, a bright rim. On by default (the new trees are off).
+    bool animeTrees = true;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

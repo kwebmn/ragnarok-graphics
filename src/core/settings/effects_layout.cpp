@@ -103,6 +103,7 @@ const EffectLayout kEffects[] = {
     {"effects.night_windows", {}, {}, {}, 2},  // 1.21
     {"effects.shared_wind", {}, {}, {}, 2},  // 1.22
     {"effects.lit_dust", {}, {}, {}, 2},  // 1.23
+    {"effects.anime_trees", {}, {}, {}, 3},  // 2.0.3
 };
 
 }  // namespace

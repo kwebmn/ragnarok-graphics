@@ -392,6 +392,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.nightWindows ? 1 : 0);  // 1.21
     w.u8(e.sharedWind ? 1 : 0);  // 1.22
     w.u8(e.litDust ? 1 : 0);  // 1.23
+    w.u8(e.animeTrees ? 1 : 0);  // 2.0.3
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

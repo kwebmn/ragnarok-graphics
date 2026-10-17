@@ -103,16 +103,21 @@ public:
     }
 
     // A card of leaves at p facing n, `size` across, turned by `spin`; its light's normal `light`.
-    void card(V3 p, V3 n, V3 light, float size, float spin, float open, float part, float seed) {
+    // 2.0.3: `ball` - the corners' light normals from its middle, not made unit: across the card they run as the place
+    // does, the shader's unit normal the ball's exactly (an anime puff: the light runs smoothly over its clump, the
+    // cards of one clump one volume)
+    void card(V3 p, V3 n, V3 light, float size, float spin, float open, float part, float seed,
+              const V3* ball = nullptr) {
         const V3 side0 = norm(cross(n, std::fabs(n.y) > 0.9f ? V3{1, 0, 0} : V3{0, 1, 0}));
         const V3 up0 = cross(side0, n);
         const V3 side = side0 * std::cos(spin) + up0 * std::sin(spin), up = cross(side, n);
         const float h = size * 0.5f;
-        const uint32_t a = put(p - side * h + up * h, light, 0, 0, open, part, seed);
-        const uint32_t b = put(p + side * h + up * h, light, 1, 0, open, part, seed);
-        const uint32_t c = put(p - side * h - up * h, light, 0, 1, open, part, seed);
-        const uint32_t d = put(p + side * h - up * h, light, 1, 1, open, part, seed);
-        quad(a, b, c, d);
+        const V3 corner[4] = {p - side * h + up * h, p + side * h + up * h, p - side * h - up * h,
+                              p + side * h - up * h};
+        uint32_t at[4];
+        for (int k = 0; k < 4; ++k)
+            at[k] = put(corner[k], ball ? corner[k] - *ball : light, float(k & 1), float(k >> 1), open, part, seed);
+        quad(at[0], at[1], at[2], at[3]);
     }
 
 private:
@@ -191,7 +196,7 @@ bool shapeOf(Kind kind, const rsm::Model& model, Shape& out) {
     return true;
 }
 
-Mesh grow(const Shape& shape, uint32_t seed) {
+Mesh grow(const Shape& shape, uint32_t seed, bool anime) {
     Mesh m;
     if (shape.kind == Kind::None) return m;
     Random rnd(seed);
@@ -259,8 +264,8 @@ Mesh grow(const Shape& shape, uint32_t seed) {
                 const float d = reach * rnd.range(0.45f, 0.85f);
                 const V3 p = V3{c.x, y, c.z} + out * d + V3{0, -d * 0.18f, 0};
                 const V3 light = norm(out * 0.8f + V3{0, 0.6f, 0});
-                b.card(p, norm(V3{0, 1, 0} + out * 0.5f), light, reach * 0.75f + 0.8f, az, 0.35f + 0.65f * k, 3.0f,
-                       rnd.next());
+                b.card(p, norm(V3{0, 1, 0} + out * 0.5f), light, (reach * 0.75f + 0.8f) * (anime ? 1.3f : 1.0f), az,
+                       0.35f + 0.65f * k, anime ? 5.0f : 3.0f, rnd.next());
             }
         }
         b.card(V3{c.x, bottom + height + 0.6f, c.z}, norm(V3{0.3f, 1, 0}), V3{0, 1, 0}, across * 0.35f + 0.6f, 0.0f,
@@ -291,6 +296,7 @@ Mesh grow(const Shape& shape, uint32_t seed) {
     struct Clump {
         V3 at;
         float radius;
+        float shade = 1.0f;  // 2.0.3: each its own light a little
     };
     std::vector<Clump> clumps;
     for (const V3& t : tips) clumps.push_back(Clump{t, across * rnd.range(0.38f, 0.52f)});
@@ -302,18 +308,20 @@ Mesh grow(const Shape& shape, uint32_t seed) {
                                across * rnd.range(0.4f, 0.55f)});
     }
     for (Clump& k : clumps) {  // kept inside the model's crown (2.0.2: a flat crown's clumps no taller than it)
+        k.shade = rnd.range(0.85f, 1.12f);
         k.radius = std::min(k.radius, std::max(r.y * 1.1f, across * 0.3f));
         k.at.x = std::clamp(k.at.x, c.x - r.x + k.radius * 0.6f, c.x + r.x - k.radius * 0.6f);
         k.at.z = std::clamp(k.at.z, c.z - r.z + k.radius * 0.6f, c.z + r.z - k.radius * 0.6f);
         const float floor = shape.kind == Kind::Blossom ? c.y - r.y : 0.3f;  // a blossom's cloud hangs in the air
         k.at.y = std::clamp(k.at.y, std::max(c.y - r.y + k.radius * 0.5f, floor), c.y + r.y - k.radius * 0.5f);
     }
-    const int cards = int(std::clamp(across * across * 1.3f, 220.0f, 1000.0f));
+    const int cards = anime ? int(std::clamp(across * across * 0.42f, 90.0f, 420.0f))
+                            : int(std::clamp(across * across * 1.3f, 220.0f, 1000.0f));
     const bool blossom = shape.kind == Kind::Sakura || shape.kind == Kind::Blossom;
-    const float size = across * (shape.kind == Kind::Bush ? 0.24f : blossom ? 0.17f : 0.2f);
+    const float size = across * (anime ? 0.46f : shape.kind == Kind::Bush ? 0.24f : blossom ? 0.17f : 0.2f);
     const float crownBottom = c.y - r.y, crownHeight = 2.0f * r.y;
     for (int i = 0; i < cards; ++i) {
-        const Clump& k = clumps[size_t(rnd.next() * float(clumps.size())) % clumps.size()];
+        const Clump& k = clumps[size_t(rnd.next() * float(clumps.size())) % clumps.size()];  // its clump
         V3 d{rnd.range(-1, 1), rnd.range(-1, 1), rnd.range(-1, 1)};
         const float l2 = dot(d, d);
         if (l2 > 1.0f || l2 < 1e-4f) {
@@ -323,15 +331,22 @@ Mesh grow(const Shape& shape, uint32_t seed) {
         d = norm(d) * (0.55f + 0.45f * std::sqrt(rnd.next()));  // most near the skin
         const V3 p = k.at + d * k.radius;
         const float depth = std::sqrt(dot(d, d));
-        const V3 outward = norm(norm(p - c) * 0.6f + norm(d) * 0.4f);
-        const V3 facing = norm(norm(d) + V3{0, 0.6f, 0} + V3{rnd.range(-0.4f, 0.4f), 0, rnd.range(-0.4f, 0.4f)});
+        // 2.0.3: each clump a volume of its own - lit by its own ball (its top to the sky, its underside in shade),
+        // the crown's way only a little; the clumps' undersides and the crown's inside darker
+        const V3 outward = anime ? norm(norm(d) * 0.85f + norm(p - c) * 0.15f)
+                                 : norm(norm(d) * 0.75f + norm(p - c) * 0.25f);
+        // anime: the puffs face the sky, a little out - the camera looks down on them, none seen edge on
+        const V3 tilt{rnd.range(-0.4f, 0.4f), 0, rnd.range(-0.4f, 0.4f)};
+        const V3 facing = anime ? norm(V3{0, 1, 0} + norm(d) * 0.35f + tilt * 0.4f)
+                                : norm(norm(d) + V3{0, 0.6f, 0} + tilt);
         const float high = std::clamp((p.y - crownBottom) / crownHeight, 0.0f, 1.0f);
-        const float open = std::clamp(0.2f + 0.5f * depth * (0.6f + 0.4f * std::max(0.0f, norm(d).y + 0.4f)) +
-                                          0.35f * high, 0.0f, 1.0f);
-        const V3 light = norm(outward * 0.85f + facing * 0.15f);
+        const float top = std::clamp(norm(d).y * 0.5f + 0.5f, 0.0f, 1.0f);
+        const float open = std::clamp((0.16f + 0.55f * depth * (0.35f + 0.65f * top) + 0.3f * high) * k.shade, 0.0f,
+                                      1.0f);
+        const V3 light = anime ? outward : norm(outward * 0.85f + facing * 0.15f);  // anime: the ball's alone
         const float droop = shape.kind == Kind::Willow ? -size * 0.6f * (1.0f - high) : 0.0f;
         b.card(p + V3{0, droop, 0}, facing, light, size * rnd.range(0.7f, 1.2f), rnd.range(0.0f, 6.2831853f), open,
-               blossom ? 4.0f : 1.0f, rnd.next());
+               anime ? 5.0f : blossom ? 4.0f : 1.0f, rnd.next(), anime ? &k.at : nullptr);
     }
     return m;
 }

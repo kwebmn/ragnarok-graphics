@@ -32,7 +32,8 @@ bool shapeOf(Kind kind, const rsm::Model& model, Shape& out);
 
 // A vertex of a grown tree, in the model's room (up along -y, the foot at 0): its place, the light's normal, the
 // texture's place (the bark's, or the card's 0-1), how open to the sky (0-1), how much the wind moves it, its part
-// (0 bark, 1 a card of leaves, 2 a palm's frond, 3 a fir's twig, 4 a card of blossom) and a number of its own (0-1).
+// (0 bark, 1 a card of leaves, 2 a palm's frond, 3 a fir's twig, 4 a card of blossom, 5 an anime crown's puff) and a
+// number of its own (0-1).
 struct Vertex {
     float pos[3];
     float normal[3];
@@ -49,8 +50,9 @@ struct Mesh {
     std::vector<uint32_t> indices;
 };
 
-// The tree of a shape, its own by the seed (the same seed, the same tree).
-Mesh grow(const Shape& shape, uint32_t seed);
+// The tree of a shape, its own by the seed (the same seed, the same tree). 2.0.3, anime: its crown of fewer, larger
+// puffs, each lit as its clump's ball - for cel shading (shaders.cpp forest_ps, part 5) - instead of many leaves.
+Mesh grow(const Shape& shape, uint32_t seed, bool anime = false);
 
 // A picture's colour (0-1): the average of its opaque pixels (alpha 128 and more), the game's A8R8G8B8; false when
 // it has none.

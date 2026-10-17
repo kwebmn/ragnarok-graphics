@@ -1062,6 +1062,7 @@ struct Renderer::Impl {
     uint32_t forestSerial = ~0u;  // the map read the forest was built from
     bool forestBuilt = false, forestDone = false, forestLogged = false, forestFailed = false;
     bool forestMismatchLogged = false;
+    bool forestAnime = false;  // 2.0.3: the style the forest was grown in
     int forestYSign = 0;  // the map file's heights: as they are (1) or turned (-1); 0 not known yet
     std::vector<map::Point> forestSeen;  // crowns the game drew, until the heights are known
     size_t forestHidden = 0;             // the game's draws left out this frame

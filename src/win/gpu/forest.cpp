@@ -120,16 +120,26 @@ bool Renderer::Impl::hideForTree(const FrameRecord& rec, const DrawCmd& d, const
     }
     const auto cell = forestGrid.find(cellKey(mid[0], mid[2]));
     if (cell == forestGrid.end()) return false;
+    // 2.0.3: the tree it fits best - the smallest whose crown holds it: a cherry's blossom hung in its crown is the
+    // blossom's (2.0.2 gave its colour to the cherry, and the blossom stayed green)
+    const ForestPlaced* fit = nullptr;
     for (uint32_t k : cell->second) {
         const ForestPlaced& t = forestPlaced[k];
         const float dx = mid[0] - t.pos[0], dz = mid[2] - t.pos[2];
         if (dx * dx + dz * dz > (t.radius * 1.15f + 1.5f) * (t.radius * 1.15f + 1.5f)) continue;
         if (half > t.radius * 1.5f + 2.0f) continue;
         if (mid[1] > t.pos[1] + 3.0f || mid[1] < t.pos[1] - t.height - 3.0f) continue;  // up along -y
+        if (!fit || t.radius < fit->radius) fit = &t;
+    }
+    if (fit) {
+        const ForestPlaced& t = *fit;
         if (tex != textures.end() && tex->second.averaged && t.model < forestColoured.size()) {
-            const bool trunk = !leafy && half < t.radius * 0.5f;
+            // a blossom's picture is its colour, whatever its alpha (pink or white)
+            const bool asLeaf = leafy || (t.model < mapWorld.forestModels().size() &&
+                                          mapWorld.forestModels()[t.model].shape.kind == forest::Kind::Blossom);
+            const bool trunk = !asLeaf && half < t.radius * 0.5f;
             uint8_t& seen = forestColoured[t.model];
-            if (leafy && !(seen & 1)) {
+            if (asLeaf && !(seen & 1)) {
                 for (int c = 0; c < 3; ++c) forestLeaf[t.model][size_t(c)] = tex->second.average[c];
                 seen |= 1;
                 forestColoursDirty = true;
@@ -149,20 +159,32 @@ bool Renderer::Impl::hideForTree(const FrameRecord& rec, const DrawCmd& d, const
 // trees grown and put into buffers of their own (the vertices of each model's kVariants trees, an instance a tree).
 void Renderer::Impl::updateForest() {
     mapWorld.poll();
-    if (mapWorld.serial() != forestSerial) {
+    const bool newMap = mapWorld.serial() != forestSerial;
+    if (newMap || forestAnime != effects.animeTrees) {  // 2.0.3: or the other style - grown again, the heights kept
         forestSerial = mapWorld.serial();
+        forestAnime = effects.animeTrees;
         for (ID3D12Resource** r : {&forestVb, &forestIb, &forestInstances})
             if (*r) {
                 slots[slot].garbage.push_back(*r);
                 *r = nullptr;
             }
-        forestBuilt = forestLogged = forestMismatchLogged = false;
+        forestBuilt = forestLogged = false;
+        forestPlaced.clear();
+        forestCalls.clear();
+        forestGrid.clear();
+    }
+    if (newMap) {
+        forestMismatchLogged = false;
         forestYSign = 0;
         forestSeen.clear();
         forestPlaced.clear();
         forestCalls.clear();
         forestGrid.clear();
         forestLeaf.assign(mapWorld.forestModels().size(), {kLeafDefault[0], kLeafDefault[1], kLeafDefault[2]});
+        for (size_t mdl = 0; mdl < mapWorld.forestModels().size(); ++mdl) {  // 2.0.3: blossom pink till seen
+            const forest::Kind kind = mapWorld.forestModels()[mdl].shape.kind;
+            if (kind == forest::Kind::Sakura || kind == forest::Kind::Blossom) forestLeaf[mdl] = {0.95f, 0.72f, 0.8f};
+        }
         forestBark.assign(mapWorld.forestModels().size(), {kBarkDefault[0], kBarkDefault[1], kBarkDefault[2]});
         forestColoured.assign(mapWorld.forestModels().size(), 0);
     }
@@ -251,7 +273,7 @@ void Renderer::Impl::updateForest() {
         for (size_t mdl = 0; mdl < models.size(); ++mdl)
             for (int v = 0; v < kVariants; ++v) {
                 const uint32_t seed = uint32_t(mdl) * 7919u + uint32_t(v) * 104729u;
-                const forest::Mesh mesh = forest::grow(models[mdl].shape, seed);
+                const forest::Mesh mesh = forest::grow(models[mdl].shape, seed, effects.animeTrees);
                 range[mdl * kVariants + size_t(v)] = {uint32_t(indices.size()), uint32_t(mesh.indices.size()),
                                                       uint32_t(verts.size())};
                 verts.insert(verts.end(), mesh.verts.begin(), mesh.verts.end());
