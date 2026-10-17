@@ -2616,6 +2616,15 @@ const Entry kTexts[] = {
      "водою, що стікає стінами. Потрібна погода (Direct3D 12).",
      "Где идёт дождь, мокнет не только земля, но и стены, крыши и модели: темнее, с блеском, когда смотришь вдоль "
      "них, и водой, стекающей по стенам. Нужна погода (Direct3D 12)."},
+    {"Windows at night",
+     "Вікна вночі",
+     "Окна ночью"},
+    {"As the night comes the houses' windows light up warm, not all of them. The panes are found in the walls' "
+     "pictures by themselves; needs Materials of the world and the night (Direct3D 12).",
+     "З настанням ночі вікна будинків загоряються теплим світлом, не всі. Шибки знаходяться в картинках стін самі; "
+     "потрібні «Матеріали світу» й ніч (Direct3D 12).",
+     "С наступлением ночи окна домов загораются тёплым светом, не все. Стёкла находятся в картинках стен сами; нужны "
+     "«Материалы мира» и ночь (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

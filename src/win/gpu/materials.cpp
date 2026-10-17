@@ -118,6 +118,8 @@ void Renderer::Impl::materialConstants(bool ground, Constants& c) const {
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     c.uiPixels[0] = mapOutdoors ? 1.0f - night : 0.0f;  // the sun's light here
     c.uiPixels[1] = 1.0f;
+    // 1.21: the windows lit as the night comes (night_windows; outdoors)
+    if (effects.nightWindows && mapOutdoors) c.uiPixels[2] = std::clamp((night - 0.3f) / 0.4f, 0.0f, 1.0f);
 }
 
 // 1.15: the way to the sun in the world (up along -y): along the ground where the shadows fall on the screen,

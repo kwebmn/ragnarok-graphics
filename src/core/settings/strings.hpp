@@ -260,6 +260,8 @@ enum class Text : uint16_t {
     FxSmoothModels, FxSmoothModelsHint,
     // 1.20
     FxSeasons, FxSeasonsHint, FxRainWet, FxRainWetHint,
+    // 1.21
+    FxNightWindows, FxNightWindowsHint,
     Count
 };
 

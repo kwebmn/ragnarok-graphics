@@ -360,6 +360,9 @@ struct EffectSettings {
     // (ground_life_ps). Off by default.
     bool seasons = false;
     bool rainWet = false;
+    // 1.21: windows at night (material_ps finds the panes, shade() lights them): the houses' windows glow warm as
+    // the night comes. Needs the materials. Off by default.
+    bool nightWindows = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

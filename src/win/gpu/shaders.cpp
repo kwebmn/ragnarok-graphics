@@ -413,6 +413,7 @@ float4 shade(PsIn i) {
     float3 dp1 = ddx(P), dp2 = ddy(P);
     bool material = ((stage1.y >> 28) & 1) != 0;
     float4 m = float4(0.5, 0.5, 0.5, 0.0);
+    float pane = 0.0;
     float3 N = float3(0.0, 0.0, -1.0), T = float3(1.0, 0.0, 0.0), B = float3(0.0, 1.0, 0.0);
     if (material) {
         N = normalize(cross(dp1, dp2));
@@ -430,6 +431,8 @@ float4 shade(PsIn i) {
             uv0 += (m.z - 0.5) * 0.035 * vt.xy / (vt.z + 0.42);
             m = sceneColor.SampleGrad(samp0, uv0, du, dv);
         }
+        pane = saturate((m.w - 0.74) * 4.0);  // 1.21: a window's pane (material_ps): glass's gloss
+        if (m.w > 0.72) m.w = 0.35 * pane;
     }
     float4 t0 = tex0.SampleGrad(samp0, uv0, du, dv);
     if (((stage1.y >> 26) & 1) != 0) t0.rgb *= relief(uv0, du, dv);  // 0.71: the ground
@@ -464,6 +467,15 @@ float4 shade(PsIn i) {
         float stretch = 1.0 - saturate(min(length(T), length(B)) * 2.5);
         float3 nw = N.x * float3(r0, r1, r2) + N.y * float3(r3, r4, r5) + N.z * float3(r6, r7, r8);
         float k = stretch * (1.0 - smoothstep(0.5, 0.8, abs(nw.y))) * twinH;
+        // 1.21, windows at night (uiPixels.z how much): a pane on a wall glows warm, one window in three left dark
+        if (uiPixels.z > 0.0 && pane > 0.0) {
+            float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
+                       float3(r9, r10, r11);
+            float wall = 1.0 - smoothstep(0.35, 0.6, abs(nw.y));
+            float on = step(0.33, mhash(floor(float2(w.x + w.z, w.y) / 3.0)));
+            float3 warm = float3(1.0, 0.84, 0.52) * (0.85 + 0.15 * mhash(floor(float2(w.x - w.z, w.y) / 3.0)));
+            c.rgb = lerp(c.rgb, warm, saturate(pane * 1.3) * wall * on * uiPixels.z);
+        }
         if (k > 0.01) {
             float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
                        float3(r9, r10, r11);
@@ -2045,6 +2057,12 @@ float4 material_ps(PresentOut i) : SV_Target {
     float sat = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
     float lum = dot(rgb, float3(0.299, 0.587, 0.114));
     float gloss = saturate((0.22 - sat) * 4.0) * smoothstep(0.2, 0.6, lum) * 0.7;
+    // 1.21: a window's pane - an even patch clearly darker than the wall about it: alpha 0.75-1 (gloss stays under
+    // 0.7), lit at night by shade()
+    float local = matLuma(p >> 2, base + 2), wide = matLuma(p >> 4, base + 4);
+    float pane = smoothstep(0.1, 0.2, wide - local) * smoothstep(0.35, 0.22, local) *
+                 smoothstep(0.08, 0.03, abs(lum - local));
+    if (pane > 0.3) gloss = 0.75 + 0.25 * pane;
     return float4(n.xy * 0.5 + 0.5, saturate(0.5 + h / weights * 1.6), gloss);
 }
 
