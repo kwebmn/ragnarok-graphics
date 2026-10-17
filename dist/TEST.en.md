@@ -1,3 +1,10 @@
+# uaRO Graphics 1.6.7 — testing
+
+- **The emotions (/emotion) from the pack show in the game.** The builder put them into the pack as effects, and the
+  skills' effects are off in the game by default, so the emotions stayed as they were. `emotion.spr` now goes with
+  the icons (on by default). No need to rebuild the pack: the emotions already in it show at once.
+- How to check: show any emotion in the game (Alt+1...Alt+0 or /lv, /heh) - it is sharp like the icons.
+
 # uaRO Graphics 1.6.6 — testing
 
 - **The builder reads the game's files on every core but one** (1.6.4 stopped at 8 threads: 20-50 % of a CPU with
