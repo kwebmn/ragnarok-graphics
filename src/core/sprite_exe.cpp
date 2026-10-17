@@ -55,7 +55,11 @@ Source sourceOf(const char* path) {
     const std::string headgear = "\xBE\xC7\xBC\xBC\xBB\xE7\xB8\xAE";                 // 악세사리
     const std::string shield = "\xB9\xE6\xC6\xD0";                                       // 방패
     const std::string garment = "\xB7\xCE\xBA\xEA";                                      // 로브
-    if (p.find("cursors.spr") != std::string::npos || in(ui)) return Source::Interface;
+    // 1.6.7: the emotions (이팩트\emotion.spr), pictures over a head drawn like icons, go with the icons - with the
+    // skills' effects (off by default) a pack made with them showed none.
+    const size_t name = p.find_last_of('\\') == std::string::npos ? 0 : p.find_last_of('\\') + 1;
+    const bool emotion = p.compare(name, 7, "emotion") == 0 && p.size() > 4 && p.compare(p.size() - 4, 4, ".spr") == 0;
+    if (p.find("cursors.spr") != std::string::npos || in(ui) || emotion) return Source::Interface;
     if (in(monster) || in("homun") || in("mercenary")) return Source::Monster;
     if (in("npc")) return Source::Npc;
     if (in(item)) return Source::Item;

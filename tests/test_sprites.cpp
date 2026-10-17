@@ -151,6 +151,9 @@ TEST(sprite_exe_files_by_their_folder) {
     CHECK(sourceOf("data\\sprite\\\xBE\xC7\xBC\xBC\xBB\xE7\xB8\xAE\\hat.spr") == Source::Player);
     CHECK(sourceOf("data\\sprite\\\xB9\xE6\xC6\xD0\\guard.spr") == Source::Player);
     CHECK(sourceOf("data\\sprite\\cursors.spr") == Source::Interface);
+    CHECK(sourceOf("data\\sprite\\\xC0\xCC\xC6\xD1\xC6\xAE\\Emotion.spr") == Source::Interface);  // 1.6.7
+    CHECK(sourceOf("data\\sprite\\\xC0\xCC\xC6\xD1\xC6\xAE\\emotion.act") == Source::Effect);
+    CHECK(sourceOf("data\\sprite\\\xC0\xCC\xC6\xD1\xC6\xAE\\torch_01.spr") == Source::Effect);
     CHECK(sourceOf("data\\sprite\\npcs.spr") == Source::Unknown);  // a file named so, not the folder
     CHECK(sourceOf(nullptr) == Source::Unknown);
 }
