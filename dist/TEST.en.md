@@ -1,3 +1,15 @@
+# uaRO Graphics 1.7.2 — testing
+
+- **Living world, the water** (needs Modern water, all off by default):
+  - **Surf and wet sand** (`effects.shore_foam`): the foam at the shore comes in and goes back, the sand just above
+    the water dark and wet in a band (wet sand: Direct3D 12).
+  - **Fish** (`effects.fish`): dark shapes of fish circle where the water is deep enough; now and then a ring where
+    one jumped.
+  - **Swamps** (`effects.swamp`): in Umbala, Brasilis and Dewata the water is murkier, bubbles swell and burst, a
+    greenish mist over the ground.
+- The sun's light on the shallow bed was already in Modern water - no box of its own.
+- How to check: comodo or cmd_fild01 (surf, sand), pay_fild04 or prt_fild01 by the water (fish), um_fild01 (swamp).
+
 # uaRO Graphics 1.7.1 — testing
 
 - **Living world, the ground and the grass** (all off by default, Direct3D 12):
