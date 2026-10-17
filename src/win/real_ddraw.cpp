@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "core/effect_groups.hpp"
 #include "core/version.hpp"
 #include "win/crash.hpp"
 #include "win/gpu/adapters.hpp"
@@ -76,9 +77,11 @@ Startup decide() {
     gpu::setChosenAdapter(s.config.gpu);  // 0.50.2: the probes look at the card the renderer will take
     SystemFacts facts;
     facts.windows10 = v.major >= 10;
+    unsigned long long vramMb = 0;
     if (facts.windows10) {  // the log names the adapter either way
         const D3D12Probe p = probeD3D12();
         facts.d3d12 = p.ok;
+        vramMb = p.vramMb;
         LOG_INFO("Direct3D 12: %s, adapter %s (vendor 0x%04x, device 0x%04x, %llu MB), hr 0x%08lx",
                  p.ok ? "OK" : "FAILED", p.adapter.c_str(), p.vendor, p.device, p.vramMb,
                  static_cast<unsigned long>(p.hr));
@@ -91,6 +94,9 @@ Startup decide() {
                  p.adapter.c_str(), p.ok ? featureLevelName(p.level).c_str() : "-", static_cast<unsigned long>(p.hr));
     }
     s.choice = chooseRenderer(s.config, facts, kUaroBuilt);
+    s.cardLevel = effect_groups::cardLevel(s.choice.api == Api::D3d12 && facts.d3d12, vramMb);
+    LOG_INFO("effects: set %s, the card's level %d", effect_groups::presetToken(s.config.effects.preset),
+             s.cardLevel);
     if (s.config.reportAuto && s.choice.renderer == Renderer::Uaro) startReportWatcher(dir);
     LOG_INFO("renderer: %s%s (%s)", rendererName(s.choice.renderer),
              s.choice.renderer == Renderer::Uaro && s.choice.api == Api::D3d11 ? " with Direct3D 11" : "",

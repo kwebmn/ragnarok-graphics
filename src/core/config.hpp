@@ -83,7 +83,15 @@ AiSettings parseAiArgument(const std::string& word);
 
 // [effects] (0.18): the picture made more modern by the driver, drawn on top of what the game draws. They apply while
 // the game runs; Pause switches them off with the other improvements.
+// 2.2: the Effects page's set (core/effect_groups.hpp) - the card's size picks which effects are on, its groups
+// (light, water...) each on or off with a strength; custom: every switch as written below.
+enum class EffectPreset { Auto, Off, Weak, Medium, Strong, Custom };
+constexpr int kEffectGroups = 9;
+
 struct EffectSettings {
+    EffectPreset preset = EffectPreset::Custom;  // an ini without it keeps its switches
+    bool groups[kEffectGroups] = {true, true, true, true, true, true, true, true, true};
+    int groupStrength[kEffectGroups] = {100, 100, 100, 100, 100, 100, 100, 100, 100};  // %, 0-200
     // 0.22.6: the map's baked light - torches' and lamps' pools, the shadows of houses and trees on the ground -
     // smooth instead of blotches and steps (the ground's coarse lightmap blurred within its cells). On by default.
     bool smoothLight = true;

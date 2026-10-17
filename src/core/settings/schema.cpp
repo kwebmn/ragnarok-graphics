@@ -1,5 +1,7 @@
 #include "core/settings/schema.hpp"
 
+#include "core/effect_groups.hpp"
+
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -292,6 +294,48 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxCaveDripsHint, ""},
         {"effects", "underwater", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxUnderwater,
          Text::FxUnderwaterHint, ""},
+        // 2.2: the set for the card, the groups and their strength (core/effect_groups.hpp)
+        {"effects", "preset", Page::Effects, Control::Choice, 0, 0, 0,
+         {"auto", "off", "weak", "medium", "strong", "custom"},
+         {Text::FxPresetAuto, Text::FxPresetOff, Text::FxPresetWeak, Text::FxPresetMedium, Text::FxPresetStrong,
+          Text::FxPresetCustom},
+         Text::FxPreset, Text::FxPresetHint, ""},
+        {"effects", "group_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupLight,
+         Text::FxGroupLightHint, ""},
+        {"effects", "group_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,
+         Text::FxGroupStrengthHint, " %"},
+        {"effects", "group_shadows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupShadows,
+         Text::FxGroupShadowsHint, ""},
+        {"effects", "group_shadows_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,
+         Text::FxGroupStrengthHint, " %"},
+        {"effects", "group_surfaces", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupSurfaces,
+         Text::FxGroupSurfacesHint, ""},
+        {"effects", "group_surfaces_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
+         Text::FxGroupStrength, Text::FxGroupStrengthHint, " %"},
+        {"effects", "group_nature", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupNature,
+         Text::FxGroupNatureHint, ""},
+        {"effects", "group_nature_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,
+         Text::FxGroupStrengthHint, " %"},
+        {"effects", "group_water", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupWater,
+         Text::FxGroupWaterHint, ""},
+        {"effects", "group_water_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,
+         Text::FxGroupStrengthHint, " %"},
+        {"effects", "group_air", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupAir,
+         Text::FxGroupAirHint, ""},
+        {"effects", "group_air_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,
+         Text::FxGroupStrengthHint, " %"},
+        {"effects", "group_life", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupLife,
+         Text::FxGroupLifeHint, ""},
+        {"effects", "group_life_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,
+         Text::FxGroupStrengthHint, " %"},
+        {"effects", "group_skills", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupSkills,
+         Text::FxGroupSkillsHint, ""},
+        {"effects", "group_skills_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,
+         Text::FxGroupStrengthHint, " %"},
+        {"effects", "group_picture", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupPicture,
+         Text::FxGroupPictureHint, ""},
+        {"effects", "group_picture_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,
+         Text::FxGroupStrengthHint, " %"},
         {"effects", "tier", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "classic", "remaster"},
          {Text::FxTierAuto, Text::FxTierClassic, Text::FxTierRemaster}, Text::FxTier, Text::FxTierHint, ""},
         {"effects", "materials", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMaterials,
@@ -631,6 +675,12 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.splashes") return c.effects.splashes ? "1" : "0";
     if (k == "effects.cave_drips") return c.effects.caveDrips ? "1" : "0";
     if (k == "effects.underwater") return c.effects.underwater ? "1" : "0";
+    if (k == "effects.preset") return effect_groups::presetToken(c.effects.preset);  // 2.2
+    for (int g = 0; g < kEffectGroups; ++g) {
+        const std::string word = std::string("effects.group_") + effect_groups::groupWord(g);
+        if (k == word) return c.effects.groups[g] ? "1" : "0";
+        if (k == word + "_strength") return std::to_string(c.effects.groupStrength[g]);
+    }
     if (k == "effects.tier") return c.effects.tier == 1 ? "classic" : c.effects.tier == 2 ? "remaster" : "auto";
     if (k == "effects.materials") return c.effects.materials ? "1" : "0";
     if (k == "effects.materials_strength") return std::to_string(c.effects.materialsStrength);

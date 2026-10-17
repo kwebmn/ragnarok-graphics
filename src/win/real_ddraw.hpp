@@ -10,6 +10,7 @@ namespace uagfx::win {
 struct Startup {
     Config config;
     RendererChoice choice;
+    int cardLevel = 1;  // 2.2: the card's for the automatic effects set (effect_groups::cardLevel)
 };
 const Startup& startup();
 

@@ -40,6 +40,7 @@ TEST(schema_compare_key_turns_every_effect_off) {
     int switches = 0;
     for (const IniSetting& s : iniSettings()) {
         if (std::string(s.section) != "effects" || s.control != Control::Check) continue;
+        if (std::string(s.key).compare(0, 6, "group_") == 0) continue;  // 2.2: a group holds switches, is none
         ++switches;
         if (tokenOf(s, c) != s.tokens[0]) std::printf("  still on with Pause: effects.%s\n", s.key);
         CHECK(tokenOf(s, c) == s.tokens[0]);

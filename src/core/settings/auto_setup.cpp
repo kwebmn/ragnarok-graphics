@@ -76,6 +76,9 @@ AutoSetup autoSetup(const Machine& m) {
     // 0.76: a card short of a strong one keeps 45 frames a second - the costliest effects go off when it cannot
     const bool keep = a.tier == Tier::Old || a.tier == Tier::Low || a.tier == Tier::Middle;
     set(e, "frames", "keep_fps", keep ? "45" : "0");
+    // 2.2: the Effects page's set by the card - its own switches as the set says
+    set(e, "effects", "preset",
+        a.tier == Tier::NoDriver ? "off" : a.tier == Tier::Middle ? "medium" : a.tier == Tier::High ? "strong" : "weak");
     // The effects of the Effects page: Direct3D 12's. A small card keeps the light ones.
     if (a.tier == Tier::Low)
         for (const char* k : {"ao", "dof", "clouds", "rays", "haze", "heat", "weather", "glow"})

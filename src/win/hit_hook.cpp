@@ -27,7 +27,7 @@ uintptr_t g_trampoline = 0;
 
 void noteHit(float x, float y, float z) {
     Context& c = Context::get();
-    if (!c.config.effects.hitFlash || !c.enhanced()) return;
+    if (!c.effects().hitFlash || !c.enhanced()) return;
     if (*reinterpret_cast<const int*>(uintptr_t(kModeKind)) != 1) return;
     const uint32_t mode = *reinterpret_cast<const uint32_t*>(uintptr_t(kModeNow));
     const uint32_t world = mode ? *reinterpret_cast<const uint32_t*>(uintptr_t(mode + 0xC4)) : 0;

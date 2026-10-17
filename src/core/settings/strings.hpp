@@ -269,6 +269,12 @@ enum class Text : uint16_t {
     FxRecommended, FxRecommendedNote,
     // 2.0.3
     FxAnimeTrees, FxAnimeTreesHint,
+    // 2.2: the Effects page's sets and groups
+    FxPreset, FxPresetHint, FxPresetAuto, FxPresetOff, FxPresetWeak, FxPresetMedium, FxPresetStrong, FxPresetCustom,
+    FxSetIntro, FxGroupLight, FxGroupLightHint, FxGroupShadows, FxGroupShadowsHint, FxGroupSurfaces,
+    FxGroupSurfacesHint, FxGroupNature, FxGroupNatureHint, FxGroupWater, FxGroupWaterHint, FxGroupAir, FxGroupAirHint,
+    FxGroupLife, FxGroupLifeHint, FxGroupSkills, FxGroupSkillsHint, FxGroupPicture, FxGroupPictureHint, FxGroupStrength,
+    FxGroupStrengthHint, FxDetails, FxDetailsHide, FxDetailsNote,
     Count
 };
 

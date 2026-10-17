@@ -17,8 +17,6 @@ constexpr int kSize = 1207;
 constexpr int kWidth = 1208;  // kWidth + 1: the height
 constexpr int kAsSetup = 1210;
 
-std::string sizeText(Size s) { return num(s.width) + "×" + num(s.height); }
-
 // The Screen page (stage 2 spec §5): how the game is shown, on which monitor, how large its interface is.
 class ScreenPage : public Page {
 public:

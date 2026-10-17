@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "core/effect_costs.hpp"
+#include "core/effect_groups.hpp"
 #include "core/live_config.hpp"
 #include "core/scale.hpp"
 #include "core/settings/ini_edit.hpp"
@@ -53,6 +54,8 @@ std::string foregroundName() {
 
 }  // namespace
 
+EffectSettings Context::effects() const { return effect_groups::effective(config.effects, startup().cardLevel); }
+
 Context& Context::get() {
     static Context c;
     return c;
@@ -87,7 +90,7 @@ bool Context::open(std::string& error) {
         remote = true;  // made: no other renderer
         if (config.remix || config.bridge || config.dlss != "off")
             LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer and DLSS need Direct3D 12 - off");
-        if (drawnByRenderer(config.effects))  // 0.46.1
+        if (drawnByRenderer(effects()))  // 0.46.1
             LOG_INFO("Direct3D 11: the Effects page's colours, the characters' shadows, the torches' light, (0.99) "
                      "the water, (1.0) the glow and the game's fireflies are drawn; the lamps, weather and the rest "
                      "need Direct3D 12 - the game's own shown there");
@@ -152,9 +155,9 @@ bool Context::open(std::string& error) {
     const AiSettings& ai = config.ai;
     const bool cells = ai.on() && (ai.sprites() || ai.effects || ai.icons);
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
-    const bool d3d11Hook = (aiHere && cells) || config.effects.actorShadows || config.effects.torch ||
-                           config.effects.appear || config.effects.glint ||
-                           config.effects.hitFlash;  // 0.93, 0.95, 0.96: the sprites' kinds
+    const EffectSettings drawn = effects();
+    const bool d3d11Hook = (aiHere && cells) || drawn.actorShadows || drawn.torch || drawn.appear || drawn.glint ||
+                           drawn.hitFlash;  // 0.93, 0.95, 0.96: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
@@ -217,7 +220,7 @@ void Context::flush() {
     // waves and reflections in the world, with the same camera; 0.23, 0.24: the torches' flicker and the smoke's
     // wisps keep to their places in the world with it; 0.25, 0.28: the map file's lamps and fireflies stand in it.
     // 0.46.1: Direct3D 11 draws none of them.
-    const EffectSettings& fx = config.effects;
+    const EffectSettings fx = effects();
     // 1.8.4: every effect the renderer draws itself - the grass, the living world, the materials... need the camera
     // too (only the older ones were listed: alone, the newer ones went without it)
     const bool world = drawnByRenderer(fx) || fx.dof;  // 1.4.2: the depth of field's focus on the character
@@ -372,7 +375,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage, enhanced_);
     keepFrameRate(config, window);
     Profiler::get().run(GetCurrentThreadId(), config.profile);  // 0.87: [debug] profile
-    EffectSettings fx = config.effects;  // 0.63: how much night now, by the clock; 0.74: the minute of the day
+    // 2.2: the set and the groups made into the switches; 0.63: how much night now, by the clock; 0.74: the minute
+    EffectSettings fx = effects();
     if (fx.night || fx.dayCycle) {
         SYSTEMTIME t{};
         GetLocalTime(&t);
@@ -386,8 +390,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
         consoleOff_ = comparing;
         std::string text;
         readTextFile(gameDir() + "\\uaro-graphics.ini", text);
-        if (!comparing.empty())
-            compareFx_ = parseConfig(settings::applyIniEdits(text, {{"effects", comparing.substr(8), "0"}})).effects;
+        if (!comparing.empty()) {  // 2.2: after the set and the groups - the switch as it comes out, then off
+            compareFx_ = effect_groups::effective(parseConfig(text).effects, startup().cardLevel);
+            if (const effect_groups::Member* fxm = effect_groups::memberOf(comparing)) compareFx_.*fxm->on = false;
+        }
     }
     if (!consoleOff_.empty()) {
         const int night = fx.nightNow, day = fx.dayNow;
@@ -473,7 +479,7 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     keepSlow_ = fps < 0.9 * double(config.keepFps) ? keepSlow_ + 1 : 0;
     if (keepSlow_ < 2) return;
     keepSlow_ = 0;
-    EffectSettings fx = config.effects;
+    EffectSettings fx = effects();
     for (const std::string& k : keepOff_) effect_costs::drop(fx, k);
     const std::string key = effect_costs::pickToDrop(fx, measured ? costs : effect_costs::Costs{}, keepOff_,
                                                      startup().choice.api == Api::D3d11);

@@ -1,5 +1,7 @@
 #include "core/config.hpp"
 
+#include "core/effect_groups.hpp"
+
 #include <algorithm>
 
 #include <cctype>
@@ -27,6 +29,23 @@ bool toInt(const std::string& v, int lo, int hi, int& out) {
     if (end == v.c_str() || *end != '\0' || n < lo || n > hi) return false;
     out = int(n);
     return true;
+}
+
+// 2.2: [effects] group_<word> (on or off) and group_<word>_strength; false: no group's key
+bool groupKey(const std::string& key, const std::string& val, EffectSettings& e) {
+    const std::string rest = key.substr(14);
+    for (int g = 0; g < kEffectGroups; ++g) {
+        const std::string word = effect_groups::groupWord(g);
+        if (rest == word) {
+            if (val == "1" || val == "0") e.groups[g] = val == "1";
+            return true;
+        }
+        if (rest == word + "_strength") {
+            toInt(val, 0, 200, e.groupStrength[g]);
+            return true;
+        }
+    }
+    return false;
 }
 
 void setBool(const std::string& v, bool& out) {
@@ -292,7 +311,9 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
            wetWalls == o.wetWalls && shoreFoam == o.shoreFoam && fish == o.fish && swamp == o.swamp &&
            butterflies == o.butterflies && birds == o.birds && leafFall == o.leafFall && embers == o.embers &&
            breath == o.breath && splashes == o.splashes && caveDrips == o.caveDrips && underwater == o.underwater &&
-           tier == o.tier && materials == o.materials && materialsStrength == o.materialsStrength;
+           tier == o.tier && materials == o.materials && materialsStrength == o.materialsStrength &&
+           preset == o.preset && std::equal(groups, groups + kEffectGroups, o.groups) &&
+           std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength);
 }
 
 AiPreset aiPresetOf(const AiSettings& a) {
@@ -656,6 +677,9 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.caveDrips);
         } else if (key == "effects.underwater") {
             setBool(val, c.effects.underwater);
+        } else if (key == "effects.preset") {  // 2.2
+            effect_groups::presetFrom(val, c.effects.preset);
+        } else if (key.compare(0, 14, "effects.group_") == 0 && groupKey(key, val, c.effects)) {  // 2.2
         } else if (key == "effects.tier") {  // 1.8
             if (val == "auto") c.effects.tier = 0;
             if (val == "classic") c.effects.tier = 1;

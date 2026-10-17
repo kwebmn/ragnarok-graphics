@@ -32,6 +32,8 @@ public:
     void unlock() { LeaveCriticalSection(&cs_); }
 
     Config config;
+    // 2.2: the effects as drawn - the set and the groups made into the switches (effect_groups::effective)
+    EffectSettings effects() const;
     gpu::Renderer* renderer = nullptr;
     FrameRecord record;
     int screenWidth = 0;
