@@ -1,3 +1,11 @@
+# uaRO Graphics 2.1.4 — testing
+
+- **No moving shadows:** "Sun shadows" and "Real shadows" are gone - they turned and jumped with the camera and
+  argued with the shadows the game has painted under trees and houses, which stay. The two boxes left the Effects
+  page and the Recommended button; `sun_shadows` / `real_shadows` in the ini are no longer read (switched off by
+  themselves). The crowns' and the characters' shadows from them went with them; the light still comes from the
+  map's own sun.
+
 # uaRO Graphics 2.1.3 — testing
 
 - **One sun:** the real shadows (and the materials', the trees', the characters' light) now fall the way of the map's
