@@ -96,7 +96,7 @@ void World::flies(const Switches& on, const Frame& f) {
             }
             Point p = x.at;
             p.y = f.waterLevel - x.altitude - 0.15f * std::sin(float(f.now) * 7.0f + x.phase * 0.01f);
-            Sprite s = sprite(Dragonfly, p, 0.9f, 1.0f);
+            Sprite s = sprite(Dragonfly, p, 1.4f, 1.0f);
             s.p1 = x.phase;
             s.headingX = std::cos(x.heading);
             s.headingZ = std::sin(x.heading);
@@ -109,13 +109,13 @@ void World::flies(const Switches& on, const Frame& f) {
         x.at.z += std::sin(x.heading) * 1.6f * f.dt;
         Point p = x.at;
         p.y = f.centre.y - x.altitude - 0.4f * std::sin(float(f.now) * 2.5f + x.colour);
-        Sprite s = sprite(Butterfly, p, 0.7f, 1.0f);
+        Sprite s = sprite(Butterfly, p, 1.3f, 1.0f);  // 1.8.2: 0.7 was a speck at 4K
         s.p1 = x.phase;
         s.p2 = x.colour;
         s.headingX = std::cos(x.heading);
         s.headingZ = std::sin(x.heading);
         out_.push_back(s);
-        Sprite shadow = sprite(Shadow, Point{x.at.x, f.centre.y, x.at.z}, 0.35f, 0.18f);
+        Sprite shadow = sprite(Shadow, Point{x.at.x, f.centre.y, x.at.z}, 0.6f, 0.18f);
         out_.push_back(shadow);
     }
 }
@@ -180,7 +180,7 @@ void World::birds(const Switches& on, const Frame& f) {
             out_.push_back(sprite(Shadow, Point{p.x, b.at.y, p.z}, 0.45f, 0.2f * fade));
         } else {
             gone = false;
-            Sprite s = sprite(BirdGround, p, 0.8f, 1.0f);
+            Sprite s = sprite(BirdGround, p, 1.1f, 1.0f);
             s.p1 = b.phase;
             s.p2 = b.facing;
             out_.push_back(s);

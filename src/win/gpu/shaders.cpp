@@ -253,7 +253,7 @@ float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
     float2 sun = uiPixels.xy;
     float luma = dot(c, float3(0.299, 0.587, 0.114));
     c *= sourceClamp.rgb;
-    if (r3 > 0.0) c = lerp(c, luma * float3(r0, r1, r2), r3);
+    if (r3 > 0.0) c = lerp(c, (0.25 + luma * 1.1) * float3(r0, r1, r2), r3);  // 1.8.2: golden, not brown
     if (r5 > 0.0) c = lerp(c, float3(0.86, 0.92, 1.0) * (0.55 + luma), r5 * saturate(0.35 - q.y * 0.65));
     if (uiPixels.z > 0.0) {
         float3 n = normalize(float3(q, sqrt(saturate(1.0 - dot(q, q) * 0.85)) + 0.3));
