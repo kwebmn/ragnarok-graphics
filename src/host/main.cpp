@@ -498,6 +498,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.rainWet = rd.u8() != 0;
             e.nightWindows = rd.u8() != 0;  // 1.21
             e.sharedWind = rd.u8() != 0;  // 1.22
+            e.litDust = rd.u8() != 0;  // 1.23
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

@@ -2634,6 +2634,15 @@ const Entry kTexts[] = {
      "то посилюється, то слабне, — а не кожне куди саме хоче (Direct3D 12).",
      "Трава, листва, песчаная позёмка, дождь, снег и облака движутся в одну сторону с одним ветром, который медленно "
      "меняет направление и то усиливается, то стихает, — а не каждое куда само хочет (Direct3D 12)."},
+    {"Dust in the light",
+     "Пил у світлі",
+     "Пыль в свете"},
+    {"Indoors and in dungeons the dust in the air shows where light falls - in the beams from the windows, by the "
+     "torches - tinted by that light, and hardly in the dark corners. Needs Motes in the air (Direct3D 12).",
+     "У приміщеннях і підземеллях пил у повітрі видно там, де падає світло, — у променях із вікон, біля факелів, — у "
+     "кольорі цього світла, а в темних кутах ледь-ледь. Потрібні «Порошинки в повітрі» (Direct3D 12).",
+     "В помещениях и подземельях пыль в воздухе видна там, где падает свет, — в лучах из окон, у факелов, — в цвете "
+     "этого света, а в тёмных углах едва-едва. Нужны «Частицы в воздухе» (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

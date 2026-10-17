@@ -2506,6 +2506,16 @@ float4 weather_ps(PresentOut i) : SV_Target {
     int kind = int(twinX + 0.5);
     float3 sum = float3(0.0, 0.0, 0.0);
     float a = 0.0;
+    // 1.23, dust in the light (twinY): indoors the motes show where light falls on what is behind them (the
+    // picture's copy, t0) - in the beams, by the torches - and hardly in the dark; tinted by that light
+    float lit = 1.0;
+    float3 litColour = float3(0.85, 0.80, 0.70);
+    if (twinY > 0.0 && kind == 6) {
+        float3 under = tex0.Load(int3(int2(i.pos.xy), 0)).rgb;
+        float l = dot(under, float3(0.299, 0.587, 0.114));
+        lit = lerp(1.0, smoothstep(0.16, 0.6, l) * 2.4, twinY);
+        litColour = lerp(litColour, saturate(under * 1.3 + 0.25), 0.6 * twinY);
+    }
     [unroll] for (int layer = 0; layer < 3; ++layer) {
         float depth = 0.6 + 0.5 * float(layer);
         float cell = (kind == 1 ? 36.0 : kind == 2 ? 22.0 : kind == 3 ? 110.0 : kind == 4 ? 60.0 : 80.0) * depth;
@@ -2555,8 +2565,8 @@ float4 weather_ps(PresentOut i) : SV_Target {
             d += float2(sin(t * 0.37 + h.x * 6.28), cos(t * 0.29 + h.y * 6.28)) * 6.0 * depth;
             float r = 0.45 + 0.35 * depth;
             shape = exp(-dot(d, d) / (r * r)) * (0.55 + 0.45 * sin(t * (0.8 + h.y) + h.x * 20.0));
-            colour = kind == 5 ? float3(1.0, 0.95, 0.75) : float3(0.85, 0.80, 0.70);
-            alpha = kind == 5 ? 0.55 : 0.35;
+            colour = kind == 5 ? float3(1.0, 0.95, 0.75) : litColour;
+            alpha = kind == 5 ? 0.55 : min(0.35 * lit, 0.8);
         }
         float s = saturate(shape) * alpha;
         sum += colour * s;

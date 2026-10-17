@@ -366,6 +366,9 @@ struct EffectSettings {
     // 1.22: one wind for the whole world (core/wind.hpp): the grass, the leaves, the sand, the rain, the snow and the
     // clouds go its way, which turns slowly, its strength coming and going. Off by default.
     bool sharedWind = false;
+    // 1.23: dust in the light (weather_ps): indoors the motes show where light falls - the beams, the torches - and
+    // hardly in the dark. Needs the motes. Off by default.
+    bool litDust = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

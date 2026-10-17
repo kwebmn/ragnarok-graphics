@@ -95,6 +95,10 @@ bool Renderer::Impl::applyWeather() {
         c.sourceRect[2] = weatherDrift.x;
         c.sourceRect[3] = windScreenX * windNow.strength * 60.0f;
     }
+    if (motes && !mapOutdoors && effects.litDust) {  // 1.23: the dust shows in the light (weather_ps)
+        if (!copySceneColor()) return false;
+        c.twin[1] = 1.0f;
+    }
     if (!weatherLogged)
         LOG_INFO("weather: %s over %s", motes ? (mapOutdoors ? "pollen" : "dust") : weatherName(mapWeather),
                  mapName.c_str());
