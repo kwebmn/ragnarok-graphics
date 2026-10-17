@@ -1,3 +1,10 @@
+# uaRO Graphics 1.8.2 — testing
+
+- **Autumn trees** (Every tree its own, seasons) golden and orange now, not muddy brown: the autumn's colour taken
+  lighter (after report R-4NMYFH's screenshots).
+- **Butterflies and dragonflies** nearly twice as large: at 4K they were specks. Birds on the ground a little larger.
+- How to check: prt_fild08 - the autumn crowns and the butterflies by day.
+
 # uaRO Graphics 1.8.1 — testing
 
 - **Screenshots in a report.** On the Diagnostics page, by the report's sending, the box Attach screenshots (on): the
