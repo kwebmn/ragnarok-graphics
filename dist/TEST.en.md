@@ -1,3 +1,11 @@
+# uaRO Graphics 1.15.0 — testing
+
+- **Smooth hills** (Effects → Remaster, off by default, Direct3D 12): the ground is lit by the sun over smooth slopes
+  instead of cell by cell - the sunny side of a hill brighter, the far side in a soft shade. Check on hilly fields
+  (prt_fild08, pay_fild maps, mjolnir): no steps or squares of light along the cells, no dark lines along cliffs,
+  the seams' strips the same brightness as the ground around; the console (~) switch shows the difference at once.
+  The log says "smooth hills: NxM corners of <map>'s ground".
+
 # uaRO Graphics 1.14.0 — testing
 
 - **Materials of the world now work on Direct3D 11 too** (Classic+ on weaker cards): relief, gloss and the large
