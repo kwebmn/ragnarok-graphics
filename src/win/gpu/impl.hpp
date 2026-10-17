@@ -11,6 +11,7 @@
 #include <array>
 #include <vector>
 
+#include "core/effect_costs.hpp"
 #include "core/footsteps.hpp"
 #include "core/frame.hpp"
 #include "core/critters.hpp"
@@ -59,14 +60,19 @@ void releaseCom(T*& p) {
 }
 
 constexpr UINT kSlots = 2;              // submissions in flight
-// 0.39.2: the effects timed one by one, for the log (kEffectNames in device.cpp); 0.76: the sky, the light in the air
-// and the floors' reflections their own.
+// 0.39.2: the effects timed one by one, for the log; 0.76: the sky, the light in the air and the floors' reflections
+// their own. 2.2.2: the sun's shadows' gone with them (2.1.4).
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
-    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeSun, kTimeBloom, kTimeGrass,
+    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
     kTimeForest,  // 2.1: the new trees
     kEffectTimes
 };
+// 2.2.2: each timed pass's names, in the enum's order (core/effect_costs.hpp kTimedPasses: the key Costs know, the
+// log's and the breadcrumbs' words)
+static_assert(sizeof(effect_costs::kTimedPasses) / sizeof(effect_costs::kTimedPasses[0]) == kEffectTimes,
+              "a name for each timed pass, in the enum's order");
+inline const effect_costs::TimedPass& passName(UINT e) { return effect_costs::kTimedPasses[e]; }
 // GPU timestamps a slot: its list, the upscale, the AI textures' work, (0.39.2) a pair an effect.
 constexpr UINT kTimes = 6 + 2 * kEffectTimes;
 constexpr UINT kCpuSrvCount = 65536;    // one SRV per texture (the client keeps thousands), the white one, the target

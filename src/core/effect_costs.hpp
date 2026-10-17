@@ -12,6 +12,19 @@ namespace uagfx::effect_costs {
 // them on the Effects page, and [frames] keep_fps turns the costliest off when the game is too slow.
 using Costs = std::map<std::string, double>;  // a pass's name -> ms a frame
 
+// 2.2.2: the passes the Direct3D 12 renderer times on its own, in its order (win/gpu/impl.hpp EffectTimer): the key
+// Costs and the switches know them by, and the log's words. One table: four lists of them were kept by hand.
+struct TimedPass {
+    const char* key;
+    const char* words;
+};
+inline constexpr TimedPass kTimedPasses[] = {
+    {"ao", "soft shadows"}, {"clouds", "clouds"}, {"actor_shadows", "characters' shadows"},
+    {"lights", "lights and torches"}, {"haze", "haze"}, {"heat", "heat haze"}, {"grade", "colour"},
+    {"dof", "depth of field"}, {"weather", "weather"}, {"glow", "glow"}, {"water", "water's copies"},
+    {"sky", "sky"}, {"shafts", "light in the air"}, {"floor", "floor reflections"}, {"bloom", "bloom"},
+    {"grass", "grass"}, {"new_trees", "new trees"}};
+
 // "name ms" a line; parse() skips what does not read.
 std::string format(const Costs& c);
 Costs parse(const std::string& text);

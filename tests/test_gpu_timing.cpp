@@ -1,6 +1,7 @@
 #include <string>
 
 #include "core/effect_costs.hpp"
+#include "core/effect_groups.hpp"
 #include "core/gpu_timing.hpp"
 #include "core/live_config.hpp"
 #include "test.hpp"
@@ -99,4 +100,16 @@ TEST(live_config_ai_kinds_apply_at_once) {
     const Config without = parseConfig("[ai]\nenabled = 1\nground = 0\n");  // started without the ground's
     u = liveUpdate(without, parseConfig("[ai]\nenabled = 1\nground = 1\n"));
     CHECK(u.applied.empty() && u.waiting.size() == 1 && u.waiting[0] == "ai.ground");
+}
+
+TEST(effect_costs_passes_are_the_renderers_timed_ones) {
+    // 2.2.2: an effect's cost is found only under a name the renderer times (one table, core/effect_costs.hpp)
+    for (int i = 0; i < effect_groups::memberCount(); ++i) {
+        const std::string pass = effect_costs::passOf(effect_groups::members()[i].key);
+        if (pass.empty()) continue;
+        bool timed = false;
+        for (const effect_costs::TimedPass& p : effect_costs::kTimedPasses) timed = timed || pass == p.key;
+        CHECK(timed);
+    }
+    for (const effect_costs::TimedPass& p : effect_costs::kTimedPasses) CHECK(std::string(p.key) != "sun");
 }
