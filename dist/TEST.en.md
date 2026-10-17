@@ -1,3 +1,14 @@
+# uaRO Graphics 1.9.0 — testing
+
+- **The remaster's phase B, its first step: smooth seams of the ground** (`effects.ground_seams`, the Remaster block,
+  off by default, Direct3D 12). The driver gathers the ground's cells the game draws, turns them into the world, and
+  where neighbouring cells have different textures (grass and road, grass and sand) draws strips along their edge:
+  one texture reaches into the other by a noise both share. The line wanders instead of stepping along the cells.
+  Works with the AI textures, the materials and the grass.
+- The log: `ground seams: N kinds of strips over M triangles of <map>'s ground`.
+- How to check: prt_fild08 - the paths' edges; pay_fild01, moc_fild01 - sand and grass. Compare with the box off. To
+  know: holes, shimmer or "bands" along the edges, anything lost under the characters, the frame's cost.
+
 # uaRO Graphics 1.8.4 — testing
 
 - **Fixed:** the driver read the game's camera only for the older effects (water, torches, characters' shadows and
