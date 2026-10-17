@@ -830,6 +830,7 @@ struct Renderer::Impl {
     }
     bool applyShafts();  // once a frame, after the haze and the sky; false: lost
     void sunOnScreen(float out[2]) const;  // 0.73: the way the sun's shadows fall on the screen (actor_shadows.cpp)
+    void sunGround(float out[3]) const;  // 2.0.1: the way the shadows fall along the ground, fixed in the world
     bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
     bool heatDue() const {
         return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));

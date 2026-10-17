@@ -160,10 +160,30 @@ ID3D12PipelineState* Renderer::Impl::shadowApplyPipeline(UINT n) {
 // the characters are drawn. The round shadows go into it too, and are not drawn on their own.
 // The way the sun's shadows fall on the screen (a unit vector, game pixels' axes).
 // 0.74: by the time of day when its cycle is on (core/daylight.hpp).
+// 2.0.1: the sun fixed in the world - its shadows' way along the ground (sunGround, the daylight's way taken in the
+// world's x and z) turned onto the screen by the camera; until 2.0 the screen's way itself, and the real shadows
+// turned with the camera.
 void Renderer::Impl::sunOnScreen(float out[2]) const {
     const daylight::Light l = daylight::at(effects.dayCycle ? effects.dayNow : -1);
     out[0] = l.shadow[0];
     out[1] = l.shadow[1];
+    if (!viewToWorldValid) return;
+    float g[3];
+    sunGround(g);
+    const float* m = viewToWorld;
+    const float sx = g[0] * m[0] + g[1] * m[1] + g[2] * m[2], sy = g[0] * m[3] + g[1] * m[4] + g[2] * m[5];
+    const float len = std::sqrt(sx * sx + sy * sy);
+    if (len < 1e-4f) return;
+    out[0] = sx / len;
+    out[1] = sy / len;
+}
+
+void Renderer::Impl::sunGround(float out[3]) const {
+    const daylight::Light l = daylight::at(effects.dayCycle ? effects.dayNow : -1);
+    const float len = std::max(std::sqrt(l.shadow[0] * l.shadow[0] + l.shadow[1] * l.shadow[1]), 1e-4f);
+    out[0] = l.shadow[0] / len;
+    out[1] = 0.0f;
+    out[2] = l.shadow[1] / len;
 }
 
 // 0.94: a round shadow under a character or a monster: its middle, in the world, for the footprints and the ripples.

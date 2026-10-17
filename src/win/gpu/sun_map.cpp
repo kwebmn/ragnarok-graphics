@@ -141,13 +141,12 @@ bool Renderer::Impl::applyRealShadows() {
     // The sun's box: about the player, its axes the light's way (fwd) and two across it.
     const float* m = viewToWorld;
     const float tz = cameraTargetZ;
-    const float mid[3] = {tz * m[6] + m[9], tz * m[7] + m[10], tz * m[8] + m[11]};
-    float sun[2];
-    sunOnScreen(sun);
+    float mid[3] = {tz * m[6] + m[9], tz * m[7] + m[10], tz * m[8] + m[11]};
     const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
     const float height = std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) * 0.0174533f;
+    // 2.0.1: the sun's way fixed in the world (sunGround) - taken from the screen it turned with the camera
     float gdir[3];
-    for (int q = 0; q < 3; ++q) gdir[q] = sun[0] * m[q] + sun[1] * m[3 + q];
+    sunGround(gdir);
     const float gl = std::max(std::sqrt(gdir[0] * gdir[0] + gdir[2] * gdir[2]), 1e-4f);
     const float fwd[3] = {gdir[0] / gl * std::cos(height), std::sin(height), gdir[2] / gl * std::cos(height)};  // down
     const float upw[3] = {0.0f, -1.0f, 0.0f};
@@ -157,6 +156,14 @@ bool Renderer::Impl::applyRealShadows() {
     for (float& r : right) r /= rl;
     const float up[3] = {right[1] * fwd[2] - right[2] * fwd[1], right[2] * fwd[0] - right[0] * fwd[2],
                          right[0] * fwd[1] - right[1] * fwd[0]};
+    // 2.0.1: the box's middle on the map's texels across the light - moved smoothly with the player, the shadows'
+    // edges crept from texel to texel
+    const float texel = 2.0f * kSunHalf / float(kSunMap);
+    const float across[2] = {mid[0] * right[0] + mid[1] * right[1] + mid[2] * right[2],
+                             mid[0] * up[0] + mid[1] * up[1] + mid[2] * up[2]};
+    const float snap[2] = {std::round(across[0] / texel) * texel - across[0],
+                           std::round(across[1] / texel) * texel - across[1]};
+    for (int q = 0; q < 3; ++q) mid[q] += right[q] * snap[0] + up[q] * snap[1];
     // the world into the box: rows (x, y, z) with their offsets
     float light[12];
     const auto row = [&](const float axis[3], float scaleBy, float add, float* out) {

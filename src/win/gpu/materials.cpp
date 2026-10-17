@@ -125,15 +125,10 @@ void Renderer::Impl::materialConstants(bool ground, Constants& c) const {
 // 1.15: the way to the sun in the world (up along -y): along the ground where the shadows fall on the screen,
 // turned into the world by the view's axes, at the sun's height by the time of day (indoors from above).
 void Renderer::Impl::sunInWorld(float out[3]) const {
-    static const float kSame[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
-    const float* m = viewToWorldValid ? viewToWorld : kSame;
-    float sun[2];
-    sunOnScreen(sun);
     const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
     const float height = (mapOutdoors ? std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) : 75.0f) * 0.0174533f;
     float g[3];
-    for (int k = 0; k < 3; ++k) g[k] = sun[0] * m[k] + sun[1] * m[3 + k];
-    g[1] = 0.0f;
+    sunGround(g);  // 2.0.1: fixed in the world
     const float gl = std::max(std::sqrt(g[0] * g[0] + g[2] * g[2]), 1e-4f);
     out[0] = -g[0] / gl * std::cos(height);
     out[1] = -std::sin(height);
