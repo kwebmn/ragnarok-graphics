@@ -1,3 +1,13 @@
+# uaRO Graphics 1.9.6 — testing
+
+- **Fixed: effect changes that "would not turn on".** The driver applied effects changed in `uaro-graphics.ini` in a
+  running game only by an old list (up to 0.33). A change of a newer one alone - grass, foliage, the sky, the relief,
+  soft particles, all of the Living world and the Remaster - changed the file and the game did not see it until one
+  of the old ones changed too. Hence "turned the grass off in the console and cannot turn it on", and settings-app
+  boxes that did nothing until a restart. Now every effect setting is compared and any change applies at once; the
+  log: `settings: uaro-graphics.ini changed: grass 0 -> 1`.
+- How to check: in the console (`~`) switch Grass, Leaves in the wind, Sky, Materials of the world off and on.
+
 # uaRO Graphics 1.9.5 — testing
 
 - **Ground seams: rounded corners, wider.** The line between textures now follows each texture's share, smooth
