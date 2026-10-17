@@ -82,6 +82,7 @@ PsIn draw_vs(VsIn i) {
     float gz = i.pos.z;
     // 1.9.7, full crowns (stage0.y bit 25): a shell of a crown - drawn again about its box's middle (sourceRect) r6
     // times as large, moved by r9, r10 of its half size, its depth by r7 (behind or in front of the crown)
+#ifndef UAGFX_SAFE
     if (uiMode == 0 && ((stage0.y >> 25) & 1) != 0) {
         float2 mid = (sourceRect.xy + sourceRect.zw) * 0.5, reach = (sourceRect.zw - sourceRect.xy) * 0.5;
         float2 g = mid + (float2(gx, gy) - mid) * r6 + reach * float2(r9, r10);
@@ -89,6 +90,7 @@ PsIn draw_vs(VsIn i) {
         gy = g.y;
         gz = saturate(gz + r7);
     }
+#endif
     float x = (gx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
     float y = 1.0 - (gy * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
     o.pos = float4(x * w, y * w, gz * w, w);
