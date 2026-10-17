@@ -617,6 +617,48 @@ float3 reflectionIn(float3 p, float3 r, float2 size, out float weight) {
 }
 float3 waterReflection(float3 p, float3 r, out float weight) { return reflectionIn(p, r, targetSize, weight); }
 
+// 1.7, the water's life (water(): twinH's bits): fish - dark shapes circling under the surface, now and then a ring
+// where one jumped; a swamp's bubbles swelling and bursting into rings, its water murkier.
+float3 waterLife(float3 c, uint life, float2 xz, float t, float thick, float light) {
+    if ((life & 1) != 0 && thick > 0.6) {
+        float2 cid = floor(xz / 7.0);
+        float seed = hash12(cid + 91.7);
+        if (seed < 0.35) {
+            float sp = (0.25 + 0.35 * hash12(cid + 3.3)) * (seed < 0.17 ? 1.0 : -1.0);
+            float ang = t * sp + seed * 40.0;
+            float2 pos = (cid + 0.5) * 7.0 + float2(cos(ang), sin(ang)) * 2.2;
+            float2 dir = float2(-sin(ang), cos(ang)) * sign(sp);
+            float2 d = xz - pos;
+            float2 l = float2(dot(d, dir), dot(d, float2(-dir.y, dir.x)));
+            l.y -= sin(t * 9.0 + seed * 20.0) * 0.12 * l.x * step(l.x, 0.0);
+            float body = smoothstep(1.0, 0.7, length(l / float2(0.75, 0.22)));
+            float tail = step(l.x, -0.6) * step(-1.05, l.x) * step(abs(l.y), (-0.6 - l.x) * 0.9);
+            c *= 1.0 - 0.35 * saturate(body + tail * 0.8) * saturate((thick - 0.6) / 1.5);
+            float jump = frac(t * 0.05 + seed * 7.0);
+            float x = length(d) - jump / 0.06 * 1.6;
+            c += exp(-x * x * 30.0) * saturate(1.0 - jump / 0.06) * 0.35 * light;
+        }
+    }
+    if ((life & 2) != 0) {
+        float2 bid = floor(xz / 3.0);
+        float seed = hash12(bid + 13.1);
+        float2 at = (bid + 0.25 + 0.5 * float2(hash12(bid + 2.2), hash12(bid + 5.5))) * 3.0;
+        float age = frac(t * (0.18 + 0.12 * seed) + seed * 9.0);
+        float d = length(xz - at);
+        c *= float3(0.9, 0.95, 0.82);
+        if (age < 0.7) {  // swelling
+            float r = 0.08 + age * 0.35;
+            float rim = exp(-pow((d - r * 0.7) * 18.0, 2.0));
+            c = lerp(c, c * 0.75, smoothstep(r, r * 0.6, d) * 0.5) + rim * 0.12 * light;
+        } else {  // burst: a ring
+            float k = (age - 0.7) / 0.3;
+            float x = d - (0.2 + k * 0.9);
+            c += exp(-x * x * 60.0) * (1.0 - k) * 0.18 * light;
+        }
+    }
+    return c;
+}
+
 float4 water(WaterIn i) {
     int2 px = int2(i.pos.xy);
     float t = sharpen;
@@ -691,8 +733,10 @@ float4 water(WaterIn i) {
     // 0.22.2: foam where the water meets the shore - near a pixel whose ground stands at or above the water there
     // (the water's own depth carried over by its slope on the screen), not over the whole of shallow water -
     // broken by noise that drifts with the waves.
+    uint life = uint(twinH + 0.5);  // 1.7: 1 fish, 2 a swamp's bubbles, 4 the surf's swash (water_life)
     float shore = 0.0;
-    float reach = 5.0 * scale;
+    float swash = (life & 4) != 0 ? 0.5 + 0.5 * sin(t * 0.55 + fp.x * 0.04) : 0.0;
+    float reach = (5.0 + 4.0 * swash) * scale;
     [unroll] for (int k = 0; k < 4; ++k) {
         float2 o = k == 0 ? float2(reach, 0.0) : k == 1 ? float2(-reach, 0.0) : k == 2 ? float2(0.0, reach)
                                                                                     : float2(0.0, -reach);
@@ -703,7 +747,8 @@ float4 water(WaterIn i) {
     shore *= saturate(1.0 - thick / 3.0);
     float froth = smoothstep(0.45, 0.8, valueNoise(fp * 0.4 + t * 0.25) * 0.6 +
                                             valueNoise(fp.yx * 1.1 - t * 0.45) * 0.4);
-    c = lerp(c, float3(0.92, 0.95, 0.97) * light, shore * froth * 0.6);
+    c = lerp(c, float3(0.92, 0.95, 0.97) * light, shore * froth * (0.6 + 0.3 * swash));
+    c = waterLife(c, life, i.world.xz, t, thick, light);
     return float4(c, saturate(thick / 0.8));  // the shore line fades in, no hard edge
 }
 
@@ -1519,6 +1564,26 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
         float wet = (g + run) * wall * twinW;
         o = lerp(o, min(col * 1.6 + 0.12, 1.0), saturate(wet));
         a = max(a, saturate(wet));
+    }
+    if (twinH > 0.0) {  // 1.7: wet sand along the shore (shore_foam): just above the water (sourceClamp.x its level,
+        // last frame's) near ground that lies under it, darker in a band that comes and goes with the swash
+        float above = sourceClamp.x - w.y;  // up is -y
+        float band = 0.9 + 0.7 * sin(t * 0.55 + dot(w.xz, float2(0.04, 0.03)));
+        if (above > 0.0 && above < band && col.r > col.b * 1.05) {
+            float near = 0.0;
+            float reach = 30.0 * scale;
+            [unroll] for (int k = 0; k < 8; ++k) {
+                float ang = float(k) * 0.785398;
+                int2 q = clamp(wp + int2(float2(cos(ang), sin(ang)) * reach), int2(0, 0), last);
+                if (sceneDepth.Load(int3(q, 0)) >= 0.99999) continue;
+                float3 qv = viewAt(q);
+                float qy = qv.x * r1 + qv.y * r4 + qv.z * r7 + r10;
+                near = max(near, step(sourceClamp.x + 0.1, qy));
+            }
+            float wet = smoothstep(band, band * 0.4, above) * 0.5 * near;
+            o = lerp(o, col * 0.6, wet / max(a + wet, 1e-3));
+            a = saturate(max(a, wet));
+        }
     }
     if (a < 0.004) discard;
     return float4(o, a);

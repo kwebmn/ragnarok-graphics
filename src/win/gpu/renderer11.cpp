@@ -17,6 +17,8 @@
 #include "core/d3d7.hpp"
 #include "core/d3d_map.hpp"
 #include "core/daylight.hpp"
+#include "core/living.hpp"
+#include "core/outdoors.hpp"
 #include "core/effect_exe.hpp"
 #include "core/foliage.hpp"
 #include "core/game_camera.hpp"
@@ -1086,6 +1088,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.footprint = float(effects_.waterWaves) / 100.0f;
         c.twin[0] = float(effects_.waterReflections) / 100.0f;
         c.twin[1] = float(effects_.waterClarity) / 100.0f;
+        // 1.7: the water's life (water_ps waterLife): fish, a swamp's bubbles, the surf's swash
+        const living::Place place = living::placeOf(map_, outdoors(map_), false);
+        c.twin[3] = float((effects_.fish && !place.cave ? 1 : 0) + (effects_.swamp && place.swamp ? 2 : 0) +
+                          (effects_.shoreFoam ? 4 : 0));
         if (!waterCells_++) LOG_INFO("water: the map's water found, drawn anew (Direct3D 11)");
     }
     // 0.67, soft particles (as draw.cpp): an effect facing the screen fades where it goes into the ground; the

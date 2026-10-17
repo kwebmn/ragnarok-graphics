@@ -46,6 +46,11 @@ bool Renderer::Impl::applyHaze() {
     c.sourceRect[3] = std::min(1.0f, mapLook.fog * user);
     // 1.7: a low fog in the morning over the fields and the towns (morning_fog)
     const float morning = effects.morningFog && mapOutdoors && !mapDesert ? living::morningFog(minuteNow()) : 0.0f;
+    if (effects.swamp && mapPlace.swamp && c.sourceRect[3] < 0.3f) {  // 1.7: a swamp's mist, always
+        static const float kMurk[3] = {0.62f, 0.68f, 0.55f};
+        for (int i = 0; i < 3; ++i) c.sourceRect[i] = kMurk[i];
+        c.sourceRect[3] = 0.3f;
+    }
     if (morning * 0.6f > c.sourceRect[3]) {
         static const float kMist[3] = {0.84f, 0.87f, 0.9f};
         const float k = mapLook.fog > 0.0f ? 0.5f : 1.0f;  // the map's own fog's colour kept, half

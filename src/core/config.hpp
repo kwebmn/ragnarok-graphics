@@ -292,6 +292,11 @@ struct EffectSettings {
     bool sandDrift = false;
     bool snowSparkle = false;
     bool wetWalls = false;
+    // 1.7.2: the living world, the water (with water): shore_foam - the surf's swash, its foam coming and going and
+    // the sand wet along the shore; fish under the surface; swamp - a swamp's bubbles and mist. Off by default.
+    bool shoreFoam = false;
+    bool fish = false;
+    bool swamp = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

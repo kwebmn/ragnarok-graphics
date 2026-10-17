@@ -276,6 +276,12 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSnowSparkleHint, ""},
         {"effects", "wet_walls", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetWalls,
          Text::FxWetWallsHint, ""},
+        {"effects", "shore_foam", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxShoreFoam,
+         Text::FxShoreFoamHint, ""},
+        {"effects", "fish", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFish,
+         Text::FxFishHint, ""},
+        {"effects", "swamp", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSwamp,
+         Text::FxSwampHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -559,6 +565,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.sand_drift") return c.effects.sandDrift ? "1" : "0";
     if (k == "effects.snow_sparkle") return c.effects.snowSparkle ? "1" : "0";
     if (k == "effects.wet_walls") return c.effects.wetWalls ? "1" : "0";
+    if (k == "effects.shore_foam") return c.effects.shoreFoam ? "1" : "0";
+    if (k == "effects.fish") return c.effects.fish ? "1" : "0";
+    if (k == "effects.swamp") return c.effects.swamp ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

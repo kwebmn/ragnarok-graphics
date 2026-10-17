@@ -464,6 +464,9 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.sandDrift = rd.u8() != 0;
             e.snowSparkle = rd.u8() != 0;
             e.wetWalls = rd.u8() != 0;
+            e.shoreFoam = rd.u8() != 0;  // 1.7.2
+            e.fish = rd.u8() != 0;
+            e.swamp = rd.u8() != 0;
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

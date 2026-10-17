@@ -329,6 +329,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.footprint = float(effects.waterWaves) / 100.0f;
         c.twin[0] = float(effects.waterReflections) / 100.0f;
         c.twin[1] = float(effects.waterClarity) / 100.0f;
+        c.twin[3] = waterLife();  // 1.7
+        noteWaterLevel(rec, d);
         if (ripplesWanted()) {  // 0.94: the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};
             int n = 0;
@@ -401,6 +403,29 @@ LeafLook Renderer::Impl::leafLook() const {
     l.viewToWorld = viewToWorldValid ? viewToWorld : nullptr;
     l.projection = camera::projectionFor(gameWidth, gameHeight);
     return l;
+}
+
+
+// 1.7: the water's life (water_ps waterLife's bits): 1 fish, 2 a swamp's bubbles, 4 the surf's swash.
+float Renderer::Impl::waterLife() const {
+    return float((effects.fish && !mapPlace.cave ? 1 : 0) + (effects.swamp && mapPlace.swamp ? 2 : 0) +
+                 (effects.shoreFoam ? 4 : 0));
+}
+
+// 1.7: the water's level in the world (its first corner), for the wet sand along the shore (ground_life_ps).
+void Renderer::Impl::noteWaterLevel(const FrameRecord& rec, const DrawCmd& d) {
+    if (!viewToWorldValid || waterLevelNoted) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    if (d.vertexOffset + 16 > v.size()) return;
+    float xyzw[4];
+    std::memcpy(xyzw, v.data() + d.vertexOffset, sizeof xyzw);
+    if (xyzw[3] <= 0.0f) return;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const float* m = viewToWorld;
+    const float vz = 1.0f / xyzw[3], vx = (xyzw[0] - p.cx) * vz / p.f0, vy = (xyzw[1] - p.cy) * vz / p.f1;
+    waterLevel = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
+    waterLevelNoted = true;
+    waterLevelKnown = true;
 }
 
 }  // namespace uagfx::gpu

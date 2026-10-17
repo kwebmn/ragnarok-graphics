@@ -223,6 +223,8 @@ enum class Text : uint16_t {
     // 1.7.1
     FxFlowers, FxFlowersHint, FxDew, FxDewHint, FxMorningFog, FxMorningFogHint, FxSandDrift, FxSandDriftHint,
     FxSnowSparkle, FxSnowSparkleHint, FxWetWalls, FxWetWallsHint,
+    // 1.7.2
+    FxShoreFoam, FxShoreFoamHint, FxFish, FxFishHint, FxSwamp, FxSwampHint,
     Count
 };
 

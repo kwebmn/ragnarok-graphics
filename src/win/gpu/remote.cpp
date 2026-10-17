@@ -355,6 +355,9 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.sandDrift ? 1 : 0);
     w.u8(e.snowSparkle ? 1 : 0);
     w.u8(e.wetWalls ? 1 : 0);
+    w.u8(e.shoreFoam ? 1 : 0);  // 1.7.2
+    w.u8(e.fish ? 1 : 0);
+    w.u8(e.swamp ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

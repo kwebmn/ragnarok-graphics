@@ -2284,6 +2284,33 @@ const Entry kTexts[] = {
      "води (Direct3D 12).",
      "Во влажных пещерах и подземельях камень поблёскивает там, где на него падает свет, а по стенам стекают тонкие "
      "струйки воды (Direct3D 12)."},
+    {"Surf and wet sand",
+     "Прибій і мокрий пісок",
+     "Прибой и мокрый песок"},
+    {"The foam along the shore comes in and goes back like a swash, and the sand just above the water is dark and wet "
+     "in a band that follows it. Needs Modern water (wet sand: Direct3D 12).",
+     "Піна вздовж берега набігає й відступає, як хвиля, а пісок трохи вище води темний і мокрий смугою, що йде за "
+     "нею. Потрібна «Сучасна вода» (мокрий пісок: Direct3D 12).",
+     "Пена вдоль берега набегает и отступает, как волна, а песок чуть выше воды тёмный и мокрый полосой, которая идёт "
+     "за ней. Нужна «Современная вода» (мокрый песок: Direct3D 12)."},
+    {"Fish",
+     "Риби",
+     "Рыбы"},
+    {"Dark shapes of fish circle under the water where it is deep enough; now and then a ring shows where one jumped. "
+     "Needs Modern water.",
+     "Під водою, де досить глибоко, кружляють темні силуети риб; час від часу видно коло там, де одна вистрибнула. "
+     "Потрібна «Сучасна вода».",
+     "Под водой, где достаточно глубоко, кружат тёмные силуэты рыб; время от времени видно круг там, где одна "
+     "выпрыгнула. Нужна «Современная вода»."},
+    {"Swamps",
+     "Болота",
+     "Болота"},
+    {"In the swamps of Umbala, Brasilis and Dewata the water is murky, bubbles swell and burst on it, and a low "
+     "greenish mist hangs over the ground. Needs Modern water (the mist: Haze and fog).",
+     "У болотах Умбали, Бразиліса й Девати вода каламутна, на ній здуваються й лопаються бульбашки, а над землею "
+     "висить низький зеленуватий серпанок. Потрібна «Сучасна вода» (серпанок: «Серпанок і туман»).",
+     "В болотах Умбалы, Бразилиса и Деваты вода мутная, на ней вздуваются и лопаются пузыри, а над землёй висит "
+     "низкая зеленоватая дымка. Нужна «Современная вода» (дымка: «Дымка и туман»)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -856,6 +856,7 @@ struct Renderer::Impl {
         }
         grassDone = false;  // 0.81
         groundLifeDone = false;  // 1.7
+        waterLevelNoted = false;
         shaftsDone = false;  // 0.73
         flareDone = false;   // 0.98
         shaftLights = 0;
@@ -897,10 +898,15 @@ struct Renderer::Impl {
     bool groundLifeDone = false, groundLifeLogged = false;
     bool groundLifeWanted() const {
         return groundLifePs && ((effects.sandDrift && mapPlace.sand) || (effects.snowSparkle && mapPlace.snow) ||
-                                (effects.wetWalls && mapPlace.cave));
+                                (effects.wetWalls && mapPlace.cave) || wetSandWanted());
     }
+    bool wetSandWanted() const { return effects.shoreFoam && waterLevelKnown && mapOutdoors; }
     bool groundLifeDue() const { return groundLifeWanted() && groundDrawn && !groundLifeDone && viewToWorldValid; }
     bool applyGroundLife();  // once a frame, before the characters; false: lost
+    float waterLife() const;  // 1.7: water_ps's bits (draw.cpp)
+    void noteWaterLevel(const FrameRecord& rec, const DrawCmd& d);
+    float waterLevel = 0.0f;  // the last water seen, its height in the world (up is -y)
+    bool waterLevelKnown = false, waterLevelNoted = false;
     // 0.80: footprints and dust (ao.cpp applySteps) - the characters' feet followed (actor_shadows.cpp)
     footsteps::Tracker footTracker;
     ID3DBlob* stepsPs = nullptr;
