@@ -263,7 +263,7 @@ void Renderer::Impl::updateForest() {
             forestYSign = bestSign;
         } else if (forestSeen.size() >= 48) {
             if (!forestMismatchLogged)
-                LOG_INFO("new trees: %s's trees do not match the game's crowns (%.1f units off) - the old new trees",
+                LOG_INFO("new trees: %s's trees do not match the game's crowns (%.1f units off) - the game's own trees",
                          mapName.c_str(), double(best));
             forestMismatchLogged = true;
             forestSeen.clear();  // tried again with new crowns
@@ -341,14 +341,14 @@ void Renderer::Impl::updateForest() {
         };
         if (!make(forestVb, forestVbBytes, verts.data(), verts.size() * sizeof(forest::Vertex)) ||
             !make(forestIb, forestIbBytes, indices.data(), indices.size() * sizeof(uint32_t))) {
-            LOG_ERROR("new trees: no memory for the forest of %s: the old new trees", mapName.c_str());
+            LOG_ERROR("new trees: no memory for the forest of %s: the game's own trees", mapName.c_str());
             forestFailed = true;
             return;
         }
         forestInstanceBytes = uint32_t(forestPlaced.size() * sizeof(InstanceData));
         forestInstances = forestInstanceBytes ? uploadBuffer(device, forestInstanceBytes) : nullptr;
         if (!forestInstances) {
-            LOG_ERROR("new trees: no memory for the forest of %s: the old new trees", mapName.c_str());
+            LOG_ERROR("new trees: no memory for the forest of %s: the game's own trees", mapName.c_str());
             forestCalls.clear();
             forestFailed = true;
             return;
@@ -474,7 +474,7 @@ ID3D12PipelineState* Renderer::Impl::forestPipeline(UINT count) {
     p.SampleDesc.Count = count;
     if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
                                                    reinterpret_cast<void**>(&forestPipelines[index])))) {
-        LOG_ERROR("new trees: the forest's pipeline failed: the old new trees");
+        LOG_ERROR("new trees: the forest's pipeline failed: the game's own trees");
         forestPipelines[index] = nullptr;
         forestFailed = true;
     }

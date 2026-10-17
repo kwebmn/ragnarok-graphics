@@ -84,17 +84,6 @@ PsIn draw_vs(VsIn i) {
     }
     float gy = i.pos.y;
     float gz = i.pos.z;
-    // 1.9.7, full crowns (stage0.y bit 25): a shell of a crown - drawn again about its box's middle (sourceRect) r6
-    // times as large, moved by r9, r10 of its half size, its depth by r7 (behind or in front of the crown)
-#ifndef UAGFX_SAFE
-    if (uiMode == 0 && ((stage0.y >> 25) & 1) != 0) {
-        float2 mid = (sourceRect.xy + sourceRect.zw) * 0.5, reach = (sourceRect.zw - sourceRect.xy) * 0.5;
-        float2 g = mid + (float2(gx, gy) - mid) * r6 + reach * float2(r9, r10);
-        gx = g.x;
-        gy = g.y;
-        gz = saturate(gz + r7);
-    }
-#endif
     float x = (gx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
     float y = 1.0 - (gy * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
     o.pos = float4(x * w, y * w, gz * w, w);
@@ -482,13 +471,6 @@ float4 shade(PsIn i) {
 #ifndef UAGFX_SAFE
     if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
     if (((stage0.y >> 28) & 1) != 0) c.rgb = spriteLight(uv0, du, dv, c.rgb);  // 1.17: the characters
-    if (((stage0.y >> 29) & 1) != 0) {  // 1.25.1: a bunch of the new trees - a round, leafy patch of its card
-        float2 lq = i.specular.rg * 2.0 - 1.0;
-        float ang = atan2(lq.y, lq.x);
-        float edge = 0.8 + 0.1 * sin(ang * 5.0 + i.specular.b * 40.0) + 0.05 * sin(ang * 11.0 + i.specular.b * 9.0);
-        c.a *= smoothstep(edge, edge - 0.2, length(lq));
-    }
-    if (((stage0.y >> 25) & 1) != 0) c.rgb *= r8;  // 1.9.7: a crown's shell, darker behind and lighter in front
     if (material) {
         c.rgb = materialLight(c.rgb, m, P, N, T, B);  // 1.8: the materials
         // 1.14, cliffs: a steep face whose texture the game stretches along it (one of its coordinates moves far

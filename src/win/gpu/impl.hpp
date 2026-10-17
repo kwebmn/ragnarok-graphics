@@ -15,7 +15,6 @@
 #include "core/frame.hpp"
 #include "core/critters.hpp"
 #include "core/key_pair.hpp"
-#include "core/new_trees.hpp"
 #include "core/hills.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
@@ -128,7 +127,6 @@ struct Texture {
     int levels = 1;
     UINT srv = 0;  // index in the CPU SRV heap
     bool leafy = false;  // 0.64: leaves (core/foliage.hpp): swayed in the world
-    new_trees::Coverage leaves;  // 1.10: where its picture is leaves, for the new trees' bunches
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COPY_DEST;
     // AI textures (ai_textures.hpp): the network's version, drawn in the world instead while it is shown.
     ID3D12Resource* ai = nullptr;
@@ -915,10 +913,8 @@ struct Renderer::Impl {
         groundGroups.clear();
         groundTextures.clear();
         seamsDone = false;
-        frameTrees.clear();  // 1.10
         forestDone = false;  // 2.0
         forestHidden = 0;
-        treesDone = false;
         skyLightDone = false;  // 1.11
         if (mirrorCollecting()) {  // 1.16: the last frame's casters for this one's mirror
             mirrorVerts.swap(sunVerts);
@@ -1022,18 +1018,6 @@ struct Renderer::Impl {
     bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty(); }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     bool applySeams();  // once a frame, the ground drawn; false: lost
-    // 1.10: the new trees (trees.cpp) - the frame's crowns of leaves in the world, drawn anew as bunches
-    struct TreeCrown {
-        DrawSetup state;
-        uint32_t texture = 0;
-        bool keyed = false;
-        float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};
-    };
-    std::vector<TreeCrown> frameTrees;
-    new_trees::Steady treeSteady;  // 1.25.1: the crowns kept from frame to frame
-    FrameRecord treeRec;
-    bool treePass = false, treesDone = false, treesLogged = false;
-    bool treesWanted() const { return effects.newTrees && remaster() && viewToWorldValid && !forestReady(); }
     // 2.0, the new trees from the map (forest.cpp): each tree of the map file grown by the driver (core/forest.hpp),
     // drawn in a few instanced calls; the game's tree models left out
     struct ForestPlaced {
@@ -1093,9 +1077,6 @@ struct Renderer::Impl {
     void updateForest();  // once a frame: the map's forest built when its file and its heights are known
     ID3D12PipelineState* forestPipeline(UINT samples);
     bool applyForest();  // once a frame, after the grass; false: lost
-    bool treesDue() const { return treesWanted() && !treesDone && !frameTrees.empty(); }
-    bool takeTree(const FrameRecord& rec, const DrawCmd& d);  // true: a crown, kept for applyTrees
-    bool applyTrees();  // once a frame, before the characters; false: lost
     // 1.11: light from the sky and from around (ao.cpp applySkyLight, sky_light_ps)
     ID3DBlob* skyLightPs = nullptr;
     ID3D12PipelineState* skyLightPipelines[4] = {};

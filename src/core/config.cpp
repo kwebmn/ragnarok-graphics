@@ -157,7 +157,6 @@ EffectSettings effectsOff() {
     e.skyLight = false;
     e.newTrees = false;
     e.groundClutter = false;
-    e.fullCrowns = false;
     e.groundSeams = false;
     e.materials = false;
     e.underwater = false;
@@ -231,7 +230,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.skyLight ||
            e.newTrees ||
            e.groundClutter ||
-           e.fullCrowns ||
            e.groundSeams ||
            e.materials ||
            e.underwater ||
@@ -688,7 +686,7 @@ Config parseConfig(const std::string& text) {
         } else if (key == "effects.ground_seams") {
             setBool(val, c.effects.groundSeams);
         } else if (key == "effects.full_crowns") {
-            setBool(val, c.effects.fullCrowns);
+            // 2.2: the old crowns are gone (the new trees grow whole ones) - read and left alone
         } else if (key == "effects.ground_clutter") {
             setBool(val, c.effects.groundClutter);
         } else if (key == "effects.new_trees") {

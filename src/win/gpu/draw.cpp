@@ -28,7 +28,7 @@ void Renderer::Impl::prepareGeometry(const FrameRecord& rec) {
         const Upload u = allocUpload(v.size(), 16);
         if (!u.cpu) return;  // no memory for this record's vertices: its draws are skipped (vertexBase 0)
         std::memcpy(u.cpu, v.data(), v.size());
-        if (smoothModelsWanted() && &rec != &seamRec && &rec != &treeRec) {  // 1.19: the models' light spread
+        if (smoothModelsWanted() && &rec != &seamRec) {  // 1.19: the models' light spread
             smoothModels(rec);
             for (const ColourChange& ch : smoothColours)
                 if (ch.at + 4 <= v.size()) std::memcpy(static_cast<uint8_t*>(u.cpu) + ch.at, &ch.colour, 4);
@@ -57,16 +57,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         return;
     }
     const DrawSetup& s = rec.states()[d.state];
-    crumb(seamPass   ? "ground seams' strips"
-          : treePass ? "new trees"
-          : s.ui     ? "the game's interface"
-                     : "the game's world");
-    const bool inner = seamPass || treePass;  // 1.9, 1.10: the driver's own draws (no hooks, nothing noted)
+    crumb(seamPass ? "ground seams' strips" : s.ui ? "the game's interface" : "the game's world");
+    const bool inner = seamPass;  // 1.9: the driver's own draws (no hooks, nothing noted)
     // 2.0: a tree of the map's, the new trees from the map on - the driver draws it (forest.cpp)
     if (!inner && !s.ui && forestOn() && hideForTree(rec, d, s)) return;
-    // 1.10: a crown of leaves, the new trees on - kept, drawn anew by applyTrees (before the characters)
-    if (!treePass && !seamPass && !s.ui && !treesDone && treesWanted() && d.fvf != d3d7::FVF_TL2 && takeTree(rec, d))
-        return;
     if (s.zEnable && s.zWrite) sceneDepthFresh = false;  // 0.39.2: the depth's copy is out of date
     // Stage 4: with several samples an alpha test that keeps the brighter alpha (the client's 0xCF on leaves and
     // fences, no blending) becomes coverage - a soft edge instead of a step. World textures get anisotropy.
@@ -100,8 +94,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
     if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
-    // 1.10; 1.25.2: after the grass - drawn before it, the crowns' green grew blades and flowers of its own
-    if (!inner && !s.ui && s.blend && treesDue() && !applyTrees()) return;
     if (!inner && !s.ui && s.blend && forestDue() && !applyForest()) return;  // 2.0
     if (!inner && !s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
@@ -377,17 +369,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = waterTime();
     }
-    bool shells = false;  // 1.9.7: the crown's shells drawn after it
-    if (!treePass && !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7
+    if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7
         LeafLook look = leafLook();
-        look.shells = effects.fullCrowns;
         leafShading(rec, d, look, c);
         if (windShared()) c.uiPixels[3] *= (windScreenX < 0.0f ? -1.0f : 1.0f) * (0.4f + 0.6f * windNow.strength);
         if (effects.leafFall) noteCrown(rec, d);
-        shells = effects.fullCrowns && c.sourceRect[2] > c.sourceRect[0];  // 1.9.7
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
-    if (treePass) c.stage0[1] |= 1u << 29;  // 1.25.1: a bunch of the new trees, a round patch (shade())
     if (hilly) hillsConstants(c);  // 1.15
     if (sprite && !matTex && c.uiMode == 0) spriteConstants(c);  // 1.17
     if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())
@@ -469,20 +457,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             list->DrawInstanced(d.vertexCount, 1, 0, 0);
     };
     issue();
-    if (shells) {  // 1.9.7, full crowns: the crown again - larger, darker and behind, then smaller, lighter, in front
-        Constants k = c;
-        k.stage0[1] |= 1u << 25;
-        const float shell[2][5] = {{1.12f, 0.0012f, 0.7f, -0.03f, -0.05f}, {0.84f, -0.0006f, 1.1f, 0.04f, 0.07f}};
-        for (const float* sh : shell) {
-            k.reproject[6] = sh[0];
-            k.reproject[7] = sh[1];
-            k.reproject[8] = sh[2];
-            k.reproject[9] = sh[3];
-            k.reproject[10] = sh[4];
-            list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &k, 0);
-            issue();
-        }
-    }
 }
 
 // 1.7: the trees' settings for a draw of leaves (draw_constants.hpp leafShading).

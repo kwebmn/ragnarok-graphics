@@ -9,8 +9,8 @@ using E = EffectSettings;
 
 // Every switch of the Effects page: its group and the weakest set it is in. The weak set keeps what costs a card
 // little (no pass of its own over the picture); the medium adds the passes and the living world; the strong the
-// remaster's own world (materials, new trees, reflections, light). 0: the player's alone - old ways the new ones
-// replaced (full crowns), a look the player turned down (anime trees, film grain), night by the clock beside the day.
+// remaster's own world (materials, new trees, reflections, light). 0: the player's alone - a look the player turned
+// down (anime trees, film grain), night by the clock beside the day.
 const Member kMembers[] = {
     {"smooth_light", Light, 1, &E::smoothLight},
     {"torch", Light, 1, &E::torch},
@@ -57,7 +57,6 @@ const Member kMembers[] = {
     {"seasons", Nature, 3, &E::seasons},
     {"shared_wind", Nature, 3, &E::sharedWind},
     {"ground_clutter", Nature, 3, &E::groundClutter},
-    {"full_crowns", Nature, 0, &E::fullCrowns},
     {"anime_trees", Nature, 0, &E::animeTrees},
 
     {"water", Water, 1, &E::water},

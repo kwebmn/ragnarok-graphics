@@ -477,7 +477,6 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.materialsStrength = rd.i32();
             e.tier = rd.i32();
             e.groundSeams = rd.u8() != 0;  // 1.9
-            e.fullCrowns = rd.u8() != 0;  // 1.9.7
             e.groundClutter = rd.u8() != 0;  // 1.9.8
             e.newTrees = rd.u8() != 0;  // 1.10
             e.skyLight = rd.u8() != 0;  // 1.11

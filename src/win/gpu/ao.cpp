@@ -741,7 +741,6 @@ bool Renderer::Impl::finishWorld() {
     if (seamsDue() && !applySeams()) return false;            // 1.9
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
     if (grassDue() && !applyGrass()) return false;            // 0.81
-    if (treesDue() && !applyTrees()) return false;            // 1.10; 1.25.2: after the grass
     if (forestDue() && !applyForest()) return false;          // 2.0
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it

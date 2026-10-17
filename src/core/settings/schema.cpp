@@ -344,8 +344,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMaterialsStrengthHint, " %"},
         {"effects", "ground_seams", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroundSeams,
          Text::FxGroundSeamsHint, ""},
-        {"effects", "full_crowns", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFullCrowns,
-         Text::FxFullCrownsHint, ""},
         {"effects", "ground_clutter", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroundClutter,
          Text::FxGroundClutterHint, ""},
         {"effects", "new_trees", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNewTrees,
@@ -685,7 +683,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.materials") return c.effects.materials ? "1" : "0";
     if (k == "effects.materials_strength") return std::to_string(c.effects.materialsStrength);
     if (k == "effects.ground_seams") return c.effects.groundSeams ? "1" : "0";
-    if (k == "effects.full_crowns") return c.effects.fullCrowns ? "1" : "0";
     if (k == "effects.ground_clutter") return c.effects.groundClutter ? "1" : "0";
     if (k == "effects.new_trees") return c.effects.newTrees ? "1" : "0";
     if (k == "effects.sky_light") return c.effects.skyLight ? "1" : "0";
