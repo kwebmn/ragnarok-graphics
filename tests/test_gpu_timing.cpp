@@ -15,6 +15,7 @@ TEST(gpu_timing_goes_over_the_bridge_whole) {
     t.upscaler = "DLSS Quality";
     t.serial = 41;
     t.effects = {{"grass", 2.375}, {"new_trees", 0.125}};
+    t.safeShaders = 3;  // 2.2.2: compiled without their newest features in that process
     std::vector<uint8_t> bytes;
     bridge::WireWriter w(bytes);
     writeTiming(w, t);
@@ -23,6 +24,7 @@ TEST(gpu_timing_goes_over_the_bridge_whole) {
     CHECK(readTiming(rd, back));
     CHECK(back.gpuMs == 7.25 && back.upscaleMs == 2.5 && back.upscaler == "DLSS Quality" && back.serial == 41);
     CHECK(back.effects.size() == 2 && back.effects["grass"] == 2.375);
+    CHECK_EQ(back.safeShaders, 3);
     bridge::WireReader cut(bytes.data(), 6);  // cut short: nothing taken
     GpuTiming none;
     CHECK(!readTiming(cut, none) && none.gpuMs < 0.0);

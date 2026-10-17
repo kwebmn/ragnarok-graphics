@@ -72,6 +72,7 @@ void Context::noteUsage(bool foreground, long outWidth, long outHeight, const Gp
         m.vendor = s.vendor;
         m.vramMb = s.vramMb;
         m.level = s.cardLevel;
+        m.remote = renderer->remote();  // 2.2.2
         LARGE_INTEGER q;
         QueryPerformanceCounter(&q);
         usage_.begin(m, uint64_t(q.QuadPart) * 0x9e3779b97f4a7c15ull ^ (uint64_t(GetCurrentProcessId()) << 32) ^ now);
@@ -93,12 +94,16 @@ void Context::noteUsage(bool foreground, long outWidth, long outHeight, const Gp
         }
         u.aiKinds = enhanced_ ? aiKindsShown(config.aiNow) : 0;
         u.aiModel = config.ai.model + "/" + config.ai.spriteModel;
+        u.fpsLimit = config.fpsLimit;  // 2.2.2
+        u.vsync = config.vsync;
+        u.safe = usageSafe_;
         usageSetup_ = u;
     }
     double gpuMs = -1.0;
     if (gpu && gpu->serial != usageGpuSerial_) {
         usageGpuSerial_ = gpu->serial;
         gpuMs = gpu->gpuMs;
+        usageSafe_ = gpu->safeShaders > 0;
     }
     std::string lines;
     usage_.frame(seconds, outdoors(map_), gpuMs, usageSetup_, lines);

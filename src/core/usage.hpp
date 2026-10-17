@@ -17,7 +17,8 @@ struct Machine {  // the same all the game long
     std::string version, card, api;  // api: "d3d12", "d3d11"
     unsigned vendor = 0;
     unsigned long long vramMb = 0;
-    int level = 0;  // effect_groups::cardLevel
+    int level = 0;        // effect_groups::cardLevel
+    bool remote = false;  // 2.2.2: drawn by the 64-bit renderer (uaro-render64.exe)
 };
 
 struct Setup {  // what a stretch is played with
@@ -25,9 +26,14 @@ struct Setup {  // what a stretch is played with
     std::string dlss, preset, groups, effects;  // groups "light:1:100,..."; effects "torch,lamps,..." (on)
     int aiKinds = 0;  // aiKindsShown's bits
     std::string aiModel;
+    // 2.2.2: [frames] fps_limit and vsync (the frames a second say little without them); the shaders compiled
+    // without their newest features (UAGFX_SAFE: the player's compiler would not take them)
+    int fpsLimit = 0;
+    bool vsync = false, safe = false;
     bool operator==(const Setup& o) const {
         return game == o.game && output == o.output && dlss == o.dlss && preset == o.preset && groups == o.groups &&
-               effects == o.effects && aiKinds == o.aiKinds && aiModel == o.aiModel;
+               effects == o.effects && aiKinds == o.aiKinds && aiModel == o.aiModel && fpsLimit == o.fpsLimit &&
+               vsync == o.vsync && safe == o.safe;
     }
     bool operator!=(const Setup& o) const { return !(*this == o); }
 };
@@ -46,8 +52,10 @@ public:
 
 private:
     void line(std::string& out);
+    std::string head(const char* kind);  // {"t":kind,"sid":...,"n":... - each line its number in the game
     Machine machine_;
     std::string session_;
+    unsigned lines_ = 0;
     Setup setup_;
     bool begun_ = false, open_ = false;
     double minutes_ = 0.0, outdoor_ = 0.0, frames_ = 0.0, gpuSum_ = 0.0, total_ = 0.0;

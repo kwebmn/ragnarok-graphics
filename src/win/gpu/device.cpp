@@ -1577,10 +1577,15 @@ bool Renderer::effectCosts(effect_costs::Costs& out) const {
 }
 
 bool Renderer::gpuTiming(GpuTiming& out) const {
-    if (remote_) return remote_->timing(out);
-    if (d3d11_) return d3d11_->timing(out);
+    if (remote_) return remote_->timing(out);  // the 64-bit renderer's own count of safe shaders with it
+    if (d3d11_) {
+        const bool known = d3d11_->timing(out);
+        out.safeShaders = safeShaderCount();  // 2.2.2
+        return known;
+    }
     if (remix_ || !impl_) return false;
     out = impl_->recent;
+    out.safeShaders = safeShaderCount();
     return out.gpuMs >= 0.0;
 }
 

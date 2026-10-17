@@ -4,6 +4,7 @@
 #include <d3dcompiler.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <fstream>
 
@@ -74,8 +75,10 @@ void keepShaders(const std::string& file, const std::vector<uint8_t>& bytes) {
 bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& out,
              std::string& error) {
     for (const shader_cache::Shader& s : store.kept) {
-        if (s.entry != entry || s.profile != profile || FAILED(store.createBlob(s.code.size(), &out))) continue;
+        bool safe = false;
+        if (!shader_cache::matches(s, entry, profile, safe) || FAILED(store.createBlob(s.code.size(), &out))) continue;
         std::memcpy(out->GetBufferPointer(), s.code.data(), s.code.size());
+        if (safe) noteSafeShader();
         store.made.push_back(s);
         ++store.reused;
         store.told(true);
@@ -90,7 +93,8 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
                                     D3DCOMPILE_SKIP_OPTIMIZATION, D3DCOMPILE_OPTIMIZATION_LEVEL1};
     static const D3D_SHADER_MACRO kSafe[2] = {{"UAGFX_SAFE", "1"}, {nullptr, nullptr}};
     HRESULT hr = E_FAIL;
-    std::string said;  // what the compiler said the first time
+    std::string said;    // what the compiler said the first time
+    bool safe = false;   // 2.2.2: made on the last try, without the newest features
     for (int i = 0; i < 4 && FAILED(hr); ++i) {
         ID3DBlob* errors = nullptr;
         out = nullptr;
@@ -101,16 +105,20 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
                           : std::string("compile failed");
             error = std::string("shader ") + entry + ": " + said;
         }
-        if (SUCCEEDED(hr) && i == 3)
+        if (SUCCEEDED(hr) && i == 3) {
             LOG_ERROR("shader %s: compiled without the newest features (soft effects, ground relief) - %s", entry,
                       errorLine(said).c_str());
+            safe = true;
+            noteSafeShader();
+        }
         else if (SUCCEEDED(hr) && i > 0)  // 0.39.3: a line of it is enough then
             LOG_INFO("shader %s: compiled with less optimisation - %s", entry, errorLine(said).c_str());
         releaseCom(errors);
     }
     if (FAILED(hr)) return false;
     const auto* code = static_cast<const uint8_t*>(out->GetBufferPointer());
-    store.made.push_back({entry, profile, std::vector<uint8_t>(code, code + out->GetBufferSize())});
+    store.made.push_back({entry, shader_cache::profileOf(profile, safe),
+                          std::vector<uint8_t>(code, code + out->GetBufferSize())});
     ++store.compiled;
     store.told(false);
     return true;
@@ -153,7 +161,12 @@ uint64_t samplerKey(const StageSetup& s, int aniso) {
            uint64_t(aniso & 31) << 52;
 }
 
+std::atomic<int> g_safeShaders{0};
+
 }  // namespace
+
+int safeShaderCount() { return g_safeShaders.load(); }
+void noteSafeShader() { ++g_safeShaders; }
 
 bool Renderer::Impl::createPipelines(std::string& error) {
     compiler = LoadLibraryA("d3dcompiler_47.dll");

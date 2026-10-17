@@ -93,6 +93,7 @@ private:
     usage::Setup usageSetup_;
     ULONGLONG usageLast_ = 0, usageSetupAt_ = 0;
     uint32_t usageGpuSerial_ = 0;
+    bool usageSafe_ = false;  // 2.2.2: the drawing process made shaders without their newest features
     void noteUsage(bool foreground, long outWidth, long outHeight, const GpuTiming* gpu);
     void writeUsage(const std::string& lines);
     ToggleKey shotKey_;  // 0.54: Ctrl+Shift+F12 - a screenshot at the picture's full size

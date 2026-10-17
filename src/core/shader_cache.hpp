@@ -16,6 +16,12 @@ struct Shader {
 };
 
 uint64_t keyOf(const std::string& source);  // the source with the compiler's settings of this version
+
+// 2.2.2: a shader compiled without the newest features (UAGFX_SAFE: the player's compiler would not take them) is
+// kept with "+safe" after its profile, so that the next starts know it as well.
+std::string profileOf(const std::string& profile, bool safe);
+// Whether a kept shader is the one wanted (entry and profile); `safe`: compiled so.
+bool matches(const Shader& s, const std::string& entry, const std::string& profile, bool& safe);
 std::vector<uint8_t> pack(uint64_t key, const std::vector<Shader>& shaders);
 std::vector<Shader> unpack(uint64_t key, const std::vector<uint8_t>& file);
 

@@ -47,6 +47,14 @@ struct Reader {
 
 }  // namespace
 
+std::string profileOf(const std::string& profile, bool safe) { return safe ? profile + "+safe" : profile; }
+
+bool matches(const Shader& s, const std::string& entry, const std::string& profile, bool& safe) {
+    if (s.entry != entry) return false;
+    safe = s.profile == profile + "+safe";
+    return safe || s.profile == profile;
+}
+
 uint64_t keyOf(const std::string& source) {
     // With what else decides the code: the optimisation levels compile() tries in turn (0.39.2).
     static const char kSettings[] = "uaro-graphics shaders: optimisation 3, then 1, then none";

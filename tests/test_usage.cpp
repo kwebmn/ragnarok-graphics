@@ -114,3 +114,24 @@ TEST(usage_changes_leave_out_what_a_set_switches) {
     CHECK(has(own, "grass 1 -> 0") && has(own, "group_nature 1 -> 0") && has(own, "sharpen 50 -> 80"));
     CHECK_EQ(own.size(), size_t(3));
 }
+
+TEST(usage_lines_carry_the_renderer_and_the_frame_limit) {
+    // 2.2.2: whether the 64-bit renderer drew, the shaders without their newest features, the frame limit and vsync
+    // (frames a second mean nothing without them); each line its number in the game (the site keeps each once)
+    usage::Recorder r;
+    usage::Machine m;
+    m.remote = true;
+    r.begin(m, 1);
+    usage::Setup s;
+    s.fpsLimit = 60;
+    s.vsync = true;
+    s.safe = true;
+    std::string out;
+    r.change("grass 1 -> 0", out);
+    for (int i = 0; i < 600; ++i) r.frame(0.1, false, -1.0, s, out);  // a minute
+    r.close(out);
+    CHECK(out.find("\"t\":\"c\",\"sid\":\"0000000000000001\",\"n\":1,") != std::string::npos);
+    CHECK(out.find("\"t\":\"s\",\"sid\":\"0000000000000001\",\"n\":2,") != std::string::npos);
+    CHECK(out.find("\"remote\":1") != std::string::npos && out.find("\"safe\":1") != std::string::npos);
+    CHECK(out.find("\"limit\":60") != std::string::npos && out.find("\"vsync\":1") != std::string::npos);
+}

@@ -323,6 +323,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         const char* source;
         std::vector<uint8_t> code;
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
+        bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
     } wants[22] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
@@ -347,7 +348,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     int missing = 0;
     for (Want& w : wants) {
         for (const shader_cache::Shader& s : kept)
-            if (s.entry == w.entry && s.profile == w.profile) w.code = s.code;
+            if (shader_cache::matches(s, w.entry, w.profile, w.safe)) w.code = s.code;
+        if (!w.code.empty() && w.safe) noteSafeShader();  // 2.2.2: kept from a start that made it so
         missing += w.code.empty() ? 1 : 0;
     }
     if (sink) sink(sinkContext, start::Progress{missing ? start::Stage::ShadersBuild : start::Stage::ShadersLoad, 0,
@@ -377,8 +379,11 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                 ID3DBlob* errors = nullptr;
                 hr = compile(w.source, std::strlen(w.source), "uaro-graphics.hlsl", i == 3 ? kSafe : nullptr,
                              nullptr, w.entry, w.profile, kLevels[i], 0, &code, &errors);
-                if (SUCCEEDED(hr) && i == 3)
+                if (SUCCEEDED(hr) && i == 3) {
                     LOG_ERROR("Direct3D 11: shader %s compiled without the newest features", w.entry);
+                    w.safe = true;
+                    noteSafeShader();
+                }
                 if (FAILED(hr) && i == 0 && errors)
                     said = std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize());
                 if (SUCCEEDED(hr) && code) {
@@ -402,7 +407,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             if (sink) sink(sinkContext, start::Progress{start::Stage::ShadersBuild, ++done, missing});
         }
         std::vector<shader_cache::Shader> all;
-        for (const Want& w : wants) all.push_back({w.entry, w.profile, w.code});
+        for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
         const std::vector<uint8_t> bytes = shader_cache::pack(key, all);
         const std::string part = cacheFile + "." + std::to_string(GetCurrentProcessId()) + ".tmp";
         std::ofstream f(part, std::ios::binary | std::ios::trunc);

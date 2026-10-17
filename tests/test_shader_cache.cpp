@@ -58,3 +58,14 @@ TEST(shader_cache_uses_nothing_of_a_damaged_file) {
     CHECK(shader_cache::unpack(key, longer).empty());
     CHECK(shader_cache::unpack(key, {}).empty());
 }
+
+TEST(shader_cache_keeps_whether_a_shader_lost_its_newest_features) {
+    // 2.2.2: a shader compiled with UAGFX_SAFE is kept so - the next starts know it too (the statistics count them)
+    const uagfx::shader_cache::Shader plain{"draw_ps", uagfx::shader_cache::profileOf("ps_5_0", false), {1}};
+    const uagfx::shader_cache::Shader safe{"draw_ps", uagfx::shader_cache::profileOf("ps_5_0", true), {2}};
+    bool lost = true;
+    CHECK(uagfx::shader_cache::matches(plain, "draw_ps", "ps_5_0", lost) && !lost);
+    CHECK(uagfx::shader_cache::matches(safe, "draw_ps", "ps_5_0", lost) && lost);
+    CHECK(!uagfx::shader_cache::matches(safe, "draw_ps", "vs_5_0", lost));
+    CHECK(!uagfx::shader_cache::matches(plain, "glow_ps", "ps_5_0", lost));
+}

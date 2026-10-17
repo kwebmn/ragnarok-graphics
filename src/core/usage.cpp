@@ -62,6 +62,12 @@ void Recorder::begin(const Machine& m, uint64_t session) {
     begun_ = true;
     open_ = false;
     total_ = 0.0;
+    lines_ = 0;
+}
+
+std::string Recorder::head(const char* kind) {
+    return std::string("{\"t\":\"") + kind + "\",\"sid\":" + jsonString(session_) +
+           ",\"n\":" + std::to_string(++lines_);
 }
 
 void Recorder::frame(double seconds, bool outdoors, double gpuMs, const Setup& s, std::string& out) {
@@ -87,7 +93,7 @@ void Recorder::change(const std::string& what, std::string& out) {
     if (!begun_) return;
     char at[32];
     std::snprintf(at, sizeof at, "%.2f", total_);
-    out += "{\"t\":\"c\",\"sid\":" + jsonString(session_) + ",\"at\":" + at + ",\"what\":" + jsonString(what) + "}\n";
+    out += head("c") + ",\"at\":" + at + ",\"what\":" + jsonString(what) + "}\n";
 }
 
 void Recorder::close(std::string& out) {
@@ -101,10 +107,13 @@ void Recorder::line(std::string& out) {
     std::snprintf(numbers, sizeof numbers, "\"min\":%.2f,\"outdoor\":%.2f,\"fps\":%.1f,\"gpu\":%.2f", minutes_,
                   outdoor_, minutes_ > 0.0 ? frames_ / (minutes_ * 60.0) : 0.0,
                   gpuCount_ ? gpuSum_ / gpuCount_ : -1.0);
-    char machine[96];
-    std::snprintf(machine, sizeof machine, "\"vendor\":%u,\"vram\":%llu,\"level\":%d,\"ai\":%d", machine_.vendor,
-                  machine_.vramMb, machine_.level, setup_.aiKinds);
-    out += "{\"t\":\"s\",\"sid\":" + jsonString(session_) + ",\"v\":" + jsonString(machine_.version) +
+    char machine[160];
+    std::snprintf(machine, sizeof machine,
+                  "\"vendor\":%u,\"vram\":%llu,\"level\":%d,\"ai\":%d,\"remote\":%d,\"safe\":%d,\"limit\":%d,"
+                  "\"vsync\":%d",
+                  machine_.vendor, machine_.vramMb, machine_.level, setup_.aiKinds, machine_.remote ? 1 : 0,
+                  setup_.safe ? 1 : 0, setup_.fpsLimit, setup_.vsync ? 1 : 0);
+    out += head("s") + ",\"v\":" + jsonString(machine_.version) +
            ",\"card\":" + jsonString(machine_.card) + ",\"api\":" + jsonString(machine_.api) + "," + machine +
            ",\"game\":" + jsonString(setup_.game) + ",\"out\":" + jsonString(setup_.output) +
            ",\"dlss\":" + jsonString(setup_.dlss) + ",\"preset\":" + jsonString(setup_.preset) +

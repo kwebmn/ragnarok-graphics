@@ -7,6 +7,10 @@ namespace uagfx::gpu {
 // present_vs/present_ps scale the client's target into the window.
 const char* shaderSource();
 
+// 2.2.2: the shaders this process compiled (or took from its cache) without their newest features (UAGFX_SAFE).
+int safeShaderCount();
+void noteSafeShader();
+
 // The shaders' cbuffer Params as the renderers fill it: Direct3D 12's root constants, (0.46) Direct3D 11's constant
 // buffer (its size rounded up to 16 bytes).
 struct Constants {
