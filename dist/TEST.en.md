@@ -1,3 +1,14 @@
+# uaRO Graphics 1.25.1 — testing
+
+- **Important: since 1.15.0 the game's shader compiler stopped at one mistake of mine** (a name used twice in the
+  smooth hills' code) and built every shader without the newest features. So nothing new since 1.15 was really on:
+  smooth hills, world reflections, living characters, land past the edge, smooth models, seasons, the wind, dust in
+  the light, the windows, the trees' 1.24 look. Fixed; the check here now uses the game's compiler's old rules.
+  After the update all of them that are switched on work for the first time - look at each, and if something looks
+  wrong, turn it off in the console (~) and send a report.
+- **The new trees** no longer blink as the camera turns or the player walks: each crown is kept from frame to frame
+  with its own layout; the bunches are round leafy patches, not squares; their swaying a third of before.
+
 # uaRO Graphics 1.25.0 — testing
 
 By the screenshots of the reports:
