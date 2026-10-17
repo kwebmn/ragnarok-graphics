@@ -262,8 +262,7 @@ std::wstring Model::backupOnce(Lang l, bool prune) {
         list += utf8(saved) + "\t" + utf8(relative) + "\r\n";
         return true;
     };
-    bool ok = keep(L"uaro-graphics.ini", L"uaro-graphics.ini") && keep(L"dgVoodoo.conf", L"dgVoodoo.conf") &&
-              keep(L"dgvoodoo\\dgVoodoo.conf", L"dgvoodoo-dgVoodoo.conf");
+    bool ok = keep(L"uaro-graphics.ini", L"uaro-graphics.ini");  // 2.2: dgVoodoo's own settings no longer
     for (const ModuleFile& m : now_.modules)
         if (ok && m.iniExists) ok = keep(wide(m.info.ini), L"module-" + wide(m.info.ini));
     const GameKeyPaths k = gameKeyPaths();

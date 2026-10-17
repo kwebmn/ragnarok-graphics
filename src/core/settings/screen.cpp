@@ -132,7 +132,6 @@ ScreenNow currentScreen(bool regFullscreen, Size regSize, const Config& ini, con
     if (regFullscreen || borderless) {
         n.choice.show = Show::Fullscreen;
         n.choice.monitor = index;
-        n.choice.mode = regSize;
         n.choice.ui = regSize.width > 0 ? scaled(m.pixels.width, 100, regSize.width) : 100;
         return n;
     }

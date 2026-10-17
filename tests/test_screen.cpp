@@ -14,7 +14,6 @@ MonitorInfo fourK() {
     m.work = {3840, 2088};
     m.scale = 175;
     m.refresh = 120;
-    m.modes = {{3840, 2160}, {2560, 1440}, {1920, 1080}};
     return m;
 }
 
@@ -168,7 +167,6 @@ TEST(screen_now_reads_what_the_game_will_get) {
     const ScreenNow f = currentScreen(true, {2194, 1234}, defaults, {}, {fourK()});
     CHECK(f.choice.show == Show::Fullscreen);
     CHECK_EQ(f.choice.ui, 175);
-    CHECK(f.choice.mode == (Size{2194, 1234}));
     // Our window of 1920x1080 logical around a 1680x945 game.
     Config ours;
     ours.mode = DisplayMode::Window;

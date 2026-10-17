@@ -55,18 +55,6 @@ int monitorScale(HMONITOR m) {
     return MulDiv(int(x), 100, 96);
 }
 
-std::vector<Size> modesOf(const wchar_t* device) {
-    std::vector<Size> out;
-    DEVMODEW dm{};
-    dm.dmSize = sizeof dm;
-    for (DWORD i = 0; EnumDisplaySettingsExW(device, i, &dm, 0); ++i) {
-        const Size s{int(dm.dmPelsWidth), int(dm.dmPelsHeight)};
-        if (dm.dmBitsPerPel == 32 && std::find(out.begin(), out.end(), s) == out.end()) out.push_back(s);
-    }
-    std::sort(out.begin(), out.end(),
-              [](Size a, Size b) { return long(a.width) * a.height > long(b.width) * b.height; });
-    return out;
-}
 
 // From DXGI: the monitors whose output shows the HDR10 colour space (HDR on, Windows 10 1703 and newer) and the
 // main adapter's driver version.
@@ -224,7 +212,6 @@ SystemInfo probeSystem() {
         m.work = {f.info.rcWork.right - f.info.rcWork.left, f.info.rcWork.bottom - f.info.rcWork.top};
         m.scale = monitorScale(f.handle);
         m.hdr = std::find(hdr.begin(), hdr.end(), f.handle) != hdr.end();
-        m.modes = modesOf(f.info.szDevice);
         s.monitors.push_back(m);
     }
     s.frame = gameFrame();

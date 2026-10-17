@@ -20,7 +20,6 @@ struct MonitorInfo {
     int scale = 100;          // d: Windows scaling, %
     int refresh = 0;          // Hz
     bool hdr = false;
-    std::vector<Size> modes;  // its real 32-bit modes, largest first (dgVoodoo's full screen)
 };
 
 enum class Show { Fullscreen, Window };
@@ -31,9 +30,8 @@ struct ScreenChoice {
     int monitor = 0;  // index as the driver numbers them
     int ui = 100;     // u, %
     Size window;      // W, real pixels (in a window)
-    Size mode;        // dgVoodoo's full screen: the monitor mode picked, which is L
     bool operator==(const ScreenChoice& o) const {
-        return show == o.show && monitor == o.monitor && ui == o.ui && window == o.window && mode == o.mode;
+        return show == o.show && monitor == o.monitor && ui == o.ui && window == o.window;
     }
 };
 

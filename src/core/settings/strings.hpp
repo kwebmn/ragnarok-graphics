@@ -23,10 +23,10 @@ enum class Text : uint16_t {
     Apply, ApplyAndPlay, Revert, Close,
     StatusRunning, StatusClosed, StatusPending, StatusApplied, ElevatedBanner,
     AfterRestart, LiveNote, LiveNoteRunning, AskUnsaved,
-    RenderHeading, RenderUaro, RenderDgVoodoo, RenderUaroHint, RenderDgVoodooHint, RenderNeedsWindows10,
-    RenderNoD3D12, InstalledOurs, InstalledNoDriver, DgVoodooFound, DgVoodooMissing, PauseNote,
+    RenderHeading, RenderNeedsWindows10,
+    RenderNoD3D12, InstalledOurs, InstalledNoDriver, PauseNote,
     ScreenShow, ScreenFullscreen, ScreenWindow, ScreenMonitor, MonitorItem, MonitorMain, ScreenUi, ScreenUiHint,
-    ScreenUiExact, ScreenUiDgVoodoo, ScreenMode, ScreenModeHint, ScreenWindowSize, ScreenWindowSizeHint, WindowItem,
+    ScreenUiExact, ScreenWindowSize, ScreenWindowSizeHint, WindowItem,
     ScreenResult, ScreenCrispest, ScreenTooBig, ScreenTooSmall, ScreenBadNumber, ScreenNowWindow,
     ScreenNowFullscreen, ScreenSetupDiffers, ShowWindowWord, ShowFullscreenWord, ScreenAsSetup, ScreenRoext,
     ScreenFirstRun, ScreenAltTab,
@@ -38,7 +38,7 @@ enum class Text : uint16_t {
     DiagVerboseLogHint, DiagReportDone, DiagWindows, DiagWindowsValue, DiagWindowsOld, DiagGpu, DiagGpuValue,
     DiagD3D12, DiagD3D12Ok, DiagD3D12Failed, DiagMonitor, DiagMonitorValue, DiagMonitorWork, DiagMonitorWorkValue,
     Yes, No, DiagDdraw,
-    DiagDdrawOther, DiagDdrawNone, DiagDgVoodooOk, DiagDgVoodooMissing, DiagModuleRoext, DiagModuleOther,
+    DiagDdrawOther, DiagDdrawNone, DiagModuleRoext, DiagModuleOther,
     DiagModuleOff, DiagInput, DiagInputNone, DiagFolder, DiagFolderOk, DiagFolderReadOnly, DiagFolderProgramFiles,
     DiagApp, DiagElevated, DiagGame, DiagGameRunning, DiagGameClosed, DiagCompat, DiagCompatUser, DiagCompatAll,
     CompatRunAsAdmin, CompatOldWindows, CompatDpi, CompatColors, CompatOther, CompatAllUsersHint, DiagRegistry,
@@ -78,14 +78,14 @@ enum class Text : uint16_t {
     AiCacheAskDelete, AiCacheAskAll, AiCacheDeleted, AiCacheDeletedAll, AiCacheNothing, AiCacheError, SizeMb, SizeGb,
     AiIcons, AiIconsHint, AiCacheColIcons, AiUiPieces, AiUiPiecesHint, AiPlayers, AiPlayersHint, AiNpcs, AiNpcsHint,
     AiItems, AiItemsHint,
-    PageEffects, FxIntro, FxGlow, FxGlowHint, FxGlowStrength, FxGlowStrengthHint, FxGlowSize, FxGlowSizeHint,
+    PageEffects, FxGlow, FxGlowHint, FxGlowStrength, FxGlowStrengthHint, FxGlowSize, FxGlowSizeHint,
     FxWater, FxWaterHint, FxWaterWaves, FxWaterWavesHint, FxWaterReflections, FxWaterReflectionsHint, FxWaterClarity,
     FxWaterClarityHint, FxGlowLight, FxGlowLightHint, FxAo, FxAoHint, FxAoStrength, FxAoStrengthHint, FxAoSize,
     FxAoSizeHint, FxGrade, FxGradeHint, FxGradeSaturation, FxGradeSaturationHint, FxGradeContrast,
     FxGradeContrastHint, FxGradeBrightness, FxGradeBrightnessHint, FxGradeWarmth, FxGradeWarmthHint,
     FxGradeVignette, FxGradeVignetteHint, FxDof, FxDofHint, FxDofStrength, FxDofStrengthHint, FxDofRange,
     FxDofRangeHint, FxSmoothLight, FxSmoothLightHint, FxTorch, FxTorchHint, FxTorchGlow, FxTorchGlowHint, FxTorchLight,
-    FxTorchLightHint, FxTorchFlicker, FxTorchFlickerHint, FxObjects, FxObjectsIntro, FxTorchFlame, FxTorchFlameHint,
+    FxTorchLightHint, FxTorchFlicker, FxTorchFlickerHint, FxTorchFlame, FxTorchFlameHint,
     FxTorchBrightness, FxTorchBrightnessHint, FxSmoke, FxSmokeHint, FxSmokeDensity, FxSmokeDensityHint, FxLamps,
     FxLampsHint, FxLampsLight, FxLampsLightHint, FxFireLight, FxFireLightHint, FxFireLightStrength,
     FxFireLightStrengthHint, FxAura, FxAuraHint, FxAuraBrightness, FxAuraBrightnessHint,
@@ -102,7 +102,7 @@ enum class Text : uint16_t {
     PagePack, PackIntro, PackHas, PackNone, PackWhat, PackWorld, PackWorldHint, PackEffects, PackEffectsHint,
     PackMonsters, PackMonstersHint, PackPlayers, PackPlayersHint, PackNpcs, PackNpcsHint, PackItems, PackItemsHint,
     PackInterface, PackInterfaceHint, PackQuality, PackQualityHint, PackQualitySmall, PackQualityBalanced,
-    PackQualityLossless, PackNets, PackMake, PackStop, PackAnew, PackCopy, PackAskAnew, PackNoHost,
+    PackQualityLossless, PackMake, PackStop, PackAnew, PackCopy, PackAskAnew, PackNoHost,
     PackNothing, PackStarting, PackReading, PackBuilding, PackBuildingNoEta, PackFile, PackDone,
     PackStopped, PackFailed, PackGone, PackGameRunning, PackBackground, 
     TimeHoursMinutes, TimeMinutes, TimeSeconds,
@@ -159,8 +159,6 @@ enum class Text : uint16_t {
     SmoothTaa, SmoothTaaHint,
     // 0.76
     FramesKeepFps, FramesKeepFpsHint, FxCostMs,
-    // 0.77
-    FxSunShadows, FxSunShadowsHint, FxSunShadowsStrength, FxSunShadowsStrengthHint,
     // 0.78
     FxBloom, FxBloomHint, FxBloomStrength, FxBloomStrengthHint, FxFilmic, FxFilmicHint,
     // 0.79
@@ -218,7 +216,7 @@ enum class Text : uint16_t {
     AiPreviewOpen, AiPreviewWindowHint,  // 1.6.2
     AiSmall, AiSmallHint, AiSmallSide, AiSmallModel,  // 1.6.3
     // 1.7: the living world
-    FxLiving, FxLivingIntro, FxTreeVolume, FxTreeVolumeHint, FxLeafLight, FxLeafLightHint, FxTreeTints, FxTreeTintsHint,
+    FxTreeVolume, FxTreeVolumeHint, FxLeafLight, FxLeafLightHint, FxTreeTints, FxTreeTintsHint,
     FxGusts, FxGustsHint, FxDapple, FxDappleHint,
     // 1.7.1
     FxFlowers, FxFlowersHint, FxDew, FxDewHint, FxMorningFog, FxMorningFogHint, FxSandDrift, FxSandDriftHint,
@@ -230,24 +228,19 @@ enum class Text : uint16_t {
     FxBreath, FxBreathHint, FxSplashes, FxSplashesHint, FxCaveDrips, FxCaveDripsHint, FxUnderwater, FxUnderwaterHint,
     // 1.8
     FxMaterials, FxMaterialsHint, FxMaterialsStrength, FxMaterialsStrengthHint,
-    FxRemaster, FxRemasterIntro, FxTier, FxTierHint, FxTierAuto, FxTierClassic, FxTierRemaster,
+    FxTier, FxTierHint, FxTierAuto, FxTierClassic, FxTierRemaster,
     ReportShots, ReportShotsHint, ReportSentShots,
     // 1.9
     FxGroundSeams, FxGroundSeamsHint,
     ConsoleTitle, ConsoleKeys,
-    // 1.9.7
-    FxFullCrowns, FxFullCrownsHint,
     // 1.9.8
     FxGroundClutter, FxGroundClutterHint,
     // 1.10
     FxNewTrees, FxNewTreesHint,
     // 1.11
     FxSkyLight, FxSkyLightHint, FxBounceLight, FxBounceLightHint,
-    // 1.12
-    FxRealShadows, FxRealShadowsHint,
     // 1.13
     FxVolumetricFog, FxVolumetricFogHint, FxVolumetricFogDensity, FxVolumetricFogDensityHint,
-    FxBlockOn, FxBlockOff,
     // 1.15
     FxSmoothHills, FxSmoothHillsHint, FxSmoothHillsStrength, FxSmoothHillsStrengthHint,
     // 1.16
@@ -266,7 +259,6 @@ enum class Text : uint16_t {
     FxSharedWind, FxSharedWindHint,
     // 1.23
     FxLitDust, FxLitDustHint,
-    FxRecommended, FxRecommendedNote,
     // 2.0.3
     FxAnimeTrees, FxAnimeTreesHint,
     // 2.2: the Effects page's sets and groups

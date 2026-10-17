@@ -44,12 +44,6 @@ const Entry kTexts[] = {
     {"Some changes are not applied. Close without them?", "Деякі зміни не застосовано. Закрити без них?",
      "Часть изменений не применена. Закрыть без них?"},
     {"What draws the game", "Чим малювати гру", "Чем рисовать игру"},
-    {"uaRO Graphics (Direct3D 12)", "uaRO Graphics (Direct3D 12)", "uaRO Graphics (Direct3D 12)"},
-    {"dgVoodoo", "dgVoodoo", "dgVoodoo"},
-    {"Our renderer: the picture at the screen's real pixels, sharpening, crisp text. Needs Windows 10 or newer.",
-     "Наш рендер: картинка в справжніх точках екрана, різкість, чіткий текст. Потрібна Windows 10 або новіша.",
-     "Наш рендер: картинка в настоящих точках экрана, резкость, чёткий текст. Нужна Windows 10 или новее."},
-    {"As before: dgVoodoo draws the game.", "Як раніше: гру малює dgVoodoo.", "Как раньше: игру рисует dgVoodoo."},
     {"Our renderer is not available: it needs Windows 10 or newer.",
      "Наш рендер недоступний: потрібна Windows 10 або новіша.", "Наш рендер недоступен: нужна Windows 10 или новее."},
     {"Our renderer is not available: Direct3D 12 does not start ({1}).",
@@ -59,8 +53,6 @@ const Entry kTexts[] = {
     {"uaRO Graphics' ddraw.dll is not in the game folder: run install.bat.",
      "ddraw.dll uaRO Graphics немає в теці гри: запусти install.bat.",
      "ddraw.dll uaRO Graphics нет в папке игры: запусти install.bat."},
-    {"dgVoodoo is in the dgvoodoo folder.", "dgVoodoo — у теці dgvoodoo.", "dgVoodoo — в папке dgvoodoo."},
-    {"dgVoodoo is not in the dgvoodoo folder.", "dgVoodoo немає в теці dgvoodoo.", "dgVoodoo нет в папке dgvoodoo."},
     {"In the game, Pause (or Scroll Lock) switches every improvement off and on, to compare.",
      "У грі клавіша Pause (або Scroll Lock) вимикає й вмикає всі покращення — для порівняння.",
      "В игре клавиша Pause (или Scroll Lock) выключает и включает все улучшения — для сравнения."},
@@ -75,12 +67,6 @@ const Entry kTexts[] = {
      "Скільки точок екрана на одну точку гри. Більше — більший інтерфейс і менше видно світу.",
      "Сколько точек экрана на одну точку игры. Больше — крупнее интерфейс и меньше видно мира."},
     {"exactly, %", "точно, %", "точно, %"},
-    {"With dgVoodoo the interface size is Windows scaling ({1} %).",
-     "З dgVoodoo розмір інтерфейсу — це масштаб Windows ({1} %).",
-     "С dgVoodoo размер интерфейса — это масштаб Windows ({1} %)."},
-    {"Monitor mode", "Режим монітора", "Режим монитора"},
-    {"dgVoodoo may switch the monitor to this mode.", "dgVoodoo може перемкнути монітор у цей режим.",
-     "dgVoodoo может переключить монитор в этот режим."},
     {"Window size", "Розмір вікна", "Размер окна"},
     {"In the screen's real pixels; only sizes that fit the screen above the task bar.",
      "У справжніх точках екрана; лише ті, що вміщуються над панеллю завдань.",
@@ -186,9 +172,6 @@ const Entry kTexts[] = {
     {"not uaRO Graphics: run install.bat", "не uaRO Graphics: запусти install.bat",
      "не uaRO Graphics: запусти install.bat"},
     {"missing: run install.bat", "немає: запусти install.bat", "нет: запусти install.bat"},
-    {"in the dgvoodoo folder", "у теці dgvoodoo", "в папке dgvoodoo"},
-    {"not in the dgvoodoo folder: dgVoodoo will not start", "немає в теці dgvoodoo: dgVoodoo не запуститься",
-     "нет в папке dgvoodoo: dgVoodoo не запустится"},
     {"ROExt (reads {1})", "ROExt (читає {1})", "ROExt (читает {1})"},
     {"an unknown module", "невідомий модуль", "неизвестный модуль"},
     {" — off", " — вимкнено", " — отключён"},
@@ -674,14 +657,6 @@ const Entry kTexts[] = {
     {"What lies on the ground: drops, loot.", "Те, що лежить на землі: здобич, луп.",
      "То, что лежит на земле: добыча, лут."},
     {"Effects", "Ефекти", "Эффекты"},
-    {"Modern effects over the game's own picture. They work with the uaRO Graphics renderer (not with dgVoodoo or "
-     "RTX Remix) and apply at once, in a running game too. Pause or Scroll Lock in the game compares with the "
-     "original picture.",
-     "Сучасні ефекти поверх картинки самої гри. Працюють із рендером uaRO Graphics (не з dgVoodoo і не з RTX Remix) "
-     "і діють одразу, у запущеній грі теж. Pause або Scroll Lock у грі порівнює з оригінальною картинкою.",
-     "Современные эффекты поверх картинки самой игры. Работают с рендером uaRO Graphics (не с dgVoodoo и не с RTX "
-     "Remix) и действуют сразу, в запущенной игре тоже. Pause или Scroll Lock в игре сравнивает с исходной "
-     "картинкой."},
     {"Glow of effects", "Світіння ефектів", "Свечение эффектов"},
     {"Fire, lightning, the light of skills, portals and lamps shine with a soft halo, as in modern games. The rest "
      "of the picture keeps its brightness.",
@@ -807,13 +782,6 @@ const Entry kTexts[] = {
     {"How much the fire and its light flicker; 0 % burns evenly.",
      "Наскільки мерехтять вогонь і його світло; 0 % — горить рівно.",
      "Насколько мерцают огонь и его свет; 0 % — горит ровно."},
-    {"Map objects", "Об'єкти карти", "Объекты карты"},
-    {"Things on the maps the game draws as small pictures blown up many times: the driver draws them anew, each "
-     "with its own box. They apply in a running game; Pause shows the game's own.",
-     "Речі на картах, які гра малює маленькими картинками, розтягнутими в багато разів: драйвер малює їх наново, "
-     "кожну — своєю галочкою. Діють у запущеній грі; Pause показує ігрові.",
-     "Вещи на картах, которые игра рисует маленькими картинками, растянутыми во много раз: драйвер рисует их "
-     "заново, каждую — своей галочкой. Действуют в запущенной игре; Pause показывает игровые."},
     {"New flame", "Новий вогонь", "Новый огонь"},
     {"A flame that burns, sways and throws sparks instead of the game's blurred picture. Off: the game's own flame, "
      "with the new glow and light around it.",
@@ -1060,9 +1028,6 @@ const Entry kTexts[] = {
     {"Smaller file (85)", "Менший файл (85)", "Файл поменьше (85)"},
     {"Balanced (92)", "Збалансована (92)", "Сбалансированное (92)"},
     {"Lossless", "Без втрат", "Без потерь"},
-    {"The networks are the AI textures page's: {1} for the maps, {2} for the rest.",
-     "Нейромережі - зі сторінки ШІ-текстур: {1} для карт, {2} для решти.",
-     "Нейросети - со страницы ИИ-текстур: {1} для карт, {2} для остального."},
     {"Make the pack", "Створити пакет", "Создать пакет"},
     {"Stop", "Зупинити", "Остановить"},
     {"Make anew", "Створити заново", "Создать заново"},
@@ -1593,21 +1558,6 @@ const Entry kTexts[] = {
     {" · ~{1} ms",
      " · ~{1} мс",
      " · ~{1} мс"},
-    {"Shadows of houses and trees",
-     "Тіні будинків і дерев",
-     "Тени домов и деревьев"},
-    {"On the fields and in the towns houses, walls and trees cast shadows on the ground away from the sun; with "
-     "\"Time of day\" they turn and lengthen. Direct3D 12.",
-     "На полях і в містах будинки, стіни й дерева відкидають тіні на землю від сонця; із «Часом доби» вони "
-     "повертаються й видовжуються. Direct3D 12.",
-     "На полях и в городах дома, стены и деревья отбрасывают тени на землю от солнца; со «Временем суток» они "
-     "поворачиваются и удлиняются. Direct3D 12."},
-    {"Shadow darkness",
-     "Темрява тіней",
-     "Темнота теней"},
-    {"How dark the shadows are.",
-     "Наскільки темні тіні.",
-     "Насколько темны тени."},
     {"Bloom of bright places",
      "Сяйво яскравих місць",
      "Свечение ярких мест"},
@@ -2188,15 +2138,6 @@ const Entry kTexts[] = {
     {"Their model",
      "Їхня модель",
      "Их модель"},
-    {"Living world",
-     "Живий світ",
-     "Живой мир"},
-    {"Small living details of the maps: the trees, the grass, the water, creatures and particles. All of them off by "
-     "default; each costs little.",
-     "Дрібні живі деталі мап: дерева, трава, вода, створіння й частинки. Усе вимкнено за замовчуванням; кожна коштує "
-     "небагато.",
-     "Мелкие живые детали карт: деревья, трава, вода, существа и частицы. Всё выключено по умолчанию; каждая стоит "
-     "немного."},
     {"Rounded tree crowns",
      "Об'ємні крони дерев",
      "Объёмные кроны деревьев"},
@@ -2401,18 +2342,6 @@ const Entry kTexts[] = {
     {"How much the relief and the gloss show.",
      "Наскільки помітні рельєф і блиск.",
      "Насколько заметны рельеф и блеск."},
-    {"Remaster",
-     "Ремастер",
-     "Ремастер"},
-    {"The world made modern by the driver: materials now; a world of its own, new trees and light next. The mode "
-     "below chooses what a card can carry: Classic+ keeps the game's picture and adds what costs little, Remaster "
-     "asks for a strong card and goes further.",
-     "Світ, осучаснений драйвером: зараз матеріали; далі власний світ, нові дерева й світло. Режим нижче вибирає, що "
-     "потягне відеокарта: «Класика+» лишає картинку гри й додає недороге, «Ремастер» вимагає сильної відеокарти й іде "
-     "далі.",
-     "Мир, осовремененный драйвером: сейчас материалы; дальше собственный мир, новые деревья и свет. Режим ниже "
-     "выбирает, что потянет видеокарта: «Классика+» оставляет картинку игры и добавляет недорогое, «Ремастер» требует "
-     "сильной видеокарты и идёт дальше."},
     {"Mode",
      "Режим",
      "Режим"},
@@ -2464,16 +2393,6 @@ const Entry kTexts[] = {
      "лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc — закрити",
      "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение · зажмите Tab — сравнить · Ctrl+Shift+F11 — "
      "счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
-    {"Full tree crowns",
-     "Пишні крони",
-     "Пышные кроны"},
-    {"Each crown of leaves is drawn twice more - a little larger, darker and behind it, a little smaller and lighter "
-     "in front of it: the thin flat crowns of the old trees look dense and deep. The trees cost three times as much "
-     "to draw (Direct3D 12).",
-     "Кожна крона малюється ще двічі — трохи більша, темніша й позаду, трохи менша й світліша попереду: тонкі пласкі "
-     "крони старих дерев виглядають густими й глибокими. Дерева коштують утричі більше (Direct3D 12).",
-     "Каждая крона рисуется ещё дважды — чуть больше, темнее и позади, чуть меньше и светлее впереди: тонкие плоские "
-     "кроны старых деревьев выглядят густыми и глубокими. Деревья стоят втрое дороже (Direct3D 12)."},
     {"Pebbles on the ground",
      "Камінці на землі",
      "Камешки на земле"},
@@ -2516,18 +2435,6 @@ const Entry kTexts[] = {
      "карниз, пісок підсвічує камені поруч (Direct3D 12).",
      "Свет отражается между соседними поверхностями: трава подкрашивает низ стены зелёным, красная крыша согревает "
      "карниз, песок подсвечивает камни рядом (Direct3D 12)."},
-    {"Real sun shadows",
-     "Справжні тіні від сонця",
-     "Настоящие тени от солнца"},
-    {"Houses, walls, rocks and trees cast shadows as the sun really would: from a map of the world seen from the sun, "
-     "also what is off the screen, the crowns' shadows dappled through the leaves. Their darkness is the Shadows of "
-     "houses and trees slider's. Remaster mode only (Direct3D 12).",
-     "Будинки, стіни, скелі й дерева кидають тіні так, як кидало б справжнє сонце: за мапою світу, видимого з сонця, "
-     "зокрема того, що поза екраном, тіні крон — плямисті крізь листя. Темнота — з повзунка «Тіні будинків і дерев». "
-     "Лише в режимі «Ремастер» (Direct3D 12).",
-     "Дома, стены, скалы и деревья отбрасывают тени так, как отбрасывало бы настоящее солнце: по карте мира, видимого "
-     "с солнца, в том числе того, что за экраном, тени крон — пятнистые сквозь листву. Темнота — с ползунка «Тени "
-     "домов и деревьев». Только в режиме «Ремастер» (Direct3D 12)."},
     {"Volumetric fog",
      "Об'ємний туман",
      "Объёмный туман"},
@@ -2543,12 +2450,6 @@ const Entry kTexts[] = {
     {"How thick the fog is.",
      "Наскільки густий туман.",
      "Насколько густой туман."},
-    {"Turn all of these on",
-     "Увімкнути все тут",
-     "Включить всё здесь"},
-    {"Turn all of these off",
-     "Вимкнути все тут",
-     "Выключить всё здесь"},
     {"Smooth hills",
      "Плавні пагорби",
      "Плавные холмы"},
@@ -2658,21 +2559,6 @@ const Entry kTexts[] = {
      "кольорі цього світла, а в темних кутах ледь-ледь. Потрібні «Порошинки в повітрі» (Direct3D 12).",
      "В помещениях и подземельях пыль в воздухе видна там, где падает свет, — в лучах из окон, у факелов, — в цвете "
      "этого света, а в тёмных углах едва-едва. Нужны «Частицы в воздухе» (Direct3D 12)."},
-    {"Recommended for a strong card",
-     "Рекомендоване для сильної відеокарти",
-     "Рекомендуемое для сильной видеокарты"},
-    {"One click turns on what gives the picture depth without overdoing it: Materials of the world (stones and roof "
-     "tiles in relief), soft shadows in the corners, the real and the screen's sun shadows, rounded tree crowns, the "
-     "sky and the land past the map's edge, smooth hills, living characters, filmic tones (the bright stays bright, "
-     "no white burnt out); the far blur and the colours a little calmer. Everything else stays as you set it.",
-     "Одне натискання вмикає те, що дає картинці глибину без перебору: «Матеріали світу» (рельєф каменю й черепиці), "
-     "м'які тіні в кутах, справжні й екранні тіні від сонця, об'ємні крони, небо й землю за краєм карти, плавні "
-     "пагорби, живих персонажів, плівкові тони (яскраве лишається яскравим, біле не вигорає); розмиття вдалині й "
-     "кольори трохи спокійніші. Решта лишається, як ви налаштували.",
-     "Одно нажатие включает то, что даёт картинке глубину без перебора: «Материалы мира» (рельеф камня и черепицы), "
-     "мягкие тени в углах, настоящие и экранные тени от солнца, объёмные кроны, небо и землю за краем карты, плавные "
-     "холмы, живых персонажей, плёночные тона (яркое остаётся ярким, белое не выгорает); размытие вдали и цвета чуть "
-     "спокойнее. Остальное остаётся, как вы настроили."},
     {"Anime-style trees",
      "Дерева в стилі аніме",
      "Деревья в стиле аниме"},

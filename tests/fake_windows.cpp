@@ -40,7 +40,6 @@ Windows& reset() {
     m.work = {3840, 2076};
     m.scale = 175;
     m.refresh = 60;
-    m.modes = {{3840, 2160}, {2560, 1440}, {1920, 1080}, {1280, 720}};
     w.system.monitors = {m};
     w.system.windows = {10, 0, 19045};
     w.system.d3d12Probed = true;

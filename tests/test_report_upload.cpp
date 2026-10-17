@@ -84,6 +84,6 @@ TEST(report_upload_tells_what_went_wrong_from_the_log) {
 TEST(report_upload_tells_the_api_from_the_log) {
     CHECK(apiOfLog("INFO  Direct3D 11 renderer on NVIDIA\n") == "d3d11");
     CHECK(apiOfLog("Direct3D 11 renderer on A\nDirect3D 12 renderer on A\n") == "d3d12");  // the last start
-    CHECK(apiOfLog("INFO  DirectDrawCreateEx = 0x00000000\n") == "dgvoodoo");
+    CHECK(apiOfLog("INFO  DirectDrawCreateEx = 0x00000000\n") == "system");  // 2.2: passed to the system's DirectDraw
     CHECK(apiOfLog("").empty());
 }

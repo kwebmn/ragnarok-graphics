@@ -41,7 +41,8 @@ bool codeOf(const std::string& answer, std::string& code);
 // start), "gpu-lost" (the graphics card was lost), "crash" (the renderer ran and the game ended without closing it),
 // "" when nothing did.
 std::string reasonOfLog(const std::string& log);
-// The graphics API the game's last start drew with, from its log: "d3d12", "d3d11", "dgvoodoo", "" unknown.
+// The graphics API the game's last start drew with, from its log: "d3d12", "d3d11", "system" (the system's
+// DirectDraw: the renderer could not start), "" unknown.
 std::string apiOfLog(const std::string& log);
 
 }  // namespace uagfx::report

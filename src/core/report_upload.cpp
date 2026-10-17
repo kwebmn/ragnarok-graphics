@@ -167,7 +167,7 @@ std::string apiOfLog(const std::string& log) {
     const size_t d12 = log.rfind("Direct3D 12 renderer on"), d11 = log.rfind("Direct3D 11 renderer on");
     if (d12 != std::string::npos || d11 != std::string::npos)
         return d11 == std::string::npos || (d12 != std::string::npos && d12 > d11) ? "d3d12" : "d3d11";
-    return log.find("DirectDrawCreateEx = ") != std::string::npos ? "dgvoodoo" : "";
+    return log.find("DirectDrawCreateEx = ") != std::string::npos ? "system" : "";  // 2.2: no dgVoodoo any more
 }
 
 }  // namespace uagfx::report
