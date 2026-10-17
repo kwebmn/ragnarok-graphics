@@ -217,9 +217,9 @@ void Context::flush() {
     // wisps keep to their places in the world with it; 0.25, 0.28: the map file's lamps and fireflies stand in it.
     // 0.46.1: Direct3D 11 draws none of them.
     const EffectSettings& fx = config.effects;
-    const bool world = fx.water || fx.torch || fx.smoke || fx.lamps || fx.fireflies || fx.mapGlows || fx.rays ||
-                       fx.lava || fx.actorShadows || fx.clouds || fx.haze || fx.heat || fx.portals || fx.weather ||
-                       fx.dof;  // 1.4.2: the depth of field's focus on the character
+    // 1.8.4: every effect the renderer draws itself - the grass, the living world, the materials... need the camera
+    // too (only the older ones were listed: alone, the newer ones went without it)
+    const bool world = drawnByRenderer(fx) || fx.dof;  // 1.4.2: the depth of field's focus on the character
     if (renderer->remix() || (enhanced_ && world && !renderer->d3d11())) {
         float view[12];
         float targetZ = 0;
