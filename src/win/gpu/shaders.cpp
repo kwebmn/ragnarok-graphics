@@ -1557,7 +1557,9 @@ float4 grass_ps(PresentOut i) : SV_Target {
     // 1.7: the way the steps near here push the blades, along the screen (the view's x axis in the world: r0-r2).
     // 1.8.3: the wind's sway and the gusts by the place in the world under the pixel, not by the pixel - by the
     // pixel the waves moved over the grass with the camera as one walked.
-    float lean = 0.0, swayPhase = 0.0, gust = 0.0;
+    // 1.9.9: how far the steps trod the grass down here, once a pixel (until 1.9.8 for every root it looked at: up
+    // to 28 roots times 64 steps a pixel - the costliest effect, 1.3-3.2 ms at 4K)
+    float lean = 0.0, swayPhase = 0.0, gust = 0.0, trod = 1.0;
     if (here < 0.99999) {
         float3 hv = viewAt(wp);
         float3 hw = hv.x * float3(r0, r1, r2) + hv.y * float3(r3, r4, r5) + hv.z * float3(r6, r7, r8) +
@@ -1573,6 +1575,7 @@ float4 grass_ps(PresentOut i) : SV_Target {
             float2 d = hw.xz - st.xz;
             float dd = dot(d, d);
             if (dd < 12.0 && dd > 1e-4) push += d * rsqrt(dd) * (1.0 - age) * (1.0 - dd / 12.0);
+            trod *= lerp(1.0, saturate(dd / 9.0), 1.0 - age);
         }
         lean = clamp(dot(float3(push.x, 0.0, push.y), float3(r0, r1, r2)), -1.0, 1.0);
     }
@@ -1598,12 +1601,7 @@ float4 grass_ps(PresentOut i) : SV_Target {
         float height = (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0);
         bool head = flower && up > height * 0.78;
         if (dot(at, at) > (head ? 0.2 : 0.05)) continue;
-        [loop] for (int s = 0; s < count; ++s) {  // trodden down
-            float4 st = tex1.Load(int3(2 * s, 0, 0));
-            float age = tex1.Load(int3(2 * s + 1, 0, 0)).x;
-            float2 d = w.xz - st.xz;
-            height *= lerp(1.0, saturate(dot(d, d) / 9.0), 1.0 - age);
-        }
+        height *= trod;  // trodden down
         if (up > height) continue;
         float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3)) * (1.0 + 0.2 * gust * up);
         if (head) colour = flowerColour(hash12(id + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * rc.g);
