@@ -11,7 +11,6 @@ using namespace settings;
 constexpr int kFullscreen = 1201;
 constexpr int kWindow = 1202;
 constexpr int kMonitor = 1203;
-constexpr int kMode = 1204;
 constexpr int kUi = 1205;
 constexpr int kUiExact = 1206;
 constexpr int kSize = 1207;
@@ -29,11 +28,10 @@ public:
         Model& m = host_.model();
         const std::vector<MonitorInfo>& monitors = m.system().monitors;
         const ScreenChoice c = m.screenChoice();
-        const bool uaro = m.backend() == Backend::Uaro;
         p.heading(t(Text::PageScreen));
         if (!gameKeyExists(m.now().registry)) p.note(t(Text::ScreenFirstRun), Tone::Warn);
         if (monitors.empty()) return;
-        const int index = uaro && c.monitor >= 0 && size_t(c.monitor) < monitors.size() ? c.monitor : 0;
+        const int index = c.monitor >= 0 && size_t(c.monitor) < monitors.size() ? c.monitor : 0;
         const MonitorInfo& mon = monitors[size_t(index)];
         // ROExt sizes the window, and its ini is written only while the game is closed (spec §4.1): until then what
         // changes the window is grey (0.6.0 review M4). The full screen never needs it (0.6.1 minor 6).
@@ -49,21 +47,11 @@ public:
             items.push_back(tf(Text::MonitorItem, {num(long(i) + 1), num(monitors[i].pixels.width),
                                                    num(monitors[i].pixels.height), num(monitors[i].scale)}) +
                             (monitors[i].primary ? t(Text::MonitorMain) : L""));
-        p.choice(kMonitor, t(Text::ScreenMonitor), items, index, L"", uaro && monitors.size() > 1 && open);
+        p.choice(kMonitor, t(Text::ScreenMonitor), items, index, L"", monitors.size() > 1 && open);
 
-        if (c.show == Show::Fullscreen && !uaro) {
-            modes_ = mon.modes;
-            const Size current = c.mode.width > 0 ? c.mode : mon.pixels;
-            if (std::find(modes_.begin(), modes_.end(), current) == modes_.end()) modes_.insert(modes_.begin(), current);
-            items.clear();
-            for (Size s : modes_) items.push_back(wide(sizeText(s)));
-            p.choice(kMode, t(Text::ScreenMode), items,
-                     int(std::find(modes_.begin(), modes_.end(), current) - modes_.begin()), t(Text::ScreenModeHint),
-                     open);
-        } else {
+        {
             uis_ = uiSteps();
-            const bool fixed = !uaro;  // dgVoodoo in a window: Windows scaling
-            const int ui = fixed ? mon.scale : c.ui;
+            const int ui = c.ui;
             if (std::find(uis_.begin(), uis_.end(), ui) == uis_.end()) {
                 uis_.push_back(ui);
                 std::sort(uis_.begin(), uis_.end());
@@ -72,17 +60,14 @@ public:
             for (int u : uis_)  // 0.41: x2, x3 - each game pixel a whole square of the screen's
                 items.push_back(wide(num(u) + " %") + (u % 100 == 0 && u >= 200 ? t(Text::ScreenCrispest) : L""));
             p.choice(kUi, t(Text::ScreenUi), items, int(std::find(uis_.begin(), uis_.end(), ui) - uis_.begin()),
-                     t(Text::ScreenUiHint), !fixed && open);
-            if (fixed)
-                p.note(tf(Text::ScreenUiDgVoodoo, {num(mon.scale)}));
-            else
-                p.number(kUiExact, t(Text::ScreenUiExact), wide(num(c.ui)), t(Text::ScreenUiHint), open);
+                     t(Text::ScreenUiHint), open);
+            p.number(kUiExact, t(Text::ScreenUiExact), wide(num(c.ui)), t(Text::ScreenUiHint), open);
         }
         if (c.show == Show::Window) {
             sizes_ = windowSizes(mon, m.system().frame);
             if (c.window.width > 0 && std::find(sizes_.begin(), sizes_.end(), c.window) == sizes_.end())
                 sizes_.push_back(c.window);
-            const int ui = uaro ? c.ui : mon.scale;
+            const int ui = c.ui;
             items.clear();
             int selected = -1;
             for (size_t i = 0; i < sizes_.size(); ++i) {
@@ -149,8 +134,6 @@ public:
             const std::vector<Size> fit = windowSizes(monitors[size_t(sel)], m.system().frame);
             if (c.show == Show::Window && std::find(fit.begin(), fit.end(), c.window) == fit.end())
                 c.window = defaultWindow(monitors[size_t(sel)], m.system().frame);
-        } else if (id == kMode && picked && sel >= 0 && size_t(sel) < modes_.size()) {
-            c.mode = modes_[size_t(sel)];
         } else if (id == kUi && picked && sel >= 0 && size_t(sel) < uis_.size()) {
             c.ui = uis_[size_t(sel)];
         } else if (id == kUiExact && code == EN_KILLFOCUS) {
@@ -194,7 +177,6 @@ private:
 
     std::vector<int> uis_;
     std::vector<Size> sizes_;
-    std::vector<Size> modes_;
 };
 
 }  // namespace

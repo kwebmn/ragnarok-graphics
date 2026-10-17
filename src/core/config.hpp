@@ -7,7 +7,6 @@
 namespace uagfx {
 
 enum class LogLevel { Error = 0, Info = 1, Debug = 2 };
-enum class Backend { DgVoodoo, Uaro };          // [renderer] backend
 // [renderer] api (0.46): Direct3D 12, Direct3D 11 (graphics cards without Direct3D 12), or 12 and else 11.
 enum class Api { D3d12, D3d11, Auto };
 // [display] mode. Auto follows the game: a windowed game keeps its window (ROExt sizes it), full screen becomes
@@ -403,7 +402,6 @@ struct SoundSettings {
 };
 
 struct Config {
-    Backend backend = Backend::DgVoodoo;
     Api api = Api::D3d12;
     // Part 3 (test): [renderer] bridge = 1 draws in the 64-bit process uaro-render64.exe; bridge_present = auto,
     // window or composition (how its picture reaches the game's window); bridge_dpi_scale = 1 scales a composition
@@ -475,7 +473,6 @@ struct Config {
 };
 
 Config parseConfig(const std::string& text);
-const char* backendToken(Backend b);
 const char* apiToken(Api a);
 const char* displayModeToken(DisplayMode m);
 const char* uiFilterToken(UiFilter f);

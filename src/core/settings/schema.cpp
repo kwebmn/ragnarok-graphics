@@ -29,8 +29,6 @@ Text pageName(Page p) {
 
 const std::vector<IniSetting>& iniSettings() {
     static const std::vector<IniSetting> list{
-        {"renderer", "backend", Page::Render, Control::Choice, 0, 0, 0, {"uaro", "dgvoodoo"},
-         {Text::RenderUaro, Text::RenderDgVoodoo}, Text::RenderHeading, Text::RenderUaroHint, ""},
         {"renderer", "api", Page::Render, Control::Choice, 0, 0, 0, {"d3d12", "d3d11", "auto"},
          {Text::RenderApiD3d12, Text::RenderApiD3d11, Text::RenderApiAuto}, Text::RenderApi, Text::RenderApiHint, ""},
         // 0.50.2: a card's name as the Renderer page lists them, or auto (a list of its own there, not a text field)
@@ -480,7 +478,6 @@ std::string sectionKey(const IniSetting& s) { return std::string(s.section) + ".
 
 std::string tokenOf(const IniSetting& s, const Config& c) {
     const std::string k = sectionKey(s);
-    if (k == "renderer.backend") return backendToken(c.backend);
     if (k == "renderer.api") return apiToken(c.api);
     if (k == "renderer.gpu") return c.gpu.empty() ? "auto" : c.gpu;
     if (k == "report.auto") return c.reportAuto ? "1" : "0";

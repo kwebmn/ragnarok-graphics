@@ -50,7 +50,6 @@ TEST(model_reads_the_client_folder_and_the_game_key) {
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
     CHECK_EQ(m.token(setting("quality.sharpen")), std::string("70"));
-    CHECK(m.backend() == Backend::Uaro);
     CHECK_EQ(m.pendingCount(), size_t(0));
     CHECK(m.screenNow().game == (Size{1920, 1080}));
     CHECK(m.screenNow().choice.window == (Size{3360, 1890}));
@@ -102,10 +101,10 @@ TEST(model_apply_keeps_what_was_written_to_the_ini_meanwhile) {
     w.files[ini] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 50\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
-    w.files[ini] = "[renderer]\r\nbackend = dgvoodoo\r\n[quality]\r\nsharpen = 50\r\n";  // use-dgvoodoo.bat meanwhile
+    w.files[ini] = "[renderer]\r\nbackend = uaro\r\napi = d3d11\r\n[quality]\r\nsharpen = 50\r\n";  // by hand meanwhile
     m.setToken(setting("quality.sharpen"), "80");
     CHECK(m.apply(Lang::En).empty());
-    CHECK_EQ(valueOf(w.files[ini], "renderer.backend"), std::string("dgvoodoo"));
+    CHECK_EQ(valueOf(w.files[ini], "renderer.api"), std::string("d3d11"));
     CHECK_EQ(valueOf(w.files[ini], "quality.sharpen"), std::string("80"));
 }
 
@@ -125,47 +124,6 @@ TEST(model_apply_keeps_what_was_written_to_roexts_ini_meanwhile) {
     CHECK_EQ(valueOf(w.files[roext], "roext.mousefreedom"), std::string("1"));
     CHECK_EQ(valueOf(w.files[roext], "roext.windowwidth"), std::string("1680"));
     CHECK_EQ(valueOf(w.files[roext], "roext.windowheight"), std::string("945"));
-}
-
-TEST(model_reset_keeps_the_renderer_chosen_meanwhile) {
-    fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
-    w.files[ini] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 90\r\n";
-    fake::gameKey(w.registry.common, 1920, 1080, false);
-    app::Model m;
-    w.files[ini] = "[renderer]\r\nbackend = dgvoodoo\r\n[quality]\r\nsharpen = 90\r\n";  // use-dgvoodoo.bat meanwhile
-    CHECK(m.resetDefaults(Lang::En).empty());
-    CHECK_EQ(valueOf(w.files[ini], "renderer.backend"), std::string("dgvoodoo"));
-}
-
-TEST(model_a_switch_to_dgvoodoo_writes_the_screen_the_page_shows) {
-    fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] =
-        "[renderer]\r\nbackend = uaro\r\n[display]\r\nmode = window\r\nwindow_width = 1920\r\nwindow_height = 1080\r\n";
-    fake::gameKey(w.registry.common, 1680, 945, false);  // a 3360 x 1890 window, the interface at 200 %
-    app::Model m;
-    CHECK_EQ(m.screenNow().choice.ui, 200);
-    m.setToken(setting("renderer.backend"), "dgvoodoo");
-    CHECK(m.screenPlan().game == (Size{1920, 1080}));  // dgVoodoo's interface follows Windows' 175 %
-    CHECK(m.apply(Lang::En).empty());
-    CHECK_EQ(effectiveDword("WIDTH"), 1920);
-    CHECK_EQ(effectiveDword("HEIGHT"), 1080);
-}
-
-TEST(model_a_switch_to_uaro_writes_the_screen_the_page_shows) {
-    fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
-    // dgVoodoo now; [display] is left from an earlier window of ours with the interface at 200 %.
-    w.files[ini] =
-        "[renderer]\r\nbackend = dgvoodoo\r\n[display]\r\nmode = window\r\nwindow_width = 1680\r\nwindow_height = 945\r\n";
-    fake::gameKey(w.registry.common, 1920, 1080, false);
-    app::Model m;
-    m.setToken(setting("renderer.backend"), "uaro");
-    const ScreenPlan shown = m.screenPlan();
-    CHECK(shown.game == (Size{1920, 1080}));
-    CHECK(shown.mode == DisplayMode::Auto);  // the game's own 3360 x 1890 window, as under dgVoodoo
-    CHECK(m.apply(Lang::En).empty());
-    CHECK_EQ(valueOf(w.files[ini], "display.mode"), std::string("auto"));
 }
 
 TEST(model_a_registry_value_refused_leaves_the_others_written) {

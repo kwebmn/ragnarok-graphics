@@ -13,8 +13,6 @@ namespace {
 
 using namespace settings;
 
-constexpr int kUaro = 1001;
-constexpr int kDgVoodoo = 1002;
 constexpr int kRows = 1100;  // + 4 x the setting's index in iniSettings()
 constexpr int kForgetLogin = 1490;
 constexpr int kAsSetup = 1491;
@@ -84,12 +82,6 @@ public:
 
     void command(int id, int code) override {
         Model& m = host_.model();
-        if ((id == kUaro || id == kDgVoodoo) && code == BN_CLICKED) {
-            m.setToken(*findSetting("renderer.backend"), id == kUaro ? "uaro" : "dgvoodoo");
-            host_.changed();
-            host_.rebuild();  // 0.46: the graphics API goes with the uaRO renderer
-            return;
-        }
         if (id == kGpu && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < gpuWords_.size()) m.setToken(*findSetting("renderer.gpu"), gpuWords_[sel]);
@@ -344,7 +336,7 @@ private:
         }
         // 1.3.3: the interface a whole number of times the game's pixels, where it is a fraction now (167 %)
         bool uiChanged = false;
-        if (m.backend() == Backend::Uaro && !integerScale(m.screenPlan().s)) {
+        if (!integerScale(m.screenPlan().s)) {
             const ScreenChoice before = m.screenChoice();
             ScreenChoice c = before;
             if (c.ui != a.ui) {
@@ -397,10 +389,7 @@ private:
         const bool win10 = sys.windows.major >= 10;
         const bool d3d12 = sys.d3d12Probed && sys.d3d12.ok;
         const bool d3d11 = sys.d3d11.ok;  // 0.46: graphics cards without Direct3D 12
-        const bool uaro = m.token(*findSetting("renderer.backend")) == "uaro";
-        p.radio(kUaro, t(Text::RenderHeading), t(Text::RenderUaro), uaro, true, t(Text::RenderUaroHint),
-                (win10 && d3d12) || d3d11 || uaro);
-        p.radio(kDgVoodoo, L"", t(Text::RenderDgVoodoo), !uaro, false, t(Text::RenderDgVoodooHint));
+        p.heading(t(Text::RenderHeading));  // 2.2: the uaRO renderer only - dgVoodoo is gone
         const auto& all = iniSettings();
         for (size_t i = 0; i < all.size(); ++i)  // 0.46: Direct3D 12, 11, or 12 and else 11
             if (sectionKey(all[i]) == "renderer.api") {
@@ -412,7 +401,7 @@ private:
                     items.push_back(t(s.choices[c]));
                     if (token == s.tokens[c]) selected = int(c);
                 }
-                p.choice(kRows + int(i) * 4, t(s.label), items, selected, t(s.hint), uaro);
+                p.choice(kRows + int(i) * 4, t(s.label), items, selected, t(s.hint), true);
             }
         // 0.50.2: the graphics card, when there are several (or one is chosen that is gone)
         const auto& cards = sys.adapters;
@@ -433,7 +422,7 @@ private:
                 items.push_back(tf(Text::RenderGpuMissing, {card}));
                 gpuWords_.push_back(card);
             }
-            p.choice(kGpu, t(Text::RenderGpu), items, selected, t(Text::RenderGpuHint), uaro);
+            p.choice(kGpu, t(Text::RenderGpu), items, selected, t(Text::RenderGpuHint), true);
         }
         p.gap();
         for (size_t i = 0; i < all.size(); ++i)  // part 3 (test): the renderer in a 64-bit process; part 4: Remix
@@ -456,7 +445,6 @@ private:
         } else {
             p.note(t(Text::InstalledNoDriver), Tone::Bad);
         }
-        p.note(t(now.dgvoodoo ? Text::DgVoodooFound : Text::DgVoodooMissing), now.dgvoodoo ? Tone::Good : Tone::Warn);
         p.gap();
         p.note(t(Text::PauseNote));
     }

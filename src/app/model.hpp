@@ -21,7 +21,7 @@ namespace uagfx::app {
 
 struct Paths {
     std::wstring dir;  // the client folder
-    std::wstring ini, log, game, version, backups, report, ddraw, dgvoodoo;
+    std::wstring ini, log, game, version, backups, report, ddraw;
 };
 
 // A dinput DLL in the client folder (stage 2 spec §2.3).
@@ -53,7 +53,6 @@ struct Snapshot {
     std::vector<CompatFlag> compat;
     Ddraw ddraw = Ddraw::None;
     std::string installedVersion;  // uaro-graphics\version.txt
-    bool dgvoodoo = false;         // dgvoodoo\DDraw.dll
     bool gameRunning = false;
     std::vector<std::wstring> backups;  // folder names, newest first
     settings::LogDigest log;
@@ -74,7 +73,6 @@ public:
     // uaro-graphics.ini keys: the player's change, else the file's value.
     std::string token(const settings::IniSetting& s) const;
     void setToken(const settings::IniSetting& s, const std::string& token);
-    Backend backend() const;        // with the player's change
     Config pendingConfig() const;   // the file's settings with the player's changes
 
     settings::ScreenChoice screenChoice() const;  // the player's, else what the game gets now

@@ -68,8 +68,8 @@ struct ScreenPlan {
     bool writesRoext = false; // ROExt WindowWidth x WindowHeight = game
     double s = 1.0;           // how many times the game is enlarged on screen
 };
-ScreenPlan planScreen(const ScreenChoice& c, const std::vector<MonitorInfo>& monitors, Backend backend,
-                      const RoextWindow& roext, const Frame& frame);
+ScreenPlan planScreen(const ScreenChoice& c, const std::vector<MonitorInfo>& monitors, const RoextWindow& roext,
+                      const Frame& frame);
 
 const std::vector<int>& uiSteps();  // 100, 125, 150, 175, 200, 250, 300 (spec §5.2)
 // The window sizes offered on a monitor (spec §5.2), largest first: the standard game sizes times d and the largest
@@ -86,7 +86,7 @@ struct ScreenNow {
     bool roextOverride = false;  // ROExt sets the windowed size (its own, or the work area with WindowLock)
 };
 ScreenNow currentScreen(bool regFullscreen, Size regSize, const Config& ini, const RoextWindow& roext,
-                        const std::vector<MonitorInfo>& monitors, Backend backend);
+                        const std::vector<MonitorInfo>& monitors);
 
 bool integerScale(double s);  // ×2, ×3...: the crispest interface
 // The game's size L in a window of W real pixels with the interface at u %: W·100/u, rounded (spec §5.3).

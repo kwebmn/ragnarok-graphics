@@ -15,7 +15,7 @@ namespace {
 
 HMODULE g_loaded = nullptr;  // set once the real DirectDraw is loaded
 
-// 0.2.0 has the uaRO renderer. It is opt-in (backend = uaro); dgVoodoo stays the default.
+// 0.2.0 has the uaRO renderer; since 2.2 it is the only one (dgVoodoo is gone).
 constexpr bool kUaroBuilt = true;
 
 void logModule(const char* name) {
@@ -44,17 +44,6 @@ void startReportWatcher(const std::string& dir) {
     LOG_INFO("report: the settings app watches this game ([report] auto = 1)");
 }
 
-// dgVoodoo's DDraw.dll in the dgvoodoo folder; its D3DImm.dll sits next to it, so that folder is added to the
-// DLL search path for the rest of the process.
-HMODULE loadDgVoodoo(const std::string& dir) {
-    const std::string folder = dir + "\\dgvoodoo";
-    if (!SetDllDirectoryA(folder.c_str())) LOG_ERROR("SetDllDirectory(%s) failed (error %lu)", folder.c_str(), GetLastError());
-    const std::string path = folder + "\\DDraw.dll";
-    HMODULE m = LoadLibraryExA(path.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
-    if (!m) LOG_ERROR("cannot load %s (error %lu)", path.c_str(), GetLastError());
-    return m;
-}
-
 HMODULE loadSystem() {
     const std::string path = systemDir() + "\\ddraw.dll";
     HMODULE m = LoadLibraryA(path.c_str());
@@ -71,8 +60,7 @@ Startup decide() {
     wlog::open(dir + "\\uaro-graphics.log", s.config.logLevel);
     installCrashHandler(dir);  // 0.52: where a crash happened, and a minidump
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
-    LOG_INFO("settings: %s; backend = %s, api = %s, mode = %s",
-             haveIni ? "uaro-graphics.ini" : "no uaro-graphics.ini, defaults", backendToken(s.config.backend),
+    LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? "uaro-graphics.ini" : "no uaro-graphics.ini, defaults",
              apiToken(s.config.api), displayModeToken(s.config.mode));
     LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%, sharpen = %d",
              s.config.highResolution ? 1 : 0, uiFilterToken(s.config.uiFilter), s.config.renderScale, s.config.sharpen);
@@ -83,13 +71,12 @@ Startup decide() {
     logModule("dinput8.dll");
     // The game's window black before anything that takes time - the Direct3D 12 probe, the renderer's start - so
     // that its white 640x480 start-up area does not stay on the screen meanwhile (window_mode.hpp).
-    if (s.config.backend == Backend::Uaro) blackenGameWindow();
+    blackenGameWindow();
 
     gpu::setChosenAdapter(s.config.gpu);  // 0.50.2: the probes look at the card the renderer will take
     SystemFacts facts;
     facts.windows10 = v.major >= 10;
-    facts.dgvoodoo = fileExists(dir + "\\dgvoodoo\\DDraw.dll");
-    if (facts.windows10) {  // always: backend = uaro needs it, and the log names the adapter either way
+    if (facts.windows10) {  // the log names the adapter either way
         const D3D12Probe p = probeD3D12();
         facts.d3d12 = p.ok;
         LOG_INFO("Direct3D 12: %s, adapter %s (vendor 0x%04x, device 0x%04x, %llu MB), hr 0x%08lx",
@@ -97,8 +84,7 @@ Startup decide() {
                  static_cast<unsigned long>(p.hr));
     }
     // 0.46: Direct3D 11 - asked for, or (auto) where Direct3D 12 is not there.
-    if (s.config.backend == Backend::Uaro &&
-        (s.config.api == Api::D3d11 || (s.config.api == Api::Auto && !(facts.windows10 && facts.d3d12)))) {
+    if (s.config.api == Api::D3d11 || (s.config.api == Api::Auto && !(facts.windows10 && facts.d3d12))) {
         const D3D11Probe p = probeD3D11();
         facts.d3d11 = p.ok;
         LOG_INFO("Direct3D 11: %s, adapter %s, feature level %s, hr 0x%08lx", p.ok ? "OK" : "FAILED",
@@ -113,12 +99,7 @@ Startup decide() {
 }
 
 HMODULE loadReal() {
-    const Startup& s = startup();
-    const std::string dir = gameDir();
-    HMODULE m = nullptr;
-    // dgVoodoo when it was chosen, and as the uaRO renderer's fallback when it is there.
-    if (s.choice.renderer != Renderer::System && fileExists(dir + "\\dgvoodoo\\DDraw.dll")) m = loadDgVoodoo(dir);
-    if (!m) m = loadSystem();
+    HMODULE m = loadSystem();  // 2.2: the system's only - dgVoodoo is no longer passed to
     if (m) LOG_INFO("passing DirectDraw to %s", modulePath(m).c_str());
     g_loaded = m;
     return m;
@@ -144,7 +125,6 @@ FARPROC realProc(const char* name) {
 FARPROC loadedProc(const char* name) { return g_loaded ? GetProcAddress(g_loaded, name) : nullptr; }
 
 void logModulesAtExit() {
-    logModule("D3DImm.dll");  // which D3DImm.dll dgVoodoo's DirectDraw picked up
     logModule("ddraw.dll");
 }
 

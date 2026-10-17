@@ -36,17 +36,15 @@ if exist "dgVoodoo.conf" copy /y "dgVoodoo.conf" "dgvoodoo\dgVoodoo.conf" >nul
 copy /y "uaro-graphics\ddraw.dll" "ddraw.dll" >nul || goto :noaccess
 rem The settings app, uaRO Graphics Settings, lives next to uaRO.exe.
 if exist "uaro-graphics\uaro-graphics.exe" copy /y "uaro-graphics\uaro-graphics.exe" "uaro-graphics.exe" >nul || goto :noaccess
-rem A settings file older than 0.3 holds the defaults and the renderer choice: it is replaced by the new one,
-rem with every new setting and its notes, and keeps that choice.
+rem A settings file older than 0.3 holds the defaults only: it is replaced by the new one, with every new setting
+rem and its notes.
 if exist "uaro-graphics.ini" (
     findstr /c:"high_resolution" "uaro-graphics.ini" >nul 2>&1
-    if errorlevel 1 (
-        set "uaro="
-        findstr /i /r /c:"^ *backend *= *uaro" "uaro-graphics.ini" >nul 2>&1 && set "uaro=1"
-        copy /y "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
-        if defined uaro powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='uaro-graphics.ini'; (Get-Content -LiteralPath $f) -replace '^backend = dgvoodoo$','backend = uaro' | Set-Content -LiteralPath $f -Encoding ASCII"
-    )
+    if errorlevel 1 copy /y "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
 )
+rem 2.2: dgVoodoo is no longer offered - its switches go (uninstall.bat still puts it back).
+if exist "use-dgvoodoo.bat" del /f "use-dgvoodoo.bat" >nul 2>&1
+if exist "use-uaro.bat" del /f "use-uaro.bat" >nul 2>&1
 if not exist "uaro-graphics.ini" copy "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
 rem A 0.3 settings file has no sharpen key yet: it is added at the end, every other setting stays.
 findstr /c:"sharpen" "uaro-graphics.ini" >nul 2>&1
@@ -391,7 +389,6 @@ if /i "%~1"=="/quiet" exit /b 0
 echo.
 echo uaRO Graphics is installed. Start the game as usual.
 echo Every setting is in uaro-graphics.exe (uaRO Graphics Settings) in this folder.
-echo To draw with the uaRO Graphics renderer (Direct3D 12), choose it there or run use-uaro.bat; use-dgvoodoo.bat switches back.
 echo The log is uaro-graphics.log in this folder. To undo everything, run uninstall.bat.
 echo.
 pause

@@ -51,7 +51,6 @@ Model::Model() {
     paths_.backups = paths_.dir + L"\\uaro-graphics-backup";
     paths_.report = paths_.dir + L"\\uaro-graphics-report.txt";
     paths_.ddraw = paths_.dir + L"\\ddraw.dll";
-    paths_.dgvoodoo = paths_.dir + L"\\dgvoodoo\\DDraw.dll";
     system_ = probeSystem();
     load();
 }
@@ -85,7 +84,6 @@ void Model::load() {
     if (readFile(paths_.ddraw, bytes))
         s.ddraw = bytes.find("uaRO Graphics") != std::string::npos ? Ddraw::Ours : Ddraw::Other;
     if (readFile(paths_.version, bytes)) s.installedVersion = firstLine(bytes);
-    s.dgvoodoo = fileExists(paths_.dgvoodoo);
     s.gameRunning = gameRunning(paths_.game);
     s.backups = listFolder(paths_.backups, true);
     std::reverse(s.backups.begin(), s.backups.end());
@@ -118,10 +116,6 @@ void Model::setToken(const IniSetting& s, const std::string& token) {
         ini_[sectionKey(s)] = token;
 }
 
-Backend Model::backend() const {
-    return token(*findSetting("renderer.backend")) == "uaro" ? Backend::Uaro : Backend::DgVoodoo;
-}
-
 std::vector<IniEdit> Model::pendingIniEdits() const {
     std::vector<IniEdit> edits;
     for (const auto& kv : ini_) edits.push_back(editOf(kv.first, kv.second));
@@ -136,7 +130,7 @@ ScreenNow Model::screenNow() const {
     const auto w = effectiveValue(now_.registry, "", "WIDTH");
     const auto h = effectiveValue(now_.registry, "", "HEIGHT");
     const Size size{w && w->asDword() ? int(*w->asDword()) : 0, h && h->asDword() ? int(*h->asDword()) : 0};
-    return currentScreen(full, size, now_.config, now_.roext, system_.monitors, now_.config.backend);
+    return currentScreen(full, size, now_.config, now_.roext, system_.monitors);
 }
 
 ScreenChoice Model::screenChoice() const {
@@ -158,7 +152,7 @@ void Model::setScreen(const ScreenChoice& c) {
 }
 
 ScreenPlan Model::screenPlan() const {
-    return planScreen(screenChoice(), system_.monitors, backend(), now_.roext, system_.frame);
+    return planScreen(screenChoice(), system_.monitors, now_.roext, system_.frame);
 }
 
 bool Model::screenWaits() const {
@@ -297,8 +291,7 @@ std::wstring Model::apply(Lang l) {
     std::vector<RegWrite> reg;
     std::vector<IniEdit> roext;
     const bool firstRun = !gameKeyExists(now_.registry);
-    // The Screen page shows the plan for the renderer chosen: a switch of the renderer alone writes it too.
-    const bool screen = (screen_ && !(*screen_ == screenNow().choice)) || backend() != now_.config.backend;
+    const bool screen = screen_ && !(*screen_ == screenNow().choice);
     bool waits = false;  // the screen needs ROExt's ini, written only while the game is closed (spec §4.1)
     ScreenChoice chosen;
     if (screen || firstRun) {
@@ -308,11 +301,7 @@ std::wstring Model::apply(Lang l) {
         waits = p.writesRoext && now_.roextModule >= 0 && now_.gameRunning;
         // A first run's key goes even then: the game waits for it in its setup.exe loop (spec §4.3; 0.6.1 review I1).
         if (firstRun) reg = firstRunWrites(p.game.width, p.game.height, p.fullscreen);
-        if (waits) {  // the screen and its renderer switch wait for the game to close; the rest goes now (0.6.0 M4)
-            ini.erase(std::remove_if(ini.begin(), ini.end(),
-                                     [](const IniEdit& e) { return e.section == "renderer" && e.key == "backend"; }),
-                      ini.end());
-        } else {
+        if (!waits) {  // the screen waits for the game to close; the rest goes now (0.6.0 M4)
             if (!firstRun) {
                 auto add = [&](const char* name, uint32_t v) {
                     if (const auto w = planWrite(now_.registry, "", name, RegValue::dword(v))) reg.push_back(*w);
@@ -371,11 +360,8 @@ std::wstring Model::apply(Lang l) {
             }
         }
     }
-    // What was written is no longer pending; a screen that waits stays, with its renderer switch.
-    const auto backendWord = ini_.find("renderer.backend");
-    const std::string kept = waits && backendWord != ini_.end() ? backendWord->second : "";
+    // What was written is no longer pending; a screen that waits stays.
     ini_.clear();
-    if (!kept.empty()) ini_["renderer.backend"] = kept;
     reg_ = held;
     if (waits)
         screen_ = chosen;  // the next Apply with the game closed writes the rest of it
@@ -456,7 +442,7 @@ void Model::keepNewestBackups(size_t count) {
 std::wstring Model::resetDefaults(Lang l) {
     std::wstring err = backupOnce(l);
     if (!err.empty()) return err;
-    std::vector<IniEdit> keep{{"renderer", "backend", backendToken(parseConfig(currentIni()).backend)}};
+    std::vector<IniEdit> keep;
     if (const auto lang = savedLanguage()) keep.push_back({"utility", "language", langToken(*lang)});
     const std::string text = applyIniEdits(defaultIni(), keep);
     if (!writeFileAtomic(paths_.ini, text)) return wtrf(l, Text::ErrWriteFile, {"uaro-graphics.ini"});

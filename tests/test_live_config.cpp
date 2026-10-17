@@ -29,18 +29,16 @@ TEST(live_config_applies_what_can_change_in_a_running_game) {
 TEST(live_config_keeps_start_up_keys_until_the_next_start) {
     const Config running = parseConfig("");
     const LiveUpdate u = liveUpdate(
-        running, parseConfig("[renderer]\nbackend = uaro\n[display]\nmode = window\nmonitor = 1\n"
+        running, parseConfig("[display]\nmode = window\nmonitor = 1\n"
                              "window_width = 1600\nwindow_height = 900\n[frames]\nallow_tearing = 1\n"));
     CHECK(u.applied.empty());
-    CHECK(u.next.backend == running.backend);
     CHECK(u.next.mode == running.mode);
     CHECK_EQ(u.next.monitor, 0);
     CHECK_EQ(u.next.windowWidth, 0);
     CHECK(!u.next.allowTearing);
-    CHECK_EQ(u.waiting.size(), size_t(6));
-    CHECK(u.waiting[0] == "backend");
-    CHECK(u.waiting[1] == "mode");
-    CHECK(u.waiting[5] == "allow_tearing");
+    CHECK_EQ(u.waiting.size(), size_t(5));
+    CHECK(u.waiting[0] == "mode");
+    CHECK(u.waiting[4] == "allow_tearing");
 }
 
 TEST(live_config_an_unchanged_file_changes_nothing) {

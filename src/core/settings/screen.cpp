@@ -33,53 +33,45 @@ bool windowFits(Size w, const MonitorInfo& m, const Frame& frame) {
 
 }  // namespace
 
-ScreenPlan planScreen(const ScreenChoice& c, const std::vector<MonitorInfo>& monitors, Backend backend,
-                      const RoextWindow& roext, const Frame& frame) {
+ScreenPlan planScreen(const ScreenChoice& c, const std::vector<MonitorInfo>& monitors, const RoextWindow& roext,
+                      const Frame& frame) {
     ScreenPlan p;
     if (monitors.empty()) {
         p.problem = ScreenProblem::BadNumber;
         return p;
     }
     const MonitorInfo& primary = monitors[0];
-    const bool uaro = backend == Backend::Uaro;
-    // dgVoodoo leaves our ini alone: its window and full screen stay on the main monitor until 0.6.3.
-    const int index = uaro && c.monitor >= 0 && size_t(c.monitor) < monitors.size() ? c.monitor : 0;
+    const int index = c.monitor >= 0 && size_t(c.monitor) < monitors.size() ? c.monitor : 0;
     const MonitorInfo& m = monitors[size_t(index)];
     if (c.show == Show::Fullscreen) {
         p.fullscreen = true;
-        if (uaro) {
-            if (c.ui < kUiMin || c.ui > kUiMax) {
-                p.problem = ScreenProblem::BadNumber;
-                return p;
-            }
-            p.game = scaled(m.pixels, 100, c.ui);
-            p.writesIni = true;
-            p.mode = DisplayMode::Auto;
-            p.monitor = index;
-        } else {
-            p.game = c.mode.width > 0 && c.mode.height > 0 ? c.mode : m.pixels;
+        if (c.ui < kUiMin || c.ui > kUiMax) {
+            p.problem = ScreenProblem::BadNumber;
+            return p;
         }
+        p.game = scaled(m.pixels, 100, c.ui);
+        p.writesIni = true;
+        p.mode = DisplayMode::Auto;
+        p.monitor = index;
         p.s = fit(m.pixels, p.game);
     } else {
         if (c.window.width <= 0 || c.window.height <= 0) {
             p.problem = ScreenProblem::BadNumber;
             return p;
         }
-        const int ui = uaro ? c.ui : m.scale;
+        const int ui = c.ui;
         if (ui < kUiMin || ui > kUiMax) {
             p.problem = ScreenProblem::BadNumber;
             return p;
         }
         p.game = gameSize(c.window, ui);
-        if (uaro) {
-            p.writesIni = true;
-            p.monitor = index;
-            if (ui == m.scale && m.primary) {
-                p.mode = DisplayMode::Auto;  // the game's own window, as ROExt or uaRO Pad make it
-            } else {
-                p.mode = DisplayMode::Window;
-                p.iniWindow = scaled(c.window, 100, m.scale);
-            }
+        p.writesIni = true;
+        p.monitor = index;
+        if (ui == m.scale && m.primary) {
+            p.mode = DisplayMode::Auto;  // the game's own window, as ROExt or uaRO Pad make it
+        } else {
+            p.mode = DisplayMode::Window;
+            p.iniWindow = scaled(c.window, 100, m.scale);
         }
         p.writesRoext = roext.active && (roext.lock || roext.size.width > 0);
         p.s = fit(c.window, p.game);
@@ -129,15 +121,14 @@ Size defaultWindow(const MonitorInfo& m, const Frame& frame) {
 }
 
 ScreenNow currentScreen(bool regFullscreen, Size regSize, const Config& ini, const RoextWindow& roext,
-                        const std::vector<MonitorInfo>& monitors, Backend backend) {
+                        const std::vector<MonitorInfo>& monitors) {
     ScreenNow n;
     if (monitors.empty()) return n;
-    const bool uaro = backend == Backend::Uaro;
-    const int index = uaro && ini.monitor >= 0 && size_t(ini.monitor) < monitors.size() ? ini.monitor : 0;
+    const int index = ini.monitor >= 0 && size_t(ini.monitor) < monitors.size() ? ini.monitor : 0;
     const MonitorInfo& m = monitors[size_t(index)];
     const MonitorInfo& primary = monitors[0];
     n.game = regSize;
-    const bool borderless = uaro && ini.mode == DisplayMode::Borderless;  // a hand-written ini: over the monitor too
+    const bool borderless = ini.mode == DisplayMode::Borderless;  // a hand-written ini: over the monitor too
     if (regFullscreen || borderless) {
         n.choice.show = Show::Fullscreen;
         n.choice.monitor = index;
@@ -153,7 +144,7 @@ ScreenNow currentScreen(bool regFullscreen, Size regSize, const Config& ini, con
         n.game = scaled(primary.work, 100, primary.scale);
         n.roextOverride = true;
     }
-    if (uaro && ini.mode == DisplayMode::Window) {
+    if (ini.mode == DisplayMode::Window) {
         n.choice.monitor = index;
         const Size logical{ini.windowWidth > 0 ? ini.windowWidth : n.game.width,
                            ini.windowHeight > 0 ? ini.windowHeight : n.game.height};

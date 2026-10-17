@@ -7,7 +7,6 @@ using namespace uagfx;
 
 TEST(config_defaults_without_a_file) {
     const Config c = parseConfig("");
-    CHECK(c.backend == Backend::DgVoodoo);
     CHECK(c.mode == DisplayMode::Auto);
     CHECK_EQ(c.monitor, 0);
     CHECK_EQ(c.windowWidth, 0);
@@ -31,7 +30,6 @@ TEST(config_reads_every_key) {
         "[quality]\nrender_scale = 150\nsharpen = 80\n"
         "[frames]\nvsync = 0\nfps_limit = 144\nallow_tearing = 1\n"
         "[debug]\nlog = verbose\n");
-    CHECK(c.backend == Backend::Uaro);
     CHECK(c.mode == DisplayMode::Window);
     CHECK_EQ(c.monitor, 1);
     CHECK_EQ(c.windowWidth, 1600);
@@ -55,7 +53,6 @@ TEST(config_invalid_values_keep_defaults) {
         "[quality]\nrender_scale = 300\nsharpen = 101\n"
         "[frames]\nvsync = maybe\nfps_limit = -5\n"
         "[debug]\nlog = loud\n");
-    CHECK(c.backend == Backend::DgVoodoo);
     CHECK(c.mode == DisplayMode::Auto);
     CHECK_EQ(c.monitor, 0);
     CHECK_EQ(c.windowWidth, 0);
@@ -181,8 +178,8 @@ TEST(config_ai_argument_round_trips) {
 }
 
 TEST(config_notepad_file_with_bom_crlf_comments_and_capitals) {
-    const Config c = parseConfig("\xEF\xBB\xBF; uaRO Graphics\r\n[Renderer]\r\nBackend = UARO ; the new one\r\n");
-    CHECK(c.backend == Backend::Uaro);
+    const Config c = parseConfig("\xEF\xBB\xBF; uaRO Graphics\r\n[Renderer]\r\nApi = D3D11 ; the old one\r\n");
+    CHECK(c.api == Api::D3d11);
 }
 
 TEST(config_display_modes) {
@@ -191,13 +188,11 @@ TEST(config_display_modes) {
 }
 
 TEST(config_keys_outside_their_section_are_ignored) {
-    const Config c = parseConfig("backend = uaro\n[display]\nbackend = uaro\n");
-    CHECK(c.backend == Backend::DgVoodoo);
+    const Config c = parseConfig("api = d3d11\n[display]\napi = d3d11\n");
+    CHECK(c.api == Api::D3d12);
 }
 
 TEST(config_tokens) {
-    CHECK(std::strcmp(backendToken(Backend::DgVoodoo), "dgvoodoo") == 0);
-    CHECK(std::strcmp(backendToken(Backend::Uaro), "uaro") == 0);
     CHECK(std::strcmp(displayModeToken(DisplayMode::Window), "window") == 0);
     CHECK(std::strcmp(displayModeToken(DisplayMode::Borderless), "borderless") == 0);
     CHECK(std::strcmp(displayModeToken(DisplayMode::Auto), "auto") == 0);

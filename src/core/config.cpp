@@ -381,8 +381,7 @@ Config parseConfig(const std::string& text) {
         const std::string raw = trim(line.substr(eq + 1));  // as written: a graphics card's name (0.50.2)
         const std::string val = lower(raw);
         if (key == "renderer.backend") {
-            if (val == "dgvoodoo") c.backend = Backend::DgVoodoo;
-            if (val == "uaro") c.backend = Backend::Uaro;
+            // 2.2: dgVoodoo is gone - the uaRO renderer always; the old line is read and left alone
         } else if (key == "renderer.api") {
             if (val == "d3d12") c.api = Api::D3d12;
             if (val == "d3d11") c.api = Api::D3d11;
@@ -814,7 +813,6 @@ Config parseConfig(const std::string& text) {
     return c;
 }
 
-const char* backendToken(Backend b) { return b == Backend::Uaro ? "uaro" : "dgvoodoo"; }
 
 const char* apiToken(Api a) { return a == Api::D3d11 ? "d3d11" : a == Api::Auto ? "auto" : "d3d12"; }
 

@@ -60,7 +60,6 @@ AutoSetup autoSetup(const Machine& m) {
     if ((a.tier == Tier::Low || a.tier == Tier::Old) && pixels > 1920LL * 1200) set(e, "quality", "render_scale", "67");
     if (a.tier != Tier::High && pixels > 1920LL * 1200 && a.tier != Tier::NoDriver)
         set(e, "quality", "sharpen", "50");  // the sharp upscale's CAS
-    set(e, "renderer", "backend", "uaro");
     set(e, "renderer", "api", a.tier == Tier::Old ? "d3d11" : "auto");
     set(e, "renderer", "remix", "0");
     // DLSS and its frame generation: NVIDIA's (the 64-bit bridge brings them); elsewhere off.

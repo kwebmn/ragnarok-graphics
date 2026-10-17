@@ -21,7 +21,6 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     LiveUpdate u;
     u.next = running;
     Config& n = u.next;
-    if (file.backend != running.backend) u.waiting.push_back("backend");
     if (file.bridge != running.bridge) u.waiting.push_back("bridge");
     if (file.remix != running.remix) u.waiting.push_back("remix");
     if (file.dlss != running.dlss) u.waiting.push_back("dlss");

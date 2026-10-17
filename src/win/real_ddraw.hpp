@@ -13,12 +13,11 @@ struct Startup {
 };
 const Startup& startup();
 
-// The DirectDraw calls go to when the uaRO renderer is not used: dgVoodoo or the system one. With the uaRO
-// renderer chosen it is the fallback (dgVoodoo when it is there). Loaded on the first call that needs it, never in
-// DllMain (no LoadLibrary under the loader lock).
+// The system's DirectDraw: where the calls go when the uaRO renderer is not used, and its fallback (2.2: dgVoodoo is
+// gone). Loaded on the first call that needs it, never in DllMain (no LoadLibrary under the loader lock).
 HMODULE realModule();
 FARPROC realProc(const char* name);  // nullptr when the module or the function is missing
-// The same, but never starts loading: for the private exports that d3dim700.dll / dgVoodoo's D3DImm.dll call
+// The same, but never starts loading: for the private exports that d3dim700.dll calls
 // while the real DirectDraw is being set up. nullptr until something has loaded it.
 FARPROC loadedProc(const char* name);
 // Called from DllMain on DLL_PROCESS_DETACH: which DirectDraw modules the game ended up with.

@@ -9,11 +9,10 @@ namespace uagfx {
 struct SystemFacts {
     bool windows10 = false;  // Windows 10 or newer (flip-model swap chains, D3D12)
     bool d3d12 = false;      // a Direct3D 12 device (feature level 11_0) could be created
-    bool dgvoodoo = false;   // dgvoodoo\DDraw.dll exists next to the game
     bool d3d11 = false;      // 0.46: a Direct3D 11 device (feature level 10_0 or better) could be created
 };
 
-enum class Renderer { Uaro, DgVoodoo, System };
+enum class Renderer { Uaro, System };  // 2.2: no dgVoodoo
 
 struct RendererChoice {
     Renderer renderer;

@@ -207,8 +207,6 @@ private:
         else
             out.push_back({t(Text::DiagDdraw), t(s.ddraw == Ddraw::Other ? Text::DiagDdrawOther : Text::DiagDdrawNone),
                            s.ddraw == Ddraw::Other ? Tone::Warn : Tone::Bad, {}});
-        out.push_back({L"dgVoodoo", t(s.dgvoodoo ? Text::DiagDgVoodooOk : Text::DiagDgVoodooMissing),
-                       s.dgvoodoo ? Tone::Good : (s.config.backend == Backend::DgVoodoo ? Tone::Bad : Tone::Warn), {}});
         if (s.modules.empty()) out.push_back({t(Text::DiagInput), t(Text::DiagInputNone), Tone::Muted, {}});
         for (const ModuleFile& mod : s.modules) {
             std::wstring what = mod.info.kind == ModuleKind::Roext     ? tf(Text::DiagModuleRoext, {mod.info.ini})

@@ -50,7 +50,7 @@ TEST(schema_compare_key_turns_every_effect_off) {
 TEST(schema_defaults_match_the_driver) {
     const Config defaults;
     CHECK(tokenOf(*findSetting("quality.sharpen"), defaults) == "50");
-    CHECK(tokenOf(*findSetting("renderer.backend"), defaults) == "dgvoodoo");
+    CHECK(!findSetting("renderer.backend"));  // 2.2: dgVoodoo is gone
     // 0.46: the graphics API on the Render page - Direct3D 12 by default; 11 and auto for older graphics cards.
     const IniSetting* api = findSetting("renderer.api");
     CHECK(api && api->page == Page::Render && api->control == Control::Choice);
@@ -82,7 +82,7 @@ TEST(schema_live_keys_are_the_specs) {
     // 64-bit renderer's features too: DLSS, frame generation, AI textures); [effects] at once (0.18).
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
-        CHECK(appliesNow(k) == (k != "renderer.backend" && k != "renderer.bridge" && k != "renderer.remix" &&
+        CHECK(appliesNow(k) == (k != "renderer.bridge" && k != "renderer.remix" &&
                                 k != "renderer.api" && k != "renderer.gpu" && k != "report.auto" &&
                                 k != "frames.fps_counter" && k != "display.ui_native" &&
                                 k != "display.hdr" &&
