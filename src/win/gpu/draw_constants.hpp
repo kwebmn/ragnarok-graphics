@@ -66,6 +66,7 @@ inline bool yExtent(const FrameRecord& rec, const DrawCmd& d, float& top, float&
 // shadows fall on the screen (core/daylight.hpp).
 struct LeafLook {
     bool volume = false, through = false, tints = false, gusts = false;
+    bool shells = false;  // 1.9.7: full crowns - the box is needed for them too
     float sun[2] = {0.83f, 0.56f};
     float throughLight = 0.0f;  // trees::throughLight
     trees::Season season = trees::Season::Green;
@@ -74,9 +75,9 @@ struct LeafLook {
 };
 
 inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook& look, Constants& c) {
-    if (!look.volume && !look.through && !look.tints && !look.gusts) return;
+    if (!look.volume && !look.through && !look.tints && !look.gusts && !look.shells) return;
     c.uiPixels[3] = look.gusts ? 1.0f : 0.0f;
-    if (!look.volume && !look.through && !look.tints) return;
+    if (!look.volume && !look.through && !look.tints && !look.shells) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     float x0 = FLT_MAX, y0 = FLT_MAX, x1 = -FLT_MAX, y1 = -FLT_MAX, rhw = 0.0f;
@@ -92,7 +93,7 @@ inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook
     }
     if (!n || x1 - x0 < 2.0f || y1 - y0 < 2.0f) return;
     rhw /= float(n);
-    c.stage1[1] |= 1u << 27;
+    if (look.volume || look.through || look.tints) c.stage1[1] |= 1u << 27;
     c.sourceRect[0] = x0;
     c.sourceRect[1] = y0;
     c.sourceRect[2] = x1;

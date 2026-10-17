@@ -86,6 +86,7 @@ const EffectLayout kEffects[] = {
     {"effects.underwater", {}, {}, {}, 2},  // 1.7.3
     {"effects.materials", {}, {"effects.materials_strength"}, {}, 3},  // 1.8
     {"effects.ground_seams", {}, {}, {}, 3},  // 1.9
+    {"effects.full_crowns", {}, {}, {}, 3},  // 1.9.7
 };
 
 }  // namespace

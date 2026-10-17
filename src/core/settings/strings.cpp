@@ -2450,6 +2450,16 @@ const Entry kTexts[] = {
     {"Up/Down choose · Space on/off · Left/Right value · hold Tab to compare · ~ or Esc close",
      "↑↓ вибір · Пробіл увімк/вимк · ←→ значення · затисніть Tab — порівняти · ~ або Esc — закрити",
      "↑↓ выбор · Пробел вкл/выкл · ←→ значение · зажмите Tab — сравнить · ~ или Esc — закрыть"},
+    {"Full tree crowns",
+     "Пишні крони",
+     "Пышные кроны"},
+    {"Each crown of leaves is drawn twice more - a little larger, darker and behind it, a little smaller and lighter "
+     "in front of it: the thin flat crowns of the old trees look dense and deep. The trees cost three times as much "
+     "to draw (Direct3D 12).",
+     "Кожна крона малюється ще двічі — трохи більша, темніша й позаду, трохи менша й світліша попереду: тонкі пласкі "
+     "крони старих дерев виглядають густими й глибокими. Дерева коштують утричі більше (Direct3D 12).",
+     "Каждая крона рисуется ещё дважды — чуть больше, темнее и позади, чуть меньше и светлее впереди: тонкие плоские "
+     "кроны старых деревьев выглядят густыми и глубокими. Деревья стоят втрое дороже (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

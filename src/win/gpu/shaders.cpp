@@ -78,9 +78,20 @@ PsIn draw_vs(VsIn i) {
         wave += uiPixels.w * gustAt(i.pos.x, twinH) * 2.6;
         gx += twinX * up * up * wave;
     }
+    float gy = i.pos.y;
+    float gz = i.pos.z;
+    // 1.9.7, full crowns (stage0.y bit 25): a shell of a crown - drawn again about its box's middle (sourceRect) r6
+    // times as large, moved by r9, r10 of its half size, its depth by r7 (behind or in front of the crown)
+    if (uiMode == 0 && ((stage0.y >> 25) & 1) != 0) {
+        float2 mid = (sourceRect.xy + sourceRect.zw) * 0.5, reach = (sourceRect.zw - sourceRect.xy) * 0.5;
+        float2 g = mid + (float2(gx, gy) - mid) * r6 + reach * float2(r9, r10);
+        gx = g.x;
+        gy = g.y;
+        gz = saturate(gz + r7);
+    }
     float x = (gx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
-    float y = 1.0 - (i.pos.y * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
-    o.pos = float4(x * w, y * w, i.pos.z * w, w);
+    float y = 1.0 - (gy * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
+    o.pos = float4(x * w, y * w, gz * w, w);
     o.diffuse = i.diffuse;
     o.specular = i.specular;
     o.uv0 = i.uv0;
@@ -356,6 +367,7 @@ float4 shade(PsIn i) {
     }
 #ifndef UAGFX_SAFE
     if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
+    if (((stage0.y >> 25) & 1) != 0) c.rgb *= r8;  // 1.9.7: a crown's shell, darker behind and lighter in front
     if (material) c.rgb = materialLight(c.rgb, m, P, N, T, B);                       // 1.8: the materials
     if (((stage1.y >> 30) & 1) != 0) {  // 1.8: the ground's large patches
         float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
@@ -372,9 +384,9 @@ float4 shade(PsIn i) {
         // 1.9.5: diffuse alpha how much the place is the other's (bilinear between the cells' middles: corners
         // round off), the noise up on one side and down on the other - one line both sides agree on
         float side = i.specular.g > 0.5 ? 1.0 : -1.0;
-        bool self = i.specular.r > 0.5;  // 1.9.2: the cell's own band at the edge, its rim covered
+        bool own = i.specular.r > 0.5;  // 1.9.2: the cell's own band at the edge, its rim covered
         float other = smoothstep(-0.05, 0.05, i.diffuse.a - 0.5 + side * (n - 0.5) * 0.9);
-        c.a = self ? (1.0 - other) * (1.0 - smoothstep(0.55, 1.0, i.specular.b)) : other;
+        c.a = own ? (1.0 - other) * (1.0 - smoothstep(0.55, 1.0, i.specular.b)) : other;
     }
 #endif
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);

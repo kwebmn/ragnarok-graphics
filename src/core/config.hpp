@@ -317,6 +317,9 @@ struct EffectSettings {
     // 1.9: the remaster's ground: ground_seams - where two cells of the ground with different textures meet, the line
     // between them wanders over the world instead of running along the cells (core/seams.hpp). Off by default.
     bool groundSeams = false;
+    // 1.9.7: the remaster's trees: full_crowns - each crown drawn twice more, larger, darker and behind it, smaller and
+    // lighter in front of it: a thin card of leaves becomes a dense crown (Direct3D 12). Off by default.
+    bool fullCrowns = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

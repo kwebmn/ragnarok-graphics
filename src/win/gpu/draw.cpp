@@ -334,9 +334,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = waterTime();
     }
+    bool shells = false;  // 1.9.7: the crown's shells drawn after it
     if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7: the trees
-        leafShading(rec, d, leafLook(), c);
+        LeafLook look = leafLook();
+        look.shells = effects.fullCrowns;
+        leafShading(rec, d, look, c);
         if (effects.leafFall) noteCrown(rec, d);
+        shells = effects.fullCrowns && c.sourceRect[2] > c.sourceRect[0];  // 1.9.7
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
     if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())
@@ -409,9 +413,27 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (d.indexCount) {
         D3D12_INDEX_BUFFER_VIEW ib{indexBase, indexBytes, DXGI_FORMAT_R16_UINT};
         list->IASetIndexBuffer(&ib);
-        list->DrawIndexedInstanced(d.indexCount, 1, d.firstIndex, 0, 0);
-    } else {
-        list->DrawInstanced(d.vertexCount, 1, 0, 0);
+    }
+    const auto issue = [&] {
+        if (d.indexCount)
+            list->DrawIndexedInstanced(d.indexCount, 1, d.firstIndex, 0, 0);
+        else
+            list->DrawInstanced(d.vertexCount, 1, 0, 0);
+    };
+    issue();
+    if (shells) {  // 1.9.7, full crowns: the crown again - larger, darker and behind, then smaller, lighter, in front
+        Constants k = c;
+        k.stage0[1] |= 1u << 25;
+        const float shell[2][5] = {{1.12f, 0.0012f, 0.7f, -0.03f, -0.05f}, {0.84f, -0.0006f, 1.1f, 0.04f, 0.07f}};
+        for (const float* sh : shell) {
+            k.reproject[6] = sh[0];
+            k.reproject[7] = sh[1];
+            k.reproject[8] = sh[2];
+            k.reproject[9] = sh[3];
+            k.reproject[10] = sh[4];
+            list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &k, 0);
+            issue();
+        }
     }
 }
 
