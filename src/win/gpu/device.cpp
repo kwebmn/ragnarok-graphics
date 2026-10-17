@@ -512,6 +512,8 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
         t.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height, t.fireColour);
         t.light = effect_light::lightOf(rec.pixels().data() + u.pixels, t.width, t.height, t.lightColour);  // 0.36
         t.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
+        t.leaves = t.leafy ? new_trees::coverageOf(rec.pixels().data() + u.pixels, t.width, t.height)  // 1.10
+                           : new_trees::Coverage{};
     }
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + u.pixels, UINT(u.rect.width()),
                                                   UINT(u.rect.height()));

@@ -310,6 +310,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFullCrownsHint, ""},
         {"effects", "ground_clutter", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroundClutter,
          Text::FxGroundClutterHint, ""},
+        {"effects", "new_trees", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNewTrees,
+         Text::FxNewTreesHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -610,6 +612,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.ground_seams") return c.effects.groundSeams ? "1" : "0";
     if (k == "effects.full_crowns") return c.effects.fullCrowns ? "1" : "0";
     if (k == "effects.ground_clutter") return c.effects.groundClutter ? "1" : "0";
+    if (k == "effects.new_trees") return c.effects.newTrees ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

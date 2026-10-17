@@ -239,6 +239,8 @@ enum class Text : uint16_t {
     FxFullCrowns, FxFullCrownsHint,
     // 1.9.8
     FxGroundClutter, FxGroundClutterHint,
+    // 1.10
+    FxNewTrees, FxNewTreesHint,
     Count
 };
 

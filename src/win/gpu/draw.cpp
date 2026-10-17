@@ -52,7 +52,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         return;
     }
     const DrawSetup& s = rec.states()[d.state];
-    crumb(seamPass ? "ground seams' strips" : s.ui ? "the game's interface" : "the game's world");  // 1.9.4
+    crumb(seamPass   ? "ground seams' strips"
+          : treePass ? "new trees"
+          : s.ui     ? "the game's interface"
+                     : "the game's world");
+    const bool inner = seamPass || treePass;  // 1.9, 1.10: the driver's own draws (no hooks, nothing noted)
+    // 1.10: a crown of leaves, the new trees on - kept, drawn anew by applyTrees (before the characters)
+    if (!treePass && !seamPass && !s.ui && !treesDone && treesWanted() && d.fvf != d3d7::FVF_TL2 && takeTree(rec, d))
+        return;
     if (s.zEnable && s.zWrite) sceneDepthFresh = false;  // 0.39.2: the depth's copy is out of date
     // Stage 4: with several samples an alpha test that keeps the brighter alpha (the client's 0xCF on leaves and
     // fences, no blending) becomes coverage - a soft edge instead of a step. World textures get anisotropy.
@@ -78,15 +85,16 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
     if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && seamsWanted()) noteGround(rec, d);  // 1.9
-    if (!seamPass && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
-    if (!seamPass && !s.ui && s.blend && aoDue() && !applyAo()) return;
-    if (!seamPass && !s.ui && s.blend && sunShadowDue() && !applySunShadows()) return;  // 0.77: likewise
-    if (!seamPass && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
-    if (!seamPass && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
-    if (!seamPass && !s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
+    if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
+    if (!inner && !s.ui && s.blend && treesDue() && !applyTrees()) return;  // 1.10
+    if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
+    if (!inner && !s.ui && s.blend && sunShadowDue() && !applySunShadows()) return;  // 0.77: likewise
+    if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
+    if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
+    if (!inner && !s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
     // the game's round ones are in them.
-    if (!seamPass && !s.ui && s.blend && actorShadowsDue() &&
+    if (!inner && !s.ui && s.blend && actorShadowsDue() &&
         !applyActorShadows(rec, size_t(&d - rec.draws().data())))
         return;
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && feetWanted()) noteFoot(rec, d);  // 0.94
@@ -335,7 +343,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[3] = waterTime();
     }
     bool shells = false;  // 1.9.7: the crown's shells drawn after it
-    if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7: the trees
+    if (!treePass && !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7
         LeafLook look = leafLook();
         look.shells = effects.fullCrowns;
         leafShading(rec, d, look, c);

@@ -737,6 +737,7 @@ bool Renderer::Impl::finishWorld() {
     if (aoDue() && !applyAo()) return false;
     if (sunShadowDue() && !applySunShadows()) return false;  // 0.77
     if (seamsDue() && !applySeams()) return false;            // 1.9
+    if (treesDue() && !applyTrees()) return false;            // 1.10
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
     if (grassDue() && !applyGrass()) return false;            // 0.81
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night

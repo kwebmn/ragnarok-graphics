@@ -323,6 +323,10 @@ struct EffectSettings {
     // 1.9.8: the remaster's ground: ground_clutter - pebbles here and there on bare earth, roads and sand
     // (ground_life_ps). Off by default.
     bool groundClutter = false;
+    // 1.10: the remaster's new trees (core/new_trees.hpp): a crown the game draws as flat cards of leaves drawn
+    // instead as a volume of small bunches of its own leaves, lit as a crown and swaying; the trunk stays the game's.
+    // Remaster mode, Direct3D 12. Off by default.
+    bool newTrees = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

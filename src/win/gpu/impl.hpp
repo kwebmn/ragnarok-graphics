@@ -13,6 +13,7 @@
 #include "core/frame.hpp"
 #include "core/critters.hpp"
 #include "core/key_pair.hpp"
+#include "core/new_trees.hpp"
 #include "core/seams.hpp"
 #include "core/living.hpp"
 #include "core/log_once.hpp"
@@ -118,6 +119,7 @@ struct Texture {
     int levels = 1;
     UINT srv = 0;  // index in the CPU SRV heap
     bool leafy = false;  // 0.64: leaves (core/foliage.hpp): swayed in the world
+    new_trees::Coverage leaves;  // 1.10: where its picture is leaves, for the new trees' bunches
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COPY_DEST;
     // AI textures (ai_textures.hpp): the network's version, drawn in the world instead while it is shown.
     ID3D12Resource* ai = nullptr;
@@ -881,6 +883,8 @@ struct Renderer::Impl {
         groundGroups.clear();
         groundTextures.clear();
         seamsDone = false;
+        frameTrees.clear();  // 1.10
+        treesDone = false;
         frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
@@ -951,6 +955,20 @@ struct Renderer::Impl {
     bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty(); }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     bool applySeams();  // once a frame, the ground drawn; false: lost
+    // 1.10: the new trees (trees.cpp) - the frame's crowns of leaves in the world, drawn anew as bunches
+    struct TreeCrown {
+        DrawSetup state;
+        uint32_t texture = 0;
+        bool keyed = false;
+        float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};
+    };
+    std::vector<TreeCrown> frameTrees;
+    FrameRecord treeRec;
+    bool treePass = false, treesDone = false, treesLogged = false;
+    bool treesWanted() const { return effects.newTrees && remaster() && viewToWorldValid; }
+    bool treesDue() const { return treesWanted() && !treesDone && !frameTrees.empty(); }
+    bool takeTree(const FrameRecord& rec, const DrawCmd& d);  // true: a crown, kept for applyTrees
+    bool applyTrees();  // once a frame, before the characters; false: lost
     bool remaster() const {
         return effects.tier == 2 || (effects.tier == 0 && adapterMb >= 6000);  // auto: a card of 6 GB and more
     }
