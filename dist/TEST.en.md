@@ -1,3 +1,11 @@
+# uaRO Graphics 1.9.7 — testing
+
+- **Full tree crowns** (`effects.full_crowns`, the Remaster block, off by default, Direct3D 12): each crown is drawn
+  twice more - a little larger, darker and behind, a little smaller and lighter in front. The old trees' thin flat
+  crowns look dense and deep. The trees cost three times as much to draw.
+- How to check: prt_fild08, pay_fild01 - switch it in the console (`~`) and compare holding Tab. To know: crowns
+  doubling as the camera moves, dark rims showing, crowns creeping through trunks and roofs.
+
 # uaRO Graphics 1.9.6 — testing
 
 - **Fixed: effect changes that "would not turn on".** The driver applied effects changed in `uaro-graphics.ini` in a
