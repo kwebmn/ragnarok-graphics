@@ -11,6 +11,7 @@
 
 #include "core/footsteps.hpp"
 #include "core/frame.hpp"
+#include "core/critters.hpp"
 #include "core/key_pair.hpp"
 #include "core/living.hpp"
 #include "core/log_once.hpp"
@@ -856,6 +857,8 @@ struct Renderer::Impl {
         }
         grassDone = false;  // 0.81
         groundLifeDone = false;  // 1.7
+        crittersDone = false;
+        frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
         flareDone = false;   // 0.98
@@ -882,6 +885,24 @@ struct Renderer::Impl {
     static constexpr size_t kMaxEmbers = 24;
     bool embersDue() const { return effects.skillSparks && embersPs && !embers.empty(); }
     bool applyEmbers();  // after the torches' pass; false: lost
+    // 1.7: the living world's creatures and particles (critters.cpp, critters_ps)
+    critters::World critterWorld;
+    std::vector<critters::Crown> frameCrowns;  // the trees' leaves drawn this frame
+    ID3DBlob* crittersPs = nullptr;
+    ID3DBlob* crittersVs = nullptr;
+    ID3D12PipelineState* crittersPipeline(UINT samples);
+    ID3D12PipelineState* crittersPipelines[4] = {};
+    ID3D12Resource* crittersData = nullptr;  // R32G32B32A32, four texels a sprite
+    D3D12_RESOURCE_STATES crittersDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT crittersDataSrv = 0;
+    bool crittersDone = false, crittersLogged = false;
+    float crittersTime = 0.0f, crittersStepsSeen = 0.0f;
+    critters::Switches critterSwitches() const;
+    bool crittersWanted() const;
+    bool crittersDue() const { return !crittersDone && groundDrawn && crittersWanted(); }
+    bool crittersNeedFeet() const { return effects.birds || effects.breath || effects.splashes; }
+    void noteCrown(const FrameRecord& rec, const DrawCmd& d);
+    bool applyCritters();  // after the torches' pass; false: lost
     // 0.81: grass on the green ground (ao.cpp applyGrass), off by default: it is costly
     ID3DBlob* grassPs = nullptr;
     ID3D12PipelineState* grassPipelines[4] = {};
@@ -922,12 +943,12 @@ struct Renderer::Impl {
     }
     float stepLife() const {
         const float prints = stepKind() == 3 ? 0.9f : stepKind() == 1 ? 25.0f : stepKind() ? 14.0f : 0.0f;
-        return std::max(prints, ripplesWanted() ? kRippleLife : 0.0f);
+        return std::max(std::max(prints, ripplesWanted() ? kRippleLife : 0.0f), crittersNeedFeet() ? 2.0f : 0.0f);
     }
     // 0.94: rings on the water where the steps go (water_ps) - the feet followed for them too, shadows on or off
     static constexpr float kRippleLife = 1.6f;
     bool ripplesWanted() const { return effects.ripples && effects.water && waterPs; }
-    bool feetWanted() const { return stepKind() || ripplesWanted(); }
+    bool feetWanted() const { return stepKind() || ripplesWanted() || crittersNeedFeet(); }
     std::vector<map::Point> frameFeet;  // the round shadows' middles drawn this frame, in the world
     void noteFoot(const FrameRecord& rec, const DrawCmd& d);
     bool stepsDue() const { return stepKind() && groundDrawn && !stepsDone && viewToWorldValid; }
@@ -1000,7 +1021,8 @@ struct Renderer::Impl {
     bool effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
                     D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0, bool scene,
                     UINT srv1 = kNoSrv,                 // t1: srv0 again unless given
-                    const D3D12_RECT* clip = nullptr);  // 0.23: only these pixels
+                    const D3D12_RECT* clip = nullptr,   // 0.23: only these pixels
+                    UINT vertices = 3);                 // 1.7: the vertex shader's own quads (critters_vs)
     float waterTime();            // seconds since the first water
     ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
     ID3D12PipelineState* glowLightPipeline(UINT samples, bool upscaledFormat);

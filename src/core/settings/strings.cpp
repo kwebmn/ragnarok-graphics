@@ -2311,6 +2311,69 @@ const Entry kTexts[] = {
      "висить низький зеленуватий серпанок. Потрібна «Сучасна вода» (серпанок: «Серпанок і туман»).",
      "В болотах Умбалы, Бразилиса и Деваты вода мутная, на ней вздуваются и лопаются пузыри, а над землёй висит "
      "низкая зеленоватая дымка. Нужна «Современная вода» (дымка: «Дымка и туман»)."},
+    {"Butterflies and dragonflies",
+     "Метелики й бабки",
+     "Бабочки и стрекозы"},
+    {"By day a few butterflies flutter over the fields and the green towns, their shadows on the ground; dragonflies "
+     "hover and dart over the water (Direct3D 12).",
+     "Удень над полями й зеленими містами пурхає кілька метеликів, їхні тіні біжать землею; над водою зависають і "
+     "різко перелітають бабки (Direct3D 12).",
+     "Днём над полями и зелёными городами порхает несколько бабочек, их тени бегут по земле; над водой зависают и "
+     "резко перелетают стрекозы (Direct3D 12)."},
+    {"Birds",
+     "Птахи",
+     "Птицы"},
+    {"By day a flock pecks on the ground and flies up and away when someone comes near; another comes later elsewhere "
+     "(Direct3D 12).",
+     "Удень зграйка клює щось на землі й злітає, коли хтось підходить близько; згодом інша сідає деінде (Direct3D 12).",
+     "Днём стайка клюёт что-то на земле и вспархивает, когда кто-то подходит близко; позже другая садится в другом "
+     "месте (Direct3D 12)."},
+    {"Leaves from the trees",
+     "Листя з дерев",
+     "Листья с деревьев"},
+    {"Now and then a leaf comes off a tree in sight, turns as it falls and lies on the ground a while - golden in "
+     "autumn, sakura petals in Amatsu (Direct3D 12).",
+     "Час від часу з дерева поруч зривається листок, кружляє, падає й трохи лежить на землі — восени золотий, в Амацу "
+     "пелюстки сакури (Direct3D 12).",
+     "Время от времени с дерева рядом срывается лист, кружится, падает и немного лежит на земле — осенью золотой, в "
+     "Амацу лепестки сакуры (Direct3D 12)."},
+    {"Embers from the fires",
+     "Іскри з вогнищ",
+     "Угольки от огня"},
+    {"Sparks rise from the torches and the fires, sway, cool and go out in the air. Needs Live torches (Direct3D 12).",
+     "Від смолоскипів і вогнищ здіймаються іскри, кружляють, холонуть і гаснуть у повітрі. Потрібні «Смолоскипи» "
+     "(Direct3D 12).",
+     "От факелов и костров поднимаются искры, кружатся, остывают и гаснут в воздухе. Нужны «Живые факелы» "
+     "(Direct3D 12)."},
+    {"Breath in the cold",
+     "Пара в холод",
+     "Пар на морозе"},
+    {"On the snowy maps the characters' breath shows in short puffs (Direct3D 12).",
+     "На сніжних мапах подих персонажів видно короткими хмаринками пари (Direct3D 12).",
+     "На снежных картах дыхание персонажей видно короткими облачками пара (Direct3D 12)."},
+    {"Splashes",
+     "Бризки",
+     "Брызги"},
+    {"A step into shallow water throws up drops that fall back (Direct3D 12).",
+     "Крок у мілку воду підкидає краплі, що падають назад (Direct3D 12).",
+     "Шаг в мелкую воду подбрасывает капли, которые падают обратно (Direct3D 12)."},
+    {"Drips in the caves",
+     "Краплі в печерах",
+     "Капли в пещерах"},
+    {"In damp caves and dungeons a drop falls from above now and then and rings spread where it lands (Direct3D 12).",
+     "У вологих печерах і підземеллях час від часу згори падає крапля, і там, де вона впала, розходяться кола "
+     "(Direct3D 12).",
+     "Во влажных пещерах и подземельях время от времени сверху падает капля, и там, где она упала, расходятся круги "
+     "(Direct3D 12)."},
+    {"Under the sea",
+     "Під водою",
+     "Под водой"},
+    {"On the undersea maps (Byalan's dungeon) strings of bubbles rise and light from above falls in swaying bands "
+     "(Direct3D 12).",
+     "На підводних мапах (підземелля Бʼялану) здіймаються ланцюжки бульбашок, а згори хвилястими смугами падає світло "
+     "(Direct3D 12).",
+     "На подводных картах (подземелье Бьялана) поднимаются цепочки пузырьков, а сверху колышущимися полосами падает "
+     "свет (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

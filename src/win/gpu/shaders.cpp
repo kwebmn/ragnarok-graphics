@@ -1589,6 +1589,143 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
     return float4(o, a);
 }
 
+// 1.7, the living world's creatures and particles (critters.cpp; core/critters.hpp): a quad each (critters_vs, six
+// vertices a sprite), premultiplied over the world. t1 four texels a sprite - its middle (target pixels), size
+// (pixels) and view depth; its kind, two numbers of its kind and its alpha; its heading on the screen (radians) and
+// how flat a circle on the ground looks; for a dragonfly the water's surface under it (pixels, depth, 1). Kind 13:
+// the light from above under the sea, over the whole picture. sharpen the time, twinW the creatures' light.
+float segment(float2 p, float2 a, float2 b) {
+    float2 pa = p - a, ba = b - a;
+    return length(pa - ba * saturate(dot(pa, ba) / max(dot(ba, ba), 1e-6)));
+}
+
+float2 turned(float2 d, float angle) {
+    float c = cos(angle), s = sin(angle);
+    return float2(d.x * c + d.y * s, -d.x * s + d.y * c);
+}
+
+struct CritterIn {
+    float4 pos : SV_Position;
+    float2 d : TEXCOORD0;
+    nointerpolation uint k : TEXCOORD1;
+};
+
+CritterIn critters_vs(uint id : SV_VertexID) {
+    CritterIn o;
+    uint k = id / 6, v = id % 6;
+    float2 corner = float2(v == 1 || v == 4 || v == 5 ? 1.0 : -1.0, v == 2 || v == 3 || v == 5 ? 1.0 : -1.0);
+    float4 s = tex1.Load(int3(4 * k, 0, 0));
+    float kind = tex1.Load(int3(4 * k + 1, 0, 0)).x;
+    float2 px = kind > 12.5 ? (corner * 0.5 + 0.5) * targetSize : s.xy + corner * s.z * 3.5;
+    o.pos = float4(px.x * 2.0 / targetSize.x - 1.0, 1.0 - px.y * 2.0 / targetSize.y, 0.0, 1.0);
+    o.d = (px - s.xy) / max(s.z, 1.0);
+    o.k = k;
+    return o;
+}
+
+float4 critters_ps(CritterIn i) : SV_Target {
+    uint k = i.k;
+    float2 d = i.d;
+    float2 p = i.pos.xy;
+    float4 s = tex1.Load(int3(4 * k, 0, 0));
+    float4 q = tex1.Load(int3(4 * k + 1, 0, 0));
+    float4 r = tex1.Load(int3(4 * k + 2, 0, 0));
+    int kind = int(q.x + 0.5);
+    float t = sharpen;
+    if (kind == 13) {  // under the sea: light from above in slanting bands, swaying
+        float2 u = p / targetSize;
+        float band = 0.0;
+        [unroll] for (int b = 0; b < 4; ++b) {
+            float x = u.x + u.y * 0.35 + sin(t * 0.3 + float(b) * 1.7) * 0.04 - float(b) * 0.27 - 0.1;
+            band += smoothstep(0.05, 0.0, abs(frac(x) - 0.5) - 0.02 * (1.0 + float(b % 2)));
+        }
+        return float4(float3(0.55, 0.8, 1.0) * band * 0.07 * (1.0 - u.y * 0.7) * q.w, 0.0);
+    }
+    float raw = sceneDepth.Load(int3(int2(p), 0));
+    if ((raw >= 0.99999 ? 1e6 : viewDepth(raw)) < s.w - 0.8) discard;  // behind something
+    float a = 0.0;
+    float3 c = float3(0.0, 0.0, 0.0);
+    float3 glow = float3(0.0, 0.0, 0.0);
+    if (kind == 1) {  // a butterfly: q.y its wings' beat, q.z its colour
+        float2 l = turned(d, r.x);
+        float f = 0.2 + 0.8 * abs(sin(q.y));
+        float2 wg = float2(abs(l.y) / f, l.x);
+        float wing = max(smoothstep(1.0, 0.75, length((wg - float2(0.5, 0.15)) / float2(0.5, 0.45))),
+                         smoothstep(1.0, 0.75, length((wg - float2(0.4, -0.3)) / float2(0.38, 0.32))));
+        int ci = int(q.z + 0.5);
+        c = ci == 0 ? float3(0.97, 0.96, 0.9) : ci == 1 ? float3(0.98, 0.8, 0.22)
+          : ci == 2 ? float3(0.45, 0.66, 0.98) : float3(0.96, 0.55, 0.2);
+        float body = smoothstep(0.1, 0.05, abs(l.y)) * step(abs(l.x), 0.42);
+        c = lerp(c, float3(0.15, 0.12, 0.1), body);
+        a = max(wing, body);
+    } else if (kind == 2) {  // a dragonfly, over the water only
+        float4 u = tex1.Load(int3(4 * k + 3, 0, 0));
+        if (u.w > 0.5) {
+            float under = sceneDepth.Load(int3(clamp(int2(u.xy), int2(0, 0), int2(targetSize) - 1), 0));
+            if ((under >= 0.99999 ? 1e6 : viewDepth(under)) < u.z - 0.3) discard;  // ground there, not water
+        }
+        float2 l = turned(d, r.x);
+        float body = smoothstep(0.09, 0.04, abs(l.y)) * step(-0.75, l.x) * step(l.x, 0.45);
+        float flick = 0.6 + 0.4 * sin(q.y);
+        float wings = 0.0;
+        [unroll] for (int w = 0; w < 4; ++w) {
+            float2 c0 = float2(w < 2 ? 0.18 : 0.0, (w % 2 == 0 ? 1.0 : -1.0) * 0.32);
+            wings = max(wings, smoothstep(1.0, 0.7, length((l - c0) / float2(0.11, 0.36 * flick))));
+        }
+        c = lerp(float3(0.82, 0.92, 1.0), float3(0.16, 0.48, 0.55), body);
+        a = max(body, wings * 0.45);
+    } else if (kind == 3) {  // a bird on the ground, pecking: q.y its time, q.z its facing
+        float peck = pow(saturate(sin(q.y * 5.0)), 6.0) * 0.25;
+        float2 l = float2(d.x * q.z, d.y);
+        float body = smoothstep(1.0, 0.8, length((l - float2(-0.05, 0.05)) / float2(0.55, 0.32)));
+        float head = smoothstep(0.2, 0.15, length(l - float2(0.45, -0.22 + peck)));
+        float beak = step(segment(l, float2(0.6, -0.22 + peck), float2(0.75, -0.18 + peck * 1.4)), 0.04);
+        c = body > head ? float3(0.42, 0.33, 0.25) : float3(0.3, 0.24, 0.18);
+        c = lerp(c, float3(0.85, 0.65, 0.2), beak);
+        a = max(max(body, head), beak);
+    } else if (kind == 4) {  // a bird flying: wings beating
+        float flap = sin(q.y) * 0.45;
+        float v = min(segment(d, float2(0.0, 0.0), float2(-0.7, -flap)),
+                      segment(d, float2(0.0, 0.0), float2(0.7, -flap)));
+        c = float3(0.22, 0.18, 0.15);
+        a = smoothstep(0.09, 0.05, v) + smoothstep(0.18, 0.12, length(d / float2(1.0, 0.7)));
+    } else if (kind == 5) {  // a leaf turning: q.y its angle, q.z its colour
+        float2 l = turned(d, q.y);
+        float e = length(l / float2(1.0, 0.45 + 0.35 * abs(sin(q.y * 0.7))));
+        int ci = int(q.z + 0.5);
+        c = ci == 0 ? float3(0.42, 0.62, 0.2) : ci == 1 ? float3(0.86, 0.66, 0.16)
+          : ci == 2 ? float3(0.82, 0.38, 0.12) : float3(0.97, 0.76, 0.84);
+        c *= 0.85 + 0.25 * step(0.0, l.y);
+        a = smoothstep(1.0, 0.8, e);
+    } else if (kind == 6) {  // an ember
+        glow = float3(1.0, 0.62, 0.22) * exp(-dot(d, d) * 3.0) * 1.4;
+    } else if (kind == 7) {  // a puff of breath
+        c = float3(0.95, 0.97, 1.0);
+        a = exp(-dot(d, d) * 1.6) * (0.75 + 0.25 * valueNoise(d * 2.0 + t));
+    } else if (kind == 8) {  // a drop
+        c = float3(0.85, 0.93, 1.0);
+        a = smoothstep(1.0, 0.6, length(d));
+        glow = c * 0.15 * a;
+    } else if (kind == 9) {  // a bubble: a bright rim, a glint
+        a = smoothstep(0.25, 0.05, abs(length(d) - 0.8)) * 0.8;
+        c = float3(0.8, 0.95, 1.0);
+        glow = float3(1.0, 1.0, 1.0) * smoothstep(0.3, 0.1, length(d - float2(-0.35, -0.35))) * 0.6;
+    } else if (kind == 10) {  // a falling drip: a streak q.y sizes long
+        c = float3(0.8, 0.9, 1.0);
+        a = smoothstep(0.9, 0.3, segment(d, float2(0.0, -q.y), float2(0.0, 0.0))) * 0.8;
+    } else if (kind == 11) {  // a ring on the ground
+        a = smoothstep(0.12, 0.0, abs(length(d / float2(1.0, r.y)) - 0.9)) * 0.7;
+        c = float3(0.85, 0.92, 1.0);
+    } else {  // a shadow on the ground
+        a = smoothstep(1.0, 0.4, length(d / float2(1.0, r.y))) * 0.9;
+    }
+    a = saturate(a) * q.w;
+    if (kind != 12) c *= twinW;
+    float3 o = c * a + glow * q.w;
+    if (a < 0.002 && dot(o, o) < 1e-6) discard;
+    return float4(o, a);
+}
+
 // 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of
 // t1 - two texels: its place (xyz) and way (w), then its age 0-1 (x) - footprint how many; twinX the kind: 1 snow,
 // 2 sand (a foot's print, fading), 3 dust (a puff spreading and thinning). Blended over by its alpha.

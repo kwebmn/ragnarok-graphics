@@ -297,6 +297,17 @@ struct EffectSettings {
     bool shoreFoam = false;
     bool fish = false;
     bool swamp = false;
+    // 1.7.3: the living world, creatures and particles (core/critters.hpp, Direct3D 12): butterflies and dragonflies,
+    // birds, leaves falling from the crowns, embers from the fires, breath in the cold, splashes, the caves' drips,
+    // bubbles and light under the sea. Off by default.
+    bool butterflies = false;
+    bool birds = false;
+    bool leafFall = false;
+    bool embers = false;
+    bool breath = false;
+    bool splashes = false;
+    bool caveDrips = false;
+    bool underwater = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

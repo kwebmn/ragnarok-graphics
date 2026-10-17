@@ -206,7 +206,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"bloom_apply_ps", "ps_5_0", &bloomApplyPs},   {"steps_ps", "ps_5_0", &stepsPs},
                    {"grass_ps", "ps_5_0", &grassPs},              {"embers_ps", "ps_5_0", &embersPs},
                    {"half_over_ps", "ps_5_0", &halfOverPs},       {"flare_ps", "ps_5_0", &flarePs},
-                   {"ground_life_ps", "ps_5_0", &groundLifePs}};
+                   {"ground_life_ps", "ps_5_0", &groundLifePs},   {"critters_ps", "ps_5_0", &crittersPs},
+                   {"critters_vs", "vs_5_0", &crittersVs}};
     store.sink = startSink;  // 0.40
     store.context = startContext;
     store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'
@@ -251,7 +252,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     params[kRootTextures].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     params[kRootTextures].DescriptorTable.NumDescriptorRanges = 1;
     params[kRootTextures].DescriptorTable.pDescriptorRanges = &srvRange;
-    params[kRootTextures].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    // 1.7: the vertex shaders too - critters_vs reads its sprites' list (t1)
+    params[kRootTextures].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     params[kRootSamplers].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     params[kRootSamplers].DescriptorTable.NumDescriptorRanges = 1;
     params[kRootSamplers].DescriptorTable.pDescriptorRanges = &samplerRange;

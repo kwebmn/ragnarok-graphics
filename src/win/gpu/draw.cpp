@@ -318,8 +318,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = waterTime();
     }
-    if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2)
-        leafShading(rec, d, leafLook(), c);  // 1.7: the trees
+    if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7: the trees
+        leafShading(rec, d, leafLook(), c);
+        if (effects.leafFall) noteCrown(rec, d);
+    }
     if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
         std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);

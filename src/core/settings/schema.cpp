@@ -282,6 +282,22 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFishHint, ""},
         {"effects", "swamp", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSwamp,
          Text::FxSwampHint, ""},
+        {"effects", "butterflies", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxButterflies,
+         Text::FxButterfliesHint, ""},
+        {"effects", "birds", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBirds,
+         Text::FxBirdsHint, ""},
+        {"effects", "leaf_fall", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLeafFall,
+         Text::FxLeafFallHint, ""},
+        {"effects", "embers", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxEmbers,
+         Text::FxEmbersHint, ""},
+        {"effects", "breath", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBreath,
+         Text::FxBreathHint, ""},
+        {"effects", "splashes", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSplashes,
+         Text::FxSplashesHint, ""},
+        {"effects", "cave_drips", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxCaveDrips,
+         Text::FxCaveDripsHint, ""},
+        {"effects", "underwater", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxUnderwater,
+         Text::FxUnderwaterHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -568,6 +584,14 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.shore_foam") return c.effects.shoreFoam ? "1" : "0";
     if (k == "effects.fish") return c.effects.fish ? "1" : "0";
     if (k == "effects.swamp") return c.effects.swamp ? "1" : "0";
+    if (k == "effects.butterflies") return c.effects.butterflies ? "1" : "0";
+    if (k == "effects.birds") return c.effects.birds ? "1" : "0";
+    if (k == "effects.leaf_fall") return c.effects.leafFall ? "1" : "0";
+    if (k == "effects.embers") return c.effects.embers ? "1" : "0";
+    if (k == "effects.breath") return c.effects.breath ? "1" : "0";
+    if (k == "effects.splashes") return c.effects.splashes ? "1" : "0";
+    if (k == "effects.cave_drips") return c.effects.caveDrips ? "1" : "0";
+    if (k == "effects.underwater") return c.effects.underwater ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

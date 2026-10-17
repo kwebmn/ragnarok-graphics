@@ -96,6 +96,14 @@ const Effect kEffects[] = {
     {"effects.shore_foam", {}, {}, {}, 2},  // 1.7.2
     {"effects.fish", {}, {}, {}, 2},  // 1.7.2
     {"effects.swamp", {}, {}, {}, 2},  // 1.7.2
+    {"effects.butterflies", {}, {}, {}, 2},  // 1.7.3
+    {"effects.birds", {}, {}, {}, 2},  // 1.7.3
+    {"effects.leaf_fall", {}, {}, {}, 2},  // 1.7.3
+    {"effects.embers", {}, {}, {}, 2},  // 1.7.3
+    {"effects.breath", {}, {}, {}, 2},  // 1.7.3
+    {"effects.splashes", {}, {}, {}, 2},  // 1.7.3
+    {"effects.cave_drips", {}, {}, {}, 2},  // 1.7.3
+    {"effects.underwater", {}, {}, {}, 2},  // 1.7.3
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 

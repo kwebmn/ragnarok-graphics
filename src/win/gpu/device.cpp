@@ -1301,6 +1301,10 @@ void Renderer::Impl::destroy() {
     releaseCom(embersData);
     for (ID3D12PipelineState*& p : grassPipelines) releaseCom(p);  // 0.81
     for (ID3D12PipelineState*& p : groundLifePipelines) releaseCom(p);  // 1.7
+    for (ID3D12PipelineState*& p : crittersPipelines) releaseCom(p);
+    releaseCom(crittersPs);
+    releaseCom(crittersVs);
+    releaseCom(crittersData);
     releaseCom(groundLifePs);
     releaseCom(grassPs);
     for (ID3D12PipelineState*& p : stepsPipelines) releaseCom(p);  // 0.80
@@ -1583,6 +1587,8 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapWeather = weather::of(map);  // 0.39: its weather
     impl_->footTracker.clear();  // 0.80
     impl_->waterLevelKnown = false;  // 1.7
+    impl_->critterWorld.setPlace(impl_->mapPlace);
+    impl_->crittersTime = 0.0f;
     if (!map.empty()) impl_->mapFadeStart = impl_->waterTime();  // 0.83: the world comes in from black
     impl_->mapRegion = region_look::of(map, 100).region[0] != 0;  // 0.79: its look
     if (impl_->mapRegion) LOG_INFO("region: %s (%s)", region_look::of(map, 100).region, map.c_str());

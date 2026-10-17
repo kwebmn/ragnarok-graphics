@@ -122,6 +122,14 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.underwater = false;
+    e.caveDrips = false;
+    e.splashes = false;
+    e.breath = false;
+    e.embers = false;
+    e.leafFall = false;
+    e.birds = false;
+    e.butterflies = false;
     e.swamp = false;
     e.fish = false;
     e.shoreFoam = false;
@@ -169,6 +177,14 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.underwater ||
+           e.caveDrips ||
+           e.splashes ||
+           e.breath ||
+           e.embers ||
+           e.leafFall ||
+           e.birds ||
+           e.butterflies ||
            e.swamp ||
            e.fish ||
            e.shoreFoam ||
@@ -571,6 +587,22 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.fish);
         } else if (key == "effects.swamp") {
             setBool(val, c.effects.swamp);
+        } else if (key == "effects.butterflies") {
+            setBool(val, c.effects.butterflies);
+        } else if (key == "effects.birds") {
+            setBool(val, c.effects.birds);
+        } else if (key == "effects.leaf_fall") {
+            setBool(val, c.effects.leafFall);
+        } else if (key == "effects.embers") {
+            setBool(val, c.effects.embers);
+        } else if (key == "effects.breath") {
+            setBool(val, c.effects.breath);
+        } else if (key == "effects.splashes") {
+            setBool(val, c.effects.splashes);
+        } else if (key == "effects.cave_drips") {
+            setBool(val, c.effects.caveDrips);
+        } else if (key == "effects.underwater") {
+            setBool(val, c.effects.underwater);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

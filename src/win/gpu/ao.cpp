@@ -36,7 +36,7 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC fullScreenPipeline(ID3D12RootSignature* root,
 
 bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
                                 D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0,
-                                bool scene, UINT srv1, const D3D12_RECT* clip) {
+                                bool scene, UINT srv1, const D3D12_RECT* clip, UINT vertices) {
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
     linearClamp.magFilter = d3d7::TFG_LINEAR;
@@ -62,7 +62,7 @@ bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D
     if (scene)
         list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
     list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    list->DrawInstanced(3, 1, 0, 0);
+    list->DrawInstanced(vertices, 1, 0, 0);
     boundPipeline = nullptr;  // the next draws bind everything again
     boundTextures = boundSamplers = ~0ull;
     pass = kPassNone;
@@ -739,6 +739,7 @@ bool Renderer::Impl::finishWorld() {
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
     if (embersDue() && !applyEmbers()) return false;  // 0.82: the skills' sparks
+    if (crittersDue() && !applyCritters()) return false;  // 1.7: the living world's creatures
     if (waterfallsDue() && !applyWaterfalls()) return false;  // 0.65: the maps' waterfalls the game never shows
     if (floorReflectDue() && !applyFloorReflections()) return false;  // 0.72: lit, before the haze
     if (hazeDue() && !applyHaze()) return false;      // 0.34: far off and over the ground, before the colours
