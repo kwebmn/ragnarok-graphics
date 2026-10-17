@@ -21,67 +21,72 @@ struct Effect {
     const char* checks[2];
     const char* sliders[5];
     const char* needs[5];  // the box under it each slider needs on, or none
-    bool object;
+    int block;             // 0 the picture's effects, 1 the map's objects (0.23.2), 2 the living world (1.7)
 };
 const Effect kEffects[] = {
-    {"effects.smooth_light", {}, {}, {}, false},
-    {"effects.ao", {}, {"effects.ao_strength", "effects.ao_size"}, {}, false},
-    {"effects.sun_shadows", {}, {"effects.sun_shadows_strength"}, {}, false},  // 0.77
-    {"effects.bloom", {}, {"effects.bloom_strength"}, {}, false},  // 0.78
-    {"effects.filmic", {}, {}, {}, false},                           // 0.78
-    {"effects.region_looks", {}, {"effects.region_looks_strength"}, {}, false},  // 0.79
-    {"effects.glow", {}, {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}, {}, false},
-    {"effects.fire_light", {"effects.skill_colours"}, {"effects.fire_light_strength"}, {}, false},
-    {"effects.actor_shadows", {}, {"effects.actor_shadows_strength"}, {}, false},
-    {"effects.clouds", {}, {"effects.clouds_strength"}, {}, false},
-    {"effects.haze", {}, {"effects.haze_strength"}, {}, false},
-    {"effects.heat", {}, {"effects.heat_strength"}, {}, false},
-    {"effects.weather", {}, {"effects.weather_amount"}, {}, false},
-    {"effects.footprints", {}, {}, {}, false},  // 0.80
-    {"effects.storms", {}, {}, {}, false},      // 0.80
-    {"effects.grass", {}, {"effects.grass_amount"}, {}, false},  // 0.81
-    {"effects.skill_sparks", {}, {"effects.skill_sparks_amount"}, {}, false},  // 0.82
-    {"effects.film_grain", {}, {"effects.film_grain_amount"}, {}, false},  // 0.83
-    {"effects.map_fade", {}, {}, {}, false},                                // 0.83
-    {"effects.round_light", {}, {}, {}, false},  // 0.84
-    {"effects.appear", {}, {}, {}, false},  // 0.93
-    {"effects.ripples", {}, {}, {}, false},  // 0.94
-    {"effects.glint", {}, {}, {}, false},  // 0.95
-    {"effects.hit_flash", {}, {}, {}, false},  // 0.96
-    {"effects.wet_ground", {}, {}, {}, false},  // 0.97
-    {"effects.flare", {}, {}, {}, false},  // 0.98
-    {"effects.aura", {}, {"effects.aura_brightness"}, {}, false},
-    {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, false},
-    {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, false},
+    {"effects.smooth_light", {}, {}, {}, 0},
+    {"effects.ao", {}, {"effects.ao_strength", "effects.ao_size"}, {}, 0},
+    {"effects.sun_shadows", {}, {"effects.sun_shadows_strength"}, {}, 0},  // 0.77
+    {"effects.bloom", {}, {"effects.bloom_strength"}, {}, 0},  // 0.78
+    {"effects.filmic", {}, {}, {}, 0},                           // 0.78
+    {"effects.region_looks", {}, {"effects.region_looks_strength"}, {}, 0},  // 0.79
+    {"effects.glow", {}, {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}, {}, 0},
+    {"effects.fire_light", {"effects.skill_colours"}, {"effects.fire_light_strength"}, {}, 0},
+    {"effects.actor_shadows", {}, {"effects.actor_shadows_strength"}, {}, 0},
+    {"effects.clouds", {}, {"effects.clouds_strength"}, {}, 0},
+    {"effects.haze", {}, {"effects.haze_strength"}, {}, 0},
+    {"effects.heat", {}, {"effects.heat_strength"}, {}, 0},
+    {"effects.weather", {}, {"effects.weather_amount"}, {}, 0},
+    {"effects.footprints", {}, {}, {}, 0},  // 0.80
+    {"effects.storms", {}, {}, {}, 0},      // 0.80
+    {"effects.grass", {}, {"effects.grass_amount"}, {}, 0},  // 0.81
+    {"effects.skill_sparks", {}, {"effects.skill_sparks_amount"}, {}, 0},  // 0.82
+    {"effects.film_grain", {}, {"effects.film_grain_amount"}, {}, 0},  // 0.83
+    {"effects.map_fade", {}, {}, {}, 0},                                // 0.83
+    {"effects.round_light", {}, {}, {}, 0},  // 0.84
+    {"effects.appear", {}, {}, {}, 0},  // 0.93
+    {"effects.ripples", {}, {}, {}, 0},  // 0.94
+    {"effects.glint", {}, {}, {}, 0},  // 0.95
+    {"effects.hit_flash", {}, {}, {}, 0},  // 0.96
+    {"effects.wet_ground", {}, {}, {}, 0},  // 0.97
+    {"effects.flare", {}, {}, {}, 0},  // 0.98
+    {"effects.aura", {}, {"effects.aura_brightness"}, {}, 0},
+    {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, 0},
+    {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, 0},
     {"effects.grade",
      {},
      {"effects.grade_saturation", "effects.grade_contrast", "effects.grade_brightness", "effects.grade_warmth",
       "effects.grade_vignette"},
      {},
-     false},
-    {"effects.night", {"effects.night_clock"}, {"effects.night_strength"}, {}, false},  // 0.63
-    {"effects.foliage", {}, {"effects.foliage_strength"}, {}, false},                    // 0.64
-    {"effects.soft_particles", {}, {}, {}, false},  // 0.67
-    {"effects.rim_light", {}, {"effects.rim_strength"}, {}, false},  // 0.68
-    {"effects.sky", {}, {"effects.sky_clouds", "effects.sky_strength"}, {}, false},  // 0.69
-    {"effects.motes", {}, {"effects.motes_amount"}, {}, false},  // 0.70
-    {"effects.relief", {}, {"effects.relief_strength"}, {}, false},  // 0.71
-    {"effects.floor_reflections", {}, {"effects.floor_reflect_strength"}, {}, false},  // 0.72
-    {"effects.shafts", {}, {"effects.shafts_strength"}, {}, false},  // 0.73
-    {"effects.day_cycle", {}, {}, {}, false},  // 0.74
-    {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, false},
+     0},
+    {"effects.night", {"effects.night_clock"}, {"effects.night_strength"}, {}, 0},  // 0.63
+    {"effects.foliage", {}, {"effects.foliage_strength"}, {}, 0},                    // 0.64
+    {"effects.soft_particles", {}, {}, {}, 0},  // 0.67
+    {"effects.rim_light", {}, {"effects.rim_strength"}, {}, 0},  // 0.68
+    {"effects.sky", {}, {"effects.sky_clouds", "effects.sky_strength"}, {}, 0},  // 0.69
+    {"effects.motes", {}, {"effects.motes_amount"}, {}, 0},  // 0.70
+    {"effects.relief", {}, {"effects.relief_strength"}, {}, 0},  // 0.71
+    {"effects.floor_reflections", {}, {"effects.floor_reflect_strength"}, {}, 0},  // 0.72
+    {"effects.shafts", {}, {"effects.shafts_strength"}, {}, 0},  // 0.73
+    {"effects.day_cycle", {}, {}, {}, 0},  // 0.74
+    {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, 0},
     {"effects.torch",
      {"effects.torch_flame"},
      {"effects.torch_brightness", "effects.torch_glow", "effects.torch_light", "effects.torch_flicker"},
      {"effects.torch_flame"},
-     true},
-    {"effects.smoke", {}, {"effects.smoke_density"}, {}, true},
-    {"effects.lamps", {}, {"effects.lamps_light"}, {}, true},
-    {"effects.fireflies", {}, {"effects.fireflies_brightness"}, {}, true},
-    {"effects.map_glows", {}, {"effects.map_glows_brightness"}, {}, true},
-    {"effects.rays", {}, {"effects.rays_brightness"}, {}, true},
-    {"effects.lava", {}, {"effects.lava_brightness"}, {}, true},
-    {"effects.portals", {}, {"effects.portals_strength"}, {}, true},
+     1},
+    {"effects.smoke", {}, {"effects.smoke_density"}, {}, 1},
+    {"effects.lamps", {}, {"effects.lamps_light"}, {}, 1},
+    {"effects.fireflies", {}, {"effects.fireflies_brightness"}, {}, 1},
+    {"effects.map_glows", {}, {"effects.map_glows_brightness"}, {}, 1},
+    {"effects.rays", {}, {"effects.rays_brightness"}, {}, 1},
+    {"effects.lava", {}, {"effects.lava_brightness"}, {}, 1},
+    {"effects.portals", {}, {"effects.portals_strength"}, {}, 1},
+    {"effects.tree_volume", {}, {}, {}, 2},  // 1.7
+    {"effects.leaf_light", {}, {}, {}, 2},  // 1.7
+    {"effects.tree_tints", {}, {}, {}, 2},  // 1.7
+    {"effects.gusts", {}, {}, {}, 2},  // 1.7
+    {"effects.dapple", {}, {}, {}, 2},  // 1.7
 };
 constexpr int kEffectCount = int(sizeof kEffects / sizeof kEffects[0]);
 
@@ -106,14 +111,14 @@ public:
             readFile(host_.model().paths().dir + L"\\uaro-graphics\\effect-costs.txt", text)
                 ? effect_costs::parse(text)
                 : effect_costs::Costs{};
-        bool objects = false;
+        int block = 0;
         for (int e = 0; e < kEffectCount; ++e) {
             const Effect& fx = kEffects[e];
-            if (fx.object && !objects) {  // 0.23.2: the map's objects, a block of their own
-                objects = true;
+            if (fx.block != block) {  // 0.23.2: the map's objects, 1.7: the living world - blocks of their own
+                block = fx.block;
                 p.gap(16);
-                p.heading(t(Text::FxObjects));
-                p.note(t(Text::FxObjectsIntro), Tone::Normal);
+                p.heading(t(block == 1 ? Text::FxObjects : Text::FxLiving));
+                p.note(t(block == 1 ? Text::FxObjectsIntro : Text::FxLivingIntro), Tone::Normal);
             }
             p.gap();
             const IniSetting& box = setting(fx.box);

@@ -55,6 +55,13 @@ struct PsIn {
     float2 uv1 : TEXCOORD1;
 };
 
+// 1.7: a gust's strength at game x and time t (0-1): a band about 250 pixels wide crossing the screen from the left
+// every 9 s or so, stronger and weaker in turn.
+float gustAt(float x, float t) {
+    float band = pow(saturate(sin(x * 0.0042 - t * 0.7)), 8.0);
+    return band * (0.55 + 0.45 * sin(t * 0.23));
+}
+
 // D3D7 puts pixel centres on integer coordinates, D3D12 on half-integers, and the target is `scale` times the
 // game's size: a game x lands at x * scale + 0.5 (stage 3 spec §4; at scale 1 that is calibration.md §3).
 PsIn draw_vs(VsIn i) {
@@ -67,6 +74,8 @@ PsIn draw_vs(VsIn i) {
         float up = saturate((twinY - i.pos.y) / max(twinW, 1.0));
         float wave = sin(twinH * 1.6 + i.pos.x * 0.013 + i.pos.y * 0.007) * 0.7 +
                      sin(twinH * 2.9 + i.pos.x * 0.031) * 0.3;
+        // 1.7, gusts (uiPixels.w): a band of wind crossing the screen from the left now and then (grass_ps alike).
+        wave += uiPixels.w * gustAt(i.pos.x, twinH) * 2.6;
         gx += twinX * up * up * wave;
     }
     float x = (gx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
@@ -231,6 +240,37 @@ float relief(float2 uv, float2 du, float2 dv) {
 }
 #endif
 
+#ifndef UAGFX_SAFE
+// 1.7, the trees (draw_constants.hpp leafShading): a draw of leaves, its box sourceRect (game pixels). uiPixels.xy
+// the way to the sun on the screen, .z the crown's roundness (tree_volume) - lit as a ball from the sun's side, darker
+// in its middle; r4 the light through the leaves (leaf_light): a leaf with a hole a few pixels towards the sun is on
+// the crown's edge and glows warm green; sourceClamp.rgb the tree's own shade, r0-r2 the autumn's colour and r3 how
+// much (tree_tints), r5 rime on the crown's top.
+float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
+    float2 lo = sourceRect.xy * scale + 0.5 + float2(jitterX, jitterY);
+    float2 hi = sourceRect.zw * scale + 0.5 + float2(jitterX, jitterY);
+    float2 q = clamp((pos - (lo + hi) * 0.5) / max((hi - lo) * 0.5, 1.0), -1.0, 1.0);
+    float2 sun = uiPixels.xy;
+    float luma = dot(c, float3(0.299, 0.587, 0.114));
+    c *= sourceClamp.rgb;
+    if (r3 > 0.0) c = lerp(c, luma * float3(r0, r1, r2), r3);
+    if (r5 > 0.0) c = lerp(c, float3(0.86, 0.92, 1.0) * (0.55 + luma), r5 * saturate(0.35 - q.y * 0.65));
+    if (uiPixels.z > 0.0) {
+        float3 n = normalize(float3(q, sqrt(saturate(1.0 - dot(q, q) * 0.85)) + 0.3));
+        float lit = dot(n, normalize(float3(sun, 0.8)));
+        float hollow = 1.0 - 0.16 * saturate(1.0 - length(q)) * saturate(0.6 + q.y);
+        c *= (0.93 + 0.27 * lit) * hollow * uiPixels.z + (1.0 - uiPixels.z);
+    }
+    if (r4 > 0.0) {
+        float2 o = (du * sun.x + dv * sun.y) * 4.0 * scale;
+        float open = 1.0 - tex0.SampleGrad(samp0, uv + o, du, dv).a;
+        float edge = open * saturate(dot(q, sun) * 0.8 + 0.45);
+        c += float3(0.42, 0.55, 0.12) * (edge * r4 * (0.4 + luma));
+    }
+    return c;
+}
+#endif
+
 float4 shade(PsIn i) {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
@@ -255,6 +295,9 @@ float4 shade(PsIn i) {
         c = stage(stage0, i.diffuse, i.specular, i.diffuse, t0);
         if ((stage1.x & 255) != 1) c = stage(stage1, i.diffuse, i.specular, c, t1);
     }
+#ifndef UAGFX_SAFE
+    if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
+#endif
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
     float alphaStep = fwidth(c.a);  // outside any branch
     if (((alphaTest >> 17) & 1) != 0) {
@@ -1283,6 +1326,20 @@ float4 sun_shadow_ps(PresentOut i) : SV_Target {
             break;
         }
         t *= grow;
+    }
+    // 1.7, dapple (sourceRect.y; sourceRect.x the time): in the shadow of leaves (green where the ray met them)
+    // spots of sun come through, stirring - noise over the world (r0-r11 the view -> the world), steady as the camera
+    // moves.
+    if (sourceRect.y > 0.0 && shade > 0.0) {
+        float3 hit = sceneColor.Load(int3(int2(tp), 0)).rgb;
+        if (hit.g > hit.r * 1.05 && hit.g > hit.b * 1.1) {
+            float3 w = p.x * float3(r0, r1, r2) + p.y * float3(r3, r4, r5) + p.z * float3(r6, r7, r8) +
+                       float3(r9, r10, r11);
+            float tm = sourceRect.x;
+            float2 wind = float2(sin(tm * 0.9) * 0.35 + sin(tm * 2.3) * 0.1, cos(tm * 0.7) * 0.25);
+            float n = valueNoise(w.xz * 0.55 + wind) * 0.65 + valueNoise(w.xz * 1.3 - wind * 1.7 + 7.1) * 0.35;
+            shade *= 1.0 - smoothstep(0.6, 0.72, n) * 0.85;
+        }
     }
     float s = 1.0 - shade * sharpen;
     return float4(s, s, s, 1.0);

@@ -7,6 +7,9 @@
 #include <vector>
 
 #include "core/frame.hpp"
+#include "core/game_camera.hpp"
+#include "core/trees.hpp"
+#include "win/gpu/shaders.hpp"
 
 namespace uagfx::gpu {
 
@@ -56,6 +59,62 @@ inline bool yExtent(const FrameRecord& rec, const DrawCmd& d, float& top, float&
         bottom = std::max(bottom, xy[1]);
     }
     return bottom - top > 2.0f;
+}
+
+// 1.7, the trees (core/trees.hpp): a draw of leaves lit as a round crown, lit through towards the sun, its own shade
+// and the season's colours (shaders.cpp leafLight), and the gusts' share of its sway (draw_vs). sun: the way the
+// shadows fall on the screen (core/daylight.hpp).
+struct LeafLook {
+    bool volume = false, through = false, tints = false, gusts = false;
+    float sun[2] = {0.83f, 0.56f};
+    float throughLight = 0.0f;  // trees::throughLight
+    trees::Season season = trees::Season::Green;
+    const float* viewToWorld = nullptr;  // null: no camera, no shade of its own
+    camera::Projection projection;
+};
+
+inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook& look, Constants& c) {
+    if (!look.volume && !look.through && !look.tints && !look.gusts) return;
+    c.uiPixels[3] = look.gusts ? 1.0f : 0.0f;
+    if (!look.volume && !look.through && !look.tints) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    float x0 = FLT_MAX, y0 = FLT_MAX, x1 = -FLT_MAX, y1 = -FLT_MAX, rhw = 0.0f;
+    uint32_t n = 0;
+    for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= v.size(); ++i, ++n) {
+        float xyzw[4];
+        std::memcpy(xyzw, v.data() + d.vertexOffset + i * stride, sizeof xyzw);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3];
+    }
+    if (!n || x1 - x0 < 2.0f || y1 - y0 < 2.0f) return;
+    rhw /= float(n);
+    c.stage1[1] |= 1u << 27;
+    c.sourceRect[0] = x0;
+    c.sourceRect[1] = y0;
+    c.sourceRect[2] = x1;
+    c.sourceRect[3] = y1;
+    const float len = std::sqrt(look.sun[0] * look.sun[0] + look.sun[1] * look.sun[1]);
+    c.uiPixels[0] = len > 1e-4f ? -look.sun[0] / len : 0.0f;  // towards the sun
+    c.uiPixels[1] = len > 1e-4f ? -look.sun[1] / len : -1.0f;
+    c.uiPixels[2] = look.volume ? 1.0f : 0.0f;
+    c.reproject[4] = look.through ? look.throughLight : 0.0f;
+    c.sourceClamp[0] = c.sourceClamp[1] = c.sourceClamp[2] = 1.0f;
+    if (!look.tints || !look.viewToWorld || rhw <= 0.0f) return;
+    const camera::Projection& p = look.projection;
+    const float* m = look.viewToWorld;
+    const float vz = 1.0f / rhw, vx = ((x0 + x1) * 0.5f - p.cx) * vz / p.f0, vy = ((y0 + y1) * 0.5f - p.cy) * vz / p.f1;
+    const float wx = vx * m[0] + vy * m[3] + vz * m[6] + m[9], wz = vx * m[2] + vy * m[5] + vz * m[8] + m[11];
+    const trees::Shade sh = trees::shadeAt(wx, wz, look.season);
+    for (int k = 0; k < 3; ++k) {
+        c.sourceClamp[k] = sh.tint[k];
+        c.reproject[k] = sh.autumn[k];
+    }
+    c.reproject[3] = sh.autumnAmount;
+    c.reproject[5] = sh.rime;
 }
 
 }  // namespace uagfx::gpu

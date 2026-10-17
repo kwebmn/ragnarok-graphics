@@ -2182,6 +2182,60 @@ const Entry kTexts[] = {
     {"Their model",
      "Їхня модель",
      "Их модель"},
+    {"Living world",
+     "Живий світ",
+     "Живой мир"},
+    {"Small living details of the maps: the trees, the grass, the water, creatures and particles. All of them off by "
+     "default; each costs little.",
+     "Дрібні живі деталі мап: дерева, трава, вода, створіння й частинки. Усе вимкнено за замовчуванням; кожна коштує "
+     "небагато.",
+     "Мелкие живые детали карт: деревья, трава, вода, существа и частицы. Всё выключено по умолчанию; каждая стоит "
+     "немного."},
+    {"Rounded tree crowns",
+     "Об'ємні крони дерев",
+     "Объёмные кроны деревьев"},
+    {"A tree's crown is lit as a round shape: the side towards the sun lighter, the far side and the middle darker. "
+     "Flat leaf pictures look like volume; the light turns with the sun.",
+     "Крона дерева освітлена як куля: бік до сонця світліший, дальній бік і середина темніші. Пласкі картинки листя "
+     "виглядають об'ємними; світло повертається разом із сонцем.",
+     "Крона дерева освещена как шар: бок к солнцу светлее, дальний бок и середина темнее. Плоские картинки листвы "
+     "выглядят объёмными; свет поворачивается вместе с солнцем."},
+    {"Sunlight through the leaves",
+     "Світло крізь листя",
+     "Свет сквозь листву"},
+    {"The leaves on the crown's edge towards the sun glow warm green, lit through - the most in the morning and the "
+     "evening.",
+     "Листя на краю крони з боку сонця світиться теплим зеленим, просвічене наскрізь, найбільше вранці й увечері.",
+     "Листья на краю кроны со стороны солнца светятся тёплым зелёным, просвеченные насквозь, сильнее всего утром и "
+     "вечером."},
+    {"Every tree its own, seasons",
+     "Кожне дерево своє, пори року",
+     "Каждое дерево своё, времена года"},
+    {"Each tree gets a slightly different shade and brightness, so a wood is not one crown copied. In autumn "
+     "(September to November, the computer's calendar) some trees turn yellow and orange; in Lutie the crowns carry "
+     "rime.",
+     "Кожне дерево трохи іншого відтінку й яскравості, тож ліс не складається з однієї скопійованої крони. Восени (з "
+     "вересня по листопад, за календарем комп'ютера) частина дерев жовтіє й рудіє; у Лютії крони вкриті інеєм.",
+     "Каждое дерево чуть другого оттенка и яркости, так что лес не состоит из одной скопированной кроны. Осенью (с "
+     "сентября по ноябрь, по календарю компьютера) часть деревьев желтеет и рыжеет; в Лютие кроны покрыты инеем."},
+    {"Gusts of wind",
+     "Пориви вітру",
+     "Порывы ветра"},
+    {"Now and then a gust crosses the screen: the trees bend one after another and the grass bends and lightens along "
+     "a band. Needs Leaves in the wind (and Grass for the grass).",
+     "Час від часу екраном проходить порив: дерева гнуться одне за одним, а трава хилиться й світлішає смугою. "
+     "Потрібне «Листя на вітрі» (і «Трава» для трави).",
+     "Время от времени по экрану проходит порыв: деревья гнутся одно за другим, а трава клонится и светлеет полосой. "
+     "Нужна «Листва на ветру» (и «Трава» для травы)."},
+    {"Sun spots under the trees",
+     "Сонячні плями під деревами",
+     "Солнечные пятна под деревьями"},
+    {"The shadow of a tree is not solid: spots of sun come through the leaves and stir with the wind. Needs Shadows "
+     "of houses and trees (Direct3D 12).",
+     "Тінь дерева не суцільна: крізь листя пробиваються сонячні плями й ворушаться від вітру. Потрібні «Тіні "
+     "будинків і дерев» (Direct3D 12).",
+     "Тень дерева не сплошная: сквозь листву пробиваются солнечные пятна и шевелятся от ветра. Нужны «Тени домов "
+     "и деревьев» (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

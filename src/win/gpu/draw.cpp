@@ -5,6 +5,7 @@
 
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
+#include "core/daylight.hpp"
 #include "core/effect_exe.hpp"
 #include "core/game_camera.hpp"
 #include "core/scale.hpp"
@@ -316,6 +317,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = waterTime();
     }
+    if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2)
+        leafShading(rec, d, leafLook(), c);  // 1.7: the trees
     if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
         std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
@@ -381,6 +384,22 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     } else {
         list->DrawInstanced(d.vertexCount, 1, 0, 0);
     }
+}
+
+// 1.7: the trees' settings for a draw of leaves (draw_constants.hpp leafShading).
+LeafLook Renderer::Impl::leafLook() const {
+    LeafLook l;
+    l.volume = effects.treeVolume;
+    l.through = effects.leafLight;
+    l.tints = effects.treeTints;
+    l.gusts = effects.gusts && effects.foliage && effects.foliageStrength > 0;
+    sunOnScreen(l.sun);
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    l.throughLight = trees::throughLight(daylight::at(effects.dayCycle ? effects.dayNow : -1).length, night);
+    l.season = mapSeason;
+    l.viewToWorld = viewToWorldValid ? viewToWorld : nullptr;
+    l.projection = camera::projectionFor(gameWidth, gameHeight);
+    return l;
 }
 
 }  // namespace uagfx::gpu

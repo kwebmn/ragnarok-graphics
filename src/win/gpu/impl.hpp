@@ -20,6 +20,7 @@
 #include "core/pipeline_key.hpp"
 #include "core/weather.hpp"
 #include "core/torch.hpp"
+#include "win/gpu/draw_constants.hpp"
 #include "win/gpu/frame_pacer.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/gpu/shaders.hpp"
@@ -519,6 +520,8 @@ struct Renderer::Impl {
     ID3DBlob* lavaPs = nullptr;     // 0.31: a cell of lava (draw.cpp), with the glow's second target
     ID3DBlob* lavaGlowPs = nullptr;
     std::string mapName;                    // the map the game shows (setMap)
+    trees::Season mapSeason = trees::Season::Green;  // 1.7: its trees' (core/trees.hpp)
+    LeafLook leafLook() const;  // 1.7: the trees' settings for leafShading (draw.cpp)
     std::vector<FireSpark> lavaCells;       // 0.31: this frame's cells of lava: their middles light around them
     bool lavaLogged = false;
     LARGE_INTEGER waterClock{};  // the waves' time starts with the first water

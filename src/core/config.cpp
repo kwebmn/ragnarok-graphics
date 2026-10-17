@@ -122,6 +122,11 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.dapple = false;
+    e.gusts = false;
+    e.treeTints = false;
+    e.leafLight = false;
+    e.treeVolume = false;
     e.flare = false;
     e.wetGround = false;
     e.hitFlash = false;
@@ -155,6 +160,11 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.dapple ||
+           e.gusts ||
+           e.treeTints ||
+           e.leafLight ||
+           e.treeVolume ||
            e.flare ||
            e.wetGround ||
            e.hitFlash ||
@@ -515,6 +525,16 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.wetGround);
         } else if (key == "effects.flare") {
             setBool(val, c.effects.flare);
+        } else if (key == "effects.tree_volume") {
+            setBool(val, c.effects.treeVolume);
+        } else if (key == "effects.leaf_light") {
+            setBool(val, c.effects.leafLight);
+        } else if (key == "effects.tree_tints") {
+            setBool(val, c.effects.treeTints);
+        } else if (key == "effects.gusts") {
+            setBool(val, c.effects.gusts);
+        } else if (key == "effects.dapple") {
+            setBool(val, c.effects.dapple);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {

@@ -217,6 +217,9 @@ enum class Text : uint16_t {
     AiPreviewZoom, AiPreviewWhole, AiPreviewZoomHint,  // 1.6.1
     AiPreviewOpen, AiPreviewWindowHint,  // 1.6.2
     AiSmall, AiSmallHint, AiSmallSide, AiSmallModel,  // 1.6.3
+    // 1.7: the living world
+    FxLiving, FxLivingIntro, FxTreeVolume, FxTreeVolumeHint, FxLeafLight, FxLeafLightHint, FxTreeTints, FxTreeTintsHint,
+    FxGusts, FxGustsHint, FxDapple, FxDappleHint,
     Count
 };
 

@@ -238,6 +238,11 @@ bool Renderer::Impl::applySunShadows() {
     c.footprint = 90.0f;
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     c.sharpen = 0.45f * float(std::clamp(effects.sunShadowsStrength, 0, 100)) / 100.0f * (1.0f - night);
+    if (effects.dapple && copySceneColor()) {  // 1.7: spots of sun under the trees (sun_shadow_ps)
+        std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+        c.sourceRect[0] = waterTime();
+        c.sourceRect[1] = 1.0f;
+    }
     if (!sunShadowLogged) LOG_INFO("sun's shadows: over %s", mapName.c_str());
     sunShadowLogged = true;
     return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneDepthSrv, true)

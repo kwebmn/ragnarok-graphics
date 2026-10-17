@@ -1053,6 +1053,21 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = float(double(now - clockStart_) / 1000.0);
     }
+    if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7: the trees
+        LeafLook l;
+        l.volume = effects_.treeVolume;
+        l.through = effects_.leafLight;
+        l.tints = effects_.treeTints;
+        l.gusts = effects_.gusts && effects_.foliage && effects_.foliageStrength > 0;
+        const daylight::Light sun = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
+        l.sun[0] = sun.shadow[0];
+        l.sun[1] = sun.shadow[1];
+        l.throughLight = trees::throughLight(sun.length, float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f);
+        l.season = season_;
+        l.viewToWorld = cameraValid_ ? viewToWorld_ : nullptr;
+        l.projection = camera::projectionFor(gameWidth_, gameHeight_);
+        leafShading(rec, d, l, c);
+    }
     // 0.99, the modern water (as draw.cpp): a cell of the map's water by water_vs/water_ps, from the picture and the
     // depth before the frame's first water; without them as the game draws it.
     bool water = false;

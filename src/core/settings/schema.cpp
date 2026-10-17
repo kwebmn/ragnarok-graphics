@@ -254,6 +254,16 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxWetGroundHint, ""},
         {"effects", "flare", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFlare,
          Text::FxFlareHint, ""},
+        {"effects", "tree_volume", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeVolume,
+         Text::FxTreeVolumeHint, ""},
+        {"effects", "leaf_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLeafLight,
+         Text::FxLeafLightHint, ""},
+        {"effects", "tree_tints", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeTints,
+         Text::FxTreeTintsHint, ""},
+        {"effects", "gusts", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGusts,
+         Text::FxGustsHint, ""},
+        {"effects", "dapple", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDapple,
+         Text::FxDappleHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -526,6 +536,11 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.hit_flash") return c.effects.hitFlash ? "1" : "0";
     if (k == "effects.wet_ground") return c.effects.wetGround ? "1" : "0";
     if (k == "effects.flare") return c.effects.flare ? "1" : "0";
+    if (k == "effects.tree_volume") return c.effects.treeVolume ? "1" : "0";
+    if (k == "effects.leaf_light") return c.effects.leafLight ? "1" : "0";
+    if (k == "effects.tree_tints") return c.effects.treeTints ? "1" : "0";
+    if (k == "effects.gusts") return c.effects.gusts ? "1" : "0";
+    if (k == "effects.dapple") return c.effects.dapple ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

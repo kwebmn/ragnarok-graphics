@@ -1573,6 +1573,7 @@ void Renderer::setMap(const std::string& map) {
     if (remote_) return remote_->setMap(map);
     impl_->mapWorld.setMap(map);
     impl_->mapName = map;  // 0.31: lava's maps
+    impl_->mapSeason = trees::seasonOf(map, trees::monthNow());  // 1.7
     impl_->mapOutdoors = outdoors(map);  // 0.33: the clouds' shadows
     impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off

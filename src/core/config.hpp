@@ -275,6 +275,15 @@ struct EffectSettings {
     // 0.98: flare - under the open sky in the day, the sun's flare across the screen when the sky shows towards it
     // (flare_ps, Direct3D 12). Off by default.
     bool flare = false;
+    // 1.7: the living world, trees: tree_volume - a crown lit as a round shape (its side to the sun lighter);
+    // leaf_light - the leaves on the crown's sunward edge lit through; tree_tints - each tree a shade of its
+    // own, autumn colours in autumn, rime in Lutie; gusts - gusts cross the woods (with foliage); dapple - spots of
+    // sun in the trees' shadows (with sun_shadows). Off by default.
+    bool treeVolume = false;
+    bool leafLight = false;
+    bool treeTints = false;
+    bool gusts = false;
+    bool dapple = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

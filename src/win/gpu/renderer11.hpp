@@ -11,6 +11,7 @@
 #include "core/draw_batch.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
+#include "core/trees.hpp"
 #include "core/map_objects.hpp"
 #include "core/torch.hpp"
 #include "core/retry_timer.hpp"
@@ -65,7 +66,10 @@ public:
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
     void saveScreenshot(const std::string& path);  // 0.54: the back buffer as it is now, to a PNG
     void setEffects(const EffectSettings& e) { effects_ = e; }  // 0.59: the colours (grade) are drawn here
-    void setMap(const std::string& map) { map_ = map; }         // 0.79: the region's look
+    void setMap(const std::string& map) {  // 0.79: the region's look; 1.7: the trees' season
+        map_ = map;
+        season_ = trees::seasonOf(map, trees::monthNow());
+    }
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setStateCache(bool on) { stateCache_ = on; }  // 0.88: [debug] state_cache
@@ -258,6 +262,7 @@ private:
     Target scene_;   // 0.59: its copy the colours are read from
     EffectSettings effects_;
     std::string map_;
+    trees::Season season_ = trees::Season::Green;
     bool worldDrawn_ = false, gradeDone_ = false;  // this frame
     ID3D11Texture2D* depth_ = nullptr;
     ID3D11DepthStencilView* dsv_ = nullptr;
