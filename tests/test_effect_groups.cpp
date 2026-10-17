@@ -3,6 +3,7 @@
 #include "core/effect_groups.hpp"
 #include "core/settings/auto_setup.hpp"
 #include "core/settings/effects_layout.hpp"
+#include "core/settings/ini_edit.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -105,4 +106,63 @@ TEST(effect_groups_auto_setup_picks_the_set) {
     CHECK(word(settings::autoSetup(m)) == "weak");
     m.vendor = 0x1414;  // no driver
     CHECK(word(settings::autoSetup(m)) == "off");
+}
+
+TEST(effect_groups_shown_takes_the_sets_switches_and_mode) {
+    EffectSettings e;  // custom: as written
+    e.grass = true;
+    e.tier = 0;
+    e.groups[Nature] = false;
+    e.groupStrength[Light] = 50;
+    CHECK(shown(e, 1).grass && shown(e, 1).tier == 0);  // a group off is shown over the switch, not in it
+    e.preset = EffectPreset::Weak;
+    const EffectSettings s = shown(e, 3);
+    CHECK(!s.grass && s.torch && s.tier == 1);
+    CHECK(!s.groups[Nature] && s.groups[Light]);  // the groups as written
+    CHECK_EQ(s.groupStrength[Light], 50);
+    CHECK_EQ(s.torchLight, e.torchLight);  // the strengths as written, not scaled by the group's
+    e.preset = EffectPreset::Auto;
+    CHECK(shown(e, 3).materials && shown(e, 3).tier == 2 && !shown(e, 2).materials);
+}
+
+TEST(effect_groups_materialize_writes_the_set_then_custom) {
+    EffectSettings e;
+    CHECK(materialize(e, 3).empty());  // custom already: nothing to write
+    e.preset = EffectPreset::Medium;
+    e.groups[Nature] = false;  // the group stays the group's: the switches are the set's
+    const auto lines = materialize(e, 3, "grass");
+    CHECK_EQ(lines.size(), size_t(memberCount()) - 1 + 2);  // every switch but the one left out, tier, preset
+    CHECK(lines.back().first == "preset" && lines.back().second == "custom");
+    bool grass = false, torch = false, materials = false, tier = false;
+    for (const auto& [key, value] : lines) {
+        grass = grass || key == "grass";
+        torch = torch || (key == "torch" && value == "1");
+        materials = materials || (key == "materials" && value == "0");
+        tier = tier || (key == "tier" && value == "classic");
+    }
+    CHECK(!grass && torch && materials && tier);
+    e.preset = EffectPreset::Strong;
+    bool remaster = false;
+    for (const auto& [key, value] : materialize(e, 1)) remaster = remaster || (key == "tier" && value == "remaster");
+    CHECK(remaster);
+    // custom chosen (the console): the caller writes the preset itself, once
+    bool preset = false;
+    for (const auto& [key, value] : materialize(e, 1, "preset")) preset = preset || key == "preset";
+    CHECK(!preset);
+}
+
+TEST(effect_groups_a_materialized_set_draws_the_same) {
+    // what the set drew is drawn the same once it is written out as the player's own (custom)
+    for (const char* word : {"auto", "off", "weak", "medium", "strong"})
+        for (int card = 1; card <= 3; ++card) {
+            const std::string text = std::string("[effects]\npreset = ") + word + "\ngroup_water = 0\n";
+            const EffectSettings before = parseConfig(text).effects;
+            std::vector<settings::IniEdit> edits;
+            for (const auto& [key, value] : materialize(before, card)) edits.push_back({"effects", key, value});
+            const EffectSettings after = parseConfig(settings::applyIniEdits(text, edits)).effects;
+            CHECK(after.preset == EffectPreset::Custom);
+            const EffectSettings a = effective(before, card), b = effective(after, card);
+            for (int m = 0; m < memberCount(); ++m) CHECK(a.*members()[m].on == b.*members()[m].on);
+            CHECK_EQ(a.tier, b.tier);
+        }
 }

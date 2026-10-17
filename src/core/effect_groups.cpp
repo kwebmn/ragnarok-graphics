@@ -193,6 +193,28 @@ EffectSettings effective(const EffectSettings& in, int card) {
     return e;
 }
 
+EffectSettings shown(const EffectSettings& e, int card) {
+    EffectSettings all = e;
+    for (bool& g : all.groups) g = true;
+    const EffectSettings set = effective(all, card);
+    EffectSettings out = e;
+    for (const Member& m : kMembers) out.*m.on = set.*m.on;
+    out.tier = set.tier;
+    return out;
+}
+
+std::vector<std::pair<std::string, std::string>> materialize(const EffectSettings& e, int card,
+                                                             const std::string& except) {
+    std::vector<std::pair<std::string, std::string>> out;
+    if (setLevel(e.preset, card) < 0) return out;
+    const EffectSettings s = shown(e, card);
+    for (const Member& m : kMembers)
+        if (except != m.key) out.emplace_back(m.key, s.*m.on ? "1" : "0");
+    if (except != "tier") out.emplace_back("tier", s.tier == 2 ? "remaster" : "classic");
+    if (except != "preset") out.emplace_back("preset", "custom");
+    return out;
+}
+
 const char* presetToken(EffectPreset p) {
     switch (p) {
         case EffectPreset::Auto: return "auto";

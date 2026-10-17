@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "core/config.hpp"
 
@@ -34,6 +36,17 @@ int cardLevel(bool d3d12, unsigned long long vramMb);
 // What the driver draws by: the set's switches (all as written for custom), each group's off, its strength on its
 // effects' own; with a set, its mode (tier) - the remaster's for strong, classic+ for the others.
 EffectSettings effective(const EffectSettings& e, int cardLevel);
+
+// What the Effects page and the console show: each switch and the mode as the set has them (custom: as written);
+// the groups and the strengths as written - they stay over the switches.
+EffectSettings shown(const EffectSettings& e, int cardLevel);
+
+// A set made the player's own - an effect switched by hand under a set, or custom chosen: the [effects] lines to
+// write ("torch", "1"), every switch as the set has it now, its mode, then preset = custom; `except` (a key about to
+// be written anyway, without "effects.": a switch, "tier" or "preset") left out. None for custom: the switches are
+// the player's already.
+std::vector<std::pair<std::string, std::string>> materialize(const EffectSettings& e, int cardLevel,
+                                                             const std::string& except = "");
 
 const char* presetToken(EffectPreset p);  // "auto", "off", "weak", "medium", "strong", "custom"
 bool presetFrom(const std::string& word, EffectPreset& p);

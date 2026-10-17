@@ -62,14 +62,7 @@ std::string groupKey(int g) { return std::string("effects.group_") + effect_grou
 // stay over the switches, as on the Effects page); a set other than custom decides them, not the file's lines.
 Config shownConfig(const Config& c) {
     Config shown = c;
-    EffectSettings e = c.effects;
-    for (bool& g : e.groups) g = true;
-    const EffectSettings set = effect_groups::effective(e, startup().cardLevel);
-    for (int i = 0; i < effect_groups::memberCount(); ++i) {
-        const effect_groups::Member& m = effect_groups::members()[i];
-        shown.effects.*m.on = set.*m.on;
-    }
-    shown.effects.tier = set.tier;
+    shown.effects = effect_groups::shown(c.effects, startup().cardLevel);
     shown.ai = c.aiNow;  // 2.2.1: the AI pictures as the file says now (shown so at once)
     return shown;
 }
@@ -195,15 +188,14 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
     if (next == now) return false;
     std::vector<IniEdit> edits;
     const std::string key = sectionKey(*s);
-    // 2.2: an effect's own switch while a set decides them - the set made the player's own first (as it has them)
-    if (config.effects.preset != EffectPreset::Custom && (effect_groups::memberOf(key) || key == "effects.tier")) {
-        for (int i = 0; i < effect_groups::memberCount(); ++i) {
-            const std::string k = std::string("effects.") + effect_groups::members()[i].key;
-            if (k == key) continue;
-            if (const IniSetting* m = settingOf(k)) edits.push_back({m->section, m->key, tokenOf(*m, shown)});
-        }
-        if (key != "effects.tier") edits.push_back({"effects", "tier", tokenOf(*settingOf("effects.tier"), shown)});
-        edits.push_back({"effects", "preset", "custom"});
+    // 2.2: an effect's own switch or the mode while a set decides them - the set made the player's own first (as it
+    // has them, in the same write); 2.2.2: custom chosen here as well, as on the Effects page (the switches the set
+    // had, not whatever the file held from before)
+    const effect_groups::Member* member = effect_groups::memberOf(key);
+    if (member || key == "effects.tier" || (key == "effects.preset" && next == "custom")) {
+        const std::string except = member ? member->key : key.substr(8);
+        for (const auto& [k, v] : effect_groups::materialize(config.effects, startup().cardLevel, except))
+            edits.push_back({"effects", k, v});
     }
     edits.push_back({s->section, s->key, next});
     std::string text;
@@ -434,6 +426,12 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 std::string choice = tok;
                 for (size_t k = 0; k < s->tokens.size() && k < s->choices.size(); ++k)
                     if (tok == s->tokens[k]) choice = tr(lang_, s->choices[k]);
+                if (r.key == "effects.preset" && tok == "auto") {  // 2.2.2: "Auto: Medium" - the card's (was "{1}")
+                    static const Text kLevels[] = {Text::FxPresetWeak, Text::FxPresetWeak, Text::FxPresetMedium,
+                                                   Text::FxPresetStrong};
+                    const int level = std::clamp(startup().cardLevel, 0, 3);
+                    choice = fmt(tr(lang_, Text::FxPresetAuto), {tr(lang_, kLevels[level])});
+                }
                 text(x, y, wide(tr(lang_, s->label)), RGB(200, 200, 190));
                 textRight(w - fontH, y, L"◂ " + wide(choice) + L" ▸", RGB(240, 236, 226));
             }
