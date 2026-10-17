@@ -568,7 +568,7 @@ Config parseConfig(const std::string& text) {
         } else if (key == "effects.day_cycle") {
             setBool(val, c.effects.dayCycle);
         } else if (key == "effects.sun_shadows") {
-            setBool(val, c.effects.sunShadows);
+            // 2.1.4: the moving shadows are gone (the map's painted ones are enough) - read, kept off
         } else if (key == "effects.sun_shadows_strength") {
             toInt(val, 0, 100, c.effects.sunShadowsStrength);
         } else if (key == "effects.bloom") {
@@ -678,7 +678,7 @@ Config parseConfig(const std::string& text) {
         } else if (key == "effects.bounce_light") {
             setBool(val, c.effects.bounceLight);
         } else if (key == "effects.real_shadows") {
-            setBool(val, c.effects.realShadows);
+            // 2.1.4: gone with sun_shadows - read, kept off
         } else if (key == "effects.volumetric_fog") {
             setBool(val, c.effects.volumetricFog);
         } else if (key == "effects.volumetric_fog_density") {

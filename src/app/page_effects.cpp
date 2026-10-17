@@ -26,7 +26,7 @@ constexpr int kRecommended = 965;               // 1.25: the set for a strong ca
 // contact shadows, the far fields blurred) - the rest stays as it is.
 const char* const kRecommendedSet[][2] = {
     {"effects.materials", "1"},     {"effects.materials_strength", "100"}, {"effects.ao", "1"},
-    {"effects.sun_shadows", "1"},   {"effects.real_shadows", "1"},         {"effects.tree_volume", "1"},
+    {"effects.tree_volume", "1"},
     {"effects.leaf_light", "1"},    {"effects.tree_tints", "1"},           {"effects.sky", "1"},
     {"effects.edge_land", "1"},     {"effects.smooth_hills", "1"},         {"effects.sprite_light", "1"},
     {"effects.filmic", "1"},        {"effects.dof_strength", "35"},        {"effects.dof_range", "70"},

@@ -6,7 +6,6 @@ namespace {
 const EffectLayout kEffects[] = {
     {"effects.smooth_light", {}, {}, {}, 0},
     {"effects.ao", {}, {"effects.ao_strength", "effects.ao_size"}, {}, 0},
-    {"effects.sun_shadows", {}, {"effects.sun_shadows_strength"}, {}, 0},  // 0.77
     {"effects.bloom", {}, {"effects.bloom_strength"}, {}, 0},  // 0.78
     {"effects.filmic", {}, {}, {}, 0},                           // 0.78
     {"effects.region_looks", {}, {"effects.region_looks_strength"}, {}, 0},  // 0.79
@@ -91,7 +90,6 @@ const EffectLayout kEffects[] = {
     {"effects.new_trees", {}, {}, {}, 3},  // 1.10
     {"effects.sky_light", {}, {}, {}, 3},  // 1.11
     {"effects.bounce_light", {}, {}, {}, 3},  // 1.11
-    {"effects.real_shadows", {}, {}, {}, 3},  // 1.12
     {"effects.volumetric_fog", {}, {"effects.volumetric_fog_density"}, {}, 3},  // 1.13
     {"effects.smooth_hills", {}, {"effects.smooth_hills_strength"}, {}, 3},  // 1.15
     {"effects.world_reflections", {}, {}, {}, 3},  // 1.16

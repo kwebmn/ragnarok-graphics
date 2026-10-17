@@ -208,10 +208,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxShaftsStrengthHint, " %"},
         {"effects", "day_cycle", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDayCycle,
          Text::FxDayCycleHint, ""},
-        {"effects", "sun_shadows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSunShadows,
-         Text::FxSunShadowsHint, ""},
-        {"effects", "sun_shadows_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {},
-         Text::FxSunShadowsStrength, Text::FxSunShadowsStrengthHint, " %"},
         {"effects", "bloom", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBloom,
          Text::FxBloomHint, ""},
         {"effects", "bloom_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxBloomStrength,
@@ -316,8 +312,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSkyLightHint, ""},
         {"effects", "bounce_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBounceLight,
          Text::FxBounceLightHint, ""},
-        {"effects", "real_shadows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRealShadows,
-         Text::FxRealShadowsHint, ""},
         {"effects", "volumetric_fog", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxVolumetricFog,
          Text::FxVolumetricFogHint, ""},
         {"effects", "volumetric_fog_density", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
@@ -597,8 +591,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.shafts") return c.effects.shafts ? "1" : "0";
     if (k == "effects.shafts_strength") return std::to_string(c.effects.shaftsStrength);
     if (k == "effects.day_cycle") return c.effects.dayCycle ? "1" : "0";
-    if (k == "effects.sun_shadows") return c.effects.sunShadows ? "1" : "0";
-    if (k == "effects.sun_shadows_strength") return std::to_string(c.effects.sunShadowsStrength);
     if (k == "effects.bloom") return c.effects.bloom ? "1" : "0";
     if (k == "effects.bloom_strength") return std::to_string(c.effects.bloomStrength);
     if (k == "effects.filmic") return c.effects.filmic ? "1" : "0";
@@ -651,7 +643,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.new_trees") return c.effects.newTrees ? "1" : "0";
     if (k == "effects.sky_light") return c.effects.skyLight ? "1" : "0";
     if (k == "effects.bounce_light") return c.effects.bounceLight ? "1" : "0";
-    if (k == "effects.real_shadows") return c.effects.realShadows ? "1" : "0";
     if (k == "effects.volumetric_fog") return c.effects.volumetricFog ? "1" : "0";
     if (k == "effects.volumetric_fog_density") return std::to_string(c.effects.volumetricFogDensity);
     if (k == "effects.smooth_hills") return c.effects.smoothHills ? "1" : "0";

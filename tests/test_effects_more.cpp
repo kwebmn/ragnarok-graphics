@@ -82,7 +82,8 @@ TEST(keep_fps_off_unless_asked_and_bounded) {
 TEST(sun_shadows_off_by_default) {
     // 0.77: the houses' and trees' shadows from the sun; 0.84: off unless asked.
     CHECK(!parseConfig("").effects.sunShadows && parseConfig("").effects.sunShadowsStrength == 60);
-    CHECK(parseConfig("[effects]\nsun_shadows = 1\n").effects.sunShadows);
+    CHECK(!parseConfig("[effects]\nsun_shadows = 1\n").effects.sunShadows);  // 2.1.4: gone
+    CHECK(!parseConfig("[effects]\nreal_shadows = 1\n").effects.realShadows);
     CHECK(!effectsOff().sunShadows);
 }
 
