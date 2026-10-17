@@ -391,6 +391,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         shells = effects.fullCrowns && c.sourceRect[2] > c.sourceRect[0];  // 1.9.7
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
+    if (treePass) c.stage0[1] |= 1u << 29;  // 1.25.1: a bunch of the new trees, a round patch (shade())
     if (hilly) hillsConstants(c);  // 1.15
     if (sprite && !matTex && c.uiMode == 0) spriteConstants(rec, d, spriteShaded, c);  // 1.17
     if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())

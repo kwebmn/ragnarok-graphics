@@ -407,8 +407,8 @@ float hillLight(float3 P) {
     float2 b = floor(g), f = g - b;
     float3 n = float3(0.0, 0.0, 0.0);
     float weight = 0.0;
-    [unroll] for (int k = 0; k < 4; ++k) {
-        int2 o = int2(k & 1, k >> 1);
+    [unroll] for (int corner = 0; corner < 4; ++corner) {  // 1.25.1: not k - FXC keeps a loop's name to the end
+        int2 o = int2(corner & 1, corner >> 1);
         int2 q = int2(b) + o;
         if (q.x < 0 || q.y < 0 || q.x >= across || q.y >= down) continue;
         float v = sceneDepth.Load(int3(q, 0));
@@ -485,6 +485,12 @@ float4 shade(PsIn i) {
 #ifndef UAGFX_SAFE
     if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
     if (((stage0.y >> 28) & 1) != 0) c.rgb = spriteLight(uv0, du, dv, c.rgb);  // 1.17: the characters
+    if (((stage0.y >> 29) & 1) != 0) {  // 1.25.1: a bunch of the new trees - a round, leafy patch of its card
+        float2 lq = i.specular.rg * 2.0 - 1.0;
+        float ang = atan2(lq.y, lq.x);
+        float edge = 0.8 + 0.1 * sin(ang * 5.0 + i.specular.b * 40.0) + 0.05 * sin(ang * 11.0 + i.specular.b * 9.0);
+        c.a *= smoothstep(edge, edge - 0.2, length(lq));
+    }
     if (((stage0.y >> 25) & 1) != 0) c.rgb *= r8;  // 1.9.7: a crown's shell, darker behind and lighter in front
     if (material) {
         c.rgb = materialLight(c.rgb, m, P, N, T, B);  // 1.8: the materials

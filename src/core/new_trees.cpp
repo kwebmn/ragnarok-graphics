@@ -36,15 +36,16 @@ Coverage coverageOf(const uint32_t* argb, int width, int height) {
 }
 
 void bunchesOf(const float lo[3], const float hi[3], const Coverage& cov, double t, const float toSun[3],
-               float sunLight, std::vector<Bunch>& out) {
+               float sunLight, std::vector<Bunch>& out, uint32_t steadySeed) {
     if (!cov.any) return;
     const float mid[3] = {(lo[0] + hi[0]) * 0.5f, (lo[1] + hi[1]) * 0.5f, (lo[2] + hi[2]) * 0.5f};
     const float rad[3] = {std::max((hi[0] - lo[0]) * 0.5f, 0.5f), std::max((hi[1] - lo[1]) * 0.5f, 0.5f),
                           std::max((hi[2] - lo[2]) * 0.5f, 0.5f)};
     const float across = std::max(rad[0], rad[2]);
     // the crown's own seed, from its place (a tenth of a unit apart: steady as the camera moves)
-    uint32_t seed = mix(uint32_t(int(std::floor(mid[0] * 2.0f))) * 73856093u ^
-                        uint32_t(int(std::floor(mid[2] * 2.0f))) * 19349663u);
+    uint32_t seed = steadySeed ? steadySeed
+                               : mix(uint32_t(int(std::floor(mid[0] * 2.0f))) * 73856093u ^
+                                     uint32_t(int(std::floor(mid[2] * 2.0f))) * 19349663u);
     const auto random = [&seed]() {
         seed = mix(seed + 0x9e3779b9u);
         return float(seed & 0xffffff) / float(0x1000000);
@@ -69,8 +70,9 @@ void bunchesOf(const float lo[3], const float hi[3], const Coverage& cov, double
         // the wind: the top more, each bunch a little its own way
         const float up = std::clamp(0.5f - y * 0.5f, 0.0f, 1.0f);  // y up along -y: the top is y -1
         const float phase = random() * 6.2831853f;
-        const float sway = (std::sin(float(t) * 1.4f + phase * 0.3f + mid[0] * 0.05f) * 0.06f +
-                            std::sin(float(t) * 3.1f + phase) * 0.02f) * up * across;
+        // 1.25.1: a third of 1.10's - the bunches went round in circles
+        const float sway = (std::sin(float(t) * 1.4f + phase * 0.3f + mid[0] * 0.05f) * 0.02f +
+                            std::sin(float(t) * 3.1f + phase) * 0.007f) * up * across;
         b.pos[0] = mid[0] + x * rad[0] + sway;
         b.pos[1] = mid[1] + y * rad[1];
         b.pos[2] = mid[2] + z * rad[2] + sway * 0.5f;
@@ -91,6 +93,60 @@ void bunchesOf(const float lo[3], const float hi[3], const Coverage& cov, double
         b.turn = random() * 6.2831853f;
         out.push_back(b);
     }
+}
+
+uint32_t Steady::settle(uint32_t texture, float lo[3], float hi[3]) {
+    const float mid[3] = {(lo[0] + hi[0]) * 0.5f, (lo[1] + hi[1]) * 0.5f, (lo[2] + hi[2]) * 0.5f};
+    Kept* best = nullptr;
+    float bestD = 1.5f * 1.5f;
+    for (Kept& k : kept_) {
+        if (k.texture != texture || k.used) continue;
+        const float dx = (k.lo[0] + k.hi[0]) * 0.5f - mid[0], dz = (k.lo[2] + k.hi[2]) * 0.5f - mid[2];
+        const float dy = (k.lo[1] + k.hi[1]) * 0.5f - mid[1];
+        const float d = dx * dx + dy * dy + dz * dz;
+        if (d < bestD) {
+            bestD = d;
+            best = &k;
+        }
+    }
+    if (!best) {
+        Kept k;
+        k.texture = texture;
+        k.used = true;
+        k.seed = mix(uint32_t(int(std::floor(mid[0] * 2.0f))) * 73856093u ^
+                     uint32_t(int(std::floor(mid[2] * 2.0f))) * 19349663u ^ texture * 83492791u ^
+                     uint32_t(kept_.size()) * 2654435761u) | 1u;  // a second crown of one tree: its own
+        for (int a = 0; a < 3; ++a) {
+            k.lo[a] = lo[a];
+            k.hi[a] = hi[a];
+        }
+        kept_.push_back(k);
+        return kept_.back().seed;
+    }
+    best->unseen = 0;
+    best->used = true;
+    bool moved = false;
+    for (int a = 0; a < 3; ++a)
+        moved = moved || std::fabs(best->lo[a] - lo[a]) > 1.0f || std::fabs(best->hi[a] - hi[a]) > 1.0f;
+    for (int a = 0; a < 3; ++a) {
+        if (moved) {
+            best->lo[a] = lo[a];
+            best->hi[a] = hi[a];
+        } else {
+            lo[a] = best->lo[a];
+            hi[a] = best->hi[a];
+        }
+    }
+    return best->seed;
+}
+
+void Steady::endFrame() {
+    for (Kept& k : kept_) {
+        ++k.unseen;
+        k.used = false;
+    }
+    kept_.erase(std::remove_if(kept_.begin(), kept_.end(), [](const Kept& k) { return k.unseen > 120; }),
+                kept_.end());
 }
 
 }  // namespace uagfx::new_trees

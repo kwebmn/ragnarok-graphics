@@ -25,8 +25,28 @@ struct Bunch {
 };
 
 // The bunches of a crown whose leaves fill the box lo-hi (the world, up along -y) at time t (s); toSun a unit vector
-// to the sun in the world, sunLight 0-1 (night 0). Placed by the crown's place: the same each frame.
+// to the sun in the world, sunLight 0-1 (night 0). Placed by `seed` (Steady's; 0: by the crown's place).
 void bunchesOf(const float lo[3], const float hi[3], const Coverage& cov, double t, const float toSun[3],
-               float sunLight, std::vector<Bunch>& out);
+               float sunLight, std::vector<Bunch>& out, uint32_t seed = 0);
+
+// 1.25.1: the crowns kept from frame to frame - read back from the game's picture each frame, a crown's box moves by
+// a hair as the camera turns or the player walks, and a seed by its rounded place flipped now and then: the whole
+// crown laid out anew in a blink. A crown found again (its texture, within 1.5 units) keeps its box and its seed.
+class Steady {
+public:
+    // The crown's steady box (lo, hi changed to the kept one unless it moved by more than a unit) and its seed.
+    uint32_t settle(uint32_t texture, float lo[3], float hi[3]);
+    void endFrame();  // the crowns not seen for 120 frames forgotten
+    size_t size() const { return kept_.size(); }
+
+private:
+    struct Kept {
+        uint32_t texture = 0, seed = 0;
+        float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};
+        int unseen = 0;
+        bool used = false;  // matched this frame: two crowns of one tree each keep their own
+    };
+    std::vector<Kept> kept_;
+};
 
 }  // namespace uagfx::new_trees

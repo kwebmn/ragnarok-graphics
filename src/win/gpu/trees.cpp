@@ -95,11 +95,12 @@ bool Renderer::Impl::applyTrees() {
     std::vector<Batch> batches;
     std::vector<new_trees::Bunch> bunches;
     size_t total = 0;
-    for (const TreeCrown& crown : frameTrees) {
+    for (TreeCrown& crown : frameTrees) {
         const auto tex = textures.find(crown.texture);
         if (tex == textures.end()) continue;
         bunches.clear();
-        new_trees::bunchesOf(crown.lo, crown.hi, tex->second.leaves, now, toSun, sunLight, bunches);
+        const uint32_t seed = treeSteady.settle(crown.texture, crown.lo, crown.hi);  // 1.25.1: no blinks
+        new_trees::bunchesOf(crown.lo, crown.hi, tex->second.leaves, now, toSun, sunLight, bunches, seed);
         Batch* into = nullptr;
         for (Batch& bt : batches)
             if (bt.crown->texture == crown.texture && bt.crown->state == crown.state &&
@@ -124,6 +125,9 @@ bool Renderer::Impl::applyTrees() {
             const uint32_t colour = 0xff000000u | l << 16 | l << 8 | l;
             const uint16_t base = uint16_t(into->verts.size());
             const float corner[4][2] = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}};
+            // 1.25.1: the corner in the specular's red and green, the bunch's own number in its blue - shade() cuts
+            // a round, leafy patch out of the card (stage 0 bit 29), the square pieces showed as squares
+            const uint32_t own = uint32_t(total * 97u) & 255u;
             for (int q = 0; q < 4; ++q) {
                 Tl1 t{};
                 t.x = sx + corner[q][0] * cs - corner[q][1] * sn;
@@ -131,7 +135,7 @@ bool Renderer::Impl::applyTrees() {
                 t.z = zd;
                 t.rhw = 1.0f / vz;
                 t.diffuse = colour;
-                t.specular = 0xff000000u;  // no fog taken off
+                t.specular = 0xff000000u | (q & 1 ? 0xff0000u : 0u) | (q & 2 ? 0xff00u : 0u) | own;  // no fog off
                 t.u = q & 1 ? bn.uv[2] : bn.uv[0];
                 t.v = q & 2 ? bn.uv[3] : bn.uv[1];
                 into->verts.push_back(t);
@@ -140,6 +144,7 @@ bool Renderer::Impl::applyTrees() {
             ++total;
         }
     }
+    treeSteady.endFrame();
     size_t drawn = 0;
     for (const Batch& bt : batches) {
         if (bt.verts.empty()) continue;

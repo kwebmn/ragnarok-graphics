@@ -1017,6 +1017,7 @@ struct Renderer::Impl {
         float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};
     };
     std::vector<TreeCrown> frameTrees;
+    new_trees::Steady treeSteady;  // 1.25.1: the crowns kept from frame to frame
     FrameRecord treeRec;
     bool treePass = false, treesDone = false, treesLogged = false;
     bool treesWanted() const { return effects.newTrees && remaster() && viewToWorldValid; }
