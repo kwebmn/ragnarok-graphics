@@ -1,3 +1,8 @@
+# uaRO Graphics 1.10.1 — testing
+
+- A safeguard: the vertex shader's new part (Full crowns) is under the "without the newest features" guard - should
+  Windows' compiler not take it, the game draws as before rather than nothing. No visible change.
+
 # uaRO Graphics 1.10.0 — testing
 
 - **The remaster's phase C: new trees** (`effects.new_trees`, the Remaster block, Remaster mode only, Direct3D 12, off
