@@ -478,6 +478,11 @@ struct Config {
 Config parseConfig(const std::string& text);
 // 2.2.1: the kinds of AI pictures shown (bits as ai::Kind: 0 ground, 1 objects, 2 sprites, 3 effects, 4 icons); 0 none
 uint8_t aiKindsShown(const AiSettings& a);
+// 2.2.1 (the console's ↻), 2.2.2 in the core: whether an [ai] kind's switch ("ai.ground", "ai.monsters"...) changed
+// from `started` (the game's start) to `now` waits for the next start - a kind turned on that the game started
+// without (its pictures were never read), or a group of sprites alone (one copy holds them all: only all of them hide
+// at once). Every other change of a kind shows at once.
+bool aiWaits(const std::string& key, const AiSettings& started, const AiSettings& now);
 const char* apiToken(Api a);
 const char* displayModeToken(DisplayMode m);
 const char* uiFilterToken(UiFilter f);

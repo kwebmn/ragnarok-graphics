@@ -67,26 +67,6 @@ Config shownConfig(const Config& c) {
     return shown;
 }
 
-// 2.2.1: an [ai] switch whose new state waits for the game's next start - a kind turned on that the game started
-// without (its pictures were never read), a group of sprites (one copy holds them all: only all of them hide at once)
-bool aiWaits(const std::string& key, const AiSettings& started, const AiSettings& now) {
-    const auto on = [&](const AiSettings& a) {
-        if (key == "ai.enabled") return a.enabled;
-        if (key == "ai.ground") return a.ground && a.on();
-        if (key == "ai.objects") return a.objects && a.on();
-        if (key == "ai.effects") return a.effects && a.on();
-        if (key == "ai.icons") return a.icons && a.on();
-        if (key == "ai.monsters") return a.monsters;
-        if (key == "ai.players") return a.players;
-        if (key == "ai.npcs") return a.npcs;
-        if (key == "ai.items") return a.items;
-        return false;
-    };
-    const bool sprite = key == "ai.monsters" || key == "ai.players" || key == "ai.npcs" || key == "ai.items";
-    if (sprite) return on(started) != on(now) && !(now.on() && !now.sprites());
-    return on(now) && !on(started);
-}
-
 }  // namespace
 
 Console::~Console() {

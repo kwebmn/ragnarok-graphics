@@ -27,12 +27,23 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.frameGeneration != running.frameGeneration) u.waiting.push_back("frame_generation");
     // [ai]: the network and its models start with the 64-bit renderer.
     const AiSettings& fa = file.ai;
-    const AiSettings& ra = running.ai;
+    const AiSettings& ra = running.ai;  // as the game started
+    // 2.2.2: the kinds shown follow the file at once (aiNow, from what was shown until now): a line of the applied,
+    // or of the waiting when the game started without them (aiWaits)
+    const AiSettings& wa = running.aiNow;
+    const std::pair<const char*, std::pair<bool, bool>> kinds[] = {
+        {"ai.enabled", {wa.enabled, fa.enabled}}, {"ai.ground", {wa.ground, fa.ground}},
+        {"ai.objects", {wa.objects, fa.objects}}, {"ai.monsters", {wa.monsters, fa.monsters}},
+        {"ai.players", {wa.players, fa.players}}, {"ai.npcs", {wa.npcs, fa.npcs}}, {"ai.items", {wa.items, fa.items}},
+        {"ai.effects", {wa.effects, fa.effects}}, {"ai.icons", {wa.icons, fa.icons}}};
+    for (const auto& [key, was] : kinds) {
+        if (was.first == was.second) continue;
+        if (aiWaits(key, ra, fa))
+            u.waiting.push_back(key);
+        else
+            u.applied.push_back(change(key, flag(was.first), flag(was.second)));
+    }
     const std::pair<const char*, bool> ai[] = {
-        {"ai.enabled", fa.enabled != ra.enabled}, {"ai.ground", fa.ground != ra.ground},
-        {"ai.objects", fa.objects != ra.objects}, {"ai.monsters", fa.monsters != ra.monsters},
-        {"ai.players", fa.players != ra.players}, {"ai.npcs", fa.npcs != ra.npcs}, {"ai.items", fa.items != ra.items},
-        {"ai.effects", fa.effects != ra.effects}, {"ai.icons", fa.icons != ra.icons},
         {"ai.ui_pieces", fa.uiPieces != ra.uiPieces},
         {"ai.model", fa.model != ra.model},
         {"ai.sprite_model", fa.spriteModel != ra.spriteModel}, {"ai.denoise", fa.denoise != ra.denoise},

@@ -63,3 +63,40 @@ TEST(ai_kinds_shown_follow_the_file_at_once) {
     CHECK(u.next.ai.ground && !u.next.aiNow.ground);  // the pack as started, the ground hidden now
     CHECK(running.aiNow.ground);
 }
+
+TEST(ai_waits_names_what_needs_the_next_start) {
+    // 2.2.1 (console's ↻), 2.2.2 in the core: a kind off is hidden at once; on at once when the game started with
+    // it; a group of sprites alone waits (one copy holds them all), all of them off is hidden at once
+    AiSettings started;
+    started.enabled = true;
+    started.monsters = started.players = started.npcs = started.items = true;
+    AiSettings now = started;
+    now.ground = false;
+    CHECK(!aiWaits("ai.ground", started, now));
+    now.monsters = false;
+    CHECK(aiWaits("ai.monsters", started, now));
+    now.players = now.npcs = now.items = false;
+    CHECK(!aiWaits("ai.monsters", started, now));
+    AiSettings off;  // started without the pictures
+    AiSettings on = off;
+    on.enabled = true;
+    CHECK(aiWaits("ai.enabled", off, on) && !aiWaits("ai.enabled", on, off));
+    on.effects = true;
+    CHECK(aiWaits("ai.effects", off, on));
+}
+
+TEST(live_config_ai_kinds_apply_at_once) {
+    // 2.2.2: the log and the statistics say a kind of the AI pictures turned off is hidden now (applied), not "at
+    // the next start"; turned on again it is shown at once when the game started with it
+    const Config running = parseConfig("[ai]\nenabled = 1\nground = 1\nobjects = 1\n");
+    LiveUpdate u = liveUpdate(running, parseConfig("[ai]\nenabled = 1\nground = 0\nobjects = 1\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(1));
+    CHECK(!u.applied.empty() && u.applied[0] == "ai.ground 1 -> 0");
+    CHECK(!u.next.aiNow.ground && u.next.ai.ground);  // hidden now, its pictures kept
+    u = liveUpdate(u.next, parseConfig("[ai]\nenabled = 1\nground = 1\nobjects = 1\n"));
+    CHECK(u.waiting.empty() && u.applied.size() == 1 && u.applied[0] == "ai.ground 0 -> 1");
+    const Config without = parseConfig("[ai]\nenabled = 1\nground = 0\n");  // started without the ground's
+    u = liveUpdate(without, parseConfig("[ai]\nenabled = 1\nground = 1\n"));
+    CHECK(u.applied.empty() && u.waiting.size() == 1 && u.waiting[0] == "ai.ground");
+}
