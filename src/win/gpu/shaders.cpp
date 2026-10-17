@@ -1518,12 +1518,18 @@ float4 grass_ps(PresentOut i) : SV_Target {
     int longest = int(twinX);
     float t = sharpen;
     int count = int(footprint);
-    // 1.7: the way the steps near here push the blades, along the screen (the view's x axis in the world: r0-r2)
-    float lean = 0.0;
-    if (here < 0.99999 && count > 0) {
+    // 1.7: the way the steps near here push the blades, along the screen (the view's x axis in the world: r0-r2).
+    // 1.8.3: the wind's sway and the gusts by the place in the world under the pixel, not by the pixel - by the
+    // pixel the waves moved over the grass with the camera as one walked.
+    float lean = 0.0, swayPhase = 0.0, gust = 0.0;
+    if (here < 0.99999) {
         float3 hv = viewAt(wp);
         float3 hw = hv.x * float3(r0, r1, r2) + hv.y * float3(r3, r4, r5) + hv.z * float3(r6, r7, r8) +
                     float3(r9, r10, r11);
+        swayPhase = hw.x * 0.35 + hw.z * 0.22;
+        if (sourceRect.x > 0.0)
+            gust = pow(saturate(sin(dot(hw.xz, float2(0.040, 0.014)) - t * 0.7)), 8.0) * (0.55 + 0.45 * sin(t * 0.23)) *
+                   sourceRect.x;
         float2 push = float2(0.0, 0.0);
         [loop] for (int s = 0; s < count; ++s) {
             float4 st = tex1.Load(int3(2 * s, 0, 0));
@@ -1534,11 +1540,10 @@ float4 grass_ps(PresentOut i) : SV_Target {
         }
         lean = clamp(dot(float3(push.x, 0.0, push.y), float3(r0, r1, r2)), -1.0, 1.0);
     }
-    float gust = sourceRect.x > 0.0 ? gustAt((float(wp.x) - jitterX) / scale, t) * sourceRect.x : 0.0;
     [loop] for (int k = longest; k >= 1; --k) {
         float up = float(k) / twinX;
-        float sway = sin(t * 1.7 + float(wp.x) * 0.021 + float(wp.y) * 0.013) * 0.25 * twinX * up * up;
-        sway += (gust * 0.55 + lean * 0.7) * twinX * up * up;
+        float sway = sin(t * 1.7 + swayPhase) * 0.25 * twinX * up * up;
+        sway += (gust * 0.55 + lean * 0.5) * twinX * up * up;
         int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
         float rd = sceneDepth.Load(int3(root, 0));
         if (rd >= 0.99999) continue;
@@ -1552,10 +1557,11 @@ float4 grass_ps(PresentOut i) : SV_Target {
         float2 id = floor(cell);
         float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
         if (hash12(id) > twinY) continue;  // no blade here
-        bool flower = hash12(id + 31.7) < twinW;
+        // 1.8.3: flowers in patches, a few in each (scattered over the whole field they were a speckle)
+        bool flower = hash12(id + 31.7) < twinW && valueNoise(w.xz * 0.07 + 3.3) > 0.72;
         float height = (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0);
-        bool head = flower && up > height * 0.8;
-        if (dot(at, at) > (head ? 0.16 : 0.05)) continue;
+        bool head = flower && up > height * 0.78;
+        if (dot(at, at) > (head ? 0.2 : 0.05)) continue;
         [loop] for (int s = 0; s < count; ++s) {  // trodden down
             float4 st = tex1.Load(int3(2 * s, 0, 0));
             float age = tex1.Load(int3(2 * s + 1, 0, 0)).x;

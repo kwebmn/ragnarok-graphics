@@ -353,7 +353,7 @@ bool Renderer::Impl::applyGrass() {
     c.sharpen = waterTime();
     // 1.7: flowers among the blades, dew on their tips in the morning, the gusts bending them
     if (effects.flowers && mapPlace.flowers >= 0) {
-        c.twin[2] = 0.05f;
+        c.twin[2] = 0.12f;  // 1.8.3: in the patches only (grass_ps)
         c.sourceRect[1] = float(mapPlace.flowers);
     }
     if (effects.dew) c.twin[3] = living::dew(minuteNow()) *
