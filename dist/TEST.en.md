@@ -1,3 +1,13 @@
+# uaRO Graphics 2.1.1 — testing
+
+- **Where a frame's time goes, in the log** (to find the drops to ~46 fps): every 30 s
+  - "bridge: a frame of the game's thread - X ms its draws written and sent, Y ms waiting for the 64-bit renderer";
+  - "CPU: X ms a frame in the driver's drawing (Y of it waiting for the card); Z ms the frame limit's wait, W ms the
+    swap chain's present".
+- **The new trees cheaper on the processor:** after a forest's first 10 s only the draws whose texture was a tree's
+  (or leaves) are read back into the world - before, every model's vertices were, every frame.
+- Please: play 2 minutes on prt_fild08 (walk about, some fights), then 2 minutes in Prontera, and send a report.
+
 # uaRO Graphics 2.1.0 — testing
 
 - **The new trees much lighter:** a frame draws only the trees in view (with a margin for their size and the wind),
