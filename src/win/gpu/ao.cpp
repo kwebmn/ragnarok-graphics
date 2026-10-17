@@ -799,9 +799,9 @@ bool Renderer::Impl::finishWorld() {
     if (realShadowsDue() && !applyRealShadows()) return false;  // 1.12
     if (sunShadowDue() && !applySunShadows()) return false;  // 0.77
     if (seamsDue() && !applySeams()) return false;            // 1.9
-    if (treesDue() && !applyTrees()) return false;            // 1.10
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
     if (grassDue() && !applyGrass()) return false;            // 0.81
+    if (treesDue() && !applyTrees()) return false;            // 1.10; 1.25.2: after the grass
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
