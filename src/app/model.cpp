@@ -456,12 +456,21 @@ void Model::keepNewestBackups(size_t count) {
     std::reverse(now_.backups.begin(), now_.backups.end());
 }
 
+std::vector<IniEdit> Model::keptAcross() const {
+    std::vector<IniEdit> keep;
+    if (const auto lang = savedLanguage()) keep.push_back({"utility", "language", langToken(*lang)});
+    // 2.2.2: the statistics' answer and this computer's number - else asked again, and counted as a new player
+    const auto now = readIni(currentIni());
+    for (const char* key : {"send", "id"})
+        if (const auto it = now.find(std::string("stats.") + key); it != now.end())
+            keep.push_back({"stats", key, it->second});
+    return keep;
+}
+
 std::wstring Model::resetDefaults(Lang l) {
     std::wstring err = backupOnce(l);
     if (!err.empty()) return err;
-    std::vector<IniEdit> keep;
-    if (const auto lang = savedLanguage()) keep.push_back({"utility", "language", langToken(*lang)});
-    const std::string text = applyIniEdits(defaultIni(), keep);
+    const std::string text = applyIniEdits(defaultIni(), keptAcross());
     if (!writeFileAtomic(paths_.ini, text)) return wtrf(l, Text::ErrWriteFile, {"uaro-graphics.ini"});
     ini_.clear();
     wroteNow_.clear();
@@ -504,9 +513,7 @@ std::wstring Model::loadProfile(const std::wstring& name, Lang l) {
         return wtrf(l, Text::ErrWriteFile, {utf8(name) + ".ini"});
     std::wstring err = backupOnce(l);
     if (!err.empty()) return err;
-    std::vector<IniEdit> keep;
-    if (const auto lang = savedLanguage()) keep.push_back({"utility", "language", langToken(*lang)});
-    if (!writeFileAtomic(paths_.ini, applyIniEdits(text, keep)))
+    if (!writeFileAtomic(paths_.ini, applyIniEdits(text, keptAcross())))
         return wtrf(l, Text::ErrWriteFile, {"uaro-graphics.ini"});
     ini_.clear();
     wroteNow_.clear();

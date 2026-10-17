@@ -145,6 +145,8 @@ private:
     // when there is none.
     std::string currentIni() const;
     std::wstring writeIni(const std::vector<settings::IniEdit>& edits, settings::Lang l);
+    // What a reset or a profile loaded keeps of the ini now: the language, (2.2.2) the statistics' answer and number.
+    std::vector<settings::IniEdit> keptAcross() const;
     std::wstring backupOnce(settings::Lang l, bool prune = true);  // prune: only the 20 newest stay (spec §4.6)
     // Each value on its own (spec §4.5): "" or the ones that failed, "NAME (error N), ..."; the others are written.
     std::string writeValues(const std::vector<settings::RegWrite>& writes);

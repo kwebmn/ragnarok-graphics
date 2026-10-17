@@ -501,3 +501,24 @@ TEST(model_writes_several_keys_now_and_undo_brings_them_back) {
     CHECK_EQ(valueOf(w.files[ini], "effects.grass"), std::string("0"));
     CHECK_EQ(valueOf(w.files[ini], "effects.preset"), std::string("strong"));
 }
+
+TEST(model_profiles_and_reset_keep_the_statistics_answer) {
+    // 2.2.2: the player's answer about the statistics and this computer's number stay through a profile loaded or
+    // a reset (as the language does): a profile saved before the question would ask it again and count a new player
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    w.files[ini] = "[quality]\r\nsharpen = 70\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(m.saveProfile(L"old", Lang::En).empty());  // made before the question
+    CHECK(m.setStats(true, Lang::En).empty());
+    const std::string id = valueOf(w.files[ini], "stats.id");
+    CHECK(id.size() == 16);
+    CHECK(m.loadProfile(L"old", Lang::En).empty());
+    CHECK(m.statsAsked());
+    CHECK_EQ(valueOf(w.files[ini], "stats.send"), std::string("1"));
+    CHECK_EQ(valueOf(w.files[ini], "stats.id"), id);
+    CHECK(m.resetDefaults(Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[ini], "stats.send"), std::string("1"));
+    CHECK_EQ(valueOf(w.files[ini], "stats.id"), id);
+}
