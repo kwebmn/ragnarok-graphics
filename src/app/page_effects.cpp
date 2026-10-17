@@ -20,6 +20,17 @@ const int kEffectCount = effectLayoutCount();
 
 constexpr int kTier = 990;  // 1.8: the remaster's mode
 constexpr int kBlockOn = 970, kBlockOff = 975;  // 1.13: a block's boxes all on, all off (+ the block)
+constexpr int kRecommended = 965;               // 1.25: the set for a strong card
+
+// 1.25: what the Recommended button sets (by the player's screenshots: flat stones and roofs, white burnt out, no
+// contact shadows, the far fields blurred) - the rest stays as it is.
+const char* const kRecommendedSet[][2] = {
+    {"effects.materials", "1"},     {"effects.materials_strength", "100"}, {"effects.ao", "1"},
+    {"effects.sun_shadows", "1"},   {"effects.real_shadows", "1"},         {"effects.tree_volume", "1"},
+    {"effects.leaf_light", "1"},    {"effects.tree_tints", "1"},           {"effects.sky", "1"},
+    {"effects.edge_land", "1"},     {"effects.smooth_hills", "1"},         {"effects.sprite_light", "1"},
+    {"effects.filmic", "1"},        {"effects.dof_strength", "35"},        {"effects.dof_range", "70"},
+    {"effects.grade_saturation", "105"}};
 int boxId(int e) { return 1001 + 100 * e; }
 int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
 int checkId(int e, int k) { return 1070 + 100 * e + 2 * k; }
@@ -35,6 +46,8 @@ public:
     void build(Panel& p) override {
         p.heading(t(Text::PageEffects));
         p.note(t(Text::FxIntro), Tone::Normal);
+        p.buttons({{kRecommended, t(Text::FxRecommended)}});  // 1.25
+        p.note(t(Text::FxRecommendedNote), Tone::Normal);
         // 0.76: what each cost the card in the last game (the driver's uaro-graphics\effect-costs.txt)
         std::string text;
         const effect_costs::Costs costs =
@@ -92,6 +105,12 @@ public:
             return;
         }
         if (code != BN_CLICKED) return;
+        if (id == kRecommended) {  // 1.25
+            for (const auto& kv : kRecommendedSet)
+                if (findSetting(kv[0])) set(setting(kv[0]), kv[1], true);
+            host_.rebuild();
+            return;
+        }
         if ((id >= kBlockOn && id < kBlockOn + 4) || (id >= kBlockOff && id < kBlockOff + 4)) {  // 1.13
             const bool on = id < kBlockOff;
             const int block = id - (on ? kBlockOn : kBlockOff);

@@ -530,7 +530,9 @@ float4 shade(PsIn i) {
         float side = i.specular.g > 0.5 ? 1.0 : -1.0;
         bool own = i.specular.r > 0.5;  // 1.9.2: the cell's own band at the edge, its rim covered
         float other = smoothstep(-0.05, 0.05, i.diffuse.a - 0.5 + side * (n - 0.5) * 0.9);
-        c.a = own ? (1.0 - other) * (1.0 - smoothstep(0.55, 1.0, i.specular.b)) : other;
+        // 1.25: the own band whole at the edge (drawn first, applySeams) - partly see-through, the texture's dark rim
+        // under it showed through the neighbour's strip as a line along the cells (the desert's "cracks")
+        c.a = own ? 1.0 - smoothstep(0.55, 1.0, i.specular.b) : other;
     }
 #endif
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
@@ -855,20 +857,22 @@ float3 waterReflection(float3 p, float3 r, out float weight) { return reflection
 // 1.7, the water's life (water(): twinH's bits): fish - dark shapes circling under the surface, now and then a ring
 // where one jumped; a swamp's bubbles swelling and bursting into rings, its water murkier.
 float3 waterLife(float3 c, uint life, float2 xz, float t, float thick, float light) {
-    if ((life & 1) != 0 && thick > 0.6) {
-        float2 cid = floor(xz / 7.0);
+    // 1.25: fewer, larger and soft - shadows deep under the surface; small and sharp they read as scratches
+    if ((life & 1) != 0 && thick > 1.2) {
+        float2 cid = floor(xz / 11.0);
         float seed = hash12(cid + 91.7);
-        if (seed < 0.35) {
-            float sp = (0.25 + 0.35 * hash12(cid + 3.3)) * (seed < 0.17 ? 1.0 : -1.0);
+        if (seed < 0.16) {
+            float sp = (0.2 + 0.25 * hash12(cid + 3.3)) * (seed < 0.08 ? 1.0 : -1.0);
             float ang = t * sp + seed * 40.0;
-            float2 pos = (cid + 0.5) * 7.0 + float2(cos(ang), sin(ang)) * 2.2;
+            float2 pos = (cid + 0.5) * 11.0 + float2(cos(ang), sin(ang)) * 3.0;
             float2 dir = float2(-sin(ang), cos(ang)) * sign(sp);
             float2 d = xz - pos;
             float2 l = float2(dot(d, dir), dot(d, float2(-dir.y, dir.x)));
-            l.y -= sin(t * 9.0 + seed * 20.0) * 0.12 * l.x * step(l.x, 0.0);
-            float body = smoothstep(1.0, 0.7, length(l / float2(0.75, 0.22)));
-            float tail = step(l.x, -0.6) * step(-1.05, l.x) * step(abs(l.y), (-0.6 - l.x) * 0.9);
-            c *= 1.0 - 0.35 * saturate(body + tail * 0.8) * saturate((thick - 0.6) / 1.5);
+            l.y -= sin(t * 6.0 + seed * 20.0) * 0.1 * l.x * step(l.x, 0.0);
+            float body = smoothstep(1.0, 0.25, length(l / float2(1.1, 0.38)));
+            float tail = smoothstep(0.0, 0.3, -0.8 - l.x) * smoothstep(0.0, 0.3, l.x + 1.5) *
+                         smoothstep(0.1, 0.0, abs(l.y) - (-0.8 - l.x) * 0.7);
+            c *= 1.0 - 0.22 * saturate(body + tail * 0.6) * saturate((thick - 1.2) / 2.0);
             float jump = frac(t * 0.05 + seed * 7.0);
             float x = length(d) - jump / 0.06 * 1.6;
             c += exp(-x * x * 30.0) * saturate(1.0 - jump / 0.06) * 0.35 * light;
@@ -987,9 +991,14 @@ float4 water(WaterIn i) {
         shore = max(shore, saturate(1.0 - above / 0.6));
     }
     shore *= saturate(1.0 - thick / 3.0);
-    float froth = smoothstep(0.45, 0.8, valueNoise(fp * 0.4 + t * 0.25) * 0.6 +
-                                            valueNoise(fp.yx * 1.1 - t * 0.45) * 0.4);
-    c = lerp(c, float3(0.92, 0.95, 0.97) * light, shore * froth * (0.6 + 0.3 * swash));
+    // 1.25: lines of foam along the shore (the water's depth's lines) rolling in and broken by noise, a thin rim at
+    // the edge - the blobs of noise before lay as a row of white dabs
+    float broken = smoothstep(0.3, 0.7, valueNoise(fp * 0.9 + t * 0.2) * 0.7 + valueNoise(fp * 2.3 - t * 0.3) * 0.3);
+    float rim = smoothstep(0.35, 0.05, thick);
+    float roll = frac(thick * 1.3 - t * 0.22);
+    float swell = exp(-pow((roll - 0.5) * 9.0, 2.0)) * saturate(1.0 - thick / 2.5);
+    float froth = saturate(rim * (0.5 + 0.5 * broken) + swell * broken * 0.7);
+    c = lerp(c, float3(0.92, 0.95, 0.97) * light, saturate(shore * 2.0) * froth * (0.55 + 0.3 * swash));
     c = waterLife(c, life, i.world.xz, t, thick, light);
     return float4(c, saturate(thick / 0.8));  // the shore line fades in, no hard edge
 }
@@ -1780,9 +1789,11 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
         float2 q = float2(dot(w.xz, wind), dot(w.xz, float2(-wind.y, wind.x)));
         float n = valueNoise(float2(q.x * 0.07 - t * 1.4, q.y * 0.8)) * 0.6 +
                   valueNoise(float2(q.x * 0.16 - t * 2.3 + 3.1, q.y * 1.9)) * 0.4;
-        float streak = smoothstep(0.6, 0.82, n) * twinX;
-        o = lerp(o, min(col * 1.25 + 0.08, 1.0), streak);
-        a = max(a, streak * 0.55);
+        // 1.25: fewer and fainter, in drifting runs (the whole ground hatched looked drawn on)
+        float run = smoothstep(0.45, 0.7, valueNoise(float2(q.x * 0.012 - t * 0.3, q.y * 0.05)));
+        float streak = smoothstep(0.68, 0.86, n) * run * twinX;
+        o = lerp(o, min(col * 1.15 + 0.05, 1.0), streak);
+        a = max(a, streak * 0.32);
     }
     if (twinY > 0.0 && luma > 0.5 && max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b)) < 0.18) {  // snow
         float2 cell = floor(w.xz * 3.0);
@@ -1996,8 +2007,8 @@ float4 critters_ps(CritterIn i) : SV_Target {
             float2 c0 = float2(w < 2 ? 0.18 : 0.0, (w % 2 == 0 ? 1.0 : -1.0) * 0.32);
             wings = max(wings, smoothstep(1.0, 0.7, length((l - c0) / float2(0.11, 0.36 * flick))));
         }
-        c = lerp(float3(0.82, 0.92, 1.0), float3(0.16, 0.48, 0.55), body);
-        a = max(body, wings * 0.45);
+        c = lerp(float3(0.7, 0.8, 0.85), float3(0.12, 0.36, 0.42), body);
+        a = max(body, wings * 0.22);  // 1.25: the wings a faint shimmer, not a pale outline
     } else if (kind == 3) {  // a bird on the ground, pecking: q.y its time, q.z its facing
         float peck = pow(saturate(sin(q.y * 5.0)), 6.0) * 0.25;
         float2 l = float2(d.x * q.z, d.y);

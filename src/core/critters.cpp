@@ -96,7 +96,7 @@ void World::flies(const Switches& on, const Frame& f) {
             }
             Point p = x.at;
             p.y = f.waterLevel - x.altitude - 0.15f * std::sin(float(f.now) * 7.0f + x.phase * 0.01f);
-            Sprite s = sprite(Dragonfly, p, 1.4f, 1.0f);
+            Sprite s = sprite(Dragonfly, p, 0.85f, 1.0f);  // 1.25: 1.4 was a stick with a rim from above
             s.p1 = x.phase;
             s.headingX = std::cos(x.heading);
             s.headingZ = std::sin(x.heading);

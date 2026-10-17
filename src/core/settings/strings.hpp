@@ -266,6 +266,7 @@ enum class Text : uint16_t {
     FxSharedWind, FxSharedWindHint,
     // 1.23
     FxLitDust, FxLitDustHint,
+    FxRecommended, FxRecommendedNote,
     Count
 };
 

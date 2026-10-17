@@ -2643,6 +2643,21 @@ const Entry kTexts[] = {
      "кольорі цього світла, а в темних кутах ледь-ледь. Потрібні «Порошинки в повітрі» (Direct3D 12).",
      "В помещениях и подземельях пыль в воздухе видна там, где падает свет, — в лучах из окон, у факелов, — в цвете "
      "этого света, а в тёмных углах едва-едва. Нужны «Частицы в воздухе» (Direct3D 12)."},
+    {"Recommended for a strong card",
+     "Рекомендоване для сильної відеокарти",
+     "Рекомендуемое для сильной видеокарты"},
+    {"One click turns on what gives the picture depth without overdoing it: Materials of the world (stones and roof "
+     "tiles in relief), soft shadows in the corners, the real and the screen's sun shadows, rounded tree crowns, the "
+     "sky and the land past the map's edge, smooth hills, living characters, filmic tones (the bright stays bright, "
+     "no white burnt out); the far blur and the colours a little calmer. Everything else stays as you set it.",
+     "Одне натискання вмикає те, що дає картинці глибину без перебору: «Матеріали світу» (рельєф каменю й черепиці), "
+     "м'які тіні в кутах, справжні й екранні тіні від сонця, об'ємні крони, небо й землю за краєм карти, плавні "
+     "пагорби, живих персонажів, плівкові тони (яскраве лишається яскравим, біле не вигорає); розмиття вдалині й "
+     "кольори трохи спокійніші. Решта лишається, як ви налаштували.",
+     "Одно нажатие включает то, что даёт картинке глубину без перебора: «Материалы мира» (рельеф камня и черепицы), "
+     "мягкие тени в углах, настоящие и экранные тени от солнца, объёмные кроны, небо и землю за краем карты, плавные "
+     "холмы, живых персонажей, плёночные тона (яркое остаётся ярким, белое не выгорает); размытие вдали и цвета чуть "
+     "спокойнее. Остальное остаётся, как вы настроили."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

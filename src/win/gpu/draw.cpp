@@ -130,7 +130,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             noteFire(rec, d, ft->second.light, ft->second.lightColour);
         }
     }
-    const bool toGlow = !s.ui && glowActive;
+    // 1.25: not the level 99 aura - blurred into the glow it lay as white pools under the players (Prontera)
+    const bool toGlow = !s.ui && glowActive && d.effect != uint8_t(effect_exe::Kind::Aura);
     // 0.19, modern water: a cell of a map's water (core/water.hpp) is drawn by its own shader, from the picture and
     // the depth the frame had before its first water (copyScene); without them, as the game draws it.
     bool water = false;

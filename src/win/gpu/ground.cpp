@@ -109,18 +109,31 @@ bool Renderer::Impl::applySeams() {
         std::vector<uint16_t> indices;
     };
     std::vector<Batch> batches;
-    for (const seams::Strip& s : strips) {
+    // 1.25: the cells' own bands first (their texture over their rim, whole at the edge), then the neighbours' strips
+    // over them - the other way the rim showed through
+    std::vector<const seams::Strip*> ordered;
+    for (const seams::Strip& s : strips)
+        if (s.inside == s.shows) ordered.push_back(&s);
+    const size_t ownBands = ordered.size();
+    for (const seams::Strip& s : strips)
+        if (s.inside != s.shows) ordered.push_back(&s);
+    size_t firstOther = 0;  // the batches from here on hold the neighbours' strips
+    for (size_t at = 0; at < ordered.size(); ++at) {
+        const seams::Strip& s = *ordered[at];
+        if (at == ownBands) firstOther = batches.size();
         if (s.inside >= groundGroups.size() || s.shows >= groundGroups.size()) continue;
         const GroundGroup& in = groundGroups[s.inside];
         const GroundGroup& shows = groundGroups[s.shows];
         Batch* into = nullptr;
-        for (Batch& bt : batches)
+        for (size_t k = at < ownBands ? 0 : firstOther; k < batches.size(); ++k) {
+            Batch& bt = batches[k];
             if (bt.in->texture[1] == in.texture[1] && bt.in->keyed[1] == in.keyed[1] &&
                 bt.shows->texture[0] == shows.texture[0] && bt.shows->keyed[0] == shows.keyed[0] &&
                 bt.in->state == in.state && bt.verts.size() + s.vertices.size() <= 60000) {
                 into = &bt;
                 break;
             }
+        }
         if (!into) {
             batches.push_back(Batch{&in, &shows, {}, {}});
             into = &batches.back();
