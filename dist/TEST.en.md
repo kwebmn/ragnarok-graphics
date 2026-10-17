@@ -1,3 +1,10 @@
+# uaRO Graphics 1.23.0 — testing
+
+- **Dust in the light** (Effects → Living world, off by default, needs Motes in the air, Direct3D 12): indoors and
+  in dungeons the dust shows where light falls - in the beams, by the torches - in that light's colour, and hardly
+  in the dark corners. Check in Prontera's church, a pub, Glast Heim: dust visible in the light shafts and around
+  the torches, nearly none in the dark; nothing changes in the fields (pollen stays as it was).
+
 # uaRO Graphics 1.22.0 — testing
 
 - **One wind for everything** (Effects → Living world, off by default, Direct3D 12): the grass, the leaves'
