@@ -1,3 +1,20 @@
+# uaRO Graphics 1.7.0 — testing
+
+- **A new block "Living world"** at the bottom of the Effects page. Its first part, the trees, all off by default:
+  - **Rounded tree crowns** (`effects.tree_volume`): a crown lit as a ball - the side to the sun lighter, the far side
+    and the middle darker. With "Time of day" the light turns.
+  - **Sunlight through the leaves** (`effects.leaf_light`): the leaves on the crown's sunward edge glow warm green,
+    more in the morning and the evening, none at night.
+  - **Every tree its own, seasons** (`effects.tree_tints`): each tree its own shade and brightness. From September to
+    November (the computer's calendar) some trees golden and orange - not in deserts, jungles and dead woods; rime
+    on the crowns in Lutie.
+  - **Gusts of wind** (`effects.gusts`, needs Leaves in the wind): now and then a gust crosses from the left and the
+    trees bend one after another.
+  - **Sun spots under the trees** (`effects.dapple`, needs Shadows of houses and trees, Direct3D 12): a crown's shadow
+    with stirring spots of light.
+- How to check: a field with trees (prt_fild08, pay_fild01), one box at a time. The autumn colours show now (October).
+  Lutie (xmas): rime on the crowns.
+
 # uaRO Graphics 1.6.7 — testing
 
 - **The emotions (/emotion) from the pack show in the game.** The builder put them into the pack as effects, and the
