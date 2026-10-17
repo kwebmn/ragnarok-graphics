@@ -1,3 +1,14 @@
+# uaRO Graphics 2.1.0 — testing
+
+- **The new trees much lighter:** a frame draws only the trees in view (with a margin for their size and the wind),
+  not all of the map's - on prt_fild08 some tens of its 491; the far ones (small on the screen) with their trunk and
+  two leaf cards in five; the real sun's map gets only the trees in its box. Nothing changes to the eye.
+- **The trees' cost in the log and on the Effects page:** the log's line "GPU: effects a frame" now has "new trees",
+  and the Effects page shows its milliseconds next to New trees, as for the grass.
+- The log also says how many of the map's trees a frame showed: "forest drawn - N of its M trees in view (K far)".
+- Check: walk and turn on prt_fild08 and pay_fild01 - no tree pops in or out at the screen's edges; the frame rate
+  against 2.0.4; send a report (the log has the new numbers).
+
 # uaRO Graphics 2.0.4 — testing
 
 - **Realistic trees of the game's own leaves:** the cards of the new trees' crowns carry pieces of the model's own
