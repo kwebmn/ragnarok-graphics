@@ -1,3 +1,12 @@
+# uaRO Graphics 1.19.0 — testing
+
+- **Smooth light on the models** (Effects → Remaster, off by default, Direct3D 12): rocks, trunks and other models
+  the game lights face by face get their light spread smoothly over the curved parts; the sharp edges of walls and
+  roofs stay. Check on rocky maps (mjolnir, cliffs of prt_fild, payon's houses): rocks without the flat facets, the
+  houses' corners still sharp, no flicker as the camera turns, the frame rate about as before. The log says
+  "smooth models: N draws of <map> lit face by face" - if that line never shows, the client lights its models
+  smoothly itself and the setting does nothing.
+
 # uaRO Graphics 1.18.0 — testing
 
 - **Land past the map's edge** (Effects → Remaster, off by default, needs the Sky, Direct3D 12): at the edge of a
