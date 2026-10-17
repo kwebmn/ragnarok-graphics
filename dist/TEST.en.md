@@ -1,3 +1,19 @@
+# uaRO Graphics 1.8.0 — testing
+
+- **The remaster begins.** A new block "Remaster" at the bottom of the Effects page:
+  - **Mode** (`effects.tier`): Automatic (Remaster on a card with 6 GB or more, else Classic+), Classic+ (any
+    card), Remaster (a strong card).
+  - **Materials of the world** (`effects.materials`, strength `effects.materials_strength`, off by default,
+    Direct3D 12): the card makes relief, height and gloss for each texture of the ground, the houses and the rocks.
+    The sun lights stone, brick and bark from the side, hollows are darker, smooth stone and tiles glint, the
+    ground's repeats hide under large patches. In Remaster also depth (parallax). The old Ground relief gives way to
+    the materials on those textures.
+- **Fix:** with the 64-bit renderer (bridge) a change of many effects in a running game reached it late - sometimes
+  only a minute later. Now at once.
+- How to check: prontera (paving, walls), prt_fild08 (ground, rocks), payon (wooden houses). Switch Materials of the
+  world in the game and compare. The log: `materials: made on the card ...`. To know: seams along the ground's
+  cells, shimmer far off, the frame's cost (debug.profile).
+
 # uaRO Graphics 1.7.3 — testing
 
 - **Living world, creatures and particles** (Direct3D 12, all off by default):
