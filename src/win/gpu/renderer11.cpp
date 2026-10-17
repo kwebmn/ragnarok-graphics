@@ -89,6 +89,7 @@ Renderer11::~Renderer11() {
     if (ctx_) ctx_->ClearState();
     releaseSwapChain();
     for (auto& t : textures_) {
+        dropMaterial(t.second);  // 1.14
         drop(t.second.srv);
         drop(t.second.texture);
     }
@@ -129,6 +130,7 @@ Renderer11::~Renderer11() {
     drop(waterVs_);  // 0.99
     drop(waterPs_);
     drop(fireflyPs_);  // 1.0.1
+    drop(materialPs_);  // 1.14
     drop(drawGlowPs_);  // 1.0
     drop(waterGlowPs_);
     drop(glowDownPs_);
@@ -321,7 +323,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         const char* source;
         std::vector<uint8_t> code;
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
-    } wants[21] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[22] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -333,7 +335,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"draw_glow_ps", ps, shaderSource(), {}, true}, {"water_glow_ps", ps, shaderSource(), {}, true},
                    {"glow_down_ps", ps, shaderSource(), {}, true}, {"glow_up_ps", ps, shaderSource(), {}, true},
                    {"glow_add_ps", ps, shaderSource(), {}, true},  // 1.0
-                   {"firefly_ps", ps, shaderSource(), {}, true}};  // 1.0.1
+                   {"firefly_ps", ps, shaderSource(), {}, true},  // 1.0.1
+                   {"material_ps", ps, shaderSource(), {}, true}};  // 1.14
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -431,6 +434,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     for (int k = 0; k < 5; ++k)
         if (wants[15 + k].code.empty() || !psOf(wants[15 + k], *glows[k])) *glows[k] = nullptr;
     if (wants[20].code.empty() || !psOf(wants[20], fireflyPs_)) fireflyPs_ = nullptr;  // 1.0.1
+    if (wants[21].code.empty() || !psOf(wants[21], materialPs_)) materialPs_ = nullptr;  // 1.14
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -635,6 +639,7 @@ void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while qu
     ++stats_.freed;
     // 0.89: a small one kept for the game's next of its size (32 MB of them at most) - a new surface's levels are
     // uploaded whole before it is first drawn (TextureLevels starts with all of them to upload), the old picture gone
+    dropMaterial(it->second);  // 1.14
     const Texture& t = it->second;
     const size_t bytes = textureBytes(t.width, t.height, t.levels);
     if (t.width * t.height <= 512 * 512 && pooledBytes_ + bytes <= (size_t(32) << 20) && pool_.size() < 256) {
@@ -1115,6 +1120,18 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
         std::memcpy(c.projection, proj, sizeof proj);
     }
+    // 1.14, the materials (as draw.cpp): a draw of the ground or a model (it writes depth, not a sprite, not leaves,
+    // not an effect) - its texture's material made first (materials11.cpp), then read with it (t2).
+    ID3D11ShaderResourceView* mat = nullptr;
+    if (materialsWanted() && !s.ui && !water && !soft && !adds && !twin && !d.twin && s.zWrite && t[0] != &white_ &&
+        !t[0]->leafy && c.uiMode == 0 &&
+        !(d.vertexCount == 4 &&
+          ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount))) {
+        Texture& own = textures_.find(d.texture[0])->second;
+        if (ensureMaterial(own, srvs[0])) mat = own.matSrv;
+        bindTarget();  // a material made just now bound its own
+    }
+    if (mat) materialConstants(d.fvf == d3d7::FVF_TL2, c);
     // 0.90: the draw call's state; the draw goes on the gathered call when it is the same and its vertices follow
     Issue is;
     is.c = c;
@@ -1129,6 +1146,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.raster = rasterState(d3dmap::cullOf(s.cull));
     is.srvs[0] = srvs[0];
     is.srvs[1] = srvs[1];
+    is.srvs[2] = mat;
     is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
     is.vs = water ? waterVs_ : drawVs_;
     is.ps = water ? (toGlow ? waterGlowPs_ : waterPs_) : toGlow ? drawGlowPs_ : drawPs_;
@@ -1167,7 +1185,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
 bool Renderer11::Issue::sameState(const Issue& o) const {
     return vs == o.vs && ps == o.ps && blend == o.blend && depth == o.depth && raster == o.raster &&
            samplers[0] == o.samplers[0] &&
-           samplers[1] == o.samplers[1] && srvs[0] == o.srvs[0] && srvs[1] == o.srvs[1] && layout == o.layout &&
+           samplers[1] == o.samplers[1] && srvs[0] == o.srvs[0] && srvs[1] == o.srvs[1] && srvs[2] == o.srvs[2] &&
+           layout == o.layout &&
            std::memcmp(&c, &o.c, sizeof c) == 0;
 }
 
@@ -1190,6 +1209,8 @@ void Renderer11::flushBatch() {
     if (is.ps == waterPs_ && waterPs_) {  // 0.99: the picture and the depth under the water (t2, t3)
         ID3D11ShaderResourceView* under[2] = {scene_.srv, depthCopySrv_};
         ctx_->PSSetShaderResources(2, 2, under);
+    } else if (is.srvs[2]) {  // 1.14: the material (t2), bound with each call that reads it
+        ctx_->PSSetShaderResources(2, 1, &is.srvs[2]);
     }
     if (need(all || is.vs != bound_.vs)) ctx_->VSSetShader(is.vs, nullptr, 0);  // 0.99: the water's, or the game's
     if (need(all || is.ps != bound_.ps)) ctx_->PSSetShader(is.ps, nullptr, 0);
@@ -1522,6 +1543,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
     waterCopied_ = waterReady_ = false;  // 0.99
+    materialsMade_ = 0;  // 1.14
     flames_.clear();
     timeEnd();
     LARGE_INTEGER ended;  // 0.89

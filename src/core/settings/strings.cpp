@@ -2379,14 +2379,16 @@ const Entry kTexts[] = {
      "Материалы мира"},
     {"Each texture of the ground, the houses and the rocks gets its relief, height and gloss, made by the card from "
      "its picture: the sun lights stones, bricks and bark from their side, the hollows are darker, smooth stone "
-     "glints, the repeats of the ground's tiles hide under large patches of shade. With the remaster also depth "
-     "(Direct3D 12).",
+     "glints, the repeats of the ground's tiles hide under large patches of shade, steep cliffs get a stone grain "
+     "of their own over the game's stretched stripes. With the remaster also depth (Direct3D 12).",
      "Кожна текстура землі, будинків і скель отримує рельєф, висоту й блиск, які відеокарта робить із її картинки: "
      "сонце освітлює камінь, цеглу й кору збоку, западини темніші, гладкий камінь виблискує, повтори плиток землі "
-     "ховаються під великими плямами відтінку. З ремастером ще й глибина (Direct3D 12).",
+     "ховаються під великими плямами відтінку, круті скелі отримують власну кам'яну фактуру поверх "
+     "розтягнутих смуг гри. З ремастером ще й глибина (Direct3D 12).",
      "Каждая текстура земли, домов и скал получает рельеф, высоту и блеск, которые видеокарта делает из её картинки: "
      "солнце освещает камень, кирпич и кору сбоку, впадины темнее, гладкий камень блестит, повторы плиток земли "
-     "прячутся под крупными пятнами оттенка. С ремастером ещё и глубина (Direct3D 12)."},
+     "прячутся под крупными пятнами оттенка, крутые скалы получают свою каменную фактуру поверх "
+     "растянутых полос игры. С ремастером ещё и глубина (Direct3D 12)."},
     {"Strength of the materials",
      "Сила матеріалів",
      "Сила материалов"},

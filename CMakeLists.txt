@@ -58,13 +58,13 @@ elseif(WIN32)
     # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
     add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/registry.cpp
                 src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp src/app/ai_cache.cpp
-                src/app/update.cpp src/app/report_send.cpp src/app/pack_fetch.cpp
+                src/app/update.cpp src/app/report_send.cpp src/app/pack_fetch.cpp src/app/shots.cpp
                 src/win/system_probe.cpp src/win/gpu/adapters.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)
     target_compile_options(uagfx_app PRIVATE -Wall -Wextra)
-    target_link_libraries(uagfx_app PUBLIC uagfx_core comctl32 shell32 ole32 advapi32 winhttp)
+    target_link_libraries(uagfx_app PUBLIC uagfx_core comctl32 shell32 ole32 uuid advapi32 winhttp)
 
     # uaro-graphics.exe, the settings app (stage 2 spec): its version comes from src/core/version.cpp.
     enable_language(RC)

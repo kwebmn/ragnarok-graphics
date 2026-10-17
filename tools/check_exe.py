@@ -72,6 +72,7 @@ ALLOWED = {
     },
     "ole32.dll": {
         "CoInitializeEx", "CoUninitialize",
+        "CoCreateInstance", "CreateStreamOnHGlobal", "GetHGlobalFromStream",  # 1.8.1: screenshots for a report
     },
     "winhttp.dll": {  # 0.49: the update check
         "WinHttpCloseHandle", "WinHttpConnect", "WinHttpOpen", "WinHttpOpenRequest", "WinHttpQueryDataAvailable",

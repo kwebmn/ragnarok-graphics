@@ -91,6 +91,10 @@ private:
         int width = 0, height = 0, levels = 1;
         std::vector<SpriteCell> cells;  // 0.60.1: a sprite cache's cells and what each holds (the shadows)
         bool leafy = false;             // 0.64: leaves (core/foliage.hpp): swayed in the world
+        // 1.14: its material (materials11.cpp) and the picture it was made from (the game's or the AI's)
+        ID3D11Texture2D* mat = nullptr;
+        ID3D11ShaderResourceView* matSrv = nullptr;
+        const void* matFor = nullptr;
     };
     struct Target {  // a picture drawn into and read from
         ID3D11Texture2D* texture = nullptr;
@@ -128,6 +132,15 @@ private:
     };
     std::vector<Fly11> flies_;
     ID3D11PixelShader* fireflyPs_ = nullptr;
+    // 1.14, the materials (materials11.cpp, as Direct3D 12's materials.cpp): made from a texture's picture by
+    // material_ps, a few a frame, then read by the ground's and the models' draws (t2, shade() bit 28)
+    ID3D11PixelShader* materialPs_ = nullptr;
+    int materialsMade_ = 0;
+    bool materialsLogged_ = false;
+    bool materialsWanted() const { return effects_.materials && effects_.materialsStrength > 0 && materialPs_; }
+    bool ensureMaterial(Texture& t, ID3D11ShaderResourceView* source);
+    static void dropMaterial(Texture& t);
+    void materialConstants(bool ground, Constants& c) const;
     bool firefliesWanted() const { return effects_.fireflies && effects_.firefliesBrightness > 0 && fireflyPs_; }
     bool takeFirefly(const FrameRecord& rec, const DrawCmd& d);
     void applyFireflies();
@@ -298,7 +311,7 @@ private:
         ID3D11DepthStencilState* depth = nullptr;
         ID3D11RasterizerState* raster = nullptr;
         ID3D11SamplerState* samplers[2] = {nullptr, nullptr};
-        ID3D11ShaderResourceView* srvs[2] = {nullptr, nullptr};
+        ID3D11ShaderResourceView* srvs[3] = {nullptr, nullptr, nullptr};  // 1.14: [2] the material (t2)
         ID3D11InputLayout* layout = nullptr;
         ID3D11VertexShader* vs = nullptr;  // 0.99: the game's draw's, or the water's
         ID3D11PixelShader* ps = nullptr;

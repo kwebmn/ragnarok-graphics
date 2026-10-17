@@ -381,7 +381,23 @@ float4 shade(PsIn i) {
 #ifndef UAGFX_SAFE
     if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
     if (((stage0.y >> 25) & 1) != 0) c.rgb *= r8;  // 1.9.7: a crown's shell, darker behind and lighter in front
-    if (material) c.rgb = materialLight(c.rgb, m, P, N, T, B);                       // 1.8: the materials
+    if (material) {
+        c.rgb = materialLight(c.rgb, m, P, N, T, B);  // 1.8: the materials
+        // 1.14, cliffs: a steep face whose texture the game stretches along it (one of its coordinates moves far
+        // slower over the world than the other: T or B short) gets a rock's own detail over the world, in the
+        // face's own two axes, breaking the streaks - its picture is not taken apart (an atlas's quarters stay)
+        float stretch = 1.0 - saturate(min(length(T), length(B)) * 2.5);
+        float3 nw = N.x * float3(r0, r1, r2) + N.y * float3(r3, r4, r5) + N.z * float3(r6, r7, r8);
+        float k = stretch * (1.0 - smoothstep(0.5, 0.8, abs(nw.y))) * twinH;
+        if (k > 0.01) {
+            float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
+                       float3(r9, r10, r11);
+            float2 a = abs(nw.x) > abs(nw.z) ? float2(w.z, w.y) : float2(w.x, w.y);
+            float detail = mnoise(a * 0.9) * 0.5 + mnoise(a * 2.3 + 7.1) * 0.3 + mnoise(a * 5.7 + 3.3) * 0.2;
+            float crack = smoothstep(0.06, 0.0, abs(mnoise(a * 1.4 + 9.2) - 0.5));
+            c.rgb *= lerp(1.0, (0.78 + 0.42 * detail) * (1.0 - 0.35 * crack), saturate(k));
+        }
+    }
     if (((stage1.y >> 30) & 1) != 0) {  // 1.8: the ground's large patches
         float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
                    float3(r9, r10, r11);
