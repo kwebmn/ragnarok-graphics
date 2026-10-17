@@ -19,6 +19,7 @@ namespace uagfx::win {
 
 WNDPROC Console::gameProc_ = nullptr;
 Console* Console::active_ = nullptr;
+HWND Console::subclassed_ = nullptr;
 
 namespace {
 
@@ -191,9 +192,11 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
 bool Console::present(HWND game, bool foreground, const std::string& iniPath, const Config& config,
                       const GpuTiming* timing) {
     if (!game) return false;
-    if (game_ != game && !gameProc_) {  // once: the game's window passes its keys through wndProc
-        gameProc_ = reinterpret_cast<WNDPROC>(
+    if (game != subclassed_) {  // once a window: its keys pass through wndProc (2.2.2: a window made anew too)
+        const auto was = reinterpret_cast<WNDPROC>(
             SetWindowLongPtrW(game, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&Console::wndProc)));
+        if (was && was != &Console::wndProc) gameProc_ = was;
+        subclassed_ = game;
         active_ = this;
     }
     game_ = game;

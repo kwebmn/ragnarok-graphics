@@ -67,6 +67,11 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
     // before the answer (1.8.0: 7 + 14 s ran past the 20 s it had, and the game drew in its own process)
     if (!await(Msg::Hello, hello, 90000)) {
         error = lost_ ? "the 64-bit renderer exited at its start" : "the 64-bit renderer did not answer";
+        DWORD code = 0;  // 2.2.2: why, when it says - its own log has the rest (uaro-render64.log)
+        if (WaitForSingleObject(process_.hProcess, 0) == WAIT_OBJECT_0 && GetExitCodeProcess(process_.hProcess, &code))
+            error += code == 2 ? " (exit code 2: it could not join the game - another version of uaro-render64.exe "
+                                 "than this ddraw.dll? Reinstall uaRO Graphics)"
+                               : " (exit code " + std::to_string(code) + ")";
         return false;
     }
     WireReader rd(hello.data(), hello.size());

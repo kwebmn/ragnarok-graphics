@@ -58,6 +58,7 @@ private:
     std::string shownText_;
     static WNDPROC gameProc_;
     static Console* active_;
+    static HWND subclassed_;  // the window whose procedure is wndProc now
 };
 
 }  // namespace uagfx::win
