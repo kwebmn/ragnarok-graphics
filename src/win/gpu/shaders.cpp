@@ -455,7 +455,11 @@ float4 shade(PsIn i) {
         if (((stage1.y >> 29) & 1) != 0) {  // parallax: one step along the view by the height
             float3 V = normalize(-P);
             float3 vt = float3(dot(V, T), dot(V, B), dot(V, N));
-            uv0 += (m.z - 0.5) * 0.035 * vt.xy / (vt.z + 0.42);
+            // 2.1.5: at most a pixel and a half on the screen - farther, the step left a tile's part of its
+            // texture for the next one's (smears and torn edges on c_tower2's floor)
+            float2 shift = (m.z - 0.5) * 0.035 * vt.xy / (vt.z + 0.42);
+            float reach = 1.5 * max(length(du), length(dv));
+            uv0 += clamp(shift, -reach, reach);
             m = sceneColor.SampleGrad(samp0, uv0, du, dv);
         }
         pane = saturate((m.w - 0.74) * 4.0);  // 1.21: a window's pane (material_ps): glass's gloss

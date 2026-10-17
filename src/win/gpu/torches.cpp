@@ -817,7 +817,11 @@ bool Renderer::Impl::applyTorches() {
             const float gx = v.x / vz * proj.f0 + proj.cx, gy = v.y / vz * proj.f1 + proj.cy;
             if (!onScreen(gx, gy, reach * proj.f0 / vz + margin)) continue;
             const float top = std::max({r.color[0], r.color[1], r.color[2], 1e-3f});
-            LightItem l{{v.x, v.y, v.z}, lampStrength, {r.color[0] / top, r.color[1] / top, r.color[2] / top}, reach};
+            // 2.1.5: a third of the colour only - the game has the lamps' colours in its light already; full ones
+            // (0.2 0.3 0.4 made blue) laid rainbow patches over c_tower2's floor.
+            float tint[3];
+            for (int k = 0; k < 3; ++k) tint[k] = 0.65f + 0.35f * r.color[k] / top;
+            LightItem l{{v.x, v.y, v.z}, lampStrength, {tint[0], tint[1], tint[2]}, reach};
             // A fire's colour - red the most, then green, then blue - flickers, each its own way.
             if (r.color[0] >= r.color[1] && r.color[1] >= r.color[2] * 0.9f && r.color[0] > 0.5f)
                 l.strength *= torch::flicker(double(time) * 0.5, torch::seedAt(w.x, w.z), amount * 0.25f);
