@@ -252,6 +252,8 @@ enum class Text : uint16_t {
     FxSmoothHills, FxSmoothHillsHint, FxSmoothHillsStrength, FxSmoothHillsStrengthHint,
     // 1.16
     FxWorldReflections, FxWorldReflectionsHint,
+    // 1.17
+    FxSpriteLight, FxSpriteLightHint, FxSpriteLightStrength, FxSpriteLightStrengthHint,
     Count
 };
 

@@ -2558,6 +2558,24 @@ const Entry kTexts[] = {
      "показати не може. Потрібна «Сучасна вода»; лише в режимі «Ремастер» (Direct3D 12).",
      "Вода отражает дома, скалы и деревья на берегу — также то, что выше верхнего края экрана и чего сама картинка "
      "показать не может. Нужна «Современная вода»; только в режиме «Ремастер» (Direct3D 12)."},
+    {"Living characters",
+     "Живі персонажі",
+     "Живые персонажи"},
+    {"Characters and monsters are lit by the sun from the side: the edge towards it brighter with a warm rim, the far "
+     "side a little darker - no longer flat stickers. With Real sun shadows they also darken when they step into the "
+     "shadow of a house or a tree (Direct3D 12).",
+     "Персонажів і монстрів сонце освітлює збоку: край до сонця світліший, з теплим обідком, дальній бік трохи "
+     "темніший — вони вже не пласкі наліпки. Зі «Справжніми тінями від сонця» вони ще й темнішають, коли заходять у "
+     "тінь будинку чи дерева (Direct3D 12).",
+     "Персонажей и монстров солнце освещает сбоку: край к солнцу светлее, с тёплым ободком, дальняя сторона чуть "
+     "темнее — они больше не плоские наклейки. С «Настоящими тенями от солнца» они ещё и темнеют, когда заходят в "
+     "тень дома или дерева (Direct3D 12)."},
+    {"Strength of the characters' light",
+     "Сила світла персонажів",
+     "Сила света персонажей"},
+    {"How much the sun's side and the rim show on the characters.",
+     "Наскільки помітні сонячний бік і обідок на персонажах.",
+     "Насколько заметны солнечная сторона и ободок на персонажах."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -346,6 +346,10 @@ struct EffectSettings {
     // 1.16: the remaster's world reflections (mirror.cpp): the last frame's opaque world turned over the water's
     // level, read by water_ps where the picture has nothing to reflect. Remaster mode. Off by default.
     bool worldReflections = false;
+    // 1.17: living characters (shaders.cpp spriteLight): a character's sprite lit by the sun from its silhouette's
+    // sides, a warm rim towards it; with Real sun shadows darker in a house's or a crown's shadow. Off by default.
+    bool spriteLight = false;
+    int spriteLightStrength = 60;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

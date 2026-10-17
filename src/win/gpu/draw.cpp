@@ -184,6 +184,20 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                 s.srcBlend != d3d7::BLEND_DESTCOLOR && softCopied >= 0;
     if (soft && !softCopied) softCopied = ensureScene("soft particles") && copySceneDepth() ? 1 : -1;
     soft = soft && softCopied > 0;
+    // 1.17, living characters: a sprite of the game's sprite cache (a character, a monster) facing the screen, blended
+    // over - lit from its silhouette's sides; in the real sun's shadows (their map made) darker
+    bool sprite = false;
+    if (spriteLightWanted() && !s.ui && !water && !smoke && !ray && !lava && !adds && !d.twin && s.blend &&
+        d.vertexCount == 4 && d.texture[0]) {
+        const auto it = textures.find(d.texture[0]);
+        if (it != textures.end() && !it->second.spriteCells.empty() && !it->second.leafy) {
+            const std::vector<uint8_t>& v = rec.vertexBytes();
+            const size_t stride = FrameRecord::stride(d.fvf);
+            sprite = quad || (d.vertexOffset + 4 * stride <= v.size() &&
+                              ai::flatQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount));
+        }
+    }
+    const bool spriteShaded = sprite && !soft && sunMapMade && sunMap;
     const DrawShader shader = smoke ? DrawShader::Smoke
                               : ray ? DrawShader::Ray
                               : lava ? DrawShader::Lava
@@ -214,7 +228,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     // 1.15: smooth hills - a draw of the ground (its own or a seam's strip) reads the corners' normals (t3)
     bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin && (s.zWrite || seamPass);
-    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly ? 5 : 2)) return;
+    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly || spriteShaded ? 5 : 2)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
@@ -292,6 +306,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         transition(matTex->mat, matTex->matState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         const UINT t3 = hilly ? hillsDataSrv : matTex->matSrv;
         list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(matTex->matSrv, t3, matTex->matSrv));
+    } else if (spriteShaded) {  // 1.17: the real sun's map (t3)
+        transition(sunMap, sunMapState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sunMapSrv, sunMapSrv, sunMapSrv));
     } else if (hilly) {  // 1.15: the hills' normals (t3)
         list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(hillsDataSrv, hillsDataSrv, hillsDataSrv));
     } else if (soft) {  // the depth behind the effect (t3)
@@ -368,6 +385,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
     if (hilly) hillsConstants(c);  // 1.15
+    if (sprite && !matTex && c.uiMode == 0) spriteConstants(rec, d, spriteShaded, c);  // 1.17
     if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())
         c.stage1[1] |= 1u << 31;
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);

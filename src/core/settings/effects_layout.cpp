@@ -95,6 +95,7 @@ const EffectLayout kEffects[] = {
     {"effects.volumetric_fog", {}, {"effects.volumetric_fog_density"}, {}, 3},  // 1.13
     {"effects.smooth_hills", {}, {"effects.smooth_hills_strength"}, {}, 3},  // 1.15
     {"effects.world_reflections", {}, {}, {}, 3},  // 1.16
+    {"effects.sprite_light", {}, {"effects.sprite_light_strength"}, {}, 2},  // 1.17
 };
 
 }  // namespace

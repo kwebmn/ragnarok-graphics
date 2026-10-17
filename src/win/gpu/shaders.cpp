@@ -256,6 +256,46 @@ float relief(float2 uv, float2 du, float2 dv) {
 #endif
 
 #ifndef UAGFX_SAFE
+// 1.17, living characters (draw.cpp spriteConstants): a sprite of a character or a monster lit by the sun from the
+// side its picture's own shape gives - its silhouette's slope a few texels around as the way its edge faces: the side
+// towards the sun (twinX, twinY on the screen, twinW its height) brighter with a warm rim, the far side a little
+// darker. uiPixels.x the strength, .y the sun's light here. sourceClamp.w > 0: the real sun's map (t3, sourceRect.w a
+// side, .z its bias) at the feet (sourceClamp.xyz in its box) - in a house's or a crown's shadow the whole sprite
+// darker by that much.
+float3 spriteLight(float2 uv, float2 du, float2 dv, float3 c) {
+    float w, h;
+    tex0.GetDimensions(w, h);
+    float2 size = float2(w, h);
+    float2 sx = du / max(length(du * size), 1e-4) * 2.0;  // two texels along the screen's x, then its y
+    float2 sy = dv / max(length(dv * size), 1e-4) * 2.0;
+    float l = tex0.SampleGrad(samp0, uv - sx, du, dv).a, r = tex0.SampleGrad(samp0, uv + sx, du, dv).a;
+    float u = tex0.SampleGrad(samp0, uv - sy, du, dv).a, d = tex0.SampleGrad(samp0, uv + sy, du, dv).a;
+    float2 out2 = -float2(r - l, d - u);  // from the inside out, screen axes (y down)
+    float edge = saturate(length(out2) * 1.5);
+    float3 n = normalize(float3(out2 * 1.2, 0.8));
+    float2 ls = float2(twinX, twinY);
+    float3 L = normalize(float3(ls * sqrt(saturate(1.0 - twinW * twinW)), 0.35 + twinW));
+    float sun = uiPixels.y;
+    float amb = lerp(0.85, 0.55, sun);
+    float k = (amb + (1.0 - amb) * saturate(dot(n, L))) / (amb + (1.0 - amb) * L.z);
+    float rim = pow(saturate(dot(normalize(out2 + 1e-5), normalize(ls + 1e-5))), 2.0) * edge * sun;
+    float s = uiPixels.x;
+    c *= lerp(1.0, clamp(k, 0.75, 1.3), s);
+    c += float3(1.0, 0.9, 0.7) * rim * 0.22 * s;
+    if (sourceClamp.w > 0.0) {  // in the shadow of a house, a crown: from the sun's map at the feet
+        float2 at = float2(sourceClamp.x * 0.5 + 0.5, 0.5 - sourceClamp.y * 0.5) * sourceRect.w;
+        float shade = 0.0;
+        [unroll] for (int y = -2; y <= 2; ++y)
+            [unroll] for (int x = -2; x <= 2; ++x) {
+                int last = int(sourceRect.w) - 1;
+                int2 q = clamp(int2(at) + int2(x, y) * 3, int2(0, 0), int2(last, last));
+                shade += sceneDepth.Load(int3(q, 0)) < sourceClamp.z - sourceRect.z ? 1.0 : 0.0;
+            }
+        c *= 1.0 - sourceClamp.w * shade / 25.0;
+    }
+    return c;
+}
+
 // 1.7, the trees (draw_constants.hpp leafShading): a draw of leaves, its box sourceRect (game pixels). uiPixels.xy
 // the way to the sun on the screen, .z the crown's roundness (tree_volume) - lit as a ball from the sun's side, darker
 // in its middle; r4 the light through the leaves (leaf_light): a leaf with a hole a few pixels towards the sun is on
@@ -414,6 +454,7 @@ float4 shade(PsIn i) {
     }
 #ifndef UAGFX_SAFE
     if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
+    if (((stage0.y >> 28) & 1) != 0) c.rgb = spriteLight(uv0, du, dv, c.rgb);  // 1.17: the characters
     if (((stage0.y >> 25) & 1) != 0) c.rgb *= r8;  // 1.9.7: a crown's shell, darker behind and lighter in front
     if (material) {
         c.rgb = materialLight(c.rgb, m, P, N, T, B);  // 1.8: the materials

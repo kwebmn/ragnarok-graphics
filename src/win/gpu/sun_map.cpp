@@ -168,6 +168,7 @@ bool Renderer::Impl::applyRealShadows() {
     row(right, 1.0f / kSunHalf, 0.0f, light);
     row(up, 1.0f / kSunHalf, 0.0f, light + 4);
     row(fwd, 1.0f / kSunDepth, 0.5f, light + 8);
+    std::copy(light, light + 12, sunWorldToBox);  // 1.17
     // the map: the casters' vertices up once, each draw its texture (its holes)
     const Upload u = allocUpload(sunVerts.size() * sizeof(float), 16);
     if (!u.cpu) return true;
@@ -294,6 +295,55 @@ bool Renderer::Impl::applyFog() {
     const UINT map = sunMapMade ? sunMapSrv : sceneColorSrv;
     return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, map)
                    : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, map);
+}
+
+// 1.17: the constants of a character's sprite (shaders.cpp spriteLight): the way to the sun on the screen and its
+// height, the strength, the sun's light here; shaded, the real sun's map made: the feet (the quad's bottom edge's
+// middle, a unit up) in the sun's box, the map's side and bias, how dark its shadow is.
+void Renderer::Impl::spriteConstants(const FrameRecord& rec, const DrawCmd& d, bool shaded, Constants& c) const {
+    c.stage0[1] |= 1u << 28;
+    float sun[2];
+    sunOnScreen(sun);
+    const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
+    const float height = mapOutdoors ? std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) * 0.0174533f : 1.2f;
+    c.twin[0] = -sun[0];
+    c.twin[1] = -sun[1];
+    c.twin[2] = 0.0f;
+    c.twin[3] = std::sin(height) * 0.6f;
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    c.uiPixels[0] = float(std::clamp(effects.spriteLightStrength, 0, 200)) / 100.0f;
+    c.uiPixels[1] = mapOutdoors ? 1.0f - 0.8f * night : 0.3f;
+    if (!shaded) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    if (d.vertexOffset + 4 * stride > v.size()) return;
+    float corner[4][4];
+    for (int k = 0; k < 4; ++k)
+        std::memcpy(corner[k], v.data() + d.vertexOffset + size_t(k) * stride, sizeof corner[k]);
+    float bottom = -1e9f;
+    for (const auto& q : corner) bottom = std::max(bottom, q[1]);
+    float x = 0.0f, rhw = 0.0f;
+    int n = 0;
+    for (const auto& q : corner)
+        if (q[1] > bottom - 0.5f) {
+            x += q[0];
+            rhw += q[3];
+            ++n;
+        }
+    if (!n || rhw <= 0.0f) return;
+    x /= float(n);
+    rhw /= float(n);
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const float* m = viewToWorld;
+    const float vz = 1.0f / rhw, vx = (x - p.cx) * vz / p.f0, vy = (bottom - p.cy) * vz / p.f1;
+    const float w[3] = {vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[1] + vy * m[4] + vz * m[7] + m[10] - 1.0f,
+                        vx * m[2] + vy * m[5] + vz * m[8] + m[11]};
+    const float* l = sunWorldToBox;
+    for (int r = 0; r < 3; ++r)
+        c.sourceClamp[r] = l[r * 4] * w[0] + l[r * 4 + 1] * w[1] + l[r * 4 + 2] * w[2] + l[r * 4 + 3];
+    c.sourceClamp[3] = 0.9f * float(std::clamp(effects.sunShadowsStrength, 0, 100)) / 100.0f * (1.0f - night);
+    c.sourceRect[2] = 0.0015f;
+    c.sourceRect[3] = float(kSunMap);
 }
 
 }  // namespace uagfx::gpu
