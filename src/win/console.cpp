@@ -17,9 +17,8 @@
 
 namespace uagfx::win {
 
-WNDPROC Console::gameProc_ = nullptr;
+std::vector<Console::Subclassed> Console::subclassed_;
 Console* Console::active_ = nullptr;
-HWND Console::subclassed_ = nullptr;
 
 namespace {
 
@@ -73,7 +72,9 @@ LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
                      msg == WM_CHAR || msg == WM_SYSCHAR;
     if (key && ((active_ && active_->open_) || wp == VK_OEM_3 || ((msg == WM_CHAR) && (wp == L'`' || wp == L'~'))))
         return 0;
-    return CallWindowProcW(gameProc_, w, msg, wp, lp);
+    for (const Subclassed& s : subclassed_)
+        if (s.window == w) return CallWindowProcW(s.proc, w, msg, wp, lp);
+    return DefWindowProcW(w, msg, wp, lp);
 }
 
 // 2.2.1: as the Effects page - the set and the mode, then the nine groups, each with its strength and a row that
@@ -182,11 +183,14 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
 bool Console::present(HWND game, bool foreground, const std::string& iniPath, const Config& config,
                       const GpuTiming* timing) {
     if (!game) return false;
-    if (game != subclassed_) {  // once a window: its keys pass through wndProc (2.2.2: a window made anew too)
-        const auto was = reinterpret_cast<WNDPROC>(
-            SetWindowLongPtrW(game, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&Console::wndProc)));
-        if (was && was != &Console::wndProc) gameProc_ = was;
-        subclassed_ = game;
+    if (game != game_) {  // once a window: its keys pass through wndProc (2.2.2: a window made anew too)
+        bool known = false;
+        for (const Subclassed& s : subclassed_) known = known || s.window == game;
+        if (!known) {
+            const auto was = reinterpret_cast<WNDPROC>(
+                SetWindowLongPtrW(game, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&Console::wndProc)));
+            if (was && was != &Console::wndProc) subclassed_.push_back({game, was});
+        }
         active_ = this;
     }
     game_ = game;

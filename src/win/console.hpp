@@ -56,9 +56,13 @@ private:
     HWND game_ = nullptr;
     bool dirty_ = true;
     std::string shownText_;
-    static WNDPROC gameProc_;
+    // the game's windows whose procedure is wndProc now, each with its own before (2.2.2: a window made anew too)
+    struct Subclassed {
+        HWND window;
+        WNDPROC proc;
+    };
+    static std::vector<Subclassed> subclassed_;
     static Console* active_;
-    static HWND subclassed_;  // the window whose procedure is wndProc now
 };
 
 }  // namespace uagfx::win
