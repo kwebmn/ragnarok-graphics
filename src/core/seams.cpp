@@ -51,7 +51,7 @@ bool same(float a, float b) { return std::fabs(a - b) < 0.02f; }
 float fold(float x) { return x < 0.0f ? -x : x > 1.0f ? 2.0f - x : x; }
 
 // 1.9.2: a place of a cell's square kept off its outermost kBand - mirrored back from it.
-constexpr float kBand = 0.06f;
+constexpr float kBand = 0.03f;  // 2.0.2: the rim only - wider, its mirror's axis showed as a light line
 float inset(float x) { return x < kBand ? 2.0f * kBand - x : x > 1.0f - kBand ? 2.0f * (1.0f - kBand) - x : x; }
 
 }  // namespace

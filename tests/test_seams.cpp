@@ -35,11 +35,11 @@ TEST(seams_strips_where_two_textures_meet_none_where_one_goes_on) {
     // 0|1 both ways, 0|2 both ways (the coordinates jump at their edge), and each cell's own band at its seams
     CHECK_EQ(int(strips.size()), 7);
     for (const seams::Strip& s : strips) CHECK_EQ(int(s.vertices.size()), s.inside == 0 && s.shows == 0 ? 30 : 15);
-    // the strip inside cell 0 showing cell 1: at its edge (x 15) cell 1's u kept off its rim (0.12), mirrored to 0.45
-    // inside
+    // the strip inside cell 0 showing cell 1: at its edge (x 15) cell 1's u kept off its rim (2.0.2: 0.06), mirrored
+    // to 0.45 inside
     for (const seams::Strip& s : strips)
         if (s.inside == 0 && s.shows == 1) {
-            CHECK(s.vertices[0].pos[0] > 14.9f && s.vertices[0].uv0[0] > 0.11f && s.vertices[0].uv0[0] < 0.13f);
+            CHECK(s.vertices[0].pos[0] > 14.9f && s.vertices[0].uv0[0] > 0.05f && s.vertices[0].uv0[0] < 0.07f);
             CHECK(s.vertices[14].uv0[0] > 0.44f && s.vertices[14].uv0[0] < 0.46f);
             // half the neighbour's at the edge's middle, 0.05 inside at 0.45 of the cell
             CHECK_EQ(int(s.vertices[2].diffuse >> 24), 128);

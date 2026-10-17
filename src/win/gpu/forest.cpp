@@ -439,7 +439,7 @@ bool Renderer::Impl::applyForest() {
     ID3D12PipelineState* pso = forestPipeline(upscale ? 1 : samples);
     if (!pso || !forestVb || !forestIb || !forestInstances) return true;
     StageSetup st;
-    if (!makeRoom(st, st, 0, 2)) return false;
+    if (!makeRoom(st, st, 0, 5)) return false;
     bindPass(upscale ? kPassWorld : kPassTarget);
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
@@ -471,6 +471,16 @@ bool Renderer::Impl::applyForest() {
     c.sourceClamp[2] = mapOutdoors ? 1.0f - 0.85f * night : 0.35f;
     list->SetGraphicsRootSignature(root);
     list->SetPipelineState(pso);
+    if (sunMapMade && sunMap) {  // 2.0.2: the trees in the real sun's shadows too, the crowns' own among them
+        std::copy(sunWorldToBox, sunWorldToBox + 4, c.uiPixels);
+        std::copy(sunWorldToBox + 4, sunWorldToBox + 8, c.twin);
+        std::copy(sunWorldToBox + 8, sunWorldToBox + 12, c.fogColor);
+        c.sourceClamp[3] = 0.75f * float(std::clamp(effects.sunShadowsStrength, 0, 100)) / 100.0f * (1.0f - night);
+        if (c.sourceClamp[3] > 0.0f) {
+            transition(sunMap, sunMapState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sunMapSrv, sunMapSrv, sunMapSrv));
+        }
+    }
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     const D3D12_VERTEX_BUFFER_VIEW views[2] = {

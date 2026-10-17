@@ -67,3 +67,20 @@ TEST(forest_average_colour_of_the_opaque_pixels) {
     const uint32_t none[1] = {0x00ffffffu};
     CHECK(!forest::averageColour(none, 1, 1, c));
 }
+
+TEST(forest_sakura_and_its_blossom) {
+    CHECK(forest::kindOf("x\\\xb9\xfe\xb3\xaa\xb9\xab""01.rsm") == forest::Kind::Sakura);             // 벗나무01
+    CHECK(forest::kindOf("x\\\xba\xd0\xc8\xab\xb9\xfe\xb2\xc9.rsm") == forest::Kind::Blossom);        // 분홍벗꽃
+    rsm::Model cloud;  // 분홍벗꽃 as its file stands: 34.6 across, 8.8 high
+    cloud.lo[0] = -17.3f, cloud.lo[1] = -8.8f, cloud.lo[2] = -11.6f;
+    cloud.hi[0] = 17.3f, cloud.hi[1] = 0.0f, cloud.hi[2] = 11.6f;
+    cloud.parts = {rsm::Part{"sakura", {-17.3f, -8.8f, -11.6f}, {17.3f, 0.0f, 11.6f}, 24}};
+    forest::Shape s;
+    CHECK(forest::shapeOf(forest::Kind::Blossom, cloud, s) && s.kind == forest::Kind::Blossom);
+    bool petals = false, high = true;
+    for (const forest::Vertex& v : forest::grow(s, 5).verts) {
+        petals = petals || v.part == 4.0f;
+        high = high && v.pos[1] < 3.0f;  // about its own box (up along -y), not pulled down to a bush's ground
+    }
+    CHECK(petals && high);
+}

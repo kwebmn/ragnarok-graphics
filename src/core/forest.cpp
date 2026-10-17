@@ -15,6 +15,8 @@ const char* const kPalm = "\xbe\xdf\xc0\xda\xbc\xf6";      // 야자수
 const char* const kFir = "\xc4\xa7\xbf\xb1\xbc\xf6";       // 침엽수
 const char* const kWillow = "\xb9\xf6\xb5\xe5\xb3\xaa\xb9\xab";  // 버드나무
 const char* const kBamboo = "\xb4\xeb\xb3\xaa\xb9\xab";    // 대나무
+const char* const kCherry = "\xb9\xfe\xb3\xaa\xb9\xab";    // 벗나무 (the files' spelling of 벚나무)
+const char* const kBlossom = "\xb9\xfe\xb2\xc9";            // 벗꽃
 const char* const kNot[] = {"\xb9\xde\xc4\xa7", "\xb1\xe2\xb5\xd5", "\xc1\xb6\xb0\xa2", "\xb5\xee\xb0\xc9",
                             "\xb1\xd7\xb8\xa9", "\xc0\xc7\xc0\xda", "\xc1\xd9\xb1\xe2"};
 // 받침 a stand, 기둥 a post, 조각 a piece, 등걸 a stump, 그릇 a bowl, 의자 a chair, 줄기 a stem
@@ -124,6 +126,8 @@ Kind kindOf(const std::string& file) {
     const size_t cut = file.find_last_of('\\');
     const std::string base = cut == std::string::npos ? file : file.substr(cut + 1);
     if (has(base, kBamboo)) return Kind::None;
+    if (has(base, kBlossom)) return Kind::Blossom;  // 2.0.2: before the trees - Prontera's sakura
+    if (has(base, kCherry)) return Kind::Sakura;
     if (has(base, kPalm)) return Kind::Palm;
     if (has(base, kFir)) return Kind::Conifer;
     if (has(base, kWillow)) return Kind::Willow;
@@ -161,6 +165,21 @@ bool shapeOf(Kind kind, const rsm::Model& model, Shape& out) {
     }
     if (!any) return false;
     out.kind = kind == Kind::Broadleaf && !trunk ? Kind::Bush : kind;
+    if (out.kind == Kind::Sakura && !trunk) {  // 2.0.2: one picture for its trunk and its crown - a trunk of its own
+        out.height = height;
+        out.trunkRadius = std::clamp(width * 0.045f, 0.5f, 2.5f);
+        out.trunkTop = height * 0.45f;
+        out.crownHi[1] = std::min(out.crownHi[1], -height * 0.35f);  // the crown above the trunk (up along -y)
+        return true;
+    }
+    if (out.kind == Kind::Blossom) {  // a cloud hung in the air: no trunk, the whole model its crown
+        for (int a = 0; a < 3; ++a) {
+            out.crownLo[a] = model.lo[a];
+            out.crownHi[a] = model.hi[a];
+        }
+        out.height = height;
+        return true;
+    }
     out.height = height;
     const float crownBottom = -out.crownHi[1];
     if (trunk && out.kind != Kind::Bush) {
@@ -187,7 +206,7 @@ Mesh grow(const Shape& shape, uint32_t seed) {
     // the trunk: from the foot (a little wider) up into the crown, bending a little
     V3 top{c.x, shape.trunkTop, c.z};
     if (shape.trunkRadius > 0.0f) {
-        const float bend = shape.kind == Kind::Palm ? 0.12f : 0.05f;
+        const float bend = shape.kind == Kind::Palm ? 0.12f : shape.kind == Kind::Sakura ? 0.09f : 0.05f;
         const float ba = rnd.range(0.0f, 6.2831853f);
         const V3 lean{std::cos(ba) * shape.height * bend, 0.0f, std::sin(ba) * shape.height * bend};
         std::vector<V3> path;
@@ -256,7 +275,9 @@ Mesh grow(const Shape& shape, uint32_t seed) {
             const float az = (float(i) + rnd.range(-0.3f, 0.3f)) / float(branches) * 6.2831853f;
             const float from = rnd.range(0.55f, 0.95f);
             const V3 start{c.x + (top.x - c.x) * from, shape.trunkTop * from, c.z + (top.z - c.z) * from};
-            const float up = rnd.range(0.35f, 0.8f), len = across * rnd.range(0.55f, 0.8f);
+            const bool cherry = shape.kind == Kind::Sakura;  // 2.0.2: wide, low branches
+            const float up = cherry ? rnd.range(0.1f, 0.45f) : rnd.range(0.35f, 0.8f);
+            const float len = across * (cherry ? rnd.range(0.7f, 0.95f) : rnd.range(0.55f, 0.8f));
             const float droop = shape.kind == Kind::Willow ? -0.5f : 0.0f;
             const V3 dir = norm(V3{std::cos(az), up + droop, std::sin(az)});
             std::vector<V3> path = {start, start + dir * (len * 0.5f),
@@ -274,19 +295,22 @@ Mesh grow(const Shape& shape, uint32_t seed) {
     std::vector<Clump> clumps;
     for (const V3& t : tips) clumps.push_back(Clump{t, across * rnd.range(0.38f, 0.52f)});
     clumps.push_back(Clump{V3{c.x, c.y + r.y * 0.45f, c.z}, across * rnd.range(0.45f, 0.6f)});
-    const int extra = shape.kind == Kind::Bush ? 5 : 2;
+    const int extra = shape.kind == Kind::Bush || shape.kind == Kind::Blossom ? 5 : 2;
     for (int i = 0; i < extra; ++i) {
         const float az = rnd.range(0.0f, 6.2831853f), d = rnd.range(0.2f, 0.6f);
         clumps.push_back(Clump{c + V3{std::cos(az) * r.x * d, rnd.range(-0.3f, 0.5f) * r.y, std::sin(az) * r.z * d},
                                across * rnd.range(0.4f, 0.55f)});
     }
-    for (Clump& k : clumps) {  // kept inside the model's crown
+    for (Clump& k : clumps) {  // kept inside the model's crown (2.0.2: a flat crown's clumps no taller than it)
+        k.radius = std::min(k.radius, std::max(r.y * 1.1f, across * 0.3f));
         k.at.x = std::clamp(k.at.x, c.x - r.x + k.radius * 0.6f, c.x + r.x - k.radius * 0.6f);
         k.at.z = std::clamp(k.at.z, c.z - r.z + k.radius * 0.6f, c.z + r.z - k.radius * 0.6f);
-        k.at.y = std::clamp(k.at.y, std::max(c.y - r.y + k.radius * 0.5f, 0.3f), c.y + r.y - k.radius * 0.5f);
+        const float floor = shape.kind == Kind::Blossom ? c.y - r.y : 0.3f;  // a blossom's cloud hangs in the air
+        k.at.y = std::clamp(k.at.y, std::max(c.y - r.y + k.radius * 0.5f, floor), c.y + r.y - k.radius * 0.5f);
     }
     const int cards = int(std::clamp(across * across * 1.3f, 220.0f, 1000.0f));
-    const float size = across * (shape.kind == Kind::Bush ? 0.24f : 0.2f);
+    const bool blossom = shape.kind == Kind::Sakura || shape.kind == Kind::Blossom;
+    const float size = across * (shape.kind == Kind::Bush ? 0.24f : blossom ? 0.17f : 0.2f);
     const float crownBottom = c.y - r.y, crownHeight = 2.0f * r.y;
     for (int i = 0; i < cards; ++i) {
         const Clump& k = clumps[size_t(rnd.next() * float(clumps.size())) % clumps.size()];
@@ -307,7 +331,7 @@ Mesh grow(const Shape& shape, uint32_t seed) {
         const V3 light = norm(outward * 0.85f + facing * 0.15f);
         const float droop = shape.kind == Kind::Willow ? -size * 0.6f * (1.0f - high) : 0.0f;
         b.card(p + V3{0, droop, 0}, facing, light, size * rnd.range(0.7f, 1.2f), rnd.range(0.0f, 6.2831853f), open,
-               1.0f, rnd.next());
+               blossom ? 4.0f : 1.0f, rnd.next());
     }
     return m;
 }

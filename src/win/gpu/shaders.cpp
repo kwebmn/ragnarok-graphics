@@ -538,7 +538,8 @@ float4 shade(PsIn i) {
         float other = smoothstep(-0.05, 0.05, i.diffuse.a - 0.5 + side * (n - 0.5) * 0.9);
         // 1.25: the own band whole at the edge (drawn first, applySeams) - partly see-through, the texture's dark rim
         // under it showed through the neighbour's strip as a line along the cells (the desert's "cracks")
-        c.a = own ? 1.0 - smoothstep(0.55, 1.0, i.specular.b) : other;
+        // 2.0.2: whole over the rim only, then fading out - whole over all of it, its mirror's axis showed
+        c.a = own ? 1.0 - smoothstep(0.3, 0.9, i.specular.b) : other;
     }
 #endif
     if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
@@ -2774,6 +2775,7 @@ struct ForestOut {
     float4 info : TEXCOORD1;  // open, part, own, the tree's number
     float3 leaf : TEXCOORD2;
     float3 bark : TEXCOORD3;
+    float3 world : TEXCOORD4;  // 2.0.2: for the real sun's map
 };
 
 // A forest vertex in the world: the instance's turn, scale and place, then the wind.
@@ -2810,7 +2812,26 @@ ForestOut forest_vs(ForestIn i) {
     o.info = float4(i.info.x, i.info.z, i.info.w, i.size.w);
     o.leaf = i.leaf.rgb;
     o.bark = i.bark.rgb;
+    o.world = w;
     return o;
+}
+
+// 2.0.2: a card of blossom - seven small flowers of five petals; how much of the place is petal, its flower's heart
+float forestBlossom(float2 uv, float own, out float heart) {
+    float best = 0.0;
+    heart = 0.0;
+    [unroll] for (int k = 0; k < 7; ++k) {
+        float a = float(k) * 0.9 + own * 6.28;
+        float2 d = uv - (0.5 + float2(cos(a), sin(a)) * (k == 0 ? 0.0 : 0.29));
+        float rad = length(d), ang = atan2(d.y, d.x);
+        float petal = 0.12 + 0.04 * cos(ang * 5.0 + own * 9.0 + float(k));
+        float f = saturate(1.0 - rad / petal);
+        if (f > best) {
+            best = f;
+            heart = 1.0 - smoothstep(0.0, 0.035, rad);
+        }
+    }
+    return best;
 }
 
 // A card's leaves: one in the middle and eight about it, each an ellipse turned its way; how much of the place is leaf
@@ -2850,6 +2871,12 @@ float4 forest_ps(ForestOut i) : SV_Target {
         float width = 0.1 + 0.9 * (1.0 - i.uv.y * 0.6) * leaflet;
         clip(width - across);
         base = i.leaf * (across < 0.08 ? 0.75 : 0.9 + 0.2 * leaflet);
+    } else if (part > 3.5) {  // 2.0.2: a card of blossom - pale at the petals' tips, a deeper heart
+        float heart;
+        float petal = forestBlossom(i.uv, own, heart);
+        clip(petal - 0.1);
+        base = lerp(i.leaf * (0.9 + 0.2 * frac(own * 5.7)), i.leaf * float3(0.75, 0.5, 0.55), heart * 0.6);
+        base = lerp(base, float3(1.0, 0.97, 0.97), (1.0 - petal) * 0.35);
     } else {  // a card of leaves (a fir's twig narrower, darker)
         float vein;
         float leaf = forestLeaves(i.uv, own, vein);
@@ -2859,8 +2886,27 @@ float4 forest_ps(ForestOut i) : SV_Target {
     }
     // the light: the sun's on what faces it (wrapped: the leaves let some through), the sky's as open as the place is
     float face = saturate((dot(n, L) + 0.35) / 1.35);
+    // 2.0.2: in the shadow of the crown above, a house, another tree - the real sun's map (t3; its box's rows
+    // uiPixels, twinX-twinH, fogColor; sourceClamp.w how dark, 0 none)
+    float lit = 1.0;
+    if (sourceClamp.w > 0.0) {
+        float4 w4 = float4(i.world, 1.0);
+        float3 l = float3(dot(w4, uiPixels), dot(w4, float4(twinX, twinY, twinW, twinH)), dot(w4, fogColor));
+        float2 at = float2(l.x * 0.5 + 0.5, 0.5 - l.y * 0.5) * 2048.0;
+        if (all(at > 1.0) && all(at < 2046.0)) {
+            float shade = 0.0;
+            [unroll] for (int k = 0; k < 4; ++k) {
+                int2 q = int2(at) + int2(k & 1, k >> 1) * 2 - 1;
+                shade += sceneDepth.Load(int3(q, 0)) < l.z - 0.002 ? 0.25 : 0.0;
+            }
+            lit = 1.0 - shade * sourceClamp.w;
+        }
+    }
     float sky = 0.4 + 0.6 * open;
-    float3 c = base * (sky * lerp(0.75, 0.55, sun) + face * sun * 0.75 * (0.55 + 0.45 * open));
+    // 2.0.2: the leaves let a little of the sun through: their far side glows warm green
+    float through = part > 0.5 ? saturate(-dot(n, L)) * 0.25 * sun * lit : 0.0;
+    float3 c = base * (sky * lerp(0.75, 0.55, sun) + face * sun * 0.75 * (0.55 + 0.45 * open) * lit) +
+               base * float3(1.1, 1.2, 0.7) * through;
     return float4(c * 1.15, 1.0);
 }
 

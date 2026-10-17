@@ -11,7 +11,9 @@ namespace uagfx::forest {
 // file gives its size - the trunk (its narrow part) and the crown (the rest). The driver grows its own tree of that
 // size and kind once a map - a trunk with branches and a crown of hundreds of leaf cards (a fir's tiers, a palm's
 // fronds) - and draws all of them in a few calls, the game's model left out.
-enum class Kind : uint8_t { None, Broadleaf, Conifer, Palm, Bush, Willow };
+// 2.0.2: Sakura - a cherry's trunk and wide branches, its crown in blossom; Blossom - a cloud of blossom the map's
+// makers hung about a cherry's branches (Prontera's pink and white), grown as a cloud of its own.
+enum class Kind : uint8_t { None, Broadleaf, Conifer, Palm, Bush, Willow, Sakura, Blossom };
 
 // By the model file's name as the map names it (cp949 bytes, "나무잡초꽃\나무01.rsm"): trees, firs, palms, willows,
 // bushes; not a tree's stand, post, piece, stump or plank, not bamboo.
@@ -30,7 +32,7 @@ bool shapeOf(Kind kind, const rsm::Model& model, Shape& out);
 
 // A vertex of a grown tree, in the model's room (up along -y, the foot at 0): its place, the light's normal, the
 // texture's place (the bark's, or the card's 0-1), how open to the sky (0-1), how much the wind moves it, its part
-// (0 bark, 1 a card of leaves, 2 a palm's frond, 3 a fir's twig) and a number of its own (0-1).
+// (0 bark, 1 a card of leaves, 2 a palm's frond, 3 a fir's twig, 4 a card of blossom) and a number of its own (0-1).
 struct Vertex {
     float pos[3];
     float normal[3];
