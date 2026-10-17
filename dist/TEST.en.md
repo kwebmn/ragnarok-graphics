@@ -1,3 +1,14 @@
+# uaRO Graphics 2.0.3 — testing
+
+- **Anime-style trees** (Effects → Remaster, on by default, needs New trees): the crowns are large soft puffs with a
+  scalloped rim, cel-shaded in steps over each clump - warm light, cool blue shade, a bright rim against the light,
+  a faint ink at the edges. Off: the realistic trees. Switching in the console (~) grows the forest anew at once.
+- **Sakura pink and white again:** a blossom's picture now goes to the blossom (the smallest tree that holds it),
+  not to the cherry it hangs in; blossom is pink until its colour is seen.
+- **Realistic trees:** small leaves (16 a card, each turned its own way, the cards round), each clump of the crown a
+  volume of its own, deeper shade inside.
+- Check: prt_fild08 and Prontera with New trees on, the anime style on and off; the frame rate.
+
 # uaRO Graphics 2.0.2 — testing
 
 - **Sakura is back, grown anew.** Prontera's cherries are a cherry's trunk and branches (벗나무01) with clouds of
