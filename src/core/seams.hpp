@@ -7,7 +7,7 @@ namespace uagfx::seams {
 // 1.9, the remaster's ground: the game draws its ground cell by cell, each with one texture, and where a grass cell
 // meets a road's the line runs straight along the cells - a staircase. From the ground's triangles in the world
 // (the game's draws turned back by its camera) the cells are found, and where two neighbours look different a strip
-// inside each along their edge shows the other's texture - its texture coordinates carried on past its own edge -
+// inside each along their edge shows the other's texture - mirrored across their edge (1.9.1) -
 // through a noise both strips share (shaders.cpp, bit 31): the line between them wanders over the world.
 struct Vertex {
     float pos[3] = {0, 0, 0};  // the world (up along -y)

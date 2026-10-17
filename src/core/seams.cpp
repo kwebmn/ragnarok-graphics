@@ -45,6 +45,11 @@ Vertex at(const Cell& c, float u, float v) {
 
 bool same(float a, float b) { return std::fabs(a - b) < 0.02f; }
 
+// 1.9.1: a place of the neighbour's square past its edge folded back into it - its texture mirrored across the edge.
+// Carried straight on, the coordinates left the cell's part of the texture: many grounds take a quarter of an atlas
+// of four, and the strip showed the next quarter's cracks and stones as dark blocks.
+float fold(float x) { return x < 0.0f ? -x : x > 1.0f ? 2.0f - x : x; }
+
 }  // namespace
 
 float cellSide(const std::vector<Triangle>& ground) {
@@ -149,7 +154,7 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                     if (w.dz == 1) { u = along; v = 1.0f - into; }
                     if (w.dz == -1) { u = along; v = into; }
                     Vertex p = at(a, u, v);
-                    const Vertex q = at(b, u - float(w.dx), v - float(w.dz));
+                    const Vertex q = at(b, fold(u - float(w.dx)), fold(v - float(w.dz)));
                     p.uv0[0] = q.uv0[0];
                     p.uv0[1] = q.uv0[1];
                     const uint32_t edge = uint32_t(255.0f * (1.0f - float(j) / kAcross) + 0.5f);

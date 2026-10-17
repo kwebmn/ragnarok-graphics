@@ -38,11 +38,11 @@ TEST(seams_strips_where_two_textures_meet_none_where_one_goes_on) {
         CHECK_EQ(int(s.vertices.size()), 15);
         CHECK_EQ(int(s.indices.size()), 48);
     }
-    // the strip inside cell 0 showing cell 1: at its edge (x 15) cell 1's u is 0, carried on to -0.45 inside
+    // the strip inside cell 0 showing cell 1: at its edge (x 15) cell 1's u is 0, mirrored to 0.45 inside
     for (const seams::Strip& s : strips)
         if (s.inside == 0 && s.shows == 1) {
             CHECK(s.vertices[0].pos[0] > 14.9f && s.vertices[0].uv0[0] > -0.01f && s.vertices[0].uv0[0] < 0.01f);
-            CHECK(s.vertices[14].uv0[0] < -0.44f && s.vertices[14].uv0[0] > -0.46f);
+            CHECK(s.vertices[14].uv0[0] > 0.44f && s.vertices[14].uv0[0] < 0.46f);
             CHECK_EQ(int(s.vertices[0].diffuse >> 24), 255);
             CHECK_EQ(int(s.vertices[14].diffuse >> 24), 0);
         }
