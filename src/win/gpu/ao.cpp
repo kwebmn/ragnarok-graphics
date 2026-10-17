@@ -370,6 +370,7 @@ bool Renderer::Impl::applyGrass() {
 // cave glistening - blended over, before the characters.
 bool Renderer::Impl::applyGroundLife() {
     groundLifeDone = true;
+    crumb("living ground");
     if (!ensureScene("living ground")) return true;
     ID3D12PipelineState* pso = alphaPipeline(groundLifePs, groundLifePipelines, upscale ? 1 : samples, "living ground");
     if (!pso) return true;

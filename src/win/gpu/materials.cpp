@@ -44,6 +44,7 @@ bool Renderer::Impl::ensureMaterial(Texture& t, bool fromAi) {
     if (t.mat && t.matFor == source) return true;
     if (materialsMade >= 2 || !materialPipeline()) return false;  // the rest in the next frames
     ++materialsMade;
+    crumb("materials");
     dropMaterial(t);
     const D3D12_RESOURCE_DESC sd = source->GetDesc();
     const int sw = int(sd.Width), sh = int(sd.Height), sourceLevels = std::max<int>(1, sd.MipLevels);

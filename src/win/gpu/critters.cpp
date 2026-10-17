@@ -63,6 +63,7 @@ critters::Switches Renderer::Impl::critterSwitches() const {
 // over the world by critters_ps, after the torches (the embers shine out of the night).
 bool Renderer::Impl::applyCritters() {
     crittersDone = true;
+    crumb("living creatures");
     const float now = waterTime();
     critters::Frame f;
     f.now = double(now);

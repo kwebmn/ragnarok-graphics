@@ -217,6 +217,16 @@ struct Renderer::Impl {
     // Stage 4 review: sample positions - every sample at the pixel's centre for interface draws, whose edges fall on
     // pixel centres; null when the card cannot place samples, and then MSAA stays off.
     ID3D12GraphicsCommandList1* list1 = nullptr;
+    // 1.9.4: breadcrumbs - each pass writes its number into crumbs as it starts and once what came before it is done
+    // (WriteBufferImmediate); after a lost device the log names the pass the GPU stopped in.
+    ID3D12GraphicsCommandList2* list2 = nullptr;
+    ID3D12Resource* crumbs = nullptr;
+    volatile uint32_t* crumbsMapped = nullptr;
+    uint32_t crumbSeq = 0;
+    const char* lastCrumb = nullptr;
+    std::vector<const char*> crumbNames;
+    void crumb(const char* what);
+    std::string crumbsReport() const;
     bool centered = false;  // the open list has them at the centre now
     ID3D12Fence* fence = nullptr;
     HANDLE fenceEvent = nullptr;
@@ -1079,7 +1089,7 @@ struct Renderer::Impl {
 struct EffectTime {
     Renderer::Impl& m;
     EffectTimer e;
-    EffectTime(Renderer::Impl& impl, EffectTimer which) : m(impl), e(which) { m.effectBegin(e); }
+    EffectTime(Renderer::Impl& impl, EffectTimer which) : m(impl), e(which) { m.effectBegin(e); }  // and a crumb
     ~EffectTime() { m.effectEnd(e); }
     EffectTime(const EffectTime&) = delete;
     EffectTime& operator=(const EffectTime&) = delete;

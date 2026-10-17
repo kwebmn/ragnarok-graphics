@@ -87,6 +87,7 @@ void Renderer::Impl::noteGround(const FrameRecord& rec, const DrawCmd& d) {
 // shadows and the grass. A record of their own: the game's geometry goes up again with its next draw.
 bool Renderer::Impl::applySeams() {
     seamsDone = true;
+    crumb("ground seams");
     const std::vector<seams::Strip> strips = seams::build(groundTris, groundTextures, 0.45f);
     if (strips.empty()) return true;
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);

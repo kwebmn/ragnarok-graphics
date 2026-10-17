@@ -109,6 +109,7 @@ bool Renderer::Impl::begin() {
         list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes);
     }
     open = true;
+    lastCrumb = nullptr;  // 1.9.4: each list its crumbs
     ++listSerial;
     return true;
 }
@@ -160,9 +161,46 @@ void Renderer::Impl::readTimes(Slot& s, UINT index) {
 }
 
 void Renderer::Impl::effectBegin(EffectTimer e) {
+    static const char* const kCrumbs[kEffectTimes] = {
+        "soft shadows", "clouds", "characters' shadows", "lights and torches", "haze", "heat haze", "colour",
+        "depth of field", "weather", "glow", "water's copies", "sky", "light in the air", "floor reflections",
+        "sun's shadows", "bloom", "grass"};
+    crumb(kCrumbs[e]);
     if (!timer || !open) return;
     list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 6 + 2 * e);
     effectSerial[e] = listSerial;
+}
+
+// 1.9.4: a breadcrumb - the pass's number (its name's place in crumbNames) and a count, written by the GPU as it
+// starts the pass (word 0) and once all the work before it is done (word 1).
+void Renderer::Impl::crumb(const char* what) {
+    if (!list2 || !crumbsMapped || !open || what == lastCrumb) return;
+    lastCrumb = what;
+    uint32_t id = 0;
+    while (id < crumbNames.size() && crumbNames[id] != what) ++id;
+    if (id == crumbNames.size()) {
+        if (crumbNames.size() >= 255) return;
+        crumbNames.push_back(what);
+    }
+    const uint32_t value = (++crumbSeq << 8) | id;
+    const D3D12_GPU_VIRTUAL_ADDRESS at = crumbs->GetGPUVirtualAddress();
+    D3D12_WRITEBUFFERIMMEDIATE_PARAMETER p[2] = {{at, value}, {at + 4, value}};
+    D3D12_WRITEBUFFERIMMEDIATE_MODE modes[2] = {D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN,
+                                                D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_OUT};
+    list2->WriteBufferImmediate(2, p, modes);
+}
+
+std::string Renderer::Impl::crumbsReport() const {
+    if (!crumbsMapped) return "";
+    const uint32_t started = crumbsMapped[0], done = crumbsMapped[1];
+    const auto name = [&](uint32_t v) {
+        const uint32_t id = v & 255;
+        return id < crumbNames.size() ? std::string(crumbNames[id]) : std::string("?");
+    };
+    char line[256];
+    std::snprintf(line, sizeof line, "in \"%s\" (pass %u started; everything before \"%s\", pass %u, done; %u passes "
+                  "recorded)", name(started).c_str(), started >> 8, name(done).c_str(), done >> 8, crumbSeq);
+    return line;
 }
 
 void Renderer::Impl::effectEnd(EffectTimer e) {
@@ -237,9 +275,12 @@ void Renderer::Impl::waitIdle() {
 void Renderer::Impl::failed(uint32_t place, const char* what, HRESULT hr) {
     const HRESULT reason = device ? device->GetDeviceRemovedReason() : S_OK;
     if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || FAILED(reason)) {
-        if (!lost)
+        if (!lost) {
             LOG_ERROR("%s: the GPU device was removed (0x%08lx, reason 0x%08lx); the picture stops here, restart the game",
                       what, static_cast<unsigned long>(hr), static_cast<unsigned long>(reason));
+            const std::string where = crumbsReport();  // 1.9.4
+            if (!where.empty()) LOG_ERROR("the GPU stopped %s", where.c_str());
+        }
         lost = true;
         return;
     }
@@ -1362,6 +1403,9 @@ void Renderer::Impl::destroy() {
         releaseCom(s.allocator);
     }
     releaseCom(list1);
+    releaseCom(list2);  // 1.9.4
+    crumbsMapped = nullptr;
+    releaseCom(crumbs);
     releaseCom(list);
     releaseCom(cpuSrv);
     releaseCom(gpuSrv);
@@ -1675,14 +1719,6 @@ void Renderer::setEffects(const EffectSettings& e) {
     Impl& m = *impl_;
     if (e == m.effects) return;
     const bool was = m.glowWanted();
-    const bool scene =
-        m.waterWanted() || m.aoWanted() || m.gradeWanted() || m.dofWanted() || m.torchWanted() || m.fireflyWanted() ||
-        m.mapGlowsWanted() || m.actorShadowsWanted() || m.cloudsWanted() || m.hazeWanted() || m.heatWanted() ||
-        m.effects.night;  // 0.63
-    const bool dof = m.dofWanted();
-    const bool ao = m.aoWanted();
-    const bool actorShadows = m.actorShadowsWanted();
-    const bool clouds = m.cloudsWanted();
     m.effects = e;
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "
@@ -1707,15 +1743,10 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
              e.grade ? "on" : "off", e.gradeSaturation, e.gradeContrast, e.gradeBrightness, e.gradeWarmth,
              e.gradeVignette, e.dof ? "on" : "off", e.dofStrength, e.dofRange);
-    if (was && !m.glowWanted()) m.releaseGlow();  // its video memory back
-    if (ao && !m.aoWanted()) m.releaseAo();
-    if (actorShadows && !m.actorShadowsWanted()) m.releaseShadowMask();  // 0.32
-    if (clouds && !m.cloudsWanted()) m.releaseCloudsMask();               // 0.39.3
-    if (dof && !m.dofWanted()) m.releaseDof();
-    if (scene && !m.waterWanted() && !m.aoWanted() && !m.gradeWanted() && !m.dofWanted() && !m.torchWanted() &&
-        !m.fireflyWanted() && !m.mapGlowsWanted() && !m.actorShadowsWanted() && !m.cloudsWanted() && !m.hazeWanted() &&
-        !m.heatWanted() && !m.effects.night)
-        m.releaseScene();
+    // 1.9.4: an effect turned off keeps its targets (until the size changes or the game ends): with the console
+    // switching effects in a running game, making them anew a moment later failed ("no video memory") and the device
+    // was lost soon after (1.9.3, reports R-HAAN9H, R-AQ6PVP). Only the glow's state is dropped for this frame.
+    if (was && !m.glowWanted()) m.dropGlow();
 }
 
 void Renderer::preparePipelines(const std::string& file) {
@@ -1819,6 +1850,19 @@ bool Renderer::create(std::string& error) {
     } else {
         m.list1 = nullptr;
         LOG_INFO("msaa: this card cannot place samples, so MSAA stays off (the interface would lose sharpness)");
+    }
+    // 1.9.4: the breadcrumbs (crumb())
+    if (SUCCEEDED(m.list->QueryInterface(__uuidof(ID3D12GraphicsCommandList2), reinterpret_cast<void**>(&m.list2)))) {
+        m.crumbs = createBuffer(m.device, D3D12_HEAP_TYPE_READBACK, 256, D3D12_RESOURCE_STATE_COPY_DEST);
+        void* p = nullptr;
+        if (!m.crumbs || FAILED(m.crumbs->Map(0, nullptr, &p))) {
+            releaseCom(m.crumbs);
+            releaseCom(m.list2);
+        } else {
+            m.crumbsMapped = static_cast<volatile uint32_t*>(p);
+        }
+    } else {
+        m.list2 = nullptr;
     }
     // GPU time for the log: without it nothing else changes.
     D3D12_QUERY_HEAP_DESC qh{};
