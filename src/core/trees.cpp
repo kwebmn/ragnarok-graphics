@@ -61,12 +61,13 @@ Shade shadeAt(float x, float z, Season season) {
     s.tint[0] = b * (1.0f + 0.10f * warm);
     s.tint[1] = b * (1.0f + 0.03f * std::fabs(warm));
     s.tint[2] = b * (1.0f - 0.14f * warm);
-    if (season == Season::Autumn && turn > 0.5f) {
-        // A third of the trees golden, the most turned of them orange and red.
-        static const float kGold[3] = {1.30f, 1.08f, 0.38f}, kRed[3] = {1.45f, 0.62f, 0.28f};
-        const float k = std::clamp((turn - 0.62f) / 0.2f, 0.0f, 1.0f);
+    if (season == Season::Autumn && turn > 0.55f) {
+        // 1.24: fewer trees turned, and each only in patches (the shader's leafLight) - whole crowns of one orange
+        // looked painted. Golden, the most turned of them orange and red, both softer.
+        static const float kGold[3] = {1.22f, 1.02f, 0.50f}, kRed[3] = {1.30f, 0.66f, 0.36f};
+        const float k = std::clamp((turn - 0.66f) / 0.2f, 0.0f, 1.0f);
         for (int c = 0; c < 3; ++c) s.autumn[c] = kGold[c] + (kRed[c] - kGold[c]) * k;
-        s.autumnAmount = std::clamp((turn - 0.5f) / 0.08f, 0.0f, 1.0f) * 0.7f;
+        s.autumnAmount = std::clamp((turn - 0.55f) / 0.15f, 0.0f, 1.0f) * 0.85f;
     }
     if (season == Season::Rime) s.rime = 0.45f + 0.25f * light;
     return s;

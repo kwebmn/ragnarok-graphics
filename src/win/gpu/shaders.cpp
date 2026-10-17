@@ -303,6 +303,17 @@ float3 spriteLight(float2 uv, float2 du, float2 dv, float3 c) {
 // in its middle; r4 the light through the leaves (leaf_light): a leaf with a hole a few pixels towards the sun is on
 // the crown's edge and glows warm green; sourceClamp.rgb the tree's own shade, r0-r2 the autumn's colour and r3 how
 // much (tree_tints), r5 rime on the crown's top.
+// 1.24: a smooth noise over the crown's own box (q: -1 to 1 across it) - the same patches however near the camera
+float leafNoise(float2 p) {
+    float2 i = floor(p), f = frac(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = frac(sin(dot(i, float2(127.1, 311.7))) * 43758.5453);
+    float b = frac(sin(dot(i + float2(1.0, 0.0), float2(127.1, 311.7))) * 43758.5453);
+    float c = frac(sin(dot(i + float2(0.0, 1.0), float2(127.1, 311.7))) * 43758.5453);
+    float d = frac(sin(dot(i + float2(1.0, 1.0), float2(127.1, 311.7))) * 43758.5453);
+    return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+}
+
 float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
     float2 lo = sourceRect.xy * scale + 0.5 + float2(jitterX, jitterY);
     float2 hi = sourceRect.zw * scale + 0.5 + float2(jitterX, jitterY);
@@ -310,7 +321,17 @@ float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
     float2 sun = uiPixels.xy;
     float luma = dot(c, float3(0.299, 0.587, 0.114));
     c *= sourceClamp.rgb;
-    if (r3 > 0.0) c = lerp(c, (0.25 + luma * 1.1) * float3(r0, r1, r2), r3);  // 1.8.2: golden, not brown
+    // 1.24: clumps of the crown each a little their own - lighter and yellower, deeper and bluer - over the box, the
+    // tree's own patches (its tint the seed): the same picture repeated on every layer of leaves shows less
+    float2 seed = sourceClamp.rg * 37.0;
+    float clump = leafNoise(q * 3.2 + seed) * 0.65 + leafNoise(q * 7.5 + seed * 1.7) * 0.35;
+    c *= lerp(float3(0.86, 0.9, 0.98), float3(1.1, 1.08, 0.94), clump);
+    // 1.8.2: golden, not brown; 1.24: in patches - some of the crown still green - and by the leaf's own light
+    // (luma times the colour: the shade between the leaves stays, the crown is no flat orange)
+    if (r3 > 0.0) {
+        float turned = r3 * smoothstep(0.25, 0.65, leafNoise(q * 2.4 + seed * 0.7 + 5.3));
+        c = lerp(c, luma * 1.75 * float3(r0, r1, r2), turned);
+    }
     if (r5 > 0.0) c = lerp(c, float3(0.86, 0.92, 1.0) * (0.55 + luma), r5 * saturate(0.35 - q.y * 0.65));
     if (uiPixels.z > 0.0) {
         // 1.9.8: and each leaf's own relief - the picture's brightness as height, lit from the sun's side
@@ -327,7 +348,11 @@ float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
         float3 n = normalize(float3(q, sqrt(saturate(1.0 - dot(q, q) * 0.85)) + 0.3));
         float lit = dot(n, normalize(float3(sun, 0.8)));
         float hollow = 1.0 - 0.16 * saturate(1.0 - length(q)) * saturate(0.6 + q.y);
-        c *= (0.93 + 0.27 * lit) * hollow * uiPixels.z + (1.0 - uiPixels.z);
+        // 1.24: the crown's depth - its lower layers (the box's lower part on the screen) in the shade of the upper
+        // ones, darker and cooler; the top in the sky's light
+        float under = saturate(q.y * 0.5 + 0.5);
+        float3 depth = lerp(float3(1.08, 1.06, 1.0), float3(0.68, 0.74, 0.82), under * under);
+        c *= lerp(float3(1.0, 1.0, 1.0), (0.93 + 0.27 * lit) * hollow * depth, uiPixels.z);
     }
     if (r4 > 0.0) {
         float2 o = (du * sun.x + dv * sun.y) * 4.0 * scale;
