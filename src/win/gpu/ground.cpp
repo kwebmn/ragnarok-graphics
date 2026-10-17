@@ -8,6 +8,7 @@
 
 #include "core/d3d7.hpp"
 #include "core/game_camera.hpp"
+#include "core/smooth_shade.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -257,6 +258,72 @@ void Renderer::Impl::hillsConstants(Constants& c) const {
     const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
     std::memcpy(c.projection, proj, sizeof proj);
     std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
+}
+
+// 1.19, smooth light on the models: the record's opaque draws of the world with one set of texture coordinates (the
+// models; the ground has two) lit face by face get their corners' colours spread over the faces around them
+// (core/smooth_shade.hpp) - once a frame, a record of the game's; at most kMostSmooth triangles.
+void Renderer::Impl::smoothModels(const FrameRecord& rec) {
+    if (smoothReady && smoothFor == rec.vertexBytes().data()) return;
+    smoothReady = true;
+    smoothFor = rec.vertexBytes().data();
+    smoothColours.clear();
+    constexpr size_t kMostSmooth = 60000;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const std::vector<uint8_t>& vb = rec.vertexBytes();
+    const std::vector<uint16_t>& ix = rec.indices();
+    size_t triangles = 0, draws = 0;
+    std::vector<smooth_shade::Corner> corners;
+    std::vector<uint32_t> tris;
+    for (const DrawCmd& d : rec.draws()) {
+        const DrawSetup& s = rec.states()[d.state];
+        if (s.ui || s.blend || !s.zWrite || d.fvf != d3d7::FVF_TL1 || d.vertexCount < 6 || triangles >= kMostSmooth)
+            continue;
+        const size_t stride = FrameRecord::stride(d.fvf);
+        if (d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) continue;
+        corners.resize(d.vertexCount);
+        for (uint32_t k = 0; k < d.vertexCount; ++k) {
+            const uint8_t* at = vb.data() + d.vertexOffset + size_t(k) * stride;
+            float xyzw[4];
+            std::memcpy(xyzw, at, sizeof xyzw);
+            corners[k].x = xyzw[0];
+            corners[k].y = xyzw[1];
+            corners[k].rhw = xyzw[3];
+            std::memcpy(&corners[k].colour, at + 16, 4);
+        }
+        tris.clear();
+        const uint32_t n = d.indexCount ? d.indexCount : d.vertexCount;
+        const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
+        const uint32_t count = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
+        bool bad = false;
+        for (uint32_t t = 0; t < count && !bad; ++t)
+            for (uint32_t k = 0; k < 3; ++k) {
+                const uint32_t at = (strip ? t : t * 3) + k;
+                uint32_t vi = at;
+                if (d.indexCount) {
+                    if (d.firstIndex + at >= ix.size()) {
+                        bad = true;
+                        break;
+                    }
+                    vi = ix[d.firstIndex + at];
+                }
+                if (vi >= d.vertexCount) {
+                    bad = true;
+                    break;
+                }
+                tris.push_back(vi);
+            }
+        if (bad || tris.size() < 6) continue;
+        triangles += tris.size() / 3;
+        const std::vector<smooth_shade::Change> changes = smooth_shade::smooth(corners, tris, p.f0, p.f1, p.cx, p.cy);
+        if (!changes.empty()) ++draws;
+        for (const smooth_shade::Change& ch : changes)
+            smoothColours.push_back(ColourChange{d.vertexOffset + size_t(ch.vertex) * stride + 16, ch.colour});
+    }
+    if (!smoothLogged && draws)
+        LOG_INFO("smooth models: %zu draws of %s lit face by face, %zu corners' light spread", draws,
+                 mapName.c_str(), smoothColours.size());
+    smoothLogged = smoothLogged || draws;
 }
 
 }  // namespace uagfx::gpu

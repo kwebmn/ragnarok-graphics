@@ -885,6 +885,7 @@ struct Renderer::Impl {
         materialsMade = 0;  // 1.8
         if (hillsWanted()) hillsGrid = hills::build(groundTris);  // 1.15: before they go
         hillsUp = hillsTried = false;
+        smoothReady = false;  // 1.19
         groundTris.clear();  // 1.9
         groundGroups.clear();
         groundTextures.clear();
@@ -969,6 +970,17 @@ struct Renderer::Impl {
     FrameRecord seamRec;
     bool seamPass = false, seamsDone = false, seamsLogged = false;
     bool seamsWanted() const { return effects.groundSeams && viewToWorldValid; }
+    // 1.19: smooth light on the models (core/smooth_shade.hpp) - the game's record's colours changed as its vertices
+    // go up (prepareGeometry), worked out once a frame
+    struct ColourChange {
+        size_t at;  // the colour's byte in the record's vertices
+        uint32_t colour;
+    };
+    std::vector<ColourChange> smoothColours;
+    const void* smoothFor = nullptr;
+    bool smoothReady = false, smoothLogged = false;
+    bool smoothModelsWanted() const { return effects.smoothModels; }
+    void smoothModels(const FrameRecord& rec);
     // 1.15: smooth hills (hills.cpp, core/hills.hpp) - the last frame's ground's corners' normals, a texture of them
     // (R32_FLOAT, kMostSide a side) put up at the frame's first ground draw, read by the ground's draws (t3)
     hills::Grid hillsGrid;

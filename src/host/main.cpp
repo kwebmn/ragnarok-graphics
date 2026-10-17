@@ -493,6 +493,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.spriteLight = rd.u8() != 0;  // 1.17
             e.spriteLightStrength = rd.i32();
             e.edgeLand = rd.u8() != 0;  // 1.18
+            e.smoothModels = rd.u8() != 0;  // 1.19
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }
