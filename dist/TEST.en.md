@@ -1,3 +1,16 @@
+# uaRO Graphics 1.8.1 — testing
+
+- **Screenshots in a report.** On the Diagnostics page, by the report's sending, the box Attach screenshots (on): the
+  6 newest of the last day from the game's `ScreenShot` folder (Print Screen in the game) and Windows' Screenshots
+  (Win + Print Screen), made 1600 pixels across at most. The message after sending says how many went.
+- **Fixed:** the first start after an update could draw in the game's process instead of the 64-bit renderer: it
+  compiled its shaders (7 s) and read a big texture pack's index (14 s) and did not answer within 20 s. Now up to
+  90 s. 1.8.0's log had `bridge: the 64-bit renderer did not answer`.
+- **The materials of the game's textures without levels** (its own, not the pack's) now have levels and the large
+  scales of relief too - less shimmer far off.
+- How to check: update, start the game - no `did not answer` in the log. Take a couple of screenshots (Print Screen)
+  and send a report with the box on.
+
 # uaRO Graphics 1.8.0 — testing
 
 - **The remaster begins.** A new block "Remaster" at the bottom of the Effects page:
