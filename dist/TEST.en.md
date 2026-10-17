@@ -1,3 +1,15 @@
+# uaRO Graphics 1.11.0 — testing
+
+- **The remaster's phase D: light.** Two new boxes in the Remaster block (off by default, Direct3D 12):
+  - **Light from the sky** (`effects.sky_light`): surfaces facing up take a little of the sky's colour (cool by day,
+    golden at sunset, deep blue at night), those facing down the ground's warm one. Houses', rocks' and the ground's
+    shapes read better. Weaker indoors.
+  - **Reflected light** (`effects.bounce_light`): light bounces between nearby surfaces - grass tints walls' feet
+    green, a red roof warms the eaves, sand lights the stones.
+- The log: `light from the sky: on <map>`.
+- How to check: prontera (walls, roofs), prt_fild08, moc_fild01 - switch them in the console, compare with Tab; in
+  the evening with Time of day. To know: too strong, noise or ripples at edges, the frame's cost.
+
 # uaRO Graphics 1.10.1 — testing
 
 - A safeguard: the vertex shader's new part (Full crowns) is under the "without the newest features" guard - should
