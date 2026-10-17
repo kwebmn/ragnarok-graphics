@@ -99,10 +99,12 @@ constexpr UINT kRtvClouds = kRtvShadow + 2;  // 0.39.3: the clouds' mask
 constexpr UINT kRtvBloom = kRtvClouds + 1;  // 0.78: the bloom's two quarter-size targets
 constexpr UINT kRtvFloor = kRtvBloom + 2;  // 0.86: the floors' reflections at half the size
 constexpr UINT kRtvMaterial = kRtvFloor + 1;  // 1.8: a level of a texture's material, made anew for each
-constexpr UINT kRtvCount = kRtvMaterial + 1;
+constexpr UINT kRtvMirror = kRtvMaterial + 1;  // 1.16: the world mirrored under the water
+constexpr UINT kRtvCount = kRtvMirror + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvSun = 2;  // 1.12: the sun's map
+constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
 
 // What the open command list draws into (bindPass); the glow's passes add its target as the second one (0.18).
 enum Pass { kPassNone = 0, kPassTarget, kPassWorld, kPassLayer, kPassTargetGlow, kPassWorldGlow };
@@ -712,7 +714,7 @@ struct Renderer::Impl {
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
     // Before samplerTable and textureTable (and sceneTable: `descriptors` 5); false: lost.
     bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2);
-    D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4);  // 0.19, kRootScene
+    D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4, UINT t5 = kNoSrv);  // 0.19, kRootScene
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
                                      bool toGlow = false, bool water = false, bool mask = false,
                                      DrawShader shader = DrawShader::Game);
@@ -890,6 +892,11 @@ struct Renderer::Impl {
         frameTrees.clear();  // 1.10
         treesDone = false;
         skyLightDone = false;  // 1.11
+        if (mirrorCollecting()) {  // 1.16: the last frame's casters for this one's mirror
+            mirrorVerts.swap(sunVerts);
+            mirrorCasters.swap(sunCasters);
+        }
+        mirrorDone = mirrorMade = false;
         sunVerts.clear();  // 1.12
         sunCasters.clear();
         sunMapDone = false;
@@ -1001,13 +1008,34 @@ struct Renderer::Impl {
     bool applySkyLight();  // once a frame, before the characters; false: lost
     // 1.12: the real sun's shadows (sun_map.cpp) - the frame's opaque world from the sun into a depth map
     struct SunCaster {
-        uint32_t first = 0, count = 0;  // vertices into sunVerts (five floats each: x, y, z, u, v)
+        uint32_t first = 0, count = 0;  // vertices into sunVerts (six floats each: x, y, z, u, v, colour's bits)
         uint32_t texture = 0;
         bool alphaTest = false;
         float ref = 0.5f;
     };
     std::vector<float> sunVerts;
     std::vector<SunCaster> sunCasters;
+    // 1.16: the world mirrored under the water (mirror.cpp) - the last frame's casters turned over the water's level,
+    // drawn at half the scene's size before the frame's first water, read by water_ps (t5)
+    std::vector<float> mirrorVerts;
+    std::vector<SunCaster> mirrorCasters;
+    ID3D12Resource* mirror = nullptr;
+    ID3D12Resource* mirrorDepth = nullptr;
+    D3D12_RESOURCE_STATES mirrorState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    D3D12_RESOURCE_STATES mirrorDepthState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    UINT mirrorSrv = kNoSrv;
+    int mirrorWidth = 0, mirrorHeight = 0;
+    ID3DBlob* mirrorVs = nullptr;
+    ID3DBlob* mirrorPs = nullptr;
+    ID3D12PipelineState* mirrorPso = nullptr;
+    bool mirrorDone = false, mirrorMade = false, mirrorLogged = false, mirrorFailed = false;
+    bool mirrorCollecting() const {
+        return effects.worldReflections && effects.water && remaster() && mirrorVs && mirrorPs && !mirrorFailed &&
+               viewToWorldValid;
+    }
+    bool mirrorDue() const { return mirrorCollecting() && waterLevelKnown && !mirrorDone && !mirrorCasters.empty(); }
+    ID3D12PipelineState* mirrorPipeline();
+    bool applyMirror();  // once a frame, before its first water; false: lost
     ID3D12Resource* sunMap = nullptr;
     D3D12_RESOURCE_STATES sunMapState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
     UINT sunMapSrv = 0;

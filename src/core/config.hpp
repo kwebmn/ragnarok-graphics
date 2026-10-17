@@ -343,6 +343,9 @@ struct EffectSettings {
     // averaged normals, not cell by cell - the sun lights the slopes smoothly. Off by default.
     bool smoothHills = false;
     int smoothHillsStrength = 60;  // %, 0-200
+    // 1.16: the remaster's world reflections (mirror.cpp): the last frame's opaque world turned over the water's
+    // level, read by water_ps where the picture has nothing to reflect. Remaster mode. Off by default.
+    bool worldReflections = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

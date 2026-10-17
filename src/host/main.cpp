@@ -489,6 +489,7 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.volumetricFogDensity = rd.i32();
             e.smoothHills = rd.u8() != 0;  // 1.15
             e.smoothHillsStrength = rd.i32();
+            e.worldReflections = rd.u8() != 0;  // 1.16
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

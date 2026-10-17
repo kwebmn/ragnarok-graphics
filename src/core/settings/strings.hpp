@@ -250,6 +250,8 @@ enum class Text : uint16_t {
     FxBlockOn, FxBlockOff,
     // 1.15
     FxSmoothHills, FxSmoothHillsHint, FxSmoothHillsStrength, FxSmoothHillsStrengthHint,
+    // 1.16
+    FxWorldReflections, FxWorldReflectionsHint,
     Count
 };
 

@@ -210,7 +210,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},
                    {"sky_light_ps", "ps_5_0", &skyLightPs},      {"sun_map_vs", "vs_5_0", &sunMapVs},
                    {"sun_map_ps", "ps_5_0", &sunMapPs},          {"sun_apply_ps", "ps_5_0", &sunApplyPs},
-                   {"fog_light_ps", "ps_5_0", &fogLightPs}};
+                   {"fog_light_ps", "ps_5_0", &fogLightPs},      {"mirror_vs", "vs_5_0", &mirrorVs},
+                   {"mirror_ps", "ps_5_0", &mirrorPs}};
     store.sink = startSink;  // 0.40
     store.context = startContext;
     store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'
@@ -244,7 +245,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     samplerRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     D3D12_DESCRIPTOR_RANGE sceneRange{};  // 0.19: the water's t2-t4
     sceneRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    sceneRange.NumDescriptors = 3;
+    sceneRange.NumDescriptors = 4;  // 1.16: and t5, the world mirrored under the water
     sceneRange.BaseShaderRegister = 2;
     sceneRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
     D3D12_ROOT_PARAMETER params[4] = {};
@@ -415,13 +416,13 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, c
     return g;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::sceneTable(UINT t2, UINT t3, UINT t4) {
-    if (ringSrv + 3 > kRingPerSlot) ringSrv = kRingPerSlot - 3;  // never: makeRoom() ran first; stay in this part
+D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::sceneTable(UINT t2, UINT t3, UINT t4, UINT t5) {
+    if (ringSrv + 4 > kRingPerSlot) ringSrv = kRingPerSlot - 4;  // never: makeRoom() ran first; stay in this part
     const UINT index = slot * kRingPerSlot + ringSrv;
-    ringSrv += 3;
+    ringSrv += 4;
     D3D12_CPU_DESCRIPTOR_HANDLE dst = gpuSrv->GetCPUDescriptorHandleForHeapStart();
     dst.ptr += SIZE_T(index) * srvStep;
-    for (const UINT srv : {t2, t3, t4}) {
+    for (const UINT srv : {t2, t3, t4, t5 == kNoSrv ? t2 : t5}) {
         device->CopyDescriptorsSimple(1, dst, cpuSrvHandle(srv), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         dst.ptr += srvStep;
     }
@@ -456,7 +457,8 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
         nextSampler = 0;
         if (!begin()) return false;
     }
-    if (ringSrv + descriptors > kRingPerSlot) {
+    // 1.16: a scene table holds four now - room for one more than the callers count
+    if (ringSrv + descriptors + 2 > kRingPerSlot) {
         submit();
         if (!begin()) return false;
     }

@@ -35,6 +35,8 @@ Texture2D tex1 : register(t1);
 Texture2D sceneColor : register(t2);
 Texture2D<float> sceneDepth : register(t3);
 Texture2DMS<float> depthMs : register(t4);
+// 1.16: the world mirrored under the water (mirror.cpp), for water_ps - the table's fourth
+Texture2D mirrorTex : register(t5);
 SamplerState samp0 : register(s0);
 SamplerState samp1 : register(s1);
 // The distance from the camera of a depth the game's projection gave (water, the effects).
@@ -874,6 +876,13 @@ float4 water(WaterIn i) {
     float3 sky = (fogEnable != 0 ? fogColor.rgb : float3(0.62, 0.74, 0.88)) * light;
     float hit;
     float3 seen = waterReflection(i.view, reflect(normalize(i.view), nv), hit);
+#ifndef UAGFX_SAFE
+    if (((stage0.y >> 27) & 1) != 0) {  // 1.16: the world mirrored (t5) where the picture has nothing to reflect
+        float4 mirrored = mirrorTex.SampleLevel(samp0, saturate(i.pos.xy / targetSize + slope * 0.02), 0);
+        seen = lerp(mirrored.rgb, seen, hit);
+        hit = max(hit, mirrored.a);
+    }
+#endif
     float3 reflection = lerp(sky, seen, hit);
     float f0r = lerp(0.02, 0.3, twinX);
     float fresnel = f0r + (1.0 - f0r) * pow(1.0 - ndv, 5.0);
@@ -1996,6 +2005,38 @@ struct SunIn {
     float4 pos : SV_Position;
     float2 uv : TEXCOORD0;
 };
+
+// 1.16, the world mirrored under the water (mirror.cpp): the last frame's opaque world (the sun map's casters, x y z
+// u v and the game's colour) turned over the water's level twinX (up is -y) and drawn by the game's camera -
+// r0-r11 the world into the view, f0-farZ its projection, uiPixels.xy the game's screen - into a picture of its own;
+// what lay under the water is left out. footprint 1: the texture's holes (alpha under twinY) let through.
+struct MirrorIn {
+    float4 pos : SV_Position;
+    float2 uv : TEXCOORD0;
+    float4 colour : COLOR0;
+    float under : TEXCOORD1;
+};
+
+MirrorIn mirror_vs(float3 p : POSITION, float2 uv : TEXCOORD0, float4 colour : COLOR0) {
+    MirrorIn o;
+    o.under = p.y - twinX;
+    float4 w = float4(p.x, 2.0 * twinX - p.y, p.z, 1.0);
+    float3 v = float3(dot(w, float4(r0, r1, r2, r3)), dot(w, float4(r4, r5, r6, r7)), dot(w, float4(r8, r9, r10, r11)));
+    float z = max(v.z, nearZ + 0.01);
+    float sx = v.x / z * f0 + cx, sy = v.y / z * f1 + cy;
+    float nz = farZ * (1.0 - nearZ / z) / (farZ - nearZ);
+    o.pos = float4((sx / uiPixels.x * 2.0 - 1.0) * z, (1.0 - sy / uiPixels.y * 2.0) * z, nz * z, z);
+    o.uv = uv;
+    o.colour = colour;
+    return o;
+}
+
+float4 mirror_ps(MirrorIn i) : SV_Target {
+    if (i.under > 0.05) discard;
+    float4 t = tex0.Sample(samp0, i.uv);
+    if (footprint > 0.5 && t.a < twinY) discard;
+    return float4(t.rgb * i.colour.rgb, 1.0);
+}
 
 SunIn sun_map_vs(float3 p : POSITION, float2 uv : TEXCOORD0) {
     SunIn o;

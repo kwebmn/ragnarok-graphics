@@ -2549,6 +2549,15 @@ const Entry kTexts[] = {
     {"How much the slopes' light and shade show.",
      "Наскільки помітні світло й тінь на схилах.",
      "Насколько заметны свет и тень на склонах."},
+    {"World reflections in water",
+     "Відображення світу у воді",
+     "Отражения мира в воде"},
+    {"The water reflects the houses, rocks and trees along its shores - also what is above the screen's top edge, "
+     "which the picture alone cannot show. Needs Modern water; Remaster mode only (Direct3D 12).",
+     "Вода відбиває будинки, скелі й дерева на березі — також те, що вище за верхній край екрана і чого сама картинка "
+     "показати не може. Потрібна «Сучасна вода»; лише в режимі «Ремастер» (Direct3D 12).",
+     "Вода отражает дома, скалы и деревья на берегу — также то, что выше верхнего края экрана и чего сама картинка "
+     "показать не может. Нужна «Современная вода»; только в режиме «Ремастер» (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

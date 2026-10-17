@@ -87,8 +87,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && (seamsWanted() || hillsWanted()))
         noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame
     // 1.12: an opaque draw of the world casts the real sun's shadows
-    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && !sunMapDone && realShadowsWanted())
-        noteCaster(rec, d, s);
+    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite &&
+        ((!sunMapDone && realShadowsWanted()) || mirrorCollecting()))
+        noteCaster(rec, d, s);  // 1.16: also for the next frame's mirror
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
     if (!inner && !s.ui && s.blend && treesDue() && !applyTrees()) return;  // 1.10
     if (!inner && !s.ui && s.blend && skyLightDue() && !applySkyLight()) return;  // 1.11: under the soft shadows
@@ -136,6 +137,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                 water::isWaterQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
                                    d.primitive == d3d7::PT_TRIANGLESTRIP) &&
                 copyScene();
+        if (water && mirrorDue() && !applyMirror()) return;  // 1.16: the world mirrored, before the first water
     }
     // One quad facing the screen: a sprite (a character, a monster, an item). 0.22.3: under DLSS such a draw, and an
     // effect, writes its coverage into the world's alpha - DLSS's mask of pixels whose history it is not to take.
@@ -282,7 +284,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (water) {  // the picture and the depth under the water (t2, t3)
         transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
+        if (mirrorMade) transition(mirror, mirrorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);  // 1.16 (t5)
+        list->SetGraphicsRootDescriptorTable(
+            kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv, mirrorMade ? mirrorSrv : kNoSrv));
         if (!waterCells++) LOG_INFO("water: the map's water found, drawn anew");
     } else if (matTex) {  // 1.8: its material (t2); 1.15 the hills' normals (t3)
         transition(matTex->mat, matTex->matState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -381,6 +385,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[0] = float(effects.waterReflections) / 100.0f;
         c.twin[1] = float(effects.waterClarity) / 100.0f;
         c.twin[3] = waterLife();  // 1.7
+        if (mirrorMade) c.stage0[1] |= 1u << 27;  // 1.16: the world mirrored (t5)
         noteWaterLevel(rec, d);
         if (ripplesWanted()) {  // 0.94: the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};

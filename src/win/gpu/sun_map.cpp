@@ -25,7 +25,7 @@ constexpr size_t kMostSunVerts = 600000;
 // 1.12: an opaque draw of the world (not the interface, not blended: the map, its models, the crowns): its
 // triangles in the world with their texture coordinates, to be drawn into the sun's map.
 void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
-    if (sunVerts.size() / 5 >= kMostSunVerts || (d.primitive != d3d7::PT_TRIANGLELIST &&
+    if (sunVerts.size() / 6 >= kMostSunVerts || (d.primitive != d3d7::PT_TRIANGLELIST &&
                                                  d.primitive != d3d7::PT_TRIANGLESTRIP))
         return;
     const std::vector<uint8_t>& vb = rec.vertexBytes();
@@ -38,7 +38,7 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
     const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
     const uint32_t triangles = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
     SunCaster c;
-    c.first = uint32_t(sunVerts.size() / 5);
+    c.first = uint32_t(sunVerts.size() / 6);
     c.texture = d.texture[0];
     c.alphaTest = s.alphaTest || s.colorKey || d.keyed[0];
     c.ref = s.alphaTest ? float(s.alphaRef) / 255.0f : 0.5f;
@@ -54,9 +54,11 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
         std::memcpy(v + 4, vb.data() + d.vertexOffset + size_t(at) * stride + 24, sizeof(float) * 2);
         if (v[3] <= 0.0f) return false;
         const float vz = 1.0f / v[3], vx = (v[0] - p.cx) * vz / p.f0, vy = (v[1] - p.cy) * vz / p.f1;
-        const float out[5] = {vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[1] + vy * m[4] + vz * m[7] + m[10],
-                              vx * m[2] + vy * m[5] + vz * m[8] + m[11], v[4], v[5]};
-        sunVerts.insert(sunVerts.end(), out, out + 5);
+        float colour;  // 1.16: the game's colour, its bits as they are (the mirror's B8G8R8A8)
+        std::memcpy(&colour, vb.data() + d.vertexOffset + size_t(at) * stride + 16, sizeof colour);
+        const float out[6] = {vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[1] + vy * m[4] + vz * m[7] + m[10],
+                              vx * m[2] + vy * m[5] + vz * m[8] + m[11], v[4], v[5], colour};
+        sunVerts.insert(sunVerts.end(), out, out + 6);
         return true;
     };
     for (uint32_t t = 0; t < triangles; ++t) {
@@ -64,7 +66,7 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
         const size_t before = sunVerts.size();
         if (!put(base) || !put(base + 1) || !put(base + 2)) sunVerts.resize(before);
     }
-    c.count = uint32_t(sunVerts.size() / 5) - c.first;
+    c.count = uint32_t(sunVerts.size() / 6) - c.first;
     if (c.count) sunCasters.push_back(c);
 }
 
@@ -204,7 +206,7 @@ bool Renderer::Impl::applyRealShadows() {
         list->SetGraphicsRootDescriptorTable(kRootTextures, textureTable(use, use));
         list->SetGraphicsRootDescriptorTable(kRootSamplers, samplerTable(st, st, 0));
         list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        const D3D12_VERTEX_BUFFER_VIEW vb{u.gpu, UINT(sunVerts.size() * sizeof(float)), UINT(5 * sizeof(float))};
+        const D3D12_VERTEX_BUFFER_VIEW vb{u.gpu, UINT(sunVerts.size() * sizeof(float)), UINT(6 * sizeof(float))};
         list->IASetVertexBuffers(0, 1, &vb);
         list->DrawInstanced(c.count, 1, c.first, 0);
     }
@@ -241,7 +243,7 @@ bool Renderer::Impl::applyRealShadows() {
     c.sharpen = 0.9f * float(std::clamp(effects.sunShadowsStrength, 0, 100)) / 100.0f * (1.0f - night);
     if (!sunMapLogged)
         LOG_INFO("real sun shadows: %zu draws, %zu triangles of %s into a %dx%d map", sunCasters.size(),
-                 sunVerts.size() / 15, mapName.c_str(), kSunMap, kSunMap);
+                 sunVerts.size() / 18, mapName.c_str(), kSunMap, kSunMap);
     sunMapLogged = true;
     return upscale ? effectPass(apply, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, sunMapSrv)
                    : effectPass(apply, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true,

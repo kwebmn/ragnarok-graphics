@@ -1363,6 +1363,11 @@ void Renderer::Impl::destroy() {
     releaseCom(crittersVs);
     releaseCom(crittersData);
     releaseCom(hillsData);  // 1.15
+    releaseCom(mirror);  // 1.16
+    releaseCom(mirrorDepth);
+    releaseCom(mirrorPso);
+    releaseCom(mirrorVs);
+    releaseCom(mirrorPs);
     releaseCom(groundLifePs);
     releaseCom(grassPs);
     for (ID3D12PipelineState*& p : stepsPipelines) releaseCom(p);  // 0.80
@@ -1908,7 +1913,7 @@ bool Renderer::create(std::string& error) {
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kGpuSrvCount, true, m.gpuSrv) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kSamplerCount, true, m.samplerHeap) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kRtvCount, false, m.rtvHeap) ||
-        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 3, false, m.dsvHeap)) {
+        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 4, false, m.dsvHeap)) {  // 1.16: kDsvMirror
         error = "descriptor heaps";
         return false;
     }
