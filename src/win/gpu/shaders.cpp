@@ -267,6 +267,17 @@ float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
     if (r3 > 0.0) c = lerp(c, (0.25 + luma * 1.1) * float3(r0, r1, r2), r3);  // 1.8.2: golden, not brown
     if (r5 > 0.0) c = lerp(c, float3(0.86, 0.92, 1.0) * (0.55 + luma), r5 * saturate(0.35 - q.y * 0.65));
     if (uiPixels.z > 0.0) {
+        // 1.9.8: and each leaf's own relief - the picture's brightness as height, lit from the sun's side
+        float tw, th;
+        tex0.GetDimensions(tw, th);
+        float2 o = 1.5 / float2(tw, th);
+        const float3 lw = float3(0.299, 0.587, 0.114);
+        float2 grad = float2(dot(tex0.SampleGrad(samp0, uv + float2(o.x, 0.0), du, dv).rgb, lw) -
+                                 dot(tex0.SampleGrad(samp0, uv - float2(o.x, 0.0), du, dv).rgb, lw),
+                             dot(tex0.SampleGrad(samp0, uv + float2(0.0, o.y), du, dv).rgb, lw) -
+                                 dot(tex0.SampleGrad(samp0, uv - float2(0.0, o.y), du, dv).rgb, lw));
+        float2 gs = float2(dot(grad, du * float2(tw, th)), dot(grad, dv * float2(tw, th)));
+        c *= clamp(1.0 + dot(gs, sun) * 1.4 * uiPixels.z, 0.75, 1.25);
         float3 n = normalize(float3(q, sqrt(saturate(1.0 - dot(q, q) * 0.85)) + 0.3));
         float lit = dot(n, normalize(float3(sun, 0.8)));
         float hollow = 1.0 - 0.16 * saturate(1.0 - length(q)) * saturate(0.6 + q.y);
@@ -1661,6 +1672,25 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
         float wet = (g + run) * wall * twinW;
         o = lerp(o, min(col * 1.6 + 0.12, 1.0), saturate(wet));
         a = max(a, saturate(wet));
+    }
+    if (sourceClamp.y > 0.0 && col.r > col.b * 1.12 && col.g > col.b * 1.05 && col.g < col.r * 1.08 && luma < 0.75) {
+        // 1.9.8, ground clutter: pebbles on bare earth, roads and sand - a few in a cell of the world, each a little
+        // stone lit from up left with its shadow down right
+        float2 cell = floor(w.xz * 1.6);
+        float seed = hash12(cell + 71.3);
+        if (seed > 0.78) {
+            float2 at = (cell + 0.2 + 0.6 * float2(hash12(cell + 2.9), hash12(cell + 8.3))) / 1.6;
+            float r = 0.06 + 0.1 * hash12(cell + 4.4);
+            float2 d = (w.xz - at) / r;
+            float e = length(d * float2(1.0, 1.3));
+            float shadow = smoothstep(1.3, 0.7, length((d - float2(0.35, 0.35)) * float2(1.0, 1.3)));
+            float stone = smoothstep(1.0, 0.8, e);
+            float3 rock = lerp(col, float3(0.62, 0.6, 0.56), 0.55) * (1.05 - 0.35 * saturate(dot(d, float2(0.6, 0.6))));
+            float3 pc = lerp(col * 0.55, rock, stone);
+            float pa = max(stone, shadow * 0.45) * sourceClamp.y;
+            o = lerp(o, pc, pa / max(a + pa, 1e-3));
+            a = saturate(max(a, pa));
+        }
     }
     if (twinH > 0.0) {  // 1.7: wet sand along the shore (shore_foam): just above the water (sourceClamp.x its level,
         // last frame's) near ground that lies under it, darker in a band that comes and goes with the swash

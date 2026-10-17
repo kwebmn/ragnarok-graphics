@@ -320,6 +320,9 @@ struct EffectSettings {
     // 1.9.7: the remaster's trees: full_crowns - each crown drawn twice more, larger, darker and behind it, smaller and
     // lighter in front of it: a thin card of leaves becomes a dense crown (Direct3D 12). Off by default.
     bool fullCrowns = false;
+    // 1.9.8: the remaster's ground: ground_clutter - pebbles here and there on bare earth, roads and sand
+    // (ground_life_ps). Off by default.
+    bool groundClutter = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

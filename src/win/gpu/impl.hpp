@@ -971,7 +971,8 @@ struct Renderer::Impl {
     bool groundLifeDone = false, groundLifeLogged = false;
     bool groundLifeWanted() const {
         return groundLifePs && ((effects.sandDrift && mapPlace.sand) || (effects.snowSparkle && mapPlace.snow) ||
-                                (effects.wetWalls && mapPlace.cave) || wetSandWanted());
+                                (effects.wetWalls && mapPlace.cave) || wetSandWanted() ||
+                                (effects.groundClutter && !mapPlace.snow));
     }
     bool wetSandWanted() const { return effects.shoreFoam && waterLevelKnown && mapOutdoors; }
     bool groundLifeDue() const { return groundLifeWanted() && groundDrawn && !groundLifeDone && viewToWorldValid; }

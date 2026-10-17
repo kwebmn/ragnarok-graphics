@@ -237,6 +237,8 @@ enum class Text : uint16_t {
     ConsoleTitle, ConsoleKeys,
     // 1.9.7
     FxFullCrowns, FxFullCrownsHint,
+    // 1.9.8
+    FxGroundClutter, FxGroundClutterHint,
     Count
 };
 

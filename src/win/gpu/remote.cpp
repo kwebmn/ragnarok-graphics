@@ -373,6 +373,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.tier);
     w.u8(e.groundSeams ? 1 : 0);  // 1.9
     w.u8(e.fullCrowns ? 1 : 0);  // 1.9.7
+    w.u8(e.groundClutter ? 1 : 0);  // 1.9.8
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

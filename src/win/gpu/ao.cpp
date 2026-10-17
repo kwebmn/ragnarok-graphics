@@ -392,6 +392,7 @@ bool Renderer::Impl::applyGroundLife() {
     c.twin[0] = effects.sandDrift && mapPlace.sand ? 1.0f : 0.0f;
     c.twin[1] = effects.snowSparkle && mapPlace.snow ? 1.0f - 0.6f * night : 0.0f;
     c.twin[2] = effects.wetWalls && mapPlace.cave ? 1.0f : 0.0f;
+    if (effects.groundClutter && !mapPlace.snow) c.sourceClamp[1] = 1.0f;  // 1.9.8: pebbles
     if (wetSandWanted()) {  // 1.7: the wet sand along the shore
         c.twin[3] = 1.0f;
         c.sourceClamp[0] = waterLevel;
@@ -402,7 +403,8 @@ bool Renderer::Impl::applyGroundLife() {
                  c.twin[0] > 0.0f   ? "sand"
                  : c.twin[1] > 0.0f ? "snow"
                  : c.twin[2] > 0.0f ? "damp walls"
-                                    : "wet sand");
+                 : c.twin[3] > 0.0f ? "wet sand"
+                                    : "pebbles");
     groundLifeLogged = true;
     return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
                    : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
