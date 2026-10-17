@@ -322,6 +322,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxVolumetricFogHint, ""},
         {"effects", "volumetric_fog_density", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
          Text::FxVolumetricFogDensity, Text::FxVolumetricFogDensityHint, " %"},
+        {"effects", "smooth_hills", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothHills,
+         Text::FxSmoothHillsHint, ""},
+        {"effects", "smooth_hills_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
+         Text::FxSmoothHillsStrength, Text::FxSmoothHillsStrengthHint, " %"},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -628,6 +632,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.real_shadows") return c.effects.realShadows ? "1" : "0";
     if (k == "effects.volumetric_fog") return c.effects.volumetricFog ? "1" : "0";
     if (k == "effects.volumetric_fog_density") return std::to_string(c.effects.volumetricFogDensity);
+    if (k == "effects.smooth_hills") return c.effects.smoothHills ? "1" : "0";
+    if (k == "effects.smooth_hills_strength") return std::to_string(c.effects.smoothHillsStrength);
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

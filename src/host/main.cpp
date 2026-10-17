@@ -487,6 +487,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.realShadows = rd.u8() != 0;  // 1.12
             e.volumetricFog = rd.u8() != 0;  // 1.13
             e.volumetricFogDensity = rd.i32();
+            e.smoothHills = rd.u8() != 0;  // 1.15
+            e.smoothHillsStrength = rd.i32();
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

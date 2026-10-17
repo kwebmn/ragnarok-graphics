@@ -339,6 +339,10 @@ struct EffectSettings {
     // with Real sun shadows in rays through the crowns and past the houses. Remaster mode. Off by default.
     bool volumetricFog = false;
     int volumetricFogDensity = 60;  // %, 0-200
+    // 1.15: the remaster's smooth hills (core/hills.hpp, shaders.cpp hillLight): the ground lit by its corners'
+    // averaged normals, not cell by cell - the sun lights the slopes smoothly. Off by default.
+    bool smoothHills = false;
+    int smoothHillsStrength = 60;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

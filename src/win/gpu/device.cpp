@@ -1362,6 +1362,7 @@ void Renderer::Impl::destroy() {
     releaseCom(crittersPs);
     releaseCom(crittersVs);
     releaseCom(crittersData);
+    releaseCom(hillsData);  // 1.15
     releaseCom(groundLifePs);
     releaseCom(grassPs);
     for (ID3D12PipelineState*& p : stepsPipelines) releaseCom(p);  // 0.80

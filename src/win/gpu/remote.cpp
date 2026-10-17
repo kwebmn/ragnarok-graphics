@@ -380,6 +380,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.realShadows ? 1 : 0);  // 1.12
     w.u8(e.volumetricFog ? 1 : 0);  // 1.13
     w.i32(e.volumetricFogDensity);
+    w.u8(e.smoothHills ? 1 : 0);  // 1.15
+    w.i32(e.smoothHillsStrength);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

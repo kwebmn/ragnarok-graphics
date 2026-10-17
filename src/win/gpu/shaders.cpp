@@ -325,6 +325,38 @@ float3 materialLight(float3 c, float4 m, float3 P, float3 N, float3 T, float3 B)
     float spec = pow(saturate(dot(n, H)), 10.0 + 70.0 * m.w) * m.w * uiPixels.y * (0.3 + 0.7 * sunLight);
     return c + spec * 0.45 * s;
 }
+
+// 1.15, smooth hills (core/hills.hpp): the ground's normal between the corners of its cells, each corner's packed in
+// t3 (a float: 4096 * (1 + x's 11 bits) + z's 12 bits, y upwards the rest; 0 none) - sourceRect.xy the world's place
+// of corner (0, 0), .z one over the cells' side, .w the corners across + 1024 * down; sourceClamp.xyz the way to the
+// sun in the world, footprint the strength, sharpen the light all around. The light of that normal against a flat
+// ground's: the sunny slopes brighter, the far ones in a soft shade, no steps from cell to cell.
+float hillLight(float3 P) {
+    float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    int across = int(fmod(sourceRect.w, 1024.0) + 0.5), down = int(sourceRect.w / 1024.0);
+    float2 g = (w.xz - sourceRect.xy) * sourceRect.z;
+    float2 b = floor(g), f = g - b;
+    float3 n = float3(0.0, 0.0, 0.0);
+    float weight = 0.0;
+    [unroll] for (int k = 0; k < 4; ++k) {
+        int2 o = int2(k & 1, k >> 1);
+        int2 q = int2(b) + o;
+        if (q.x < 0 || q.y < 0 || q.x >= across || q.y >= down) continue;
+        float v = sceneDepth.Load(int3(q, 0));
+        if (v < 4096.0) continue;
+        float hi = floor(v / 4096.0), lo = v - hi * 4096.0;
+        float nx = (hi - 1.0) / 1023.0 - 1.0, nz = lo / 2047.5 - 1.0;
+        float bw = (o.x == 1 ? f.x : 1.0 - f.x) * (o.y == 1 ? f.y : 1.0 - f.y);
+        n += float3(nx, -sqrt(saturate(1.0 - nx * nx - nz * nz)), nz) * bw;
+        weight += bw;
+    }
+    if (weight < 0.01) return 1.0;
+    n = normalize(n);
+    float3 L = normalize(sourceClamp.xyz);
+    float amb = sharpen;
+    float k = (amb + (1.0 - amb) * saturate(dot(n, L))) / max(amb + (1.0 - amb) * saturate(-L.y), 1e-3);
+    return lerp(1.0, clamp(k, 0.6, 1.4), footprint * saturate(weight * 2.0 - 0.5));
+}
 #endif
 
 float4 shade(PsIn i) {
@@ -398,6 +430,7 @@ float4 shade(PsIn i) {
             c.rgb *= lerp(1.0, (0.78 + 0.42 * detail) * (1.0 - 0.35 * crack), saturate(k));
         }
     }
+    if (((stage0.y >> 26) & 1) != 0) c.rgb *= hillLight(P);  // 1.15: smooth hills
     if (((stage1.y >> 30) & 1) != 0) {  // 1.8: the ground's large patches
         float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
                    float3(r9, r10, r11);

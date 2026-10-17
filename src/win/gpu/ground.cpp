@@ -189,4 +189,74 @@ bool Renderer::Impl::applySeams() {
     return !lost;
 }
 
+// 1.15, smooth hills: the grid of the last frame's ground (core/hills.hpp, made as the frame began) put up into its
+// texture once a frame, at the first ground draw that wants it (in the draw's list, before it records).
+bool Renderer::Impl::ensureHills() {
+    if (hillsTried) return hillsUp;
+    hillsTried = true;
+    if (hillsFailed) return false;
+    const hills::Grid& g = hillsGrid;
+    if (g.side <= 0.0f || g.width <= 0 || g.height <= 0 || g.packed.size() < size_t(g.width) * size_t(g.height))
+        return false;
+    if (!hillsData) {
+        hillsData = createTexture2D(device, hills::kMostSide, hills::kMostSide, 1, DXGI_FORMAT_R32_FLOAT,
+                                    D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+        hillsDataSrv = hillsData ? allocSrv() : kNoSrv;
+        if (!hillsData || hillsDataSrv == kNoSrv) {
+            LOG_ERROR("smooth hills: no memory for the ground's normals: none");
+            releaseCom(hillsData);
+            hillsFailed = true;  // not tried again
+            return false;
+        }
+        hillsDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+        device->CreateShaderResourceView(hillsData, nullptr, cpuSrvHandle(hillsDataSrv));
+    }
+    const UINT pitch = UINT(hills::kMostSide) * sizeof(float);  // 1024: a multiple of 256
+    const Upload u = allocUpload(size_t(pitch) * size_t(g.height), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+    if (!u.cpu) return false;
+    for (int row = 0; row < g.height; ++row)
+        std::memcpy(static_cast<uint8_t*>(u.cpu) + size_t(row) * pitch, g.packed.data() + size_t(row) * size_t(g.width),
+                    size_t(g.width) * sizeof(float));
+    D3D12_TEXTURE_COPY_LOCATION src{}, to{};
+    src.pResource = slots[slot].upload;
+    src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint.Offset = u.offset;
+    src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32_FLOAT;
+    src.PlacedFootprint.Footprint.Width = UINT(g.width);
+    src.PlacedFootprint.Footprint.Height = UINT(g.height);
+    src.PlacedFootprint.Footprint.Depth = 1;
+    src.PlacedFootprint.Footprint.RowPitch = pitch;
+    to.pResource = hillsData;
+    to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    transition(hillsData, hillsDataState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
+    transition(hillsData, hillsDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    hillsUp = true;
+    if (!hillsLogged)
+        LOG_INFO("smooth hills: %dx%d corners of %s's ground, %.1f apart", g.width, g.height, mapName.c_str(),
+                 double(g.side));
+    hillsLogged = true;
+    return true;
+}
+
+// The constants of a ground draw lit over the smooth hills (shaders.cpp hillLight): bit 26 of stage 0, the grid's
+// place, the game's projection and camera, the way to the sun in the world, the strength, the light all around.
+void Renderer::Impl::hillsConstants(Constants& c) const {
+    const hills::Grid& g = hillsGrid;
+    c.stage0[1] |= 1u << 26;
+    c.sourceRect[0] = g.originX;
+    c.sourceRect[1] = g.originZ;
+    c.sourceRect[2] = 1.0f / g.side;
+    c.sourceRect[3] = float(g.width) + 1024.0f * float(g.height);
+    sunInWorld(c.sourceClamp);
+    c.sourceClamp[3] = 0.0f;
+    c.footprint = float(std::clamp(effects.smoothHillsStrength, 0, 200)) / 100.0f;
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    c.sharpen = mapOutdoors ? 0.55f + 0.3f * night : 0.75f;  // the sun's light against the sky's
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+    std::memcpy(c.projection, proj, sizeof proj);
+    std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
+}
+
 }  // namespace uagfx::gpu

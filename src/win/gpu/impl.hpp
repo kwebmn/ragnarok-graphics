@@ -14,6 +14,7 @@
 #include "core/critters.hpp"
 #include "core/key_pair.hpp"
 #include "core/new_trees.hpp"
+#include "core/hills.hpp"
 #include "core/seams.hpp"
 #include "core/living.hpp"
 #include "core/log_once.hpp"
@@ -880,6 +881,8 @@ struct Renderer::Impl {
         groundLifeDone = false;  // 1.7
         crittersDone = false;
         materialsMade = 0;  // 1.8
+        if (hillsWanted()) hillsGrid = hills::build(groundTris);  // 1.15: before they go
+        hillsUp = hillsTried = false;
         groundTris.clear();  // 1.9
         groundGroups.clear();
         groundTextures.clear();
@@ -959,6 +962,19 @@ struct Renderer::Impl {
     FrameRecord seamRec;
     bool seamPass = false, seamsDone = false, seamsLogged = false;
     bool seamsWanted() const { return effects.groundSeams && viewToWorldValid; }
+    // 1.15: smooth hills (hills.cpp, core/hills.hpp) - the last frame's ground's corners' normals, a texture of them
+    // (R32_FLOAT, kMostSide a side) put up at the frame's first ground draw, read by the ground's draws (t3)
+    hills::Grid hillsGrid;
+    ID3D12Resource* hillsData = nullptr;
+    D3D12_RESOURCE_STATES hillsDataState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT hillsDataSrv = 0;
+    bool hillsUp = false, hillsTried = false, hillsLogged = false, hillsFailed = false;
+    bool hillsWanted() const {
+        return effects.smoothHills && effects.smoothHillsStrength > 0 && viewToWorldValid;
+    }
+    bool ensureHills();  // the texture holds this frame's grid; false: none this frame
+    void hillsConstants(Constants& c) const;
+    void sunInWorld(float out[3]) const;  // the way to the sun (as the materials find it), up along -y
     bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty(); }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     bool applySeams();  // once a frame, the ground drawn; false: lost

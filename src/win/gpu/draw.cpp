@@ -84,7 +84,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // characters' list comes first of those - or at the interface, the shadows go onto what is drawn so far: the
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
-    if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && seamsWanted()) noteGround(rec, d);  // 1.9
+    if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && (seamsWanted() || hillsWanted()))
+        noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame
     // 1.12: an opaque draw of the world casts the real sun's shadows
     if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && !sunMapDone && realShadowsWanted())
         noteCaster(rec, d, s);
@@ -209,11 +210,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         const auto it = textures.find(d.texture[0]);
         if (it != textures.end() && !it->second.leafy && ensureMaterial(it->second, aiDrawn[0])) matTex = &it->second;
     }
-    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex ? 5 : 2)) return;
+    // 1.15: smooth hills - a draw of the ground (its own or a seam's strip) reads the corners' normals (t3)
+    bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin && (s.zWrite || seamPass);
+    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly ? 5 : 2)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
     }
+    hilly = hilly && ensureHills();
     // Stage 6: a window tile whose twin was made at this scale is drawn from the twin, a texel per target pixel;
     // otherwise (Pause, another scale, no twin) exactly as before.
     const bool twin = d.twin && s.ui && twinMatches(d.twinScale, scale) && textures.count(d.twin);
@@ -280,9 +284,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
         if (!waterCells++) LOG_INFO("water: the map's water found, drawn anew");
-    } else if (matTex) {  // 1.8: its material (t2)
+    } else if (matTex) {  // 1.8: its material (t2); 1.15 the hills' normals (t3)
         transition(matTex->mat, matTex->matState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(matTex->matSrv, matTex->matSrv, matTex->matSrv));
+        const UINT t3 = hilly ? hillsDataSrv : matTex->matSrv;
+        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(matTex->matSrv, t3, matTex->matSrv));
+    } else if (hilly) {  // 1.15: the hills' normals (t3)
+        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(hillsDataSrv, hillsDataSrv, hillsDataSrv));
     } else if (soft) {  // the depth behind the effect (t3)
         transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -356,6 +363,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         shells = effects.fullCrowns && c.sourceRect[2] > c.sourceRect[0];  // 1.9.7
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
+    if (hilly) hillsConstants(c);  // 1.15
     if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())
         c.stage1[1] |= 1u << 31;
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);

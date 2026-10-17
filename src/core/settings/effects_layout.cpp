@@ -93,6 +93,7 @@ const EffectLayout kEffects[] = {
     {"effects.bounce_light", {}, {}, {}, 3},  // 1.11
     {"effects.real_shadows", {}, {}, {}, 3},  // 1.12
     {"effects.volumetric_fog", {}, {"effects.volumetric_fog_density"}, {}, 3},  // 1.13
+    {"effects.smooth_hills", {}, {"effects.smooth_hills_strength"}, {}, 3},  // 1.15
 };
 
 }  // namespace

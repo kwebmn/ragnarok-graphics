@@ -2534,6 +2534,21 @@ const Entry kTexts[] = {
     {"Turn all of these off",
      "Вимкнути все тут",
      "Выключить всё здесь"},
+    {"Smooth hills",
+     "Плавні пагорби",
+     "Плавные холмы"},
+    {"The game lights its ground cell by cell, and a hill shows as steps of light. The ground is lit by the sun over "
+     "smooth slopes instead: the sunny side of a hill brighter, the far side in a soft shade (Direct3D 12).",
+     "Гра освітлює землю клітинка за клітинкою, і пагорб видно сходинками світла. Натомість сонце освітлює плавні "
+     "схили: сонячний бік пагорба світліший, дальній у м'якій тіні (Direct3D 12).",
+     "Игра освещает землю клетка за клеткой, и холм видно ступеньками света. Вместо этого солнце освещает плавные "
+     "склоны: солнечная сторона холма светлее, дальняя в мягкой тени (Direct3D 12)."},
+    {"Strength of the hills' light",
+     "Сила світла пагорбів",
+     "Сила света холмов"},
+    {"How much the slopes' light and shade show.",
+     "Наскільки помітні світло й тінь на схилах.",
+     "Насколько заметны свет и тень на склонах."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

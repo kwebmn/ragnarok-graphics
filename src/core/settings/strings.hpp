@@ -248,6 +248,8 @@ enum class Text : uint16_t {
     // 1.13
     FxVolumetricFog, FxVolumetricFogHint, FxVolumetricFogDensity, FxVolumetricFogDensityHint,
     FxBlockOn, FxBlockOff,
+    // 1.15
+    FxSmoothHills, FxSmoothHillsHint, FxSmoothHillsStrength, FxSmoothHillsStrengthHint,
     Count
 };
 
