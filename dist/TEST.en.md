@@ -1,3 +1,13 @@
+# uaRO Graphics 2.1.3 — testing
+
+- **One sun:** the real shadows (and the materials', the trees', the characters' light) now fall the way of the map's
+  own sun - the light its makers set in the map file, by which the game's painted shadows on the ground were drawn
+  - so that the two kinds of shadows agree. The day cycle only lifts and lowers the sun (longer shadows morning and
+  evening) and colours its light; without the cycle the sun stands as high as the map's.
+- Check, please, in Prontera and on prt_fild08 by day: do our shadows (houses, trees, sakura) fall the same way as
+  the dark shadows painted on the ground under them? If ours fall exactly the other way (towards the sun), say so -
+  one sign to turn.
+
 # uaRO Graphics 2.1.2 — testing
 
 - **Shadows that came out of nowhere:** the real sun's map covered about 150 x 150 units about the player - the far
