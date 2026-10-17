@@ -188,8 +188,7 @@ bool Renderer::Impl::applyAo() {
             return false;
     }
     transition(aoTarget[0], aoState[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    return upscale ? effectPass(apply, world, worldState, rtvHandle(kRtvWorld), w, h, c, aoSrv[0], false)
-                   : effectPass(apply, target, targetState, rtvHandle(kRtvTarget), w, h, c, aoSrv[0], false);
+    return worldPass(apply, w, h, c, aoSrv[0], false);
 }
 
 // Into the target (its samples) or the world under DLSS (one sample), as it is: the colours are made in the shader.
@@ -220,10 +219,7 @@ bool Renderer::Impl::applyGrade() {
     c.twin[2] = float(std::clamp(effects.gradeVignette, 0, 100)) / 100.0f;
     c.uiPixels[0] = float(sceneWidth);
     c.uiPixels[1] = float(sceneHeight);
-    return upscale ? effectPass(gradePipelines[code], world, worldState, rtvHandle(kRtvWorld), sceneWidth,
-                                sceneHeight, c, sceneColorSrv, true)
-                   : effectPass(gradePipelines[code], target, targetState, rtvHandle(kRtvTarget), sceneWidth,
-                                sceneHeight, c, sceneColorSrv, true);
+    return worldPass(gradePipelines[code], sceneWidth, sceneHeight, c, sceneColorSrv, true);
 }
 
 // 0.63: the night (night_ps) - as the colours are made, from the picture's copy into it.
@@ -254,10 +250,7 @@ bool Renderer::Impl::applyNight() {
     c.sourceRect[0] = flashNow();  // 0.80
     c.uiPixels[0] = float(sceneWidth);
     c.uiPixels[1] = float(sceneHeight);
-    return upscale ? effectPass(nightPipelines[code], world, worldState, rtvHandle(kRtvWorld), sceneWidth,
-                                sceneHeight, c, sceneColorSrv, true)
-                   : effectPass(nightPipelines[code], target, targetState, rtvHandle(kRtvTarget), sceneWidth,
-                                sceneHeight, c, sceneColorSrv, true);
+    return worldPass(nightPipelines[code], sceneWidth, sceneHeight, c, sceneColorSrv, true);
 }
 
 float Renderer::Impl::flashNow() const {
@@ -321,10 +314,7 @@ bool Renderer::Impl::applyGrass() {
                                cells != kNoSrv ? ", on the map's ground only" : "");
     grassLogged = true;
     const UINT list1 = steps ? stepsDataSrv : sceneColorSrv;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, list1,
-                                nullptr, 3, cells)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, list1,
-                                nullptr, 3, cells);
+    return worldPass(pso, w, h, c, sceneColorSrv, true, list1, nullptr, 3, cells);
 }
 
 // 1.7: the living world's ground (ground_life_ps) - sand drifting over the desert, snow glittering, the walls of a damp
@@ -379,8 +369,7 @@ bool Renderer::Impl::applyGroundLife() {
                                     : "pebbles",
                  seasonsShown() ? ", the season" : "", rainWetShown() ? ", wet in the rain" : "");
     groundLifeLogged = true;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+    return worldPass(pso, w, h, c, sceneColorSrv, true);
 }
 
 // 0.80: the steps the characters left - prints in the snow and the sand, dust on dry ground - onto the ground.
@@ -454,8 +443,7 @@ bool Renderer::Impl::applySteps() {
                  mapName.c_str());
     stepsLogged = true;
     const UINT list1 = stepsDataSrv;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, list1)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, list1);
+    return worldPass(pso, w, h, c, sceneColorSrv, true, list1);
 }
 
 void Renderer::Impl::releaseBloom() {
@@ -558,10 +546,7 @@ bool Renderer::Impl::applyBloom() {
         }
     }
     transition(bloomTarget[0], bloomState[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    return upscale ? effectPass(bloomApplyPipelines[code], world, worldState, rtvHandle(kRtvWorld), w, h, c,
-                                bloomSrv[0], true)
-                   : effectPass(bloomApplyPipelines[code], target, targetState, rtvHandle(kRtvTarget), w, h, c,
-                                bloomSrv[0], true);
+    return worldPass(bloomApplyPipelines[code], w, h, c, bloomSrv[0], true);
 }
 
 void Renderer::Impl::releaseDof() {
@@ -700,10 +685,7 @@ bool Renderer::Impl::applyDof() {
     }
     transition(dofTarget[0], dofState[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     const UINT focus = dofFocusSrv[dofFocusNow];
-    return upscale ? effectPass(dofApplyPipelines[code], world, worldState, rtvHandle(kRtvWorld), w, h, c, dofSrv[0],
-                                true, focus)
-                   : effectPass(dofApplyPipelines[code], target, targetState, rtvHandle(kRtvTarget), w, h, c,
-                                dofSrv[0], true, focus);
+    return worldPass(dofApplyPipelines[code], w, h, c, dofSrv[0], true, focus);
 }
 
 // 1.11: light from the sky and from around (sky_light_ps) - the picture's copy put back lit by the sky above and the
@@ -745,8 +727,7 @@ bool Renderer::Impl::applySkyLight() {
     c.twin[2] = 6.0f;  // world units around
     if (!skyLightLogged) LOG_INFO("light from the sky: on %s", mapName.c_str());
     skyLightLogged = true;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+    return worldPass(pso, w, h, c, sceneColorSrv, true);
 }
 
 bool Renderer::Impl::finishWorld() {

@@ -103,8 +103,7 @@ bool Renderer::Impl::applyWeather() {
         LOG_INFO("weather: %s over %s", motes ? (mapOutdoors ? "pollen" : "dust") : weatherName(mapWeather),
                  mapName.c_str());
     weatherLogged = true;
-    if (!(upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, false)
-                  : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, false)))
+    if (!(worldPass(pso, w, h, c, sceneColorSrv, false)))
         return false;
     // 0.64: the rain's splashes on the ground, where it is known (the camera read)
     ID3D12PipelineState* splash = alphaPipeline(splashPs, splashPipelines, upscale ? 1 : samples, "rain's splashes");
@@ -118,8 +117,7 @@ bool Renderer::Impl::applyWeather() {
         c.jitter[0] = jitter[0];
         c.jitter[1] = jitter[1];
     }
-    return upscale ? effectPass(splash, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
-                   : effectPass(splash, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+    return worldPass(splash, w, h, c, sceneColorSrv, true);
 }
 
 const char* weatherName(weather::Kind k) {

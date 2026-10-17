@@ -105,8 +105,7 @@ bool Renderer::Impl::applyFog() {
     if (!fogLightLogged)
         LOG_INFO("volumetric fog: over %s", mapName.c_str());
     fogLightLogged = true;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+    return worldPass(pso, w, h, c, sceneColorSrv, true);
 }
 
 // 1.17: the constants of a character's sprite (shaders.cpp spriteLight): the way to the sun on the screen and its

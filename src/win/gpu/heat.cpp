@@ -107,10 +107,7 @@ bool Renderer::Impl::applyHeat() {
     if (clip.right <= clip.left || clip.bottom <= clip.top) return true;
     if (!heatLogged) LOG_INFO("heat haze: %u spots of heat%s", unsigned(spots.size()), mapDesert ? ", the desert" : "");
     heatLogged = true;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, heatDataSrv,
-                                &clip)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true,
-                                heatDataSrv, &clip);
+    return worldPass(pso, w, h, c, sceneColorSrv, true, heatDataSrv, &clip);
 }
 
 }  // namespace uagfx::gpu

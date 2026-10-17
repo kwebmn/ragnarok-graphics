@@ -488,8 +488,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     transition(shadowMask[0], shadowMaskState[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     c.sharpen = float(std::clamp(effects.actorShadowsStrength, 0, 100)) / 100.0f;
     const UINT mask = shadowMaskSrv[0];
-    const bool done = upscale ? effectPass(apply, world, worldState, rtvHandle(kRtvWorld), w, h, c, mask, false)
-                              : effectPass(apply, target, targetState, rtvHandle(kRtvTarget), w, h, c, mask, false);
+    const bool done = worldPass(apply, w, h, c, mask, false);
     if (!done) return false;
     actorShadowsDrawn = true;
     if (!actorShadowsLogged)

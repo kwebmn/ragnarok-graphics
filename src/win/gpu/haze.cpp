@@ -60,8 +60,7 @@ bool Renderer::Impl::applyHaze() {
     c.sharpen = waterTime();
     if (!hazeLogged) LOG_INFO("haze: over %s%s", mapName.c_str(), mapLook.fog > 0.0f ? ", with a low fog" : "");
     hazeLogged = true;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneDepthSrv, true)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneDepthSrv, true);
+    return worldPass(pso, w, h, c, sceneDepthSrv, true);
 }
 
 // 0.73: the light in the air - about the torches' pass's lights (their list left in torchData) and, under the open
@@ -99,8 +98,7 @@ bool Renderer::Impl::applyShafts() {
     c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
     c.sourceRect[2] = 1.0f;
     const UINT lights = torchDataSrv;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, lights)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, lights);
+    return worldPass(pso, w, h, c, sceneColorSrv, true, lights);
 }
 
 // 0.98: the sun's flare - where the sky shows towards the sun (up and to the left past the screen, against the way
@@ -123,8 +121,7 @@ bool Renderer::Impl::applyFlare() {
     c.twin[0] = 0.35f * (1.0f - night / 0.6f);
     if (!flareLogged) LOG_INFO("sun flare: on %s", mapName.c_str());
     flareLogged = true;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
+    return worldPass(pso, w, h, c, sceneColorSrv, true);
 }
 
 // 0.72: the floors reflect what stands on them - indoors and in the rain (floor_reflect_ps, from the picture's copy).
@@ -187,8 +184,7 @@ bool Renderer::Impl::applyFloorReflections() {
                     true))
         return false;
     transition(floorTarget, floorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    return upscale ? effectPass(over, world, worldState, rtvHandle(kRtvWorld), w, h, c, floorSrv, false)
-                   : effectPass(over, target, targetState, rtvHandle(kRtvTarget), w, h, c, floorSrv, false);
+    return worldPass(over, w, h, c, floorSrv, false);
 }
 
 // 0.69: past the map's edge on a map under the open sky - the sky, its clouds, at night its stars (sky_ps).
@@ -239,8 +235,7 @@ bool Renderer::Impl::applySky() {
     c.sharpen = waterTime();
     if (!skyLogged) LOG_INFO("sky: over %s", mapName.c_str());
     skyLogged = true;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneDepthSrv, true)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneDepthSrv, true);
+    return worldPass(pso, w, h, c, sceneDepthSrv, true);
 }
 
 }  // namespace uagfx::gpu

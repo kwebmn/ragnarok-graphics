@@ -113,8 +113,7 @@ bool Renderer::Impl::applyClouds() {
                     c, sceneDepthSrv, true))  // t0 unread: the depth, in its shader state already
         return false;
     transition(cloudsMask, cloudsMaskState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, cloudsMaskSrv, false)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, cloudsMaskSrv, false);
+    return worldPass(pso, w, h, c, cloudsMaskSrv, false);
 }
 
 }  // namespace uagfx::gpu

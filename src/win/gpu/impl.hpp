@@ -1278,6 +1278,15 @@ struct Renderer::Impl {
                     const D3D12_RECT* clip = nullptr,   // 0.23: only these pixels
                     UINT vertices = 3,                  // 1.7: the vertex shader's own quads (critters_vs)
                     UINT sceneT5 = kNoSrv);             // 2.2.1: the scene table's t5 (the grass: the ground)
+    // 2.2.2: an effect pass over the world's picture - the upscaler's world while it upscales (DLSS, TAA, ui_native),
+    // else the target (twenty passes wrote both calls out, the same arguments twice)
+    bool worldPass(ID3D12PipelineState* pso, int w, int h, Constants& c, UINT srv0, bool scene, UINT srv1 = kNoSrv,
+                   const D3D12_RECT* clip = nullptr, UINT vertices = 3, UINT sceneT5 = kNoSrv) {
+        return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, srv0, scene, srv1, clip,
+                                    vertices, sceneT5)
+                       : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, srv0, scene, srv1, clip,
+                                    vertices, sceneT5);
+    }
     float waterTime();            // seconds since the first water
     ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
     ID3D12PipelineState* glowLightPipeline(UINT samples, bool upscaledFormat);
