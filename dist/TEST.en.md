@@ -1,3 +1,20 @@
+# uaRO Graphics 1.25.0 — testing
+
+By the screenshots of the reports:
+- **The desert's "cracks"** - thin dark lines along the ground's cells since 1.9.0 (Ground seams): a cell's own band
+  now lies whole at its edge and is drawn first, the texture's dark rim no longer shows through. Check moc_fild maps
+  with Ground seams on - no grid of lines.
+- **Sand drift** fewer and fainter streaks, in drifting runs, instead of the whole ground hatched.
+- **The level 99 aura** no longer goes into the glow: no white pools under the players (Prontera's square).
+- **Fish** fewer, larger and soft, only in deep water - before they read as scratches on the water.
+- **Shore foam** in thin lines rolling in along the shore and a rim at the edge, not a row of white dabs.
+- **Dragonflies** smaller, their wings a faint shimmer - from above they looked like sticks with a rim.
+- **Effects page: "Recommended for a strong card"** - one click turns on Materials of the world, soft shadows,
+  both sun shadows, rounded crowns, the sky and the land past the edge, smooth hills, living characters, filmic
+  tones; calmer far blur and colours. The rest stays.
+- Not in the button, worth a try: AI textures page, the world's model "general" instead of "anime" - the stones and
+  roofs less drawn, fewer dark smudges (the pictures are made again as you play).
+
 # uaRO Graphics 1.24.0 — testing
 
 - **Trees from above, by the screenshots** (Living world: Rounded tree crowns, Every tree its own, seasons):
