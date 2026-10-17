@@ -1,3 +1,12 @@
+# uaRO Graphics 1.14.0 — testing
+
+- **Materials of the world now work on Direct3D 11 too** (Classic+ on weaker cards): relief, gloss and the large
+  patches of shade on the ground, the houses and the rocks; the material is made at 256 pixels a side there. Check:
+  Direct3D 11, Effects → Materials of the world on - stones and bricks lit from their side, no flicker, no black
+  textures; the log says "materials: made on the card ... (Direct3D 11)".
+- **Cliffs**: on steep slopes where the game stretches a texture into stripes, the materials lay a stone grain with
+  cracks of its own over it (both renderers). Check on a map with rocks (mjolnir, prt_fild maps with cliffs).
+
 # uaRO Graphics 1.13.1 — testing
 
 - The settings app's Living world and Remaster blocks have **Turn all of these on** and **Turn all of these off**
