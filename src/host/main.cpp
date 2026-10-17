@@ -430,8 +430,6 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.shaftsStrength = rd.i32();
             e.dayCycle = rd.u8() != 0;  // 0.74
             e.dayNow = rd.i32();
-            e.sunShadows = rd.u8() != 0;  // 0.77
-            e.sunShadowsStrength = rd.i32();
             e.bloom = rd.u8() != 0;  // 0.78
             e.bloomStrength = rd.i32();
             e.filmic = rd.u8() != 0;
@@ -484,7 +482,6 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.newTrees = rd.u8() != 0;  // 1.10
             e.skyLight = rd.u8() != 0;  // 1.11
             e.bounceLight = rd.u8() != 0;
-            e.realShadows = rd.u8() != 0;  // 1.12
             e.volumetricFog = rd.u8() != 0;  // 1.13
             e.volumetricFogDensity = rd.i32();
             e.smoothHills = rd.u8() != 0;  // 1.15

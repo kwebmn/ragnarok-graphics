@@ -323,8 +323,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.shaftsStrength);
     w.u8(e.dayCycle ? 1 : 0);  // 0.74
     w.i32(e.dayNow);
-    w.u8(e.sunShadows ? 1 : 0);  // 0.77
-    w.i32(e.sunShadowsStrength);
     w.u8(e.bloom ? 1 : 0);  // 0.78
     w.i32(e.bloomStrength);
     w.u8(e.filmic ? 1 : 0);
@@ -377,7 +375,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.newTrees ? 1 : 0);  // 1.10
     w.u8(e.skyLight ? 1 : 0);  // 1.11
     w.u8(e.bounceLight ? 1 : 0);
-    w.u8(e.realShadows ? 1 : 0);  // 1.12
     w.u8(e.volumetricFog ? 1 : 0);  // 1.13
     w.i32(e.volumetricFogDensity);
     w.u8(e.smoothHills ? 1 : 0);  // 1.15

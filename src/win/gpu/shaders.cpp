@@ -261,9 +261,7 @@ float relief(float2 uv, float2 du, float2 dv) {
 // 1.17, living characters (draw.cpp spriteConstants): a sprite of a character or a monster lit by the sun from the
 // side its picture's own shape gives - its silhouette's slope a few texels around as the way its edge faces: the side
 // towards the sun (twinX, twinY on the screen, twinW its height) brighter with a warm rim, the far side a little
-// darker. uiPixels.x the strength, .y the sun's light here. sourceClamp.w > 0: the real sun's map (t3, sourceRect.w a
-// side, .z its bias) at the feet (sourceClamp.xyz in its box) - in a house's or a crown's shadow the whole sprite
-// darker by that much.
+// darker. uiPixels.x the strength, .y the sun's light here.
 float3 spriteLight(float2 uv, float2 du, float2 dv, float3 c) {
     float w, h;
     tex0.GetDimensions(w, h);
@@ -284,17 +282,6 @@ float3 spriteLight(float2 uv, float2 du, float2 dv, float3 c) {
     float s = uiPixels.x;
     c *= lerp(1.0, clamp(k, 0.75, 1.3), s);
     c += float3(1.0, 0.9, 0.7) * rim * 0.22 * s;
-    if (sourceClamp.w > 0.0) {  // in the shadow of a house, a crown: from the sun's map at the feet
-        float2 at = float2(sourceClamp.x * 0.5 + 0.5, 0.5 - sourceClamp.y * 0.5) * sourceRect.w;
-        float shade = 0.0;
-        [unroll] for (int y = -2; y <= 2; ++y)
-            [unroll] for (int x = -2; x <= 2; ++x) {
-                int last = int(sourceRect.w) - 1;
-                int2 q = clamp(int2(at) + int2(x, y) * 3, int2(0, 0), int2(last, last));
-                shade += sceneDepth.Load(int3(q, 0)) < sourceClamp.z - sourceRect.z ? 1.0 : 0.0;
-            }
-        c *= 1.0 - sourceClamp.w * shade / 25.0;
-    }
     return c;
 }
 
@@ -1617,47 +1604,6 @@ float4 haze_ps(PresentOut i) : SV_Target {
     return float4(c, a);
 }
 
-// 0.77, the sun's shadows (ao.cpp applySunShadows): before the characters are drawn, each pixel of the map and its
-// models looks along the way to the sun (twinX, twinY, twinW: view space, a unit vector) for something of the picture
-// in front of that ray - a house, a wall, a tree - and is in its shadow then, the farther the softer. Multiplied onto
-// the picture: sharpen the shadow's darkness, footprint the ray's reach (units).
-float4 sun_shadow_ps(PresentOut i) : SV_Target {
-    int2 wp = int2(i.pos.xy);
-    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
-    float3 p = viewAt(wp);
-    float3 l = float3(twinX, twinY, twinW);
-    float shade = 0.0;
-    float t = 1.5;
-    float grow = pow(footprint / 1.5, 1.0 / 15.0);
-    float2 tp;
-    [loop] for (int k = 0; k < 16; ++k) {
-        float3 q = p + l * t;
-        if (!viewToPixel(q, tp)) break;
-        float gap = q.z - viewDepth(sceneDepth.Load(int3(int2(tp), 0)));
-        if (gap > 0.6 + t * 0.02 && gap < 25.0) {
-            shade = 1.0 - 0.5 * t / footprint;
-            break;
-        }
-        t *= grow;
-    }
-    // 1.7, dapple (sourceRect.y; sourceRect.x the time): in the shadow of leaves (green where the ray met them)
-    // spots of sun come through, stirring - noise over the world (r0-r11 the view -> the world), steady as the camera
-    // moves.
-    if (sourceRect.y > 0.0 && shade > 0.0) {
-        float3 hit = sceneColor.Load(int3(int2(tp), 0)).rgb;
-        if (hit.g > hit.r * 1.05 && hit.g > hit.b * 1.1) {
-            float3 w = p.x * float3(r0, r1, r2) + p.y * float3(r3, r4, r5) + p.z * float3(r6, r7, r8) +
-                       float3(r9, r10, r11);
-            float tm = sourceRect.x;
-            float2 wind = float2(sin(tm * 0.9) * 0.35 + sin(tm * 2.3) * 0.1, cos(tm * 0.7) * 0.25);
-            float n = valueNoise(w.xz * 0.55 + wind) * 0.65 + valueNoise(w.xz * 1.3 - wind * 1.7 + 7.1) * 0.35;
-            shade *= 1.0 - smoothstep(0.6, 0.72, n) * 0.85;
-        }
-    }
-    float s = 1.0 - shade * sharpen;
-    return float4(s, s, s, 1.0);
-}
-
 // 0.82, the skills' sparks (torches.cpp applyEmbers), added on: about each place a skill burns or shines (t1, two
 // texels: its middle (target pixels) .xy, its size .z, strength .w; then its colour .rgb and kind .w - 1 fire, 0
 // another) - footprint how many - a dozen sparks: a fire's embers rise, swaying, and die out; another skill's
@@ -2171,14 +2117,6 @@ float4 sky_light_ps(PresentOut i) : SV_Target {
 #endif
 
 #ifndef UAGFX_SAFE
-// 1.12, the real sun's shadows (sun_map.cpp): the world's opaque draws seen from the sun into a depth map - r0-r11 the
-// world into the sun's box (x, y -1..1 across it, z 0..1 along the light), a leaves picture's holes (footprint 1:
-// alpha below twinX) let the light through.
-struct SunIn {
-    float4 pos : SV_Position;
-    float2 uv : TEXCOORD0;
-};
-
 // 1.16, the world mirrored under the water (mirror.cpp): the last frame's opaque world (the sun map's casters, x y z
 // u v and the game's colour) turned over the water's level twinX (up is -y) and drawn by the game's camera -
 // r0-r11 the world into the view, f0-farZ its projection, uiPixels.xy the game's screen - into a picture of its own;
@@ -2210,51 +2148,14 @@ float4 mirror_ps(MirrorIn i) : SV_Target {
     if (footprint > 0.5 && t.a < twinY) discard;
     return float4(t.rgb * i.colour.rgb, 1.0);
 }
-
-SunIn sun_map_vs(float3 p : POSITION, float2 uv : TEXCOORD0) {
-    SunIn o;
-    o.pos = float4(dot(float4(p, 1.0), float4(r0, r1, r2, r3)), dot(float4(p, 1.0), float4(r4, r5, r6, r7)),
-                   dot(float4(p, 1.0), float4(r8, r9, r10, r11)), 1.0);
-    o.uv = uv;
-    return o;
-}
-
-void sun_map_ps(SunIn i) {
-    if (footprint > 0.5 && tex0.Sample(samp0, i.uv).a < twinX) discard;
-}
-
-// The map applied (multiplied onto the picture, before the characters): each pixel of the world - r0-r11 now the view
-// into the sun's box - in the light or behind something nearer the sun; 3 x 3 of the map's texels (twinY of them a
-// side), softer. sharpen the shadow's darkness.
-float4 sun_apply_ps(PresentOut i) : SV_Target {
-    int2 wp = int2(i.pos.xy);
-    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
-    float3 v = viewAt(wp);
-    float3 l = float3(dot(float4(v, 1.0), float4(r0, r1, r2, r3)), dot(float4(v, 1.0), float4(r4, r5, r6, r7)),
-                      dot(float4(v, 1.0), float4(r8, r9, r10, r11)));
-    float2 uv = float2(l.x * 0.5 + 0.5, 0.5 - l.y * 0.5);
-    if (any(uv <= 0.0) || any(uv >= 1.0) || l.z >= 1.0) discard;
-    float2 at = uv * twinY - 0.5;
-    float shade = 0.0;
-    [unroll] for (int y = -1; y <= 1; ++y)
-        [unroll] for (int x = -1; x <= 1; ++x) {
-            int2 q = clamp(int2(at) + int2(x, y), int2(0, 0), int2(int(twinY) - 1, int(twinY) - 1));
-            shade += tex1.Load(int3(q, 0)).r < l.z - twinW ? 1.0 : 0.0;
-        }
-    // 2.1.2: towards the box's edge the shadows fade out - cut off there, they came and went as one walked
-    float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-    float s = 1.0 - sharpen * shade / 9.0 * smoothstep(0.0, 0.06, edge);
-    return float4(s, s, s, 1.0);
-}
 #endif
 
 #ifndef UAGFX_SAFE
 // 1.13, volumetric fog (sun_map.cpp applyFog): along the view from the camera to what the pixel shows, a dozen steps
 // through a fog lying low over the ground - thicker below twinX + twinY (the ground's height, up -y, and the fog's
-// depth), drifting with noise - each step lit by the sun where the sun's map (t1, footprint 1: there is one) does not
-// hide it: rays through the crowns and past the houses. r0-r11 the view into the sun's box; sourceClamp, sourceRect,
-// fogColor the view into the world's x, y and z; twinW the density, uiPixels.z the sun's share, .w the map's side;
-// sharpen the time. Blended over by its alpha.
+// depth), drifting with noise - each step lit by the sun (2.2: no sun's map, no rays). sourceClamp, sourceRect,
+// fogColor the view into the world's x, y and z; twinW the density, uiPixels.z the sun's share; sharpen the time.
+// Blended over by its alpha.
 float4 fog_light_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     float raw = sceneDepth.Load(int3(wp, 0));
@@ -2275,15 +2176,6 @@ float4 fog_light_ps(PresentOut i) : SV_Target {
         dens *= 0.55 + 0.9 * valueNoise(float2(wx, wz) * 0.035 + float2(sharpen * 0.03, sharpen * 0.017));
         if (dens < 1e-4) continue;
         float sun = 1.0;
-        if (footprint > 0.5) {
-            float3 l = float3(dot(q4, float4(r0, r1, r2, r3)), dot(q4, float4(r4, r5, r6, r7)),
-                              dot(q4, float4(r8, r9, r10, r11)));
-            float2 uv = float2(l.x * 0.5 + 0.5, 0.5 - l.y * 0.5);
-            if (all(uv > 0.0) && all(uv < 1.0)) {
-                int2 tq = clamp(int2(uv * uiPixels.w), int2(0, 0), int2(int(uiPixels.w) - 1, int(uiPixels.w) - 1));
-                sun = tex1.Load(int3(tq, 0)).r < l.z - 0.002 ? 0.0 : 1.0;
-            }
-        }
         float a = 1.0 - exp(-dens * stride);
         float3 lit = float3(0.62, 0.68, 0.76) * 0.55 + float3(1.0, 0.92, 0.78) * sun * uiPixels.z;
         light += trans * a * lit;
@@ -2892,15 +2784,7 @@ float4 forest_ps(ForestOut i) : SV_Target {
         float edge;
         float mask = forestPuff(i.uv, own, edge);
         clip(mask - 0.5);
-        float lit1 = 1.0;
-        if (sourceClamp.w > 0.0) {
-            float4 w4 = float4(i.world, 1.0);
-            float3 l = float3(dot(w4, uiPixels), dot(w4, float4(twinX, twinY, twinW, twinH)), dot(w4, fogColor));
-            float2 at = float2(l.x * 0.5 + 0.5, 0.5 - l.y * 0.5) * 2048.0;
-            if (all(at > 1.0) && all(at < 2046.0))
-                lit1 = sceneDepth.Load(int3(int2(at), 0)) < l.z - 0.002 ? 1.0 - sourceClamp.w : 1.0;
-        }
-        float t = (dot(n, L) * 0.5 + 0.5) * (0.55 + 0.45 * open) * lerp(1.0, lit1, 0.8);
+        float t = (dot(n, L) * 0.5 + 0.5) * (0.55 + 0.45 * open);
         t = lerp(0.42, t, sun);  // at night and indoors flatter
         float band = smoothstep(0.36, 0.42, t), high = smoothstep(0.62, 0.66, t);
         float3 shade = i.leaf * float3(0.55, 0.68, 1.05) * 0.72;
@@ -2947,60 +2831,12 @@ float4 forest_ps(ForestOut i) : SV_Target {
     }
     // the light: the sun's on what faces it (wrapped: the leaves let some through), the sky's as open as the place is
     float face = saturate((dot(n, L) + 0.35) / 1.35);
-    // 2.0.2: in the shadow of the crown above, a house, another tree - the real sun's map (t3; its box's rows
-    // uiPixels, twinX-twinH, fogColor; sourceClamp.w how dark, 0 none)
-    float lit = 1.0;
-    if (sourceClamp.w > 0.0) {
-        float4 w4 = float4(i.world, 1.0);
-        float3 l = float3(dot(w4, uiPixels), dot(w4, float4(twinX, twinY, twinW, twinH)), dot(w4, fogColor));
-        float2 at = float2(l.x * 0.5 + 0.5, 0.5 - l.y * 0.5) * 2048.0;
-        if (all(at > 1.0) && all(at < 2046.0)) {
-            float shade = 0.0;
-            [unroll] for (int k = 0; k < 4; ++k) {
-                int2 q = int2(at) + int2(k & 1, k >> 1) * 2 - 1;
-                shade += sceneDepth.Load(int3(q, 0)) < l.z - 0.002 ? 0.25 : 0.0;
-            }
-            lit = 1.0 - shade * sourceClamp.w;
-        }
-    }
     float sky = 0.4 + 0.6 * open;
     // 2.0.2: the leaves let a little of the sun through: their far side glows warm green
-    float through = part > 0.5 ? saturate(-dot(n, L)) * 0.25 * sun * lit : 0.0;
-    float3 c = base * (sky * lerp(0.75, 0.55, sun) + face * sun * 0.75 * (0.55 + 0.45 * open) * lit) +
+    float through = part > 0.5 ? saturate(-dot(n, L)) * 0.25 * sun : 0.0;
+    float3 c = base * (sky * lerp(0.75, 0.55, sun) + face * sun * 0.75 * (0.55 + 0.45 * open)) +
                base * float3(1.1, 1.2, 0.7) * through;
     return float4(c * 1.15, 1.0);
-}
-
-// 2.0: the forest into the real sun's map (sun_map.cpp): r0-r11 the world into the sun's box, as sun_map_vs; the
-// leaves' holes let the light through.
-struct ForestSunOut {
-    float4 pos : SV_Position;
-    float2 uv : TEXCOORD0;
-    float2 info : TEXCOORD1;  // the part, its own number
-};
-
-ForestSunOut forest_sun_vs(ForestIn i) {
-    ForestSunOut o;
-    float3 n;
-    float4 w = float4(forestWorld(i, n), 1.0);
-    o.pos = float4(dot(w, float4(r0, r1, r2, r3)), dot(w, float4(r4, r5, r6, r7)), dot(w, float4(r8, r9, r10, r11)),
-                   1.0);
-    o.uv = i.uv;
-    o.info = float2(i.info.z, i.info.w);
-    return o;
-}
-
-void forest_sun_ps(ForestSunOut i) {
-    if (i.info.x > 4.5) {  // 2.0.3: an anime puff
-        float edge;
-        clip(forestPuff(i.uv, i.info.y, edge) - 0.5);
-    } else if (i.info.x > 1.5 && i.info.x < 2.5) {
-        float across = abs(i.uv.x - 0.5) * 2.0;
-        clip(0.1 + 0.9 * (1.0 - i.uv.y * 0.6) * (0.5 + 0.5 * sin(i.uv.y * 60.0 + i.info.y * 20.0)) - across);
-    } else if (i.info.x > 0.5) {
-        float vein;
-        clip(forestLeaves(i.uv, i.info.y, vein) - 0.08);
-    }
 }
 #endif
 )HLSL";

@@ -41,7 +41,7 @@ std::vector<IniEdit> presetEdits(Preset p) {
     // 0.85: and the light one leaves out the costly effects; 0.90.3: the characters' shadows too (5-10 ms of a
     // strong card's in a crowd with Direct3D 11) - the auto setup's for old and small cards
     if (p == Preset::Speed)
-        for (const char* k : {"ao", "dof", "glow", "clouds", "heat", "floor_reflections", "shafts", "sun_shadows",
+        for (const char* k : {"ao", "dof", "glow", "clouds", "heat", "floor_reflections", "shafts",
                               "bloom", "grass", "actor_shadows"})
             e.push_back({"effects", k, "0"});
     return e;

@@ -153,7 +153,6 @@ EffectSettings effectsOff() {
     e.worldReflections = false;
     e.smoothHills = false;
     e.volumetricFog = false;
-    e.realShadows = false;
     e.bounceLight = false;
     e.skyLight = false;
     e.newTrees = false;
@@ -190,7 +189,7 @@ EffectSettings effectsOff() {
     e.ripples = false;
     e.appear = false;
     e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
-    e.sunShadows = e.bloom = e.filmic = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
+    e.bloom = e.filmic = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
     e.filmGrain = e.mapFade = e.roundLight = false;
     e.nightNow = 0;
     e.dayNow = -1;
@@ -228,7 +227,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.worldReflections ||
            e.smoothHills ||
            e.volumetricFog ||
-           e.realShadows ||
            e.bounceLight ||
            e.skyLight ||
            e.newTrees ||
@@ -264,7 +262,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.glint ||
            e.ripples ||
            e.appear || e.softParticles || e.rimLight || e.sky || e.motes ||
-           e.relief || e.floorReflections || e.shafts || e.dayCycle || e.sunShadows || e.bloom || e.filmic ||
+           e.relief || e.floorReflections || e.shafts || e.dayCycle || e.bloom || e.filmic ||
            e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks || e.filmGrain ||
            e.roundLight;
 }
@@ -298,7 +296,7 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
            motesAmount == o.motesAmount && relief == o.relief && reliefStrength == o.reliefStrength &&
            floorReflections == o.floorReflections && floorReflectStrength == o.floorReflectStrength &&
            shafts == o.shafts && shaftsStrength == o.shaftsStrength && dayCycle == o.dayCycle && dayNow == o.dayNow &&
-           sunShadows == o.sunShadows && sunShadowsStrength == o.sunShadowsStrength && bloom == o.bloom &&
+           bloom == o.bloom &&
            bloomStrength == o.bloomStrength && filmic == o.filmic && regionLooks == o.regionLooks &&
            regionLooksStrength == o.regionLooksStrength && footprints == o.footprints && storms == o.storms &&
            grass == o.grass && grassAmount == o.grassAmount && skillSparks == o.skillSparks &&
@@ -587,10 +585,9 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 200, c.effects.shaftsStrength);
         } else if (key == "effects.day_cycle") {
             setBool(val, c.effects.dayCycle);
-        } else if (key == "effects.sun_shadows") {
-            // 2.1.4: the moving shadows are gone (the map's painted ones are enough) - read, kept off
-        } else if (key == "effects.sun_shadows_strength") {
-            toInt(val, 0, 100, c.effects.sunShadowsStrength);
+        } else if (key == "effects.sun_shadows" || key == "effects.sun_shadows_strength" ||
+                   key == "effects.real_shadows") {
+            // 2.1.4: the moving shadows are gone (the map's painted ones are enough); 2.2: their code too
         } else if (key == "effects.bloom") {
             setBool(val, c.effects.bloom);
         } else if (key == "effects.bloom_strength") {
@@ -700,8 +697,6 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.skyLight);
         } else if (key == "effects.bounce_light") {
             setBool(val, c.effects.bounceLight);
-        } else if (key == "effects.real_shadows") {
-            // 2.1.4: gone with sun_shadows - read, kept off
         } else if (key == "effects.volumetric_fog") {
             setBool(val, c.effects.volumetricFog);
         } else if (key == "effects.volumetric_fog_density") {

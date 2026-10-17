@@ -19,7 +19,6 @@ const Costly kCostly[] = {
     {"new_trees", "new_trees", &EffectSettings::newTrees},  // 2.1
     {"floor_reflections", "floor", &EffectSettings::floorReflections},
     {"dof", "dof", &EffectSettings::dof},
-    {"sun_shadows", "sun", &EffectSettings::sunShadows},
     {"ao", "ao", &EffectSettings::ao},
     {"shafts", "shafts", &EffectSettings::shafts},
     {"glow", "glow", &EffectSettings::glow},

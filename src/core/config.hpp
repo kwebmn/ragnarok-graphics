@@ -234,10 +234,6 @@ struct EffectSettings {
     // frame, not the file's (-1 off).
     bool dayCycle = false;
     int dayNow = -1;
-    // 0.77: the sun's shadows - on the fields and in the towns the houses, walls and trees cast shadows on the
-    // ground away from the sun (with the time of day they turn). 0.84: off by default.
-    bool sunShadows = false;
-    int sunShadowsStrength = 60;  // %, 0-100
     // 0.78: bloom - the bright parts of the picture (sunlit tiles, snow, windows, fire) glow softly; the filmic
     // curve - the highlights roll off instead of clipping, as in modern games. 0.84: both off by default.
     bool bloom = false;
@@ -338,10 +334,6 @@ struct EffectSettings {
     // ground's; bounce_light - the colours around light a surface a little in their colour. Off by default.
     bool skyLight = false;
     bool bounceLight = false;
-    // 1.12: the remaster's real sun shadows (win/gpu/sun_map.cpp): the frame's opaque world drawn from the sun into a
-    // depth map, every pixel of it darkened where something nearer the sun hides it - the leaves' holes let
-    // light through. Instead of the screen's own sun shadows; Remaster mode, Direct3D 12. Off by default.
-    bool realShadows = false;
     // 1.13: the remaster's volumetric fog (fog_light_ps): a fog lying low over the fields, drifting, lit by the sun -
     // with Real sun shadows in rays through the crowns and past the houses. Remaster mode. Off by default.
     bool volumetricFog = false;

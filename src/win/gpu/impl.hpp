@@ -109,7 +109,6 @@ constexpr UINT kRtvMirror = kRtvMaterial + 1;  // 1.16: the world mirrored under
 constexpr UINT kRtvCount = kRtvMirror + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
-constexpr UINT kDsvSun = 2;  // 1.12: the sun's map
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
 
 // What the open command list draws into (bindPass); the glow's passes add its target as the second one (0.18).
@@ -898,7 +897,6 @@ struct Renderer::Impl {
         hazeDone = false;
         skyDone = false;  // 0.69
         floorReflectDone = false;  // 0.72
-        sunShadowDone = false;  // 0.77
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80
         if (!frameFeet.empty()) {  // 0.94: the last frame's feet (they were drawn with it)
@@ -929,8 +927,6 @@ struct Renderer::Impl {
         mirrorDone = mirrorMade = false;
         sunVerts.clear();  // 1.12
         sunCasters.clear();
-        sunMapDone = false;
-        sunMapMade = false;
         fogLightDone = false;  // 1.13
         frameCrowns.clear();
         waterLevelNoted = false;
@@ -1065,10 +1061,6 @@ struct Renderer::Impl {
     ID3DBlob* forestVs = nullptr;
     ID3DBlob* forestPs = nullptr;
     ID3D12PipelineState* forestPipelines[4] = {};
-    ID3DBlob* forestSunVs = nullptr;  // into the real sun's map
-    ID3DBlob* forestSunPs = nullptr;
-    ID3D12PipelineState* forestSunPso = nullptr;
-    void forestIntoSunMap(const float light[12]);  // the forest's shadows (sun_map.cpp applyRealShadows)
     void forestWind(Constants& c);  // its time and wind into the constants
     ID3D12Resource* forestVb = nullptr;
     ID3D12Resource* forestIb = nullptr;
@@ -1111,7 +1103,7 @@ struct Renderer::Impl {
     bool skyLightWanted() const { return skyLightPs && (effects.skyLight || effects.bounceLight); }
     bool skyLightDue() const { return skyLightWanted() && groundDrawn && !skyLightDone && viewToWorldValid; }
     bool applySkyLight();  // once a frame, before the characters; false: lost
-    // 1.12: the real sun's shadows (sun_map.cpp) - the frame's opaque world from the sun into a depth map
+    // 1.12: the frame's opaque world (sun_map.cpp noteCaster) - since 2.2 for the mirror only
     struct SunCaster {
         uint32_t first = 0, count = 0;  // vertices into sunVerts (six floats each: x, y, z, u, v, colour's bits)
         uint32_t texture = 0;
@@ -1141,31 +1133,11 @@ struct Renderer::Impl {
     bool mirrorDue() const { return mirrorCollecting() && waterLevelKnown && !mirrorDone && !mirrorCasters.empty(); }
     ID3D12PipelineState* mirrorPipeline();
     bool applyMirror();  // once a frame, before its first water; false: lost
-    ID3D12Resource* sunMap = nullptr;
-    D3D12_RESOURCE_STATES sunMapState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-    UINT sunMapSrv = 0;
-    ID3DBlob* sunMapVs = nullptr;
-    ID3DBlob* sunMapPs = nullptr;
-    ID3DBlob* sunApplyPs = nullptr;
-    ID3D12PipelineState* sunMapPso = nullptr;
-    ID3D12PipelineState* sunApplyPipelines[4] = {};
-    bool sunMapDone = false, sunMapLogged = false;
-    bool realShadowsWanted() const {
-        return effects.realShadows && remaster() && sunMapVs && sunMapPs && sunApplyPs && mapOutdoors &&
-               viewToWorldValid && effects.nightNow < 90;
-    }
-    bool realShadowsDue() const { return realShadowsWanted() && groundDrawn && !sunMapDone; }
     void noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
-    ID3D12PipelineState* sunMapPipeline();
-    bool applyRealShadows();  // once a frame, before the characters; false: lost
-    float sunViewToBox[12] = {};  // this frame's map: the view into the sun's box (applyFog)
-    float sunWorldToBox[12] = {};  // 1.17: and the world into it (the characters' feet, spriteConstants)
-    float sunBoxHalf = 75.0f;      // 2.1.2: its half across this frame (world units): the ground the screen shows
-    // 1.17, living characters (draw.cpp): a sprite lit by the sun from its silhouette's sides, darker in the real
-    // shadows (shaders.cpp spriteLight, stage 0 bit 28)
+    // 1.17, living characters (draw.cpp): a sprite lit by the sun from its silhouette's sides (shaders.cpp
+    // spriteLight, stage 0 bit 28)
     bool spriteLightWanted() const { return effects.spriteLight && effects.spriteLightStrength > 0; }
-    void spriteConstants(const FrameRecord& rec, const DrawCmd& d, bool shaded, Constants& c) const;
-    bool sunMapMade = false;
+    void spriteConstants(Constants& c) const;
     // 1.13: volumetric fog lit by the sun (sun_map.cpp applyFog, fog_light_ps)
     ID3DBlob* fogLightPs = nullptr;
     ID3D12PipelineState* fogLightPipelines[4] = {};
@@ -1264,18 +1236,6 @@ struct Renderer::Impl {
     bool applyBloom();  // once a frame, the world finished, before its colours; false: lost
     void releaseBloom();
     // 0.77: the sun's shadows of the houses, walls and trees - under the open sky, by day
-    ID3DBlob* sunShadowPs = nullptr;
-    ID3D12PipelineState* sunShadowPipelines[4] = {};
-    bool sunShadowDone = false;
-    bool sunShadowLogged = false;
-    bool sunShadowWanted() const {
-        return effects.sunShadows && effects.sunShadowsStrength > 0 && sunShadowPs && mapOutdoors &&
-               effects.nightNow < 100;
-    }
-    bool sunShadowDue() const {  // 1.12: not with the real ones
-        return sunShadowWanted() && groundDrawn && !sunShadowDone && viewToWorldValid && !realShadowsWanted();
-    }
-    bool applySunShadows();  // once a frame, before the characters (as the soft shadows); false: lost
     bool applyAo();  // once a frame (aoDone); false: lost
     bool gradeWanted() const { return effects.grade; }
     bool nightDue() const {  // 0.74: also for the time of day's tint; 0.79: and the region's look

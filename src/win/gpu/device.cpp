@@ -1344,8 +1344,6 @@ void Renderer::Impl::destroy() {
     releaseCom(shaftsPs);
     releaseCom(flarePs);  // 0.98
     for (ID3D12PipelineState*& f : flarePipelines) releaseCom(f);
-    for (ID3D12PipelineState*& p : sunShadowPipelines) releaseCom(p);  // 0.77
-    releaseCom(sunShadowPs);
     for (ID3D12PipelineState*& p : embersPipelines) releaseCom(p);  // 0.82
     releaseCom(embersPs);
     releaseCom(embersData);
@@ -1354,14 +1352,8 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : crittersPipelines) releaseCom(p);
     releaseCom(materialPso);  // 1.8
     for (ID3D12PipelineState*& p : skyLightPipelines) releaseCom(p);  // 1.11
-    for (ID3D12PipelineState*& p : sunApplyPipelines) releaseCom(p);  // 1.12
     for (ID3D12PipelineState*& p : fogLightPipelines) releaseCom(p);  // 1.13
     releaseCom(fogLightPs);
-    releaseCom(sunMapPso);
-    releaseCom(sunMapVs);
-    releaseCom(sunMapPs);
-    releaseCom(sunApplyPs);
-    releaseCom(sunMap);
     releaseCom(skyLightPs);
     releaseCom(materialPs);
     releaseCom(crittersPs);
@@ -1374,9 +1366,6 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : forestPipelines) releaseCom(p);
     releaseCom(forestVs);
     releaseCom(forestPs);
-    releaseCom(forestSunPso);
-    releaseCom(forestSunVs);
-    releaseCom(forestSunPs);
     releaseCom(mirror);  // 1.16
     releaseCom(mirrorDepth);
     releaseCom(mirrorPso);

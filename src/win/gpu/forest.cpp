@@ -86,21 +86,6 @@ int keepInView(const Renderer::Impl::ForestPlaced& t, const void* with) {
     return reach < 70.0f && vz > r ? 1 : 0;
 }
 
-struct SunKeep {
-    const float* light;  // the world into the box: rows x, y (z the light's way)
-    float half;          // the box's half across (sunBoxHalf)
-};
-
-int keepInSunBox(const Renderer::Impl::ForestPlaced& t, const void* with) {
-    const SunKeep& k = *static_cast<const SunKeep*>(with);
-    const float* l = k.light;
-    const float r = (std::max(t.radius, t.height * 0.5f) * 1.1f + 2.0f) / k.half;
-    const float w[3] = {t.pos[0], t.pos[1] - t.height * 0.5f, t.pos[2]};
-    const float bx = l[0] * w[0] + l[1] * w[1] + l[2] * w[2] + l[3];
-    const float by = l[4] * w[0] + l[5] * w[1] + l[6] * w[2] + l[7];
-    return std::fabs(bx) <= 1.0f + r && std::fabs(by) <= 1.0f + r ? 1 : -1;  // the shadows: a far tree's cards do
-}
-
 const float kLeafDefault[3] = {0.30f, 0.47f, 0.18f}, kBarkDefault[3] = {0.36f, 0.27f, 0.20f};
 
 // The game's draw's box in the world (its vertices back through the camera); false when it cannot be.
@@ -508,61 +493,6 @@ void Renderer::Impl::forestWind(Constants& c) {
     }
 }
 
-// 2.0: the forest's trees into the real sun's map (its target and view set by applyRealShadows) - the holes of the
-// leaves let the light through.
-void Renderer::Impl::forestIntoSunMap(const float light[12]) {
-    if (!forestReady() || !forestVb || !forestIb || !forestInstances || !forestSunVs || !forestSunPs) return;
-    if (!forestSunPso) {
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
-        p.pRootSignature = root;
-        p.VS = {forestSunVs->GetBufferPointer(), forestSunVs->GetBufferSize()};
-        p.PS = {forestSunPs->GetBufferPointer(), forestSunPs->GetBufferSize()};
-        p.InputLayout = {kForestLayout, 8};
-        p.SampleMask = UINT_MAX;
-        p.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-        p.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-        p.RasterizerState.DepthClipEnable = TRUE;
-        p.RasterizerState.DepthBias = 600;
-        p.RasterizerState.SlopeScaledDepthBias = 2.0f;
-        p.DepthStencilState.DepthEnable = TRUE;
-        p.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-        p.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-        p.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        p.NumRenderTargets = 0;
-        p.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-        p.SampleDesc.Count = 1;
-        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
-                                                       reinterpret_cast<void**>(&forestSunPso)))) {
-            LOG_ERROR("new trees: the forest's shadows' pipeline failed: none");
-            forestSunPso = nullptr;
-            releaseCom(forestSunPs);
-            return;
-        }
-    }
-    // 2.1: only the trees in the sun's box, each with part of its leaves (enough for a shadow)
-    D3D12_GPU_VIRTUAL_ADDRESS at = 0;
-    UINT bytes = 0;
-    std::vector<ForestDraw> draws;
-    const SunKeep box{light, sunBoxHalf};
-    if (!forestPick(&keepInSunBox, &box, at, bytes, draws)) return;
-    Constants c{};
-    std::copy(light, light + 12, c.reproject);
-    forestWind(c);
-    list->SetGraphicsRootSignature(root);
-    list->SetPipelineState(forestSunPso);
-    list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
-    list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    const D3D12_VERTEX_BUFFER_VIEW views[2] = {
-        {forestVb->GetGPUVirtualAddress(), forestVbBytes, UINT(sizeof(forest::Vertex))},
-        {at, bytes, UINT(sizeof(InstanceData))}};
-    list->IASetVertexBuffers(0, 2, views);
-    const D3D12_INDEX_BUFFER_VIEW ib{forestIb->GetGPUVirtualAddress(), forestIbBytes, DXGI_FORMAT_R32_UINT};
-    list->IASetIndexBuffer(&ib);
-    for (const ForestDraw& draw : draws)
-        list->DrawIndexedInstanced(draw.indexCount, draw.instances, draw.firstIndex, INT(draw.baseVertex),
-                                   draw.firstInstance);
-}
-
 // 2.0: the forest drawn into the world (with its depth) after the grass, before the characters - all its trees in a
 // call for each model's variant.
 bool Renderer::Impl::applyForest() {
@@ -626,16 +556,6 @@ bool Renderer::Impl::applyForest() {
     c.sourceClamp[2] = mapOutdoors ? 1.0f - 0.85f * night : 0.35f;
     list->SetGraphicsRootSignature(root);
     list->SetPipelineState(pso);
-    if (sunMapMade && sunMap) {  // 2.0.2: the trees in the real sun's shadows too, the crowns' own among them
-        std::copy(sunWorldToBox, sunWorldToBox + 4, c.uiPixels);
-        std::copy(sunWorldToBox + 4, sunWorldToBox + 8, c.twin);
-        std::copy(sunWorldToBox + 8, sunWorldToBox + 12, c.fogColor);
-        c.sourceClamp[3] = 0.75f * float(std::clamp(effects.sunShadowsStrength, 0, 100)) / 100.0f * (1.0f - night);
-        if (c.sourceClamp[3] > 0.0f) {
-            transition(sunMap, sunMapState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-            list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sunMapSrv, sunMapSrv, sunMapSrv));
-        }
-    }
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     const D3D12_VERTEX_BUFFER_VIEW views[2] = {

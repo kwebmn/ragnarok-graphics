@@ -79,12 +79,10 @@ TEST(keep_fps_off_unless_asked_and_bounded) {
     CHECK(parseConfig("[frames]\nkeep_fps = 999\n").keepFps == 0);
 }
 
-TEST(sun_shadows_off_by_default) {
-    // 0.77: the houses' and trees' shadows from the sun; 0.84: off unless asked.
-    CHECK(!parseConfig("").effects.sunShadows && parseConfig("").effects.sunShadowsStrength == 60);
-    CHECK(!parseConfig("[effects]\nsun_shadows = 1\n").effects.sunShadows);  // 2.1.4: gone
-    CHECK(!parseConfig("[effects]\nreal_shadows = 1\n").effects.realShadows);
-    CHECK(!effectsOff().sunShadows);
+TEST(sun_shadows_are_gone) {
+    // 0.77 and 1.12: the moving shadows; 2.1.4 off, 2.2 their code gone - the old lines are read and left alone
+    const Config c = parseConfig("[effects]\nsun_shadows = 1\nreal_shadows = 1\nbloom = 1\n");
+    CHECK(c.effects.bloom);
 }
 
 TEST(bloom_and_filmic_off_by_default) {

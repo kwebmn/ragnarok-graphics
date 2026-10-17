@@ -202,18 +202,16 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"splash_ps", "ps_5_0", &splashPs},            {"waterfall_ps", "ps_5_0", &waterfallPs},
                    {"sky_ps", "ps_5_0", &skyPs},                  {"floor_reflect_ps", "ps_5_0", &floorReflectPs},
                    {"shafts_ps", "ps_5_0", &shaftsPs},            {"taa_ps", "ps_5_0", &taaPs},
-                   {"sun_shadow_ps", "ps_5_0", &sunShadowPs},     {"bloom_down_ps", "ps_5_0", &bloomDownPs},
+                   {"bloom_down_ps", "ps_5_0", &bloomDownPs},
                    {"bloom_apply_ps", "ps_5_0", &bloomApplyPs},   {"steps_ps", "ps_5_0", &stepsPs},
                    {"grass_ps", "ps_5_0", &grassPs},              {"embers_ps", "ps_5_0", &embersPs},
                    {"half_over_ps", "ps_5_0", &halfOverPs},       {"flare_ps", "ps_5_0", &flarePs},
                    {"ground_life_ps", "ps_5_0", &groundLifePs},   {"critters_ps", "ps_5_0", &crittersPs},
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},
-                   {"sky_light_ps", "ps_5_0", &skyLightPs},      {"sun_map_vs", "vs_5_0", &sunMapVs},
-                   {"sun_map_ps", "ps_5_0", &sunMapPs},          {"sun_apply_ps", "ps_5_0", &sunApplyPs},
+                   {"sky_light_ps", "ps_5_0", &skyLightPs},
                    {"fog_light_ps", "ps_5_0", &fogLightPs},      {"mirror_vs", "vs_5_0", &mirrorVs},
                    {"mirror_ps", "ps_5_0", &mirrorPs},          {"forest_vs", "vs_5_0", &forestVs},
-                   {"forest_ps", "ps_5_0", &forestPs},          {"forest_sun_vs", "vs_5_0", &forestSunVs},
-                   {"forest_sun_ps", "ps_5_0", &forestSunPs}};
+                   {"forest_ps", "ps_5_0", &forestPs}};
     store.sink = startSink;  // 0.40
     store.context = startContext;
     store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'

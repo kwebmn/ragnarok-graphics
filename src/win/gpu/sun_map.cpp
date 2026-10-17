@@ -15,15 +15,12 @@
 namespace uagfx::gpu {
 namespace {
 
-constexpr int kSunMap = 2048;          // the map's side, texels
-constexpr float kSunHalf = 75.0f;      // half the box across, world units, at the least (2.1.2: sunBoxHalf)
-constexpr float kSunDepth = 400.0f;    // the box along the light
 constexpr size_t kMostSunVerts = 600000;
 
 }  // namespace
 
 // 1.12: an opaque draw of the world (not the interface, not blended: the map, its models, the crowns): its
-// triangles in the world with their texture coordinates, to be drawn into the sun's map.
+// triangles in the world with their texture coordinates - since 2.2 for the mirror under the water (mirror.cpp).
 void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
     if (sunVerts.size() / 6 >= kMostSunVerts || (d.primitive != d3d7::PT_TRIANGLELIST &&
                                                  d.primitive != d3d7::PT_TRIANGLESTRIP))
@@ -70,234 +67,8 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
     if (c.count) sunCasters.push_back(c);
 }
 
-// The sun's map's pipeline: the world's triangles into a depth map, the leaves' holes let through.
-ID3D12PipelineState* Renderer::Impl::sunMapPipeline() {
-    if (sunMapPso || !sunMapVs || !sunMapPs) return sunMapPso;
-    const D3D12_INPUT_ELEMENT_DESC layout[2] = {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
-    p.pRootSignature = root;
-    p.VS = {sunMapVs->GetBufferPointer(), sunMapVs->GetBufferSize()};
-    p.PS = {sunMapPs->GetBufferPointer(), sunMapPs->GetBufferSize()};
-    p.InputLayout = {layout, 2};
-    p.SampleMask = UINT_MAX;
-    p.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-    p.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-    p.RasterizerState.DepthClipEnable = TRUE;
-    p.RasterizerState.DepthBias = 600;
-    p.RasterizerState.SlopeScaledDepthBias = 2.0f;
-    p.DepthStencilState.DepthEnable = TRUE;
-    p.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    p.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-    p.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    p.NumRenderTargets = 0;
-    p.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-    p.SampleDesc.Count = 1;
-    if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
-                                                   reinterpret_cast<void**>(&sunMapPso)))) {
-        LOG_ERROR("real sun shadows: the map's pipeline failed: none");
-        sunMapPso = nullptr;
-        releaseCom(sunMapPs);
-    }
-    return sunMapPso;
-}
-
-// 1.12: the real sun's shadows - the frame's opaque world drawn from the sun into its map (the box about the player),
-// then each pixel of the world darkened where something nearer the sun hides it (sun_apply_ps), before the
-// characters. The screen's own sun shadows (0.77) give way to them.
-bool Renderer::Impl::applyRealShadows() {
-    sunMapDone = true;
-    crumb("real sun shadows");
-    if ((sunCasters.empty() && !forestReady()) || !cameraValid || cameraTargetZ <= 0.0f) return true;
-    if (!ensureScene("real sun shadows") || !sunMapPipeline()) return true;
-    ID3D12PipelineState* apply = mulPipeline(sunApplyPs, sunApplyPipelines, upscale ? 1 : samples, "real sun shadows");
-    if (!apply) return true;
-    if (!sunMap) {
-        D3D12_CLEAR_VALUE deep{};
-        deep.Format = DXGI_FORMAT_D32_FLOAT;
-        deep.DepthStencil.Depth = 1.0f;
-        sunMap = createTexture2D(device, kSunMap, kSunMap, 1, DXGI_FORMAT_R32_TYPELESS,
-                                 D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, D3D12_RESOURCE_STATE_DEPTH_WRITE, &deep);
-        sunMapSrv = sunMap ? allocSrv() : kNoSrv;
-        if (!sunMap || sunMapSrv == kNoSrv) {
-            LOG_ERROR("real sun shadows: no video memory for the map: none");
-            releaseCom(sunMap);
-            releaseCom(sunApplyPs);
-            return true;
-        }
-        sunMapState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-        D3D12_DEPTH_STENCIL_VIEW_DESC dv{};
-        dv.Format = DXGI_FORMAT_D32_FLOAT;
-        dv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-        device->CreateDepthStencilView(sunMap, &dv, dsvHandle(kDsvSun));
-        D3D12_SHADER_RESOURCE_VIEW_DESC sv{};
-        sv.Format = DXGI_FORMAT_R32_FLOAT;
-        sv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        sv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        sv.Texture2D.MipLevels = 1;
-        device->CreateShaderResourceView(sunMap, &sv, cpuSrvHandle(sunMapSrv));
-    }
-    // The sun's box: about the player, its axes the light's way (fwd) and two across it.
-    const float* m = viewToWorld;
-    const float tz = cameraTargetZ;
-    float mid[3] = {tz * m[6] + m[9], tz * m[7] + m[10], tz * m[8] + m[11]};
-    const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
-    (void)day;
-    const float height = sunHeight();  // 2.1.3
-    // 2.0.1: the sun's way fixed in the world (sunGround) - taken from the screen it turned with the camera
-    float gdir[3];
-    sunGround(gdir);
-    const float gl = std::max(std::sqrt(gdir[0] * gdir[0] + gdir[2] * gdir[2]), 1e-4f);
-    const float fwd[3] = {gdir[0] / gl * std::cos(height), std::sin(height), gdir[2] / gl * std::cos(height)};  // down
-    const float upw[3] = {0.0f, -1.0f, 0.0f};
-    float right[3] = {fwd[1] * upw[2] - fwd[2] * upw[1], fwd[2] * upw[0] - fwd[0] * upw[2],
-                      fwd[0] * upw[1] - fwd[1] * upw[0]};
-    const float rl = std::max(std::sqrt(right[0] * right[0] + right[1] * right[1] + right[2] * right[2]), 1e-4f);
-    for (float& r : right) r /= rl;
-    const float up[3] = {right[1] * fwd[2] - right[2] * fwd[1], right[2] * fwd[0] - right[0] * fwd[2],
-                         right[0] * fwd[1] - right[1] * fwd[0]};
-    // 2.0.1: the box's middle on the map's texels across the light - moved smoothly with the player, the shadows'
-    // edges crept from texel to texel
-    // 2.1.2: the box as large as the ground the screen shows - 75 units, the camera's usual sight, left the far part
-    // of the screen without shadows, and those of the houses and trees at the box's edge came and went as one walked
-    // or turned. The screen's corners' rays met with the ground's height at the player; the largest reach from the
-    // player, in steps of 25 units (a step only when the camera zooms) between 75 and 250.
-    float reach = kSunHalf;
-    {
-        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
-        const float corner[4][2] = {{0.0f, 0.0f}, {float(gameWidth), 0.0f}, {0.0f, float(gameHeight)},
-                                    {float(gameWidth), float(gameHeight)}};
-        for (const auto& c : corner) {
-            const float dx = (c[0] - p.cx) / p.f0, dy = (c[1] - p.cy) / p.f1;
-            const float dir[3] = {dx * m[0] + dy * m[3] + m[6], dx * m[1] + dy * m[4] + m[7],
-                                  dx * m[2] + dy * m[5] + m[8]};
-            if (dir[1] <= 1e-3f) {  // a ray above the horizon: as far as the box goes
-                reach = 250.0f;
-                continue;
-            }
-            const float t = (mid[1] - m[10]) / dir[1];
-            if (t <= 0.0f) continue;
-            const float gx = m[9] + dir[0] * t - mid[0], gz = m[11] + dir[2] * t - mid[2];
-            reach = std::max(reach, std::sqrt(gx * gx + gz * gz) * 1.08f);
-        }
-    }
-    sunBoxHalf = std::clamp(std::ceil(reach / 25.0f) * 25.0f, kSunHalf, 250.0f);
-    const float texel = 2.0f * sunBoxHalf / float(kSunMap);
-    const float across[2] = {mid[0] * right[0] + mid[1] * right[1] + mid[2] * right[2],
-                             mid[0] * up[0] + mid[1] * up[1] + mid[2] * up[2]};
-    const float snap[2] = {std::round(across[0] / texel) * texel - across[0],
-                           std::round(across[1] / texel) * texel - across[1]};
-    for (int q = 0; q < 3; ++q) mid[q] += right[q] * snap[0] + up[q] * snap[1];
-    // the world into the box: rows (x, y, z) with their offsets
-    float light[12];
-    const auto row = [&](const float axis[3], float scaleBy, float add, float* out) {
-        out[0] = axis[0] * scaleBy;
-        out[1] = axis[1] * scaleBy;
-        out[2] = axis[2] * scaleBy;
-        out[3] = -(axis[0] * mid[0] + axis[1] * mid[1] + axis[2] * mid[2]) * scaleBy + add;
-    };
-    row(right, 1.0f / sunBoxHalf, 0.0f, light);
-    row(up, 1.0f / sunBoxHalf, 0.0f, light + 4);
-    row(fwd, 1.0f / kSunDepth, 0.5f, light + 8);
-    std::copy(light, light + 12, sunWorldToBox);  // 1.17
-    // the map: the casters' vertices up once, each draw its texture (its holes)
-    const Upload u = allocUpload(sunVerts.size() * sizeof(float), 16);
-    if (!u.cpu) return true;
-    std::memcpy(u.cpu, sunVerts.data(), sunVerts.size() * sizeof(float));
-    StageSetup st;
-    st.addressU = st.addressV = d3d7::TADDRESS_WRAP;
-    st.magFilter = d3d7::TFG_POINT;
-    st.minFilter = d3d7::TFN_POINT;
-    st.mipFilter = d3d7::TFP_NONE;
-    transition(sunMap, sunMapState, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-    bool cleared = false;
-    for (const SunCaster& c : sunCasters) {
-        if (!makeRoom(st, st, 0, 2)) return false;
-        const auto tex = textures.find(c.texture);
-        const UINT srv = tex != textures.end() && tex->second.resource ? tex->second.srv : kNoSrv;
-        if (srv != kNoSrv && tex->second.resource)
-            transition(tex->second.resource, tex->second.state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle(kDsvSun);
-        list->OMSetRenderTargets(0, nullptr, FALSE, &dsv);
-        if (!cleared) {
-            list->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-            cleared = true;
-        }
-        const D3D12_VIEWPORT vp{0.0f, 0.0f, float(kSunMap), float(kSunMap), 0.0f, 1.0f};
-        const D3D12_RECT all{0, 0, kSunMap, kSunMap};
-        list->RSSetViewports(1, &vp);
-        list->RSSetScissorRects(1, &all);
-        list->SetGraphicsRootSignature(root);
-        list->SetPipelineState(sunMapPso);
-        Constants k{};
-        std::copy(light, light + 12, k.reproject);
-        k.footprint = c.alphaTest && srv != kNoSrv ? 1.0f : 0.0f;
-        k.twin[0] = c.ref;
-        list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &k, 0);
-        const UINT use = srv != kNoSrv ? srv : 0;
-        list->SetGraphicsRootDescriptorTable(kRootTextures, textureTable(use, use));
-        list->SetGraphicsRootDescriptorTable(kRootSamplers, samplerTable(st, st, 0));
-        list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        const D3D12_VERTEX_BUFFER_VIEW vb{u.gpu, UINT(sunVerts.size() * sizeof(float)), UINT(6 * sizeof(float))};
-        list->IASetVertexBuffers(0, 1, &vb);
-        list->DrawInstanced(c.count, 1, c.first, 0);
-    }
-    if (forestReady()) {  // 2.0: the forest's trees cast too
-        const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle(kDsvSun);
-        list->OMSetRenderTargets(0, nullptr, FALSE, &dsv);
-        if (!cleared) {
-            list->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-            cleared = true;
-        }
-        const D3D12_VIEWPORT vp{0.0f, 0.0f, float(kSunMap), float(kSunMap), 0.0f, 1.0f};
-        const D3D12_RECT all{0, 0, kSunMap, kSunMap};
-        list->RSSetViewports(1, &vp);
-        list->RSSetScissorRects(1, &all);
-        forestIntoSunMap(light);
-    }
-    boundPipeline = nullptr;
-    boundTextures = boundSamplers = ~0ull;
-    pass = kPassNone;
-    transition(sunMap, sunMapState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    // applied: the view into the box (the box's rows times the view's own into the world)
-    if (!copySceneDepth()) return false;
-    Constants c{};
-    for (int r = 0; r < 3; ++r)
-        for (int col = 0; col < 3; ++col)
-            c.reproject[r * 4 + col] = light[r * 4] * m[col * 3] + light[r * 4 + 1] * m[col * 3 + 1] +
-                                       light[r * 4 + 2] * m[col * 3 + 2];
-    for (int r = 0; r < 3; ++r)
-        c.reproject[r * 4 + 3] = light[r * 4] * m[9] + light[r * 4 + 1] * m[10] + light[r * 4 + 2] * m[11] +
-                                 light[r * 4 + 3];
-    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    c.scale = float(upscale ? worldScale : scale);
-    if (upscale) {
-        c.jitter[0] = jitter[0];
-        c.jitter[1] = jitter[1];
-    }
-    std::copy(c.reproject, c.reproject + 12, sunViewToBox);  // 1.13: for the fog
-    sunMapMade = true;
-    const int w = sceneWidth, h = sceneHeight;
-    c.uiPixels[0] = float(w);
-    c.uiPixels[1] = float(h);
-    c.twin[1] = float(kSunMap);
-    c.twin[2] = 0.0015f;  // the bias along the light
-    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
-    c.sharpen = 0.9f * float(std::clamp(effects.sunShadowsStrength, 0, 100)) / 100.0f * (1.0f - night);
-    if (!sunMapLogged)
-        LOG_INFO("real sun shadows: %zu draws, %zu triangles of %s into a %dx%d map", sunCasters.size(),
-                 sunVerts.size() / 18, mapName.c_str(), kSunMap, kSunMap);
-    sunMapLogged = true;
-    return upscale ? effectPass(apply, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, sunMapSrv)
-                   : effectPass(apply, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true,
-                                sunMapSrv);
-}
-
-// 1.13: volumetric fog lying low over the fields, lit by the sun where its map says the light gets through (rays
-// through the crowns and past the houses), blended over the world once it is drawn - the characters in it too.
+// 1.13: volumetric fog lying low over the fields, lit by the sun, blended over the world once it is drawn - the
+// characters in it too. (2.2: without the sun's map - no rays through the crowns.)
 bool Renderer::Impl::applyFog() {
     fogLightDone = true;
     crumb("volumetric fog");
@@ -305,7 +76,6 @@ bool Renderer::Impl::applyFog() {
     ID3D12PipelineState* pso = alphaPipeline(fogLightPs, fogLightPipelines, upscale ? 1 : samples, "volumetric fog");
     if (!pso) return true;
     if (!copySceneDepth()) return false;
-    if (sunMapMade) transition(sunMap, sunMapState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     const float* m = viewToWorld;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
@@ -330,22 +100,18 @@ bool Renderer::Impl::applyFog() {
     c.twin[2] = 0.02f * float(std::clamp(effects.volumetricFogDensity, 0, 200)) / 100.0f;
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     c.uiPixels[2] = 0.9f * (1.0f - night);
-    c.uiPixels[3] = float(kSunMap);
-    c.footprint = sunMapMade ? 1.0f : 0.0f;
-    if (sunMapMade) std::copy(sunViewToBox, sunViewToBox + 12, c.reproject);
+    c.footprint = 0.0f;  // no sun's map
     c.sharpen = waterTime();
     if (!fogLightLogged)
-        LOG_INFO("volumetric fog: over %s%s", mapName.c_str(), sunMapMade ? ", lit by the sun's map" : "");
+        LOG_INFO("volumetric fog: over %s", mapName.c_str());
     fogLightLogged = true;
-    const UINT map = sunMapMade ? sunMapSrv : sceneColorSrv;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, map)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, map);
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true);
 }
 
 // 1.17: the constants of a character's sprite (shaders.cpp spriteLight): the way to the sun on the screen and its
-// height, the strength, the sun's light here; shaded, the real sun's map made: the feet (the quad's bottom edge's
-// middle, a unit up) in the sun's box, the map's side and bias, how dark its shadow is.
-void Renderer::Impl::spriteConstants(const FrameRecord& rec, const DrawCmd& d, bool shaded, Constants& c) const {
+// height, the strength, the sun's light here.
+void Renderer::Impl::spriteConstants(Constants& c) const {
     c.stage0[1] |= 1u << 28;
     float sun[2];
     sunOnScreen(sun);
@@ -356,37 +122,6 @@ void Renderer::Impl::spriteConstants(const FrameRecord& rec, const DrawCmd& d, b
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     c.uiPixels[0] = float(std::clamp(effects.spriteLightStrength, 0, 200)) / 100.0f;
     c.uiPixels[1] = mapOutdoors ? 1.0f - 0.8f * night : 0.3f;
-    if (!shaded) return;
-    const std::vector<uint8_t>& v = rec.vertexBytes();
-    const size_t stride = FrameRecord::stride(d.fvf);
-    if (d.vertexOffset + 4 * stride > v.size()) return;
-    float corner[4][4];
-    for (int k = 0; k < 4; ++k)
-        std::memcpy(corner[k], v.data() + d.vertexOffset + size_t(k) * stride, sizeof corner[k]);
-    float bottom = -1e9f;
-    for (const auto& q : corner) bottom = std::max(bottom, q[1]);
-    float x = 0.0f, rhw = 0.0f;
-    int n = 0;
-    for (const auto& q : corner)
-        if (q[1] > bottom - 0.5f) {
-            x += q[0];
-            rhw += q[3];
-            ++n;
-        }
-    if (!n || rhw <= 0.0f) return;
-    x /= float(n);
-    rhw /= float(n);
-    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
-    const float* m = viewToWorld;
-    const float vz = 1.0f / rhw, vx = (x - p.cx) * vz / p.f0, vy = (bottom - p.cy) * vz / p.f1;
-    const float w[3] = {vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[1] + vy * m[4] + vz * m[7] + m[10] - 1.0f,
-                        vx * m[2] + vy * m[5] + vz * m[8] + m[11]};
-    const float* l = sunWorldToBox;
-    for (int r = 0; r < 3; ++r)
-        c.sourceClamp[r] = l[r * 4] * w[0] + l[r * 4 + 1] * w[1] + l[r * 4 + 2] * w[2] + l[r * 4 + 3];
-    c.sourceClamp[3] = 0.9f * float(std::clamp(effects.sunShadowsStrength, 0, 100)) / 100.0f * (1.0f - night);
-    c.sourceRect[2] = 0.0015f;
-    c.sourceRect[3] = float(kSunMap);
 }
 
 }  // namespace uagfx::gpu

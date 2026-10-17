@@ -93,15 +93,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
     if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && (seamsWanted() || hillsWanted()))
         noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame
-    // 1.12: an opaque draw of the world casts the real sun's shadows
-    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite &&
-        ((!sunMapDone && realShadowsWanted()) || mirrorCollecting()))
-        noteCaster(rec, d, s);  // 1.16: also for the next frame's mirror
+    // 1.16: an opaque draw of the world into the next frame's mirror (2.2: the sun's map is gone)
+    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting()) noteCaster(rec, d, s);
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
     if (!inner && !s.ui && s.blend && skyLightDue() && !applySkyLight()) return;  // 1.11: under the soft shadows
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
-    if (!inner && !s.ui && s.blend && realShadowsDue() && !applyRealShadows()) return;  // 1.12
-    if (!inner && !s.ui && s.blend && sunShadowDue() && !applySunShadows()) return;  // 0.77: likewise
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
     if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
     // 1.10; 1.25.2: after the grass - drawn before it, the crowns' green grew blades and flowers of its own
@@ -207,7 +203,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                               ai::flatQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount));
         }
     }
-    const bool spriteShaded = sprite && !soft && sunMapMade && sunMap;
     const DrawShader shader = smoke ? DrawShader::Smoke
                               : ray ? DrawShader::Ray
                               : lava ? DrawShader::Lava
@@ -238,7 +233,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     // 1.15: smooth hills - a draw of the ground (its own or a seam's strip) reads the corners' normals (t3)
     bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin && (s.zWrite || seamPass);
-    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly || spriteShaded ? 5 : 2)) return;
+    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly ? 5 : 2)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
@@ -316,9 +311,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         transition(matTex->mat, matTex->matState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         const UINT t3 = hilly ? hillsDataSrv : matTex->matSrv;
         list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(matTex->matSrv, t3, matTex->matSrv));
-    } else if (spriteShaded) {  // 1.17: the real sun's map (t3)
-        transition(sunMap, sunMapState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sunMapSrv, sunMapSrv, sunMapSrv));
     } else if (hilly) {  // 1.15: the hills' normals (t3)
         list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(hillsDataSrv, hillsDataSrv, hillsDataSrv));
     } else if (soft) {  // the depth behind the effect (t3)
@@ -397,7 +389,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
     if (treePass) c.stage0[1] |= 1u << 29;  // 1.25.1: a bunch of the new trees, a round patch (shade())
     if (hilly) hillsConstants(c);  // 1.15
-    if (sprite && !matTex && c.uiMode == 0) spriteConstants(rec, d, spriteShaded, c);  // 1.17
+    if (sprite && !matTex && c.uiMode == 0) spriteConstants(c);  // 1.17
     if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())
         c.stage1[1] |= 1u << 31;
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
