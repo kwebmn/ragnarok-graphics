@@ -1,3 +1,8 @@
+# uaRO Graphics 1.13.1 — testing
+
+- The settings app's Living world and Remaster blocks have **Turn all of these on** and **Turn all of these off**
+  buttons - to switch the whole set on for testing and back as quickly.
+
 # uaRO Graphics 1.13.0 — testing
 
 - **Volumetric fog** (`effects.volumetric_fog`, density `effects.volumetric_fog_density`, the Remaster block, Remaster
