@@ -1,3 +1,11 @@
+# uaRO Graphics 1.9.1 — testing
+
+- **Smooth seams of the ground without dark "bricks".** 1.9.0's strip carried the neighbour's texture on past its
+  edge, and many maps' ground takes a quarter of a shared picture of four - the strip showed the next quarter
+  (cracks, stones), and dark rectangular pieces stood along the cells (moc_fild01, report R-PMH75Q). Now the
+  neighbour's texture is mirrored across the edge and stays its own.
+- How to check: moc_fild01 and prt_fild08 with Smooth seams of the ground - a pair on/off.
+
 # uaRO Graphics 1.9.0 — testing
 
 - **The remaster's phase B, its first step: smooth seams of the ground** (`effects.ground_seams`, the Remaster block,
