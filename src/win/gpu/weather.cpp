@@ -3,6 +3,7 @@
 #include <d3d12.h>
 
 #include <algorithm>
+#include <cmath>
 
 #include "core/game_camera.hpp"
 #include "win/gpu/impl.hpp"
@@ -90,6 +91,10 @@ bool Renderer::Impl::applyWeather() {
         c.sourceRect[0] = (m[9] * m[0] + m[10] * m[1] + m[11] * m[2]) * perUnit;
         c.sourceRect[1] = (m[9] * m[3] + m[10] * m[4] + m[11] * m[5]) * perUnit;
     }
+    if (windShared()) {  // 1.22: blown along the screen by the shared wind
+        c.sourceRect[2] = weatherDrift.x;
+        c.sourceRect[3] = windScreenX * windNow.strength * 60.0f;
+    }
     if (!weatherLogged)
         LOG_INFO("weather: %s over %s", motes ? (mapOutdoors ? "pollen" : "dust") : weatherName(mapWeather),
                  mapName.c_str());
@@ -121,6 +126,23 @@ const char* weatherName(weather::Kind k) {
     case weather::Kind::Sand: return "sand";
     default: return "none";
     }
+}
+
+// 1.22: the shared wind now (core/wind.hpp) and what it has carried since the last frame: the weather along the
+// screen (pixels), the clouds' shadows over the world, the sky's clouds.
+void Renderer::Impl::updateWind() {
+    const float now = waterTime();
+    float dt = windClock < 0.0f ? 0.0f : now - windClock;
+    if (dt < 0.0f) dt = 0.0f;  // the clock went round its hour
+    windClock = now;
+    windNow = wind::at(double(now));
+    const float* m = viewToWorld;
+    const float axis = std::sqrt(m[0] * m[0] + m[2] * m[2]);
+    windScreenX = axis > 1e-4f ? (windNow.x * m[0] + windNow.z * m[2]) / axis : 0.0f;
+    const float s = windNow.strength;
+    weatherDrift.advance(windScreenX * s * 60.0f, 0.0f, dt);
+    cloudsDrift.advance(windNow.x * s * 0.016f, windNow.z * s * 0.016f, dt);
+    skyDrift.advance(windNow.x * s * 0.012f, windNow.z * s * 0.012f, dt);
 }
 
 }  // namespace uagfx::gpu

@@ -101,6 +101,7 @@ const EffectLayout kEffects[] = {
     {"effects.seasons", {}, {}, {}, 2},  // 1.20
     {"effects.rain_wet", {}, {}, {}, 2},  // 1.20
     {"effects.night_windows", {}, {}, {}, 2},  // 1.21
+    {"effects.shared_wind", {}, {}, {}, 2},  // 1.22
 };
 
 }  // namespace

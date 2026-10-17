@@ -342,6 +342,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxRainWetHint, ""},
         {"effects", "night_windows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNightWindows,
          Text::FxNightWindowsHint, ""},
+        {"effects", "shared_wind", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSharedWind,
+         Text::FxSharedWindHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -658,6 +660,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.seasons") return c.effects.seasons ? "1" : "0";
     if (k == "effects.rain_wet") return c.effects.rainWet ? "1" : "0";
     if (k == "effects.night_windows") return c.effects.nightWindows ? "1" : "0";
+    if (k == "effects.shared_wind") return c.effects.sharedWind ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

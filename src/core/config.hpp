@@ -363,6 +363,9 @@ struct EffectSettings {
     // 1.21: windows at night (material_ps finds the panes, shade() lights them): the houses' windows glow warm as
     // the night comes. Needs the materials. Off by default.
     bool nightWindows = false;
+    // 1.22: one wind for the whole world (core/wind.hpp): the grass, the leaves, the sand, the rain, the snow and the
+    // clouds go its way, which turns slowly, its strength coming and going. Off by default.
+    bool sharedWind = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

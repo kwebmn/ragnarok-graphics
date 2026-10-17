@@ -17,6 +17,7 @@
 #include "core/hills.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
+#include "core/wind.hpp"
 #include "core/living.hpp"
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
@@ -549,6 +550,14 @@ struct Renderer::Impl {
     std::string mapName;                    // the map the game shows (setMap)
     trees::Season mapSeason = trees::Season::Green;  // 1.7: its trees' (core/trees.hpp)
     seasons::Look mapYear;  // 1.20: the year on its ground (core/seasons.hpp)
+    // 1.22: the shared wind (core/wind.hpp), once a frame (weather.cpp updateWind): its way in the world, its way on
+    // the screen (the view's x axis), and what it has carried the weather (pixels), the clouds' shadows and the sky's
+    // clouds so far
+    wind::Wind windNow;
+    float windScreenX = 0.0f, windClock = -1.0f;
+    wind::Drift weatherDrift, cloudsDrift, skyDrift;
+    bool windShared() const { return effects.sharedWind && viewToWorldValid; }
+    void updateWind();
     living::Place mapPlace;                          // 1.7: its small details (core/living.hpp)
     int minuteNow() const { return effects.dayCycle && effects.dayNow >= 0 ? effects.dayNow : living::localMinute(); }
     LeafLook leafLook() const;  // 1.7: the trees' settings for leafShading (draw.cpp)
@@ -888,6 +897,7 @@ struct Renderer::Impl {
         if (hillsWanted()) hillsGrid = hills::build(groundTris);  // 1.15: before they go
         hillsUp = hillsTried = false;
         smoothReady = false;  // 1.19
+        if (windShared()) updateWind();  // 1.22
         groundTris.clear();  // 1.9
         groundGroups.clear();
         groundTextures.clear();

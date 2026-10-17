@@ -103,6 +103,10 @@ bool Renderer::Impl::applyClouds() {
     c.uiPixels[3] = float(cloudsMaskH);
     c.sharpen = waterTime();
     c.footprint = float(std::clamp(effects.cloudsStrength, 0, 100)) / 100.0f;
+    if (windShared()) {  // 1.22: drifting with the shared wind
+        c.sourceRect[0] = cloudsDrift.x;
+        c.sourceRect[1] = cloudsDrift.y + 1e-3f;
+    }
     if (!cloudsLogged) LOG_INFO("clouds: their shadows over %s", mapName.c_str());
     cloudsLogged = true;
     if (!effectPass(cloudsMaskPipeline, cloudsMask, cloudsMaskState, rtvHandle(kRtvClouds), cloudsMaskW, cloudsMaskH,

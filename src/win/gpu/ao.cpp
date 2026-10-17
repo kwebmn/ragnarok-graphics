@@ -360,6 +360,10 @@ bool Renderer::Impl::applyGrass() {
     if (effects.dew) c.twin[3] = living::dew(minuteNow()) *
                                  (1.0f - float(std::clamp(effects.nightNow, 0, 100)) / 100.0f);
     if (effects.gusts) c.sourceRect[0] = 1.0f;
+    if (windShared()) {  // 1.22: the shared wind's way times its strength
+        c.sourceRect[2] = windNow.x * windNow.strength;
+        c.sourceRect[3] = windNow.z * windNow.strength;
+    }
     if (!grassLogged) LOG_INFO("grass: on %s, blades up to %.0f pixels", mapName.c_str(), c.twin[0]);
     grassLogged = true;
     const UINT list1 = steps ? stepsDataSrv : sceneColorSrv;
@@ -405,6 +409,10 @@ bool Renderer::Impl::applyGroundLife() {
         c.sourceRect[3] = mapYear.lush;
     }
     if (rainWetShown()) c.sourceClamp[2] = 1.0f;
+    if (windShared()) {  // 1.22: the sand drifts the shared wind's way
+        c.uiPixels[2] = windNow.x;
+        c.uiPixels[3] = windNow.z;
+    }
     c.sharpen = waterTime();
     if (!groundLifeLogged)
         LOG_INFO("living ground: on %s (%s%s%s)", mapName.c_str(),

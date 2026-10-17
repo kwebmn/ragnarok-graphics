@@ -385,6 +385,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         LeafLook look = leafLook();
         look.shells = effects.fullCrowns;
         leafShading(rec, d, look, c);
+        if (windShared()) c.uiPixels[3] *= (windScreenX < 0.0f ? -1.0f : 1.0f) * (0.4f + 0.6f * windNow.strength);
         if (effects.leafFall) noteCrown(rec, d);
         shells = effects.fullCrowns && c.sourceRect[2] > c.sourceRect[0];  // 1.9.7
     }

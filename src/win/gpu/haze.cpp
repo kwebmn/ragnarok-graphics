@@ -232,6 +232,10 @@ bool Renderer::Impl::applySky() {
         c.sourceClamp[0] = cameraTargetZ * viewToWorld[7] + viewToWorld[10];
         if (!copySceneColor()) return false;
     }
+    if (windShared()) {  // 1.22: the clouds drift with the shared wind
+        c.sourceClamp[1] = skyDrift.x;
+        c.sourceClamp[2] = skyDrift.y + 1e-3f;
+    }
     c.sharpen = waterTime();
     if (!skyLogged) LOG_INFO("sky: over %s", mapName.c_str());
     skyLogged = true;

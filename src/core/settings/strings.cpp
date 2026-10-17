@@ -2625,6 +2625,15 @@ const Entry kTexts[] = {
      "потрібні «Матеріали світу» й ніч (Direct3D 12).",
      "С наступлением ночи окна домов загораются тёплым светом, не все. Стёкла находятся в картинках стен сами; нужны "
      "«Материалы мира» и ночь (Direct3D 12)."},
+    {"One wind for everything",
+     "Один вітер для всього",
+     "Один ветер для всего"},
+    {"The grass, the leaves, drifting sand, rain, snow and the clouds all go one way with one wind, which slowly "
+     "turns and blows stronger and weaker - instead of each going its own way (Direct3D 12).",
+     "Трава, листя, піщана поземка, дощ, сніг і хмари рухаються в один бік з одним вітром, що поволі змінює напрям і "
+     "то посилюється, то слабне, — а не кожне куди саме хоче (Direct3D 12).",
+     "Трава, листва, песчаная позёмка, дождь, снег и облака движутся в одну сторону с одним ветром, который медленно "
+     "меняет направление и то усиливается, то стихает, — а не каждое куда само хочет (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

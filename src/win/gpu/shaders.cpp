@@ -77,7 +77,9 @@ PsIn draw_vs(VsIn i) {
         float wave = sin(twinH * 1.6 + i.pos.x * 0.013 + i.pos.y * 0.007) * 0.7 +
                      sin(twinH * 2.9 + i.pos.x * 0.031) * 0.3;
         // 1.7, gusts (uiPixels.w): a band of wind crossing the screen from the left now and then (grass_ps alike).
-        wave += uiPixels.w * gustAt(i.pos.x, twinH) * 2.6;
+        // 1.22: the shared wind's - its sign the side it comes from, its size how strong
+        float across = uiPixels.w < 0.0 ? 4096.0 - i.pos.x : i.pos.x;
+        wave += uiPixels.w * gustAt(across, twinH) * 2.6;
         gx += twinX * up * up * wave;
     }
     float gy = i.pos.y;
@@ -1519,7 +1521,7 @@ float clouds_ps(PresentOut i) : SV_Target {
     float3 v = viewAt(wp);
     float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
     float t = sharpen;
-    float2 q = w.xz * 0.0035 + float2(t * 0.012, t * 0.005);
+    float2 q = w.xz * 0.0035 + (any(sourceRect.xy != 0.0) ? sourceRect.xy : float2(t * 0.012, t * 0.005));  // 1.22
     float n = fbm4(q) * 0.7 + fbm4(q * 2.3 + float2(5.1, 1.7)) * 0.3;
     return 1.0 - smoothstep(0.46, 0.68, n) * footprint * 0.55;
 }
@@ -1673,13 +1675,17 @@ float4 grass_ps(PresentOut i) : SV_Target {
     // 1.9.9: how far the steps trod the grass down here, once a pixel (until 1.9.8 for every root it looked at: up
     // to 28 roots times 64 steps a pixel - the costliest effect, 1.3-3.2 ms at 4K)
     float lean = 0.0, swayPhase = 0.0, gust = 0.0, trod = 1.0;
+    float windStrength = length(sourceRect.zw);
+    float2 windWay = windStrength > 1e-4 ? sourceRect.zw / windStrength : float2(0.943, 0.33);
+    // 1.22: the blades lean the wind's way on the screen (the view's x axis in the world: r0-r2)
+    float windLean = windStrength * dot(float3(windWay.x, 0.0, windWay.y), float3(r0, r1, r2)) * 0.35;
     if (here < 0.99999) {
         float3 hv = viewAt(wp);
         float3 hw = hv.x * float3(r0, r1, r2) + hv.y * float3(r3, r4, r5) + hv.z * float3(r6, r7, r8) +
                     float3(r9, r10, r11);
         swayPhase = hw.x * 0.35 + hw.z * 0.22;
-        if (sourceRect.x > 0.0)
-            gust = pow(saturate(sin(dot(hw.xz, float2(0.040, 0.014)) - t * 0.7)), 8.0) * (0.55 + 0.45 * sin(t * 0.23)) *
+        if (sourceRect.x > 0.0)  // 1.22: along the shared wind (sourceRect.zw its way times its strength)
+            gust = pow(saturate(sin(dot(hw.xz, windWay * 0.042) - t * 0.7)), 8.0) * (0.55 + 0.45 * sin(t * 0.23)) *
                    sourceRect.x;
         float2 push = float2(0.0, 0.0);
         [loop] for (int s = 0; s < count; ++s) {
@@ -1695,7 +1701,7 @@ float4 grass_ps(PresentOut i) : SV_Target {
     [loop] for (int k = longest; k >= 1; --k) {
         float up = float(k) / twinX;
         float sway = sin(t * 1.7 + swayPhase) * 0.25 * twinX * up * up;
-        sway += (gust * 0.55 + lean * 0.5) * twinX * up * up;
+        sway += (gust * 0.55 + lean * 0.5 + windLean) * twinX * up * up;
         int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
         float rd = sceneDepth.Load(int3(root, 0));
         if (rd >= 0.99999) continue;
@@ -1745,7 +1751,7 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
     float3 o = col;
     float a = 0.0;
     if (twinX > 0.0 && col.r > col.g * 1.02 && col.g > col.b * 1.05 && col.r > 0.22) {  // sand
-        float2 wind = float2(0.94, 0.34);
+        float2 wind = any(uiPixels.zw != 0.0) ? normalize(uiPixels.zw) : float2(0.94, 0.34);  // 1.22: shared
         float2 q = float2(dot(w.xz, wind), dot(w.xz, float2(-wind.y, wind.x)));
         float n = valueNoise(float2(q.x * 0.07 - t * 1.4, q.y * 0.8)) * 0.6 +
                   valueNoise(float2(q.x * 0.16 - t * 2.3 + 3.1, q.y * 1.9)) * 0.4;
@@ -2411,7 +2417,7 @@ float4 sky_ps(PresentOut i) : SV_Target {
     float t = sharpen;
     float3 c = lerp(fogColor.rgb, sourceRect.rgb, smoothstep(-0.35, 0.6, up));
     float2 layer = d.xz / (abs(d.y) + 0.3);
-    float2 uv = layer * 1.4 + float2(t * 0.010, t * 0.006);
+    float2 uv = layer * 1.4 + (any(sourceClamp.yz != 0.0) ? sourceClamp.yz : float2(t * 0.010, t * 0.006));  // 1.22
     float n = fbm4(uv);
     float cover = smoothstep(0.62 - 0.3 * twinX, 0.92 - 0.2 * twinX, n) * saturate(twinX * 1.5);
     float lit = saturate(0.55 + (n - fbm4(uv + float2(0.06, 0.04))) * 6.0);  // the side towards the light brighter
@@ -2508,7 +2514,10 @@ float4 weather_ps(PresentOut i) : SV_Target {
                       : kind == 3 ? float2(18.0, 26.0)
                       : kind == 4 ? float2(-300.0, 14.0)
                                   : float2(5.0, kind == 5 ? -3.0 : 2.0);
-        float2 q = p + sourceRect.xy * depth - fall * depth * t;
+        // 1.22: the shared wind blows it along the screen (sourceRect.z how far so far, .w how fast now)
+        float blown = kind == 1 ? 1.0 : kind == 2 ? 0.6 : kind == 3 ? 1.6 : kind == 4 ? 2.5 : 0.4;
+        float2 q = p + sourceRect.xy * depth - fall * depth * t - float2(sourceRect.z * blown, 0.0) * depth;
+        fall.x += sourceRect.w * blown;
         float2 id = floor(q / cell);
         float2 f = frac(q / cell);
         float presence = kind == 3 ? 0.18 : kind == 4 ? 0.35 : kind >= 5 ? 0.3 : 0.55;
