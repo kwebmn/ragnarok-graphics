@@ -1,3 +1,10 @@
+# uaRO Graphics 1.8.4 — testing
+
+- **Fixed:** the driver read the game's camera only for the older effects (water, torches, characters' shadows and
+  the like). With only the newer ones on - grass, the Living world, the materials - they had no camera: no trees'
+  shades, no patches on the ground, no creatures. Now the camera is read for any effect the driver draws itself.
+- How to check: everything off but, say, Materials of the world or Butterflies - they work.
+
 # uaRO Graphics 1.8.3 — testing
 
 - **The grass no longer "flows in waves" as you walk.** Its sway and the gusts went by the pixel on the screen: as
