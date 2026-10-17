@@ -59,7 +59,8 @@ ALLOWED = {
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",
         "__wgetmainargs", "__winitenv", "_amsg_exit", "_cexit", "_close", "_errno", "_filelengthi64", "_fileno",
-        "_initterm", "_iob", "_onexit", "_read", "_wfopen", "abort", "atoi", "calloc", "exit", "fclose", "fflush",
+        "_initterm", "_iob", "_onexit", "_read", "_wfopen", "abort", "atoi", "calloc", "clock", "exit", "fclose",
+        "fflush",
         "fgetpos", "fopen", "fprintf", "fputc", "fputs", "fputwc", "fread", "free", "fsetpos", "fwprintf",
         "fwrite", "isalnum", "isupper", "iswctype", "isxdigit", "localeconv", "malloc", "memchr", "memcmp", "memcpy",
         "memmove", "memset", "realloc",

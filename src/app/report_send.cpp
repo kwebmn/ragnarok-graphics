@@ -4,12 +4,14 @@
 #include <winhttp.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <ctime>
 #include <sstream>
 
 #include "app/files.hpp"
 #include "app/shots.hpp"
 #include "app/text.hpp"
+#include "core/usage.hpp"
 #include "core/version.hpp"
 
 namespace uagfx::app {
@@ -150,24 +152,27 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
     return u;
 }
 
-bool sendUpload(const report::Upload& u, std::string& code, std::string& error) {
-    const std::string body = report::uploadJson(u);
+namespace {
+
+// A JSON body POSTed to uaro.kiev.ua's `path`: its status and answer, false when no answer came (`error` says why).
+bool postJson(const wchar_t* path, const std::string& body, DWORD& status, std::string& answer, std::string& error) {
     HINTERNET session = WinHttpOpen(L"uaRO Graphics Settings", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
                                      WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (session) WinHttpSetTimeouts(session, 10000, 10000, 30000, 30000);
     HINTERNET connect = session ? WinHttpConnect(session, report::kHost, INTERNET_DEFAULT_HTTPS_PORT, 0) : nullptr;
-    HINTERNET request = connect ? WinHttpOpenRequest(connect, L"POST", report::kPath, nullptr, WINHTTP_NO_REFERER,
+    HINTERNET request = connect ? WinHttpOpenRequest(connect, L"POST", path, nullptr, WINHTTP_NO_REFERER,
                                                      WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)
                                 : nullptr;
     const wchar_t* headers = L"Content-Type: application/json\r\nAccept: application/json\r\n";
-    DWORD status = 0, size = sizeof status;
+    status = 0;
+    DWORD size = sizeof status;
     const bool sent = request &&
                       WinHttpSendRequest(request, headers, DWORD(-1L), const_cast<char*>(body.data()),
                                          DWORD(body.size()), DWORD(body.size()), 0) &&
                       WinHttpReceiveResponse(request, nullptr) &&
                       WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
                                           WINHTTP_HEADER_NAME_BY_INDEX, &status, &size, WINHTTP_NO_HEADER_INDEX);
-    std::string answer;
+    answer.clear();
     if (sent) {
         DWORD n = 0;
         while (WinHttpQueryDataAvailable(request, &n) && n && answer.size() < (64u << 10)) {
@@ -184,6 +189,15 @@ bool sendUpload(const report::Upload& u, std::string& code, std::string& error) 
         error = "no answer from uaro.kiev.ua (error " + std::to_string(GetLastError()) + ")";
         return false;
     }
+    return true;
+}
+
+}  // namespace
+
+bool sendUpload(const report::Upload& u, std::string& code, std::string& error) {
+    DWORD status = 0;
+    std::string answer;
+    if (!postJson(report::kPath, report::uploadJson(u), status, answer, error)) return false;
     if (status == 429) {
         error = "too many reports from this computer - try again in an hour";
         return false;
@@ -212,12 +226,48 @@ std::vector<std::string> sentCodes(const Model& m, size_t most) {
     return out;
 }
 
+bool sendUsage(const std::wstring& dir, bool force, std::string& error) {
+    std::string ini;
+    readFile(dir + L"\\uaro-graphics.ini", ini);
+    const Config c = parseConfig(ini);
+    if (!c.statsSend || c.statsId.empty()) return false;  // no leave: nothing goes
+    const std::wstring file = dir + L"\\uaro-graphics\\usage.jsonl";
+    const std::wstring sentAt = dir + L"\\uaro-graphics\\stats-sent.txt";
+    std::string lines, last;
+    if (!readFile(file, lines) || lines.empty()) return true;
+    readFile(sentAt, last);
+    long long then = 0;
+    for (const char c : last)  // the time it was last sent, seconds
+        if (c >= '0' && c <= '9') then = then * 10 + (c - '0');
+    const long long now = static_cast<long long>(std::time(nullptr));
+    if (!force && now - then < 20 * 3600 && lines.size() < (512u << 10)) return true;  // once a day
+    size_t taken = 0;
+    const std::string body = usage::uploadBody(c.statsId, kVersion, lines, usage::kMostUpload, taken);
+    if (!taken) return true;  // no whole line yet
+    DWORD status = 0;
+    std::string answer;
+    if (!postJson(L"/api/graphics/stats", body, status, answer, error)) return false;
+    if (status != 200 && status != 201) {
+        error = "uaro.kiev.ua answered " + std::to_string(status);
+        return false;
+    }
+    // what was sent goes; what the game wrote meanwhile after it stays (the file is read again)
+    std::string after;
+    readFile(file, after);
+    const bool same = after.size() >= taken && after.compare(0, taken, lines, 0, taken) == 0;
+    writeFileAtomic(file, same ? after.substr(taken) : after);
+    writeFileAtomic(sentAt, std::to_string(now));
+    return true;
+}
+
 int watchGame(unsigned long pid) {
     HANDLE game = OpenProcess(SYNCHRONIZE, FALSE, pid);
     if (!game) return 0;
     WaitForSingleObject(game, INFINITE);
     CloseHandle(game);
     Sleep(2000);  // the log closed and flushed
+    std::string ignored;
+    sendUsage(exeFolder(), false, ignored);  // 2.2.1: the statistics, with the player's leave
     std::string log;
     if (!readFile(exeFolder() + L"\\uaro-graphics.log", log)) return 0;
     const std::string reason = report::reasonOfLog(log);

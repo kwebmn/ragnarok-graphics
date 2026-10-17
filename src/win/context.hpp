@@ -15,6 +15,7 @@
 #include "core/scale.hpp"
 #include "core/throttle.hpp"
 #include "core/toggle_key.hpp"
+#include "core/usage.hpp"
 #include "win/console.hpp"
 #include "win/fps_overlay.hpp"
 #include "win/gpu/renderer.hpp"
@@ -87,6 +88,13 @@ private:
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
     ToggleKey fpsKey_;  // 0.54: Ctrl+Shift+F11 - the frame counter
+    // 2.2.1: the statistics of the settings played with, with the player's leave ([stats] send; core/usage.hpp)
+    usage::Recorder usage_;
+    usage::Setup usageSetup_;
+    ULONGLONG usageLast_ = 0, usageSetupAt_ = 0;
+    uint32_t usageGpuSerial_ = 0;
+    void noteUsage(bool foreground, long outWidth, long outHeight, const GpuTiming* gpu);
+    void writeUsage(const std::string& lines);
     ToggleKey shotKey_;  // 0.54: Ctrl+Shift+F12 - a screenshot at the picture's full size
     bool fpsShown_ = false;
     // 0.76: [frames] keep_fps - the frames counted since keepSince_, slow windows in a row, the effects turned off for

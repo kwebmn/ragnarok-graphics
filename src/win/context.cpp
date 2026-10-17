@@ -6,8 +6,10 @@
 #include "core/effect_costs.hpp"
 #include "core/effect_groups.hpp"
 #include "core/live_config.hpp"
+#include "core/outdoors.hpp"
 #include "core/scale.hpp"
 #include "core/settings/ini_edit.hpp"
+#include "core/version.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
 #include "win/effect_hook.hpp"
@@ -53,6 +55,68 @@ std::string foregroundName() {
 }
 
 }  // namespace
+
+// 2.2.1: the settings played with, a line a stretch (core/usage.hpp) - with the player's leave only, while the game is
+// in front and shows a map; the setup looked at once a second, not each frame.
+void Context::noteUsage(bool foreground, long outWidth, long outHeight, const GpuTiming* gpu) {
+    const ULONGLONG now = GetTickCount64();
+    const double seconds = usageLast_ ? double(now - usageLast_) / 1000.0 : 0.0;
+    usageLast_ = now;
+    if (!config.statsSend || !foreground || map_.empty() || !renderer) return;
+    if (!usage_.begun()) {
+        const Startup& s = startup();
+        usage::Machine m;
+        m.version = kVersion;
+        m.card = s.adapter;
+        m.api = s.choice.renderer != Renderer::Uaro ? "system" : s.choice.api == Api::D3d11 ? "d3d11" : "d3d12";
+        m.vendor = s.vendor;
+        m.vramMb = s.vramMb;
+        m.level = s.cardLevel;
+        LARGE_INTEGER q;
+        QueryPerformanceCounter(&q);
+        usage_.begin(m, uint64_t(q.QuadPart) * 0x9e3779b97f4a7c15ull ^ (uint64_t(GetCurrentProcessId()) << 32) ^ now);
+    }
+    if (!usageSetupAt_ || now - usageSetupAt_ >= 1000) {
+        usageSetupAt_ = now;
+        usage::Setup u;
+        u.game = std::to_string(screenWidth) + "x" + std::to_string(screenHeight);
+        u.output = std::to_string(outWidth) + "x" + std::to_string(outHeight);
+        u.dlss = config.dlss;
+        u.preset = effect_groups::presetToken(config.effects.preset);
+        for (int g = 0; g < kEffectGroups; ++g)
+            u.groups += std::string(g ? "," : "") + effect_groups::groupWord(g) + ":" +
+                        (config.effects.groups[g] ? "1" : "0") + ":" + std::to_string(config.effects.groupStrength[g]);
+        const EffectSettings drawn = enhanced_ ? effects() : effectsOff();
+        for (int i = 0; i < effect_groups::memberCount(); ++i) {
+            const effect_groups::Member& m = effect_groups::members()[i];
+            if (drawn.*m.on) u.effects += std::string(u.effects.empty() ? "" : ",") + m.key;
+        }
+        u.aiKinds = enhanced_ ? aiKindsShown(config.aiNow) : 0;
+        u.aiModel = config.ai.model + "/" + config.ai.spriteModel;
+        usageSetup_ = u;
+    }
+    double gpuMs = -1.0;
+    if (gpu && gpu->serial != usageGpuSerial_) {
+        usageGpuSerial_ = gpu->serial;
+        gpuMs = gpu->gpuMs;
+    }
+    std::string lines;
+    usage_.frame(seconds, outdoors(map_), gpuMs, usageSetup_, lines);
+    writeUsage(lines);
+}
+
+// The lines to uaro-graphics\usage.jsonl, which the settings app sends and empties; past 4 MB nothing more (the app
+// not run for long, or no leave in it any more).
+void Context::writeUsage(const std::string& lines) {
+    if (lines.empty()) return;
+    const std::string path = gameDir() + "\\uaro-graphics\\usage.jsonl";
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    const bool full = GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &a) &&
+                      (a.nFileSizeHigh || a.nFileSizeLow > (4u << 20));
+    if (full) return;
+    std::ofstream f(path, std::ios::binary | std::ios::app);
+    f.write(lines.data(), std::streamsize(lines.size()));
+}
 
 EffectSettings Context::effects() const { return effect_groups::effective(config.effects, startup().cardLevel); }
 
@@ -460,6 +524,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool timed = renderer->gpuTiming(gpuNow);
     fps_.setGpu(timed ? &gpuNow : nullptr);
     fps_.present(window, fpsShown_);
+    noteUsage(foreground, out.cx, out.cy, timed ? &gpuNow : nullptr);  // 2.2.1
     if (console_.present(window, foreground, gameDir() + "\\uaro-graphics.ini", config,
                          timed ? &gpuNow : nullptr)) {  // 1.9.3
         settingsChecked_ = 0;  // read at once, at the next present
@@ -545,6 +610,15 @@ void Context::watchSettings() {
     if (config.windowArt != was.windowArt) crisp::setWindowArt(config.windowArt);  // 0.41: the windows redrawn
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
     if (config.fpsCounter != was.fpsCounter) fpsShown_ = config.fpsCounter;  // 2.2.1: at once
+    if (config.statsSend && usage_.begun()) {  // 2.2.1: what was changed in the game - what was liked, or not
+        std::string lines;
+        for (const std::string& a : u.applied) usage_.change(a, lines);
+        writeUsage(lines);
+    } else if (!config.statsSend && was.statsSend && usage_.begun()) {
+        std::string lines;
+        usage_.close(lines);  // the leave taken back: the stretch so far, then nothing more
+        writeUsage(lines);
+    }
     std::string line = "settings: uaro-graphics.ini changed:";
     for (size_t i = 0; i < u.applied.size(); ++i) line += (i ? ", " : " ") + u.applied[i];
     if (!u.waiting.empty()) line += u.applied.empty() ? " at the next start:" : "; at the next start:";

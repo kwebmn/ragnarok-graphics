@@ -113,6 +113,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         n.keepFps = file.keepFps;
     }
     if (file.allowTearing != running.allowTearing) u.waiting.push_back("allow_tearing");
+    if (file.statsSend != running.statsSend) {  // 2.2.1: the statistics at once
+        u.applied.push_back(change("stats", flag(running.statsSend), flag(file.statsSend)));
+        n.statsSend = file.statsSend;
+    }
+    n.statsId = file.statsId;
     if (file.fpsCounter != running.fpsCounter) {  // 2.2.1: the frame counter at once
         u.applied.push_back(change("fps_counter", flag(running.fpsCounter), flag(file.fpsCounter)));
         n.fpsCounter = file.fpsCounter;
@@ -139,7 +144,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
-           k == "debug.profile" || k == "frames.fps_counter" ||
+           k == "debug.profile" || k == "frames.fps_counter" || k == "stats.send" ||
            k.compare(0, 8, "effects.") == 0;
 }
 

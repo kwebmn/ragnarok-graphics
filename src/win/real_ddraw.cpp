@@ -42,7 +42,7 @@ void startReportWatcher(const std::string& dir) {
     }
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
-    LOG_INFO("report: the settings app watches this game ([report] auto = 1)");
+    LOG_INFO("report: the settings app watches this game ([report] auto = 1 or [stats] send = 1)");
 }
 
 HMODULE loadSystem() {
@@ -82,6 +82,9 @@ Startup decide() {
         const D3D12Probe p = probeD3D12();
         facts.d3d12 = p.ok;
         vramMb = p.vramMb;
+        s.adapter = p.adapter;
+        s.vendor = p.vendor;
+        s.vramMb = p.vramMb;
         LOG_INFO("Direct3D 12: %s, adapter %s (vendor 0x%04x, device 0x%04x, %llu MB), hr 0x%08lx",
                  p.ok ? "OK" : "FAILED", p.adapter.c_str(), p.vendor, p.device, p.vramMb,
                  static_cast<unsigned long>(p.hr));
@@ -90,6 +93,11 @@ Startup decide() {
     if (s.config.api == Api::D3d11 || (s.config.api == Api::Auto && !(facts.windows10 && facts.d3d12))) {
         const D3D11Probe p = probeD3D11();
         facts.d3d11 = p.ok;
+        if (s.adapter.empty() || !facts.d3d12) {
+            s.adapter = p.adapter;
+            s.vendor = p.vendor;
+            s.vramMb = p.vramMb;
+        }
         LOG_INFO("Direct3D 11: %s, adapter %s, feature level %s, hr 0x%08lx", p.ok ? "OK" : "FAILED",
                  p.adapter.c_str(), p.ok ? featureLevelName(p.level).c_str() : "-", static_cast<unsigned long>(p.hr));
     }
@@ -97,7 +105,8 @@ Startup decide() {
     s.cardLevel = effect_groups::cardLevel(s.choice.api == Api::D3d12 && facts.d3d12, vramMb);
     LOG_INFO("effects: set %s, the card's level %d", effect_groups::presetToken(s.config.effects.preset),
              s.cardLevel);
-    if (s.config.reportAuto && s.choice.renderer == Renderer::Uaro) startReportWatcher(dir);
+    // 2.2.1: also for the statistics - sent when the game ends, with the player's leave
+    if ((s.config.reportAuto || s.config.statsSend) && s.choice.renderer == Renderer::Uaro) startReportWatcher(dir);
     LOG_INFO("renderer: %s%s (%s)", rendererName(s.choice.renderer),
              s.choice.renderer == Renderer::Uaro && s.choice.api == Api::D3d11 ? " with Direct3D 11" : "",
              s.choice.reason.c_str());

@@ -410,6 +410,10 @@ struct Config {
     // 0.51: [report] auto - a report to the developers (uaro.kiev.ua) when a game ended badly: the settings app's
     // watcher, started by the driver, sends it after the game (core/report_upload.hpp).
     bool reportAuto = false;
+    // 2.2.1: [stats] send - the anonymous statistics of the settings played with (core/usage.hpp), asked once by the
+    // settings app; id - this installation's random number there (no name, no login)
+    bool statsSend = false;
+    std::string statsId;
     bool bridgeDpiScale = true;
     // Part 4 (test): [renderer] remix = 1 draws through Direct3D 9's fixed function, with the world in world space:
     // RTX Remix when its d3d9.dll is next to uaRO.exe, else the system's Direct3D 9.

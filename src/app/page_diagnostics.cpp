@@ -25,9 +25,11 @@ constexpr int kVerbose = 1307;
 constexpr int kComment = 1308;  // 0.51: the report to the developers
 constexpr int kSend = 1309;
 constexpr int kAutoReport = 1310;
+constexpr int kStats = 1315;  // 2.2.1: the anonymous statistics
 constexpr int kShots = 1311;  // 1.8.1
 bool g_shots = true;           // the box, while the settings app runs
-constexpr int kProfile = 1311;  // 0.87
+// 0.87; 2.2.1: was 1311, the screenshots' box's too - a click on it switched them
+constexpr int kProfile = 1312;
 
 struct Row {
     std::wstring check;
@@ -89,6 +91,7 @@ public:
         p.check(kShots, t(Text::ReportShots), g_shots, t(Text::ReportShotsHint));
         p.buttons({{kSend, t(Text::ReportSend)}});
         p.check(kAutoReport, t(Text::ReportAuto), m.token(*findSetting("report.auto")) == "1", t(Text::ReportAutoHint));
+        p.check(kStats, t(Text::StatsSend), m.now().config.statsSend, t(Text::StatsSendHint));  // 2.2.1
         const std::vector<std::string> sent = sentCodes(m);
         if (!sent.empty()) {
             std::string list;
@@ -122,6 +125,11 @@ public:
             sendReport();
         } else if (id == kShots) {
             g_shots = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
+        } else if (id == kStats) {  // 2.2.1: the leave given or taken back - written at once
+            const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
+            const std::wstring err = m.setStats(on, host_.lang());
+            if (!err.empty()) host_.message(err, true);
+            host_.reload();
         } else if (id == kAutoReport) {
             const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
             m.setToken(*findSetting("report.auto"), on ? "1" : "0");

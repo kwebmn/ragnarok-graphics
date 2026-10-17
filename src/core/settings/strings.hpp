@@ -277,6 +277,7 @@ enum class Text : uint16_t {
     FxGroupStrengthHint, FxDetails, FxDetailsHide, FxDetailsNote,
     // 2.2.1
     FxGroupFixes, FxGroupFixesHint,
+    StatsSend, StatsSendHint, StatsAsk,
     Count
 };
 

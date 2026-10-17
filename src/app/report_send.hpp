@@ -22,5 +22,8 @@ std::vector<std::string> sentCodes(const Model& m, size_t most = 5);
 // uaro-graphics.exe --watch <pid>, started by the driver with [report] auto = 1: waits for that game to end, and
 // when its log says it went badly (report::reasonOfLog), sends a report - at most one in 6 hours. No window.
 int watchGame(unsigned long pid);
+// 2.2.1: uaro-graphics\usage.jsonl (core/usage.hpp) to uaro.kiev.ua, with the player's leave ([stats] send) - once a
+// day (force: now); what was sent leaves the file. false: not sent (error says why, "" no leave).
+bool sendUsage(const std::wstring& dir, bool force, std::string& error);
 
 }  // namespace uagfx::app

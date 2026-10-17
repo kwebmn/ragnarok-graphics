@@ -38,6 +38,8 @@ const std::vector<IniSetting>& iniSettings() {
         // 0.51: the Diagnostics page's own check box
         {"report", "auto", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ReportAuto,
          Text::ReportAutoHint, ""},
+        {"stats", "send", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::StatsSend,
+         Text::StatsSendHint, ""},  // 2.2.1
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         {"renderer", "remix", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
@@ -525,6 +527,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "renderer.api") return apiToken(c.api);
     if (k == "renderer.gpu") return c.gpu.empty() ? "auto" : c.gpu;
     if (k == "report.auto") return c.reportAuto ? "1" : "0";
+    if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
     if (k == "renderer.remix") return c.remix ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";

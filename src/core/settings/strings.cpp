@@ -2826,6 +2826,30 @@ const Entry kTexts[] = {
      "біля стін замість обрізаних, світ плавно з'являється після нової карти. У кожному наборі.",
      "То, что чинит старую картинку, а не добавляет к ней: запечённый свет карты плавный вместо пятен, эффекты тают "
      "у стен вместо обрезанных, мир плавно появляется после новой карты. В каждом наборе."},
+    {"Send anonymous statistics of the settings",
+     "Надсилати анонімну статистику налаштувань",
+     "Отправлять анонимную статистику настроек"},
+    {"Helps make the graphics better for everyone: which effects and textures are on and how long, what is turned "
+     "off after a try, the graphics card's name and memory, the frames a second and the card's milliseconds. No name, "
+     "no login, no files - a random number for this computer. Sent by this app to uaro.kiev.ua once a day.",
+     "Допомагає зробити графіку кращою для всіх: які ефекти й текстури ввімкнені й скільки часу, що вимикають після "
+     "спроби, назва й пам'ять відеокарти, кадри за секунду й мілісекунди карти. Ні імені, ні логіна, ні файлів — "
+     "випадкове число для цього комп'ютера. Надсилає ця утиліта на uaro.kiev.ua раз на день.",
+     "Помогает сделать графику лучше для всех: какие эффекты и текстуры включены и сколько времени, что выключают "
+     "после пробы, название и память видеокарты, кадры в секунду и миллисекунды карты. Ни имени, ни логина, ни "
+     "файлов — случайное число для этого компьютера. Отправляет эта утилита на uaro.kiev.ua раз в день."},
+    {"Help make uaRO Graphics better?\n\nWith your leave the settings app sends, once a day, anonymous statistics "
+     "of how the graphics are played: which effects and textures are on and for how long, what is turned off after "
+     "a try, the graphics card and its frames a second. No name, no login, no files.\n\nThe best settings for each "
+     "graphics card are then made from it. You can change your mind on the Diagnostics page.",
+     "Допомогти зробити uaRO Graphics кращим?\n\nЗ вашого дозволу утиліта раз на день надсилає анонімну "
+     "статистику того, як грають з графікою: які ефекти й текстури ввімкнені й скільки часу, що вимикають після "
+     "спроби, відеокарта та її кадри за секунду. Ні імені, ні логіна, ні файлів.\n\nЗ неї складаються найкращі "
+     "налаштування для кожної відеокарти. Передумати можна на сторінці «Діагностика».",
+     "Помочь сделать uaRO Graphics лучше?\n\nС вашего разрешения утилита раз в день отправляет анонимную "
+     "статистику того, как играют с графикой: какие эффекты и текстуры включены и сколько времени, что выключают "
+     "после пробы, видеокарта и её кадры в секунду. Ни имени, ни логина, ни файлов.\n\nИз неё составляются лучшие "
+     "настройки для каждой видеокарты. Передумать можно на странице «Диагностика»."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -1,6 +1,9 @@
 #include "app/model.hpp"
 
 #include <algorithm>
+#include <cstdio>
+#include <cstdint>
+#include <ctime>
 #include <set>
 
 #include "app/files.hpp"
@@ -611,5 +614,30 @@ std::optional<Lang> Model::savedLanguage() const {
 }
 
 void Model::saveLanguage(Lang l) { writeIni({{"utility", "language", langToken(l)}}, l); }
+
+bool Model::statsAsked() const { return readIni(currentIni()).count("stats.send") > 0; }
+
+std::wstring Model::setStats(bool send, Lang l) {
+    std::vector<IniEdit> edits{{"stats", "send", send ? "1" : "0"}};
+    if (send && parseConfig(currentIni()).statsId.empty()) {
+        // the clocks (seconds since 1970, the processor's time of this app) and a stack address, mixed: a number for
+        // this computer, not a secret (no std::chrono: its clocks bring GetTimeZoneInformation into the imports)
+        int here = 0;
+        uint64_t x = uint64_t(std::time(nullptr)) ^ (uint64_t(std::clock()) << 32) ^
+                     (uint64_t(reinterpret_cast<uintptr_t>(&here)) << 7);
+        for (int i = 0; i < 4; ++i) {  // splitmix64: the bits spread
+            x += 0x9e3779b97f4a7c15ull;
+            x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ull;
+            x = (x ^ (x >> 27)) * 0x94d049bb133111ebull;
+            x ^= x >> 31;
+        }
+        char id[24];
+        std::snprintf(id, sizeof id, "%016llx", static_cast<unsigned long long>(x));
+        edits.push_back({"stats", "id", id});
+    }
+    const std::wstring err = writeIni(edits, l);
+    if (err.empty()) load();
+    return err;
+}
 
 }  // namespace uagfx::app

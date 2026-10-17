@@ -11,6 +11,10 @@ struct Startup {
     Config config;
     RendererChoice choice;
     int cardLevel = 1;  // 2.2: the card's for the automatic effects set (effect_groups::cardLevel)
+    // 2.2.1: the card's name, maker and video memory (the statistics, core/usage.hpp)
+    std::string adapter;
+    unsigned vendor = 0;
+    unsigned long long vramMb = 0;
 };
 const Startup& startup();
 

@@ -4,8 +4,10 @@
 #include <commdlg.h>
 
 #include <algorithm>
+#include <memory>
 
 #include "app/mnemonic.hpp"
+#include "app/report_send.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -24,6 +26,15 @@ constexpr int kUndo = 22;
 constexpr int kCloseButton = 23;
 constexpr UINT kRebuild = WM_APP + 1;
 constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page
+constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics go
+
+// 2.2.1: the day's statistics, on a thread of its own (the network may take seconds); the folder's copy its own.
+DWORD WINAPI sendStats(void* folder) {
+    std::unique_ptr<std::wstring> dir(static_cast<std::wstring*>(folder));
+    std::string error;
+    sendUsage(*dir, false, error);
+    return 0;
+}
 constexpr UINT_PTR kTimer = 1;
 constexpr UINT_PTR kTickTimer = 2;  // 0.43: a page's tick()
 
@@ -236,6 +247,7 @@ void MainWindow::create() {
     SendMessageW(sidebar_, LB_SETCURSEL, 0, 0);
     buildPage();
     SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
+    PostMessageW(hwnd_, kAskStats, 0, 0);
 }
 
 RECT MainWindow::pageArea() const {
@@ -512,6 +524,20 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kRebuild:
             if (rebuilds_.arrived()) buildPage();
             return 0;
+        case kAskStats: {  // 2.2.1: asked once; then the day's statistics go in the background (not while it plays)
+            if (!model_->statsAsked()) {
+                const bool yes = box(wtr(lang_, Text::StatsAsk), MB_YESNO | MB_ICONQUESTION) == IDYES;
+                const std::wstring err = model_->setStats(yes, lang_);
+                if (!err.empty()) message(err, true);
+                rebuild();
+            }
+            if (model_->now().config.statsSend && !model_->now().gameRunning) {
+                const std::wstring dir = model_->paths().dir;
+                HANDLE t = CreateThread(nullptr, 0, &sendStats, new std::wstring(dir), 0, nullptr);
+                if (t) CloseHandle(t);
+            }
+            return 0;
+        }
         case WM_TIMER:
             if (wp == kTimer && model_->refreshRunning()) rebuild();  // the game started or closed
             if (wp == kTickTimer && current_) current_->tick();

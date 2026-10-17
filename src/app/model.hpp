@@ -135,6 +135,10 @@ public:
     std::wstring launchGame(settings::Lang l);
     std::optional<settings::Lang> savedLanguage() const;
     void saveLanguage(settings::Lang l);  // the app's own key: no backup for it
+    // 2.2.1: the anonymous statistics (core/usage.hpp) - whether the player was asked ([stats] send in the file), and
+    // the answer written at once (with this computer's random number the first time)
+    bool statsAsked() const;
+    std::wstring setStats(bool send, settings::Lang l);
 
 private:
     // The ini as it is on disk now - what Notepad or use-*.bat wrote since load() stays - or the shipped defaults

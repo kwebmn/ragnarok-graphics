@@ -407,6 +407,11 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.bridge);
         } else if (key == "report.auto") {
             setBool(val, c.reportAuto);
+        } else if (key == "stats.send") {  // 2.2.1
+            setBool(val, c.statsSend);
+        } else if (key == "stats.id") {
+            if (val.size() >= 8 && val.size() <= 32 && val.find_first_not_of("0123456789abcdef") == std::string::npos)
+                c.statsId = val;
         } else if (key == "renderer.gpu") {
             c.gpu = val == "auto" ? "" : raw;
         } else if (key == "renderer.bridge_present") {
