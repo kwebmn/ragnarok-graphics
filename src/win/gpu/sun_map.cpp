@@ -230,6 +230,8 @@ bool Renderer::Impl::applyRealShadows() {
         c.jitter[0] = jitter[0];
         c.jitter[1] = jitter[1];
     }
+    std::copy(c.reproject, c.reproject + 12, sunViewToBox);  // 1.13: for the fog
+    sunMapMade = true;
     const int w = sceneWidth, h = sceneHeight;
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
@@ -244,6 +246,52 @@ bool Renderer::Impl::applyRealShadows() {
     return upscale ? effectPass(apply, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, sunMapSrv)
                    : effectPass(apply, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true,
                                 sunMapSrv);
+}
+
+// 1.13: volumetric fog lying low over the fields, lit by the sun where its map says the light gets through (rays
+// through the crowns and past the houses), blended over the world once it is drawn - the characters in it too.
+bool Renderer::Impl::applyFog() {
+    fogLightDone = true;
+    crumb("volumetric fog");
+    if (!ensureScene("volumetric fog")) return true;
+    ID3D12PipelineState* pso = alphaPipeline(fogLightPs, fogLightPipelines, upscale ? 1 : samples, "volumetric fog");
+    if (!pso) return true;
+    if (!copySceneDepth()) return false;
+    if (sunMapMade) transition(sunMap, sunMapState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const float* m = viewToWorld;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.scale = float(upscale ? worldScale : scale);
+    if (upscale) {
+        c.jitter[0] = jitter[0];
+        c.jitter[1] = jitter[1];
+    }
+    const int w = sceneWidth, h = sceneHeight;
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    const float worldX[4] = {m[0], m[3], m[6], m[9]}, worldY[4] = {m[1], m[4], m[7], m[10]},
+                worldZ[4] = {m[2], m[5], m[8], m[11]};
+    std::copy(worldX, worldX + 4, c.sourceClamp);
+    std::copy(worldY, worldY + 4, c.sourceRect);
+    std::copy(worldZ, worldZ + 4, c.fogColor);
+    const float tz = cameraTargetZ;
+    c.twin[0] = tz * m[7] + m[10];  // the ground's height at the player
+    c.twin[1] = 5.0f;              // the fog's depth over it
+    c.twin[2] = 0.02f * float(std::clamp(effects.volumetricFogDensity, 0, 200)) / 100.0f;
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    c.uiPixels[2] = 0.9f * (1.0f - night);
+    c.uiPixels[3] = float(kSunMap);
+    c.footprint = sunMapMade ? 1.0f : 0.0f;
+    if (sunMapMade) std::copy(sunViewToBox, sunViewToBox + 12, c.reproject);
+    c.sharpen = waterTime();
+    if (!fogLightLogged)
+        LOG_INFO("volumetric fog: over %s%s", mapName.c_str(), sunMapMade ? ", lit by the sun's map" : "");
+    fogLightLogged = true;
+    const UINT map = sunMapMade ? sunMapSrv : sceneColorSrv;
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, map)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, map);
 }
 
 }  // namespace uagfx::gpu

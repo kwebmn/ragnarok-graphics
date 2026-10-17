@@ -1350,6 +1350,8 @@ void Renderer::Impl::destroy() {
     releaseCom(materialPso);  // 1.8
     for (ID3D12PipelineState*& p : skyLightPipelines) releaseCom(p);  // 1.11
     for (ID3D12PipelineState*& p : sunApplyPipelines) releaseCom(p);  // 1.12
+    for (ID3D12PipelineState*& p : fogLightPipelines) releaseCom(p);  // 1.13
+    releaseCom(fogLightPs);
     releaseCom(sunMapPso);
     releaseCom(sunMapVs);
     releaseCom(sunMapPs);

@@ -792,6 +792,7 @@ bool Renderer::Impl::finishWorld() {
     if (crittersDue() && !applyCritters()) return false;  // 1.7: the living world's creatures
     if (waterfallsDue() && !applyWaterfalls()) return false;  // 0.65: the maps' waterfalls the game never shows
     if (floorReflectDue() && !applyFloorReflections()) return false;  // 0.72: lit, before the haze
+    if (fogLightDue() && !applyFog()) return false;   // 1.13: the low fog lit by the sun
     if (hazeDue() && !applyHaze()) return false;      // 0.34: far off and over the ground, before the colours
     if (skyDue() && !applySky()) return false;        // 0.69: the sky where the haze filled the void
     if (shaftsDue() && !applyShafts()) return false;  // 0.73: the light in the air

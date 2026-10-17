@@ -1983,6 +1983,53 @@ float4 sun_apply_ps(PresentOut i) : SV_Target {
 }
 #endif
 
+#ifndef UAGFX_SAFE
+// 1.13, volumetric fog (sun_map.cpp applyFog): along the view from the camera to what the pixel shows, a dozen steps
+// through a fog lying low over the ground - thicker below twinX + twinY (the ground's height, up -y, and the fog's
+// depth), drifting with noise - each step lit by the sun where the sun's map (t1, footprint 1: there is one) does not
+// hide it: rays through the crowns and past the houses. r0-r11 the view into the sun's box; sourceClamp, sourceRect,
+// fogColor the view into the world's x, y and z; twinW the density, uiPixels.z the sun's share, .w the map's side;
+// sharpen the time. Blended over by its alpha.
+float4 fog_light_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    float raw = sceneDepth.Load(int3(wp, 0));
+    float3 v = raw >= 0.99999 ? normalize(viewAt(wp)) * 400.0 : viewAt(wp);
+    float len = min(length(v), 400.0);
+    float3 dir = normalize(v);
+    const int kSteps = 12;
+    float stride = len / float(kSteps);
+    float t = hash12(float2(wp) + frac(sharpen)) * stride;
+    float trans = 1.0;
+    float3 light = float3(0.0, 0.0, 0.0);
+    [loop] for (int k = 0; k < kSteps; ++k, t += stride) {
+        float3 q = dir * t;
+        float4 q4 = float4(q, 1.0);
+        float wy = dot(q4, sourceRect), wx = dot(q4, sourceClamp), wz = dot(q4, fogColor);
+        float above = twinX - wy;  // up is -y
+        float dens = exp(-max(above, 0.0) / twinY) * twinW;
+        dens *= 0.55 + 0.9 * valueNoise(float2(wx, wz) * 0.035 + float2(sharpen * 0.03, sharpen * 0.017));
+        if (dens < 1e-4) continue;
+        float sun = 1.0;
+        if (footprint > 0.5) {
+            float3 l = float3(dot(q4, float4(r0, r1, r2, r3)), dot(q4, float4(r4, r5, r6, r7)),
+                              dot(q4, float4(r8, r9, r10, r11)));
+            float2 uv = float2(l.x * 0.5 + 0.5, 0.5 - l.y * 0.5);
+            if (all(uv > 0.0) && all(uv < 1.0)) {
+                int2 tq = clamp(int2(uv * uiPixels.w), int2(0, 0), int2(int(uiPixels.w) - 1, int(uiPixels.w) - 1));
+                sun = tex1.Load(int3(tq, 0)).r < l.z - 0.002 ? 0.0 : 1.0;
+            }
+        }
+        float a = 1.0 - exp(-dens * stride);
+        float3 lit = float3(0.62, 0.68, 0.76) * 0.55 + float3(1.0, 0.92, 0.78) * sun * uiPixels.z;
+        light += trans * a * lit;
+        trans *= 1.0 - a;
+    }
+    float alpha = 1.0 - trans;
+    if (alpha < 0.003) discard;
+    return float4(light / alpha, alpha);
+}
+#endif
+
 // 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of
 // t1 - two texels: its place (xyz) and way (w), then its age 0-1 (x) - footprint how many; twinX the kind: 1 snow,
 // 2 sand (a foot's print, fading), 3 dust (a puff spreading and thinning). Blended over by its alpha.

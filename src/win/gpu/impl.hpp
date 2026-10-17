@@ -890,6 +890,8 @@ struct Renderer::Impl {
         sunVerts.clear();  // 1.12
         sunCasters.clear();
         sunMapDone = false;
+        sunMapMade = false;
+        fogLightDone = false;  // 1.13
         frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
@@ -1007,6 +1009,17 @@ struct Renderer::Impl {
     void noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
     ID3D12PipelineState* sunMapPipeline();
     bool applyRealShadows();  // once a frame, before the characters; false: lost
+    float sunViewToBox[12] = {};  // this frame's map: the view into the sun's box (applyFog)
+    bool sunMapMade = false;
+    // 1.13: volumetric fog lit by the sun (sun_map.cpp applyFog, fog_light_ps)
+    ID3DBlob* fogLightPs = nullptr;
+    ID3D12PipelineState* fogLightPipelines[4] = {};
+    bool fogLightDone = false, fogLightLogged = false;
+    bool fogLightDue() const {
+        return effects.volumetricFog && effects.volumetricFogDensity > 0 && fogLightPs && remaster() && mapOutdoors &&
+               viewToWorldValid && cameraValid && cameraTargetZ > 0.0f && groundDrawn && !fogLightDone;
+    }
+    bool applyFog();  // once a frame, the world drawn; false: lost
     bool remaster() const {
         return effects.tier == 2 || (effects.tier == 0 && adapterMb >= 6000);  // auto: a card of 6 GB and more
     }

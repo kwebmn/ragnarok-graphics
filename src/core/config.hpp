@@ -335,6 +335,10 @@ struct EffectSettings {
     // depth map, every pixel of it darkened where something nearer the sun hides it - the leaves' holes let
     // light through. Instead of the screen's own sun shadows; Remaster mode, Direct3D 12. Off by default.
     bool realShadows = false;
+    // 1.13: the remaster's volumetric fog (fog_light_ps): a fog lying low over the fields, drifting, lit by the sun -
+    // with Real sun shadows in rays through the crowns and past the houses. Remaster mode. Off by default.
+    bool volumetricFog = false;
+    int volumetricFogDensity = 60;  // %, 0-200
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

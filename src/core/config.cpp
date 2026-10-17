@@ -122,6 +122,7 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
+    e.volumetricFog = false;
     e.realShadows = false;
     e.bounceLight = false;
     e.skyLight = false;
@@ -185,6 +186,7 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
+           e.volumetricFog ||
            e.realShadows ||
            e.bounceLight ||
            e.skyLight ||
@@ -655,6 +657,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.effects.bounceLight);
         } else if (key == "effects.real_shadows") {
             setBool(val, c.effects.realShadows);
+        } else if (key == "effects.volumetric_fog") {
+            setBool(val, c.effects.volumetricFog);
+        } else if (key == "effects.volumetric_fog_density") {
+            toInt(val, 0, 200, c.effects.volumetricFogDensity);
         } else if (key == "effects.foliage") {
             setBool(val, c.effects.foliage);
         } else if (key == "effects.foliage_strength") {
