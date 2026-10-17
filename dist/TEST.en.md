@@ -1,3 +1,13 @@
+# uaRO Graphics 1.9.5 — testing
+
+- **Ground seams: rounded corners, wider.** The line between textures now follows each texture's share, smooth
+  between the cells' middles: at the corners a texture goes round the line cuts an arc instead of a step. The strips
+  reach the cell's middle, the noise moves the line further.
+- **Seams far cheaper.** The strips go in batches: one draw for each pairing of textures instead of 600+ apart
+  (moc_fild01 dropped to 35 fps). The log: `ground seams: N kinds of strips in M draws ...`.
+- How to check: prt_fild08 and pay_fild01 - the paths' edges (the steps smooth); moc_fild01 - fps with the seams. The
+  console is handy for it: `~`, Smooth seams of the ground, hold Tab.
+
 # uaRO Graphics 1.9.4 — testing
 
 - **A hang when switching effects in the console.** In reports R-HAAN9H and R-AQ6PVP the card was lost (device
