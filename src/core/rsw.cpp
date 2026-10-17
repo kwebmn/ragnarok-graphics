@@ -25,6 +25,15 @@ public:
         return v;
     }
     bool ok() const { return ok_; }
+    std::string name(size_t width) {  // 2.0: a name of `width` bytes, its zeros off
+        if (n_ - p_ < width) {
+            ok_ = false;
+            return {};
+        }
+        const char* s = reinterpret_cast<const char*>(d_ + p_);
+        p_ += width;
+        return std::string(s, strnlen(s, width));
+    }
 
 private:
     const uint8_t* d_;
@@ -62,7 +71,14 @@ bool parse(const uint8_t* data, size_t size, World& out, std::string& error) {
     for (int32_t i = 0; i < count && r.ok(); ++i) {
         const int32_t type = r.get<int32_t>();
         if (type == 1) {  // a model: name, animation, speed, block, file, node, place, turn, scale
-            r.skip(40 + 12 + 80 + 80 + 36);
+            Model m;
+            r.skip(40 + 12);
+            m.file = r.name(80);
+            r.skip(80);
+            for (float& f : m.pos) f = r.get<float>();
+            for (float& f : m.rot) f = r.get<float>();
+            for (float& f : m.scale) f = r.get<float>();
+            if (r.ok() && out.models.size() < 200000) out.models.push_back(std::move(m));
         } else if (type == 2) {
             Light l;
             r.skip(80);

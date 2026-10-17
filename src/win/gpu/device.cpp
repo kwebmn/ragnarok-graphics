@@ -20,6 +20,7 @@
 #include "core/window_plan.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/ai_textures.hpp"
+#include "core/forest.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/gpu/remix9.hpp"
 #include "win/gpu/renderer11.hpp"
@@ -514,6 +515,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
         t.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
         t.leaves = t.leafy ? new_trees::coverageOf(rec.pixels().data() + u.pixels, t.width, t.height)  // 1.10
                            : new_trees::Coverage{};
+        t.averaged = forest::averageColour(rec.pixels().data() + u.pixels, t.width, t.height, t.average);  // 2.0
     }
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + u.pixels, UINT(u.rect.width()),
                                                   UINT(u.rect.height()));
@@ -1363,6 +1365,15 @@ void Renderer::Impl::destroy() {
     releaseCom(crittersVs);
     releaseCom(crittersData);
     releaseCom(hillsData);  // 1.15
+    releaseCom(forestVb);  // 2.0
+    releaseCom(forestIb);
+    releaseCom(forestInstances);
+    for (ID3D12PipelineState*& p : forestPipelines) releaseCom(p);
+    releaseCom(forestVs);
+    releaseCom(forestPs);
+    releaseCom(forestSunPso);
+    releaseCom(forestSunVs);
+    releaseCom(forestSunPs);
     releaseCom(mirror);  // 1.16
     releaseCom(mirrorDepth);
     releaseCom(mirrorPso);

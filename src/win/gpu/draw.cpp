@@ -62,6 +62,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
           : s.ui     ? "the game's interface"
                      : "the game's world");
     const bool inner = seamPass || treePass;  // 1.9, 1.10: the driver's own draws (no hooks, nothing noted)
+    // 2.0: a tree of the map's, the new trees from the map on - the driver draws it (forest.cpp)
+    if (!inner && !s.ui && forestOn() && hideForTree(rec, d, s)) return;
     // 1.10: a crown of leaves, the new trees on - kept, drawn anew by applyTrees (before the characters)
     if (!treePass && !seamPass && !s.ui && !treesDone && treesWanted() && d.fvf != d3d7::FVF_TL2 && takeTree(rec, d))
         return;
@@ -104,6 +106,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
     // 1.10; 1.25.2: after the grass - drawn before it, the crowns' green grew blades and flowers of its own
     if (!inner && !s.ui && s.blend && treesDue() && !applyTrees()) return;
+    if (!inner && !s.ui && s.blend && forestDue() && !applyForest()) return;  // 2.0
     if (!inner && !s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
     // the game's round ones are in them.

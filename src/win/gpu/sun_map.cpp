@@ -109,7 +109,7 @@ ID3D12PipelineState* Renderer::Impl::sunMapPipeline() {
 bool Renderer::Impl::applyRealShadows() {
     sunMapDone = true;
     crumb("real sun shadows");
-    if (sunCasters.empty() || !cameraValid || cameraTargetZ <= 0.0f) return true;
+    if ((sunCasters.empty() && !forestReady()) || !cameraValid || cameraTargetZ <= 0.0f) return true;
     if (!ensureScene("real sun shadows") || !sunMapPipeline()) return true;
     ID3D12PipelineState* apply = mulPipeline(sunApplyPs, sunApplyPipelines, upscale ? 1 : samples, "real sun shadows");
     if (!apply) return true;
@@ -210,6 +210,19 @@ bool Renderer::Impl::applyRealShadows() {
         const D3D12_VERTEX_BUFFER_VIEW vb{u.gpu, UINT(sunVerts.size() * sizeof(float)), UINT(6 * sizeof(float))};
         list->IASetVertexBuffers(0, 1, &vb);
         list->DrawInstanced(c.count, 1, c.first, 0);
+    }
+    if (forestReady()) {  // 2.0: the forest's trees cast too
+        const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle(kDsvSun);
+        list->OMSetRenderTargets(0, nullptr, FALSE, &dsv);
+        if (!cleared) {
+            list->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+            cleared = true;
+        }
+        const D3D12_VIEWPORT vp{0.0f, 0.0f, float(kSunMap), float(kSunMap), 0.0f, 1.0f};
+        const D3D12_RECT all{0, 0, kSunMap, kSunMap};
+        list->RSSetViewports(1, &vp);
+        list->RSSetScissorRects(1, &all);
+        forestIntoSunMap(light);
     }
     boundPipeline = nullptr;
     boundTextures = boundSamplers = ~0ull;

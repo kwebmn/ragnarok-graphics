@@ -2749,6 +2749,150 @@ GlowOut smoke_glow_ps(PsIn i) {
     o.g = ((alphaTest >> 19) & 1) != 0 ? o.c : float4(0.0, 0.0, 0.0, o.c.a);
     return o;
 }
+
+#ifndef UAGFX_SAFE
+// 2.0, the new trees from the map (forest.cpp; core/forest.hpp): each tree the driver's own - its vertices in the
+// model's room (up along -y, the foot at 0), an instance a tree: its place in the world and turn (about up), its
+// scale and number, the colours of its leaves and bark. r0-r11 the world into the view, f0-farZ the game's projection,
+// targetSize, scale and jitter as the game's draws; sourceRect.xyz the way to the sun in the world, .w the time;
+// sourceClamp.xy the wind's way times its strength, .z the sun's light here (night, indoors less).
+struct ForestIn {
+    float3 pos : POSITION;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD0;
+    float4 info : TEXCOORD1;  // open to the sky, the wind's share, the part (0 bark, 1 leaves, 2 frond, 3 twig), own
+    float4 at : TEXCOORD2;    // the place, the turn (radians)
+    float4 size : TEXCOORD3;  // the scale x y z, the tree's number (0-1)
+    float4 leaf : TEXCOORD4;
+    float4 bark : TEXCOORD5;
+};
+
+struct ForestOut {
+    float4 pos : SV_Position;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD0;
+    float4 info : TEXCOORD1;  // open, part, own, the tree's number
+    float3 leaf : TEXCOORD2;
+    float3 bark : TEXCOORD3;
+};
+
+// A forest vertex in the world: the instance's turn, scale and place, then the wind.
+float3 forestWorld(ForestIn i, out float3 n) {
+    float s = sin(i.at.w), c = cos(i.at.w);
+    float3 p = i.pos * i.size.xyz;
+    float3 w = float3(p.x * c - p.z * s, p.y, p.x * s + p.z * c) + i.at.xyz;
+    n = float3(i.normal.x * c - i.normal.z * s, i.normal.y, i.normal.x * s + i.normal.z * c);
+    // the wind: the crown more than the trunk, each tree in its own time, a gust now and then; the leaves flutter
+    float t = sourceRect.w;
+    float strength = length(sourceClamp.xy);
+    float2 way = strength > 1e-4 ? sourceClamp.xy / strength : float2(0.94, 0.33);
+    float phase = dot(i.at.xz, float2(0.05, 0.07)) + i.size.w * 6.28;
+    float bend = (sin(t * 0.9 + phase) * 0.5 + sin(t * 2.3 + phase * 1.7) * 0.2 + 0.45) * (0.4 + strength);
+    w.xz += way * bend * i.info.y * 1.4 * i.size.y;
+    if (i.info.z > 0.5) w += n * sin(t * 5.5 + i.info.w * 40.0) * 0.06;
+    return w;
+}
+
+ForestOut forest_vs(ForestIn i) {
+    ForestOut o;
+    float3 n;
+    float3 w = forestWorld(i, n);
+    float3 v = float3(dot(float4(w, 1.0), float4(r0, r1, r2, r3)), dot(float4(w, 1.0), float4(r4, r5, r6, r7)),
+                      dot(float4(w, 1.0), float4(r8, r9, r10, r11)));
+    float z = max(v.z, nearZ + 0.01);
+    float gx = v.x / z * f0 + cx, gy = v.y / z * f1 + cy;
+    float depth = farZ * (1.0 - nearZ / z) / (farZ - nearZ);
+    float x = (gx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
+    float y = 1.0 - (gy * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
+    o.pos = float4(x * z, y * z, depth * z, z);
+    o.normal = n;
+    o.uv = i.uv;
+    o.info = float4(i.info.x, i.info.z, i.info.w, i.size.w);
+    o.leaf = i.leaf.rgb;
+    o.bark = i.bark.rgb;
+    return o;
+}
+
+// A card's leaves: one in the middle and eight about it, each an ellipse turned its way; how much of the place is leaf
+// and how far into the leaf (for its vein and its edge's light).
+float forestLeaves(float2 uv, float own, out float vein) {
+    float best = 0.0;
+    vein = 0.0;
+    [unroll] for (int k = 0; k < 9; ++k) {
+        float a = float(k) * 0.77 + own * 6.28;
+        float r = k == 0 ? 0.0 : (k < 5 ? 0.2 : 0.34);
+        float2 d = uv - (0.5 + float2(cos(a), sin(a)) * r);
+        float ang = a + 0.6;
+        float2 l = float2(d.x * cos(ang) + d.y * sin(ang), -d.x * sin(ang) + d.y * cos(ang));
+        float e = (l.x * l.x) / (0.19 * 0.19) + (l.y * l.y) / (0.085 * 0.085);
+        float leaf = saturate(1.0 - e);
+        if (leaf > best) {
+            best = leaf;
+            vein = 1.0 - smoothstep(0.0, 0.012, abs(l.y));
+        }
+    }
+    return best;
+}
+
+float4 forest_ps(ForestOut i) : SV_Target {
+    float part = i.info.y, own = i.info.z, open = i.info.x;
+    float3 L = normalize(sourceRect.xyz);
+    float3 n = normalize(i.normal);
+    float sun = sourceClamp.z;
+    float3 base;
+    if (part < 0.5) {  // bark: furrows along the trunk
+        float furrow = valueNoise(float2(i.uv.x * 7.0, i.uv.y * 1.5)) * 0.6 +
+                       valueNoise(float2(i.uv.x * 19.0, i.uv.y * 4.0)) * 0.4;
+        base = i.bark * (0.62 + 0.55 * furrow);
+    } else if (part > 1.5 && part < 2.5) {  // a palm's frond: a stem and leaflets along it
+        float across = abs(i.uv.x - 0.5) * 2.0;
+        float leaflet = 0.5 + 0.5 * sin(i.uv.y * 60.0 + own * 20.0);
+        float width = 0.1 + 0.9 * (1.0 - i.uv.y * 0.6) * leaflet;
+        clip(width - across);
+        base = i.leaf * (across < 0.08 ? 0.75 : 0.9 + 0.2 * leaflet);
+    } else {  // a card of leaves (a fir's twig narrower, darker)
+        float vein;
+        float leaf = forestLeaves(i.uv, own, vein);
+        clip(leaf - 0.08);
+        float tone = 0.82 + 0.36 * frac(own * 7.31 + floor(leaf * 3.0) * 0.17);
+        base = i.leaf * tone * (part > 2.5 ? 0.8 : 1.0) * (1.0 - 0.15 * vein) * (0.85 + 0.25 * leaf);
+    }
+    // the light: the sun's on what faces it (wrapped: the leaves let some through), the sky's as open as the place is
+    float face = saturate((dot(n, L) + 0.35) / 1.35);
+    float sky = 0.4 + 0.6 * open;
+    float3 c = base * (sky * lerp(0.75, 0.55, sun) + face * sun * 0.75 * (0.55 + 0.45 * open));
+    return float4(c * 1.15, 1.0);
+}
+
+// 2.0: the forest into the real sun's map (sun_map.cpp): r0-r11 the world into the sun's box, as sun_map_vs; the
+// leaves' holes let the light through.
+struct ForestSunOut {
+    float4 pos : SV_Position;
+    float2 uv : TEXCOORD0;
+    float2 info : TEXCOORD1;  // the part, its own number
+};
+
+ForestSunOut forest_sun_vs(ForestIn i) {
+    ForestSunOut o;
+    float3 n;
+    float4 w = float4(forestWorld(i, n), 1.0);
+    o.pos = float4(dot(w, float4(r0, r1, r2, r3)), dot(w, float4(r4, r5, r6, r7)), dot(w, float4(r8, r9, r10, r11)),
+                   1.0);
+    o.uv = i.uv;
+    o.info = float2(i.info.z, i.info.w);
+    return o;
+}
+
+void forest_sun_ps(ForestSunOut i) {
+    if (i.info.x > 1.5 && i.info.x < 2.5) {
+        float across = abs(i.uv.x - 0.5) * 2.0;
+        clip(0.1 + 0.9 * (1.0 - i.uv.y * 0.6) * (0.5 + 0.5 * sin(i.uv.y * 60.0 + i.info.y * 20.0)) - across);
+    } else if (i.info.x > 0.5) {
+        float vein;
+        clip(forestLeaves(i.uv, i.info.y, vein) - 0.08);
+    }
+}
+#endif
 )HLSL";
 }
 

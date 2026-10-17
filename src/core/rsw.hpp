@@ -22,11 +22,21 @@ struct Effect {
     float param[4] = {0, 0, 0, 0};
 };
 
+// 2.0: a model the map places (the new trees: core/forest.hpp) - its file under data\model\ (cp949 bytes, as the
+// map names it), its place, its turn (degrees about x, y, z) and its scale.
+struct Model {
+    std::string file;
+    float pos[3] = {0, 0, 0};
+    float rot[3] = {0, 0, 0};
+    float scale[3] = {1, 1, 1};
+};
+
 struct World {
     int version = 0;     // major * 256 + minor
     int waterType = -1;  // 0.31: its water's kind (4: lava); -1 not known
     std::vector<Light> lights;
     std::vector<Effect> effects;
+    std::vector<Model> models;  // 2.0
 };
 
 // false (and why) when it is not a map file; a file cut short or an unknown object keeps what came before it.

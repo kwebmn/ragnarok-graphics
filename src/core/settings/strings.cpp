@@ -2474,15 +2474,18 @@ const Entry kTexts[] = {
     {"New trees",
      "Нові дерева",
      "Новые деревья"},
-    {"The flat crowns of the old trees are drawn anew as a volume of many small bunches of their own leaves - lit "
-     "from the sun's side, darker inside, swaying in the wind; the camera turning shows them round. The trunks stay. "
-     "Remaster mode only (Direct3D 12).",
-     "Пласкі крони старих дерев малюються наново як об'єм із багатьох дрібних жмутків їхнього ж листя — освітлені з "
-     "боку сонця, темніші всередині, гойдаються на вітрі; коли камера повертається, видно, що вони об'ємні. Стовбури "
-     "лишаються. Лише в режимі «Ремастер» (Direct3D 12).",
-     "Плоские кроны старых деревьев рисуются заново как объём из многих мелких пучков их же листвы — освещены со "
-     "стороны солнца, темнее внутри, качаются на ветру; когда камера поворачивается, видно, что они объёмные. Стволы "
-     "остаются. Только в режиме «Ремастер» (Direct3D 12)."},
+    {"The map's trees grown anew by the driver from the map file - each where it stands, of its kind and size: a "
+     "trunk with branches and a crown of clumps of leaves (a fir's tiers, a palm's fronds, a bush) in the colours of "
+     "the map's own trees, swaying in the wind, with Real sun shadows casting real shadows. They stand still as you "
+     "walk and turn. Remaster mode only (Direct3D 12).",
+     "Дерева карти драйвер вирощує наново з файлу карти — кожне там, де стоїть, своєї породи й розміру: стовбур із "
+     "гілками й крона з купок листя (яруси ялини, віяла пальми, кущ) у кольорах дерев самої карти, гойдаються на "
+     "вітрі, зі «Справжніми тінями від сонця» кидають справжню тінь. Не тремтять, коли ходите й повертаєте камеру. "
+     "Лише в режимі «Ремастер» (Direct3D 12).",
+     "Деревья карты драйвер выращивает заново из файла карты — каждое там, где стоит, своей породы и размера: ствол "
+     "с ветками и крона из кучек листвы (ярусы ели, веера пальмы, куст) в цветах деревьев самой карты, качаются на "
+     "ветру, с «Настоящими тенями от солнца» отбрасывают настоящую тень. Не дрожат, когда ходите и поворачиваете "
+     "камеру. Только в режиме «Ремастер» (Direct3D 12)."},
     {"Light from the sky",
      "Світло неба",
      "Свет неба"},
