@@ -1,3 +1,18 @@
+# uaRO Graphics 2.0.0 — testing
+
+- **Trees 2.0** (Effects → Remaster → New trees, Direct3D 12, Remaster mode): the map's trees are no longer guessed
+  from the picture each frame - the driver reads the map file (where each tree stands, its model, turn and size) and
+  the tree models, grows its own 3D tree for each - a trunk with branches and a crown of clumps of leaves (firs in
+  tiers, palms with fronds, bushes), in the colours of the map's own trees - and draws the whole forest in a few
+  calls; the game's tree models are left out. They sway in the wind (with One wind for everything, its wind) and,
+  with Real sun shadows, cast their shadows. They must stand still as you walk and turn.
+- What to look at, first on prt_fild08: do the trees stand where the old ones stood (not shifted, not floating, not
+  sunk); are any old trees still drawn among the new (doubled); is anything else gone that is not a tree (a fence,
+  a sign by a tree); the colours and the size; the frame rate. Screenshots please.
+- The log says what happened: "new trees: <map> has N tree models, M of them read", then "forest grown - N trees"
+  and "forest drawn, N of the game's tree draws left out". If it says "do not match" or "axes are not known", the
+  old new trees are drawn instead - send that report.
+
 # uaRO Graphics 1.25.2 — testing
 
 - **New trees: no grass and flowers on the crowns.** The new trees were drawn before the grass, and the grass took
