@@ -34,6 +34,10 @@ struct Model {
 struct World {
     int version = 0;     // major * 256 + minor
     int waterType = -1;  // 0.31: its water's kind (4: lava); -1 not known
+    // 2.1.3: the map's sun as its makers set it - the way its painted shadows fall (degrees; latitude from straight
+    // above); known false for a file without it
+    int lightLongitude = 0, lightLatitude = 0;
+    bool lightKnown = false;
     std::vector<Light> lights;
     std::vector<Effect> effects;
     std::vector<Model> models;  // 2.0

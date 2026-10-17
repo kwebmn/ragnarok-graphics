@@ -178,7 +178,40 @@ void Renderer::Impl::sunOnScreen(float out[2]) const {
     out[1] = sy / len;
 }
 
+bool Renderer::Impl::mapSun(float toSun[3]) const {
+    const rsw::World* w = mapWorld.world();
+    const map::Axes axes = mapWorld.axes();
+    if (!w || !w->lightKnown || !axes.known()) return false;
+    // as the client turns the file's light into its way (longitude about up, latitude from straight above), the
+    // file's room up along -y: the way to the light
+    const float lon = float(w->lightLongitude) * 0.0174533f, lat = float(w->lightLatitude) * 0.0174533f;
+    toSun[0] = float(axes.x) * -std::cos(lon) * std::sin(lat);
+    toSun[1] = -std::cos(lat);
+    toSun[2] = float(axes.z) * -std::sin(lon) * std::sin(lat);
+    return true;
+}
+
+float Renderer::Impl::sunHeight() const {
+    float toSun[3];
+    if (!effects.dayCycle && mapSun(toSun))
+        return std::clamp(std::asin(std::clamp(-toSun[1], -1.0f, 1.0f)), 15.0f * 0.0174533f, 70.0f * 0.0174533f);
+    const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
+    return std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) * 0.0174533f;
+}
+
+// 2.1.3: the shadows fall the map's way (its painted shadows' and ours agree), the day cycle only lifting and lowering
+// the sun; a map without its light, the day's way as before.
 void Renderer::Impl::sunGround(float out[3]) const {
+    float toSun[3];
+    if (mapSun(toSun)) {
+        const float len = std::sqrt(toSun[0] * toSun[0] + toSun[2] * toSun[2]);
+        if (len > 1e-4f) {
+            out[0] = -toSun[0] / len;
+            out[1] = 0.0f;
+            out[2] = -toSun[2] / len;
+            return;
+        }
+    }
     const daylight::Light l = daylight::at(effects.dayCycle ? effects.dayNow : -1);
     const float len = std::max(std::sqrt(l.shadow[0] * l.shadow[0] + l.shadow[1] * l.shadow[1]), 1e-4f);
     out[0] = l.shadow[0] / len;

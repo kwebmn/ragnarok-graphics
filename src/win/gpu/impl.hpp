@@ -837,6 +837,10 @@ struct Renderer::Impl {
     bool applyShafts();  // once a frame, after the haze and the sky; false: lost
     void sunOnScreen(float out[2]) const;  // 0.73: the way the sun's shadows fall on the screen (actor_shadows.cpp)
     void sunGround(float out[3]) const;  // 2.0.1: the way the shadows fall along the ground, fixed in the world
+    // 2.1.3: the map's own sun (its file's light: the way its painted shadows fall), the way to it in the world (up
+    // along -y); false when the file or the maps' axes are not known
+    bool mapSun(float toSun[3]) const;
+    float sunHeight() const;  // 2.1.3: the sun above the horizon (radians) - the day's, or the map's without the cycle
     bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
     bool heatDue() const {
         return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));

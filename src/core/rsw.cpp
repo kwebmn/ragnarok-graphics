@@ -61,7 +61,10 @@ bool parse(const uint8_t* data, size_t size, World& out, std::string& error) {
         out.waterType = r.get<int32_t>();
         r.skip(12 + (v >= 0x108 ? 4 : 0));
     }
-    r.skip(8 + 24 + (v >= 0x107 ? 4 : 0));               // the light: longitude, latitude, colours, opacity
+    out.lightLongitude = r.get<int32_t>();  // 2.1.3: the light: longitude, latitude, then colours, opacity
+    out.lightLatitude = r.get<int32_t>();
+    out.lightKnown = r.ok();
+    r.skip(24 + (v >= 0x107 ? 4 : 0));
     if (v >= 0x106) r.skip(16);                          // the ground's box
     const int32_t count = r.get<int32_t>();
     if (!r.ok() || count < 0 || count > 1000000) {

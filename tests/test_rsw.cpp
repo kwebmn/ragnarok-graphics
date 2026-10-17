@@ -90,6 +90,7 @@ TEST(rsw_lights_and_effects_of_a_map) {
     CHECK_EQ(w.lights.size(), size_t(1));
     CHECK_EQ(w.effects.size(), size_t(1));
     CHECK_EQ(w.models.size(), size_t(1));  // 2.0: the model's file and place
+    CHECK(w.lightKnown && w.lightLongitude == 45 && w.lightLatitude == 45);  // 2.1.3: the map's sun
     if (w.models.size() == 1) CHECK(w.models[0].file == "tree.rsm" && w.models[0].scale[2] == 1.0f);
     if (w.lights.size() == 1) {
         CHECK(w.lights[0].pos[0] == 10.0f && w.lights[0].pos[1] == -20.0f && w.lights[0].pos[2] == 30.0f);

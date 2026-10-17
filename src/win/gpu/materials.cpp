@@ -126,7 +126,8 @@ void Renderer::Impl::materialConstants(bool ground, Constants& c) const {
 // turned into the world by the view's axes, at the sun's height by the time of day (indoors from above).
 void Renderer::Impl::sunInWorld(float out[3]) const {
     const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
-    const float height = (mapOutdoors ? std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) : 75.0f) * 0.0174533f;
+    (void)day;
+    const float height = mapOutdoors ? sunHeight() : 75.0f * 0.0174533f;  // 2.1.3: the map's or the day's
     float g[3];
     sunGround(g);  // 2.0.1: fixed in the world
     const float gl = std::max(std::sqrt(g[0] * g[0] + g[2] * g[2]), 1e-4f);

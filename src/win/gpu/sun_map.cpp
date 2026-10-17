@@ -143,7 +143,8 @@ bool Renderer::Impl::applyRealShadows() {
     const float tz = cameraTargetZ;
     float mid[3] = {tz * m[6] + m[9], tz * m[7] + m[10], tz * m[8] + m[11]};
     const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
-    const float height = std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) * 0.0174533f;
+    (void)day;
+    const float height = sunHeight();  // 2.1.3
     // 2.0.1: the sun's way fixed in the world (sunGround) - taken from the screen it turned with the camera
     float gdir[3];
     sunGround(gdir);
@@ -348,8 +349,7 @@ void Renderer::Impl::spriteConstants(const FrameRecord& rec, const DrawCmd& d, b
     c.stage0[1] |= 1u << 28;
     float sun[2];
     sunOnScreen(sun);
-    const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);
-    const float height = mapOutdoors ? std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) * 0.0174533f : 1.2f;
+    const float height = mapOutdoors ? sunHeight() : 1.2f;  // 2.1.3
     c.twin[0] = -sun[0];
     c.twin[1] = -sun[1];
     c.twin[2] = std::sin(height) * 0.6f;  // twinW (1.17.1: was set into twinH, the height read as 0)
