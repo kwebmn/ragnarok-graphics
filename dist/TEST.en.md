@@ -1,3 +1,16 @@
+# uaRO Graphics 1.12.0 — testing
+
+- **Real sun shadows** (`effects.real_shadows`, the Remaster block, Remaster mode only, Direct3D 12, off by default).
+  The driver gathers the frame's opaque geometry (ground, houses, walls, rocks, crowns) in the world, draws it as the
+  sun sees it into a 2048x2048 shadow map about the player, and darkens what the sun cannot reach. Unlike the old
+  Shadows of houses and trees (a search on the screen): things off the screen cast too, shadows do not break at the
+  edges, crowns cast dappled shadows through their holes. The way is the sun's, turning with Time of day. The
+  darkness is the Shadows of houses and trees slider; the screen's own sun shadows are not drawn meanwhile.
+- The log: `real sun shadows: N draws, M triangles of <map> into a 2048x2048 map`.
+- How to check: prontera, prt_fild08, payon by day - switch it in the console, compare with Tab. To know: the way
+  right (as the characters' shadows), stripes or shimmer on the ground (self-shadowing), shadows sliding off their
+  objects, the frame's cost.
+
 # uaRO Graphics 1.11.0 — testing
 
 - **The remaster's phase D: light.** Two new boxes in the Remaster block (off by default, Direct3D 12):
