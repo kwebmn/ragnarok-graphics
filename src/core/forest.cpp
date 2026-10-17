@@ -2,11 +2,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace uagfx::forest {
 namespace {
 
-bool has(const std::string& s, const char* part) { return s.find(part) != std::string::npos; }
+// A word in a cp949 name, from a letter's start only: a Hangul letter is two bytes, and a short word (one letter)
+// found from a letter's second byte would be another word.
+bool has(const std::string& s, const char* part) {
+    const size_t n = std::strlen(part);
+    for (size_t i = 0; i + n <= s.size(); i += static_cast<unsigned char>(s[i]) >= 0x81 ? 2 : 1)
+        if (s.compare(i, n, part) == 0) return true;
+    return false;
+}
 
 // cp949 words
 const char* const kTree = "\xb3\xaa\xb9\xab";              // 나무
@@ -18,8 +26,17 @@ const char* const kBamboo = "\xb4\xeb\xb3\xaa\xb9\xab";    // 대나무
 const char* const kCherry = "\xb9\xfe\xb3\xaa\xb9\xab";    // 벗나무 (the files' spelling of 벚나무)
 const char* const kBlossom = "\xb9\xfe\xb2\xc9";            // 벗꽃
 const char* const kNot[] = {"\xb9\xde\xc4\xa7", "\xb1\xe2\xb5\xd5", "\xc1\xb6\xb0\xa2", "\xb5\xee\xb0\xc9",
-                            "\xb1\xd7\xb8\xa9", "\xc0\xc7\xc0\xda", "\xc1\xd9\xb1\xe2"};
-// 받침 a stand, 기둥 a post, 조각 a piece, 등걸 a stump, 그릇 a bowl, 의자 a chair, 줄기 a stem
+                            "\xb1\xd7\xb8\xa9", "\xc0\xc7\xc0\xda", "\xc1\xd9\xb1\xe2",
+                            // 2.2.1: 나무 is wood too - a wooden bridge was grown as bushes (umbala)
+                            "\xb4\xd9\xb8\xae", "\xbb\xf3\xc0\xda", "\xbf\xef\xc5\xb8\xb8\xae", "\xba\xae",
+                            "\xc0\xd4\xb1\xb8", "\xc5\xeb", "\xb4\xf8\xc0\xfc", "\xbc\xb1\xb9\xdd",
+                            "\xbb\xd1\xb8\xae", "\xb9\xd8\xb5\xd5", "\xb0\xa1\xb7\xce\xb5\xee", "\xc3\xa2\xb9\xae",
+                            "\xc0\xe5\xbd\xc4", "\xb0\xa1\xc1\xf6", "\xb9\xce\xb0\xa1", "\xba\xb8\xbc\xae",
+                            "\xc0\xd9", "\xb0\xe8\xb4\xdc", "\xb3\xad\xb0\xa3", "\xc3\xd0\xba\xd2"};
+// 받침 a stand, 기둥 a post, 조각 a piece, 등걸 a stump, 그릇 a bowl, 의자 a chair, 줄기 a stem; 2.2.1: 다리 a bridge
+// (사다리 a ladder), 상자 a box, 울타리 a fence, 벽 a wall, 입구 a gate, 통 a barrel (통나무 a log), 던전 the tree
+// dungeon's props, 선반 a shelf, 뿌리 roots, 밑둥 a stump, 가로등 a street lamp, 창문 a window, 장식 an ornament,
+// 가지 a branch, 민가 a house, 보석 a gem, 잎 leaves alone, 계단 stairs, 난간 a railing, 촛불 a candle
 
 uint32_t mix(uint32_t h) {
     h ^= h >> 16;
@@ -148,7 +165,8 @@ bool shapeOf(Kind kind, const rsm::Model& model, Shape& out) {
     if (kind == Kind::None || model.parts.empty()) return false;
     const float width = std::max(model.hi[0] - model.lo[0], model.hi[2] - model.lo[2]);
     const float height = -model.lo[1];
-    if (height < 6.0f || width < 4.0f) return false;
+    // 2.2.1: and no giant - Eclage's world tree (234 high) is a building to walk on, not a tree to grow
+    if (height < 6.0f || width < 4.0f || height > 150.0f || width > 150.0f) return false;
     // the trunk: the tallest narrow part
     const rsm::Part* trunk = nullptr;
     for (const rsm::Part& p : model.parts) {

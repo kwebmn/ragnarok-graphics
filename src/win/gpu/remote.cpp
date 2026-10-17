@@ -116,6 +116,7 @@ void Remote::handle(Msg type, const uint8_t* data, uint32_t size) {
             upscales_ = true;
             break;
         case Msg::Lost: setLost("render64: " + rd.str()); break;
+        case Msg::Timing: readTiming(rd, timing_); break;  // 2.2.1
         case Msg::IconDone: {  // AI icons (0.14): one made larger
             const uint64_t key = rd.u64();
             const int w = rd.i32(), h = rd.i32();

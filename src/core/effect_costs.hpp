@@ -18,6 +18,8 @@ Costs parse(const std::string& text);
 
 // The ms the effect behind an [effects] switch costs (its pass's), or below 0 when not measured.
 double costOf(const Costs& c, const std::string& key);
+// 2.2.1: its timed pass's name, "" when it has none of its own (a group's sum takes each pass once)
+std::string passOf(const std::string& key);
 
 // [frames] keep_fps: the switch to turn off next - on, not turned off already: the costliest measured one (over
 // 0.05 ms); with nothing measured, the first of a list from the usually costliest down (with d3d11, of those Direct3D

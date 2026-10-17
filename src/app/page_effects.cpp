@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <set>
 #include <string>
 
 #include "app/files.hpp"
@@ -19,35 +20,44 @@ using Effect = EffectLayout;  // 1.9.3: the layout in core/settings/effects_layo
 const Effect* const kEffects = effectLayout();
 const int kEffectCount = effectLayoutCount();
 
-constexpr int kTier = 990;  // 1.8: the remaster's mode
-constexpr int kBlockOn = 970, kBlockOff = 975;  // 1.13: a block's boxes all on, all off (+ the block)
-// 2.2: the set for the card, the details' button, each group's box and slider (its number + 1)
-constexpr int kPreset = 960, kDetails = 961;
-int groupBox(int g) { return 900 + 4 * g; }
-int groupSlider(int g) { return 902 + 4 * g; }
+// The controls' numbers: the main window hands a page only those from 1000 on (2.2.1: the set's, the groups' and the
+// mode's were under it - they did nothing).
+constexpr int kPreset = 20000, kTier = 20001;
+int groupBox(int g) { return 20100 + 20 * g; }
+int groupSlider(int g) { return 20102 + 20 * g; }  // its number: + 1
+int groupOpen(int g) { return 20105 + 20 * g; }
+int boxId(int e) { return 1001 + 100 * e; }
+int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
+int checkId(int e, int k) { return 1070 + 100 * e + 2 * k; }
 
 const char* const kPresets[] = {"auto", "off", "weak", "medium", "strong", "custom"};
 const Text kGroupNames[kEffectGroups] = {Text::FxGroupLight,  Text::FxGroupShadows, Text::FxGroupSurfaces,
                                          Text::FxGroupNature, Text::FxGroupWater,   Text::FxGroupAir,
                                          Text::FxGroupLife,   Text::FxGroupSkills,  Text::FxGroupPicture};
 
-std::string groupKey(int g) { return std::string("effects.group_") + effect_groups::groupWord(g); }
+// 2.2.1: the groups opened to their effects - kept while the app runs (a page is made anew at every change)
+bool g_open[kEffectGroups] = {};
 
-int boxId(int e) { return 1001 + 100 * e; }
-int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
-int checkId(int e, int k) { return 1070 + 100 * e + 2 * k; }
+std::string groupKey(int g) { return std::string("effects.group_") + effect_groups::groupWord(g); }
 
 const IniSetting& setting(const char* key) { return *findSetting(key); }
 const IniSetting& setting(const std::string& key) { return *findSetting(key); }
 
-// The [effects] section (0.18): each effect a box, its settings under it, grey while it is off. They apply in a
+// The layout's entry of a group's member (its box, its own settings), -1 none.
+int layoutOf(const effect_groups::Member& m) {
+    const std::string box = std::string("effects.") + m.key;
+    for (int e = 0; e < kEffectCount; ++e)
+        if (box == kEffects[e].box) return e;
+    return -1;
+}
+
+// The [effects] section (0.18), 2.2: the set for the card, then nine groups - each on or off with its strength, and
+// opened (its button) to its effects, each a box with its settings under it, grey while it is off. They apply in a
 // running game: a box at once, a slider when it is let go.
 class EffectsPage : public Page {
 public:
     explicit EffectsPage(PageHost& host) : Page(host) {}
 
-    // 2.2: the set for the card and nine groups, each on or off with its strength; every effect on its own under
-    // Details (the list as it was), where a change makes the set "custom".
     void build(Panel& p) override {
         Model& m = host_.model();
         p.heading(t(Text::PageEffects));
@@ -68,76 +78,56 @@ public:
             if (word == kPresets[i]) selected = i;
         }
         p.choice(kPreset, t(preset.label), items, selected, t(preset.hint));
+        if (word == "custom") {  // 1.8: the mode - a set decides it (the strong one's the remaster's)
+            const IniSetting& tier = setting("effects.tier");
+            const std::string token = m.token(tier);
+            p.choice(kTier, t(tier.label), {t(Text::FxTierAuto), t(Text::FxTierClassic), t(Text::FxTierRemaster)},
+                     token == "classic" ? 1 : token == "remaster" ? 2 : 0, t(tier.hint));
+        }
+        p.note(t(Text::FxDetailsNote), Tone::Muted);
         const bool any = word != "off";
         for (int g = 0; g < kEffectGroups; ++g) {
-            p.gap();
+            p.gap(12);
             const bool on = m.token(setting(groupKey(g))) == "1";
-            std::wstring label = t(kGroupNames[g]);
+            // its effects' costs, each timed pass once (the motes and the weather are one pass)
             double ms = 0.0;
+            int count = 0;
+            std::set<std::string> passes;
             for (int i = 0; i < effect_groups::memberCount(); ++i) {
                 const effect_groups::Member& x = effect_groups::members()[i];
-                const double c = x.group == g ? effect_costs::costOf(costs, x.key) : -1.0;
+                if (x.group != g) continue;
+                ++count;
+                const std::string pass = effect_costs::passOf(x.key);
+                if (pass.empty() || !passes.insert(pass).second) continue;
+                const double c = effect_costs::costOf(costs, x.key);
                 if (c > 0.0) ms += c;
             }
-            if (ms > 0.0) {
-                char v[16];
-                std::snprintf(v, sizeof v, "%.1f", std::max(ms, 0.1));
-                label += tf(Text::FxCostMs, {v});
-            }
-            p.check(groupBox(g), label, on, t(setting(groupKey(g)).hint), any);
+            p.check(groupBox(g), withCost(t(kGroupNames[g]), ms), on, t(setting(groupKey(g)).hint), any);
             if (effect_groups::hasStrength(g))
                 slider(p, groupSlider(g), (groupKey(g) + "_strength").c_str(), any && on);
-        }
-        p.gap(16);
-        p.buttons({{kDetails, t(details_ ? Text::FxDetailsHide : Text::FxDetails)}});
-        if (!details_) {
-            p.gap();
-            p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
-            return;
-        }
-        p.note(t(Text::FxDetailsNote), Tone::Normal);
-        int block = 0;
-        for (int e = 0; e < kEffectCount; ++e) {
-            const Effect& fx = kEffects[e];
-            if (fx.block != block) {  // 0.23.2: the map's objects, 1.7: the living world - blocks of their own
-                block = fx.block;
-                p.gap(16);
-                p.heading(t(block == 1 ? Text::FxObjects : block == 2 ? Text::FxLiving : Text::FxRemaster));
-                p.note(t(block == 1   ? Text::FxObjectsIntro
-                         : block == 2 ? Text::FxLivingIntro
-                                      : Text::FxRemasterIntro),
-                       Tone::Normal);
-                if (block >= 2)  // 1.13: the whole block on or off at once
-                    p.buttons({{kBlockOn + block, t(Text::FxBlockOn)}, {kBlockOff + block, t(Text::FxBlockOff)}});
-                if (block == 3) {  // 1.8: the mode, for all of the block
-                    const IniSetting& tier = setting("effects.tier");
-                    const std::string token = setSwitches() ? (setSwitches()->tier == 2 ? "remaster" : "classic")
-                                                            : host_.model().token(tier);
-                    p.choice(kTier, t(tier.label),
-                             {t(Text::FxTierAuto), t(Text::FxTierClassic), t(Text::FxTierRemaster)},
-                             token == "classic" ? 1 : token == "remaster" ? 2 : 0, t(tier.hint));
+            p.buttons({{groupOpen(g),
+                        g_open[g] ? t(Text::FxDetailsHide) : tf(Text::FxDetails, {std::to_string(count)})}});
+            if (!g_open[g]) continue;
+            for (int i = 0; i < effect_groups::memberCount(); ++i) {
+                const effect_groups::Member& x = effect_groups::members()[i];
+                const int e = x.group == g ? layoutOf(x) : -1;
+                if (e < 0) continue;
+                const Effect& fx = kEffects[e];
+                const IniSetting& box = setting(fx.box);
+                const bool fxOn = isOn(fx.box);
+                const bool live = any && on;
+                p.check(boxId(e), withCost(t(box.label), effect_costs::costOf(costs, fx.box)), fxOn, t(box.hint),
+                        live, true);
+                for (int k = 0; k < 2 && fx.checks[k]; ++k) {
+                    const IniSetting& c = setting(fx.checks[k]);
+                    p.check(checkId(e, k), t(c.label), isOn(fx.checks[k]), t(c.hint), live && fxOn, true);
                 }
+                for (int k = 0; k < 5 && fx.sliders[k]; ++k)
+                    slider(p, sliderId(e, k), fx.sliders[k], live && fxOn && (!fx.needs[k] || isOn(fx.needs[k])));
             }
-            p.gap();
-            const IniSetting& box = setting(fx.box);
-            const bool on = isOn(fx.box);
-            std::wstring label = t(box.label);
-            const double ms = effect_costs::costOf(costs, fx.box);
-            if (ms >= 0.0) {
-                char v[16];
-                std::snprintf(v, sizeof v, "%.1f", std::max(ms, 0.1));
-                label += tf(Text::FxCostMs, {v});
-            }
-            p.check(boxId(e), label, on, t(box.hint));
-            for (int k = 0; k < 2 && fx.checks[k]; ++k) {
-                const IniSetting& c = setting(fx.checks[k]);
-                p.check(checkId(e, k), t(c.label), isOn(fx.checks[k]), t(c.hint), on, true);
-            }
-            for (int k = 0; k < 5 && fx.sliders[k]; ++k)
-                slider(p, sliderId(e, k), fx.sliders[k], on && (!fx.needs[k] || isOn(fx.needs[k])));
         }
         p.gap();
-        p.note(t(host_.model().now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
+        p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
     }
 
     void command(int id, int code) override {
@@ -158,26 +148,18 @@ public:
             return;
         }
         if (code != BN_CLICKED) return;
-        if (id == kDetails) {
-            details_ = !details_;
-            host_.rebuild();
-            return;
-        }
-        for (int g = 0; g < kEffectGroups; ++g)
+        for (int g = 0; g < kEffectGroups; ++g) {
+            if (id == groupOpen(g)) {
+                g_open[g] = !g_open[g];
+                host_.rebuild();
+                return;
+            }
             if (id == groupBox(g)) {
                 const bool checked = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
                 set(setting(groupKey(g)), checked ? "1" : "0", true);
                 host_.rebuild();
                 return;
             }
-        if ((id >= kBlockOn && id < kBlockOn + 4) || (id >= kBlockOff && id < kBlockOff + 4)) {  // 1.13
-            const bool on = id < kBlockOff;
-            const int block = id - (on ? kBlockOn : kBlockOff);
-            makeCustom();
-            for (int e = 0; e < kEffectCount; ++e)
-                if (kEffects[e].block == block) set(setting(kEffects[e].box), on ? "1" : "0", true);
-            host_.rebuild();
-            return;
         }
         for (int e = 0; e < kEffectCount; ++e) {
             const char* key = id == boxId(e) ? kEffects[e].box : nullptr;
@@ -205,7 +187,12 @@ public:
     }
 
 private:
-    bool details_ = false;  // 2.2: every effect on its own shown
+    std::wstring withCost(const std::wstring& label, double ms) const {
+        if (ms <= 0.0) return label;
+        char v[16];
+        std::snprintf(v, sizeof v, "%.1f", std::max(ms, 0.1));
+        return label + tf(Text::FxCostMs, {v});
+    }
 
     // An effect's switch as it works: a set other than custom decides them (shown as it has them), else the file's.
     bool isOn(const char* key) {

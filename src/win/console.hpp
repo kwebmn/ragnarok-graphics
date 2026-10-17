@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/config.hpp"
+#include "core/gpu_timing.hpp"
 #include "core/settings/strings.hpp"
 
 namespace uagfx::win {
@@ -18,13 +19,15 @@ class Console {
 public:
     ~Console();
     // Every present of the game: its keys and its panel. True: uaro-graphics.ini was changed - read it again now.
-    bool present(HWND game, bool foreground, const std::string& iniPath, const Config& config);
+    // 2.2.1: timing - the card's work (the title's GPU ms, each effect's own); nullptr: not measured
+    bool present(HWND game, bool foreground, const std::string& iniPath, const Config& config,
+                 const GpuTiming* timing = nullptr);
     // The effect held off for comparison ("effects.grass"), "" none.
     const std::string& comparing() const { return comparing_; }
     bool open() const { return open_; }
 
 private:
-    enum class Kind { Heading, Box, Check, Slider, Choice };
+    enum class Kind { Heading, Box, Check, Slider, Choice, Open };  // 2.2.1: Open - a group's effects shown or not
     struct Row {
         Kind kind = Kind::Heading;
         std::string key;  // "effects.grass"; a heading's: its text (UTF-8)
@@ -38,11 +41,12 @@ private:
     void build(settings::Lang lang);
     bool pressed(int vk, Key& k, bool repeats, ULONGLONG now);
     bool change(const std::string& iniPath, const Config& config, int step);  // step 0: switch
-    void draw(HWND game, const Config& config);
+    void draw(HWND game, const Config& config, const GpuTiming* timing);
     void hide();
     static LRESULT CALLBACK wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp);
 
     bool open_ = false;
+    bool groupOpen_[kEffectGroups] = {};  // 2.2.1: the groups opened to their effects
     std::vector<Row> rows_;
     int at_ = 0, top_ = 0;
     settings::Lang lang_ = settings::Lang::En;

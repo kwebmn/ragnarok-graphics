@@ -8,6 +8,7 @@
 #include "core/config.hpp"
 #include "core/effect_costs.hpp"
 #include "core/frame.hpp"
+#include "core/gpu_timing.hpp"
 #include "core/image.hpp"
 #include "core/start_screen.hpp"
 
@@ -116,6 +117,8 @@ public:
     bool setTaa(bool on);  // 0.75: [quality] taa - Direct3D 12 in the game's process; false when it is not used
     // 0.76: what the effects cost a frame, the last half minute (Direct3D 12 in the game's process); false: unknown
     bool effectCosts(effect_costs::Costs& out) const;
+    // 2.2.1: the card's work a frame, the last half second (every renderer that times it); false: not measured
+    bool gpuTiming(GpuTiming& out) const;
     bool canSupersample() const { return !remote_ && !d3d11_ && !remix_; }
     // 0.39.5, before create(): the shaders' code is kept in this file between starts - compiled once, not each time.
     void setShaderCache(const std::string& file);

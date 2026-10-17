@@ -67,6 +67,11 @@ Costs parse(const std::string& text) {
     return c;
 }
 
+std::string passOf(const std::string& key) {
+    const Costly* k = find(key);
+    return k ? k->pass : "";
+}
+
 double costOf(const Costs& c, const std::string& key) {
     const Costly* k = find(key);
     if (!k) return -1;

@@ -148,14 +148,23 @@ void Renderer::Impl::submit() {
 void Renderer::Impl::readTimes(Slot& s, UINT index) {
     if (s.timed && timerData) {
         const UINT64* t = timerData + index * kTimes;
-        if (t[1] > t[0]) gpuTicks += t[1] - t[0];
-        if (s.upscaleTimed && t[3] > t[2]) upscaleTicks += t[3] - t[2];
+        if (t[1] > t[0]) {
+            gpuTicks += t[1] - t[0];
+            recentGpu += t[1] - t[0];
+        }
+        if (s.upscaleTimed && t[3] > t[2]) {
+            upscaleTicks += t[3] - t[2];
+            recentUpscale += t[3] - t[2];
+        }
         if (s.aiTimed && t[5] >= t[4]) {
             aiTicks += t[5] - t[4];
             if (ai) ai->observe(index, double(t[5] - t[4]) * 1000.0 / double(timerFrequency));
         }
         for (UINT e = 0; e < kEffectTimes; ++e)
-            if ((s.effectTimed >> e & 1) && t[7 + 2 * e] > t[6 + 2 * e]) effectTicks[e] += t[7 + 2 * e] - t[6 + 2 * e];
+            if ((s.effectTimed >> e & 1) && t[7 + 2 * e] > t[6 + 2 * e]) {
+                effectTicks[e] += t[7 + 2 * e] - t[6 + 2 * e];
+                recentEffect[e] += t[7 + 2 * e] - t[6 + 2 * e];
+            }
     }
     s.timed = s.upscaleTimed = s.aiTimed = false;
     s.effectTimed = 0;
@@ -214,6 +223,27 @@ void Renderer::Impl::noteGpuFrame() {
     if (!timer || !timerFrequency) return;
     ++gpuFrames;
     const ULONGLONG now = GetTickCount64();
+    // 2.2.1: twice a second the frame's work and the timed passes' (effect_costs' names) for the frame counter
+    ++recentFrames;
+    if (!recentSince) recentSince = now;
+    if (now - recentSince >= 500) {
+        static const char* const kPasses[kEffectTimes] = {
+            "ao",    "clouds", "actor_shadows", "lights", "haze",   "heat",  "grade", "dof",   "weather",
+            "glow",  "water",  "sky",           "shafts", "floor",  "sun",   "bloom", "grass", "new_trees"};
+        const double ms = 1000.0 / double(timerFrequency) / double(recentFrames);
+        recent.gpuMs = double(recentGpu) * ms;
+        recent.upscaleMs = double(recentUpscale) * ms;
+        recent.upscaler = upscaler && recentUpscale ? upscaler->name() : "";
+        recent.effects.clear();
+        for (UINT e = 0; e < kEffectTimes; ++e) {
+            if (recentEffect[e]) recent.effects[kPasses[e]] = double(recentEffect[e]) * ms;
+            recentEffect[e] = 0;
+        }
+        ++recent.serial;
+        recentGpu = recentUpscale = 0;
+        recentFrames = 0;
+        recentSince = now;
+    }
     if (!gpuSince) gpuSince = now;
     if (now - gpuSince < 30000) return;
     const double ms = 1000.0 / double(timerFrequency) / double(gpuFrames);
@@ -1358,6 +1388,7 @@ void Renderer::Impl::destroy() {
     releaseCom(crittersVs);
     releaseCom(crittersData);
     releaseCom(hillsData);  // 1.15
+    releaseCom(groundCellsData);  // 2.2.1
     releaseCom(forestVb);  // 2.0
     releaseCom(forestIb);
     releaseCom(forestInstances);
@@ -1533,10 +1564,24 @@ bool Renderer::effectCosts(effect_costs::Costs& out) const {
         "ao",    "clouds", "actor_shadows", "lights", "haze", "heat",  "grade", "dof",
         "weather", "glow", "water",         "sky",    "shafts", "floor", "sun",  "bloom", "grass", "new_trees"};
     out.clear();
-    if (remote_ || d3d11_ || remix_ || !impl_->effectMsKnown) return false;
+    if (remote_) {  // 2.2.1: the 64-bit renderer's, as it sends them (the last half second's)
+        GpuTiming t;
+        if (!remote_->timing(t) || t.effects.empty()) return false;
+        out = t.effects;
+        return true;
+    }
+    if (d3d11_ || remix_ || !impl_->effectMsKnown) return false;
     for (UINT e = 0; e < kEffectTimes; ++e)
         if (impl_->effectMs[e] > 0.0) out[kNames[e]] = impl_->effectMs[e];
     return true;
+}
+
+bool Renderer::gpuTiming(GpuTiming& out) const {
+    if (remote_) return remote_->timing(out);
+    if (d3d11_) return d3d11_->timing(out);
+    if (remix_ || !impl_) return false;
+    out = impl_->recent;
+    return out.gpuMs >= 0.0;
 }
 
 bool Renderer::setTaa(bool on) {

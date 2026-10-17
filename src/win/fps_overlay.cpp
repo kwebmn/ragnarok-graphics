@@ -26,6 +26,17 @@ FpsOverlay::~FpsOverlay() {
     if (window_) DestroyWindow(window_);
 }
 
+void FpsOverlay::setGpu(const GpuTiming* t) {
+    gpu_.clear();
+    if (!t || t->gpuMs < 0.0) return;
+    wchar_t text[96];
+    if (t->upscaleMs > 0.05)
+        std::swprintf(text, 96, L"  ·  GPU %.1f ms (%hs %.1f)", t->gpuMs, t->upscaler.c_str(), t->upscaleMs);
+    else
+        std::swprintf(text, 96, L"  ·  GPU %.1f ms", t->gpuMs);
+    gpu_ = text;
+}
+
 void FpsOverlay::present(HWND game, bool shown) {
     const ULONGLONG now = GetTickCount64();
     if (lastFrame_) worstMs_ = std::max(worstMs_, double(now - lastFrame_));
@@ -35,9 +46,9 @@ void FpsOverlay::present(HWND game, bool shown) {
     if (now - since_ < 500) return;
     const double seconds = double(now - since_) / 1000.0;
     const double fps = frames_ / seconds;
-    wchar_t text[128];
-    std::swprintf(text, 128, L"%.0f fps  ·  %.1f ms  (%.0f max)  ·  %hs", fps, fps > 0 ? 1000.0 / fps : 0.0,
-                  worstMs_, label_.c_str());
+    wchar_t text[256];
+    std::swprintf(text, 256, L"%.0f fps  ·  %.1f ms  (%.0f max)%ls  ·  %hs", fps, fps > 0 ? 1000.0 / fps : 0.0,
+                  worstMs_, gpu_.c_str(), label_.c_str());
     frames_ = 0;
     worstMs_ = 0;
     since_ = now;

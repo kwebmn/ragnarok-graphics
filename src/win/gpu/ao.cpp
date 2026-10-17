@@ -36,7 +36,7 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC fullScreenPipeline(ID3D12RootSignature* root,
 
 bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
                                 D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0,
-                                bool scene, UINT srv1, const D3D12_RECT* clip, UINT vertices) {
+                                bool scene, UINT srv1, const D3D12_RECT* clip, UINT vertices, UINT sceneT5) {
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
     linearClamp.magFilter = d3d7::TFG_LINEAR;
@@ -60,7 +60,8 @@ bool Renderer::Impl::effectPass(ID3D12PipelineState* pso, ID3D12Resource* dst, D
     list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
     list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
     if (scene)
-        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
+        list->SetGraphicsRootDescriptorTable(kRootScene,
+                                             sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv, sceneT5));
     list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     list->DrawInstanced(vertices, 1, 0, 0);
     boundPipeline = nullptr;  // the next draws bind everything again
@@ -306,11 +307,24 @@ bool Renderer::Impl::applyGrass() {
         c.sourceRect[2] = windNow.x * windNow.strength;
         c.sourceRect[3] = windNow.z * windNow.strength;
     }
-    if (!grassLogged) LOG_INFO("grass: on %s, blades up to %.0f pixels", mapName.c_str(), c.twin[0]);
+    // 2.2.1: the map's ground only (sourceClamp: the cells' grid, t5 their heights) - not the decks and bridges over it
+    UINT cells = kNoSrv;
+    if (ensureGroundCells()) {
+        const ground_cells::Grid& g = groundCells;
+        c.sourceClamp[0] = g.originX;
+        c.sourceClamp[1] = g.originZ;
+        c.sourceClamp[2] = 1.0f / g.side;
+        c.sourceClamp[3] = float(g.width) + 1024.0f * float(g.height);
+        cells = groundCellsSrv;
+    }
+    if (!grassLogged) LOG_INFO("grass: on %s, blades up to %.0f pixels%s", mapName.c_str(), c.twin[0],
+                               cells != kNoSrv ? ", on the map's ground only" : "");
     grassLogged = true;
     const UINT list1 = steps ? stepsDataSrv : sceneColorSrv;
-    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, list1)
-                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, list1);
+    return upscale ? effectPass(pso, world, worldState, rtvHandle(kRtvWorld), w, h, c, sceneColorSrv, true, list1,
+                                nullptr, 3, cells)
+                   : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, true, list1,
+                                nullptr, 3, cells);
 }
 
 // 1.7: the living world's ground (ground_life_ps) - sand drifting over the desert, snow glittering, the walls of a damp

@@ -30,6 +30,17 @@ TEST(forest_kinds_by_the_model_name) {
     CHECK(forest::kindOf("x\\rock.rsm") == forest::Kind::None);
 }
 
+TEST(forest_wood_is_not_a_tree) {
+    // 2.2.1: 나무 is wood too - umbala's bridge (움발라-나무다리3) was grown as bushes over the water
+    CHECK(forest::kindOf("x\\\xbf\xf2\xb9\xdf\xb6\xf3-\xb3\xaa\xb9\xab\xb4\xd9\xb8\xae""3.rsm") == forest::Kind::None);
+    CHECK(forest::kindOf("x\\\xb3\xaa\xb9\xab\xbb\xf3\xc0\xda""01.rsm") == forest::Kind::None);      // a wooden box
+    CHECK(forest::kindOf("x\\\xb3\xaa\xb9\xab\xbf\xef\xc5\xb8\xb8\xae.rsm") == forest::Kind::None);  // a fence
+    CHECK(forest::kindOf("x\\\xc5\xeb\xb3\xaa\xb9\xab.rsm") == forest::Kind::None);                   // a log
+    CHECK(forest::kindOf("x\\\xb3\xaa\xb9\xab\xb9\xd8\xb5\xd5.rsm") == forest::Kind::None);           // a stump
+    // a word from a letter's start only: c5 eb (통) across two letters (b0 c5, eb a1) is no barrel - a tree
+    CHECK(forest::kindOf("x\\\xb0\xc5\xeb\xa1\xb3\xaa\xb9\xab.rsm") == forest::Kind::Broadleaf);
+}
+
 TEST(forest_grows_a_tree_of_the_models_size) {
     forest::Shape s;
     CHECK(forest::shapeOf(forest::Kind::Broadleaf, tree01(), s));

@@ -112,6 +112,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         n.keepFps = file.keepFps;
     }
     if (file.allowTearing != running.allowTearing) u.waiting.push_back("allow_tearing");
+    if (file.fpsCounter != running.fpsCounter) {  // 2.2.1: the frame counter at once
+        u.applied.push_back(change("fps_counter", flag(running.fpsCounter), flag(file.fpsCounter)));
+        n.fpsCounter = file.fpsCounter;
+    }
     // 1.9.6: every [effects] key the settings know, by its word in the file - the list written out by hand stopped at
     // 0.33, and a change of a newer one alone (grass, foliage, the sky, the living world...) was not applied until
     // one of the listed changed with it: the console's switches seemed not to work.
@@ -134,7 +138,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
-           k == "debug.profile" ||
+           k == "debug.profile" || k == "frames.fps_counter" ||
            k.compare(0, 8, "effects.") == 0;
 }
 

@@ -25,6 +25,11 @@ public:
     bool start(const BridgeOptions& o, std::string& error);
     std::string adapterName() const { return adapter_; }
     bool upscales() const { return upscales_; }  // DLSS is ready in the renderer
+    // 2.2.1: the renderer's work a frame, as it last sent it (Msg::Timing, twice a second)
+    bool timing(GpuTiming& out) const {
+        out = timing_;
+        return timing_.gpuMs >= 0.0;
+    }
     void setUiSharp(bool sharp);
     void preparePipelines(const std::string& file);
     bool setTarget(int width, int height);
@@ -73,6 +78,7 @@ private:
     void timeLog();
     int samples_ = 1;
     bool upscales_ = false;
+    GpuTiming timing_;
     bool lost_ = false;
     bool needSurface_ = false;  // the renderer could not make a swap chain for the game's window
     EffectSettings effects_;  // as last sent

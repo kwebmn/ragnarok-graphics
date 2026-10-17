@@ -3,15 +3,20 @@
 
 #include <string>
 
+#include "core/gpu_timing.hpp"
+
 namespace uagfx::win {
 
 // 0.54: the frame counter - "143 fps · 7.0 ms · Direct3D 11" in the game window's top left corner, in a small
 // layered window of its own over it (no draw of the renderer's: the same with Direct3D 12, 11 and the 64-bit
-// renderer). Ctrl+Shift+F11 shows and hides it; [display] fps_counter = 1 shows it from the start.
+// renderer). Ctrl+Shift+F11 shows and hides it; [frames] fps_counter = 1 shows it (2.2.1: at once, and the key
+// writes it). 2.2.1: and the card's work a frame - "GPU 7.1 ms (DLSS Quality 2.6)": at the frame limit the frames a
+// second stay the same whatever is on, the GPU's milliseconds show what an effect costs.
 class FpsOverlay {
 public:
     ~FpsOverlay();
     void setLabel(const std::string& api) { label_ = api; }
+    void setGpu(const GpuTiming* t);  // the last measurement, nullptr: none
     // Every present of the game: counts, and twice a second redraws (or hides it, the game not in front).
     void present(HWND game, bool shown);
 
@@ -24,6 +29,7 @@ private:
     ULONGLONG lastFrame_ = 0;
     double worstMs_ = 0;
     std::wstring text_;
+    std::wstring gpu_;
 };
 
 }  // namespace uagfx::win

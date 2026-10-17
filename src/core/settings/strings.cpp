@@ -1328,12 +1328,18 @@ const Entry kTexts[] = {
     {"Frame counter",
      "Лічильник кадрів",
      "Счётчик кадров"},
-    {"Frames a second and the frame time in the game window's top left corner. Ctrl+Shift+F11 in the game shows and "
-     "hides it at any time.",
-     "Кадри за секунду й час кадру в лівому верхньому куті вікна гри. Ctrl+Shift+F11 у грі показує й ховає його "
-     "будь-коли.",
-     "Кадры в секунду и время кадра в левом верхнем углу окна игры. Ctrl+Shift+F11 в игре показывает и прячет его в "
-     "любой момент."},
+    {"Frames a second, the frame time and the graphics card's work a frame (GPU, DLSS apart) in the game window's top "
+     "left corner. The frames a second stay at the limit (60) whatever is on - the GPU's milliseconds show what an "
+     "effect costs: watch them as you switch it (the console, ~, has each effect's own). Ctrl+Shift+F11 in the game "
+     "shows and hides it at any time.",
+     "Кадри за секунду, час кадру й робота відеокарти за кадр (GPU, окремо DLSS) у лівому верхньому куті вікна гри. "
+     "Кадри за секунду лишаються на межі (60), хоч би що було ввімкнено, — мілісекунди GPU показують, скільки коштує "
+     "ефект: дивіться на них, перемикаючи його (у консолі, ~, — ціна кожного ефекту окремо). Ctrl+Shift+F11 у грі "
+     "показує й ховає його будь-коли.",
+     "Кадры в секунду, время кадра и работа видеокарты за кадр (GPU, отдельно DLSS) в левом верхнем углу окна игры. "
+     "Кадры в секунду остаются на пределе (60), что бы ни было включено, — миллисекунды GPU показывают, сколько стоит "
+     "эффект: смотрите на них, переключая его (в консоли, ~, — цена каждого эффекта отдельно). Ctrl+Shift+F11 в игре "
+     "показывает и прячет его в любой момент."},
     {"Profiles",
      "Профілі",
      "Профили"},
@@ -2441,17 +2447,23 @@ const Entry kTexts[] = {
      "Плавні стики землі",
      "Плавные стыки земли"},
     {"Where grass meets a road or sand, the line between them no longer runs in steps along the ground's cells: it "
-     "wanders, one texture reaching into the other (Direct3D 12).",
+     "wanders, one texture reaching into the other. On fields and in towns; the tiled floors of dungeons keep their "
+     "straight edges (Direct3D 12).",
      "Там, де трава зустрічається з дорогою чи піском, межа між ними більше не йде сходинками вздовж клітинок землі: "
-     "вона петляє, одна текстура заходить в іншу (Direct3D 12).",
+     "вона петляє, одна текстура заходить в іншу. На полях і в містах; плиткова підлога підземель зберігає рівні "
+     "краї (Direct3D 12).",
      "Там, где трава встречается с дорогой или песком, граница между ними больше не идёт ступеньками вдоль клеток "
-     "земли: она петляет, одна текстура заходит в другую (Direct3D 12)."},
+     "земли: она петляет, одна текстура заходит в другую. На полях и в городах; плиточный пол подземелий сохраняет "
+     "ровные края (Direct3D 12)."},
     {"uaRO Graphics - effects",
      "uaRO Graphics — ефекти",
      "uaRO Graphics — эффекты"},
-    {"Up/Down choose · Space on/off · Left/Right value · hold Tab to compare · ~ or Esc close",
-     "↑↓ вибір · Пробіл увімк/вимк · ←→ значення · затисніть Tab — порівняти · ~ або Esc — закрити",
-     "↑↓ выбор · Пробел вкл/выкл · ←→ значение · зажмите Tab — сравнить · ~ или Esc — закрыть"},
+    {"Up/Down choose · Space on/off, a group's effects · Left/Right value · hold Tab to compare · Ctrl+Shift+F11 "
+     "frame counter · ~ or Esc close",
+     "↑↓ вибір · Пробіл увімк/вимк, ефекти групи · ←→ значення · затисніть Tab — порівняти · Ctrl+Shift+F11 — "
+     "лічильник кадрів · ~ або Esc — закрити",
+     "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение · зажмите Tab — сравнить · Ctrl+Shift+F11 — "
+     "счётчик кадров · ~ или Esc — закрыть"},
     {"Full tree crowns",
      "Пишні крони",
      "Пышные кроны"},
@@ -2790,16 +2802,18 @@ const Entry kTexts[] = {
     {"How strong the group's effects are: 100 % as made, less is gentler, more is stronger.",
      "Наскільки сильні ефекти групи: 100 % — як задумано, менше — м'якше, більше — сильніше.",
      "Насколько сильны эффекты группы: 100 % — как задумано, меньше — мягче, больше — сильнее."},
-    {"&Details",
-     "&Докладно",
-     "&Подробно"},
-    {"Hide &details",
-     "Сховати &докладне",
-     "Скрыть &подробное"},
-    {"Every effect on its own. A change here makes the set Custom; the groups above still turn theirs off.",
-     "Кожен ефект окремо. Зміна тут робить набір «Свій»; групи вгорі й далі вимикають свої.",
-     "Каждый эффект отдельно. Изменение здесь делает набор «Свой»; группы вверху по-прежнему выключают "
-     "свои."},
+    {"The group's effects ({1}) ▸",
+     "Ефекти групи ({1}) ▸",
+     "Эффекты группы ({1}) ▸"},
+    {"Hide the effects ▾",
+     "Сховати ефекти ▾",
+     "Скрыть эффекты ▾"},
+    {"Each effect can be switched inside its group (the button under it). A switch of one makes the set Custom, "
+     "starting from what the set had on; a group's box still turns all of its effects off.",
+     "Кожен ефект можна перемкнути всередині його групи (кнопка під нею). Перемкнений ефект робить набір «Свій», "
+     "починаючи з того, що набір мав увімкненим; галочка групи й далі вимикає всі її ефекти.",
+     "Каждый эффект можно переключить внутри его группы (кнопка под ней). Переключённый эффект делает набор «Свой», "
+     "начиная с того, что набор держал включённым; галочка группы по-прежнему выключает все её эффекты."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

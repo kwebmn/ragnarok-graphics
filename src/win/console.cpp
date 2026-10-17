@@ -3,7 +3,10 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <map>
+#include <set>
 
+#include "core/effect_costs.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/ini_edit.hpp"
@@ -86,34 +89,34 @@ LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
     return CallWindowProcW(gameProc_, w, msg, wp, lp);
 }
 
+// 2.2.1: as the Effects page - the set and the mode, then the nine groups, each with its strength and a row that
+// opens it to its effects (each with its own settings under it); some thirty rows, not a hundred and fifty.
 void Console::build(Lang lang) {
     rows_.clear();
-    // 2.2: the set for the card and the groups first, then every effect on its own
+    rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11 as well)
     rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
     rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
+    rows_.push_back(Row{Kind::Choice, "effects.tier", 0});
+    const EffectLayout* fx = effectLayout();
     for (int g = 0; g < kEffectGroups; ++g) {
         if (!settingOf(groupKey(g))) continue;
         rows_.push_back(Row{Kind::Box, groupKey(g), 0});
         if (effect_groups::hasStrength(g)) rows_.push_back(Row{Kind::Slider, groupKey(g) + "_strength", 1});
-    }
-    const EffectLayout* fx = effectLayout();
-    int block = -1;
-    for (int e = 0; e < effectLayoutCount(); ++e) {
-        if (fx[e].block != block) {
-            block = fx[e].block;
-            const Text heading = block == 0   ? Text::PageEffects
-                                 : block == 1 ? Text::FxObjects
-                                 : block == 2 ? Text::FxLiving
-                                              : Text::FxRemaster;
-            rows_.push_back(Row{Kind::Heading, tr(lang, heading), 0});
-            if (block == 3) rows_.push_back(Row{Kind::Choice, "effects.tier", 1});
+        rows_.push_back(Row{Kind::Open, groupKey(g), 1});
+        if (!groupOpen_[g]) continue;
+        for (int i = 0; i < effect_groups::memberCount(); ++i) {
+            const effect_groups::Member& m = effect_groups::members()[i];
+            if (m.group != g) continue;
+            const std::string box = std::string("effects.") + m.key;
+            for (int e = 0; e < effectLayoutCount(); ++e) {
+                if (box != fx[e].box || !settingOf(fx[e].box)) continue;
+                rows_.push_back(Row{Kind::Box, fx[e].box, 2});
+                for (int k = 0; k < 2 && fx[e].checks[k]; ++k)
+                    if (settingOf(fx[e].checks[k])) rows_.push_back(Row{Kind::Check, fx[e].checks[k], 3});
+                for (int k = 0; k < 5 && fx[e].sliders[k]; ++k)
+                    if (settingOf(fx[e].sliders[k])) rows_.push_back(Row{Kind::Slider, fx[e].sliders[k], 3});
+            }
         }
-        if (!settingOf(fx[e].box)) continue;
-        rows_.push_back(Row{Kind::Box, fx[e].box, 0});
-        for (int k = 0; k < 2 && fx[e].checks[k]; ++k)
-            if (settingOf(fx[e].checks[k])) rows_.push_back(Row{Kind::Check, fx[e].checks[k], 1});
-        for (int k = 0; k < 5 && fx[e].sliders[k]; ++k)
-            if (settingOf(fx[e].sliders[k])) rows_.push_back(Row{Kind::Slider, fx[e].sliders[k], 1});
     }
     at_ = std::clamp(at_, 0, std::max(0, int(rows_.size()) - 1));
     if (!rows_.empty() && rows_[size_t(at_)].kind == Kind::Heading && at_ + 1 < int(rows_.size())) ++at_;
@@ -136,6 +139,13 @@ bool Console::pressed(int vk, Key& k, bool repeats, ULONGLONG now) {
 bool Console::change(const std::string& iniPath, const Config& config, int step) {
     if (rows_.empty()) return false;
     const Row& r = rows_[size_t(at_)];
+    if (r.kind == Kind::Open) {  // 2.2.1: a group's effects shown or hidden - Space, Enter, right opens, left closes
+        for (int g = 0; g < kEffectGroups; ++g)
+            if (r.key == groupKey(g)) groupOpen_[g] = step == 0 ? !groupOpen_[g] : step > 0;
+        build(lang_);
+        dirty_ = true;
+        return false;
+    }
     const IniSetting* s = r.kind == Kind::Heading ? nullptr : settingOf(r.key);
     if (!s) return false;
     const Config shown = shownConfig(config);
@@ -180,7 +190,8 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
     return true;
 }
 
-bool Console::present(HWND game, bool foreground, const std::string& iniPath, const Config& config) {
+bool Console::present(HWND game, bool foreground, const std::string& iniPath, const Config& config,
+                      const GpuTiming* timing) {
     if (!game) return false;
     if (game_ != game && !gameProc_) {  // once: the game's window passes its keys through wndProc
         gameProc_ = reinterpret_cast<WNDPROC>(
@@ -246,7 +257,7 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
     if (GetAsyncKeyState(VK_TAB) < 0 && at_ < n) {
         const Row& r = rows_[size_t(at_)];
         if (r.kind == Kind::Box) comparing = r.key;
-        if (r.kind == Kind::Check || r.kind == Kind::Slider)
+        if (r.kind == Kind::Check || r.kind == Kind::Slider || r.kind == Kind::Open)
             for (int k = at_; k >= 0; --k)
                 if (rows_[size_t(k)].kind == Kind::Box) {
                     comparing = rows_[size_t(k)].key;
@@ -258,7 +269,7 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         dirty_ = true;
     }
     if (changed) dirty_ = true;
-    draw(game, config);
+    draw(game, config, timing);
     return changed;
 }
 
@@ -267,10 +278,10 @@ void Console::hide() {
     shownText_.clear();
 }
 
-void Console::draw(HWND game, const Config& file) {
+void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
     // Redrawn when anything shown changed: the values come from the config the driver read (2.2: as the set has them).
     const Config config = shownConfig(file);
-    std::string state = std::to_string(at_) + "|" + comparing_;
+    std::string state = std::to_string(at_) + "|" + comparing_ + "|" + std::to_string(timing ? timing->serial : 0);
     for (const Row& r : rows_)
         if (r.kind != Kind::Heading)
             if (const IniSetting* s = settingOf(r.key)) state += tokenOf(*s, config) + ",";
@@ -290,7 +301,7 @@ void Console::draw(HWND game, const Config& file) {
     const int line = fontH * 3 / 2;
     const int w = std::max(fontH * 26, int(client.right - client.left) * 2 / 5);
     const int h = std::max(line * 8, int(client.bottom - client.top) * 3 / 4);
-    const int visible = std::max(3, (h - line * 3) / line);
+    const int visible = std::max(3, (h - line * 4) / line);  // the title, two lines of keys at the foot
     if (at_ < top_) top_ = at_;
     if (at_ >= top_ + visible) top_ = at_ - visible + 1;
     top_ = std::clamp(top_, 0, std::max(0, int(rows_.size()) - visible));
@@ -326,6 +337,18 @@ void Console::draw(HWND game, const Config& file) {
             TextOutW(dc, x - sz.cx, y, s.c_str(), int(s.size()));
         };
         text(fontH, line / 4, wide(tr(lang_, Text::ConsoleTitle)), RGB(229, 169, 78), true);
+        // 2.2.1: the card's work a frame now - what an effect costs shows as it is switched (or Tab held)
+        std::map<std::string, double> costs;
+        if (timing && timing->gpuMs >= 0.0) {
+            char gpu[96];
+            if (timing->upscaleMs > 0.05)
+                std::snprintf(gpu, sizeof gpu, "GPU %.2f ms (%s %.2f)", timing->gpuMs, timing->upscaler.c_str(),
+                              timing->upscaleMs);
+            else
+                std::snprintf(gpu, sizeof gpu, "GPU %.2f ms", timing->gpuMs);
+            textRight(w - fontH, line / 4, wide(gpu), RGB(229, 169, 78));
+            costs = timing->effects;
+        }
         for (int i = 0; i < visible && top_ + i < int(rows_.size()); ++i) {
             const Row& r = rows_[size_t(top_ + i)];
             const int y = line + line / 2 + i * line;
@@ -334,6 +357,16 @@ void Console::draw(HWND game, const Config& file) {
                     std::fill(px + size_t(yy) * size_t(w), px + size_t(yy + 1) * size_t(w), 0x00384048u);
             if (r.kind == Kind::Heading) {
                 text(fontH, y, wide(r.key), RGB(229, 169, 78), true);
+                continue;
+            }
+            if (r.kind == Kind::Open) {  // 2.2.1: "the group's effects (12) >" or "hide the effects"
+                int g = 0, count = 0;
+                while (g < kEffectGroups && r.key != groupKey(g)) ++g;
+                for (int i = 0; i < effect_groups::memberCount(); ++i) count += effect_groups::members()[i].group == g;
+                const bool shown = g < kEffectGroups && groupOpen_[g];
+                const std::string label = shown ? std::string(tr(lang_, Text::FxDetailsHide))
+                                                : fmt(tr(lang_, Text::FxDetails), {std::to_string(count)});
+                text(fontH + r.depth * fontH * 2, y, wide(label), RGB(140, 180, 220));
                 continue;
             }
             const IniSetting* s = settingOf(r.key);
@@ -345,6 +378,26 @@ void Console::draw(HWND game, const Config& file) {
                 const bool on = tok == s->tokens[1] && !held;
                 text(x, y, on ? L"■" : L"□", on ? RGB(143, 194, 122) : RGB(150, 150, 150));
                 text(x + fontH * 3 / 2, y, wide(tr(lang_, s->label)), on ? RGB(240, 236, 226) : RGB(170, 170, 170));
+                // 2.2.1: its timed pass's ms (a group's: its effects' passes, each once)
+                double ms = -1.0;
+                int g = 0;
+                while (g < kEffectGroups && r.key != groupKey(g)) ++g;
+                if (g < kEffectGroups) {
+                    std::set<std::string> passes;
+                    for (int i = 0; i < effect_groups::memberCount(); ++i) {
+                        const effect_groups::Member& m = effect_groups::members()[i];
+                        const std::string pass = m.group == g ? effect_costs::passOf(m.key) : "";
+                        const auto c = pass.empty() || !passes.insert(pass).second ? costs.end() : costs.find(pass);
+                        if (c != costs.end()) ms = std::max(ms, 0.0) + c->second;
+                    }
+                } else {
+                    ms = effect_costs::costOf(costs, r.key);
+                }
+                if (ms >= 0.005) {
+                    char v[32];
+                    std::snprintf(v, sizeof v, "%.2f ms", ms);
+                    textRight(w - fontH, y, wide(v), RGB(150, 160, 160));
+                }
             } else if (s->control == Control::Slider) {
                 text(x, y, wide(tr(lang_, s->label)), RGB(200, 200, 190));
                 textRight(w - fontH, y, wide(tok + s->unit), RGB(240, 236, 226));
@@ -356,8 +409,11 @@ void Console::draw(HWND game, const Config& file) {
                 textRight(w - fontH, y, L"◂ " + wide(choice) + L" ▸", RGB(240, 236, 226));
             }
         }
-        const int foot = h - line - line / 4;
-        text(fontH, foot, wide(tr(lang_, Text::ConsoleKeys)), RGB(150, 160, 160));
+        RECT foot{fontH, h - 2 * line - line / 4, w - fontH, h};  // 2.2.1: two lines, wrapped
+        SelectObject(dc, font);
+        SetTextColor(dc, RGB(150, 160, 160));
+        const std::wstring keys = wide(tr(lang_, Text::ConsoleKeys));
+        DrawTextW(dc, keys.c_str(), int(keys.size()), &foot, DT_WORDBREAK | DT_LEFT | DT_NOPREFIX);
         for (size_t i = 0; i < size_t(w) * size_t(h); ++i) {
             const uint32_t c = px[i] & 0xFFFFFF;
             const uint32_t v = std::max({c & 0xFF, (c >> 8) & 0xFF, c >> 16});

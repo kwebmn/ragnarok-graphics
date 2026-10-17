@@ -254,6 +254,57 @@ bool Renderer::Impl::ensureHills() {
     return true;
 }
 
+// 2.2.1: the grass's ground (core/ground_cells.hpp, made as the frame began from the last frame's) into its texture
+// once a frame, in the grass's pass's list before it records.
+bool Renderer::Impl::ensureGroundCells() {
+    if (groundCellsTried) return groundCellsUp;
+    groundCellsTried = true;
+    if (groundCellsFailed) return false;
+    const ground_cells::Grid& g = groundCells;
+    if (g.side <= 0.0f || g.width <= 0 || g.height <= 0 || g.span.size() < size_t(g.width) * size_t(g.height) * 2)
+        return false;
+    if (!groundCellsData) {
+        groundCellsData = createTexture2D(device, ground_cells::kMostSide, ground_cells::kMostSide, 1,
+                                          DXGI_FORMAT_R32G32_FLOAT, D3D12_RESOURCE_FLAG_NONE,
+                                          D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+        groundCellsSrv = groundCellsData ? allocSrv() : kNoSrv;
+        if (!groundCellsData || groundCellsSrv == kNoSrv) {
+            LOG_ERROR("grass: no memory for the ground's heights: on every green pixel as before");
+            releaseCom(groundCellsData);
+            groundCellsFailed = true;  // not tried again
+            return false;
+        }
+        groundCellsState = D3D12_RESOURCE_STATE_COPY_DEST;
+        device->CreateShaderResourceView(groundCellsData, nullptr, cpuSrvHandle(groundCellsSrv));
+    }
+    const UINT pitch = UINT(ground_cells::kMostSide) * 2 * sizeof(float);  // 2048: a multiple of 256
+    const Upload u = allocUpload(size_t(pitch) * size_t(g.height), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+    if (!u.cpu) return false;
+    for (int row = 0; row < g.height; ++row)
+        std::memcpy(static_cast<uint8_t*>(u.cpu) + size_t(row) * pitch,
+                    g.span.data() + size_t(row) * size_t(g.width) * 2, size_t(g.width) * 2 * sizeof(float));
+    D3D12_TEXTURE_COPY_LOCATION src{}, to{};
+    src.pResource = slots[slot].upload;
+    src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint.Offset = u.offset;
+    src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32G32_FLOAT;
+    src.PlacedFootprint.Footprint.Width = UINT(g.width);
+    src.PlacedFootprint.Footprint.Height = UINT(g.height);
+    src.PlacedFootprint.Footprint.Depth = 1;
+    src.PlacedFootprint.Footprint.RowPitch = pitch;
+    to.pResource = groundCellsData;
+    to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    transition(groundCellsData, groundCellsState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
+    transition(groundCellsData, groundCellsState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    groundCellsUp = true;
+    if (!groundCellsLogged)
+        LOG_INFO("grass: %dx%d cells of %s's ground, %.1f a side", g.width, g.height, mapName.c_str(),
+                 double(g.side));
+    groundCellsLogged = true;
+    return true;
+}
+
 // The constants of a ground draw lit over the smooth hills (shaders.cpp hillLight): bit 26 of stage 0, the grid's
 // place, the game's projection and camera, the way to the sun in the world, the strength, the light all around.
 void Renderer::Impl::hillsConstants(Constants& c) const {

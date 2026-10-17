@@ -162,6 +162,8 @@ private:
     std::vector<uint8_t> out_;
     std::vector<uint8_t> iconOut_;  // its own: an icon comes back in the middle of other work
     std::vector<uint8_t> startOut_;  // 0.40
+    std::vector<uint8_t> timingOut_;  // 2.2.1
+    uint32_t timingSent_ = 0;
     LateDlss late_;
 };
 
@@ -586,6 +588,14 @@ void Host::present(WireReader& rd) {
     o.hdr = rd.u8() != 0;     // 0.65
     if (rd.ok() && (surface_ || presentMode_ != "composition")) {
         renderer_.present(window, width, height, source, o);
+        GpuTiming t;  // 2.2.1: the card's work, each new half second's to the game (its frame counter, the console)
+        if (renderer_.gpuTiming(t) && t.serial != timingSent_) {
+            timingSent_ = t.serial;
+            timingOut_.clear();
+            WireWriter w(timingOut_);
+            writeTiming(w, t);
+            channel_.trySend(Msg::Timing, timingOut_);
+        }
         if (!surface_ && renderer_.presentRefused() && !surfaceAsked_ && presentMode_ != "window") {
             surfaceAsked_ = true;
             LOG_INFO("bridge: the game's window takes no swap chain from this process; "

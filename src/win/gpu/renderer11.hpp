@@ -56,6 +56,11 @@ public:
     // The device and its shaders - read from shaderCache when a run kept them, else compiled and kept there; the
     // start screen is told of them.
     bool create(const std::string& shaderCache, Renderer::StartSink sink, void* sinkContext, std::string& error);
+    // 2.2.1: the card's work a frame, the last half second; false: not measured
+    bool timing(GpuTiming& out) const {
+        out = recent_;
+        return recent_.gpuMs >= 0.0;
+    }
     std::string adapterName() const { return adapter_; }
     bool setTarget(int width, int height);
     bool setScale(double k, int targetWidth, int targetHeight);
@@ -366,6 +371,10 @@ private:
         EffectSpan& operator=(const EffectSpan&) = delete;
     };
     double effectMs_[kEffectTimes11] = {};
+    double recentMs_ = 0.0, recentEffectMs_[kEffectTimes11] = {};  // 2.2.1: the half second's, for timing()
+    uint32_t recentFrames_ = 0;
+    ULONGLONG recentSince_ = 0;
+    GpuTiming recent_;
     // 0.89: what the frames ask of the processor and the driver, the log every half minute - draws, the driver's
     // calls made and spared, the processor's time in drawing; the game's textures made, reused, freed
     struct Stats {

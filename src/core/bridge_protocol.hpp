@@ -71,6 +71,7 @@ enum class Msg : uint32_t {
     UpscalerReady,      // DLSS came up after the Hello (it starts in the background)
     IconDone,           // u64 key, i32 width, height, then width * height ARGB: that icon made larger
     StartProgress,      // u8 stage, i32 shaders done, i32 of them (core/start_screen.hpp): what its start does
+    Timing,             // 2.2.1: the card's work a frame, the last half second (core/gpu_timing.hpp writeTiming)
 };
 
 }  // namespace uagfx::bridge

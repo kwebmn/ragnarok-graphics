@@ -1690,6 +1690,16 @@ float4 grass_ps(PresentOut i) : SV_Target {
         if (hereZ < v.z - 1.0) continue;  // something in front of the blade
         float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) +
                    float3(r9, r10, r11);
+        // 2.2.1: on the map's own ground only - sourceClamp the cells' grid (its corner, one over a side, the cells
+        // across + 1024 * down), t5 each cell's lowest and highest y: umbala's green decks and bridges stand above it
+        if (sourceClamp.z > 0.0) {
+            int cellsAcross = int(fmod(sourceClamp.w, 1024.0) + 0.5), cellsDown = int(sourceClamp.w / 1024.0);
+            int2 cellAt = int2(floor((w.xz - sourceClamp.xy) * sourceClamp.z));
+            if (all(cellAt >= int2(0, 0)) && cellAt.x < cellsAcross && cellAt.y < cellsDown) {
+                float2 cellSpan = mirrorTex.Load(int3(cellAt, 0)).rg;
+                if (cellSpan.x > cellSpan.y || w.y < cellSpan.x - 0.75 || w.y > cellSpan.y + 0.75) continue;
+            }
+        }
         float2 cell = w.xz * 2.0;  // a blade or none every half unit
         float2 id = floor(cell);
         float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));

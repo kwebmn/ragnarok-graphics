@@ -1735,6 +1735,20 @@ void Renderer11::timeFrame() {
     }
     untimed_ = false;
     const ULONGLONG now = GetTickCount64();
+    if (!recentSince_) recentSince_ = now;
+    if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
+        static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade"};
+        recent_.gpuMs = recentMs_ / recentFrames_;
+        recent_.effects.clear();
+        for (int e = 0; e < kEffectTimes11; ++e) {
+            if (recentEffectMs_[e] > 0.0) recent_.effects[kPasses[e]] = recentEffectMs_[e] / recentFrames_;
+            recentEffectMs_[e] = 0.0;
+        }
+        ++recent_.serial;
+        recentMs_ = 0.0;
+        recentFrames_ = 0;
+        recentSince_ = now;
+    }
     if (!gpuSince_) gpuSince_ = now;
     if (now - gpuSince_ >= 30000) logGpu(now);
 }
@@ -1762,12 +1776,16 @@ bool Renderer11::readTimes(UINT slot, bool wait) {
     }
     gpuMs_ += double(ticks) * 1000.0 / double(d.Frequency);
     ++gpuFrames_;
+    recentMs_ += double(ticks) * 1000.0 / double(d.Frequency);  // 2.2.1
+    ++recentFrames_;
     for (int e = 0; e < kEffectTimes11; ++e) {  // 0.89: the effects' own spans
         if (!(f.effectEnded >> e & 1)) continue;
         UINT64 a = 0, b = 0;
         if (ctx_->GetData(f.effect[e][0], &a, sizeof a, D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK &&
-            ctx_->GetData(f.effect[e][1], &b, sizeof b, D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK && b > a)
+            ctx_->GetData(f.effect[e][1], &b, sizeof b, D3D11_ASYNC_GETDATA_DONOTFLUSH) == S_OK && b > a) {
             effectMs_[e] += double(b - a) * 1000.0 / double(d.Frequency);
+            recentEffectMs_[e] += double(b - a) * 1000.0 / double(d.Frequency);
+        }
     }
     return true;
 }

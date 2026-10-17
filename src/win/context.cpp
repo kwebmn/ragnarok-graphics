@@ -294,7 +294,22 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 0.54: Ctrl+Shift+F11 - the frame counter
     const bool fpsDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                          GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F11) < 0;
-    if (fpsKey_.pressed(fpsDown)) fpsShown_ = !fpsShown_;
+    if (fpsKey_.pressed(fpsDown)) {  // 2.2.1: written too - the console, the settings and the next start see it
+        fpsShown_ = !fpsShown_;
+        const std::string path = gameDir() + "\\uaro-graphics.ini";
+        std::string text;
+        readTextFile(path, text);
+        const std::string next = settings::applyIniEdits(text, {{"frames", "fps_counter", fpsShown_ ? "1" : "0"}});
+        bool written = false;
+        {
+            std::ofstream f(path + ".fps", std::ios::binary | std::ios::trunc);  // whole, then in its place
+            written = f && f.write(next.data(), std::streamsize(next.size()));
+        }
+        if (written && MoveFileExA((path + ".fps").c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+            config.fpsCounter = fpsShown_;  // what the file says now: not taken for a change of it
+            LOG_INFO("frame counter: %s (Ctrl+Shift+F11)", fpsShown_ ? "on" : "off");
+        }
+    }
     // 0.54: Ctrl+Shift+F12 - the picture as shown (4K, not the game's 1920x1080) into the game's ScreenShot folder
     const bool shotDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                           GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F12) < 0;
@@ -439,8 +454,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
     soundFrame(foreground);  // 0.91: quieter in the background; the crowd's limiter thinned out
     renderer->present(window, out.cx, out.cy, source, o);
+    GpuTiming gpuNow;  // 2.2.1: the card's work a frame - the counter's and the console's
+    const bool timed = renderer->gpuTiming(gpuNow);
+    fps_.setGpu(timed ? &gpuNow : nullptr);
     fps_.present(window, fpsShown_);
-    if (console_.present(window, foreground, gameDir() + "\\uaro-graphics.ini", config)) {  // 1.9.3
+    if (console_.present(window, foreground, gameDir() + "\\uaro-graphics.ini", config,
+                         timed ? &gpuNow : nullptr)) {  // 1.9.3
         settingsChecked_ = 0;  // read at once, at the next present
         settingsKnown_ = false;
     }
@@ -523,6 +542,7 @@ void Context::watchSettings() {
     }
     if (config.windowArt != was.windowArt) crisp::setWindowArt(config.windowArt);  // 0.41: the windows redrawn
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
+    if (config.fpsCounter != was.fpsCounter) fpsShown_ = config.fpsCounter;  // 2.2.1: at once
     std::string line = "settings: uaro-graphics.ini changed:";
     for (size_t i = 0; i < u.applied.size(); ++i) line += (i ? ", " : " ") + u.applied[i];
     if (!u.waiting.empty()) line += u.applied.empty() ? " at the next start:" : "; at the next start:";

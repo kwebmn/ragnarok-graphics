@@ -15,6 +15,8 @@
 #include "core/frame.hpp"
 #include "core/critters.hpp"
 #include "core/key_pair.hpp"
+#include "core/gpu_timing.hpp"
+#include "core/ground_cells.hpp"
 #include "core/hills.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
@@ -584,6 +586,11 @@ struct Renderer::Impl {
     uint64_t effectSerial[kEffectTimes] = {};
     double effectMs[kEffectTimes] = {};  // 0.76: the last half minute's, ms a frame (Renderer::effectCosts)
     bool effectMsKnown = false;
+    // 2.2.1: the last half second's, for the frame counter and the console (Renderer::gpuTiming)
+    UINT64 recentGpu = 0, recentUpscale = 0, recentEffect[kEffectTimes] = {};
+    uint32_t recentFrames = 0;
+    ULONGLONG recentSince = 0;
+    GpuTiming recent;
     void effectBegin(EffectTimer e);
     void effectEnd(EffectTimer e);
     void noteGpuFrame();                   // after a present
@@ -906,7 +913,9 @@ struct Renderer::Impl {
         crittersDone = false;
         materialsMade = 0;  // 1.8
         if (hillsWanted()) hillsGrid = hills::build(groundTris);  // 1.15: before they go
+        if (grassCellsWanted()) groundCells = ground_cells::build(groundTris);  // 2.2.1
         hillsUp = hillsTried = false;
+        groundCellsUp = groundCellsTried = false;
         smoothReady = false;  // 1.19
         if (windShared()) updateWind();  // 1.22
         groundTris.clear();  // 1.9
@@ -990,7 +999,9 @@ struct Renderer::Impl {
     std::vector<uint32_t> groundTextures;
     FrameRecord seamRec;
     bool seamPass = false, seamsDone = false, seamsLogged = false;
-    bool seamsWanted() const { return effects.groundSeams && viewToWorldValid; }
+    // 2.2.1: outdoors only - a dungeon's floor is tiles (Glast Heim's church: stone and black broken ones), whose
+    // edges are meant straight: the wandering line spread the black over the stones as cracks, and blinked
+    bool seamsWanted() const { return effects.groundSeams && viewToWorldValid && mapOutdoors; }
     // 1.19: smooth light on the models (core/smooth_shade.hpp) - the game's record's colours changed as its vertices
     // go up (prepareGeometry), worked out once a frame
     struct ColourChange {
@@ -1013,6 +1024,16 @@ struct Renderer::Impl {
         return effects.smoothHills && effects.smoothHillsStrength > 0 && viewToWorldValid;
     }
     bool ensureHills();  // the texture holds this frame's grid; false: none this frame
+    // 2.2.1: the ground's heights a cell (core/ground_cells.hpp) - the grass on the map's ground only (grass_ps, t5)
+    ground_cells::Grid groundCells;
+    ID3D12Resource* groundCellsData = nullptr;
+    D3D12_RESOURCE_STATES groundCellsState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT groundCellsSrv = kNoSrv;
+    bool groundCellsUp = false, groundCellsTried = false, groundCellsFailed = false, groundCellsLogged = false;
+    bool grassCellsWanted() const {
+        return effects.grass && effects.grassAmount > 0 && grassPs && mapOutdoors && viewToWorldValid;
+    }
+    bool ensureGroundCells();  // the texture holds this frame's cells; false: none this frame
     void hillsConstants(Constants& c) const;
     void sunInWorld(float out[3]) const;  // the way to the sun (as the materials find it), up along -y
     bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty(); }
@@ -1248,7 +1269,8 @@ struct Renderer::Impl {
                     D3D12_CPU_DESCRIPTOR_HANDLE dstRtv, int dstW, int dstH, Constants& c, UINT srv0, bool scene,
                     UINT srv1 = kNoSrv,                 // t1: srv0 again unless given
                     const D3D12_RECT* clip = nullptr,   // 0.23: only these pixels
-                    UINT vertices = 3);                 // 1.7: the vertex shader's own quads (critters_vs)
+                    UINT vertices = 3,                  // 1.7: the vertex shader's own quads (critters_vs)
+                    UINT sceneT5 = kNoSrv);             // 2.2.1: the scene table's t5 (the grass: the ground)
     float waterTime();            // seconds since the first water
     ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
     ID3D12PipelineState* glowLightPipeline(UINT samples, bool upscaledFormat);
