@@ -1,3 +1,14 @@
+# uaRO Graphics 1.9.4 — testing
+
+- **A hang when switching effects in the console.** In reports R-HAAN9H and R-AQ6PVP the card was lost (device
+  removed) a couple of seconds after an effect was turned off from the console; before that, Soft shadows and Glow
+  turned on again could not make their buffers ("no video memory"). Now an effect turned off keeps its buffers (until
+  the size changes or the game ends) - turned on again it takes the same ones.
+- **Breadcrumbs on the card.** If the card is lost all the same, the log has `the GPU stopped in "..."` - the pass it
+  stopped in (shadows, grass, seams, the game's world, the interface...). That will show the exact cause.
+- How to check: open the console (`~`) and switch effects off and on many times, Soft shadows, Glow, Characters'
+  shadows, Clouds the most. If the game hangs all the same, send a report right after restarting it.
+
 # uaRO Graphics 1.9.3 — testing
 
 - **A console in the game.** The `~` key (left of 1) opens a panel over the game with every switch and slider of the
