@@ -91,6 +91,7 @@ const EffectLayout kEffects[] = {
     {"effects.new_trees", {}, {}, {}, 3},  // 1.10
     {"effects.sky_light", {}, {}, {}, 3},  // 1.11
     {"effects.bounce_light", {}, {}, {}, 3},  // 1.11
+    {"effects.real_shadows", {}, {}, {}, 3},  // 1.12
 };
 
 }  // namespace

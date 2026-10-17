@@ -101,6 +101,7 @@ constexpr UINT kRtvMaterial = kRtvFloor + 1;  // 1.8: a level of a texture's mat
 constexpr UINT kRtvCount = kRtvMaterial + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
+constexpr UINT kDsvSun = 2;  // 1.12: the sun's map
 
 // What the open command list draws into (bindPass); the glow's passes add its target as the second one (0.18).
 enum Pass { kPassNone = 0, kPassTarget, kPassWorld, kPassLayer, kPassTargetGlow, kPassWorldGlow };
@@ -886,6 +887,9 @@ struct Renderer::Impl {
         frameTrees.clear();  // 1.10
         treesDone = false;
         skyLightDone = false;  // 1.11
+        sunVerts.clear();  // 1.12
+        sunCasters.clear();
+        sunMapDone = false;
         frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
@@ -977,6 +981,32 @@ struct Renderer::Impl {
     bool skyLightWanted() const { return skyLightPs && (effects.skyLight || effects.bounceLight); }
     bool skyLightDue() const { return skyLightWanted() && groundDrawn && !skyLightDone && viewToWorldValid; }
     bool applySkyLight();  // once a frame, before the characters; false: lost
+    // 1.12: the real sun's shadows (sun_map.cpp) - the frame's opaque world from the sun into a depth map
+    struct SunCaster {
+        uint32_t first = 0, count = 0;  // vertices into sunVerts (five floats each: x, y, z, u, v)
+        uint32_t texture = 0;
+        bool alphaTest = false;
+        float ref = 0.5f;
+    };
+    std::vector<float> sunVerts;
+    std::vector<SunCaster> sunCasters;
+    ID3D12Resource* sunMap = nullptr;
+    D3D12_RESOURCE_STATES sunMapState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    UINT sunMapSrv = 0;
+    ID3DBlob* sunMapVs = nullptr;
+    ID3DBlob* sunMapPs = nullptr;
+    ID3DBlob* sunApplyPs = nullptr;
+    ID3D12PipelineState* sunMapPso = nullptr;
+    ID3D12PipelineState* sunApplyPipelines[4] = {};
+    bool sunMapDone = false, sunMapLogged = false;
+    bool realShadowsWanted() const {
+        return effects.realShadows && remaster() && sunMapVs && sunMapPs && sunApplyPs && mapOutdoors &&
+               viewToWorldValid && effects.nightNow < 90;
+    }
+    bool realShadowsDue() const { return realShadowsWanted() && groundDrawn && !sunMapDone; }
+    void noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    ID3D12PipelineState* sunMapPipeline();
+    bool applyRealShadows();  // once a frame, before the characters; false: lost
     bool remaster() const {
         return effects.tier == 2 || (effects.tier == 0 && adapterMb >= 6000);  // auto: a card of 6 GB and more
     }
@@ -1068,7 +1098,9 @@ struct Renderer::Impl {
         return effects.sunShadows && effects.sunShadowsStrength > 0 && sunShadowPs && mapOutdoors &&
                effects.nightNow < 100;
     }
-    bool sunShadowDue() const { return sunShadowWanted() && groundDrawn && !sunShadowDone && viewToWorldValid; }
+    bool sunShadowDue() const {  // 1.12: not with the real ones
+        return sunShadowWanted() && groundDrawn && !sunShadowDone && viewToWorldValid && !realShadowsWanted();
+    }
     bool applySunShadows();  // once a frame, before the characters (as the soft shadows); false: lost
     bool applyAo();  // once a frame (aoDone); false: lost
     bool gradeWanted() const { return effects.grade; }

@@ -1939,6 +1939,50 @@ float4 sky_light_ps(PresentOut i) : SV_Target {
 }
 #endif
 
+#ifndef UAGFX_SAFE
+// 1.12, the real sun's shadows (sun_map.cpp): the world's opaque draws seen from the sun into a depth map - r0-r11 the
+// world into the sun's box (x, y -1..1 across it, z 0..1 along the light), a leaves picture's holes (footprint 1:
+// alpha below twinX) let the light through.
+struct SunIn {
+    float4 pos : SV_Position;
+    float2 uv : TEXCOORD0;
+};
+
+SunIn sun_map_vs(float3 p : POSITION, float2 uv : TEXCOORD0) {
+    SunIn o;
+    o.pos = float4(dot(float4(p, 1.0), float4(r0, r1, r2, r3)), dot(float4(p, 1.0), float4(r4, r5, r6, r7)),
+                   dot(float4(p, 1.0), float4(r8, r9, r10, r11)), 1.0);
+    o.uv = uv;
+    return o;
+}
+
+void sun_map_ps(SunIn i) {
+    if (footprint > 0.5 && tex0.Sample(samp0, i.uv).a < twinX) discard;
+}
+
+// The map applied (multiplied onto the picture, before the characters): each pixel of the world - r0-r11 now the view
+// into the sun's box - in the light or behind something nearer the sun; 3 x 3 of the map's texels (twinY of them a
+// side), softer. sharpen the shadow's darkness.
+float4 sun_apply_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
+    float3 v = viewAt(wp);
+    float3 l = float3(dot(float4(v, 1.0), float4(r0, r1, r2, r3)), dot(float4(v, 1.0), float4(r4, r5, r6, r7)),
+                      dot(float4(v, 1.0), float4(r8, r9, r10, r11)));
+    float2 uv = float2(l.x * 0.5 + 0.5, 0.5 - l.y * 0.5);
+    if (any(uv <= 0.0) || any(uv >= 1.0) || l.z >= 1.0) discard;
+    float2 at = uv * twinY - 0.5;
+    float shade = 0.0;
+    [unroll] for (int y = -1; y <= 1; ++y)
+        [unroll] for (int x = -1; x <= 1; ++x) {
+            int2 q = clamp(int2(at) + int2(x, y), int2(0, 0), int2(int(twinY) - 1, int(twinY) - 1));
+            shade += tex1.Load(int3(q, 0)).r < l.z - twinW ? 1.0 : 0.0;
+        }
+    float s = 1.0 - sharpen * shade / 9.0;
+    return float4(s, s, s, 1.0);
+}
+#endif
+
 // 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of
 // t1 - two texels: its place (xyz) and way (w), then its age 0-1 (x) - footprint how many; twinX the kind: 1 snow,
 // 2 sand (a foot's print, fading), 3 dust (a puff spreading and thinning). Blended over by its alpha.

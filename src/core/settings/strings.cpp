@@ -2499,6 +2499,18 @@ const Entry kTexts[] = {
      "карниз, пісок підсвічує камені поруч (Direct3D 12).",
      "Свет отражается между соседними поверхностями: трава подкрашивает низ стены зелёным, красная крыша согревает "
      "карниз, песок подсвечивает камни рядом (Direct3D 12)."},
+    {"Real sun shadows",
+     "Справжні тіні від сонця",
+     "Настоящие тени от солнца"},
+    {"Houses, walls, rocks and trees cast shadows as the sun really would: from a map of the world seen from the sun, "
+     "also what is off the screen, the crowns' shadows dappled through the leaves. Their darkness is the Shadows of "
+     "houses and trees slider's. Remaster mode only (Direct3D 12).",
+     "Будинки, стіни, скелі й дерева кидають тіні так, як кидало б справжнє сонце: за мапою світу, видимого з сонця, "
+     "зокрема того, що поза екраном, тіні крон — плямисті крізь листя. Темнота — з повзунка «Тіні будинків і дерев». "
+     "Лише в режимі «Ремастер» (Direct3D 12).",
+     "Дома, стены, скалы и деревья отбрасывают тени так, как отбрасывало бы настоящее солнце: по карте мира, видимого "
+     "с солнца, в том числе того, что за экраном, тени крон — пятнистые сквозь листву. Темнота — с ползунка «Тени "
+     "домов и деревьев». Только в режиме «Ремастер» (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

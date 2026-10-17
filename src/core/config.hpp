@@ -331,6 +331,10 @@ struct EffectSettings {
     // ground's; bounce_light - the colours around light a surface a little in their colour. Off by default.
     bool skyLight = false;
     bool bounceLight = false;
+    // 1.12: the remaster's real sun shadows (win/gpu/sun_map.cpp): the frame's opaque world drawn from the sun into a
+    // depth map, every pixel of it darkened where something nearer the sun hides it - the leaves' holes let
+    // light through. Instead of the screen's own sun shadows; Remaster mode, Direct3D 12. Off by default.
+    bool realShadows = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

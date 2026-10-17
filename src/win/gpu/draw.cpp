@@ -85,10 +85,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
     if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && seamsWanted()) noteGround(rec, d);  // 1.9
+    // 1.12: an opaque draw of the world casts the real sun's shadows
+    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && !sunMapDone && realShadowsWanted())
+        noteCaster(rec, d, s);
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
     if (!inner && !s.ui && s.blend && treesDue() && !applyTrees()) return;  // 1.10
     if (!inner && !s.ui && s.blend && skyLightDue() && !applySkyLight()) return;  // 1.11: under the soft shadows
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
+    if (!inner && !s.ui && s.blend && realShadowsDue() && !applyRealShadows()) return;  // 1.12
     if (!inner && !s.ui && s.blend && sunShadowDue() && !applySunShadows()) return;  // 0.77: likewise
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
     if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters

@@ -243,6 +243,8 @@ enum class Text : uint16_t {
     FxNewTrees, FxNewTreesHint,
     // 1.11
     FxSkyLight, FxSkyLightHint, FxBounceLight, FxBounceLightHint,
+    // 1.12
+    FxRealShadows, FxRealShadowsHint,
     Count
 };
 

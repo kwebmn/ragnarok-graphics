@@ -316,6 +316,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSkyLightHint, ""},
         {"effects", "bounce_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBounceLight,
          Text::FxBounceLightHint, ""},
+        {"effects", "real_shadows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRealShadows,
+         Text::FxRealShadowsHint, ""},
         {"effects", "night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNight, Text::FxNightHint,
          ""},
         {"effects", "night_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {}, Text::FxNightStrength,
@@ -619,6 +621,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.new_trees") return c.effects.newTrees ? "1" : "0";
     if (k == "effects.sky_light") return c.effects.skyLight ? "1" : "0";
     if (k == "effects.bounce_light") return c.effects.bounceLight ? "1" : "0";
+    if (k == "effects.real_shadows") return c.effects.realShadows ? "1" : "0";
     if (k == "effects.night") return c.effects.night ? "1" : "0";
     if (k == "effects.foliage") return c.effects.foliage ? "1" : "0";
     if (k == "effects.foliage_strength") return std::to_string(c.effects.foliageStrength);

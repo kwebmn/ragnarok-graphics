@@ -779,6 +779,7 @@ bool Renderer::Impl::applySkyLight() {
 bool Renderer::Impl::finishWorld() {
     if (skyLightDue() && !applySkyLight()) return false;  // 1.11
     if (aoDue() && !applyAo()) return false;
+    if (realShadowsDue() && !applyRealShadows()) return false;  // 1.12
     if (sunShadowDue() && !applySunShadows()) return false;  // 0.77
     if (seamsDue() && !applySeams()) return false;            // 1.9
     if (treesDue() && !applyTrees()) return false;            // 1.10

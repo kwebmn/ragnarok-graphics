@@ -1349,6 +1349,12 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : crittersPipelines) releaseCom(p);
     releaseCom(materialPso);  // 1.8
     for (ID3D12PipelineState*& p : skyLightPipelines) releaseCom(p);  // 1.11
+    for (ID3D12PipelineState*& p : sunApplyPipelines) releaseCom(p);  // 1.12
+    releaseCom(sunMapPso);
+    releaseCom(sunMapVs);
+    releaseCom(sunMapPs);
+    releaseCom(sunApplyPs);
+    releaseCom(sunMap);
     releaseCom(skyLightPs);
     releaseCom(materialPs);
     releaseCom(crittersPs);
@@ -1899,7 +1905,7 @@ bool Renderer::create(std::string& error) {
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kGpuSrvCount, true, m.gpuSrv) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kSamplerCount, true, m.samplerHeap) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kRtvCount, false, m.rtvHeap) ||
-        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 2, false, m.dsvHeap)) {
+        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 3, false, m.dsvHeap)) {
         error = "descriptor heaps";
         return false;
     }

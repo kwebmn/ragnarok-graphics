@@ -208,7 +208,8 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"half_over_ps", "ps_5_0", &halfOverPs},       {"flare_ps", "ps_5_0", &flarePs},
                    {"ground_life_ps", "ps_5_0", &groundLifePs},   {"critters_ps", "ps_5_0", &crittersPs},
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},
-                   {"sky_light_ps", "ps_5_0", &skyLightPs}};
+                   {"sky_light_ps", "ps_5_0", &skyLightPs},      {"sun_map_vs", "vs_5_0", &sunMapVs},
+                   {"sun_map_ps", "ps_5_0", &sunMapPs},          {"sun_apply_ps", "ps_5_0", &sunApplyPs}};
     store.sink = startSink;  // 0.40
     store.context = startContext;
     store.total = 6 + int(sizeof effects / sizeof effects[0]);  // the six below and the effects'
