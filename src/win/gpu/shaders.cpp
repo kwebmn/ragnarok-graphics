@@ -241,9 +241,9 @@ float relief(float2 uv, float2 du, float2 dv) {
     float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(area, 1e-6));
     // 2.2.2: a face seen nearly edge-on or its texture stretched (a step's side: the texels a pixel nearly in one
     // line, their area near nothing) had its slope blown up - dark and light flickered there as the camera turned: the
-    // relief fades out there, and its slope is kept to a hill's
+    // relief fades out there (a slope clamp would not help: the light below is at its limits from |gs| 0.05 on)
     float even = saturate(area / max(max(dot(tx, tx), dot(ty, ty)), 1e-6) * 6.0 - 0.2);
-    gs = clamp(gs, -1.5, 1.5) * even;
+    gs *= even;
     float3 n = normalize(float3(-gs * 3.5 * uiPixels.x, 1.0));
     const float3 light = float3(-0.4706, -0.5752, 0.6690);  // normalised (-0.45, -0.55, 0.64)
     // 0.83.1: mostly darker on the sides away from the light - lit sides brightened little: light ground (paved
@@ -2278,20 +2278,26 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
     float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
     float3 dx = abs(r.z - p.z) < abs(p.z - l.z) ? r - p : p - l;
     float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
-    // 2.2.2: at a break of the depth (a gap's or a step's edge) both neighbours of a side lie off the floor: its
-    // normal there is a guess that changes as the camera turns - a reflection flashing along the edge; none there
-    float breakX = min(abs(r.z - p.z), abs(p.z - l.z)), breakY = min(abs(d.z - p.z), abs(p.z - u.z));
-    if (max(breakX, breakY) > 0.03 * p.z) return float4(0.0, 0.0, 0.0, 0.0);
     float3 n = normalize(cross(dy, dx));
     if (dot(n, p) > 0.0) n = -n;  // towards the camera
+    float3 v = normalize(p);
+    // 2.2.2: where both neighbours of a side lie off this surface (a thin edge, a gap's or a step's rim) its normal is
+    // a guess that changes as the camera turns, nearly across the view - a reflection flashed there. It fades out from
+    // a jump of 0.8 % of the depth (a floor's own is under 0.1 % a pixel), and where the normal turns from the camera
+    // (a floor faces it by half or more).
+    float breakX = min(abs(r.z - p.z), abs(p.z - l.z)), breakY = min(abs(d.z - p.z), abs(p.z - u.z));
+    float rim = smoothstep(0.008, 0.02, max(breakX, breakY) / p.z);
     float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
     float flat = smoothstep(0.88, 0.97, -nw.y);  // up is -y
-    if (flat <= 0.0) return float4(0.0, 0.0, 0.0, 0.0);
-    float3 v = normalize(p);
-    float weight;
-    float3 c = reflectionIn(p + n * 0.6, reflect(v, n), uiPixels.xy, weight);
+    float shine = flat * (1.0 - rim) * smoothstep(0.15, 0.3, dot(-v, n));  // what reflects
+    // the rain's wet darkens a rim as the floor about it (taken for floor): no light specks along the edges
+    float wet = twinY > 0.0 ? lerp(flat, 1.0, rim) : 0.0;
+    if (shine <= 0.0 && wet <= 0.0) return float4(0.0, 0.0, 0.0, 0.0);
+    float weight = 0.0;
+    float3 c = float3(0.0, 0.0, 0.0);
+    if (shine > 0.0) c = reflectionIn(p + n * 0.6, reflect(v, n), uiPixels.xy, weight);
     float fresnel = 0.04 + 0.96 * pow(1.0 - saturate(dot(-v, n)), 5.0);
-    float a = flat * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
+    float a = shine * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
     // 0.97, wet ground (twinY): the ground a little darker all over, and puddles - patches of noise over the world,
     // the same wherever the camera goes - mirroring nearly as water does.
     float dark = 0.0;
@@ -2299,8 +2305,8 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
         float3 world = p.x * float3(r0, r1, r2) + p.y * float3(r3, r4, r5) + p.z * float3(r6, r7, r8) +
                        float3(r9, r10, r11);
         float n0 = valueNoise(world.xz * 0.045) * 0.7 + valueNoise(world.xz * 0.17 + 3.1) * 0.3;
-        float puddle = smoothstep(0.58, 0.66, n0) * flat;
-        dark = 0.16 * flat * twinY;
+        float puddle = smoothstep(0.58, 0.66, n0) * shine;
+        dark = 0.16 * wet * twinY;
         a = max(a, puddle * weight * (0.45 + 0.4 * saturate(fresnel * 3.0)) * twinY);
         // 1.7: rings where the rain's drops fall into the puddles (sharpen the time)
         float2 rc = world.xz * 0.6;
