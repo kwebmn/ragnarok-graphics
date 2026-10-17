@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <array>
 #include <vector>
 
@@ -651,6 +652,9 @@ struct Renderer::Impl {
     FramePacer pacer;  // 0.85: [frames] fps_limit
     // 0.86: the processor's time in the driver's drawing (execute, present until its wait), for the log
     LONGLONG cpuTicks = 0;
+    // 2.1.1: where a frame's time goes besides the drawing - waiting for the card (a slot's fence), the frame limit's
+    // wait, the swap chain's present - for the log next to cpuTicks (the game's own wait is the bridge's, remote.cpp)
+    LONGLONG fenceTicks = 0, pacerTicks = 0, swapTicks = 0;
     struct CpuTime {
         LONGLONG& total;
         LARGE_INTEGER start{};
@@ -1072,6 +1076,10 @@ struct Renderer::Impl {
     std::vector<std::array<float, 3>> forestLeaf, forestBark;      // each model's, from the game's textures
     std::vector<uint8_t> forestColoured;                           // each model's: 1 leaves seen, 2 bark seen
     std::vector<uint32_t> forestTexture;  // 2.0.4: each model's leaves' picture (the game's texture), 0 not seen
+    // 2.1.1: the textures the game's tree draws had - after the first 10 s of a forest only draws of those (and of
+    // leaves) are read back into the world, not every model's
+    std::unordered_set<uint32_t> forestTreeTextures;
+    ULONGLONG forestLearnUntil = 0;
     bool forestColoursDirty = false;
     uint32_t forestSerial = ~0u;  // the map read the forest was built from
     bool forestBuilt = false, forestDone = false, forestLogged = false, forestFailed = false;

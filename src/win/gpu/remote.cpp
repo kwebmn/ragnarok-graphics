@@ -427,10 +427,32 @@ void Remote::noteObjectTexture(uint32_t id, uint8_t kind) {
 
 void Remote::execute(const FrameRecord& record) {
     if (lost_ || record.empty()) return;
+    LARGE_INTEGER a, b;
+    QueryPerformanceCounter(&a);
     buffer_.clear();
     WireWriter w(buffer_);
     bridge::writeRecord(w, record);
     send(Msg::Execute, buffer_);
+    QueryPerformanceCounter(&b);
+    sendTicks_ += b.QuadPart - a.QuadPart;  // 2.1.1
+}
+
+// 2.1.1: every 30 s, where the game's thread spent a frame in the bridge - writing and sending its draws, waiting for
+// the 64-bit renderer to show its pictures (at most two wait) - to tell a slow renderer from a slow game.
+void Remote::timeLog() {
+    LARGE_INTEGER now, f;
+    QueryPerformanceCounter(&now);
+    QueryPerformanceFrequency(&f);
+    ++frames_;
+    if (!since_) since_ = now.QuadPart;
+    if (now.QuadPart - since_ < 30 * f.QuadPart) return;
+    const double ms = 1000.0 / double(f.QuadPart) / double(frames_);
+    LOG_INFO("bridge: a frame of the game's thread - %.2f ms its draws written and sent, %.2f ms waiting for the "
+             "64-bit renderer (%u frames in %.0f s)", double(sendTicks_) * ms, double(waitTicks_) * ms, frames_,
+             double(now.QuadPart - since_) / double(f.QuadPart));
+    sendTicks_ = waitTicks_ = 0;
+    frames_ = 0;
+    since_ = now.QuadPart;
 }
 
 bool Remote::readTarget(std::vector<uint32_t>& argb) {
@@ -479,8 +501,13 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     if (lost_) return;
     if (window && (needSurface_ || options_.present == "composition")) showOn(window, outputWidth);
     // At most two pictures wait to be shown: the game's loop keeps the pace of the renderer's presents (vsync).
-    if (presentsSent_ - channel_.presented() >= 2 && !channel_.waitPresented(presentsSent_ - 1, 1000) &&
-        channel_.peerGone()) {
+    LARGE_INTEGER a, b;
+    QueryPerformanceCounter(&a);
+    const bool behind = presentsSent_ - channel_.presented() >= 2 && !channel_.waitPresented(presentsSent_ - 1, 1000);
+    QueryPerformanceCounter(&b);
+    waitTicks_ += b.QuadPart - a.QuadPart;  // 2.1.1
+    timeLog();
+    if (behind && channel_.peerGone()) {
         setLost("the 64-bit renderer exited");
         return;
     }

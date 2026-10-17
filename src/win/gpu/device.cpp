@@ -245,9 +245,11 @@ void Renderer::Impl::noteGpuFrame() {
     if (!effects.empty()) LOG_INFO("GPU: effects a frame - %s", effects.c_str());
     LARGE_INTEGER qpf;  // 0.86: and the processor's part
     QueryPerformanceFrequency(&qpf);
-    LOG_INFO("CPU: %.2f ms a frame in the driver's drawing", double(cpuTicks) * 1000.0 / double(qpf.QuadPart) /
-                                                                 double(std::max<uint32_t>(gpuFrames, 1)));
-    cpuTicks = 0;
+    const double perFrame = 1000.0 / double(qpf.QuadPart) / double(std::max<uint32_t>(gpuFrames, 1));
+    LOG_INFO("CPU: %.2f ms a frame in the driver's drawing (%.2f of it waiting for the card); %.2f ms the frame "
+             "limit's wait, %.2f ms the swap chain's present", double(cpuTicks) * perFrame,
+             double(fenceTicks) * perFrame, double(pacerTicks) * perFrame, double(swapTicks) * perFrame);
+    cpuTicks = fenceTicks = pacerTicks = swapTicks = 0;
     effectMsKnown = true;
     gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
@@ -256,6 +258,7 @@ void Renderer::Impl::noteGpuFrame() {
 
 void Renderer::Impl::waitSlot(Slot& s) {
     if (s.fence && fence->GetCompletedValue() < s.fence) {
+        CpuTime waited(fenceTicks);  // 2.1.1
         fence->SetEventOnCompletion(s.fence, fenceEvent);
         WaitForSingleObject(fenceEvent, INFINITE);
     }
@@ -2432,10 +2435,15 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     m.submit();
 
     presentCpu.stop();  // 0.86: not the waits
-    m.pacer.wait(options.fpsLimit);  // 0.85: kept to the frame
+    {
+        Impl::CpuTime paced(m.pacerTicks);  // 2.1.1
+        m.pacer.wait(options.fpsLimit);  // 0.85: kept to the frame
+    }
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    Impl::CpuTime swapped(m.swapTicks);  // 2.1.1
     const HRESULT hr = m.swapChain->Present(sync, flags);
+    swapped.stop();
     if (!m.shotPath.empty()) {  // 0.54: the copy done, the PNG written
         m.waitIdle();
         uint8_t* data = nullptr;

@@ -135,6 +135,9 @@ bool Renderer::Impl::hideForTree(const FrameRecord& rec, const DrawCmd& d, const
     const auto tex = d.texture[0] ? textures.find(d.texture[0]) : textures.end();
     const bool leafy = tex != textures.end() && tex->second.leafy;
     if (!forestBuilt && (!leafy || forestSeen.size() >= 48)) return false;
+    // 2.1.1: past the first seconds, a draw of a texture no tree had is no tree's - its vertices not read again
+    if (forestBuilt && !leafy && GetTickCount64() > forestLearnUntil && !forestTreeTextures.count(d.texture[0]))
+        return false;
     if (forestBuilt && d.vertexCount == 4) {  // a sprite's quad: a character, an item - never a tree
         const std::vector<uint8_t>& vb = rec.vertexBytes();
         const size_t stride = FrameRecord::stride(d.fvf);
@@ -188,6 +191,7 @@ bool Renderer::Impl::hideForTree(const FrameRecord& rec, const DrawCmd& d, const
                 forestColoursDirty = true;
             }
         }
+        if (forestTreeTextures.size() < 4096) forestTreeTextures.insert(d.texture[0]);  // 2.1.1
         ++forestHidden;
         return true;
     }
@@ -360,6 +364,8 @@ void Renderer::Impl::updateForest() {
         }
         forestColoursDirty = true;
         forestBuilt = true;
+        forestTreeTextures.clear();  // 2.1.1: learnt anew for this forest
+        forestLearnUntil = GetTickCount64() + 10000;
         LOG_INFO("new trees: %s's forest grown - %zu trees of %zu models, %zu triangles in %zu calls (heights %+d)",
                  mapName.c_str(), forestPlaced.size(), models.size(), indices.size() / 3, forestCalls.size(),
                  forestYSign);

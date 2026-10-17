@@ -66,6 +66,11 @@ private:
     std::string adapter_;
     uint32_t nextTexture_ = 0;
     uint32_t presentsSent_ = 0;
+    // 2.1.1: the game's thread's time here - its draws written and sent, its wait for the renderer's presents -
+    // logged every 30 s
+    LONGLONG sendTicks_ = 0, waitTicks_ = 0, since_ = 0;
+    uint32_t frames_ = 0;
+    void timeLog();
     int samples_ = 1;
     bool upscales_ = false;
     bool lost_ = false;
