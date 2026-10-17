@@ -1,0 +1,343 @@
+#include "win/console.hpp"
+
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+
+#include "core/settings/effects_layout.hpp"
+#include "core/settings/ini_edit.hpp"
+#include "core/settings/schema.hpp"
+#include "win/log.hpp"
+#include "win/paths.hpp"
+
+namespace uagfx::win {
+
+WNDPROC Console::gameProc_ = nullptr;
+Console* Console::active_ = nullptr;
+
+namespace {
+
+using namespace settings;
+
+const wchar_t kClass[] = L"uaroGraphicsConsole";
+
+ATOM windowClass() {
+    static ATOM atom = 0;
+    if (atom) return atom;
+    WNDCLASSW c{};
+    c.lpfnWndProc = DefWindowProcW;
+    c.hInstance = GetModuleHandleW(nullptr);
+    c.lpszClassName = kClass;
+    atom = RegisterClassW(&c);
+    return atom;
+}
+
+std::wstring wide(const std::string& utf8) {
+    if (utf8.empty()) return {};
+    const int n = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), nullptr, 0);
+    std::wstring w(size_t(std::max(n, 0)), L'\0');
+    if (n > 0) MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), w.data(), n);
+    return w;
+}
+
+bool writeAtomic(const std::string& path, const std::string& text) {
+    const std::string part = path + ".console";
+    std::FILE* f = std::fopen(part.c_str(), "wb");
+    if (!f) return false;
+    const bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
+    std::fclose(f);
+    return ok && MoveFileExA(part.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING);
+}
+
+const IniSetting* settingOf(const std::string& key) { return findSetting(key); }
+
+}  // namespace
+
+Console::~Console() {
+    hide();
+    if (window_) DestroyWindow(window_);
+}
+
+// The game's window gets no keys while the console is open; ~ itself never (it opens and closes the console).
+LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
+    const bool key = msg == WM_KEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP ||
+                     msg == WM_CHAR || msg == WM_SYSCHAR;
+    if (key && ((active_ && active_->open_) || wp == VK_OEM_3 || ((msg == WM_CHAR) && (wp == L'`' || wp == L'~'))))
+        return 0;
+    return CallWindowProcW(gameProc_, w, msg, wp, lp);
+}
+
+void Console::build(Lang lang) {
+    rows_.clear();
+    const EffectLayout* fx = effectLayout();
+    int block = -1;
+    for (int e = 0; e < effectLayoutCount(); ++e) {
+        if (fx[e].block != block) {
+            block = fx[e].block;
+            const Text heading = block == 0   ? Text::PageEffects
+                                 : block == 1 ? Text::FxObjects
+                                 : block == 2 ? Text::FxLiving
+                                              : Text::FxRemaster;
+            rows_.push_back(Row{Kind::Heading, tr(lang, heading), 0});
+            if (block == 3) rows_.push_back(Row{Kind::Choice, "effects.tier", 1});
+        }
+        if (!settingOf(fx[e].box)) continue;
+        rows_.push_back(Row{Kind::Box, fx[e].box, 0});
+        for (int k = 0; k < 2 && fx[e].checks[k]; ++k)
+            if (settingOf(fx[e].checks[k])) rows_.push_back(Row{Kind::Check, fx[e].checks[k], 1});
+        for (int k = 0; k < 5 && fx[e].sliders[k]; ++k)
+            if (settingOf(fx[e].sliders[k])) rows_.push_back(Row{Kind::Slider, fx[e].sliders[k], 1});
+    }
+    at_ = std::clamp(at_, 0, std::max(0, int(rows_.size()) - 1));
+    if (!rows_.empty() && rows_[size_t(at_)].kind == Kind::Heading && at_ + 1 < int(rows_.size())) ++at_;
+}
+
+bool Console::pressed(int vk, Key& k, bool repeats, ULONGLONG now) {
+    const bool down = GetAsyncKeyState(vk) < 0;
+    bool fire = false;
+    if (down && !k.down) {
+        fire = true;
+        k.since = k.last = now;
+    } else if (down && repeats && now - k.since > 350 && now - k.last > 55) {
+        fire = true;
+        k.last = now;
+    }
+    k.down = down;
+    return fire;
+}
+
+bool Console::change(const std::string& iniPath, const Config& config, int step) {
+    if (rows_.empty()) return false;
+    const Row& r = rows_[size_t(at_)];
+    const IniSetting* s = r.kind == Kind::Heading ? nullptr : settingOf(r.key);
+    if (!s) return false;
+    const std::string now = tokenOf(*s, config);
+    std::string next = now;
+    if (s->control == Control::Check) {
+        const bool on = now == s->tokens[1];
+        const bool want = step == 0 ? !on : step > 0;
+        next = want ? s->tokens[1] : s->tokens[0];
+    } else if (s->control == Control::Slider) {
+        const int v = std::atoi(now.c_str()) + (step == 0 ? 1 : step) * std::max(s->step, 1);
+        next = std::to_string(std::clamp(v, s->min, s->max));
+    } else if (s->control == Control::Choice && !s->tokens.empty()) {
+        int i = 0;
+        for (size_t k = 0; k < s->tokens.size(); ++k)
+            if (now == s->tokens[k]) i = int(k);
+        const int n = int(s->tokens.size());
+        i = ((i + (step < 0 ? -1 : 1)) % n + n) % n;
+        next = s->tokens[size_t(i)];
+    }
+    if (next == now) return false;
+    std::string text;
+    readTextFile(iniPath, text);
+    if (!writeAtomic(iniPath, applyIniEdits(text, {{s->section, s->key, next}}))) {
+        LOG_ERROR("console: uaro-graphics.ini could not be written");
+        return false;
+    }
+    LOG_INFO("console: %s = %s", sectionKey(*s).c_str(), next.c_str());
+    return true;
+}
+
+bool Console::present(HWND game, bool foreground, const std::string& iniPath, const Config& config) {
+    if (!game) return false;
+    if (game_ != game && !gameProc_) {  // once: the game's window passes its keys through wndProc
+        gameProc_ = reinterpret_cast<WNDPROC>(
+            SetWindowLongPtrW(game, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&Console::wndProc)));
+        active_ = this;
+    }
+    game_ = game;
+    const ULONGLONG now = GetTickCount64();
+    if (!foreground) {
+        hide();
+        comparing_.clear();
+        return false;
+    }
+    if (pressed(VK_OEM_3, toggle_, false, now)) {
+        open_ = !open_;
+        if (open_) {
+            std::string text;
+            readTextFile(iniPath, text);
+            const auto ini = readIni(text);
+            const auto lang = ini.count("utility.language") ? parseLang(ini.at("utility.language")) : std::nullopt;
+            lang_ = startLang(lang);
+            build(lang_);
+            LOG_INFO("console: open");
+        }
+        dirty_ = true;
+    }
+    if (!open_) {
+        hide();
+        comparing_.clear();
+        return false;
+    }
+    bool changed = false;
+    const int n = int(rows_.size());
+    const auto move = [&](int by) {
+        int to = at_;
+        for (int k = 0; k < std::abs(by); ++k) {
+            int step = to + (by > 0 ? 1 : -1);
+            while (step >= 0 && step < n && rows_[size_t(step)].kind == Kind::Heading) step += by > 0 ? 1 : -1;
+            if (step < 0 || step >= n) break;
+            to = step;
+        }
+        if (to != at_) {
+            at_ = to;
+            dirty_ = true;
+        }
+    };
+    if (pressed(VK_UP, up_, true, now)) move(-1);
+    if (pressed(VK_DOWN, down_, true, now)) move(1);
+    if (pressed(VK_PRIOR, pageUp_, true, now)) move(-10);
+    if (pressed(VK_NEXT, pageDown_, true, now)) move(10);
+    if (pressed(VK_SPACE, space_, false, now) | pressed(VK_RETURN, enter_, false, now))
+        changed = change(iniPath, config, 0);
+    if (pressed(VK_LEFT, left_, true, now)) changed = change(iniPath, config, -1) || changed;
+    if (pressed(VK_RIGHT, right_, true, now)) changed = change(iniPath, config, 1) || changed;
+    if (pressed(VK_ESCAPE, escape_, false, now)) {
+        open_ = false;
+        hide();
+        comparing_.clear();
+        return changed;
+    }
+    // Tab held: the chosen effect's own box off while it is held
+    std::string comparing;
+    if (GetAsyncKeyState(VK_TAB) < 0 && at_ < n) {
+        const Row& r = rows_[size_t(at_)];
+        if (r.kind == Kind::Box) comparing = r.key;
+        if (r.kind == Kind::Check || r.kind == Kind::Slider)
+            for (int k = at_; k >= 0; --k)
+                if (rows_[size_t(k)].kind == Kind::Box) {
+                    comparing = rows_[size_t(k)].key;
+                    break;
+                }
+    }
+    if (comparing != comparing_) {
+        comparing_ = comparing;
+        dirty_ = true;
+    }
+    if (changed) dirty_ = true;
+    draw(game, config);
+    return changed;
+}
+
+void Console::hide() {
+    if (window_ && IsWindowVisible(window_)) ShowWindow(window_, SW_HIDE);
+    shownText_.clear();
+}
+
+void Console::draw(HWND game, const Config& config) {
+    // Redrawn when anything shown changed: the values come from the config the driver read.
+    std::string state = std::to_string(at_) + "|" + comparing_;
+    for (const Row& r : rows_)
+        if (r.kind != Kind::Heading)
+            if (const IniSetting* s = settingOf(r.key)) state += tokenOf(*s, config) + ",";
+    if (!dirty_ && state == shownText_ && window_ && IsWindowVisible(window_)) return;
+    dirty_ = false;
+    shownText_ = state;
+    if (!window_ && windowClass())
+        window_ = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE |
+                                      WS_EX_TOPMOST,
+                                  kClass, L"", WS_POPUP, 0, 0, 1, 1, game, nullptr, GetModuleHandleW(nullptr), nullptr);
+    if (!window_) return;
+    RECT client{};
+    GetClientRect(game, &client);
+    HDC screen = GetDC(nullptr);
+    HDC dc = CreateCompatibleDC(screen);
+    const int fontH = std::max(14, GetDeviceCaps(screen, LOGPIXELSY) * 15 / 96);
+    const int line = fontH * 3 / 2;
+    const int w = std::max(fontH * 26, int(client.right - client.left) * 2 / 5);
+    const int h = std::max(line * 8, int(client.bottom - client.top) * 3 / 4);
+    const int visible = std::max(3, (h - line * 3) / line);
+    if (at_ < top_) top_ = at_;
+    if (at_ >= top_ + visible) top_ = at_ - visible + 1;
+    top_ = std::clamp(top_, 0, std::max(0, int(rows_.size()) - visible));
+    HFONT font = CreateFontW(-fontH, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                             CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+    HFONT bold = CreateFontW(-fontH, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                             CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+    BITMAPINFO bi{};
+    bi.bmiHeader.biSize = sizeof bi.bmiHeader;
+    bi.bmiHeader.biWidth = w;
+    bi.bmiHeader.biHeight = -h;
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = 32;
+    void* bits = nullptr;
+    HBITMAP bmp = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+    if (bmp && bits) {
+        HGDIOBJ oldBmp = SelectObject(dc, bmp);
+        HGDIOBJ oldFont = SelectObject(dc, font);
+        auto* px = static_cast<uint32_t*>(bits);
+        // A dark panel; the chosen row a lighter band; GDI's text then made opaque (premultiplied below).
+        std::fill(px, px + size_t(w) * size_t(h), 0x00101418u);
+        SetBkMode(dc, TRANSPARENT);
+        const auto text = [&](int x, int y, const std::wstring& s, COLORREF c, bool strong = false) {
+            SelectObject(dc, strong ? bold : font);
+            SetTextColor(dc, c);
+            TextOutW(dc, x, y, s.c_str(), int(s.size()));
+        };
+        const auto textRight = [&](int x, int y, const std::wstring& s, COLORREF c) {
+            SelectObject(dc, font);
+            SIZE sz{};
+            GetTextExtentPoint32W(dc, s.c_str(), int(s.size()), &sz);
+            SetTextColor(dc, c);
+            TextOutW(dc, x - sz.cx, y, s.c_str(), int(s.size()));
+        };
+        text(fontH, line / 4, wide(tr(lang_, Text::ConsoleTitle)), RGB(229, 169, 78), true);
+        for (int i = 0; i < visible && top_ + i < int(rows_.size()); ++i) {
+            const Row& r = rows_[size_t(top_ + i)];
+            const int y = line + line / 2 + i * line;
+            if (top_ + i == at_)
+                for (int yy = std::max(0, y - line / 8); yy < std::min(h, y + line - line / 8); ++yy)
+                    std::fill(px + size_t(yy) * size_t(w), px + size_t(yy + 1) * size_t(w), 0x00384048u);
+            if (r.kind == Kind::Heading) {
+                text(fontH, y, wide(r.key), RGB(229, 169, 78), true);
+                continue;
+            }
+            const IniSetting* s = settingOf(r.key);
+            if (!s) continue;
+            const std::string tok = tokenOf(*s, config);
+            const int x = fontH + r.depth * fontH * 2;
+            const bool held = !comparing_.empty() && comparing_ == r.key;
+            if (s->control == Control::Check) {
+                const bool on = tok == s->tokens[1] && !held;
+                text(x, y, on ? L"■" : L"□", on ? RGB(143, 194, 122) : RGB(150, 150, 150));
+                text(x + fontH * 3 / 2, y, wide(tr(lang_, s->label)), on ? RGB(240, 236, 226) : RGB(170, 170, 170));
+            } else if (s->control == Control::Slider) {
+                text(x, y, wide(tr(lang_, s->label)), RGB(200, 200, 190));
+                textRight(w - fontH, y, wide(tok + s->unit), RGB(240, 236, 226));
+            } else if (s->control == Control::Choice) {
+                std::string choice = tok;
+                for (size_t k = 0; k < s->tokens.size() && k < s->choices.size(); ++k)
+                    if (tok == s->tokens[k]) choice = tr(lang_, s->choices[k]);
+                text(x, y, wide(tr(lang_, s->label)), RGB(200, 200, 190));
+                textRight(w - fontH, y, L"◂ " + wide(choice) + L" ▸", RGB(240, 236, 226));
+            }
+        }
+        const int foot = h - line - line / 4;
+        text(fontH, foot, wide(tr(lang_, Text::ConsoleKeys)), RGB(150, 160, 160));
+        for (size_t i = 0; i < size_t(w) * size_t(h); ++i) {
+            const uint32_t c = px[i] & 0xFFFFFF;
+            const uint32_t v = std::max({c & 0xFF, (c >> 8) & 0xFF, c >> 16});
+            const uint32_t a = v > 0x50 ? 255u : 215u;  // the panel a little see-through, the text solid
+            const uint32_t r = (c >> 16) * a / 255, g = ((c >> 8) & 0xFF) * a / 255, b = (c & 0xFF) * a / 255;
+            px[i] = a << 24 | r << 16 | g << 8 | b;
+        }
+        POINT at{0, 0};
+        ClientToScreen(game, &at);
+        POINT pos{at.x + fontH, at.y + fontH * 3}, origin{0, 0};
+        SIZE extent{w, h};
+        BLENDFUNCTION blend{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+        UpdateLayeredWindow(window_, screen, &pos, &extent, dc, &origin, 0, &blend, ULW_ALPHA);
+        if (!IsWindowVisible(window_)) ShowWindow(window_, SW_SHOWNOACTIVATE);
+        SelectObject(dc, oldFont);
+        SelectObject(dc, oldBmp);
+    }
+    if (bmp) DeleteObject(bmp);
+    DeleteObject(font);
+    DeleteObject(bold);
+    DeleteDC(dc);
+    ReleaseDC(nullptr, screen);
+}
+
+}  // namespace uagfx::win

@@ -2444,6 +2444,12 @@ const Entry kTexts[] = {
      "вона петляє, одна текстура заходить в іншу (Direct3D 12).",
      "Там, где трава встречается с дорогой или песком, граница между ними больше не идёт ступеньками вдоль клеток "
      "земли: она петляет, одна текстура заходит в другую (Direct3D 12)."},
+    {"uaRO Graphics - effects",
+     "uaRO Graphics — ефекти",
+     "uaRO Graphics — эффекты"},
+    {"Up/Down choose · Space on/off · Left/Right value · hold Tab to compare · ~ or Esc close",
+     "↑↓ вибір · Пробіл увімк/вимк · ←→ значення · затисніть Tab — порівняти · ~ або Esc — закрити",
+     "↑↓ выбор · Пробел вкл/выкл · ←→ значение · зажмите Tab — сравнить · ~ или Esc — закрыть"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

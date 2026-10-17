@@ -15,6 +15,7 @@
 #include "core/scale.hpp"
 #include "core/throttle.hpp"
 #include "core/toggle_key.hpp"
+#include "win/console.hpp"
 #include "win/fps_overlay.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/shadow.hpp"
@@ -95,6 +96,9 @@ private:
     std::set<std::string> keepOff_;
     uint64_t costsWritten_ = 0;
     FpsOverlay fps_;
+    Console console_;               // 1.9.3: ~ - the effects' switches over the game
+    std::string consoleOff_;        // the effect the console holds off, and the settings without it
+    EffectSettings compareFx_;
     Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)
     SIZE lastOut_{};
     ScalePlan lastPlan_;

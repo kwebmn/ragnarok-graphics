@@ -234,6 +234,7 @@ enum class Text : uint16_t {
     ReportShots, ReportShotsHint, ReportSentShots,
     // 1.9
     FxGroundSeams, FxGroundSeamsHint,
+    ConsoleTitle, ConsoleKeys,
     Count
 };
 

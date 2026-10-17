@@ -6,6 +6,7 @@
 #include "core/effect_costs.hpp"
 #include "core/live_config.hpp"
 #include "core/scale.hpp"
+#include "core/settings/ini_edit.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
 #include "win/effect_hook.hpp"
@@ -379,6 +380,21 @@ void Context::present(const Rect& source, bool waitForVblank) {
         if (fx.dayCycle) fx.dayNow = t.wHour * 60 + t.wMinute;
     }
     for (const std::string& k : keepOff_) effect_costs::drop(fx, k);  // 0.76
+    // 1.9.3: Tab held in the console - the chosen effect off while it is held (the file as it is, that key 0)
+    const std::string& comparing = console_.comparing();
+    if (comparing != consoleOff_) {
+        consoleOff_ = comparing;
+        std::string text;
+        readTextFile(gameDir() + "\\uaro-graphics.ini", text);
+        if (!comparing.empty())
+            compareFx_ = parseConfig(settings::applyIniEdits(text, {{"effects", comparing.substr(8), "0"}})).effects;
+    }
+    if (!consoleOff_.empty()) {
+        const int night = fx.nightNow, day = fx.dayNow;
+        fx = compareFx_;
+        fx.nightNow = night;
+        fx.dayNow = day;
+    }
     renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
@@ -415,6 +431,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     soundFrame(foreground);  // 0.91: quieter in the background; the crowd's limiter thinned out
     renderer->present(window, out.cx, out.cy, source, o);
     fps_.present(window, fpsShown_);
+    if (console_.present(window, foreground, gameDir() + "\\uaro-graphics.ini", config)) {  // 1.9.3
+        settingsChecked_ = 0;  // read at once, at the next present
+        settingsKnown_ = false;
+    }
     ++stats_.frames;
     logStats(false);
 }
