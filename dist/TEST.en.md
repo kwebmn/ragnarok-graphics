@@ -1,3 +1,11 @@
+# uaRO Graphics 1.8.3 — testing
+
+- **The grass no longer "flows in waves" as you walk.** Its sway and the gusts went by the pixel on the screen: as
+  the camera moved, the waves' pattern moved with it. Now by the place in the world: the grass sways where it stands
+  and walking does not drive it. Parting under the feet a little softer.
+- **Far fewer flowers, in patches** instead of a speckle over the whole field; heads a little larger.
+- How to check: prt_fild08 with Grass and Flowers - walk across the field.
+
 # uaRO Graphics 1.8.2 — testing
 
 - **Autumn trees** (Every tree its own, seasons) golden and orange now, not muddy brown: the autumn's colour taken
