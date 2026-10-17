@@ -1,3 +1,13 @@
+# uaRO Graphics 1.13.0 — testing
+
+- **Volumetric fog** (`effects.volumetric_fog`, density `effects.volumetric_fog_density`, the Remaster block, Remaster
+  mode only, Direct3D 12, off by default). A light fog lies low over the fields and the towns, drifting slowly, lit by
+  the sun. With Real sun shadows the light goes through it in rays: through the crowns, past the houses. Characters
+  far off are in it too. No sunlight in it at night.
+- The log: `volumetric fog: over <map>, lit by the sun's map`.
+- How to check: prt_fild08 or pay_fild01 by day, with Real sun shadows - switch it in the console, move Density,
+  compare with Tab. To know: the rays showing, ripples or noise, too thick, the frame's cost.
+
 # uaRO Graphics 1.12.0 — testing
 
 - **Real sun shadows** (`effects.real_shadows`, the Remaster block, Remaster mode only, Direct3D 12, off by default).
