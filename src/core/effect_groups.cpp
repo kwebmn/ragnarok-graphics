@@ -12,7 +12,10 @@ using E = EffectSettings;
 // remaster's own world (materials, new trees, reflections, light). 0: the player's alone - a look the player turned
 // down (anime trees, film grain), night by the clock beside the day.
 const Member kMembers[] = {
-    {"smooth_light", Light, 1, &E::smoothLight},
+    {"smooth_light", Fixes, 1, &E::smoothLight},
+    {"soft_particles", Fixes, 1, &E::softParticles},
+    {"map_fade", Fixes, 1, &E::mapFade},
+
     {"torch", Light, 1, &E::torch},
     {"smoke", Light, 1, &E::smoke},
     {"lamps", Light, 1, &E::lamps},
@@ -97,8 +100,6 @@ const Member kMembers[] = {
     {"skills_soft", Skills, 1, &E::skillsSoft},
     {"appear", Skills, 1, &E::appear},
     {"hit_flash", Skills, 1, &E::hitFlash},
-    {"soft_particles", Skills, 1, &E::softParticles},
-    {"map_fade", Skills, 1, &E::mapFade},
     {"skill_sparks", Skills, 2, &E::skillSparks},
 
     {"grade", Picture, 1, &E::grade},
@@ -138,8 +139,8 @@ const Strength kStrengths[] = {
 }  // namespace
 
 const char* groupWord(int g) {
-    static const char* const kWords[kEffectGroups] = {"light", "shadows", "surfaces", "nature", "water",
-                                                      "air",   "life",    "skills",   "picture"};
+    static const char* const kWords[kEffectGroups] = {"fixes", "light", "shadows", "surfaces", "nature",
+                                                      "water", "air",   "life",    "skills",   "picture"};
     return g >= 0 && g < kEffectGroups ? kWords[g] : "";
 }
 

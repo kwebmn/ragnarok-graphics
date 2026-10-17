@@ -300,6 +300,8 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::FxPresetAuto, Text::FxPresetOff, Text::FxPresetWeak, Text::FxPresetMedium, Text::FxPresetStrong,
           Text::FxPresetCustom},
          Text::FxPreset, Text::FxPresetHint, ""},
+        {"effects", "group_fixes", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupFixes,
+         Text::FxGroupFixesHint, ""},  // 2.2.1: no strength
         {"effects", "group_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroupLight,
          Text::FxGroupLightHint, ""},
         {"effects", "group_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxGroupStrength,

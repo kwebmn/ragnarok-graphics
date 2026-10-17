@@ -1678,8 +1678,11 @@ bool Renderer11::startAi(const std::string& gameDir, const AiSettings& settings)
     return true;
 }
 
-void Renderer11::setAiShown(bool shown) {
-    if (ai_) ai_->shown = shown;
+void Renderer11::setAiShown(uint8_t kinds) {
+    if (ai_) {
+        ai_->shown = kinds != 0;
+        ai_->kindsShown = kinds;
+    }
 }
 
 void Renderer11::requestIcon(uint64_t key, int width, int height, const uint32_t* argb) {

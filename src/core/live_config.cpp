@@ -44,6 +44,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
                                   fa.smallModel != ra.smallModel}};  // 1.6.3
     for (const auto& k : ai)
         if (k.second) u.waiting.push_back(k.first);
+    n.aiNow = file.ai;  // 2.2.1: shown as the file says at once - a kind off hidden now, its pictures kept
     if (file.mode != running.mode) u.waiting.push_back("mode");
     if (file.highResolution != running.highResolution) {
         u.applied.push_back(change("high_resolution", flag(running.highResolution), flag(file.highResolution)));

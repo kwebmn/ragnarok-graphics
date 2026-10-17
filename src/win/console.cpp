@@ -70,7 +70,28 @@ Config shownConfig(const Config& c) {
         shown.effects.*m.on = set.*m.on;
     }
     shown.effects.tier = set.tier;
+    shown.ai = c.aiNow;  // 2.2.1: the AI pictures as the file says now (shown so at once)
     return shown;
+}
+
+// 2.2.1: an [ai] switch whose new state waits for the game's next start - a kind turned on that the game started
+// without (its pictures were never read), a group of sprites (one copy holds them all: only all of them hide at once)
+bool aiWaits(const std::string& key, const AiSettings& started, const AiSettings& now) {
+    const auto on = [&](const AiSettings& a) {
+        if (key == "ai.enabled") return a.enabled;
+        if (key == "ai.ground") return a.ground && a.on();
+        if (key == "ai.objects") return a.objects && a.on();
+        if (key == "ai.effects") return a.effects && a.on();
+        if (key == "ai.icons") return a.icons && a.on();
+        if (key == "ai.monsters") return a.monsters;
+        if (key == "ai.players") return a.players;
+        if (key == "ai.npcs") return a.npcs;
+        if (key == "ai.items") return a.items;
+        return false;
+    };
+    const bool sprite = key == "ai.monsters" || key == "ai.players" || key == "ai.npcs" || key == "ai.items";
+    if (sprite) return on(started) != on(now) && !(now.on() && !now.sprites());
+    return on(now) && !on(started);
 }
 
 }  // namespace
@@ -94,6 +115,11 @@ LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
 void Console::build(Lang lang) {
     rows_.clear();
     rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11 as well)
+    // 2.2.1: the AI pictures of the texture pack - a kind off hidden at once, on at once when the game started with it
+    rows_.push_back(Row{Kind::Heading, tr(lang, Text::PageAi), 0});
+    for (const char* k : {"ai.enabled", "ai.ground", "ai.objects", "ai.monsters", "ai.players", "ai.npcs", "ai.items",
+                          "ai.effects", "ai.icons"})
+        if (settingOf(k)) rows_.push_back(Row{Kind::Box, k, std::string(k) == "ai.enabled" ? 0 : 1});
     rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
     rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
     rows_.push_back(Row{Kind::Choice, "effects.tier", 0});
@@ -377,7 +403,10 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
             if (s->control == Control::Check) {
                 const bool on = tok == s->tokens[1] && !held;
                 text(x, y, on ? L"■" : L"□", on ? RGB(143, 194, 122) : RGB(150, 150, 150));
-                text(x + fontH * 3 / 2, y, wide(tr(lang_, s->label)), on ? RGB(240, 236, 226) : RGB(170, 170, 170));
+                std::wstring label = wide(tr(lang_, s->label));
+                if (r.key.compare(0, 3, "ai.") == 0 && aiWaits(r.key, file.ai, file.aiNow))
+                    label += L"  \u21bb";  // 2.2.1: at the next start
+                text(x + fontH * 3 / 2, y, label, on ? RGB(240, 236, 226) : RGB(170, 170, 170));
                 // 2.2.1: its timed pass's ms (a group's: its effects' passes, each once)
                 double ms = -1.0;
                 int g = 0;

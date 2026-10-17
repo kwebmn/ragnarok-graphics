@@ -8,8 +8,10 @@
 // them stronger or weaker. The driver works from what effective() gives; "custom" is every switch as written.
 namespace uagfx::effect_groups {
 
-// The groups, in the page's order; their ini words: [effects] group_<word> and group_<word>_strength.
-enum Group { Light, Shadows, Surfaces, Nature, Water, Air, Life, Skills, Picture };
+// The groups, in the page's order; their ini words: [effects] group_<word> and group_<word>_strength. 2.2.1: Fixes -
+// what mends the old picture rather than adds to it (the map's light smooth, effects not cut at the walls, the
+// fade between maps), in every set.
+enum Group { Fixes, Light, Shadows, Surfaces, Nature, Water, Air, Life, Skills, Picture };
 const char* groupWord(int g);
 bool hasStrength(int g);  // false: no slider (the living world's creatures have no strength)
 

@@ -275,6 +275,8 @@ enum class Text : uint16_t {
     FxGroupSurfacesHint, FxGroupNature, FxGroupNatureHint, FxGroupWater, FxGroupWaterHint, FxGroupAir, FxGroupAirHint,
     FxGroupLife, FxGroupLifeHint, FxGroupSkills, FxGroupSkillsHint, FxGroupPicture, FxGroupPictureHint, FxGroupStrength,
     FxGroupStrengthHint, FxDetails, FxDetailsHide, FxDetailsNote,
+    // 2.2.1
+    FxGroupFixes, FxGroupFixesHint,
     Count
 };
 

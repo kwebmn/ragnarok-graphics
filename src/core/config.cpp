@@ -827,7 +827,14 @@ Config parseConfig(const std::string& text) {
     if (!newEnabled && oldEnabled) c.ai.enabled = legacy.enabled;
     if (!newBudget && oldBudget) c.ai.budget = legacy.budget;
     if (!newDenoise && oldDenoise) c.ai.denoise = legacy.denoise;
+    c.aiNow = c.ai;
     return c;
+}
+
+uint8_t aiKindsShown(const AiSettings& a) {
+    if (!a.on()) return 0;
+    return uint8_t((a.ground ? 1 : 0) | (a.objects ? 2 : 0) | (a.sprites() ? 4 : 0) | (a.effects ? 8 : 0) |
+                   (a.icons ? 16 : 0));
 }
 
 

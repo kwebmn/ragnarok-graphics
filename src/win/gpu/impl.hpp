@@ -136,6 +136,7 @@ struct Texture {
     UINT aiSrv = 0;
     // Where it stands in: the world's draws, the interface's (0.14.1: the sprite cache's copy for the cursor, the
     // loading screen and other big pictures of the interface).
+    uint8_t aiKind = 0xFF;  // 2.2.1: its AI picture's kind (ai::Kind) - shown while that kind is on; 0xFF unknown
     bool aiWorld = true;
     bool aiUi = false;
     // 0.26: how much its picture looks like fire (core/effect_light.hpp) and its colour - an effect drawn from it

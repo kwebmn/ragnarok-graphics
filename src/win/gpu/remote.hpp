@@ -46,7 +46,7 @@ public:
         startContext_ = context;
     }
     int samples() const { return samples_; }
-    void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown);
+    void setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds);
     void setEffects(const EffectSettings& e);  // sent when they change
     uint32_t createTexture(int width, int height, int levels);
     void releaseTexture(uint32_t id);

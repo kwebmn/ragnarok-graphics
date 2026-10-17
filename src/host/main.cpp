@@ -350,8 +350,8 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
         case Msg::SetDrawQuality: {
             const int aniso = rd.i32();
             const bool coverage = rd.u8() != 0;
-            const bool aiShown = rd.u8() != 0;
-            renderer_.setDrawQuality(aniso, coverage, aiShown);
+            const uint8_t aiKinds = rd.u8();  // 2.2.1: the kinds shown
+            renderer_.setDrawQuality(aniso, coverage, aiKinds);
             break;
         }
         case Msg::SetEffects: {

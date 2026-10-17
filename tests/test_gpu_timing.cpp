@@ -44,3 +44,20 @@ TEST(live_config_shows_the_frame_counter_at_once) {
     CHECK(u.waiting.empty());
     CHECK(appliesNow("frames.fps_counter"));
 }
+
+TEST(ai_kinds_shown_follow_the_file_at_once) {
+    // 2.2.1: [ai] in a running game - a kind off hidden at once (aiNow), the started settings kept (ai)
+    AiSettings a;
+    a.enabled = true;
+    a.ground = a.objects = a.icons = true;
+    a.effects = false;
+    CHECK_EQ(int(aiKindsShown(a)), 1 | 2 | 16);
+    a.players = true;
+    CHECK_EQ(int(aiKindsShown(a)), 1 | 2 | 4 | 16);
+    a.enabled = false;
+    CHECK_EQ(int(aiKindsShown(a)), 0);
+    const Config running = parseConfig("[ai]\nenabled = 1\nground = 1\n");
+    const LiveUpdate u = liveUpdate(running, parseConfig("[ai]\nenabled = 1\nground = 0\n"));
+    CHECK(u.next.ai.ground && !u.next.aiNow.ground);  // the pack as started, the ground hidden now
+    CHECK(running.aiNow.ground);
+}

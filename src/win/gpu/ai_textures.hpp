@@ -67,6 +67,8 @@ public:
     // windows draws 15 frames a second (save_power), so a generating network takes up to kBackgroundMs of each.
     void work(bool foreground = true);
     bool shown = true;                              // Pause: the game's own textures
+    uint8_t kindsShown = 0xFF;  // 2.2.1: the kinds shown ([ai] as the file has it now; bits as ai::Kind)
+    bool kindShown(uint8_t kind) const { return kind >= 8 || (kindsShown >> kind & 1) != 0; }
 
     // 0.43, the pack builder (Renderer::buildPack): the networks of the settings' kinds - no pack.
     bool startForPack(const std::string& gameDir, const AiSettings& settings, std::string& error);

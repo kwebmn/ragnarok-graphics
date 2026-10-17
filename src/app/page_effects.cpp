@@ -31,9 +31,10 @@ int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
 int checkId(int e, int k) { return 1070 + 100 * e + 2 * k; }
 
 const char* const kPresets[] = {"auto", "off", "weak", "medium", "strong", "custom"};
-const Text kGroupNames[kEffectGroups] = {Text::FxGroupLight,  Text::FxGroupShadows, Text::FxGroupSurfaces,
-                                         Text::FxGroupNature, Text::FxGroupWater,   Text::FxGroupAir,
-                                         Text::FxGroupLife,   Text::FxGroupSkills,  Text::FxGroupPicture};
+const Text kGroupNames[kEffectGroups] = {Text::FxGroupFixes,  Text::FxGroupLight, Text::FxGroupShadows,
+                                         Text::FxGroupSurfaces, Text::FxGroupNature, Text::FxGroupWater,
+                                         Text::FxGroupAir,    Text::FxGroupLife,  Text::FxGroupSkills,
+                                         Text::FxGroupPicture};
 
 // 2.2.1: the groups opened to their effects - kept while the app runs (a page is made anew at every change)
 bool g_open[kEffectGroups] = {};

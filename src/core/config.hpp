@@ -86,12 +86,12 @@ AiSettings parseAiArgument(const std::string& word);
 // 2.2: the Effects page's set (core/effect_groups.hpp) - the card's size picks which effects are on, its groups
 // (light, water...) each on or off with a strength; custom: every switch as written below.
 enum class EffectPreset { Auto, Off, Weak, Medium, Strong, Custom };
-constexpr int kEffectGroups = 9;
+constexpr int kEffectGroups = 10;  // 2.2.1: the picture's fixes a group of their own
 
 struct EffectSettings {
     EffectPreset preset = EffectPreset::Custom;  // an ini without it keeps its switches
-    bool groups[kEffectGroups] = {true, true, true, true, true, true, true, true, true};
-    int groupStrength[kEffectGroups] = {100, 100, 100, 100, 100, 100, 100, 100, 100};  // %, 0-200
+    bool groups[kEffectGroups] = {true, true, true, true, true, true, true, true, true, true};
+    int groupStrength[kEffectGroups] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100};  // %, 0-200
     // 0.22.6: the map's baked light - torches' and lamps' pools, the shadows of houses and trees on the ground -
     // smooth instead of blotches and steps (the ground's coarse lightmap blurred within its cells). On by default.
     bool smoothLight = true;
@@ -428,6 +428,9 @@ struct Config {
     bool alphaToCoverage = true; // stage 4, with MSAA: soft edges where alpha testing cuts textures (leaves, fences)
     int anisotropy = 16;         // stage 4: anisotropic filtering of the world's textures - 0 (off), 2, 4, 8 or 16
     AiSettings ai;
+    // 2.2.1: [ai] as the file has it now - ai stays as the game started (the networks and the pack start with it);
+    // what is shown follows this one at once (aiKindsShown): a kind off is hidden in a running game
+    AiSettings aiNow;
     EffectSettings effects;
     // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance or ultra - NVIDIA DLSS in the 64-bit
     // renderer (it starts that renderer; MSAA is off then).
@@ -469,6 +472,8 @@ struct Config {
 };
 
 Config parseConfig(const std::string& text);
+// 2.2.1: the kinds of AI pictures shown (bits as ai::Kind: 0 ground, 1 objects, 2 sprites, 3 effects, 4 icons); 0 none
+uint8_t aiKindsShown(const AiSettings& a);
 const char* apiToken(Api a);
 const char* displayModeToken(DisplayMode m);
 const char* uiFilterToken(UiFilter f);

@@ -16,6 +16,11 @@
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
+
+// 2.2.1: aiKindsShown's bits (core/config.hpp) are the kinds' numbers
+static_assert(int(ai::Kind::Ground) == 0 && int(ai::Kind::Objects) == 1 && int(ai::Kind::Sprites) == 2 &&
+                  int(ai::Kind::Effects) == 3 && int(ai::Kind::Icons) == 4,
+              "the kinds' bits");
 namespace {
 
 constexpr int kNetScale = 4;  // every network enlarges 4 times; a result of twice the size is its first mip level
@@ -888,6 +893,7 @@ bool AiTextures::finish(Job& job) {
     t.aiSrv = srv;
     t.aiWorld = !item->second.ui;
     t.aiUi = item->second.ui;
+    t.aiKind = uint8_t(item->second.ui ? ai::Kind::Icons : item->second.kind);  // 2.2.1
     m_.device->CreateShaderResourceView(tex, nullptr, m_.cpuSrvHandle(srv));
     item->second.state = Item::Done;
     item->second.bytes = 0;  // 0.44: the copy's video memory
@@ -1060,6 +1066,7 @@ bool AiTextures::makeAtlas(uint32_t id, Texture& t) {
     t.aiSrv = srv;
     t.aiWorld = true;
     t.aiUi = true;  // the cursor and the interface's other sprites come from the same cache
+    t.aiKind = uint8_t(ai::Kind::Sprites);  // 2.2.1
     m_.device->CreateShaderResourceView(tex, nullptr, m_.cpuSrvHandle(srv));
     a.grid.reset(t.width, t.height);
     atlases_[id] = std::move(a);

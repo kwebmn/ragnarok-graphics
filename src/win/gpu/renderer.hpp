@@ -91,7 +91,8 @@ public:
     // Stage 4: anisotropic filtering of the world's textures (0 = off, else 2-16), and alpha testing as coverage in
     // draws without blending while the target has several samples.
     // aiShown: AI textures drawn instead of the game's (off with Pause, to compare).
-    void setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown = true);
+    // 2.2.1: aiKinds - the kinds of AI pictures shown (aiKindsShown's bits), 0 none
+    void setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds = 0xFF);
     // 0.18: [effects] as they apply now (off with Pause); nothing in Remix's Direct3D 9.
     void setEffects(const EffectSettings& e);
 

@@ -210,7 +210,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         for (int i = 0; i < 2; ++i) {
             const auto it = d.texture[i] ? textures.find(d.texture[i]) : textures.end();
             aiDrawn[i] = it != textures.end() && it->second.ai && (s.ui ? it->second.aiUi : it->second.aiWorld) &&
-                         (!s.ui || aiInterfaceAt(scale));  // 0.89: not the interface at the game's own size
+                         (!s.ui || aiInterfaceAt(scale)) &&  // 0.89: not the interface at the game's own size
+                         ai->kindShown(it->second.aiKind);  // 2.2.1: its kind on in the file now
             const bool mips = sampled[i].mipFilter == d3d7::TFP_POINT || sampled[i].mipFilter == d3d7::TFP_LINEAR;
             if (aiDrawn[i] && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
         }

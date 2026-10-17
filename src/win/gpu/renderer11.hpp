@@ -83,7 +83,7 @@ public:
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);
-    void setAiShown(bool shown);  // Pause: the game's own textures
+    void setAiShown(uint8_t kinds);  // Pause: the game's own textures (0); 2.2.1: the kinds shown
     void requestIcon(uint64_t key, int width, int height, const uint32_t* argb);
     void setIconSink(Renderer::IconSink sink, void* context);
     void finish();

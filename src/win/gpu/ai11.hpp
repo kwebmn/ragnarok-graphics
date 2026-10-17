@@ -58,6 +58,7 @@ public:
     ID3D11ShaderResourceView* copyOf(uint32_t id, bool ui) const;
     void work();  // once a frame, on the game's thread: what the thread has made goes in
     bool shown = true;  // Pause: the game's own textures
+    uint8_t kindsShown = 0xFF;  // 2.2.1: the kinds shown ([ai] as the file has it now; bits as ai::Kind)
 
 private:
     struct Item {

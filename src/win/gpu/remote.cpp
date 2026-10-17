@@ -235,12 +235,12 @@ void Remote::setMap(const std::string& map) {
     send(Msg::Map, buffer_);
 }
 
-void Remote::setDrawQuality(int anisotropy, bool alphaToCoverage, bool aiShown) {
+void Remote::setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds) {
     buffer_.clear();
     WireWriter w(buffer_);
     w.i32(anisotropy);
     w.u8(alphaToCoverage ? 1 : 0);
-    w.u8(aiShown ? 1 : 0);
+    w.u8(aiKinds);  // 2.2.1: the kinds shown (was 0 or 1: all or none)
     send(Msg::SetDrawQuality, buffer_);
 }
 
