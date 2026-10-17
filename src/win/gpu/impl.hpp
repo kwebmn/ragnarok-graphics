@@ -1058,6 +1058,7 @@ struct Renderer::Impl {
     std::unordered_map<int64_t, std::vector<uint32_t>> forestGrid;  // cells of 32 units: the trees in each
     std::vector<std::array<float, 3>> forestLeaf, forestBark;      // each model's, from the game's textures
     std::vector<uint8_t> forestColoured;                           // each model's: 1 leaves seen, 2 bark seen
+    std::vector<uint32_t> forestTexture;  // 2.0.4: each model's leaves' picture (the game's texture), 0 not seen
     bool forestColoursDirty = false;
     uint32_t forestSerial = ~0u;  // the map read the forest was built from
     bool forestBuilt = false, forestDone = false, forestLogged = false, forestFailed = false;

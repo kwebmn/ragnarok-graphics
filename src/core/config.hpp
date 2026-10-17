@@ -370,8 +370,9 @@ struct EffectSettings {
     // hardly in the dark. Needs the motes. Off by default.
     bool litDust = false;
     // 2.0.3: the new trees drawn as in an anime (core/forest.hpp grow, shaders.cpp forest_ps part 5): crowns of large
-    // soft puffs in cel-shaded steps, warm light, cool shade, a bright rim. On by default (the new trees are off).
-    bool animeTrees = true;
+    // soft puffs in cel-shaded steps, warm light, cool shade, a bright rim. 2.0.4: off by default - the player found
+    // the realistic trees of leaves fit the game's pictures better.
+    bool animeTrees = false;
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

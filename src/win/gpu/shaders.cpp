@@ -2917,6 +2917,15 @@ float4 forest_ps(ForestOut i) : SV_Target {
         clip(petal - 0.1);
         base = lerp(i.leaf * (0.9 + 0.2 * frac(own * 5.7)), i.leaf * float3(0.75, 0.5, 0.55), heart * 0.6);
         base = lerp(base, float3(1.0, 0.97, 0.97), (1.0 - petal) * 0.35);
+    } else if (footprint > 0.5) {  // 2.0.4: the game's own leaves' picture, a piece of it on the card, round
+        float2 at = 0.12 + float2(hash12(float2(own * 31.7, 1.3)), hash12(float2(own * 17.1, 7.7))) * 0.46;
+        float4 t = tex0.Sample(samp0, at + i.uv * 0.3);
+        float2 off = i.uv - 0.5;  // a ragged round edge, lost among the picture's own leaves
+        float edge = 0.44 + 0.07 * sin(atan2(off.y, off.x) * 7.0 + own * 13.0);
+        float round = smoothstep(edge + 0.06, edge - 0.04, length(off));
+        clip(t.a * round - 0.5);
+        float3 average = max(float3(asfloat(stage0.x), asfloat(stage0.y), asfloat(stage1.x)), 0.02);
+        base = t.rgb * (i.leaf / average) * (part > 2.5 ? 0.85 : 1.0);  // its tree's shade and season
     } else {  // a card of leaves (a fir's twig narrower, darker)
         float vein;
         float leaf = forestLeaves(i.uv, own, vein);

@@ -12,6 +12,7 @@
 #include "core/forest.hpp"
 #include "core/game_camera.hpp"
 #include "core/trees.hpp"
+#include "win/gpu/ai_textures.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -135,11 +136,17 @@ bool Renderer::Impl::hideForTree(const FrameRecord& rec, const DrawCmd& d, const
         const ForestPlaced& t = *fit;
         if (tex != textures.end() && tex->second.averaged && t.model < forestColoured.size()) {
             // a blossom's picture is its colour, whatever its alpha (pink or white)
-            const bool asLeaf = leafy || (t.model < mapWorld.forestModels().size() &&
-                                          mapWorld.forestModels()[t.model].shape.kind == forest::Kind::Blossom);
+            const forest::Kind kind = t.model < mapWorld.forestModels().size()
+                                          ? mapWorld.forestModels()[t.model].shape.kind
+                                          : forest::Kind::None;
+            const bool asLeaf = leafy || kind == forest::Kind::Blossom;
             const bool trunk = !asLeaf && half < t.radius * 0.5f;
             uint8_t& seen = forestColoured[t.model];
-            if (asLeaf && !(seen & 1)) {
+            // 2.0.4: the leaves' picture itself, cut into the cards (forest_ps) - not a cherry's nor a palm's
+            if (leafy && kind != forest::Kind::Sakura && kind != forest::Kind::Palm && t.model < forestTexture.size())
+                forestTexture[t.model] = d.texture[0];
+            // 2.0.4: not a cherry's - its one picture is bark and blossom, its crown came out brown
+            if (asLeaf && !(seen & 1) && kind != forest::Kind::Sakura) {
                 for (int c = 0; c < 3; ++c) forestLeaf[t.model][size_t(c)] = tex->second.average[c];
                 seen |= 1;
                 forestColoursDirty = true;
@@ -187,6 +194,7 @@ void Renderer::Impl::updateForest() {
         }
         forestBark.assign(mapWorld.forestModels().size(), {kBarkDefault[0], kBarkDefault[1], kBarkDefault[2]});
         forestColoured.assign(mapWorld.forestModels().size(), 0);
+        forestTexture.assign(mapWorld.forestModels().size(), 0);
     }
     const std::vector<MapWorld::ForestModel>& models = mapWorld.forestModels();
     const std::vector<MapWorld::ForestTree>& trees = mapWorld.forestTrees();
@@ -333,9 +341,16 @@ void Renderer::Impl::updateForest() {
                 d.size[0] = f.scale[0], d.size[1] = f.scale[1], d.size[2] = f.scale[2], d.size[3] = f.seed;
                 // each tree its own shade, autumn's colours in the season (core/trees.hpp, as 1.7's leaf shading)
                 const trees::Shade sh = trees::shadeAt(f.pos[0], f.pos[2], mapSeason);
+                // 2.0.4: autumn only on the broadleaf trees, and softer - the firs, palms and the sakura keep their
+                // colours (in October Prontera's sakura went brown and orange), a whole crown of orange was too much
+                const forest::Kind kind = mapWorld.forestModels()[f.model].shape.kind;
+                const bool turns = kind == forest::Kind::Broadleaf || kind == forest::Kind::Willow ||
+                                   kind == forest::Kind::Bush;
+                const bool blossom = kind == forest::Kind::Sakura || kind == forest::Kind::Blossom;
                 for (int c = 0; c < 3; ++c) {
-                    float leaf = forestLeaf[f.model][size_t(c)] * sh.tint[c];
-                    leaf += (forestLeaf[f.model][size_t(c)] * 1.6f * sh.autumn[c] - leaf) * sh.autumnAmount;
+                    float leaf = forestLeaf[f.model][size_t(c)] * (blossom ? 1.0f : sh.tint[c]);
+                    if (turns)
+                        leaf += (forestLeaf[f.model][size_t(c)] * 1.6f * sh.autumn[c] - leaf) * sh.autumnAmount * 0.55f;
                     d.leaf[c] = leaf;
                     d.bark[c] = forestBark[f.model][size_t(c)];
                 }
@@ -460,8 +475,14 @@ bool Renderer::Impl::applyForest() {
     crumb("new trees");
     ID3D12PipelineState* pso = forestPipeline(upscale ? 1 : samples);
     if (!pso || !forestVb || !forestIb || !forestInstances) return true;
-    StageSetup st;
-    if (!makeRoom(st, st, 0, 5)) return false;
+    // 2.0.4: the room for all of it first - the leaves' pictures' tables, the sampler - so that no new list starts in
+    // the middle of the calls (it would drop the forest's pipeline and buffers)
+    StageSetup leafSampler;
+    leafSampler.addressU = leafSampler.addressV = d3d7::TADDRESS_WRAP;
+    leafSampler.magFilter = d3d7::TFG_LINEAR;
+    leafSampler.minFilter = d3d7::TFN_LINEAR;
+    leafSampler.mipFilter = d3d7::TFP_LINEAR;
+    if (!makeRoom(leafSampler, leafSampler, 16, UINT(5 + 2 * forestTexture.size()))) return false;
     bindPass(upscale ? kPassWorld : kPassTarget);
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
@@ -511,9 +532,38 @@ bool Renderer::Impl::applyForest() {
     list->IASetVertexBuffers(0, 2, views);
     const D3D12_INDEX_BUFFER_VIEW ib{forestIb->GetGPUVirtualAddress(), forestIbBytes, DXGI_FORMAT_R32_UINT};
     list->IASetIndexBuffer(&ib);
-    for (const ForestCall& call : forestCalls)
+    // 2.0.4: each model's calls with its leaves' own picture (the game's, its AI picture when shown) cut into the
+    // cards - footprint 1, the picture's average colour in stage0.x, stage0.y, stage1.x (asfloat) - so the crowns
+    // are the game's leaves in the trees' own shapes; a model whose picture is not known yet keeps the drawn leaves.
+    uint32_t bound = ~0u;
+    for (const ForestCall& call : forestCalls) {
+        const uint32_t model = forestPlaced[call.firstInstance].model;
+        const uint32_t id = model < forestTexture.size() ? forestTexture[model] : 0;
+        const auto tex = id ? textures.find(id) : textures.end();
+        const bool textured = tex != textures.end() && tex->second.resource && tex->second.averaged;
+        if ((textured ? id : 0u) != bound) {
+            bound = textured ? id : 0u;
+            Constants k = c;
+            if (textured) {
+                Texture& t = tex->second;
+                const bool aiShown = ai && ai->shown && t.ai && t.aiWorld;
+                if (aiShown)
+                    transition(t.ai, t.aiState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                else
+                    transition(t.resource, t.state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+                const UINT srv = aiShown ? t.aiSrv : t.srv;
+                list->SetGraphicsRootDescriptorTable(kRootTextures, textureTable(srv, srv));
+                list->SetGraphicsRootDescriptorTable(kRootSamplers, samplerTable(leafSampler, leafSampler, 16));
+                k.footprint = 1.0f;
+                std::memcpy(&k.stage0[0], &t.average[0], 4);
+                std::memcpy(&k.stage0[1], &t.average[1], 4);
+                std::memcpy(&k.stage1[0], &t.average[2], 4);
+            }
+            list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &k, 0);
+        }
         list->DrawIndexedInstanced(call.indexCount, call.instances, call.firstIndex, INT(call.baseVertex),
                                    call.firstInstance);
+    }
     boundPipeline = nullptr;  // the game's next draw binds its own
     boundTextures = boundSamplers = ~0ull;
     if (!forestLogged)
