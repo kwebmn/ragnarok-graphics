@@ -1,3 +1,8 @@
+# uaRO Graphics 2.1.6 — testing
+
+- **No blinking at steps:** the seams between textures are no longer drawn over a step of the floor (a little wall
+  between two tiles) - the strip at the wall's foot blinked against it (c_tower2).
+
 # uaRO Graphics 2.1.5 — testing
 
 - **No rainbow floors:** the map's lamps light with a third of their colour - the game has their colours in its
