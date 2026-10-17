@@ -237,7 +237,13 @@ float relief(float2 uv, float2 du, float2 dv) {
     // area (k squared): k goes out, the relief the game's texture gives.
     float2 g = float2(hr - hl, hd - hu) * 0.5;
     float2 tx = du * size, ty = dv * size;  // texels a screen pixel
-    float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(abs(tx.x * ty.y - tx.y * ty.x), 1e-6));
+    float area = abs(tx.x * ty.y - tx.y * ty.x);
+    float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(area, 1e-6));
+    // 2.2.2: a face seen nearly edge-on or its texture stretched (a step's side: the texels a pixel nearly in one
+    // line, their area near nothing) had its slope blown up - dark and light flickered there as the camera turned: the
+    // relief fades out there, and its slope is kept to a hill's
+    float even = saturate(area / max(max(dot(tx, tx), dot(ty, ty)), 1e-6) * 6.0 - 0.2);
+    gs = clamp(gs, -1.5, 1.5) * even;
     float3 n = normalize(float3(-gs * 3.5 * uiPixels.x, 1.0));
     const float3 light = float3(-0.4706, -0.5752, 0.6690);  // normalised (-0.45, -0.55, 0.64)
     // 0.83.1: mostly darker on the sides away from the light - lit sides brightened little: light ground (paved
@@ -363,9 +369,13 @@ float3 materialLight(float3 c, float4 m, float3 P, float3 N, float3 T, float3 B)
     float amb = lerp(0.85, 0.5, sunLight);
     float k = (amb + (1.0 - amb) * saturate(dot(n, L))) / (amb + (1.0 - amb) * saturate(dot(N, L)));
     float hollow = lerp(0.8, 1.0, saturate(m.z * 1.8));
-    float s = twinH;
-    c *= lerp(1.0, clamp(k, 0.55, 1.6) * hollow, s);
     float3 V = normalize(-P);
+    // 2.2.2: a face turned from the light (a step's side in a dark gap) was lit up to 1.6 times by its relief alone,
+    // and one seen nearly edge-on took its relief from a few garbled texels - white glints flashing as the camera
+    // turned: at most 1.3 times now, and the relief and the glint fade on faces seen edge-on
+    float facing = saturate(abs(dot(V, N)) * 4.0 - 0.1);
+    float s = twinH * facing;
+    c *= lerp(1.0, clamp(k, 0.55, 1.3) * hollow, s);
     float3 H = normalize(L + V);
     float spec = pow(saturate(dot(n, H)), 10.0 + 70.0 * m.w) * m.w * uiPixels.y * (0.3 + 0.7 * sunLight);
     // 2.1.7: a glint only as bright as the place - white over a dark gap, it flashed as the camera turned
@@ -2268,6 +2278,10 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
     float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
     float3 dx = abs(r.z - p.z) < abs(p.z - l.z) ? r - p : p - l;
     float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
+    // 2.2.2: at a break of the depth (a gap's or a step's edge) both neighbours of a side lie off the floor: its
+    // normal there is a guess that changes as the camera turns - a reflection flashing along the edge; none there
+    float breakX = min(abs(r.z - p.z), abs(p.z - l.z)), breakY = min(abs(d.z - p.z), abs(p.z - u.z));
+    if (max(breakX, breakY) > 0.03 * p.z) return float4(0.0, 0.0, 0.0, 0.0);
     float3 n = normalize(cross(dy, dx));
     if (dot(n, p) > 0.0) n = -n;  // towards the camera
     float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
