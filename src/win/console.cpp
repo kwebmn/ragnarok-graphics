@@ -388,7 +388,7 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
             if (r.kind == Kind::Open) {  // 2.2.1: "the group's effects (12) >" or "hide the effects"
                 int g = 0, count = 0;
                 while (g < kEffectGroups && r.key != groupKey(g)) ++g;
-                for (int i = 0; i < effect_groups::memberCount(); ++i) count += effect_groups::members()[i].group == g;
+                for (int k = 0; k < effect_groups::memberCount(); ++k) count += effect_groups::members()[k].group == g;
                 const bool shown = g < kEffectGroups && groupOpen_[g];
                 const std::string label = shown ? std::string(tr(lang_, Text::FxDetailsHide))
                                                 : fmt(tr(lang_, Text::FxDetails), {std::to_string(count)});
@@ -413,8 +413,8 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 while (g < kEffectGroups && r.key != groupKey(g)) ++g;
                 if (g < kEffectGroups) {
                     std::set<std::string> passes;
-                    for (int i = 0; i < effect_groups::memberCount(); ++i) {
-                        const effect_groups::Member& m = effect_groups::members()[i];
+                    for (int k = 0; k < effect_groups::memberCount(); ++k) {
+                        const effect_groups::Member& m = effect_groups::members()[k];
                         const std::string pass = m.group == g ? effect_costs::passOf(m.key) : "";
                         const auto c = pass.empty() || !passes.insert(pass).second ? costs.end() : costs.find(pass);
                         if (c != costs.end()) ms = std::max(ms, 0.0) + c->second;
