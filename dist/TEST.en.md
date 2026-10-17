@@ -1,3 +1,19 @@
+# uaRO Graphics 1.7.1 — testing
+
+- **Living world, the ground and the grass** (all off by default, Direct3D 12):
+  - **Flowers in the grass** (`effects.flowers`, needs Grass): a flower here and there among the blades, the region's
+    colours - Prontera's meadows, Payon's reds, Amatsu's pinks, bright tropical ones in Umbala and Comodo.
+  - **Morning dew** (`effects.dew`, needs Grass): from dawn to noon drops on the blades' tips flash.
+  - **Morning fog** (`effects.morning_fog`, needs Haze and fog): 4:30-10:30 a low fog over the fields and the towns,
+    thickest 6-8.
+  - **Drifting sand** (`effects.sand_drift`): in the desert of Morroc and Veins the wind drives sand over the ground.
+  - **Glittering snow** (`effects.snow_sparkle`): Lutie's and the ice caves' snow glitters.
+  - **Damp cave walls** (`effects.wet_walls`): in damp dungeons the stone glistens in the light, trickles run down.
+- Better without new boxes: the grass under the feet now also **parts to the sides**; **Gusts of wind** bend and
+  lighten the grass in a band; **raindrops' rings** in the puddles of Wet ground.
+- How to check: prt_fild08 with Grass (flowers, dew in the morning, gusts), moc_fild01 (sand), xmas (snow),
+  pay_dun00 or prt_sewb1 (walls), any field in the morning (fog).
+
 # uaRO Graphics 1.7.0 — testing
 
 - **A new block "Living world"** at the bottom of the Effects page. Its first part, the trees, all off by default:
