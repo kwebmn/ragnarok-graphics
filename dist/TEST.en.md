@@ -1,3 +1,10 @@
+# uaRO Graphics 2.1.7 — testing
+
+- **No white flashes in dark gaps:** the materials' glint is no brighter than the place it is on - it was added as
+  white over dark gaps and flashed as the camera turned (c_tower2).
+- **Striped step sides:** where the game stretches a texture along a face (a step's side, in stripes) the material
+  (relief and glint) is off - it was as garbled there as the picture.
+
 # uaRO Graphics 2.1.6 — testing
 
 - **No blinking at steps:** the seams between textures are no longer drawn over a step of the floor (a little wall
