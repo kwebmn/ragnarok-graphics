@@ -222,7 +222,7 @@ float4 smoothLightmap(float2 uv, float4 sharp) {
 // texture's width - its slope taken across one of the game's texels, so that an AI picture (2 or 4 times as many,
 // smooth between them) under it keeps the relief the game's texture gives (x4 had a quarter of it).
 #ifndef UAGFX_SAFE  // 0.76: the newest features, left out when a compiler will not take them (pipeline.cpp)
-float relief(float2 uv, float2 du, float2 dv) {
+float relief(float2 uv, float2 du, float2 dv, float seen) {
     float w, h;
     tex0.GetDimensions(w, h);
     float2 size = float2(w, h);
@@ -241,9 +241,9 @@ float relief(float2 uv, float2 du, float2 dv) {
     float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(area, 1e-6));
     // 2.2.2: a face seen nearly edge-on or its texture stretched (a step's side: the texels a pixel nearly in one
     // line, their area near nothing) had its slope blown up - dark and light flickered there as the camera turned: the
-    // relief fades out there (a slope clamp would not help: the light below is at its limits from |gs| 0.05 on)
-    float even = saturate(area / max(max(dot(tx, tx), dot(ty, ty)), 1e-6) * 6.0 - 0.2);
-    gs *= even;
+    // relief fades out where the pixel sees it poorly (shade()'s measure; a slope clamp would not help: the light
+    // below is at its limits from |gs| 0.05 on)
+    gs *= seen;
     float3 n = normalize(float3(-gs * 3.5 * uiPixels.x, 1.0));
     const float3 light = float3(-0.4706, -0.5752, 0.6690);  // normalised (-0.45, -0.55, 0.64)
     // 0.83.1: mostly darker on the sides away from the light - lit sides brightened little: light ground (paved
@@ -361,7 +361,7 @@ float mnoise(float2 p) {
     return lerp(lerp(mhash(i), mhash(i + float2(1, 0)), f.x), lerp(mhash(i + float2(0, 1)), mhash(i + 1.0), f.x), f.y);
 }
 
-float3 materialLight(float3 c, float4 m, float3 P, float3 N, float3 T, float3 B) {
+float3 materialLight(float3 c, float4 m, float3 P, float3 N, float3 T, float3 B, float seen) {
     float2 xy = m.xy * 2.0 - 1.0;
     float3 n = normalize(T * xy.x + B * xy.y + N * sqrt(saturate(1.0 - dot(xy, xy))));
     float3 L = normalize(float3(twinX, twinY, twinW));
@@ -372,9 +372,9 @@ float3 materialLight(float3 c, float4 m, float3 P, float3 N, float3 T, float3 B)
     float3 V = normalize(-P);
     // 2.2.2: a face turned from the light (a step's side in a dark gap) was lit up to 1.6 times by its relief alone,
     // and one seen nearly edge-on took its relief from a few garbled texels - white glints flashing as the camera
-    // turned: at most 1.3 times now, and the relief and the glint fade on faces seen edge-on
-    float facing = saturate(abs(dot(V, N)) * 4.0 - 0.1);
-    float s = twinH * facing;
+    // turned: at most 1.3 times now, and the relief and the glint fade where the pixel sees the relief poorly
+    // (shade()'s measure: edge-on, stretched, its texels along a line)
+    float s = twinH * seen;
     c *= lerp(1.0, clamp(k, 0.55, 1.3) * hollow, s);
     float3 H = normalize(L + V);
     float spec = pow(saturate(dot(n, H)), 10.0 + 70.0 * m.w) * m.w * uiPixels.y * (0.3 + 0.7 * sunLight);
@@ -430,21 +430,33 @@ float4 shade(PsIn i) {
     float4 m = float4(0.5, 0.5, 0.5, 0.0);
     float pane = 0.0;
     float3 N = float3(0.0, 0.0, -1.0), T = float3(1.0, 0.0, 0.0), B = float3(0.0, 1.0, 0.0);
-    if (material) {
+    float seen = 1.0;
+    if (material || ((stage1.y >> 26) & 1) != 0) {  // the materials or the ground's relief (a draw's own, uniform)
+        // the surface's normal towards the camera and its texture's way along it (T with u, B with v, the longer 1)
         N = normalize(cross(dp1, dp2));
-        if (dot(N, P) > 0.0) N = -N;  // towards the camera
+        if (dot(N, P) > 0.0) N = -N;
         float3 dp2perp = cross(dp2, N), dp1perp = cross(N, dp1);
         T = dp2perp * du.x + dp1perp * dv.x;
         B = dp2perp * du.y + dp1perp * dv.y;
         float im = rsqrt(max(max(dot(T, T), dot(B, B)), 1e-12));
         T *= im;
         B *= im;
+        // 2.2.2: how clearly a pixel sees its texture's relief - one measure for the relief, the materials and their
+        // glint, each now faded by all three causes the glints of 2.1.5-2.2.1 came from (each had one of its own and
+        // passed the others): the texture stretched along the face (a step's side: stripes, 2.1.7), the face seen
+        // nearly edge-on, the pixel's texels along one line (the two at once)
+        float tw, th;
+        tex0.GetDimensions(tw, th);
+        float2 tx = du * float2(tw, th), ty = dv * float2(tw, th);  // the texels a screen pixel spans
+        float spread = abs(tx.x * ty.y - tx.y * ty.x) / max(max(dot(tx, tx), dot(ty, ty)), 1e-6);
+        seen = min(min(saturate(min(length(T), length(B)) * 4.0 - 0.4),
+                       saturate(abs(dot(normalize(-P), N)) * 4.0 - 0.1)),
+                   saturate(spread * 6.0 - 0.2));
+    }
+    if (material) {
         m = sceneColor.SampleGrad(samp0, uv0, du, dv);
-        // 2.1.7: a face the game stretches its texture along (a step's side: stripes) - its relief and gloss as
-        // garbled as its picture, no material there (it flashed white in c_tower2's gaps)
-        float even = saturate(min(length(T), length(B)) * 4.0 - 0.4);
-        m = lerp(float4(0.5, 0.5, 0.5, 0.0), m, even);
-        if (even > 0.99 && ((stage1.y >> 29) & 1) != 0) {  // parallax: one step along the view by the height
+        m = lerp(float4(0.5, 0.5, 0.5, 0.0), m, seen);  // garbled relief and gloss: none (c_tower2's gaps)
+        if (seen > 0.99 && ((stage1.y >> 29) & 1) != 0) {  // parallax: one step along the view by the height
             float3 V = normalize(-P);
             float3 vt = float3(dot(V, T), dot(V, B), dot(V, N));
             // 2.1.5: at most a pixel and a half on the screen - farther, the step left a tile's part of its
@@ -458,7 +470,7 @@ float4 shade(PsIn i) {
         if (m.w > 0.72) m.w = 0.35 * pane;
     }
     float4 t0 = tex0.SampleGrad(samp0, uv0, du, dv);
-    if (((stage1.y >> 26) & 1) != 0) t0.rgb *= relief(uv0, du, dv);  // 0.71: the ground
+    if (((stage1.y >> 26) & 1) != 0) t0.rgb *= relief(uv0, du, dv, seen);  // 0.71: the ground
 #else
     float4 t0 = tex0.Sample(samp0, uv0);
 #endif
@@ -482,7 +494,7 @@ float4 shade(PsIn i) {
     if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
     if (((stage0.y >> 28) & 1) != 0) c.rgb = spriteLight(uv0, du, dv, c.rgb);  // 1.17: the characters
     if (material) {
-        c.rgb = materialLight(c.rgb, m, P, N, T, B);  // 1.8: the materials
+        c.rgb = materialLight(c.rgb, m, P, N, T, B, seen);  // 1.8: the materials
         // 1.14, cliffs: a steep face whose texture the game stretches along it (one of its coordinates moves far
         // slower over the world than the other: T or B short) gets a rock's own detail over the world, in the
         // face's own two axes, breaking the streaks - its picture is not taken apart (an atlas's quarters stay)
