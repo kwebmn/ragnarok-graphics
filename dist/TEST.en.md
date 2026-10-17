@@ -1,3 +1,18 @@
+# uaRO Graphics 1.9.3 — testing
+
+- **A console in the game.** The `~` key (left of 1) opens a panel over the game with every switch and slider of the
+  Effects page, by blocks, in the settings app's language:
+  - Up/Down (PgUp/PgDn by 10) choose; Space or Enter switch; Left/Right move a slider or the mode;
+  - **hold Tab** - the chosen effect off while held: an instant with/without comparison;
+  - `~` or Esc close.
+  Changes go into `uaro-graphics.ini` at once and apply in the running game; the settings app sees the same. While
+  the console is open the game gets no keys (the chat does not open). `~` itself never reaches the game.
+- A reminder: **Ctrl+Shift+F12** - a screenshot at the screen's full size with every effect into the game's
+  `ScreenShot` folder.
+- The log: `console: open` and each change (`console: effects.grass = 0`).
+- How to check: press `~` in the game, walk the list, switch a couple of effects, hold Tab on Smooth seams of the
+  ground.
+
 # uaRO Graphics 1.9.2 — testing
 
 - **The ground's seams cover the thin lines along the cells' edges.** After R-PKXZT5's screenshots: the desert shows
