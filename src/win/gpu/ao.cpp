@@ -348,7 +348,8 @@ bool Renderer::Impl::applyGrass() {
     c.uiPixels[1] = float(h);
     c.footprint = steps ? float(std::min(footTracker.steps().size(), footsteps::Tracker::kMax)) : 0.0f;
     // The longest blade: about 1.6 units at the camera's usual distance.
-    c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, 28.0f);
+    // 1.16.1: Classic+ (the weaker cards) at most 16 pixels a blade - the cost goes with it (28: 1.7 times)
+    c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, remaster() ? 28.0f : 16.0f);
     c.twin[1] = 0.65f * float(std::clamp(effects.grassAmount, 0, 100)) / 100.0f;
     c.sharpen = waterTime();
     // 1.7: flowers among the blades, dew on their tips in the morning, the gusts bending them
