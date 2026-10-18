@@ -2093,7 +2093,10 @@ float4 material_ps(PresentOut i) : SV_Target {
 // back changed: twinX the sky's share - what faces up takes the sky's colour (sourceRect.rgb), what faces down the
 // ground's (sourceClamp.rgb), as the light from all around would; twinY the bounce - the colours a few steps around
 // that face the surface light it a little in their colour (grass greens a wall's foot, a red roof warms the eaves);
-// twinW how far (world units). r0-r11 the view -> the world.
+// twinW how far (world units). r0-r11 the view -> the world. 2.2.3: each of the eight ways around counts by how much
+// the two surfaces turn to each other (the cosine squared stands for both) - until now the light of those seen was
+// averaged and given in full once a few were: every fold of the ground a few degrees deep took a third of the
+// light around, and a sunny beach's small bumps (cmd_fild02) shone as bright lines along the cells' edges.
 float4 sky_light_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
@@ -2113,7 +2116,6 @@ float4 sky_light_ps(PresentOut i) : SV_Target {
         float reach = clamp(twinW * f0 * scale / max(p.z, 1.0), 4.0, 64.0);
         float spin = hash12(float2(wp)) * 6.2831853;
         float3 sum = float3(0.0, 0.0, 0.0);
-        float weights = 0.0;
         [unroll] for (int k = 0; k < 8; ++k) {
             float ang = spin + float(k) * 0.7853982;
             float far = reach * (0.45 + 0.55 * frac(float(k) * 0.618 + spin));
@@ -2122,12 +2124,10 @@ float4 sky_light_ps(PresentOut i) : SV_Target {
             float3 to = viewAt(q) - p;
             float dist = length(to);
             if (dist < 1e-3) continue;
-            float w = saturate(dot(n, to / dist)) / (1.0 + dist * dist * 0.01);
-            sum += sceneColor.Load(int3(q, 0)).rgb * w;
-            weights += w;
+            float facing = saturate(dot(n, to / dist));
+            sum += sceneColor.Load(int3(q, 0)).rgb * (facing * facing / (1.0 + dist * dist * 0.01));
         }
-        float3 bounce = sum / max(weights, 1e-3);
-        o += col * bounce * twinY * saturate(weights * 2.0) * 0.35;
+        o += col * sum * (twinY / 8.0);  // a wall's foot as before (a third), a 17-degree fold some 4 %
     }
     return float4(o, 1.0);
 }
