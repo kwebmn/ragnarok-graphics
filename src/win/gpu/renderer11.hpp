@@ -16,6 +16,7 @@
 #include "core/living.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
+#include "core/smooth_shade.hpp"
 #include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/weather.hpp"
@@ -303,6 +304,7 @@ private:
     void applyShafts();
     void applyFlare();
     void applyDof();
+    void applyFog();  // 2.5.5: the volumetric fog low over the fields (sun_map.cpp applyFog) - the remaster's
     void spriteConstants(Constants& c) const;
     void updateWind();
     bool windShared() const { return effects_.sharedWind && cameraValid_; }
@@ -556,6 +558,8 @@ private:
     ID3D11PixelShader* dofDownPs_ = nullptr;
     ID3D11PixelShader* dofFocusPs_ = nullptr;
     ID3D11PixelShader* dofApplyPs_ = nullptr;
+    ID3D11PixelShader* fogLightPs_ = nullptr;
+    bool fogDone_ = false, fogLogged_ = false;
     Target dof_[2];
     Target dofFocus_[2];  // 1x1 R32: the focus, last frame's and this one's
     int dofFocusNow_ = 0;
@@ -567,6 +571,8 @@ private:
     wind::Wind windNow_;
     float windScreenX_ = 0.0f;
     wind::Drift weatherDrift_, cloudsDrift_, skyDrift_;
+    std::vector<smooth_shade::RecordChange> smoothColours_;  // 2.5.5: this record's models' corners spread
+    bool smoothLogged_ = false;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;

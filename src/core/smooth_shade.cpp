@@ -5,6 +5,9 @@
 #include <cstring>
 #include <utility>
 
+#include "core/d3d7.hpp"
+#include "core/game_camera.hpp"
+
 namespace uagfx::smooth_shade {
 namespace {
 
@@ -94,6 +97,64 @@ std::vector<Change> smooth(const std::vector<Corner>& vertices, const std::vecto
             if (now != was) out.push_back(Change{vi, now});
         }
         run = end;
+    }
+    return out;
+}
+
+std::vector<RecordChange> recordChanges(const FrameRecord& rec, int gameWidth, int gameHeight, size_t& draws,
+                                        size_t most) {
+    std::vector<RecordChange> out;
+    draws = 0;
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const std::vector<uint8_t>& vb = rec.vertexBytes();
+    const std::vector<uint16_t>& ix = rec.indices();
+    size_t triangles = 0;
+    std::vector<Corner> corners;
+    std::vector<uint32_t> tris;
+    for (const DrawCmd& d : rec.draws()) {
+        const DrawSetup& s = rec.states()[d.state];
+        if (s.ui || s.blend || !s.zWrite || d.fvf != d3d7::FVF_TL1 || d.vertexCount < 6 || triangles >= most)
+            continue;
+        const size_t stride = FrameRecord::stride(d.fvf);
+        if (d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) continue;
+        corners.resize(d.vertexCount);
+        for (uint32_t k = 0; k < d.vertexCount; ++k) {
+            const uint8_t* at = vb.data() + d.vertexOffset + size_t(k) * stride;
+            float xyzw[4];
+            std::memcpy(xyzw, at, sizeof xyzw);
+            corners[k].x = xyzw[0];
+            corners[k].y = xyzw[1];
+            corners[k].rhw = xyzw[3];
+            std::memcpy(&corners[k].colour, at + 16, 4);
+        }
+        tris.clear();
+        const uint32_t n = d.indexCount ? d.indexCount : d.vertexCount;
+        const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
+        const uint32_t count = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
+        bool bad = false;
+        for (uint32_t t = 0; t < count && !bad; ++t)
+            for (uint32_t k = 0; k < 3; ++k) {
+                const uint32_t at = (strip ? t : t * 3) + k;
+                uint32_t vi = at;
+                if (d.indexCount) {
+                    if (d.firstIndex + at >= ix.size()) {
+                        bad = true;
+                        break;
+                    }
+                    vi = ix[d.firstIndex + at];
+                }
+                if (vi >= d.vertexCount) {
+                    bad = true;
+                    break;
+                }
+                tris.push_back(vi);
+            }
+        if (bad || tris.size() < 6) continue;
+        triangles += tris.size() / 3;
+        const std::vector<Change> changes = smooth(corners, tris, p.f0, p.f1, p.cx, p.cy);
+        if (!changes.empty()) ++draws;
+        for (const Change& ch : changes)
+            out.push_back(RecordChange{d.vertexOffset + size_t(ch.vertex) * stride + 16, ch.colour});
     }
     return out;
 }

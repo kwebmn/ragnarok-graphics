@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "core/frame.hpp"
+
 namespace uagfx::smooth_shade {
 
 // 1.19, smooth light on the models (effects.smooth_models): the game lights a house's, a rock's model face by face -
@@ -24,5 +26,15 @@ struct Change {
 // view's place of a vertex). Empty when the draw is not lit face by face, or nothing changes.
 std::vector<Change> smooth(const std::vector<Corner>& vertices, const std::vector<uint32_t>& triangles, float f0,
                            float f1, float cx, float cy, float crease = 0.8f);
+
+// 2.5.5: a frame record's colours to change - its opaque draws of the world with one set of texture coordinates (the
+// models; the ground has two), at most `most` triangles: each a byte of the record's vertices (a colour) and the
+// colour it gets. `draws` how many of them changed. Both renderers patch their copy of the vertices with them.
+struct RecordChange {
+    size_t at;
+    uint32_t colour;
+};
+std::vector<RecordChange> recordChanges(const FrameRecord& rec, int gameWidth, int gameHeight, size_t& draws,
+                                        size_t most = 60000);
 
 }  // namespace uagfx::smooth_shade

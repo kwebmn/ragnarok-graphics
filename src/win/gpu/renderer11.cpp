@@ -27,6 +27,7 @@
 #include "core/region_look.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
+#include "core/smooth_shade.hpp"
 #include "core/twin_grid.hpp"
 #include "core/water.hpp"
 #include "core/window_plan.hpp"
@@ -189,6 +190,7 @@ Renderer11::~Renderer11() {
     drop(dofApplyPs_);
     for (Target& t : dof_) dropTarget(t);
     for (Target& t : dofFocus_) dropTarget(t);
+    drop(fogLightPs_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -382,7 +384,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[59] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[60] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -432,7 +434,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"flare_ps", ps, shaderSource(), {}, true},
                    {"dof_down_ps", ps, shaderSource(), {}, true},
                    {"dof_focus_ps", ps, shaderSource(), {}, true},
-                   {"dof_apply_ps", ps, shaderSource(), {}, true}};
+                   {"dof_apply_ps", ps, shaderSource(), {}, true},
+                   {"fog_light_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -572,6 +575,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[56].code.empty() || !psOf(wants[56], dofDownPs_)) dofDownPs_ = nullptr;
     if (wants[57].code.empty() || !psOf(wants[57], dofFocusPs_)) dofFocusPs_ = nullptr;
     if (wants[58].code.empty() || !psOf(wants[58], dofApplyPs_)) dofApplyPs_ = nullptr;
+    if (wants[59].code.empty() || !psOf(wants[59], fogLightPs_)) fogLightPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -819,6 +823,10 @@ bool Renderer11::uploadGeometry(const FrameRecord& rec) {
             return false;
         }
         std::memcpy(m.pData, data, bytes);
+        // 2.5.5 (ground.cpp 1.19): the models lit face by face, their corners' light spread (A8R8G8B8, as recorded)
+        if (bind == D3D11_BIND_VERTEX_BUFFER && !smoothColours_.empty())
+            for (const smooth_shade::RecordChange& ch : smoothColours_)
+                if (ch.at + 4 <= bytes) std::memcpy(static_cast<uint8_t*>(m.pData) + ch.at, &ch.colour, 4);
         if (swizzle) {
             auto* v = static_cast<uint8_t*>(m.pData);
             for (const DrawCmd& d : swizzle->draws()) {
@@ -833,6 +841,15 @@ bool Renderer11::uploadGeometry(const FrameRecord& rec) {
     };
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const std::vector<uint16_t>& i = rec.indices();
+    smoothColours_.clear();
+    if (effects_.smoothModels) {  // 2.5.5: once a record (core/smooth_shade.hpp recordChanges)
+        size_t draws = 0;
+        smoothColours_ = smooth_shade::recordChanges(rec, gameWidth_, gameHeight_, draws);
+        if (!smoothLogged_ && draws)
+            LOG_INFO("smooth models: %zu draws of %s lit face by face, %zu corners' light spread (Direct3D 11)", draws,
+                     map_.c_str(), smoothColours_.size());
+        smoothLogged_ = smoothLogged_ || draws;
+    }
     return fill(vertices_, vertexBytes_, D3D11_BIND_VERTEX_BUFFER, v.data(), v.size(),
                 bgraVertices_ ? nullptr : &rec) &&
            fill(indices_, indexBytes_, D3D11_BIND_INDEX_BUFFER, i.data(), i.size() * sizeof(uint16_t), nullptr);
@@ -1104,7 +1121,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
-    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !hazeDone_ ||
+    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !fogDone_ || !hazeDone_ ||
                                 !skyDone_ || !shaftsDone_ || !flareDone_ || !heatDone_ || !bloomDone_ ||
                                 !gradeDone_ || !dofDone_ || !weatherDone_))
         flushBatch();
@@ -1116,6 +1133,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         applyCritters();  // 2.5.4: the living world, the embers shining out of the night
     }
     if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the haze
+    if (s.ui && worldDrawn_ && !fogDone_) applyFog();  // 2.5.5: the low fog lit by the sun
     if (s.ui && worldDrawn_ && !hazeDone_) applyHaze();  // 2.5: far off and over the ground, before the colours
     if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: where the haze filled the void
     if (s.ui && worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5: the light in the air
@@ -1838,6 +1856,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         applyCritters();    // 2.5.4
     }
     if (worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3
+    if (worldDrawn_ && !fogDone_) applyFog();  // 2.5.5
     if (worldDrawn_ && !hazeDone_) applyHaze();  // 2.5
     if (worldDrawn_ && !skyDone_) applySky();
     if (worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5
@@ -1866,7 +1885,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
     frameCrowns_.clear();
     critterFires_.clear();
-    skyLightDone_ = shaftsDone_ = flareDone_ = dofDone_ = false;  // 2.5.5
+    skyLightDone_ = shaftsDone_ = flareDone_ = dofDone_ = fogDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
@@ -2979,6 +2998,37 @@ void Renderer11::applyDof() {
         maskPass(dofBlurPs_, dof_[1 - i], c, dof_[i].srv, nullptr);
     }
     worldPass(dofApplyPs_, c, 2, 0, depthSrv_, dof_[0].srv, dofFocus_[dofFocusNow_].srv);
+}
+
+// 2.5.5: as Direct3D 12's applyFog (sun_map.cpp) - a fog lying low over the fields, lit by the sun, blended over the
+// world - the remaster's (the strong set's mode) only, as there
+void Renderer11::applyFog() {
+    fogDone_ = true;
+    if (!fogLightPs_ || !effects_.volumetricFog || effects_.volumetricFogDensity <= 0 || effects_.tier != 2 ||
+        !outdoors_ || !cameraValid_ || cameraTargetZ_ <= 0.0f || !target_.texture || !depthViews())
+        return;
+    const float* m = viewToWorld_;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    const float worldX[4] = {m[0], m[3], m[6], m[9]}, worldY[4] = {m[1], m[4], m[7], m[10]},
+                worldZ[4] = {m[2], m[5], m[8], m[11]};
+    std::copy(worldX, worldX + 4, c.sourceClamp);
+    std::copy(worldY, worldY + 4, c.sourceRect);
+    std::copy(worldZ, worldZ + 4, c.fogColor);
+    c.twin[0] = camera::targetHeight(m, cameraTargetZ_);  // the ground's height at the player
+    c.twin[1] = 5.0f;                                       // the fog's depth over it
+    c.twin[2] = 0.02f * float(std::clamp(effects_.volumetricFogDensity, 0, 200)) / 100.0f;
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    c.uiPixels[2] = 0.9f * (1.0f - night);
+    c.sharpen = waterTime();
+    if (!fogLogged_) LOG_INFO("volumetric fog: over %s (Direct3D 11)", map_.c_str());
+    fogLogged_ = true;
+    worldPass(fogLightPs_, c, 0, 1, depthSrv_);
 }
 
 float Renderer11::mapFadeNow() {
