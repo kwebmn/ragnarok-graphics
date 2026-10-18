@@ -1,3 +1,19 @@
+# uaRO Graphics 2.5.4 — testing
+
+- **Direct3D 11: the grass and the living ground.** The grass with its flowers, dew in the morning, gusts of wind,
+  bent under the steps - on the map's ground only (not on the bridges and decks). The living ground: sand drifting
+  over the desert, the snow glittering, a damp cave's walls glistening, the wet sand along the shore, the season's
+  snow and grass, the ground wet in the rain.
+- **Direct3D 11: the living world** - butterflies, dragonflies over the water, birds, leaves falling from the crowns,
+  sparks from the fires, breath in the frost, splashes about the feet in the water, drips in the caves, the light
+  from above under the sea.
+- **Fixed (Direct3D 12):** the living world's sparks never rose from the torches - the torches' pass took the list
+  of flames before the creatures read it.
+- Check, please: on Direct3D 11 the grass on Prontera's fields (the Nature group), butterflies and birds by day (the
+  Life group), leaves falling from the trees, sparks rising from the torches (on Direct3D 12 too), the snow
+  glittering in Lutie. uaro-graphics.log: "grass: … (Direct3D 11)", "living ground: … (Direct3D 11)", "living
+  creatures: … (Direct3D 11)".
+
 # uaRO Graphics 2.5.3 — testing
 
 - **Direct3D 11: the portals** - the last effect of the weak set: a soft blue light and the air turning about them.
