@@ -40,6 +40,11 @@ ScalePlan planScale(int gameWidth, int gameHeight, int outputWidth, int outputHe
     return p;
 }
 
+float upscaleMipBias(double worldScale, double pictureScale) {
+    if (!(worldScale > 0.0) || !(pictureScale > 0.0) || worldScale >= pictureScale) return 0.0f;
+    return float(std::log2(worldScale / pictureScale));
+}
+
 Rect scaleRect(const Rect& r, double k) {
     const auto edge = [k](int v) { return int(std::ceil(v * k - 1e-6)); };  // 1e-6: k = O / L is not exact
     return Rect{edge(r.left), edge(r.top), edge(r.right), edge(r.bottom)};

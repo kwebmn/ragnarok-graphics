@@ -16,6 +16,7 @@
 #include "core/frame.hpp"
 #include "core/critters.hpp"
 #include "core/key_pair.hpp"
+#include "core/scale.hpp"
 #include "core/gpu_timing.hpp"
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
@@ -741,10 +742,12 @@ struct Renderer::Impl {
     bool createPipelines(std::string& error);
     ID3D12PipelineState* presentPipelineFor(UINT n);  // made the first time a target of n samples needs it
     // aniso: the anisotropy of the pair's samplers, 0 for interface draws and copies (stage 4).
-    D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const StageSetup& s0, const StageSetup& s1, int aniso);
+    D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const StageSetup& s0, const StageSetup& s1, int aniso, float bias = 0.0f);
+    // 2.2.4: the mip bias of the world's textures now - under DLSS lower, for the picture's pixels (upscaleMipBias)
+    float worldMipBias() const { return upscale ? upscaleMipBias(worldScale, scale) : 0.0f; }
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
     // Before samplerTable and textureTable (and sceneTable: `descriptors` 5); false: lost.
-    bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2);
+    bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2, float bias = 0.0f);
     D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4, UINT t5 = kNoSrv);  // 0.19, kRootScene
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
                                      bool toGlow = false, bool water = false, bool mask = false,

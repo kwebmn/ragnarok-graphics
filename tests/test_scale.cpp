@@ -181,3 +181,15 @@ TEST(scale_under_100_draws_smaller_than_the_picture) {
     CHECK(full.targetWidth == 1920 && full.k == 1.0);
     CHECK(planScale(1920, 1080, 3840, 2160, 10, true).targetWidth == 1920);  // 50 % at most: 4K / 2
 }
+
+TEST(scale_upscaler_samples_textures_for_the_pictures_pixels) {
+    // 2.2.4: under DLSS the world is drawn smaller than the picture and its textures' mip levels were picked for the
+    // world's pixels - the texture pack's pictures (mip levels of their own) came out blurred on a 4K screen, the
+    // game's (none) not; lowered by log2(world / picture), never raised
+    CHECK(std::fabs(upscaleMipBias(2559.0 / 1920.0, 2.0) - std::log2(2559.0 / 3840.0)) < 1e-4);  // Quality, 4K
+    CHECK(std::fabs(upscaleMipBias(1.0, 2.0) + 1.0f) < 1e-6);                                    // Performance
+    CHECK_EQ(upscaleMipBias(2.0, 2.0), 0.0f);  // DLAA: the picture's own size
+    CHECK_EQ(upscaleMipBias(3.0, 2.0), 0.0f);  // drawn larger: the levels as they are
+    CHECK_EQ(upscaleMipBias(0.0, 2.0), 0.0f);
+    CHECK_EQ(upscaleMipBias(1.5, 0.0), 0.0f);
+}

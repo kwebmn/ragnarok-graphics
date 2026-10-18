@@ -507,7 +507,7 @@ bool Renderer::Impl::applyForest() {
     leafSampler.magFilter = d3d7::TFG_LINEAR;
     leafSampler.minFilter = d3d7::TFN_LINEAR;
     leafSampler.mipFilter = d3d7::TFP_LINEAR;
-    if (!makeRoom(leafSampler, leafSampler, 16, UINT(5 + 2 * forestTexture.size()))) return false;
+    if (!makeRoom(leafSampler, leafSampler, 16, UINT(5 + 2 * forestTexture.size()), worldMipBias())) return false;
     bindPass(upscale ? kPassWorld : kPassTarget);
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
@@ -585,7 +585,8 @@ bool Renderer::Impl::applyForest() {
                     transition(t.resource, t.state, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
                 const UINT srv = aiShown ? t.aiSrv : t.srv;
                 list->SetGraphicsRootDescriptorTable(kRootTextures, textureTable(srv, srv));
-                list->SetGraphicsRootDescriptorTable(kRootSamplers, samplerTable(leafSampler, leafSampler, 16));
+                list->SetGraphicsRootDescriptorTable(kRootSamplers,
+                                                     samplerTable(leafSampler, leafSampler, 16, worldMipBias()));
                 k.footprint = 1.0f;
                 std::memcpy(&k.stage0[0], &t.average[0], 4);
                 std::memcpy(&k.stage0[1], &t.average[1], 4);

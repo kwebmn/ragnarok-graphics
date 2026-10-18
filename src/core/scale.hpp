@@ -25,6 +25,12 @@ constexpr int kMaxTarget = 16384;  // the largest Direct3D 12 texture side
 ScalePlan planScale(int gameWidth, int gameHeight, int outputWidth, int outputHeight, int renderScale,
                     bool highResolution);
 
+// 2.2.4: under a temporal upscaler (DLSS) the world's textures are sampled for the picture's pixels, not the world's
+// fewer ones - their mip level lowered by log2(world / picture), as NVIDIA's DLSS guide has it: the upscaler gathers
+// the finer texels over the jittered frames. worldScale and pictureScale: game pixels -> world, -> picture. Never
+// above 0 (a world drawn larger keeps its levels); 0 for sizes unknown.
+float upscaleMipBias(double worldScale, double pictureScale);
+
 // Game pixels [x0, x1) in the target: [ceil(x0 k), ceil(x1 k)) - the pixels a quad with those edges covers once
 // its vertices sit at x k + 0.5 (D3D12 pixel centres are on half-integers).
 Rect scaleRect(const Rect& r, double k);

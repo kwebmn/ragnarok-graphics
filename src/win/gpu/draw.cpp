@@ -234,7 +234,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     // 1.15: smooth hills - a draw of the ground (its own or a seam's strip) reads the corners' normals (t3)
     bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin && (s.zWrite || seamPass);
-    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly ? 5 : 2)) return;
+    // 2.2.4: DLSS's (upscaleMipBias) - not for what its mask keeps from the history (sprites, effects): their finer
+    // texels it cannot gather, they would only shimmer
+    const float mipBias = toWorld && !mask ? worldMipBias() : 0.0f;
+    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly ? 5 : 2, mipBias)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
         prepareGeometry(rec);
         if (!vertexBase) return;
@@ -274,7 +277,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             srv[i] = t[i]->srv;
         }
     }
-    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(sampled[0], sampled[1], aniso);
+    const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(sampled[0], sampled[1], aniso, mipBias);
     bindPass(toWorld ? (toGlow ? kPassWorldGlow : kPassWorld)
                      : toLayer ? kPassLayer : toGlow ? kPassTargetGlow : kPassTarget);
     worldDrawn = worldDrawn || toWorld;

@@ -119,8 +119,9 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
 }
 
 // One D3D12 sampler from a D3D7 stage. D3D7 address modes and D3D12's share their numbers (WRAP 1 ... BORDER 4).
-// Stage 4: a world texture the client filters linearly is filtered anisotropically when aniso is 2-16.
-D3D12_SAMPLER_DESC samplerFor(const StageSetup& s, int aniso) {
+// Stage 4: a world texture the client filters linearly is filtered anisotropically when aniso is 2-16. 2.2.4: bias
+// shifts the mip level (the world under DLSS, upscaleMipBias).
+D3D12_SAMPLER_DESC samplerFor(const StageSetup& s, int aniso, float bias) {
     D3D12_SAMPLER_DESC d{};
     const bool linearMin = s.minFilter == d3d7::TFN_LINEAR || s.minFilter == d3d7::TFN_ANISOTROPIC;
     const bool linearMag = s.magFilter == d3d7::TFG_LINEAR || s.magFilter == d3d7::TFG_ANISOTROPIC;
@@ -146,13 +147,15 @@ D3D12_SAMPLER_DESC samplerFor(const StageSetup& s, int aniso) {
     d.BorderColor[3] = float(s.borderColor >> 24) / 255.0f;
     d.MinLOD = 0.0f;
     d.MaxLOD = mips ? D3D12_FLOAT32_MAX : 0.0f;
+    d.MipLODBias = bias;
     return d;
 }
 
-uint64_t samplerKey(const StageSetup& s, int aniso) {
+uint64_t samplerKey(const StageSetup& s, int aniso, float bias) {
+    const uint64_t lower = uint64_t(std::clamp(int(std::lround(-bias * 16.0f)), 0, 127));  // sixteenths, 0 to -7.9
     return uint64_t(s.addressU) | uint64_t(s.addressV) << 4 | uint64_t(s.magFilter) << 8 |
            uint64_t(s.minFilter) << 12 | uint64_t(s.mipFilter) << 16 | uint64_t(s.borderColor) << 20 |
-           uint64_t(aniso & 31) << 52;
+           uint64_t(aniso & 31) << 52 | lower << 57;
 }
 
 std::atomic<int> g_safeShaders{0};
@@ -402,8 +405,9 @@ ID3D12PipelineState* Renderer::Impl::presentPipelineFor(UINT n) {
     return presentPipelines[code];
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, const StageSetup& s1, int aniso) {
-    const KeyPair key{samplerKey(s0, aniso), samplerKey(s1, aniso)};
+D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, const StageSetup& s1, int aniso,
+                                                          float bias) {
+    const KeyPair key{samplerKey(s0, aniso, bias), samplerKey(s1, aniso, bias)};
     auto it = samplerPairs.find(key);
     if (it == samplerPairs.end()) {
         if (nextSampler + 2 > kSamplerCount) return samplerHeap->GetGPUDescriptorHandleForHeapStart();  // never: makeRoom()
@@ -411,8 +415,8 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::samplerTable(const StageSetup& s0, c
         nextSampler += 2;
         D3D12_CPU_DESCRIPTOR_HANDLE h = samplerHeap->GetCPUDescriptorHandleForHeapStart();
         h.ptr += SIZE_T(index) * samplerStep;
-        const D3D12_SAMPLER_DESC d0 = samplerFor(s0, aniso);
-        const D3D12_SAMPLER_DESC d1 = samplerFor(s1, aniso);
+        const D3D12_SAMPLER_DESC d0 = samplerFor(s0, aniso, bias);
+        const D3D12_SAMPLER_DESC d1 = samplerFor(s1, aniso, bias);
         device->CreateSampler(&d0, h);
         h.ptr += samplerStep;
         device->CreateSampler(&d1, h);
@@ -456,9 +460,9 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::textureTable(UINT srv0, UINT srv1) {
 // free place in the cache - when it is full, every list using the old pairs has to finish first - and the two texture
 // descriptors come from this list's part of the ring. Either way a new list starts here, never in the middle of a
 // draw. False when the GPU is lost.
-bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors) {
+bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors, float bias) {
     if (nextSampler + 2 > kSamplerCount &&
-        samplerPairs.find(KeyPair{samplerKey(s0, aniso), samplerKey(s1, aniso)}) == samplerPairs.end()) {
+        samplerPairs.find(KeyPair{samplerKey(s0, aniso, bias), samplerKey(s1, aniso, bias)}) == samplerPairs.end()) {
         waitIdle();
         samplerPairs.clear();
         nextSampler = 0;
