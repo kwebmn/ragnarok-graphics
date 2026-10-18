@@ -6,6 +6,7 @@
 
 #include "core/settings/strings.hpp"
 #include "core/studio_state.hpp"
+#include "studio/catalog_work.hpp"
 #include "studio/jobs.hpp"
 
 namespace uagfx::studio {
@@ -41,6 +42,7 @@ private:
     int dpi_ = 96;
     Session session_;
     std::unique_ptr<Jobs> jobs_;
+    std::unique_ptr<CatalogWork> catalog_;
 };
 
 }  // namespace uagfx::studio

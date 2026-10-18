@@ -101,7 +101,9 @@ void StudioWindow::build() {
     SendMessageW(jobBar_, PBM_SETRANGE32, 0, 1000);
     stop_ = make(L"BUTTON", t(settings::Text::StudioStop), BS_PUSHBUTTON, kStopButton);
     jobs_ = std::make_unique<Jobs>(hwnd_, gameDir_);
+    catalog_ = std::make_unique<CatalogWork>(gameDir_);
     if (session_.paused) jobs_->pause();
+    else catalog_->update(hwnd_);
     SetTimer(hwnd_, kBarTimer, 2000, nullptr);
     showBar();
 }
@@ -133,7 +135,15 @@ void StudioWindow::showBar() {
     size_t waiting = 0;
     for (const Job& j : jobs_->snapshot()) waiting += j.state == Job::Queued;
     std::wstring job;
-    if (p.id) {
+    uint64_t catalogDone = 0, catalogTotal = 0;
+    if (catalog_) catalog_->count(catalogDone, catalogTotal);
+    const std::string catalogStage = catalog_ ? catalog_->stage() : std::string();
+    if (!p.id && !catalogStage.empty()) {  // the catalog's update, when no job runs
+        std::string what = catalogStage;
+        if (catalogTotal) what += " (" + std::to_string(catalogDone) + "/" + std::to_string(catalogTotal) + ")";
+        job = app::wtrf(lang_, settings::Text::StudioJobRunning, {"catalog", what});
+        SendMessageW(jobBar_, PBM_SETPOS, WPARAM(catalogTotal ? catalogDone * 1000 / catalogTotal : 0), 0);
+    } else if (p.id) {
         std::string what = p.stage.empty() ? p.current : p.stage + (p.current.empty() ? "" : " - " + p.current);
         if (p.total) what += " (" + std::to_string(p.done) + "/" + std::to_string(p.total) + ")";
         job = app::wtrf(lang_, settings::Text::StudioJobRunning, {p.label.empty() ? p.op : p.label, what});
@@ -142,13 +152,19 @@ void StudioWindow::showBar() {
     }
     if (waiting) job += L"; " + app::wtrf(lang_, settings::Text::StudioJobsWaiting, {std::to_string(waiting)});
     SetWindowTextW(jobLabel_, job.c_str());
-    SendMessageW(jobBar_, PBM_SETPOS, WPARAM(p.total ? p.done * 1000 / p.total : 0), 0);
+    if (p.id || catalogStage.empty())
+        SendMessageW(jobBar_, PBM_SETPOS, WPARAM(p.total ? p.done * 1000 / p.total : 0), 0);
     EnableWindow(stop_, p.id != 0);
 }
 
 void StudioWindow::togglePause() {
-    if (jobs_->paused()) jobs_->resume();
-    else jobs_->pause();
+    if (jobs_->paused()) {  // G4: the newest engine at the next job; the catalog up to date with the archives
+        jobs_->resume();
+        catalog_->update(hwnd_);
+    } else {  // G4: everything let go - the engine, the archives, the pack
+        jobs_->pause();
+        catalog_->stop();
+    }
     saveSession();
     showBar();
 }
@@ -177,7 +193,13 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (LOWORD(wp) == kStopButton && jobs_) jobs_->stop(jobs_->progress().id);
             return 0;
         case WM_TIMER:
-            if (wp == kBarTimer) showBar();
+            if (wp == kBarTimer) {
+                showBar();
+                if (catalog_) catalog_->closeIdle();
+            }
+            return 0;
+        case kCatalogReady:
+            showBar();
             return 0;
         case kJobsChanged:
         case kEngineGone:
@@ -193,6 +215,7 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case WM_DESTROY:
             KillTimer(hwnd_, kBarTimer);
             jobs_.reset();  // the engine ends, the queue is written
+            catalog_.reset();
             if (font_) DeleteObject(font_);
             PostQuitMessage(0);
             return 0;
