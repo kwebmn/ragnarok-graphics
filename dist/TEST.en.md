@@ -1,3 +1,12 @@
+# uaRO Graphics 2.5.10 — urgent fix
+
+- **Direct3D 12: a black screen at the first light.** Since 2.5.0 the torches' light buffer took the final picture's
+  place. As soon as a light came into the frame - a town's lamps, a dungeon's torches, a skill's light (a priest's cast,
+  say), a portal - the screen went black (the screenshots too). After Scroll Lock the picture came back, but a large
+  bright rectangle showed about the skills. Fixed; that place is now guarded against such mistakes too.
+- Check, please: skills cast next to you (Heal, Increase AGI, Blessing), a town with lamps (prt_in) and a portal - the
+  screen does not go dark, no bright rectangle; Scroll Lock there and back breaks nothing.
+
 # uaRO Graphics 2.5.9 — testing
 
 - **Direct3D 11 draws every effect of Direct3D 12.** The last four of the High set are added: the smooth hills, the
