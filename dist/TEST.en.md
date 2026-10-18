@@ -1,3 +1,18 @@
+# uaRO Graphics 2.5.1 — testing
+
+- **Direct3D 11: five more effects** by the same shaders as Direct3D 12: the soft shadows where surfaces meet (the
+  Shadows group: a mask at a half or a quarter of the size, blurred, multiplied into the picture), the clouds'
+  shadows on the open maps (the Air group) and the light of the lamps the map's makers placed (the Light group: the
+  map's file is read as on Direct3D 12; the map's axes are found from the torches seen, so the lamps come a few
+  seconds after the first torch in view).
+- And two more of the weak set, which Direct3D 11 gets by default: the light of the skills' fire (the brightest
+  places light around them, as a torch does; with "skill colours" the other skills in their own colour) and the
+  light of the map's hidden torches (the game does not show them; no flame - the light only). Both go in the same
+  pass as the torches' light.
+- Check, please, on a map without Direct3D 12: uaro-graphics.log has "shadows: … (Direct3D 11)", "clouds: their
+  shadows over … (Direct3D 11)", "torches: N lit (Direct3D 11: their light and the map's lamps …)"; shadows under
+  the houses and along the walls, the clouds' patches on a field, the lamps' light in Prontera at night.
+
 # uaRO Graphics 2.5.0 — testing
 
 - **Speed, Direct3D 12.** The torches' and lamps' light is not one pass over the lights' whole area looping over
