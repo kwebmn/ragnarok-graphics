@@ -98,6 +98,7 @@ public:
         season_ = trees::seasonOf(map, trees::monthNow());
         look_ = haze::lookOf(map);  // 2.5: its haze and fog, the open sky, its weather (as Direct3D 12's setMap)
         outdoors_ = outdoors(map);
+        shine_ = floorShine(map);  // 2.5.17
         desert_ = desert(map);  // 2.5.2: the prints in the sand
         footTracker_.clear();
         lavaLogged_ = false;
@@ -275,7 +276,7 @@ private:
         const float user = float(std::clamp(effects_.floorReflectStrength, 0, 100)) / 100.0f;
         return weather_ == weather::Kind::Rain && effects_.weather ? std::min(1.0f, user * 1.6f)
                : outdoors_                                          ? 0.0f
-                                                                    : user;
+                                                                    : user * shine_;  // 2.5.17
     }
     // 2.5.4: the living ground (ao.cpp applyGroundLife: sand drifting over the desert, snow glittering, a damp cave's
     // walls glistening, the wet sand along the shore, the season's snow and grass, wet in the rain) and the grass
@@ -575,6 +576,7 @@ private:
     bool hazeLogged_ = false, skyLogged_ = false, weatherLogged_ = false;
     haze::Look look_;  // the map's (setMap)
     bool outdoors_ = false;
+    float shine_ = 0.0f;  // 2.5.17: how much the map's floor reflects under a roof (floorShine)
     weather::Kind weather_ = weather::Kind::None;
     float cameraTargetZ_ = 0.0f;  // the view depth of what the camera looks at (setCamera), 0 unknown
     // 2.5.1: the soft shadows and the clouds' shadows; the map's file (the lamps' lights, torches11.cpp)

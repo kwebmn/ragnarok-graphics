@@ -563,6 +563,7 @@ struct Renderer::Impl {
     bool cloudsDone = false;
     bool cloudsLogged = false;
     bool mapOutdoors = false;  // the map is a field or a town (core/outdoors.hpp)
+    float mapShine = 0.0f;     // 2.5.17: how much its floor reflects under a roof (core/outdoors.hpp floorShine)
     // 0.34, haze and fog (haze.cpp), the map's look (core/haze.hpp).
     ID3DBlob* hazePs = nullptr;
     ID3D12PipelineState* hazePipelines[4] = {};
@@ -910,7 +911,7 @@ struct Renderer::Impl {
         const float user = float(std::clamp(effects.floorReflectStrength, 0, 100)) / 100.0f;
         return mapWeather == weather::Kind::Rain && effects.weather ? std::min(1.0f, user * 1.6f)
                : mapOutdoors                                         ? 0.0f
-                                                                     : user;
+                                                                     : user * mapShine;  // 2.5.17
     }
     // 0.97: the ground wet where it rains - darker, puddles mirroring - by the floor's own pass
     bool wetWanted() const {
