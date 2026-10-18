@@ -73,7 +73,10 @@ bool rowShown(const catalog::FileEntry& f, const catalog::PictureOf& p, const Ro
     }
     if (r.text.empty()) return true;
     const std::string t = lower(r.text);
-    return lower(f.name).find(t) != std::string::npos || lower(p.key).find(t) != std::string::npos;
+    if (lower(f.name).find(t) != std::string::npos || lower(p.key).find(t) != std::string::npos) return true;
+    for (const std::string& k : p.lowKeys)  // 2.3.1: a game at a lower texture detail picks it by its lower key
+        if (lower(k).find(t) != std::string::npos) return true;
+    return false;
 }
 
 }  // namespace uagfx::studio

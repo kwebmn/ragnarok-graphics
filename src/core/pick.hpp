@@ -12,4 +12,22 @@ bool inTriangle(float ax, float ay, float bx, float by, float cx, float cy, floa
 // or not; points and lines never. -1 none.
 int lastDrawAt(const FrameRecord& r, float x, float y, const std::function<bool(const DrawCmd&)>& wanted);
 
+// 2.3.1: a pick's turn. The key is read at a present, after that frame's draws were played: the next frame's records
+// are looked through (seen: each record's texture on top under the point, 0 none - a later record's wins), and its
+// present writes what was found (due, once).
+class Request {
+public:
+    void ask(float x, float y);
+    bool looking() const { return asked_; }
+    float x() const { return x_; }
+    float y() const { return y_; }
+    void seen(uint32_t hit);
+    bool due(uint32_t& hit);
+
+private:
+    bool asked_ = false, searched_ = false;
+    float x_ = 0, y_ = 0;
+    uint32_t hit_ = 0;
+};
+
 }  // namespace uagfx::pick

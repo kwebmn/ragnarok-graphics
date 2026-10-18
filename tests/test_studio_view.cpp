@@ -91,4 +91,8 @@ TEST(rows_filter_by_navigator_and_text) {
     CHECK(studio::rowShown(f, p, facts, r));
     r.text = "grass";
     CHECK(!studio::rowShown(f, p, facts, r));
+    // 2.3.1: a game at a lower texture detail draws (and picks) the texture by its lower key
+    p.lowKeys = {"128x128\\00000000000000aa"};
+    r.text = "128x128\\00000000000000aa";
+    CHECK(studio::rowShown(f, p, facts, r));
 }

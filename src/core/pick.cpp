@@ -16,6 +16,27 @@ bool inTriangle(float ax, float ay, float bx, float by, float cx, float cy, floa
     return !(negative && positive);
 }
 
+void Request::ask(float x, float y) {
+    asked_ = true;
+    searched_ = false;
+    x_ = x;
+    y_ = y;
+    hit_ = 0;
+}
+
+void Request::seen(uint32_t hit) {
+    if (!asked_) return;
+    searched_ = true;
+    if (hit) hit_ = hit;
+}
+
+bool Request::due(uint32_t& hit) {
+    if (!asked_ || !searched_) return false;
+    asked_ = false;
+    hit = hit_;
+    return true;
+}
+
 int lastDrawAt(const FrameRecord& r, float x, float y, const std::function<bool(const DrawCmd&)>& wanted) {
     const std::vector<uint8_t>& bytes = r.vertexBytes();
     const std::vector<uint16_t>& indices = r.indices();

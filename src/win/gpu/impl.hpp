@@ -11,6 +11,7 @@
 #include <array>
 #include <vector>
 
+#include "core/pick.hpp"
 #include "core/effect_costs.hpp"
 #include "core/footsteps.hpp"
 #include "core/frame.hpp"
@@ -287,11 +288,11 @@ struct Renderer::Impl {
     int anisotropy = 0;           // stage 4: of world draws; 0 = off
     bool alphaToCoverage = false;  // stage 4
     bool xray = false;             // 2.3: uaRO Studio's X-ray - the world's and the interface's textures tinted
-    // 2.3, uaRO Studio's pick (L2): the cursor's game pixel asked about, the texture of the last draw found under it
-    // in this frame's records so far (written at the present), and the picked texture's picture off or on (A/B).
-    bool pickWanted = false, abWanted = false;
-    float pickX = 0, pickY = 0;
-    uint32_t pickHit = 0;
+    // 2.3, uaRO Studio's pick (L2): the cursor's game pixel asked about - the next frame's records looked through, its
+    // present writing the texture of the last draw found under it (2.3.1) - and the picked texture's picture off or
+    // on (A/B).
+    pick::Request pick;
+    bool abWanted = false;
     // Part 3 (DLSS, uaro-render64.exe; upscaler.hpp): the world at the render size with a jitter, its depth and
     // motion, the upscaler's output at the target's size and the interface layer (premultiplied) that goes on top.
     Upscaler* upscaler = nullptr;

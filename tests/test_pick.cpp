@@ -69,3 +69,22 @@ TEST(pick_edges_count_once) {
     CHECK_EQ(pick::lastDrawAt(f, 9, 5, [](const DrawCmd&) { return true; }), -1);
     CHECK_EQ(pick::lastDrawAt(f, 1, 9, [](const DrawCmd&) { return true; }), 0);
 }
+
+TEST(pick_request_waits_for_the_next_frame) {
+    // 2.3.1: the key is read at a present, after that frame's draws were played - the pick looks through the next
+    // frame's (2.3.0 wrote "nothing under the cursor" at once, every time)
+    pick::Request r;
+    uint32_t hit = 99;
+    CHECK(!r.looking() && !r.due(hit));
+    r.ask(10.5f, 20.5f);
+    CHECK(r.looking() && r.x() == 10.5f && r.y() == 20.5f);
+    CHECK(!r.due(hit));  // the frame it was asked at: its draws are gone
+    r.seen(0);           // the next frame's first record: nothing there
+    r.seen(7);           // its second: a texture on top
+    r.seen(0);           // its third: nothing more under the point - the 7 stays
+    CHECK(r.due(hit) && hit == 7);
+    CHECK(!r.looking() && !r.due(hit));  // once
+    r.ask(1, 1);
+    r.seen(0);
+    CHECK(r.due(hit) && hit == 0);  // nothing of the AI's there: said so
+}

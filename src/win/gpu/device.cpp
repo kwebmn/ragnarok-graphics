@@ -1785,12 +1785,7 @@ void Renderer::setStudio(uint8_t flags, int x, int y) {
     Impl& m = *impl_;
     if (m.xray != ((flags & 1) != 0)) LOG_INFO("X-ray: %s", (flags & 1) ? "on" : "off");
     m.xray = (flags & 1) != 0;
-    if (flags & 2) {  // the next present writes what this frame drew there
-        m.pickWanted = true;
-        m.pickX = float(x) + 0.5f;
-        m.pickY = float(y) + 0.5f;
-        m.pickHit = 0;
-    }
+    if (flags & 2) m.pick.ask(float(x) + 0.5f, float(y) + 0.5f);  // what the next frame draws there
     if (flags & 4) m.abWanted = true;
 }
 
@@ -2267,12 +2262,12 @@ void Renderer::execute(const FrameRecord& record) {
         m.upscaler->renderStart();
     }
     m.prepareGeometry(record);
-    if (m.pickWanted && m.ai) {  // 2.3: the topmost draw of an AI texture under the cursor, the later records over it
-        const int k = pick::lastDrawAt(record, m.pickX, m.pickY, [&m](const DrawCmd& d) {
+    if (m.pick.looking() && m.ai) {  // 2.3: the topmost draw of an AI texture under the cursor, later records over it
+        const int k = pick::lastDrawAt(record, m.pick.x(), m.pick.y(), [&m](const DrawCmd& d) {
             uint8_t how = 0;
             return d.texture[0] && m.ai->howOf(d.texture[0], how);
         });
-        if (k >= 0) m.pickHit = record.draws()[size_t(k)].texture[0];
+        m.pick.seen(k >= 0 ? record.draws()[size_t(k)].texture[0] : 0);
     }
     for (const Command& c : record.commands()) {
         if (!m.open) break;  // the list could not go on (the GPU is lost): nothing more is recorded
@@ -2366,10 +2361,8 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (remote_) return remote_->present(window, outputWidth, outputHeight, source, options);
     Impl& m = *impl_;
     Impl::CpuTime presentCpu(m.cpuTicks);  // 0.86
-    if (m.pickWanted) {  // 2.3, uaRO Studio: the frame is whole - what it drew under the cursor
-        m.pickWanted = false;
-        if (m.ai) m.ai->writePick(m.pickHit, int(m.pickX), int(m.pickY));
-    }
+    uint32_t picked = 0;  // 2.3, uaRO Studio: the frame after the key is whole - what it drew under the cursor
+    if (m.pick.due(picked) && m.ai) m.ai->writePick(picked, int(m.pick.x()), int(m.pick.y()));
     if (m.abWanted) {
         m.abWanted = false;
         if (m.ai) m.ai->toggleHidden();
