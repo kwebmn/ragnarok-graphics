@@ -1158,8 +1158,9 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     if (level == 0) {  // 2.5.20: super-light's flat textures keep the shape of one with transparent texels
         const uint32_t* px = rec.pixels().data() + u.pixels;
         const size_t n = size_t(u.rect.width()) * size_t(u.rect.height());
-        bool clear = false;
-        for (size_t i = 0; i < n && !clear; ++i) clear = (px[i] >> 24) != 0xFF;
+        uint32_t all = 0xFFFFFFFFu;  // every texel ANDed: its alpha 255 only if each one's is (no branch a texel)
+        for (size_t i = 0; i < n; ++i) all &= px[i];
+        const bool clear = (all >> 24) != 0xFF;
         const bool whole = u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height;
         it->second.transparent = clear || (!whole && it->second.transparent);
     }
