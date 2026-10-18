@@ -1,3 +1,18 @@
+# uaRO Graphics 2.5.3 — testing
+
+- **Direct3D 11: the portals** - the last effect of the weak set: a soft blue light and the air turning about them.
+- **Direct3D 11: more of the medium set** (to be turned on by hand on the Effects page or in the `~` console):
+  - the hot air shimmering over the flames, the burning skills and the lava, far off in the desert;
+  - the forest's beams of light by their own shader, with dust and light where they fall;
+  - the morning fog over the fields and the towns and the swamps' mist (in the haze);
+  - sparks about the fire skills;
+  - the floors' reflections indoors and in the rain, the wet ground;
+  - the rain's splashes on the ground.
+- Check, please, on Direct3D 11: a portal in Prontera (the blue light, the air turning); the heat over the torches
+  and in the desert (Sograt); the beams in the forest (Payon); the fog on a field in the morning; the floors'
+  reflections in the houses. The log: "heat haze: … (Direct3D 11)", "rays: … (Direct3D 11)", "floor reflections: …
+  (Direct3D 11)".
+
 # uaRO Graphics 2.5.2 — testing
 
 - **Direct3D 11 got nearly all of the weak set** (what cards without Direct3D 12 get by default) - by the same
