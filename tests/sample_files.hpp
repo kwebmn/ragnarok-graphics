@@ -138,4 +138,56 @@ inline std::vector<uint8_t> rsm() {
     return w.b;
 }
 
+// 2.3: a ground file (.gnd, version 1.7): its textures, one lightmap, a top surface a cell. cells[y * width + x]:
+// the cell's texture and its corners' UV ({u0, u1, u2, u3}, {v0, v1, v2, v3}: (x, y), (x+1, y), (x, y+1),
+// (x+1, y+1)); texture -1: no top surface there.
+struct GndCell {
+    int texture = -1;
+    float u[4] = {0, 1, 0, 1};
+    float v[4] = {0, 0, 1, 1};
+};
+
+inline std::vector<uint8_t> gnd(const std::vector<std::string>& textures, int width, int height,
+                                const std::vector<GndCell>& cells) {
+    RswWriter w;
+    w.bytes("GRGN", 4);
+    const uint8_t version[2] = {1, 7};
+    w.bytes(version, 2);
+    w.i32(width);
+    w.i32(height);
+    w.f32(10.0f);
+    w.i32(int32_t(textures.size()));
+    w.i32(80);
+    for (const std::string& t : textures) w.text(t.c_str(), 80);
+    w.i32(1);  // one lightmap of 8 x 8, 1 cell
+    w.i32(8);
+    w.i32(8);
+    w.i32(1);
+    std::vector<uint8_t> light(8 * 8 * 4, 0x80);
+    w.bytes(light.data(), light.size());
+    int surfaces = 0;
+    for (const GndCell& c : cells) surfaces += c.texture >= 0;
+    w.i32(surfaces);
+    for (const GndCell& c : cells) {
+        if (c.texture < 0) continue;
+        for (float u : c.u) w.f32(u);
+        for (float v : c.v) w.f32(v);
+        const int16_t texture = int16_t(c.texture);
+        const uint16_t lightmap = 0;
+        w.bytes(&texture, 2);
+        w.bytes(&lightmap, 2);
+        const uint8_t colour[4] = {255, 255, 255, 255};
+        w.bytes(colour, 4);
+    }
+    int surface = 0;
+    for (const GndCell& c : cells) {
+        const float heights[4] = {0, 0, 0, 0};
+        w.bytes(heights, sizeof heights);
+        w.i32(c.texture >= 0 ? surface++ : -1);  // top
+        w.i32(-1);                                // front
+        w.i32(-1);                                // right
+    }
+    return w.b;
+}
+
 }  // namespace testfiles
