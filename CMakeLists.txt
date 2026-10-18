@@ -5,6 +5,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# 2.5.14: the 32-bit build's floating point in SSE2 (every processor Windows 10 runs on has it), as the tests' on
+# x86-64 - the x87's turned each float to int into two changes of its control word, and the mip levels the game
+# stretches its textures into (core/image.cpp) cost a third of its thread (R-7NUW85)
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
+    add_compile_options(-msse2 -mfpmath=sse)
+endif()
+
 # miniz (MIT): deflate and inflate for GRF archives (upscaled.grf). Third-party code: its own warnings are not ours.
 add_library(uagfx_miniz STATIC third_party/miniz/miniz.c)
 target_include_directories(uagfx_miniz PUBLIC third_party/miniz)
@@ -18,9 +25,6 @@ file(GLOB UAGFX_WEBP_SOURCES CONFIGURE_DEPENDS third_party/libwebp/src/dec/*.c t
 add_library(uagfx_webp STATIC ${UAGFX_WEBP_SOURCES})
 target_include_directories(uagfx_webp PUBLIC third_party/libwebp/src PRIVATE third_party/libwebp)
 target_compile_options(uagfx_webp PRIVATE -w)
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
-    target_compile_options(uagfx_webp PRIVATE -msse2)  # every processor Windows 10 runs on has it
-endif()
 
 # Portable core: formats, surfaces, config, decisions. No Windows headers; unit-tested on Linux.
 # 0.49: stb_image's JPEG decoder (the game's .jpg pictures for the texture pack).
