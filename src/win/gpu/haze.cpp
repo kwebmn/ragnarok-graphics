@@ -44,6 +44,13 @@ bool Renderer::Impl::applyHaze() {
     std::copy(mapLook.hazeColour, mapLook.hazeColour + 3, c.fogColor);
     std::copy(mapLook.fogColour, mapLook.fogColour + 3, c.sourceRect);
     c.sourceRect[3] = std::min(1.0f, mapLook.fog * user);
+    // 2.2.2: the low fog lies at the ground's height at the character (sourceClamp.x, .y 1 when known) - five depths
+    // across the screen gave it until now, and walking past walls (their tops, the void beyond) it jumped up and
+    // down: the walls went light and dark by turns (alde_dun03)
+    if (cameraValid && cameraTargetZ > 0.0f) {
+        c.sourceClamp[0] = camera::targetHeight(viewToWorld, cameraTargetZ);
+        c.sourceClamp[1] = 1.0f;
+    }
     // 1.7: a low fog in the morning over the fields and the towns (morning_fog)
     const float morning = effects.morningFog && mapOutdoors && !mapDesert ? living::morningFog(minuteNow()) : 0.0f;
     if (effects.swamp && mapPlace.swamp && c.sourceRect[3] < 0.3f) {  // 1.7: a swamp's mist, always
@@ -225,7 +232,7 @@ bool Renderer::Impl::applySky() {
     const bool land = effects.edgeLand && cameraValid && cameraTargetZ > 0.0f;
     if (land) {
         c.twin[3] = 1.0f;
-        c.sourceClamp[0] = cameraTargetZ * viewToWorld[7] + viewToWorld[10];
+        c.sourceClamp[0] = camera::targetHeight(viewToWorld, cameraTargetZ);
         if (!copySceneColor()) return false;
     }
     if (windShared()) {  // 1.22: the clouds drift with the shared wind

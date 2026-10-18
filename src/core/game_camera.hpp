@@ -37,6 +37,12 @@ inline float viewZ(const float view[12], const float at[3]) {
     return at[0] * view[2] + at[1] * view[5] + at[2] * view[8] + view[11];
 }
 
+// 2.2.2: the world height (y, down positive) of the point the camera looks at - the character's ground - by the view
+// -> world affine (4 x 3, row vectors) and that point's view depth (viewZ; the point is on the view's axis).
+inline float targetHeight(const float viewToWorld[12], float targetZ) {
+    return targetZ * viewToWorld[7] + viewToWorld[10];
+}
+
 // The view matrix of a LookAt: an orthonormal rotation and a move; false for anything else (a stale pointer).
 bool plausibleView(const float view[12]);
 

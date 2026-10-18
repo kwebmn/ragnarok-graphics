@@ -94,8 +94,7 @@ bool Renderer::Impl::applyFog() {
     std::copy(worldX, worldX + 4, c.sourceClamp);
     std::copy(worldY, worldY + 4, c.sourceRect);
     std::copy(worldZ, worldZ + 4, c.fogColor);
-    const float tz = cameraTargetZ;
-    c.twin[0] = tz * m[7] + m[10];  // the ground's height at the player
+    c.twin[0] = camera::targetHeight(m, cameraTargetZ);  // the ground's height at the player
     c.twin[1] = 5.0f;              // the fog's depth over it
     c.twin[2] = 0.02f * float(std::clamp(effects.volumetricFogDensity, 0, 200)) / 100.0f;
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;

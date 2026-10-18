@@ -173,3 +173,19 @@ TEST(game_camera_hands_remix_a_y_up_world_that_shows_as_the_game_draws_it) {
     CHECK(!remixPoint(p, iv, s, 100, 100, 0.0f, a));
     CHECK(!remixPoint(p, iv, s, 100, 100, -0.01f, a));
 }
+
+TEST(game_camera_target_height_is_the_characters_ground) {
+    // 2.2.2: the world height of the point the game's camera looks at (the character on the ground) from the view ->
+    // world affine and that point's depth - the dungeons' low fog lies at it (five depths across the screen jumped as
+    // walls' tops and the void came under them)
+    for (const V3 at : {V3{50, 0, 80}, V3{50, -12.5f, 80}, V3{-30, 7, 140}}) {
+        float view[12], v4[16], inv[16], toWorld[12];
+        lookAt({at.x + 250, at.y - 250, at.z + 20}, at, {0, -1, 0}, view);
+        affine4(view, v4);
+        CHECK(inverse4(v4, inv));
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 3; ++c) toWorld[3 * r + c] = inv[4 * r + c];
+        const float a[3] = {at.x, at.y, at.z};
+        CHECK(std::fabs(targetHeight(toWorld, viewZ(view, a)) - at.y) < 1e-3f);
+    }
+}
