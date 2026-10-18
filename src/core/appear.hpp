@@ -10,25 +10,34 @@ namespace uagfx::appear {
 // 1.0.2: they blinked now and then - a sprite is remembered for kMemoryMs after it was last drawn (a frame shown
 // twice, a sprite skipped for a frame), and a new layer close by one already shown (a weapon drawn in an attack, a
 // head turned) belongs to it: shown at once.
+// 2.4.1: and they blinked in their animations - a quarter of the monsters move their frame's middle 45 sprite pixels
+// or more from one frame to the next (Lunatic 60, Baphomet 51, Marina 86), over kNear with the camera near: both
+// reaches grow with the sprite's size on the screen (the larger of its box's sides, its frame and the known one's),
+// a jump over 1.5 of it rare (0.2 % of the monsters).
 constexpr double kFadeMs = 250.0;
 constexpr double kMemoryMs = 400.0;
 constexpr float kNear = 96.0f;     // game pixels a sprite may move between two frames (the camera turning, a run)
 constexpr float kLayer = 56.0f;    // ... and how close another layer of a shown one comes
+constexpr float kNearSize = 1.5f;  // 2.4.1: or as far as these times its size
+constexpr float kLayerSize = 1.0f;
 
 class Tracker {
 public:
-    // The sprite of `kind` drawn now about (x, y): how much of it shows, 0..1.
-    float alpha(uint8_t kind, float x, float y, double nowMs) {
+    // The sprite of `kind` drawn now about (x, y), `size` across (its box's larger side): how much of it shows, 0..1.
+    float alpha(uint8_t kind, float x, float y, float size, double nowMs) {
         latest_ = nowMs;
         int best = -1;
-        float bestD = kNear * kNear;
+        float bestD = 0.0f;
         bool shownNear = false;
         for (size_t i = 0; i < known_.size(); ++i) {
             const Seen& s = known_[i];
             if (s.kind != kind || nowMs - s.seen > kMemoryMs) continue;
             const float dx = s.x - x, dy = s.y - y, d = dx * dx + dy * dy;
-            if (d < kLayer * kLayer && nowMs - s.born >= kFadeMs) shownNear = true;
-            if (!s.taken && d < bestD) {
+            const float larger = size > s.size ? size : s.size;
+            const float reach = kNear > kNearSize * larger ? kNear : kNearSize * larger;
+            const float layer = kLayer > kLayerSize * larger ? kLayer : kLayerSize * larger;
+            if (d < layer * layer && nowMs - s.born >= kFadeMs) shownNear = true;
+            if (!s.taken && d < reach * reach && (best < 0 || d < bestD)) {
                 bestD = d;
                 best = int(i);
             }
@@ -40,7 +49,7 @@ public:
         } else if (quiet_ || shownNear) {
             born = nowMs - kFadeMs;  // after a pause what is there was there; a layer of one already shown
         }
-        now_.push_back(Seen{kind, x, y, born, nowMs, false});
+        now_.push_back(Seen{kind, x, y, size, born, nowMs, false});
         const double t = (nowMs - born) / kFadeMs;
         return t >= 1.0 ? 1.0f : t <= 0.0 ? 0.0f : float(t);
     }
@@ -58,7 +67,7 @@ public:
 private:
     struct Seen {
         uint8_t kind;
-        float x, y;
+        float x, y, size;
         double born, seen;
         bool taken;
     };

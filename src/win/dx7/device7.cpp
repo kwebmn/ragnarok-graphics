@@ -273,7 +273,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         }
         float shown = 1.0f;
         if (fx.appear && sprite && fades) {
-            shown = c.appear.alpha(kind, x, y, c.nowMs());
+            shown = c.appear.alpha(kind, x, y, std::max(x1 - x0, y1 - y0), c.nowMs());
             if (shown < 1.0f) {
                 if (vertices != soft_.data()) soft_.assign(v, v + 4 * 32);
                 for (int i = 0; i < 4; ++i) {
