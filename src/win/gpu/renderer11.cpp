@@ -173,6 +173,10 @@ Renderer11::~Renderer11() {
     drop(halfOverPs_);
     dropTarget(floor_);
     drop(splashPs_);
+    drop(groundLifePs_);  // 2.5.4
+    drop(grassPs_);
+    drop(groundCellsSrv_);
+    drop(groundCellsData_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -366,7 +370,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[49] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[51] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -406,7 +410,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"embers_ps", ps, shaderSource(), {}, true},  // 2.5.3: sparks, floors' reflections, splashes
                    {"floor_reflect_ps", ps, shaderSource(), {}, true},
                    {"half_over_ps", ps, shaderSource(), {}, true},
-                   {"splash_ps", ps, shaderSource(), {}, true}};
+                   {"splash_ps", ps, shaderSource(), {}, true},
+                   {"ground_life_ps", ps, shaderSource(), {}, true},  // 2.5.4: the living ground, the grass
+                   {"grass_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -536,6 +542,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[46].code.empty() || !psOf(wants[46], floorReflectPs_)) floorReflectPs_ = nullptr;
     if (wants[47].code.empty() || !psOf(wants[47], halfOverPs_)) halfOverPs_ = nullptr;
     if (wants[48].code.empty() || !psOf(wants[48], splashPs_)) splashPs_ = nullptr;
+    if (wants[49].code.empty() || !psOf(wants[49], groundLifePs_)) groundLifePs_ = nullptr;  // 2.5.4
+    if (wants[50].code.empty() || !psOf(wants[50], grassPs_)) grassPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1112,9 +1120,18 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui) worldDrawn_ = true;
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;
+    if (!s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && grassWanted()) noteGround(rec, d);  // 2.5.4: the next cells
     if (!s.ui && s.blend && groundDrawn_ && !aoDone_ && aoWanted()) {  // 2.5.1: before the characters (draw.cpp)
         flushBatch();
         applyAo();
+    }
+    if (!s.ui && s.blend && groundDrawn_ && !groundLifeDone_ && groundLifeWanted() && cameraValid_) {  // 2.5.4
+        flushBatch();
+        applyGroundLife();
+    }
+    if (!s.ui && s.blend && groundDrawn_ && !grassDone_ && grassWanted()) {  // 2.5.4: under the characters
+        flushBatch();
+        applyGrass();
     }
     if (!s.ui && s.blend && groundDrawn_ && !cloudsDone_ && cloudsWanted() && cameraValid_) {
         flushBatch();
@@ -1237,6 +1254,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         water::isWaterQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
                            d.primitive == d3d7::PT_TRIANGLESTRIP))
         water = (!toGlow || waterGlowPs_) && copyForWater();  // 1.0: in the glow, its own glow shader
+    if (water) noteWaterLevel(rec, d);  // 2.5.4: the wet sand's and the creatures' water level
     if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
         std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
         const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
@@ -1792,6 +1810,10 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     heatDone_ = floorDone_ = false;  // 2.5.3
     heatSpots_.clear();
     embers_.clear();
+    groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
+    if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
+    groundTris_.clear();
+    groundCellsUp_ = false;
     if (!frameFeet_.empty()) {  // 2.5.2: this frame's feet (as Direct3D 12's newPicture)
         footTracker_.update(frameFeet_, waterTime(), stepLife());
         frameFeet_.clear();
@@ -1851,7 +1873,7 @@ void Renderer11::applyGrade() {
 // A pass over the world from a copy of it (scene_, t2) into it, RGB only: the colours (0.59), the night (0.63).
 void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, int copy, int blend,
                            ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t0,
-                           ID3D11ShaderResourceView* t1, const RECT* clip) {
+                           ID3D11ShaderResourceView* t1, const RECT* clip, ID3D11ShaderResourceView* t5) {
     if (copy == 1) {
         if (scene_.width != target_.width || scene_.height != target_.height) {
             dropTarget(scene_);
@@ -1890,10 +1912,12 @@ void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, int copy, 
     passSamplers();
     if (t0) ctx_->PSSetShaderResources(0, 1, &t0);            // tex0 : register(t0) - a mask of its own
     if (t1) ctx_->PSSetShaderResources(1, 1, &t1);            // tex1 : register(t1) - a list of its own
+    if (t5) ctx_->PSSetShaderResources(5, 1, &t5);            // 2.5.4: register(t5) - the ground's cells
     if (copy != 0) ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
     if (depth) ctx_->PSSetShaderResources(3, 1, &depth);     // sceneDepth : register(t3)
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
+    if (t5) ctx_->PSSetShaderResources(5, 1, none);
     if (clip) ctx_->RSSetScissorRects(1, &all);
 }
 
@@ -2268,6 +2292,165 @@ void Renderer11::applyFloorReflections() {
     floorLogged_ = true;
     maskPass(floorReflectPs_, floor_, c, nullptr, depthSrv_, scene_.srv);
     worldPass(halfOverPs_, c, 0, 4, nullptr, floor_.srv);
+}
+
+// 2.5.4 (draw.cpp noteWaterLevel): the water's height in the world, from a cell of it - once a frame
+void Renderer11::noteWaterLevel(const FrameRecord& rec, const DrawCmd& d) {
+    if (!cameraValid_ || waterLevelNoted_) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    if (d.vertexOffset + 16 > v.size()) return;
+    float xyzw[4];
+    std::memcpy(xyzw, v.data() + d.vertexOffset, sizeof xyzw);
+    if (xyzw[3] <= 0.0f) return;
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+    const float* m = viewToWorld_;
+    const float vz = 1.0f / xyzw[3], vx = (xyzw[0] - p.cx) * vz / p.f0, vy = (xyzw[1] - p.cy) * vz / p.f1;
+    waterLevel_ = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
+    waterLevelNoted_ = waterLevelKnown_ = true;
+}
+
+// 2.5.4 (ground.cpp noteGround): a draw of the ground - its triangles in the world, for the grass's cells
+void Renderer11::noteGround(const FrameRecord& rec, const DrawCmd& d) {
+    constexpr size_t kMostGround = 60000;  // triangles a frame (ground.cpp)
+    if (!cameraValid_ || groundTris_.size() >= kMostGround) return;
+    const std::vector<uint8_t>& vb = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    if (d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) return;
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+    const float* m = viewToWorld_;
+    const auto world = [&](uint32_t k, seams::Vertex& out) {
+        float xyzw[4];
+        std::memcpy(xyzw, vb.data() + d.vertexOffset + size_t(k) * stride, sizeof xyzw);
+        if (xyzw[3] <= 0.0f) return false;
+        const float vz = 1.0f / xyzw[3], vx = (xyzw[0] - p.cx) * vz / p.f0, vy = (xyzw[1] - p.cy) * vz / p.f1;
+        out.pos[0] = vx * m[0] + vy * m[3] + vz * m[6] + m[9];
+        out.pos[1] = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
+        out.pos[2] = vx * m[2] + vy * m[5] + vz * m[8] + m[11];
+        return true;
+    };
+    const std::vector<uint16_t>& ix = rec.indices();
+    const uint32_t n = d.indexCount ? d.indexCount : d.vertexCount;
+    const auto vertexAt = [&](uint32_t k, uint32_t& out) {
+        if (!d.indexCount) {
+            out = k;
+            return k < d.vertexCount;
+        }
+        if (d.firstIndex + k >= ix.size()) return false;
+        out = ix[d.firstIndex + k];
+        return out < d.vertexCount;
+    };
+    const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
+    const uint32_t triangles = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
+    for (uint32_t t = 0; t < triangles && groundTris_.size() < kMostGround; ++t) {
+        uint32_t a = 0, b = 0, c = 0;
+        const uint32_t base = strip ? t : t * 3;
+        if (!vertexAt(base, a) || !vertexAt(base + 1, b) || !vertexAt(base + 2, c)) break;
+        seams::Triangle tri{};
+        if (!world(a, tri.v[0]) || !world(b, tri.v[1]) || !world(c, tri.v[2])) continue;
+        groundTris_.push_back(tri);
+    }
+}
+
+// 2.5.4: as Direct3D 12's applyGroundLife (ao.cpp) - ground_life_ps from the picture's copy and its depth, blended
+void Renderer11::applyGroundLife() {
+    groundLifeDone_ = true;
+    if (!groundLifeWanted() || !cameraValid_ || !target_.texture || !depthViews()) return;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    c.twin[0] = effects_.sandDrift && place_.sand ? 1.0f : 0.0f;
+    c.twin[1] = effects_.snowSparkle && place_.snow ? 1.0f - 0.6f * night : 0.0f;
+    c.twin[2] = effects_.wetWalls && place_.cave ? 1.0f : 0.0f;
+    if (wetSandWanted()) {  // the wet sand along the shore
+        c.twin[3] = 1.0f;
+        c.sourceClamp[0] = waterLevel_;
+    }
+    if (seasonsShown()) {  // the season's snow and grass, each a box of its own
+        c.sourceRect[0] = effects_.seasonSnow ? year_.snow : 0.0f;
+        c.sourceRect[2] = effects_.seasonGrass ? year_.dry : 0.0f;
+        c.sourceRect[3] = effects_.seasonGrass ? year_.lush : 0.0f;
+    }
+    if (rainWetShown()) c.sourceClamp[2] = 1.0f;
+    c.sharpen = waterTime();
+    if (!groundLifeLogged_)
+        LOG_INFO("living ground: on %s (%s%s%s, Direct3D 11)", map_.c_str(),
+                 c.twin[0] > 0.0f   ? "sand"
+                 : c.twin[1] > 0.0f ? "snow"
+                 : c.twin[2] > 0.0f ? "damp walls"
+                 : c.twin[3] > 0.0f ? "wet sand"
+                                    : "nothing of its own",
+                 seasonsShown() ? ", the season" : "", rainWetShown() ? ", wet in the rain" : "");
+    groundLifeLogged_ = true;
+    worldPass(groundLifePs_, c, 1, 1, depthSrv_);
+}
+
+// 2.5.4: as Direct3D 12's applyGrass (ao.cpp) - grass_ps from the picture's copy and its depth, blended over; the
+// steps bend it (t1, the footprints' list), the map's ground only (t5, its cells' heights from the last frame).
+void Renderer11::applyGrass() {
+    grassDone_ = true;
+    if (!grassWanted() || !target_.texture || !depthViews()) return;
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    Constants c{};
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    const float k = float(scale_);
+    c.scale = k;
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    const bool steps = stepsDataSrv_ && !footTracker_.steps().empty();
+    c.footprint = steps ? float(std::min(footTracker_.steps().size(), footsteps::Tracker::kMax)) : 0.0f;
+    c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, 16.0f);  // Classic+'s longest blade
+    c.twin[1] = 0.65f * float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;
+    c.sharpen = waterTime();
+    if (effects_.flowers && place_.flowers >= 0) {  // flowers among the blades, in the patches only
+        c.twin[2] = 0.12f;
+        c.sourceRect[1] = float(place_.flowers);
+    }
+    const int minute = effects_.dayCycle && effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();
+    if (effects_.dew) c.twin[3] = living::dew(minute) * (1.0f - float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f);
+    if (effects_.gusts) c.sourceRect[0] = 1.0f;
+    // The map's ground only: the cells' grid (sourceClamp), their heights (t5) - uploaded once a frame
+    const ground_cells::Grid& g = groundCells_;
+    const bool grid = g.side > 0.0f && g.width > 0 && g.height > 0 &&
+                      g.span.size() >= size_t(g.width) * size_t(g.height) * 2;
+    if (grid && !groundCellsData_) {
+        D3D11_TEXTURE2D_DESC d{};
+        d.Width = d.Height = UINT(ground_cells::kMostSide);
+        d.MipLevels = d.ArraySize = 1;
+        d.Format = DXGI_FORMAT_R32G32_FLOAT;
+        d.SampleDesc.Count = 1;
+        d.Usage = D3D11_USAGE_DEFAULT;
+        d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(device_->CreateTexture2D(&d, nullptr, &groundCellsData_)) ||
+            FAILED(device_->CreateShaderResourceView(groundCellsData_, nullptr, &groundCellsSrv_))) {
+            drop(groundCellsData_);
+            LOG_ERROR("grass: no memory for the ground's heights (Direct3D 11): on every green pixel");
+        }
+    }
+    if (grid && groundCellsSrv_ && !groundCellsUp_) {
+        const D3D11_BOX box{0, 0, 0, UINT(g.width), UINT(g.height), 1};
+        ctx_->UpdateSubresource(groundCellsData_, 0, &box, g.span.data(), UINT(g.width) * 2 * sizeof(float), 0);
+        groundCellsUp_ = true;
+    }
+    if (grid && groundCellsUp_) {
+        c.sourceClamp[0] = g.originX;
+        c.sourceClamp[1] = g.originZ;
+        c.sourceClamp[2] = 1.0f / g.side;
+        c.sourceClamp[3] = float(g.width) + 1024.0f * float(g.height);
+    }
+    if (!grassLogged_)
+        LOG_INFO("grass: on %s, blades up to %.0f pixels%s (Direct3D 11)", map_.c_str(), c.twin[0],
+                 grid && groundCellsUp_ ? ", on the map's ground only" : "");
+    grassLogged_ = true;
+    worldPass(grassPs_, c, 1, 1, depthSrv_, nullptr, steps ? stepsDataSrv_ : nullptr, nullptr,
+              grid && groundCellsUp_ ? groundCellsSrv_ : nullptr);
 }
 
 float Renderer11::mapFadeNow() {

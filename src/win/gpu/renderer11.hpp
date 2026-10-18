@@ -11,6 +11,10 @@
 
 #include "core/draw_batch.hpp"
 #include "core/footsteps.hpp"
+#include "core/ground_cells.hpp"
+#include "core/living.hpp"
+#include "core/seams.hpp"
+#include "core/seasons.hpp"
 #include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/weather.hpp"
@@ -85,6 +89,10 @@ public:
         desert_ = desert(map);  // 2.5.2: the prints in the sand
         footTracker_.clear();
         lavaLogged_ = false;
+        place_ = living::placeOf(map, outdoors_, season_ == trees::Season::Autumn);  // 2.5.4: as Direct3D 12's
+        year_ = seasons::of(map, trees::monthNow(), outdoors_, place_);
+        waterLevelKnown_ = false;
+        groundLifeLogged_ = grassLogged_ = false;
         weather_ = weather::of(map);
         hazeLogged_ = skyLogged_ = weatherLogged_ = cloudsLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
@@ -253,6 +261,27 @@ private:
                : outdoors_                                          ? 0.0f
                                                                     : user;
     }
+    // 2.5.4: the living ground (ao.cpp applyGroundLife: sand drifting over the desert, snow glittering, a damp cave's
+    // walls glistening, the wet sand along the shore, the season's snow and grass, wet in the rain) and the grass
+    // (applyGrass: on the map's ground only - its cells from the frame's ground triangles), before the characters
+    void applyGroundLife();
+    void applyGrass();
+    void noteGround(const FrameRecord& rec, const DrawCmd& d);
+    void noteWaterLevel(const FrameRecord& rec, const DrawCmd& d);
+    bool seasonsShown() const {
+        return effects_.seasons && ((effects_.seasonSnow && year_.snow > 0.0f) ||
+                                    (effects_.seasonGrass && (year_.dry > 0.0f || year_.lush > 0.0f)));
+    }
+    bool rainWetShown() const { return effects_.rainWet && effects_.weather && weather_ == weather::Kind::Rain; }
+    bool wetSandWanted() const { return effects_.shoreFoam && effects_.wetSand && waterLevelKnown_ && outdoors_; }
+    bool groundLifeWanted() const {
+        return groundLifePs_ && ((effects_.sandDrift && place_.sand) || (effects_.snowSparkle && place_.snow) ||
+                                 (effects_.wetWalls && place_.cave) || wetSandWanted() || seasonsShown() ||
+                                 rainWetShown());
+    }
+    bool grassWanted() const {
+        return effects_.grass && effects_.grassAmount > 0 && grassPs_ && outdoors_ && cameraValid_;
+    }
     bool wetWanted() const {
         return effects_.wetGround && effects_.weather && weather_ == weather::Kind::Rain && floorReflectPs_ &&
                halfOverPs_;
@@ -275,7 +304,8 @@ private:
     // depth - bound as t3 (sceneDepth); t0, t1 - bound as the first two textures
     void worldPass(ID3D11PixelShader* ps, const Constants& c, int copy = 1, int blend = 0,
                    ID3D11ShaderResourceView* depth = nullptr, ID3D11ShaderResourceView* t0 = nullptr,
-                   ID3D11ShaderResourceView* t1 = nullptr, const RECT* clip = nullptr);  // D3D11_RECT
+                   ID3D11ShaderResourceView* t1 = nullptr, const RECT* clip = nullptr,  // D3D11_RECT
+                   ID3D11ShaderResourceView* t5 = nullptr);  // 2.5.4: the grass's ground cells
     // 0.60.1: the characters' shadows (actor_shadows11.cpp, as Direct3D 12's actor_shadows.cpp - the sun's light
     // alone: no map's lamps without the camera)
     bool shadowsWanted() const {
@@ -456,6 +486,19 @@ private:
     Target floor_;
     bool floorDone_ = false, floorLogged_ = false;
     ID3D11PixelShader* splashPs_ = nullptr;
+    // 2.5.4: the living ground, the grass
+    ID3D11PixelShader* groundLifePs_ = nullptr;
+    ID3D11PixelShader* grassPs_ = nullptr;
+    living::Place place_;
+    seasons::Look year_;
+    float waterLevel_ = 0.0f;  // the last water seen, its height in the world (up is -y)
+    bool waterLevelKnown_ = false, waterLevelNoted_ = false;
+    std::vector<seams::Triangle> groundTris_;  // this frame's ground in the world, for the next frame's cells
+    ground_cells::Grid groundCells_;
+    ID3D11Texture2D* groundCellsData_ = nullptr;  // R32G32: each cell's lowest and highest y
+    ID3D11ShaderResourceView* groundCellsSrv_ = nullptr;
+    bool groundCellsUp_ = false;  // this frame's grid in the texture
+    bool groundLifeDone_ = false, grassDone_ = false, groundLifeLogged_ = false, grassLogged_ = false;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
