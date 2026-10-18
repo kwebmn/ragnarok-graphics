@@ -83,6 +83,7 @@ public:
         weather_ = weather::of(map);
         hazeLogged_ = skyLogged_ = weatherLogged_ = cloudsLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
+        if (!map.empty()) fadeStart_ = waterTime();  // 2.5.2: the world comes in from black (0.83)
     }
     void setGameDir(const std::string& dir) { mapWorld_.setGameDir(dir); }  // 2.5.1: the map files
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
@@ -176,17 +177,27 @@ private:
     // multiplied in) and the clouds' shadows (clouds.cpp: their mask, multiplied in) - before the characters
     void applyAo();
     void applyClouds();
+    // 2.5.2: the bloom, the filmic curve, the film's grain and the new map's fade (ao.cpp applyBloom: the bright
+    // parts at a quarter of the size, blurred twice each way, added) - before the colours
+    void applyBloom();
+    float mapFadeNow();  // 1 when done
+    bool bloomWanted() {
+        return (effects_.bloom || effects_.filmic || (effects_.filmGrain && effects_.filmGrainAmount > 0) ||
+                mapFadeNow() < 1.0f) &&
+               bloomDownPs_ && dofBlurPs_ && bloomApplyPs_;
+    }
     bool aoWanted() const { return effects_.ao && effects_.aoStrength > 0 && aoPs_ && aoBlurPs_ && aoApplyPs_; }
     bool cloudsWanted() const {
         return effects_.clouds && effects_.cloudsStrength > 0 && cloudsPs_ && cloudsApplyPs_ && outdoors_;
     }
     // A pass into a small target of its own: t0 and the depth (t3) read, the whole target written
     void maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c, ID3D11ShaderResourceView* t0,
-                  ID3D11ShaderResourceView* depth);
+                  ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t2 = nullptr);
     void passSamplers();  // linear, clamped, at s0 and s1 - the passes' own
-    // A pass over the whole picture: copy - the picture's copy in t2 (sceneColor); blend - 0 written whole, 1 blended
-    // over by its alpha, 2 multiplied in; depth - bound as t3 (sceneDepth); t0 - bound as the first texture
-    void worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy = true, int blend = 0,
+    // A pass over the whole picture: copy - 1 the picture copied now into t2 (sceneColor), 2 its copy as it is, 0
+    // none; blend - 0 written whole, 1 blended over by its alpha, 2 multiplied in; depth - bound as t3 (sceneDepth);
+    // t0 - bound as the first texture
+    void worldPass(ID3D11PixelShader* ps, const Constants& c, int copy = 1, int blend = 0,
                    ID3D11ShaderResourceView* depth = nullptr, ID3D11ShaderResourceView* t0 = nullptr);
     // 0.60.1: the characters' shadows (actor_shadows11.cpp, as Direct3D 12's actor_shadows.cpp - the sun's light
     // alone: no map's lamps without the camera)
@@ -201,6 +212,12 @@ private:
     void noteTorch(const FrameRecord& rec, const DrawCmd& d);
     void applyTorchLight();
     bool torchesWanted() const { return effects_.torch && effects_.torchLight > 0 && torchLightPs_; }
+    // 2.5.2: the new flame and its glow (torch_fire_ps) in place of the game's glow - and of its flame with
+    // torch_flame on (torches.cpp takeTorch); true: the game's draw is not made
+    bool flamesWanted() const { return effects_.torch && torchFirePs_; }
+    bool takeTorch(const FrameRecord& rec, const DrawCmd& d);
+    ID3D11PixelShader* torchFirePs_ = nullptr;
+    ID3D11PixelShader* dustPs_ = nullptr;  // 2.5.2: the maps' clouds of dust (core/map_glows.hpp)
     // 2.5.1: the fire of skills lights around it (torches.cpp noteFire): a draw that adds a fire-coloured picture,
     // or (skill_colours) one that lights in its own colour - its middle, depth, strength and colour, gathered by
     // place in the torches' light pass
@@ -325,6 +342,13 @@ private:
     Target cloudsMask_;
     bool aoDone_ = false, cloudsDone_ = false, aoLogged_ = false, cloudsLogged_ = false;
     MapWorld mapWorld_;
+    // 2.5.2: the bloom's two quarter-size targets and shaders; the new map's fade
+    ID3D11PixelShader* bloomDownPs_ = nullptr;
+    ID3D11PixelShader* dofBlurPs_ = nullptr;
+    ID3D11PixelShader* bloomApplyPs_ = nullptr;
+    Target bloom_[2];
+    bool bloomDone_ = false, bloomLogged_ = false;
+    float fadeStart_ = -1.0f;  // the effects' clock when the map changed; below 0 none
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
@@ -417,7 +441,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[9][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.1: nine)
+        ID3D11Query* effect[10][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.2: ten)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -428,9 +452,9 @@ private:
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
-        kTimeAo11, kTimeClouds11, kEffectTimes11
+        kTimeAo11, kTimeClouds11, kTimeBloom11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 9, "FrameTimes::effect holds nine");
+    static_assert(kEffectTimes11 == 10, "FrameTimes::effect holds ten");
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);
     struct EffectSpan {  // the scope of an effect's pass

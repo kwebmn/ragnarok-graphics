@@ -10,6 +10,7 @@
 #include "core/d3d7.hpp"
 #include "core/fireflies.hpp"
 #include "core/game_camera.hpp"
+#include "core/map_glows.hpp"
 #include "core/torch.hpp"
 #include "win/gpu/renderer11.hpp"
 #include "win/gpu/shaders.hpp"
@@ -25,6 +26,8 @@ constexpr int kMaxLights = 64;  // as Direct3D 12's
 constexpr float kReach = 45.0f;
 constexpr float kLightColor[3] = {1.0f, 0.58f, 0.28f};
 constexpr float kMiddle = 0.38f;
+constexpr float kGlowRadius = 2.2f;  // 2.5.2: the flame's glow, flame heights around its middle (torches.cpp)
+constexpr size_t kMaxTorches = 32;   // flames drawn anew in a frame (impl.hpp)
 
 // 0.25 (torches.cpp): the map file's torches the game does not show (it knows effect ids up to 629): their colours.
 bool hiddenTorch(int32_t id, float tint[3]) {
@@ -179,7 +182,7 @@ void Renderer11::applyFireflies() {
 }
 
 void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
-    if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame || flames_.size() >= size_t(kMaxLights)) return;
+    if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame || flames_.size() >= kMaxTorches) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     if (d.vertexOffset + 4 * stride > v.size()) return;
@@ -207,21 +210,38 @@ void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
     }
 }
 
+bool Renderer11::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
+    const objects::Kind kind = objectTextures_.of(d.texture[0]);
+    if (kind != objects::Kind::TorchGlow && kind != objects::Kind::TorchFlame) return false;
+    if (kind == objects::Kind::TorchGlow) return flamesWanted();  // the new flame's pass draws a glow of its own
+    if (torchesWanted() || flamesWanted()) noteTorch(rec, d);
+    return flamesWanted() && effects_.torchFlame;  // off: the game's own flame, the new glow and light around it
+}
+
+// Once the world is drawn, before its colours (as torches.cpp applyTorches): the light of this frame's flames, the
+// map's lamps and hidden torches, the skills' fire and the maps' glows into the picture (one pass, from its copy);
+// 2.5.2: then each flame and the glow around it, the map's own fireflies, its glowing orbs and pools and its clouds
+// of dust (a pass each, cut to it).
 void Renderer11::applyTorchLight() {
     EffectSpan span(*this, kTimeLight11);  // 0.89
     lightDone_ = true;
-    // 2.5.1: the map's lamps light too (torches.cpp), with the camera and the map file's axes known
-    const bool torches = torchesWanted() && !flames_.empty();
     const bool placed = cameraValid_ && mapWorld_.axes().known();  // the map file's places known in the world
+    const rsw::World* layout = placed ? mapWorld_.world() : nullptr;
+    const bool torches = torchesWanted() && !flames_.empty();
     const bool lampsOn = effects_.lamps && effects_.lampsLight > 0 && torchLightPs_ && placed &&
                          !mapWorld_.lamps().empty();
-    const bool hidden = torchesWanted() && placed && mapWorld_.world();  // the torches the game does not show
+    const bool hidden = effects_.torch && layout;  // the torches the game does not show
     const bool fire = fireWanted() && !fireSparks_.empty();  // 2.5.1: the skills' fire
-    if ((!torches && !lampsOn && !hidden && !fire) || !depth_ || !target_.texture) {
-        fireSparks_.clear();
+    const bool glows = layout && effects_.mapGlows && effects_.mapGlowsBrightness > 0 && fireflyPs_;  // 2.5.2
+    const bool mapFlies = layout && firefliesWanted();
+    std::vector<torch::Flame> flames;
+    flames.swap(flames_);
+    std::vector<FireSpark11> sparks;
+    sparks.swap(fireSparks_);
+    if ((!torches && !lampsOn && !hidden && !fire && !glows && !mapFlies && !(flamesWanted() && !flames.empty())) ||
+        !depth_ || !target_.texture || !depthViews())
         return;
-    }
-    if (!lightData_) {
+    if (!lightData_ && torchLightPs_) {
         D3D11_TEXTURE2D_DESC d{};
         d.Width = kMaxLights * 2;
         d.Height = 1;
@@ -236,34 +256,127 @@ void Renderer11::applyTorchLight() {
             lightData_ = nullptr;
             torchLightPs_->Release();  // not tried again
             torchLightPs_ = nullptr;
-            return;
         }
     }
-    if (depthSrvOf_ != depth_) {  // as the shadows read it (actor_shadows11.cpp)
-        if (depthSrv_) depthSrv_->Release();
-        depthSrv_ = nullptr;
-        D3D11_SHADER_RESOURCE_VIEW_DESC v{};
-        v.Format = DXGI_FORMAT_R32_FLOAT;
-        v.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        v.Texture2D.MipLevels = 1;
-        depthSrvOf_ = depth_;
-        if (FAILED(device_->CreateShaderResourceView(depth_, &v, &depthSrv_))) depthSrv_ = nullptr;
-    }
-    if (!depthSrv_) return;
-    const unsigned long long now = GetTickCount64();
-    if (!clockStart_) clockStart_ = now;
-    const double time = double(now - clockStart_) / 1000.0;
+    const float time = waterTime();  // 2.5.2: the effects' clock, as Direct3D 12's
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float amount = 0.35f * float(std::clamp(effects_.torchFlicker, 0, 100)) / 100.0f;
     const float strength = 0.4f * float(std::clamp(effects_.torchLight, 0, 200)) / 100.0f;
     const float k = float(scale_);
     const int w = target_.width, h = target_.height;
+    const float margin = float(std::max(gameWidth_, gameHeight_)) * 0.25f;
+    const float* m = viewToWorld_;  // the camera backwards, inverted: its rows are orthonormal
+    const map::Axes axes = mapWorld_.axes();
+    const auto toView = [m](const map::Point& p, float v[3]) {
+        const float dx = p.x - m[9], dy = p.y - m[10], dz = p.z - m[11];
+        v[0] = dx * m[0] + dy * m[1] + dz * m[2];
+        v[1] = dx * m[3] + dy * m[4] + dz * m[5];
+        v[2] = dx * m[6] + dy * m[7] + dz * m[8];
+    };
+    const auto onScreen = [&](float gx, float gy, float slack) {
+        return gx > -slack && gy > -slack && gx < float(gameWidth_) + slack && gy < float(gameHeight_) + slack;
+    };
+    // 0.25 (torches.cpp): the map file's torches the game does not show - a flame each, in its colour
+    if (hidden)
+        for (const rsw::Effect& e : layout->effects) {
+            torch::Flame f;
+            if (flames.size() >= kMaxTorches || !hiddenTorch(e.id, f.tint)) continue;
+            const map::Point base = map::toWorld(axes, map::Point{e.pos[0], e.pos[1] - 2.0f, e.pos[2]});
+            float vb[3], vt[3];
+            toView(base, vb);
+            toView(map::Point{base.x, base.y - 13.0f, base.z}, vt);  // 13 units tall
+            if (vb[2] <= proj.nearZ || vt[2] <= proj.nearZ) continue;
+            f.baseX = vb[0] / vb[2] * proj.f0 + proj.cx;
+            f.baseY = vb[1] / vb[2] * proj.f1 + proj.cy;
+            f.upX = vt[0] / vt[2] * proj.f0 + proj.cx - f.baseX;
+            f.upY = vt[1] / vt[2] * proj.f1 + proj.cy - f.baseY;
+            f.halfWidth = std::hypot(f.upX, f.upY) * (torch::kHalfWidth / torch::kHeight);
+            f.rhw = 1.0f / vb[2];
+            if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
+        }
+    // The flames' own flicker: each by its place in the world - whichever way the camera looks
+    std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f), calms(flames.size(), 1.0f);
+    for (size_t i = 0; i < flames.size(); ++i) {
+        const torch::Flame& f = flames[i];
+        const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;
+        const float vz = 1.0f / f.rhw, vx = (mx - proj.cx) * vz / proj.f0, vy = (my - proj.cy) * vz / proj.f1;
+        const uint32_t s = cameraValid_ ? torch::seedAt(vx * m[0] + vy * m[3] + vz * m[6] + m[9],
+                                                        vx * m[2] + vy * m[5] + vz * m[8] + m[11])
+                                        : torch::seedAt(mx, my);
+        flickers[i] = torch::flicker(time, s, amount);
+        seeds[i] = float(s % 1000u) / 1000.0f;
+        calms[i] = torch::flicker(double(time) * 0.5, s ^ 0x5BD1E995u, amount * 0.35f);
+    }
+    // 0.28, 0.29 (torches.cpp): the fireflies of the map's makers (713, 714, 946) drifting about their places; the
+    // maps' hidden lights - an orb floats and breathes, a pool lights the ground about it, a cloud of dust drifts
+    struct Dot {
+        float gx, gy, vz, r, bright, colour[3], sharp, halo;
+    };
+    struct Cloud {
+        float gx, gy, vz, perUnit, radius, seed, bright, colour[3];
+    };
+    struct Item {
+        float view[3], reach, colour[3], strength;
+    };
+    std::vector<Dot> dots;
+    std::vector<Cloud> clouds;
+    std::vector<Item> glowLights;
+    if (mapFlies) {
+        const float user = float(std::clamp(effects_.firefliesBrightness, 0, 200)) / 100.0f;
+        uint32_t index = 0;
+        for (const rsw::Effect& e : layout->effects) {
+            if (e.id != 713 && e.id != 714 && e.id != 946) continue;
+            const float seed = float(((++index) * 2654435761u) >> 8 & 0xFFFFu) / 65535.0f;
+            if (dots.size() >= 96) break;
+            const map::Point o = fireflies::wander(time, seed);
+            float v[3];
+            toView(map::toWorld(axes, map::Point{e.pos[0] + o.x, e.pos[1] + o.y, e.pos[2] + o.z}), v);
+            if (v[2] <= proj.nearZ) continue;
+            const float gx = v[0] / v[2] * proj.f0 + proj.cx, gy = v[1] / v[2] * proj.f1 + proj.cy;
+            if (!onScreen(gx, gy, 32.0f)) continue;
+            dots.push_back(Dot{gx, gy, v[2], 0.22f * proj.f0 / v[2], user * fireflies::blink(time, seed),
+                               {1.0f, 0.86f, 0.3f}, 1.2f, 1.0f});
+        }
+    }
+    if (glows) {
+        const float user = float(std::clamp(effects_.mapGlowsBrightness, 0, 200)) / 100.0f;
+        uint32_t index = 0;
+        for (const rsw::Effect& e : layout->effects) {
+            map_glows::Glow g;
+            if (!map_glows::glowOf(e.id, g)) continue;
+            const float seed = float(((++index) * 2246822519u) >> 8 & 0xFFFFu) / 65535.0f;
+            const float lift = g.shape == map_glows::Shape::Orb ? map_glows::bob(time, seed) : 0.0f;
+            float v[3];
+            toView(map::toWorld(axes, map::Point{e.pos[0], e.pos[1] + lift, e.pos[2]}), v);
+            if (v[2] <= proj.nearZ) continue;
+            const float gx = v[0] / v[2] * proj.f0 + proj.cx, gy = v[1] / v[2] * proj.f1 + proj.cy;
+            const float perUnit = proj.f0 / v[2];
+            const float breath = g.shape == map_glows::Shape::Dust ? 1.0f : map_glows::pulse(time, seed);
+            if (!onScreen(gx, gy, std::max(g.reach, g.size) * perUnit + 32.0f)) continue;
+            if (g.light > 0.0f)
+                glowLights.push_back(Item{{v[0], v[1], v[2]}, g.reach, {g.colour[0], g.colour[1], g.colour[2]},
+                                          g.light * breath * user});
+            if (!onScreen(gx, gy, g.size * perUnit + 32.0f)) continue;
+            if (g.shape == map_glows::Shape::Dust) {
+                if (clouds.size() < 32 && dustPs_)
+                    clouds.push_back(Cloud{gx, gy, v[2], perUnit, g.size, seed, 0.35f * user,
+                                           {g.colour[0], g.colour[1], g.colour[2]}});
+            } else if (dots.size() < 96 + 64) {
+                const bool pool = g.shape == map_glows::Shape::Pool;
+                dots.push_back(Dot{gx, gy, v[2], g.size * perUnit, (pool ? 0.18f : 0.75f) * breath * user,
+                                   {g.colour[0], g.colour[1], g.colour[2]}, pool ? 0.15f : 0.4f,
+                                   pool ? 0.6f : 1.6f});
+            }
+        }
+    }
+    // The list of lights for the light's pass, two texels each
     float data[kMaxLights * 2][4] = {};
     float lx0 = float(w), ly0 = float(h), lx1 = 0.0f, ly1 = 0.0f;
     int count = 0;
     // A light into the list: its place in the view and reach, its colour and strength; where its reach falls on
     // the screen (the cube about it, each corner projected) widens the lit rectangle.
     const auto addLight = [&](const float view[3], float reach, const float colour[3], float amountOf) {
+        if (count == kMaxLights) return;
         std::copy(view, view + 3, data[2 * count]);
         data[2 * count][3] = reach;
         std::copy(colour, colour + 3, data[2 * count + 1]);
@@ -280,43 +393,21 @@ void Renderer11::applyTorchLight() {
         }
         ++count;
     };
-    if (torches)
-        for (const torch::Flame& f : flames_) {
-            if (count == kMaxLights) break;
+    if (torchesWanted())
+        for (size_t i = 0; i < flames.size(); ++i) {  // the game's flames and the hidden ones
+            const torch::Flame& f = flames[i];
             const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;
             const float vz = 1.0f / f.rhw;
-            const float vx = (mx - proj.cx) * vz / proj.f0, vy = (my - proj.cy) * vz / proj.f1;
-            const uint32_t seed = torch::seedAt(mx, my);  // no camera: by its place on the screen
-            const float calm = torch::flicker(time * 0.5, seed ^ 0x5BD1E995u, amount * 0.35f);
-            const float view[3] = {vx, vy, vz};
-            addLight(view, kReach, kLightColor, strength * calm * f.alpha);
+            const float view[3] = {(mx - proj.cx) * vz / proj.f0, (my - proj.cy) * vz / proj.f1, vz};
+            const bool own = f.tint[0] < 0.99f || f.tint[1] < 0.99f || f.tint[2] < 0.99f;  // a hidden one's colour
+            addLight(view, kReach, own ? f.tint : kLightColor, strength * calms[i] * f.alpha);
         }
-    if (hidden) {  // 2.5.1: the map file's torches the game does not show - their light (the flame stays unseen)
-        const map::Axes axes = mapWorld_.axes();
-        const float* m = viewToWorld_;
-        for (const rsw::Effect& e : mapWorld_.world()->effects) {
-            float tint[3];
-            if (count == kMaxLights || !hiddenTorch(e.id, tint)) continue;
-            // the flame's middle: its base two units down the file's place, the light kMiddle of its 13 units up
-            const map::Point wp = map::toWorld(axes, map::Point{e.pos[0], e.pos[1] - 2.0f - 13.0f * kMiddle, e.pos[2]});
-            const float dx = wp.x - m[9], dy = wp.y - m[10], dz = wp.z - m[11];
-            const float v[3] = {dx * m[0] + dy * m[1] + dz * m[2], dx * m[3] + dy * m[4] + dz * m[5],
-                                dx * m[6] + dy * m[7] + dz * m[8]};
-            if (v[2] <= proj.nearZ) continue;
-            const float gx = v[0] / v[2] * proj.f0 + proj.cx, gy = v[1] / v[2] * proj.f1 + proj.cy;
-            const float slack = float(std::max(gameWidth_, gameHeight_)) * 0.25f;
-            if (gx < -slack || gy < -slack || gx > float(gameWidth_) + slack || gy > float(gameHeight_) + slack)
-                continue;
-            const float calm = torch::flicker(time * 0.5, torch::seedAt(wp.x, wp.z) ^ 0x5BD1E995u, amount * 0.35f);
-            addLight(v, kReach, tint, strength * calm);
-        }
-    }
     if (fire) {  // 2.5.1: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16
         struct Cell {
             float w = 0, view[3] = {0, 0, 0}, colour[3] = {0, 0, 0};
         };
         std::unordered_map<int, Cell> cells;
-        for (const FireSpark11& f : fireSparks_) {
+        for (const FireSpark11& f : sparks) {
             Cell& c = cells[int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f))];
             c.w += f.strength;
             for (int i = 0; i < 3; ++i) {
@@ -329,7 +420,7 @@ void Renderer11::applyTorchLight() {
             if (kv.second.w > 0.02f) best.push_back(kv.second);
         std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
         const float fireStrength = 0.18f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f;
-        for (size_t i = 0; i < best.size() && i < 16 && count < kMaxLights; ++i) {
+        for (size_t i = 0; i < best.size() && i < 16; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
             const float view[3] = {c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w};
@@ -337,46 +428,50 @@ void Renderer11::applyTorchLight() {
             addLight(view, 25.0f + 15.0f * std::min(c.w, 1.0f), colour, fireStrength * std::min(c.w, 1.0f));
         }
     }
-    fireSparks_.clear();
+    {  // 0.28: the fireflies light a little around them, the nearest 16 (2.5.2: the map's dots, its orbs and pools)
+        std::vector<size_t> order(dots.size());
+        for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return dots[a].vz < dots[b].vz; });
+        for (size_t i = 0, used = 0; i < order.size() && used < 16; ++i) {
+            const Dot& f = dots[order[i]];
+            if (f.bright < 0.05f) continue;
+            const float view[3] = {(f.gx - proj.cx) * f.vz / proj.f0, (f.gy - proj.cy) * f.vz / proj.f1, f.vz};
+            addLight(view, 12.0f, f.colour, 0.12f * f.bright);
+            ++used;
+        }
+    }
+    std::sort(glowLights.begin(), glowLights.end(),
+              [](const Item& a, const Item& b) { return a.view[2] < b.view[2]; });
+    for (size_t i = 0; i < glowLights.size() && i < 24; ++i)  // 0.29: the nearest 24 of the maps' glows
+        addLight(glowLights[i].view, glowLights[i].reach, glowLights[i].colour, glowLights[i].strength);
     if (lampsOn) {  // 2.5.1: the lamps the map's makers placed, the nearest to the camera first (as torches.cpp)
-        const map::Axes axes = mapWorld_.axes();
         const float lampStrength = 0.8f * float(std::clamp(effects_.lampsLight, 0, 200)) / 100.0f;
-        const float margin = float(std::max(gameWidth_, gameHeight_)) * 0.25f;
-        struct Lamp {
-            float view[3], tint[3], strength, reach;
-        };
-        std::vector<Lamp> lamps;
-        const float* m = viewToWorld_;  // the camera backwards, inverted: its rows are orthonormal
+        std::vector<Item> lamps;
         for (const rsw::Light& r : mapWorld_.lamps()) {
             const map::Point wp = map::toWorld(axes, map::Point{r.pos[0], r.pos[1], r.pos[2]});
-            const float dx = wp.x - m[9], dy = wp.y - m[10], dz = wp.z - m[11];
-            const float v[3] = {dx * m[0] + dy * m[1] + dz * m[2], dx * m[3] + dy * m[4] + dz * m[5],
-                                dx * m[6] + dy * m[7] + dz * m[8]};
+            float v[3];
+            toView(wp, v);
             const float reach = std::clamp(r.range * 0.45f, 15.0f, 70.0f);
             if (v[2] <= proj.nearZ - reach) continue;
             const float vz = std::max(v[2], proj.nearZ);
-            const float gx = v[0] / vz * proj.f0 + proj.cx, gy = v[1] / vz * proj.f1 + proj.cy;
-            const float slack = reach * proj.f0 / vz + margin;
-            if (gx < -slack || gy < -slack || gx > float(gameWidth_) + slack || gy > float(gameHeight_) + slack)
+            if (!onScreen(v[0] / vz * proj.f0 + proj.cx, v[1] / vz * proj.f1 + proj.cy, reach * proj.f0 / vz + margin))
                 continue;
             const float top = std::max({r.color[0], r.color[1], r.color[2], 1e-3f});
-            Lamp l{{v[0], v[1], v[2]}, {0.0f, 0.0f, 0.0f}, lampStrength, reach};
-            for (int c = 0; c < 3; ++c) l.tint[c] = 0.65f + 0.35f * r.color[c] / top;  // 2.1.5: a third of it
+            Item l{{v[0], v[1], v[2]}, reach, {0.0f, 0.0f, 0.0f}, lampStrength};
+            for (int c = 0; c < 3; ++c) l.colour[c] = 0.65f + 0.35f * r.color[c] / top;  // 2.1.5: a third of it
             if (r.color[0] >= r.color[1] && r.color[1] >= r.color[2] * 0.9f && r.color[0] > 0.5f)  // a fire's
-                l.strength *= torch::flicker(time * 0.5, torch::seedAt(wp.x, wp.z), amount * 0.25f);
+                l.strength *= torch::flicker(double(time) * 0.5, torch::seedAt(wp.x, wp.z), amount * 0.25f);
             lamps.push_back(l);
         }
-        std::sort(lamps.begin(), lamps.end(), [](const Lamp& a, const Lamp& b) { return a.view[2] < b.view[2]; });
-        for (const Lamp& l : lamps) {
-            if (count == kMaxLights) break;
-            addLight(l.view, l.reach, l.tint, l.strength);
-        }
+        std::sort(lamps.begin(), lamps.end(), [](const Item& a, const Item& b) { return a.view[2] < b.view[2]; });
+        for (const Item& l : lamps) addLight(l.view, l.reach, l.colour, l.strength);
     }
     const D3D11_RECT lit{LONG(std::max(0.0f, std::floor(lx0))), LONG(std::max(0.0f, std::floor(ly0))),
                          LONG(std::min(float(w), std::ceil(lx1))), LONG(std::min(float(h), std::ceil(ly1)))};
-    if (!count || lit.right <= lit.left || lit.bottom <= lit.top) return;
-    ctx_->UpdateSubresource(lightData_, 0, nullptr, data, UINT(sizeof data), 0);
-    // The picture's copy (scene_, as the colours make it) read, the lit pixels written.
+    const bool light = count && torchLightPs_ && lightData_ && lit.right > lit.left && lit.bottom > lit.top;
+    const bool drawFlames = flamesWanted() && !flames.empty();
+    if (!light && !drawFlames && dots.empty() && clouds.empty()) return;
+    // The picture's copy (scene_) read by the light and the flames - taken before either writes the picture
     if (scene_.width != w || scene_.height != h) {
         dropTarget(scene_);
         if (!makeTarget(scene_, w, h)) return;
@@ -388,37 +483,121 @@ void Renderer11::applyTorchLight() {
     ctx_->OMSetRenderTargets(1, &target_.rtv, nullptr);
     const D3D11_VIEWPORT vp{0.0f, 0.0f, float(w), float(h), 0.0f, 1.0f};
     ctx_->RSSetViewports(1, &vp);
-    ctx_->RSSetScissorRects(1, &lit);
-    Constants c{};
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    c.scale = k;
-    c.uiPixels[0] = float(w);
-    c.uiPixels[1] = float(h);
-    c.footprint = float(count);
-    c.sourceRect[0] = effects_.roundLight ? 1.0f : 0.0f;  // 0.84
-    c.sharpen = effects_.rimLight ? 0.6f * float(std::clamp(effects_.rimStrength, 0, 200)) / 100.0f : 0.0f;  // 0.68
-    setConstants(c);
-    ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO,
-                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
-                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
-                          nullptr, 0xFFFFFFFF);
     ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
     ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
     ctx_->IASetInputLayout(nullptr);
     ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     ctx_->VSSetShader(presentVs_, nullptr, 0);
-    ctx_->PSSetShader(torchLightPs_, nullptr, 0);
     ctx_->VSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
-    ID3D11ShaderResourceView* views[4] = {nullptr, lightDataSrv_, scene_.srv, depthSrv_};  // t1, t2, t3
-    ctx_->PSSetShaderResources(0, 4, views);
-    ctx_->Draw(3, 0);
+    passSamplers();
+    const UINT8 rgb = D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN | D3D11_COLOR_WRITE_ENABLE_BLUE;
+    Constants c{};
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.targetSize[0] = float(w);
+    c.targetSize[1] = float(h);
+    c.scale = k;
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    // A pass of the current shader cut to [x0, x1) x [y0, y1) of the picture
+    const auto cut = [&](const Constants& pc, float x0, float y0, float x1, float y1) {
+        const D3D11_RECT box{LONG(std::max(0.0f, std::floor(x0))), LONG(std::max(0.0f, std::floor(y0))),
+                             LONG(std::min(float(w), std::ceil(x1))), LONG(std::min(float(h), std::ceil(y1)))};
+        if (box.right <= box.left || box.bottom <= box.top) return;
+        ctx_->RSSetScissorRects(1, &box);
+        setConstants(pc);
+        ctx_->Draw(3, 0);
+    };
+    if (light) {  // the light from the list (torch_light_ps: t1 the list, t2 the copy, t3 the depth)
+        ctx_->UpdateSubresource(lightData_, 0, nullptr, data, UINT(sizeof data), 0);
+        Constants lc = c;
+        lc.footprint = float(count);
+        lc.sourceRect[0] = effects_.roundLight ? 1.0f : 0.0f;  // 0.84
+        lc.sharpen = effects_.rimLight ? 0.6f * float(std::clamp(effects_.rimStrength, 0, 200)) / 100.0f : 0.0f;
+        ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO, rgb), nullptr, 0xFFFFFFFF);
+        ctx_->PSSetShader(torchLightPs_, nullptr, 0);
+        ID3D11ShaderResourceView* views[4] = {nullptr, lightDataSrv_, scene_.srv, depthSrv_};
+        ctx_->PSSetShaderResources(0, 4, views);
+        cut(lc, float(lit.left), float(lit.top), float(lit.right), float(lit.bottom));
+        ctx_->PSSetShaderResources(0, 4, none);
+    }
+    ID3D11ShaderResourceView* sceneViews[4] = {nullptr, nullptr, scene_.srv, depthSrv_};
+    ctx_->PSSetShaderResources(0, 4, sceneViews);  // t2 the copy, t3 the depth
+    if (drawFlames) {  // 2.5.2: each flame and the glow around it (torch_fire_ps), premultiplied over
+        const float glowStrength = float(std::clamp(effects_.torchGlow, 0, 200)) / 100.0f;
+        const float brightness = 0.65f * float(std::clamp(effects_.torchBrightness, 0, 200)) / 100.0f;
+        ctx_->OMSetBlendState(blendState(true, d3d7::BLEND_ONE, d3d7::BLEND_INVSRCALPHA, rgb), nullptr, 0xFFFFFFFF);
+        ctx_->PSSetShader(torchFirePs_, nullptr, 0);
+        for (size_t i = 0; i < flames.size(); ++i) {
+            const torch::Flame& f = flames[i];
+            const float bx = f.baseX * k + 0.5f, by = f.baseY * k + 0.5f, ux = f.upX * k, uy = f.upY * k;
+            const float fh = std::hypot(ux, uy);
+            if (fh < 2.0f) continue;  // too small to see
+            const bool own = f.tint[0] < 0.99f || f.tint[1] < 0.99f || f.tint[2] < 0.99f;
+            Constants fc = c;
+            fc.sourceRect[0] = bx;
+            fc.sourceRect[1] = by;
+            fc.sourceRect[2] = ux;
+            fc.sourceRect[3] = uy;
+            fc.sourceClamp[0] = f.halfWidth * k;
+            fc.sourceClamp[1] = 1.0f / f.rhw;
+            fc.sourceClamp[3] = seeds[i];
+            fc.uiPixels[2] = flickers[i];
+            fc.uiPixels[3] = time;
+            fc.twin[0] = glowStrength;
+            fc.twin[1] = f.alpha;
+            fc.twin[2] = effects_.torchFlame || own ? brightness : 0.0f;
+            std::copy(f.tint, f.tint + 3, fc.fogColor);
+            const float mx = bx + ux * kMiddle, my = by + uy * kMiddle, r = fh * kGlowRadius;
+            cut(fc, mx - r, my - r, mx + r, my + r);
+        }
+    }
+    if (!dots.empty()) {  // 0.28, 0.29: each firefly's, orb's and pool's dot and halo (firefly_ps), added
+        ctx_->OMSetBlendState(blendState(true, d3d7::BLEND_ONE, d3d7::BLEND_ONE, rgb), nullptr, 0xFFFFFFFF);
+        ctx_->PSSetShader(fireflyPs_, nullptr, 0);
+        for (const Dot& f : dots) {
+            if (f.bright < 0.01f) continue;
+            const float fx = f.gx * k + 0.5f, fy = f.gy * k + 0.5f, r = std::max(f.r * k, 0.6f);
+            Constants dc = c;
+            dc.sourceRect[0] = fx;
+            dc.sourceRect[1] = fy;
+            dc.sourceRect[2] = r;
+            dc.sourceRect[3] = f.sharp;
+            dc.sourceClamp[1] = f.vz;
+            dc.twin[0] = f.bright;
+            dc.twin[1] = f.halo;
+            std::copy(f.colour, f.colour + 3, dc.fogColor);
+            cut(dc, fx - 8.0f * r, fy - 8.0f * r, fx + 8.0f * r, fy + 8.0f * r);
+        }
+    }
+    if (!clouds.empty()) {  // 0.29: each cloud of dust (dust_ps), added
+        ctx_->OMSetBlendState(blendState(true, d3d7::BLEND_ONE, d3d7::BLEND_ONE, rgb), nullptr, 0xFFFFFFFF);
+        ctx_->PSSetShader(dustPs_, nullptr, 0);
+        for (const Cloud& d : clouds) {
+            const float dx = d.gx * k + 0.5f, dy = d.gy * k + 0.5f, perUnit = d.perUnit * k;
+            const float reach = d.radius * perUnit * 1.3f + 4.0f;
+            Constants cc = c;
+            cc.sourceRect[0] = dx;
+            cc.sourceRect[1] = dy;
+            cc.sourceRect[2] = perUnit;
+            cc.sourceRect[3] = d.radius;
+            cc.sourceClamp[1] = d.vz;
+            cc.sourceClamp[3] = d.seed;
+            cc.uiPixels[3] = time;
+            cc.twin[0] = d.bright;
+            std::copy(d.colour, d.colour + 3, cc.fogColor);
+            cut(cc, dx - reach, dy - reach, dx + reach, dy + reach);
+        }
+    }
     ctx_->PSSetShaderResources(0, 4, none);
+    const D3D11_RECT all{0, 0, w, h};
+    ctx_->RSSetScissorRects(1, &all);
     if (!lightLogged_)
-        LOG_INFO("torches: %d lit (Direct3D 11: their light%s%s; the flames the game's)", count,
-                 lampsOn ? " and the map's lamps" : "", fire ? ", the skills' fire" : "");
-    lightLogged_ = true;
+        LOG_INFO("torches: %d lights, %zu flames, %zu glows, %zu clouds of dust (Direct3D 11%s%s)", count,
+                 drawFlames ? flames.size() : size_t(0), dots.size(), clouds.size(),
+                 lampsOn ? ", the map's lamps" : "", fire ? ", the skills' fire" : "");
+    lightLogged_ = lightLogged_ || count > 0 || drawFlames;
 }
 
 }  // namespace uagfx::gpu

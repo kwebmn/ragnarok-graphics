@@ -480,9 +480,7 @@ float4 shade(PsIn i) {
         t0 = uiSample(uv0, du, dv, i.pos.xy);
     float2 uv1 = ((stage1.y >> 16) & 7) == 0 ? i.uv0 : i.uv1;
     float4 t1 = tex1.Sample(samp1, uv1);
-#ifndef UAGFX_LEAN
-    if (((stage1.y >> 25) & 1) != 0) t1 = smoothLightmap(uv1, t1);  // 0.22.6: the ground's lightmap
-#endif
+    if (((stage1.y >> 25) & 1) != 0) t1 = smoothLightmap(uv1, t1);  // 0.22.6: the ground's lightmap (2.5.2: lean too)
     if (colorKey != 0) {  // colour-keyed textures carry the key as alpha 0 (TextureLevels, Task 10)
         if (((stage0.y >> 24) & 1) != 0 && t0.a == 0) discard;
         if (((stage1.y >> 24) & 1) != 0 && t1.a == 0) discard;
@@ -574,9 +572,9 @@ float4 shade(PsIn i) {
 float4 draw_ps(PsIn i) : SV_Target { return shade(i); }
 
 // 2.5: the same shader without the world's extras (UAGFX_LEAN, pipeline.cpp: the materials, the relief, the hills,
-// the seams, the leaves, the sprites' light, the smooth lightmap, the soft particles): a draw with none of their bits
-// - the sprites, the effects, the interface, most of a frame - takes it: fewer registers and no explicit gradients,
-// which the old cards pay for dearly.
+// the seams, the leaves, the sprites' light, the soft particles): a draw with none of their bits - the sprites, the
+// effects, the interface, most of a frame - takes it: fewer registers and no explicit gradients, which the old cards
+// pay for dearly. 2.5.2: the smooth lightmap stays in it - the ground of a weak card's set is lean with it.
 float4 draw_lean_ps(PsIn i) : SV_Target { return shade(i); }
 
 // 0.18, the glow of effects: world draws also write the light they add into a second target, blended the same way.

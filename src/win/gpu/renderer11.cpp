@@ -147,6 +147,13 @@ Renderer11::~Renderer11() {
     dropTarget(aoTarget_[0]);
     dropTarget(aoTarget_[1]);
     dropTarget(cloudsMask_);
+    drop(torchFirePs_);  // 2.5.2
+    drop(dustPs_);
+    drop(bloomDownPs_);
+    drop(dofBlurPs_);
+    drop(bloomApplyPs_);
+    dropTarget(bloom_[0]);
+    dropTarget(bloom_[1]);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -340,7 +347,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[32] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[37] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -363,7 +370,12 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"ao_blur_ps", ps, shaderSource(), {}, true},
                    {"ao_apply_ps", ps, shaderSource(), {}, true},
                    {"clouds_ps", ps, shaderSource(), {}, true},
-                   {"clouds_apply_ps", ps, shaderSource(), {}, true}};
+                   {"clouds_apply_ps", ps, shaderSource(), {}, true},
+                   {"torch_fire_ps", ps, shaderSource(), {}, true},  // 2.5.2: the new flame, the maps' dust
+                   {"dust_ps", ps, shaderSource(), {}, true},
+                   {"bloom_down_ps", ps, shaderSource(), {}, true},  // 2.5.2: the bloom, filmic, grain, fade
+                   {"dof_blur_ps", ps, shaderSource(), {}, true},
+                   {"bloom_apply_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -476,6 +488,11 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[29].code.empty() || !psOf(wants[29], aoApplyPs_)) aoApplyPs_ = nullptr;
     if (wants[30].code.empty() || !psOf(wants[30], cloudsPs_)) cloudsPs_ = nullptr;
     if (wants[31].code.empty() || !psOf(wants[31], cloudsApplyPs_)) cloudsApplyPs_ = nullptr;
+    if (wants[32].code.empty() || !psOf(wants[32], torchFirePs_)) torchFirePs_ = nullptr;  // 2.5.2
+    if (wants[33].code.empty() || !psOf(wants[33], dustPs_)) dustPs_ = nullptr;
+    if (wants[34].code.empty() || !psOf(wants[34], bloomDownPs_)) bloomDownPs_ = nullptr;
+    if (wants[35].code.empty() || !psOf(wants[35], dofBlurPs_)) dofBlurPs_ = nullptr;
+    if (wants[36].code.empty() || !psOf(wants[36], bloomApplyPs_)) bloomApplyPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1009,12 +1026,13 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ &&
-        (!nightDone_ || !lightDone_ || !hazeDone_ || !skyDone_ || !gradeDone_ || !weatherDone_))
+        (!nightDone_ || !lightDone_ || !hazeDone_ || !skyDone_ || !bloomDone_ || !gradeDone_ || !weatherDone_))
         flushBatch();
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
     if (s.ui && worldDrawn_ && !hazeDone_) applyHaze();  // 2.5: far off and over the ground, before the colours
     if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: where the haze filled the void
+    if (s.ui && worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2: before the colours (ao.cpp finishWorld)
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
     if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
     if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
@@ -1022,7 +1040,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 1.0: from the world's first draw that adds light, its draws write into the glow too
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
     const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura);  // 1.25
-    if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && torchesWanted()) noteTorch(rec, d);
+    // 2.5.2: a torch's layers - the glow and (torch_flame) the flame drawn anew once the world is (takeTorch)
+    if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch && takeTorch(rec, d)) return;
     // 2.5.1: the fire of skills (as draw.cpp): an added picture that looks like fire, or one that lights in its own
     // colour - not the maps' objects (their own)
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && fireWanted() && d.texture[0]) {
@@ -1101,6 +1120,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.targetSize[1] = float(target_.height);
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
+    // 2.5.2: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly (as draw.cpp, 0.22.6) - the
+    // weak set's own, never set here until now
+    if (effects_.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1]->width == 256 && t[1]->height == 256)
+        c.stage1[1] |= 1u << 25;
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
     c.fogEnable = s.fog ? 1u : 0u;
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
@@ -1228,7 +1251,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.vs = water ? waterVs_ : drawVs_;
     // 2.5: a draw whose constants carry none of the world's extras takes the lean shader (as draw.cpp)
     const bool lean = !water &&
-                      (c.stage1[1] & (1u << 25 | 1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
+                      (c.stage1[1] & (1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
                       (c.stage0[1] & (1u << 26 | 1u << 28)) == 0 && (c.alphaTest & 1u << 20) == 0;
     is.ps = water    ? (toGlow ? waterGlowPs_ : waterPs_)
             : toGlow ? (lean && drawGlowLeanPs_ ? drawGlowLeanPs_ : drawGlowPs_)
@@ -1620,6 +1643,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (worldDrawn_ && !hazeDone_) applyHaze();  // 2.5
     if (worldDrawn_ && !skyDone_) applySky();
     if (!flies_.empty()) applyFireflies();  // 1.0.1
+    if (worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
     if (worldDrawn_ && !weatherDone_) applyWeather();  // 2.5
     if (glowDrawn_) addGlow();  // 1.0: likewise
@@ -1633,6 +1657,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     fireSparks_.clear();
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
     hazeDone_ = skyDone_ = weatherDone_ = false;  // 2.5
+    bloomDone_ = false;  // 2.5.2
     waterCopied_ = waterReady_ = false;  // 0.99
     materialsMade_ = 0;  // 1.14
     flames_.clear();
@@ -1686,9 +1711,9 @@ void Renderer11::applyGrade() {
 }
 
 // A pass over the world from a copy of it (scene_, t2) into it, RGB only: the colours (0.59), the night (0.63).
-void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy, int blend,
+void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, int copy, int blend,
                            ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t0) {
-    if (copy) {
+    if (copy == 1) {
         if (scene_.width != target_.width || scene_.height != target_.height) {
             dropTarget(scene_);
             if (!makeTarget(scene_, target_.width, target_.height)) return;
@@ -1721,7 +1746,7 @@ void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy,
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
     passSamplers();
     if (t0) ctx_->PSSetShaderResources(0, 1, &t0);            // tex0 : register(t0) - a mask of its own
-    if (copy) ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
+    if (copy != 0) ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
     if (depth) ctx_->PSSetShaderResources(3, 1, &depth);     // sceneDepth : register(t3)
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
@@ -1738,7 +1763,8 @@ void Renderer11::passSamplers() {
 }
 
 void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c,
-                          ID3D11ShaderResourceView* t0, ID3D11ShaderResourceView* depth) {
+                          ID3D11ShaderResourceView* t0, ID3D11ShaderResourceView* depth,
+                          ID3D11ShaderResourceView* t2) {
     targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
     ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
     ctx_->PSSetShaderResources(0, 4, none);
@@ -1761,10 +1787,65 @@ void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Const
     ctx_->VSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
     passSamplers();
-    ID3D11ShaderResourceView* views[4] = {t0, nullptr, nullptr, depth};
+    ID3D11ShaderResourceView* views[4] = {t0, nullptr, t2, depth};
     ctx_->PSSetShaderResources(0, 4, views);
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
+}
+
+float Renderer11::mapFadeNow() {
+    if (!effects_.mapFade || fadeStart_ < 0.0f) return 1.0f;
+    const float t = (waterTime() - fadeStart_) / 0.7f;
+    return t >= 1.0f ? 1.0f : t <= 0.0f ? 0.0f : t * t * (3.0f - 2.0f * t);
+}
+
+// 2.5.2: as Direct3D 12's applyBloom (ao.cpp) - the bright parts at a quarter of the size (bloom_down_ps), blurred
+// across and down twice (dof_blur_ps), added onto the picture with the filmic curve, the grain and the map's fade
+// (bloom_apply_ps, from the picture's copy).
+void Renderer11::applyBloom() {
+    EffectSpan span(*this, kTimeBloom11);
+    bloomDone_ = true;
+    if (!bloomWanted() || !target_.texture) return;
+    const int w = target_.width, h = target_.height;
+    const int qw = std::max(1, (w + 3) / 4), qh = std::max(1, (h + 3) / 4);
+    for (Target& t : bloom_)
+        if (t.width != qw || t.height != qh) {
+            dropTarget(t);
+            if (!makeTarget(t, qw, qh)) {
+                LOG_ERROR("bloom: no video memory at %dx%d (Direct3D 11): it stays off", qw, qh);
+                bloomApplyPs_ = nullptr;  // not tried again
+                return;
+            }
+        }
+    if (scene_.width != w || scene_.height != h) {
+        dropTarget(scene_);
+        if (!makeTarget(scene_, w, h)) return;
+    }
+    ctx_->CopyResource(scene_.texture, target_.texture);
+    Constants c{};
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.uiPixels[2] = float(qw);
+    c.uiPixels[3] = float(qh);
+    c.footprint = 0.88f;  // the bright parts: over this
+    const bool bloom = effects_.bloom && effects_.bloomStrength > 0;
+    c.sharpen = bloom ? 0.6f * float(std::clamp(effects_.bloomStrength, 0, 200)) / 100.0f : 0.0f;
+    c.twin[1] = effects_.filmic ? 1.0f : 0.0f;
+    c.twin[2] = effects_.filmGrain ? float(std::clamp(effects_.filmGrainAmount, 0, 100)) / 100.0f : 0.0f;
+    c.twin[3] = mapFadeNow();
+    c.sourceRect[2] = std::fmod(waterTime() * 60.0f, 4096.0f);  // the grain's seed, new each frame
+    if (bloom) {
+        maskPass(bloomDownPs_, bloom_[0], c, nullptr, nullptr, scene_.srv);
+        for (int k = 0; k < 4; ++k) {  // across, down, then again twice as wide
+            const int i = k % 2;
+            c.sourceRect[0] = i == 0 ? float(1 + k / 2) : 0.0f;
+            c.sourceRect[1] = i == 0 ? 0.0f : float(1 + k / 2);
+            maskPass(dofBlurPs_, bloom_[1 - i], c, bloom_[i].srv, nullptr);
+        }
+    }
+    if (!bloomLogged_) LOG_INFO("bloom: %dx%d for the %dx%d picture (Direct3D 11)", qw, qh, w, h);
+    bloomLogged_ = true;
+    worldPass(bloomApplyPs_, c, 2, 0, nullptr, bloom ? bloom_[0].srv : nullptr);
 }
 
 // 2.5.1: the soft shadows (ao_ps, ao_blur_ps, ao_apply_ps) as Direct3D 12's ao.cpp draws them - a mask at a half
@@ -2071,7 +2152,7 @@ void Renderer11::timeFrame() {
     if (!recentSince_) recentSince_ = now;
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
-                                                             "haze", "sky", "weather", "ao", "clouds"};
+                                                             "haze", "sky", "weather", "ao", "clouds", "bloom"};
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
@@ -2147,7 +2228,7 @@ void Renderer11::logGpu(ULONGLONG now) {
         // 0.89: the effects one by one, as Direct3D 12's log has them
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
                                                             "colour", "haze", "sky", "weather", "soft shadows",
-                                                            "clouds"};
+                                                            "clouds", "bloom"};
         std::string effects;
         for (int e = 0; e < kEffectTimes11; ++e) {
             if (effectMs_[e] <= 0.0) continue;
