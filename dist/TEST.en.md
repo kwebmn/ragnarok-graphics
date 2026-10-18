@@ -1,3 +1,17 @@
+# uaRO Graphics 2.5.14 — testing
+
+- **Direct3D 11: a frame no longer waits for the monitor.** With two buffers a graphics card slower than the monitor
+  waited for its refresh each frame (20 ms of work, say, became 33 - 30 frames instead of 50). Now there are three,
+  and the "GPU … ms" counter leaves that wait out - on weak cards (HD 6570) it shows the card's real work.
+- **keep_fps turns "Light from the sky" off.** On an HD 6570 this pass cost up to 29 ms of a frame, and keep_fps
+  turned off everything but it. Now it turns it off too (Direct3D 11 and 12).
+- **Less work for the game's thread.** The textures' mip levels the game builds by stretching are worked out several
+  times faster (the same picture, bit for bit); the 32-bit part does its fractions with SSE2.
+- Check, please, on the HD 6570 with the same set of effects: higher FPS than before; the log's "GPU … ms of work"
+  below the frame's time; the same picture. On the main computer: all as before, no blinking or stalls; screenshots
+  and leaving the game work.
+
+
 # uaRO Graphics 2.5.13 — testing
 
 - **A white screen with "Direct3D 11 on a thread of its own".** In 2.5.12 the drawing thread made none of the game's
