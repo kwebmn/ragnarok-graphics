@@ -16,10 +16,14 @@
 namespace uagfx::win {
 namespace {
 
-// The process's modules now (uaRO.exe first found by its handle).
-std::vector<profile::Module> modules(size_t& exe) {
+// The process's modules now (uaRO.exe first found by its handle; 2.5.5: ours by an address in it).
+std::vector<profile::Module> modules(size_t& exe, size_t& ours) {
     std::vector<profile::Module> out;
     exe = 0;
+    ours = size_t(-1);
+    HMODULE own = nullptr;
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                       reinterpret_cast<LPCWSTR>(&modules), &own);
     HMODULE list[512];
     DWORD needed = 0;
     if (!K32EnumProcessModules(GetCurrentProcess(), list, sizeof list, &needed)) return out;
@@ -30,6 +34,7 @@ std::vector<profile::Module> modules(size_t& exe) {
         if (!K32GetModuleInformation(GetCurrentProcess(), list[i], &info, sizeof info)) continue;
         K32GetModuleBaseNameA(GetCurrentProcess(), list[i], name, MAX_PATH);
         if (list[i] == self) exe = out.size();
+        if (list[i] == own) ours = out.size();
         out.push_back(profile::Module{name, uint32_t(uintptr_t(info.lpBaseOfDll)), uint32_t(info.SizeOfImage)});
     }
     return out;
@@ -84,9 +89,9 @@ void Profiler::sampleLoop() {
     HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
     if (!timer) timer = CreateWaitableTimerExW(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
     profile::Tally tally;
-    size_t exe = 0;
-    std::vector<profile::Module> mods = modules(exe);
-    tally.setModules(mods, exe);
+    size_t exe = 0, own = 0;
+    std::vector<profile::Module> mods = modules(exe, own);
+    tally.setModules(mods, exe, own);
     const uint32_t lo = exe < mods.size() ? mods[exe].base : 0, hi = exe < mods.size() ? lo + mods[exe].size : 0;
     ULONGLONG since = GetTickCount64();
     while (!quit_) {
@@ -136,8 +141,8 @@ void Profiler::sampleLoop() {
         if (now - since >= 10000) {
             for (const std::string& line : tally.report(double(now - since) / 1000.0)) LOG_INFO("%s", line.c_str());
             since = now;
-            mods = modules(exe);  // modules come and go (the graphics driver's): listed anew for the next tally
-            tally.setModules(mods, exe);
+            mods = modules(exe, own);  // modules come and go (the graphics driver's): listed anew for the next tally
+            tally.setModules(mods, exe, own);
         }
     }
     if (timer) CloseHandle(timer);

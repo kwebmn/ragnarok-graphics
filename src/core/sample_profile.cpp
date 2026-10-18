@@ -21,9 +21,10 @@ std::vector<std::pair<K, size_t>> sorted(const std::map<K, size_t>& m) {
 
 }  // namespace
 
-void Tally::setModules(std::vector<Module> modules, size_t exe) {
+void Tally::setModules(std::vector<Module> modules, size_t exe, size_t self) {
     modules_ = std::move(modules);
     exe_ = exe;
+    self_ = self;
 }
 
 int Tally::moduleOf(uint32_t at) const {
@@ -36,6 +37,7 @@ void Tally::add(uint32_t at, uint32_t caller) {
     ++samples_;
     const int m = moduleOf(at);
     ++byModule_[m];
+    if (m >= 0 && size_t(m) == self_) ++inSelf_[(at - modules_[size_t(m)].base) & ~63u];
     if (m >= 0 && size_t(m) == exe_) {
         ++inExe_[at & ~63u];
     } else if (caller) {
@@ -80,10 +82,22 @@ std::vector<std::string> Tally::report(double seconds, size_t top) {
         }
         lines.push_back(l);
     }
+    if (!inSelf_.empty() && self_ < modules_.size()) {
+        l = "profile: " + modules_[self_].name + "'s busiest places -";
+        k = 0;
+        for (const auto& [span, n] : sorted(inSelf_)) {
+            if (k++ == top) break;
+            char b[48];
+            std::snprintf(b, sizeof b, "%s +0x%06x %s", k > 1 ? "," : "", unsigned(span), percent(n, samples_).c_str());
+            l += b;
+        }
+        lines.push_back(l);
+    }
     samples_ = 0;
     byModule_.clear();
     inExe_.clear();
     callers_.clear();
+    inSelf_.clear();
     return lines;
 }
 

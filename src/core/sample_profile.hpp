@@ -17,7 +17,9 @@ struct Module {
 
 class Tally {
 public:
-    void setModules(std::vector<Module> modules, size_t exe);  // exe: the index of uaRO.exe in them
+    // exe: the index of uaRO.exe in them; self (2.5.5): the driver's own module's, tallied by place as offsets from
+    // its base (its functions found in the build's link map afterwards); none: past the list
+    void setModules(std::vector<Module> modules, size_t exe, size_t self = size_t(-1));
     // A sample: where the thread was, and (outside uaRO.exe) the uaRO.exe address it was called from, 0 unknown.
     void add(uint32_t at, uint32_t caller);
     // The lines for the log, the tally then cleared. seconds: the time the samples were taken over.
@@ -32,6 +34,8 @@ private:
     std::map<int, size_t> byModule_;           // -1: no module (generated code, the stack)
     std::map<uint32_t, size_t> inExe_;         // 64-byte spans of uaRO.exe
     std::map<uint64_t, size_t> callers_;       // caller span << 32 | module
+    size_t self_ = size_t(-1);
+    std::map<uint32_t, size_t> inSelf_;        // 2.5.5: 64-byte spans of the driver's own module, from its base
 };
 
 }  // namespace uagfx::profile

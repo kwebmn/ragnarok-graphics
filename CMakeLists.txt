@@ -76,7 +76,9 @@ elseif(WIN32)
     target_compile_definitions(ddraw PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS)
     target_compile_options(ddraw PRIVATE -Wall -Wextra)
     target_link_libraries(ddraw PRIVATE uagfx_core)
-    target_link_options(ddraw PRIVATE -static -static-libgcc -static-libstdc++ -s)
+    # 2.5.5: its link map beside it - the profile's places in ddraw.dll (offsets) are found in it afterwards
+    target_link_options(ddraw PRIVATE -static -static-libgcc -static-libstdc++ -s
+                        "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/ddraw.map")
 
     # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
     add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/registry.cpp
