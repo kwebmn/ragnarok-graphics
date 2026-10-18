@@ -1,3 +1,11 @@
+# uaRO Graphics 2.3.2 — testing
+
+- **Ctrl+Shift+F8 picks the ground, not the cursor's cell:** the game draws the cell under the cursor
+  (`data\texture\grid.tga`) over the ground right there, and the pick took it. The first press now takes what is drawn
+  opaque (the ground, a model); pressed again at the same place, the next texture down, round and round.
+- Check, please: Ctrl+Shift+F8 on the ground opens the ground's texture in uaRO Studio; again - the cell, again - the
+  ground.
+
 # uaRO Graphics 2.3.1 — testing
 
 - **The game starts while uaRO Studio is open:** the studio (and the texture pack's builder) opened the game's
