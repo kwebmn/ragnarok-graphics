@@ -1,3 +1,15 @@
+# uaRO Graphics 2.5.19 — what to check
+
+- **The game's palettes in the settings app** (Service → "Game palettes (Palettes.grf)"). Makes Palettes.grf with only
+  the palettes the server lets be worn: hair styles 0-23, hair colours 0-20, clothes 0-77. Costumes and the Doram race
+  are unknown to the 2007 client and stay out. The same palette is kept once: Kamishi's pack (219 thousand palettes,
+  153 MB) becomes about 18,500 palettes in 4-5 MB in a few seconds. The source: a GRF, a ZIP or a folder.
+- **Texture pack: heads in every hair colour 0-20** (0-8 before). Press "Make the pack": the heads in colours 9-20 are
+  added, nothing made is made again. uaRO Studio makes its catalogue again once.
+- Please check: make Palettes.grf of your whole one (save it under another name), put it in place of the old one (the
+  game closed) and look at characters with hair colour 20 and clothes colour 77 - their own colours, not the default.
+  Send a report.
+
 # uaRO Graphics 2.5.18 — what to check
 
 - **Skills' effects from the texture pack.** The big effects of skills (the .str animations: lightning, wings, rocks,
