@@ -1,3 +1,37 @@
+# uaRO Graphics 2.3.0 — testing
+
+- **uaRO Studio** (`uaro-graphics\uaro-studio.exe`): a program of its own for the texture pack. It copies itself to
+  `%LOCALAPPDATA%\uaroGraphics\studio\` and runs from there, so the driver can be updated while it is open.
+  - **Textures:** every texture of the game in a list with a thumbnail pair (the game's / the pack's), its state, the
+    model that made its picture, quality flags (smoothed, tone shifted, bands, halos, pink fringe, alpha, seams) and
+    the detail kept; the navigator by maps, folders, states, models and what the game drew on a map.
+  - **Inspector:** side by side, a wipe (right mouse), tiled 3x3, as the map lays it, the difference; the wheel zooms
+    to 16x. The information: the archive and the archives it shadows, the keys, when and by what the picture was
+    made, the maps, an atlas's tiles.
+  - **Make again** any texture (or a selection) by any model and a chain: deblock, colour key, tone as the
+    original's, the original's grain back, sharpen, clean alpha, a second model on the edges, an atlas's tiles one by
+    one. Look, then Keep or Discard. Take out of the pack; the game's own always; the material (gloss, relief,
+    height) lighter or stronger for one texture.
+  - **Pack:** pictures by group, model and kind, pictures no texture names, textures without a picture, the space
+    replaced pictures hold, Compact. Pause lets go of the engine, the pack and the game's files.
+- **In the game:** Ctrl+Shift+F9 the X-ray (green from the pack, blue made in the game, red no picture, grey the
+  game's by a rule); Ctrl+Shift+F8 opens the texture under the cursor in the studio; Ctrl+Shift+F7 turns its picture
+  off and on (A/B). What the studio changes shows in the running game at once.
+- The pack's pictures carry the time they were written and what they were made from; the builder names its stages
+  and every thread's file, and reads the studio's catalog instead of the game's files when it is up to date.
+- Check, please: Comodo's beach (cmd_fild02) in the studio — its sand's flags, Make again by general with tone and
+  grain, Keep, the game shows it without a restart; Ctrl+Shift+F8 on the sand opens it in the studio; the X-ray.
+- **One map's textures on the Texture pack page:** at the page's foot - the map (the last one you played is filled
+  in), Its ground and Its models, a model and two buttons. Make again makes the pictures of that map's textures anew
+  by the model chosen; Take out of the pack takes them out, and the game shows its own textures there. Close the game
+  first: the change shows at its next start. Other maps with the same textures change too.
+- **The settings app no longer freezes at Stop and Make:** the pack page no longer reads the whole pack at every click,
+  nor every picture of a pack its builder is still writing.
+- **A faster build:** only the colours the server lets be worn (hair 0-8, clothes 0-77), not all 128 hair colours and
+  up to 700 clothes colours; Stop works at once; while the files are read, the one being read is shown.
+- Check, please: Comodo's beach (cmd_fild02) - Its ground, model general, Make again, then the sand in the game; and
+  Take out of the pack - the sand becomes the game's texture.
+
 # uaRO Graphics 2.2.4 — testing
 
 - **Sharp pack textures with DLSS:** DLSS draws the world smaller than the screen, and the pack's textures were taken
