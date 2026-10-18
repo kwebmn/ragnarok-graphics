@@ -179,3 +179,17 @@ TEST(ai_ready_jpg_pictures_found_by_their_likeness) {
     addPack(r2, {ui}, pack::indexText(x));
     CHECK(!r2.alike(game.data(), 256, 256, Kind::Icons, name));
 }
+
+TEST(ai_ready_takes_no_studio_line_for_a_picture) {
+    // 2.3: the studio's lines ('+', '!', '#') name no picture of the pack
+    ReadyPictures r(settings());
+    const std::string packed = pack::pictureName(pack::Group::World, kKey);
+    pack::Index x;
+    x.pictures[packed] = pack::IndexEntry{Kind::Ground, {}};
+    x.made[packed] = pack::Provenance{"a.bmp", "data.grf", 1, "general", "general x4"};
+    x.materials[kKey] = pack::MaterialScales{};
+    addPack(r, {packed}, pack::indexText(x));
+    std::string name;
+    CHECK(r.texture(kKey, Kind::Ground, name) && name == packed);
+    CHECK_EQ(r.ahead(), size_t(1));  // the picture's kind alone
+}

@@ -362,3 +362,129 @@ TEST(texture_pack_counts_its_pictures_by_its_directory_alone) {
     CHECK(r.open(path, error) && r.recovered() && r.has("world/8x8/dd.webp"));  // the builder's and the game's
     std::remove(path.c_str());
 }
+
+TEST(index_round_trips_its_new_lines) {
+    // 2.3, uaRO Studio: what a picture was made from ('+'), the game's own always ('!'), a texture's material ('#')
+    pack::Index x;
+    x.pictures["world/1x1/a.webp"] = pack::IndexEntry{ai::Kind::Ground, {"prontera"}};
+    x.made["world/1x1/a.webp"] =
+        pack::Provenance{"data\\texture\\\xC0\xAF\\a.bmp", "data.grf", 1760000000, "anime", "anime x4 tone"};
+    x.ownAlways.insert("64x64\\00000000000000ff");
+    x.materials["256x256\\0123456789abcdef"] = pack::MaterialScales{0.0f, 1.5f, 0.25f};
+    const std::string text = pack::indexText(x);
+    const std::string made = "+world/1x1/a.webp\tdata\\texture\\\xC0\xAF\\a.bmp\tdata.grf\t1760000000\tanime\t"
+                             "anime x4 tone\n";
+    CHECK(text.find(made) != std::string::npos);
+    CHECK(text.find("!64x64\\00000000000000ff\n") != std::string::npos);
+    CHECK(text.find("#256x256\\0123456789abcdef\tgloss=0.00\trelief=1.50\theight=0.25\n") != std::string::npos);
+    const pack::Index back = pack::parseIndexFile(text);
+    CHECK_EQ(back.pictures.size(), size_t(1));
+    CHECK(back.made.size() == 1 && back.made.at("world/1x1/a.webp").archive == "data.grf");
+    CHECK_EQ(back.made.at("world/1x1/a.webp").made, int64_t(1760000000));
+    CHECK_EQ(back.made.at("world/1x1/a.webp").chain, std::string("anime x4 tone"));
+    CHECK_EQ(back.made.at("world/1x1/a.webp").file, std::string("data\\texture\\\xC0\xAF\\a.bmp"));
+    CHECK(back.ownAlways == std::set<std::string>{"64x64\\00000000000000ff"});
+    const pack::MaterialScales& m = back.materials.at("256x256\\0123456789abcdef");
+    CHECK(m.gloss == 0.0f && m.relief == 1.5f && m.height == 0.25f);
+    CHECK_EQ(pack::indexText(back), text);
+    // a material line missing a part keeps that part at 1; a broken one is skipped
+    const pack::Index part = pack::parseIndexFile("#1x1\\1\trelief=2\n#\tgloss=1\n!\n");
+    CHECK(part.materials.size() == 1 && part.materials.at("1x1\\1").relief == 2.0f);
+    CHECK(part.materials.at("1x1\\1").gloss == 1.0f && part.ownAlways.empty());
+}
+
+TEST(index_new_lines_are_no_pictures_to_old_readers) {
+    // a 2.2.5 reader took an unknown line for a picture of no kind the pack has not: nothing found by it
+    pack::Index x;
+    x.pictures["world/256x256/0123456789abcdef.webp"] = pack::IndexEntry{ai::Kind::Ground, {}};
+    x.made["world/256x256/0123456789abcdef.webp"] = pack::Provenance{"a.bmp", "data.grf", 1, "general", "general x4"};
+    x.ownAlways.insert("256x256\\0123456789abcdef");
+    x.materials["256x256\\0123456789abcdef"] = pack::MaterialScales{};
+    const std::map<std::string, ai::Kind> kinds = pack::parseIndex(pack::indexText(x));
+    CHECK_EQ(kinds.size(), size_t(1));
+    CHECK(kinds.at("world/256x256/0123456789abcdef.webp") == ai::Kind::Ground);
+}
+
+TEST(pack_entries_carry_their_time) {
+    // 2.3: a picture's time is when it was written (it was 1980-01-01 for all) - the studio shows which build made it
+    const std::string path = tempPath();
+    std::string error;
+    uint16_t date = 0, time = 0;
+    pack::dosOfUnix(1760000000, date, time);  // 2025-10-09 08:53:20 UTC
+    CHECK_EQ(pack::unixOfDos(date, time), int64_t(1760000000));
+    pack::dosOfUnix(0, date, time);
+    CHECK(date == 0x21 && time == 0 && pack::unixOfDos(date, time) == 0);
+    {
+        pack::Writer w;
+        CHECK(w.open(path, false, error));
+        CHECK(w.add("world/1x1/a.webp", reinterpret_cast<const uint8_t*>("aaa"), 3, error, false, 1760000000));
+        CHECK(w.add("world/1x1/b.webp", reinterpret_cast<const uint8_t*>("bb"), 2, error, false, 0));
+        CHECK(w.close("", error));
+    }
+    {
+        pack::Reader r;
+        CHECK(r.open(path, error));
+        CHECK_EQ(r.timeOf("world/1x1/a.webp"), int64_t(1760000000));
+        CHECK_EQ(r.timeOf("world/1x1/b.webp"), int64_t(0));  // no time of its own
+        CHECK_EQ(r.timeOf("world/1x1/none.webp"), int64_t(0));
+    }
+    {
+        // the pack goes on: the pictures there keep their times; a new one gets now
+        pack::Writer w;
+        CHECK(w.open(path, true, error));
+        CHECK(w.add("world/1x1/c.webp", reinterpret_cast<const uint8_t*>("c"), 1, error));
+        CHECK(w.close("", error));
+    }
+    pack::Reader r;
+    CHECK(r.open(path, error));
+    CHECK_EQ(r.timeOf("world/1x1/a.webp"), int64_t(1760000000));
+    CHECK(r.timeOf("world/1x1/c.webp") > int64_t(1760000000));
+    std::vector<pack::ZipEntry> entries;
+    std::FILE* f = std::fopen(path.c_str(), "rb");
+    std::fseek(f, 0, SEEK_END);
+    const uint64_t size = uint64_t(std::ftell(f));
+    const auto read = [f](uint64_t at, uint8_t* out, size_t n) {
+        return std::fseek(f, long(at), SEEK_SET) == 0 && std::fread(out, 1, n, f) == n;
+    };
+    CHECK(pack::centralDirectoryOf(size, read, entries, error));
+    std::fclose(f);
+    bool seen = false;
+    for (const pack::ZipEntry& e : entries)
+        if (e.name == "world/1x1/a.webp") seen = pack::unixOfDos(e.dosDate, e.dosTime) == 1760000000;
+    CHECK(seen);
+    std::remove(path.c_str());
+}
+
+TEST(texture_pack_rewrite_keeps_times_and_the_new_lines) {
+    // 2.3: Compact (the studio's Pack tab) - what was made and when, the game's own and the materials stay
+    const std::string path = tempPath(), out = tempPath();
+    std::string error;
+    {
+        pack::Writer w;
+        CHECK(w.open(path, false, error));
+        CHECK(w.add("world/1x1/a.webp", reinterpret_cast<const uint8_t*>("aaa"), 3, error, false, 1760000000));
+        CHECK(w.add("world/1x1/b.webp", reinterpret_cast<const uint8_t*>("bb"), 2, error, false, 1760000000));
+        pack::Index x;
+        x.pictures["world/1x1/a.webp"] = pack::IndexEntry{ai::Kind::Ground, {}};
+        x.pictures["world/1x1/b.webp"] = pack::IndexEntry{ai::Kind::Ground, {}};
+        x.made["world/1x1/a.webp"] = pack::Provenance{"a.bmp", "data.grf", 1760000000, "general", "general x4"};
+        x.made["world/1x1/b.webp"] = pack::Provenance{"b.bmp", "data.grf", 1760000000, "general", "general x4"};
+        x.alike["world/1x1/a.webp"] = "1 2 3";
+        x.ownAlways.insert("1x1\\9");
+        x.materials["1x1\\8"] = pack::MaterialScales{0.5f, 1.0f, 1.0f};
+        CHECK(w.close(pack::indexText(x), error));
+    }
+    size_t kept = 0;
+    CHECK(pack::rewrite(path, out, [](const std::string& n) { return n != "world/1x1/b.webp"; }, kept, error));
+    pack::Reader r;
+    CHECK(r.open(out, error));
+    CHECK_EQ(r.timeOf("world/1x1/a.webp"), int64_t(1760000000));
+    std::vector<uint8_t> data;
+    CHECK(r.read(pack::kIndexName, data));
+    const pack::Index x = pack::parseIndexFile(std::string(data.begin(), data.end()));
+    CHECK(x.made.size() == 1 && x.made.count("world/1x1/a.webp"));
+    CHECK(x.alike.size() == 1 && x.ownAlways.count("1x1\\9") && x.materials.count("1x1\\8"));
+    r.close();
+    std::remove(path.c_str());
+    std::remove(out.c_str());
+}

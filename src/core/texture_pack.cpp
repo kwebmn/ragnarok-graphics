@@ -3,7 +3,10 @@
 #include <miniz.h>
 
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
 
 #if defined(_WIN32)
 #include <io.h>
@@ -20,7 +23,7 @@ namespace {
 
 constexpr uint32_t kLocalSig = 0x04034b50, kCentralSig = 0x02014b50, kEndSig = 0x06054b50;
 constexpr uint32_t kEnd64Sig = 0x06064b50, kLocator64Sig = 0x07064b50;
-constexpr uint32_t kDosDate = 0x21;  // 1980-01-01: the pictures have no time of their own
+constexpr uint16_t kNoDate = 0x21;  // 1980-01-01: a picture without a time of its own (before 2.3 all of them)
 
 void put16(std::vector<uint8_t>& b, uint32_t v) {
     b.push_back(uint8_t(v));
@@ -129,6 +132,8 @@ bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<Found>& o
         }
         Found e;
         e.method = get16(&cd[p + 10]);
+        e.dosTime = uint16_t(get16(&cd[p + 12]));
+        e.dosDate = uint16_t(get16(&cd[p + 14]));
         e.crc = get32(&cd[p + 16]);
         e.compressed = get32(&cd[p + 20]);
         e.size = get32(&cd[p + 24]);
@@ -186,19 +191,21 @@ void localHeaders(std::FILE* f, std::vector<Found>& out) {
         e.header = at;
         e.compressed = e.size = compressed;
         e.crc = get32(h + 14);
+        e.dosTime = uint16_t(get16(h + 10));
+        e.dosDate = uint16_t(get16(h + 12));
         out.push_back(std::move(e));
         at = data + compressed;
     }
 }
 
-std::vector<uint8_t> localHeader(const std::string& name, uint64_t size, uint32_t crc) {
+std::vector<uint8_t> localHeader(const std::string& name, uint64_t size, uint32_t crc, uint16_t date, uint16_t time) {
     std::vector<uint8_t> b;
     put32(b, kLocalSig);
     put16(b, 20);
     put16(b, 0);  // no flags
     put16(b, 0);  // stored
-    put16(b, 0);
-    put16(b, kDosDate);
+    put16(b, time);
+    put16(b, date);
     put32(b, crc);
     put32(b, uint32_t(size));
     put32(b, uint32_t(size));
@@ -208,15 +215,16 @@ std::vector<uint8_t> localHeader(const std::string& name, uint64_t size, uint32_
     return b;
 }
 
-void centralEntry(std::vector<uint8_t>& b, const std::string& name, uint64_t header, uint64_t size, uint32_t crc) {
+void centralEntry(std::vector<uint8_t>& b, const std::string& name, uint64_t header, uint64_t size, uint32_t crc,
+                  uint16_t date, uint16_t time) {
     const bool far = header >= 0xFFFFFFFF;
     put32(b, kCentralSig);
     put16(b, 45);
     put16(b, far ? 45 : 20);
     put16(b, 0);
     put16(b, 0);
-    put16(b, 0);
-    put16(b, kDosDate);
+    put16(b, time);
+    put16(b, date);
     put32(b, crc);
     put32(b, uint32_t(size));
     put32(b, uint32_t(size));
@@ -267,6 +275,51 @@ void endRecords(std::vector<uint8_t>& b, uint64_t count, uint64_t cdOffset, uint
 }  // namespace
 
 const char* groupName(Group g) { return g == Group::Sprites ? "sprites" : g == Group::Ui ? "ui" : "world"; }
+
+// Days since 1970-01-01 of a date of the Gregorian calendar, and back (H. Hinnant's civil algorithms).
+namespace {
+int64_t daysOf(int64_t y, int64_t m, int64_t d) {
+    y -= m <= 2;
+    const int64_t era = (y >= 0 ? y : y - 399) / 400;
+    const int64_t yoe = y - era * 400;
+    const int64_t doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+    const int64_t doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return era * 146097 + doe - 719468;
+}
+void dateOf(int64_t days, int64_t& y, int64_t& m, int64_t& d) {
+    days += 719468;
+    const int64_t era = (days >= 0 ? days : days - 146096) / 146097;
+    const int64_t doe = days - era * 146097;
+    const int64_t yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    const int64_t doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    const int64_t mp = (5 * doy + 2) / 153;
+    d = doy - (153 * mp + 2) / 5 + 1;
+    m = mp + (mp < 10 ? 3 : -9);
+    y = yoe + era * 400 + (m <= 2);
+}
+}  // namespace
+
+int64_t unixOfDos(uint16_t date, uint16_t time) {
+    if (date == kNoDate && time == 0) return 0;
+    const int64_t y = 1980 + (date >> 9), m = (date >> 5) & 15, d = date & 31;
+    if (m < 1 || m > 12 || d < 1) return 0;
+    return daysOf(y, m, d) * 86400 + int64_t(time >> 11) * 3600 + int64_t((time >> 5) & 63) * 60 +
+           int64_t(time & 31) * 2;
+}
+
+void dosOfUnix(int64_t t, uint16_t& date, uint16_t& time) {
+    const int64_t first = daysOf(1980, 1, 1) * 86400, last = daysOf(2107, 12, 31) * 86400 + 86399;
+    if (t <= first || t > last) {  // none (or out of the format's years)
+        date = kNoDate;
+        time = 0;
+        return;
+    }
+    const int64_t days = t / 86400, s = t % 86400;
+    int64_t y = 0, m = 0, d = 0;
+    dateOf(days, y, m, d);
+    date = uint16_t(((y - 1980) << 9) | (m << 5) | d);
+    time = uint16_t(((s / 3600) << 11) | (((s / 60) % 60) << 5) | ((s % 60) / 2));
+}
 
 std::string pictureName(Group g, const std::string& key) {
     std::string name = std::string(groupName(g)) + "/" + key + ".webp";
@@ -321,8 +374,69 @@ std::string indexText(const Index& index) {
     for (const auto& n : index.alike) t += "~" + n.first + "\t" + n.second + "\n";
     for (const auto& e : index.pictures)  // 1.6
         if (!e.second.model.empty()) t += "^" + e.first + "\t" + e.second.model + "\t" + e.second.group + "\n";
+    for (const auto& e : index.made) {  // 2.3
+        const Provenance& p = e.second;
+        t += "+" + e.first + "\t" + p.file + "\t" + p.archive + "\t" + std::to_string(p.made) + "\t" + p.model + "\t" +
+             p.chain + "\n";
+    }
+    for (const std::string& key : index.ownAlways) t += "!" + key + "\n";
+    for (const auto& e : index.materials) {
+        char scales[96];
+        std::snprintf(scales, sizeof scales, "\tgloss=%.2f\trelief=%.2f\theight=%.2f\n", double(e.second.gloss),
+                      double(e.second.relief), double(e.second.height));
+        t += "#" + e.first + scales;
+    }
     return t;
 }
+
+namespace {
+
+// "a\tb\tc" into its fields
+std::vector<std::string> fieldsOf(const std::string& line) {
+    std::vector<std::string> out;
+    size_t from = 0;
+    for (;;) {
+        const size_t tab = line.find('\t', from);
+        out.push_back(line.substr(from, tab == std::string::npos ? std::string::npos : tab - from));
+        if (tab == std::string::npos) return out;
+        from = tab + 1;
+    }
+}
+
+// 2.3: the studio's lines; false: not one of them
+bool studioLine(const std::string& line, Index& out) {
+    if (line.empty() || (line[0] != '+' && line[0] != '!' && line[0] != '#')) return false;
+    if (line[0] == '!') {
+        if (line.size() > 1 && line.find('\t') == std::string::npos) out.ownAlways.insert(line.substr(1));
+        return true;
+    }
+    const std::vector<std::string> f = fieldsOf(line.substr(1));
+    if (f[0].empty()) return true;
+    if (line[0] == '+') {
+        if (f.size() < 6) return true;
+        Provenance& p = out.made[f[0]];
+        p.file = f[1];
+        p.archive = f[2];
+        p.made = std::strtoll(f[3].c_str(), nullptr, 10);
+        p.model = f[4];
+        p.chain = f[5];
+        return true;
+    }
+    MaterialScales m;
+    for (size_t i = 1; i < f.size(); ++i) {
+        const size_t eq = f[i].find('=');
+        if (eq == std::string::npos) continue;
+        const std::string name = f[i].substr(0, eq);
+        const float v = std::strtof(f[i].c_str() + eq + 1, nullptr);
+        if (name == "gloss") m.gloss = v;
+        else if (name == "relief") m.relief = v;
+        else if (name == "height") m.height = v;
+    }
+    out.materials[f[0]] = m;
+    return true;
+}
+
+}  // namespace
 
 Index parseIndexFile(const std::string& text) {
     Index out;
@@ -334,6 +448,7 @@ Index parseIndexFile(const std::string& text) {
         std::string line = text.substr(at, end - at);
         at = end + 1;
         if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (studioLine(line, out)) continue;  // 2.3
         const size_t tab = line.find('\t');
         if (tab == std::string::npos || tab == 0 || line[0] == '=') continue;  // 0.45: '=': a lower detail's key
         if (line[0] == '~') {  // 0.49: a picture found by its likeness
@@ -447,7 +562,8 @@ bool Reader::open(const std::string& path, std::string& error, bool recover) {
         recovered_ = true;
     }
     entries_.reserve(found.size());
-    for (Found& e : found) entries_[e.name] = Entry{e.header, e.compressed, e.size, uint16_t(e.method)};
+    for (Found& e : found)
+        entries_[e.name] = Entry{e.header, e.compressed, e.size, uint16_t(e.method), e.dosDate, e.dosTime};
     return true;
 }
 
@@ -461,6 +577,11 @@ void Reader::close() {
 uint64_t Reader::sizeOf(const std::string& name) const {
     const auto it = entries_.find(name);
     return it == entries_.end() ? 0 : it->second.compressed;
+}
+
+int64_t Reader::timeOf(const std::string& name) const {
+    const auto it = entries_.find(name);
+    return it == entries_.end() ? 0 : unixOfDos(it->second.date, it->second.time);
 }
 
 bool Reader::read(const std::string& name, std::vector<uint8_t>& out) const {
@@ -512,7 +633,7 @@ bool Writer::open(const std::string& path, bool resume, std::string& error) {
             if (e.name == kIndexName || e.method != 0 || names_.count(e.name)) continue;  // the index is made anew
             if (!entries_.empty() && e.header > entries_[last].header) last = entries_.size();
             names_[e.name] = entries_.size();
-            entries_.push_back(Central{e.name, e.header, e.size, e.crc});
+            entries_.push_back(Central{e.name, e.header, e.size, e.crc, e.dosDate, e.dosTime});
         }
         if (!entries_.empty()) {  // the end of the last picture, by its local header
             uint8_t h[30];
@@ -548,9 +669,10 @@ std::vector<std::string> Writer::names() const {
     return out;
 }
 
-bool Writer::writeLocal(const std::string& name, const uint8_t* data, size_t size, uint32_t crc, std::string& error) {
-    const std::vector<uint8_t> h = localHeader(name, size, crc);
-    if (!seekTo(file_, end_) || std::fwrite(h.data(), 1, h.size(), file_) != h.size() ||
+bool Writer::writeLocal(const Central& c, const uint8_t* data, std::string& error) {
+    const std::vector<uint8_t> h = localHeader(c.name, c.size, c.crc, c.date, c.time);
+    const size_t size = size_t(c.size);
+    if (!seekTo(file_, c.header) || std::fwrite(h.data(), 1, h.size(), file_) != h.size() ||
         (size && std::fwrite(data, 1, size, file_) != size)) {
         error = "cannot write " + path_ + " (the disk is full?)";
         return false;
@@ -558,7 +680,8 @@ bool Writer::writeLocal(const std::string& name, const uint8_t* data, size_t siz
     return true;
 }
 
-bool Writer::add(const std::string& name, const uint8_t* data, size_t size, std::string& error, bool replace) {
+bool Writer::add(const std::string& name, const uint8_t* data, size_t size, std::string& error, bool replace,
+                 int64_t when) {
     if (!file_) {
         error = "the pack is not open";
         return false;
@@ -568,14 +691,15 @@ bool Writer::add(const std::string& name, const uint8_t* data, size_t size, std:
         error = "not a picture of the pack: " + name;
         return false;
     }
-    const uint32_t crc = uint32_t(mz_crc32(MZ_CRC32_INIT, data, size));
-    if (!writeLocal(name, data, size, crc, error)) return false;
+    Central c{name, end_, uint64_t(size), uint32_t(mz_crc32(MZ_CRC32_INIT, data, size))};
+    dosOfUnix(when < 0 ? int64_t(std::time(nullptr)) : when, c.date, c.time);
+    if (!writeLocal(c, data, error)) return false;
     const auto there = names_.find(name);
     if (there != names_.end()) {
-        entries_[there->second] = Central{name, end_, uint64_t(size), crc};
+        entries_[there->second] = std::move(c);
     } else {
         names_[name] = entries_.size();
-        entries_.push_back(Central{name, end_, uint64_t(size), crc});
+        entries_.push_back(std::move(c));
     }
     end_ += 30 + name.size() + size;
     return true;
@@ -601,13 +725,14 @@ bool Writer::checkpoint(const std::string& index, std::string& error) {
     }
     uint64_t at = end_;
     std::vector<uint8_t> cd;
-    for (const Central& c : entries_) centralEntry(cd, c.name, c.header, c.size, c.crc);
+    for (const Central& c : entries_) centralEntry(cd, c.name, c.header, c.size, c.crc, c.date, c.time);
     uint64_t count = entries_.size();
     if (!index.empty()) {  // after the pictures, so that the next add() goes over it
         const auto* data = reinterpret_cast<const uint8_t*>(index.data());
-        const uint32_t crc = uint32_t(mz_crc32(MZ_CRC32_INIT, data, index.size()));
-        if (!writeLocal(kIndexName, data, index.size(), crc, error)) return false;
-        centralEntry(cd, kIndexName, at, index.size(), crc);
+        Central c{kIndexName, at, uint64_t(index.size()), uint32_t(mz_crc32(MZ_CRC32_INIT, data, index.size()))};
+        dosOfUnix(int64_t(std::time(nullptr)), c.date, c.time);
+        if (!writeLocal(c, data, error)) return false;
+        centralEntry(cd, kIndexName, at, index.size(), c.crc, c.date, c.time);
         at += 30 + std::strlen(kIndexName) + index.size();
         ++count;
     }
@@ -644,13 +769,19 @@ bool rewrite(const std::string& from, const std::string& to, const std::function
             error = from + ": " + name + " cannot be read";
             return false;
         }
-        if (!w.add(name, data.data(), data.size(), error)) return false;
+        if (!w.add(name, data.data(), data.size(), error, false, r.timeOf(name))) return false;  // 2.3: its time
         const auto e = old.pictures.find(name);
         if (e != old.pictures.end()) now.pictures[name] = e->second;
+        const auto m = old.made.find(name);  // 2.3: what it was made from
+        if (m != old.made.end()) now.made.insert(*m);
+        const auto l = old.alike.find(name);  // 2.3: (a .jpg's likeness was lost so)
+        if (l != old.alike.end()) now.alike.insert(*l);
         ++kept;
     }
     for (const auto& a : old.aliases)
         if (w.has(a.second)) now.aliases.insert(a);
+    now.ownAlways = old.ownAlways;  // 2.3: keys, not pictures - they stay
+    now.materials = old.materials;
     return w.close(indexText(now), error);
 }
 
