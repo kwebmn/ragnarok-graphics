@@ -1,3 +1,11 @@
+# uaRO Graphics 2.2.4 — testing
+
+- **Sharp pack textures with DLSS:** DLSS draws the world smaller than the screen, and the pack's textures were taken
+  from a smaller mip level made for that smaller world: sand, tiles and grass came out softer than the game's own
+  textures. The level is now picked for the screen's pixels, as NVIDIA asks. Without DLSS all is as it was.
+- **Trees and Objects:** Objects turned off in the console take the pack's pictures off the new trees too.
+- Check, please: Comodo's beach with DLSS and Map ground on — the sand no softer than with it off.
+
 # uaRO Graphics 2.2.3 — testing
 
 - **Sand and gentle slopes:** Reflected light no longer draws bright lines along the cells' edges on bright sand
