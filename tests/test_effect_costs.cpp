@@ -47,6 +47,28 @@ TEST(effect_costs_keep_fps_drops_the_light_from_the_sky) {
     CHECK(effect_costs::costOf(c, "effects.bounce_light") > 29.0);
 }
 
+TEST(effect_costs_keep_fps_drops_the_worlds_extras) {
+    // 2.5.16: the materials, the relief, the characters' light... are drawn inside the world's draws - no pass of their
+    // own to time, so keep_fps never turned them off (R-DUMAMX, an HD 6570: the world 40-50 ms a frame, the passes a
+    // few). With the world timed: a pass worth a millisecond first; then they, the usually costliest first; then the
+    // cheap passes. Without (Direct3D 12): the passes as before, then they.
+    EffectSettings e = effectsOff();
+    e.materials = e.relief = e.spriteLight = e.ao = e.glow = true;
+    const effect_costs::Costs cheap{{"ao", 0.45}, {"glow", 0.3}, {"world", 41.0}};
+    CHECK(effect_costs::pickToDrop(e, cheap, {}) == "materials");
+    CHECK(effect_costs::pickToDrop(e, cheap, {"materials"}) == "relief");
+    CHECK(effect_costs::pickToDrop(e, cheap, {"materials", "relief"}) == "sprite_light");
+    CHECK(effect_costs::pickToDrop(e, cheap, {"materials", "relief", "sprite_light"}) == "ao");  // then the passes
+    const effect_costs::Costs dear{{"ao", 4.8}, {"glow", 0.3}, {"world", 41.0}};
+    CHECK(effect_costs::pickToDrop(e, dear, {}) == "ao");  // a millisecond's pass before the extras
+    const effect_costs::Costs untimed{{"ao", 0.45}, {"glow", 0.3}};  // Direct3D 12: no world's time
+    CHECK(effect_costs::pickToDrop(e, untimed, {}) == "ao");
+    CHECK(effect_costs::pickToDrop(e, untimed, {"ao", "glow"}) == "materials");  // the passes gone: the extras
+    effect_costs::drop(e, "effects.materials");
+    CHECK(!e.materials);
+    CHECK(effect_costs::costOf(dear, "effects.relief") < 0);  // not measured on its own
+}
+
 TEST(effect_costs_every_timed_pass_has_a_switch) {
     // keep_fps can turn off whatever the renderer times: a pass with no switch of its own stays however costly
     for (const effect_costs::TimedPass& p : effect_costs::kTimedPasses) {

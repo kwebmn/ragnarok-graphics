@@ -34,9 +34,10 @@ double costOf(const Costs& c, const std::string& key);
 // 2.2.1: its timed pass's name, "" when it has none of its own (a group's sum takes each pass once)
 std::string passOf(const std::string& key);
 
-// [frames] keep_fps: the switch to turn off next - on, not turned off already: the costliest measured one (over
-// 0.05 ms); with nothing measured, the first of a list from the usually costliest down. "" when none is left. (2.5.9:
-// Direct3D 11 draws them all now and times its passes too - it took only three of the list until now.)
+// [frames] keep_fps: the switch to turn off next - on, not turned off already: the costliest measured one of a
+// millisecond or more; then (2.5.16) what the world's own draws do (the materials, the relief, the characters' light,
+// ... - no pass to time); then the costliest measured over 0.05 ms; with nothing measured, the first of a list from
+// the usually costliest down. "" when none is left. (2.5.9: Direct3D 11 times its passes too.)
 std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped);
 void drop(EffectSettings& e, const std::string& key);  // its switch off
 // 2.2.2, keep_fps: whether a five-second window was too slow because of the graphics card - under 90 % of the frames

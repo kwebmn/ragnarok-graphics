@@ -3511,7 +3511,9 @@ void Renderer11::timeFrame() {
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
-            if (recentEffectMs_[e] > 0.0 && !drawsTimer(e))  // the effects' costs only (keep_fps, the console)
+            // the effects' costs (keep_fps, the console) and the world's (2.5.16: keep_fps turns the world's
+            // extras off when it is the world that is slow), not the interface's
+            if (recentEffectMs_[e] > 0.0 && e != kTimeUi11)
                 recent_.effects[kPasses[e]] = recentEffectMs_[e] / recentFrames_;
             recentEffectMs_[e] = 0.0;
         }

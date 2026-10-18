@@ -36,9 +36,21 @@ const Costly kCostly[] = {
     {"grade", "grade", &EffectSettings::grade},
 };
 
+// 2.5.16: what is drawn inside the world's own draws (the draw shader's extras: without them most draws take its
+// lean form) - no pass of its own to time; keep_fps turns them off, the usually costliest first, once no pass is
+// worth a millisecond (R-DUMAMX: an HD 6570's world 40-50 ms a frame, the passes a few)
+const Costly kWorldExtras[] = {
+    {"materials", "", &EffectSettings::materials},       {"relief", "", &EffectSettings::relief},
+    {"sprite_light", "", &EffectSettings::spriteLight},  {"smooth_hills", "", &EffectSettings::smoothHills},
+    {"ground_seams", "", &EffectSettings::groundSeams},  {"leaf_light", "", &EffectSettings::leafLight},
+    {"soft_particles", "", &EffectSettings::softParticles},
+};
+
 const Costly* find(const std::string& key) {
     const std::string k = key.compare(0, 8, "effects.") == 0 ? key.substr(8) : key;
     for (const Costly& c : kCostly)
+        if (k == c.key) return &c;
+    for (const Costly& c : kWorldExtras)
         if (k == c.key) return &c;
     return nullptr;
 }
@@ -80,7 +92,7 @@ std::string passOf(const std::string& key) {
 
 double costOf(const Costs& c, const std::string& key) {
     const Costly* k = find(key);
-    if (!k) return -1;
+    if (!k || !*k->pass) return -1;
     const auto it = c.find(k->pass);
     return it == c.end() ? -1 : it->second;
 }
@@ -96,11 +108,21 @@ std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<s
             best = &k;
         }
     }
-    if (best) return best->key;
-    if (!c.empty()) return "";  // measured: what is not, or costs next to nothing, is not worth losing
+    const auto extra = [&]() -> std::string {  // 2.5.16: the world's extras, the usually costliest first
+        for (const Costly& k : kWorldExtras)
+            if ((e.*k.on) && !dropped.count(k.key)) return k.key;
+        return "";
+    };
+    // The world's draws timed (Direct3D 11's "world"): a pass worth a millisecond first, then the extras - they are
+    // in the world's time - and the cheap passes last; untimed, the passes first and the extras when none is left.
+    if (best && (most >= 1.0 || !c.count("world"))) return best->key;
+    if (!c.empty()) {  // measured: what is not, or costs next to nothing, is not worth losing - but the extras
+        const std::string x = extra();
+        return !x.empty() ? x : best ? best->key : "";
+    }
     for (const Costly& k : kCostly)
         if ((e.*k.on) && !dropped.count(k.key)) return k.key;
-    return "";
+    return extra();
 }
 
 void drop(EffectSettings& e, const std::string& key) {
