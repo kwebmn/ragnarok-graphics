@@ -15,6 +15,7 @@
 #include "core/webp_image.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::gpu {
 
@@ -66,6 +67,7 @@ struct AiConstants {
 }  // namespace
 
 AiTextures::~AiTextures() {
+    writeSeen();  // 2.3: the last map's report
     if (ready_) {
         finishReadbacks();  // the renderer waited for the GPU: the last results go into the pack too
         logNow(true);
@@ -190,6 +192,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     maxSide_ = std::max(s.minSize, s.maxSize);
     ahead_ = s.ahead;
     generate_ = s.generate;
+    seenDir_ = gameDir + "\\uaro-graphics\\seen";  // 2.3
     const std::string dir = gameDir + "\\uaro-graphics\\ai\\";
     bool anyKind = false;
     for (int k = 0; k < ai::kKinds; ++k)
@@ -320,6 +323,7 @@ void AiTextures::putAwayOld() {
         if (it == items_.end()) continue;
         dropAi(id);
         it->second.state = Item::Away;
+        it->second.how = uint8_t(studio::How::Budget);  // 2.3: the game's texture until it is back
         ++putAway_;
     }
 }
@@ -929,6 +933,7 @@ bool AiTextures::finish(Job& job) {
     t.aiKind = uint8_t(item->second.ui ? ai::Kind::Icons : item->second.kind);  // 2.2.1
     m_.device->CreateShaderResourceView(tex, nullptr, m_.cpuSrvHandle(srv));
     item->second.state = Item::Done;
+    item->second.how = uint8_t(job.loaded ? studio::How::Pack : studio::How::Made);  // 2.3
     item->second.bytes = 0;  // 0.44: the copy's video memory
     for (size_t i = skip; i < levels.size(); ++i)
         item->second.bytes += uint64_t(levels[i].width) * uint64_t(levels[i].height) * 4;
@@ -1271,16 +1276,19 @@ void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const u
     keptBytes_ -= item.argb.size() * 4;
     item.argb.clear();
     item.state = Item::Kept;  // drawn again, it gets its turn again (a result of the old pixels is not taken)
+    item.how = uint8_t(studio::How::Missing);
     item.later = item.loading = item.ui = false;
     item.name.clear();
     item.mapSerial = 0;
     if (++item.uploads > 3) {  // changed again and again (an effect): not worth the network
         item.state = Item::Skipped;
+        item.how = uint8_t(studio::How::Budget);
         return;
     }
     const size_t n = size_t(t.width) * size_t(t.height);
     if (keptBytes_ + n * 4 > kKeptLimit) {
         item.state = Item::Skipped;
+        item.how = uint8_t(studio::How::Budget);
         return;
     }
     item.argb.assign(argb, argb + n);
@@ -1297,11 +1305,18 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     item.kind = kind;
     const int k = int(kind);
     if (k >= ai::kKinds || !kindOn_[k]) {  // a lightmap, no world texture, or a kind that is off
+        item.how = uint8_t(studio::How::KindOff);
         drop(item);
         return;
     }
     item.ui = kind == ai::Kind::Icons;  // through noteUpload only the interface's big pictures have this kind
     if (!item.ui && (item.width > maxSide_ || item.height > maxSide_)) {  // past the page's "texture sides"
+        item.how = uint8_t(studio::How::Size);
+        drop(item);
+        return;
+    }
+    if (pictures_->marked(item.key)) {  // 2.3, uaRO Studio: the game's own always - neither the pack's nor made
+        item.how = uint8_t(studio::How::Marked);
         drop(item);
         return;
     }
@@ -1312,6 +1327,8 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         (ai::softPicture(item.argb.data(), item.width, item.height) ||
          ai::softAlpha(item.argb.data(), item.width, item.height))) {
         ++soft_;
+        item.how = uint8_t(ai::softPicture(item.argb.data(), item.width, item.height) ? studio::How::Soft
+                                                                                        : studio::How::Alpha);
         drop(item);
         return;
     }
@@ -1327,6 +1344,7 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         item.name = name;
         item.loading = true;
         item.aheadRead = later;
+        item.how = uint8_t(studio::How::Pack);
         note(name, kind);
         requestPacked(id, name, item.width, item.height, Job(), later ? 2 : 1);
         return;
@@ -1393,6 +1411,8 @@ void AiTextures::noteWorldUse(uint32_t id, ai::Kind kind) {
     Item& item = it->second;
     if (kind == ai::Kind::None) return;  // a second stage of a draw that is no ground: says nothing of the texture
     item.lastUse = frame_;
+    if (item.kind == ai::Kind::None) item.kind = kind;  // 2.3: for the report, also of a texture it never takes
+    noteSeen(item);
     if (item.state == Item::Away) {  // 0.44: its copy was put away - back from the pack
         bringBack(id, item);
         return;
@@ -1421,6 +1441,7 @@ void AiTextures::noteUiUse(uint32_t id) {
     if (it == items_.end()) return;
     Item& item = it->second;
     item.lastUse = frame_;
+    noteSeen(item);  // 2.3
     if (item.state == Item::Away) {
         bringBack(id, item);
         return;
@@ -1433,8 +1454,43 @@ void AiTextures::noteUiUse(uint32_t id) {
 
 void AiTextures::setMap(const std::string& map) {
     if (map == map_) return;
+    writeSeen();  // 2.3: the map left
     map_ = map;
     ++mapSerial_;
+}
+
+void AiTextures::noteSeen(Item& item) {
+    if (seenDir_.empty() || item.counted == frame_ || item.key.empty()) return;
+    item.counted = frame_;
+    studio::Seen& s = seenOnMap_[item.key];
+    s.key = item.key;
+    s.kind = uint8_t(item.kind);
+    s.how = studio::How(item.how);
+    ++s.count;
+}
+
+void AiTextures::writeSeen() {
+    if (seenDir_.empty() || map_.empty() || seenOnMap_.empty()) {
+        seenOnMap_.clear();
+        return;
+    }
+    std::vector<studio::Seen> seen;
+    seen.reserve(seenOnMap_.size());
+    for (auto& e : seenOnMap_) seen.push_back(std::move(e.second));
+    seenOnMap_.clear();
+    std::sort(seen.begin(), seen.end(), [](const studio::Seen& a, const studio::Seen& b) { return a.count > b.count; });
+    CreateDirectoryA(seenDir_.c_str(), nullptr);
+    win::writeFileAtomic(seenDir_ + "\\" + map_ + ".txt", studio::seenText(map_, seen));
+    std::vector<std::pair<std::string, int64_t>> files;  // the last 20 maps' reports stay
+    WIN32_FIND_DATAA f{};
+    HANDLE find = FindFirstFileA((seenDir_ + "\\*.txt").c_str(), &f);
+    if (find == INVALID_HANDLE_VALUE) return;
+    do {
+        const uint64_t t = uint64_t(f.ftLastWriteTime.dwHighDateTime) << 32 | f.ftLastWriteTime.dwLowDateTime;
+        files.emplace_back(f.cFileName, int64_t(t / 10000000ull));
+    } while (FindNextFileA(find, &f));
+    FindClose(find);
+    for (const std::string& old : studio::seenToDelete(files)) DeleteFileA((seenDir_ + "\\" + old).c_str());
 }
 
 void AiTextures::forget(uint32_t id) {

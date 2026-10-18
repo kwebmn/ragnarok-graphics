@@ -39,6 +39,8 @@ public:
     bool alikeName(const uint32_t* argb, int width, int height, std::string& name) const;
     bool alikeFits(const std::string& name, Kind kind) const;
     size_t ahead() const { return kinds_.size(); }
+    // 2.3, uaRO Studio's "the game's own always" (the index's '!' lines): no picture for these keys.
+    bool marked(const std::string& key) const { return marked_.count(key) != 0; }
     size_t aliases() const { return aliases_.size(); }
 
 private:
@@ -51,6 +53,7 @@ private:
     std::unordered_map<std::string, Kind> kinds_;           // a key -> its kind, known ahead
     std::unordered_map<std::string, std::string> aliases_;  // a key of a lower texture detail -> the pack's picture
     pack::NearPictures alike_;  // 0.49
+    std::unordered_set<std::string> marked_;  // 2.3
 };
 
 }  // namespace uagfx::ai

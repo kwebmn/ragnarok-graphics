@@ -14,6 +14,7 @@ ReadyPictures::ReadyPictures(const AiSettings& s) : settings_(s) {
 void ReadyPictures::addPack(std::function<bool(const std::string&)> has, const std::string& index) {
     packHas_ = std::move(has);
     const pack::Index x = pack::parseIndexFile(index);
+    marked_ = std::unordered_set<std::string>(x.ownAlways.begin(), x.ownAlways.end());  // 2.3
     for (const auto& e : x.pictures) {
         pack::Group g = pack::Group::World;
         std::string key;
@@ -51,7 +52,7 @@ bool ReadyPictures::knownKind(const std::string& key, Kind& kind) const {
 }
 
 bool ReadyPictures::texture(const std::string& key, Kind kind, std::string& name) const {
-    if (!kindOn(kind)) return false;
+    if (!kindOn(kind) || marked(key)) return false;
     const bool ui = kind == Kind::Icons;
     name = pack::pictureName(ui ? pack::Group::Ui : pack::Group::World, key);
     if (has(name)) return true;
@@ -71,17 +72,20 @@ bool ReadyPictures::alikeName(const uint32_t* argb, int width, int height, std::
 }
 
 bool ReadyPictures::alikeFits(const std::string& name, Kind kind) const {
+    pack::Group g = pack::Group::World;
+    std::string key;
+    if (pack::keyOfPicture(name, g, key) && marked(key)) return false;  // 2.3
     return kindOn(kind) && (kind == Kind::Icons) == (name.rfind(pack::groupName(pack::Group::Ui), 0) == 0);
 }
 
 bool ReadyPictures::cell(const std::string& key, std::string& name) const {
-    if (!anyCells()) return false;
+    if (!anyCells() || marked(key)) return false;
     name = pack::pictureName(pack::Group::Sprites, key);
     return has(name);
 }
 
 bool ReadyPictures::icon(const std::string& key, std::string& name) const {
-    if (!on_[int(Kind::Icons)]) return false;
+    if (!on_[int(Kind::Icons)] || marked(key)) return false;
     name = pack::pictureName(pack::Group::Ui, key);
     return has(name);
 }

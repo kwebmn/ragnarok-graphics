@@ -21,6 +21,7 @@
 #include "core/ai/srvgg.hpp"
 #include "core/config.hpp"
 #include "core/frame.hpp"
+#include "core/studio_link.hpp"
 #include "core/texture_pack.hpp"
 #include "win/gpu/missing_dump.hpp"
 #include "win/gpu/renderer.hpp"
@@ -125,6 +126,8 @@ private:
         uint64_t lastUse = 0;    // 0.44: the frame it was last drawn in (frame_)
         uint64_t bytes = 0;      // its copy's in video memory (Texture::ai), all its levels
         ai::Group group = ai::Group::World;  // 1.6
+        uint8_t how = uint8_t(studio::How::Missing);  // 2.3: how it is shown (the map's report, the X-ray)
+        uint64_t counted = ~0ull;                     // 2.3: the frame it was last counted in the report
     };
     struct Level {
         UINT64 at = 0;  // bytes into the image
@@ -252,6 +255,10 @@ private:
     void drop(Item& item);  // its pixels go: never its turn
     void begin(uint32_t id, Item& item, ai::Kind kind, bool later);
     void note(const std::string& name, ai::Kind kind);  // 0.48: its kind and the map, into the pack's index
+    // 2.3, uaRO Studio's report of a map (L3): each texture drawn, how it was shown and in how many frames - written
+    // to uaro-graphics\seen\<map>.txt when the map changes and at the end, the last 20 maps kept.
+    void noteSeen(Item& item);
+    void writeSeen();
     bool nextJob();
     void takeLoaded();
     void finishReadbacks();
@@ -279,6 +286,8 @@ private:
     // 1.6: the network of a model word, loaded once (the same model for several groups is one network); -1, error.
     int netOfToken(const std::string& dir, const std::string& token, std::string& error);
     std::string modelDir_;  // 2.3: the studio's engine - where netForModel finds the models
+    std::string seenDir_;   // 2.3: uaro-graphics\seen ("" no reports: the pack builder, the studio's engine)
+    std::unordered_map<std::string, studio::Seen> seenOnMap_;
     bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack
     bool generate_ = false;                     // [ai] generate: the network makes what is missing
     pack::Reader pack_;                         // 0.42: uaro-textures.zip, read by the I/O thread

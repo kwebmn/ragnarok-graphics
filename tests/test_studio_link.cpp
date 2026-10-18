@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "core/studio_link.hpp"
+#include "core/studio_status.hpp"
 #include "test.hpp"
 
 using namespace uagfx;

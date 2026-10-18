@@ -13,6 +13,7 @@
 #include "core/config.hpp"
 #include "host/pack_builder.hpp"
 #include "core/studio_link.hpp"
+#include "core/studio_status.hpp"
 #include "core/version.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
