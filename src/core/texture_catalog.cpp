@@ -82,6 +82,9 @@ Catalog start(const std::vector<ArchiveStamp>& archives,
     c.archives = archives;
     c.maxHair = choice.maxHairColour;
     c.maxCloth = choice.maxClothColour;
+    c.minSide = choice.minSide;
+    c.maxSide = choice.maxSide;
+    c.bodyColours = choice.bodyColours;
     toDecode.clear();
     std::vector<std::pair<std::string, std::vector<uint16_t>>> sorted = names;
     std::sort(sorted.begin(), sorted.end());
@@ -93,7 +96,8 @@ Catalog start(const std::vector<ArchiveStamp>& archives,
         archivesOf[n.first] = &n.second;
     }
     std::unordered_map<std::string, const FileEntry*> before;
-    if (old && old->maxHair == c.maxHair && old->maxCloth == c.maxCloth)
+    if (old && old->maxHair == c.maxHair && old->maxCloth == c.maxCloth && old->minSide == c.minSide &&
+        old->maxSide == c.maxSide && old->bodyColours == c.bodyColours)
         for (const FileEntry& f : old->files) before[f.name] = &f;
     // An archive as it was: its stamp at that place before, or (a palette's) anywhere among the old ones.
     const auto same = [&](const std::vector<uint16_t>& was, const std::vector<uint16_t>& now) {
@@ -273,6 +277,9 @@ std::string save(const Catalog& c) {
     o.u32(kVersion);
     o.u32(uint32_t(c.maxHair));
     o.u32(uint32_t(c.maxCloth));
+    o.u32(uint32_t(c.minSide));
+    o.u32(uint32_t(c.maxSide));
+    o.u8(c.bodyColours);
     o.u32(uint32_t(c.archives.size()));
     for (const ArchiveStamp& a : c.archives) {
         o.str(a.path);
@@ -317,6 +324,9 @@ bool load(const std::string& bytes, Catalog& out) {
     Catalog c;
     c.maxHair = int(int32_t(in.u32()));
     c.maxCloth = int(int32_t(in.u32()));
+    c.minSide = int(int32_t(in.u32()));
+    c.maxSide = int(int32_t(in.u32()));
+    c.bodyColours = in.u8() != 0;
     c.archives.resize(in.count(20));
     for (ArchiveStamp& a : c.archives) {
         a.path = in.str();

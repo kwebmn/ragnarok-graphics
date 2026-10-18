@@ -145,6 +145,11 @@ TEST(catalog_keeps_what_did_not_change) {
     g.archives[0].size = 101;  // uaro.grf changed: a.bmp alone
     g.build(&old, &again);
     CHECK_EQ(again.size(), size_t(1));
+    pack::Choice smaller;  // other sides of the world's textures: other pictures, every file again
+    smaller.minSide = 32;
+    std::vector<size_t> all;
+    catalog::start(Game().archives, Game().names, smaller, &old, all);
+    CHECK_EQ(all.size(), size_t(4));
     CHECK(fileOf(now, "data\\texture\\a.bmp")->pictures.size() == 1);
 }
 

@@ -66,6 +66,33 @@ bool LineReader::next(Message& out) {
     }
 }
 
+json::Value statusJson(const pack::Status& s) {
+    // the status file's own lines (pack::statusText), each a member
+    json::Value v = json::Value::object();
+    const std::string text = pack::statusText(s);
+    for (const std::string& line : linesOf(text)) {
+        const size_t eq = line.find('=');
+        if (eq == std::string::npos || line.compare(0, eq, "thread") == 0) continue;
+        v.set(line.substr(0, eq), line.substr(eq + 1));
+    }
+    json::Value threads = json::Value::array();
+    for (const std::string& t : s.threads) threads.push(t);
+    v.set("thread", threads);
+    return v;
+}
+
+bool statusOfJson(const json::Value& v, pack::Status& out) {
+    std::string text;
+    for (const auto& m : v.members()) {
+        if (m.first == "thread") {
+            for (const json::Value& t : m.second.items()) text += "thread=" + t.asString() + "\n";
+            continue;
+        }
+        text += m.first + "=" + m.second.asString() + "\n";
+    }
+    return pack::parseStatus(text, out);
+}
+
 std::string pickText(const Pick& p) {
     return "key=" + p.key + "\nkind=" + p.kind + "\nhow=" + p.how + "\nmap=" + p.map + "\npicture=" + p.picture +
            "\nx=" + std::to_string(p.x) + "\ny=" + std::to_string(p.y) + "\n";

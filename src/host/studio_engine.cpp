@@ -2,12 +2,16 @@
 
 #include <windows.h>
 
+#include <algorithm>
+#include <atomic>
 #include <cstdio>
 #include <deque>
 #include <memory>
 #include <vector>
 
 #include "core/ai/groups.hpp"
+#include "core/config.hpp"
+#include "host/pack_builder.hpp"
 #include "core/studio_link.hpp"
 #include "core/version.hpp"
 #include "win/gpu/renderer.hpp"
@@ -75,6 +79,8 @@ public:
         DWORD n = 0;
         if (!WriteFile(handle_, line.data(), DWORD(line.size()), &n, nullptr)) gone_ = true;
     }
+    bool stopAsked() const { return stop_ || gone_; }
+    void clearStop() { stop_ = false; }
     // The next request; false when the pipe broke (the studio is gone) and nothing is left.
     bool next(studio::Message& out) {
         AcquireSRWLockExclusive(&lock_);
@@ -101,6 +107,8 @@ private:
             lines.feed(buf, n);
             studio::Message m;
             while (lines.next(m)) {
+                if (m.op == "stop" || m.op == "quit") stop_ = true;  // heard in the middle of a build too
+                if (m.op == "stop") continue;
                 AcquireSRWLockExclusive(&lock_);
                 queue_.push_back(std::move(m));
                 WakeConditionVariable(&more_);
@@ -118,7 +126,25 @@ private:
     SRWLOCK lock_ = SRWLOCK_INIT;
     CONDITION_VARIABLE more_ = CONDITION_VARIABLE_INIT;
     std::deque<studio::Message> queue_;
-    bool gone_ = false;
+    std::atomic<bool> gone_{false}, stop_{false};
+};
+
+// 2.3 (N1): a build's status as the engine's progress replies to its request.
+class PipeSink : public BuildSink {
+public:
+    PipeSink(Pipe& pipe, int64_t id) : pipe_(pipe), id_(id) {}
+    void write(const pack::Status& s, bool now) override {
+        const ULONGLONG t = GetTickCount64();
+        if (!now && t - last_ < 500) return;
+        last_ = t;
+        pipe_.send(studio::Message{id_, "progress", studio::statusJson(s)});
+    }
+    bool stopAsked() override { return pipe_.stopAsked(); }
+
+private:
+    Pipe& pipe_;
+    int64_t id_;
+    ULONGLONG last_ = 0;
 };
 
 class Engine {
@@ -130,6 +156,7 @@ public:
             if (m.op == "quit") break;
             if (m.op == "hello") hello(m);
             else if (m.op == "enlarge") enlarge(m);
+            else if (m.op == "build") build(m);
             else if (m.op != "stop") fail(m, "no such request: " + m.op);
         }
     }
@@ -183,6 +210,39 @@ private:
         b.set("height", h * 4);
         b.set("ms", int64_t(GetTickCount64() - start));
         reply(m, "result", b);
+    }
+
+    // 2.3 (N1, N2): a texture pack build (host/pack_builder.hpp) - its status as progress, its catalog the studio's.
+    void build(const studio::Message& m) {
+        const json::Value& b = m.body;
+        PackArgs a;
+        a.mode = b["mode"].asString().empty() ? "build" : b["mode"].asString();
+        a.dir = dir_;
+        a.choice = pack::parseChoice(b["kinds"].asString());
+        a.ai = parseAiArgument(b["ai"].asString());
+        a.choice.minSide = std::min(a.ai.minSize, a.ai.maxSize);
+        a.choice.maxSide = std::max(a.ai.minSize, a.ai.maxSize);
+        a.quality = int(std::clamp<int64_t>(b["quality"].asInt(90), 1, 100));
+        a.fresh = b["fresh"].asBool();
+        a.map = b["map"].asString();
+        if (b.has("mapKinds")) {
+            a.mapGround = b["mapKinds"].asString().find("ground") != std::string::npos;
+            a.mapModels = b["mapKinds"].asString().find("models") != std::string::npos;
+        }
+        a.remake = b["remake"].asBool();
+        if (b["colours"].items().size() == 2) {
+            a.choice.maxHairColour = int(b["colours"][size_t(0)].asInt(8));
+            a.choice.maxClothColour = int(b["colours"][size_t(1)].asInt(77));
+        }
+        if (!b["catalog"].asString().empty() && !readFile(b["catalog"].asString(), a.catalogData))
+            a.catalogData.clear();
+        renderer_.reset();  // the build takes the card itself
+        pipe_.clearStop();
+        PipeSink sink(pipe_, m.id);
+        const int code = runPack(a, &sink);
+        json::Value r = json::Value::object();
+        r.set("code", code);
+        reply(m, "result", r);
     }
 
     std::string dir_;

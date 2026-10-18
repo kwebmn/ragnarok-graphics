@@ -50,7 +50,10 @@ struct Catalog {
     std::vector<ArchiveStamp> archives;
     std::vector<std::string> maps;
     std::vector<FileEntry> files;
+    // the choice it was made with (pack::Choice): what makes the same keys
     int maxHair = 8, maxCloth = 77;
+    int minSide = 16, maxSide = 512;
+    bool bodyColours = false;
 };
 
 // The files of the listing (each name with its archives, as GameFiles::archivesOf gives them) that have a part in the

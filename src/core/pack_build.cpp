@@ -422,6 +422,8 @@ std::string statusText(const Status& s) {
     t += "current=" + oneLine(s.current) + "\n";
     t += "message=" + oneLine(s.message) + "\n";
     t += "work=" + oneLine(s.work) + "\n";
+    t += "stage=" + oneLine(s.stage) + "\n";  // 2.3
+    for (const std::string& f : s.threads) t += "thread=" + oneLine(f) + "\n";
     return t;
 }
 
@@ -464,6 +466,10 @@ bool parseStatus(const std::string& text, Status& out) {
             s.pid = uint32_t(std::strtoul(v.c_str(), nullptr, 10));
         } else if (k == "current") {
             s.current = v;
+        } else if (k == "stage") {  // 2.3
+            s.stage = v;
+        } else if (k == "thread") {
+            s.threads.push_back(v);
         } else if (k == "message") {
             s.message = v;
         } else if (k == "work") {

@@ -5,9 +5,11 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
+#include <ctime>
 #include <deque>
 #include <exception>
 #include <map>
+#include <memory>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -17,6 +19,7 @@
 #include "core/ai/texture_cache.hpp"
 #include "core/map_textures.hpp"
 #include "core/near_picture.hpp"
+#include "core/texture_catalog.hpp"
 #include "core/texture_pack.hpp"
 #include "core/webp_image.hpp"
 #include "win/gpu/renderer.hpp"
@@ -67,17 +70,17 @@ std::vector<pack::Picture> picturesOf(pack::GameFiles& files, const std::string&
 }
 
 // The status file, replaced whole (the settings app never reads half of one); at most every half second unless now.
-class StatusFile {
+class StatusFile : public BuildSink {
 public:
     explicit StatusFile(std::string path) : path_(std::move(path)) { DeleteFileA((path_ + ".stop").c_str()); }
-    void write(const pack::Status& s, bool now = false) {
+    void write(const pack::Status& s, bool now) override {
         const ULONGLONG t = GetTickCount64();
         if (!now && t - last_ < 500) return;
         last_ = t;
         win::writeFileAtomic(path_, pack::statusText(s));
     }
     // The settings app's stop: its file, gone once seen. Looked for at most every 300 ms.
-    bool stopAsked() {
+    bool stopAsked() override {
         const ULONGLONG t = GetTickCount64();
         if (t - looked_ < 300) return false;
         looked_ = t;
@@ -238,7 +241,7 @@ struct ListWork {
     size_t first = 0, step = 1;
     std::atomic<uint32_t>* done = nullptr;
     std::atomic<bool>* stop = nullptr;
-    std::atomic<size_t>* current = nullptr;  // 2.2.5: the file a thread took last, for the status
+    std::atomic<size_t>* current = nullptr;  // 2.2.5: the file this thread reads (2.3: its own; past the end: none)
     std::vector<std::vector<Listed>>* out = nullptr;
 };
 
@@ -270,12 +273,37 @@ DWORD WINAPI listMain(void* arg) {
             }
         ++*w.done;
     }
+    w.current->store(w.list->size());
     return 0;
 }
 
+// 2.3 (N1): where a run's time went - a line in the log at its end.
+class Timeline {
+public:
+    void stage(const char* name) {
+        const ULONGLONG now = GetTickCount64();
+        if (!parts_.empty()) parts_.back().second = now - since_;
+        parts_.emplace_back(name, 0);
+        since_ = now;
+    }
+    std::string text() {
+        stage("");
+        std::string t;
+        for (const auto& p : parts_)
+            if (!p.first.empty())
+                t += (t.empty() ? "" : ", ") + p.first + " " + std::to_string((p.second + 500) / 1000) + " s";
+        parts_.pop_back();
+        return t;
+    }
+
+private:
+    std::vector<std::pair<std::string, ULONGLONG>> parts_;
+    ULONGLONG since_ = 0;
+};
+
 class Builder {
 public:
-    explicit Builder(const PackArgs& a) : a_(a), status_(a.status) {
+    Builder(const PackArgs& a, BuildSink& sink) : a_(a), status_(sink) {
         s_.pid = GetCurrentProcessId();
         s_.work = a.mode;  // 2.2.5
     }
@@ -299,9 +327,19 @@ private:
     bool checkpoint(Encoders* enc, bool last);
     int stopped();  // in the middle: the pack whole again, the status says so
 
+    // 2.3 (N1): a stage begins - in the status and the timeline
+    void stage(const char* name) {
+        s_.stage = name;
+        timeline_.stage(name);
+    }
+    // 2.3 (N2): the studio's catalog, when it is up to date with the archives and the choice, in place of the
+    // reading pass; false: the pass is read
+    bool listFromCatalog(std::vector<std::vector<Listed>>& out);
+
     const PackArgs& a_;
-    StatusFile status_;
+    BuildSink& status_;
     pack::Status s_;
+    Timeline timeline_;
     pack::GameFiles files_;
     std::vector<std::pair<std::string, pack::Source>> list_;
     pack::Writer writer_;
@@ -312,6 +350,7 @@ private:
 };
 
 bool Builder::listFiles() {
+    stage("archives");
     std::string error;
     if (!files_.open(a_.dir, error)) {
         fail("the game's files: " + error);
@@ -336,6 +375,49 @@ bool Builder::listFiles() {
         if (src.type != pack::Source::None) list_.emplace_back(n, src);
     }
     s_.filesTotal = uint32_t(list_.size());
+    return true;
+}
+
+bool Builder::listFromCatalog(std::vector<std::vector<Listed>>& out) {
+    if (a_.catalog.empty() && a_.catalogData.empty()) return false;
+    std::string bytes = a_.catalogData;
+    catalog::Catalog c;
+    if ((bytes.empty() && !win::readTextFile(a_.catalog, bytes)) || !catalog::load(bytes, c)) {
+        LOG_INFO("texture pack: no catalog of the studio's in %s: the game's files are read", a_.catalog.c_str());
+        return false;
+    }
+    // Up to date: the same archives as they are now, the same colours and sides.
+    const std::vector<std::string>& paths = files_.paths();
+    bool current = c.archives.size() == paths.size() && c.maxHair == a_.choice.maxHairColour &&
+                   c.maxCloth == a_.choice.maxClothColour && c.minSide == a_.choice.minSide &&
+                   c.maxSide == a_.choice.maxSide && c.bodyColours == a_.choice.bodyColours;
+    for (size_t i = 0; current && i < paths.size(); ++i) {
+        const std::string path = paths[i].find(':') != std::string::npos ? paths[i] : a_.dir + "\\" + paths[i];
+        uint64_t size = 0;
+        int64_t time = 0;
+        current = c.archives[i].path == paths[i] && win::fileStamp(path, size, time) && c.archives[i].size == size &&
+                  c.archives[i].time == time;
+    }
+    std::unordered_map<std::string, const catalog::FileEntry*> byName;
+    for (const catalog::FileEntry& f : c.files) byName[f.name] = &f;
+    for (size_t i = 0; current && i < list_.size(); ++i) current = byName.count(list_[i].first) != 0;
+    if (!current) {
+        LOG_INFO("texture pack: the studio's catalog is older than the game's archives: they are read");
+        return false;
+    }
+    out.assign(list_.size(), {});
+    for (size_t i = 0; i < list_.size(); ++i)
+        for (const catalog::PictureOf& p : byName.at(list_[i].first)->pictures) {
+            Listed l;
+            l.name = pack::pictureName(pack::Group(p.group), p.key);
+            l.group = ai::Group(p.aiGroup);
+            l.width = p.width;
+            l.height = p.height;
+            l.lowKeys = p.lowKeys;
+            out[i].push_back(std::move(l));
+        }
+    s_.filesDone = uint32_t(list_.size());
+    LOG_INFO("texture pack: the studio's catalog stands for the reading pass (%zu files)", list_.size());
     return true;
 }
 
@@ -364,7 +446,8 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
              static_cast<unsigned long>(si.dwNumberOfProcessors), static_cast<unsigned long long>(free >> 20));
     std::atomic<uint32_t> filesDone{0};
     std::atomic<bool> stop{false};
-    std::atomic<size_t> current{list_.size()};
+    std::vector<std::atomic<size_t>> current(threads);  // 2.3: each thread's file
+    for (std::atomic<size_t>& c : current) c = list_.size();
     std::vector<ListWork> work(threads);
     std::vector<HANDLE> handles;
     for (size_t t = 0; t < threads; ++t) {
@@ -376,7 +459,7 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
         w.step = threads;
         w.done = &filesDone;
         w.stop = &stop;
-        w.current = &current;
+        w.current = &current[t];
         w.out = &out;
         HANDLE h = CreateThread(nullptr, 0, listMain, &w, 0, nullptr);
         if (h) handles.push_back(h);
@@ -390,12 +473,18 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
     while (!handles.empty() &&
            WaitForMultipleObjects(DWORD(handles.size()), handles.data(), TRUE, 500) == WAIT_TIMEOUT) {
         s_.filesDone = filesDone.load();
-        const size_t at = current.load();  // 2.2.5: where the reading is (a head's colours took minutes unseen)
-        if (at < list_.size()) s_.current = utf8Of(list_[at].first);
-        status_.write(s_);
+        // 2.2.5: where the reading is (a head's colours took minutes unseen); 2.3: every thread's file
+        s_.threads.clear();
+        for (const std::atomic<size_t>& c : current) {
+            const size_t at = c.load();
+            s_.threads.push_back(at < list_.size() ? utf8Of(list_[at].first) : std::string());
+            if (at < list_.size()) s_.current = s_.threads.back();
+        }
+        status_.write(s_, false);
         if (status_.stopAsked()) stop = true;
     }
     s_.current.clear();
+    s_.threads.clear();
     for (HANDLE h : handles) CloseHandle(h);
     LOG_INFO("texture pack: the game's files read by %zu threads", handles.empty() ? size_t(1) : handles.size());
     return !stop;
@@ -516,6 +605,10 @@ bool Builder::checkpoint(Encoders* enc, bool last) {
         if (index.pictures.count(a.second)) index.aliases.insert(a);
     for (const auto& n : index_.alike)
         if (index.pictures.count(n.first)) index.alike.insert(n);
+    for (const auto& m : index_.made)  // 2.3: the studio's lines stay
+        if (index.pictures.count(m.first)) index.made.insert(m);
+    index.ownAlways = index_.ownAlways;
+    index.materials = index_.materials;
     std::string error;
     const std::string text = pack::indexText(index);
     const bool ok = last ? writer_.close(text, error) : writer_.checkpoint(text, error);
@@ -552,7 +645,8 @@ int Builder::drop() {
     old.close();
     s_.state = pack::Status::Reading;
     std::vector<std::vector<Listed>> found;
-    if (!listPictures(found)) {  // the pack not touched yet
+    stage("textures");
+    if (!listFromCatalog(found) && !listPictures(found)) {  // the pack not touched yet
         s_.state = pack::Status::Stopped;
         status_.write(s_, true);
         return 0;
@@ -597,12 +691,19 @@ int Builder::build() {
     // 1.6.4: the files read on every core but one, each thread with the archives open on its own; then what they
     // found taken in the files' order (the first file of a picture gives its kind, as one thread did it).
     std::vector<std::vector<Listed>> found;
-    if (!listPictures(found)) return stopped();
+    stage("textures");
+    if (!listFromCatalog(found) && !listPictures(found)) return stopped();  // 2.3: the studio's catalog first
     std::unordered_set<std::string> seen;
     for (size_t i = 0; i < found.size(); ++i) {
         bool some = false;
         for (const Listed& l : found[i]) {
             if (!seen.insert(l.name).second) continue;
+            pack::Group group = pack::Group::World;
+            std::string key;
+            if (pack::keyOfPicture(l.name, group, key) && index_.ownAlways.count(key)) {  // 2.3: the game's own
+                done.insert(l.name);  // never made
+                continue;
+            }
             pack::IndexEntry& entry = index_.pictures[l.name];
             entry.kind = list_[i].second.kind;
             // 1.6: its group, written for every picture; one another model made is made again when asked
@@ -654,6 +755,7 @@ int Builder::build() {
     GetSystemInfo(&si);
     const int threads = std::clamp(int(si.dwNumberOfProcessors) - 1, 1, 16);
     Encoders enc(writer_, a_.quality, threads);
+    stage("making");
     s_.state = pack::Status::Building;
     s_.filesDone = 0;
     s_.filesTotal = uint32_t(todo.size());
@@ -686,6 +788,13 @@ int Builder::build() {
             pack::IndexEntry& made = index_.pictures[name];  // 1.6: the model that made it
             made.model = a_.ai.modelForPicture(g, p.width, p.height);  // 1.6.3
             made.group = ai::groupName(g);
+            // 2.3: what it was made of, when and how - the studio shows it beside the picture
+            const std::vector<int> from = files_.archivesOf(list_[i].first);
+            index_.made[name] = pack::Provenance{list_[i].first, from.empty() ? "" : files_.paths()[size_t(from[0])],
+                                                 int64_t(std::time(nullptr)), made.model, made.model + " x4"};
+            if (p.contentWidth)  // 0.49: a .jpg's likeness (2.3: here too - the catalog's keys have none)
+                index_.alike[name] = pack::likenessText(
+                    pack::likenessOf(p.argb.data(), p.width, p.height, p.contentWidth, p.contentHeight));
             m.width = p.width * 4;
             m.height = p.height * 4;
             m.argb = std::move(big);
@@ -699,7 +808,7 @@ int Builder::build() {
                 if (!checkpoint(&enc, false)) return fail("the pack could not be written");
                 saved = GetTickCount64();
             }
-            status_.write(s_);
+            status_.write(s_, false);
             if (status_.stopAsked()) {
                 stop = true;
                 break;
@@ -714,6 +823,7 @@ int Builder::build() {
             return fail(encError);
         }
     }
+    stage("writing");
     enc.finish();  // every picture pushed in the pack
     if (stop) return stopped();
     if (!checkpoint(nullptr, true)) return fail("the pack could not be written");
@@ -724,19 +834,27 @@ int Builder::build() {
     const std::string missed = failed ? ", " + std::to_string(failed) + " the graphics card did not make" : "";
     LOG_INFO("texture pack: done - %u pictures made, %u in the pack, %.1f MB%s", s_.made, s_.inPack,
              double(s_.bytes) / 1048576.0, missed.c_str());
+    LOG_INFO("texture pack: time - %s", timeline_.text().c_str());  // 2.3 (N1)
     return 0;
 }
 
 }  // namespace
 
-int runPack(const PackArgs& args) {
+int runPack(const PackArgs& args, BuildSink* sink) {
     PackArgs a = args;
     if (a.out.empty()) a.out = a.dir + "\\uaro-textures.zip";
     if (a.status.empty()) a.status = a.dir + "\\uaro-graphics\\pack-status.txt";
     if (a.mode == "preview") {  // 1.6: writes no pack - neither mutex; its pictures into uaro-graphics\preview
         a.out = a.dir + "\\uaro-graphics\\preview";
         if (args.status.empty()) a.status = a.out + "-status.txt";
-        Builder b(a);
+    }
+    std::unique_ptr<StatusFile> file;  // the status file, unless the studio's pipe hears how it goes (2.3)
+    if (!sink) {
+        file = std::make_unique<StatusFile>(a.status);
+        sink = file.get();
+    }
+    if (a.mode == "preview") {
+        Builder b(a, *sink);
         return b.run();
     }
     // One builder at a time: a second would write the same pack.
@@ -754,13 +872,13 @@ int runPack(const PackArgs& args) {
         s.state = pack::Status::Failed;
         s.message = "a game is writing the pack (making textures while playing): close the game first";
         s.pid = GetCurrentProcessId();
-        StatusFile(a.status).write(s, true);
+        sink->write(s, true);
         if (writer) CloseHandle(writer);
         if (one) CloseHandle(one);
         return 4;
     }
     LOG_INFO("texture pack: %s, kinds %s, quality %d", a.mode.c_str(), pack::choiceText(a.choice).c_str(), a.quality);
-    Builder b(a);
+    Builder b(a, *sink);
     const int code = b.run();
     ReleaseMutex(writer);
     CloseHandle(writer);

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/json.hpp"
+#include "core/pack_build.hpp"
 
 namespace uagfx::studio {
 
@@ -30,6 +31,10 @@ private:
     std::string buffer_;
     size_t skipped_ = 0;
 };
+
+// A build's status (pack::Status) in the engine's progress replies.
+json::Value statusJson(const pack::Status& s);
+bool statusOfJson(const json::Value& v, pack::Status& out);  // false: no state in it
 
 // The link with a running game: files in the studio's folder (%LOCALAPPDATA%\uaroGraphics\studio\link) and two named
 // events - the driver's part is a file and an event (ddraw.dll imports kernel32, user32, gdi32 and msvcrt alone).

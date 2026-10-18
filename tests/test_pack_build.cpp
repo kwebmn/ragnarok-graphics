@@ -584,3 +584,15 @@ TEST(game_files_open_like_shares_and_reads) {
     std::remove((dir + "/DATA.INI").c_str());
     rmdir(dir.c_str());
 }
+
+TEST(pack_status_names_its_stage_and_threads) {
+    // 2.3 (N1): where a build is - its stage and every reading thread's file - not only "files N of M"
+    pack::Status s;
+    s.state = pack::Status::Reading;
+    s.stage = "colours";
+    s.threads = {"data\\sprite\\a.spr", "", "data\\texture\\\xC0\xAF\\b.bmp"};
+    pack::Status r;
+    CHECK(pack::parseStatus(pack::statusText(s), r));
+    CHECK(r.stage == "colours" && r.threads == s.threads);
+    CHECK(pack::parseStatus("state=reading\nfiles=1/2\n", r) && r.stage.empty() && r.threads.empty());  // 2.2.5's
+}

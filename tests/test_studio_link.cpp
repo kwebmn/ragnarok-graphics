@@ -89,3 +89,19 @@ TEST(raw_round_trips_and_refuses_lies) {
     CHECK(!studio::parseRaw(studio::rawOf(3, 2, argb).substr(0, 20), w, h, back));
     CHECK(studio::rawOf(3, 2, {1, 2}).empty());  // fewer pixels than the size: none
 }
+
+TEST(link_carries_a_builds_status) {
+    // 2.3 (N1): a build the engine runs tells the studio how it goes - its stage, every thread's file
+    pack::Status s;
+    s.state = pack::Status::Building;
+    s.filesDone = 3, s.filesTotal = 9, s.made = 120, s.toMake = 4000, s.inPack = 290000, s.bytes = 1ull << 33;
+    s.rate = 12.5, s.eta = 300, s.pid = 77;
+    s.current = "data\\texture\\\xC0\xAF.bmp";
+    s.work = "build";
+    s.stage = "making";
+    s.threads = {"a.spr", ""};
+    pack::Status r;
+    CHECK(studio::statusOfJson(studio::statusJson(s), r));
+    CHECK(pack::statusText(r) == pack::statusText(s));
+    CHECK(!studio::statusOfJson(json::Value::object(), r));  // no state
+}

@@ -102,6 +102,10 @@ struct Status {
     std::string current;                     // the file it makes pictures of (UTF-8)
     std::string message;                     // why it failed
     std::string work;                        // 2.2.5: "build" or "drop" (made counts those taken out); "" older
+    // 2.3 (uaRO Studio's N1): the stage - archives, textures, colours, making, writing ("" older) - and each reading
+    // thread's file now ("" between files)
+    std::string stage;
+    std::vector<std::string> threads;
 };
 std::string statusText(const Status& s);
 bool parseStatus(const std::string& text, Status& out);  // false: no state in it
