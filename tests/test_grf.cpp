@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -137,4 +138,28 @@ TEST(grf_copy_keeps_the_chosen_entries_and_drops_old_tables) {
     CHECK(!b.open(static_cast<std::FILE*>(nullptr), false, error));
     std::remove(path.c_str());
     std::remove(copy.c_str());
+}
+
+TEST(grf_open_like_reads_without_its_own_table) {
+    // 2.3: a second reader of the same archive shares its table (a reading thread each, one table read)
+    const std::string path = tempPath();
+    const char* name = path.c_str();
+    std::string error;
+    {
+        Archive a;
+        CHECK(a.open(name, true, error));
+        CHECK(a.append({{"data\\a.txt", std::vector<uint8_t>{'h', 'i'}}}, error));
+    }
+    auto first = std::make_unique<Archive>();
+    CHECK(first->open(name, false, error));
+    Archive second;
+    CHECK(second.openLike(*first, error));
+    first.reset();
+    std::vector<uint8_t> out;
+    CHECK(second.read("data\\a.txt", out, error) && out == (std::vector<uint8_t>{'h', 'i'}));
+    CHECK_EQ(second.count(), size_t(1));
+    Archive closed;
+    CHECK(!second.openLike(closed, error));  // an archive not open: false, and the second is closed
+    CHECK(!second.isOpen());
+    std::remove(name);
 }

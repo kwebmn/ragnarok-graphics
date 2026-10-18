@@ -30,9 +30,16 @@ public:
     ~GameFiles();
     // dir: the game's folder (its DATA.INI). false when no archive opens.
     bool open(const std::string& dir, std::string& error);
-    const std::vector<std::string>& names() const { return names_; }  // lower case, backslashes, each once, sorted
+    // 2.3 (N3): the archives `other` has open, for another thread - their tables and the names shared, a file handle
+    // of its own for each GRF. false when other has none open.
+    bool openLike(const GameFiles& other, std::string& error);
+    const std::vector<std::string>& names() const;  // lower case, backslashes, each once, sorted
     // 2.2.5: the maps among the archives' files (data\<map>.rsw), sorted; their .gnd, .rsw and .rsm read too
-    const std::vector<std::string>& maps() const { return maps_; }
+    const std::vector<std::string>& maps() const;
+    // 2.3: DATA.INI's archives that opened, in its order; the archives holding a file - the one that gives it first,
+    // then those it shadows (empty: none)
+    const std::vector<std::string>& paths() const;
+    std::vector<int> archivesOf(const std::string& name) const;
     bool read(const std::string& name, std::vector<uint8_t>& out);
     std::string report() const;  // the archives and their files: for the log
 
@@ -41,15 +48,20 @@ private:
         int archive = 0;
         std::string stored;  // its name in a GRF (its own case)
     };
-    std::vector<std::unique_ptr<grf::Archive>> grfs_;
-    std::vector<std::unique_ptr<zip::Index>> zips_;
-    std::vector<std::pair<bool, int>> order_;  // per archive: a zip?, its index in grfs_ or zips_
-    std::vector<std::string> paths_;
-    std::vector<std::string> failed_;  // 1.6.5: DATA.INI's archives that did not open, and why
-    std::vector<size_t> counts_;
-    std::unordered_map<std::string, Place> where_;
-    std::vector<std::string> names_;
-    std::vector<std::string> maps_;
+    // What every reader of the same archives shares (openLike): read once, never changed after open().
+    struct Shared {
+        std::vector<std::unique_ptr<grf::Archive>> grfs;  // the first reader's; others open them like these
+        std::vector<std::shared_ptr<zip::Index>> zips;     // a ZIP's index holds no file: shared as it is
+        std::vector<std::pair<bool, int>> order;           // per archive: a zip?, its index in grfs or zips
+        std::vector<std::string> paths;
+        std::vector<std::string> failed;  // 1.6.5: DATA.INI's archives that did not open, and why
+        std::vector<size_t> counts;
+        std::unordered_map<std::string, Place> where;
+        std::unordered_map<std::string, std::vector<int>> shadowed;  // 2.3: a name -> the other archives with it
+        std::vector<std::string> names, maps;
+    };
+    std::shared_ptr<Shared> shared_;
+    std::vector<std::unique_ptr<grf::Archive>> grfs_;  // openLike's own handles (open(): empty, shared_'s used)
 };
 
 // What the builder makes (the settings app's choices) and the sides the driver's AI takes.

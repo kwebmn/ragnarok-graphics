@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <map>
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -541,4 +542,45 @@ TEST(pack_build_takes_the_games_jpg_pictures) {
     CHECK(p.size() == 1 && p[0].group == pack::Group::World && p[0].width == 32 && p[0].contentWidth == 32);
     c.world = false;
     CHECK(pack::sourceOf("data\\texture\\water\\water000.jpg", c).type == pack::Source::None);
+}
+
+TEST(game_files_name_every_archive_of_a_file) {
+    // 2.3, the studio's catalog: the archive that gives a file and those it shadows (the first wins without a word)
+    const std::string dir = tempDir();
+    grfWith(dir + "/uaro.grf", {{"data\\texture\\a.bmp", "new"}});
+    grfWith(dir + "/data.grf", {{"DATA\\TEXTURE\\A.BMP", "old"}, {"data\\texture\\b.bmp", "b"}});
+    writeFile(dir + "/DATA.INI", "[Data]\n0=uaro.grf\n1=data.grf\n");
+    pack::GameFiles files;
+    std::string error;
+    CHECK(files.open(dir, error));
+    CHECK(files.paths() == (std::vector<std::string>{"uaro.grf", "data.grf"}));
+    CHECK(files.archivesOf("data\\texture\\a.bmp") == (std::vector<int>{0, 1}));
+    CHECK(files.archivesOf("data\\texture\\b.bmp") == std::vector<int>{1});
+    CHECK(files.archivesOf("data\\texture\\c.bmp").empty());
+    std::remove((dir + "/uaro.grf").c_str());
+    std::remove((dir + "/data.grf").c_str());
+    std::remove((dir + "/DATA.INI").c_str());
+    rmdir(dir.c_str());
+}
+
+TEST(game_files_open_like_shares_and_reads) {
+    // 2.3 (N3): a reading thread's files - the archives' tables shared with the first reader, its own file handles
+    const std::string dir = tempDir();
+    grfWith(dir + "/data.grf", {{"data\\texture\\a.bmp", "aaa"}, {"data\\texture\\b.bmp", "bb"}});
+    writeFile(dir + "/DATA.INI", "[Data]\n0=data.grf\n");
+    std::string error;
+    auto first = std::make_unique<pack::GameFiles>();
+    CHECK(first->open(dir, error));
+    pack::GameFiles second;
+    CHECK(second.openLike(*first, error));
+    CHECK(second.names() == first->names());
+    first.reset();  // the first reader gone: the second reads on
+    std::vector<uint8_t> out;
+    CHECK(second.read("data\\texture\\b.bmp", out) && std::string(out.begin(), out.end()) == "bb");
+    CHECK(second.archivesOf("data\\texture\\a.bmp") == std::vector<int>{0});
+    pack::GameFiles none, empty;
+    CHECK(!none.openLike(empty, error));  // nothing open: false
+    std::remove((dir + "/data.grf").c_str());
+    std::remove((dir + "/DATA.INI").c_str());
+    rmdir(dir.c_str());
 }

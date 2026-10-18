@@ -234,7 +234,7 @@ struct Listed {
 struct ListWork {
     const std::vector<std::pair<std::string, pack::Source>>* list = nullptr;
     const pack::Choice* choice = nullptr;
-    std::string dir;
+    const pack::GameFiles* shared = nullptr;  // 2.3: the builder's - its archives' tables, read once
     size_t first = 0, step = 1;
     std::atomic<uint32_t>* done = nullptr;
     std::atomic<bool>* stop = nullptr;
@@ -244,9 +244,9 @@ struct ListWork {
 
 DWORD WINAPI listMain(void* arg) {
     ListWork& w = *static_cast<ListWork*>(arg);
-    pack::GameFiles files;  // its own: an archive is read by one thread at a time
+    pack::GameFiles files;  // its own handles: an archive is read by one thread at a time; 2.3: the tables shared
     std::string error;
-    if (!files.open(w.dir, error)) return 1;
+    if (!files.openLike(*w.shared, error)) return 1;
     std::vector<uint8_t> data;
     for (size_t i = w.first; i < w.list->size() && !*w.stop; i += w.step) {
         const auto& f = (*w.list)[i];
@@ -352,8 +352,9 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
     out.assign(list_.size(), {});
     SYSTEM_INFO si{};
     GetSystemInfo(&si);
-    // 1.6.6: every core but one, as far as the memory goes - each thread holds the archives' directories of its own
-    // (about 100 MB with Palettes.grf's colours); 1.6.4 stopped at 8.
+    // 1.6.6: every core but one, as far as the memory goes - each thread held the archives' directories of its own
+    // (about 100 MB with Palettes.grf's colours; 2.3: shared, the bound kept for the pictures a thread decodes);
+    // 1.6.4 stopped at 8.
     MEMORYSTATUSEX mem{};
     mem.dwLength = sizeof mem;
     const uint64_t free = GlobalMemoryStatusEx(&mem) ? mem.ullAvailPhys : (uint64_t(2) << 30);
@@ -370,7 +371,7 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
         ListWork& w = work[t];
         w.list = &list_;
         w.choice = &a_.choice;
-        w.dir = a_.dir;
+        w.shared = &files_;
         w.first = t;
         w.step = threads;
         w.done = &filesDone;
