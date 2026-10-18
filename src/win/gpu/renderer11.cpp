@@ -154,6 +154,13 @@ Renderer11::~Renderer11() {
     drop(bloomApplyPs_);
     dropTarget(bloom_[0]);
     dropTarget(bloom_[1]);
+    drop(stepsPs_);
+    drop(stepsDataSrv_);
+    drop(stepsData_);
+    drop(smokePs_);
+    drop(smokeGlowPs_);
+    drop(lavaPs_);
+    drop(lavaGlowPs_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -347,7 +354,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[37] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[42] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -375,7 +382,12 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"dust_ps", ps, shaderSource(), {}, true},
                    {"bloom_down_ps", ps, shaderSource(), {}, true},  // 2.5.2: the bloom, filmic, grain, fade
                    {"dof_blur_ps", ps, shaderSource(), {}, true},
-                   {"bloom_apply_ps", ps, shaderSource(), {}, true}};
+                   {"bloom_apply_ps", ps, shaderSource(), {}, true},
+                   {"steps_ps", ps, shaderSource(), {}, true},  // 2.5.2: the footprints, the smoke, the lava
+                   {"smoke_ps", ps, shaderSource(), {}, true},
+                   {"smoke_glow_ps", ps, shaderSource(), {}, true},
+                   {"lava_ps", ps, shaderSource(), {}, true},
+                   {"lava_glow_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -493,6 +505,11 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[34].code.empty() || !psOf(wants[34], bloomDownPs_)) bloomDownPs_ = nullptr;
     if (wants[35].code.empty() || !psOf(wants[35], dofBlurPs_)) dofBlurPs_ = nullptr;
     if (wants[36].code.empty() || !psOf(wants[36], bloomApplyPs_)) bloomApplyPs_ = nullptr;
+    if (wants[37].code.empty() || !psOf(wants[37], stepsPs_)) stepsPs_ = nullptr;
+    if (wants[38].code.empty() || !psOf(wants[38], smokePs_)) smokePs_ = nullptr;
+    if (wants[39].code.empty() || !psOf(wants[39], smokeGlowPs_)) smokeGlowPs_ = nullptr;
+    if (wants[40].code.empty() || !psOf(wants[40], lavaPs_)) lavaPs_ = nullptr;
+    if (wants[41].code.empty() || !psOf(wants[41], lavaGlowPs_)) lavaGlowPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1025,9 +1042,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
-    if (s.ui && worldDrawn_ &&
-        (!nightDone_ || !lightDone_ || !hazeDone_ || !skyDone_ || !bloomDone_ || !gradeDone_ || !weatherDone_))
+    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !hazeDone_ || !skyDone_ ||
+                                !bloomDone_ || !gradeDone_ || !weatherDone_))
         flushBatch();
+    if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
     if (s.ui && worldDrawn_ && !hazeDone_) applyHaze();  // 2.5: far off and over the ground, before the colours
@@ -1042,6 +1060,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura);  // 1.25
     // 2.5.2: a torch's layers - the glow and (torch_flame) the flame drawn anew once the world is (takeTorch)
     if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch && takeTorch(rec, d)) return;
+    // 2.5.2: a character's round shadow - its feet followed for the footprints and the ripples (as draw.cpp)
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && (stepKind() || ripplesWanted())) noteFoot(rec, d);
     // 2.5.1: the fire of skills (as draw.cpp): an added picture that looks like fire, or one that lights in its own
     // colour - not the maps' objects (their own)
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && fireWanted() && d.texture[0]) {
@@ -1197,8 +1217,59 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         const living::Place place = living::placeOf(map_, outdoors(map_), false);
         c.twin[3] = float((effects_.fish && !place.cave ? 1 : 0) + (effects_.swamp && place.swamp ? 2 : 0) +
                           (effects_.shoreFoam ? 4 : 0));
+        if (ripplesWanted()) {  // 2.5.2 (draw.cpp 0.94): the three newest steps (x, z, age), one in each free vector
+            float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};
+            int n = 0;
+            const float now = waterTime();
+            const std::deque<footsteps::Step>& steps = footTracker_.steps();
+            for (auto it = steps.rbegin(); it != steps.rend() && n < 3; ++it) {
+                const float age = now - it->born;
+                if (age < 0.0f || age > kRippleLife) continue;
+                slot[n][0] = it->x;
+                slot[n][1] = it->z;
+                slot[n][2] = age;
+                ++n;
+            }
+            c.twin[2] = float(n);
+        }
         if (!waterCells_++) LOG_INFO("water: the map's water found, drawn anew (Direct3D 11)");
     }
+    // 2.5.2: a puff of the chimneys' smoke (smoke_ps, draw.cpp 0.24) and a cell of lava (lava_ps, 0.31) by their own
+    // shaders: the camera backwards, the time, the density or the brightness; the lava lights around it
+    bool smoke = false, lava = false;
+    if (!s.ui && !water && smokeWanted() && d.vertexCount == 4 && !objectTextures_.empty() &&
+        objectTextures_.of(d.texture[0]) == objects::Kind::Smoke)
+        smoke = d.vertexOffset + 4 * stride <= rec.vertexBytes().size();
+    if (!s.ui && !water && !smoke && lavaWanted() && d.fvf == d3d7::FVF_TL1 && d.vertexCount == 4 && s.blend &&
+        s.srcBlend == d3d7::BLEND_SRCALPHA && s.dstBlend == d3d7::BLEND_INVSRCALPHA && lavaMap()) {
+        lava = d.vertexOffset + 4 * stride <= rec.vertexBytes().size() &&
+               water::isLavaQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
+                                 d.primitive == d3d7::PT_TRIANGLESTRIP);
+        if (lava) noteLava(rec, d);
+        if (lava && !lavaLogged_) LOG_INFO("lava: %s's drawn as living lava (Direct3D 11)", map_.c_str());
+        lavaLogged_ = lavaLogged_ || lava;
+    }
+    if (smoke || lava) {
+        static const float kSame[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};  // the camera unknown: the view itself
+        std::memcpy(c.reproject, cameraValid_ ? viewToWorld_ : kSame, sizeof c.reproject);
+        const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        c.twin[3] = waterTime();
+    }
+    if (smoke) {  // its depth (the quad's), the density
+        float rhw = 0.0f;
+        for (size_t k = 0; k < 4; ++k) {
+            float w = 0.0f;
+            std::memcpy(&w, rec.vertexBytes().data() + d.vertexOffset + k * stride + 12, sizeof w);
+            rhw += w * 0.25f;
+        }
+        c.twin[0] = rhw > 0.0f ? 1.0f / rhw : 1.0f;
+        c.footprint = float(std::clamp(effects_.smokeDensity, 0, 200)) / 100.0f;
+        if (!smokeLogged_) LOG_INFO("smoke: the chimneys' smoke drawn anew (Direct3D 11)");
+        smokeLogged_ = true;
+    }
+    if (lava) c.footprint = float(std::clamp(effects_.lavaBrightness, 0, 200)) / 100.0f;
     // 0.67, soft particles (as draw.cpp): an effect facing the screen fades where it goes into the ground; the
     // depth read while it is tested only.
     const bool adds = s.blend && s.dstBlend == d3d7::BLEND_ONE;
@@ -1208,7 +1279,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (toGlow) glowDrawn_ = true;
     const bool effectDraw = adds || d.effect == uint8_t(effect_exe::Kind::Skill) ||
                             d.effect == uint8_t(effect_exe::Kind::Portal);
-    const bool soft = !water && !s.ui && effects_.softParticles && d.vertexCount == 4 && s.blend && s.zEnable &&
+    const bool soft = !water && !smoke && !lava && !s.ui && effects_.softParticles && d.vertexCount == 4 && s.blend &&
+                      s.zEnable &&
                       !s.zWrite && effectDraw && s.srcBlend != d3d7::BLEND_ZERO &&
                       s.srcBlend != d3d7::BLEND_DESTCOLOR &&
                       ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount) &&
@@ -1223,7 +1295,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 1.14, the materials (as draw.cpp): a draw of the ground or a model (it writes depth, not a sprite, not leaves,
     // not an effect) - its texture's material made first (materials11.cpp), then read with it (t2).
     ID3D11ShaderResourceView* mat = nullptr;
-    if (materialsWanted() && !s.ui && !water && !soft && !adds && !twin && !d.twin && s.zWrite && t[0] != &white_ &&
+    if (materialsWanted() && !s.ui && !water && !smoke && !lava && !soft && !adds && !twin && !d.twin && s.zWrite &&
+        t[0] != &white_ &&
         !t[0]->leafy && c.uiMode == 0 &&
         !(d.vertexCount == 4 &&
           ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount))) {
@@ -1250,10 +1323,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
     is.vs = water ? waterVs_ : drawVs_;
     // 2.5: a draw whose constants carry none of the world's extras takes the lean shader (as draw.cpp)
-    const bool lean = !water &&
+    const bool lean = !water && !smoke && !lava &&
                       (c.stage1[1] & (1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
                       (c.stage0[1] & (1u << 26 | 1u << 28)) == 0 && (c.alphaTest & 1u << 20) == 0;
     is.ps = water    ? (toGlow ? waterGlowPs_ : waterPs_)
+            : smoke  ? (toGlow ? smokeGlowPs_ : smokePs_)  // 2.5.2
+            : lava   ? (toGlow ? lavaGlowPs_ : lavaPs_)
             : toGlow ? (lean && drawGlowLeanPs_ ? drawGlowLeanPs_ : drawGlowPs_)
                      : lean && drawLeanPs_ ? drawLeanPs_ : drawPs_;
     is.primitive = d.primitive;
@@ -1638,6 +1713,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     const auto tx = [this](int x) { return float(double(x) * target_.width / gameWidth_); };
     const auto ty = [this](int y) { return float(double(y) * target_.height / gameHeight_); };
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
+    if (worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2
     if (worldDrawn_ && !nightDone_) applyNight();  // 0.63
     if (worldDrawn_ && !lightDone_) applyTorchLight();  // 0.61
     if (worldDrawn_ && !hazeDone_) applyHaze();  // 2.5
@@ -1657,7 +1733,11 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     fireSparks_.clear();
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
     hazeDone_ = skyDone_ = weatherDone_ = false;  // 2.5
-    bloomDone_ = false;  // 2.5.2
+    bloomDone_ = stepsDone_ = false;  // 2.5.2
+    if (!frameFeet_.empty()) {  // 2.5.2: this frame's feet (as Direct3D 12's newPicture)
+        footTracker_.update(frameFeet_, waterTime(), stepLife());
+        frameFeet_.clear();
+    }
     waterCopied_ = waterReady_ = false;  // 0.99
     materialsMade_ = 0;  // 1.14
     flames_.clear();
@@ -1712,7 +1792,8 @@ void Renderer11::applyGrade() {
 
 // A pass over the world from a copy of it (scene_, t2) into it, RGB only: the colours (0.59), the night (0.63).
 void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, int copy, int blend,
-                           ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t0) {
+                           ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t0,
+                           ID3D11ShaderResourceView* t1) {
     if (copy == 1) {
         if (scene_.width != target_.width || scene_.height != target_.height) {
             dropTarget(scene_);
@@ -1746,6 +1827,7 @@ void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, int copy, 
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
     passSamplers();
     if (t0) ctx_->PSSetShaderResources(0, 1, &t0);            // tex0 : register(t0) - a mask of its own
+    if (t1) ctx_->PSSetShaderResources(1, 1, &t1);            // tex1 : register(t1) - a list of its own
     if (copy != 0) ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
     if (depth) ctx_->PSSetShaderResources(3, 1, &depth);     // sceneDepth : register(t3)
     ctx_->Draw(3, 0);
@@ -1791,6 +1873,109 @@ void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Const
     ctx_->PSSetShaderResources(0, 4, views);
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
+}
+
+// 2.5.2 (actor_shadows.cpp noteFoot): a character's round shadow - its middle in the world, the feet this frame
+void Renderer11::noteFoot(const FrameRecord& rec, const DrawCmd& d) {
+    if (!cameraValid_ || d.vertexCount != 4 || frameFeet_.size() >= 256) return;
+    const size_t stride = FrameRecord::stride(d.fvf);
+    if (d.vertexOffset + 4 * stride > rec.vertexBytes().size()) return;
+    const uint8_t* q = rec.vertexBytes().data() + d.vertexOffset;
+    float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f, rhw = 0.0f;
+    for (int i = 0; i < 4; ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, q + size_t(i) * stride, sizeof xyzw);
+        x0 = std::min(x0, xyzw[0]);
+        x1 = std::max(x1, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3] * 0.25f;
+    }
+    if (rhw <= 0.0f) return;
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float* m = viewToWorld_;
+    const float vz = 1.0f / rhw, vx = ((x0 + x1) * 0.5f - proj.cx) * vz / proj.f0,
+                vy = ((y0 + y1) * 0.5f - proj.cy) * vz / proj.f1;
+    frameFeet_.push_back(map::Point{vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[1] + vy * m[4] + vz * m[7] + m[10],
+                                    vx * m[2] + vy * m[5] + vz * m[8] + m[11]});
+}
+
+// 2.5.2 (torches.cpp noteLava): a cell of lava - its middle in the view, for the light it gives
+void Renderer11::noteLava(const FrameRecord& rec, const DrawCmd& d) {
+    if (lavaCells_.size() >= 4096) return;
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+    FireSpark11 s{};
+    float rhw = 0.0f;
+    for (uint32_t i = 0; i < 4; ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, rec.vertexBytes().data() + d.vertexOffset + size_t(i) * stride, sizeof xyzw);
+        s.gameX += xyzw[0] * 0.25f;
+        s.gameY += xyzw[1] * 0.25f;
+        rhw += xyzw[3] * 0.25f;
+    }
+    if (rhw <= 0.0f) return;
+    const float vz = 1.0f / rhw;
+    s.view[0] = (s.gameX - p.cx) * vz / p.f0;
+    s.view[1] = (s.gameY - p.cy) * vz / p.f1;
+    s.view[2] = vz;
+    s.strength = 1.0f;
+    lavaCells_.push_back(s);
+}
+
+// 2.5.2: as Direct3D 12's applySteps (ao.cpp) - the steps' list (steps_ps's t1: two texels a step, its place and
+// way, then its age) over the ground, blended by its alpha.
+void Renderer11::applySteps() {
+    EffectSpan span(*this, kTimeSteps11);
+    stepsDone_ = true;
+    const int kind = stepKind();
+    const std::deque<footsteps::Step>& steps = footTracker_.steps();
+    if (!kind || steps.empty() || !cameraValid_ || !target_.texture || !depthViews()) return;
+    if (!stepsData_) {
+        D3D11_TEXTURE2D_DESC d{};
+        d.Width = UINT(footsteps::Tracker::kMax * 2);
+        d.Height = 1;
+        d.MipLevels = d.ArraySize = 1;
+        d.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        d.SampleDesc.Count = 1;
+        d.Usage = D3D11_USAGE_DEFAULT;
+        d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(device_->CreateTexture2D(&d, nullptr, &stepsData_)) ||
+            FAILED(device_->CreateShaderResourceView(stepsData_, nullptr, &stepsDataSrv_))) {
+            drop(stepsData_);
+            LOG_ERROR("footprints: no memory for their list (Direct3D 11): none");
+            drop(stepsPs_);  // not tried again
+            return;
+        }
+    }
+    const float now = waterTime(), life = stepLife();
+    float data[footsteps::Tracker::kMax * 2][4] = {};
+    size_t n = 0;
+    for (const footsteps::Step& s : steps) {
+        if (n >= footsteps::Tracker::kMax) break;
+        data[2 * n][0] = s.x;
+        data[2 * n][1] = s.y;
+        data[2 * n][2] = s.z;
+        data[2 * n][3] = s.angle;
+        data[2 * n + 1][0] = std::clamp((now - s.born) / life, 0.0f, 1.0f);
+        ++n;
+    }
+    ctx_->UpdateSubresource(stepsData_, 0, nullptr, data, UINT(sizeof data), 0);
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    c.footprint = float(n);
+    c.twin[0] = float(kind);
+    if (!stepsLogged_)
+        LOG_INFO("footprints: %s on %s (Direct3D 11)", kind == 1 ? "in the snow" : kind == 2 ? "in the sand" : "dust",
+                 map_.c_str());
+    stepsLogged_ = true;
+    worldPass(stepsPs_, c, 0, 1, depthSrv_, nullptr, stepsDataSrv_);
 }
 
 float Renderer11::mapFadeNow() {
@@ -2152,7 +2337,8 @@ void Renderer11::timeFrame() {
     if (!recentSince_) recentSince_ = now;
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
-                                                             "haze", "sky", "weather", "ao", "clouds", "bloom"};
+                                                             "haze", "sky", "weather", "ao", "clouds", "bloom",
+                                                             "steps"};
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
@@ -2228,7 +2414,7 @@ void Renderer11::logGpu(ULONGLONG now) {
         // 0.89: the effects one by one, as Direct3D 12's log has them
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
                                                             "colour", "haze", "sky", "weather", "soft shadows",
-                                                            "clouds", "bloom"};
+                                                            "clouds", "bloom", "footprints"};
         std::string effects;
         for (int e = 0; e < kEffectTimes11; ++e) {
             if (effectMs_[e] <= 0.0) continue;

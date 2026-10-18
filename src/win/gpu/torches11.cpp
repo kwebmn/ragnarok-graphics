@@ -238,7 +238,10 @@ void Renderer11::applyTorchLight() {
     flames.swap(flames_);
     std::vector<FireSpark11> sparks;
     sparks.swap(fireSparks_);
-    if ((!torches && !lampsOn && !hidden && !fire && !glows && !mapFlies && !(flamesWanted() && !flames.empty())) ||
+    std::vector<FireSpark11> lavaCells;  // 2.5.2: the lava's (noteLava)
+    lavaCells.swap(lavaCells_);
+    if ((!torches && !lampsOn && !hidden && !fire && !glows && !mapFlies && lavaCells.empty() &&
+         !(flamesWanted() && !flames.empty())) ||
         !depth_ || !target_.texture || !depthViews())
         return;
     if (!lightData_ && torchLightPs_) {
@@ -438,6 +441,32 @@ void Renderer11::applyTorchLight() {
             const float view[3] = {(f.gx - proj.cx) * f.vz / proj.f0, (f.gy - proj.cy) * f.vz / proj.f1, f.vz};
             addLight(view, 12.0f, f.colour, 0.12f * f.bright);
             ++used;
+        }
+    }
+    if (!lavaCells.empty()) {  // 0.31 (torches.cpp): the lava's heat by place (96 px cells), the nearest 12
+        struct Pool {
+            float view[3] = {0, 0, 0};
+            int n = 0;
+        };
+        std::unordered_map<int, Pool> pools;
+        for (const FireSpark11& s : lavaCells) {
+            Pool& q = pools[int(std::floor(s.gameX / 96.0f)) * 4096 + int(std::floor(s.gameY / 96.0f))];
+            for (int i = 0; i < 3; ++i) q.view[i] += s.view[i];
+            ++q.n;
+        }
+        std::vector<Pool> heat;
+        for (auto& kv : pools) {
+            Pool q = kv.second;
+            for (int i = 0; i < 3; ++i) q.view[i] /= float(q.n);
+            heat.push_back(q);
+        }
+        std::sort(heat.begin(), heat.end(), [](const Pool& a, const Pool& b) { return a.view[2] < b.view[2]; });
+        const float user = float(std::clamp(effects_.lavaBrightness, 0, 200)) / 100.0f;
+        static const float kLava[3] = {1.0f, 0.42f, 0.12f};
+        for (size_t i = 0; i < heat.size() && i < 12; ++i) {
+            const float breath = 0.85f + 0.15f * std::sin(time * 1.1f + float(i) * 2.3f);
+            const float view[3] = {heat[i].view[0], heat[i].view[1] - 3.0f, heat[i].view[2]};
+            addLight(view, 35.0f, kLava, 0.35f * user * breath);
         }
     }
     std::sort(glowLights.begin(), glowLights.end(),

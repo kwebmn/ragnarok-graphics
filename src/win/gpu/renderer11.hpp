@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "core/draw_batch.hpp"
+#include "core/footsteps.hpp"
 #include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/weather.hpp"
@@ -80,6 +81,9 @@ public:
         season_ = trees::seasonOf(map, trees::monthNow());
         look_ = haze::lookOf(map);  // 2.5: its haze and fog, the open sky, its weather (as Direct3D 12's setMap)
         outdoors_ = outdoors(map);
+        desert_ = desert(map);  // 2.5.2: the prints in the sand
+        footTracker_.clear();
+        lavaLogged_ = false;
         weather_ = weather::of(map);
         hazeLogged_ = skyLogged_ = weatherLogged_ = cloudsLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
@@ -181,6 +185,29 @@ private:
     // parts at a quarter of the size, blurred twice each way, added) - before the colours
     void applyBloom();
     float mapFadeNow();  // 1 when done
+    // 2.5.2: the steps the characters left - prints in the snow and the sand, dust on dry ground (ao.cpp applySteps)
+    // - and the rings on the water where they go (water_ps), the feet followed from the game's round shadows
+    void applySteps();
+    void noteFoot(const FrameRecord& rec, const DrawCmd& d);
+    int stepKind() const {  // 1 snow, 2 sand, 3 dust, 0 none
+        if (!effects_.footprints || !stepsPs_) return 0;
+        return weather_ == weather::Kind::Snow ? 1 : desert_ ? 2 : outdoors_ && effects_.stepDust ? 3 : 0;
+    }
+    static constexpr float kRippleLife = 1.6f;
+    bool ripplesWanted() const { return effects_.ripples && effects_.water && waterPs_; }
+    float stepLife() const {
+        const float prints = stepKind() == 3 ? 0.9f : stepKind() == 1 ? 25.0f : stepKind() ? 14.0f : 0.0f;
+        return std::max(prints, ripplesWanted() ? kRippleLife : 0.0f);
+    }
+    // 2.5.2: the chimneys' smoke (smoke_ps) and the lava (lava_ps) drawn by their own shaders, the lava lighting
+    // around it in the torches' pass (draw.cpp, torches.cpp)
+    bool smokeWanted() const { return effects_.smoke && smokePs_ && smokeGlowPs_; }
+    bool lavaWanted() const { return effects_.lava && lavaPs_ && lavaGlowPs_; }
+    bool lavaMap() const {
+        const rsw::World* w = mapWorld_.world();
+        return (w && w->waterType == 4) || map_ == "mag_dun01" || map_ == "mag_dun02" || map_ == "tak_run";
+    }
+    void noteLava(const FrameRecord& rec, const DrawCmd& d);
     bool bloomWanted() {
         return (effects_.bloom || effects_.filmic || (effects_.filmGrain && effects_.filmGrainAmount > 0) ||
                 mapFadeNow() < 1.0f) &&
@@ -196,9 +223,10 @@ private:
     void passSamplers();  // linear, clamped, at s0 and s1 - the passes' own
     // A pass over the whole picture: copy - 1 the picture copied now into t2 (sceneColor), 2 its copy as it is, 0
     // none; blend - 0 written whole, 1 blended over by its alpha, 2 multiplied in; depth - bound as t3 (sceneDepth);
-    // t0 - bound as the first texture
+    // t0, t1 - bound as the first two textures
     void worldPass(ID3D11PixelShader* ps, const Constants& c, int copy = 1, int blend = 0,
-                   ID3D11ShaderResourceView* depth = nullptr, ID3D11ShaderResourceView* t0 = nullptr);
+                   ID3D11ShaderResourceView* depth = nullptr, ID3D11ShaderResourceView* t0 = nullptr,
+                   ID3D11ShaderResourceView* t1 = nullptr);
     // 0.60.1: the characters' shadows (actor_shadows11.cpp, as Direct3D 12's actor_shadows.cpp - the sun's light
     // alone: no map's lamps without the camera)
     bool shadowsWanted() const {
@@ -349,6 +377,19 @@ private:
     Target bloom_[2];
     bool bloomDone_ = false, bloomLogged_ = false;
     float fadeStart_ = -1.0f;  // the effects' clock when the map changed; below 0 none
+    // 2.5.2: the footprints and the ripples; the chimneys' smoke and the lava
+    ID3D11PixelShader* stepsPs_ = nullptr;
+    ID3D11Texture2D* stepsData_ = nullptr;  // two texels a step (steps_ps's t1)
+    ID3D11ShaderResourceView* stepsDataSrv_ = nullptr;
+    footsteps::Tracker footTracker_;
+    std::vector<map::Point> frameFeet_;  // the round shadows' middles drawn this frame, in the world
+    bool stepsDone_ = false, stepsLogged_ = false, desert_ = false;
+    ID3D11PixelShader* smokePs_ = nullptr;
+    ID3D11PixelShader* smokeGlowPs_ = nullptr;
+    ID3D11PixelShader* lavaPs_ = nullptr;
+    ID3D11PixelShader* lavaGlowPs_ = nullptr;
+    std::vector<FireSpark11> lavaCells_;  // this frame's cells of lava: their middles light around them
+    bool smokeLogged_ = false, lavaLogged_ = false;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
@@ -441,7 +482,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[10][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.2: ten)
+        ID3D11Query* effect[11][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.2: eleven)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -452,9 +493,9 @@ private:
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
-        kTimeAo11, kTimeClouds11, kTimeBloom11, kEffectTimes11
+        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 10, "FrameTimes::effect holds ten");
+    static_assert(kEffectTimes11 == 11, "FrameTimes::effect holds eleven");
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);
     struct EffectSpan {  // the scope of an effect's pass
