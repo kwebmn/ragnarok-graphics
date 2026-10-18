@@ -1895,7 +1895,8 @@ void Renderer::setMap(const std::string& map) {
 void Renderer::setShaderCache(const std::string& file) { impl_->shaderCacheFile = file; }
 
 void Renderer::setGameDir(const std::string& dir) {
-    if (remix_ || remote_ || d3d11_) return;  // uaro-render64.exe is given it at its start
+    if (d3d11_) return d3d11_->setGameDir(dir);  // 2.5.1: the map files, for the lamps
+    if (remix_ || remote_) return;  // uaro-render64.exe is given it at its start
     impl_->mapWorld.setGameDir(dir);
 }
 

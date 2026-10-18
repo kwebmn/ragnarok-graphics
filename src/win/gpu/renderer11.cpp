@@ -138,6 +138,14 @@ Renderer11::~Renderer11() {
     drop(hazePs_);
     drop(skyPs_);
     drop(weatherPs_);
+    drop(aoPs_);  // 2.5.1
+    drop(aoBlurPs_);
+    drop(aoApplyPs_);
+    drop(cloudsPs_);
+    drop(cloudsApplyPs_);
+    dropTarget(aoTarget_[0]);
+    dropTarget(aoTarget_[1]);
+    dropTarget(cloudsMask_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -331,7 +339,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[27] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[32] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -349,7 +357,12 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"draw_glow_lean_ps", ps, shaderSource(), {}, true, false, true},
                    {"haze_ps", ps, shaderSource(), {}, true},  // 2.5: the haze, the sky, the weather
                    {"sky_ps", ps, shaderSource(), {}, true},
-                   {"weather_ps", ps, shaderSource(), {}, true}};
+                   {"weather_ps", ps, shaderSource(), {}, true},
+                   {"ao_ps", ps, shaderSource(), {}, true},  // 2.5.1: the soft shadows, the clouds' shadows
+                   {"ao_blur_ps", ps, shaderSource(), {}, true},
+                   {"ao_apply_ps", ps, shaderSource(), {}, true},
+                   {"clouds_ps", ps, shaderSource(), {}, true},
+                   {"clouds_apply_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -457,6 +470,11 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[24].code.empty() || !psOf(wants[24], hazePs_)) hazePs_ = nullptr;  // 2.5
     if (wants[25].code.empty() || !psOf(wants[25], skyPs_)) skyPs_ = nullptr;
     if (wants[26].code.empty() || !psOf(wants[26], weatherPs_)) weatherPs_ = nullptr;
+    if (wants[27].code.empty() || !psOf(wants[27], aoPs_)) aoPs_ = nullptr;  // 2.5.1
+    if (wants[28].code.empty() || !psOf(wants[28], aoBlurPs_)) aoBlurPs_ = nullptr;
+    if (wants[29].code.empty() || !psOf(wants[29], aoApplyPs_)) aoApplyPs_ = nullptr;
+    if (wants[30].code.empty() || !psOf(wants[30], cloudsPs_)) cloudsPs_ = nullptr;
+    if (wants[31].code.empty() || !psOf(wants[31], cloudsApplyPs_)) cloudsApplyPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1003,6 +1021,14 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui) worldDrawn_ = true;
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;
+    if (!s.ui && s.blend && groundDrawn_ && !aoDone_ && aoWanted()) {  // 2.5.1: before the characters (draw.cpp)
+        flushBatch();
+        applyAo();
+    }
+    if (!s.ui && s.blend && groundDrawn_ && !cloudsDone_ && cloudsWanted() && cameraValid_) {
+        flushBatch();
+        applyClouds();
+    }
     if (!s.ui && s.blend && groundDrawn_ && !shadowsDone_ && shadowsWanted()) {
         flushBatch();  // 0.90
         applyActorShadows(rec, size_t(&d - rec.draws().data()));
@@ -1549,6 +1575,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         return;
     }
     if (ai_) ai_->work();  // 0.47: the AI textures' pictures read meanwhile go in
+    mapWorld_.poll();      // 2.5.1: the map's file read meanwhile
     if (!target_.texture || !window || source.empty()) return;
     if (!ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),
                          options.allowTearing)) {
@@ -1583,6 +1610,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (!options.screenshot.empty()) saveScreenshot(options.screenshot);  // 0.54
     gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
+    aoDone_ = cloudsDone_ = false;  // 2.5.1
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
     hazeDone_ = skyDone_ = weatherDone_ = false;  // 2.5
     waterCopied_ = waterReady_ = false;  // 0.99
@@ -1638,8 +1666,8 @@ void Renderer11::applyGrade() {
 }
 
 // A pass over the world from a copy of it (scene_, t2) into it, RGB only: the colours (0.59), the night (0.63).
-void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy, bool alpha,
-                           ID3D11ShaderResourceView* depth) {
+void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy, int blend,
+                           ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t0) {
     if (copy) {
         if (scene_.width != target_.width || scene_.height != target_.height) {
             dropTarget(scene_);
@@ -1656,8 +1684,10 @@ void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy,
     const D3D11_RECT all{0, 0, target_.width, target_.height};
     ctx_->RSSetScissorRects(1, &all);
     setConstants(c);
-    ctx_->OMSetBlendState(blendState(alpha, alpha ? d3d7::BLEND_SRCALPHA : d3d7::BLEND_ONE,
-                                     alpha ? d3d7::BLEND_INVSRCALPHA : d3d7::BLEND_ZERO,
+    // 1: over by its alpha; 2: the picture times it (blend ZERO, SRCCOLOR - the shadows); 0: written whole
+    const uint32_t src = blend == 1 ? d3d7::BLEND_SRCALPHA : blend == 2 ? d3d7::BLEND_ZERO : d3d7::BLEND_ONE;
+    const uint32_t dst = blend == 1 ? d3d7::BLEND_INVSRCALPHA : blend == 2 ? d3d7::BLEND_SRCCOLOR : d3d7::BLEND_ZERO;
+    ctx_->OMSetBlendState(blendState(blend != 0, src, dst,
                                      D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
                                          D3D11_COLOR_WRITE_ENABLE_BLUE),
                           nullptr, 0xFFFFFFFF);
@@ -1669,10 +1699,127 @@ void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy,
     ctx_->PSSetShader(ps, nullptr, 0);
     ctx_->VSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
+    passSamplers();
+    if (t0) ctx_->PSSetShaderResources(0, 1, &t0);            // tex0 : register(t0) - a mask of its own
     if (copy) ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
     if (depth) ctx_->PSSetShaderResources(3, 1, &depth);     // sceneDepth : register(t3)
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
+}
+
+void Renderer11::passSamplers() {
+    StageSetup linearClamp;
+    linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
+    linearClamp.magFilter = d3d7::TFG_LINEAR;
+    linearClamp.minFilter = d3d7::TFN_LINEAR;
+    linearClamp.mipFilter = d3d7::TFP_NONE;
+    ID3D11SamplerState* samplers[2] = {samplerState(linearClamp, 0), samplerState(linearClamp, 0)};
+    ctx_->PSSetSamplers(0, 2, samplers);
+}
+
+void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c,
+                          ID3D11ShaderResourceView* t0, ID3D11ShaderResourceView* depth) {
+    targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
+    ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
+    ctx_->PSSetShaderResources(0, 4, none);
+    ctx_->OMSetRenderTargets(1, &into.rtv, nullptr);
+    const D3D11_VIEWPORT vp{0.0f, 0.0f, float(into.width), float(into.height), 0.0f, 1.0f};
+    ctx_->RSSetViewports(1, &vp);
+    const D3D11_RECT all{0, 0, into.width, into.height};
+    ctx_->RSSetScissorRects(1, &all);
+    setConstants(c);
+    ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO,
+                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
+                          nullptr, 0xFFFFFFFF);
+    ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
+    ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
+    ctx_->IASetInputLayout(nullptr);
+    ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx_->VSSetShader(presentVs_, nullptr, 0);
+    ctx_->PSSetShader(ps, nullptr, 0);
+    ctx_->VSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetConstantBuffers(0, 1, &constants_);
+    passSamplers();
+    ID3D11ShaderResourceView* views[4] = {t0, nullptr, nullptr, depth};
+    ctx_->PSSetShaderResources(0, 4, views);
+    ctx_->Draw(3, 0);
+    ctx_->PSSetShaderResources(0, 4, none);
+}
+
+// 2.5.1: the soft shadows (ao_ps, ao_blur_ps, ao_apply_ps) as Direct3D 12's ao.cpp draws them - a mask at a half
+// (a quarter of a big picture) of the size from the depth, blurred across and down, multiplied into the picture.
+void Renderer11::applyAo() {
+    EffectSpan span(*this, kTimeAo11);
+    aoDone_ = true;
+    if (!aoWanted() || !target_.texture || !depthViews()) return;
+    const int w = target_.width, h = target_.height;
+    const int div = w >= 3000 ? 4 : 2;
+    const int aw = std::max(1, (w + div - 1) / div), ah = std::max(1, (h + div - 1) / div);
+    for (Target& t : aoTarget_)
+        if (t.width != aw || t.height != ah) {
+            dropTarget(t);
+            if (!makeTarget(t, aw, ah, DXGI_FORMAT_R8_UNORM)) {
+                LOG_ERROR("shadows: no video memory for them at %dx%d (Direct3D 11)", aw, ah);
+                aoApplyPs_ = nullptr;  // not tried again (the object stays until the end)
+                return;
+            }
+        }
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.uiPixels[2] = float(aw);
+    c.uiPixels[3] = float(ah);
+    c.footprint = 1.5f + 7.5f * float(std::clamp(effects_.aoSize, 0, 100)) / 100.0f;  // world units
+    c.sharpen = float(std::clamp(effects_.aoStrength, 0, 100)) / 100.0f;
+    maskPass(aoPs_, aoTarget_[0], c, nullptr, depthSrv_);
+    for (int i = 0; i < 2; ++i) {  // across, then down
+        c.sourceRect[0] = i == 0 ? 1.0f : 0.0f;
+        c.sourceRect[1] = i == 0 ? 0.0f : 1.0f;
+        maskPass(aoBlurPs_, aoTarget_[1 - i], c, aoTarget_[i].srv, depthSrv_);
+    }
+    if (!aoLogged_) LOG_INFO("shadows: %dx%d, from the depth of the %dx%d picture (Direct3D 11)", aw, ah, w, h);
+    aoLogged_ = true;
+    worldPass(aoApplyPs_, c, false, 2, nullptr, aoTarget_[0].srv);
+}
+
+// 2.5.1: the clouds' shadows (clouds_ps, clouds_apply_ps) as Direct3D 12's clouds.cpp - their mask from the depth
+// and the camera, multiplied into the picture; they drift with the time, not with the shared wind.
+void Renderer11::applyClouds() {
+    EffectSpan span(*this, kTimeClouds11);
+    cloudsDone_ = true;
+    if (!cloudsWanted() || !cameraValid_ || !target_.texture || !depthViews()) return;
+    const int w = target_.width, h = target_.height;
+    const int div = w >= 3000 ? 4 : 2;
+    const int mw = std::max(1, (w + div - 1) / div), mh = std::max(1, (h + div - 1) / div);
+    if (cloudsMask_.width != mw || cloudsMask_.height != mh) {
+        dropTarget(cloudsMask_);
+        if (!makeTarget(cloudsMask_, mw, mh, DXGI_FORMAT_R8_UNORM)) {
+            LOG_ERROR("clouds: no video memory for their mask at %dx%d (Direct3D 11)", mw, mh);
+            cloudsApplyPs_ = nullptr;  // not tried again
+            return;
+        }
+    }
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.uiPixels[2] = float(mw);
+    c.uiPixels[3] = float(mh);
+    c.sharpen = waterTime();
+    c.footprint = float(std::clamp(effects_.cloudsStrength, 0, 100)) / 100.0f;
+    if (!cloudsLogged_) LOG_INFO("clouds: their shadows over %s (Direct3D 11)", map_.c_str());
+    cloudsLogged_ = true;
+    maskPass(cloudsPs_, cloudsMask_, c, nullptr, depthSrv_);
+    worldPass(cloudsApplyPs_, c, false, 2, nullptr, cloudsMask_.srv);
 }
 
 // 2.5: the haze (haze_ps) as Direct3D 12's haze.cpp draws it - far off the picture goes over to the map's haze,
@@ -1706,7 +1853,7 @@ void Renderer11::applyHaze() {
     c.sharpen = waterTime();
     if (!hazeLogged_) LOG_INFO("haze: over %s%s (Direct3D 11)", map_.c_str(), fog ? ", with a low fog" : "");
     hazeLogged_ = true;
-    worldPass(hazePs_, c, false, true, depthSrv_);
+    worldPass(hazePs_, c, false, 1, depthSrv_);
 }
 
 // 2.5: the sky (sky_ps) as Direct3D 12's applySky - past the map's edge under the open sky, its clouds and stars,
@@ -1745,7 +1892,7 @@ void Renderer11::applySky() {
     c.sharpen = waterTime();
     if (!skyLogged_) LOG_INFO("sky: over %s (Direct3D 11)", map_.c_str());
     skyLogged_ = true;
-    worldPass(skyPs_, c, land, true, depthSrv_);
+    worldPass(skyPs_, c, land, 1, depthSrv_);
 }
 
 // 2.5: the weather (weather_ps) as Direct3D 12's weather.cpp - the map's snow, rain, leaves or sand in three layers,
@@ -1786,7 +1933,7 @@ void Renderer11::applyWeather() {
                                                            : "sand",
                  map_.c_str());
     weatherLogged_ = true;
-    worldPass(weatherPs_, c, false, true, nullptr);
+    worldPass(weatherPs_, c, false, 1);
 }
 
 void Renderer11::saveScreenshot(const std::string& path) {
@@ -1904,7 +2051,7 @@ void Renderer11::timeFrame() {
     if (!recentSince_) recentSince_ = now;
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
-                                                             "haze", "sky", "weather"};
+                                                             "haze", "sky", "weather", "ao", "clouds"};
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
@@ -1979,7 +2126,8 @@ void Renderer11::logGpu(ULONGLONG now) {
                  double(now - gpuSince_) / 1000.0);
         // 0.89: the effects one by one, as Direct3D 12's log has them
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
-                                                            "colour", "haze", "sky", "weather"};
+                                                            "colour", "haze", "sky", "weather", "soft shadows",
+                                                            "clouds"};
         std::string effects;
         for (int e = 0; e < kEffectTimes11; ++e) {
             if (effectMs_[e] <= 0.0) continue;

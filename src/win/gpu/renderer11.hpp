@@ -12,6 +12,7 @@
 #include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/weather.hpp"
+#include "win/gpu/map_world.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
 #include "core/trees.hpp"
@@ -80,8 +81,10 @@ public:
         look_ = haze::lookOf(map);  // 2.5: its haze and fog, the open sky, its weather (as Direct3D 12's setMap)
         outdoors_ = outdoors(map);
         weather_ = weather::of(map);
-        hazeLogged_ = skyLogged_ = weatherLogged_ = false;
+        hazeLogged_ = skyLogged_ = weatherLogged_ = cloudsLogged_ = false;
+        mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
     }
+    void setGameDir(const std::string& dir) { mapWorld_.setGameDir(dir); }  // 2.5.1: the map files
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setStateCache(bool on) { stateCache_ = on; }  // 0.88: [debug] state_cache
@@ -166,10 +169,22 @@ private:
     void applyHaze();
     void applySky();
     void applyWeather();
-    // A pass over the whole picture: copy - the picture's copy in t2 (sceneColor); alpha - blended over by its
-    // alpha, else written whole; depth - bound as t3 (sceneDepth)
-    void worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy = true, bool alpha = false,
-                   ID3D11ShaderResourceView* depth = nullptr);
+    // 2.5.1: the soft shadows where surfaces meet (ao.cpp: a mask at a half or a quarter of the size, blurred twice,
+    // multiplied in) and the clouds' shadows (clouds.cpp: their mask, multiplied in) - before the characters
+    void applyAo();
+    void applyClouds();
+    bool aoWanted() const { return effects_.ao && effects_.aoStrength > 0 && aoPs_ && aoBlurPs_ && aoApplyPs_; }
+    bool cloudsWanted() const {
+        return effects_.clouds && effects_.cloudsStrength > 0 && cloudsPs_ && cloudsApplyPs_ && outdoors_;
+    }
+    // A pass into a small target of its own: t0 and the depth (t3) read, the whole target written
+    void maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c, ID3D11ShaderResourceView* t0,
+                  ID3D11ShaderResourceView* depth);
+    void passSamplers();  // linear, clamped, at s0 and s1 - the passes' own
+    // A pass over the whole picture: copy - the picture's copy in t2 (sceneColor); blend - 0 written whole, 1 blended
+    // over by its alpha, 2 multiplied in; depth - bound as t3 (sceneDepth); t0 - bound as the first texture
+    void worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy = true, int blend = 0,
+                   ID3D11ShaderResourceView* depth = nullptr, ID3D11ShaderResourceView* t0 = nullptr);
     // 0.60.1: the characters' shadows (actor_shadows11.cpp, as Direct3D 12's actor_shadows.cpp - the sun's light
     // alone: no map's lamps without the camera)
     bool shadowsWanted() const {
@@ -285,6 +300,16 @@ private:
     bool outdoors_ = false;
     weather::Kind weather_ = weather::Kind::None;
     float cameraTargetZ_ = 0.0f;  // the view depth of what the camera looks at (setCamera), 0 unknown
+    // 2.5.1: the soft shadows and the clouds' shadows; the map's file (the lamps' lights, torches11.cpp)
+    ID3D11PixelShader* aoPs_ = nullptr;
+    ID3D11PixelShader* aoBlurPs_ = nullptr;
+    ID3D11PixelShader* aoApplyPs_ = nullptr;
+    ID3D11PixelShader* cloudsPs_ = nullptr;
+    ID3D11PixelShader* cloudsApplyPs_ = nullptr;
+    Target aoTarget_[2];
+    Target cloudsMask_;
+    bool aoDone_ = false, cloudsDone_ = false, aoLogged_ = false, cloudsLogged_ = false;
+    MapWorld mapWorld_;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
@@ -377,7 +402,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[7][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5: seven)
+        ID3D11Query* effect[9][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.1: nine)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -388,9 +413,9 @@ private:
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
-        kEffectTimes11
+        kTimeAo11, kTimeClouds11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 7, "FrameTimes::effect holds seven");
+    static_assert(kEffectTimes11 == 9, "FrameTimes::effect holds nine");
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);
     struct EffectSpan {  // the scope of an effect's pass

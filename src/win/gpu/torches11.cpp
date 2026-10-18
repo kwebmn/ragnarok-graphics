@@ -146,12 +146,24 @@ void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
     if (!torch::flameOf(q, f) || f.rhw <= 0.0f) return;
     f.alpha = std::min(1.0f, float(diffuse >> 24) / 240.0f);
     flames_.push_back(f);
+    if (cameraValid_ && !mapWorld_.axes().known()) {  // 2.5.1: where it stands, for the map file's axes (torches.cpp)
+        const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+        const float vz = 1.0f / f.rhw, vx = (f.baseX - p.cx) * vz / p.f0, vy = (f.baseY - p.cy) * vz / p.f1;
+        const float* m = viewToWorld_;
+        mapWorld_.noteTorch(map::Point{vx * m[0] + vy * m[3] + vz * m[6] + m[9],
+                                       vx * m[1] + vy * m[4] + vz * m[7] + m[10],
+                                       vx * m[2] + vy * m[5] + vz * m[8] + m[11]});
+    }
 }
 
 void Renderer11::applyTorchLight() {
     EffectSpan span(*this, kTimeLight11);  // 0.89
     lightDone_ = true;
-    if (flames_.empty() || !torchesWanted() || !depth_ || !target_.texture) return;
+    // 2.5.1: the map's lamps light too (torches.cpp), with the camera and the map file's axes known
+    const bool torches = torchesWanted() && !flames_.empty();
+    const bool lampsOn = effects_.lamps && effects_.lampsLight > 0 && torchLightPs_ && cameraValid_ &&
+                         mapWorld_.axes().known() && !mapWorld_.lamps().empty();
+    if ((!torches && !lampsOn) || !depth_ || !target_.texture) return;
     if (!lightData_) {
         D3D11_TEXTURE2D_DESC d{};
         d.Width = kMaxLights * 2;
@@ -192,22 +204,17 @@ void Renderer11::applyTorchLight() {
     float data[kMaxLights * 2][4] = {};
     float lx0 = float(w), ly0 = float(h), lx1 = 0.0f, ly1 = 0.0f;
     int count = 0;
-    for (const torch::Flame& f : flames_) {
-        if (count == kMaxLights) break;
-        const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;
-        const float vz = 1.0f / f.rhw;
-        const float vx = (mx - proj.cx) * vz / proj.f0, vy = (my - proj.cy) * vz / proj.f1;
-        const uint32_t seed = torch::seedAt(mx, my);  // no camera: by its place on the screen
-        const float calm = torch::flicker(time * 0.5, seed ^ 0x5BD1E995u, amount * 0.35f);
-        const float view[3] = {vx, vy, vz};
+    // A light into the list: its place in the view and reach, its colour and strength; where its reach falls on
+    // the screen (the cube about it, each corner projected) widens the lit rectangle.
+    const auto addLight = [&](const float view[3], float reach, const float colour[3], float amountOf) {
         std::copy(view, view + 3, data[2 * count]);
-        data[2 * count][3] = kReach;
-        std::copy(kLightColor, kLightColor + 3, data[2 * count + 1]);
-        data[2 * count + 1][3] = strength * calm * f.alpha;
-        for (int corner = 0; corner < 8; ++corner) {  // where its reach falls on the screen
-            const float px = vx + ((corner & 1) ? kReach : -kReach);
-            const float py = vy + ((corner & 2) ? kReach : -kReach);
-            const float pz = std::max(vz + ((corner & 4) ? kReach : -kReach), proj.nearZ);
+        data[2 * count][3] = reach;
+        std::copy(colour, colour + 3, data[2 * count + 1]);
+        data[2 * count + 1][3] = amountOf;
+        for (int corner = 0; corner < 8; ++corner) {
+            const float px = view[0] + ((corner & 1) ? reach : -reach);
+            const float py = view[1] + ((corner & 2) ? reach : -reach);
+            const float pz = std::max(view[2] + ((corner & 4) ? reach : -reach), proj.nearZ);
             const float tx = (px / pz * proj.f0 + proj.cx) * k + 0.5f, ty = (py / pz * proj.f1 + proj.cy) * k + 0.5f;
             lx0 = std::min(lx0, tx);
             ly0 = std::min(ly0, ty);
@@ -215,6 +222,51 @@ void Renderer11::applyTorchLight() {
             ly1 = std::max(ly1, ty);
         }
         ++count;
+    };
+    if (torches)
+        for (const torch::Flame& f : flames_) {
+            if (count == kMaxLights) break;
+            const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;
+            const float vz = 1.0f / f.rhw;
+            const float vx = (mx - proj.cx) * vz / proj.f0, vy = (my - proj.cy) * vz / proj.f1;
+            const uint32_t seed = torch::seedAt(mx, my);  // no camera: by its place on the screen
+            const float calm = torch::flicker(time * 0.5, seed ^ 0x5BD1E995u, amount * 0.35f);
+            const float view[3] = {vx, vy, vz};
+            addLight(view, kReach, kLightColor, strength * calm * f.alpha);
+        }
+    if (lampsOn) {  // 2.5.1: the lamps the map's makers placed, the nearest to the camera first (as torches.cpp)
+        const map::Axes axes = mapWorld_.axes();
+        const float lampStrength = 0.8f * float(std::clamp(effects_.lampsLight, 0, 200)) / 100.0f;
+        const float margin = float(std::max(gameWidth_, gameHeight_)) * 0.25f;
+        struct Lamp {
+            float view[3], tint[3], strength, reach;
+        };
+        std::vector<Lamp> lamps;
+        const float* m = viewToWorld_;  // the camera backwards, inverted: its rows are orthonormal
+        for (const rsw::Light& r : mapWorld_.lamps()) {
+            const map::Point wp = map::toWorld(axes, map::Point{r.pos[0], r.pos[1], r.pos[2]});
+            const float dx = wp.x - m[9], dy = wp.y - m[10], dz = wp.z - m[11];
+            const float v[3] = {dx * m[0] + dy * m[1] + dz * m[2], dx * m[3] + dy * m[4] + dz * m[5],
+                                dx * m[6] + dy * m[7] + dz * m[8]};
+            const float reach = std::clamp(r.range * 0.45f, 15.0f, 70.0f);
+            if (v[2] <= proj.nearZ - reach) continue;
+            const float vz = std::max(v[2], proj.nearZ);
+            const float gx = v[0] / vz * proj.f0 + proj.cx, gy = v[1] / vz * proj.f1 + proj.cy;
+            const float slack = reach * proj.f0 / vz + margin;
+            if (gx < -slack || gy < -slack || gx > float(gameWidth_) + slack || gy > float(gameHeight_) + slack)
+                continue;
+            const float top = std::max({r.color[0], r.color[1], r.color[2], 1e-3f});
+            Lamp l{{v[0], v[1], v[2]}, {0.0f, 0.0f, 0.0f}, lampStrength, reach};
+            for (int c = 0; c < 3; ++c) l.tint[c] = 0.65f + 0.35f * r.color[c] / top;  // 2.1.5: a third of it
+            if (r.color[0] >= r.color[1] && r.color[1] >= r.color[2] * 0.9f && r.color[0] > 0.5f)  // a fire's
+                l.strength *= torch::flicker(time * 0.5, torch::seedAt(wp.x, wp.z), amount * 0.25f);
+            lamps.push_back(l);
+        }
+        std::sort(lamps.begin(), lamps.end(), [](const Lamp& a, const Lamp& b) { return a.view[2] < b.view[2]; });
+        for (const Lamp& l : lamps) {
+            if (count == kMaxLights) break;
+            addLight(l.view, l.reach, l.tint, l.strength);
+        }
     }
     const D3D11_RECT lit{LONG(std::max(0.0f, std::floor(lx0))), LONG(std::max(0.0f, std::floor(ly0))),
                          LONG(std::min(float(w), std::ceil(lx1))), LONG(std::min(float(h), std::ceil(ly1)))};
@@ -259,7 +311,9 @@ void Renderer11::applyTorchLight() {
     ctx_->PSSetShaderResources(0, 4, views);
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
-    if (!lightLogged_) LOG_INFO("torches: %d lit (Direct3D 11: their light; the flames the game's)", count);
+    if (!lightLogged_)
+        LOG_INFO("torches: %d lit (Direct3D 11: their light%s; the flames the game's)", count,
+                 lampsOn ? " and the map's lamps" : "");
     lightLogged_ = true;
 }
 
