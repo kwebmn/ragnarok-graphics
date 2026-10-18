@@ -1,3 +1,23 @@
+# uaRO Graphics 2.5.2 — testing
+
+- **Direct3D 11 got nearly all of the weak set** (what cards without Direct3D 12 get by default) - by the same
+  shaders as Direct3D 12:
+  - the ground's smooth lightmap (the switch was there, but it never worked on Direct3D 11);
+  - the torches' new flame with its glow in place of the game's glow (with "new flame", of its flame too), the map's
+    hidden torches in their own colour;
+  - the map's hidden lights - floating orbs, pools of light, clouds of dust - and the fireflies the map's makers
+    placed;
+  - footprints: prints in the snow and the sand, dust on dry ground; rings on the water where the steps go;
+  - the chimneys' smoke and living lava by their own shaders, the lava lighting around it;
+  - the new map's fade-in, and the bloom, filmic and film grain (when turned on by hand).
+- Of the weak set only the portals are missing on Direct3D 11 now.
+- The lean world shader smooths the lightmap itself now - the ground on weak cards stays on it.
+- Check, please, on Direct3D 11: the torches in Prontera and the dungeons - the new flame and glow, the lamps' light;
+  footprints in the snow (Lutie) and the sand (Morroc); the chimneys' smoke in Payon; lava in Magma; the map coming
+  in from black after a teleport. uaro-graphics.log: "torches: N lights, M flames, … (Direct3D 11 …)", "footprints:
+  … (Direct3D 11)", "smoke: … (Direct3D 11)", "lava: … (Direct3D 11)". If it got slower, the log's "GPU: effects a
+  frame - …" line shows which effect costs.
+
 # uaRO Graphics 2.5.1 — testing
 
 - **Direct3D 11: five more effects** by the same shaders as Direct3D 12: the soft shadows where surfaces meet (the
