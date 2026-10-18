@@ -123,7 +123,13 @@ void Context::writeUsage(const std::string& lines) {
     f.write(lines.data(), std::streamsize(lines.size()));
 }
 
-EffectSettings Context::effects() const { return effect_groups::effective(config.effects, startup().cardLevel); }
+const EffectSettings& Context::effects() const {
+    if (!effectsMade_) {
+        effects_ = effect_groups::effective(config.effects, startup().cardLevel);
+        effectsMade_ = true;
+    }
+    return effects_;
+}
 
 Context& Context::get() {
     static Context c;
@@ -643,6 +649,7 @@ void Context::watchSettings() {
     if (u.applied.empty() && u.waiting.empty()) return;
     const Config was = config;
     config = u.next;  // render_scale, high_resolution, sharpen, vsync and fps_limit are read at every present
+    settingsChanged();
     if (config.uiFilter != was.uiFilter) renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     if (config.crispText != was.crispText) {
         if (config.crispText) {

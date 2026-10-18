@@ -217,7 +217,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (tag.auraExtra && c.enhanced() && win::auraOff()) return D3D_OK;
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
-    const EffectSettings fx = c.effects();
+    const EffectSettings& fx = c.effects();  // 2.5.11: made once a change, not each draw
     // 0.37: the skills likewise, by their own slider.
     const bool aura = fx.aura && fx.auraBrightness < 100 && tag.kind == effect_exe::Kind::Aura;
     const bool skill = fx.skillsSoft && fx.skillBrightness < 100 && tag.kind == effect_exe::Kind::Skill;

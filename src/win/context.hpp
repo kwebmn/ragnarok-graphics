@@ -33,8 +33,11 @@ public:
     void unlock() { LeaveCriticalSection(&cs_); }
 
     Config config;
-    // 2.2: the effects as drawn - the set and the groups made into the switches (effect_groups::effective)
-    EffectSettings effects() const;
+    // 2.2: the effects as drawn - the set and the groups made into the switches (effect_groups::effective). 2.5.11:
+    // made once a change of `config` (settingsChanged) - each of the game's draws asks for them, and made anew each
+    // time they were 2 % of the game's thread with Direct3D 11
+    const EffectSettings& effects() const;
+    void settingsChanged() { effectsMade_ = false; }  // `config` replaced
     gpu::Renderer* renderer = nullptr;
     FrameRecord record;
     int screenWidth = 0;
@@ -87,6 +90,8 @@ private:
     bool renderScaleNoted_ = false;  // the log has said render_scale is not used with DLSS
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
+    mutable EffectSettings effects_;  // 2.5.11: effects(), made from `config`
+    mutable bool effectsMade_ = false;
     ToggleKey fpsKey_;  // 0.54: Ctrl+Shift+F11 - the frame counter
     // 2.2.1: the statistics of the settings played with, with the player's leave ([stats] send; core/usage.hpp)
     usage::Recorder usage_;

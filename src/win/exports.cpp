@@ -27,6 +27,7 @@ HRESULT createUaro(REFIID iid, LPVOID* out, IUnknown* outer) {
     uagfx::win::Guard guard;
     uagfx::win::Context& c = uagfx::win::Context::get();
     c.config = uagfx::win::startup().config;
+    c.settingsChanged();
     uagfx::win::blackenGameWindow();  // before the renderer starts: its start takes a moment
     std::string error;
     if (!c.open(error)) {
