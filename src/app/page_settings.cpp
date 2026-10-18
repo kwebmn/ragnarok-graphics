@@ -4,6 +4,7 @@
 #include <cstdlib>
 
 #include "app/page.hpp"
+#include "app/setting_ids.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/auto_setup.hpp"
 #include "core/settings/report.hpp"
@@ -13,11 +14,6 @@ namespace {
 
 using namespace settings;
 
-constexpr int kRows = 1100;  // + 4 x the setting's index in iniSettings()
-constexpr int kForgetLogin = 1490;
-constexpr int kAuto = 1492;  // 0.50
-constexpr int kGpu = 1493;   // 0.50.2
-constexpr int kReg = 1500;  // + 4 x the setting's index in regSettings()
 
 std::string hresult(long hr) {
     char buf[16];
@@ -146,11 +142,7 @@ public:
     }
 
 private:
-    static const IniSetting* settingOf(int id) {
-        if (id < kRows || id >= kForgetLogin) return nullptr;
-        const size_t i = size_t(id - kRows) / 4;
-        return (id - kRows) % 4 == 0 && i < iniSettings().size() ? &iniSettings()[i] : nullptr;
-    }
+    static const IniSetting* settingOf(int id) { return settingOfId(id); }  // 2.4.2: app/setting_ids.hpp
 
     static const RegSetting* regOf(int id) {
         if (id < kReg) return nullptr;
@@ -377,7 +369,7 @@ private:
                     items.push_back(t(s.choices[c]));
                     if (token == s.tokens[c]) selected = int(c);
                 }
-                p.choice(kRows + int(i) * 4, t(s.label), items, selected, t(s.hint), true);
+                p.choice(rowId(i), t(s.label), items, selected, t(s.hint), true);
             }
         // 0.50.2: the graphics card, when there are several (or one is chosen that is gone)
         const auto& cards = sys.adapters;
@@ -403,7 +395,7 @@ private:
         p.gap();
         for (size_t i = 0; i < all.size(); ++i)  // part 3 (test): the renderer in a 64-bit process; part 4: Remix
             if (sectionKey(all[i]) == "renderer.bridge" || sectionKey(all[i]) == "renderer.remix")
-                p.check(kRows + int(i) * 4, t(all[i].label), m.token(all[i]) == "1", t(all[i].hint));
+                p.check(rowId(i), t(all[i].label), m.token(all[i]) == "1", t(all[i].hint));
         if ((!win10 || !d3d12) && d3d11 && m.token(*findSetting("renderer.api")) == "d3d12")
             p.note(t(Text::RenderUseD3d11), Tone::Warn);  // 0.46: Direct3D 11 works here
         else if (!win10 && !d3d11)
@@ -431,7 +423,7 @@ private:
         for (size_t i = 0; i < all.size(); ++i) {
             const IniSetting& s = all[i];
             if (s.page != which_) continue;
-            const int id = kRows + int(i) * 4;
+            const int id = rowId(i);
             const std::string token = m.token(s);
             switch (s.control) {
                 case Control::Check:
