@@ -29,8 +29,9 @@ The user asked for a rich tool of its own: «отдельный файл ... з�
 ставить на паузу, обновлять драйвер и не перезапускать саму программу», with the driver's frames tested in it too,
 and every idea of the review below («вноси все»).
 
-**Status.** Designed; phase 1 is planned in `docs/superpowers/plans/2026-10-18-studio-phase1.md`. Grounded in the code
-as of 2.2.5.
+**Status.** Phase 1 built on the branch `studio` (2026-10-18, not released yet), as planned in
+`docs/superpowers/plans/2026-10-18-studio-phase1.md`; the calls made on the way are in its ledger and in
+`docs/ARCHITECTURE.md`. Grounded in the code as of 2.2.5.
 
 ## Goals
 
