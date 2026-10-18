@@ -112,3 +112,15 @@ TEST(builds_drop_all_but_five_and_the_running) {
     CHECK(gone == (std::vector<std::string>{"b0", "b2"}));
     CHECK(studio::buildsToDrop({{"a", 1}}, "a").empty());
 }
+
+TEST(queue_pause_is_no_try) {
+    // G4: Pause stops the engine in the middle of a job - it runs again whole after Resume, not counted as a failure
+    studio::Queue q;
+    const int64_t a = q.add("make", json::Value::object(), false);
+    q.started(a);
+    q.interrupted(a);
+    CHECK(q.jobs()[0].state == studio::Job::Queued && q.jobs()[0].tries == 0);
+    q.started(a);
+    q.engineLost(a);
+    CHECK(q.jobs()[0].state == studio::Job::Queued);  // still its one more try
+}

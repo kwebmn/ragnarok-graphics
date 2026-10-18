@@ -100,6 +100,13 @@ void Queue::engineLost(int64_t id) {
     }
 }
 
+void Queue::interrupted(int64_t id) {
+    Job* j = find(id);
+    if (!j || j->state != Job::Running) return;
+    j->state = Job::Queued;
+    j->tries = std::max(0, j->tries - 1);
+}
+
 json::Value Queue::toJson() const {
     json::Value v = json::Value::object();
     v.set("next", next_);

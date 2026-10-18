@@ -52,13 +52,15 @@ bool writeFile(const std::string& path, const std::string& bytes) {
     return MoveFileExW(part.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
 }
 
-// The pipe's other end: lines in on a thread of their own, lines out from the main one.
+// The pipe's other end: lines in on a thread of their own, lines out from the main one. Overlapped: a handle opened
+// for synchronous I/O lets one call at a time through, and the reader's wait would hold every reply back.
 class Pipe {
 public:
     bool connect(const std::string& name) {
         const std::string path = "\\\\.\\pipe\\" + name;
         for (int tries = 0; tries < 50; ++tries) {
-            handle_ = CreateFileA(path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+            handle_ = CreateFileA(path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
+                                  FILE_FLAG_OVERLAPPED, nullptr);
             if (handle_ != INVALID_HANDLE_VALUE) break;
             if (GetLastError() == ERROR_PIPE_BUSY) WaitNamedPipeA(path.c_str(), 100);
             else Sleep(100);
@@ -68,7 +70,10 @@ public:
         return reader_ != nullptr;
     }
     ~Pipe() {
-        if (handle_ != INVALID_HANDLE_VALUE) CloseHandle(handle_);  // the reader's ReadFile fails: it ends
+        if (handle_ != INVALID_HANDLE_VALUE) {
+            CancelIoEx(handle_, nullptr);  // the reader's read ends
+            CloseHandle(handle_);
+        }
         if (reader_) {
             WaitForSingleObject(reader_, 2000);
             CloseHandle(reader_);
@@ -76,8 +81,13 @@ public:
     }
     void send(const studio::Message& m) {
         const std::string line = studio::lineOf(m);
+        OVERLAPPED ov{};
+        ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         DWORD n = 0;
-        if (!WriteFile(handle_, line.data(), DWORD(line.size()), &n, nullptr)) gone_ = true;
+        if (!WriteFile(handle_, line.data(), DWORD(line.size()), nullptr, &ov) &&
+            (GetLastError() != ERROR_IO_PENDING || !GetOverlappedResult(handle_, &ov, &n, TRUE)))
+            gone_ = true;
+        CloseHandle(ov.hEvent);
     }
     bool stopAsked() const { return stop_ || gone_; }
     void clearStop() { stop_ = false; }
@@ -103,7 +113,15 @@ private:
         studio::LineReader lines;
         char buf[4096];
         DWORD n = 0;
-        while (ReadFile(handle_, buf, sizeof buf, &n, nullptr) && n) {
+        OVERLAPPED ov{};
+        ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        const auto readSome = [&]() {
+            ResetEvent(ov.hEvent);
+            if (ReadFile(handle_, buf, sizeof buf, nullptr, &ov) || GetLastError() == ERROR_IO_PENDING)
+                return GetOverlappedResult(handle_, &ov, &n, TRUE) && n;
+            return false;
+        };
+        while (readSome()) {
             lines.feed(buf, n);
             studio::Message m;
             while (lines.next(m)) {
@@ -115,6 +133,7 @@ private:
                 ReleaseSRWLockExclusive(&lock_);
             }
         }
+        CloseHandle(ov.hEvent);
         AcquireSRWLockExclusive(&lock_);
         gone_ = true;
         WakeConditionVariable(&more_);

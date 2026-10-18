@@ -45,6 +45,7 @@ public:
     void done(int64_t id);
     void failed(int64_t id, const std::string& why);
     void engineLost(int64_t id);  // queued again once, then failed
+    void interrupted(int64_t id);  // stopped by Pause: queued again, not counted as a try
     const std::vector<Job>& jobs() const { return jobs_; }
     json::Value toJson() const;  // the jobs left: a running one as queued (it runs again), finished ones not kept
     static Queue fromJson(const json::Value& v);

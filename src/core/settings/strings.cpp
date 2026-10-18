@@ -2804,6 +2804,22 @@ const Entry kTexts[] = {
     {"uaRO Studio could not start from its own copy: {1}",
      "uaRO Studio не змогла запуститися зі своєї копії: {1}",
      "uaRO Studio не смогла запуститься из своей копии: {1}"},
+    {"Pause", "Пауза", "Пауза"},
+    {"Resume", "Продовжити", "Продолжить"},
+    {"Paused: the engine, the pack and the game's files are free (update the driver now).",
+     "Пауза: рушій, пакет і файли гри вільні (тепер можна оновити драйвер).",
+     "Пауза: движок, пакет и файлы игры свободны (теперь можно обновить драйвер)."},
+    {"Engine: {1}", "Рушій: {1}", "Движок: {1}"},
+    {"Engine: not started yet", "Рушій: ще не запущено", "Движок: ещё не запущен"},
+    {"a newer one takes over after this job", "новіший заступить після цієї роботи",
+     "новый заступит после этой работы"},
+    {"No jobs", "Робіт немає", "Работ нет"},
+    {"{1}: {2}", "{1}: {2}", "{1}: {2}"},
+    {"{1} more waiting", "ще чекають: {1}", "ещё ждут: {1}"},
+    {"Stop", "Стоп", "Стоп"},
+    {"Textures", "Текстури", "Текстуры"},
+    {"Pack", "Пакет", "Пакет"},
+    {"Log", "Журнал", "Журнал"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
