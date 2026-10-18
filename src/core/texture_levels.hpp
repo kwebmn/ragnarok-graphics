@@ -15,6 +15,9 @@ namespace uagfx {
 class TextureLevels {
 public:
     TextureLevels(int width, int height, PixelFormat format, int levels);
+    ~TextureLevels();
+    TextureLevels(const TextureLevels&) = delete;
+    TextureLevels& operator=(const TextureLevels&) = delete;
     int levels() const { return int(images_.size()); }
     Image& level(int i) { return images_[size_t(i)]; }
     const Image& level(int i) const { return images_[size_t(i)]; }
@@ -26,12 +29,25 @@ public:
     void slotWritten(Rect r, uint8_t source = 0);
     bool pending() const;
     void sync(FrameRecord& record, uint32_t texture);  // records the changed rectangles as uploads
+    // 2.5.18: the game's own texels of level 0 before it made them 16-bit (core/full_colour.hpp): r of level 0, argb
+    // r.width() * r.height() of them; mips - it made its mip levels of level 0 again. The next upload sends them in
+    // full colour where the 16-bit texels are still theirs, the mip levels made of them; false: none kept - no 16-bit
+    // format, r not inside level 0, or the full colours of all textures waiting for their uploads at kFullBytes.
+    bool fullColour(const Rect& r, const uint32_t* argb, bool mips);
+    static size_t fullBytes();
+    static constexpr size_t kFullBytes = size_t(96) << 20;  // the game's address space is 32-bit
 
 private:
+    bool mergeFull(const Rect& r, std::vector<uint32_t>& argb) const;  // level 0's texels of r, from full_
+    void dropFull();
+
     std::vector<Image> images_;
     std::vector<Rect> dirty_;
     std::vector<SpriteCell> slots_;  // since the last upload of level 0
     ColorKey key_;
+    std::vector<uint32_t> full_;  // 2.5.18: level 0's full colours (its size) while some wait for their upload
+    Rect fullRect_;               // where they are
+    bool fullMips_ = false;       // the mip levels to make of them
 };
 
 }  // namespace uagfx

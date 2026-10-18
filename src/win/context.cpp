@@ -9,6 +9,7 @@
 #include "core/outdoors.hpp"
 #include "core/scale.hpp"
 #include "core/settings/ini_edit.hpp"
+#include "core/texture_levels.hpp"
 #include "core/version.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
@@ -20,6 +21,7 @@
 #include "win/game_camera.hpp"
 #include "win/sprite_hook.hpp"
 #include "win/start_screen.hpp"
+#include "win/texture_hook.hpp"
 #include "win/log.hpp"
 #include "win/thread_time.hpp"
 #include "win/paths.hpp"
@@ -267,6 +269,8 @@ bool Context::open(std::string& error) {
                            drawn.hitFlash;  // 0.93, 0.95, 0.96: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
+    setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
+    if (!config.remix) installTextureHook();
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     renderer->setIconSink(&crisp::iconReady, nullptr);
@@ -691,6 +695,7 @@ void Context::watchSettings() {
         }
     }
     if (config.windowArt != was.windowArt) crisp::setWindowArt(config.windowArt);  // 0.41: the windows redrawn
+    if (config.fullColour != was.fullColour) setFullColour(config.fullColour);  // 2.5.18: the textures loaded next
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
     if (config.fpsCounter != was.fpsCounter) fpsShown_ = config.fpsCounter;  // 2.2.1: at once
     if (config.statsSend && usage_.begun()) {  // 2.2.1: what was changed in the game - what was liked, or not
@@ -755,9 +760,14 @@ void Context::logStats(bool final) {
     if (ms && stats_.frames)
         std::snprintf(busy, sizeof busy, "; the game's thread busy %.0f %% of a core (%.1f ms a frame)",
                       (threadCpuMs() - stats_.cpuMs) * 100.0 / ms, (threadCpuMs() - stats_.cpuMs) / stats_.frames);
+    char full[96] = "";  // 2.5.18
+    if (fullColourTextures())
+        std::snprintf(full, sizeof full, "; %u textures written in full colour so far (%u MB waiting)",
+                      fullColourTextures(), unsigned(TextureLevels::fullBytes() >> 20));
     if (stats_.frames || stats_.readBacks)
-        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s", stats_.frames,
-                 ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(), busy);
+        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s%s", stats_.frames,
+                 ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(), busy,
+                 full);
     stats_ = Stats{};
     stats_.since = now;
     stats_.cpuMs = threadCpuMs();

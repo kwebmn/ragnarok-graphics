@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/d3d7.hpp"
+#include "core/full_colour.hpp"
 #include "win/context.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dx7/formats.hpp"
@@ -132,6 +133,19 @@ uint8_t Surface7::spriteAt(float x, float y, bool* card) const {
 Surface7* Surface7::from(IDirectDrawSurface7* s) {
     Surface7* p = static_cast<Surface7*>(s);
     return p && p->magic_ == kMagic ? p : nullptr;
+}
+
+bool Surface7::fullColour(int x, int y, int w, int h, const uint32_t* picture, int pitch) {
+    win::Guard guard;
+    if (role_ != SurfaceRole::Texture || level_ != 0 || !picture || pitch <= 0) return false;
+    TextureLevels& levels = *top()->levels_;
+    const Image& top0 = levels.level(0);
+    if (!full_colour::shortFormat(top0.format())) return false;
+    const full_colour::Write at = full_colour::writeOf(x, y, w, h, top0.width(), top0.height());
+    if (at.rect.empty()) return false;
+    std::vector<uint32_t> texels;
+    full_colour::texelsOf(picture, pitch, at, texels);
+    return levels.fullColour(at.rect, texels.data(), true);  // the game made its mip levels again too
 }
 
 HRESULT STDMETHODCALLTYPE Surface7::QueryInterface(REFIID riid, void** out) {

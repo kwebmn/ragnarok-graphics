@@ -478,6 +478,9 @@ struct Config {
     // 2.5.16: [quality] world_scale - Direct3D 11: the world drawn at this share (50-100 %) of the picture's size and
     // made larger with sharpening before the interface, which stays sharp (an HD 6570: the world was the frame)
     int worldScale = 100;
+    // 2.5.18: [quality] full_colour - the textures in their pictures' own colours, not the 16-bit ones the game makes
+    // (core/full_colour.hpp)
+    bool fullColour = true;
     // 0.62: [display] ui_native - with render_scale over 100 % on Direct3D 12 (no DLSS): the world drawn larger and
     // made smaller, the interface drawn at the screen's own pixels (not drawn larger and made smaller with it)
     bool uiNative = false;

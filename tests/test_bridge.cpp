@@ -39,7 +39,7 @@ FrameRecord sampleRecord() {
     const uint16_t indices[3] = {2, 0, 1};
     r.draw(d, vertices.data(), 3, indices, 3);
     const uint32_t pixels[6] = {1, 2, 3, 4, 5, 6};
-    r.upload(0x40000002, 1, Rect{4, 4, 7, 6}, pixels);
+    r.upload(0x40000002, 1, Rect{4, 4, 7, 6}, pixels, {}, PixelFormat::A4R4G4B4);  // 2.5.18: full colours
     r.writeTarget(Rect{0, 0, 2, 1}, pixels + 4);
     r.upload(0x40000003, 0, Rect{0, 0, 3, 2}, pixels, {{Rect{0, 0, 1, 1}, 1}, {Rect{2, 0, 3, 2}, 4}});  // 0.13: cells
     return r;
@@ -76,6 +76,8 @@ TEST(bridge_a_record_crosses_field_by_field) {
     CHECK(b.pixels() == a.pixels());
     CHECK(b.uploads()[0].rect == (Rect{4, 4, 7, 6}));
     CHECK_EQ(b.uploads()[0].slotCount, 0u);
+    CHECK_EQ(int(b.uploads()[0].fullFrom), int(PixelFormat::A4R4G4B4));
+    CHECK_EQ(int(b.uploads()[1].fullFrom), 0);
     CHECK_EQ(b.uploads()[1].firstSlot, 0u);
     CHECK_EQ(b.uploads()[1].slotCount, 2u);
     CHECK(b.slots() == a.slots());

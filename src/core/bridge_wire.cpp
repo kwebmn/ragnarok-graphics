@@ -189,6 +189,7 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         w.u32(u.pixels);
         w.u32(u.firstSlot);
         w.u32(u.slotCount);
+        w.u8(u.fullFrom);
     }
     w.u32(uint32_t(r.slots().size()));
     for (const SpriteCell& s : r.slots()) {
@@ -261,7 +262,7 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         d.twinTile[1] = rd.i32();
         d.twinScale = rd.f64();
     }
-    if (!count(rd, 36, n)) return fail();
+    if (!count(rd, 37, n)) return fail();
     r.uploads_.resize(n);
     for (UploadCmd& u : r.uploads_) {
         u.texture = rd.u32();
@@ -270,6 +271,7 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         u.pixels = rd.u32();
         u.firstSlot = rd.u32();
         u.slotCount = rd.u32();
+        u.fullFrom = rd.u8();
     }
     if (!count(rd, 17, n)) return fail();
     r.slots_.resize(n);

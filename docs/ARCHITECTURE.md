@@ -22,7 +22,9 @@ GND), the texture pack, the bridge's messages, the statistics — and is tested 
    call becomes a command of `FrameRecord` (`core/frame.hpp`: Clear, Viewport, Draw, Upload, WriteTarget — plain
    data, no pointers). Hooks into `uaRO.exe` tell what a draw is: the sprite and its folder (`sprite_hook`), the
    game's effect (`effect_hook`), the cell under the mouse (`pick_hook`), hits and sounds (`hit_hook`,
-   `sound_hook`); crisp text (`src/win/crisp`) swaps the windows' tiles for twins at the screen's pixels.
+   `sound_hook`); crisp text (`src/win/crisp`) swaps the windows' tiles for twins at the screen's pixels. The
+   textures keep their pictures' own colours (`texture_hook`, `core/full_colour.hpp`): the game makes them 16-bit
+   as it writes them, and their uploads carry the 8-bit texels wherever the 16-bit ones are still made of them.
 2. **Present.** `Context::present` (`src/win/context.cpp`) flushes the record, reads the game's camera, plans the
    scale (`core/scale`), supersampling, TAA or DLSS, sets the effects — `Context::effects()`, the quality set and
    the groups made into switches (`core/effect_groups`) — and presents; then the frame counter, the statistics and

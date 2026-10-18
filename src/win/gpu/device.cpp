@@ -11,6 +11,7 @@
 
 #include "core/d3d7.hpp"
 #include "core/foliage.hpp"
+#include "core/full_colour.hpp"
 #include "core/png_write.hpp"
 #include "core/region_look.hpp"
 #include "core/effect_light.hpp"
@@ -717,9 +718,11 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     dst.SubresourceIndex = u.level;
     list->CopyTextureRegion(&dst, UINT(u.rect.left), UINT(u.rect.top), 0, &src, nullptr);
     if (u.slotCount) noteSpriteCells(t, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.32
-    if (ai)
-        ai->noteUpload(u.texture, t, u, rec.pixels().data() + u.pixels,
+    if (ai) {
+        std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
+        ai->noteUpload(u.texture, t, u, full_colour::aiTexels(u, rec.pixels().data() + u.pixels, game),
                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);  // with their sources
+    }
 }
 
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {

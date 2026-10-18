@@ -31,7 +31,7 @@ enum class Text : uint16_t {
     ScreenNowFullscreen, ScreenRoext,
     ScreenFirstRun, ScreenAltTab,
     QualityHighRes, QualityHighResHint, QualityRenderScale, QualityRenderScaleHint, QualityWorldScale,
-    QualityWorldScaleHint, QualitySharpen,
+    QualityWorldScaleHint, QualityFullColour, QualityFullColourHint, QualitySharpen,
     QualitySharpenHint, QualityUiFilter, QualityUiFilterHint, UiSharp, UiSmooth, QualityCrispText,
     QualityCrispTextHint,
     FramesVsync, FramesVsyncHint, FramesFpsLimit, FramesFpsLimitHint, FramesTearing, FramesTearingHint,

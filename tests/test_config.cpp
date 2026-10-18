@@ -577,6 +577,20 @@ TEST(config_world_scale) {
     CHECK(appliesNow("quality.world_scale"));
 }
 
+TEST(config_full_colour) {
+    // 2.5.18: the textures in their pictures' own colours - on unless the file says otherwise
+    CHECK(parseConfig("").fullColour);
+    CHECK(!parseConfig("[quality]\nfull_colour = 0\n").fullColour);
+    const settings::IniSetting* s = settings::findSetting("quality.full_colour");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->control == settings::Control::Check && s->page == settings::Page::Quality);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[quality]\nfull_colour = 0\n")), std::string("0"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[quality]\nfull_colour = 0\n"));
+    CHECK(u.waiting.empty() && u.applied.size() == 1 && u.applied[0] == "full_colour 1 -> 0");
+    CHECK(appliesNow("quality.full_colour"));
+}
+
 TEST(config_shader_variants) {
     // 2.5.16: [debug] shader_variants - on unless turned off (the draw shaders made for the game's states)
     CHECK(parseConfig("").shaderVariants);

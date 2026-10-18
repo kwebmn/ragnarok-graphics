@@ -87,6 +87,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("world_scale", std::to_string(running.worldScale), std::to_string(file.worldScale)));
         n.worldScale = file.worldScale;
     }
+    if (file.fullColour != running.fullColour) {  // 2.5.18: for the textures loaded from now on
+        u.applied.push_back(change("full_colour", running.fullColour ? "1" : "0", file.fullColour ? "1" : "0"));
+        n.fullColour = file.fullColour;
+    }
     if (file.sharpen != running.sharpen) {
         u.applied.push_back(change("sharpen", std::to_string(running.sharpen), std::to_string(file.sharpen)));
         n.sharpen = file.sharpen;
@@ -161,7 +165,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
 bool appliesNow(const std::string& k) {
     return k == "display.high_resolution" || k == "display.ui_filter" || k == "display.crisp_text" ||
            k == "display.window_art" ||
-           k == "quality.render_scale" || k == "quality.world_scale" || k == "quality.sharpen" ||
+           k == "quality.render_scale" || k == "quality.world_scale" || k == "quality.full_colour" ||
+           k == "quality.sharpen" ||
            k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||

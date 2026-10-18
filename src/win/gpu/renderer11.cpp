@@ -22,6 +22,7 @@
 #include "core/effect_exe.hpp"
 #include "core/effect_light.hpp"
 #include "core/foliage.hpp"
+#include "core/full_colour.hpp"
 #include "core/game_camera.hpp"
 #include "core/png_write.hpp"
 #include "core/region_look.hpp"
@@ -1136,9 +1137,11 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
                                                  it->second.lightColour);
     }
     if (u.slotCount) spriteCellsWritten(it->second.cells, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1
-    if (ai_)  // 0.47: its key, or the sprite cache's new frames with their sources
-        ai_->noteUpload(u.texture, t.width, t.height, u, rec.pixels().data() + u.pixels,
+    if (ai_) {  // 0.47: its key, or the sprite cache's new frames with their sources
+        std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
+        ai_->noteUpload(u.texture, t.width, t.height, u, full_colour::aiTexels(u, rec.pixels().data() + u.pixels, game),
                         u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);
+    }
 }
 
 void Renderer11::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {

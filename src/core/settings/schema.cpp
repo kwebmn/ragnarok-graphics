@@ -54,6 +54,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::QualityRenderScaleHint, " %"},
         {"quality", "world_scale", Page::Quality, Control::Slider, 50, 100, 5, {}, {}, Text::QualityWorldScale,
          Text::QualityWorldScaleHint, " %"},  // 2.5.16
+        {"quality", "full_colour", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityFullColour,
+         Text::QualityFullColourHint, ""},  // 2.5.18
         {"quality", "sharpen", Page::Quality, Control::Slider, 0, 100, 5, {}, {}, Text::QualitySharpen,
          Text::QualitySharpenHint, ""},
         {"display", "ui_filter", Page::Quality, Control::Choice, 0, 0, 0, {"sharp", "smooth"},
@@ -590,6 +592,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";
     if (k == "quality.render_scale") return std::to_string(c.renderScale);
     if (k == "quality.world_scale") return std::to_string(c.worldScale);  // 2.5.16
+    if (k == "quality.full_colour") return c.fullColour ? "1" : "0";        // 2.5.18
     if (k == "quality.sharpen") return std::to_string(c.sharpen);
     if (k == "display.ui_filter") return uiFilterToken(c.uiFilter);
     if (k == "display.window_art") return windowArtToken(c.windowArt);
