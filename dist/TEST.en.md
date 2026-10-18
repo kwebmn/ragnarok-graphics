@@ -1,3 +1,23 @@
+# uaRO Graphics 2.4.2 — testing
+
+- **setup.exe is not needed any more.** As it starts, the settings app makes the game's settings in the registry if
+  there are none yet, and with the game closed it takes over everything setup.exe wrote. After that setup.exe changes
+  nothing the game sees, and it can go from the client's download.
+- No more "As in setup.exe" buttons and "setup.exe has: …" notes in the app, nor "the game uses …, setup.exe has …"
+  lines in the diagnostics and the report.
+- **DLSS: own size.** Smoothing has a DLSS mode "Own size": the world is drawn at a share of the screen (33-100 %)
+  or at a size written by hand (width and/or height; with one of them alone the other follows the screen's
+  proportions), and DLSS enlarges it to the screen. The size it makes on this screen is shown under the rows. A size
+  DLSS does not take is brought to the nearest one it does; uaro-render64.log says what was chosen ("DLSS: own size
+  …").
+- **DLSS model:** Auto (as before: K for DLAA, Quality and Balanced, M and L for the fast modes) or K, J, L, M - for
+  any mode.
+- **Fixed:** the checks and lists on the Frames and Sound (own part) pages changed nothing.
+- Check, please: open the app with the game closed and look at Diagnostics - "Game settings in the registry: there;
+  this app writes them", no lines about setup.exe; the game starts with the same screen and sound as before. DLSS Own
+  size at 75 % and, say, 50 % - the picture and the FPS change, uaro-render64.log has "DLSS: own size …"; DLSS model K
+  and L - the difference shows; a check on Frames stays.
+
 # uaRO Graphics 2.4.1 — testing
 
 - **Monsters no longer blink in their animations.** "Fade in monsters and items" took an attack's frame for a
