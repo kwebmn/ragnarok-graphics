@@ -28,6 +28,11 @@ public:
     virtual bool ask(const std::wstring& text) = 0;  // Yes or No
     // A .reg file to save the game's settings to (save) or to load them from; "" when the player cancels.
     virtual std::wstring pickFile(bool save) = 0;
+    // 2.5.19: a file of another kind - pattern "*.grf;*.zip" under filterName, offered: the name (or path) the
+    // dialog starts with - and a folder; "" when the player cancels.
+    virtual std::wstring pickPath(bool save, const std::wstring& filterName, const std::wstring& pattern,
+                                  const std::wstring& offered) = 0;
+    virtual std::wstring pickFolder(const std::wstring& title) = 0;
     // 1.6: another page, once the page's code has returned (the AI page's "Make again" opens the Texture pack page).
     virtual void showPage(settings::Page which) = 0;
 };

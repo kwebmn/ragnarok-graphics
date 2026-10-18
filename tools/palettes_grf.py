@@ -23,7 +23,8 @@ import zipfile
 import zlib
 
 # The server's limits (uAthena: the stylist's ranges; its conf/battle/client.conf says hair colours 0-8 in the
-# repository only). Raised there, raise them here and run this again.
+# repository only). Raised there, raise them here and run this again. The settings app makes the same file on the
+# player's computer (the Service page, core/palette_grf.hpp): keep its limits the same.
 MAX_HAIR_STYLE = 23
 MAX_HAIR_COLOUR = 20
 MAX_CLOTH_COLOUR = 77

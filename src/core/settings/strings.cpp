@@ -3043,6 +3043,41 @@ const Entry kTexts[] = {
     {"Own size on this screen: {1}×{2} of {3}×{4} ({5} %); DLSS may bring it to the nearest size it takes.",
      "Свій розмір на цьому екрані: {1}×{2} з {3}×{4} ({5} %); DLSS може звести його до найближчого, який бере.",
      "Свой размер на этом экране: {1}×{2} из {3}×{4} ({5} %); DLSS может свести его к ближайшему, который берёт."},
+    // 2.5.19
+    {"Game palettes (Palettes.grf)", "Палітри гри (Palettes.grf)", "Палитры игры (Palettes.grf)"},
+    {"Makes Palettes.grf with only the palettes the server lets be worn: hair styles 0-{1}, hair colours 0-{2}, "
+     "clothes colours 0-{3}. Costumes and the Doram race are unknown to the 2007 client and stay out. The same palette "
+     "is kept once: Kamishi's pack (219 thousand palettes, 153 MB) becomes about 18,500 in 4-5 MB. A palette the "
+     "client does not find is drawn in the sprite's own colours, without an error.",
+     "Збирає Palettes.grf лише з палітрами, які дозволяє сервер: зачіски 0–{1}, кольори волосся 0–{2}, кольори "
+     "одягу 0–{3}. Костюмів і Дорамів клієнт 2007 року не знає — вони не беруться. Однакова палітра зберігається "
+     "один раз: пак Kamishi (219 тисяч палітр, 153 МБ) стає приблизно 18 500 у 4–5 МБ. Палітру, якої клієнт не "
+     "знайде, він малює рідними кольорами спрайта, без помилки.",
+     "Собирает Palettes.grf только с палитрами, которые разрешает сервер: причёски 0–{1}, цвета волос 0–{2}, цвета "
+     "одежды 0–{3}. Костюмов и Дорамов клиент 2007 года не знает — они не берутся. Одинаковая палитра хранится один "
+     "раз: пак Kamishi (219 тысяч палитр, 153 МБ) становится примерно 18 500 в 4–5 МБ. Палитру, которой клиент не "
+     "найдёт, он рисует родными цветами спрайта, без ошибки."},
+    {"Make from a GRF or ZIP...", "Зібрати з GRF або ZIP…", "Собрать из GRF или ZIP…"},
+    {"Make from a folder...", "Зібрати з теки…", "Собрать из папки…"},
+    {"Making Palettes.grf...", "Збирається Palettes.grf…", "Собирается Palettes.grf…"},
+    {"Made {1}: {2} palettes ({3} different), {4} MB in {5} s.",
+     "Зібрано {1}: палітр {2} (різних {3}), {4} МБ за {5} с.",
+     "Собрано {1}: палитр {2} (разных {3}), {4} МБ за {5} с."},
+    {"Left out: hair past the limits {1}, clothes past them {2}, costumes and the Doram race {3}, names the client "
+     "never asks for {4}, empty {5}, files that are no palettes {6}.",
+     "Не взято: волосся понад межі {1}, одяг понад межі {2}, костюми й Дорами {3}, імена, яких клієнт не питає, "
+     "{4}, порожні {5}, файли, що не палітри, {6}.",
+     "Не взято: волосы сверх пределов {1}, одежда сверх пределов {2}, костюмы и Дорамы {3}, имена, которые клиент не "
+     "спрашивает, {4}, пустые {5}, файлы, которые не палитры, {6}."},
+    {"Not made: {1}", "Не зібрано: {1}", "Не собрано: {1}"},
+    {"The source and the result are one file: save the result elsewhere and put it in place afterwards.",
+     "Джерело й результат — один файл: збережіть результат деінде, а потім покладіть на місце.",
+     "Источник и результат — один файл: сохраните результат в другое место, а потом положите на место."},
+    {"The folder with the palettes (data\\palette, or a folder it is in)",
+     "Тека з палітрами (data\\palette або тека, у якій вона)",
+     "Папка с палитрами (data\\palette или папка, в которой она лежит)"},
+    {"GRF or ZIP archives", "Архіви GRF або ZIP", "Архивы GRF или ZIP"},
+    {"GRF archive", "Архів GRF", "Архив GRF"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

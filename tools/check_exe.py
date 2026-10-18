@@ -32,6 +32,7 @@ ALLOWED = {
         "BitBlt", "CreateSolidBrush",  # 1.6.2: the preview's window
     },
     "kernel32.dll": {
+        "GetFullPathNameW",  # 2.5.19: the palettes' source and result told apart (Windows 2000 and later)
         # 0.49: the update check's thread and its lock
         "AcquireSRWLockExclusive", "AcquireSRWLockShared", "CreateThread", "ReleaseSRWLockExclusive",
         "ReleaseSRWLockShared",
@@ -76,6 +77,7 @@ ALLOWED = {
     "ole32.dll": {
         "CoInitializeEx", "CoUninitialize",
         "CoCreateInstance", "CreateStreamOnHGlobal", "GetHGlobalFromStream",  # 1.8.1: screenshots for a report
+        "CoTaskMemFree",  # 2.5.19: the palettes' folder
     },
     "winhttp.dll": {  # 0.49: the update check
         "WinHttpCloseHandle", "WinHttpConnect", "WinHttpOpen", "WinHttpOpenRequest", "WinHttpQueryDataAvailable",
@@ -84,6 +86,7 @@ ALLOWED = {
     },
     "shell32.dll": {
         "SHGetFolderPathW", "ShellExecuteExW", "ShellExecuteW",
+        "SHBrowseForFolderW", "SHGetPathFromIDListW",  # 2.5.19: the palettes' folder (Windows 2000 and later)
     },
     "user32.dll": {
         # 1.6.2: the preview's window

@@ -302,6 +302,9 @@ enum class Text : uint16_t {
     DiagRegistryOld,  // 2.4.2
     DlssCustom, DlssScale, DlssScaleHint, DlssWidth, DlssHeight, DlssSizeHint, DlssModel, DlssModelHint, DlssModelAuto,
     DlssModelK, DlssModelJ, DlssModelL, DlssModelM, DlssCustomNow,
+    // 2.5.19: the Service page's Palettes.grf
+    ServicePalettes, PalettesNote, PalettesFromFile, PalettesFromFolder, PalettesWorking, PalettesDone, PalettesLeft,
+    PalettesFailed, PalettesSameFile, PalettesFolderTitle, FileFilterGrfZip, FileFilterGrf,
     Count
 };
 

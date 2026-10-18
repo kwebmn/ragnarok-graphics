@@ -1,4 +1,8 @@
+#include <cstdio>
+
+#include "app/files.hpp"
 #include "app/page.hpp"
+#include "app/palettes.hpp"
 #include "app/update.hpp"
 #include "core/settings/presets.hpp"
 #include "core/update_check.hpp"
@@ -24,6 +28,8 @@ constexpr int kProfileName = 1451;
 constexpr int kProfileSave = 1452;
 constexpr int kProfileLoad = 1453;
 constexpr int kProfileDelete = 1454;
+constexpr int kPalettesFile = 1460;  // 2.5.19
+constexpr int kPalettesFolder = 1461;
 
 Text presetName(Preset p) {
     switch (p) {
@@ -93,6 +99,31 @@ public:
             p.note(t(Text::GameSettingsRunning), Tone::Warn);
         else
             p.note(t(Text::GameSettingsNote));
+        // 2.5.19: Palettes.grf with the palettes the server lets be worn
+        p.gap();
+        p.heading(t(Text::ServicePalettes));
+        p.note(tf(Text::PalettesNote, {std::to_string(palettes::kMaxHairStyle),
+                                       std::to_string(palettes::kMaxHairColour),
+                                       std::to_string(palettes::kMaxClothColour)}));
+        const PalettesState made = palettesState();
+        making_ = made.kind == PalettesState::Working;
+        p.buttons({{kPalettesFile, t(Text::PalettesFromFile), !making_},
+                   {kPalettesFolder, t(Text::PalettesFromFolder), !making_}});
+        if (making_) {
+            p.note(t(Text::PalettesWorking));
+        } else if (made.kind == PalettesState::Failed) {
+            p.note(tf(Text::PalettesFailed, {made.error}), Tone::Bad);
+        } else if (made.kind == PalettesState::Done) {
+            char mb[32], s[32];
+            std::snprintf(mb, sizeof mb, "%.1f", double(made.bytes) / 1e6);
+            std::snprintf(s, sizeof s, "%.1f", made.seconds);
+            p.note(tf(Text::PalettesDone,
+                      {utf8(made.out), std::to_string(made.kept), std::to_string(made.blocks), mb, s}),
+                   Tone::Good);
+            std::vector<std::string> left;
+            for (uint32_t n : made.left) left.push_back(std::to_string(n));
+            p.note(tf(Text::PalettesLeft, left));
+        }
         p.gap();
         p.heading(t(Text::ServiceUaroGraphics));
         p.buttons({{kReset, t(Text::ResetButton)}});
@@ -103,6 +134,7 @@ public:
         p.gap();
         p.heading(t(Text::ServiceUpdate));
         const UpdateState u = updateState();
+        checking_ = u.kind == UpdateState::Checking;
         p.buttons({{kUpdateCheck, t(Text::UpdateCheck), u.kind != UpdateState::Checking},
                    {kUpdateNow, t(Text::UpdateNow), !running}});
         if (u.kind == UpdateState::Checking)
@@ -119,9 +151,15 @@ public:
             p.note(t(Text::UpdateNote));
     }
 
-    bool ticks() const override { return updateState().kind == UpdateState::Checking; }
+    bool ticks() const override {
+        return updateState().kind == UpdateState::Checking || palettesState().kind == PalettesState::Working;
+    }
     void tick() override {
-        if (updateState().kind != UpdateState::Checking) host_.rebuild();  // the answer came
+        const bool checking = updateState().kind == UpdateState::Checking;
+        const bool making = palettesState().kind == PalettesState::Working;
+        if ((checking_ && !checking) || (making_ && !making)) host_.rebuild();  // the answer came, or the file
+        checking_ = checking;
+        making_ = making;
     }
 
     void command(int id, int code) override {
@@ -195,6 +233,24 @@ public:
             const std::wstring err = m.loadGameSettings(file, l);
             host_.message(err.empty() ? t(Text::GameLoaded) : err, !err.empty());
             host_.reload();
+        } else if (id == kPalettesFile || id == kPalettesFolder) {  // 2.5.19
+            std::wstring source;
+            if (id == kPalettesFolder) {
+                source = host_.pickFolder(t(Text::PalettesFolderTitle));
+            } else {
+                const std::wstring own = m.paths().dir + L"\\Palettes.grf";  // the game's, offered first
+                source = host_.pickPath(false, t(Text::FileFilterGrfZip), L"*.grf;*.gpf;*.zip",
+                                        fileExists(own) ? own : L"");
+            }
+            if (source.empty()) return;
+            const std::wstring out = host_.pickPath(true, t(Text::FileFilterGrf), L"*.grf", L"Palettes.grf");
+            if (out.empty()) return;
+            if (samePath(source, out)) {
+                host_.message(t(Text::PalettesSameFile), true);
+                return;
+            }
+            startPalettes(source, id == kPalettesFolder, out);
+            host_.rebuild();
         } else if (id == kLayoutReset) {
             if (!host_.ask(t(Text::LayoutResetAsk))) return;
             const std::wstring err = m.resetWindowLayout(l);
@@ -206,6 +262,7 @@ public:
 private:
     HWND list_ = nullptr;
     HWND profiles_ = nullptr;
+    bool checking_ = false, making_ = false;  // at the last look: what ended since is shown anew
 };
 
 }  // namespace

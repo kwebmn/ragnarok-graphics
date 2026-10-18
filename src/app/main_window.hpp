@@ -26,6 +26,9 @@ public:
     void message(const std::wstring& text, bool error) override;
     bool ask(const std::wstring& text) override;
     std::wstring pickFile(bool save) override;
+    std::wstring pickPath(bool save, const std::wstring& filterName, const std::wstring& pattern,
+                          const std::wstring& offered) override;
+    std::wstring pickFolder(const std::wstring& title) override;
     void showPage(settings::Page which) override;
 
 private:

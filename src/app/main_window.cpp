@@ -2,6 +2,7 @@
 
 #include <commctrl.h>
 #include <commdlg.h>
+#include <shlobj.h>
 
 #include <algorithm>
 #include <memory>
@@ -403,24 +404,47 @@ void MainWindow::message(const std::wstring& text, bool error) {
 bool MainWindow::ask(const std::wstring& text) { return box(text, MB_YESNO | MB_ICONQUESTION) == IDYES; }
 
 std::wstring MainWindow::pickFile(bool save) {
+    return pickPath(save, wtr(lang_, Text::FileFilterReg), L"*.reg", save ? L"uaro-game-settings.reg" : L"");
+}
+
+std::wstring MainWindow::pickPath(bool save, const std::wstring& filterName, const std::wstring& pattern,
+                                  const std::wstring& offered) {
     wchar_t file[MAX_PATH] = {};
-    if (save) std::wstring(L"uaro-game-settings.reg").copy(file, MAX_PATH - 1);
-    std::wstring filter = wtr(lang_, Text::FileFilterReg);
+    offered.copy(file, MAX_PATH - 1);
+    std::wstring filter = filterName;
     filter += L'\0';
-    filter += L"*.reg";
+    filter += pattern;
     filter += L'\0';  // and c_str()'s own: the list ends with two
+    const size_t dot = pattern.find(L"*.");
+    const std::wstring ext =  // the first pattern's: the name typed without one gets it
+        dot == std::wstring::npos ? L"" : pattern.substr(dot + 2, pattern.find(L';', dot) - dot - 2);
     OPENFILENAMEW o{};
     o.lStructSize = sizeof o;
     o.hwndOwner = hwnd_;
     o.lpstrFilter = filter.c_str();
     o.lpstrFile = file;
     o.nMaxFile = MAX_PATH;
-    o.lpstrDefExt = L"reg";
+    o.lpstrDefExt = ext.empty() ? nullptr : ext.c_str();
     o.Flags = OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST | (save ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST);
     rebuilds_.boxOpened();  // its own message loop runs like a message box's
     const BOOL ok = save ? GetSaveFileNameW(&o) : GetOpenFileNameW(&o);
     if (rebuilds_.boxClosed()) PostMessageW(hwnd_, kRebuild, 0, 0);
     return ok ? std::wstring(file) : std::wstring();
+}
+
+std::wstring MainWindow::pickFolder(const std::wstring& title) {
+    BROWSEINFOW b{};
+    b.hwndOwner = hwnd_;
+    b.lpszTitle = title.c_str();
+    b.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;  // COM is the thread's since main()
+    rebuilds_.boxOpened();
+    LPITEMIDLIST id = SHBrowseForFolderW(&b);
+    if (rebuilds_.boxClosed()) PostMessageW(hwnd_, kRebuild, 0, 0);
+    if (!id) return {};
+    wchar_t path[MAX_PATH] = {};
+    const bool ok = SHGetPathFromIDListW(id, path) != FALSE;
+    CoTaskMemFree(id);
+    return ok ? std::wstring(path) : std::wstring();
 }
 
 bool MainWindow::confirmClose() { return model_->pendingCount() == 0 || ask(wtr(lang_, Text::AskUnsaved)); }
