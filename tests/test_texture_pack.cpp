@@ -335,3 +335,30 @@ TEST(pack_writer_takes_pictures_out) {
     CHECK(r.read("world/8x8/dd.webp", data) && data == bytes("dddd"));
     std::remove(path.c_str());
 }
+
+TEST(texture_pack_counts_its_pictures_by_its_directory_alone) {
+    // 2.2.5: the settings app's line about the pack - the pictures its directory names (the index not among them),
+    // never every picture's header of a pack its builder is writing: that froze the window at Stop and Make
+    const std::string path = tempPath();
+    std::string error;
+    uint64_t pictures = 9;
+    CHECK(!pack::countOf(path, pictures, error));  // no pack
+    {
+        pack::Writer w;
+        CHECK(w.open(path, false, error));
+        CHECK(add(w, "world/8x8/aa.webp", "a") && add(w, "world/8x8/bb.webp", "bb"));
+        CHECK(add(w, "sprites/8x8/cc.webp", "ccc"));
+        CHECK(w.close("world/8x8/aa.webp\tground\n", error));
+    }
+    CHECK(pack::countOf(path, pictures, error) && pictures == 3);
+    {
+        pack::Writer w;  // a run that goes on: the directory gone until its checkpoint
+        CHECK(w.open(path, true, error));
+        CHECK(add(w, "world/8x8/dd.webp", "dddd"));
+    }
+    CHECK(!pack::countOf(path, pictures, error));  // being written: not read picture by picture
+    pack::Reader r;
+    CHECK(!r.open(path, error, false));  // the settings app's reader: no picture by picture either
+    CHECK(r.open(path, error) && r.recovered() && r.has("world/8x8/dd.webp"));  // the builder's and the game's
+    std::remove(path.c_str());
+}

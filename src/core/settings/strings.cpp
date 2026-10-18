@@ -2793,6 +2793,9 @@ const Entry kTexts[] = {
      "Напишите название карты, как в её файлах, напр. cmd_fild02."},
     {"{1} pictures taken out of the pack; {2} in it.", "Прибрано з пакета картинок: {1}; у ньому: {2}.",
      "Убрано из пакета картинок: {1}; в нём: {2}."},
+    {"The pack is being written, or its last build was cut short ({1}): a build finishes it.",
+     "Пакет зараз записується або його останнє збирання обірвалося ({1}): збирання його допише.",
+     "Пакет сейчас записывается или его последняя сборка оборвалась ({1}): сборка его допишет."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

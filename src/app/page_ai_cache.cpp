@@ -29,14 +29,18 @@ public:
         Model& m = host_.model();
         path_ = m.paths().dir + L"\\uaro-textures.zip";
         oldPath_ = m.paths().dir + L"\\upscaled.grf";
-        file_ = readPack(path_);
+        busy_ = m.now().gameRunning || packInUse();
+        // 2.2.5: not read while its builder or a game writes it (it has no directory then)
+        const bool writing = packInUse();
+        file_ = writing ? PackFile() : readPack(path_);
         oldBytes_ = fileBytes(oldPath_);
         contents_ = ai::CacheContents(file_.entries);
         index_ = contents_.index();
-        busy_ = m.now().gameRunning || packInUse();
         const Lang l = host_.lang();
         p.heading(t(Text::PageAiCache));
-        if (!file_.exists)
+        if (writing)
+            p.note(t(Text::AiCacheRunning), Tone::Warn);
+        else if (!file_.exists)
             p.note(t(Text::AiCacheNone));
         else if (!file_.error.empty())
             p.note(tf(Text::AiCacheUnreadable, {file_.error}), Tone::Bad);
@@ -71,7 +75,7 @@ public:
         if (oldBytes_)  // 0.48: upscaled.grf of 0.11-0.47, not used any more
             buttons.push_back({kDeleteOld, tf(Text::AiCacheDeleteOld, {sizeText(oldBytes_, l)}), !busy_});
         p.buttons(buttons);
-        if (busy_) p.note(t(Text::AiCacheRunning), Tone::Warn);
+        if (busy_ && !writing) p.note(t(Text::AiCacheRunning), Tone::Warn);
         p.note(t(Text::AiCacheOldNote));
     }
 

@@ -275,7 +275,7 @@ enum class Text : uint16_t {
     // 2.2.5: one map's textures on the Texture pack page
     PackMapHeading, PackMapNote, PackMapName, PackMapCue, PackMapNameHint, PackMapGround, PackMapGroundHint,
     PackMapModels, PackMapModelsHint, PackMapModel, PackMapModelHint, PackMapRemake, PackMapDrop, PackMapAskRemake,
-    PackMapAskDrop, PackMapBadName, PackDropped,
+    PackMapAskDrop, PackMapBadName, PackDropped, PackWriting,
     Count
 };
 

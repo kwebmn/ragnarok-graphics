@@ -69,6 +69,10 @@ struct ZipEntry {
 };
 using ReadAt = std::function<bool(uint64_t at, uint8_t* out, size_t n)>;
 bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<ZipEntry>& out, std::string& error);
+// 2.2.5: the pictures a pack's central directory names (its index not counted), by its end records and its directory
+// alone - no name kept, never every picture's header: false (and why) for a pack being written, which has no directory
+// until its builder's checkpoint. The settings app's line about the pack froze its window reading those.
+bool countOf(const std::string& path, uint64_t& pictures, std::string& error);
 
 class Reader {
 public:
@@ -78,8 +82,10 @@ public:
     Reader& operator=(const Reader&) = delete;
 
     // The file stays open until close(). 0.48: a pack cut short before its central directory (its builder or the
-    // game's own making stopped) is read by its pictures' local headers, without its index: recovered().
-    bool open(const std::string& path, std::string& error);
+    // game's own making stopped) is read by its pictures' local headers, without its index: recovered(). 2.2.5:
+    // recover false - not that (the settings app: every header of a pack being written, read on its window's thread,
+    // froze it); false then.
+    bool open(const std::string& path, std::string& error, bool recover = true);
     void close();
     bool isOpen() const { return file_ != nullptr; }
     bool recovered() const { return recovered_; }

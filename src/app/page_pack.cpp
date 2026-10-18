@@ -347,18 +347,27 @@ private:
     std::wstring packText() {
         if (running_ && haveStatus_ && status_.inPack)
             return tf(Text::PackHas, {num(status_.inPack), sizeText(status_.bytes, host_.lang())});
-        pack::Reader r;
-        std::string error;
-        const std::string path = ansi(dir_ + L"\\uaro-textures.zip");
+        const std::wstring path = dir_ + L"\\uaro-textures.zip";
         packCount_ = 0;
-        if (!r.open(path, error)) return t(Text::PackNone);
-        const size_t n = r.count() - (r.has(pack::kIndexName) ? 1 : 0);
-        packCount_ = n;
         WIN32_FILE_ATTRIBUTE_DATA d{};
-        unsigned long long bytes = 0;
-        if (GetFileAttributesExW((dir_ + L"\\uaro-textures.zip").c_str(), GetFileExInfoStandard, &d))
-            bytes = (unsigned long long)d.nFileSizeHigh << 32 | d.nFileSizeLow;
-        return tf(Text::PackHas, {num((long long)n), sizeText(bytes, host_.lang())});
+        if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &d)) return t(Text::PackNone);
+        const unsigned long long bytes = (unsigned long long)d.nFileSizeHigh << 32 | d.nFileSizeLow;
+        const unsigned long long stamp =
+            (unsigned long long)d.ftLastWriteTime.dwHighDateTime << 32 | d.ftLastWriteTime.dwLowDateTime;
+        // 2.2.5: counted by its directory alone, once a change of the file - the whole pack opened here at every
+        // rebuild, and every picture's header read of one its builder was writing, froze the window (Stop, Make)
+        static unsigned long long countedBytes = 0, countedStamp = 0;
+        static uint64_t counted = 0;
+        static bool countedOk = false;
+        if (bytes != countedBytes || stamp != countedStamp) {
+            std::string error;
+            countedOk = pack::countOf(ansi(path), counted, error);
+            countedBytes = bytes;
+            countedStamp = stamp;
+        }
+        if (!countedOk) return tf(Text::PackWriting, {sizeText(bytes, host_.lang())});
+        packCount_ = size_t(counted);
+        return tf(Text::PackHas, {num((long long)counted), sizeText(bytes, host_.lang())});
     }
 
     std::string timeText(int seconds) const {

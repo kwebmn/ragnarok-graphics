@@ -20,7 +20,7 @@ bool readPackIndex(const std::wstring& path, pack::Index& out) {
     pack::Reader r;
     std::string error;
     std::vector<uint8_t> data;
-    if (!r.open(ansi(path), error) || !r.read(pack::kIndexName, data)) return false;
+    if (!r.open(ansi(path), error, false) || !r.read(pack::kIndexName, data)) return false;  // 2.2.5: no recovery
     out = pack::parseIndexFile(std::string(data.begin(), data.end()));
     return true;
 }
@@ -31,7 +31,7 @@ PackFile readPack(const std::wstring& path) {
     f.exists = true;
     f.bytes = fileBytes(path);
     pack::Reader r;
-    if (!r.open(ansi(path), f.error)) return f;
+    if (!r.open(ansi(path), f.error, false)) return f;  // 2.2.5: a pack being written - not header by header
     std::vector<uint8_t> data;
     const pack::Index index =
         r.read(pack::kIndexName, data) ? pack::parseIndexFile(std::string(data.begin(), data.end())) : pack::Index();

@@ -62,7 +62,11 @@ using Found = ZipEntry;
 // here, HTTP ranges of a pack on the site in the settings app's download).
 }  // namespace
 
-bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<Found>& out, std::string& error) {
+namespace {
+
+// Where a ZIP's central directory is and how many entries it holds, by its end records (ZIP64's when they say so).
+bool directoryOf(uint64_t size, const ReadAt& read, uint64_t& count, uint64_t& cdOffset, uint64_t& cdSize,
+                 std::string& error) {
     if (size < 22) {
         error = "too short for a ZIP";
         return false;
@@ -85,7 +89,9 @@ bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<Found>& o
         return false;
     }
     const uint64_t endAt = size - tail + at;
-    uint64_t count = get16(&b[at + 10]), cdSize = get32(&b[at + 12]), cdOffset = get32(&b[at + 16]);
+    count = get16(&b[at + 10]);
+    cdSize = get32(&b[at + 12]);
+    cdOffset = get32(&b[at + 16]);
     if (count == 0xFFFF || cdSize == 0xFFFFFFFF || cdOffset == 0xFFFFFFFF) {
         uint8_t loc[20], end64[56];
         if (endAt < 20 || !read(endAt - 20, loc, sizeof loc) || get32(loc) != kLocator64Sig ||
@@ -101,6 +107,14 @@ bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<Found>& o
         error = "a broken central directory";
         return false;
     }
+    return true;
+}
+
+}  // namespace
+
+bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<Found>& out, std::string& error) {
+    uint64_t count = 0, cdOffset = 0, cdSize = 0;
+    if (!directoryOf(size, read, count, cdOffset, cdSize, error)) return false;
     std::vector<uint8_t> cd(static_cast<size_t>(cdSize));
     if (!cd.empty() && !read(cdOffset, cd.data(), cd.size())) {
         error = "the central directory cannot be read";
@@ -376,7 +390,45 @@ bool keyOfPicture(const std::string& name, Group& group, std::string& key) {
     return true;
 }
 
-bool Reader::open(const std::string& path, std::string& error) {
+bool countOf(const std::string& path, uint64_t& pictures, std::string& error) {
+    std::FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) {
+        error = "cannot open " + path;
+        return false;
+    }
+    const ReadAt read = [f](uint64_t at, uint8_t* to, size_t n) { return readAt(f, at, to, n); };
+    uint64_t count = 0, cdOffset = 0, cdSize = 0;
+    std::vector<uint8_t> cd;
+    bool ok = directoryOf(sizeOf(f), read, count, cdOffset, cdSize, error);
+    if (ok) {
+        cd.resize(static_cast<size_t>(cdSize));
+        ok = cd.empty() || read(cdOffset, cd.data(), cd.size());
+        if (!ok) error = "the central directory cannot be read";
+    }
+    std::fclose(f);
+    if (!ok) return false;
+    // the entries' headers one after another; no name kept
+    const size_t indexLen = std::strlen(kIndexName);
+    uint64_t found = 0;
+    size_t p = 0;
+    for (uint64_t i = 0; i < count; ++i) {
+        if (p + 46 > cd.size() || get32(&cd[p]) != kCentralSig) {
+            error = "a broken central directory entry";
+            return false;
+        }
+        const size_t nameLen = get16(&cd[p + 28]), extraLen = get16(&cd[p + 30]), commentLen = get16(&cd[p + 32]);
+        if (p + 46 + nameLen + extraLen + commentLen > cd.size()) {
+            error = "a broken central directory entry";
+            return false;
+        }
+        if (nameLen != indexLen || std::memcmp(&cd[p + 46], kIndexName, indexLen) != 0) ++found;
+        p += 46 + nameLen + extraLen + commentLen;
+    }
+    pictures = found;
+    return true;
+}
+
+bool Reader::open(const std::string& path, std::string& error, bool recover) {
     close();
     file_ = std::fopen(path.c_str(), "rb");
     if (!file_) {
@@ -386,7 +438,7 @@ bool Reader::open(const std::string& path, std::string& error) {
     std::vector<Found> found;
     std::string why;
     if (!centralDirectory(file_, found, why)) {  // 0.48: cut short - its pictures by their local headers
-        localHeaders(file_, found);
+        if (recover) localHeaders(file_, found);
         if (found.empty()) {
             error = path + ": " + why;
             close();
