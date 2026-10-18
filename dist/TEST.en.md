@@ -1,3 +1,13 @@
+# uaRO Graphics 2.5.7 — testing
+
+- **The light in the air costs a quarter.** The rays from the sky (by day under the open sky) and the glow of the air
+  about the fires are now worked out at half the size and laid over the picture smoothly - as the floors' reflections
+  are. It was the dearest pass by day: each pixel of the rays read the depth 24 times. On Direct3D 12 and Direct3D 11.
+- **Direct3D 11: the floors' reflections show again.** Since 2.5.3 they were worked out but never shown - the pass did
+  not write their picture's transparency.
+- Check, please: by day in a field (prt_fild08, say) with the effects on - the FPS before and now; the rays from the
+  sky look as soft as before. On Direct3D 11 the floors reflect in a dungeon or in the rain.
+
 # uaRO Graphics 2.5.6 — testing
 
 - **The game thread's profile (`[debug] profile = 1`) names the driver's own busy places too.** In the Radeon HD 6570
