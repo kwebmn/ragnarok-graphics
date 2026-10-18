@@ -1752,17 +1752,18 @@ bool Renderer::presentRefused() const { return impl_->refused; }
 
 bool Renderer::lost() const { return d3d11_ ? d3d11_->lost() : impl_->lost; }
 
-void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds) {
+void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds, uint8_t aiSprites) {
     if (remix_) return;
     if (d3d11_) {
         d3d11_->setAnisotropy(anisotropy);
-        return d3d11_->setAiShown(aiKinds);
+        return d3d11_->setAiShown(aiKinds, aiSprites);
     }
-    if (remote_) return remote_->setDrawQuality(anisotropy, alphaToCoverage, aiKinds);
+    if (remote_) return remote_->setDrawQuality(anisotropy, alphaToCoverage, aiKinds, aiSprites);
     Impl& m = *impl_;
     if (m.ai) {
         m.ai->shown = aiKinds != 0;
         m.ai->kindsShown = aiKinds;
+        m.ai->spritesShown = aiSprites;
     }
     if (anisotropy == m.anisotropy && alphaToCoverage == m.alphaToCoverage) return;
     m.anisotropy = anisotropy;

@@ -278,16 +278,19 @@ void Ai11::dropCopy(uint32_t id) {
     copies_.erase(c);
 }
 
-ID3D11ShaderResourceView* Ai11::copyOf(uint32_t id, bool ui) const {
+ID3D11ShaderResourceView* Ai11::copyOf(uint32_t id, bool ui, uint8_t source) const {
     if (!shown || !id) return nullptr;
     const auto c = copies_.find(id);
     if (c == copies_.end()) return nullptr;
-    // 2.2.1: its kind on in the file now (a sprite cache's copy: sprites; the interface's: icons)
+    // 2.2.1: its kind on in the file now (the interface's: icons); 2.2.2: a sprite cache's copy - it stands in for
+    // the interface's draws too (the cursor) - by the kind of the cell drawn (2.2.1 took the icons' for it)
     const auto item = items_.find(id);
     ai::Kind kind = item != items_.end() ? item->second.kind : ai::Kind::None;
-    if (atlases_.count(id)) kind = ai::Kind::Sprites;
     if (c->second.ui) kind = ai::Kind::Icons;
-    if (int(kind) < 8 && !(kindsShown >> int(kind) & 1)) return nullptr;
+    if (atlases_.count(id)) kind = ai::Kind::Sprites;
+    const bool on = kind == ai::Kind::Sprites ? aiCellShown(source, kindsShown, spritesShown)
+                                              : int(kind) >= 8 || (kindsShown >> int(kind) & 1) != 0;
+    if (!on) return nullptr;
     return (ui ? c->second.ui : c->second.world) ? c->second.srv : nullptr;
 }
 

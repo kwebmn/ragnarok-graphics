@@ -452,9 +452,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
             if (!map.empty()) LOG_INFO("map: %s", map.c_str());
         }
     }
-    // 2.2.1: the AI pictures' kinds as the file says now (a kind off hidden at once); Pause: none
+    // 2.2.1: the AI pictures' kinds as the file says now (a kind off hidden at once; 2.2.2: each kind of sprites
+    // too); Pause: none
     renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage,
-                             enhanced_ ? aiKindsShown(config.aiNow) : uint8_t(0));
+                             enhanced_ ? aiKindsShown(config.aiNow) : uint8_t(0),
+                             enhanced_ ? aiSpritesShown(config.aiNow) : uint8_t(0));
     keepFrameRate(config, window);
     Profiler::get().run(GetCurrentThreadId(), config.profile);  // 0.87: [debug] profile
     // 2.2: the set and the groups made into the switches; 0.63: how much night now, by the clock; 0.74: the minute

@@ -69,6 +69,9 @@ public:
     bool shown = true;                              // Pause: the game's own textures
     uint8_t kindsShown = 0xFF;  // 2.2.1: the kinds shown ([ai] as the file has it now; bits as ai::Kind)
     bool kindShown(uint8_t kind) const { return kind >= 8 || (kindsShown >> kind & 1) != 0; }
+    uint8_t spritesShown = 0xFF;  // 2.2.2: the sprites' kinds shown (aiSpritesShown's bits)
+    // 2.2.2: a sprite cache's cell holding `source` (sprite_exe::Source) drawn from the copy (aiCellShown)
+    bool cellShown(uint8_t source) const { return aiCellShown(source, kindsShown, spritesShown); }
 
     // 0.43, the pack builder (Renderer::buildPack): the networks of the settings' kinds - no pack.
     bool startForPack(const std::string& gameDir, const AiSettings& settings, std::string& error);

@@ -1,7 +1,9 @@
 #include "core/config.hpp"
 
+#include "core/ai/kinds.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/schema.hpp"
+#include "core/sprite_exe.hpp"
 
 #include <algorithm>
 
@@ -571,6 +573,28 @@ uint8_t aiKindsShown(const AiSettings& a) {
                    (a.icons ? 16 : 0));
 }
 
+uint8_t aiSpritesShown(const AiSettings& a) {
+    if (!a.on()) return 0;
+    using sprite_exe::Source;
+    const auto bit = [](Source s) { return 1 << int(s); };
+    return uint8_t((a.monsters ? bit(Source::Monster) : 0) | (a.players ? bit(Source::Player) : 0) |
+                   (a.npcs ? bit(Source::Npc) : 0) | (a.items ? bit(Source::Item) : 0));
+}
+
+bool aiCellShown(uint8_t source, uint8_t kinds, uint8_t sprites) {
+    const auto kind = [&](ai::Kind k) { return (kinds >> int(k) & 1) != 0; };
+    switch (sprite_exe::Source(source)) {
+        case sprite_exe::Source::Monster:
+        case sprite_exe::Source::Player:
+        case sprite_exe::Source::Npc:
+        case sprite_exe::Source::Item: return (sprites >> source & 1) != 0;
+        case sprite_exe::Source::Effect: return kind(ai::Kind::Effects);
+        case sprite_exe::Source::Interface: return kind(ai::Kind::Icons);
+        case sprite_exe::Source::Unknown: break;
+    }
+    return kind(ai::Kind::Sprites);
+}
+
 bool aiWaits(const std::string& key, const AiSettings& started, const AiSettings& now) {
     const auto on = [&](const AiSettings& a) {
         if (key == "ai.enabled") return a.enabled;
@@ -578,14 +602,12 @@ bool aiWaits(const std::string& key, const AiSettings& started, const AiSettings
         if (key == "ai.objects") return a.objects && a.on();
         if (key == "ai.effects") return a.effects && a.on();
         if (key == "ai.icons") return a.icons && a.on();
-        if (key == "ai.monsters") return a.monsters;
-        if (key == "ai.players") return a.players;
-        if (key == "ai.npcs") return a.npcs;
-        if (key == "ai.items") return a.items;
+        if (key == "ai.monsters") return a.monsters && a.on();
+        if (key == "ai.players") return a.players && a.on();
+        if (key == "ai.npcs") return a.npcs && a.on();
+        if (key == "ai.items") return a.items && a.on();
         return false;
     };
-    const bool sprite = key == "ai.monsters" || key == "ai.players" || key == "ai.npcs" || key == "ai.items";
-    if (sprite) return on(started) != on(now) && !(now.on() && !now.sprites());
     return on(now) && !on(started);
 }
 

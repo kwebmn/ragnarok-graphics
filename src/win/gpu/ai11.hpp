@@ -55,10 +55,12 @@ public:
         iconContext_ = context;
     }
     // The picture a draw of the world (ui false) or of the interface takes in place of the texture; null: the game's.
-    ID3D11ShaderResourceView* copyOf(uint32_t id, bool ui) const;
+    // 2.2.2: source - what the sprite cache's cell drawn holds (sprite_exe::Source; 0 unknown, any other texture)
+    ID3D11ShaderResourceView* copyOf(uint32_t id, bool ui, uint8_t source = 0) const;
     void work();  // once a frame, on the game's thread: what the thread has made goes in
     bool shown = true;  // Pause: the game's own textures
     uint8_t kindsShown = 0xFF;  // 2.2.1: the kinds shown ([ai] as the file has it now; bits as ai::Kind)
+    uint8_t spritesShown = 0xFF;  // 2.2.2: the sprites' kinds shown (aiSpritesShown's bits)
 
 private:
     struct Item {

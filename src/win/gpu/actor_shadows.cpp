@@ -31,14 +31,6 @@ struct MaskVertex {
 
 constexpr float kLength = 0.45f;  // of a layer's height above the feet, the shadow's length
 
-// What a sprite cache cell of `t` holds at (u, v) (sprite_exe::Source; 0 unknown).
-uint8_t sourceAt(const std::vector<SpriteCell>& cells, const Texture& t, float u, float v) {
-    const int x = int(u * float(t.width)), y = int(v * float(t.height));
-    for (const SpriteCell& c : cells)
-        if (x >= c.rect.left && x < c.rect.right && y >= c.rect.top && y < c.rect.bottom) return c.source;
-    return 0;
-}
-
 // A cell written again: what it holds now.
 void noteCells(std::vector<SpriteCell>& cells, const SpriteCell* slots, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
@@ -328,7 +320,8 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
         const auto t = textures.find(d.texture[0]);
         if (t == textures.end()) continue;
         const auto c = cells.find(d.texture[0]);
-        const uint8_t source = sourceAt(c != cells.end() ? c->second : t->second.spriteCells, t->second, u0, v0);
+        const uint8_t source = spriteSourceAt(c != cells.end() ? c->second : t->second.spriteCells, t->second.width,
+                                              t->second.height, u0, v0);
         if (source == uint8_t(sprite_exe::Source::Player) || source == uint8_t(sprite_exe::Source::Monster) ||
             source == uint8_t(sprite_exe::Source::Npc))
             layers.push_back(l);

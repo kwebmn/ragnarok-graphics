@@ -300,3 +300,41 @@ TEST(live_config_smooth_map_light_applies_now) {
     CHECK(u.applied[0] == "smooth_light 1 -> 0");
 }
 
+
+TEST(live_config_ai_sprite_kinds_hide_each_on_its_own) {
+    // 2.2.2: monsters, players, NPCs or items turned off in a running game are hidden at once, each by the cells of
+    // the sprite cache that hold it (2.2.1 waited for the next start unless all four were off: one copy holds them)
+    const char* started = "[ai]\nenabled = 1\nmonsters = 1\nplayers = 1\nnpcs = 1\nitems = 1\n";
+    const Config running = parseConfig(started);
+    const char* noMonsters = "[ai]\nenabled = 1\nmonsters = 0\nplayers = 1\nnpcs = 1\nitems = 1\n";
+    LiveUpdate u = liveUpdate(running, parseConfig(noMonsters));
+    CHECK(u.waiting.empty());
+    CHECK(u.applied.size() == 1 && u.applied[0] == "ai.monsters 1 -> 0");
+    CHECK(!u.next.aiNow.monsters && u.next.ai.monsters);  // hidden now, its pictures kept
+    u = liveUpdate(u.next, parseConfig(started));
+    CHECK(u.waiting.empty() && u.applied.size() == 1 && u.applied[0] == "ai.monsters 0 -> 1");
+    // started without the players' pictures: on waits for the next start, as any kind's
+    const Config without = parseConfig("[ai]\nenabled = 1\nmonsters = 1\nplayers = 0\n");
+    u = liveUpdate(without, parseConfig("[ai]\nenabled = 1\nmonsters = 1\nplayers = 1\n"));
+    CHECK(u.applied.empty() && u.waiting.size() == 1 && u.waiting[0] == "ai.players");
+}
+
+TEST(live_config_ai_sprite_cells_follow_their_kinds) {
+    // 2.2.2: a cell of the sprite cache is drawn from its AI copy while its own kind is shown - monsters, players,
+    // NPCs and items by theirs (aiSpritesShown, bits by sprite_exe::Source), an effect's frame by the effects', the
+    // cursor by the icons' (aiKindsShown), a frame of no known file while any sprite kind is
+    AiSettings a;
+    a.enabled = true;
+    a.monsters = a.npcs = true;
+    CHECK_EQ(int(aiSpritesShown(a)), (1 << 1) | (1 << 3));
+    a.enabled = false;
+    CHECK_EQ(int(aiSpritesShown(a)), 0);
+    const uint8_t kinds = 1 | 2 | 4 | 16;  // ground, objects, sprites, icons - not the effects
+    const uint8_t npcs = 1 << 3;
+    CHECK(!aiCellShown(1, kinds, npcs));  // a monster's frame: the game's own
+    CHECK(aiCellShown(3, kinds, npcs));   // an NPC's: the AI's
+    CHECK(!aiCellShown(5, kinds, npcs));  // an effect's frame
+    CHECK(aiCellShown(6, kinds, npcs));   // the cursor
+    CHECK(aiCellShown(0, kinds, npcs));   // no known file
+    CHECK(!aiCellShown(0, kinds & ~4, 0));
+}

@@ -67,7 +67,7 @@ TEST(ai_kinds_shown_follow_the_file_at_once) {
 
 TEST(ai_waits_names_what_needs_the_next_start) {
     // 2.2.1 (console's ↻), 2.2.2 in the core: a kind off is hidden at once; on at once when the game started with
-    // it; a group of sprites alone waits (one copy holds them all), all of them off is hidden at once
+    // it; 2.2.2: a kind of sprites alone too (the cells of the cache that hold it)
     AiSettings started;
     started.enabled = true;
     started.monsters = started.players = started.npcs = started.items = true;
@@ -75,7 +75,10 @@ TEST(ai_waits_names_what_needs_the_next_start) {
     now.ground = false;
     CHECK(!aiWaits("ai.ground", started, now));
     now.monsters = false;
-    CHECK(aiWaits("ai.monsters", started, now));
+    CHECK(!aiWaits("ai.monsters", started, now));
+    AiSettings fewer = started;  // started without the items' pictures
+    fewer.items = false;
+    CHECK(aiWaits("ai.items", fewer, started));
     now.players = now.npcs = now.items = false;
     CHECK(!aiWaits("ai.monsters", started, now));
     AiSettings off;  // started without the pictures

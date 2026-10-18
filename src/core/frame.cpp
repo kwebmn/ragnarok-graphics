@@ -82,4 +82,24 @@ void FrameRecord::reset() {
     slots_.clear();
 }
 
+uint8_t spriteSourceAt(const std::vector<SpriteCell>& cells, int width, int height, float u, float v) {
+    const int x = int(u * float(width)), y = int(v * float(height));
+    for (const SpriteCell& c : cells)
+        if (x >= c.rect.left && x < c.rect.right && y >= c.rect.top && y < c.rect.bottom) return c.source;
+    return 0;
+}
+
+uint8_t spriteSourceOf(const std::vector<SpriteCell>& cells, int width, int height, const std::vector<uint8_t>& bytes,
+                       size_t offset, size_t stride, uint32_t count) {
+    if (cells.empty() || !count || stride < 32 || offset + size_t(count) * stride > bytes.size()) return 0;
+    float u = 0.0f, v = 0.0f;
+    for (uint32_t i = 0; i < count; ++i) {
+        float uv[2];
+        std::memcpy(uv, bytes.data() + offset + size_t(i) * stride + 24, sizeof uv);
+        u += uv[0];
+        v += uv[1];
+    }
+    return spriteSourceAt(cells, width, height, u / float(count), v / float(count));
+}
+
 }  // namespace uagfx

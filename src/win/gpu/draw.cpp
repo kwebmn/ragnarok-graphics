@@ -210,8 +210,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         for (int i = 0; i < 2; ++i) {
             const auto it = d.texture[i] ? textures.find(d.texture[i]) : textures.end();
             aiDrawn[i] = it != textures.end() && it->second.ai && (s.ui ? it->second.aiUi : it->second.aiWorld) &&
-                         (!s.ui || aiInterfaceAt(scale)) &&  // 0.89: not the interface at the game's own size
-                         ai->kindShown(it->second.aiKind);  // 2.2.1: its kind on in the file now
+                         (!s.ui || aiInterfaceAt(scale));  // 0.89: not the interface at the game's own size
+            // 2.2.1: its kind on in the file now; 2.2.2: a sprite cache's by the kind of the cell drawn (monsters
+            // off alone are the game's own at once)
+            if (aiDrawn[i] && it->second.aiKind == uint8_t(ai::Kind::Sprites))
+                aiDrawn[i] = ai->cellShown(spriteSourceOf(it->second.spriteCells, it->second.width, it->second.height,
+                                                          rec.vertexBytes(), d.vertexOffset,
+                                                          FrameRecord::stride(d.fvf), d.vertexCount));
+            else if (aiDrawn[i])
+                aiDrawn[i] = ai->kindShown(it->second.aiKind);
             const bool mips = sampled[i].mipFilter == d3d7::TFP_POINT || sampled[i].mipFilter == d3d7::TFP_LINEAR;
             if (aiDrawn[i] && !mips) sampled[i].mipFilter = d3d7::TFP_LINEAR;
         }

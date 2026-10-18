@@ -40,13 +40,6 @@ void drop(T*& p) {
     p = nullptr;
 }
 
-uint8_t sourceAt(const std::vector<SpriteCell>& cells, int width, int height, float u, float v) {
-    const int x = int(u * float(width)), y = int(v * float(height));
-    for (const SpriteCell& c : cells)
-        if (x >= c.rect.left && x < c.rect.right && y >= c.rect.top && y < c.rect.bottom) return c.source;
-    return 0;
-}
-
 }  // namespace
 
 void Renderer11::noteCells(Texture& t, const SpriteCell* slots, uint32_t count) {
@@ -196,7 +189,7 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
         if (t == textures_.end()) continue;
         const auto c = cells.find(d.texture[0]);
         const uint8_t source =
-            sourceAt(c != cells.end() ? c->second : t->second.cells, t->second.width, t->second.height, u0, v0);
+            spriteSourceAt(c != cells.end() ? c->second : t->second.cells, t->second.width, t->second.height, u0, v0);
         if (source == uint8_t(sprite_exe::Source::Player) || source == uint8_t(sprite_exe::Source::Monster) ||
             source == uint8_t(sprite_exe::Source::Npc))
             layers.push_back(l);

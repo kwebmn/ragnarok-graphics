@@ -999,7 +999,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool aiHere = !s.ui || aiInterfaceAt(scale_);  // 0.89: not the interface at the game's own size
     if (ai_ && aiHere) {
         for (int i = 0; i < 2 && !(d.twin && s.ui); ++i) {
-            ID3D11ShaderResourceView* copy = t[i] != &white_ ? ai_->copyOf(d.texture[i], s.ui) : nullptr;
+            // 2.2.2: a sprite cache's by the kind of the cell drawn
+            const uint8_t source = t[i]->cells.empty() ? 0
+                                                       : spriteSourceOf(t[i]->cells, t[i]->width, t[i]->height,
+                                                                        rec.vertexBytes(), d.vertexOffset, stride,
+                                                                        d.vertexCount);
+            ID3D11ShaderResourceView* copy = t[i] != &white_ ? ai_->copyOf(d.texture[i], s.ui, source) : nullptr;
             if (!copy) continue;
             srvs[i] = copy;
             aiDrawn[i] = true;
@@ -1680,10 +1685,11 @@ bool Renderer11::startAi(const std::string& gameDir, const AiSettings& settings)
     return true;
 }
 
-void Renderer11::setAiShown(uint8_t kinds) {
+void Renderer11::setAiShown(uint8_t kinds, uint8_t sprites) {
     if (ai_) {
         ai_->shown = kinds != 0;
         ai_->kindsShown = kinds;
+        ai_->spritesShown = sprites;
     }
 }
 

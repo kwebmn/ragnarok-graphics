@@ -174,3 +174,19 @@ TEST(frame_record_out_of_memory_leaves_no_command_without_its_data) {
         r.draw(d, vertices, 1, nullptr, 0);
     }));
 }
+
+TEST(frame_sprite_source_is_the_cell_a_draw_samples) {
+    // 2.2.2: a draw of the game's sprite cache shows the frame of the cell its texture coordinates fall in - the
+    // middle of its vertices' (u, v 24 bytes into a transformed vertex): a quad's corners lie on the cell's edges
+    const std::vector<SpriteCell> cells = {{Rect{0, 0, 64, 64}, 1}, {Rect{64, 0, 128, 96}, 3}};
+    CHECK_EQ(int(spriteSourceAt(cells, 256, 256, 0.1f, 0.1f)), 1);
+    CHECK_EQ(int(spriteSourceAt(cells, 256, 256, 0.3f, 0.2f)), 3);
+    CHECK_EQ(int(spriteSourceAt(cells, 256, 256, 0.9f, 0.9f)), 0);  // no cell there: unknown
+    std::vector<uint8_t> bytes(8 + 4 * 32, 0);
+    const float uv[4][2] = {{0.25f, 0.0f}, {0.5f, 0.0f}, {0.25f, 0.375f}, {0.5f, 0.375f}};
+    for (int i = 0; i < 4; ++i) std::memcpy(bytes.data() + 8 + i * 32 + 24, uv[i], sizeof uv[i]);
+    CHECK_EQ(int(spriteSourceOf(cells, 256, 256, bytes, 8, 32, 4)), 3);
+    CHECK_EQ(int(spriteSourceOf(cells, 256, 256, bytes, 8, 32, 5)), 0);  // past the vertices there are
+    CHECK_EQ(int(spriteSourceOf(cells, 256, 256, bytes, 8, 16, 4)), 0);  // no texture coordinates in a vertex
+    CHECK_EQ(int(spriteSourceOf({}, 256, 256, bytes, 8, 32, 4)), 0);
+}

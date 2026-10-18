@@ -52,6 +52,14 @@ struct SpriteCell {
     bool operator==(const SpriteCell& o) const { return rect == o.rect && source == o.source; }
 };
 
+// What the cell of a sprite cache (width x height texels) at the texture coordinates (u, v) holds - its source; 0
+// (unknown) outside every cell.
+uint8_t spriteSourceAt(const std::vector<SpriteCell>& cells, int width, int height, float u, float v);
+// 2.2.2: what a draw of the cache shows - the cell at the middle of the first texture coordinates of its `count`
+// vertices (u, v 24 bytes into a transformed vertex) from bytes[offset]; 0 when they are not all there.
+uint8_t spriteSourceOf(const std::vector<SpriteCell>& cells, int width, int height, const std::vector<uint8_t>& bytes,
+                       size_t offset, size_t stride, uint32_t count);
+
 struct UploadCmd {  // texture pixels, ARGB8, rect.width() * rect.height() values at pixels()[pixels]
     uint32_t texture = 0;
     uint32_t level = 0;
