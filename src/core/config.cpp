@@ -386,6 +386,8 @@ Config parseConfig(const std::string& text) {
             if (val == "auto") c.api = Api::Auto;
         } else if (key == "renderer.bridge") {
             setBool(val, c.bridge);
+        } else if (key == "renderer.render_thread") {  // 2.5.12
+            setBool(val, c.renderThread);
         } else if (key == "report.auto") {
             setBool(val, c.reportAuto);
         } else if (key == "stats.send") {  // 2.2.1

@@ -157,7 +157,24 @@ bool Context::open(std::string& error) {
     const bool d3d11 = startup().choice.api == Api::D3d11;
     if (d3d11) {
         std::string why;
-        if (!r->createD3D11(gameDir() + "\\uaro-graphics\\shaders-d3d11.bin", why)) {
+        const std::string shaders = gameDir() + "\\uaro-graphics\\shaders-d3d11.bin";
+        bool made = false;
+        if (config.renderThread) {  // 2.5.12 (test): on a thread of its own - the game's thread only writes frames down
+            gpu::BridgeOptions o;
+            o.thread = true;
+            o.gameDir = gameDir();
+            o.shaderCache = shaders;
+            o.ai = config.ai;
+            o.stateCache = config.stateCache;
+            o.mergeDraws = config.mergeDraws;
+            o.logLevel = int(config.logLevel);
+            made = r->createRemote(o, why);
+            if (made)
+                LOG_INFO("Direct3D 11: drawing on a thread of its own ([renderer] render_thread = 1)");
+            else
+                LOG_ERROR("Direct3D 11's thread: %s; drawing on the game's thread", why.c_str());
+        }
+        if (!made && !r->createD3D11(shaders, why)) {
             error = "Direct3D 11: " + why;
             delete r;
             return false;
@@ -223,8 +240,10 @@ bool Context::open(std::string& error) {
     LOG_INFO("%s renderer on %s", d3d11 ? "Direct3D 11" : "Direct3D 12", renderer->adapterName().c_str());
     fpsShown_ = config.fpsCounter;  // 0.54
     fps_.setLabel(std::string(d3d11 ? "Direct3D 11" : "Direct3D 12") + (config.dlss != "off" ? " + DLSS" : ""));
-    // 0.47: the AI textures with Direct3D 11 - the texture pack's pictures, in the game's process.
-    const bool aiHere = d3d11 && config.ai.enabled && renderer->startAiTextures(gameDir(), config.ai);
+    // 0.47: the AI textures with Direct3D 11 - the texture pack's pictures, in the game's process (2.5.12: on its own
+    // thread, which started them itself).
+    const bool aiHere =
+        d3d11 && config.ai.enabled && (renderer->remote() || renderer->startAiTextures(gameDir(), config.ai));
     crisp::setWindowArt(config.windowArt);  // 0.41: before the first twin
     crisp::install(config.crispText);
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'

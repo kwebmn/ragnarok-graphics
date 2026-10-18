@@ -84,6 +84,7 @@ TEST(schema_live_keys_are_the_specs) {
     for (const IniSetting& s : iniSettings()) {
         const std::string k = sectionKey(s);
         CHECK(appliesNow(k) == (k != "renderer.bridge" && k != "renderer.remix" &&
+                                k != "renderer.render_thread" &&  // 2.5.12: the renderer's own thread, at the start
                                 k != "renderer.api" && k != "renderer.gpu" && k != "report.auto" &&
                                 k != "display.ui_native" &&
                                 k != "display.hdr" &&

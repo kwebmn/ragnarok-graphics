@@ -63,7 +63,7 @@ enum class Text : uint16_t {
     ServiceGameSettings, GameSave, GameLoad, LayoutReset, GameSettingsNote, GameLoadAsk, LayoutResetAsk, GameSaved,
     GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, GameSettingsRunning, ErrPartialFile,
     PageSmoothing, SmoothMsaa, SmoothMsaaHint, SmoothA2c, SmoothA2cHint, SmoothAniso, SmoothAnisoHint, SmoothOff,
-    Factor2, Factor4, Factor8, Factor16, RenderBridge, RenderBridgeHint,
+    Factor2, Factor4, Factor8, Factor16, RenderBridge, RenderBridgeHint, RenderThread, RenderThreadHint,
     SmoothDlss, SmoothDlssHint, DlssDlaa, DlssQuality, DlssBalanced, DlssPerformance, DlssUltra,
     FramesGeneration, FramesGenerationHint, Times3, AiEnable, AiEnableHint, AiBudget, AiBudgetHint,
     AiDenoise, AiDenoiseHint, RenderRemix, RenderRemixHint,

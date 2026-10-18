@@ -420,6 +420,17 @@ const Entry kTexts[] = {
      "бути та сама.",
      "Рисует в отдельном 64-битном процессе uaro-render64.exe: он нужен для DLSS и генерации кадров. Картинка "
      "должна быть та же."},
+    {"Direct3D 11 on a thread of its own (test)", "Direct3D 11 у власному потоці (перевірка)",
+     "Direct3D 11 в своём потоке (проверка)"},
+    {"With Direct3D 11 the game's thread only writes down what to draw, and a thread of its own draws it on another "
+     "core of the processor - as the 64-bit renderer does for Direct3D 12. More frames where the processor holds the "
+     "game back: an older computer, many effects.",
+     "З Direct3D 11 потік гри лише записує, що малювати, а малює власний потік на іншому ядрі процесора — як "
+     "64-бітний рендер для Direct3D 12. Більше кадрів там, де гру стримує процесор: старіший комп'ютер, багато "
+     "ефектів.",
+     "С Direct3D 11 поток игры только записывает, что рисовать, а рисует собственный поток на другом ядре процессора "
+     "— как 64-битный рендер для Direct3D 12. Больше кадров там, где игру сдерживает процессор: старый компьютер, "
+     "много эффектов."},
     {"NVIDIA DLSS", "NVIDIA DLSS", "NVIDIA DLSS"},
     {"A technology of NVIDIA for GeForce RTX cards, in the 64-bit renderer (it starts by itself). DLAA smooths at "
      "full resolution; Quality ... Ultra draw the world smaller and rebuild it. Instead of MSAA.",

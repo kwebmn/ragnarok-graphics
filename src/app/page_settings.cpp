@@ -403,7 +403,8 @@ private:
         }
         p.gap();
         for (size_t i = 0; i < all.size(); ++i)  // part 3 (test): the renderer in a 64-bit process; part 4: Remix
-            if (sectionKey(all[i]) == "renderer.bridge" || sectionKey(all[i]) == "renderer.remix")
+            if (sectionKey(all[i]) == "renderer.bridge" || sectionKey(all[i]) == "renderer.render_thread" ||
+                sectionKey(all[i]) == "renderer.remix")
                 p.check(rowId(i), t(all[i].label), m.token(all[i]) == "1", t(all[i].hint));
         if ((!win10 || !d3d12) && d3d11 && m.token(*findSetting("renderer.api")) == "d3d12")
             p.note(t(Text::RenderUseD3d11), Tone::Warn);  // 0.46: Direct3D 11 works here

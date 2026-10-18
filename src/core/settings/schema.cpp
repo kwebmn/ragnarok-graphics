@@ -44,6 +44,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::StatsSendHint, ""},  // 2.2.1
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
+        {"renderer", "render_thread", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderThread,
+         Text::RenderThreadHint, ""},  // 2.5.12
         {"renderer", "remix", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
          Text::RenderRemixHint, ""},
         {"display", "high_resolution", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityHighRes,
@@ -581,6 +583,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "report.auto") return c.reportAuto ? "1" : "0";
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
+    if (k == "renderer.render_thread") return c.renderThread ? "1" : "0";
     if (k == "renderer.remix") return c.remix ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";
     if (k == "quality.render_scale") return std::to_string(c.renderScale);

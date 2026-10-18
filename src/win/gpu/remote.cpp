@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "core/bridge_wire.hpp"
+#include "win/gpu/local_host.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
@@ -23,6 +24,11 @@ constexpr DWORD kAnswerMs = 10000;            // a renderer that does not answer
 }  // namespace
 
 Remote::~Remote() {
+    if (thread_) {  // 2.5.12: its thread ends at the Quit; one that does not is left (the game is closing)
+        if (!lost_) channel_.send(Msg::Quit, nullptr, 0, 2000);
+        if (WaitForSingleObject(thread_, 5000) != WAIT_OBJECT_0) LOG_ERROR("%s did not end in time", who_.c_str());
+        CloseHandle(thread_);
+    }
     if (process_.hProcess) {
         if (!lost_ && channel_.send(Msg::Quit, nullptr, 0, 2000) &&
             WaitForSingleObject(process_.hProcess, 3000) == WAIT_OBJECT_0) {
@@ -44,6 +50,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
         "Local\\uaro-render-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64());
     if (!channel_.create(name, kToHostBytes, kToClientBytes, error)) return false;
     channel_.setWhileWaiting([](void* self) { static_cast<Remote*>(self)->drain(); }, this);
+    if (o.thread) return startThread(name, error);
     std::string cmd = "\"" + o.hostExe + "\" --channel " + name + " --parent " +
                       std::to_string(GetCurrentProcessId()) + " --dir \"" + o.gameDir + "\" --log " +
                       std::to_string(o.logLevel) + " --present " + o.present + " --dlss " + o.dlss +
@@ -88,10 +95,37 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
     return true;
 }
 
+// 2.5.12: Direct3D 11's own thread instead of the 64-bit process - the same Hello, up to the same 90 s (the first
+// start compiles its shaders)
+bool Remote::startThread(const std::string& name, std::string& error) {
+    who_ = "Direct3D 11's thread";
+    thread_ = startLocalHost(name, options_);
+    if (!thread_) {
+        error = "its thread could not be started (error " + std::to_string(GetLastError()) + ")";
+        return false;
+    }
+    channel_.setPeer(thread_);
+    std::vector<uint8_t> hello;
+    if (!await(Msg::Hello, hello, 90000)) {
+        error = lost_ ? who_ + " ended at its start" : who_ + " did not answer";
+        return false;
+    }
+    WireReader rd(hello.data(), hello.size());
+    const bool ok = rd.u8() != 0;
+    const std::string text = rd.str();
+    if (!ok || !rd.ok()) {
+        error = text;
+        return false;
+    }
+    adapter_ = text;
+    upscales_ = false;
+    return true;
+}
+
 bool Remote::send(Msg type, const std::vector<uint8_t>& payload) {
     if (lost_) return false;
     if (!channel_.send(type, payload)) {
-        setLost("the 64-bit renderer is gone");
+        setLost(who_ + " is gone");
         return false;
     }
     return true;
@@ -161,7 +195,7 @@ bool Remote::await(Msg want, std::vector<uint8_t>& reply, DWORD ms) {
         uint32_t size = 0;
         const ULONGLONG spent = GetTickCount64() - start;
         if (spent >= ms || !channel_.receive(type, data, size, DWORD(ms - spent))) {
-            if (channel_.peerGone()) setLost("the 64-bit renderer exited");
+            if (channel_.peerGone()) setLost(who_ + " exited");
             return false;
         }
         if (type == want) {
@@ -177,7 +211,7 @@ void Remote::drain() {
     const uint8_t* data = nullptr;
     uint32_t size = 0;
     while (!lost_ && channel_.receive(type, data, size, 0)) handle(type, data, size);
-    if (!lost_ && channel_.peerGone()) setLost("the 64-bit renderer exited");
+    if (!lost_ && channel_.peerGone()) setLost(who_ + " exited");
 }
 
 void Remote::setUiSharp(bool sharp) { send(Msg::SetUiSharp, {uint8_t(sharp ? 1 : 0)}); }
@@ -474,8 +508,8 @@ void Remote::timeLog() {
     if (!since_) since_ = now.QuadPart;
     if (now.QuadPart - since_ < 30 * f.QuadPart) return;
     const double ms = 1000.0 / double(f.QuadPart) / double(frames_);
-    LOG_INFO("bridge: a frame of the game's thread - %.2f ms its draws written and sent, %.2f ms waiting for the "
-             "64-bit renderer (%u frames in %.0f s)", double(sendTicks_) * ms, double(waitTicks_) * ms, frames_,
+    LOG_INFO("bridge: a frame of the game's thread - %.2f ms its draws written and sent, %.2f ms waiting for %s "
+             "(%u frames in %.0f s)", double(sendTicks_) * ms, double(waitTicks_) * ms, who_.c_str(), frames_,
              double(now.QuadPart - since_) / double(f.QuadPart));
     sendTicks_ = waitTicks_ = 0;
     frames_ = 0;
@@ -535,7 +569,7 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     waitTicks_ += b.QuadPart - a.QuadPart;  // 2.1.1
     timeLog();
     if (behind && channel_.peerGone()) {
-        setLost("the 64-bit renderer exited");
+        setLost(who_ + " exited");
         return;
     }
     buffer_.clear();

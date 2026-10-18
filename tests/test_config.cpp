@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "core/config.hpp"
+#include "core/settings/schema.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -546,4 +547,14 @@ TEST(config_reads_xray_off_by_default) {
     CHECK(!parseConfig("").xray);
     CHECK(parseConfig("[debug]\nxray = 1\n").xray);
     CHECK(!parseConfig("[debug]\nxray = 0\n").xray);
+}
+
+TEST(config_render_thread) {
+    // 2.5.12: [renderer] render_thread - Direct3D 11 on a thread of its own; off unless asked for (a test)
+    CHECK(!parseConfig("").renderThread);
+    CHECK(parseConfig("[renderer]\nrender_thread = 1\n").renderThread);
+    CHECK(!parseConfig("[renderer]\nrender_thread = 0\n").renderThread);
+    const settings::IniSetting* s = settings::findSetting("renderer.render_thread");
+    CHECK(s != nullptr);
+    if (s) CHECK(settings::tokenOf(*s, parseConfig("[renderer]\nrender_thread = 1\n")) == "1");
 }

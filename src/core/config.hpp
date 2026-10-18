@@ -416,6 +416,9 @@ struct Config {
     // surface for Windows scaling of the game's window.
     bool bridge = false;
     std::string bridgePresent = "auto";
+    // 2.5.12 (test): [renderer] render_thread = 1 - Direct3D 11 draws on a thread of its own in the game's process
+    // (gpu/local_host.cpp): the game's thread only writes the frame down, as for uaro-render64.exe
+    bool renderThread = false;
     // 0.50.2: [renderer] gpu - the name of the graphics card to draw on (Windows' own, as the Renderer page lists
     // them); "" (auto): the fast one of several (core/gpu_order.hpp).
     std::string gpu;

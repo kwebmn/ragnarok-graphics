@@ -14,7 +14,8 @@
 namespace uagfx::gpu {
 
 // Part 3: the renderer in uaro-render64.exe, driven from the game's process. Every call goes through the shared block;
-// only setTarget, setScale and readTarget wait for an answer. Texture ids are given out here.
+// only setTarget, setScale and readTarget wait for an answer. Texture ids are given out here. 2.5.12: or Direct3D 11
+// on a thread of its own in this process (BridgeOptions::thread, gpu/local_host.cpp), through a block of its own.
 class Remote {
 public:
     Remote() = default;
@@ -58,6 +59,7 @@ public:
 
 private:
     bool send(bridge::Msg type, const std::vector<uint8_t>& payload);
+    bool startThread(const std::string& name, std::string& error);  // 2.5.12
     // Waits for the answer `want`, handling what else arrives meanwhile; false when the renderer is gone or slow.
     bool await(bridge::Msg want, std::vector<uint8_t>& reply, DWORD ms);
     void handle(bridge::Msg type, const uint8_t* data, uint32_t size);
@@ -68,6 +70,8 @@ private:
     win::bridge::Channel channel_;
     win::bridge::Composition composition_;
     PROCESS_INFORMATION process_{};
+    HANDLE thread_ = nullptr;  // 2.5.12: Direct3D 11's own thread in this process instead (gpu/local_host.cpp)
+    std::string who_ = "the 64-bit renderer";  // in the log
     BridgeOptions options_;
     std::string adapter_;
     uint32_t nextTexture_ = 0;
