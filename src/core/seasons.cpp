@@ -19,9 +19,9 @@ Look of(const std::string& map, int month, bool outdoors, const living::Place& p
     case 3: l.lush = 0.3f; break;
     case 4: l.lush = 0.6f; break;
     case 5: l.lush = 0.45f; break;
-    case 9: l.leaves = 0.2f, l.dry = 0.15f; break;
-    case 10: l.leaves = 0.6f, l.dry = 0.35f; break;
-    case 11: l.leaves = 0.45f, l.dry = 0.5f; break;
+    case 9: l.dry = 0.15f; break;
+    case 10: l.dry = 0.35f; break;
+    case 11: l.dry = 0.5f; break;
     default: break;
     }
     return l;

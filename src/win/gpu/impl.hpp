@@ -853,7 +853,8 @@ struct Renderer::Impl {
     bool applyFloorReflections();  // once a frame, the world drawn and lit; false: lost
     bool shaftsWanted() const { return effects.shafts && effects.shaftsStrength > 0 && shaftsPs; }
     bool shaftsDue() const {
-        return shaftsWanted() && groundDrawn && !shaftsDone && viewToWorldValid && (shaftLights > 0 || mapOutdoors);
+        return shaftsWanted() && groundDrawn && !shaftsDone && viewToWorldValid &&
+               (shaftLights > 0 || (mapOutdoors && effects.skyRays));  // 2.4: the sky's rays a box of their own
     }
     bool applyShafts();  // once a frame, after the haze and the sky; false: lost
     void sunOnScreen(float out[2]) const;  // 0.73: the way the sun's shadows fall on the screen (actor_shadows.cpp)
@@ -872,7 +873,10 @@ struct Renderer::Impl {
         return effects.weather && effects.weatherAmount > 0 && weatherPs && mapWeather != weather::Kind::None;
     }
     // 0.70: motes in the air where the map has no weather - pollen under the open sky, dust elsewhere
-    bool motesWanted() const { return effects.motes && effects.motesAmount > 0 && weatherPs && !mapName.empty(); }
+    bool motesWanted() const {  // 2.4: the pollen outdoors and the dust indoors each a box of its own
+        return effects.motes && effects.motesAmount > 0 && weatherPs && !mapName.empty() &&
+               (mapOutdoors ? effects.pollen : effects.indoorDust);
+    }
     bool weatherWanted() const { return mapWeatherWanted() || motesWanted(); }
     bool weatherDue() const { return weatherWanted() && groundDrawn && !weatherDone; }
     bool applyWeather();  // once a frame, the world finished; false: lost
@@ -1186,16 +1190,16 @@ struct Renderer::Impl {
     bool groundLifeDone = false, groundLifeLogged = false;
     bool groundLifeWanted() const {
         return groundLifePs && ((effects.sandDrift && mapPlace.sand) || (effects.snowSparkle && mapPlace.snow) ||
-                                (effects.wetWalls && mapPlace.cave) || wetSandWanted() ||
-                                (effects.groundClutter && !mapPlace.snow) || seasonsShown() || rainWetShown());
+                                (effects.wetWalls && mapPlace.cave) || wetSandWanted() || seasonsShown() ||
+                                rainWetShown());
     }
     // 1.20: the year on the whole map, the rain's wet on the walls and roofs (ground_life_ps)
     bool seasonsShown() const {
-        return effects.seasons && (mapYear.snow > 0.0f || mapYear.leaves > 0.0f || mapYear.dry > 0.0f ||
-                                   mapYear.lush > 0.0f);
+        return effects.seasons && ((effects.seasonSnow && mapYear.snow > 0.0f) ||
+                                   (effects.seasonGrass && (mapYear.dry > 0.0f || mapYear.lush > 0.0f)));
     }
     bool rainWetShown() const { return effects.rainWet && effects.weather && mapWeather == weather::Kind::Rain; }
-    bool wetSandWanted() const { return effects.shoreFoam && waterLevelKnown && mapOutdoors; }
+    bool wetSandWanted() const { return effects.shoreFoam && effects.wetSand && waterLevelKnown && mapOutdoors; }
     bool groundLifeDue() const { return groundLifeWanted() && groundDrawn && !groundLifeDone && viewToWorldValid; }
     bool applyGroundLife();  // once a frame, before the characters; false: lost
     float waterLife() const;  // 1.7: water_ps's bits (draw.cpp)
@@ -1213,7 +1217,7 @@ struct Renderer::Impl {
     bool stepsLogged = false;
     int stepKind() const {  // 1 snow, 2 sand, 3 dust, 0 none
         if (!effects.footprints || !stepsPs) return 0;
-        return mapWeather == weather::Kind::Snow ? 1 : mapDesert ? 2 : mapOutdoors ? 3 : 0;
+        return mapWeather == weather::Kind::Snow ? 1 : mapDesert ? 2 : mapOutdoors && effects.stepDust ? 3 : 0;
     }
     float stepLife() const {
         const float prints = stepKind() == 3 ? 0.9f : stepKind() == 1 ? 25.0f : stepKind() ? 14.0f : 0.0f;
@@ -1264,7 +1268,9 @@ struct Renderer::Impl {
     }
     bool mapRegion = false;  // 0.79: the map is of a region with a look of its own (core/region_look.hpp)
     bool applyNight();  // 0.63: once a frame, before the torches' light; false: lost
-    bool waterfallsDue() const { return effects.water && waterfallPs && groundDrawn && !waterfallsDone; }
+    bool waterfallsDue() const {
+        return effects.water && effects.waterfalls && waterfallPs && groundDrawn && !waterfallsDone;
+    }
     bool applyWaterfalls();  // 0.65: once a frame, after the torches; false: lost
     ID3D12PipelineState* waterfallPipeline(UINT samples);
     bool gradeDue() const { return gradeWanted() && groundDrawn && !gradeDone; }

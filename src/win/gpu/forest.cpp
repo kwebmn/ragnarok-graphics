@@ -372,7 +372,8 @@ void Renderer::Impl::updateForest() {
                 d.at[0] = f.pos[0], d.at[1] = f.pos[1], d.at[2] = f.pos[2], d.at[3] = f.turn;
                 d.size[0] = f.scale[0], d.size[1] = f.scale[1], d.size[2] = f.scale[2], d.size[3] = f.seed;
                 // each tree its own shade, autumn's colours in the season (core/trees.hpp, as 1.7's leaf shading)
-                const trees::Shade sh = trees::shadeAt(f.pos[0], f.pos[2], mapSeason);
+                const trees::Shade sh =  // 2.4: autumn's and Lutie's crowns a box of their own
+                    trees::shadeAt(f.pos[0], f.pos[2], effects.treeSeasons ? mapSeason : trees::Season::Green);
                 // 2.0.4: autumn only on the broadleaf trees, and softer - the firs, palms and the sakura keep their
                 // colours (in October Prontera's sakura went brown and orange), a whole crown of orange was too much
                 const forest::Kind kind = mapWorld.forestModels()[f.model].shape.kind;

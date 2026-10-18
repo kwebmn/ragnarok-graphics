@@ -59,7 +59,7 @@ const Member kMembers[] = {
     {"leaf_fall", Nature, 3, &E::leafFall},
     {"seasons", Nature, 3, &E::seasons},
     {"shared_wind", Nature, 3, &E::sharedWind},
-    {"ground_clutter", Nature, 3, &E::groundClutter},
+
     {"anime_trees", Nature, 0, &E::animeTrees},
 
     {"water", Water, 1, &E::water},

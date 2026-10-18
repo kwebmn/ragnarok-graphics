@@ -120,7 +120,7 @@ public:
                 const bool live = any && on;
                 p.check(boxId(e), withCost(t(box.label), effect_costs::costOf(costs, fx.box)), fxOn, t(box.hint),
                         live, true);
-                for (int k = 0; k < 2 && fx.checks[k]; ++k) {
+                for (int k = 0; k < kLayoutChecks && fx.checks[k]; ++k) {
                     const IniSetting& c = setting(fx.checks[k]);
                     p.check(checkId(e, k), t(c.label), isOn(fx.checks[k]), t(c.hint), live && fxOn, true);
                 }
@@ -165,7 +165,7 @@ public:
         }
         for (int e = 0; e < kEffectCount; ++e) {
             const char* key = id == boxId(e) ? kEffects[e].box : nullptr;
-            for (int k = 0; k < 2 && !key && kEffects[e].checks[k]; ++k)
+            for (int k = 0; k < kLayoutChecks && !key && kEffects[e].checks[k]; ++k)
                 if (id == checkId(e, k)) key = kEffects[e].checks[k];
             if (!key) continue;
             const bool checked = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;

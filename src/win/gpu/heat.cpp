@@ -37,7 +37,8 @@ bool Renderer::Impl::applyHeat() {
     std::vector<HeatSpot> spots;
     spots.swap(heatSpots);
     const float user = float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f;
-    const float desertAmount = heatWanted() && mapDesert && viewToWorldValid ? 0.35f * user : 0.0f;
+    const float desertAmount =  // 2.4: the desert's a box of its own
+        heatWanted() && effects.desertHeat && mapDesert && viewToWorldValid ? 0.35f * user : 0.0f;
     if (spots.empty() && desertAmount <= 0.0f) return true;
     if (!ensureScene("heat haze")) return true;
     ID3D12PipelineState* pso = heatPipeline(upscale ? 1 : samples);

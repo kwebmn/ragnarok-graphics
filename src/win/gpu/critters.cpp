@@ -49,6 +49,7 @@ bool Renderer::Impl::crittersWanted() const {
 critters::Switches Renderer::Impl::critterSwitches() const {
     critters::Switches on;
     on.butterflies = effects.butterflies;
+    on.dragonflies = effects.butterflies && effects.dragonflies;  // 2.4
     on.birds = effects.birds;
     on.leaves = effects.leafFall;
     on.embers = effects.embers;

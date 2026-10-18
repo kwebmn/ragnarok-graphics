@@ -159,7 +159,6 @@ EffectSettings effectsOff() {
     e.bounceLight = false;
     e.skyLight = false;
     e.newTrees = false;
-    e.groundClutter = false;
     e.groundSeams = false;
     e.materials = false;
     e.underwater = false;
@@ -193,6 +192,10 @@ EffectSettings effectsOff() {
     e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.bloom = e.filmic = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
     e.filmGrain = e.mapFade = e.roundLight = false;
+    // 2.4: the parts of the effects
+    e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.wetSand = e.stepDust = e.seasonSnow = false;
+    e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.stars = e.lowFog = e.desertHeat = false;
+    e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
     e.dayNow = -1;
     return e;
@@ -232,7 +235,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.bounceLight ||
            e.skyLight ||
            e.newTrees ||
-           e.groundClutter ||
            e.groundSeams ||
            e.materials ||
            e.underwater ||
@@ -269,49 +271,15 @@ bool drawnByRenderer(const EffectSettings& e) {
 }
 
 bool EffectSettings::operator==(const EffectSettings& o) const {
-    // 1.8: every field (until 1.7.3 the newer ones were left out, and a change of one alone did not reach the 64-bit
-    // renderer until another changed)
-    return smoothLight == o.smoothLight && torch == o.torch && torchFlame == o.torchFlame &&
-           torchBrightness == o.torchBrightness && torchGlow == o.torchGlow && torchLight == o.torchLight &&
-           torchFlicker == o.torchFlicker && smoke == o.smoke && smokeDensity == o.smokeDensity && lamps == o.lamps &&
-           lampsLight == o.lampsLight && fireLight == o.fireLight && fireLightStrength == o.fireLightStrength &&
-           skillColours == o.skillColours && skillsSoft == o.skillsSoft && skillBrightness == o.skillBrightness &&
-           aura == o.aura && auraBrightness == o.auraBrightness && fireflies == o.fireflies &&
-           firefliesBrightness == o.firefliesBrightness && mapGlows == o.mapGlows &&
-           mapGlowsBrightness == o.mapGlowsBrightness && rays == o.rays && raysBrightness == o.raysBrightness &&
-           lava == o.lava && lavaBrightness == o.lavaBrightness && actorShadows == o.actorShadows &&
-           actorShadowsStrength == o.actorShadowsStrength && clouds == o.clouds &&
-           cloudsStrength == o.cloudsStrength && haze == o.haze && hazeStrength == o.hazeStrength && heat == o.heat &&
-           heatStrength == o.heatStrength && portals == o.portals && portalsStrength == o.portalsStrength &&
-           weather == o.weather && weatherAmount == o.weatherAmount && glow == o.glow &&
-           glowStrength == o.glowStrength && glowSize == o.glowSize && glowLight == o.glowLight && ao == o.ao &&
-           aoStrength == o.aoStrength && aoSize == o.aoSize && grade == o.grade &&
-           gradeSaturation == o.gradeSaturation && gradeContrast == o.gradeContrast &&
-           gradeBrightness == o.gradeBrightness && gradeWarmth == o.gradeWarmth && gradeVignette == o.gradeVignette &&
-           foliage == o.foliage && foliageStrength == o.foliageStrength && night == o.night &&
-           nightStrength == o.nightStrength && nightClock == o.nightClock && nightNow == o.nightNow && dof == o.dof &&
-           dofStrength == o.dofStrength && dofRange == o.dofRange && water == o.water && waterWaves == o.waterWaves &&
-           waterReflections == o.waterReflections && waterClarity == o.waterClarity &&
-           softParticles == o.softParticles && rimLight == o.rimLight && rimStrength == o.rimStrength &&
-           sky == o.sky && skyClouds == o.skyClouds && skyStrength == o.skyStrength && motes == o.motes &&
-           motesAmount == o.motesAmount && relief == o.relief && reliefStrength == o.reliefStrength &&
-           floorReflections == o.floorReflections && floorReflectStrength == o.floorReflectStrength &&
-           shafts == o.shafts && shaftsStrength == o.shaftsStrength && dayCycle == o.dayCycle && dayNow == o.dayNow &&
-           bloom == o.bloom &&
-           bloomStrength == o.bloomStrength && filmic == o.filmic && regionLooks == o.regionLooks &&
-           regionLooksStrength == o.regionLooksStrength && footprints == o.footprints && storms == o.storms &&
-           grass == o.grass && grassAmount == o.grassAmount && skillSparks == o.skillSparks &&
-           skillSparksAmount == o.skillSparksAmount && filmGrain == o.filmGrain &&
-           filmGrainAmount == o.filmGrainAmount && mapFade == o.mapFade && roundLight == o.roundLight &&
-           appear == o.appear && ripples == o.ripples && glint == o.glint && hitFlash == o.hitFlash &&
-           wetGround == o.wetGround && flare == o.flare && treeVolume == o.treeVolume && leafLight == o.leafLight &&
-           treeTints == o.treeTints && gusts == o.gusts && dapple == o.dapple && flowers == o.flowers &&
-           dew == o.dew && morningFog == o.morningFog && sandDrift == o.sandDrift && snowSparkle == o.snowSparkle &&
-           wetWalls == o.wetWalls && shoreFoam == o.shoreFoam && fish == o.fish && swamp == o.swamp &&
-           butterflies == o.butterflies && birds == o.birds && leafFall == o.leafFall && embers == o.embers &&
-           breath == o.breath && splashes == o.splashes && caveDrips == o.caveDrips && underwater == o.underwater &&
-           tier == o.tier && materials == o.materials && materialsStrength == o.materialsStrength &&
-           preset == o.preset && std::equal(groups, groups + kEffectGroups, o.groups) &&
+    // 2.4: every switch and number the settings' schema binds to its field - the list written out by hand (1.8) left
+    // out every field added since 1.9, and a change of one of them alone never reached the 64-bit renderer (the
+    // seasons off in the console did nothing under DLSS); then the driver's own fields, which the schema has not
+    for (const settings::IniSetting& s : settings::iniSettings()) {
+        if (s.flag && this->*s.flag != o.*s.flag) return false;
+        if (s.number && this->*s.number != o.*s.number) return false;
+    }
+    return nightNow == o.nightNow && dayNow == o.dayNow && tier == o.tier && preset == o.preset &&
+           std::equal(groups, groups + kEffectGroups, o.groups) &&
            std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength);
 }
 

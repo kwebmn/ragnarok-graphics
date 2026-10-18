@@ -60,7 +60,10 @@ void World::flies(const Switches& on, const Frame& f) {
         flies_.clear();
         return;
     }
-    const size_t butterflies = 6, dragonflies = f.waterKnown ? 3 : 0;
+    const size_t butterflies = 6, dragonflies = on.dragonflies && f.waterKnown ? 3 : 0;
+    if (!on.dragonflies)  // 2.4: their box off - the ones about go at once
+        flies_.erase(std::remove_if(flies_.begin(), flies_.end(), [](const Fly& x) { return x.dragonfly; }),
+                     flies_.end());
     size_t haveB = 0, haveD = 0;
     for (const Fly& x : flies_) ++(x.dragonfly ? haveD : haveB);
     while (haveB < butterflies || haveD < dragonflies) {

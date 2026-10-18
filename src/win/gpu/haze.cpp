@@ -43,7 +43,7 @@ bool Renderer::Impl::applyHaze() {
     c.twin[2] = std::min(1.0f, mapLook.haze * user);  // twinW (1.18: until now into twinH - no haze far off)
     std::copy(mapLook.hazeColour, mapLook.hazeColour + 3, c.fogColor);
     std::copy(mapLook.fogColour, mapLook.fogColour + 3, c.sourceRect);
-    c.sourceRect[3] = std::min(1.0f, mapLook.fog * user);
+    c.sourceRect[3] = effects.lowFog ? std::min(1.0f, mapLook.fog * user) : 0.0f;  // 2.4: a box of its own
     // 2.2.2: the low fog lies at the ground's height at the character (sourceClamp.x, .y 1 when known) - five depths
     // across the screen gave it until now, and walking past walls (their tops, the void beyond) it jumped up and
     // down: the walls went light and dark by turns (alde_dun03)
@@ -65,7 +65,8 @@ bool Renderer::Impl::applyHaze() {
         c.sourceRect[3] = std::min(1.0f, morning * 0.6f * std::max(user, 0.5f));
     }
     c.sharpen = waterTime();
-    if (!hazeLogged) LOG_INFO("haze: over %s%s", mapName.c_str(), mapLook.fog > 0.0f ? ", with a low fog" : "");
+    if (!hazeLogged)
+        LOG_INFO("haze: over %s%s", mapName.c_str(), mapLook.fog > 0.0f && effects.lowFog ? ", with a low fog" : "");
     hazeLogged = true;
     return worldPass(pso, w, h, c, sceneDepthSrv, true);
 }
@@ -97,7 +98,7 @@ bool Renderer::Impl::applyShafts() {
     c.uiPixels[1] = float(h);
     c.footprint = float(shaftLights);
     c.twin[0] = 0.22f * user * (1.0f + 0.6f * night);  // the glow shows more in the dark
-    c.twin[1] = mapOutdoors ? 0.5f * user * (1.0f - night) : 0.0f;
+    c.twin[1] = mapOutdoors && effects.skyRays ? 0.5f * user * (1.0f - night) : 0.0f;  // 2.4: a box of their own
     // The sun up and to the left past the screen - against the way the characters' shadows fall (actor_shadows.cpp)
     float sun[2];
     sunOnScreen(sun);
@@ -228,6 +229,7 @@ bool Renderer::Impl::applySky() {
     c.twin[0] = float(std::clamp(effects.skyClouds, 0, 100)) / 100.0f;
     c.twin[1] = float(std::clamp(effects.skyStrength, 0, 100)) / 100.0f;
     c.twin[2] = night;  // twinW (1.17.1: until now into twinH - the sky never went dark, no stars)
+    c.sourceClamp[3] = effects.stars ? 1.0f : 0.0f;  // 2.4: the stars a box of their own
     // 1.17.1: land past the map's edge, below the horizon (sky_ps): how much, the ground's height at the player
     const bool land = effects.edgeLand && cameraValid && cameraTargetZ > 0.0f;
     if (land) {

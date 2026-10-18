@@ -506,7 +506,6 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.materialsStrength = rd.i32();
             e.tier = rd.i32();
             e.groundSeams = rd.u8() != 0;  // 1.9
-            e.groundClutter = rd.u8() != 0;  // 1.9.8
             e.newTrees = rd.u8() != 0;  // 1.10
             e.skyLight = rd.u8() != 0;  // 1.11
             e.bounceLight = rd.u8() != 0;
@@ -525,6 +524,24 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.sharedWind = rd.u8() != 0;  // 1.22
             e.litDust = rd.u8() != 0;  // 1.23
             e.animeTrees = rd.u8() != 0;  // 2.0.3
+            // 2.4: the parts of the effects, in Remote::setEffects's order
+            e.waterFoam = rd.u8() != 0;
+            e.waterGlints = rd.u8() != 0;
+            e.caustics = rd.u8() != 0;
+            e.waterfalls = rd.u8() != 0;
+            e.wetSand = rd.u8() != 0;
+            e.stepDust = rd.u8() != 0;
+            e.seasonSnow = rd.u8() != 0;
+            e.seasonGrass = rd.u8() != 0;
+            e.pollen = rd.u8() != 0;
+            e.indoorDust = rd.u8() != 0;
+            e.rainSplashes = rd.u8() != 0;
+            e.stars = rd.u8() != 0;
+            e.lowFog = rd.u8() != 0;
+            e.desertHeat = rd.u8() != 0;
+            e.skyRays = rd.u8() != 0;
+            e.treeSeasons = rd.u8() != 0;
+            e.dragonflies = rd.u8() != 0;
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

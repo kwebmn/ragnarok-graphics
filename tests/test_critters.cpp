@@ -29,6 +29,25 @@ TEST(critters_butterflies_by_day_on_a_field_none_at_night) {
     CHECK_EQ(count(w.sprites(), critters::Butterfly), 0);
 }
 
+TEST(critters_dragonflies_have_their_own_switch) {
+    // 2.4: the dragonflies over the water a box of their own under the butterflies
+    critters::World w;
+    w.setPlace(living::placeOf("prt_fild08", true, false));
+    critters::Switches on;
+    on.butterflies = true;
+    on.dragonflies = true;
+    critters::Frame f;
+    f.centreKnown = true;
+    f.waterKnown = true;
+    f.dt = 0.016f;
+    w.update(on, f);
+    CHECK_EQ(count(w.sprites(), critters::Dragonfly), 3);
+    on.dragonflies = false;
+    w.update(on, f);
+    CHECK_EQ(count(w.sprites(), critters::Dragonfly), 0);
+    CHECK_EQ(count(w.sprites(), critters::Butterfly), 6);
+}
+
 TEST(critters_a_flock_flies_off_when_someone_comes_near) {
     critters::World w;
     w.setPlace(living::placeOf("prontera", true, false));

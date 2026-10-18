@@ -105,7 +105,7 @@ void Console::build(Lang lang) {
             for (int e = 0; e < effectLayoutCount(); ++e) {
                 if (box != fx[e].box || !settingOf(fx[e].box)) continue;
                 rows_.push_back(Row{Kind::Box, fx[e].box, 2});
-                for (int k = 0; k < 2 && fx[e].checks[k]; ++k)
+                for (int k = 0; k < kLayoutChecks && fx[e].checks[k]; ++k)
                     if (settingOf(fx[e].checks[k])) rows_.push_back(Row{Kind::Check, fx[e].checks[k], 3});
                 for (int k = 0; k < 5 && fx[e].sliders[k]; ++k)
                     if (settingOf(fx[e].sliders[k])) rows_.push_back(Row{Kind::Slider, fx[e].sliders[k], 3});

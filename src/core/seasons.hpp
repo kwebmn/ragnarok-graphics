@@ -6,12 +6,12 @@
 namespace uagfx::seasons {
 
 // 1.20, the year on the whole map (effects.seasons; ground_life_ps): by the computer's calendar - winter's snow on
-// what faces up (roofs, rocks' tops, crowns, the ground), autumn's fallen leaves and its drier grass, spring's
-// greener ground. The snowy maps (Lutie and the like) keep snow on their roofs all year; the desert, the jungle, the
-// tropics, caves and the sea have none of it. Each 0-1.
+// what faces up (roofs, rocks' tops, crowns, the ground), autumn's drier grass, spring's greener ground. The snowy
+// maps (Lutie and the like) keep snow on their roofs all year; the desert, the jungle, the tropics, caves and the sea
+// have none of it. Each 0-1. 2.4: autumn's leaves on the ground are gone - specks a few pixels across over every
+// paved square.
 struct Look {
     float snow = 0.0f;
-    float leaves = 0.0f;
     float dry = 0.0f;   // the green ground towards straw
     float lush = 0.0f;  // the green ground greener
 };

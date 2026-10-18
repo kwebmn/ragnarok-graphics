@@ -41,7 +41,8 @@ struct Sprite {
 };
 
 struct Switches {
-    bool butterflies = false;  // and dragonflies over the water
+    bool butterflies = false;
+    bool dragonflies = false;  // 2.4: over the water, with the butterflies (a box of their own under them)
     bool birds = false;
     bool leaves = false;
     bool embers = false;

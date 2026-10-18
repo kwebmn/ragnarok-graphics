@@ -491,7 +491,7 @@ LeafLook Renderer::Impl::leafLook() const {
     sunOnScreen(l.sun);
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     l.throughLight = trees::throughLight(daylight::at(effects.dayCycle ? effects.dayNow : -1).length, night);
-    l.season = mapSeason;
+    l.season = effects.treeSeasons ? mapSeason : trees::Season::Green;  // 2.4: autumn's and Lutie's a box of their own
     l.viewToWorld = viewToWorldValid ? viewToWorld : nullptr;
     l.projection = camera::projectionFor(gameWidth, gameHeight);
     return l;
@@ -500,8 +500,11 @@ LeafLook Renderer::Impl::leafLook() const {
 
 // 1.7: the water's life (water_ps waterLife's bits): 1 fish, 2 a swamp's bubbles, 4 the surf's swash.
 float Renderer::Impl::waterLife() const {
+    // 2.4: and the water's own parts, each a box of its own: 8 the foam along the shore, 16 the sun's glints, 32 the
+    // light on the bed
     return float((effects.fish && !mapPlace.cave ? 1 : 0) + (effects.swamp && mapPlace.swamp ? 2 : 0) +
-                 (effects.shoreFoam ? 4 : 0));
+                 (effects.shoreFoam ? 4 : 0) + (effects.waterFoam ? 8 : 0) + (effects.waterGlints ? 16 : 0) +
+                 (effects.caustics ? 32 : 0));
 }
 
 // 1.7: the water's level in the world (its first corner), for the wet sand along the shore (ground_life_ps).

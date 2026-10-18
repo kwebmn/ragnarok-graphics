@@ -911,6 +911,9 @@ float4 water(WaterIn i) {
     int2 px = int2(i.pos.xy);
     float t = sharpen;
     float waves = footprint;
+    // 1.7: 1 fish, 2 a swamp's bubbles, 4 the surf's swash (water_life); 2.4: the water's own parts, each a box of
+    // its own - 8 the foam along the shore, 16 the sun's glints, 32 the light on the bed
+    uint life = uint(twinH + 0.5);
     // 0.22.2: the world's axes turned, for the noise: no rows along them.
     float2 fp = float2(dot(i.world.xz, float2(0.8, 0.6)), dot(i.world.xz, float2(-0.6, 0.8)));
     float2 slope = waveSlope(i.world.xz, t);
@@ -958,7 +961,7 @@ float4 water(WaterIn i) {
     float3 ray = normalize(i.world - eye);
     float2 bedXz = i.world.xz + ray.xz * (path / max(dot(ray, float3(r6, r7, r8)), 0.2));
     float shallow = exp(-path * lerp(0.3, 0.05, twinY));
-    bed *= 1.0 + causticAt(bedXz, t) * shallow * waves;
+    if ((life & 32) != 0) bed *= 1.0 + causticAt(bedXz, t) * shallow * waves;
     // The game's own water picture gives the water its colour.
     float3 tint = tex0.Sample(samp0, i.uv + slope * 0.04).rgb * i.diffuse.rgb;
     float absorb = 1.0 - exp(-path * lerp(0.22, 0.012, twinY));
@@ -984,30 +987,32 @@ float4 water(WaterIn i) {
     float3 h = normalize(normalize(float3(-0.45, -0.8, 0.4)) + toEye);
     float ndh = saturate(dot(n, h));
     float sun = fogEnable != 0 ? 0.25 : 1.0;  // in a fog (dungeons, caves) hardly any sun
-    c += (pow(ndh, 600.0) * 3.0 + pow(ndh, 60.0) * 0.12) * light * (0.25 + 0.75 * waves) * sun;
+    if ((life & 16) != 0) c += (pow(ndh, 600.0) * 3.0 + pow(ndh, 60.0) * 0.12) * light * (0.25 + 0.75 * waves) * sun;
     // 0.22.2: foam where the water meets the shore - near a pixel whose ground stands at or above the water there
     // (the water's own depth carried over by its slope on the screen), not over the whole of shallow water -
     // broken by noise that drifts with the waves.
-    uint life = uint(twinH + 0.5);  // 1.7: 1 fish, 2 a swamp's bubbles, 4 the surf's swash (water_life)
-    float shore = 0.0;
-    float swash = (life & 4) != 0 ? 0.5 + 0.5 * sin(t * 0.55 + fp.x * 0.04) : 0.0;
-    float reach = (5.0 + 4.0 * swash) * scale;
-    [unroll] for (int k = 0; k < 4; ++k) {
-        float2 o = k == 0 ? float2(reach, 0.0) : k == 1 ? float2(-reach, 0.0) : k == 2 ? float2(0.0, reach)
-                                                                                    : float2(0.0, -reach);
-        int2 q = clamp(int2(i.pos.xy + o), int2(0, 0), int2(targetSize) - 1);
-        float above = viewDepth(sceneDepth.Load(int3(q, 0))) - (waterZ + dot(o, dz));
-        shore = max(shore, saturate(1.0 - above / 0.6));
+    if ((life & 8) != 0) {
+        float shore = 0.0;
+        float swash = (life & 4) != 0 ? 0.5 + 0.5 * sin(t * 0.55 + fp.x * 0.04) : 0.0;
+        float reach = (5.0 + 4.0 * swash) * scale;
+        [unroll] for (int k = 0; k < 4; ++k) {
+            float2 o = k == 0 ? float2(reach, 0.0) : k == 1 ? float2(-reach, 0.0) : k == 2 ? float2(0.0, reach)
+                                                                                        : float2(0.0, -reach);
+            int2 q = clamp(int2(i.pos.xy + o), int2(0, 0), int2(targetSize) - 1);
+            float above = viewDepth(sceneDepth.Load(int3(q, 0))) - (waterZ + dot(o, dz));
+            shore = max(shore, saturate(1.0 - above / 0.6));
+        }
+        shore *= saturate(1.0 - thick / 3.0);
+        // 1.25: lines of foam along the shore (the water's depth's lines) rolling in and broken by noise, a thin rim
+        // at the edge - the blobs of noise before lay as a row of white dabs
+        float broken =
+            smoothstep(0.3, 0.7, valueNoise(fp * 0.9 + t * 0.2) * 0.7 + valueNoise(fp * 2.3 - t * 0.3) * 0.3);
+        float rim = smoothstep(0.35, 0.05, thick);
+        float roll = frac(thick * 1.3 - t * 0.22);
+        float swell = exp(-pow((roll - 0.5) * 9.0, 2.0)) * saturate(1.0 - thick / 2.5);
+        float froth = saturate(rim * (0.5 + 0.5 * broken) + swell * broken * 0.7);
+        c = lerp(c, float3(0.92, 0.95, 0.97) * light, saturate(shore * 2.0) * froth * (0.55 + 0.3 * swash));
     }
-    shore *= saturate(1.0 - thick / 3.0);
-    // 1.25: lines of foam along the shore (the water's depth's lines) rolling in and broken by noise, a thin rim at
-    // the edge - the blobs of noise before lay as a row of white dabs
-    float broken = smoothstep(0.3, 0.7, valueNoise(fp * 0.9 + t * 0.2) * 0.7 + valueNoise(fp * 2.3 - t * 0.3) * 0.3);
-    float rim = smoothstep(0.35, 0.05, thick);
-    float roll = frac(thick * 1.3 - t * 0.22);
-    float swell = exp(-pow((roll - 0.5) * 9.0, 2.0)) * saturate(1.0 - thick / 2.5);
-    float froth = saturate(rim * (0.5 + 0.5 * broken) + swell * broken * 0.7);
-    c = lerp(c, float3(0.92, 0.95, 0.97) * light, saturate(shore * 2.0) * froth * (0.55 + 0.3 * swash));
     c = waterLife(c, life, i.world.xz, t, thick, light);
     return float4(c, saturate(thick / 0.8));  // the shore line fades in, no hard edge
 }
@@ -1807,25 +1812,6 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
         o = lerp(o, min(col * 1.6 + 0.12, 1.0), saturate(wet));
         a = max(a, saturate(wet));
     }
-    if (sourceClamp.y > 0.0 && col.r > col.b * 1.12 && col.g > col.b * 1.05 && col.g < col.r * 1.08 && luma < 0.75) {
-        // 1.9.8, ground clutter: pebbles on bare earth, roads and sand - a few in a cell of the world, each a little
-        // stone lit from up left with its shadow down right
-        float2 cell = floor(w.xz * 1.6);
-        float seed = hash12(cell + 71.3);
-        if (seed > 0.78) {
-            float2 at = (cell + 0.2 + 0.6 * float2(hash12(cell + 2.9), hash12(cell + 8.3))) / 1.6;
-            float r = 0.06 + 0.1 * hash12(cell + 4.4);
-            float2 d = (w.xz - at) / r;
-            float e = length(d * float2(1.0, 1.3));
-            float shadow = smoothstep(1.3, 0.7, length((d - float2(0.35, 0.35)) * float2(1.0, 1.3)));
-            float stone = smoothstep(1.0, 0.8, e);
-            float3 rock = lerp(col, float3(0.62, 0.6, 0.56), 0.55) * (1.05 - 0.35 * saturate(dot(d, float2(0.6, 0.6))));
-            float3 pc = lerp(col * 0.55, rock, stone);
-            float pa = max(stone, shadow * 0.45) * sourceClamp.y;
-            o = lerp(o, pc, pa / max(a + pa, 1e-3));
-            a = saturate(max(a, pa));
-        }
-    }
     if (twinH > 0.0) {  // 1.7: wet sand along the shore (shore_foam): just above the water (sourceClamp.x its level,
         // last frame's) near ground that lies under it, darker in a band that comes and goes with the swash
         float above = sourceClamp.x - w.y;  // up is -y
@@ -1848,8 +1834,9 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
     }
 #ifndef UAGFX_SAFE
     // 1.20, the year and the rain on the whole map (core/seasons.hpp): sourceRect.x winter's snow on what faces up,
-    // .y autumn's fallen leaves, .z the green ground drier (autumn, winter), .w greener (spring); sourceClamp.z the
-    // rain's wet on the walls, the roofs and the models (rain_wet) - darker, a sheen where one looks along them.
+    // .z the green ground drier (autumn, winter), .w greener (spring); sourceClamp.z the rain's wet on the walls, the
+    // roofs and the models (rain_wet) - darker, a sheen where one looks along them. 2.4: .y (autumn's leaves on the
+    // ground) and 1.9.8's pebbles (sourceClamp.y) are gone - specks a few pixels across over every paved square.
     if (any(sourceRect > 0.0) || sourceClamp.z > 0.0) {
         float3 l = viewAt(max(wp - int2(1, 0), int2(0, 0))), r = viewAt(min(wp + int2(1, 0), last));
         float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
@@ -1864,23 +1851,6 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
             float k = green * up;
             o = lerp(o, c2, k / max(a + k, 1e-3));
             a = saturate(max(a, k));
-        }
-        if (sourceRect.y > 0.0) {  // fallen leaves on the ground
-            float2 cell = floor(w.xz * 2.4);
-            float seed = hash12(cell + 23.7);
-            if (seed < sourceRect.y * 0.6 * up) {
-                float2 at = (cell + 0.2 + 0.6 * float2(hash12(cell + 1.7), hash12(cell + 6.1))) / 2.4;
-                float ang = hash12(cell + 9.9) * 6.283;
-                float2 dd = w.xz - at;
-                dd = float2(dd.x * cos(ang) - dd.y * sin(ang), dd.x * sin(ang) + dd.y * cos(ang)) / 0.09;
-                float leaf = smoothstep(1.0, 0.75, length(dd * float2(1.0, 1.9)));
-                float hue = hash12(cell + 3.3);
-                float3 lc = hue < 0.4 ? float3(0.85, 0.55, 0.15) : hue < 0.75 ? float3(0.72, 0.28, 0.1)
-                                                                           : float3(0.55, 0.42, 0.18);
-                lc *= clamp(luma * 2.2, 0.35, 1.1);
-                o = lerp(o, lc, leaf / max(a + leaf, 1e-3));
-                a = saturate(max(a, leaf));
-            }
         }
         if (sourceRect.x > 0.0) {  // snow on what faces up
             float drift = valueNoise(w.xz * 0.35) * 0.6 + valueNoise(w.xz * 1.3 + 4.1) * 0.4;
@@ -2400,7 +2370,7 @@ float4 sky_ps(PresentOut i) : SV_Target {
     float3 day = lerp(float3(0.78, 0.80, 0.86), float3(1.0, 0.99, 0.96), lit);
     float3 cloud = lerp(day, float3(0.16, 0.18, 0.26) + 0.08 * lit, night);
     c = lerp(c, cloud, cover * smoothstep(-0.95, -0.2, -abs(up)));  // thinner straight up and straight down
-    if (night > 0.0) {
+    if (night > 0.0 && sourceClamp.w > 0.0) {  // 2.4: the stars a box of their own
         float2 cell = floor(layer * 70.0);
         float h = hash12(cell);
         float2 at = frac(layer * 70.0) - (0.25 + 0.5 * float2(hash12(cell + 7.1), hash12(cell + 3.7)));

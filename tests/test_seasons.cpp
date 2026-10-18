@@ -6,7 +6,7 @@ using namespace uagfx;
 TEST(seasons_by_the_month_and_the_place) {
     living::Place field;
     CHECK(seasons::of("prt_fild08", 1, true, field).snow > 0.5f);
-    CHECK(seasons::of("prt_fild08", 10, true, field).leaves > 0.5f);
+    CHECK(seasons::of("prt_fild08", 10, true, field).dry > 0.3f);  // 2.4: the leaves on the ground are gone
     CHECK(seasons::of("prt_fild08", 4, true, field).lush > 0.5f);
     CHECK(seasons::of("prt_fild08", 7, true, field).snow == 0.0f);
     CHECK(seasons::of("prt_fild08", 1, false, field).snow == 0.0f);  // indoors

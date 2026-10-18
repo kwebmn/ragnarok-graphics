@@ -384,7 +384,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.materialsStrength);
     w.i32(e.tier);
     w.u8(e.groundSeams ? 1 : 0);  // 1.9
-    w.u8(e.groundClutter ? 1 : 0);  // 1.9.8
     w.u8(e.newTrees ? 1 : 0);  // 1.10
     w.u8(e.skyLight ? 1 : 0);  // 1.11
     w.u8(e.bounceLight ? 1 : 0);
@@ -403,6 +402,24 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.sharedWind ? 1 : 0);  // 1.22
     w.u8(e.litDust ? 1 : 0);  // 1.23
     w.u8(e.animeTrees ? 1 : 0);  // 2.0.3
+    // 2.4: the parts of the effects (1.9.8's pebbles no longer sent); the host reads them in this order
+    w.u8(e.waterFoam ? 1 : 0);
+    w.u8(e.waterGlints ? 1 : 0);
+    w.u8(e.caustics ? 1 : 0);
+    w.u8(e.waterfalls ? 1 : 0);
+    w.u8(e.wetSand ? 1 : 0);
+    w.u8(e.stepDust ? 1 : 0);
+    w.u8(e.seasonSnow ? 1 : 0);
+    w.u8(e.seasonGrass ? 1 : 0);
+    w.u8(e.pollen ? 1 : 0);
+    w.u8(e.indoorDust ? 1 : 0);
+    w.u8(e.rainSplashes ? 1 : 0);
+    w.u8(e.stars ? 1 : 0);
+    w.u8(e.lowFog ? 1 : 0);
+    w.u8(e.desertHeat ? 1 : 0);
+    w.u8(e.skyRays ? 1 : 0);
+    w.u8(e.treeSeasons ? 1 : 0);
+    w.u8(e.dragonflies ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

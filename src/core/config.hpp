@@ -320,9 +320,7 @@ struct EffectSettings {
     // 1.9: the remaster's ground: ground_seams - where two cells of the ground with different textures meet, the line
     // between them wanders over the world instead of running along the cells (core/seams.hpp). Off by default.
     bool groundSeams = false;
-    // 1.9.8: the remaster's ground: ground_clutter - pebbles here and there on bare earth, roads and sand
-    // (ground_life_ps). Off by default.
-    bool groundClutter = false;
+
     // 1.10, 2.0: the remaster's new trees (core/forest.hpp, win/gpu/forest.cpp): each tree of the map file grown by
     // the driver, the game's tree models left out. Remaster mode, Direct3D 12. Off by default.
     bool newTrees = false;
@@ -368,6 +366,26 @@ struct EffectSettings {
     // soft puffs in cel-shaded steps, warm light, cool shade, a bright rim. 2.0.4: off by default - the player found
     // the realistic trees of leaves fit the game's pictures better.
     bool animeTrees = false;
+    // 2.4: the parts of what an effect draws, each a box of its own under it (the Effects page, the game's console) -
+    // on, as each was drawn before; its effect off, it is off too. 1.9.8's pebbles (ground_clutter) are gone: specks
+    // a few pixels across over every paved square, as were the seasons' leaves on the ground.
+    bool waterFoam = true;      // water: the foam along the shore
+    bool waterGlints = true;    // water: the sun's glints on the waves
+    bool caustics = true;       // water: the light the waves focus on a shallow bed
+    bool waterfalls = true;     // water: the waterfalls the maps' makers placed (0.65)
+    bool wetSand = true;        // shore_foam: the wet sand above the water
+    bool stepDust = true;       // footprints: the dust a step lifts on dry ground
+    bool seasonSnow = true;     // seasons: winter's snow on what faces up
+    bool seasonGrass = true;    // seasons: the green ground drier in autumn, greener in spring
+    bool pollen = true;         // motes: under the open sky
+    bool indoorDust = true;     // motes: in the dungeons and the houses
+    bool rainSplashes = true;   // weather: the rain's rings on the ground
+    bool stars = true;          // sky: at night
+    bool lowFog = true;         // haze: the dungeons' low fog
+    bool desertHeat = true;     // heat: far off in the desert
+    bool skyRays = true;        // shafts: the rays from the sky over the fields
+    bool treeSeasons = true;    // tree_tints: autumn's golden crowns, Lutie's rime
+    bool dragonflies = true;    // butterflies: the dragonflies over the water
     bool operator==(const EffectSettings& o) const;
     bool operator!=(const EffectSettings& o) const { return !(*this == o); }
 };

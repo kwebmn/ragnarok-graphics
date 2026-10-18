@@ -343,16 +343,14 @@ bool Renderer::Impl::applyGroundLife() {
     c.twin[0] = effects.sandDrift && mapPlace.sand ? 1.0f : 0.0f;
     c.twin[1] = effects.snowSparkle && mapPlace.snow ? 1.0f - 0.6f * night : 0.0f;
     c.twin[2] = effects.wetWalls && mapPlace.cave ? 1.0f : 0.0f;
-    if (effects.groundClutter && !mapPlace.snow) c.sourceClamp[1] = 1.0f;  // 1.9.8: pebbles
     if (wetSandWanted()) {  // 1.7: the wet sand along the shore
         c.twin[3] = 1.0f;
         c.sourceClamp[0] = waterLevel;
     }
-    if (seasonsShown()) {  // 1.20
-        c.sourceRect[0] = mapYear.snow;
-        c.sourceRect[1] = mapYear.leaves;
-        c.sourceRect[2] = mapYear.dry;
-        c.sourceRect[3] = mapYear.lush;
+    if (seasonsShown()) {  // 1.20; 2.4: the snow and the grass each a box of its own, autumn's leaves gone (.y 0)
+        c.sourceRect[0] = effects.seasonSnow ? mapYear.snow : 0.0f;
+        c.sourceRect[2] = effects.seasonGrass ? mapYear.dry : 0.0f;
+        c.sourceRect[3] = effects.seasonGrass ? mapYear.lush : 0.0f;
     }
     if (rainWetShown()) c.sourceClamp[2] = 1.0f;
     if (windShared()) {  // 1.22: the sand drifts the shared wind's way
@@ -366,7 +364,7 @@ bool Renderer::Impl::applyGroundLife() {
                  : c.twin[1] > 0.0f ? "snow"
                  : c.twin[2] > 0.0f ? "damp walls"
                  : c.twin[3] > 0.0f ? "wet sand"
-                                    : "pebbles",
+                                    : "nothing of its own",
                  seasonsShown() ? ", the season" : "", rainWetShown() ? ", wet in the rain" : "");
     groundLifeLogged = true;
     return worldPass(pso, w, h, c, sceneColorSrv, true);

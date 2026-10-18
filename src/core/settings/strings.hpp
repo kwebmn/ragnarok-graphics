@@ -233,8 +233,6 @@ enum class Text : uint16_t {
     // 1.9
     FxGroundSeams, FxGroundSeamsHint,
     ConsoleTitle, ConsoleKeys,
-    // 1.9.8
-    FxGroundClutter, FxGroundClutterHint,
     // 1.10
     FxNewTrees, FxNewTreesHint,
     // 1.11
@@ -299,6 +297,12 @@ enum class Text : uint16_t {
     StudioPackCompact, StudioPackCompactNote, StudioJobCompact, StudioPackGameOpen, StudioPackNone, StudioLogDone,
     DiagXray, DiagXrayHint,
     StudioViewMaterial, StudioMatGloss, StudioMatRelief, StudioMatHeight, StudioMatSave, StudioJobMaterial,
+    // 2.4: the parts of the effects
+    FxWaterFoam, FxWaterFoamHint, FxWaterGlints, FxWaterGlintsHint, FxCaustics, FxCausticsHint, FxWaterfalls,
+    FxWaterfallsHint, FxWetSand, FxWetSandHint, FxStepDust, FxStepDustHint, FxSeasonSnow, FxSeasonSnowHint,
+    FxSeasonGrass, FxSeasonGrassHint, FxPollen, FxPollenHint, FxIndoorDust, FxIndoorDustHint, FxRainSplashes,
+    FxRainSplashesHint, FxStars, FxStarsHint, FxLowFog, FxLowFogHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
+    FxSkyRaysHint, FxTreeSeasons, FxTreeSeasonsHint, FxDragonflies, FxDragonfliesHint,
     Count
 };
 

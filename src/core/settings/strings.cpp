@@ -1599,15 +1599,13 @@ const Entry kTexts[] = {
     {"How strong the region's colour mood is.",
      "Наскільки сильний настрій кольорів регіону.",
      "Насколько сильно настроение цветов региона."},
-    {"Footprints and dust",
-     "Сліди й пил",
-     "Следы и пыль"},
-    {"Characters leave footprints in the snow and the sand that slowly fade, and raise a little dust as they walk on "
-     "dry fields. Needs the characters' shadows. Direct3D 12.",
-     "Персонажі лишають сліди на снігу й піску, що поволі зникають, а на сухих полях здіймають трохи пилу. Потрібні "
-     "тіні персонажів. Direct3D 12.",
-     "Персонажи оставляют следы на снегу и песке, которые понемногу исчезают, а на сухих полях поднимают немного "
-     "пыли. Нужны тени персонажей. Direct3D 12."},
+    {"Footprints",
+     "Сліди",
+     "Следы"},
+    {"Characters leave footprints in the snow and the sand that slowly fade. Needs the characters' shadows. "
+     "Direct3D 12.",
+     "Персонажі лишають сліди на снігу й піску, що поволі зникають. Потрібні тіні персонажів. Direct3D 12.",
+     "Персонажи оставляют следы на снегу и песке, которые понемногу исчезают. Нужны тени персонажей. Direct3D 12."},
     {"Thunderstorms",
      "Грози",
      "Грозы"},
@@ -2159,16 +2157,12 @@ const Entry kTexts[] = {
      "Листя на краю крони з боку сонця світиться теплим зеленим, просвічене наскрізь, найбільше вранці й увечері.",
      "Листья на краю кроны со стороны солнца светятся тёплым зелёным, просвеченные насквозь, сильнее всего утром и "
      "вечером."},
-    {"Every tree its own, seasons",
-     "Кожне дерево своє, пори року",
-     "Каждое дерево своё, времена года"},
-    {"Each tree gets a slightly different shade and brightness, so a wood is not one crown copied. In autumn "
-     "(September to November, the computer's calendar) some trees turn yellow and orange; in Lutie the crowns carry "
-     "rime.",
-     "Кожне дерево трохи іншого відтінку й яскравості, тож ліс не складається з однієї скопійованої крони. Восени (з "
-     "вересня по листопад, за календарем комп'ютера) частина дерев жовтіє й рудіє; у Лютії крони вкриті інеєм.",
-     "Каждое дерево чуть другого оттенка и яркости, так что лес не состоит из одной скопированной кроны. Осенью (с "
-     "сентября по ноябрь, по календарю компьютера) часть деревьев желтеет и рыжеет; в Лютие кроны покрыты инеем."},
+    {"Every tree its own",  // 2.4: its seasons a box of their own
+     "Кожне дерево своє",
+     "Каждое дерево своё"},
+    {"Each tree gets a slightly different shade and brightness, so a wood is not one crown copied.",
+     "Кожне дерево трохи іншого відтінку й яскравості, тож ліс не складається з однієї скопійованої крони.",
+     "Каждое дерево чуть другого оттенка и яркости, так что лес не состоит из одной скопированной кроны."},
     {"Gusts of wind",
      "Пориви вітру",
      "Порывы ветра"},
@@ -2235,15 +2229,12 @@ const Entry kTexts[] = {
      "води (Direct3D 12).",
      "Во влажных пещерах и подземельях камень поблёскивает там, где на него падает свет, а по стенам стекают тонкие "
      "струйки воды (Direct3D 12)."},
-    {"Surf and wet sand",
-     "Прибій і мокрий пісок",
-     "Прибой и мокрый песок"},
-    {"The foam along the shore comes in and goes back like a swash, and the sand just above the water is dark and wet "
-     "in a band that follows it. Needs Modern water (wet sand: Direct3D 12).",
-     "Піна вздовж берега набігає й відступає, як хвиля, а пісок трохи вище води темний і мокрий смугою, що йде за "
-     "нею. Потрібна «Сучасна вода» (мокрий пісок: Direct3D 12).",
-     "Пена вдоль берега набегает и отступает, как волна, а песок чуть выше воды тёмный и мокрый полосой, которая идёт "
-     "за ней. Нужна «Современная вода» (мокрый песок: Direct3D 12)."},
+    {"Surf",
+     "Прибій",
+     "Прибой"},
+    {"The foam along the shore comes in and goes back like a swash. Needs Modern water.",
+     "Піна вздовж берега набігає й відступає, як хвиля. Потрібна «Сучасна вода».",
+     "Пена вдоль берега набегает и отступает, как волна. Нужна «Современная вода»."},
     {"Fish",
      "Риби",
      "Рыбы"},
@@ -2262,15 +2253,13 @@ const Entry kTexts[] = {
      "висить низький зеленуватий серпанок. Потрібна «Сучасна вода» (серпанок: «Серпанок і туман»).",
      "В болотах Умбалы, Бразилиса и Деваты вода мутная, на ней вздуваются и лопаются пузыри, а над землёй висит "
      "низкая зеленоватая дымка. Нужна «Современная вода» (дымка: «Дымка и туман»)."},
-    {"Butterflies and dragonflies",
-     "Метелики й бабки",
-     "Бабочки и стрекозы"},
-    {"By day a few butterflies flutter over the fields and the green towns, their shadows on the ground; dragonflies "
-     "hover and dart over the water (Direct3D 12).",
-     "Удень над полями й зеленими містами пурхає кілька метеликів, їхні тіні біжать землею; над водою зависають і "
-     "різко перелітають бабки (Direct3D 12).",
-     "Днём над полями и зелёными городами порхает несколько бабочек, их тени бегут по земле; над водой зависают и "
-     "резко перелетают стрекозы (Direct3D 12)."},
+    {"Butterflies",
+     "Метелики",
+     "Бабочки"},
+    {"By day a few butterflies flutter over the fields and the green towns, their shadows on the ground "
+     "(Direct3D 12).",
+     "Удень над полями й зеленими містами пурхає кілька метеликів, їхні тіні біжать землею (Direct3D 12).",
+     "Днём над полями и зелёными городами порхает несколько бабочек, их тени бегут по земле (Direct3D 12)."},
     {"Birds",
      "Птахи",
      "Птицы"},
@@ -2397,15 +2386,6 @@ const Entry kTexts[] = {
      "лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc — закрити",
      "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение · зажмите Tab — сравнить · Ctrl+Shift+F11 — "
      "счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
-    {"Pebbles on the ground",
-     "Камінці на землі",
-     "Камешки на земле"},
-    {"Small stones lie here and there on bare earth, roads and sand, each lit from its side with a little shadow; "
-     "they stay in place as the camera moves (Direct3D 12).",
-     "Дрібні камінці лежать подекуди на голій землі, дорогах і піску, кожен освітлений збоку з маленькою тінню; вони "
-     "лишаються на місці, коли рухається камера (Direct3D 12).",
-     "Мелкие камешки лежат кое-где на голой земле, дорогах и песке, каждый освещён сбоку с маленькой тенью; они "
-     "остаются на месте, когда движется камера (Direct3D 12)."},
     {"New trees",
      "Нові дерева",
      "Новые деревья"},
@@ -2518,15 +2498,12 @@ const Entry kTexts[] = {
     {"Seasons on the map",
      "Пори року на карті",
      "Времена года на карте"},
-    {"By the computer's calendar: in winter snow lies on the roofs, the tops of the rocks and the ground; in autumn "
-     "fallen leaves and drier grass; in spring greener fields. Snowy maps keep snow on their roofs all year; the "
-     "desert and the tropics have no seasons (Direct3D 12).",
-     "За календарем комп'ютера: узимку сніг лежить на дахах, верхівках скель і землі; восени опале листя й сухіша "
-     "трава; навесні зеленіші поля. Сніжні карти тримають сніг на дахах увесь рік; пустеля й тропіки без пір року "
-     "(Direct3D 12).",
-     "По календарю компьютера: зимой снег лежит на крышах, верхушках скал и земле; осенью опавшие листья и более "
-     "сухая трава; весной зеленее поля. Снежные карты держат снег на крышах весь год; пустыня и тропики без времён "
-     "года (Direct3D 12)."},
+    {"By the computer's calendar: snow in winter and the grass's colour by the season, each its own box below. Snowy "
+     "maps keep snow on their roofs all year; the desert and the tropics have no seasons (Direct3D 12).",
+     "За календарем комп'ютера: сніг узимку й колір трави за сезоном, кожне своєю галочкою нижче. Сніжні карти "
+     "тримають сніг на дахах увесь рік; пустеля й тропіки без пір року (Direct3D 12).",
+     "По календарю компьютера: снег зимой и цвет травы по сезону, каждое своей галочкой ниже. Снежные карты держат "
+     "снег на крышах весь год; пустыня и тропики без времён года (Direct3D 12)."},
     {"Wet in the rain",
      "Мокре під дощем",
      "Мокрое под дождём"},
@@ -2558,11 +2535,13 @@ const Entry kTexts[] = {
      "Пил у світлі",
      "Пыль в свете"},
     {"Indoors and in dungeons the dust in the air shows where light falls - in the beams from the windows, by the "
-     "torches - tinted by that light, and hardly in the dark corners. Needs Motes in the air (Direct3D 12).",
+     "torches - tinted by that light, and hardly in the dark corners. Needs Motes in the air and Dust indoors "
+     "(Direct3D 12).",
      "У приміщеннях і підземеллях пил у повітрі видно там, де падає світло, — у променях із вікон, біля факелів, — у "
-     "кольорі цього світла, а в темних кутах ледь-ледь. Потрібні «Порошинки в повітрі» (Direct3D 12).",
+     "кольорі цього світла, а в темних кутах ледь-ледь. Потрібні «Порошинки в повітрі» й «Пил у приміщеннях» "
+     "(Direct3D 12).",
      "В помещениях и подземельях пыль в воздухе видна там, где падает свет, — в лучах из окон, у факелов, — в цвете "
-     "этого света, а в тёмных углах едва-едва. Нужны «Частицы в воздухе» (Direct3D 12)."},
+     "этого света, а в тёмных углах едва-едва. Нужны «Частицы в воздухе» и «Пыль в помещениях» (Direct3D 12)."},
     {"Anime-style trees",
      "Дерева в стилі аніме",
      "Деревья в стиле аниме"},
@@ -2967,6 +2946,75 @@ const Entry kTexts[] = {
     {"Height", "Висота", "Высота"},
     {"Save the material", "Зберегти матеріал", "Сохранить материал"},
     {"Material {1}", "Матеріал {1}", "Материал {1}"},
+    // 2.4: the parts of the effects
+    {"Foam along the shore", "Піна вздовж берега", "Пена вдоль берега"},
+    {"White lines of foam roll in where the water meets the shore, a thin rim at its very edge.",
+     "Білі смуги піни набігають там, де вода сходиться з берегом, біля самого краю тонка облямівка.",
+     "Белые полосы пены набегают там, где вода сходится с берегом, у самого края тонкая кромка."},
+    {"Sun glints on the water", "Відблиски сонця на воді", "Блики солнца на воде"},
+    {"The sun sparkles on the waves; in dungeons and caves hardly at all.",
+     "Сонце виблискує на хвилях; у підземеллях і печерах ледь-ледь.",
+     "Солнце сверкает на волнах; в подземельях и пещерах едва-едва."},
+    {"Light on the bed", "Світло на дні", "Свет на дне"},
+    {"Where the water is shallow, the waves gather the sun into a moving net of light on the bed.",
+     "Де вода мілка, хвилі збирають сонце в рухливу сітку світла на дні.",
+     "Где вода мелкая, волны собирают солнце в бегущую сетку света на дне."},
+    {"Waterfalls", "Водоспади", "Водопады"},
+    {"The waterfalls the maps' makers placed and the game never shows (Brasilis) fall and foam.",
+     "Водоспади, які поставили автори карт, а гра ніколи не показує (Бразиліс), падають і піняться.",
+     "Водопады, которые поставили авторы карт, а игра никогда не показывает (Бразилис), падают и пенятся."},
+    {"Wet sand", "Мокрий пісок", "Мокрый песок"},
+    {"The sand just above the water is darker and wet, in a band that follows the surf (Direct3D 12).",
+     "Пісок трохи вище води темніший і мокрий — смугою, що йде за прибоєм (Direct3D 12).",
+     "Песок чуть выше воды темнее и мокрый — полосой, которая идёт за прибоем (Direct3D 12)."},
+    {"Dust from steps", "Пил з-під ніг", "Пыль из-под ног"},
+    {"Away from snow and sand, each step under the open sky lifts a little dust, on paved squares too.",
+     "Поза снігом і піском кожен крок під відкритим небом здіймає трохи пилу, також на бруківці.",
+     "Вне снега и песка каждый шаг под открытым небом поднимает немного пыли, в том числе на брусчатке."},
+    {"Snow in winter", "Сніг узимку", "Снег зимой"},
+    {"From December to February snow lies on the roofs, the tops of the rocks and the ground.",
+     "З грудня по лютий сніг лежить на дахах, верхівках скель і землі.",
+     "С декабря по февраль снег лежит на крышах, верхушках скал и земле."},
+    {"Grass by the season", "Трава за сезоном", "Трава по сезону"},
+    {"From September to February the green ground goes drier, towards straw; from March to May it is greener.",
+     "З вересня по лютий зелена земля сухіша, ближче до соломи; з березня по травень — зеленіша.",
+     "С сентября по февраль зелёная земля суше, ближе к соломе; с марта по май — зеленее."},
+    {"Pollen outdoors", "Пилок надворі", "Пыльца на улице"},
+    {"Over the fields and the towns without weather of their own, pollen floats in the air; less of it at night.",
+     "Над полями й містами без своєї погоди в повітрі пливе пилок; уночі його менше.",
+     "Над полями и городами без своей погоды в воздухе плывёт пыльца; ночью её меньше."},
+    {"Dust indoors", "Пил у приміщеннях", "Пыль в помещениях"},
+    {"In the dungeons and the houses fine dust floats in the air.",
+     "У підземеллях і будинках у повітрі пливе дрібний пил.",
+     "В подземельях и домах в воздухе плывёт мелкая пыль."},
+    {"Rain splashes", "Бризки дощу", "Брызги дождя"},
+    {"Where it rains, rings spread on the ground where the drops land (Direct3D 12).",
+     "Де йде дощ, на землі розходяться кола там, де падають краплі (Direct3D 12).",
+     "Где идёт дождь, на земле расходятся круги там, куда падают капли (Direct3D 12)."},
+    {"Stars at night", "Зорі вночі", "Звёзды ночью"},
+    {"At night the sky past the map's edge shows twinkling stars.",
+     "Уночі небо за краєм карти показує мерехтливі зорі.",
+     "Ночью небо за краем карты показывает мерцающие звёзды."},
+    {"Low fog in dungeons", "Низький туман у підземеллях", "Низкий туман в подземельях"},
+    {"In the dungeons a low fog drifts over the ground; the darkness far off stays.",
+     "У підземеллях над землею пливе низький туман; темрява вдалині лишається.",
+     "В подземельях над землёй плывёт низкий туман; темнота вдали остаётся."},
+    {"Heat over the desert", "Марево над пустелею", "Марево в пустыне"},
+    {"Far off in the desert around Morroc the picture shimmers in the hot air; the heat over fire and lava stays.",
+     "Удалині в пустелі довкола Моррока картинка тремтить у гарячому повітрі; марево над вогнем і лавою лишається.",
+     "Вдали в пустыне вокруг Морокка картинка дрожит в горячем воздухе; марево над огнём и лавой остаётся."},
+    {"Rays from the sky", "Промені з неба", "Лучи с неба"},
+    {"On the fields rays of light pour down from the sky past the map's edge; the light around the fires stays.",
+     "На полях промені світла ллються з неба за краєм карти; світло довкола вогню лишається.",
+     "На полях лучи света льются с неба за краем карты; свет вокруг огня остаётся."},
+    {"Autumn and winter crowns", "Осінні та зимові крони", "Осенние и зимние кроны"},
+    {"From September to November some crowns turn golden and red in patches; in Lutie rime lies on their tops.",
+     "З вересня по листопад частина крон плямами жовтіє й червоніє; у Лютії на верхівках лежить іній.",
+     "С сентября по ноябрь часть крон пятнами желтеет и краснеет; в Лютие на верхушках лежит иней."},
+    {"Dragonflies", "Бабки", "Стрекозы"},
+    {"By day a dragonfly or two hovers over the water and darts off (Direct3D 12).",
+     "Удень одна-дві бабки зависають над водою й різко перелітають (Direct3D 12).",
+     "Днём над водой зависают и резко перелетают одна-две стрекозы (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

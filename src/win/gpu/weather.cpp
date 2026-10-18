@@ -107,7 +107,8 @@ bool Renderer::Impl::applyWeather() {
         return false;
     // 0.64: the rain's splashes on the ground, where it is known (the camera read)
     ID3D12PipelineState* splash = alphaPipeline(splashPs, splashPipelines, upscale ? 1 : samples, "rain's splashes");
-    if (motes || mapWeather != weather::Kind::Rain || !viewToWorldValid || !splash) return true;
+    if (motes || mapWeather != weather::Kind::Rain || !effects.rainSplashes || !viewToWorldValid || !splash)
+        return true;  // 2.4: the splashes a box of their own
     if (!copySceneDepth()) return false;
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};

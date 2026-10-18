@@ -13,10 +13,10 @@ const EffectLayout kEffects[] = {
     {"effects.fire_light", {"effects.skill_colours"}, {"effects.fire_light_strength"}, {}, 0},
     {"effects.actor_shadows", {}, {"effects.actor_shadows_strength"}, {}, 0},
     {"effects.clouds", {}, {"effects.clouds_strength"}, {}, 0},
-    {"effects.haze", {}, {"effects.haze_strength"}, {}, 0},
-    {"effects.heat", {}, {"effects.heat_strength"}, {}, 0},
-    {"effects.weather", {}, {"effects.weather_amount"}, {}, 0},
-    {"effects.footprints", {}, {}, {}, 0},  // 0.80
+    {"effects.haze", {"effects.low_fog"}, {"effects.haze_strength"}, {}, 0},       // 2.4: its parts' boxes
+    {"effects.heat", {"effects.desert_heat"}, {"effects.heat_strength"}, {}, 0},
+    {"effects.weather", {"effects.rain_splashes"}, {"effects.weather_amount"}, {}, 0},
+    {"effects.footprints", {"effects.step_dust"}, {}, {}, 0},  // 0.80
     {"effects.storms", {}, {}, {}, 0},      // 0.80
     {"effects.grass", {}, {"effects.grass_amount"}, {}, 0},  // 0.81
     {"effects.skill_sparks", {}, {"effects.skill_sparks_amount"}, {}, 0},  // 0.82
@@ -31,7 +31,11 @@ const EffectLayout kEffects[] = {
     {"effects.flare", {}, {}, {}, 0},  // 0.98
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, 0},
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, 0},
-    {"effects.water", {}, {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"}, {}, 0},
+    {"effects.water",
+     {"effects.water_foam", "effects.water_glints", "effects.caustics", "effects.waterfalls"},
+     {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"},
+     {},
+     0},
     {"effects.grade",
      {},
      {"effects.grade_saturation", "effects.grade_contrast", "effects.grade_brightness", "effects.grade_warmth",
@@ -42,11 +46,11 @@ const EffectLayout kEffects[] = {
     {"effects.foliage", {}, {"effects.foliage_strength"}, {}, 0},                    // 0.64
     {"effects.soft_particles", {}, {}, {}, 0},  // 0.67
     {"effects.rim_light", {}, {"effects.rim_strength"}, {}, 0},  // 0.68
-    {"effects.sky", {}, {"effects.sky_clouds", "effects.sky_strength"}, {}, 0},  // 0.69
-    {"effects.motes", {}, {"effects.motes_amount"}, {}, 0},  // 0.70
+    {"effects.sky", {"effects.stars"}, {"effects.sky_clouds", "effects.sky_strength"}, {}, 0},  // 0.69
+    {"effects.motes", {"effects.pollen", "effects.indoor_dust"}, {"effects.motes_amount"}, {}, 0},  // 0.70
     {"effects.relief", {}, {"effects.relief_strength"}, {}, 0},  // 0.71
     {"effects.floor_reflections", {}, {"effects.floor_reflect_strength"}, {}, 0},  // 0.72
-    {"effects.shafts", {}, {"effects.shafts_strength"}, {}, 0},  // 0.73
+    {"effects.shafts", {"effects.sky_rays"}, {"effects.shafts_strength"}, {}, 0},  // 0.73
     {"effects.day_cycle", {}, {}, {}, 0},  // 0.74
     {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, 0},
     {"effects.torch",
@@ -63,7 +67,7 @@ const EffectLayout kEffects[] = {
     {"effects.portals", {}, {"effects.portals_strength"}, {}, 1},
     {"effects.tree_volume", {}, {}, {}, 2},  // 1.7
     {"effects.leaf_light", {}, {}, {}, 2},  // 1.7
-    {"effects.tree_tints", {}, {}, {}, 2},  // 1.7
+    {"effects.tree_tints", {"effects.tree_seasons"}, {}, {}, 2},  // 1.7
     {"effects.gusts", {}, {}, {}, 2},  // 1.7
     {"effects.dapple", {}, {}, {}, 2},  // 1.7
     {"effects.flowers", {}, {}, {}, 2},  // 1.7.1
@@ -72,10 +76,10 @@ const EffectLayout kEffects[] = {
     {"effects.sand_drift", {}, {}, {}, 2},  // 1.7.1
     {"effects.snow_sparkle", {}, {}, {}, 2},  // 1.7.1
     {"effects.wet_walls", {}, {}, {}, 2},  // 1.7.1
-    {"effects.shore_foam", {}, {}, {}, 2},  // 1.7.2
+    {"effects.shore_foam", {"effects.wet_sand"}, {}, {}, 2},  // 1.7.2
     {"effects.fish", {}, {}, {}, 2},  // 1.7.2
     {"effects.swamp", {}, {}, {}, 2},  // 1.7.2
-    {"effects.butterflies", {}, {}, {}, 2},  // 1.7.3
+    {"effects.butterflies", {"effects.dragonflies"}, {}, {}, 2},  // 1.7.3
     {"effects.birds", {}, {}, {}, 2},  // 1.7.3
     {"effects.leaf_fall", {}, {}, {}, 2},  // 1.7.3
     {"effects.embers", {}, {}, {}, 2},  // 1.7.3
@@ -85,7 +89,7 @@ const EffectLayout kEffects[] = {
     {"effects.underwater", {}, {}, {}, 2},  // 1.7.3
     {"effects.materials", {}, {"effects.materials_strength"}, {}, 3},  // 1.8
     {"effects.ground_seams", {}, {}, {}, 3},  // 1.9
-    {"effects.ground_clutter", {}, {}, {}, 3},  // 1.9.8
+
     {"effects.new_trees", {}, {}, {}, 3},  // 1.10
     {"effects.sky_light", {}, {}, {}, 3},  // 1.11
     {"effects.bounce_light", {}, {}, {}, 3},  // 1.11
@@ -95,7 +99,7 @@ const EffectLayout kEffects[] = {
     {"effects.sprite_light", {}, {"effects.sprite_light_strength"}, {}, 2},  // 1.17
     {"effects.edge_land", {}, {}, {}, 3},  // 1.18
     {"effects.smooth_models", {}, {}, {}, 3},  // 1.19
-    {"effects.seasons", {}, {}, {}, 2},  // 1.20
+    {"effects.seasons", {"effects.season_snow", "effects.season_grass"}, {}, {}, 2},  // 1.20
     {"effects.rain_wet", {}, {}, {}, 2},  // 1.20
     {"effects.night_windows", {}, {}, {}, 2},  // 1.21
     {"effects.shared_wind", {}, {}, {}, 2},  // 1.22
