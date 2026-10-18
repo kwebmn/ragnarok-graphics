@@ -1785,7 +1785,7 @@ void Renderer::setStudio(uint8_t flags, int x, int y) {
     Impl& m = *impl_;
     if (m.xray != ((flags & 1) != 0)) LOG_INFO("X-ray: %s", (flags & 1) ? "on" : "off");
     m.xray = (flags & 1) != 0;
-    if (flags & 2) m.pick.ask(float(x) + 0.5f, float(y) + 0.5f);  // what the next frame draws there
+    if (flags & 2) m.pick.ask(float(x) + 0.5f, float(y) + 0.5f, GetTickCount64());  // what the next frame draws there
     if (flags & 4) m.abWanted = true;
 }
 
@@ -2262,12 +2262,16 @@ void Renderer::execute(const FrameRecord& record) {
         m.upscaler->renderStart();
     }
     m.prepareGeometry(record);
-    if (m.pick.looking() && m.ai) {  // 2.3: the topmost draw of an AI texture under the cursor, later records over it
-        const int k = pick::lastDrawAt(record, m.pick.x(), m.pick.y(), [&m](const DrawCmd& d) {
-            uint8_t how = 0;
-            return d.texture[0] && m.ai->howOf(d.texture[0], how);
-        });
-        m.pick.seen(k >= 0 ? record.draws()[size_t(k)].texture[0] : 0);
+    if (m.pick.looking() && m.ai) {  // 2.3: the AI textures under the cursor, the one on top first (2.3.1: all of them)
+        std::vector<uint32_t> opaque, blended;
+        for (int k : pick::drawsAt(record, m.pick.x(), m.pick.y(), [&m](const DrawCmd& d) {
+                 uint8_t how = 0;
+                 return d.texture[0] && m.ai->howOf(d.texture[0], how);
+             })) {
+            const DrawCmd& d = record.draws()[size_t(k)];
+            (record.states()[d.state].blend ? blended : opaque).push_back(d.texture[0]);
+        }
+        m.pick.seen(opaque, blended);
     }
     for (const Command& c : record.commands()) {
         if (!m.open) break;  // the list could not go on (the GPU is lost): nothing more is recorded

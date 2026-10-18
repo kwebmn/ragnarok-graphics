@@ -41,19 +41,20 @@ void quad(FrameRecord& f, float x0, float y0, float x1, float y1, uint32_t tex,
 
 }  // namespace
 
-TEST(pick_finds_the_last_draw_under_the_point) {
-    // 2.3, uaRO Studio (L2): the texture under the cursor - the frame's last draw whose triangles hold its pixel
+TEST(pick_finds_the_draws_under_the_point) {
+    // 2.3, uaRO Studio (L2): the textures under the cursor - the frame's draws whose triangles hold its pixel, the
+    // one on top first
     FrameRecord f;
-    quad(f, 0, 0, 100, 100, 7);                                // the ground
-    quad(f, 40, 40, 60, 60, 9, d3d7::PT_TRIANGLELIST);         // a sprite over it, indexed
-    quad(f, 200, 200, 210, 210, 11);                           // something elsewhere
+    quad(f, 0, 0, 100, 100, 7);                         // the ground
+    quad(f, 40, 40, 60, 60, 9, d3d7::PT_TRIANGLELIST);  // a sprite over it, indexed
+    quad(f, 200, 200, 210, 210, 11);                    // something elsewhere
     const auto any = [](const DrawCmd& d) { return d.texture[0] != 0; };
-    CHECK_EQ(pick::lastDrawAt(f, 50, 50, any), 1);
-    CHECK_EQ(pick::lastDrawAt(f, 10, 90, any), 0);
-    CHECK_EQ(pick::lastDrawAt(f, 150, 150, any), -1);
+    CHECK(pick::drawsAt(f, 50, 50, any) == (std::vector<int>{1, 0}));
+    CHECK(pick::drawsAt(f, 10, 90, any) == std::vector<int>{0});
+    CHECK(pick::drawsAt(f, 150, 150, any).empty());
     // what the caller does not want (the interface over the world, say) is passed over
     const auto notNine = [](const DrawCmd& d) { return d.texture[0] != 9; };
-    CHECK_EQ(pick::lastDrawAt(f, 50, 50, notNine), 0);
+    CHECK(pick::drawsAt(f, 50, 50, notNine) == std::vector<int>{0});
 }
 
 TEST(pick_edges_count_once) {
@@ -62,12 +63,12 @@ TEST(pick_edges_count_once) {
     CHECK(pick::inTriangle(0, 0, 0, 10, 10, 0, 2, 2));  // either winding
     CHECK(pick::inTriangle(0, 0, 10, 0, 0, 10, 0, 5));  // on an edge: in
     CHECK(!pick::inTriangle(0, 0, 10, 0, 20, 0, 5, 0));  // a triangle of no area holds nothing
-    // a fan of a whole quad
+    // a fan of the corners 0,1,2,3 in a strip's order covers (0,1,2) and (0,2,3): not the right one's middle
     FrameRecord f;
     quad(f, 0, 0, 10, 10, 3, d3d7::PT_TRIANGLEFAN);
-    // a fan of the corners 0,1,2,3 in a strip's order covers (0,1,2) and (0,2,3): not the right one's middle
-    CHECK_EQ(pick::lastDrawAt(f, 9, 5, [](const DrawCmd&) { return true; }), -1);
-    CHECK_EQ(pick::lastDrawAt(f, 1, 9, [](const DrawCmd&) { return true; }), 0);
+    const auto all = [](const DrawCmd&) { return true; };
+    CHECK(pick::drawsAt(f, 9, 5, all).empty());
+    CHECK(pick::drawsAt(f, 1, 9, all) == std::vector<int>{0});
 }
 
 TEST(pick_request_waits_for_the_next_frame) {
@@ -76,15 +77,44 @@ TEST(pick_request_waits_for_the_next_frame) {
     pick::Request r;
     uint32_t hit = 99;
     CHECK(!r.looking() && !r.due(hit));
-    r.ask(10.5f, 20.5f);
+    r.ask(10.5f, 20.5f, 1000);
     CHECK(r.looking() && r.x() == 10.5f && r.y() == 20.5f);
     CHECK(!r.due(hit));  // the frame it was asked at: its draws are gone
-    r.seen(0);           // the next frame's first record: nothing there
-    r.seen(7);           // its second: a texture on top
-    r.seen(0);           // its third: nothing more under the point - the 7 stays
+    r.seen({}, {});      // the next frame's first record: nothing there
+    r.seen({7}, {});     // its second: a texture on top
     CHECK(r.due(hit) && hit == 7);
     CHECK(!r.looking() && !r.due(hit));  // once
-    r.ask(1, 1);
-    r.seen(0);
+    r.ask(300, 300, 2000);
+    r.seen({}, {});
     CHECK(r.due(hit) && hit == 0);  // nothing of the AI's there: said so
+}
+
+TEST(pick_request_takes_the_opaque_first_and_goes_down) {
+    // 2.3.1: the game draws the cursor's cell (grid.tga) blended over the ground right under the cursor - the first
+    // press takes what is drawn opaque (the ground, a model), each press again at the same place the next one down
+    pick::Request r;
+    uint32_t hit = 0;
+    const auto press = [&](float x, uint64_t ms, std::vector<uint32_t> opaque, std::vector<uint32_t> blended) {
+        r.ask(x, 50.0f, ms);
+        r.seen(opaque, blended);
+        return r.due(hit) ? hit : 999u;
+    };
+    CHECK_EQ(press(50, 1000, {5}, {3}), 5u);    // the ground, not the cell
+    CHECK_EQ(press(51, 2000, {5}, {3}), 3u);    // again, a pixel off: the cell under the cursor
+    CHECK_EQ(press(50, 3000, {5}, {3}), 5u);    // and round again
+    CHECK_EQ(press(80, 4000, {5}, {3}), 5u);    // another place: from the top
+    CHECK_EQ(press(80, 30000, {5}, {3}), 5u);   // the same place much later: from the top
+    // two records: the later one's draws lie over the earlier one's; a texture seen twice counts once
+    r.ask(10, 10, 40000);
+    r.seen({4}, {});
+    r.seen({9, 4}, {3});
+    CHECK(r.due(hit) && hit == 9);
+    r.ask(10, 10, 41000);
+    r.seen({4}, {});
+    r.seen({9, 4}, {3});
+    CHECK(r.due(hit) && hit == 4);
+    r.ask(10, 10, 42000);
+    r.seen({4}, {});
+    r.seen({9, 4}, {3});
+    CHECK(r.due(hit) && hit == 3);
 }

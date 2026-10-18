@@ -1,5 +1,7 @@
 #include "core/pick.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "core/d3d7.hpp"
@@ -16,28 +18,39 @@ bool inTriangle(float ax, float ay, float bx, float by, float cx, float cy, floa
     return !(negative && positive);
 }
 
-void Request::ask(float x, float y) {
+void Request::ask(float x, float y, uint64_t nowMs) {
+    const bool again = before_ && std::fabs(x - x_) <= 3.0f && std::fabs(y - y_) <= 3.0f && nowMs - at_ < 15000;
+    depth_ = again ? depth_ + 1 : 0;
     asked_ = true;
     searched_ = false;
+    before_ = true;
     x_ = x;
     y_ = y;
-    hit_ = 0;
+    at_ = nowMs;
+    opaque_.clear();
+    blended_.clear();
 }
 
-void Request::seen(uint32_t hit) {
+void Request::seen(const std::vector<uint32_t>& opaque, const std::vector<uint32_t>& blended) {
     if (!asked_) return;
     searched_ = true;
-    if (hit) hit_ = hit;
+    opaque_.insert(opaque_.begin(), opaque.begin(), opaque.end());  // a later record over the earlier ones
+    blended_.insert(blended_.begin(), blended.begin(), blended.end());
 }
 
 bool Request::due(uint32_t& hit) {
     if (!asked_ || !searched_) return false;
     asked_ = false;
-    hit = hit_;
+    std::vector<uint32_t> order;  // the opaque ones first, each texture once
+    for (const std::vector<uint32_t>* list : {&opaque_, &blended_})
+        for (uint32_t id : *list)
+            if (id && std::find(order.begin(), order.end(), id) == order.end()) order.push_back(id);
+    hit = order.empty() ? 0 : order[size_t(depth_) % order.size()];
     return true;
 }
 
-int lastDrawAt(const FrameRecord& r, float x, float y, const std::function<bool(const DrawCmd&)>& wanted) {
+std::vector<int> drawsAt(const FrameRecord& r, float x, float y, const std::function<bool(const DrawCmd&)>& wanted) {
+    std::vector<int> out;
     const std::vector<uint8_t>& bytes = r.vertexBytes();
     const std::vector<uint16_t>& indices = r.indices();
     for (size_t k = r.draws().size(); k-- > 0;) {
@@ -60,10 +73,13 @@ int lastDrawAt(const FrameRecord& r, float x, float y, const std::function<bool(
             if (d.primitive == d3d7::PT_TRIANGLEFAN) a = 0, b = t + 1, c = t + 2;
             float p[6];
             if (!at(a, p[0], p[1]) || !at(b, p[2], p[3]) || !at(c, p[4], p[5])) break;
-            if (inTriangle(p[0], p[1], p[2], p[3], p[4], p[5], x, y)) return int(k);
+            if (inTriangle(p[0], p[1], p[2], p[3], p[4], p[5], x, y)) {
+                out.push_back(int(k));
+                break;
+            }
         }
     }
-    return -1;
+    return out;
 }
 
 }  // namespace uagfx::pick
