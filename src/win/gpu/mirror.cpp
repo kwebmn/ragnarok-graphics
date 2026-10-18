@@ -58,8 +58,8 @@ bool Renderer::Impl::applyMirror() {
     if (!mirrorPipeline() || !viewToWorldValid || sceneWidth <= 0 || sceneHeight <= 0) return true;
     const int w = std::max(1, sceneWidth / 2), h = std::max(1, sceneHeight / 2);
     if (!mirror || mirrorWidth != w || mirrorHeight != h) {
-        if (mirror) slots[slot].garbage.push_back(mirror);
-        if (mirrorDepth) slots[slot].garbage.push_back(mirrorDepth);
+        discard(mirror);  // 2.4.3
+        discard(mirrorDepth);
         mirror = mirrorDepth = nullptr;
         D3D12_CLEAR_VALUE clearColour{};
         clearColour.Format = DXGI_FORMAT_R8G8B8A8_UNORM;

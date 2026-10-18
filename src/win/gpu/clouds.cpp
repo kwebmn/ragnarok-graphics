@@ -37,7 +37,7 @@ ID3D12PipelineState* Renderer::Impl::cloudsPipeline(UINT n) {
 }
 
 void Renderer::Impl::releaseCloudsMask() {
-    if (cloudsMask) slots[slot].garbage.push_back(cloudsMask);  // what the open list recorded may still read it
+    discard(cloudsMask);  // what the open list recorded may still read it (2.4.3: discard)
     cloudsMask = nullptr;
     cloudsMaskW = cloudsMaskH = 0;
 }

@@ -155,7 +155,7 @@ bool Renderer::Impl::applyFloorReflections() {
     const int w = sceneWidth, h = sceneHeight;
     const int hw = std::max(1, (w + 1) / 2), hh = std::max(1, (h + 1) / 2);
     if (!floorTarget || hw != floorWidth || hh != floorHeight) {
-        if (floorTarget) slots[slot].garbage.push_back(floorTarget);
+        discard(floorTarget);  // 2.4.3
         floorTarget = createTexture2D(device, hw, hh, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
                                       D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
                                       nullptr);

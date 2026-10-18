@@ -32,7 +32,7 @@ ID3D12PipelineState* Renderer::Impl::materialPipeline() {
 
 void Renderer::Impl::dropMaterial(Texture& t) {
     if (!t.mat) return;
-    slots[slot].garbage.push_back(t.mat);
+    discard(t.mat);  // 2.4.3
     freeSrv.push_back(t.matSrv);
     t.mat = nullptr;
     t.matSrv = 0;
@@ -63,6 +63,7 @@ bool Renderer::Impl::ensureMaterial(uint32_t id, Texture& t, bool fromAi) {
         releaseCom(mat);
         return false;
     }
+    nameResource(mat, ("material of texture " + std::to_string(id)).c_str());  // 2.4.3
     device->CreateShaderResourceView(mat, nullptr, cpuSrvHandle(srvIndex));
     t.mat = mat;
     t.matSrv = srvIndex;

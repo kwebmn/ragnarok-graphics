@@ -48,6 +48,9 @@ class AiTextures;  // ai_textures.hpp
 D3D12_GRAPHICS_PIPELINE_STATE_DESC fullScreenPipeline(ID3D12RootSignature* root, ID3DBlob* vs, ID3DBlob* ps,
                                                       DXGI_FORMAT format, UINT samples);
 
+// 2.4.3: the resource's name for the log of a lost device (DRED names the allocation a page fault hit).
+void nameResource(ID3D12Resource* r, const char* name);
+
 // A committed 2D texture in the default heap (device.cpp); null when it cannot be made.
 ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, DXGI_FORMAT format,
                                 D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, const D3D12_CLEAR_VALUE* clear,
@@ -146,6 +149,7 @@ struct Texture {
     uint8_t aiKind = 0xFF;  // 2.2.1: its AI picture's kind (ai::Kind) - shown while that kind is on; 0xFF unknown
     bool aiWorld = true;
     bool aiUi = false;
+    bool aiHidden = false;  // 2.4.3: uaRO Studio's A/B (Ctrl+Shift+F7) - the game's own drawn, the copy kept
     // 0.26: how much its picture looks like fire (core/effect_light.hpp) and its colour - an effect drawn from it
     // lights around it.
     float fire = 0.0f;
@@ -253,6 +257,15 @@ struct Renderer::Impl {
     Slot slots[kSlots];
     UINT slot = 0;
     bool open = false;
+    // 2.4.3: a resource the GPU may still read goes once the list that could read it has run: the open list's slot,
+    // or - no list open - the last submitted one's (its slot's begin() waits for that submission). Until now it went
+    // to slots[slot] always, which between two lists is the slot about to begin: freed after a wait for the
+    // submission before last only, while the last could still read it (R-TT5RVW: the device lost after an A/B).
+    void discard(IUnknown* r) {
+        if (r) slots[open ? slot : (slot + kSlots - 1) % kSlots].garbage.push_back(r);
+    }
+    bool dred = false;  // 2.4.3: D3D12's device-removed data is on (page faults): dredReport() after a loss
+    void dredReport();
     std::string adapter;
     uint64_t adapterMb = 0;  // 1.8: its own memory, for the remaster's automatic choice
     LogOnce failures;

@@ -614,14 +614,14 @@ bool AiTextures::ensureBuffers(int width, int height) {
     const UINT64 n = UINT64(width) * UINT64(height);
     const UINT64 planes = n * 4 * 4, feat = n * UINT64(std::max(features_, 3 * kNetScale * kNetScale)) * 4;
     if (planes > planesBytes_) {
-        if (planes_) m_.slots[m_.slot].garbage.push_back(planes_);
+        if (planes_) m_.discard(planes_);
         planes_ = buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, planes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
         planesBytes_ = planes_ ? planes : 0;
         planesState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
     if (feat > featBytes_) {
         for (ID3D12Resource*& r : feat_) {
-            if (r) m_.slots[m_.slot].garbage.push_back(r);
+            if (r) m_.discard(r);
             r = buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, feat, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
         }
         featBytes_ = feat_[0] && feat_[1] ? feat : 0;
@@ -707,16 +707,16 @@ void AiTextures::trimBuffers() {
     const UINT64 normal = UINT64(kTrimSide) * UINT64(kTrimSide) * UINT64(features_) * 4;
     if (featBytes_ <= normal) return;
     for (ID3D12Resource*& r : feat_) {
-        if (r) m_.slots[m_.slot].garbage.push_back(r);  // freed once this list has run
+        if (r) m_.discard(r);  // freed once this list has run
         r = nullptr;
     }
-    if (planes_) m_.slots[m_.slot].garbage.push_back(planes_);
+    if (planes_) m_.discard(planes_);
     planes_ = nullptr;
     featBytes_ = planesBytes_ = 0;
 }
 
 void AiTextures::dropJob() {
-    if (job_ && job_->image) m_.slots[m_.slot].garbage.push_back(job_->image);  // freed once this list has run
+    if (job_ && job_->image) m_.discard(job_->image);  // freed once this list has run
     job_.reset();
     trimBuffers();
 }
@@ -822,7 +822,7 @@ ID3D12Resource* AiTextures::makeImage(Job& job, std::vector<Level>& levels) {
         ID3D12Resource* image = job.image;
         job.image = nullptr;
         levels = job.levels;
-        m_.slots[m_.slot].garbage.push_back(image);  // freed once this list has run
+        m_.discard(image);  // freed once this list has run
         D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         if (!job.rrdbDone) dispatchAlpha(job, image, levels[0]);  // 1.5: RRDB's tiles placed the alpha too
         dispatchMips(image, levels);
@@ -838,7 +838,7 @@ ID3D12Resource* AiTextures::makeImage(Job& job, std::vector<Level>& levels) {
         buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
     if (!image) return nullptr;
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    m_.slots[m_.slot].garbage.push_back(image);  // freed once this list has run
+    m_.discard(image);  // freed once this list has run
     if (job.loaded) {  // level 0 from the pack
         const Level& l0 = levels[0];
         const Upload u = m_.allocUpload(UINT64(l0.pitch) * UINT64(h), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
@@ -897,6 +897,7 @@ bool AiTextures::finish(Job& job) {
     if (FAILED(m_.device->CreateCommittedResource(&hp, D3D12_HEAP_FLAG_NONE, &td, D3D12_RESOURCE_STATE_COPY_DEST,
                                                   nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&tex))))
         return false;
+    nameResource(tex, ("AI picture of texture " + std::to_string(job.id)).c_str());  // 2.4.3
     for (size_t i = skip; i < levels.size(); ++i) {
         D3D12_TEXTURE_COPY_LOCATION src{}, dst{};
         src.pResource = image;
@@ -918,13 +919,13 @@ bool AiTextures::finish(Job& job) {
     const auto item = items_.find(job.id);
     if (it == m_.textures.end() || item == items_.end() || item->second.state != Item::Waiting ||
         item->second.name != job.name) {
-        m_.slots[m_.slot].garbage.push_back(tex);
+        m_.discard(tex);
         return true;
     }
     Texture& t = it->second;
     const UINT srv = m_.allocSrv();
     if (srv == kNoSrv) {
-        m_.slots[m_.slot].garbage.push_back(tex);
+        m_.discard(tex);
         return false;
     }
     dropAi(job.id);
@@ -1097,9 +1098,10 @@ bool AiTextures::makeAtlas(uint32_t id, Texture& t) {
     if (FAILED(m_.device->CreateCommittedResource(&hp, D3D12_HEAP_FLAG_NONE, &td, D3D12_RESOURCE_STATE_COPY_DEST,
                                                   nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&tex))))
         return false;
+    nameResource(tex, ("AI sprite cache of texture " + std::to_string(id)).c_str());  // 2.4.3
     const UINT srv = m_.allocSrv();
     if (srv == kNoSrv) {
-        m_.slots[m_.slot].garbage.push_back(tex);
+        m_.discard(tex);
         return false;
     }
     dropAi(id);  // a picture of it as a whole, made before it was seen to be a sprite cache
@@ -1245,7 +1247,7 @@ void AiTextures::dropAi(uint32_t id) {
     }
     const auto it = m_.textures.find(id);
     if (it == m_.textures.end() || !it->second.ai) return;
-    m_.slots[m_.slot].garbage.push_back(it->second.ai);
+    m_.discard(it->second.ai);
     m_.freeSrv.push_back(it->second.aiSrv);
     it->second.ai = nullptr;
     it->second.aiSrv = 0;
@@ -1510,11 +1512,17 @@ void AiTextures::toggleHidden() {
     for (auto& e : items_) {
         Item& item = e.second;
         if (item.key != picked_) continue;
+        // 2.4.3: its copy stays in video memory, only not drawn (Texture::aiHidden) - and is drawn again at once.
+        // Until now it was freed here and read again from the pack on the way back.
+        const auto t = m_.textures.find(e.first);
+        if (t != m_.textures.end()) t->second.aiHidden = hide;
         if (hide) {  // the game's texture where its picture was
-            dropAi(e.first);
-            item.state = Item::Skipped;
+            if (item.state == Item::Done) item.howShown = item.how;
+            if (item.state == Item::Kept || item.state == Item::Away) item.state = Item::Skipped;
             item.how = uint8_t(studio::How::Hidden);
-        } else {  // drawn again, its picture is taken again
+        } else if (item.state == Item::Done) {
+            if (item.how == uint8_t(studio::How::Hidden)) item.how = item.howShown;
+        } else if (item.state == Item::Skipped) {  // drawn again, its picture is taken again
             item.state = Item::Kept;
             item.how = uint8_t(studio::How::Missing);
         }
@@ -2068,7 +2076,7 @@ bool AiTextures::ioCheckpoint() {
 bool AiTextures::ensureScratch(UINT64 words) {
     const UINT64 bytes = words * 4;
     if (bytes <= scratchBytes_ && scratch_) return true;
-    if (scratch_) m_.slots[m_.slot].garbage.push_back(scratch_);  // freed once this list has run
+    if (scratch_) m_.discard(scratch_);  // freed once this list has run
     scratch_ = buffer(m_.device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, true);
     scratchBytes_ = scratch_ ? bytes : 0;
     scratchState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;

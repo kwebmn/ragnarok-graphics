@@ -39,6 +39,48 @@ std::string narrow(const wchar_t* w) {
     return n > 0 ? std::string(out) : std::string();
 }
 
+// 2.4.3: D3D12's device-removed extended data (DRED, Windows 10 1903 and later; the MinGW headers lack it): what
+// the runtime knows after a lost device - a page fault's address, the allocations freed lately and those still
+// there at it. The two interfaces and the structures as d3d12.h declares them.
+constexpr int kDredOn = 2;  // D3D12_DRED_ENABLEMENT_FORCED_ON
+struct DredAllocationNode {
+    const char* nameA;
+    const wchar_t* nameW;
+    UINT type;  // D3D12_DRED_ALLOCATION_TYPE: 34 a resource, 24 a descriptor heap, 21 a pipeline state...
+    const DredAllocationNode* next;
+};
+struct DredPageFault {
+    D3D12_GPU_VIRTUAL_ADDRESS va;
+    const DredAllocationNode* existing;
+    const DredAllocationNode* freed;
+};
+struct DredSettings : IUnknown {  // ID3D12DeviceRemovedExtendedDataSettings
+    virtual void STDMETHODCALLTYPE SetAutoBreadcrumbsEnablement(int) = 0;
+    virtual void STDMETHODCALLTYPE SetPageFaultEnablement(int) = 0;
+    virtual void STDMETHODCALLTYPE SetWatsonDumpEnablement(int) = 0;
+};
+struct DredData : IUnknown {  // ID3D12DeviceRemovedExtendedData
+    virtual HRESULT STDMETHODCALLTYPE GetAutoBreadcrumbsOutput(void*) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetPageFaultAllocationOutput(DredPageFault*) = 0;
+};
+const GUID kDredSettingsIid = {0x82BC481C, 0x6B9B, 0x4030, {0xAE, 0xDB, 0x7E, 0xE3, 0xD1, 0xDF, 0x1E, 0x63}};
+const GUID kDredDataIid = {0x98931D33, 0x5AE8, 0x4791, {0xAA, 0x3C, 0x1A, 0x73, 0xA2, 0x93, 0x4E, 0x71}};
+
+// The names of an allocation list, up to a dozen: the resource's own (nameResource) or its kind's number.
+std::string dredNames(const DredAllocationNode* n) {
+    std::string s;
+    int count = 0;
+    for (; n && count < 12; n = n->next, ++count) {
+        if (!s.empty()) s += ", ";
+        s += n->nameA ? std::string(n->nameA) : n->nameW ? narrow(n->nameW) : std::string("?");
+        char kind[16];
+        std::snprintf(kind, sizeof kind, " (%u)", n->type);
+        s += kind;
+    }
+    if (n) s += ", ...";
+    return s.empty() ? std::string("none") : s;
+}
+
 ID3D12Resource* createBuffer(ID3D12Device* device, D3D12_HEAP_TYPE type, UINT64 size, D3D12_RESOURCE_STATES state) {
     D3D12_HEAP_PROPERTIES heap{};
     heap.Type = type;
@@ -54,10 +96,20 @@ ID3D12Resource* createBuffer(ID3D12Device* device, D3D12_HEAP_TYPE type, UINT64 
     if (FAILED(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &d, state, nullptr,
                                                __uuidof(ID3D12Resource), reinterpret_cast<void**>(&r))))
         return nullptr;
+    char name[64];
+    std::snprintf(name, sizeof name, "buffer %llu KB%s", static_cast<unsigned long long>(size >> 10),
+                  type == D3D12_HEAP_TYPE_UPLOAD ? " (upload)" : type == D3D12_HEAP_TYPE_READBACK ? " (readback)" : "");
+    nameResource(r, name);
     return r;
 }
 
 }  // namespace
+
+void nameResource(ID3D12Resource* r, const char* name) {
+    if (!r || !name) return;
+    wchar_t w[128];
+    if (MultiByteToWideChar(CP_UTF8, 0, name, -1, w, 128) > 0) r->SetName(w);
+}
 
 ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, DXGI_FORMAT format,
                                 D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, const D3D12_CLEAR_VALUE* clear,
@@ -78,6 +130,10 @@ ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, 
     if (FAILED(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &d, state, clear,
                                                __uuidof(ID3D12Resource), reinterpret_cast<void**>(&r))))
         return nullptr;
+    char name[64];
+    std::snprintf(name, sizeof name, "texture %dx%d, %d levels, format %u%s", w, h, levels, unsigned(format),
+                  samples > 1 ? ", multisampled" : "");
+    nameResource(r, name);
     return r;
 }
 
@@ -303,6 +359,7 @@ void Renderer::Impl::failed(uint32_t place, const char* what, HRESULT hr) {
                       what, static_cast<unsigned long>(hr), static_cast<unsigned long>(reason));
             const std::string where = crumbsReport();  // 1.9.4
             if (!where.empty()) LOG_ERROR("the GPU stopped %s", where.c_str());
+            dredReport();  // 2.4.3
         }
         lost = true;
         return;
@@ -310,9 +367,35 @@ void Renderer::Impl::failed(uint32_t place, const char* what, HRESULT hr) {
     if (failures.first(place, uint32_t(hr))) LOG_ERROR("%s failed: 0x%08lx", what, static_cast<unsigned long>(hr));
 }
 
+// 2.4.3: what D3D12's device-removed data knows of the loss - a page fault (a resource read or written after it was
+// freed, or past its end): its address, the allocations freed lately and those still there at it; or no fault at
+// all: the GPU stopped on its own - a hang in a shader, or a reset another program caused.
+void Renderer::Impl::dredReport() {
+    if (!dred || !device) return;
+    DredData* data = nullptr;
+    if (FAILED(device->QueryInterface(kDredDataIid, reinterpret_cast<void**>(&data))) || !data) {
+        LOG_ERROR("DRED: this Windows or driver gives no data of the loss");
+        return;
+    }
+    DredPageFault fault{};
+    const HRESULT hr = data->GetPageFaultAllocationOutput(&fault);
+    data->Release();
+    if (FAILED(hr)) {
+        LOG_ERROR("DRED: no page fault data (0x%08lx)", static_cast<unsigned long>(hr));
+        return;
+    }
+    if (!fault.va && !fault.existing && !fault.freed) {
+        LOG_ERROR("DRED: no page fault - the GPU stopped on its own (a hang, or a reset another program caused)");
+        return;
+    }
+    LOG_ERROR("DRED: page fault at 0x%016llx; freed lately: %s; there: %s", static_cast<unsigned long long>(fault.va),
+              dredNames(fault.freed).c_str(), dredNames(fault.existing).c_str());
+}
+
 bool Renderer::Impl::growUpload(Slot& s, UINT64 size) {
     if (s.upload) s.garbage.push_back(s.upload);  // still used by what this slot recorded so far
     s.upload = createBuffer(device, D3D12_HEAP_TYPE_UPLOAD, size, D3D12_RESOURCE_STATE_GENERIC_READ);
+    if (s.upload) nameResource(s.upload, (std::string("upload ring of slot ") + std::to_string(&s - slots)).c_str());
     s.mapped = nullptr;
     s.size = s.upload ? size : 0;
     s.used = 0;
@@ -1888,6 +1971,22 @@ bool Renderer::create(std::string& error) {
         error = "no DXGI 1.4 factory";
         return false;
     }
+    // 2.4.3: D3D12's device-removed data (DRED): page faults tracked always - they cost nothing until a loss, and
+    // then the log names the address and the resource (failed(): dredReport). Asked of the system's d3d12.dll: with
+    // Streamline's interposer in m.d3d12 the setting still reaches the runtime underneath.
+    using GetDebugFn = HRESULT(WINAPI*)(REFIID, void**);
+    const HMODULE system = m.api ? LoadLibraryA("d3d12.dll") : m.d3d12;
+    const auto getDebug = system ? reinterpret_cast<GetDebugFn>(
+                                       reinterpret_cast<void*>(GetProcAddress(system, "D3D12GetDebugInterface")))
+                                 : nullptr;
+    if (getDebug) {
+        DredSettings* dred = nullptr;
+        if (SUCCEEDED(getDebug(kDredSettingsIid, reinterpret_cast<void**>(&dred))) && dred) {
+            dred->SetPageFaultEnablement(kDredOn);
+            dred->Release();
+            m.dred = true;
+        }
+    }
     // 0.50.1: the fast card of several (a laptop's NVIDIA, not its integrated Intel); no WARP, no Basic Render.
     std::vector<AdapterFacts> all;
     std::vector<IDXGIAdapter1*> adapters = orderedAdapters(m.factory, &all);
@@ -2194,10 +2293,17 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
                                  D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
     if (!t.resource) {
         m.freeSrv.push_back(t.srv);
+        // 2.4.3: a lost device makes nothing - its reason and the GPU's last pass to the log now, not at the next
+        // read of the frame (R-TT5RVW: "not made" six seconds before the loss was told)
+        const HRESULT reason = m.device->GetDeviceRemovedReason();
+        if (FAILED(reason)) m.failed(7, "making a texture", reason);
         return 0;
     }
     m.device->CreateShaderResourceView(t.resource, nullptr, m.cpuSrvHandle(t.srv));
     const uint32_t id = m.nextTexture++;
+    char name[48];
+    std::snprintf(name, sizeof name, "game texture %u, %dx%d", id, width, height);
+    nameResource(t.resource, name);
     m.textures.emplace(id, t);
     return id;
 }

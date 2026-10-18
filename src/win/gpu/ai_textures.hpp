@@ -146,6 +146,7 @@ private:
         uint64_t bytes = 0;      // its copy's in video memory (Texture::ai), all its levels
         ai::Group group = ai::Group::World;  // 1.6
         uint8_t how = uint8_t(studio::How::Missing);  // 2.3: how it is shown (the map's report, the X-ray)
+        uint8_t howShown = 0;                          // 2.4.3: its how before Hidden (A/B), given back after
         uint64_t counted = ~0ull;                     // 2.3: the frame it was last counted in the report
     };
     struct Level {

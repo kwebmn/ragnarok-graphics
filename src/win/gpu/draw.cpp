@@ -206,7 +206,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (ai && ai->shown && !(d.twin && s.ui))
         for (int i = 0; i < 2; ++i) {
             const auto it = d.texture[i] ? textures.find(d.texture[i]) : textures.end();
-            aiDrawn[i] = it != textures.end() && it->second.ai && (s.ui ? it->second.aiUi : it->second.aiWorld) &&
+            const bool copy = it != textures.end() && it->second.ai && !it->second.aiHidden;  // 2.4.3: A/B keeps it
+            aiDrawn[i] = copy && (s.ui ? it->second.aiUi : it->second.aiWorld) &&
                          (!s.ui || aiInterfaceAt(scale));  // 0.89: not the interface at the game's own size
             // 2.2.1: its kind on in the file now; 2.2.2: a sprite cache's by the kind of the cell drawn (monsters
             // off alone are the game's own at once)
