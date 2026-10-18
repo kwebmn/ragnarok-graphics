@@ -29,19 +29,13 @@
 #include "win/paths.hpp"
 
 namespace uagfx::gpu {
-namespace {
-
-UINT64 alignUp(UINT64 v, UINT64 a) { return (v + a - 1) & ~(a - 1); }
-
-std::string narrow(const wchar_t* w) {
-    char out[512];
-    const int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, out, sizeof out, nullptr, nullptr);
-    return n > 0 ? std::string(out) : std::string();
-}
 
 // 2.4.3: D3D12's device-removed extended data (DRED, Windows 10 1903 and later; the MinGW headers lack it): what
 // the runtime knows after a lost device - a page fault's address, the allocations freed lately and those still
-// there at it. The two interfaces and the structures as d3d12.h declares them.
+// there at it. The two interfaces and the structures as d3d12.h declares them. 2.5.8: outside the anonymous
+// namespace - there GCC knows a class's every derived class, finds none implementing these and makes each call of
+// their methods a call of a pure virtual function: address 0 here (tools/check_pure_calls.py). Every start of
+// Direct3D 12 whose runtime gave DRED's settings crashed in 2.5.0-2.5.7, the 64-bit renderer too.
 constexpr int kDredOn = 2;  // D3D12_DRED_ENABLEMENT_FORCED_ON
 struct DredAllocationNode {
     const char* nameA;
@@ -63,6 +57,17 @@ struct DredData : IUnknown {  // ID3D12DeviceRemovedExtendedData
     virtual HRESULT STDMETHODCALLTYPE GetAutoBreadcrumbsOutput(void*) = 0;
     virtual HRESULT STDMETHODCALLTYPE GetPageFaultAllocationOutput(DredPageFault*) = 0;
 };
+
+namespace {
+
+UINT64 alignUp(UINT64 v, UINT64 a) { return (v + a - 1) & ~(a - 1); }
+
+std::string narrow(const wchar_t* w) {
+    char out[512];
+    const int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, out, sizeof out, nullptr, nullptr);
+    return n > 0 ? std::string(out) : std::string();
+}
+
 const GUID kDredSettingsIid = {0x82BC481C, 0x6B9B, 0x4030, {0xAE, 0xDB, 0x7E, 0xE3, 0xD1, 0xDF, 0x1E, 0x63}};
 const GUID kDredDataIid = {0x98931D33, 0x5AE8, 0x4791, {0xAA, 0x3C, 0x1A, 0x73, 0xA2, 0x93, 0x4E, 0x71}};
 
