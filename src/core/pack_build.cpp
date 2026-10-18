@@ -352,6 +352,7 @@ std::string statusText(const Status& s) {
     t += "pid=" + std::to_string(s.pid) + "\n";
     t += "current=" + oneLine(s.current) + "\n";
     t += "message=" + oneLine(s.message) + "\n";
+    t += "work=" + oneLine(s.work) + "\n";
     return t;
 }
 
@@ -396,6 +397,8 @@ bool parseStatus(const std::string& text, Status& out) {
             s.current = v;
         } else if (k == "message") {
             s.message = v;
+        } else if (k == "work") {
+            s.work = v;
         }
     }
     if (state) out = std::move(s);

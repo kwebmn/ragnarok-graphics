@@ -18,6 +18,7 @@ struct LogDigest {
     std::vector<std::string> errors;  // the last 10 ERROR messages
     size_t errorCount = 0;
     std::vector<std::string> tail;    // the last lines, whole, for the report
+    std::string map;                  // 2.2.5: the last map the game showed ("map: cmd_fild02")
 };
 LogDigest digestLog(const std::string& text, size_t keep = 40);
 

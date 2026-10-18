@@ -138,6 +138,17 @@ TEST(pack_build_writes_and_reads_its_status) {
     CHECK(!pack::parseStatus("state=nonsense\n", bad));
 }
 
+TEST(pack_build_status_names_its_work) {
+    // 2.2.5: the page words the end by the work - pictures made, or (one map's) taken out
+    pack::Status s;
+    s.state = pack::Status::Done;
+    s.work = "drop";
+    s.made = 12;
+    pack::Status r;
+    CHECK(pack::parseStatus(pack::statusText(s), r) && r.work == "drop" && r.made == 12);
+    CHECK(pack::parseStatus("state=done\n", r) && r.work.empty());  // an older builder's
+}
+
 TEST(pack_build_writes_and_reads_the_packs_index) {
     // index.txt: a line a picture - its name and its kind - so that a pack goes on with its kinds known.
     std::map<std::string, ai::Kind> kinds = {{"world/256x256/0123456789abcdef.webp", ai::Kind::Ground},

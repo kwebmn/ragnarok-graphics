@@ -83,6 +83,7 @@ struct Status {
     uint32_t pid = 0;                        // the builder's process
     std::string current;                     // the file it makes pictures of (UTF-8)
     std::string message;                     // why it failed
+    std::string work;                        // 2.2.5: "build" or "drop" (made counts those taken out); "" older
 };
 std::string statusText(const Status& s);
 bool parseStatus(const std::string& text, Status& out);  // false: no state in it

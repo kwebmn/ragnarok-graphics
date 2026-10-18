@@ -38,6 +38,8 @@ LogDigest digestLog(const std::string& text, size_t keep) {
             d.crispScale.clear();
         } else if (msg.rfind("renderer: ", 0) == 0) {
             d.renderer = msg.substr(10);
+        } else if (msg.rfind("map: ", 0) == 0) {  // 2.2.5
+            d.map = msg.substr(5);
         } else if (msg.rfind("crisp text: ", 0) == 0) {
             const std::string what = msg.substr(12);
             if (what == "on" || what.rfind("off", 0) == 0)

@@ -304,3 +304,34 @@ TEST(pack_writer_replaces_a_picture_and_the_index_keeps_its_model) {
     CHECK(e.kind == uagfx::ai::Kind::Sprites && e.model == "anime6b" && e.group == "players");
     CHECK_EQ(int(back.pictures.size()), 1);
 }
+
+TEST(pack_writer_takes_pictures_out) {
+    // 2.2.5: a picture taken out (one map's, to test a model there) is gone from the directory; the others stay and
+    // the pack goes on as before
+    const std::string path = tempPath();
+    std::string error;
+    {
+        pack::Writer w;
+        CHECK(w.open(path, false, error));
+        CHECK(add(w, "world/8x8/aa.webp", "a") && add(w, "world/8x8/bb.webp", "bb"));
+        CHECK(add(w, "world/8x8/cc.webp", "ccc"));
+        CHECK(w.close("", error));
+    }
+    {
+        pack::Writer w;
+        CHECK(w.open(path, true, error));
+        CHECK(w.remove("world/8x8/aa.webp"));
+        CHECK(!w.remove("world/8x8/zz.webp"));  // not there
+        CHECK(!w.has("world/8x8/aa.webp") && w.has("world/8x8/cc.webp") && w.count() == 2);
+        CHECK(add(w, "world/8x8/dd.webp", "dddd"));
+        CHECK(w.close("", error));
+    }
+    pack::Reader r;
+    CHECK(r.open(path, error));
+    std::vector<uint8_t> data;
+    CHECK(!r.has("world/8x8/aa.webp"));
+    CHECK(r.read("world/8x8/bb.webp", data) && data == bytes("bb"));
+    CHECK(r.read("world/8x8/cc.webp", data) && data == bytes("ccc"));
+    CHECK(r.read("world/8x8/dd.webp", data) && data == bytes("dddd"));
+    std::remove(path.c_str());
+}

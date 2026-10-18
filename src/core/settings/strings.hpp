@@ -272,6 +272,10 @@ enum class Text : uint16_t {
     StatsSend, StatsSendHint, StatsAsk,
     // 2.2.2
     StatsSendNow, StatsState, StatsNever, StatsSentNow, StatsNothing, StatsFailed,
+    // 2.2.5: one map's textures on the Texture pack page
+    PackMapHeading, PackMapNote, PackMapName, PackMapCue, PackMapNameHint, PackMapGround, PackMapGroundHint,
+    PackMapModels, PackMapModelsHint, PackMapModel, PackMapModelHint, PackMapRemake, PackMapDrop, PackMapAskRemake,
+    PackMapAskDrop, PackMapBadName, PackDropped,
     Count
 };
 

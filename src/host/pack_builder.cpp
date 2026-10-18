@@ -15,6 +15,7 @@
 #include "core/ai/kinds.hpp"
 #include "core/ai/pack_models.hpp"
 #include "core/ai/texture_cache.hpp"
+#include "core/map_textures.hpp"
 #include "core/near_picture.hpp"
 #include "core/texture_pack.hpp"
 #include "core/webp_image.hpp"
@@ -269,6 +270,7 @@ class Builder {
 public:
     explicit Builder(const PackArgs& a) : a_(a), status_(a.status) {
         s_.pid = GetCurrentProcessId();
+        s_.work = a.mode;  // 2.2.5
     }
     int run();
 
@@ -280,8 +282,9 @@ private:
         status_.write(s_, true);
         return 3;
     }
-    bool listFiles();  // the game's files of the choice
+    bool listFiles();  // the game's files of the choice (2.2.5: of one map's textures when asked)
     int build();
+    int drop();  // 2.2.5: one map's pictures out of the pack
     int preview();  // 1.6: one picture of a group through every model, for the AI page
     // 1.6.4: what each file of list_ holds, read by several threads; false when stopped
     bool listPictures(std::vector<std::vector<Listed>>& out);
@@ -308,7 +311,20 @@ bool Builder::listFiles() {
         return false;
     }
     LOG_INFO("texture pack: %s", files_.report().c_str());
+    std::unordered_set<std::string> only;  // 2.2.5: one map's textures
+    if (!a_.map.empty()) {
+        const auto read = [&](const std::string& name, std::vector<uint8_t>& out) { return files_.read(name, out); };
+        for (const std::string& n : map_textures::filesOf(a_.map, a_.mapGround, a_.mapModels, read)) only.insert(n);
+        LOG_INFO("texture pack: %zu textures of %s (%s%s%s)", only.size(), a_.map.c_str(),
+                 a_.mapGround ? "its ground" : "", a_.mapGround && a_.mapModels ? ", " : "",
+                 a_.mapModels ? "its models" : "");
+        if (only.empty()) {
+            fail("no textures of the map " + a_.map + " in the game's files");
+            return false;
+        }
+    }
     for (const std::string& n : files_.names()) {
+        if (!only.empty() && !only.count(n)) continue;
         const pack::Source src = pack::sourceOf(n, a_.choice);
         if (src.type != pack::Source::None) list_.emplace_back(n, src);
     }
@@ -320,6 +336,7 @@ int Builder::run() {
     s_.state = pack::Status::Starting;
     status_.write(s_, true);
     if (a_.mode == "build") return build();
+    if (a_.mode == "drop") return drop();
     if (a_.mode == "preview") return preview();
     return fail("no such work: " + a_.mode);
 }
@@ -506,6 +523,41 @@ int Builder::stopped() {
     return 0;
 }
 
+// 2.2.5: one map's pictures out of the pack - the game shows its own textures there (or the network makes them anew
+// in the game, [ai] generate): a model's pictures compared with the game's on one place. No graphics card needed.
+int Builder::drop() {
+    if (a_.map.empty()) return fail("which map's pictures to take out: --map");
+    if (!pack::anyChosen(a_.choice)) return fail("nothing is chosen to take out");
+    if (!listFiles()) return 3;
+    const std::string out = a_.out;
+    if (!exists(out)) return fail(out + ": there is no pack");
+    pack::Reader old;
+    std::string error;
+    std::vector<uint8_t> index;
+    if (old.open(out, error) && old.read(pack::kIndexName, index))
+        index_ = pack::parseIndexFile(std::string(index.begin(), index.end()));
+    old.close();
+    s_.state = pack::Status::Reading;
+    std::vector<std::vector<Listed>> found;
+    if (!listPictures(found)) {  // the pack not touched yet
+        s_.state = pack::Status::Stopped;
+        status_.write(s_, true);
+        return 0;
+    }
+    if (!writer_.open(out, true, error)) return fail(out + ": " + error);
+    // From here on the pack has no central directory until checkpoint(): every way out goes through one.
+    for (const std::vector<Listed>& file : found)
+        for (const Listed& l : file)
+            if (writer_.remove(l.name)) ++s_.made;
+    if (!checkpoint(nullptr, true)) return fail("the pack could not be written");
+    s_.state = pack::Status::Done;
+    s_.current.clear();
+    s_.eta = 0;
+    status_.write(s_, true);
+    LOG_INFO("texture pack: %u pictures of %s taken out, %u in the pack", s_.made, a_.map.c_str(), s_.inPack);
+    return 0;
+}
+
 int Builder::build() {
     if (!pack::anyChosen(a_.choice)) return fail("nothing is chosen to make");
     if (!listFiles()) return 3;
@@ -544,6 +596,10 @@ int Builder::build() {
             entry.group = ai::groupName(l.group);
             if (a_.redo[size_t(l.group)] && done.count(l.name) &&
                 ai::modelOfEntry(entry, l.group, a_.ai) != a_.ai.modelForPicture(l.group, l.width, l.height)) {
+                done.erase(l.name);
+                redo_.insert(l.name);
+            }
+            if (a_.remake && done.count(l.name)) {  // 2.2.5: one map's pictures, whichever model made them
                 done.erase(l.name);
                 redo_.insert(l.name);
             }

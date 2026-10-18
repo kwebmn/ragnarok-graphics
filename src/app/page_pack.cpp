@@ -2,12 +2,15 @@
 #include <cstdio>
 #include <string>
 
+#include "app/files.hpp"
 #include "app/pack_fetch.hpp"
 #include "app/page.hpp"
 #include "app/ui.hpp"
 #include "core/config.hpp"
+#include "core/map_textures.hpp"
 #include "core/pack_build.hpp"
 #include "core/pack_download.hpp"
+#include "core/settings/log_digest.hpp"
 #include "core/texture_pack.hpp"
 
 namespace uagfx::app {
@@ -26,6 +29,12 @@ constexpr int kFetch = 1040;  // 0.53: the pack from the site
 constexpr int kFetchStop = 1041;
 constexpr int kFetchBar = 1042;
 constexpr int kRedoBox = 1050;  // 1.6
+constexpr int kMapName = 1060;  // 2.2.5: one map's textures
+constexpr int kMapGround = 1061;
+constexpr int kMapModels = 1062;
+constexpr int kMapModel = 1063;
+constexpr int kMapRemake = 1064;
+constexpr int kMapDrop = 1065;
 
 struct KindBox {
     Text label, hint;
@@ -44,6 +53,19 @@ int g_quality = 1;
 // The builder just started: its status file is not there yet (the old one is deleted before).
 DWORD g_launched = 0;
 ULONGLONG g_launchedAt = 0;
+// 2.2.5: one map's textures - its name as typed (the last map of the game's log at first), what of it, the model
+std::wstring g_map;
+bool g_mapFromLog = false;
+bool g_mapGround = true, g_mapModels = false;
+int g_mapModel = 0;
+const char* const kModelWords[3] = {"general", "anime", "anime6b"};
+
+// 2.2.5: a run of the builder on one map's textures.
+struct MapRun {
+    std::string map;
+    bool ground = true, models = false;
+    std::string model;  // "": the models the settings have (taken out, nothing made)
+};
 
 bool* kindOf(pack::Choice& c, int i) {
     bool* const fields[kBoxes] = {&c.world, &c.effects, &c.monsters, &c.players,
@@ -151,6 +173,25 @@ public:
         if (!chosen) p.note(t(Text::PackNothing), Tone::Warn);
         if (running_) p.note(t(Text::PackBackground));
         if (running_ && m.now().gameRunning) p.note(t(Text::PackGameRunning), Tone::Warn);
+        // 2.2.5: one map's textures - a model tried on one place
+        p.gap();
+        p.heading(t(Text::PackMapHeading));
+        p.note(t(Text::PackMapNote));
+        if (!g_mapFromLog) {
+            g_mapFromLog = true;
+            std::string log;
+            if (readFile(m.paths().log, log)) g_map = wide(settings::digestLog(log, 0).map);
+        }
+        if (HWND name = p.line(kMapName, t(Text::PackMapName), t(Text::PackMapCue), 40, t(Text::PackMapNameHint)))
+            SetWindowTextW(name, g_map.c_str());
+        p.checks({{kMapGround, t(Text::PackMapGround), g_mapGround, t(Text::PackMapGroundHint), !running_},
+                  {kMapModels, t(Text::PackMapModels), g_mapModels, t(Text::PackMapModelsHint), !running_}},
+                 2);
+        p.choice(kMapModel, t(Text::PackMapModel),
+                 {t(Text::AiModelGeneral), t(Text::AiModelAnime), t(Text::AiModelAnime6b)}, g_mapModel,
+                 t(Text::PackMapModelHint), !running_);
+        const bool mapOk = host && !running_ && (g_mapGround || g_mapModels);
+        p.buttons({{kMapRemake, t(Text::PackMapRemake), mapOk}, {kMapDrop, t(Text::PackMapDrop), mapOk && packCount_}});
         show();
     }
 
@@ -186,7 +227,40 @@ public:
             if (sel >= 0 && sel < 3) g_quality = int(sel);
             return;
         }
+        if (id == kMapName && code == EN_CHANGE) {  // 2.2.5
+            wchar_t text[64] = {};
+            GetWindowTextW(ctl, text, 64);
+            g_map = text;
+            return;
+        }
+        if ((id == kMapGround || id == kMapModels) && code == BN_CLICKED) {
+            (id == kMapGround ? g_mapGround : g_mapModels) = SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED;
+            host_.rebuild();  // the buttons want one of them
+            return;
+        }
+        if (id == kMapModel && code == CBN_SELCHANGE) {
+            const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
+            if (sel >= 0 && sel < 3) g_mapModel = int(sel);
+            return;
+        }
         if (code != BN_CLICKED) return;
+        if (id == kMapRemake || id == kMapDrop) {
+            MapRun run;
+            run.map = map_textures::mapName(utf8(g_map));
+            if (run.map.empty()) {
+                host_.message(t(Text::PackMapBadName), true);
+                return;
+            }
+            run.ground = g_mapGround;
+            run.models = g_mapModels;
+            const Text models[3] = {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b};
+            if (id == kMapDrop ? !host_.ask(tf(Text::PackMapAskDrop, {run.map}))
+                               : !host_.ask(tf(Text::PackMapAskRemake, {run.map, utf8(t(models[g_mapModel]))})))
+                return;
+            if (id == kMapRemake) run.model = kModelWords[g_mapModel];
+            start(id == kMapDrop ? "drop" : "build", pack::parseChoice("world"), false, &run);
+            return;
+        }
         if (id == kFetch) {
             startFetch(dir_, pack::kPackUrl);
             host_.rebuild();
@@ -338,7 +412,8 @@ private:
                 case pack::Status::Done:
                     permille = 1000;
                     how = Tone::Good;
-                    line = tf(Text::PackDone, {num(s.inPack), sizeText(s.bytes, host_.lang())});
+                    line = s.work == "drop" ? tf(Text::PackDropped, {num(s.made), num(s.inPack)})  // 2.2.5
+                                            : tf(Text::PackDone, {num(s.inPack), sizeText(s.bytes, host_.lang())});
                     break;
                 case pack::Status::Stopped:
                     line = tf(Text::PackStopped, {num(s.made)});
@@ -363,8 +438,12 @@ private:
         if (now != text) SetWindowTextW(w, text.c_str());
     }
 
-    void start(const char* mode, const pack::Choice& choice, bool fresh) {
-        const AiSettings a = host_.model().pendingConfig().ai;
+    void start(const char* mode, const pack::Choice& choice, bool fresh, const MapRun* run = nullptr) {
+        AiSettings a = host_.model().pendingConfig().ai;
+        if (run && !run->model.empty()) {  // 2.2.5: the map's pictures by the model asked
+            a.models[size_t(ai::Group::World)] = run->model;
+            a.model = run->model;
+        }
         const std::wstring exe = builderExe();
         const std::string kinds = pack::choiceText(choice);
         std::wstring line = L"\"" + exe + L"\" --pack " + wide(mode) + L" --dir \"" + dir_ + L"\" --ai " +
@@ -376,6 +455,11 @@ private:
             for (int g = 0; g < ai::kGroups; ++g) groups += std::string(g ? "," : "") + ai::groupName(ai::Group(g));
             line += L" --redo " + wide(groups);
             packRedo() = false;
+        }
+        if (run) {  // 2.2.5: one map's textures
+            line += L" --map " + wide(run->map) + L" --map-kinds " +
+                    (run->ground && run->models ? L"ground,models" : run->ground ? L"ground" : L"models");
+            if (!run->model.empty()) line += L" --remake 1";
         }
         const std::string card = host_.model().pendingConfig().gpu;  // 0.50.2: the card chosen on the Renderer page
         line += L" --gpu \"" + wide(card.empty() ? "auto" : card) + L"\"";

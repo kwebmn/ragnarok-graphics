@@ -3,8 +3,9 @@
 //   uaro-render64.exe --channel <shared block> --parent <game pid> --dir "<game folder>" --log <level>
 //                     --present auto|window|composition
 // and it ends with the game. 0.43: the settings app starts it to make the texture pack (host/pack_builder.hpp):
-//   uaro-render64.exe --pack check|build --dir "<game folder>" --ai <[ai] settings> --kinds <what>
+//   uaro-render64.exe --pack build|drop --dir "<game folder>" --ai <[ai] settings> --kinds <what>
 //                     [--quality 90] [--fresh 1] [--out "<pack>"] [--status "<file>"]
+//                     [--map <map> --map-kinds ground,models --remake 1] (2.2.5: one map's textures)
 #include <windows.h>
 
 #include <algorithm>
@@ -90,6 +91,12 @@ Args parseArgs() {
                 from = comma + 1;
             }
         }
+        else if (k == "--map") a.pack.map = v;  // 2.2.5: one map's textures
+        else if (k == "--map-kinds") {
+            a.pack.mapGround = v.find("ground") != std::string::npos;
+            a.pack.mapModels = v.find("models") != std::string::npos;
+        }
+        else if (k == "--remake") a.pack.remake = v == "1";
         else if (k == "--out") a.pack.out = v;
         else if (k == "--status") a.pack.status = v;
         else continue;

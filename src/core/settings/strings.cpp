@@ -2754,6 +2754,45 @@ const Entry kTexts[] = {
     {"The statistics did not go: {1}. They stay and go next time.",
      "Статистику не надіслано: {1}. Вона лишається й піде наступного разу.",
      "Статистика не отправлена: {1}. Она остаётся и уйдёт в следующий раз."},
+    // 2.2.5
+    {"One map's textures", "Текстури однієї карти", "Текстуры одной карты"},
+    {"To try a model on one place: the pictures of one map's textures made again by the model chosen here, or taken "
+     "out of the pack - the game then shows its own textures there. Other maps with the same textures change too. "
+     "Close the game first: the change shows at its next start.",
+     "Щоб спробувати модель на одному місці: картинки текстур однієї карти створити наново вибраною тут моделлю або "
+     "прибрати з пакета — тоді гра показує там свої текстури. Інші карти з тими самими текстурами теж зміняться. "
+     "Спершу закрийте гру: зміни видно після її наступного запуску.",
+     "Чтобы попробовать модель на одном месте: картинки текстур одной карты пересоздать выбранной здесь моделью или "
+     "убрать из пакета — тогда игра показывает там свои текстуры. Другие карты с теми же текстурами тоже изменятся. "
+     "Сначала закройте игру: изменения видны после её следующего запуска."},
+    {"Map", "Карта", "Карта"},
+    {"e.g. cmd_fild02", "напр. cmd_fild02", "напр. cmd_fild02"},
+    {"The map's name as its files have it (/where in the game says it); the last map you played is filled in.",
+     "Назва карти, як у її файлах (її каже /where у грі); підставлено останню карту, де ви грали.",
+     "Название карты, как в её файлах (его говорит /where в игре); подставлена последняя карта, где вы играли."},
+    {"Its ground", "Її земля", "Её земля"},
+    {"Sand, grass, paving, roads: the ground's textures.", "Пісок, трава, плити, дороги: текстури землі.",
+     "Песок, трава, плиты, дороги: текстуры земли."},
+    {"Its models", "Її моделі", "Её модели"},
+    {"Buildings, trees, rocks and the like placed on the map.", "Будівлі, дерева, скелі тощо, поставлені на карті.",
+     "Здания, деревья, скалы и прочее, поставленное на карте."},
+    {"Model", "Модель", "Модель"},
+    {"The network that makes these pictures again; the pack's other pictures keep theirs.",
+     "Мережа, що створює ці картинки наново; інші картинки пакета лишаються своїми.",
+     "Сеть, которая пересоздаёт эти картинки; остальные картинки пакета остаются своими."},
+    {"Make again", "Створити наново", "Пересоздать"},
+    {"Take out of the pack", "Прибрати з пакета", "Убрать из пакета"},
+    {"Make the pictures of the textures of {1} again by the model {2}? The ones in the pack are replaced.",
+     "Створити наново картинки текстур карти {1} моделлю {2}? Ті, що в пакеті, буде замінено.",
+     "Пересоздать картинки текстур карты {1} моделью {2}? Те, что в пакете, будут заменены."},
+    {"Take the pictures of the textures of {1} out of the pack? The game will show its own textures there.",
+     "Прибрати з пакета картинки текстур карти {1}? Гра покаже там свої текстури.",
+     "Убрать из пакета картинки текстур карты {1}? Игра покажет там свои текстуры."},
+    {"Write the map's name as its files have it, e.g. cmd_fild02.",
+     "Напишіть назву карти, як у її файлах, напр. cmd_fild02.",
+     "Напишите название карты, как в её файлах, напр. cmd_fild02."},
+    {"{1} pictures taken out of the pack; {2} in it.", "Прибрано з пакета картинок: {1}; у ньому: {2}.",
+     "Убрано из пакета картинок: {1}; в нём: {2}."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

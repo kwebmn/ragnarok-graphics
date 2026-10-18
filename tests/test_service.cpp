@@ -84,6 +84,17 @@ TEST(report_hides_user_names_and_lists_the_settings) {
     CHECK(maskUserPaths("C:/Users/anna/x and D:\\users\\b\\y") == "C:/Users/.../x and D:\\users\\...\\y");
 }
 
+TEST(log_digest_knows_the_last_map) {
+    // 2.2.5: the Texture pack page's one map - the last the game showed, as a start
+    const LogDigest d = digestLog(
+        "09:18:12.882 INFO  map: cmd_fild02\r\n"
+        "09:18:12.967 INFO  render64: region: Comodo (cmd_fild02)\r\n"
+        "09:30:01.000 INFO  map: alde_dun03\r\n"
+        "09:30:02.000 INFO  render64: map objects: alde_dun03 from data.grf\r\n");
+    CHECK(d.map == "alde_dun03");
+    CHECK(digestLog("09:30:01.000 INFO  renderer: uaro\r\n").map.empty());
+}
+
 TEST(log_digest_reads_the_crisp_text_lines_of_the_last_start) {
     const std::string log =
         "19:20:01.001 INFO  uaRO Graphics 0.6.0 in C:\\Games\\uaRO\\uaRO.exe\r\n"

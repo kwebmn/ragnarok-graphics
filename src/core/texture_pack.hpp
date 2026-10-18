@@ -120,6 +120,9 @@ public:
     // replace (1.6): a picture already there gets the new one - its directory entry points at the new bytes, the old
     // stay unread until the Ready textures page rewrites the pack; else a name there is left as it is.
     bool add(const std::string& name, const uint8_t* data, size_t size, std::string& error, bool replace = false);
+    // 2.2.5: a picture out of the directory (one map's, to test a model there) - its bytes stay unread until the Ready
+    // textures page rewrites the pack; false when it is not there.
+    bool remove(const std::string& name);
     // The index (when not empty) and the central directory after the last picture: a whole ZIP from here on - the next
     // add() goes over them.
     bool checkpoint(const std::string& index, std::string& error);

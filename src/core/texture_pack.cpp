@@ -529,6 +529,19 @@ bool Writer::add(const std::string& name, const uint8_t* data, size_t size, std:
     return true;
 }
 
+bool Writer::remove(const std::string& name) {
+    const auto it = names_.find(name);
+    if (it == names_.end()) return false;
+    const size_t at = it->second;
+    names_.erase(it);
+    if (at + 1 != entries_.size()) {  // the last one into its place: the directory's order means nothing
+        entries_[at] = std::move(entries_.back());
+        names_[entries_[at].name] = at;
+    }
+    entries_.pop_back();
+    return true;
+}
+
 bool Writer::checkpoint(const std::string& index, std::string& error) {
     if (!file_) {
         error = "the pack is not open";
