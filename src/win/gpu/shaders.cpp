@@ -1377,7 +1377,10 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
     colour /= max(light, 1e-4);
     float lift = 1.0 + 2.4 * (1.0 - smoothstep(0.08, 0.7, lum));  // dark surfaces lit more, bright ones tinted
     float3 warm = colour * (min(lum * lift, 0.9) / max(dot(colour, luma), 0.05));
-    return float4(lerp(sc, saturate(warm), w * 0.9), 1.0);
+    // 2.5.17: a triangular noise of a step either way against the rings an 8-bit picture shows in a wide soft light
+    // (a skill's fire round a character, R-HNEYBN)
+    float3 lit = lerp(sc, saturate(warm), w * 0.9);
+    return float4(lit + (hash12(i.pos.xy) + hash12(i.pos.xy + 17.3) - 1.0) / 255.0, 1.0);
 }
 
 // 2.5: the same light in two passes instead of one over every pixel of the lights' union: each light's own quad on
@@ -1466,7 +1469,10 @@ float4 torch_apply_ps(PresentOut i) : SV_Target {
     float3 colour = sum.rgb / max(light, 1e-4);
     float lift = 1.0 + 2.4 * (1.0 - smoothstep(0.08, 0.7, lum));
     float3 warm = colour * (min(lum * lift, 0.9) / max(dot(colour, luma), 0.05));
-    return float4(lerp(sc, saturate(warm), w * 0.9), 1.0);
+    // 2.5.17: a triangular noise of a step either way against the rings an 8-bit picture shows in a wide soft light
+    // (a skill's fire round a character, R-HNEYBN)
+    float3 lit = lerp(sc, saturate(warm), w * 0.9);
+    return float4(lit + (hash12(i.pos.xy) + hash12(i.pos.xy + 17.3) - 1.0) / 255.0, 1.0);
 }
 
 float fbm4(float2 p) {
