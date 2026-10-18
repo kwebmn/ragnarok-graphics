@@ -1,3 +1,15 @@
+# uaRO Graphics 2.4.1 — testing
+
+- **Monsters no longer blink in their animations.** "Fade in monsters and items" took an attack's frame for a
+  new monster and faded it in from transparent: a quarter of the monsters move their frame's middle 45 sprite pixels
+  or more from one frame to the next (Lunatic, Baphomet, wolves), over 96 pixels of the screen with the camera near.
+  A monster is now known within one and a half of its size.
+- **The new trees and the anime-style trees are gone** altogether. The game's own trees keep their crowns' volume,
+  the light through the leaves, their own shades, autumn crowns, leaves in the wind, gusts, sun spots and falling
+  leaves.
+- Check, please: with "Fade in monsters and items" on, monsters do not blink in a fight (Lunatics, wolves,
+  Baphomet); new monsters coming onto the screen still fade in.
+
 # uaRO Graphics 2.4.0 — testing
 
 - **The specks on the paving are gone.** They were the seasons' autumn "fallen leaves": they lay on everything that
