@@ -1,3 +1,26 @@
+# uaRO Graphics 2.5.0 — testing
+
+- **Speed, Direct3D 12.** The torches' and lamps' light is not one pass over the lights' whole area looping over
+  every light in every pixel any more (a tower's sixty torches cost 3-7 ms at 1080p), but a quad per light into a
+  buffer of light and one apply pass: the same arithmetic, but a pixel's work is its own lights' and a pixel no light
+  reaches costs nothing. The game's draws are gathered into fewer draw calls, as Direct3D 11 has done since 0.90
+  (the log, every 30 s: "draws: N a frame in M calls to the GPU"); `[debug] merge_draws = 0` turns it off.
+- **Speed, both renderers.** A lean world shader for the sprites, the effects and the interface - without the
+  materials, the relief, the hills, the seams, the leaves and the textures' explicit gradients, which the old cards
+  pay for dearly; the ground and the models with materials keep the whole one. The picture does not change.
+- **Direct3D 11:** the haze with the low fog, the sky past the map's edge and the weather (snow, rain, leaves, sand;
+  pollen and dust) by the same shaders as Direct3D 12. And the game's camera reaches Direct3D 11 now - its modern
+  water (0.99) never came on until now.
+- **The graphics card lost after a texture's A/B (report R-TT5RVW, 2.3.1).** The AI picture is not freed at an A/B
+  (Ctrl+Shift+F7) any more, only not drawn; every deferred release of a resource goes through one place with the
+  right slot. Should the card be lost again, the log says exactly what happened: "DRED: page fault at … freed lately:
+  … there: …" with the resources' names, or "DRED: no page fault" - a shader's hang or a reset by another program.
+- Check, please: uaro-render64.log has "GPU: effects a frame - … lights and torches …" (in a tower or a dungeon with
+  torches - less than before) and "draws: N a frame in M calls"; the picture is the same. On Direct3D 11: a field
+  shows the haze far off and the sky past the map's edge, a map with rain or snow its weather, the water its waves and
+  reflections; uaro-graphics.log has "haze: over …", "sky: over …", "weather: … (Direct3D 11)", "water: … drawn anew
+  (Direct3D 11)".
+
 # uaRO Graphics 2.4.2 — testing
 
 - **setup.exe is not needed any more.** As it starts, the settings app makes the game's settings in the registry if
