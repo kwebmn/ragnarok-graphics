@@ -17,6 +17,8 @@
 #include "core/living.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
+#include "core/shader_cache.hpp"
+#include "core/shader_variants.hpp"
 #include "core/smooth_shade.hpp"
 #include "core/haze.hpp"
 #include "core/outdoors.hpp"
@@ -114,6 +116,7 @@ public:
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
     void setStateCache(bool on) { stateCache_ = on; }  // 0.88: [debug] state_cache
+    void setShaderVariants(bool on) { variantsWanted_ = on; }  // 2.5.16: [debug] shader_variants
     void setMergeDraws(bool on) { mergeDraws_ = on; }  // 0.90: [debug] merge_draws
     void setCamera(bool valid, const float view[12], float targetZ = 0);  // 0.99: the game's camera (the modern water)
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
@@ -442,6 +445,33 @@ private:
     std::vector<FireSpark11> fireSparks_;  // this frame's
     void noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]);
     bool compileShaders(const std::string& cacheFile, Renderer::StartSink sink, void* sinkContext, std::string& error);
+    // 2.5.16: the draw shader made for each state of the game's draws (core/shader_variants.hpp, variants11.cpp) - made
+    // on a thread of their own as the states come and kept in the shader cache; the one for every state draws
+    // meanwhile, and wherever one cannot be made
+    struct VariantDone {
+        shader_variants::Key key;
+        ID3D11PixelShader* ps = nullptr;
+    };
+    std::unordered_map<shader_variants::Key, ID3D11PixelShader*, shader_variants::KeyHash> variants_;  // null: asked
+    CRITICAL_SECTION variantLock_{};
+    bool variantLockMade_ = false;
+    std::vector<shader_variants::Key> variantJobs_;  // under the lock
+    std::vector<VariantDone> variantDone_;           // under the lock
+    std::vector<shader_cache::Shader> cacheShaders_;  // the cache file's, the variants added as they come (the lock)
+    bool variantStop_ = false;                        // under the lock
+    HANDLE variantThread_ = nullptr, variantWake_ = nullptr;
+    bool variantsWanted_ = true, variantsUsable_ = false;
+    unsigned variantsMade_ = 0, variantsLogged_ = 0;
+    std::string variantCacheFile_;
+    uint64_t variantCacheKey_ = 0;
+    const char* variantProfile_ = "ps_5_0";
+    void startVariants(const std::string& cacheFile, uint64_t key, const char* profile,
+                       std::vector<shader_cache::Shader> shaders, const std::vector<shader_cache::Shader>& kept);
+    ID3D11PixelShader* variantOf(shader_variants::Base base, const Constants& c);
+    void collectVariants();  // at a present: the ones made since
+    void stopVariants();
+    static DWORD WINAPI variantMain(void* self);
+    void variantLoop();
     bool makeTarget(Target& t, int width, int height) {
         return makeTarget(t, width, height, DXGI_FORMAT_B8G8R8A8_UNORM);
     }

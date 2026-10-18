@@ -1947,6 +1947,10 @@ bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
     return true;
 }
 
+void Renderer::setShaderVariants(bool on) {
+    if (d3d11_) d3d11_->setShaderVariants(on);  // Direct3D 11's own thread is given it at its start
+}
+
 void Renderer::setWorldScale(double share) {
     if (d3d11_) return d3d11_->setWorldScale(share);
     if (remote_) return remote_->setWorldScale(share);  // Direct3D 11's own thread; uaro-render64.exe leaves it

@@ -576,3 +576,9 @@ TEST(config_world_scale) {
     CHECK(u.waiting.empty() && u.applied.size() == 1 && u.applied[0] == "world_scale 100 -> 75");
     CHECK(appliesNow("quality.world_scale"));
 }
+
+TEST(config_shader_variants) {
+    // 2.5.16: [debug] shader_variants - on unless turned off (the draw shaders made for the game's states)
+    CHECK(parseConfig("").shaderVariants);
+    CHECK(!parseConfig("[debug]\nshader_variants = 0\n").shaderVariants);
+}

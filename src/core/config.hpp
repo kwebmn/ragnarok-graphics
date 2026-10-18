@@ -499,6 +499,9 @@ struct Config {
     // 0.90: [debug] merge_draws - Direct3D 11 sends the game's draws that follow one another with the same state as
     // one draw call (core/draw_batch.hpp); 0 sends each by itself as before
     bool mergeDraws = true;
+    // 2.5.16: [debug] shader_variants - Direct3D 11 draws each state of the game's draws with a shader made for it
+    // (core/shader_variants.hpp); 0 draws all with the one shader for every state, as before
+    bool shaderVariants = true;
     SoundSettings sound;  // 0.91
 };
 

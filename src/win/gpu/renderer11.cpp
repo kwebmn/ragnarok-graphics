@@ -89,6 +89,7 @@ Renderer11::~Renderer11() {
     }
     delete ai_;  // its thread first: it makes textures on the device
     ai_ = nullptr;
+    stopVariants();  // 2.5.16: its thread too
     if (ctx_) ctx_->ClearState();
     releaseSwapChain();
     for (auto& t : textures_) {
@@ -525,6 +526,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         }
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
+        shader_variants::Key variant;  // 2.5.16: the draw shaders of the game's states kept with them
+        for (const shader_cache::Shader& s : kept)
+            if (shader_variants::parseName(s.entry, variant)) all.push_back(s);
         const std::vector<uint8_t> bytes = shader_cache::pack(key, all);
         win::writeFileAtomic(cacheFile, bytes.data(), bytes.size());  // another client starting reads it whole or not
     }
@@ -593,6 +597,11 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[59].code.empty() || !psOf(wants[59], fogLightPs_)) fogLightPs_ = nullptr;
     if (wants[60].code.empty() || !vsOf(wants[60], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
     if (wants[61].code.empty() || !psOf(wants[61], mirrorPs_)) mirrorPs_ = nullptr;
+    if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
+        std::vector<shader_cache::Shader> all;
+        for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
+        startVariants(cacheFile, key, ps, std::move(all), kept);
+    }
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1541,6 +1550,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
             : ray    ? (toGlow ? rayGlowPs_ : rayPs_)  // 2.5.3
             : toGlow ? (lean && drawGlowLeanPs_ ? drawGlowLeanPs_ : drawGlowPs_)
                      : lean && drawLeanPs_ ? drawLeanPs_ : drawPs_;
+    if (!water && !smoke && !lava && !ray) {  // 2.5.16: the shader made for this state, once it is
+        using shader_variants::Base;
+        const Base base = toGlow ? (lean && drawGlowLeanPs_ ? Base::GlowLean : Base::Glow)
+                                 : (lean && drawLeanPs_ ? Base::Lean : Base::Full);
+        if (ID3D11PixelShader* own = variantOf(base, is.c)) is.ps = own;
+    }
     is.primitive = d.primitive;
     is.firstIndex = d.firstIndex;
     is.indexCount = d.indexCount;
@@ -1984,6 +1999,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         return;
     }
     if (ai_) ai_->work();  // 0.47: the AI textures' pictures read meanwhile go in
+    collectVariants();     // 2.5.16: the draw shaders made meanwhile
     mapWorld_.poll();      // 2.5.1: the map's file read meanwhile
     if (!target_.texture || !window || source.empty()) return;
     if (!ensureSwapChain(window, UINT(std::max(1, outputWidth)), UINT(std::max(1, outputHeight)),

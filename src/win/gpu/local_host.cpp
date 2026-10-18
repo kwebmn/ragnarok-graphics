@@ -64,6 +64,7 @@ DWORD WINAPI run(void* context) {
         }
         renderer.setStateCache(s->options.stateCache);
         renderer.setMergeDraws(s->options.mergeDraws);
+        renderer.setShaderVariants(s->options.shaderVariants);  // 2.5.16
         renderer.setIconSink(&iconDone, &channel);
         renderer.setGameDir(s->options.gameDir);
         if (s->options.ai.enabled) renderer.startAiTextures(s->options.gameDir, s->options.ai);  // its own log line

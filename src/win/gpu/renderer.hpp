@@ -45,6 +45,7 @@ struct BridgeOptions {
     std::string shaderCache;  // its shaders' file
     bool stateCache = true;   // [debug] state_cache, merge_draws
     bool mergeDraws = true;
+    bool shaderVariants = true;  // 2.5.16: [debug] shader_variants
 };
 
 struct PresentOptions {
@@ -127,6 +128,7 @@ public:
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world at this share (0.5-1) of the picture and makes it
     // larger before the interface; nothing elsewhere
     void setWorldScale(double share);
+    void setShaderVariants(bool on);  // 2.5.16: [debug] shader_variants (Direct3D 11)
     void setUpscaler(Upscaler* u);   // before setScale
     // 0.62: [display] ui_native - the world `ratio` times the picture, made smaller into it, the interface at the
     // picture's pixels (setScale with upscale then); false where it cannot (Direct3D 11, the 64-bit renderer).

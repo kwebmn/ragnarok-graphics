@@ -172,6 +172,7 @@ bool Context::open(std::string& error) {
             o.ai = config.ai;
             o.stateCache = config.stateCache;
             o.mergeDraws = config.mergeDraws;
+            o.shaderVariants = config.shaderVariants;  // 2.5.16
             o.logLevel = int(config.logLevel);
             made = r->createRemote(o, why);
             if (made)
@@ -239,6 +240,9 @@ bool Context::open(std::string& error) {
     renderer->setStateCache(config.stateCache);  // 0.88
     if (!config.stateCache) LOG_INFO("Direct3D 11: every state set again each draw ([debug] state_cache = 0)");
     renderer->setMergeDraws(config.mergeDraws);  // 0.90
+    renderer->setShaderVariants(config.shaderVariants);  // 2.5.16
+    if (d3d11 && !config.shaderVariants)
+        LOG_INFO("Direct3D 11: every draw with the one shader for every state ([debug] shader_variants = 0)");
     if (!config.mergeDraws && !renderer->remote())  // 2.5: Direct3D 12 in this process gathers them too
         LOG_INFO("each of the game's draws by itself ([debug] merge_draws = 0)");
     renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");

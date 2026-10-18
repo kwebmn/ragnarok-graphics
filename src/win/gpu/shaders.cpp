@@ -28,6 +28,23 @@ cbuffer Params : register(b0) {
     float r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11;  // motion only: this view -> the previous one, 4 x 3
     float f0, f1, cx, cy, nearZ, farZ;  // motion only: the game's projection (core/game_camera.hpp)
 };
+#ifdef UAGFX_FIXED
+// 2.5.16: the draw shader made for one state of the game's draws (core/shader_variants.hpp): its Direct3D 7 stages,
+// tests, fog and interface mode as constants - the compiler folds the branches that choose among them away (an old
+// Radeon's VLIW cores spend on each branch, and the one shader for every state has many). The buffer stays as it is.
+static const uint2 fixedStage0 = uint2(UAGFX_S0X, UAGFX_S0Y);
+static const uint2 fixedStage1 = uint2(UAGFX_S1X, UAGFX_S1Y);
+static const uint fixedAlphaTest = UAGFX_ALPHA;
+static const uint fixedFog = UAGFX_FOG;
+static const uint fixedColorKey = UAGFX_KEY;
+static const uint fixedUiMode = UAGFX_UI;
+#define stage0 fixedStage0
+#define stage1 fixedStage1
+#define alphaTest fixedAlphaTest
+#define fogEnable fixedFog
+#define colorKey fixedColorKey
+#define uiMode fixedUiMode
+#endif
 Texture2D tex0 : register(t0);
 Texture2D tex1 : register(t1);
 // 0.19, modern water: the picture and its depth as they were before the frame's first water (water_ps), and the
