@@ -1729,7 +1729,13 @@ bool Renderer::effectCosts(effect_costs::Costs& out) const {
         out = t.effects;
         return true;
     }
-    if (d3d11_ || remix_ || !impl_->effectMsKnown) return false;
+    if (d3d11_) {  // 2.5.9: Direct3D 11's own passes as it times them (the last half second's): keep_fps had none
+        GpuTiming t;
+        if (!d3d11_->timing(t) || t.effects.empty()) return false;
+        out = t.effects;
+        return true;
+    }
+    if (remix_ || !impl_->effectMsKnown) return false;
     for (UINT e = 0; e < kEffectTimes; ++e)
         if (impl_->effectMs[e] > 0.0) out[passName(e).key] = impl_->effectMs[e];
     return true;

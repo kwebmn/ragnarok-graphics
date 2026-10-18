@@ -1057,15 +1057,15 @@ const Entry kTexts[] = {
     {"Graphics API", "Графічний API", "Графический API"},
     {"How uaRO Graphics draws. Direct3D 12 has every feature (DLSS, effects, AI textures). Direct3D 11 is for graphics "
      "cards without Direct3D 12 (Radeon HD 5000-7000, GeForce GTX 400-600 with old drivers, Intel HD 4000) and "
-     "Windows 7 and 8: the game, the window's size, crisp text and the AI textures of the texture pack, without DLSS "
-     "and effects yet. Auto takes Direct3D 12 and else 11.",
+     "Windows 7 and 8: the game, the window's size, crisp text, the effects and the AI textures of the texture pack, "
+     "without DLSS. Auto takes Direct3D 12 and else 11.",
      "Як малює uaRO Graphics. Direct3D 12 має всі можливості (DLSS, ефекти, ШІ-текстури). Direct3D 11 - для "
      "відеокарт без Direct3D 12 (Radeon HD 5000-7000, GeForce GTX 400-600 зі старими драйверами, Intel HD 4000) і "
-     "Windows 7 та 8: гра, розмір вікна, чіткий текст і ШІ-текстури з пакета текстур, поки без DLSS і ефектів. "
+     "Windows 7 та 8: гра, розмір вікна, чіткий текст, ефекти й ШІ-текстури з пакета текстур, без DLSS. "
      "«Авто» бере Direct3D 12, а без нього - 11.",
      "Как рисует uaRO Graphics. Direct3D 12 умеет всё (DLSS, эффекты, ИИ-текстуры). Direct3D 11 - для видеокарт без "
      "Direct3D 12 (Radeon HD 5000-7000, GeForce GTX 400-600 со старыми драйверами, Intel HD 4000) и Windows 7 и 8: "
-     "игра, размер окна, чёткий текст и ИИ-текстуры из пакета текстур, пока без DLSS и эффектов. «Авто» берёт "
+     "игра, размер окна, чёткий текст, эффекты и ИИ-текстуры из пакета текстур, без DLSS. «Авто» берёт "
      "Direct3D 12, а без него - 11."},
     {"Direct3D 12 (all features)", "Direct3D 12 (усі можливості)", "Direct3D 12 (все возможности)"},
     {"Direct3D 11 (older graphics cards, test)", "Direct3D 11 (старші відеокарти, тест)",
@@ -1145,12 +1145,9 @@ const Entry kTexts[] = {
      "вигляд гри. Встановіть драйвер відеокарти з сайту виробника й натисніть ще раз.",
      "Драйвер видеокарты не установлен (базовый видеоадаптер Windows) или карта слишком старая: установлен "
      "собственный вид игры. Установите драйвер видеокарты с сайта производителя и нажмите ещё раз."},
-    {"The card has no Direct3D 12: Direct3D 11, the picture at the game's size, no smoothing. The Effects page needs "
-     "Direct3D 12.",
-     "Карта не має Direct3D 12: Direct3D 11, картинка в розмірі гри, без згладжування. Сторінці «Ефекти» потрібен "
-     "Direct3D 12.",
-     "У карты нет Direct3D 12: Direct3D 11, картинка в размере игры, без сглаживания. Странице «Эффекты» нужен "
-     "Direct3D 12."},
+    {"The card has no Direct3D 12: Direct3D 11, the picture at the game's size, no smoothing, the Low effects.",
+     "Карта не має Direct3D 12: Direct3D 11, картинка в розмірі гри, без згладжування, ефекти «Низькі».",
+     "У карты нет Direct3D 12: Direct3D 11, картинка в размере игры, без сглаживания, эффекты «Низкие»."},
     {"A small graphics card: the light settings, the heavy effects off.",
      "Слабка відеокарта: легкі налаштування, важкі ефекти вимкнено.",
      "Слабая видеокарта: лёгкие настройки, тяжёлые эффекты выключены."},

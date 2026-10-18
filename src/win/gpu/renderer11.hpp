@@ -13,6 +13,7 @@
 #include "core/draw_batch.hpp"
 #include "core/footsteps.hpp"
 #include "core/ground_cells.hpp"
+#include "core/hills.hpp"
 #include "core/living.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
@@ -57,8 +58,9 @@ class Ai11;
 // 0.46: the game drawn with Direct3D 11 - for graphics cards without Direct3D 12 (Radeon HD 5000-7000, GeForce GTX
 // 400-600 with old drivers, Intel HD 4000) and Windows 7 and 8. The same shaders as Direct3D 12's (shaders.cpp): the
 // game's fixed function, the target at the window's size with the interface's filter, crisp text's twins, the
-// picture fitted into the window with its sharpening; no DLSS or effects yet. Feature level 11_0 takes shader model 5,
-// 10_0 and 10_1 shader model 4 (when the shaders compile for it). 0.47: the AI textures' ready pictures (ai11.hpp).
+// picture fitted into the window with its sharpening; no DLSS. Feature level 11_0 takes shader model 5, 10_0 and 10_1
+// shader model 4 (when the shaders compile for it). 0.47: the AI textures' ready pictures (ai11.hpp). 2.5-2.5.9: the
+// effects, Direct3D 12's passes by the same shaders.
 class Renderer11 {
 public:
     Renderer11() = default;
@@ -310,6 +312,59 @@ private:
     bool windShared() const { return effects_.sharedWind && cameraValid_; }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     void noteWaterLevel(const FrameRecord& rec, const DrawCmd& d);
+    // 2.5.9: the strong set's last four, as Direct3D 12's - the materials' depth along the view (parallax, bit 29)
+    // with the remaster; the smooth hills (ground11.cpp: the last frame's ground's corners' normals, t3); the
+    // ground's seams (ground11.cpp: strips across the cells' edges drawn as the ground is, from a record and buffers
+    // of their own, before the soft shadows); the world's reflections in the water (mirror11.cpp: the last frame's
+    // opaque world turned over the water's level at half the size, water_ps's t5)
+    bool remaster() const { return effects_.tier == 2; }
+    void sunInWorld(float out[3]) const;  // the way to the sun in the world, up along -y (materials11.cpp)
+    float waterLife() const;              // water_ps's bits of the water's life and parts (draw.cpp waterLife)
+    hills::Grid hillsGrid_;
+    ID3D11Texture2D* hillsData_ = nullptr;  // R32_FLOAT, hills::kMostSide a side
+    ID3D11ShaderResourceView* hillsSrv_ = nullptr;
+    bool hillsUp_ = false, hillsTried_ = false, hillsLogged_ = false, hillsFailed_ = false;
+    bool hillsWanted() const { return effects_.smoothHills && effects_.smoothHillsStrength > 0 && cameraValid_; }
+    bool ensureHills();  // the texture holds this frame's grid; false: none this frame
+    void hillsConstants(Constants& c) const;
+    struct GroundGroup11 {  // a draw of the ground's state and textures: the seams' strips are drawn by them
+        DrawSetup state;
+        uint32_t texture[2] = {0, 0};
+        bool keyed[2] = {false, false};
+    };
+    std::vector<GroundGroup11> groundGroups_;
+    std::vector<uint32_t> groundTextures_;  // each group's texture (stage 0)
+    FrameRecord seamRec_;
+    ID3D11Buffer* seamVertices_ = nullptr;
+    ID3D11Buffer* seamIndices_ = nullptr;
+    UINT seamVertexBytes_ = 0, seamIndexBytes_ = 0;
+    bool seamPass_ = false;  // draw() draws a strip: no notes, no passes
+    bool seamsDone_ = false, seamsLogged_ = false;
+    bool seamsWanted() const { return effects_.groundSeams && cameraValid_ && outdoors_; }
+    void applySeams();
+    struct Caster11 {  // an opaque draw of the world: its corners in casterVerts_ (x, y, z, u, v, colour's bits)
+        uint32_t first = 0, count = 0;
+        uint32_t texture = 0;
+        bool alphaTest = false;
+        float ref = 0.5f;
+    };
+    std::vector<float> casterVerts_, mirrorVerts_;  // this frame's; the last frame's, drawn into the mirror
+    std::vector<Caster11> casters_, mirrorCasters_;
+    ID3D11VertexShader* mirrorVs_ = nullptr;
+    ID3D11PixelShader* mirrorPs_ = nullptr;
+    ID3D11InputLayout* mirrorLayout_ = nullptr;
+    ID3D11Buffer* mirrorVb_ = nullptr;
+    UINT mirrorVbBytes_ = 0;
+    Target mirror_;
+    ID3D11Texture2D* mirrorDepth_ = nullptr;
+    ID3D11DepthStencilView* mirrorDsv_ = nullptr;
+    bool mirrorDone_ = false, mirrorMade_ = false, mirrorLogged_ = false, mirrorFailed_ = false;
+    bool mirrorCollecting() const {
+        return effects_.worldReflections && effects_.water && remaster() && mirrorVs_ && mirrorPs_ && mirrorLayout_ &&
+               !mirrorFailed_ && cameraValid_;
+    }
+    void noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    void applyMirror();  // once a frame, before its first water
     bool seasonsShown() const {
         return effects_.seasons && ((effects_.seasonSnow && year_.snow > 0.0f) ||
                                     (effects_.seasonGrass && (year_.dry > 0.0f || year_.lush > 0.0f)));
@@ -388,6 +443,10 @@ private:
     bool makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D11DepthStencilView*& dsv);
     bool makeStaging(int width, int height);
     bool uploadGeometry(const FrameRecord& rec);
+    // A dynamic buffer, grown as needed, written whole: swizzle - the record whose draws' colours go in as R8G8B8A8
+    // (no B8G8R8A8 vertices); smooth - the models' light spread put in (smoothColours_, 2.5.5)
+    bool fillBuffer(ID3D11Buffer*& buffer, UINT& capacity, UINT bind, const void* data, size_t bytes,
+                    const FrameRecord* swizzle, bool smooth);
     void clear(const ClearCmd& c);
     void applyViewport();
     void upload(const FrameRecord& rec, const UploadCmd& u);
@@ -536,7 +595,8 @@ private:
     seasons::Look year_;
     float waterLevel_ = 0.0f;  // the last water seen, its height in the world (up is -y)
     bool waterLevelKnown_ = false, waterLevelNoted_ = false;
-    std::vector<seams::Triangle> groundTris_;  // this frame's ground in the world, for the next frame's cells
+    // this frame's ground in the world: the next frame's cells (2.5.9: and hills), this frame's seams (ground11.cpp)
+    std::vector<seams::Triangle> groundTris_;
     ground_cells::Grid groundCells_;
     ID3D11Texture2D* groundCellsData_ = nullptr;  // R32G32: each cell's lowest and highest y
     ID3D11ShaderResourceView* groundCellsSrv_ = nullptr;
@@ -633,7 +693,8 @@ private:
         ID3D11DepthStencilState* depth = nullptr;
         ID3D11RasterizerState* raster = nullptr;
         ID3D11SamplerState* samplers[2] = {nullptr, nullptr};
-        ID3D11ShaderResourceView* srvs[3] = {nullptr, nullptr, nullptr};  // 1.14: [2] the material (t2)
+        // 1.14: [2] the material (t2); 2.5.9: [3] the hills' normals (t3)
+        ID3D11ShaderResourceView* srvs[4] = {nullptr, nullptr, nullptr, nullptr};
         ID3D11InputLayout* layout = nullptr;
         ID3D11VertexShader* vs = nullptr;  // 0.99: the game's draw's, or the water's
         ID3D11PixelShader* ps = nullptr;
@@ -667,7 +728,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[15][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.5: fifteen)
+        ID3D11Query* effect[19][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.9: nineteen)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -679,9 +740,9 @@ private:
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
         kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeSkyLight11, kTimeShafts11,
-        kTimeDof11, kEffectTimes11
+        kTimeDof11, kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11, kEffectTimes11  // 2.5.9: the last four
     };
-    static_assert(kEffectTimes11 == 15, "FrameTimes::effect holds fifteen");
+    static_assert(kEffectTimes11 == 19, "FrameTimes::effect holds nineteen");
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);
     struct EffectSpan {  // the scope of an effect's pass

@@ -192,6 +192,17 @@ Renderer11::~Renderer11() {
     for (Target& t : dofFocus_) dropTarget(t);
     drop(fogLightPs_);
     dropTarget(shafts_);  // 2.5.7
+    drop(hillsSrv_);  // 2.5.9
+    drop(hillsData_);
+    drop(seamVertices_);
+    drop(seamIndices_);
+    drop(mirrorVs_);
+    drop(mirrorPs_);
+    drop(mirrorLayout_);
+    drop(mirrorVb_);
+    dropTarget(mirror_);
+    drop(mirrorDsv_);
+    drop(mirrorDepth_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -385,7 +396,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[60] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[62] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -436,7 +447,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"dof_down_ps", ps, shaderSource(), {}, true},
                    {"dof_focus_ps", ps, shaderSource(), {}, true},
                    {"dof_apply_ps", ps, shaderSource(), {}, true},
-                   {"fog_light_ps", ps, shaderSource(), {}, true}};
+                   {"fog_light_ps", ps, shaderSource(), {}, true},
+                   {"mirror_vs", vs, shaderSource(), {}, true},  // 2.5.9: the world's reflections in the water
+                   {"mirror_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -577,6 +590,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[57].code.empty() || !psOf(wants[57], dofFocusPs_)) dofFocusPs_ = nullptr;
     if (wants[58].code.empty() || !psOf(wants[58], dofApplyPs_)) dofApplyPs_ = nullptr;
     if (wants[59].code.empty() || !psOf(wants[59], fogLightPs_)) fogLightPs_ = nullptr;
+    if (wants[60].code.empty() || !vsOf(wants[60], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
+    if (wants[61].code.empty() || !psOf(wants[61], mirrorPs_)) mirrorPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -602,6 +617,15 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             error = "the vertices' layout was refused";
             return false;
         }
+    }
+    if (mirrorVs_) {  // 2.5.9: the mirror's corners (mirror11.cpp) - x y z, u v, the game's colour
+        const D3D11_INPUT_ELEMENT_DESC layout[3] = {
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"COLOR", 0, colour, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}};
+        if (FAILED(device_->CreateInputLayout(layout, 3, wants[60].code.data(), wants[60].code.size(),
+                                              &mirrorLayout_)))
+            mirrorLayout_ = nullptr;
     }
     return true;
 }
@@ -796,50 +820,51 @@ void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while qu
 
 // The record's vertices and indices, once for all its draws - colours turned to R8G8B8A8 where the card takes no
 // B8G8R8A8 vertices.
-bool Renderer11::uploadGeometry(const FrameRecord& rec) {
-    const auto fill = [this](ID3D11Buffer*& buffer, UINT& capacity, UINT bind, const void* data, size_t bytes,
-                             const FrameRecord* swizzle) {
-        if (!bytes) return true;
-        if (bytes > capacity) {
-            drop(buffer);
-            UINT size = std::max<UINT>(capacity, 1u << 20);
-            while (size < bytes) size *= 2;
-            D3D11_BUFFER_DESC d{};
-            d.ByteWidth = size;
-            d.Usage = D3D11_USAGE_DYNAMIC;
-            d.BindFlags = bind;
-            d.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-            const HRESULT hr = device_->CreateBuffer(&d, nullptr, &buffer);
-            if (FAILED(hr)) {
-                failed("a geometry buffer", hr);
-                capacity = 0;
-                return false;
-            }
-            capacity = size;
-        }
-        D3D11_MAPPED_SUBRESOURCE m{};
-        const HRESULT hr = ctx_->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &m);
+bool Renderer11::fillBuffer(ID3D11Buffer*& buffer, UINT& capacity, UINT bind, const void* data, size_t bytes,
+                            const FrameRecord* swizzle, bool smooth) {
+    if (!bytes) return true;
+    if (bytes > capacity) {
+        drop(buffer);
+        UINT size = std::max<UINT>(capacity, 1u << 20);
+        while (size < bytes) size *= 2;
+        D3D11_BUFFER_DESC d{};
+        d.ByteWidth = size;
+        d.Usage = D3D11_USAGE_DYNAMIC;
+        d.BindFlags = bind;
+        d.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        const HRESULT hr = device_->CreateBuffer(&d, nullptr, &buffer);
         if (FAILED(hr)) {
-            failed("writing the geometry", hr);
+            failed("a geometry buffer", hr);
+            capacity = 0;
             return false;
         }
-        std::memcpy(m.pData, data, bytes);
-        // 2.5.5 (ground.cpp 1.19): the models lit face by face, their corners' light spread (A8R8G8B8, as recorded)
-        if (bind == D3D11_BIND_VERTEX_BUFFER && !smoothColours_.empty())
-            for (const smooth_shade::RecordChange& ch : smoothColours_)
-                if (ch.at + 4 <= bytes) std::memcpy(static_cast<uint8_t*>(m.pData) + ch.at, &ch.colour, 4);
-        if (swizzle) {
-            auto* v = static_cast<uint8_t*>(m.pData);
-            for (const DrawCmd& d : swizzle->draws()) {
-                const size_t stride = FrameRecord::stride(d.fvf);
-                for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= bytes; ++i)
-                    for (size_t at : {size_t(16), size_t(20)}) std::swap(v[d.vertexOffset + i * stride + at],
-                                                                         v[d.vertexOffset + i * stride + at + 2]);
-            }
+        capacity = size;
+    }
+    D3D11_MAPPED_SUBRESOURCE m{};
+    const HRESULT hr = ctx_->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &m);
+    if (FAILED(hr)) {
+        failed("writing the geometry", hr);
+        return false;
+    }
+    std::memcpy(m.pData, data, bytes);
+    // 2.5.5 (ground.cpp 1.19): the models lit face by face, their corners' light spread (A8R8G8B8, as recorded)
+    if (smooth && bind == D3D11_BIND_VERTEX_BUFFER && !smoothColours_.empty())
+        for (const smooth_shade::RecordChange& ch : smoothColours_)
+            if (ch.at + 4 <= bytes) std::memcpy(static_cast<uint8_t*>(m.pData) + ch.at, &ch.colour, 4);
+    if (swizzle) {
+        auto* v = static_cast<uint8_t*>(m.pData);
+        for (const DrawCmd& d : swizzle->draws()) {
+            const size_t stride = FrameRecord::stride(d.fvf);
+            for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= bytes; ++i)
+                for (size_t at : {size_t(16), size_t(20)})
+                    std::swap(v[d.vertexOffset + i * stride + at], v[d.vertexOffset + i * stride + at + 2]);
         }
-        ctx_->Unmap(buffer, 0);
-        return true;
-    };
+    }
+    ctx_->Unmap(buffer, 0);
+    return true;
+}
+
+bool Renderer11::uploadGeometry(const FrameRecord& rec) {
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const std::vector<uint16_t>& i = rec.indices();
     smoothColours_.clear();
@@ -851,9 +876,10 @@ bool Renderer11::uploadGeometry(const FrameRecord& rec) {
                      map_.c_str(), smoothColours_.size());
         smoothLogged_ = smoothLogged_ || draws;
     }
-    return fill(vertices_, vertexBytes_, D3D11_BIND_VERTEX_BUFFER, v.data(), v.size(),
-                bgraVertices_ ? nullptr : &rec) &&
-           fill(indices_, indexBytes_, D3D11_BIND_INDEX_BUFFER, i.data(), i.size() * sizeof(uint16_t), nullptr);
+    return fillBuffer(vertices_, vertexBytes_, D3D11_BIND_VERTEX_BUFFER, v.data(), v.size(),
+                      bgraVertices_ ? nullptr : &rec, true) &&
+           fillBuffer(indices_, indexBytes_, D3D11_BIND_INDEX_BUFFER, i.data(), i.size() * sizeof(uint16_t), nullptr,
+                      false);
 }
 
 void Renderer11::setConstants(const Constants& c) {
@@ -1150,7 +1176,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
     const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura);  // 1.25
     // 2.5.2: a torch's layers - the glow and (torch_flame) the flame drawn anew once the world is (takeTorch)
-    if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch && takeTorch(rec, d)) return;
+    if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch && takeTorch(rec, d))
+        return;
     // 2.5.3: a portal's draw - its middle, for its light and its swirl once the world is drawn (as draw.cpp 0.38)
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted()) notePortal(rec, d);
     // 2.5.2: a character's round shadow - its feet followed for the footprints and the ripples (as draw.cpp)
@@ -1173,29 +1200,40 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui) worldDrawn_ = true;
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;
-    if (!s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && grassWanted()) noteGround(rec, d);  // 2.5.4: the next cells
-    if (!s.ui && s.blend && groundDrawn_ && !skyLightDone_ && skyLightPs_ &&
+    // 2.5.4: the grass's next cells; 2.5.9 the next frame's smooth hills, this frame's seams
+    if (!seamPass_ && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && (grassWanted() || hillsWanted() || seamsWanted()))
+        noteGround(rec, d);
+    // 2.5.9 (draw.cpp 1.16): an opaque draw of the world into the next frame's mirror
+    if (!seamPass_ && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting()) noteCaster(rec, d, s);
+    // 2.5.9 (draw.cpp 1.9): the seams' strips at the first blended draw of the world, before the soft shadows - drawn
+    // by this function (seamPass_), which makes no notes and no passes for them
+    if (!seamPass_ && !s.ui && s.blend && !seamsDone_ && seamsWanted() && !groundTris_.empty()) {
+        flushBatch();
+        applySeams();
+    }
+    const bool passes = !seamPass_ && !s.ui && s.blend && groundDrawn_;  // the passes before the characters
+    if (passes && !skyLightDone_ && skyLightPs_ &&
         (effects_.skyLight || effects_.bounceLight) && cameraValid_) {  // 2.5.5: under the soft shadows (draw.cpp)
         flushBatch();
         applySkyLight();
     }
-    if (!s.ui && s.blend && groundDrawn_ && !aoDone_ && aoWanted()) {  // 2.5.1: before the characters (draw.cpp)
+    if (passes && !aoDone_ && aoWanted()) {  // 2.5.1: before the characters (draw.cpp)
         flushBatch();
         applyAo();
     }
-    if (!s.ui && s.blend && groundDrawn_ && !groundLifeDone_ && groundLifeWanted() && cameraValid_) {  // 2.5.4
+    if (passes && !groundLifeDone_ && groundLifeWanted() && cameraValid_) {  // 2.5.4
         flushBatch();
         applyGroundLife();
     }
-    if (!s.ui && s.blend && groundDrawn_ && !grassDone_ && grassWanted()) {  // 2.5.4: under the characters
+    if (passes && !grassDone_ && grassWanted()) {  // 2.5.4: under the characters
         flushBatch();
         applyGrass();
     }
-    if (!s.ui && s.blend && groundDrawn_ && !cloudsDone_ && cloudsWanted() && cameraValid_) {
+    if (passes && !cloudsDone_ && cloudsWanted() && cameraValid_) {
         flushBatch();
         applyClouds();
     }
-    if (!s.ui && s.blend && groundDrawn_ && !shadowsDone_ && shadowsWanted()) {
+    if (passes && !shadowsDone_ && shadowsWanted()) {
         flushBatch();  // 0.90
         applyActorShadows(rec, size_t(&d - rec.draws().data()));
     }
@@ -1316,6 +1354,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
                            d.primitive == d3d7::PT_TRIANGLESTRIP))
         water = (!toGlow || waterGlowPs_) && copyForWater();  // 1.0: in the glow, its own glow shader
     if (water) noteWaterLevel(rec, d);  // 2.5.4: the wet sand's and the creatures' water level
+    if (water && !mirrorDone_ && waterLevelKnown_ && mirrorCollecting() && !mirrorCasters_.empty()) {
+        applyMirror();  // 2.5.9 (draw.cpp 1.16): the world mirrored, before the frame's first water
+        bindTarget();
+    }
     if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
         std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
         const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
@@ -1325,10 +1367,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.footprint = float(effects_.waterWaves) / 100.0f;
         c.twin[0] = float(effects_.waterReflections) / 100.0f;
         c.twin[1] = float(effects_.waterClarity) / 100.0f;
-        // 1.7: the water's life (water_ps waterLife): fish, a swamp's bubbles, the surf's swash
-        const living::Place place = living::placeOf(map_, outdoors(map_), false);
-        c.twin[3] = float((effects_.fish && !place.cave ? 1 : 0) + (effects_.swamp && place.swamp ? 2 : 0) +
-                          (effects_.shoreFoam ? 4 : 0));
+        // 1.7: the water's life (water_ps waterLife); 2.5.9 and its parts - the foam, the glints, the light on the
+        // bed (Direct3D 12's since 2.4, never set here until now)
+        c.twin[3] = waterLife();
+        if (mirrorMade_) c.stage0[1] |= 1u << 27;  // 2.5.9 (draw.cpp 1.16): the world mirrored (t5)
         if (ripplesWanted()) {  // 2.5.2 (draw.cpp 0.94): the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};
             int n = 0;
@@ -1424,7 +1466,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // not an effect) - its texture's material made first (materials11.cpp), then read with it (t2).
     ID3D11ShaderResourceView* mat = nullptr;
     if (materialsWanted() && !s.ui && !water && !smoke && !lava && !ray && !soft && !adds && !twin && !d.twin &&
-        s.zWrite && t[0] != &white_ &&
+        (s.zWrite || seamPass_) && t[0] != &white_ &&
         !t[0]->leafy && c.uiMode == 0 &&
         !(d.vertexCount == 4 &&
           ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount))) {
@@ -1440,6 +1482,18 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         !t[0]->cells.empty() && !t[0]->leafy &&
         ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount))
         spriteConstants(c);
+    // 2.5.9 (draw.cpp 1.15): smooth hills - a draw of the ground (its own or a seam's strip) reads the corners'
+    // normals (t3)
+    const bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin &&
+                       (s.zWrite || seamPass_) && ensureHills();
+    if (hilly) hillsConstants(c);
+    if (seamPass_) {  // 2.5.9 (draw.cpp 1.9): a strip across a seam - its alpha from the noise over the world
+        c.stage1[1] |= 1u << 31;
+        const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
+    }
     // 0.90: the draw call's state; the draw goes on the gathered call when it is the same and its vertices follow
     Issue is;
     is.c = c;
@@ -1455,6 +1509,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.srvs[0] = srvs[0];
     is.srvs[1] = srvs[1];
     is.srvs[2] = mat;
+    is.srvs[3] = hilly ? hillsSrv_ : nullptr;  // 2.5.9
     is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
     is.vs = water ? waterVs_ : drawVs_;
     // 2.5: a draw whose constants carry none of the world's extras takes the lean shader (as draw.cpp)
@@ -1503,7 +1558,7 @@ bool Renderer11::Issue::sameState(const Issue& o) const {
     return vs == o.vs && ps == o.ps && blend == o.blend && depth == o.depth && raster == o.raster &&
            samplers[0] == o.samplers[0] &&
            samplers[1] == o.samplers[1] && srvs[0] == o.srvs[0] && srvs[1] == o.srvs[1] && srvs[2] == o.srvs[2] &&
-           layout == o.layout &&
+           srvs[3] == o.srvs[3] && layout == o.layout &&
            std::memcmp(&c, &o.c, sizeof c) == 0;
 }
 
@@ -1523,11 +1578,16 @@ void Renderer11::flushBatch() {
         ++(differs ? issued : spared);
         return differs;
     };
-    if (is.ps == waterPs_ && waterPs_) {  // 0.99: the picture and the depth under the water (t2, t3)
+    if (is.ps && (is.ps == waterPs_ || is.ps == waterGlowPs_)) {
+        // 0.99: the picture and the depth under the water (t2, t3) - 2.5.9: in the glow too (water_glow_ps read none
+        // until now); the world mirrored (t5)
         ID3D11ShaderResourceView* under[2] = {scene_.srv, depthCopySrv_};
         ctx_->PSSetShaderResources(2, 2, under);
-    } else if (is.srvs[2]) {  // 1.14: the material (t2), bound with each call that reads it
-        ctx_->PSSetShaderResources(2, 1, &is.srvs[2]);
+        ID3D11ShaderResourceView* mirrored = mirrorMade_ ? mirror_.srv : nullptr;
+        ctx_->PSSetShaderResources(5, 1, &mirrored);
+    } else {
+        if (is.srvs[2]) ctx_->PSSetShaderResources(2, 1, &is.srvs[2]);  // 1.14: the material (t2), with each call
+        if (is.srvs[3]) ctx_->PSSetShaderResources(3, 1, &is.srvs[3]);  // 2.5.9: the hills' normals (t3)
     }
     if (need(all || is.vs != bound_.vs)) ctx_->VSSetShader(is.vs, nullptr, 0);  // 0.99: the water's, or the game's
     if (need(all || is.ps != bound_.ps)) ctx_->PSSetShader(is.ps, nullptr, 0);
@@ -1591,6 +1651,7 @@ bool Renderer11::copyForWater() {
     waterReady_ = false;
     if (!depth_ || !target_.texture) return false;
     flushBatch();  // the draws before the water go into the copies
+    EffectSpan span(*this, kTimeWater11);  // 2.5.9: the copies alone, not the draws before them
     if (scene_.width != target_.width || scene_.height != target_.height) {
         dropTarget(scene_);
         if (!makeTarget(scene_, target_.width, target_.height)) return false;
@@ -1619,6 +1680,14 @@ bool Renderer11::copyForWater() {
     ctx_->CopyResource(depthCopy_, depth_);
     waterReady_ = true;
     return true;
+}
+
+// 2.5.9 (draw.cpp waterLife): water_ps's bits - 1 fish, 2 a swamp's bubbles, 4 the surf's swash; the water's own
+// parts, each a box of its own since 2.4: 8 the foam along the shore, 16 the sun's glints, 32 the light on the bed
+float Renderer11::waterLife() const {
+    return float((effects_.fish && !place_.cave ? 1 : 0) + (effects_.swamp && place_.swamp ? 2 : 0) +
+                 (effects_.shoreFoam ? 4 : 0) + (effects_.waterFoam ? 8 : 0) + (effects_.waterGlints ? 16 : 0) +
+                 (effects_.caustics ? 32 : 0));
 }
 
 float Renderer11::waterTime() {
@@ -1890,8 +1959,19 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     shaftLights_ = 0;
     updateWind();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
+    if (hillsWanted()) hillsGrid_ = hills::build(groundTris_);  // 2.5.9: the next frame's smooth hills
     groundTris_.clear();
+    groundGroups_.clear();  // 2.5.9: the seams' groups
+    groundTextures_.clear();
     groundCellsUp_ = false;
+    hillsUp_ = hillsTried_ = seamsDone_ = false;
+    if (mirrorCollecting()) {  // 2.5.9: this frame's opaque world for the next one's mirror
+        mirrorVerts_.swap(casterVerts_);
+        mirrorCasters_.swap(casters_);
+    }
+    casterVerts_.clear();
+    casters_.clear();
+    mirrorDone_ = mirrorMade_ = false;
     if (!frameFeet_.empty()) {  // 2.5.2: this frame's feet (as Direct3D 12's newPicture)
         footTracker_.update(frameFeet_, waterTime(), stepLife());
         frameFeet_.clear();
@@ -2337,6 +2417,7 @@ void Renderer11::applyEmbers() {
 // the rain: worked out at half the size from the picture's copy and its depth (floor_reflect_ps), laid over smoothly
 // (half_over_ps, premultiplied).
 void Renderer11::applyFloorReflections() {
+    EffectSpan span(*this, kTimeFloor11);  // 2.5.9
     floorDone_ = true;
     const float amount = floorReflectAmount();
     if ((amount <= 0.0f && !wetWanted()) || !cameraValid_ || !target_.texture || !depthViews()) return;
@@ -2388,47 +2469,6 @@ void Renderer11::noteWaterLevel(const FrameRecord& rec, const DrawCmd& d) {
 }
 
 // 2.5.4 (ground.cpp noteGround): a draw of the ground - its triangles in the world, for the grass's cells
-void Renderer11::noteGround(const FrameRecord& rec, const DrawCmd& d) {
-    constexpr size_t kMostGround = 60000;  // triangles a frame (ground.cpp)
-    if (!cameraValid_ || groundTris_.size() >= kMostGround) return;
-    const std::vector<uint8_t>& vb = rec.vertexBytes();
-    const size_t stride = FrameRecord::stride(d.fvf);
-    if (d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) return;
-    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
-    const float* m = viewToWorld_;
-    const auto world = [&](uint32_t k, seams::Vertex& out) {
-        float xyzw[4];
-        std::memcpy(xyzw, vb.data() + d.vertexOffset + size_t(k) * stride, sizeof xyzw);
-        if (xyzw[3] <= 0.0f) return false;
-        const float vz = 1.0f / xyzw[3], vx = (xyzw[0] - p.cx) * vz / p.f0, vy = (xyzw[1] - p.cy) * vz / p.f1;
-        out.pos[0] = vx * m[0] + vy * m[3] + vz * m[6] + m[9];
-        out.pos[1] = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
-        out.pos[2] = vx * m[2] + vy * m[5] + vz * m[8] + m[11];
-        return true;
-    };
-    const std::vector<uint16_t>& ix = rec.indices();
-    const uint32_t n = d.indexCount ? d.indexCount : d.vertexCount;
-    const auto vertexAt = [&](uint32_t k, uint32_t& out) {
-        if (!d.indexCount) {
-            out = k;
-            return k < d.vertexCount;
-        }
-        if (d.firstIndex + k >= ix.size()) return false;
-        out = ix[d.firstIndex + k];
-        return out < d.vertexCount;
-    };
-    const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
-    const uint32_t triangles = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
-    for (uint32_t t = 0; t < triangles && groundTris_.size() < kMostGround; ++t) {
-        uint32_t a = 0, b = 0, c = 0;
-        const uint32_t base = strip ? t : t * 3;
-        if (!vertexAt(base, a) || !vertexAt(base + 1, b) || !vertexAt(base + 2, c)) break;
-        seams::Triangle tri{};
-        if (!world(a, tri.v[0]) || !world(b, tri.v[1]) || !world(c, tri.v[2])) continue;
-        groundTris_.push_back(tri);
-    }
-}
-
 // 2.5.4: as Direct3D 12's applyGroundLife (ao.cpp) - ground_life_ps from the picture's copy and its depth, blended
 void Renderer11::applyGroundLife() {
     groundLifeDone_ = true;
@@ -2475,6 +2515,7 @@ void Renderer11::applyGroundLife() {
 // 2.5.4: as Direct3D 12's applyGrass (ao.cpp) - grass_ps from the picture's copy and its depth, blended over; the
 // steps bend it (t1, the footprints' list), the map's ground only (t5, its cells' heights from the last frame).
 void Renderer11::applyGrass() {
+    EffectSpan span(*this, kTimeGrass11);  // 2.5.9
     grassDone_ = true;
     if (!grassWanted() || !target_.texture || !depthViews()) return;
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
@@ -3019,7 +3060,7 @@ void Renderer11::applyDof() {
 // world - the remaster's (the strong set's mode) only, as there
 void Renderer11::applyFog() {
     fogDone_ = true;
-    if (!fogLightPs_ || !effects_.volumetricFog || effects_.volumetricFogDensity <= 0 || effects_.tier != 2 ||
+    if (!fogLightPs_ || !effects_.volumetricFog || effects_.volumetricFogDensity <= 0 || !remaster() ||
         !outdoors_ || !cameraValid_ || cameraTargetZ_ <= 0.0f || !target_.texture || !depthViews())
         return;
     const float* m = viewToWorld_;
@@ -3442,7 +3483,8 @@ void Renderer11::timeFrame() {
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
                                                              "haze", "sky", "weather", "ao", "clouds", "bloom",
-                                                             "steps", "heat", "sky_light", "shafts", "dof"};
+                                                             "steps", "heat", "sky_light", "shafts", "dof",
+                                                             "glow", "water", "floor", "grass"};
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
@@ -3520,7 +3562,8 @@ void Renderer11::logGpu(ULONGLONG now) {
                                                             "colour", "haze", "sky", "weather", "soft shadows",
                                                             "clouds", "bloom", "footprints", "heat haze",
                                                             "light from the sky", "light in the air",
-                                                            "depth of field"};
+                                                            "depth of field", "glow", "water's copies",
+                                                            "floor reflections", "grass"};
         std::string effects;
         for (int e = 0; e < kEffectTimes11; ++e) {
             if (effectMs_[e] <= 0.0) continue;

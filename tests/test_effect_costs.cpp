@@ -27,11 +27,6 @@ TEST(effect_costs_drop_the_costliest_first) {
     CHECK(effect_costs::pickToDrop(none, c, {}).empty());
 }
 
-TEST(effect_costs_on_direct3d_11_only_what_it_draws) {
-    EffectSettings e;
-    e.ao = e.dof = true;
-    CHECK(effect_costs::pickToDrop(e, {}, {}, true) == "actor_shadows");
-}
 
 TEST(effect_costs_keep_fps_blames_the_card_only_when_it_is_the_card) {
     // 2.2.2: a window under 90 % of the frames wanted is the card's fault only when its own work fills the frame

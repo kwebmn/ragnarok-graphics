@@ -104,6 +104,7 @@ void Renderer11::glowPass(ID3D11PixelShader* ps, ID3D11ShaderResourceView* src, 
 // onto what is around in its colour, then all of it added onto the picture (as Direct3D 12's addGlow).
 void Renderer11::addGlow() {
     flushBatch();
+    EffectSpan span(*this, kTimeGlow11);  // 2.5.9: the glow's own passes, not the draws before them
     const bool drawn = glowDrawn_;
     glowActive_ = glowDrawn_ = false;
     targetBound_ = false;  // the game's draws bind the target alone again

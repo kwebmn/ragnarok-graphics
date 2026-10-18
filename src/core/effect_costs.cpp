@@ -10,10 +10,9 @@ struct Costly {
     const char* key;   // the switch, without "effects."
     const char* pass;  // its timed pass (device.cpp kEffectNames' short names)
     bool EffectSettings::*on;
-    bool d3d11 = false;  // Direct3D 11 draws it too
 };
 
-// The usually costliest first: what keep_fps turns off while nothing is measured (Direct3D 11, the 64-bit renderer).
+// The usually costliest first: what keep_fps turns off while nothing is measured yet.
 const Costly kCostly[] = {
     {"grass", "grass", &EffectSettings::grass},
     {"floor_reflections", "floor", &EffectSettings::floorReflections},
@@ -23,15 +22,15 @@ const Costly kCostly[] = {
     {"glow", "glow", &EffectSettings::glow},
     {"bloom", "bloom", &EffectSettings::bloom},
     {"clouds", "clouds", &EffectSettings::clouds},
-    {"actor_shadows", "actor_shadows", &EffectSettings::actorShadows, true},
+    {"actor_shadows", "actor_shadows", &EffectSettings::actorShadows},
     {"water", "water", &EffectSettings::water},
     {"haze", "haze", &EffectSettings::haze},
     {"heat", "heat", &EffectSettings::heat},
     {"sky", "sky", &EffectSettings::sky},
     {"weather", "weather", &EffectSettings::weather},
     {"motes", "weather", &EffectSettings::motes},
-    {"lamps", "lights", &EffectSettings::lamps, true},
-    {"grade", "grade", &EffectSettings::grade, true},
+    {"lamps", "lights", &EffectSettings::lamps},
+    {"grade", "grade", &EffectSettings::grade},
 };
 
 const Costly* find(const std::string& key) {
@@ -83,7 +82,7 @@ double costOf(const Costs& c, const std::string& key) {
     return it == c.end() ? -1 : it->second;
 }
 
-std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped, bool d3d11) {
+std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped) {
     const Costly* best = nullptr;
     double most = 0.05;
     for (const Costly& k : kCostly) {
@@ -97,7 +96,7 @@ std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<s
     if (best) return best->key;
     if (!c.empty()) return "";  // measured: what is not, or costs next to nothing, is not worth losing
     for (const Costly& k : kCostly)
-        if ((e.*k.on) && !dropped.count(k.key) && (k.d3d11 || !d3d11)) return k.key;
+        if ((e.*k.on) && !dropped.count(k.key)) return k.key;
     return "";
 }
 

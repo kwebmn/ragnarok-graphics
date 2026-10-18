@@ -5,9 +5,7 @@
 #include <cstring>
 
 #include "core/d3d7.hpp"
-#include "core/daylight.hpp"
 #include "core/game_camera.hpp"
-#include "core/outdoors.hpp"
 #include "win/gpu/renderer11.hpp"
 #include "win/log.hpp"
 
@@ -128,12 +126,14 @@ bool Renderer11::ensureMaterial(Texture& t, ID3D11ShaderResourceView* source) {
     return true;
 }
 
-// The constants of a draw lit by its material (as Direct3D 12's materialConstants): bits 28 and 30 (no relief by the
-// view's depth - bit 29 is the remaster's), the game's projection and camera, the way to the sun in the view (indoors
-// from above), the strength.
+// The constants of a draw lit by its material (as Direct3D 12's materialConstants): bits 28 and 30, 2.5.9 bit 29
+// with the remaster (its depth along the view, parallax), the game's projection and camera, the way to the sun in the
+// view (2.5.9: the map's, fixed in the world, as Direct3D 12's since 2.0.1 - it turned with the camera here), the
+// strength; 2.5.9 the windows lit at night.
 void Renderer11::materialConstants(bool ground, Constants& c) const {
     c.stage1[1] |= 1u << 28;
     c.stage1[1] &= ~(1u << 26);  // the relief of 0.71 is the material's now
+    if (remaster()) c.stage1[1] |= 1u << 29;
     if (ground) c.stage1[1] |= 1u << 30;
     const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
     const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
@@ -141,20 +141,27 @@ void Renderer11::materialConstants(bool ground, Constants& c) const {
     static const float kSame[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
     const float* m = cameraValid_ ? viewToWorld_ : kSame;
     std::memcpy(c.reproject, m, sizeof c.reproject);
-    const daylight::Light day = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
-    const bool open = outdoors(map_);
-    const float height = (open ? std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) : 75.0f) * 0.0174533f;
-    // along the ground: where the shadows fall on the screen, turned into the world by the view's axes
-    float g[3];
-    for (int k = 0; k < 3; ++k) g[k] = day.shadow[0] * m[k] + day.shadow[1] * m[3 + k];
-    g[1] = 0.0f;
-    const float gl = std::max(std::sqrt(g[0] * g[0] + g[2] * g[2]), 1e-4f);
-    const float toSun[3] = {-g[0] / gl * std::cos(height), -std::sin(height), -g[2] / gl * std::cos(height)};
+    float toSun[3];
+    sunInWorld(toSun);
     for (int k = 0; k < 3; ++k) c.twin[k] = toSun[0] * m[3 * k] + toSun[1] * m[3 * k + 1] + toSun[2] * m[3 * k + 2];
     c.twin[3] = float(std::clamp(effects_.materialsStrength, 0, 200)) / 100.0f;
     const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
-    c.uiPixels[0] = open ? 1.0f - night : 0.0f;  // the sun's light here
+    c.uiPixels[0] = outdoors_ ? 1.0f - night : 0.0f;  // the sun's light here
     c.uiPixels[1] = 1.0f;
+    // 1.21: the windows lit as the night comes (night_windows; outdoors)
+    if (effects_.nightWindows && outdoors_) c.uiPixels[2] = std::clamp((night - 0.3f) / 0.4f, 0.0f, 1.0f);
+}
+
+// 2.5.9 (materials.cpp sunInWorld): the way to the sun in the world (up along -y) - along the ground the map's sun
+// (sunGround), at its height (indoors from above).
+void Renderer11::sunInWorld(float out[3]) const {
+    const float height = outdoors_ ? sunHeight() : 75.0f * 0.0174533f;
+    float g[3];
+    sunGround(g);
+    const float gl = std::max(std::sqrt(g[0] * g[0] + g[2] * g[2]), 1e-4f);
+    out[0] = -g[0] / gl * std::cos(height);
+    out[1] = -std::sin(height);
+    out[2] = -g[2] / gl * std::cos(height);
 }
 
 }  // namespace uagfx::gpu
