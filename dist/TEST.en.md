@@ -1,3 +1,12 @@
+# uaRO Graphics 2.5.6 — testing
+
+- **The game thread's profile (`[debug] profile = 1`) names the driver's own busy places too.** In the Radeon HD 6570
+  report the game's thread spent up to 70 % of its time in `ddraw.dll`, of which the renderer itself was only a part.
+  The log now writes a "DDRAW.dll's busiest places - +0x… N%, …" line every 10 seconds, from which the slow functions
+  of the driver can be named.
+- Check, please: on the Direct3D 11 computer (the profile is on there already) play a couple of minutes - a field, a
+  town, a dungeon - and send a report with the app's button.
+
 # uaRO Graphics 2.5.5 — testing
 
 - **Direct3D 11: the strong set's effects and those by hand** (turned on on the Effects page or in the `~` console):
