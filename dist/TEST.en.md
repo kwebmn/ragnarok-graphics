@@ -1,3 +1,16 @@
+# uaRO Graphics 2.5.15 — testing
+
+- **The report tells the whole computer now, not only its graphics card:** the processor (its name, cores, threads,
+  clock), the memory (in all and free), the power (mains or battery, the power plan). The driver writes the same into
+  its log at the start.
+- **What holds a frame back.** Every 30 seconds the log tells how much of a core the game's thread and Direct3D 11's
+  thread take (their work, not their waits), and Direct3D 11 times the game's world and its interface on the card
+  apart ("GPU: the game's world … its interface …").
+- Check, please, on the HD 6570: play a couple of minutes in a field and in a town, then compare by the frame counter
+  (Ctrl+Shift+F11), each for about 20 seconds standing still: 1) as it is; 2) Scroll Lock - every improvement off; 3)
+  Scroll Lock again and the "Low" quality of effects in the console (~). Write down the FPS and "GPU … ms" of each and
+  send a report.
+
 # uaRO Graphics 2.5.14 — testing
 
 - **Direct3D 11: a frame no longer waits for the monitor.** With two buffers a graphics card slower than the monitor
