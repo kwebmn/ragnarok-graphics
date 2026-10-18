@@ -1,3 +1,13 @@
+# uaRO Graphics 2.5.13 — testing
+
+- **A white screen with "Direct3D 11 on a thread of its own".** In 2.5.12 the drawing thread made none of the game's
+  textures (the game's side numbers them, and Direct3D 11 took no texture under a given number) - everything was
+  drawn white. Now they are made under those numbers, as in the 64-bit renderer.
+- Check, please, with Direct3D 11 and the "Direct3D 11 on a thread of its own" box ticked (Render page): the same
+  picture as without it; in a field and in a town the FPS no lower than before; no blinking or stalls; screenshots
+  and leaving the game work. Send a report after a couple of minutes in a field - the log's "waiting for Direct3D
+  11's thread" line shows how long the game's thread waits for the drawing.
+
 # uaRO Graphics 2.5.12 — testing
 
 - **Direct3D 11 on a thread of its own (a test, off by default).** A new box on the Render page: "Direct3D 11 on a
