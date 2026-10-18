@@ -135,6 +135,9 @@ Renderer11::~Renderer11() {
     drop(drawGlowPs_);  // 1.0
     drop(drawLeanPs_);  // 2.5
     drop(drawGlowLeanPs_);
+    drop(hazePs_);
+    drop(skyPs_);
+    drop(weatherPs_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -328,7 +331,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[24] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[27] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -343,7 +346,10 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"firefly_ps", ps, shaderSource(), {}, true},  // 1.0.1
                    {"material_ps", ps, shaderSource(), {}, true},  // 1.14
                    {"draw_lean_ps", ps, shaderSource(), {}, true, false, true},  // 2.5
-                   {"draw_glow_lean_ps", ps, shaderSource(), {}, true, false, true}};
+                   {"draw_glow_lean_ps", ps, shaderSource(), {}, true, false, true},
+                   {"haze_ps", ps, shaderSource(), {}, true},  // 2.5: the haze, the sky, the weather
+                   {"sky_ps", ps, shaderSource(), {}, true},
+                   {"weather_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -448,6 +454,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[21].code.empty() || !psOf(wants[21], materialPs_)) materialPs_ = nullptr;  // 1.14
     if (wants[22].code.empty() || !psOf(wants[22], drawLeanPs_)) drawLeanPs_ = nullptr;  // 2.5
     if (wants[23].code.empty() || !psOf(wants[23], drawGlowLeanPs_)) drawGlowLeanPs_ = nullptr;
+    if (wants[24].code.empty() || !psOf(wants[24], hazePs_)) hazePs_ = nullptr;  // 2.5
+    if (wants[25].code.empty() || !psOf(wants[25], skyPs_)) skyPs_ = nullptr;
+    if (wants[26].code.empty() || !psOf(wants[26], weatherPs_)) weatherPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -974,11 +983,16 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
-    if (s.ui && worldDrawn_ && (!nightDone_ || !lightDone_ || !gradeDone_)) flushBatch();
+    if (s.ui && worldDrawn_ &&
+        (!nightDone_ || !lightDone_ || !hazeDone_ || !skyDone_ || !gradeDone_ || !weatherDone_))
+        flushBatch();
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
+    if (s.ui && worldDrawn_ && !hazeDone_) applyHaze();  // 2.5: far off and over the ground, before the colours
+    if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: where the haze filled the void
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
     if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
+    if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
     // 1.0: from the world's first draw that adds light, its draws write into the glow too
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
@@ -1336,10 +1350,11 @@ float Renderer11::waterTime() {
     return float(double(now.QuadPart - waterClock_.QuadPart) / double(freq.QuadPart));
 }
 
-void Renderer11::setCamera(bool valid, const float view[12], float) {
+void Renderer11::setCamera(bool valid, const float view[12], float targetZ) {
     float v4[16], inv[16];
     camera::affine4(view, v4);
     cameraValid_ = valid && camera::inverse4(v4, inv);
+    cameraTargetZ_ = cameraValid_ ? targetZ : 0.0f;  // 2.5: the low fog's and the land's height
     if (cameraValid_)
         for (int r = 0; r < 4; ++r)
             for (int c = 0; c < 3; ++c) viewToWorld_[3 * r + c] = inv[4 * r + c];
@@ -1556,8 +1571,11 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
     if (worldDrawn_ && !nightDone_) applyNight();  // 0.63
     if (worldDrawn_ && !lightDone_) applyTorchLight();  // 0.61
+    if (worldDrawn_ && !hazeDone_) applyHaze();  // 2.5
+    if (worldDrawn_ && !skyDone_) applySky();
     if (!flies_.empty()) applyFireflies();  // 1.0.1
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
+    if (worldDrawn_ && !weatherDone_) applyWeather();  // 2.5
     if (glowDrawn_) addGlow();  // 1.0: likewise
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
          options.sharpen);
@@ -1566,6 +1584,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
+    hazeDone_ = skyDone_ = weatherDone_ = false;  // 2.5
     waterCopied_ = waterReady_ = false;  // 0.99
     materialsMade_ = 0;  // 1.14
     flames_.clear();
@@ -1619,22 +1638,26 @@ void Renderer11::applyGrade() {
 }
 
 // A pass over the world from a copy of it (scene_, t2) into it, RGB only: the colours (0.59), the night (0.63).
-void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c) {
-    if (scene_.width != target_.width || scene_.height != target_.height) {
-        dropTarget(scene_);
-        if (!makeTarget(scene_, target_.width, target_.height)) return;
+void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy, bool alpha,
+                           ID3D11ShaderResourceView* depth) {
+    if (copy) {
+        if (scene_.width != target_.width || scene_.height != target_.height) {
+            dropTarget(scene_);
+            if (!makeTarget(scene_, target_.width, target_.height)) return;
+        }
+        ctx_->CopyResource(scene_.texture, target_.texture);
     }
-    ctx_->CopyResource(scene_.texture, target_.texture);
     targetBound_ = false;
-    ID3D11ShaderResourceView* none[3] = {nullptr, nullptr, nullptr};
-    ctx_->PSSetShaderResources(0, 3, none);
+    ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
+    ctx_->PSSetShaderResources(0, 4, none);
     ctx_->OMSetRenderTargets(1, &target_.rtv, nullptr);
     const D3D11_VIEWPORT vp{0.0f, 0.0f, float(target_.width), float(target_.height), 0.0f, 1.0f};
     ctx_->RSSetViewports(1, &vp);
     const D3D11_RECT all{0, 0, target_.width, target_.height};
     ctx_->RSSetScissorRects(1, &all);
     setConstants(c);
-    ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO,
+    ctx_->OMSetBlendState(blendState(alpha, alpha ? d3d7::BLEND_SRCALPHA : d3d7::BLEND_ONE,
+                                     alpha ? d3d7::BLEND_INVSRCALPHA : d3d7::BLEND_ZERO,
                                      D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
                                          D3D11_COLOR_WRITE_ENABLE_BLUE),
                           nullptr, 0xFFFFFFFF);
@@ -1646,9 +1669,124 @@ void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c) {
     ctx_->PSSetShader(ps, nullptr, 0);
     ctx_->VSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
-    ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
+    if (copy) ctx_->PSSetShaderResources(2, 1, &scene_.srv);  // sceneColor : register(t2)
+    if (depth) ctx_->PSSetShaderResources(3, 1, &depth);     // sceneDepth : register(t3)
     ctx_->Draw(3, 0);
-    ctx_->PSSetShaderResources(0, 3, none);
+    ctx_->PSSetShaderResources(0, 4, none);
+}
+
+// 2.5: the haze (haze_ps) as Direct3D 12's haze.cpp draws it - far off the picture goes over to the map's haze,
+// over the low ground a fog lies at the character's height; the morning's and the swamp's mists stay Direct3D 12's.
+void Renderer11::applyHaze() {
+    EffectSpan span(*this, kTimeHaze11);
+    hazeDone_ = true;
+    const bool fog = effects_.lowFog && look_.fog > 0.0f;
+    if (!hazePs_ || !effects_.haze || effects_.hazeStrength <= 0 || (look_.haze <= 0.0f && !fog) || !cameraValid_ ||
+        !target_.texture || !depthViews())
+        return;
+    const float user = float(std::clamp(effects_.hazeStrength, 0, 100)) / 50.0f;  // 50 % the look's own
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    c.twin[0] = look_.hazeStart;
+    c.twin[1] = look_.hazeEnd;
+    c.twin[2] = std::min(1.0f, look_.haze * user);
+    std::copy(look_.hazeColour, look_.hazeColour + 3, c.fogColor);
+    std::copy(look_.fogColour, look_.fogColour + 3, c.sourceRect);
+    c.sourceRect[3] = fog ? std::min(1.0f, look_.fog * user) : 0.0f;
+    if (cameraTargetZ_ > 0.0f) {  // the low fog at the ground's height at the character
+        c.sourceClamp[0] = camera::targetHeight(viewToWorld_, cameraTargetZ_);
+        c.sourceClamp[1] = 1.0f;
+    }
+    c.sharpen = waterTime();
+    if (!hazeLogged_) LOG_INFO("haze: over %s%s (Direct3D 11)", map_.c_str(), fog ? ", with a low fog" : "");
+    hazeLogged_ = true;
+    worldPass(hazePs_, c, false, true, depthSrv_);
+}
+
+// 2.5: the sky (sky_ps) as Direct3D 12's applySky - past the map's edge under the open sky, its clouds and stars,
+// land below the horizon when asked (the picture's copy then).
+void Renderer11::applySky() {
+    EffectSpan span(*this, kTimeSky11);
+    skyDone_ = true;
+    if (!skyPs_ || !effects_.sky || effects_.skyStrength <= 0 || !outdoors_ || !cameraValid_ || !target_.texture ||
+        !depthViews())
+        return;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    const bool hazy = effects_.haze && look_.haze > 0.0f;
+    const float pale[3] = {0.72f, 0.80f, 0.91f}, deep[3] = {0.33f, 0.52f, 0.86f}, dark[3] = {0.03f, 0.05f, 0.11f};
+    for (int k = 0; k < 3; ++k) {
+        const float horizon = hazy ? look_.hazeColour[k] : pale[k];
+        c.fogColor[k] = horizon + (dark[k] * 2.0f - horizon) * night;
+        c.sourceRect[k] = deep[k] + (dark[k] - deep[k]) * night;
+    }
+    c.twin[0] = float(std::clamp(effects_.skyClouds, 0, 100)) / 100.0f;
+    c.twin[1] = float(std::clamp(effects_.skyStrength, 0, 100)) / 100.0f;
+    c.twin[2] = night;
+    c.sourceClamp[3] = effects_.stars ? 1.0f : 0.0f;
+    const bool land = effects_.edgeLand && cameraTargetZ_ > 0.0f;
+    if (land) {
+        c.twin[3] = 1.0f;
+        c.sourceClamp[0] = camera::targetHeight(viewToWorld_, cameraTargetZ_);
+    }
+    c.sharpen = waterTime();
+    if (!skyLogged_) LOG_INFO("sky: over %s (Direct3D 11)", map_.c_str());
+    skyLogged_ = true;
+    worldPass(skyPs_, c, land, true, depthSrv_);
+}
+
+// 2.5: the weather (weather_ps) as Direct3D 12's weather.cpp - the map's snow, rain, leaves or sand in three layers,
+// or the motes (the pollen outdoors, the dust indoors); the shared wind and the lit dust stay Direct3D 12's.
+void Renderer11::applyWeather() {
+    EffectSpan span(*this, kTimeWeather11);
+    weatherDone_ = true;
+    const bool own = effects_.weather && effects_.weatherAmount > 0 && weather_ != weather::Kind::None;
+    const bool motes = !own && effects_.motes && effects_.motesAmount > 0 && !map_.empty() &&
+                       (outdoors_ ? effects_.pollen : effects_.indoorDust);
+    if (!weatherPs_ || (!own && !motes) || !target_.texture) return;
+    Constants c{};
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    c.twin[0] = float(int(weather_));
+    c.footprint = float(std::clamp(effects_.weatherAmount, 0, 200)) / 100.0f;
+    if (motes) {  // 0.70: kinds 5 (pollen) and 6 (dust); the pollen fewer at night
+        const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+        c.twin[0] = outdoors_ ? 5.0f : 6.0f;
+        c.footprint = float(std::clamp(effects_.motesAmount, 0, 200)) / 100.0f;
+        if (outdoors_) c.footprint *= 1.0f - 0.7f * night;
+    }
+    c.sharpen = waterTime();
+    if (cameraValid_) {  // the camera's place along the view's own across and down, in game pixels nearby
+        const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+        const float* m = viewToWorld_;
+        const float perUnit = proj.f0 / 250.0f;
+        c.sourceRect[0] = (m[9] * m[0] + m[10] * m[1] + m[11] * m[2]) * perUnit;
+        c.sourceRect[1] = (m[9] * m[3] + m[10] * m[4] + m[11] * m[5]) * perUnit;
+    }
+    if (!weatherLogged_)
+        LOG_INFO("weather: %s over %s (Direct3D 11)",
+                 motes ? (outdoors_ ? "pollen" : "dust")
+                       : weather_ == weather::Kind::Snow   ? "snow"
+                         : weather_ == weather::Kind::Rain ? "rain"
+                         : weather_ == weather::Kind::Leaves ? "leaves"
+                                                           : "sand",
+                 map_.c_str());
+    weatherLogged_ = true;
+    worldPass(weatherPs_, c, false, true, nullptr);
 }
 
 void Renderer11::saveScreenshot(const std::string& path) {
@@ -1765,7 +1903,8 @@ void Renderer11::timeFrame() {
     const ULONGLONG now = GetTickCount64();
     if (!recentSince_) recentSince_ = now;
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
-        static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade"};
+        static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
+                                                             "haze", "sky", "weather"};
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
@@ -1840,7 +1979,7 @@ void Renderer11::logGpu(ULONGLONG now) {
                  double(now - gpuSince_) / 1000.0);
         // 0.89: the effects one by one, as Direct3D 12's log has them
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
-                                                            "colour"};
+                                                            "colour", "haze", "sky", "weather"};
         std::string effects;
         for (int e = 0; e < kEffectTimes11; ++e) {
             if (effectMs_[e] <= 0.0) continue;

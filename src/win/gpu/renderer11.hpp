@@ -9,6 +9,9 @@
 #include <vector>
 
 #include "core/draw_batch.hpp"
+#include "core/haze.hpp"
+#include "core/outdoors.hpp"
+#include "core/weather.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
 #include "core/trees.hpp"
@@ -74,6 +77,10 @@ public:
     void setMap(const std::string& map) {  // 0.79: the region's look; 1.7: the trees' season
         map_ = map;
         season_ = trees::seasonOf(map, trees::monthNow());
+        look_ = haze::lookOf(map);  // 2.5: its haze and fog, the open sky, its weather (as Direct3D 12's setMap)
+        outdoors_ = outdoors(map);
+        weather_ = weather::of(map);
+        hazeLogged_ = skyLogged_ = weatherLogged_ = false;
     }
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
@@ -154,7 +161,15 @@ private:
     void applyFireflies();
     void applyGrade();  // 0.59
     void applyNight();  // 0.63
-    void worldPass(ID3D11PixelShader* ps, const Constants& c);
+    // 2.5: the haze and the low fog, the sky past the map's edge, the map's weather (or the motes) - Direct3D 12's
+    // haze.cpp and weather.cpp passes by the same shaders, with the game's camera (setCamera) and the depth (t3)
+    void applyHaze();
+    void applySky();
+    void applyWeather();
+    // A pass over the whole picture: copy - the picture's copy in t2 (sceneColor); alpha - blended over by its
+    // alpha, else written whole; depth - bound as t3 (sceneDepth)
+    void worldPass(ID3D11PixelShader* ps, const Constants& c, bool copy = true, bool alpha = false,
+                   ID3D11ShaderResourceView* depth = nullptr);
     // 0.60.1: the characters' shadows (actor_shadows11.cpp, as Direct3D 12's actor_shadows.cpp - the sun's light
     // alone: no map's lamps without the camera)
     bool shadowsWanted() const {
@@ -260,6 +275,16 @@ private:
     objects::Textures objectTextures_;
     std::vector<torch::Flame> flames_;  // this frame's
     bool lightDone_ = false, lightLogged_ = false;
+    // 2.5: the haze, the sky and the weather (applyHaze, applySky, applyWeather)
+    ID3D11PixelShader* hazePs_ = nullptr;
+    ID3D11PixelShader* skyPs_ = nullptr;
+    ID3D11PixelShader* weatherPs_ = nullptr;
+    bool hazeDone_ = false, skyDone_ = false, weatherDone_ = false;
+    bool hazeLogged_ = false, skyLogged_ = false, weatherLogged_ = false;
+    haze::Look look_;  // the map's (setMap)
+    bool outdoors_ = false;
+    weather::Kind weather_ = weather::Kind::None;
+    float cameraTargetZ_ = 0.0f;  // the view depth of what the camera looks at (setCamera), 0 unknown
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
@@ -352,7 +377,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[4][2] = {};  // 0.89: the effects' own spans (EffectTime11)
+        ID3D11Query* effect[7][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5: seven)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -361,7 +386,11 @@ private:
     };
     FrameTimes times_[kTimedFrames];
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
-    enum EffectTime11 { kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kEffectTimes11 };
+    enum EffectTime11 {
+        kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
+        kEffectTimes11
+    };
+    static_assert(kEffectTimes11 == 7, "FrameTimes::effect holds seven");
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);
     struct EffectSpan {  // the scope of an effect's pass

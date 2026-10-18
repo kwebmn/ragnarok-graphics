@@ -161,7 +161,8 @@ bool Context::open(std::string& error) {
             LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer and DLSS need Direct3D 12 - off");
         if (drawnByRenderer(effects()))  // 0.46.1
             LOG_INFO("Direct3D 11: the Effects page's colours, the characters' shadows, the torches' light, (0.99) "
-                     "the water, (1.0) the glow and the game's fireflies are drawn; the lamps, weather and the rest "
+                     "the water, (1.0) the glow and the game's fireflies, (2.5) the haze, the sky and the weather "
+                     "are drawn; the lamps and the rest "
                      "need Direct3D 12 - the game's own shown there");
     } else if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if there
         const std::string local = gameDir() + "\\d3d9.dll";
@@ -302,7 +303,8 @@ void Context::flush() {
     // 1.8.4: every effect the renderer draws itself - the grass, the living world, the materials... need the camera
     // too (only the older ones were listed: alone, the newer ones went without it)
     const bool world = drawnByRenderer(fx) || fx.dof;  // 1.4.2: the depth of field's focus on the character
-    if (renderer->remix() || (enhanced_ && world && !renderer->d3d11())) {
+    // 2.5: Direct3D 11 takes it too - its water (0.99, never given it until now), haze, sky and weather
+    if (renderer->remix() || (enhanced_ && world)) {
         float view[12];
         float targetZ = 0;
         const bool known = readGameCamera(view);
