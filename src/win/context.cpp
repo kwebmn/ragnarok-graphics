@@ -275,6 +275,7 @@ bool Context::open(std::string& error) {
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
+    setFastTextures(config.fastTextures);  // 2.5.20
     if (!config.remix) installTextureHook();
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87

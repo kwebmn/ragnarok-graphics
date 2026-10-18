@@ -15,5 +15,12 @@ constexpr uint32_t kSurface = 0x0C;  // CTexture: its IDirectDrawSurface7 (crisp
 // The windows' pictures into their 256 x 256 tiles (CDCBitmap, FUN_00403a40) - again whenever a window changes, from
 // 32-bit pictures crisp text draws itself: its call of Update returns here, and those stay 16-bit.
 constexpr uint32_t kWindowTilesReturn = 0x403BBD;
+constexpr uint32_t kFormat = 0x10;    // CTexture: 0 A1R5G5B5, 1 A4R4G4B4, 2 R5G6B5, 4 32-bit
+constexpr uint32_t kMips = 0x4175D0;  // the mip levels made again from level 0 (thiscall: the CTexture, its rect)
+
+// 2.5.20: Update's own loop made fast (win/texture_hook.hpp): `count` texels of a row of the picture, every `step`-th
+// from src, into dst in the texture's format as the game writes them - magenta transparent, with `key` black too;
+// R5G6B5 leaves a keyed magenta texel as it was. Another format: nothing written.
+void convertRow(uint32_t format, const uint32_t* src, int step, int count, bool key, void* dst);
 
 }  // namespace uagfx::texture_exe

@@ -507,6 +507,7 @@ struct Config {
     // game's own, which tests every cell of the map's pieces the ray passes over
     bool fastPick = true;
     bool fastFtol = true;  // 2.5.20: [debug] fast_ftol - the game's __ftol by fisttp (win/ftol_patch.hpp)
+    bool fastTextures = true;  // 2.5.20: [debug] fast_textures - CTexture::Update's rows by SSE2 (texture_hook)
     // 0.90: [debug] merge_draws - Direct3D 11 sends the game's draws that follow one another with the same state as
     // one draw call (core/draw_batch.hpp); 0 sends each by itself as before
     bool mergeDraws = true;

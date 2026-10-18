@@ -9,6 +9,9 @@ namespace uagfx::win {
 bool installTextureHook();
 // [quality] full_colour: off - the 16-bit texels alone, from the next texture the game writes.
 void setFullColour(bool on);
+// 2.5.20: [debug] fast_textures - Update made by the driver as the game makes it, its loop core/texture_exe's (SSE2);
+// off: the game's own.
+void setFastTextures(bool on);
 uint32_t fullColourTextures();  // the writes kept in full colour so far
 
 }  // namespace uagfx::win
