@@ -925,7 +925,7 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     stats_.uploaded += uint64_t(u.rect.width()) * uint64_t(u.rect.height()) * 4;  // 0.89
     if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height)
         it->second.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
-    if (u.slotCount) noteCells(it->second, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1: the shadows
+    if (u.slotCount) spriteCellsWritten(it->second.cells, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1
     if (ai_)  // 0.47: its key, or the sprite cache's new frames with their sources
         ai_->noteUpload(u.texture, t.width, t.height, u, rec.pixels().data() + u.pixels,
                         u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);

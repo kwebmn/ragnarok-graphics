@@ -42,18 +42,6 @@ void drop(T*& p) {
 
 }  // namespace
 
-void Renderer11::noteCells(Texture& t, const SpriteCell* slots, uint32_t count) {
-    for (uint32_t i = 0; i < count; ++i) {
-        bool found = false;
-        for (SpriteCell& c : t.cells)
-            if (c.rect == slots[i].rect) {
-                c.source = slots[i].source;
-                found = true;
-            }
-        if (!found && t.cells.size() < 1024) t.cells.push_back(slots[i]);
-    }
-}
-
 bool Renderer11::ensureShadowMask(int w, int h) {
     if (!maxBlend_ || !mulBlend_) {
         D3D11_BLEND_DESC b{};
@@ -133,10 +121,7 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
                 const auto t = textures_.find(u.texture);
                 it = cells.emplace(u.texture, t != textures_.end() ? t->second.cells : std::vector<SpriteCell>()).first;
             }
-            Texture scratch;
-            scratch.cells = std::move(it->second);
-            noteCells(scratch, rec.slots().data() + u.firstSlot, u.slotCount);
-            it->second = std::move(scratch.cells);
+            spriteCellsWritten(it->second, rec.slots().data() + u.firstSlot, u.slotCount);
             continue;
         }
         if (cmd.type != Cmd::Draw) continue;

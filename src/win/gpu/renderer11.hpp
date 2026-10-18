@@ -161,7 +161,6 @@ private:
     }
     void applyActorShadows(const FrameRecord& rec, size_t from);
     bool ensureShadowMask(int w, int h);
-    static void noteCells(Texture& t, const SpriteCell* slots, uint32_t count);
     // 0.61: the torches' light (torches11.cpp, as Direct3D 12's torch_light_ps): the flames the game draws noted,
     // their light onto the ground before the colours; the flames and their glow stay the game's.
     void noteTorch(const FrameRecord& rec, const DrawCmd& d);

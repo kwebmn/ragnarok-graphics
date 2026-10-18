@@ -52,6 +52,9 @@ struct SpriteCell {
     bool operator==(const SpriteCell& o) const { return rect == o.rect && source == o.source; }
 };
 
+// 0.32: a sprite cache's cells written again - what each holds now (at most 1024 kept); 2.2.2: a cell of another size
+// over older ones (the texture taken back for frames of another size) puts them out.
+void spriteCellsWritten(std::vector<SpriteCell>& cells, const SpriteCell* slots, uint32_t count);
 // What the cell of a sprite cache (width x height texels) at the texture coordinates (u, v) holds - its source; 0
 // (unknown) outside every cell.
 uint8_t spriteSourceAt(const std::vector<SpriteCell>& cells, int width, int height, float u, float v);

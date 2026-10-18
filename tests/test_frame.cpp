@@ -190,3 +190,22 @@ TEST(frame_sprite_source_is_the_cell_a_draw_samples) {
     CHECK_EQ(int(spriteSourceOf(cells, 256, 256, bytes, 8, 16, 4)), 0);  // no texture coordinates in a vertex
     CHECK_EQ(int(spriteSourceOf({}, 256, 256, bytes, 8, 32, 4)), 0);
 }
+
+TEST(frame_sprite_cells_written_replace_what_they_cover) {
+    // 0.32: a cache's cells and what each holds now; 2.2.2: a cell of another size over them (the texture taken back
+    // for frames of another size) puts the old ones out - looked up by place, they named the frame's kind wrongly
+    std::vector<SpriteCell> cells;
+    const SpriteCell monster{Rect{0, 0, 64, 64}, 1}, item{Rect{64, 0, 128, 64}, 4};
+    spriteCellsWritten(cells, &monster, 1);
+    spriteCellsWritten(cells, &item, 1);
+    CHECK_EQ(cells.size(), size_t(2));
+    const SpriteCell npc{Rect{0, 0, 64, 64}, 3};  // the same cell, another frame
+    spriteCellsWritten(cells, &npc, 1);
+    CHECK(cells.size() == 2 && spriteSourceAt(cells, 256, 256, 0.1f, 0.1f) == 3);
+    const SpriteCell player{Rect{32, 0, 64, 32}, 2};  // a smaller cell in the first one's place
+    spriteCellsWritten(cells, &player, 1);
+    CHECK_EQ(cells.size(), size_t(2));
+    CHECK_EQ(int(spriteSourceAt(cells, 256, 256, 0.15f, 0.05f)), 2);
+    CHECK_EQ(int(spriteSourceAt(cells, 256, 256, 0.05f, 0.05f)), 0);  // the rest of the old cell: nothing known
+    CHECK_EQ(int(spriteSourceAt(cells, 256, 256, 0.3f, 0.1f)), 4);
+}

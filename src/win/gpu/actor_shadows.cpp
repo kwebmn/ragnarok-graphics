@@ -31,23 +31,10 @@ struct MaskVertex {
 
 constexpr float kLength = 0.45f;  // of a layer's height above the feet, the shadow's length
 
-// A cell written again: what it holds now.
-void noteCells(std::vector<SpriteCell>& cells, const SpriteCell* slots, uint32_t count) {
-    for (uint32_t i = 0; i < count; ++i) {
-        bool found = false;
-        for (SpriteCell& c : cells)
-            if (c.rect == slots[i].rect) {
-                c.source = slots[i].source;
-                found = true;
-            }
-        if (!found && cells.size() < 1024) cells.push_back(slots[i]);
-    }
-}
-
 }  // namespace
 
 void Renderer::Impl::noteSpriteCells(Texture& t, const SpriteCell* slots, uint32_t count) {
-    noteCells(t.spriteCells, slots, count);
+    spriteCellsWritten(t.spriteCells, slots, count);
 }
 
 void Renderer::Impl::releaseShadowMask() {
@@ -267,7 +254,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
                 it = cells.emplace(u.texture, t != textures.end() ? t->second.spriteCells : std::vector<SpriteCell>())
                          .first;
             }
-            noteCells(it->second, rec.slots().data() + u.firstSlot, u.slotCount);
+            spriteCellsWritten(it->second, rec.slots().data() + u.firstSlot, u.slotCount);
             continue;
         }
         if (cmd.type != Cmd::Draw) continue;

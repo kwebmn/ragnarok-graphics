@@ -82,6 +82,27 @@ void FrameRecord::reset() {
     slots_.clear();
 }
 
+void spriteCellsWritten(std::vector<SpriteCell>& cells, const SpriteCell* slots, uint32_t count) {
+    for (uint32_t i = 0; i < count; ++i) {
+        const Rect& r = slots[i].rect;
+        bool found = false;
+        size_t kept = 0;
+        for (size_t k = 0; k < cells.size(); ++k) {
+            SpriteCell& c = cells[k];
+            if (c.rect == r) {
+                c.source = slots[i].source;
+                found = true;
+            } else if (c.rect.left < r.right && r.left < c.rect.right && c.rect.top < r.bottom &&
+                       r.top < c.rect.bottom) {
+                continue;  // covered by the new cell
+            }
+            cells[kept++] = c;
+        }
+        cells.resize(kept);
+        if (!found && cells.size() < 1024) cells.push_back(slots[i]);
+    }
+}
+
 uint8_t spriteSourceAt(const std::vector<SpriteCell>& cells, int width, int height, float u, float v) {
     const int x = int(u * float(width)), y = int(v * float(height));
     for (const SpriteCell& c : cells)
