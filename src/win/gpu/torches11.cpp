@@ -240,8 +240,13 @@ void Renderer11::applyTorchLight() {
     sparks.swap(fireSparks_);
     std::vector<FireSpark11> lavaCells;  // 2.5.2: the lava's (noteLava)
     lavaCells.swap(lavaCells_);
+    std::vector<FireSpark11> portalSparks;  // 2.5.3: the portals' draws (notePortal), the forest's beams (noteRay)
+    portalSparks.swap(portalSparks_);
+    std::vector<RayPart11> rayParts;
+    rayParts.swap(rayParts_);
+    if (!portalsWanted()) portalTracks_.clear();
     if ((!torches && !lampsOn && !hidden && !fire && !glows && !mapFlies && lavaCells.empty() &&
-         !(flamesWanted() && !flames.empty())) ||
+         portalSparks.empty() && portalTracks_.empty() && rayParts.empty() && !(flamesWanted() && !flames.empty())) ||
         !depth_ || !target_.texture || !depthViews())
         return;
     if (!lightData_ && torchLightPs_) {
@@ -423,6 +428,15 @@ void Renderer11::applyTorchLight() {
             if (kv.second.w > 0.02f) best.push_back(kv.second);
         std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
         const float fireStrength = 0.18f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f;
+        if (heatWanted())  // 2.5.3: the hot air over burning skills (their middles, game pixels to the target's)
+            for (size_t i = 0; i < best.size() && i < 16; ++i) {
+                const Cell& c = best[i];
+                const float vz = c.view[2] / c.w;
+                if (vz <= proj.nearZ) continue;
+                const float gx = c.view[0] / c.w / vz * proj.f0 + proj.cx;
+                const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
+                heatSpots_.push_back(HeatSpot11{gx * k, gy * k, 70.0f * k, 0.6f * std::min(c.w, 1.0f) * heatUser()});
+            }
         for (size_t i = 0; i < best.size() && i < 16; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
@@ -467,6 +481,129 @@ void Renderer11::applyTorchLight() {
             const float breath = 0.85f + 0.15f * std::sin(time * 1.1f + float(i) * 2.3f);
             const float view[3] = {heat[i].view[0], heat[i].view[1] - 3.0f, heat[i].view[2]};
             addLight(view, 35.0f, kLava, 0.35f * user * breath);
+            if (heatWanted() && heat[i].view[2] > proj.nearZ) {  // 2.5.3: the hot air over the lava
+                const float gx = heat[i].view[0] / heat[i].view[2] * proj.f0 + proj.cx;
+                const float gy = heat[i].view[1] / heat[i].view[2] * proj.f1 + proj.cy;
+                heatSpots_.push_back(HeatSpot11{gx * k, gy * k, 110.0f * k, 0.45f * heatUser()});
+            }
+        }
+    }
+    // 0.38 (torches.cpp): the portals - this frame's draws gathered into what stands there, followed from frame to
+    // frame (their places eased, their strength fading in and out): a soft blue light about each, the air turning
+    const float portalStep = std::clamp(time - portalTime_, 0.0f, 0.25f);
+    portalTime_ = time;
+    if (portalsWanted()) {
+        struct Gate {
+            float view[3] = {0, 0, 0}, gx = 0, gy = 0, size = 0;
+            int n = 0;
+            bool claimed = false;
+        };
+        std::vector<Gate> seen;
+        for (const FireSpark11& s : portalSparks) {
+            Gate* g = nullptr;
+            for (Gate& o : seen)
+                if (std::hypot(o.gx / float(o.n) - s.gameX, o.gy / float(o.n) - s.gameY) <
+                    std::max(80.0f, std::max(o.size, s.strength) * 0.8f))
+                    g = &o;
+            if (!g) {
+                seen.push_back(Gate{});
+                g = &seen.back();
+            }
+            for (int i = 0; i < 3; ++i) g->view[i] += s.view[i];
+            g->gx += s.gameX;
+            g->gy += s.gameY;
+            g->size = std::max(g->size, s.strength);
+            ++g->n;
+        }
+        for (Gate& g : seen) {
+            for (int i = 0; i < 3; ++i) g.view[i] /= float(g.n);
+            g.gx /= float(g.n);
+            g.gy /= float(g.n);
+        }
+        const float ease = 1.0f - std::exp(-portalStep * 5.0f);
+        for (PortalTrack11& t : portalTracks_) {
+            Gate* best = nullptr;
+            float bestD = 140.0f;
+            for (Gate& g : seen) {
+                const float dist = std::hypot(g.gx - t.gx, g.gy - t.gy);
+                if (!g.claimed && dist < bestD) {
+                    bestD = dist;
+                    best = &g;
+                }
+            }
+            if (best) {
+                best->claimed = true;
+                for (int i = 0; i < 3; ++i) t.view[i] += (best->view[i] - t.view[i]) * ease;
+                t.gx += (best->gx - t.gx) * ease;
+                t.gy += (best->gy - t.gy) * ease;
+                t.size += (best->size - t.size) * ease;
+                t.strength = std::min(1.0f, t.strength + portalStep / 0.4f);
+            } else {
+                t.strength -= portalStep / 1.2f;  // its rings gone a moment: it fades rather than goes out
+            }
+        }
+        for (const Gate& g : seen)
+            if (!g.claimed && portalTracks_.size() < 16)
+                portalTracks_.push_back(PortalTrack11{{g.view[0], g.view[1], g.view[2]}, g.gx, g.gy, g.size, 0.0f});
+        portalTracks_.erase(std::remove_if(portalTracks_.begin(), portalTracks_.end(),
+                                           [](const PortalTrack11& t) { return t.strength <= 0.0f; }),
+                            portalTracks_.end());
+        const float user = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
+        static const float kBlue[3] = {0.45f, 0.75f, 1.0f};
+        int shownCount = 0;
+        for (const PortalTrack11& t : portalTracks_) {
+            const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
+            if (shown <= 0.0f) continue;
+            if (shownCount++ < 8) {
+                const float view[3] = {t.view[0], t.view[1] - 4.0f, t.view[2]};
+                addLight(view, 30.0f, kBlue, 0.35f * user * shown);
+            }
+            if (heatPs_) {
+                const float r = std::clamp(t.size * 0.6f, 30.0f, 140.0f) * k;
+                heatSpots_.push_back(HeatSpot11{t.gx * k, t.gy * k, r, -0.7f * std::min(user, 1.5f) * shown});
+            }
+        }
+    }
+    // 0.30 (torches.cpp): the forest's beams, gathered by place (cells of 64 game pixels): dust drifting in each,
+    // light where it falls - the nearest 12
+    if (!rayParts.empty()) {
+        struct Beam {
+            float middle[3] = {0, 0, 0}, foot[3] = {0, 0, 0};
+            float gx = 0, gy = 0;
+            int n = 0;
+        };
+        std::unordered_map<int, Beam> beams;
+        for (const RayPart11& r : rayParts) {
+            Beam& b = beams[int(std::floor(r.gameX / 64.0f)) * 4096 + int(std::floor(r.gameY / 64.0f))];
+            for (int i = 0; i < 3; ++i) {
+                b.middle[i] += r.middle[i];
+                b.foot[i] += r.foot[i];
+            }
+            b.gx += r.gameX;
+            b.gy += r.gameY;
+            ++b.n;
+        }
+        std::vector<Beam> closest;
+        for (auto& kv : beams) {
+            Beam b = kv.second;
+            for (int i = 0; i < 3; ++i) {
+                b.middle[i] /= float(b.n);
+                b.foot[i] /= float(b.n);
+            }
+            b.gx /= float(b.n);
+            b.gy /= float(b.n);
+            closest.push_back(b);
+        }
+        std::sort(closest.begin(), closest.end(),
+                  [](const Beam& a, const Beam& b) { return a.middle[2] < b.middle[2]; });
+        const float user = float(std::clamp(effects_.raysBrightness, 0, 200)) / 100.0f;
+        for (size_t i = 0; i < closest.size() && i < 12; ++i) {
+            const Beam& b = closest[i];
+            if (b.middle[2] <= proj.nearZ) continue;
+            glowLights.push_back(Item{{b.foot[0], b.foot[1], b.foot[2]}, 20.0f, {0.95f, 1.0f, 0.82f}, 0.22f * user});
+            if (dustPs_ && clouds.size() < 32)
+                clouds.push_back(Cloud{b.gx, b.gy, b.middle[2], proj.f0 / b.middle[2], 6.0f,
+                                       float(i) * 0.137f + 0.05f, 0.3f * user, {1.0f, 0.97f, 0.86f}});
         }
     }
     std::sort(glowLights.begin(), glowLights.end(),
@@ -495,6 +632,13 @@ void Renderer11::applyTorchLight() {
         std::sort(lamps.begin(), lamps.end(), [](const Item& a, const Item& b) { return a.view[2] < b.view[2]; });
         for (const Item& l : lamps) addLight(l.view, l.reach, l.colour, l.strength);
     }
+    if (heatWanted())  // 2.5.3: the hot air over each flame
+        for (const torch::Flame& f : flames) {
+            const float fh = std::hypot(f.upX, f.upY) * k;
+            if (fh < 2.0f) continue;
+            heatSpots_.push_back(HeatSpot11{(f.baseX + f.upX * 0.9f) * k + 0.5f, (f.baseY + f.upY * 0.9f) * k + 0.5f,
+                                            fh * 1.4f, 0.5f * f.alpha * heatUser()});
+        }
     const D3D11_RECT lit{LONG(std::max(0.0f, std::floor(lx0))), LONG(std::max(0.0f, std::floor(ly0))),
                          LONG(std::min(float(w), std::ceil(lx1))), LONG(std::min(float(h), std::ceil(ly1)))};
     const bool light = count && torchLightPs_ && lightData_ && lit.right > lit.left && lit.bottom > lit.top;

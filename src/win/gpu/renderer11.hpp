@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <dxgiformat.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -208,6 +209,33 @@ private:
         return (w && w->waterType == 4) || map_ == "mag_dun01" || map_ == "mag_dun02" || map_ == "tak_run";
     }
     void noteLava(const FrameRecord& rec, const DrawCmd& d);
+    // 2.5.3: the hot air shimmering (heat_ps, heat.cpp) over the flames, the burning skills and the lava, the
+    // portals' air turning, the desert far off - its spots gathered by the torches' pass
+    struct HeatSpot11 {
+        float x, y, radius, strength;  // target pixels; below 0 a portal's swirl
+    };
+    std::vector<HeatSpot11> heatSpots_;
+    void applyHeat();
+    bool heatWanted() const { return effects_.heat && effects_.heatStrength > 0 && heatPs_; }
+    float heatUser() const { return float(std::clamp(effects_.heatStrength, 0, 200)) / 100.0f; }
+    // 2.5.3: the portals (torches.cpp notePortal): their draws gathered into what stands there, followed from frame
+    // to frame - a soft blue light about each and the air turning in it
+    bool portalsWanted() const { return effects_.portals && effects_.portalsStrength > 0; }
+    void notePortal(const FrameRecord& rec, const DrawCmd& d);
+    struct PortalTrack11 {
+        float view[3];
+        float gx, gy, size, strength;
+    };
+    std::vector<PortalTrack11> portalTracks_;
+    float portalTime_ = 0.0f;
+    // 2.5.3: the forest's beams of light (ray_ps, draw.cpp 0.30) - their dust and light where they fall
+    bool raysWanted() const { return effects_.rays && rayPs_ && rayGlowPs_; }
+    struct RayPart11 {
+        float middle[3], foot[3];
+        float gameX, gameY;
+    };
+    std::vector<RayPart11> rayParts_;
+    void noteRay(const FrameRecord& rec, const DrawCmd& d);
     bool bloomWanted() {
         return (effects_.bloom || effects_.filmic || (effects_.filmGrain && effects_.filmGrainAmount > 0) ||
                 mapFadeNow() < 1.0f) &&
@@ -226,7 +254,7 @@ private:
     // t0, t1 - bound as the first two textures
     void worldPass(ID3D11PixelShader* ps, const Constants& c, int copy = 1, int blend = 0,
                    ID3D11ShaderResourceView* depth = nullptr, ID3D11ShaderResourceView* t0 = nullptr,
-                   ID3D11ShaderResourceView* t1 = nullptr);
+                   ID3D11ShaderResourceView* t1 = nullptr, const RECT* clip = nullptr);  // D3D11_RECT
     // 0.60.1: the characters' shadows (actor_shadows11.cpp, as Direct3D 12's actor_shadows.cpp - the sun's light
     // alone: no map's lamps without the camera)
     bool shadowsWanted() const {
@@ -389,7 +417,15 @@ private:
     ID3D11PixelShader* lavaPs_ = nullptr;
     ID3D11PixelShader* lavaGlowPs_ = nullptr;
     std::vector<FireSpark11> lavaCells_;  // this frame's cells of lava: their middles light around them
+    std::vector<FireSpark11> portalSparks_;  // 2.5.3: this frame's portal draws (strength: their size, game pixels)
     bool smokeLogged_ = false, lavaLogged_ = false;
+    // 2.5.3: the heat haze, the forest's beams
+    ID3D11PixelShader* heatPs_ = nullptr;
+    ID3D11Texture2D* heatData_ = nullptr;  // a texel a spot (heat_ps's t1)
+    ID3D11ShaderResourceView* heatDataSrv_ = nullptr;
+    bool heatDone_ = false, heatLogged_ = false, raysLogged_ = false;
+    ID3D11PixelShader* rayPs_ = nullptr;
+    ID3D11PixelShader* rayGlowPs_ = nullptr;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
@@ -482,7 +518,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[11][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.2: eleven)
+        ID3D11Query* effect[12][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.3: twelve)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -493,9 +529,9 @@ private:
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
-        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kEffectTimes11
+        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 11, "FrameTimes::effect holds eleven");
+    static_assert(kEffectTimes11 == 12, "FrameTimes::effect holds twelve");
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);
     struct EffectSpan {  // the scope of an effect's pass
