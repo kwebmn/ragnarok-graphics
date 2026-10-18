@@ -1,3 +1,14 @@
+# uaRO Graphics 2.3.1 — testing
+
+- **The game starts while uaRO Studio is open:** the studio (and the texture pack's builder) opened the game's
+  archives for reading and writing, and the game, which shares its archives for reading alone, could not open them:
+  "Unable to load table class_tab.txt". They are now opened for reading alone.
+- **Ctrl+Shift+F8 picks the texture under the cursor:** 2.3.0 read the key after the frame's draws had gone by and
+  always found nothing there; the next frame is looked through now. The studio also finds a texture the game draws
+  smaller (texture detail below the highest).
+- Check, please: open uaRO Studio, let it read the catalog, start the game - it starts; Ctrl+Shift+F8 on the ground
+  opens its texture in the studio.
+
 # uaRO Graphics 2.3.0 — testing
 
 - **uaRO Studio** (`uaro-graphics\uaro-studio.exe`): a program of its own for the texture pack. It copies itself to
