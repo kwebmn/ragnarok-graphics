@@ -202,6 +202,55 @@ std::vector<AdapterProbe> probeAdapters(bool systemOnly) {
     return out;
 }
 
+unsigned long long registryVramMb(const std::string& name) {
+    using Open = LONG(WINAPI*)(HKEY, LPCWSTR, DWORD, REGSAM, PHKEY);
+    using Enum = LONG(WINAPI*)(HKEY, DWORD, LPWSTR, LPDWORD, LPDWORD, LPWSTR, LPDWORD, PFILETIME);
+    using Query = LONG(WINAPI*)(HKEY, LPCWSTR, LPDWORD, LPDWORD, LPBYTE, LPDWORD);
+    using Close = LONG(WINAPI*)(HKEY);
+    HMODULE advapi = LoadLibraryA("advapi32.dll");
+    if (!advapi) return 0;
+    const auto open = reinterpret_cast<Open>(reinterpret_cast<void*>(GetProcAddress(advapi, "RegOpenKeyExW")));
+    const auto list = reinterpret_cast<Enum>(reinterpret_cast<void*>(GetProcAddress(advapi, "RegEnumKeyExW")));
+    const auto query = reinterpret_cast<Query>(reinterpret_cast<void*>(GetProcAddress(advapi, "RegQueryValueExW")));
+    const auto close = reinterpret_cast<Close>(reinterpret_cast<void*>(GetProcAddress(advapi, "RegCloseKey")));
+    const wchar_t* kDisplays = L"SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}";
+    HKEY root = nullptr;
+    unsigned long long found = 0;
+    if (open && list && query && close && !name.empty() &&
+        open(HKEY_LOCAL_MACHINE, kDisplays, 0, KEY_READ | KEY_WOW64_64KEY, &root) == ERROR_SUCCESS) {
+        wchar_t sub[64];
+        for (DWORD i = 0; !found; ++i) {
+            DWORD n = 64;
+            if (list(root, i, sub, &n, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) break;
+            HKEY key = nullptr;
+            if (open(root, sub, 0, KEY_READ | KEY_WOW64_64KEY, &key) != ERROR_SUCCESS) continue;
+            wchar_t desc[256] = {};
+            DWORD size = sizeof desc - sizeof(wchar_t), type = 0;
+            if (query(key, L"DriverDesc", nullptr, &type, reinterpret_cast<BYTE*>(desc), &size) == ERROR_SUCCESS &&
+                type == REG_SZ && utf8(desc) == name) {
+                unsigned long long bytes = 0;
+                DWORD small = 0;
+                size = sizeof bytes;
+                if (query(key, L"HardwareInformation.qwMemorySize", nullptr, &type, reinterpret_cast<BYTE*>(&bytes),
+                          &size) == ERROR_SUCCESS &&
+                    size == sizeof bytes) {
+                    found = bytes / (1024 * 1024);
+                } else {
+                    size = sizeof small;
+                    if (query(key, L"HardwareInformation.MemorySize", nullptr, &type, reinterpret_cast<BYTE*>(&small),
+                              &size) == ERROR_SUCCESS &&
+                        size == sizeof small)
+                        found = small / (1024 * 1024);
+                }
+            }
+            close(key);
+        }
+        close(root);
+    }
+    FreeLibrary(advapi);
+    return found;
+}
+
 std::string featureLevelName(unsigned level) {
     return std::to_string((level >> 12) & 15) + "_" + std::to_string((level >> 8) & 15);
 }

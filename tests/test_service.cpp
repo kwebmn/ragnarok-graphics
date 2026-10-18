@@ -1,3 +1,4 @@
+#include "core/effect_groups.hpp"
 #include "core/settings/log_digest.hpp"
 #include "core/settings/presets.hpp"
 #include "core/settings/report.hpp"
@@ -52,6 +53,17 @@ TEST(report_video_memory_at_the_32_bit_cap_is_a_floor) {
     CHECK(vramText(3071) == "3071 MB");
     CHECK(vramText(3072) == "at least 3072 MB (a 32-bit program sees no more)");
     CHECK(vramText(16303) == "16303 MB");  // 0.51.1: the driver's number from the registry
+}
+
+TEST(report_video_memory_past_the_cap_is_the_display_drivers) {
+    // 2.2.3: the driver too - DXGI's 3072 MB in the game's 32-bit process made every newer card a weak one (the card's
+    // level 1: the automatic set the weak one, while the settings app said strong); the display driver's own number
+    // (the registry's) where DXGI's is the cap, and never less than DXGI's
+    CHECK_EQ(realVramMb(3072, 16311), 16311ull);
+    CHECK_EQ(realVramMb(3072, 0), 3072ull);      // no number in the registry: the floor
+    CHECK_EQ(realVramMb(3072, 2048), 3072ull);   // a smaller one is not the card's
+    CHECK_EQ(realVramMb(2048, 16311), 2048ull);  // under the cap DXGI's is the card's
+    CHECK_EQ(effect_groups::cardLevel(true, realVramMb(3072, 16311)), 3);
 }
 
 TEST(report_hides_user_names_and_lists_the_settings) {

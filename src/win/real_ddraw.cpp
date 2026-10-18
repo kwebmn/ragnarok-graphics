@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/effect_groups.hpp"
+#include "core/settings/report.hpp"
 #include "core/version.hpp"
 #include "win/crash.hpp"
 #include "win/gpu/adapters.hpp"
@@ -75,19 +76,27 @@ Startup decide() {
     blackenGameWindow();
 
     gpu::setChosenAdapter(s.config.gpu);  // 0.50.2: the probes look at the card the renderer will take
+    // 2.2.3: DXGI's 3072 MB in this 32-bit process is only a floor - the display driver's own number (the settings
+    // app's since 0.51.1): every newer card came out weak, the automatic set the weak one while the app said strong
+    const auto realMb = [](unsigned long long mb, const std::string& adapter) {
+        if (mb != settings::kVramSeenAtMost) return mb;
+        const unsigned long long real = settings::realVramMb(mb, registryVramMb(adapter));
+        if (real != mb) LOG_INFO("video memory: %llu MB (the display driver's; DXGI tells a 32-bit program no more "
+                                 "than %llu)", real, mb);
+        return real;
+    };
     SystemFacts facts;
     facts.windows10 = v.major >= 10;
     unsigned long long vramMb = 0;
     if (facts.windows10) {  // the log names the adapter either way
         const D3D12Probe p = probeD3D12();
         facts.d3d12 = p.ok;
-        vramMb = p.vramMb;
         s.adapter = p.adapter;
         s.vendor = p.vendor;
-        s.vramMb = p.vramMb;
         LOG_INFO("Direct3D 12: %s, adapter %s (vendor 0x%04x, device 0x%04x, %llu MB), hr 0x%08lx",
                  p.ok ? "OK" : "FAILED", p.adapter.c_str(), p.vendor, p.device, p.vramMb,
                  static_cast<unsigned long>(p.hr));
+        vramMb = s.vramMb = realMb(p.vramMb, p.adapter);
     }
     // 0.46: Direct3D 11 - asked for, or (auto) where Direct3D 12 is not there.
     if (s.config.api == Api::D3d11 || (s.config.api == Api::Auto && !(facts.windows10 && facts.d3d12))) {
@@ -96,7 +105,7 @@ Startup decide() {
         if (s.adapter.empty() || !facts.d3d12) {
             s.adapter = p.adapter;
             s.vendor = p.vendor;
-            s.vramMb = p.vramMb;
+            s.vramMb = realMb(p.vramMb, p.adapter);
         }
         LOG_INFO("Direct3D 11: %s, adapter %s, feature level %s, hr 0x%08lx", p.ok ? "OK" : "FAILED",
                  p.adapter.c_str(), p.ok ? featureLevelName(p.level).c_str() : "-", static_cast<unsigned long>(p.hr));

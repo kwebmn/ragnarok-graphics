@@ -37,6 +37,11 @@ struct D3D11Probe {
 D3D11Probe probeD3D11(bool systemOnly = false);
 std::string featureLevelName(unsigned level);  // "11_0"
 
+// 0.51.1 (the settings app), 2.2.3 the driver too: DXGI tells a 32-bit program no more than 3072 MB of video memory -
+// the display driver's own number from the registry (HardwareInformation.qwMemorySize, else .MemorySize) of the card
+// of this name; 0 when not found. advapi32.dll is loaded at run time: ddraw.dll imports none of it.
+unsigned long long registryVramMb(const std::string& name);
+
 // 0.50.2: every graphics card (no software one), in the order the renderer tries them with [renderer] gpu = auto -
 // the settings app's list of cards and the automatic setup's facts of the chosen one.
 struct AdapterProbe {

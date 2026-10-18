@@ -12,6 +12,10 @@ std::string vramText(unsigned long long mb) {
     return mb == kVramSeenAtMost ? "at least " + text + " (a 32-bit program sees no more)" : text;
 }
 
+unsigned long long realVramMb(unsigned long long dxgiMb, unsigned long long registryMb) {
+    return dxgiMb == kVramSeenAtMost && registryMb > dxgiMb ? registryMb : dxgiMb;
+}
+
 std::string maskUserPaths(const std::string& text) {
     std::string out;
     size_t pos = 0;

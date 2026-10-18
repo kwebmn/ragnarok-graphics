@@ -25,6 +25,9 @@ struct ReportFacts {
 // has, not its size.
 constexpr unsigned long long kVramSeenAtMost = 3072;
 std::string vramText(unsigned long long mb);  // "2048 MB"; "at least 3072 MB (a 32-bit program sees no more)"
+// 0.51.1 (the settings app), 2.2.3 the driver too: the card's video memory - the display driver's own number (the
+// registry's, win::registryVramMb) where DXGI's is the cap and the driver's is more, else DXGI's.
+unsigned long long realVramMb(unsigned long long dxgiMb, unsigned long long registryMb);
 // The text, in English for the developers; Windows user names in paths are hidden.
 std::string makeReport(const ReportFacts& f);
 std::string maskUserPaths(const std::string& text);  // "\Users\<name>\" -> "\Users\...\"
