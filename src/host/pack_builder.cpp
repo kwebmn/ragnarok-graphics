@@ -44,16 +44,21 @@ bool exists(const std::string& path) { return GetFileAttributesA(path.c_str()) !
 // A file broken past what the readers check (no memory for what its header claims): none of its pictures, a line in
 // the log - the rest of the game's files go on.
 // 0.49: a head's frames in every hair colour the game has too (palettesOf) - the game draws it with one of them.
+// 2.2.5: the colours the server lets be worn alone; a stop asked looked at between them (a head's colours took long).
 std::vector<pack::Picture> picturesOf(pack::GameFiles& files, const std::string& name, const pack::Source& s,
-                                      const std::vector<uint8_t>& data, const pack::Choice& c) {
+                                      const std::vector<uint8_t>& data, const pack::Choice& c,
+                                      const std::atomic<bool>* stop = nullptr) {
     try {
         std::vector<pack::Picture> out = pack::picturesOf(s, data.data(), data.size(), c);
         if (s.type != pack::Source::Sprite) return out;
         std::vector<uint8_t> palette;
-        for (const std::string& p : pack::palettesOf(name, files.names(), c.bodyColours))
+        for (const std::string& p :
+             pack::palettesOf(name, files.names(), c.bodyColours, c.maxHairColour, c.maxClothColour)) {
+            if (stop && stop->load()) break;
             if (files.read(p, palette) && palette.size() >= 1024)
                 for (pack::Picture& f : pack::picturesOf(s, data.data(), data.size(), c, palette.data()))
                     out.push_back(std::move(f));
+        }
         return out;
     } catch (const std::exception& e) {
         LOG_ERROR("texture pack: %s left out (%s)", utf8Of(name).c_str(), e.what());
@@ -233,6 +238,7 @@ struct ListWork {
     size_t first = 0, step = 1;
     std::atomic<uint32_t>* done = nullptr;
     std::atomic<bool>* stop = nullptr;
+    std::atomic<size_t>* current = nullptr;  // 2.2.5: the file a thread took last, for the status
     std::vector<std::vector<Listed>>* out = nullptr;
 };
 
@@ -244,8 +250,9 @@ DWORD WINAPI listMain(void* arg) {
     std::vector<uint8_t> data;
     for (size_t i = w.first; i < w.list->size() && !*w.stop; i += w.step) {
         const auto& f = (*w.list)[i];
+        w.current->store(i);
         if (files.read(f.first, data))
-            for (const pack::Picture& p : picturesOf(files, f.first, f.second, data, *w.choice)) {
+            for (const pack::Picture& p : picturesOf(files, f.first, f.second, data, *w.choice, w.stop)) {
                 Listed l;
                 l.name = pack::pictureName(p.group, p.key);
                 l.group = ai::groupOfPicture(f.first, f.second, p.width, p.height);
@@ -356,6 +363,7 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
              static_cast<unsigned long>(si.dwNumberOfProcessors), static_cast<unsigned long long>(free >> 20));
     std::atomic<uint32_t> filesDone{0};
     std::atomic<bool> stop{false};
+    std::atomic<size_t> current{list_.size()};
     std::vector<ListWork> work(threads);
     std::vector<HANDLE> handles;
     for (size_t t = 0; t < threads; ++t) {
@@ -367,6 +375,7 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
         w.step = threads;
         w.done = &filesDone;
         w.stop = &stop;
+        w.current = &current;
         w.out = &out;
         HANDLE h = CreateThread(nullptr, 0, listMain, &w, 0, nullptr);
         if (h) handles.push_back(h);
@@ -380,9 +389,12 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
     while (!handles.empty() &&
            WaitForMultipleObjects(DWORD(handles.size()), handles.data(), TRUE, 500) == WAIT_TIMEOUT) {
         s_.filesDone = filesDone.load();
+        const size_t at = current.load();  // 2.2.5: where the reading is (a head's colours took minutes unseen)
+        if (at < list_.size()) s_.current = utf8Of(list_[at].first);
         status_.write(s_);
         if (status_.stopAsked()) stop = true;
     }
+    s_.current.clear();
     for (HANDLE h : handles) CloseHandle(h);
     LOG_INFO("texture pack: the game's files read by %zu threads", handles.empty() ? size_t(1) : handles.size());
     return !stop;

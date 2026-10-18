@@ -189,7 +189,8 @@ Source sourceOf(const std::string& n, const Choice& c) {
     return s;
 }
 
-std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names, bool bodies) {
+std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names, bool bodies,
+                                    int maxHair, int maxCloth) {
     const std::string human = "\xC0\xCE\xB0\xA3\xC1\xB7", head = "\xB8\xD3\xB8\xAE\xC5\xEB",
                       hair = "\xB8\xD3\xB8\xAE";  // 인간족, 머리통, 머리
     // 0.56: the bodies (몸통) and the clothes' colours (몸): "<job>_<sex>_<n>.pal" for "<job>_<sex>.spr", as the hair's
@@ -213,7 +214,8 @@ std::vector<std::string> palettesOf(const std::string& sprite, const std::vector
         if (colour.size() <= 4 || !endsWith(colour, ".pal")) continue;
         bool digits = true;
         for (size_t i = 0; i + 4 < colour.size(); ++i) digits = digits && colour[i] >= '0' && colour[i] <= '9';
-        if (digits) out.push_back(*it);
+        const int most = isBody ? maxCloth : maxHair;
+        if (digits && (most < 0 || std::atoi(colour.c_str()) <= most)) out.push_back(*it);
     }
     return out;
 }

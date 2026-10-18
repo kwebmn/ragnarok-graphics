@@ -6,6 +6,7 @@
 //   uaro-render64.exe --pack build|drop --dir "<game folder>" --ai <[ai] settings> --kinds <what>
 //                     [--quality 90] [--fresh 1] [--out "<pack>"] [--status "<file>"]
 //                     [--map <map> --map-kinds ground,models --remake 1] (2.2.5: one map's textures)
+//                     [--colours 8,77] (2.2.5: the most hair and clothes colours made; -1 every one)
 #include <windows.h>
 
 #include <algorithm>
@@ -64,6 +65,7 @@ Args parseArgs() {
         words.push_back(w);
     }
     Args a;
+    int colours[2] = {-2, -2};  // 2.2.5: none given
     for (size_t i = 1; i + 1 < words.size(); ++i) {
         const std::string& k = words[i];
         const std::string& v = words[i + 1];
@@ -97,11 +99,18 @@ Args parseArgs() {
             a.pack.mapModels = v.find("models") != std::string::npos;
         }
         else if (k == "--remake") a.pack.remake = v == "1";
+        else if (k == "--colours") {  // 2.2.5: the most hair and clothes colours, "8,77" (applied after --kinds)
+            const size_t comma = v.find(',');
+            colours[0] = std::atoi(v.c_str());
+            colours[1] = comma == std::string::npos ? colours[0] : std::atoi(v.c_str() + comma + 1);
+        }
         else if (k == "--out") a.pack.out = v;
         else if (k == "--status") a.pack.status = v;
         else continue;
         ++i;
     }
+    if (colours[0] >= -1) a.pack.choice.maxHairColour = colours[0];
+    if (colours[1] >= -1) a.pack.choice.maxClothColour = colours[1];
     return a;
 }
 

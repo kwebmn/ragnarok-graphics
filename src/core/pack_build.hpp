@@ -62,6 +62,9 @@ struct Choice {
     // unless asked for ("bodycolours")
     bool bodyColours = false;
     int minSide = 16, maxSide = 512;  // the world's textures ([ai] min_size, max_size)
+    // 2.2.5: the colours the server lets be worn (uAthena battle/client.conf max_hair_color, max_cloth_color) - the
+    // client has 128 hair colours a style and up to 700 clothes colours a job; -1: every one there is
+    int maxHairColour = 8, maxClothColour = 77;
 };
 // The kinds as the settings app passes them to the builder: "world,effects,monsters,players,npcs,items,interface"
 // (the sides come with the [ai] settings).
@@ -103,7 +106,8 @@ std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t siz
                                 const uint8_t* palette = nullptr);
 // 0.49: the palettes the game draws a sprite with besides its own, among the game's files (sorted names): a head's
 // hair colours - data\palette\머리\머리<N>_<sex>_<colour>.pal for data\sprite\인간족\머리통\<sex>\<N>_<sex>.spr.
+// 2.2.5: maxHair, maxCloth - none past these colours (-1: every one).
 std::vector<std::string> palettesOf(const std::string& sprite, const std::vector<std::string>& names,
-                                    bool bodies = false);
+                                    bool bodies = false, int maxHair = -1, int maxCloth = -1);
 
 }  // namespace uagfx::pack
