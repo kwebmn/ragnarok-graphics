@@ -689,8 +689,8 @@ bool Renderer::Impl::applyDof() {
 // 1.11: light from the sky and from around (sky_light_ps) - the picture's copy put back lit by the sky above and the
 // ground below, and by the colours around it - before the soft shadows and the characters.
 bool Renderer::Impl::applySkyLight() {
+    EffectTime t(*this, kTimeSkyLight);  // 2.5.14: and its crumb
     skyLightDone = true;
-    crumb("light from the sky");
     if (!ensureScene("light from the sky")) return true;
     ID3D12PipelineState* pso =
         alphaPipeline(skyLightPs, skyLightPipelines, upscale ? 1 : samples, "light from the sky");

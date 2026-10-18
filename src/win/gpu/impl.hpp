@@ -72,6 +72,7 @@ constexpr UINT kSlots = 2;              // submissions in flight
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
     kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
+    kTimeSkyLight,  // 2.5.14: keep_fps knew nothing of its cost
     kEffectTimes
 };
 // 2.2.2: each timed pass's names, in the enum's order (core/effect_costs.hpp kTimedPasses: the key Costs know, the
