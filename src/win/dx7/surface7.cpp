@@ -143,9 +143,13 @@ bool Surface7::fullColour(int x, int y, int w, int h, const uint32_t* picture, i
     if (!full_colour::shortFormat(top0.format())) return false;
     const full_colour::Write at = full_colour::writeOf(x, y, w, h, top0.width(), top0.height());
     if (at.rect.empty()) return false;
-    std::vector<uint32_t> texels;
-    full_colour::texelsOf(picture, pitch, at, texels);
-    return levels.fullColour(at.rect, texels.data(), true);  // the game made its mip levels again too
+    try {  // called from the game's own code: nothing may be thrown back into it
+        std::vector<uint32_t> texels;
+        full_colour::texelsOf(picture, pitch, at, texels);
+        return levels.fullColour(at.rect, texels.data(), true);  // the game made its mip levels again too
+    } catch (...) {  // no memory for it (the game's address space): the 16-bit texels
+        return false;
+    }
 }
 
 HRESULT STDMETHODCALLTYPE Surface7::QueryInterface(REFIID riid, void** out) {

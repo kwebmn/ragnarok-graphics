@@ -110,26 +110,30 @@ void TextureLevels::sync(FrameRecord& record, uint32_t texture) {
         if (i == 0) {
             full = mergeFull(d, argb);
         } else if (fullMips_ && !full_.empty()) {
-            if (chainLevel < 0) {
-                cw = images_[0].width();
-                ch = images_[0].height();
-                toArgbRect(images_[0], images_[0].bounds(), key_, chain);
-                mergeFull(images_[0].bounds(), chain);
-                chainLevel = 0;
-            }
-            for (; chainLevel < int(i); ++chainLevel) {
-                int nw = 0, nh = 0;
-                full_colour::halve(chain, cw, ch, next, nw, nh);
-                chain.swap(next);
-                cw = nw;
-                ch = nh;
-            }
-            for (int y = d.top; y < d.bottom; ++y)
-                for (int x = d.left; x < d.right; ++x) {
-                    uint32_t& t = argb[size_t(y - d.top) * size_t(d.width()) + size_t(x - d.left)];
-                    t = full_colour::mergeMip(f, t, chain[size_t(y) * size_t(cw) + size_t(x)]);
+            try {  // the game's thread, its address space: without memory for them the mips go up 16-bit
+                if (chainLevel < 0) {
+                    cw = images_[0].width();
+                    ch = images_[0].height();
+                    toArgbRect(images_[0], images_[0].bounds(), key_, chain);
+                    mergeFull(images_[0].bounds(), chain);
+                    chainLevel = 0;
                 }
-            full = true;
+                for (; chainLevel < int(i); ++chainLevel) {
+                    int nw = 0, nh = 0;
+                    full_colour::halve(chain, cw, ch, next, nw, nh);
+                    chain.swap(next);
+                    cw = nw;
+                    ch = nh;
+                }
+                for (int y = d.top; y < d.bottom; ++y)
+                    for (int x = d.left; x < d.right; ++x) {
+                        uint32_t& t = argb[size_t(y - d.top) * size_t(d.width()) + size_t(x - d.left)];
+                        t = full_colour::mergeMip(f, t, chain[size_t(y) * size_t(cw) + size_t(x)]);
+                    }
+                full = true;
+            } catch (...) {
+                fullMips_ = false;
+            }
         }
         record.upload(texture, uint32_t(i), d, argb.data(), i == 0 ? slots_ : std::vector<SpriteCell>(),
                       full ? f : PixelFormat::Unknown);
