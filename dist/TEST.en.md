@@ -1,3 +1,18 @@
+# uaRO Graphics 2.5.5 — testing
+
+- **Direct3D 11: the strong set's effects and those by hand** (turned on on the Effects page or in the `~` console):
+  - the shared wind: the weather, the clouds, the sky, the grass, the sand and the leaves move with one wind;
+  - the light from the sky and from around (what faces up takes the sky's colour, what faces down the ground's, the
+    colours around light the surfaces);
+  - the light in the air about the lights and the rays from the sky; the sun's flare;
+  - the characters lit by the sun from their silhouette's sides;
+  - the depth of field focused on the character;
+  - smooth light on the models (stones and bark without facets);
+  - the volumetric fog over the fields (in the remaster's mode).
+- Check, please, on Direct3D 11 with the Strong set or by hand: uaro-graphics.log has "light from the sky: …
+  (Direct3D 11)", "depth of field: … (Direct3D 11)", "smooth models: … (Direct3D 11)"; on a weak card the FPS will
+  likely drop hard with them - expected, that is what the strong set is for.
+
 # uaRO Graphics 2.5.4 — testing
 
 - **Direct3D 11: the grass and the living ground.** The grass with its flowers, dew in the morning, gusts of wind,
