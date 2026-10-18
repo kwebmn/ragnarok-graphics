@@ -15,7 +15,6 @@ constexpr int kUi = 1205;
 constexpr int kUiExact = 1206;
 constexpr int kSize = 1207;
 constexpr int kWidth = 1208;  // kWidth + 1: the height
-constexpr int kAsSetup = 1210;
 
 // The Screen page (stage 2 spec §5): how the game is shown, on which monitor, how large its interface is.
 class ScreenPage : public Page {
@@ -99,13 +98,6 @@ public:
             else
                 p.note(tf(Text::ScreenNowFullscreen, {num(now.game.width), num(now.game.height), num(now.choice.ui)}));
         }
-        bool setupFull = false;
-        if (const auto setup = m.setupScreen(setupFull)) {
-            p.note(tf(Text::ScreenSetupDiffers, {num(setup->width), num(setup->height),
-                                                 utf8(t(setupFull ? Text::ShowFullscreenWord : Text::ShowWindowWord))}),
-                   Tone::Warn);
-            p.buttons({{kAsSetup, t(Text::ScreenAsSetup), !m.screenAsSetupPending()}});
-        }
         if (roext) {
             p.note(tf(Text::ScreenRoext, {snap.modules[size_t(snap.roextModule)].info.ini}));
             if (!open) p.note(t(Text::ErrGameRunning), Tone::Warn);  // spec §4.1
@@ -143,11 +135,6 @@ public:
             const int w = std::atoi(controlText(GetDlgItem(host_.window(), kWidth)).c_str());
             const int h = std::atoi(controlText(GetDlgItem(host_.window(), kWidth + 1)).c_str());
             if (w > 0 && h > 0) c.window = Size{w, h};
-        } else if (id == kAsSetup && code == BN_CLICKED) {
-            m.screenAsSetup();
-            host_.changed();
-            host_.rebuild();
-            return;
         } else {
             return;
         }

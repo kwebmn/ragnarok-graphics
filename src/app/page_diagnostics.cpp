@@ -266,15 +266,10 @@ private:
         if (!gameKeyExists(s.registry)) {
             out.push_back({t(Text::DiagRegistry), t(Text::DiagRegistryNone), Tone::Warn, {}});
         } else {
-            out.push_back({t(Text::DiagRegistry),
-                           tf(Text::DiagRegistryValue, {utf8(t(s.registry.personal.exists ? Text::Yes : Text::No)),
-                                                        utf8(t(s.registry.common.exists ? Text::Yes : Text::No))}),
-                           Tone::Normal, {}});
-            for (const CopyDifference& d : copyDifferences(s.registry, setupValues())) {  // screen and sound (§7)
-                const std::string n = d.name;
-                out.push_back({wide(n), tf(Text::DiagRegistryDiffers, {d.personal, d.common}), Tone::Warn,
-                               [&m, n](Lang l) { return m.resetRegistryValue(n, l); }});
-            }
+            // 2.4.2: this app's alone - setup.exe's copy (the common one) is not compared any more: the game reads the
+            // personal copy, which this app writes whole
+            const Text mine = s.registry.personal.exists ? Text::DiagRegistryValue : Text::DiagRegistryOld;
+            out.push_back({t(Text::DiagRegistry), t(mine), Tone::Normal, {}});
         }
         if (!s.log.found) {
             out.push_back({t(Text::DiagLog), t(Text::DiagLogNone), Tone::Muted, {}});

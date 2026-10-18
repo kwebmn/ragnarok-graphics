@@ -82,20 +82,12 @@ public:
     // The plan needs ROExt's ini, written only while the game is closed (spec §4.1): the Screen page greys what changes
     // the window. The full screen never needs it (0.6.1 minor 6).
     bool screenWaits() const;
-    void screenAsSetup();          // "as in setup.exe": the personal screen values go
-    bool screenAsSetupPending() const { return screenAsSetup_; }
-    std::optional<settings::Size> setupScreen(bool& fullscreen) const;  // setup.exe's, when it differs from the game's
 
     // The game's key on the pages (0.6.2): the player's word, else what the game reads now (game_settings).
     std::string regWord(const settings::RegSetting& s) const;
     void setRegWord(const settings::RegSetting& s, const std::string& word);
     // Whether a page may change it now: what the game writes itself waits for it to close (spec §4.1).
     bool regOpen(const settings::RegSetting& s) const { return !s.gameWrites || !now_.gameRunning; }
-    // Spec §4.2: the values setup.exe writes (the sound device) where the player's copy differs from setup.exe's own
-    // (the common copy), each with setup.exe's word; "as in setup.exe" takes those words, and Apply then deletes the
-    // personal values.
-    std::vector<std::pair<const settings::RegSetting*, std::string>> regSetupDiffers() const;
-    void regAsSetup();
     std::vector<std::wstring> skins() const;  // the folders of skin\ next to uaRO.exe (spec §6.1)
     bool hasIntro() const;                     // openning.bik next to uaRO.exe
 
@@ -125,7 +117,10 @@ public:
     std::wstring loadProfile(const std::wstring& name, settings::Lang l);
     std::wstring deleteProfile(const std::wstring& name, settings::Lang l);
     std::wstring removeCompatFlag(const CompatFlag& f, settings::Lang l);
-    std::wstring resetRegistryValue(const std::string& name, settings::Lang l);
+    // 2.4.2: the game's key this app's as it starts - setup.exe out of it: with none in either copy, Apply's first
+    // run (the game would start setup.exe and wait for it); with the game closed, every value setup.exe's copy alone
+    // holds taken into the personal one. An error, else "".
+    std::wstring ownGameKey(settings::Lang l);
     std::wstring forgetLogin(settings::Lang l);  // the saved login goes; only while the game is closed (§4.1)
     // Spec §8: the whole game key as the game reads it, to a .reg file under the personal copy's path; from one, it
     // replaces the personal copy (only while the game is closed, a copy of the present one made first).
@@ -158,7 +153,6 @@ private:
     std::map<std::string, std::string> ini_;  // "section.key" -> the player's word
     std::map<std::string, std::string> reg_;  // regKey -> the player's word
     std::optional<settings::ScreenChoice> screen_;
-    bool screenAsSetup_ = false;
     std::map<std::string, std::string> wroteNow_;  // "section.key" -> the word before the first writeNow
     bool backedUp_ = false;
 };

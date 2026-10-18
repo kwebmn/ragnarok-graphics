@@ -39,26 +39,32 @@ TEST(registry_writes_go_to_the_personal_copy) {
     CHECK(w.has_value());
     CHECK(w->op == RegOp::Set);
     CHECK(w->value.asDword() == 1680u);
-    // Already what the game sees: nothing to do.
-    CHECK(!planWrite(r, "", "WIDTH", RegValue::dword(1920)));
-    CHECK(!planWrite(r, "", "TEXTUREMODE", RegValue::dword(1)));
+    // 2.4.2: what the game sees from setup.exe's copy alone is written into the personal one - setup.exe out of it.
+    CHECK(planWrite(r, "", "WIDTH", RegValue::dword(1920))->op == RegOp::Set);
+    CHECK(!planWrite(r, "", "TEXTUREMODE", RegValue::dword(1)));  // the personal copy holds it already
 }
 
-TEST(registry_a_value_equal_to_setup_exes_drops_the_personal_one) {
+TEST(registry_a_value_equal_to_setup_exes_stays_in_the_personal_copy) {
+    // 2.4.2: until now it dropped the personal value, and setup.exe was in charge of it again
     const GameRegistry r = usersPc();
-    // TEXTUREMODE 2 is what setup.exe's copy holds: the personal 1 goes, setup.exe is in charge again.
     const auto w = planWrite(r, "", "TEXTUREMODE", RegValue::dword(2));
-    CHECK(w.has_value());
-    CHECK(w->op == RegOp::Delete);
-    // A type mismatch is a different value: a REG_SZ "2" is no REG_DWORD 2.
+    CHECK(w.has_value() && w->op == RegOp::Set && w->value.asDword() == 2u);
     CHECK(planWrite(r, "", "TEXTUREMODE", RegValue::sz("2"))->op == RegOp::Set);
 }
 
-TEST(registry_reset_returns_to_setup_exes_value) {
-    const GameRegistry r = usersPc();
-    CHECK(planReset(r, "", "TEXTUREMODE")->op == RegOp::Delete);
-    CHECK(!planReset(r, "", "WIDTH"));               // no personal value
-    CHECK(!planReset(r, "", "SHOWTIPSATSTARTUP"));   // nothing in setup.exe's copy to fall back on
+TEST(registry_takes_what_only_setup_exes_copy_holds) {
+    // 2.4.2: every value the game reads from the common copy alone (setup.exe's) goes into the personal one - setup.exe
+    // changing it later changes nothing the game sees
+    GameRegistry r = usersPc();
+    const std::vector<RegWrite> w = pinWrites(r);
+    CHECK_EQ(w.size(), size_t(4));  // WIDTH, HEIGHT, ISFULLSCREENMODE, Option's soundVolume - TEXTUREMODE the player's
+    applyWrites(r.personal, w);
+    CHECK(r.personal.find("", "WIDTH")->asDword() == 1920u);
+    CHECK(r.personal.find("Option", "soundVolume")->asDword() == 100u);
+    CHECK(r.personal.find("", "TEXTUREMODE")->asDword() == 1u);
+    CHECK(pinWrites(r).empty());
+    r.common.keys[""]["WIDTH"] = RegValue::dword(800);  // setup.exe run afterwards
+    CHECK(effectiveValue(r, "", "WIDTH")->asDword() == 1920u);
 }
 
 TEST(registry_applying_writes_updates_the_model) {
@@ -67,7 +73,7 @@ TEST(registry_applying_writes_updates_the_model) {
                              *planWrite(r, "", "TEXTUREMODE", RegValue::dword(2))});
     CHECK(effectiveValue(r, "", "WIDTH")->asDword() == 1680u);
     CHECK(effectiveValue(r, "", "TEXTUREMODE")->asDword() == 2u);
-    CHECK(!r.personal.find("", "TEXTUREMODE"));
+    CHECK(r.personal.find("", "TEXTUREMODE")->asDword() == 2u);  // 2.4.2: the player's, though setup.exe's is 2 too
 }
 
 TEST(registry_first_run_has_all_the_game_needs) {
@@ -88,23 +94,6 @@ TEST(registry_first_run_has_all_the_game_needs) {
     for (const RegWrite& w : firstRunWrites(800, 600, true))
         CHECK(w.value.isSz() || w.value.type == uint32_t(RegType::Binary) || w.value.asDword().has_value());
     CHECK(effectiveValue(r, "", "TRILINEARFILTER")->asDword() == 0u);
-}
-
-TEST(game_registry_lists_the_setup_values_the_copies_differ_in) {
-    GameRegistry r;
-    r.personal.exists = r.common.exists = true;
-    r.personal.keys[""]["WIDTH"] = RegValue::dword(1680);
-    r.common.keys[""]["WIDTH"] = RegValue::dword(1920);
-    r.personal.keys[""]["HEIGHT"] = RegValue::dword(1080);
-    r.common.keys[""]["HEIGHT"] = RegValue::dword(1080);
-    r.personal.keys[""]["PROVIDERNAME"] = RegValue::sz("Miles Fast 2D Positional Audio");
-    r.common.keys[""]["PROVIDERNAME"] = RegValue::sz("No Provider");
-    r.personal.keys[""]["SOUNDMODE"] = RegValue::dword(0);  // in one copy only: nothing to compare
-    const std::vector<CopyDifference> d = copyDifferences(r, setupValues());
-    CHECK_EQ(d.size(), size_t(2));
-    CHECK(d.size() == 2 && d[0].name == "WIDTH" && d[0].personal == "1680" && d[0].common == "1920");
-    CHECK(d.size() == 2 && d[1].name == "PROVIDERNAME" && d[1].personal == "Miles Fast 2D Positional Audio" &&
-          d[1].common == "No Provider");
 }
 
 TEST(game_registry_the_effective_copy_is_what_the_game_reads) {

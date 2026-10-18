@@ -39,7 +39,7 @@ struct RegCopy {
 };
 
 // The game's key as the game sees it (stage 2 spec §2.1, §4.2): the personal copy (the user's VirtualStore) over the
-// common one (HKLM, written by setup.exe).
+// common one (HKLM, written by setup.exe). 2.4.2: setup.exe is out of it - this app writes the personal copy whole.
 struct GameRegistry {
     RegCopy personal;
     RegCopy common;
@@ -51,16 +51,6 @@ bool gameKeyExists(const GameRegistry& r);  // in either copy
 // settings file holds it).
 RegCopy effectiveCopy(const GameRegistry& r);
 
-// A value of the key itself that both copies hold, differently (stage 2 spec §7): the personal one wins.
-struct CopyDifference {
-    std::string name;
-    std::string personal;  // as text: the number, the string, else the bytes in hex
-    std::string common;
-};
-std::vector<CopyDifference> copyDifferences(const GameRegistry& r, const std::vector<std::string>& names);
-// What setup.exe writes for the screen and the sound: the values the Diagnostics page compares (spec §7).
-const std::vector<std::string>& setupValues();
-
 enum class RegOp { Set, Delete };
 // One change of the personal copy.
 struct RegWrite {
@@ -71,14 +61,14 @@ struct RegWrite {
     bool operator==(const RegWrite& o) const;
 };
 
-// The change of the personal copy that makes the game see `v` (spec §4.2): none when it already does; deleting the
-// personal value when the common copy holds exactly `v` (setup.exe stays in charge of it); else setting it.
+// The change of the personal copy that makes it hold `v` (spec §4.2): none when it does; else setting it. 2.4.2: also
+// when setup.exe's copy holds `v` - until then the personal value went, and setup.exe was in charge of it again.
 std::optional<RegWrite> planWrite(const GameRegistry& r, const std::string& subkey, const std::string& name,
                                   const RegValue& v);
-// "As in setup.exe": deleting the personal value, so the game sees the common one; none when there is no personal
-// value or no common one to fall back on.
-std::optional<RegWrite> planReset(const GameRegistry& r, const std::string& subkey, const std::string& name);
 void applyWrites(RegCopy& personal, const std::vector<RegWrite>& writes);
+// 2.4.2: every value the game reads from the common copy alone (setup.exe's) written into the personal one - setup.exe
+// changing it later changes nothing the game sees.
+std::vector<RegWrite> pinWrites(const GameRegistry& r);
 // "Reset the windows' layout" (spec §8): every window's .X in UIRectInfo becomes -1 - a window that does not fit is put
 // in its place when it opens (registry.md §5) - and the chat goes to the bottom left (M_CHATWNDY = -1). Nothing when
 // there is no layout yet: the game makes its own.

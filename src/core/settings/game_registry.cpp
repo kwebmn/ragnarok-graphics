@@ -67,18 +67,17 @@ bool RegWrite::operator==(const RegWrite& o) const {
 std::optional<RegWrite> planWrite(const GameRegistry& r, const std::string& subkey, const std::string& name,
                                   const RegValue& v) {
     const RegValue* mine = r.personal.find(subkey, name);
-    const RegValue* common = r.common.find(subkey, name);
-    if (common && *common == v) {
-        if (!mine) return std::nullopt;
-        return RegWrite{subkey, name, RegOp::Delete, RegValue{}};
-    }
     if (mine && *mine == v) return std::nullopt;
     return RegWrite{subkey, name, RegOp::Set, v};
 }
 
-std::optional<RegWrite> planReset(const GameRegistry& r, const std::string& subkey, const std::string& name) {
-    if (!r.personal.find(subkey, name) || !r.common.find(subkey, name)) return std::nullopt;
-    return RegWrite{subkey, name, RegOp::Delete, RegValue{}};
+std::vector<RegWrite> pinWrites(const GameRegistry& r) {
+    std::vector<RegWrite> out;
+    for (const auto& key : r.common.keys)
+        for (const auto& value : key.second)
+            if (!r.personal.find(key.first, value.first))
+                out.push_back(RegWrite{key.first, value.first, RegOp::Set, value.second});
+    return out;
 }
 
 void applyWrites(RegCopy& personal, const std::vector<RegWrite>& writes) {
@@ -143,41 +142,6 @@ std::vector<RegWrite> firstRunWrites(int width, int height, bool fullscreen) {
         dw("TRILINEARFILTER", 0),
         dw("ISVOODOO", 0),
     };
-}
-
-namespace {
-
-std::string valueText(const RegValue& v) {
-    if (const auto d = v.asDword()) return std::to_string(*d);
-    if (v.isSz()) return v.text;
-    static const char kHex[] = "0123456789abcdef";
-    std::string out;
-    for (const uint8_t b : v.bytes) {
-        if (!out.empty()) out += ' ';
-        out += kHex[b >> 4];
-        out += kHex[b & 15];
-    }
-    return out;
-}
-
-}  // namespace
-
-std::vector<CopyDifference> copyDifferences(const GameRegistry& r, const std::vector<std::string>& names) {
-    std::vector<CopyDifference> out;
-    for (const std::string& name : names) {
-        const RegValue* mine = r.personal.find("", name);
-        const RegValue* common = r.common.find("", name);
-        if (mine && common && *mine != *common) out.push_back({name, valueText(*mine), valueText(*common)});
-    }
-    return out;
-}
-
-const std::vector<std::string>& setupValues() {
-    static const std::vector<std::string> names{"ISFULLSCREENMODE", "WIDTH",           "HEIGHT",
-                                                "BITPERPIXEL",      "SOUNDMODE",       "DIGITALRATETYPE",
-                                                "DIGITALBITSTYPE",  "NUMSAMPLETYPE",   "SPEAKERTYPE",
-                                                "PROVIDERNAME"};
-    return names;
 }
 
 }  // namespace uagfx::settings

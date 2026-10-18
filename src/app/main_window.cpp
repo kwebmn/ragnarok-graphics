@@ -244,6 +244,10 @@ void MainWindow::create() {
     SetWindowPos(hwnd_, nullptr, 0, 0, r.right - r.left, r.bottom - r.top, SWP_NOMOVE | SWP_NOZORDER);
     layout();
     retext();
+    // 2.4.2: the game's key this app's from its start, setup.exe out of it - written when there is none (the game would
+    // start setup.exe and wait for it), setup.exe's values taken over while the game is closed
+    const std::wstring owned = model_->ownGameKey(lang_);
+    if (!owned.empty()) message(owned, true);
     SendMessageW(sidebar_, LB_SETCURSEL, 0, 0);
     buildPage();
     SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile

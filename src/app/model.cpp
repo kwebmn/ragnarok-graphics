@@ -28,11 +28,6 @@ IniEdit editOf(const std::string& sectionKey, const std::string& value) {
     return IniEdit{sectionKey.substr(0, dot), sectionKey.substr(dot + 1), value};
 }
 
-int dword(const RegCopy& c, const char* name) {
-    const RegValue* v = c.find("", name);
-    return v && v->asDword() ? int(*v->asDword()) : 0;
-}
-
 }  // namespace
 
 Text problemText(ScreenProblem p) {
@@ -151,7 +146,6 @@ ScreenChoice Model::screenChoice() const {
 
 void Model::setScreen(const ScreenChoice& c) {
     screen_ = c;
-    screenAsSetup_ = false;
 }
 
 ScreenPlan Model::screenPlan() const {
@@ -160,23 +154,6 @@ ScreenPlan Model::screenPlan() const {
 
 bool Model::screenWaits() const {
     return now_.gameRunning && now_.roextModule >= 0 && screenPlan().writesRoext;
-}
-
-void Model::screenAsSetup() {
-    screen_.reset();
-    screenAsSetup_ = true;
-}
-
-std::optional<Size> Model::setupScreen(bool& fullscreen) const {
-    bool differs = false;
-    for (const char* name : {"ISFULLSCREENMODE", "WIDTH", "HEIGHT"}) {
-        const RegValue* mine = now_.registry.personal.find("", name);
-        const RegValue* common = now_.registry.common.find("", name);
-        differs = differs || (mine && common && *mine != *common);
-    }
-    if (!differs) return std::nullopt;
-    fullscreen = dword(now_.registry.common, "ISFULLSCREENMODE") != 0;
-    return Size{dword(now_.registry.common, "WIDTH"), dword(now_.registry.common, "HEIGHT")};
 }
 
 std::string Model::regWord(const RegSetting& s) const {
@@ -190,24 +167,6 @@ void Model::setRegWord(const RegSetting& s, const std::string& word) {
         reg_.erase(regKey(s));
     else
         reg_[regKey(s)] = word;
-}
-
-std::vector<std::pair<const RegSetting*, std::string>> Model::regSetupDiffers() const {
-    GameRegistry setup = now_.registry;
-    setup.personal = RegCopy{};
-    const std::vector<std::string>& names = setupValues();
-    std::vector<std::pair<const RegSetting*, std::string>> out;
-    for (const RegSetting& s : regSettings()) {
-        if (*s.subkey || std::find(names.begin(), names.end(), s.name) == names.end()) continue;
-        if (!now_.registry.personal.find("", s.name) || !now_.registry.common.find("", s.name)) continue;
-        const std::string theirs = regWordOf(s, setup);
-        if (regWord(s) != theirs) out.push_back({&s, theirs});
-    }
-    return out;
-}
-
-void Model::regAsSetup() {
-    for (const auto& d : regSetupDiffers()) setRegWord(*d.first, d.second);
 }
 
 std::vector<std::wstring> Model::skins() const { return listFolder(paths_.dir + L"\\skin", true); }
@@ -231,7 +190,7 @@ std::optional<Preset> Model::preset() const {
 
 size_t Model::pendingCount() const {
     const bool screen = screen_ && !(*screen_ == screenNow().choice);
-    return ini_.size() + reg_.size() + (screen ? 1 : 0) + (screenAsSetup_ ? 1 : 0);
+    return ini_.size() + reg_.size() + (screen ? 1 : 0);
 }
 
 std::string Model::currentIni() const {
@@ -322,9 +281,6 @@ std::wstring Model::apply(Lang l) {
             if (p.writesRoext && now_.roextModule >= 0)
                 roext = {{"ROExt", "WindowWidth", num(p.game.width)}, {"ROExt", "WindowHeight", num(p.game.height)}};
         }
-    } else if (screenAsSetup_) {
-        for (const char* name : {"ISFULLSCREENMODE", "WIDTH", "HEIGHT", "BITPERPIXEL"})
-            if (const auto w = planReset(now_.registry, "", name)) reg.push_back(*w);
     }
     std::map<std::string, std::string> held;  // what the game writes itself waits for it to close (spec §4.1)
     for (const auto& kv : reg_) {  // after the screen's: the player's word wins over a first run's
@@ -334,6 +290,12 @@ std::wstring Model::apply(Lang l) {
             held.insert(kv);
         else if (const auto w = planWrite(now_.registry, s->subkey, s->name, regValueOf(*s, kv.second)))
             reg.push_back(*w);
+    }
+    // 2.4.2: with the game closed, every value setup.exe's copy alone holds goes into the personal one too - first,
+    // so that a write of the player's to the same value comes after it
+    if (!firstRun && !now_.gameRunning) {
+        const std::vector<RegWrite> pins = pinWrites(now_.registry);
+        reg.insert(reg.begin(), pins.begin(), pins.end());
     }
     if (!ini.empty() || !reg.empty() || !roext.empty()) {
         std::wstring err = backupOnce(l);
@@ -369,7 +331,6 @@ std::wstring Model::apply(Lang l) {
         screen_ = chosen;  // the next Apply with the game closed writes the rest of it
     else
         screen_.reset();
-    screenAsSetup_ = false;
     wroteNow_.clear();
     load();
     return waits || !held.empty() ? wtr(l, Text::ApplyWaits) : L"";
@@ -403,7 +364,6 @@ std::wstring Model::revert(Lang l) {
     ini_.clear();
     reg_.clear();
     screen_.reset();
-    screenAsSetup_ = false;
     if (wroteNow_.empty()) return L"";
     std::vector<IniEdit> back;
     for (const auto& kv : wroteNow_) back.push_back(editOf(kv.first, kv.second));
@@ -442,7 +402,6 @@ std::wstring Model::restore(const std::wstring& backup, Lang l) {
     ini_.clear();
     reg_.clear();
     screen_.reset();
-    screenAsSetup_ = false;
     wroteNow_.clear();
     load();
     return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
@@ -538,12 +497,18 @@ std::wstring Model::removeCompatFlag(const CompatFlag& f, Lang l) {
     return L"";
 }
 
-std::wstring Model::resetRegistryValue(const std::string& name, Lang l) {
-    const auto w = planReset(now_.registry, "", name);
-    if (!w) return L"";
+std::wstring Model::ownGameKey(Lang l) {
+    refreshRunning();
+    if (!gameKeyExists(now_.registry)) {  // nothing of the player's yet: Apply's first run, ROExt's part waiting
+        const std::wstring said = apply(l);
+        return said == wtr(l, Text::ApplyWaits) ? L"" : said;
+    }
+    if (now_.gameRunning) return L"";  // it reads its key at its start: taken over once it is closed
+    const std::vector<RegWrite> pins = pinWrites(now_.registry);
+    if (pins.empty()) return L"";
     std::wstring err = backupOnce(l);
     if (!err.empty()) return err;
-    const std::string failed = writePersonalValue(*w);
+    const std::string failed = writeValues(pins);
     load();
     return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
 }
@@ -587,7 +552,6 @@ std::wstring Model::loadGameSettings(const std::wstring& file, Lang l) {
     const std::string failed = replacePersonal(copy);
     reg_.clear();  // the game's key is another one now: what the pages changed was for the old one
     screen_.reset();
-    screenAsSetup_ = false;
     load();
     return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
 }

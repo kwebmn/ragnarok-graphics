@@ -15,7 +15,6 @@ using namespace settings;
 
 constexpr int kRows = 1100;  // + 4 x the setting's index in iniSettings()
 constexpr int kForgetLogin = 1490;
-constexpr int kAsSetup = 1491;
 constexpr int kAuto = 1492;  // 0.50
 constexpr int kGpu = 1493;   // 0.50.2
 constexpr int kReg = 1500;  // + 4 x the setting's index in regSettings()
@@ -51,8 +50,7 @@ public:
                 regRows(p, [](const RegSetting&) { return true; });
                 break;
             case settings::Page::Sound:
-                regRows(p, [](const RegSetting& s) { return !*s.subkey; });  // the device, as setup.exe sets it
-                buildAsSetup(p);
+                regRows(p, [](const RegSetting& s) { return !*s.subkey; });  // the device
                 p.gap();
                 regRows(p, [](const RegSetting& s) { return s.control == Control::Check; });  // music, effects
                 regRows(p, [](const RegSetting& s) { return s.control == Control::Slider; });
@@ -94,12 +92,6 @@ public:
         }
         if (id == kForgetLogin && code == BN_CLICKED) {
             forgetLogin();
-            return;
-        }
-        if (id == kAsSetup && code == BN_CLICKED) {
-            m.regAsSetup();
-            host_.changed();
-            host_.rebuild();  // the lists show setup.exe's now
             return;
         }
         if (const RegSetting* r = regOf(id)) {
@@ -258,22 +250,6 @@ private:
             selected = int(items.size()) - 1;
         }
         return items;
-    }
-
-    // Spec §4.2: where this app's sound differs from setup.exe's, the page says so and offers setup.exe's.
-    void buildAsSetup(Panel& p) {
-        const auto differs = host_.model().regSetupDiffers();
-        if (differs.empty()) return;
-        std::string list;
-        for (const auto& d : differs) {
-            const RegSetting& s = *d.first;
-            std::string value = d.second;
-            for (size_t c = 0; c < s.choices.size(); ++c)
-                if (d.second == std::to_string(s.values[c])) value = utf8(t(s.choices[c]));
-            list += (list.empty() ? "" : ", ") + utf8(t(s.label)) + " — " + value;
-        }
-        p.note(tf(Text::SoundSetupDiffers, {list}), Tone::Warn);
-        p.buttons({{kAsSetup, t(Text::ScreenAsSetup)}});
     }
 
     void buildForgetLogin(Panel& p) {

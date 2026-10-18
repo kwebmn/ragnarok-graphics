@@ -262,43 +262,63 @@ TEST(model_game_settings_the_game_writes_wait_while_it_runs) {
     CHECK_EQ(effectiveDword("SPRITEMODE"), 0);
 }
 
-TEST(model_a_game_setting_as_setup_s_leaves_setup_in_charge) {
-    // Spec §4.2: a value equal to the common copy's deletes the personal one.
+TEST(model_a_game_setting_equal_to_setup_s_stays_the_player_s) {
+    // 2.4.2: a value equal to the common copy's (setup.exe's) stays in the personal one - until now it was deleted, and
+    // setup.exe was in charge of it again
     fake::Windows& w = fake::reset();
     fake::gameKey(w.registry.common, 1920, 1080, false);
     w.registry.common.keys[""]["SOUNDMODE"] = RegValue::dword(1);
     w.registry.personal.exists = true;
     w.registry.personal.keys[""]["SOUNDMODE"] = RegValue::dword(2);
     app::Model m;
-    CHECK(m.regWord(*findRegSetting("SOUNDMODE")) == "2");
     m.setRegWord(*findRegSetting("SOUNDMODE"), "1");
     CHECK(m.apply(Lang::En).empty());
-    CHECK(w.registry.personal.find("", "SOUNDMODE") == nullptr);
+    const RegValue* mine = w.registry.personal.find("", "SOUNDMODE");
+    CHECK(mine && mine->asDword() == 1u);
     CHECK_EQ(effectiveDword("SOUNDMODE"), 1);
 }
 
-TEST(model_sound_differs_from_setup_exe_s_until_taken_as_in_it) {
-    // Spec §4.2: where the personal copy's sound differs from setup.exe's (the common copy), the page says so; "as in
-    // setup.exe" takes setup.exe's words, and Apply deletes the personal values.
+TEST(model_apply_takes_what_only_setup_exe_s_copy_holds) {
+    // 2.4.2: Apply writes every value the game reads from setup.exe's copy alone into the personal one - setup.exe
+    // changing it later changes nothing the game sees
     fake::Windows& w = fake::reset();
     fake::gameKey(w.registry.common, 1920, 1080, false);
     w.registry.common.keys[""]["SOUNDMODE"] = RegValue::dword(1);
-    w.registry.common.keys[""]["NUMSAMPLETYPE"] = RegValue::dword(0);
     w.registry.personal.exists = true;
-    w.registry.personal.keys[""]["SOUNDMODE"] = RegValue::dword(2);
-    w.registry.personal.keys[""]["NUMSAMPLETYPE"] = RegValue::dword(0);       // the same as setup.exe's
-    w.registry.personal.keys[""]["SPEAKERTYPE"] = RegValue::dword(1);         // setup.exe has none to compare
-    w.registry.personal.keys["Option"]["soundVolume"] = RegValue::dword(50);  // not setup.exe's
+    w.registry.personal.keys["Option"]["isEffectOn"] = RegValue::dword(0);
     app::Model m;
-    const auto differs = m.regSetupDiffers();
-    CHECK_EQ(differs.size(), size_t(1));
-    CHECK(!differs.empty() && regKey(*differs[0].first) == "SOUNDMODE" && differs[0].second == "1");
-    m.regAsSetup();
-    CHECK(m.regWord(*findRegSetting("SOUNDMODE")) == "1");
-    CHECK(m.regSetupDiffers().empty());  // the player has taken it
+    m.setRegWord(*findRegSetting("TEXTUREMODE"), "1");
     CHECK(m.apply(Lang::En).empty());
-    CHECK(w.registry.personal.find("", "SOUNDMODE") == nullptr);
-    CHECK(w.registry.personal.find("", "SPEAKERTYPE") != nullptr);
+    for (const char* name : {"WIDTH", "HEIGHT", "ISFULLSCREENMODE", "BITPERPIXEL", "SOUNDMODE"})
+        CHECK(w.registry.personal.find("", name) != nullptr);
+    w.registry.common.keys[""]["SOUNDMODE"] = RegValue::dword(2);  // setup.exe run afterwards
+    CHECK_EQ(effectiveDword("SOUNDMODE"), 1);
+}
+
+TEST(model_start_writes_the_game_key_when_there_is_none) {
+    // 2.4.2: without the game's key in either copy the game starts setup.exe and waits for it - the app writes what the
+    // game needs as soon as it starts, not only at Apply
+    fake::Windows& w = fake::reset();
+    app::Model m;
+    CHECK(m.ownGameKey(Lang::En).empty());
+    CHECK(gameKeyExists(w.registry));
+    CHECK_EQ(effectiveDword("WIDTH"), 1920);  // a 3360 x 1890 window at 175 %
+    CHECK_EQ(effectiveDword("SOUNDMODE"), 1);
+    CHECK_EQ(m.pendingCount(), size_t(0));
+}
+
+TEST(model_start_takes_what_only_setup_exe_s_copy_holds) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    w.gameRunning = true;  // it reads its key at its start: taken over once it is closed
+    app::Model running;
+    CHECK(running.ownGameKey(Lang::En).empty());
+    CHECK(w.registry.personal.find("", "WIDTH") == nullptr);
+    w.gameRunning = false;
+    app::Model m;
+    CHECK(m.ownGameKey(Lang::En).empty());
+    CHECK(w.registry.personal.find("", "WIDTH") != nullptr);
+    CHECK(w.registry.personal.find("", "BITPERPIXEL") != nullptr);
 }
 
 TEST(model_presets_and_revert_take_the_game_s_quality_too) {

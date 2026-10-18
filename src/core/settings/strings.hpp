@@ -28,7 +28,7 @@ enum class Text : uint16_t {
     ScreenShow, ScreenFullscreen, ScreenWindow, ScreenMonitor, MonitorItem, MonitorMain, ScreenUi, ScreenUiHint,
     ScreenUiExact, ScreenWindowSize, ScreenWindowSizeHint, WindowItem,
     ScreenResult, ScreenCrispest, ScreenTooBig, ScreenTooSmall, ScreenBadNumber, ScreenNowWindow,
-    ScreenNowFullscreen, ScreenSetupDiffers, ShowWindowWord, ShowFullscreenWord, ScreenAsSetup, ScreenRoext,
+    ScreenNowFullscreen, ScreenRoext,
     ScreenFirstRun, ScreenAltTab,
     QualityHighRes, QualityHighResHint, QualityRenderScale, QualityRenderScaleHint, QualitySharpen,
     QualitySharpenHint, QualityUiFilter, QualityUiFilterHint, UiSharp, UiSmooth, QualityCrispText,
@@ -42,7 +42,7 @@ enum class Text : uint16_t {
     DiagModuleOff, DiagInput, DiagInputNone, DiagFolder, DiagFolderOk, DiagFolderReadOnly, DiagFolderProgramFiles,
     DiagApp, DiagElevated, DiagGame, DiagGameRunning, DiagGameClosed, DiagCompat, DiagCompatUser, DiagCompatAll,
     CompatRunAsAdmin, CompatOldWindows, CompatDpi, CompatColors, CompatOther, CompatAllUsersHint, DiagRegistry,
-    DiagRegistryValue, DiagRegistryNone, DiagRegistryDiffers, DiagLogRenderer, DiagLogCrisp, DiagLogErrors,
+    DiagRegistryValue, DiagRegistryNone, DiagLogRenderer, DiagLogCrisp, DiagLogErrors,
     DiagLogErrorsNone,
     DiagLogErrorsSome, DiagLogFps, DiagLog, DiagLogNone, DiagFixed,
     ServicePresets, PresetMaximum, PresetBalance, PresetSpeed, PresetPlain, PresetNote, PresetCustom,
@@ -61,8 +61,7 @@ enum class Text : uint16_t {
     ChatWhisperStrangers, ChatWhisperFriends, ChatWhisperSound, ChatFriendsNote, ChatRememberLogin, ChatForgetLogin,
     ChatForgetAsk, ChatLoginForgotten, ChatMacrosHeading, ChatMacrosHint,
     ServiceGameSettings, GameSave, GameLoad, LayoutReset, GameSettingsNote, GameLoadAsk, LayoutResetAsk, GameSaved,
-    GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, SoundSetupDiffers,
-    GameSettingsRunning, ErrPartialFile,
+    GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, GameSettingsRunning, ErrPartialFile,
     PageSmoothing, SmoothMsaa, SmoothMsaaHint, SmoothA2c, SmoothA2cHint, SmoothAniso, SmoothAnisoHint, SmoothOff,
     Factor2, Factor4, Factor8, Factor16, RenderBridge, RenderBridgeHint,
     SmoothDlss, SmoothDlssHint, DlssDlaa, DlssQuality, DlssBalanced, DlssPerformance, DlssUltra,
@@ -299,6 +298,7 @@ enum class Text : uint16_t {
     FxSeasonGrass, FxSeasonGrassHint, FxPollen, FxPollenHint, FxIndoorDust, FxIndoorDustHint, FxRainSplashes,
     FxRainSplashesHint, FxStars, FxStarsHint, FxLowFog, FxLowFogHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
     FxSkyRaysHint, FxTreeSeasons, FxTreeSeasonsHint, FxDragonflies, FxDragonfliesHint,
+    DiagRegistryOld,  // 2.4.2
     Count
 };
 
