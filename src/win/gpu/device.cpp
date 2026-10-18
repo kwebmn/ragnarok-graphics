@@ -2195,6 +2195,20 @@ bool Renderer::create(std::string& error) {
     m.samplerStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     m.rtvStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     m.dsvStep = m.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+    // 2.5.10: slot 0 an empty view (reads 0) of no resource, never handed out. A slot index left at its default 0
+    // pointed at the target's view: the torches' light buffer (torchLightSrv, 2.5.0) made its view there at its
+    // first light - the frame shown and read was that buffer (black), or once the target's view was made again
+    // (Scroll Lock) the light read the picture (a bright square about a skill). A forgotten index costs its own
+    // effect now, never the picture.
+    m.allocSrv();
+    {
+        D3D12_SHADER_RESOURCE_VIEW_DESC none{};
+        none.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        none.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        none.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        none.Texture2D.MipLevels = 1;
+        m.device->CreateShaderResourceView(nullptr, &none, m.cpuSrvHandle(0));
+    }
     m.targetSrv = m.allocSrv();
     m.gameSrv = m.allocSrv();
     m.depthSrv = m.allocSrv();  // part 3 (DLSS): the world's depth, its picture, the interface layer, the world
@@ -2390,7 +2404,7 @@ uint32_t Renderer::createTexture(int width, int height, int levels) {
     t.height = height;
     t.levels = std::max(1, levels);
     t.srv = m.allocSrv();
-    if (t.srv == kNoSrv) {  // index 0 is the target's: never hand out a slot that is in use
+    if (t.srv == kNoSrv) {  // never hand out a slot that is in use
         LOG_ERROR("no texture descriptor left for a %dx%d texture (%u textures alive)", width, height,
                   static_cast<unsigned>(m.textures.size()));
         return 0;

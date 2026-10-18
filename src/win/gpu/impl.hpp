@@ -515,7 +515,7 @@ struct Renderer::Impl {
     ID3D12PipelineState* torchAccumPipeline = nullptr;
     ID3D12Resource* torchLight = nullptr;
     D3D12_RESOURCE_STATES torchLightState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    UINT torchLightSrv = 0;
+    UINT torchLightSrv = kNoSrv;  // 2.5.10: was 0 - see device.cpp, slot 0
     int torchLightW = 0, torchLightH = 0;
     bool torchLightFailed = false;
     bool ensureTorchLight(int w, int h);  // the buffer at this size; false: none (logged once)
