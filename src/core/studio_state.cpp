@@ -23,6 +23,7 @@ json::Value toJson(const Session& s) {
     v.set("w", s.w);
     v.set("h", s.h);
     v.set("paused", s.paused);
+    v.set("chain", s.chain);
     return v;
 }
 
@@ -37,6 +38,7 @@ Session sessionOf(const json::Value& v) {
     text("sort", s.sort);
     text("shown", s.shown);
     text("view", s.view);
+    text("chain", s.chain);
     s.sortDown = v["sortDown"].asBool(s.sortDown);
     s.paused = v["paused"].asBool(s.paused);
     for (const json::Value& k : v["selected"].items())

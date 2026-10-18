@@ -34,6 +34,13 @@ private:
     void showBar();        // the bar as the jobs and the engine are now
     void togglePause();
     void showTab(int tab);
+    // The inspector's actions (T4): queued as jobs.
+    void makeAgain();
+    void keep();
+    void discard();
+    void takeOut();
+    void toggleOwn();
+    void jobDone(int64_t id);
     void loadSession();
     void saveSession();
 
@@ -51,6 +58,7 @@ private:
     std::unique_ptr<TexturesTab> textures_;
     std::unique_ptr<Inspector> inspector_;
     int tab_ = 0;
+    std::wstring lastError_;  // the last job that failed, on the bar until the next one
 };
 
 }  // namespace uagfx::studio

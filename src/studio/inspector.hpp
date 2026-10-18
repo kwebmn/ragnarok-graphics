@@ -23,6 +23,8 @@ struct Shown {
     std::vector<map_textures::PatchCell> patch;
     std::wstring info;
     bool own = false;  // the game's own always
+    std::shared_ptr<const Image> made;  // made again before (studio\made\), not kept yet
+    std::string key, file;
 };
 
 // 2.3 (T2, T3, T4), the inspector: the compare control with its modes, the information of the texture shown (its
@@ -36,6 +38,7 @@ public:
     void showRow(const Row& row, const std::vector<std::string>& orphans);
     void shownReady(uint64_t generation, Shown* shown);
     void setMade(std::shared_ptr<const Image> made);  // a picture made again: compared at once
+    void refresh(const std::vector<std::string>& orphans);  // the row shown, read again
     bool command(int id, int code);
     const Shown* shown() const { return shown_.get(); }
     std::shared_ptr<const Image> made() const { return made_; }

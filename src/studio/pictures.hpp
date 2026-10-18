@@ -19,6 +19,10 @@ struct Image {
     bool empty() const { return argb.empty(); }
 };
 
+// The game's names (CP949 bytes) for the window (UTF-16) and the studio's own texts (UTF-8).
+std::wstring wideOfGame(const std::string& cp949);
+std::string utf8OfGame(const std::string& cp949);
+
 pack::Choice choiceOf(const catalog::Catalog& c);  // the choice the catalog's keys were made with
 // The original of a catalog picture: its file read again and decoded (in its colour's palette), the picture of its
 // key; false when the file changed since the catalog (no picture of that key in it).

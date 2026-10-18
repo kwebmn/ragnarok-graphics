@@ -2,10 +2,14 @@
 
 #include <commctrl.h>
 
+#include <algorithm>
 #include <cstdio>
 
 #include "app/text.hpp"
 #include "app/ui.hpp"
+#include "core/ai/chain.hpp"
+#include "studio/make_dialog.hpp"
+#include "studio/making.hpp"
 #include "studio/messages.hpp"
 #include "studio/places.hpp"
 
@@ -106,6 +110,12 @@ void StudioWindow::build() {
     textures_ = std::make_unique<TexturesTab>(hwnd_, lang_, font_, dpi_, gameDir_, *catalog_, *thumbs_);
     inspector_ = std::make_unique<Inspector>(hwnd_, lang_, font_, dpi_, gameDir_, *catalog_);
     textures_->onSelect = [this](const Row& row) { inspector_->showRow(row, textures_->orphans()); };
+    addPictureWork(*jobs_, *catalog_);
+    inspector_->onMake = [this] { makeAgain(); };
+    inspector_->onKeep = [this] { keep(); };
+    inspector_->onDiscard = [this] { discard(); };
+    inspector_->onTakeOut = [this] { takeOut(); };
+    inspector_->onOwn = [this] { toggleOwn(); };
     tab_ = session_.tab == "pack" ? 1 : session_.tab == "log" ? 2 : 0;
     TabCtrl_SetCurSel(tabs_, tab_);
     showTab(tab_);
@@ -164,7 +174,7 @@ void StudioWindow::showBar() {
         if (p.total) what += " (" + std::to_string(p.done) + "/" + std::to_string(p.total) + ")";
         job = app::wtrf(lang_, settings::Text::StudioJobRunning, {p.label.empty() ? p.op : p.label, what});
     } else {
-        job = t(settings::Text::StudioJobsIdle);
+        job = lastError_.empty() ? t(settings::Text::StudioJobsIdle) : lastError_;
     }
     if (waiting) job += L"; " + app::wtrf(lang_, settings::Text::StudioJobsWaiting, {std::to_string(waiting)});
     SetWindowTextW(jobLabel_, job.c_str());
@@ -178,6 +188,108 @@ void StudioWindow::showTab(int tab) {
     session_.tab = tab == 1 ? "pack" : tab == 2 ? "log" : "textures";
     if (textures_) textures_->show(tab == 0);
     if (inspector_) inspector_->show(tab == 0);
+}
+
+void StudioWindow::makeAgain() {
+    const auto cat = catalog_->catalog();
+    if (!cat) return;
+    std::vector<Row> rows = textures_->selection();
+    if (rows.empty() && inspector_->shown()) rows.push_back(inspector_->shown()->row);
+    rows.erase(std::remove_if(rows.begin(), rows.end(),
+                              [&](const Row& r) { return r.file == Row::kNoFile || r.file >= cat->files.size(); }),
+               rows.end());
+    if (rows.empty()) return;
+    ai::Chain chain;
+    if (session_.chain.empty() || !ai::parseChain(session_.chain, chain)) chain = ai::Chain();
+    const catalog::FileEntry& first = cat->files[rows[0].file];
+    const std::wstring what = rows.size() == 1
+                                  ? wideOfGame(first.name.substr(first.name.rfind('\\') + 1))
+                                  : app::wtrf(lang_, settings::Text::StudioMakeMany, {std::to_string(rows.size())});
+    if (!askChain(hwnd_, lang_, font_, dpi_, what, first.grid, chain)) return;
+    session_.chain = ai::chainText(chain);
+    for (const Row& r : rows) {
+        const catalog::FileEntry& f = cat->files[r.file];
+        json::Value args = json::Value::object();
+        args.set("file", f.name);
+        args.set("key", f.pictures[r.picture].key);
+        args.set("chain", session_.chain);
+        jobs_->add("make", args, false,
+                   app::utf8(app::wtrf(lang_, settings::Text::StudioJobMake,
+                                       {utf8OfGame(f.name.substr(f.name.rfind('\\') + 1))})));
+    }
+    lastError_.clear();
+}
+
+void StudioWindow::keep() {
+    const Shown* s = inspector_->shown();
+    if (!s || !inspector_->made() || s->key.empty()) return;
+    json::Value args = json::Value::object();
+    args.set("file", s->file);
+    args.set("key", s->key);
+    jobs_->add("keep", args, true,
+               app::utf8(app::wtrf(lang_, settings::Text::StudioJobKeep,
+                                   {utf8OfGame(s->file.substr(s->file.rfind('\\') + 1))})));
+}
+
+void StudioWindow::discard() {
+    const Shown* s = inspector_->shown();
+    if (!s || s->key.empty()) return;
+    const std::wstring made = madeFile(s->key);
+    DeleteFileW(made.c_str());
+    DeleteFileW((made.substr(0, made.size() - 4) + L".txt").c_str());
+    inspector_->setMade(nullptr);
+}
+
+void StudioWindow::takeOut() {
+    const auto cat = catalog_->catalog();
+    std::vector<Row> rows = textures_->selection();
+    if (rows.empty() && inspector_->shown()) rows.push_back(inspector_->shown()->row);
+    json::Value names = json::Value::array(), keys = json::Value::array();
+    for (const Row& r : rows) {
+        if (r.file == Row::kNoFile) {
+            if (r.picture < textures_->orphans().size()) names.push(textures_->orphans()[r.picture]);
+        } else if (cat && r.file < cat->files.size()) {
+            const catalog::PictureOf& p = cat->files[r.file].pictures[r.picture];
+            names.push(pack::pictureName(pack::Group(p.group), p.key));
+            keys.push(p.key);
+        }
+    }
+    if (names.items().empty()) return;
+    json::Value args = json::Value::object();
+    args.set("names", names);
+    args.set("keys", keys);
+    jobs_->add("takeout", args, true,
+               app::utf8(app::wtrf(lang_, settings::Text::StudioJobTakeOut, {std::to_string(names.items().size())})));
+}
+
+void StudioWindow::toggleOwn() {
+    const Shown* s = inspector_->shown();
+    if (!s || s->key.empty()) return;
+    json::Value args = json::Value::object();
+    args.set("key", s->key);
+    args.set("on", !s->own);
+    jobs_->add("own", args, true,
+               app::utf8(app::wtrf(lang_, settings::Text::StudioJobOwn,
+                                   {utf8OfGame(s->file.substr(s->file.rfind('\\') + 1))})));
+}
+
+void StudioWindow::jobDone(int64_t id) {
+    json::Value result;
+    std::string why;
+    std::string label;
+    for (const Job& j : jobs_->snapshot())
+        if (j.id == id) label = j.op;
+    if (!jobs_->resultOf(id, result, why)) {
+        lastError_ = app::wtrf(lang_, settings::Text::StudioJobFailed, {label, why});
+        showBar();
+        return;
+    }
+    lastError_.clear();
+    const std::string op = result["op"].asString();
+    if (op != "make") textures_->catalogChanged();  // the pack changed: the states again
+    const Shown* s = inspector_->shown();
+    if (s && (op != "make" || result["key"].asString() == s->key)) inspector_->refresh(textures_->orphans());
+    showBar();
 }
 
 void StudioWindow::togglePause() {
@@ -252,6 +364,9 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kJobsChanged:
         case kEngineGone:
             showBar();
+            return 0;
+        case kJobDone:
+            jobDone(int64_t(wp));
             return 0;
         case kEngineLog:
             delete reinterpret_cast<std::string*>(lp);  // the Log tab takes it (Task 18)

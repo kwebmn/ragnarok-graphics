@@ -21,6 +21,7 @@ struct Session {
     int zoom = 1;
     std::string view = "pair";          // pair, wipe, tiled, map, difference
     int x = -1, y = -1, w = 0, h = 0;   // the window; x -1: where Windows puts it
+    std::string chain;                  // Make again's last choice (ai::chainText)
 };
 json::Value toJson(const Session& s);
 Session sessionOf(const json::Value& v);  // what is missing keeps its default

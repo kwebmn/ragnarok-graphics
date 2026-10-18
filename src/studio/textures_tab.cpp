@@ -267,6 +267,14 @@ void TexturesTab::rowsReady(uint64_t generation, RowsResult* result) {
 
 void TexturesTab::thumbsReady() { InvalidateRect(list_, nullptr, FALSE); }
 
+std::vector<Row> TexturesTab::selection() const {
+    std::vector<Row> out;
+    int i = -1;
+    while ((i = ListView_GetNextItem(list_, i, LVNI_SELECTED)) >= 0)
+        if (size_t(i) < rows_.size()) out.push_back(rows_[size_t(i)]);
+    return out;
+}
+
 std::wstring TexturesTab::cell(const Row& r, int column) const {
     const bool orphan = r.file == Row::kNoFile;
     if (!shown_ || (!orphan && r.file >= shown_->files.size()) || (orphan && r.picture >= orphans_.size())) return L"";

@@ -6,8 +6,10 @@
 
 #include "app/text.hpp"
 #include "core/ai/picture_metrics.hpp"
+#include "core/studio_link.hpp"
 #include "core/webp_image.hpp"
 #include "studio/catalog_work.hpp"
+#include "studio/making.hpp"
 #include "studio/messages.hpp"
 
 namespace uagfx::studio {
@@ -70,6 +72,17 @@ DWORD WINAPI loadMain(void* arg) {
         const catalog::PictureOf& p = f.pictures[job->row.picture];
         auto original = std::make_shared<Image>();
         if (originalOf(work, *cat, f, p, *original)) out->original = original;
+        out->key = p.key;
+        out->file = f.name;
+        std::string bytes;  // a picture made again before and not kept or discarded yet
+        auto made = std::make_shared<Image>();
+        if (std::FILE* m = _wfopen(madeFile(p.key).c_str(), L"rb")) {
+            char buf[1 << 16];
+            size_t n = 0;
+            while ((n = std::fread(buf, 1, sizeof buf, m)) > 0) bytes.append(buf, n);
+            std::fclose(m);
+            if (parseRaw(bytes, made->width, made->height, made->argb)) out->made = made;
+        }
         auto packed = std::make_shared<Image>();
         if (view && reader.isOpen() && packPictureOf(reader, p, view->index, *packed)) out->packed = packed;
         line(app::wtrf(l, settings::Text::StudioInfoFile, {app::utf8(fromCp949(f.name))}));
@@ -231,7 +244,11 @@ void Inspector::shownReady(uint64_t generation, Shown* shown) {
     const settings::Text own = shown_->own ? settings::Text::StudioOwnNot : settings::Text::StudioOwnAlways;
     SetWindowTextW(actions_[4], t(own).c_str());
     view_.setPatch(shown_->patch);
-    showCompare();
+    setMade(shown_->made);
+}
+
+void Inspector::refresh(const std::vector<std::string>& orphans) {
+    if (shown_) showRow(shown_->row, orphans);
 }
 
 void Inspector::setMade(std::shared_ptr<const Image> made) {

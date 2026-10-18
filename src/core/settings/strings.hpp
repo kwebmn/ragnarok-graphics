@@ -291,6 +291,10 @@ enum class Text : uint16_t {
     StudioInfoPicture, StudioInfoNoPicture, StudioInfoMade, StudioInfoFrom, StudioInfoMaps, StudioInfoAtlas,
     StudioInfoOnePicture, StudioInfoColour, StudioInfoMetrics, StudioInfoMaterial, StudioInfoOwn, StudioInfoOrphan,
     StudioMakeAgain, StudioKeep, StudioDiscard, StudioTakeOut, StudioOwnAlways, StudioOwnNot,
+    StudioMakeTitle, StudioMakeModel, StudioMakeScale, StudioMakeDenoise, StudioMakeOwnDenoise, StudioMakeBefore,
+    StudioMakeDeblock, StudioMakeKey, StudioMakeAfter, StudioMakeTone, StudioMakeGrain, StudioMakeSharpen,
+    StudioMakeAlpha, StudioMakeBlend, StudioMakeOriginal, StudioMakeTiles, StudioMakeGo, StudioCancel, StudioNone,
+    StudioMakeMany, StudioJobMake, StudioJobKeep, StudioJobTakeOut, StudioJobOwn, StudioJobFailed,
     Count
 };
 

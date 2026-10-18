@@ -3,10 +3,22 @@
 #include <algorithm>
 #include <exception>
 
+#include <windows.h>
+
+#include "app/text.hpp"
 #include "core/webp_image.hpp"
 #include "studio/catalog_work.hpp"
 
 namespace uagfx::studio {
+
+std::wstring wideOfGame(const std::string& s) {
+    const int n = MultiByteToWideChar(949, 0, s.data(), int(s.size()), nullptr, 0);
+    std::wstring w(size_t(n > 0 ? n : 0), L'\0');
+    if (n > 0) MultiByteToWideChar(949, 0, s.data(), int(s.size()), w.data(), n);
+    return w;
+}
+
+std::string utf8OfGame(const std::string& cp949) { return app::utf8(wideOfGame(cp949)); }
 
 pack::Choice choiceOf(const catalog::Catalog& c) {
     pack::Choice choice;

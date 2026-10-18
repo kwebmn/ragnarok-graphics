@@ -21,6 +21,7 @@ TEST(session_round_trips_and_defaults) {
     s.view = "wipe";
     s.x = 10, s.y = 20, s.w = 1600, s.h = 900;
     s.paused = true;
+    s.chain = "anime x4 tone grain=0.30";
     json::Value v;
     std::string error;
     CHECK(json::parse(json::dump(studio::toJson(s)), v, error));
@@ -28,6 +29,7 @@ TEST(session_round_trips_and_defaults) {
     CHECK(b.tab == "pack" && b.nav == s.nav && b.filter == "sand" && b.sort == "detail" && b.sortDown);
     CHECK(b.selected == s.selected && b.shown == s.shown && b.zoom == 8 && b.view == "wipe");
     CHECK(b.x == 10 && b.y == 20 && b.w == 1600 && b.h == 900 && b.paused);
+    CHECK_EQ(b.chain, std::string("anime x4 tone grain=0.30"));  // Make again's last choice
     const studio::Session d = studio::sessionOf(json::Value::object());  // an empty one: the defaults
     CHECK(d.tab == "textures" && d.zoom == 1 && d.view == "pair" && d.x == -1 && !d.paused);
     CHECK(studio::sessionOf(json::Value("broken")).tab == "textures");

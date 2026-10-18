@@ -48,6 +48,7 @@ public:
     void timer(UINT_PTR id);
     std::function<void(const Row& row)> onSelect;  // the inspector's
     const std::vector<std::string>& orphans() const { return orphans_; }
+    std::vector<Row> selection() const;  // the rows selected in the list
 
 private:
     enum Id : int { kTree = 300, kFilter, kList, kCount };
