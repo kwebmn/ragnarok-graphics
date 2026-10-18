@@ -144,7 +144,6 @@ EffectSettings effectsOff() {
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.clouds = e.haze = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
-    e.animeTrees = false;
     e.litDust = false;
     e.sharedWind = false;
     e.nightWindows = false;
@@ -158,7 +157,6 @@ EffectSettings effectsOff() {
     e.volumetricFog = false;
     e.bounceLight = false;
     e.skyLight = false;
-    e.newTrees = false;
     e.groundSeams = false;
     e.materials = false;
     e.underwater = false;
@@ -220,7 +218,6 @@ bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.clouds || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
-           e.animeTrees ||
            e.litDust ||
            e.sharedWind ||
            e.nightWindows ||
@@ -234,7 +231,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.volumetricFog ||
            e.bounceLight ||
            e.skyLight ||
-           e.newTrees ||
            e.groundSeams ||
            e.materials ||
            e.underwater ||

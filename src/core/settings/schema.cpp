@@ -351,8 +351,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMaterialsStrengthHint, " %", nullptr, &E::materialsStrength},
         {"effects", "ground_seams", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroundSeams,
          Text::FxGroundSeamsHint, "", &E::groundSeams},
-        {"effects", "new_trees", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNewTrees,
-         Text::FxNewTreesHint, "", &E::newTrees},
         {"effects", "sky_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkyLight,
          Text::FxSkyLightHint, "", &E::skyLight},
         {"effects", "bounce_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBounceLight,
@@ -385,8 +383,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSharedWindHint, "", &E::sharedWind},
         {"effects", "lit_dust", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLitDust,
          Text::FxLitDustHint, "", &E::litDust},
-        {"effects", "anime_trees", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAnimeTrees,
-         Text::FxAnimeTreesHint, "", &E::animeTrees},
         // 2.4: the parts of the effects, each a box under its effect (the water's foam, glints, ...)
         {"effects", "water_foam", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWaterFoam,
          Text::FxWaterFoamHint, "", &E::waterFoam},

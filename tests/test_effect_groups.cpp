@@ -40,8 +40,8 @@ TEST(effect_groups_sets_grow_from_weak_to_strong) {
         CHECK(!(medium.*x.on) || (strong.*x.on));
         CHECK((strong.*x.on) == (x.level > 0));
     }
-    CHECK(weak.torch && !weak.grass && medium.grass && !medium.materials && strong.materials && strong.newTrees);
-    CHECK(!strong.animeTrees && !strong.filmGrain);  // the player's own only
+    CHECK(weak.torch && !weak.grass && medium.grass && !medium.materials && strong.materials);
+    CHECK(!strong.filmGrain);  // the player's own only
     CHECK(weak.tier == 1 && strong.tier == 2);
 }
 
@@ -63,7 +63,7 @@ TEST(effect_groups_custom_keeps_the_switches_a_group_turns_its_off) {
     e.groups[Nature] = false;
     CHECK(!effective(e, 3).grass && effective(e, 3).torch);
     e.preset = EffectPreset::Strong;
-    CHECK(!effective(e, 3).newTrees && effective(e, 3).water);
+    CHECK(!effective(e, 3).grass && effective(e, 3).water);
 }
 
 TEST(effect_groups_strength_scales_its_effects) {

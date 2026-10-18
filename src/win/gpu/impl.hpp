@@ -63,11 +63,10 @@ void releaseCom(T*& p) {
 
 constexpr UINT kSlots = 2;              // submissions in flight
 // 0.39.2: the effects timed one by one, for the log; 0.76: the sky, the light in the air and the floors' reflections
-// their own. 2.2.2: the sun's shadows' gone with them (2.1.4).
+// their own. 2.2.2: the sun's shadows' gone with them (2.1.4); 2.4.1: the new trees' too.
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
     kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
-    kTimeForest,  // 2.1: the new trees
     kEffectTimes
 };
 // 2.2.2: each timed pass's names, in the enum's order (core/effect_costs.hpp kTimedPasses: the key Costs know, the
@@ -153,8 +152,6 @@ struct Texture {
     float fireColour[3] = {0, 0, 0};
     float light = 0.0f;  // 0.36: how much it lights in its own colour (core/effect_light.hpp: lightOf)
     float lightColour[3] = {0, 0, 0};
-    float average[3] = {0, 0, 0};  // 2.0: its opaque pixels' colour (the new trees' leaves and bark)
-    bool averaged = false;
     // 0.32: a sprite cache's cells and what each holds now (sprite_exe::Source) - the characters cast shadows.
     std::vector<SpriteCell> spriteCells;
     // 1.8: its material (materials.cpp) - relief, height, gloss - made from the picture matFor (the game's or the AI's)
@@ -907,7 +904,6 @@ struct Renderer::Impl {
     // A new picture (cleared, presented, another target): the world's effects are due again.
     void newPicture() {
         waterCopied = false;  // 0.19: its water copies what is under it anew
-        if (forestOn()) updateForest();  // 2.0: the map's forest built once its file and heights are known
         aoDone = groundDrawn = gradeDone = dofDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
         softCopied = 0;     // 0.67
@@ -943,8 +939,6 @@ struct Renderer::Impl {
         groundGroups.clear();
         groundTextures.clear();
         seamsDone = false;
-        forestDone = false;  // 2.0
-        forestHidden = 0;
         skyLightDone = false;  // 1.11
         if (mirrorCollecting()) {  // 1.16: the last frame's casters for this one's mirror
             mirrorVerts.swap(sunVerts);
@@ -1060,65 +1054,6 @@ struct Renderer::Impl {
     bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty(); }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     bool applySeams();  // once a frame, the ground drawn; false: lost
-    // 2.0, the new trees from the map (forest.cpp): each tree of the map file grown by the driver (core/forest.hpp),
-    // drawn in a few instanced calls; the game's tree models left out
-    struct ForestPlaced {
-        float pos[3] = {0, 0, 0};  // the world
-        float turn = 0;            // radians
-        float scale[3] = {1, 1, 1};
-        float radius = 0, height = 0;  // across its crown's half, up (world units, scaled)
-        uint32_t model = 0, variant = 0;
-        float seed = 0;
-    };
-    struct ForestCall {
-        uint32_t indexCount = 0, firstIndex = 0, baseVertex = 0, firstInstance = 0, instances = 0;
-        uint32_t farCount = 0;  // 2.1: the indices a far tree is drawn with (its trunk and part of its leaves)
-    };
-    // 2.1: a frame's call - the trees kept (in view, or in the sun's box), near or far, their instances uploaded
-    struct ForestDraw {
-        uint32_t indexCount = 0, firstIndex = 0, baseVertex = 0, firstInstance = 0, instances = 0, model = 0;
-    };
-    std::vector<std::array<float, 16>> forestData;  // 2.1: each tree's instance (forest_vs), as the buffer holds them
-    // the trees `keep` says (-1 left out, 0 near, 1 far): their instances uploaded for this frame (at, bytes) and a
-    // call for each model's variant and nearness; false when none is kept or no memory
-    bool forestPick(int (*keep)(const ForestPlaced&, const void*), const void* with, D3D12_GPU_VIRTUAL_ADDRESS& at,
-                    UINT& bytes, std::vector<ForestDraw>& draws);
-    size_t forestDrawnTrees = 0, forestFarTrees = 0;  // 2.1: the last frame's, for the log
-    ID3DBlob* forestVs = nullptr;
-    ID3DBlob* forestPs = nullptr;
-    ID3D12PipelineState* forestPipelines[4] = {};
-    void forestWind(Constants& c);  // its time and wind into the constants
-    ID3D12Resource* forestVb = nullptr;
-    ID3D12Resource* forestIb = nullptr;
-    ID3D12Resource* forestInstances = nullptr;
-    uint32_t forestVbBytes = 0, forestIbBytes = 0, forestInstanceBytes = 0;
-    std::vector<ForestPlaced> forestPlaced;
-    std::vector<ForestCall> forestCalls;
-    std::unordered_map<int64_t, std::vector<uint32_t>> forestGrid;  // cells of 32 units: the trees in each
-    std::vector<std::array<float, 3>> forestLeaf, forestBark;      // each model's, from the game's textures
-    std::vector<uint8_t> forestColoured;                           // each model's: 1 leaves seen, 2 bark seen
-    std::vector<uint32_t> forestTexture;  // 2.0.4: each model's leaves' picture (the game's texture), 0 not seen
-    // 2.1.1: the textures the game's tree draws had - after the first 10 s of a forest only draws of those (and of
-    // leaves) are read back into the world, not every model's
-    std::unordered_set<uint32_t> forestTreeTextures;
-    ULONGLONG forestLearnUntil = 0;
-    bool forestColoursDirty = false;
-    uint32_t forestSerial = ~0u;  // the map read the forest was built from
-    bool forestBuilt = false, forestDone = false, forestLogged = false, forestFailed = false;
-    bool forestMismatchLogged = false;
-    bool forestAnime = false;  // 2.0.3: the style the forest was grown in
-    int forestYSign = 0;  // the map file's heights: as they are (1) or turned (-1); 0 not known yet
-    std::vector<map::Point> forestSeen;  // crowns the game drew, until the heights are known
-    size_t forestHidden = 0;             // the game's draws left out this frame
-    bool forestOn() const {
-        return effects.newTrees && remaster() && viewToWorldValid && forestVs && forestPs && !forestFailed;
-    }
-    bool forestReady() const { return forestOn() && forestBuilt; }
-    bool forestDue() const { return forestReady() && !forestDone && !forestCalls.empty(); }
-    bool hideForTree(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);  // true: a map tree's, left out
-    void updateForest();  // once a frame: the map's forest built when its file and its heights are known
-    ID3D12PipelineState* forestPipeline(UINT samples);
-    bool applyForest();  // once a frame, after the grass; false: lost
     // 1.11: light from the sky and from around (ao.cpp applySkyLight, sky_light_ps)
     ID3DBlob* skyLightPs = nullptr;
     ID3D12PipelineState* skyLightPipelines[4] = {};

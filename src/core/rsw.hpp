@@ -22,8 +22,8 @@ struct Effect {
     float param[4] = {0, 0, 0, 0};
 };
 
-// 2.0: a model the map places (the new trees: core/forest.hpp) - its file under data\model\ (cp949 bytes, as the
-// map names it), its place, its turn (degrees about x, y, z) and its scale.
+// 2.0: a model the map places (its textures for the pack: core/map_textures.hpp, uaRO Studio's catalog) - its file
+// under data\model\ (cp949 bytes, as the map names it), its place, its turn (degrees about x, y, z) and its scale.
 struct Model {
     std::string file;
     float pos[3] = {0, 0, 0};

@@ -15,7 +15,7 @@ TEST(gpu_timing_goes_over_the_bridge_whole) {
     t.upscaleMs = 2.5;
     t.upscaler = "DLSS Quality";
     t.serial = 41;
-    t.effects = {{"grass", 2.375}, {"new_trees", 0.125}};
+    t.effects = {{"grass", 2.375}, {"sky", 0.125}};
     t.safeShaders = 3;  // 2.2.2: compiled without their newest features in that process
     std::vector<uint8_t> bytes;
     bridge::WireWriter w(bytes);

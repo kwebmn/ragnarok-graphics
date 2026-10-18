@@ -384,7 +384,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.materialsStrength);
     w.i32(e.tier);
     w.u8(e.groundSeams ? 1 : 0);  // 1.9
-    w.u8(e.newTrees ? 1 : 0);  // 1.10
     w.u8(e.skyLight ? 1 : 0);  // 1.11
     w.u8(e.bounceLight ? 1 : 0);
     w.u8(e.volumetricFog ? 1 : 0);  // 1.13
@@ -401,7 +400,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.nightWindows ? 1 : 0);  // 1.21
     w.u8(e.sharedWind ? 1 : 0);  // 1.22
     w.u8(e.litDust ? 1 : 0);  // 1.23
-    w.u8(e.animeTrees ? 1 : 0);  // 2.0.3
     // 2.4: the parts of the effects (1.9.8's pebbles no longer sent); the host reads them in this order
     w.u8(e.waterFoam ? 1 : 0);
     w.u8(e.waterGlints ? 1 : 0);

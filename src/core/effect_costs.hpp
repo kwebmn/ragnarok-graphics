@@ -23,7 +23,7 @@ inline constexpr TimedPass kTimedPasses[] = {
     {"lights", "lights and torches"}, {"haze", "haze"}, {"heat", "heat haze"}, {"grade", "colour"},
     {"dof", "depth of field"}, {"weather", "weather"}, {"glow", "glow"}, {"water", "water's copies"},
     {"sky", "sky"}, {"shafts", "light in the air"}, {"floor", "floor reflections"}, {"bloom", "bloom"},
-    {"grass", "grass"}, {"new_trees", "new trees"}};
+    {"grass", "grass"}};
 
 // "name ms" a line; parse() skips what does not read.
 std::string format(const Costs& c);

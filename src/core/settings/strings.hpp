@@ -233,8 +233,6 @@ enum class Text : uint16_t {
     // 1.9
     FxGroundSeams, FxGroundSeamsHint,
     ConsoleTitle, ConsoleKeys,
-    // 1.10
-    FxNewTrees, FxNewTreesHint,
     // 1.11
     FxSkyLight, FxSkyLightHint, FxBounceLight, FxBounceLightHint,
     // 1.13
@@ -257,8 +255,6 @@ enum class Text : uint16_t {
     FxSharedWind, FxSharedWindHint,
     // 1.23
     FxLitDust, FxLitDustHint,
-    // 2.0.3
-    FxAnimeTrees, FxAnimeTreesHint,
     // 2.2: the Effects page's sets and groups
     FxPreset, FxPresetHint, FxPresetAuto, FxPresetOff, FxPresetWeak, FxPresetMedium, FxPresetStrong, FxPresetCustom,
     FxSetIntro, FxGroupLight, FxGroupLightHint, FxGroupShadows, FxGroupShadowsHint, FxGroupSurfaces,

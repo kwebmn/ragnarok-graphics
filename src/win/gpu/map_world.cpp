@@ -7,7 +7,6 @@
 #include <cstring>
 
 #include "core/grf/grf.hpp"
-#include "core/rsm.hpp"
 #include "core/zip.hpp"
 #include "win/log.hpp"
 
@@ -79,7 +78,6 @@ struct MapWorld::Shared {
     bool asked = false;
     std::string doneName;  // a finished read
     rsw::World done;
-    std::vector<MapWorld::ForestModel> doneForest;  // 2.0: the tree models read with it
     bool doneOk = false;
     bool doneReady = false;
 };
@@ -141,25 +139,11 @@ void MapWorld::poll() {
     const bool fresh = shared_->doneReady && shared_->doneName == shown_;
     if (shared_->doneReady && shared_->doneName == shown_) {
         world_ = std::move(shared_->done);
-        forestModels_ = std::move(shared_->doneForest);
         ready_ = shared_->doneOk;
-        ++serial_;
     }
     shared_->doneReady = shared_->doneReady && !fresh;
     LeaveCriticalSection(&shared_->lock);
     if (!fresh || !ready_) return;
-    forestTrees_.clear();  // 2.0: the trees, each of the models read
-    for (const rsw::Model& m : world_.models)
-        for (size_t k = 0; k < forestModels_.size(); ++k)
-            if (forestModels_[k].file == m.file) {
-                ForestTree t;
-                t.model = uint32_t(k);
-                std::copy(m.pos, m.pos + 3, t.pos);
-                t.turn = m.rot[1];
-                std::copy(m.scale, m.scale + 3, t.scale);
-                forestTrees_.push_back(t);
-                break;
-            }
     placed_.clear();
     std::vector<map::Point> torches;  // the game's and those it does not show (red, green, purple)
     for (const rsw::Effect& e : world_.effects) {
@@ -279,41 +263,9 @@ void MapWorld::loop() {
             LOG_INFO("map objects: %s from %s - %u lamps, %u effects (%u torches, %u the game does not show)",
                      name.c_str(), from.c_str(), unsigned(w.lights.size()), unsigned(w.effects.size()), torches, hidden);
         }
-        // 2.0, the new trees: the map's tree models read and measured (each file once)
-        std::vector<ForestModel> forest;
-        if (ok) {
-            std::vector<std::string> files;
-            for (const rsw::Model& m : w.models)
-                if (forest::kindOf(m.file) != forest::Kind::None &&
-                    std::find(files.begin(), files.end(), m.file) == files.end() && files.size() < 64)
-                    files.push_back(m.file);
-            for (const std::string& file : files) {
-                const std::string model = "data\\model\\" + file;
-                std::vector<uint8_t> mb;
-                std::string merr;
-                bool found = readFile(dir + "\\" + model, mb);
-                for (size_t i = 0; i < archives.size() && !found; ++i) {
-                    Archive& a = *archives[i];
-                    if (!open(a)) continue;
-                    const std::string zipped = zip::normalName(model);
-                    found = a.grf ? a.g.find(model) && a.g.read(model, mb, merr)
-                                  : a.zip.has(zipped) && a.zip.read(zipped, mb, merr);
-                }
-                rsm::Model rm;
-                ForestModel fm;
-                fm.file = file;
-                if (found && rsm::parse(mb.data(), mb.size(), rm, merr) &&
-                    forest::shapeOf(forest::kindOf(file), rm, fm.shape))
-                    forest.push_back(fm);
-            }
-            if (!files.empty())
-                LOG_INFO("new trees: %s has %u tree models, %u of them read", name.c_str(), unsigned(files.size()),
-                         unsigned(forest.size()));
-        }
         EnterCriticalSection(&shared_->lock);
         shared_->doneName = name;
         shared_->done = std::move(w);
-        shared_->doneForest = std::move(forest);
         shared_->doneOk = ok;
         shared_->doneReady = true;
         LeaveCriticalSection(&shared_->lock);

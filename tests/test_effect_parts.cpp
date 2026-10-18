@@ -73,3 +73,14 @@ TEST(effect_settings_compare_every_field) {
     }
     CHECK(fields >= 100);
 }
+
+TEST(effect_new_trees_are_gone) {
+    // 2.4.1: the new trees (2.0) and their anime style are gone - the player keeps the game's own trees (their
+    // volume, light, tints and seasons stay); the old lines in the settings are read and left alone
+    for (const char* k : {"effects.new_trees", "effects.anime_trees"}) {
+        CHECK(findSetting(k) == nullptr);
+        CHECK(effect_groups::memberOf(k) == nullptr);
+        CHECK(boxOf(k).empty());
+    }
+    CHECK(parseConfig("[effects]\nnew_trees = 1\nanime_trees = 1\n").effects == parseConfig("").effects);
+}

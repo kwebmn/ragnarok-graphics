@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "core/map_axes.hpp"
-#include "core/forest.hpp"
 #include "core/rsw.hpp"
 
 namespace uagfx::gpu {
@@ -29,22 +28,6 @@ public:
     // 0.25.2: its lights but those on a torch - the makers put one on many torches to bake its glow into the ground,
     // and the torch lights that place itself.
     const std::vector<rsw::Light>& lamps() const { return lamps_; }
-    // 2.0, the new trees: the map's tree models (their files and shapes, core/forest.hpp) and its trees - each a
-    // model of those, its place as the file has it (axes() turns it into the game's world), its turn and scale.
-    // serial() changes with each map read.
-    struct ForestModel {
-        std::string file;
-        forest::Shape shape;
-    };
-    struct ForestTree {
-        uint32_t model = 0;
-        float pos[3] = {0, 0, 0};
-        float turn = 0;  // about up, degrees
-        float scale[3] = {1, 1, 1};
-    };
-    const std::vector<ForestModel>& forestModels() const { return forestModels_; }
-    const std::vector<ForestTree>& forestTrees() const { return forestTrees_; }
-    uint32_t serial() const { return serial_; }
     map::Axes axes() const { return axes_; }
     // The base of a torch's flame seen this frame, in the game's world: the axes are found from them.
     void noteTorch(const map::Point& world);
@@ -64,9 +47,6 @@ private:
     map::Axes axes_;
     std::vector<map::Point> placed_;  // the file's torches (effect 47)
     std::vector<rsw::Light> lamps_;
-    std::vector<ForestModel> forestModels_;  // 2.0
-    std::vector<ForestTree> forestTrees_;
-    uint32_t serial_ = 0;
     std::vector<map::Point> seen_;    // where torches were seen, until the axes are known
 };
 

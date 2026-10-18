@@ -321,9 +321,6 @@ struct EffectSettings {
     // between them wanders over the world instead of running along the cells (core/seams.hpp). Off by default.
     bool groundSeams = false;
 
-    // 1.10, 2.0: the remaster's new trees (core/forest.hpp, win/gpu/forest.cpp): each tree of the map file grown by
-    // the driver, the game's tree models left out. Remaster mode, Direct3D 12. Off by default.
-    bool newTrees = false;
     // 1.11: the remaster's light (sky_light_ps): sky_light - what faces up takes the sky's colour, what faces down the
     // ground's; bounce_light - the colours around light a surface a little in their colour. Off by default.
     bool skyLight = false;
@@ -362,10 +359,7 @@ struct EffectSettings {
     // 1.23: dust in the light (weather_ps): indoors the motes show where light falls - the beams, the torches - and
     // hardly in the dark. Needs the motes. Off by default.
     bool litDust = false;
-    // 2.0.3: the new trees drawn as in an anime (core/forest.hpp grow, shaders.cpp forest_ps part 5): crowns of large
-    // soft puffs in cel-shaded steps, warm light, cool shade, a bright rim. 2.0.4: off by default - the player found
-    // the realistic trees of leaves fit the game's pictures better.
-    bool animeTrees = false;
+    // 2.4.1: 1.10's and 2.0's new trees (new_trees, anime_trees) are gone - the player keeps the game's own trees.
     // 2.4: the parts of what an effect draws, each a box of its own under it (the Effects page, the game's console) -
     // on, as each was drawn before; its effect off, it is off too. 1.9.8's pebbles (ground_clutter) are gone: specks
     // a few pixels across over every paved square, as were the seasons' leaves on the ground.

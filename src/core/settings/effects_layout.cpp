@@ -90,7 +90,6 @@ const EffectLayout kEffects[] = {
     {"effects.materials", {}, {"effects.materials_strength"}, {}, 3},  // 1.8
     {"effects.ground_seams", {}, {}, {}, 3},  // 1.9
 
-    {"effects.new_trees", {}, {}, {}, 3},  // 1.10
     {"effects.sky_light", {}, {}, {}, 3},  // 1.11
     {"effects.bounce_light", {}, {}, {}, 3},  // 1.11
     {"effects.volumetric_fog", {}, {"effects.volumetric_fog_density"}, {}, 3},  // 1.13
@@ -104,7 +103,6 @@ const EffectLayout kEffects[] = {
     {"effects.night_windows", {}, {}, {}, 2},  // 1.21
     {"effects.shared_wind", {}, {}, {}, 2},  // 1.22
     {"effects.lit_dust", {}, {}, {}, 2},  // 1.23
-    {"effects.anime_trees", {}, {}, {}, 3},  // 2.0.3
 };
 
 }  // namespace
