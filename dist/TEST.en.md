@@ -1,3 +1,17 @@
+# uaRO Graphics 2.5.18 — what to check
+
+- **Skills' effects from the texture pack.** The big effects of skills (the .str animations: lightning, wings, rocks,
+  fire, the "Lv uP!!" text) load their textures with black as transparent, and the driver did not find their pictures
+  in the pack. Now it does; the pack need not be made again.
+- **Full-colour textures.** The game makes every texture 16-bit: glows, fire and the skills' particles had steps, the
+  effects' coloured frames only 16 shades of transparency. Now the textures are drawn in their pictures' own colours
+  (Quality → "Full-colour textures", on). The texture pack finds its pictures as before.
+- **The pack builder** also makes the effects' TGA textures as the .str animations take them. For them, press "Make
+  the pack" on the Texture pack page: only the new pictures are added.
+- Please check: skills with big effects and a level up - their pictures sharp, from the pack; glows and fire without
+  steps. To compare: turn "Full-colour textures" off and change the map (it applies to the textures loaded after the
+  change). Send a report.
+
 # uaRO Graphics 2.5.17 — testing
 
 - **Floor reflections on smooth floors only.** The floor used to reflect on every map under a roof, and in caves (Ant
