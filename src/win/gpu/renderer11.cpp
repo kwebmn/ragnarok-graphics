@@ -20,6 +20,7 @@
 #include "core/living.hpp"
 #include "core/outdoors.hpp"
 #include "core/effect_exe.hpp"
+#include "core/effect_light.hpp"
 #include "core/foliage.hpp"
 #include "core/game_camera.hpp"
 #include "core/png_write.hpp"
@@ -961,8 +962,14 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     ctx_->UpdateSubresource(t.texture, UINT(level), &box, rec.pixels().data() + u.pixels, UINT(u.rect.width()) * 4,
                             0);
     stats_.uploaded += uint64_t(u.rect.width()) * uint64_t(u.rect.height()) * 4;  // 0.89
-    if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height)
+    if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
         it->second.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
+        // 2.5.1: a whole picture - how much it looks like fire, or lights in its own colour (as device.cpp upload)
+        it->second.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height,
+                                               it->second.fireColour);
+        it->second.light = effect_light::lightOf(rec.pixels().data() + u.pixels, t.width, t.height,
+                                                 it->second.lightColour);
+    }
     if (u.slotCount) spriteCellsWritten(it->second.cells, rec.slots().data() + u.firstSlot, u.slotCount);  // 0.60.1
     if (ai_)  // 0.47: its key, or the sprite cache's new frames with their sources
         ai_->noteUpload(u.texture, t.width, t.height, u, rec.pixels().data() + u.pixels,
@@ -1016,6 +1023,18 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
     const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura);  // 1.25
     if (!s.ui && d.vertexCount == 4 && !objectTextures_.empty() && torchesWanted()) noteTorch(rec, d);
+    // 2.5.1: the fire of skills (as draw.cpp): an added picture that looks like fire, or one that lights in its own
+    // colour - not the maps' objects (their own)
+    if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && fireWanted() && d.texture[0]) {
+        const auto ft = textures_.find(d.texture[0]);
+        const bool mine = d.effect == uint8_t(effect_exe::Kind::None) || d.effect == uint8_t(effect_exe::Kind::Skill);
+        if (ft != textures_.end() && ft->second.fire > 0.15f && mine) {
+            noteFire(rec, d, ft->second.fire, ft->second.fireColour);
+        } else if (ft != textures_.end() && effects_.skillColours && ft->second.light > 0.2f && mine &&
+                   (objectTextures_.empty() || objectTextures_.of(d.texture[0]) == objects::Kind::None)) {
+            noteFire(rec, d, ft->second.light, ft->second.lightColour);
+        }
+    }
     // 1.0.1: a firefly the game draws - drawn anew at the interface instead
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Firefly) && firefliesWanted() && takeFirefly(rec, d)) return;
     if (!s.ui) worldDrawn_ = true;
@@ -1611,6 +1630,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
     aoDone_ = cloudsDone_ = false;  // 2.5.1
+    fireSparks_.clear();
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
     hazeDone_ = skyDone_ = weatherDone_ = false;  // 2.5
     waterCopied_ = waterReady_ = false;  // 0.99

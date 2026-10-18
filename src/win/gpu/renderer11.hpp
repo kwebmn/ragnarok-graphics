@@ -107,6 +107,9 @@ private:
         int width = 0, height = 0, levels = 1;
         std::vector<SpriteCell> cells;  // 0.60.1: a sprite cache's cells and what each holds (the shadows)
         bool leafy = false;             // 0.64: leaves (core/foliage.hpp): swayed in the world
+        // 2.5.1: how much its picture looks like fire and its colour, or lights in its own colour (core/effect_light)
+        float fire = 0.0f, fireColour[3] = {0, 0, 0};
+        float light = 0.0f, lightColour[3] = {0, 0, 0};
         // 1.14: its material (materials11.cpp) and the picture it was made from (the game's or the AI's)
         ID3D11Texture2D* mat = nullptr;
         ID3D11ShaderResourceView* matSrv = nullptr;
@@ -198,6 +201,18 @@ private:
     void noteTorch(const FrameRecord& rec, const DrawCmd& d);
     void applyTorchLight();
     bool torchesWanted() const { return effects_.torch && effects_.torchLight > 0 && torchLightPs_; }
+    // 2.5.1: the fire of skills lights around it (torches.cpp noteFire): a draw that adds a fire-coloured picture,
+    // or (skill_colours) one that lights in its own colour - its middle, depth, strength and colour, gathered by
+    // place in the torches' light pass
+    bool fireWanted() const { return effects_.fireLight && effects_.fireLightStrength > 0 && torchLightPs_; }
+    struct FireSpark11 {
+        float view[3];
+        float strength;
+        float colour[3];
+        float gameX, gameY;
+    };
+    std::vector<FireSpark11> fireSparks_;  // this frame's
+    void noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]);
     bool compileShaders(const std::string& cacheFile, Renderer::StartSink sink, void* sinkContext, std::string& error);
     bool makeTarget(Target& t, int width, int height) {
         return makeTarget(t, width, height, DXGI_FORMAT_B8G8R8A8_UNORM);

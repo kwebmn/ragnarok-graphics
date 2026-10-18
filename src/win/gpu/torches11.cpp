@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <unordered_map>
 
 #include "core/d3d7.hpp"
 #include "core/fireflies.hpp"
@@ -25,7 +26,57 @@ constexpr float kReach = 45.0f;
 constexpr float kLightColor[3] = {1.0f, 0.58f, 0.28f};
 constexpr float kMiddle = 0.38f;
 
+// 0.25 (torches.cpp): the map file's torches the game does not show (it knows effect ids up to 629): their colours.
+bool hiddenTorch(int32_t id, float tint[3]) {
+    static const float kRed[3] = {1.0f, 0.32f, 0.26f}, kGreen[3] = {0.42f, 1.0f, 0.38f};
+    static const float kPurple[3] = {0.78f, 0.4f, 1.0f};
+    const float* c = id == 690 ? kRed : id == 691 ? kGreen : id == 696 ? kPurple : nullptr;
+    if (!c) return false;
+    std::copy(c, c + 3, tint);
+    return true;
+}
+
 }  // namespace
+
+// 2.5.1: as torches.cpp noteFire - the draw's middle and depth from its vertices, how much it lights: the picture's
+// fire (or its own light), the game's fade and colour of it, its size on the screen.
+void Renderer11::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]) {
+    if (fireSparks_.size() >= 512) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    const uint32_t n = std::min<uint32_t>(d.vertexCount, 256);
+    if (n == 0 || d.vertexOffset + size_t(n) * stride > v.size()) return;
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, rhw = 0.0f, shown = 0.0f;
+    for (uint32_t i = 0; i < n; ++i) {
+        const uint8_t* p = v.data() + d.vertexOffset + size_t(i) * stride;
+        float xyzw[4];
+        uint32_t diffuse = 0;
+        std::memcpy(xyzw, p, sizeof xyzw);
+        std::memcpy(&diffuse, p + 16, sizeof diffuse);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3];
+        const uint32_t top = std::max({diffuse >> 16 & 255u, diffuse >> 8 & 255u, diffuse & 255u});
+        shown += float(diffuse >> 24) / 255.0f * float(top) / 255.0f;
+    }
+    rhw /= float(n);
+    shown /= float(n);
+    if (rhw <= 0.0f || shown <= 0.01f) return;
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+    FireSpark11 s;
+    s.gameX = (x0 + x1) * 0.5f;
+    s.gameY = (y0 + y1) * 0.5f;
+    const float vz = 1.0f / rhw;
+    s.view[0] = (s.gameX - p.cx) * vz / p.f0;
+    s.view[1] = (s.gameY - p.cy) * vz / p.f1;
+    s.view[2] = vz;
+    const float size = std::sqrt(std::max(0.0f, (x1 - x0) * (y1 - y0)));  // game pixels
+    s.strength = amount * shown * std::clamp(size / 120.0f, 0.15f, 1.5f);
+    std::copy(colour, colour + 3, s.colour);
+    fireSparks_.push_back(s);
+}
 
 // 1.0.1: one of the game's fireflies (effect 45, known by the driver): its middle, size, fade and tint.
 bool Renderer11::takeFirefly(const FrameRecord& rec, const DrawCmd& d) {
@@ -161,9 +212,15 @@ void Renderer11::applyTorchLight() {
     lightDone_ = true;
     // 2.5.1: the map's lamps light too (torches.cpp), with the camera and the map file's axes known
     const bool torches = torchesWanted() && !flames_.empty();
-    const bool lampsOn = effects_.lamps && effects_.lampsLight > 0 && torchLightPs_ && cameraValid_ &&
-                         mapWorld_.axes().known() && !mapWorld_.lamps().empty();
-    if ((!torches && !lampsOn) || !depth_ || !target_.texture) return;
+    const bool placed = cameraValid_ && mapWorld_.axes().known();  // the map file's places known in the world
+    const bool lampsOn = effects_.lamps && effects_.lampsLight > 0 && torchLightPs_ && placed &&
+                         !mapWorld_.lamps().empty();
+    const bool hidden = torchesWanted() && placed && mapWorld_.world();  // the torches the game does not show
+    const bool fire = fireWanted() && !fireSparks_.empty();  // 2.5.1: the skills' fire
+    if ((!torches && !lampsOn && !hidden && !fire) || !depth_ || !target_.texture) {
+        fireSparks_.clear();
+        return;
+    }
     if (!lightData_) {
         D3D11_TEXTURE2D_DESC d{};
         d.Width = kMaxLights * 2;
@@ -234,6 +291,53 @@ void Renderer11::applyTorchLight() {
             const float view[3] = {vx, vy, vz};
             addLight(view, kReach, kLightColor, strength * calm * f.alpha);
         }
+    if (hidden) {  // 2.5.1: the map file's torches the game does not show - their light (the flame stays unseen)
+        const map::Axes axes = mapWorld_.axes();
+        const float* m = viewToWorld_;
+        for (const rsw::Effect& e : mapWorld_.world()->effects) {
+            float tint[3];
+            if (count == kMaxLights || !hiddenTorch(e.id, tint)) continue;
+            // the flame's middle: its base two units down the file's place, the light kMiddle of its 13 units up
+            const map::Point wp = map::toWorld(axes, map::Point{e.pos[0], e.pos[1] - 2.0f - 13.0f * kMiddle, e.pos[2]});
+            const float dx = wp.x - m[9], dy = wp.y - m[10], dz = wp.z - m[11];
+            const float v[3] = {dx * m[0] + dy * m[1] + dz * m[2], dx * m[3] + dy * m[4] + dz * m[5],
+                                dx * m[6] + dy * m[7] + dz * m[8]};
+            if (v[2] <= proj.nearZ) continue;
+            const float gx = v[0] / v[2] * proj.f0 + proj.cx, gy = v[1] / v[2] * proj.f1 + proj.cy;
+            const float slack = float(std::max(gameWidth_, gameHeight_)) * 0.25f;
+            if (gx < -slack || gy < -slack || gx > float(gameWidth_) + slack || gy > float(gameHeight_) + slack)
+                continue;
+            const float calm = torch::flicker(time * 0.5, torch::seedAt(wp.x, wp.z) ^ 0x5BD1E995u, amount * 0.35f);
+            addLight(v, kReach, tint, strength * calm);
+        }
+    }
+    if (fire) {  // 2.5.1: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16
+        struct Cell {
+            float w = 0, view[3] = {0, 0, 0}, colour[3] = {0, 0, 0};
+        };
+        std::unordered_map<int, Cell> cells;
+        for (const FireSpark11& f : fireSparks_) {
+            Cell& c = cells[int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f))];
+            c.w += f.strength;
+            for (int i = 0; i < 3; ++i) {
+                c.view[i] += f.view[i] * f.strength;
+                c.colour[i] += f.colour[i] * f.strength;
+            }
+        }
+        std::vector<Cell> best;
+        for (const auto& kv : cells)
+            if (kv.second.w > 0.02f) best.push_back(kv.second);
+        std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
+        const float fireStrength = 0.18f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f;
+        for (size_t i = 0; i < best.size() && i < 16 && count < kMaxLights; ++i) {
+            const Cell& c = best[i];
+            const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
+            const float view[3] = {c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w};
+            const float colour[3] = {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top};
+            addLight(view, 25.0f + 15.0f * std::min(c.w, 1.0f), colour, fireStrength * std::min(c.w, 1.0f));
+        }
+    }
+    fireSparks_.clear();
     if (lampsOn) {  // 2.5.1: the lamps the map's makers placed, the nearest to the camera first (as torches.cpp)
         const map::Axes axes = mapWorld_.axes();
         const float lampStrength = 0.8f * float(std::clamp(effects_.lampsLight, 0, 200)) / 100.0f;
@@ -312,8 +416,8 @@ void Renderer11::applyTorchLight() {
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
     if (!lightLogged_)
-        LOG_INFO("torches: %d lit (Direct3D 11: their light%s; the flames the game's)", count,
-                 lampsOn ? " and the map's lamps" : "");
+        LOG_INFO("torches: %d lit (Direct3D 11: their light%s%s; the flames the game's)", count,
+                 lampsOn ? " and the map's lamps" : "", fire ? ", the skills' fire" : "");
     lightLogged_ = true;
 }
 
