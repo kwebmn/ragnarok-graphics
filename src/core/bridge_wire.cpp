@@ -322,4 +322,20 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
     return true;
 }
 
+void writeStudioKeys(WireWriter& w, const StudioKeys& k) {
+    w.u8(k.flags);
+    w.i32(k.x);
+    w.i32(k.y);
+}
+
+bool readStudioKeys(WireReader& rd, StudioKeys& k) {
+    StudioKeys got;
+    got.flags = rd.u8();
+    got.x = rd.i32();
+    got.y = rd.i32();
+    if (!rd.ok()) return false;
+    k = got;
+    return true;
+}
+
 }  // namespace uagfx::bridge

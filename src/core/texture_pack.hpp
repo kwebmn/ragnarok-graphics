@@ -50,14 +50,36 @@ struct IndexEntry {
         return kind == o.kind && maps == o.maps && model == o.model && group == o.group;
     }
 };
+// 2.3, uaRO Studio's lines (an older reader takes each for a picture of no kind the pack has not):
+// "+<picture>\t<file>\t<archive>\t<made>\t<model>\t<chain>" - what a picture was made from, when, by what;
+// "!<key>" - the game's own texture always (no picture made or shown for it);
+// "#<key>\tgloss=<x>\trelief=<x>\theight=<x>" - the driver's material of that texture scaled (0 turns a part off).
+struct Provenance {
+    std::string file, archive;  // the game's file (its CP949 name) and the archive that gave it
+    int64_t made = 0;           // Unix seconds
+    std::string model, chain;   // the network's model; the processing chain (ai::chainText)
+    bool operator==(const Provenance& o) const {
+        return file == o.file && archive == o.archive && made == o.made && model == o.model && chain == o.chain;
+    }
+};
+struct MaterialScales {
+    float gloss = 1, relief = 1, height = 1;
+    bool operator==(const MaterialScales& o) const {
+        return gloss == o.gloss && relief == o.relief && height == o.height;
+    }
+};
 struct Index {
     std::map<std::string, IndexEntry> pictures;
     std::map<std::string, std::string> aliases;  // a key of a lower texture detail -> its whole texture's picture
     // 0.49: the pictures the game finds by their likeness ("~name\t<likenessText>" lines, near_picture.hpp).
     std::map<std::string, std::string> alike;
+    std::map<std::string, Provenance> made;           // 2.3: a picture's name ->
+    std::set<std::string> ownAlways;                  // 2.3: keys
+    std::map<std::string, MaterialScales> materials;  // 2.3: keys ->
 };
 std::string indexText(const Index& index);
-Index parseIndexFile(const std::string& text);
+// provenance (2.3): the '+' lines too - a line a picture: the game's driver leaves them out unless it writes the index
+Index parseIndexFile(const std::string& text, bool provenance = true);
 
 // 0.53: a ZIP's entry as its central directory has it; the directory read through a function of the bytes at an
 // offset (a file, or a pack on the site by HTTP ranges).
@@ -66,7 +88,11 @@ struct ZipEntry {
     uint64_t header = 0, compressed = 0, size = 0;  // its local header's offset, its sizes
     uint32_t crc = 0;
     uint32_t method = 0;  // 0 stored
+    uint16_t dosDate = 0, dosTime = 0;  // 2.3: when it was written (MS-DOS fields, UTC)
 };
+// 2.3: the pack's entries carry the time they were written (they had 1980-01-01, which stays "no time": 0).
+int64_t unixOfDos(uint16_t date, uint16_t time);
+void dosOfUnix(int64_t t, uint16_t& date, uint16_t& time);
 using ReadAt = std::function<bool(uint64_t at, uint8_t* out, size_t n)>;
 bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<ZipEntry>& out, std::string& error);
 // 2.2.5: the pictures a pack's central directory names (its index not counted), by its end records and its directory
@@ -92,6 +118,7 @@ public:
     size_t count() const { return entries_.size(); }  // the index entry too
     bool has(const std::string& name) const { return entries_.count(name) != 0; }
     uint64_t sizeOf(const std::string& name) const;  // its bytes in the pack; 0 when it has none
+    int64_t timeOf(const std::string& name) const;   // 2.3: when it was written (Unix seconds); 0 none, or no time
     // A file of the pack, stored or deflated. One thread at a time (the renderer's I/O thread, the builder's).
     bool read(const std::string& name, std::vector<uint8_t>& out) const;
     std::vector<std::string> names() const;
@@ -102,6 +129,7 @@ private:
         uint64_t compressed = 0;
         uint64_t size = 0;
         uint16_t method = 0;  // 0 stored, 8 deflated
+        uint16_t date = 0, time = 0;
     };
     std::FILE* file_ = nullptr;
     bool recovered_ = false;
@@ -125,7 +153,9 @@ public:
     std::vector<std::string> names() const;
     // replace (1.6): a picture already there gets the new one - its directory entry points at the new bytes, the old
     // stay unread until the Ready textures page rewrites the pack; else a name there is left as it is.
-    bool add(const std::string& name, const uint8_t* data, size_t size, std::string& error, bool replace = false);
+    // when (2.3): the entry's time - Unix seconds, -1 now, 0 none (1980-01-01).
+    bool add(const std::string& name, const uint8_t* data, size_t size, std::string& error, bool replace = false,
+             int64_t when = -1);
     // 2.2.5: a picture out of the directory (one map's, to test a model there) - its bytes stay unread until the Ready
     // textures page rewrites the pack; false when it is not there.
     bool remove(const std::string& name);
@@ -140,8 +170,9 @@ private:
         uint64_t header = 0;
         uint64_t size = 0;
         uint32_t crc = 0;
+        uint16_t date = 0x21, time = 0;
     };
-    bool writeLocal(const std::string& name, const uint8_t* data, size_t size, uint32_t crc, std::string& error);
+    bool writeLocal(const Central& c, const uint8_t* data, std::string& error);
     std::FILE* file_ = nullptr;
     std::string path_;
     uint64_t end_ = 0;  // after the last picture's data

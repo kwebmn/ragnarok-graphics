@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <functional>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -31,10 +32,13 @@ public:
     // An archive in a file the caller opened ("rb", or "r+b" when writable; the settings app opens UTF-16 paths):
     // the archive closes it.
     bool open(std::FILE* file, bool writable, std::string& error);
+    // 2.3: the archive `other` has open (by its path), read-only, with a file handle of its own and other's table
+    // shared - a reading thread each (the texture pack's builder, the studio's catalog), the table read once.
+    bool openLike(const Archive& other, std::string& error);
     void close();
     bool isOpen() const { return file_ != nullptr; }
     const Entry* find(const std::string& name) const;
-    size_t count() const { return entries_.size(); }
+    size_t count() const { return entries_->size(); }
     std::vector<std::string> names() const;
     bool read(const std::string& name, std::vector<uint8_t>& out, std::string& error);
     // Compresses and adds the files (a name already there gets the new data), then a new table and header. New data
@@ -50,9 +54,13 @@ private:
     bool readTable(const std::string& what, std::string& error);
     bool writeTable(uint64_t at, std::string& error);
 
+    using Table = std::map<std::string, Entry>;
+    Table& own();  // the table to change: a copy of its own first when it is shared (openLike)
+
     FILE* file_ = nullptr;
     bool writable_ = false;
-    std::map<std::string, Entry> entries_;
+    std::string path_;  // 2.3: "" when opened by a FILE*
+    std::shared_ptr<Table> entries_ = std::make_shared<Table>();
     uint64_t end_ = 46;  // end of the last table written or read
 };
 

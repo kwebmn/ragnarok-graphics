@@ -26,6 +26,15 @@ bool fileExists(const std::string& path) {
     return attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY);
 }
 
+bool fileStamp(const std::string& path, uint64_t& size, int64_t& time) {
+    WIN32_FILE_ATTRIBUTE_DATA d{};
+    if (!GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &d)) return false;
+    size = uint64_t(d.nFileSizeHigh) << 32 | d.nFileSizeLow;
+    const uint64_t t = uint64_t(d.ftLastWriteTime.dwHighDateTime) << 32 | d.ftLastWriteTime.dwLowDateTime;
+    time = int64_t(t / 10000000ull) - 11644473600ll;  // 100 ns since 1601 to seconds since 1970
+    return true;
+}
+
 bool readTextFile(const std::string& path, std::string& out) {
     // Shared for deleting too: the settings app replaces uaro-graphics.ini in one step (MoveFileEx), also while it is
     // read here (0.6.0 review M1).

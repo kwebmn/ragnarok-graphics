@@ -543,7 +543,8 @@ float4 shade(PsIn i) {
         c.a = own ? 1.0 - smoothstep(0.3, 0.9, i.specular.b) : other;
     }
 #endif
-    if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
+    if (fogEnable == 2) c.rgb = lerp(c.rgb, fogColor.rgb, fogColor.a);  // 2.3: uaRO Studio's X-ray, the state's colour
+    else if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
     float alphaStep = fwidth(c.a);  // outside any branch
     if (((alphaTest >> 17) & 1) != 0) {
         // Stage 4, alpha to coverage: the test's edge (alpha >= ref) as coverage over about one pixel, so the edge
@@ -2071,21 +2072,22 @@ float4 material_ps(PresentOut i) : SV_Target {
         h += (matLuma(q, lod) - far) * w;
         weights += w;
     }
-    float3 n = normalize(float3(-slope * 5.0, 1.0));
+    // 2.3, uaRO Studio's material of one texture: its gloss, relief and height scaled (sourceClamp.xyz, 1 as built)
+    float3 n = normalize(float3(-slope * 5.0 * sourceClamp.y, 1.0));
     int have = max(int(uiPixels.w + 0.5) - 1, 0), at = min(base, have);
     int2 size = max(int2(sourceRect.xy) >> at, int2(1, 1));
     int2 q0 = p << (base - at);
     float3 rgb = tex0.Load(int3(((q0 % size) + size) % size, at)).rgb;
     float sat = max(rgb.r, max(rgb.g, rgb.b)) - min(rgb.r, min(rgb.g, rgb.b));
     float lum = dot(rgb, float3(0.299, 0.587, 0.114));
-    float gloss = saturate((0.22 - sat) * 4.0) * smoothstep(0.2, 0.6, lum) * 0.7;
+    float gloss = min(saturate((0.22 - sat) * 4.0) * smoothstep(0.2, 0.6, lum) * 0.7 * sourceClamp.x, 0.7);
     // 1.21: a window's pane - an even patch clearly darker than the wall about it: alpha 0.75-1 (gloss stays under
     // 0.7), lit at night by shade()
     float local = matLuma(p >> 2, base + 2), wide = matLuma(p >> 4, base + 4);
     float pane = smoothstep(0.1, 0.2, wide - local) * smoothstep(0.35, 0.22, local) *
                  smoothstep(0.08, 0.03, abs(lum - local));
-    if (pane > 0.3) gloss = 0.75 + 0.25 * pane;
-    return float4(n.xy * 0.5 + 0.5, saturate(0.5 + h / weights * 1.6), gloss);
+    if (pane > 0.3 && sourceClamp.x > 0.0) gloss = 0.75 + 0.25 * pane;
+    return float4(n.xy * 0.5 + 0.5, saturate(0.5 + h / weights * 1.6 * sourceClamp.z), gloss);
 }
 
 #ifndef UAGFX_SAFE

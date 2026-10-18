@@ -29,8 +29,20 @@ struct PackArgs {
     std::string map;
     bool mapGround = true, mapModels = true;
     bool remake = false;
+    // 2.3 (uaRO Studio's N2), --catalog <file>: the studio's texture catalog (core/texture_catalog.hpp) - when it is
+    // up to date with the game's archives, its keys stand for the reading pass (no file of the game read twice).
+    std::string catalog;
+    std::string catalogData;  // or its bytes (the studio's engine reads the file by its wide name)
 };
 
-int runPack(const PackArgs& a);  // the process's exit code: 0 done or stopped
+// 2.3: where a build tells how it goes and hears a stop - the status file and its ".stop" file (the settings app), or
+// uaRO Studio's pipe (its engine runs the build).
+struct BuildSink {
+    virtual ~BuildSink() = default;
+    virtual void write(const pack::Status& s, bool now) = 0;  // now: at once, else at most every half second
+    virtual bool stopAsked() = 0;
+};
+
+int runPack(const PackArgs& a, BuildSink* sink = nullptr);  // the exit code: 0 done or stopped; null: the file
 
 }  // namespace uagfx::host

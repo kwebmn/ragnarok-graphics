@@ -29,6 +29,12 @@ app's Service page) downloads and installs the newest build; your settings stay.
   each with its own switch and strength, and each opens to its effects. New effects come switched off.
 - **AI textures.** The Texture pack page builds `uaro-textures.zip` from the game's own pictures with Real-ESRGAN
   models; the game then shows them by kind — ground, buildings, characters and items, skills, icons.
+- **uaRO Studio** (`uaro-graphics\uaro-studio.exe`, for the pack's makers and testers): every texture of the game
+  beside its pack picture — its archive and the ones it shadows, the model and the date it was made, the maps it is
+  on, quality flags (smoothed, tone shifted, bands, halos, a pink fringe, spoiled alpha, seams); any texture made
+  again by any model and a chain of steps (tone, grain, sharpening, clean alpha, an atlas's tiles one by one), looked
+  at and kept or discarded; taken out, the game's own always, its material lighter or stronger. The running game
+  shows the changes at once; in the game Ctrl+Shift+F8 opens the texture under the cursor in the studio.
 - **NVIDIA DLSS and frame generation** on GeForce RTX cards (the Smoothing page), drawn by the 64-bit renderer
   `uaro-render64.exe`; the DLSS package is downloaded at installation on computers with an NVIDIA card.
 - **The gamepad.** [uaRO Pad](https://github.com/kwebmn/ragnarok-gamepad) comes along: the Gamepad page turns it on.
@@ -44,6 +50,9 @@ app's Service page) downloads and installs the newest build; your settings stay.
 | `Pause` or `Scroll Lock` | Every improvement off and on again, to compare |
 | `Ctrl+Shift+F11` | The frame counter: frames a second, milliseconds, the graphics card's milliseconds |
 | `Ctrl+Shift+F12` | A screenshot of the picture as shown, into the game's `ScreenShot` folder |
+| `Ctrl+Shift+F9` | uaRO Studio's X-ray: textures from the pack green, made in the game blue, without a picture red |
+| `Ctrl+Shift+F8` | The texture under the cursor opened in uaRO Studio |
+| `Ctrl+Shift+F7` | That texture's picture off and on again (A/B) |
 
 In the console, hold `Tab` on an effect or a group to see the picture — and the card's milliseconds — without it.
 
@@ -61,6 +70,7 @@ app's Renderer page picks the renderer, the quality and the effects for your car
 | `uaro-graphics.log`, `uaro-render64.log` | What the driver and the 64-bit renderer did — the report sends them |
 | `uaro-graphics\` | The driver, the settings app, the 64-bit renderer, the models, the shader caches |
 | `uaro-textures.zip` | The AI texture pack, when built |
+| `uaro-graphics\seen\` | What the game drew on the last 20 maps and how (uaRO Studio reads it) |
 
 ## Building from source
 
@@ -70,7 +80,7 @@ Everything is cross-built on Linux with MinGW-w64; the portable core is tested o
 # ddraw.dll, the settings app uaro-graphics.exe and the installer (32-bit, as the game)
 cmake -S . -B build-win -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DCMAKE_BUILD_TYPE=Release
 cmake --build build-win -j
-# the 64-bit renderer uaro-render64.exe
+# the 64-bit renderer uaro-render64.exe and uaRO Studio uaro-studio.exe
 cmake -S . -B build-win64 -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake -DCMAKE_BUILD_TYPE=Release
 cmake --build build-win64 -j
 # the core's tests
@@ -93,6 +103,7 @@ changes with DXC `-HV 2018`, which keeps to FXC's rules (a loop's variable lives
 | `src/win/gpu` | The renderers: Direct3D 12 (and its effects), Direct3D 11, RTX Remix, the bridge to the 64-bit process |
 | `src/host` | `uaro-render64.exe`: the 64-bit renderer, DLSS through NVIDIA Streamline, the texture pack builder |
 | `src/app` | `uaro-graphics.exe`, the settings app |
+| `src/studio` | `uaro-studio.exe`, uaRO Studio; its engine is `uaro-render64.exe --studio` |
 | `src/setup` | `uaro-graphics-setup.exe` |
 | `dist` | What the archive carries besides the programs: scripts, the default `uaro-graphics.ini`, the notes |
 | `docs` | Research of the client and the design notes |

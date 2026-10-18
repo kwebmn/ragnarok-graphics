@@ -21,6 +21,7 @@
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/ai_textures.hpp"
 #include "core/forest.hpp"
+#include "core/pick.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/gpu/remix9.hpp"
 #include "win/gpu/renderer11.hpp"
@@ -1645,6 +1646,32 @@ bool Renderer::enlargeForPack(int group, const uint32_t* argb, int width, int he
                          error);  // 1.6, 1.6.3
 }
 
+bool Renderer::startAiForStudio(const std::string& gameDir, std::string& error) {
+    Impl& m = *impl_;
+    if (remote_ || remix_ || m.ai || !m.device) {
+        error = "the renderer is not for it";
+        return false;
+    }
+    m.ai = new AiTextures(m);
+    if (!m.ai->startForStudio(gameDir, error)) {
+        delete m.ai;
+        m.ai = nullptr;
+        return false;
+    }
+    return true;
+}
+
+bool Renderer::enlargeByModel(const std::string& model, int denoise, const uint32_t* argb, int width, int height,
+                              uint32_t border, std::vector<uint32_t>& out, std::string& error) {
+    Impl& m = *impl_;
+    if (!m.ai) {
+        error = "no networks";
+        return false;
+    }
+    const int net = m.ai->netForModel(model, denoise, error);
+    return net >= 0 && m.ai->enlarge(net, argb, width, height, border, out, error);
+}
+
 std::string Renderer::packNetName(int group) const {
     const Impl& m = *impl_;
     const int net = m.ai ? m.ai->netForGroup(ai::Group(group)) : -1;
@@ -1751,6 +1778,21 @@ void Renderer::setPresentSurface(HANDLE surface) {
 bool Renderer::presentRefused() const { return impl_->refused; }
 
 bool Renderer::lost() const { return d3d11_ ? d3d11_->lost() : impl_->lost; }
+
+void Renderer::setStudio(uint8_t flags, int x, int y) {
+    if (remix_ || d3d11_) return;
+    if (remote_) return remote_->setStudio(flags, x, y);
+    Impl& m = *impl_;
+    if (m.xray != ((flags & 1) != 0)) LOG_INFO("X-ray: %s", (flags & 1) ? "on" : "off");
+    m.xray = (flags & 1) != 0;
+    if (flags & 2) {  // the next present writes what this frame drew there
+        m.pickWanted = true;
+        m.pickX = float(x) + 0.5f;
+        m.pickY = float(y) + 0.5f;
+        m.pickHit = 0;
+    }
+    if (flags & 4) m.abWanted = true;
+}
 
 void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds, uint8_t aiSprites) {
     if (remix_) return;
@@ -2225,6 +2267,13 @@ void Renderer::execute(const FrameRecord& record) {
         m.upscaler->renderStart();
     }
     m.prepareGeometry(record);
+    if (m.pickWanted && m.ai) {  // 2.3: the topmost draw of an AI texture under the cursor, the later records over it
+        const int k = pick::lastDrawAt(record, m.pickX, m.pickY, [&m](const DrawCmd& d) {
+            uint8_t how = 0;
+            return d.texture[0] && m.ai->howOf(d.texture[0], how);
+        });
+        if (k >= 0) m.pickHit = record.draws()[size_t(k)].texture[0];
+    }
     for (const Command& c : record.commands()) {
         if (!m.open) break;  // the list could not go on (the GPU is lost): nothing more is recorded
         switch (c.type) {
@@ -2317,6 +2366,14 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (remote_) return remote_->present(window, outputWidth, outputHeight, source, options);
     Impl& m = *impl_;
     Impl::CpuTime presentCpu(m.cpuTicks);  // 0.86
+    if (m.pickWanted) {  // 2.3, uaRO Studio: the frame is whole - what it drew under the cursor
+        m.pickWanted = false;
+        if (m.ai) m.ai->writePick(m.pickHit, int(m.pickX), int(m.pickY));
+    }
+    if (m.abWanted) {
+        m.abWanted = false;
+        if (m.ai) m.ai->toggleHidden();
+    }
     if (m.lost) {  // the GPU is gone (stage 3 review M2): no Present waits for vblank, keep the game's loop from spinning
         Sleep(15);
         return;

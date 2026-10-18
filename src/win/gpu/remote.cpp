@@ -250,6 +250,13 @@ void Remote::setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKind
     send(Msg::SetDrawQuality, buffer_);
 }
 
+void Remote::setStudio(uint8_t flags, int x, int y) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    bridge::writeStudioKeys(w, bridge::StudioKeys{flags, x, y});
+    send(Msg::SetStudio, buffer_);
+}
+
 void Remote::setEffects(const EffectSettings& e) {
     if (effectsSent_ && e == effects_) return;
     buffer_.clear();

@@ -43,8 +43,32 @@ Archive::~Archive() { close(); }
 void Archive::close() {
     if (file_) std::fclose(file_);
     file_ = nullptr;
-    entries_.clear();
+    entries_ = std::make_shared<Table>();  // another reader of the old table keeps it
+    path_.clear();
     end_ = kHeader;
+}
+
+Archive::Table& Archive::own() {
+    if (entries_.use_count() > 1) entries_ = std::make_shared<Table>(*entries_);
+    return *entries_;
+}
+
+bool Archive::openLike(const Archive& other, std::string& error) {
+    close();
+    if (!other.file_ || other.path_.empty()) {
+        error = "no archive open by its path to read again";
+        return false;
+    }
+    file_ = std::fopen(other.path_.c_str(), "rb");
+    if (!file_) {
+        error = "cannot open " + other.path_;
+        return false;
+    }
+    writable_ = false;
+    path_ = other.path_;
+    entries_ = other.entries_;
+    end_ = other.end_;
+    return true;
 }
 
 bool Archive::open(const std::string& path, bool create, std::string& error) {
@@ -67,9 +91,12 @@ bool Archive::open(const std::string& path, bool create, std::string& error) {
             close();
             return false;
         }
+        path_ = path;
         return true;
     }
-    return readTable(path, error);
+    if (!readTable(path, error)) return false;
+    path_ = path;
+    return true;
 }
 
 bool Archive::open(std::FILE* file, bool writable, std::string& error) {
@@ -106,6 +133,7 @@ bool Archive::readTable(const std::string& path, std::string& error) {
         close();
         return false;
     }
+    Table entries;
     for (size_t p = 0; p < table.size();) {
         const void* nul = std::memchr(table.data() + p, 0, table.size() - p);
         if (!nul) break;
@@ -119,23 +147,24 @@ bool Archive::readTable(const std::string& path, std::string& error) {
         x.size = get32(e + 8);
         x.flags = e[12];
         x.offset = get32(e + 13);
-        entries_[name] = x;
+        entries[name] = x;
         p += len + 1 + 17;
     }
+    entries_ = std::make_shared<Table>(std::move(entries));
     end_ = at + 8 + packed;
     return true;
 }
 
 std::vector<std::string> Archive::names() const {
     std::vector<std::string> out;
-    out.reserve(entries_.size());
-    for (const auto& e : entries_) out.push_back(e.first);
+    out.reserve(entries_->size());
+    for (const auto& e : *entries_) out.push_back(e.first);
     return out;
 }
 
 const Entry* Archive::find(const std::string& name) const {
-    const auto it = entries_.find(name);
-    return it == entries_.end() ? nullptr : &it->second;
+    const auto it = entries_->find(name);
+    return it == entries_->end() ? nullptr : &it->second;
 }
 
 bool Archive::read(const std::string& name, std::vector<uint8_t>& out, std::string& error) {
@@ -188,10 +217,11 @@ bool Archive::append(const std::vector<std::pair<std::string, std::vector<uint8_
         added[f.first] = e;
         at += n;
     }
-    std::map<std::string, Entry> was = entries_;
-    for (const auto& a : added) entries_[a.first] = a.second;
+    const Table was = *entries_;
+    Table& table = own();
+    for (const auto& a : added) table[a.first] = a.second;
     if (!writeTable(at, error)) {
-        entries_ = was;  // the header still points to the old table
+        own() = was;  // the header still points to the old table
         return false;
     }
     return true;
@@ -204,7 +234,7 @@ bool Archive::copyTo(std::FILE* out, const std::function<bool(const std::string&
     }
     // In the order of the data: the source is read front to back.
     std::vector<std::pair<uint32_t, std::string>> order;
-    for (const auto& e : entries_)
+    for (const auto& e : *entries_)
         if (keep(e.first)) order.emplace_back(e.second.offset, e.first);
     std::sort(order.begin(), order.end());
     Archive copy;
@@ -213,7 +243,7 @@ bool Archive::copyTo(std::FILE* out, const std::function<bool(const std::string&
     uint64_t at = kHeader;
     std::vector<uint8_t> data;
     for (const auto& o : order) {
-        Entry e = entries_.at(o.second);
+        Entry e = entries_->at(o.second);
         data.resize(e.aligned);
         if (!readAt(file_, kHeader + e.offset, data.data(), data.size())) {
             error = "cannot read " + o.second;
@@ -226,7 +256,7 @@ bool Archive::copyTo(std::FILE* out, const std::function<bool(const std::string&
             return false;
         }
         e.offset = uint32_t(at - kHeader);
-        copy.entries_[o.second] = e;
+        copy.own()[o.second] = e;
         at += data.size();
     }
     const bool ok = copy.writeTable(at, error);
@@ -236,7 +266,7 @@ bool Archive::copyTo(std::FILE* out, const std::function<bool(const std::string&
 
 bool Archive::writeTable(uint64_t at, std::string& error) {
     std::vector<uint8_t> table;
-    for (const auto& e : entries_) {
+    for (const auto& e : *entries_) {
         table.insert(table.end(), e.first.begin(), e.first.end());
         table.push_back(0);
         uint8_t b[17];
@@ -260,7 +290,7 @@ bool Archive::writeTable(uint64_t at, std::string& error) {
     std::memcpy(h, kMagic, 16);
     put32(h + 30, uint32_t(at - kHeader));
     put32(h + 34, 0);                                   // seed
-    put32(h + 38, uint32_t(entries_.size()) + 7);       // count + seed + 7
+    put32(h + 38, uint32_t(entries_->size()) + 7);      // count + seed + 7
     put32(h + 42, kVersion);
     // The table first, the header that points to it last: until then the old header and table stay valid.
     if (!writeAt(file_, at, z.data(), 8 + n) || std::fflush(file_) != 0 || !writeAt(file_, 0, h, sizeof h) ||

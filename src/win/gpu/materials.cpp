@@ -8,6 +8,7 @@
 
 #include "core/daylight.hpp"
 #include "core/game_camera.hpp"
+#include "win/gpu/ai_textures.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -38,7 +39,7 @@ void Renderer::Impl::dropMaterial(Texture& t) {
     t.matFor = nullptr;
 }
 
-bool Renderer::Impl::ensureMaterial(Texture& t, bool fromAi) {
+bool Renderer::Impl::ensureMaterial(uint32_t id, Texture& t, bool fromAi) {
     ID3D12Resource* source = fromAi ? t.ai : t.resource;
     if (!source) return false;
     if (t.mat && t.matFor == source) return true;
@@ -85,6 +86,11 @@ bool Renderer::Impl::ensureMaterial(Texture& t, bool fromAi) {
         c.uiPixels[3] = float(sourceLevels);
         c.sourceRect[0] = float(sw);
         c.sourceRect[1] = float(sh);
+        pack::MaterialScales scales;  // 2.3: uaRO Studio's material of this texture ('#' lines), 1 as built
+        if (ai) ai->materialScales(id, scales);
+        c.sourceClamp[0] = scales.gloss;
+        c.sourceClamp[1] = scales.relief;
+        c.sourceClamp[2] = scales.height;
         if (!effectPass(materialPso, t.mat, t.matState, rtvHandle(kRtvMaterial), lw, lh, c, sourceSrv, false)) {
             dropMaterial(t);  // tried again later
             return false;

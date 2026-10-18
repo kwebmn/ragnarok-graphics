@@ -33,11 +33,23 @@ target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
 target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp uagfx_stb)
 
+if(WIN32)
+    # The version of src/core/version.cpp for the resources of the settings app (32-bit) and uaRO Studio (64-bit).
+    enable_language(RC)
+    file(STRINGS src/core/version.cpp UAGFX_VERSION_LINE REGEX "kVersion = ")
+    string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" UAGFX_VERSION "${UAGFX_VERSION_LINE}")
+    set(UAGFX_V1 ${CMAKE_MATCH_1})
+    set(UAGFX_V2 ${CMAKE_MATCH_2})
+    set(UAGFX_V3 ${CMAKE_MATCH_3})
+    configure_file(src/app/version_rc.h.in ${CMAKE_BINARY_DIR}/app/version_rc.h)
+endif()
+
 if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # uaro-render64.exe (part 3): the renderer in a 64-bit process the driver hands its calls to; the rest of the
     # project is 32-bit (cmake/mingw-x86_64.cmake builds only this).
     file(GLOB UAGFX_HOST_SOURCES CONFIGURE_DEPENDS src/win/gpu/*.cpp src/win/bridge/*.cpp)
     add_executable(uaro-render64 WIN32 src/host/main.cpp src/host/pack_builder.cpp src/host/streamline.cpp
+                   src/host/studio_engine.cpp
                    ${UAGFX_HOST_SOURCES} src/win/log.cpp src/win/paths.cpp)
     # NVIDIA Streamline's headers (MIT); its DLLs are loaded at run time from uaro-graphics\dlss\.
     target_include_directories(uaro-render64 PRIVATE third_party/streamline/include)
@@ -45,6 +57,17 @@ if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     target_compile_options(uaro-render64 PRIVATE -Wall -Wextra -Wno-unknown-pragmas)  # Streamline's #pragma region
     target_link_libraries(uaro-render64 PRIVATE uagfx_core)
     target_link_options(uaro-render64 PRIVATE -static -static-libgcc -static-libstdc++ -s)
+
+    # 2.3: uaro-studio.exe, uaRO Studio (docs/superpowers/specs/2026-10-18-texture-studio-design.md) - 64-bit, its
+    # engine a copy of uaro-render64.exe; the settings app's UI kit and texts.
+    file(GLOB UAGFX_STUDIO_SOURCES CONFIGURE_DEPENDS src/studio/*.cpp)
+    add_executable(uaro-studio WIN32 ${UAGFX_STUDIO_SOURCES} src/app/ui.cpp src/app/text.cpp src/app/utf16.cpp
+                   src/app/mnemonic.cpp src/win/paths.cpp src/studio/studio.rc)
+    target_include_directories(uaro-studio PRIVATE ${CMAKE_BINARY_DIR}/app)
+    target_compile_definitions(uaro-studio PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+    target_compile_options(uaro-studio PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
+    target_link_libraries(uaro-studio PRIVATE uagfx_core comctl32 shell32 ole32 uuid)
+    target_link_options(uaro-studio PRIVATE -static -static-libgcc -static-libstdc++ -s -municode)
 elseif(WIN32)
     # ddraw.dll that uaRO.exe loads from its own folder instead of dgVoodoo's or the system one.
     file(GLOB_RECURSE UAGFX_WIN_SOURCES CONFIGURE_DEPENDS src/win/*.cpp)
@@ -67,13 +90,6 @@ elseif(WIN32)
     target_link_libraries(uagfx_app PUBLIC uagfx_core comctl32 shell32 ole32 uuid advapi32 winhttp)
 
     # uaro-graphics.exe, the settings app (stage 2 spec): its version comes from src/core/version.cpp.
-    enable_language(RC)
-    file(STRINGS src/core/version.cpp UAGFX_VERSION_LINE REGEX "kVersion = ")
-    string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" UAGFX_VERSION "${UAGFX_VERSION_LINE}")
-    set(UAGFX_V1 ${CMAKE_MATCH_1})
-    set(UAGFX_V2 ${CMAKE_MATCH_2})
-    set(UAGFX_V3 ${CMAKE_MATCH_3})
-    configure_file(src/app/version_rc.h.in ${CMAKE_BINARY_DIR}/app/version_rc.h)
     add_executable(uaro-graphics WIN32 src/app/main.cpp src/app/main_window.cpp src/app/ui.cpp src/app/page.cpp
                    src/app/page_settings.cpp src/app/page_screen.cpp src/app/page_diagnostics.cpp
                    src/app/page_service.cpp src/app/page_ai.cpp src/app/page_ai_cache.cpp

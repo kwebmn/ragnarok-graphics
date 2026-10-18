@@ -16,6 +16,10 @@ constexpr uint32_t kModeMap = 0x60;      // the map's file name, "prontera.rsw" 
 constexpr uint32_t kViewMatrix = 0x94;   // 4 x 3 floats: world -> view for row vectors (D3D), the last row a move
 constexpr uint32_t kViewAt = 0x28;       // 3 floats: the point the camera looks at - the character (0x4faf00)
 constexpr uint32_t kConstants = 0x695740;  // pi, far, near, horizontal and vertical field of view in degrees
+// 2.3: the game's mouse (CMouse, read by DirectInput - Windows' cursor does not follow it in exclusive mode): its x
+// and y in the game's pixels, clamped to its picture (uaRO.exe 0x419c60)
+constexpr uint32_t kMouse = 0x6EE6F0;
+constexpr uint32_t kMouseX = 0x14, kMouseY = 0x18;
 constexpr float kPi = 3.141592025756836f;  // as the exe holds it
 constexpr float kFar = 1500.0f;
 constexpr float kNear = 10.0f;

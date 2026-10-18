@@ -94,6 +94,9 @@ public:
     // 2.2.1: aiKinds - the kinds of AI pictures shown (aiKindsShown's bits), 0 none; 2.2.2: aiSprites - the sprites'
     // kinds shown (aiSpritesShown's bits)
     void setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds = 0xFF, uint8_t aiSprites = 0xFF);
+    // 2.3, uaRO Studio's keys in the game (bridge::StudioKeys): bit 0 the X-ray; bit 1 a pick at (x, y), the cursor
+    // in the game's picture; bit 2 the picked texture's picture off or on again. Direct3D 12 alone.
+    void setStudio(uint8_t flags, int x, int y);
     // 0.18: [effects] as they apply now (off with Pause); nothing in Remix's Direct3D 9.
     void setEffects(const EffectSettings& e);
 
@@ -138,6 +141,12 @@ public:
     bool enlargeForPack(int group, const uint32_t* argb, int width, int height, uint32_t border,
                         std::vector<uint32_t>& out, std::string& error);
     std::string packNetName(int group) const;
+    // 2.3, uaRO Studio's engine (uaro-render64.exe --studio): the networks' pipelines alone, after create(); then a
+    // picture 4 times as large by any model ("general", "anime", "anime6b"; denoise for the general one, -1 its
+    // default), the model loaded when it is first asked for. border as AiTextures::enlarge's.
+    bool startAiForStudio(const std::string& gameDir, std::string& error);
+    bool enlargeByModel(const std::string& model, int denoise, const uint32_t* argb, int width, int height,
+                        uint32_t border, std::vector<uint32_t>& out, std::string& error);
     // The map the game shows ("prontera"; "" none): the texture pack's index notes the textures seen on it (AI
     // textures made); 0.25: its file is read for its lamps and the torches the game does not show.
     void setMap(const std::string& map);

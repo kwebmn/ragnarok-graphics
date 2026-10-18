@@ -12,6 +12,7 @@ cmake -S . -B build-win64 --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=cmake/ming
 cmake --build build-win64 -j >/dev/null
 python3 tools/check_dll.py build-win/ddraw.dll
 python3 tools/check_exe.py build-win/uaro-graphics.exe
+python3 tools/check_studio.py build-win64/uaro-studio.exe  # 2.3: uaRO Studio
 out="build-win/uaro-graphics.zip"
 stage="build-win/package"
 rm -rf "$out" "$stage"
@@ -19,7 +20,7 @@ mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-gra
 cp dist/install.bat dist/uninstall.bat dist/update.bat dist/get-dlss.bat \
    dist/TEST.en.md dist/TEST.uk.md dist/TEST.ru.md "$stage/"
 cp build-win/ddraw.dll build-win/uaro-graphics.exe dist/uaro-graphics.ini build-win64/uaro-render64.exe \
-   dist/dlss-version.txt "$stage/uaro-graphics/"
+   build-win64/uaro-studio.exe dist/dlss-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 # 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.
 cp dist/pad/dinput.dll dist/pad/uaro-pad.ini dist/pad/version.txt "$stage/uaro-graphics/pad/"

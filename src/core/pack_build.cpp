@@ -84,6 +84,9 @@ GameFiles::GameFiles() = default;
 GameFiles::~GameFiles() = default;
 
 bool GameFiles::open(const std::string& dir, std::string& error) {
+    grfs_.clear();
+    shared_.reset();
+    auto sh = std::make_shared<Shared>();
     const char sep = dir.find('/') != std::string::npos && dir.find('\\') == std::string::npos ? '/' : '\\';
     std::string ini;
     if (std::FILE* f = std::fopen((dir + sep + "DATA.INI").c_str(), "rb")) {
@@ -92,75 +95,128 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
         while ((n = std::fread(buf, 1, sizeof buf, f)) > 0 && ini.size() < (1u << 20)) ini.append(buf, n);
         std::fclose(f);
     }
+    // A name: where it comes from (the first archive), or (2.3) another archive it is in too.
+    const auto note = [&sh](const std::string& n, int archive, const std::string& stored, size_t& count) {
+        const auto there = sh->where.find(n);
+        if (there != sh->where.end()) {
+            sh->shadowed[n].push_back(archive);
+            return;
+        }
+        sh->where.emplace(n, Place{archive, stored});
+        count += listed(n);
+    };
     for (const std::string& file : dataArchives(ini)) {
         const std::string ext = lower(file.size() > 4 ? file.substr(file.size() - 4) : "");
         if (ext != ".grf" && ext != ".gpf" && ext != ".zip") {
-            failed_.push_back(file + " (not a GRF, GPF or ZIP)");  // 1.6.5
+            sh->failed.push_back(file + " (not a GRF, GPF or ZIP)");  // 1.6.5
             continue;
         }
         const std::string path = file.find(':') != std::string::npos ? file : dir + sep + file;
         std::string why;
-        const int archive = int(order_.size());
+        const int archive = int(sh->order.size());
         size_t count = 0;
         if (ext == ".zip") {
-            auto z = std::make_unique<zip::Index>();
+            auto z = std::make_shared<zip::Index>();
             if (!z->open(path, [](const std::string& n) { return listed(n) || mapFile(n); }, why)) {
-                failed_.push_back(file + " (" + why + ")");  // 1.6.5: said in the log
+                sh->failed.push_back(file + " (" + why + ")");  // 1.6.5: said in the log
                 continue;
             }
-            for (const std::string& n : z->names())
-                if (!where_.count(n)) {
-                    where_[n] = Place{archive, n};
-                    count += listed(n);
-                }
-            zips_.push_back(std::move(z));
-            order_.emplace_back(true, int(zips_.size()) - 1);
+            for (const std::string& n : z->names()) note(n, archive, n, count);
+            sh->zips.push_back(std::move(z));
+            sh->order.emplace_back(true, int(sh->zips.size()) - 1);
         } else {
             auto g = std::make_unique<grf::Archive>();
             if (!g->open(path, false, why)) {
-                failed_.push_back(file + " (" + why + ")");  // 1.6.5
+                sh->failed.push_back(file + " (" + why + ")");  // 1.6.5
                 continue;
             }
             for (const std::string& stored : g->names()) {
                 const std::string n = zip::normalName(stored);
-                if ((!listed(n) && !mapFile(n)) || where_.count(n)) continue;
-                where_[n] = Place{archive, stored};
-                count += listed(n);
+                if (listed(n) || mapFile(n)) note(n, archive, stored, count);
             }
-            grfs_.push_back(std::move(g));
-            order_.emplace_back(false, int(grfs_.size()) - 1);
+            sh->grfs.push_back(std::move(g));
+            sh->order.emplace_back(false, int(sh->grfs.size()) - 1);
         }
-        paths_.push_back(file);
-        counts_.push_back(count);
+        sh->paths.push_back(file);
+        sh->counts.push_back(count);
     }
-    if (order_.empty()) {
+    if (sh->order.empty()) {
         error = "DATA.INI lists no archive that opens in " + dir;
         return false;
     }
-    names_.reserve(where_.size());
-    for (const auto& w : where_) {
-        if (listed(w.first)) names_.push_back(w.first);
-        else if (endsWith(w.first, ".rsw")) maps_.push_back(w.first.substr(5, w.first.size() - 9));  // 2.2.5
+    sh->names.reserve(sh->where.size());
+    for (const auto& w : sh->where) {
+        if (listed(w.first)) sh->names.push_back(w.first);
+        else if (endsWith(w.first, ".rsw")) sh->maps.push_back(w.first.substr(5, w.first.size() - 9));  // 2.2.5
     }
-    std::sort(names_.begin(), names_.end());
-    std::sort(maps_.begin(), maps_.end());
+    std::sort(sh->names.begin(), sh->names.end());
+    std::sort(sh->maps.begin(), sh->maps.end());
+    shared_ = std::move(sh);
     return true;
 }
 
+bool GameFiles::openLike(const GameFiles& other, std::string& error) {
+    grfs_.clear();
+    shared_.reset();
+    if (!other.shared_) {
+        error = "no archives open";
+        return false;
+    }
+    for (const auto& g : other.shared_->grfs) {
+        auto own = std::make_unique<grf::Archive>();
+        if (!own->openLike(*g, error)) {
+            grfs_.clear();
+            return false;
+        }
+        grfs_.push_back(std::move(own));
+    }
+    shared_ = other.shared_;
+    return true;
+}
+
+const std::vector<std::string>& GameFiles::names() const {
+    static const std::vector<std::string> none;
+    return shared_ ? shared_->names : none;
+}
+
+const std::vector<std::string>& GameFiles::maps() const {
+    static const std::vector<std::string> none;
+    return shared_ ? shared_->maps : none;
+}
+
+const std::vector<std::string>& GameFiles::paths() const {
+    static const std::vector<std::string> none;
+    return shared_ ? shared_->paths : none;
+}
+
+std::vector<int> GameFiles::archivesOf(const std::string& name) const {
+    std::vector<int> out;
+    if (!shared_) return out;
+    const auto it = shared_->where.find(name);
+    if (it == shared_->where.end()) return out;
+    out.push_back(it->second.archive);
+    const auto more = shared_->shadowed.find(name);
+    if (more != shared_->shadowed.end()) out.insert(out.end(), more->second.begin(), more->second.end());
+    return out;
+}
+
 bool GameFiles::read(const std::string& name, std::vector<uint8_t>& out) {
-    const auto it = where_.find(name);
-    if (it == where_.end()) return false;
-    const std::pair<bool, int>& a = order_[size_t(it->second.archive)];
+    if (!shared_) return false;
+    const auto it = shared_->where.find(name);
+    if (it == shared_->where.end()) return false;
+    const std::pair<bool, int>& a = shared_->order[size_t(it->second.archive)];
     std::string error;
-    return a.first ? zips_[size_t(a.second)]->read(it->second.stored, out, error)
-                   : grfs_[size_t(a.second)]->read(it->second.stored, out, error);
+    if (a.first) return shared_->zips[size_t(a.second)]->read(it->second.stored, out, error);
+    grf::Archive& g = grfs_.empty() ? *shared_->grfs[size_t(a.second)] : *grfs_[size_t(a.second)];
+    return g.read(it->second.stored, out, error);
 }
 
 std::string GameFiles::report() const {
     std::string s;
-    for (size_t i = 0; i < paths_.size(); ++i)
-        s += (i ? ", " : "") + paths_[i] + " (" + std::to_string(counts_[i]) + " pictures' files)";
-    for (const std::string& f : failed_) s += "; not read: " + f;  // 1.6.5: a DATA.INI line whose archive did not open
+    if (!shared_) return s;
+    for (size_t i = 0; i < shared_->paths.size(); ++i)
+        s += (i ? ", " : "") + shared_->paths[i] + " (" + std::to_string(shared_->counts[i]) + " pictures' files)";
+    for (const std::string& f : shared_->failed) s += "; not read: " + f;  // 1.6.5: a DATA.INI line that did not open
     return s;
 }
 
@@ -366,6 +422,8 @@ std::string statusText(const Status& s) {
     t += "current=" + oneLine(s.current) + "\n";
     t += "message=" + oneLine(s.message) + "\n";
     t += "work=" + oneLine(s.work) + "\n";
+    t += "stage=" + oneLine(s.stage) + "\n";  // 2.3
+    for (const std::string& f : s.threads) t += "thread=" + oneLine(f) + "\n";
     return t;
 }
 
@@ -408,6 +466,10 @@ bool parseStatus(const std::string& text, Status& out) {
             s.pid = uint32_t(std::strtoul(v.c_str(), nullptr, 10));
         } else if (k == "current") {
             s.current = v;
+        } else if (k == "stage") {  // 2.3
+            s.stage = v;
+        } else if (k == "thread") {
+            s.threads.push_back(v);
         } else if (k == "message") {
             s.message = v;
         } else if (k == "work") {

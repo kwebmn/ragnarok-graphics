@@ -11,6 +11,7 @@ which rules keep it working. Version notes live in `dist/TEST.*.md`; the older d
 | `uaro-render64.exe` (64-bit) | `src/host` | The same Direct3D 12 renderer in a process of its own — DLSS and frame generation (NVIDIA Streamline) exist only for 64-bit programs; also builds the AI texture pack (`--pack`) |
 | `uaro-graphics.exe` | `src/app` | The settings app (Win32); `--watch <pid>` waits for a game to end, then sends the statistics and, when it went badly, a report |
 | `uaro-graphics-setup.exe` | `src/setup` | The installer: the release zip appended to it |
+| `uaro-studio.exe` (64-bit) | `src/studio` | uaRO Studio (2.3): the pack's textures and pictures side by side, made again, kept, linked to the running game; its engine is a copy of `uaro-render64.exe --studio` |
 
 `src/core` holds everything without Windows headers — settings, effects and their groups, formats (GRF, RSW, RSM,
 GND), the texture pack, the bridge's messages, the statistics — and is tested on Linux (`tests/`).
@@ -81,6 +82,39 @@ changes, backups and profiles; it is tested on Linux over `tests/fake_windows.cp
 `dist/ai` (`src/host/pack_builder.cpp`, `core/texture_pack.cpp`, `core/ai`); the renderers take its pictures by
 kind (ground, objects, sprites, effects, icons — `aiKindsShown`, changed live through `SetDrawQuality`).
 
+## uaRO Studio
+
+The design is `docs/superpowers/specs/2026-10-18-texture-studio-design.md`, its first phase's plan
+`docs/superpowers/plans/2026-10-18-studio-phase1.md`.
+
+- **Its own copy.** Started from `uaro-graphics\`, it copies itself to
+  `%LOCALAPPDATA%\uaroGraphics\studio\<version>-<hex>\` and runs that copy (the last five builds kept), so that
+  `update.bat` replaces the shipped file freely; one runs at a time (`Local\uaro-studio`).
+- **The engine.** A copy of the installed `uaro-render64.exe` (`engine-<version>-<hex>.exe`, the last five driver
+  builds kept) run as `--studio <pipe> --dir <game>`: one JSON object a line both ways over a named pipe with
+  overlapped I/O (`core/studio_link`, `core/json`) - `hello`, `enlarge` (any model, loaded when first asked), `build`
+  (a pack build with its status as progress, `core/studio_status`), `stop`, `quit`. A newer installed engine takes
+  over between two jobs; a lost one is started again and its job tried once more (`core/studio_state` Queue).
+- **The jobs** run one at a time on a thread of their own (`src/studio/jobs.cpp`): make (the chain `core/ai/chain`
+  about the engine's network, atlas tiles `core/atlas_tiles`; the picture waits in `studio\made\`), keep, take
+  out, the game's own, material, compact. Every write of the pack takes the builder's mutex and
+  `Local\uaro-textures-zip` (`src/studio/pack_edit.cpp`); a job that would write while a game or a builder writes
+  waits. Pause ends the engine, closes the archives and writes `queue.json` and `session.json`.
+- **The catalog** (`core/texture_catalog`): every texture file with the archive that gives it and those it
+  shadows, its pictures' keys (lower details, the server's colours), its maps and a ground texture's atlas grid;
+  joined with the pack's index; kept in `studio\catalog.bin` and read again only for archives that changed - the
+  builder takes it as its reading pass (`--catalog`). Quality numbers: `core/ai/picture_metrics`.
+- **The pack's index** got three kinds of lines an older reader skips: `+<picture>` what it was made from, when and
+  how; `!<key>` the game's own always; `#<key>` a texture's material scales. The entries carry the time they were
+  written. The builder, the game's own writer and Compact keep all three.
+- **The game linked** (the `gpu` code both renderers share, `win/context.cpp` for the keys): the map's report
+  `uaro-graphics\seen\<map>.txt` (`AiTextures::writeSeen`), the X-ray (`[debug] xray`, Ctrl+Shift+F9: the state's
+  colour through the fog's constants), the pick (Ctrl+Shift+F8 reads the game's own cursor, `core/pick` finds the
+  draw, `link\pick.txt` and `Local\uaro-studio-pick`), A/B (Ctrl+Shift+F7), the live reload (`link\changed.txt`
+  and `Local\uaro-studio-changed`, looked at once a frame; the I/O thread opens the pack again) and the material's
+  scales (`material_ps` through `sourceClamp.xyz`; the studio's preview is `core/material_maps`). Direct3D 12 only;
+  the bridge carries the keys as `Msg::SetStudio`.
+
 ## Shaders
 
 One HLSL source, `src/win/gpu/shaders.cpp`, compiled on the player's computer by `d3dcompiler_47.dll` (FXC) and kept
@@ -91,6 +125,7 @@ change with DXC `-HV 2018`: FXC keeps a loop's variable after the loop and refus
 ## Checks before a release
 
 `tests/` (Linux), `tools/check_dll.py` (`ddraw.dll` imports only `kernel32`, `user32`, `gdi32`, `msvcrt`),
-`tools/check_exe.py` (the settings app imports only what Windows 7 has), `tools/check_texts.py` (every text is
+`tools/check_exe.py` (the settings app imports only what Windows 7 has), `tools/check_studio.py` (uaRO Studio is
+64-bit and imports from Windows' own DLLs alone), `tools/check_texts.py` (every text is
 shown somewhere), `tools/check_package.py` (the archive), DXC over every shader. Lines stay within 120 characters,
 code comments in English; new visual effects come switched off.

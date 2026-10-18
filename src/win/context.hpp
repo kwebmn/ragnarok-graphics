@@ -97,6 +97,9 @@ private:
     void noteUsage(bool foreground, long outWidth, long outHeight, const GpuTiming* gpu);
     void writeUsage(const std::string& lines);
     ToggleKey shotKey_;  // 0.54: Ctrl+Shift+F12 - a screenshot at the picture's full size
+    ToggleKey xrayKey_;  // 2.3: Ctrl+Shift+F9, uaRO Studio's X-ray
+    ToggleKey pickKey_, abKey_;  // 2.3: Ctrl+Shift+F8 the texture under the cursor, Ctrl+Shift+F7 its A/B
+    uint8_t studioSent_ = 0xFF;  // 2.3: the studio's keys the renderer has
     bool fpsShown_ = false;
     // 0.76: [frames] keep_fps - the frames counted since keepSince_, slow windows in a row, the effects turned off for
     // this game; the effects' costs written for the settings app every half minute

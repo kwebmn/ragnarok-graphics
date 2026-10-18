@@ -13,5 +13,7 @@ bool readCameraTargetDepth(float& z);
 // AI textures (0.12): the map the game shows ("prontera"), from the same game mode as the camera; "" when there is no
 // world (the login, the character list) or the exe is another build.
 std::string readGameMap();
+// 2.3, uaRO Studio's pick: the game's own cursor in its pixels; false in another build of the exe.
+bool readGameCursor(int& x, int& y);
 
 }  // namespace uagfx::win

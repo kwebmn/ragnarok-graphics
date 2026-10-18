@@ -179,3 +179,53 @@ TEST(ai_ready_jpg_pictures_found_by_their_likeness) {
     addPack(r2, {ui}, pack::indexText(x));
     CHECK(!r2.alike(game.data(), 256, 256, Kind::Icons, name));
 }
+
+TEST(ai_ready_takes_no_studio_line_for_a_picture) {
+    // 2.3: the studio's lines ('+', '!', '#') name no picture of the pack
+    ReadyPictures r(settings());
+    const std::string packed = pack::pictureName(pack::Group::World, kKey);
+    pack::Index x;
+    x.pictures[packed] = pack::IndexEntry{Kind::Ground, {}};
+    x.made[packed] = pack::Provenance{"a.bmp", "data.grf", 1, "general", "general x4"};
+    x.materials[kKey] = pack::MaterialScales{};
+    addPack(r, {packed}, pack::indexText(x));
+    std::string name;
+    CHECK(r.texture(kKey, Kind::Ground, name) && name == packed);
+    CHECK_EQ(r.ahead(), size_t(1));  // the picture's kind alone
+}
+
+TEST(ready_pictures_leave_marked_keys) {
+    // 2.3, the studio's "the game's own always" ('!' lines): no picture of the pack for that key, whatever the kind
+    ReadyPictures r(settings());
+    const std::string world = pack::pictureName(pack::Group::World, kKey);
+    const std::string sprite = pack::pictureName(pack::Group::Sprites, kKey);
+    const std::string ui = pack::pictureName(pack::Group::Ui, kKey);
+    pack::Index x;
+    x.pictures[world] = pack::IndexEntry{Kind::Ground, {}};
+    x.aliases[kLow] = world;
+    x.ownAlways.insert(kKey);
+    x.ownAlways.insert(kLow);
+    addPack(r, {world, sprite, ui}, pack::indexText(x));
+    std::string name;
+    CHECK(r.marked(kKey));
+    CHECK(!r.texture(kKey, Kind::Ground, name));
+    CHECK(!r.texture(kLow, Kind::Ground, name));  // a lower detail's key marked too
+    CHECK(!r.cell(kKey, name));
+    CHECK(!r.icon(kKey, name));
+    ReadyPictures plain(settings());  // without the mark: the pictures as before
+    x.ownAlways.clear();
+    addPack(plain, {world, sprite, ui}, pack::indexText(x));
+    CHECK(!plain.marked(kKey));
+    CHECK(plain.texture(kKey, Kind::Ground, name) && plain.cell(kKey, name) && plain.icon(kKey, name));
+}
+
+TEST(ready_pictures_know_a_textures_material) {
+    // 2.3, uaRO Studio's material of one texture ('#' lines): its gloss, relief and height scaled
+    ReadyPictures r(settings());
+    pack::Index x;
+    x.materials[kKey] = pack::MaterialScales{0.0f, 1.5f, 0.5f};
+    addPack(r, {}, pack::indexText(x));
+    pack::MaterialScales s;
+    CHECK(r.materialOf(kKey, s) && s.gloss == 0.0f && s.relief == 1.5f && s.height == 0.5f);
+    CHECK(!r.materialOf(kLow, s) && s.gloss == 1.0f && s.relief == 1.0f && s.height == 1.0f);  // none: as built
+}

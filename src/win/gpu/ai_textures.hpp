@@ -21,6 +21,7 @@
 #include "core/ai/srvgg.hpp"
 #include "core/config.hpp"
 #include "core/frame.hpp"
+#include "core/studio_link.hpp"
 #include "core/texture_pack.hpp"
 #include "win/gpu/missing_dump.hpp"
 #include "win/gpu/renderer.hpp"
@@ -72,9 +73,32 @@ public:
     uint8_t spritesShown = 0xFF;  // 2.2.2: the sprites' kinds shown (aiSpritesShown's bits)
     // 2.2.2: a sprite cache's cell holding `source` (sprite_exe::Source) drawn from the copy (aiCellShown)
     bool cellShown(uint8_t source) const { return aiCellShown(source, kindsShown, spritesShown); }
+    // 2.3, uaRO Studio's X-ray: how a texture is shown (studio::How); false: not one of the AI's (a lightmap, a
+    // sprite cache, a texture outside the sides).
+    // 2.3, uaRO Studio (L2): the texture picked under the cursor into %LOCALAPPDATA%\uaroGraphics\studio\link\pick.txt
+    // and the studio told (its event); 0: nothing of the AI's was there. toggleHidden: that texture's picture off in
+    // the game, or on again (A/B of one texture).
+    void writePick(uint32_t id, int x, int y);
+    // 2.3 (T7): a texture's material scales ('#' lines of the pack's index); 1, 1, 1 when it has none
+    void materialScales(uint32_t id, pack::MaterialScales& out) const {
+        const auto it = items_.find(id);
+        out = pack::MaterialScales();
+        if (it != items_.end() && pictures_) pictures_->materialOf(it->second.key, out);
+    }
+    void toggleHidden();
+    bool howOf(uint32_t id, uint8_t& how) const {
+        const auto it = items_.find(id);
+        if (it == items_.end()) return false;
+        how = it->second.how;
+        return true;
+    }
 
     // 0.43, the pack builder (Renderer::buildPack): the networks of the settings' kinds - no pack.
     bool startForPack(const std::string& gameDir, const AiSettings& settings, std::string& error);
+    // 2.3, uaRO Studio's engine: the compute pipelines alone; a model's network loaded when it is first asked for
+    // (netForModel: the general one at the denoise asked, -1 the settings'), self-tested, its file closed after.
+    bool startForStudio(const std::string& gameDir, std::string& error);
+    int netForModel(const std::string& token, int denoise, std::string& error);
     int netFor(ai::Kind kind) const { return int(kind) < ai::kKinds ? netOf_[int(kind)] : -1; }
     // 1.6: the network of a group of pictures (its own model); -1 none.
     int netForGroup(ai::Group g) const { return int(g) < ai::kGroups ? groupNet_[int(g)] : -1; }
@@ -121,6 +145,8 @@ private:
         uint64_t lastUse = 0;    // 0.44: the frame it was last drawn in (frame_)
         uint64_t bytes = 0;      // its copy's in video memory (Texture::ai), all its levels
         ai::Group group = ai::Group::World;  // 1.6
+        uint8_t how = uint8_t(studio::How::Missing);  // 2.3: how it is shown (the map's report, the X-ray)
+        uint64_t counted = ~0ull;                     // 2.3: the frame it was last counted in the report
     };
     struct Level {
         UINT64 at = 0;  // bytes into the image
@@ -177,7 +203,8 @@ private:
     // 0.48: the I/O thread's work - a picture of the pack read (width x height the game texture's: its result's / 4),
     // one made written into the pack, or the index told of a kind and a map a picture was seen as and on.
     struct IoRequest {
-        enum Type : uint8_t { Read, Write, Note } type = Read;
+        // 2.3 Reload: the pack's directory and index read again (uaRO Studio changed it), name the keys changed
+        enum Type : uint8_t { Read, Write, Note, Reload } type = Read;
         uint32_t id = 0;
         std::string name;
         std::vector<uint32_t> argb;  // to write
@@ -195,6 +222,8 @@ private:
         uint32_t id = 0;
         std::string name;
         bool ok = false;
+        std::shared_ptr<pack::Reader> reloaded;  // 2.3: the pack opened again, its index in `text`, its keys in name
+        std::string text;
         std::vector<uint32_t> argb;
         int width = 0, height = 0;
         Job cell;
@@ -248,6 +277,10 @@ private:
     void drop(Item& item);  // its pixels go: never its turn
     void begin(uint32_t id, Item& item, ai::Kind kind, bool later);
     void note(const std::string& name, ai::Kind kind);  // 0.48: its kind and the map, into the pack's index
+    // 2.3, uaRO Studio's report of a map (L3): each texture drawn, how it was shown and in how many frames - written
+    // to uaro-graphics\seen\<map>.txt when the map changes and at the end, the last 20 maps kept.
+    void noteSeen(Item& item);
+    void writeSeen();
     bool nextJob();
     void takeLoaded();
     void finishReadbacks();
@@ -274,9 +307,19 @@ private:
     int smallNet_ = -1;          // 1.6.3: [ai] small_model with small_pictures on
     // 1.6: the network of a model word, loaded once (the same model for several groups is one network); -1, error.
     int netOfToken(const std::string& dir, const std::string& token, std::string& error);
+    std::string modelDir_;  // 2.3: the studio's engine - where netForModel finds the models
+    std::string seenDir_;   // 2.3: uaro-graphics\seen ("" no reports: the pack builder, the studio's engine)
+    std::string picked_;    // 2.3: the key picked last (Ctrl+Shift+F8)
+    std::unordered_set<std::string> hidden_;  // 2.3: keys whose pictures are off (Ctrl+Shift+F7)
+    std::unordered_map<std::string, studio::Seen> seenOnMap_;
     bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack
     bool generate_ = false;                     // [ai] generate: the network makes what is missing
-    pack::Reader pack_;                         // 0.42: uaro-textures.zip, read by the I/O thread
+    // 0.42: uaro-textures.zip, read by the I/O thread; 2.3: shared - opened again there when uaRO Studio changes it,
+    // then swapped in here under ioLock_ (each read takes it under the lock)
+    std::shared_ptr<pack::Reader> pack_ = std::make_shared<pack::Reader>();
+    HANDLE changedEvent_ = nullptr;  // 2.3: Local\uaro-studio-changed, set by the studio after it wrote the pack
+    void studioChanged();             // 2.3: the event set - the pack asked to be read again
+    void reloaded(IoResult& r);       // 2.3: the pack read again - the keys changed taken from it anew
     std::unique_ptr<ai::ReadyPictures> pictures_;  // 0.48: the pack's pictures and kinds, looked up here
     MissingDump dump_;                             // 0.49.1
     int scale_ = 4;                             // the result: 4 or 2 times the game's texture

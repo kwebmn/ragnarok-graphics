@@ -149,3 +149,15 @@ TEST(bridge_chunks_make_the_message_again) {
     CHECK(!a.feed(ChunkHeader{9, 2, 5, 4}, part2));  // not where the last one ended
     CHECK(!a.complete());
 }
+
+TEST(bridge_carries_set_studio) {
+    // 2.3, uaRO Studio's keys in the game: the X-ray, a pick at the cursor, A/B of the picked texture
+    std::vector<uint8_t> buf;
+    WireWriter w(buf);
+    writeStudioKeys(w, StudioKeys{5, 640, -3});
+    WireReader r(buf.data(), buf.size());
+    StudioKeys k;
+    CHECK(readStudioKeys(r, k) && k.flags == 5 && k.x == 640 && k.y == -3);
+    WireReader cut(buf.data(), 4);
+    CHECK(!readStudioKeys(cut, k));
+}

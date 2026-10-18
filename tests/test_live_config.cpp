@@ -338,3 +338,11 @@ TEST(live_config_ai_sprite_cells_follow_their_kinds) {
     CHECK(aiCellShown(0, kinds, npcs));   // no known file
     CHECK(!aiCellShown(0, kinds & ~4, 0));
 }
+
+TEST(live_config_takes_the_xray_at_once) {
+    // 2.3: uaRO Studio's X-ray from the console or the settings app shows at once
+    Config running, file;
+    file.xray = true;
+    const LiveUpdate u = liveUpdate(running, file);
+    CHECK(u.next.xray);
+}

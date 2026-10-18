@@ -540,3 +540,10 @@ TEST(config_effects_drawn_by_the_renderer) {
     glow.glow = true;
     CHECK(drawnByRenderer(glow));
 }
+
+TEST(config_reads_xray_off_by_default) {
+    // 2.3, uaRO Studio's X-ray ([debug] xray, Ctrl+Shift+F9): off unless asked
+    CHECK(!parseConfig("").xray);
+    CHECK(parseConfig("[debug]\nxray = 1\n").xray);
+    CHECK(!parseConfig("[debug]\nxray = 0\n").xray);
+}

@@ -138,4 +138,122 @@ inline std::vector<uint8_t> rsm() {
     return w.b;
 }
 
+// 2.3: a ground file (.gnd, version 1.7): its textures, one lightmap, a top surface a cell. cells[y * width + x]:
+// the cell's texture and its corners' UV ({u0, u1, u2, u3}, {v0, v1, v2, v3}: (x, y), (x+1, y), (x, y+1),
+// (x+1, y+1)); texture -1: no top surface there.
+struct GndCell {
+    int texture = -1;
+    float u[4] = {0, 1, 0, 1};
+    float v[4] = {0, 0, 1, 1};
+};
+
+inline std::vector<uint8_t> gnd(const std::vector<std::string>& textures, int width, int height,
+                                const std::vector<GndCell>& cells) {
+    RswWriter w;
+    w.bytes("GRGN", 4);
+    const uint8_t version[2] = {1, 7};
+    w.bytes(version, 2);
+    w.i32(width);
+    w.i32(height);
+    w.f32(10.0f);
+    w.i32(int32_t(textures.size()));
+    w.i32(80);
+    for (const std::string& t : textures) w.text(t.c_str(), 80);
+    w.i32(1);  // one lightmap of 8 x 8, 1 cell
+    w.i32(8);
+    w.i32(8);
+    w.i32(1);
+    std::vector<uint8_t> light(8 * 8 * 4, 0x80);
+    w.bytes(light.data(), light.size());
+    int surfaces = 0;
+    for (const GndCell& c : cells) surfaces += c.texture >= 0;
+    w.i32(surfaces);
+    for (const GndCell& c : cells) {
+        if (c.texture < 0) continue;
+        for (float u : c.u) w.f32(u);
+        for (float v : c.v) w.f32(v);
+        const int16_t texture = int16_t(c.texture);
+        const uint16_t lightmap = 0;
+        w.bytes(&texture, 2);
+        w.bytes(&lightmap, 2);
+        const uint8_t colour[4] = {255, 255, 255, 255};
+        w.bytes(colour, 4);
+    }
+    int surface = 0;
+    for (const GndCell& c : cells) {
+        const float heights[4] = {0, 0, 0, 0};
+        w.bytes(heights, sizeof heights);
+        w.i32(c.texture >= 0 ? surface++ : -1);  // top
+        w.i32(-1);                                // front
+        w.i32(-1);                                // right
+    }
+    return w.b;
+}
+
+// 2.3: a 24-bit BMP of w x h from rows of 0xRRGGBB (top first) - a world texture as the game's files have it.
+inline std::vector<uint8_t> bmp24(int w, int h, const std::vector<uint32_t>& top) {
+    RswWriter b;
+    const uint32_t stride = (uint32_t(w) * 3 + 3) & ~3u, bits = 0x36;
+    const auto u16 = [&b](uint32_t v) {
+        const uint16_t x = uint16_t(v);
+        b.bytes(&x, 2);
+    };
+    const auto u32 = [&b](uint32_t v) { b.bytes(&v, 4); };
+    b.bytes("BM", 2);
+    u32(bits + stride * uint32_t(h));
+    u32(0);
+    u32(bits);
+    u32(40);
+    u32(uint32_t(w));
+    u32(uint32_t(h));
+    u16(1);
+    u16(24);
+    for (int i = 0; i < 6; ++i) u32(0);
+    for (int y = h - 1; y >= 0; --y) {
+        for (int x = 0; x < w; ++x) {
+            const uint32_t v = top[size_t(y * w + x)];
+            const uint8_t px[3] = {uint8_t(v), uint8_t(v >> 8), uint8_t(v >> 16)};
+            b.bytes(px, 3);
+        }
+        for (uint32_t pad = uint32_t(w) * 3; pad < stride; ++pad) b.bytes("\0", 1);
+    }
+    return b.b;
+}
+
+// 2.3: a sprite (SPR 2.1) of one palette frame (w x h of palette indices, no runs of zeros) and its palette.
+inline std::vector<uint8_t> spr(int w, int h, const std::vector<uint8_t>& indices,
+                                const std::vector<uint8_t>& palette) {
+    RswWriter b;
+    const auto u16 = [&b](uint32_t v) {
+        const uint16_t x = uint16_t(v);
+        b.bytes(&x, 2);
+    };
+    b.bytes("SP\x01\x02", 4);
+    u16(1);  // palette frames
+    u16(0);  // 32-bit frames
+    u16(uint32_t(w));
+    u16(uint32_t(h));
+    u16(uint32_t(indices.size()));
+    b.bytes(indices.data(), indices.size());
+    b.bytes(palette.data(), palette.size());
+    return b.b;
+}
+
+// 2.3: a palette (1024 bytes, RGBA) whose colour 1 is (r, g, b), colour 2 magenta, colour 3 light grey.
+inline std::vector<uint8_t> palette(uint8_t r, uint8_t g, uint8_t b) {
+    std::vector<uint8_t> p(1024, 0);
+    p[4] = r, p[5] = g, p[6] = b;
+    p[8] = 255, p[9] = 0, p[10] = 255;
+    p[12] = p[13] = p[14] = 220;
+    return p;
+}
+
+// 2.3: w x h palette indices, 1 and 3 in a checker - a frame with detail (one of a flat colour is soft light)
+inline std::vector<uint8_t> checker(int w, int h) {
+    std::vector<uint8_t> out(size_t(w) * size_t(h));
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) out[size_t(y * w + x)] = uint8_t((x + y) % 2 ? 3 : 1);
+    return out;
+}
+
 }  // namespace testfiles

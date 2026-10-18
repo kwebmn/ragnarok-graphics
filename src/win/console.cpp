@@ -87,6 +87,7 @@ void Console::build(Lang lang) {
     for (const char* k : {"ai.enabled", "ai.ground", "ai.objects", "ai.monsters", "ai.players", "ai.npcs", "ai.items",
                           "ai.effects", "ai.icons"})
         if (settingOf(k)) rows_.push_back(Row{Kind::Box, k, std::string(k) == "ai.enabled" ? 0 : 1});
+    if (settingOf("debug.xray")) rows_.push_back(Row{Kind::Box, "debug.xray", 1});  // 2.3: Ctrl+Shift+F9 too
     rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
     rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
     rows_.push_back(Row{Kind::Choice, "effects.tier", 0});
