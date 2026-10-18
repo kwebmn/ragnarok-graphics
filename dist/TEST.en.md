@@ -1,3 +1,14 @@
+# uaRO Graphics 2.5.12 — testing
+
+- **Direct3D 11 on a thread of its own (a test, off by default).** A new box on the Render page: "Direct3D 11 on a
+  thread of its own". With it the game's thread only writes each frame down and goes on at once, and a thread of its
+  own draws it on another core of the processor - as the 64-bit renderer does for Direct3D 12. Where the processor
+  holds the game back (an older computer, many effects) there should be more frames. If the thread does not start,
+  the game draws as before.
+- Check, please, with Direct3D 11: tick the box, restart the game. In a field and in a town the FPS no lower than
+  before, the same picture, no blinking or stalls; screenshots and leaving the game work. Send a report - the log's
+  "waiting for Direct3D 11's thread" line shows how long the game's thread waits for the drawing.
+
 # uaRO Graphics 2.5.11 — testing
 
 - **Less work on the game's own thread (Direct3D 11 above all).** From the profile of your Direct3D 11 report:
