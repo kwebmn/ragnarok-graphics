@@ -76,3 +76,17 @@ faces and the vertices' projection share one `OnRun` and its globals. The driver
 of its own (Direct3D 11's, or the 64-bit renderer for Direct3D 12). The large step would be drawing the world itself
 from RSW, GND and RSM (the driver reads them already) with the client's camera (`CView+0x94`), hooking
 `FUN_004de9f0` and the ground's drawing, and leaving the client its sprites, effects and interface.
+
+## Built
+
+- 2.5.18: point 1 - `CTexture::Update` through its vtable entry (`win/texture_hook`): the picture's own 8-bit texels
+  drawn where the 16-bit ones are still theirs (`core/full_colour.hpp`). 2.5.20: the driver makes the whole update as
+  the game does - its fields, sizes, steps, lock, rows, unlock, its own mip function - with the rows by SSE2
+  (`core/texture_exe.hpp`, the same bits: 3.5 times the speed of the same loop on 512x512); `[debug] fast_textures`.
+- 2.5.20: point 5 - `__ftol` by `fisttp` where the processor has SSE3 (`win/ftol_patch`, `[debug] fast_ftol`).
+- 2.5.20, the driver's own part of the game's thread (report R-82's profile: 9.3 % of it): the effects' faces in a
+  flat table cleared by the frame's stamp (a map's nodes were made and freed every frame), crisp text's windows
+  compared a row at a time where nothing changed, the frame's record written for the bridge with inline writes.
+
+Left: point 2 (true-colour sprite frames), 3 and 4 (loads off the game's thread), 6 and 7. `ProjectVertex` stays the
+game's: its two divisions a vertex are most of its cost, and an SSE copy would round the depth differently.
