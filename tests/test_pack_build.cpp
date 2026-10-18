@@ -212,28 +212,29 @@ TEST(pack_build_finds_the_hair_palettes_of_a_head) {
 }
 
 TEST(pack_build_takes_the_colours_the_server_lets_be_worn) {
-    // 2.2.5: the client has 128 hair colours a style and up to 700 clothes colours a job; the server lets 0-8 and 0-77
-    // be worn (uAthena battle/client.conf max_hair_color, max_cloth_color) - the builder read and made the others for
-    // nothing (its reading pass took long on the heads)
+    // 2.2.5: the client has 128 hair colours a style and up to 700 clothes colours a job; the server lets 0-20 (2.5.19:
+    // its stylist's, npc/custom/dye.txt) and 0-77 be worn - the builder read and made the others for nothing (its
+    // reading pass took long on the heads)
     const std::string human = "\xC0\xCE\xB0\xA3\xC1\xB7", head = "\xB8\xD3\xB8\xAE\xC5\xEB",
                       hair = "\xB8\xD3\xB8\xAE", body = "\xB8\xF6\xC5\xEB", clothes = "\xB8\xF6", male = "\xB3\xB2",
                       job = "\xB0\xCB\xBB\xE7";
     const std::string sprite = "data\\sprite\\" + human + "\\" + head + "\\" + male + "\\12_" + male + ".spr";
     const std::string dress = "data\\sprite\\" + human + "\\" + body + "\\" + male + "\\" + job + "_" + male + ".spr";
     std::vector<std::string> names = {sprite, dress};
-    for (int c : {0, 8, 9, 127}) names.push_back("data\\palette\\" + hair + "\\" + hair + "12_" + male + "_" +
+    for (int c : {0, 8, 9, 20, 21, 127}) names.push_back("data\\palette\\" + hair + "\\" + hair + "12_" + male + "_" +
                                                 std::to_string(c) + ".pal");
     for (int c : {1, 77, 78, 699})
         names.push_back("data\\palette\\" + clothes + "\\" + job + "_" + male + "_" + std::to_string(c) + ".pal");
     std::sort(names.begin(), names.end());
     const pack::Choice c;
-    CHECK(c.maxHairColour == 8 && c.maxClothColour == 77);
+    CHECK(c.maxHairColour == 20 && c.maxClothColour == 77);
     const std::vector<std::string> hairs = pack::palettesOf(sprite, names, false, c.maxHairColour, c.maxClothColour);
-    CHECK_EQ(hairs.size(), size_t(2));
-    CHECK(hairs.size() == 2 && hairs[0].find("_0.pal") != std::string::npos);
-    CHECK(hairs.size() == 2 && hairs[1].find("_8.pal") != std::string::npos);
+    CHECK_EQ(hairs.size(), size_t(4));  // 0, 8, 9, 20 - not 21 or 127
+    CHECK(hairs.size() == 4 && hairs[0].find("_0.pal") != std::string::npos);
+    CHECK(hairs.size() == 4 && hairs[1].find("_20.pal") != std::string::npos);
+    CHECK(hairs.size() == 4 && hairs[3].find("_9.pal") != std::string::npos);
     CHECK_EQ(pack::palettesOf(dress, names, true, c.maxHairColour, c.maxClothColour).size(), size_t(2));
-    CHECK_EQ(pack::palettesOf(sprite, names).size(), size_t(4));  // no limit asked: every colour there is
+    CHECK_EQ(pack::palettesOf(sprite, names).size(), size_t(6));  // no limit asked: every colour there is
 }
 
 TEST(pack_build_finds_the_clothes_colours_of_a_body_when_asked) {

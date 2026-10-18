@@ -42,7 +42,7 @@ struct Game {
         add("data\\texture\\bark.bmp", testfiles::bmp24(64, 64, cells(2)), {1});
         add("data\\texture\\leaf.bmp", testfiles::bmp24(64, 64, cells(3)), {1});
         add(kSprite, testfiles::spr(16, 16, testfiles::checker(16, 16), testfiles::palette(10, 20, 30)), {1});
-        for (int c = 0; c <= 12; ++c) add(hairPalette(c), testfiles::palette(uint8_t(40 + c * 8), 60, 70), {1});
+        for (int c = 0; c <= 24; ++c) add(hairPalette(c), testfiles::palette(uint8_t(40 + c * 8), 60, 70), {1});
         std::vector<testfiles::GndCell> ground(4);
         for (int i = 0; i < 4; ++i) {  // each cell another quarter tile of a.bmp, never the next one
             testfiles::GndCell& c = ground[size_t(i)];
@@ -107,16 +107,16 @@ TEST(catalog_lists_every_texture) {
 }
 
 TEST(catalog_takes_the_server_colours) {
-    // a head in its own palette and the hair colours the server lets be worn (0-8 of 0-12)
+    // a head in its own palette and the hair colours the server lets be worn (0-20 of 0-24)
     const Game g;
     const catalog::Catalog c = g.build();
     const catalog::FileEntry* head = fileOf(c, kSprite);
-    CHECK(head && head->palettes.size() == 9);
-    CHECK(head && head->pictures.size() == 10);
+    CHECK(head && head->palettes.size() == 21);
+    CHECK(head && head->pictures.size() == 22);
     std::set<std::string> used;
     if (head)
         for (const catalog::PictureOf& p : head->pictures) used.insert(p.palette);
-    CHECK(used.count("") && used.count(hairPalette(8)) && !used.count(hairPalette(9)));
+    CHECK(used.count("") && used.count(hairPalette(20)) && !used.count(hairPalette(21)));
 }
 
 TEST(catalog_names_the_maps_and_grid) {
@@ -189,7 +189,7 @@ TEST(catalog_cache_round_trips) {
     CHECK(catalog::load(catalog::save(c), back));
     CHECK(catalog::save(back) == catalog::save(c));
     CHECK(back.files.size() == c.files.size() && back.maps == c.maps && back.archives.size() == 2);
-    CHECK(fileOf(back, kSprite)->palettes.size() == 9);
+    CHECK(fileOf(back, kSprite)->palettes.size() == 21);
 }
 
 TEST(catalog_cache_refuses_bad_bytes) {

@@ -63,7 +63,7 @@ DWORD WINAPI decodeMain(void* arg) {
 CatalogWork::~CatalogWork() { stop(); }
 
 pack::Choice CatalogWork::choice() const {
-    pack::Choice c;  // every kind; the server's colours (hair 0-8, clothes 0-77)
+    pack::Choice c;  // every kind; the server's colours (hair 0-20, clothes 0-77)
     std::string ini;
     if (win::readTextFile(app::ansi(gameDir_ + L"\\uaro-graphics.ini"), ini)) {
         const Config config = parseConfig(ini);

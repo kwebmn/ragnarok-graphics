@@ -113,7 +113,7 @@ Args parseArgs() {
             a.pack.mapModels = v.find("models") != std::string::npos;
         }
         else if (k == "--remake") a.pack.remake = v == "1";
-        else if (k == "--colours") {  // 2.2.5: the most hair and clothes colours, "8,77" (applied after --kinds)
+        else if (k == "--colours") {  // 2.2.5: the most hair and clothes colours, "20,77" (applied after --kinds)
             const size_t comma = v.find(',');
             colours[0] = std::atoi(v.c_str());
             colours[1] = comma == std::string::npos ? colours[0] : std::atoi(v.c_str() + comma + 1);

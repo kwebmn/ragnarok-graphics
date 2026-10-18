@@ -251,7 +251,7 @@ private:
         }
         a.remake = b["remake"].asBool();
         if (b["colours"].items().size() == 2) {
-            a.choice.maxHairColour = int(b["colours"][size_t(0)].asInt(8));
+            a.choice.maxHairColour = int(b["colours"][size_t(0)].asInt(20));
             a.choice.maxClothColour = int(b["colours"][size_t(1)].asInt(77));
         }
         if (!b["catalog"].asString().empty() && !readFile(b["catalog"].asString(), a.catalogData))

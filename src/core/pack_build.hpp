@@ -78,8 +78,9 @@ struct Choice {
     bool bodyColours = false;
     int minSide = 16, maxSide = 512;  // the world's textures ([ai] min_size, max_size)
     // 2.2.5: the colours the server lets be worn (uAthena battle/client.conf max_hair_color, max_cloth_color) - the
-    // client has 128 hair colours a style and up to 700 clothes colours a job; -1: every one there is
-    int maxHairColour = 8, maxClothColour = 77;
+    // client has 128 hair colours a style and up to 700 clothes colours a job; -1: every one there is. 2.5.19: hair
+    // 0-20 - the game's stylist (npc/custom/dye.txt) dyes those, whatever the repository's client.conf says (8)
+    int maxHairColour = 20, maxClothColour = 77;
 };
 // The kinds as the settings app passes them to the builder: "world,effects,monsters,players,npcs,items,interface"
 // (the sides come with the [ai] settings).

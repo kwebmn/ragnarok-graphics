@@ -51,7 +51,7 @@ struct Catalog {
     std::vector<std::string> maps;
     std::vector<FileEntry> files;
     // the choice it was made with (pack::Choice): what makes the same keys
-    int maxHair = 8, maxCloth = 77;
+    int maxHair = 20, maxCloth = 77;
     int minSide = 16, maxSide = 512;
     bool bodyColours = false;
 };
