@@ -31,6 +31,8 @@ public:
     // dir: the game's folder (its DATA.INI). false when no archive opens.
     bool open(const std::string& dir, std::string& error);
     const std::vector<std::string>& names() const { return names_; }  // lower case, backslashes, each once, sorted
+    // 2.2.5: the maps among the archives' files (data\<map>.rsw), sorted; their .gnd, .rsw and .rsm read too
+    const std::vector<std::string>& maps() const { return maps_; }
     bool read(const std::string& name, std::vector<uint8_t>& out);
     std::string report() const;  // the archives and their files: for the log
 
@@ -47,6 +49,7 @@ private:
     std::vector<size_t> counts_;
     std::unordered_map<std::string, Place> where_;
     std::vector<std::string> names_;
+    std::vector<std::string> maps_;
 };
 
 // What the builder makes (the settings app's choices) and the sides the driver's AI takes.

@@ -88,6 +88,27 @@ TEST(pack_build_takes_a_file_from_the_first_archive) {
     rmdir(dir.c_str());
 }
 
+TEST(pack_build_reads_the_files_of_the_maps) {
+    // 2.2.5: one map's textures - its ground (.gnd), its world (.rsw) and its models (.rsm) are read through the
+    // game's archives too, though none is a picture (they were not kept: no map's textures were ever found)
+    const std::string dir = tempDir();
+    grfWith(dir + "/data.grf", {{"data\\cmd_fild02.gnd", "ground"}, {"data\\cmd_fild02.rsw", "world"},
+                                {"data\\model\\\xB3\xAA\\tree.rsm", "a model"}, {"data\\texture\\a.bmp", "a"}});
+    writeFile(dir + "/DATA.INI", "[Data]\n0=data.grf\n");
+    pack::GameFiles files;
+    std::string error;
+    CHECK(files.open(dir, error));
+    std::vector<uint8_t> out;
+    CHECK(files.read("data\\cmd_fild02.gnd", out) && std::string(out.begin(), out.end()) == "ground");
+    CHECK(files.read("data\\cmd_fild02.rsw", out) && std::string(out.begin(), out.end()) == "world");
+    CHECK(files.read("data\\model\\\xB3\xAA\\tree.rsm", out) && std::string(out.begin(), out.end()) == "a model");
+    CHECK(files.names() == std::vector<std::string>{"data\\texture\\a.bmp"});  // the pictures' files alone
+    CHECK(files.maps() == std::vector<std::string>{"cmd_fild02"});
+    std::remove((dir + "/data.grf").c_str());
+    std::remove((dir + "/DATA.INI").c_str());
+    rmdir(dir.c_str());
+}
+
 TEST(pack_build_passes_its_choice_as_words) {
     // 0.43: the settings app starts the builder with the kinds ticked on its page, as words.
     pack::Choice c;

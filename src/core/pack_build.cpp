@@ -42,6 +42,13 @@ bool listed(const std::string& n) {
     return wanted(n) || (n.rfind("data\\palette\\", 0) == 0 && endsWith(n, ".pal"));
 }
 
+// 2.2.5: a map's files (core/map_textures.hpp): data\<map>.gnd and .rsw, the models data\model\...\<name>.rsm
+bool mapFile(const std::string& n) {
+    if (n.rfind("data\\", 0) != 0) return false;
+    if (endsWith(n, ".rsm")) return n.rfind("data\\model\\", 0) == 0;
+    return (endsWith(n, ".gnd") || endsWith(n, ".rsw")) && n.find('\\', 5) == std::string::npos;
+}
+
 const std::string kInterface = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
 
 }  // namespace
@@ -97,14 +104,14 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
         size_t count = 0;
         if (ext == ".zip") {
             auto z = std::make_unique<zip::Index>();
-            if (!z->open(path, [](const std::string& n) { return listed(n); }, why)) {
+            if (!z->open(path, [](const std::string& n) { return listed(n) || mapFile(n); }, why)) {
                 failed_.push_back(file + " (" + why + ")");  // 1.6.5: said in the log
                 continue;
             }
             for (const std::string& n : z->names())
                 if (!where_.count(n)) {
                     where_[n] = Place{archive, n};
-                    ++count;
+                    count += listed(n);
                 }
             zips_.push_back(std::move(z));
             order_.emplace_back(true, int(zips_.size()) - 1);
@@ -116,9 +123,9 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
             }
             for (const std::string& stored : g->names()) {
                 const std::string n = zip::normalName(stored);
-                if (!listed(n) || where_.count(n)) continue;
+                if ((!listed(n) && !mapFile(n)) || where_.count(n)) continue;
                 where_[n] = Place{archive, stored};
-                ++count;
+                count += listed(n);
             }
             grfs_.push_back(std::move(g));
             order_.emplace_back(false, int(grfs_.size()) - 1);
@@ -131,8 +138,12 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
         return false;
     }
     names_.reserve(where_.size());
-    for (const auto& w : where_) names_.push_back(w.first);
+    for (const auto& w : where_) {
+        if (listed(w.first)) names_.push_back(w.first);
+        else if (endsWith(w.first, ".rsw")) maps_.push_back(w.first.substr(5, w.first.size() - 9));  // 2.2.5
+    }
     std::sort(names_.begin(), names_.end());
+    std::sort(maps_.begin(), maps_.end());
     return true;
 }
 
