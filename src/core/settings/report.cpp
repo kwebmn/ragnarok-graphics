@@ -51,6 +51,9 @@ std::string makeReport(const ReportFacts& f) {
     r += "Settings app: " + f.utilityVersion + "\r\n";
     r += "Installed driver: " + (f.driverVersion.empty() ? std::string("unknown") : f.driverVersion) + "\r\n";
     r += "Windows: " + f.windows + "\r\n";
+    if (!f.processor.empty()) r += "Processor: " + f.processor + "\r\n";
+    if (!f.memory.empty()) r += "Memory: " + f.memory + "\r\n";
+    if (!f.power.empty()) r += "Power: " + f.power + "\r\n";
     r += "Graphics: " + f.gpu + "\r\n";
     for (const std::string& m : f.monitors) r += "Monitor: " + m + "\r\n";
     r += "Screen: " + f.screen + "\r\n";

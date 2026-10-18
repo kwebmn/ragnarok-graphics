@@ -12,6 +12,8 @@ struct ReportFacts {
     std::string utilityVersion;
     std::string driverVersion;               // the installed build, "" when unknown
     std::string windows;                     // "10.0 build 26200"
+    // 2.5.15 (core/machine.hpp): the processor, the memory, the power; "" from an older settings app - no line
+    std::string processor, memory, power;
     std::string gpu;                         // "NVIDIA GeForce RTX 5060 Ti, 16311 MB, Direct3D 12: OK"
     std::vector<std::string> monitors;       // one line each
     std::string iniText;                     // uaro-graphics.ini: only "section.key = value" goes into the report

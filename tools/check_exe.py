@@ -55,6 +55,8 @@ ALLOWED = {
         # 0.51: the watcher of a game for the reports (--watch)
         "SetPriorityClass", "GetSystemTimeAsFileTime",  # 0.52: a crash dump of the last week
         "CreateMutexA", "ReleaseMutex",  # 0.53: the pack from the site, one writer at a time
+        # 2.5.15: the computer in the report - its cores (XP SP3), memory and power (Windows 2000)
+        "GetLogicalProcessorInformation", "GlobalMemoryStatusEx", "GetSystemPowerStatus",
     },
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",

@@ -71,6 +71,9 @@ ReportFacts reportFacts(const Model& m, const std::vector<std::string>& problems
     f.driverVersion = s.installedVersion;
     f.windows = num(long(sys.windows.major)) + "." + num(long(sys.windows.minor)) + " build " +
                 num(long(sys.windows.build));
+    f.processor = processorText(sys.computer);  // 2.5.15
+    f.memory = memoryText(sys.computer);
+    f.power = powerText(sys.computer);
     f.gpu = sys.d3d12Probed ? sys.d3d12.adapter + ", " + vramText(sys.d3d12.vramMb) + ", driver " +
                                   (sys.gpuDriver.empty() ? "unknown" : sys.gpuDriver) +
                                   ", Direct3D 12: " + (sys.d3d12.ok ? "OK" : "failed " + hresult(sys.d3d12.hr))

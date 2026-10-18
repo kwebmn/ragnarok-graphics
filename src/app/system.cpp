@@ -138,6 +138,7 @@ bool runsElevated() {
 SystemInfo probeSystem() {
     SystemInfo s;
     s.windows = win::windowsVersion();
+    s.computer = win::probeComputer();  // 2.5.15
     if (s.windows.major >= 10) {
         s.d3d12 = win::probeD3D12(true);
         s.d3d12Probed = true;

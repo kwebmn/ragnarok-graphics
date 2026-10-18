@@ -2,6 +2,9 @@
 
 #include <windows.h>
 
+#include <cpuid.h>
+#include <cstdio>
+
 #include <d3d11.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
@@ -249,6 +252,71 @@ unsigned long long registryVramMb(const std::string& name) {
     }
     FreeLibrary(advapi);
     return found;
+}
+
+Computer probeComputer() {
+    Computer m;
+    unsigned a = 0, b = 0, c = 0, d = 0;
+    if (__get_cpuid(0x80000000u, &a, &b, &c, &d) && a >= 0x80000004u) {
+        uint32_t regs[12] = {};
+        for (unsigned i = 0; i < 3; ++i)
+            __get_cpuid(0x80000002u + i, &regs[4 * i], &regs[4 * i + 1], &regs[4 * i + 2], &regs[4 * i + 3]);
+        m.cpu = cpuBrand(regs);
+    }
+    DWORD bytes = 0;
+    GetLogicalProcessorInformation(nullptr, &bytes);
+    std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> info(bytes / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION));
+    if (!info.empty() && GetLogicalProcessorInformation(info.data(), &bytes))
+        for (const SYSTEM_LOGICAL_PROCESSOR_INFORMATION& p : info) {
+            if (p.Relationship != RelationProcessorCore) continue;
+            ++m.cores;
+            for (ULONG_PTR mask = p.ProcessorMask; mask; mask &= mask - 1) ++m.threads;
+        }
+    using Open = LONG(WINAPI*)(HKEY, LPCWSTR, DWORD, REGSAM, PHKEY);
+    using Query = LONG(WINAPI*)(HKEY, LPCWSTR, LPDWORD, LPDWORD, LPBYTE, LPDWORD);
+    using Close = LONG(WINAPI*)(HKEY);
+    if (HMODULE advapi = LoadLibraryA("advapi32.dll")) {  // the processor's rated clock
+        const auto open = reinterpret_cast<Open>(reinterpret_cast<void*>(GetProcAddress(advapi, "RegOpenKeyExW")));
+        const auto query =
+            reinterpret_cast<Query>(reinterpret_cast<void*>(GetProcAddress(advapi, "RegQueryValueExW")));
+        const auto close = reinterpret_cast<Close>(reinterpret_cast<void*>(GetProcAddress(advapi, "RegCloseKey")));
+        HKEY key = nullptr;
+        if (open && query && close &&
+            open(HKEY_LOCAL_MACHINE, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ, &key) ==
+                ERROR_SUCCESS) {
+            DWORD mhz = 0, size = sizeof mhz, type = 0;
+            if (query(key, L"~MHz", nullptr, &type, reinterpret_cast<BYTE*>(&mhz), &size) == ERROR_SUCCESS &&
+                type == REG_DWORD)
+                m.mhz = unsigned(mhz);
+            close(key);
+        }
+        FreeLibrary(advapi);
+    }
+    MEMORYSTATUSEX memory{};
+    memory.dwLength = sizeof memory;
+    if (GlobalMemoryStatusEx(&memory)) {
+        m.ramMb = memory.ullTotalPhys >> 20;
+        m.freeMb = memory.ullAvailPhys >> 20;
+    }
+    SYSTEM_POWER_STATUS power{};
+    if (GetSystemPowerStatus(&power)) m.mains = power.ACLineStatus == 1 ? 1 : power.ACLineStatus == 0 ? 0 : -1;
+    using Active = DWORD(WINAPI*)(HKEY, GUID**);
+    if (HMODULE powrprof = LoadLibraryA("powrprof.dll")) {  // the power plan, by its GUID (its name is localised)
+        const auto active =
+            reinterpret_cast<Active>(reinterpret_cast<void*>(GetProcAddress(powrprof, "PowerGetActiveScheme")));
+        GUID* g = nullptr;
+        if (active && active(nullptr, &g) == ERROR_SUCCESS && g) {
+            char text[40];
+            std::snprintf(text, sizeof text, "%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                          static_cast<unsigned long>(g->Data1), unsigned(g->Data2), unsigned(g->Data3),
+                          unsigned(g->Data4[0]), unsigned(g->Data4[1]), unsigned(g->Data4[2]), unsigned(g->Data4[3]),
+                          unsigned(g->Data4[4]), unsigned(g->Data4[5]), unsigned(g->Data4[6]), unsigned(g->Data4[7]));
+            m.plan = powerPlanName(text);
+            LocalFree(g);
+        }
+        FreeLibrary(powrprof);
+    }
+    return m;
 }
 
 std::string featureLevelName(unsigned level) {

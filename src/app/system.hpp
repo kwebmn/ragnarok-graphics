@@ -18,6 +18,7 @@ struct SystemInfo {
     std::vector<settings::MonitorInfo> monitors;  // as the driver numbers them: 0 = the main one
     settings::Frame frame;                        // the game window's frame: its own or ours, the larger
     bool elevated = false;                        // this app runs as administrator
+    Computer computer;                             // 2.5.15: the processor, the memory, the power (the report)
 };
 SystemInfo probeSystem();
 

@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#include "core/computer.hpp"
+
 namespace uagfx::win {
 
 struct WindowsVersion {
@@ -52,5 +54,9 @@ struct AdapterProbe {
     unsigned d3d11Level = 0;  // 0: no Direct3D 11 device
 };
 std::vector<AdapterProbe> probeAdapters(bool systemOnly = false);
+
+// 2.5.15: the processor (CPUID, its cores), the memory and the power - for the log and the report. advapi32.dll and
+// powrprof.dll are loaded at run time: ddraw.dll imports neither.
+Computer probeComputer();
 
 }  // namespace uagfx::win
