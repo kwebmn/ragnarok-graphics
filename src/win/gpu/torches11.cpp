@@ -646,6 +646,14 @@ void Renderer11::applyTorchLight() {
         std::sort(lamps.begin(), lamps.end(), [](const Item& a, const Item& b) { return a.view[2] < b.view[2]; });
         for (const Item& l : lamps) addLight(l.view, l.reach, l.colour, l.strength);
     }
+    for (const torch::Flame& f : flames) {  // 2.5.4: the flames' tips in the world, for the embers rising from them
+        if (f.rhw <= 0.0f || critterFires_.size() >= 32) continue;
+        const float vz = 1.0f / f.rhw, gx = f.baseX + f.upX * 0.8f, gy = f.baseY + f.upY * 0.8f;
+        const float vx = (gx - proj.cx) * vz / proj.f0, vy = (gy - proj.cy) * vz / proj.f1;
+        critterFires_.push_back(critters::Point{vx * m[0] + vy * m[3] + vz * m[6] + m[9],
+                                                vx * m[1] + vy * m[4] + vz * m[7] + m[10],
+                                                vx * m[2] + vy * m[5] + vz * m[8] + m[11]});
+    }
     if (heatWanted())  // 2.5.3: the hot air over each flame
         for (const torch::Flame& f : flames) {
             const float fh = std::hypot(f.upX, f.upY) * k;

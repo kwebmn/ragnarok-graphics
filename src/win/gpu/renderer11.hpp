@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/critters.hpp"
 #include "core/draw_batch.hpp"
 #include "core/footsteps.hpp"
 #include "core/ground_cells.hpp"
@@ -93,6 +94,8 @@ public:
         year_ = seasons::of(map, trees::monthNow(), outdoors_, place_);
         waterLevelKnown_ = false;
         groundLifeLogged_ = grassLogged_ = false;
+        critterWorld_.setPlace(place_);  // 2.5.4: a new map - everything goes
+        crittersTime_ = 0.0f;
         weather_ = weather::of(map);
         hazeLogged_ = skyLogged_ = weatherLogged_ = cloudsLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
@@ -206,7 +209,8 @@ private:
     bool ripplesWanted() const { return effects_.ripples && effects_.water && waterPs_; }
     float stepLife() const {
         const float prints = stepKind() == 3 ? 0.9f : stepKind() == 1 ? 25.0f : stepKind() ? 14.0f : 0.0f;
-        return std::max(prints, ripplesWanted() ? kRippleLife : 0.0f);
+        return std::max(std::max(prints, ripplesWanted() ? kRippleLife : 0.0f),
+                        effects_.birds || effects_.breath || effects_.splashes ? 2.0f : 0.0f);
     }
     // 2.5.2: the chimneys' smoke (smoke_ps) and the lava (lava_ps) drawn by their own shaders, the lava lighting
     // around it in the torches' pass (draw.cpp, torches.cpp)
@@ -266,6 +270,24 @@ private:
     // (applyGrass: on the map's ground only - its cells from the frame's ground triangles), before the characters
     void applyGroundLife();
     void applyGrass();
+    // 2.5.4: the living world's creatures and particles (critters.cpp: core/critters.hpp moved on, turned to the
+    // screen, drawn over the world by critters_vs and critters_ps after the torches)
+    void applyCritters();
+    void noteCrown(const FrameRecord& rec, const DrawCmd& d);
+    critters::Switches critterSwitches() const {
+        critters::Switches on;
+        on.butterflies = effects_.butterflies;
+        on.dragonflies = effects_.butterflies && effects_.dragonflies;
+        on.birds = effects_.birds;
+        on.leaves = effects_.leafFall;
+        on.embers = effects_.embers;
+        on.breath = effects_.breath;
+        on.splashes = effects_.splashes;
+        on.drips = effects_.caveDrips;
+        on.underwater = effects_.underwater;
+        return on;
+    }
+    bool crittersNeedFeet() const { return effects_.birds || effects_.breath || effects_.splashes; }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     void noteWaterLevel(const FrameRecord& rec, const DrawCmd& d);
     bool seasonsShown() const {
@@ -499,6 +521,16 @@ private:
     ID3D11ShaderResourceView* groundCellsSrv_ = nullptr;
     bool groundCellsUp_ = false;  // this frame's grid in the texture
     bool groundLifeDone_ = false, grassDone_ = false, groundLifeLogged_ = false, grassLogged_ = false;
+    // 2.5.4: the living world
+    ID3D11VertexShader* crittersVs_ = nullptr;
+    ID3D11PixelShader* crittersPs_ = nullptr;
+    ID3D11Texture2D* crittersData_ = nullptr;  // four texels a sprite (critters_vs's and critters_ps's t1)
+    ID3D11ShaderResourceView* crittersDataSrv_ = nullptr;
+    critters::World critterWorld_;
+    std::vector<critters::Crown> frameCrowns_;   // this frame's trees in sight (noteCrown)
+    std::vector<critters::Point> critterFires_;  // this frame's flames' tips (the torches' pass)
+    float crittersTime_ = 0.0f, crittersStepsSeen_ = 0.0f;
+    bool crittersLogged_ = false;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;

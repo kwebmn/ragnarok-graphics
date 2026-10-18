@@ -493,6 +493,9 @@ struct Renderer::Impl {
     objects::Textures objectTextures;      // 0.23.1, 0.24: the textures that are a frame of a map object
     MapWorld mapWorld;                      // 0.25: the map file - its lamps and the effects the game does not show
     std::vector<torch::Flame> torchFlames;  // this frame's
+    // 2.5.4: this frame's flames as the torches' pass had them (the hidden ones too), for the embers rising from
+    // them (critters.cpp) - torchFlames is taken by the pass, and the creatures came after it: none ever rose
+    std::vector<torch::Flame> critterFlames;
     std::vector<FireSpark> fireSparks;      // 0.26: this frame's fire of skills
     std::vector<Firefly> fireflyDraws;      // 0.28: this frame's fireflies the game draws
     bool firefliesLogged = false;
@@ -973,6 +976,7 @@ struct Renderer::Impl {
         torchFlames.clear();
         fireSparks.clear();
         fireflyDraws.clear();
+        critterFlames.clear();  // 2.5.4
         rayParts.clear();
         lavaCells.clear();
         actorShadowsDone = actorShadowsDrawn = false;

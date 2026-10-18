@@ -505,6 +505,7 @@ bool Renderer::Impl::applyTorches() {
             f.rhw = 1.0f / vb.z;
             if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
         }
+    critterFlames = flames;  // 2.5.4: the embers rise from them (critters.cpp)
     // 0.28: the fireflies - the game's (their flash by their primitive's seed) and, the map file read, those the
     // maps' makers placed that the game does not show (713, 714, 946), drifting about their places.
     struct Fly {

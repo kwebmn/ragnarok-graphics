@@ -177,6 +177,10 @@ Renderer11::~Renderer11() {
     drop(grassPs_);
     drop(groundCellsSrv_);
     drop(groundCellsData_);
+    drop(crittersVs_);  // 2.5.4
+    drop(crittersPs_);
+    drop(crittersDataSrv_);
+    drop(crittersData_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -370,7 +374,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[51] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[53] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -412,7 +416,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"half_over_ps", ps, shaderSource(), {}, true},
                    {"splash_ps", ps, shaderSource(), {}, true},
                    {"ground_life_ps", ps, shaderSource(), {}, true},  // 2.5.4: the living ground, the grass
-                   {"grass_ps", ps, shaderSource(), {}, true}};
+                   {"grass_ps", ps, shaderSource(), {}, true},
+                   {"critters_vs", vs, shaderSource(), {}, true},  // 2.5.4: the living world
+                   {"critters_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -544,6 +550,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[48].code.empty() || !psOf(wants[48], splashPs_)) splashPs_ = nullptr;
     if (wants[49].code.empty() || !psOf(wants[49], groundLifePs_)) groundLifePs_ = nullptr;  // 2.5.4
     if (wants[50].code.empty() || !psOf(wants[50], grassPs_)) grassPs_ = nullptr;
+    if (wants[51].code.empty() || !vsOf(wants[51], crittersVs_)) crittersVs_ = nullptr;
+    if (wants[52].code.empty() || !psOf(wants[52], crittersPs_)) crittersPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1083,7 +1091,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) {
         applyTorchLight();
-        applyEmbers();  // 2.5.3: the skills' sparks about the places it gathered
+        applyEmbers();    // 2.5.3: the skills' sparks about the places it gathered
+        applyCritters();  // 2.5.4: the living world, the embers shining out of the night
     }
     if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the haze
     if (s.ui && worldDrawn_ && !hazeDone_) applyHaze();  // 2.5: far off and over the ground, before the colours
@@ -1102,7 +1111,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 2.5.3: a portal's draw - its middle, for its light and its swirl once the world is drawn (as draw.cpp 0.38)
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted()) notePortal(rec, d);
     // 2.5.2: a character's round shadow - its feet followed for the footprints and the ripples (as draw.cpp)
-    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && (stepKind() || ripplesWanted())) noteFoot(rec, d);
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && (stepKind() || ripplesWanted() || crittersNeedFeet()))
+        noteFoot(rec, d);
     // 2.5.1: the fire of skills (as draw.cpp): an added picture that looks like fire, or one that lights in its own
     // colour - not the maps' objects (their own)
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && fireWanted() && d.texture[0]) {
@@ -1244,6 +1254,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         l.viewToWorld = cameraValid_ ? viewToWorld_ : nullptr;
         l.projection = camera::projectionFor(gameWidth_, gameHeight_);
         leafShading(rec, d, l, c);
+        if (effects_.leafFall) noteCrown(rec, d);  // 2.5.4: the leaves falling from it (the living world)
     }
     // 0.99, the modern water (as draw.cpp): a cell of the map's water by water_vs/water_ps, from the picture and the
     // depth before the frame's first water; without them as the game draws it.
@@ -1786,6 +1797,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (worldDrawn_ && !lightDone_) {
         applyTorchLight();  // 0.61
         applyEmbers();      // 2.5.3
+        applyCritters();    // 2.5.4
     }
     if (worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3
     if (worldDrawn_ && !hazeDone_) applyHaze();  // 2.5
@@ -1811,6 +1823,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     heatSpots_.clear();
     embers_.clear();
     groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
+    frameCrowns_.clear();
+    critterFires_.clear();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
     groundTris_.clear();
     groundCellsUp_ = false;
@@ -2451,6 +2465,239 @@ void Renderer11::applyGrass() {
     grassLogged_ = true;
     worldPass(grassPs_, c, 1, 1, depthSrv_, nullptr, steps ? stepsDataSrv_ : nullptr, nullptr,
               grid && groundCellsUp_ ? groundCellsSrv_ : nullptr);
+}
+
+// 2.5.4 (critters.cpp noteCrown): a tree's leaves drawn - its crown in the world, for the leaves falling from it
+void Renderer11::noteCrown(const FrameRecord& rec, const DrawCmd& d) {
+    if (!cameraValid_ || frameCrowns_.size() >= 32) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, rhw = 0.0f;
+    uint32_t n = 0;
+    for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= v.size(); ++i, ++n) {
+        float xyzw[4];
+        std::memcpy(xyzw, v.data() + d.vertexOffset + i * stride, sizeof xyzw);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3];
+    }
+    if (!n || rhw <= 0.0f || x1 - x0 < 8.0f) return;
+    rhw /= float(n);
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+    const float* m = viewToWorld_;
+    const float vz = 1.0f / rhw, vx = ((x0 + x1) * 0.5f - p.cx) * vz / p.f0, vy = ((y0 + y1) * 0.5f - p.cy) * vz / p.f1;
+    critters::Crown crown;
+    crown.centre = critters::Point{vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[1] + vy * m[4] + vz * m[7] + m[10],
+                                   vx * m[2] + vy * m[5] + vz * m[8] + m[11]};
+    crown.radius = std::clamp((x1 - x0) * 0.5f * vz / p.f0, 1.0f, 12.0f);
+    frameCrowns_.push_back(crown);
+}
+
+// 2.5.4: as Direct3D 12's applyCritters (critters.cpp) - the creatures moved on about the player (the point the
+// camera looks at), turned to the screen into four texels each (t1) and drawn as quads by critters_vs, premultiplied
+// over the picture, hidden by its depth (t3).
+void Renderer11::applyCritters() {
+    std::vector<critters::Crown> crowns;
+    crowns.swap(frameCrowns_);
+    std::vector<critters::Point> fires;
+    fires.swap(critterFires_);
+    const critters::Switches on = critterSwitches();
+    if (!crittersVs_ || !crittersPs_ || !on.any() || !cameraValid_ || !target_.texture || !depthViews()) return;
+    const float now = waterTime();
+    critters::Frame f;
+    f.now = double(now);
+    f.dt = crittersTime_ > 0.0f ? std::clamp(now - crittersTime_, 0.0f, 0.1f) : 0.0f;
+    crittersTime_ = now;
+    const float* m = viewToWorld_;
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    if (cameraTargetZ_ > 0.0f) {  // the point the camera looks at: the player
+        const float tz = cameraTargetZ_;
+        f.centre = critters::Point{tz * m[6] + m[9], tz * m[7] + m[10], tz * m[8] + m[11]};
+        f.centreKnown = true;
+    } else {  // else the feet nearest the middle of the screen (the view's z axis)
+        float nearest = 1e30f;
+        for (const map::Point& p : frameFeet_) {
+            const float x = p.x - m[9], y = p.y - m[10], z = p.z - m[11];
+            const float along = x * m[6] + y * m[7] + z * m[8];
+            const float off = x * x + y * y + z * z - along * along;
+            if (along > 0.0f && off < nearest) {
+                nearest = off;
+                f.centre = critters::Point{p.x, p.y, p.z};
+                f.centreKnown = true;
+            }
+        }
+    }
+    if (!f.centreKnown) return;
+    float best = 1e30f;
+    for (const map::Point& p : frameFeet_) {  // the player's feet: the ground's height there
+        f.feet.push_back(critters::Point{p.x, p.y, p.z});
+        const float dist = std::hypot(p.x - f.centre.x, p.z - f.centre.z);
+        if (dist < best && dist < 6.0f) {
+            best = dist;
+            f.centre.y = p.y;
+        }
+    }
+    for (const footsteps::Step& s : footTracker_.steps())
+        if (s.born > crittersStepsSeen_) f.steps.push_back(critters::Point{s.x, s.y, s.z});
+    for (const footsteps::Step& s : footTracker_.steps()) crittersStepsSeen_ = std::max(crittersStepsSeen_, s.born);
+    f.fires = std::move(fires);
+    f.crowns = std::move(crowns);
+    f.waterKnown = waterLevelKnown_;
+    f.waterLevel = waterLevel_;
+    const int minute = effects_.dayCycle && effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();
+    f.day = living::daytime(minute);
+    f.night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    critterWorld_.update(on, f);
+    const std::vector<critters::Sprite>& all = critterWorld_.sprites();
+    const bool shafts = effects_.underwater && place_.underwater;
+    if (all.empty() && !shafts) return;
+    if (!crittersData_) {
+        D3D11_TEXTURE2D_DESC d{};
+        d.Width = UINT(critters::kMaxSprites * 4);
+        d.Height = 1;
+        d.MipLevels = d.ArraySize = 1;
+        d.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        d.SampleDesc.Count = 1;
+        d.Usage = D3D11_USAGE_DEFAULT;
+        d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(device_->CreateTexture2D(&d, nullptr, &crittersData_)) ||
+            FAILED(device_->CreateShaderResourceView(crittersData_, nullptr, &crittersDataSrv_))) {
+            drop(crittersData_);
+            LOG_ERROR("living creatures: no memory for their list (Direct3D 11): none");
+            drop(crittersPs_);  // not tried again
+            return;
+        }
+    }
+    // The world back into the view: the inverse of viewToWorld's 3 x 3 (its rows the view's axes in the world).
+    const float a = m[0], b = m[1], c3 = m[2], d = m[3], e = m[4], g = m[5], h = m[6], i = m[7], k = m[8];
+    const float det = a * (e * k - g * i) - b * (d * k - g * h) + c3 * (d * i - e * h);
+    if (std::fabs(det) < 1e-8f) return;
+    const float inv[9] = {(e * k - g * i) / det, (c3 * i - b * k) / det, (b * g - c3 * e) / det,
+                          (g * h - d * k) / det, (a * k - c3 * h) / det, (c3 * d - a * g) / det,
+                          (d * i - e * h) / det, (b * h - a * i) / det, (a * e - b * d) / det};
+    const float k0 = float(scale_);
+    const auto toView = [&](const critters::Point& w, float out[3]) {
+        const float x = w.x - m[9], y = w.y - m[10], z = w.z - m[11];
+        out[0] = x * inv[0] + y * inv[3] + z * inv[6];
+        out[1] = x * inv[1] + y * inv[4] + z * inv[7];
+        out[2] = x * inv[2] + y * inv[5] + z * inv[8];
+    };
+    const auto toScreen = [&](const float v[3], float& sx, float& sy) {
+        sx = (v[0] / v[2] * proj.f0 + proj.cx) * k0 + 0.5f;
+        sy = (v[1] / v[2] * proj.f1 + proj.cy) * k0 + 0.5f;
+    };
+    const float squash = std::clamp(std::fabs(m[7]), 0.2f, 1.0f);  // a circle on the ground seen from the camera
+    const int w = target_.width, ht = target_.height;
+    static float data[critters::kMaxSprites * 4][4];
+    std::memset(data, 0, sizeof data);
+    size_t n = 0;
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f;
+    for (const critters::Sprite& s : all) {
+        if (n >= critters::kMaxSprites) break;
+        float v[3];
+        toView(s.at, v);
+        if (v[2] < proj.nearZ + 1.0f) continue;
+        float sx, sy;
+        toScreen(v, sx, sy);
+        const float size = s.size * proj.f0 * k0 / v[2];
+        if (sx < -4.0f * size || sy < -4.0f * size || sx > float(w) + 4.0f * size || sy > float(ht) + 4.0f * size)
+            continue;
+        float* t0 = data[4 * n];
+        t0[0] = sx;
+        t0[1] = sy;
+        t0[2] = std::max(size, 1.0f);
+        t0[3] = v[2];
+        float* t1 = data[4 * n + 1];
+        t1[0] = float(s.kind);
+        t1[1] = s.p1;
+        t1[2] = s.p2;
+        t1[3] = s.alpha;
+        float* t2 = data[4 * n + 2];
+        if (s.headingX != 0.0f || s.headingZ != 0.0f) {  // the heading turned to the screen
+            float tip[3];
+            toView(critters::Point{s.at.x + s.headingX, s.at.y, s.at.z + s.headingZ}, tip);
+            if (tip[2] > proj.nearZ) {
+                float tx, ty;
+                toScreen(tip, tx, ty);
+                t2[0] = std::atan2(ty - sy, tx - sx);
+            }
+        }
+        t2[1] = squash;
+        if (s.kind == critters::Dragonfly && waterLevelKnown_) {  // over the water only: its point on the surface
+            float q[3];
+            toView(critters::Point{s.at.x, waterLevel_, s.at.z}, q);
+            if (q[2] > proj.nearZ) {
+                float* t3 = data[4 * n + 3];
+                toScreen(q, t3[0], t3[1]);
+                t3[2] = q[2];
+                t3[3] = 1.0f;
+            }
+        }
+        x0 = std::min(x0, sx - 3.0f * size);
+        y0 = std::min(y0, sy - 3.0f * size);
+        x1 = std::max(x1, sx + 3.0f * size);
+        y1 = std::max(y1, sy + 3.0f * size);
+        ++n;
+    }
+    if (shafts && n < critters::kMaxSprites) {  // the light from above under the sea, over the whole picture
+        data[4 * n][2] = 1.0f;
+        data[4 * n + 1][0] = 13.0f;
+        data[4 * n + 1][3] = 1.0f;
+        ++n;
+    }
+    if (!n) return;
+    D3D11_RECT clip{0, 0, w, ht};
+    if (!shafts) {
+        clip.left = LONG(std::clamp(x0, 0.0f, float(w)));
+        clip.top = LONG(std::clamp(y0, 0.0f, float(ht)));
+        clip.right = LONG(std::clamp(x1 + 1.0f, 0.0f, float(w)));
+        clip.bottom = LONG(std::clamp(y1 + 1.0f, 0.0f, float(ht)));
+        if (clip.right <= clip.left || clip.bottom <= clip.top) return;
+    }
+    ctx_->UpdateSubresource(crittersData_, 0, nullptr, data, UINT(sizeof data), 0);
+    Constants c{};
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.targetSize[0] = float(w);
+    c.targetSize[1] = float(ht);
+    c.scale = k0;
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(ht);
+    c.sharpen = now;
+    c.twin[2] = 1.0f - 0.65f * f.night;  // the creatures' light
+    if (!crittersLogged_) LOG_INFO("living creatures: on %s (Direct3D 11)", map_.c_str());
+    crittersLogged_ = true;
+    targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
+    ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
+    ctx_->PSSetShaderResources(0, 4, none);
+    ctx_->OMSetRenderTargets(1, &target_.rtv, nullptr);
+    const D3D11_VIEWPORT vp{0.0f, 0.0f, float(w), float(ht), 0.0f, 1.0f};
+    ctx_->RSSetViewports(1, &vp);
+    ctx_->RSSetScissorRects(1, &clip);
+    setConstants(c);
+    ctx_->OMSetBlendState(blendState(true, d3d7::BLEND_ONE, d3d7::BLEND_INVSRCALPHA,
+                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
+                          nullptr, 0xFFFFFFFF);
+    ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
+    ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
+    ctx_->IASetInputLayout(nullptr);
+    ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    ctx_->VSSetShader(crittersVs_, nullptr, 0);
+    ctx_->PSSetShader(crittersPs_, nullptr, 0);
+    ctx_->VSSetConstantBuffers(0, 1, &constants_);
+    ctx_->PSSetConstantBuffers(0, 1, &constants_);
+    passSamplers();
+    ctx_->VSSetShaderResources(1, 1, &crittersDataSrv_);  // the vertex shader places the quads from the list
+    ID3D11ShaderResourceView* views[4] = {nullptr, crittersDataSrv_, nullptr, depthSrv_};
+    ctx_->PSSetShaderResources(0, 4, views);
+    ctx_->Draw(UINT(6 * n), 0);
+    ctx_->PSSetShaderResources(0, 4, none);
+    ctx_->VSSetShaderResources(1, 1, none);
+    const D3D11_RECT whole{0, 0, w, ht};
+    ctx_->RSSetScissorRects(1, &whole);
 }
 
 float Renderer11::mapFadeNow() {

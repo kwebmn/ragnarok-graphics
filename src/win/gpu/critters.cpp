@@ -102,7 +102,7 @@ bool Renderer::Impl::applyCritters() {
     for (const footsteps::Step& s : footTracker.steps())
         if (s.born > crittersStepsSeen) f.steps.push_back(critters::Point{s.x, s.y, s.z});
     for (const footsteps::Step& s : footTracker.steps()) crittersStepsSeen = std::max(crittersStepsSeen, s.born);
-    for (const torch::Flame& fl : torchFlames) {  // the flames' tips
+    for (const torch::Flame& fl : critterFlames) {  // the flames' tips (2.5.4: as the torches' pass had them)
         if (fl.rhw <= 0.0f || f.fires.size() >= 32) continue;
         const float vz = 1.0f / fl.rhw, gx = fl.baseX + fl.upX * 0.8f, gy = fl.baseY + fl.upY * 0.8f;
         const float vx = (gx - proj.cx) * vz / proj.f0, vy = (gy - proj.cy) * vz / proj.f1;
