@@ -1,3 +1,23 @@
+# uaRO Graphics 2.4.0 — testing
+
+- **The specks on the paving are gone.** They were the seasons' autumn "fallen leaves": they lay on everything that
+  faces up, Prontera's paving too, a couple of pixels each. "Pebbles on the ground" made the same specks and are gone
+  as well; the old `ground_clutter` line in the settings is simply not read.
+- **Under DLSS one effect switched off in the console (~) now reaches the picture at once.** The effects newer than
+  1.9 (the seasons, the new trees, the sky's light, smooth hills, the shared wind and others) were not passed to the
+  64-bit renderer one by one - which is why the specks went only with the whole "Nature" group.
+- **The parts of the effects have boxes of their own** under the effect - on the Effects page and in the console
+  (~). All on, as before; switch off what you do not like:
+  - Modern water: foam along the shore, sun glints on the water, light on the bed, waterfalls;
+  - Surf: wet sand; Footprints: dust from steps;
+  - Seasons on the map: snow in winter, grass by the season;
+  - Motes in the air: pollen outdoors, dust indoors;
+  - Weather: rain splashes; Sky past the map's edge: stars at night;
+  - Haze and fog: low fog in dungeons; Heat haze: heat over the desert;
+  - Light in the air: rays from the sky; Every tree its own: autumn and winter crowns; Butterflies: dragonflies.
+- Check, please: no specks on Prontera's paving by day or by night; under DLSS any single box in the console (the
+  seasons, say) changes the picture at once; the new boxes switch off just their own part.
+
 # uaRO Graphics 2.3.2 — testing
 
 - **Ctrl+Shift+F8 picks the ground, not the cursor's cell:** the game draws the cell under the cursor
