@@ -190,4 +190,70 @@ inline std::vector<uint8_t> gnd(const std::vector<std::string>& textures, int wi
     return w.b;
 }
 
+// 2.3: a 24-bit BMP of w x h from rows of 0xRRGGBB (top first) - a world texture as the game's files have it.
+inline std::vector<uint8_t> bmp24(int w, int h, const std::vector<uint32_t>& top) {
+    RswWriter b;
+    const uint32_t stride = (uint32_t(w) * 3 + 3) & ~3u, bits = 0x36;
+    const auto u16 = [&b](uint32_t v) {
+        const uint16_t x = uint16_t(v);
+        b.bytes(&x, 2);
+    };
+    const auto u32 = [&b](uint32_t v) { b.bytes(&v, 4); };
+    b.bytes("BM", 2);
+    u32(bits + stride * uint32_t(h));
+    u32(0);
+    u32(bits);
+    u32(40);
+    u32(uint32_t(w));
+    u32(uint32_t(h));
+    u16(1);
+    u16(24);
+    for (int i = 0; i < 6; ++i) u32(0);
+    for (int y = h - 1; y >= 0; --y) {
+        for (int x = 0; x < w; ++x) {
+            const uint32_t v = top[size_t(y * w + x)];
+            const uint8_t px[3] = {uint8_t(v), uint8_t(v >> 8), uint8_t(v >> 16)};
+            b.bytes(px, 3);
+        }
+        for (uint32_t pad = uint32_t(w) * 3; pad < stride; ++pad) b.bytes("\0", 1);
+    }
+    return b.b;
+}
+
+// 2.3: a sprite (SPR 2.1) of one palette frame (w x h of palette indices, no runs of zeros) and its palette.
+inline std::vector<uint8_t> spr(int w, int h, const std::vector<uint8_t>& indices,
+                                const std::vector<uint8_t>& palette) {
+    RswWriter b;
+    const auto u16 = [&b](uint32_t v) {
+        const uint16_t x = uint16_t(v);
+        b.bytes(&x, 2);
+    };
+    b.bytes("SP\x01\x02", 4);
+    u16(1);  // palette frames
+    u16(0);  // 32-bit frames
+    u16(uint32_t(w));
+    u16(uint32_t(h));
+    u16(uint32_t(indices.size()));
+    b.bytes(indices.data(), indices.size());
+    b.bytes(palette.data(), palette.size());
+    return b.b;
+}
+
+// 2.3: a palette (1024 bytes, RGBA) whose colour 1 is (r, g, b), colour 2 magenta, colour 3 light grey.
+inline std::vector<uint8_t> palette(uint8_t r, uint8_t g, uint8_t b) {
+    std::vector<uint8_t> p(1024, 0);
+    p[4] = r, p[5] = g, p[6] = b;
+    p[8] = 255, p[9] = 0, p[10] = 255;
+    p[12] = p[13] = p[14] = 220;
+    return p;
+}
+
+// 2.3: w x h palette indices, 1 and 3 in a checker - a frame with detail (one of a flat colour is soft light)
+inline std::vector<uint8_t> checker(int w, int h) {
+    std::vector<uint8_t> out(size_t(w) * size_t(h));
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) out[size_t(y * w + x)] = uint8_t((x + y) % 2 ? 3 : 1);
+    return out;
+}
+
 }  // namespace testfiles
