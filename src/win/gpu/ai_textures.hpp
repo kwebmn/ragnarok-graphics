@@ -197,7 +197,8 @@ private:
     // 0.48: the I/O thread's work - a picture of the pack read (width x height the game texture's: its result's / 4),
     // one made written into the pack, or the index told of a kind and a map a picture was seen as and on.
     struct IoRequest {
-        enum Type : uint8_t { Read, Write, Note } type = Read;
+        // 2.3 Reload: the pack's directory and index read again (uaRO Studio changed it), name the keys changed
+        enum Type : uint8_t { Read, Write, Note, Reload } type = Read;
         uint32_t id = 0;
         std::string name;
         std::vector<uint32_t> argb;  // to write
@@ -215,6 +216,8 @@ private:
         uint32_t id = 0;
         std::string name;
         bool ok = false;
+        std::shared_ptr<pack::Reader> reloaded;  // 2.3: the pack opened again, its index in `text`, its keys in name
+        std::string text;
         std::vector<uint32_t> argb;
         int width = 0, height = 0;
         Job cell;
@@ -305,7 +308,12 @@ private:
     std::unordered_map<std::string, studio::Seen> seenOnMap_;
     bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack
     bool generate_ = false;                     // [ai] generate: the network makes what is missing
-    pack::Reader pack_;                         // 0.42: uaro-textures.zip, read by the I/O thread
+    // 0.42: uaro-textures.zip, read by the I/O thread; 2.3: shared - opened again there when uaRO Studio changes it,
+    // then swapped in here under ioLock_ (each read takes it under the lock)
+    std::shared_ptr<pack::Reader> pack_ = std::make_shared<pack::Reader>();
+    HANDLE changedEvent_ = nullptr;  // 2.3: Local\uaro-studio-changed, set by the studio after it wrote the pack
+    void studioChanged();             // 2.3: the event set - the pack asked to be read again
+    void reloaded(IoResult& r);       // 2.3: the pack read again - the keys changed taken from it anew
     std::unique_ptr<ai::ReadyPictures> pictures_;  // 0.48: the pack's pictures and kinds, looked up here
     MissingDump dump_;                             // 0.49.1
     int scale_ = 4;                             // the result: 4 or 2 times the game's texture

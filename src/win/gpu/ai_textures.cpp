@@ -68,6 +68,7 @@ struct AiConstants {
 
 AiTextures::~AiTextures() {
     writeSeen();  // 2.3: the last map's report
+    if (changedEvent_) CloseHandle(changedEvent_);
     if (ready_) {
         finishReadbacks();  // the renderer waited for the GPU: the last results go into the pack too
         logNow(true);
@@ -223,20 +224,21 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     const bool packThere = GetFileAttributesA(packPath_.c_str()) != INVALID_FILE_ATTRIBUTES;
     std::string packError;
     // 1.5.8: with the pack's pictures off ([ai] enabled = 0, generate = 1) the pack stays closed: all is made anew.
-    if (s.enabled && !pack_.open(packPath_, packError) && packThere)
+    if (s.enabled && !pack_->open(packPath_, packError) && packThere)
         LOG_ERROR("AI textures: the texture pack cannot be read (%s)", packError.c_str());
-    if (!pack_.isOpen() && !generate_) {
+    if (!pack_->isOpen() && !generate_) {
         error = "no texture pack (uaro-textures.zip) in the game's folder - its builder is on the Texture pack page of "
                 "the settings";
         return false;
     }
     std::vector<uint8_t> index;
-    if (pack_.isOpen() && !pack_.read(pack::kIndexName, index)) index.clear();
+    if (pack_->isOpen() && !pack_->read(pack::kIndexName, index)) index.clear();
     const std::string indexFile(index.begin(), index.end());
     index_ = pack::parseIndexFile(indexFile);  // the I/O thread's from its start on: written with the pictures made
     pictures_ = std::make_unique<ai::ReadyPictures>(s);
-    const pack::Reader* reader = &pack_;
+    const std::shared_ptr<const pack::Reader> reader = pack_;
     pictures_->addPack([reader](const std::string& name) { return reader->has(name); }, indexFile);
+    changedEvent_ = CreateEventA(nullptr, FALSE, FALSE, studio::kChangedEvent);  // 2.3: uaRO Studio's
     // The copies' share of the video memory.
     systemBudget_ = systemMemory(nullptr);
     vramBudget_ = ai::copiesBudget(systemBudget_);
@@ -245,7 +247,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     if (generate_) {
         writerMutex_ = CreateMutexA(nullptr, FALSE, pack::kWriterMutex);
         writable_ = s.enabled && writerMutex_ && WaitForSingleObject(writerMutex_, 0) == WAIT_OBJECT_0;
-        if (writable_ && packThere && !pack_.isOpen()) {
+        if (writable_ && packThere && !pack_->isOpen()) {
             ReleaseMutex(writerMutex_);
             writable_ = false;
         }
@@ -275,12 +277,12 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
                                          "cannot be read");
     LOG_INFO("AI textures: on - %s; x%d, textures %d-%d, ahead %s; %s", kinds.c_str(), scale_, minSide_, maxSide_,
              ahead_ ? "on" : "off", making.c_str());
-    if (pack_.isOpen())
+    if (pack_->isOpen())
         LOG_INFO("AI textures: the texture pack uaro-textures.zip has %u pictures (%u keys known ahead, %u of a lower "
                  "texture detail)%s",
-                 static_cast<unsigned>(pack_.count() - (pack_.has(pack::kIndexName) ? 1 : 0)),
+                 static_cast<unsigned>(pack_->count() - (pack_->has(pack::kIndexName) ? 1 : 0)),
                  static_cast<unsigned>(pictures_->ahead()), static_cast<unsigned>(pictures_->aliases()),
-                 pack_.recovered() ? " - cut short, read by its pictures' headers, without its index" : "");
+                 pack_->recovered() ? " - cut short, read by its pictures' headers, without its index" : "");
     else if (!s.enabled)
         LOG_INFO("AI textures: the texture pack is not read - its pictures are off, the network makes them all");
     else
@@ -977,7 +979,7 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
                         ai::Group::Effects, ai::Group::Icons})
         if (net < 0) net = groupNet_[int(g)];
     if (!pictures_->anyCells()) return;
-    if (net < 0 && !pack_.isOpen()) return;  // 0.42: nothing to show and none made: as the game
+    if (net < 0 && !pack_->isOpen()) return;  // 0.42: nothing to show and none made: as the game
     auto a = atlases_.find(id);
     if (a == atlases_.end()) {
         if (!makeAtlas(id, t)) return;
@@ -1355,9 +1357,12 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         return;
     }
     item.name = pack::pictureName(item.ui ? pack::Group::Ui : pack::Group::World, item.key);
-    if (item.net < 0) {  // not generating: it stays the game's
+    // 2.3: a texture taken anew after uaRO Studio changed the pack has no pixels any more (they went when its picture
+    // came): the pack's or the game's, never the network's
+    const bool pixels = item.argb.size() >= size_t(item.width) * size_t(item.height) && !item.argb.empty();
+    if (item.net < 0 || !pixels) {  // not generating: it stays the game's
         ++missing_[k];
-        dump_.save(ai::kindName(kind), item.key, item.argb.data(), item.width, item.height);
+        if (pixels) dump_.save(ai::kindName(kind), item.key, item.argb.data(), item.width, item.height);
         drop(item);
     } else if (later) {
         item.later = true;
@@ -1385,7 +1390,8 @@ bool AiTextures::nextIo(IoRequest& r) {
     int bestRank = 9;
     for (size_t i = 0; i < ioIn_.size(); ++i) {
         const IoRequest& q = ioIn_[i];
-        int rank = q.type == IoRequest::Note ? -1 : q.type == IoRequest::Write ? 3 : q.rank;
+        const bool first = q.type == IoRequest::Note || q.type == IoRequest::Reload;
+        int rank = first ? -1 : q.type == IoRequest::Write ? 3 : q.rank;
         if (rank == 2 && urgent_.count(q.id)) rank = 1;  // read ahead, in view now
         if (rank < bestRank) {
             bestRank = rank;
@@ -1514,6 +1520,43 @@ void AiTextures::toggleHidden() {
     LOG_INFO("A/B: %s %s", picked_.c_str(), hide ? "the game's texture" : "its picture again");
 }
 
+void AiTextures::studioChanged() {
+    char local[MAX_PATH] = {};
+    const DWORD n = GetEnvironmentVariableA("LOCALAPPDATA", local, MAX_PATH);
+    std::string text;
+    if (n && n < MAX_PATH)
+        win::readTextFile(std::string(local) + "\\" + studio::kFolder + "\\link\\changed.txt", text);
+    IoRequest r;
+    r.type = IoRequest::Reload;
+    r.name = text;  // the keys, a line each
+    request(std::move(r));
+}
+
+void AiTextures::reloaded(IoResult& r) {
+    if (!r.ok) return;
+    EnterCriticalSection(&ioLock_);
+    pack_ = r.reloaded;
+    LeaveCriticalSection(&ioLock_);
+    auto pictures = std::make_unique<ai::ReadyPictures>(settings_);
+    const std::shared_ptr<const pack::Reader> reader = r.reloaded;
+    pictures->addPack([reader](const std::string& name) { return reader->has(name); }, r.text);
+    pictures_ = std::move(pictures);
+    size_t again = 0;
+    for (const std::string& key : studio::parseChanged(r.name))
+        for (auto& e : items_) {
+            Item& item = e.second;
+            if (item.key != key) continue;
+            dropAi(e.first);  // the game's texture until its picture is read again (or made: generating)
+            const auto t = m_.textures.find(e.first);
+            if (t != m_.textures.end()) m_.dropMaterial(t->second);  // its material made from the old picture
+            item.state = Item::Kept;
+            item.how = uint8_t(studio::How::Missing);
+            item.later = item.loading = false;
+            ++again;
+        }
+    LOG_INFO("AI textures: the texture pack read again (uaRO Studio): %zu textures take their pictures anew", again);
+}
+
 void AiTextures::noteSeen(Item& item) {
     if (seenDir_.empty() || item.counted == frame_ || item.key.empty()) return;
     item.counted = frame_;
@@ -1614,6 +1657,10 @@ void AiTextures::takeLoaded() {
     results.swap(ioOut_);
     LeaveCriticalSection(&ioLock_);
     for (IoResult& r : results) {
+        if (r.reloaded) {  // 2.3: uaRO Studio's change
+            reloaded(r);
+            continue;
+        }
         if (r.cell.icon) {  // an icon: straight back to the driver, or the network after all (0.42: generating)
             Job j = std::move(r.cell);
             if (r.ok && r.width == j.width * scale_ && r.height == j.height * scale_ && m_.iconSink) {
@@ -1716,6 +1763,7 @@ void AiTextures::work(bool foreground) {
     background_ = !foreground && generate_;
     computeBound_ = false;
     ++frame_;
+    if (changedEvent_ && WaitForSingleObject(changedEvent_, 0) == WAIT_OBJECT_0) studioChanged();  // 2.3
     putAwayOld();
     takeLoaded();
     finishReadbacks();
@@ -1888,6 +1936,21 @@ void AiTextures::ioLoop() {
             stop = ioStop_;
             LeaveCriticalSection(&ioLock_);
             if (!have) break;
+            if (r.type == IoRequest::Reload) {  // 2.3: uaRO Studio wrote the pack - its directory and index again
+                IoResult res;
+                res.name = r.name;
+                res.reloaded = std::make_shared<pack::Reader>();
+                std::string why;
+                std::vector<uint8_t> index;
+                if (res.reloaded->open(packPath_, why) && res.reloaded->read(pack::kIndexName, index))
+                    res.text.assign(index.begin(), index.end());
+                res.ok = res.reloaded->isOpen();
+                if (!res.ok) LOG_ERROR("AI textures: the texture pack cannot be read again (%s)", why.c_str());
+                EnterCriticalSection(&ioLock_);
+                ioOut_.push_back(std::move(res));
+                LeaveCriticalSection(&ioLock_);
+                continue;
+            }
             if (r.type == IoRequest::Note) {
                 pack::IndexEntry& e = index_.pictures[r.name];
                 if (e.kind == ai::Kind::None) e.kind = r.kind;
@@ -1932,7 +1995,7 @@ void AiTextures::ioLoop() {
         const ULONGLONG now = GetTickCount64();
         // At the end the maps seen go into the index too, also when no picture was made.
         const bool due = since && (stop || unsavedBytes >= kBatchBytes || now - since >= 30000);
-        if (!failed && (due || (stop && indexChanged_ && (writer_.isOpen() || pack_.isOpen())))) {
+        if (!failed && (due || (stop && indexChanged_ && (writer_.isOpen() || pack_->isOpen())))) {
             ioCheckpoint();
             since = 0;
             unsavedBytes = 0;
@@ -1951,6 +2014,12 @@ std::string AiTextures::packIndex() const {
         if (writer_.has(e.first)) out.pictures.insert(e);
     for (const auto& a : index_.aliases)
         if (writer_.has(a.second)) out.aliases.insert(a);
+    for (const auto& n : index_.alike)  // 2.3: a .jpg's likeness was lost so
+        if (writer_.has(n.first)) out.alike.insert(n);
+    for (const auto& m : index_.made)  // 2.3: uaRO Studio's lines stay
+        if (writer_.has(m.first)) out.made.insert(m);
+    out.ownAlways = index_.ownAlways;
+    out.materials = index_.materials;
     return pack::indexText(out);
 }
 
@@ -1959,10 +2028,13 @@ std::string AiTextures::packIndex() const {
 // picture for one at a lower texture detail, 8 or 16 times its size.
 bool AiTextures::ioRead(const IoRequest& r, IoResult& res) {
     std::vector<uint8_t> blob;
+    EnterCriticalSection(&ioLock_);
+    const std::shared_ptr<pack::Reader> reader = pack_;  // 2.3: swapped by a reload of the studio's
+    LeaveCriticalSection(&ioLock_);
     const auto u = unsaved_.find(r.name);
     if (u != unsaved_.end())
         blob = u->second;
-    else if (!pack_.read(r.name, blob) && !(fresh_.isOpen() && fresh_.read(r.name, blob)))
+    else if (!reader->read(r.name, blob) && !(fresh_.isOpen() && fresh_.read(r.name, blob)))
         return false;
     if (!webp::decode(blob.data(), blob.size(), res.argb, res.width, res.height)) return false;
     while (r.width > 0 && r.height > 0 && res.width > r.width * scale_ && res.height > r.height * scale_ &&
