@@ -271,6 +271,11 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             if (rd.ok()) renderer_.setWorldScale(share);
             break;
         }
+        case Msg::SetLight: {  // 2.5.20
+            const uint8_t flags = rd.u8();
+            if (rd.ok()) renderer_.setLight(flags);
+            break;
+        }
         case Msg::Map: {
             const std::string map = rd.str();
             if (rd.ok()) renderer_.setMap(map);
@@ -294,6 +299,7 @@ bool Server::readPresent(const uint8_t* data, uint32_t size, Present& out) {
     out.options.foreground = rd.u8() != 0;
     out.options.screenshot = rd.str();  // 0.54
     out.options.hdr = rd.u8() != 0;     // 0.65
+    out.options.pacerSleeps = rd.u8() != 0;  // 2.5.20
     return rd.ok();
 }
 

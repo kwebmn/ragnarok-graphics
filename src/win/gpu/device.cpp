@@ -1955,6 +1955,11 @@ void Renderer::setShaderVariants(bool on) {
     if (d3d11_) d3d11_->setShaderVariants(on);  // Direct3D 11's own thread is given it at its start
 }
 
+void Renderer::setLight(uint8_t flags) {
+    if (d3d11_) return d3d11_->setLight(flags);
+    if (remote_) return remote_->setLight(flags);  // Direct3D 11's own thread; uaro-render64.exe leaves them
+}
+
 void Renderer::setWorldScale(double share) {
     if (d3d11_) return d3d11_->setWorldScale(share);
     if (remote_) return remote_->setWorldScale(share);  // Direct3D 11's own thread; uaro-render64.exe leaves it
@@ -2750,7 +2755,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     presentCpu.stop();  // 0.86: not the waits
     {
         Impl::CpuTime paced(m.pacerTicks);  // 2.1.1
-        m.pacer.wait(options.fpsLimit);  // 0.85: kept to the frame
+        m.pacer.wait(options.fpsLimit, options.pacerSleeps);  // 0.85: kept to the frame
     }
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;

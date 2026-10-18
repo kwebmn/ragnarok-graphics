@@ -23,6 +23,7 @@
 #include "core/effect_light.hpp"
 #include "core/foliage.hpp"
 #include "core/full_colour.hpp"
+#include "core/light_mode.hpp"
 #include "core/game_camera.hpp"
 #include "core/png_write.hpp"
 #include "core/region_look.hpp"
@@ -95,6 +96,7 @@ Renderer11::~Renderer11() {
     releaseSwapChain();
     for (auto& t : textures_) {
         dropMaterial(t.second);  // 1.14
+        drop(t.second.flat);     // 2.5.20
         drop(t.second.srv);
         drop(t.second.texture);
     }
@@ -327,6 +329,14 @@ bool Renderer11::create(const std::string& shaderCache, Renderer::StartSink sink
     UINT support = 0;
     bgraVertices_ = SUCCEEDED(device_->CheckFormatSupport(DXGI_FORMAT_B8G8R8A8_UNORM, &support)) &&
                     (support & D3D11_FORMAT_SUPPORT_IA_VERTEX_BUFFER);
+    // 2.5.20: super-light's 16-bit world - B5G6R5 is optional before Windows 8 (its 11.1 runtime)
+    const UINT world16 = D3D11_FORMAT_SUPPORT_TEXTURE2D | D3D11_FORMAT_SUPPORT_RENDER_TARGET |
+                         D3D11_FORMAT_SUPPORT_SHADER_SAMPLE | D3D11_FORMAT_SUPPORT_BLENDABLE;
+    UINT depth16 = 0;
+    world16Ok_ = SUCCEEDED(device_->CheckFormatSupport(DXGI_FORMAT_B5G6R5_UNORM, &support)) &&
+                 (support & world16) == world16 &&
+                 SUCCEEDED(device_->CheckFormatSupport(DXGI_FORMAT_D16_UNORM, &depth16)) &&
+                 (depth16 & D3D11_FORMAT_SUPPORT_DEPTH_STENCIL);
     if (!compileShaders(shaderCache, sink, sinkContext, error)) return false;
     // The game's draws' and copies' constants, a part's clear's.
     D3D11_BUFFER_DESC b{};
@@ -670,19 +680,20 @@ void Renderer11::dropTarget(Target& t) {
     t.width = t.height = 0;
 }
 
-bool Renderer11::makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D11DepthStencilView*& dsv) {
+bool Renderer11::makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D11DepthStencilView*& dsv,
+                           bool sixteen) {
     D3D11_TEXTURE2D_DESC d{};
     d.Width = UINT(width);
     d.Height = UINT(height);
     d.MipLevels = d.ArraySize = 1;
     // 0.60.1: readable too (the characters' shadows read the ground's depth): typeless, a D32 view to draw with
-    d.Format = DXGI_FORMAT_R32_TYPELESS;
+    d.Format = sixteen ? DXGI_FORMAT_R16_TYPELESS : DXGI_FORMAT_R32_TYPELESS;
     d.SampleDesc.Count = 1;
     d.Usage = D3D11_USAGE_DEFAULT;
     d.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
     HRESULT hr = device_->CreateTexture2D(&d, nullptr, &depth);
     D3D11_DEPTH_STENCIL_VIEW_DESC v{};
-    v.Format = DXGI_FORMAT_D32_FLOAT;
+    v.Format = sixteen ? DXGI_FORMAT_D16_UNORM : DXGI_FORMAT_D32_FLOAT;
     v.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     if (SUCCEEDED(hr)) hr = device_->CreateDepthStencilView(depth, &v, &dsv);
     if (FAILED(hr)) {
@@ -823,6 +834,21 @@ bool Renderer11::createTextureAs(uint32_t id, int width, int height, int levels)
     return true;
 }
 
+ID3D11ShaderResourceView* Renderer11::flatView(Texture& t) {
+    const int level = light::flatLevel(t.width, t.height, t.levels, t.transparent);
+    if (level <= 0 || !t.texture) return nullptr;
+    if (t.flat && t.flatLevel == level) return t.flat;
+    drop(t.flat);
+    D3D11_SHADER_RESOURCE_VIEW_DESC v{};
+    v.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    v.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    v.Texture2D.MostDetailedMip = UINT(level);
+    v.Texture2D.MipLevels = UINT(t.levels - level);
+    if (FAILED(device_->CreateShaderResourceView(t.texture, &v, &t.flat))) t.flat = nullptr;
+    t.flatLevel = level;
+    return t.flat;
+}
+
 void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while queued work still reads it
     const auto it = textures_.find(id);
     if (it == textures_.end()) return;
@@ -832,6 +858,7 @@ void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while qu
     // 0.89: a small one kept for the game's next of its size (32 MB of them at most) - a new surface's levels are
     // uploaded whole before it is first drawn (TextureLevels starts with all of them to upload), the old picture gone
     dropMaterial(it->second);  // 1.14
+    drop(it->second.flat);     // 2.5.20
     const Texture& t = it->second;
     const size_t bytes = textureBytes(t.width, t.height, t.levels);
     if (t.width * t.height <= 512 * 512 && pooledBytes_ + bytes <= (size_t(32) << 20) && pool_.size() < 256) {
@@ -1128,6 +1155,14 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     ctx_->UpdateSubresource(t.texture, UINT(level), &box, rec.pixels().data() + u.pixels, UINT(u.rect.width()) * 4,
                             0);
     stats_.uploaded += uint64_t(u.rect.width()) * uint64_t(u.rect.height()) * 4;  // 0.89
+    if (level == 0) {  // 2.5.20: super-light's flat textures keep the shape of one with transparent texels
+        const uint32_t* px = rec.pixels().data() + u.pixels;
+        const size_t n = size_t(u.rect.width()) * size_t(u.rect.height());
+        bool clear = false;
+        for (size_t i = 0; i < n && !clear; ++i) clear = (px[i] >> 24) != 0xFF;
+        const bool whole = u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height;
+        it->second.transparent = clear || (!whole && it->second.transparent);
+    }
     if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
         it->second.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
         // 2.5.1: a whole picture - how much it looks like fire, or lights in its own colour (as device.cpp upload)
@@ -1311,6 +1346,22 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         } else if (!twin && d.texture[0] && t[0] != &white_) {
             ai_->noteUiUse(d.texture[0]);
         }
+    }
+    // 2.5.20: super-light - the ground's and the models' textures as their colour alone (light::kFlatWorld); the
+    // sprites, the effects and the interface as they are
+    if ((light_ & light::kFlatWorld) && !s.ui && !twin && d.texture[0] && t[0] != &white_) {
+        ai::DrawFacts facts;
+        facts.uvSets = d.fvf == d3d7::FVF_TL2 ? 2 : 1;
+        facts.additive = s.blend && s.dstBlend == d3d7::BLEND_ONE;
+        facts.flatQuad = d.vertexCount == 4 && ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride,
+                                                            d.vertexCount, d.indexCount);
+        const ai::Kind kind = ai::drawKind(facts);
+        const auto it = textures_.find(d.texture[0]);
+        if ((kind == ai::Kind::Ground || kind == ai::Kind::Objects) && it != textures_.end())
+            if (ID3D11ShaderResourceView* flat = flatView(it->second)) {
+                srvs[0] = flat;
+                aiDrawn[0] = false;
+            }
     }
     Constants c{};
     c.targetSize[0] = float(target_.width);
@@ -1529,6 +1580,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     Issue is;
     is.c = c;
     const int aniso = s.ui ? 0 : anisotropy_;
+    if ((light_ & light::kPointMips) && !s.ui)  // 2.5.20: super-light - one mip level a texel, not two blended
+        for (StageSetup& st : sampled)
+            if (st.mipFilter == d3d7::TFP_LINEAR) st.mipFilter = d3d7::TFP_POINT;
     is.samplers[0] = samplerState(sampled[0], aniso);
     is.samplers[1] = samplerState(sampled[1], aniso);
     is.blend = blendState(s.blend, d3dmap::blendOf(s.srcBlend, d3d7::BLEND_ONE),
@@ -1747,10 +1801,13 @@ void Renderer11::setCamera(bool valid, const float view[12], float targetZ) {
 
 bool Renderer11::depthViews() {
     if (!depth_) return false;
+    D3D11_TEXTURE2D_DESC desc{};
+    depth_->GetDesc(&desc);
+    const bool sixteen = desc.Format == DXGI_FORMAT_R16_TYPELESS;  // 2.5.20: super-light's world
     if (depthSrvOf_ != depth_) {
         drop(depthSrv_);
         D3D11_SHADER_RESOURCE_VIEW_DESC v{};
-        v.Format = DXGI_FORMAT_R32_FLOAT;
+        v.Format = sixteen ? DXGI_FORMAT_R16_UNORM : DXGI_FORMAT_R32_FLOAT;
         v.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         v.Texture2D.MipLevels = 1;
         depthSrvOf_ = depth_;
@@ -1759,7 +1816,7 @@ bool Renderer11::depthViews() {
     if (readOnlyDsvOf_ != depth_) {
         drop(readOnlyDsv_);
         D3D11_DEPTH_STENCIL_VIEW_DESC v{};
-        v.Format = DXGI_FORMAT_D32_FLOAT;
+        v.Format = sixteen ? DXGI_FORMAT_D16_UNORM : DXGI_FORMAT_D32_FLOAT;
         v.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
         v.Flags = D3D11_DSV_READ_ONLY_DEPTH;
         readOnlyDsvOf_ = depth_;
@@ -1769,20 +1826,28 @@ bool Renderer11::depthViews() {
 }
 
 bool Renderer11::ensureWorld() {
-    if (inWorld_ || lost_ || !scaled_ || !target_.texture || worldScale_ > 0.995) return false;
+    // 2.5.20: super-light's 16-bit world has a set of its own at any scale
+    const bool sixteen = (light_ & light::kWorld16) && world16Ok_;
+    if (inWorld_ || lost_ || !scaled_ || !target_.texture || (worldScale_ > 0.995 && !sixteen)) return false;
     const double k = scale_ * worldScale_;
     const int w = std::max(16, int(std::lround(gameWidth_ * k))), h = std::max(16, int(std::lround(gameHeight_ * k)));
-    if (w >= target_.width || h >= target_.height) return false;
+    if (w > target_.width || h > target_.height || (!sixteen && (w == target_.width || h == target_.height)))
+        return false;
     world_.scale = k;
-    if (world_.target.texture && world_.target.width == w && world_.target.height == h) return true;
+    if (world_.target.texture && world_.target.width == w && world_.target.height == h && world_.sixteen == sixteen)
+        return true;
     dropWorld();
-    if (!makeTarget(world_.target, w, h) || !makeDepth(w, h, world_.depth, world_.dsv)) {
+    if (!makeTarget(world_.target, w, h, sixteen ? DXGI_FORMAT_B5G6R5_UNORM : DXGI_FORMAT_B8G8R8A8_UNORM) ||
+        !makeDepth(w, h, world_.depth, world_.dsv, sixteen)) {
         dropWorld();
         worldScale_ = 1.0;  // no memory for it: the world drawn whole from now on
+        if (sixteen) world16Ok_ = false;
         return false;
     }
-    LOG_INFO("Direct3D 11: the world drawn at %dx%d (%.0f %% of the picture's %dx%d) and made larger, the interface at "
-             "the picture's pixels ([quality] world_scale)", w, h, worldScale_ * 100.0, target_.width, target_.height);
+    world_.sixteen = sixteen;
+    LOG_INFO("Direct3D 11: the world drawn at %dx%d (%.0f %% of the picture's %dx%d)%s and made larger, the interface "
+             "at the picture's pixels ([quality] world_scale)", w, h, worldScale_ * 100.0, target_.width,
+             target_.height, sixteen ? ", 16-bit (super-light)" : "");
     return true;
 }
 
@@ -1835,6 +1900,10 @@ void Renderer11::execute(const FrameRecord& record) {
     timeBegin();
     if (!frameOpen_) {  // 2.5.16: the frame's clear and its world on the world's picture (world_scale)
         frameOpen_ = true;
+        if (lightWanted_ != light_) {  // 2.5.20: the light modes' flags, between frames (no world set is in use)
+            if ((lightWanted_ ^ light_) & light::kWorld16) dropWorld();
+            light_ = lightWanted_;
+        }
         enterWorld();
     }
     geometry_ = uploadGeometry(record);
@@ -2103,7 +2172,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     stats_.ticks += ended.QuadPart - started.QuadPart;
     ++stats_.frames;
     timeFrame();
-    pacer_.wait(options.fpsLimit);  // 0.85: kept to the frame
+    pacer_.wait(options.fpsLimit, options.pacerSleeps);  // 0.85: kept to the frame
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && tearing_ ? DXGI_PRESENT_ALLOW_TEARING : 0;
     const HRESULT hr = swap_->Present(sync, flags);

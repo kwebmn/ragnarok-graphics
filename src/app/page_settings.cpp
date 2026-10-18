@@ -101,6 +101,7 @@ public:
         HWND ctl = GetDlgItem(host_.window(), id);
         if (s->control == Control::Check && code == BN_CLICKED) {
             m.setToken(*s, s->tokens[SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0]);
+            if (sectionKey(*s) == "frames.battery_saver") host_.rebuild();  // 2.5.20: its frames' row with it
         } else if (s->control == Control::Choice && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < s->tokens.size()) m.setToken(*s, s->tokens[size_t(sel)]);
@@ -435,6 +436,8 @@ private:
             const std::string api = host_.model().token(*findSetting("renderer.api"));
             return api == "d3d11" || (api == "auto" && !(sys.d3d12Probed && sys.d3d12.ok));
         }
+        if (k == "frames.battery_fps")  // 2.5.20: with the battery saver on
+            return host_.model().token(*findSetting("frames.battery_saver")) == "1";
         if (k.compare(0, 13, "quality.dlss_") != 0) return true;
         const std::string dlss = host_.model().token(*findSetting("quality.dlss"));
         return k == "quality.dlss_model" ? dlss != "off" : dlss == "custom";

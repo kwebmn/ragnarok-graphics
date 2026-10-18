@@ -10,7 +10,7 @@ FramePacer::~FramePacer() {
     if (timer_) CloseHandle(timer_);
 }
 
-void FramePacer::wait(int fps) {
+void FramePacer::wait(int fps, bool sleep) {
     if (fps <= 0) {
         next_ = 0;
         return;
@@ -33,13 +33,17 @@ void FramePacer::wait(int fps) {
         return;
     }
     const LONGLONG left = next_ - now.QuadPart;
-    const LONGLONG halfMs = frequency_ / 2000;
+    const LONGLONG halfMs = sleep ? 0 : frequency_ / 2000;
     if (left > halfMs && timer_) {
         LARGE_INTEGER due;
         due.QuadPart = -((left - halfMs) * 10000000 / frequency_);  // 100 ns units, relative
         if (SetWaitableTimer(timer_, &due, 0, nullptr, nullptr, FALSE)) WaitForSingleObject(timer_, 1000);
     } else if (left > halfMs) {
         Sleep(DWORD((left - halfMs) * 1000 / frequency_));
+    }
+    if (sleep) {  // the timer's own accuracy (half a millisecond with the high-resolution one) is close enough
+        next_ += period;
+        return;
     }
     do {  // the rest of it
         QueryPerformanceCounter(&now);

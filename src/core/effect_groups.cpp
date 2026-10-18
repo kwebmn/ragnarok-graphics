@@ -191,6 +191,13 @@ EffectSettings effective(const EffectSettings& in, int card) {
     return e;
 }
 
+EffectSettings atMost(const EffectSettings& e, int level) {
+    EffectSettings out = e;
+    for (const Member& m : kMembers) out.*m.on = out.*m.on && m.level > 0 && m.level <= level;
+    if (level < 3 && out.tier > 1) out.tier = 1;  // the remaster's mode is the strong set's
+    return out;
+}
+
 EffectSettings shown(const EffectSettings& e, int card) {
     EffectSettings all = e;
     for (bool& g : all.groups) g = true;

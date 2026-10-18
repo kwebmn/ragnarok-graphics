@@ -305,6 +305,8 @@ enum class Text : uint16_t {
     // 2.5.19: the Service page's Palettes.grf
     ServicePalettes, PalettesNote, PalettesFromFile, PalettesFromFolder, PalettesWorking, PalettesDone, PalettesLeft,
     PalettesFailed, PalettesSameFile, PalettesFolderTitle, FileFilterGrfZip, FileFilterGrf,
+    // 2.5.20: the light modes
+    QualitySuperLight, QualitySuperLightHint, FramesBattery, FramesBatteryHint, FramesBatteryFps, FramesBatteryFpsHint,
     Count
 };
 

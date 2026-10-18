@@ -40,6 +40,9 @@ EffectSettings effective(const EffectSettings& e, int cardLevel);
 // What the Effects page and the console show: each switch and the mode as the set has them (custom: as written);
 // the groups and the strengths as written - they stay over the switches.
 EffectSettings shown(const EffectSettings& e, int cardLevel);
+// 2.5.20: the light modes' cap (core/light_mode.hpp) on what effective() gave: only the switches of the sets up to
+// `level` stay on (0 none, 1 the weak set's) - one the player turned off stays off, one of no set goes off.
+EffectSettings atMost(const EffectSettings& effectiveSettings, int level);
 
 // A set made the player's own - an effect switched by hand under a set, or custom chosen: the [effects] lines to
 // write ("torch", "1"), every switch as the set has it now, its mode, then preset = custom; `except` (a key about to

@@ -48,6 +48,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::RenderThreadHint, ""},  // 2.5.12
         {"renderer", "remix", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
          Text::RenderRemixHint, ""},
+        {"quality", "super_light", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualitySuperLight,
+         Text::QualitySuperLightHint, ""},  // 2.5.20: first - over the rest of the page
         {"display", "high_resolution", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityHighRes,
          Text::QualityHighResHint, ""},
         {"quality", "render_scale", Page::Quality, Control::Slider, 50, 200, 10, {}, {}, Text::QualityRenderScale,
@@ -527,6 +529,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FramesFpsLimitHint, ""},
         {"frames", "save_power", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesSavePower,
          Text::FramesSavePowerHint, ""},
+        {"frames", "battery_saver", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesBattery,
+         Text::FramesBatteryHint, ""},  // 2.5.20
+        {"frames", "battery_fps", Page::Frames, Control::Slider, 15, 60, 5, {}, {}, Text::FramesBatteryFps,
+         Text::FramesBatteryFpsHint, ""},
         {"frames", "keep_fps", Page::Frames, Control::Number, 0, 240, 1, {}, {}, Text::FramesKeepFps,
          Text::FramesKeepFpsHint, ""},
         {"frames", "allow_tearing", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesTearing,
@@ -593,6 +599,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "quality.render_scale") return std::to_string(c.renderScale);
     if (k == "quality.world_scale") return std::to_string(c.worldScale);  // 2.5.16
     if (k == "quality.full_colour") return c.fullColour ? "1" : "0";        // 2.5.18
+    if (k == "quality.super_light") return c.superLight ? "1" : "0";        // 2.5.20
+    if (k == "frames.battery_saver") return c.batterySaver ? "1" : "0";
+    if (k == "frames.battery_fps") return std::to_string(c.batteryFps);
     if (k == "quality.sharpen") return std::to_string(c.sharpen);
     if (k == "display.ui_filter") return uiFilterToken(c.uiFilter);
     if (k == "display.window_art") return windowArtToken(c.windowArt);

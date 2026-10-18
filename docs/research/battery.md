@@ -35,3 +35,14 @@ pulled out. On battery, automatically or by a button in the settings app (undeci
 - in the background and minimised as now (15 frames), and nothing drawn while the window is hidden.
 
 Expected, without measurements (no laptop at hand): about 2-3 hours of play instead of one.
+
+## Built (2.5.20)
+
+`[frames] battery_saver` (off by default) and `battery_fps` (30, 15-60) on the Frames page. The driver asks Windows
+every 3 seconds whether the laptop runs on its battery (`GetSystemPowerStatus`); while it does: `battery_fps` frames at
+most, the effects at most the weak set's (each switch on only if the file has it on and the weak set has it), the world
+at 75 % at most (Direct3D 11), the frame pacer sleeping on its timer without the last half millisecond's spin, and 5
+turns of the game's loop a second when it is minimised (15 before). On the mains everything is as the file says.
+
+Not done: undoing the client's `timeBeginPeriod(1)` - since Windows 10 2004 a process's timer resolution touches no
+other process, and the pacer falls back to an ordinary timer before 1803, whose half-millisecond accuracy depends on it.

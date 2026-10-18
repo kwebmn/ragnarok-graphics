@@ -87,6 +87,19 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("world_scale", std::to_string(running.worldScale), std::to_string(file.worldScale)));
         n.worldScale = file.worldScale;
     }
+    if (file.superLight != running.superLight) {  // 2.5.20
+        u.applied.push_back(change("super_light", running.superLight ? "1" : "0", file.superLight ? "1" : "0"));
+        n.superLight = file.superLight;
+    }
+    if (file.batterySaver != running.batterySaver) {
+        u.applied.push_back(change("battery_saver", flag(running.batterySaver), flag(file.batterySaver)));
+        n.batterySaver = file.batterySaver;
+    }
+    if (file.batteryFps != running.batteryFps) {
+        u.applied.push_back(
+            change("battery_fps", std::to_string(running.batteryFps), std::to_string(file.batteryFps)));
+        n.batteryFps = file.batteryFps;
+    }
     if (file.fullColour != running.fullColour) {  // 2.5.18: for the textures loaded from now on
         u.applied.push_back(change("full_colour", running.fullColour ? "1" : "0", file.fullColour ? "1" : "0"));
         n.fullColour = file.fullColour;
@@ -166,6 +179,7 @@ bool appliesNow(const std::string& k) {
     return k == "display.high_resolution" || k == "display.ui_filter" || k == "display.crisp_text" ||
            k == "display.window_art" ||
            k == "quality.render_scale" || k == "quality.world_scale" || k == "quality.full_colour" ||
+           k == "quality.super_light" || k == "frames.battery_saver" || k == "frames.battery_fps" ||
            k == "quality.sharpen" ||
            k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||

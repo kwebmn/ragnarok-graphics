@@ -55,3 +55,19 @@ running game, Scroll Lock still showing the game's own picture.
 First the tester's 2.5.16 report: Scroll Lock against the old 35 frames (the shaders' gain) and `world_scale`
 100/75/50 (the share of a frame that follows the pixels). With the base still at 15 ms or more, flat colours and 16-bit
 targets are needed; at 6-10 ms they are a matter of taste.
+
+## Built (2.5.20)
+
+`[quality] super_light` (the Quality page's first box), over the other settings while it is on and given back when it
+ends, in a running game (`core/light_mode.hpp`, applied in `Context::present`):
+
+- every effect off (`effect_groups::atMost(.., 0)`), the AI pictures not drawn - and not read at all when the game
+  starts with it on;
+- `world_scale` 50 %, `render_scale` 100 % at most, no anisotropy, sharpening, MSAA, TAA or supersampling;
+- Direct3D 11's own (`Renderer::setLight`, taken at a frame's start): the ground's and the models' textures from their
+  last mip level - a view of it, no memory - or, with transparent texels, the last of 16 texels a side
+  (`light::flatLevel`); sprites, effects and the interface as they are; the world's set in B5G6R5 with D16 depth where
+  the card can draw into, blend and sample B5G6R5 (else 32-bit); mip levels without blending.
+
+Not done: a 30-frame cap (the frame limit stays the player's), Direct3D 12's flat textures and 16-bit targets (the
+weakest cards are Direct3D 11's). No measurement yet on the weak card.

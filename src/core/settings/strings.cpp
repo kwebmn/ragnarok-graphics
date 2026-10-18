@@ -3078,6 +3078,34 @@ const Entry kTexts[] = {
      "Папка с палитрами (data\\palette или папка, в которой она лежит)"},
     {"GRF or ZIP archives", "Архіви GRF або ZIP", "Архивы GRF или ZIP"},
     {"GRF archive", "Архів GRF", "Архив GRF"},
+    // 2.5.20
+    {"Super-light mode", "Супер-легкий режим", "Супер-лёгкий режим"},
+    {"For the weakest graphics cards, over the settings below while it is on: no effect and no AI picture, the world "
+     "at half the picture's size, no anisotropy, sharpening or smoothing; with Direct3D 11 also the world's textures "
+     "as their colour alone (a clay look in the map's colours), a 16-bit world, mip levels without blending. The "
+     "interface and the characters stay as they are. Turned off, everything comes back as it was.",
+     "Для найслабших відеокарт, поверх налаштувань нижче, поки ввімкнено: жодного ефекту й жодної картинки ШІ, світ "
+     "у половину розміру картинки, без анізотропії, різкості й згладжування; з Direct3D 11 ще й текстури світу самим "
+     "їхнім кольором (наче глина в кольорах карти), 16-бітний світ, мип-рівні без змішування. Інтерфейс і персонажі "
+     "лишаються як є. Вимкнете — усе повернеться як було.",
+     "Для самых слабых видеокарт, поверх настроек ниже, пока включено: ни одного эффекта и ни одной картинки ИИ, мир "
+     "в половину размера картинки, без анизотропии, резкости и сглаживания; с Direct3D 11 ещё и текстуры мира одним "
+     "их цветом (как глина в цветах карты), 16-битный мир, мип-уровни без смешивания. Интерфейс и персонажи "
+     "остаются как есть. Выключите — всё вернётся как было."},
+    {"Save the laptop's battery", "Берегти батарею ноутбука", "Беречь батарею ноутбука"},
+    {"While a laptop runs on its battery: the frames limited (below), the effects at most the weak set's, the world "
+     "at 75 % (Direct3D 11), 5 frames when the game is minimised. On the mains again, everything as before.",
+     "Поки ноутбук працює від батареї: кадри обмежено (нижче), ефекти не сильніші за слабкий набір, світ у 75 % "
+     "(Direct3D 11), 5 кадрів, коли гру згорнуто. Від мережі — усе як раніше.",
+     "Пока ноутбук работает от батареи: кадры ограничены (ниже), эффекты не сильнее слабого набора, мир в 75 % "
+     "(Direct3D 11), 5 кадров, когда игра свёрнута. От сети — всё как раньше."},
+    {"Frames on the battery", "Кадрів від батареї", "Кадров от батареи"},
+    {"Frames a second at most while the laptop runs on its battery (the battery saver above). 30 is about half the "
+     "work of 60.",
+     "Кадрів за секунду найбільше, поки ноутбук працює від батареї (збереження батареї вище). 30 — це приблизно "
+     "половина роботи від 60.",
+     "Кадров в секунду не больше, пока ноутбук работает от батареи (экономия батареи выше). 30 — это примерно "
+     "половина работы от 60."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

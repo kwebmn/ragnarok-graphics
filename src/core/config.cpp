@@ -424,6 +424,8 @@ Config parseConfig(const std::string& text) {
             toInt(val, 50, 100, c.worldScale);  // 2.5.16
         } else if (key == "quality.full_colour") {
             setBool(val, c.fullColour);  // 2.5.18
+        } else if (key == "quality.super_light") {
+            setBool(val, c.superLight);  // 2.5.20
         } else if (key == "quality.sharpen") {
             toInt(val, 0, 100, c.sharpen);
         } else if (key == "quality.msaa") {
@@ -496,6 +498,10 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 1000, c.fpsLimit);
         } else if (key == "frames.save_power") {
             setBool(val, c.savePower);
+        } else if (key == "frames.battery_saver") {
+            setBool(val, c.batterySaver);  // 2.5.20
+        } else if (key == "frames.battery_fps") {
+            toInt(val, 15, 60, c.batteryFps);
         } else if (key == "frames.keep_fps") {
             toInt(val, 0, 240, c.keepFps);
         } else if (key == "frames.allow_tearing") {

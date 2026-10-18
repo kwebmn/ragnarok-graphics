@@ -9,7 +9,9 @@ namespace uagfx::gpu {
 class FramePacer {
 public:
     ~FramePacer();
-    void wait(int fps);  // before a present; 0: no limit
+    // before a present; 0: no limit. 2.5.20: sleep - on the timer to the frame's time (a laptop on its battery): no
+    // last half a millisecond waited out awake
+    void wait(int fps, bool sleep = false);
 
 private:
     HANDLE timer_ = nullptr;

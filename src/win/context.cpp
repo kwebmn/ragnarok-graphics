@@ -132,7 +132,8 @@ void Context::writeUsage(const std::string& lines) {
 
 const EffectSettings& Context::effects() const {
     if (!effectsMade_) {
-        effects_ = effect_groups::effective(config.effects, startup().cardLevel);
+        // 2.5.20: as the light modes leave them - super-light none, the battery's at most the weak set's
+        effects_ = light::effectsOf(effect_groups::effective(config.effects, startup().cardLevel), light_);
         effectsMade_ = true;
     }
     return effects_;
@@ -253,8 +254,11 @@ bool Context::open(std::string& error) {
     fps_.setLabel(std::string(d3d11 ? "Direct3D 11" : "Direct3D 12") + (config.dlss != "off" ? " + DLSS" : ""));
     // 0.47: the AI textures with Direct3D 11 - the texture pack's pictures, in the game's process (2.5.12: on its own
     // thread, which started them itself).
-    const bool aiHere =
-        d3d11 && config.ai.enabled && (renderer->remote() || renderer->startAiTextures(gameDir(), config.ai));
+    // 2.5.20: super-light from the start - no AI picture is drawn: none read either (back with the next start)
+    if (d3d11 && config.ai.enabled && config.superLight)
+        LOG_INFO("AI textures: not started - super-light ([quality] super_light)");
+    const bool aiHere = d3d11 && config.ai.enabled && !config.superLight &&
+                        (renderer->remote() || renderer->startAiTextures(gameDir(), config.ai));
     crisp::setWindowArt(config.windowArt);  // 0.41: before the first twin
     crisp::install(config.crispText);
     // AI textures (0.13): sprites through the game's sprite cache, cell by cell (sprite_hook.hpp); (0.14) the windows'
@@ -375,6 +379,34 @@ void Context::flushIfFull() {
     if (record.full()) flush();
 }
 
+void Context::updateLight() {
+    const ULONGLONG now = GetTickCount64();
+    if (!config.batterySaver) {
+        onBattery_ = false;
+    } else if (!powerChecked_ || now - powerChecked_ >= 3000) {  // a cable pulled out is seen within 3 seconds
+        powerChecked_ = now;
+        SYSTEM_POWER_STATUS p{};
+        onBattery_ = GetSystemPowerStatus(&p) && p.ACLineStatus == 0;
+    }
+    const light::Overrides o = light::overridesOf(config, onBattery_);
+    if (o == light_) return;
+    if (o.superLight != light_.superLight)
+        LOG_INFO("super-light: %s", o.superLight ? "on - no effects, no AI pictures, the world at half size; Direct3D "
+                                                   "11: its textures as their colour alone, 16-bit, no blended mip "
+                                                   "levels"
+                                                 : "off - the settings as the file has them");
+    if (o.battery != light_.battery) {
+        if (o.battery)
+            LOG_INFO("battery saver: on the battery - %d frames at most, the effects at most the weak set's, the world "
+                     "at 75 %% at most", o.fpsMax);
+        else
+            LOG_INFO("battery saver: %s - the settings as the file has them",
+                     config.batterySaver ? "on the mains" : "off");
+    }
+    light_ = o;
+    effectsMade_ = false;  // effects() made again
+}
+
 void Context::present(const Rect& source, bool waitForVblank) {
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
@@ -386,9 +418,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     if (!renderer) return;
     watchSettings();
+    updateLight();  // 2.5.20
     if (window && IsIconic(window)) {  // minimised: nothing to show, and no vsync to hold the game's loop back
         noteWindow(true, false);
-        Sleep(15);
+        Sleep(light_.battery ? DWORD(1000 / std::max(1, light_.minimisedFps)) : 15);  // 2.5.20: 5 on the battery
         return;
     }
     const bool foreground = !window || GetForegroundWindow() == window;
@@ -476,15 +509,16 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 0.62: [display] ui_native - supersampling the world alone (Direct3D 12 in this process, no DLSS): the target the
     // picture's size, the world render_scale times it, made smaller into it; the interface at the picture's pixels.
     const bool nativeWanted = !dlss && config.uiNative && config.highResolution && config.renderScale > 100 &&
-                              renderer->canSupersample();
+                              !light_.noSupersampling && renderer->canSupersample();
     const bool uiNative =
         nativeWanted && renderer->setSupersample(enhanced_ ? config.renderScale / 100.0 : 1.0) && enhanced_;
     if (!nativeWanted) renderer->setSupersample(1.0);  // turned off in a running game
     // 0.75: [quality] taa - the renderer's own, where neither DLSS nor ui_native is used
-    const bool taaWanted = !dlss && !nativeWanted && config.taa && renderer->canSupersample();
+    const bool taaWanted =
+        !dlss && !nativeWanted && config.taa && !light_.noSupersampling && renderer->canSupersample();
     const bool taa = taaWanted && renderer->setTaa(enhanced_) && enhanced_;
     if (!taaWanted) renderer->setTaa(false);
-    const int renderScale = dlss || uiNative || taa ? 100 : config.renderScale;
+    const int renderScale = dlss || uiNative || taa ? 100 : std::min(config.renderScale, light_.renderScaleMax);
     if (dlss && config.renderScale > 100 && !renderScaleNoted_) {
         renderScaleNoted_ = true;
         LOG_INFO("render_scale %d%% is not used with DLSS: it draws the world at its own size", config.renderScale);
@@ -499,7 +533,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Part 3: DLSS (in the 64-bit renderer) draws the world instead of MSAA; Pause turns it off as well. Without
     // DLSS in the renderer (no RTX card, no files) MSAA stays (0.8 review M4).
     const bool upscale = enhanced_ && (dlss || uiNative || taa);
-    const int samples = enhanced_ && !upscale && config.msaa > 1 ? config.msaa : 1;
+    const int samples = enhanced_ && !upscale && config.msaa > 1 && !light_.noSupersampling ? config.msaa : 1;
     if (plan.targetWidth != scaledWidth_ || plan.targetHeight != scaledHeight_ || samples != scaledSamples_ ||
         upscale != scaledUpscale_) {
         scaledWidth_ = plan.targetWidth;  // also when it fails: no new attempt every frame
@@ -510,7 +544,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
-    renderer->setWorldScale(enhanced_ ? config.worldScale / 100.0 : 1.0);
+    renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);
+    renderer->setLight(enhanced_ ? light_.flags : uint8_t(0));  // 2.5.20: Pause shows the game's own picture
     if (upscale && (dlss || taa)) {  // the camera of the frame being shown: the motion of its pixels
         float view[12];
         float targetZ = 0;
@@ -535,9 +570,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     // 2.2.1: the AI pictures' kinds as the file says now (a kind off hidden at once; 2.2.2: each kind of sprites
     // too); Pause: none
-    renderer->setDrawQuality(enhanced_ ? config.anisotropy : 0, enhanced_ && config.alphaToCoverage,
-                             enhanced_ ? aiKindsShown(config.aiNow) : uint8_t(0),
-                             enhanced_ ? aiSpritesShown(config.aiNow) : uint8_t(0));
+    const bool aiShown = enhanced_ && !light_.aiHidden;  // 2.5.20: super-light draws none of them
+    renderer->setDrawQuality(enhanced_ && !light_.noAnisotropy ? config.anisotropy : 0,
+                             enhanced_ && config.alphaToCoverage && !light_.noSupersampling,
+                             aiShown ? aiKindsShown(config.aiNow) : uint8_t(0),
+                             aiShown ? aiSpritesShown(config.aiNow) : uint8_t(0));
     keepFrameRate(config, window);
     Profiler::get().run(GetCurrentThreadId(), config.profile);  // 0.87: [debug] profile
     // 2.2: the set and the groups made into the switches; 0.63: how much night now, by the clock; 0.74: the minute
@@ -594,10 +631,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.allowTearing = config.allowTearing;
     // 0.85, [frames] save_power: in the background (another window in front, minimised) 15 frames a second, with no
     // map shown (the login, the character select) 30 - what the player is not looking at needs no more.
-    o.fpsLimit = config.fpsLimit;
+    o.fpsLimit = light::fpsLimit(config.fpsLimit, light_);  // 2.5.20: the battery's
+    o.pacerSleeps = light_.pacerSleeps;
     const int idle = !foreground ? 15 : map_.empty() ? 30 : 0;
     if (config.savePower && idle && (o.fpsLimit <= 0 || o.fpsLimit > idle)) o.fpsLimit = idle;
-    o.sharpen = enhanced_ && config.sharpen > 0 ? float(config.sharpen - 1) / 99.0f : -1.0f;  // 1-100 -> CAS 0..1
+    o.sharpen = enhanced_ && config.sharpen > 0 && !light_.noSharpen ? float(config.sharpen - 1) / 99.0f
+                                                                     : -1.0f;  // 1-100 -> CAS 0..1
     o.foreground = foreground;
     o.vsyncSetting = config.vsync;
     o.screenshot = screenshot;

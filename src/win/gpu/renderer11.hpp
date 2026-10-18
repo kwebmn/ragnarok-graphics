@@ -84,6 +84,7 @@ public:
     // 2.5.16: [quality] world_scale - the world drawn at this share (0.5-1) of the picture and made larger before the
     // interface, which stays at the picture's pixels (an HD 6570: the world was most of the frame)
     void setWorldScale(double share) { worldScale_ = std::clamp(share, 0.5, 1.0); }
+    void setLight(uint8_t flags) { lightWanted_ = flags; }  // 2.5.20: taken at the next frame's start
     uint32_t createTexture(int width, int height, int levels);
     // 2.5.13: under the number the game's side gave it (Direct3D 11 on its own thread: Remote numbers them)
     bool createTextureAs(uint32_t id, int width, int height, int levels);
@@ -144,6 +145,10 @@ private:
         ID3D11Texture2D* mat = nullptr;
         ID3D11ShaderResourceView* matSrv = nullptr;
         const void* matFor = nullptr;
+        // 2.5.20: super-light - a view of its last level (or the last of 16 a side: transparent), and its level
+        ID3D11ShaderResourceView* flat = nullptr;
+        int flatLevel = 0;
+        bool transparent = false;  // a texel of its level 0 not opaque
     };
     struct Target {  // a picture drawn into and read from
         ID3D11Texture2D* texture = nullptr;
@@ -176,6 +181,8 @@ private:
     bool glowDrawn_ = false;   // ... and some did this frame
     bool glowFailed_ = false;  // not made at this size
     bool makeTarget(Target& t, int width, int height, DXGI_FORMAT format);
+    // sixteen (2.5.20): D16 for the 16-bit world, else D32
+    bool makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D11DepthStencilView*& dsv, bool sixteen);
     // 1.0.1: the game's fireflies drawn anew (torches11.cpp, firefly_ps as Direct3D 12's): taken from its draws, each
     // a soft blinking light added at the interface, behind what stands in front of it
     struct Fly11 {
@@ -477,7 +484,9 @@ private:
         return makeTarget(t, width, height, DXGI_FORMAT_B8G8R8A8_UNORM);
     }
     void dropTarget(Target& t);
-    bool makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D11DepthStencilView*& dsv);
+    bool makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D11DepthStencilView*& dsv) {
+        return makeDepth(width, height, depth, dsv, false);
+    }
     bool makeStaging(int width, int height);
     bool uploadGeometry(const FrameRecord& rec);
     // A dynamic buffer, grown as needed, written whole: swizzle - the record whose draws' colours go in as R8G8B8A8
@@ -705,9 +714,14 @@ private:
         ID3D11DepthStencilView* readOnlyDsv = nullptr;
         ID3D11Texture2D* readOnlyDsvOf = nullptr;
         double scale = 1.0;
+        bool sixteen = false;  // 2.5.20: B5G6R5 and D16 (super-light)
     };
     WorldSet world_;
     double worldScale_ = 1.0;
+    // 2.5.20: the light modes' flags (core/light_mode.hpp light::Flag): wanted, and taken at a frame's start
+    uint8_t lightWanted_ = 0, light_ = 0;
+    bool world16Ok_ = false;  // B5G6R5 can be drawn into, blended and sampled; D16 depth
+    ID3D11ShaderResourceView* flatView(Texture& t);
     bool inWorld_ = false;      // world_ holds the picture's set now
     bool frameOpen_ = false;    // the frame's first execute is behind
     bool scaled_ = false;       // a present was made: the start-up calibration is over

@@ -224,6 +224,12 @@ void Remote::setWorldScale(double share) {
     send(Msg::SetWorldScale, buffer_);
 }
 
+void Remote::setLight(uint8_t flags) {
+    if (flags == light_) return;
+    light_ = flags;
+    send(Msg::SetLight, {flags});
+}
+
 void Remote::preparePipelines(const std::string& file) {
     buffer_.clear();
     WireWriter(buffer_).str(file);
@@ -593,6 +599,7 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     w.u8(o.foreground ? 1 : 0);
     w.str(o.screenshot);  // 0.54
     w.u8(o.hdr ? 1 : 0);  // 0.65
+    w.u8(o.pacerSleeps ? 1 : 0);  // 2.5.20
     if (send(Msg::Present, buffer_)) ++presentsSent_;
 }
 

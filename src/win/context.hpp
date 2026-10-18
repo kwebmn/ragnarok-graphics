@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "core/light_mode.hpp"
 #include "core/appear.hpp"
 #include "core/hit_flash.hpp"
 #include "core/config.hpp"
@@ -93,6 +94,11 @@ private:
     bool enhanced_ = true;
     mutable EffectSettings effects_;  // 2.5.11: effects(), made from `config`
     mutable bool effectsMade_ = false;
+    // 2.5.20: the light modes (core/light_mode.hpp) - what they take from `config` now, and the laptop's power
+    light::Overrides light_;
+    bool onBattery_ = false;
+    ULONGLONG powerChecked_ = 0;
+    void updateLight();
     ToggleKey fpsKey_;  // 0.54: Ctrl+Shift+F11 - the frame counter
     // 2.2.1: the statistics of the settings played with, with the player's leave ([stats] send; core/usage.hpp)
     usage::Recorder usage_;

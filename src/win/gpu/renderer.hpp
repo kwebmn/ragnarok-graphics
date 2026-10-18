@@ -57,6 +57,7 @@ struct PresentOptions {
     bool vsyncSetting = true;   // vsync as set (vsync above is off for a Blt that shows at once); Remix's interval
     std::string screenshot;     // 0.54: the picture as shown, to this PNG file (Ctrl+Shift+F12); "" none
     bool hdr = false;           // 0.65: [display] hdr - HDR10 where the monitor shows HDR (Direct3D 12)
+    bool pacerSleeps = false;   // 2.5.20: the battery saver - fps_limit kept by sleeping alone (FramePacer)
 };
 
 // Direct3D 12 behind the DirectDraw surfaces: plays frame records onto the render target the client draws into,
@@ -128,6 +129,9 @@ public:
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world at this share (0.5-1) of the picture and makes it
     // larger before the interface; nothing elsewhere
     void setWorldScale(double share);
+    // 2.5.20: the light modes' flags (core/light_mode.hpp light::Flag) - Direct3D 11's: the world's textures as their
+    // colour alone, a 16-bit world, mip levels without blending; Direct3D 12 keeps its own picture
+    void setLight(uint8_t flags);
     void setShaderVariants(bool on);  // 2.5.16: [debug] shader_variants (Direct3D 11)
     void setUpscaler(Upscaler* u);   // before setScale
     // 0.62: [display] ui_native - the world `ratio` times the picture, made smaller into it, the interface at the

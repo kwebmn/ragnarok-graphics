@@ -471,6 +471,10 @@ struct Config {
     // 0 = no limit; 0.85: 60 by default (was none: 150 frames of a game that looks the same at 60)
     int fpsLimit = 60;
     bool savePower = true;  // 0.85: [frames] save_power - 15 frames a second in the background, 30 with no map
+    // 2.5.20: [frames] battery_saver - while a laptop runs on its battery: battery_fps frames at most, the effects at
+    // most the weak set's, the world at 75 % (core/light_mode.hpp)
+    bool batterySaver = false;
+    int batteryFps = 30;
     // 0.76: [frames] keep_fps - below this for ten seconds, the costliest effect goes off for the rest of the game
     // (core/effect_costs.hpp); 0 = never
     int keepFps = 0;
@@ -481,6 +485,9 @@ struct Config {
     // 2.5.18: [quality] full_colour - the textures in their pictures' own colours, not the 16-bit ones the game makes
     // (core/full_colour.hpp)
     bool fullColour = true;
+    // 2.5.20: [quality] super_light - the weakest cards' mode (core/light_mode.hpp): no effect, no AI picture, the
+    // world at half size, its textures as their colour alone, 16-bit, in a running game and given back when it ends
+    bool superLight = false;
     // 0.62: [display] ui_native - with render_scale over 100 % on Direct3D 12 (no DLSS): the world drawn larger and
     // made smaller, the interface drawn at the screen's own pixels (not drawn larger and made smaller with it)
     bool uiNative = false;

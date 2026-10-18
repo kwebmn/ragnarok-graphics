@@ -591,6 +591,27 @@ TEST(config_full_colour) {
     CHECK(appliesNow("quality.full_colour"));
 }
 
+TEST(config_light_modes) {
+    // 2.5.20: super-light and the battery saver - off unless the file says otherwise, applied in a running game
+    const Config d = parseConfig("");
+    CHECK(!d.superLight && !d.batterySaver);
+    CHECK_EQ(d.batteryFps, 30);
+    const Config c = parseConfig("[quality]\nsuper_light = 1\n[frames]\nbattery_saver = 1\nbattery_fps = 20\n");
+    CHECK(c.superLight && c.batterySaver);
+    CHECK_EQ(c.batteryFps, 20);
+    CHECK_EQ(parseConfig("[frames]\nbattery_fps = 5\n").batteryFps, 30);  // out of range: the default
+    const settings::IniSetting* s = settings::findSetting("quality.super_light");
+    const settings::IniSetting* b = settings::findSetting("frames.battery_saver");
+    const settings::IniSetting* f = settings::findSetting("frames.battery_fps");
+    CHECK(s && b && f);
+    if (!s || !b || !f) return;
+    CHECK(s->page == settings::Page::Quality && b->page == settings::Page::Frames && f->min == 15 && f->max == 60);
+    CHECK_EQ(settings::tokenOf(*f, c), std::string("20"));
+    const LiveUpdate u = liveUpdate(d, c);
+    CHECK(u.waiting.empty() && u.applied.size() == 3);
+    CHECK(appliesNow("quality.super_light") && appliesNow("frames.battery_saver") && appliesNow("frames.battery_fps"));
+}
+
 TEST(config_shader_variants) {
     // 2.5.16: [debug] shader_variants - on unless turned off (the draw shaders made for the game's states)
     CHECK(parseConfig("").shaderVariants);
