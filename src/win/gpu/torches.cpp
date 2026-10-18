@@ -338,20 +338,40 @@ bool Renderer::Impl::lightPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelin
 
 // The shaders, the pipelines for this target and the copies of the picture: false when any is missing (logged once).
 bool Renderer::Impl::torchReady() {
-    if (!torchLightPs || !torchFirePs || !open) return false;
+    if (!torchLightVs || !torchAccumPs || !torchApplyPs || !torchFirePs || !open) return false;
     const UINT n = upscale ? 1 : samples;
     const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
     const UINT fire = upscale ? 4 : code;
-    if (!torchLightPipelines[code]) {
+    if (!torchAccumPipeline) {  // 2.5: each light's quad into the buffer of light, added
         D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
-            fullScreenPipeline(root, presentVs, torchLightPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
+            fullScreenPipeline(root, torchLightVs, torchAccumPs, DXGI_FORMAT_R16G16B16A16_FLOAT, 1);
+        D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
+        b.BlendEnable = TRUE;
+        b.SrcBlend = D3D12_BLEND_ONE;
+        b.DestBlend = D3D12_BLEND_ONE;
+        b.BlendOp = D3D12_BLEND_OP_ADD;
+        b.SrcBlendAlpha = D3D12_BLEND_ONE;
+        b.DestBlendAlpha = D3D12_BLEND_ONE;
+        b.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+        b.LogicOp = D3D12_LOGIC_OP_NOOP;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&torchAccumPipeline)))) {
+            torchAccumPipeline = nullptr;
+            LOG_ERROR("torches: the light's pipeline failed: they stay the game's");
+            releaseCom(torchAccumPs);  // not tried again
+            return false;
+        }
+    }
+    if (!torchLightPipelines[code]) {  // the buffer's sums into the picture
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, torchApplyPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
         p.BlendState.RenderTarget[0].RenderTargetWriteMask =
             D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
         if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
                                                        reinterpret_cast<void**>(&torchLightPipelines[code])))) {
             torchLightPipelines[code] = nullptr;
             LOG_ERROR("torches: the light's pipeline onto %u samples failed: they stay the game's", 1u << code);
-            releaseCom(torchLightPs);  // not tried again
+            releaseCom(torchApplyPs);  // not tried again
             return false;
         }
     }
@@ -385,13 +405,40 @@ bool Renderer::Impl::torchReady() {
         if (!torchData || torchDataSrv == kNoSrv) {
             LOG_ERROR("torches: no memory for their list: they stay the game's");
             releaseCom(torchData);
-            releaseCom(torchLightPs);
+            releaseCom(torchAccumPs);
             return false;
         }
         torchDataState = D3D12_RESOURCE_STATE_COPY_DEST;
         device->CreateShaderResourceView(torchData, nullptr, cpuSrvHandle(torchDataSrv));
     }
     return ensureScene("torches");
+}
+
+// 2.5: the buffer of light at the world's size - made anew when the size changes; false: none at this size.
+bool Renderer::Impl::ensureTorchLight(int w, int h) {
+    if (torchLight && w == torchLightW && h == torchLightH) return true;
+    if (torchLightFailed && w == torchLightW && h == torchLightH) return false;
+    discard(torchLight);
+    torchLight = nullptr;
+    torchLightW = w;
+    torchLightH = h;
+    D3D12_CLEAR_VALUE none{};
+    none.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    torchLight = createTexture2D(device, w, h, 1, DXGI_FORMAT_R16G16B16A16_FLOAT,
+                                 D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
+    if (torchLight && torchLightSrv == kNoSrv) torchLightSrv = allocSrv();
+    if (!torchLight || torchLightSrv == kNoSrv) {
+        LOG_ERROR("torches: no video memory for their light at %dx%d: they stay the game's", w, h);
+        releaseCom(torchLight);
+        torchLightFailed = true;
+        return false;
+    }
+    nameResource(torchLight, "torches' light");
+    torchLightState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    torchLightFailed = false;
+    device->CreateShaderResourceView(torchLight, nullptr, cpuSrvHandle(torchLightSrv));
+    device->CreateRenderTargetView(torchLight, nullptr, rtvHandle(kRtvTorch));
+    return true;
 }
 
 namespace {
@@ -905,10 +952,43 @@ bool Renderer::Impl::applyTorches() {
         c.sourceRect[0] = effects.roundLight ? 1.0f : 0.0f;  // 0.84
         c.sharpen = effects.rimLight ? 0.6f * float(std::clamp(effects.rimStrength, 0, 200)) / 100.0f : 0.0f;  // 0.68
         const D3D12_RECT lit = clipped(lx0, ly0, lx1, ly1, w, h);
-        if (lit.right > lit.left && lit.bottom > lit.top &&
-            !effectPass(torchLightPipelines[code], dst, dstState, rtv, w, h, c, sceneColorSrv, true, torchDataSrv,
-                        &lit))
-            return false;
+        if (lit.right > lit.left && lit.bottom > lit.top && ensureTorchLight(w, h)) {
+            // 2.5: each light's quad adds into the buffer of light (torch_light_vs, torch_accum_ps), cleared first
+            StageSetup linearClamp;
+            linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
+            linearClamp.magFilter = d3d7::TFG_LINEAR;
+            linearClamp.minFilter = d3d7::TFN_LINEAR;
+            linearClamp.mipFilter = d3d7::TFP_NONE;
+            if (!makeRoom(linearClamp, linearClamp, 0, 5)) return false;
+            placeSamples(false);
+            const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(linearClamp, linearClamp, 0);
+            const D3D12_GPU_DESCRIPTOR_HANDLE textures = textureTable(sceneDepthSrv, torchDataSrv);
+            transition(torchLight, torchLightState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            const D3D12_CPU_DESCRIPTOR_HANDLE lightRtv = rtvHandle(kRtvTorch);
+            const float none[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            list->OMSetRenderTargets(1, &lightRtv, FALSE, nullptr);
+            list->ClearRenderTargetView(lightRtv, none, 1, &lit);
+            const D3D12_VIEWPORT vp{0.0f, 0.0f, float(w), float(h), 0.0f, 1.0f};
+            list->RSSetViewports(1, &vp);
+            list->RSSetScissorRects(1, &lit);
+            list->SetGraphicsRootSignature(root);
+            list->SetPipelineState(torchAccumPipeline);
+            c.targetSize[0] = float(w);
+            c.targetSize[1] = float(h);
+            list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
+            list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
+            list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
+            list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
+            list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            list->DrawInstanced(6, UINT(lights.size()), 0, 0);
+            boundPipeline = nullptr;  // the next draws bind everything again
+            boundTextures = boundSamplers = ~0ull;
+            pass = kPassNone;
+            transition(torchLight, torchLightState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            if (!effectPass(torchLightPipelines[code], dst, dstState, rtv, w, h, c, torchLightSrv, true, kNoSrv,
+                            &lit))
+                return false;
+        }
     }
     if (heatWanted())  // 0.35: the hot air over each flame
         for (const torch::Flame& f : flames) {

@@ -117,7 +117,8 @@ constexpr UINT kRtvBloom = kRtvClouds + 1;  // 0.78: the bloom's two quarter-siz
 constexpr UINT kRtvFloor = kRtvBloom + 2;  // 0.86: the floors' reflections at half the size
 constexpr UINT kRtvMaterial = kRtvFloor + 1;  // 1.8: a level of a texture's material, made anew for each
 constexpr UINT kRtvMirror = kRtvMaterial + 1;  // 1.16: the world mirrored under the water
-constexpr UINT kRtvCount = kRtvMirror + 1;
+constexpr UINT kRtvTorch = kRtvMirror + 1;  // 2.5: the torches' buffer of light
+constexpr UINT kRtvCount = kRtvTorch + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
@@ -468,11 +469,22 @@ struct Renderer::Impl {
     ID3D12Resource* torchData = nullptr;  // R32G32B32A32 float, a texel a torch: its light's place and strength
     D3D12_RESOURCE_STATES torchDataState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT torchDataSrv = 0;
-    ID3DBlob* torchLightPs = nullptr;
+    // 2.5: the light in two passes (shaders.cpp torch_light_vs): each light's quad adds into a buffer of light the
+    // world's size (R16G16B16A16 float: colour times amount, amount), one pass turns it into the picture.
+    ID3DBlob* torchLightVs = nullptr;
+    ID3DBlob* torchAccumPs = nullptr;
+    ID3DBlob* torchApplyPs = nullptr;
+    ID3D12PipelineState* torchAccumPipeline = nullptr;
+    ID3D12Resource* torchLight = nullptr;
+    D3D12_RESOURCE_STATES torchLightState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT torchLightSrv = 0;
+    int torchLightW = 0, torchLightH = 0;
+    bool torchLightFailed = false;
+    bool ensureTorchLight(int w, int h);  // the buffer at this size; false: none (logged once)
     ID3DBlob* torchFirePs = nullptr;
     ID3DBlob* smokePs = nullptr;  // 0.24: the chimneys' smoke (draw.cpp), with the glow's second target and without
     ID3DBlob* smokeGlowPs = nullptr;
-    ID3D12PipelineState* torchLightPipelines[4] = {};  // into the target of 1, 2, 4, 8 samples (the world: 1)
+    ID3D12PipelineState* torchLightPipelines[4] = {};  // 2.5: the apply pass into the target of 1, 2, 4, 8 samples
     ID3D12PipelineState* torchFirePipelines[5] = {};   // the same, and the world under DLSS (its alpha the mask)
     ID3DBlob* fireflyPs = nullptr;                      // 0.28: a firefly's dot and halo
     ID3D12PipelineState* fireflyPipelines[5] = {};     // as torchFirePipelines

@@ -1355,6 +1355,95 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
     return float4(lerp(sc, saturate(warm), w * 0.9), 1.0);
 }
 
+// 2.5: the same light in two passes instead of one over every pixel of the lights' union: each light's own quad on
+// the screen (torch_light_vs, from its texels) adds what it gives each pixel into a buffer of light (torch_accum_ps:
+// rgb its colour times the amount, a the amount), then one pass turns the sums into the picture (torch_apply_ps) -
+// the arithmetic of torch_light_ps, but a pixel's work is its own lights', not all of them, and a pixel no light
+// reaches costs nothing (a tower's sixty torches cost 3-7 ms at 1080p). uiPixels.xy the buffer's size, the world's.
+struct TorchIn {
+    float4 pos : SV_Position;
+    nointerpolation uint light : TEXCOORD1;
+};
+
+TorchIn torch_light_vs(uint id : SV_VertexID, uint inst : SV_InstanceID) {
+    float4 t = tex1.Load(int3(2 * int(inst), 0, 0));  // its place in the view and its reach
+    float2 lo = float2(0.0, 0.0), hi = uiPixels.xy;    // the whole buffer: the camera within its reach
+    if (t.z - t.w > nearZ) {  // the cube about it: its near face's corners projected bound the rest of it
+        float z = t.z - t.w;
+        float2 a = float2((t.x - t.w) / z * f0 + cx, (t.y - t.w) / z * f1 + cy) * scale + float2(jitterX, jitterY);
+        float2 b = float2((t.x + t.w) / z * f0 + cx, (t.y + t.w) / z * f1 + cy) * scale + float2(jitterX, jitterY);
+        lo = clamp(min(a, b) - 1.0, float2(0.0, 0.0), uiPixels.xy);
+        hi = clamp(max(a, b) + 1.0, float2(0.0, 0.0), uiPixels.xy);
+    }
+    uint corner = id == 3 ? 2 : id == 4 ? 1 : id == 5 ? 3 : id;  // two triangles: 0 1 2, 2 1 3
+    float2 p = float2((corner & 1) != 0 ? hi.x : lo.x, (corner & 2) != 0 ? hi.y : lo.y);
+    TorchIn o;
+    o.pos = float4(p.x / uiPixels.x * 2.0 - 1.0, 1.0 - p.y / uiPixels.y * 2.0, 0.0, 1.0);
+    o.light = inst;
+    return o;
+}
+
+float4 torch_accum_ps(TorchIn i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there
+    float3 p = viewAt(wp);
+    float4 t = tex1.Load(int3(2 * int(i.light), 0, 0));
+    float3 v = t.xyz - p;
+    float d2 = dot(v, v), reach2 = t.w * t.w;
+    if (d2 >= reach2) discard;
+    float4 c = tex1.Load(int3(2 * int(i.light) + 1, 0, 0));  // its colour and strength
+    int2 last = int2(uiPixels.xy) - 1;
+    float3 l = viewAt(max(wp - int2(1, 0), int2(0, 0))), r = viewAt(min(wp + int2(1, 0), last));
+    float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
+    float3 dx = abs(r.z - p.z) < abs(p.z - l.z) ? r - p : p - l;
+    float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
+    float3 n = normalize(cross(dy, dx));
+    if (dot(n, p) > 0.0) n = -n;  // towards the camera
+    if (sourceRect.x > 0.5) {  // 0.79, round characters (torch_light_ps)
+        float stepPx = max(1.0, scale * 1.5);
+        float dl = 0.0, dr = 0.0;
+        [loop] for (int k = 1; k <= 16 && (dl == 0.0 || dr == 0.0); ++k) {
+            int2 o = int2(int(round(float(k) * stepPx)), 0);
+            if (dl == 0.0 && viewDepth(sceneDepth.Load(int3(max(wp - o, int2(0, 0)), 0))) - p.z > 4.0) dl = float(k);
+            if (dr == 0.0 && viewDepth(sceneDepth.Load(int3(min(wp + o, last), 0))) - p.z > 4.0) dr = float(k);
+        }
+        if (dl > 0.0 && dr > 0.0) {
+            float across = (dl - dr) / (dl + dr);
+            n = normalize(n + float3(across * 1.3, 0.0, 0.0) * length(n));
+        }
+    }
+    float f = 1.0 - d2 / reach2;
+    float facing = saturate(dot(n, v * rsqrt(max(d2, 1e-4))) * 0.7 + 0.3);
+    float a = c.w * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;
+    if (sharpen > 0.0) {  // 0.68, rim light (torch_light_ps)
+        float2 sd = float2(f0 * (v.x * p.z - p.x * v.z), f1 * (v.y * p.z - p.y * v.z));
+        float sl = length(sd);
+        if (sl > 1e-4) {
+            int2 q = clamp(wp + int2(round(sd / sl * 3.0 * scale)), int2(0, 0), last);
+            float gap = viewDepth(sceneDepth.Load(int3(q, 0))) - p.z;
+            a += c.w * f * smoothstep(3.0, 12.0, gap) * sharpen;
+        }
+    }
+    return float4(c.rgb * a, a);
+}
+
+// The buffer's sums (tex0) into the picture's copy (t2), as torch_light_ps ended.
+float4 torch_apply_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    float4 sum = tex0.Load(int3(wp, 0));
+    float light = sum.a;
+    if (light <= 0.0) discard;
+    float3 sc = sceneColor.Load(int3(wp, 0)).rgb;
+    const float3 luma = float3(0.2126, 0.7152, 0.0722);
+    float lum = dot(sc, luma);
+    float w = (1.0 - exp(-2.4 * light)) * (1.0 - 0.6 * smoothstep(0.3, 0.8, lum));
+    if (w < 0.004) discard;
+    float3 colour = sum.rgb / max(light, 1e-4);
+    float lift = 1.0 + 2.4 * (1.0 - smoothstep(0.08, 0.7, lum));
+    float3 warm = colour * (min(lum * lift, 0.9) / max(dot(colour, luma), 0.05));
+    return float4(lerp(sc, saturate(warm), w * 0.9), 1.0);
+}
+
 float fbm4(float2 p) {
     float s = 0.0, a = 0.5;
     [unroll] for (int k = 0; k < 4; ++k) {

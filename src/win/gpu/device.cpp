@@ -1411,7 +1411,11 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : torchFirePipelines) releaseCom(p);
     for (ID3D12PipelineState*& p : fireflyPipelines) releaseCom(p);  // 0.28
     for (ID3D12PipelineState*& p : dustPipelines) releaseCom(p);      // 0.29
-    releaseCom(torchLightPs);
+    releaseCom(torchLightVs);  // 2.5
+    releaseCom(torchAccumPs);
+    releaseCom(torchApplyPs);
+    releaseCom(torchAccumPipeline);
+    releaseCom(torchLight);
     releaseCom(torchFirePs);
     releaseCom(fireflyPs);
     releaseCom(dustPs);
