@@ -578,7 +578,7 @@ bool Renderer::Impl::applyForest() {
             Constants k = c;
             if (textured) {
                 Texture& t = tex->second;
-                const bool aiShown = ai && ai->shown && t.ai && t.aiWorld;
+                const bool aiShown = ai && ai->shown && t.ai && t.aiWorld && ai->kindShown(t.aiKind);  // 2.2.4
                 if (aiShown)
                     transition(t.ai, t.aiState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
                 else
