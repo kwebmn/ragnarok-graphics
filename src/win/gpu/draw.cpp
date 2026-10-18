@@ -352,6 +352,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;
     c.fogColor[2] = float(s.fogColor & 255) / 255.0f;
     c.fogColor[3] = 1.0f;
+    uint8_t how = 0;  // 2.3, uaRO Studio's X-ray (L1): the texture's state as a colour over it, through the fog's slot
+    if (xray && ai && d.texture[0] && ai->howOf(d.texture[0], how)) {
+        static const float kColours[3][3] = {{0.25f, 0.85f, 0.35f}, {0.25f, 0.55f, 1.0f}, {1.0f, 0.25f, 0.25f}};
+        const int k = how == uint8_t(studio::How::Pack) ? 0 : how == uint8_t(studio::How::Made) ? 1
+                      : how == uint8_t(studio::How::Missing) ? 2 : -1;
+        for (int i = 0; i < 3; ++i) c.fogColor[i] = k < 0 ? 0.6f : kColours[k][i];  // grey: the game's by a rule
+        c.fogColor[3] = 0.35f;
+        c.fogEnable = 2;
+    }
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale, uiSharp ? UiFilter::Sharp : UiFilter::Smooth));
     // The AI's picture has the detail the game pixels lack: sampled as it is, not one tap per game pixel.

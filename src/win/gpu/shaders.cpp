@@ -543,7 +543,8 @@ float4 shade(PsIn i) {
         c.a = own ? 1.0 - smoothstep(0.3, 0.9, i.specular.b) : other;
     }
 #endif
-    if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
+    if (fogEnable == 2) c.rgb = lerp(c.rgb, fogColor.rgb, fogColor.a);  // 2.3: uaRO Studio's X-ray, the state's colour
+    else if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
     float alphaStep = fwidth(c.a);  // outside any branch
     if (((alphaTest >> 17) & 1) != 0) {
         // Stage 4, alpha to coverage: the test's edge (alpha >= ref) as coverage over about one pixel, so the edge

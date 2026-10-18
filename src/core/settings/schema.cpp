@@ -512,6 +512,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::GfxSoundDuckHint, ""},  // 1.3
         {"debug", "profile", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagProfile,
          Text::DiagProfileHint, ""},
+        {"debug", "xray", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagXray,
+         Text::DiagXrayHint, ""},  // 2.3
         {"debug", "log", Page::Diagnostics, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
          Text::DiagVerboseLogHint, ""},
     };
@@ -591,6 +593,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.keep_fps") return std::to_string(c.keepFps);
     if (k == "debug.profile") return c.profile ? "1" : "0";
+    if (k == "debug.xray") return c.xray ? "1" : "0";  // 2.3
     if (k == "frames.save_power") return c.savePower ? "1" : "0";
     if (k == "frames.fps_counter") return c.fpsCounter ? "1" : "0";
     if (k == "display.ui_native") return c.uiNative ? "1" : "0";

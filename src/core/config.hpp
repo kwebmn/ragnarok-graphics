@@ -463,6 +463,8 @@ struct Config {
     bool allowTearing = false;  // let G-SYNC / FreeSync monitors show frames as soon as they are ready
     LogLevel logLevel = LogLevel::Info;
     bool profile = false;  // 0.87: [debug] profile - where the game's thread spends its time, into the log
+    // 2.3: [debug] xray - uaRO Studio's X-ray (Ctrl+Shift+F9 too): the textures tinted by how they are shown
+    bool xray = false;
     // 0.88: [debug] state_cache - Direct3D 11 calls only for what changed between the game's draws; 0 calls everything
     // each draw as before (should a picture come out wrong with it)
     bool stateCache = true;

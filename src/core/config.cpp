@@ -554,6 +554,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.mergeDraws);
         } else if (key == "debug.profile") {
             setBool(val, c.profile);
+        } else if (key == "debug.xray") {  // 2.3
+            setBool(val, c.xray);
         } else if (key == "debug.log") {
             if (val == "normal") c.logLevel = LogLevel::Info;
             if (val == "verbose") c.logLevel = LogLevel::Debug;

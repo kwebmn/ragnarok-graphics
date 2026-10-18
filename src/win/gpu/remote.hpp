@@ -47,6 +47,7 @@ public:
     }
     int samples() const { return samples_; }
     void setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds, uint8_t aiSprites);
+    void setStudio(uint8_t flags, int x, int y);  // 2.3
     void setEffects(const EffectSettings& e);  // sent when they change
     uint32_t createTexture(int width, int height, int levels);
     void releaseTexture(uint32_t id);

@@ -368,6 +368,11 @@ void Host::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             channel_.send(Msg::ScaleSet, out_);
             break;
         }
+        case Msg::SetStudio: {  // 2.3
+            bridge::StudioKeys k;
+            if (bridge::readStudioKeys(rd, k)) renderer_.setStudio(k.flags, k.x, k.y);
+            break;
+        }
         case Msg::SetDrawQuality: {
             const int aniso = rd.i32();
             const bool coverage = rd.u8() != 0;

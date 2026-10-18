@@ -2954,6 +2954,13 @@ const Entry kTexts[] = {
      "Пакета ще немає: uaro-textures.zip створюється на сторінці «Пакет текстур» утиліти.",
      "Пакета ещё нет: uaro-textures.zip создаётся на странице «Пакет текстур» утилиты."},
     {"{1}: done", "{1}: готово", "{1}: готово"},
+    {"X-ray of the AI pictures", "Рентген картинок ШІ", "Рентген картинок ИИ"},
+    {"Ctrl+Shift+F9 in the game as well: a texture tinted green comes from the pack, blue was made in the game, red "
+     "has no picture, grey stays the game's (soft light, its kind off, too big, the game's own always).",
+     "Також Ctrl+Shift+F9 у грі: текстура зеленим - з пакета, синім - створена в грі, червоним - без картинки, сірим - "
+     "лишається грою (м'яке світло, вид вимкнено, завелика, завжди своя гри).",
+     "Также Ctrl+Shift+F9 в игре: текстура зелёным - из пакета, синим - создана в игре, красным - без картинки, "
+     "серым - остаётся игры (мягкий свет, вид выключен, слишком большая, всегда своя игры)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

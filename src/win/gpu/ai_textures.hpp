@@ -73,6 +73,14 @@ public:
     uint8_t spritesShown = 0xFF;  // 2.2.2: the sprites' kinds shown (aiSpritesShown's bits)
     // 2.2.2: a sprite cache's cell holding `source` (sprite_exe::Source) drawn from the copy (aiCellShown)
     bool cellShown(uint8_t source) const { return aiCellShown(source, kindsShown, spritesShown); }
+    // 2.3, uaRO Studio's X-ray: how a texture is shown (studio::How); false: not one of the AI's (a lightmap, a
+    // sprite cache, a texture outside the sides).
+    bool howOf(uint32_t id, uint8_t& how) const {
+        const auto it = items_.find(id);
+        if (it == items_.end()) return false;
+        how = it->second.how;
+        return true;
+    }
 
     // 0.43, the pack builder (Renderer::buildPack): the networks of the settings' kinds - no pack.
     bool startForPack(const std::string& gameDir, const AiSettings& settings, std::string& error);

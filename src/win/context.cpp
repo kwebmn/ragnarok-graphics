@@ -375,6 +375,22 @@ void Context::present(const Rect& source, bool waitForVblank) {
             LOG_INFO("frame counter: %s (Ctrl+Shift+F11)", fpsShown_ ? "on" : "off");
         }
     }
+    // 2.3: Ctrl+Shift+F9 - uaRO Studio's X-ray: the AI pictures' textures tinted by how they are shown; written too,
+    // as Ctrl+Shift+F11 is ([debug] xray, the console's switch)
+    const bool xrayDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
+                          GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F9) < 0;
+    if (xrayKey_.pressed(xrayDown)) {
+        const bool on = !config.xray;
+        if (editIniFile(gameDir() + "\\uaro-graphics.ini", {{"debug", "xray", on ? "1" : "0"}})) {
+            config.xray = on;
+            LOG_INFO("X-ray: %s (Ctrl+Shift+F9)", on ? "on" : "off");
+        }
+    }
+    const uint8_t studio = config.xray && enhanced_ ? 1 : 0;  // Pause: the game's own everywhere, no tint
+    if (studio != studioSent_) {
+        renderer->setStudio(studio, 0, 0);
+        studioSent_ = studio;
+    }
     // 0.54: Ctrl+Shift+F12 - the picture as shown (4K, not the game's 1920x1080) into the game's ScreenShot folder
     const bool shotDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                           GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F12) < 0;

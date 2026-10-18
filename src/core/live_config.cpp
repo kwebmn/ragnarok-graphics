@@ -129,6 +129,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         n.statsSend = file.statsSend;
     }
     n.statsId = file.statsId;
+    if (file.xray != running.xray) {  // 2.3: uaRO Studio's X-ray at once (the console, the settings app)
+        u.applied.push_back(change("xray", flag(running.xray), flag(file.xray)));
+        n.xray = file.xray;
+    }
     if (file.fpsCounter != running.fpsCounter) {  // 2.2.1: the frame counter at once
         u.applied.push_back(change("fps_counter", flag(running.fpsCounter), flag(file.fpsCounter)));
         n.fpsCounter = file.fpsCounter;
@@ -155,7 +159,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
-           k == "debug.profile" || k == "frames.fps_counter" || k == "stats.send" ||
+           k == "debug.profile" || k == "debug.xray" || k == "frames.fps_counter" || k == "stats.send" ||
            k.compare(0, 8, "effects.") == 0;
 }
 

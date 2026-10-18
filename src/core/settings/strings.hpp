@@ -297,6 +297,7 @@ enum class Text : uint16_t {
     StudioMakeMany, StudioJobMake, StudioJobKeep, StudioJobTakeOut, StudioJobOwn, StudioJobFailed,
     StudioPackPictures, StudioPackSize, StudioPackByGroup, StudioPackByModel, StudioPackByKind, StudioPackRead,
     StudioPackCompact, StudioPackCompactNote, StudioJobCompact, StudioPackGameOpen, StudioPackNone, StudioLogDone,
+    DiagXray, DiagXrayHint,
     Count
 };
 

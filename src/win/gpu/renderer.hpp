@@ -94,6 +94,9 @@ public:
     // 2.2.1: aiKinds - the kinds of AI pictures shown (aiKindsShown's bits), 0 none; 2.2.2: aiSprites - the sprites'
     // kinds shown (aiSpritesShown's bits)
     void setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds = 0xFF, uint8_t aiSprites = 0xFF);
+    // 2.3, uaRO Studio's keys in the game (bridge::StudioKeys): bit 0 the X-ray; bit 1 a pick at (x, y), the cursor
+    // in the game's picture; bit 2 the picked texture's picture off or on again. Direct3D 12 alone.
+    void setStudio(uint8_t flags, int x, int y);
     // 0.18: [effects] as they apply now (off with Pause); nothing in Remix's Direct3D 9.
     void setEffects(const EffectSettings& e);
 

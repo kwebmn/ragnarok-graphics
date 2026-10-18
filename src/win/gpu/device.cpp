@@ -1778,6 +1778,16 @@ bool Renderer::presentRefused() const { return impl_->refused; }
 
 bool Renderer::lost() const { return d3d11_ ? d3d11_->lost() : impl_->lost; }
 
+void Renderer::setStudio(uint8_t flags, int x, int y) {
+    if (remix_ || d3d11_) return;
+    if (remote_) return remote_->setStudio(flags, x, y);
+    Impl& m = *impl_;
+    if (m.xray != ((flags & 1) != 0)) LOG_INFO("X-ray: %s", (flags & 1) ? "on" : "off");
+    m.xray = (flags & 1) != 0;
+    (void)x;
+    (void)y;
+}
+
 void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds, uint8_t aiSprites) {
     if (remix_) return;
     if (d3d11_) {

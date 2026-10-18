@@ -53,4 +53,13 @@ void writeRecord(WireWriter& w, const FrameRecord& r);
 // False for bytes that are not a whole, consistent record (an index or offset out of its range); r is empty then.
 bool readRecord(WireReader& rd, FrameRecord& r);
 
+// 2.3, uaRO Studio's keys in the game (Msg::SetStudio): bit 0 the X-ray on; bit 1 a pick at (x, y), the cursor in the
+// game's picture; bit 2 the picked texture's picture off, or on again (A/B).
+struct StudioKeys {
+    uint8_t flags = 0;
+    int32_t x = 0, y = 0;
+};
+void writeStudioKeys(WireWriter& w, const StudioKeys& k);
+bool readStudioKeys(WireReader& rd, StudioKeys& k);  // false: cut short
+
 }  // namespace uagfx::bridge

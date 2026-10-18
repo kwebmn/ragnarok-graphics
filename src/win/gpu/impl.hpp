@@ -286,6 +286,7 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES resolvedState = D3D12_RESOURCE_STATE_RESOLVE_DEST;
     int anisotropy = 0;           // stage 4: of world draws; 0 = off
     bool alphaToCoverage = false;  // stage 4
+    bool xray = false;             // 2.3: uaRO Studio's X-ray - the world's and the interface's textures tinted
     // Part 3 (DLSS, uaro-render64.exe; upscaler.hpp): the world at the render size with a jitter, its depth and
     // motion, the upscaler's output at the target's size and the interface layer (premultiplied) that goes on top.
     Upscaler* upscaler = nullptr;
