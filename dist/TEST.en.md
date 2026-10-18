@@ -1,3 +1,14 @@
+# uaRO Graphics 2.5.17 — testing
+
+- **Floor reflections on smooth floors only.** The floor used to reflect on every map under a roof, and in caves (Ant
+  Hell, for one) smeared copies trailed under the loot and the character. Now castles, churches, palaces, Glast Heim's
+  halls, towers, labs, temples, ice and factories reflect; houses half as much; caves, mines, sewers and pyramids not
+  at all. In the rain outdoors as before.
+- **The light of fire and torches without rings.** A wide soft circle of light (a skill's fire round the character) no
+  longer splits into visible ring-shaped steps.
+- Check, please: in Ant Hell (anthell01/02) no streaks under the loot and the character; in Prontera's church or a
+  castle the floor still reflects; the circle of light from Magnum Break is smooth. Send a report.
+
 # uaRO Graphics 2.5.16 — testing
 
 - **Direct3D 11: a shader for each state.** One shader for every state used to decide by branches, at each pixel, how
