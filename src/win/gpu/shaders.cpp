@@ -2312,9 +2312,12 @@ float4 steps_ps(PresentOut i) : SV_Target {
 // 0.73, light in the air (haze.cpp), added onto the picture: about each light of the torches' pass (t1, footprint of
 // them, as torch_light_ps reads them) the air glows - the light scattered along the view up to what the pixel shows
 // (its depth), so a wall hides the glow behind it - twinX its strength; and under the open sky (twinY its strength)
-// rays from the sky where the map's edge shows it, streaming away from the sun (sourceRect.xy, target pixels).
+// rays from the sky where the map's edge shows it, streaming away from the sun (sourceRect.xy, target pixels). 2.5.7:
+// drawn at a share of the world's size (sourceRect.w: 2 at half - a quarter of the pixels, of the rays' 24 depth reads
+// each), each pixel the world's it stands for, then laid over smoothly (half_over_ps, added).
 float4 shafts_ps(PresentOut i) : SV_Target {
-    int2 wp = int2(i.pos.xy);
+    int2 last = int2(uiPixels.xy) - 1;
+    int2 wp = min(int2(i.pos.xy * max(sourceRect.w, 1.0)), last);
     float raw = sceneDepth.Load(int3(wp, 0));
     float2 g = (float2(wp) - float2(jitterX, jitterY)) / scale;
     float3 dir = normalize(float3((g.x - cx) / f0, (g.y - cy) / f1, 1.0));
@@ -2337,7 +2340,6 @@ float4 shafts_ps(PresentOut i) : SV_Target {
         float2 stride = toSun / max(length(toSun), 1.0) * min(length(toSun), 0.45 * length(uiPixels.xy)) / 24.0;
         float2 q = float2(wp) + stride * hash12(float2(wp));  // dithered: no bands
         float rays = 0.0, decay = 1.0;
-        int2 last = int2(uiPixels.xy) - 1;
         [loop] for (int s = 0; s < 24; ++s) {
             q += stride;
             rays += (sceneDepth.Load(int3(clamp(int2(q), int2(0, 0), last), 0)) >= 0.99999 ? 1.0 : 0.0) * decay;

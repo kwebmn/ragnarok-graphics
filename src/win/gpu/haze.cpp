@@ -76,9 +76,39 @@ bool Renderer::Impl::applyHaze() {
 bool Renderer::Impl::applyShafts() {
     shaftsDone = true;
     EffectTime timing(*this, kTimeShafts);
-    if (!ensureScene("light in the air") || !torchReady()) return true;
-    ID3D12PipelineState* pso = addPipeline(shaftsPs, shaftsPipelines, upscale ? 1 : samples, "light in the air");
+    if (!ensureScene("light in the air") || !torchReady() || !shaftsPs || !halfOverPs) return true;
+    // 2.5.7: at half the world's size into a target of its own, then added over the world smoothly
+    if (!shaftsHalfPipeline) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, shaftsPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&shaftsHalfPipeline)))) {
+            shaftsHalfPipeline = nullptr;
+            LOG_ERROR("light in the air: the pipeline failed: none");
+            releaseCom(shaftsPs);  // not tried again
+            return true;
+        }
+    }
+    ID3D12PipelineState* pso = addPipeline(halfOverPs, halfAddPipelines, upscale ? 1 : samples, "light in the air");
     if (!pso) return true;
+    const int hw = std::max(1, (sceneWidth + 1) / 2), hh = std::max(1, (sceneHeight + 1) / 2);
+    if (!shaftsTarget || hw != shaftsWidth || hh != shaftsHeight) {
+        discard(shaftsTarget);
+        shaftsTarget = createTexture2D(device, hw, hh, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                       D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                       nullptr);
+        shaftsState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        shaftsWidth = hw;
+        shaftsHeight = hh;
+        if (!shaftsTarget) {
+            LOG_ERROR("light in the air: no video memory at %dx%d: none", hw, hh);
+            releaseCom(shaftsPs);
+            return true;
+        }
+        nameResource(shaftsTarget, "light in the air");
+        device->CreateRenderTargetView(shaftsTarget, nullptr, rtvHandle(kRtvShafts));
+        device->CreateShaderResourceView(shaftsTarget, nullptr, cpuSrvHandle(shaftsSrv));
+    }
     if (!copySceneDepth()) return false;
     transition(torchData, torchDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     const int w = sceneWidth, h = sceneHeight;
@@ -105,8 +135,16 @@ bool Renderer::Impl::applyShafts() {
     c.sourceRect[0] = float(w) * (0.5f - sun[0] * 1.6f);
     c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
     c.sourceRect[2] = 1.0f;
+    c.sourceRect[3] = 2.0f;  // 2.5.7: a pixel for the world's two by two
     const UINT lights = torchDataSrv;
-    return worldPass(pso, w, h, c, sceneColorSrv, true, lights);
+    transition(shaftsTarget, shaftsState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    const float none[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    list->ClearRenderTargetView(rtvHandle(kRtvShafts), none, 0, nullptr);
+    if (!effectPass(shaftsHalfPipeline, shaftsTarget, shaftsState, rtvHandle(kRtvShafts), hw, hh, c, sceneColorSrv,
+                    true, lights))
+        return false;
+    transition(shaftsTarget, shaftsState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    return worldPass(pso, w, h, c, shaftsSrv, false);
 }
 
 // 0.98: the sun's flare - where the sky shows towards the sun (up and to the left past the screen, against the way

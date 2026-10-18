@@ -120,7 +120,8 @@ constexpr UINT kRtvFloor = kRtvBloom + 2;  // 0.86: the floors' reflections at h
 constexpr UINT kRtvMaterial = kRtvFloor + 1;  // 1.8: a level of a texture's material, made anew for each
 constexpr UINT kRtvMirror = kRtvMaterial + 1;  // 1.16: the world mirrored under the water
 constexpr UINT kRtvTorch = kRtvMirror + 1;  // 2.5: the torches' buffer of light
-constexpr UINT kRtvCount = kRtvTorch + 1;
+constexpr UINT kRtvShafts = kRtvTorch + 1;  // 2.5.7: the light in the air at half the size
+constexpr UINT kRtvCount = kRtvShafts + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
@@ -569,7 +570,13 @@ struct Renderer::Impl {
     haze::Look mapLook;
     // 0.73, light in the air (haze.cpp, shafts_ps): the torches' pass leaves its lights' count.
     ID3DBlob* shaftsPs = nullptr;
-    ID3D12PipelineState* shaftsPipelines[4] = {};
+    // 2.5.7: drawn into a half-size target (no blending), then added over the world from it (half_over_ps)
+    ID3D12PipelineState* shaftsHalfPipeline = nullptr;
+    ID3D12PipelineState* halfAddPipelines[4] = {};
+    ID3D12Resource* shaftsTarget = nullptr;
+    D3D12_RESOURCE_STATES shaftsState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT shaftsSrv = 0;
+    int shaftsWidth = 0, shaftsHeight = 0;
     bool shaftsDone = false;
     ID3DBlob* flarePs = nullptr;  // 0.98: the sun's flare (haze.cpp applyFlare)
     ID3D12PipelineState* flarePipelines[4] = {};

@@ -191,6 +191,7 @@ Renderer11::~Renderer11() {
     for (Target& t : dof_) dropTarget(t);
     for (Target& t : dofFocus_) dropTarget(t);
     drop(fogLightPs_);
+    dropTarget(shafts_);  // 2.5.7
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -2010,7 +2011,7 @@ void Renderer11::passSamplers() {
 
 void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c,
                           ID3D11ShaderResourceView* t0, ID3D11ShaderResourceView* depth,
-                          ID3D11ShaderResourceView* t2) {
+                          ID3D11ShaderResourceView* t2, ID3D11ShaderResourceView* t1) {
     targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
     ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
     ctx_->PSSetShaderResources(0, 4, none);
@@ -2020,10 +2021,10 @@ void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Const
     const D3D11_RECT all{0, 0, into.width, into.height};
     ctx_->RSSetScissorRects(1, &all);
     setConstants(c);
-    ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO,
-                                     D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
-                                         D3D11_COLOR_WRITE_ENABLE_BLUE),
-                          nullptr, 0xFFFFFFFF);
+    // 2.5.7: all four channels, as Direct3D 12's (fullScreenPipeline): the alpha was never written - half_over_ps
+    // reads it (none: nothing laid over), so the floors' reflections (2.5.3) could not show on Direct3D 11
+    ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO, D3D11_COLOR_WRITE_ENABLE_ALL), nullptr,
+                          0xFFFFFFFF);
     ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
     ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
     ctx_->IASetInputLayout(nullptr);
@@ -2033,7 +2034,7 @@ void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Const
     ctx_->VSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
     passSamplers();
-    ID3D11ShaderResourceView* views[4] = {t0, nullptr, t2, depth};
+    ID3D11ShaderResourceView* views[4] = {t0, t1, t2, depth};
     ctx_->PSSetShaderResources(0, 4, views);
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
@@ -2891,8 +2892,8 @@ void Renderer11::applySkyLight() {
 void Renderer11::applyShafts() {
     EffectSpan span(*this, kTimeShafts11);
     shaftsDone_ = true;
-    if (!shaftsPs_ || !effects_.shafts || effects_.shaftsStrength <= 0 || !cameraValid_ || !target_.texture ||
-        !depthViews() || (shaftLights_ <= 0 && !(outdoors_ && effects_.skyRays)))
+    if (!shaftsPs_ || !halfOverPs_ || !effects_.shafts || effects_.shaftsStrength <= 0 || !cameraValid_ ||
+        !target_.texture || !depthViews() || (shaftLights_ <= 0 && !(outdoors_ && effects_.skyRays)))
         return;
     const int w = target_.width, h = target_.height;
     const float user = float(std::clamp(effects_.shaftsStrength, 0, 200)) / 100.0f;
@@ -2913,7 +2914,21 @@ void Renderer11::applyShafts() {
     c.sourceRect[0] = float(w) * (0.5f - sun[0] * 1.6f);
     c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
     c.sourceRect[2] = 1.0f;
-    worldPass(shaftsPs_, c, 0, 3, depthSrv_, nullptr, shaftLights_ > 0 ? lightDataSrv_ : nullptr);
+    // 2.5.7: at half the size into a target of its own (a quarter of the rays' depth reads), added over smoothly
+    const int hw = std::max(1, (w + 1) / 2), hh = std::max(1, (h + 1) / 2);
+    if (shafts_.width != hw || shafts_.height != hh) {
+        dropTarget(shafts_);
+        if (!makeTarget(shafts_, hw, hh)) {
+            LOG_ERROR("light in the air: no video memory at %dx%d (Direct3D 11): none", hw, hh);
+            shaftsPs_ = nullptr;  // not tried again (the object stays until the end)
+            return;
+        }
+    }
+    c.sourceRect[3] = 2.0f;
+    const float none[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    ctx_->ClearRenderTargetView(shafts_.rtv, none);
+    maskPass(shaftsPs_, shafts_, c, nullptr, depthSrv_, nullptr, shaftLights_ > 0 ? lightDataSrv_ : nullptr);
+    worldPass(halfOverPs_, c, 0, 3, nullptr, shafts_.srv);
 }
 
 // 2.5.5: as Direct3D 12's applyFlare (haze.cpp) - where the sky shows towards the sun, a glow and rings, added

@@ -1528,7 +1528,9 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : halfOverPipelines) releaseCom(p);
     releaseCom(halfOverPs);
     releaseCom(floorTarget);
-    for (ID3D12PipelineState*& p : shaftsPipelines) releaseCom(p);  // 0.73
+    releaseCom(shaftsHalfPipeline);  // 0.73; 2.5.7 at half the size
+    for (ID3D12PipelineState*& p : halfAddPipelines) releaseCom(p);
+    releaseCom(shaftsTarget);
     releaseCom(shaftsPs);
     releaseCom(flarePs);  // 0.98
     for (ID3D12PipelineState*& f : flarePipelines) releaseCom(f);
@@ -2206,6 +2208,7 @@ bool Renderer::create(std::string& error) {
     m.taaHistorySrv = m.allocSrv();
     for (UINT& srv : m.bloomSrv) srv = m.allocSrv();  // 0.78
     m.floorSrv = m.allocSrv();  // 0.86
+    m.shaftsSrv = m.allocSrv();  // 2.5.7
     if (!m.createPipelines(error)) return false;
 
     // The texture bound wherever the client binds none: D3D7 reads it as white (states.md §5).

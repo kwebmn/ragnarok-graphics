@@ -339,7 +339,8 @@ private:
     }
     // A pass into a small target of its own: t0 and the depth (t3) read, the whole target written
     void maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c, ID3D11ShaderResourceView* t0,
-                  ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t2 = nullptr);
+                  ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t2 = nullptr,
+                  ID3D11ShaderResourceView* t1 = nullptr);
     void passSamplers();  // linear, clamped, at s0 and s1 - the passes' own
     // A pass over the whole picture: copy - 1 the picture copied now into t2 (sceneColor), 2 its copy as it is, 0
     // none; blend - 0 written whole, 1 blended over by its alpha, 2 multiplied in, 3 added, 4 premultiplied over;
@@ -565,6 +566,7 @@ private:
     int dofFocusNow_ = 0;
     LARGE_INTEGER dofFocusTime_{};
     int shaftLights_ = 0;  // the lights of this frame's torches' pass (lightData_)
+    Target shafts_;        // 2.5.7: the light in the air at half the size
     bool skyLightDone_ = false, shaftsDone_ = false, flareDone_ = false, dofDone_ = false;
     bool skyLightLogged_ = false, dofLogged_ = false;
     float windClock_ = -1.0f;
