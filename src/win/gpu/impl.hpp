@@ -381,6 +381,8 @@ struct Renderer::Impl {
     bool glowActive = false;  // this frame's world draws write into `glow` too
     bool glowDrawn = false;   // `glow` holds light not yet added to the picture
     ID3DBlob* drawGlowPs = nullptr;
+    ID3DBlob* drawLeanPs = nullptr;  // 2.5: draw_ps / draw_glow_ps without the world's extras (UAGFX_LEAN)
+    ID3DBlob* drawGlowLeanPs = nullptr;
     ID3DBlob* glowDownPs = nullptr;
     ID3DBlob* glowUpPs = nullptr;
     ID3DBlob* glowAddPs = nullptr;
@@ -780,7 +782,7 @@ struct Renderer::Impl {
     D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4, UINT t5 = kNoSrv);  // 0.19, kRootScene
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
                                      bool toGlow = false, bool water = false, bool mask = false,
-                                     DrawShader shader = DrawShader::Game);
+                                     DrawShader shader = DrawShader::Game, bool lean = false);  // 2.5: draw_lean_ps
     bool createUpscalePipelines();  // the motion pass and the layer composite
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
     // draw.cpp

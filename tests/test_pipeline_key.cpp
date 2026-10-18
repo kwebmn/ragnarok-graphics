@@ -24,6 +24,16 @@ TEST(pipeline_key_round_trips) {
     CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
     CHECK(!pipelineKey(s, FVF_TL1).twoUv);
     CHECK(packPipelineKey(pipelineKey(s, FVF_TL1)) != packPipelineKey(k));
+    PipelineKey lean = k;  // 2.5: the lean draw shader is a key of its own, the game's shader alone
+    lean.lean = true;
+    CHECK(unpackPipelineKey(packPipelineKey(lean)) == lean);
+    CHECK(packPipelineKey(lean) != packPipelineKey(k));
+    CHECK(validPipelineKey(packPipelineKey(k)) && validPipelineKey(packPipelineKey(lean)));
+    lean.water = true;
+    CHECK(!validPipelineKey(packPipelineKey(lean)));
+    lean.water = false;
+    lean.shader = DrawShader::Smoke;
+    CHECK(!validPipelineKey(packPipelineKey(lean)));
 }
 
 TEST(pipeline_key_file_parses_its_own_lines) {
@@ -50,10 +60,11 @@ TEST(pipeline_key_file_skips_keys_the_renderer_cannot_make) {
     good.cull = CULL_NONE;
     good.srcBlend = BLEND_ONE;
     good.dstBlend = BLEND_ZERO;
-    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 27) +
+    const std::string text = pipelineKeysHeader() + pipelineKeyLine(packPipelineKey(good) | uint64_t(1) << 28) +
                              "ffffffffffffffff\n" + pipelineKeyLine(packPipelineKey(bad)) +
                              pipelineKeyLine(packPipelineKey(good));
-    // good with bit 27 (only the stray-bits check rejects it), all bits, blend 12: skipped
+    // good with bit 28 (only the stray-bits check rejects it; 2.5: bit 27 is the lean shader), all bits, blend 12:
+    // skipped
     const std::vector<uint64_t> keys = parsePipelineKeys(text);
     CHECK_EQ(keys.size(), size_t(1));
     CHECK(keys.size() == 1 && keys[0] == packPipelineKey(good));
@@ -132,7 +143,8 @@ TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
     CHECK(rejected(plain, [](PipelineKey& k) { k.zWrite = true; }));                 // no Z test: no Z writes
     CHECK(rejected(plain, [](PipelineKey& k) { k.srcBlend = BLEND_SRCALPHA; }));     // no blending: ONE and ZERO
     CHECK(rejected(plain, [](PipelineKey& k) { k.dstBlend = BLEND_INVSRCALPHA; }));
-    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 27));  // a bit past the packed fields
+    CHECK(validPipelineKey(packPipelineKey(good) | uint64_t(1) << 27));   // 2.5: bit 27 is the lean shader
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 28));  // a bit past the packed fields
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 63));
 }
 

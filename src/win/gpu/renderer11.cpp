@@ -133,6 +133,8 @@ Renderer11::~Renderer11() {
     drop(fireflyPs_);  // 1.0.1
     drop(materialPs_);  // 1.14
     drop(drawGlowPs_);  // 1.0
+    drop(drawLeanPs_);  // 2.5
+    drop(drawGlowLeanPs_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -325,7 +327,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         std::vector<uint8_t> code;
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
-    } wants[22] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+        bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
+    } wants[24] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -338,7 +341,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"glow_down_ps", ps, shaderSource(), {}, true}, {"glow_up_ps", ps, shaderSource(), {}, true},
                    {"glow_add_ps", ps, shaderSource(), {}, true},  // 1.0
                    {"firefly_ps", ps, shaderSource(), {}, true},  // 1.0.1
-                   {"material_ps", ps, shaderSource(), {}, true}};  // 1.14
+                   {"material_ps", ps, shaderSource(), {}, true},  // 1.14
+                   {"draw_lean_ps", ps, shaderSource(), {}, true, false, true},  // 2.5
+                   {"draw_glow_lean_ps", ps, shaderSource(), {}, true, false, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -373,13 +378,17 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             static const UINT kLevels[4] = {D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCOMPILE_OPTIMIZATION_LEVEL1,
                                             D3DCOMPILE_SKIP_OPTIMIZATION, D3DCOMPILE_OPTIMIZATION_LEVEL1};
             static const D3D_SHADER_MACRO kSafe[2] = {{"UAGFX_SAFE", "1"}, {nullptr, nullptr}};
+            static const D3D_SHADER_MACRO kLean[2] = {{"UAGFX_LEAN", "1"}, {nullptr, nullptr}};
+            static const D3D_SHADER_MACRO kLeanSafe[3] = {
+                {"UAGFX_LEAN", "1"}, {"UAGFX_SAFE", "1"}, {nullptr, nullptr}};
             HRESULT hr = E_FAIL;
             std::string said;
             for (int i = 0; i < 4 && FAILED(hr); ++i) {
                 ID3DBlob* code = nullptr;
                 ID3DBlob* errors = nullptr;
-                hr = compile(w.source, std::strlen(w.source), "uaro-graphics.hlsl", i == 3 ? kSafe : nullptr,
-                             nullptr, w.entry, w.profile, kLevels[i], 0, &code, &errors);
+                const D3D_SHADER_MACRO* macros = i == 3 ? (w.lean ? kLeanSafe : kSafe) : w.lean ? kLean : nullptr;
+                hr = compile(w.source, std::strlen(w.source), "uaro-graphics.hlsl", macros, nullptr, w.entry,
+                             w.profile, kLevels[i], 0, &code, &errors);
                 if (SUCCEEDED(hr) && i == 3) {
                     LOG_ERROR("Direct3D 11: shader %s compiled without the newest features", w.entry);
                     w.safe = true;
@@ -437,6 +446,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         if (wants[15 + k].code.empty() || !psOf(wants[15 + k], *glows[k])) *glows[k] = nullptr;
     if (wants[20].code.empty() || !psOf(wants[20], fireflyPs_)) fireflyPs_ = nullptr;  // 1.0.1
     if (wants[21].code.empty() || !psOf(wants[21], materialPs_)) materialPs_ = nullptr;  // 1.14
+    if (wants[22].code.empty() || !psOf(wants[22], drawLeanPs_)) drawLeanPs_ = nullptr;  // 2.5
+    if (wants[23].code.empty() || !psOf(wants[23], drawGlowLeanPs_)) drawGlowLeanPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1156,7 +1167,13 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.srvs[2] = mat;
     is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
     is.vs = water ? waterVs_ : drawVs_;
-    is.ps = water ? (toGlow ? waterGlowPs_ : waterPs_) : toGlow ? drawGlowPs_ : drawPs_;
+    // 2.5: a draw whose constants carry none of the world's extras takes the lean shader (as draw.cpp)
+    const bool lean = !water &&
+                      (c.stage1[1] & (1u << 25 | 1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
+                      (c.stage0[1] & (1u << 26 | 1u << 28)) == 0 && (c.alphaTest & 1u << 20) == 0;
+    is.ps = water    ? (toGlow ? waterGlowPs_ : waterPs_)
+            : toGlow ? (lean && drawGlowLeanPs_ ? drawGlowLeanPs_ : drawGlowPs_)
+                     : lean && drawLeanPs_ ? drawLeanPs_ : drawPs_;
     is.primitive = d.primitive;
     is.firstIndex = d.firstIndex;
     is.indexCount = d.indexCount;

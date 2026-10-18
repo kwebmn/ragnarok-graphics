@@ -120,6 +120,8 @@ private:
     void glowPass(ID3D11PixelShader* ps, ID3D11ShaderResourceView* src, int srcW, int srcH, ID3D11RenderTargetView* dst,
                   int dstW, int dstH, ID3D11BlendState* blend, float factor, float strength, bool first);
     ID3D11PixelShader* drawGlowPs_ = nullptr;
+    ID3D11PixelShader* drawLeanPs_ = nullptr;  // 2.5: draw_ps / draw_glow_ps without the world's extras
+    ID3D11PixelShader* drawGlowLeanPs_ = nullptr;
     ID3D11PixelShader* waterGlowPs_ = nullptr;
     ID3D11PixelShader* glowDownPs_ = nullptr;
     ID3D11PixelShader* glowUpPs_ = nullptr;

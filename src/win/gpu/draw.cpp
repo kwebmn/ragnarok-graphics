@@ -290,10 +290,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         boundTextures = ~0ull;
         boundSamplers = ~0ull;
     }
-    if (pso != boundPipeline) {
-        list->SetPipelineState(pso);
-        boundPipeline = pso;
-    }
     const uint64_t textureKey = uint64_t(srv[0]) << 32 | srv[1];
     if (textureKey != boundTextures) {
         list->SetGraphicsRootDescriptorTable(kRootTextures, textureTable(srv[0], srv[1]));
@@ -459,6 +455,20 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(c.projection, proj, sizeof proj);
         c.twin[3] = waterTime();
         c.footprint = float(std::clamp(ray ? effects.raysBrightness : effects.lavaBrightness, 0, 200)) / 100.0f;
+    }
+    // 2.5: a draw whose constants carry none of the world's extras (shade()'s bits: the smooth lightmap, relief,
+    // leaves, material, patches, seams; hills, the sprites' light; soft particles) takes the lean shader - the
+    // pipeline is chosen here, once the constants are known, and set before the draw
+    const bool lean = shader == DrawShader::Game && !water &&
+                      (c.stage1[1] & (1u << 25 | 1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
+                      (c.stage0[1] & (1u << 26 | 1u << 28)) == 0 && (c.alphaTest & 1u << 20) == 0;
+    if (lean) {
+        ID3D12PipelineState* leanPso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask, shader, true);
+        if (leanPso) pso = leanPso;
+    }
+    if (pso != boundPipeline) {
+        list->SetPipelineState(pso);
+        boundPipeline = pso;
     }
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP

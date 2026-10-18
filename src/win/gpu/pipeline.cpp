@@ -67,7 +67,7 @@ void keepShaders(const std::string& file, const std::vector<uint8_t>& bytes) {
 }
 
 bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* profile, ID3DBlob*& out,
-             std::string& error) {
+             std::string& error, bool lean = false) {  // 2.5: lean - with UAGFX_LEAN (draw_lean_ps)
     for (const shader_cache::Shader& s : store.kept) {
         bool safe = false;
         if (!shader_cache::matches(s, entry, profile, safe) || FAILED(store.createBlob(s.code.size(), &out))) continue;
@@ -86,14 +86,17 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
     static const UINT kLevels[4] = {D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCOMPILE_OPTIMIZATION_LEVEL1,
                                     D3DCOMPILE_SKIP_OPTIMIZATION, D3DCOMPILE_OPTIMIZATION_LEVEL1};
     static const D3D_SHADER_MACRO kSafe[2] = {{"UAGFX_SAFE", "1"}, {nullptr, nullptr}};
+    static const D3D_SHADER_MACRO kLean[2] = {{"UAGFX_LEAN", "1"}, {nullptr, nullptr}};
+    static const D3D_SHADER_MACRO kLeanSafe[3] = {{"UAGFX_LEAN", "1"}, {"UAGFX_SAFE", "1"}, {nullptr, nullptr}};
     HRESULT hr = E_FAIL;
     std::string said;    // what the compiler said the first time
     bool safe = false;   // 2.2.2: made on the last try, without the newest features
     for (int i = 0; i < 4 && FAILED(hr); ++i) {
         ID3DBlob* errors = nullptr;
         out = nullptr;
-        hr = fn(src, std::strlen(src), "uaro-graphics.hlsl", i == 3 ? kSafe : nullptr, nullptr, entry, profile,
-                kLevels[i], 0, &out, &errors);
+        const D3D_SHADER_MACRO* macros = i == 3 ? (lean ? kLeanSafe : kSafe) : lean ? kLean : nullptr;
+        hr = fn(src, std::strlen(src), "uaro-graphics.hlsl", macros, nullptr, entry, profile, kLevels[i], 0, &out,
+                &errors);
         if (FAILED(hr) && i == 0) {
             said = errors ? std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize())
                           : std::string("compile failed");
@@ -190,7 +193,10 @@ bool Renderer::Impl::createPipelines(std::string& error) {
         const char* entry;
         const char* profile;
         ID3DBlob** blob;
+        bool lean = false;  // 2.5: with UAGFX_LEAN
     } effects[] = {{"draw_glow_ps", "ps_5_0", &drawGlowPs},  {"glow_down_ps", "ps_5_0", &glowDownPs},
+                   {"draw_lean_ps", "ps_5_0", &drawLeanPs, true},
+                   {"draw_glow_lean_ps", "ps_5_0", &drawGlowLeanPs, true},
                    {"glow_up_ps", "ps_5_0", &glowUpPs},      {"glow_add_ps", "ps_5_0", &glowAddPs},
                    {"water_vs", "vs_5_0", &waterVs},         {"water_ps", "ps_5_0", &waterPs},
                    {"water_glow_ps", "ps_5_0", &waterGlowPs}, {"depth_copy_ps", "ps_5_0", &depthCopyPs},
@@ -234,7 +240,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
         return false;
     for (const auto& e : effects) {
         std::string why;
-        if (!compile(store, compileFn, e.entry, e.profile, *e.blob, why)) {
+        if (!compile(store, compileFn, e.entry, e.profile, *e.blob, why, e.lean)) {
             *e.blob = nullptr;
             LOG_ERROR("%s: its effect stays off", why.c_str());
         }
@@ -482,8 +488,9 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
 // Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage). 0.18: toGlow, the
 // glow target as the second one.
 ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer,
-                                                 bool toGlow, bool water, bool mask, DrawShader shader) {
+                                                 bool toGlow, bool water, bool mask, DrawShader shader, bool lean) {
     PipelineKey k = pipelineKey(s, fvf);
+    k.lean = lean && !water && shader == DrawShader::Game;  // 2.5
     k.samples = uint8_t(toLayer ? 1 : samples);
     k.alphaToCoverage = coverage && !toLayer;
     k.layer = toLayer;
@@ -511,7 +518,10 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
     p.pRootSignature = root;
     p.BlendState.AlphaToCoverageEnable = k.alphaToCoverage ? TRUE : FALSE;
     p.VS = {drawVs->GetBufferPointer(), drawVs->GetBufferSize()};
-    p.PS = {drawPs->GetBufferPointer(), drawPs->GetBufferSize()};
+    // 2.5: the lean shader where the key asks and it compiled; else the whole one draws the same, slower
+    const bool lean = k.lean && drawLeanPs && (!k.glow || drawGlowLeanPs);
+    p.PS = lean ? D3D12_SHADER_BYTECODE{drawLeanPs->GetBufferPointer(), drawLeanPs->GetBufferSize()}
+                : D3D12_SHADER_BYTECODE{drawPs->GetBufferPointer(), drawPs->GetBufferSize()};
     D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
     b.BlendEnable = k.blend ? TRUE : FALSE;
     b.SrcBlend = D3D12_BLEND(k.srcBlend ? uint32_t(k.srcBlend) : uint32_t(d3d7::BLEND_ONE));
@@ -548,7 +558,8 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
         return nullptr;
     }
     if (k.glow) {  // 0.18: the light it adds into the glow target too, blended alike (one blend for both)
-        p.PS = {drawGlowPs->GetBufferPointer(), drawGlowPs->GetBufferSize()};
+        p.PS = lean ? D3D12_SHADER_BYTECODE{drawGlowLeanPs->GetBufferPointer(), drawGlowLeanPs->GetBufferSize()}
+                    : D3D12_SHADER_BYTECODE{drawGlowPs->GetBufferPointer(), drawGlowPs->GetBufferSize()};
         p.NumRenderTargets = 2;
         p.RTVFormats[1] = DXGI_FORMAT_R11G11B10_FLOAT;
     }

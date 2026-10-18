@@ -1378,6 +1378,8 @@ void Renderer::Impl::destroy() {
     releaseCom(glowUpPipeline);
     for (ID3D12PipelineState*& p : glowAddPipelines) releaseCom(p);
     releaseCom(drawGlowPs);
+    releaseCom(drawLeanPs);  // 2.5
+    releaseCom(drawGlowLeanPs);
     releaseCom(glowDownPs);
     releaseCom(glowUpPs);
     releaseCom(glowAddPs);

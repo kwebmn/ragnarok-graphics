@@ -30,6 +30,7 @@ struct PipelineKey {
     bool water = false;  // 0.19: a cell of a map's water, drawn by the modern water's shaders
     bool mask = false;   // 0.22.3: a character or an effect in the DLSS world - its coverage into the alpha
     DrawShader shader = DrawShader::Game;  // 0.24: Smoke (bit 25, as 0.24 saved it); 0.30: two bits
+    bool lean = false;  // 2.5: the draw shader without the world's extras (draw_lean_ps) - the game's shader only
     bool operator==(const PipelineKey& o) const;
 };
 

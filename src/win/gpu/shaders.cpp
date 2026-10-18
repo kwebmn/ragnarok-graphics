@@ -420,7 +420,7 @@ float4 shade(PsIn i) {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
     float2 dv = ddy(uv0);
-#ifndef UAGFX_SAFE
+#if !defined(UAGFX_SAFE) && !defined(UAGFX_LEAN)
     // 1.8: the point in the view and its surface's slopes, also outside any branch (garbage where unused)
     float pz = i.pos.w;
     float2 pg = (i.pos.xy - 0.5 - float2(jitterX, jitterY)) / max(scale, 1e-3);
@@ -480,7 +480,9 @@ float4 shade(PsIn i) {
         t0 = uiSample(uv0, du, dv, i.pos.xy);
     float2 uv1 = ((stage1.y >> 16) & 7) == 0 ? i.uv0 : i.uv1;
     float4 t1 = tex1.Sample(samp1, uv1);
+#ifndef UAGFX_LEAN
     if (((stage1.y >> 25) & 1) != 0) t1 = smoothLightmap(uv1, t1);  // 0.22.6: the ground's lightmap
+#endif
     if (colorKey != 0) {  // colour-keyed textures carry the key as alpha 0 (TextureLevels, Task 10)
         if (((stage0.y >> 24) & 1) != 0 && t0.a == 0) discard;
         if (((stage1.y >> 24) & 1) != 0 && t1.a == 0) discard;
@@ -490,7 +492,7 @@ float4 shade(PsIn i) {
         c = stage(stage0, i.diffuse, i.specular, i.diffuse, t0);
         if ((stage1.x & 255) != 1) c = stage(stage1, i.diffuse, i.specular, c, t1);
     }
-#ifndef UAGFX_SAFE
+#if !defined(UAGFX_SAFE) && !defined(UAGFX_LEAN)
     if (((stage1.y >> 27) & 1) != 0) c.rgb = leafLight(i.pos.xy, uv0, du, dv, c.rgb);  // 1.7: the trees
     if (((stage0.y >> 28) & 1) != 0) c.rgb = spriteLight(uv0, du, dv, c.rgb);  // 1.17: the characters
     if (material) {
@@ -558,7 +560,7 @@ float4 shade(PsIn i) {
     if (((alphaTest >> 18) & 1) != 0) c.a = 1.0;
     // 0.67, soft particles: an effect fades over the last few units before what is behind it (the frame's depth so
     // far, sceneDepth) - no hard line where it goes into the ground; its colour too when it adds light (bit 21).
-#ifndef UAGFX_SAFE
+#if !defined(UAGFX_SAFE) && !defined(UAGFX_LEAN)
     if (((alphaTest >> 20) & 1) != 0) {
         float behind = viewDepth(sceneDepth.Load(int3(int2(i.pos.xy), 0))) - viewDepth(i.pos.z);
         float fade = smoothstep(0.0, 1.0, saturate(behind / 7.0));
@@ -570,6 +572,12 @@ float4 shade(PsIn i) {
 }
 
 float4 draw_ps(PsIn i) : SV_Target { return shade(i); }
+
+// 2.5: the same shader without the world's extras (UAGFX_LEAN, pipeline.cpp: the materials, the relief, the hills,
+// the seams, the leaves, the sprites' light, the smooth lightmap, the soft particles): a draw with none of their bits
+// - the sprites, the effects, the interface, most of a frame - takes it: fewer registers and no explicit gradients,
+// which the old cards pay for dearly.
+float4 draw_lean_ps(PsIn i) : SV_Target { return shade(i); }
 
 // 0.18, the glow of effects: world draws also write the light they add into a second target, blended the same way.
 // A draw that adds light (alphaTest bit 19; also one that multiplies, which scales the light under it alike) writes
@@ -585,6 +593,8 @@ GlowOut draw_glow_ps(PsIn i) {
     o.g = ((alphaTest >> 19) & 1) != 0 ? o.c : float4(0.0, 0.0, 0.0, o.c.a);
     return o;
 }
+
+GlowOut draw_glow_lean_ps(PsIn i) { return draw_glow_ps(i); }  // 2.5: with UAGFX_LEAN
 
 struct PresentOut {
     float4 pos : SV_Position;
