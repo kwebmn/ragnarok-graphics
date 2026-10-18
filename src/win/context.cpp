@@ -21,6 +21,7 @@
 #include "win/sprite_hook.hpp"
 #include "win/start_screen.hpp"
 #include "win/log.hpp"
+#include "win/thread_time.hpp"
 #include "win/paths.hpp"
 #include "win/profiler.hpp"
 #include "win/real_ddraw.hpp"
@@ -735,13 +736,20 @@ void Context::noteWindow(bool minimized, bool foreground) {
 void Context::logStats(bool final) {
     const DWORD now = GetTickCount();
     if (!stats_.since) stats_.since = now;
+    if (stats_.cpuMs < 0.0) stats_.cpuMs = threadCpuMs();
     const DWORD ms = now - stats_.since;
     if (!final && ms < 30000) return;
+    // 2.5.15: how much of a core the game's thread had - its own work and ours in it, not its waits
+    char busy[96] = "";
+    if (ms && stats_.frames)
+        std::snprintf(busy, sizeof busy, "; the game's thread busy %.0f %% of a core (%.1f ms a frame)",
+                      (threadCpuMs() - stats_.cpuMs) * 100.0 / ms, (threadCpuMs() - stats_.cpuMs) / stats_.frames);
     if (stats_.frames || stats_.readBacks)
-        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s", stats_.frames, ms / 1000.0,
-                 ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str());
+        LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s", stats_.frames,
+                 ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(), busy);
     stats_ = Stats{};
     stats_.since = now;
+    stats_.cpuMs = threadCpuMs();
 }
 
 }  // namespace uagfx::win

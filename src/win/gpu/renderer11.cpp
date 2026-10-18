@@ -1156,6 +1156,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         (d.indexCount && size_t(d.firstIndex) + d.indexCount > rec.indices().size()))
         return;
     const DrawSetup& s = rec.states()[d.state];
+    timeDraws(s.ui, true);  // 2.5.15: the world's and the interface's spans on the card
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
@@ -1183,6 +1184,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
     if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
+    if (s.ui) timeDraws(true, false);   // 2.5.15: the interface's span after the world's effects
     // 1.0: from the world's first draw that adds light, its draws write into the glow too
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
     const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura);  // 1.25
@@ -1919,6 +1921,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         return;
     }
     timeBegin();
+    effectEnd(kTimeWorld11);  // 2.5.15: a frame without an interface ends its world here
+    effectEnd(kTimeUi11);
     // Fit the source into the window, keeping its shape, on whole pixels: bars where the shapes differ.
     const Rect fit = fitPicture(source.width(), source.height(), int(swapWidth_), int(swapHeight_));
     if (!(fit == picture_)) {
@@ -3502,11 +3506,13 @@ void Renderer11::timeFrame() {
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
                                                              "haze", "sky", "weather", "ao", "clouds", "bloom",
                                                              "steps", "heat", "sky_light", "shafts", "dof",
-                                                             "glow", "water", "floor", "grass"};
+                                                             "glow", "water", "floor", "grass", "world",
+                                                             "interface"};
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
-            if (recentEffectMs_[e] > 0.0) recent_.effects[kPasses[e]] = recentEffectMs_[e] / recentFrames_;
+            if (recentEffectMs_[e] > 0.0 && !drawsTimer(e))  // the effects' costs only (keep_fps, the console)
+                recent_.effects[kPasses[e]] = recentEffectMs_[e] / recentFrames_;
             recentEffectMs_[e] = 0.0;
         }
         ++recent_.serial;
@@ -3555,6 +3561,26 @@ bool Renderer11::readTimes(UINT slot, bool wait) {
     return true;
 }
 
+// 2.5.15: the world's span from the frame's first world draw to its first interface draw (before: true there), the
+// interface's from after the world's effects drawn at that draw (before: false) to the present - what the gathered
+// draws so far did goes before each stamp; the world's effects fall between the two (their own spans tell them).
+void Renderer11::timeDraws(bool ui, bool before) {
+    if (!timing_ || untimed_) return;
+    const FrameTimes& f = times_[timeSlot_];
+    if (!f.open) return;
+    const bool worldBegun = (f.effectBegun >> kTimeWorld11 & 1) != 0, uiBegun = (f.effectBegun >> kTimeUi11 & 1) != 0;
+    if (!ui && !worldBegun && !uiBegun) {
+        flushBatch();
+        effectBegin(kTimeWorld11);
+    } else if (ui && before && worldBegun && !(f.effectEnded >> kTimeWorld11 & 1)) {
+        flushBatch();
+        effectEnd(kTimeWorld11);
+    } else if (ui && !before && !uiBegun) {
+        flushBatch();
+        effectBegin(kTimeUi11);
+    }
+}
+
 void Renderer11::effectBegin(EffectTime11 e) {
     if (!timing_ || untimed_) return;
     FrameTimes& f = times_[timeSlot_];
@@ -3581,10 +3607,13 @@ void Renderer11::logGpu(ULONGLONG now) {
                                                             "clouds", "bloom", "footprints", "heat haze",
                                                             "light from the sky", "light in the air",
                                                             "depth of field", "glow", "water's copies",
-                                                            "floor reflections", "grass"};
+                                                            "floor reflections", "grass", "", ""};
+        if (effectMs_[kTimeWorld11] > 0.0 || effectMs_[kTimeUi11] > 0.0)  // 2.5.15
+            LOG_INFO("GPU: the game's world %.2f ms a frame (the effects drawn amid it too), its interface %.2f ms",
+                     effectMs_[kTimeWorld11] / gpuFrames_, effectMs_[kTimeUi11] / gpuFrames_);
         std::string effects;
         for (int e = 0; e < kEffectTimes11; ++e) {
-            if (effectMs_[e] <= 0.0) continue;
+            if (effectMs_[e] <= 0.0 || drawsTimer(e)) continue;
             char part[64];
             std::snprintf(part, sizeof part, "%s%s %.2f ms", effects.empty() ? "" : ", ", kNames[e],
                           effectMs_[e] / gpuFrames_);

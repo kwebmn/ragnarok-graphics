@@ -731,7 +731,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[19][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.9: nineteen)
+        ID3D11Query* effect[21][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -743,11 +743,16 @@ private:
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
         kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeSkyLight11, kTimeShafts11,
-        kTimeDof11, kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11, kEffectTimes11  // 2.5.9: the last four
+        kTimeDof11, kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
+        // 2.5.15: the game's world draws (with the effects drawn amid them) and its interface's - apart from the
+        // effects' own passes in the log, not in their costs (an HD 6570: 46-57 ms a frame, effects a few of them)
+        kTimeWorld11, kTimeUi11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 19, "FrameTimes::effect holds nineteen");
+    static_assert(kEffectTimes11 == 21, "FrameTimes::effect holds 21");
+    static bool drawsTimer(int e) { return e == kTimeWorld11 || e == kTimeUi11; }
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);
+    void timeDraws(bool ui, bool before);  // 2.5.15: at each game's draw - the world's and the interface's spans
     struct EffectSpan {  // the scope of an effect's pass
         Renderer11& r;
         EffectTime11 e;

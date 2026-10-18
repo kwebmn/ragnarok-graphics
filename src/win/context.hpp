@@ -77,6 +77,7 @@ private:
         unsigned frames = 0;
         unsigned readBacks = 0;
         DWORD since = 0;
+        double cpuMs = -1.0;  // 2.5.15: the game's thread's processor time at the window's start (threadCpuMs)
     };
 
     CRITICAL_SECTION cs_;

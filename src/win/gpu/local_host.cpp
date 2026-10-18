@@ -9,6 +9,7 @@
 #include "win/bridge/channel.hpp"
 #include "win/bridge/serve.hpp"
 #include "win/log.hpp"
+#include "win/thread_time.hpp"
 
 namespace uagfx::gpu {
 namespace {
@@ -71,6 +72,10 @@ DWORD WINAPI run(void* context) {
         w.u8(0);  // no DLSS
         channel.send(Msg::Hello, hello);
         win::bridge::Server server(renderer, channel);
+        // 2.5.15: how much of a core this thread has - its work, not its waits for the card (HD 6570: which limits?)
+        double cpuSince = win::threadCpuMs();
+        ULONGLONG wallSince = GetTickCount64();
+        unsigned frames = 0;
         for (;;) {
             Msg type;
             const uint8_t* data = nullptr;
@@ -83,6 +88,17 @@ DWORD WINAPI run(void* context) {
                     server.sendTiming();
                 }
                 channel.notifyPresented();
+                ++frames;
+                const ULONGLONG now = GetTickCount64();
+                if (now - wallSince >= 30000) {
+                    const double cpu = win::threadCpuMs();
+                    LOG_INFO("Direct3D 11's thread: busy %.0f %% of a core (%.1f ms of the processor a frame, %u "
+                             "frames)", (cpu - cpuSince) * 100.0 / double(now - wallSince), (cpu - cpuSince) / frames,
+                             frames);
+                    cpuSince = cpu;
+                    wallSince = now;
+                    frames = 0;
+                }
             } else {
                 server.dispatch(type, data, size);
             }
