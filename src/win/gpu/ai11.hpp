@@ -72,6 +72,10 @@ private:
         bool soft = false;  // soft light alone or a soft alpha (0.22.2, 0.39.2): it stays the game's
         bool ui = false;    // a picture of the interface: it stands in for the interface's draws
         std::string alike;  // 0.49: a .jpg's: the pack's picture most like it (found as it was uploaded)
+        // 2.5.18: a texture of the skills' animations, black its key (core/ai/black_key.hpp): the plain texture's key
+        // and the texels the key took away
+        std::string plainKey;
+        std::vector<uint8_t> shown;
         uint32_t serial = 0;   // its pixels': a picture asked for older ones is not taken
         bool urgent = false;   // 0.49.1: drawn while its picture, asked for ahead, is still on its way
         uint64_t lastUse = 0;  // the frame it was last drawn in
@@ -99,6 +103,7 @@ private:
         int width = 0, height = 0;  // the game texture's, the cell's, the icon's
         int cellX = 0, cellY = 0;
         uint64_t iconKey = 0;
+        std::vector<uint8_t> shown;  // 2.5.18: the plain texture's picture for one keyed black - the key put on it
     };
     struct Level {
         int width = 0, height = 0;
@@ -114,6 +119,8 @@ private:
     };
 
     void begin(uint32_t id, Item& item, ai::Kind kind, bool ahead = false);
+    // The pack's picture of the texture as kind into r (its name; a black-keyed one's key too) - false: none.
+    bool findPicture(Item& item, ai::Kind kind, Request& r);
     void bringBack(uint32_t id, Item& item);
     void dropCopy(uint32_t id);
     void putAwayOld();
@@ -178,6 +185,7 @@ private:
 
     uint32_t texturesTaken_ = 0, cellsWritten_ = 0, cellsTaken_ = 0, iconsTaken_ = 0, iconsNone_ = 0;
     uint32_t failed_ = 0, soft_ = 0, waiting_ = 0;
+    uint32_t blackKeyed_ = 0;  // 2.5.18: the skills' animations' textures found by their plain pictures
     uint32_t unseen_ = 0, unseenFound_ = 0;  // 0.49.3: frames found changed past the game's call, of them in the pack
     ULONGLONG cellWait_ = 0, cellWaitMost_ = 0;  // 0.49.2: the frames' pictures from asked to in, all and the longest
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run

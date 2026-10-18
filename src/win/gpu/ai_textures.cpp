@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iterator>
 
+#include "core/ai/black_key.hpp"
 #include "core/ai/groups.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "core/ai/vram.hpp"
@@ -342,7 +343,7 @@ void AiTextures::bringBack(uint32_t id, Item& item) {
     }
     item.state = Item::Waiting;
     item.loading = true;
-    requestPacked(id, item.name, item.width, item.height, Job());
+    requestPacked(id, item.name, item.width, item.height, Job(), 1, item.shown);
     ++broughtBack_;
 }
 
@@ -1350,14 +1351,16 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     // 0.42: the texture pack first (0.45: at a lower texture detail the whole texture's picture); 0.48: the pack
     // alone - generating, the network makes what it has not.
     std::string name;
+    std::vector<uint8_t>().swap(item.shown);
     if (pictures_->texture(item.key, kind, name) ||
-        pictures_->alike(item.argb.data(), item.width, item.height, kind, name)) {  // 0.49: a .jpg's, by likeness
+        pictures_->alike(item.argb.data(), item.width, item.height, kind, name) ||  // 0.49: a .jpg's, by likeness
+        blackKeyed(item, kind, name)) {
         item.name = name;
         item.loading = true;
         item.aheadRead = later;
         item.how = uint8_t(studio::How::Pack);
         note(name, kind);
-        requestPacked(id, name, item.width, item.height, Job(), later ? 2 : 1);
+        requestPacked(id, name, item.width, item.height, Job(), later ? 2 : 1, item.shown);
         return;
     }
     item.name = pack::pictureName(item.ui ? pack::Group::Ui : pack::Group::World, item.key);
@@ -1376,13 +1379,27 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
     }
 }
 
+bool AiTextures::blackKeyed(Item& item, ai::Kind kind, std::string& name) {
+    std::vector<uint32_t> plain;
+    if (item.argb.size() < size_t(item.width) * size_t(item.height) ||
+        !ai::plainOfBlackKey(item.argb.data(), item.width, item.height, plain, item.shown))
+        return false;
+    if (pictures_->texture(ai::keyName(ai::textureKey(plain.data(), item.width, item.height)), kind, name)) {
+        ++blackKeyed_;
+        return true;
+    }
+    std::vector<uint8_t>().swap(item.shown);
+    return false;
+}
+
 void AiTextures::requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell,
-                               uint8_t rank) {
+                               uint8_t rank, const std::vector<uint8_t>& shown) {
     IoRequest r;
     r.id = id;
     r.name = name;
     r.width = width;
     r.height = height;
+    r.shown = shown;
     r.rank = cell.cell || cell.icon ? 0 : rank;  // 0.66: the characters' frames and the icons first
     r.cell = std::move(cell);
     request(std::move(r));
@@ -1890,6 +1907,9 @@ void AiTextures::logNow(bool final) {
     if (anyMissing)
         LOG_INFO("AI textures: not in the pack - %s; sprite frames %u, icons %u", missing.c_str(), cellsMissing_,
                  iconsMissing_);
+    if (blackKeyed_)  // 2.5.18
+        LOG_INFO("AI textures: %u textures of the skills' animations (black their key) by their plain pictures",
+                 blackKeyed_);
     if (cellsWritten_)
         LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack, %u made by the "
                  "network, %u waiting; read in %llu ms on average, %llu at most",
@@ -2050,6 +2070,8 @@ bool AiTextures::ioRead(const IoRequest& r, IoResult& res) {
     while (r.width > 0 && r.height > 0 && res.width > r.width * scale_ && res.height > r.height * scale_ &&
            res.width % 2 == 0 && res.height % 2 == 0)
         ai::halve(res.argb, res.width, res.height);
+    if (!r.shown.empty())  // 2.5.18: the plain texture's picture for one keyed black - the key on it
+        ai::keyAway(res.argb, res.width, res.height, r.shown, r.width, r.height);
     return true;
 }
 

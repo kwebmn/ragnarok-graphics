@@ -148,6 +148,9 @@ private:
         uint8_t how = uint8_t(studio::How::Missing);  // 2.3: how it is shown (the map's report, the X-ray)
         uint8_t howShown = 0;                          // 2.4.3: its how before Hidden (A/B), given back after
         uint64_t counted = ~0ull;                     // 2.3: the frame it was last counted in the report
+        // 2.5.18: found by the plain texture's picture (a texture of the skills' animations, black its key -
+        // core/ai/black_key.hpp): the texels the key took away, put on the picture as it is read
+        std::vector<uint8_t> shown;
     };
     struct Level {
         UINT64 at = 0;  // bytes into the image
@@ -218,6 +221,7 @@ private:
         // hundreds as it loads), 3 a picture made, to write
         uint8_t rank = 1;
         ULONGLONG asked = 0;  // 0.66: when (the log's waits)
+        std::vector<uint8_t> shown;  // 2.5.18: a black-keyed texture's (Item::shown)
     };
     struct IoResult {
         uint32_t id = 0;
@@ -293,7 +297,9 @@ private:
     std::string packIndex() const;                   // the I/O thread's
     void logNow(bool final);
     // 0.42: a picture of the texture pack (pictureName) for a game texture of width x height: read on the I/O thread.
-    void requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell, uint8_t rank = 1);
+    void requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell, uint8_t rank = 1,
+                       const std::vector<uint8_t>& shown = {});
+    bool blackKeyed(Item& item, ai::Kind kind, std::string& name);  // 2.5.18: its plain picture's name
     bool nextIo(IoRequest& r);  // 0.66: under ioLock_: the most urgent request, taken out
 
     Renderer::Impl& m_;
@@ -398,6 +404,7 @@ private:
     uint32_t missing_[ai::kKinds] = {}, cellsMissing_ = 0, iconsMissing_ = 0;
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run
     uint32_t soft_ = 0;      // textures and sprite frames of soft light alone, left as the game's (0.22.2)
+    uint32_t blackKeyed_ = 0;  // 2.5.18: the skills' animations' textures found by their plain pictures
     ULONGLONG lastLog_ = 0;
 };
 

@@ -8,6 +8,7 @@
 #include <cstring>
 #include <utility>
 
+#include "core/ai/black_key.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "core/ai/vram.hpp"
 #include "core/bc_encode.hpp"
@@ -174,6 +175,12 @@ void Ai11::noteUpload(uint32_t id, int width, int height, const UploadCmd& u, co
     item.soft = ai::softPicture(argb, width, height) || ai::softAlpha(argb, width, height);
     item.alike.clear();
     if (pictures_->hasAlike(width, height)) pictures_->alikeName(argb, width, height, item.alike);
+    item.plainKey.clear();
+    std::vector<uint32_t> plain;  // 2.5.18
+    if (ai::plainOfBlackKey(argb, width, height, plain, item.shown))
+        item.plainKey = ai::keyName(ai::textureKey(plain.data(), width, height));
+    else
+        std::vector<uint8_t>().swap(item.shown);
     ai::Kind kind = ai::Kind::None;
     if (pictures_->knownKind(item.key, kind)) begin(id, item, kind, true);  // ahead: on its way before it is drawn
 }
@@ -190,13 +197,11 @@ void Ai11::begin(uint32_t id, Item& item, ai::Kind kind, bool ahead) {
         return;
     }
     Request r;
-    if (!pictures_->texture(item.key, kind, r.name)) {
-        if (item.alike.empty() || !pictures_->alikeFits(item.alike, kind)) {  // none made: the game's
-            ++missing_[int(kind)];
-            return;
-        }
-        r.name = item.alike;  // 0.49: a .jpg's, by its likeness
+    if (!findPicture(item, kind, r)) {  // none made: the game's
+        ++missing_[int(kind)];
+        return;
     }
+    if (!r.shown.empty()) ++blackKeyed_;
     item.state = Item::Waiting;
     r.id = id;
     r.serial = item.serial;
@@ -204,6 +209,17 @@ void Ai11::begin(uint32_t id, Item& item, ai::Kind kind, bool ahead) {
     r.height = item.height;
     r.ahead = ahead;
     request(std::move(r));
+}
+
+bool Ai11::findPicture(Item& item, ai::Kind kind, Request& r) {
+    if (pictures_->texture(item.key, kind, r.name)) return true;
+    if (!item.plainKey.empty() && pictures_->texture(item.plainKey, kind, r.name)) {  // 2.5.18: keyed black
+        r.shown = item.shown;
+        return true;
+    }
+    if (item.alike.empty() || !pictures_->alikeFits(item.alike, kind)) return false;
+    r.name = item.alike;  // 0.49: a .jpg's, by its likeness
+    return true;
 }
 
 void Ai11::noteWorldUse(uint32_t id, ai::Kind kind) {
@@ -243,12 +259,9 @@ void Ai11::noteUiUse(uint32_t id) {
 
 void Ai11::bringBack(uint32_t id, Item& item) {
     Request r;
-    if (!pictures_->texture(item.key, item.kind, r.name)) {
-        if (item.alike.empty() || !pictures_->alikeFits(item.alike, item.kind)) {
-            item.state = Item::Skipped;
-            return;
-        }
-        r.name = item.alike;
+    if (!findPicture(item, item.kind, r)) {
+        item.state = Item::Skipped;
+        return;
     }
     item.state = Item::Waiting;
     r.id = id;
@@ -667,7 +680,9 @@ bool Ai11::load(const Request& r, std::vector<uint32_t>& argb, int& width, int& 
     // texture detail, 8 or 16 times its size.
     while (width > r.width * scale_ && height > r.height * scale_ && width % 2 == 0 && height % 2 == 0)
         ai::halve(argb, width, height);
-    return width == r.width * scale_ && height == r.height * scale_;
+    if (width != r.width * scale_ || height != r.height * scale_) return false;
+    if (!r.shown.empty()) ai::keyAway(argb, width, height, r.shown, r.width, r.height);  // 2.5.18: keyed black
+    return true;
 }
 
 namespace {
@@ -782,6 +797,9 @@ void Ai11::logNow(bool final) {
              texturesTaken_, waiting_, failed_, kinds.c_str(), seen_[int(ai::Kind::Lightmap)], soft_);
     LOG_INFO("AI textures: not in the pack - %s; sprite frames %u, icons %u", missing.c_str(), cellsMissing_,
              iconsNone_);
+    if (blackKeyed_)  // 2.5.18
+        LOG_INFO("AI textures: %u textures of the skills' animations (black their key) by their plain pictures",
+                 blackKeyed_);
     if (cellsWritten_)
         LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack (waited %llu ms "
                  "on average, %llu at most)",
