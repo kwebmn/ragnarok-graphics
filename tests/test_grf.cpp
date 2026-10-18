@@ -163,3 +163,26 @@ TEST(grf_open_like_reads_without_its_own_table) {
     CHECK(!second.isOpen());
     std::remove(name);
 }
+
+TEST(grf_open_to_read_asks_no_write_access) {
+    // 2.3.1: the game opens its archives sharing them for reading alone (uaRO.exe 0x510b50: FILE_SHARE_READ) - a
+    // handle of ours that could write, held while uaRO Studio read the archives, kept the game from opening them
+    // ("Unable to load table class_tab.txt"). A game's archive is read with no write access asked for.
+    const std::string path = tempPath();
+    std::string error;
+    {
+        Archive a;
+        CHECK(a.open(path, true, error));
+        CHECK(a.writable());
+        CHECK(a.append({{"data\\class_tab.txt", bytes(10, 7)}}, error));
+    }
+    Archive r;
+    CHECK(r.openToRead(path, error));
+    CHECK(!r.writable());
+    std::vector<uint8_t> out;
+    CHECK(r.read("data\\class_tab.txt", out, error) && out == bytes(10, 7));
+    CHECK(!r.append({{"data\\more.txt", bytes(3, 1)}}, error));  // not for writing
+    Archive none;
+    CHECK(!none.openToRead(path + ".none", error));
+    std::remove(path.c_str());
+}

@@ -32,6 +32,11 @@ public:
     // An archive in a file the caller opened ("rb", or "r+b" when writable; the settings app opens UTF-16 paths):
     // the archive closes it.
     bool open(std::FILE* file, bool writable, std::string& error);
+    // 2.3.1: a game's archive, for reading: no write access asked for. The game opens its archives sharing them for
+    // reading alone (uaRO.exe 0x510b50: FILE_SHARE_READ): a handle of ours that could write, held while uaRO Studio
+    // read the archives, kept it from opening them ("Unable to load table class_tab.txt").
+    bool openToRead(const std::string& path, std::string& error);
+    bool writable() const { return writable_; }
     // 2.3: the archive `other` has open (by its path), read-only, with a file handle of its own and other's table
     // shared - a reading thread each (the texture pack's builder, the studio's catalog), the table read once.
     bool openLike(const Archive& other, std::string& error);

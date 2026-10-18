@@ -99,6 +99,19 @@ bool Archive::open(const std::string& path, bool create, std::string& error) {
     return true;
 }
 
+bool Archive::openToRead(const std::string& path, std::string& error) {
+    close();
+    file_ = std::fopen(path.c_str(), "rb");
+    if (!file_) {
+        error = "cannot open " + path;
+        return false;
+    }
+    writable_ = false;
+    if (!readTable(path, error)) return false;
+    path_ = path;
+    return true;
+}
+
 bool Archive::open(std::FILE* file, bool writable, std::string& error) {
     close();
     if (!file) {

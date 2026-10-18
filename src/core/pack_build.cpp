@@ -126,7 +126,7 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
             sh->order.emplace_back(true, int(sh->zips.size()) - 1);
         } else {
             auto g = std::make_unique<grf::Archive>();
-            if (!g->open(path, false, why)) {
+            if (!g->openToRead(path, why)) {  // 2.3.1: never for writing - the game would not open it
                 sh->failed.push_back(file + " (" + why + ")");  // 1.6.5
                 continue;
             }

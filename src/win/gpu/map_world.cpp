@@ -252,7 +252,7 @@ void MapWorld::loop() {
                                         n.compare(n.size() - 4, 4, ".rsm") == 0);
             };
             std::string why;
-            a.ok = a.grf ? a.g.open(a.path, false, why) : a.zip.open(a.path, maps, why);
+            a.ok = a.grf ? a.g.openToRead(a.path, why) : a.zip.open(a.path, maps, why);  // 2.3.1: reading alone
             if (!a.ok) LOG_INFO("map objects: %s cannot be read (%s)", a.path.c_str(), why.c_str());
             return a.ok;
         };
