@@ -1,3 +1,22 @@
+# uaRO Graphics 2.5.16 — testing
+
+- **Direct3D 11: a shader for each state.** One shader for every state used to decide by branches, at each pixel, how
+  to blend the textures, test the transparency and add the fog; old Radeons (an HD 6570) pay for each such branch. Now
+  each state the game uses gets a shader of its own without them (a sprite's is 25 times shorter). They are made in
+  the background as the game is played and kept: in the first minutes after the update the processor works more,
+  from the next start they are there at once. The same picture.
+- **World resolution (Direct3D 11).** A new slider on the Quality page when the game draws with Direct3D 11: the world
+  (the map, the characters, the effects) is drawn at a lower resolution and made larger with sharpening, while the
+  interface and the text stay sharp. 75 % is about half the pixels. It changes in a running game. "Set up
+  automatically" gives old cards 75 %.
+- **keep_fps** now also turns off what the world itself draws: the materials, the relief, the light on the
+  characters, the seams, the soft particles.
+- **The statistics** (if sending them is on) know the processor and the memory.
+- Check, please, on the HD 6570: 1) Scroll Lock (everything off) - the FPS and "GPU … ms" against the 35 frames of
+  before; 2) your settings with the "World resolution" at 100, 75 and 50 % - the FPS and how it looks; 3) the log's
+  lines "draw shaders made for the game's own states" and "the world drawn at". To compare, the shaders can be turned
+  off: `[debug] shader_variants = 0`. Send a report.
+
 # uaRO Graphics 2.5.15 — testing
 
 - **The report tells the whole computer now, not only its graphics card:** the processor (its name, cores, threads,
