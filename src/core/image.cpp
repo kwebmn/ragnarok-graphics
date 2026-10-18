@@ -37,15 +37,29 @@ void keyedRow(const uint8_t* from, uint8_t* to, int count, uint32_t low, uint32_
     }
 }
 
+// std::lround of a channel's value (0 to 255): its halves up. 2.5.14: without the library's call - lroundf was a
+// third of the game's thread (R-7NUW85), twelve a pixel of the mip levels the game stretches its textures into.
+inline uint32_t roundChannel(float v) {
+    const int whole = int(v);
+    return uint32_t(whole + (v - float(whole) >= 0.5f ? 1 : 0));  // v - whole is exact below 2^23
+}
+
 uint32_t lerpArgb(uint32_t a, uint32_t b, float t) {
     uint32_t out = 0;
     for (int shift = 0; shift < 32; shift += 8) {
         const float ca = float((a >> shift) & 255);
         const float cb = float((b >> shift) & 255);
-        out |= uint32_t(std::lround(ca + (cb - ca) * t)) << shift;
+        out |= roundChannel(ca + (cb - ca) * t) << shift;
     }
     return out;
 }
+
+// A destination column's or row's place in the source (stretch): the two pixels around it, clamped to the source
+// rectangle, and the second's weight.
+struct Taps {
+    int first = 0, second = 0;
+    float t = 0.0f;
+};
 
 }  // namespace
 
@@ -109,30 +123,38 @@ bool stretch(Image& dst, Rect dr, const Image& src, Rect sr, StretchFilter filte
     const PixelFormat f = src.format();
     const float sx = float(sr.width()) / float(full.width());
     const float sy = float(sr.height()) / float(full.height());
+    // The source position of a pixel's centre along one axis - the same for a whole column or row, so worked out
+    // once for it (2.5.14: it was for each pixel): the pixel itself (Point) or the two around it (Linear).
+    const auto taps = [filter](int i, int from, float scale, int low, int high) {
+        const float u = (float(i - from) + 0.5f) * scale;
+        Taps k;
+        if (filter == StretchFilter::Point) {
+            k.first = k.second = std::clamp(low + int(u), low, high - 1);
+            return k;
+        }
+        const float fu = u - 0.5f;
+        const int i0 = int(std::floor(fu));
+        k.first = std::clamp(low + i0, low, high - 1);
+        k.second = std::clamp(low + i0 + 1, low, high - 1);
+        k.t = fu - float(i0);
+        return k;
+    };
+    std::vector<Taps> columns(size_t(dr.width()));
+    for (int x = dr.left; x < dr.right; ++x) columns[size_t(x - dr.left)] = taps(x, full.left, sx, sr.left, sr.right);
     for (int y = dr.top; y < dr.bottom; ++y) {
+        const Taps row = taps(y, full.top, sy, sr.top, sr.bottom);
+        if (filter == StretchFilter::Point) {
+            for (int x = dr.left; x < dr.right; ++x)
+                dst.setPixel(x, y, src.pixel(columns[size_t(x - dr.left)].first, row.first));
+            continue;
+        }
         for (int x = dr.left; x < dr.right; ++x) {
-            const float u = (float(x - full.left) + 0.5f) * sx;  // source position of the pixel centre
-            const float v = (float(y - full.top) + 0.5f) * sy;
-            if (filter == StretchFilter::Point) {
-                const int px = std::clamp(sr.left + int(u), sr.left, sr.right - 1);
-                const int py = std::clamp(sr.top + int(v), sr.top, sr.bottom - 1);
-                dst.setPixel(x, y, src.pixel(px, py));
-                continue;
-            }
-            const float fu = u - 0.5f;
-            const float fv = v - 0.5f;
-            const int x0 = int(std::floor(fu));
-            const int y0 = int(std::floor(fv));
-            const float tx = fu - float(x0);
-            const float ty = fv - float(y0);
-            auto at = [&](int ix, int iy) {
-                ix = std::clamp(sr.left + ix, sr.left, sr.right - 1);
-                iy = std::clamp(sr.top + iy, sr.top, sr.bottom - 1);
-                return toArgb8(f, src.pixel(ix, iy));
-            };
-            const uint32_t top = lerpArgb(at(x0, y0), at(x0 + 1, y0), tx);
-            const uint32_t bottom = lerpArgb(at(x0, y0 + 1), at(x0 + 1, y0 + 1), tx);
-            dst.setPixel(x, y, fromArgb8(f, lerpArgb(top, bottom, ty)));
+            const Taps& c = columns[size_t(x - dr.left)];
+            const uint32_t top = lerpArgb(toArgb8(f, src.pixel(c.first, row.first)),
+                                          toArgb8(f, src.pixel(c.second, row.first)), c.t);
+            const uint32_t bottom = lerpArgb(toArgb8(f, src.pixel(c.first, row.second)),
+                                             toArgb8(f, src.pixel(c.second, row.second)), c.t);
+            dst.setPixel(x, y, fromArgb8(f, lerpArgb(top, bottom, row.t)));
         }
     }
     return true;
