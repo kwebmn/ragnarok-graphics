@@ -706,6 +706,7 @@ void Renderer11::applyTorchLight() {
     };
     if (light) {  // the light from the list (torch_light_ps: t1 the list, t2 the copy, t3 the depth)
         ctx_->UpdateSubresource(lightData_, 0, nullptr, data, UINT(sizeof data), 0);
+        shaftLights_ = count;  // 2.5.5: the light in the air reads the list too
         Constants lc = c;
         lc.footprint = float(count);
         lc.sourceRect[0] = effects_.roundLight ? 1.0f : 0.0f;  // 0.84

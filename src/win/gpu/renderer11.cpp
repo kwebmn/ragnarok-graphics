@@ -181,6 +181,14 @@ Renderer11::~Renderer11() {
     drop(crittersPs_);
     drop(crittersDataSrv_);
     drop(crittersData_);
+    drop(skyLightPs_);  // 2.5.5
+    drop(shaftsPs_);
+    drop(flarePs_);
+    drop(dofDownPs_);
+    drop(dofFocusPs_);
+    drop(dofApplyPs_);
+    for (Target& t : dof_) dropTarget(t);
+    for (Target& t : dofFocus_) dropTarget(t);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -374,7 +382,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[53] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[59] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -418,7 +426,13 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"ground_life_ps", ps, shaderSource(), {}, true},  // 2.5.4: the living ground, the grass
                    {"grass_ps", ps, shaderSource(), {}, true},
                    {"critters_vs", vs, shaderSource(), {}, true},  // 2.5.4: the living world
-                   {"critters_ps", ps, shaderSource(), {}, true}};
+                   {"critters_ps", ps, shaderSource(), {}, true},
+                   {"sky_light_ps", ps, shaderSource(), {}, true},  // 2.5.5: sky light, shafts, flare, DoF
+                   {"shafts_ps", ps, shaderSource(), {}, true},
+                   {"flare_ps", ps, shaderSource(), {}, true},
+                   {"dof_down_ps", ps, shaderSource(), {}, true},
+                   {"dof_focus_ps", ps, shaderSource(), {}, true},
+                   {"dof_apply_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -552,6 +566,12 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[50].code.empty() || !psOf(wants[50], grassPs_)) grassPs_ = nullptr;
     if (wants[51].code.empty() || !vsOf(wants[51], crittersVs_)) crittersVs_ = nullptr;
     if (wants[52].code.empty() || !psOf(wants[52], crittersPs_)) crittersPs_ = nullptr;
+    if (wants[53].code.empty() || !psOf(wants[53], skyLightPs_)) skyLightPs_ = nullptr;  // 2.5.5
+    if (wants[54].code.empty() || !psOf(wants[54], shaftsPs_)) shaftsPs_ = nullptr;
+    if (wants[55].code.empty() || !psOf(wants[55], flarePs_)) flarePs_ = nullptr;
+    if (wants[56].code.empty() || !psOf(wants[56], dofDownPs_)) dofDownPs_ = nullptr;
+    if (wants[57].code.empty() || !psOf(wants[57], dofFocusPs_)) dofFocusPs_ = nullptr;
+    if (wants[58].code.empty() || !psOf(wants[58], dofApplyPs_)) dofApplyPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1085,7 +1105,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !hazeDone_ ||
-                                !skyDone_ || !heatDone_ || !bloomDone_ || !gradeDone_ || !weatherDone_))
+                                !skyDone_ || !shaftsDone_ || !flareDone_ || !heatDone_ || !bloomDone_ ||
+                                !gradeDone_ || !dofDone_ || !weatherDone_))
         flushBatch();
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
@@ -1097,9 +1118,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the haze
     if (s.ui && worldDrawn_ && !hazeDone_) applyHaze();  // 2.5: far off and over the ground, before the colours
     if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: where the haze filled the void
+    if (s.ui && worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5: the light in the air
+    if (s.ui && worldDrawn_ && !flareDone_) applyFlare();    // 2.5.5: the sun's flare
     if (s.ui && worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3: the hot air over all of that
     if (s.ui && worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2: before the colours (ao.cpp finishWorld)
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
+    if (s.ui && worldDrawn_ && !dofDone_) applyDof();  // 2.5.5: after the colours (ao.cpp finishWorld)
     if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
     if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
@@ -1131,6 +1155,11 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;
     if (!s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && grassWanted()) noteGround(rec, d);  // 2.5.4: the next cells
+    if (!s.ui && s.blend && groundDrawn_ && !skyLightDone_ && skyLightPs_ &&
+        (effects_.skyLight || effects_.bounceLight) && cameraValid_) {  // 2.5.5: under the soft shadows (draw.cpp)
+        flushBatch();
+        applySkyLight();
+    }
     if (!s.ui && s.blend && groundDrawn_ && !aoDone_ && aoWanted()) {  // 2.5.1: before the characters (draw.cpp)
         flushBatch();
         applyAo();
@@ -1254,6 +1283,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         l.viewToWorld = cameraValid_ ? viewToWorld_ : nullptr;
         l.projection = camera::projectionFor(gameWidth_, gameHeight_);
         leafShading(rec, d, l, c);
+        if (windShared())  // 2.5.5: the leaves sway the shared wind's way
+            c.uiPixels[3] *= (windScreenX_ < 0.0f ? -1.0f : 1.0f) * (0.4f + 0.6f * windNow_.strength);
         if (effects_.leafFall) noteCrown(rec, d);  // 2.5.4: the leaves falling from it (the living world)
     }
     // 0.99, the modern water (as draw.cpp): a cell of the map's water by water_vs/water_ps, from the picture and the
@@ -1383,6 +1414,13 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         bindTarget();  // a material made just now bound its own
     }
     if (mat) materialConstants(d.fvf == d3d7::FVF_TL2, c);
+    // 2.5.5 (draw.cpp 1.17): a sprite of the game's sprite cache (a character, a monster) facing the screen, blended
+    // over - lit by the sun from its silhouette's sides
+    if (!mat && effects_.spriteLight && effects_.spriteLightStrength > 0 && !s.ui && !water && !smoke && !lava &&
+        !ray && !adds && !d.twin && c.uiMode == 0 && s.blend && d.vertexCount == 4 && t[0] != &white_ &&
+        !t[0]->cells.empty() && !t[0]->leafy &&
+        ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount))
+        spriteConstants(c);
     // 0.90: the draw call's state; the draw goes on the gathered call when it is the same and its vertices follow
     Issue is;
     is.c = c;
@@ -1802,10 +1840,13 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3
     if (worldDrawn_ && !hazeDone_) applyHaze();  // 2.5
     if (worldDrawn_ && !skyDone_) applySky();
+    if (worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5
+    if (worldDrawn_ && !flareDone_) applyFlare();
     if (worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3
     if (!flies_.empty()) applyFireflies();  // 1.0.1
     if (worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
+    if (worldDrawn_ && !dofDone_) applyDof();      // 2.5.5
     if (worldDrawn_ && !weatherDone_) applyWeather();  // 2.5
     if (glowDrawn_) addGlow();  // 1.0: likewise
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
@@ -1825,6 +1866,9 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
     frameCrowns_.clear();
     critterFires_.clear();
+    skyLightDone_ = shaftsDone_ = flareDone_ = dofDone_ = false;  // 2.5.5
+    shaftLights_ = 0;
+    updateWind();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
     groundTris_.clear();
     groundCellsUp_ = false;
@@ -2391,6 +2435,10 @@ void Renderer11::applyGroundLife() {
         c.sourceRect[3] = effects_.seasonGrass ? year_.lush : 0.0f;
     }
     if (rainWetShown()) c.sourceClamp[2] = 1.0f;
+    if (windShared()) {  // 2.5.5: the sand drifts the shared wind's way
+        c.uiPixels[2] = windNow_.x;
+        c.uiPixels[3] = windNow_.z;
+    }
     c.sharpen = waterTime();
     if (!groundLifeLogged_)
         LOG_INFO("living ground: on %s (%s%s%s, Direct3D 11)", map_.c_str(),
@@ -2430,6 +2478,10 @@ void Renderer11::applyGrass() {
     const int minute = effects_.dayCycle && effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();
     if (effects_.dew) c.twin[3] = living::dew(minute) * (1.0f - float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f);
     if (effects_.gusts) c.sourceRect[0] = 1.0f;
+    if (windShared()) {  // 2.5.5: the shared wind's way times its strength
+        c.sourceRect[2] = windNow_.x * windNow_.strength;
+        c.sourceRect[3] = windNow_.z * windNow_.strength;
+    }
     // The map's ground only: the cells' grid (sourceClamp), their heights (t5) - uploaded once a frame
     const ground_cells::Grid& g = groundCells_;
     const bool grid = g.side > 0.0f && g.width > 0 && g.height > 0 &&
@@ -2700,6 +2752,235 @@ void Renderer11::applyCritters() {
     ctx_->RSSetScissorRects(1, &whole);
 }
 
+// 2.5.5 (actor_shadows.cpp): the way to the map's light from its file, as the client turns it - when its axes are known
+bool Renderer11::mapSun(float toSun[3]) const {
+    const rsw::World* w = mapWorld_.world();
+    const map::Axes axes = mapWorld_.axes();
+    if (!w || !w->lightKnown || !axes.known()) return false;
+    const float lon = float(w->lightLongitude) * 0.0174533f, lat = float(w->lightLatitude) * 0.0174533f;
+    toSun[0] = float(axes.x) * -std::cos(lon) * std::sin(lat);
+    toSun[1] = -std::cos(lat);
+    toSun[2] = float(axes.z) * -std::sin(lon) * std::sin(lat);
+    return true;
+}
+
+float Renderer11::sunHeight() const {
+    float toSun[3];
+    if (!effects_.dayCycle && mapSun(toSun))
+        return std::clamp(std::asin(std::clamp(-toSun[1], -1.0f, 1.0f)), 15.0f * 0.0174533f, 70.0f * 0.0174533f);
+    const daylight::Light day = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
+    return std::clamp(50.0f / day.length * 0.55f, 15.0f, 70.0f) * 0.0174533f;
+}
+
+void Renderer11::sunGround(float out[3]) const {
+    float toSun[3];
+    if (mapSun(toSun)) {
+        const float len = std::sqrt(toSun[0] * toSun[0] + toSun[2] * toSun[2]);
+        if (len > 1e-4f) {
+            out[0] = -toSun[0] / len;
+            out[1] = 0.0f;
+            out[2] = -toSun[2] / len;
+            return;
+        }
+    }
+    const daylight::Light l = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
+    const float len = std::max(std::sqrt(l.shadow[0] * l.shadow[0] + l.shadow[1] * l.shadow[1]), 1e-4f);
+    out[0] = l.shadow[0] / len;
+    out[1] = 0.0f;
+    out[2] = l.shadow[1] / len;
+}
+
+void Renderer11::sunOnScreen(float out[2]) const {
+    const daylight::Light l = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
+    out[0] = l.shadow[0];
+    out[1] = l.shadow[1];
+    if (!cameraValid_) return;
+    float g[3];
+    sunGround(g);
+    const float* m = viewToWorld_;
+    const float sx = g[0] * m[0] + g[1] * m[1] + g[2] * m[2], sy = g[0] * m[3] + g[1] * m[4] + g[2] * m[5];
+    const float len = std::sqrt(sx * sx + sy * sy);
+    if (len < 1e-4f) return;
+    out[0] = sx / len;
+    out[1] = sy / len;
+}
+
+void Renderer11::spriteConstants(Constants& c) const {  // 2.5.5 (sun_map.cpp)
+    c.stage0[1] |= 1u << 28;
+    float sun[2];
+    sunOnScreen(sun);
+    const float height = outdoors_ ? sunHeight() : 1.2f;
+    c.twin[0] = -sun[0];
+    c.twin[1] = -sun[1];
+    c.twin[2] = std::sin(height) * 0.6f;
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    c.uiPixels[0] = float(std::clamp(effects_.spriteLightStrength, 0, 200)) / 100.0f;
+    c.uiPixels[1] = outdoors_ ? 1.0f - 0.8f * night : 0.3f;
+}
+
+// 2.5.5 (weather.cpp updateWind): the shared wind now and what it has carried since the last frame
+void Renderer11::updateWind() {
+    const float now = waterTime();
+    float dt = windClock_ < 0.0f ? 0.0f : now - windClock_;
+    if (dt < 0.0f) dt = 0.0f;
+    windClock_ = now;
+    windNow_ = wind::at(double(now));
+    const float* m = viewToWorld_;
+    const float axis = std::sqrt(m[0] * m[0] + m[2] * m[2]);
+    windScreenX_ = cameraValid_ && axis > 1e-4f ? (windNow_.x * m[0] + windNow_.z * m[2]) / axis : 0.0f;
+    const float s = windNow_.strength;
+    weatherDrift_.advance(windScreenX_ * s * 60.0f, 0.0f, dt);
+    cloudsDrift_.advance(windNow_.x * s * 0.016f, windNow_.z * s * 0.016f, dt);
+    skyDrift_.advance(windNow_.x * s * 0.012f, windNow_.z * s * 0.012f, dt);
+}
+
+// 2.5.5: as Direct3D 12's applySkyLight (ao.cpp) - the picture's copy put back lit by the sky above and the ground
+// below, and by the colours around it
+void Renderer11::applySkyLight() {
+    EffectSpan span(*this, kTimeSkyLight11);
+    skyLightDone_ = true;
+    if (!skyLightPs_ || !(effects_.skyLight || effects_.bounceLight) || !cameraValid_ || !target_.texture ||
+        !depthViews())
+        return;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(target_.width);
+    c.uiPixels[1] = float(target_.height);
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    const daylight::Light day = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
+    const float k = outdoors_ ? 1.0f : 0.35f;  // under a roof both near white
+    const float sky[3] = {0.94f * day.tint[0], 0.99f * day.tint[1], 1.09f * day.tint[2]};
+    const float ground[3] = {1.06f, 1.02f, 0.93f};
+    for (int q = 0; q < 3; ++q) {
+        c.sourceRect[q] = 1.0f + ((sky[q] - 1.0f) * (1.0f + 0.5f * night)) * k;
+        c.sourceClamp[q] = 1.0f + (ground[q] - 1.0f) * k * (1.0f - night);
+    }
+    c.twin[0] = effects_.skyLight ? 1.0f : 0.0f;
+    c.twin[1] = effects_.bounceLight ? 1.0f : 0.0f;
+    c.twin[2] = 6.0f;  // world units around
+    if (!skyLightLogged_) LOG_INFO("light from the sky: on %s (Direct3D 11)", map_.c_str());
+    skyLightLogged_ = true;
+    worldPass(skyLightPs_, c, 1, 1, depthSrv_);
+}
+
+// 2.5.5: as Direct3D 12's applyShafts (haze.cpp) - the light in the air about this frame's lights (the torches'
+// pass's list, lightData_) and, under the open sky, rays from where the sky shows past the map's edge, added
+void Renderer11::applyShafts() {
+    EffectSpan span(*this, kTimeShafts11);
+    shaftsDone_ = true;
+    if (!shaftsPs_ || !effects_.shafts || effects_.shaftsStrength <= 0 || !cameraValid_ || !target_.texture ||
+        !depthViews() || (shaftLights_ <= 0 && !(outdoors_ && effects_.skyRays)))
+        return;
+    const int w = target_.width, h = target_.height;
+    const float user = float(std::clamp(effects_.shaftsStrength, 0, 200)) / 100.0f;
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.footprint = float(shaftLights_);
+    c.twin[0] = 0.22f * user * (1.0f + 0.6f * night);  // the glow shows more in the dark
+    c.twin[1] = outdoors_ && effects_.skyRays ? 0.5f * user * (1.0f - night) : 0.0f;
+    float sun[2];
+    sunOnScreen(sun);
+    c.sourceRect[0] = float(w) * (0.5f - sun[0] * 1.6f);
+    c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
+    c.sourceRect[2] = 1.0f;
+    worldPass(shaftsPs_, c, 0, 3, depthSrv_, nullptr, shaftLights_ > 0 ? lightDataSrv_ : nullptr);
+}
+
+// 2.5.5: as Direct3D 12's applyFlare (haze.cpp) - where the sky shows towards the sun, a glow and rings, added
+void Renderer11::applyFlare() {
+    flareDone_ = true;
+    if (!flarePs_ || !effects_.flare || !outdoors_ || effects_.nightNow >= 60 || !target_.texture || !depthViews())
+        return;
+    const int w = target_.width, h = target_.height;
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    Constants c{};
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    float sun[2];
+    sunOnScreen(sun);
+    c.sourceRect[0] = float(w) * (0.5f - sun[0] * 1.6f);
+    c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
+    c.twin[0] = 0.35f * (1.0f - night / 0.6f);
+    worldPass(flarePs_, c, 0, 3, depthSrv_);
+}
+
+// 2.5.5: as Direct3D 12's applyDof (ao.cpp) - the focus where the camera looks (dof_focus_ps, one texel, from the last
+// frame's), the picture at a quarter of the size blurred across and down, mixed in by each pixel's distance from it
+void Renderer11::applyDof() {
+    EffectSpan span(*this, kTimeDof11);
+    dofDone_ = true;
+    if (!effects_.dof || effects_.dofStrength <= 0 || !dofDownPs_ || !dofBlurPs_ || !dofFocusPs_ || !dofApplyPs_ ||
+        !target_.texture || !depthViews())
+        return;
+    const int w = target_.width, h = target_.height;
+    const int qw = std::max(1, (w + 3) / 4), qh = std::max(1, (h + 3) / 4);
+    for (Target& t : dof_)
+        if (t.width != qw || t.height != qh) {
+            dropTarget(t);
+            if (!makeTarget(t, qw, qh)) {
+                LOG_ERROR("depth of field: no video memory at %dx%d (Direct3D 11): it stays off", qw, qh);
+                dofApplyPs_ = nullptr;  // not tried again
+                return;
+            }
+        }
+    if (!dofFocus_[0].texture) {
+        for (Target& t : dofFocus_) {
+            if (!makeTarget(t, 1, 1, DXGI_FORMAT_R32_FLOAT)) {
+                dofApplyPs_ = nullptr;
+                return;
+            }
+            const float zero[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // no focus yet: the first is taken as it is
+            ctx_->ClearRenderTargetView(t.rtv, zero);
+        }
+        LOG_INFO("depth of field: blurred at %dx%d from the %dx%d picture (Direct3D 11)", qw, qh, w, h);
+    }
+    if (scene_.width != w || scene_.height != h) {
+        dropTarget(scene_);
+        if (!makeTarget(scene_, w, h)) return;
+    }
+    ctx_->CopyResource(scene_.texture, target_.texture);
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.uiPixels[2] = float(qw);
+    c.uiPixels[3] = float(qh);
+    c.footprint = 0.01f + 0.14f * float(std::clamp(effects_.dofRange, 0, 100)) / 100.0f;
+    c.sharpen = float(std::clamp(effects_.dofStrength, 0, 100)) / 100.0f;
+    LARGE_INTEGER now, freq;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&now);
+    const double dt =
+        dofFocusTime_.QuadPart ? double(now.QuadPart - dofFocusTime_.QuadPart) / double(freq.QuadPart) : 1.0;
+    dofFocusTime_ = now;
+    c.twin[3] = dt > 0.5 ? 1.0f : float(1.0 - std::exp(-dt / 0.06));
+    c.reproject[0] = cameraValid_ ? cameraTargetZ_ : 0.0f;  // the focus where the camera looks
+    const int was = dofFocusNow_;
+    dofFocusNow_ = 1 - dofFocusNow_;
+    maskPass(dofFocusPs_, dofFocus_[dofFocusNow_], c, dofFocus_[was].srv, depthSrv_);
+    maskPass(dofDownPs_, dof_[0], c, nullptr, nullptr, scene_.srv);
+    for (int i = 0; i < 2; ++i) {  // across, then down
+        c.sourceRect[0] = i == 0 ? 1.0f : 0.0f;
+        c.sourceRect[1] = i == 0 ? 0.0f : 1.0f;
+        maskPass(dofBlurPs_, dof_[1 - i], c, dof_[i].srv, nullptr);
+    }
+    worldPass(dofApplyPs_, c, 2, 0, depthSrv_, dof_[0].srv, dofFocus_[dofFocusNow_].srv);
+}
+
 float Renderer11::mapFadeNow() {
     if (!effects_.mapFade || fadeStart_ < 0.0f) return 1.0f;
     const float t = (waterTime() - fadeStart_) / 0.7f;
@@ -2824,6 +3105,10 @@ void Renderer11::applyClouds() {
     c.uiPixels[3] = float(mh);
     c.sharpen = waterTime();
     c.footprint = float(std::clamp(effects_.cloudsStrength, 0, 100)) / 100.0f;
+    if (windShared()) {  // 2.5.5: drifting with the shared wind
+        c.sourceRect[0] = cloudsDrift_.x;
+        c.sourceRect[1] = cloudsDrift_.y + 1e-3f;
+    }
     if (!cloudsLogged_) LOG_INFO("clouds: their shadows over %s (Direct3D 11)", map_.c_str());
     cloudsLogged_ = true;
     maskPass(cloudsPs_, cloudsMask_, c, nullptr, depthSrv_);
@@ -2907,6 +3192,10 @@ void Renderer11::applySky() {
     c.twin[1] = float(std::clamp(effects_.skyStrength, 0, 100)) / 100.0f;
     c.twin[2] = night;
     c.sourceClamp[3] = effects_.stars ? 1.0f : 0.0f;
+    if (windShared()) {  // 2.5.5: the clouds drift with the shared wind
+        c.sourceClamp[1] = skyDrift_.x;
+        c.sourceClamp[2] = skyDrift_.y + 1e-3f;
+    }
     const bool land = effects_.edgeLand && cameraTargetZ_ > 0.0f;
     if (land) {
         c.twin[3] = 1.0f;
@@ -2956,6 +3245,10 @@ void Renderer11::applyWeather() {
                                                            : "sand",
                  map_.c_str());
     weatherLogged_ = true;
+    if (windShared()) {  // 2.5.5: blown along the screen by the shared wind
+        c.sourceRect[2] = weatherDrift_.x;
+        c.sourceRect[3] = windScreenX_ * windNow_.strength * 60.0f;
+    }
     worldPass(weatherPs_, c, false, 1);
     // 2.5.3 (weather.cpp 0.64): the rain's splashes on the ground, where it is known (the camera read)
     if (motes || weather_ != weather::Kind::Rain || !effects_.rainSplashes || !cameraValid_ || !splashPs_ ||
@@ -3084,7 +3377,7 @@ void Renderer11::timeFrame() {
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
                                                              "haze", "sky", "weather", "ao", "clouds", "bloom",
-                                                             "steps", "heat"};
+                                                             "steps", "heat", "sky_light", "shafts", "dof"};
         recent_.gpuMs = recentMs_ / recentFrames_;
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
@@ -3160,7 +3453,9 @@ void Renderer11::logGpu(ULONGLONG now) {
         // 0.89: the effects one by one, as Direct3D 12's log has them
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
                                                             "colour", "haze", "sky", "weather", "soft shadows",
-                                                            "clouds", "bloom", "footprints", "heat haze"};
+                                                            "clouds", "bloom", "footprints", "heat haze",
+                                                            "light from the sky", "light in the air",
+                                                            "depth of field"};
         std::string effects;
         for (int e = 0; e < kEffectTimes11; ++e) {
             if (effectMs_[e] <= 0.0) continue;

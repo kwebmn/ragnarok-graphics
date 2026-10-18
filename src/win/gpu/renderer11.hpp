@@ -19,6 +19,7 @@
 #include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/weather.hpp"
+#include "core/wind.hpp"
 #include "win/gpu/map_world.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
@@ -288,6 +289,23 @@ private:
         return on;
     }
     bool crittersNeedFeet() const { return effects_.birds || effects_.breath || effects_.splashes; }
+    // 2.5.5: the sun (actor_shadows.cpp): the way to it from the map's file, else the day's; on the screen
+    bool mapSun(float toSun[3]) const;
+    float sunHeight() const;
+    void sunGround(float out[3]) const;
+    void sunOnScreen(float out[2]) const;
+    // 2.5.5: the light from the sky and from around (ao.cpp applySkyLight), before the soft shadows; the light in
+    // the air about the lights and from the sky (haze.cpp applyShafts), the sun's flare (applyFlare); the depth of
+    // field (ao.cpp applyDof), after the colours; the characters lit by the sun from their sides (sun_map.cpp
+    // spriteConstants); the shared wind (weather.cpp updateWind) the weather, the clouds, the sky, the grass, the
+    // sand and the leaves go with
+    void applySkyLight();
+    void applyShafts();
+    void applyFlare();
+    void applyDof();
+    void spriteConstants(Constants& c) const;
+    void updateWind();
+    bool windShared() const { return effects_.sharedWind && cameraValid_; }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     void noteWaterLevel(const FrameRecord& rec, const DrawCmd& d);
     bool seasonsShown() const {
@@ -531,6 +549,24 @@ private:
     std::vector<critters::Point> critterFires_;  // this frame's flames' tips (the torches' pass)
     float crittersTime_ = 0.0f, crittersStepsSeen_ = 0.0f;
     bool crittersLogged_ = false;
+    // 2.5.5: the sky's light, the light in the air, the flare, the depth of field, the shared wind
+    ID3D11PixelShader* skyLightPs_ = nullptr;
+    ID3D11PixelShader* shaftsPs_ = nullptr;
+    ID3D11PixelShader* flarePs_ = nullptr;
+    ID3D11PixelShader* dofDownPs_ = nullptr;
+    ID3D11PixelShader* dofFocusPs_ = nullptr;
+    ID3D11PixelShader* dofApplyPs_ = nullptr;
+    Target dof_[2];
+    Target dofFocus_[2];  // 1x1 R32: the focus, last frame's and this one's
+    int dofFocusNow_ = 0;
+    LARGE_INTEGER dofFocusTime_{};
+    int shaftLights_ = 0;  // the lights of this frame's torches' pass (lightData_)
+    bool skyLightDone_ = false, shaftsDone_ = false, flareDone_ = false, dofDone_ = false;
+    bool skyLightLogged_ = false, dofLogged_ = false;
+    float windClock_ = -1.0f;
+    wind::Wind windNow_;
+    float windScreenX_ = 0.0f;
+    wind::Drift weatherDrift_, cloudsDrift_, skyDrift_;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
@@ -623,7 +659,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[12][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.3: twelve)
+        ID3D11Query* effect[15][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.5: fifteen)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -634,9 +670,10 @@ private:
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
-        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kEffectTimes11
+        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeSkyLight11, kTimeShafts11,
+        kTimeDof11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 12, "FrameTimes::effect holds twelve");
+    static_assert(kEffectTimes11 == 15, "FrameTimes::effect holds fifteen");
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);
     struct EffectSpan {  // the scope of an effect's pass
