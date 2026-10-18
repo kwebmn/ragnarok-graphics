@@ -104,6 +104,8 @@ void StudioWindow::build() {
     catalog_ = std::make_unique<CatalogWork>(gameDir_);
     thumbs_ = std::make_unique<Thumbs>(hwnd_, *catalog_);
     textures_ = std::make_unique<TexturesTab>(hwnd_, lang_, font_, dpi_, gameDir_, *catalog_, *thumbs_);
+    inspector_ = std::make_unique<Inspector>(hwnd_, lang_, font_, dpi_, gameDir_, *catalog_);
+    textures_->onSelect = [this](const Row& row) { inspector_->showRow(row, textures_->orphans()); };
     tab_ = session_.tab == "pack" ? 1 : session_.tab == "log" ? 2 : 0;
     TabCtrl_SetCurSel(tabs_, tab_);
     showTab(tab_);
@@ -121,7 +123,13 @@ void StudioWindow::layout() {
     MoveWindow(tabs_, at(4), at(4), w - at(8), h - barH - at(8), TRUE);
     RECT page{at(4), at(4), w - at(4), h - barH - at(4)};  // the tab's page, in the window's pixels
     TabCtrl_AdjustRect(tabs_, FALSE, &page);
-    if (textures_) textures_->layout(page);
+    if (textures_ && inspector_) {  // the list on the left, the inspector on the right
+        RECT left = page, right = page;
+        left.right = page.left + (page.right - page.left) * 56 / 100;
+        right.left = left.right + at(8);
+        textures_->layout(left);
+        inspector_->layout(right);
+    }
     MoveWindow(pause_, at(8), y, at(110), row, TRUE);
     MoveWindow(engineLabel_, at(126), y + at(4), at(300), row, TRUE);
     MoveWindow(jobBar_, at(436), y + at(4), at(200), at(16), TRUE);
@@ -169,6 +177,7 @@ void StudioWindow::showTab(int tab) {
     tab_ = tab;
     session_.tab = tab == 1 ? "pack" : tab == 2 ? "log" : "textures";
     if (textures_) textures_->show(tab == 0);
+    if (inspector_) inspector_->show(tab == 0);
 }
 
 void StudioWindow::togglePause() {
@@ -206,6 +215,7 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (LOWORD(wp) == kPauseButton) togglePause();
             if (LOWORD(wp) == kStopButton && jobs_) jobs_->stop(jobs_->progress().id);
             if (textures_) textures_->command(LOWORD(wp), HIWORD(wp));
+            if (inspector_) inspector_->command(LOWORD(wp), HIWORD(wp));
             return 0;
         case WM_NOTIFY: {
             const auto* n = reinterpret_cast<const NMHDR*>(lp);
@@ -231,6 +241,10 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kThumbReady:
             if (textures_) textures_->thumbsReady();
             return 0;
+        case kShownReady:
+            if (inspector_) inspector_->shownReady(uint64_t(wp), reinterpret_cast<Shown*>(lp));
+            else delete reinterpret_cast<Shown*>(lp);
+            return 0;
         case kRowsReady:
             if (textures_) textures_->rowsReady(uint64_t(wp), reinterpret_cast<RowsResult*>(lp));
             else delete reinterpret_cast<RowsResult*>(lp);
@@ -249,6 +263,7 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case WM_DESTROY:
             KillTimer(hwnd_, kBarTimer);
             jobs_.reset();  // the engine ends, the queue is written
+            inspector_.reset();
             textures_.reset();
             thumbs_.reset();
             catalog_.reset();

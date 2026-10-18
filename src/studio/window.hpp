@@ -7,6 +7,7 @@
 #include "core/settings/strings.hpp"
 #include "core/studio_state.hpp"
 #include "studio/catalog_work.hpp"
+#include "studio/inspector.hpp"
 #include "studio/jobs.hpp"
 #include "studio/textures_tab.hpp"
 #include "studio/thumbs.hpp"
@@ -48,6 +49,7 @@ private:
     std::unique_ptr<CatalogWork> catalog_;
     std::unique_ptr<Thumbs> thumbs_;
     std::unique_ptr<TexturesTab> textures_;
+    std::unique_ptr<Inspector> inspector_;
     int tab_ = 0;
 };
 

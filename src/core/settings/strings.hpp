@@ -286,6 +286,11 @@ enum class Text : uint16_t {
     StudioColDate, StudioStateMissing, StudioStateInPack, StudioStateOwn, StudioStateOrphan, StudioFlagSmoothed,
     StudioFlagWashed, StudioFlagBanded, StudioFlagRinging, StudioFlagFringe, StudioFlagAlpha, StudioFlagSeams,
     StudioRowsCount, StudioCatalogEmpty,
+    StudioViewPair, StudioViewWipe, StudioViewTiled, StudioViewMap, StudioViewDiff, StudioViewSmooth, StudioVsPack,
+    StudioVsMade, StudioInfoFile, StudioInfoArchive, StudioInfoShadowed, StudioInfoKey, StudioInfoLow,
+    StudioInfoPicture, StudioInfoNoPicture, StudioInfoMade, StudioInfoFrom, StudioInfoMaps, StudioInfoAtlas,
+    StudioInfoOnePicture, StudioInfoColour, StudioInfoMetrics, StudioInfoMaterial, StudioInfoOwn, StudioInfoOrphan,
+    StudioMakeAgain, StudioKeep, StudioDiscard, StudioTakeOut, StudioOwnAlways, StudioOwnNot,
     Count
 };
 
