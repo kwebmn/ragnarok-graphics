@@ -8,6 +8,7 @@
 #include "core/ai/kinds.hpp"
 #include "core/config.hpp"
 #include "core/near_picture.hpp"
+#include "core/texture_pack.hpp"
 
 namespace uagfx::ai {
 
@@ -41,6 +42,8 @@ public:
     size_t ahead() const { return kinds_.size(); }
     // 2.3, uaRO Studio's "the game's own always" (the index's '!' lines): no picture for these keys.
     bool marked(const std::string& key) const { return marked_.count(key) != 0; }
+    // 2.3: a texture's material scaled ('#' lines); false and 1, 1, 1 (as built) when it is not
+    bool materialOf(const std::string& key, pack::MaterialScales& out) const;
     size_t aliases() const { return aliases_.size(); }
 
 private:
@@ -54,6 +57,7 @@ private:
     std::unordered_map<std::string, std::string> aliases_;  // a key of a lower texture detail -> the pack's picture
     pack::NearPictures alike_;  // 0.49
     std::unordered_set<std::string> marked_;  // 2.3
+    std::unordered_map<std::string, pack::MaterialScales> materials_;  // 2.3
 };
 
 }  // namespace uagfx::ai

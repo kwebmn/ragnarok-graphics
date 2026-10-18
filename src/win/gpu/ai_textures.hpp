@@ -79,6 +79,12 @@ public:
     // and the studio told (its event); 0: nothing of the AI's was there. toggleHidden: that texture's picture off in
     // the game, or on again (A/B of one texture).
     void writePick(uint32_t id, int x, int y);
+    // 2.3 (T7): a texture's material scales ('#' lines of the pack's index); 1, 1, 1 when it has none
+    void materialScales(uint32_t id, pack::MaterialScales& out) const {
+        const auto it = items_.find(id);
+        out = pack::MaterialScales();
+        if (it != items_.end() && pictures_) pictures_->materialOf(it->second.key, out);
+    }
     void toggleHidden();
     bool howOf(uint32_t id, uint8_t& how) const {
         const auto it = items_.find(id);

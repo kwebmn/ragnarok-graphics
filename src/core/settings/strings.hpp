@@ -298,6 +298,7 @@ enum class Text : uint16_t {
     StudioPackPictures, StudioPackSize, StudioPackByGroup, StudioPackByModel, StudioPackByKind, StudioPackRead,
     StudioPackCompact, StudioPackCompactNote, StudioJobCompact, StudioPackGameOpen, StudioPackNone, StudioLogDone,
     DiagXray, DiagXrayHint,
+    StudioViewMaterial, StudioMatGloss, StudioMatRelief, StudioMatHeight, StudioMatSave, StudioJobMaterial,
     Count
 };
 

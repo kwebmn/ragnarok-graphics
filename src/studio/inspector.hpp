@@ -25,6 +25,7 @@ struct Shown {
     bool own = false;  // the game's own always
     std::shared_ptr<const Image> made;  // made again before (studio\made\), not kept yet
     std::string key, file;
+    pack::MaterialScales material;  // its material's scales in the pack (1, 1, 1 as built)
 };
 
 // 2.3 (T2, T3, T4), the inspector: the compare control with its modes, the information of the texture shown (its
@@ -40,17 +41,21 @@ public:
     void setMade(std::shared_ptr<const Image> made);  // a picture made again: compared at once
     void refresh(const std::vector<std::string>& orphans);  // the row shown, read again
     bool command(int id, int code);
+    void scrolled(HWND bar);  // a material's slider moved: its maps again
     const Shown* shown() const { return shown_.get(); }
     std::shared_ptr<const Image> made() const { return made_; }
-    // The actions (the window's): make again, keep, discard, take out, the game's own always (or not).
+    // The actions (the window's): make again, keep, discard, take out, the game's own always (or not), the material.
     std::function<void()> onMake, onKeep, onDiscard, onTakeOut, onOwn;
+    std::function<void(const pack::MaterialScales&)> onMaterial;
 
 private:
     enum Id : int {
         kPair = 400, kWipe, kTiled, kMap, kDiff, kSmooth, kVersus, kView, kInfo, kMake, kKeep, kDiscard, kTakeOut,
-        kOwn
+        kOwn, kMaterialMode, kGloss, kRelief, kHeight, kSaveMaterial
     };
     void showCompare();
+    void showMaterial();  // T7: the three maps of the picture shown, by the sliders' scales
+    pack::MaterialScales sliders() const;
     std::wstring t(settings::Text x) const;
 
     HWND parent_;
@@ -60,7 +65,9 @@ private:
     std::wstring gameDir_;
     CatalogWork& catalog_;
     std::vector<HWND> controls_;
-    HWND modes_[5] = {}, smooth_ = nullptr, versus_ = nullptr, info_ = nullptr, actions_[5] = {};
+    HWND modes_[6] = {}, smooth_ = nullptr, versus_ = nullptr, info_ = nullptr, actions_[5] = {};
+    HWND scales_[3] = {}, scaleLabels_[3] = {}, saveMaterial_ = nullptr;
+    bool materialMode_ = false;
     CompareView view_;
     std::unique_ptr<Shown> shown_;
     std::shared_ptr<const Image> made_;

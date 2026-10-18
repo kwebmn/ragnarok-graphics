@@ -230,7 +230,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (materialsWanted() && !s.ui && !water && !smoke && !lava && !ray && !soft && !quad && !adds && !d.twin &&
         (s.zWrite || seamPass) && d.texture[0] && d.texture[0] != white) {
         const auto it = textures.find(d.texture[0]);
-        if (it != textures.end() && !it->second.leafy && ensureMaterial(it->second, aiDrawn[0])) matTex = &it->second;
+        if (it != textures.end() && !it->second.leafy && ensureMaterial(it->first, it->second, aiDrawn[0]))
+            matTex = &it->second;
     }
     // 1.15: smooth hills - a draw of the ground (its own or a seam's strip) reads the corners' normals (t3)
     bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin && (s.zWrite || seamPass);

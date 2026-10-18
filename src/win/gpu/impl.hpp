@@ -1000,7 +1000,7 @@ struct Renderer::Impl {
     bool materialsLogged = false;
     int materialSide = 512;
     ID3D12PipelineState* materialPipeline();
-    bool ensureMaterial(Texture& t, bool fromAi);  // false: not ready yet
+    bool ensureMaterial(uint32_t id, Texture& t, bool fromAi);  // false: not ready yet
     void dropMaterial(Texture& t);
     bool materialsWanted() const { return effects.materials && effects.materialsStrength > 0 && materialPs; }
     void materialConstants(bool ground, Constants& c) const;  // a draw with its material

@@ -160,6 +160,7 @@ void CompareView::paint(HDC dc) {
             if (mode_ == Mode::Wipe) img = float(x) < wipe_ * float(W) ? a_.get() : b_.get();
             if (mode_ == Mode::Tiled) img = b_ ? b_.get() : a_.get();
             if (mode_ == Mode::Difference) img = &diff;
+            if (mode_ == Mode::Single) img = a_.get();
             if (!img) continue;
             uint32_t c = 0;
             const bool got = mode_ == Mode::Map ? sampleMap(*img, ox / kCellTexels, oy / kCellTexels, c)

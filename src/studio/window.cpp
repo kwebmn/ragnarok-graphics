@@ -119,6 +119,18 @@ void StudioWindow::build() {
     inspector_->onDiscard = [this] { discard(); };
     inspector_->onTakeOut = [this] { takeOut(); };
     inspector_->onOwn = [this] { toggleOwn(); };
+    inspector_->onMaterial = [this](const pack::MaterialScales& s) {  // T7: the shown texture's material
+        const Shown* shown = inspector_->shown();
+        if (!shown || shown->key.empty()) return;
+        json::Value args = json::Value::object();
+        args.set("key", shown->key);
+        args.set("gloss", double(s.gloss));
+        args.set("relief", double(s.relief));
+        args.set("height", double(s.height));
+        jobs_->add("material", args, true,
+                   app::utf8(app::wtrf(lang_, settings::Text::StudioJobMaterial,
+                                       {utf8OfGame(shown->file.substr(shown->file.rfind('\\') + 1))})));
+    };
     tab_ = 0;  // the textures at the start (the Pack tab counts the pack: it waits until it is opened)
     TabCtrl_SetCurSel(tabs_, tab_);
     showTab(tab_);
@@ -365,6 +377,9 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (textures_) textures_->command(LOWORD(wp), HIWORD(wp));
             if (inspector_) inspector_->command(LOWORD(wp), HIWORD(wp));
             if (pack_) pack_->command(LOWORD(wp), HIWORD(wp));
+            return 0;
+        case WM_HSCROLL:
+            if (inspector_ && lp) inspector_->scrolled(reinterpret_cast<HWND>(lp));
             return 0;
         case WM_NOTIFY: {
             const auto* n = reinterpret_cast<const NMHDR*>(lp);

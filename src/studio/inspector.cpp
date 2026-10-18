@@ -1,11 +1,13 @@
 #include "studio/inspector.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <ctime>
 
 #include "app/text.hpp"
 #include "core/ai/picture_metrics.hpp"
+#include "core/material_maps.hpp"
 #include "core/studio_link.hpp"
 #include "core/webp_image.hpp"
 #include "studio/catalog_work.hpp"
@@ -100,6 +102,10 @@ DWORD WINAPI loadMain(void* arg) {
         if (!low.empty()) line(app::wtrf(l, settings::Text::StudioInfoLow, {low}));
         const std::string name = pack::pictureName(pack::Group(p.group), p.key);
         out->own = view && view->index.ownAlways.count(p.key);
+        if (view) {
+            const auto mat = view->index.materials.find(p.key);
+            if (mat != view->index.materials.end()) out->material = mat->second;
+        }
         if (out->own) line(app::wtr(l, settings::Text::StudioInfoOwn));
         if (out->packed) {
             line(app::wtrf(l, settings::Text::StudioInfoPicture,
@@ -170,11 +176,12 @@ Inspector::Inspector(HWND parent, settings::Lang lang, HFONT font, int dpi, std:
         controls_.push_back(h);
         return h;
     };
-    const settings::Text modes[5] = {settings::Text::StudioViewPair, settings::Text::StudioViewWipe,
+    const settings::Text modes[6] = {settings::Text::StudioViewPair, settings::Text::StudioViewWipe,
                                      settings::Text::StudioViewTiled, settings::Text::StudioViewMap,
-                                     settings::Text::StudioViewDiff};
-    for (int i = 0; i < 5; ++i)
-        modes_[i] = make(L"BUTTON", t(modes[i]), BS_AUTORADIOBUTTON | BS_PUSHLIKE | (i ? 0 : WS_GROUP), 0, kPair + i);
+                                     settings::Text::StudioViewDiff, settings::Text::StudioViewMaterial};
+    for (int i = 0; i < 6; ++i)
+        modes_[i] = make(L"BUTTON", t(modes[i]), BS_AUTORADIOBUTTON | BS_PUSHLIKE | (i ? 0 : WS_GROUP), 0,
+                         i < 5 ? kPair + i : kMaterialMode);
     SendMessageW(modes_[0], BM_SETCHECK, BST_CHECKED, 0);
     smooth_ = make(L"BUTTON", t(settings::Text::StudioViewSmooth), BS_AUTOCHECKBOX | WS_GROUP, 0, kSmooth);
     versus_ = make(WC_COMBOBOXW, L"", CBS_DROPDOWNLIST | WS_VSCROLL, 0, kVersus);
@@ -189,6 +196,47 @@ Inspector::Inspector(HWND parent, settings::Lang lang, HFONT font, int dpi, std:
                                        settings::Text::StudioOwnAlways};
     for (int i = 0; i < 5; ++i) actions_[i] = make(L"BUTTON", t(actions[i]), BS_PUSHBUTTON, 0, kMake + i);
     for (int i = 1; i < 3; ++i) EnableWindow(actions_[i], FALSE);  // Keep, Discard: with a picture made again
+    const settings::Text scaleNames[3] = {settings::Text::StudioMatGloss, settings::Text::StudioMatRelief,
+                                          settings::Text::StudioMatHeight};
+    for (int i = 0; i < 3; ++i) {  // T7: a texture's material, 0-200 % of the driver's
+        scaleLabels_[i] = make(L"STATIC", t(scaleNames[i]), SS_RIGHT | SS_CENTERIMAGE, 0, -1);
+        scales_[i] = make(TRACKBAR_CLASSW, L"", TBS_HORZ | WS_TABSTOP, 0, kGloss + i);
+        SendMessageW(scales_[i], TBM_SETRANGE, TRUE, MAKELPARAM(0, 200));
+        SendMessageW(scales_[i], TBM_SETTICFREQ, 50, 0);
+        SendMessageW(scales_[i], TBM_SETPOS, TRUE, 100);
+    }
+    saveMaterial_ = make(L"BUTTON", t(settings::Text::StudioMatSave), BS_PUSHBUTTON | WS_TABSTOP, 0, kSaveMaterial);
+}
+
+pack::MaterialScales Inspector::sliders() const {
+    pack::MaterialScales s;
+    s.gloss = float(SendMessageW(scales_[0], TBM_GETPOS, 0, 0)) / 100.0f;
+    s.relief = float(SendMessageW(scales_[1], TBM_GETPOS, 0, 0)) / 100.0f;
+    s.height = float(SendMessageW(scales_[2], TBM_GETPOS, 0, 0)) / 100.0f;
+    return s;
+}
+
+void Inspector::showMaterial() {
+    if (!shown_) return;
+    const std::shared_ptr<const Image> from = made_ ? made_ : shown_->packed ? shown_->packed : shown_->original;
+    if (!from || from->empty()) return;
+    std::vector<uint32_t> maps;
+    int w = 0, h = 0;
+    material::mapsOf(from->argb.data(), from->width, from->height, sliders(), maps, w, h);
+    auto shown = std::make_shared<Image>();  // relief, height and gloss side by side
+    shown->width = w * 3;
+    shown->height = h;
+    shown->argb.resize(size_t(w) * 3 * size_t(h));
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const uint32_t m = maps[size_t(y) * size_t(w) + size_t(x)];
+            const uint32_t r = m & 0xFF, g = m >> 8 & 0xFF, b = m >> 16 & 0xFF, a = m >> 24;
+            const size_t row = size_t(y) * size_t(w) * 3;
+            shown->argb[row + size_t(x)] = 0xFF000000u | r << 16 | g << 8 | 0xFFu;
+            shown->argb[row + size_t(w + x)] = 0xFF000000u | b << 16 | b << 8 | b;
+            shown->argb[row + size_t(2 * w + x)] = 0xFF000000u | a << 16 | a << 8 | a;
+        }
+    view_.set(shown, nullptr);
 }
 
 std::wstring Inspector::t(settings::Text x) const { return app::wtr(lang_, x); }
@@ -202,7 +250,7 @@ void Inspector::layout(const RECT& r) {
     const int left = int(r.left), top = int(r.top), right = int(r.right), bottom = int(r.bottom);
     const int w = right - left, row = at(24), gap = at(6);
     int x = left, y = top;
-    const int modeW = std::max(at(60), (w - at(220)) / 5);
+    const int modeW = std::max(at(60), (w - at(220)) / 6);
     for (HWND m : modes_) {
         MoveWindow(m, x, y, modeW - at(2), row, TRUE);
         x += modeW;
@@ -214,7 +262,12 @@ void Inspector::layout(const RECT& r) {
     const int viewH = std::max(at(100), bottom - y - infoH - actionsH - gap * 2);
     MoveWindow(view_.hwnd(), left, y, w, viewH, TRUE);
     y += viewH + gap;
-    MoveWindow(info_, left, y, w, infoH, TRUE);
+    MoveWindow(info_, left, y, w - at(250), infoH, TRUE);
+    for (int i = 0; i < 3; ++i) {  // the material's sliders beside the information
+        MoveWindow(scaleLabels_[i], right - at(244), y + i * (row + gap), at(70), row, TRUE);
+        MoveWindow(scales_[i], right - at(170), y + i * (row + gap), at(170), row, TRUE);
+    }
+    MoveWindow(saveMaterial_, right - at(244), y + 3 * (row + gap), at(244), row, TRUE);
     y += infoH + gap;
     const int actionW = w / 5;
     for (int i = 0; i < 5; ++i) MoveWindow(actions_[i], left + i * actionW, y, actionW - at(4), row, TRUE);
@@ -244,7 +297,14 @@ void Inspector::shownReady(uint64_t generation, Shown* shown) {
     const settings::Text own = shown_->own ? settings::Text::StudioOwnNot : settings::Text::StudioOwnAlways;
     SetWindowTextW(actions_[4], t(own).c_str());
     view_.setPatch(shown_->patch);
+    const float scales[3] = {shown_->material.gloss, shown_->material.relief, shown_->material.height};
+    for (int i = 0; i < 3; ++i) SendMessageW(scales_[i], TBM_SETPOS, TRUE, LPARAM(std::lround(scales[i] * 100.0f)));
     setMade(shown_->made);
+}
+
+void Inspector::scrolled(HWND bar) {
+    for (HWND s : scales_)
+        if (s == bar && materialMode_) showMaterial();
 }
 
 void Inspector::refresh(const std::vector<std::string>& orphans) {
@@ -260,13 +320,26 @@ void Inspector::setMade(std::shared_ptr<const Image> made) {
 
 void Inspector::showCompare() {
     if (!shown_) return;
+    if (materialMode_) return showMaterial();
     const bool versusMade = SendMessageW(versus_, CB_GETCURSEL, 0, 0) == 1 && made_;
     view_.set(shown_->original ? shown_->original : shown_->packed, versusMade ? made_ : shown_->packed);
 }
 
 bool Inspector::command(int id, int code) {
     if (id >= kPair && id <= kDiff && code == BN_CLICKED) {
+        materialMode_ = false;
         view_.setMode(CompareView::Mode(id - kPair));
+        showCompare();
+        return true;
+    }
+    if (id == kMaterialMode && code == BN_CLICKED) {
+        materialMode_ = true;
+        view_.setMode(CompareView::Mode::Single);
+        showMaterial();
+        return true;
+    }
+    if (id == kSaveMaterial && code == BN_CLICKED) {
+        if (onMaterial) onMaterial(sliders());
         return true;
     }
     if (id == kSmooth && code == BN_CLICKED) {

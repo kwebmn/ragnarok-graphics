@@ -16,7 +16,7 @@ namespace uagfx::studio {
 // with the right button (or Shift) moves the wipe; nearest texels or smooth.
 class CompareView {
 public:
-    enum class Mode { Pair, Wipe, Tiled, Map, Difference };
+    enum class Mode { Pair, Wipe, Tiled, Map, Difference, Single };  // Single: the first picture alone
     static bool registerClass(HINSTANCE instance);
     HWND create(HWND parent, int id);
     HWND hwnd() const { return hwnd_; }

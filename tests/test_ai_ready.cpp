@@ -218,3 +218,14 @@ TEST(ready_pictures_leave_marked_keys) {
     CHECK(!plain.marked(kKey));
     CHECK(plain.texture(kKey, Kind::Ground, name) && plain.cell(kKey, name) && plain.icon(kKey, name));
 }
+
+TEST(ready_pictures_know_a_textures_material) {
+    // 2.3, uaRO Studio's material of one texture ('#' lines): its gloss, relief and height scaled
+    ReadyPictures r(settings());
+    pack::Index x;
+    x.materials[kKey] = pack::MaterialScales{0.0f, 1.5f, 0.5f};
+    addPack(r, {}, pack::indexText(x));
+    pack::MaterialScales s;
+    CHECK(r.materialOf(kKey, s) && s.gloss == 0.0f && s.relief == 1.5f && s.height == 0.5f);
+    CHECK(!r.materialOf(kLow, s) && s.gloss == 1.0f && s.relief == 1.0f && s.height == 1.0f);  // none: as built
+}

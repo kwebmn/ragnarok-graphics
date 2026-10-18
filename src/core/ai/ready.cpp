@@ -15,6 +15,7 @@ void ReadyPictures::addPack(std::function<bool(const std::string&)> has, const s
     packHas_ = std::move(has);
     const pack::Index x = pack::parseIndexFile(index);
     marked_ = std::unordered_set<std::string>(x.ownAlways.begin(), x.ownAlways.end());  // 2.3
+    materials_ = std::unordered_map<std::string, pack::MaterialScales>(x.materials.begin(), x.materials.end());
     for (const auto& e : x.pictures) {
         pack::Group g = pack::Group::World;
         std::string key;
@@ -34,6 +35,12 @@ void ReadyPictures::addPack(std::function<bool(const std::string&)> has, const s
 }
 
 void ReadyPictures::addMade(const std::string& name) { made_.insert(name); }
+
+bool ReadyPictures::materialOf(const std::string& key, pack::MaterialScales& out) const {
+    const auto it = materials_.find(key);
+    out = it == materials_.end() ? pack::MaterialScales() : it->second;
+    return it != materials_.end();
+}
 
 void ReadyPictures::noteKind(const std::string& key, Kind kind) {
     if (int(kind) < kKinds) kinds_.emplace(key, kind);

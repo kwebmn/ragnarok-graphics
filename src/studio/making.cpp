@@ -200,6 +200,27 @@ void addPictureWork(Jobs& jobs, CatalogWork& catalog, settings::Lang lang) {
         return true;
     });
 
+    jobs.on("material", [&catalog](JobContext& ctx, json::Value& result, std::string& why) {
+        const json::Value& a = ctx.job.args;
+        const std::string key = a["key"].asString();
+        const pack::MaterialScales s{float(a["gloss"].asNumber(1)), float(a["relief"].asNumber(1)),
+                                     float(a["height"].asNumber(1))};
+        const bool built = s == pack::MaterialScales();  // as the driver makes it: no line
+        if (!packEdit(app::ansi(catalog.packPath()),
+                      [&](pack::Writer&, pack::Index& index, std::string&) {
+                          if (built) index.materials.erase(key);
+                          else index.materials[key] = s;
+                          return true;
+                      },
+                      why))
+            return false;
+        catalog.readPack();
+        tellGame({key});
+        result.set("op", "material");
+        result.set("key", key);
+        return true;
+    });
+
     jobs.on("own", [&catalog](JobContext& ctx, json::Value& result, std::string& why) {
         const std::string key = ctx.job.args["key"].asString();
         const bool on = ctx.job.args["on"].asBool();
