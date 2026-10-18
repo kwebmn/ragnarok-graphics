@@ -1,3 +1,13 @@
+# uaRO Graphics 2.5.11 — testing
+
+- **Less work on the game's own thread (Direct3D 11 above all).** From the profile of your Direct3D 11 report:
+  - the textures and sprite frames the game writes are converted 3-15 times faster (they were 17-20% of its thread);
+  - the ground's seams are built 2.3 times faster, and not built again at all while you stand still (were ~20%);
+  - the set of effects is no longer made anew at every draw (was ~2%).
+  The picture is the same: the results match bit for bit, the tests check it.
+- Check, please: with Direct3D 11 in the same field and the same settings - the FPS above 2.5.10's; send a report (the
+  profile's share of DDRAW.dll should drop clearly).
+
 # uaRO Graphics 2.5.10 — urgent fix
 
 - **Direct3D 12: a black screen at the first light.** Since 2.5.0 the torches' light buffer took the final picture's
