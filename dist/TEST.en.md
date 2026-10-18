@@ -1,3 +1,14 @@
+# uaRO Graphics 2.2.3 — testing
+
+- **Sand and gentle slopes:** Reflected light no longer draws bright lines along the cells' edges on bright sand
+  (Comodo's beach, cmd_fild02). The light of the surfaces around now counts by how much they turn to each other:
+  small folds of the ground get next to nothing, a wall's foot as before.
+- **Auto by the graphics card:** the driver saw 3072 MB on any newer card (all Windows tells a 32-bit game), took it
+  for a weak one and drew the weak set of effects while the settings app said Strong. The driver now takes the card's
+  real memory, as the settings app does.
+- Check, please: Comodo's beach (cmd_fild02) with all effects; in the console (~) "Auto: …" names your card's class,
+  and Custom chosen from Auto no longer turns nearly everything off.
+
 # uaRO Graphics 2.2.2 — testing
 
 - **Glints on tiles and steps:** the relief, the materials and their gloss now fade by one measure — "the pixel sees
