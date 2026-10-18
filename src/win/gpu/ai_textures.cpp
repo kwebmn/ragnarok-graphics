@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iterator>
 
+#include "core/ai/groups.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "core/ai/vram.hpp"
 #include "core/sprite_exe.hpp"
@@ -358,6 +359,38 @@ bool AiTextures::startForPack(const std::string& gameDir, const AiSettings& s, s
         if (!selfTest(int(i), error)) return false;
     ready_ = true;
     return true;
+}
+
+bool AiTextures::startForStudio(const std::string& gameDir, std::string& error) {
+    scale_ = 4;
+    generate_ = true;
+    modelDir_ = gameDir + "\\uaro-graphics\\ai\\";
+    for (int k = 0; k < ai::kKinds; ++k) kindOn_[k] = true;
+    if (!createGpu(error)) return false;  // no network yet: the pipelines alone
+    ready_ = true;
+    return true;
+}
+
+int AiTextures::netForModel(const std::string& token, int denoise, std::string& error) {
+    if (!ai::validModel(token)) {
+        error = "no such model: " + token;
+        return -1;
+    }
+    const int d = denoise < 0 ? settings_.denoise : std::min(denoise, 100);
+    for (size_t i = 0; i < nets_.size(); ++i)
+        if (nets_[i]->token == token && (token != "general" || nets_[i]->denoise == d)) return int(i);
+    auto net = std::make_unique<Net>();
+    if (!loadNet(modelDir_, token, d, *net, error)) return -1;
+    if (!net->rrdb) features_ = std::max(features_, net->model.features);
+    if (!uploadWeights(*net, error)) return -1;
+    nets_.push_back(std::move(net));
+    const int at = int(nets_.size()) - 1;
+    if (!selfTest(at, error)) {
+        releaseCom(nets_.back()->weights);  // the self-test waited for the card: nothing uses them
+        nets_.pop_back();
+        return -1;
+    }
+    return at;
 }
 
 bool AiTextures::enlarge(int net, const uint32_t* argb, int w, int h, uint32_t border, std::vector<uint32_t>& out,

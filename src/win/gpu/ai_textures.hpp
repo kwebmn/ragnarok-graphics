@@ -75,6 +75,10 @@ public:
 
     // 0.43, the pack builder (Renderer::buildPack): the networks of the settings' kinds - no pack.
     bool startForPack(const std::string& gameDir, const AiSettings& settings, std::string& error);
+    // 2.3, uaRO Studio's engine: the compute pipelines alone; a model's network loaded when it is first asked for
+    // (netForModel: the general one at the denoise asked, -1 the settings'), self-tested, its file closed after.
+    bool startForStudio(const std::string& gameDir, std::string& error);
+    int netForModel(const std::string& token, int denoise, std::string& error);
     int netFor(ai::Kind kind) const { return int(kind) < ai::kKinds ? netOf_[int(kind)] : -1; }
     // 1.6: the network of a group of pictures (its own model); -1 none.
     int netForGroup(ai::Group g) const { return int(g) < ai::kGroups ? groupNet_[int(g)] : -1; }
@@ -274,6 +278,7 @@ private:
     int smallNet_ = -1;          // 1.6.3: [ai] small_model with small_pictures on
     // 1.6: the network of a model word, loaded once (the same model for several groups is one network); -1, error.
     int netOfToken(const std::string& dir, const std::string& token, std::string& error);
+    std::string modelDir_;  // 2.3: the studio's engine - where netForModel finds the models
     bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack
     bool generate_ = false;                     // [ai] generate: the network makes what is missing
     pack::Reader pack_;                         // 0.42: uaro-textures.zip, read by the I/O thread

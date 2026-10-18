@@ -1645,6 +1645,32 @@ bool Renderer::enlargeForPack(int group, const uint32_t* argb, int width, int he
                          error);  // 1.6, 1.6.3
 }
 
+bool Renderer::startAiForStudio(const std::string& gameDir, std::string& error) {
+    Impl& m = *impl_;
+    if (remote_ || remix_ || m.ai || !m.device) {
+        error = "the renderer is not for it";
+        return false;
+    }
+    m.ai = new AiTextures(m);
+    if (!m.ai->startForStudio(gameDir, error)) {
+        delete m.ai;
+        m.ai = nullptr;
+        return false;
+    }
+    return true;
+}
+
+bool Renderer::enlargeByModel(const std::string& model, int denoise, const uint32_t* argb, int width, int height,
+                              uint32_t border, std::vector<uint32_t>& out, std::string& error) {
+    Impl& m = *impl_;
+    if (!m.ai) {
+        error = "no networks";
+        return false;
+    }
+    const int net = m.ai->netForModel(model, denoise, error);
+    return net >= 0 && m.ai->enlarge(net, argb, width, height, border, out, error);
+}
+
 std::string Renderer::packNetName(int group) const {
     const Impl& m = *impl_;
     const int net = m.ai ? m.ai->netForGroup(ai::Group(group)) : -1;

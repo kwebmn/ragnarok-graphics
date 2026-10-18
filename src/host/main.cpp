@@ -7,6 +7,8 @@
 //                     [--quality 90] [--fresh 1] [--out "<pack>"] [--status "<file>"]
 //                     [--map <map> --map-kinds ground,models --remake 1] (2.2.5: one map's textures)
 //                     [--colours 8,77] (2.2.5: the most hair and clothes colours made; -1 every one)
+// 2.3: uaRO Studio starts a copy of it as its engine (host/studio_engine.hpp):
+//   uaro-render64.exe --studio <pipe> --dir "<game folder>"
 #include <windows.h>
 
 #include <algorithm>
@@ -20,6 +22,7 @@
 #include "core/bridge_wire.hpp"
 #include "core/version.hpp"
 #include "host/pack_builder.hpp"
+#include "host/studio_engine.hpp"
 #include "host/streamline.hpp"
 #include "win/bridge/channel.hpp"
 #include "win/gpu/adapters.hpp"
@@ -46,6 +49,7 @@ struct Args {
     AiSettings ai;  // [ai]
     std::string gpu;  // 0.50.2: [renderer] gpu ("" the fast card)
     host::PackArgs pack;  // 0.43: --pack
+    std::string studio;   // 2.3: --studio <pipe>, uaRO Studio's engine
 };
 
 // The driver's command line: words, "quoted words".
@@ -104,6 +108,7 @@ Args parseArgs() {
             colours[0] = std::atoi(v.c_str());
             colours[1] = comma == std::string::npos ? colours[0] : std::atoi(v.c_str() + comma + 1);
         }
+        else if (k == "--studio") a.studio = v;  // 2.3
         else if (k == "--out") a.pack.out = v;
         else if (k == "--status") a.pack.status = v;
         else continue;
@@ -637,6 +642,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         a.pack.choice.minSide = std::min(a.ai.minSize, a.ai.maxSize);
         a.pack.choice.maxSide = std::max(a.ai.minSize, a.ai.maxSize);
         return host::runPack(a.pack);
+    }
+    if (!a.studio.empty()) {  // 2.3: uaRO Studio's engine, a log of its own
+        wlog::open(a.dir + "\\uaro-studio-engine.log", LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log));
+        return host::runStudio(a.dir, a.studio);
     }
     wlog::open(a.dir + "\\uaro-render64.log", LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log));
     if (a.channel.empty() || !a.parent) {
