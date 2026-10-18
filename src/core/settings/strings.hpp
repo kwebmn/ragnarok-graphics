@@ -276,6 +276,8 @@ enum class Text : uint16_t {
     PackMapHeading, PackMapNote, PackMapName, PackMapCue, PackMapNameHint, PackMapGround, PackMapGroundHint,
     PackMapModels, PackMapModelsHint, PackMapModel, PackMapModelHint, PackMapRemake, PackMapDrop, PackMapAskRemake,
     PackMapAskDrop, PackMapBadName, PackDropped, PackWriting,
+    // 2.3: uaRO Studio
+    StudioTitle, StudioNoGame, StudioCopyFailed,
     Count
 };
 

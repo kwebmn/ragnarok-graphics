@@ -2796,6 +2796,14 @@ const Entry kTexts[] = {
     {"The pack is being written, or its last build was cut short ({1}): a build finishes it.",
      "Пакет зараз записується або його останнє збирання обірвалося ({1}): збирання його допише.",
      "Пакет сейчас записывается или его последняя сборка оборвалась ({1}): сборка его допишет."},
+    // 2.3: uaRO Studio
+    {"uaRO Studio", "uaRO Studio", "uaRO Studio"},
+    {"uaRO Studio works with a game: start it from the uaro-graphics folder in your uaRO folder.",
+     "uaRO Studio працює з грою: запустіть її з теки uaro-graphics у теці uaRO.",
+     "uaRO Studio работает с игрой: запустите её из папки uaro-graphics в папке uaRO."},
+    {"uaRO Studio could not start from its own copy: {1}",
+     "uaRO Studio не змогла запуститися зі своєї копії: {1}",
+     "uaRO Studio не смогла запуститься из своей копии: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

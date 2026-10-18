@@ -1,0 +1,31 @@
+#include <winver.h>
+
+#include "version_rc.h"
+
+// uaRO Studio's icon (the settings app's), its manifest (asInvoker, per-monitor DPI, Common Controls 6) and version.
+1 ICON "../app/app.ico"
+1 24 "studio.manifest"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION UAGFX_VERSION_NUMBERS
+PRODUCTVERSION UAGFX_VERSION_NUMBERS
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "KWEB Team"
+            VALUE "FileDescription", "uaRO Studio"
+            VALUE "FileVersion", UAGFX_VERSION_TEXT
+            VALUE "OriginalFilename", "uaro-studio.exe"
+            VALUE "ProductName", "uaRO Graphics"
+            VALUE "ProductVersion", UAGFX_VERSION_TEXT
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
