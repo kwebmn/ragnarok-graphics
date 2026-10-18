@@ -448,9 +448,16 @@ struct Config {
     // what is shown follows this one at once (aiKindsShown): a kind off is hidden in a running game
     AiSettings aiNow;
     EffectSettings effects;
-    // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance or ultra - NVIDIA DLSS in the 64-bit
-    // renderer (it starts that renderer; MSAA is off then).
+    // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance, ultra or (2.4.2) custom - NVIDIA DLSS in the
+    // 64-bit renderer (it starts that renderer; MSAA is off then).
     std::string dlss = "off";
+    // 2.4.2: dlss = custom - DLSS at the player's own size (core/dlss_size.hpp): dlss_scale % of the screen (33-100),
+    // or dlss_width x dlss_height when written (0 = by the share; one of them alone: the screen's proportions);
+    // dlss_model - its network: auto (NVIDIA's for the mode), k, j, l or m (Streamline's presets), any mode.
+    int dlssScale = 75;
+    int dlssWidth = 0;
+    int dlssHeight = 0;
+    std::string dlssModel = "auto";
     // 0.75: [quality] taa - the renderer's own temporal anti-aliasing (Direct3D 12, any card; DLSS goes first)
     bool taa = false;
     // Test switches (not on a page): dlss_jitter, dlss_motion = normal or inverted - the sign conventions DLSS

@@ -64,10 +64,20 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::WindowArtXbr, Text::WindowArtAi, Text::WindowArtPixels}, Text::QualityWindowArt,
          Text::QualityWindowArtHint, ""},
         {"quality", "dlss", Page::Smoothing, Control::Choice, 0, 0, 0,
-         {"off", "dlaa", "quality", "balanced", "performance", "ultra"},
+         {"off", "dlaa", "quality", "balanced", "performance", "ultra", "custom"},
          {Text::SmoothOff, Text::DlssDlaa, Text::DlssQuality, Text::DlssBalanced, Text::DlssPerformance,
-          Text::DlssUltra},
+          Text::DlssUltra, Text::DlssCustom},
          Text::SmoothDlss, Text::SmoothDlssHint, ""},
+        // 2.4.2: DLSS at the player's own size and its network
+        {"quality", "dlss_scale", Page::Smoothing, Control::Slider, 33, 100, 1, {}, {}, Text::DlssScale,
+         Text::DlssScaleHint, " %"},
+        {"quality", "dlss_width", Page::Smoothing, Control::Number, 0, 16384, 1, {}, {}, Text::DlssWidth,
+         Text::DlssSizeHint, ""},
+        {"quality", "dlss_height", Page::Smoothing, Control::Number, 0, 16384, 1, {}, {}, Text::DlssHeight,
+         Text::DlssSizeHint, ""},
+        {"quality", "dlss_model", Page::Smoothing, Control::Choice, 0, 0, 0, {"auto", "k", "j", "l", "m"},
+         {Text::DlssModelAuto, Text::DlssModelK, Text::DlssModelJ, Text::DlssModelL, Text::DlssModelM},
+         Text::DlssModel, Text::DlssModelHint, ""},
         {"quality", "taa", Page::Smoothing, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::SmoothTaa,
          Text::SmoothTaaHint, ""},
         {"quality", "msaa", Page::Smoothing, Control::Choice, 0, 0, 0, {"0", "2", "4", "8"},
@@ -579,6 +589,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "display.window_art") return windowArtToken(c.windowArt);
     if (k == "display.crisp_text") return c.crispText ? "1" : "0";
     if (k == "quality.dlss") return c.dlss;
+    if (k == "quality.dlss_scale") return std::to_string(c.dlssScale);  // 2.4.2
+    if (k == "quality.dlss_width") return std::to_string(c.dlssWidth);
+    if (k == "quality.dlss_height") return std::to_string(c.dlssHeight);
+    if (k == "quality.dlss_model") return c.dlssModel;
     if (k == "quality.msaa") return std::to_string(c.msaa);
     if (k == "quality.taa") return c.taa ? "1" : "0";
     if (k == "quality.alpha_to_coverage") return c.alphaToCoverage ? "1" : "0";

@@ -43,6 +43,9 @@ struct Args {
     int log = 1;
     std::string present = "auto";
     std::string dlss = "off";
+    int dlssScale = 75;  // 2.4.2: dlss = custom - its share of the screen, or its size (0: by the share)
+    int dlssWidth = 0, dlssHeight = 0;
+    std::string dlssModel = "auto";
     bool jitterInverted = false;
     bool motionInverted = false;
     int generation = 0;
@@ -79,6 +82,12 @@ Args parseArgs() {
         else if (k == "--log") a.log = std::atoi(v.c_str());
         else if (k == "--present") a.present = v;
         else if (k == "--dlss") a.dlss = v;
+        else if (k == "--dlss-scale") a.dlssScale = std::clamp(std::atoi(v.c_str()), 33, 100);
+        else if (k == "--dlss-size") {
+            const size_t x = v.find('x');
+            a.dlssWidth = x == std::string::npos ? 0 : std::max(0, std::atoi(v.substr(0, x).c_str()));
+            a.dlssHeight = x == std::string::npos ? 0 : std::max(0, std::atoi(v.substr(x + 1).c_str()));
+        } else if (k == "--dlss-model") a.dlssModel = v;
         else if (k == "--dlss-jitter") a.jitterInverted = v == "inverted";
         else if (k == "--dlss-motion") a.motionInverted = v == "inverted";
         else if (k == "--fg") a.generation = std::atoi(v.c_str());
@@ -234,6 +243,7 @@ int Host::run(const Args& a) {
         std::string why;
     } attach{&dlss_, false, "the device was not made"};
     dlss_.setSigns(a.jitterInverted ? -1.0f : 1.0f, a.motionInverted ? -1.0f : 1.0f);
+    dlss_.setOwn(a.dlssScale, a.dlssWidth, a.dlssHeight, a.dlssModel);  // 2.4.2
     if (early) {
         startProgress(this, start::Progress{start::Stage::Dlss, 0, 0});  // 0.40
         std::string why;

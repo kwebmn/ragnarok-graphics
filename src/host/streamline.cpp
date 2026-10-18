@@ -7,6 +7,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "core/dlss_size.hpp"
 #include "sl.h"
 #include "sl_dlss.h"
 #include "sl_dlss_g.h"
@@ -167,6 +168,17 @@ bool Dlss::upgrade(void** iface) { return p_upgrade && iface && *iface && p_upgr
 
 HMODULE Dlss::module() const { return g_sl; }
 
+void Dlss::setOwn(int percent, int width, int height, const std::string& model) {
+    ownPercent_ = percent;
+    ownWidth_ = width;
+    ownHeight_ = height;
+    preset_ = model == "k"   ? uint32_t(sl::DLSSPreset::ePresetK)
+              : model == "j" ? uint32_t(sl::DLSSPreset::ePresetJ)
+              : model == "l" ? uint32_t(sl::DLSSPreset::ePresetL)
+              : model == "m" ? uint32_t(sl::DLSSPreset::ePresetM)
+                             : 0;
+}
+
 bool Dlss::init(const std::string& folder, const std::string& logFolder, const std::string& mode, int generation,
                 bool late, std::string& error) {
     generation_ = generation >= 2 && generation <= 4 ? generation : 0;
@@ -175,6 +187,10 @@ bool Dlss::init(const std::string& folder, const std::string& logFolder, const s
             mode_ = uint32_t(m.mode);
             name_ = m.name;
         }
+    if (mode == "custom") {  // 2.4.2: the mode follows its size (renderSize)
+        own_ = true;
+        mode_ = uint32_t(sl::DLSSMode::eMaxQuality);
+    }
     if (!mode_) {
         error = "no DLSS mode \"" + mode + "\"";
         return false;
@@ -271,6 +287,7 @@ bool Dlss::attach(ID3D12Device* device, std::string& error) {
 }
 
 bool Dlss::renderSize(int outW, int outH, int& renderW, int& renderH) {
+    if (own_) return ownSize(outW, outH, renderW, renderH);
     sl::DLSSOptions o;
     o.mode = sl::DLSSMode(mode_);
     o.outputWidth = uint32_t(outW);
@@ -286,6 +303,51 @@ bool Dlss::renderSize(int outW, int outH, int& renderW, int& renderH) {
     return true;
 }
 
+// 2.4.2: the player's own size - each mode's range asked, the one that takes it (the nearest it takes when none does)
+bool Dlss::ownSize(int outW, int outH, int& renderW, int& renderH) {
+    std::vector<dlss::Range> ranges;
+    for (const Mode& m : kModes) {
+        sl::DLSSOptions o;
+        o.mode = m.mode;
+        o.outputWidth = uint32_t(outW);
+        o.outputHeight = uint32_t(outH);
+        sl::DLSSOptimalSettings s;
+        if (slDLSSGetOptimalSettings(o, s) != sl::Result::eOk || !s.optimalRenderWidth || !s.optimalRenderHeight)
+            continue;
+        dlss::Range r;
+        r.mode = dlss::Mode(int(&m - kModes) + 1);  // kModes in dlss::Mode's order
+        r.width = int(s.optimalRenderWidth);
+        r.height = int(s.optimalRenderHeight);
+        r.minWidth = int(s.renderWidthMin ? s.renderWidthMin : s.optimalRenderWidth);
+        r.minHeight = int(s.renderHeightMin ? s.renderHeightMin : s.optimalRenderHeight);
+        r.maxWidth = int(s.renderWidthMax ? s.renderWidthMax : s.optimalRenderWidth);
+        r.maxHeight = int(s.renderHeightMax ? s.renderHeightMax : s.optimalRenderHeight);
+        ranges.push_back(r);
+    }
+    const dlss::Size want = dlss::asked(outW, outH, ownPercent_, ownWidth_, ownHeight_);
+    const dlss::Pick p = dlss::pick(ranges, want);
+    if (p.mode == dlss::Mode::None) {
+        failed("slDLSSGetOptimalSettings: no mode for " + std::to_string(outW) + "x" + std::to_string(outH));
+        return false;
+    }
+    const Mode& m = kModes[int(p.mode) - 1];
+    if (mode_ != uint32_t(m.mode)) optionsW_ = optionsH_ = 0;  // the options set again for the mode
+    mode_ = uint32_t(m.mode);
+    renderW = p.size.width;
+    renderH = p.size.height;
+    ownName_ = "DLSS " + std::to_string(renderW) + "x" + std::to_string(renderH);
+    if (outW != ownForW_ || outH != ownForH_) {
+        for (const dlss::Range& r : ranges)
+            if (r.mode == p.mode)
+                LOG_INFO("DLSS: own size %dx%d of %dx%d (asked %dx%d) - %s, which takes %dx%d to %dx%d", renderW,
+                         renderH, outW, outH, want.width, want.height, m.name, r.minWidth, r.minHeight, r.maxWidth,
+                         r.maxHeight);
+        ownForW_ = outW;
+        ownForH_ = outH;
+    }
+    return true;
+}
+
 bool Dlss::setOptions(int outW, int outH) {
     if (outW == optionsW_ && outH == optionsH_) return true;
     sl::DLSSOptions o;
@@ -296,6 +358,9 @@ bool Dlss::setOptions(int outW, int outH) {
     o.dlaaPreset = o.qualityPreset = o.balancedPreset = sl::DLSSPreset::ePresetK;  // the transformer model
     o.performancePreset = sl::DLSSPreset::ePresetM;
     o.ultraPerformancePreset = sl::DLSSPreset::ePresetL;
+    if (preset_)  // 2.4.2: the player's network for every mode
+        o.dlaaPreset = o.qualityPreset = o.balancedPreset = o.performancePreset = o.ultraPerformancePreset =
+            sl::DLSSPreset(preset_);
     const sl::Result r = slDLSSSetOptions(kViewport, o);
     if (r != sl::Result::eOk) {
         failed(result("slDLSSSetOptions", r));

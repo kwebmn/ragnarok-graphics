@@ -2983,6 +2983,36 @@ const Entry kTexts[] = {
     {"setup.exe's alone so far: this app takes them over once the game is closed",
      "поки лише від setup.exe: утиліта забере їх, коли гру буде закрито",
      "пока только от setup.exe: утилита заберёт их, когда игра будет закрыта"},
+    // 2.4.2: DLSS at the player's own size, its network
+    {"Own size", "Свій розмір", "Свой размер"},
+    {"Own size: share of the screen", "Свій розмір: частка екрана", "Свой размер: доля экрана"},
+    {"With DLSS on Own size: the world is drawn at this share of the screen, and DLSS enlarges it to the screen. 100 % "
+     "is DLAA. A size DLSS does not take is brought to the nearest one it does.",
+     "Для DLSS «Свій розмір»: світ малюється в такій частці екрана, а DLSS збільшує його до екрана. 100 % — це DLAA. "
+     "Розмір, якого DLSS не бере, зводиться до найближчого, який бере.",
+     "Для DLSS «Свой размер»: мир рисуется в такой доле экрана, а DLSS увеличивает его до экрана. 100 % — это DLAA. "
+     "Размер, который DLSS не берёт, сводится к ближайшему, который берёт."},
+    {"Own size: width", "Свій розмір: ширина", "Свой размер: ширина"},
+    {"Own size: height", "Свій розмір: висота", "Свой размер: высота"},
+    {"In pixels, by hand, over the share: 0 is by the share. One of them alone: the other one follows the screen's "
+     "proportions.",
+     "У пікселях, вручну, замість частки: 0 — за часткою. Якщо задано лише одне, друге — за пропорціями екрана.",
+     "В пикселях, вручную, вместо доли: 0 — по доле. Если задано только одно, второе — по пропорциям экрана."},
+    {"DLSS model", "Модель DLSS", "Модель DLSS"},
+    {"The network DLSS draws with, in any mode. Auto is NVIDIA's for the mode: K for DLAA, Quality and Balanced, M "
+     "for Performance, L for Ultra performance.",
+     "Мережа, якою малює DLSS, у будь-якому режимі. «Авто» — вибір NVIDIA для режиму: K для DLAA, «Якості» й "
+     "«Балансу», M для «Продуктивності», L для «Ультрапродуктивності».",
+     "Сеть, которой рисует DLSS, в любом режиме. «Авто» — выбор NVIDIA для режима: K для DLAA, «Качества» и "
+     "«Баланса», M для «Производительности», L для «Ультрапроизводительности»."},
+    {"Auto", "Авто", "Авто"},
+    {"K - the best picture", "K — найкраща картинка", "K — лучшая картинка"},
+    {"J - less smearing, more flicker", "J — менше шлейфів, більше мерехтіння", "J — меньше шлейфов, больше мерцания"},
+    {"L - sharper and steadier, heavier", "L — різкіша й стабільніша, важча", "L — резче и стабильнее, тяжелее"},
+    {"M - near L, faster", "M — близька до L, швидша", "M — близко к L, быстрее"},
+    {"Own size on this screen: {1}×{2} of {3}×{4} ({5} %); DLSS may bring it to the nearest size it takes.",
+     "Свій розмір на цьому екрані: {1}×{2} з {3}×{4} ({5} %); DLSS може звести його до найближчого, який бере.",
+     "Свой размер на этом экране: {1}×{2} из {3}×{4} ({5} %); DLSS может свести его к ближайшему, который берёт."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

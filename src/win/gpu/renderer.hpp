@@ -29,7 +29,11 @@ struct BridgeOptions {
     std::string gameDir;             // its log, uaro-render64.log, goes there
     std::string present = "auto";    // auto: the game's window, else a composition surface; window; composition
     bool dpiScale = true;            // composition: scaled for Windows scaling of a DPI-unaware game window
-    std::string dlss = "off";        // off, dlaa, quality, balanced, performance, ultra
+    std::string dlss = "off";        // off, dlaa, quality, balanced, performance, ultra, custom (2.4.2)
+    int dlssScale = 75;              // 2.4.2: custom - % of the screen, or width x height when written (0: by %)
+    int dlssWidth = 0;
+    int dlssHeight = 0;
+    std::string dlssModel = "auto";  // 2.4.2: DLSS's network - auto, k, j, l or m
     int frameGeneration = 0;          // 2-4: DLSS frame generation, 0 none
     bool dlssJitterInverted = false;  // test switches ([quality] dlss_jitter, dlss_motion)
     bool dlssMotionInverted = false;

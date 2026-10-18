@@ -426,8 +426,16 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.alphaToCoverage);
         } else if (key == "quality.dlss") {
             if (val == "off" || val == "dlaa" || val == "quality" || val == "balanced" || val == "performance" ||
-                val == "ultra")
+                val == "ultra" || val == "custom")
                 c.dlss = val;
+        } else if (key == "quality.dlss_scale") {  // 2.4.2
+            toInt(val, 33, 100, c.dlssScale);
+        } else if (key == "quality.dlss_width") {
+            toInt(val, 0, 16384, c.dlssWidth);
+        } else if (key == "quality.dlss_height") {
+            toInt(val, 0, 16384, c.dlssHeight);
+        } else if (key == "quality.dlss_model") {
+            if (val == "auto" || val == "k" || val == "j" || val == "l" || val == "m") c.dlssModel = val;
         } else if (key == "quality.taa") {
             setBool(val, c.taa);
         } else if (key == "quality.dlss_jitter") {

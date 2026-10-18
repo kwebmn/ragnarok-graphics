@@ -5,7 +5,9 @@
 
 #include "app/page.hpp"
 #include "app/setting_ids.hpp"
+#include "core/dlss_size.hpp"
 #include "core/live_config.hpp"
+#include "core/scale.hpp"
 #include "core/settings/auto_setup.hpp"
 #include "core/settings/report.hpp"
 
@@ -102,12 +104,18 @@ public:
         } else if (s->control == Control::Choice && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < s->tokens.size()) m.setToken(*s, s->tokens[size_t(sel)]);
+            if (sectionKey(*s) == "quality.dlss" && !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host_.rebuild();
+        } else if (s->control == Control::Choice && code == CBN_CLOSEUP && sectionKey(*s) == "quality.dlss") {
+            host_.rebuild();  // 2.4.2: the rows that come with the mode, once its list is closed
+            return;
         } else if (s->control == Control::Number && code == EN_KILLFOCUS) {
             const std::string text = controlText(ctl);
-            if (validToken(*s, text))
+            if (validToken(*s, text)) {
                 m.setToken(*s, text);
-            else
+                showOwnSize();
+            } else {
                 host_.rebuild();  // back to the value it had
+            }
         } else {
             return;
         }
@@ -133,6 +141,7 @@ public:
         const std::string token = std::to_string(v);
         SetDlgItemTextW(host_.window(), id + 1, wide(token + s->unit).c_str());
         m.setToken(*s, token);
+        showOwnSize();
         // While the game runs a slider applies when it is let go (spec §6): the driver reads the ini within a second.
         if (code == TB_ENDTRACK && m.now().gameRunning && appliesNow(sectionKey(*s))) {
             const std::wstring err = m.writeNow(*s, token, host_.lang());
@@ -417,12 +426,55 @@ private:
         p.note(t(Text::PauseNote));
     }
 
+    // 2.4.2: DLSS's own size shows under Own size, its model with DLSS on
+    bool shown(const IniSetting& s) const {
+        const std::string k = sectionKey(s);
+        if (k.compare(0, 13, "quality.dlss_") != 0) return true;
+        const std::string dlss = host_.model().token(*findSetting("quality.dlss"));
+        return k == "quality.dlss_model" ? dlss != "off" : dlss == "custom";
+    }
+
+    // 2.4.2: the picture DLSS enlarges the world to - the game's size times the screen's scale (render_scale is not
+    // used with DLSS), as the Screen page plans it; 0x0 without a plan.
+    Size dlssScreen() const {
+        const Model& m = host_.model();
+        const ScreenPlan plan = m.screenPlan();
+        const std::vector<MonitorInfo>& monitors = m.system().monitors;
+        if (plan.problem != ScreenProblem::None || plan.game.width <= 0 || plan.game.height <= 0 || monitors.empty())
+            return {};
+        const ScreenChoice c = m.screenChoice();
+        const size_t index = c.monitor >= 0 && size_t(c.monitor) < monitors.size() ? size_t(c.monitor) : 0;
+        const Size out = c.show == Show::Fullscreen ? monitors[index].pixels
+                         : c.window.width > 0       ? c.window
+                                                    : plan.game;
+        const bool high = m.token(*findSetting("display.high_resolution")) == "1";
+        const ScalePlan s = planScale(plan.game.width, plan.game.height, out.width, out.height, 100, high);
+        return {s.targetWidth, s.targetHeight};
+    }
+
+    // 2.4.2: the own size on this screen, under its rows
+    std::wstring ownSizeText() const {
+        const Model& m = host_.model();
+        const auto number = [&m](const char* key) { return std::atoi(m.token(*findSetting(key)).c_str()); };
+        const Size out = dlssScreen();
+        const dlss::Size want = dlss::asked(out.width, out.height, number("quality.dlss_scale"),
+                                            number("quality.dlss_width"), number("quality.dlss_height"));
+        const int share = out.width > 0 ? (want.width * 100 + out.width / 2) / out.width : 0;
+        return tf(Text::DlssCustomNow, {std::to_string(want.width), std::to_string(want.height),
+                                        std::to_string(out.width), std::to_string(out.height), std::to_string(share)});
+    }
+
+    void showOwnSize() {  // again as its rows change
+        if (ownSize_) SetWindowTextW(ownSize_, ownSizeText().c_str());
+    }
+
     void buildRows(Panel& p) {
         Model& m = host_.model();
         const std::vector<IniSetting>& all = iniSettings();
+        ownSize_ = nullptr;
         for (size_t i = 0; i < all.size(); ++i) {
             const IniSetting& s = all[i];
-            if (s.page != which_) continue;
+            if (s.page != which_ || !shown(s)) continue;
             const int id = rowId(i);
             const std::string token = m.token(s);
             switch (s.control) {
@@ -449,13 +501,20 @@ private:
                 case Control::Line:  // the game's key only: a key of uaro-graphics.ini is never a line of text
                     break;
             }
-            if (!appliesNow(sectionKey(s))) p.note(t(Text::AfterRestart));
+            if (sectionKey(s) == "quality.dlss_height" && dlssScreen().width > 0)
+                ownSize_ = p.note(ownSizeText(), Tone::Normal);
+            // 2.4.2: one note under rows in a row that apply at the next start
+            size_t next = i + 1;
+            while (next < all.size() && (all[next].page != which_ || !shown(all[next]))) ++next;
+            if (!appliesNow(sectionKey(s)) && (next == all.size() || appliesNow(sectionKey(all[next]))))
+                p.note(t(Text::AfterRestart));
         }
         p.gap();
         p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
     }
 
     settings::Page which_;
+    HWND ownSize_ = nullptr;              // 2.4.2: the note with DLSS's own size on this screen
     bool held_ = false;                   // a row is grey: the game runs and writes it itself
     std::vector<std::string> skinWords_;  // the skin list's words, in its order
     std::vector<std::string> gpuWords_;   // 0.50.2: the graphics card list's [renderer] gpu words, in its order

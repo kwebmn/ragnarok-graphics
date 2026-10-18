@@ -87,7 +87,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "renderer.api" && k != "renderer.gpu" && k != "report.auto" &&
                                 k != "display.ui_native" &&
                                 k != "display.hdr" &&
-                                k != "quality.dlss" &&
+                                k.compare(0, 12, "quality.dlss") != 0 &&  // 2.4.2: its own size and model too
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
                                 k.compare(0, 3, "ai.") != 0 && k.compare(0, 6, "sound.") != 0));
     }

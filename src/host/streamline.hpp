@@ -29,8 +29,11 @@ public:
         jitterSign_ = jitter;
         motionSign_ = motion;
     }
+    // 2.4.2: mode custom - the share of the screen (%), or the size when written (0: by the share), drawn in the mode
+    // whose range takes it (core/dlss_size.hpp); the network for every mode: auto, k, j, l or m. Before init.
+    void setOwn(int percent, int width, int height, const std::string& model);
 
-    const char* name() const override { return name_; }
+    const char* name() const override { return own_ ? ownName_.c_str() : name_; }
     bool renderSize(int outW, int outH, int& renderW, int& renderH) override;
     bool evaluate(const Frame& f) override;
     bool generates() const override { return generationReady_; }
@@ -42,6 +45,7 @@ public:
 
 private:
     bool setOptions(int outW, int outH);
+    bool ownSize(int outW, int outH, int& renderW, int& renderH);  // renderSize of mode custom
     void* token();  // this frame's sl::FrameToken: one for every Streamline call of a frame
     void marker(uint32_t m);  // sl::PCLMarker
     void startStats();         // frame generation came on
@@ -51,6 +55,11 @@ private:
 
     bool started_ = false;
     uint32_t mode_ = 0;  // sl::DLSSMode
+    bool own_ = false;  // 2.4.2: mode custom (setOwn), mode_ the one that takes its size
+    int ownPercent_ = 75, ownWidth_ = 0, ownHeight_ = 0;
+    uint32_t preset_ = 0;  // 2.4.2: sl::DLSSPreset for every mode, 0 NVIDIA's for each
+    std::string ownName_ = "DLSS";
+    int ownForW_ = 0, ownForH_ = 0;  // the output its size was logged for
     const char* name_ = "DLSS";
     uint32_t frame_ = 0;
     int optionsW_ = 0;  // the output size the options were set for

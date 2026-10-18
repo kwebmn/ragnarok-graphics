@@ -185,6 +185,10 @@ bool Context::open(std::string& error) {
         o.dpiScale = config.bridgeDpiScale;
         o.logLevel = int(config.logLevel);
         o.dlss = config.dlss;
+        o.dlssScale = config.dlssScale;  // 2.4.2
+        o.dlssWidth = config.dlssWidth;
+        o.dlssHeight = config.dlssHeight;
+        o.dlssModel = config.dlssModel;
         o.dlssJitterInverted = config.dlssJitterInverted;
         o.dlssMotionInverted = config.dlssMotionInverted;
         o.frameGeneration = config.dlss != "off" ? config.frameGeneration : 0;  // it uses DLSS's depth and motion

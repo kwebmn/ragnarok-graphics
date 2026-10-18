@@ -299,6 +299,8 @@ enum class Text : uint16_t {
     FxRainSplashesHint, FxStars, FxStarsHint, FxLowFog, FxLowFogHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
     FxSkyRaysHint, FxTreeSeasons, FxTreeSeasonsHint, FxDragonflies, FxDragonfliesHint,
     DiagRegistryOld,  // 2.4.2
+    DlssCustom, DlssScale, DlssScaleHint, DlssWidth, DlssHeight, DlssSizeHint, DlssModel, DlssModelHint, DlssModelAuto,
+    DlssModelK, DlssModelJ, DlssModelL, DlssModelM, DlssCustomNow,
     Count
 };
 
