@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 
+#include <atomic>
 #include <memory>
 #include <string>
 
@@ -42,6 +43,8 @@ private:
     void takeOut();
     void toggleOwn();
     void jobDone(int64_t id);
+    void picked();  // L2: link\pick.txt - the texture the game picked, shown
+    static DWORD WINAPI pickMain(void* self);
     void loadSession();
     void saveSession();
 
@@ -62,6 +65,8 @@ private:
     std::unique_ptr<LogTab> log_;
     int tab_ = 0;
     std::wstring lastError_;  // the last job that failed, on the bar until the next one
+    HANDLE pickEvent_ = nullptr, pickThread_ = nullptr;  // the game's pick (Local\uaro-studio-pick)
+    std::atomic<bool> closing_{false};
 };
 
 }  // namespace uagfx::studio

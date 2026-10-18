@@ -8,6 +8,7 @@
 #include "app/text.hpp"
 #include "app/ui.hpp"
 #include "core/ai/chain.hpp"
+#include "core/studio_link.hpp"
 #include "studio/make_dialog.hpp"
 #include "studio/making.hpp"
 #include "studio/messages.hpp"
@@ -124,6 +125,9 @@ void StudioWindow::build() {
     if (session_.paused) jobs_->pause();
     else catalog_->update(hwnd_);
     SetTimer(hwnd_, kBarTimer, 2000, nullptr);
+    // L2: the game's Ctrl+Shift+F8 sets this event after writing link\pick.txt
+    pickEvent_ = CreateEventW(nullptr, FALSE, FALSE, app::wide(kPickEvent).c_str());
+    if (pickEvent_) pickThread_ = CreateThread(nullptr, 0, &StudioWindow::pickMain, this, 0, nullptr);
     showBar();
 }
 
@@ -301,6 +305,29 @@ void StudioWindow::jobDone(int64_t id) {
     showBar();
 }
 
+DWORD WINAPI StudioWindow::pickMain(void* self) {
+    auto* w = static_cast<StudioWindow*>(self);
+    while (!w->closing_ && WaitForSingleObject(w->pickEvent_, INFINITE) == WAIT_OBJECT_0)
+        if (!w->closing_) PostMessageW(w->hwnd_, kPicked, 0, 0);
+    return 0;
+}
+
+void StudioWindow::picked() {
+    std::string text;
+    Pick p;
+    if (!readWhole(linkFolder() + L"\\pick.txt", text) || !parsePick(text, p)) return;
+    if (log_) log_->add(L"pick: " + app::wide(p.key) + L" (" + app::wide(p.kind) + L", " + app::wide(p.how) + L")");
+    showTab(0);
+    TabCtrl_SetCurSel(tabs_, 0);
+    textures_->showKey(p.key);
+    // in front of the game: Windows lets a window that was not active ask for it, or flash
+    if (IsIconic(hwnd_)) ShowWindow(hwnd_, SW_RESTORE);
+    if (!SetForegroundWindow(hwnd_)) {
+        FLASHWINFO f{sizeof f, hwnd_, FLASHW_ALL | FLASHW_TIMERNOFG, 0, 0};
+        FlashWindowEx(&f);
+    }
+}
+
 void StudioWindow::togglePause() {
     if (jobs_->paused()) {  // G4: the newest engine at the next job; the catalog up to date with the archives
         jobs_->resume();
@@ -378,6 +405,9 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kJobDone:
             jobDone(int64_t(wp));
             return 0;
+        case kPicked:
+            picked();
+            return 0;
         case kEngineLog: {
             std::unique_ptr<std::string> line(reinterpret_cast<std::string*>(lp));
             if (log_) log_->add(L"engine: " + app::wide(*line));
@@ -393,6 +423,13 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_DESTROY:
             KillTimer(hwnd_, kBarTimer);
+            closing_ = true;
+            if (pickThread_) {
+                SetEvent(pickEvent_);
+                WaitForSingleObject(pickThread_, 2000);
+                CloseHandle(pickThread_);
+            }
+            if (pickEvent_) CloseHandle(pickEvent_);
             jobs_.reset();  // the engine ends, the queue is written
             inspector_.reset();
             textures_.reset();

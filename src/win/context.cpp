@@ -386,9 +386,28 @@ void Context::present(const Rect& source, bool waitForVblank) {
             LOG_INFO("X-ray: %s (Ctrl+Shift+F9)", on ? "on" : "off");
         }
     }
+    // 2.3: Ctrl+Shift+F8 - the texture under the game's cursor into uaRO Studio; Ctrl+Shift+F7 - its picture off in
+    // the game, and on again (A/B of one texture)
+    const bool ctrlShift = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
+                           GetAsyncKeyState(VK_SHIFT) < 0;
+    uint8_t once = 0;
+    int cursorX = 0, cursorY = 0;
+    if (pickKey_.pressed(ctrlShift && GetAsyncKeyState(VK_F8) < 0)) {
+        POINT p{};
+        RECT r{};
+        if (readGameCursor(cursorX, cursorY)) {  // the game's own (DirectInput's), in its pixels
+            once |= 2;
+        } else if (GetCursorPos(&p) && ScreenToClient(window, &p) && GetClientRect(window, &r) && r.right > 0 &&
+                   r.bottom > 0) {  // another build: Windows' cursor, the window's pixels to the game's
+            cursorX = int(int64_t(p.x) * shadow.width() / r.right);
+            cursorY = int(int64_t(p.y) * shadow.height() / r.bottom);
+            once |= 2;
+        }
+    }
+    if (abKey_.pressed(ctrlShift && GetAsyncKeyState(VK_F7) < 0)) once |= 4;
     const uint8_t studio = config.xray && enhanced_ ? 1 : 0;  // Pause: the game's own everywhere, no tint
-    if (studio != studioSent_) {
-        renderer->setStudio(studio, 0, 0);
+    if (studio != studioSent_ || once) {
+        renderer->setStudio(uint8_t(studio | once), cursorX, cursorY);
         studioSent_ = studio;
     }
     // 0.54: Ctrl+Shift+F12 - the picture as shown (4K, not the game's 1920x1080) into the game's ScreenShot folder

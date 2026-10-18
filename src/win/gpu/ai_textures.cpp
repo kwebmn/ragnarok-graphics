@@ -1320,6 +1320,11 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         drop(item);
         return;
     }
+    if (hidden_.count(item.key)) {  // 2.3: its picture off for A/B (Ctrl+Shift+F7)
+        item.how = uint8_t(studio::How::Hidden);
+        drop(item);
+        return;
+    }
     // 0.22.2: soft light alone - a torch's glow, a halo, a gradient - stays the game's, also when the pack has a
     // picture of it: the network would turn its gradients into bands. 0.39.2: so does a picture shaped by a soft alpha
     // (smoke, glowing particles): the network's alpha is all or nothing.
@@ -1457,6 +1462,56 @@ void AiTextures::setMap(const std::string& map) {
     writeSeen();  // 2.3: the map left
     map_ = map;
     ++mapSerial_;
+}
+
+void AiTextures::writePick(uint32_t id, int x, int y) {
+    const auto it = items_.find(id);
+    if (it == items_.end()) {
+        LOG_INFO("pick: no AI texture under the cursor at %d, %d", x, y);
+        return;
+    }
+    const Item& item = it->second;
+    picked_ = item.key;
+    studio::Pick p;
+    p.key = item.key;
+    p.kind = ai::kindName(item.kind);
+    p.how = studio::howName(studio::How(item.how));
+    p.map = map_;
+    p.picture = item.name;
+    p.x = x;
+    p.y = y;
+    char local[MAX_PATH] = {};
+    const DWORD n = GetEnvironmentVariableA("LOCALAPPDATA", local, MAX_PATH);
+    if (!n || n >= MAX_PATH) return;
+    const std::string folder = std::string(local) + "\\" + studio::kFolder;
+    CreateDirectoryA((std::string(local) + "\\uaroGraphics").c_str(), nullptr);
+    CreateDirectoryA(folder.c_str(), nullptr);
+    CreateDirectoryA((folder + "\\link").c_str(), nullptr);
+    win::writeFileAtomic(folder + "\\link\\pick.txt", studio::pickText(p));
+    if (HANDLE e = OpenEventA(EVENT_MODIFY_STATE, FALSE, studio::kPickEvent)) {  // the studio running: it opens it
+        SetEvent(e);
+        CloseHandle(e);
+    }
+    LOG_INFO("pick: %s (%s, %s) at %d, %d", p.key.c_str(), p.kind.c_str(), p.how.c_str(), x, y);
+}
+
+void AiTextures::toggleHidden() {
+    if (picked_.empty()) return;
+    const bool hide = hidden_.insert(picked_).second;
+    if (!hide) hidden_.erase(picked_);
+    for (auto& e : items_) {
+        Item& item = e.second;
+        if (item.key != picked_) continue;
+        if (hide) {  // the game's texture where its picture was
+            dropAi(e.first);
+            item.state = Item::Skipped;
+            item.how = uint8_t(studio::How::Hidden);
+        } else {  // drawn again, its picture is taken again
+            item.state = Item::Kept;
+            item.how = uint8_t(studio::How::Missing);
+        }
+    }
+    LOG_INFO("A/B: %s %s", picked_.c_str(), hide ? "the game's texture" : "its picture again");
 }
 
 void AiTextures::noteSeen(Item& item) {

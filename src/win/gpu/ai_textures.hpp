@@ -75,6 +75,11 @@ public:
     bool cellShown(uint8_t source) const { return aiCellShown(source, kindsShown, spritesShown); }
     // 2.3, uaRO Studio's X-ray: how a texture is shown (studio::How); false: not one of the AI's (a lightmap, a
     // sprite cache, a texture outside the sides).
+    // 2.3, uaRO Studio (L2): the texture picked under the cursor into %LOCALAPPDATA%\uaroGraphics\studio\link\pick.txt
+    // and the studio told (its event); 0: nothing of the AI's was there. toggleHidden: that texture's picture off in
+    // the game, or on again (A/B of one texture).
+    void writePick(uint32_t id, int x, int y);
+    void toggleHidden();
     bool howOf(uint32_t id, uint8_t& how) const {
         const auto it = items_.find(id);
         if (it == items_.end()) return false;
@@ -295,6 +300,8 @@ private:
     int netOfToken(const std::string& dir, const std::string& token, std::string& error);
     std::string modelDir_;  // 2.3: the studio's engine - where netForModel finds the models
     std::string seenDir_;   // 2.3: uaro-graphics\seen ("" no reports: the pack builder, the studio's engine)
+    std::string picked_;    // 2.3: the key picked last (Ctrl+Shift+F8)
+    std::unordered_set<std::string> hidden_;  // 2.3: keys whose pictures are off (Ctrl+Shift+F7)
     std::unordered_map<std::string, studio::Seen> seenOnMap_;
     bool kindOn_[ai::kKinds] = {};              // 0.42: the kinds shown improved, from the pack
     bool generate_ = false;                     // [ai] generate: the network makes what is missing

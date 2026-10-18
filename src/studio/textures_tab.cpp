@@ -189,6 +189,7 @@ void TexturesTab::fillTree() {
         return TreeView_InsertItem(tree_, &in);
     };
     const HTREEITEM all = add(TVI_ROOT, t(settings::Text::StudioNavAll), "");
+    all_ = all;
     const HTREEITEM states = add(TVI_ROOT, t(settings::Text::StudioNavStates), "");
     add(states, t(settings::Text::StudioNavMissing), "state:missing");
     add(states, t(settings::Text::StudioNavInPack), "state:inpack");
@@ -258,6 +259,13 @@ void TexturesTab::rowsReady(uint64_t generation, RowsResult* result) {
     rows_ = std::move(r->rows);
     orphans_ = std::move(r->orphans);
     ListView_SetItemCountEx(list_, int(rows_.size()), LVSICF_NOSCROLL);
+    if (selectFirst_ && !rows_.empty()) {  // a texture picked in the game: shown at once
+        selectFirst_ = false;
+        ListView_SetItemState(list_, -1, 0, LVIS_SELECTED | LVIS_FOCUSED);
+        ListView_SetItemState(list_, 0, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+        ListView_EnsureVisible(list_, 0, FALSE);
+        if (onSelect) onSelect(rows_[0]);
+    }
     size_t all = 0;
     for (const catalog::FileEntry& f : shown_->files) all += f.pictures.size();
     SetWindowTextW(count_, app::wtrf(lang_, settings::Text::StudioRowsCount,
@@ -409,6 +417,17 @@ bool TexturesTab::notify(const NMHDR* n, LRESULT& result) {
         }
     }
     return false;
+}
+
+void TexturesTab::showKey(const std::string& key) {
+    if (all_) TreeView_SelectItem(tree_, all_);  // its row wherever the navigator was
+    filter_now_.nav.clear();
+    filter_now_.keys.clear();
+    filter_now_.text = key;
+    selectFirst_ = true;
+    SetWindowTextW(filter_, app::wide(key).c_str());
+    KillTimer(parent_, kFilterTimer);  // the edit's change asks for a rebuild; this one is it
+    rebuild();
 }
 
 void TexturesTab::command(int id, int code) {

@@ -1,0 +1,71 @@
+#include <cstring>
+#include <vector>
+
+#include "core/d3d7.hpp"
+#include "core/frame.hpp"
+#include "core/pick.hpp"
+#include "test.hpp"
+
+using namespace uagfx;
+
+namespace {
+
+// A TL1 vertex (32 bytes): x, y, z, rhw, then colours and uv
+void vertex(std::vector<uint8_t>& out, float x, float y) {
+    uint8_t v[32] = {};
+    const float xyzw[4] = {x, y, 0.5f, 1.0f};
+    std::memcpy(v, xyzw, sizeof xyzw);
+    out.insert(out.end(), v, v + 32);
+}
+
+// A quad from (x0, y0) to (x1, y1) as a triangle strip of texture `tex`
+void quad(FrameRecord& f, float x0, float y0, float x1, float y1, uint32_t tex,
+          uint32_t primitive = d3d7::PT_TRIANGLESTRIP) {
+    std::vector<uint8_t> v;
+    vertex(v, x0, y0);
+    vertex(v, x1, y0);
+    vertex(v, x0, y1);
+    vertex(v, x1, y1);
+    DrawCmd d;
+    d.state = f.addState(DrawSetup{});
+    d.primitive = primitive;
+    d.fvf = d3d7::FVF_TL1;
+    d.texture[0] = tex;
+    if (primitive == d3d7::PT_TRIANGLELIST) {
+        const uint16_t idx[6] = {0, 1, 2, 2, 1, 3};
+        f.draw(d, v.data(), 4, idx, 6);
+    } else {
+        f.draw(d, v.data(), 4, nullptr, 0);
+    }
+}
+
+}  // namespace
+
+TEST(pick_finds_the_last_draw_under_the_point) {
+    // 2.3, uaRO Studio (L2): the texture under the cursor - the frame's last draw whose triangles hold its pixel
+    FrameRecord f;
+    quad(f, 0, 0, 100, 100, 7);                                // the ground
+    quad(f, 40, 40, 60, 60, 9, d3d7::PT_TRIANGLELIST);         // a sprite over it, indexed
+    quad(f, 200, 200, 210, 210, 11);                           // something elsewhere
+    const auto any = [](const DrawCmd& d) { return d.texture[0] != 0; };
+    CHECK_EQ(pick::lastDrawAt(f, 50, 50, any), 1);
+    CHECK_EQ(pick::lastDrawAt(f, 10, 90, any), 0);
+    CHECK_EQ(pick::lastDrawAt(f, 150, 150, any), -1);
+    // what the caller does not want (the interface over the world, say) is passed over
+    const auto notNine = [](const DrawCmd& d) { return d.texture[0] != 9; };
+    CHECK_EQ(pick::lastDrawAt(f, 50, 50, notNine), 0);
+}
+
+TEST(pick_edges_count_once) {
+    CHECK(pick::inTriangle(0, 0, 10, 0, 0, 10, 2, 2));
+    CHECK(!pick::inTriangle(0, 0, 10, 0, 0, 10, 8, 8));
+    CHECK(pick::inTriangle(0, 0, 0, 10, 10, 0, 2, 2));  // either winding
+    CHECK(pick::inTriangle(0, 0, 10, 0, 0, 10, 0, 5));  // on an edge: in
+    CHECK(!pick::inTriangle(0, 0, 10, 0, 20, 0, 5, 0));  // a triangle of no area holds nothing
+    // a fan of a whole quad
+    FrameRecord f;
+    quad(f, 0, 0, 10, 10, 3, d3d7::PT_TRIANGLEFAN);
+    // a fan of the corners 0,1,2,3 in a strip's order covers (0,1,2) and (0,2,3): not the right one's middle
+    CHECK_EQ(pick::lastDrawAt(f, 9, 5, [](const DrawCmd&) { return true; }), -1);
+    CHECK_EQ(pick::lastDrawAt(f, 1, 9, [](const DrawCmd&) { return true; }), 0);
+}

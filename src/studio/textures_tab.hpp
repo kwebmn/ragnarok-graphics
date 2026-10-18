@@ -49,6 +49,7 @@ public:
     std::function<void(const Row& row)> onSelect;  // the inspector's
     const std::vector<std::string>& orphans() const { return orphans_; }
     std::vector<Row> selection() const;  // the rows selected in the list
+    void showKey(const std::string& key);  // L2: every texture, filtered by the key; its first row shown
 
 private:
     enum Id : int { kTree = 300, kFilter, kList, kCount };
@@ -73,6 +74,8 @@ private:
     std::vector<std::string> orphans_;
     std::shared_ptr<const catalog::Catalog> shown_;
     uint64_t generation_ = 0;
+    bool selectFirst_ = false;  // the next rows: the first one selected and shown (a pick from the game)
+    HTREEITEM all_ = nullptr;
     int sortColumn_ = 1;
     bool sortDown_ = false;
 };

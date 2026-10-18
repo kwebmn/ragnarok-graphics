@@ -19,15 +19,20 @@ bool read(uint32_t address, void* out, size_t size) {
            got == size;
 }
 
-// The game mode while it shows a world; 0 at the login and the character list, or in another build of the exe.
-uint32_t gameMode() {
-    static int build = -1;  // known once: the exe does not change while it runs
+// The exe the addresses belong to: known once (it does not change while it runs).
+bool knownBuild() {
+    static int build = -1;
     if (build < 0) {
         float constants[5];
         build = read(camera::kConstants, constants, sizeof constants) && camera::knownConstants(constants) ? 1 : 0;
     }
+    return build == 1;
+}
+
+// The game mode while it shows a world; 0 at the login and the character list, or in another build of the exe.
+uint32_t gameMode() {
     uint32_t type = 0, mode = 0;
-    if (!build || !read(camera::kModeMgr + camera::kModeType, &type, 4) || type != 1 ||
+    if (!knownBuild() || !read(camera::kModeMgr + camera::kModeType, &type, 4) || type != 1 ||
         !read(camera::kModeMgr + camera::kModeCurrent, &mode, 4))
         return 0;
     return mode;
@@ -53,6 +58,16 @@ bool readCameraTargetDepth(float& z) {
         return false;
     z = camera::viewZ(view, at);
     return std::isfinite(z) && z > camera::kNear && z < camera::kFar;
+}
+
+bool readGameCursor(int& x, int& y) {
+    int32_t at[2] = {0, 0};
+    if (!knownBuild() || !read(camera::kMouse + camera::kMouseX, &at[0], 4) ||
+        !read(camera::kMouse + camera::kMouseY, &at[1], 4))
+        return false;
+    x = at[0];
+    y = at[1];
+    return true;
 }
 
 std::string readGameMap() {

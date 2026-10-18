@@ -21,6 +21,7 @@
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/ai_textures.hpp"
 #include "core/forest.hpp"
+#include "core/pick.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/gpu/remix9.hpp"
 #include "win/gpu/renderer11.hpp"
@@ -1784,8 +1785,13 @@ void Renderer::setStudio(uint8_t flags, int x, int y) {
     Impl& m = *impl_;
     if (m.xray != ((flags & 1) != 0)) LOG_INFO("X-ray: %s", (flags & 1) ? "on" : "off");
     m.xray = (flags & 1) != 0;
-    (void)x;
-    (void)y;
+    if (flags & 2) {  // the next present writes what this frame drew there
+        m.pickWanted = true;
+        m.pickX = float(x) + 0.5f;
+        m.pickY = float(y) + 0.5f;
+        m.pickHit = 0;
+    }
+    if (flags & 4) m.abWanted = true;
 }
 
 void Renderer::setDrawQuality(int anisotropy, bool alphaToCoverage, uint8_t aiKinds, uint8_t aiSprites) {
@@ -2261,6 +2267,13 @@ void Renderer::execute(const FrameRecord& record) {
         m.upscaler->renderStart();
     }
     m.prepareGeometry(record);
+    if (m.pickWanted && m.ai) {  // 2.3: the topmost draw of an AI texture under the cursor, the later records over it
+        const int k = pick::lastDrawAt(record, m.pickX, m.pickY, [&m](const DrawCmd& d) {
+            uint8_t how = 0;
+            return d.texture[0] && m.ai->howOf(d.texture[0], how);
+        });
+        if (k >= 0) m.pickHit = record.draws()[size_t(k)].texture[0];
+    }
     for (const Command& c : record.commands()) {
         if (!m.open) break;  // the list could not go on (the GPU is lost): nothing more is recorded
         switch (c.type) {
@@ -2353,6 +2366,14 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (remote_) return remote_->present(window, outputWidth, outputHeight, source, options);
     Impl& m = *impl_;
     Impl::CpuTime presentCpu(m.cpuTicks);  // 0.86
+    if (m.pickWanted) {  // 2.3, uaRO Studio: the frame is whole - what it drew under the cursor
+        m.pickWanted = false;
+        if (m.ai) m.ai->writePick(m.pickHit, int(m.pickX), int(m.pickY));
+    }
+    if (m.abWanted) {
+        m.abWanted = false;
+        if (m.ai) m.ai->toggleHidden();
+    }
     if (m.lost) {  // the GPU is gone (stage 3 review M2): no Present waits for vblank, keep the game's loop from spinning
         Sleep(15);
         return;
