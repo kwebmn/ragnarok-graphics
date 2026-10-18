@@ -1,3 +1,17 @@
+# uaRO Graphics 2.5.9 — testing
+
+- **Direct3D 11 draws every effect of Direct3D 12.** The last four of the High set are added: the smooth hills, the
+  ground's seams (the edge between grass and road wanders instead of following the cells' steps), the world reflected
+  in the water and the materials' relief. With Direct3D 11 the materials are lit by the map's sun, as with Direct3D
+  12, and the windows light up at night.
+- **Direct3D 11: the water.** The foam along the shore, the sun's glints and the light on the bed never came on until
+  now - they do. Water in a frame with the glow did not see what lay under it and came out dark - fixed.
+- **Direct3D 11: Keep the frame rate (keep_fps)** now sees the effects' costs and turns off the dearest ones, not
+  only the characters' shadows, the lamps and the colour.
+- The app's texts no longer say Direct3D 11 has no effects.
+- Check, please, with Direct3D 11 (the Render page) and the High effects: the hills in a field (prt_fild08), the seams
+  between grass and road, houses reflected in the water (Alberta, Izlude), the foam and glints on the sea.
+
 # uaRO Graphics 2.5.8 — urgent fix
 
 - **The game crashed at start with Direct3D 12 (versions 2.5.0-2.5.7).** Turning on the lost-device diagnostics
