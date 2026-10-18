@@ -1,3 +1,10 @@
+# uaRO Graphics 2.5.8 — urgent fix
+
+- **The game crashed at start with Direct3D 12 (versions 2.5.0-2.5.7).** Turning on the lost-device diagnostics
+  (DRED) was built wrong: instead of calling the system it jumped to address 0. It crashed on Windows 10 and 11 at
+  every start with Direct3D 12, DLSS too. Fixed; a check of the build now catches such a mistake.
+- Check, please: the game with Direct3D 12 starts and reaches the server's login.
+
 # uaRO Graphics 2.5.7 — testing
 
 - **The light in the air costs a quarter.** The rays from the sky (by day under the open sky) and the glow of the air
