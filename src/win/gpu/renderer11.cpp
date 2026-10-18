@@ -1839,7 +1839,10 @@ bool Renderer11::ensureSwapChain(HWND window, UINT width, UINT height, bool want
                 d.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
                 d.SampleDesc.Count = 1;
                 d.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-                d.BufferCount = 2;
+                // 2.5.14: three - with two, the next frame's buffer is the one on screen until the display takes the
+                // new one, and a card slower than the display waited for it each frame: 20 ms of work became 33
+                // (R-A327CX, an HD 6570 at 24-31 fps, its "GPU" time the frame's to the tenth of a millisecond)
+                d.BufferCount = 3;
                 d.SwapEffect = effect;
                 d.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
                 d.Flags = effect == DXGI_SWAP_EFFECT_FLIP_DISCARD && allow ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
@@ -1916,8 +1919,6 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         return;
     }
     timeBegin();
-    const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-    ctx_->ClearRenderTargetView(backRtv_, black);
     // Fit the source into the window, keeping its shape, on whole pixels: bars where the shapes differ.
     const Rect fit = fitPicture(source.width(), source.height(), int(swapWidth_), int(swapHeight_));
     if (!(fit == picture_)) {
@@ -1949,6 +1950,12 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (worldDrawn_ && !dofDone_) applyDof();      // 2.5.5
     if (worldDrawn_ && !weatherDone_) applyWeather();  // 2.5
     if (glowDrawn_) addGlow();  // 1.0: likewise
+    // 2.5.14: the window's buffer last, outside the card's timed work - its first use waits until the display lets
+    // go of it, and that wait was counted as the card's (keep_fps turned effects off for it)
+    timeEnd();
+    const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    ctx_->ClearRenderTargetView(backRtv_, black);
+    timeBegin();
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
          options.sharpen);
     ctx_->OMSetRenderTargets(0, nullptr, nullptr);
