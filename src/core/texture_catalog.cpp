@@ -17,7 +17,9 @@
 namespace uagfx::catalog {
 namespace {
 
-constexpr uint32_t kVersion = 1;
+// 2: (2.5.18) an effect's TGA has a second picture, as the .str animations take it (pack::picturesOf) - a catalog of
+// 1 knows none of them: the files are read again.
+constexpr uint32_t kVersion = 2;
 
 std::vector<std::string> paletteFiles(const std::string& name, const std::vector<std::string>& allNames,
                                       const pack::Choice& c) {

@@ -596,3 +596,30 @@ TEST(pack_status_names_its_stage_and_threads) {
     CHECK(r.stage == "colours" && r.threads == s.threads);
     CHECK(pack::parseStatus("state=reading\nfiles=1/2\n", r) && r.stage.empty() && r.threads.empty());  // 2.2.5's
 }
+
+TEST(pack_build_effect_tga_also_as_the_str_animations_take_it) {
+    // 2.5.18: a 32-bit TGA of the effects' folder: its picture as the game takes it, and as the .str animations take
+    // it - black its key (FUN_0042c850), its alpha going with the key.
+    const int w = 16, h = 16;
+    std::vector<uint8_t> t = {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, uint8_t(w), 0, uint8_t(h), 0, 32, 0x28};
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const bool black = (x + y) % 4 == 0;
+            t.push_back(black ? 0 : 200);                   // B
+            t.push_back(black ? 0 : uint8_t(y * 16));       // G
+            t.push_back(black ? 0 : uint8_t(x * 16 + 15));  // R
+            t.push_back(0xFF);                              // A
+        }
+    const pack::Source s = pack::sourceOf("data\\texture\\effect\\spark.tga", pack::Choice{});
+    std::vector<pack::Picture> p = pack::picturesOf(s, t.data(), t.size(), pack::Choice{});
+    CHECK_EQ(p.size(), size_t(2));
+    if (p.size() != 2) return;
+    CHECK_EQ(p[0].argb[0], 0xFF000000u);  // black seen
+    CHECK_EQ(p[1].argb[0], 0u);           // black keyed away
+    CHECK(p[0].argb[1] == p[1].argb[1] && p[0].key != p[1].key);
+    // A BMP's needs no second picture: the driver finds it by the plain one's (core/ai/black_key.hpp); nor a world TGA.
+    CHECK_EQ(pack::picturesOf(pack::sourceOf("data\\texture\\spark.tga", pack::Choice{}), t.data(), t.size(),
+                              pack::Choice{})
+                 .size(),
+             size_t(1));
+}

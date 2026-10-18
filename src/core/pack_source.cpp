@@ -109,7 +109,7 @@ uint32_t spritePaletteColour(const uint8_t* p) {
 
 int spriteCell(int side) { return side <= 32 ? 32 : side <= 64 ? 64 : side <= 128 ? 128 : side <= 256 ? 256 : 0; }
 
-bool worldTexture(const uint8_t* data, size_t size, bool tga, Picture& out) {
+bool worldTexture(const uint8_t* data, size_t size, bool tga, Picture& out, bool blackKey) {
     std::vector<uint32_t> src;
     int w = 0, h = 0;
     bool alpha = false;
@@ -120,8 +120,8 @@ bool worldTexture(const uint8_t* data, size_t size, bool tga, Picture& out) {
     out.height = h;
     out.argb.resize(src.size());
     for (size_t i = 0; i < src.size(); ++i)
-        out.argb[i] = alpha ? toArgb8(PixelFormat::A4R4G4B4, gameA4R4G4B4(src[i], false))
-                            : toArgb8(PixelFormat::A1R5G5B5, gameA1R5G5B5(src[i], false));
+        out.argb[i] = alpha ? toArgb8(PixelFormat::A4R4G4B4, gameA4R4G4B4(src[i], blackKey))
+                            : toArgb8(PixelFormat::A1R5G5B5, gameA1R5G5B5(src[i], blackKey));
     keyed(out);
     return true;
 }

@@ -293,13 +293,23 @@ std::vector<Picture> picturesOf(const Source& s, const uint8_t* data, size_t siz
     Picture p;
     switch (s.type) {
         case Source::Texture:
-        case Source::Tga:
-            if (!worldTexture(data, size, s.type == Source::Tga, p) || p.width < c.minSide || p.height < c.minSide ||
-                p.width > c.maxSide || p.height > c.maxSide || ai::softPicture(p.argb.data(), p.width, p.height) ||
-                ai::softAlpha(p.argb.data(), p.width, p.height))
-                break;
-            out.push_back(std::move(p));
+        case Source::Tga: {
+            const auto usable = [&c](const Picture& q) {
+                return q.width >= c.minSide && q.height >= c.minSide && q.width <= c.maxSide && q.height <= c.maxSide &&
+                       !ai::softPicture(q.argb.data(), q.width, q.height) &&
+                       !ai::softAlpha(q.argb.data(), q.width, q.height);
+            };
+            if (!worldTexture(data, size, s.type == Source::Tga, p)) break;
+            const std::string plain = p.key;
+            if (usable(p)) out.push_back(std::move(p));
+            // 2.5.18: an effect's TGA as the .str animations take it, black its key (FUN_0042c850) - its alpha goes
+            // with the key, so the driver cannot find it by the plain picture as a BMP's (core/ai/black_key.hpp)
+            Picture keyed;
+            if (s.type == Source::Tga && s.kind == ai::Kind::Effects && worldTexture(data, size, true, keyed, true) &&
+                keyed.key != plain && usable(keyed))
+                out.push_back(std::move(keyed));
             break;
+        }
         case Source::Interface: {
             if (!interfacePicture(data, size, p)) break;
             const int w = p.width, h = p.height;
