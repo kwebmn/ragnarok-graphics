@@ -172,6 +172,7 @@ void Renderer::Impl::releaseGlow() {
 void Renderer::Impl::dropGlow() { glowActive = glowDrawn = false; }
 
 bool Renderer::Impl::startGlow() {
+    flushDraws();  // 2.5: the draws before the glow's target is made and cleared
     // The world's own size and samples: the target's, or under DLSS (part 3) the world drawn smaller.
     const int w = upscale ? renderWidth : width;
     const int h = upscale ? renderHeight : height;

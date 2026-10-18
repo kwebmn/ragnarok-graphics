@@ -5,6 +5,7 @@
 #include <dxgi1_6.h>
 
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -16,6 +17,7 @@
 #include "core/footsteps.hpp"
 #include "core/frame.hpp"
 #include "core/critters.hpp"
+#include "core/draw_batch.hpp"
 #include "core/key_pair.hpp"
 #include "core/scale.hpp"
 #include "core/gpu_timing.hpp"
@@ -267,6 +269,36 @@ struct Renderer::Impl {
     }
     bool dred = false;  // 2.4.3: D3D12's device-removed data is on (page faults): dredReport() after a loss
     void dredReport();
+    // 2.5: the game's draws gathered into fewer draw calls, as Direct3D 11 has done since 0.90 (core/draw_batch.hpp):
+    // draws one after another with the same pipeline, tables and constants, their vertices one after another in the
+    // record, go to the GPU as one call (the quads through the index pattern). A draw waits in pendingDraw until the
+    // next one cannot join it, or until anything else is recorded - a barrier, a pass, a new list (flushDraws, from
+    // transition, bindPass, makeRoom, submit...). [debug] merge_draws 0 sends each by itself, as before.
+    struct PendingDraw {
+        ID3D12PipelineState* pso = nullptr;
+        uint64_t textureKey = 0;
+        D3D12_GPU_DESCRIPTOR_HANDLE textures{}, samplers{}, scene{};
+        bool hasScene = false;
+        uint64_t sceneKey = 0;
+        Constants c{};
+        D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        UINT indexCount = 0, firstIndex = 0;
+        bool sameState(const PendingDraw& o) const {
+            return pso == o.pso && textureKey == o.textureKey && samplers.ptr == o.samplers.ptr &&
+                   hasScene == o.hasScene && sceneKey == o.sceneKey && topology == o.topology &&
+                   std::memcmp(&c, &o.c, sizeof c) == 0;
+        }
+    } pendingDraw;
+    batch::Batch pendingBatch;
+    bool mergeDraws = true;
+    uint64_t lastTextureKey = ~0ull;  // the pair whose table lastTextures holds (copied once a list for each pair)
+    D3D12_GPU_DESCRIPTOR_HANDLE lastTextures{};
+    ID3D12Resource* quadIndices = nullptr;  // batch::quadIndices as an index buffer
+    D3D12_RESOURCE_STATES quadIndicesState = D3D12_RESOURCE_STATE_COPY_DEST;
+    bool quadIndicesFailed = false;
+    uint32_t drawsGathered = 0, drawCalls = 0;  // since the last log line
+    void flushDraws();         // the gathered draw call to the list
+    bool ensureQuadIndices();  // the pattern in video memory; false: quads go one by one
     std::string adapter;
     uint64_t adapterMb = 0;  // 1.8: its own memory, for the remaster's automatic choice
     LogOnce failures;
@@ -778,7 +810,10 @@ struct Renderer::Impl {
     float worldMipBias() const { return upscale ? upscaleMipBias(worldScale, scale) : 0.0f; }
     D3D12_GPU_DESCRIPTOR_HANDLE textureTable(UINT srv0, UINT srv1);
     // Before samplerTable and textureTable (and sceneTable: `descriptors` 5); false: lost.
-    bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2, float bias = 0.0f);
+    // 2.5: fromDraw - the game's draw itself: the draws gathered so far stay gathered (any other caller records a
+    // pass: they go first)
+    bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2, float bias = 0.0f,
+                  bool fromDraw = false);
     D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4, UINT t5 = kNoSrv);  // 0.19, kRootScene
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
                                      bool toGlow = false, bool water = false, bool mask = false,

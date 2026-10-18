@@ -466,7 +466,9 @@ D3D12_GPU_DESCRIPTOR_HANDLE Renderer::Impl::textureTable(UINT srv0, UINT srv1) {
 // free place in the cache - when it is full, every list using the old pairs has to finish first - and the two texture
 // descriptors come from this list's part of the ring. Either way a new list starts here, never in the middle of a
 // draw. False when the GPU is lost.
-bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors, float bias) {
+bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors, float bias,
+                              bool fromDraw) {
+    if (!fromDraw) flushDraws();  // 2.5: a pass follows - the draws gathered so far go first
     if (nextSampler + 2 > kSamplerCount &&
         samplerPairs.find(KeyPair{samplerKey(s0, aniso, bias), samplerKey(s1, aniso, bias)}) == samplerPairs.end()) {
         waitIdle();

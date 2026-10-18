@@ -190,6 +190,7 @@ bool Renderer::Impl::applySeams() {
         ++drawn;
     }
     if (!drawn) return true;
+    flushDraws();  // 2.5: the game's draws gathered so far are of its own vertices, uploaded before the strips'
     prepareGeometry(seamRec);
     if (vertexBase) {
         seamPass = true;

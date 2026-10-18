@@ -159,6 +159,8 @@ bool Renderer::Impl::begin() {
     boundPipeline = nullptr;
     boundTextures = ~0ull;
     boundSamplers = ~0ull;
+    lastTextureKey = ~0ull;  // 2.5: the ring starts anew
+    pendingBatch.close();
     pass = kPassNone;
     centered = false;  // a new list starts with the default sample positions
     if (timer) {
@@ -173,6 +175,7 @@ bool Renderer::Impl::begin() {
 
 void Renderer::Impl::submit() {
     if (!open) return;
+    flushDraws();  // 2.5
     open = false;
     if (timer) {
         Slot& s = slots[slot];
@@ -228,6 +231,7 @@ void Renderer::Impl::readTimes(Slot& s, UINT index) {
 
 void Renderer::Impl::effectBegin(EffectTimer e) {
     crumb(passName(e).words);  // the table's own text: crumb() tells the passes apart by the pointer
+    flushDraws();  // 2.5: timed from here on, the draws before it done
     if (!timer || !open) return;
     list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 6 + 2 * e);
     effectSerial[e] = listSerial;
@@ -237,6 +241,7 @@ void Renderer::Impl::effectBegin(EffectTimer e) {
 // starts the pass (word 0) and once all the work before it is done (word 1).
 void Renderer::Impl::crumb(const char* what) {
     if (!list2 || !crumbsMapped || !open || what == lastCrumb) return;
+    flushDraws();  // 2.5: the pass before this one ends with its draws
     lastCrumb = what;
     uint32_t id = 0;
     while (id < crumbNames.size() && crumbNames[id] != what) ++id;
@@ -325,10 +330,82 @@ void Renderer::Impl::noteGpuFrame() {
              "limit's wait, %.2f ms the swap chain's present", double(cpuTicks) * perFrame,
              double(fenceTicks) * perFrame, double(pacerTicks) * perFrame, double(swapTicks) * perFrame);
     cpuTicks = fenceTicks = pacerTicks = swapTicks = 0;
+    if (drawsGathered)  // 2.5: how many of the game's draws went as one call
+        LOG_INFO("draws: %u a frame in %u calls to the GPU", drawsGathered / std::max<uint32_t>(gpuFrames, 1),
+                 drawCalls / std::max<uint32_t>(gpuFrames, 1));
+    drawsGathered = drawCalls = 0;
     effectMsKnown = true;
     gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
     gpuSince = now;
+}
+
+// 2.5: the quads' index pattern (core/draw_batch.hpp) in video memory, once, through this list.
+bool Renderer::Impl::ensureQuadIndices() {
+    if (quadIndices) return true;
+    if (quadIndicesFailed || !open) return false;
+    const std::vector<uint16_t> pattern = batch::quadIndices(batch::kMaxQuads);
+    const UINT64 bytes = pattern.size() * sizeof(uint16_t);
+    quadIndices = createBuffer(device, D3D12_HEAP_TYPE_DEFAULT, bytes, D3D12_RESOURCE_STATE_COPY_DEST);
+    const Upload u = quadIndices ? allocUpload(bytes, 4) : Upload{nullptr, 0, 0};
+    if (!quadIndices || !u.cpu) {
+        releaseCom(quadIndices);
+        quadIndicesFailed = true;
+        LOG_ERROR("draws: no memory for the quads' index pattern: each quad is drawn by itself");
+        return false;
+    }
+    nameResource(quadIndices, "quad index pattern");
+    std::memcpy(u.cpu, pattern.data(), size_t(bytes));
+    flushDraws();
+    list->CopyBufferRegion(quadIndices, 0, slots[slot].upload, u.offset, bytes);
+    quadIndicesState = D3D12_RESOURCE_STATE_COPY_DEST;
+    transition(quadIndices, quadIndicesState, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+    return true;
+}
+
+// 2.5: the gathered draw call to the list - its pipeline, tables and constants where they differ from the bound
+// ones, the quads through the index pattern, a list as it is, a draw by itself as the game made it.
+void Renderer::Impl::flushDraws() {
+    if (!pendingBatch.open()) return;
+    const PendingDraw& p = pendingDraw;
+    if (!boundPipeline) {  // a fresh list or after a pass: the root signature and its tables are gone
+        list->SetGraphicsRootSignature(root);
+        boundTextures = ~0ull;
+        boundSamplers = ~0ull;
+    }
+    if (p.pso != boundPipeline) {
+        list->SetPipelineState(p.pso);
+        boundPipeline = p.pso;
+    }
+    if (p.textureKey != boundTextures) {
+        list->SetGraphicsRootDescriptorTable(kRootTextures, p.textures);
+        boundTextures = p.textureKey;
+    }
+    if (p.samplers.ptr != boundSamplers) {
+        list->SetGraphicsRootDescriptorTable(kRootSamplers, p.samplers);
+        boundSamplers = p.samplers.ptr;
+    }
+    if (p.hasScene) list->SetGraphicsRootDescriptorTable(kRootScene, p.scene);
+    list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &p.c, 0);
+    const batch::Kind kind = pendingBatch.kind();
+    list->IASetPrimitiveTopology(kind == batch::Kind::Quads ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST : p.topology);
+    const UINT stride = pendingBatch.stride();
+    const D3D12_VERTEX_BUFFER_VIEW vb{vertexBase + pendingBatch.firstByte(), pendingBatch.vertices() * stride, stride};
+    list->IASetVertexBuffers(0, 1, &vb);
+    if (kind == batch::Kind::Quads) {
+        const D3D12_INDEX_BUFFER_VIEW ib{quadIndices->GetGPUVirtualAddress(),
+                                         UINT(batch::kMaxQuads * 6 * sizeof(uint16_t)), DXGI_FORMAT_R16_UINT};
+        list->IASetIndexBuffer(&ib);
+        list->DrawIndexedInstanced(pendingBatch.vertices() / 4 * 6, 1, 0, 0, 0);
+    } else if (p.indexCount) {
+        const D3D12_INDEX_BUFFER_VIEW ib{indexBase, indexBytes, DXGI_FORMAT_R16_UINT};
+        list->IASetIndexBuffer(&ib);
+        list->DrawIndexedInstanced(p.indexCount, 1, p.firstIndex, 0, 0);
+    } else {
+        list->DrawInstanced(pendingBatch.vertices(), 1, 0, 0);
+    }
+    ++drawCalls;
+    pendingBatch.close();
 }
 
 void Renderer::Impl::waitSlot(Slot& s) {
@@ -425,6 +502,7 @@ Upload Renderer::Impl::allocUpload(UINT64 size, UINT64 alignment) {
 
 void Renderer::Impl::transition(ID3D12Resource* r, D3D12_RESOURCE_STATES& state, D3D12_RESOURCE_STATES to) {
     if (state == to) return;
+    flushDraws();  // 2.5: the draws gathered so far go before the barrier
     D3D12_RESOURCE_BARRIER b{};
     b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     b.Transition.pResource = r;
@@ -478,6 +556,7 @@ void Renderer::Impl::bindPass(int p) {
     }
     if (withGlow) transition(glow, glowState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     if (pass == p) return;
+    flushDraws();  // 2.5: with the targets they were drawn to
     if (toWorld) {
         const D3D12_CPU_DESCRIPTOR_HANDLE rtv[2] = {rtvHandle(kRtvWorld), rtvHandle(kRtvGlow)};
         const D3D12_CPU_DESCRIPTOR_HANDLE dsv = dsvHandle(kDsvWorld);
@@ -503,6 +582,7 @@ void Renderer::Impl::bindPass(int p) {
 
 void Renderer::Impl::placeSamples(bool center) {
     if (!list1 || center == centered) return;
+    flushDraws();  // 2.5: with their own sample positions
     if (center) {
         D3D12_SAMPLE_POSITION at[8] = {};  // all eight at (0, 0): the pixel's centre
         list1->SetSamplePositions(samples, 1, at);
@@ -515,6 +595,7 @@ void Renderer::Impl::placeSamples(bool center) {
 // ---- Impl: frame record commands ---------------------------------------------------------------------------
 
 void Renderer::Impl::clear(const ClearCmd& c) {
+    flushDraws();  // 2.5: before the clear
     if (c.flags & 2) sceneDepthFresh = false;  // 0.39.2: the depth cleared - its copy out of date
     // 0.18: the picture cleared - the light of a world no longer there is not added to the next one.
     if ((c.flags & 1) && c.rect.left <= 0 && c.rect.top <= 0 && c.rect.right >= gameWidth &&
@@ -571,6 +652,7 @@ void Renderer::Impl::setViewport(const ViewportCmd& v) {
 // Pre-transformed vertices carry their screen position: the D3D7 viewport only clips them and gives the depth
 // range. So the D3D12 viewport is the whole target and the client's viewport becomes the scissor rectangle.
 void Renderer::Impl::applyViewport() {
+    flushDraws();  // 2.5: with the viewport they were drawn in
     viewport = D3D12_VIEWPORT{0.0f, 0.0f, float(width), float(height), gameViewport.minZ, gameViewport.maxZ};
     const Rect r = scaleRect(gameViewport.rect, scale);
     const LONG left = std::max(r.left, 0), top = std::max(r.top, 0);
@@ -969,6 +1051,7 @@ void Renderer::Impl::nextJitter() {
 
 void Renderer::Impl::startFrame() {
     if (!frameEnded || !layer) return;
+    flushDraws();  // 2.5
     frameEnded = false;
     bindPass(kPassLayer);
     const float none[4] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -1494,6 +1577,7 @@ void Renderer::Impl::destroy() {
     releaseCom(heatPs);
     releaseCom(heatData);
     releaseCom(torchData);
+    releaseCom(quadIndices);  // 2.5
     releaseCom(smokePs);  // 0.24
     releaseCom(smokeGlowPs);
     releaseCom(dofDownPipeline);
@@ -1596,6 +1680,7 @@ std::string Renderer::adapterName() const {
 
 void Renderer::setMergeDraws(bool on) {
     if (d3d11_) d3d11_->setMergeDraws(on);
+    if (impl_) impl_->mergeDraws = on;  // 2.5: Direct3D 12 gathers them too
 }
 
 void Renderer::setStateCache(bool on) {

@@ -236,8 +236,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 2.2.4: DLSS's (upscaleMipBias) - not for what its mask keeps from the history (sprites, effects): their finer
     // texels it cannot gather, they would only shimmer
     const float mipBias = toWorld && !mask ? worldMipBias() : 0.0f;
-    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly ? 5 : 2, mipBias)) return;
+    if (!makeRoom(sampled[0], sampled[1], aniso, water || soft || matTex || hilly ? 5 : 2, mipBias, true)) return;
     if (geometryList != listSerial) {  // also after a list that failed to close: its slot is used again (0.4.1 review)
+        flushDraws();  // 2.5: the draws gathered so far are of the vertices uploaded before these
         prepareGeometry(rec);
         if (!vertexBase) return;
     }
@@ -285,37 +286,37 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // Stage 4 review: the interface's edges fall on pixel centres (whole D3D7 positions, x * k + 0.5); with every
     // sample there it is drawn exactly as with one sample, while the world keeps its smoothed edges.
     if (samples > 1) placeSamples(s.ui);
-    if (!boundPipeline) {  // a fresh list or after present(): the root signature and its tables are gone
-        list->SetGraphicsRootSignature(root);
-        boundTextures = ~0ull;
-        boundSamplers = ~0ull;
-    }
+    // 2.5: the tables' descriptors are copied now (makeRoom made room in the ring) and set when the draw is issued -
+    // by itself or gathered with the draws before it (flushDraws)
     const uint64_t textureKey = uint64_t(srv[0]) << 32 | srv[1];
-    if (textureKey != boundTextures) {
-        list->SetGraphicsRootDescriptorTable(kRootTextures, textureTable(srv[0], srv[1]));
-        boundTextures = textureKey;
+    if (textureKey != lastTextureKey) {
+        lastTextures = textureTable(srv[0], srv[1]);
+        lastTextureKey = textureKey;
     }
-    if (samplers.ptr != boundSamplers) {
-        list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
-        boundSamplers = samplers.ptr;
-    }
+    PendingDraw next;
+    next.textureKey = textureKey;
+    next.textures = lastTextures;
+    next.samplers = samplers;
+    const auto sceneOf = [&](UINT t2, UINT t3, UINT t5) {
+        next.scene = sceneTable(t2, t3, t2, t5);
+        next.hasScene = true;
+        next.sceneKey = uint64_t(t2) << 40 | uint64_t(t3) << 20 | uint64_t(t5 == kNoSrv ? t2 : t5);
+    };
     if (water) {  // the picture and the depth under the water (t2, t3)
         transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         if (mirrorMade) transition(mirror, mirrorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);  // 1.16 (t5)
-        list->SetGraphicsRootDescriptorTable(
-            kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv, mirrorMade ? mirrorSrv : kNoSrv));
+        sceneOf(sceneColorSrv, sceneDepthSrv, mirrorMade ? mirrorSrv : kNoSrv);
         if (!waterCells++) LOG_INFO("water: the map's water found, drawn anew");
     } else if (matTex) {  // 1.8: its material (t2); 1.15 the hills' normals (t3)
         transition(matTex->mat, matTex->matState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        const UINT t3 = hilly ? hillsDataSrv : matTex->matSrv;
-        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(matTex->matSrv, t3, matTex->matSrv));
+        sceneOf(matTex->matSrv, hilly ? hillsDataSrv : matTex->matSrv, kNoSrv);
     } else if (hilly) {  // 1.15: the hills' normals (t3)
-        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(hillsDataSrv, hillsDataSrv, hillsDataSrv));
+        sceneOf(hillsDataSrv, hillsDataSrv, kNoSrv);
     } else if (soft) {  // the depth behind the effect (t3)
         transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         transition(sceneDepth, sceneDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
+        sceneOf(sceneColorSrv, sceneDepthSrv, kNoSrv);
     }
     Constants c{};
     c.targetSize[0] = float(toWorld ? renderWidth : width);
@@ -466,27 +467,27 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         ID3D12PipelineState* leanPso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask, shader, true);
         if (leanPso) pso = leanPso;
     }
-    if (pso != boundPipeline) {
-        list->SetPipelineState(pso);
-        boundPipeline = pso;
-    }
-    list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
-    list->IASetPrimitiveTopology(d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
-                                                                       : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    // 2.5: the draw goes on the gathered call when its state is the same and its vertices follow (draw_batch.hpp);
+    // by itself as before: merging off, the game's own indices, a quad without the pattern
+    next.pso = pso;
+    next.c = c;
+    next.topology = d.primitive == d3d7::PT_TRIANGLESTRIP ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
+                                                          : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    next.indexCount = d.indexCount;
+    next.firstIndex = d.firstIndex;
     const UINT stride = FrameRecord::stride(d.fvf);
-    D3D12_VERTEX_BUFFER_VIEW vb{vertexBase + d.vertexOffset, d.vertexCount * stride, stride};
-    list->IASetVertexBuffers(0, 1, &vb);
-    if (d.indexCount) {
-        D3D12_INDEX_BUFFER_VIEW ib{indexBase, indexBytes, DXGI_FORMAT_R16_UINT};
-        list->IASetIndexBuffer(&ib);
+    batch::Draw shape{batch::kindOf(d.primitive, d.vertexCount, d.indexCount != 0), d.vertexOffset, d.vertexCount,
+                      stride};
+    if (!mergeDraws || (shape.kind == batch::Kind::Quads && !ensureQuadIndices())) shape.kind = batch::Kind::Single;
+    ++drawsGathered;
+    if (pendingBatch.joins(shape) && next.sameState(pendingDraw)) {
+        pendingBatch.add(shape);
+        return;
     }
-    const auto issue = [&] {
-        if (d.indexCount)
-            list->DrawIndexedInstanced(d.indexCount, 1, d.firstIndex, 0, 0);
-        else
-            list->DrawInstanced(d.vertexCount, 1, 0, 0);
-    };
-    issue();
+    flushDraws();
+    pendingDraw = next;
+    pendingBatch.start(shape);
+    if (shape.kind == batch::Kind::Single) flushDraws();
 }
 
 // 1.7: the trees' settings for a draw of leaves (draw_constants.hpp leafShading).
