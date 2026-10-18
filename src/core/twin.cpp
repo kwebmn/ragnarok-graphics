@@ -1,6 +1,7 @@
 #include "core/twin.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <cmath>
 
 namespace uagfx {
@@ -92,6 +93,8 @@ int TwinPicture::sync(const uint32_t* dib, Rect r) {
     for (int y = r.top; y < r.bottom; ++y) {
         const uint32_t* src = dib + size_t(y) * size_t(w_);
         const uint32_t* copy = copy_.data() + size_t(y) * size_t(w_);
+        // 2.5.20: a row the same to the byte changed nothing - a window drawn again as it was (most, most frames)
+        if (std::memcmp(src + r.left, copy + r.left, size_t(r.width()) * 4) == 0) continue;
         for (int x = r.left; x < r.right;) {
             if (((src[x] ^ copy[x]) & 0xFFFFFFu) == 0) {
                 ++x;

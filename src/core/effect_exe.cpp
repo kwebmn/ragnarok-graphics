@@ -104,16 +104,43 @@ void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Sof
     }
 }
 
+size_t Faces::slotOf(uint32_t vertices) const {
+    const size_t mask = slots_.size() - 1;
+    size_t i = size_t((vertices * 0x9E3779B1u) >> 8) & mask;  // the address's bits spread (Fibonacci hashing)
+    while (slots_[i].stamp == stamp_ && slots_[i].vertices != vertices) i = (i + 1) & mask;
+    return i;
+}
+
+void Faces::grow() {
+    std::vector<Slot> old;
+    old.swap(slots_);
+    slots_.assign(std::max<size_t>(old.size() * 2, 1024), Slot{});
+    for (const Slot& s : old)
+        if (s.stamp == stamp_) slots_[slotOf(s.vertices)] = s;
+}
+
 void Faces::note(uint32_t vertices, Tag tag) {
-    if (vertices && tag.kind != Kind::None) faces_[vertices] = tag;
+    if (!vertices || tag.kind == Kind::None) return;
+    if ((count_ + 1) * 2 > slots_.size()) grow();
+    Slot& s = slots_[slotOf(vertices)];
+    if (s.stamp != stamp_) ++count_;
+    s.vertices = vertices;
+    s.stamp = stamp_;
+    s.tag = tag;
 }
 
 Tag Faces::of(uint32_t vertices) const {
-    if (faces_.empty()) return Tag{};
-    const auto it = faces_.find(vertices);
-    return it == faces_.end() ? Tag{} : it->second;
+    if (!count_) return Tag{};
+    const Slot& s = slots_[slotOf(vertices)];
+    return s.stamp == stamp_ ? s.tag : Tag{};
 }
 
-void Faces::clear() { faces_.clear(); }
+void Faces::clear() {
+    count_ = 0;
+    if (++stamp_ == 0) {  // after four billion frames: every slot free by hand once
+        for (Slot& s : slots_) s.stamp = 0;
+        stamp_ = 1;
+    }
+}
 
 }  // namespace uagfx::effect_exe

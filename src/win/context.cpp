@@ -14,6 +14,7 @@
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
 #include "win/effect_hook.hpp"
+#include "win/ftol_patch.hpp"
 #include "win/hit_hook.hpp"
 #include "win/pick_hook.hpp"
 #include "win/sound_hook.hpp"
@@ -276,6 +277,7 @@ bool Context::open(std::string& error) {
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
     if (!config.remix) installTextureHook();
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
+    installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)

@@ -2,6 +2,7 @@
 
 #include "core/d3d7.hpp"
 #include "core/effect_exe.hpp"
+#include "core/ftol_exe.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -76,6 +77,26 @@ TEST(effect_exe_knows_the_faces_of_an_effect_by_their_vertices) {
     CHECK(f.of(0x2000000).kind == Kind::None);
 }
 
+TEST(effect_exe_faces_of_a_crowded_frame_and_the_next) {
+    // 2.5.20: a flat table, cleared by the frame's stamp - thousands of faces, grown on the way, frame after frame
+    effect_exe::Faces f;
+    for (int frame = 0; frame < 3; ++frame) {
+        for (uint32_t i = 1; i <= 5000; ++i)
+            f.note(0x400000 + i * 0x60 + uint32_t(frame) * 4, effect_exe::Tag{Kind::Aura, uint8_t(i + frame)});
+        bool all = true;
+        for (uint32_t i = 1; i <= 5000; ++i) {
+            const effect_exe::Tag t = f.of(0x400000 + i * 0x60 + uint32_t(frame) * 4);
+            all = all && t.kind == Kind::Aura && t.seed == uint8_t(i + frame);
+        }
+        CHECK(all);
+        CHECK(f.of(0x400000 + 0x60 + uint32_t(frame) * 4 + 2).kind == Kind::None);
+        f.note(0x400060 + uint32_t(frame) * 4, effect_exe::Tag{Kind::Firefly, 9});  // noted again: the last tag
+        CHECK(f.of(0x400060 + uint32_t(frame) * 4).kind == Kind::Firefly);
+        f.clear();
+        CHECK(f.of(0x400060 + uint32_t(frame) * 4).kind == Kind::None);  // the last frame's: gone
+    }
+}
+
 TEST(effect_exe_knows_fireflies_and_the_sort_functions_entry) {
     CHECK(effect_exe::kindOf(45) == Kind::Firefly);
     CHECK(effect_exe::kindOf(44) == Kind::None);
@@ -120,4 +141,16 @@ TEST(effect_exe_softens_by_how_the_draw_blends) {
     v.diffuse = 0xFFFFFFFF;  // white multiplies nothing: stays so
     effect_exe::soften(reinterpret_cast<uint8_t*>(&v), 1, sizeof(Tl1), 50, Soften::White);
     CHECK_EQ(v.diffuse, 0xFFFFFFFFu);
+}
+
+TEST(ftol_exe_fast_one_fits_in_the_games_place) {
+    // 2.5.20: fisttp in __ftol's own 39 bytes: the code first, then int3 to the end; the game's as this build has it
+    CHECK_EQ(int(uagfx::ftol_exe::kOriginal[0]), 0x55);  // push ebp
+    CHECK_EQ(int(uagfx::ftol_exe::kOriginal[uagfx::ftol_exe::kSize - 1]), 0xC3);  // ret
+    CHECK_EQ(int(uagfx::ftol_exe::kFast[3]), 0xDD);  // fisttp m64int: DD /1
+    CHECK_EQ(int(uagfx::ftol_exe::kFast[4]) >> 3 & 7, 1);
+    CHECK_EQ(int(uagfx::ftol_exe::kFast[16]), 0xC3);
+    bool padded = true;
+    for (size_t i = 17; i < uagfx::ftol_exe::kSize; ++i) padded = padded && uagfx::ftol_exe::kFast[i] == 0xCC;
+    CHECK(padded);
 }

@@ -4,26 +4,9 @@
 
 namespace uagfx::bridge {
 
-void WireWriter::u32(uint32_t v) { bytes(&v, 4); }  // x86 on both sides: little-endian as it is
-void WireWriter::u64(uint64_t v) { bytes(&v, 8); }
-void WireWriter::f32(float v) { bytes(&v, 4); }
-void WireWriter::f64(double v) { bytes(&v, 8); }
-
-void WireWriter::bytes(const void* p, size_t n) {
-    const uint8_t* b = static_cast<const uint8_t*>(p);
-    out_.insert(out_.end(), b, b + n);
-}
-
 void WireWriter::str(const std::string& s) {
     u32(uint32_t(s.size()));
     bytes(s.data(), s.size());
-}
-
-void WireWriter::rect(const Rect& r) {
-    i32(r.left);
-    i32(r.top);
-    i32(r.right);
-    i32(r.bottom);
 }
 
 const uint8_t* WireReader::take(size_t n) {

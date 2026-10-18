@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -11,18 +12,28 @@ namespace uagfx::bridge {
 
 // Part 3: the 32-bit driver and the 64-bit renderer process exchange plain bytes, little-endian, field by field -
 // never a struct copied whole: i686 and x86_64 lay out structs with doubles and bools differently.
+// 2.5.20: the small writes inline - a frame's record is tens of thousands of them, on the game's thread.
 class WireWriter {
 public:
     explicit WireWriter(std::vector<uint8_t>& out) : out_(out) {}
     void u8(uint8_t v) { out_.push_back(v); }
-    void u32(uint32_t v);
+    void u32(uint32_t v) { bytes(&v, 4); }  // x86 on both sides: little-endian as it is
     void i32(int32_t v) { u32(uint32_t(v)); }
-    void u64(uint64_t v);
-    void f32(float v);
-    void f64(double v);
-    void bytes(const void* p, size_t n);
+    void u64(uint64_t v) { bytes(&v, 8); }
+    void f32(float v) { bytes(&v, 4); }
+    void f64(double v) { bytes(&v, 8); }
+    void bytes(const void* p, size_t n) {  // resize and copy: GCC 12 warns falsely of insert's inlined memcpy
+        const size_t at = out_.size();
+        out_.resize(at + n);
+        if (n) std::memcpy(out_.data() + at, p, n);
+    }
     void str(const std::string& s);
-    void rect(const Rect& r);
+    void rect(const Rect& r) {
+        i32(r.left);
+        i32(r.top);
+        i32(r.right);
+        i32(r.bottom);
+    }
 
 private:
     std::vector<uint8_t>& out_;

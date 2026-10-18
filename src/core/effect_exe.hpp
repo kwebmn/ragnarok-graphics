@@ -1,6 +1,7 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
-#include <unordered_map>
+#include <vector>
 
 namespace uagfx::effect_exe {
 
@@ -64,7 +65,9 @@ struct Tag {
 bool auraExtra(int id);
 constexpr uint32_t kAuraFlag = 0x772CE4;
 
-// The faces of the effects the driver cares about sorted this frame, by the address of their vertices.
+// The faces of the effects the driver cares about sorted this frame, by the address of their vertices. 2.5.20: a flat
+// table cleared by the frame's stamp - asked at every draw of the game's, it was a map whose nodes were made and freed
+// every frame.
 class Faces {
 public:
     void note(uint32_t vertices, Tag tag);
@@ -72,7 +75,16 @@ public:
     void clear();  // a new frame: a face's memory may hold another one by then
 
 private:
-    std::unordered_map<uint32_t, Tag> faces_;
+    struct Slot {
+        uint32_t vertices = 0;
+        uint32_t stamp = 0;  // the frame it was noted in: of another frame, the slot is free
+        Tag tag;
+    };
+    size_t slotOf(uint32_t vertices) const;  // its slot, or the free one it would take
+    void grow();
+    std::vector<Slot> slots_;  // a power of two of them, at most half taken
+    uint32_t stamp_ = 1;
+    size_t count_ = 0;
 };
 
 }  // namespace uagfx::effect_exe
