@@ -78,7 +78,8 @@ struct Index {
     std::map<std::string, MaterialScales> materials;  // 2.3: keys ->
 };
 std::string indexText(const Index& index);
-Index parseIndexFile(const std::string& text);
+// provenance (2.3): the '+' lines too - a line a picture: the game's driver leaves them out unless it writes the index
+Index parseIndexFile(const std::string& text, bool provenance = true);
 
 // 0.53: a ZIP's entry as its central directory has it; the directory read through a function of the bytes at an
 // offset (a file, or a pack on the site by HTTP ranges).

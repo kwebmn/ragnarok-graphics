@@ -404,8 +404,9 @@ std::vector<std::string> fieldsOf(const std::string& line) {
 }
 
 // 2.3: the studio's lines; false: not one of them
-bool studioLine(const std::string& line, Index& out) {
+bool studioLine(const std::string& line, Index& out, bool provenance) {
     if (line.empty() || (line[0] != '+' && line[0] != '!' && line[0] != '#')) return false;
+    if (line[0] == '+' && !provenance) return true;
     if (line[0] == '!') {
         if (line.size() > 1 && line.find('\t') == std::string::npos) out.ownAlways.insert(line.substr(1));
         return true;
@@ -438,7 +439,7 @@ bool studioLine(const std::string& line, Index& out) {
 
 }  // namespace
 
-Index parseIndexFile(const std::string& text) {
+Index parseIndexFile(const std::string& text, bool provenance) {
     Index out;
     out.aliases = parseAliases(text);
     size_t at = 0;
@@ -448,7 +449,7 @@ Index parseIndexFile(const std::string& text) {
         std::string line = text.substr(at, end - at);
         at = end + 1;
         if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (studioLine(line, out)) continue;  // 2.3
+        if (studioLine(line, out, provenance)) continue;  // 2.3
         const size_t tab = line.find('\t');
         if (tab == std::string::npos || tab == 0 || line[0] == '=') continue;  // 0.45: '=': a lower detail's key
         if (line[0] == '~') {  // 0.49: a picture found by its likeness

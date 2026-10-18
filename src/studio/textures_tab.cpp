@@ -49,6 +49,7 @@ struct Rebuild {
     Thumbs* thumbs = nullptr;
     int sortColumn = 1;
     bool sortDown = false;
+    std::atomic<int>* working = nullptr;  // the tab's: down at the very end (the tab waits for it)
 };
 
 DWORD WINAPI rebuildMain(void* arg) {
@@ -108,6 +109,7 @@ DWORD WINAPI rebuildMain(void* arg) {
     });
     if (job->sortDown) std::reverse(out->rows.begin(), out->rows.end());
     PostMessageW(job->notify, kRowsReady, WPARAM(job->generation), LPARAM(out.release()));
+    --*job->working;
     return 0;
 }
 
@@ -147,6 +149,10 @@ TexturesTab::TexturesTab(HWND parent, settings::Lang lang, HFONT font, int dpi, 
         col.cx = i ? MulDiv(widths[i], dpi_, 96) : widths[i];
         ListView_InsertColumn(list_, i, &col);
     }
+}
+
+TexturesTab::~TexturesTab() {
+    while (working_ > 0) Sleep(5);
 }
 
 std::wstring TexturesTab::t(settings::Text x) const { return app::wtr(lang_, x); }
@@ -247,9 +253,13 @@ void TexturesTab::rebuild() {
     job->thumbs = &thumbs_;
     job->sortColumn = sortColumn_;
     job->sortDown = sortDown_;
+    job->working = &working_;
+    ++working_;
     if (HANDLE h = CreateThread(nullptr, 0, rebuildMain, job.get(), 0, nullptr)) {
         job.release();
         CloseHandle(h);
+    } else {
+        --working_;
     }
 }
 

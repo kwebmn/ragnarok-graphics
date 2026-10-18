@@ -3,6 +3,7 @@
 
 #include <commctrl.h>
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <string>
@@ -38,6 +39,7 @@ class TexturesTab {
 public:
     TexturesTab(HWND parent, settings::Lang lang, HFONT font, int dpi, std::wstring gameDir, CatalogWork& catalog,
                 Thumbs& thumbs);
+    ~TexturesTab();  // its rows' threads done first: they read the thumbnails
     void show(bool on);
     void layout(const RECT& area);
     void catalogChanged();  // the navigator and the rows again
@@ -74,6 +76,7 @@ private:
     std::vector<std::string> orphans_;
     std::shared_ptr<const catalog::Catalog> shown_;
     uint64_t generation_ = 0;
+    std::atomic<int> working_{0};  // rows being made on threads
     bool selectFirst_ = false;  // the next rows: the first one selected and shown (a pick from the game)
     HTREEITEM all_ = nullptr;
     int sortColumn_ = 1;

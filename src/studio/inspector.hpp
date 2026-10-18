@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <string>
@@ -34,6 +35,7 @@ struct Shown {
 class Inspector {
 public:
     Inspector(HWND parent, settings::Lang lang, HFONT font, int dpi, std::wstring gameDir, CatalogWork& catalog);
+    ~Inspector();  // its loaders done first: they read the catalog
     void show(bool on);
     void layout(const RECT& area);
     void showRow(const Row& row, const std::vector<std::string>& orphans);
@@ -72,6 +74,7 @@ private:
     std::unique_ptr<Shown> shown_;
     std::shared_ptr<const Image> made_;
     uint64_t generation_ = 0;
+    std::atomic<int> working_{0};  // rows being loaded on threads
 };
 
 }  // namespace uagfx::studio

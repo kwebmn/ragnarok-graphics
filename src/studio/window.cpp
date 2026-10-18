@@ -311,7 +311,10 @@ void StudioWindow::jobDone(int64_t id) {
     if (log_) log_->add(app::wtrf(lang_, settings::Text::StudioLogDone, {label}));
     if (pack_ && result["op"].asString() != "make") pack_->refresh();
     const std::string op = result["op"].asString();
-    if (op != "make") textures_->catalogChanged();  // the pack changed: the states again
+    if (op != "make") {  // the pack changed: the thumbnails, the flags and the states again
+        thumbs_->forget();
+        textures_->catalogChanged();
+    }
     const Shown* s = inspector_->shown();
     if (s && (op != "make" || result["key"].asString() == s->key)) inspector_->refresh(textures_->orphans());
     showBar();

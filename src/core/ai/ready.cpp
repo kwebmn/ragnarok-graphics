@@ -13,7 +13,7 @@ ReadyPictures::ReadyPictures(const AiSettings& s) : settings_(s) {
 
 void ReadyPictures::addPack(std::function<bool(const std::string&)> has, const std::string& index) {
     packHas_ = std::move(has);
-    const pack::Index x = pack::parseIndexFile(index);
+    const pack::Index x = pack::parseIndexFile(index, false);  // 2.3: what a picture was made from: not here
     marked_ = std::unordered_set<std::string>(x.ownAlways.begin(), x.ownAlways.end());  // 2.3
     materials_ = std::unordered_map<std::string, pack::MaterialScales>(x.materials.begin(), x.materials.end());
     for (const auto& e : x.pictures) {

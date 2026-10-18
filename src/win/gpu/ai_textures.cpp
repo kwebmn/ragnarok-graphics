@@ -234,7 +234,9 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     std::vector<uint8_t> index;
     if (pack_->isOpen() && !pack_->read(pack::kIndexName, index)) index.clear();
     const std::string indexFile(index.begin(), index.end());
-    index_ = pack::parseIndexFile(indexFile);  // the I/O thread's from its start on: written with the pictures made
+    // the I/O thread's from its start on: written with the pictures made; 2.3: what each was made from ('+', a line a
+    // picture) only when this game writes the index again (generating) - else tens of MB for nothing
+    index_ = pack::parseIndexFile(indexFile, generate_);
     pictures_ = std::make_unique<ai::ReadyPictures>(s);
     const std::shared_ptr<const pack::Reader> reader = pack_;
     pictures_->addPack([reader](const std::string& name) { return reader->has(name); }, indexFile);

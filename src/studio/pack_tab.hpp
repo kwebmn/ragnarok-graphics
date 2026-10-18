@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 
+#include <atomic>
 #include <memory>
 #include <string>
 
@@ -17,6 +18,7 @@ class Jobs;
 class PackTab {
 public:
     PackTab(HWND parent, settings::Lang lang, HFONT font, int dpi, CatalogWork& catalog, Jobs& jobs);
+    ~PackTab();  // its count done first: it reads the catalog
     void show(bool on);
     void layout(const RECT& area);
     void refresh();  // the numbers again (on a thread: kPackReady)
@@ -35,6 +37,7 @@ private:
     Jobs& jobs_;
     HWND text_ = nullptr, read_ = nullptr, compact_ = nullptr, note_ = nullptr;
     bool busy_ = false;
+    std::atomic<int> working_{0};
 };
 
 // 2.3, the Log tab: the engine's lines and what the jobs did, the newest last.

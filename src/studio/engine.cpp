@@ -124,17 +124,22 @@ void Engine::stop() {
         CloseHandle(reader_);
         reader_ = nullptr;
     }
+    AcquireSRWLockExclusive(&write_);
     if (pipe_ != INVALID_HANDLE_VALUE) {
         CloseHandle(pipe_);
         pipe_ = INVALID_HANDLE_VALUE;
     }
+    ReleaseSRWLockExclusive(&write_);
     endAll("the engine stopped");
     name_.clear();
 }
 
 bool Engine::write(const std::string& line) {
-    if (pipe_ == INVALID_HANDLE_VALUE || gone_) return false;
-    AcquireSRWLockExclusive(&write_);
+    AcquireSRWLockExclusive(&write_);  // stop() closes the pipe under it
+    if (pipe_ == INVALID_HANDLE_VALUE || gone_) {
+        ReleaseSRWLockExclusive(&write_);
+        return false;
+    }
     OVERLAPPED ov{};
     ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     DWORD n = 0;

@@ -16,6 +16,7 @@ struct Count {
     HWND notify = nullptr;
     settings::Lang lang = settings::Lang::En;
     CatalogWork* catalog = nullptr;
+    std::atomic<int>* working = nullptr;  // the tab's: down at the very end (it waits for it)
 };
 
 std::string listOf(const std::map<std::string, uint32_t>& m) {
@@ -63,6 +64,7 @@ DWORD WINAPI countMain(void* arg) {
         line(settings::Text::StudioPackByKind, {listOf(o.byKind)});
     }
     PostMessageW(job->notify, kPackReady, 0, LPARAM(text.release()));
+    --*job->working;
     return 0;
 }
 
@@ -80,6 +82,10 @@ PackTab::PackTab(HWND parent, settings::Lang lang, HFONT font, int dpi, CatalogW
     read_ = make(L"BUTTON", t(settings::Text::StudioPackRead), BS_PUSHBUTTON | WS_TABSTOP, 0, kRead);
     compact_ = make(L"BUTTON", t(settings::Text::StudioPackCompact), BS_PUSHBUTTON | WS_TABSTOP, 0, kCompact);
     note_ = make(L"STATIC", t(settings::Text::StudioPackCompactNote), SS_LEFT, 0, kNote);
+}
+
+PackTab::~PackTab() {
+    while (working_ > 0) Sleep(5);
 }
 
 std::wstring PackTab::t(settings::Text x) const { return app::wtr(lang_, x); }
@@ -104,10 +110,14 @@ void PackTab::refresh() {
     job->notify = parent_;
     job->lang = lang_;
     job->catalog = &catalog_;
+    job->working = &working_;
+    ++working_;
     if (HANDLE h = CreateThread(nullptr, 0, countMain, job.get(), 0, nullptr)) {
         job.release();
         busy_ = true;
         CloseHandle(h);
+    } else {
+        --working_;
     }
 }
 

@@ -47,6 +47,7 @@ struct Load {
     std::string orphan;
     settings::Lang lang = settings::Lang::En;
     CatalogWork* catalog = nullptr;
+    std::atomic<int>* working = nullptr;  // the inspector's: down at the very end (it waits for it)
 };
 
 DWORD WINAPI loadMain(void* arg) {
@@ -161,6 +162,7 @@ DWORD WINAPI loadMain(void* arg) {
     }
     out->info = std::move(info);
     PostMessageW(job->notify, kShownReady, WPARAM(job->generation), LPARAM(out.release()));
+    --*job->working;
     return 0;
 }
 
@@ -239,6 +241,10 @@ void Inspector::showMaterial() {
     view_.set(shown, nullptr);
 }
 
+Inspector::~Inspector() {
+    while (working_ > 0) Sleep(5);
+}
+
 std::wstring Inspector::t(settings::Text x) const { return app::wtr(lang_, x); }
 
 void Inspector::show(bool on) {
@@ -281,11 +287,15 @@ void Inspector::showRow(const Row& row, const std::vector<std::string>& orphans)
     if (row.file == Row::kNoFile && row.picture < orphans.size()) job->orphan = orphans[row.picture];
     job->lang = lang_;
     job->catalog = &catalog_;
+    job->working = &working_;
     made_.reset();
     for (int i = 1; i < 3; ++i) EnableWindow(actions_[i], FALSE);
+    ++working_;
     if (HANDLE h = CreateThread(nullptr, 0, loadMain, job.get(), 0, nullptr)) {
         job.release();
         CloseHandle(h);
+    } else {
+        --working_;
     }
 }
 

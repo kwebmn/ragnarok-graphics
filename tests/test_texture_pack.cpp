@@ -488,3 +488,17 @@ TEST(texture_pack_rewrite_keeps_times_and_the_new_lines) {
     std::remove(path.c_str());
     std::remove(out.c_str());
 }
+
+TEST(index_parse_leaves_provenance_out_when_asked) {
+    // 2.3: a '+' line a picture (300 000 of them) - the game's driver has no use for them unless it writes the index
+    pack::Index x;
+    x.pictures["world/1x1/a.webp"] = pack::IndexEntry{ai::Kind::Ground, {}};
+    x.made["world/1x1/a.webp"] = pack::Provenance{"a.bmp", "data.grf", 1, "general", "general x4"};
+    x.ownAlways.insert("1x1\\9");
+    x.materials["1x1\\8"] = pack::MaterialScales{0.5f, 1.0f, 1.0f};
+    const std::string text = pack::indexText(x);
+    const pack::Index lean = pack::parseIndexFile(text, false);
+    CHECK(lean.made.empty());
+    CHECK(lean.pictures.size() == 1 && lean.ownAlways.size() == 1 && lean.materials.size() == 1);
+    CHECK_EQ(pack::parseIndexFile(text).made.size(), size_t(1));  // whole by default
+}
