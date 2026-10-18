@@ -8,6 +8,8 @@
 #include "core/studio_state.hpp"
 #include "studio/catalog_work.hpp"
 #include "studio/jobs.hpp"
+#include "studio/textures_tab.hpp"
+#include "studio/thumbs.hpp"
 
 namespace uagfx::studio {
 
@@ -30,6 +32,7 @@ private:
     void layout();         // their places at the window's size
     void showBar();        // the bar as the jobs and the engine are now
     void togglePause();
+    void showTab(int tab);
     void loadSession();
     void saveSession();
 
@@ -43,6 +46,9 @@ private:
     Session session_;
     std::unique_ptr<Jobs> jobs_;
     std::unique_ptr<CatalogWork> catalog_;
+    std::unique_ptr<Thumbs> thumbs_;
+    std::unique_ptr<TexturesTab> textures_;
+    int tab_ = 0;
 };
 
 }  // namespace uagfx::studio

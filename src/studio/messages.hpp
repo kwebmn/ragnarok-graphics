@@ -11,5 +11,6 @@ constexpr UINT kJobsChanged = WM_APP + 4;   // a job began, went on or ended: th
 constexpr UINT kJobDone = WM_APP + 5;       // wParam: the job's id - its result is ready (Jobs::resultOf)
 constexpr UINT kThumbReady = WM_APP + 6;    // a thumbnail or a picture was decoded
 constexpr UINT kPicked = WM_APP + 7;        // the game picked a texture (link\pick.txt)
+constexpr UINT kRowsReady = WM_APP + 8;     // wParam: the rows' generation; lParam: RowsResult* (textures_tab)
 
 }  // namespace uagfx::studio

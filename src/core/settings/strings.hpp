@@ -280,6 +280,12 @@ enum class Text : uint16_t {
     StudioTitle, StudioNoGame, StudioCopyFailed, StudioPause, StudioResume, StudioPaused, StudioEngine,
     StudioEngineNone, StudioEngineNewer, StudioJobsIdle, StudioJobRunning, StudioJobsWaiting, StudioStop,
     StudioTabTextures, StudioTabPack, StudioTabLog,
+    StudioNavAll, StudioNavMaps, StudioNavFolders, StudioNavStates, StudioNavMissing, StudioNavInPack, StudioNavOwn,
+    StudioNavFlagged, StudioNavOverrides, StudioNavOrphans, StudioNavModels, StudioNavReports, StudioFilterCue,
+    StudioColPicture, StudioColFile, StudioColState, StudioColModel, StudioColFlags, StudioColDetail, StudioColSize,
+    StudioColDate, StudioStateMissing, StudioStateInPack, StudioStateOwn, StudioStateOrphan, StudioFlagSmoothed,
+    StudioFlagWashed, StudioFlagBanded, StudioFlagRinging, StudioFlagFringe, StudioFlagAlpha, StudioFlagSeams,
+    StudioRowsCount, StudioCatalogEmpty,
     Count
 };
 

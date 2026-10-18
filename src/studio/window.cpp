@@ -102,6 +102,11 @@ void StudioWindow::build() {
     stop_ = make(L"BUTTON", t(settings::Text::StudioStop), BS_PUSHBUTTON, kStopButton);
     jobs_ = std::make_unique<Jobs>(hwnd_, gameDir_);
     catalog_ = std::make_unique<CatalogWork>(gameDir_);
+    thumbs_ = std::make_unique<Thumbs>(hwnd_, *catalog_);
+    textures_ = std::make_unique<TexturesTab>(hwnd_, lang_, font_, dpi_, gameDir_, *catalog_, *thumbs_);
+    tab_ = session_.tab == "pack" ? 1 : session_.tab == "log" ? 2 : 0;
+    TabCtrl_SetCurSel(tabs_, tab_);
+    showTab(tab_);
     if (session_.paused) jobs_->pause();
     else catalog_->update(hwnd_);
     SetTimer(hwnd_, kBarTimer, 2000, nullptr);
@@ -114,6 +119,9 @@ void StudioWindow::layout() {
     const auto at = [&](int v) { return app::px(v, dpi_); };
     const int barH = at(40), w = r.right, h = r.bottom, y = h - barH + at(8), row = at(24);
     MoveWindow(tabs_, at(4), at(4), w - at(8), h - barH - at(8), TRUE);
+    RECT page{at(4), at(4), w - at(4), h - barH - at(4)};  // the tab's page, in the window's pixels
+    TabCtrl_AdjustRect(tabs_, FALSE, &page);
+    if (textures_) textures_->layout(page);
     MoveWindow(pause_, at(8), y, at(110), row, TRUE);
     MoveWindow(engineLabel_, at(126), y + at(4), at(300), row, TRUE);
     MoveWindow(jobBar_, at(436), y + at(4), at(200), at(16), TRUE);
@@ -157,6 +165,12 @@ void StudioWindow::showBar() {
     EnableWindow(stop_, p.id != 0);
 }
 
+void StudioWindow::showTab(int tab) {
+    tab_ = tab;
+    session_.tab = tab == 1 ? "pack" : tab == 2 ? "log" : "textures";
+    if (textures_) textures_->show(tab == 0);
+}
+
 void StudioWindow::togglePause() {
     if (jobs_->paused()) {  // G4: the newest engine at the next job; the catalog up to date with the archives
         jobs_->resume();
@@ -191,15 +205,35 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case WM_COMMAND:
             if (LOWORD(wp) == kPauseButton) togglePause();
             if (LOWORD(wp) == kStopButton && jobs_) jobs_->stop(jobs_->progress().id);
+            if (textures_) textures_->command(LOWORD(wp), HIWORD(wp));
             return 0;
+        case WM_NOTIFY: {
+            const auto* n = reinterpret_cast<const NMHDR*>(lp);
+            if (n->hwndFrom == tabs_ && n->code == TCN_SELCHANGE) {
+                showTab(TabCtrl_GetCurSel(tabs_));
+                return 0;
+            }
+            LRESULT result = 0;
+            if (textures_ && textures_->notify(n, result)) return result;
+            break;
+        }
         case WM_TIMER:
             if (wp == kBarTimer) {
                 showBar();
                 if (catalog_) catalog_->closeIdle();
             }
+            if (textures_) textures_->timer(wp);
             return 0;
         case kCatalogReady:
             showBar();
+            if (textures_) textures_->catalogChanged();
+            return 0;
+        case kThumbReady:
+            if (textures_) textures_->thumbsReady();
+            return 0;
+        case kRowsReady:
+            if (textures_) textures_->rowsReady(uint64_t(wp), reinterpret_cast<RowsResult*>(lp));
+            else delete reinterpret_cast<RowsResult*>(lp);
             return 0;
         case kJobsChanged:
         case kEngineGone:
@@ -215,6 +249,8 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case WM_DESTROY:
             KillTimer(hwnd_, kBarTimer);
             jobs_.reset();  // the engine ends, the queue is written
+            textures_.reset();
+            thumbs_.reset();
             catalog_.reset();
             if (font_) DeleteObject(font_);
             PostQuitMessage(0);
