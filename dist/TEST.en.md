@@ -1,3 +1,28 @@
+# uaRO Graphics 2.2.2 — testing
+
+- **Glints on tiles and steps:** the relief, the materials and their gloss now fade by one measure — "the pixel sees
+  the texture's relief poorly" (the texture stretched along the face, the face seen edge-on, the pixel's texels in one
+  line). Each effect had a measure of its own, and a face that passed one glinted by another: only turning the whole
+  Surfaces group off helped. Materials brighten at most 1.3 times. Ordinary ground looks as before.
+- **Floor reflections at edges:** at the rims of pits, steps and thin details the reflection fades smoothly instead
+  of blinking as the camera turns; in the rain such rims darken like the floor around them (no light specks).
+- **The console (~):** choosing Custom starts from the set's effects (as the Effects page does), not from what the
+  file held; Auto quality names the card's class — "Auto: Medium".
+- **AI textures in the console:** a switch lights up at once (2.2.1 missed a kind turned back on); monsters, players,
+  NPCs and items turn off one by one and at once — their frames are drawn from the game's own pictures (a single kind
+  of sprites used to wait for the next start). A kind the game started without still needs a restart (the ↻ mark).
+- **Fog in dungeons:** the low fog lies at the ground's height at the character; walking past walls it used to jump
+  up and down, the walls going light and dark by turns (alde_dun03).
+- **keep_fps** turns effects off only when the graphics card is what is slow; slow for the processor's part (a crowd,
+  a town), the effects stay — turning them off would not help.
+- **Statistics:** sent more reliably (nothing is lost while the game writes), know whether the 64-bit renderer draws
+  and the frame limit; the Diagnostics page shows when they last went and has "Send the statistics now". A profile
+  loaded or Reset no longer loses your answer about the statistics.
+- Small things: when the 64-bit renderer does not join, the log says why; dgVoodoo's leftovers are gone.
+- Check, please: c_tower2's and gl_church's floors and gaps while turning the camera (with the Surfaces group on);
+  floor reflections at steps and in the rain; alde_dun03's walls while walking; the console's Custom, "Auto: …",
+  Monsters off and on; Diagnostics → "Send the statistics now".
+
 # uaRO Graphics 2.2.1 — testing
 
 - **The Effects page works:** the quality choice, the groups' boxes and the effects inside them did nothing in 2.2.0
