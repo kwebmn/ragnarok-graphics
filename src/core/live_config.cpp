@@ -82,6 +82,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("render_scale", std::to_string(running.renderScale), std::to_string(file.renderScale)));
         n.renderScale = file.renderScale;
     }
+    if (file.worldScale != running.worldScale) {  // 2.5.16
+        u.applied.push_back(
+            change("world_scale", std::to_string(running.worldScale), std::to_string(file.worldScale)));
+        n.worldScale = file.worldScale;
+    }
     if (file.sharpen != running.sharpen) {
         u.applied.push_back(change("sharpen", std::to_string(running.sharpen), std::to_string(file.sharpen)));
         n.sharpen = file.sharpen;
@@ -156,7 +161,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
 bool appliesNow(const std::string& k) {
     return k == "display.high_resolution" || k == "display.ui_filter" || k == "display.crisp_text" ||
            k == "display.window_art" ||
-           k == "quality.render_scale" || k == "quality.sharpen" || k == "quality.msaa" || k == "quality.taa" ||
+           k == "quality.render_scale" || k == "quality.world_scale" || k == "quality.sharpen" ||
+           k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
            k == "debug.profile" || k == "debug.xray" || k == "frames.fps_counter" || k == "stats.send" ||

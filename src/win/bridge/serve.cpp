@@ -266,6 +266,11 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             renderer_.requestIcon(key, w, h, argb.data());
             break;
         }
+        case Msg::SetWorldScale: {  // 2.5.16
+            const double share = rd.f64();
+            if (rd.ok()) renderer_.setWorldScale(share);
+            break;
+        }
         case Msg::Map: {
             const std::string map = rd.str();
             if (rd.ok()) renderer_.setMap(map);

@@ -61,6 +61,9 @@ AutoSetup autoSetup(const Machine& m) {
     if (a.tier != Tier::High && pixels > 1920LL * 1200 && a.tier != Tier::NoDriver)
         set(e, "quality", "sharpen", "50");  // the sharp upscale's CAS
     set(e, "renderer", "api", a.tier == Tier::Old ? "d3d11" : "auto");
+    // 2.5.16: Direct3D 11's world at 75 % of the picture, the interface sharp - an HD 6570 drew 35 frames with every
+    // improvement off, the world most of each (R-DUMAMX); the others draw it whole
+    set(e, "quality", "world_scale", a.tier == Tier::Old ? "75" : "100");
     set(e, "renderer", "remix", "0");
     // DLSS and its frame generation: NVIDIA's (the 64-bit bridge brings them); elsewhere off.
     if (m.vendor != kNvidia || a.tier == Tier::Old || a.tier == Tier::NoDriver) {

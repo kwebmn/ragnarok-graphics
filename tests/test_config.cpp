@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "core/config.hpp"
+#include "core/live_config.hpp"
 #include "core/settings/schema.hpp"
 #include "test.hpp"
 
@@ -557,4 +558,21 @@ TEST(config_render_thread) {
     const settings::IniSetting* s = settings::findSetting("renderer.render_thread");
     CHECK(s != nullptr);
     if (s) CHECK(settings::tokenOf(*s, parseConfig("[renderer]\nrender_thread = 1\n")) == "1");
+}
+
+TEST(config_world_scale) {
+    // 2.5.16: Direct3D 11 draws the world at 50-100 % of the picture, the interface sharp
+    CHECK_EQ(parseConfig("").worldScale, 100);
+    CHECK_EQ(parseConfig("[quality]\nworld_scale = 75\n").worldScale, 75);
+    CHECK_EQ(parseConfig("[quality]\nworld_scale = 20\n").worldScale, 100);  // out of range: the default
+    CHECK_EQ(parseConfig("[quality]\nworld_scale = 140\n").worldScale, 100);
+    const settings::IniSetting* s = settings::findSetting("quality.world_scale");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->control == settings::Control::Slider && s->min == 50 && s->max == 100);
+    CHECK(s->page == settings::Page::Quality);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[quality]\nworld_scale = 80\n")), std::string("80"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[quality]\nworld_scale = 75\n"));
+    CHECK(u.waiting.empty() && u.applied.size() == 1 && u.applied[0] == "world_scale 100 -> 75");
+    CHECK(appliesNow("quality.world_scale"));
 }

@@ -32,6 +32,7 @@ public:
         return timing_.gpuMs >= 0.0;
     }
     void setUiSharp(bool sharp);
+    void setWorldScale(double share);  // 2.5.16: sent when it changes
     void preparePipelines(const std::string& file);
     bool setTarget(int width, int height);
     bool setScale(double k, int width, int height, int samples, bool upscale);
@@ -75,6 +76,7 @@ private:
     BridgeOptions options_;
     std::string adapter_;
     uint32_t nextTexture_ = 0;
+    double worldScale_ = 1.0;  // 2.5.16: the last sent
     uint32_t presentsSent_ = 0;
     // 2.1.1: the game's thread's time here - its draws written and sent, its wait for the renderer's presents -
     // logged every 30 s

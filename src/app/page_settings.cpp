@@ -430,6 +430,11 @@ private:
     // 2.4.2: DLSS's own size shows under Own size, its model with DLSS on
     bool shown(const IniSetting& s) const {
         const std::string k = sectionKey(s);
+        if (k == "quality.world_scale") {  // 2.5.16: Direct3D 11's alone - chosen, or "auto" without Direct3D 12
+            const SystemInfo& sys = host_.model().system();
+            const std::string api = host_.model().token(*findSetting("renderer.api"));
+            return api == "d3d11" || (api == "auto" && !(sys.d3d12Probed && sys.d3d12.ok));
+        }
         if (k.compare(0, 13, "quality.dlss_") != 0) return true;
         const std::string dlss = host_.model().token(*findSetting("quality.dlss"));
         return k == "quality.dlss_model" ? dlss != "off" : dlss == "custom";

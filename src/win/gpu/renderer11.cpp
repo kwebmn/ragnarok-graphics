@@ -103,6 +103,7 @@ Renderer11::~Renderer11() {
     pool_.clear();
     drop(white_.srv);
     drop(white_.texture);
+    dropWorld();  // 2.5.16
     dropTarget(target_);
     dropTarget(game_);
     dropTarget(scene_);
@@ -701,6 +702,9 @@ bool Renderer11::makeStaging(int width, int height) {
 bool Renderer11::setTarget(int width, int height) {
     if (lost_ || width <= 0 || height <= 0) return false;
     if (width == gameWidth_ && height == gameHeight_ && target_.texture) return true;
+    exitWorld();  // 2.5.16: the picture's own set back, the world's of the old size gone
+    dropWorld();
+    scaled_ = false;  // the start-up calibration draws at the game's size again
     ctx_->ClearState();
     targetBound_ = false;
     dropTarget(target_);
@@ -729,6 +733,7 @@ bool Renderer11::setTarget(int width, int height) {
 
 bool Renderer11::setScale(double k, int targetWidth, int targetHeight) {
     if (lost_ || !target_.texture || targetWidth <= 0 || targetHeight <= 0) return false;
+    exitWorld();  // 2.5.16: the picture's own set (the frame's world made larger into it) before its size changes
     if (k == scale_ && targetWidth == target_.width && targetHeight == target_.height) return true;
     Target next;
     ID3D11Texture2D* depth = nullptr;
@@ -1184,6 +1189,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
     if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
+    if (s.ui) exitWorld();              // 2.5.16: the world made larger into the picture, the interface sharp
     if (s.ui) timeDraws(true, false);   // 2.5.15: the interface's span after the world's effects
     // 1.0: from the world's first draw that adds light, its draws write into the glow too
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
@@ -1744,11 +1750,75 @@ bool Renderer11::depthViews() {
     return depthSrv_ && readOnlyDsv_;
 }
 
+bool Renderer11::ensureWorld() {
+    if (inWorld_ || lost_ || !scaled_ || !target_.texture || worldScale_ > 0.995) return false;
+    const double k = scale_ * worldScale_;
+    const int w = std::max(16, int(std::lround(gameWidth_ * k))), h = std::max(16, int(std::lround(gameHeight_ * k)));
+    if (w >= target_.width || h >= target_.height) return false;
+    world_.scale = k;
+    if (world_.target.texture && world_.target.width == w && world_.target.height == h) return true;
+    dropWorld();
+    if (!makeTarget(world_.target, w, h) || !makeDepth(w, h, world_.depth, world_.dsv)) {
+        dropWorld();
+        worldScale_ = 1.0;  // no memory for it: the world drawn whole from now on
+        return false;
+    }
+    LOG_INFO("Direct3D 11: the world drawn at %dx%d (%.0f %% of the picture's %dx%d) and made larger, the interface at "
+             "the picture's pixels ([quality] world_scale)", w, h, worldScale_ * 100.0, target_.width, target_.height);
+    return true;
+}
+
+void Renderer11::swapWorld() {
+    std::swap(target_, world_.target);
+    std::swap(depth_, world_.depth);
+    std::swap(dsv_, world_.dsv);
+    std::swap(depthSrv_, world_.depthSrv);  // each set keeps its own views (depthViews makes them once)
+    std::swap(depthSrvOf_, world_.depthSrvOf);
+    std::swap(readOnlyDsv_, world_.readOnlyDsv);
+    std::swap(readOnlyDsvOf_, world_.readOnlyDsvOf);
+    std::swap(scale_, world_.scale);
+    inWorld_ = !inWorld_;
+    targetBound_ = false;
+}
+
+void Renderer11::enterWorld() {
+    if (!ensureWorld()) return;
+    flushBatch();
+    swapWorld();
+}
+
+void Renderer11::exitWorld() {
+    if (!inWorld_) return;
+    flushBatch();
+    glowActive_ = glowDrawn_ = false;  // a glow begun and never drawn into (one drawn was added before this)
+    swapWorld();
+    const Target& world = world_.target;
+    const float all[4] = {0.0f, 0.0f, float(world.width), float(world.height)};
+    blit(world.srv, world.width, world.height, all, target_.rtv, Rect{0, 0, target_.width, target_.height},
+         target_.width, target_.height, worldSharpen_);
+    ctx_->OMSetRenderTargets(0, nullptr, nullptr);
+    ctx_->ClearDepthStencilView(dsv_, D3D11_CLEAR_DEPTH, 1.0f, 0);  // the interface's own (its draws mostly keep none)
+}
+
+void Renderer11::dropWorld() {
+    if (inWorld_) swapWorld();
+    dropTarget(world_.target);
+    drop(world_.depthSrv);
+    drop(world_.readOnlyDsv);
+    drop(world_.dsv);
+    drop(world_.depth);
+    world_.depthSrvOf = world_.readOnlyDsvOf = nullptr;
+}
+
 void Renderer11::execute(const FrameRecord& record) {
     if (lost_ || !target_.texture || record.empty()) return;
     LARGE_INTEGER started;  // 0.89: the processor's time in drawing, for the log
     QueryPerformanceCounter(&started);
     timeBegin();
+    if (!frameOpen_) {  // 2.5.16: the frame's clear and its world on the world's picture (world_scale)
+        frameOpen_ = true;
+        enterWorld();
+    }
     geometry_ = uploadGeometry(record);
     targetBound_ = false;
     for (const Command& c : record.commands()) {
@@ -1774,6 +1844,7 @@ void Renderer11::execute(const FrameRecord& record) {
 
 bool Renderer11::readTarget(std::vector<uint32_t>& argb) {
     if (lost_ || !target_.texture || !staging_) return false;
+    exitWorld();  // 2.5.16: the game reads the whole picture (the rest of the frame drawn on it)
     ID3D11Texture2D* source = target_.texture;
     if (target_.width != gameWidth_ || target_.height != gameHeight_) {
         // The client reads its own size: the target shrunk into the helper first (stage 3 spec §5).
@@ -1930,10 +2001,6 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         LOG_DEBUG("picture %dx%d of the game shown as %dx%d at %d,%d in the %ux%u window", source.width(),
                   source.height(), fit.width(), fit.height(), fit.left, fit.top, swapWidth_, swapHeight_);
     }
-    // The source is in game pixels: into target pixels by each axis' own ratio.
-    const auto tx = [this](int x) { return float(double(x) * target_.width / gameWidth_); };
-    const auto ty = [this](int y) { return float(double(y) * target_.height / gameHeight_); };
-    const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
     if (worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2
     if (worldDrawn_ && !nightDone_) applyNight();  // 0.63
     if (worldDrawn_ && !lightDone_) {
@@ -1954,6 +2021,16 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (worldDrawn_ && !dofDone_) applyDof();      // 2.5.5
     if (worldDrawn_ && !weatherDone_) applyWeather();  // 2.5
     if (glowDrawn_) addGlow();  // 1.0: likewise
+    exitWorld();  // 2.5.16: a frame without an interface: its world made larger now
+    frameOpen_ = false;
+    scaled_ = true;  // the start-up calibration is over by the first present (stage 3 spec §4.3)
+    // the world made larger gets a little sharpening of its own unless the present sharpens all of it
+    worldSharpen_ = options.sharpen > 0.0f ? -1.0f : 0.3f;
+    // The source is in game pixels: into target pixels by each axis' own ratio (2.5.16: the picture's, the world's
+    // smaller one made larger into it by now).
+    const auto tx = [this](int x) { return float(double(x) * target_.width / gameWidth_); };
+    const auto ty = [this](int y) { return float(double(y) * target_.height / gameHeight_); };
+    const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
     // 2.5.14: the window's buffer last, outside the card's timed work - its first use waits until the display lets
     // go of it, and that wait was counted as the card's (keep_fps turned effects off for it)
     timeEnd();

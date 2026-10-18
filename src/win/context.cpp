@@ -500,6 +500,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
         scaledUpscale_ = upscale;
         scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight, samples, upscale);
     }
+    // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
+    // Pause draws it whole (the game's own picture to compare with)
+    renderer->setWorldScale(enhanced_ ? config.worldScale / 100.0 : 1.0);
     if (upscale && (dlss || taa)) {  // the camera of the frame being shown: the motion of its pixels
         float view[12];
         float targetZ = 0;

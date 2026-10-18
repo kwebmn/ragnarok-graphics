@@ -1947,6 +1947,11 @@ bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
     return true;
 }
 
+void Renderer::setWorldScale(double share) {
+    if (d3d11_) return d3d11_->setWorldScale(share);
+    if (remote_) return remote_->setWorldScale(share);  // Direct3D 11's own thread; uaro-render64.exe leaves it
+}
+
 void Renderer::setPresentSurface(HANDLE surface) {
     Impl& m = *impl_;
     if (m.presentSurface == surface) return;

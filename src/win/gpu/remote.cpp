@@ -216,6 +216,14 @@ void Remote::drain() {
 
 void Remote::setUiSharp(bool sharp) { send(Msg::SetUiSharp, {uint8_t(sharp ? 1 : 0)}); }
 
+void Remote::setWorldScale(double share) {
+    if (share == worldScale_) return;
+    worldScale_ = share;
+    buffer_.clear();
+    WireWriter(buffer_).f64(share);
+    send(Msg::SetWorldScale, buffer_);
+}
+
 void Remote::preparePipelines(const std::string& file) {
     buffer_.clear();
     WireWriter(buffer_).str(file);

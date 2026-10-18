@@ -73,6 +73,8 @@ TEST(auto_setup_an_old_radeon_on_direct3d_11) {
     CHECK(valueOf(a, "effects", "actor_shadows") == "0");  // 0.90.3: costly in a crowd
     CHECK(valueOf(a, "renderer", "api") == "d3d11");
     CHECK(valueOf(a, "quality", "render_scale") == "100");
+    // 2.5.16: the world at 75 % of the picture, the interface sharp (R-DUMAMX: 35 frames with every improvement off)
+    CHECK(valueOf(a, "quality", "world_scale") == "75");
     CHECK(valueOf(a, "quality", "msaa") == "0");
     CHECK(valueOf(a, "quality", "dlss") == "off" && valueOf(a, "frames", "frame_generation") == "off");
     CHECK(valueOf(a, "renderer", "bridge") == "0");

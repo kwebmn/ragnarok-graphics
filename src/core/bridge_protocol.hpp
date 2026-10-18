@@ -64,6 +64,7 @@ enum class Msg : uint32_t {
                         // skills' light, i32 its strength ([effects], 0.18-0.26)
     ObjectTexture,      // u32 id, u8 kind (objects::Kind): a texture that is a frame of a map object (0.23.1)
     SetStudio,          // 2.3: uaRO Studio's keys (writeStudioKeys): the X-ray, a pick, A/B
+    SetWorldScale,      // 2.5.16: f64 the world's share of the picture (Direct3D 11's [quality] world_scale)
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text

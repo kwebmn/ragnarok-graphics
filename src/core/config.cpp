@@ -420,6 +420,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.crispText);
         } else if (key == "quality.render_scale") {
             toInt(val, 50, 200, c.renderScale);  // 0.58: from 50 % (drawn smaller, made larger sharply)
+        } else if (key == "quality.world_scale") {
+            toInt(val, 50, 100, c.worldScale);  // 2.5.16
         } else if (key == "quality.sharpen") {
             toInt(val, 0, 100, c.sharpen);
         } else if (key == "quality.msaa") {

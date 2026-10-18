@@ -79,6 +79,9 @@ public:
     std::string adapterName() const { return adapter_; }
     bool setTarget(int width, int height);
     bool setScale(double k, int targetWidth, int targetHeight);
+    // 2.5.16: [quality] world_scale - the world drawn at this share (0.5-1) of the picture and made larger before the
+    // interface, which stays at the picture's pixels (an HD 6570: the world was most of the frame)
+    void setWorldScale(double share) { worldScale_ = std::clamp(share, 0.5, 1.0); }
     uint32_t createTexture(int width, int height, int levels);
     // 2.5.13: under the number the game's side gave it (Direct3D 11 on its own thread: Remote numbers them)
     bool createTextureAs(uint32_t id, int width, int height, int levels);
@@ -657,6 +660,31 @@ private:
     std::unordered_map<uint64_t, ID3D11SamplerState*> samplers_;
 
     Target target_;  // the game's picture at the window's size (k times the game's)
+    // 2.5.16: the world's smaller picture (world_scale) and what goes with it. While the world is drawn it is swapped
+    // with the picture's (target_, its depth and their views, scale_): every pass draws on what target_ is - the
+    // frame's clear, the game's world draws and their effects - and before the interface's first draw it is made
+    // larger into the picture's, which takes the interface.
+    struct WorldSet {
+        Target target;
+        ID3D11Texture2D* depth = nullptr;
+        ID3D11DepthStencilView* dsv = nullptr;
+        ID3D11ShaderResourceView* depthSrv = nullptr;
+        ID3D11Texture2D* depthSrvOf = nullptr;
+        ID3D11DepthStencilView* readOnlyDsv = nullptr;
+        ID3D11Texture2D* readOnlyDsvOf = nullptr;
+        double scale = 1.0;
+    };
+    WorldSet world_;
+    double worldScale_ = 1.0;
+    bool inWorld_ = false;      // world_ holds the picture's set now
+    bool frameOpen_ = false;    // the frame's first execute is behind
+    bool scaled_ = false;       // a present was made: the start-up calibration is over
+    float worldSharpen_ = 0.3f;  // the world's own sharpening made larger (-1: the present sharpens all of it)
+    bool ensureWorld();  // the smaller picture of world_scale's size; false: the world is drawn whole
+    void swapWorld();
+    void enterWorld();   // at the frame's start
+    void exitWorld();    // at the interface's first draw, the present, anything that needs the whole picture
+    void dropWorld();
     Target scene_;   // 0.59: its copy the colours are read from
     EffectSettings effects_;
     std::string map_;
