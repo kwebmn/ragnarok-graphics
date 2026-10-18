@@ -157,7 +157,8 @@ void Renderer11::hillsConstants(Constants& c) const {
 // vertices go into buffers of their own: the game's record stays in vertices_ for its next draws.
 void Renderer11::applySeams() {
     seamsDone_ = true;
-    const std::vector<seams::Strip> strips = seams::build(groundTris_, groundTextures_, 0.5f);
+    // 2.5.11: built again only when the ground differs from the last frame's (the camera moved)
+    const std::vector<seams::Strip>& strips = seamsCache_.build(groundTris_, groundTextures_, 0.5f);
     if (strips.empty()) return;
     const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
     const float* m = viewToWorld_;

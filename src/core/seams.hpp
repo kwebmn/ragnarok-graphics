@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -19,6 +20,7 @@ struct Triangle {
     Vertex v[3];
     uint32_t group = 0;  // the caller's: its draw's state and textures
 };
+static_assert(sizeof(Vertex) == 36 && sizeof(Triangle) == 112, "no padding: compared byte by byte (Cache)");
 
 // A strip's corner: as Vertex; the diffuse alpha how much the place is the other texture's (1.9.5: bilinear between
 // the cells' middles, 0.5 at the edge); the specular's blue the way across the strip (0 at the edge), green 255 on the
@@ -36,5 +38,22 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
 
 // The cells' side (world units) the triangles show - the median of their extents; 0 when none.
 float cellSide(const std::vector<Triangle>& ground);
+
+// 2.5.11: build()'s strips of the last ground, built again only when the ground, its textures or the width differ -
+// standing still, the game draws the same ground frame after frame (with Direct3D 11 on the game's own thread).
+class Cache {
+public:
+    const std::vector<Strip>& build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture,
+                                    float width);
+    void clear();          // another map
+    size_t made() const { return made_; }  // builds so far
+private:
+    std::vector<Triangle> ground_;
+    std::vector<uint32_t> texture_;
+    float width_ = -1.0f;
+    bool known_ = false;
+    std::vector<Strip> strips_;
+    size_t made_ = 0;
+};
 
 }  // namespace uagfx::seams

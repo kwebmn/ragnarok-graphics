@@ -335,6 +335,7 @@ private:
     std::vector<GroundGroup11> groundGroups_;
     std::vector<uint32_t> groundTextures_;  // each group's texture (stage 0)
     FrameRecord seamRec_;
+    seams::Cache seamsCache_;  // 2.5.11
     ID3D11Buffer* seamVertices_ = nullptr;
     ID3D11Buffer* seamIndices_ = nullptr;
     UINT seamVertexBytes_ = 0, seamIndexBytes_ = 0;

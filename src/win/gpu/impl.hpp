@@ -1086,6 +1086,7 @@ struct Renderer::Impl {
     std::vector<GroundGroup> groundGroups;
     std::vector<uint32_t> groundTextures;
     FrameRecord seamRec;
+    seams::Cache seamsCache;  // 2.5.11
     bool seamPass = false, seamsDone = false, seamsLogged = false;
     // 2.2.1: outdoors only - a dungeon's floor is tiles (Glast Heim's church: stone and black broken ones), whose
     // edges are meant straight: the wandering line spread the black over the stones as cracks, and blinked

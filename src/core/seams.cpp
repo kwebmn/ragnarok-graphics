@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <unordered_map>
 
 namespace uagfx::seams {
@@ -33,31 +34,44 @@ void onGround(const Cell& c, float u, float v, float out[3]) {
 
 int64_t keyOf(int x, int z) { return (int64_t(x) << 32) ^ int64_t(uint32_t(z)); }
 
-uint32_t lerpColour(uint32_t a, uint32_t b, float t) {
+// The cell's attributes at (u, v) of its own square, bilinear (outside [0, 1] carried on), colours rounded channel by
+// channel at each of the three steps. 2.5.11: only the parts a strip's corner keeps, each by the same arithmetic as
+// before - a corner took two whole vertices of it and four of the neighbours' look-ups: 8.7 ms a frame.
+// The channels at bit shifts from..to, the others 0.
+uint32_t lerpChannels(uint32_t a, uint32_t b, float t, int from, int to) {
     uint32_t out = 0;
-    for (int s = 0; s < 32; s += 8) {
+    for (int s = from; s <= to; s += 8) {
         const float ca = float((a >> s) & 255), cb = float((b >> s) & 255);
         out |= uint32_t(std::clamp(ca + (cb - ca) * t + 0.5f, 0.0f, 255.0f)) << s;
     }
     return out;
 }
 
-Vertex lerp(const Vertex& a, const Vertex& b, float t) {
-    Vertex v;
-    for (int k = 0; k < 3; ++k) v.pos[k] = a.pos[k] + (b.pos[k] - a.pos[k]) * t;
+float lerpf(float a, float b, float t) { return a + (b - a) * t; }
+
+// at(c, u, v).uv0
+void uv0At(const Cell& c, float u, float v, float out[2]) {
     for (int k = 0; k < 2; ++k) {
-        v.uv0[k] = a.uv0[k] + (b.uv0[k] - a.uv0[k]) * t;
-        v.uv1[k] = a.uv1[k] + (b.uv1[k] - a.uv1[k]) * t;
+        const float top = lerpf(c.corner[0].uv0[k], c.corner[1].uv0[k], u);
+        const float bottom = lerpf(c.corner[2].uv0[k], c.corner[3].uv0[k], u);
+        out[k] = lerpf(top, bottom, v);
     }
-    v.diffuse = lerpColour(a.diffuse, b.diffuse, t);
-    v.specular = lerpColour(a.specular, b.specular, t);
-    return v;
 }
 
-// The cell's attributes at (u, v) of its own square - bilinear; outside [0, 1] carried on.
-Vertex at(const Cell& c, float u, float v) {
-    const Vertex top = lerp(c.corner[0], c.corner[1], u), bottom = lerp(c.corner[2], c.corner[3], u);
-    return lerp(top, bottom, v);
+// at(c, u, v)'s second coordinates, its diffuse colour without the alpha and its specular's alpha alone
+void keptAt(const Cell& c, float u, float v, Vertex& p) {
+    for (int k = 0; k < 2; ++k) {
+        const float top = lerpf(c.corner[0].uv1[k], c.corner[1].uv1[k], u);
+        const float bottom = lerpf(c.corner[2].uv1[k], c.corner[3].uv1[k], u);
+        p.uv1[k] = lerpf(top, bottom, v);
+    }
+    const auto colour = [&](uint32_t Vertex::*field, int from, int to) {
+        const uint32_t top = lerpChannels(c.corner[0].*field, c.corner[1].*field, u, from, to);
+        const uint32_t bottom = lerpChannels(c.corner[2].*field, c.corner[3].*field, u, from, to);
+        return lerpChannels(top, bottom, v, from, to);
+    };
+    p.diffuse = colour(&Vertex::diffuse, 0, 16);
+    p.specular = colour(&Vertex::specular, 24, 24);
 }
 
 bool same(float a, float b) { return std::fabs(a - b) < 0.02f; }
@@ -172,12 +186,21 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                 return c != cells.end() && c->second.group < texture.size() && texture[c->second.group] == tb ? 1.0f
                                                                                                                 : 0.0f;
             };
+            // 2.5.11: the cells about this one looked up once an edge, not four times a corner of a strip
+            float nearby[3][3];
+            for (int j = 0; j < 3; ++j)
+                for (int i = 0; i < 3; ++i) nearby[j][i] = theirs(ix - 1 + i, iz - 1 + j);
+            const auto theirsNear = [&](int cx, int cz) {
+                const int i = cx - (ix - 1), j = cz - (iz - 1);
+                return i >= 0 && i < 3 && j >= 0 && j < 3 ? nearby[j][i] : theirs(cx, cz);
+            };
             const auto claim = [&](float u, float v) {
                 const float gx = float(ix) + u - 0.5f, gz = float(iz) + v - 0.5f;
                 const int x0 = int(std::floor(gx)), z0 = int(std::floor(gz));
                 const float fx = gx - float(x0), fz = gz - float(z0);
-                const float top = theirs(x0, z0) + (theirs(x0 + 1, z0) - theirs(x0, z0)) * fx;
-                const float bottom = theirs(x0, z0 + 1) + (theirs(x0 + 1, z0 + 1) - theirs(x0, z0 + 1)) * fx;
+                const float top = theirsNear(x0, z0) + (theirsNear(x0 + 1, z0) - theirsNear(x0, z0)) * fx;
+                const float bottom =
+                    theirsNear(x0, z0 + 1) + (theirsNear(x0 + 1, z0 + 1) - theirsNear(x0, z0 + 1)) * fx;
                 return top + (bottom - top) * fz;
             };
             // 1.9.2: two strips inside this cell - the neighbour's texture by the noise, and over the band at the
@@ -205,16 +228,17 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                         if (w.dx == -1) { u = into; v = along; }
                         if (w.dz == 1) { u = along; v = 1.0f - into; }
                         if (w.dz == -1) { u = along; v = into; }
-                        Vertex p = at(a, u, v);
+                        Vertex p;
+                        keptAt(a, u, v, p);
                         onGround(a, u, v, p.pos);  // 2.1.2: on the game's triangles
-                        const Vertex q = self ? at(a, inset(u), inset(v))
-                                              : at(b, inset(fold(u - float(w.dx))), inset(fold(v - float(w.dz))));
-                        p.uv0[0] = q.uv0[0];
-                        p.uv0[1] = q.uv0[1];
+                        if (self)
+                            uv0At(a, inset(u), inset(v), p.uv0);
+                        else
+                            uv0At(b, inset(fold(u - float(w.dx))), inset(fold(v - float(w.dz))), p.uv0);
                         const uint32_t f = uint32_t(255.0f * std::clamp(claim(u, v), 0.0f, 1.0f) + 0.5f);
                         const uint32_t g = uint32_t(255.0f * float(j) / kAcross + 0.5f);
-                        p.diffuse = (p.diffuse & 0x00ffffffu) | f << 24;
-                        p.specular = (p.specular & 0xff000000u) | (self ? 0xff0000u : 0u) | (low ? 0xff00u : 0u) | g;
+                        p.diffuse |= f << 24;
+                        p.specular |= (self ? 0xff0000u : 0u) | (low ? 0xff00u : 0u) | g;
                         s.vertices.push_back(p);
                     }
                 for (int j = 0; j < kAcross; ++j)
@@ -229,6 +253,30 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
         }
     }
     return out;
+}
+
+const std::vector<Strip>& Cache::build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture,
+                                       float width) {
+    const size_t groundBytes = ground.size() * sizeof(Triangle), textureBytes = texture.size() * sizeof(uint32_t);
+    const bool same = known_ && width == width_ && ground.size() == ground_.size() &&
+                      texture.size() == texture_.size() &&
+                      (!groundBytes || std::memcmp(ground.data(), ground_.data(), groundBytes) == 0) &&
+                      (!textureBytes || std::memcmp(texture.data(), texture_.data(), textureBytes) == 0);
+    if (same) return strips_;
+    strips_ = seams::build(ground, texture, width);
+    ground_ = ground;
+    texture_ = texture;
+    width_ = width;
+    known_ = true;
+    ++made_;
+    return strips_;
+}
+
+void Cache::clear() {
+    ground_.clear();
+    texture_.clear();
+    strips_.clear();
+    known_ = false;
 }
 
 }  // namespace uagfx::seams

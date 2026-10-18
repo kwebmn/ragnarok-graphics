@@ -89,7 +89,8 @@ void Renderer::Impl::noteGround(const FrameRecord& rec, const DrawCmd& d) {
 bool Renderer::Impl::applySeams() {
     seamsDone = true;
     crumb("ground seams");
-    const std::vector<seams::Strip> strips = seams::build(groundTris, groundTextures, 0.5f);
+    // 2.5.11: built again only when the ground differs from the last frame's (the camera moved)
+    const std::vector<seams::Strip>& strips = seamsCache.build(groundTris, groundTextures, 0.5f);
     if (strips.empty()) return true;
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;

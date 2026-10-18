@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstdio>
 #include "core/seams.hpp"
 #include "test.hpp"
 
@@ -79,4 +80,99 @@ TEST(seams_none_over_a_step) {
         for (seams::Vertex& v : ground[k].v) v.pos[1] = -3.0f;
     const std::vector<uint32_t> textures = {1, 2};
     CHECK(seams::build(ground, textures, 0.45f).empty());
+}
+
+namespace {
+
+// A ground of n x n cells, its textures, heights, colours and second coordinates from a fixed sequence.
+void varied(std::vector<seams::Triangle>& ground, std::vector<uint32_t>& textures, int n) {
+    uint32_t seed = 7;
+    const auto next = [&] {
+        seed = seed * 1664525u + 1013904223u;
+        return seed;
+    };
+    for (int z = 0; z < n; ++z)
+        for (int x = 0; x < n; ++x) {
+            const uint32_t group = uint32_t(textures.size());
+            textures.push_back(1 + next() % 3);
+            seams::Vertex c[4];
+            for (int k = 0; k < 4; ++k) {
+                c[k].pos[0] = float(x + (k & 1)) * 10.0f;
+                c[k].pos[2] = float(z + (k >> 1)) * 10.0f;
+                c[k].pos[1] = -0.3f * float((x + (k & 1) + (z + (k >> 1)) * 3) % 5);
+                c[k].uv0[0] = float(k & 1) * (next() % 4 == 0 ? 0.5f : 1.0f);
+                c[k].uv0[1] = float(k >> 1);
+                c[k].uv1[0] = float(next() % 256) / 256.0f;
+                c[k].uv1[1] = float(next() % 256) / 256.0f;
+                c[k].diffuse = next();
+                c[k].specular = next();
+            }
+            seams::Triangle a, b;
+            a.v[0] = c[0], a.v[1] = c[1], a.v[2] = c[2];
+            b.v[0] = c[2], b.v[1] = c[1], b.v[2] = c[3];
+            a.group = b.group = group;
+            ground.push_back(a);
+            ground.push_back(b);
+        }
+}
+
+// FNV-1a over the strips: their groups, every vertex's fields and the indices.
+uint64_t hashOf(const std::vector<seams::Strip>& strips) {
+    uint64_t h = 1469598103934665603ull;
+    const auto add = [&](const void* p, size_t n) {
+        for (size_t i = 0; i < n; ++i) h = (h ^ static_cast<const uint8_t*>(p)[i]) * 1099511628211ull;
+    };
+    for (const seams::Strip& s : strips) {
+        add(&s.inside, 4);
+        add(&s.shows, 4);
+        for (const seams::Vertex& v : s.vertices) {
+            add(v.pos, 12);
+            add(&v.diffuse, 4);
+            add(&v.specular, 4);
+            add(v.uv0, 8);
+            add(v.uv1, 8);
+        }
+        add(s.indices.data(), s.indices.size() * 2);
+    }
+    return h;
+}
+
+}  // namespace
+
+TEST(seams_strips_stay_as_they_were_byte_for_byte) {
+    // 2.5.11: the strips' loops made a few times faster (8.7 ms a frame over cmd_fild02's view, the game's own
+    // thread with Direct3D 11) - every vertex as before
+    std::vector<seams::Triangle> ground;
+    std::vector<uint32_t> textures;
+    varied(ground, textures, 12);
+    const std::vector<seams::Strip> strips = seams::build(ground, textures, 0.5f);
+    size_t vertices = 0;
+    for (const seams::Strip& s : strips) vertices += s.vertices.size();
+    std::printf("  seams snapshot: %zu strips, %zu vertices, %016llx\n", strips.size(), vertices,
+                static_cast<unsigned long long>(hashOf(strips)));
+    CHECK(hashOf(strips) == 0x73823ca6fdbf5b50ull);  // as 2.5.10 made them
+}
+
+TEST(seams_cache_builds_again_only_when_the_ground_differs) {
+    // 2.5.11: standing still the game draws the same ground frame after frame - its strips are not built again
+    std::vector<seams::Triangle> ground;
+    std::vector<uint32_t> textures;
+    varied(ground, textures, 6);
+    seams::Cache cache;
+    const uint64_t first = hashOf(cache.build(ground, textures, 0.5f));
+    CHECK(first == hashOf(seams::build(ground, textures, 0.5f)));
+    CHECK_EQ(cache.made(), size_t(1));
+    CHECK(hashOf(cache.build(ground, textures, 0.5f)) == first);
+    CHECK_EQ(cache.made(), size_t(1));  // the same ground: the same strips, not made again
+    ground[3].v[1].pos[1] += 0.25f;     // the camera moved: the ground back in the world a little elsewhere
+    CHECK(hashOf(cache.build(ground, textures, 0.5f)) == hashOf(seams::build(ground, textures, 0.5f)));
+    CHECK_EQ(cache.made(), size_t(2));
+    textures[2] = 9;  // another texture
+    cache.build(ground, textures, 0.5f);
+    CHECK_EQ(cache.made(), size_t(3));
+    cache.build(ground, textures, 0.4f);  // another width
+    CHECK_EQ(cache.made(), size_t(4));
+    cache.clear();  // another map
+    cache.build(ground, textures, 0.4f);
+    CHECK_EQ(cache.made(), size_t(5));
 }
