@@ -9,6 +9,7 @@
 #include "studio/catalog_work.hpp"
 #include "studio/inspector.hpp"
 #include "studio/jobs.hpp"
+#include "studio/pack_tab.hpp"
 #include "studio/textures_tab.hpp"
 #include "studio/thumbs.hpp"
 
@@ -57,6 +58,8 @@ private:
     std::unique_ptr<Thumbs> thumbs_;
     std::unique_ptr<TexturesTab> textures_;
     std::unique_ptr<Inspector> inspector_;
+    std::unique_ptr<PackTab> pack_;
+    std::unique_ptr<LogTab> log_;
     int tab_ = 0;
     std::wstring lastError_;  // the last job that failed, on the bar until the next one
 };

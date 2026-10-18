@@ -10,21 +10,57 @@
 
 namespace uagfx::studio {
 
+namespace {
+
+// The pack's writer for as long as it lives: the builder's mutex (a builder or another change: busy) and the pack
+// writer's (a game making pictures: busy).
+class PackLock {
+public:
+    bool take(std::string& error) {
+        builder_ = CreateMutexW(nullptr, FALSE, L"Local\\uaro-texture-pack-builder");
+        if (!builder_ || GetLastError() == ERROR_ALREADY_EXISTS) {
+            error = "the pack is busy";
+            return false;
+        }
+        writer_ = CreateMutexW(nullptr, FALSE, app::wide(pack::kWriterMutex).c_str());
+        const DWORD got = writer_ ? WaitForSingleObject(writer_, 0) : WAIT_FAILED;
+        held_ = got == WAIT_OBJECT_0 || got == WAIT_ABANDONED;
+        if (!held_) error = "the pack is busy";
+        return held_;
+    }
+    ~PackLock() {
+        if (held_) ReleaseMutex(writer_);
+        if (writer_) CloseHandle(writer_);
+        if (builder_) CloseHandle(builder_);
+    }
+
+private:
+    HANDLE builder_ = nullptr, writer_ = nullptr;
+    bool held_ = false;
+};
+
+}  // namespace
+
+bool compactPack(const std::string& pack, std::string& error, const std::string& gameOpen) {
+    PackLock lock;
+    if (!lock.take(error)) return false;
+    const std::string fresh = pack + ".new";
+    size_t kept = 0;
+    if (!pack::rewrite(pack, fresh, [](const std::string&) { return true; }, kept, error)) {
+        DeleteFileA(fresh.c_str());
+        return false;
+    }
+    if (!MoveFileExA(fresh.c_str(), pack.c_str(), MOVEFILE_REPLACE_EXISTING)) {  // a game reading it holds it
+        DeleteFileA(fresh.c_str());
+        error = gameOpen;
+        return false;
+    }
+    return true;
+}
+
 bool packEdit(const std::string& pack, const PackChange& change, std::string& error) {
-    HANDLE builder = CreateMutexW(nullptr, FALSE, L"Local\\uaro-texture-pack-builder");
-    if (!builder || GetLastError() == ERROR_ALREADY_EXISTS) {
-        if (builder) CloseHandle(builder);
-        error = "the pack is busy";
-        return false;
-    }
-    HANDLE writer = CreateMutexW(nullptr, FALSE, app::wide(pack::kWriterMutex).c_str());
-    const DWORD got = writer ? WaitForSingleObject(writer, 0) : WAIT_FAILED;
-    if (got != WAIT_OBJECT_0 && got != WAIT_ABANDONED) {
-        if (writer) CloseHandle(writer);
-        CloseHandle(builder);
-        error = "the pack is busy";
-        return false;
-    }
+    PackLock lock;
+    if (!lock.take(error)) return false;
     pack::Index index;
     {
         pack::Reader r;  // its index, before the writer drops it to go on
@@ -41,9 +77,6 @@ bool packEdit(const std::string& pack, const PackChange& change, std::string& er
         ok = w.close(pack::indexText(index), closing) && changed;
         error = !changed ? why : closing;
     }
-    ReleaseMutex(writer);
-    CloseHandle(writer);
-    CloseHandle(builder);
     return ok;
 }
 

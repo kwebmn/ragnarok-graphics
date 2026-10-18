@@ -13,5 +13,6 @@ constexpr UINT kThumbReady = WM_APP + 6;    // a thumbnail or a picture was deco
 constexpr UINT kPicked = WM_APP + 7;        // the game picked a texture (link\pick.txt)
 constexpr UINT kRowsReady = WM_APP + 8;     // wParam: the rows' generation; lParam: RowsResult* (textures_tab)
 constexpr UINT kShownReady = WM_APP + 9;    // wParam: the inspector's generation; lParam: Shown* (inspector)
+constexpr UINT kPackReady = WM_APP + 10;    // lParam: std::wstring* - the Pack tab's numbers
 
 }  // namespace uagfx::studio

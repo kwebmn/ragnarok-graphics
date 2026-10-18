@@ -62,7 +62,14 @@ std::wstring madeFile(const std::string& key) {
     return studioRoot() + L"\\made\\" + app::wide(name) + L".raw";
 }
 
-void addPictureWork(Jobs& jobs, CatalogWork& catalog) {
+void addPictureWork(Jobs& jobs, CatalogWork& catalog, settings::Lang lang) {
+    jobs.on("compact", [&catalog, lang](JobContext&, json::Value& result, std::string& why) {
+        const std::string gameOpen = app::utf8(app::wtr(lang, settings::Text::StudioPackGameOpen));
+        if (!compactPack(app::ansi(catalog.packPath()), why, gameOpen)) return false;
+        catalog.readPack();
+        result.set("op", "compact");
+        return true;
+    });
     jobs.on("make", [&catalog](JobContext& ctx, json::Value& result, std::string& why) {
         const json::Value& a = ctx.job.args;
         const std::string file = a["file"].asString(), key = a["key"].asString();

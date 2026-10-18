@@ -13,6 +13,9 @@ namespace uagfx::studio {
 // false and why: "the pack is busy", or what failed.
 using PackChange = std::function<bool(pack::Writer& w, pack::Index& index, std::string& error)>;
 bool packEdit(const std::string& pack, const PackChange& change, std::string& error);
+// P1: the pack copied whole into a new file without the space replaced and taken-out pictures hold, put in its place;
+// gameOpen: why when a running game holds the pack open.
+bool compactPack(const std::string& pack, std::string& error, const std::string& gameOpen);
 // A running game told of the keys changed (link\changed.txt, the event Local\uaro-studio-changed): it takes their
 // pictures and materials from the pack again.
 void tellGame(const std::vector<std::string>& keys);

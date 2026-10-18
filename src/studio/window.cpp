@@ -110,13 +110,15 @@ void StudioWindow::build() {
     textures_ = std::make_unique<TexturesTab>(hwnd_, lang_, font_, dpi_, gameDir_, *catalog_, *thumbs_);
     inspector_ = std::make_unique<Inspector>(hwnd_, lang_, font_, dpi_, gameDir_, *catalog_);
     textures_->onSelect = [this](const Row& row) { inspector_->showRow(row, textures_->orphans()); };
-    addPictureWork(*jobs_, *catalog_);
+    addPictureWork(*jobs_, *catalog_, lang_);
+    pack_ = std::make_unique<PackTab>(hwnd_, lang_, font_, dpi_, *catalog_, *jobs_);
+    log_ = std::make_unique<LogTab>(hwnd_, font_);
     inspector_->onMake = [this] { makeAgain(); };
     inspector_->onKeep = [this] { keep(); };
     inspector_->onDiscard = [this] { discard(); };
     inspector_->onTakeOut = [this] { takeOut(); };
     inspector_->onOwn = [this] { toggleOwn(); };
-    tab_ = session_.tab == "pack" ? 1 : session_.tab == "log" ? 2 : 0;
+    tab_ = 0;  // the textures at the start (the Pack tab counts the pack: it waits until it is opened)
     TabCtrl_SetCurSel(tabs_, tab_);
     showTab(tab_);
     if (session_.paused) jobs_->pause();
@@ -133,6 +135,8 @@ void StudioWindow::layout() {
     MoveWindow(tabs_, at(4), at(4), w - at(8), h - barH - at(8), TRUE);
     RECT page{at(4), at(4), w - at(4), h - barH - at(4)};  // the tab's page, in the window's pixels
     TabCtrl_AdjustRect(tabs_, FALSE, &page);
+    if (pack_) pack_->layout(page);
+    if (log_) log_->layout(page);
     if (textures_ && inspector_) {  // the list on the left, the inspector on the right
         RECT left = page, right = page;
         left.right = page.left + (page.right - page.left) * 56 / 100;
@@ -188,6 +192,8 @@ void StudioWindow::showTab(int tab) {
     session_.tab = tab == 1 ? "pack" : tab == 2 ? "log" : "textures";
     if (textures_) textures_->show(tab == 0);
     if (inspector_) inspector_->show(tab == 0);
+    if (pack_) pack_->show(tab == 1);
+    if (log_) log_->show(tab == 2);
 }
 
 void StudioWindow::makeAgain() {
@@ -281,10 +287,13 @@ void StudioWindow::jobDone(int64_t id) {
         if (j.id == id) label = j.op;
     if (!jobs_->resultOf(id, result, why)) {
         lastError_ = app::wtrf(lang_, settings::Text::StudioJobFailed, {label, why});
+        if (log_) log_->add(lastError_);
         showBar();
         return;
     }
     lastError_.clear();
+    if (log_) log_->add(app::wtrf(lang_, settings::Text::StudioLogDone, {label}));
+    if (pack_ && result["op"].asString() != "make") pack_->refresh();
     const std::string op = result["op"].asString();
     if (op != "make") textures_->catalogChanged();  // the pack changed: the states again
     const Shown* s = inspector_->shown();
@@ -328,6 +337,7 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (LOWORD(wp) == kStopButton && jobs_) jobs_->stop(jobs_->progress().id);
             if (textures_) textures_->command(LOWORD(wp), HIWORD(wp));
             if (inspector_) inspector_->command(LOWORD(wp), HIWORD(wp));
+            if (pack_) pack_->command(LOWORD(wp), HIWORD(wp));
             return 0;
         case WM_NOTIFY: {
             const auto* n = reinterpret_cast<const NMHDR*>(lp);
@@ -368,8 +378,14 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kJobDone:
             jobDone(int64_t(wp));
             return 0;
-        case kEngineLog:
-            delete reinterpret_cast<std::string*>(lp);  // the Log tab takes it (Task 18)
+        case kEngineLog: {
+            std::unique_ptr<std::string> line(reinterpret_cast<std::string*>(lp));
+            if (log_) log_->add(L"engine: " + app::wide(*line));
+            return 0;
+        }
+        case kPackReady:
+            if (pack_) pack_->ready(reinterpret_cast<std::wstring*>(lp));
+            else delete reinterpret_cast<std::wstring*>(lp);
             return 0;
         case WM_CLOSE:
             saveSession();
@@ -380,6 +396,8 @@ LRESULT StudioWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             jobs_.reset();  // the engine ends, the queue is written
             inspector_.reset();
             textures_.reset();
+            pack_.reset();
+            log_.reset();
             thumbs_.reset();
             catalog_.reset();
             if (font_) DeleteObject(font_);
