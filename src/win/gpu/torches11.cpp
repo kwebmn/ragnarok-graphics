@@ -428,6 +428,20 @@ void Renderer11::applyTorchLight() {
             if (kv.second.w > 0.02f) best.push_back(kv.second);
         std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
         const float fireStrength = 0.18f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f;
+        for (size_t i = 0; i < best.size() && embers_.size() < 24 && effects_.skillSparks && embersPs_; ++i) {
+            const Cell& c = best[i];  // 2.5.3 (torches.cpp 0.82): the places for the skills' sparks
+            const float vz = c.view[2] / c.w;
+            if (vz <= proj.nearZ) continue;
+            const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
+            Ember11 e{};
+            e.x = (c.view[0] / c.w / vz * proj.f0 + proj.cx) * k + 0.5f;
+            e.y = (c.view[1] / c.w / vz * proj.f1 + proj.cy) * k + 0.5f;
+            e.size = 7.0f * proj.f0 / vz * k;  // about seven units across
+            e.strength = 0.55f * std::min(c.w, 1.0f) * float(std::clamp(effects_.skillSparksAmount, 0, 200)) / 100.0f;
+            for (int i2 = 0; i2 < 3; ++i2) e.colour[i2] = c.colour[i2] / top;
+            e.fire = e.colour[0] > 0.8f && e.colour[2] < 0.6f;
+            embers_.push_back(e);
+        }
         if (heatWanted())  // 2.5.3: the hot air over burning skills (their middles, game pixels to the target's)
             for (size_t i = 0; i < best.size() && i < 16; ++i) {
                 const Cell& c = best[i];

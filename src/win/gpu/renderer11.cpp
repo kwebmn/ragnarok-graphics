@@ -166,6 +166,13 @@ Renderer11::~Renderer11() {
     drop(heatData_);
     drop(rayPs_);
     drop(rayGlowPs_);
+    drop(embersPs_);
+    drop(embersDataSrv_);
+    drop(embersData_);
+    drop(floorReflectPs_);
+    drop(halfOverPs_);
+    dropTarget(floor_);
+    drop(splashPs_);
     drop(waterGlowPs_);
     drop(glowDownPs_);
     drop(glowUpPs_);
@@ -359,7 +366,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[45] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[49] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -395,7 +402,11 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"lava_glow_ps", ps, shaderSource(), {}, true},
                    {"heat_ps", ps, shaderSource(), {}, true},  // 2.5.3: the heat haze, the forest's beams
                    {"ray_ps", ps, shaderSource(), {}, true},
-                   {"ray_glow_ps", ps, shaderSource(), {}, true}};
+                   {"ray_glow_ps", ps, shaderSource(), {}, true},
+                   {"embers_ps", ps, shaderSource(), {}, true},  // 2.5.3: sparks, floors' reflections, splashes
+                   {"floor_reflect_ps", ps, shaderSource(), {}, true},
+                   {"half_over_ps", ps, shaderSource(), {}, true},
+                   {"splash_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -521,6 +532,10 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[42].code.empty() || !psOf(wants[42], heatPs_)) heatPs_ = nullptr;  // 2.5.3
     if (wants[43].code.empty() || !psOf(wants[43], rayPs_)) rayPs_ = nullptr;
     if (wants[44].code.empty() || !psOf(wants[44], rayGlowPs_)) rayGlowPs_ = nullptr;
+    if (wants[45].code.empty() || !psOf(wants[45], embersPs_)) embersPs_ = nullptr;
+    if (wants[46].code.empty() || !psOf(wants[46], floorReflectPs_)) floorReflectPs_ = nullptr;
+    if (wants[47].code.empty() || !psOf(wants[47], halfOverPs_)) halfOverPs_ = nullptr;
+    if (wants[48].code.empty() || !psOf(wants[48], splashPs_)) splashPs_ = nullptr;
     {  // 0.60.1: the shadows' quads (actor_shadows11.cpp): a place, the texture's coordinates, alpha and depth, feet
         const D3D11_INPUT_ELEMENT_DESC layout[4] = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1053,12 +1068,16 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
-    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !hazeDone_ || !skyDone_ ||
-                                !heatDone_ || !bloomDone_ || !gradeDone_ || !weatherDone_))
+    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !hazeDone_ ||
+                                !skyDone_ || !heatDone_ || !bloomDone_ || !gradeDone_ || !weatherDone_))
         flushBatch();
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
-    if (s.ui && worldDrawn_ && !lightDone_) applyTorchLight();
+    if (s.ui && worldDrawn_ && !lightDone_) {
+        applyTorchLight();
+        applyEmbers();  // 2.5.3: the skills' sparks about the places it gathered
+    }
+    if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the haze
     if (s.ui && worldDrawn_ && !hazeDone_) applyHaze();  // 2.5: far off and over the ground, before the colours
     if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: where the haze filled the void
     if (s.ui && worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3: the hot air over all of that
@@ -1746,7 +1765,11 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     const float from[4] = {tx(source.left), ty(source.top), tx(source.right), ty(source.bottom)};
     if (worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2
     if (worldDrawn_ && !nightDone_) applyNight();  // 0.63
-    if (worldDrawn_ && !lightDone_) applyTorchLight();  // 0.61
+    if (worldDrawn_ && !lightDone_) {
+        applyTorchLight();  // 0.61
+        applyEmbers();      // 2.5.3
+    }
+    if (worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3
     if (worldDrawn_ && !hazeDone_) applyHaze();  // 2.5
     if (worldDrawn_ && !skyDone_) applySky();
     if (worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3
@@ -1766,8 +1789,9 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
     hazeDone_ = skyDone_ = weatherDone_ = false;  // 2.5
     bloomDone_ = stepsDone_ = false;  // 2.5.2
-    heatDone_ = false;  // 2.5.3
+    heatDone_ = floorDone_ = false;  // 2.5.3
     heatSpots_.clear();
+    embers_.clear();
     if (!frameFeet_.empty()) {  // 2.5.2: this frame's feet (as Direct3D 12's newPicture)
         footTracker_.update(frameFeet_, waterTime(), stepLife());
         frameFeet_.clear();
@@ -1844,9 +1868,13 @@ void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, int copy, 
     const D3D11_RECT all{0, 0, target_.width, target_.height};
     ctx_->RSSetScissorRects(1, clip ? clip : &all);  // 2.5.3: only these pixels when given
     setConstants(c);
-    // 1: over by its alpha; 2: the picture times it (blend ZERO, SRCCOLOR - the shadows); 0: written whole
+    // 1: over by its alpha; 2: the picture times it (blend ZERO, SRCCOLOR - the shadows); 3: added; 4: premultiplied
+    // over (ONE, INVSRCALPHA); 0: written whole
     const uint32_t src = blend == 1 ? d3d7::BLEND_SRCALPHA : blend == 2 ? d3d7::BLEND_ZERO : d3d7::BLEND_ONE;
-    const uint32_t dst = blend == 1 ? d3d7::BLEND_INVSRCALPHA : blend == 2 ? d3d7::BLEND_SRCCOLOR : d3d7::BLEND_ZERO;
+    const uint32_t dst = blend == 1 || blend == 4 ? d3d7::BLEND_INVSRCALPHA
+                         : blend == 2             ? d3d7::BLEND_SRCCOLOR
+                         : blend == 3             ? d3d7::BLEND_ONE
+                                                  : d3d7::BLEND_ZERO;
     ctx_->OMSetBlendState(blendState(blend != 0, src, dst,
                                      D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
                                          D3D11_COLOR_WRITE_ENABLE_BLUE),
@@ -2150,6 +2178,98 @@ void Renderer11::noteRay(const FrameRecord& rec, const DrawCmd& d) {
     rayParts_.push_back(r);
 }
 
+// 2.5.3: as Direct3D 12's applyEmbers (torches.cpp) - the places the torches' pass gathered (two texels each in
+// embers_ps's t1), the sparks added on, cut to them.
+void Renderer11::applyEmbers() {
+    std::vector<Ember11> places;
+    places.swap(embers_);
+    if (places.empty() || !embersPs_ || !target_.texture) return;
+    constexpr size_t kMaxEmbers = 24;
+    if (!embersData_) {
+        D3D11_TEXTURE2D_DESC d{};
+        d.Width = UINT(kMaxEmbers * 2);
+        d.Height = 1;
+        d.MipLevels = d.ArraySize = 1;
+        d.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        d.SampleDesc.Count = 1;
+        d.Usage = D3D11_USAGE_DEFAULT;
+        d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(device_->CreateTexture2D(&d, nullptr, &embersData_)) ||
+            FAILED(device_->CreateShaderResourceView(embersData_, nullptr, &embersDataSrv_))) {
+            drop(embersData_);
+            drop(embersPs_);  // not tried again
+            return;
+        }
+    }
+    float data[kMaxEmbers * 2][4] = {};
+    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f;
+    const size_t n = std::min(places.size(), kMaxEmbers);
+    for (size_t i = 0; i < n; ++i) {
+        const Ember11& e = places[i];
+        data[2 * i][0] = e.x;
+        data[2 * i][1] = e.y;
+        data[2 * i][2] = e.size;
+        data[2 * i][3] = e.strength;
+        std::copy(e.colour, e.colour + 3, data[2 * i + 1]);
+        data[2 * i + 1][3] = e.fire ? 1.0f : 0.0f;
+        x0 = std::min(x0, e.x - 3.0f * e.size);
+        y0 = std::min(y0, e.y - 3.0f * e.size);
+        x1 = std::max(x1, e.x + 3.0f * e.size);
+        y1 = std::max(y1, e.y + 3.0f * e.size);
+    }
+    const int w = target_.width, h = target_.height;
+    const D3D11_RECT lit{LONG(std::max(0.0f, std::floor(x0))), LONG(std::max(0.0f, std::floor(y0))),
+                         LONG(std::min(float(w), std::ceil(x1))), LONG(std::min(float(h), std::ceil(y1)))};
+    if (lit.right <= lit.left || lit.bottom <= lit.top) return;
+    ctx_->UpdateSubresource(embersData_, 0, nullptr, data, UINT(sizeof data), 0);
+    Constants c{};
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.footprint = float(n);
+    c.sharpen = waterTime();
+    worldPass(embersPs_, c, 0, 3, nullptr, nullptr, embersDataSrv_, &lit);
+}
+
+// 2.5.3: as Direct3D 12's applyFloorReflections (haze.cpp) - the floors reflect what stands on them, indoors and in
+// the rain: worked out at half the size from the picture's copy and its depth (floor_reflect_ps), laid over smoothly
+// (half_over_ps, premultiplied).
+void Renderer11::applyFloorReflections() {
+    floorDone_ = true;
+    const float amount = floorReflectAmount();
+    if ((amount <= 0.0f && !wetWanted()) || !cameraValid_ || !target_.texture || !depthViews()) return;
+    const int w = target_.width, h = target_.height;
+    const int hw = std::max(1, (w + 1) / 2), hh = std::max(1, (h + 1) / 2);
+    if (floor_.width != hw || floor_.height != hh) {
+        dropTarget(floor_);
+        if (!makeTarget(floor_, hw, hh)) {
+            LOG_ERROR("floor reflections: no video memory at %dx%d (Direct3D 11): none", hw, hh);
+            halfOverPs_ = nullptr;  // not tried again (the object stays until the end)
+            return;
+        }
+    }
+    if (scene_.width != w || scene_.height != h) {
+        dropTarget(scene_);
+        if (!makeTarget(scene_, w, h)) return;
+    }
+    ctx_->CopyResource(scene_.texture, target_.texture);
+    Constants c{};
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    c.scale = float(scale_);
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    c.twin[0] = amount;
+    c.twin[1] = wetWanted() ? 1.0f : 0.0f;
+    c.sharpen = waterTime();  // the drops' rings in the puddles
+    if (!floorLogged_) LOG_INFO("floor reflections: on %s, at %dx%d (Direct3D 11)", map_.c_str(), hw, hh);
+    floorLogged_ = true;
+    maskPass(floorReflectPs_, floor_, c, nullptr, depthSrv_, scene_.srv);
+    worldPass(halfOverPs_, c, 0, 4, nullptr, floor_.srv);
+}
+
 float Renderer11::mapFadeNow() {
     if (!effects_.mapFade || fadeStart_ < 0.0f) return 1.0f;
     const float t = (waterTime() - fadeStart_) / 0.7f;
@@ -2407,6 +2527,15 @@ void Renderer11::applyWeather() {
                  map_.c_str());
     weatherLogged_ = true;
     worldPass(weatherPs_, c, false, 1);
+    // 2.5.3 (weather.cpp 0.64): the rain's splashes on the ground, where it is known (the camera read)
+    if (motes || weather_ != weather::Kind::Rain || !effects_.rainSplashes || !cameraValid_ || !splashPs_ ||
+        !depthViews())
+        return;
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+    worldPass(splashPs_, c, 0, 1, depthSrv_);
 }
 
 void Renderer11::saveScreenshot(const std::string& path) {

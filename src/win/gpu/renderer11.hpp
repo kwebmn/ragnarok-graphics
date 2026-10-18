@@ -236,6 +236,27 @@ private:
     };
     std::vector<RayPart11> rayParts_;
     void noteRay(const FrameRecord& rec, const DrawCmd& d);
+    // 2.5.3: the skills' sparks about the places the torches' pass gathered the skills' fire at (torches.cpp
+    // applyEmbers), added; the floors' reflections indoors and in the rain (haze.cpp applyFloorReflections: at half
+    // the size, then laid over)
+    struct Ember11 {
+        float x, y, size, strength, colour[3];
+        bool fire;
+    };
+    std::vector<Ember11> embers_;
+    void applyEmbers();
+    void applyFloorReflections();
+    float floorReflectAmount() const {
+        if (!effects_.floorReflections || !floorReflectPs_ || !halfOverPs_) return 0.0f;
+        const float user = float(std::clamp(effects_.floorReflectStrength, 0, 100)) / 100.0f;
+        return weather_ == weather::Kind::Rain && effects_.weather ? std::min(1.0f, user * 1.6f)
+               : outdoors_                                          ? 0.0f
+                                                                    : user;
+    }
+    bool wetWanted() const {
+        return effects_.wetGround && effects_.weather && weather_ == weather::Kind::Rain && floorReflectPs_ &&
+               halfOverPs_;
+    }
     bool bloomWanted() {
         return (effects_.bloom || effects_.filmic || (effects_.filmGrain && effects_.filmGrainAmount > 0) ||
                 mapFadeNow() < 1.0f) &&
@@ -250,8 +271,8 @@ private:
                   ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t2 = nullptr);
     void passSamplers();  // linear, clamped, at s0 and s1 - the passes' own
     // A pass over the whole picture: copy - 1 the picture copied now into t2 (sceneColor), 2 its copy as it is, 0
-    // none; blend - 0 written whole, 1 blended over by its alpha, 2 multiplied in; depth - bound as t3 (sceneDepth);
-    // t0, t1 - bound as the first two textures
+    // none; blend - 0 written whole, 1 blended over by its alpha, 2 multiplied in, 3 added, 4 premultiplied over;
+    // depth - bound as t3 (sceneDepth); t0, t1 - bound as the first two textures
     void worldPass(ID3D11PixelShader* ps, const Constants& c, int copy = 1, int blend = 0,
                    ID3D11ShaderResourceView* depth = nullptr, ID3D11ShaderResourceView* t0 = nullptr,
                    ID3D11ShaderResourceView* t1 = nullptr, const RECT* clip = nullptr);  // D3D11_RECT
@@ -426,6 +447,15 @@ private:
     bool heatDone_ = false, heatLogged_ = false, raysLogged_ = false;
     ID3D11PixelShader* rayPs_ = nullptr;
     ID3D11PixelShader* rayGlowPs_ = nullptr;
+    // 2.5.3: the skills' sparks, the floors' reflections, the rain's splashes
+    ID3D11PixelShader* embersPs_ = nullptr;
+    ID3D11Texture2D* embersData_ = nullptr;  // two texels a place (embers_ps's t1)
+    ID3D11ShaderResourceView* embersDataSrv_ = nullptr;
+    ID3D11PixelShader* floorReflectPs_ = nullptr;
+    ID3D11PixelShader* halfOverPs_ = nullptr;
+    Target floor_;
+    bool floorDone_ = false, floorLogged_ = false;
+    ID3D11PixelShader* splashPs_ = nullptr;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
