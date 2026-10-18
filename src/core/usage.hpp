@@ -19,6 +19,10 @@ struct Machine {  // the same all the game long
     unsigned long long vramMb = 0;
     int level = 0;        // effect_groups::cardLevel
     bool remote = false;  // 2.2.2: drawn by the 64-bit renderer (uaro-render64.exe)
+    // 2.5.15: the processor and the memory (core/computer.hpp) - is the card or the processor the limit
+    std::string cpu;
+    int cores = 0, threads = 0;
+    unsigned long long ramMb = 0;
 };
 
 struct Setup {  // what a stretch is played with

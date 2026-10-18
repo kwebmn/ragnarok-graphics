@@ -144,8 +144,12 @@ void Recorder::line(std::string& out) {
                   "\"vsync\":%d",
                   machine_.vendor, machine_.vramMb, machine_.level, setup_.aiKinds, machine_.remote ? 1 : 0,
                   setup_.safe ? 1 : 0, setup_.fpsLimit, setup_.vsync ? 1 : 0);
+    char computer[96];  // 2.5.15
+    std::snprintf(computer, sizeof computer, ",\"cores\":%d,\"threads\":%d,\"ram\":%llu", machine_.cores,
+                  machine_.threads, machine_.ramMb);
     out += head("s") + ",\"v\":" + jsonString(machine_.version) +
            ",\"card\":" + jsonString(machine_.card) + ",\"api\":" + jsonString(machine_.api) + "," + machine +
+           ",\"cpu\":" + jsonString(machine_.cpu) + computer +
            ",\"game\":" + jsonString(setup_.game) + ",\"out\":" + jsonString(setup_.output) +
            ",\"dlss\":" + jsonString(setup_.dlss) + ",\"preset\":" + jsonString(setup_.preset) +
            ",\"groups\":" + jsonString(setup_.groups) + ",\"on\":" + jsonString(setup_.effects) +

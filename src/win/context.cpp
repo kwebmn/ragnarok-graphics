@@ -73,6 +73,10 @@ void Context::noteUsage(bool foreground, long outWidth, long outHeight, const Gp
         m.vendor = s.vendor;
         m.vramMb = s.vramMb;
         m.level = s.cardLevel;
+        m.cpu = s.computer.cpu;  // 2.5.15
+        m.cores = s.computer.cores;
+        m.threads = s.computer.threads;
+        m.ramMb = s.computer.ramMb;
         m.remote = renderer->remote();  // 2.2.2
         LARGE_INTEGER q;
         QueryPerformanceCounter(&q);

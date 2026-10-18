@@ -68,9 +68,9 @@ Startup decide() {
              s.config.highResolution ? 1 : 0, uiFilterToken(s.config.uiFilter), s.config.renderScale, s.config.sharpen);
     const WindowsVersion v = windowsVersion();
     LOG_INFO("Windows %lu.%lu build %lu", v.major, v.minor, v.build);
-    const Computer computer = probeComputer();  // 2.5.15: the rest of the computer, for the reports
-    LOG_INFO("processor: %s; memory: %s; power: %s", processorText(computer).c_str(), memoryText(computer).c_str(),
-             powerText(computer).c_str());
+    s.computer = probeComputer();  // 2.5.15: the rest of the computer, for the reports and the statistics
+    LOG_INFO("processor: %s; memory: %s; power: %s", processorText(s.computer).c_str(),
+             memoryText(s.computer).c_str(), powerText(s.computer).c_str());
     if (!s.config.gpu.empty()) LOG_INFO("graphics card chosen: %s ([renderer] gpu)", s.config.gpu.c_str());
     logModule("dinput.dll");   // ROExt or uaRO Pad
     logModule("dinput8.dll");

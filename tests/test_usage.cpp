@@ -115,6 +115,23 @@ TEST(usage_changes_leave_out_what_a_set_switches) {
     CHECK_EQ(own.size(), size_t(3));
 }
 
+TEST(usage_lines_carry_the_computer) {
+    // 2.5.15: the processor and the memory with the card - an HD 6570 at 35 frames with every improvement off: the
+    // card or the processor?
+    usage::Recorder r;
+    usage::Machine m;
+    m.cpu = "AMD Athlon(tm) II X2 250 \"Regor\"";
+    m.cores = 2;
+    m.threads = 2;
+    m.ramMb = 4096;
+    r.begin(m, 7);
+    std::string out;
+    for (int i = 0; i < 600; ++i) r.frame(0.1, false, -1.0, usage::Setup{}, out);
+    r.close(out);
+    CHECK(out.find("\"cpu\":\"AMD Athlon(tm) II X2 250 \\\"Regor\\\"\"") != std::string::npos);
+    CHECK(out.find("\"cores\":2,\"threads\":2,\"ram\":4096") != std::string::npos);
+}
+
 TEST(usage_lines_carry_the_renderer_and_the_frame_limit) {
     // 2.2.2: whether the 64-bit renderer drew, the shaders without their newest features, the frame limit and vsync
     // (frames a second mean nothing without them); each line its number in the game (the site keeps each once)

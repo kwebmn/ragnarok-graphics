@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 
+#include "core/computer.hpp"
 #include "core/config.hpp"
 #include "core/renderer_choice.hpp"
 
@@ -15,6 +16,7 @@ struct Startup {
     std::string adapter;
     unsigned vendor = 0;
     unsigned long long vramMb = 0;
+    Computer computer;  // 2.5.15: the processor, the memory, the power (the log, the statistics)
 };
 const Startup& startup();
 
