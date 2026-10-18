@@ -1,33 +1,78 @@
 #include "core/pixel.hpp"
 
+#include <cstring>
+
 namespace uagfx {
 namespace {
 
-// v has `bits` bits -> 8 bits; 0 stays 0 and the maximum becomes 255.
-uint32_t expand(uint32_t v, int bits) {
-    switch (bits) {
-        case 1: return v ? 255u : 0u;
-        case 4: return v * 17u;
-        case 5: return (v << 3) | (v >> 2);
-        case 6: return (v << 2) | (v >> 4);
-        default: return v;
+// The raw value of pixel i of a row, 16 or 32 bits (memcpy: the game's rows need not be aligned).
+inline uint32_t load16(const uint8_t* row, int i) {
+    uint16_t v;
+    std::memcpy(&v, row + 2 * i, 2);
+    return v;
+}
+
+inline uint32_t load32(const uint8_t* row, int i) {
+    uint32_t v;
+    std::memcpy(&v, row + 4 * i, 4);
+    return v;
+}
+
+inline void store16(uint8_t* row, int i, uint32_t v) {
+    const uint16_t s = uint16_t(v);
+    std::memcpy(row + 2 * i, &s, 2);
+}
+
+inline void store32(uint8_t* row, int i, uint32_t v) { std::memcpy(row + 4 * i, &v, 4); }
+
+// The row's loop for one format, known when compiled: toArgb8's switch goes out of the loop.
+template <PixelFormat F, bool Keyed>
+void toRow(const uint8_t* src, uint32_t* dst, int count, uint32_t low, uint32_t high) {
+    for (int i = 0; i < count; ++i) {
+        const uint32_t raw = bytesPerPixel(F) == 4 ? load32(src, i) : load16(src, i);
+        dst[i] = Keyed && raw >= low && raw <= high ? 0u : toArgb8(F, raw);
+    }
+}
+
+template <bool Keyed>
+void toRowOf(PixelFormat f, const uint8_t* src, uint32_t* dst, int count, uint32_t low, uint32_t high) {
+    switch (f) {
+        case PixelFormat::R5G6B5: return toRow<PixelFormat::R5G6B5, Keyed>(src, dst, count, low, high);
+        case PixelFormat::X1R5G5B5: return toRow<PixelFormat::X1R5G5B5, Keyed>(src, dst, count, low, high);
+        case PixelFormat::A1R5G5B5: return toRow<PixelFormat::A1R5G5B5, Keyed>(src, dst, count, low, high);
+        case PixelFormat::A4R4G4B4: return toRow<PixelFormat::A4R4G4B4, Keyed>(src, dst, count, low, high);
+        case PixelFormat::X8R8G8B8: return toRow<PixelFormat::X8R8G8B8, Keyed>(src, dst, count, low, high);
+        case PixelFormat::A8R8G8B8: return toRow<PixelFormat::A8R8G8B8, Keyed>(src, dst, count, low, high);
+        case PixelFormat::Unknown: break;
+    }
+    for (int i = 0; i < count; ++i) dst[i] = 0;
+}
+
+template <PixelFormat F, bool Client>
+void fromRow(const uint32_t* src, uint8_t* dst, int count) {
+    for (int i = 0; i < count; ++i) {
+        const uint32_t raw = Client ? targetToClient(F, src[i]) : fromArgb8(F, src[i]);
+        if (bytesPerPixel(F) == 4)
+            store32(dst, i, raw);
+        else
+            store16(dst, i, raw);
+    }
+}
+
+template <bool Client>
+void fromRowOf(PixelFormat f, const uint32_t* src, uint8_t* dst, int count) {
+    switch (f) {
+        case PixelFormat::R5G6B5: return fromRow<PixelFormat::R5G6B5, Client>(src, dst, count);
+        case PixelFormat::X1R5G5B5: return fromRow<PixelFormat::X1R5G5B5, Client>(src, dst, count);
+        case PixelFormat::A1R5G5B5: return fromRow<PixelFormat::A1R5G5B5, Client>(src, dst, count);
+        case PixelFormat::A4R4G4B4: return fromRow<PixelFormat::A4R4G4B4, Client>(src, dst, count);
+        case PixelFormat::X8R8G8B8: return fromRow<PixelFormat::X8R8G8B8, Client>(src, dst, count);
+        case PixelFormat::A8R8G8B8: return fromRow<PixelFormat::A8R8G8B8, Client>(src, dst, count);
+        case PixelFormat::Unknown: break;
     }
 }
 
 }  // namespace
-
-int bytesPerPixel(PixelFormat f) {
-    switch (f) {
-        case PixelFormat::R5G6B5:
-        case PixelFormat::X1R5G5B5:
-        case PixelFormat::A1R5G5B5:
-        case PixelFormat::A4R4G4B4: return 2;
-        case PixelFormat::X8R8G8B8:
-        case PixelFormat::A8R8G8B8: return 4;
-        case PixelFormat::Unknown: break;
-    }
-    return 0;
-}
 
 Masks masksOf(PixelFormat f) {
     switch (f) {
@@ -52,63 +97,18 @@ PixelFormat formatFromMasks(uint32_t bits, uint32_t r, uint32_t g, uint32_t b, u
     return PixelFormat::Unknown;
 }
 
-uint32_t toArgb8(PixelFormat f, uint32_t raw) {
-    switch (f) {
-        case PixelFormat::R5G6B5:
-            return 0xFF000000u | expand((raw >> 11) & 31, 5) << 16 | expand((raw >> 5) & 63, 6) << 8 |
-                   expand(raw & 31, 5);
-        case PixelFormat::X1R5G5B5:
-            return 0xFF000000u | expand((raw >> 10) & 31, 5) << 16 | expand((raw >> 5) & 31, 5) << 8 |
-                   expand(raw & 31, 5);
-        case PixelFormat::A1R5G5B5:
-            return expand((raw >> 15) & 1, 1) << 24 | expand((raw >> 10) & 31, 5) << 16 |
-                   expand((raw >> 5) & 31, 5) << 8 | expand(raw & 31, 5);
-        case PixelFormat::A4R4G4B4:
-            return expand((raw >> 12) & 15, 4) << 24 | expand((raw >> 8) & 15, 4) << 16 |
-                   expand((raw >> 4) & 15, 4) << 8 | expand(raw & 15, 4);
-        case PixelFormat::X8R8G8B8: return 0xFF000000u | (raw & 0xFFFFFFu);
-        case PixelFormat::A8R8G8B8: return raw;
-        case PixelFormat::Unknown: break;
-    }
-    return 0;
-}
-
-uint32_t fromArgb8(PixelFormat f, uint32_t argb) {
-    const uint32_t a = argb >> 24;
-    const uint32_t r = (argb >> 16) & 255;
-    const uint32_t g = (argb >> 8) & 255;
-    const uint32_t b = argb & 255;
-    switch (f) {
-        case PixelFormat::R5G6B5: return (r >> 3) << 11 | (g >> 2) << 5 | (b >> 3);
-        case PixelFormat::X1R5G5B5: return (r >> 3) << 10 | (g >> 3) << 5 | (b >> 3);
-        case PixelFormat::A1R5G5B5: return (a >= 128 ? 0x8000u : 0u) | (r >> 3) << 10 | (g >> 3) << 5 | (b >> 3);
-        case PixelFormat::A4R4G4B4: return (a >> 4) << 12 | (r >> 4) << 8 | (g >> 4) << 4 | (b >> 4);
-        case PixelFormat::X8R8G8B8: return argb & 0xFFFFFFu;
-        case PixelFormat::A8R8G8B8: return argb;
-        case PixelFormat::Unknown: break;
-    }
-    return 0;
-}
-
-uint32_t readPixel(PixelFormat f, const uint8_t* p) {
-    uint32_t v = 0;
-    for (int i = bytesPerPixel(f) - 1; i >= 0; --i) v = v << 8 | p[i];
-    return v;
-}
-
-void writePixel(PixelFormat f, uint8_t* p, uint32_t raw) {
-    const int n = bytesPerPixel(f);
-    for (int i = 0; i < n; ++i) p[i] = uint8_t(raw >> (8 * i));
-}
-
 void rowToArgb8(PixelFormat f, const uint8_t* src, uint32_t* dst, int count) {
-    const int n = bytesPerPixel(f);
-    for (int i = 0; i < count; ++i) dst[i] = toArgb8(f, readPixel(f, src + i * n));
+    toRowOf<false>(f, src, dst, count, 0, 0);
 }
 
-void rowFromArgb8(PixelFormat f, const uint32_t* src, uint8_t* dst, int count) {
-    const int n = bytesPerPixel(f);
-    for (int i = 0; i < count; ++i) writePixel(f, dst + i * n, fromArgb8(f, src[i]));
+void rowToArgb8Keyed(PixelFormat f, const uint8_t* src, uint32_t* dst, int count, uint32_t keyLow, uint32_t keyHigh) {
+    toRowOf<true>(f, src, dst, count, keyLow, keyHigh);
+}
+
+void rowFromArgb8(PixelFormat f, const uint32_t* src, uint8_t* dst, int count) { fromRowOf<false>(f, src, dst, count); }
+
+void rowTargetToClient(PixelFormat f, const uint32_t* src, uint8_t* dst, int count) {
+    fromRowOf<true>(f, src, dst, count);
 }
 
 uint32_t targetToClient(PixelFormat f, uint32_t argb) {

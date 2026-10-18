@@ -9,12 +9,16 @@ bool inside(const Rect& r, int width, int height) {
     return !r.empty() && r.left >= 0 && r.top >= 0 && r.right <= width && r.bottom <= height;
 }
 
-// The sr part of src as its own image in format f.
+// The sr part of src as its own image in format f (2.5.11: a row at a time, each format chosen once a row - the
+// game's sprite frames come this way, a Blt between formats).
 Image region(const Image& src, const Rect& sr, PixelFormat f) {
     Image out(sr.width(), sr.height(), f);
-    for (int y = 0; y < sr.height(); ++y)
-        for (int x = 0; x < sr.width(); ++x)
-            out.setPixel(x, y, fromArgb8(f, toArgb8(src.format(), src.pixel(sr.left + x, sr.top + y))));
+    std::vector<uint32_t> argb(size_t(sr.width()));
+    const size_t from = size_t(sr.left) * size_t(bytesPerPixel(src.format()));
+    for (int y = 0; y < sr.height(); ++y) {
+        rowToArgb8(src.format(), src.row(sr.top + y) + from, argb.data(), sr.width());
+        rowFromArgb8(f, argb.data(), out.row(y), sr.width());
+    }
     return out;
 }
 
@@ -26,12 +30,15 @@ uint8_t* pixelAddress(Image& img, int x, int y) {
 
 void toArgbRect(const Image& img, const Rect& r, const ColorKey& key, std::vector<uint32_t>& out) {
     out.resize(size_t(r.width()) * size_t(r.height()));
-    size_t i = 0;
-    for (int y = r.top; y < r.bottom; ++y)
-        for (int x = r.left; x < r.right; ++x) {
-            const uint32_t raw = img.pixel(x, y);
-            out[i++] = key.matches(raw) ? 0u : toArgb8(img.format(), raw);
-        }
+    const int w = r.width();
+    const size_t from = size_t(r.left) * size_t(bytesPerPixel(img.format()));
+    for (int y = r.top; y < r.bottom; ++y) {  // 2.5.11: a row at a time, the format chosen once a row
+        uint32_t* to = out.data() + size_t(y - r.top) * size_t(w);
+        if (key.enabled)
+            rowToArgb8Keyed(img.format(), img.row(y) + from, to, w, key.low, key.high);
+        else
+            rowToArgb8(img.format(), img.row(y) + from, to, w);
+    }
 }
 
 bool blitCpu(Image& dst, const Rect& dr, const Image& src, const Rect& sr, const ColorKey& key) {
@@ -58,10 +65,9 @@ bool readTargetInto(Image& dst, const Rect& dr, const std::vector<uint32_t>& tar
     if (dst.format() == PixelFormat::Unknown || dr.empty() || !inside(sr, width, height)) return false;
     if (target.size() < size_t(width) * size_t(height)) return false;
     Image part(sr.width(), sr.height(), dst.format());
-    for (int y = 0; y < sr.height(); ++y)
-        for (int x = 0; x < sr.width(); ++x)
-            part.setPixel(x, y, targetToClient(dst.format(),
-                                               target[size_t(sr.top + y) * size_t(width) + size_t(sr.left + x)]));
+    for (int y = 0; y < sr.height(); ++y)  // 2.5.11: a row at a time
+        rowTargetToClient(dst.format(), target.data() + size_t(sr.top + y) * size_t(width) + size_t(sr.left),
+                          part.row(y), sr.width());
     if (dr.width() == part.width() && dr.height() == part.height())
         return copy(dst, dr.left, dr.top, part, part.bounds());
     return stretch(dst, dr, part, part.bounds(), StretchFilter::Point);

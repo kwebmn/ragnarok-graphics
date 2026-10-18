@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <vector>
 
 namespace uagfx {
 namespace {
@@ -24,6 +25,16 @@ bool clipCopy(const Image& dst, int& dx, int& dy, const Image& src, Rect& sr) {
     dx = dr.left;
     dy = dr.top;
     return true;
+}
+
+// A row of pixels of type T copied but those whose value lies in [low, high] (copyKeyed's, left to right).
+template <typename T>
+void keyedRow(const uint8_t* from, uint8_t* to, int count, uint32_t low, uint32_t high) {
+    for (int i = 0; i < count; ++i) {
+        T v;
+        std::memcpy(&v, from + sizeof(T) * size_t(i), sizeof(T));
+        if (uint32_t(v) < low || uint32_t(v) > high) std::memcpy(to + sizeof(T) * size_t(i), &v, sizeof(T));
+    }
 }
 
 uint32_t lerpArgb(uint32_t a, uint32_t b, float t) {
@@ -52,8 +63,12 @@ Image::Image(int width, int height, PixelFormat format)
 
 void fill(Image& dst, Rect r, uint32_t raw) {
     if (!clipRect(dst.bounds(), r)) return;
-    for (int y = r.top; y < r.bottom; ++y)
-        for (int x = r.left; x < r.right; ++x) dst.setPixel(x, y, raw);
+    // 2.5.11: one row made, then copied into each
+    const size_t bpp = size_t(bytesPerPixel(dst.format())), bytes = size_t(r.width()) * bpp;
+    if (!bytes) return;
+    std::vector<uint8_t> row(bytes);
+    for (size_t i = 0; i < bytes; i += bpp) writePixel(dst.format(), row.data() + i, raw);
+    for (int y = r.top; y < r.bottom; ++y) std::memcpy(dst.row(y) + size_t(r.left) * bpp, row.data(), bytes);
 }
 
 bool copy(Image& dst, int dx, int dy, const Image& src, Rect sr) {
@@ -74,11 +89,15 @@ bool copyKeyed(Image& dst, int dx, int dy, const Image& src, Rect sr, uint32_t k
     if (dst.format() != src.format() || dst.format() == PixelFormat::Unknown) return false;
     if (!inside(sr, src)) return false;
     if (!clipCopy(dst, dx, dy, src, sr)) return true;
-    for (int y = 0; y < sr.height(); ++y)
-        for (int x = 0; x < sr.width(); ++x) {
-            const uint32_t v = src.pixel(sr.left + x, sr.top + y);
-            if (v < keyLow || v > keyHigh) dst.setPixel(dx + x, dy + y, v);
-        }
+    const size_t bpp = size_t(bytesPerPixel(src.format()));
+    for (int y = 0; y < sr.height(); ++y) {  // 2.5.11: the pixel's size chosen once a row, not each pixel
+        const uint8_t* from = src.row(sr.top + y) + size_t(sr.left) * bpp;
+        uint8_t* to = dst.row(dy + y) + size_t(dx) * bpp;
+        if (bpp == 2)
+            keyedRow<uint16_t>(from, to, sr.width(), keyLow, keyHigh);
+        else
+            keyedRow<uint32_t>(from, to, sr.width(), keyLow, keyHigh);
+    }
     return true;
 }
 

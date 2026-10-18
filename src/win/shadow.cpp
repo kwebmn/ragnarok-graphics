@@ -82,20 +82,14 @@ void Shadow::fault(bool write) {
 
 void Shadow::fill(const std::vector<uint32_t>& argb) {
     if (argb.size() < size_t(w_) * size_t(h_)) return;
-    const int bpp = bytesPerPixel(f_);
-    for (int y = 0; y < h_; ++y)
-        for (int x = 0; x < w_; ++x)
-            writePixel(f_, mem_ + size_t(y) * size_t(pitch_) + size_t(x) * size_t(bpp),
-                       targetToClient(f_, argb[size_t(y) * size_t(w_) + size_t(x)]));
+    for (int y = 0; y < h_; ++y)  // 2.5.11: a row at a time
+        rowTargetToClient(f_, argb.data() + size_t(y) * size_t(w_), mem_ + size_t(y) * size_t(pitch_), w_);
 }
 
 void Shadow::toArgb(std::vector<uint32_t>& argb) const {
     argb.resize(size_t(w_) * size_t(h_));
-    const int bpp = bytesPerPixel(f_);
-    for (int y = 0; y < h_; ++y)
-        for (int x = 0; x < w_; ++x)
-            argb[size_t(y) * size_t(w_) + size_t(x)] =
-                toArgb8(f_, readPixel(f_, mem_ + size_t(y) * size_t(pitch_) + size_t(x) * size_t(bpp)));
+    for (int y = 0; y < h_; ++y)  // 2.5.11: a row at a time
+        rowToArgb8(f_, mem_ + size_t(y) * size_t(pitch_), argb.data() + size_t(y) * size_t(w_), w_);
 }
 
 }  // namespace uagfx::win

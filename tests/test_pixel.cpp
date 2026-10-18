@@ -66,3 +66,32 @@ TEST(pixel_rows_are_little_endian) {
     CHECK(p[0] == 0x44 && p[3] == 0x11);
     CHECK_EQ(readPixel(PixelFormat::A8R8G8B8, p), 0x11223344u);
 }
+
+TEST(pixel_rows_convert_as_the_pixels_do) {
+    // 2.5.11: the rows' own loops (the format chosen once a row, not each pixel) give what the pixels' functions
+    // give - the conversions of the game's textures and frames were a fifth of its thread with Direct3D 11
+    uint32_t seed = 1;
+    const auto next = [&] {
+        seed = seed * 1664525u + 1013904223u;
+        return seed;
+    };
+    for (PixelFormat f : kAll) {
+        const int n = bytesPerPixel(f);
+        uint8_t src[64 * 4], back[64 * 4];
+        for (uint8_t& b : src) b = uint8_t(next() >> 24);
+        uint32_t argb[64], keyed[64], gpu[64];
+        rowToArgb8(f, src, argb, 64);
+        const uint32_t low = readPixel(f, src + 3 * n), high = low + 40;
+        rowToArgb8Keyed(f, src, keyed, 64, low, high);
+        for (int i = 0; i < 64; ++i) {
+            const uint32_t raw = readPixel(f, src + i * n);
+            CHECK_EQ(argb[i], toArgb8(f, raw));
+            CHECK_EQ(keyed[i], raw >= low && raw <= high ? 0u : toArgb8(f, raw));
+            gpu[i] = next();
+        }
+        rowFromArgb8(f, gpu, back, 64);
+        for (int i = 0; i < 64; ++i) CHECK_EQ(readPixel(f, back + i * n), fromArgb8(f, gpu[i]));
+        rowTargetToClient(f, gpu, back, 64);
+        for (int i = 0; i < 64; ++i) CHECK_EQ(readPixel(f, back + i * n), targetToClient(f, gpu[i]));
+    }
+}
