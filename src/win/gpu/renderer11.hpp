@@ -80,6 +80,8 @@ public:
     bool setTarget(int width, int height);
     bool setScale(double k, int targetWidth, int targetHeight);
     uint32_t createTexture(int width, int height, int levels);
+    // 2.5.13: under the number the game's side gave it (Direct3D 11 on its own thread: Remote numbers them)
+    bool createTextureAs(uint32_t id, int width, int height, int levels);
     void releaseTexture(uint32_t id);
     void execute(const FrameRecord& record);
     bool readTarget(std::vector<uint32_t>& argb);

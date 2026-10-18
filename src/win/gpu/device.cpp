@@ -1934,7 +1934,9 @@ ID3D12Device* Renderer::device() const { return impl_->device; }
 bool Renderer::upscaling() const { return impl_->upscale; }
 
 bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
-    if (d3d11_ || remix_ || remote_) return false;  // uaro-render64.exe's
+    // uaro-render64.exe's and (2.5.13) Direct3D 11's own thread's: 2.5.12 made none there - the screen was white
+    if (d3d11_) return d3d11_->createTextureAs(id, width, height, levels);
+    if (remix_ || remote_) return false;
     Impl& m = *impl_;
     if (!id || m.textures.count(id)) return false;
     const uint32_t made = createTexture(width, height, levels);

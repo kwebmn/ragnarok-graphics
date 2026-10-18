@@ -797,6 +797,17 @@ uint32_t Renderer11::createTexture(int width, int height, int levels) {
     return id;
 }
 
+bool Renderer11::createTextureAs(uint32_t id, int width, int height, int levels) {
+    if (!id || textures_.count(id)) return false;
+    const uint32_t made = createTexture(width, height, levels);
+    if (!made) return false;
+    const auto it = textures_.find(made);
+    Texture t = std::move(it->second);
+    textures_.erase(it);
+    textures_.emplace(id, std::move(t));
+    return true;
+}
+
 void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while queued work still reads it
     const auto it = textures_.find(id);
     if (it == textures_.end()) return;
