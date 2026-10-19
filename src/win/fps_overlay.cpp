@@ -28,6 +28,7 @@ FpsOverlay::~FpsOverlay() {
 
 void FpsOverlay::setGpu(const GpuTiming* t) {
     gpu_.clear();
+    shown_ = t ? t->shown : 0.0;
     if (!t || t->gpuMs < 0.0) return;
     wchar_t text[96];
     if (t->upscaleMs > 0.05)
@@ -46,9 +47,12 @@ void FpsOverlay::present(HWND game, bool shown) {
     if (now - since_ < 500) return;
     const double seconds = double(now - since_) / 1000.0;
     const double fps = frames_ / seconds;
+    wchar_t generated[64] = L"";
+    if (shown_ > 1.05)  // 2.5.24: the frames on the screen, the generated ones too
+        std::swprintf(generated, 64, L" (%.0f with frame generation)", fps * shown_);
     wchar_t text[256];
-    std::swprintf(text, 256, L"%.0f fps  ·  %.1f ms  (%.0f max)%ls  ·  %hs", fps, fps > 0 ? 1000.0 / fps : 0.0,
-                  worstMs_, gpu_.c_str(), label_.c_str());
+    std::swprintf(text, 256, L"%.0f fps%ls  ·  %.1f ms  (%.0f max)%ls  ·  %hs", fps, generated,
+                  fps > 0 ? 1000.0 / fps : 0.0, worstMs_, gpu_.c_str(), label_.c_str());
     frames_ = 0;
     worstMs_ = 0;
     since_ = now;

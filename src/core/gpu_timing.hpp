@@ -18,6 +18,9 @@ struct GpuTiming {
     uint32_t serial = 0;  // a new measurement, a new number
     // 2.2.2: the shaders the drawing process compiled without their newest features (UAGFX_SAFE), for the statistics
     int safeShaders = 0;
+    // 2.5.24: frames shown a frame of the game with DLSS frame generation (the generated ones too, 2-6) - the counter
+    // counts the game's frames alone; 0: none generated
+    double shown = 0.0;
 };
 
 inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
@@ -33,6 +36,7 @@ inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
         w.str(name);
         w.f32(float(ms));
     }
+    w.f32(float(t.shown));  // 2.5.24
 }
 
 inline bool readTiming(bridge::WireReader& rd, GpuTiming& t) {
@@ -48,6 +52,7 @@ inline bool readTiming(bridge::WireReader& rd, GpuTiming& t) {
         const double ms = rd.f32();
         if (rd.ok()) r.effects[name] = ms;
     }
+    r.shown = rd.f32();  // 2.5.24
     if (!rd.ok()) return false;
     t = r;
     return true;

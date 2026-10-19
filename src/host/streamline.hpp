@@ -34,6 +34,7 @@ public:
     void setOwn(int percent, int width, int height, const std::string& model);
 
     const char* name() const override { return own_ ? ownName_.c_str() : name_; }
+    double shownPerFrame() override;  // 2.5.24
     bool renderSize(int outW, int outH, int& renderW, int& renderH) override;
     bool evaluate(const Frame& f) override;
     bool generates() const override { return generationReady_; }
@@ -77,6 +78,7 @@ private:
     ULONGLONG statsStart_ = 0;
     uint32_t statsFrames_ = 0;
     uint32_t statsShown_ = 0;
+    uint32_t recentFrames_ = 0, recentShown_ = 0;  // 2.5.24: since the frame counter last asked
     int modeLines_ = 0;
 };
 

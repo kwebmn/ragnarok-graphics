@@ -11,7 +11,8 @@ namespace uagfx::win {
 // layered window of its own over it (no draw of the renderer's: the same with Direct3D 12, 11 and the 64-bit
 // renderer). Ctrl+Shift+F11 shows and hides it; [frames] fps_counter = 1 shows it (2.2.1: at once, and the key
 // writes it). 2.2.1: and the card's work a frame - "GPU 7.1 ms (DLSS Quality 2.6)": at the frame limit the frames a
-// second stay the same whatever is on, the GPU's milliseconds show what an effect costs.
+// second stay the same whatever is on, the GPU's milliseconds show what an effect costs. 2.5.24: with frame
+// generation also the frames shown - "42 fps (166 with frame generation)".
 class FpsOverlay {
 public:
     ~FpsOverlay();
@@ -30,6 +31,7 @@ private:
     double worstMs_ = 0;
     std::wstring text_;
     std::wstring gpu_;
+    double shown_ = 0;  // 2.5.24: frames shown a frame of the game with frame generation; 0 none
 };
 
 }  // namespace uagfx::win

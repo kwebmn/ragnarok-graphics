@@ -534,9 +534,19 @@ void Dlss::startStats() {
 
 void Dlss::countStats() {
     sl::DLSSGState state;
-    if (slDLSSGGetState(kViewport, state, nullptr) == sl::Result::eOk) statsShown_ += state.numFramesActuallyPresented;
+    if (slDLSSGGetState(kViewport, state, nullptr) == sl::Result::eOk) {
+        statsShown_ += state.numFramesActuallyPresented;
+        recentShown_ += state.numFramesActuallyPresented;
+    }
     ++statsFrames_;
+    ++recentFrames_;
     if (GetTickCount64() - statsStart_ >= 30000) reportStats();
+}
+
+double Dlss::shownPerFrame() {
+    const double perFrame = recentFrames_ && generationMode_ == 1 ? double(recentShown_) / recentFrames_ : 0.0;
+    recentFrames_ = recentShown_ = 0;
+    return perFrame;
 }
 
 void Dlss::reportStats() {

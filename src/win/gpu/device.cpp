@@ -294,6 +294,7 @@ void Renderer::Impl::noteGpuFrame() {
         recent.gpuMs = double(recentGpu) * ms;
         recent.upscaleMs = double(recentUpscale) * ms;
         recent.upscaler = upscaler && recentUpscale ? upscaler->name() : "";
+        recent.shown = upscaler ? upscaler->shownPerFrame() : 0.0;  // 2.5.24: frame generation's
         recent.effects.clear();
         for (UINT e = 0; e < kEffectTimes; ++e) {
             if (recentEffect[e]) recent.effects[passName(e).key] = double(recentEffect[e]) * ms;
