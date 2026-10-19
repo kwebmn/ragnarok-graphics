@@ -1,3 +1,23 @@
+# uaRO Graphics 2.6.12 — to check
+
+- **Fixed a game crash (uaRO.exe+0xa89f6)** on Enter in the chat box while a map loads: through a portal, a
+  teleport, `@warp`, `@follow`. The bug is the 2007 client's own: the count of the chat lines sent is set to zero
+  only when the map has loaded, and before that the line was written by whatever number the memory held. ddraw.dll
+  now fixes that check in the game when uaRO.exe is the same build (the log says "chat: a line sent while a map
+  loads no longer crashes the game").
+- **"Moths at the fire" and the embers work without "Live torches".** They took the fires' places from the
+  torches' effect only, and with the "Light" group off there were none.
+- **The moths show better:** twice the size, circling wider and in front of the flame (half the circle went into
+  the wall behind the torch), dusty wings that flash warm as they beat - the pale specks by the fire were taken
+  for sparks.
+- **A report shows the settings and the log as they are when it is sent.** The app wrote into the report's text
+  what it read when it opened: after switches in the console (~) the next reports carried the old settings.
+- Please check: type a command that takes you to another map in the chat (`@warp prontera`, say), press Enter and,
+  while the map loads, type something more and press Enter again - the game does not crash, the line goes to the chat.
+- Please check: "Clock" at "Night 0:00", only the "Living world" group on with "Moths at the fire" and the
+  embers, in the Pyramids (`@warp moc_pryd01 89 80`) three moths circle in front of a torch's flame and sparks
+  rise over it; the same with the "Light" group on.
+
 # uaRO Graphics 2.6.11 — to check
 
 - **"Clock"** - a new row under the "Air and weather" group (in the console and in the app): "Auto" - the computer's
