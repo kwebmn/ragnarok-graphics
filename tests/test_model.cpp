@@ -542,3 +542,55 @@ TEST(model_profiles_and_reset_keep_the_statistics_answer) {
     CHECK_EQ(valueOf(w.files[ini], "stats.send"), std::string("1"));
     CHECK_EQ(valueOf(w.files[ini], "stats.id"), id);
 }
+
+// 2.6: the modes, the window's place and the version whose notes were shown - the app's own keys of [utility].
+TEST(model_new_install_starts_simple) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(!m.usedBefore());
+    CHECK(m.startMode() == Mode::Simple);
+    CHECK(!m.savedPlace());
+    CHECK(m.seenVersion().empty());
+}
+
+TEST(model_used_install_starts_detailed) {
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    w.files[ini] = "[utility]\r\nlanguage = ru\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(m.usedBefore());
+    CHECK(m.startMode() == Mode::Detailed);
+    m.saveMode(Mode::Developer);
+    CHECK(m.startMode() == Mode::Developer);
+    CHECK_EQ(valueOf(w.files[ini], "utility.mode"), std::string("developer"));
+    CHECK_EQ(m.pendingCount(), size_t(0));  // the app's own key: no change for Apply
+}
+
+TEST(model_mode_place_and_version_survive_reset) {
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    w.files[ini] = "[quality]\r\nsharpen = 70\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(m.saveProfile(L"old", Lang::En).empty());  // made before the keys
+    m.saveMode(Mode::Developer);
+    m.savePlace({10, 20, 1110, 740, true});
+    m.saveSeenVersion("2.6.0");
+    CHECK(m.resetDefaults(Lang::En).empty());
+    CHECK(m.loadProfile(L"old", Lang::En).empty());
+    CHECK(m.startMode() == Mode::Developer);
+    const auto place = m.savedPlace();
+    CHECK(place && place->left == 10 && place->bottom == 740 && place->maximized);
+    CHECK_EQ(m.seenVersion(), std::string("2.6.0"));
+}
+
+TEST(model_recommends_a_word_each_row_takes) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    for (const IniSetting& s : iniSettings())
+        CHECK(s.control == Control::Line || validToken(s, m.recommended(s)));
+    CHECK_EQ(m.recommended(setting("renderer.gpu")), std::string("auto"));
+}

@@ -11,11 +11,14 @@
 #include "core/settings/game_registry.hpp"
 #include "core/settings/game_settings.hpp"
 #include "core/settings/input_module.hpp"
+#include "core/settings/auto_setup.hpp"
 #include "core/settings/log_digest.hpp"
+#include "core/settings/navigation.hpp"
 #include "core/settings/presets.hpp"
 #include "core/settings/schema.hpp"
 #include "core/settings/screen.hpp"
 #include "core/settings/strings.hpp"
+#include "core/settings/window_place.hpp"
 
 namespace uagfx::app {
 
@@ -135,6 +138,22 @@ public:
     bool statsAsked() const;
     std::wstring setStats(bool send, settings::Lang l);
 
+    // 2.6: the app's own keys of [utility], written at once without a backup like the language and kept across a
+    // reset and a profile: the mode (a new install starts Simple, one the app ran in before Detailed), the window's
+    // place, the version whose notes were shown.
+    bool usedBefore() const;  // the file holds the language or the statistics' answer
+    settings::Mode startMode() const;
+    void saveMode(settings::Mode m);
+    std::optional<settings::WindowPlace> savedPlace() const;
+    void savePlace(const settings::WindowPlace& p);
+    std::string seenVersion() const;
+    void saveSeenVersion(const std::string& version);
+    // This computer as the auto setup sees it (0.50; 2.6 from the Render page): the card the Render page's list
+    // names, else the fast one.
+    settings::Machine machine() const;
+    // 2.6: the word recommended for a row on this computer - the auto setup's, else the shipped default.
+    std::string recommended(const settings::IniSetting& s) const;
+
 private:
     // The ini as it is on disk now - what Notepad or use-*.bat wrote since load() stays - or the shipped defaults
     // when there is none.
@@ -155,6 +174,7 @@ private:
     std::optional<settings::ScreenChoice> screen_;
     std::map<std::string, std::string> wroteNow_;  // "section.key" -> the word before the first writeNow
     bool backedUp_ = false;
+    mutable std::map<std::string, std::string> recommended_;  // 2.6: recommendedTokens, made at the first ask
 };
 
 // What the Screen page says about a plan it cannot write.

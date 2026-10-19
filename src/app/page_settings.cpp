@@ -274,43 +274,11 @@ private:
         host_.reload();
     }
 
-    // 0.50.2: the card the Renderer page's choice names (pending or written), else the fast one; null: none listed.
-    const win::AdapterProbe* chosenCard() const {
-        const auto& cards = host_.model().system().adapters;
-        const std::string word = host_.model().token(*findSetting("renderer.gpu"));
-        for (const win::AdapterProbe& c : cards)
-            if (sameName(c.name, word)) return &c;
-        return cards.empty() ? nullptr : &cards.front();
-    }
 
     // 0.50: what this computer carries, at a press (core/settings/auto_setup) - for a client handed to other players.
     void autoSetupNow() {
         Model& m = host_.model();
-        const SystemInfo& sys = m.system();
-        Machine x;
-        x.windows10 = sys.windows.major >= 10;
-        x.d3d12 = sys.d3d12Probed && sys.d3d12.ok;
-        x.d3d11 = sys.d3d11.ok;
-        x.d3d11Level = sys.d3d11.level;
-        // The Direct3D 12 probe reads the main adapter even where it makes no device (an old Radeon).
-        x.vendor = sys.d3d12.vendor ? sys.d3d12.vendor : sys.d3d11.vendor;
-        x.vramMb = sys.d3d12.vramMb ? sys.d3d12.vramMb : sys.d3d11.vramMb;
-        x.adapter = !sys.d3d12.adapter.empty() ? sys.d3d12.adapter : sys.d3d11.adapter;
-        if (const win::AdapterProbe* card = chosenCard()) {  // 0.50.2: the card the game will draw on
-            x.d3d12 = card->d3d12;
-            x.d3d11 = card->d3d11Level != 0;
-            x.d3d11Level = card->d3d11Level;
-            x.vendor = card->vendor;
-            x.vramMb = card->vramMb;
-            x.adapter = card->name;
-        }
-        x.vramCapped = x.vramMb == kVramSeenAtMost;  // 0.51.1: no better number from the driver's registry
-        if (!sys.monitors.empty()) {
-            x.screenWidth = sys.monitors[0].pixels.width;
-            x.screenHeight = sys.monitors[0].pixels.height;
-            x.hdr = sys.monitors[0].hdr;  // 1.3.3
-        }
-        x.pack = GetFileAttributesW((m.paths().dir + L"\\uaro-textures.zip").c_str()) != INVALID_FILE_ATTRIBUTES;
+        const Machine x = m.machine();  // 2.6: the model's, the recommended values' too
         const AutoSetup a = autoSetup(x);
         m.applyPreset(a.preset);  // the game's own texture quality too
         std::string scale = "100";

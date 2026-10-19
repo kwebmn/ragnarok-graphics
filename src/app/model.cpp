@@ -1,6 +1,7 @@
 #include "app/model.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <cstdint>
 #include <ctime>
@@ -10,7 +11,9 @@
 #include "app/text.hpp"
 #include "core/settings/compat_flags.hpp"
 #include "core/settings/ini_edit.hpp"
+#include "core/settings/recommended.hpp"
 #include "core/settings/reg_file.hpp"
+#include "core/settings/report.hpp"
 
 namespace uagfx::app {
 
@@ -422,6 +425,9 @@ std::vector<IniEdit> Model::keptAcross() const {
     for (const char* key : {"send", "id"})
         if (const auto it = now.find(std::string("stats.") + key); it != now.end())
             keep.push_back({"stats", key, it->second});
+    for (const char* key : {"mode", "window", "seen"})  // 2.6: the app's own
+        if (const auto it = now.find(std::string("utility.") + key); it != now.end())
+            keep.push_back({"utility", key, it->second});
     return keep;
 }
 
@@ -586,6 +592,79 @@ std::optional<Lang> Model::savedLanguage() const {
 void Model::saveLanguage(Lang l) { writeIni({{"utility", "language", langToken(l)}}, l); }
 
 bool Model::statsAsked() const { return readIni(currentIni()).count("stats.send") > 0; }
+
+bool Model::usedBefore() const {
+    const auto v = readIni(now_.iniText);
+    return v.count("utility.language") > 0 || v.count("stats.send") > 0;
+}
+
+Mode Model::startMode() const {
+    const auto v = readIni(now_.iniText);
+    const auto it = v.find("utility.mode");
+    return settings::startMode(it == v.end() ? std::nullopt : parseMode(it->second), usedBefore());
+}
+
+void Model::saveMode(Mode m) { writeIni({{"utility", "mode", modeToken(m)}}, Lang::En); }
+
+std::optional<WindowPlace> Model::savedPlace() const {
+    const auto v = readIni(now_.iniText);
+    const auto it = v.find("utility.window");
+    return it == v.end() ? std::nullopt : parsePlace(it->second);
+}
+
+void Model::savePlace(const WindowPlace& p) { writeIni({{"utility", "window", placeToken(p)}}, Lang::En); }
+
+std::string Model::seenVersion() const {
+    const auto v = readIni(now_.iniText);
+    const auto it = v.find("utility.seen");
+    return it == v.end() ? std::string() : it->second;
+}
+
+void Model::saveSeenVersion(const std::string& version) { writeIni({{"utility", "seen", version}}, Lang::En); }
+
+Machine Model::machine() const {
+    const SystemInfo& sys = system_;
+    Machine x;
+    x.windows10 = sys.windows.major >= 10;
+    x.d3d12 = sys.d3d12Probed && sys.d3d12.ok;
+    x.d3d11 = sys.d3d11.ok;
+    x.d3d11Level = sys.d3d11.level;
+    // The Direct3D 12 probe reads the main adapter even where it makes no device (an old Radeon).
+    x.vendor = sys.d3d12.vendor ? sys.d3d12.vendor : sys.d3d11.vendor;
+    x.vramMb = sys.d3d12.vramMb ? sys.d3d12.vramMb : sys.d3d11.vramMb;
+    x.adapter = !sys.d3d12.adapter.empty() ? sys.d3d12.adapter : sys.d3d11.adapter;
+    // 0.50.2: the card the game will draw on - the one the Render page's list names, else the fast one
+    const std::string word = token(*findSetting("renderer.gpu"));
+    const win::AdapterProbe* card = sys.adapters.empty() ? nullptr : &sys.adapters.front();
+    for (const win::AdapterProbe& c : sys.adapters)
+        if (c.name.size() == word.size() &&
+            std::equal(c.name.begin(), c.name.end(), word.begin(), [](char a, char b) {
+                return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+            }))
+            card = &c;
+    if (card) {
+        x.d3d12 = card->d3d12;
+        x.d3d11 = card->d3d11Level != 0;
+        x.d3d11Level = card->d3d11Level;
+        x.vendor = card->vendor;
+        x.vramMb = card->vramMb;
+        x.adapter = card->name;
+    }
+    x.vramCapped = x.vramMb == kVramSeenAtMost;  // 0.51.1: no better number from the driver's registry
+    if (!sys.monitors.empty()) {
+        x.screenWidth = sys.monitors[0].pixels.width;
+        x.screenHeight = sys.monitors[0].pixels.height;
+        x.hdr = sys.monitors[0].hdr;  // 1.3.3
+    }
+    x.pack = fileExists(paths_.dir + L"\\uaro-textures.zip");
+    return x;
+}
+
+std::string Model::recommended(const IniSetting& s) const {
+    if (recommended_.empty()) recommended_ = recommendedTokens(parseConfig(defaultIni()), autoSetup(machine()));
+    const auto it = recommended_.find(sectionKey(s));
+    return it == recommended_.end() ? std::string() : it->second;
+}
 
 std::wstring Model::setStats(bool send, Lang l) {
     std::vector<IniEdit> edits{{"stats", "send", send ? "1" : "0"}};
