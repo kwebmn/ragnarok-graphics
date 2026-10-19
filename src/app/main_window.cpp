@@ -979,7 +979,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 layout();
                 updateScrollBar();
                 scrollTo(scroll_);
-                if (!sizing_ && viewWidth() != builtWidth_) rebuild();  // maximized, restored
+                // maximized, restored; not before the first page (create() makes it at the window's size)
+                if (!sizing_ && current_ && viewWidth() != builtWidth_) rebuild();
             }
             return 0;
         case WM_ENTERSIZEMOVE:
