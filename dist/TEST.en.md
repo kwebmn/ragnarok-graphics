@@ -1,3 +1,16 @@
+# uaRO Graphics 2.5.26 — what to check
+
+- **NVIDIA Reflex without frame generation too.** With DLSS on an NVIDIA card the game no longer draws frames
+  ahead: each frame waits until the graphics card is about to be free, and only then does the game read the mouse.
+  The cursor should follow the mouse noticeably closer, with nearly as many frames a second. A new box "NVIDIA
+  Reflex" on the Frames page (on); it applies from the next start of the game.
+- With Reflex the frame limit (`fps_limit`) waits before the game starts a frame, not before a finished one is shown.
+- **The log of how the picture is shown.** The `presentation:` line now says whether the game's window covers its
+  monitor pixel for pixel: only then can Windows show the picture straight, without composing it with the desktop. In
+  2.5.25 the line told nothing.
+- Please check: the same settings as last time (DLSS, no frame generation) - the cursor, and the frames a second on
+  the counter (74-78 before). To compare, turn "NVIDIA Reflex" off and start the game again. Then send a report.
+
 # uaRO Graphics 2.5.25 — what to check
 
 - **DLSS frame generation responds faster.** The game no longer draws frames ahead while the 64-bit renderer waits
