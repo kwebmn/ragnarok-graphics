@@ -1,3 +1,15 @@
+# uaRO Graphics 2.5.27 — what to check
+
+- **The Game AI 2.0 model for AI textures.** It can be chosen for any group of pictures on the AI textures page, for
+  "One map's textures" on the Texture pack page and in uaRO Studio. A model for game textures (real and drawn), not
+  for small icons; about 3 times slower than anime 6B. By Tal, under the WTFPL.
+- The model is large, so it comes apart from the package: when it is chosen and its file is not there, the AI
+  textures page shows "Download Game AI (29 MB)", which starts get-models.bat. It is kept in 16 bits: 33 MB instead
+  of 67, the pictures within 2 levels of 255.
+- The models' preview on the AI textures page shows Game AI too (once it is downloaded).
+- Please check: choose Game AI for one group -> "Download Game AI" -> a console downloads the model -> the warning on
+  the page goes. Then the preview and "One map's textures" with Game AI - how it looks in the game.
+
 # uaRO Graphics 2.5.26 — what to check
 
 - **NVIDIA Reflex without frame generation too.** With DLSS on an NVIDIA card the game no longer draws frames
