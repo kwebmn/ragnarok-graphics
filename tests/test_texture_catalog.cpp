@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "core/ai/groups.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "core/pack_build.hpp"
 #include "core/pack_source.hpp"
@@ -129,6 +130,16 @@ TEST(catalog_names_the_maps_and_grid) {
     const catalog::FileEntry* bark = fileOf(c, "data\\texture\\bark.bmp");
     CHECK(bark && bark->maps == std::vector<uint32_t>{0} && bark->grid.cols == 1);  // a model's
     CHECK(fileOf(c, kSprite)->maps.empty());
+}
+
+TEST(catalog_groups_the_world_by_its_maps) {
+    // 2.5.28: a world texture's AI group by the maps that take it - map "t" is none of the towns, fields, dungeons
+    // or houses: its ground's are the other maps' ground, its models' the other maps' models; a head by its folder
+    const Game g;
+    const catalog::Catalog c = g.build();
+    CHECK(fileOf(c, "data\\texture\\a.bmp")->pictures.at(0).aiGroup == uint8_t(ai::Group::GroundOther));
+    CHECK(fileOf(c, "data\\texture\\bark.bmp")->pictures.at(0).aiGroup == uint8_t(ai::Group::ModelsOther));
+    CHECK(fileOf(c, kSprite)->pictures.at(0).aiGroup == uint8_t(ai::Group::Heads));
 }
 
 TEST(catalog_keeps_what_did_not_change) {

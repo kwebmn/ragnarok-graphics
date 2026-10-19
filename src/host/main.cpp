@@ -105,7 +105,14 @@ Args parseArgs() {
                 size_t comma = v.find(',', from);
                 if (comma == std::string::npos) comma = v.size();
                 ai::Group g;
-                if (ai::parseGroup(v.substr(from, comma - from), g)) a.pack.redo[size_t(g)] = true;
+                ai::Family f;  // 2.5.28: a family's word (of before) - its groups
+                const std::string word = v.substr(from, comma - from);
+                if (ai::parseGroup(word, g)) {
+                    a.pack.redo[size_t(g)] = true;
+                } else if (ai::parseFamily(word, f)) {
+                    for (int i = 0; i < ai::kGroups; ++i)
+                        if (ai::familyOf(ai::Group(i)) == f) a.pack.redo[size_t(i)] = true;
+                }
                 from = comma + 1;
             }
         }

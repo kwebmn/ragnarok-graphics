@@ -41,7 +41,6 @@ const char* aiShaderSource();  // ai_shaders.cpp
 class AiTextures {
 public:
     explicit AiTextures(Renderer::Impl& m) : m_(m) {
-        std::fill(std::begin(netOf_), std::end(netOf_), -1);
         std::fill(std::begin(groupNet_), std::end(groupNet_), -1);
     }
     ~AiTextures();
@@ -100,7 +99,6 @@ public:
     // (netForModel: the general one at the denoise asked, -1 the settings'), self-tested, its file closed after.
     bool startForStudio(const std::string& gameDir, std::string& error);
     int netForModel(const std::string& token, int denoise, std::string& error);
-    int netFor(ai::Kind kind) const { return int(kind) < ai::kKinds ? netOf_[int(kind)] : -1; }
     // 1.6: the network of a group of pictures (its own model); -1 none.
     int netForGroup(ai::Group g) const { return int(g) < ai::kGroups ? groupNet_[int(g)] : -1; }
     // 1.6.3: a picture's - the small pictures' model below [ai] small_side, else its group's.
@@ -145,7 +143,7 @@ private:
         bool ui = false;         // a picture of the interface: it stands in for interface draws, not the world's
         uint64_t lastUse = 0;    // 0.44: the frame it was last drawn in (frame_)
         uint64_t bytes = 0;      // its copy's in video memory (Texture::ai), all its levels
-        ai::Group group = ai::Group::World;  // 1.6
+        ai::Group group = ai::Group::GroundOther;  // 1.6
         uint8_t how = uint8_t(studio::How::Missing);  // 2.3: how it is shown (the map's report, the X-ray)
         uint8_t howShown = 0;                          // 2.4.3: its how before Hidden (A/B), given back after
         uint64_t counted = ~0ull;                     // 2.3: the frame it was last counted in the report
@@ -178,7 +176,7 @@ private:
         bool icon = false;  // 0.14: an icon of a window - the picture goes back to the driver
         uint64_t iconKey = 0;
         uint32_t border = 0;  // past the picture's edge (ai_conv): 0 the other side, 1 zeros, 2 the edge again
-        ai::Group group = ai::Group::World;  // 1.6: whose model makes it, the index's word
+        ai::Group group = ai::Group::GroundOther;  // 1.6: whose model makes it, the index's word
         ID3D12Resource* image = nullptr;
         std::vector<Level> levels;
         // 1.5, RRDB: the picture's planes (ai::prepareInput), its tiles, the one going through, done with all.
@@ -315,7 +313,6 @@ private:
     // The network of each kind; -1: off, or (0.42) not generating. 0.47.1: every kind -1 at first (the constructor) -
     // the icons' was 0 since 0.14: the first network made them, and without one (0.42) the start read nets_[0] of
     // none and uaro-render64.exe fell (0xc0000005) whenever the AI textures were on.
-    int netOf_[ai::kKinds];
     int groupNet_[ai::kGroups];  // 1.6
     int smallNet_ = -1;          // 1.6.3: [ai] small_model with small_pictures on
     // 1.6: the network of a model word, loaded once (the same model for several groups is one network); -1, error.

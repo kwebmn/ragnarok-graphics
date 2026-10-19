@@ -1,7 +1,9 @@
 #include <algorithm>
+#include <map>
 #include <cstdio>
 #include <string>
 
+#include "app/ai_group_texts.hpp"
 #include "app/files.hpp"
 #include "app/pack_compact.hpp"
 #include "app/page.hpp"
@@ -143,15 +145,25 @@ public:
                  {t(Text::PackQualitySmall), t(Text::PackQualityBalanced), t(Text::PackQualityLossless)}, g_quality,
                  t(Text::PackQualityHint), !running_);
         const AiSettings a = m.pendingConfig().ai;
-        // 1.6: each group by its own model
-        const Text groupLabels[ai::kGroups] = {Text::AiGroupWorld,   Text::AiGroupMonsters, Text::AiGroupPlayers,
-                                               Text::AiGroupNpcs,    Text::AiGroupItems,    Text::AiGroupEffects,
-                                               Text::AiGroupIcons,   Text::AiGroupScreens};
+        // 1.6: each group by its own model; 2.5.28: a section a part - its model, and its groups that differ
+        const auto modelName = [](const std::string& token) {
+            return token == "anime6b" ? std::string("anime 6B") : token == "gameai" ? std::string("Game AI") : token;
+        };
         std::string nets;
-        for (int g = 0; g < ai::kGroups; ++g) {
-            const std::string& token = a.modelFor(ai::Group(g));
-            nets += std::string(g ? "; " : "") + utf8(t(groupLabels[g])) + " - " +
-                    (token == "anime6b" ? "anime 6B" : token == "gameai" ? "Game AI" : token);
+        for (int s = 0; s < ai::kSections; ++s) {
+            std::map<std::string, int> uses;  // the section's models, how many groups each
+            for (int g = 0; g < ai::kGroups; ++g)
+                if (ai::sectionOf(ai::Group(g)) == s) ++uses[a.modelFor(ai::Group(g))];
+            const std::string most = std::max_element(uses.begin(), uses.end(), [](const auto& x, const auto& y) {
+                                         return x.second < y.second;
+                                     })->first;
+            nets += std::string(s ? "; " : "") + utf8(t(kAiSectionLabels[s])) + " - " + modelName(most);
+            std::string apart;  // its groups of another model
+            for (int g = 0; g < ai::kGroups; ++g)
+                if (ai::sectionOf(ai::Group(g)) == s && a.modelFor(ai::Group(g)) != most)
+                    apart += std::string(apart.empty() ? "" : ", ") + utf8(t(kAiGroupLabels[g])) + " - " +
+                             modelName(a.modelFor(ai::Group(g)));
+            if (!apart.empty()) nets += " (" + apart + ")";
         }
         p.note(tf(Text::PackNetsGroups, {nets}));
         p.check(kRedoBox, t(Text::PackRedo), packRedo(), t(Text::PackRedoHint), !running_);
@@ -432,8 +444,9 @@ private:
 
     void start(const char* mode, const pack::Choice& choice, bool fresh, const MapRun* run = nullptr) {
         AiSettings a = host_.model().pendingConfig().ai;
-        if (run && !run->model.empty()) {  // 2.2.5: the map's pictures by the model asked
-            a.models[size_t(ai::Group::World)] = run->model;
+        if (run && !run->model.empty()) {  // 2.2.5: the map's pictures by the model asked (2.5.28: every world group)
+            for (int g = 0; g < ai::kGroups; ++g)
+                if (ai::familyOf(ai::Group(g)) == ai::Family::World) a.models[size_t(g)] = run->model;
             a.model = run->model;
         }
         const std::wstring exe = builderExe();

@@ -9,6 +9,7 @@
 #include <iterator>
 
 #include "core/ai/black_key.hpp"
+#include "core/ai/file_groups.hpp"
 #include "core/ai/groups.hpp"
 #include "core/ai/recolour.hpp"
 #include "core/ai/texture_cache.hpp"
@@ -115,18 +116,19 @@ bool loadModel(const std::string& path, ai::Model& m, std::string& error) {
     return ai::parseModel(file, m, error);
 }
 
-// 1.6: whether a group's pictures are on: the world's by the ground's or the objects' box, the interface's big
-// pictures with its icons.
+// 1.6: whether a group's pictures are on - 2.5.28: as the pack's (core/ai/pack_models.hpp's groupOn, which needs
+// pack_build.hpp: its "interface" a macro of Windows' headers here) - the world's ground by the ground's box, its
+// models by the objects', the interface's by the icons'.
 bool groupOn(const AiSettings& s, ai::Group g) {
-    switch (g) {
-        case ai::Group::World: return s.ground || s.objects;
-        case ai::Group::Monsters: return s.monsters;
-        case ai::Group::Players: return s.players;
-        case ai::Group::Npcs: return s.npcs;
-        case ai::Group::Items: return s.items;
-        case ai::Group::Effects: return s.effects;
-        case ai::Group::Icons:
-        case ai::Group::Screens: return s.icons;
+    switch (ai::familyOf(g)) {
+        case ai::Family::World: return ai::sectionOf(g) == 0 ? s.ground : s.objects;
+        case ai::Family::Monsters: return s.monsters;
+        case ai::Family::Players: return s.players;
+        case ai::Family::Npcs: return s.npcs;
+        case ai::Family::Items: return s.items;
+        case ai::Family::Effects: return s.effects;
+        case ai::Family::Icons:
+        case ai::Family::Screens: return s.icons;
     }
     return false;
 }
@@ -202,10 +204,6 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
         groupNet_[g] = netOfToken(dir, s.modelFor(ai::Group(g)), error);
         if (groupNet_[g] < 0) return false;
     }
-    netOf_[int(ai::Kind::Ground)] = netOf_[int(ai::Kind::Objects)] = groupNet_[int(ai::Group::World)];
-    netOf_[int(ai::Kind::Sprites)] = groupNet_[int(ai::Group::Monsters)];
-    netOf_[int(ai::Kind::Effects)] = groupNet_[int(ai::Group::Effects)];
-    netOf_[int(ai::Kind::Icons)] = groupNet_[int(ai::Group::Icons)];
     if (generate_ && s.smallPictures && (smallNet_ = netOfToken(dir, s.smallModel, error)) < 0) return false;  // 1.6.3
     if (!anyKind) {
         error = "no kind of texture is chosen (the AI textures page)";
@@ -355,10 +353,6 @@ bool AiTextures::startForPack(const std::string& gameDir, const AiSettings& s, s
         groupNet_[g] = netOfToken(dir, s.modelFor(ai::Group(g)), error);
         if (groupNet_[g] < 0) return false;
     }
-    netOf_[int(ai::Kind::Ground)] = netOf_[int(ai::Kind::Objects)] = groupNet_[int(ai::Group::World)];
-    netOf_[int(ai::Kind::Sprites)] = groupNet_[int(ai::Group::Monsters)];
-    netOf_[int(ai::Kind::Effects)] = groupNet_[int(ai::Group::Effects)];
-    netOf_[int(ai::Kind::Icons)] = groupNet_[int(ai::Group::Icons)];
     if (s.smallPictures && (smallNet_ = netOfToken(dir, s.smallModel, error)) < 0) return false;  // 1.6.3
     if (!createGpu(error)) return false;
     for (size_t i = 0; i < nets_.size(); ++i)
@@ -976,9 +970,8 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
     // The network for sprites (the model for characters): any kind of theirs that is on has made it (0.42: when
     // generating).
     int net = -1;  // 1.6: any group of the frames' - each frame goes to its own group's (cellWritten)
-    for (ai::Group g : {ai::Group::Monsters, ai::Group::Players, ai::Group::Npcs, ai::Group::Items,
-                        ai::Group::Effects, ai::Group::Icons})
-        if (net < 0) net = groupNet_[int(g)];
+    for (int g = 0; g < ai::kGroups && net < 0; ++g)  // 2.5.28: a group of the sprites' families
+        if (ai::familyOf(ai::Group(g)) != ai::Family::World) net = groupNet_[g];
     if (!pictures_->anyCells()) return;
     if (net < 0 && !pack_->isOpen()) return;  // 0.42: nothing to show and none made: as the game
     auto a = atlases_.find(id);
@@ -1196,7 +1189,7 @@ bool AiTextures::finishIcon(Job& job) {
 }
 
 void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* argb) {
-    const int net = netForPicture(ai::Group::Icons, width, height);
+    const int net = netForPicture(ai::Group::ItemIcons, width, height);  // 2.5.28: item and skill icons
     if (!ready_ || !kindOn_[int(ai::Kind::Icons)] || width <= 0 || height <= 0 || !icons_.insert(key).second) return;
     Job j;
     j.net = net;
@@ -1205,7 +1198,7 @@ void AiTextures::noteIcon(uint64_t key, int width, int height, const uint32_t* a
     j.icon = true;
     j.iconKey = key;
     j.kind = ai::Kind::Icons;
-    j.group = ai::Group::Icons;
+    j.group = ai::Group::ItemIcons;
     j.border = 2;
     j.pixels.assign(argb, argb + size_t(width) * size_t(height));
     j.alpha = ai::hasTransparency(j.pixels.data(), width, height);
@@ -1360,7 +1353,7 @@ void AiTextures::begin(uint32_t id, Item& item, ai::Kind kind, bool later) {
         drop(item);
         return;
     }
-    item.group = ai::groupOfKind(kind);  // 1.6: by its group's model
+    item.group = ai::groupOfKind(kind, ai::mapKindOf(map_));  // 1.6: by its group's model; 2.5.28: the map's kind
     item.net = netForPicture(item.group, item.width, item.height);  // -1 when not generating (0.42); 1.6.3: small
     item.state = Item::Waiting;
     pictures_->noteKind(item.key, kind);

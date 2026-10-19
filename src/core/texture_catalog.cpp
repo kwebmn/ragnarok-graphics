@@ -19,7 +19,7 @@ namespace {
 
 // 2: (2.5.18) an effect's TGA has a second picture, as the .str animations take it (pack::picturesOf) - a catalog of
 // 1 knows none of them: the files are read again.
-constexpr uint32_t kVersion = 2;
+constexpr uint32_t kVersion = 3;  // 2.5.28: the 38 AI groups
 
 std::vector<std::string> paletteFiles(const std::string& name, const std::vector<std::string>& allNames,
                                       const pack::Choice& c) {
@@ -201,12 +201,16 @@ void mapsOf(Catalog& c, const std::vector<std::string>& maps, const Read& read, 
     std::map<std::string, std::vector<std::string>> models;  // a model's file -> its textures (read once)
     std::unordered_map<size_t, map_textures::GroundUse> ground;
     std::vector<uint8_t> data;
+    ai::WorldUses uses;  // 2.5.28: the world's pictures' groups, by the maps that take them
+    for (const std::string& m : maps) uses.kinds.push_back(ai::mapKindOf(m));
     for (size_t m = 0; m < maps.size(); ++m) {
         if (stop && *stop) return;
         std::set<std::string> textures;
         if (read("data\\" + maps[m] + ".gnd", data)) {
-            for (const std::string& t : map_textures::groundTextures(data.data(), data.size()))
-                textures.insert(zip::normalName("data\\texture\\" + t));
+            for (const std::string& t : map_textures::groundTextures(data.data(), data.size())) {
+                const std::string name = zip::normalName("data\\texture\\" + t);
+                if (textures.insert(name).second) uses.textures[name].ground.push_back(uint32_t(m));
+            }
             for (const auto& u : map_textures::groundUses(data.data(), data.size())) {
                 const auto f = fileAt.find(u.first);
                 if (f == fileAt.end()) continue;
@@ -234,6 +238,11 @@ void mapsOf(Catalog& c, const std::vector<std::string>& maps, const Read& read, 
                             if (!p.texture.empty()) own.push_back(zip::normalName("data\\texture\\" + p.texture));
                     known = models.emplace(file, std::move(own)).first;
                 }
+                for (const std::string& t : known->second) {
+                    ai::WorldUses::Use& use = uses.textures[t];
+                    if (use.models.empty() || use.models.back() != uint32_t(m)) use.models.push_back(uint32_t(m));
+                    use.plantModel = use.plantModel || ai::plantModelFile(file);
+                }
                 textures.insert(known->second.begin(), known->second.end());
             }
         for (const std::string& t : textures) {
@@ -242,6 +251,11 @@ void mapsOf(Catalog& c, const std::vector<std::string>& maps, const Read& read, 
         }
     }
     for (const auto& g : ground) c.files[g.first].grid = atlas_tiles::gridOf(g.second);
+    for (FileEntry& f : c.files) {  // 2.5.28: a world texture's group by the kind of map that takes it most
+        const pack::Source s{pack::Source::Type(f.type), ai::Kind(f.kind)};
+        if (s.type == pack::Source::Sprite || s.type == pack::Source::Interface) continue;
+        for (PictureOf& p : f.pictures) p.aiGroup = uint8_t(ai::groupOfPicture(f.name, s, p.width, p.height, &uses));
+    }
 }
 
 std::unordered_multimap<std::string, std::pair<size_t, size_t>> byKey(const Catalog& c) {

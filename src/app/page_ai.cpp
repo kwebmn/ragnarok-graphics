@@ -3,6 +3,7 @@
 #include <string>
 
 #include "app/ai_cache.hpp"
+#include "app/ai_group_texts.hpp"
 #include "app/files.hpp"
 #include "app/page.hpp"
 #include "app/preview_window.hpp"
@@ -25,7 +26,7 @@ constexpr int kSizes = 1060;  // from, and to at 1061
 constexpr int kAhead = 1070;
 constexpr int kGenerate = 1080;  // 0.42
 constexpr int kModelSet = 1090;    // 1.6: the set of models
-constexpr int kGroupModel = 1100;  // 1.6: + the group
+constexpr int kGroupModel = 1200;  // 1.6: + the group (2.5.28: 38 of them - past the ids below)
 constexpr int kRedo = 1120;
 constexpr int kPreviewGroup = 1130;
 constexpr int kPreviewShow = 1131;
@@ -36,9 +37,8 @@ constexpr int kSmallSide = 1141;
 constexpr int kSmallModel = 1142;
 constexpr int kGetModels = 1150;  // 2.5.27: get-models.bat - Game AI's file
 
-const Text kGroupLabels[ai::kGroups] = {Text::AiGroupWorld,   Text::AiGroupMonsters, Text::AiGroupPlayers,
-                                        Text::AiGroupNpcs,    Text::AiGroupItems,    Text::AiGroupEffects,
-                                        Text::AiGroupIcons,   Text::AiGroupScreens};
+const auto& kGroupLabels = kAiGroupLabels;  // 2.5.28: app/ai_group_texts.hpp
+const auto& kSectionLabels = kAiSectionLabels;
 
 std::string groupKey(int g) { return std::string("ai.model_") + ai::groupName(ai::Group(g)); }
 
@@ -285,18 +285,40 @@ private:
         const pack::Index* index = packIndex(host_.model().paths().dir + L"\\uaro-textures.zip");
         const ai::PackCounts counts = index ? ai::countPack(*index, a) : ai::PackCounts{};
         uint32_t other = 0;
+        // 2.5.28: under the headings of their sections; the pack's pictures a line a section, group by group, those
+        // another model made marked
+        int section = -1;
+        std::string inPack;
+        bool warn = false;
+        const auto sectionEnd = [&]() {
+            if (!inPack.empty())
+                p.note(tf(warn ? Text::AiGroupInPackOther : Text::AiGroupInPack, {inPack}),
+                       warn ? Tone::Warn : Tone::Muted);
+            inPack.clear();
+            warn = false;
+        };
         for (int g = 0; g < ai::kGroups; ++g) {
-            const bool groupUsed = on && ai::groupOn(a, ai::Group(g));
+            const ai::Group group = ai::Group(g);
+            if (ai::sectionOf(group) != section) {
+                sectionEnd();
+                section = ai::sectionOf(group);
+                p.gap(4);
+                p.note(t(kSectionLabels[section]), Tone::Normal);
+            }
+            const bool groupUsed = on && ai::groupOn(a, group);
             choiceRow(p, kGroupModel + g, groupKey(g).c_str(), groupUsed);
             if (!index) continue;
             const ai::GroupCount& c = counts.groups[size_t(g)];
+            if (!c.pictures) continue;
+            std::string part = utf8(t(kGroupLabels[g])) + " " + num(c.pictures);
             if (c.other && groupUsed) {
                 other += c.other;
-                p.note(tf(Text::AiGroupInPackOther, {num(c.pictures), num(c.other)}), Tone::Warn);
-            } else {
-                p.note(tf(Text::AiGroupInPack, {num(c.pictures)}));
+                warn = true;
+                part += " (\u26A0 " + num(c.other) + ")";
             }
+            inPack += (inPack.empty() ? "" : "; ") + part;
         }
+        sectionEnd();
         // 1.6.3: the small pictures' own model, over their group's
         const bool small = a.smallPictures;
         p.check(kSmall, t(Text::AiSmall), small, t(Text::AiSmallHint), on);

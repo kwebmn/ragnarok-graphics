@@ -43,12 +43,20 @@ struct AiSettings {
     bool uiPieces = true;  // 0.15: with icons, the windows' small pieces too - buttons, tabs, slots (baked-in text)
     std::string model = "general";      // ground and objects: general (realistic) or anime (drawn)
     std::string spriteModel = "anime";  // sprites and effects
-    // 1.6: a model for each group of pictures ([ai] model_world, model_monsters ...); "" - as model (the world) or
-    // sprite_model (the rest) say.
+    // 1.6: a model for each group of pictures ([ai] model_<group>); "" - its family's. 2.5.28: 38 groups, the eight
+    // of before their families ([ai] model_world, model_players ...; model_monsters and model_npcs are their head
+    // group's own), and a family of none as model (the world) or sprite_model (the rest) say.
     std::array<std::string, ai::kGroups> models{};
+    std::array<std::string, ai::kFamilies> familyModels{};
     const std::string& modelFor(ai::Group g) const {
         const std::string& own = models[size_t(g)];
-        return !own.empty() ? own : g == ai::Group::World ? model : spriteModel;
+        if (!own.empty()) return own;
+        const ai::Family f = ai::familyOf(g);
+        ai::Group head = g;
+        if (ai::headOf(f, head) && !models[size_t(head)].empty()) return models[size_t(head)];
+        const std::string& family = familyModels[size_t(f)];
+        if (!family.empty()) return family;
+        return f == ai::Family::World ? model : spriteModel;
     }
     // 1.6.3: pictures smaller than small_side a side (both sides, the game's pixels) by small_model whatever their
     // group's - anime 6B redraws a 24x24 icon its own way.

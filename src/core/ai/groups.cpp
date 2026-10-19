@@ -5,7 +5,16 @@
 namespace uagfx::ai {
 namespace {
 
-const char* const kNames[kGroups] = {"world", "monsters", "players", "npcs", "items", "effects", "icons", "screens"};
+const char* const kNames[kGroups] = {
+    "ground_town", "ground_field", "ground_dungeon", "ground_indoor", "ground_other",
+    "buildings_town", "models_field", "models_dungeon", "furniture", "models_other", "trees", "plants", "water",
+    "bodies", "mounted", "heads", "weapons", "shields", "headgear", "garments",
+    "monsters", "bosses", "homunculi", "npcs",
+    "items_ground", "item_icons", "item_pictures", "card_pictures",
+    "skill_animations", "effect_sprites",
+    "emotions", "cursor", "windows", "menu_icons", "portraits", "maps", "loading", "login"};
+const char* const kFamilyNames[kFamilies] = {"world", "monsters", "players", "npcs", "items", "effects", "icons",
+                                             "screens"};
 const char* const kModelTokens[kModels] = {"general", "anime", "anime6b", "gameai"};
 
 }  // namespace
@@ -19,6 +28,56 @@ bool parseGroup(const std::string& name, Group& out) {
             return true;
         }
     return false;
+}
+
+Family familyOf(Group g) {
+    const int i = int(g);
+    if (i <= int(Group::Water)) return Family::World;
+    if (i <= int(Group::Garments)) return Family::Players;
+    if (i <= int(Group::Homunculi)) return Family::Monsters;
+    switch (g) {
+        case Group::Npcs: return Family::Npcs;
+        case Group::ItemsGround: return Family::Items;
+        case Group::ItemIcons:
+        case Group::ItemPictures: return Family::Icons;  // small pictures of the interface, as before
+        case Group::CardPictures: return Family::Screens;  // a card's picture is a big one
+        case Group::SkillAnimations:
+        case Group::EffectSprites: return Family::Effects;
+        case Group::Emotions:
+        case Group::Cursor:
+        case Group::Windows:
+        case Group::MenuIcons: return Family::Icons;
+        default: return Family::Screens;  // portraits, maps, loading and login screens
+    }
+}
+
+const char* familyName(Family f) { return int(f) < kFamilies ? kFamilyNames[int(f)] : ""; }
+
+bool parseFamily(const std::string& name, Family& out) {
+    for (int i = 0; i < kFamilies; ++i)
+        if (name == kFamilyNames[i]) {
+            out = Family(i);
+            return true;
+        }
+    return false;
+}
+
+bool headOf(Family f, Group& out) {
+    if (f == Family::Monsters) out = Group::Monsters;
+    else if (f == Family::Npcs) out = Group::Npcs;
+    else return false;
+    return true;
+}
+
+int sectionOf(Group g) {
+    const int i = int(g);
+    if (i <= int(Group::GroundOther)) return 0;
+    if (i <= int(Group::Water)) return 1;
+    if (i <= int(Group::Garments)) return 2;
+    if (i <= int(Group::Npcs)) return 3;
+    if (i <= int(Group::CardPictures)) return 4;
+    if (i <= int(Group::EffectSprites)) return 5;
+    return 6;
 }
 
 const char* modelToken(int i) { return i >= 0 && i < kModels ? kModelTokens[i] : ""; }
@@ -45,22 +104,27 @@ const char* modelFile(const std::string& token) {
 
 bool rrdbModel(const std::string& token) { return token == "anime6b" || token == "gameai"; }
 
-Group groupOfKind(Kind k) {
+Group groupOfKind(Kind k, MapKind map) {
     switch (k) {
         case Kind::Sprites: return Group::Monsters;  // a world texture drawn facing the screen
-        case Kind::Effects: return Group::Effects;
-        case Kind::Icons: return Group::Screens;      // through the world's way only the big pictures come
-        default: return Group::World;
+        case Kind::Effects: return Group::SkillAnimations;
+        case Kind::Icons: return Group::Loading;      // through the world's way only the big pictures come
+        case Kind::Objects: {
+            const Group models[] = {Group::BuildingsTown, Group::ModelsField, Group::ModelsDungeon, Group::Furniture,
+                                    Group::ModelsOther};
+            return models[int(map) < 5 ? int(map) : 4];
+        }
+        default: return Group(int(Group::GroundTown) + (int(map) < 5 ? int(map) : 4));
     }
 }
 
 Group groupOfSource(uint8_t source) {
     switch (sprite_exe::Source(source)) {
-        case sprite_exe::Source::Player: return Group::Players;
+        case sprite_exe::Source::Player: return Group::Bodies;
         case sprite_exe::Source::Npc: return Group::Npcs;
-        case sprite_exe::Source::Item: return Group::Items;
-        case sprite_exe::Source::Effect: return Group::Effects;
-        case sprite_exe::Source::Interface: return Group::Icons;  // the cursor
+        case sprite_exe::Source::Item: return Group::ItemsGround;
+        case sprite_exe::Source::Effect: return Group::EffectSprites;
+        case sprite_exe::Source::Interface: return Group::Cursor;
         case sprite_exe::Source::Monster:
         case sprite_exe::Source::Unknown: break;
     }

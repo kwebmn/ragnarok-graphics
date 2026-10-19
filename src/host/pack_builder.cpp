@@ -228,7 +228,7 @@ uint32_t borderOf(pack::Group g) { return g == pack::Group::World ? 0u : g == pa
 // 1.6.4: a picture of a file as the reading pass finds it, and one reading thread's share of the files.
 struct Listed {
     std::string name;
-    ai::Group group = ai::Group::World;
+    ai::Group group = ai::Group::GroundOther;
     int width = 0, height = 0;
     std::string alike;                 // a .jpg's likeness (0.49)
     std::vector<std::string> lowKeys;  // its keys at a lower texture detail (0.45)
@@ -238,6 +238,7 @@ struct ListWork {
     const std::vector<std::pair<std::string, pack::Source>>* list = nullptr;
     const pack::Choice* choice = nullptr;
     const pack::GameFiles* shared = nullptr;  // 2.3: the builder's - its archives' tables, read once
+    const ai::WorldUses* uses = nullptr;      // 2.5.28: the maps that take the world's textures (their groups)
     size_t first = 0, step = 1;
     std::atomic<uint32_t>* done = nullptr;
     std::atomic<bool>* stop = nullptr;
@@ -258,7 +259,7 @@ DWORD WINAPI listMain(void* arg) {
             for (const pack::Picture& p : picturesOf(files, f.first, f.second, data, *w.choice, w.stop)) {
                 Listed l;
                 l.name = pack::pictureName(p.group, p.key);
-                l.group = ai::groupOfPicture(f.first, f.second, p.width, p.height);
+                l.group = ai::groupOfPicture(f.first, f.second, p.width, p.height, w.uses);
                 l.width = p.width;
                 l.height = p.height;
                 if (p.contentWidth)
@@ -342,6 +343,11 @@ private:
     Timeline timeline_;
     pack::GameFiles files_;
     std::vector<std::pair<std::string, pack::Source>> list_;
+    // 2.5.28: the maps that take each world texture - its group by the kind of map (core/ai/file_groups.hpp); read
+    // once, when the world's textures are made (some 1,250 maps: seconds)
+    ai::WorldUses uses_;
+    bool usesRead_ = false;
+    const ai::WorldUses* worldUses();
     pack::Writer writer_;
     // Every picture's kind of this run and of the pack's index (0.48: with the maps the game's own making noted), and
     // (0.45) the keys of the world's textures at the game's lower texture details, to their whole textures' pictures.
@@ -455,6 +461,7 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
         w.list = &list_;
         w.choice = &a_.choice;
         w.shared = &files_;
+        w.uses = a_.choice.world ? worldUses() : nullptr;
         w.first = t;
         w.step = threads;
         w.done = &filesDone;
@@ -501,8 +508,15 @@ int Builder::preview() {
     std::string error;
     if (!files_.open(a_.dir, error)) return fail("the game's files: " + error);
     const pack::Choice all;
-    const char* const hints[ai::kGroups] = {"prontera", "poring", "novice", "kafra",
-                                            "apple",    "fire",   "item",   "loading"};
+    // 2.5.28: a word of a well-known file of each group, "" any of it
+    const char* const hints[ai::kGroups] = {
+        "prontera", "", "dun", "", "", "prontera", "", "", "", "", "tree", "flow", "water",  // the world
+        "", "riding", "", "", "", "", "",                                                   // the characters
+        "poring", "baphomet", "lif", "kafra",                                               // monsters, NPCs
+        "apple", "\\item\\", "collection", "cardbmp",                                     // items
+        "", "", "emotion", "cursors",                                                       // effects, emotions, cursor
+        "basic_interface", "menu_icon", "illust", "\\map\\", "loading", "login"};        // the interface
+    const ai::WorldUses* uses = ai::familyOf(want) == ai::Family::World ? worldUses() : nullptr;
     pack::Picture found;
     std::string from;
     std::vector<uint8_t> data;
@@ -514,7 +528,7 @@ int Builder::preview() {
             if (pass == 0 && n.find(hints[int(want)]) == std::string::npos) continue;
             if (++tried > 400 || !files_.read(n, data)) continue;
             for (pack::Picture& p : picturesOf(files_, n, src, data, all))
-                if (ai::groupOfPicture(n, src, p.width, p.height) == want && p.width >= 24 && p.height >= 24) {
+                if (ai::groupOfPicture(n, src, p.width, p.height, uses) == want && p.width >= 24 && p.height >= 24) {
                     found = std::move(p);
                     from = n;
                     break;
@@ -669,6 +683,20 @@ int Builder::drop() {
     return 0;
 }
 
+const ai::WorldUses* Builder::worldUses() {
+    if (!usesRead_) {
+        usesRead_ = true;
+        const ULONGLONG t0 = GetTickCount64();
+        const map_textures::Read read = [this](const std::string& name, std::vector<uint8_t>& out) {
+            return files_.read(name, out);
+        };
+        uses_ = ai::worldUsesOf(files_.maps(), read);
+        LOG_INFO("texture pack: the world's textures of %zu maps, %zu textures, in %.1f s (their groups)",
+                 uses_.kinds.size(), uses_.textures.size(), double(GetTickCount64() - t0) / 1000.0);
+    }
+    return &uses_;
+}
+
 int Builder::build() {
     if (!pack::anyChosen(a_.choice)) return fail("nothing is chosen to make");
     if (!listFiles()) return 3;
@@ -775,7 +803,8 @@ int Builder::build() {
             const std::string name = pack::pictureName(p.group, p.key);
             if (!done.insert(name).second) continue;
             std::string why;
-            const ai::Group g = ai::groupOfPicture(list_[i].first, list_[i].second, p.width, p.height);
+            const ai::Group g = ai::groupOfPicture(list_[i].first, list_[i].second, p.width, p.height,
+                                                   a_.choice.world ? worldUses() : nullptr);
             if (!renderer.enlargeForPack(int(g), p.argb.data(), p.width, p.height, borderOf(p.group), big, why)) {
                 if (renderer.lost()) {
                     enc.drain();

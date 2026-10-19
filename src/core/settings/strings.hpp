@@ -205,8 +205,8 @@ enum class Text : uint16_t {
     PadNpcHint, PadNpcHintHint,
     AiModelAnime6b,  // 1.5
     // 1.6: a model for each group, the preview
-    AiGroupsHeading, AiGroupWorld, AiGroupMonsters, AiGroupPlayers, AiGroupNpcs, AiGroupItems, AiGroupEffects,
-    AiGroupIcons, AiGroupScreens, AiGroupModelHint, AiModelSet, AiModelSetHint, AiModelSetFast, AiModelSetBalanced,
+    AiGroupsHeading, AiGroupMonsters, AiGroupNpcs, AiGroupItems, AiGroupModelHint, AiModelSet, AiModelSetHint,
+    AiModelSetFast, AiModelSetBalanced,
     AiModelSetMaximum, AiModelSetCustom, AiGroupInPack, AiGroupInPackOther, AiNoPackYet, AiUnknownSprites, AiRedo,
     AiRedoHint, AiPreviewHeading, AiPreviewGroup, AiPreviewShow, AiPreviewHint, AiPreviewWorking, AiPreviewFailed,
     AiPreviewFrom, AiPreviewGame, PackRedo, PackRedoHint,
@@ -311,6 +311,15 @@ enum class Text : uint16_t {
     AiModelGameAi, AiGameAiMissing, AiGetModels, AiGetModelsFailed,  // 2.5.27
     PackUnread, PackCompact, PackCompactNote, PackCompactAsk, PackCompacting, PackCompacted,  // 2.5.28
     PackCompactFailed,
+    // 2.5.28: the 38 groups and their sections on the AI page
+    AiSectionGround, AiGroupGroundTown, AiGroupGroundField, AiGroupGroundDungeon, AiGroupGroundIndoor,
+    AiGroupGroundOther, AiSectionModels, AiGroupBuildingsTown, AiGroupModelsField, AiGroupModelsDungeon,
+    AiGroupFurniture, AiGroupModelsOther, AiGroupTrees, AiGroupPlants, AiGroupWater, AiSectionCharacters,
+    AiGroupBodies, AiGroupMounted, AiGroupHeads, AiGroupWeapons, AiGroupShields, AiGroupHeadgear, AiGroupGarments,
+    AiSectionMonsters, AiGroupBosses, AiGroupHomunculi, AiSectionItems, AiGroupItemIcons, AiGroupItemPictures,
+    AiGroupCardPictures, AiSectionEffects, AiGroupSkillAnimations, AiGroupEffectSprites, AiSectionInterface,
+    AiGroupEmotions, AiGroupCursor, AiGroupWindows, AiGroupMenuIcons, AiGroupPortraits, AiGroupMaps, AiGroupLoading,
+    AiGroupLogin,
     Count
 };
 

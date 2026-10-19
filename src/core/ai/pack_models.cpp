@@ -7,8 +7,6 @@
 namespace uagfx::ai {
 namespace {
 
-constexpr int kScreenSide = 128;  // as the driver's kUiPictureSide: the interface's big pictures
-
 // "ui/256x128\0123.webp" -> 256, 128
 bool sizeOfName(const std::string& name, int& w, int& h) {
     const size_t slash = name.find('/');
@@ -22,32 +20,26 @@ bool sizeOfName(const std::string& name, int& w, int& h) {
 
 }  // namespace
 
-Group groupOfPicture(const std::string& fileName, const pack::Source& s, int width, int height) {
+Group groupOfPicture(const std::string& fileName, const pack::Source& s, int width, int height,
+                     const WorldUses* uses) {
     switch (s.type) {
-        case pack::Source::Sprite: return groupOfSource(uint8_t(sprite_exe::sourceOf(fileName.c_str())));
-        case pack::Source::Interface:
-            return width >= kScreenSide && height >= kScreenSide ? Group::Screens : Group::Icons;
-        case pack::Source::Jpeg: return s.kind == Kind::Icons ? Group::Screens : groupOfKind(s.kind);
-        default: return s.kind == Kind::Effects ? Group::Effects : Group::World;
+        case pack::Source::Sprite: return spriteGroupOf(fileName);
+        case pack::Source::Interface: return interfaceGroupOf(fileName, width, height);
+        case pack::Source::Jpeg:
+            return s.kind == Kind::Icons ? interfaceGroupOf(fileName, width, height) : worldGroupOf(fileName, uses);
+        default: return worldGroupOf(fileName, uses);  // an effect's texture by its folder
     }
 }
 
-std::optional<Group> groupOfEntry(const std::string& name, const pack::IndexEntry& e) {
-    Group g;
+std::optional<Group> groupOfEntry(const std::string&, const pack::IndexEntry& e) {
+    Group g;  // "monsters" and "npcs" were families' words too: their pictures count as those groups' until then
     if (!e.group.empty() && parseGroup(e.group, g)) return g;
-    if (e.kind == Kind::Effects) return Group::Effects;
-    if (name.rfind("world/", 0) == 0) return Group::World;
-    if (name.rfind("ui/", 0) == 0) {
-        int w = 0, h = 0;
-        return sizeOfName(name, w, h) && w >= kScreenSide && h >= kScreenSide ? Group::Screens : Group::Icons;
-    }
-    if (e.kind == Kind::Icons) return Group::Icons;  // the cursor's frames
     return std::nullopt;
 }
 
 std::string modelOfEntry(const pack::IndexEntry& e, Group g, const AiSettings& a) {
     if (!e.model.empty()) return e.model;
-    return g == Group::World ? a.model : a.spriteModel;
+    return familyOf(g) == Family::World ? a.model : a.spriteModel;
 }
 
 PackCounts countPack(const pack::Index& index, const AiSettings& a) {
@@ -71,15 +63,15 @@ PackCounts countPack(const pack::Index& index, const AiSettings& a) {
 }
 
 bool groupOn(const AiSettings& s, Group g) {
-    switch (g) {
-        case Group::World: return s.ground || s.objects;
-        case Group::Monsters: return s.monsters;
-        case Group::Players: return s.players;
-        case Group::Npcs: return s.npcs;
-        case Group::Items: return s.items;
-        case Group::Effects: return s.effects;
-        case Group::Icons:
-        case Group::Screens: return s.icons;
+    switch (familyOf(g)) {
+        case Family::World: return sectionOf(g) == 0 ? s.ground : s.objects;
+        case Family::Monsters: return s.monsters;
+        case Family::Players: return s.players;
+        case Family::Npcs: return s.npcs;
+        case Family::Items: return s.items;
+        case Family::Effects: return s.effects;
+        case Family::Icons:
+        case Family::Screens: return s.icons;
     }
     return false;
 }
@@ -88,10 +80,10 @@ std::array<std::string, kGroups> modelsOfSet(ModelSet s) {
     std::array<std::string, kGroups> m{};
     if (s == ModelSet::Own) return m;
     for (int g = 0; g < kGroups; ++g) {
-        const Group group = Group(g);
-        m[size_t(g)] = group == Group::World && s != ModelSet::Fast ? "general"
-                       : s == ModelSet::Maximum || (s == ModelSet::Balanced && group == Group::Screens) ? "anime6b"
-                                                                                                          : "anime";
+        const Family f = familyOf(Group(g));
+        m[size_t(g)] = f == Family::World && s != ModelSet::Fast ? "general"
+                       : s == ModelSet::Maximum || (s == ModelSet::Balanced && f == Family::Screens) ? "anime6b"
+                                                                                                    : "anime";
     }
     return m;
 }
