@@ -96,7 +96,11 @@ public:
                 return;
             }
             case kRecommended: runAutoSetup(host_); return;
-            case kWhatsNew: host_.message(notesText(m.paths().dir, host_.lang()), false); return;
+            case kWhatsNew: {
+                const std::wstring notes = notesText(m.paths().dir, host_.lang());
+                host_.message(notes.empty() ? tf(Text::NotesNone, {kVersion}) : notes, false);
+                return;
+            }
             case kUpdateCheck:
                 startUpdateCheck();
                 host_.rebuild();

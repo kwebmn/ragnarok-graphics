@@ -9,7 +9,11 @@
 
 #include "app/mnemonic.hpp"
 #include "app/report_send.hpp"
+#include "app/status_info.hpp"
+#include "app/update.hpp"
 #include "core/settings/search.hpp"
+#include "core/update_check.hpp"
+#include "core/version.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -32,6 +36,8 @@ constexpr int kModeFirst = 30;     // 2.6: the three modes' buttons, 30-32
 constexpr int kSearch = 33;        // the search field
 constexpr int kReportButton = 34;  // "Report a problem"
 constexpr int kTabFirst = 40;      // a view's tabs, 40-43: the page view's children, made with the page
+constexpr int kResetView = 44;     // "Reset the page to the recommended values", made with the page
+constexpr int kStrip = 26;         // 2.6: the status bar's height at 96 DPI
 constexpr int kHeader = 52;        // 2.6: the header's height at 96 DPI
 constexpr int kList = 200;         // the list's width
 constexpr UINT kRebuild = WM_APP + 1;
@@ -62,6 +68,7 @@ int MainWindow::run(HINSTANCE inst, int show) {
     lang_ = startLang(saved);  // 0.48: English until one is chosen
     mode_ = model_->startMode();  // 2.6
     shown_ = viewsOf(mode_).front();
+    newInstall_ = !model_->usedBefore();  // before the statistics' question writes its answer
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof wc;
     wc.lpfnWndProc = proc;
@@ -257,6 +264,9 @@ void MainWindow::create() {
         modes_[i] =
             child(L"BUTTON", BS_AUTORADIOBUTTON | BS_PUSHLIKE | WS_TABSTOP | (i ? 0 : WS_GROUP), kModeFirst + i);
     search_ = child(L"EDIT", ES_AUTOHSCROLL | WS_TABSTOP | WS_GROUP, kSearch, WS_EX_CLIENTEDGE);
+    stripLeft_ = child(L"STATIC", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX | SS_ENDELLIPSIS, 0);
+    stripRight_ = child(L"STATIC", SS_RIGHT | SS_CENTERIMAGE | SS_NOPREFIX, 0);
+    stripBrush_ = CreateSolidBrush(RGB(243, 243, 243));
     report_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP | WS_GROUP, kReportButton);
     listBrush_ = CreateSolidBrush(RGB(247, 247, 247));
     lineBrush_ = CreateSolidBrush(RGB(227, 227, 227));
@@ -322,7 +332,7 @@ int MainWindow::contentTop() const {
 int MainWindow::rowTop() const {
     RECT c;
     GetClientRect(hwnd_, &c);
-    return c.bottom - px(46, dpi_);
+    return c.bottom - px(kStrip + 46, dpi_);
 }
 
 void MainWindow::layout() {
@@ -331,7 +341,7 @@ void MainWindow::layout() {
     const int w = c.right;
     auto at = [&](int v) { return px(v, dpi_); };
     for (HWND ctl : {sidebar_, langBox_, banner_, status_, apply_, play_, undo_, close_, report_, search_, modes_[0],
-                     modes_[1], modes_[2]})
+                     modes_[1], modes_[2], stripLeft_, stripRight_})
         SendMessageW(ctl, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
     // 2.6: the modes, the search (what the rest leaves of 300), "Report a problem" and the language on the right
     int x = at(16);
@@ -357,6 +367,10 @@ void MainWindow::layout() {
         x -= at(8);
     }
     MoveWindow(status_, at(12), by, x - at(12), bh, TRUE);
+    // 2.6: the status bar - the driver and the pack on the left, the game on the right
+    const int sy = c.bottom - at(kStrip);
+    MoveWindow(stripRight_, w - at(16 + 220), sy, at(220), at(kStrip), TRUE);
+    MoveWindow(stripLeft_, at(16), sy, w - at(16 + 220 + 16 + 16), at(kStrip), TRUE);
     const RECT page = pageArea();
     MoveWindow(view_, page.left, page.top, page.right - page.left, page.bottom - page.top, TRUE);
     InvalidateRect(hwnd_, nullptr, TRUE);  // the lines and the list's ground move with them
@@ -375,11 +389,51 @@ void MainWindow::paint() {
     const RECT ground{0, top, list, bottom};
     const RECT edge{list, top, list + 1, bottom};
     const RECT foot{0, bottom, c.right, bottom + 1};
+    const RECT strip{0, c.bottom - px(kStrip, dpi_), c.right, c.bottom};
+    const RECT stripLine{0, strip.top, c.right, strip.top + 1};
     FillRect(dc, &header, lineBrush_);
     FillRect(dc, &ground, listBrush_);
     FillRect(dc, &edge, lineBrush_);
     FillRect(dc, &foot, lineBrush_);
+    FillRect(dc, &strip, stripBrush_);
+    FillRect(dc, &stripLine, lineBrush_);
     EndPaint(hwnd_, &ps);
+}
+
+// 2.6: the status bar's words - the driver's version and its update, the texture pack, the game
+void MainWindow::updateStrip() {
+    const Snapshot& now = model_->now();
+    const std::string installed = now.installedVersion.substr(0, now.installedVersion.find(' '));
+    std::wstring left = wtrf(lang_, Text::MainDriver, {installed.empty() ? std::string(kVersion) : installed});
+    const UpdateState u = updateState();
+    if (u.kind == UpdateState::Checking) left += L" · " + wtr(lang_, Text::UpdateChecking);
+    if (u.kind == UpdateState::Done)
+        left += L" · " + (update::newer(u.latest, kVersion) ? wtrf(lang_, Text::MainUpdateNew, {u.latest})
+                                                                 : wtr(lang_, Text::MainUpdateNone));
+    const PackSummary pack = packSummary(model_->paths().dir);
+    left += L"     ";
+    if (!pack.exists)
+        left += wtr(lang_, Text::StripNoPack);
+    else if (pack.counted)
+        left += wtrf(lang_, Text::MainPack, {num((long long)pack.pictures), sizeText(pack.bytes, lang_)});
+    else
+        left += wtrf(lang_, Text::PackWriting, {sizeText(pack.bytes, lang_)});
+    SetWindowTextW(stripLeft_, left.c_str());
+    SetWindowTextW(stripRight_, wtr(lang_, now.gameRunning ? Text::StatusRunning : Text::StatusClosed).c_str());
+}
+
+// 2.6: "Reset the page to the recommended values" - every row of the view's tab the mode shows, as the player's
+// change (Apply writes them)
+void MainWindow::resetView() {
+    if (!ask(wtr(lang_, Text::ResetPageAsk))) return;
+    for (const settings::IniSetting& s : iniSettings()) {
+        const settings::Place at = placeOf(s);
+        if (at.view != shown_ || at.tab != tab_ || levelOf(s) > mode()) continue;
+        const std::string want = model_->recommended(s);
+        if (!want.empty() && want != model_->token(s)) model_->setToken(s, want);
+    }
+    changed();
+    rebuild();
 }
 
 void MainWindow::drawListItem(const DRAWITEMSTRUCT& d) {
@@ -538,6 +592,11 @@ void MainWindow::buildPage() {
         for (int i = 0; i < tabCount(shown_); ++i) names.push_back(wtr(lang_, tabName(shown_, i)));
         panel_->tabs(kTabFirst, names, tab_);
     }
+    if (query_.empty() && resettable(shown_, tab_)) {  // 2.6: the rows of this view back to the recommended
+        panel_->buttons({{kResetView, wtr(lang_, Text::ResetPage)}});
+        panel_->note(wtr(lang_, Text::DotLegend));
+        panel_->gap(4);
+    }
     current_ = query_.empty() ? makeView() : makeSearchPage(*this, utf8(query_));  // 2.6: the search over the view
     current_->build(*panel_);
     if (current_->ticks())
@@ -571,12 +630,10 @@ void MainWindow::buildPage() {
 
 void MainWindow::updateStatus() {
     const size_t pending = model_->pendingCount();
-    std::wstring text = flash_;
-    if (text.empty()) {
-        text = wtr(lang_, model_->now().gameRunning ? Text::StatusRunning : Text::StatusClosed);
-        if (pending) text += L" " + wtrf(lang_, Text::StatusPending, {num(static_cast<long long>(pending))});
-    }
+    std::wstring text = flash_;  // 2.6: the game's state is the status bar's
+    if (text.empty() && pending) text = wtrf(lang_, Text::StatusPending, {num(static_cast<long long>(pending))});
     SetWindowTextW(status_, text.c_str());
+    updateStrip();
     EnableWindow(apply_, model_->canApply() || typing_);
     EnableWindow(play_, !model_->system().elevated);
     EnableWindow(undo_, model_->canRevert());
@@ -728,6 +785,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 setMode(Mode(id - kModeFirst));
             } else if (id == kSearch && code == EN_CHANGE) {
                 SetTimer(hwnd_, kSearchTimer, 250, nullptr);
+            } else if (id == kResetView && code == BN_CLICKED) {
+                resetView();
             } else if (id == kReportButton && code == BN_CLICKED) {
                 reportFocus_ = true;
                 showView(settings::View::Service, 0);
@@ -797,6 +856,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             HDC dc = reinterpret_cast<HDC>(wp);
             HWND ctl = reinterpret_cast<HWND>(lp);
             Tone tone = Tone::Normal;
+            if (ctl == stripLeft_ || ctl == stripRight_) {  // 2.6: the status bar's ground
+                SetTextColor(dc, RGB(85, 85, 85));
+                SetBkMode(dc, TRANSPARENT);
+                return reinterpret_cast<LRESULT>(stripBrush_);
+            }
             if (ctl == banner_)
                 SetTextColor(dc, toneColor(Tone::Bad));
             else if (panel_ && panel_->toneOf(ctl, tone))
@@ -846,6 +910,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 if (!err.empty()) message(err, true);
                 rebuild();
             }
+            if (model_->seenVersion() != kVersion) {  // 2.6: a new version's notes, once (not on a new install)
+                const std::wstring notes = newInstall_ ? std::wstring() : notesText(model_->paths().dir, lang_);
+                if (!notes.empty()) message(notes, false);
+                model_->saveSeenVersion(kVersion);
+            }
             if (model_->now().config.statsSend && !model_->now().gameRunning && !statsThread_) {
                 auto* dir = new std::wstring(model_->paths().dir);
                 statsThread_ = CreateThread(nullptr, 0, &sendStats, dir, 0, nullptr);
@@ -864,7 +933,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 }
                 return 0;
             }
-            if (wp == kTimer && model_->refreshRunning()) rebuild();  // the game started or closed
+            if (wp == kTimer) {
+                if (model_->refreshRunning()) rebuild();  // the game started or closed
+                updateStrip();  // the update's check, the pack's builder
+            }
             if (wp == kTickTimer && current_) current_->tick();
             return 0;
         case WM_DPICHANGED: {
@@ -926,7 +998,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             }
             current_.reset();
             panel_.reset();
-            for (HBRUSH b : {listBrush_, lineBrush_, chosenBrush_, accentBrush_})
+            for (HBRUSH b : {listBrush_, lineBrush_, chosenBrush_, accentBrush_, stripBrush_})
                 if (b) DeleteObject(b);
             PostQuitMessage(0);
             return 0;

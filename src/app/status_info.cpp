@@ -39,7 +39,7 @@ std::wstring notesText(const std::wstring& dir, settings::Lang l) {
     std::string notes;
     if (readFile(dir + L"\\TEST." + wide(settings::langToken(l)) + L".md", md)) notes = settings::notesOf(md, kVersion);
     if (notes.empty() && readFile(dir + L"\\TEST.en.md", md)) notes = settings::notesOf(md, kVersion);
-    return notes.empty() ? wtrf(l, settings::Text::NotesNone, {kVersion}) : wide(notes);
+    return notes.empty() ? std::wstring() : wtrf(l, settings::Text::WhatsNewTitle, {kVersion}) + L"\n\n" + wide(notes);
 }
 
 }  // namespace uagfx::app

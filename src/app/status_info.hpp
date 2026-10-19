@@ -18,8 +18,8 @@ struct PackSummary {
 PackSummary packSummary(const std::wstring& dir);
 // DLSS's files (get-dlss.bat puts uaro-graphics\dlss\ with its version.txt).
 bool dlssInstalled(const std::wstring& dir);
-// "What's new" in this version: its part of TEST.<language>.md next to uaRO.exe (the English one when that is
-// missing), or a line saying there are none.
+// "What's new" in this version under its title: its part of TEST.<language>.md next to uaRO.exe (the English one
+// when that is missing); "" when there is none.
 std::wstring notesText(const std::wstring& dir, settings::Lang l);
 
 }  // namespace uagfx::app

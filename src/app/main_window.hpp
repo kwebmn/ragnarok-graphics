@@ -64,6 +64,8 @@ private:
     int rowTop() const;  // the buttons' row
     std::unique_ptr<Page> makeView();  // the shown view's page (its tab's)
     void clearSearch();
+    void updateStrip();  // 2.6: the status bar
+    void resetView();
     std::wstring searchText() const;
     std::wstring windowLetters() const;  // Alt+letter of the window's own buttons
     void doApply(bool play);
@@ -105,6 +107,10 @@ private:
     HBRUSH lineBrush_ = nullptr;
     HBRUSH chosenBrush_ = nullptr;
     HBRUSH accentBrush_ = nullptr;
+    HWND stripLeft_ = nullptr;  // 2.6: the status bar's two sides
+    HWND stripRight_ = nullptr;
+    HBRUSH stripBrush_ = nullptr;
+    bool newInstall_ = false;  // no notes of "What's new" on the first start
     std::unique_ptr<Panel> panel_;
     std::unique_ptr<Page> current_;
     Rebuilds rebuilds_;

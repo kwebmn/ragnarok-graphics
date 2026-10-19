@@ -3287,6 +3287,23 @@ const Entry kTexts[] = {
     {"Nothing found for «{1}».", "За «{1}» нічого не знайдено.", "По «{1}» ничего не найдено."},
     {"Only the first {1} are shown: add a word.", "Показано лише перші {1}: додайте слово.",
      "Показаны только первые {1}: добавьте слово."},
+    // 2.6: the status bar, the "changed" dots, the page's reset, "What's new"
+    {"No texture pack", "Пакета текстур немає", "Пакета текстур нет"},
+    {"Recommended for this computer: {1}", "Рекомендовано для цього комп'ютера: {1}",
+     "Рекомендуется для этого компьютера: {1}"},
+    {"on", "увімкнено", "включено"},
+    {"off", "вимкнено", "выключено"},
+    {"● - not the value recommended for this computer (its hint says which is).",
+     "● - не те значення, що рекомендоване для цього комп'ютера (підказка каже, яке).",
+     "● - не то значение, что рекомендуется для этого компьютера (подсказка говорит, какое)."},
+    {"Reset the page to the recommended values", "Скинути сторінку до рекомендованих",
+     "Сбросить страницу к рекомендуемым"},
+    {"Set every row of this page to the value recommended for this computer? Nothing is written until Apply.",
+     "Поставити кожному рядку цієї сторінки значення, рекомендоване для цього комп'ютера? Нічого не записується до "
+     "«Застосувати».",
+     "Поставить каждой строке этой страницы значение, рекомендуемое для этого компьютера? Ничего не записывается до "
+     "«Применить»."},
+    {"What's new in uaRO Graphics {1}", "Що нового в uaRO Graphics {1}", "Что нового в uaRO Graphics {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

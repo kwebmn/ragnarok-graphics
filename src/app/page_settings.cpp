@@ -456,11 +456,13 @@ private:
         const IniSetting& s = iniSettings()[i];
         const int id = rowId(i);
         const std::string token = host_.model().token(s);
+        HWND row = nullptr;
         switch (s.control) {
-            case Control::Check: return p.check(id, t(s.label), token == s.tokens[1], t(s.hint));
+            case Control::Check: row = p.check(id, t(s.label), token == s.tokens[1], t(s.hint)); break;
             case Control::Slider:
-                return p.slider(id, t(s.label), s.min, s.max, s.step, std::atoi(token.c_str()), wide(token + s.unit),
-                                t(s.hint));
+                row = p.slider(id, t(s.label), s.min, s.max, s.step, std::atoi(token.c_str()), wide(token + s.unit),
+                               t(s.hint));
+                break;
             case Control::Choice: {
                 std::vector<std::wstring> items;
                 int selected = 0;
@@ -468,12 +470,26 @@ private:
                     items.push_back(t(s.choices[c]));
                     if (token == s.tokens[c]) selected = int(c);
                 }
-                return p.choice(id, t(s.label), items, selected, t(s.hint));
+                row = p.choice(id, t(s.label), items, selected, t(s.hint));
+                break;
             }
-            case Control::Number: return p.number(id, t(s.label), wide(token), t(s.hint));
+            case Control::Number: row = p.number(id, t(s.label), wide(token), t(s.hint)); break;
             case Control::Line: break;  // the game's key only: a key of uaro-graphics.ini is never a line of text
         }
-        return nullptr;
+        // 2.6: a dot before a row whose value is not the one recommended for this computer
+        const std::string recommended = host_.model().recommended(s);
+        if (row && !recommended.empty() && recommended != token)
+            p.dot(row, tf(Text::DotHint, {utf8(tokenText(s, recommended))}));
+        return row;
+    }
+
+    // A row's word as the page shows it: on or off, the list's item, the number with its unit.
+    std::wstring tokenText(const IniSetting& s, const std::string& token) const {
+        if (s.control == Control::Check) return t(token == s.tokens[1] ? Text::DotOn : Text::DotOff);
+        if (s.control == Control::Choice)
+            for (size_t c = 0; c < s.choices.size() && c < s.tokens.size(); ++c)
+                if (token == s.tokens[c]) return t(s.choices[c]);
+        return wide(token + s.unit);
     }
 
     void buildRows(Panel& p) {

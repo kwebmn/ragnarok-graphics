@@ -74,7 +74,7 @@ public:
         const std::string word = m.token(preset);
         int selected = 0;
         const std::vector<std::wstring> items = presetItems(selected);
-        p.choice(kPreset, t(preset.label), items, selected, t(preset.hint));
+        dot(p, p.choice(kPreset, t(preset.label), items, selected, t(preset.hint)), preset);
         const bool simple = host_.mode() == Mode::Simple;  // 2.6: the set and the groups alone
         if (word == "custom" && !simple) {  // 1.8: the mode - a set decides it (the strong one's the remaster's)
             const IniSetting& tier = setting("effects.tier");
@@ -102,7 +102,8 @@ public:
                 const double c = effect_costs::costOf(costs, x.key);
                 if (c > 0.0) ms += c;
             }
-            p.check(groupBox(g), withCost(t(kGroupNames[g]), ms), on, t(setting(groupKey(g)).hint), any);
+            dot(p, p.check(groupBox(g), withCost(t(kGroupNames[g]), ms), on, t(setting(groupKey(g)).hint), any),
+                setting(groupKey(g)));
             if (effect_groups::hasStrength(g))
                 slider(p, groupSlider(g), (groupKey(g) + "_strength").c_str(), any && on);
             if (simple) continue;
@@ -317,8 +318,21 @@ private:
     void slider(Panel& p, int id, const char* key, bool enabled) {
         const IniSetting& s = setting(key);
         const std::string token = host_.model().token(s);
-        p.slider(id, t(s.label), s.min, s.max, s.step, std::atoi(token.c_str()), wide(token + s.unit), t(s.hint),
-                 enabled);
+        dot(p,
+            p.slider(id, t(s.label), s.min, s.max, s.step, std::atoi(token.c_str()), wide(token + s.unit), t(s.hint),
+                     enabled),
+            s);
+    }
+
+    // 2.6: a dot before the set, a group's box or a strength whose value is not the recommended one
+    void dot(Panel& p, HWND row, const IniSetting& s) {
+        const std::string want = host_.model().recommended(s);
+        if (!row || want.empty() || want == host_.model().token(s)) return;
+        std::wstring shown = wide(want + s.unit);
+        if (s.control == Control::Check) shown = t(want == s.tokens[1] ? Text::DotOn : Text::DotOff);
+        for (size_t c = 0; s.control == Control::Choice && c < s.choices.size() && c < s.tokens.size(); ++c)
+            if (want == s.tokens[c]) shown = t(s.choices[c]);
+        p.dot(row, tf(Text::DotHint, {utf8(shown)}));
     }
 
     // The player's change; with `now` and the game running it goes into the file at once (the driver reads it within
