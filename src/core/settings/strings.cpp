@@ -3294,6 +3294,7 @@ const Entry kTexts[] = {
      "Поставить каждой строке этой страницы значение, рекомендуемое для этого компьютера? Ничего не записывается до "
      "«Применить»."},
     {"What's new in uaRO Graphics {1}", "Що нового в uaRO Graphics {1}", "Что нового в uaRO Graphics {1}"},
+    {"its group is off", "його група вимкнена", "его группа выключена"},  // 2.6.8
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

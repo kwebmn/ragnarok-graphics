@@ -372,11 +372,17 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
             const bool held = !comparing_.empty() && comparing_ == r.key;
             if (s->control == Control::Check) {
                 const bool on = tok == s->tokens[1] && !held;
-                text(x, y, on ? L"■" : L"□", on ? RGB(143, 194, 122) : RGB(150, 150, 150));
+                // 2.6.8: an effect on under a group that is off draws nothing (effect_groups::effective) - grey, with
+                // its group named off, not green as if it worked
+                const effect_groups::Member* member = effect_groups::memberOf(r.key);
+                const bool muted = on && member && !config.effects.groups[member->group];
+                const bool lit = on && !muted;
+                text(x, y, on ? L"■" : L"□", lit ? RGB(143, 194, 122) : RGB(150, 150, 150));
                 std::wstring label = wide(tr(lang_, s->label));
                 if (r.key.compare(0, 3, "ai.") == 0 && aiWaits(r.key, file.ai, file.aiNow))
                     label += L"  \u21bb";  // 2.2.1: at the next start
-                text(x + fontH * 3 / 2, y, label, on ? RGB(240, 236, 226) : RGB(170, 170, 170));
+                if (muted) label += L"  (" + wide(tr(lang_, Text::ConsoleGroupOff)) + L")";
+                text(x + fontH * 3 / 2, y, label, lit ? RGB(240, 236, 226) : RGB(170, 170, 170));
                 // 2.2.1: its timed pass's ms (a group's: its effects' passes, each once)
                 double ms = -1.0;
                 int g = 0;
