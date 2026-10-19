@@ -1,3 +1,44 @@
+# uaRO Graphics 2.6.0 — to check
+
+- **The settings app in three modes** — a switch at the top: Simple, Detailed, Developer. Simple: the Main page (the
+  quality in one choice, DLSS, frame generation, the frame limit and VSync, HDR, the sound, the gamepad, the
+  battery, the driver's and the card's state, the HD textures), Effects (the set and ten groups) and Gamepad.
+  Detailed: every setting on eight pages instead of fifteen — Graphics (the former Renderer, Quality, Smoothing and
+  Frames), Screen, Effects, AI textures (tabs: what to improve, models by group, the texture pack, ready textures),
+  Sound, Gamepad, Game and chat, Service (with the diagnostics and the report). Developer: the Debug page and the
+  test rows too. Nothing is gone: hidden rows keep their values in the ini.
+- A new install opens in the Simple mode, an earlier one in the Detailed mode; the chosen mode is kept.
+- **The window grows and maximizes** and keeps its size and place (880×600 at the least). On a wide window
+  Graphics, Effects, the AI models and Main go in two columns.
+- **Search** — the field at the top (Ctrl+F): the rows found change right in the results, the button under each
+  opens its page; Enter opens the first one's page, Esc goes back.
+- **A blue dot** before a row: its value is not the one recommended for this computer (the dot's hint says which).
+  "Reset the page to the recommended values" is at the top of the pages of settings rows; Apply writes it.
+- **The status bar** at the bottom: the driver's version and its update, the texture pack, the game. **Report a
+  problem** at the top opens the report to the developers.
+- **What's new:** after an update the app shows these notes once; the button is on the Main page.
+- **The Debug page** (Developer mode): the log, the profiler, X-ray, DLSS's signs, how the 64-bit renderer's picture
+  reaches the window, shader variants, the state cache, merged draws, the game's fast paths (some of them were in the
+  ini alone before), uaRO Studio, the game's keys.
+- **Compact the texture pack.** Pictures made again or taken out stay inside uaro-textures.zip: the game does not
+  read them, but they take room. Compact (Developer mode, the Texture pack tab) copies the pack to a new file
+  without them. Close the game first; it needs about the pack's size of free disk.
+- **The pack's download from the site is gone** — the pack is made on your own computer only.
+- **38 model groups instead of 8** (the Models by group tab): the ground, the models and buildings by the map's
+  kind, trees, plants, water, the character's parts, monsters, bosses and MVPs, items, effects, the interface. After
+  the update every new group takes its former group's model; the pack's pictures learn their groups at the next Make.
+- Please check:
+  1. The app opens in the Detailed mode; switch Simple → Developer → Detailed — the list on the left changes, the
+     Developer one ends with a grey "Developer only" heading and Debugging.
+  2. Stretch the window and maximize it — the page is made again, Graphics and Effects in two columns. Close and
+     open the app — the same size and place.
+  3. Ctrl+F, "light" — rows marked "Effects › group"; switch one right there; Esc goes back.
+  4. Blue dots on Graphics; "Reset the page to the recommended values" → the question → the dots gone → Apply.
+  5. Simple mode, Main: Quality → High (Graphics then holds the Maximum preset), Recommended settings, What's new.
+  6. Report a problem → the Service page, the caret in the comment field.
+  7. AI textures → Texture pack → Make (no new pictures, only their groups written) → Models by group — the sections
+     and the pictures in each group.
+
 # uaRO Graphics 2.5.27 — what to check
 
 - **The Game AI 2.0 model for AI textures.** It can be chosen for any group of pictures on the AI textures page, for
