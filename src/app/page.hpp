@@ -64,6 +64,13 @@ public:
         (void)n;
         return 0;
     }
+    // 2.6: the control of the setting `key` ("section.key" of the ini) as this page makes it, alone - for the Main
+    // page and the search; false: not one of this page's.
+    virtual bool buildRow(Panel& p, const std::string& key) {
+        (void)p;
+        (void)key;
+        return false;
+    }
     // 0.43: a page that shows work going on elsewhere (the texture pack's builder) - tick() twice a second.
     virtual bool ticks() const { return false; }
     virtual void tick() {}
@@ -93,6 +100,15 @@ std::unique_ptr<Page> makeEffectsPage(PageHost& host);  // 0.18: the [effects] s
 std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pack's builder
 std::unique_ptr<Page> makePadPage(PageHost& host);      // 1.4: uaRO Pad, the gamepad
 std::unique_ptr<Page> makeDebugPage(PageHost& host);    // 2.6: the Developer mode's switches and tools
+std::unique_ptr<Page> makeMainPage(PageHost& host);     // 2.6: the Simple mode's Main page
+
+// 2.6: uaRO Pad from the Main page - whether it is in the game's folder, the package's version, and on or off as the
+// Gamepad page does it ("" or what went wrong).
+bool padOn();
+std::wstring padVersion();
+std::wstring switchPad(PageHost& host, bool on);
+// 2.6: "Recommended settings" of the Main page - the Render page's auto setup for this computer.
+void runAutoSetup(PageHost& host);
 
 // 1.6: the Texture pack page's "make again what another model made", ticked from the AI page.
 bool& packRedo();

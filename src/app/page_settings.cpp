@@ -38,6 +38,14 @@ public:
     SettingsPage(PageHost& host, std::vector<settings::Page> left, std::vector<settings::Page> right)
         : Page(host), left_(std::move(left)), right_(std::move(right)) {}
 
+    // 2.6: one row of the ini's schema, alone (the Main page, the search)
+    bool buildRow(Panel& p, const std::string& key) override {
+        const std::vector<IniSetting>& all = iniSettings();
+        for (size_t i = 0; i < all.size(); ++i)
+            if (sectionKey(all[i]) == key) return buildOne(p, i) != nullptr;
+        return false;
+    }
+
     void build(Panel& p) override {
         const bool two = !right_.empty() && p.split();
         for (size_t i = 0; i < left_.size(); ++i) buildPart(p, left_[i], i > 0);
@@ -99,7 +107,7 @@ public:
             return;
         }
         if (id == kAuto && code == BN_CLICKED) {
-            autoSetupNow();
+            runAutoSetup(host_);
             return;
         }
         if (id == kForgetLogin && code == BN_CLICKED) {
@@ -289,62 +297,6 @@ private:
     }
 
 
-    // 0.50: what this computer carries, at a press (core/settings/auto_setup) - for a client handed to other players.
-    void autoSetupNow() {
-        Model& m = host_.model();
-        const Machine x = m.machine();  // 2.6: the model's, the recommended values' too
-        const AutoSetup a = autoSetup(x);
-        m.applyPreset(a.preset);  // the game's own texture quality too
-        std::string scale = "100";
-        for (const IniEdit& e : a.edits) {
-            if (const IniSetting* s = findSetting(e.section + "." + e.key)) m.setToken(*s, e.value);
-            if (e.key == "render_scale") scale = e.value;
-        }
-        // 1.3.3: the interface a whole number of times the game's pixels, where it is a fraction now (167 %)
-        bool uiChanged = false;
-        if (!integerScale(m.screenPlan().s)) {
-            const ScreenChoice before = m.screenChoice();
-            ScreenChoice c = before;
-            if (c.ui != a.ui) {
-                c.ui = a.ui;
-                m.setScreen(c);
-                uiChanged = m.screenPlan().problem == ScreenProblem::None;
-                if (!uiChanged) m.setScreen(before);  // too small a game at that size: as it was
-            }
-        }
-        host_.changed();
-        std::wstring text = tf(Text::AutoFound, {x.adapter.empty() ? utf8(t(Text::Unknown)) : x.adapter,
-                                                 std::to_string(x.vramMb),
-                                                 std::to_string(x.screenWidth) + "x" + std::to_string(x.screenHeight)});
-        switch (a.tier) {
-            case Tier::NoDriver: text += L"\n\n" + t(Text::AutoTierNoDriver); break;
-            case Tier::Old: text += L"\n\n" + t(Text::AutoTierOld); break;
-            case Tier::Low: text += L"\n\n" + t(Text::AutoTierLow); break;
-            case Tier::Middle: text += L"\n\n" + t(Text::AutoTierMiddle); break;
-            case Tier::High: text += L"\n\n" + tf(Text::AutoTierHigh, {scale}); break;
-        }
-        const Text ai = a.aiWorld ? Text::AutoAiAll
-                        : a.ai    ? Text::AutoAiSprites
-                        : !x.pack ? Text::AutoAiNoPack
-                                  : Text::AutoAiOff;
-        text += L"\n" + t(ai);
-        if (uiChanged) text += L"\n" + tf(Text::AutoUiWhole, {std::to_string(a.ui)});  // 1.3.3
-        if (a.dlss == "dlaa") text += L"\n" + t(Text::AutoDlaa);
-        if (a.dlss == "quality") text += L"\n" + t(Text::AutoDlssQuality);
-        if (a.hdrOn) text += L"\n" + t(Text::AutoHdr);
-        if (a.soundEngine) text += L"\n" + t(Text::AutoSoundEngine);
-        text += L"\n\n" + t(Text::AutoAsk);
-        if (host_.ask(text)) {
-            std::wstring err = m.apply(host_.lang());
-            if (err.empty()) err = m.launchGame(host_.lang());
-            if (!err.empty()) host_.message(err, true);
-            host_.reload();
-            return;
-        }
-        host_.message(t(Text::AutoPending), false);
-        host_.rebuild();  // the page shows the new values
-    }
-
     void buildRender(Panel& p) {
         Model& m = host_.model();
         p.heading(t(Text::AutoHeading));  // 0.50: first, for a player who only wants it to work
@@ -468,6 +420,32 @@ private:
         if (ownSize_) SetWindowTextW(ownSize_, ownSizeText().c_str());
     }
 
+    // The control of the schema's row i (its id rowId(i)), as the page shows it; 2.6: alone on the Main page and in
+    // the search's results too.
+    HWND buildOne(Panel& p, size_t i) {
+        const IniSetting& s = iniSettings()[i];
+        const int id = rowId(i);
+        const std::string token = host_.model().token(s);
+        switch (s.control) {
+            case Control::Check: return p.check(id, t(s.label), token == s.tokens[1], t(s.hint));
+            case Control::Slider:
+                return p.slider(id, t(s.label), s.min, s.max, s.step, std::atoi(token.c_str()), wide(token + s.unit),
+                                t(s.hint));
+            case Control::Choice: {
+                std::vector<std::wstring> items;
+                int selected = 0;
+                for (size_t c = 0; c < s.choices.size(); ++c) {
+                    items.push_back(t(s.choices[c]));
+                    if (token == s.tokens[c]) selected = int(c);
+                }
+                return p.choice(id, t(s.label), items, selected, t(s.hint));
+            }
+            case Control::Number: return p.number(id, t(s.label), wide(token), t(s.hint));
+            case Control::Line: break;  // the game's key only: a key of uaro-graphics.ini is never a line of text
+        }
+        return nullptr;
+    }
+
     void buildRows(Panel& p) {
         Model& m = host_.model();
         const std::vector<IniSetting>& all = iniSettings();
@@ -475,32 +453,7 @@ private:
         for (size_t i = 0; i < all.size(); ++i) {
             const IniSetting& s = all[i];
             if (!listed(s)) continue;
-            const int id = rowId(i);
-            const std::string token = m.token(s);
-            switch (s.control) {
-                case Control::Check:
-                    p.check(id, t(s.label), token == s.tokens[1], t(s.hint));
-                    break;
-                case Control::Slider:
-                    p.slider(id, t(s.label), s.min, s.max, s.step, std::atoi(token.c_str()), wide(token + s.unit),
-                             t(s.hint));
-                    break;
-                case Control::Choice: {
-                    std::vector<std::wstring> items;
-                    int selected = 0;
-                    for (size_t c = 0; c < s.choices.size(); ++c) {
-                        items.push_back(t(s.choices[c]));
-                        if (token == s.tokens[c]) selected = int(c);
-                    }
-                    p.choice(id, t(s.label), items, selected, t(s.hint));
-                    break;
-                }
-                case Control::Number:
-                    p.number(id, t(s.label), wide(token), t(s.hint));
-                    break;
-                case Control::Line:  // the game's key only: a key of uaro-graphics.ini is never a line of text
-                    break;
-            }
+            buildOne(p, i);
             if (sectionKey(s) == "quality.dlss_height" && dlssScreen().width > 0)
                 ownSize_ = p.note(ownSizeText(), Tone::Normal);
             // 2.4.2: one note under rows in a row that apply at the next start
@@ -522,6 +475,64 @@ private:
 };
 
 }  // namespace
+
+// 0.50: what this computer carries, at a press (core/settings/auto_setup) - for a client handed to other players.
+// 2.6: the Main page's "Recommended settings" too.
+void runAutoSetup(PageHost& host) {
+    const Lang l = host.lang();
+    Model& m = host.model();
+    const Machine x = m.machine();  // 2.6: the model's, the recommended values' too
+    const AutoSetup a = autoSetup(x);
+    m.applyPreset(a.preset);  // the game's own texture quality too
+    std::string scale = "100";
+    for (const IniEdit& e : a.edits) {
+        if (const IniSetting* s = findSetting(e.section + "." + e.key)) m.setToken(*s, e.value);
+        if (e.key == "render_scale") scale = e.value;
+    }
+    // 1.3.3: the interface a whole number of times the game's pixels, where it is a fraction now (167 %)
+    bool uiChanged = false;
+    if (!integerScale(m.screenPlan().s)) {
+        const ScreenChoice before = m.screenChoice();
+        ScreenChoice c = before;
+        if (c.ui != a.ui) {
+            c.ui = a.ui;
+            m.setScreen(c);
+            uiChanged = m.screenPlan().problem == ScreenProblem::None;
+            if (!uiChanged) m.setScreen(before);  // too small a game at that size: as it was
+        }
+    }
+    host.changed();
+    std::wstring text = wtrf(l, Text::AutoFound, {x.adapter.empty() ? utf8(wtr(l, Text::Unknown)) : x.adapter,
+                                             std::to_string(x.vramMb),
+                                             std::to_string(x.screenWidth) + "x" + std::to_string(x.screenHeight)});
+    switch (a.tier) {
+        case Tier::NoDriver: text += L"\n\n" + wtr(l, Text::AutoTierNoDriver); break;
+        case Tier::Old: text += L"\n\n" + wtr(l, Text::AutoTierOld); break;
+        case Tier::Low: text += L"\n\n" + wtr(l, Text::AutoTierLow); break;
+        case Tier::Middle: text += L"\n\n" + wtr(l, Text::AutoTierMiddle); break;
+        case Tier::High: text += L"\n\n" + wtrf(l, Text::AutoTierHigh, {scale}); break;
+    }
+    const Text ai = a.aiWorld ? Text::AutoAiAll
+                    : a.ai    ? Text::AutoAiSprites
+                    : !x.pack ? Text::AutoAiNoPack
+                              : Text::AutoAiOff;
+    text += L"\n" + wtr(l, ai);
+    if (uiChanged) text += L"\n" + wtrf(l, Text::AutoUiWhole, {std::to_string(a.ui)});  // 1.3.3
+    if (a.dlss == "dlaa") text += L"\n" + wtr(l, Text::AutoDlaa);
+    if (a.dlss == "quality") text += L"\n" + wtr(l, Text::AutoDlssQuality);
+    if (a.hdrOn) text += L"\n" + wtr(l, Text::AutoHdr);
+    if (a.soundEngine) text += L"\n" + wtr(l, Text::AutoSoundEngine);
+    text += L"\n\n" + wtr(l, Text::AutoAsk);
+    if (host.ask(text)) {
+        std::wstring err = m.apply(l);
+        if (err.empty()) err = m.launchGame(l);
+        if (!err.empty()) host.message(err, true);
+        host.reload();
+        return;
+    }
+    host.message(wtr(l, Text::AutoPending), false);
+    host.rebuild();  // the page shows the new values
+}
 
 std::unique_ptr<Page> makeSettingsPage(PageHost& host, std::vector<settings::Page> left,
                                        std::vector<settings::Page> right) {

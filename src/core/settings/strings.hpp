@@ -329,6 +329,11 @@ enum class Text : uint16_t {
     DebugFastPickHint, DebugFastFtol, DebugFastFtolHint, DebugFastTextures, DebugFastTexturesHint,
     DeveloperOnly, ReportProblem,  // 2.6: the list's heading, the header's button
     DebugTools, DebugStudio, DebugCompact, DebugPalettes, DebugPreview, DebugKeys,  // 2.6: the Debug page's tools
+    // 2.6: the Main page
+    MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
+    MainQualityHint, MainOther, MainPad, MainPadHint, MainRecommended, MainWhatsNew, MainState, MainDriver,
+    MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,
+    MainMore, NotesNone,
     Count
 };
 

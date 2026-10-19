@@ -440,7 +440,7 @@ void MainWindow::setMode(Mode m) {
 std::unique_ptr<Page> MainWindow::makeView() {
     using P = settings::Page;
     switch (shown_) {
-        case settings::View::Main:
+        case settings::View::Main: return makeMainPage(*this);
         case settings::View::Graphics:
             return makeSettingsPage(*this, {P::Render, P::Quality}, {P::Smoothing, P::Frames});
         case settings::View::Screen: return makeScreenPage(*this);

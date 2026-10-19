@@ -3238,6 +3238,47 @@ const Entry kTexts[] = {
      "В игре: ~ - консоль; Ctrl+Shift+F11 - счётчик кадров; Ctrl+Shift+F12 - снимок в полном размере; "
      "Ctrl+Shift+F9 - рентген; Ctrl+Shift+F8 - текстура под курсором в uaRO Studio, Ctrl+Shift+F7 - её картинка "
      "выкл./вкл."},
+    // 2.6: the Main page
+    {"What a game needs. Everything else is in the Detailed mode.", "Головне для гри. Усе інше - у докладному режимі.",
+     "Главное для игры. Всё остальное - в подробном режиме."},
+    {"Picture", "Картинка", "Картинка"},
+    {"Low", "Низька", "Низкое"},
+    {"Medium", "Середня", "Среднее"},
+    {"High", "Висока", "Высокое"},
+    {"Super-light", "Надлегка", "Супер-лёгкое"},
+    {"Your own", "Своя", "Своё"},
+    {"The detail and the smoothing in one choice (the Service page's presets); Super-light for weak graphics cards. "
+     "The effects are on the Effects page.",
+     "Деталізація і згладжування одним вибором (пресети сторінки «Сервіс»); «Надлегка» - для слабких відеокарт. "
+     "Ефекти - на сторінці «Ефекти».",
+     "Детализация и сглаживание одним выбором (пресеты страницы «Сервис»); «Супер-лёгкое» - для слабых видеокарт. "
+     "Эффекты - на странице «Эффекты»."},
+    {"Other", "Інше", "Прочее"},
+    {"Gamepad (uaRO Pad {1})", "Геймпад (uaRO Pad {1})", "Геймпад (uaRO Pad {1})"},
+    {"Play with a gamepad: uaRO Pad goes into the game's folder. Its settings are on the Gamepad page.",
+     "Гра з геймпадом: uaRO Pad потрапляє в теку гри. Його налаштування - на сторінці «Геймпад».",
+     "Игра с геймпадом: uaRO Pad попадает в папку игры. Его настройки - на странице «Геймпад»."},
+    {"Recommended settings", "Рекомендовані налаштування", "Рекомендуемые настройки"},
+    {"What's new in {1}", "Що нового в {1}", "Что нового в {1}"},
+    {"State", "Стан", "Состояние"},
+    {"Driver {1}", "Драйвер {1}", "Драйвер {1}"},
+    {"no updates", "оновлень немає", "обновлений нет"},
+    {"{1} is out", "вийшла {1}", "вышла {1}"},
+    {"No Direct3D 11: the game's own look only", "Немає Direct3D 11: лише власний вигляд гри",
+     "Нет Direct3D 11: только собственный вид игры"},
+    {"DLSS and frame generation are installed", "DLSS і генерацію кадрів встановлено",
+     "DLSS и генерация кадров установлены"},
+    {"DLSS is not installed (get-dlss.bat downloads it)", "DLSS не встановлено (get-dlss.bat завантажить його)",
+     "DLSS не установлен (get-dlss.bat скачает его)"},
+    {"HD textures", "HD-текстури", "HD-текстуры"},
+    {"Pack: {1} pictures, {2}", "Пакет: {1} картинок, {2}", "Пакет: {1} картинок, {2}"},
+    {"No texture pack yet: «Make the pack» makes it on this computer.",
+     "Пакета текстур ще немає: «Зробити пакет» зробить його на цьому комп'ютері.",
+     "Пакета текстур пока нет: «Сделать пакет» сделает его на этом компьютере."},
+    {"Make the pack", "Зробити пакет", "Сделать пакет"},
+    {"More", "Докладніше", "Подробнее"},
+    {"No notes for {1} were found next to uaRO.exe (TEST.*.md).", "Поруч з uaRO.exe немає нотаток до {1} (TEST.*.md).",
+     "Рядом с uaRO.exe нет заметок к {1} (TEST.*.md)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

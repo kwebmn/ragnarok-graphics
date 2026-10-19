@@ -46,6 +46,12 @@ class PadPage : public Page {
 public:
     explicit PadPage(PageHost& host) : Page(host) {}
 
+    // 2.6: the Main page's box - on or off as this page's buttons do it
+    std::wstring setOn(bool on) {
+        state_ = classifyPad(fileText(inFolder(L"dinput.dll")), fileText(inFolder(L"uaro-graphics\\pad\\dinput.dll")));
+        return on ? switchOn() : switchOff();
+    }
+
     void build(Panel& p) override {
         const bool running = host_.model().now().gameRunning;
         const std::string packaged = fileText(inFolder(L"uaro-graphics\\pad\\dinput.dll"));
@@ -173,6 +179,16 @@ private:
 };
 
 }  // namespace
+
+bool padOn() {
+    const PadFile s =
+        classifyPad(fileText(inFolder(L"dinput.dll")), fileText(inFolder(L"uaro-graphics\\pad\\dinput.dll")));
+    return s == PadFile::Same || s == PadFile::Pad;
+}
+
+std::wstring padVersion() { return wide(trimmed(fileText(inFolder(L"uaro-graphics\\pad\\version.txt")))); }
+
+std::wstring switchPad(PageHost& host, bool on) { return PadPage(host).setOn(on); }
 
 std::unique_ptr<Page> makePadPage(PageHost& host) { return std::make_unique<PadPage>(host); }
 
