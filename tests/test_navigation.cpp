@@ -89,6 +89,13 @@ TEST(nav_debug_rows_are_developer) {
         CHECK(findSetting(k) && findSetting(k)->page == Page::Debug);
 }
 
+TEST(nav_ai_rows_by_tab) {
+    CHECK(placeOf(*findSetting("ai.model_trees")).tab == 1);
+    CHECK(placeOf(*findSetting("ai.small_model")).tab == 1);
+    CHECK(placeOf(*findSetting("ai.denoise")).tab == 0);
+    CHECK(placeOf(*findSetting("quality.msaa")).view == View::Graphics);
+}
+
 TEST(nav_resettable_views_are_made_of_rows) {
     CHECK(resettable(View::Graphics, 0) && resettable(View::Effects, 0) && resettable(View::Sound, 0));
     CHECK(resettable(View::Ai, 0) && resettable(View::Ai, 1) && !resettable(View::Ai, 2));

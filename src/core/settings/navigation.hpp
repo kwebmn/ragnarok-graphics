@@ -38,6 +38,7 @@ struct Place {
     int tab;
 };
 Place placeOf(Page p);  // where an old page is now (the AI page's "Make again" opens the pack's tab)
+Place placeOf(const IniSetting& s);  // its page's, the AI models' on the tab of the models
 
 // The lowest mode that shows a row of uaro-graphics.ini's schema.
 Mode levelOf(const IniSetting& s);

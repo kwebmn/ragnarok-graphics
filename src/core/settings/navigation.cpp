@@ -129,6 +129,14 @@ Place placeOf(Page p) {
     return {View::Service, 0};
 }
 
+Place placeOf(const IniSetting& s) {
+    const std::string k = sectionKey(s);
+    if (s.page == Page::Ai &&
+        (k.compare(0, 8, "ai.model") == 0 || k.compare(0, 8, "ai.small") == 0 || k == "ai.sprite_model"))
+        return {View::Ai, 1};
+    return placeOf(s.page);
+}
+
 bool mainKey(const std::string& sectionKey) {
     for (const char* k : kMainKeys)
         if (sectionKey == k) return true;
