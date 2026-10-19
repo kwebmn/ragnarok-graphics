@@ -39,8 +39,8 @@ TEST(motes_on_by_default_their_amount_bounded) {
 }
 
 TEST(relief_on_by_default_its_strength_bounded) {
-    // 0.71: the ground's relief from its picture.
-    CHECK(parseConfig("").effects.relief && parseConfig("").effects.reliefStrength == 100);
+    // 0.71: the ground's relief from its picture; 2.6.8: at 30 % (100 turned the stones' tops gritty).
+    CHECK(parseConfig("").effects.relief && parseConfig("").effects.reliefStrength == 30);
     CHECK(parseConfig("[effects]\nrelief_strength = 0\n").effects.reliefStrength == 0);
     CHECK(!effectsOff().relief);
 }

@@ -231,7 +231,7 @@ struct EffectSettings {
     // 0.71: the ground's relief - its picture's cracks and stones lit from one side (bump mapping from the
     // texture's brightness; the AI textures' detail the most). On by default.
     bool relief = true;
-    int reliefStrength = 100;  // %, 0-200
+    int reliefStrength = 30;  // %, 0-200 (2.6.8: the tester's choice - at 100 the stones' tops turned gritty)
     // 0.72: reflections on the floor - indoors (polished and wet floors) and in the rain what stands on the
     // floor is reflected in it (screen-space). On by default.
     bool floorReflections = true;
