@@ -372,6 +372,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.stage1[1] |= 1u << 26;  // 0.71: the ground's relief (shaders.cpp relief())
         c.uiPixels[0] = float(std::clamp(effects.reliefStrength, 0, 200)) / 100.0f;
         c.uiPixels[1] = t[0] ? float(t[0]->width) : 0.0f;  // 1.5.10: the game's texels, also under an AI picture
+        // 2.6.7: shade()'s measure of how well a pixel sees the relief (seen) takes the pixel's place in the view -
+        // by the projection, which only the materials, the hills and the seams set: without them it was 0, seen 0
+        // and no relief at all (the tester's check of it alone)
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
     }
     float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind
     if (!s.ui && !twin && c.uiMode == 0 && effects.foliage && effects.foliageStrength > 0 && t[0] && t[0]->leafy &&
