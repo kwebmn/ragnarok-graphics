@@ -35,6 +35,7 @@ struct BridgeOptions {
     int dlssHeight = 0;
     std::string dlssModel = "auto";  // 2.4.2: DLSS's network - auto, k, j, l or m
     int frameGeneration = 0;          // 2-4: DLSS frame generation, 0 none
+    bool reflex = true;               // 2.5.26: [frames] reflex - NVIDIA Reflex with DLSS
     bool dlssJitterInverted = false;  // test switches ([quality] dlss_jitter, dlss_motion)
     bool dlssMotionInverted = false;
     AiSettings ai;                    // AI textures ([ai])

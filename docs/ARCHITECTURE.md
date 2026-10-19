@@ -43,11 +43,13 @@ One block of shared memory with a ring each way (`core/bridge_ring.hpp`); the me
 checks `kVersion` and exits with code 2 on another one; the driver then draws in its own process. **Raise
 `kVersion` with every change of a message's contents** (2.2.1 changed two without it).
 
-The game's loop keeps the host's pace: it may draw two frames ahead of the screen (`Remote::present`). With DLSS
-frame generation, whose Reflex holds each of the host's frames back until the card is about to be free, it draws
-none ahead: its next frame starts after the host's present and Reflex's sleep (`Host::present` signals `presented`
-after both), so the game takes its input when Reflex wants it (2.5.25). The host's frame pacer then keeps the
-frames shown, the generated ones too, under the monitor's refresh (`core/frame_fit`).
+The game's loop keeps the host's pace: it may draw two frames ahead of the screen (`Remote::present`). With NVIDIA
+Reflex on in the host - DLSS frame generation needs it, and since 2.5.26 `[frames] reflex` turns it on with DLSS
+alone - Reflex holds each of the host's frames back until the card is about to be free, and the game draws none
+ahead: its next frame starts after the host's present and Reflex's sleep (`Host::present` signals `presented` after
+both; the host tells the game Reflex is on in `GpuTiming::reflex`), so the game takes its input when Reflex wants it
+(2.5.25). The host's frame pacer then keeps the frames shown, the generated ones too, under the monitor's refresh
+(`core/frame_fit`); without frame generation it waits after the present instead, before the game's next frame.
 
 ## Settings
 

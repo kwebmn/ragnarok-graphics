@@ -50,6 +50,7 @@ struct Args {
     bool jitterInverted = false;
     bool motionInverted = false;
     int generation = 0;
+    bool reflex = true;  // 2.5.26: [frames] reflex
     AiSettings ai;  // [ai]
     std::string gpu;  // 0.50.2: [renderer] gpu ("" the fast card)
     host::PackArgs pack;  // 0.43: --pack
@@ -92,6 +93,7 @@ Args parseArgs() {
         else if (k == "--dlss-jitter") a.jitterInverted = v == "inverted";
         else if (k == "--dlss-motion") a.motionInverted = v == "inverted";
         else if (k == "--fg") a.generation = std::atoi(v.c_str());
+        else if (k == "--reflex") a.reflex = v != "0";
         else if (k == "--ai") a.ai = parseAiArgument(v);
         else if (k == "--gpu") a.gpu = v == "auto" ? "" : v;
         else if (k == "--pack") a.pack.mode = v;
@@ -239,6 +241,7 @@ int Host::run(const Args& a) {
     } attach{&dlss_, false, "the device was not made"};
     dlss_.setSigns(a.jitterInverted ? -1.0f : 1.0f, a.motionInverted ? -1.0f : 1.0f);
     dlss_.setOwn(a.dlssScale, a.dlssWidth, a.dlssHeight, a.dlssModel);  // 2.4.2
+    dlss_.setReflex(a.reflex);                                          // 2.5.26
     if (early) {
         startProgress(this, start::Progress{start::Stage::Dlss, 0, 0});  // 0.40
         std::string why;

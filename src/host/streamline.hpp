@@ -32,6 +32,9 @@ public:
     // 2.4.2: mode custom - the share of the screen (%), or the size when written (0: by the share), drawn in the mode
     // whose range takes it (core/dlss_size.hpp); the network for every mode: auto, k, j, l or m. Before init.
     void setOwn(int percent, int width, int height, const std::string& model);
+    // 2.5.26: [frames] reflex - NVIDIA Reflex without frame generation too (frame generation turns it on anyway).
+    // Before init.
+    void setReflex(bool on) { reflexWanted_ = on; }
 
     const char* name() const override { return own_ ? ownName_.c_str() : name_; }
     double shownPerFrame() override;  // 2.5.24
@@ -40,9 +43,11 @@ public:
     bool evaluate(const Frame& f) override;
     bool generates() const override { return generationReady_; }
     bool generating() const override { return generationMode_ == 1; }
+    bool latencyMarkers() const override { return reflexReady_; }  // 2.5.26
     void renderStart() override;
     void beforePresent(const Generation& g) override;
-    void afterPresent() override;  // after every present while it generates, whatever the frame did
+    void presentStart() override;  // 2.5.26
+    void afterPresent() override;  // after every present while Reflex is on, whatever the frame did
     void suspend() override;
 
 private:
@@ -70,6 +75,9 @@ private:
     float motionSign_ = 1.0f;
     int generation_ = 0;          // asked for: 2-4, 0 none
     bool generationReady_ = false;  // DLSS-G loaded and this card has it
+    bool reflexWanted_ = true;      // 2.5.26: [frames] reflex
+    bool reflexReady_ = false;      // Reflex on: its markers and sleep every frame
+    bool renderStarted_ = false;    // this frame's first markers set (renderStart)
     void* token_ = nullptr;       // sl::FrameToken* of the frame being drawn
     bool presentStarted_ = false;  // beforePresent ran this frame: its present has a start marker
     int generationMode_ = -1;     // the options set last: off (0) or on (1)

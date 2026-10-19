@@ -3123,6 +3123,15 @@ const Entry kTexts[] = {
      "під фарбу. Вимкнено: пофарбований персонаж такий, як його малює гра, без ШІ.",
      "Одежда и волосы любого цвета, который даёт игра: картинка пакета в родных цветах спрайта, перекрашенная под "
      "краску. Выключено: крашеный персонаж такой, как его рисует игра, без ИИ."},
+    {"NVIDIA Reflex", "NVIDIA Reflex", "NVIDIA Reflex"},
+    {"With DLSS: each frame waits until the graphics card is about to be free, and the game reads the mouse only "
+     "then - the cursor follows the mouse sooner, the frames a second stay nearly the same. Frame generation turns it "
+     "on anyway. Applies at the next start of the game.",
+     "З DLSS: кожен кадр чекає, доки відеокарта майже звільниться, і гра читає мишу лише тоді — курсор раніше йде за "
+     "мишею, кадрів на секунду майже стільки ж. Генерація кадрів вмикає його й так. Діє з наступного запуску гри.",
+     "С DLSS: каждый кадр ждёт, пока видеокарта почти освободится, и игра читает мышь только тогда — курсор раньше "
+     "идёт за мышью, кадров в секунду почти столько же. Генерация кадров включает его и так. Действует со "
+     "следующего запуска игры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

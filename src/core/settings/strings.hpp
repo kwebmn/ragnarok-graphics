@@ -308,6 +308,7 @@ enum class Text : uint16_t {
     // 2.5.20: the light modes
     QualitySuperLight, QualitySuperLightHint, FramesBattery, FramesBatteryHint, FramesBatteryFps, FramesBatteryFpsHint,
     AiDyes, AiDyesHint,  // 2.5.23
+    FramesReflex, FramesReflexHint,  // 2.5.26
     Count
 };
 

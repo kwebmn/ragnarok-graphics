@@ -25,6 +25,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.remix != running.remix) u.waiting.push_back("remix");
     if (file.dlss != running.dlss) u.waiting.push_back("dlss");
     if (file.frameGeneration != running.frameGeneration) u.waiting.push_back("frame_generation");
+    if (file.reflex != running.reflex) u.waiting.push_back("reflex");  // 2.5.26: chosen at the renderer's start
     // [ai]: the network and its models start with the 64-bit renderer.
     const AiSettings& fa = file.ai;
     const AiSettings& ra = running.ai;  // as the game started

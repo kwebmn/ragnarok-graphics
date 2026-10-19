@@ -18,6 +18,7 @@ TEST(gpu_timing_goes_over_the_bridge_whole) {
     t.effects = {{"grass", 2.375}, {"sky", 0.125}};
     t.safeShaders = 3;  // 2.2.2: compiled without their newest features in that process
     t.shown = 3.875;    // 2.5.24: frames shown a frame of the game with frame generation
+    t.reflex = true;    // 2.5.26: NVIDIA Reflex holds the renderer's frames - the game draws none ahead
     std::vector<uint8_t> bytes;
     bridge::WireWriter w(bytes);
     writeTiming(w, t);
@@ -28,6 +29,7 @@ TEST(gpu_timing_goes_over_the_bridge_whole) {
     CHECK(back.effects.size() == 2 && back.effects["grass"] == 2.375);
     CHECK_EQ(back.safeShaders, 3);
     CHECK_EQ(back.shown, 3.875);
+    CHECK(back.reflex);
     bridge::WireReader cut(bytes.data(), 6);  // cut short: nothing taken
     GpuTiming none;
     CHECK(!readTiming(cut, none) && none.gpuMs < 0.0);
@@ -40,6 +42,16 @@ TEST(gpu_timing_names_the_passes_of_the_switches) {
     CHECK(effect_costs::passOf("effects.materials").empty());
     const effect_costs::Costs c = {{"grass", 2.4}};
     CHECK(effect_costs::costOf(c, "effects.grass") > 2.3);
+}
+
+TEST(config_reflex_on_by_default_and_waits_for_a_restart) {
+    // 2.5.26: [frames] reflex - NVIDIA Reflex with DLSS, chosen when the 64-bit renderer starts
+    CHECK(parseConfig("").reflex);
+    const Config off = parseConfig("[frames]\nreflex = 0\n");
+    CHECK(!off.reflex);
+    const LiveUpdate u = liveUpdate(parseConfig(""), off);
+    CHECK(u.waiting.size() == 1 && u.waiting[0] == "reflex");
+    CHECK(u.next.reflex);  // as the game started
 }
 
 TEST(live_config_shows_the_frame_counter_at_once) {

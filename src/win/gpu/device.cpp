@@ -297,6 +297,7 @@ void Renderer::Impl::noteGpuFrame() {
         recent.upscaleMs = double(recentUpscale) * ms;
         recent.upscaler = upscaler && recentUpscale ? upscaler->name() : "";
         recent.shown = upscaler ? upscaler->shownPerFrame() : 0.0;  // 2.5.24: frame generation's
+        recent.reflex = upscaler && upscaler->latencyMarkers();       // 2.5.26
         recent.effects.clear();
         for (UINT e = 0; e < kEffectTimes; ++e) {
             if (recentEffect[e]) recent.effects[passName(e).key] = double(recentEffect[e]) * ms;
@@ -335,10 +336,13 @@ void Renderer::Impl::noteGpuFrame() {
     LARGE_INTEGER qpf;  // 0.86: and the processor's part
     QueryPerformanceFrequency(&qpf);
     const double perFrame = 1000.0 / double(qpf.QuadPart) / double(std::max<uint32_t>(gpuFrames, 1));
+    char reflexPart[48] = "";  // 2.5.26
+    if (reflexTicks)
+        std::snprintf(reflexPart, sizeof reflexPart, ", %.2f ms Reflex's wait", double(reflexTicks) * perFrame);
     LOG_INFO("CPU: %.2f ms a frame in the driver's drawing (%.2f of it waiting for the card); %.2f ms the frame "
-             "limit's wait, %.2f ms the swap chain's present", double(cpuTicks) * perFrame,
-             double(fenceTicks) * perFrame, double(pacerTicks) * perFrame, double(swapTicks) * perFrame);
-    cpuTicks = fenceTicks = pacerTicks = swapTicks = 0;
+             "limit's wait, %.2f ms the swap chain's present%s", double(cpuTicks) * perFrame,
+             double(fenceTicks) * perFrame, double(pacerTicks) * perFrame, double(swapTicks) * perFrame, reflexPart);
+    cpuTicks = fenceTicks = pacerTicks = swapTicks = reflexTicks = 0;
     if (drawsGathered)  // 2.5: how many of the game's draws went as one call
         LOG_INFO("draws: %u a frame in %u calls to the GPU", drawsGathered / std::max<uint32_t>(gpuFrames, 1),
                  drawCalls / std::max<uint32_t>(gpuFrames, 1));
@@ -2823,10 +2827,16 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     m.submit();
 
     presentCpu.stop();  // 0.86: not the waits
-    {
+    // 2.5.26: with Reflex the game draws its next frame only after this present (Remote::present), so without frame
+    // generation the frame limit waits after the present: the game takes the mouse after the wait instead of the
+    // frame being shown a wait late. Frame generation's waits stay before it - its frames paced by the presents.
+    const bool reflex = m.upscaler && m.upscaler->latencyMarkers();
+    const bool paceAfter = reflex && m.upscaler->shownPerPresent() <= 1;
+    if (!paceAfter) {
         Impl::CpuTime paced(m.pacerTicks);  // 2.1.1
         m.pacer.wait(m.pacedLimit(options.fpsLimit), options.pacerSleeps);  // 0.85: kept to the frame
     }
+    if (reflex) m.upscaler->presentStart();  // 2.5.26: Reflex's markers right before the present
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
     Impl::CpuTime swapped(m.swapTicks);  // 2.1.1
@@ -2850,7 +2860,14 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     }
     m.noteGpuFrame();
     m.notePresentation();  // 2.5.25
-    if (m.upscaler && m.upscaler->generates()) m.upscaler->afterPresent();  // every frame: the next frame's token
+    if (paceAfter) {
+        Impl::CpuTime paced(m.pacerTicks);
+        m.pacer.wait(options.fpsLimit, options.pacerSleeps);
+    }
+    if (reflex) {  // every frame: the next frame's token, Reflex's sleep
+        Impl::CpuTime slept(m.reflexTicks);
+        m.upscaler->afterPresent();
+    }
     m.renderStarted = false;
     m.upscaledNow = false;
     m.newPicture();  // 0.19-0.23: the next frame's water, shadows, torches, colours, depth of field

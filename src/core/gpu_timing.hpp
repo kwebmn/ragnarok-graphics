@@ -21,6 +21,9 @@ struct GpuTiming {
     // 2.5.24: frames shown a frame of the game with DLSS frame generation (the generated ones too, 2-6) - the counter
     // counts the game's frames alone; 0: none generated
     double shown = 0.0;
+    // 2.5.26: NVIDIA Reflex holds the renderer's frames until the card is about to be free - the game then draws no
+    // frame ahead of the screen (Remote::present)
+    bool reflex = false;
 };
 
 inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
@@ -37,6 +40,7 @@ inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
         w.f32(float(ms));
     }
     w.f32(float(t.shown));  // 2.5.24
+    w.u8(t.reflex ? 1 : 0);  // 2.5.26
 }
 
 inline bool readTiming(bridge::WireReader& rd, GpuTiming& t) {
@@ -53,6 +57,7 @@ inline bool readTiming(bridge::WireReader& rd, GpuTiming& t) {
         if (rd.ok()) r.effects[name] = ms;
     }
     r.shown = rd.f32();  // 2.5.24
+    r.reflex = rd.u8() != 0;  // 2.5.26
     if (!rd.ok()) return false;
     t = r;
     return true;

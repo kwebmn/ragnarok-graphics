@@ -751,6 +751,7 @@ struct Renderer::Impl {
     // 2.1.1: where a frame's time goes besides the drawing - waiting for the card (a slot's fence), the frame limit's
     // wait, the swap chain's present - for the log next to cpuTicks (the game's own wait is the bridge's, remote.cpp)
     LONGLONG fenceTicks = 0, pacerTicks = 0, swapTicks = 0;
+    LONGLONG reflexTicks = 0;  // 2.5.26: Reflex's sleep after the present (Upscaler::afterPresent)
     struct CpuTime {
         LONGLONG& total;
         LARGE_INTEGER start{};

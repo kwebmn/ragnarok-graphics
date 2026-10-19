@@ -508,6 +508,8 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 240, c.keepFps);
         } else if (key == "frames.allow_tearing") {
             setBool(val, c.allowTearing);
+        } else if (key == "frames.reflex") {  // 2.5.26
+            setBool(val, c.reflex);
         } else if (key == "debug.state_cache") {
             setBool(val, c.stateCache);
         } else if (key == "debug.fast_pick") {

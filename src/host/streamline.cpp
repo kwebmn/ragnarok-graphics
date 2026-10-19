@@ -218,8 +218,9 @@ bool Dlss::init(const std::string& folder, const std::string& logFolder, const s
     }
     const std::wstring logs = wide(logFolder);
     const wchar_t* paths[1] = {dir.c_str()};
-    // Frame generation needs Reflex and its latency markers (PCL) as well.
-    sl::Feature features[4] = {sl::kFeatureDLSS, sl::kFeatureDLSS_G, sl::kFeatureReflex, sl::kFeaturePCL};
+    // Frame generation needs Reflex and its latency markers (PCL) as well; 2.5.26: Reflex also without it ([frames]
+    // reflex).
+    sl::Feature features[4] = {sl::kFeatureDLSS, sl::kFeatureReflex, sl::kFeaturePCL, sl::kFeatureDLSS_G};
     sl::Preferences pref{};
     pref.showConsole = false;
     pref.logLevel = sl::LogLevel::eDefault;
@@ -240,7 +241,7 @@ bool Dlss::init(const std::string& folder, const std::string& logFolder, const s
         pref.flags |= sl::PreferenceFlags::eUseManualHooking;
     }
     pref.featuresToLoad = features;
-    pref.numFeaturesToLoad = generation_ ? 4 : 1;
+    pref.numFeaturesToLoad = generation_ ? 4 : reflexWanted_ ? 3 : 1;
     pref.engine = sl::EngineType::eCustom;
     pref.engineVersion = "uaRO Graphics";
     pref.projectId = "5b0c8a37-2f6e-4d91-a6c4-0e7f3b9d2c18";
@@ -269,6 +270,7 @@ bool Dlss::attach(ID3D12Device* device, std::string& error) {
         error = "this graphics card or its driver has no DLSS (" + std::to_string(int(r)) + ")";
         return false;
     }
+    bool generation = false;
     if (generation_) {
         r = slIsFeatureSupported(sl::kFeatureDLSS_G, adapter);
         if (r != sl::Result::eOk) {
@@ -276,12 +278,26 @@ bool Dlss::attach(ID3D12Device* device, std::string& error) {
                       "Windows' hardware-accelerated GPU scheduling are needed",
                       int(r));
         } else {
-            sl::ReflexOptions reflex;
-            reflex.mode = sl::ReflexMode::eLowLatency;  // frame generation works only with Reflex on
-            const sl::Result rr = slReflexSetOptions(reflex);
-            if (rr != sl::Result::eOk) LOG_ERROR("%s", result("slReflexSetOptions", rr).c_str());
-            generationReady_ = true;
+            generation = true;
         }
+    }
+    // Frame generation works only with Reflex on. 2.5.26: Reflex also without it - each frame held back until the
+    // card is about to be free, and the game's next one started only then (the bridge waits for the present), so
+    // that the game takes the mouse late instead of drawing two frames ahead.
+    const bool alone = !generation && reflexWanted_ && slIsFeatureSupported(sl::kFeatureReflex, adapter) ==
+                                                           sl::Result::eOk;
+    if (generation || alone) {
+        sl::ReflexOptions reflex;
+        reflex.mode = sl::ReflexMode::eLowLatency;
+        const sl::Result rr = slReflexSetOptions(reflex);
+        if (rr != sl::Result::eOk) LOG_ERROR("%s", result("slReflexSetOptions", rr).c_str());
+        reflexReady_ = generation || rr == sl::Result::eOk;  // frame generation's markers as before, whatever it said
+        generationReady_ = generation;
+        if (reflexReady_)
+            LOG_INFO("NVIDIA Reflex on%s: the game's frames are held until the card is about to be free",
+                     generation ? " (frame generation needs it)" : "");
+    } else if (reflexWanted_ && !generation_) {
+        LOG_INFO("NVIDIA Reflex is not available with this card or driver: the game may draw two frames ahead");
     }
     return true;
 }
@@ -449,11 +465,13 @@ void* Dlss::token() {
 }
 
 void Dlss::marker(uint32_t m) {
-    if (!generationReady_ || !token()) return;
+    if (!reflexReady_ || !token()) return;
     slPCLSetMarker(sl::PCLMarker(m), *static_cast<sl::FrameToken*>(token_));
 }
 
 void Dlss::renderStart() {
+    if (!reflexReady_ || renderStarted_) return;
+    renderStarted_ = true;
     marker(uint32_t(sl::PCLMarker::eSimulationEnd));  // the game has worked out its frame: its draws arrive
     marker(uint32_t(sl::PCLMarker::eRenderSubmitStart));
 }
@@ -506,6 +524,13 @@ void Dlss::beforePresent(const Generation& g) {
         }
     }
     if (generationMode_ == 1) countStats();
+}
+
+// 2.5.26: right before the present, every frame while Reflex is on (frame generation's too, after its options); a
+// frame whose world drew nothing upscaled (Pause, a loading screen) gets its first markers here, in their order.
+void Dlss::presentStart() {
+    if (!reflexReady_ || !token()) return;
+    renderStart();
     marker(uint32_t(sl::PCLMarker::eRenderSubmitEnd));
     marker(uint32_t(sl::PCLMarker::ePresentStart));
     presentStarted_ = true;
@@ -581,9 +606,10 @@ void Dlss::noteMode(const char* what) {
 }
 
 void Dlss::afterPresent() {
-    if (!generationReady_) return;
+    if (!reflexReady_) return;
     if (presentStarted_) marker(uint32_t(sl::PCLMarker::ePresentEnd));
     presentStarted_ = false;
+    renderStarted_ = false;
     // The next frame: its own token, Reflex's sleep, then its simulation. Every frame, also one whose upscale failed
     // or that had nothing to generate around: a token kept on would take the next frame's constants as a second set
     // for the same frame (0.9: "Setting different 'common' constants multiple times within the same frame").

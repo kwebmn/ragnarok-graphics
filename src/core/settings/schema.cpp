@@ -524,6 +524,8 @@ const std::vector<IniSetting>& iniSettings() {
         {"frames", "frame_generation", Page::Frames, Control::Choice, 0, 0, 0, {"off", "2x", "3x", "4x"},
          {Text::SmoothOff, Text::Factor2, Text::Times3, Text::Factor4}, Text::FramesGeneration,
          Text::FramesGenerationHint, ""},
+        {"frames", "reflex", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesReflex,
+         Text::FramesReflexHint, ""},  // 2.5.26
         {"frames", "fps_counter", Page::Frames, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FramesFpsCounter,
          Text::FramesFpsCounterHint, ""},
         {"frames", "fps_limit", Page::Frames, Control::Number, 0, 1000, 1, {}, {}, Text::FramesFpsLimit,
@@ -663,6 +665,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "display.hdr") return c.hdr ? "1" : "0";
     if (k == "frames.frame_generation") return c.frameGeneration ? std::to_string(c.frameGeneration) + "x" : "off";
     if (k == "frames.allow_tearing") return c.allowTearing ? "1" : "0";
+    if (k == "frames.reflex") return c.reflex ? "1" : "0";  // 2.5.26
     if (k == "sound.rate") return std::to_string(c.sound.rate);  // 0.91
     if (k == "sound.voices") return c.sound.voices ? "1" : "0";
     if (k == "sound.background") return std::to_string(c.sound.background);

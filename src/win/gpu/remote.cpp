@@ -58,6 +58,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
                       "x" + std::to_string(o.dlssHeight) + " --dlss-model " + o.dlssModel +  // 2.4.2
                       " --dlss-jitter " + (o.dlssJitterInverted ? "inverted" : "normal") + " --dlss-motion " +
                       (o.dlssMotionInverted ? "inverted" : "normal") + " --fg " + std::to_string(o.frameGeneration) +
+                      " --reflex " + (o.reflex ? "1" : "0") +  // 2.5.26
                       " --ai " + aiArgument(o.ai) + " --gpu \"" + (o.gpu.empty() ? "auto" : o.gpu) + "\"";
     STARTUPINFOA si{};
     si.cb = sizeof si;
@@ -605,8 +606,9 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     // 2.5.25: with DLSS frame generation the renderer has Reflex on, and Reflex holds each frame back until the card
     // is about to be free: the game's next frame starts only after this one is shown and Reflex has slept, taking
     // its input as late as Reflex wants it. Two frames ahead (above), the frames drawn waited out Reflex's sleep in
-    // the queue instead - the cursor some 100 ms behind the mouse at 4x (R-Q7RBYV: "it feels slow").
-    if (timing_.shown > 1.05) {
+    // the queue instead - the cursor some 100 ms behind the mouse at 4x (R-Q7RBYV: "it feels slow"). 2.5.26: Reflex
+    // without frame generation too ([frames] reflex).
+    if (timing_.reflex || timing_.shown > 1.05) {
         QueryPerformanceCounter(&a);
         const bool shown = channel_.waitPresented(presentsSent_, 1000);
         QueryPerformanceCounter(&b);

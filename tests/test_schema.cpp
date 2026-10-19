@@ -90,6 +90,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "display.hdr" &&
                                 k.compare(0, 12, "quality.dlss") != 0 &&  // 2.4.2: its own size and model too
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
+                                k != "frames.reflex" &&  // 2.5.26: chosen when the 64-bit renderer starts
                                 k.compare(0, 3, "ai.") != 0 && k.compare(0, 6, "sound.") != 0));
     }
 }

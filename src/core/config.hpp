@@ -498,6 +498,10 @@ struct Config {
     // over white
     bool hdr = false;  // 0.54: [frames] fps_counter - the frame counter at the start (win/fps_overlay.hpp)
     int frameGeneration = 0;  // part 3: [frames] frame_generation = off, 2x, 3x, 4x - DLSS frame generation (DLSS on)
+    // 2.5.26: [frames] reflex - NVIDIA Reflex with DLSS (the 64-bit renderer): each frame held back until the card is
+    // about to be free and the game's next one started only then, so that it takes the mouse late; frame generation
+    // turns it on anyway
+    bool reflex = true;
     bool allowTearing = false;  // let G-SYNC / FreeSync monitors show frames as soon as they are ready
     LogLevel logLevel = LogLevel::Info;
     bool profile = false;  // 0.87: [debug] profile - where the game's thread spends its time, into the log

@@ -60,8 +60,12 @@ public:
     virtual bool inRenderer() const { return false; }
     virtual bool generates() const { return false; }
     virtual bool generating() const { return false; }   // on as of the last present: off takes a present to apply
+    // 2.5.26: NVIDIA Reflex on (with frame generation, or [frames] reflex): the latency markers below every frame -
+    // renderStart, presentStart right before the present, afterPresent after it (Reflex's sleep)
+    virtual bool latencyMarkers() const { return false; }
     virtual void renderStart() {}                        // the frame's first commands arrived
-    virtual void beforePresent(const Generation&) {}     // its inputs and options, before the present
+    virtual void beforePresent(const Generation&) {}     // frame generation's inputs and options, before the submit
+    virtual void presentStart() {}                       // 2.5.26: the present comes now
     virtual void afterPresent() {}                       // the next frame begins (latency markers, sleep)
     // Generation off now: before the swap chain changes size, and for frames without the upscale (Pause).
     virtual void suspend() {}
