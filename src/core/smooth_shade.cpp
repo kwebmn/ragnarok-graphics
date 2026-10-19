@@ -15,6 +15,22 @@ struct Vec {
     float x, y, z;
 };
 
+// Lit face by face: most triangles one colour at their three corners (colourOf a vertex's), not all of them the same.
+template <typename ColourOf>
+bool faceLit(const std::vector<uint32_t>& triangles, size_t vertices, ColourOf colourOf) {
+    const size_t n = triangles.size() / 3;
+    size_t flat = 0;
+    bool varied = false;
+    for (size_t t = 0; t < n; ++t) {
+        const uint32_t a = triangles[t * 3], b = triangles[t * 3 + 1], c = triangles[t * 3 + 2];
+        if (a >= vertices || b >= vertices || c >= vertices) return false;
+        const uint32_t ca = colourOf(a) & 0xFFFFFFu;
+        if (ca == (colourOf(b) & 0xFFFFFFu) && ca == (colourOf(c) & 0xFFFFFFu)) ++flat;
+        if (ca != (colourOf(triangles[0]) & 0xFFFFFFu)) varied = true;
+    }
+    return varied && flat * 10 >= n * 8;
+}
+
 uint64_t keyOf(const Corner& c) {
     uint32_t a, b, r;
     std::memcpy(&a, &c.x, 4);
@@ -30,17 +46,7 @@ std::vector<Change> smooth(const std::vector<Corner>& vertices, const std::vecto
     std::vector<Change> out;
     const size_t n = triangles.size() / 3;
     if (n < 2) return out;
-    // lit face by face: most triangles one colour at their three corners, and not all of them the same
-    size_t flat = 0;
-    bool varied = false;
-    for (size_t t = 0; t < n; ++t) {
-        const uint32_t a = triangles[t * 3], b = triangles[t * 3 + 1], c = triangles[t * 3 + 2];
-        if (a >= vertices.size() || b >= vertices.size() || c >= vertices.size()) return out;
-        const uint32_t ca = vertices[a].colour & 0xFFFFFFu;
-        if (ca == (vertices[b].colour & 0xFFFFFFu) && ca == (vertices[c].colour & 0xFFFFFFu)) ++flat;
-        if (ca != (vertices[triangles[0]].colour & 0xFFFFFFu)) varied = true;
-    }
-    if (!varied || flat * 10 < n * 8) return out;
+    if (!faceLit(triangles, vertices.size(), [&](uint32_t v) { return vertices[v].colour; })) return out;
     const auto view = [&](const Corner& c) {
         const float z = 1.0f / c.rhw;
         return Vec{(c.x - cx) * z / f0, (c.y - cy) * z / f1, z};
@@ -117,22 +123,22 @@ std::vector<RecordChange> recordChanges(const FrameRecord& rec, int gameWidth, i
             continue;
         const size_t stride = FrameRecord::stride(d.fvf);
         if (d.vertexOffset + size_t(d.vertexCount) * stride > vb.size()) continue;
-        corners.resize(d.vertexCount);
-        for (uint32_t k = 0; k < d.vertexCount; ++k) {
-            const uint8_t* at = vb.data() + d.vertexOffset + size_t(k) * stride;
-            float xyzw[4];
-            std::memcpy(xyzw, at, sizeof xyzw);
-            corners[k].x = xyzw[0];
-            corners[k].y = xyzw[1];
-            corners[k].rhw = xyzw[3];
-            std::memcpy(&corners[k].colour, at + 16, 4);
-        }
         tris.clear();
         const uint32_t n = d.indexCount ? d.indexCount : d.vertexCount;
         const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
         const uint32_t count = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
-        bool bad = false;
-        for (uint32_t t = 0; t < count && !bad; ++t)
+        // 2.6.6: a model the game lights smoothly already is no work and no part of the budget - every opaque model
+        // counted against it, and a busy frame could use it up before its face-lit ones came. Told as its triangles
+        // are gathered (faceLit's rule): past a fifth of them not one colour, it is not face-lit.
+        const uint8_t* colours = vb.data() + d.vertexOffset + 16;
+        const auto colourOf = [&](uint32_t v) {
+            uint32_t c;
+            std::memcpy(&c, colours + size_t(v) * stride, 4);
+            return c & 0xFFFFFFu;
+        };
+        bool bad = false, varied = false;
+        uint32_t uneven = 0;
+        for (uint32_t t = 0; t < count && !bad; ++t) {
             for (uint32_t k = 0; k < 3; ++k) {
                 const uint32_t at = (strip ? t : t * 3) + k;
                 uint32_t vi = at;
@@ -149,7 +155,23 @@ std::vector<RecordChange> recordChanges(const FrameRecord& rec, int gameWidth, i
                 }
                 tris.push_back(vi);
             }
-        if (bad || tris.size() < 6) continue;
+            if (bad) break;
+            const uint32_t* tri = tris.data() + tris.size() - 3;
+            const uint32_t c = colourOf(tri[0]);
+            if (c != colourOf(tri[1]) || c != colourOf(tri[2])) bad = ++uneven * 5 > count;
+            varied = varied || c != colourOf(tris[0]);
+        }
+        if (bad || !varied || tris.size() < 6) continue;
+        corners.resize(d.vertexCount);
+        for (uint32_t k = 0; k < d.vertexCount; ++k) {
+            const uint8_t* at = vb.data() + d.vertexOffset + size_t(k) * stride;
+            float xyzw[4];
+            std::memcpy(xyzw, at, sizeof xyzw);
+            corners[k].x = xyzw[0];
+            corners[k].y = xyzw[1];
+            corners[k].rhw = xyzw[3];
+            std::memcpy(&corners[k].colour, at + 16, 4);
+        }
         triangles += tris.size() / 3;
         const std::vector<Change> changes = smooth(corners, tris, p.f0, p.f1, p.cx, p.cy);
         if (!changes.empty()) ++draws;
