@@ -1,3 +1,18 @@
+# uaRO Graphics 2.6.6 — to check
+
+- **"World materials" default to 50 %** (was 100 %): the relief of stone and brick is calmer. Where the strength was
+  already set, it stays as it was.
+- **"Smooth light on models" removed.** It made no visible difference on RO's models: by Prontera's fountain and on a
+  rock in the Louyang field the picture is the same with it and without. The game lights the models smoothly anyway, and
+  low rocks have edges too steep to round. Its line is gone from the settings and the console; an old value in the ini
+  changes nothing.
+- **"Ground relief" shows again.** It measured a stone's height one texel apart, and uaRO's ground textures are 4 times
+  the originals: several texels merge into one screen pixel, and there was no step. The step is at least a screen pixel
+  now - the paving's cracks and stones are lit from one side.
+- Please check: on a fresh install the strength of "World materials" is 50 %. Yours stays what you set in the console.
+  "Ground relief": on Prontera's paving there is a difference with Tab and without - the stones bulge, lit from one
+  side.
+
 # uaRO Graphics 2.6.5 — to check
 
 - **"Living characters" reworked, softly.** Instead of a narrow rim along the silhouette (not seen at 60 %, a white
