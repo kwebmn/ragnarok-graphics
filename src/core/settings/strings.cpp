@@ -2423,21 +2423,18 @@ const Entry kTexts[] = {
     {"Living characters",
      "Живі персонажі",
      "Живые персонажи"},
-    {"Characters and monsters are lit by the sun from the side: the edge towards it brighter with a warm rim, the far "
-     "side a little darker - no longer flat stickers. With Real sun shadows they also darken when they step into the "
-     "shadow of a house or a tree (Direct3D 12).",
-     "Персонажів і монстрів сонце освітлює збоку: край до сонця світліший, з теплим обідком, дальній бік трохи "
-     "темніший — вони вже не пласкі наліпки. Зі «Справжніми тінями від сонця» вони ще й темнішають, коли заходять у "
-     "тінь будинку чи дерева (Direct3D 12).",
-     "Персонажей и монстров солнце освещает сбоку: край к солнцу светлее, с тёплым ободком, дальняя сторона чуть "
-     "темнее — они больше не плоские наклейки. С «Настоящими тенями от солнца» они ещё и темнеют, когда заходят в "
-     "тень дома или дерева (Direct3D 12)."},
+    {"Characters and monsters are lit by the sun as figures: the side of the body towards it a little lighter and "
+     "warmer, the far side in a soft shade - no longer flat stickers.",
+     "Персонажів і монстрів сонце освітлює як об'ємні фігури: бік тіла до сонця трохи світліший і тепліший, дальній "
+     "у м'якій тіні — вони вже не пласкі наліпки.",
+     "Персонажей и монстров солнце освещает как объёмные фигуры: сторона тела к солнцу чуть светлее и теплее, дальняя "
+     "в мягкой тени — они больше не плоские наклейки."},
     {"Strength of the characters' light",
      "Сила світла персонажів",
      "Сила света персонажей"},
-    {"How much the sun's side and the rim show on the characters.",
-     "Наскільки помітні сонячний бік і обідок на персонажах.",
-     "Насколько заметны солнечная сторона и ободок на персонажах."},
+    {"How much the sun's side and the shade show on the characters.",
+     "Наскільки помітні сонячний бік і тінь на персонажах.",
+     "Насколько заметны солнечная сторона и тень на персонажах."},
     {"Land past the map's edge",
      "Земля за краєм карти",
      "Земля за краем карты"},

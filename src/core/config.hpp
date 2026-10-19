@@ -350,7 +350,7 @@ struct EffectSettings {
     // 1.17: living characters (shaders.cpp spriteLight): a character's sprite lit by the sun from its silhouette's
     // sides, a warm rim towards it; with Real sun shadows darker in a house's or a crown's shadow. Off by default.
     bool spriteLight = false;
-    int spriteLightStrength = 60;  // %, 0-200
+    int spriteLightStrength = 100;  // %, 0-200 (2.6.4: the body's light, seen at 100; the old rim was 60)
     // 1.18: land past the map's edge (sky_ps): looked down at, the ground goes on in the colours of the ground on
     // the screen, fading into the haze - instead of a sea of clouds. Needs the sky. Off by default.
     bool edgeLand = false;

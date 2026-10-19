@@ -270,34 +270,35 @@ float relief(float2 uv, float2 du, float2 dv, float seen) {
 #endif
 
 #ifndef UAGFX_SAFE
-// 1.17, living characters (draw.cpp spriteConstants): a sprite of a character or a monster lit by the sun from the
-// side its picture's own shape gives - its silhouette's slope a few texels around as the way its edge faces: the side
-// towards the sun (twinX, twinY on the screen, twinW its height) brighter with a warm rim, the far side a little
-// darker. uiPixels.x the strength, .y the sun's light here; 2.6.3: .z the game texture's width.
+// 1.17, living characters (draw.cpp spriteConstants): a sprite of a character or a monster lit by the sun as a body.
+// 2.6.4: its silhouette seen from a little way off - its alpha 3 and 6 of the game's texels around, eight ways - as a
+// height, whose slope is a normal across the whole figure: the side towards the sun (twinX, twinY on the screen, twinW
+// its height) lighter and warmer, the far side in a soft shade. (1.17 lit a rim two texels wide at the edge: unseen at
+// 60 %, a white outline at 200 %.) uiPixels.x the strength, .y the sun's light here, .z the game texture's width.
 float3 spriteLight(float2 uv, float2 du, float2 dv, float3 c) {
     float w, h;
     tex0.GetDimensions(w, h);
     float2 size = float2(w, h);
-    // two of the game's texels along the screen's x, then its y - 2.6.3: an AI picture (2 or 4 times as many texels,
-    // smooth between them) had the edge a quarter as wide and soft, and no light on its sides at all
     float per = uiPixels.z > 0.0 ? max(1.0, floor(w / uiPixels.z + 0.5)) : 1.0;  // its texels a game texel
-    float2 sx = du / max(length(du * size), 1e-4) * 2.0 * per;
-    float2 sy = dv / max(length(dv * size), 1e-4) * 2.0 * per;
-    float l = tex0.SampleGrad(samp0, uv - sx, du, dv).a, r = tex0.SampleGrad(samp0, uv + sx, du, dv).a;
-    float u = tex0.SampleGrad(samp0, uv - sy, du, dv).a, d = tex0.SampleGrad(samp0, uv + sy, du, dv).a;
-    float2 out2 = -float2(r - l, d - u);  // from the inside out, screen axes (y down)
-    float edge = saturate(length(out2) * 1.5);
-    float3 n = normalize(float3(out2 * 1.2, 0.8));
+    float2 ex = du / max(length(du * size), 1e-4) * per;  // a game texel along the screen's x, then its y
+    float2 ey = dv / max(length(dv * size), 1e-4) * per;
+    float2 g = float2(0.0, 0.0);
+    [unroll] for (int way = 0; way < 8; ++way) {
+        float2 d = float2(cos(float(way) * 0.785398), sin(float(way) * 0.785398));
+        float2 o = ex * d.x + ey * d.y;
+        float out6 = tex0.SampleGrad(samp0, uv + o * 6.0, du, dv).a;  // 6 game texels away, then 3
+        float out3 = tex0.SampleGrad(samp0, uv + o * 3.0, du, dv).a;
+        g += d * (out6 + 0.5 * out3);
+    }
+    float3 n = normalize(float3(-g * 0.9, 1.0));  // the figure's height falls outwards: its normal leans out
     float2 ls = float2(twinX, twinY);
     float3 L = normalize(float3(ls * sqrt(saturate(1.0 - twinW * twinW)), 0.35 + twinW));
-    float sun = uiPixels.y;
-    float amb = lerp(0.85, 0.55, sun);
+    float amb = lerp(0.85, 0.6, uiPixels.y);
     float k = (amb + (1.0 - amb) * saturate(dot(n, L))) / (amb + (1.0 - amb) * L.z);
-    float rim = pow(saturate(dot(normalize(out2 + 1e-5), normalize(ls + 1e-5))), 2.0) * edge * sun;
     float s = uiPixels.x;
-    c *= lerp(1.0, clamp(k, 0.75, 1.3), s);
-    c += float3(1.0, 0.9, 0.7) * rim * 0.22 * s;
-    return c;
+    float f = clamp(1.0 + (clamp(k, 0.72, 1.3) - 1.0) * s, 0.6, 1.45);
+    float warm = saturate(k - 1.0) * s;
+    return c * f * float3(1.0 + 0.06 * warm, 1.0, 1.0 - 0.08 * warm);
 }
 
 // 1.7, the trees (draw_constants.hpp leafShading): a draw of leaves, its box sourceRect (game pixels). uiPixels.xy
