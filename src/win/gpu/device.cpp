@@ -381,43 +381,38 @@ int Renderer::Impl::pacedLimit(int fpsLimit) {
     return frame_fit::pacedFps(fpsLimit, refreshHz, shown);
 }
 
-// 2.5.25: how Windows shows the swap chain - composed with the rest of the screen by the desktop window manager, or
-// flipped straight to the monitor (or put on an overlay plane) - with the window against its monitor, logged when
-// it changes: frame generation paces its frames and G-SYNC works only flipped straight; a window not covering its
-// monitor pixel for pixel (Windows scaling of a DPI-unaware game: 175 % made it 3839x2159 of 3840x2160) or another
-// window over it (the frame counter, the console) keeps it composed.
+// 2.5.25: whether Windows can flip the swap chain straight to the monitor (independent flip) or composes it with the
+// rest of the screen: frame generation paces its frames, and G-SYNC works, only flipped straight - and that takes a
+// window covering its monitor pixel for pixel with nothing over it. Windows scaling of the DPI-unaware game makes it a
+// pixel short (175 %: 3839x2159 of 3840x2160, R-Q7RBYV). Logged when it changes. 2.5.26: told by the window's place
+// - IDXGISwapChainMedia, which tells the mode itself, is not there for a window's swap chain (R-FABEAA).
 void Renderer::Impl::notePresentation() {
     const ULONGLONG now = GetTickCount64();
-    if (!swapChain || presentSurface || now - presentationAsked < 5000) return;
+    if (!window || presentSurface || now - presentationAsked < 5000) return;
     presentationAsked = now;
-    IDXGISwapChainMedia* media = nullptr;
-    if (FAILED(swapChain->QueryInterface(__uuidof(IDXGISwapChainMedia), reinterpret_cast<void**>(&media)))) {
-        if (presentationLogged != -2) LOG_INFO("presentation: how Windows shows the picture is not told");
-        presentationLogged = -2;
-        return;
-    }
-    DXGI_FRAME_STATISTICS_MEDIA stats{};
-    const HRESULT hr = media->GetFrameStatisticsMedia(&stats);
-    media->Release();
-    if (FAILED(hr) || int(stats.CompositionMode) == presentationLogged) return;
-    presentationLogged = int(stats.CompositionMode);
-    static const char* const kModes[] = {
-        "composed by Windows with the rest of the screen (the desktop window manager)",
-        "on a hardware overlay plane", "flipped straight to the monitor (independent flip)",
-        "composed by Windows - it could not put it on an overlay plane"};
-    const char* how = presentationLogged >= 0 && presentationLogged < 4 ? kModes[presentationLogged] : "unknown";
     RECT client{};
+    POINT origin{0, 0};
     MONITORINFO monitor{};
     monitor.cbSize = sizeof monitor;
     {
         win::RealPixels real;  // the screen's own pixels, whatever Windows scaling
-        GetClientRect(window, &client);
-        if (!GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &monitor))
-            monitor.rcMonitor = RECT{};
+        if (!GetClientRect(window, &client) || !ClientToScreen(window, &origin) ||
+            !GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &monitor))
+            return;
     }
-    LOG_INFO("presentation: %s; the window %ldx%ld, its monitor %ldx%ld", how, client.right - client.left,
-             client.bottom - client.top, monitor.rcMonitor.right - monitor.rcMonitor.left,
-             monitor.rcMonitor.bottom - monitor.rcMonitor.top);
+    const RECT on{origin.x, origin.y, origin.x + client.right, origin.y + client.bottom};
+    if (EqualRect(&on, &presentationWindow) && EqualRect(&monitor.rcMonitor, &presentationMonitor)) return;
+    presentationWindow = on;
+    presentationMonitor = monitor.rcMonitor;
+    const RECT& m = monitor.rcMonitor;
+    if (EqualRect(&on, &m))
+        LOG_INFO("presentation: the window covers its monitor (%ldx%ld) - Windows can show the picture straight on "
+                 "it while no other window is over the game", m.right - m.left, m.bottom - m.top);
+    else
+        LOG_INFO("presentation: the window %ldx%ld at %ld,%ld does not cover its monitor's %ldx%ld - Windows "
+                 "composes the picture with the desktop, frame generation shows its frames later and less evenly",
+                 on.right - on.left, on.bottom - on.top, on.left - m.left, on.top - m.top, m.right - m.left,
+                 m.bottom - m.top);
 }
 
 // 2.5: the quads' index pattern (core/draw_batch.hpp) in video memory, once, through this list.

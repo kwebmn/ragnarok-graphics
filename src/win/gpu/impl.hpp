@@ -742,7 +742,7 @@ struct Renderer::Impl {
     int refreshHz = 0;
     ULONGLONG refreshAsked = 0;
     int fitLogged = -1;
-    int presentationLogged = -1;
+    RECT presentationWindow{}, presentationMonitor{};  // as last logged: the client area and its monitor, real pixels
     ULONGLONG presentationAsked = 0;
     int pacedLimit(int fpsLimit);  // the pacer's for this present
     void notePresentation();       // after a present
