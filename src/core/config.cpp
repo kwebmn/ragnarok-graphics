@@ -191,7 +191,7 @@ EffectSettings effectsOff() {
     e.appear = false;
     e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.bloom = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
-    e.filmGrain = e.mapFade = e.noGameFog = e.roundLight = false;
+    e.mapFade = e.noGameFog = e.roundLight = false;
     // 2.4: the parts of the effects
     e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.wetSand = e.stepDust = e.seasonSnow = false;
     e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.stars = e.desertHeat = false;
@@ -260,7 +260,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.ripples ||
            e.appear || e.softParticles || e.rimLight || e.sky || e.motes ||
            e.relief || e.floorReflections || e.shafts || e.dayCycle || e.bloom ||
-           e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks || e.filmGrain ||
+           e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks ||
            e.roundLight;
 }
 

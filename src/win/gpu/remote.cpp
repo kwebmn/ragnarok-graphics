@@ -391,8 +391,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.grassAmount);
     w.u8(e.skillSparks ? 1 : 0);  // 0.82
     w.i32(e.skillSparksAmount);
-    w.u8(e.filmGrain ? 1 : 0);  // 0.83
-    w.i32(e.filmGrainAmount);
     w.u8(e.mapFade ? 1 : 0);
     w.u8(e.noGameFog ? 1 : 0);  // 2.6.10
     w.u8(e.roundLight ? 1 : 0);  // 0.84

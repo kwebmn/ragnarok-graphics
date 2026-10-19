@@ -120,10 +120,10 @@ TEST(skill_sparks_off_by_default) {
     CHECK(!effectsOff().skillSparks);
 }
 
-TEST(film_grain_and_map_fade_off_by_default) {
-    // 0.83; 0.84: the map's fade off too
-    CHECK(!parseConfig("").effects.filmGrain && !parseConfig("").effects.mapFade);
-    CHECK(!effectsOff().filmGrain && !effectsOff().mapFade);
+TEST(map_fade_off_by_default) {
+    // 0.83; 0.84: the map's fade off (2.6.11: the film grain with it gone)
+    CHECK(!parseConfig("").effects.mapFade);
+    CHECK(!effectsOff().mapFade);
 }
 
 TEST(frames_limited_and_saving_power_by_default) {

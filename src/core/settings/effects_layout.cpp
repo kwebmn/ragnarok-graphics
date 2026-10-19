@@ -17,7 +17,6 @@ const EffectLayout kEffects[] = {
     {"effects.storms", {}, {}, {}, 0},      // 0.80
     {"effects.grass", {}, {"effects.grass_amount"}, {}, 0},  // 0.81
     {"effects.skill_sparks", {}, {"effects.skill_sparks_amount"}, {}, 0},  // 0.82
-    {"effects.film_grain", {}, {"effects.film_grain_amount"}, {}, 0},  // 0.83
     {"effects.map_fade", {}, {}, {}, 0},                                // 0.83
     {"effects.no_game_fog", {}, {}, {}, 0},                             // 2.6.10
     {"effects.round_light", {}, {}, {}, 0},  // 0.84

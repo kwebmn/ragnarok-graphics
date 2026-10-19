@@ -1198,8 +1198,8 @@ struct Renderer::Impl {
     int bloomWidth = 0, bloomHeight = 0;
     bool bloomFailed = false;
     bool bloomDone = false;
-    bool bloomWanted() const {  // 0.83: the film's grain and the new map's fade go with it
-        return (effects.bloom || (effects.filmGrain && effects.filmGrainAmount > 0) ||
+    bool bloomWanted() const {  // 0.83: the new map's fade goes with it
+        return (effects.bloom ||
                 mapFadeNow() < 1.0f) &&
                bloomDownPs && bloomApplyPs && dofBlurPs;
     }

@@ -10,7 +10,7 @@ using E = EffectSettings;
 // Every switch of the Effects page: its group and the weakest set it is in. The weak set keeps what costs a card
 // little (no pass of its own over the picture); the medium adds the passes and the living world; the strong the
 // remaster's own world (materials, new trees, reflections, light). 0: the player's alone - a look the player turned
-// down (anime trees, film grain), night by the clock beside the day.
+// down, night by the clock beside the day.
 const Member kMembers[] = {
     {"smooth_light", Fixes, 1, &E::smoothLight},
     {"soft_particles", Fixes, 1, &E::softParticles},
@@ -99,7 +99,6 @@ const Member kMembers[] = {
     {"region_looks", Picture, 2, &E::regionLooks},
     {"bloom", Picture, 3, &E::bloom},
     {"flare", Picture, 3, &E::flare},
-    {"film_grain", Picture, 0, &E::filmGrain},
 };
 
 // A group's strength works on these of its effects (each up to its own most).
@@ -124,7 +123,7 @@ const Strength kStrengths[] = {
     {Air, &E::motesAmount, 200},
     {Skills, &E::auraBrightness, 100},   {Skills, &E::skillBrightness, 100},   {Skills, &E::skillSparksAmount, 200},
     {Picture, &E::bloomStrength, 200},   {Picture, &E::regionLooksStrength, 100},
-    {Picture, &E::filmGrainAmount, 100},
+
 };
 
 }  // namespace

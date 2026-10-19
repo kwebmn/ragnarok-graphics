@@ -131,8 +131,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.grassAmount = rd.i32();
             e.skillSparks = rd.u8() != 0;  // 0.82
             e.skillSparksAmount = rd.i32();
-            e.filmGrain = rd.u8() != 0;  // 0.83
-            e.filmGrainAmount = rd.i32();
             e.mapFade = rd.u8() != 0;
             e.noGameFog = rd.u8() != 0;  // 2.6.10
             e.roundLight = rd.u8() != 0;  // 0.84

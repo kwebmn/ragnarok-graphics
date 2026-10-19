@@ -425,7 +425,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"ao_apply_ps", ps, shaderSource(), {}, true},
                    {"torch_fire_ps", ps, shaderSource(), {}, true},  // 2.5.2: the new flame, the maps' dust
                    {"dust_ps", ps, shaderSource(), {}, true},
-                   {"bloom_down_ps", ps, shaderSource(), {}, true},  // 2.5.2: the bloom, grain, fade
+                   {"bloom_down_ps", ps, shaderSource(), {}, true},  // 2.5.2: the bloom, the map's fade
                    {"dof_blur_ps", ps, shaderSource(), {}, true},
                    {"bloom_apply_ps", ps, shaderSource(), {}, true},
                    {"steps_ps", ps, shaderSource(), {}, true},  // 2.5.2: the footprints, the smoke, the lava
@@ -3150,7 +3150,7 @@ float Renderer11::mapFadeNow() {
 }
 
 // 2.5.2: as Direct3D 12's applyBloom (ao.cpp) - the bright parts at a quarter of the size (bloom_down_ps), blurred
-// across and down twice (dof_blur_ps), added onto the picture with the grain and the map's fade
+// across and down twice (dof_blur_ps), added onto the picture with the map's fade
 // (bloom_apply_ps, from the picture's copy).
 void Renderer11::applyBloom() {
     EffectSpan span(*this, kTimeBloom11);
@@ -3176,9 +3176,7 @@ void Renderer11::applyBloom() {
     c.footprint = 0.88f;  // the bright parts: over this
     const bool bloom = effects_.bloom && effects_.bloomStrength > 0;
     c.sharpen = bloom ? 0.6f * float(std::clamp(effects_.bloomStrength, 0, 200)) / 100.0f : 0.0f;
-    c.twin[2] = effects_.filmGrain ? float(std::clamp(effects_.filmGrainAmount, 0, 100)) / 100.0f : 0.0f;
     c.twin[3] = mapFadeNow();
-    c.sourceRect[2] = std::fmod(waterTime() * 60.0f, 4096.0f);  // the grain's seed, new each frame
     if (bloom) {
         maskPass(bloomDownPs_, bloom_[0], c, nullptr, nullptr, scene_.srv);
         for (int k = 0; k < 4; ++k) {  // across, down, then again twice as wide

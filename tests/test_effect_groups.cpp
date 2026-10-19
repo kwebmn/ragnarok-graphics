@@ -41,7 +41,7 @@ TEST(effect_groups_sets_grow_from_weak_to_strong) {
         CHECK((strong.*x.on) == (x.level > 0));
     }
     CHECK(weak.torch && !weak.grass && medium.grass && !medium.materials && strong.materials);
-    CHECK(!strong.filmGrain);  // the player's own only
+    CHECK(!strong.night);  // the player's own only (night by the clock)
     CHECK(weak.tier == 1 && strong.tier == 2);
 }
 

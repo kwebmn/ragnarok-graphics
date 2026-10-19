@@ -255,9 +255,8 @@ struct EffectSettings {
     // 0.84: off by default.
     bool skillSparks = false;
     int skillSparksAmount = 100;  // %, 0-200
-    // 0.83: film grain and the world coming in from black after a new map; 0.84: both off by default.
-    bool filmGrain = false;
-    int filmGrainAmount = 30;  // %, 0-100
+    // 0.83: the world coming in from black after a new map; 0.84: off by default. (2.6.11: the film grain with it
+    // gone at the player's word.)
     bool mapFade = false;
     // 2.6.10: the game's own fog (its fogparametertable: prt_fild08's light green, prontera's white) left out on the
     // fields and in the towns, where it lay as a coloured veil, thicker as the camera went back (R-P6KRQF); the
