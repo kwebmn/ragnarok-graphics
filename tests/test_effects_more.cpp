@@ -88,11 +88,11 @@ TEST(sun_shadows_are_gone) {
     CHECK(c.effects.bloom);
 }
 
-TEST(bloom_and_filmic_off_by_default) {
-    // 0.78; 0.84: off unless asked
+TEST(bloom_off_by_default) {
+    // 0.78; 0.84: off unless asked (2.6.11: the filmic curve with it gone)
     const Config c = parseConfig("");
-    CHECK(!c.effects.bloom && c.effects.bloomStrength == 60 && !c.effects.filmic);
-    CHECK(!effectsOff().bloom && !effectsOff().filmic);
+    CHECK(!c.effects.bloom && c.effects.bloomStrength == 60);
+    CHECK(!effectsOff().bloom);
 }
 
 TEST(region_looks_off_by_default) {

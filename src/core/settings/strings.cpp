@@ -1547,15 +1547,6 @@ const Entry kTexts[] = {
     {"How much the bright places glow.",
      "Наскільки сяють яскраві місця.",
      "Насколько светятся яркие места."},
-    {"Film-like colours",
-     "Кольори як у кіно",
-     "Цвета как в кино"},
-    {"A film camera's curve over the picture: the bright parts roll off softly instead of turning flat white, the "
-     "shadows keep their depth. Direct3D 12.",
-     "Крива кінокамери над картинкою: яскраві місця м’яко згасають, а не стають пласко-білими, тіні зберігають "
-     "глибину. Direct3D 12.",
-     "Кривая кинокамеры поверх картинки: яркие места мягко сходят на нет, а не становятся плоско-белыми, тени "
-     "сохраняют глубину. Direct3D 12."},
     {"Colours of each region",
      "Кольори кожного регіону",
      "Цвета каждого региона"},
@@ -2551,10 +2542,9 @@ const Entry kTexts[] = {
     {"Picture",
      "Картинка",
      "Картинка"},
-    {"Colour, film tones, the regions' looks; with a strong card bloom, depth of field and the sun's "
-     "flare.",
-     "Колір, плівкові тони, вигляд регіонів; з потужною картою — bloom, глибина різкості й відблиск сонця.",
-     "Цвет, плёночные тона, вид регионов; с мощной картой — bloom, глубина резкости и блик солнца."},
+    {"Colour, the regions' looks; with a strong card bloom, depth of field and the sun's flare.",
+     "Колір, вигляд регіонів; з потужною картою — bloom, глибина різкості й відблиск сонця.",
+     "Цвет, вид регионов; с мощной картой — bloom, глубина резкости и блик солнца."},
     {"Strength",
      "Сила",
      "Сила"},

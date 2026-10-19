@@ -238,11 +238,10 @@ struct EffectSettings {
     // frame, not the file's (-1 off).
     bool dayCycle = false;
     int dayNow = -1;
-    // 0.78: bloom - the bright parts of the picture (sunlit tiles, snow, windows, fire) glow softly; the filmic
-    // curve - the highlights roll off instead of clipping, as in modern games. 0.84: both off by default.
+    // 0.78: bloom - the bright parts of the picture (sunlit tiles, snow, windows, fire) glow softly. 0.84: off by
+    // default. (2.6.11: the filmic curve with it gone at the player's word.)
     bool bloom = false;
     int bloomStrength = 60;  // %, 0-200
-    bool filmic = false;
     // 0.79: each region its colours (core/region_look.hpp): Payon warm and green, Niflheim cold and pale, Morroc
     // sun-bleached... 0.84: off by default.
     bool regionLooks = false;

@@ -96,7 +96,6 @@ const Member kMembers[] = {
     {"skill_sparks", Skills, 2, &E::skillSparks},
 
     {"grade", Picture, 1, &E::grade},
-    {"filmic", Picture, 2, &E::filmic},
     {"region_looks", Picture, 2, &E::regionLooks},
     {"bloom", Picture, 3, &E::bloom},
     {"dof", Picture, 3, &E::dof},

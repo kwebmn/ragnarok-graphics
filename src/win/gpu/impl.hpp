@@ -1206,7 +1206,7 @@ struct Renderer::Impl {
     bool stepsDue() const { return stepKind() && groundDrawn && !stepsDone && viewToWorldValid; }
     bool applySteps();  // once a frame, the world finished; false: lost
     float flashNow() const;  // 0.80: the thunderstorm's lightning now (0-1), where it rains
-    // 0.78: bloom and the filmic curve (ao.cpp)
+    // 0.78: bloom (ao.cpp)
     ID3DBlob* bloomDownPs = nullptr;
     ID3DBlob* bloomApplyPs = nullptr;
     ID3D12PipelineState* bloomDownPipeline = nullptr;
@@ -1219,7 +1219,7 @@ struct Renderer::Impl {
     bool bloomFailed = false;
     bool bloomDone = false;
     bool bloomWanted() const {  // 0.83: the film's grain and the new map's fade go with it
-        return (effects.bloom || effects.filmic || (effects.filmGrain && effects.filmGrainAmount > 0) ||
+        return (effects.bloom || (effects.filmGrain && effects.filmGrainAmount > 0) ||
                 mapFadeNow() < 1.0f) &&
                bloomDownPs && bloomApplyPs && dofBlurPs;
     }

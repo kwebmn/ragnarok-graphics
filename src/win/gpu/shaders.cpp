@@ -1180,8 +1180,8 @@ float4 dof_down_ps(PresentOut i) : SV_Target {
 }
 
 // 0.78, bloom (ao.cpp applyBloom): the picture's bright parts at a quarter of its size - over footprint, the brighter
-// the more - blurred by dof_blur_ps, then added onto it (bloom_apply_ps: sharpen how much), and a filmic curve over
-// all (twinY how much of it): the highlights roll off softly instead of clipping, the shadows keep their depth.
+// the more - blurred by dof_blur_ps, then added onto it (bloom_apply_ps: sharpen how much). 2.6.11: the filmic curve
+// over all (the highlights rolled off, an S-curve) gone at the player's word.
 float4 bloom_down_ps(PresentOut i) : SV_Target {
     float2 c = i.pos.xy * 4.0;
     float2 t = 1.0 / uiPixels.xy;
@@ -1195,20 +1195,12 @@ float4 bloom_down_ps(PresentOut i) : SV_Target {
     return float4(s * (over * over / max(l, 1e-3)), 1.0);
 }
 
-// The picture is the game's (not HDR): what passes 0.8 - the bloom added on - rolls off towards white instead of
-// clipping, and a light S-curve gives contrast while the middle grey stays where it is.
-float3 filmic(float3 c) {
-    float3 over = max(c - 0.8, 0.0);
-    float3 x = saturate(min(c, 0.8) + 0.2 * (1.0 - exp(-over / 0.2)));
-    return lerp(x, x * x * (3.0 - 2.0 * x), 0.18);
-}
-
 float4 bloom_apply_ps(PresentOut i) : SV_Target {
     int2 p = int2(i.pos.xy);
     float3 c = sceneColor.Load(int3(p, 0)).rgb;
     float3 glow = tex0.SampleLevel(samp0, i.pos.xy * 0.25 / uiPixels.zw, 0).rgb;
     c += glow * sharpen;
-    c = lerp(saturate(c), filmic(c), twinY);
+    c = saturate(c);
     // 0.83: film grain (twinW how much: a fine noise, new each frame, less in the bright parts) and the world coming
     // in from black after a new map (twinH, 0-1)
     float n = hash12(i.pos.xy + float2(sourceRect.z * 1.618, sourceRect.z * 0.618)) - 0.5;

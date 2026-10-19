@@ -228,8 +228,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxBloomHint, "", &E::bloom},
         {"effects", "bloom_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxBloomStrength,
          Text::FxBloomStrengthHint, " %", nullptr, &E::bloomStrength},
-        {"effects", "filmic", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFilmic,
-         Text::FxFilmicHint, "", &E::filmic},
         {"effects", "region_looks", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRegionLooks,
          Text::FxRegionLooksHint, "", &E::regionLooks},
         {"effects", "region_looks_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {},

@@ -211,7 +211,7 @@ private:
     // 2.5.1: the soft shadows where surfaces meet (ao.cpp: a mask at a half or a quarter of the size, blurred twice,
     // multiplied in) - before the characters
     void applyAo();
-    // 2.5.2: the bloom, the filmic curve, the film's grain and the new map's fade (ao.cpp applyBloom: the bright
+    // 2.5.2: the bloom, the film's grain and the new map's fade (ao.cpp applyBloom: the bright
     // parts at a quarter of the size, blurred twice each way, added) - before the colours
     void applyBloom();
     float mapFadeNow();  // 1 when done
@@ -397,7 +397,7 @@ private:
                halfOverPs_;
     }
     bool bloomWanted() {
-        return (effects_.bloom || effects_.filmic || (effects_.filmGrain && effects_.filmGrainAmount > 0) ||
+        return (effects_.bloom || (effects_.filmGrain && effects_.filmGrainAmount > 0) ||
                 mapFadeNow() < 1.0f) &&
                bloomDownPs_ && dofBlurPs_ && bloomApplyPs_;
     }

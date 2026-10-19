@@ -7,7 +7,6 @@ const EffectLayout kEffects[] = {
     {"effects.smooth_light", {}, {}, {}, 0},
     {"effects.ao", {}, {"effects.ao_strength", "effects.ao_size"}, {}, 0},
     {"effects.bloom", {}, {"effects.bloom_strength"}, {}, 0},  // 0.78
-    {"effects.filmic", {}, {}, {}, 0},                           // 0.78
     {"effects.region_looks", {}, {"effects.region_looks_strength"}, {}, 0},  // 0.79
     {"effects.glow", {}, {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}, {}, 0},
     {"effects.fire_light", {"effects.skill_colours"}, {"effects.fire_light_strength"}, {}, 0},

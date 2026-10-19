@@ -386,7 +386,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.dayNow);
     w.u8(e.bloom ? 1 : 0);  // 0.78
     w.i32(e.bloomStrength);
-    w.u8(e.filmic ? 1 : 0);
     w.u8(e.regionLooks ? 1 : 0);  // 0.79
     w.i32(e.regionLooksStrength);
     w.u8(e.footprints ? 1 : 0);  // 0.80
