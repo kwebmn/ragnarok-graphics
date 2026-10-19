@@ -23,6 +23,7 @@ Overrides overridesOf(const Config& c, bool onBattery) {
         o.fpsMax = std::clamp(c.batteryFps, 15, 60);
         o.minimisedFps = 5;
         o.pacerSleeps = true;
+        o.flags = kPlainUpscale;
     }
     if (c.superLight) {
         o.superLight = true;
@@ -31,7 +32,7 @@ Overrides overridesOf(const Config& c, bool onBattery) {
         o.worldScaleMax = 50;
         o.renderScaleMax = 100;
         o.noSharpen = o.noAnisotropy = o.noSupersampling = true;
-        o.flags = kFlatWorld | kWorld16 | kPointMips;
+        o.flags = kFlatWorld | kWorld16 | kPointMips | kPlainUpscale;
     }
     return o;
 }

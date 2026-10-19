@@ -71,3 +71,11 @@ ends, in a running game (`core/light_mode.hpp`, applied in `Context::present`):
 
 Not done: a 30-frame cap (the frame limit stays the player's), Direct3D 12's flat textures and 16-bit targets (the
 weakest cards are Direct3D 11's). No measurement yet on the weak card.
+
+Fixed after the first test (RTX 5060 Ti, 4K screen, Direct3D 11): 2.5.21 - a black world on the maps of a region, the
+last frame frozen after Scroll Lock: the night pass ran with the region colours off and copied the 16-bit world into a
+32-bit copy (nothing copied); it runs only when it changes the picture now (`region_look::changes`), and the copies
+take the picture's format (`Renderer11::copyScene`). 2.5.22 - the world made larger plainly (`light::kPlainUpscale`,
+one bilinear tap): its own sharpening (Catmull-Rom under CAS, 45 taps a pixel) cost about 1.6 ms of the 2.2 there,
+ten times the world. A client whose setup turns mipmaps off (one level a texture, as on that PC) keeps its textures:
+flat ones need the mip levels.

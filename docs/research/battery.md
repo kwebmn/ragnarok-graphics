@@ -44,5 +44,8 @@ most, the effects at most the weak set's (each switch on only if the file has it
 at 75 % at most (Direct3D 11), the frame pacer sleeping on its timer without the last half millisecond's spin, and 5
 turns of the game's loop a second when it is minimised (15 before). On the mains everything is as the file says.
 
+2.5.22: the world at 75 % made larger plainly (`light::kPlainUpscale`) - its own sharpening, 45 taps a pixel of the
+picture, cost more than the quarter of the world's pixels saved.
+
 Not done: undoing the client's `timeBeginPeriod(1)` - since Windows 10 2004 a process's timer resolution touches no
 other process, and the pacer falls back to an ordinary timer before 1803, whose half-millisecond accuracy depends on it.

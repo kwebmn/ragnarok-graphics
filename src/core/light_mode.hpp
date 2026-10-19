@@ -13,7 +13,9 @@ namespace uagfx::light {
 // - the battery's ([frames] battery_saver) while a laptop runs on its battery: battery_fps frames at most, the effects
 //   at most the weak set's, the world at 75 % at most (Direct3D 11), the frame pacer sleeping through, 5 frames when
 //   the game is minimised (docs/research/battery.md).
-enum Flag : uint8_t { kFlatWorld = 1, kWorld16 = 2, kPointMips = 4 };  // Direct3D 11's own (Renderer::setLight)
+// Direct3D 11's own (Renderer::setLight); kPlainUpscale (2.5.22): the smaller world made larger by one bilinear tap,
+// not its own sharpening (Catmull-Rom and CAS, 45 taps a pixel of the picture)
+enum Flag : uint8_t { kFlatWorld = 1, kWorld16 = 2, kPointMips = 4, kPlainUpscale = 8 };
 
 struct Overrides {
     bool superLight = false, battery = false;  // the modes on now

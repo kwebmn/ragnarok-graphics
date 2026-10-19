@@ -2121,8 +2121,9 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     exitWorld();  // 2.5.16: a frame without an interface: its world made larger now
     frameOpen_ = false;
     scaled_ = true;  // the start-up calibration is over by the first present (stage 3 spec §4.3)
-    // the world made larger gets a little sharpening of its own unless the present sharpens all of it
-    worldSharpen_ = options.sharpen > 0.0f ? -1.0f : 0.3f;
+    // the world made larger gets a little sharpening of its own unless the present sharpens all of it - or the light
+    // modes want it plain (2.5.22: Catmull-Rom and CAS, 45 taps a pixel, cost more than the world they made larger)
+    worldSharpen_ = options.sharpen > 0.0f || (light_ & light::kPlainUpscale) ? -1.0f : 0.3f;
     // The source is in game pixels: into target pixels by each axis' own ratio (2.5.16: the picture's, the world's
     // smaller one made larger into it by now).
     const auto tx = [this](int x) { return float(double(x) * target_.width / gameWidth_); };

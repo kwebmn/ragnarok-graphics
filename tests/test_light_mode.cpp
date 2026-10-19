@@ -23,7 +23,8 @@ TEST(light_super_light_strips_down_to_the_game) {
     CHECK(o.aiHidden && o.noSharpen && o.noAnisotropy && o.noSupersampling);
     CHECK_EQ(o.worldScaleMax, 50);
     CHECK_EQ(o.renderScaleMax, 100);
-    CHECK_EQ(int(o.flags), int(light::kFlatWorld | light::kWorld16 | light::kPointMips));
+    // 2.5.22: the world made larger plainly - its own sharpening was the frame's dearest pass (45 taps a pixel)
+    CHECK_EQ(int(o.flags), int(light::kFlatWorld | light::kWorld16 | light::kPointMips | light::kPlainUpscale));
     CHECK_EQ(o.fpsMax, 0);  // the frames as the file has them
     EffectSettings e;
     e.preset = EffectPreset::Strong;
@@ -40,7 +41,7 @@ TEST(light_battery_keeps_the_weak_set_and_the_frames) {
     CHECK_EQ(o.effectsLevel, 1);
     CHECK_EQ(o.worldScaleMax, 75);
     CHECK_EQ(o.minimisedFps, 5);
-    CHECK_EQ(int(o.flags), 0);
+    CHECK_EQ(int(o.flags), int(light::kPlainUpscale));  // 2.5.22: the world at 75 % made larger plainly
     CHECK_EQ(light::fpsLimit(60, o), 25);
     CHECK_EQ(light::fpsLimit(0, o), 25);   // no limit in the file: the battery's
     CHECK_EQ(light::fpsLimit(20, o), 20);  // a lower one stays
