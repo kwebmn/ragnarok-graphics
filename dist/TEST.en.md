@@ -1,3 +1,17 @@
+# uaRO Graphics 2.5.25 — what to check
+
+- **DLSS frame generation responds faster.** The game no longer draws frames ahead while the 64-bit renderer waits
+  for the graphics card: it starts its next frame only once its own is shown. The frames drawn used to wait in a
+  queue, and the cursor lagged the mouse by some 100 ms (4x at 4K); now by about half of that.
+- **No more frames on the screen than the monitor shows.** A 144 Hz monitor got 156 a second; it dropped the extra
+  ones unevenly, and the card spent on them the time the game's own frames needed. Now the game's frames are at most
+  the monitor's refresh divided by the factor: at 144 Hz up to 69 a second with 2x, up to 34 with 4x.
+- The cursor and the game's windows are drawn by the game itself, and frame generation does not make them faster:
+  they move with the game's own frames. 2x suits a 144 Hz monitor best.
+- The log now tells how Windows shows the picture: composed with the desktop or straight to the monitor.
+- Please check: frame generation 2x (and 4x to compare) - the cursor and the camera; the counter shows e.g. "55 fps
+  (110 with frame generation)". Then send a report.
+
 # uaRO Graphics 2.5.24 — what to check
 
 - **Palettes.grf with every hair colour.** The Service page's build takes every hair colour its source has (128 in
