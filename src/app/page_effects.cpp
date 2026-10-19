@@ -23,7 +23,7 @@ const int kEffectCount = effectLayoutCount();
 
 // The controls' numbers: the main window hands a page only those from 1000 on (2.2.1: the set's, the groups' and the
 // mode's were under it - they did nothing).
-constexpr int kPreset = 20000, kTier = 20001;
+constexpr int kPreset = 20000, kTier = 20001, kClock = 20002;  // 2.6.11: the clock
 int groupBox(int g) { return 20100 + 20 * g; }
 int groupSlider(int g) { return 20102 + 20 * g; }  // its number: + 1
 int groupOpen(int g) { return 20105 + 20 * g; }
@@ -106,6 +106,17 @@ public:
                 setting(groupKey(g)));
             if (effect_groups::hasStrength(g))
                 slider(p, groupSlider(g), (groupKey(g) + "_strength").c_str(), any && on);
+            if (g == effect_groups::Air) {  // 2.6.11: the time of day - for all that goes by the hour, any group's
+                const IniSetting& clock = setting("effects.clock");
+                const std::string now = m.token(clock);
+                int at = 0;
+                std::vector<std::wstring> items;
+                for (size_t k = 0; k < clock.tokens.size() && k < clock.choices.size(); ++k) {
+                    items.push_back(t(clock.choices[k]));
+                    if (now == clock.tokens[k]) at = int(k);
+                }
+                dot(p, p.choice(kClock, t(clock.label), items, at, t(clock.hint)), clock);
+            }
             if (simple) continue;
             p.buttons({{groupOpen(g),
                         g_open[g] ? t(Text::FxDetailsHide) : tf(Text::FxDetails, {std::to_string(count)})}});
@@ -174,6 +185,12 @@ public:
         }
         if (id == kTier && code == CBN_SELCHANGE) {  // 1.8
             chooseTier(SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0));
+            return;
+        }
+        if (id == kClock && code == CBN_SELCHANGE) {  // 2.6.11
+            const IniSetting& clock = setting("effects.clock");
+            const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
+            if (sel >= 0 && size_t(sel) < clock.tokens.size()) set(clock, clock.tokens[size_t(sel)], true);
             return;
         }
         if (code != BN_CLICKED) return;

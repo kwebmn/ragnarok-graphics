@@ -22,3 +22,15 @@ TEST(daylight_turns_the_shadows_and_warms_the_ends_of_the_day) {
     CHECK(morning.tint[0] > 1.02f);                            // pink
     CHECK(std::fabs(noon.tint[0] - 1.0f) < 0.01f);
 }
+
+TEST(daylight_clock_gives_the_minute_of_the_day) {
+    // 2.6.11, [effects] clock: the computer's minute, or a moment the player chose - fixed, for all that goes by
+    // the hour
+    CHECK_EQ(daylight::minuteOf(daylight::kClockAuto, 777), 777);
+    CHECK_EQ(daylight::minuteOf(daylight::kClockDawn, 777), 6 * 60 + 30);
+    CHECK_EQ(daylight::minuteOf(daylight::kClockMorning, 777), 9 * 60);
+    CHECK_EQ(daylight::minuteOf(daylight::kClockDay, 777), 13 * 60);
+    CHECK_EQ(daylight::minuteOf(daylight::kClockSunset, 777), 18 * 60 + 30);
+    CHECK_EQ(daylight::minuteOf(daylight::kClockNight, 777), 0);
+    CHECK_EQ(daylight::minuteOf(42, 777), 777);  // none of them: the computer's
+}

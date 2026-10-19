@@ -5,6 +5,11 @@
 
 namespace uagfx::daylight {
 
+int minuteOf(int clock, int localMinute) {
+    static const int kMinutes[kClocks] = {-1, 6 * 60 + 30, 9 * 60, 13 * 60, 18 * 60 + 30, 0};
+    return clock > kClockAuto && clock < kClocks ? kMinutes[clock] : localMinute;
+}
+
 Light at(int minute) {
     Light l;
     if (minute < 0) return l;

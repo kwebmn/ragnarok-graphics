@@ -2,6 +2,8 @@
 #include <string>
 
 #include "core/config.hpp"
+#include "core/daylight.hpp"
+#include "core/settings/schema.hpp"
 #include "core/effect_groups.hpp"
 #include "core/outdoors.hpp"
 #include "core/settings/ini_edit.hpp"
@@ -187,4 +189,14 @@ TEST(game_fog_drawn_but_under_the_open_sky_with_the_fix) {
     CHECK(!gameFogDrawn(true, true, true));    // a field or a town: none
     CHECK(gameFogDrawn(true, true, false));    // a dungeon keeps its dark fog (it hides the void past the map)
     CHECK(!gameFogDrawn(false, false, false));  // the game asked for none
+}
+
+TEST(clock_auto_by_default_a_moment_by_its_word) {
+    // 2.6.11: [effects] clock - auto (the computer's) or one of five moments; a change of it alone is a change
+    CHECK_EQ(parseConfig("").effects.clock, int(daylight::kClockAuto));
+    const Config c = parseConfig("[effects]\nclock = sunset\n");
+    CHECK_EQ(c.effects.clock, int(daylight::kClockSunset));
+    CHECK(settings::tokenOf(*settings::findSetting("effects.clock"), c) == "sunset");
+    CHECK_EQ(parseConfig("[effects]\nclock = noon\n").effects.clock, int(daylight::kClockAuto));  // not its word
+    CHECK(!(c.effects == parseConfig("").effects));
 }

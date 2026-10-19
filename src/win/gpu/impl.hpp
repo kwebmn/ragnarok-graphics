@@ -612,7 +612,7 @@ struct Renderer::Impl {
     bool windShared() const { return effects.sharedWind && viewToWorldValid; }
     void updateWind();
     living::Place mapPlace;                          // 1.7: its small details (core/living.hpp)
-    int minuteNow() const { return effects.dayCycle && effects.dayNow >= 0 ? effects.dayNow : living::localMinute(); }
+    int minuteNow() const { return effects.dayNow >= 0 ? effects.dayNow : living::localMinute(); }  // 2.6.11
     LeafLook leafLook() const;  // 1.7: the trees' settings for leafShading (draw.cpp)
     std::vector<FireSpark> lavaCells;       // 0.31: this frame's cells of lava: their middles light around them
     bool lavaLogged = false;

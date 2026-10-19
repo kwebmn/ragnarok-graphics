@@ -584,11 +584,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     Profiler::get().run(GetCurrentThreadId(), config.profile);  // 0.87: [debug] profile
     // 2.2: the set and the groups made into the switches; 0.63: how much night now, by the clock; 0.74: the minute
     EffectSettings fx = effects();
-    if (fx.night || fx.dayCycle) {
+    {  // 2.6.11: the minute for all that goes by the hour - the computer's clock or the player's chosen moment
         SYSTEMTIME t{};
         GetLocalTime(&t);
-        fx.nightNow = nightAmount(fx, t.wHour, t.wMinute);
-        if (fx.dayCycle) fx.dayNow = t.wHour * 60 + t.wMinute;
+        applyClock(fx, t.wHour * 60 + t.wMinute);
     }
     for (const std::string& k : keepOff_) effect_costs::drop(fx, k);  // 0.76
     // 1.9.3: Tab held in the console - the chosen effect off while it is held (the file as it is, that key 0)

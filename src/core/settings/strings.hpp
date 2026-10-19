@@ -334,6 +334,8 @@ enum class Text : uint16_t {
     StripNoPack, DotHint, DotOn, DotOff, DotLegend, ResetPage, ResetPageAsk, WhatsNewTitle,
     ConsoleGroupOff,  // 2.6.8: an effect on whose group is off
     FxNoGameFog, FxNoGameFogHint,  // 2.6.10
+    FxClock, FxClockHint, FxClockAuto, FxClockDawn, FxClockMorning, FxClockDay, FxClockSunset,  // 2.6.11
+    FxClockNight,
     Count
 };
 

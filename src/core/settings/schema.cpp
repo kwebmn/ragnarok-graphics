@@ -352,6 +352,12 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxGroupStrengthHint, " %"},
         {"effects", "tier", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "classic", "remaster"},
          {Text::FxTierAuto, Text::FxTierClassic, Text::FxTierRemaster}, Text::FxTier, Text::FxTierHint, ""},
+        // 2.6.11: the time of day for all that goes by the hour (core/daylight.hpp Clock)
+        {"effects", "clock", Page::Effects, Control::Choice, 0, 0, 0,
+         {"auto", "dawn", "morning", "day", "sunset", "night"},
+         {Text::FxClockAuto, Text::FxClockDawn, Text::FxClockMorning, Text::FxClockDay, Text::FxClockSunset,
+          Text::FxClockNight},
+         Text::FxClock, Text::FxClockHint, ""},
         {"effects", "materials", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMaterials,
          Text::FxMaterialsHint, "", &E::materials},
         {"effects", "materials_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMaterialsStrength,
@@ -739,6 +745,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
         if (k == word + "_strength") return std::to_string(c.effects.groupStrength[g]);
     }
     if (k == "effects.tier") return c.effects.tier == 1 ? "classic" : c.effects.tier == 2 ? "remaster" : "auto";
+    if (k == "effects.clock")  // 2.6.11
+        return s.tokens[c.effects.clock > 0 && c.effects.clock < int(s.tokens.size()) ? size_t(c.effects.clock) : 0];
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.keep_fps") return std::to_string(c.keepFps);

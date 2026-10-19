@@ -235,6 +235,7 @@ struct EffectSettings {
     // frame, not the file's (-1 off).
     bool dayCycle = false;
     int dayNow = -1;
+    int clock = 0;  // 2.6.11: daylight::Clock - the computer's clock (0), or a moment the player chose
     // 0.78: bloom - the bright parts of the picture (sunlit tiles, snow, windows, fire) glow softly. 0.84: off by
     // default. (2.6.11: the filmic curve with it gone at the player's word.)
     bool bloom = false;
@@ -383,6 +384,8 @@ bool drawnByRenderer(const EffectSettings& e);
 // 0.63: how much night now (0-100, EffectSettings::nightNow) at this local time: its strength, by the clock only
 // from 20:00 to 6:00 - rising from 20:00 to 21:00, fading from 5:00 to 6:00.
 int nightAmount(const EffectSettings& e, int hour, int minute);
+// 2.6.11: dayNow and nightNow by the clock the player chose ([effects] clock) or the computer's (localMinute)
+void applyClock(EffectSettings& e, int localMinute);
 
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 // 0.91: [sound] - the game's sound through the driver (core/sound_mix.hpp, win/sound_hook.cpp)

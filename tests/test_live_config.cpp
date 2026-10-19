@@ -321,3 +321,13 @@ TEST(live_config_takes_the_xray_at_once) {
     const LiveUpdate u = liveUpdate(running, file);
     CHECK(u.next.xray);
 }
+
+TEST(live_config_the_chosen_clock_applies_now) {
+    // 2.6.11: the time of day picked in the console or the settings app shows at once
+    CHECK(appliesNow("effects.clock"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nclock = night\n"));
+    CHECK(u.waiting.empty());
+    CHECK_EQ(u.applied.size(), size_t(1));
+    CHECK(u.applied.size() == 1 && u.applied[0] == "clock auto -> night");
+    CHECK_EQ(u.next.effects.clock, 5);
+}

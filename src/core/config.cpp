@@ -1,6 +1,7 @@
 #include "core/config.hpp"
 
 #include "core/ai/kinds.hpp"
+#include "core/daylight.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/schema.hpp"
 #include "core/sprite_exe.hpp"
@@ -216,6 +217,14 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
     return int(strength * f + 0.5);
 }
 
+void applyClock(EffectSettings& e, int localMinute) {
+    const int minute = daylight::minuteOf(e.clock, localMinute);
+    e.dayNow = minute;
+    EffectSettings byTheHour = e;  // a moment the player chose says which hour it is - the night too
+    if (e.clock != daylight::kClockAuto) byTheHour.nightClock = true;
+    e.nightNow = nightAmount(byTheHour, minute / 60, minute % 60);
+}
+
 bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.heat || e.portals || e.weather || e.glow || e.ao ||
@@ -272,7 +281,7 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
         if (s.flag && this->*s.flag != o.*s.flag) return false;
         if (s.number && this->*s.number != o.*s.number) return false;
     }
-    return nightNow == o.nightNow && dayNow == o.dayNow && tier == o.tier && preset == o.preset &&
+    return nightNow == o.nightNow && dayNow == o.dayNow && clock == o.clock && tier == o.tier && preset == o.preset &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&
            std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength);
 }
@@ -472,6 +481,10 @@ Config parseConfig(const std::string& text) {
         } else if (key == "effects.preset") {  // 2.2
             effect_groups::presetFrom(val, c.effects.preset);
         } else if (key.compare(0, 14, "effects.group_") == 0 && groupKey(key, val, c.effects)) {  // 2.2
+        } else if (key == "effects.clock") {  // 2.6.11
+            static const char* const kWords[daylight::kClocks] = {"auto", "dawn", "morning", "day", "sunset", "night"};
+            for (int k = 0; k < daylight::kClocks; ++k)
+                if (val == kWords[k]) c.effects.clock = k;
         } else if (key == "effects.tier") {  // 1.8
             if (val == "auto") c.effects.tier = 0;
             if (val == "classic") c.effects.tier = 1;

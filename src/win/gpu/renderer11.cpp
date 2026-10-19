@@ -2722,7 +2722,7 @@ void Renderer11::applyGrass() {
         c.twin[2] = 0.12f;
         c.sourceRect[1] = float(place_.flowers);
     }
-    const int minute = effects_.dayCycle && effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();
+    const int minute = effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();  // 2.6.11
     if (effects_.dew) c.twin[3] = living::dew(minute) * (1.0f - float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f);
     if (effects_.gusts) c.sourceRect[0] = 1.0f;
     if (windShared()) {  // 2.5.5: the shared wind's way times its strength
@@ -2845,7 +2845,7 @@ void Renderer11::applyCritters() {
     f.crowns = std::move(crowns);
     f.waterKnown = waterLevelKnown_;
     f.waterLevel = waterLevel_;
-    const int minute = effects_.dayCycle && effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();
+    const int minute = effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();  // 2.6.11
     f.day = living::daytime(minute);
     f.night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
     critterWorld_.update(on, f);
@@ -3237,7 +3237,7 @@ void Renderer11::applyMist() {
     EffectSpan span(*this, kTimeMist11);
     mistDone_ = true;
     const living::Place place = living::placeOf(map_, outdoors_, season_ == trees::Season::Autumn);
-    const int minute = effects_.dayCycle && effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();
+    const int minute = effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();  // 2.6.11
     const float morning = effects_.morningFog && outdoors_ && !desert_ ? living::morningFog(minute) : 0.0f;
     const bool swampy = effects_.swamp && place.swamp;
     if (!mistPs_ || (morning <= 0.0f && !swampy) || !cameraValid_ || !target_.texture || !depthViews()) return;

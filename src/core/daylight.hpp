@@ -15,4 +15,10 @@ struct Light {
 // minute: of the day, 0-1439; below 0 the cycle is off - the usual sun (as from behind the camera's left), no tint.
 Light at(int minute);
 
+// 2.6.11, [effects] clock: the time of day all that goes by the hour takes (the day's sun, the night by the clock, the
+// creatures of the day, the dew, the morning fog) - the computer's clock, or a moment the player chose, kept fixed:
+// dawn 6:30, morning 9:00, day 13:00, sunset 18:30, night 0:00 (in the order of the file's words).
+enum Clock { kClockAuto, kClockDawn, kClockMorning, kClockDay, kClockSunset, kClockNight, kClocks };
+int minuteOf(int clock, int localMinute);  // localMinute: the computer's, 0-1439
+
 }  // namespace uagfx::daylight

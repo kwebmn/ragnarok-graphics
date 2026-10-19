@@ -96,6 +96,8 @@ void Console::build(Lang lang) {
         if (!settingOf(groupKey(g))) continue;
         rows_.push_back(Row{Kind::Box, groupKey(g), 0});
         if (effect_groups::hasStrength(g)) rows_.push_back(Row{Kind::Slider, groupKey(g) + "_strength", 1});
+        if (g == effect_groups::Air && settingOf("effects.clock"))  // 2.6.11: the time of day, ← → at once
+            rows_.push_back(Row{Kind::Choice, "effects.clock", 1});
         rows_.push_back(Row{Kind::Open, groupKey(g), 1});
         if (!groupOpen_[g]) continue;
         for (int i = 0; i < effect_groups::memberCount(); ++i) {
