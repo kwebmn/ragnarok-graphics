@@ -309,6 +309,7 @@ private:
         return on;
     }
     bool crittersNeedFeet() const { return effects_.birds || effects_.breath || effects_.splashes; }
+    bool crittersNeedFire() const { return effects_.moths || effects_.embers; }  // 2.6.12
     // 2.5.5: the sun (actor_shadows.cpp): the way to it from the map's file, else the day's; on the screen
     bool mapSun(float toSun[3]) const;
     float sunHeight() const;
@@ -431,6 +432,8 @@ private:
     // torch_flame on (torches.cpp takeTorch); true: the game's draw is not made
     bool flamesWanted() const { return effects_.torch && torchFirePs_; }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);
+    // 2.6.12: the torches off, a flame the game draws noted for the moths and the embers alone (critterFlames_)
+    void noteCritterFlame(const FrameRecord& rec, const DrawCmd& d);
     ID3D11PixelShader* torchFirePs_ = nullptr;
     ID3D11PixelShader* dustPs_ = nullptr;  // 2.5.2: the maps' clouds of dust (core/map_glows.hpp)
     // 2.5.1: the fire of skills lights around it (torches.cpp noteFire): a draw that adds a fire-coloured picture,
@@ -650,6 +653,7 @@ private:
     critters::World critterWorld_;
     std::vector<critters::Crown> frameCrowns_;   // this frame's trees in sight (noteCrown)
     std::vector<critters::Point> critterFires_;  // this frame's flames' tips (the torches' pass)
+    std::vector<torch::Flame> critterFlames_;    // 2.6.12: this frame's flames with the torches off
     float crittersTime_ = 0.0f, crittersStepsSeen_ = 0.0f;
     bool crittersLogged_ = false;
     // 2.5.5: the light in the air, the flare, the shared wind

@@ -105,13 +105,11 @@ bool Renderer::Impl::applyCritters() {
         if (s.born > crittersStepsSeen) f.steps.push_back(critters::Point{s.x, s.y, s.z});
     for (const footsteps::Step& s : footTracker.steps()) crittersStepsSeen = std::max(crittersStepsSeen, s.born);
     for (const torch::Flame& fl : critterFlames) {  // the flames' tips (2.5.4: as the torches' pass had them)
-        if (fl.rhw <= 0.0f || f.fires.size() >= 32) continue;
-        const float vz = 1.0f / fl.rhw, gx = fl.baseX + fl.upX * 0.8f, gy = fl.baseY + fl.upY * 0.8f;
-        const float vx = (gx - proj.cx) * vz / proj.f0, vy = (gy - proj.cy) * vz / proj.f1;
-        f.fires.push_back(critters::Point{vx * m[0] + vy * m[3] + vz * m[6] + m[9],
-                                          vx * m[1] + vy * m[4] + vz * m[7] + m[10],
-                                          vx * m[2] + vy * m[5] + vz * m[8] + m[11]});
+        critters::Point at;
+        if (f.fires.size() < 32 && critters::fireOf(fl, proj, m, at)) f.fires.push_back(at);
     }
+    const float ground = std::hypot(m[6], m[8]);  // 2.6.12: the camera's side of the fires, for the moths
+    if (ground > 1e-3f) f.toCamera = critters::Point{-m[6] / ground, 0.0f, -m[8] / ground};
     f.crowns = frameCrowns;
     frameCrowns.clear();
     f.waterKnown = waterLevelKnown;

@@ -2203,11 +2203,9 @@ const Entry kTexts[] = {
     {"Embers from the fires",
      "Іскри з вогнищ",
      "Угольки от огня"},
-    {"Sparks rise from the torches and the fires, sway, cool and go out in the air. Needs Live torches (Direct3D 12).",
-     "Від смолоскипів і вогнищ здіймаються іскри, кружляють, холонуть і гаснуть у повітрі. Потрібні «Смолоскипи» "
-     "(Direct3D 12).",
-     "От факелов и костров поднимаются искры, кружатся, остывают и гаснут в воздухе. Нужны «Живые факелы» "
-     "(Direct3D 12)."},
+    {"Sparks rise from the torches and the fires, sway, cool and go out in the air (Direct3D 12).",
+     "Від смолоскипів і вогнищ здіймаються іскри, кружляють, холонуть і гаснуть у повітрі (Direct3D 12).",
+     "От факелов и костров поднимаются искры, кружатся, остывают и гаснут в воздухе (Direct3D 12)."},
     {"Breath in the cold",
      "Пара в холод",
      "Пар на морозе"},
@@ -3233,10 +3231,12 @@ const Entry kTexts[] = {
      "От сумерек до рассвета над травой, где днём летают бабочки, низко плывут светлячки — то светятся, то гаснут "
      "(Direct3D 12)."},
     {"Moths at the fire", "Нічні метелики біля вогню", "Мотыльки у огня"},
-    {"At night a few pale moths circle the torches and the fires near you, lit by the flames (Direct3D 12).",
-     "Уночі кілька світлих нічних метеликів кружляють довкола смолоскипів і вогнищ поруч, освітлені полум'ям "
-     "(Direct3D 12).",
-     "Ночью несколько светлых мотыльков кружат вокруг факелов и огней рядом, освещённые пламенем (Direct3D 12)."},
+    {"At night a few moths circle in front of the torches and the fires near you, their wings flashing in the "
+     "flames' light (Direct3D 12).",
+     "Уночі кілька нічних метеликів кружляють перед смолоскипами й вогнищами поруч, їхні крила спалахують у світлі "
+     "полум'я (Direct3D 12).",
+     "Ночью несколько мотыльков кружат перед факелами и огнями рядом, их крылья вспыхивают в свете пламени "
+     "(Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -2,7 +2,9 @@
 #include <cstdint>
 #include <vector>
 
+#include "core/game_camera.hpp"
 #include "core/living.hpp"
+#include "core/torch.hpp"
 
 namespace uagfx::critters {
 
@@ -73,13 +75,19 @@ struct Frame {
     bool centreKnown = false;
     std::vector<Point> feet;    // the characters' feet this frame
     std::vector<Point> steps;   // the steps that began this frame
-    std::vector<Point> fires;   // the flames' tips
+    std::vector<Point> fires;   // the flames' tips (fireOf)
     std::vector<Crown> crowns;  // the trees in sight
     float waterLevel = 0.0f;    // the water's height, when known
     bool waterKnown = false;
     float day = 1.0f;     // 0-1: daylight (living::daytime)
     float night = 0.0f;   // 0-1
+    Point toCamera;       // 2.6.12: the way to the camera along the ground (x, z a unit long), 0: not known
 };
+
+// 2.6.12: where a flame the game drew burns in the world - its tip, four fifths of the way up from its base, back
+// from the screen by the game's projection and the camera backwards (view -> world, 4 x 3 rows): the moths circle
+// it, the embers rise from it. false for a flame with no depth.
+bool fireOf(const torch::Flame& f, const camera::Projection& p, const float viewToWorld[12], Point& out);
 
 class World {
 public:

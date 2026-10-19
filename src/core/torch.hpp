@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 
 namespace uagfx::torch {
@@ -34,6 +35,10 @@ struct Flame {
 // The flame of a quad drawn with a flame frame - its texture coordinates span the frame (the game's sprite setting
 // may halve it, its texture may be larger) - false when the corners do not map the frame onto the screen.
 bool flameOf(const Corner q[4], Flame& out);
+// 2.6.12: the flame of such a quad from its four vertices as the game wrote them (each x, y, z, rhw, the diffuse
+// colour - its alpha the game's fade - the specular one, u, v; `stride` bytes apart): false when they map no flame
+// frame or it has no depth.
+bool flameOfQuad(const uint8_t* vertices, size_t stride, Flame& out);
 
 // How bright a flame burns at time t (seconds): about 1, within 1 +- amount, smooth; each seed its own way.
 float flicker(double t, uint32_t seed, float amount);

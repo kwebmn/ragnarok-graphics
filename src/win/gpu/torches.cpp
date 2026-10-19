@@ -67,6 +67,17 @@ bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
     return effects.torchFlame;  // 0.23.2: off - the game's own flame, the new glow and light around it
 }
 
+// 2.6.12: with the torches' pass off, a flame the game draws (known as takeTorch knows it, drawn as the game has it)
+// noted for the creatures alone - the moths circle it, the embers rise from it (applyCritters).
+void Renderer::Impl::noteCritterFlame(const FrameRecord& rec, const DrawCmd& d) {
+    if (objectTextures.of(d.texture[0]) != objects::Kind::TorchFlame || critterFlames.size() >= kMaxTorches) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    torch::Flame f;
+    if (d.vertexOffset + 4 * stride <= v.size() && torch::flameOfQuad(v.data() + d.vertexOffset, stride, f))
+        critterFlames.push_back(f);
+}
+
 // 0.26: a fire-coloured effect drawn this frame (draw.cpp) - its middle and depth from its vertices, how much it
 // lights: its picture's fire (0.36: or its own light), the game's fade and colour of it, its size on the screen.
 void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]) {
@@ -505,7 +516,7 @@ bool Renderer::Impl::applyTorches() {
             f.rhw = 1.0f / vb.z;
             if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
         }
-    critterFlames = flames;  // 2.5.4: the embers rise from them (critters.cpp)
+    if (torchWanted()) critterFlames = flames;  // 2.5.4: the embers rise from them; off: noteCritterFlame's
     // 0.28: the fireflies - the game's (their flash by their primitive's seed) and, the map file read, those the
     // maps' makers placed that the game does not show (713, 714, 946), drifting about their places.
     struct Fly {

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
-
+#include <cstring>
 
 namespace uagfx::torch {
 namespace {
@@ -70,6 +70,22 @@ bool flameOf(const Corner q[4], Flame& out) {
     out.z = (q[0].z + q[1].z + q[2].z + q[3].z) * 0.25f;
     out.rhw = (q[0].rhw + q[1].rhw + q[2].rhw + q[3].rhw) * 0.25f;
     return std::isfinite(out.baseX) && std::isfinite(out.baseY) && out.halfWidth > 0.0f;
+}
+
+bool flameOfQuad(const uint8_t* vertices, size_t stride, Flame& out) {
+    Corner q[4];
+    uint32_t diffuse = 0;
+    for (int i = 0; i < 4; ++i) {
+        const uint8_t* p = vertices + size_t(i) * stride;
+        float xyzw[4], uv[2];
+        std::memcpy(xyzw, p, sizeof xyzw);
+        std::memcpy(uv, p + 24, sizeof uv);  // after the position, the diffuse and the specular colours
+        q[i] = Corner{xyzw[0], xyzw[1], xyzw[2], xyzw[3], uv[0], uv[1]};
+        if (i == 0) std::memcpy(&diffuse, p + 16, sizeof diffuse);
+    }
+    if (!flameOf(q, out) || out.rhw <= 0.0f) return false;
+    out.alpha = std::min(1.0f, float(diffuse >> 24) / 240.0f);  // the .act shows the flame at 240
+    return true;
 }
 
 float flicker(double t, uint32_t seed, float amount) {

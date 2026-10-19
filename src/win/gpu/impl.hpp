@@ -940,6 +940,7 @@ struct Renderer::Impl {
                               !lavaCells.empty() || !portalSparks.empty() || !portalTracks.empty());
     }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
+    void noteCritterFlame(const FrameRecord& rec, const DrawCmd& d);  // 2.6.12: the torches off
     bool torchReady();     // the shaders, pipelines and the picture's copies are there
     bool applyTorches();   // once a frame (torchDone), the world drawn: before its colours; false: lost
     // A new picture (cleared, presented, another target): the world's effects are due again.
@@ -1029,6 +1030,7 @@ struct Renderer::Impl {
     bool crittersWanted() const;
     bool crittersDue() const { return !crittersDone && groundDrawn && crittersWanted(); }
     bool crittersNeedFeet() const { return effects.birds || effects.breath || effects.splashes; }
+    bool crittersNeedFire() const { return effects.moths || effects.embers; }  // 2.6.12
     void noteCrown(const FrameRecord& rec, const DrawCmd& d);
     // 1.8: the materials (materials.cpp) and the remaster (effects.tier)
     ID3DBlob* materialPs = nullptr;

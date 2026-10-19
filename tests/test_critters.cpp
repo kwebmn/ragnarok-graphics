@@ -2,7 +2,9 @@
 #include <cmath>
 
 #include "core/critters.hpp"
+#include "core/game_camera.hpp"
 #include "core/living.hpp"
+#include "core/torch.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -143,7 +145,8 @@ TEST(critters_moths_round_the_fires_at_night) {
     for (const critters::Sprite& s : w.sprites())
         if (s.kind == critters::Moth) {
             const float r = std::hypot(s.at.x - fire.x, s.at.z - fire.z);
-            round = round && r > 0.4f && r < 2.6f && s.at.y > fire.y - 1.8f && s.at.y < fire.y + 1.0f;
+            round = round && r > 0.8f && r < 3.0f && s.at.y > fire.y - 1.8f && s.at.y < fire.y + 1.0f;
+            round = round && s.size > 0.8f;  // 2.6.12: at 0.55 a speck by the flame, taken for a spark (R-B27V4Y)
         }
     CHECK(round);
     f.day = 1.0f;  // by day none
@@ -160,4 +163,53 @@ TEST(critters_moths_round_the_fires_at_night) {
     for (int k = 0; k < 6; ++k) f.fires.push_back(critters::Point{float(k) * 6.0f, -3.0f, 0.0f});
     w.update(on, f);
     CHECK_EQ(count(w.sprites(), critters::Moth), 12);
+}
+
+TEST(critters_moths_keep_to_the_cameras_side_of_their_fire) {
+    // 2.6.12: a torch hangs on a wall - the moths circle out in front of it, on the camera's side, not in the wall
+    critters::World w;
+    w.setPlace(living::placeOf("moc_pryd01", false, false));
+    critters::Switches on;
+    on.moths = true;
+    critters::Frame f;
+    f.centreKnown = true;
+    f.dt = 0.05f;
+    f.day = 0.0f;
+    const critters::Point fire{0.0f, -3.0f, 0.0f};
+    f.fires = {fire};
+    f.toCamera = critters::Point{0.0f, 0.0f, -1.0f};
+    float behind = -1e9f, sum = 0.0f;
+    int n = 0;
+    for (int frame = 0; frame < 400; ++frame) {
+        f.now = double(frame) * 0.05;
+        w.update(on, f);
+        for (const critters::Sprite& s : w.sprites())
+            if (s.kind == critters::Moth) {
+                behind = std::max(behind, s.at.z - fire.z);
+                sum += s.at.z - fire.z;
+                ++n;
+            }
+    }
+    CHECK_EQ(n, 1200);
+    CHECK(behind < 0.8f);           // never deep behind the flame
+    CHECK(sum / float(n) < -0.8f);  // out in front of it
+}
+
+TEST(critters_fire_of_a_flame_is_its_tip_in_the_world) {
+    // 2.6.12: a flame the game drew, back from the screen into the world four fifths up from its base - where the
+    // moths circle and the embers rise; the camera here looks along the world's z from (10, -5, 20)
+    const camera::Projection p = camera::projectionFor(1920, 1080);
+    const float viewToWorld[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 10, -5, 20};
+    torch::Flame fl;
+    fl.baseX = p.cx;
+    fl.baseY = p.cy;
+    fl.upY = -50.0f;
+    fl.rhw = 0.01f;  // 100 units away
+    critters::Point at;
+    CHECK(critters::fireOf(fl, p, viewToWorld, at));
+    CHECK(std::fabs(at.x - 10.0f) < 1e-3f);
+    CHECK(std::fabs(at.y - (-5.0f - 40.0f * 100.0f / p.f1)) < 1e-3f);
+    CHECK(std::fabs(at.z - 120.0f) < 1e-3f);
+    fl.rhw = 0.0f;  // no depth: nowhere
+    CHECK(!critters::fireOf(fl, p, viewToWorld, at));
 }

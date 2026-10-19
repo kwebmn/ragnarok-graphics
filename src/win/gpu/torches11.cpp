@@ -185,20 +185,8 @@ void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
     if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame || flames_.size() >= kMaxTorches) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
-    if (d.vertexOffset + 4 * stride > v.size()) return;
-    torch::Corner q[4];
-    uint32_t diffuse = 0;
-    for (int i = 0; i < 4; ++i) {
-        const uint8_t* p = v.data() + d.vertexOffset + size_t(i) * stride;
-        float xyzw[4], uv[2];
-        std::memcpy(xyzw, p, sizeof xyzw);
-        std::memcpy(uv, p + 24, sizeof uv);
-        q[i] = torch::Corner{xyzw[0], xyzw[1], xyzw[2], xyzw[3], uv[0], uv[1]};
-        if (i == 0) std::memcpy(&diffuse, p + 16, sizeof diffuse);
-    }
     torch::Flame f;
-    if (!torch::flameOf(q, f) || f.rhw <= 0.0f) return;
-    f.alpha = std::min(1.0f, float(diffuse >> 24) / 240.0f);
+    if (d.vertexOffset + 4 * stride > v.size() || !torch::flameOfQuad(v.data() + d.vertexOffset, stride, f)) return;
     flames_.push_back(f);
     if (cameraValid_ && !mapWorld_.axes().known()) {  // 2.5.1: where it stands, for the map file's axes (torches.cpp)
         const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
@@ -208,6 +196,15 @@ void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
                                        vx * m[1] + vy * m[4] + vz * m[7] + m[10],
                                        vx * m[2] + vy * m[5] + vz * m[8] + m[11]});
     }
+}
+
+void Renderer11::noteCritterFlame(const FrameRecord& rec, const DrawCmd& d) {
+    if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame || critterFlames_.size() >= kMaxTorches) return;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    torch::Flame f;
+    if (d.vertexOffset + 4 * stride <= v.size() && torch::flameOfQuad(v.data() + d.vertexOffset, stride, f))
+        critterFlames_.push_back(f);
 }
 
 bool Renderer11::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
@@ -647,12 +644,8 @@ void Renderer11::applyTorchLight() {
         for (const Item& l : lamps) addLight(l.view, l.reach, l.colour, l.strength);
     }
     for (const torch::Flame& f : flames) {  // 2.5.4: the flames' tips in the world, for the embers rising from them
-        if (f.rhw <= 0.0f || critterFires_.size() >= 32) continue;
-        const float vz = 1.0f / f.rhw, gx = f.baseX + f.upX * 0.8f, gy = f.baseY + f.upY * 0.8f;
-        const float vx = (gx - proj.cx) * vz / proj.f0, vy = (gy - proj.cy) * vz / proj.f1;
-        critterFires_.push_back(critters::Point{vx * m[0] + vy * m[3] + vz * m[6] + m[9],
-                                                vx * m[1] + vy * m[4] + vz * m[7] + m[10],
-                                                vx * m[2] + vy * m[5] + vz * m[8] + m[11]});
+        critters::Point at;
+        if (critterFires_.size() < 32 && critters::fireOf(f, proj, m, at)) critterFires_.push_back(at);
     }
     if (heatWanted())  // 2.5.3: the hot air over each flame
         for (const torch::Flame& f : flames) {
