@@ -27,7 +27,6 @@ const Member kMembers[] = {
     {"rays", Light, 2, &E::rays},
     {"glow", Light, 2, &E::glow},
     {"round_light", Light, 2, &E::roundLight},
-    {"bounce_light", Light, 3, &E::bounceLight},
     {"night_windows", Light, 3, &E::nightWindows},
 
     {"actor_shadows", Shadows, 1, &E::actorShadows},

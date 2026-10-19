@@ -233,7 +233,6 @@ enum class Text : uint16_t {
     FxGroundSeams, FxGroundSeamsHint,
     ConsoleTitle, ConsoleKeys,
     // 1.11
-    FxBounceLight, FxBounceLightHint,
     // 1.13
     FxVolumetricFog, FxVolumetricFogHint, FxVolumetricFogDensity, FxVolumetricFogDensityHint,
     // 1.15

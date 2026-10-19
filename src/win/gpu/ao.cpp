@@ -731,36 +731,7 @@ bool Renderer::Impl::applyDof() {
     return worldPass(dofApplyPipelines[code], w, h, c, dofSrv[0], true, focus);
 }
 
-// 1.11: the light from around (bounce_light_ps) - the picture's copy put back lit a little by the colours around it -
-// before the soft shadows and the characters. 2.6.8: the sky's colour on what faces up (sky_light) gone.
-bool Renderer::Impl::applyBounceLight() {
-    EffectTime t(*this, kTimeBounceLight);  // 2.5.14: and its crumb
-    bounceLightDone = true;
-    if (!ensureScene("reflected light")) return true;
-    ID3D12PipelineState* pso =
-        alphaPipeline(bounceLightPs, bounceLightPipelines, upscale ? 1 : samples, "reflected light");
-    if (!pso) return true;
-    if (!copySceneColor() || !copySceneDepth()) return false;
-    const int w = sceneWidth, h = sceneHeight;
-    Constants c{};
-    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    c.scale = float(upscale ? worldScale : scale);
-    if (upscale) {
-        c.jitter[0] = jitter[0];
-        c.jitter[1] = jitter[1];
-    }
-    c.uiPixels[0] = float(w);
-    c.uiPixels[1] = float(h);
-    c.twin[2] = 6.0f;  // world units around
-    if (!bounceLightLogged) LOG_INFO("reflected light: on %s", mapName.c_str());
-    bounceLightLogged = true;
-    return worldPass(pso, w, h, c, sceneColorSrv, true);
-}
-
 bool Renderer::Impl::finishWorld() {
-    if (bounceLightDue() && !applyBounceLight()) return false;  // 1.11
     if (aoDue() && !applyAo()) return false;
     if (seamsDue() && !applySeams()) return false;            // 1.9
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7

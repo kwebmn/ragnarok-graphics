@@ -315,12 +315,10 @@ private:
     float sunHeight() const;
     void sunGround(float out[3]) const;
     void sunOnScreen(float out[2]) const;
-    // 2.5.5: the light from around (ao.cpp applyBounceLight), before the soft shadows; the light in
-    // the air about the lights and from the sky (haze.cpp applyShafts), the sun's flare (applyFlare); the depth of
-    // field (ao.cpp applyDof), after the colours; the characters lit by the sun from their sides (sun_map.cpp
-    // spriteConstants); the shared wind (weather.cpp updateWind) the weather, the clouds, the sky, the grass, the
-    // sand and the leaves go with
-    void applyBounceLight();
+    // 2.5.5: the light in the air about the lights and from the sky (haze.cpp applyShafts), the sun's flare
+    // (applyFlare); the depth of field (ao.cpp applyDof), after the colours; the characters lit by the sun from their
+    // sides (sun_map.cpp spriteConstants); the shared wind (weather.cpp updateWind) the weather, the clouds, the sky,
+    // the grass, the sand and the leaves go with
     void applyShafts();
     void applyFlare();
     void applyDof();
@@ -665,8 +663,7 @@ private:
     std::vector<critters::Point> critterFires_;  // this frame's flames' tips (the torches' pass)
     float crittersTime_ = 0.0f, crittersStepsSeen_ = 0.0f;
     bool crittersLogged_ = false;
-    // 2.5.5: the sky's light, the light in the air, the flare, the depth of field, the shared wind
-    ID3D11PixelShader* bounceLightPs_ = nullptr;
+    // 2.5.5: the light in the air, the flare, the depth of field, the shared wind
     ID3D11PixelShader* shaftsPs_ = nullptr;
     ID3D11PixelShader* flarePs_ = nullptr;
     ID3D11PixelShader* dofDownPs_ = nullptr;
@@ -680,8 +677,8 @@ private:
     LARGE_INTEGER dofFocusTime_{};
     int shaftLights_ = 0;  // the lights of this frame's torches' pass (lightData_)
     Target shafts_;        // 2.5.7: the light in the air at half the size
-    bool bounceLightDone_ = false, shaftsDone_ = false, flareDone_ = false, dofDone_ = false;
-    bool bounceLightLogged_ = false, dofLogged_ = false;
+    bool shaftsDone_ = false, flareDone_ = false, dofDone_ = false;
+    bool dofLogged_ = false;
     float windClock_ = -1.0f;
     wind::Wind windNow_;
     float windScreenX_ = 0.0f;
@@ -812,7 +809,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[21][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21)
+        ID3D11Query* effect[20][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21; 2.6.8: 20)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -823,13 +820,13 @@ private:
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
-        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeBounceLight11, kTimeShafts11,
+        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeShafts11,
         kTimeDof11, kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
         // 2.5.15: the game's world draws (with the effects drawn amid them) and its interface's - apart from the
         // effects' own passes in the log, not in their costs (an HD 6570: 46-57 ms a frame, effects a few of them)
         kTimeWorld11, kTimeUi11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 21, "FrameTimes::effect holds 21");
+    static_assert(kEffectTimes11 == 20, "FrameTimes::effect holds 20");
     static bool drawsTimer(int e) { return e == kTimeWorld11 || e == kTimeUi11; }
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);

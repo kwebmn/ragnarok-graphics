@@ -189,7 +189,6 @@ Renderer11::~Renderer11() {
     drop(crittersPs_);
     drop(crittersDataSrv_);
     drop(crittersData_);
-    drop(bounceLightPs_);  // 2.5.5
     drop(shaftsPs_);
     drop(flarePs_);
     drop(dofDownPs_);
@@ -411,7 +410,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[62] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[61] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -456,8 +455,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"grass_ps", ps, shaderSource(), {}, true},
                    {"critters_vs", vs, shaderSource(), {}, true},  // 2.5.4: the living world
                    {"critters_ps", ps, shaderSource(), {}, true},
-                   {"bounce_light_ps", ps, shaderSource(), {}, true},  // 2.5.5: reflected light, shafts, flare, DoF
-                   {"shafts_ps", ps, shaderSource(), {}, true},
+                   {"shafts_ps", ps, shaderSource(), {}, true},  // 2.5.5: shafts, flare, DoF
                    {"flare_ps", ps, shaderSource(), {}, true},
                    {"dof_down_ps", ps, shaderSource(), {}, true},
                    {"dof_focus_ps", ps, shaderSource(), {}, true},
@@ -601,15 +599,14 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[50].code.empty() || !psOf(wants[50], grassPs_)) grassPs_ = nullptr;
     if (wants[51].code.empty() || !vsOf(wants[51], crittersVs_)) crittersVs_ = nullptr;
     if (wants[52].code.empty() || !psOf(wants[52], crittersPs_)) crittersPs_ = nullptr;
-    if (wants[53].code.empty() || !psOf(wants[53], bounceLightPs_)) bounceLightPs_ = nullptr;  // 2.5.5
-    if (wants[54].code.empty() || !psOf(wants[54], shaftsPs_)) shaftsPs_ = nullptr;
-    if (wants[55].code.empty() || !psOf(wants[55], flarePs_)) flarePs_ = nullptr;
-    if (wants[56].code.empty() || !psOf(wants[56], dofDownPs_)) dofDownPs_ = nullptr;
-    if (wants[57].code.empty() || !psOf(wants[57], dofFocusPs_)) dofFocusPs_ = nullptr;
-    if (wants[58].code.empty() || !psOf(wants[58], dofApplyPs_)) dofApplyPs_ = nullptr;
-    if (wants[59].code.empty() || !psOf(wants[59], fogLightPs_)) fogLightPs_ = nullptr;
-    if (wants[60].code.empty() || !vsOf(wants[60], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
-    if (wants[61].code.empty() || !psOf(wants[61], mirrorPs_)) mirrorPs_ = nullptr;
+    if (wants[53].code.empty() || !psOf(wants[53], shaftsPs_)) shaftsPs_ = nullptr;
+    if (wants[54].code.empty() || !psOf(wants[54], flarePs_)) flarePs_ = nullptr;
+    if (wants[55].code.empty() || !psOf(wants[55], dofDownPs_)) dofDownPs_ = nullptr;
+    if (wants[56].code.empty() || !psOf(wants[56], dofFocusPs_)) dofFocusPs_ = nullptr;
+    if (wants[57].code.empty() || !psOf(wants[57], dofApplyPs_)) dofApplyPs_ = nullptr;
+    if (wants[58].code.empty() || !psOf(wants[58], fogLightPs_)) fogLightPs_ = nullptr;
+    if (wants[59].code.empty() || !vsOf(wants[59], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
+    if (wants[60].code.empty() || !psOf(wants[60], mirrorPs_)) mirrorPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -646,7 +643,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"COLOR", 0, colour, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}};
-        if (FAILED(device_->CreateInputLayout(layout, 3, wants[60].code.data(), wants[60].code.size(),
+        if (FAILED(device_->CreateInputLayout(layout, 3, wants[59].code.data(), wants[59].code.size(),
                                               &mirrorLayout_)))
             mirrorLayout_ = nullptr;
     }
@@ -1281,11 +1278,6 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         applySeams();
     }
     const bool passes = !seamPass_ && !s.ui && s.blend && groundDrawn_;  // the passes before the characters
-    if (passes && !bounceLightDone_ && bounceLightPs_ && effects_.bounceLight &&
-        cameraValid_) {  // 2.5.5: under the soft shadows (draw.cpp)
-        flushBatch();
-        applyBounceLight();
-    }
     if (passes && !aoDone_ && aoWanted()) {  // 2.5.1: before the characters (draw.cpp)
         flushBatch();
         applyAo();
@@ -2150,7 +2142,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
     frameCrowns_.clear();
     critterFires_.clear();
-    bounceLightDone_ = shaftsDone_ = flareDone_ = dofDone_ = fogDone_ = false;  // 2.5.5
+    shaftsDone_ = flareDone_ = dofDone_ = fogDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
@@ -3119,25 +3111,6 @@ void Renderer11::updateWind() {
     skyDrift_.advance(windNow_.x * s * 0.012f, windNow_.z * s * 0.012f, dt);
 }
 
-// 2.5.5: as Direct3D 12's applyBounceLight (ao.cpp) - the picture's copy put back lit a little by the colours around
-// it (2.6.8: the sky's colour on what faces up gone)
-void Renderer11::applyBounceLight() {
-    EffectSpan span(*this, kTimeBounceLight11);
-    bounceLightDone_ = true;
-    if (!bounceLightPs_ || !effects_.bounceLight || !cameraValid_ || !target_.texture || !depthViews()) return;
-    Constants c{};
-    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    c.scale = float(scale_);
-    c.uiPixels[0] = float(target_.width);
-    c.uiPixels[1] = float(target_.height);
-    c.twin[2] = 6.0f;  // world units around
-    if (!bounceLightLogged_) LOG_INFO("reflected light: on %s (Direct3D 11)", map_.c_str());
-    bounceLightLogged_ = true;
-    worldPass(bounceLightPs_, c, 1, 1, depthSrv_);
-}
-
 // 2.5.5: as Direct3D 12's applyShafts (haze.cpp) - the light in the air about this frame's lights (the torches'
 // pass's list, lightData_) and, under the open sky, rays from where the sky shows past the map's edge, added
 void Renderer11::applyShafts() {
@@ -3685,7 +3658,7 @@ void Renderer11::timeFrame() {
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
                                                              "haze", "sky", "weather", "ao", "clouds", "bloom",
-                                                             "steps", "heat", "bounce_light", "shafts", "dof",
+                                                             "steps", "heat", "shafts", "dof",
                                                              "glow", "water", "floor", "grass", "world",
                                                              "interface"};
         recent_.gpuMs = recentMs_ / recentFrames_;
@@ -3787,7 +3760,7 @@ void Renderer11::logGpu(ULONGLONG now) {
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
                                                             "colour", "haze", "sky", "weather", "soft shadows",
                                                             "clouds", "bloom", "footprints", "heat haze",
-                                                            "reflected light", "light in the air",
+                                                            "light in the air",
                                                             "depth of field", "glow", "water's copies",
                                                             "floor reflections", "grass", "", ""};
         if (effectMs_[kTimeWorld11] > 0.0 || effectMs_[kTimeUi11] > 0.0)  // 2.5.15

@@ -73,7 +73,6 @@ constexpr UINT kSlots = 2;              // submissions in flight
 enum EffectTimer : UINT {
     kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
     kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
-    kTimeBounceLight,  // 2.5.14: keep_fps knew nothing of its cost
     kEffectTimes
 };
 // 2.2.2: each timed pass's names, in the enum's order (core/effect_costs.hpp kTimedPasses: the key Costs know, the
@@ -1024,7 +1023,6 @@ struct Renderer::Impl {
         groundGroups.clear();
         groundTextures.clear();
         seamsDone = false;
-        bounceLightDone = false;  // 1.11
         if (mirrorCollecting()) {  // 1.16: the last frame's casters for this one's mirror
             mirrorVerts.swap(sunVerts);
             mirrorCasters.swap(sunCasters);
@@ -1129,13 +1127,6 @@ struct Renderer::Impl {
     bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty(); }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     bool applySeams();  // once a frame, the ground drawn; false: lost
-    // 1.11: the light from around (ao.cpp applyBounceLight, bounce_light_ps)
-    ID3DBlob* bounceLightPs = nullptr;
-    ID3D12PipelineState* bounceLightPipelines[4] = {};
-    bool bounceLightDone = false, bounceLightLogged = false;
-    bool bounceLightWanted() const { return bounceLightPs && effects.bounceLight; }
-    bool bounceLightDue() const { return bounceLightWanted() && groundDrawn && !bounceLightDone && viewToWorldValid; }
-    bool applyBounceLight();  // once a frame, before the characters; false: lost
     // 1.12: the frame's opaque world (sun_map.cpp noteCaster) - since 2.2 for the mirror only
     struct SunCaster {
         uint32_t first = 0, count = 0;  // vertices into sunVerts (six floats each: x, y, z, u, v, colour's bits)
