@@ -1,3 +1,14 @@
+# uaRO Graphics 2.5.24 — what to check
+
+- **Palettes.grf with every hair colour.** The Service page's build takes every hair colour its source has (128 in
+  Kamishi's pack), not only 0-20. The server clamps hair at 8 now, but should the limit go up, the new colours show in
+  the game at once, without building again. It adds about 70 KB: 4.5 MB for 4.4. The texture pack makes heads in
+  colours 0-20, the driver colours the rest itself.
+- **The frame counter with DLSS frame generation** shows the frames on the screen too: "42 fps (166 with frame
+  generation)". It counted the game's frames alone, and frame generation looked off.
+- Please check: Service -> "Game palettes" -> make it again; about 23,600 palettes in the end. Put the new
+  Palettes.grf in place (the game closed) - the game looks as before.
+
 # uaRO Graphics 2.5.23 — what to check
 
 - **Dyed clothes and hair with AI.** A character in dyed clothes was drawn without AI: the pack makes the bodies in
