@@ -31,19 +31,19 @@ TEST(effect_costs_drop_the_costliest_first) {
     CHECK(effect_costs::pickToDrop(none, c, {}).empty());
 }
 
-TEST(effect_costs_keep_fps_drops_the_light_from_the_sky) {
-    // 2.5.14: the light from the sky and from around (one pass, "sky_light") was the costliest of an HD 6570's frame
-    // (R-7NUW85: 29 ms) and keep_fps never turned it off - none of its switches was known to it
+TEST(effect_costs_keep_fps_drops_the_reflected_light) {
+    // 2.5.14: the light from the sky and from around (one pass) was the costliest of an HD 6570's frame (R-7NUW85:
+    // 29 ms) and keep_fps never turned it off - none of its switches was known to it. 2.6.8: the sky's part gone, the
+    // pass the reflected light's alone ("bounce_light")
     EffectSettings e = effectsOff();
-    e.skyLight = e.bounceLight = e.ao = e.grass = true;
-    const effect_costs::Costs c{{"sky_light", 29.47}, {"ao", 4.57}, {"grass", 2.42}};
-    CHECK(effect_costs::pickToDrop(e, c, {}) == "sky_light");
-    effect_costs::drop(e, "sky_light");
-    CHECK(!e.skyLight && e.bounceLight);
-    CHECK(effect_costs::pickToDrop(e, c, {"sky_light"}) == "bounce_light");  // the pass runs while either is on
+    e.bounceLight = e.ao = e.grass = true;
+    const effect_costs::Costs c{{"bounce_light", 29.47}, {"ao", 4.57}, {"grass", 2.42}};
+    CHECK(effect_costs::pickToDrop(e, c, {}) == "bounce_light");
     effect_costs::drop(e, "effects.bounce_light");
-    CHECK(!e.bounceLight);
-    CHECK(effect_costs::passOf("effects.sky_light") == "sky_light");
+    CHECK(!e.bounceLight && e.ao);
+    CHECK(effect_costs::pickToDrop(e, c, {"bounce_light"}) == "ao");
+    CHECK(effect_costs::passOf("effects.bounce_light") == "bounce_light");
+    CHECK(effect_costs::passOf("effects.sky_light").empty());  // an old ini's key: no effect any more
     CHECK(effect_costs::costOf(c, "effects.bounce_light") > 29.0);
 }
 

@@ -15,9 +15,8 @@ struct Costly {
 // The usually costliest first: what keep_fps turns off while nothing is measured yet.
 const Costly kCostly[] = {
     {"grass", "grass", &EffectSettings::grass},
-    // 2.5.14: one pass draws both - it runs while either is on (R-7NUW85: 29 ms of an HD 6570's frame, never dropped)
-    {"sky_light", "sky_light", &EffectSettings::skyLight},
-    {"bounce_light", "sky_light", &EffectSettings::bounceLight},
+    // 2.5.14: timed on its own (R-7NUW85: 29 ms of an HD 6570's frame, never dropped); 2.6.8: the bounce alone
+    {"bounce_light", "bounce_light", &EffectSettings::bounceLight},
     {"floor_reflections", "floor", &EffectSettings::floorReflections},
     {"dof", "dof", &EffectSettings::dof},
     {"ao", "ao", &EffectSettings::ao},

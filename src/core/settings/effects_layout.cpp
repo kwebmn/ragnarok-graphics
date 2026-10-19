@@ -90,7 +90,6 @@ const EffectLayout kEffects[] = {
     {"effects.materials", {}, {"effects.materials_strength"}, {}, 3},  // 1.8
     {"effects.ground_seams", {}, {}, {}, 3},  // 1.9
 
-    {"effects.sky_light", {}, {}, {}, 3},  // 1.11
     {"effects.bounce_light", {}, {}, {}, 3},  // 1.11
     {"effects.volumetric_fog", {}, {"effects.volumetric_fog_density"}, {}, 3},  // 1.13
     {"effects.smooth_hills", {}, {"effects.smooth_hills_strength"}, {}, 3},  // 1.15

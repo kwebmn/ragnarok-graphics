@@ -161,7 +161,6 @@ EffectSettings effectsOff() {
     e.smoothHills = false;
     e.volumetricFog = false;
     e.bounceLight = false;
-    e.skyLight = false;
     e.groundSeams = false;
     e.materials = false;
     e.underwater = false;
@@ -234,7 +233,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.smoothHills ||
            e.volumetricFog ||
            e.bounceLight ||
-           e.skyLight ||
            e.groundSeams ||
            e.materials ||
            e.underwater ||

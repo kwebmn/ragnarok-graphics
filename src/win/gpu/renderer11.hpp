@@ -313,12 +313,12 @@ private:
     float sunHeight() const;
     void sunGround(float out[3]) const;
     void sunOnScreen(float out[2]) const;
-    // 2.5.5: the light from the sky and from around (ao.cpp applySkyLight), before the soft shadows; the light in
+    // 2.5.5: the light from around (ao.cpp applyBounceLight), before the soft shadows; the light in
     // the air about the lights and from the sky (haze.cpp applyShafts), the sun's flare (applyFlare); the depth of
     // field (ao.cpp applyDof), after the colours; the characters lit by the sun from their sides (sun_map.cpp
     // spriteConstants); the shared wind (weather.cpp updateWind) the weather, the clouds, the sky, the grass, the
     // sand and the leaves go with
-    void applySkyLight();
+    void applyBounceLight();
     void applyShafts();
     void applyFlare();
     void applyDof();
@@ -660,7 +660,7 @@ private:
     float crittersTime_ = 0.0f, crittersStepsSeen_ = 0.0f;
     bool crittersLogged_ = false;
     // 2.5.5: the sky's light, the light in the air, the flare, the depth of field, the shared wind
-    ID3D11PixelShader* skyLightPs_ = nullptr;
+    ID3D11PixelShader* bounceLightPs_ = nullptr;
     ID3D11PixelShader* shaftsPs_ = nullptr;
     ID3D11PixelShader* flarePs_ = nullptr;
     ID3D11PixelShader* dofDownPs_ = nullptr;
@@ -674,8 +674,8 @@ private:
     LARGE_INTEGER dofFocusTime_{};
     int shaftLights_ = 0;  // the lights of this frame's torches' pass (lightData_)
     Target shafts_;        // 2.5.7: the light in the air at half the size
-    bool skyLightDone_ = false, shaftsDone_ = false, flareDone_ = false, dofDone_ = false;
-    bool skyLightLogged_ = false, dofLogged_ = false;
+    bool bounceLightDone_ = false, shaftsDone_ = false, flareDone_ = false, dofDone_ = false;
+    bool bounceLightLogged_ = false, dofLogged_ = false;
     float windClock_ = -1.0f;
     wind::Wind windNow_;
     float windScreenX_ = 0.0f;
@@ -817,7 +817,7 @@ private:
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
-        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeSkyLight11, kTimeShafts11,
+        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeBounceLight11, kTimeShafts11,
         kTimeDof11, kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
         // 2.5.15: the game's world draws (with the effects drawn amid them) and its interface's - apart from the
         // effects' own passes in the log, not in their costs (an HD 6570: 46-57 ms a frame, effects a few of them)

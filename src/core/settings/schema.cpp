@@ -370,8 +370,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMaterialsStrengthHint, " %", nullptr, &E::materialsStrength},
         {"effects", "ground_seams", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGroundSeams,
          Text::FxGroundSeamsHint, "", &E::groundSeams},
-        {"effects", "sky_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkyLight,
-         Text::FxSkyLightHint, "", &E::skyLight},
         {"effects", "bounce_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBounceLight,
          Text::FxBounceLightHint, "", &E::bounceLight},
         {"effects", "volumetric_fog", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxVolumetricFog,

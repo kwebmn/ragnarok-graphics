@@ -175,8 +175,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.materialsStrength = rd.i32();
             e.tier = rd.i32();
             e.groundSeams = rd.u8() != 0;  // 1.9
-            e.skyLight = rd.u8() != 0;  // 1.11
-            e.bounceLight = rd.u8() != 0;
+            e.bounceLight = rd.u8() != 0;  // 1.11
             e.volumetricFog = rd.u8() != 0;  // 1.13
             e.volumetricFogDensity = rd.i32();
             e.smoothHills = rd.u8() != 0;  // 1.15

@@ -84,7 +84,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 1.16: an opaque draw of the world into the next frame's mirror (2.2: the sun's map is gone)
     if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting()) noteCaster(rec, d, s);
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
-    if (!inner && !s.ui && s.blend && skyLightDue() && !applySkyLight()) return;  // 1.11: under the soft shadows
+    if (!inner && !s.ui && s.blend && bounceLightDue() && !applyBounceLight()) return;  // 1.11: under the soft shadows
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
     if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters

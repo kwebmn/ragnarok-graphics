@@ -2199,15 +2199,15 @@ float4 material_ps(PresentOut i) : SV_Target {
 }
 
 #ifndef UAGFX_SAFE
-// 1.11, light from the sky and from around (ao.cpp applySkyLight), before the characters, the picture's copy t2 put
-// back changed: twinX the sky's share - what faces up takes the sky's colour (sourceRect.rgb), what faces down the
-// ground's (sourceClamp.rgb), as the light from all around would; twinY the bounce - the colours a few steps around
-// that face the surface light it a little in their colour (grass greens a wall's foot, a red roof warms the eaves);
-// twinW how far (world units). r0-r11 the view -> the world. 2.2.3: each of the eight ways around counts by how much
-// the two surfaces turn to each other (the cosine squared stands for both) - until now the light of those seen was
-// averaged and given in full once a few were: every fold of the ground a few degrees deep took a third of the
-// light around, and a sunny beach's small bumps (cmd_fild02) shone as bright lines along the cells' edges.
-float4 sky_light_ps(PresentOut i) : SV_Target {
+// 1.11, the light from around (ao.cpp applyBounceLight), before the characters, the picture's copy t2 put back
+// changed: the colours a few steps around that face the surface light it a little in their colour (grass greens a
+// wall's foot, a red roof warms the eaves); twinW how far (world units). 2.2.3: each of the eight ways around counts
+// by how much the two surfaces turn to each other (the cosine squared stands for both) - until now the light of those
+// seen was averaged and given in full once a few were: every fold of the ground a few degrees deep took a third of
+// the light around, and a sunny beach's small bumps (cmd_fild02) shone as bright lines along the cells' edges.
+// 2.6.8: the sky's colour on what faces up and the ground's on what faces down (sky_light) gone - under RO's camera
+// nearly all faces up, so it only made the ground and the roofs colder (R-AYTGNE).
+float4 bounce_light_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
     int2 last = int2(uiPixels.xy) - 1;
@@ -2219,27 +2219,21 @@ float4 sky_light_ps(PresentOut i) : SV_Target {
     float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
     float3 n = normalize(cross(dy, dx));
     if (dot(n, p) > 0.0) n = -n;
-    float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
-    float3 around = lerp(sourceClamp.rgb, sourceRect.rgb, saturate(0.5 - nw.y * 0.5));  // up is -y
-    float3 o = col * lerp(float3(1.0, 1.0, 1.0), around, twinX);
-    if (twinY > 0.0) {
-        float reach = clamp(twinW * f0 * scale / max(p.z, 1.0), 4.0, 64.0);
-        float spin = hash12(float2(wp)) * 6.2831853;
-        float3 sum = float3(0.0, 0.0, 0.0);
-        [unroll] for (int k = 0; k < 8; ++k) {
-            float ang = spin + float(k) * 0.7853982;
-            float far = reach * (0.45 + 0.55 * frac(float(k) * 0.618 + spin));
-            int2 q = clamp(wp + int2(float2(cos(ang), sin(ang)) * far), int2(0, 0), last);
-            if (sceneDepth.Load(int3(q, 0)) >= 0.99999) continue;
-            float3 to = viewAt(q) - p;
-            float dist = length(to);
-            if (dist < 1e-3) continue;
-            float facing = saturate(dot(n, to / dist));
-            sum += sceneColor.Load(int3(q, 0)).rgb * (facing * facing / (1.0 + dist * dist * 0.01));
-        }
-        o += col * sum * (twinY / 8.0);  // a wall's foot as before (a third), a 17-degree fold some 4 %
+    float reach = clamp(twinW * f0 * scale / max(p.z, 1.0), 4.0, 64.0);
+    float spin = hash12(float2(wp)) * 6.2831853;
+    float3 sum = float3(0.0, 0.0, 0.0);
+    [unroll] for (int k = 0; k < 8; ++k) {
+        float ang = spin + float(k) * 0.7853982;
+        float far = reach * (0.45 + 0.55 * frac(float(k) * 0.618 + spin));
+        int2 q = clamp(wp + int2(float2(cos(ang), sin(ang)) * far), int2(0, 0), last);
+        if (sceneDepth.Load(int3(q, 0)) >= 0.99999) continue;
+        float3 to = viewAt(q) - p;
+        float dist = length(to);
+        if (dist < 1e-3) continue;
+        float facing = saturate(dot(n, to / dist));
+        sum += sceneColor.Load(int3(q, 0)).rgb * (facing * facing / (1.0 + dist * dist * 0.01));
     }
-    return float4(o, 1.0);
+    return float4(col + col * sum / 8.0, 1.0);  // a wall's foot as before (a third), a 17-degree fold some 4 %
 }
 #endif
 

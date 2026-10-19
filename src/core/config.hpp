@@ -332,9 +332,9 @@ struct EffectSettings {
     // between them wanders over the world instead of running along the cells (core/seams.hpp). Off by default.
     bool groundSeams = false;
 
-    // 1.11: the remaster's light (sky_light_ps): sky_light - what faces up takes the sky's colour, what faces down the
-    // ground's; bounce_light - the colours around light a surface a little in their colour. Off by default.
-    bool skyLight = false;
+    // 1.11: the remaster's light (bounce_light_ps): bounce_light - the colours around light a surface a little in
+    // their colour. Off by default. 2.6.8: sky_light (what faces up in the sky's colour) is gone - under RO's camera
+    // nearly all faces up, so it only made the ground and the roofs colder (R-AYTGNE); an old ini's key is not read.
     bool bounceLight = false;
     // 1.13: the remaster's volumetric fog (fog_light_ps): a fog lying low over the fields, drifting, lit by the sun -
     // with Real sun shadows in rays through the crowns and past the houses. Remaster mode. Off by default.

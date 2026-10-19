@@ -29,7 +29,7 @@ TEST(light_super_light_strips_down_to_the_game) {
     EffectSettings e;
     e.preset = EffectPreset::Strong;
     const EffectSettings none = light::effectsOf(effect_groups::effective(e, 3), o);
-    CHECK(!none.torch && !none.smoothLight && !none.glow && !none.skyLight);  // the fixes too
+    CHECK(!none.torch && !none.smoothLight && !none.glow && !none.bounceLight);  // the fixes too
 }
 
 TEST(light_battery_keeps_the_weak_set_and_the_frames) {
@@ -48,10 +48,10 @@ TEST(light_battery_keeps_the_weak_set_and_the_frames) {
     EffectSettings e;
     e.preset = EffectPreset::Strong;
     const EffectSettings strong = effect_groups::effective(e, 3);
-    CHECK(strong.torch && strong.glow && strong.skyLight);
+    CHECK(strong.torch && strong.glow && strong.bounceLight);
     const EffectSettings weak = light::effectsOf(strong, o);
-    CHECK(weak.torch && weak.smoothLight);  // the weak set's stay
-    CHECK(!weak.glow && !weak.skyLight);    // the medium and strong sets' go
+    CHECK(weak.torch && weak.smoothLight);   // the weak set's stay
+    CHECK(!weak.glow && !weak.bounceLight);  // the medium and strong sets' go
     CHECK(weak.tier <= 1);
     e.preset = EffectPreset::Custom;  // one the player turned off stays off
     e.torch = false;

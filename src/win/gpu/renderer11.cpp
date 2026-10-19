@@ -187,7 +187,7 @@ Renderer11::~Renderer11() {
     drop(crittersPs_);
     drop(crittersDataSrv_);
     drop(crittersData_);
-    drop(skyLightPs_);  // 2.5.5
+    drop(bounceLightPs_);  // 2.5.5
     drop(shaftsPs_);
     drop(flarePs_);
     drop(dofDownPs_);
@@ -454,7 +454,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"grass_ps", ps, shaderSource(), {}, true},
                    {"critters_vs", vs, shaderSource(), {}, true},  // 2.5.4: the living world
                    {"critters_ps", ps, shaderSource(), {}, true},
-                   {"sky_light_ps", ps, shaderSource(), {}, true},  // 2.5.5: sky light, shafts, flare, DoF
+                   {"bounce_light_ps", ps, shaderSource(), {}, true},  // 2.5.5: reflected light, shafts, flare, DoF
                    {"shafts_ps", ps, shaderSource(), {}, true},
                    {"flare_ps", ps, shaderSource(), {}, true},
                    {"dof_down_ps", ps, shaderSource(), {}, true},
@@ -599,7 +599,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[50].code.empty() || !psOf(wants[50], grassPs_)) grassPs_ = nullptr;
     if (wants[51].code.empty() || !vsOf(wants[51], crittersVs_)) crittersVs_ = nullptr;
     if (wants[52].code.empty() || !psOf(wants[52], crittersPs_)) crittersPs_ = nullptr;
-    if (wants[53].code.empty() || !psOf(wants[53], skyLightPs_)) skyLightPs_ = nullptr;  // 2.5.5
+    if (wants[53].code.empty() || !psOf(wants[53], bounceLightPs_)) bounceLightPs_ = nullptr;  // 2.5.5
     if (wants[54].code.empty() || !psOf(wants[54], shaftsPs_)) shaftsPs_ = nullptr;
     if (wants[55].code.empty() || !psOf(wants[55], flarePs_)) flarePs_ = nullptr;
     if (wants[56].code.empty() || !psOf(wants[56], dofDownPs_)) dofDownPs_ = nullptr;
@@ -1279,10 +1279,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         applySeams();
     }
     const bool passes = !seamPass_ && !s.ui && s.blend && groundDrawn_;  // the passes before the characters
-    if (passes && !skyLightDone_ && skyLightPs_ &&
-        (effects_.skyLight || effects_.bounceLight) && cameraValid_) {  // 2.5.5: under the soft shadows (draw.cpp)
+    if (passes && !bounceLightDone_ && bounceLightPs_ && effects_.bounceLight &&
+        cameraValid_) {  // 2.5.5: under the soft shadows (draw.cpp)
         flushBatch();
-        applySkyLight();
+        applyBounceLight();
     }
     if (passes && !aoDone_ && aoWanted()) {  // 2.5.1: before the characters (draw.cpp)
         flushBatch();
@@ -2148,7 +2148,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
     frameCrowns_.clear();
     critterFires_.clear();
-    skyLightDone_ = shaftsDone_ = flareDone_ = dofDone_ = fogDone_ = false;  // 2.5.5
+    bounceLightDone_ = shaftsDone_ = flareDone_ = dofDone_ = fogDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
@@ -3081,37 +3081,23 @@ void Renderer11::updateWind() {
     skyDrift_.advance(windNow_.x * s * 0.012f, windNow_.z * s * 0.012f, dt);
 }
 
-// 2.5.5: as Direct3D 12's applySkyLight (ao.cpp) - the picture's copy put back lit by the sky above and the ground
-// below, and by the colours around it
-void Renderer11::applySkyLight() {
-    EffectSpan span(*this, kTimeSkyLight11);
-    skyLightDone_ = true;
-    if (!skyLightPs_ || !(effects_.skyLight || effects_.bounceLight) || !cameraValid_ || !target_.texture ||
-        !depthViews())
-        return;
+// 2.5.5: as Direct3D 12's applyBounceLight (ao.cpp) - the picture's copy put back lit a little by the colours around
+// it (2.6.8: the sky's colour on what faces up gone)
+void Renderer11::applyBounceLight() {
+    EffectSpan span(*this, kTimeBounceLight11);
+    bounceLightDone_ = true;
+    if (!bounceLightPs_ || !effects_.bounceLight || !cameraValid_ || !target_.texture || !depthViews()) return;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
     std::copy(pv, pv + 6, c.projection);
-    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
     c.scale = float(scale_);
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
-    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
-    const daylight::Light day = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
-    const float k = outdoors_ ? 1.0f : 0.35f;  // under a roof both near white
-    const float sky[3] = {0.94f * day.tint[0], 0.99f * day.tint[1], 1.09f * day.tint[2]};
-    const float ground[3] = {1.06f, 1.02f, 0.93f};
-    for (int q = 0; q < 3; ++q) {
-        c.sourceRect[q] = 1.0f + ((sky[q] - 1.0f) * (1.0f + 0.5f * night)) * k;
-        c.sourceClamp[q] = 1.0f + (ground[q] - 1.0f) * k * (1.0f - night);
-    }
-    c.twin[0] = effects_.skyLight ? 1.0f : 0.0f;
-    c.twin[1] = effects_.bounceLight ? 1.0f : 0.0f;
     c.twin[2] = 6.0f;  // world units around
-    if (!skyLightLogged_) LOG_INFO("light from the sky: on %s (Direct3D 11)", map_.c_str());
-    skyLightLogged_ = true;
-    worldPass(skyLightPs_, c, 1, 1, depthSrv_);
+    if (!bounceLightLogged_) LOG_INFO("reflected light: on %s (Direct3D 11)", map_.c_str());
+    bounceLightLogged_ = true;
+    worldPass(bounceLightPs_, c, 1, 1, depthSrv_);
 }
 
 // 2.5.5: as Direct3D 12's applyShafts (haze.cpp) - the light in the air about this frame's lights (the torches'
@@ -3661,7 +3647,7 @@ void Renderer11::timeFrame() {
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
                                                              "haze", "sky", "weather", "ao", "clouds", "bloom",
-                                                             "steps", "heat", "sky_light", "shafts", "dof",
+                                                             "steps", "heat", "bounce_light", "shafts", "dof",
                                                              "glow", "water", "floor", "grass", "world",
                                                              "interface"};
         recent_.gpuMs = recentMs_ / recentFrames_;
@@ -3763,7 +3749,7 @@ void Renderer11::logGpu(ULONGLONG now) {
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
                                                             "colour", "haze", "sky", "weather", "soft shadows",
                                                             "clouds", "bloom", "footprints", "heat haze",
-                                                            "light from the sky", "light in the air",
+                                                            "reflected light", "light in the air",
                                                             "depth of field", "glow", "water's copies",
                                                             "floor reflections", "grass", "", ""};
         if (effectMs_[kTimeWorld11] > 0.0 || effectMs_[kTimeUi11] > 0.0)  // 2.5.15
