@@ -12,6 +12,7 @@
 #include "app/files.hpp"
 #include "app/shots.hpp"
 #include "app/text.hpp"
+#include "core/settings/log_digest.hpp"
 #include "core/usage.hpp"
 #include "core/version.hpp"
 
@@ -115,15 +116,21 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
     u.automatic = automatic;
     u.version = kVersion;
     u.comment = comment;
-    u.report = makeReport(reportFacts(m, problems));
+    std::string log;
+    readFile(m.paths().log, log);
+    // 2.6.12: the settings and the log as the disk has them now - the game's console writes the ini while this app
+    // keeps what it read when it opened (R-TDWB4X and R-B27V4Y carried R-MUQ8U5's text, their files fresh)
+    ReportFacts facts = reportFacts(m, problems);
+    std::string ini;
+    if (readFile(m.paths().ini, ini)) facts.iniText = ini;
+    if (!log.empty()) facts.log = settings::digestLog(log);
+    u.report = makeReport(facts);
     u.windows = num(long(sys.windows.major)) + "." + num(long(sys.windows.minor)) + " build " +
                 num(long(sys.windows.build));
     u.gpu = !sys.adapters.empty() ? sys.adapters.front().name : sys.d3d12.adapter;
     const std::string chosen = m.now().config.gpu;  // 0.50.2
     for (const win::AdapterProbe& a : sys.adapters)
         if (!chosen.empty() && a.name == chosen) u.gpu = a.name;
-    std::string log;
-    readFile(m.paths().log, log);
     u.api = report::apiOfLog(log);
     const std::wstring& dir = m.paths().dir;
     const std::pair<const wchar_t*, size_t> files[] = {
