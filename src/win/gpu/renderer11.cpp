@@ -188,11 +188,6 @@ Renderer11::~Renderer11() {
     drop(crittersData_);
     drop(shaftsPs_);
     drop(flarePs_);
-    drop(dofDownPs_);
-    drop(dofFocusPs_);
-    drop(dofApplyPs_);
-    for (Target& t : dof_) dropTarget(t);
-    for (Target& t : dofFocus_) dropTarget(t);
     dropTarget(shafts_);  // 2.5.7
     drop(hillsSrv_);  // 2.5.9
     drop(hillsData_);
@@ -406,7 +401,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[58] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[55] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -451,9 +446,6 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"critters_ps", ps, shaderSource(), {}, true},
                    {"shafts_ps", ps, shaderSource(), {}, true},  // 2.5.5: shafts, flare, DoF
                    {"flare_ps", ps, shaderSource(), {}, true},
-                   {"dof_down_ps", ps, shaderSource(), {}, true},
-                   {"dof_focus_ps", ps, shaderSource(), {}, true},
-                   {"dof_apply_ps", ps, shaderSource(), {}, true},
                    {"mirror_vs", vs, shaderSource(), {}, true},  // 2.5.9: the world's reflections in the water
                    {"mirror_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
@@ -592,11 +584,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[50].code.empty() || !psOf(wants[50], crittersPs_)) crittersPs_ = nullptr;
     if (wants[51].code.empty() || !psOf(wants[51], shaftsPs_)) shaftsPs_ = nullptr;
     if (wants[52].code.empty() || !psOf(wants[52], flarePs_)) flarePs_ = nullptr;
-    if (wants[53].code.empty() || !psOf(wants[53], dofDownPs_)) dofDownPs_ = nullptr;
-    if (wants[54].code.empty() || !psOf(wants[54], dofFocusPs_)) dofFocusPs_ = nullptr;
-    if (wants[55].code.empty() || !psOf(wants[55], dofApplyPs_)) dofApplyPs_ = nullptr;
-    if (wants[56].code.empty() || !vsOf(wants[56], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
-    if (wants[57].code.empty() || !psOf(wants[57], mirrorPs_)) mirrorPs_ = nullptr;
+    if (wants[53].code.empty() || !vsOf(wants[53], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
+    if (wants[54].code.empty() || !psOf(wants[54], mirrorPs_)) mirrorPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -633,7 +622,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"COLOR", 0, colour, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}};
-        if (FAILED(device_->CreateInputLayout(layout, 3, wants[56].code.data(), wants[56].code.size(),
+        if (FAILED(device_->CreateInputLayout(layout, 3, wants[53].code.data(), wants[53].code.size(),
                                               &mirrorLayout_)))
             mirrorLayout_ = nullptr;
     }
@@ -1204,7 +1193,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !mistDone_ ||
                                 !skyDone_ || !shaftsDone_ || !flareDone_ || !heatDone_ || !bloomDone_ ||
-                                !gradeDone_ || !dofDone_ || !weatherDone_))
+                                !gradeDone_ || !weatherDone_))
         flushBatch();
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
@@ -1221,7 +1210,6 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3: the hot air over all of that
     if (s.ui && worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2: before the colours (ao.cpp finishWorld)
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
-    if (s.ui && worldDrawn_ && !dofDone_) applyDof();  // 2.5.5: after the colours (ao.cpp finishWorld)
     if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
     if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
@@ -2089,7 +2077,6 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (!flies_.empty()) applyFireflies();  // 1.0.1
     if (worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
-    if (worldDrawn_ && !dofDone_) applyDof();      // 2.5.5
     if (worldDrawn_ && !weatherDone_) applyWeather();  // 2.5
     if (glowDrawn_) addGlow();  // 1.0: likewise
     exitWorld();  // 2.5.16: a frame without an interface: its world made larger now
@@ -2126,7 +2113,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
     frameCrowns_.clear();
     critterFires_.clear();
-    shaftsDone_ = flareDone_ = dofDone_ = false;  // 2.5.5
+    shaftsDone_ = flareDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
@@ -3156,68 +3143,6 @@ void Renderer11::applyFlare() {
     worldPass(flarePs_, c, 0, 3, depthSrv_);
 }
 
-// 2.5.5: as Direct3D 12's applyDof (ao.cpp) - the focus where the camera looks (dof_focus_ps, one texel, from the last
-// frame's), the picture at a quarter of the size blurred across and down, mixed in by each pixel's distance from it
-void Renderer11::applyDof() {
-    EffectSpan span(*this, kTimeDof11);
-    dofDone_ = true;
-    if (!effects_.dof || effects_.dofStrength <= 0 || !dofDownPs_ || !dofBlurPs_ || !dofFocusPs_ || !dofApplyPs_ ||
-        !target_.texture || !depthViews())
-        return;
-    const int w = target_.width, h = target_.height;
-    const int qw = std::max(1, (w + 3) / 4), qh = std::max(1, (h + 3) / 4);
-    for (Target& t : dof_)
-        if (t.width != qw || t.height != qh) {
-            dropTarget(t);
-            if (!makeTarget(t, qw, qh)) {
-                LOG_ERROR("depth of field: no video memory at %dx%d (Direct3D 11): it stays off", qw, qh);
-                dofApplyPs_ = nullptr;  // not tried again
-                return;
-            }
-        }
-    if (!dofFocus_[0].texture) {
-        for (Target& t : dofFocus_) {
-            if (!makeTarget(t, 1, 1, DXGI_FORMAT_R32_FLOAT)) {
-                dofApplyPs_ = nullptr;
-                return;
-            }
-            const float zero[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // no focus yet: the first is taken as it is
-            ctx_->ClearRenderTargetView(t.rtv, zero);
-        }
-        LOG_INFO("depth of field: blurred at %dx%d from the %dx%d picture (Direct3D 11)", qw, qh, w, h);
-    }
-    if (!copyScene()) return;
-    Constants c{};
-    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    c.scale = float(scale_);
-    c.uiPixels[0] = float(w);
-    c.uiPixels[1] = float(h);
-    c.uiPixels[2] = float(qw);
-    c.uiPixels[3] = float(qh);
-    c.footprint = 0.01f + 0.14f * float(std::clamp(effects_.dofRange, 0, 100)) / 100.0f;
-    c.sharpen = float(std::clamp(effects_.dofStrength, 0, 100)) / 100.0f;
-    LARGE_INTEGER now, freq;
-    QueryPerformanceFrequency(&freq);
-    QueryPerformanceCounter(&now);
-    const double dt =
-        dofFocusTime_.QuadPart ? double(now.QuadPart - dofFocusTime_.QuadPart) / double(freq.QuadPart) : 1.0;
-    dofFocusTime_ = now;
-    c.twin[3] = dt > 0.5 ? 1.0f : float(1.0 - std::exp(-dt / 0.06));
-    c.reproject[0] = cameraValid_ ? cameraTargetZ_ : 0.0f;  // the focus where the camera looks
-    const int was = dofFocusNow_;
-    dofFocusNow_ = 1 - dofFocusNow_;
-    maskPass(dofFocusPs_, dofFocus_[dofFocusNow_], c, dofFocus_[was].srv, depthSrv_);
-    maskPass(dofDownPs_, dof_[0], c, nullptr, nullptr, scene_.srv);
-    for (int i = 0; i < 2; ++i) {  // across, then down
-        c.sourceRect[0] = i == 0 ? 1.0f : 0.0f;
-        c.sourceRect[1] = i == 0 ? 0.0f : 1.0f;
-        maskPass(dofBlurPs_, dof_[1 - i], c, dof_[i].srv, nullptr);
-    }
-    worldPass(dofApplyPs_, c, 2, 0, depthSrv_, dof_[0].srv, dofFocus_[dofFocusNow_].srv);
-}
-
 float Renderer11::mapFadeNow() {
     if (!effects_.mapFade || fadeStart_ < 0.0f) return 1.0f;
     const float t = (waterTime() - fadeStart_) / 0.7f;
@@ -3559,7 +3484,7 @@ void Renderer11::timeFrame() {
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
                                                              "mist", "sky", "weather", "ao", "bloom",
-                                                             "steps", "heat", "shafts", "dof",
+                                                             "steps", "heat", "shafts",
                                                              "glow", "water", "floor", "grass", "world",
                                                              "interface"};
         recent_.gpuMs = recentMs_ / recentFrames_;
@@ -3662,7 +3587,7 @@ void Renderer11::logGpu(ULONGLONG now) {
                                                             "colour", "mists", "sky", "weather", "soft shadows",
                                                             "bloom", "footprints", "heat haze",
                                                             "light in the air",
-                                                            "depth of field", "glow", "water's copies",
+                                                            "glow", "water's copies",
                                                             "floor reflections", "grass", "", ""};
         if (effectMs_[kTimeWorld11] > 0.0 || effectMs_[kTimeUi11] > 0.0)  // 2.5.15
             LOG_INFO("GPU: the game's world %.2f ms a frame (the effects drawn amid it too), its interface %.2f ms",

@@ -296,19 +296,6 @@ TEST(config_effects_colour) {
     CHECK(parseConfig("[effects]\ngrade_contrast = 49\ngrade_brightness = 151\n").effects == d);
 }
 
-TEST(config_effects_depth_of_field) {
-    // 0.22: off unless asked for; its blur and sharp zone 0-100 %.
-    const EffectSettings d = parseConfig("").effects;
-    CHECK(!d.dof);
-    CHECK_EQ(d.dofStrength, 60);
-    CHECK_EQ(d.dofRange, 40);
-    const EffectSettings e = parseConfig("[effects]\ndof = 1\ndof_strength = 100\ndof_range = 0\n").effects;
-    CHECK(e.dof);
-    CHECK_EQ(e.dofStrength, 100);
-    CHECK_EQ(e.dofRange, 0);
-    CHECK(parseConfig("[effects]\ndof_range = 200\n").effects == d);
-}
-
 TEST(config_effects_smooth_map_light) {
     // 0.22.6: on unless turned off.
     CHECK(parseConfig("").effects.smoothLight);

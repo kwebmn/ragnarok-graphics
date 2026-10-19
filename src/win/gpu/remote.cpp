@@ -329,9 +329,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.gradeBrightness);
     w.i32(e.gradeWarmth);
     w.i32(e.gradeVignette);
-    w.u8(e.dof ? 1 : 0);
-    w.i32(e.dofStrength);
-    w.i32(e.dofRange);
     w.u8(e.smoothLight ? 1 : 0);
     w.u8(e.torch ? 1 : 0);
     w.i32(e.torchGlow);

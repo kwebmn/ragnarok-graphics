@@ -16,7 +16,6 @@ struct Costly {
 const Costly kCostly[] = {
     {"grass", "grass", &EffectSettings::grass},
     {"floor_reflections", "floor", &EffectSettings::floorReflections},
-    {"dof", "dof", &EffectSettings::dof},
     {"ao", "ao", &EffectSettings::ao},
     {"shafts", "shafts", &EffectSettings::shafts},
     {"glow", "glow", &EffectSettings::glow},

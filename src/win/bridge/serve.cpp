@@ -69,9 +69,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.gradeBrightness = rd.i32();
             e.gradeWarmth = rd.i32();
             e.gradeVignette = rd.i32();
-            e.dof = rd.u8() != 0;
-            e.dofStrength = rd.i32();
-            e.dofRange = rd.i32();
             e.smoothLight = rd.u8() != 0;
             e.torch = rd.u8() != 0;
             e.torchGlow = rd.i32();

@@ -19,14 +19,14 @@ TEST(effect_costs_read_back_what_was_written) {
 TEST(effect_costs_drop_the_costliest_first) {
     // 0.76, [frames] keep_fps: the costliest measured; without measures the usual order; a dropped one once.
     EffectSettings e;
-    e.ao = e.dof = true;
-    const effect_costs::Costs c{{"ao", 0.9}, {"dof", 0.3}, {"floor", 0.6}, {"mist", 0.01}};
+    e.ao = true;
+    const effect_costs::Costs c{{"ao", 0.9}, {"floor", 0.6}, {"mist", 0.01}};
     CHECK(effect_costs::pickToDrop(e, c, {}) == "ao");
     CHECK(effect_costs::pickToDrop(e, c, {"ao"}) == "floor_reflections");
     CHECK(effect_costs::pickToDrop(e, {}, {}) == "floor_reflections");
     effect_costs::drop(e, "floor_reflections");
     CHECK(!e.floorReflections);
-    CHECK(effect_costs::pickToDrop(e, {}, {}) == "dof");
+    CHECK(effect_costs::pickToDrop(e, {}, {}) == "ao");  // the usual order's next
     EffectSettings none = effectsOff();
     CHECK(effect_costs::pickToDrop(none, c, {}).empty());
 }

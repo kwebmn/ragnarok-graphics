@@ -70,7 +70,7 @@ constexpr UINT kSlots = 2;              // submissions in flight
 // 0.39.2: the effects timed one by one, for the log; 0.76: the sky, the light in the air and the floors' reflections
 // their own. 2.2.2: the sun's shadows' gone with them (2.1.4); 2.4.1: the new trees' too.
 enum EffectTimer : UINT {
-    kTimeAo, kTimeActorShadows, kTimeLights, kTimeMist, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
+    kTimeAo, kTimeActorShadows, kTimeLights, kTimeMist, kTimeHeat, kTimeGrade, kTimeWeather,
     kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
     kEffectTimes
 };
@@ -110,9 +110,7 @@ constexpr int kGlowLevels = 8;     // the glow's chain of smaller copies, the fi
 constexpr UINT kRtvGlowChain = 12;
 constexpr UINT kRtvSceneDepth = kRtvGlowChain + kGlowLevels;  // 0.19: the depth before the frame's first water
 constexpr UINT kRtvAo = kRtvSceneDepth + 1;  // 0.20: the soft shadows' two targets
-constexpr UINT kRtvDof = kRtvAo + 2;         // 0.22: the depth of field's two
-constexpr UINT kRtvDofFocus = kRtvDof + 2;   // 0.22.3: its focus, last frame's and this one's
-constexpr UINT kRtvBias = kRtvDofFocus + 2;  // 0.22.3: DLSS's mask of pixels whose history it is not to take
+constexpr UINT kRtvBias = kRtvAo + 2;  // 0.22.3: DLSS's mask of pixels whose history it is not to take
 constexpr UINT kRtvShadow = kRtvBias + 1;  // 0.32: the characters' shadows' two masks
 constexpr UINT kRtvBloom = kRtvShadow + 2;  // 0.78: the bloom's two quarter-size targets
 constexpr UINT kRtvFloor = kRtvBloom + 2;  // 0.86: the floors' reflections at half the size
@@ -467,27 +465,9 @@ struct Renderer::Impl {
     bool nightDone = false;  // 0.63
     ID3DBlob* nightPs = nullptr;
     ID3D12PipelineState* nightPipelines[4] = {};
-    // 0.22, depth of field (ao.cpp): after the colours, from a quarter-sized blurred copy.
-    bool dofDone = false;
-    ID3D12Resource* dofTarget[2] = {};  // B8G8R8A8, a quarter of the world's size
-    D3D12_RESOURCE_STATES dofState[2] = {};
-    UINT dofSrv[2] = {};
-    int dofWidth = 0, dofHeight = 0;
-    bool dofFailed = false;
-    ID3DBlob* dofDownPs = nullptr;
+    // 0.22: the blur along one direction (dof_blur_ps) - the depth of field's, now the bloom's (2.6.11: the depth of
+    // field gone at the player's word)
     ID3DBlob* dofBlurPs = nullptr;
-    ID3DBlob* dofApplyPs = nullptr;
-    ID3D12PipelineState* dofDownPipeline = nullptr;
-    ID3D12PipelineState* dofBlurPipeline = nullptr;
-    ID3D12PipelineState* dofApplyPipelines[4] = {};
-    // 0.22.3: the focus in one R32 texel, the two in turn: this frame's made from the last one's.
-    ID3D12Resource* dofFocus[2] = {};
-    D3D12_RESOURCE_STATES dofFocusState[2] = {};
-    UINT dofFocusSrv[2] = {};
-    int dofFocusNow = 0;
-    LARGE_INTEGER dofFocusTime{};  // when the focus last moved (0.22.4: by time, not by frames)
-    ID3DBlob* dofFocusPs = nullptr;
-    ID3D12PipelineState* dofFocusPipeline = nullptr;
     // 0.23, the torches (torches.cpp): the game's torch layers are not drawn - its glow not at all, its flames noted -
     // and drawn anew once the world is: their light into the picture, then each flame and the glow around it.
     objects::Textures objectTextures;      // 0.23.1, 0.24: the textures that are a frame of a map object
@@ -965,7 +945,7 @@ struct Renderer::Impl {
     // A new picture (cleared, presented, another target): the world's effects are due again.
     void newPicture() {
         waterCopied = false;  // 0.19: its water copies what is under it anew
-        aoDone = groundDrawn = gradeDone = dofDone = torchDone = false;  // 0.20-0.23
+        aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
         softCopied = 0;     // 0.67
         waterfallsDone = false;  // 0.65
@@ -1253,10 +1233,6 @@ struct Renderer::Impl {
     // picture (and under DLSS before the upscale). False: lost.
     bool finishWorld();
     bool copySceneColor();  // the world's picture so far into sceneColor, one sample per pixel
-    bool dofWanted() const { return effects.dof && effects.dofStrength > 0; }
-    bool dofDue() const { return dofWanted() && groundDrawn && !dofDone; }
-    bool applyDof();  // once a frame (dofDone), after the colours; false: lost
-    void releaseDof();
     bool ensureAo(int w, int h);
     void releaseAo();
     ID3D12PipelineState* aoApplyPipeline(UINT samples);

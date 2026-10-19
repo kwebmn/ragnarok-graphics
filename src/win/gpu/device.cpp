@@ -1566,10 +1566,6 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : nightPipelines) releaseCom(p);  // 0.63
     releaseCom(nightPs);
     releaseCom(gradePs);
-    for (ID3D12Resource*& r : dofTarget) releaseCom(r);  // 0.22
-    for (ID3D12Resource*& r : dofFocus) releaseCom(r);
-    releaseCom(dofFocusPipeline);
-    releaseCom(dofFocusPs);
     releaseCom(maskPipeline);  // 0.22.3
     releaseCom(maskPs);
     releaseCom(taaPipeline);  // 0.75
@@ -1656,12 +1652,7 @@ void Renderer::Impl::destroy() {
     releaseCom(quadIndices);  // 2.5
     releaseCom(smokePs);  // 0.24
     releaseCom(smokeGlowPs);
-    releaseCom(dofDownPipeline);
-    releaseCom(dofBlurPipeline);
-    for (ID3D12PipelineState*& p : dofApplyPipelines) releaseCom(p);
-    releaseCom(dofDownPs);
     releaseCom(dofBlurPs);
-    releaseCom(dofApplyPs);
     releaseCom(aoPs);
     releaseCom(aoBlurPs);
     releaseCom(aoApplyPs);
@@ -2103,7 +2094,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.glowStrength, e.glowSize,
              e.glowLight, e.water ? "on" : "off", e.waterWaves, e.waterReflections, e.waterClarity,
              e.grade ? "on" : "off", e.gradeSaturation, e.gradeContrast, e.gradeBrightness, e.gradeWarmth,
-             e.gradeVignette, e.dof ? "on" : "off", e.dofStrength, e.dofRange);
+             e.gradeVignette);
     // 1.9.4: an effect turned off keeps its targets (until the size changes or the game ends): with the console
     // switching effects in a running game, making them anew a moment later failed ("no video memory") and the device
     // was lost soon after (1.9.3, reports R-HAAN9H, R-AQ6PVP). Only the glow's state is dropped for this frame.
@@ -2310,8 +2301,6 @@ bool Renderer::create(std::string& error) {
     m.sceneDepthSrv = m.allocSrv();
     for (UINT& srv : m.aoSrv) srv = m.allocSrv();  // 0.20: the soft shadows
     for (UINT& srv : m.shadowMaskSrv) srv = m.allocSrv();  // 0.32: the characters' shadows
-    for (UINT& srv : m.dofSrv) srv = m.allocSrv();  // 0.22: the depth of field
-    for (UINT& srv : m.dofFocusSrv) srv = m.allocSrv();
     m.biasSrv = m.allocSrv();  // 0.22.3: DLSS's mask
     m.motionSrv = m.allocSrv();  // 0.75: TAA's
     m.taaHistorySrv = m.allocSrv();

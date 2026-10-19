@@ -1157,28 +1157,6 @@ float4 night_ps(PresentOut i) : SV_Target {
     return float4(lerp(c, lerp(night, c, keep), sharpen), 1.0);
 }
 
-// 0.22, depth of field (tilt-shift): sharp around what the camera looks at - the character in the middle of the
-// screen - softer with the distance in depth from it, near and far, as if the map were a model. uiPixels the
-// world's size and its blurred copy's (a quarter); footprint where the blur starts (0.22.5: a share of the focus's
-// distance), sharpen its strength (0-1); sourceRect.xy the blur's direction.
-// 1.3.5: eight by eight of the picture under a tent (sixteen bilinear taps, the middle ones the most) - a box of four
-// by four made the far blur swim as the camera followed a walk: each step of the picture across the quarter's grid
-// changed which pixels went into which.
-float4 dof_down_ps(PresentOut i) : SV_Target {
-    float2 c = i.pos.xy * 4.0;
-    float2 t = 1.0 / uiPixels.xy;
-    float3 s = float3(0.0, 0.0, 0.0);
-    float weights = 0.0;
-    [unroll] for (int y = 0; y < 4; ++y)
-        [unroll] for (int x = 0; x < 4; ++x) {
-            float2 o = float2(float(x) * 2.0 - 3.0, float(y) * 2.0 - 3.0);  // -3, -1, 1, 3
-            float w = (4.0 - abs(o.x)) * (4.0 - abs(o.y));
-            s += sceneColor.SampleLevel(samp0, (c + o) * t, 0).rgb * w;
-            weights += w;
-        }
-    return float4(s / weights, 1.0);
-}
-
 // 0.78, bloom (ao.cpp applyBloom): the picture's bright parts at a quarter of its size - over footprint, the brighter
 // the more - blurred by dof_blur_ps, then added onto it (bloom_apply_ps: sharpen how much). 2.6.11: the filmic curve
 // over all (the highlights rolled off, an S-curve) gone at the player's word.
@@ -1220,51 +1198,6 @@ float4 dof_blur_ps(PresentOut i) : SV_Target {  // nine taps along one direction
         weights += w;
     }
     return float4(sum / weights, 1.0);
-}
-
-// 0.22.3, the focus (one texel): the median of the depths around the middle of the screen - the character there
-// covers the middle itself in some frames of its walk and not in others, the ground around it holds still - and
-// carried over from the last frame's (t0) by twinH, this frame's share of the way (0.22.4: by the time since it,
-// not by frames). 0.22.4: nothing drawn (the void past a cliff, the sky) counts for nothing - with too few samples
-// left the focus stays - and only a jump of a warp or another map is taken at once.
-float dof_focus_ps(PresentOut i) : SV_Target {
-    int2 mid = int2(uiPixels.xy * 0.5);
-    float rad = 26.0 * scale;
-    float z[13];
-    float valid = 0.0;
-    [unroll] for (int k = 0; k < 13; ++k) {
-        float a = 6.2831853 * float(k) / 12.0;
-        int2 q = k == 0 ? mid : clamp(mid + int2(float2(cos(a), sin(a)) * rad), int2(0, 0), int2(uiPixels.xy) - 1);
-        float d = sceneDepth.Load(int3(q, 0));
-        bool drawn = d < 0.99999;
-        z[k] = drawn ? viewDepth(d) : 1e6;  // sorted past every drawn one
-        valid += drawn ? 1.0 : 0.0;
-    }
-    [unroll] for (int n = 0; n < 12; ++n)  // sorted (bubbles; every index known when compiled)
-        [unroll] for (int m = 0; m < 12 - n; ++m) {
-            float lo = min(z[m], z[m + 1]);
-            z[m + 1] = max(z[m], z[m + 1]);
-            z[m] = lo;
-        }
-    float before = tex0.Load(int3(0, 0, 0)).r;
-    // 1.4.2: the depth of the point the camera looks at (the character), when the game's camera could be read (r0).
-    if (r0 > 0.0) return before <= 0.0 || abs(r0 - before) > 300.0 ? r0 : lerp(before, r0, twinH);
-    if (valid < 4.0) return before;  // too little of the ground in view: as it was (0 until there is a focus)
-    float now = z[int(valid) / 2];
-    return before <= 0.0 || abs(now - before) > 300.0 ? now : lerp(before, now, twinH);
-}
-
-float4 dof_apply_ps(PresentOut i) : SV_Target {
-    int2 p = int2(i.pos.xy);
-    float3 sharp = sceneColor.Load(int3(p, 0)).rgb;
-    float3 soft = tex0.SampleLevel(samp0, i.pos.xy * 0.25 / uiPixels.zw, 0).rgb;
-    float focus = tex1.Load(int3(0, 0, 0)).r;  // dof_focus_ps
-    float z = viewDepth(sceneDepth.Load(int3(p, 0)));
-    // 0.22.5: the sharp zone a share of the focus's distance (footprint), so that zooming the camera out or in
-    // keeps the same part of the screen sharp.
-    float start = focus * footprint;
-    float blur = focus > 0.0 ? smoothstep(start, start * 3.0, abs(z - focus)) * sharpen : 0.0;  // none yet
-    return float4(lerp(sharp, soft, blur), 1.0);
 }
 
 // 0.75, TAA (device.cpp applyTaa) for any graphics card: the world (t0, drawn with a sub-pixel jitter at the

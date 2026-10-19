@@ -21,7 +21,7 @@ struct TimedPass {
 inline constexpr TimedPass kTimedPasses[] = {
     {"ao", "soft shadows"}, {"actor_shadows", "characters' shadows"},
     {"lights", "lights and torches"}, {"mist", "mists"}, {"heat", "heat haze"}, {"grade", "colour"},
-    {"dof", "depth of field"}, {"weather", "weather"}, {"glow", "glow"}, {"water", "water's copies"},
+    {"weather", "weather"}, {"glow", "glow"}, {"water", "water's copies"},
     {"sky", "sky"}, {"shafts", "light in the air"}, {"floor", "floor reflections"}, {"bloom", "bloom"},
     {"grass", "grass"}};
 

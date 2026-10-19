@@ -313,12 +313,10 @@ private:
     void sunGround(float out[3]) const;
     void sunOnScreen(float out[2]) const;
     // 2.5.5: the light in the air about the lights and from the sky (haze.cpp applyShafts), the sun's flare
-    // (applyFlare); the depth of field (ao.cpp applyDof), after the colours; the characters lit by the sun from their
-    // sides (sun_map.cpp spriteConstants); the shared wind (weather.cpp updateWind) the weather, the clouds, the sky,
-    // the grass, the sand and the leaves go with
+    // (applyFlare); the characters lit by the sun from their sides (sun_map.cpp spriteConstants); the shared wind
+    // (weather.cpp updateWind) the weather, the clouds, the sky, the grass, the sand and the leaves go with
     void applyShafts();
     void applyFlare();
-    void applyDof();
     void spriteConstants(Constants& c, int gameWidth) const;  // 2.6.3: the game texture's width
     void updateWind();
     bool windShared() const { return effects_.sharedWind && cameraValid_; }
@@ -652,20 +650,12 @@ private:
     std::vector<critters::Point> critterFires_;  // this frame's flames' tips (the torches' pass)
     float crittersTime_ = 0.0f, crittersStepsSeen_ = 0.0f;
     bool crittersLogged_ = false;
-    // 2.5.5: the light in the air, the flare, the depth of field, the shared wind
+    // 2.5.5: the light in the air, the flare, the shared wind
     ID3D11PixelShader* shaftsPs_ = nullptr;
     ID3D11PixelShader* flarePs_ = nullptr;
-    ID3D11PixelShader* dofDownPs_ = nullptr;
-    ID3D11PixelShader* dofFocusPs_ = nullptr;
-    ID3D11PixelShader* dofApplyPs_ = nullptr;
-    Target dof_[2];
-    Target dofFocus_[2];  // 1x1 R32: the focus, last frame's and this one's
-    int dofFocusNow_ = 0;
-    LARGE_INTEGER dofFocusTime_{};
     int shaftLights_ = 0;  // the lights of this frame's torches' pass (lightData_)
     Target shafts_;        // 2.5.7: the light in the air at half the size
-    bool shaftsDone_ = false, flareDone_ = false, dofDone_ = false;
-    bool dofLogged_ = false;
+    bool shaftsDone_ = false, flareDone_ = false;
     float windClock_ = -1.0f;
     wind::Wind windNow_;
     float windScreenX_ = 0.0f;
@@ -796,7 +786,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[19][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21; 2.6.8: 19)
+        ID3D11Query* effect[18][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21; 2.6.11: 18)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -808,12 +798,12 @@ private:
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeMist11, kTimeSky11, kTimeWeather11,
         kTimeAo11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeShafts11,
-        kTimeDof11, kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
+        kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
         // 2.5.15: the game's world draws (with the effects drawn amid them) and its interface's - apart from the
         // effects' own passes in the log, not in their costs (an HD 6570: 46-57 ms a frame, effects a few of them)
         kTimeWorld11, kTimeUi11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 19, "FrameTimes::effect holds 19");
+    static_assert(kEffectTimes11 == 18, "FrameTimes::effect holds 18");
     static bool drawsTimer(int e) { return e == kTimeWorld11 || e == kTimeUi11; }
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);

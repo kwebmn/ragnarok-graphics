@@ -198,9 +198,6 @@ struct EffectSettings {
     int nightStrength = 60;  // %, 0-100
     bool nightClock = false;
     int nightNow = 0;
-    bool dof = false;
-    int dofStrength = 60;  // %, 0-100: how soft the far and the near get
-    int dofRange = 40;     // %, 0-100: how deep the sharp zone is
     bool water = false;
     int waterWaves = 50;        // %, 0-100: 0 a still mirror
     int waterReflections = 50;  // %, 0-100: how much the water reflects

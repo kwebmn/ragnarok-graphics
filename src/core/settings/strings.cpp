@@ -768,21 +768,6 @@ const Entry kTexts[] = {
     {"Vignette", "Віньєтка", "Виньетка"},
     {"The corners of the screen darker, as in films; 0 % none.",
      "Кути екрана темніші, як у кіно; 0 % — без неї.", "Углы экрана темнее, как в кино; 0 % — без неё."},
-    {"Depth of field", "Глибина різкості", "Глубина резкости"},
-    {"Sharp around your character in the middle of the screen; what is farther or nearer gets softer, as if the "
-     "map were a model (tilt-shift). The interface stays sharp.",
-     "Різко довкола вашого персонажа посеред екрана; дальше й ближче — м'якше, ніби карта — макет (tilt-shift). "
-     "Інтерфейс лишається різким.",
-     "Резко вокруг вашего персонажа в центре экрана; дальше и ближе — мягче, будто карта — макет (tilt-shift). "
-     "Интерфейс остаётся резким."},
-    {"Blur", "Розмиття", "Размытие"},
-    {"How soft the far and the near get.", "Наскільки м'якими стають дальнє й ближнє.",
-     "Насколько мягкими становятся дальнее и ближнее."},
-    {"Sharp zone", "Зона різкості", "Зона резкости"},
-    {"How deep the sharp zone around the character is: less blurs sooner, more keeps more sharp.",
-     "Наскільки глибока різка зона довкола персонажа: менше — розмиття починається раніше, більше — різкого більше.",
-     "Насколько глубока резкая зона вокруг персонажа: меньше — размытие начинается раньше, больше — резкого "
-     "больше."},
     {"Smooth map light", "М'яке світло карти", "Мягкий свет карты"},
     {"The map's baked light - the pools of torches and lamps, the shadows of houses and trees on the ground - smooth "
      "instead of blotches with steps and dots: the game keeps it in a very coarse grid that shows its cells when "
@@ -2542,9 +2527,9 @@ const Entry kTexts[] = {
     {"Picture",
      "Картинка",
      "Картинка"},
-    {"Colour, the regions' looks; with a strong card bloom, depth of field and the sun's flare.",
-     "Колір, вигляд регіонів; з потужною картою — bloom, глибина різкості й відблиск сонця.",
-     "Цвет, вид регионов; с мощной картой — bloom, глубина резкости и блик солнца."},
+    {"Colour, the regions' looks; with a strong card bloom and the sun's flare.",
+     "Колір, вигляд регіонів; з потужною картою — bloom і відблиск сонця.",
+     "Цвет, вид регионов; с мощной картой — bloom и блик солнца."},
     {"Strength",
      "Сила",
      "Сила"},

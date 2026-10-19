@@ -98,7 +98,6 @@ const Member kMembers[] = {
     {"grade", Picture, 1, &E::grade},
     {"region_looks", Picture, 2, &E::regionLooks},
     {"bloom", Picture, 3, &E::bloom},
-    {"dof", Picture, 3, &E::dof},
     {"flare", Picture, 3, &E::flare},
     {"film_grain", Picture, 0, &E::filmGrain},
 };
@@ -124,7 +123,7 @@ const Strength kStrengths[] = {
     {Air, &E::weatherAmount, 200},       {Air, &E::skyStrength, 100},          {Air, &E::shaftsStrength, 200},
     {Air, &E::motesAmount, 200},
     {Skills, &E::auraBrightness, 100},   {Skills, &E::skillBrightness, 100},   {Skills, &E::skillSparksAmount, 200},
-    {Picture, &E::bloomStrength, 200},   {Picture, &E::dofStrength, 100},      {Picture, &E::regionLooksStrength, 100},
+    {Picture, &E::bloomStrength, 200},   {Picture, &E::regionLooksStrength, 100},
     {Picture, &E::filmGrainAmount, 100},
 };
 

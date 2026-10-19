@@ -348,7 +348,7 @@ void Context::flush() {
     const EffectSettings fx = effects();
     // 1.8.4: every effect the renderer draws itself - the grass, the living world, the materials... need the camera
     // too (only the older ones were listed: alone, the newer ones went without it)
-    const bool world = drawnByRenderer(fx) || fx.dof;  // 1.4.2: the depth of field's focus on the character
+    const bool world = drawnByRenderer(fx);
     // 2.5: Direct3D 11 takes it too - its water (0.99, never given it until now), haze, sky and weather
     if (renderer->remix() || (enhanced_ && world)) {
         float view[12];

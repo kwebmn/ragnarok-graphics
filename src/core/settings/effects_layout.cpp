@@ -50,7 +50,6 @@ const EffectLayout kEffects[] = {
     {"effects.floor_reflections", {}, {"effects.floor_reflect_strength"}, {}, 0},  // 0.72
     {"effects.shafts", {"effects.sky_rays"}, {"effects.shafts_strength"}, {}, 0},  // 0.73
     {"effects.day_cycle", {}, {}, {}, 0},  // 0.74
-    {"effects.dof", {}, {"effects.dof_strength", "effects.dof_range"}, {}, 0},
     {"effects.torch",
      {"effects.torch_flame"},
      {"effects.torch_brightness", "effects.torch_glow", "effects.torch_light", "effects.torch_flicker"},
