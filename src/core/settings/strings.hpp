@@ -233,7 +233,6 @@ enum class Text : uint16_t {
     ConsoleTitle, ConsoleKeys,
     // 1.11
     // 1.13
-    FxVolumetricFog, FxVolumetricFogHint, FxVolumetricFogDensity, FxVolumetricFogDensityHint,
     // 1.15
     FxSmoothHills, FxSmoothHillsHint, FxSmoothHillsStrength, FxSmoothHillsStrengthHint,
     // 1.16

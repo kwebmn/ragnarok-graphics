@@ -1618,8 +1618,6 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : groundLifePipelines) releaseCom(p);  // 1.7
     for (ID3D12PipelineState*& p : crittersPipelines) releaseCom(p);
     releaseCom(materialPso);  // 1.8
-    for (ID3D12PipelineState*& p : fogLightPipelines) releaseCom(p);  // 1.13
-    releaseCom(fogLightPs);
     releaseCom(materialPs);
     releaseCom(crittersPs);
     releaseCom(crittersVs);

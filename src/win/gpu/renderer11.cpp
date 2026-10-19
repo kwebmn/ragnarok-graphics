@@ -193,7 +193,6 @@ Renderer11::~Renderer11() {
     drop(dofApplyPs_);
     for (Target& t : dof_) dropTarget(t);
     for (Target& t : dofFocus_) dropTarget(t);
-    drop(fogLightPs_);
     dropTarget(shafts_);  // 2.5.7
     drop(hillsSrv_);  // 2.5.9
     drop(hillsData_);
@@ -407,7 +406,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[59] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[58] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -455,7 +454,6 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"dof_down_ps", ps, shaderSource(), {}, true},
                    {"dof_focus_ps", ps, shaderSource(), {}, true},
                    {"dof_apply_ps", ps, shaderSource(), {}, true},
-                   {"fog_light_ps", ps, shaderSource(), {}, true},
                    {"mirror_vs", vs, shaderSource(), {}, true},  // 2.5.9: the world's reflections in the water
                    {"mirror_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
@@ -597,9 +595,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[53].code.empty() || !psOf(wants[53], dofDownPs_)) dofDownPs_ = nullptr;
     if (wants[54].code.empty() || !psOf(wants[54], dofFocusPs_)) dofFocusPs_ = nullptr;
     if (wants[55].code.empty() || !psOf(wants[55], dofApplyPs_)) dofApplyPs_ = nullptr;
-    if (wants[56].code.empty() || !psOf(wants[56], fogLightPs_)) fogLightPs_ = nullptr;
-    if (wants[57].code.empty() || !vsOf(wants[57], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
-    if (wants[58].code.empty() || !psOf(wants[58], mirrorPs_)) mirrorPs_ = nullptr;
+    if (wants[56].code.empty() || !vsOf(wants[56], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
+    if (wants[57].code.empty() || !psOf(wants[57], mirrorPs_)) mirrorPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -636,7 +633,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"COLOR", 0, colour, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}};
-        if (FAILED(device_->CreateInputLayout(layout, 3, wants[57].code.data(), wants[57].code.size(),
+        if (FAILED(device_->CreateInputLayout(layout, 3, wants[56].code.data(), wants[56].code.size(),
                                               &mirrorLayout_)))
             mirrorLayout_ = nullptr;
     }
@@ -1205,7 +1202,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
-    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !fogDone_ || !mistDone_ ||
+    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !mistDone_ ||
                                 !skyDone_ || !shaftsDone_ || !flareDone_ || !heatDone_ || !bloomDone_ ||
                                 !gradeDone_ || !dofDone_ || !weatherDone_))
         flushBatch();
@@ -1217,7 +1214,6 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         applyCritters();  // 2.5.4: the living world, the embers shining out of the night
     }
     if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the mists
-    if (s.ui && worldDrawn_ && !fogDone_) applyFog();  // 2.5.5: the low fog lit by the sun
     if (s.ui && worldDrawn_ && !mistDone_) applyMist();  // 2.5: over the ground, before the colours
     if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: past the map's edge
     if (s.ui && worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5: the light in the air
@@ -2085,7 +2081,6 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         applyCritters();    // 2.5.4
     }
     if (worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3
-    if (worldDrawn_ && !fogDone_) applyFog();  // 2.5.5
     if (worldDrawn_ && !mistDone_) applyMist();  // 2.5
     if (worldDrawn_ && !skyDone_) applySky();
     if (worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5
@@ -2131,7 +2126,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundLifeDone_ = grassDone_ = waterLevelNoted_ = false;  // 2.5.4
     frameCrowns_.clear();
     critterFires_.clear();
-    shaftsDone_ = flareDone_ = dofDone_ = fogDone_ = false;  // 2.5.5
+    shaftsDone_ = flareDone_ = dofDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
@@ -3221,37 +3216,6 @@ void Renderer11::applyDof() {
         maskPass(dofBlurPs_, dof_[1 - i], c, dof_[i].srv, nullptr);
     }
     worldPass(dofApplyPs_, c, 2, 0, depthSrv_, dof_[0].srv, dofFocus_[dofFocusNow_].srv);
-}
-
-// 2.5.5: as Direct3D 12's applyFog (sun_map.cpp) - a fog lying low over the fields, lit by the sun, blended over the
-// world - the remaster's (the strong set's mode) only, as there
-void Renderer11::applyFog() {
-    fogDone_ = true;
-    if (!fogLightPs_ || !effects_.volumetricFog || effects_.volumetricFogDensity <= 0 || !remaster() ||
-        !outdoors_ || !cameraValid_ || cameraTargetZ_ <= 0.0f || !target_.texture || !depthViews())
-        return;
-    const float* m = viewToWorld_;
-    Constants c{};
-    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    c.scale = float(scale_);
-    c.uiPixels[0] = float(target_.width);
-    c.uiPixels[1] = float(target_.height);
-    const float worldX[4] = {m[0], m[3], m[6], m[9]}, worldY[4] = {m[1], m[4], m[7], m[10]},
-                worldZ[4] = {m[2], m[5], m[8], m[11]};
-    std::copy(worldX, worldX + 4, c.sourceClamp);
-    std::copy(worldY, worldY + 4, c.sourceRect);
-    std::copy(worldZ, worldZ + 4, c.fogColor);
-    c.twin[0] = camera::targetHeight(m, cameraTargetZ_);  // the ground's height at the player
-    c.twin[1] = 5.0f;                                       // the fog's depth over it
-    c.twin[2] = 0.02f * float(std::clamp(effects_.volumetricFogDensity, 0, 200)) / 100.0f;
-    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
-    c.uiPixels[2] = 0.9f * (1.0f - night);
-    c.sharpen = waterTime();
-    if (!fogLogged_) LOG_INFO("volumetric fog: over %s (Direct3D 11)", map_.c_str());
-    fogLogged_ = true;
-    worldPass(fogLightPs_, c, 0, 1, depthSrv_);
 }
 
 float Renderer11::mapFadeNow() {

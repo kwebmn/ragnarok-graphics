@@ -432,8 +432,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.materialsStrength);
     w.i32(e.tier);
     w.u8(e.groundSeams ? 1 : 0);  // 1.9
-    w.u8(e.volumetricFog ? 1 : 0);  // 1.13
-    w.i32(e.volumetricFogDensity);
     w.u8(e.smoothHills ? 1 : 0);  // 1.15
     w.i32(e.smoothHillsStrength);
     w.u8(e.worldReflections ? 1 : 0);  // 1.16

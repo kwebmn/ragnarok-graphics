@@ -159,7 +159,6 @@ EffectSettings effectsOff() {
     e.spriteLight = false;
     e.worldReflections = false;
     e.smoothHills = false;
-    e.volumetricFog = false;
     e.groundSeams = false;
     e.materials = false;
     e.underwater = false;
@@ -230,7 +229,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.spriteLight ||
            e.worldReflections ||
            e.smoothHills ||
-           e.volumetricFog ||
            e.groundSeams ||
            e.materials ||
            e.underwater ||

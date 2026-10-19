@@ -67,46 +67,6 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
     if (c.count) sunCasters.push_back(c);
 }
 
-// 1.13: volumetric fog lying low over the fields, lit by the sun, blended over the world once it is drawn - the
-// characters in it too. (2.2: without the sun's map - no rays through the crowns.)
-bool Renderer::Impl::applyFog() {
-    fogLightDone = true;
-    crumb("volumetric fog");
-    if (!ensureScene("volumetric fog")) return true;
-    ID3D12PipelineState* pso = alphaPipeline(fogLightPs, fogLightPipelines, upscale ? 1 : samples, "volumetric fog");
-    if (!pso) return true;
-    if (!copySceneDepth()) return false;
-    const float* m = viewToWorld;
-    Constants c{};
-    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    c.scale = float(upscale ? worldScale : scale);
-    if (upscale) {
-        c.jitter[0] = jitter[0];
-        c.jitter[1] = jitter[1];
-    }
-    const int w = sceneWidth, h = sceneHeight;
-    c.uiPixels[0] = float(w);
-    c.uiPixels[1] = float(h);
-    const float worldX[4] = {m[0], m[3], m[6], m[9]}, worldY[4] = {m[1], m[4], m[7], m[10]},
-                worldZ[4] = {m[2], m[5], m[8], m[11]};
-    std::copy(worldX, worldX + 4, c.sourceClamp);
-    std::copy(worldY, worldY + 4, c.sourceRect);
-    std::copy(worldZ, worldZ + 4, c.fogColor);
-    c.twin[0] = camera::targetHeight(m, cameraTargetZ);  // the ground's height at the player
-    c.twin[1] = 5.0f;              // the fog's depth over it
-    c.twin[2] = 0.02f * float(std::clamp(effects.volumetricFogDensity, 0, 200)) / 100.0f;
-    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
-    c.uiPixels[2] = 0.9f * (1.0f - night);
-    c.footprint = 0.0f;  // no sun's map
-    c.sharpen = waterTime();
-    if (!fogLightLogged)
-        LOG_INFO("volumetric fog: over %s", mapName.c_str());
-    fogLightLogged = true;
-    return worldPass(pso, w, h, c, sceneColorSrv, true);
-}
-
 // 1.17: the constants of a character's sprite (shaders.cpp spriteLight): the way to the sun on the screen and its
 // height, the strength, the sun's light here.
 void Renderer::Impl::spriteConstants(Constants& c, int gameWidth) const {

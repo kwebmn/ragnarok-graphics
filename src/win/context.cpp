@@ -194,8 +194,8 @@ bool Context::open(std::string& error) {
             LOG_INFO("Direct3D 11: RTX Remix, the 64-bit renderer and DLSS need Direct3D 12 - off");
         if (drawnByRenderer(effects()))  // 0.46.1; 2.5.9: every effect of Direct3D 12's now
             LOG_INFO("Direct3D 11: the effects are drawn as with Direct3D 12 (the remaster's - parallax, the world "
-                     "in the water, the volumetric fog - with the strong set); DLSS, TAA and the world drawn larger "
-                     "(render_scale over 100) need Direct3D 12");
+                     "in the water - with the strong set); DLSS, TAA and the world drawn larger (render_scale over "
+                     "100) need Direct3D 12");
     } else if (config.remix) {  // part 4 (test): Direct3D 9 for RTX Remix, its d3d9.dll next to uaRO.exe if there
         const std::string local = gameDir() + "\\d3d9.dll";
         const std::string dll = fileExists(local) ? local : systemDir() + "\\d3d9.dll";

@@ -330,10 +330,6 @@ struct EffectSettings {
     // between them wanders over the world instead of running along the cells (core/seams.hpp). Off by default.
     bool groundSeams = false;
 
-    // 1.13: the remaster's volumetric fog (fog_light_ps): a fog lying low over the fields, drifting, lit by the sun -
-    // with Real sun shadows in rays through the crowns and past the houses. Remaster mode. Off by default.
-    bool volumetricFog = false;
-    int volumetricFogDensity = 60;  // %, 0-200
     // 1.15: the remaster's smooth hills (core/hills.hpp, shaders.cpp hillLight): the ground lit by its corners'
     // averaged normals, not cell by cell - the sun lights the slopes smoothly. Off by default.
     bool smoothHills = false;
