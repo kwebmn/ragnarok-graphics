@@ -1,3 +1,20 @@
+# uaRO Graphics 2.5.20 — what to check
+
+- **Super-light mode** (Quality → the first box). For the weakest graphics cards, over the settings while it is on: no
+  effect and no AI picture, the world at half the picture's size, no anisotropy, sharpening or smoothing. With
+  Direct3D 11 also the ground's and the models' textures as their colour alone (a clay look in the map's colours), a
+  16-bit world and mip levels without blending. The interface and the characters as they are; Scroll Lock shows the game
+  as it was. Turned off, everything comes back.
+- **Save the laptop's battery** (Frames). While a laptop runs on its battery: frames at most as set (30), the effects at
+  most the weak set's, the world at 75 % (Direct3D 11), a minimised game nearly idle. On the mains, everything as
+  before.
+- **A quicker game thread.** The game's textures made 16-bit several times faster (map loads), rounding without
+  switching the processor's mode, the effects' tags without memory made every frame, less work for crisp text's windows
+  and for the frame sent on.
+- Please check: turn super-light on in a map and compare the frames (the counter, Ctrl+Shift+F11); off - the picture as
+  it was. On a laptop: turn "Save the laptop's battery" on, pull the charger - the log says "battery saver: on the
+  battery". Maps load no worse, textures look as before. Send a report.
+
 # uaRO Graphics 2.5.19 — what to check
 
 - **The game's palettes in the settings app** (Service → "Game palettes (Palettes.grf)"). Makes Palettes.grf with only
