@@ -3281,12 +3281,15 @@ const Entry kTexts[] = {
      "Рядом с uaRO.exe нет заметок к {1} (TEST.*.md)."},
     // 2.6: the header's search
     {"Search settings   Ctrl+F", "Пошук у налаштуваннях   Ctrl+F", "Поиск по настройкам   Ctrl+F"},
-    {"Found {1} for «{2}» - change them right here. Enter opens the first one's page, Esc goes back.",
-     "Знайдено {1} за «{2}» - змінюйте прямо тут. Enter відкриває сторінку першого, Esc повертає назад.",
-     "Найдено {1} по «{2}» - меняйте прямо здесь. Enter открывает страницу первого, Esc возвращает назад."},
+    {"«{2}»: {1} found", "«{2}»: знайдено {1}", "«{2}»: найдено {1}"},
     {"Nothing found for «{1}».", "За «{1}» нічого не знайдено.", "По «{1}» ничего не найдено."},
     {"Only the first {1} are shown: add a word.", "Показано лише перші {1}: додайте слово.",
      "Показаны только первые {1}: добавьте слово."},
+    {"Change them right here; the button under each opens its page. Enter opens the first one's page, Esc goes back.",
+     "Змінюйте прямо тут; кнопка під кожним відкриває його сторінку. Enter відкриває сторінку першого, Esc повертає "
+     "назад.",
+     "Меняйте прямо здесь; кнопка под каждым открывает его страницу. Enter открывает страницу первого, Esc "
+     "возвращает назад."},
     // 2.6: the status bar, the "changed" dots, the page's reset, "What's new"
     {"No texture pack", "Пакета текстур немає", "Пакета текстур нет"},
     {"Recommended for this computer: {1}", "Рекомендовано для цього комп'ютера: {1}",

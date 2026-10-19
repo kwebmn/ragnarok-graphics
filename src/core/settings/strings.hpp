@@ -334,7 +334,7 @@ enum class Text : uint16_t {
     MainQualityHint, MainOther, MainPad, MainPadHint, MainRecommended, MainWhatsNew, MainState, MainDriver,
     MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,
     MainMore, NotesNone,
-    SearchCue, SearchFound, SearchNothing, SearchMany,  // 2.6: the header's search
+    SearchCue, SearchFound, SearchNothing, SearchMany, SearchHow,  // 2.6: the header's search
     // 2.6: the status bar, the "changed" dots, the page's reset, "What's new"
     StripNoPack, DotHint, DotOn, DotOff, DotLegend, ResetPage, ResetPageAsk, WhatsNewTitle,
     Count

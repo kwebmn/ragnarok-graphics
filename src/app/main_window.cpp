@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "app/mnemonic.hpp"
+#include "app/notes_window.hpp"
 #include "app/report_send.hpp"
 #include "app/status_info.hpp"
 #include "app/update.hpp"
@@ -669,6 +670,12 @@ int MainWindow::box(const std::wstring& text, UINT type) {
     return answer;
 }
 
+void MainWindow::showNotes(const std::wstring& text) {
+    rebuilds_.boxOpened();  // its own message loop runs like a message box's
+    app::showNotes(hwnd_, wtr(lang_, Text::AppTitle), text, font_, dpi_);
+    if (rebuilds_.boxClosed()) PostMessageW(hwnd_, kRebuild, 0, 0);
+}
+
 void MainWindow::message(const std::wstring& text, bool error) {
     box(text, error ? MB_ICONWARNING : MB_ICONINFORMATION);
 }
@@ -912,7 +919,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             }
             if (model_->seenVersion() != kVersion) {  // 2.6: a new version's notes, once (not on a new install)
                 const std::wstring notes = newInstall_ ? std::wstring() : notesText(model_->paths().dir, lang_);
-                if (!notes.empty()) message(notes, false);
+                if (!notes.empty()) showNotes(notes);
                 model_->saveSeenVersion(kVersion);
             }
             if (model_->now().config.statsSend && !model_->now().gameRunning && !statsThread_) {

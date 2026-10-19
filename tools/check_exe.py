@@ -114,6 +114,7 @@ ALLOWED = {
         "GetWindowPlacement", "SetWindowPlacement", "MonitorFromRect", "MonitorFromWindow",
         "DrawFocusRect",  # 2.6: the list of views, drawn by the app (Windows 95 and later)
         "GetKeyState",  # 2.6: Ctrl+F, the search
+        "IsWindow",  # 2.6: "What's new"'s window (Windows 95 and later)
     },
 }
 # Newer than Windows 7: never on the list above (a check of the list itself).

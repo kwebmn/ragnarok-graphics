@@ -7,12 +7,13 @@ namespace {
 
 using namespace settings;
 
-constexpr int kOpenLog = 1601;
-constexpr int kOpenFolder = 1602;
-constexpr int kStudio = 1603;
-constexpr int kCompact = 1604;
-constexpr int kPalettes = 1605;
-constexpr int kPreview = 1606;
+// Over the game key's rows (1500 + 4 x 41) and under the schema's (4000), the Main page's (2001-2008) apart.
+constexpr int kOpenLog = 2101;
+constexpr int kOpenFolder = 2102;
+constexpr int kStudio = 2103;
+constexpr int kCompact = 2104;
+constexpr int kPalettes = 2105;
+constexpr int kPreview = 2106;
 
 // 2.6: the Developer mode's page - the switches for checks and reports (the Debug rows of the schema, a page of rows
 // of their own inside), the log, and the tools: uaRO Studio, and where Compact, Palettes.grf and the models' preview

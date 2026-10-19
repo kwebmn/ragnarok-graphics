@@ -47,3 +47,13 @@ TEST(window_place_rejects_nonsense) {
     CHECK(!parsePlace("0 0 900 700 0 7"));
     CHECK(parsePlace(" 0 0 900 700 1 "));
 }
+
+TEST(whats_new_keeps_numbered_steps) {
+    const char* const notes =
+        "# uaRO Graphics 2.6.0 — проверка\n"
+        "- Проверьте:\n"
+        "  1. Первое\n"
+        "     продолжение.\n"
+        "  2. Второе.\n";
+    CHECK(notesOf(notes, "2.6.0") == "• Проверьте:\n   1. Первое продолжение.\n   2. Второе.");
+}

@@ -21,13 +21,13 @@ app's Service page) downloads and installs the newest build; your settings stay.
 ## What it does
 
 - **Resolution and text.** The game is drawn at the window's real pixels, not stretched: the world sharper, the
-  interface at the size you choose, the text and the windows' frames crisp (Screen and Quality pages). MSAA,
-  anisotropic filtering, TAA and contrast-adaptive sharpening are on the Quality and Smoothing pages.
+  interface at the size you choose, the text and the windows' frames crisp (Screen and Graphics pages). MSAA,
+  anisotropic filtering, TAA and contrast-adaptive sharpening are on the Graphics page.
 - **Effects, chosen by quality.** *Auto* picks a set by your graphics card — *Low* (Direct3D 11 or under 4 GB of
   video memory), *Medium* (4–8 GB) or *High* (8 GB and more); *Off* and *Custom* are there too. Ten groups — fixes
   of the picture, light, shadows, surfaces, nature, water, air and weather, the living world, skills, the picture —
   each with its own switch and strength, and each opens to its effects. New effects come switched off.
-- **AI textures.** The Texture pack page builds `uaro-textures.zip` from the game's own pictures with Real-ESRGAN
+- **AI textures.** The Neural network page's Pack tab builds `uaro-textures.zip` from the game's own pictures with Real-ESRGAN
   models or Game AI 2.0 (downloaded apart, `get-models.bat`), a model for each group of pictures; the game then shows
   them by kind — ground, buildings, characters and items, skills, icons.
 - **uaRO Studio** (`uaro-graphics\uaro-studio.exe`, for the pack's makers and testers): every texture of the game
@@ -36,10 +36,15 @@ app's Service page) downloads and installs the newest build; your settings stay.
   again by any model and a chain of steps (tone, grain, sharpening, clean alpha, an atlas's tiles one by one), looked
   at and kept or discarded; taken out, the game's own always, its material lighter or stronger. The running game
   shows the changes at once; in the game Ctrl+Shift+F8 opens the texture under the cursor in the studio.
-- **NVIDIA DLSS and frame generation** on GeForce RTX cards (the Smoothing page), drawn by the 64-bit renderer
+- **NVIDIA DLSS and frame generation** on GeForce RTX cards (the Graphics page), drawn by the 64-bit renderer
   `uaro-render64.exe`; the DLSS package is downloaded at installation on computers with an NVIDIA card.
+- **The settings app in three modes.** *Simple* — the Main page with the choices a game needs, the effects' groups
+  and the gamepad; *Detailed* — every setting on eight pages; *Developer* — the Debug page and the test rows too.
+  The window grows and remembers its place, **Ctrl+F** finds any setting and changes it in place, a dot marks a
+  value that is not the one recommended for your computer.
 - **The gamepad.** [uaRO Pad](https://github.com/kwebmn/ragnarok-gamepad) comes along: the Gamepad page turns it on.
-- **Reports and statistics.** The Diagnostics page sends a report to the developers with one button (a code
+- **Reports and statistics.** **Report a problem** at the top of the settings app sends a report to the
+  developers with one button (a code
   `R-XXXXXX` comes back) and can send one by itself when a game went badly. With your leave — asked once — the
   settings app sends anonymous statistics of which effects are kept and how the cards cope; no name, no login.
 
@@ -60,8 +65,9 @@ In the console, hold `Tab` on an effect or a group to see the picture — and th
 ## Requirements
 
 Windows 10 or 11 and a graphics card with Direct3D 12 for everything. Cards with Direct3D 11 only draw the game,
-its resolution, crisp text, the AI textures and a part of the effects. **Set up for this computer** on the settings
-app's Renderer page picks the renderer, the quality and the effects for your card.
+its resolution, crisp text, the AI textures and a part of the effects. **Recommended settings** on the settings
+app's Main page (**Set up for this computer** on the Graphics page) picks the renderer, the quality and the
+effects for your card.
 
 ## Files in the client folder
 

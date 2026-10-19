@@ -28,6 +28,13 @@ bool heads(const std::string& line, const std::string& version) {
     return after == line.size() || (line[after] != '.' && (line[after] < '0' || line[after] > '9'));
 }
 
+// "  1. ..." - a numbered step under a point
+bool step(const std::string& line, size_t text) {
+    size_t i = text;
+    while (i < line.size() && line[i] >= '0' && line[i] <= '9') ++i;
+    return text > 0 && i > text && line.compare(i, 2, ". ") == 0;
+}
+
 std::string plain(std::string s) {
     for (const std::string mark : {"**", "`"})
         for (size_t at = s.find(mark); at != std::string::npos; at = s.find(mark, at)) s.erase(at, mark.size());
@@ -48,7 +55,9 @@ std::string notesOf(const std::string& markdown, const std::string& version) {
         if (text == std::string::npos) continue;
         if (line.compare(text, 2, "- ") == 0 && text == 0)
             points.push_back("• " + line.substr(2));
-        else if (!points.empty() && text > 0)  // a point's next line
+        else if (step(line, text))  // its own line, under its point
+            points.push_back("   " + line.substr(text));
+        else if (!points.empty() && text > 0)  // a point's (or a step's) next line
             points.back() += " " + line.substr(text);
         else
             points.push_back(line.substr(text));

@@ -40,6 +40,8 @@ public:
     virtual void showView(settings::View view, int tab) = 0;
     // 2.6: the level of the rows the pages show - the mode, the Detailed one for a page opened off the mode's list
     virtual settings::Mode mode() const = 0;
+    // 2.6: a long text in a window of its own that scrolls ("What's new"); the page stays under it like a box's
+    virtual void showNotes(const std::wstring& text) = 0;
 };
 
 // 2.6: the Diagnostics page's report comment - the header's "Report a problem" puts the focus into it.

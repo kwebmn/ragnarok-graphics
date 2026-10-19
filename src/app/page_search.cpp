@@ -50,6 +50,7 @@ public:
             return;
         }
         p.heading(tf(Text::SearchFound, {std::to_string(hits_.size()), query_}));
+        p.note(t(Text::SearchHow));
         if (hits_.size() >= 80) p.note(tf(Text::SearchMany, {std::to_string(hits_.size())}), Tone::Warn);
         for (size_t n = 0; n < hits_.size(); ++n) {
             const Hit& h = hits_[n];
