@@ -454,6 +454,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.skyRays ? 1 : 0);
     w.u8(e.treeSeasons ? 1 : 0);
     w.u8(e.dragonflies ? 1 : 0);
+    w.u8(e.nightFireflies ? 1 : 0);  // 2.6.11
+    w.u8(e.moths ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

@@ -57,6 +57,8 @@ critters::Switches Renderer::Impl::critterSwitches() const {
     on.splashes = effects.splashes;
     on.drips = effects.caveDrips;
     on.underwater = effects.underwater;
+    on.nightFireflies = effects.nightFireflies;  // 2.6.11
+    on.moths = effects.moths;
     return on;
 }
 

@@ -40,6 +40,8 @@ void World::setPlace(const living::Place& p) {
     motes_.clear();
     drips_.clear();
     vents_.clear();
+    glows_.clear();
+    moths_.clear();
     flockAgain_ = 0.0;
 }
 
@@ -50,7 +52,93 @@ void World::update(const Switches& on, const Frame& f) {
     birds(on, f);
     motes(on, f);
     drips(on, f);
+    fireflies(on, f);
+    moths(on, f);
     if (out_.size() > kMaxSprites) out_.resize(kMaxSprites);
+}
+
+// 2.6.11: where the butterflies fly by day, fireflies drift low over the grass from dusk to dawn (by the hour: day
+// under 0.3), each lit a while and dark a while; they come out as the light goes.
+void World::fireflies(const Switches& on, const Frame& f) {
+    if (!on.nightFireflies || !place_.wildlife || f.day >= 0.3f) {
+        glows_.clear();
+        return;
+    }
+    const float dusk = std::clamp((0.3f - f.day) / 0.3f, 0.0f, 1.0f);
+    while (glows_.size() < 14) {
+        Glow g;
+        g.at = around(f.centre, 4.0f, 38.0f);
+        g.heading = random() * 2.0f * kPi;
+        g.phase = random();
+        g.period = 2.5f + 3.0f * random();
+        g.altitude = 0.4f + 1.8f * random();
+        glows_.push_back(g);
+    }
+    for (Glow& g : glows_) {
+        if (distXz(g.at, f.centre) > 50.0f) g.at = around(f.centre, 10.0f, 38.0f);  // left behind: elsewhere
+        g.heading += std::sin(float(f.now) * 0.7f + g.phase * 6.0f) * 0.9f * f.dt;
+        g.at.x += std::cos(g.heading) * 0.5f * f.dt;
+        g.at.z += std::sin(g.heading) * 0.5f * f.dt;
+        const float cycle = std::fmod(float(f.now) / g.period + g.phase, 1.0f);
+        const float lit = std::pow(std::max(0.0f, std::sin(cycle * 2.0f * kPi)), 3.0f);  // dark half the time
+        Point p = g.at;
+        p.y = f.centre.y - g.altitude - 0.25f * std::sin(float(f.now) * 1.3f + g.phase * 6.0f);
+        Sprite s = sprite(Firefly, p, 0.5f, dusk);
+        s.p1 = lit;
+        out_.push_back(s);
+    }
+}
+
+// 2.6.11: at night three pale moths circle each of the four fires nearest the player (within 45 units) - a fire
+// gone, its moths with it.
+void World::moths(const Switches& on, const Frame& f) {
+    if (!on.moths || f.day >= 0.3f || f.fires.empty()) {
+        moths_.clear();
+        return;
+    }
+    std::vector<Point> near;
+    for (const Point& p : f.fires)
+        if (distXz(p, f.centre) < 45.0f) near.push_back(p);
+    std::sort(near.begin(), near.end(),
+              [&](const Point& a, const Point& b) { return distXz(a, f.centre) < distXz(b, f.centre); });
+    if (near.size() > 4) near.resize(4);
+    // each moth keeps to its fire as this frame has it (the tips move a little from frame to frame)
+    std::vector<Circler> kept;
+    for (const Point& fire : near) {
+        int have = 0;
+        for (Circler& m : moths_)
+            if (have < 3 && distXz(m.fire, fire) < 2.0f) {
+                m.fire = fire;
+                kept.push_back(m);
+                ++have;
+            }
+        for (; have < 3; ++have) {
+            Circler m;
+            m.fire = fire;
+            m.angle = random() * 2.0f * kPi;
+            m.speed = (1.6f + 1.4f * random()) * (random() < 0.5f ? -1.0f : 1.0f);
+            m.radius = 0.7f + 1.4f * random();
+            m.height = -0.4f + 1.6f * random();
+            m.phase = random() * 10.0f;
+            kept.push_back(m);
+        }
+    }
+    moths_.swap(kept);
+    const float dusk = std::clamp((0.3f - f.day) / 0.3f, 0.0f, 1.0f);
+    for (Circler& m : moths_) {
+        m.angle += m.speed * f.dt;
+        m.phase += f.dt * 30.0f;  // quick wings
+        const float r = m.radius + 0.25f * std::sin(float(f.now) * 5.0f + m.phase * 0.1f);
+        const Point p{m.fire.x + std::cos(m.angle) * r,
+                      m.fire.y - m.height - 0.3f * std::sin(float(f.now) * 3.1f + m.phase * 0.05f),
+                      m.fire.z + std::sin(m.angle) * r};
+        Sprite s = sprite(Moth, p, 0.55f, dusk);
+        s.p1 = m.phase;
+        const float along = m.angle + (m.speed > 0.0f ? 0.5f : -0.5f) * kPi;  // its way: along its circle
+        s.headingX = std::cos(along);
+        s.headingZ = std::sin(along);
+        out_.push_back(s);
+    }
 }
 
 // Butterflies wandering over the grass by day, a dragonfly or two darting over the water.

@@ -170,6 +170,7 @@ EffectSettings effectsOff() {
     e.leafFall = false;
     e.birds = false;
     e.butterflies = false;
+    e.nightFireflies = e.moths = false;
     e.swamp = false;
     e.fish = false;
     e.shoreFoam = false;
@@ -248,6 +249,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.leafFall ||
            e.birds ||
            e.butterflies ||
+           e.nightFireflies || e.moths ||
            e.swamp ||
            e.fish ||
            e.shoreFoam ||

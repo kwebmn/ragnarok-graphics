@@ -3225,6 +3225,18 @@ const Entry kTexts[] = {
     {"Day 13:00", "День 13:00", "День 13:00"},
     {"Sunset 18:30", "Захід 18:30", "Закат 18:30"},
     {"Night 0:00", "Ніч 0:00", "Ночь 0:00"},
+    {"Fireflies in the grass", "Світлячки в траві", "Светлячки в траве"},
+    {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
+     "while (Direct3D 12).",
+     "Від сутінків до світанку над травою, де вдень літають метелики, низько пливуть світлячки — то світяться, то "
+     "гаснуть (Direct3D 12).",
+     "От сумерек до рассвета над травой, где днём летают бабочки, низко плывут светлячки — то светятся, то гаснут "
+     "(Direct3D 12)."},
+    {"Moths at the fire", "Нічні метелики біля вогню", "Мотыльки у огня"},
+    {"At night a few pale moths circle the torches and the fires near you, lit by the flames (Direct3D 12).",
+     "Уночі кілька світлих нічних метеликів кружляють довкола смолоскипів і вогнищ поруч, освітлені полум'ям "
+     "(Direct3D 12).",
+     "Ночью несколько светлых мотыльков кружат вокруг факелов и огней рядом, освещённые пламенем (Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

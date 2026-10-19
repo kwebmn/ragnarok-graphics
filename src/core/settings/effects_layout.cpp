@@ -77,6 +77,8 @@ const EffectLayout kEffects[] = {
     {"effects.swamp", {}, {}, {}, 2},  // 1.7.2
     {"effects.butterflies", {"effects.dragonflies"}, {}, {}, 2},  // 1.7.3
     {"effects.birds", {}, {}, {}, 2},  // 1.7.3
+    {"effects.night_fireflies", {}, {}, {}, 2},  // 2.6.11
+    {"effects.moths", {}, {}, {}, 2},
     {"effects.leaf_fall", {}, {}, {}, 2},  // 1.7.3
     {"effects.embers", {}, {}, {}, 2},  // 1.7.3
     {"effects.breath", {}, {}, {}, 2},  // 1.7.3

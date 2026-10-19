@@ -304,6 +304,8 @@ private:
         on.splashes = effects_.splashes;
         on.drips = effects_.caveDrips;
         on.underwater = effects_.underwater;
+        on.nightFireflies = effects_.nightFireflies;  // 2.6.11
+        on.moths = effects_.moths;
         return on;
     }
     bool crittersNeedFeet() const { return effects_.birds || effects_.breath || effects_.splashes; }

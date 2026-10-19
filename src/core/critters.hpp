@@ -23,6 +23,9 @@ enum Kind : uint8_t {
     Drip = 10,
     Ring = 11,    // on the ground, flat
     Shadow = 12,  // on the ground, flat
+    // 13: the light from above under the sea - the renderer's own, over the whole picture
+    Firefly = 14,  // 2.6.11: a light over the grass at night, blinking (p1 how lit, 0-1)
+    Moth = 15,     // 2.6.11: round a fire at night (p1 its wings' beat)
 };
 
 struct Point {
@@ -50,7 +53,12 @@ struct Switches {
     bool splashes = false;
     bool drips = false;
     bool underwater = false;
-    bool any() const { return butterflies || birds || leaves || embers || breath || splashes || drips || underwater; }
+    bool nightFireflies = false;  // 2.6.11: over the grass from dusk to dawn
+    bool moths = false;           // 2.6.11: round the fires at night
+    bool any() const {
+        return butterflies || birds || leaves || embers || breath || splashes || drips || underwater ||
+               nightFireflies || moths;
+    }
 };
 
 struct Crown {  // a tree's leaves drawn this frame
@@ -108,6 +116,14 @@ private:
         Point at;
         float next = 0.0f;
     };
+    struct Glow {  // 2.6.11: a firefly in the grass at night
+        Point at;
+        float heading = 0.0f, phase = 0.0f, period = 3.0f, altitude = 1.0f;
+    };
+    struct Circler {  // 2.6.11: a moth round a fire
+        Point fire;
+        float angle = 0.0f, speed = 2.0f, radius = 1.2f, height = 0.5f, phase = 0.0f;
+    };
 
     float random();  // 0-1
     Point around(const Point& c, float near, float far);
@@ -115,6 +131,8 @@ private:
     void birds(const Switches& on, const Frame& f);
     void motes(const Switches& on, const Frame& f);
     void drips(const Switches& on, const Frame& f);
+    void fireflies(const Switches& on, const Frame& f);  // 2.6.11
+    void moths(const Switches& on, const Frame& f);      // 2.6.11
 
     living::Place place_;
     uint32_t seed_ = 0x9e3779b9u;
@@ -124,6 +142,8 @@ private:
     std::vector<Mote> motes_;
     std::vector<DripSpot> drips_;
     std::vector<Vent> vents_;
+    std::vector<Glow> glows_;
+    std::vector<Circler> moths_;
     float fireCarry_ = 0.0f, leafCarry_ = 0.0f;
     std::vector<Sprite> out_;
 };

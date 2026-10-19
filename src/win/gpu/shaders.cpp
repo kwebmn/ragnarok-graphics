@@ -1924,7 +1924,8 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
 // vertices a sprite), premultiplied over the world. t1 four texels a sprite - its middle (target pixels), size
 // (pixels) and view depth; its kind, two numbers of its kind and its alpha; its heading on the screen (radians) and
 // how flat a circle on the ground looks; for a dragonfly the water's surface under it (pixels, depth, 1). Kind 13:
-// the light from above under the sea, over the whole picture. sharpen the time, twinW the creatures' light.
+// the light from above under the sea, over the whole picture. sharpen the time, twinW the creatures' light. 2.6.11:
+// kind 14 a firefly (q.y how lit), 15 a moth at a fire (q.y its wings' beat, r.x its heading) - lit by the flames.
 float segment(float2 p, float2 a, float2 b) {
     float2 pa = p - a, ba = b - a;
     return length(pa - ba * saturate(dot(pa, ba) / max(dot(ba, ba), 1e-6)));
@@ -1947,7 +1948,7 @@ CritterIn critters_vs(uint id : SV_VertexID) {
     float2 corner = float2(v == 1 || v == 4 || v == 5 ? 1.0 : -1.0, v == 2 || v == 3 || v == 5 ? 1.0 : -1.0);
     float4 s = tex1.Load(int3(4 * k, 0, 0));
     float kind = tex1.Load(int3(4 * k + 1, 0, 0)).x;
-    float2 px = kind > 12.5 ? (corner * 0.5 + 0.5) * targetSize : s.xy + corner * s.z * 3.5;
+    float2 px = abs(kind - 13.0) < 0.5 ? (corner * 0.5 + 0.5) * targetSize : s.xy + corner * s.z * 3.5;
     o.pos = float4(px.x * 2.0 / targetSize.x - 1.0, 1.0 - px.y * 2.0 / targetSize.y, 0.0, 1.0);
     o.d = (px - s.xy) / max(s.z, 1.0);
     o.k = k;
@@ -2044,6 +2045,19 @@ float4 critters_ps(CritterIn i) : SV_Target {
     } else if (kind == 10) {  // a falling drip: a streak q.y sizes long
         c = float3(0.8, 0.9, 1.0);
         a = smoothstep(0.9, 0.3, segment(d, float2(0.0, -q.y), float2(0.0, 0.0))) * 0.8;
+    } else if (kind == 14) {  // 2.6.11: a firefly - a yellow-green light and its soft halo, lit a while (q.y)
+        float rr = dot(d, d);
+        glow = float3(0.78, 1.0, 0.38) * (exp(-rr * 3.0) * 1.5 + exp(-rr * 0.35) * 0.3) * q.y;
+    } else if (kind == 15) {  // 2.6.11: a moth at a fire: a butterfly's shape, pale, beating fast, warm from the flames
+        float2 l = turned(d, r.x);
+        float f = 0.25 + 0.75 * abs(sin(q.y));
+        float2 wg = float2(abs(l.y) / f, l.x);
+        float wing = max(smoothstep(1.0, 0.75, length((wg - float2(0.45, 0.1)) / float2(0.45, 0.42))),
+                         smoothstep(1.0, 0.75, length((wg - float2(0.35, -0.25)) / float2(0.32, 0.3))));
+        float body = smoothstep(0.1, 0.05, abs(l.y)) * step(abs(l.x), 0.4);
+        c = lerp(float3(0.9, 0.86, 0.76), float3(0.32, 0.26, 0.2), body);
+        a = max(wing, body);
+        glow = float3(1.0, 0.68, 0.32) * 0.35 * a;
     } else if (kind == 11) {  // a ring on the ground
         a = smoothstep(0.12, 0.0, abs(length(d / float2(1.0, r.y)) - 0.9)) * 0.7;
         c = float3(0.85, 0.92, 1.0);

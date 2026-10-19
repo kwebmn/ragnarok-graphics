@@ -200,3 +200,16 @@ TEST(clock_auto_by_default_a_moment_by_its_word) {
     CHECK_EQ(parseConfig("[effects]\nclock = noon\n").effects.clock, int(daylight::kClockAuto));  // not its word
     CHECK(!(c.effects == parseConfig("").effects));
 }
+
+TEST(night_creatures_off_by_default_in_no_set) {
+    // 2.6.11: the fireflies in the grass and the moths at the fire - new looks, the player's own
+    const EffectSettings d = parseConfig("").effects;
+    CHECK(!d.nightFireflies && !d.moths);
+    const EffectSettings e = parseConfig("[effects]\nnight_fireflies = 1\nmoths = 1\n").effects;
+    CHECK(e.nightFireflies && e.moths);
+    CHECK(!effectsOff().nightFireflies && !effectsOff().moths);
+    for (const char* k : {"effects.night_fireflies", "effects.moths"}) {
+        const effect_groups::Member* m = effect_groups::memberOf(k);
+        CHECK(m && m->group == effect_groups::Life && m->level == 0);
+    }
+}
