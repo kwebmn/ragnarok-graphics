@@ -19,6 +19,8 @@ rm -rf "$out" "$stage"
 mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/pad"
 cp dist/install.bat dist/uninstall.bat dist/update.bat dist/get-dlss.bat dist/get-models.bat \
    dist/TEST.en.md dist/TEST.uk.md dist/TEST.ru.md "$stage/"
+# 2.6.1: the flags of Ctrl+1 and Ctrl+2 (tools/emotion_flags.py) - the game reads it once DATA.INI lists it
+cp dist/uaro-flags.grf "$stage/"
 cp build-win/ddraw.dll build-win/uaro-graphics.exe dist/uaro-graphics.ini build-win64/uaro-render64.exe \
    build-win64/uaro-studio.exe dist/dlss-version.txt dist/models-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
