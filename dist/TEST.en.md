@@ -1,3 +1,11 @@
+# uaRO Graphics 2.5.22 — what to check
+
+- **Super-light mode and "Save the laptop's battery" lighter on the graphics card.** The world drawn at half (75 %) the
+  size was made larger with a sharpening of its own - 45 taps for every pixel; on a 4K screen that cost ten times the
+  world itself. Now it is made larger by plain smoothing: the world a little softer, the card's work several times less.
+- Please check: super-light on a map, a minute of play, a report - "GPU: … ms of work a frame" should be well under
+  the 2.2 ms of the last one.
+
 # uaRO Graphics 2.5.21 — what to check
 
 - **Super-light mode on Direct3D 11: a black or frozen world.** On the maps of a known region (Prontera, Louyang and
