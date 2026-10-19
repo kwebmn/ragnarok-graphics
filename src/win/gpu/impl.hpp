@@ -1181,7 +1181,7 @@ struct Renderer::Impl {
     // 1.17, living characters (draw.cpp): a sprite lit by the sun from its silhouette's sides (shaders.cpp
     // spriteLight, stage 0 bit 28)
     bool spriteLightWanted() const { return effects.spriteLight && effects.spriteLightStrength > 0; }
-    void spriteConstants(Constants& c) const;
+    void spriteConstants(Constants& c, int gameWidth) const;  // 2.6.3: the game texture's width
     // 1.13: volumetric fog lit by the sun (sun_map.cpp applyFog, fog_light_ps)
     ID3DBlob* fogLightPs = nullptr;
     ID3D12PipelineState* fogLightPipelines[4] = {};

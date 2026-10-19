@@ -109,7 +109,7 @@ bool Renderer::Impl::applyFog() {
 
 // 1.17: the constants of a character's sprite (shaders.cpp spriteLight): the way to the sun on the screen and its
 // height, the strength, the sun's light here.
-void Renderer::Impl::spriteConstants(Constants& c) const {
+void Renderer::Impl::spriteConstants(Constants& c, int gameWidth) const {
     c.stage0[1] |= 1u << 28;
     float sun[2];
     sunOnScreen(sun);
@@ -120,6 +120,7 @@ void Renderer::Impl::spriteConstants(Constants& c) const {
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     c.uiPixels[0] = float(std::clamp(effects.spriteLightStrength, 0, 200)) / 100.0f;
     c.uiPixels[1] = mapOutdoors ? 1.0f - 0.8f * night : 0.3f;
+    c.uiPixels[2] = float(gameWidth);  // 2.6.3: its edge in the game's texels, also under an AI picture
 }
 
 }  // namespace uagfx::gpu

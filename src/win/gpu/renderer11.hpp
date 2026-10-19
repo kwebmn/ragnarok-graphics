@@ -324,7 +324,7 @@ private:
     void applyFlare();
     void applyDof();
     void applyFog();  // 2.5.5: the volumetric fog low over the fields (sun_map.cpp applyFog) - the remaster's
-    void spriteConstants(Constants& c) const;
+    void spriteConstants(Constants& c, int gameWidth) const;  // 2.6.3: the game texture's width
     void updateWind();
     bool windShared() const { return effects_.sharedWind && cameraValid_; }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);

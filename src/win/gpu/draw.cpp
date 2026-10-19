@@ -394,7 +394,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
     if (hilly) hillsConstants(c);  // 1.15
-    if (sprite && !matTex && c.uiMode == 0) spriteConstants(c);  // 1.17
+    if (sprite && !matTex && c.uiMode == 0) spriteConstants(c, t[0] ? t[0]->width : 0);  // 1.17
     if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())
         c.stage1[1] |= 1u << 31;
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);

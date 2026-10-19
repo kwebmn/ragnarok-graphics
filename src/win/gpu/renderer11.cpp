@@ -1579,7 +1579,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         !ray && !adds && !d.twin && c.uiMode == 0 && s.blend && d.vertexCount == 4 && t[0] != &white_ &&
         !t[0]->cells.empty() && !t[0]->leafy &&
         ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount))
-        spriteConstants(c);
+        spriteConstants(c, t[0]->width);
     // 2.5.9 (draw.cpp 1.15): smooth hills - a draw of the ground (its own or a seam's strip) reads the corners'
     // normals (t3)
     const bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin &&
@@ -3062,7 +3062,7 @@ void Renderer11::sunOnScreen(float out[2]) const {
     out[1] = sy / len;
 }
 
-void Renderer11::spriteConstants(Constants& c) const {  // 2.5.5 (sun_map.cpp)
+void Renderer11::spriteConstants(Constants& c, int gameWidth) const {  // 2.5.5 (sun_map.cpp)
     c.stage0[1] |= 1u << 28;
     float sun[2];
     sunOnScreen(sun);
@@ -3073,6 +3073,7 @@ void Renderer11::spriteConstants(Constants& c) const {  // 2.5.5 (sun_map.cpp)
     const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
     c.uiPixels[0] = float(std::clamp(effects_.spriteLightStrength, 0, 200)) / 100.0f;
     c.uiPixels[1] = outdoors_ ? 1.0f - 0.8f * night : 0.3f;
+    c.uiPixels[2] = float(gameWidth);  // 2.6.3: its edge in the game's texels, also under an AI picture
 }
 
 // 2.5.5 (weather.cpp updateWind): the shared wind now and what it has carried since the last frame

@@ -273,13 +273,16 @@ float relief(float2 uv, float2 du, float2 dv, float seen) {
 // 1.17, living characters (draw.cpp spriteConstants): a sprite of a character or a monster lit by the sun from the
 // side its picture's own shape gives - its silhouette's slope a few texels around as the way its edge faces: the side
 // towards the sun (twinX, twinY on the screen, twinW its height) brighter with a warm rim, the far side a little
-// darker. uiPixels.x the strength, .y the sun's light here.
+// darker. uiPixels.x the strength, .y the sun's light here; 2.6.3: .z the game texture's width.
 float3 spriteLight(float2 uv, float2 du, float2 dv, float3 c) {
     float w, h;
     tex0.GetDimensions(w, h);
     float2 size = float2(w, h);
-    float2 sx = du / max(length(du * size), 1e-4) * 2.0;  // two texels along the screen's x, then its y
-    float2 sy = dv / max(length(dv * size), 1e-4) * 2.0;
+    // two of the game's texels along the screen's x, then its y - 2.6.3: an AI picture (2 or 4 times as many texels,
+    // smooth between them) had the edge a quarter as wide and soft, and no light on its sides at all
+    float per = uiPixels.z > 0.0 ? max(1.0, floor(w / uiPixels.z + 0.5)) : 1.0;  // its texels a game texel
+    float2 sx = du / max(length(du * size), 1e-4) * 2.0 * per;
+    float2 sy = dv / max(length(dv * size), 1e-4) * 2.0 * per;
     float l = tex0.SampleGrad(samp0, uv - sx, du, dv).a, r = tex0.SampleGrad(samp0, uv + sx, du, dv).a;
     float u = tex0.SampleGrad(samp0, uv - sy, du, dv).a, d = tex0.SampleGrad(samp0, uv + sy, du, dv).a;
     float2 out2 = -float2(r - l, d - u);  // from the inside out, screen axes (y down)
