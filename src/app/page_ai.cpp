@@ -104,12 +104,18 @@ const IniSetting& setting(const char* key) { return *findSetting(key); }
 // with the 64-bit renderer: a note says so once.
 class AiPage : public Page {
 public:
-    explicit AiPage(PageHost& host) : Page(host) {}
+    AiPage(PageHost& host, AiPart part) : Page(host), part_(part) {}
 
     void build(Panel& p) override {
         Model& m = host_.model();
         const AiSettings a = m.pendingConfig().ai;
         const bool on = a.on();  // 1.5.8: the pack's pictures or the network making them
+        if (part_ == AiPart::Models) {  // 2.6: the tab of the models
+            buildGroups(p, a, on);
+            if (!on) p.note(t(Text::AiOffNote));
+            buildPreview(p);
+            return;
+        }
         p.heading(t(Text::PageAi));
         p.check(kEnable, t(Text::AiEnable), a.enabled, t(Text::AiEnableHint));
         const AiPreset preset = aiPresetOf(a);
@@ -138,7 +144,6 @@ public:
         p.pair(kSizes, t(Text::AiSizes), std::atoi(m.token(setting("ai.min_size")).c_str()),
                std::atoi(m.token(setting("ai.max_size")).c_str()), t(Text::AiSizesHint), on, L"–");
         p.check(kAhead, t(Text::AiAhead), m.token(setting("ai.ahead")) == "1", t(Text::AiAheadHint), on);
-        buildGroups(p, a, on);
         p.gap();
         p.note(t(Text::AiPackNote));  // 0.42
         // 1.5.8: a switch of its own - without the pack's pictures it makes them all anew and keeps none.
@@ -146,7 +151,6 @@ public:
         if (m.token(setting("renderer.api")) == "d3d11") p.note(t(Text::AiD3d11Note));  // 0.47
         p.note(t(Text::AfterRestart));
         if (!on) p.note(t(Text::AiOffNote));
-        buildPreview(p);
     }
 
     bool ticks() const override { return g_preview.process != nullptr; }
@@ -274,6 +278,8 @@ public:
     }
 
 private:
+    AiPart part_;  // 2.6: which tab
+
     // 1.6: a model for each group, the set of them, what the pack holds of each and "make again".
     void buildGroups(Panel& p, const AiSettings& a, bool on) {
         p.gap();
@@ -446,6 +452,6 @@ private:
 
 }  // namespace
 
-std::unique_ptr<Page> makeAiPage(PageHost& host) { return std::make_unique<AiPage>(host); }
+std::unique_ptr<Page> makeAiPage(PageHost& host, AiPart part) { return std::make_unique<AiPage>(host, part); }
 
 }  // namespace uagfx::app

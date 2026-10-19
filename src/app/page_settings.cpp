@@ -2,6 +2,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <utility>
 
 #include "app/page.hpp"
 #include "app/setting_ids.hpp"
@@ -30,12 +31,25 @@ bool sameName(const std::string& a, const std::string& b) {  // a folder's name:
 }
 
 // Render, Quality and Frames (stage 2 spec §6.1): uaro-graphics.ini keys one to one. Quality, Sound, Game and Chat
-// (0.6.2): the game's key.
+// (0.6.2): the game's key. 2.6: several of them on one page (Graphics: Render, Quality | Smoothing, Frames), the right
+// ones in a second column when the page is wide; the rows above the mode are left out.
 class SettingsPage : public Page {
 public:
-    SettingsPage(PageHost& host, settings::Page which) : Page(host), which_(which) {}
+    SettingsPage(PageHost& host, std::vector<settings::Page> left, std::vector<settings::Page> right)
+        : Page(host), left_(std::move(left)), right_(std::move(right)) {}
 
     void build(Panel& p) override {
+        const bool two = !right_.empty() && p.split();
+        for (size_t i = 0; i < left_.size(); ++i) buildPart(p, left_[i], i > 0);
+        if (two) p.nextColumn();
+        for (size_t i = 0; i < right_.size(); ++i) buildPart(p, right_[i], i > 0 || !two);
+        if (two) p.join();
+    }
+
+    void buildPart(Panel& p, settings::Page which, bool after) {
+        if (after) p.gap(16);
+        which_ = which;
+        held_ = false;
         p.heading(t(pageName(which_)));
         switch (which_) {
             case settings::Page::Render:
@@ -402,6 +416,9 @@ private:
         p.note(t(Text::PauseNote));
     }
 
+    // A row of the part being built that the mode shows (2.6) and its values call for.
+    bool listed(const IniSetting& s) const { return s.page == which_ && levelOf(s) <= host_.mode() && shown(s); }
+
     // 2.4.2: DLSS's own size shows under Own size, its model with DLSS on
     bool shown(const IniSetting& s) const {
         const std::string k = sectionKey(s);
@@ -457,7 +474,7 @@ private:
         ownSize_ = nullptr;
         for (size_t i = 0; i < all.size(); ++i) {
             const IniSetting& s = all[i];
-            if (s.page != which_ || !shown(s)) continue;
+            if (!listed(s)) continue;
             const int id = rowId(i);
             const std::string token = m.token(s);
             switch (s.control) {
@@ -488,7 +505,7 @@ private:
                 ownSize_ = p.note(ownSizeText(), Tone::Normal);
             // 2.4.2: one note under rows in a row that apply at the next start
             size_t next = i + 1;
-            while (next < all.size() && (all[next].page != which_ || !shown(all[next]))) ++next;
+            while (next < all.size() && !listed(all[next])) ++next;
             if (!appliesNow(sectionKey(s)) && (next == all.size() || appliesNow(sectionKey(all[next]))))
                 p.note(t(Text::AfterRestart));
         }
@@ -496,7 +513,8 @@ private:
         p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
     }
 
-    settings::Page which_;
+    std::vector<settings::Page> left_, right_;
+    settings::Page which_ = settings::Page::Render;  // the part being built
     HWND ownSize_ = nullptr;              // 2.4.2: the note with DLSS's own size on this screen
     bool held_ = false;                   // a row is grey: the game runs and writes it itself
     std::vector<std::string> skinWords_;  // the skin list's words, in its order
@@ -505,8 +523,9 @@ private:
 
 }  // namespace
 
-std::unique_ptr<Page> makeSettingsPage(PageHost& host, settings::Page which) {
-    return std::make_unique<SettingsPage>(host, which);
+std::unique_ptr<Page> makeSettingsPage(PageHost& host, std::vector<settings::Page> left,
+                                       std::vector<settings::Page> right) {
+    return std::make_unique<SettingsPage>(host, std::move(left), std::move(right));
 }
 
 }  // namespace uagfx::app

@@ -9,6 +9,7 @@
 #include "app/model.hpp"
 #include "app/text.hpp"
 #include "app/ui.hpp"
+#include "core/settings/navigation.hpp"
 #include "core/settings/schema.hpp"
 
 namespace uagfx::app {
@@ -34,8 +35,15 @@ public:
                                   const std::wstring& offered) = 0;
     virtual std::wstring pickFolder(const std::wstring& title) = 0;
     // 1.6: another page, once the page's code has returned (the AI page's "Make again" opens the Texture pack page).
+    // 2.6: where the page is now (the pack's tab of the AI view); showView a view and its tab.
     virtual void showPage(settings::Page which) = 0;
+    virtual void showView(settings::View view, int tab) = 0;
+    // 2.6: the level of the rows the pages show - the mode, the Detailed one for a page opened off the mode's list
+    virtual settings::Mode mode() const = 0;
 };
+
+// 2.6: the Diagnostics page's report comment - the header's "Report a problem" puts the focus into it.
+constexpr int kReportField = 1308;
 
 // One page of the list on the left (stage 2 spec §6.1). Its controls' ids start at 1000.
 class Page {
@@ -68,11 +76,18 @@ protected:
     PageHost& host_;
 };
 
-std::unique_ptr<Page> makeSettingsPage(PageHost& host, settings::Page which);  // Render, Quality, Frames
+// The pages of the schema's rows and the game's key (Render, Quality, Frames...). 2.6: several on one page, the right
+// ones in a second column when the page is wide; the rows above the host's mode left out.
+std::unique_ptr<Page> makeSettingsPage(PageHost& host, std::vector<settings::Page> left,
+                                       std::vector<settings::Page> right = {});
+// 2.6: pages one under another; a control's command goes to the page that made it.
+std::unique_ptr<Page> makePartsPage(PageHost& host, std::vector<std::unique_ptr<Page>> parts);
 std::unique_ptr<Page> makeScreenPage(PageHost& host);
 std::unique_ptr<Page> makeDiagnosticsPage(PageHost& host);
 std::unique_ptr<Page> makeServicePage(PageHost& host);
-std::unique_ptr<Page> makeAiPage(PageHost& host);       // 0.12: the [ai] section
+// 0.12: the [ai] section; 2.6: on two tabs - what the network improves, and the models by group
+enum class AiPart { What, Models };
+std::unique_ptr<Page> makeAiPage(PageHost& host, AiPart part);
 std::unique_ptr<Page> makeAiCachePage(PageHost& host);  // 0.12: what the texture pack holds (0.48)
 std::unique_ptr<Page> makeEffectsPage(PageHost& host);  // 0.18: the [effects] section
 std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pack's builder

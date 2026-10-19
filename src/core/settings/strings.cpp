@@ -3222,6 +3222,8 @@ const Entry kTexts[] = {
     {"The game's texture rows copied with SSE2. Off: the game's own copy.",
      "Рядки текстур гри копіюються через SSE2. Вимкнено: власне копіювання гри.",
      "Строки текстур игры копируются через SSE2. Выключено: собственное копирование игры."},
+    {"Developer only", "Лише розробнику", "Только разработчику"},
+    {"Report a problem", "Повідомити про проблему", "Сообщить о проблеме"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

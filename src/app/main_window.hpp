@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "app/model.hpp"
 #include "app/page.hpp"
@@ -30,6 +31,8 @@ public:
                           const std::wstring& offered) override;
     std::wstring pickFolder(const std::wstring& title) override;
     void showPage(settings::Page which) override;
+    void showView(settings::View view, int tab) override;
+    settings::Mode mode() const override;
 
 private:
     static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -51,6 +54,15 @@ private:
     bool confirmClose();
     void savePlace();       // 2.6
     int viewWidth() const;  // the page view's, in pixels
+    // 2.6: the list of the mode's views (the "Developer only" heading before the Debug view), the mode switched
+    void fillList();
+    void setMode(settings::Mode m);
+    bool listed(settings::View v) const;  // in the mode's list
+    int contentTop() const;               // under the header (and the administrator's banner)
+    void drawListItem(const DRAWITEMSTRUCT& d);
+    void paint();
+    int rowTop() const;  // the buttons' row
+    std::unique_ptr<Page> makeView();  // the shown view's page (its tab's)
     std::wstring windowLetters() const;  // Alt+letter of the window's own buttons
     void doApply(bool play);
     RECT pageArea() const;
@@ -75,7 +87,20 @@ private:
     HWND play_ = nullptr;
     HWND undo_ = nullptr;
     HWND close_ = nullptr;
-    int page_ = 0;
+    // 2.6: what is shown - the mode, its view (or one off its list) and the view's tab
+    settings::Mode mode_ = settings::Mode::Detailed;
+    settings::View shown_ = settings::View::Graphics;
+    int tab_ = 0;
+    std::vector<int> listItems_;  // the list's entries: a View, or -1 for the "Developer only" heading
+    HWND modes_[settings::kModeCount] = {};
+    HWND report_ = nullptr;     // "Report a problem"
+    bool reportFocus_ = false;  // after the next build: the report's comment field focused
+    HFONT bold_ = nullptr;      // the list's chosen entry
+    int listSel_ = -1;          // the list's entry chosen before (past the heading the way the arrow went)
+    HBRUSH listBrush_ = nullptr;
+    HBRUSH lineBrush_ = nullptr;
+    HBRUSH chosenBrush_ = nullptr;
+    HBRUSH accentBrush_ = nullptr;
     std::unique_ptr<Panel> panel_;
     std::unique_ptr<Page> current_;
     Rebuilds rebuilds_;

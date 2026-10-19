@@ -27,8 +27,13 @@ constexpr int kApply = 20;
 constexpr int kPlay = 21;
 constexpr int kUndo = 22;
 constexpr int kCloseButton = 23;
+constexpr int kModeFirst = 30;     // 2.6: the three modes' buttons, 30-32
+constexpr int kReportButton = 34;  // "Report a problem"
+constexpr int kTabFirst = 40;      // a view's tabs, 40-43: the page view's children, made with the page
+constexpr int kHeader = 52;        // 2.6: the header's height at 96 DPI
+constexpr int kList = 200;         // the list's width
 constexpr UINT kRebuild = WM_APP + 1;
-constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page
+constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page; 2.6: the view, lParam its tab
 constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics go
 
 // 2.2.1: the day's statistics, on a thread of its own (the network may take seconds); the folder's copy its own.
@@ -52,6 +57,8 @@ int MainWindow::run(HINSTANCE inst, int show) {
     model_ = std::make_unique<Model>();
     const auto saved = model_->savedLanguage();
     lang_ = startLang(saved);  // 0.48: English until one is chosen
+    mode_ = model_->startMode();  // 2.6
+    shown_ = viewsOf(mode_).front();
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof wc;
     wc.lpfnWndProc = proc;
@@ -68,8 +75,8 @@ int MainWindow::run(HINSTANCE inst, int show) {
     vc.lpszClassName = kViewClass;
     RegisterClassExW(&vc);
     // 2.6: a window that grows and is maximized, as it was closed the last time
-    hwnd_ = CreateWindowExW(0, kClass, wtr(lang_, Text::AppTitle).c_str(), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-                            CW_USEDEFAULT, kWidth, kHeight, nullptr, nullptr, inst, this);
+    hwnd_ = CreateWindowExW(0, kClass, wtr(lang_, Text::AppTitle).c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                            CW_USEDEFAULT, CW_USEDEFAULT, kWidth, kHeight, nullptr, nullptr, inst, this);
     if (!hwnd_) return 1;
     if (const auto place = model_->savedPlace()) {
         RECT r{place->left, place->top, place->right, place->bottom};
@@ -223,6 +230,8 @@ void MainWindow::makeFonts() {
     }
     font_ = makeFont(dpi_, false);
     heading_ = makeFont(dpi_, true, 115);
+    if (bold_) DeleteObject(bold_);  // the list's own: drawn with it
+    bold_ = makeFont(dpi_, true);
 }
 
 void MainWindow::create() {
@@ -235,7 +244,18 @@ void MainWindow::create() {
         SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
         return c;
     };
-    sidebar_ = child(L"LISTBOX", LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_TABSTOP | WS_VSCROLL, kSidebar, WS_EX_CLIENTEDGE);
+    // 2.6: the header - the modes, "Report a problem"; the list of the mode's views, drawn here
+    for (int i = 0; i < kModeCount; ++i)
+        modes_[i] =
+            child(L"BUTTON", BS_AUTORADIOBUTTON | BS_PUSHLIKE | WS_TABSTOP | (i ? 0 : WS_GROUP), kModeFirst + i);
+    report_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP | WS_GROUP, kReportButton);
+    listBrush_ = CreateSolidBrush(RGB(247, 247, 247));
+    lineBrush_ = CreateSolidBrush(RGB(227, 227, 227));
+    chosenBrush_ = CreateSolidBrush(RGB(230, 230, 230));
+    accentBrush_ = CreateSolidBrush(toneColor(Tone::Accent));
+    sidebar_ = child(L"LISTBOX",
+                     LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_TABSTOP | WS_VSCROLL | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS,
+                     kSidebar);
     // The page view: its controls are a group of the window's for Tab (control parent); it scrolls them.
     view_ = CreateWindowExW(WS_EX_CONTROLPARENT, kViewClass, L"", WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_VSCROLL,
                             0, 0, 10, 10, hwnd_, nullptr, inst, this);
@@ -272,33 +292,52 @@ void MainWindow::create() {
     // start setup.exe and wait for it), setup.exe's values taken over while the game is closed
     const std::wstring owned = model_->ownGameKey(lang_);
     if (!owned.empty()) message(owned, true);
-    SendMessageW(sidebar_, LB_SETCURSEL, 0, 0);
     buildPage();
     SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
     PostMessageW(hwnd_, kAskStats, 0, 0);
 }
 
+// 2.6: the page view right of the list, between the header and the buttons' row; the page's own left margin holds
+// the "changed" dots
 RECT MainWindow::pageArea() const {
     RECT client;
     GetClientRect(hwnd_, &client);
-    return RECT{px(204, dpi_), px(56, dpi_), client.right - px(16, dpi_), client.bottom - px(56, dpi_)};
+    return RECT{px(kList + 8, dpi_), contentTop() + px(8, dpi_), client.right - px(8, dpi_),
+                rowTop() - px(9 + 8, dpi_)};
+}
+
+int MainWindow::contentTop() const {
+    return px(kHeader, dpi_) + 1 + (model_->system().elevated ? px(48, dpi_) : 0);
+}
+
+int MainWindow::rowTop() const {
+    RECT c;
+    GetClientRect(hwnd_, &c);
+    return c.bottom - px(46, dpi_);
 }
 
 void MainWindow::layout() {
     RECT c;
     GetClientRect(hwnd_, &c);
     const int w = c.right;
-    const int h = c.bottom;
     auto at = [&](int v) { return px(v, dpi_); };
-    for (HWND ctl : {sidebar_, langBox_, banner_, status_, apply_, play_, undo_, close_})
+    for (HWND ctl : {sidebar_, langBox_, banner_, status_, apply_, play_, undo_, close_, report_, modes_[0], modes_[1],
+                     modes_[2]})
         SendMessageW(ctl, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
-    MoveWindow(sidebar_, at(12), at(12), at(180), h - at(12) - at(60), TRUE);
-    SendMessageW(sidebar_, LB_SETITEMHEIGHT, 0, at(30));
-    MoveWindow(langBox_, w - at(12) - at(150), at(12), at(150), at(240), TRUE);
-    MoveWindow(banner_, at(204), at(8), w - at(204) - at(12) - at(160), at(44), TRUE);
-    const int by = h - at(46);
+    int x = at(16);
+    for (HWND m : modes_) {
+        MoveWindow(m, x, at(11), at(112), at(30), TRUE);
+        x += at(112) + at(2);
+    }
+    MoveWindow(langBox_, w - at(16) - at(150), at(14), at(150), at(240), TRUE);
+    MoveWindow(report_, w - at(16 + 150 + 12 + 190), at(11), at(190), at(30), TRUE);
+    MoveWindow(banner_, at(16), at(kHeader) + at(5), w - at(32), at(40), TRUE);
+    const int top = contentTop();
+    const int by = rowTop();
+    MoveWindow(sidebar_, 0, top + at(8), at(kList), by - at(9) - top - at(8), TRUE);
+    SendMessageW(sidebar_, LB_SETITEMHEIGHT, 0, at(32));
     const int bh = at(32);
-    int x = w - at(12);
+    x = w - at(12);
     for (auto b : {std::make_pair(close_, 110), std::make_pair(undo_, 120), std::make_pair(play_, 220),
                    std::make_pair(apply_, 130)}) {
         x -= at(b.second);
@@ -308,15 +347,127 @@ void MainWindow::layout() {
     MoveWindow(status_, at(12), by, x - at(12), bh, TRUE);
     const RECT page = pageArea();
     MoveWindow(view_, page.left, page.top, page.right - page.left, page.bottom - page.top, TRUE);
+    InvalidateRect(hwnd_, nullptr, TRUE);  // the lines and the list's ground move with them
+}
+
+// 2.6: the header's line, the list's ground and edge, the line over the buttons' row
+void MainWindow::paint() {
+    PAINTSTRUCT ps;
+    HDC dc = BeginPaint(hwnd_, &ps);
+    RECT c;
+    GetClientRect(hwnd_, &c);
+    const int top = contentTop();
+    const int bottom = rowTop() - px(9, dpi_);
+    const int list = px(kList, dpi_);
+    const RECT header{0, px(kHeader, dpi_), c.right, px(kHeader, dpi_) + 1};
+    const RECT ground{0, top, list, bottom};
+    const RECT edge{list, top, list + 1, bottom};
+    const RECT foot{0, bottom, c.right, bottom + 1};
+    FillRect(dc, &header, lineBrush_);
+    FillRect(dc, &ground, listBrush_);
+    FillRect(dc, &edge, lineBrush_);
+    FillRect(dc, &foot, lineBrush_);
+    EndPaint(hwnd_, &ps);
+}
+
+void MainWindow::drawListItem(const DRAWITEMSTRUCT& d) {
+    if (d.itemID == UINT(-1)) return;  // an empty list's focus
+    HDC dc = d.hDC;
+    const RECT r = d.rcItem;
+    FillRect(dc, &r, listBrush_);
+    const int item = d.itemID < listItems_.size() ? listItems_[d.itemID] : -1;
+    const bool chosen = (d.itemState & ODS_SELECTED) && item >= 0;
+    const RECT box{r.left + px(6, dpi_), r.top + px(2, dpi_), r.right - px(6, dpi_), r.bottom - px(2, dpi_)};
+    if (chosen) {  // grey under it, the accent's bar on its left
+        const RECT bar{box.left, box.top, box.left + px(3, dpi_), box.bottom};
+        FillRect(dc, &box, chosenBrush_);
+        FillRect(dc, &bar, accentBrush_);
+    }
+    const LRESULT n = SendMessageW(sidebar_, LB_GETTEXTLEN, d.itemID, 0);
+    std::wstring text(size_t(n > 0 ? n : 0) + 1, L'\0');
+    if (n > 0) SendMessageW(sidebar_, LB_GETTEXT, d.itemID, reinterpret_cast<LPARAM>(&text[0]));
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, item < 0                            ? RGB(119, 119, 119)
+                     : developerView(settings::View(item)) ? RGB(122, 75, 0)
+                                                           : GetSysColor(COLOR_WINDOWTEXT));
+    HGDIOBJ old = SelectObject(dc, chosen ? bold_ : font_);
+    RECT t{r.left + px(item < 0 ? 14 : 20, dpi_), r.top, r.right - px(8, dpi_), r.bottom};
+    DrawTextW(dc, text.c_str(), -1, &t, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
+    SelectObject(dc, old);
+    if ((d.itemState & ODS_FOCUS) && item >= 0) DrawFocusRect(dc, &box);
+}
+
+void MainWindow::fillList() {
+    SendMessageW(sidebar_, LB_RESETCONTENT, 0, 0);
+    listItems_.clear();
+    int chosen = -1;
+    for (settings::View v : viewsOf(mode_)) {
+        if (developerView(v) && std::find(listItems_.begin(), listItems_.end(), -1) == listItems_.end()) {
+            SendMessageW(sidebar_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(wtr(lang_, Text::DeveloperOnly).c_str()));
+            listItems_.push_back(-1);
+        }
+        if (v == shown_) chosen = int(listItems_.size());
+        SendMessageW(sidebar_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(wtr(lang_, viewName(v)).c_str()));
+        listItems_.push_back(int(v));
+    }
+    SendMessageW(sidebar_, LB_SETCURSEL, WPARAM(chosen), 0);  // -1: a view off the list, none chosen
+    listSel_ = chosen;
+    for (int i = 0; i < kModeCount; ++i)
+        SendMessageW(modes_[i], BM_SETCHECK, i == int(mode_) ? BST_CHECKED : BST_UNCHECKED, 0);
+}
+
+bool MainWindow::listed(settings::View v) const {
+    const std::vector<settings::View> list = viewsOf(mode_);
+    return std::find(list.begin(), list.end(), v) != list.end();
+}
+
+Mode MainWindow::mode() const { return listed(shown_) ? mode_ : std::max(mode_, Mode::Detailed); }
+
+// The view stays when the new mode lists it, else the mode's first; the mode is kept for the next start.
+void MainWindow::setMode(Mode m) {
+    if (m == mode_) return;
+    mode_ = m;
+    model_->saveMode(m);
+    if (!listed(shown_)) {
+        shown_ = viewsOf(m).front();
+        tab_ = 0;
+        scroll_ = 0;
+    }
+    fillList();
+    buildPage();
+}
+
+std::unique_ptr<Page> MainWindow::makeView() {
+    using P = settings::Page;
+    switch (shown_) {
+        case settings::View::Main:
+        case settings::View::Graphics:
+            return makeSettingsPage(*this, {P::Render, P::Quality}, {P::Smoothing, P::Frames});
+        case settings::View::Screen: return makeScreenPage(*this);
+        case settings::View::Effects: return makeEffectsPage(*this);
+        case settings::View::Ai:
+            if (tab_ == 2) return makePackPage(*this);
+            if (tab_ == 3) return makeAiCachePage(*this);
+            return makeAiPage(*this, tab_ == 1 ? AiPart::Models : AiPart::What);
+        case settings::View::Sound: return makeSettingsPage(*this, {P::Sound});
+        case settings::View::Pad: return makePadPage(*this);
+        case settings::View::GameChat: return makeSettingsPage(*this, {P::Game, P::Chat});
+        case settings::View::Service: {
+            std::vector<std::unique_ptr<Page>> parts;
+            parts.push_back(makeServicePage(*this));
+            parts.push_back(makeDiagnosticsPage(*this));
+            return makePartsPage(*this, std::move(parts));
+        }
+        case settings::View::Debug: break;
+    }
+    return makeSettingsPage(*this, {P::Debug});
 }
 
 void MainWindow::retext() {
     SetWindowTextW(hwnd_, wtr(lang_, Text::AppTitle).c_str());
-    const int selected = int(SendMessageW(sidebar_, LB_GETCURSEL, 0, 0));
-    SendMessageW(sidebar_, LB_RESETCONTENT, 0, 0);
-    for (int i = 0; i < kPageCount; ++i)
-        SendMessageW(sidebar_, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(wtr(lang_, pageName(settings::Page(i))).c_str()));
-    SendMessageW(sidebar_, LB_SETCURSEL, WPARAM(selected < 0 ? 0 : selected), 0);
+    fillList();
+    for (int i = 0; i < kModeCount; ++i) SetWindowTextW(modes_[i], wtr(lang_, modeName(Mode(i))).c_str());
+    SetWindowTextW(report_, wtr(lang_, Text::ReportProblem).c_str());
     SetWindowTextW(banner_, wtr(lang_, Text::ElevatedBanner).c_str());
     SetWindowTextW(apply_, wtr(lang_, Text::Apply).c_str());
     SetWindowTextW(play_, wtr(lang_, Text::ApplyAndPlay).c_str());
@@ -346,20 +497,16 @@ void MainWindow::buildPage() {
     static const SystemMetricsForDpiFn metrics = reinterpret_cast<SystemMetricsForDpiFn>(reinterpret_cast<void*>(
         GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetSystemMetricsForDpi")));
     const int bar = metrics ? metrics(SM_CXVSCROLL, UINT(dpi_)) : GetSystemMetrics(SM_CXVSCROLL);
-    const RECT area{0, -scroll_, view.right - view.left - bar - px(8, dpi_), view.bottom - view.top - scroll_};
+    const RECT area{px(16, dpi_), -scroll_, view.right - view.left - bar - px(8, dpi_),
+                    view.bottom - view.top - scroll_};
     builtWidth_ = view.right - view.left;  // 2.6: made again when the window's width changes
     panel_ = std::make_unique<Panel>(view_, font_, heading_, tooltip_, dpi_, area, windowLetters());
-    switch (settings::Page(page_)) {
-        case settings::Page::Screen: current_ = makeScreenPage(*this); break;
-        case settings::Page::Diagnostics: current_ = makeDiagnosticsPage(*this); break;
-        case settings::Page::Service: current_ = makeServicePage(*this); break;
-        case settings::Page::Ai: current_ = makeAiPage(*this); break;
-        case settings::Page::AiCache: current_ = makeAiCachePage(*this); break;
-        case settings::Page::Effects: current_ = makeEffectsPage(*this); break;
-        case settings::Page::Pack: current_ = makePackPage(*this); break;
-        case settings::Page::Pad: current_ = makePadPage(*this); break;
-        default: current_ = makeSettingsPage(*this, settings::Page(page_)); break;
+    if (tabCount(shown_) > 1) {  // 2.6: the view's tabs over its page
+        std::vector<std::wstring> names;
+        for (int i = 0; i < tabCount(shown_); ++i) names.push_back(wtr(lang_, tabName(shown_, i)));
+        panel_->tabs(kTabFirst, names, tab_);
     }
+    current_ = makeView();
     current_->build(*panel_);
     if (current_->ticks())
         SetTimer(hwnd_, kTickTimer, 500, nullptr);
@@ -380,6 +527,13 @@ void MainWindow::buildPage() {
             SetFocus(f);
             if (field) SendMessageW(f, EM_SETSEL, selStart, selEnd);
         }
+    if (reportFocus_) {  // 2.6: "Report a problem" - its comment field in view, the caret in it
+        reportFocus_ = false;
+        if (HWND f = GetDlgItem(view_, kReportField)) {
+            SetFocus(f);
+            showFocused();
+        }
+    }
     updateStatus();
 }
 
@@ -401,7 +555,12 @@ void MainWindow::changed() {
     updateStatus();
 }
 
-void MainWindow::showPage(settings::Page which) { PostMessageW(hwnd_, kShowPage, WPARAM(which), 0); }
+void MainWindow::showPage(settings::Page which) {
+    const settings::Place p = placeOf(which);
+    showView(p.view, p.tab);
+}
+
+void MainWindow::showView(settings::View view, int tab) { PostMessageW(hwnd_, kShowPage, WPARAM(view), LPARAM(tab)); }
 
 void MainWindow::rebuild() {
     // After this message: the control that asked is not taken down under it.
@@ -517,11 +676,31 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             const int id = LOWORD(wp);
             const int code = HIWORD(wp);
             if (id == kSidebar && code == LBN_SELCHANGE) {
-                const LRESULT sel = SendMessageW(sidebar_, LB_GETCURSEL, 0, 0);
-                if (sel >= 0 && sel != page_) {
-                    page_ = int(sel);
+                int sel = int(SendMessageW(sidebar_, LB_GETCURSEL, 0, 0));
+                if (sel >= 0 && size_t(sel) < listItems_.size() && listItems_[size_t(sel)] < 0) {
+                    // 2.6: the "Developer only" heading is no entry: on past it the way the arrow went
+                    sel += sel > listSel_ ? 1 : -1;
+                    if (sel < 0 || size_t(sel) >= listItems_.size()) sel = listSel_;
+                    SendMessageW(sidebar_, LB_SETCURSEL, WPARAM(sel), 0);
+                }
+                listSel_ = sel;
+                const int item = sel >= 0 && size_t(sel) < listItems_.size() ? listItems_[size_t(sel)] : -1;
+                if (item >= 0 && settings::View(item) != shown_) {
+                    shown_ = settings::View(item);
+                    tab_ = 0;
                     scroll_ = 0;  // another page starts at its top
                     buildPage();
+                }
+            } else if (id >= kModeFirst && id < kModeFirst + kModeCount && code == BN_CLICKED) {
+                setMode(Mode(id - kModeFirst));
+            } else if (id == kReportButton && code == BN_CLICKED) {
+                reportFocus_ = true;
+                showView(settings::View::Service, 0);
+            } else if (id >= kTabFirst && id < kTabFirst + tabCount(shown_) && code == BN_CLICKED) {
+                if (id - kTabFirst != tab_) {
+                    tab_ = id - kTabFirst;
+                    scroll_ = 0;
+                    rebuild();  // posted: the tab that was clicked is not taken down under its own message
                 }
             } else if (id == kLang && (code == CBN_CLOSEUP ||
                                        (code == CBN_SELCHANGE && !SendMessageW(langBox_, CB_GETDROPPEDSTATE, 0, 0)))) {
@@ -585,12 +764,35 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return reinterpret_cast<LRESULT>(GetSysColorBrush(COLOR_WINDOW));
         }
         case kShowPage:
-            if (int(wp) < kPageCount && int(wp) != page_) {
-                page_ = int(wp);
-                scroll_ = 0;
-                SendMessageW(sidebar_, LB_SETCURSEL, wp, 0);
-                buildPage();
+            if (int(wp) < settings::kViewCount) {
+                const auto view = settings::View(wp);
+                const int tab = std::clamp(int(lp), 0, tabCount(view) - 1);
+                if (view != shown_ || tab != tab_ || reportFocus_) {
+                    shown_ = view;
+                    tab_ = tab;
+                    scroll_ = 0;
+                    fillList();  // chosen in the list, or none when the mode does not list it
+                    buildPage();
+                }
             }
+            return 0;
+        case WM_MEASUREITEM:  // 2.6: the list's entries
+            if (wp == kSidebar) {
+                reinterpret_cast<MEASUREITEMSTRUCT*>(lp)->itemHeight = UINT(px(32, dpi_));
+                return TRUE;
+            }
+            break;
+        case WM_DRAWITEM:
+            if (wp == kSidebar) {
+                drawListItem(*reinterpret_cast<const DRAWITEMSTRUCT*>(lp));
+                return TRUE;
+            }
+            break;
+        case WM_CTLCOLORLISTBOX:
+            if (reinterpret_cast<HWND>(lp) == sidebar_) return reinterpret_cast<LRESULT>(listBrush_);
+            break;
+        case WM_PAINT:
+            paint();
             return 0;
         case kRebuild:
             if (rebuilds_.arrived()) buildPage();
@@ -672,6 +874,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             }
             current_.reset();
             panel_.reset();
+            for (HBRUSH b : {listBrush_, lineBrush_, chosenBrush_, accentBrush_})
+                if (b) DeleteObject(b);
             PostQuitMessage(0);
             return 0;
         default:

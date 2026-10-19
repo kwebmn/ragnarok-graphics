@@ -327,6 +327,7 @@ enum class Text : uint16_t {
     DebugPresentAuto, DebugPresentWindow, DebugPresentComposition, DebugDpiScale, DebugDpiScaleHint, DebugVariants,
     DebugVariantsHint, DebugStateCache, DebugStateCacheHint, DebugMergeDraws, DebugMergeDrawsHint, DebugFastPick,
     DebugFastPickHint, DebugFastFtol, DebugFastFtolHint, DebugFastTextures, DebugFastTexturesHint,
+    DeveloperOnly, ReportProblem,  // 2.6: the list's heading, the header's button
     Count
 };
 
