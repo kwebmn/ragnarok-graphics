@@ -1,3 +1,12 @@
+# uaRO Graphics 2.6.2 — to check
+
+- **The Ctrl+2 flag is now the Right Sector's own:** red over black with the white «ПРАВИЙ СЕКТОР» and the trident and
+  sword across the middle. The flag is small - a letter is about two pixels - so the lettering shows as a white band.
+  In 2.6.1 it was divided diagonally by mistake.
+- A curled edge of the cloth (its back showing) takes its own half's colour on both flags now.
+- The same file, `uaro-flags.grf`: listed in DATA.INI already, nothing to do.
+- Please check: Ctrl+2 in the game - a red-black flag with a white band of lettering across the middle.
+
 # uaRO Graphics 2.6.1 — to check
 
 - **The emotions' flags: Ctrl+1 is Ukraine's flag, Ctrl+2 the Right Sector's** (red at the pole's top, black below,
