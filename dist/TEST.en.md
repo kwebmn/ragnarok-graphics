@@ -1,3 +1,12 @@
+# uaRO Graphics 2.6.4 — to check
+
+- **"Living characters" with the network's textures:** the band of light along the silhouette's edge is as wide as
+  designed now - 2.3 times wider. With the network's pictures (4 times larger) the edge was measured in their small
+  texels, and the light was barely seen.
+- Please check: in the console (`~`) turn "Living characters" on, stand in the sun and hold Tab on its line. On the
+  character's edge towards the sun (opposite its shadow) a light warm band, the far edge a little darker. Turning the
+  character does not change it: the edge facing the sun is lit.
+
 # uaRO Graphics 2.6.3 — to check
 
 - **A character's shadow no longer blinks while walking.** The game draws each part of a character (body, head, hat,
