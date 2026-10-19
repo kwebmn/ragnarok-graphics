@@ -244,17 +244,19 @@ float relief(float2 uv, float2 du, float2 dv, float seen) {
     tex0.GetDimensions(w, h);
     float2 size = float2(w, h);
     const float k = uiPixels.y > 0.0 ? max(1.0, floor(w / uiPixels.y + 0.5)) : 1.0;  // AI texels a game texel
-    float2 o = k / size;
+    float2 tx = du * size, ty = dv * size;  // texels a screen pixel
+    float area = abs(tx.x * ty.y - tx.y * ty.x);
+    // 2.6.6: not nearer than a screen pixel - the texture seen smaller than its texels (uaRO's are 1024 a side) is
+    // sampled from a blurred mip, where a texel either way gave nearly the same height and no relief at all
+    float2 o = max(k, sqrt(area)) / size;
     const float3 luma = float3(0.2126, 0.7152, 0.0722);
     float hl = dot(tex0.SampleGrad(samp0, uv - float2(o.x, 0.0), du, dv).rgb, luma);
     float hr = dot(tex0.SampleGrad(samp0, uv + float2(o.x, 0.0), du, dv).rgb, luma);
     float hu = dot(tex0.SampleGrad(samp0, uv - float2(0.0, o.y), du, dv).rgb, luma);
     float hd = dot(tex0.SampleGrad(samp0, uv + float2(0.0, o.y), du, dv).rgb, luma);
-    // The height across a game texel against the picture's texels a screen pixel (tx, ty, k times as many) and their
-    // area (k squared): k goes out, the relief the game's texture gives.
+    // The height across a game texel (or a screen pixel) against the picture's texels a screen pixel (tx, ty) and
+    // their area: the texels go out, the relief the game's texture gives.
     float2 g = float2(hr - hl, hd - hu) * 0.5;
-    float2 tx = du * size, ty = dv * size;  // texels a screen pixel
-    float area = abs(tx.x * ty.y - tx.y * ty.x);
     float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(area, 1e-6));
     // 2.2.2: a face seen nearly edge-on or its texture stretched (a step's side: the texels a pixel nearly in one
     // line, their area near nothing) had its slope blown up - dark and light flickered there as the camera turned: the
