@@ -44,7 +44,6 @@ const Member kMembers[] = {
     {"materials", Surfaces, 3, &E::materials},
     {"ground_seams", Surfaces, 3, &E::groundSeams},
     {"smooth_hills", Surfaces, 3, &E::smoothHills},
-    {"smooth_models", Surfaces, 3, &E::smoothModels},
 
     {"grass", Nature, 2, &E::grass},
     {"foliage", Nature, 2, &E::foliage},

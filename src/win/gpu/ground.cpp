@@ -8,7 +8,6 @@
 
 #include "core/d3d7.hpp"
 #include "core/game_camera.hpp"
-#include "core/smooth_shade.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -325,23 +324,6 @@ void Renderer::Impl::hillsConstants(Constants& c) const {
     const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
     std::memcpy(c.projection, proj, sizeof proj);
     std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
-}
-
-// 1.19, smooth light on the models: the record's opaque draws of the world with one set of texture coordinates (the
-// models; the ground has two) lit face by face get their corners' colours spread over the faces around them
-// (core/smooth_shade.hpp) - once a frame, a record of the game's; at most kMostSmooth triangles.
-void Renderer::Impl::smoothModels(const FrameRecord& rec) {
-    if (smoothReady && smoothFor == rec.vertexBytes().data()) return;
-    smoothReady = true;
-    smoothFor = rec.vertexBytes().data();
-    smoothColours.clear();
-    size_t draws = 0;  // 2.5.5: the record's part in core/smooth_shade, shared with Direct3D 11
-    for (const smooth_shade::RecordChange& ch : smooth_shade::recordChanges(rec, gameWidth, gameHeight, draws))
-        smoothColours.push_back(ColourChange{ch.at, ch.colour});
-    if (!smoothLogged && draws)
-        LOG_INFO("smooth models: %zu draws of %s lit face by face, %zu corners' light spread", draws,
-                 mapName.c_str(), smoothColours.size());
-    smoothLogged = smoothLogged || draws;
 }
 
 }  // namespace uagfx::gpu

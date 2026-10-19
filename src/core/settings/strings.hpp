@@ -244,8 +244,6 @@ enum class Text : uint16_t {
     FxSpriteLight, FxSpriteLightHint, FxSpriteLightStrength, FxSpriteLightStrengthHint,
     // 1.18
     FxEdgeLand, FxEdgeLandHint,
-    // 1.19
-    FxSmoothModels, FxSmoothModelsHint,
     // 1.20
     FxSeasons, FxSeasonsHint, FxRainWet, FxRainWetHint,
     // 1.21

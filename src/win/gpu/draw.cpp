@@ -28,11 +28,6 @@ void Renderer::Impl::prepareGeometry(const FrameRecord& rec) {
         const Upload u = allocUpload(v.size(), 16);
         if (!u.cpu) return;  // no memory for this record's vertices: its draws are skipped (vertexBase 0)
         std::memcpy(u.cpu, v.data(), v.size());
-        if (smoothModelsWanted() && &rec != &seamRec) {  // 1.19: the models' light spread
-            smoothModels(rec);
-            for (const ColourChange& ch : smoothColours)
-                if (ch.at + 4 <= v.size()) std::memcpy(static_cast<uint8_t*>(u.cpu) + ch.at, &ch.colour, 4);
-        }
         vertexBase = u.gpu;
     }
     const std::vector<uint16_t>& i = rec.indices();

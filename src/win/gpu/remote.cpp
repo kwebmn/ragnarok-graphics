@@ -445,7 +445,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.spriteLight ? 1 : 0);  // 1.17
     w.i32(e.spriteLightStrength);
     w.u8(e.edgeLand ? 1 : 0);  // 1.18
-    w.u8(e.smoothModels ? 1 : 0);  // 1.19
     w.u8(e.seasons ? 1 : 0);  // 1.20
     w.u8(e.rainWet ? 1 : 0);
     w.u8(e.nightWindows ? 1 : 0);  // 1.21

@@ -30,7 +30,6 @@
 #include "core/region_look.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
-#include "core/smooth_shade.hpp"
 #include "core/twin_grid.hpp"
 #include "core/water.hpp"
 #include "core/window_plan.hpp"
@@ -886,7 +885,7 @@ void Renderer11::releaseTexture(uint32_t id) {  // Direct3D 11 keeps it while qu
 // The record's vertices and indices, once for all its draws - colours turned to R8G8B8A8 where the card takes no
 // B8G8R8A8 vertices.
 bool Renderer11::fillBuffer(ID3D11Buffer*& buffer, UINT& capacity, UINT bind, const void* data, size_t bytes,
-                            const FrameRecord* swizzle, bool smooth) {
+                            const FrameRecord* swizzle) {
     if (!bytes) return true;
     if (bytes > capacity) {
         drop(buffer);
@@ -912,10 +911,6 @@ bool Renderer11::fillBuffer(ID3D11Buffer*& buffer, UINT& capacity, UINT bind, co
         return false;
     }
     std::memcpy(m.pData, data, bytes);
-    // 2.5.5 (ground.cpp 1.19): the models lit face by face, their corners' light spread (A8R8G8B8, as recorded)
-    if (smooth && bind == D3D11_BIND_VERTEX_BUFFER && !smoothColours_.empty())
-        for (const smooth_shade::RecordChange& ch : smoothColours_)
-            if (ch.at + 4 <= bytes) std::memcpy(static_cast<uint8_t*>(m.pData) + ch.at, &ch.colour, 4);
     if (swizzle) {
         auto* v = static_cast<uint8_t*>(m.pData);
         for (const DrawCmd& d : swizzle->draws()) {
@@ -932,19 +927,9 @@ bool Renderer11::fillBuffer(ID3D11Buffer*& buffer, UINT& capacity, UINT bind, co
 bool Renderer11::uploadGeometry(const FrameRecord& rec) {
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const std::vector<uint16_t>& i = rec.indices();
-    smoothColours_.clear();
-    if (effects_.smoothModels) {  // 2.5.5: once a record (core/smooth_shade.hpp recordChanges)
-        size_t draws = 0;
-        smoothColours_ = smooth_shade::recordChanges(rec, gameWidth_, gameHeight_, draws);
-        if (!smoothLogged_ && draws)
-            LOG_INFO("smooth models: %zu draws of %s lit face by face, %zu corners' light spread (Direct3D 11)", draws,
-                     map_.c_str(), smoothColours_.size());
-        smoothLogged_ = smoothLogged_ || draws;
-    }
     return fillBuffer(vertices_, vertexBytes_, D3D11_BIND_VERTEX_BUFFER, v.data(), v.size(),
-                      bgraVertices_ ? nullptr : &rec, true) &&
-           fillBuffer(indices_, indexBytes_, D3D11_BIND_INDEX_BUFFER, i.data(), i.size() * sizeof(uint16_t), nullptr,
-                      false);
+                      bgraVertices_ ? nullptr : &rec) &&
+           fillBuffer(indices_, indexBytes_, D3D11_BIND_INDEX_BUFFER, i.data(), i.size() * sizeof(uint16_t), nullptr);
 }
 
 void Renderer11::setConstants(const Constants& c) {

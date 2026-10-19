@@ -354,9 +354,6 @@ struct EffectSettings {
     // 1.18: land past the map's edge (sky_ps): looked down at, the ground goes on in the colours of the ground on
     // the screen, fading into the haze - instead of a sea of clouds. Needs the sky. Off by default.
     bool edgeLand = false;
-    // 1.19: smooth light on the models (core/smooth_shade.hpp): a model the game lights face by face gets its
-    // corners' light spread over the faces around them - rocks and bark round off, edges stay. Off by default.
-    bool smoothModels = false;
     // 1.20: the year on the whole map (core/seasons.hpp) and the rain's wet on the walls and roofs
     // (ground_life_ps). Off by default.
     bool seasons = false;

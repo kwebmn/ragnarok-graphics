@@ -1018,7 +1018,6 @@ struct Renderer::Impl {
         if (grassCellsWanted()) groundCells = ground_cells::build(groundTris);  // 2.2.1
         hillsUp = hillsTried = false;
         groundCellsUp = groundCellsTried = false;
-        smoothReady = false;  // 1.19
         if (windShared()) updateWind();  // 1.22
         groundTris.clear();  // 1.9
         groundGroups.clear();
@@ -1103,17 +1102,6 @@ struct Renderer::Impl {
     // 2.2.1: outdoors only - a dungeon's floor is tiles (Glast Heim's church: stone and black broken ones), whose
     // edges are meant straight: the wandering line spread the black over the stones as cracks, and blinked
     bool seamsWanted() const { return effects.groundSeams && viewToWorldValid && mapOutdoors; }
-    // 1.19: smooth light on the models (core/smooth_shade.hpp) - the game's record's colours changed as its vertices
-    // go up (prepareGeometry), worked out once a frame
-    struct ColourChange {
-        size_t at;  // the colour's byte in the record's vertices
-        uint32_t colour;
-    };
-    std::vector<ColourChange> smoothColours;
-    const void* smoothFor = nullptr;
-    bool smoothReady = false, smoothLogged = false;
-    bool smoothModelsWanted() const { return effects.smoothModels; }
-    void smoothModels(const FrameRecord& rec);
     // 1.15: smooth hills (hills.cpp, core/hills.hpp) - the last frame's ground's corners' normals, a texture of them
     // (R32_FLOAT, kMostSide a side) put up at the frame's first ground draw, read by the ground's draws (t3)
     hills::Grid hillsGrid;

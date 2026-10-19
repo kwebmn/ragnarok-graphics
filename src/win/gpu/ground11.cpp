@@ -259,9 +259,9 @@ void Renderer11::applySeams() {
     const std::vector<uint8_t>& v = seamRec_.vertexBytes();
     const std::vector<uint16_t>& ix = seamRec_.indices();
     if (!fillBuffer(seamVertices_, seamVertexBytes_, D3D11_BIND_VERTEX_BUFFER, v.data(), v.size(),
-                    bgraVertices_ ? nullptr : &seamRec_, false) ||
+                    bgraVertices_ ? nullptr : &seamRec_) ||
         !fillBuffer(seamIndices_, seamIndexBytes_, D3D11_BIND_INDEX_BUFFER, ix.data(), ix.size() * sizeof(uint16_t),
-                    nullptr, false))
+                    nullptr))
         return;
     // the strips' buffers stand in for the record's while they are drawn (flushBatch binds vertices_, indices_)
     std::swap(vertices_, seamVertices_);

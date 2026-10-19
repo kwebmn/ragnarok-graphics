@@ -97,7 +97,6 @@ const EffectLayout kEffects[] = {
     {"effects.world_reflections", {}, {}, {}, 3},  // 1.16
     {"effects.sprite_light", {}, {"effects.sprite_light_strength"}, {}, 2},  // 1.17
     {"effects.edge_land", {}, {}, {}, 3},  // 1.18
-    {"effects.smooth_models", {}, {}, {}, 3},  // 1.19
     {"effects.seasons", {"effects.season_snow", "effects.season_grass"}, {}, {}, 2},  // 1.20
     {"effects.rain_wet", {}, {}, {}, 2},  // 1.20
     {"effects.night_windows", {}, {}, {}, 2},  // 1.21

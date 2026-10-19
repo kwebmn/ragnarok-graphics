@@ -155,7 +155,6 @@ EffectSettings effectsOff() {
     e.nightWindows = false;
     e.rainWet = false;
     e.seasons = false;
-    e.smoothModels = false;
     e.edgeLand = false;
     e.spriteLight = false;
     e.worldReflections = false;
@@ -229,7 +228,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.nightWindows ||
            e.rainWet ||
            e.seasons ||
-           e.smoothModels ||
            e.edgeLand ||
            e.spriteLight ||
            e.worldReflections ||

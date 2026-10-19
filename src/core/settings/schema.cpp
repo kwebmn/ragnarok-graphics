@@ -390,8 +390,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSpriteLightStrength, Text::FxSpriteLightStrengthHint, " %", nullptr, &E::spriteLightStrength},
         {"effects", "edge_land", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxEdgeLand,
          Text::FxEdgeLandHint, "", &E::edgeLand},
-        {"effects", "smooth_models", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothModels,
-         Text::FxSmoothModelsHint, "", &E::smoothModels},
         {"effects", "seasons", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSeasons,
          Text::FxSeasonsHint, "", &E::seasons},
         {"effects", "rain_wet", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRainWet,

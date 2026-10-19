@@ -19,7 +19,6 @@
 #include "core/seasons.hpp"
 #include "core/shader_cache.hpp"
 #include "core/shader_variants.hpp"
-#include "core/smooth_shade.hpp"
 #include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/weather.hpp"
@@ -491,9 +490,9 @@ private:
     bool makeStaging(int width, int height);
     bool uploadGeometry(const FrameRecord& rec);
     // A dynamic buffer, grown as needed, written whole: swizzle - the record whose draws' colours go in as R8G8B8A8
-    // (no B8G8R8A8 vertices); smooth - the models' light spread put in (smoothColours_, 2.5.5)
+    // (no B8G8R8A8 vertices)
     bool fillBuffer(ID3D11Buffer*& buffer, UINT& capacity, UINT bind, const void* data, size_t bytes,
-                    const FrameRecord* swizzle, bool smooth);
+                    const FrameRecord* swizzle);
     void clear(const ClearCmd& c);
     void applyViewport();
     void upload(const FrameRecord& rec, const UploadCmd& u);
@@ -681,8 +680,6 @@ private:
     wind::Wind windNow_;
     float windScreenX_ = 0.0f;
     wind::Drift weatherDrift_, cloudsDrift_, skyDrift_;
-    std::vector<smooth_shade::RecordChange> smoothColours_;  // 2.5.5: this record's models' corners spread
-    bool smoothLogged_ = false;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;

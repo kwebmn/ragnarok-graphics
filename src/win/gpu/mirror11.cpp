@@ -119,7 +119,7 @@ void Renderer11::applyMirror() {
     c.twin[0] = waterLevel_;
     flushBatch();  // the game's draws gathered so far go into the picture first
     if (!fillBuffer(mirrorVb_, mirrorVbBytes_, D3D11_BIND_VERTEX_BUFFER, mirrorVerts_.data(),
-                    mirrorVerts_.size() * sizeof(float), nullptr, false))
+                    mirrorVerts_.size() * sizeof(float), nullptr))
         return;
     targetBound_ = false;  // the next draw binds the target, its state and the game's shaders again
     ID3D11ShaderResourceView* none = nullptr;
