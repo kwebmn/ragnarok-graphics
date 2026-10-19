@@ -20,15 +20,31 @@ std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<L
         // 0.39.1: the layer's depth at a given height on the screen, along its tilt (its mean was off by up to half
         // its height's tilt - tall characters got no shadow).
         const float tilt = bottom > top ? (l.bottomZ - l.topZ) / (bottom - top) : 0.0f;
+        const auto over = [&](const Blob& s) {  // over its feet: across them, above them
+            return std::fabs(middle - s.x) <= std::max(s.halfW * 2.2f, 16.0f) && top < s.y &&
+                   bottom <= s.y + std::max(s.halfH * 2.5f, 20.0f);
+        };
+        const auto off = [&](const Blob& s) { return std::fabs(l.bottomZ + tilt * (s.y - bottom) - s.viewZ); };
+        // 2.6.3: the layer of a character the game drew a shadow for (its seed) stands on that one's feet. The game
+        // draws each clip nearer by the clips before it (0.8 units each at 300 away) and by the screen's height (4.7
+        // units at 1080p): by depth two of a character's layers stood on its feet, the head lost at a turn that drew
+        // the weapon first. Not a sprite over everything (the game's nearest depth).
         int best = -1;
-        float closest = 5.0f;  // world units: a character's layers stand at its depth
-        for (size_t b = 0; b < blobs.size(); ++b) {
+        float closest = 0.0f;
+        for (size_t b = 0; b < blobs.size() && l.owner; ++b) {
             const Blob& s = blobs[b];
-            const float off = std::fabs(l.bottomZ + tilt * (s.y - bottom) - s.viewZ);
-            if (std::fabs(middle - s.x) > std::max(s.halfW * 2.2f, 16.0f) || top >= s.y ||
-                bottom > s.y + std::max(s.halfH * 2.5f, 20.0f) || off > closest)
+            if (s.owner != l.owner || !over(s) || off(s) > 0.25f * s.viewZ || (best >= 0 && off(s) >= closest))
                 continue;
-            closest = off;
+            closest = off(s);
+            best = int(b);
+        }
+        // Else - its character unknown or without its shadow there - the one at its depth.
+        const bool owned = best >= 0;
+        closest = 5.0f;  // world units: a character's layers stand at its depth
+        for (size_t b = 0; b < blobs.size() && !owned; ++b) {
+            const Blob& s = blobs[b];
+            if (!over(s) || off(s) > closest) continue;
+            closest = off(s);
             best = int(b);
         }
         if (best < 0) continue;
@@ -47,6 +63,7 @@ std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<L
         q.feetX = s.x;
         q.feetY = s.y;
         q.texture = l.texture;
+        q.owned = owned;
         out.push_back(q);
     }
     return out;

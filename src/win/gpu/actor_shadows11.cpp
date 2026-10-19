@@ -144,6 +144,7 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
         }
         l.alpha = float(diffuse >> 24) / 255.0f;
         l.texture = d.texture[0];
+        l.owner = d.effect == uint8_t(effect_exe::Kind::None) ? d.effectSeed : 0;  // 2.6.3: its character's seed
         if (d.effect == uint8_t(effect_exe::Kind::Shadow)) {  // the game's round one
             float x0 = l.corner[0][0], x1 = x0, y0 = l.corner[0][1], y1 = y0;
             for (int i = 1; i < 4; ++i) {
@@ -153,7 +154,7 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
                 y1 = std::max(y1, l.corner[i][1]);
             }
             blobs.push_back(actor_shadows::Blob{(x0 + x1) * 0.5f, (y0 + y1) * 0.5f, (x1 - x0) * 0.5f, (y1 - y0) * 0.5f,
-                                                1.0f / rhw});
+                                                1.0f / rhw, d.effectSeed});
             rounds.push_back(l);
             continue;
         }
@@ -313,9 +314,14 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
     ctx_->PSSetShaderResources(0, 1, &shadowMask_[0].srv);
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
-    if (!shadowsLogged_)
-        LOG_INFO("characters' shadows: %u characters, %u layers of their sprites (Direct3D 11, the sun's light)",
-                 unsigned(blobs.size()), unsigned(layers.size()));
+    if (!shadowsLogged_) {
+        const size_t owned = size_t(std::count_if(quads.begin(), quads.end(),
+                                                  [](const actor_shadows::ShadowQuad& q) { return q.owned; }));
+        LOG_INFO("characters' shadows: %u characters, %u layers of their sprites (%u cast, %u known as their "
+                 "characters'; Direct3D 11, the sun's light)",
+                 unsigned(blobs.size()), unsigned(layers.size()), unsigned(quads.size() - rounds.size()),
+                 unsigned(owned));
+    }
     shadowsLogged_ = true;
 }
 

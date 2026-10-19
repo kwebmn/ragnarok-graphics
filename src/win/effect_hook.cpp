@@ -31,6 +31,8 @@ Tag g_current;
 // Under the driver's lock: the faces are noted on the game's thread and looked up when it draws them; a present
 // (Bink's too, from its own thread) starts the next frame's.
 effect_exe::Faces g_faces;
+// 2.6.3: the character whose shadow the game asked for last - its sprites come next (the characters' shadows).
+effect_exe::Owner g_owner;
 
 void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
     // The effect it is of, as the game's own update reads it (FUN_00611bf0: 0 once the effect is gone).
@@ -57,18 +59,21 @@ void __attribute__((thiscall)) effectRender(uint32_t effect, void* matrix) {
 }
 
 void __attribute__((thiscall)) sortFace(uint32_t renderer, uint32_t face, uint32_t flags) {
-    if (g_current.kind != Kind::None && face) {
+    const Tag tag = g_owner.faceTag(g_current, flags);  // 2.6.3: a character's sprite - the character's seed
+    if ((tag.kind != Kind::None || tag.seed) && face) {
         const uint32_t vertices = *reinterpret_cast<const uint32_t*>(uintptr_t(face));
         Guard guard;
-        g_faces.note(vertices, g_current);
+        g_faces.note(vertices, tag);
     }
     reinterpret_cast<SortFn>(g_sort)(renderer, face, flags);
 }
 
-// 0.32: while the game draws a character's shadow, its face is the character's shadow.
+// 0.32: while the game draws a character's shadow, its face is the character's shadow; 2.6.3: the character's
+// sprites, sorted next, are its.
 void __attribute__((thiscall)) actorShadow(uint32_t actor, uint32_t matrix, float scale) {
     const Tag before = g_current;
-    g_current = Tag{Kind::Shadow, uint8_t((actor >> 4) * 2654435761u >> 24)};
+    g_owner.shadow(actor);
+    g_current = Tag{Kind::Shadow, effect_exe::ownerSeed(actor)};
     reinterpret_cast<ShadowFn>(g_shadow)(actor, matrix, scale);
     g_current = before;
 }
@@ -166,6 +171,9 @@ Tag drawnEffect(const void* vertices) {
     return g_render ? g_faces.of(uint32_t(reinterpret_cast<uintptr_t>(vertices))) : Tag{};
 }
 
-void effectFrame() { g_faces.clear(); }
+void effectFrame() {
+    g_faces.clear();
+    g_owner.clear();
+}
 
 }  // namespace uagfx::win

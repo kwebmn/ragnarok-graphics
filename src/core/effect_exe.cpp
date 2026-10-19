@@ -20,6 +20,22 @@ bool isShadowEntry(const uint8_t bytes[6]) {
 
 bool auraExtra(int id) { return id == 200 || id == 201 || id == 397 || id == 398; }
 
+uint8_t ownerSeed(uint32_t actor) {
+    const uint8_t s = uint8_t((actor >> 4) * 2654435761u >> 24);  // the address's bits spread
+    return s ? s : 1;
+}
+
+void Owner::shadow(uint32_t actor) { seed_ = ownerSeed(actor); }
+
+Tag Owner::faceTag(Tag current, uint32_t flags) const {
+    if (current.kind != Kind::None) return current;
+    Tag t;
+    if (flags & 1) t.seed = seed_;  // a blended list's: a sprite's
+    return t;
+}
+
+void Owner::clear() { seed_ = 0; }
+
 Kind kindOf(int id) {
     switch (id) {
     case 45:
@@ -120,7 +136,7 @@ void Faces::grow() {
 }
 
 void Faces::note(uint32_t vertices, Tag tag) {
-    if (!vertices || tag.kind == Kind::None) return;
+    if (!vertices || (tag.kind == Kind::None && !tag.seed)) return;  // 2.6.3: a character's sprite has its seed
     if ((count_ + 1) * 2 > slots_.size()) grow();
     Slot& s = slots_[slotOf(vertices)];
     if (s.stamp != stamp_) ++count_;

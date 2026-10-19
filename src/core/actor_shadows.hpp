@@ -10,19 +10,22 @@ namespace uagfx::actor_shadows {
 // low sun or a torch nearby throws it. All on the screen, in game pixels: the sprites face the screen.
 
 // The game's shadow under a character (uaRO.exe FUN_00547b80, known by the driver): its middle - the feet - its half
-// width and height, its view depth.
+// width and height, its view depth; 2.6.3: the character's seed (effect_exe::ownerSeed, 0 unknown).
 struct Blob {
     float x, y, halfW, halfH, viewZ;
+    uint8_t owner = 0;
 };
 
 // A layer of a sprite drawn this frame: its corners and their texture coordinates, its alpha, the view depth of its
-// top and its bottom (uaRO.exe tilts a sprite's depth with its height: 0.16 units a pixel), its texture.
+// top and its bottom (uaRO.exe tilts a sprite's depth with its height: 0.16 units a pixel), its texture; 2.6.3: the
+// seed of the character it was drawn for (the last whose shadow the game asked for, effect_exe::Owner; 0 unknown).
 struct Layer {
     float corner[4][2];
     float uv[4][2];
     float alpha;
     float topZ, bottomZ;
     uint32_t texture;
+    uint8_t owner = 0;
 };
 
 // A layer's shadow: the same picture, its corners on the ground.
@@ -33,11 +36,12 @@ struct ShadowQuad {
     float viewZ;         // the feet's
     float feetX, feetY;  // 0.39.1: where they stand on the screen
     uint32_t texture;
+    bool owned = false;  // 2.6.3: known as its character's by its seed, not by its depth
 };
 
-// The shadows of the layers that stand on a blob's feet - over them across, above them, at their depth - each laid
-// from the feet along `dir` (a unit direction on the screen; per blob from `dirs` when it has as many) for `length`
-// of its height above them.
+// The shadows of the layers that stand on a blob's feet - over them across, above them, its character's (2.6.3: the
+// same seed) or else at their depth - each laid from the feet along `dir` (a unit direction on the screen; per blob
+// from `dirs` when it has as many) for `length` of its height above them.
 std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<Layer>& layers,
                              const std::vector<std::array<float, 2>>& dirs, const float dir[2], float length);
 

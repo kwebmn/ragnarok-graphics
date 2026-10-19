@@ -290,6 +290,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
         const float viewZ = 1.0f / rhw;
         l.alpha = float(diffuse >> 24) / 255.0f;
         l.texture = d.texture[0];
+        l.owner = d.effect == uint8_t(effect_exe::Kind::None) ? d.effectSeed : 0;  // 2.6.3: its character's seed
         if (d.effect == uint8_t(effect_exe::Kind::Shadow)) {  // the game's round one
             float x0 = l.corner[0][0], x1 = x0, y0 = l.corner[0][1], y1 = y0;
             for (int i = 1; i < 4; ++i) {
@@ -299,7 +300,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
                 y1 = std::max(y1, l.corner[i][1]);
             }
             blobs.push_back(actor_shadows::Blob{(x0 + x1) * 0.5f, (y0 + y1) * 0.5f, (x1 - x0) * 0.5f, (y1 - y0) * 0.5f,
-                                                viewZ});
+                                                viewZ, d.effectSeed});
             rounds.push_back(l);
             continue;
         }
@@ -471,9 +472,14 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     const bool done = worldPass(apply, w, h, c, mask, false);
     if (!done) return false;
     actorShadowsDrawn = true;
-    if (!actorShadowsLogged)
-        LOG_INFO("characters' shadows: %u characters, %u layers of their sprites%s", unsigned(blobs.size()),
-                 unsigned(layers.size()), layout ? ", lit by the map's torches and lamps" : "");
+    if (!actorShadowsLogged) {
+        const size_t owned = size_t(std::count_if(quads.begin(), quads.end(),
+                                                  [](const actor_shadows::ShadowQuad& q) { return q.owned; }));
+        LOG_INFO("characters' shadows: %u characters, %u layers of their sprites (%u cast, %u known as their "
+                 "characters')%s",
+                 unsigned(blobs.size()), unsigned(layers.size()), unsigned(quads.size() - rounds.size()),
+                 unsigned(owned), layout ? ", lit by the map's torches and lamps" : "");
+    }
     actorShadowsLogged = true;
     return true;
 }

@@ -65,9 +65,27 @@ struct Tag {
 bool auraExtra(int id);
 constexpr uint32_t kAuraFlag = 0x772CE4;
 
-// The faces of the effects the driver cares about sorted this frame, by the address of their vertices. 2.5.20: a flat
-// table cleared by the frame's stamp - asked at every draw of the game's, it was a map whose nodes were made and freed
-// every frame.
+// 2.6.3: whose a sprite's face is. uaRO.exe asks for a character's round shadow (kActorShadow) right before it sorts
+// the character's sprites (FUN_00548190, FUN_005aa130, the players' FUN_005ae540): the faces sorted after a shadow's
+// call into the blended lists (flags bit 0), not an effect's, are that character's until the next shadow's - their
+// tag kind None with the character's seed (the characters' shadows know its layers by it: actor_shadows::Layer).
+// A character's seed, of its address; never 0 (nobody's).
+uint8_t ownerSeed(uint32_t actor);
+class Owner {
+public:
+    void shadow(uint32_t actor);  // the game asks for a character's shadow
+    // The tag of a face sorted now with `flags`: an effect's own (a shadow's too); a blended one after a character's
+    // shadow, the character's; else none.
+    Tag faceTag(Tag current, uint32_t flags) const;
+    void clear();  // a new frame: nobody's yet
+
+private:
+    uint8_t seed_ = 0;
+};
+
+// The faces of the effects the driver cares about (2.6.3: and of the characters' sprites) sorted this frame, by the
+// address of their vertices. 2.5.20: a flat table cleared by the frame's stamp - asked at every draw of the game's, it
+// was a map whose nodes were made and freed every frame.
 class Faces {
 public:
     void note(uint32_t vertices, Tag tag);

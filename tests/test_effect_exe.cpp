@@ -97,6 +97,36 @@ TEST(effect_exe_faces_of_a_crowded_frame_and_the_next) {
     }
 }
 
+TEST(effect_exe_knows_a_characters_faces_by_its_shadow) {
+    // 2.6.3: uaRO.exe asks for a character's round shadow (FUN_00547b80) right before it sorts the character's
+    // sprites into the blended lists (FUN_00548190, FUN_005aa130, the players' FUN_005ae540): those faces are the
+    // character's - not an effect's (kind None), with its shadow's seed - until the next character's shadow.
+    effect_exe::Owner o;
+    const effect_exe::Tag none{};
+    CHECK_EQ(int(o.faceTag(none, 0x101).seed), 0);  // before any shadow: nobody's
+    o.shadow(0x1234560);
+    const uint8_t a = effect_exe::ownerSeed(0x1234560);
+    CHECK(a != 0);
+    CHECK(effect_exe::ownerSeed(0) != 0);  // never 0: that is nobody's
+    const effect_exe::Tag t = o.faceTag(none, 0x101);
+    CHECK(t.kind == Kind::None && t.seed == a);
+    CHECK_EQ(int(o.faceTag(none, 1).seed), int(a));
+    CHECK_EQ(int(o.faceTag(none, 0).seed), 0);  // an opaque face (a model of the map's): not a sprite
+    const effect_exe::Tag skill{Kind::Skill, 9};
+    CHECK(o.faceTag(skill, 0x101).kind == Kind::Skill && o.faceTag(skill, 0x101).seed == 9);  // an effect's own
+    o.shadow(0x7654320);
+    CHECK(effect_exe::ownerSeed(0x7654320) != a);
+    CHECK_EQ(int(o.faceTag(none, 1).seed), int(effect_exe::ownerSeed(0x7654320)));
+    o.clear();  // a new frame
+    CHECK_EQ(int(o.faceTag(none, 1).seed), 0);
+    // The faces' table keeps them: a character's face (kind None, a seed) is noted; one with neither is not.
+    effect_exe::Faces f;
+    f.note(0x3000000, effect_exe::Tag{Kind::None, a});
+    f.note(0x3000020, effect_exe::Tag{});
+    CHECK(f.of(0x3000000).kind == Kind::None && f.of(0x3000000).seed == a);
+    CHECK_EQ(int(f.of(0x3000020).seed), 0);
+}
+
 TEST(effect_exe_knows_fireflies_and_the_sort_functions_entry) {
     CHECK(effect_exe::kindOf(45) == Kind::Firefly);
     CHECK(effect_exe::kindOf(44) == Kind::None);
