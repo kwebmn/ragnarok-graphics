@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """palettes_grf.py OUT.grf SOURCE [SOURCE...]: the client's Palettes.grf with the palettes the server lets be worn.
 
-uaRO's server dyes hair 0-20 on hair styles 0-23 and clothes 0-77 (its stylist npc/custom/dye.txt; uAthena's
-pc_changelook clamps every look change to its limits, the char server makes new characters inside them). The client
+uaRO's server lets hair styles 0-23 and clothes 0-77 be worn (its stylist npc/custom/dye.txt; uAthena's
+pc_changelook clamps every look change to its limits, the char server makes new characters inside them); hair
+colours are all kept - the server clamps them at its max_hair_color (8 now), raised there the game has them at once. The client
 (uaRO.exe of 2007) asks for data\\palette\\머리\\머리<style>_<sex>_<colour>.pal and
 data\\palette\\몸\\<job>_<sex>_<colour>.pal; a palette it does not find draws the sprite's own colours, no error.
 Kamishi's palette pack has 219,293 of them (700 clothes colours a job, 128 hair colours on 120 styles, costumes, the
-Doram race - neither known to the 2007 client); about 18,500 can be worn.
+Doram race - neither known to the 2007 client); about 23,600 stay (every hair colour).
 
 SOURCE: a folder (with a palette folder in it, or the palette folder itself), a .zip or a GRF 0x200 (not encrypted);
 the first source that has a palette gives it. The GRF is written as uaRO.exe reads one (FUN_00510fd0: each entry by
@@ -22,11 +23,10 @@ import time
 import zipfile
 import zlib
 
-# The server's limits (uAthena: the stylist's ranges; its conf/battle/client.conf says hair colours 0-8 in the
-# repository only). Raised there, raise them here and run this again. The settings app makes the same file on the
-# player's computer (the Service page, core/palette_grf.hpp): keep its limits the same.
+# The server's limits (uAthena: the stylist's ranges). Raised there, raise them here and run this again. The
+# settings app makes the same file on the player's computer (the Service page, core/palette_grf.hpp): keep its limits
+# the same. Hair colours: every one (2.5.24) - the server clamps them at its max_hair_color.
 MAX_HAIR_STYLE = 23
-MAX_HAIR_COLOUR = 20
 MAX_CLOTH_COLOUR = 77
 
 HAIR = re.compile(r'^data\\palette\\머리\\머리(\d+)_([^_\\]+)_(\d+)\.pal$', re.IGNORECASE)
@@ -48,8 +48,7 @@ def wanted(name):
     """Why a palette is left out ('' to keep it)."""
     m = HAIR.match(name)
     if m:
-        ok = int(m.group(1)) <= MAX_HAIR_STYLE and int(m.group(3)) <= MAX_HAIR_COLOUR
-        return '' if ok else 'hair past styles 0-%d or colours 0-%d' % (MAX_HAIR_STYLE, MAX_HAIR_COLOUR)
+        return '' if int(m.group(1)) <= MAX_HAIR_STYLE else 'hair past styles 0-%d' % MAX_HAIR_STYLE
     m = CLOTHES.match(name)
     if m:
         return '' if int(m.group(3)) <= MAX_CLOTH_COLOUR else 'clothes past colours 0-%d' % MAX_CLOTH_COLOUR
@@ -189,8 +188,8 @@ def main(argv):
     hair = sum(1 for name, _ in kept if HAIR.match(name))
     print('%s: %d palettes (hair %d, clothes %d), %d of them different, %.1f MB, in %.1f s' %
           (out, len(kept), hair, len(kept) - hair, blocks, os.path.getsize(out) / 1e6, time.time() - started))
-    print('limits: hair styles 0-%d, hair colours 0-%d, clothes colours 0-%d; read %d palettes from %s' %
-          (MAX_HAIR_STYLE, MAX_HAIR_COLOUR, MAX_CLOTH_COLOUR, len(found), ', '.join(sources)))
+    print('limits: hair styles 0-%d, every hair colour, clothes colours 0-%d; read %d palettes from %s' %
+          (MAX_HAIR_STYLE, MAX_CLOTH_COLOUR, len(found), ', '.join(sources)))
     for why, n in sorted(left.items(), key=lambda x: -x[1]):
         print('  left out %d: %s' % (n, why))
     if others:  # what an old Palettes.grf held besides palettes: it is not in the new one

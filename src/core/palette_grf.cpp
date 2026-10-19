@@ -92,7 +92,7 @@ std::optional<Left> verdict(const std::string& name) {
             who.size() - kHair.size() > 4)
             return Left::OddName;
         const int style = std::stoi(who.substr(kHair.size()));
-        if (style > kMaxHairStyle || colour > kMaxHairColour) return Left::HairPast;
+        if (style > kMaxHairStyle) return Left::HairPast;  // 2.5.24: any colour
         return std::nullopt;
     }
     if (colour > kMaxClothColour) return Left::ClothesPast;  // <job>_<sex>_<colour>

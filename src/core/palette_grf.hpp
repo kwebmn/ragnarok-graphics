@@ -10,19 +10,20 @@
 namespace uagfx::palettes {
 
 // 2.5.19: the client's Palettes.grf with the palettes the server lets be worn, made on the player's computer (the
-// Service page) from the whole set in seconds - Kamishi's pack: 219,293 palettes, 153 MB; about 18,500 of them stay,
+// Service page) from the whole set in seconds - Kamishi's pack: 219,293 palettes, 153 MB; about 23,600 of them stay,
 // in 4-5 MB. uaRO.exe of 2007 asks for data\palette\머리\머리<style>_<sex>_<colour>.pal and
 // data\palette\몸\<job>_<sex>_<colour>.pal, and draws the sprite's own colours when it finds none - no error.
-// The server's limits (its stylist npc/custom/dye.txt; uAthena's pc_changelook clamps every look change to them):
+// The server's limits (its stylist npc/custom/dye.txt; uAthena's pc_changelook clamps every look change to them).
+// 2.5.24: every hair colour the source has - the server clamps at its max_hair_color (8 now, its stylist offers 0-20)
+// and raised there the client has the next ones at once; Kamishi's 128 add 70 KB to the 4.4 MB.
 constexpr int kMaxHairStyle = 23;
-constexpr int kMaxHairColour = 20;
 constexpr int kMaxClothColour = 77;
 
 // The name the client asks for of a file in a source - its path in a GRF, a zip or a folder, cp949 bytes, '/' or
 // '\': data\palette\<the rest> after its palette folder; "" when it is in none.
 std::string clientName(const std::string& path);
 
-// Why a palette stays out: hair past the styles or colours, clothes past the colours, a folder the 2007 client knows
+// Why a palette stays out: hair past the styles, clothes past the colours, a folder the 2007 client knows
 // nothing of (costumes, the Doram race), a name it never asks for, an empty file, a file that is no palette.
 enum class Left : uint8_t { HairPast, ClothesPast, Unknown, OddName, Empty, NotPalette };
 constexpr int kLeftKinds = 6;

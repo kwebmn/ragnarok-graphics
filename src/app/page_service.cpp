@@ -103,7 +103,6 @@ public:
         p.gap();
         p.heading(t(Text::ServicePalettes));
         p.note(tf(Text::PalettesNote, {std::to_string(palettes::kMaxHairStyle),
-                                       std::to_string(palettes::kMaxHairColour),
                                        std::to_string(palettes::kMaxClothColour)}));
         const PalettesState made = palettesState();
         making_ = made.kind == PalettesState::Working;

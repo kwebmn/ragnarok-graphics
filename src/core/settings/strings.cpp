@@ -3045,18 +3045,21 @@ const Entry kTexts[] = {
      "Свой размер на этом экране: {1}×{2} из {3}×{4} ({5} %); DLSS может свести его к ближайшему, который берёт."},
     // 2.5.19
     {"Game palettes (Palettes.grf)", "Палітри гри (Palettes.grf)", "Палитры игры (Palettes.grf)"},
-    {"Makes Palettes.grf with only the palettes the server lets be worn: hair styles 0-{1}, hair colours 0-{2}, "
-     "clothes colours 0-{3}. Costumes and the Doram race are unknown to the 2007 client and stay out. The same palette "
-     "is kept once: Kamishi's pack (219 thousand palettes, 153 MB) becomes about 18,500 in 4-5 MB. A palette the "
-     "client does not find is drawn in the sprite's own colours, without an error.",
-     "Збирає Palettes.grf лише з палітрами, які дозволяє сервер: зачіски 0–{1}, кольори волосся 0–{2}, кольори "
-     "одягу 0–{3}. Костюмів і Дорамів клієнт 2007 року не знає — вони не беруться. Однакова палітра зберігається "
-     "один раз: пак Kamishi (219 тисяч палітр, 153 МБ) стає приблизно 18 500 у 4–5 МБ. Палітру, якої клієнт не "
-     "знайде, він малює рідними кольорами спрайта, без помилки.",
-     "Собирает Palettes.grf только с палитрами, которые разрешает сервер: причёски 0–{1}, цвета волос 0–{2}, цвета "
-     "одежды 0–{3}. Костюмов и Дорамов клиент 2007 года не знает — они не берутся. Одинаковая палитра хранится один "
-     "раз: пак Kamishi (219 тысяч палитр, 153 МБ) становится примерно 18 500 в 4–5 МБ. Палитру, которой клиент не "
-     "найдёт, он рисует родными цветами спрайта, без ошибки."},
+    {"Makes Palettes.grf with only the palettes the server lets be worn: hair styles 0-{1}, clothes colours 0-{2}, "
+     "and every hair colour there is - should the server allow more, the game has them at once. Costumes and the "
+     "Doram race are unknown to the 2007 client and stay out. The same palette is kept once: Kamishi's pack (219 "
+     "thousand palettes, 153 MB) becomes about 23,600 in 4-5 MB. A palette the client does not find is drawn in the "
+     "sprite's own colours, without an error.",
+     "Збирає Palettes.grf лише з палітрами, які дозволяє сервер: зачіски 0–{1}, кольори одягу 0–{2} і всі кольори "
+     "волосся, які є, — якщо сервер дозволить більше, у грі вони з'являться одразу. Костюмів і Дорамів клієнт 2007 "
+     "року не знає — вони не беруться. Однакова палітра зберігається один раз: пак Kamishi (219 тисяч палітр, "
+     "153 МБ) стає приблизно 23 600 у 4–5 МБ. Палітру, якої клієнт не знайде, він малює рідними кольорами спрайта, "
+     "без помилки.",
+     "Собирает Palettes.grf только с палитрами, которые разрешает сервер: причёски 0–{1}, цвета одежды 0–{2} и все "
+     "цвета волос, какие есть, — если сервер разрешит больше, в игре они появятся сразу. Костюмов и Дорамов клиент "
+     "2007 года не знает — они не берутся. Одинаковая палитра хранится один раз: пак Kamishi (219 тысяч палитр, "
+     "153 МБ) становится примерно 23 600 в 4–5 МБ. Палитру, которой клиент не найдёт, он рисует родными цветами "
+     "спрайта, без ошибки."},
     {"Make from a GRF or ZIP...", "Зібрати з GRF або ZIP…", "Собрать из GRF или ZIP…"},
     {"Make from a folder...", "Зібрати з теки…", "Собрать из папки…"},
     {"Making Palettes.grf...", "Збирається Palettes.grf…", "Собирается Palettes.grf…"},

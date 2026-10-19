@@ -48,7 +48,9 @@ TEST(palettes_keep_what_the_server_lets_be_worn) {
     CHECK(!palettes::verdict(hair(23, 20)));
     CHECK(!palettes::verdict(hair(0, 0)));
     CHECK(palettes::verdict(hair(24, 1)) == Left::HairPast);
-    CHECK(palettes::verdict(hair(5, 21)) == Left::HairPast);
+    // 2.5.24: every hair colour - the server clamps at its max_hair_color (8 now), raised there the client has them
+    CHECK(!palettes::verdict(hair(5, 21)));
+    CHECK(!palettes::verdict(hair(5, 127)));
     CHECK(!palettes::verdict(clothes(kSword, 77)));
     CHECK(palettes::verdict(clothes(kSword, 78)) == Left::ClothesPast);
     CHECK(!palettes::verdict(clothes("meister_riding", 3)));  // a job's name with '_' in it
@@ -76,7 +78,7 @@ TEST(palettes_grf_holds_each_palette_once_and_reads_back) {
     CHECK(c.wants(clothes(kSword, 4)));
     c.take(clothes(kSword, 4), other);
     CHECK(!c.wants(hair(1, 1)));                    // a later source's: the first stays
-    CHECK(!c.wants(hair(1, 30)));                   // past the colours
+    CHECK(!c.wants(hair(30, 1)));                   // past the styles
     CHECK(c.wants(clothes(kSword, 5)));
     c.take(clothes(kSword, 5), {});                 // an empty file
     CHECK(!c.wants("palette/127_Hairs_Human.png"));  // the pack's own picture
