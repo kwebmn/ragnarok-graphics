@@ -1,3 +1,27 @@
+# uaRO Graphics 2.6.8 — to check
+
+- **"Ground relief" defaults to 30 %** (was 100 %): at 100 % the stones' tops turned gritty, at 30 % the stones bulge
+  softly. Where the strength was already set, it stays as it was.
+- **Grass 3-5 times cheaper** (estimated). On an HD 6570 it cost 22 ms a frame and "Keep the frame rate" turned it off
+  ten seconds after it came. The steps that tread the grass down are now worked out once a frame in a small grid
+  instead of at every pixel; on Direct3D 11 the blades' roots are looked for on every second row - the blades as long
+  as before.
+- **"Light from the sky" and "Reflected light" removed.** RO's camera looks from above and nearly everything on screen
+  faces up: "Light from the sky" only made the ground and the roofs colder (Prontera's paving: red -4 %, blue +6 %),
+  and "Reflected light" only lightened the corners of the wall's battlements a little - for 1.6 ms of the graphics
+  card.
+- **"Clouds' shadows" removed** with "Clouds' darkness". The clouds in the sky past the map's edge stay.
+- **"Motes in the air" default to 200 %** (was 100 %): twice as many pollen flecks - at 100 % they were all but unseen
+  over Prontera's white paving. It costs next to nothing: 0.09 ms a frame on an RTX 5060 Ti. Where the amount was
+  already set, it stays as it was.
+- **Console (~): an effect inside a group that is off is now grey**, marked "its group is off". It used to show green
+  although nothing was drawn: a group that is off turns off everything in it.
+- Please check: on a weak card the grass stays on the field (no `keep_fps: … effects.grass off` in the log) and is
+  still trodden down under the feet; on a fresh install the strength of "Ground relief" is 30 % and "How many motes"
+  200 %; the "Light" group has neither "Light from the sky" nor "Reflected light", and "Air and weather" has no
+  "Clouds' shadows"; in the console turn the "Light" group off and open it - the effects on inside it are grey with
+  the mark; turn the group on - green again.
+
 # uaRO Graphics 2.6.7 — to check
 
 - **"Ground relief" works on its own.** It showed only with "World materials", "Smooth hills" or "Smooth seams of the
