@@ -258,6 +258,46 @@ float Renderer::Impl::flashNow() const {
     return lightning::flash(double(const_cast<Impl*>(this)->waterTime()));
 }
 
+// 2.6.8: the steps' hold on the blades (core/trample.hpp) made into its grid and copied to its texture - grass_ps went
+// through up to 64 steps at every pixel (R-9K2F6E: the grass 22 ms of an HD 6570's frame)
+bool Renderer::Impl::uploadTrample() {
+    if (trampleFailed) return false;
+    trample::build(footTracker.steps(), waterTime(), stepLife(), trample);
+    if (trample.texels.empty()) return false;
+    constexpr UINT side = UINT(trample::Grid::kSide), pitch = side * 4;  // 512: rows a multiple of 256 apart
+    if (!trampleData) {
+        trampleData = createTexture2D(device, int(side), int(side), 1, DXGI_FORMAT_R8G8B8A8_SNORM,
+                                      D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+        trampleSrv = trampleData ? allocSrv() : kNoSrv;
+        if (!trampleData || trampleSrv == kNoSrv) {
+            LOG_ERROR("grass: no memory for the steps' grid: the blades stand where steps were");
+            releaseCom(trampleData);
+            trampleFailed = true;  // not tried again
+            return false;
+        }
+        trampleState = D3D12_RESOURCE_STATE_COPY_DEST;
+        device->CreateShaderResourceView(trampleData, nullptr, cpuSrvHandle(trampleSrv));
+    }
+    const Upload u = allocUpload(UINT64(pitch) * side, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+    if (!u.cpu) return false;
+    std::memcpy(u.cpu, trample.texels.data(), trample.texels.size());
+    D3D12_TEXTURE_COPY_LOCATION src{}, to{};
+    src.pResource = slots[slot].upload;
+    src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint.Offset = u.offset;
+    src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_SNORM;
+    src.PlacedFootprint.Footprint.Width = side;
+    src.PlacedFootprint.Footprint.Height = side;
+    src.PlacedFootprint.Footprint.Depth = 1;
+    src.PlacedFootprint.Footprint.RowPitch = pitch;
+    to.pResource = trampleData;
+    to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    transition(trampleData, trampleState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
+    transition(trampleData, trampleState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    return true;
+}
+
 // 0.81: grass blades from the green ground (grass_ps), trodden down where the last frame's steps are.
 bool Renderer::Impl::applyGrass() {
     grassDone = true;
@@ -266,8 +306,7 @@ bool Renderer::Impl::applyGrass() {
     ID3D12PipelineState* pso = alphaPipeline(grassPs, grassPipelines, upscale ? 1 : samples, "grass");
     if (!pso) return true;
     if (!copySceneColor() || !copySceneDepth()) return false;
-    const bool steps = stepsData && !footTracker.steps().empty();
-    if (steps) transition(stepsData, stepsDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const bool held = uploadTrample();  // 2.6.8: the steps' hold read from its grid, not each step at every pixel
     const int w = sceneWidth, h = sceneHeight;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
@@ -282,7 +321,13 @@ bool Renderer::Impl::applyGrass() {
     }
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
-    c.footprint = steps ? float(std::min(footTracker.steps().size(), footsteps::Tracker::kMax)) : 0.0f;
+    if (held) {
+        c.footprint = 1.0f;
+        c.fogColor[0] = trample.originX;
+        c.fogColor[1] = trample.originZ;
+        c.fogColor[2] = 1.0f / trample.cell;
+        c.fogColor[3] = float(trample::Grid::kSide);
+    }
     // The longest blade: about 1.6 units at the camera's usual distance.
     // 1.16.1: Classic+ (the weaker cards) at most 16 pixels a blade - the cost goes with it (28: 1.7 times)
     c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, remaster() ? 28.0f : 16.0f);
@@ -313,7 +358,7 @@ bool Renderer::Impl::applyGrass() {
     if (!grassLogged) LOG_INFO("grass: on %s, blades up to %.0f pixels%s", mapName.c_str(), c.twin[0],
                                cells != kNoSrv ? ", on the map's ground only" : "");
     grassLogged = true;
-    const UINT list1 = steps ? stepsDataSrv : sceneColorSrv;
+    const UINT list1 = held ? trampleSrv : sceneColorSrv;
     return worldPass(pso, w, h, c, sceneColorSrv, true, list1, nullptr, 3, cells);
 }
 

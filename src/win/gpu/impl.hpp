@@ -15,6 +15,7 @@
 #include "core/pick.hpp"
 #include "core/effect_costs.hpp"
 #include "core/footsteps.hpp"
+#include "core/trample.hpp"
 #include "core/frame.hpp"
 #include "core/critters.hpp"
 #include "core/draw_batch.hpp"
@@ -1193,6 +1194,13 @@ struct Renderer::Impl {
                viewToWorldValid;
     }
     bool applyGrass();  // once a frame, before the characters; false: lost
+    // 2.6.8: the steps' hold on the blades (core/trample.hpp), made once a frame into its texture (grass_ps's t1)
+    trample::Grid trample;
+    ID3D12Resource* trampleData = nullptr;
+    D3D12_RESOURCE_STATES trampleState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT trampleSrv = 0;
+    bool trampleFailed = false;
+    bool uploadTrample();  // false: no step holds (or no memory for it)
     // 1.7: the living world's ground (ao.cpp applyGroundLife): sand drifting, snow glittering, damp walls glistening
     ID3DBlob* groundLifePs = nullptr;
     ID3D12PipelineState* groundLifePipelines[4] = {};

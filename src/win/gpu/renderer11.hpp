@@ -12,6 +12,7 @@
 #include "core/critters.hpp"
 #include "core/draw_batch.hpp"
 #include "core/footsteps.hpp"
+#include "core/trample.hpp"
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
 #include "core/living.hpp"
@@ -290,6 +291,7 @@ private:
     // (applyGrass: on the map's ground only - its cells from the frame's ground triangles), before the characters
     void applyGroundLife();
     void applyGrass();
+    bool uploadTrample();  // 2.6.8: the steps' hold on the blades (core/trample.hpp) into its texture; false: none
     // 2.5.4: the living world's creatures and particles (critters.cpp: core/critters.hpp moved on, turned to the
     // screen, drawn over the world by critters_vs and critters_ps after the torches)
     void applyCritters();
@@ -610,6 +612,10 @@ private:
     ID3D11Texture2D* stepsData_ = nullptr;  // two texels a step (steps_ps's t1)
     ID3D11ShaderResourceView* stepsDataSrv_ = nullptr;
     footsteps::Tracker footTracker_;
+    trample::Grid trample_;                     // 2.6.8: the steps' hold on the grass, made once a frame
+    ID3D11Texture2D* trampleData_ = nullptr;    // its texels (grass_ps's t1)
+    ID3D11ShaderResourceView* trampleSrv_ = nullptr;
+    bool trampleFailed_ = false;
     std::vector<map::Point> frameFeet_;  // the round shadows' middles drawn this frame, in the world
     bool stepsDone_ = false, stepsLogged_ = false, desert_ = false;
     ID3D11PixelShader* smokePs_ = nullptr;

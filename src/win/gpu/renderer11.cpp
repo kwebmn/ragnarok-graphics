@@ -163,6 +163,8 @@ Renderer11::~Renderer11() {
     drop(stepsPs_);
     drop(stepsDataSrv_);
     drop(stepsData_);
+    drop(trampleSrv_);  // 2.6.8
+    drop(trampleData_);
     drop(smokePs_);
     drop(smokeGlowPs_);
     drop(lavaPs_);
@@ -2697,8 +2699,35 @@ void Renderer11::applyGroundLife() {
     worldPass(groundLifePs_, c, 1, 1, depthSrv_);
 }
 
+// 2.6.8: as Direct3D 12's uploadTrample (ao.cpp) - the steps' hold on the blades made into its grid and texture
+bool Renderer11::uploadTrample() {
+    if (trampleFailed_) return false;
+    trample::build(footTracker_.steps(), waterTime(), stepLife(), trample_);
+    if (trample_.texels.empty()) return false;
+    constexpr UINT side = UINT(trample::Grid::kSide);
+    if (!trampleData_) {
+        D3D11_TEXTURE2D_DESC d{};
+        d.Width = d.Height = side;
+        d.MipLevels = d.ArraySize = 1;
+        d.Format = DXGI_FORMAT_R8G8B8A8_SNORM;
+        d.SampleDesc.Count = 1;
+        d.Usage = D3D11_USAGE_DEFAULT;
+        d.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(device_->CreateTexture2D(&d, nullptr, &trampleData_)) ||
+            FAILED(device_->CreateShaderResourceView(trampleData_, nullptr, &trampleSrv_))) {
+            drop(trampleData_);
+            trampleFailed_ = true;  // not tried again
+            LOG_ERROR("grass: no memory for the steps' grid (Direct3D 11): the blades stand where steps were");
+            return false;
+        }
+    }
+    ctx_->UpdateSubresource(trampleData_, 0, nullptr, trample_.texels.data(), side * 4, 0);
+    return true;
+}
+
 // 2.5.4: as Direct3D 12's applyGrass (ao.cpp) - grass_ps from the picture's copy and its depth, blended over; the
-// steps bend it (t1, the footprints' list), the map's ground only (t5, its cells' heights from the last frame).
+// steps bend it (t1: 2.6.8 their hold's grid, uploadTrample), the map's ground only (t5, its cells' heights from the
+// last frame).
 void Renderer11::applyGrass() {
     EffectSpan span(*this, kTimeGrass11);  // 2.5.9
     grassDone_ = true;
@@ -2712,8 +2741,17 @@ void Renderer11::applyGrass() {
     c.scale = k;
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
-    const bool steps = stepsDataSrv_ && !footTracker_.steps().empty();
-    c.footprint = steps ? float(std::min(footTracker_.steps().size(), footsteps::Tracker::kMax)) : 0.0f;
+    const bool held = uploadTrample();  // 2.6.8: the steps' hold read from its grid, not each step at every pixel
+    if (held) {
+        c.footprint = 1.0f;
+        c.fogColor[0] = trample_.originX;
+        c.fogColor[1] = trample_.originZ;
+        c.fogColor[2] = 1.0f / trample_.cell;
+        c.fogColor[3] = float(trample::Grid::kSide);
+    }
+    // 2.6.8: Direct3D 11 is a weak card's (an HD 6570's grass cost 22 ms, R-9K2F6E): the roots on every second row
+    // only - each blade still found, the search half as long
+    c.uiPixels[2] = 2.0f;
     c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, 16.0f);  // Classic+'s longest blade
     c.twin[1] = 0.65f * float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;
     c.sharpen = waterTime();
@@ -2758,10 +2796,10 @@ void Renderer11::applyGrass() {
         c.sourceClamp[3] = float(g.width) + 1024.0f * float(g.height);
     }
     if (!grassLogged_)
-        LOG_INFO("grass: on %s, blades up to %.0f pixels%s (Direct3D 11)", map_.c_str(), c.twin[0],
-                 grid && groundCellsUp_ ? ", on the map's ground only" : "");
+        LOG_INFO("grass: on %s, blades up to %.0f pixels%s, their roots on every second row (Direct3D 11)",
+                 map_.c_str(), c.twin[0], grid && groundCellsUp_ ? ", on the map's ground only" : "");
     grassLogged_ = true;
-    worldPass(grassPs_, c, 1, 1, depthSrv_, nullptr, steps ? stepsDataSrv_ : nullptr, nullptr,
+    worldPass(grassPs_, c, 1, 1, depthSrv_, nullptr, held ? trampleSrv_ : nullptr, nullptr,
               grid && groundCellsUp_ ? groundCellsSrv_ : nullptr);
 }
 

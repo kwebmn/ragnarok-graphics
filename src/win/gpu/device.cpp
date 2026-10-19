@@ -1643,6 +1643,7 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : stepsPipelines) releaseCom(p);  // 0.80
     releaseCom(stepsPs);
     releaseCom(stepsData);
+    releaseCom(trampleData);  // 2.6.8
     releaseBloom();  // 0.78
     releaseCom(bloomDownPipeline);
     releaseCom(bloomBlurPipeline);

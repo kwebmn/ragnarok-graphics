@@ -1052,10 +1052,14 @@ float4 water(WaterIn i) {
 // drawn, before the characters and the effects. f0-farZ are the game's projection, scale and jitter the world's;
 // uiPixels the world's size and the shadows' (half of it); footprint the radius in world units, sharpen the
 // strength (0-1); sourceRect.xy the blur's direction.
-float3 viewAt(int2 wp) {  // the point of the view the world pixel wp shows (its centre: game (wp - jitter) / scale)
-    float z = viewDepth(sceneDepth.Load(int3(wp, 0)));
+float3 viewFrom(int2 wp, float raw) {  // 2.6.8: viewAt with the pixel's depth read already
+    float z = viewDepth(raw);
     float2 g = (float2(wp) - float2(jitterX, jitterY)) / scale;
     return float3((g.x - cx) * z / f0, (g.y - cy) * z / f1, z);
+}
+
+float3 viewAt(int2 wp) {  // the point of the view the world pixel wp shows (its centre: game (wp - jitter) / scale)
+    return viewFrom(wp, sceneDepth.Load(int3(wp, 0)));
 }
 
 float ao_ps(PresentOut i) : SV_Target {
@@ -1800,7 +1804,22 @@ float4 embers_ps(PresentOut i) : SV_Target {
 // it; footprint how many). twinX the blades' longest (target pixels), twinY how many (0-1), sharpen the time.
 // 1.7: the trodden blades lean away from the step; twinW the share of flowers (flowers), sourceRect.y their colours
 // (living::Place::flowers); twinH the dew (dew) glinting on the tips; sourceRect.x the gusts (gusts): a band of
-// wind crossing the screen bends the blades and lightens them.
+// wind crossing the screen bends the blades and lightens them. 2.6.8 (R-9K2F6E: 22 ms on an HD 6570): the steps'
+// hold read from their grid (footprint 1: t1, core/trample.hpp; fogColor its corner, one over a texel's side, texels
+// a side) instead of up to 64 steps a pixel; the root's depth read once; the map's ground looked up only for a root
+// that has a blade; uiPixels.z 2 (Direct3D 11) looks for roots on every second row only - a blade still found
+// whole, its root a row higher or lower.
+float4 trampleAt(float2 xz) {  // 2.6.8: the grid between its four texel centres around xz, past its edge the edge's
+    float2 g = (xz - fogColor.xy) * fogColor.z - 0.5;
+    int last = int(fogColor.w + 0.5) - 1;
+    int2 i = int2(floor(g));
+    float2 f = g - float2(i);
+    int2 a = clamp(i, int2(0, 0), int2(last, last)), b = clamp(i + int2(1, 1), int2(0, 0), int2(last, last));
+    float4 t00 = tex1.Load(int3(a.x, a.y, 0)), t10 = tex1.Load(int3(b.x, a.y, 0));
+    float4 t01 = tex1.Load(int3(a.x, b.y, 0)), t11 = tex1.Load(int3(b.x, b.y, 0));
+    return lerp(lerp(t00, t10, f.x), lerp(t01, t11, f.x), f.y);
+}
+
 float3 flowerColour(float pick, int palette) {
     float3 a = float3(0.98, 0.86, 0.25), b = float3(0.97, 0.96, 0.92), c = float3(0.72, 0.58, 0.92);  // a meadow
     if (palette == 1) { a = float3(0.92, 0.28, 0.18); b = float3(0.98, 0.62, 0.20); c = float3(0.98, 0.88, 0.40); }
@@ -1816,7 +1835,6 @@ float4 grass_ps(PresentOut i) : SV_Target {
     float hereZ = here >= 0.99999 ? 1e6 : viewDepth(here);
     int longest = int(twinX);
     float t = sharpen;
-    int count = int(footprint);
     // 1.7: the way the steps near here push the blades, along the screen (the view's x axis in the world: r0-r2).
     // 1.8.3: the wind's sway and the gusts by the place in the world under the pixel, not by the pixel - by the
     // pixel the waves moved over the grass with the camera as one walked.
@@ -1835,18 +1853,15 @@ float4 grass_ps(PresentOut i) : SV_Target {
         if (sourceRect.x > 0.0)  // 1.22: along the shared wind (sourceRect.zw its way times its strength)
             gust = pow(saturate(sin(dot(hw.xz, windWay * 0.042) - t * 0.7)), 8.0) * (0.55 + 0.45 * sin(t * 0.23)) *
                    sourceRect.x;
-        float2 push = float2(0.0, 0.0);
-        [loop] for (int s = 0; s < count; ++s) {
-            float4 st = tex1.Load(int3(2 * s, 0, 0));
-            float age = tex1.Load(int3(2 * s + 1, 0, 0)).x;
-            float2 d = hw.xz - st.xz;
-            float dd = dot(d, d);
-            if (dd < 12.0 && dd > 1e-4) push += d * rsqrt(dd) * (1.0 - age) * (1.0 - dd / 12.0);
-            trod *= lerp(1.0, saturate(dd / 9.0), 1.0 - age);
+        if (footprint > 0.5) {  // 2.6.8: the steps' hold, from their grid
+            float4 hold = trampleAt(hw.xz);
+            lean = clamp(dot(float3(hold.x, 0.0, hold.y) * 2.0, float3(r0, r1, r2)), -1.0, 1.0);
+            trod = hold.z;
         }
-        lean = clamp(dot(float3(push.x, 0.0, push.y), float3(r0, r1, r2)), -1.0, 1.0);
     }
-    [loop] for (int k = longest; k >= 1; --k) {
+    int every = uiPixels.z > 1.5 ? 2 : 1;  // 2.6.8: every second row's roots only (the roots on the even rows)
+    int first = longest - (every == 2 ? ((wp.y + longest) & 1) : 0);
+    [loop] for (int k = first; k >= 1; k -= every) {
         float up = float(k) / twinX;
         float sway = sin(t * 1.7 + swayPhase) * 0.25 * twinX * up * up;
         sway += (gust * 0.55 + lean * 0.5 + windLean) * twinX * up * up;
@@ -1855,20 +1870,10 @@ float4 grass_ps(PresentOut i) : SV_Target {
         if (rd >= 0.99999) continue;
         float3 rc = sceneColor.Load(int3(root, 0)).rgb;
         if (rc.g < rc.r * 1.04 || rc.g < rc.b * 1.15 || rc.g < 0.12) continue;  // not green ground
-        float3 v = viewAt(root);
+        float3 v = viewFrom(root, rd);
         if (hereZ < v.z - 1.0) continue;  // something in front of the blade
         float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) +
                    float3(r9, r10, r11);
-        // 2.2.1: on the map's own ground only - sourceClamp the cells' grid (its corner, one over a side, the cells
-        // across + 1024 * down), t5 each cell's lowest and highest y: umbala's green decks and bridges stand above it
-        if (sourceClamp.z > 0.0) {
-            int cellsAcross = int(fmod(sourceClamp.w, 1024.0) + 0.5), cellsDown = int(sourceClamp.w / 1024.0);
-            int2 cellAt = int2(floor((w.xz - sourceClamp.xy) * sourceClamp.z));
-            if (all(cellAt >= int2(0, 0)) && cellAt.x < cellsAcross && cellAt.y < cellsDown) {
-                float2 cellSpan = mirrorTex.Load(int3(cellAt, 0)).rg;
-                if (cellSpan.x > cellSpan.y || w.y < cellSpan.x - 0.75 || w.y > cellSpan.y + 0.75) continue;
-            }
-        }
         float2 cell = w.xz * 2.0;  // a blade or none every half unit
         float2 id = floor(cell);
         float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
@@ -1878,6 +1883,17 @@ float4 grass_ps(PresentOut i) : SV_Target {
         float height = (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0);
         bool head = flower && up > height * 0.78;
         if (dot(at, at) > (head ? 0.2 : 0.05)) continue;
+        // 2.2.1: on the map's own ground only - sourceClamp the cells' grid (its corner, one over a side, the cells
+        // across + 1024 * down), t5 each cell's lowest and highest y: umbala's green decks and bridges stand above it
+        // (2.6.8: looked up only for a root that has a blade - most have none)
+        if (sourceClamp.z > 0.0) {
+            int cellsAcross = int(fmod(sourceClamp.w, 1024.0) + 0.5), cellsDown = int(sourceClamp.w / 1024.0);
+            int2 cellAt = int2(floor((w.xz - sourceClamp.xy) * sourceClamp.z));
+            if (all(cellAt >= int2(0, 0)) && cellAt.x < cellsAcross && cellAt.y < cellsDown) {
+                float2 cellSpan = mirrorTex.Load(int3(cellAt, 0)).rg;
+                if (cellSpan.x > cellSpan.y || w.y < cellSpan.x - 0.75 || w.y > cellSpan.y + 0.75) continue;
+            }
+        }
         height *= trod;  // trodden down
         if (up > height) continue;
         float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3)) * (1.0 + 0.2 * gust * up);
