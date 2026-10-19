@@ -3160,6 +3160,16 @@ const Entry kTexts[] = {
     {"World map and minimaps", "Мапа світу й мінімапи", "Карта мира и миникарты"},
     {"Loading screens", "Заставки завантаження", "Экраны загрузки"},
     {"Login, character select and creation", "Вхід, вибір і створення персонажа", "Вход, выбор и создание персонажа"},
+    // 2.6: the modes and the list's new entries
+    {"Simple", "Простий", "Простой"},
+    {"Detailed", "Докладний", "Подробный"},
+    {"Developer", "Розробника", "Разработчика"},
+    {"Main", "Головне", "Главное"},
+    {"Graphics", "Графіка", "Графика"},
+    {"Game and chat", "Гра й чат", "Игра и чат"},
+    {"Debugging", "Налагодження", "Отладка"},
+    {"What to improve", "Що покращувати", "Что улучшать"},
+    {"Models by group", "Моделі за групами", "Модели по группам"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

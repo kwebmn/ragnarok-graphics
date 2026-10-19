@@ -320,6 +320,8 @@ enum class Text : uint16_t {
     AiGroupCardPictures, AiSectionEffects, AiGroupSkillAnimations, AiGroupEffectSprites, AiSectionInterface,
     AiGroupEmotions, AiGroupCursor, AiGroupWindows, AiGroupMenuIcons, AiGroupPortraits, AiGroupMaps, AiGroupLoading,
     AiGroupLogin,
+    // 2.6: the modes and the list's new entries
+    ModeSimple, ModeDetailed, ModeDeveloper, ViewMain, ViewGraphics, ViewGameChat, PageDebug, AiTabWhat, AiTabModels,
     Count
 };
 
