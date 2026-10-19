@@ -21,7 +21,6 @@ const Costly kCostly[] = {
     {"shafts", "shafts", &EffectSettings::shafts},
     {"glow", "glow", &EffectSettings::glow},
     {"bloom", "bloom", &EffectSettings::bloom},
-    {"clouds", "clouds", &EffectSettings::clouds},
     {"actor_shadows", "actor_shadows", &EffectSettings::actorShadows},
     {"water", "water", &EffectSettings::water},
     {"haze", "haze", &EffectSettings::haze},

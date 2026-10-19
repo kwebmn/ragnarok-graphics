@@ -132,7 +132,7 @@ const char* weatherName(weather::Kind k) {
 }
 
 // 1.22: the shared wind now (core/wind.hpp) and what it has carried since the last frame: the weather along the
-// screen (pixels), the clouds' shadows over the world, the sky's clouds.
+// screen (pixels), the sky's clouds.
 void Renderer::Impl::updateWind() {
     const float now = waterTime();
     float dt = windClock < 0.0f ? 0.0f : now - windClock;
@@ -144,7 +144,6 @@ void Renderer::Impl::updateWind() {
     windScreenX = axis > 1e-4f ? (windNow.x * m[0] + windNow.z * m[2]) / axis : 0.0f;
     const float s = windNow.strength;
     weatherDrift.advance(windScreenX * s * 60.0f, 0.0f, dt);
-    cloudsDrift.advance(windNow.x * s * 0.016f, windNow.z * s * 0.016f, dt);
     skyDrift.advance(windNow.x * s * 0.012f, windNow.z * s * 0.012f, dt);
 }
 

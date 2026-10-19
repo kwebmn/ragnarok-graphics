@@ -919,15 +919,6 @@ const Entry kTexts[] = {
      "солнца — вместо круглого пятна игры под ногами."},
     {"Shadows' darkness", "Темрява тіней", "Темнота теней"},
     {"How dark the characters' shadows are.", "Наскільки темні тіні персонажів.", "Насколько темны тени персонажей."},
-    {"Clouds' shadows", "Тіні хмар", "Тени облаков"},
-    {"Shadows of clouds drift slowly over the fields and the towns, the ground and the buildings darker under them - "
-     "not in dungeons nor houses.",
-     "Тіні хмар повільно пливуть полями й містами, земля та будинки під ними темнішають — не в підземеллях і не в "
-     "будинках.",
-     "Тени облаков медленно плывут по полям и городам, земля и здания под ними темнеют — не в подземельях и не в "
-     "домах."},
-    {"Clouds' darkness", "Темрява хмар", "Темнота облаков"},
-    {"How dark the clouds' shadows are.", "Наскільки темні тіні хмар.", "Насколько темны тени облаков."},
     {"Haze and fog", "Серпанок і туман", "Дымка и туман"},
     {"Under the open sky a light bluish haze far off; in the dungeons the dark far off and a low fog drifting over the "
      "ground. Houses and the like stay as they are.",
@@ -2557,13 +2548,13 @@ const Entry kTexts[] = {
     {"Air and weather",
      "Повітря й погода",
      "Воздух и погода"},
-    {"Haze, weather, clouds' shadows, heat haze, storms, the sky, day and night, dust, morning fog, sand "
+    {"Haze, weather, heat haze, storms, the sky, day and night, dust, morning fog, sand "
      "and snow; with a strong card sun beams, volumetric fog, dust in the light, wet after rain and the "
      "land past the map's edge.",
-     "Серпанок, погода, тіні хмар, марево, грози, небо, день і ніч, пил, ранковий туман, пісок і сніг; з "
+     "Серпанок, погода, марево, грози, небо, день і ніч, пил, ранковий туман, пісок і сніг; з "
      "потужною картою — сонячні промені, об'ємний туман, пил у світлі, мокре після дощу й земля за краєм "
      "карти.",
-     "Дымка, погода, тени облаков, марево, грозы, небо, день и ночь, пыль, утренний туман, песок и снег; с "
+     "Дымка, погода, марево, грозы, небо, день и ночь, пыль, утренний туман, песок и снег; с "
      "мощной картой — солнечные лучи, объёмный туман, пыль в свете, мокрое после дождя и земля за краем "
      "карты."},
     {"Living world",

@@ -110,7 +110,7 @@ public:
         critterWorld_.setPlace(place_);  // 2.5.4: a new map - everything goes
         crittersTime_ = 0.0f;
         weather_ = weather::of(map);
-        hazeLogged_ = skyLogged_ = weatherLogged_ = cloudsLogged_ = false;
+        hazeLogged_ = skyLogged_ = weatherLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
         if (!map.empty()) fadeStart_ = waterTime();  // 2.5.2: the world comes in from black (0.83)
     }
@@ -211,9 +211,8 @@ private:
     void applySky();
     void applyWeather();
     // 2.5.1: the soft shadows where surfaces meet (ao.cpp: a mask at a half or a quarter of the size, blurred twice,
-    // multiplied in) and the clouds' shadows (clouds.cpp: their mask, multiplied in) - before the characters
+    // multiplied in) - before the characters
     void applyAo();
-    void applyClouds();
     // 2.5.2: the bloom, the filmic curve, the film's grain and the new map's fade (ao.cpp applyBloom: the bright
     // parts at a quarter of the size, blurred twice each way, added) - before the colours
     void applyBloom();
@@ -406,9 +405,6 @@ private:
                bloomDownPs_ && dofBlurPs_ && bloomApplyPs_;
     }
     bool aoWanted() const { return effects_.ao && effects_.aoStrength > 0 && aoPs_ && aoBlurPs_ && aoApplyPs_; }
-    bool cloudsWanted() const {
-        return effects_.clouds && effects_.cloudsStrength > 0 && cloudsPs_ && cloudsApplyPs_ && outdoors_;
-    }
     // A pass into a small target of its own: t0 and the depth (t3) read, the whole target written
     void maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c, ID3D11ShaderResourceView* t0,
                   ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t2 = nullptr,
@@ -588,15 +584,12 @@ private:
     float shine_ = 0.0f;  // 2.5.17: how much the map's floor reflects under a roof (floorShine)
     weather::Kind weather_ = weather::Kind::None;
     float cameraTargetZ_ = 0.0f;  // the view depth of what the camera looks at (setCamera), 0 unknown
-    // 2.5.1: the soft shadows and the clouds' shadows; the map's file (the lamps' lights, torches11.cpp)
+    // 2.5.1: the soft shadows; the map's file (the lamps' lights, torches11.cpp)
     ID3D11PixelShader* aoPs_ = nullptr;
     ID3D11PixelShader* aoBlurPs_ = nullptr;
     ID3D11PixelShader* aoApplyPs_ = nullptr;
-    ID3D11PixelShader* cloudsPs_ = nullptr;
-    ID3D11PixelShader* cloudsApplyPs_ = nullptr;
     Target aoTarget_[2];
-    Target cloudsMask_;
-    bool aoDone_ = false, cloudsDone_ = false, aoLogged_ = false, cloudsLogged_ = false;
+    bool aoDone_ = false, aoLogged_ = false;
     MapWorld mapWorld_;
     // 2.5.2: the bloom's two quarter-size targets and shaders; the new map's fade
     ID3D11PixelShader* bloomDownPs_ = nullptr;
@@ -682,7 +675,7 @@ private:
     float windClock_ = -1.0f;
     wind::Wind windNow_;
     float windScreenX_ = 0.0f;
-    wind::Drift weatherDrift_, cloudsDrift_, skyDrift_;
+    wind::Drift weatherDrift_, skyDrift_;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
@@ -809,7 +802,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[20][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21; 2.6.8: 20)
+        ID3D11Query* effect[19][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21; 2.6.8: 19)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -820,13 +813,13 @@ private:
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
         kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
-        kTimeAo11, kTimeClouds11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeShafts11,
+        kTimeAo11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeShafts11,
         kTimeDof11, kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
         // 2.5.15: the game's world draws (with the effects drawn amid them) and its interface's - apart from the
         // effects' own passes in the log, not in their costs (an HD 6570: 46-57 ms a frame, effects a few of them)
         kTimeWorld11, kTimeUi11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 20, "FrameTimes::effect holds 20");
+    static_assert(kEffectTimes11 == 19, "FrameTimes::effect holds 19");
     static bool drawsTimer(int e) { return e == kTimeWorld11 || e == kTimeUi11; }
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);

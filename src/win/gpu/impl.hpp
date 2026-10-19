@@ -71,7 +71,7 @@ constexpr UINT kSlots = 2;              // submissions in flight
 // 0.39.2: the effects timed one by one, for the log; 0.76: the sky, the light in the air and the floors' reflections
 // their own. 2.2.2: the sun's shadows' gone with them (2.1.4); 2.4.1: the new trees' too.
 enum EffectTimer : UINT {
-    kTimeAo, kTimeClouds, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
+    kTimeAo, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
     kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
     kEffectTimes
 };
@@ -115,8 +115,7 @@ constexpr UINT kRtvDof = kRtvAo + 2;         // 0.22: the depth of field's two
 constexpr UINT kRtvDofFocus = kRtvDof + 2;   // 0.22.3: its focus, last frame's and this one's
 constexpr UINT kRtvBias = kRtvDofFocus + 2;  // 0.22.3: DLSS's mask of pixels whose history it is not to take
 constexpr UINT kRtvShadow = kRtvBias + 1;  // 0.32: the characters' shadows' two masks
-constexpr UINT kRtvClouds = kRtvShadow + 2;  // 0.39.3: the clouds' mask
-constexpr UINT kRtvBloom = kRtvClouds + 1;  // 0.78: the bloom's two quarter-size targets
+constexpr UINT kRtvBloom = kRtvShadow + 2;  // 0.78: the bloom's two quarter-size targets
 constexpr UINT kRtvFloor = kRtvBloom + 2;  // 0.86: the floors' reflections at half the size
 constexpr UINT kRtvMaterial = kRtvFloor + 1;  // 1.8: a level of a texture's material, made anew for each
 constexpr UINT kRtvMirror = kRtvMaterial + 1;  // 1.16: the world mirrored under the water
@@ -550,18 +549,6 @@ struct Renderer::Impl {
     bool actorShadowsDrawn = false;  // and the game's round ones with them: not drawn on their own
     bool actorShadowsLogged = false;
     bool sceneDepthFresh = false;  // 0.39.2: sceneDepth holds the depth as it is now (copySceneDepth)
-    // 0.33, the clouds' shadows (clouds.cpp) over the open sky's maps; 0.39.3: worked out into a smaller mask first.
-    ID3DBlob* cloudsPs = nullptr;
-    ID3DBlob* cloudsApplyPs = nullptr;
-    ID3D12PipelineState* cloudsMaskPipeline = nullptr;
-    ID3D12PipelineState* cloudsPipelines[4] = {};  // the mask into the target of 1, 2, 4, 8 samples (the world: 1)
-    ID3D12Resource* cloudsMask = nullptr;          // R8: the light they leave
-    D3D12_RESOURCE_STATES cloudsMaskState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    UINT cloudsMaskSrv = 0;
-    int cloudsMaskW = 0, cloudsMaskH = 0;
-    bool cloudsMaskFailed = false;
-    bool cloudsDone = false;
-    bool cloudsLogged = false;
     bool mapOutdoors = false;  // the map is a field or a town (core/outdoors.hpp)
     float mapShine = 0.0f;     // 2.5.17: how much its floor reflects under a roof (core/outdoors.hpp floorShine)
     // 0.34, haze and fog (haze.cpp), the map's look (core/haze.hpp).
@@ -639,11 +626,10 @@ struct Renderer::Impl {
     trees::Season mapSeason = trees::Season::Green;  // 1.7: its trees' (core/trees.hpp)
     seasons::Look mapYear;  // 1.20: the year on its ground (core/seasons.hpp)
     // 1.22: the shared wind (core/wind.hpp), once a frame (weather.cpp updateWind): its way in the world, its way on
-    // the screen (the view's x axis), and what it has carried the weather (pixels), the clouds' shadows and the sky's
-    // clouds so far
+    // the screen (the view's x axis), and what it has carried the weather (pixels) and the sky's clouds so far
     wind::Wind windNow;
     float windScreenX = 0.0f, windClock = -1.0f;
-    wind::Drift weatherDrift, cloudsDrift, skyDrift;
+    wind::Drift weatherDrift, skyDrift;
     bool windShared() const { return effects.sharedWind && viewToWorldValid; }
     void updateWind();
     living::Place mapPlace;                          // 1.7: its small details (core/living.hpp)
@@ -898,14 +884,6 @@ struct Renderer::Impl {
     void releaseShadowMask();
     ID3D12PipelineState* shadowApplyPipeline(UINT samples);
     void noteSpriteCells(Texture& t, const SpriteCell* slots, uint32_t count);
-    bool cloudsWanted() const {
-        return effects.clouds && effects.cloudsStrength > 0 && cloudsPs && cloudsApplyPs && mapOutdoors;
-    }
-    bool cloudsDue() const { return cloudsWanted() && groundDrawn && !cloudsDone && viewToWorldValid; }
-    bool applyClouds();  // once a frame; false: lost
-    bool ensureCloudsMask(int w, int h);  // 0.39.3
-    void releaseCloudsMask();
-    ID3D12PipelineState* cloudsPipeline(UINT samples);
     bool hazeWanted() const {
         return effects.haze && effects.hazeStrength > 0 && hazePs && (mapLook.haze > 0.0f || mapLook.fog > 0.0f);
     }
@@ -999,7 +977,6 @@ struct Renderer::Impl {
         rayParts.clear();
         lavaCells.clear();
         actorShadowsDone = actorShadowsDrawn = false;
-        cloudsDone = false;
         sceneDepthFresh = false;
         hazeDone = false;
         skyDone = false;  // 0.69

@@ -84,7 +84,7 @@ AutoSetup autoSetup(const Machine& m) {
         a.tier == Tier::NoDriver ? "off" : a.tier == Tier::Middle ? "medium" : a.tier == Tier::High ? "strong" : "weak");
     // The effects of the Effects page: Direct3D 12's. A small card keeps the light ones.
     if (a.tier == Tier::Low)
-        for (const char* k : {"ao", "dof", "clouds", "rays", "haze", "heat", "weather", "glow"})
+        for (const char* k : {"ao", "dof", "rays", "haze", "heat", "weather", "glow"})
             set(e, "effects", k, "0");
     // The AI textures: the pack's pictures only (the game makes none: that is for debugging). The world's take the
     // most video memory: a card under 1 GB keeps to the sprites and the icons (0.57: 2 GB before the compression,

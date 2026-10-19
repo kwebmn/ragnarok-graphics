@@ -1700,29 +1700,6 @@ float4 shadow_ps(ShadowIn i) : SV_Target {
     return float4(a, a, a, a);
 }
 
-// 0.33, the clouds' shadows (clouds.cpp): each pixel's place in the world from the picture's depth (t3; r0-r11 the
-// camera backwards, f0-farZ the projection), darker where the clouds' noise is high there, the clouds drifting with the
-// wind. sharpen the time, footprint the darkness (1 = 100 %). 0.39.3: into a mask a quarter of a big world's size,
-// half of a smaller one's (uiPixels.xy the world's size, .zw the mask's) - the light they leave.
-float clouds_ps(PresentOut i) : SV_Target {
-    int ratio = int(uiPixels.x / uiPixels.z + 0.5);
-    int2 wp = min(int2(i.pos.xy) * ratio + ratio / 2, int2(uiPixels.xy) - 1);  // the middle of its pixels
-    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) return 1.0;  // nothing drawn there
-    float3 v = viewAt(wp);
-    float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
-    float t = sharpen;
-    float2 q = w.xz * 0.0035 + (any(sourceRect.xy != 0.0) ? sourceRect.xy : float2(t * 0.012, t * 0.005));  // 1.22
-    float n = fbm4(q) * 0.7 + fbm4(q * 2.3 + float2(5.1, 1.7)) * 0.3;
-    return 1.0 - smoothstep(0.46, 0.68, n) * footprint * 0.55;
-}
-
-// 0.39.3: the clouds' mask (t0) onto the picture, multiplied (blend ZERO, SRC_COLOR).
-float4 clouds_apply_ps(PresentOut i) : SV_Target {
-    float ratio = floor(uiPixels.x / uiPixels.z + 0.5);
-    float f = tex0.SampleLevel(samp0, i.pos.xy / (ratio * uiPixels.zw), 0).r;
-    return float4(f * 0.985, f, min(f * 1.015, 1.0), 1.0);  // a touch cooler under the clouds
-}
-
 // 0.34, haze and fog (haze.cpp): the picture's depth (t3) gives each pixel's view depth and place in the world (r0-r11
 // the camera backwards, f0-farZ the projection). Far off it goes over to the haze's colour (fogColor) - twinX where
 // it starts, twinY where it is whole, twinW how much; over the low ground a fog drifts - sourceRect.rgb its colour,

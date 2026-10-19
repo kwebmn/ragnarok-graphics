@@ -34,7 +34,7 @@ TEST(schema_every_word_reads_back_through_the_driver) {
 
 TEST(schema_compare_key_turns_every_effect_off) {
     // 0.39.4: Pause shows the game's own picture - every switch of the Effects page off, the ones added last too
-    // (0.28-0.39 stayed on: clouds, haze, the characters' shadows, weather...).
+    // (0.28-0.39 stayed on: haze, the characters' shadows, weather...).
     Config c;
     c.effects = effectsOff();
     int switches = 0;

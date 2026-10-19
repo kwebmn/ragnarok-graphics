@@ -1598,11 +1598,6 @@ void Renderer::Impl::destroy() {
     releaseCom(shadowPs);
     releaseCom(shadowBlurPs);
     releaseCom(shadowApplyPs);
-    for (ID3D12PipelineState*& p : cloudsPipelines) releaseCom(p);  // 0.33
-    releaseCom(cloudsPs);
-    releaseCom(cloudsMask);  // 0.39.3
-    releaseCom(cloudsMaskPipeline);
-    releaseCom(cloudsApplyPs);
     for (ID3D12PipelineState*& p : hazePipelines) releaseCom(p);  // 0.34
     releaseCom(hazePs);
     for (ID3D12PipelineState*& p : skyPipelines) releaseCom(p);  // 0.69
@@ -1966,7 +1961,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapSeason = trees::seasonOf(map, trees::monthNow());  // 1.7
     impl_->mapPlace = living::placeOf(map, outdoors(map), impl_->mapSeason == trees::Season::Autumn);
     impl_->mapYear = seasons::of(map, trees::monthNow(), outdoors(map), impl_->mapPlace);  // 1.20
-    impl_->mapOutdoors = outdoors(map);  // 0.33: the clouds' shadows
+    impl_->mapOutdoors = outdoors(map);  // 0.33: the open sky's effects
     impl_->mapShine = floorShine(map);   // 2.5.17: the floor reflections on smooth floors alone
     impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
@@ -2093,7 +2088,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "
              "the others %s; "
              "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; "
-             "characters' shadows %s, %d%%; clouds %s, %d%%; haze %s, %d%%; heat haze %s, %d%%; portals %s, %d%%; "
+             "characters' shadows %s, %d%%; haze %s, %d%%; heat haze %s, %d%%; portals %s, %d%%; "
              "weather %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
@@ -2104,7 +2099,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.fireflies ? "on" : "off",
              e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.rays ? "on" : "off",
              e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness, e.actorShadows ? "on" : "off",
-             e.actorShadowsStrength, e.clouds ? "on" : "off", e.cloudsStrength, e.haze ? "on" : "off", e.hazeStrength,
+             e.actorShadowsStrength, e.haze ? "on" : "off", e.hazeStrength,
              e.heat ? "on" : "off", e.heatStrength, e.portals ? "on" : "off", e.portalsStrength,
              e.weather ? "on" : "off", e.weatherAmount,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",
@@ -2318,7 +2313,6 @@ bool Renderer::create(std::string& error) {
     m.sceneDepthSrv = m.allocSrv();
     for (UINT& srv : m.aoSrv) srv = m.allocSrv();  // 0.20: the soft shadows
     for (UINT& srv : m.shadowMaskSrv) srv = m.allocSrv();  // 0.32: the characters' shadows
-    m.cloudsMaskSrv = m.allocSrv();  // 0.39.3: the clouds' mask
     for (UINT& srv : m.dofSrv) srv = m.allocSrv();  // 0.22: the depth of field
     for (UINT& srv : m.dofFocusSrv) srv = m.allocSrv();
     m.biasSrv = m.allocSrv();  // 0.22.3: DLSS's mask

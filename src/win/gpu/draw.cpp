@@ -87,7 +87,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
     if (!inner && !s.ui && s.blend && grassDue() && !applyGrass()) return;  // 0.81: the grass under the characters
-    if (!inner && !s.ui && s.blend && cloudsDue() && !applyClouds()) return;  // 0.33: the clouds' shadows, likewise
     // 0.32: the characters' shadows likewise - from this draw on the frame's characters stand on the ground - and
     // the game's round ones are in them.
     if (!inner && !s.ui && s.blend && actorShadowsDue() &&

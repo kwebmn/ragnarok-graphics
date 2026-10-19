@@ -12,7 +12,6 @@ const EffectLayout kEffects[] = {
     {"effects.glow", {}, {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}, {}, 0},
     {"effects.fire_light", {"effects.skill_colours"}, {"effects.fire_light_strength"}, {}, 0},
     {"effects.actor_shadows", {}, {"effects.actor_shadows_strength"}, {}, 0},
-    {"effects.clouds", {}, {"effects.clouds_strength"}, {}, 0},
     {"effects.haze", {"effects.low_fog"}, {"effects.haze_strength"}, {}, 0},       // 2.4: its parts' boxes
     {"effects.heat", {"effects.desert_heat"}, {"effects.heat_strength"}, {}, 0},
     {"effects.weather", {"effects.rain_splashes"}, {"effects.weather_amount"}, {}, 0},

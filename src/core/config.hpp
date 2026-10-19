@@ -154,9 +154,6 @@ struct EffectSettings {
     // light - instead of the game's round ones. On by default.
     bool actorShadows = true;
     int actorShadowsStrength = 55;  // %, 0-100: how dark
-    // 0.33: clouds' shadows drifting over the fields and the towns (core/outdoors.hpp). On by default.
-    bool clouds = true;
-    int cloudsStrength = 50;  // %, 0-100: how dark
     // 0.34: haze far off under the open sky; in the dungeons the dark far off and a low fog over the ground
     // (core/haze.hpp). On by default.
     bool haze = true;
