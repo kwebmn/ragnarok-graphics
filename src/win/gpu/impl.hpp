@@ -737,6 +737,15 @@ struct Renderer::Impl {
     bool surfaceNoted = false;        // the log has said frame generation stays off on it
     bool refused = false;             // the game's window took no swap chain from this process
     FramePacer pacer;  // 0.85: [frames] fps_limit
+    // 2.5.25: frame generation kept under the refresh of the window's monitor (core/frame_fit.hpp), asked again every
+    // few seconds - the window may go to another monitor; and how Windows shows the swap chain, logged on a change
+    int refreshHz = 0;
+    ULONGLONG refreshAsked = 0;
+    int fitLogged = -1;
+    int presentationLogged = -1;
+    ULONGLONG presentationAsked = 0;
+    int pacedLimit(int fpsLimit);  // the pacer's for this present
+    void notePresentation();       // after a present
     // 0.86: the processor's time in the driver's drawing (execute, present until its wait), for the log
     LONGLONG cpuTicks = 0;
     // 2.1.1: where a frame's time goes besides the drawing - waiting for the card (a slot's fence), the frame limit's

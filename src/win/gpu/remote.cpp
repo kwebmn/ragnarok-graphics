@@ -600,7 +600,19 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     w.str(o.screenshot);  // 0.54
     w.u8(o.hdr ? 1 : 0);  // 0.65
     w.u8(o.pacerSleeps ? 1 : 0);  // 2.5.20
-    if (send(Msg::Present, buffer_)) ++presentsSent_;
+    if (!send(Msg::Present, buffer_)) return;
+    ++presentsSent_;
+    // 2.5.25: with DLSS frame generation the renderer has Reflex on, and Reflex holds each frame back until the card
+    // is about to be free: the game's next frame starts only after this one is shown and Reflex has slept, taking
+    // its input as late as Reflex wants it. Two frames ahead (above), the frames drawn waited out Reflex's sleep in
+    // the queue instead - the cursor some 100 ms behind the mouse at 4x (R-Q7RBYV: "it feels slow").
+    if (timing_.shown > 1.05) {
+        QueryPerformanceCounter(&a);
+        const bool shown = channel_.waitPresented(presentsSent_, 1000);
+        QueryPerformanceCounter(&b);
+        waitTicks_ += b.QuadPart - a.QuadPart;
+        if (!shown && channel_.peerGone()) setLost(who_ + " exited");
+    }
 }
 
 }  // namespace uagfx::gpu

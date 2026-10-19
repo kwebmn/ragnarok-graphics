@@ -467,11 +467,17 @@ const Entry kTexts[] = {
     {"Ultra performance", "Ультрапродуктивність", "Ультрапроизводительность"},
     {"NVIDIA DLSS frame generation", "Генерація кадрів NVIDIA DLSS", "Генерация кадров NVIDIA DLSS"},
     {"Adds made-up frames between the game's: GeForce RTX 40 and 50 (3x and 4x: RTX 50), only with DLSS on the "
-     "Smoothing page. Smoother movement, a little more delay; off in menus by itself.",
+     "Smoothing page. Smoother movement of the world, a little more delay; off in menus by itself. The frames shown "
+     "stay under the monitor's refresh, so the game's own are at most the refresh divided by the factor (144 Hz: 2x - "
+     "69 a second, 4x - 34); the cursor and the windows move with the game's own frames - 2x suits 144 Hz.",
      "Додає вигадані кадри між кадрами гри: GeForce RTX 40 і 50 (3x і 4x — RTX 50), лише з DLSS у «Згладжуванні». "
-     "Плавніший рух, трохи більша затримка; у меню вимикається сама.",
+     "Плавніший рух світу, трохи більша затримка; у меню вимикається сама. Показаних кадрів не більше за частоту "
+     "монітора, тож власних кадрів гри щонайбільше вона, поділена на множник (144 Гц: 2x — 69 на секунду, 4x — 34); "
+     "курсор і вікна рухаються з кадрами гри — для 144 Гц підходить 2x.",
      "Добавляет придуманные кадры между кадрами игры: GeForce RTX 40 и 50 (3x и 4x — RTX 50), только с DLSS в "
-     "«Сглаживании». Плавнее движение, чуть больше задержка; в меню выключается сама."},
+     "«Сглаживании». Плавнее движение мира, чуть больше задержка; в меню выключается сама. Показанных кадров не "
+     "больше частоты монитора, поэтому собственных кадров игры не больше неё, делённой на множитель (144 Гц: 2x — 69 "
+     "в секунду, 4x — 34); курсор и окна движутся с кадрами игры — для 144 Гц подходит 2x."},
     {"3×", "3×", "3×"},
     {"HD textures from the texture pack (uaro-textures.zip)", "HD-текстури з пакета текстур (uaro-textures.zip)",
      "HD-текстуры из пакета текстур (uaro-textures.zip)"},

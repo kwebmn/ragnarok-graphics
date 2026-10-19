@@ -54,7 +54,7 @@ if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     file(GLOB UAGFX_HOST_SOURCES CONFIGURE_DEPENDS src/win/gpu/*.cpp src/win/bridge/*.cpp)
     add_executable(uaro-render64 WIN32 src/host/main.cpp src/host/pack_builder.cpp src/host/streamline.cpp
                    src/host/studio_engine.cpp
-                   ${UAGFX_HOST_SOURCES} src/win/log.cpp src/win/paths.cpp)
+                   ${UAGFX_HOST_SOURCES} src/win/log.cpp src/win/paths.cpp src/win/dpi.cpp)
     # NVIDIA Streamline's headers (MIT); its DLLs are loaded at run time from uaro-graphics\dlss\.
     target_include_directories(uaro-render64 PRIVATE third_party/streamline/include)
     target_compile_definitions(uaro-render64 PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS)

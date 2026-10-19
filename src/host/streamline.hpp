@@ -35,6 +35,7 @@ public:
 
     const char* name() const override { return own_ ? ownName_.c_str() : name_; }
     double shownPerFrame() override;  // 2.5.24
+    int shownPerPresent() const override { return generationMode_ == 1 ? int(generationFrames_) + 1 : 1; }
     bool renderSize(int outW, int outH, int& renderW, int& renderH) override;
     bool evaluate(const Frame& f) override;
     bool generates() const override { return generationReady_; }

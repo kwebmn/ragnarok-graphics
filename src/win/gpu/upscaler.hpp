@@ -16,6 +16,8 @@ public:
     // 2.5.24: the frames shown a frame of the game since the last ask, with frame generation (the generated ones
     // too); 0 when it generated none - for the frame counter, twice a second
     virtual double shownPerFrame() { return 0.0; }
+    // 2.5.25: the frames this present shows, the game's and the generated ones: 1 without frame generation
+    virtual int shownPerPresent() const { return 1; }
     // The render size for an output of outW x outH; false when it cannot work at that size.
     virtual bool renderSize(int outW, int outH, int& renderW, int& renderH) = 0;
 

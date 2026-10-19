@@ -11,6 +11,7 @@
 
 #include "core/d3d7.hpp"
 #include "core/foliage.hpp"
+#include "core/frame_fit.hpp"
 #include "core/full_colour.hpp"
 #include "core/png_write.hpp"
 #include "core/region_look.hpp"
@@ -26,6 +27,7 @@
 #include "win/gpu/remix9.hpp"
 #include "win/gpu/renderer11.hpp"
 #include "win/gpu/remote.hpp"
+#include "win/dpi.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 
@@ -345,6 +347,77 @@ void Renderer::Impl::noteGpuFrame() {
     gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
     gpuSince = now;
+}
+
+// 2.5.25: with frame generation the game's frames are held so that the shown ones stay under the refresh of the
+// window's monitor (R-Q7RBYV: 4x made 156 a second for a 144 Hz monitor - the extra ones dropped unevenly, and the
+// card spent on them the time the game's own frames needed). One present is one frame of the game.
+int Renderer::Impl::pacedLimit(int fpsLimit) {
+    const int shown = upscaler ? upscaler->shownPerPresent() : 1;
+    if (shown <= 1) return fpsLimit;
+    const ULONGLONG now = GetTickCount64();
+    if (!refreshAsked || now - refreshAsked >= 5000) {
+        refreshAsked = now;
+        refreshHz = 0;
+        MONITORINFOEXW monitor{};
+        monitor.cbSize = sizeof monitor;
+        DEVMODEW mode{};
+        mode.dmSize = sizeof mode;
+        if (window &&
+            GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST),
+                            reinterpret_cast<MONITORINFO*>(&monitor)) &&
+            EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode))
+            refreshHz = int(mode.dmDisplayFrequency);
+    }
+    const int fit = frame_fit::gameFps(refreshHz, shown);
+    if (fit != fitLogged) {
+        fitLogged = fit;
+        if (fit > 0)
+            LOG_INFO("frame generation %dx on a %d Hz monitor: the game's frames at most %d a second, %d shown with "
+                     "the generated ones - more the monitor would drop unevenly", shown, refreshHz, fit, fit * shown);
+        else
+            LOG_INFO("frame generation %dx: the monitor's refresh unknown, the game's frames not held for it", shown);
+    }
+    return frame_fit::pacedFps(fpsLimit, refreshHz, shown);
+}
+
+// 2.5.25: how Windows shows the swap chain - composed with the rest of the screen by the desktop window manager, or
+// flipped straight to the monitor (or put on an overlay plane) - with the window against its monitor, logged when
+// it changes: frame generation paces its frames and G-SYNC works only flipped straight; a window not covering its
+// monitor pixel for pixel (Windows scaling of a DPI-unaware game: 175 % made it 3839x2159 of 3840x2160) or another
+// window over it (the frame counter, the console) keeps it composed.
+void Renderer::Impl::notePresentation() {
+    const ULONGLONG now = GetTickCount64();
+    if (!swapChain || presentSurface || now - presentationAsked < 5000) return;
+    presentationAsked = now;
+    IDXGISwapChainMedia* media = nullptr;
+    if (FAILED(swapChain->QueryInterface(__uuidof(IDXGISwapChainMedia), reinterpret_cast<void**>(&media)))) {
+        if (presentationLogged != -2) LOG_INFO("presentation: how Windows shows the picture is not told");
+        presentationLogged = -2;
+        return;
+    }
+    DXGI_FRAME_STATISTICS_MEDIA stats{};
+    const HRESULT hr = media->GetFrameStatisticsMedia(&stats);
+    media->Release();
+    if (FAILED(hr) || int(stats.CompositionMode) == presentationLogged) return;
+    presentationLogged = int(stats.CompositionMode);
+    static const char* const kModes[] = {
+        "composed by Windows with the rest of the screen (the desktop window manager)",
+        "on a hardware overlay plane", "flipped straight to the monitor (independent flip)",
+        "composed by Windows - it could not put it on an overlay plane"};
+    const char* how = presentationLogged >= 0 && presentationLogged < 4 ? kModes[presentationLogged] : "unknown";
+    RECT client{};
+    MONITORINFO monitor{};
+    monitor.cbSize = sizeof monitor;
+    {
+        win::RealPixels real;  // the screen's own pixels, whatever Windows scaling
+        GetClientRect(window, &client);
+        if (!GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &monitor))
+            monitor.rcMonitor = RECT{};
+    }
+    LOG_INFO("presentation: %s; the window %ldx%ld, its monitor %ldx%ld", how, client.right - client.left,
+             client.bottom - client.top, monitor.rcMonitor.right - monitor.rcMonitor.left,
+             monitor.rcMonitor.bottom - monitor.rcMonitor.top);
 }
 
 // 2.5: the quads' index pattern (core/draw_batch.hpp) in video memory, once, through this list.
@@ -2757,7 +2830,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     presentCpu.stop();  // 0.86: not the waits
     {
         Impl::CpuTime paced(m.pacerTicks);  // 2.1.1
-        m.pacer.wait(options.fpsLimit, options.pacerSleeps);  // 0.85: kept to the frame
+        m.pacer.wait(m.pacedLimit(options.fpsLimit), options.pacerSleeps);  // 0.85: kept to the frame
     }
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && m.tearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0;
@@ -2781,6 +2854,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         m.shotPath.clear();
     }
     m.noteGpuFrame();
+    m.notePresentation();  // 2.5.25
     if (m.upscaler && m.upscaler->generates()) m.upscaler->afterPresent();  // every frame: the next frame's token
     m.renderStarted = false;
     m.upscaledNow = false;
