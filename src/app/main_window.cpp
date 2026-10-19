@@ -9,6 +9,7 @@
 
 #include "app/mnemonic.hpp"
 #include "app/report_send.hpp"
+#include "core/settings/search.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -28,6 +29,7 @@ constexpr int kPlay = 21;
 constexpr int kUndo = 22;
 constexpr int kCloseButton = 23;
 constexpr int kModeFirst = 30;     // 2.6: the three modes' buttons, 30-32
+constexpr int kSearch = 33;        // the search field
 constexpr int kReportButton = 34;  // "Report a problem"
 constexpr int kTabFirst = 40;      // a view's tabs, 40-43: the page view's children, made with the page
 constexpr int kHeader = 52;        // 2.6: the header's height at 96 DPI
@@ -45,6 +47,7 @@ DWORD WINAPI sendStats(void* folder) {
 }
 constexpr UINT_PTR kTimer = 1;
 constexpr UINT_PTR kTickTimer = 2;  // 0.43: a page's tick()
+constexpr UINT_PTR kSearchTimer = 3;  // 2.6: the search runs once the typing stops for a moment
 
 }  // namespace
 
@@ -95,6 +98,11 @@ int MainWindow::run(HINSTANCE inst, int show) {
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
         if (msg.message == WM_MOUSEWHEEL && wheelToPage(msg)) continue;
+        if (msg.message == WM_KEYDOWN && msg.wParam == 'F' && GetKeyState(VK_CONTROL) < 0 && search_) {  // 2.6
+            SetFocus(search_);
+            SendMessageW(search_, EM_SETSEL, 0, -1);
+            continue;
+        }
         if (IsDialogMessageW(hwnd_, &msg)) {  // Tab, arrows and Alt+letter between the controls
             if (msg.message == WM_KEYDOWN || msg.message == WM_SYSCHAR || msg.message == WM_CHAR) showFocused();
             continue;
@@ -248,6 +256,7 @@ void MainWindow::create() {
     for (int i = 0; i < kModeCount; ++i)
         modes_[i] =
             child(L"BUTTON", BS_AUTORADIOBUTTON | BS_PUSHLIKE | WS_TABSTOP | (i ? 0 : WS_GROUP), kModeFirst + i);
+    search_ = child(L"EDIT", ES_AUTOHSCROLL | WS_TABSTOP | WS_GROUP, kSearch, WS_EX_CLIENTEDGE);
     report_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP | WS_GROUP, kReportButton);
     listBrush_ = CreateSolidBrush(RGB(247, 247, 247));
     lineBrush_ = CreateSolidBrush(RGB(227, 227, 227));
@@ -321,16 +330,19 @@ void MainWindow::layout() {
     GetClientRect(hwnd_, &c);
     const int w = c.right;
     auto at = [&](int v) { return px(v, dpi_); };
-    for (HWND ctl : {sidebar_, langBox_, banner_, status_, apply_, play_, undo_, close_, report_, modes_[0], modes_[1],
-                     modes_[2]})
+    for (HWND ctl : {sidebar_, langBox_, banner_, status_, apply_, play_, undo_, close_, report_, search_, modes_[0],
+                     modes_[1], modes_[2]})
         SendMessageW(ctl, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
+    // 2.6: the modes, the search (what the rest leaves of 300), "Report a problem" and the language on the right
     int x = at(16);
     for (HWND m : modes_) {
-        MoveWindow(m, x, at(11), at(112), at(30), TRUE);
-        x += at(112) + at(2);
+        MoveWindow(m, x, at(11), at(100), at(30), TRUE);
+        x += at(100) + at(2);
     }
-    MoveWindow(langBox_, w - at(16) - at(150), at(14), at(150), at(240), TRUE);
-    MoveWindow(report_, w - at(16 + 150 + 12 + 190), at(11), at(190), at(30), TRUE);
+    const int right = w - at(16 + 130 + 12 + 170 + 12);
+    MoveWindow(search_, x + at(10), at(12), std::clamp(right - x - at(10), at(120), at(300)), at(28), TRUE);
+    MoveWindow(langBox_, w - at(16) - at(130), at(14), at(130), at(240), TRUE);
+    MoveWindow(report_, w - at(16 + 130 + 12 + 170), at(11), at(170), at(30), TRUE);
     MoveWindow(banner_, at(16), at(kHeader) + at(5), w - at(32), at(40), TRUE);
     const int top = contentTop();
     const int by = rowTop();
@@ -421,7 +433,26 @@ bool MainWindow::listed(settings::View v) const {
     return std::find(list.begin(), list.end(), v) != list.end();
 }
 
-Mode MainWindow::mode() const { return listed(shown_) ? mode_ : std::max(mode_, Mode::Detailed); }
+// The search finds what the mode shows; a view off the mode's list shows at least the Detailed level.
+Mode MainWindow::mode() const {
+    return !query_.empty() || listed(shown_) ? mode_ : std::max(mode_, Mode::Detailed);
+}
+
+std::wstring MainWindow::searchText() const {
+    const int n = GetWindowTextLengthW(search_);
+    std::wstring text(size_t(n) + 1, L'\0');
+    GetWindowTextW(search_, &text[0], n + 1);
+    text.resize(size_t(n));
+    return text;
+}
+
+// 2.6: the search's text gone - the view back (made by the caller)
+void MainWindow::clearSearch() {
+    KillTimer(hwnd_, kSearchTimer);
+    query_.clear();
+    if (GetWindowTextLengthW(search_) > 0) SetWindowTextW(search_, L"");
+    KillTimer(hwnd_, kSearchTimer);  // its EN_CHANGE set it again
+}
 
 // The view stays when the new mode lists it, else the mode's first; the mode is kept for the next start.
 void MainWindow::setMode(Mode m) {
@@ -468,6 +499,7 @@ void MainWindow::retext() {
     fillList();
     for (int i = 0; i < kModeCount; ++i) SetWindowTextW(modes_[i], wtr(lang_, modeName(Mode(i))).c_str());
     SetWindowTextW(report_, wtr(lang_, Text::ReportProblem).c_str());
+    SendMessageW(search_, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(wtr(lang_, Text::SearchCue).c_str()));
     SetWindowTextW(banner_, wtr(lang_, Text::ElevatedBanner).c_str());
     SetWindowTextW(apply_, wtr(lang_, Text::Apply).c_str());
     SetWindowTextW(play_, wtr(lang_, Text::ApplyAndPlay).c_str());
@@ -501,12 +533,12 @@ void MainWindow::buildPage() {
                     view.bottom - view.top - scroll_};
     builtWidth_ = view.right - view.left;  // 2.6: made again when the window's width changes
     panel_ = std::make_unique<Panel>(view_, font_, heading_, tooltip_, dpi_, area, windowLetters());
-    if (tabCount(shown_) > 1) {  // 2.6: the view's tabs over its page
+    if (tabCount(shown_) > 1 && query_.empty()) {  // 2.6: the view's tabs over its page
         std::vector<std::wstring> names;
         for (int i = 0; i < tabCount(shown_); ++i) names.push_back(wtr(lang_, tabName(shown_, i)));
         panel_->tabs(kTabFirst, names, tab_);
     }
-    current_ = makeView();
+    current_ = query_.empty() ? makeView() : makeSearchPage(*this, utf8(query_));  // 2.6: the search over the view
     current_->build(*panel_);
     if (current_->ticks())
         SetTimer(hwnd_, kTickTimer, 500, nullptr);
@@ -685,7 +717,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 }
                 listSel_ = sel;
                 const int item = sel >= 0 && size_t(sel) < listItems_.size() ? listItems_[size_t(sel)] : -1;
-                if (item >= 0 && settings::View(item) != shown_) {
+                if (item >= 0 && (settings::View(item) != shown_ || !query_.empty())) {
+                    clearSearch();
                     shown_ = settings::View(item);
                     tab_ = 0;
                     scroll_ = 0;  // another page starts at its top
@@ -693,6 +726,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 }
             } else if (id >= kModeFirst && id < kModeFirst + kModeCount && code == BN_CLICKED) {
                 setMode(Mode(id - kModeFirst));
+            } else if (id == kSearch && code == EN_CHANGE) {
+                SetTimer(hwnd_, kSearchTimer, 250, nullptr);
             } else if (id == kReportButton && code == BN_CLICKED) {
                 reportFocus_ = true;
                 showView(settings::View::Service, 0);
@@ -722,6 +757,12 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 reload();
             } else if (id == kCloseButton && code == BN_CLICKED) {
                 PostMessageW(hwnd_, WM_CLOSE, 0, 0);
+            } else if (id == IDOK && GetFocus() == search_) {  // 2.6: Enter in the search - the first one's page
+                const auto hits = findSettings(utf8(searchText()), lang_, mode_);
+                if (!hits.empty()) showView(hits.front().place.view, hits.front().place.tab);
+            } else if (id == IDCANCEL && GetFocus() == search_ && GetWindowTextLengthW(search_) > 0) {
+                clearSearch();  // Esc in the search: the view back
+                buildPage();
             } else if (id == IDOK) {  // Enter: a number field takes what was typed
                 HWND focus = GetFocus();
                 const int focusId = focus ? GetDlgCtrlID(focus) : 0;
@@ -767,7 +808,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (int(wp) < settings::kViewCount) {
                 const auto view = settings::View(wp);
                 const int tab = std::clamp(int(lp), 0, tabCount(view) - 1);
-                if (view != shown_ || tab != tab_ || reportFocus_) {
+                if (view != shown_ || tab != tab_ || reportFocus_ || !query_.empty()) {
+                    clearSearch();
                     shown_ = view;
                     tab_ = tab;
                     scroll_ = 0;
@@ -812,6 +854,16 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         }
         case WM_TIMER:
+            if (wp == kSearchTimer) {  // 2.6: the typing stopped - the search's page, or the view back
+                KillTimer(hwnd_, kSearchTimer);
+                const std::wstring text = searchText();
+                if (text != query_) {
+                    query_ = text;
+                    scroll_ = 0;
+                    buildPage();
+                }
+                return 0;
+            }
             if (wp == kTimer && model_->refreshRunning()) rebuild();  // the game started or closed
             if (wp == kTickTimer && current_) current_->tick();
             return 0;

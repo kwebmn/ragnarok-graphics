@@ -6,6 +6,7 @@
 
 #include "app/files.hpp"
 #include "app/page.hpp"
+#include "app/setting_ids.hpp"
 #include "core/effect_costs.hpp"
 #include "core/effect_groups.hpp"
 #include "core/live_config.hpp"
@@ -71,14 +72,8 @@ public:
                                                                                    : effect_costs::Costs{};
         const IniSetting& preset = setting("effects.preset");
         const std::string word = m.token(preset);
-        static const Text kLevels[] = {Text::FxPresetWeak, Text::FxPresetWeak, Text::FxPresetMedium,
-                                       Text::FxPresetStrong};
-        std::vector<std::wstring> items;
         int selected = 0;
-        for (int i = 0; i < 6; ++i) {
-            items.push_back(i == 0 ? tf(Text::FxPresetAuto, {utf8(t(kLevels[cardLevel()]))}) : t(preset.choices[i]));
-            if (word == kPresets[i]) selected = i;
-        }
+        const std::vector<std::wstring> items = presetItems(selected);
         p.choice(kPreset, t(preset.label), items, selected, t(preset.hint));
         const bool simple = host_.mode() == Mode::Simple;  // 2.6: the set and the groups alone
         if (word == "custom" && !simple) {  // 1.8: the mode - a set decides it (the strong one's the remaster's)
@@ -137,21 +132,47 @@ public:
         p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
     }
 
+    // 2.6: one row of the [effects] section alone, for the search's results - its id the schema's (rowId), its
+    // commands as this page's own
+    bool buildRow(Panel& p, const std::string& key) override {
+        const std::vector<IniSetting>& all = iniSettings();
+        size_t i = 0;
+        while (i < all.size() && sectionKey(all[i]) != key) ++i;
+        if (i == all.size() || std::string(all[i].section) != "effects") return false;
+        Model& m = host_.model();
+        shown_ = effect_groups::shown(m.pendingConfig().effects, cardLevel());
+        const IniSetting& s = all[i];
+        const bool any = m.token(setting("effects.preset")) != "off";
+        if (key == "effects.preset") {
+            int selected = 0;
+            const std::vector<std::wstring> items = presetItems(selected);
+            p.choice(rowId(i), t(s.label), items, selected, t(s.hint));
+        } else if (key == "effects.tier") {
+            const std::string token = m.token(s);
+            p.choice(rowId(i), t(s.label), {t(Text::FxTierAuto), t(Text::FxTierClassic), t(Text::FxTierRemaster)},
+                     token == "classic" ? 1 : token == "remaster" ? 2 : 0, t(s.hint));
+        } else if (s.control == Control::Check) {
+            const bool group = key.compare(0, 14, "effects.group_") == 0;
+            p.check(rowId(i), t(s.label), group ? m.token(s) == "1" : isOn(key.c_str()), t(s.hint), any);
+        } else if (s.control == Control::Slider) {
+            slider(p, rowId(i), key.c_str(), any);
+        } else {
+            return false;
+        }
+        return true;
+    }
+
     void command(int id, int code) override {
+        if (const IniSetting* s = settingOfId(id)) {  // 2.6: a row of the search's results
+            commandRow(*s, id, code);
+            return;
+        }
         if (id == kPreset && code == CBN_SELCHANGE) {  // 2.2
-            const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
-            if (sel < 0 || sel >= 6) return;
-            if (std::string(kPresets[sel]) == "custom")
-                makeCustom();  // from what the set had on
-            else
-                set(setting("effects.preset"), kPresets[sel], true);
-            host_.rebuild();
+            choosePreset(SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0));
             return;
         }
         if (id == kTier && code == CBN_SELCHANGE) {  // 1.8
-            const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
-            static const char* const kTiers[] = {"auto", "classic", "remaster"};
-            if (sel >= 0 && sel < 3) set(setting("effects.tier"), kTiers[sel], true);
+            chooseTier(SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0));
             return;
         }
         if (code != BN_CLICKED) return;
@@ -195,6 +216,50 @@ public:
     }
 
 private:
+    void choosePreset(LRESULT sel) {
+        if (sel < 0 || sel >= 6) return;
+        if (std::string(kPresets[sel]) == "custom")
+            makeCustom();  // from what the set had on
+        else
+            set(setting("effects.preset"), kPresets[sel], true);
+        host_.rebuild();
+    }
+
+    void chooseTier(LRESULT sel) {
+        static const char* const kTiers[] = {"auto", "classic", "remaster"};
+        if (sel >= 0 && sel < 3) set(setting("effects.tier"), kTiers[sel], true);
+    }
+
+    // 2.6: the search's row of `s` changed - as the page's own control of it
+    void commandRow(const IniSetting& s, int id, int code) {
+        const std::string key = sectionKey(s);
+        HWND ctl = GetDlgItem(host_.window(), id);
+        const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
+        if (key == "effects.preset" && code == CBN_SELCHANGE) return choosePreset(sel);
+        if (key == "effects.tier" && code == CBN_SELCHANGE) return chooseTier(sel);
+        if (s.control != Control::Check || code != BN_CLICKED) return;
+        const char* token = SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED ? "1" : "0";
+        // a group's box as its own; a switch of its own under a set makes the set the player's (2.2)
+        const bool group = key.compare(0, 14, "effects.group_") == 0;
+        if (group || !effect_groups::memberOf(key) || !makeCustom(key.c_str(), token)) set(s, token, true);
+        host_.rebuild();
+    }
+
+    // The set's list: "auto" names the level it takes on this card.
+    std::vector<std::wstring> presetItems(int& selected) const {
+        static const Text kLevels[] = {Text::FxPresetWeak, Text::FxPresetWeak, Text::FxPresetMedium,
+                                       Text::FxPresetStrong};
+        const IniSetting& preset = setting("effects.preset");
+        const std::string word = host_.model().token(preset);
+        std::vector<std::wstring> items;
+        selected = 0;
+        for (int i = 0; i < 6; ++i) {
+            items.push_back(i == 0 ? tf(Text::FxPresetAuto, {utf8(t(kLevels[cardLevel()]))}) : t(preset.choices[i]));
+            if (word == kPresets[i]) selected = i;
+        }
+        return items;
+    }
+
     std::wstring withCost(const std::wstring& label, double ms) const {
         if (ms <= 0.0) return label;
         char v[16];
@@ -210,6 +275,8 @@ private:
     EffectSettings shown_;  // effect_groups::shown, as build() found them
 
     static std::string sliderKey(int id) {
+        if (const IniSetting* s = settingOfId(id))  // 2.6: the search's
+            return s->control == Control::Slider && std::string(s->section) == "effects" ? sectionKey(*s) : "";
         for (int g = 0; g < kEffectGroups; ++g)
             if (id == groupSlider(g)) return groupKey(g) + "_strength";
         for (int e = 0; e < kEffectCount; ++e)
@@ -268,6 +335,8 @@ private:
 };
 
 }  // namespace
+
+Text effectGroupName(int g) { return g >= 0 && g < kEffectGroups ? kGroupNames[g] : Text::PageEffects; }
 
 std::unique_ptr<Page> makeEffectsPage(PageHost& host) { return std::make_unique<EffectsPage>(host); }
 

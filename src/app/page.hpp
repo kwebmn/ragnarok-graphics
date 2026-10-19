@@ -109,6 +109,9 @@ std::wstring padVersion();
 std::wstring switchPad(PageHost& host, bool on);
 // 2.6: "Recommended settings" of the Main page - the Render page's auto setup for this computer.
 void runAutoSetup(PageHost& host);
+// 2.6: the search's results - the rows changed in place, each with a button to its page.
+std::unique_ptr<Page> makeSearchPage(PageHost& host, const std::string& query);
+settings::Text effectGroupName(int g);  // the Effects page's name of a group
 
 // 1.6: the Texture pack page's "make again what another model made", ticked from the AI page.
 bool& packRedo();

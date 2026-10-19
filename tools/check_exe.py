@@ -113,6 +113,7 @@ ALLOWED = {
         # 2.6, the window that keeps its size and place (Windows 2000 and later)
         "GetWindowPlacement", "SetWindowPlacement", "MonitorFromRect", "MonitorFromWindow",
         "DrawFocusRect",  # 2.6: the list of views, drawn by the app (Windows 95 and later)
+        "GetKeyState",  # 2.6: Ctrl+F, the search
     },
 }
 # Newer than Windows 7: never on the list above (a check of the list itself).

@@ -334,6 +334,7 @@ enum class Text : uint16_t {
     MainQualityHint, MainOther, MainPad, MainPadHint, MainRecommended, MainWhatsNew, MainState, MainDriver,
     MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,
     MainMore, NotesNone,
+    SearchCue, SearchFound, SearchNothing, SearchMany,  // 2.6: the header's search
     Count
 };
 

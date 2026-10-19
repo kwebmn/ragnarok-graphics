@@ -3279,6 +3279,14 @@ const Entry kTexts[] = {
     {"More", "Докладніше", "Подробнее"},
     {"No notes for {1} were found next to uaRO.exe (TEST.*.md).", "Поруч з uaRO.exe немає нотаток до {1} (TEST.*.md).",
      "Рядом с uaRO.exe нет заметок к {1} (TEST.*.md)."},
+    // 2.6: the header's search
+    {"Search settings   Ctrl+F", "Пошук у налаштуваннях   Ctrl+F", "Поиск по настройкам   Ctrl+F"},
+    {"Found {1} for «{2}» - change them right here. Enter opens the first one's page, Esc goes back.",
+     "Знайдено {1} за «{2}» - змінюйте прямо тут. Enter відкриває сторінку першого, Esc повертає назад.",
+     "Найдено {1} по «{2}» - меняйте прямо здесь. Enter открывает страницу первого, Esc возвращает назад."},
+    {"Nothing found for «{1}».", "За «{1}» нічого не знайдено.", "По «{1}» ничего не найдено."},
+    {"Only the first {1} are shown: add a word.", "Показано лише перші {1}: додайте слово.",
+     "Показаны только первые {1}: добавьте слово."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

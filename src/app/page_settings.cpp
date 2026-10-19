@@ -38,8 +38,15 @@ public:
     SettingsPage(PageHost& host, std::vector<settings::Page> left, std::vector<settings::Page> right)
         : Page(host), left_(std::move(left)), right_(std::move(right)) {}
 
-    // 2.6: one row of the ini's schema, alone (the Main page, the search)
+    // 2.6: one row of the ini's schema ("section.key") or of the game's key ("reg:" and its name), alone (the Main
+    // page, the search)
     bool buildRow(Panel& p, const std::string& key) override {
+        if (key.compare(0, 4, "reg:") == 0) {
+            const std::vector<RegSetting>& reg = regSettings();
+            for (size_t i = 0; i < reg.size(); ++i)
+                if (key.compare(4, std::string::npos, regKey(reg[i])) == 0) return buildReg(p, i) != nullptr;
+            return false;
+        }
         const std::vector<IniSetting>& all = iniSettings();
         for (size_t i = 0; i < all.size(); ++i)
             if (sectionKey(all[i]) == key) return buildOne(p, i) != nullptr;
@@ -262,6 +269,29 @@ private:
         }
         if (!checks.empty()) p.checks(checks);
         if (!macros.empty()) p.lines(macros, letters, L"", macrosOpen);
+    }
+
+    // 2.6: one row of the game's key alone (the search's): a box, a slider or a list of numbers; the skins' list
+    // and the chat macros only on their page.
+    HWND buildReg(Panel& p, size_t i) {
+        Model& m = host_.model();
+        const RegSetting& s = regSettings()[i];
+        const int id = kReg + int(i) * 4;
+        const std::string word = m.regWord(s);
+        const bool open = m.regOpen(s);
+        const std::wstring hint = s.hint == s.label ? L"" : t(s.hint);
+        if (s.control == Control::Check) return p.check(id, t(s.label), word == "1", hint, open);
+        if (s.control == Control::Slider)
+            return p.slider(id, t(s.label), s.min, s.max, std::max(s.step, 1), std::atoi(word.c_str()), wide(word),
+                            hint, open);
+        if (s.control != Control::Choice || s.kind == RegKind::Line) return nullptr;
+        std::vector<std::wstring> items;
+        int selected = 0;
+        for (size_t c = 0; c < s.choices.size(); ++c) {
+            items.push_back(t(s.choices[c]));
+            if (word == std::to_string(s.values[c])) selected = int(c);
+        }
+        return p.choice(id, t(s.label), items, selected, hint, open);
     }
 
     // "No skin", the folders of skin\, and a name the game has that no folder holds: it shows no skin then.

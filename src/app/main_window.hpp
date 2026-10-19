@@ -63,6 +63,8 @@ private:
     void paint();
     int rowTop() const;  // the buttons' row
     std::unique_ptr<Page> makeView();  // the shown view's page (its tab's)
+    void clearSearch();
+    std::wstring searchText() const;
     std::wstring windowLetters() const;  // Alt+letter of the window's own buttons
     void doApply(bool play);
     RECT pageArea() const;
@@ -94,6 +96,8 @@ private:
     std::vector<int> listItems_;  // the list's entries: a View, or -1 for the "Developer only" heading
     HWND modes_[settings::kModeCount] = {};
     HWND report_ = nullptr;     // "Report a problem"
+    HWND search_ = nullptr;     // the search's field; its text, once taken, shows the search's page
+    std::wstring query_;
     bool reportFocus_ = false;  // after the next build: the report's comment field focused
     HFONT bold_ = nullptr;      // the list's chosen entry
     int listSel_ = -1;          // the list's entry chosen before (past the heading the way the arrow went)
