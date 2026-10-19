@@ -80,15 +80,18 @@ public:
             if (word == kPresets[i]) selected = i;
         }
         p.choice(kPreset, t(preset.label), items, selected, t(preset.hint));
-        if (word == "custom") {  // 1.8: the mode - a set decides it (the strong one's the remaster's)
+        const bool simple = host_.mode() == Mode::Simple;  // 2.6: the set and the groups alone
+        if (word == "custom" && !simple) {  // 1.8: the mode - a set decides it (the strong one's the remaster's)
             const IniSetting& tier = setting("effects.tier");
             const std::string token = m.token(tier);
             p.choice(kTier, t(tier.label), {t(Text::FxTierAuto), t(Text::FxTierClassic), t(Text::FxTierRemaster)},
                      token == "classic" ? 1 : token == "remaster" ? 2 : 0, t(tier.hint));
         }
-        p.note(t(Text::FxDetailsNote), Tone::Muted);
+        if (!simple) p.note(t(Text::FxDetailsNote), Tone::Muted);
         const bool any = word != "off";
+        const bool two = p.split();  // 2.6: the groups in two columns when the page is wide
         for (int g = 0; g < kEffectGroups; ++g) {
+            if (two && g == (kEffectGroups + 1) / 2) p.nextColumn();
             p.gap(12);
             const bool on = m.token(setting(groupKey(g))) == "1";
             // its effects' costs, each timed pass once (the motes and the weather are one pass)
@@ -107,6 +110,7 @@ public:
             p.check(groupBox(g), withCost(t(kGroupNames[g]), ms), on, t(setting(groupKey(g)).hint), any);
             if (effect_groups::hasStrength(g))
                 slider(p, groupSlider(g), (groupKey(g) + "_strength").c_str(), any && on);
+            if (simple) continue;
             p.buttons({{groupOpen(g),
                         g_open[g] ? t(Text::FxDetailsHide) : tf(Text::FxDetails, {std::to_string(count)})}});
             if (!g_open[g]) continue;
@@ -128,6 +132,7 @@ public:
                     slider(p, sliderId(e, k), fx.sliders[k], live && fxOn && (!fx.needs[k] || isOn(fx.needs[k])));
             }
         }
+        p.join();
         p.gap();
         p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
     }

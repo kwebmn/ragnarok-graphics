@@ -110,10 +110,10 @@ public:
         Model& m = host_.model();
         const AiSettings a = m.pendingConfig().ai;
         const bool on = a.on();  // 1.5.8: the pack's pictures or the network making them
-        if (part_ == AiPart::Models) {  // 2.6: the tab of the models
+        if (part_ == AiPart::Models) {  // 2.6: the tab of the models, the preview the Developer mode's
             buildGroups(p, a, on);
             if (!on) p.note(t(Text::AiOffNote));
-            buildPreview(p);
+            if (host_.mode() == Mode::Developer) buildPreview(p);
             return;
         }
         p.heading(t(Text::PageAi));
@@ -296,6 +296,18 @@ private:
         int section = -1;
         std::string inPack;
         bool warn = false;
+        // 2.6: the sections in two columns when the page is wide - the right one from the section boundary nearest
+        // the middle of the groups
+        int rightFrom = 1;
+        int best = ai::kGroups;
+        for (int g = 1; g < ai::kGroups; ++g) {
+            const int from = ai::sectionOf(ai::Group(g));
+            if (from != ai::sectionOf(ai::Group(g - 1)) && std::abs(2 * g - ai::kGroups) < best) {
+                best = std::abs(2 * g - ai::kGroups);
+                rightFrom = from;
+            }
+        }
+        const bool two = p.split();
         const auto sectionEnd = [&]() {
             if (!inPack.empty())
                 p.note(tf(warn ? Text::AiGroupInPackOther : Text::AiGroupInPack, {inPack}),
@@ -308,6 +320,7 @@ private:
             if (ai::sectionOf(group) != section) {
                 sectionEnd();
                 section = ai::sectionOf(group);
+                if (two && section == rightFrom) p.nextColumn();
                 p.gap(4);
                 p.note(t(kSectionLabels[section]), Tone::Normal);
             }
@@ -325,6 +338,7 @@ private:
             inPack += (inPack.empty() ? "" : "; ") + part;
         }
         sectionEnd();
+        p.join();
         // 1.6.3: the small pictures' own model, over their group's
         const bool small = a.smallPictures;
         p.check(kSmall, t(Text::AiSmall), small, t(Text::AiSmallHint), on);

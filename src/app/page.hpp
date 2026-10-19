@@ -92,6 +92,7 @@ std::unique_ptr<Page> makeAiCachePage(PageHost& host);  // 0.12: what the textur
 std::unique_ptr<Page> makeEffectsPage(PageHost& host);  // 0.18: the [effects] section
 std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pack's builder
 std::unique_ptr<Page> makePadPage(PageHost& host);      // 1.4: uaRO Pad, the gamepad
+std::unique_ptr<Page> makeDebugPage(PageHost& host);    // 2.6: the Developer mode's switches and tools
 
 // 1.6: the Texture pack page's "make again what another model made", ticked from the AI page.
 bool& packRedo();

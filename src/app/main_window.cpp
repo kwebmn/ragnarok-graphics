@@ -460,7 +460,7 @@ std::unique_ptr<Page> MainWindow::makeView() {
         }
         case settings::View::Debug: break;
     }
-    return makeSettingsPage(*this, {P::Debug});
+    return makeDebugPage(*this);
 }
 
 void MainWindow::retext() {

@@ -3224,6 +3224,20 @@ const Entry kTexts[] = {
      "Строки текстур игры копируются через SSE2. Выключено: собственное копирование игры."},
     {"Developer only", "Лише розробнику", "Только разработчику"},
     {"Report a problem", "Повідомити про проблему", "Сообщить о проблеме"},
+    {"Tools", "Інструменти", "Инструменты"},
+    {"Open uaRO Studio", "Відкрити uaRO Studio", "Открыть uaRO Studio"},
+    {"Compact the texture pack", "Стиснути пакет текстур", "Сжать пакет текстур"},
+    {"Build Palettes.grf", "Зібрати Palettes.grf", "Собрать Palettes.grf"},
+    {"Model preview", "Попередній перегляд моделей", "Превью моделей"},
+    {"In the game: ~ the console; Ctrl+Shift+F11 the frame counter; Ctrl+Shift+F12 a full-size snapshot; "
+     "Ctrl+Shift+F9 X-ray; Ctrl+Shift+F8 the texture under the cursor into uaRO Studio, Ctrl+Shift+F7 its picture off "
+     "and on.",
+     "У грі: ~ - консоль; Ctrl+Shift+F11 - лічильник кадрів; Ctrl+Shift+F12 - знімок у повному розмірі; "
+     "Ctrl+Shift+F9 - рентген; Ctrl+Shift+F8 - текстура під курсором в uaRO Studio, Ctrl+Shift+F7 - її картинка "
+     "вимк./увімк.",
+     "В игре: ~ - консоль; Ctrl+Shift+F11 - счётчик кадров; Ctrl+Shift+F12 - снимок в полном размере; "
+     "Ctrl+Shift+F9 - рентген; Ctrl+Shift+F8 - текстура под курсором в uaRO Studio, Ctrl+Shift+F7 - её картинка "
+     "выкл./вкл."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

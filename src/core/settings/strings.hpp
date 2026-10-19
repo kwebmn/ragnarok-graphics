@@ -328,6 +328,7 @@ enum class Text : uint16_t {
     DebugVariantsHint, DebugStateCache, DebugStateCacheHint, DebugMergeDraws, DebugMergeDrawsHint, DebugFastPick,
     DebugFastPickHint, DebugFastFtol, DebugFastFtolHint, DebugFastTextures, DebugFastTexturesHint,
     DeveloperOnly, ReportProblem,  // 2.6: the list's heading, the header's button
+    DebugTools, DebugStudio, DebugCompact, DebugPalettes, DebugPreview, DebugKeys,  // 2.6: the Debug page's tools
     Count
 };
 

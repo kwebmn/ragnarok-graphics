@@ -126,7 +126,8 @@ public:
         // 2.5.28: the room pictures made again or taken out hold, and Compact - no site's pack any more
         compacting_ = compactRunning();
         compactLine_ = nullptr;  // this build's, if any
-        if (packUnread_ || compacting_ || compactState().kind != CompactState::Idle) {
+        const bool developer = host_.mode() == settings::Mode::Developer;  // 2.6: Compact and one map are its
+        if (developer && (packUnread_ || compacting_ || compactState().kind != CompactState::Idle)) {
             if (packUnread_) p.note(tf(Text::PackUnread, {sizeText(packUnread_, host_.lang())}));
             p.buttons({{kCompact, t(Text::PackCompact), packUnread_ && !compacting_ && !running_}});
             p.note(t(Text::PackCompactNote));
@@ -183,26 +184,29 @@ public:
         if (!chosen) p.note(t(Text::PackNothing), Tone::Warn);
         if (running_) p.note(t(Text::PackBackground));
         if (running_ && m.now().gameRunning) p.note(t(Text::PackGameRunning), Tone::Warn);
-        // 2.2.5: one map's textures - a model tried on one place
-        p.gap();
-        p.heading(t(Text::PackMapHeading));
-        p.note(t(Text::PackMapNote));
-        if (!g_mapFromLog) {
-            g_mapFromLog = true;
-            std::string log;
-            if (readFile(m.paths().log, log)) g_map = wide(settings::digestLog(log, 0).map);
+        // 2.2.5: one map's textures - a model tried on one place - 2.6: the Developer mode's
+        if (developer) {
+            p.gap();
+            p.heading(t(Text::PackMapHeading));
+            p.note(t(Text::PackMapNote));
+            if (!g_mapFromLog) {
+                g_mapFromLog = true;
+                std::string log;
+                if (readFile(m.paths().log, log)) g_map = wide(settings::digestLog(log, 0).map);
+            }
+            if (HWND name = p.line(kMapName, t(Text::PackMapName), t(Text::PackMapCue), 40, t(Text::PackMapNameHint)))
+                SetWindowTextW(name, g_map.c_str());
+            p.checks({{kMapGround, t(Text::PackMapGround), g_mapGround, t(Text::PackMapGroundHint), !running_},
+                      {kMapModels, t(Text::PackMapModels), g_mapModels, t(Text::PackMapModelsHint), !running_}},
+                     2);
+            p.choice(kMapModel, t(Text::PackMapModel),
+                     {t(Text::AiModelGeneral), t(Text::AiModelAnime), t(Text::AiModelAnime6b), t(Text::AiModelGameAi)},
+                     g_mapModel,
+                     t(Text::PackMapModelHint), !running_);
+            const bool mapOk = host && !busy && (g_mapGround || g_mapModels);
+            p.buttons({{kMapRemake, t(Text::PackMapRemake), mapOk},
+                       {kMapDrop, t(Text::PackMapDrop), mapOk && packCount_}});
         }
-        if (HWND name = p.line(kMapName, t(Text::PackMapName), t(Text::PackMapCue), 40, t(Text::PackMapNameHint)))
-            SetWindowTextW(name, g_map.c_str());
-        p.checks({{kMapGround, t(Text::PackMapGround), g_mapGround, t(Text::PackMapGroundHint), !running_},
-                  {kMapModels, t(Text::PackMapModels), g_mapModels, t(Text::PackMapModelsHint), !running_}},
-                 2);
-        p.choice(kMapModel, t(Text::PackMapModel),
-                 {t(Text::AiModelGeneral), t(Text::AiModelAnime), t(Text::AiModelAnime6b), t(Text::AiModelGameAi)},
-                 g_mapModel,
-                 t(Text::PackMapModelHint), !running_);
-        const bool mapOk = host && !busy && (g_mapGround || g_mapModels);
-        p.buttons({{kMapRemake, t(Text::PackMapRemake), mapOk}, {kMapDrop, t(Text::PackMapDrop), mapOk && packCount_}});
         show();
     }
 

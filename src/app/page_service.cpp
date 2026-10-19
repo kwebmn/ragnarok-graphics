@@ -100,30 +100,33 @@ public:
         else
             p.note(t(Text::GameSettingsNote));
         // 2.5.19: Palettes.grf with the palettes the server lets be worn
-        p.gap();
-        p.heading(t(Text::ServicePalettes));
-        p.note(tf(Text::PalettesNote, {std::to_string(palettes::kMaxHairStyle),
-                                       std::to_string(palettes::kMaxClothColour)}));
         const PalettesState made = palettesState();
         making_ = made.kind == PalettesState::Working;
-        p.buttons({{kPalettesFile, t(Text::PalettesFromFile), !making_},
-                   {kPalettesFolder, t(Text::PalettesFromFolder), !making_}});
-        if (making_) {
-            p.note(t(Text::PalettesWorking));
-        } else if (made.kind == PalettesState::Failed) {
-            p.note(tf(Text::PalettesFailed, {made.error}), Tone::Bad);
-        } else if (made.kind == PalettesState::Done) {
-            char mb[32], s[32];
-            std::snprintf(mb, sizeof mb, "%.1f", double(made.bytes) / 1e6);
-            std::snprintf(s, sizeof s, "%.1f", made.seconds);
-            p.note(tf(Text::PalettesDone,
-                      {utf8(made.out), std::to_string(made.kept), std::to_string(made.blocks), mb, s}),
-                   Tone::Good);
-            std::vector<std::string> left;
-            for (uint32_t n : made.left) left.push_back(std::to_string(n));
-            p.note(tf(Text::PalettesLeft, left));
-        }
         p.gap();
+        // 2.6: the Developer mode's
+        if (host_.mode() == settings::Mode::Developer) {
+            p.heading(t(Text::ServicePalettes));
+            p.note(tf(Text::PalettesNote, {std::to_string(palettes::kMaxHairStyle),
+                                           std::to_string(palettes::kMaxClothColour)}));
+            p.buttons({{kPalettesFile, t(Text::PalettesFromFile), !making_},
+                       {kPalettesFolder, t(Text::PalettesFromFolder), !making_}});
+            if (making_) {
+                p.note(t(Text::PalettesWorking));
+            } else if (made.kind == PalettesState::Failed) {
+                p.note(tf(Text::PalettesFailed, {made.error}), Tone::Bad);
+            } else if (made.kind == PalettesState::Done) {
+                char mb[32], s[32];
+                std::snprintf(mb, sizeof mb, "%.1f", double(made.bytes) / 1e6);
+                std::snprintf(s, sizeof s, "%.1f", made.seconds);
+                p.note(tf(Text::PalettesDone,
+                          {utf8(made.out), std::to_string(made.kept), std::to_string(made.blocks), mb, s}),
+                       Tone::Good);
+                std::vector<std::string> left;
+                for (uint32_t n : made.left) left.push_back(std::to_string(n));
+                p.note(tf(Text::PalettesLeft, left));
+            }
+            p.gap();
+        }
         p.heading(t(Text::ServiceUaroGraphics));
         p.buttons({{kReset, t(Text::ResetButton)}});
         p.note(tf(Text::VersionsValue,
