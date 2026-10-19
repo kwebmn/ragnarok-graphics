@@ -1,3 +1,14 @@
+# uaRO Graphics 2.6.1 — to check
+
+- **The emotions' flags: Ctrl+1 is Ukraine's flag, Ctrl+2 the Right Sector's** (red at the pole's top, black below,
+  divided diagonally). They come as an archive of their own, `uaro-flags.grf`, in the game's folder next to
+  uaRO.exe. The game reads it once DATA.INI lists it above the client's GRF; the update leaves DATA.INI alone.
+- The flags wave as the old ones did: the same 27 frames, folds and shades; turned away they show their back in the
+  flag's colours too. The other emotions are untouched. With the DATA.INI line, Make on the Texture pack tab improves
+  them too.
+- Please check: the DATA.INI line → the game → Ctrl+1 and Ctrl+2 wave the Ukrainian and the red-black flags; another
+  player with the updated client sees them over your character; the other emotions (Alt+L, /!, /?) as before.
+
 # uaRO Graphics 2.6.0 — to check
 
 - **The settings app in three modes** — a switch at the top: Simple, Detailed, Developer. Simple: the Main page (the
