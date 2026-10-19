@@ -11,12 +11,13 @@ namespace uagfx::settings {
 // The settings app's pages in the order of its list (stage 2 spec §6.1): Chat holds the whisper, login and chat macro
 // rows the Game page has no room for; Smoothing comes with stage 4 (spec §13), Input and dgVoodoo with 0.6.3; Ai (the
 // [ai] section) and AiCache (what the texture pack holds, 0.48) with 0.12; Effects (the [effects] section) with 0.18;
-// Pack (the texture pack's builder) with 0.43; Pad (uaRO Pad, the gamepad) with 1.4.
+// Pack (the texture pack's builder) with 0.43; Pad (uaRO Pad, the gamepad) with 1.4; Debug (2.6) the developer's
+// switches - the Developer mode's page.
 enum class Page : uint8_t {
     Render, Screen, Quality, Smoothing, Effects, Ai, AiCache, Pack, Frames, Sound, Pad, Game, Chat, Diagnostics,
-    Service
+    Service, Debug
 };
-constexpr int kPageCount = 15;
+constexpr int kPageCount = 16;
 Text pageName(Page p);
 
 enum class Control : uint8_t { Check, Slider, Choice, Number, Line };  // Line: a line of text

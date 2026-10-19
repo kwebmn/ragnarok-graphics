@@ -104,7 +104,7 @@ std::vector<Page> partsOf(View v, int tab) {
         case View::Service: return {Page::Service, Page::Diagnostics};
         case View::Debug: break;
     }
-    return {};
+    return {Page::Debug};
 }
 
 Place placeOf(Page p) {
@@ -122,6 +122,7 @@ Place placeOf(Page p) {
         case Page::Pad: return {View::Pad, 0};
         case Page::Game:
         case Page::Chat: return {View::GameChat, 0};
+        case Page::Debug: return {View::Debug, 0};
         case Page::Diagnostics:
         case Page::Service: break;
     }
@@ -144,14 +145,16 @@ std::vector<std::string> simpleKeys() {
 std::vector<std::string> developerKeys() {
     std::vector<std::string> keys(std::begin(kDeveloperKeys), std::end(kDeveloperKeys));
     for (const IniSetting& s : iniSettings())
-        if (std::strcmp(s.section, "debug") == 0) keys.push_back(sectionKey(s));
+        if ((s.page == Page::Debug || std::strcmp(s.section, "debug") == 0) &&
+            std::find(keys.begin(), keys.end(), sectionKey(s)) == keys.end())
+            keys.push_back(sectionKey(s));
     return keys;
 }
 
 Mode levelOf(const IniSetting& s) {
     const std::string k = sectionKey(s);
     if (mainKey(k) || effectsSimple(k)) return Mode::Simple;
-    if (std::strcmp(s.section, "debug") == 0) return Mode::Developer;
+    if (s.page == Page::Debug || std::strcmp(s.section, "debug") == 0) return Mode::Developer;
     for (const char* d : kDeveloperKeys)
         if (k == d) return Mode::Developer;
     return Mode::Detailed;

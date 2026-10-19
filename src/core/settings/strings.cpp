@@ -3170,6 +3170,58 @@ const Entry kTexts[] = {
     {"Debugging", "Налагодження", "Отладка"},
     {"What to improve", "Що покращувати", "Что улучшать"},
     {"Models by group", "Моделі за групами", "Модели по группам"},
+    // 2.6: the Debug page's test switches
+    {"DLSS jitter inverted", "Джитер DLSS навпаки", "Джиттер DLSS наоборот"},
+    {"The sign of the camera's sub-pixel shift DLSS is given. Turn it on when the picture with DLSS comes out "
+     "blurred.",
+     "Знак зсуву камери на частку пікселя, який отримує DLSS. Увімкни, якщо картинка з DLSS розмита.",
+     "Знак сдвига камеры на долю пикселя, который получает DLSS. Включи, если картинка с DLSS размыта."},
+    {"DLSS motion inverted", "Рух для DLSS навпаки", "Движение для DLSS наоборот"},
+    {"The sign of the motion vectors DLSS is given. Turn it on when moving things smear behind them with DLSS.",
+     "Знак векторів руху, які отримує DLSS. Увімкни, якщо з DLSS за рухомим тягнеться слід.",
+     "Знак векторов движения, которые получает DLSS. Включи, если с DLSS за движущимся тянется след."},
+    {"Picture into the window", "Картинка у вікно", "Картинка в окно"},
+    {"How the 64-bit renderer's picture reaches the game's window: straight into it, or through a surface Windows "
+     "composes over it.",
+     "Як картинка 64-бітного рендера потрапляє у вікно гри: прямо в нього чи через поверхню, яку Windows накладає "
+     "зверху.",
+     "Как картинка 64-битного рендера попадает в окно игры: прямо в него или через поверхность, которую Windows "
+     "накладывает сверху."},
+    {"Auto", "Авто", "Авто"},
+    {"Window", "Вікно", "Окно"},
+    {"Composition", "Композиція", "Композиция"},
+    {"Composition follows Windows scaling", "Композиція з масштабом Windows", "Композиция с масштабом Windows"},
+    {"The composition surface is scaled with the game's window when Windows scales it (125 %, 150 %).",
+     "Поверхню композиції масштабовано разом із вікном гри, коли Windows його масштабує (125 %, 150 %).",
+     "Поверхность композиции масштабируется вместе с окном игры, когда Windows его масштабирует (125 %, 150 %)."},
+    {"Direct3D 11: a shader for each state", "Direct3D 11: шейдер на кожен стан",
+     "Direct3D 11: шейдер на каждое состояние"},
+    {"Each state of the game's draws gets a shader made for it. Off: one shader for every state, as before 2.5.16.",
+     "Кожен стан малювання гри отримує свій шейдер. Вимкнено: один шейдер на все, як до 2.5.16.",
+     "Каждое состояние рисования игры получает свой шейдер. Выключено: один шейдер на всё, как до 2.5.16."},
+    {"Direct3D 11: only what changed", "Direct3D 11: лише те, що змінилося", "Direct3D 11: только то, что изменилось"},
+    {"Direct3D 11 is told only what changed between the game's draws. Off: everything at every draw, should a picture "
+     "come out wrong.",
+     "Direct3D 11 отримує лише те, що змінилося між малюваннями гри. Вимкнено: усе щоразу - якщо картинка вийде "
+     "неправильною.",
+     "Direct3D 11 получает только то, что изменилось между рисованиями игры. Выключено: всё каждый раз - если "
+     "картинка выйдет неправильной."},
+    {"Direct3D 11: merge draws", "Direct3D 11: злиття малювань", "Direct3D 11: слияние рисований"},
+    {"Draws of the game that follow one another in the same state go as one. Off: each by itself.",
+     "Малювання гри поспіль з одним станом ідуть одним викликом. Вимкнено: кожне окремо.",
+     "Рисования игры подряд с одним состоянием идут одним вызовом. Выключено: каждое отдельно."},
+    {"Fast pick under the mouse", "Швидкий пошук клітинки під мишею", "Быстрый поиск клетки под мышью"},
+    {"The cell under the mouse found along the mouse's ray. Off: the game's own search over the map's pieces.",
+     "Клітинку під мишею знайдено вздовж променя миші. Вимкнено: власний пошук гри по шматках мапи.",
+     "Клетка под мышью находится вдоль луча мыши. Выключено: собственный поиск игры по кускам карты."},
+    {"Fast number rounding", "Швидке округлення чисел", "Быстрое округление чисел"},
+    {"The game's conversion of numbers to whole ones by one instruction (fisttp). Off: the game's own.",
+     "Перетворення чисел гри на цілі однією інструкцією (fisttp). Вимкнено: власне гри.",
+     "Преобразование чисел игры в целые одной инструкцией (fisttp). Выключено: собственное игры."},
+    {"Fast texture rows", "Швидкі рядки текстур", "Быстрые строки текстур"},
+    {"The game's texture rows copied with SSE2. Off: the game's own copy.",
+     "Рядки текстур гри копіюються через SSE2. Вимкнено: власне копіювання гри.",
+     "Строки текстур игры копируются через SSE2. Выключено: собственное копирование игры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

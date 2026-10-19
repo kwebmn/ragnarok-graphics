@@ -91,6 +91,11 @@ TEST(schema_live_keys_are_the_specs) {
                                 k.compare(0, 12, "quality.dlss") != 0 &&  // 2.4.2: its own size and model too
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&
                                 k != "frames.reflex" &&  // 2.5.26: chosen when the 64-bit renderer starts
+                                // 2.6: the developer's switches, read as the game or the 64-bit renderer starts
+                                k != "renderer.bridge_present" && k != "renderer.bridge_dpi_scale" &&
+                                k != "debug.state_cache" && k != "debug.fast_pick" && k != "debug.fast_ftol" &&
+                                k != "debug.fast_textures" && k != "debug.merge_draws" &&
+                                k != "debug.shader_variants" &&
                                 k.compare(0, 3, "ai.") != 0 && k.compare(0, 6, "sound.") != 0));
     }
 }
@@ -98,7 +103,7 @@ TEST(schema_live_keys_are_the_specs) {
 TEST(schema_pages_follow_the_spec) {
     // Stage 2 spec §6.1 with 0.6.2: Sound, Game, and Chat and login after Frames - the last holds the whisper, login
     // and chat macro rows the Game page has no room for.
-    CHECK_EQ(kPageCount, 15);
+    CHECK_EQ(kPageCount, 16);
     CHECK(pageName(Page::Sound) == Text::PageSound);
     CHECK(pageName(Page::Game) == Text::PageGame);
     CHECK(pageName(Page::Chat) == Text::PageChat);
@@ -119,6 +124,9 @@ TEST(schema_pages_follow_the_spec) {
     CHECK_EQ(int(Page::Pad), 10);
     CHECK_EQ(int(Page::Diagnostics), 13);
     CHECK_EQ(int(Page::Service), 14);
+    // 2.6: the developer's switches on a page of their own, last
+    CHECK_EQ(int(Page::Debug), 15);
+    CHECK(pageName(Page::Debug) == Text::PageDebug);
 }
 
 TEST(schema_effects_keys_read_and_write_within_their_ranges) {

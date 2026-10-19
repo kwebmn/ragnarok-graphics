@@ -100,8 +100,14 @@ public:
         if (!s) return;
         HWND ctl = GetDlgItem(host_.window(), id);
         if (s->control == Control::Check && code == BN_CLICKED) {
-            m.setToken(*s, s->tokens[SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0]);
+            const std::string token = s->tokens[SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0];
+            m.setToken(*s, token);
             if (sectionKey(*s) == "frames.battery_saver") host_.rebuild();  // 2.5.20: its frames' row with it
+            // 0.87: the profiler (2.6: every switch of the Debug page the driver reads live) at once in a running game
+            if (s->page == settings::Page::Debug && m.now().gameRunning && appliesNow(sectionKey(*s))) {
+                const std::wstring err = m.writeNow(*s, token, host_.lang());
+                if (!err.empty()) host_.message(err, true);
+            }
         } else if (s->control == Control::Choice && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < s->tokens.size()) m.setToken(*s, s->tokens[size_t(sel)]);
@@ -403,9 +409,9 @@ private:
             p.choice(kGpu, t(Text::RenderGpu), items, selected, t(Text::RenderGpuHint), true);
         }
         p.gap();
-        for (size_t i = 0; i < all.size(); ++i)  // part 3 (test): the renderer in a 64-bit process; part 4: Remix
-            if (sectionKey(all[i]) == "renderer.bridge" || sectionKey(all[i]) == "renderer.render_thread" ||
-                sectionKey(all[i]) == "renderer.remix")
+        // part 3: the renderer in a 64-bit process (2.6: its thread and Remix on the Debug page)
+        for (size_t i = 0; i < all.size(); ++i)
+            if (sectionKey(all[i]) == "renderer.bridge")
                 p.check(rowId(i), t(all[i].label), m.token(all[i]) == "1", t(all[i].hint));
         if ((!win10 || !d3d12) && d3d11 && m.token(*findSetting("renderer.api")) == "d3d12")
             p.note(t(Text::RenderUseD3d11), Tone::Warn);  // 0.46: Direct3D 11 works here

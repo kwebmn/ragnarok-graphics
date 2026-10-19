@@ -25,6 +25,7 @@ Text pageName(Page p) {
         case Page::Game: return Text::PageGame;
         case Page::Chat: return Text::PageChat;
         case Page::Diagnostics: return Text::PageDiagnostics;
+        case Page::Debug: return Text::PageDebug;
         case Page::Service: break;
     }
     return Text::PageService;
@@ -44,9 +45,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::StatsSendHint, ""},  // 2.2.1
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
-        {"renderer", "render_thread", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderThread,
+        {"renderer", "render_thread", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderThread,
          Text::RenderThreadHint, ""},  // 2.5.12
-        {"renderer", "remix", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
+        {"renderer", "remix", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderRemix,
          Text::RenderRemixHint, ""},
         {"quality", "super_light", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualitySuperLight,
          Text::QualitySuperLightHint, ""},  // 2.5.20: first - over the rest of the page
@@ -655,12 +656,35 @@ const std::vector<IniSetting>& iniSettings() {
          Text::GfxSoundHeadphonesHint, ""},  // 1.2
         {"sound", "duck", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundDuck,
          Text::GfxSoundDuckHint, ""},  // 1.3
-        {"debug", "profile", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagProfile,
-         Text::DiagProfileHint, ""},
-        {"debug", "xray", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagXray,
-         Text::DiagXrayHint, ""},  // 2.3
-        {"debug", "log", Page::Diagnostics, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
+        // 2.6: the Debug page - the log, the profiler and X-ray from the Diagnostics page, then the test switches
+        // the ini alone held before
+        {"debug", "log", Page::Debug, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
          Text::DiagVerboseLogHint, ""},
+        {"debug", "profile", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagProfile,
+         Text::DiagProfileHint, ""},
+        {"debug", "xray", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DiagXray,
+         Text::DiagXrayHint, ""},  // 2.3
+        {"quality", "dlss_jitter", Page::Debug, Control::Check, 0, 1, 1, {"normal", "inverted"}, {},
+         Text::DebugDlssJitter, Text::DebugDlssJitterHint, ""},
+        {"quality", "dlss_motion", Page::Debug, Control::Check, 0, 1, 1, {"normal", "inverted"}, {},
+         Text::DebugDlssMotion, Text::DebugDlssMotionHint, ""},
+        {"renderer", "bridge_present", Page::Debug, Control::Choice, 0, 0, 0, {"auto", "window", "composition"},
+         {Text::DebugPresentAuto, Text::DebugPresentWindow, Text::DebugPresentComposition}, Text::DebugPresent,
+         Text::DebugPresentHint, ""},
+        {"renderer", "bridge_dpi_scale", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugDpiScale,
+         Text::DebugDpiScaleHint, ""},
+        {"debug", "shader_variants", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugVariants,
+         Text::DebugVariantsHint, ""},
+        {"debug", "state_cache", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugStateCache,
+         Text::DebugStateCacheHint, ""},
+        {"debug", "merge_draws", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugMergeDraws,
+         Text::DebugMergeDrawsHint, ""},
+        {"debug", "fast_pick", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugFastPick,
+         Text::DebugFastPickHint, ""},
+        {"debug", "fast_ftol", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugFastFtol,
+         Text::DebugFastFtolHint, ""},
+        {"debug", "fast_textures", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugFastTextures,
+         Text::DebugFastTexturesHint, ""},
     };
     return list;
 }
@@ -769,6 +793,17 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "sound.headphones") return c.sound.headphones ? "1" : "0";  // 1.2
     if (k == "sound.duck") return c.sound.duck ? "1" : "0";              // 1.3
     if (k == "debug.log") return c.logLevel == LogLevel::Debug ? "verbose" : "normal";
+    // 2.6: the Debug page's test switches
+    if (k == "quality.dlss_jitter") return c.dlssJitterInverted ? "inverted" : "normal";
+    if (k == "quality.dlss_motion") return c.dlssMotionInverted ? "inverted" : "normal";
+    if (k == "renderer.bridge_present") return c.bridgePresent;
+    if (k == "renderer.bridge_dpi_scale") return c.bridgeDpiScale ? "1" : "0";
+    if (k == "debug.shader_variants") return c.shaderVariants ? "1" : "0";
+    if (k == "debug.state_cache") return c.stateCache ? "1" : "0";
+    if (k == "debug.merge_draws") return c.mergeDraws ? "1" : "0";
+    if (k == "debug.fast_pick") return c.fastPick ? "1" : "0";
+    if (k == "debug.fast_ftol") return c.fastFtol ? "1" : "0";
+    if (k == "debug.fast_textures") return c.fastTextures ? "1" : "0";
     return "";
 }
 

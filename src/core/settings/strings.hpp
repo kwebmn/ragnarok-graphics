@@ -322,6 +322,11 @@ enum class Text : uint16_t {
     AiGroupLogin,
     // 2.6: the modes and the list's new entries
     ModeSimple, ModeDetailed, ModeDeveloper, ViewMain, ViewGraphics, ViewGameChat, PageDebug, AiTabWhat, AiTabModels,
+    // 2.6: the Debug page's test switches
+    DebugDlssJitter, DebugDlssJitterHint, DebugDlssMotion, DebugDlssMotionHint, DebugPresent, DebugPresentHint,
+    DebugPresentAuto, DebugPresentWindow, DebugPresentComposition, DebugDpiScale, DebugDpiScaleHint, DebugVariants,
+    DebugVariantsHint, DebugStateCache, DebugStateCacheHint, DebugMergeDraws, DebugMergeDrawsHint, DebugFastPick,
+    DebugFastPickHint, DebugFastFtol, DebugFastFtolHint, DebugFastTextures, DebugFastTexturesHint,
     Count
 };
 

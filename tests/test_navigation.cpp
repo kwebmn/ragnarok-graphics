@@ -74,6 +74,21 @@ TEST(nav_levels) {
     for (const std::string& k : developerKeys()) CHECK(findSetting(k) != nullptr);
 }
 
+TEST(nav_debug_rows_are_developer) {
+    int rows = 0;
+    for (const IniSetting& s : iniSettings()) {
+        if (s.page != Page::Debug) continue;
+        ++rows;
+        CHECK(levelOf(s) == Mode::Developer);
+    }
+    CHECK(rows >= 15);
+    CHECK(partsOf(View::Debug, 0) == std::vector<Page>({Page::Debug}));
+    CHECK(placeOf(Page::Debug).view == View::Debug);
+    for (const char* k : {"renderer.render_thread", "renderer.remix", "debug.profile", "debug.log",
+                          "renderer.bridge_present", "quality.dlss_jitter", "debug.shader_variants"})
+        CHECK(findSetting(k) && findSetting(k)->page == Page::Debug);
+}
+
 TEST(nav_resettable_views_are_made_of_rows) {
     CHECK(resettable(View::Graphics, 0) && resettable(View::Effects, 0) && resettable(View::Sound, 0));
     CHECK(resettable(View::Ai, 0) && resettable(View::Ai, 1) && !resettable(View::Ai, 2));
