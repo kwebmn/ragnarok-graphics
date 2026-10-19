@@ -430,6 +430,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     c.targetSize[0] = float(shadowMaskW);
     c.targetSize[1] = float(shadowMaskH);
     c.scale = k;
+    if (viewToWorldValid) std::copy(viewToWorld, viewToWorld + 12, c.reproject);  // 2.6.3: the ground's level
     list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
     list->SetGraphicsRootDescriptorTable(kRootSamplers, samplerTable(linearClamp, linearClamp, 0));
     list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));

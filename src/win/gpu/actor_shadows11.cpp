@@ -257,6 +257,7 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
     c.targetSize[0] = float(mw);
     c.targetSize[1] = float(mh);
     c.scale = k;
+    if (cameraValid_) std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);  // 2.6.3: the ground's level
     setConstants(c);
     ctx_->OMSetBlendState(maxBlend_, nullptr, 0xFFFFFFFF);
     ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);

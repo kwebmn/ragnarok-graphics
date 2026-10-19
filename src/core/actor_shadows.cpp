@@ -69,4 +69,17 @@ std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<L
     return out;
 }
 
+float groundDepth(const camera::Projection& p, const float up[3], float feetX, float feetY, float feetZ, float slope,
+                  float x, float y) {
+    const float z = feetZ + (y - feetY) * slope;
+    if (up[0] * up[0] + up[1] * up[1] + up[2] * up[2] < 0.5f || p.f0 <= 0.0f || p.f1 <= 0.0f) return z;
+    // the view's ray through the pixel (1 deep) and the feet, against the plane through them
+    const float ray[3] = {(x - p.cx) / p.f0, (y - p.cy) / p.f1, 1.0f};
+    const float feet[3] = {(feetX - p.cx) * feetZ / p.f0, (feetY - p.cy) * feetZ / p.f1, feetZ};
+    const float across = up[0] * ray[0] + up[1] * ray[1] + up[2] * ray[2];
+    if (std::fabs(across) < 1e-4f) return z;  // the ray along the ground: its horizon
+    const float flat = (up[0] * feet[0] + up[1] * feet[1] + up[2] * feet[2]) / across;
+    return flat > 0.0f ? std::min(z, flat) : z;  // past the horizon: none
+}
+
 }  // namespace uagfx::actor_shadows

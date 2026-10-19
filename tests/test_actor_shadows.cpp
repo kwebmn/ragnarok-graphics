@@ -152,3 +152,27 @@ TEST(actor_shadows_take_a_layer_to_its_own_characters_feet) {
     CHECK_EQ(n.size(), size_t(1));
     if (n.size() == 1) CHECK(n[0].viewZ == 303.0f);
 }
+
+TEST(actor_shadows_keep_the_ground_flat_under_the_feet) {
+    // 2.6.3: shadow_ps takes the ground's slope on the screen from the scene's depth 12 pixels below the feet. Near a
+    // ledge that depth fell on the wall below it (deeper and deeper down the screen): the ground below the feet looked
+    // far too deep and the shadow falling there was cut - it blinked as a character walked along the ledge
+    // (Aldebaran, report R-9AFFAR). A post in front did the same to the shadow above the feet. Never deeper than the
+    // flat ground through the feet now.
+    const camera::Projection p = camera::projectionFor(1920, 1080);
+    const float up[3] = {0.0f, -0.70710678f, -0.70710678f};  // the camera 45 degrees down
+    const float feetZ = 300.0f, below = p.cy + 40.0f, above = p.cy - 40.0f;
+    const float flatBelow = feetZ / (1.0f + 40.0f / p.f1), flatAbove = feetZ / (1.0f - 40.0f / p.f1);
+    // off the wall below a ledge: +0.6 a pixel - 324 units 40 pixels down, the ground there 297
+    CHECK(std::fabs(actor_shadows::groundDepth(p, up, p.cx, p.cy, feetZ, 0.6f, p.cx, below) - flatBelow) < 0.01f);
+    // off a post in front: -0.6 a pixel - 324 units 40 pixels up, the ground there 303
+    CHECK(std::fabs(actor_shadows::groundDepth(p, up, p.cx, p.cy, feetZ, -0.6f, p.cx, above) - flatAbove) < 0.01f);
+    // a slope nearer than the flat ground (a hill rising there) stays
+    CHECK(std::fabs(actor_shadows::groundDepth(p, up, p.cx, p.cy, feetZ, 0.02f, p.cx, above) - 299.2f) < 0.01f);
+    // no camera known: the slope alone, as before
+    const float none[3] = {0.0f, 0.0f, 0.0f};
+    CHECK(std::fabs(actor_shadows::groundDepth(p, none, p.cx, p.cy, feetZ, 0.6f, p.cx, below) - 324.0f) < 0.01f);
+    // the feet's own pixel: their depth
+    CHECK(std::fabs(actor_shadows::groundDepth(p, up, p.cx + 10.0f, p.cy, feetZ, 0.6f, p.cx + 10.0f, p.cy) - feetZ) <
+          0.01f);
+}

@@ -1672,6 +1672,18 @@ float4 shadow_ps(ShadowIn i) : SV_Target {
     float z1 = viewDepth(sceneDepth.Load(int3(clamp(int2(i.feet + float2(0.0, step)), int2(0, 0), last), 0)));
     float slope = clamp((z1 - z0) / step, -0.6, 0.6);
     float expected = i.az.y + (float(wp.y) - i.feet.y) * slope;
+    // 2.6.3 (actor_shadows::groundDepth): never deeper than the flat ground through the feet (r1, r4, r7 the world's
+    // up in view space; none without the camera) - that depth below the feet fell on the wall below a ledge or on a
+    // post in front, and the shadow falling there was cut: it blinked as a character walked along a ledge
+    float3 up = float3(r1, r4, r7);
+    if (dot(up, up) > 0.5) {
+        float2 g = (i.feet - 0.5) / max(scale, 1e-3), q = float2(wp) / max(scale, 1e-3);  // game pixels
+        float3 ray = float3((q.x - cx) / max(f0, 1e-3), (q.y - cy) / max(f1, 1e-3), 1.0);
+        float3 at = float3((g.x - cx) * i.az.y / max(f0, 1e-3), (g.y - cy) * i.az.y / max(f1, 1e-3), i.az.y);
+        float across = dot(up, ray);
+        float level = abs(across) < 1e-4 ? -1.0 : dot(up, at) / across;
+        if (level > 0.0) expected = min(expected, level);  // past the horizon: none
+    }
     float z = viewDepth(sceneDepth.Load(int3(wp, 0)));
     if (z < expected - 6.0) discard;  // a wall, a tree in front of the ground there
     float a = saturate(tex0.Sample(samp0, i.uv).a * i.az.x);
