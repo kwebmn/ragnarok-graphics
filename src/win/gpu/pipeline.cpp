@@ -500,6 +500,7 @@ ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fv
     k.water = water && !toLayer;
     k.mask = mask && !toLayer;
     k.shader = toLayer ? DrawShader::Game : shader;
+    k.behind = behindGround(s, fvf, groundDrawn) && !toLayer;  // 2.6.3: a model, a step behind the ground
     return pipelineForKey(packPipelineKey(k));
 }
 
@@ -540,6 +541,8 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
                                                                                         : D3D12_CULL_MODE_NONE;
     p.RasterizerState.FrontCounterClockwise = FALSE;
     p.RasterizerState.DepthClipEnable = TRUE;
+    // 2.6.3: one step of the game's 16-bit Z (1/65536) - the D32's unit at the world's depths (0.5 to 1) is 2^-24
+    p.RasterizerState.DepthBias = k.behind ? 256 : 0;
     p.DepthStencilState.DepthEnable = k.zEnable ? TRUE : FALSE;
     p.DepthStencilState.DepthWriteMask = k.zWrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
     p.DepthStencilState.DepthFunc = k.zFunc >= d3d7::CMP_NEVER && k.zFunc <= d3d7::CMP_ALWAYS

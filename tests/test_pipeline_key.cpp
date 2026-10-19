@@ -144,7 +144,8 @@ TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
     CHECK(rejected(plain, [](PipelineKey& k) { k.srcBlend = BLEND_SRCALPHA; }));     // no blending: ONE and ZERO
     CHECK(rejected(plain, [](PipelineKey& k) { k.dstBlend = BLEND_INVSRCALPHA; }));
     CHECK(validPipelineKey(packPipelineKey(good) | uint64_t(1) << 27));   // 2.5: bit 27 is the lean shader
-    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 28));  // a bit past the packed fields
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 28));  // 2.6.3: a step deeper - never blended
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 29));  // a bit past the packed fields
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 63));
 }
 
@@ -274,4 +275,43 @@ TEST(pipeline_key_draw_shaders_keep_the_smokes_bit) {
     k.zEnable = false;
     k.zFunc = CMP_ALWAYS;
     CHECK(!validPipelineKey(packPipelineKey(k)));
+}
+
+TEST(pipeline_key_models_lie_a_step_behind_the_ground) {
+    // 2.6.3: the client draws its opaque list (the models) before the ground (FUN_0040e4d0) and asks for a 16-bit
+    // Z-buffer: a model's face in the ground's plane - a house's threshold - got the ground's very depth there, and
+    // the ground, drawn after it with LESSEQUAL, won. The GPU's Z is D32: rounding picked either, and a doorway in
+    // Aldebaran flickered between the paving and the floor's planks as the camera turned (report R-9AFFAR). An opaque
+    // draw of the world before the ground lies one step of a 16-bit Z deeper.
+    DrawSetup model;
+    model.zEnable = true;
+    model.zWrite = true;
+    model.zFunc = CMP_LESSEQUAL;
+    model.cull = CULL_NONE;
+    CHECK(behindGround(model, FVF_TL1, false));
+    CHECK(!behindGround(model, FVF_TL1, true));   // after the ground: as the game draws it, the later one on top
+    CHECK(!behindGround(model, FVF_TL2, false));  // the ground itself
+    DrawSetup blended = model;
+    blended.blend = true;
+    CHECK(!behindGround(blended, FVF_TL1, false));
+    DrawSetup unwritten = model;
+    unwritten.zWrite = false;
+    CHECK(!behindGround(unwritten, FVF_TL1, false));
+    DrawSetup ui = model;
+    ui.ui = true;
+    CHECK(!behindGround(ui, FVF_TL1, false));
+    // a pipeline of its own: the key keeps it, for such draws only
+    PipelineKey k = pipelineKey(model, FVF_TL1);
+    k.behind = true;
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    CHECK(packPipelineKey(k) != packPipelineKey(pipelineKey(model, FVF_TL1)));
+    for (const DrawSetup& s : {blended, unwritten}) {
+        PipelineKey other = pipelineKey(s, FVF_TL1);
+        other.behind = true;
+        CHECK(!validPipelineKey(packPipelineKey(other)));
+    }
+    PipelineKey ground = pipelineKey(model, FVF_TL2);
+    ground.behind = true;
+    CHECK(!validPipelineKey(packPipelineKey(ground)));
 }

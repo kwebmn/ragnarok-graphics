@@ -31,10 +31,16 @@ struct PipelineKey {
     bool mask = false;   // 0.22.3: a character or an effect in the DLSS world - its coverage into the alpha
     DrawShader shader = DrawShader::Game;  // 0.24: Smoke (bit 25, as 0.24 saved it); 0.30: two bits
     bool lean = false;  // 2.5: the draw shader without the world's extras (draw_lean_ps) - the game's shader only
+    bool behind = false;  // 2.6.3: one step of a 16-bit Z deeper (behindGround)
     bool operator==(const PipelineKey& o) const;
 };
 
 PipelineKey pipelineKey(const DrawSetup& s, uint32_t fvf);
+// 2.6.3: whether a draw lies one step of a 16-bit Z deeper - an opaque draw of the world before the ground, the
+// game's models. The client draws its opaque list before the ground (FUN_0040e4d0) and asks for a 16-bit Z-buffer:
+// a model's face in the ground's plane (a house's threshold) got the ground's very depth there, and the ground, drawn
+// after it with LESSEQUAL, won. The GPU's Z is D32: its rounding picked either, flickering as the camera turned.
+bool behindGround(const DrawSetup& s, uint32_t fvf, bool groundDrawn);
 uint64_t packPipelineKey(const PipelineKey& k);
 PipelineKey unpackPipelineKey(uint64_t v);
 

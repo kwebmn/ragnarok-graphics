@@ -507,7 +507,7 @@ private:
     void setConstants(const Constants& c);
     ID3D11BlendState* blendState(bool enable, uint32_t src, uint32_t dst, uint8_t writeMask);
     ID3D11DepthStencilState* depthState(bool enable, bool write, uint32_t func);
-    ID3D11RasterizerState* rasterState(uint32_t cull);
+    ID3D11RasterizerState* rasterState(uint32_t cull, bool behind = false);
     ID3D11SamplerState* samplerState(const StageSetup& s, int aniso);
     bool ensureSwapChain(HWND window, UINT width, UINT height, bool wantTearing);
     void releaseSwapChain();

@@ -25,6 +25,7 @@
 #include "core/full_colour.hpp"
 #include "core/light_mode.hpp"
 #include "core/game_camera.hpp"
+#include "core/pipeline_key.hpp"
 #include "core/png_write.hpp"
 #include "core/region_look.hpp"
 #include "core/scale.hpp"
@@ -1000,19 +1001,21 @@ ID3D11DepthStencilState* Renderer11::depthState(bool enable, bool write, uint32_
     return s;
 }
 
-ID3D11RasterizerState* Renderer11::rasterState(uint32_t cull) {
-    const auto it = rasters_.find(cull);
+ID3D11RasterizerState* Renderer11::rasterState(uint32_t cull, bool behind) {
+    const uint32_t key = cull | (behind ? 0x100u : 0u);
+    const auto it = rasters_.find(key);
     if (it != rasters_.end()) return it->second;
     D3D11_RASTERIZER_DESC d{};
     d.FillMode = D3D11_FILL_SOLID;
     d.CullMode = D3D11_CULL_MODE(cull);
     d.FrontCounterClockwise = FALSE;
+    d.DepthBias = behind ? 256 : 0;  // 2.6.3 (pipeline.cpp): one step of the game's 16-bit Z in the D32
     d.DepthClipEnable = TRUE;
     d.ScissorEnable = TRUE;  // the game's viewport clips its pre-transformed vertices
     ID3D11RasterizerState* s = nullptr;
     const HRESULT hr = device_->CreateRasterizerState(&d, &s);
     if (FAILED(hr)) failed("a rasterizer state", hr);
-    rasters_.emplace(cull, s);
+    rasters_.emplace(key, s);
     return s;
 }
 
@@ -1603,7 +1606,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
                           D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
                               D3D11_COLOR_WRITE_ENABLE_BLUE);
     is.depth = depthState(s.zEnable, s.zWrite, d3dmap::compareOf(s.zFunc));
-    is.raster = rasterState(d3dmap::cullOf(s.cull));
+    // 2.6.3: a model a step of the game's 16-bit Z behind the ground (pipeline_key.hpp behindGround); the 16-bit
+    // world's D16 has that step itself
+    is.raster = rasterState(d3dmap::cullOf(s.cull), behindGround(s, d.fvf, groundDrawn_) &&
+                                                        !((light_ & light::kWorld16) && world16Ok_));
     is.srvs[0] = srvs[0];
     is.srvs[1] = srvs[1];
     is.srvs[2] = mat;
