@@ -32,8 +32,9 @@ TEST(sky_on_by_default_with_its_clouds) {
 }
 
 TEST(motes_on_by_default_their_amount_bounded) {
-    // 0.70: pollen and dust in the air.
-    CHECK(parseConfig("").effects.motes && parseConfig("").effects.motesAmount == 100);
+    // 0.70: pollen and dust in the air. 2.6.8: twice as many by default - at 100 % they were all but unseen over
+    // Prontera's white paving (R-UT7AH3), and the pass costs 0.09 ms on an RTX 5060 Ti
+    CHECK(parseConfig("").effects.motes && parseConfig("").effects.motesAmount == 200);
     CHECK(parseConfig("[effects]\nmotes_amount = 40\n").effects.motesAmount == 40);
     CHECK(!effectsOff().motes);
 }

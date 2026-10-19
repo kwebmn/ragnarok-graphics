@@ -224,7 +224,7 @@ struct EffectSettings {
     // 0.70: motes in the air where the map has no weather - pollen drifting over the fields and the towns, dust
     // in the dungeons and the houses. On by default.
     bool motes = true;
-    int motesAmount = 100;  // %, 0-200
+    int motesAmount = 200;  // %, 0-200 (2.6.8: the tester's choice - at 100 all but unseen in Prontera, R-UT7AH3)
     // 0.71: the ground's relief - its picture's cracks and stones lit from one side (bump mapping from the
     // texture's brightness; the AI textures' detail the most). On by default.
     bool relief = true;
