@@ -6,8 +6,9 @@ uaRO.exe (2007-05-07) under langtype 14 (sclientinfo.xml's connection to play.ua
 Ctrl+1 and 67 for Ctrl+2 (its key handler, decomp line ~182640), and draws them with emotion.act's actions 65 and 66
 (an emotion's action is its number less one from 35 on): a white-black-red flag, frames 169-177 of emotion.spr, and
 the double-headed eagle's, frames 178-186 - the same nine poses of the waving cloth, in the same places. This script
-draws the first as Ukraine's (blue over yellow) and the second as the Right Sector's (red and black, divided from the
-hoist's foot to the fly's top), both on the first one's folds and shades, and writes emotion.spr alone into a GRF for
+draws the first as Ukraine's (blue over yellow) and the second as the Right Sector's (red over black, its white
+lettering with the trident across the middle - a letter is two pixels or so here: a white band of them), both on the
+first one's folds and shades, and writes emotion.spr alone into a GRF for
 DATA.INI, above the client's own. Every other frame keeps its bytes. Where the cloth turns away from the viewer the
 game paints its back in the flag's main colour (white here, green on Brazil's); these flags show their colours there
 too, laid out along the pole.
@@ -32,10 +33,38 @@ WHITE = {1, 120, 121, 122, 123, 124, 125, 126, 127}
 BLACK = {2, 164, 165, 167}
 RED = {149, 150, 151, 53, 54, 95}
 POLE = {70, 137, 138, 139, 140, 141, 72, 74, 76, 77, 78, 79, 199}
+SHADOW = {115, 116, 117}  # a fold's deep shadow: the stripe nearest it, darker
 BASE = {'w': 121, 'r': 149}  # a stripe's plain colour: the others are its shades
 
 UA_BLUE, UA_YELLOW = (0, 87, 183), (255, 215, 0)
-RS_RED, RS_BLACK = (204, 20, 32), (26, 24, 26)
+RS_RED, RS_BLACK, RS_WHITE = (204, 20, 32), (26, 24, 26), (246, 244, 238)
+# The Right Sector's flag (Wikimedia Commons, Flag_of_Right_Sector.svg) as 96 x 52 cells: red over black, the white
+# "ПРАВИЙ СЕКТОР" with the trident and the sword across the middle - rows 16-35 below, the rows above all red, those under
+# them all black.
+RS_SIZE = (96, 52)
+RS_TEXT_TOP = 16
+RS_TEXT = [
+    'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRWRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR',
+    'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRWWWRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR',
+    'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRWWWRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR',
+    'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRWRRRRRRRRWWWRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRWRRRRRRRRRRRR',
+    'RRRWWWWWRRWWWRRRRRWRRRWWWRRWWWRRRRRWWRWRRRWWRRRWWWRRRWRRRRWWWWRWWWRRWWRRRWRWWWWWRRWWWRRWWWRRRRRR',
+    'RRRWWRWWRRWWRWRRRRWRRRWWRWRRWWRRWRRWWRRWRRWWWRRWWWRRWWWRRRWRRWRWWRWRWWRRWWRRWWRRRRWRWRRWWWWRRRRR',
+    'RRRWWRWWRRWWRRWRRRWRRRWWRWRRWWRRWRRWWRRWRRWWRWRWWWRWRWWRRWWRRRRWWRRRWWRWRWRRWWRRRWWRWWRWWWRWRRRR',
+    'RRRWWRWWRRWWRRWRRRWRRRWWRWRRWWRWWRRWWRWWRRWWRWRWWWWWRWWRRWWRRRRWWRRRWWRWRRRRWWRRRWRRWWRWWWRWRRRR',
+    'RRRWWRWWRRWWRRWRRWWRRRWWRWRRWWRWWRRWWRWWRRWWRWWWWWWWRWWRRWWRRRRWWRRRWWRWRRRRWWRRRWRRRWRWWWRWRRRR',
+    'RRRWWRWWRRWWRRWRRWWWRRWWRWRRWWWWWRRWWRWWRRWWRWRWWWRWRWWRRWWRRRRWWWRRWWWWRRRRWWRRRWRRRWRWWWRWRRRR',
+    'KKKWWKWWWKWWKKWKKWWWKKWWKWKKWWWWWKKWWWWWKKWWKWKWKWKWKWKKKWWKKKKWWKKKWWWWKKKKWWKKKWKKKWKWWWKWKKKK',
+    'KKKWWKWWWKWWWWKKWKWWKKWWKWKKWWWWWKKWWWWWKKWWKWKWKWKWKWKKKWWKKKKWWKKKWWWWKKKKWWKKKWKKKWKWWWWKKKKK',
+    'KKKWWKWWWKWWWKKKWKWWKKWWKWWKWWKWWKKWWKWWKKKWWWKWKWWWWWKKKWWKKKKWWKKKWWWKKKKKWWKKKWKKKWKWWWKKKKKK',
+    'KKKWWKWWWKWWWKKKWWWWKKWWKWWKWWKWWKKWWKWWKKKWWKKKKKKKWWKKKWWKKKKWWKKKWWWWWKKKWWKKKWKKWWKWWWKKKKKK',
+    'KKKWWKWWWKWWWKKWKKWWKKWWKWKKWKKWWKKWKKWWKKKWWKWWWWWKWWKKKWWKKWKWWKKKWWKKWWKKWWKKKWKKWWKWWWKKKKKK',
+    'KKKWWKWWWKWWWKKWKKWWKKWWKWKKWKKWWKKWKKWWKKKKWWKKWKKWWWKKKWWKWKKWWKWKWWKKWWKKWWKKKKWKWKKWWWKKKKKK',
+    'KKKWWKWWWKWWWKKWKKWWWKWWWKKKWKKWWKKWKKWWKKWWWWWKWKWWWWKKKKWWWKKWWWKKWWWKWWKKWWWKKKWWWKKWWWKKKKKK',
+    'KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKWKKKWKWKWKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK',
+    'KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKWKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK',
+    'KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKWKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK',
+]
 LEVELS = (0.5, 0.62, 0.74, 0.86, 1.0, 1.08, 1.16)  # the shades kept of each colour
 
 
@@ -109,6 +138,10 @@ class Cloth:
         kind = {}
         for i, c in enumerate(px):
             kind[i] = 'w' if c in WHITE else 'k' if c in BLACK else 'r' if c in RED else 'p' if c in POLE else None
+        stripes = [i for i, k in kind.items() if k in ('w', 'k', 'r')]
+        for i, c in enumerate(px):
+            if c in SHADOW and stripes:
+                kind[i] = kind[min(stripes, key=lambda j: (j % w - i % w) ** 2 + (j // w - i // w) ** 2)]
         self.cloth = [i for i, k in kind.items() if k in ('w', 'k', 'r')]
         at = {k: [(i % w, i // w) for i, kk in kind.items() if kk == k] for k in ('w', 'k', 'r', 'p')}
         outside = [(i % w, i // w) for i, c in enumerate(px) if c == 0 or kind[i] == 'p']
@@ -134,13 +167,41 @@ class Cloth:
         lo, hi = min(along.values(), default=0), max(along.values(), default=1)
         wide = max(across.values(), default=1) or 1
 
+        # Facing the viewer, white that does not touch the black stripe is the back of a curled edge, not the top
+        # stripe: placed along the pole as on a turned pose.
+        back = set()
+        if self.front:
+            seen = set()
+            for start in (i for i in self.cloth if kind[i] == 'w'):
+                if start in seen:
+                    continue
+                part, todo, touches = [], [start], False
+                seen.add(start)
+                while todo:
+                    i = todo.pop()
+                    part.append(i)
+                    for dx in (-1, 0, 1):
+                        for dy in (-1, 0, 1):
+                            x, y = i % w + dx, i // w + dy
+                            if 0 <= x < w and 0 <= y < h:
+                                j = y * w + x
+                                touches = touches or kind[j] == 'k'
+                                if kind[j] == 'w' and j not in seen:
+                                    seen.add(j)
+                                    todo.append(j)
+                if not touches:
+                    back.update(part)
+
         self.v, self.u, self.f = {}, {}, {}
         for i in self.cloth:
             x, y = i % w, i // w
             k = kind[i]
             self.u[i] = across[i] / wide
-            self.f[i] = 1.0 if k == 'k' else lum(colour[px[i]]) / lum(colour[BASE[k]])
-            if not self.front:
+            if px[i] in SHADOW:  # darker than the stripe's own shades: against the white's
+                self.f[i] = lum(colour[px[i]]) / lum(colour[BASE['w']])
+            else:
+                self.f[i] = 1.0 if k == 'k' else lum(colour[px[i]]) / lum(colour[BASE[k]])
+            if not self.front or i in back:
                 self.v[i] = (along[i] - lo) / ((hi - lo) or 1)
                 continue
             out = near(x, y, outside, True)
@@ -153,6 +214,24 @@ class Cloth:
                 above = dk if at['k'] else dw
                 v = 2 / 3 + (above / (above + out)) / 3
             self.v[i] = min(1.0, max(0.0, v))
+
+
+def rs_cell(cx, cy):
+    if RS_TEXT_TOP <= cy < RS_TEXT_TOP + len(RS_TEXT):
+        return RS_TEXT[cy - RS_TEXT_TOP][cx]
+    return 'R' if cy < RS_SIZE[1] // 2 else 'K'
+
+
+def rs_colour(u, v):
+    """The Right Sector's flag at (u, v) as one pixel of the emotion takes it: its cells around averaged, the nearest
+    of its red, black and white."""
+    w, h = RS_SIZE
+    cx, cy = min(w - 1, int(u * w)), min(h - 1, int(v * h))
+    rgb = {'R': RS_RED, 'K': RS_BLACK, 'W': RS_WHITE}
+    cells = [rgb[rs_cell(x, y)] for x in range(max(0, cx - 1), min(w, cx + 2))
+             for y in range(max(0, cy - 1), min(h, cy + 2))]
+    mean = [sum(c[k] for c in cells) / len(cells) for k in range(3)]
+    return min((RS_RED, RS_BLACK, RS_WHITE), key=lambda c: sum((a - b) ** 2 for a, b in zip(c, mean)))
 
 
 def level(f):
@@ -191,7 +270,7 @@ def main(argv):
     for w, h, raw in frames:
         used |= set(decode(raw, w * h))
     free = [i for i in range(1, 256) if i not in used]
-    wanted = [(c, f) for c in (UA_BLUE, UA_YELLOW, RS_RED, RS_BLACK) for f in LEVELS]
+    wanted = [(c, f) for c in (UA_BLUE, UA_YELLOW, RS_RED, RS_BLACK, RS_WHITE) for f in LEVELS]
     if len(free) < len(wanted):
         sys.exit('the palette has %d free colours, %d wanted' % (len(free), len(wanted)))
     slot = {}
@@ -202,7 +281,7 @@ def main(argv):
         w, h, raw = frames[FIRST_UA + k]
         cloth = Cloth(w, h, decode(raw, w * h), colour)
         ua = redraw(cloth, lambda i: UA_BLUE if cloth.v[i] < 0.5 else UA_YELLOW, slot)
-        rs = redraw(cloth, lambda i: RS_RED if cloth.u[i] + cloth.v[i] < 1 else RS_BLACK, slot)
+        rs = redraw(cloth, lambda i: rs_colour(cloth.u[i], cloth.v[i]), slot)
         frames[FIRST_UA + k][2] = encode(ua)
         frames[FIRST_RS + k][2] = encode(rs)
     spr = write_spr(frames, rest, rgba, palette)
