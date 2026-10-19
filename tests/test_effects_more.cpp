@@ -2,6 +2,8 @@
 #include <string>
 
 #include "core/config.hpp"
+#include "core/effect_groups.hpp"
+#include "core/outdoors.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "test.hpp"
 
@@ -168,4 +170,21 @@ TEST(state_cache_on_unless_turned_off) {
     // 0.90: [debug] merge_draws - Direct3D 11's draw calls gathered
     CHECK(parseConfig("").mergeDraws);
     CHECK(!parseConfig("[debug]\nmerge_draws = 0\n").mergeDraws);
+}
+
+TEST(no_game_fog_on_by_default_a_fix_of_every_set) {
+    // 2.6.10: the game's own fog left out on the fields and in the towns (R-P6KRQF: prt_fild08's light green
+    // 0xBAFF77 veil, thicker as the camera goes back) - a fix, in every set; every switch off shows the game's own
+    CHECK(parseConfig("").effects.noGameFog);
+    CHECK(!parseConfig("[effects]\nno_game_fog = 0\n").effects.noGameFog);
+    CHECK(!effectsOff().noGameFog);
+    const effect_groups::Member* m = effect_groups::memberOf("effects.no_game_fog");
+    CHECK(m && m->group == effect_groups::Fixes && m->level == 1);
+}
+
+TEST(game_fog_drawn_but_under_the_open_sky_with_the_fix) {
+    CHECK(gameFogDrawn(true, false, true));    // the fix off: the game's as it asks
+    CHECK(!gameFogDrawn(true, true, true));    // a field or a town: none
+    CHECK(gameFogDrawn(true, true, false));    // a dungeon keeps its dark fog (it hides the void past the map)
+    CHECK(!gameFogDrawn(false, false, false));  // the game asked for none
 }

@@ -398,6 +398,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.filmGrain ? 1 : 0);  // 0.83
     w.i32(e.filmGrainAmount);
     w.u8(e.mapFade ? 1 : 0);
+    w.u8(e.noGameFog ? 1 : 0);  // 2.6.10
     w.u8(e.roundLight ? 1 : 0);  // 0.84
     w.u8(e.appear ? 1 : 0);  // 0.93
     w.u8(e.ripples ? 1 : 0);  // 0.94

@@ -336,7 +336,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
         std::memcpy(c.projection, proj, sizeof proj);
     }
-    c.fogEnable = s.fog ? 1u : 0u;
+    c.fogEnable = gameFogDrawn(s.fog, effects.noGameFog, mapOutdoors) ? 1u : 0u;  // 2.6.10
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;
     c.fogColor[2] = float(s.fogColor & 255) / 255.0f;

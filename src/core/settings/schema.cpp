@@ -252,6 +252,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFilmGrainAmountHint, " %", nullptr, &E::filmGrainAmount},
         {"effects", "map_fade", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMapFade,
          Text::FxMapFadeHint, "", &E::mapFade},
+        {"effects", "no_game_fog", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNoGameFog,
+         Text::FxNoGameFogHint, "", &E::noGameFog},  // 2.6.10
         {"effects", "round_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRoundLight,
          Text::FxRoundLightHint, "", &E::roundLight},
         {"effects", "appear", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAppear,

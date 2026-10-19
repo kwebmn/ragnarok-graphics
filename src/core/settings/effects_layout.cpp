@@ -20,6 +20,7 @@ const EffectLayout kEffects[] = {
     {"effects.skill_sparks", {}, {"effects.skill_sparks_amount"}, {}, 0},  // 0.82
     {"effects.film_grain", {}, {"effects.film_grain_amount"}, {}, 0},  // 0.83
     {"effects.map_fade", {}, {}, {}, 0},                                // 0.83
+    {"effects.no_game_fog", {}, {}, {}, 0},                             // 2.6.10
     {"effects.round_light", {}, {}, {}, 0},  // 0.84
     {"effects.appear", {}, {}, {}, 0},  // 0.93
     {"effects.ripples", {}, {}, {}, 0},  // 0.94

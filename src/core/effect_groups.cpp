@@ -15,6 +15,7 @@ const Member kMembers[] = {
     {"smooth_light", Fixes, 1, &E::smoothLight},
     {"soft_particles", Fixes, 1, &E::softParticles},
     {"map_fade", Fixes, 1, &E::mapFade},
+    {"no_game_fog", Fixes, 1, &E::noGameFog},  // 2.6.10
 
     {"torch", Light, 1, &E::torch},
     {"smoke", Light, 1, &E::smoke},

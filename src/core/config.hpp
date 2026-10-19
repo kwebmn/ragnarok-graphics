@@ -263,6 +263,10 @@ struct EffectSettings {
     bool filmGrain = false;
     int filmGrainAmount = 30;  // %, 0-100
     bool mapFade = false;
+    // 2.6.10: the game's own fog (its fogparametertable: prt_fild08's light green, prontera's white) left out on the
+    // fields and in the towns, where it lay as a coloured veil, thicker as the camera went back (R-P6KRQF); the
+    // dungeons keep theirs (dark, hiding the void past the map). A fix, in every set.
+    bool noGameFog = true;
     // 0.84: round characters - the torches' light across a character as if it were round (0.79 with the rim light;
     // now its own switch). Off by default.
     bool roundLight = false;

@@ -3255,6 +3255,14 @@ const Entry kTexts[] = {
      "«Применить»."},
     {"What's new in uaRO Graphics {1}", "Що нового в uaRO Graphics {1}", "Что нового в uaRO Graphics {1}"},
     {"its group is off", "його група вимкнена", "его группа выключена"},  // 2.6.8
+    {"No game fog under the open sky", "Без туману гри під відкритим небом",
+     "Без тумана игры под открытым небом"},  // 2.6.10
+    {"On the fields and in the towns the game's own fog is left out - the green or white veil that thickens as the "
+     "camera goes back. The dungeons keep their dark fog.",
+     "На полях і в містах власний туман гри не малюється — зелена чи біла пелена, що густішає, коли камера "
+     "віддаляється. Підземелля зберігають свій темний туман.",
+     "На полях и в городах собственный туман игры не рисуется — зелёная или белая пелена, которая густеет, когда "
+     "камера отдаляется. Подземелья сохраняют свой тёмный туман."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -334,6 +334,7 @@ enum class Text : uint16_t {
     // 2.6: the status bar, the "changed" dots, the page's reset, "What's new"
     StripNoPack, DotHint, DotOn, DotOff, DotLegend, ResetPage, ResetPageAsk, WhatsNewTitle,
     ConsoleGroupOff,  // 2.6.8: an effect on whose group is off
+    FxNoGameFog, FxNoGameFogHint,  // 2.6.10
     Count
 };
 
