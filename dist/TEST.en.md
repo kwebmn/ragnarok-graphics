@@ -1,3 +1,14 @@
+# uaRO Graphics 2.5.23 — what to check
+
+- **Dyed clothes and hair with AI.** A character in dyed clothes was drawn without AI: the pack makes the bodies in
+  their own colours only, and the bodies in all 78 colours would take about 7.5 GB more. Now the driver takes the
+  pack's picture in the own colours and colours it as the dye: the network's shading and lines stay, the colour is the
+  dye's. The same for hair of any colour; heads in colours 0-20 still come ready from the pack. The pack does not grow.
+  On by default: the AI page -> "Dyed clothes and hair".
+- Please check: a character in dyed clothes (at the stylist or among the players) - the clothes as sharp as undyed
+  ones, the colour right. Untick the box - such a character looks as in the game. The log has a "sprite frames in a
+  dye" line. Send a report.
+
 # uaRO Graphics 2.5.22 — what to check
 
 - **Super-light mode and "Save the laptop's battery" lighter on the graphics card.** The world drawn at half (75 %) the
