@@ -66,7 +66,7 @@ if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     # engine a copy of uaro-render64.exe; the settings app's UI kit and texts.
     file(GLOB UAGFX_STUDIO_SOURCES CONFIGURE_DEPENDS src/studio/*.cpp)
     add_executable(uaro-studio WIN32 ${UAGFX_STUDIO_SOURCES} src/app/ui.cpp src/app/text.cpp src/app/utf16.cpp
-                   src/app/mnemonic.cpp src/win/paths.cpp src/studio/studio.rc)
+                   src/app/mnemonic.cpp src/app/pack_compact.cpp src/win/paths.cpp src/studio/studio.rc)
     target_include_directories(uaro-studio PRIVATE ${CMAKE_BINARY_DIR}/app)
     target_compile_definitions(uaro-studio PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
     target_compile_options(uaro-studio PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
@@ -87,7 +87,7 @@ elseif(WIN32)
     # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
     add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/registry.cpp
                 src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp src/app/ai_cache.cpp
-                src/app/update.cpp src/app/report_send.cpp src/app/pack_fetch.cpp src/app/shots.cpp
+                src/app/update.cpp src/app/report_send.cpp src/app/pack_compact.cpp src/app/shots.cpp
                 src/app/palettes.cpp src/win/system_probe.cpp src/win/gpu/adapters.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE

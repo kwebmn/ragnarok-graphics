@@ -115,6 +115,26 @@ bool directoryOf(uint64_t size, const ReadAt& read, uint64_t& count, uint64_t& c
 
 }  // namespace
 
+namespace {
+
+// ZIP64: the eight-byte values of an entry's fields that are all ones, in this order, from its extra fields.
+void zip64Values(const uint8_t* extra, size_t length, uint64_t& size, uint64_t& compressed, uint64_t& header) {
+    for (size_t x = 0; x + 4 <= length;) {
+        const size_t id = get16(extra + x), len = get16(extra + x + 2);
+        if (x + 4 + len > length) break;
+        if (id == 1) {
+            size_t q = x + 4;
+            const size_t qEnd = x + 4 + len;
+            if (size == 0xFFFFFFFF && q + 8 <= qEnd) size = get64(extra + q), q += 8;
+            if (compressed == 0xFFFFFFFF && q + 8 <= qEnd) compressed = get64(extra + q), q += 8;
+            if (header == 0xFFFFFFFF && q + 8 <= qEnd) header = get64(extra + q);
+        }
+        x += 4 + len;
+    }
+}
+
+}  // namespace
+
 bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<Found>& out, std::string& error) {
     uint64_t count = 0, cdOffset = 0, cdSize = 0;
     if (!directoryOf(size, read, count, cdOffset, cdSize, error)) return false;
@@ -145,19 +165,7 @@ bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<Found>& o
             return false;
         }
         e.name.assign(reinterpret_cast<const char*>(&cd[p + 46]), nameLen);
-        // ZIP64: the eight-byte values of the fields that are all ones, in this order.
-        for (size_t x = p + 46 + nameLen; x + 4 <= extraEnd;) {
-            const size_t id = get16(&cd[x]), len = get16(&cd[x + 2]);
-            if (x + 4 + len > extraEnd) break;
-            if (id == 1) {
-                size_t q = x + 4;
-                const size_t qEnd = x + 4 + len;
-                if (e.size == 0xFFFFFFFF && q + 8 <= qEnd) e.size = get64(&cd[q]), q += 8;
-                if (e.compressed == 0xFFFFFFFF && q + 8 <= qEnd) e.compressed = get64(&cd[q]), q += 8;
-                if (e.header == 0xFFFFFFFF && q + 8 <= qEnd) e.header = get64(&cd[q]);
-            }
-            x += 4 + len;
-        }
+        zip64Values(&cd[p + 46 + nameLen], extraLen, e.size, e.compressed, e.header);
         out.push_back(std::move(e));
         p = extraEnd + commentLen;
     }
@@ -506,7 +514,7 @@ bool keyOfPicture(const std::string& name, Group& group, std::string& key) {
     return true;
 }
 
-bool countOf(const std::string& path, uint64_t& pictures, std::string& error) {
+bool countOf(const std::string& path, Counted& out, std::string& error) {
     std::FILE* f = std::fopen(path.c_str(), "rb");
     if (!f) {
         error = "cannot open " + path;
@@ -523,9 +531,10 @@ bool countOf(const std::string& path, uint64_t& pictures, std::string& error) {
     }
     std::fclose(f);
     if (!ok) return false;
-    // the entries' headers one after another; no name kept
+    // the entries' headers one after another; no name kept. 2.5.28: what they hold (a local header has no extra
+    // field: Writer's) against where the last of them ends - the rest is pictures replaced or taken out
     const size_t indexLen = std::strlen(kIndexName);
-    uint64_t found = 0;
+    uint64_t found = 0, used = 0, end = 0;
     size_t p = 0;
     for (uint64_t i = 0; i < count; ++i) {
         if (p + 46 > cd.size() || get32(&cd[p]) != kCentralSig) {
@@ -538,9 +547,15 @@ bool countOf(const std::string& path, uint64_t& pictures, std::string& error) {
             return false;
         }
         if (nameLen != indexLen || std::memcmp(&cd[p + 46], kIndexName, indexLen) != 0) ++found;
+        uint64_t size = get32(&cd[p + 24]), compressed = get32(&cd[p + 20]), header = get32(&cd[p + 42]);
+        zip64Values(&cd[p + 46 + nameLen], extraLen, size, compressed, header);
+        const uint64_t held = 30 + nameLen + compressed;
+        used += held;
+        end = std::max(end, header + held);
         p += 46 + nameLen + extraLen + commentLen;
     }
-    pictures = found;
+    out.pictures = found;
+    out.unread = end > used ? end - used : 0;
     return true;
 }
 
@@ -755,7 +770,7 @@ bool Writer::close(const std::string& index, std::string& error) {
 }
 
 bool rewrite(const std::string& from, const std::string& to, const std::function<bool(const std::string&)>& keep,
-             size_t& kept, std::string& error) {
+             size_t& kept, std::string& error, const std::function<void(size_t done, size_t total)>& progress) {
     kept = 0;
     Reader r;
     if (!r.open(from, error)) return false;
@@ -764,7 +779,10 @@ bool rewrite(const std::string& from, const std::string& to, const std::function
     Writer w;
     if (!w.open(to, false, error)) return false;
     Index now;
-    for (const std::string& name : r.names()) {
+    const std::vector<std::string> names = r.names();
+    size_t looked = 0;
+    for (const std::string& name : names) {
+        if (progress && (++looked % 256 == 0 || looked == names.size())) progress(looked, names.size());
         if (name == kIndexName || !keep(name)) continue;
         if (!r.read(name, data)) {
             error = from + ": " + name + " cannot be read";

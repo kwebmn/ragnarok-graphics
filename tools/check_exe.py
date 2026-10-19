@@ -55,7 +55,10 @@ ALLOWED = {
         "CreateProcessW", "GetTickCount64",
         # 0.51: the watcher of a game for the reports (--watch)
         "SetPriorityClass", "GetSystemTimeAsFileTime",  # 0.52: a crash dump of the last week
-        "CreateMutexA", "ReleaseMutex",  # 0.53: the pack from the site, one writer at a time
+        "CreateMutexA", "ReleaseMutex",  # 0.53: one writer at a time (the statistics' lock now)
+        # 2.5.28: the Texture pack page's Compact - the pack's locks, the copy put in its place, the disk's room
+        # (Windows 2000 and later)
+        "CreateMutexW", "DeleteFileA", "MoveFileExA", "GetDiskFreeSpaceExW",
         # 2.5.15: the computer in the report - its cores (XP SP3), memory and power (Windows 2000)
         "GetLogicalProcessorInformation", "GlobalMemoryStatusEx", "GetSystemPowerStatus",
     },

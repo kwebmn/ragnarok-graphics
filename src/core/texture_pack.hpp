@@ -98,7 +98,13 @@ bool centralDirectoryOf(uint64_t size, const ReadAt& read, std::vector<ZipEntry>
 // 2.2.5: the pictures a pack's central directory names (its index not counted), by its end records and its directory
 // alone - no name kept, never every picture's header: false (and why) for a pack being written, which has no directory
 // until its builder's checkpoint. The settings app's line about the pack froze its window reading those.
-bool countOf(const std::string& path, uint64_t& pictures, std::string& error);
+// 2.5.28: and the bytes the directory names no more - pictures made again or taken out (Writer::add's replace,
+// Writer::remove), never read; rewrite() leaves them behind (the Texture pack page's Compact).
+struct Counted {
+    uint64_t pictures = 0;
+    uint64_t unread = 0;
+};
+bool countOf(const std::string& path, Counted& out, std::string& error);
 
 class Reader {
 public:
@@ -182,8 +188,8 @@ private:
 
 // 0.48: the pack at `from` again at `to` with the pictures `keep` takes (copied as they are) and the index of what
 // stays (a lower detail's key to a picture that goes, goes too) - the Ready textures page deletes pictures so.
-// kept: the pictures copied.
+// kept: the pictures copied. 2.5.28: progress - the pack's pictures looked at so far of all of them, now and then.
 bool rewrite(const std::string& from, const std::string& to, const std::function<bool(const std::string&)>& keep,
-             size_t& kept, std::string& error);
+             size_t& kept, std::string& error, const std::function<void(size_t done, size_t total)>& progress = {});
 
 }  // namespace uagfx::pack

@@ -6,6 +6,7 @@
 #include <ctime>
 #include <vector>
 
+#include "app/pack_compact.hpp"
 #include "app/text.hpp"
 #include "core/ai/chain.hpp"
 #include "core/ai/groups.hpp"
@@ -65,7 +66,7 @@ std::wstring madeFile(const std::string& key) {
 void addPictureWork(Jobs& jobs, CatalogWork& catalog, settings::Lang lang) {
     jobs.on("compact", [&catalog, lang](JobContext&, json::Value& result, std::string& why) {
         const std::string gameOpen = app::utf8(app::wtr(lang, settings::Text::StudioPackGameOpen));
-        if (!compactPack(app::ansi(catalog.packPath()), why, gameOpen)) return false;
+        if (!app::compactPack(app::ansi(catalog.packPath()), why, gameOpen)) return false;
         catalog.readPack();
         result.set("op", "compact");
         return true;

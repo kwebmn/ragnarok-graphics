@@ -341,8 +341,8 @@ TEST(texture_pack_counts_its_pictures_by_its_directory_alone) {
     // never every picture's header of a pack its builder is writing: that froze the window at Stop and Make
     const std::string path = tempPath();
     std::string error;
-    uint64_t pictures = 9;
-    CHECK(!pack::countOf(path, pictures, error));  // no pack
+    pack::Counted counted;
+    CHECK(!pack::countOf(path, counted, error));  // no pack
     {
         pack::Writer w;
         CHECK(w.open(path, false, error));
@@ -350,17 +350,60 @@ TEST(texture_pack_counts_its_pictures_by_its_directory_alone) {
         CHECK(add(w, "sprites/8x8/cc.webp", "ccc"));
         CHECK(w.close("world/8x8/aa.webp\tground\n", error));
     }
-    CHECK(pack::countOf(path, pictures, error) && pictures == 3);
+    CHECK(pack::countOf(path, counted, error) && counted.pictures == 3 && counted.unread == 0);
     {
         pack::Writer w;  // a run that goes on: the directory gone until its checkpoint
         CHECK(w.open(path, true, error));
         CHECK(add(w, "world/8x8/dd.webp", "dddd"));
     }
-    CHECK(!pack::countOf(path, pictures, error));  // being written: not read picture by picture
+    CHECK(!pack::countOf(path, counted, error));  // being written: not read picture by picture
     pack::Reader r;
     CHECK(!r.open(path, error, false));  // the settings app's reader: no picture by picture either
     CHECK(r.open(path, error) && r.recovered() && r.has("world/8x8/dd.webp"));  // the builder's and the game's
     std::remove(path.c_str());
+}
+
+TEST(texture_pack_counts_what_replaced_pictures_hold) {
+    // 2.5.28: a picture made again or taken out keeps its old bytes in the file, never read - the Texture pack page
+    // says how much, and its Compact (pack::rewrite) leaves them behind
+    const std::string path = tempPath(), fresh = path + ".new";
+    std::string error;
+    {
+        pack::Writer w;
+        CHECK(w.open(path, false, error));
+        CHECK(add(w, "world/8x8/aa.webp", "a") && add(w, "world/8x8/bb.webp", "bb"));
+        CHECK(add(w, "sprites/8x8/cc.webp", "ccc"));
+        CHECK(w.close("", error));
+    }
+    {
+        pack::Writer w;
+        CHECK(w.open(path, true, error));
+        const std::string again = "BBBBB";
+        CHECK(w.add("world/8x8/bb.webp", reinterpret_cast<const uint8_t*>(again.data()), again.size(), error, true));
+        CHECK(w.remove("sprites/8x8/cc.webp"));
+        CHECK(w.close("", error));
+    }
+    pack::Counted c;
+    CHECK(pack::countOf(path, c, error) && c.pictures == 2);
+    const uint64_t old = (30 + std::string("world/8x8/bb.webp").size() + 2) +
+                         (30 + std::string("sprites/8x8/cc.webp").size() + 3);
+    CHECK_EQ(c.unread, old);
+    size_t kept = 0, steps = 0, last = 0, total = 0;
+    CHECK(pack::rewrite(path, fresh, [](const std::string&) { return true; }, kept, error,
+                        [&](size_t done, size_t all) {
+                            ++steps;
+                            last = done;
+                            total = all;
+                        }));
+    CHECK(kept == 2 && steps >= 1 && last == 2 && total == 2);
+    CHECK(pack::countOf(fresh, c, error) && c.pictures == 2 && c.unread == 0);
+    pack::Reader r;
+    std::vector<uint8_t> bytes;
+    CHECK(r.open(fresh, error) && r.read("world/8x8/bb.webp", bytes) && std::string(bytes.begin(), bytes.end()) ==
+                                                                          "BBBBB");
+    r.close();
+    std::remove(path.c_str());
+    std::remove(fresh.c_str());
 }
 
 TEST(index_round_trips_its_new_lines) {

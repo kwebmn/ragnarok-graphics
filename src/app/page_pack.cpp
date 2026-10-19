@@ -3,13 +3,12 @@
 #include <string>
 
 #include "app/files.hpp"
-#include "app/pack_fetch.hpp"
+#include "app/pack_compact.hpp"
 #include "app/page.hpp"
 #include "app/ui.hpp"
 #include "core/config.hpp"
 #include "core/map_textures.hpp"
 #include "core/pack_build.hpp"
-#include "core/pack_download.hpp"
 #include "core/settings/log_digest.hpp"
 #include "core/texture_pack.hpp"
 
@@ -25,9 +24,7 @@ constexpr int kStop = 1021;
 constexpr int kAnew = 1023;
 constexpr int kCopy = 1024;
 constexpr int kBar = 1030;
-constexpr int kFetch = 1040;  // 0.53: the pack from the site
-constexpr int kFetchStop = 1041;
-constexpr int kFetchBar = 1042;
+constexpr int kCompact = 1040;  // 2.5.28 (the site's download, 0.53, gone)
 constexpr int kRedoBox = 1050;  // 1.6
 constexpr int kMapName = 1060;  // 2.2.5: one map's textures
 constexpr int kMapGround = 1061;
@@ -124,15 +121,15 @@ public:
         look();
         p.heading(t(Text::PagePack));
         p.note(packText(), Tone::Normal);
-        // 0.53: first what a player does - the developers' pack from the site
-        p.heading(t(Text::PackFetchHeading));
-        p.note(t(Text::PackFetchNote));
-        fetching_ = fetchRunning();
-        p.buttons({{kFetch, t(Text::PackFetchButton), !fetching_ && !running_},
-                   {kFetchStop, t(Text::PackFetchStop), fetching_}});
-        fetchBar_ = p.progress(kFetchBar);
-        fetchLine_ = p.note(fetchText() + L"\n ");
-        showFetch();
+        // 2.5.28: the room pictures made again or taken out hold, and Compact - no site's pack any more
+        compacting_ = compactRunning();
+        compactLine_ = nullptr;  // this build's, if any
+        if (packUnread_ || compacting_ || compactState().kind != CompactState::Idle) {
+            if (packUnread_) p.note(tf(Text::PackUnread, {sizeText(packUnread_, host_.lang())}));
+            p.buttons({{kCompact, t(Text::PackCompact), packUnread_ && !compacting_ && !running_}});
+            p.note(t(Text::PackCompactNote));
+            compactLine_ = p.note(compactText() + L"\n ");
+        }
         p.gap();
         p.heading(t(Text::PackMakeHeading));
         p.note(t(Text::PackIntro));
@@ -159,7 +156,8 @@ public:
         p.note(tf(Text::PackNetsGroups, {nets}));
         p.check(kRedoBox, t(Text::PackRedo), packRedo(), t(Text::PackRedoHint), !running_);
         const bool chosen = pack::anyChosen(g_choice);
-        p.buttons({{kMake, t(Text::PackMake), host && chosen && !running_}, {kStop, t(Text::PackStop), running_}});
+        const bool busy = running_ || compacting_;  // 2.5.28: Compact holds the pack too
+        p.buttons({{kMake, t(Text::PackMake), host && chosen && !busy}, {kStop, t(Text::PackStop), running_}});
         bar_ = p.progress(kBar);
         // The lines as they are now; while it works, room for two of each (tick() changes their text alone).
         std::wstring line, detail;
@@ -168,7 +166,7 @@ public:
         line_ = p.note(running_ ? line + L"\n " : line, tone);
         detail_ = p.note(running_ ? detail + L"\n " : detail);
         const bool result = !running_ && haveStatus_ && !working(status_.state);
-        p.buttons({{kAnew, t(Text::PackAnew), host && chosen && !running_}, {kCopy, t(Text::PackCopy), result}});
+        p.buttons({{kAnew, t(Text::PackAnew), host && chosen && !busy}, {kCopy, t(Text::PackCopy), result}});
         if (!host) p.note(t(Text::PackNoHost), Tone::Bad);
         if (!chosen) p.note(t(Text::PackNothing), Tone::Warn);
         if (running_) p.note(t(Text::PackBackground));
@@ -191,17 +189,17 @@ public:
                  {t(Text::AiModelGeneral), t(Text::AiModelAnime), t(Text::AiModelAnime6b), t(Text::AiModelGameAi)},
                  g_mapModel,
                  t(Text::PackMapModelHint), !running_);
-        const bool mapOk = host && !running_ && (g_mapGround || g_mapModels);
+        const bool mapOk = host && !busy && (g_mapGround || g_mapModels);
         p.buttons({{kMapRemake, t(Text::PackMapRemake), mapOk}, {kMapDrop, t(Text::PackMapDrop), mapOk && packCount_}});
         show();
     }
 
     void tick() override {
-        if (fetching_ != fetchRunning()) {
+        if (compacting_ != compactRunning()) {
             host_.rebuild();  // its buttons and the pack's numbers
             return;
         }
-        showFetch();
+        if (compacting_ && compactLine_) setText(compactLine_, compactText() + L"\n ");
         const bool was = running_;
         const pack::Status::State before = status_.state;
         look();
@@ -263,13 +261,13 @@ public:
             start(id == kMapDrop ? "drop" : "build", pack::parseChoice("world"), false, &run);
             return;
         }
-        if (id == kFetch) {
-            startFetch(dir_, pack::kPackUrl);
+        if (id == kCompact) {  // 2.5.28
+            const std::wstring path = dir_ + L"\\uaro-textures.zip";
+            const uint64_t need = packBytes_ > packUnread_ ? packBytes_ - packUnread_ : 0;
+            const Lang l = host_.lang();
+            if (!host_.ask(tf(Text::PackCompactAsk, {sizeText(packUnread_, l), sizeText(need, l)}))) return;
+            startCompact(path, need + (64u << 20), utf8(t(Text::StudioPackGameOpen)));
             host_.rebuild();
-            return;
-        }
-        if (id == kFetchStop) {
-            stopFetch();
             return;
         }
         if (id == kMake) {
@@ -290,41 +288,21 @@ public:
     }
 
 private:
-    // 0.53: the download's line and bar as they are now.
-    std::wstring fetchText() const {
-        const FetchState f = fetchState();
-        const auto mb = [&](uint64_t b) { return sizeText(b, host_.lang()); };
-        switch (f.kind) {
-            case FetchState::Idle: return L"";
-            case FetchState::Listing: return t(Text::PackFetchListing);
-            case FetchState::Fetching: {
-                const double left = f.bytesPerSecond > 0 ? double(f.total - f.done) / f.bytesPerSecond / 60.0 : 0;
-                return tf(Text::PackFetchProgress,
-                          {num(f.fetched), num(f.pictures), mb(f.done), mb(f.total),
-                           mb(uint64_t(f.bytesPerSecond)), num((long long)(left + 0.5))});
-            }
-            case FetchState::Done:
-                return f.pictures ? tf(Text::PackFetchDone, {num(f.fetched), num(f.already)})
-                                  : tf(Text::PackFetchUpToDate, {num(f.already)});
-            case FetchState::Failed: return tf(Text::PackFetchFailed, {f.error});
-            case FetchState::Stopped: return tf(Text::PackFetchStopped, {num(f.fetched)});
+    // 2.5.28: Compact's line as it is now.
+    std::wstring compactText() const {
+        const CompactState c = compactState();
+        switch (c.kind) {
+            case CompactState::Idle: return L"";
+            case CompactState::Working:
+                return tf(Text::PackCompacting, {num((long long)c.done), num((long long)c.total)});
+            case CompactState::Done: return tf(Text::PackCompacted, {sizeText(c.freed, host_.lang())});
+            case CompactState::Failed: return tf(Text::PackCompactFailed, {c.error});
         }
         return L"";
     }
-    void showFetch() {
-        const FetchState f = fetchState();
-        if (fetchBar_)
-            SendMessageW(fetchBar_, PBM_SETPOS, WPARAM(f.total ? f.done * 1000 / f.total : (f.kind == FetchState::Done
-                                                                                               ? 1000 : 0)), 0);
-        if (fetchLine_) {
-            const std::wstring text = fetchText();
-            wchar_t now[512] = {};
-            GetWindowTextW(fetchLine_, now, 512);
-            if (text + L"\n " != now) SetWindowTextW(fetchLine_, (text + L"\n ").c_str());
-        }
-    }
-    bool fetching_ = false;
-    HWND fetchBar_ = nullptr, fetchLine_ = nullptr;
+    bool compacting_ = false;
+    HWND compactLine_ = nullptr;
+    uint64_t packBytes_ = 0, packUnread_ = 0;  // 2.5.28: the pack's size, and of it the old pictures' room
 
     // The builder: the 64-bit renderer in the uaro-graphics folder, as the driver starts it (context.cpp).
     std::wstring builderExe() const { return dir_ + L"\\uaro-graphics\\uaro-render64.exe"; }
@@ -351,6 +329,7 @@ private:
             return tf(Text::PackHas, {num(status_.inPack), sizeText(status_.bytes, host_.lang())});
         const std::wstring path = dir_ + L"\\uaro-textures.zip";
         packCount_ = 0;
+        packBytes_ = packUnread_ = 0;
         WIN32_FILE_ATTRIBUTE_DATA d{};
         if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &d)) return t(Text::PackNone);
         const unsigned long long bytes = (unsigned long long)d.nFileSizeHigh << 32 | d.nFileSizeLow;
@@ -359,7 +338,7 @@ private:
         // 2.2.5: counted by its directory alone, once a change of the file - the whole pack opened here at every
         // rebuild, and every picture's header read of one its builder was writing, froze the window (Stop, Make)
         static unsigned long long countedBytes = 0, countedStamp = 0;
-        static uint64_t counted = 0;
+        static pack::Counted counted;
         static bool countedOk = false;
         if (bytes != countedBytes || stamp != countedStamp) {
             std::string error;
@@ -368,8 +347,10 @@ private:
             countedStamp = stamp;
         }
         if (!countedOk) return tf(Text::PackWriting, {sizeText(bytes, host_.lang())});
-        packCount_ = size_t(counted);
-        return tf(Text::PackHas, {num((long long)counted), sizeText(bytes, host_.lang())});
+        packCount_ = size_t(counted.pictures);
+        packBytes_ = bytes;
+        packUnread_ = counted.unread;
+        return tf(Text::PackHas, {num((long long)counted.pictures), sizeText(bytes, host_.lang())});
     }
 
     std::string timeText(int seconds) const {

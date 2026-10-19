@@ -119,9 +119,8 @@ enum class Text : uint16_t {
     // 0.51: reports to the developers
     ReportHeading, ReportNote, ReportComment, ReportCommentCue, ReportSend, ReportAsk, ReportSent, ReportFailed,
     ReportSentList, ReportAuto, ReportAutoHint,
-    // 0.53: the texture pack from the site
-    PackFetchHeading, PackFetchNote, PackFetchButton, PackFetchStop, PackFetchListing, PackFetchProgress, PackFetchDone,
-    PackFetchUpToDate, PackFetchFailed, PackFetchStopped, PackMakeHeading,
+    // 0.53 (the site's download gone in 2.5.28)
+    PackMakeHeading,
     // 0.54
     FramesFpsCounter, FramesFpsCounterHint,
     // 0.55: profiles
@@ -310,6 +309,8 @@ enum class Text : uint16_t {
     AiDyes, AiDyesHint,  // 2.5.23
     FramesReflex, FramesReflexHint,  // 2.5.26
     AiModelGameAi, AiGameAiMissing, AiGetModels, AiGetModelsFailed,  // 2.5.27
+    PackUnread, PackCompact, PackCompactNote, PackCompactAsk, PackCompacting, PackCompacted,  // 2.5.28
+    PackCompactFailed,
     Count
 };
 
