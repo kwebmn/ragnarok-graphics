@@ -1,3 +1,14 @@
+# uaRO Graphics 2.5.21 — what to check
+
+- **Super-light mode on Direct3D 11: a black or frozen world.** On the maps of a known region (Prontera, Louyang and
+  others) the world was black, and after Scroll Lock the last frame without the mode stayed frozen on it. The cause:
+  the night and region colours pass ran with "Colours of each region" off too, and the mode's 16-bit world cannot be
+  copied into its 32-bit copy. Now the pass runs only when it has something to change, and the frame's copies always
+  take the frame's own format. Direct3D 11 also no longer makes a needless full-screen pass on region maps with their
+  colours off.
+- Please check: turn super-light on and go to Prontera - the world is there and moves; Scroll Lock there and back - the
+  picture does not freeze. Send a report.
+
 # uaRO Graphics 2.5.20 — what to check
 
 - **Super-light mode** (Quality → the first box). For the weakest graphics cards, over the settings while it is on: no
