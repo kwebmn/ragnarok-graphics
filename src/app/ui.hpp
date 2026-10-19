@@ -16,7 +16,7 @@ HFONT makeFont(int dpi, bool bold, int percent = 100);  // Windows' message font
 
 bool copyToClipboard(HWND owner, const std::wstring& text);
 
-enum class Tone { Normal, Muted, Good, Warn, Bad };
+enum class Tone { Normal, Muted, Good, Warn, Bad, Accent };  // 2.6: Accent - the "changed" dots
 COLORREF toneColor(Tone t);
 
 struct CheckItem {  // a check box of Panel::checks
@@ -83,9 +83,21 @@ public:
     // checkboxes: a check box before every row (LVS_EX_CHECKBOXES).
     HWND listView(int id, const std::vector<std::pair<std::wstring, int>>& columns, int rows, bool checkboxes = false);
     void gap(int at96 = 8);
+    // 2.6: two columns when the page is wide - rows go into the left one until nextColumn(), then into the right one
+    // from the same top; join() goes on under the taller one, across the page. False and one column when either
+    // would be narrower than minColumn96: nextColumn() and join() change nothing then.
+    bool split(int minColumn96 = 400);
+    void nextColumn();
+    void join();
+    // 2.6: tabs - push-like radio buttons in a row (ids firstId + n), the selected one pressed.
+    void tabs(int firstId, const std::vector<std::wstring>& names, int selected);
+    // 2.6: a dot in the accent colour in the margin left of a row's control: its value is not the recommended one.
+    HWND dot(HWND row, const std::wstring& hint);
+    size_t madeCount() const { return made_.size(); }
+    HWND madeAt(size_t i) const { return made_[i]; }
     bool toneOf(HWND ctl, Tone& tone) const;
     // How tall the page is: from the area's top to below its last row (the scrolled page view's range).
-    int height() const { return y_ - area_.top; }
+    int height() const { return (column_ == 1 && leftBottom_ > y_ ? leftBottom_ : y_) - area_.top; }
     // The hints over disabled controls follow their controls after the page view scrolled them.
     void moveTips();
 
@@ -109,6 +121,10 @@ private:
     std::vector<HWND> tipped_;  // the controls with a hint over their rectangle too (tip())
     std::map<HWND, Tone> tones_;
     std::wstring taken_;  // the letters for Alt+letter taken so far
+    RECT full_{};         // 2.6: the area across the page while it is split
+    int splitTop_ = 0;
+    int leftBottom_ = 0;  // under the left column's last row
+    int column_ = -1;     // -1 not split, 0 the left column, 1 the right one
 };
 
 }  // namespace uagfx::app

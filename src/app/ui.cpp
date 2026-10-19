@@ -12,6 +12,7 @@ namespace {
 constexpr int kLabel = 200;  // the label column, at 96 DPI
 constexpr int kRow = 26;
 constexpr int kGap = 6;
+constexpr int kColumnGap = 32;  // 2.6: between two columns
 
 // A grey control's text: no letter of its own (Alt+one would send the focus elsewhere), its '&' shown as it is.
 std::wstring literal(const std::wstring& text) {
@@ -66,6 +67,7 @@ COLORREF toneColor(Tone t) {
         case Tone::Good: return RGB(16, 124, 16);
         case Tone::Warn: return RGB(157, 93, 0);
         case Tone::Bad: return RGB(196, 43, 28);
+        case Tone::Accent: return RGB(15, 108, 189);
         case Tone::Normal: break;
     }
     return GetSysColor(COLOR_WINDOWTEXT);
@@ -407,6 +409,72 @@ HWND Panel::listView(int id, const std::vector<std::pair<std::wstring, int>>& co
 }
 
 void Panel::gap(int at96) { y_ += at(at96); }
+
+bool Panel::split(int minColumn96) {
+    if (column_ >= 0) return true;
+    const int column = (area_.right - area_.left - at(kColumnGap)) / 2;
+    if (column < at(minColumn96)) return false;
+    full_ = area_;
+    splitTop_ = y_;
+    leftBottom_ = y_;
+    column_ = 0;
+    area_.right = area_.left + column;
+    return true;
+}
+
+void Panel::nextColumn() {
+    if (column_ != 0) return;
+    leftBottom_ = y_;
+    y_ = splitTop_;
+    area_.left = full_.left + (full_.right - full_.left - at(kColumnGap)) / 2 + at(kColumnGap);
+    area_.right = full_.right;
+    column_ = 1;
+}
+
+void Panel::join() {
+    if (column_ < 0) return;
+    if (column_ == 1) y_ = std::max(y_, leftBottom_);
+    area_ = full_;
+    column_ = -1;
+}
+
+void Panel::tabs(int firstId, const std::vector<std::wstring>& names, int selected) {
+    int x = area_.left;
+    HDC dc = GetDC(owner_);
+    HGDIOBJ old = SelectObject(dc, font_);
+    for (size_t i = 0; i < names.size(); ++i) {
+        SIZE s{};
+        GetTextExtentPoint32W(dc, names[i].c_str(), int(names[i].size()), &s);
+        const int w = s.cx + at(32);
+        HWND c = make(L"BUTTON", withMnemonic(names[i], taken_), BS_AUTORADIOBUTTON | BS_PUSHLIKE | WS_TABSTOP, x, y_,
+                      w, at(kRow + 6), firstId + int(i), 0, i == 0);
+        SendMessageW(c, BM_SETCHECK, int(i) == selected ? BST_CHECKED : BST_UNCHECKED, 0);
+        x += w + at(4);
+    }
+    SelectObject(dc, old);
+    ReleaseDC(owner_, dc);
+    y_ += at(kRow + 6) + at(kGap * 2);
+}
+
+HWND Panel::dot(HWND row, const std::wstring& hint) {
+    RECT r;
+    GetWindowRect(row, &r);
+    MapWindowPoints(nullptr, owner_, reinterpret_cast<POINT*>(&r), 2);
+    const int side = at(12);
+    HWND c = make(L"STATIC", L"●", SS_CENTER | SS_NOPREFIX | SS_NOTIFY, area_.left - at(14),
+                  r.top + (r.bottom - r.top - side) / 2, side, side, 0, 0, false);
+    tones_[c] = Tone::Accent;
+    if (tooltip_ && !hint.empty()) {  // the dot's own mouse (SS_NOTIFY): no tool over the view's rectangle
+        TOOLINFOW ti{};
+        ti.cbSize = sizeof ti;
+        ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+        ti.hwnd = owner_;
+        ti.uId = reinterpret_cast<UINT_PTR>(c);
+        ti.lpszText = const_cast<wchar_t*>(hint.c_str());
+        SendMessageW(tooltip_, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&ti));
+    }
+    return c;
+}
 
 bool Panel::toneOf(HWND ctl, Tone& tone) const {
     const auto it = tones_.find(ctl);
