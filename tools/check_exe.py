@@ -110,6 +110,8 @@ ALLOWED = {
         "WindowFromPoint",
         # 0.43, the texture pack page's lines
         "GetWindowTextLengthW",
+        # 2.6, the window that keeps its size and place (Windows 2000 and later)
+        "GetWindowPlacement", "SetWindowPlacement", "MonitorFromRect", "MonitorFromWindow",
     },
 }
 # Newer than Windows 7: never on the list above (a check of the list itself).

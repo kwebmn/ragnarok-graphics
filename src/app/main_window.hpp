@@ -49,6 +49,8 @@ private:
     void updateStatus();
     int box(const std::wstring& text, UINT type);
     bool confirmClose();
+    void savePlace();       // 2.6
+    int viewWidth() const;  // the page view's, in pixels
     std::wstring windowLetters() const;  // Alt+letter of the window's own buttons
     void doApply(bool play);
     RECT pageArea() const;
@@ -80,6 +82,8 @@ private:
     bool typing_ = false;  // a number field holds text it has not taken yet: Apply takes it first (0.6.0 review M5)
     std::wstring flash_;          // the last result in the status line, until the next change
     HANDLE statsThread_ = nullptr;  // 2.2.2: the day's statistics going - waited for (a while) at the end
+    bool sizing_ = false;           // 2.6: the frame is being dragged
+    int builtWidth_ = 0;            // the page view's width the page was made at
 };
 
 }  // namespace uagfx::app

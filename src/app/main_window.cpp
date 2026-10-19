@@ -17,8 +17,10 @@ using namespace settings;
 
 const wchar_t kClass[] = L"uaroGraphicsSettings";
 const wchar_t kViewClass[] = L"uaroGraphicsPage";
-constexpr int kWidth = 880;  // the client area at 96 DPI
+constexpr int kWidth = 880;  // the client area at 96 DPI: the least (2.6: it was the only size)
 constexpr int kHeight = 600;
+constexpr int kStartWidth = 1100;  // 2.6: the first start's, where the screen has room
+constexpr int kStartHeight = 720;
 constexpr int kSidebar = 10;
 constexpr int kLang = 11;
 constexpr int kApply = 20;
@@ -65,10 +67,23 @@ int MainWindow::run(HINSTANCE inst, int show) {
     vc.hIcon = vc.hIconSm = nullptr;
     vc.lpszClassName = kViewClass;
     RegisterClassExW(&vc);
-    hwnd_ = CreateWindowExW(0, kClass, wtr(lang_, Text::AppTitle).c_str(),
-                            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, CW_USEDEFAULT, CW_USEDEFAULT,
-                            kWidth, kHeight, nullptr, nullptr, inst, this);
+    // 2.6: a window that grows and is maximized, as it was closed the last time
+    hwnd_ = CreateWindowExW(0, kClass, wtr(lang_, Text::AppTitle).c_str(), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+                            CW_USEDEFAULT, kWidth, kHeight, nullptr, nullptr, inst, this);
     if (!hwnd_) return 1;
+    if (const auto place = model_->savedPlace()) {
+        RECT r{place->left, place->top, place->right, place->bottom};
+        if (MonitorFromRect(&r, MONITOR_DEFAULTTONULL)) {  // a monitor that is gone: the default place
+            WINDOWPLACEMENT wp{};
+            wp.length = sizeof wp;
+            GetWindowPlacement(hwnd_, &wp);
+            wp.rcNormalPosition = r;
+            wp.showCmd = SW_HIDE;
+            SetWindowPlacement(hwnd_, &wp);
+            if (place->maximized && (show == SW_SHOWNORMAL || show == SW_SHOWDEFAULT || show == SW_SHOW))
+                show = SW_SHOWMAXIMIZED;
+        }
+    }
     ShowWindow(hwnd_, show);
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
@@ -239,8 +254,16 @@ void MainWindow::create() {
                                CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, hwnd_, nullptr, inst, nullptr);
     SendMessageW(tooltip_, TTM_SETMAXTIPWIDTH, 0, px(380, dpi_));
     SendMessageW(tooltip_, TTM_SETDELAYTIME, TTDT_AUTOPOP, 20000);
-    // The client area of 880 x 600 at this DPI.
-    RECT r{0, 0, px(kWidth, dpi_), px(kHeight, dpi_)};
+    // 2.6: a client area of 1100 x 720 at this DPI where the screen has room, else 880 x 600
+    RECT r{0, 0, px(kStartWidth, dpi_), px(kStartHeight, dpi_)};
+    MONITORINFO mi{};
+    mi.cbSize = sizeof mi;
+    if (GetMonitorInfoW(MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST), &mi)) {
+        const int workWidth = mi.rcWork.right - mi.rcWork.left;
+        const int workHeight = mi.rcWork.bottom - mi.rcWork.top;
+        if (r.right > workWidth * 9 / 10 || r.bottom > workHeight * 9 / 10)
+            r = RECT{0, 0, px(kWidth, dpi_), px(kHeight, dpi_)};
+    }
     AdjustWindowRectEx(&r, DWORD(GetWindowLongPtrW(hwnd_, GWL_STYLE)), FALSE, 0);
     SetWindowPos(hwnd_, nullptr, 0, 0, r.right - r.left, r.bottom - r.top, SWP_NOMOVE | SWP_NOZORDER);
     layout();
@@ -324,6 +347,7 @@ void MainWindow::buildPage() {
         GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetSystemMetricsForDpi")));
     const int bar = metrics ? metrics(SM_CXVSCROLL, UINT(dpi_)) : GetSystemMetrics(SM_CXVSCROLL);
     const RECT area{0, -scroll_, view.right - view.left - bar - px(8, dpi_), view.bottom - view.top - scroll_};
+    builtWidth_ = view.right - view.left;  // 2.6: made again when the window's width changes
     panel_ = std::make_unique<Panel>(view_, font_, heading_, tooltip_, dpi_, area, windowLetters());
     switch (settings::Page(page_)) {
         case settings::Page::Screen: current_ = makeScreenPage(*this); break;
@@ -448,6 +472,25 @@ std::wstring MainWindow::pickFolder(const std::wstring& title) {
 }
 
 bool MainWindow::confirmClose() { return model_->pendingCount() == 0 || ask(wtr(lang_, Text::AskUnsaved)); }
+
+// 2.6: the window's place for the next start - written when it changed
+void MainWindow::savePlace() {
+    WINDOWPLACEMENT wp{};
+    wp.length = sizeof wp;
+    if (!GetWindowPlacement(hwnd_, &wp)) return;
+    const RECT& r = wp.rcNormalPosition;
+    const bool maximized = wp.showCmd == SW_SHOWMAXIMIZED || (wp.showCmd == SW_SHOWMINIMIZED &&
+                                                               (wp.flags & WPF_RESTORETOMAXIMIZED));
+    const WindowPlace p{int(r.left), int(r.top), int(r.right), int(r.bottom), maximized};
+    const auto saved = model_->savedPlace();
+    if (!saved || placeToken(*saved) != placeToken(p)) model_->savePlace(p);
+}
+
+int MainWindow::viewWidth() const {
+    RECT r;
+    GetWindowRect(view_, &r);
+    return r.right - r.left;
+}
 
 std::wstring MainWindow::windowLetters() const {
     std::wstring taken;
@@ -591,8 +634,33 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             }
             return 0;
         }
+        case WM_GETMINMAXINFO: {  // 2.6: 880 x 600 at the least
+            auto* mm = reinterpret_cast<MINMAXINFO*>(lp);
+            RECT r{0, 0, px(kWidth, dpi_), px(kHeight, dpi_)};
+            AdjustWindowRectEx(&r, DWORD(GetWindowLongPtrW(hwnd_, GWL_STYLE)), FALSE, 0);
+            mm->ptMinTrackSize = POINT{r.right - r.left, r.bottom - r.top};
+            return 0;
+        }
+        case WM_SIZE:  // 2.6: the window grows - its parts moved, the page made again at the new width
+            if (view_ && wp != SIZE_MINIMIZED) {
+                layout();
+                updateScrollBar();
+                scrollTo(scroll_);
+                if (!sizing_ && viewWidth() != builtWidth_) rebuild();  // maximized, restored
+            }
+            return 0;
+        case WM_ENTERSIZEMOVE:
+            sizing_ = true;
+            return 0;
+        case WM_EXITSIZEMOVE:  // once the frame is let go: the controls are made at most once a drag
+            sizing_ = false;
+            if (view_ && viewWidth() != builtWidth_) rebuild();
+            return 0;
         case WM_CLOSE:
-            if (confirmClose()) DestroyWindow(hwnd_);
+            if (confirmClose()) {
+                savePlace();
+                DestroyWindow(hwnd_);
+            }
             return 0;
         case WM_DESTROY:
             KillTimer(hwnd_, kTimer);
