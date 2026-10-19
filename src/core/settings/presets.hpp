@@ -23,4 +23,12 @@ std::vector<std::pair<std::string, std::string>> presetRegWords(Preset p);
 // a preset sets, and an empty one leaves the game's quality out.
 std::optional<Preset> presetOf(const Config& c, const std::map<std::string, std::string>& gameWords = {});
 
+// 2.6: the Main page's one choice of the picture's quality - Low, Medium and High the presets Speed, Balance and
+// Maximum without their frames' and effects' keys (the page has the frames' rows, the Effects page the set), with the
+// super-light mode off; SuperLight that mode alone.
+enum class MainQuality { Low, Medium, High, SuperLight };
+constexpr int kMainQualityCount = 4;
+std::vector<IniEdit> mainQualityEdits(MainQuality q);
+std::optional<MainQuality> mainQualityOf(const Config& c);  // the one the settings hold, if any
+
 }  // namespace uagfx::settings

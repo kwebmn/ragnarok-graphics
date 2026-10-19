@@ -60,6 +60,28 @@ std::vector<std::pair<std::string, std::string>> presetRegWords(Preset p) {
     return {};
 }
 
+std::vector<IniEdit> mainQualityEdits(MainQuality q) {
+    if (q == MainQuality::SuperLight) return {{"quality", "super_light", "1"}};
+    const Preset p = q == MainQuality::Low      ? Preset::Speed
+                     : q == MainQuality::Medium ? Preset::Balance
+                                                : Preset::Maximum;
+    std::vector<IniEdit> edits{{"quality", "super_light", "0"}};
+    for (const IniEdit& e : presetEdits(p))
+        if (e.section != "frames" && e.section != "effects") edits.push_back(e);
+    return edits;
+}
+
+std::optional<MainQuality> mainQualityOf(const Config& c) {
+    if (c.superLight) return MainQuality::SuperLight;
+    switch (presetOf(c).value_or(Preset::Plain)) {
+        case Preset::Speed: return MainQuality::Low;
+        case Preset::Balance: return MainQuality::Medium;
+        case Preset::Maximum: return MainQuality::High;
+        case Preset::Plain: break;
+    }
+    return std::nullopt;
+}
+
 std::optional<Preset> presetOf(const Config& c, const std::map<std::string, std::string>& gameWords) {
     for (int i = 0; i < kPresetCount; ++i) {
         const Values v = valuesOf(Preset(i));
