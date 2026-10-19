@@ -2190,7 +2190,9 @@ void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its streng
     nightDone_ = true;
     const bool night = effects_.night && effects_.nightNow > 0, day = effects_.dayCycle && effects_.dayNow >= 0;
     const region_look::Look look = region_look::of(map_, effects_.regionLooks ? effects_.regionLooksStrength : 0);
-    if ((!night && !day && !look.region[0]) || !nightPs_ || !target_.texture) return;
+    // 2.5.21: the region's look only when it changes the picture - with region_looks off this was a pass for nothing
+    // on every map of a region, and with super-light's 16-bit world (no copy of it into scene_) a black world
+    if ((!night && !day && !region_look::changes(look)) || !nightPs_ || !target_.texture) return;
     Constants c{};
     c.sharpen = night ? float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f : 0.0f;
     const daylight::Light light = daylight::at(day ? effects_.dayNow : -1);  // 0.74: the time of day's tint

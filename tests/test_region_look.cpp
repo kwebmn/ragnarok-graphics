@@ -16,3 +16,14 @@ TEST(region_look_by_the_map_and_its_strength) {
     CHECK(std::string(none.region).empty() && none.saturation == 1.0f && none.tint[0] == 1.0f);
     CHECK(region_look::of("prontera", 0).saturation == 1.0f);
 }
+
+TEST(region_look_changes_the_picture_only_when_tinted) {
+    // 2.5.21: a region's look at strength 0 (region_looks off) leaves the picture as it is - Direct3D 11 made the night
+    // pass for it on every map of a region, and super-light's 16-bit world could not be copied for it (a black world)
+    CHECK(!region_look::changes(region_look::of("prontera", 0)));
+    CHECK(!region_look::changes(region_look::of("lou_fild01", 0)));
+    CHECK(!region_look::changes(region_look::of("1@tower", 100)));
+    CHECK(region_look::changes(region_look::of("prontera", 100)));
+    CHECK(region_look::changes(region_look::of("nif_fild01", 100)));
+    CHECK(region_look::changes(region_look::of("moc_fild01", 50)));
+}

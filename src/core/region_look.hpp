@@ -15,4 +15,8 @@ struct Look {
 // strength 0-100: how much of the region's look (0 none, 100 all of it).
 Look of(const std::string& map, int strength);
 
+// 2.5.21: the look makes the picture other than the game's (a tint or a saturation of its own) - a region's at
+// strength 0 does not
+bool changes(const Look& look);
+
 }  // namespace uagfx::region_look

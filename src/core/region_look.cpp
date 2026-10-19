@@ -54,4 +54,8 @@ Look of(const std::string& map, int strength) {
     return l;
 }
 
+bool changes(const Look& look) {
+    return look.saturation != 1.0f || look.tint[0] != 1.0f || look.tint[1] != 1.0f || look.tint[2] != 1.0f;
+}
+
 }  // namespace uagfx::region_look
