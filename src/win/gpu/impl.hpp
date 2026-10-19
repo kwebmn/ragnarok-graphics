@@ -31,7 +31,6 @@
 #include "core/log_once.hpp"
 #include "core/retry_timer.hpp"
 #include "core/map_objects.hpp"
-#include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/pipeline_key.hpp"
 #include "core/weather.hpp"
@@ -71,7 +70,7 @@ constexpr UINT kSlots = 2;              // submissions in flight
 // 0.39.2: the effects timed one by one, for the log; 0.76: the sky, the light in the air and the floors' reflections
 // their own. 2.2.2: the sun's shadows' gone with them (2.1.4); 2.4.1: the new trees' too.
 enum EffectTimer : UINT {
-    kTimeAo, kTimeActorShadows, kTimeLights, kTimeHaze, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
+    kTimeAo, kTimeActorShadows, kTimeLights, kTimeMist, kTimeHeat, kTimeGrade, kTimeDof, kTimeWeather,
     kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
     kEffectTimes
 };
@@ -551,12 +550,12 @@ struct Renderer::Impl {
     bool sceneDepthFresh = false;  // 0.39.2: sceneDepth holds the depth as it is now (copySceneDepth)
     bool mapOutdoors = false;  // the map is a field or a town (core/outdoors.hpp)
     float mapShine = 0.0f;     // 2.5.17: how much its floor reflects under a roof (core/outdoors.hpp floorShine)
-    // 0.34, haze and fog (haze.cpp), the map's look (core/haze.hpp).
-    ID3DBlob* hazePs = nullptr;
-    ID3D12PipelineState* hazePipelines[4] = {};
-    bool hazeDone = false;
-    bool hazeLogged = false;
-    haze::Look mapLook;
+    // 0.34, haze and fog (haze.cpp); 2.6.8: the far haze and the dungeons' dark and fog gone at the player's word -
+    // the low mists left: the morning's over the fields and the towns, a swamp's.
+    ID3DBlob* mistPs = nullptr;
+    ID3D12PipelineState* mistPipelines[4] = {};
+    bool mistDone = false;
+    bool mistLogged = false;
     // 0.73, light in the air (haze.cpp, shafts_ps): the torches' pass leaves its lights' count.
     ID3DBlob* shaftsPs = nullptr;
     // 2.5.7: drawn into a half-size target (no blending), then added over the world from it (half_over_ps)
@@ -884,12 +883,12 @@ struct Renderer::Impl {
     void releaseShadowMask();
     ID3D12PipelineState* shadowApplyPipeline(UINT samples);
     void noteSpriteCells(Texture& t, const SpriteCell* slots, uint32_t count);
-    bool hazeWanted() const {
-        return effects.haze && effects.hazeStrength > 0 && hazePs && (mapLook.haze > 0.0f || mapLook.fog > 0.0f);
+    bool mistWanted() const {
+        return mistPs && ((effects.morningFog && mapOutdoors && !mapDesert) || (effects.swamp && mapPlace.swamp));
     }
-    bool hazeDue() const { return hazeWanted() && groundDrawn && !hazeDone && viewToWorldValid; }
-    bool applyHaze();  // once a frame, the world drawn and lit; false: lost
-    ID3D12PipelineState* hazePipeline(UINT samples);
+    bool mistDue() const { return mistWanted() && groundDrawn && !mistDone && viewToWorldValid; }
+    bool applyMist();  // once a frame, the world drawn and lit; false: lost
+    ID3D12PipelineState* mistPipeline(UINT samples);
     bool skyWanted() const { return effects.sky && effects.skyStrength > 0 && skyPs && mapOutdoors; }
     bool skyDue() const { return skyWanted() && groundDrawn && !skyDone && viewToWorldValid; }
     bool applySky();  // once a frame, the world drawn; false: lost
@@ -915,7 +914,7 @@ struct Renderer::Impl {
         return shaftsWanted() && groundDrawn && !shaftsDone && viewToWorldValid &&
                (shaftLights > 0 || (mapOutdoors && effects.skyRays));  // 2.4: the sky's rays a box of their own
     }
-    bool applyShafts();  // once a frame, after the haze and the sky; false: lost
+    bool applyShafts();  // once a frame, after the mists and the sky; false: lost
     void sunOnScreen(float out[2]) const;  // 0.73: the way the sun's shadows fall on the screen (actor_shadows.cpp)
     void sunGround(float out[3]) const;  // 2.0.1: the way the shadows fall along the ground, fixed in the world
     // 2.1.3: the map's own sun (its file's light: the way its painted shadows fall), the way to it in the world (up
@@ -950,7 +949,7 @@ struct Renderer::Impl {
     ID3D12PipelineState* blendPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
                                        const char* what, int mode);
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
-    bool applyHeat();  // once a frame, after the torches' pass and the haze; false: lost
+    bool applyHeat();  // once a frame, after the torches' pass and the mists; false: lost
     ID3D12PipelineState* heatPipeline(UINT samples);
     void noteRay(const FrameRecord& rec, const DrawCmd& d);
     // An added-light pipeline of `ps` for this target (fireflies, dust); false (and `ps` dropped) when it fails.
@@ -978,7 +977,7 @@ struct Renderer::Impl {
         lavaCells.clear();
         actorShadowsDone = actorShadowsDrawn = false;
         sceneDepthFresh = false;
-        hazeDone = false;
+        mistDone = false;
         skyDone = false;  // 0.69
         floorReflectDone = false;  // 0.72
         bloomDone = false;  // 0.78

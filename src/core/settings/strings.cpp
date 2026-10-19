@@ -919,15 +919,6 @@ const Entry kTexts[] = {
      "солнца — вместо круглого пятна игры под ногами."},
     {"Shadows' darkness", "Темрява тіней", "Темнота теней"},
     {"How dark the characters' shadows are.", "Наскільки темні тіні персонажів.", "Насколько темны тени персонажей."},
-    {"Haze and fog", "Серпанок і туман", "Дымка и туман"},
-    {"Under the open sky a light bluish haze far off; in the dungeons the dark far off and a low fog drifting over the "
-     "ground. Houses and the like stay as they are.",
-     "Під відкритим небом — легкий блакитнуватий серпанок удалині; у підземеллях — темрява вдалині й низький туман, "
-     "що пливе над землею. Будинки тощо — без змін.",
-     "Под открытым небом — лёгкая голубоватая дымка вдали; в подземельях — темнота вдали и низкий туман, плывущий "
-     "над землёй. Дома и прочее — без изменений."},
-    {"Haze's strength", "Сила серпанку", "Сила дымки"},
-    {"How thick the haze and the fog are.", "Наскільки густі серпанок і туман.", "Насколько густы дымка и туман."},
     {"Heat haze", "Марево від жару", "Марево от жара"},
     {"Over the torches' flames, burning skills and lava, and far off in the desert of Morroc, the picture shimmers as "
      "the hot air rises.",
@@ -2171,11 +2162,11 @@ const Entry kTexts[] = {
      "Ранковий туман",
      "Утренний туман"},
     {"A low fog lies over the fields and the towns at dawn: thick from 6 to 8, gone by half past ten (the computer's "
-     "clock). Needs Haze and fog.",
+     "clock).",
      "На світанку над полями й містами стелиться низький туман: густий з 6 до 8, зникає до пів на одинадцяту (за "
-     "годинником комп'ютера). Потрібен «Серпанок і туман».",
+     "годинником комп'ютера).",
      "На рассвете над полями и городами стелется низкий туман: густой с 6 до 8, тает к половине одиннадцатого (по "
-     "часам компьютера). Нужна «Дымка и туман»."},
+     "часам компьютера)."},
     {"Drifting sand",
      "Позмінка піску",
      "Позёмка песка"},
@@ -2216,11 +2207,11 @@ const Entry kTexts[] = {
      "Болота",
      "Болота"},
     {"In the swamps of Umbala, Brasilis and Dewata the water is murky, bubbles swell and burst on it, and a low "
-     "greenish mist hangs over the ground. Needs Modern water (the mist: Haze and fog).",
+     "greenish mist hangs over the ground. Needs Modern water.",
      "У болотах Умбали, Бразиліса й Девати вода каламутна, на ній здуваються й лопаються бульбашки, а над землею "
-     "висить низький зеленуватий серпанок. Потрібна «Сучасна вода» (серпанок: «Серпанок і туман»).",
+     "висить низький зеленуватий серпанок. Потрібна «Сучасна вода».",
      "В болотах Умбалы, Бразилиса и Деваты вода мутная, на ней вздуваются и лопаются пузыри, а над землёй висит "
-     "низкая зеленоватая дымка. Нужна «Современная вода» (дымка: «Дымка и туман»)."},
+     "низкая зеленоватая дымка. Нужна «Современная вода»."},
     {"Butterflies",
      "Метелики",
      "Бабочки"},
@@ -2548,13 +2539,13 @@ const Entry kTexts[] = {
     {"Air and weather",
      "Повітря й погода",
      "Воздух и погода"},
-    {"Haze, weather, heat haze, storms, the sky, day and night, dust, morning fog, sand "
+    {"Weather, heat haze, storms, the sky, day and night, dust, morning fog, sand "
      "and snow; with a strong card sun beams, volumetric fog, dust in the light, wet after rain and the "
      "land past the map's edge.",
-     "Серпанок, погода, марево, грози, небо, день і ніч, пил, ранковий туман, пісок і сніг; з "
+     "Погода, марево, грози, небо, день і ніч, пил, ранковий туман, пісок і сніг; з "
      "потужною картою — сонячні промені, об'ємний туман, пил у світлі, мокре після дощу й земля за краєм "
      "карти.",
-     "Дымка, погода, марево, грозы, небо, день и ночь, пыль, утренний туман, песок и снег; с "
+     "Погода, марево, грозы, небо, день и ночь, пыль, утренний туман, песок и снег; с "
      "мощной картой — солнечные лучи, объёмный туман, пыль в свете, мокрое после дождя и земля за краем "
      "карты."},
     {"Living world",
@@ -2906,10 +2897,6 @@ const Entry kTexts[] = {
     {"At night the sky past the map's edge shows twinkling stars.",
      "Уночі небо за краєм карти показує мерехтливі зорі.",
      "Ночью небо за краем карты показывает мерцающие звёзды."},
-    {"Low fog in dungeons", "Низький туман у підземеллях", "Низкий туман в подземельях"},
-    {"In the dungeons a low fog drifts over the ground; the darkness far off stays.",
-     "У підземеллях над землею пливе низький туман; темрява вдалині лишається.",
-     "В подземельях над землёй плывёт низкий туман; темнота вдали остаётся."},
     {"Heat over the desert", "Марево над пустелею", "Марево в пустыне"},
     {"Far off in the desert around Morroc the picture shimmers in the hot air; the heat over fire and lava stays.",
      "Удалині в пустелі довкола Моррока картинка тремтить у гарячому повітрі; марево над вогнем і лавою лишається.",

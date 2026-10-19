@@ -142,7 +142,7 @@ Renderer11::~Renderer11() {
     drop(drawGlowPs_);  // 1.0
     drop(drawLeanPs_);  // 2.5
     drop(drawGlowLeanPs_);
-    drop(hazePs_);
+    drop(mistPs_);
     drop(skyPs_);
     drop(weatherPs_);
     drop(aoPs_);  // 2.5.1
@@ -423,7 +423,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"material_ps", ps, shaderSource(), {}, true},  // 1.14
                    {"draw_lean_ps", ps, shaderSource(), {}, true, false, true},  // 2.5
                    {"draw_glow_lean_ps", ps, shaderSource(), {}, true, false, true},
-                   {"haze_ps", ps, shaderSource(), {}, true},  // 2.5: the haze, the sky, the weather
+                   {"mist_ps", ps, shaderSource(), {}, true},  // 2.5: the mists, the sky, the weather
                    {"sky_ps", ps, shaderSource(), {}, true},
                    {"weather_ps", ps, shaderSource(), {}, true},
                    {"ao_ps", ps, shaderSource(), {}, true},  // 2.5.1: the soft shadows
@@ -565,7 +565,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[21].code.empty() || !psOf(wants[21], materialPs_)) materialPs_ = nullptr;  // 1.14
     if (wants[22].code.empty() || !psOf(wants[22], drawLeanPs_)) drawLeanPs_ = nullptr;  // 2.5
     if (wants[23].code.empty() || !psOf(wants[23], drawGlowLeanPs_)) drawGlowLeanPs_ = nullptr;
-    if (wants[24].code.empty() || !psOf(wants[24], hazePs_)) hazePs_ = nullptr;  // 2.5
+    if (wants[24].code.empty() || !psOf(wants[24], mistPs_)) mistPs_ = nullptr;  // 2.5
     if (wants[25].code.empty() || !psOf(wants[25], skyPs_)) skyPs_ = nullptr;
     if (wants[26].code.empty() || !psOf(wants[26], weatherPs_)) weatherPs_ = nullptr;
     if (wants[27].code.empty() || !psOf(wants[27], aoPs_)) aoPs_ = nullptr;  // 2.5.1
@@ -1205,7 +1205,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
-    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !fogDone_ || !hazeDone_ ||
+    if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !fogDone_ || !mistDone_ ||
                                 !skyDone_ || !shaftsDone_ || !flareDone_ || !heatDone_ || !bloomDone_ ||
                                 !gradeDone_ || !dofDone_ || !weatherDone_))
         flushBatch();
@@ -1216,10 +1216,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         applyEmbers();    // 2.5.3: the skills' sparks about the places it gathered
         applyCritters();  // 2.5.4: the living world, the embers shining out of the night
     }
-    if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the haze
+    if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the mists
     if (s.ui && worldDrawn_ && !fogDone_) applyFog();  // 2.5.5: the low fog lit by the sun
-    if (s.ui && worldDrawn_ && !hazeDone_) applyHaze();  // 2.5: far off and over the ground, before the colours
-    if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: where the haze filled the void
+    if (s.ui && worldDrawn_ && !mistDone_) applyMist();  // 2.5: over the ground, before the colours
+    if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: past the map's edge
     if (s.ui && worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5: the light in the air
     if (s.ui && worldDrawn_ && !flareDone_) applyFlare();    // 2.5.5: the sun's flare
     if (s.ui && worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3: the hot air over all of that
@@ -2086,7 +2086,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     }
     if (worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3
     if (worldDrawn_ && !fogDone_) applyFog();  // 2.5.5
-    if (worldDrawn_ && !hazeDone_) applyHaze();  // 2.5
+    if (worldDrawn_ && !mistDone_) applyMist();  // 2.5
     if (worldDrawn_ && !skyDone_) applySky();
     if (worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5
     if (worldDrawn_ && !flareDone_) applyFlare();
@@ -2123,7 +2123,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     aoDone_ = false;  // 2.5.1
     fireSparks_.clear();
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
-    hazeDone_ = skyDone_ = weatherDone_ = false;  // 2.5
+    mistDone_ = skyDone_ = weatherDone_ = false;  // 2.5
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
     heatSpots_.clear();
@@ -3345,16 +3345,16 @@ void Renderer11::applyAo() {
     worldPass(aoApplyPs_, c, false, 2, nullptr, aoTarget_[0].srv);
 }
 
-// 2.5: the haze (haze_ps) as Direct3D 12's haze.cpp draws it - far off the picture goes over to the map's haze,
-// over the low ground a fog lies at the character's height; the morning's and the swamp's mists stay Direct3D 12's.
-void Renderer11::applyHaze() {
-    EffectSpan span(*this, kTimeHaze11);
-    hazeDone_ = true;
-    const bool fog = effects_.lowFog && look_.fog > 0.0f;
-    if (!hazePs_ || !effects_.haze || effects_.hazeStrength <= 0 || (look_.haze <= 0.0f && !fog) || !cameraValid_ ||
-        !target_.texture || !depthViews())
-        return;
-    const float user = float(std::clamp(effects_.hazeStrength, 0, 100)) / 50.0f;  // 50 % the look's own
+// 2.5: the low mists (mist_ps) as Direct3D 12's applyMist (haze.cpp) - the morning's over the fields and the towns,
+// a swamp's - at the ground's height at the character (2.6.8: the far haze and the dungeons' dark and fog gone).
+void Renderer11::applyMist() {
+    EffectSpan span(*this, kTimeMist11);
+    mistDone_ = true;
+    const living::Place place = living::placeOf(map_, outdoors_, season_ == trees::Season::Autumn);
+    const int minute = effects_.dayCycle && effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();
+    const float morning = effects_.morningFog && outdoors_ && !desert_ ? living::morningFog(minute) : 0.0f;
+    const bool swampy = effects_.swamp && place.swamp;
+    if (!mistPs_ || (morning <= 0.0f && !swampy) || !cameraValid_ || !target_.texture || !depthViews()) return;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -3363,35 +3363,25 @@ void Renderer11::applyHaze() {
     c.scale = float(scale_);
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
-    c.twin[0] = look_.hazeStart;
-    c.twin[1] = look_.hazeEnd;
-    c.twin[2] = std::min(1.0f, look_.haze * user);
-    std::copy(look_.hazeColour, look_.hazeColour + 3, c.fogColor);
-    std::copy(look_.fogColour, look_.fogColour + 3, c.sourceRect);
-    c.sourceRect[3] = fog ? std::min(1.0f, look_.fog * user) : 0.0f;
-    // 2.5.3 (haze.cpp 1.7): a swamp's mist, always; a low fog in the morning over the fields and the towns
-    const living::Place place = living::placeOf(map_, outdoors_, season_ == trees::Season::Autumn);
-    const int minute = effects_.dayCycle && effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();
-    const float morning = effects_.morningFog && outdoors_ && !desert_ ? living::morningFog(minute) : 0.0f;
-    if (effects_.swamp && place.swamp && c.sourceRect[3] < 0.3f) {
+    if (swampy) {  // 2.5.3 (haze.cpp 1.7): a swamp's mist, always
         static const float kMurk[3] = {0.62f, 0.68f, 0.55f};
-        for (int i = 0; i < 3; ++i) c.sourceRect[i] = kMurk[i];
+        std::copy(kMurk, kMurk + 3, c.sourceRect);
         c.sourceRect[3] = 0.3f;
     }
-    if (morning * 0.6f > c.sourceRect[3]) {
+    if (morning * 0.6f > c.sourceRect[3]) {  // the morning's, thicker
         static const float kMist[3] = {0.84f, 0.87f, 0.9f};
-        const float k = look_.fog > 0.0f ? 0.5f : 1.0f;  // the map's own fog's colour kept, half
-        for (int i = 0; i < 3; ++i) c.sourceRect[i] = c.sourceRect[i] * (1.0f - k) + kMist[i] * k;
-        c.sourceRect[3] = std::min(1.0f, morning * 0.6f * std::max(user, 0.5f));
+        std::copy(kMist, kMist + 3, c.sourceRect);
+        c.sourceRect[3] = std::min(1.0f, morning * 0.6f);
     }
     if (cameraTargetZ_ > 0.0f) {  // the low fog at the ground's height at the character
         c.sourceClamp[0] = camera::targetHeight(viewToWorld_, cameraTargetZ_);
         c.sourceClamp[1] = 1.0f;
     }
     c.sharpen = waterTime();
-    if (!hazeLogged_) LOG_INFO("haze: over %s%s (Direct3D 11)", map_.c_str(), fog ? ", with a low fog" : "");
-    hazeLogged_ = true;
-    worldPass(hazePs_, c, false, 1, depthSrv_);
+    if (!mistLogged_)
+        LOG_INFO("mists: %s over %s (Direct3D 11)", swampy ? "a swamp's" : "the morning's", map_.c_str());
+    mistLogged_ = true;
+    worldPass(mistPs_, c, false, 1, depthSrv_);
 }
 
 // 2.5: the sky (sky_ps) as Direct3D 12's applySky - past the map's edge under the open sky, its clouds and stars,
@@ -3411,10 +3401,9 @@ void Renderer11::applySky() {
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
     const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
-    const bool hazy = effects_.haze && look_.haze > 0.0f;
     const float pale[3] = {0.72f, 0.80f, 0.91f}, deep[3] = {0.33f, 0.52f, 0.86f}, dark[3] = {0.03f, 0.05f, 0.11f};
     for (int k = 0; k < 3; ++k) {
-        const float horizon = hazy ? look_.hazeColour[k] : pale[k];
+        const float horizon = pale[k];  // 2.6.8: the far haze's colour gone with it
         c.fogColor[k] = horizon + (dark[k] * 2.0f - horizon) * night;
         c.sourceRect[k] = deep[k] + (dark[k] - deep[k]) * night;
     }
@@ -3606,7 +3595,7 @@ void Renderer11::timeFrame() {
     if (!recentSince_) recentSince_ = now;
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
-                                                             "haze", "sky", "weather", "ao", "bloom",
+                                                             "mist", "sky", "weather", "ao", "bloom",
                                                              "steps", "heat", "shafts", "dof",
                                                              "glow", "water", "floor", "grass", "world",
                                                              "interface"};
@@ -3707,7 +3696,7 @@ void Renderer11::logGpu(ULONGLONG now) {
                  double(now - gpuSince_) / 1000.0);
         // 0.89: the effects one by one, as Direct3D 12's log has them
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
-                                                            "colour", "haze", "sky", "weather", "soft shadows",
+                                                            "colour", "mists", "sky", "weather", "soft shadows",
                                                             "bloom", "footprints", "heat haze",
                                                             "light in the air",
                                                             "depth of field", "glow", "water's copies",

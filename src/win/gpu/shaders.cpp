@@ -1700,40 +1700,33 @@ float4 shadow_ps(ShadowIn i) : SV_Target {
     return float4(a, a, a, a);
 }
 
-// 0.34, haze and fog (haze.cpp): the picture's depth (t3) gives each pixel's view depth and place in the world (r0-r11
-// the camera backwards, f0-farZ the projection). Far off it goes over to the haze's colour (fogColor) - twinX where
-// it starts, twinY where it is whole, twinW how much; over the low ground a fog drifts - sourceRect.rgb its colour,
-// .w how much, the ground's height the character's (2.2.2: sourceClamp.x, .y 1 when known; else that near the middle
-// of the view); sharpen the time. Blended over the picture by its alpha.
-float4 haze_ps(PresentOut i) : SV_Target {
+// 0.34, haze and fog (haze.cpp) - 2.6.8: the far haze and the dungeons' dark and low fog gone at the player's word,
+// the low mists left (the morning's over the fields and the towns, a swamp's). The picture's depth (t3) gives each
+// pixel's place in the world (r0-r11 the camera backwards, f0-farZ the projection); over the low ground the mist
+// drifts - sourceRect.rgb its colour, .w how much, the ground's height the character's (2.2.2: sourceClamp.x, .y 1
+// when known; else that near the middle of the view); sharpen the time. Blended over the picture by its alpha.
+float4 mist_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
-    bool nothing = sceneDepth.Load(int3(wp, 0)) >= 0.99999;
+    if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there
     float3 v = viewAt(wp);
-    float a = (nothing ? 1.0 : smoothstep(twinX, twinY, v.z)) * twinW;
-    float3 c = fogColor.rgb;
-    if (sourceRect.w > 0.0 && !nothing) {
-        float gy = sourceClamp.x;  // 2.2.2: the ground's height at the character (.y 1 when known)
-        if (sourceClamp.y < 0.5) {
-            int2 last = int2(uiPixels.xy) - 1;
-            int2 mid = int2(uiPixels.xy * float2(0.5, 0.58));
-            gy = 0.0;
-            [unroll] for (int k = 0; k < 5; ++k) {
-                float3 m = viewAt(clamp(mid + int2((k - 2) * int(uiPixels.x) / 16, 0), int2(0, 0), last));
-                gy += m.x * r1 + m.y * r4 + m.z * r7 + r10;
-            }
-            gy *= 0.2;
+    float gy = sourceClamp.x;  // 2.2.2: the ground's height at the character (.y 1 when known)
+    if (sourceClamp.y < 0.5) {
+        int2 last = int2(uiPixels.xy) - 1;
+        int2 mid = int2(uiPixels.xy * float2(0.5, 0.58));
+        gy = 0.0;
+        [unroll] for (int k = 0; k < 5; ++k) {
+            float3 m = viewAt(clamp(mid + int2((k - 2) * int(uiPixels.x) / 16, 0), int2(0, 0), last));
+            gy += m.x * r1 + m.y * r4 + m.z * r7 + r10;
         }
-        float3 w =
-            v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
-        float low = saturate((w.y - gy + 4.0) / 8.0);  // up is -y: the lower, the thicker
-        float t = sharpen;
-        float wisps = fbm4(w.xz * 0.025 + float2(t * 0.02, -t * 0.013));
-        float f = low * (0.45 + 0.55 * smoothstep(0.3, 0.7, wisps)) * sourceRect.w;
-        c = lerp(c, sourceRect.rgb, f / max(a + f, 1e-3));
-        a = saturate(a + f);
+        gy *= 0.2;
     }
-    if (a < 0.003) discard;
-    return float4(c, a);
+    float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+    float low = saturate((w.y - gy + 4.0) / 8.0);  // up is -y: the lower, the thicker
+    float t = sharpen;
+    float wisps = fbm4(w.xz * 0.025 + float2(t * 0.02, -t * 0.013));
+    float f = low * (0.45 + 0.55 * smoothstep(0.3, 0.7, wisps)) * sourceRect.w;
+    if (f < 0.003) discard;
+    return float4(sourceRect.rgb, f);
 }
 
 // 0.82, the skills' sparks (torches.cpp applyEmbers), added on: about each place a skill burns or shines (t1, two

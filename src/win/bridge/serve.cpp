@@ -95,8 +95,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.lavaBrightness = rd.i32();
             e.actorShadows = rd.u8() != 0;
             e.actorShadowsStrength = rd.i32();
-            e.haze = rd.u8() != 0;
-            e.hazeStrength = rd.i32();
             e.heat = rd.u8() != 0;
             e.heatStrength = rd.i32();
             e.skillColours = rd.u8() != 0;
@@ -199,7 +197,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.indoorDust = rd.u8() != 0;
             e.rainSplashes = rd.u8() != 0;
             e.stars = rd.u8() != 0;
-            e.lowFog = rd.u8() != 0;
             e.desertHeat = rd.u8() != 0;
             e.skyRays = rd.u8() != 0;
             e.treeSeasons = rd.u8() != 0;

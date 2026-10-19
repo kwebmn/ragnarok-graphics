@@ -23,13 +23,15 @@ const Costly kCostly[] = {
     {"bloom", "bloom", &EffectSettings::bloom},
     {"actor_shadows", "actor_shadows", &EffectSettings::actorShadows},
     {"water", "water", &EffectSettings::water},
-    {"haze", "haze", &EffectSettings::haze},
     {"heat", "heat", &EffectSettings::heat},
     {"sky", "sky", &EffectSettings::sky},
     {"weather", "weather", &EffectSettings::weather},
     {"motes", "weather", &EffectSettings::motes},
     {"lamps", "lights", &EffectSettings::lamps},
     {"grade", "grade", &EffectSettings::grade},
+    // 2.6.8: the low mists' pass (haze.cpp applyMist) - it runs while either is on
+    {"morning_fog", "mist", &EffectSettings::morningFog},
+    {"swamp", "mist", &EffectSettings::swamp},
 };
 
 // 2.5.16: what is drawn inside the world's own draws (the draw shader's extras: without them most draws take its

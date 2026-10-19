@@ -1598,8 +1598,8 @@ void Renderer::Impl::destroy() {
     releaseCom(shadowPs);
     releaseCom(shadowBlurPs);
     releaseCom(shadowApplyPs);
-    for (ID3D12PipelineState*& p : hazePipelines) releaseCom(p);  // 0.34
-    releaseCom(hazePs);
+    for (ID3D12PipelineState*& p : mistPipelines) releaseCom(p);  // 0.34
+    releaseCom(mistPs);
     for (ID3D12PipelineState*& p : skyPipelines) releaseCom(p);  // 0.69
     releaseCom(floorReflectPipeline);  // 0.72, 0.86
     for (ID3D12PipelineState*& p : halfOverPipelines) releaseCom(p);
@@ -1963,7 +1963,6 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapYear = seasons::of(map, trees::monthNow(), outdoors(map), impl_->mapPlace);  // 1.20
     impl_->mapOutdoors = outdoors(map);  // 0.33: the open sky's effects
     impl_->mapShine = floorShine(map);   // 2.5.17: the floor reflections on smooth floors alone
-    impl_->mapLook = haze::lookOf(map);  // 0.34: its haze and fog
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
     impl_->mapWeather = weather::of(map);  // 0.39: its weather
     impl_->footTracker.clear();  // 0.80
@@ -2088,7 +2087,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "
              "the others %s; "
              "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; "
-             "characters' shadows %s, %d%%; haze %s, %d%%; heat haze %s, %d%%; portals %s, %d%%; "
+             "characters' shadows %s, %d%%; heat haze %s, %d%%; portals %s, %d%%; "
              "weather %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
@@ -2099,7 +2098,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.fireflies ? "on" : "off",
              e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.rays ? "on" : "off",
              e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness, e.actorShadows ? "on" : "off",
-             e.actorShadowsStrength, e.haze ? "on" : "off", e.hazeStrength,
+             e.actorShadowsStrength,
              e.heat ? "on" : "off", e.heatStrength, e.portals ? "on" : "off", e.portalsStrength,
              e.weather ? "on" : "off", e.weatherAmount,
              e.ao ? "on" : "off", e.aoStrength, e.aoSize, e.glow ? "on" : "off",

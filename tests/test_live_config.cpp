@@ -221,14 +221,6 @@ TEST(live_config_actor_shadows_apply_now) {
     CHECK(u.applied[1] == "actor_shadows_strength 55 -> 30");
 }
 
-TEST(live_config_haze_applies_now) {
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nhaze = 0\nhaze_strength = 10\n"));
-    CHECK(u.waiting.empty());
-    CHECK_EQ(u.applied.size(), size_t(2));
-    CHECK(u.applied[0] == "haze 1 -> 0");
-    CHECK(u.applied[1] == "haze_strength 50 -> 10");
-}
-
 TEST(live_config_heat_applies_now) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[effects]\nheat = 0\nheat_strength = 40\n"));
     CHECK(u.waiting.empty());

@@ -74,7 +74,7 @@ TEST(effect_groups_strength_scales_its_effects) {
     CHECK_EQ(x.torchLight, 50);
     CHECK_EQ(x.lampsLight, 30);
     CHECK_EQ(x.actorShadowsStrength, 100);  // 55 x 2, kept to its most
-    CHECK_EQ(x.hazeStrength, e.hazeStrength);  // another group's as it was
+    CHECK_EQ(x.heatStrength, e.heatStrength);  // another group's as it was
     CHECK(!hasStrength(Life) && hasStrength(Water));
 }
 

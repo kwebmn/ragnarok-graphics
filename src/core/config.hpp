@@ -154,10 +154,6 @@ struct EffectSettings {
     // light - instead of the game's round ones. On by default.
     bool actorShadows = true;
     int actorShadowsStrength = 55;  // %, 0-100: how dark
-    // 0.34: haze far off under the open sky; in the dungeons the dark far off and a low fog over the ground
-    // (core/haze.hpp). On by default.
-    bool haze = true;
-    int hazeStrength = 50;  // %, 0-100
     // 0.35: heat haze - the picture shimmers over the torches' flames, burning skills, lava and far off over the
     // desert. On by default.
     bool heat = true;
@@ -296,7 +292,8 @@ struct EffectSettings {
     bool gusts = false;
     bool dapple = false;
     // 1.7.1: the living world, the ground: flowers in the grass, dew on it in the morning (with grass); a low morning
-    // fog (with haze); sand drifting over the desert, snow glittering, damp caves' walls glistening. Off by default.
+    // fog (2.6.8: on its own, the haze gone); sand drifting over the desert, snow glittering, damp caves' walls
+    // glistening. Off by default.
     bool flowers = false;
     bool dew = false;
     bool morningFog = false;
@@ -376,7 +373,6 @@ struct EffectSettings {
     bool indoorDust = true;     // motes: in the dungeons and the houses
     bool rainSplashes = true;   // weather: the rain's rings on the ground
     bool stars = true;          // sky: at night
-    bool lowFog = true;         // haze: the dungeons' low fog
     bool desertHeat = true;     // heat: far off in the desert
     bool skyRays = true;        // shafts: the rays from the sky over the fields
     bool treeSeasons = true;    // tree_tints: autumn's golden crowns, Lutie's rime

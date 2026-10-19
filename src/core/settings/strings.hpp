@@ -92,7 +92,7 @@ enum class Text : uint16_t {
     FxFireflies, FxFirefliesHint, FxFirefliesBrightness, FxFirefliesBrightnessHint, FxMapGlows, FxMapGlowsHint,
     FxMapGlowsBrightness, FxMapGlowsBrightnessHint, FxRays, FxRaysHint, FxRaysBrightness, FxRaysBrightnessHint,
     FxLava, FxLavaHint, FxLavaBrightness, FxLavaBrightnessHint, FxActorShadows, FxActorShadowsHint,
-    FxActorShadowsStrength, FxActorShadowsStrengthHint, FxHaze, FxHazeHint, FxHazeStrength, FxHazeStrengthHint,
+    FxActorShadowsStrength, FxActorShadowsStrengthHint,
     FxHeat, FxHeatHint, FxHeatStrength, FxHeatStrengthHint, FxSkillColours, FxSkillColoursHint,
     FxSkillsSoft, FxSkillsSoftHint, FxSkillBrightness, FxSkillBrightnessHint, FxPortals, FxPortalsHint,
     FxPortalsStrength, FxPortalsStrengthHint, FxWeather, FxWeatherHint, FxWeatherAmount, FxWeatherAmountHint,
@@ -292,7 +292,7 @@ enum class Text : uint16_t {
     FxWaterFoam, FxWaterFoamHint, FxWaterGlints, FxWaterGlintsHint, FxCaustics, FxCausticsHint, FxWaterfalls,
     FxWaterfallsHint, FxWetSand, FxWetSandHint, FxStepDust, FxStepDustHint, FxSeasonSnow, FxSeasonSnowHint,
     FxSeasonGrass, FxSeasonGrassHint, FxPollen, FxPollenHint, FxIndoorDust, FxIndoorDustHint, FxRainSplashes,
-    FxRainSplashesHint, FxStars, FxStarsHint, FxLowFog, FxLowFogHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
+    FxRainSplashesHint, FxStars, FxStarsHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
     FxSkyRaysHint, FxTreeSeasons, FxTreeSeasonsHint, FxDragonflies, FxDragonfliesHint,
     DiagRegistryOld,  // 2.4.2
     DlssCustom, DlssScale, DlssScaleHint, DlssWidth, DlssHeight, DlssSizeHint, DlssModel, DlssModelHint, DlssModelAuto,

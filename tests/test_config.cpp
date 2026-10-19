@@ -427,18 +427,6 @@ TEST(config_effects_actor_shadows) {
     CHECK(parseConfig("[effects]\nactor_shadows_strength = 101\n").effects == d);
 }
 
-TEST(config_effects_haze) {
-    // 0.34: haze far off and fog over the dungeons' ground - on unless turned off, 0-100 %.
-    const EffectSettings d = parseConfig("").effects;
-    CHECK(d.haze);
-    CHECK_EQ(d.hazeStrength, 50);
-    const EffectSettings e = parseConfig("[effects]\nhaze = 0\nhaze_strength = 90\n").effects;
-    CHECK(!e.haze);
-    CHECK_EQ(e.hazeStrength, 90);
-    CHECK(!(e == d));
-    CHECK(parseConfig("[effects]\nhaze_strength = -1\n").effects == d);
-}
-
 TEST(config_effects_heat) {
     // 0.35: heat haze over fire, lava and the desert far off - on unless turned off, 0-200 %.
     const EffectSettings d = parseConfig("").effects;

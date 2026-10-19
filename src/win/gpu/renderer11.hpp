@@ -20,7 +20,6 @@
 #include "core/seasons.hpp"
 #include "core/shader_cache.hpp"
 #include "core/shader_variants.hpp"
-#include "core/haze.hpp"
 #include "core/outdoors.hpp"
 #include "core/weather.hpp"
 #include "core/wind.hpp"
@@ -97,7 +96,6 @@ public:
     void setMap(const std::string& map) {  // 0.79: the region's look; 1.7: the trees' season
         map_ = map;
         season_ = trees::seasonOf(map, trees::monthNow());
-        look_ = haze::lookOf(map);  // 2.5: its haze and fog, the open sky, its weather (as Direct3D 12's setMap)
         outdoors_ = outdoors(map);
         shine_ = floorShine(map);  // 2.5.17
         desert_ = desert(map);  // 2.5.2: the prints in the sand
@@ -110,7 +108,7 @@ public:
         critterWorld_.setPlace(place_);  // 2.5.4: a new map - everything goes
         crittersTime_ = 0.0f;
         weather_ = weather::of(map);
-        hazeLogged_ = skyLogged_ = weatherLogged_ = false;
+        mistLogged_ = skyLogged_ = weatherLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
         if (!map.empty()) fadeStart_ = waterTime();  // 2.5.2: the world comes in from black (0.83)
     }
@@ -205,9 +203,9 @@ private:
     void applyFireflies();
     void applyGrade();  // 0.59
     void applyNight();  // 0.63
-    // 2.5: the haze and the low fog, the sky past the map's edge, the map's weather (or the motes) - Direct3D 12's
+    // 2.5: the low mists, the sky past the map's edge, the map's weather (or the motes) - Direct3D 12's
     // haze.cpp and weather.cpp passes by the same shaders, with the game's camera (setCamera) and the depth (t3)
-    void applyHaze();
+    void applyMist();
     void applySky();
     void applyWeather();
     // 2.5.1: the soft shadows where surfaces meet (ao.cpp: a mask at a half or a quarter of the size, blurred twice,
@@ -573,13 +571,12 @@ private:
     objects::Textures objectTextures_;
     std::vector<torch::Flame> flames_;  // this frame's
     bool lightDone_ = false, lightLogged_ = false;
-    // 2.5: the haze, the sky and the weather (applyHaze, applySky, applyWeather)
-    ID3D11PixelShader* hazePs_ = nullptr;
+    // 2.5: the mists, the sky and the weather (applyMist, applySky, applyWeather)
+    ID3D11PixelShader* mistPs_ = nullptr;
     ID3D11PixelShader* skyPs_ = nullptr;
     ID3D11PixelShader* weatherPs_ = nullptr;
-    bool hazeDone_ = false, skyDone_ = false, weatherDone_ = false;
-    bool hazeLogged_ = false, skyLogged_ = false, weatherLogged_ = false;
-    haze::Look look_;  // the map's (setMap)
+    bool mistDone_ = false, skyDone_ = false, weatherDone_ = false;
+    bool mistLogged_ = false, skyLogged_ = false, weatherLogged_ = false;
     bool outdoors_ = false;
     float shine_ = 0.0f;  // 2.5.17: how much the map's floor reflects under a roof (floorShine)
     weather::Kind weather_ = weather::Kind::None;
@@ -812,7 +809,7 @@ private:
     FrameTimes times_[kTimedFrames];
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
-        kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeHaze11, kTimeSky11, kTimeWeather11,
+        kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeMist11, kTimeSky11, kTimeWeather11,
         kTimeAo11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeShafts11,
         kTimeDof11, kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
         // 2.5.15: the game's world draws (with the effects drawn amid them) and its interface's - apart from the

@@ -11,21 +11,25 @@
 namespace uagfx::gpu {
 
 // 0.34: blended over the target (its samples) or the world under DLSS (one sample) by its alpha.
-ID3D12PipelineState* Renderer::Impl::hazePipeline(UINT n) {
-    return alphaPipeline(hazePs, hazePipelines, n, "haze");
+ID3D12PipelineState* Renderer::Impl::mistPipeline(UINT n) {
+    return alphaPipeline(mistPs, mistPipelines, n, "mists");
 }
 
-// Once the world is drawn and lit (before its colours): far off it goes over to the haze, over the dungeons' low
-// ground a fog drifts (core/haze.hpp: by the map).
-bool Renderer::Impl::applyHaze() {
-    hazeDone = true;  // tried once a frame, whatever comes of it
-    EffectTime timing(*this, kTimeHaze);  // 0.39.2
-    if (!ensureScene("haze")) return true;
-    ID3D12PipelineState* pso = hazePipeline(upscale ? 1 : samples);
+// Once the world is drawn and lit (before its colours): the low mists - the morning's over the fields and the towns,
+// a swamp's (2.6.8: the far haze and the dungeons' dark and low fog, the pass's own until now, gone at the player's
+// word; it was the mists' switch too).
+bool Renderer::Impl::applyMist() {
+    mistDone = true;  // tried once a frame, whatever comes of it
+    EffectTime timing(*this, kTimeMist);  // 0.39.2
+    // 1.7: a low fog in the morning over the fields and the towns (morning_fog), a swamp's mist always (swamp)
+    const float morning = effects.morningFog && mapOutdoors && !mapDesert ? living::morningFog(minuteNow()) : 0.0f;
+    const bool swampy = effects.swamp && mapPlace.swamp;
+    if (morning <= 0.0f && !swampy) return true;
+    if (!ensureScene("mists")) return true;
+    ID3D12PipelineState* pso = mistPipeline(upscale ? 1 : samples);
     if (!pso) return true;
     if (!copySceneDepth()) return false;
     const int w = sceneWidth, h = sceneHeight;
-    const float user = float(std::clamp(effects.hazeStrength, 0, 100)) / 50.0f;  // 50 % the look's own
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -38,12 +42,6 @@ bool Renderer::Impl::applyHaze() {
     }
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
-    c.twin[0] = mapLook.hazeStart;
-    c.twin[1] = mapLook.hazeEnd;
-    c.twin[2] = std::min(1.0f, mapLook.haze * user);  // twinW (1.18: until now into twinH - no haze far off)
-    std::copy(mapLook.hazeColour, mapLook.hazeColour + 3, c.fogColor);
-    std::copy(mapLook.fogColour, mapLook.fogColour + 3, c.sourceRect);
-    c.sourceRect[3] = effects.lowFog ? std::min(1.0f, mapLook.fog * user) : 0.0f;  // 2.4: a box of its own
     // 2.2.2: the low fog lies at the ground's height at the character (sourceClamp.x, .y 1 when known) - five depths
     // across the screen gave it until now, and walking past walls (their tops, the void beyond) it jumped up and
     // down: the walls went light and dark by turns (alde_dun03)
@@ -51,23 +49,19 @@ bool Renderer::Impl::applyHaze() {
         c.sourceClamp[0] = camera::targetHeight(viewToWorld, cameraTargetZ);
         c.sourceClamp[1] = 1.0f;
     }
-    // 1.7: a low fog in the morning over the fields and the towns (morning_fog)
-    const float morning = effects.morningFog && mapOutdoors && !mapDesert ? living::morningFog(minuteNow()) : 0.0f;
-    if (effects.swamp && mapPlace.swamp && c.sourceRect[3] < 0.3f) {  // 1.7: a swamp's mist, always
+    if (swampy) {  // 1.7: a swamp's mist, always
         static const float kMurk[3] = {0.62f, 0.68f, 0.55f};
-        for (int i = 0; i < 3; ++i) c.sourceRect[i] = kMurk[i];
+        std::copy(kMurk, kMurk + 3, c.sourceRect);
         c.sourceRect[3] = 0.3f;
     }
-    if (morning * 0.6f > c.sourceRect[3]) {
+    if (morning * 0.6f > c.sourceRect[3]) {  // the morning's, thicker
         static const float kMist[3] = {0.84f, 0.87f, 0.9f};
-        const float k = mapLook.fog > 0.0f ? 0.5f : 1.0f;  // the map's own fog's colour kept, half
-        for (int i = 0; i < 3; ++i) c.sourceRect[i] = c.sourceRect[i] * (1.0f - k) + kMist[i] * k;
-        c.sourceRect[3] = std::min(1.0f, morning * 0.6f * std::max(user, 0.5f));
+        std::copy(kMist, kMist + 3, c.sourceRect);
+        c.sourceRect[3] = std::min(1.0f, morning * 0.6f);
     }
     c.sharpen = waterTime();
-    if (!hazeLogged)
-        LOG_INFO("haze: over %s%s", mapName.c_str(), mapLook.fog > 0.0f && effects.lowFog ? ", with a low fog" : "");
-    hazeLogged = true;
+    if (!mistLogged) LOG_INFO("mists: %s over %s", swampy ? "a swamp's" : "the morning's", mapName.c_str());
+    mistLogged = true;
     return worldPass(pso, w, h, c, sceneDepthSrv, true);
 }
 
@@ -254,13 +248,12 @@ bool Renderer::Impl::applySky() {
     }
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
-    // The horizon in the haze's colour where the map has one (the void it filled goes over into the sky), a pale blue
-    // otherwise; the zenith a deeper blue; both darker and bluer at night.
+    // The horizon a pale blue (2.6.8: the far haze's colour gone with it), the zenith a deeper blue; both darker and
+    // bluer at night.
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
-    const bool hazy = hazeWanted() && mapLook.haze > 0.0f;
     const float pale[3] = {0.72f, 0.80f, 0.91f}, deep[3] = {0.33f, 0.52f, 0.86f}, dark[3] = {0.03f, 0.05f, 0.11f};
     for (int k = 0; k < 3; ++k) {
-        const float horizon = hazy ? mapLook.hazeColour[k] : pale[k];
+        const float horizon = pale[k];
         c.fogColor[k] = horizon + (dark[k] * 2.0f - horizon) * night;
         c.sourceRect[k] = deep[k] + (dark[k] - deep[k]) * night;
     }

@@ -66,7 +66,6 @@ const Member kMembers[] = {
     {"fish", Water, 3, &E::fish},
     {"world_reflections", Water, 3, &E::worldReflections},
 
-    {"haze", Air, 1, &E::haze},
     {"weather", Air, 1, &E::weather},
     {"heat", Air, 2, &E::heat},
     {"storms", Air, 2, &E::storms},
@@ -122,7 +121,7 @@ const Strength kStrengths[] = {
     {Surfaces, &E::smoothHillsStrength, 200}, {Surfaces, &E::floorReflectStrength, 100},
     {Nature, &E::grassAmount, 100},      {Nature, &E::foliageStrength, 200},
     {Water, &E::waterWaves, 100},        {Water, &E::waterReflections, 100},
-    {Air, &E::hazeStrength, 100},         {Air, &E::heatStrength, 200},
+    {Air, &E::heatStrength, 200},
     {Air, &E::weatherAmount, 200},       {Air, &E::skyStrength, 100},          {Air, &E::shaftsStrength, 200},
     {Air, &E::motesAmount, 200},         {Air, &E::volumetricFogDensity, 200},
     {Skills, &E::auraBrightness, 100},   {Skills, &E::skillBrightness, 100},   {Skills, &E::skillSparksAmount, 200},

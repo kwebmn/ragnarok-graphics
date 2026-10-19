@@ -148,7 +148,7 @@ bool AiSettings::operator==(const AiSettings& o) const {
 EffectSettings effectsOff() {
     EffectSettings e;  // every switch off (0.39.4: the ones added since 0.27 too), the sliders as they are
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
-    e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.haze = e.heat = false;
+    e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.dof = e.water = e.night = e.foliage = false;
     e.litDust = false;
     e.sharedWind = false;
@@ -195,7 +195,7 @@ EffectSettings effectsOff() {
     e.filmGrain = e.mapFade = e.roundLight = false;
     // 2.4: the parts of the effects
     e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.wetSand = e.stepDust = e.seasonSnow = false;
-    e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.stars = e.lowFog = e.desertHeat = false;
+    e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.stars = e.desertHeat = false;
     e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
     e.dayNow = -1;
@@ -219,7 +219,7 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
 
 bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
-           e.lava || e.actorShadows || e.haze || e.heat || e.portals || e.weather || e.glow || e.ao ||
+           e.lava || e.actorShadows || e.heat || e.portals || e.weather || e.glow || e.ao ||
            e.grade || e.dof || e.water || e.night || e.foliage ||
            e.litDust ||
            e.sharedWind ||

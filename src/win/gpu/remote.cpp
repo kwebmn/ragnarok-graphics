@@ -355,8 +355,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.lavaBrightness);
     w.u8(e.actorShadows ? 1 : 0);
     w.i32(e.actorShadowsStrength);
-    w.u8(e.haze ? 1 : 0);
-    w.i32(e.hazeStrength);
     w.u8(e.heat ? 1 : 0);
     w.i32(e.heatStrength);
     w.u8(e.skillColours ? 1 : 0);
@@ -459,7 +457,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.indoorDust ? 1 : 0);
     w.u8(e.rainSplashes ? 1 : 0);
     w.u8(e.stars ? 1 : 0);
-    w.u8(e.lowFog ? 1 : 0);
     w.u8(e.desertHeat ? 1 : 0);
     w.u8(e.skyRays ? 1 : 0);
     w.u8(e.treeSeasons ? 1 : 0);
