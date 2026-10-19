@@ -1,3 +1,13 @@
+# uaRO Graphics 2.6.10 — to check
+
+- **"No game fog under the open sky"** - a new switch among the "Fixes of the picture", on by default. On the fields
+  and in the towns the game's own fog is no longer drawn: the light green veil over Prontera's fields (prt_fild08's
+  colour in the game's data is 0xBAFF77) and the white one in Prontera, which thickened as the camera went back. In
+  the dungeons the game's dark fog stays - it hides the void past the map's edge.
+- Please check: turn the "Fixes of the picture" group on, at `@warp prt_fild08 200 200` move the camera back - no
+  green veil; turn "No game fog under the open sky" off - it is back. Far back, the void past the map's edge may show
+  at the border - "Sky past the map's edge" of the "Air and weather" group covers it.
+
 # uaRO Graphics 2.6.9 — to check
 
 - **"Haze and fog" removed** with "Haze's strength" and "Low fog in dungeons": no more bluish haze far off under the
