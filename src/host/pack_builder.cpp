@@ -492,7 +492,8 @@ bool Builder::listPictures(std::vector<std::vector<Listed>>& out) {
 
 // 1.6: the AI page's preview - a picture of the group (a well-known one where the game has it: a poring, a Kafra),
 // at most 128 a side (its middle), through each model; into a_.out: source.bmp (the game's, 4 times by its pixels),
-// general.bmp, anime.bmp, anime6b.bmp - on a grey ground where it is transparent - and preview.txt (where it is from).
+// general.bmp, anime.bmp, anime6b.bmp, gameai.bmp (2.5.27, when its model is there) - on a grey ground where it is
+// transparent - and preview.txt (where it is from).
 int Builder::preview() {
     ai::Group want = ai::Group::Monsters;
     for (int g = 0; g < ai::kGroups; ++g)
@@ -529,10 +530,13 @@ int Builder::preview() {
     for (int y = 0; y < h; ++y)
         for (int x = 0; x < w; ++x)
             part[size_t(y) * size_t(w) + size_t(x)] = found.argb[size_t(y0 + y) * size_t(found.width) + size_t(x0 + x)];
-    // Every model, each as the network of a group (the pack's own way of loading them).
+    // Every model, each as the network of a group (the pack's own way of loading them); 2.5.27: Game AI's when its
+    // file is there - it comes apart (get-models.bat).
     AiSettings s = a_.ai;
-    const char* const models[3] = {"general", "anime", "anime6b"};
-    for (int g = 0; g < ai::kGroups; ++g) s.models[size_t(g)] = models[std::min(g, 2)];
+    std::vector<std::string> models = {"general", "anime", "anime6b"};
+    const std::string gameAi = a_.dir + "\\uaro-graphics\\ai\\" + ai::modelFile("gameai") + ".bin";
+    if (GetFileAttributesA(gameAi.c_str()) != INVALID_FILE_ATTRIBUTES) models.push_back("gameai");
+    for (int g = 0; g < ai::kGroups; ++g) s.models[size_t(g)] = models[std::min(size_t(g), models.size() - 1)];
     s.smallPictures = false;  // 1.6.3: each model as it is, also on a small picture
     gpu::Renderer renderer;
     renderer.setShaderCache(a_.dir + "\\uaro-graphics\\shaders-64.bin");
@@ -577,11 +581,11 @@ int Builder::preview() {
         for (int x = 0; x < w * 4; ++x)
             big[size_t(y) * size_t(w * 4) + size_t(x)] = part[size_t(y / 4) * size_t(w) + size_t(x / 4)];
     if (!save("source.bmp", big, w * 4, h * 4)) return fail("the preview cannot be written into " + a_.out);
-    for (int m = 0; m < 3; ++m) {
+    for (size_t m = 0; m < models.size(); ++m) {
         std::string why;
-        if (!renderer.enlargeForPack(m, part.data(), w, h, borderOf(found.group), big, why))
-            return fail(std::string(models[m]) + ": " + why);
-        save((std::string(models[m]) + ".bmp").c_str(), big, w * 4, h * 4);
+        if (!renderer.enlargeForPack(int(m), part.data(), w, h, borderOf(found.group), big, why))
+            return fail(models[m] + ": " + why);
+        save((models[m] + ".bmp").c_str(), big, w * 4, h * 4);
     }
     std::FILE* f = std::fopen((a_.out + "\\preview.txt").c_str(), "wb");
     if (f) {

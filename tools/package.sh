@@ -17,10 +17,10 @@ out="build-win/uaro-graphics.zip"
 stage="build-win/package"
 rm -rf "$out" "$stage"
 mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/pad"
-cp dist/install.bat dist/uninstall.bat dist/update.bat dist/get-dlss.bat \
+cp dist/install.bat dist/uninstall.bat dist/update.bat dist/get-dlss.bat dist/get-models.bat \
    dist/TEST.en.md dist/TEST.uk.md dist/TEST.ru.md "$stage/"
 cp build-win/ddraw.dll build-win/uaro-graphics.exe dist/uaro-graphics.ini build-win64/uaro-render64.exe \
-   build-win64/uaro-studio.exe dist/dlss-version.txt "$stage/uaro-graphics/"
+   build-win64/uaro-studio.exe dist/dlss-version.txt dist/models-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 # 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.
 cp dist/pad/dinput.dll dist/pad/uaro-pad.ini dist/pad/version.txt "$stage/uaro-graphics/pad/"

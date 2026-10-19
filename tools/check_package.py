@@ -9,11 +9,11 @@ import sys
 import zipfile
 from pathlib import Path
 
-EXPECTED = {"install.bat", "uninstall.bat", "update.bat", "get-dlss.bat",
+EXPECTED = {"install.bat", "uninstall.bat", "update.bat", "get-dlss.bat", "get-models.bat",
             "TEST.en.md", "TEST.uk.md", "TEST.ru.md", "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.exe",
             "uaro-graphics/uaro-graphics.ini", "uaro-graphics/version.txt", "uaro-graphics/uaro-render64.exe",
             "uaro-graphics/uaro-studio.exe",
-            "uaro-graphics/dlss-version.txt", "uaro-graphics/remix/rtx.conf",
+            "uaro-graphics/dlss-version.txt", "uaro-graphics/models-version.txt", "uaro-graphics/remix/rtx.conf",
             "uaro-graphics/ai/realesr-general-x4v3.bin", "uaro-graphics/ai/realesr-general-wdn-x4v3.bin",
             "uaro-graphics/ai/realesr-animevideov3.bin", "uaro-graphics/ai/LICENSE-Real-ESRGAN.txt",
             "uaro-graphics/ai/realesrgan-x4plus-anime-6b.bin",

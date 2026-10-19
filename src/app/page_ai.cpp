@@ -6,6 +6,7 @@
 #include "app/files.hpp"
 #include "app/page.hpp"
 #include "app/preview_window.hpp"
+#include "app/update.hpp"
 #include "core/ai/pack_models.hpp"
 #include "core/pack_build.hpp"
 
@@ -33,6 +34,7 @@ constexpr int kPreviewOpen = 1133;  // 1.6.2: the viewer window
 constexpr int kSmall = 1140;  // 1.6.3: small pictures by their own model
 constexpr int kSmallSide = 1141;
 constexpr int kSmallModel = 1142;
+constexpr int kGetModels = 1150;  // 2.5.27: get-models.bat - Game AI's file
 
 const Text kGroupLabels[ai::kGroups] = {Text::AiGroupWorld,   Text::AiGroupMonsters, Text::AiGroupPlayers,
                                         Text::AiGroupNpcs,    Text::AiGroupItems,    Text::AiGroupEffects,
@@ -77,6 +79,7 @@ struct Preview {
     std::string error;
 };
 Preview g_preview;
+std::string g_getModelsError;  // 2.5.27: why get-models.bat did not start
 
 // What to improve, three to a row: the map, the sprites by their files (0.16), the interface.
 struct KindBox {
@@ -205,6 +208,10 @@ public:
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel < 0 || size_t(sel) >= s.tokens.size()) return;
             m.setToken(s, s.tokens[size_t(sel)]);
+        } else if (id == kGetModels && clicked) {  // 2.5.27: in its own console; the page looks again on its rebuild
+            g_getModelsError = startGetModels(m.paths().dir);
+            host_.rebuild();
+            return;
         } else if (id == kRedo && clicked) {  // the Texture pack page, its "make again" ticked
             packRedo() = true;
             host_.showPage(settings::Page::Pack);
@@ -296,6 +303,17 @@ private:
         p.number(kSmallSide, t(Text::AiSmallSide), wide(host_.model().token(setting("ai.small_side"))),
                  t(Text::AiSmallHint), on && small);
         choiceRow(p, kSmallModel, "ai.small_model", on && small);
+        // 2.5.27: Game AI comes apart from the package - its file downloaded when a group that is on wants it
+        bool gameAi = on && small && a.smallModel == "gameai";
+        for (int g = 0; g < ai::kGroups; ++g)
+            gameAi = gameAi || (on && ai::groupOn(a, ai::Group(g)) && a.modelFor(ai::Group(g)) == "gameai");
+        const std::wstring gameAiFile =
+            host_.model().paths().dir + L"\\uaro-graphics\\ai\\" + wide(ai::modelFile("gameai")) + L".bin";
+        if (gameAi && !fileExists(gameAiFile)) {
+            p.note(t(Text::AiGameAiMissing), Tone::Warn);
+            p.buttons({{kGetModels, t(Text::AiGetModels)}});
+            if (!g_getModelsError.empty()) p.note(tf(Text::AiGetModelsFailed, {g_getModelsError}), Tone::Bad);
+        }
         if (!index) p.note(t(Text::AiNoPackYet));
         if (counts.unknown) p.note(tf(Text::AiUnknownSprites, {num(counts.unknown)}));
         if (other) {
@@ -339,10 +357,12 @@ private:
 
     std::vector<std::pair<std::wstring, std::wstring>> previewFiles() const {
         const std::wstring d = previewDir() + L"\\";
-        return {{d + L"source.bmp", t(Text::AiPreviewGame)},
-                {d + L"general.bmp", L"general"},
-                {d + L"anime.bmp", L"anime"},
-                {d + L"anime6b.bmp", L"anime 6B"}};
+        std::vector<std::pair<std::wstring, std::wstring>> files = {{d + L"source.bmp", t(Text::AiPreviewGame)},
+                                                                    {d + L"general.bmp", L"general"},
+                                                                    {d + L"anime.bmp", L"anime"},
+                                                                    {d + L"anime6b.bmp", L"anime 6B"}};
+        if (fileExists(d + L"gameai.bmp")) files.push_back({d + L"gameai.bmp", L"Game AI"});  // 2.5.27
+        return files;
     }
 
     std::wstring previewDir() const { return host_.model().paths().dir + L"\\uaro-graphics\\preview"; }
@@ -357,6 +377,7 @@ private:
                             wide(card.empty() ? "auto" : card) + L"\"";
         DeleteFileW((previewDir() + L"-status.txt").c_str());
         DeleteFileW((previewDir() + L"\\preview.txt").c_str());
+        DeleteFileW((previewDir() + L"\\gameai.bmp").c_str());  // 2.5.27: made again only with its model there
         STARTUPINFOW si{};
         si.cb = sizeof si;
         PROCESS_INFORMATION pi{};

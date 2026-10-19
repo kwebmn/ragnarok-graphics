@@ -106,7 +106,7 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
         ai::Group g;
         if (ai::parseGroup(k.substr(6), g) && ai::validModel(v)) a.models[size_t(g)] = v;
     } else if (k == "model" || k == "sprite_model") {
-        if (v == "general" || v == "anime" || v == "anime6b") (k == "model" ? a.model : a.spriteModel) = v;  // 1.5
+        if (ai::validModel(v)) (k == "model" ? a.model : a.spriteModel) = v;  // 1.5; 2.5.27: any of them
     } else if (k == "denoise") {
         denoise = toInt(v, 0, 100, a.denoise) || denoise;
     } else if (k == "scale") {

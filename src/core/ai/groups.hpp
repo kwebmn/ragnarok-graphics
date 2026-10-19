@@ -16,13 +16,17 @@ constexpr int kGroups = 8;
 const char* groupName(Group g);  // "world", "monsters" ... "screens": the ini's model_<name>, the index's word
 bool parseGroup(const std::string& name, Group& out);
 
-// The models a group can be made by, in the page's order: Real-ESRGAN's general, its compact anime, the RRDB anime 6B.
-constexpr int kModels = 3;
-const char* modelToken(int i);  // "general", "anime", "anime6b"
+// The models a group can be made by, in the page's order: Real-ESRGAN's general, its compact anime, the RRDB anime 6B;
+// 2.5.27: Game AI 2.0 (ESRGAN of 23 blocks, by Tal, WTFPL - game textures; its file comes apart, get-models.bat).
+constexpr int kModels = 4;
+const char* modelToken(int i);  // "general", "anime", "anime6b", "gameai"
 bool validModel(const std::string& token);
 int modelIndex(const std::string& token);  // -1 for none of them
 // How much work a picture is for each, against anime (the page shows it).
 int modelCost(const std::string& token);
+// 2.5.27: its file in uaro-graphics\ai, without ".bin"; whether the RRDB engine runs it (else the compact one)
+const char* modelFile(const std::string& token);
+bool rrdbModel(const std::string& token);
 
 // The group of a world texture by the kind it is drawn as (the driver), and of a sprite cache's frame by its file's
 // folder (sprite_exe::Source as a number; 0 unknown - a monster, as most sprites are).

@@ -58,7 +58,7 @@ std::wstring g_map;
 bool g_mapFromLog = false;
 bool g_mapGround = true, g_mapModels = false;
 int g_mapModel = 0;
-const char* const kModelWords[3] = {"general", "anime", "anime6b"};
+const char* const kModelWords[4] = {"general", "anime", "anime6b", "gameai"};  // 2.5.27: Game AI
 
 // 2.2.5: a run of the builder on one map's textures.
 struct MapRun {
@@ -154,7 +154,7 @@ public:
         for (int g = 0; g < ai::kGroups; ++g) {
             const std::string& token = a.modelFor(ai::Group(g));
             nets += std::string(g ? "; " : "") + utf8(t(groupLabels[g])) + " - " +
-                    (token == "anime6b" ? "anime 6B" : token);
+                    (token == "anime6b" ? "anime 6B" : token == "gameai" ? "Game AI" : token);
         }
         p.note(tf(Text::PackNetsGroups, {nets}));
         p.check(kRedoBox, t(Text::PackRedo), packRedo(), t(Text::PackRedoHint), !running_);
@@ -188,7 +188,8 @@ public:
                   {kMapModels, t(Text::PackMapModels), g_mapModels, t(Text::PackMapModelsHint), !running_}},
                  2);
         p.choice(kMapModel, t(Text::PackMapModel),
-                 {t(Text::AiModelGeneral), t(Text::AiModelAnime), t(Text::AiModelAnime6b)}, g_mapModel,
+                 {t(Text::AiModelGeneral), t(Text::AiModelAnime), t(Text::AiModelAnime6b), t(Text::AiModelGameAi)},
+                 g_mapModel,
                  t(Text::PackMapModelHint), !running_);
         const bool mapOk = host && !running_ && (g_mapGround || g_mapModels);
         p.buttons({{kMapRemake, t(Text::PackMapRemake), mapOk}, {kMapDrop, t(Text::PackMapDrop), mapOk && packCount_}});
@@ -240,7 +241,7 @@ public:
         }
         if (id == kMapModel && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
-            if (sel >= 0 && sel < 3) g_mapModel = int(sel);
+            if (sel >= 0 && sel < 4) g_mapModel = int(sel);  // 2.5.27: Game AI the fourth
             return;
         }
         if (code != BN_CLICKED) return;
@@ -253,7 +254,8 @@ public:
             }
             run.ground = g_mapGround;
             run.models = g_mapModels;
-            const Text models[3] = {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b};
+            const Text models[4] = {Text::AiModelGeneral, Text::AiModelAnime, Text::AiModelAnime6b,
+                                    Text::AiModelGameAi};
             if (id == kMapDrop ? !host_.ask(tf(Text::PackMapAskDrop, {run.map}))
                                : !host_.ask(tf(Text::PackMapAskRemake, {run.map, utf8(t(models[g_mapModel]))})))
                 return;

@@ -161,8 +161,8 @@ public:
                         std::vector<uint32_t>& out, std::string& error);
     std::string packNetName(int group) const;
     // 2.3, uaRO Studio's engine (uaro-render64.exe --studio): the networks' pipelines alone, after create(); then a
-    // picture 4 times as large by any model ("general", "anime", "anime6b"; denoise for the general one, -1 its
-    // default), the model loaded when it is first asked for. border as AiTextures::enlarge's.
+    // picture 4 times as large by any model ("general", "anime", "anime6b", "gameai"; denoise for the general one,
+    // -1 its default), the model loaded when it is first asked for. border as AiTextures::enlarge's.
     bool startAiForStudio(const std::string& gameDir, std::string& error);
     bool enlargeByModel(const std::string& model, int denoise, const uint32_t* argb, int width, int height,
                         uint32_t border, std::vector<uint32_t>& out, std::string& error);

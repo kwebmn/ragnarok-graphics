@@ -9,6 +9,8 @@
 DEFAULT_INI RCDATA "uaro-graphics.ini"
 // 1.3.1: update.bat, put into the game's folder when it is not there (a client copied without it)
 UPDATE_BAT RCDATA "update.bat"
+// 2.5.27: get-models.bat, the AI models that come apart (Game AI 2.0), put there by the AI textures page
+GET_MODELS_BAT RCDATA "get-models.bat"
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION UAGFX_VERSION_NUMBERS

@@ -90,7 +90,10 @@ changes, backups and profiles; it is tested on Linux over `tests/fake_windows.cp
 
 `uaro-render64.exe --pack` builds `uaro-textures.zip` from the game's pictures with the Real-ESRGAN models in
 `dist/ai` (`src/host/pack_builder.cpp`, `core/texture_pack.cpp`, `core/ai`); the renderers take its pictures by
-kind (ground, objects, sprites, effects, icons — `aiKindsShown`, changed live through `SetDrawQuality`).
+kind (ground, objects, sprites, effects, icons — `aiKindsShown`, changed live through `SetDrawQuality`). The models
+are `core/ai/groups` (token, file, cost, which engine); Game AI 2.0 (2.5.27) is too large for the release and comes
+in `release/uaro-graphics-models.zip` (`tools/models_package.py`: `tools/ai_rrdb.py --half`, RRDB format 2 - the
+weights as halves), which `get-models.bat` fetches when the AI textures page asks for it.
 
 ## uaRO Studio
 

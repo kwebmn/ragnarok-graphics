@@ -15,6 +15,30 @@ int convFirst() { return 0; }
 int convDense(int block, int rdb, int k) { return 1 + (block * 3 + rdb) * 5 + k; }
 int convBody(const RrdbModel& m) { return 1 + m.blocks * 15; }
 
+// 2.5.27: an IEEE half as a float - subnormals, infinities and NaNs too
+float halfToFloat(uint16_t h) {
+    const uint32_t sign = uint32_t(h & 0x8000u) << 16;
+    uint32_t exp = (h >> 10) & 0x1F, mant = h & 0x3FFu;
+    uint32_t bits;
+    if (exp == 0x1F) {
+        bits = sign | 0x7F800000u | (mant << 13);
+    } else if (exp) {
+        bits = sign | ((exp - 15 + 127) << 23) | (mant << 13);
+    } else if (!mant) {
+        bits = sign;
+    } else {  // subnormal: shifted up into a normal float
+        exp = 127 - 15 + 1;
+        while (!(mant & 0x400u)) {
+            mant <<= 1;
+            --exp;
+        }
+        bits = sign | (exp << 23) | ((mant & 0x3FFu) << 13);
+    }
+    float f;
+    std::memcpy(&f, &bits, 4);
+    return f;
+}
+
 }  // namespace
 
 int bufChannels(const RrdbModel& m, Buf b) {
@@ -47,8 +71,9 @@ bool parseRrdb(const std::vector<uint8_t>& file, RrdbModel& m, std::string& erro
     m.growth = int(u32(file, 8));
     m.blocks = int(u32(file, 12));
     const int scale = int(u32(file, 16));
+    const uint32_t format = u32(file, 20);  // 1 floats; 2.5.27: 2 halves (Game AI 2.0 in 33 MB, not 67)
     if (m.features < 1 || m.features > 256 || m.growth < 1 || m.growth > 256 || m.blocks < 1 || m.blocks > 64 ||
-        scale != 4 || u32(file, 20) != 1) {
+        scale != 4 || (format != 1 && format != 2)) {
         error = "unexpected RRDB header";
         return false;
     }
@@ -75,12 +100,17 @@ bool parseRrdb(const std::vector<uint8_t>& file, RrdbModel& m, std::string& erro
             for (int k = 0; k < 5; ++k) conv(f + k * g, k < 4 ? g : f);
     for (int i = 0; i < 4; ++i) conv(f, f);  // body, up1, up2, hr
     conv(f, 3);
-    if (file.size() != 24 + at * 4) {
+    if (file.size() != 24 + at * (format == 2 ? 2 : 4)) {
         error = "RRDB model of the wrong size";
         return false;
     }
     n.data.resize(at + size_t(f));
-    std::memcpy(n.data.data(), file.data() + 24, at * 4);  // little-endian floats, as on x86
+    if (format == 2) {
+        for (size_t i = 0; i < at; ++i)
+            n.data[i] = halfToFloat(uint16_t(file[24 + 2 * i] | file[25 + 2 * i] << 8));
+    } else {
+        std::memcpy(n.data.data(), file.data() + 24, at * 4);  // little-endian floats, as on x86
+    }
     // The scales folded in: a dense block's fifth convolution times 0.2; the third block's of each group times 0.04
     // (0.2 of its block's end and 0.2 of the group's, rrdbProgram adds the rest).
     for (int b = 0; b < m.blocks; ++b)

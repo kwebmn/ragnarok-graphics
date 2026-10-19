@@ -10,7 +10,8 @@ namespace uagfx::studio {
 namespace {
 
 constexpr const wchar_t* kClass = L"uaroStudioMake";
-const char* const kModels[] = {"general", "anime", "anime6b"};
+const char* const kModels[] = {"general", "anime", "anime6b", "gameai"};  // 2.5.27: Game AI
+constexpr int kModelCount = 4;
 
 enum Id : int {
     kModel = 500, kScale, kOwnDenoise, kDenoise, kDeblock, kKey, kTone, kGrain, kSharpen, kAlpha, kBlend, kOriginal,
@@ -29,7 +30,7 @@ struct Dialog {
     bool checked(int id) const { return SendMessageW(get(id), BM_GETCHECK, 0, 0) == BST_CHECKED; }
     int pos(int id) const { return int(SendMessageW(get(id), TBM_GETPOS, 0, 0)); }
     void take() {  // the controls into the chain
-        chain.model = kModels[std::clamp(int(SendMessageW(get(kModel), CB_GETCURSEL, 0, 0)), 0, 2)];
+        chain.model = kModels[std::clamp(int(SendMessageW(get(kModel), CB_GETCURSEL, 0, 0)), 0, kModelCount - 1)];
         chain.scale = SendMessageW(get(kScale), CB_GETCURSEL, 0, 0) == 1 ? 2 : 4;
         chain.denoise = checked(kOwnDenoise) ? pos(kDenoise) : -1;
         chain.deblock = checked(kDeblock);
@@ -39,7 +40,7 @@ struct Dialog {
         chain.sharpen = float(pos(kSharpen)) / 100.0f;
         chain.cleanAlpha = checked(kAlpha);
         const int blend = int(SendMessageW(get(kBlend), CB_GETCURSEL, 0, 0));
-        chain.blendModel = blend >= 1 && blend <= 3 ? kModels[blend - 1] : "";
+        chain.blendModel = blend >= 1 && blend <= kModelCount ? kModels[blend - 1] : "";
         chain.original = float(pos(kOriginal)) / 100.0f;
         chain.tiles = (grid.cols > 1 || grid.rows > 1) && checked(kTiles);
     }
@@ -125,8 +126,12 @@ bool askChain(HWND owner, settings::Lang lang, HFONT font, int dpi, const std::w
         y += rowH + gap;
     };
     label(settings::Text::StudioMakeModel);
-    combo(kModel, {L"general", L"anime", L"anime6b"},
-          c.model == "anime" ? 1 : c.model == "anime6b" ? 2 : 0);
+    const auto index = [](const std::string& m) {  // -1 none of them
+        for (int i = 0; i < kModelCount; ++i)
+            if (m == kModels[i]) return i;
+        return -1;
+    };
+    combo(kModel, {L"general", L"anime", L"anime6b", L"gameai"}, std::max(0, index(c.model)));
     label(settings::Text::StudioMakeScale);
     combo(kScale, {L"×4", L"×2"}, c.scale == 2 ? 1 : 0);
     check(kOwnDenoise, t(settings::Text::StudioMakeOwnDenoise), c.denoise >= 0);
@@ -144,8 +149,8 @@ bool askChain(HWND owner, settings::Lang lang, HFONT font, int dpi, const std::w
     slider(kSharpen, settings::Text::StudioMakeSharpen, 100, int(c.sharpen * 100.0f + 0.5f));
     slider(kOriginal, settings::Text::StudioMakeOriginal, 50, int(c.original * 100.0f + 0.5f));
     label(settings::Text::StudioMakeBlend);
-    combo(kBlend, {t(settings::Text::StudioNone), L"general", L"anime", L"anime6b"},
-          c.blendModel == "general" ? 1 : c.blendModel == "anime" ? 2 : c.blendModel == "anime6b" ? 3 : 0);
+    combo(kBlend, {t(settings::Text::StudioNone), L"general", L"anime", L"anime6b", L"gameai"},
+          index(c.blendModel) + 1);
     if (grid.cols > 1 || grid.rows > 1)
         check(kTiles,
               app::wtrf(lang, settings::Text::StudioMakeTiles, {std::to_string(grid.cols), std::to_string(grid.rows)}),

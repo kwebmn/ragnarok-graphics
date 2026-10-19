@@ -131,23 +131,19 @@ bool groupOn(const AiSettings& s, ai::Group g) {
     return false;
 }
 
-// The model file of an [ai] model word.
-const char* modelFile(const std::string& token) {
-    if (token == "anime6b") return "realesrgan-x4plus-anime-6b";  // 1.5
-    return token == "anime" ? "realesr-animevideov3" : "realesr-general-x4v3";
-}
-
 }  // namespace
 
 bool AiTextures::loadNet(const std::string& dir, const std::string& token, int denoise, Net& net,
                          std::string& error) {
     net.token = token;
-    net.name = modelFile(token);
-    if (token == "anime6b") {  // 1.5: Real-ESRGAN's RRDBNet for drawn pictures
+    net.name = ai::modelFile(token);
+    if (ai::rrdbModel(token)) {  // 1.5: Real-ESRGAN's RRDBNet for drawn pictures; 2.5.27: Game AI 2.0's ESRGAN
         std::ifstream f(dir + net.name + ".bin", std::ios::binary);
         const std::vector<uint8_t> file((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
         if (file.empty()) {
-            error = "no model " + dir + net.name + ".bin (update.bat installs it)";
+            error = "no model " + dir + net.name + ".bin (" +
+                    (token == "gameai" ? "get-models.bat or the AI textures page downloads it"
+                                       : "update.bat installs it") + ")";
             return false;
         }
         if (!ai::parseRrdb(file, net.rrdbModel, error)) return false;

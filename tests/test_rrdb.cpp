@@ -40,6 +40,15 @@ std::vector<uint8_t> smallModel(std::vector<std::vector<float>>& convs, std::vec
     return file;
 }
 
+// 2.5.27: a value as IEEE half (sign, 5-bit exponent, 10-bit mantissa) - normal numbers and zero, exactly
+uint16_t half(float v) {
+    if (v == 0.0f) return 0;
+    uint32_t b;
+    std::memcpy(&b, &v, 4);
+    const uint32_t sign = (b >> 16) & 0x8000u, exp = (b >> 23) & 0xFF, mant = b & 0x7FFFFF;
+    return uint16_t(sign | ((exp - 127 + 15) << 10) | (mant >> 13));
+}
+
 using Planes = std::vector<float>;
 
 // The network written out the way Real-ESRGAN's RRDBNet does it, zeros past the edge.
@@ -74,6 +83,36 @@ Planes up2(const Planes& p, int c, int w, int h) {
 }
 
 }  // namespace
+
+TEST(rrdb_reads_half_precision_weights) {
+    // 2.5.27: format 2 - the weights as halves (Game AI 2.0 in 33 MB, not 67): read as the same floats
+    std::vector<std::vector<float>> w;
+    std::vector<int> ins, outs;
+    std::vector<uint8_t> full = smallModel(w, ins, outs);
+    std::vector<uint8_t> halves(full.begin(), full.begin() + 24);
+    const uint32_t two = 2;
+    std::memcpy(halves.data() + 20, &two, 4);
+    size_t at = 24;
+    for (const auto& v : w)
+        for (float x : v) {
+            const float exact = std::round(x * 1024.0f) / 1024.0f;  // k/1024: exactly a half
+            std::memcpy(full.data() + at, &exact, 4);
+            at += 4;
+            const uint16_t h = half(exact);
+            halves.push_back(uint8_t(h));
+            halves.push_back(uint8_t(h >> 8));
+        }
+    RrdbModel a, b;
+    std::string error;
+    CHECK(parseRrdb(full, a, error));
+    CHECK(parseRrdb(halves, b, error));
+    CHECK(a.blocks == b.blocks && a.net.data.size() == b.net.data.size() && a.net.data == b.net.data);
+    halves.pop_back();  // a byte short
+    CHECK(!parseRrdb(halves, b, error));
+    const uint32_t three = 3;  // no such format
+    std::memcpy(full.data() + 20, &three, 4);
+    CHECK(!parseRrdb(full, b, error));
+}
 
 TEST(rrdb_program_matches_the_network_as_written) {
     std::vector<std::vector<float>> w;

@@ -1,0 +1,16 @@
+4x Game AI 2.0 - an ESRGAN model by Tal (https://openmodeldb.info/models/4x-GameAI-2-0), for game textures, under
+the WTFPL below. uaRO Graphics ships it as 4x-gameai-2.0.bin: the same network, its weights as 16-bit halves.
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+                    Version 2, December 2004
+
+ Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+
+ Everyone is permitted to copy and distribute verbatim or modified
+ copies of this license document, and changing it is allowed as long
+ as the name is changed.
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. You just DO WHAT THE FUCK YOU WANT TO.

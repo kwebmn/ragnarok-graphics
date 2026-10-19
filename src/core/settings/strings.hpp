@@ -309,6 +309,7 @@ enum class Text : uint16_t {
     QualitySuperLight, QualitySuperLightHint, FramesBattery, FramesBatteryHint, FramesBatteryFps, FramesBatteryFpsHint,
     AiDyes, AiDyesHint,  // 2.5.23
     FramesReflex, FramesReflexHint,  // 2.5.26
+    AiModelGameAi, AiGameAiMissing, AiGetModels, AiGetModelsFailed,  // 2.5.27
     Count
 };
 

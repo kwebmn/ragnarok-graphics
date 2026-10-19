@@ -14,5 +14,7 @@ void startUpdateCheck();
 UpdateState updateState();
 // update.bat of the game's folder, started; "" or why not, in English.
 std::string startUpdate(const std::wstring& gameDir);
+// 2.5.27: get-models.bat likewise - the AI models that come apart (Game AI 2.0), downloaded in its console.
+std::string startGetModels(const std::wstring& gameDir);
 
 }  // namespace uagfx::app

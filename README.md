@@ -28,7 +28,8 @@ app's Service page) downloads and installs the newest build; your settings stay.
   of the picture, light, shadows, surfaces, nature, water, air and weather, the living world, skills, the picture —
   each with its own switch and strength, and each opens to its effects. New effects come switched off.
 - **AI textures.** The Texture pack page builds `uaro-textures.zip` from the game's own pictures with Real-ESRGAN
-  models; the game then shows them by kind — ground, buildings, characters and items, skills, icons.
+  models or Game AI 2.0 (downloaded apart, `get-models.bat`), a model for each group of pictures; the game then shows
+  them by kind — ground, buildings, characters and items, skills, icons.
 - **uaRO Studio** (`uaro-graphics\uaro-studio.exe`, for the pack's makers and testers): every texture of the game
   beside its pack picture — its archive and the ones it shadows, the model and the date it was made, the maps it is
   on, quality flags (smoothed, tone shifted, bands, halos, a pink fringe, spoiled alpha, seams); any texture made
@@ -110,5 +111,6 @@ changes with DXC `-HV 2018`, which keeps to FXC's rules (a loop's variable lives
 
 ## License
 
-[MIT](LICENSE). Real-ESRGAN models: BSD-3-Clause (`dist/ai/LICENSE-Real-ESRGAN.txt`); NVIDIA Streamline headers:
-MIT; miniz, libwebp and stb_image under their own licenses in `third_party/`.
+[MIT](LICENSE). Real-ESRGAN models: BSD-3-Clause (`dist/ai/LICENSE-Real-ESRGAN.txt`); Game AI 2.0 by Tal: WTFPL
+(`dist/ai/LICENSE-GameAI.txt`); NVIDIA Streamline headers: MIT; miniz, libwebp and stb_image under their own licenses
+in `third_party/`.

@@ -17,7 +17,8 @@ namespace {
 
 constexpr UINT_PTR kFilterTimer = 20;  // the filter applied a moment after the last key
 constexpr int kColumns = 8;
-const char* const kModels[] = {"", "general", "anime", "anime6b"};
+const char* const kModels[] = {"", "general", "anime", "anime6b", "gameai"};  // 2.5.27: Game AI
+constexpr uint8_t kOtherModel = 5;  // a model none of these
 
 std::wstring fromCp949(const std::string& s) {
     const int n = MultiByteToWideChar(949, 0, s.data(), int(s.size()), nullptr, 0);
@@ -34,9 +35,9 @@ std::string toCp949(const std::wstring& w) {
 }
 
 uint8_t modelCode(const std::string& m) {
-    for (uint8_t i = 1; i < 4; ++i)
+    for (uint8_t i = 1; i < kOtherModel; ++i)
         if (m == kModels[i]) return i;
-    return m.empty() ? 0 : 4;
+    return m.empty() ? 0 : kOtherModel;
 }
 
 // What a rebuild works from: copies and shared parts, so that the window goes on meanwhile.
@@ -204,7 +205,7 @@ void TexturesTab::fillTree() {
     add(states, t(settings::Text::StudioNavOverrides), "overrides");
     add(states, t(settings::Text::StudioNavOrphans), "orphans");
     const HTREEITEM models = add(TVI_ROOT, t(settings::Text::StudioNavModels), "");
-    for (int i = 1; i < 4; ++i) add(models, app::wide(kModels[i]), std::string("model:") + kModels[i]);
+    for (int i = 1; i < kOtherModel; ++i) add(models, app::wide(kModels[i]), std::string("model:") + kModels[i]);
     // What the game drew (uaro-graphics\seen\<map>.txt, the driver's reports)
     const HTREEITEM seen = add(TVI_ROOT, t(settings::Text::StudioNavReports), "");
     WIN32_FIND_DATAW f{};
@@ -315,7 +316,7 @@ std::wstring TexturesTab::cell(const Row& r, int column) const {
             return t(s[std::min<int>(r.state, 3)]);
         }
         case 3:
-            return r.model == 4 ? L"?" : app::wide(kModels[r.model]);
+            return r.model >= kOtherModel ? L"?" : app::wide(kModels[r.model]);
         case 4:
         case 5: {
             if (orphan) return L"";

@@ -3132,6 +3132,21 @@ const Entry kTexts[] = {
      "С DLSS: каждый кадр ждёт, пока видеокарта почти освободится, и игра читает мышь только тогда — курсор раньше "
      "идёт за мышью, кадров в секунду почти столько же. Генерация кадров включает его и так. Действует со "
      "следующего запуска игры."},
+    {"Game AI 2.0 (game textures, real and drawn; not for small icons; downloaded apart, 29 MB; 3 times slower than "
+     "anime 6B)",
+     "Game AI 2.0 (ігрові текстури, реалістичні й мальовані; не для дрібних іконок; завантажується окремо, 29 МБ; "
+     "утричі повільніша за anime 6B)",
+     "Game AI 2.0 (игровые текстуры, реалистичные и рисованные; не для мелких иконок; скачивается отдельно, 29 МБ; "
+     "втрое медленнее anime 6B)"},
+    {"Game AI is not on this computer yet: it comes apart from the package (29 MB). Until it is downloaded, pictures "
+     "by it are not made.",
+     "Game AI ще немає на цьому комп'ютері: вона йде окремо від пакета (29 МБ). Доки її не завантажено, картинки нею "
+     "не робляться.",
+     "Game AI ещё нет на этом компьютере: она идёт отдельно от пакета (29 МБ). Пока её не скачали, картинки ею не "
+     "делаются."},
+    {"Download Game AI (29 MB)", "Завантажити Game AI (29 МБ)", "Скачать Game AI (29 МБ)"},
+    {"get-models.bat could not be started: {1}", "Не вдалося запустити get-models.bat: {1}",
+     "Не удалось запустить get-models.bat: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
