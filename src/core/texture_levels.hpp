@@ -25,8 +25,9 @@ public:
     void setKey(const ColorKey& key);  // the alpha of keyed texels changes: every level is sent again
     void changed(int level, Rect r);   // r is clipped to the level
     // AI textures (0.13): a cell of the game's sprite cache got a new frame (of `source`, sprite_exe::Source); the
-    // next upload of level 0 names it.
-    void slotWritten(Rect r, uint8_t source = 0);
+    // next upload of level 0 names it. 2.5.23: own - the frame in its sprite's own colours when the game wrote it in
+    // a dye (the cell's size; else none).
+    void slotWritten(Rect r, uint8_t source = 0, const std::vector<uint32_t>* own = nullptr);
     bool pending() const;
     void sync(FrameRecord& record, uint32_t texture);  // records the changed rectangles as uploads
     // 2.5.18: the game's own texels of level 0 before it made them 16-bit (core/full_colour.hpp): r of level 0, argb
@@ -44,6 +45,7 @@ private:
     std::vector<Image> images_;
     std::vector<Rect> dirty_;
     std::vector<SpriteCell> slots_;  // since the last upload of level 0
+    std::vector<std::vector<uint32_t>> slotOwn_;  // 2.5.23: each one's own colours (empty: none)
     ColorKey key_;
     std::vector<uint32_t> full_;  // 2.5.18: level 0's full colours (its size) while some wait for their upload
     Rect fullRect_;               // where they are

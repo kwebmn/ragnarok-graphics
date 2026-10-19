@@ -276,6 +276,7 @@ bool Context::open(std::string& error) {
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
     setFastTextures(config.fastTextures);  // 2.5.20
+    setSpriteDyes(config.aiNow.dyes);      // 2.5.23
     if (!config.remix) installTextureHook();
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
@@ -738,6 +739,7 @@ void Context::watchSettings() {
     }
     if (config.windowArt != was.windowArt) crisp::setWindowArt(config.windowArt);  // 0.41: the windows redrawn
     if (config.fullColour != was.fullColour) setFullColour(config.fullColour);  // 2.5.18: the textures loaded next
+    if (config.aiNow.dyes != was.aiNow.dyes) setSpriteDyes(config.aiNow.dyes);  // 2.5.23: the frames written next
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
     if (config.fpsCounter != was.fpsCounter) fpsShown_ = config.fpsCounter;  // 2.2.1: at once
     if (config.statsSend && usage_.begun()) {  // 2.2.1: what was changed in the game - what was liked, or not

@@ -47,7 +47,8 @@ uint32_t FrameRecord::addPixels(const uint32_t* argb, size_t count) {
 }
 
 void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
-                         const std::vector<SpriteCell>& slots, PixelFormat fullFrom) {
+                         const std::vector<SpriteCell>& slots, PixelFormat fullFrom,
+                         const std::vector<std::vector<uint32_t>>& own) {
     UploadCmd u;
     u.fullFrom = uint8_t(fullFrom);
     u.texture = texture;
@@ -57,6 +58,11 @@ void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, con
     u.firstSlot = uint32_t(slots_.size());
     u.slotCount = uint32_t(slots.size());
     slots_.insert(slots_.end(), slots.begin(), slots.end());
+    for (size_t i = 0; i < slots.size(); ++i) {  // 2.5.23: a dyed frame's own colours, the cell's size
+        SpriteCell& s = slots_[u.firstSlot + i];
+        const size_t area = size_t(s.rect.width()) * size_t(s.rect.height());
+        s.own = i < own.size() && !own[i].empty() && own[i].size() == area ? addPixels(own[i].data(), area) + 1 : 0;
+    }
     uploads_.push_back(u);
     commands_.push_back({Cmd::Upload, uint32_t(uploads_.size() - 1)});
 }

@@ -1,4 +1,7 @@
 #pragma once
+#include <cstdint>
+#include <vector>
+
 #include "core/image.hpp"
 
 namespace uagfx::win {
@@ -12,5 +15,10 @@ bool installSpriteHook();
 // false at any other time.
 bool spriteCell(Rect& cell, uint8_t& source);
 bool spriteCellCard();  // 0.95: ... and it is a card lying on the ground
+// 2.5.23: ... and the game writes it in a dye (a palette other than its sprite's own: the clothes', the hair's) - the
+// cell's texels as the game would write them in the sprite's own colours (its 16-bit values, the cell's size; the AI
+// textures find the pack's picture by them and colour it as the dye); nullptr otherwise.
+const std::vector<uint16_t>* spriteCellOwn();
+void setSpriteDyes(bool on);  // [ai] dyes
 
 }  // namespace uagfx::win

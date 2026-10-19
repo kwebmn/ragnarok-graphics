@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <unordered_map>
@@ -29,6 +30,13 @@ uint8_t g_source = 0;
 std::unordered_map<uint32_t, uint8_t> g_frames;
 std::unordered_map<uint32_t, bool> g_cards;  // 0.95: the frames of a card lying on the ground
 bool g_card = false;
+// 2.5.23: every palette frame -> its sprite (CSprRes, whose own palette is at sprite_exe::kPalette); the frame being
+// written in a dye, in the sprite's own colours
+std::unordered_map<uint32_t, uint32_t> g_owners;
+std::vector<uint16_t> g_own;
+bool g_ownValid = false;
+std::atomic<bool> g_dyes{true};
+bool g_dyeLogged = false;
 uintptr_t g_load = 0;  // the loader the vtable held
 
 using LoadFn = uint32_t(__attribute__((thiscall)) *)(uint32_t sprite, const char* name);
@@ -42,13 +50,44 @@ void noteFrames(uint32_t list, uint8_t source) {
         if (*f) g_frames[*f] = source;
 }
 
-// [at, at + n) lies in committed, readable memory: the game's objects are read on its word.
-bool readable(uintptr_t at, size_t n) {
+// The bytes readable from at on, to the end of its committed region (0: none).
+size_t readableFrom(uintptr_t at) {
     MEMORY_BASIC_INFORMATION m{};
     if (!at || !VirtualQuery(reinterpret_cast<const void*>(at), &m, sizeof m) || m.State != MEM_COMMIT ||
         (m.Protect & (PAGE_NOACCESS | PAGE_GUARD)))
-        return false;
-    return at + n <= reinterpret_cast<uintptr_t>(m.BaseAddress) + m.RegionSize;
+        return 0;
+    return reinterpret_cast<uintptr_t>(m.BaseAddress) + m.RegionSize - at;
+}
+
+// [at, at + n) lies in committed, readable memory: the game's objects are read on its word.
+bool readable(uintptr_t at, size_t n) { return n <= readableFrom(at); }
+
+// 2.5.23: the frame (a SprImg) going into a cell of cellW x cellH with `palette` - when that is not its sprite's own,
+// the cell as the sprite's own colours would make it, into g_own.
+void ownColours(const void* image, const void* palette, int cellW, int cellH) {
+    const auto o = g_owners.find(uint32_t(reinterpret_cast<uintptr_t>(image)));
+    if (o == g_owners.end()) return;
+    const uintptr_t own = uintptr_t(o->second) + sprite_exe::kPalette;
+    if (own == reinterpret_cast<uintptr_t>(palette) || !readable(own, 1024) ||
+        !readable(reinterpret_cast<uintptr_t>(palette), 1024) ||
+        !readable(reinterpret_cast<uintptr_t>(image), sprite_exe::kImageData + 4))
+        return;
+    const auto* ownPalette = reinterpret_cast<const uint32_t*>(own);
+    if (sprite_exe::sameColours(ownPalette, static_cast<const uint32_t*>(palette))) return;
+    const auto* img = static_cast<const uint8_t*>(image);
+    int16_t w = 0, h = 0;
+    std::memcpy(&w, img, 2);
+    std::memcpy(&h, img + 2, 2);
+    uint32_t data = 0;
+    std::memcpy(&data, img + sprite_exe::kImageData, 4);
+    const size_t available = readableFrom(data);
+    if (!available || w <= 0 || h <= 0) return;
+    g_ownValid = sprite_exe::cellTexels(reinterpret_cast<const uint8_t*>(uintptr_t(data)), available, w, h, ownPalette,
+                                        cellW, cellH, g_own);
+    if (g_ownValid && !g_dyeLogged) {
+        g_dyeLogged = true;
+        LOG_INFO("AI textures: a frame in a dye (clothes, hair) - its picture in its own colours, coloured as the dye");
+    }
 }
 
 // 0.23.1, 0.24, the maps' objects drawn anew (core/map_objects.hpp): the loader gives each 32-bit frame a texture of
@@ -87,6 +126,14 @@ uint32_t __attribute__((thiscall)) spriteLoad(uint32_t sprite, const char* name)
     const uint8_t source = uint8_t(sprite_exe::sourceOf(name));
     noteFrames(sprite + sprite_exe::kImages, source);
     noteFrames(sprite + sprite_exe::kRgbaImages, source);
+    {  // 2.5.23: each palette frame's sprite - its own palette
+        const uint32_t list = sprite + sprite_exe::kImages;
+        const uint32_t* begin = *reinterpret_cast<uint32_t* const*>(uintptr_t(list));
+        const uint32_t* end = *reinterpret_cast<uint32_t* const*>(uintptr_t(list) + 4);
+        if (begin && end >= begin && end - begin <= 65536)
+            for (const uint32_t* f = begin; f != end; ++f)
+                if (*f) g_owners[*f] = sprite;
+    }
     if (source == uint8_t(sprite_exe::Source::Item)) {  // 0.95: whether it is a card's, every frame of it
         const bool card = sprite_exe::cardOnGround(name);
         const uint32_t list = sprite + sprite_exe::kImages;
@@ -108,6 +155,8 @@ void __attribute__((thiscall)) spriteWrite(uint32_t texture, int x, int y, unsig
     g_source = f == g_frames.end() ? 0 : f->second;
     const auto c = g_cards.find(uint32_t(reinterpret_cast<uintptr_t>(image)));
     g_card = c != g_cards.end() && c->second;
+    g_ownValid = false;
+    if (g_dyes.load() && image && palette) ownColours(image, palette, int(width), height);
     g_writing = true;
     reinterpret_cast<WriteFn>(uintptr_t(sprite_exe::kWrite))(texture, x, y, width, height, image, palette);
     g_writing = false;
@@ -162,5 +211,9 @@ bool spriteCell(Rect& cell, uint8_t& source) {
 }
 
 bool spriteCellCard() { return g_writing && g_card; }
+
+const std::vector<uint16_t>* spriteCellOwn() { return g_writing && g_ownValid ? &g_own : nullptr; }
+
+void setSpriteDyes(bool on) { g_dyes = on; }
 
 }  // namespace uagfx::win

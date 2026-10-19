@@ -465,6 +465,7 @@ const std::vector<IniSetting>& iniSettings() {
         {"ai", "players", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiPlayers, Text::AiPlayersHint, ""},
         {"ai", "npcs", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiNpcs, Text::AiNpcsHint, ""},
         {"ai", "items", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiItems, Text::AiItemsHint, ""},
+        {"ai", "dyes", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiDyes, Text::AiDyesHint, ""},
         {"ai", "effects", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiEffects, Text::AiEffectsHint,
          ""},
         {"ai", "icons", Page::Ai, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::AiIcons, Text::AiIconsHint, ""},
@@ -640,6 +641,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "ai.min_size") return std::to_string(a.minSize);
     if (k == "ai.max_size") return std::to_string(a.maxSize);
     if (k == "ai.ahead") return a.ahead ? "1" : "0";
+    if (k == "ai.dyes") return a.dyes ? "1" : "0";  // 2.5.23
     if (k == "ai.compress") return a.compress;
     if (k == "ai.generate") return a.generate ? "1" : "0";
     if (k == "quality.anisotropy") return std::to_string(c.anisotropy);

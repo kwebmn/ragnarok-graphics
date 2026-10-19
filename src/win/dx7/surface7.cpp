@@ -520,7 +520,20 @@ HRESULT STDMETHODCALLTYPE Surface7::Unlock(LPRECT) {
         Rect cell;  // AI textures: a frame the game wrote into a cell of its sprite cache (sprite_hook.hpp)
         uint8_t source = 0;
         if (level_ == 0 && win::spriteCell(cell, source)) {
-            top()->levels_->slotWritten(cell, source);
+            // 2.5.23: a frame in a dye - the same frame in its sprite's own colours, made 32-bit as its texels are
+            std::vector<uint32_t> own;
+            const std::vector<uint16_t>* own16 = win::spriteCellOwn();
+            const TextureLevels& lv = *top()->levels_;
+            const PixelFormat f = lv.level(0).format();
+            if (own16 && bytesPerPixel(f) == 2 && own16->size() == size_t(cell.width()) * size_t(cell.height())) {
+                own.resize(own16->size());
+                const auto* bytes = reinterpret_cast<const uint8_t*>(own16->data());
+                if (lv.key().enabled)
+                    rowToArgb8Keyed(f, bytes, own.data(), int(own.size()), lv.key().low, lv.key().high);
+                else
+                    rowToArgb8(f, bytes, own.data(), int(own.size()));
+            }
+            top()->levels_->slotWritten(cell, source, own.empty() ? nullptr : &own);
             std::vector<Cell>& cells = top()->cells_;  // 0.93
             const bool card = win::spriteCellCard();
             bool known = false;

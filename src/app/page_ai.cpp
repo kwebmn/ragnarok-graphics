@@ -90,6 +90,7 @@ const KindBox kBoxes[] = {{"ai.ground", Text::AiGround, Text::AiGroundHint},
                           {"ai.players", Text::AiPlayers, Text::AiPlayersHint},
                           {"ai.npcs", Text::AiNpcs, Text::AiNpcsHint},
                           {"ai.items", Text::AiItems, Text::AiItemsHint},
+                          {"ai.dyes", Text::AiDyes, Text::AiDyesHint},  // 2.5.23
                           {"ai.icons", Text::AiIcons, Text::AiIconsHint},
                           {"ai.ui_pieces", Text::AiUiPieces, Text::AiUiPiecesHint}};
 constexpr int kKindCount = int(sizeof kBoxes / sizeof kBoxes[0]);

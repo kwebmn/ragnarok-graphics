@@ -121,6 +121,8 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
         if (v == "auto" || v == "on" || v == "off") a.compress = v;
     } else if (k == "ahead") {
         setBool(v, a.ahead);
+    } else if (k == "dyes") {  // 2.5.23
+        setBool(v, a.dyes);
     } else if (k == "generate") {
         setBool(v, a.generate);
     }
@@ -130,7 +132,7 @@ void parseAi(const std::string& k, const std::string& v, AiSettings& a, bool& en
 
 bool AiSettings::operator==(const AiSettings& o) const {
     return enabled == o.enabled && ground == o.ground && objects == o.objects && monsters == o.monsters &&
-           players == o.players && npcs == o.npcs && items == o.items &&
+           players == o.players && npcs == o.npcs && items == o.items && dyes == o.dyes &&
            effects == o.effects && icons == o.icons && uiPieces == o.uiPieces && model == o.model &&
            spriteModel == o.spriteModel &&
            denoise == o.denoise && scale == o.scale && budget == o.budget && minSize == o.minSize &&

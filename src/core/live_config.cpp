@@ -35,7 +35,8 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         {"ai.enabled", {wa.enabled, fa.enabled}}, {"ai.ground", {wa.ground, fa.ground}},
         {"ai.objects", {wa.objects, fa.objects}}, {"ai.monsters", {wa.monsters, fa.monsters}},
         {"ai.players", {wa.players, fa.players}}, {"ai.npcs", {wa.npcs, fa.npcs}}, {"ai.items", {wa.items, fa.items}},
-        {"ai.effects", {wa.effects, fa.effects}}, {"ai.icons", {wa.icons, fa.icons}}};
+        {"ai.effects", {wa.effects, fa.effects}}, {"ai.icons", {wa.icons, fa.icons}},
+        {"ai.dyes", {wa.dyes, fa.dyes}}};  // 2.5.23
     for (const auto& [key, was] : kinds) {
         if (was.first == was.second) continue;
         if (aiWaits(key, ra, fa))

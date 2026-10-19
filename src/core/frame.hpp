@@ -49,6 +49,10 @@ struct DrawCmd {
 struct SpriteCell {
     Rect rect;
     uint8_t source = 0;
+    // 2.5.23: a frame the game wrote in a dye (another palette) - the same frame in its sprite's own colours at
+    // pixels()[own - 1], the cell's size: the AI textures find the pack's picture by it and colour it as the dye; 0
+    // none
+    uint32_t own = 0;
     bool operator==(const SpriteCell& o) const { return rect == o.rect && source == o.source; }
 };
 
@@ -101,8 +105,10 @@ public:
     void clear(const ClearCmd& c);
     void viewport(const ViewportCmd& v);
     void draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, const uint16_t* indices, uint32_t indexCount);
+    // own (2.5.23): for slots[i] the frame in its own colours (the cell's size), or none (empty)
     void upload(uint32_t texture, uint32_t level, const Rect& rect, const uint32_t* argb,
-                const std::vector<SpriteCell>& slots = {}, PixelFormat fullFrom = PixelFormat::Unknown);
+                const std::vector<SpriteCell>& slots = {}, PixelFormat fullFrom = PixelFormat::Unknown,
+                const std::vector<std::vector<uint32_t>>& own = {});
     void writeTarget(const Rect& rect, const uint32_t* argb);
     bool empty() const { return commands_.empty(); }
     // Bytes waiting to go to the GPU: vertices, indices and pixels. Past kFlushBytes the driver plays the record at

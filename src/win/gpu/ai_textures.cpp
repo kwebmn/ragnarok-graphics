@@ -10,6 +10,7 @@
 
 #include "core/ai/black_key.hpp"
 #include "core/ai/groups.hpp"
+#include "core/ai/recolour.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "core/ai/vram.hpp"
 #include "core/sprite_exe.hpp"
@@ -970,7 +971,7 @@ bool AiTextures::cellOn(uint8_t source) const {
 }
 
 void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const SpriteCell* cells,
-                           uint32_t count) {
+                           uint32_t count, const uint32_t* pixels) {
     const auto item = items_.find(id);
     if (item != items_.end()) {
         keptBytes_ -= item->second.argb.size() * 4;
@@ -1014,12 +1015,13 @@ void AiTextures::noteCells(uint32_t id, Texture& t, const UploadCmd& u, const ui
             c.bottom > u.rect.bottom)
             continue;
         at.sources[uint32_t(c.top) << 16 | uint32_t(c.left)] = cells[i].source;
-        cellWritten(id, t, at, net, c, pixelsOf(c), u.rect.width(), cells[i].source, true);
+        cellWritten(id, t, at, net, c, pixelsOf(c), u.rect.width(), cells[i].source, true,
+                    cells[i].own && pixels ? pixels + (cells[i].own - 1) : nullptr);  // 2.5.23
     }
 }
 
 void AiTextures::cellWritten(uint32_t id, Texture& t, Atlas& a, int net, const Rect& c, const uint32_t* argb,
-                             int pitch, uint8_t source, bool seen) {
+                             int pitch, uint8_t source, bool seen, const uint32_t* own) {
     const int w = c.width(), h = c.height();
     std::vector<uint32_t> pixels(size_t(w) * size_t(h));
     for (int y = 0; y < h; ++y)
@@ -1061,8 +1063,23 @@ void AiTextures::cellWritten(uint32_t id, Texture& t, Atlas& a, int net, const R
              : kind == sprite_exe::Source::Interface ? ai::Kind::Icons
                                                      : ai::Kind::Sprites;
     // 0.42: from the texture pack first; 0.48: from the pack alone - generating, the network makes the rest.
-    std::string name;
-    if (pictures_->cell(key, name)) {
+    std::string name;  // the frame's picture's name in the pack, found or to be made
+    bool found = pictures_->cell(key, name);
+    std::vector<uint32_t> ownPixels;
+    std::string ownKey;
+    if (!found && own) {  // 2.5.23: a frame in a dye - its picture in its own colours, coloured as the dye
+        ownPixels.assign(own, own + size_t(w) * size_t(h));
+        ownKey = ai::keyName(ai::textureKey(ownPixels.data(), w, h));
+        std::string ownName;
+        if (pictures_->cell(ownKey, ownName)) {
+            found = true;
+            name = ownName;
+            j.own = std::move(ownPixels);
+            j.dyed = pixels;
+            ++dyed_;
+        }
+    }
+    if (found) {
         if (!seen) ++unseenFound_;
         note(name, j.kind);
         j.name = name;
@@ -1073,7 +1090,10 @@ void AiTextures::cellWritten(uint32_t id, Texture& t, Atlas& a, int net, const R
     if (!seen) return;  // perhaps no frame at all: the network makes none of it
     if (j.net < 0) {  // not generating (1.6: its group's network): the frame stays as the game has it
         ++cellsMissing_;
-        dump_.save(sprite_exe::sourceName(source), key, pixels.data(), w, h);
+        if (!ownKey.empty())  // 2.5.23: the pack has the frame in no colour - it lacks its own colours' picture
+            dump_.save(sprite_exe::sourceName(source), ownKey, ownPixels.data(), w, h);
+        else
+            dump_.save(sprite_exe::sourceName(source), key, pixels.data(), w, h);
         return;
     }
     j.name = name;
@@ -1262,10 +1282,10 @@ void AiTextures::drop(Item& item) {
 }
 
 void AiTextures::noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb,
-                            const SpriteCell* cells, uint32_t cellCount) {
+                            const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels) {
     if (!ready_ || u.level != 0) return;
     if (cellCount || atlases_.count(id)) {  // a sprite cache: cell by cell
-        noteCells(id, t, u, argb, cells, cellCount);
+        noteCells(id, t, u, argb, cells, cellCount, pixels);
         return;
     }
     if (t.ai) dropAi(id);  // the game changed a texture the network had done: its own pixels again
@@ -1917,6 +1937,10 @@ void AiTextures::logNow(bool final) {
                  static_cast<unsigned>(cells_.size()),
                  static_cast<unsigned long long>(cellWaits_ ? cellWait_ / cellWaits_ : 0),
                  static_cast<unsigned long long>(cellWaitMost_));
+    if (dyed_)  // 2.5.23
+        LOG_INFO("AI textures: sprite frames in a dye - %u taken by their pictures in their own colours, coloured as "
+                 "the dye",
+                 dyed_);
     if (unseen_)  // 0.49.3
         LOG_INFO("AI textures: sprite frames - %u came past the game's call (found changed in their caches), %u of "
                  "them in the pack",
@@ -2017,6 +2041,9 @@ void AiTextures::ioLoop() {
             res.name = r.name;
             res.cell = std::move(r.cell);
             res.ok = ioRead(r, res);
+            const Job& cj = res.cell;  // 2.5.23: a frame in a dye from its picture in its own colours
+            if (res.ok && !cj.own.empty() && res.width == cj.width * scale_ && res.height == cj.height * scale_)
+                ai::recolour(res.argb, res.width, res.height, cj.own.data(), cj.dyed.data(), cj.width, cj.height);
             res.asked = r.asked;
             EnterCriticalSection(&ioLock_);
             ioOut_.push_back(std::move(res));

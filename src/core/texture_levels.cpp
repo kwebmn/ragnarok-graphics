@@ -79,14 +79,18 @@ void TextureLevels::changed(int level, Rect r) {
     dirty_[size_t(level)] = unite(dirty_[size_t(level)], r);
 }
 
-void TextureLevels::slotWritten(Rect r, uint8_t source) {
+void TextureLevels::slotWritten(Rect r, uint8_t source, const std::vector<uint32_t>* own) {
+    const Rect asked = r;
     if (levels() == 0 || !clipRect(images_[0].bounds(), r)) return;
-    for (SpriteCell& s : slots_)
-        if (s.rect == r) {  // written again before the upload: the cell's newest frame goes once
-            s.source = source;
+    const bool whole = own && r == asked && own->size() == size_t(r.width()) * size_t(r.height());
+    for (size_t i = 0; i < slots_.size(); ++i)
+        if (slots_[i].rect == r) {  // written again before the upload: the cell's newest frame goes once
+            slots_[i].source = source;
+            slotOwn_[i] = whole ? *own : std::vector<uint32_t>();
             return;
         }
     slots_.push_back(SpriteCell{r, source});
+    slotOwn_.push_back(whole ? *own : std::vector<uint32_t>());
 }
 
 bool TextureLevels::pending() const {
@@ -136,9 +140,13 @@ void TextureLevels::sync(FrameRecord& record, uint32_t texture) {
             }
         }
         record.upload(texture, uint32_t(i), d, argb.data(), i == 0 ? slots_ : std::vector<SpriteCell>(),
-                      full ? f : PixelFormat::Unknown);
+                      full ? f : PixelFormat::Unknown,
+                      i == 0 ? slotOwn_ : std::vector<std::vector<uint32_t>>());
         dirty_[i] = Rect{};
-        if (i == 0) slots_.clear();
+        if (i == 0) {
+            slots_.clear();
+            slotOwn_.clear();
+        }
         sent = true;
     }
     if (sent) dropFull();

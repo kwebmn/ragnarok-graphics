@@ -178,6 +178,7 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
     for (const SpriteCell& s : r.slots()) {
         w.rect(s.rect);
         w.u8(s.source);
+        w.u32(s.own);  // 2.5.23
     }
     w.u32(uint32_t(r.writes().size()));
     for (const WriteTargetCmd& t : r.writes()) {
@@ -256,11 +257,12 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         u.slotCount = rd.u32();
         u.fullFrom = rd.u8();
     }
-    if (!count(rd, 17, n)) return fail();
+    if (!count(rd, 21, n)) return fail();
     r.slots_.resize(n);
     for (SpriteCell& s : r.slots_) {
         s.rect = rd.rect();
         s.source = rd.u8();
+        s.own = rd.u32();
     }
     if (!count(rd, 20, n)) return fail();
     r.writes_.resize(n);
@@ -302,6 +304,8 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
     };
     for (const UploadCmd& u : r.uploads_)
         if (!pixelsFit(u.rect, u.pixels) || uint64_t(u.firstSlot) + u.slotCount > r.slots_.size()) return fail();
+    for (const SpriteCell& s : r.slots_)  // 2.5.23: a dyed frame's own colours within the pixels
+        if (s.own && !pixelsFit(s.rect, s.own - 1)) return fail();
     for (const WriteTargetCmd& t : r.writes_)
         if (!pixelsFit(t.rect, t.pixels)) return fail();
     return true;

@@ -307,6 +307,7 @@ enum class Text : uint16_t {
     PalettesFailed, PalettesSameFile, PalettesFolderTitle, FileFilterGrfZip, FileFilterGrf,
     // 2.5.20: the light modes
     QualitySuperLight, QualitySuperLightHint, FramesBattery, FramesBatteryHint, FramesBatteryFps, FramesBatteryFpsHint,
+    AiDyes, AiDyesHint,  // 2.5.23
     Count
 };
 

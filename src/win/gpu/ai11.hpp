@@ -42,9 +42,10 @@ public:
 
     bool start(const std::string& gameDir, const AiSettings& settings, std::string& error);
     // A texture's pixels as the game uploads them - level 0 of a whole one gives its key; cells: the cells of the
-    // game's sprite cache that got a new frame (UploadCmd::slots).
+    // game's sprite cache that got a new frame (UploadCmd::slots); pixels (2.5.23): the record's, where a dyed
+    // frame's own colours are (SpriteCell::own).
     void noteUpload(uint32_t id, int width, int height, const UploadCmd& u, const uint32_t* argb,
-                    const SpriteCell* cells, uint32_t cellCount);
+                    const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels = nullptr);
     void noteWorldUse(uint32_t id, ai::Kind kind);  // drawn in the world as kind
     void noteUiUse(uint32_t id);                    // drawn in the interface: its big pictures
     void forget(uint32_t id);                       // the game released it
@@ -104,6 +105,10 @@ private:
         int cellX = 0, cellY = 0;
         uint64_t iconKey = 0;
         std::vector<uint8_t> shown;  // 2.5.18: the plain texture's picture for one keyed black - the key put on it
+        // 2.5.23: a frame in a dye - the picture of the frame in its own colours coloured as the dye (own and dyed:
+        // the frame's colours both ways, the cell's size); dye the dyed frame's key (its picture's kept under it)
+        std::vector<uint32_t> own, dyed;
+        std::string dye;
     };
     struct Level {
         int width = 0, height = 0;
@@ -125,10 +130,12 @@ private:
     void dropCopy(uint32_t id);
     void putAwayOld();
     void noteCells(uint32_t id, int width, int height, const UploadCmd& u, const uint32_t* argb,
-                   const SpriteCell* cells, uint32_t count);
+                   const SpriteCell* cells, uint32_t count, const uint32_t* pixels);
     bool cellOn(uint8_t source) const;
     // A frame in the cell c of the cache (argb its top left texel): seen - through the game's call; else found changed.
-    void cellWritten(uint32_t id, Atlas& a, const Rect& c, const uint32_t* argb, int pitch, uint8_t source, bool seen);
+    // own (2.5.23): the frame in its sprite's own colours (the cell's size) when the game wrote it in a dye.
+    void cellWritten(uint32_t id, Atlas& a, const Rect& c, const uint32_t* argb, int pitch, uint8_t source, bool seen,
+                     const uint32_t* own = nullptr);
     bool makeAtlas(uint32_t id, int width, int height);
     // smooth (0.49.2): a frame whose picture is on its way - enlarged smoothly meanwhile, not texel by texel.
     void standIn(uint32_t id, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch, bool smooth = false);
@@ -187,6 +194,7 @@ private:
     uint32_t failed_ = 0, soft_ = 0, waiting_ = 0;
     uint32_t blackKeyed_ = 0;  // 2.5.18: the skills' animations' textures found by their plain pictures
     uint32_t unseen_ = 0, unseenFound_ = 0;  // 0.49.3: frames found changed past the game's call, of them in the pack
+    uint32_t dyed_ = 0;  // 2.5.23: frames in a dye taken by their pictures in their own colours
     ULONGLONG cellWait_ = 0, cellWaitMost_ = 0;  // 0.49.2: the frames' pictures from asked to in, all and the longest
     uint32_t seen_[6] = {};  // textures first drawn as each ai::Kind this run
     // 0.48 (in place of the settings app's "Check the keys"): what the pack has no picture of, by kind; frames.

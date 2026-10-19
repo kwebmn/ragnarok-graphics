@@ -11,6 +11,39 @@ bool isWriteCall(const uint8_t bytes[5]) {
     return kWriteCall + 5 + rel == kWrite;
 }
 
+bool cellTexels(const uint8_t* rle, size_t available, int frameW, int frameH, const uint32_t* palette, int cellW,
+                int cellH, std::vector<uint16_t>& out) {
+    if (!rle || !palette || frameW < 0 || frameH < 0 || frameW > cellW || frameH > cellH || cellW <= 0 || cellH <= 0)
+        return false;
+    out.assign(size_t(cellW) * size_t(cellH), 0);
+    size_t at = 0;
+    int run = 0;  // transparent texels still to come (a run goes on into the next row)
+    for (int y = 0; y < frameH; ++y)
+        for (int x = 0; x < frameW; ++x) {
+            if (run > 0) {
+                --run;
+                continue;
+            }
+            if (at >= available) return false;
+            const uint8_t b = rle[at];
+            if (b == 0) {
+                if (at + 1 >= available) return false;
+                run = int(rle[at + 1]) - 1;
+                at += 2;
+            } else {
+                out[size_t(y) * size_t(cellW) + size_t(x)] = uint16_t(palette[b] & 0xFFFFu);
+                at += 1;
+            }
+        }
+    return true;
+}
+
+bool sameColours(const uint32_t* a, const uint32_t* b) {
+    for (int i = 0; i < 256; ++i)
+        if ((a[i] & 0xFFFFu) != (b[i] & 0xFFFFu)) return false;
+    return true;
+}
+
 namespace {
 
 // The path in lower case with backslashes, as the folders are compared.

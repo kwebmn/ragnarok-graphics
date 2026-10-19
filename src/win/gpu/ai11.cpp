@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "core/ai/black_key.hpp"
+#include "core/ai/recolour.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "core/ai/vram.hpp"
 #include "core/bc_encode.hpp"
@@ -148,10 +149,10 @@ uint64_t Ai11::videoMemory(uint64_t* used) const {
 }
 
 void Ai11::noteUpload(uint32_t id, int width, int height, const UploadCmd& u, const uint32_t* argb,
-                      const SpriteCell* cells, uint32_t cellCount) {
+                      const SpriteCell* cells, uint32_t cellCount, const uint32_t* pixels) {
     if (!ready_ || u.level != 0 || !argb) return;
     if (cellCount || atlases_.count(id)) {  // the game's sprite cache: cell by cell
-        noteCells(id, width, height, u, argb, cells, cellCount);
+        noteCells(id, width, height, u, argb, cells, cellCount, pixels);
         return;
     }
     dropCopy(id);  // the game changed the texture: its own pixels again
@@ -342,7 +343,7 @@ bool Ai11::cellOn(uint8_t source) const {
 }
 
 void Ai11::noteCells(uint32_t id, int width, int height, const UploadCmd& u, const uint32_t* argb,
-                     const SpriteCell* cells, uint32_t count) {
+                     const SpriteCell* cells, uint32_t count, const uint32_t* pixels) {
     const auto item = items_.find(id);
     if (item != items_.end()) {  // taken for a whole texture before it was seen to be a sprite cache
         if (!atlases_.count(id)) dropCopy(id);
@@ -379,12 +380,13 @@ void Ai11::noteCells(uint32_t id, int width, int height, const UploadCmd& u, con
             c.bottom > u.rect.bottom)
             continue;
         at.sources[uint32_t(c.top) << 16 | uint32_t(c.left)] = cells[i].source;
-        cellWritten(id, at, c, pixelsOf(c), u.rect.width(), cells[i].source, true);
+        cellWritten(id, at, c, pixelsOf(c), u.rect.width(), cells[i].source, true,
+                    cells[i].own && pixels ? pixels + (cells[i].own - 1) : nullptr);  // 2.5.23
     }
 }
 
 void Ai11::cellWritten(uint32_t id, Atlas& a, const Rect& c, const uint32_t* argb, int pitch, uint8_t source,
-                       bool seen) {
+                       bool seen, const uint32_t* own) {
     const int w = c.width(), h = c.height();
     std::vector<uint32_t> pixels(size_t(w) * size_t(h));
     for (int y = 0; y < h; ++y)
@@ -410,7 +412,23 @@ void Ai11::cellWritten(uint32_t id, Atlas& a, const Rect& c, const uint32_t* arg
     }
     Request r;
     const std::string key = ai::keyName(ai::textureKey(pixels.data(), w, h));
-    if (!pictures_->cell(key, r.name)) {
+    bool found = pictures_->cell(key, r.name);
+    if (!found && own) {  // 2.5.23: a frame in a dye - its picture in its own colours, coloured as the dye
+        std::vector<uint32_t> ownPixels(own, own + size_t(w) * size_t(h));
+        const std::string ownKey = ai::keyName(ai::textureKey(ownPixels.data(), w, h));
+        if (pictures_->cell(ownKey, r.name)) {
+            found = true;
+            r.dye = key;
+            r.own = std::move(ownPixels);
+            r.dyed = pixels;
+            ++dyed_;
+        } else if (seen) {  // the pack has the frame in no colour: it lacks its own colours' picture
+            ++cellsMissing_;
+            dump_.save(sprite_exe::sourceName(source), ownKey, ownPixels.data(), w, h);
+            return;
+        }
+    }
+    if (!found) {
         if (!seen) return;  // perhaps no frame at all
         ++cellsMissing_;
         dump_.save(sprite_exe::sourceName(source), key, pixels.data(), w, h);
@@ -682,6 +700,7 @@ bool Ai11::load(const Request& r, std::vector<uint32_t>& argb, int& width, int& 
         ai::halve(argb, width, height);
     if (width != r.width * scale_ || height != r.height * scale_) return false;
     if (!r.shown.empty()) ai::keyAway(argb, width, height, r.shown, r.width, r.height);  // 2.5.18: keyed black
+    if (!r.own.empty()) ai::recolour(argb, width, height, r.own.data(), r.dyed.data(), r.width, r.height);  // 2.5.23
     return true;
 }
 
@@ -690,8 +709,9 @@ constexpr size_t kFramesBytes = size_t(48) << 20;  // the frames kept read: the 
 }  // namespace
 
 void Ai11::serve(const Request& r, Result& out) {
+    const std::string kept_as = r.dye.empty() ? r.name : r.name + "|" + r.dye;  // 2.5.23: a dye's its own
     if (r.want == Want::Cell) {  // 0.49.1: read lately - again at once
-        const auto kept = frames_.find(r.name);
+        const auto kept = frames_.find(kept_as);
         if (kept != frames_.end() && !kept->second.first.empty() && kept->second.first[0].width == r.width * scale_ &&
             kept->second.first[0].height == r.height * scale_) {
             recent_.splice(recent_.begin(), recent_, kept->second.second);
@@ -719,9 +739,9 @@ void Ai11::serve(const Request& r, Result& out) {
         out.ok = true;
         size_t bytes = 0;
         for (const Level& l : out.levels) bytes += l.argb.size() * 4;
-        if (bytes * 8 < kFramesBytes && !frames_.count(r.name)) {
-            recent_.push_front(r.name);
-            frames_[r.name] = {out.levels, recent_.begin()};
+        if (bytes * 8 < kFramesBytes && !frames_.count(kept_as)) {
+            recent_.push_front(kept_as);
+            frames_[kept_as] = {out.levels, recent_.begin()};
             framesBytes_ += bytes;
             while (framesBytes_ > kFramesBytes && !recent_.empty()) {  // the least lately shown go
                 const auto old = frames_.find(recent_.back());
@@ -806,6 +826,10 @@ void Ai11::logNow(bool final) {
                  cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsTaken_,
                  static_cast<unsigned long long>(cellsTaken_ ? cellWait_ / cellsTaken_ : 0),
                  static_cast<unsigned long long>(cellWaitMost_));
+    if (dyed_)  // 2.5.23
+        LOG_INFO("AI textures: sprite frames in a dye - %u taken by their pictures in their own colours, coloured as "
+                 "the dye",
+                 dyed_);
     if (unseen_)  // 0.49.3
         LOG_INFO("AI textures: sprite frames - %u came past the game's call (found changed in their caches), %u of "
                  "them in the pack",

@@ -89,6 +89,15 @@ TEST(config_ai_denoise_is_a_percent) {
     CHECK_EQ(parseConfig("[ai]\ndenoise = some\n").ai.denoise, 25);
 }
 
+TEST(config_ai_dyes_on_by_default) {
+    // 2.5.23: a sprite frame in a dye from the pack's picture in its own colours
+    CHECK(AiSettings().dyes);
+    CHECK(!parseConfig("[ai]\ndyes = 0\n").ai.dyes);
+    AiSettings off;
+    off.dyes = false;
+    CHECK(off != AiSettings());
+}
+
 TEST(config_ai_section_reads_every_key) {
     const Config c = parseConfig(
         "[ai]\nenabled = 1\nground = 0\nobjects = 0\nsprites = 1\neffects = 1\nmodel = anime\n"

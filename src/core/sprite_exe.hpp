@@ -1,5 +1,7 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include "core/map_objects.hpp"
 
@@ -23,6 +25,20 @@ constexpr uint32_t kLoad = 0x4385F0;
 constexpr uint32_t kLoadSlot = 0x695A0C;
 constexpr uint32_t kImages = 0x514;      // palette frames: begin, then end at +4
 constexpr uint32_t kRgbaImages = 0x524;  // 32-bit frames
+// 2.5.23: the file's palette as the game made it (FUN_00404e60 at load): 256 entries, the 16-bit colour FUN_00417ae0
+// writes in each one's low half - a frame drawn with another palette (a dye: clothes, hair) gets that one instead.
+constexpr uint32_t kPalette = 0x110;
+// A palette frame (SprImg): its width and height (16-bit each) at 0, and at kImageData its texels, index 0 starting
+// a run of transparent ones (the count in the next byte).
+constexpr uint32_t kImageData = 12;
+
+// 2.5.23: the cell's texels as FUN_00417ae0 writes a frame (frameW x frameH, its texels at rle, `available` bytes of
+// them readable) with `palette` into a cell of cellW x cellH: the frame in its top left corner, the rest cleared.
+// false: the data ends before the frame does, or the frame is larger than the cell.
+bool cellTexels(const uint8_t* rle, size_t available, int frameW, int frameH, const uint32_t* palette, int cellW,
+                int cellH, std::vector<uint16_t>& out);
+// Whether two of the game's palettes give the same colours (the entries' low halves).
+bool sameColours(const uint32_t* a, const uint32_t* b);
 
 // What a sprite file shows, by its folder (the names are EUC-KR bytes in data\sprite\): what the AI page's boxes
 // choose. Homunculi and mercenaries look like monsters; heads, bodies, headgear, shields, garments and weapons make

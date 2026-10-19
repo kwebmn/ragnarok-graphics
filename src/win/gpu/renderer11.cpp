@@ -1187,7 +1187,8 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
     if (ai_) {  // 0.47: its key, or the sprite cache's new frames with their sources
         std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
         ai_->noteUpload(u.texture, t.width, t.height, u, full_colour::aiTexels(u, rec.pixels().data() + u.pixels, game),
-                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);
+                        u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount,
+                        rec.pixels().data());  // 2.5.23: a dyed frame's own colours
     }
 }
 

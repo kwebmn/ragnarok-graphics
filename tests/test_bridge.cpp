@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -41,7 +42,9 @@ FrameRecord sampleRecord() {
     const uint32_t pixels[6] = {1, 2, 3, 4, 5, 6};
     r.upload(0x40000002, 1, Rect{4, 4, 7, 6}, pixels, {}, PixelFormat::A4R4G4B4);  // 2.5.18: full colours
     r.writeTarget(Rect{0, 0, 2, 1}, pixels + 4);
-    r.upload(0x40000003, 0, Rect{0, 0, 3, 2}, pixels, {{Rect{0, 0, 1, 1}, 1}, {Rect{2, 0, 3, 2}, 4}});  // 0.13: cells
+    // 0.13: cells; 2.5.23: the second a dyed frame's, its own colours along
+    r.upload(0x40000003, 0, Rect{0, 0, 3, 2}, pixels, {{Rect{0, 0, 1, 1}, 1}, {Rect{2, 0, 3, 2}, 4}},
+             PixelFormat::Unknown, {{}, {7, 8}});
     return r;
 }
 
@@ -83,6 +86,30 @@ TEST(bridge_a_record_crosses_field_by_field) {
     CHECK(b.slots() == a.slots());
     CHECK(b.slots()[1].rect == (Rect{2, 0, 3, 2}));
     CHECK_EQ(b.slots()[1].source, 4);  // 0.16: what sprite the frame is of
+    CHECK_EQ(b.slots()[0].own, 0u);
+    CHECK(b.slots()[1].own != 0);  // 2.5.23
+    CHECK_EQ(b.pixels()[b.slots()[1].own - 1], 7u);
+    CHECK_EQ(b.pixels()[b.slots()[1].own], 8u);
+}
+
+TEST(bridge_a_cells_own_colours_past_the_pixels_are_refused) {
+    // 2.5.23: the cell's own colours must lie within the record's pixels
+    FrameRecord a;
+    const uint32_t pixels[2] = {1, 2};
+    a.upload(1, 0, Rect{0, 0, 2, 1}, pixels, {{Rect{0, 0, 2, 1}, 1}}, PixelFormat::Unknown, {{3, 4}});
+    CHECK_EQ(a.slots()[0].own, 3u);  // after the upload's two pixels
+    std::vector<uint8_t> bytes = bytesOf(a);
+    FrameRecord b;
+    WireReader ok(bytes.data(), bytes.size());
+    CHECK(readRecord(ok, b));
+    // the cell as it crosses: its rectangle, its source, its own colours' place - moved past the pixels
+    const uint8_t cell[21] = {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0, 0};
+    const auto at = std::search(bytes.begin(), bytes.end(), cell, cell + 21);
+    CHECK(at != bytes.end());
+    if (at == bytes.end()) return;
+    *(at + 17) = 4;  // 3 -> 4: its second texel past the end
+    WireReader rd(bytes.data(), bytes.size());
+    CHECK(!readRecord(rd, b));
 }
 
 TEST(bridge_a_damaged_record_is_refused) {

@@ -53,9 +53,10 @@ public:
     bool start(const std::string& gameDir, const AiSettings& settings, std::string& error);
     void observe(UINT slot, double ms);  // what this slot's last share of the work took on the GPU
     // A texture's pixels as the game uploads them: level 0 of a whole texture is kept for the network. cells: the
-    // cells of the game's sprite cache that got a new frame (UploadCmd::slots) - each enlarged on its own.
+    // cells of the game's sprite cache that got a new frame (UploadCmd::slots) - each enlarged on its own; pixels
+    // (2.5.23): the record's, where a dyed frame's own colours are (SpriteCell::own).
     void noteUpload(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const SpriteCell* cells,
-                    uint32_t cellCount);
+                    uint32_t cellCount, const uint32_t* pixels = nullptr);
     void noteWorldUse(uint32_t id, ai::Kind kind);  // drawn in the world as `kind`: its turn comes, if that is on
     // 0.14.1: drawn in the interface - a big picture (the loading screen, the login's backgrounds) gets its turn as
     // an icon of the interface (the kind Icons) and stands in for interface draws.
@@ -185,6 +186,9 @@ private:
         std::vector<ai::Tile> tiles;
         size_t tile = 0;
         bool rrdbDone = false;
+        // 2.5.23: a frame in a dye read as its picture in its own colours, coloured as the dye on the I/O thread
+        // (the frame's colours both ways, the cell's size)
+        std::vector<uint32_t> own, dyed;
     };
     // A sprite cache of the game (0.13): its enlarged copy is the texture's Texture::ai, made cell by cell.
     struct Atlas {
@@ -262,11 +266,13 @@ private:
     ID3D12Resource* makeImage(Job& job, std::vector<Level>& levels);  // in COPY_SOURCE, all its levels
     void readBack(const Job& job, ID3D12Resource* image, const Level& top);  // for the pack (0.48)
     void noteCells(uint32_t id, Texture& t, const UploadCmd& u, const uint32_t* argb, const SpriteCell* cells,
-                   uint32_t count);
+                   uint32_t count, const uint32_t* pixels);
     bool cellOn(uint8_t source) const;
     // A frame in the cell c of the cache (argb its top left texel): seen - through the game's call; else found changed.
+    // own (2.5.23): the frame in its sprite's own colours (the cell's size) when the game wrote it in a dye.
     void cellWritten(uint32_t id, Texture& t, Atlas& a, int net, const Rect& c, const uint32_t* argb, int pitch,
-                     uint8_t source, bool seen);  // a frame of this sprite file's kind goes to the network (sprite_exe)
+                     uint8_t source, bool seen,  // a frame of this sprite file's kind goes to the network (sprite_exe)
+                     const uint32_t* own = nullptr);
     bool makeAtlas(uint32_t id, Texture& t);
     void standIn(Texture& t, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch);
     void writeRegion(Texture& t, int level, int x, int y, int w, int h, const std::vector<uint32_t>& argb);
@@ -395,6 +401,7 @@ private:
     uint32_t doneNetwork_ = 0, donePack_ = 0;
     uint32_t cellsPack_ = 0, iconsPack_ = 0;  // 0.42: from the texture pack
     uint32_t unseen_ = 0, unseenFound_ = 0;  // 0.49.3: frames found changed past the game's call, of them in the pack
+    uint32_t dyed_ = 0;  // 2.5.23: frames in a dye taken by their pictures in their own colours
     uint32_t cellsWritten_ = 0, cellsNetwork_ = 0;
     ULONGLONG cellWait_ = 0, cellWaitMost_ = 0;  // 0.66: the frames' pictures from asked to in, all and the longest
     uint32_t cellWaits_ = 0;  // sprite frames: by the game, by the network

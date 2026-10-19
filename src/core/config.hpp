@@ -35,6 +35,9 @@ struct AiSettings {
     bool npcs = false;
     bool items = false;     // on the ground
     bool sprites() const { return monsters || players || npcs || items; }
+    // 2.5.23: a sprite frame the game draws in a dye (the clothes' or the hair's colours) - the pack's picture of the
+    // frame in its own colours, coloured as the dye (core/ai/recolour.hpp)
+    bool dyes = true;
     bool effects = false;  // light and sparks
     bool icons = true;     // 0.14: item and skill icons in the game's windows (crisp text's twins)
     bool uiPieces = true;  // 0.15: with icons, the windows' small pieces too - buttons, tabs, slots (baked-in text)

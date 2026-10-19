@@ -721,7 +721,8 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     if (ai) {
         std::vector<uint32_t> game;  // 2.5.18: the texels the pack knows it by
         ai->noteUpload(u.texture, t, u, full_colour::aiTexels(u, rec.pixels().data() + u.pixels, game),
-                       u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount);  // with their sources
+                       u.slotCount ? rec.slots().data() + u.firstSlot : nullptr, u.slotCount,  // with their sources
+                       rec.pixels().data());  // 2.5.23: a dyed frame's own colours
     }
 }
 

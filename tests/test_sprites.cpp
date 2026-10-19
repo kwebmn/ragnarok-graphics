@@ -45,6 +45,31 @@ TEST(texlevels_sprite_cells_go_with_the_next_upload_of_level_0) {
     CHECK(r.slots().empty());
 }
 
+TEST(texlevels_a_dyed_frame_takes_its_own_colours_along) {
+    // 2.5.23: a frame the game wrote in a dye - the same frame in its sprite's own colours goes with the upload
+    // (the record's pixels, the cell's size); written again without one, the cell has none
+    TextureLevels t(64, 64, PixelFormat::A1R5G5B5, 1);
+    FrameRecord r;
+    t.changed(0, Rect{0, 0, 64, 64});
+    const std::vector<uint32_t> own(32 * 32, 0xFF123456u);
+    t.slotWritten(Rect{0, 0, 32, 32}, 2, &own);
+    t.slotWritten(Rect{32, 0, 64, 32}, 2, &own);
+    t.slotWritten(Rect{32, 0, 64, 32}, 2);  // its newest frame in its own colours
+    t.sync(r, 5);
+    const SpriteCell* cells = r.slots().data() + r.uploads()[0].firstSlot;
+    CHECK_EQ(r.uploads()[0].slotCount, 2u);
+    CHECK(cells[0].own != 0);
+    CHECK_EQ(r.pixels()[cells[0].own - 1], 0xFF123456u);
+    CHECK_EQ(r.pixels()[cells[0].own - 1 + 32 * 32 - 1], 0xFF123456u);
+    CHECK_EQ(cells[1].own, 0u);
+    const std::vector<uint32_t> wrong(5, 1);  // not the cell's size: none
+    t.changed(0, Rect{0, 0, 8, 8});
+    t.slotWritten(Rect{0, 0, 32, 32}, 2, &wrong);
+    r.reset();
+    t.sync(r, 5);
+    CHECK_EQ(r.slots()[r.uploads()[0].firstSlot].own, 0u);
+}
+
 TEST(ai_enlarged_cell_keeps_colours_and_its_cut_out_shape) {
     // A 2x2 cell, one texel hidden: enlarged 4 times its colours stay in the corners, the hidden texel's place stays
     // transparent and takes its neighbours' colour (no black fringe), and every level halves as the GPU does.
