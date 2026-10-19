@@ -1,3 +1,11 @@
+# uaRO Graphics 2.6.7 — to check
+
+- **"Ground relief" works on its own.** It showed only with "World materials", "Smooth hills" or "Smooth seams of the
+  ground" on: without them the shader did not know where the camera was and put the relief out entirely. 2.6.6 named the
+  wrong cause - the step across the texture had nothing to do with it.
+- Please check: in the console (`~`) keep only "Ground relief" on (materials, hills and seams off), walk up to
+  Prontera's paving and hold Tab on its line. The stones should bulge, lit from one side.
+
 # uaRO Graphics 2.6.6 — to check
 
 - **"World materials" default to 50 %** (was 100 %): the relief of stone and brick is calmer. Where the strength was
