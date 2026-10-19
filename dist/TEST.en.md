@@ -1,3 +1,23 @@
+# uaRO Graphics 2.6.3 — to check
+
+- **A character's shadow no longer blinks while walking.** The game draws each part of a character (body, head, hat,
+  weapon) a little nearer the camera than the one before. The shadow knew the parts by their depth and took the first
+  two only; when a turn drew the weapon before the body, the head stopped passing and its shadow was gone for those
+  frames. Now the shadow knows the parts by the character itself.
+- So the shadow is fuller: hats, weapons, shields and capes are in it - the whole silhouette.
+- At a game resolution of 1440p and above the sprite-shaped shadows could be missing altogether (only the round spot) -
+  they show now.
+- **At the edge of a walkway, a wall, steps and by posts the shadow is no longer cut.** The shadow found the ground by
+  one point under the feet; at an edge that point fell on the wall below, and the shadow falling that way was gone -
+  walking along the edge it came and went (as in Aldebaran by the balustrade).
+- **No more flickering where a model lies in the ground's plane** - like the house doorway in Aldebaran (dark paving one
+  moment, light planks the next as the camera turns). The game counts on a 16-bit depth buffer, where the ground, drawn
+  after the model, always wins in such a plane; the card's buffer is finer, and either side won. Models now lie one
+  16-bit step deeper, as they did in the game.
+- Please check: "Characters' shadows" on, walk around Prontera in different directions with turns, and along the
+  balustrade in Aldebaran - the shadow is steady, never gone; a character's hat and weapon show in it. In Aldebaran by
+  the same house turn the camera - the doorway does not flicker.
+
 # uaRO Graphics 2.6.2 — to check
 
 - **The Ctrl+2 flag is now the Right Sector's own:** red over black with the white «ПРАВИЙ СЕКТОР» and the trident and
