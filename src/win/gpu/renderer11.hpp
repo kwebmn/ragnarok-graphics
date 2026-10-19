@@ -155,6 +155,7 @@ private:
         ID3D11RenderTargetView* rtv = nullptr;
         ID3D11ShaderResourceView* srv = nullptr;
         int width = 0, height = 0;
+        DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;  // 2.5.21: the 16-bit world's B5G6R5 among them
     };
     // 1.0: the glow of the effects (glow11.cpp, as Direct3D 12's effects.cpp): from the world's first draw that adds
     // light the draws write that light into a second target too; at the interface it is shrunk level by level,
@@ -732,6 +733,9 @@ private:
     void exitWorld();    // at the interface's first draw, the present, anything that needs the whole picture
     void dropWorld();
     Target scene_;   // 0.59: its copy the colours are read from
+    // 2.5.21: the picture into scene_, made of its size and format first (CopyResource between two formats copies
+    // nothing: super-light's 16-bit world gave the passes an old copy); false: no memory for it
+    bool copyScene();
     EffectSettings effects_;
     std::string map_;
     trees::Season season_ = trees::Season::Green;

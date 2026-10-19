@@ -670,6 +670,7 @@ bool Renderer11::makeTarget(Target& t, int width, int height, DXGI_FORMAT format
     }
     t.width = width;
     t.height = height;
+    t.format = format;
     return true;
 }
 
@@ -678,6 +679,16 @@ void Renderer11::dropTarget(Target& t) {
     drop(t.rtv);
     drop(t.texture);
     t.width = t.height = 0;
+    t.format = DXGI_FORMAT_UNKNOWN;
+}
+
+bool Renderer11::copyScene() {
+    if (scene_.width != target_.width || scene_.height != target_.height || scene_.format != target_.format) {
+        dropTarget(scene_);
+        if (!makeTarget(scene_, target_.width, target_.height, target_.format)) return false;
+    }
+    ctx_->CopyResource(scene_.texture, target_.texture);
+    return true;
 }
 
 bool Renderer11::makeDepth(int width, int height, ID3D11Texture2D*& depth, ID3D11DepthStencilView*& dsv,
@@ -1744,21 +1755,18 @@ bool Renderer11::copyForWater() {
     if (!depth_ || !target_.texture) return false;
     flushBatch();  // the draws before the water go into the copies
     EffectSpan span(*this, kTimeWater11);  // 2.5.9: the copies alone, not the draws before them
-    if (scene_.width != target_.width || scene_.height != target_.height) {
-        dropTarget(scene_);
-        if (!makeTarget(scene_, target_.width, target_.height)) return false;
-    }
     D3D11_TEXTURE2D_DESC dd{};
     depth_->GetDesc(&dd);
+    const bool sixteen = dd.Format == DXGI_FORMAT_R16_TYPELESS;  // 2.5.21: the 16-bit world's depth copied as it is
     D3D11_TEXTURE2D_DESC cd{};
     if (depthCopy_) depthCopy_->GetDesc(&cd);
-    if (!depthCopy_ || cd.Width != dd.Width || cd.Height != dd.Height) {
+    if (!depthCopy_ || cd.Width != dd.Width || cd.Height != dd.Height || cd.Format != dd.Format) {
         drop(depthCopySrv_);
         drop(depthCopyDsv_);
         drop(depthCopy_);
-        if (!makeDepth(int(dd.Width), int(dd.Height), depthCopy_, depthCopyDsv_)) return false;
+        if (!makeDepth(int(dd.Width), int(dd.Height), depthCopy_, depthCopyDsv_, sixteen)) return false;
         D3D11_SHADER_RESOURCE_VIEW_DESC v{};
-        v.Format = DXGI_FORMAT_R32_FLOAT;
+        v.Format = sixteen ? DXGI_FORMAT_R16_UNORM : DXGI_FORMAT_R32_FLOAT;
         v.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         v.Texture2D.MipLevels = 1;
         if (FAILED(device_->CreateShaderResourceView(depthCopy_, &v, &depthCopySrv_))) {
@@ -1768,7 +1776,7 @@ bool Renderer11::copyForWater() {
     }
     ID3D11ShaderResourceView* none[2] = {nullptr, nullptr};
     ctx_->PSSetShaderResources(2, 2, none);  // neither copy bound while it is written
-    ctx_->CopyResource(scene_.texture, target_.texture);
+    if (!copyScene()) return false;
     ctx_->CopyResource(depthCopy_, depth_);
     waterReady_ = true;
     return true;
@@ -2222,13 +2230,7 @@ void Renderer11::applyGrade() {
 void Renderer11::worldPass(ID3D11PixelShader* ps, const Constants& c, int copy, int blend,
                            ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t0,
                            ID3D11ShaderResourceView* t1, const RECT* clip, ID3D11ShaderResourceView* t5) {
-    if (copy == 1) {
-        if (scene_.width != target_.width || scene_.height != target_.height) {
-            dropTarget(scene_);
-            if (!makeTarget(scene_, target_.width, target_.height)) return;
-        }
-        ctx_->CopyResource(scene_.texture, target_.texture);
-    }
+    if (copy == 1 && !copyScene()) return;
     targetBound_ = false;
     ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
     ctx_->PSSetShaderResources(0, 4, none);
@@ -2621,11 +2623,7 @@ void Renderer11::applyFloorReflections() {
             return;
         }
     }
-    if (scene_.width != w || scene_.height != h) {
-        dropTarget(scene_);
-        if (!makeTarget(scene_, w, h)) return;
-    }
-    ctx_->CopyResource(scene_.texture, target_.texture);
+    if (!copyScene()) return;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -3210,11 +3208,7 @@ void Renderer11::applyDof() {
         }
         LOG_INFO("depth of field: blurred at %dx%d from the %dx%d picture (Direct3D 11)", qw, qh, w, h);
     }
-    if (scene_.width != w || scene_.height != h) {
-        dropTarget(scene_);
-        if (!makeTarget(scene_, w, h)) return;
-    }
-    ctx_->CopyResource(scene_.texture, target_.texture);
+    if (!copyScene()) return;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -3301,11 +3295,7 @@ void Renderer11::applyBloom() {
                 return;
             }
         }
-    if (scene_.width != w || scene_.height != h) {
-        dropTarget(scene_);
-        if (!makeTarget(scene_, w, h)) return;
-    }
-    ctx_->CopyResource(scene_.texture, target_.texture);
+    if (!copyScene()) return;
     Constants c{};
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);

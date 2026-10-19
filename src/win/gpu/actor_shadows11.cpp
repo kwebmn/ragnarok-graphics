@@ -90,20 +90,8 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
     EffectSpan span(*this, kTimeShadows11);  // 0.89
     shadowsDone_ = true;  // tried once a frame
     const int w = target_.width, h = target_.height;
-    if (!depth_ || !ensureShadowMask(w, h)) return;
-    if (depthSrvOf_ != depth_) {  // the depth buffer was made anew (a new scale)
-        drop(depthSrv_);
-        D3D11_SHADER_RESOURCE_VIEW_DESC v{};
-        v.Format = DXGI_FORMAT_R32_FLOAT;
-        v.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        v.Texture2D.MipLevels = 1;
-        depthSrvOf_ = depth_;
-        if (FAILED(device_->CreateShaderResourceView(depth_, &v, &depthSrv_))) {
-            depthSrv_ = nullptr;
-            return;
-        }
-    }
-    if (!depthSrv_) return;
+    // 2.5.21: the depth's views as depthViews makes them - of its own format (the 16-bit world's D16 too)
+    if (!depth_ || !ensureShadowMask(w, h) || !depthViews()) return;
     // What each sprite cache cell holds as the record goes on (its uploads write cells before their draws).
     std::unordered_map<uint32_t, std::vector<SpriteCell>> cells;
     const std::vector<uint8_t>& v = rec.vertexBytes();

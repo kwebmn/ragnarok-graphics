@@ -667,11 +667,7 @@ void Renderer11::applyTorchLight() {
     const bool drawFlames = flamesWanted() && !flames.empty();
     if (!light && !drawFlames && dots.empty() && clouds.empty()) return;
     // The picture's copy (scene_) read by the light and the flames - taken before either writes the picture
-    if (scene_.width != w || scene_.height != h) {
-        dropTarget(scene_);
-        if (!makeTarget(scene_, w, h)) return;
-    }
-    ctx_->CopyResource(scene_.texture, target_.texture);
+    if (!copyScene()) return;
     targetBound_ = false;
     ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
     ctx_->PSSetShaderResources(0, 4, none);
