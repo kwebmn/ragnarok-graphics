@@ -1,3 +1,14 @@
+# uaRO Graphics 2.6.9 — to check
+
+- **"Haze and fog" removed** with "Haze's strength" and "Low fog in dungeons": no more bluish haze far off under the
+  open sky, no dark far off and low fog in the dungeons. The sky's horizon past the map's edge is now a pale blue, not
+  the haze's colour.
+- **"Morning fog" and the swamps' mist stay** and now work on their own, by their own switches ("Morning fog",
+  "Swamps"). Until now they were drawn only with the haze on.
+- Please check: the "Air and weather" group has no "Haze and fog"; in the dungeons (e.g. `@warp pay_dun00 21 183`) no
+  fog lies over the floor; with "Morning fog" on, in the morning by the computer's clock a fog lies over the fields (the
+  log: `mists: the morning's over <map>`).
+
 # uaRO Graphics 2.6.8 — to check
 
 - **"Ground relief" defaults to 30 %** (was 100 %): at 100 % the stones' tops turned gritty, at 30 % the stones bulge
