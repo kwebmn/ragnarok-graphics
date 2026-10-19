@@ -327,7 +327,7 @@ struct EffectSettings {
     // repeats hidden under large patches; with the remaster (tier) also its depth (parallax). Off by default.
     int tier = 0;  // 1.8: [effects] tier - 0 auto (by the card), 1 classic+ (any card), 2 remaster (a strong one)
     bool materials = false;
-    int materialsStrength = 100;  // %, 0-200
+    int materialsStrength = 50;  // %, 0-200 (2.6.6: the tester's choice, 100 looked pressed into the stone)
     // 1.9: the remaster's ground: ground_seams - where two cells of the ground with different textures meet, the line
     // between them wanders over the world instead of running along the cells (core/seams.hpp). Off by default.
     bool groundSeams = false;
