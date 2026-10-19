@@ -1,3 +1,23 @@
+# uaRO Graphics 2.6.11 — to check
+
+- **"Clock"** - a new row under the "Air and weather" group (in the console and in the app): "Auto" - the computer's
+  clock, as before, or a chosen moment that stays: "Dawn 6:30", "Morning 9:00", "Day 13:00", "Sunset 18:30", "Night
+  0:00". All that goes by the hour follows the chosen time: the sun and the light of the day cycle, the night, the
+  butterflies and the birds, the dew, the morning fog, the stars, the windows at night. A chosen "Day" is day even
+  with "Night" on without "By the clock".
+- **Night creatures** (the "Living world" group, off by default): "Fireflies in the grass" - from dusk to dawn lights
+  drift low over the grass where the butterflies fly by day, each lit a while and dark a while; "Moths at the fire" -
+  at night three pale moths circle each of the nearest torches and fires, lit by the flames.
+- **"Volumetric fog" removed** with "Fog density" (a Remaster-mode effect, off by default).
+- **"Film-like colours" removed.** The bloom of bright places and the fade into a map work as before.
+- **"Depth of field" removed** with "Blur" and "Sharp zone".
+- **"Film grain" removed** with "Grain strength".
+- Please check: the "Air and weather" group has no "Volumetric fog" and "Picture" no "Film-like colours", "Depth of
+  field" nor "Film grain"; the game in Remaster mode starts and draws as before; "Clock" at "Day 13:00" at night by
+  the computer's clock - the butterflies fly, at "Night 0:00" with "Night" on - dark, at "Auto" - as the computer's
+  clock says; turn "Fireflies in the grass" on and set "Clock" to "Night 0:00" at `@warp prt_fild08 200 200` - lights
+  blink over the grass; "Moths at the fire" - in the Pyramids (`@warp moc_pryd01 89 80`) moths circle a torch.
+
 # uaRO Graphics 2.6.10 — to check
 
 - **"No game fog under the open sky"** - a new switch among the "Fixes of the picture", on by default. On the fields
