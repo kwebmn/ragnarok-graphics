@@ -1,3 +1,12 @@
+# uaRO Graphics 2.6.5 — to check
+
+- **"Living characters" reworked, softly.** Instead of a narrow rim along the silhouette (not seen at 60 %, a white
+  outline at 200 %) the whole figure is lit now: the side of the body towards the sun a little lighter and warmer, the
+  far half in a soft shade. Nothing white is added on top. Default strength 100 %.
+- Please check: in the console (`~`) set the strength of "Living characters" to 100 % (200 % is left from the last
+  check - strong now), stand in the sun and hold Tab on the "Living characters" line. The character should look more
+  solid: the side towards the sun (opposite its shadow) lighter, the far side darker, no white rim.
+
 # uaRO Graphics 2.6.4 — to check
 
 - **"Living characters" with the network's textures:** the band of light along the silhouette's edge is as wide as
