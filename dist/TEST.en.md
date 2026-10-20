@@ -1,3 +1,11 @@
+# uaRO Graphics 2.7.4 — to check
+
+- **Fixed: the grass no longer blinks with the camera far back.** Far off the blades grew smaller than a pixel and
+  came and went. Now as the camera goes back the grass thins out smoothly and is gone; at the usual distance it is
+  as it was.
+- Please check: the field by Prontera (prt_fild08 200 200) - take the camera all the way back: the grass thins out
+  and goes without blinking; come closer - the grass is thick again.
+
 # uaRO Graphics 2.7.3 — to check
 
 - **Fixed: the grass by the water no longer blinks.** In shallow ponds the grass came under the water and went again -
