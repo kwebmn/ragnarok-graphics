@@ -149,7 +149,7 @@ bool AiSettings::operator==(const AiSettings& o) const {
 EffectSettings effectsOff() {
     EffectSettings e;  // every switch off (0.39.4: the ones added since 0.27 too), the sliders as they are
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
-    e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.heat = false;
+    e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.actorShadowsSpot = e.heat = false;
     e.portals = e.weather = e.glow = e.ao = e.grade = e.water = e.night = e.foliage = false;
     e.litDust = false;
     e.sharedWind = false;

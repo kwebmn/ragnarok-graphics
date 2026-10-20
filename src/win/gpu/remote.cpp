@@ -352,6 +352,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.lavaBrightness);
     w.u8(e.actorShadows ? 1 : 0);
     w.i32(e.actorShadowsStrength);
+    w.u8(e.actorShadowsSpot ? 1 : 0);  // 2.6.15
     w.u8(e.heat ? 1 : 0);
     w.i32(e.heatStrength);
     w.u8(e.skillColours ? 1 : 0);

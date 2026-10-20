@@ -92,6 +92,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.lavaBrightness = rd.i32();
             e.actorShadows = rd.u8() != 0;
             e.actorShadowsStrength = rd.i32();
+            e.actorShadowsSpot = rd.u8() != 0;  // 2.6.15
             e.heat = rd.u8() != 0;
             e.heatStrength = rd.i32();
             e.skillColours = rd.u8() != 0;

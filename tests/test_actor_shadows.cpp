@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "core/actor_shadows.hpp"
+#include "core/config.hpp"
 #include "core/game_camera.hpp"
 #include "core/map_axes.hpp"
 #include "core/rsw.hpp"
@@ -345,4 +346,29 @@ TEST(actor_shadows_lights_of_a_map_file) {
     if (l.size() != 2) return;
     CHECK(l[0].x == -10.0f && l[0].y == -12.0f && l[0].z == 20.0f && l[0].reach == 40.0f && l[0].seed != 0);
     CHECK(l[1].x == 5.0f && std::fabs(l[1].reach - 45.0f) < 1e-4f && l[1].seed == 0);
+}
+
+TEST(actor_shadows_the_games_round_spot_gives_way_to_a_characters_own) {
+    // 2.6.15: effects.actor_shadows_spot off - the game's round spot fades out as the character's own shadow comes on:
+    // gone under a whole one, half under a half-faded one (a torch's far off), whole where none falls (underground
+    // with no fire near); on - under everyone, as ever
+    std::vector<Blob> blobs = {Blob{200.0f, 300.0f, 20.0f, 8.0f, 150.0f}, Blob{400.0f, 300.0f, 20.0f, 8.0f, 150.0f},
+                               Blob{600.0f, 300.0f, 20.0f, 8.0f, 150.0f}};
+    std::vector<Layer> layers = {layer(180.0f, 200.0f, 220.0f, 300.0f, 150.5f),
+                                 layer(380.0f, 200.0f, 420.0f, 300.0f, 150.5f)};  // the third has no layer of its own
+    const std::vector<std::vector<actor_shadows::Cast>> casts = {
+        {actor_shadows::Cast{{1.0f, 0.0f}, 0.5f, 1.0f}}, {actor_shadows::Cast{{1.0f, 0.0f}, 0.5f, 0.5f}}, {}};
+    const std::vector<ShadowQuad> q = actor_shadows::cast(blobs, layers, casts);
+    CHECK(q.size() == 2 && q[0].blob == 0 && q[1].blob == 1);
+    const std::vector<float> off = actor_shadows::spotShares(q, blobs.size(), false);
+    CHECK(off.size() == 3);
+    if (off.size() == 3) CHECK(off[0] == 0.0f && std::fabs(off[1] - 0.5f) < 1e-5f && off[2] == 1.0f);
+    const std::vector<float> on = actor_shadows::spotShares(q, blobs.size(), true);
+    CHECK(on.size() == 3 && on[0] == 1.0f && on[1] == 1.0f && on[2] == 1.0f);
+}
+
+TEST(actor_shadows_spot_kept_by_default) {
+    // 2.6.15: the game's round spot stays under everyone unless the player turns it off
+    CHECK(parseConfig("").effects.actorShadowsSpot);
+    CHECK(!parseConfig("[effects]\nactor_shadows_spot = 0\n").effects.actorShadowsSpot);
 }

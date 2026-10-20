@@ -166,6 +166,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxActorShadowsHint, "", &E::actorShadows},
         {"effects", "actor_shadows_strength", Page::Effects, Control::Slider, 0, 100, 5, {}, {},
          Text::FxActorShadowsStrength, Text::FxActorShadowsStrengthHint, " %", nullptr, &E::actorShadowsStrength},
+        {"effects", "actor_shadows_spot", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::FxActorShadowsSpot, Text::FxActorShadowsSpotHint, "", &E::actorShadowsSpot},  // 2.6.15
         {"effects", "heat", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxHeat, Text::FxHeatHint,
          "", &E::heat},
         {"effects", "heat_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxHeatStrength,

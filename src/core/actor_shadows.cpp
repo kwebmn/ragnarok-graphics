@@ -71,6 +71,8 @@ std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<L
                 q.uv[i][1] = l.uv[i][1];
             }
             q.alpha = l.alpha * c.weight;
+            q.blob = best;
+            q.weight = c.weight;
             q.viewZ = s.viewZ;
             q.feetX = s.x;
             q.feetY = s.y;
@@ -109,6 +111,15 @@ std::vector<Lit> litBy(const std::vector<Light>& lights, float feetX, float feet
         lit.weight = std::clamp(weight, 0.0f, 1.0f);
         out.push_back(lit);
     }
+    return out;
+}
+
+std::vector<float> spotShares(const std::vector<ShadowQuad>& quads, size_t blobs, bool spot) {
+    std::vector<float> out(blobs, 1.0f);
+    if (spot) return out;
+    for (const ShadowQuad& q : quads)
+        if (q.blob >= 0 && size_t(q.blob) < blobs)
+            out[size_t(q.blob)] = std::min(out[size_t(q.blob)], 1.0f - std::clamp(q.weight, 0.0f, 1.0f));
     return out;
 }
 

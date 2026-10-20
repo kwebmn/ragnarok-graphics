@@ -41,6 +41,8 @@ struct ShadowQuad {
     float feetX, feetY;  // 0.39.1: where they stand on the screen
     uint32_t texture;
     bool owned = false;  // 2.6.3: known as its character's by its seed, not by its depth
+    int blob = -1;         // 2.6.15: its character's blob
+    float weight = 1.0f;   // 2.6.15: how dark its light makes it (Cast::weight)
 };
 
 // The shadows of the layers that stand on a blob's feet - over them across, above them, its character's (2.6.3: the
@@ -96,6 +98,10 @@ std::vector<std::vector<Cast>> castsFor(const std::vector<Blob>& blobs, const st
                                         const camera::Projection& p, const float viewToWorld[12], bool known,
                                         const float sun[2], float sunLength, bool openSky, float night, float base,
                                         double time, float flicker);
+
+// 2.6.15: how much of the game's round spot stays under each blob - all of it with `spot` (effects.
+// actor_shadows_spot), else as much as its own shadow does not darken: none under a whole one, all where none falls.
+std::vector<float> spotShares(const std::vector<ShadowQuad>& quads, size_t blobs, bool spot);
 
 // 2.6.3 (shadow_ps does the same): the ground's view depth at game pixel (x, y) under a character whose feet stand at
 // (feetX, feetY), feetZ deep - along `slope` (view units a pixel down the screen, from the scene's depth just below
