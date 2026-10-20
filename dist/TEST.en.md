@@ -1,3 +1,18 @@
+# uaRO Graphics 2.7.10 — to check
+
+- **"Flash of a hit" on hills.** The game gives a hit's place at the player's height, so on a slope the driver
+  found no monster there and nothing flashed. Now the hit goes to the monster standing at that place higher or
+  lower. The first 8 hits go into the log.
+- **"Gusts of wind" removed.** The gust's band was too faint to see. The grass and the leaves sway as before; "One
+  wind for everything" still bends the grass and carries rain, snow and sand one way.
+- **"Sun flare" removed.** The camera looks down at the ground and the sky is hardly ever in the picture: the
+  flare showed only at a map's edge, while by day the card checked the whole screen every frame for nothing.
+- **"Fade in monsters and items" removed.** Monsters, characters and items appear at once again, as in the
+  game.
+- The log no longer has the ground seams line every 5 seconds — the blinking was found and fixed in 2.7.9.
+- Please check: prt_fild08 200 200, "Flash of a hit" and the game's sound on — hit a monster with a normal attack
+  a few times, one standing higher or lower on the slope too. Does it flash white? Then a report.
+
 # uaRO Graphics 2.7.9 — to check
 
 - **"Grass and road seams" blinking in the middle of a map — fixed.** The neighbour's strip (magenta in the seams
