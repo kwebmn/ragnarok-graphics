@@ -241,11 +241,19 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                         p.specular |= (self ? 0xff0000u : 0u) | (low ? 0xff00u : 0u) | g;
                         s.vertices.push_back(p);
                     }
+                // 2.7.5: each quad split along the cell's own crease (the game's two triangles' diagonal) - its q0-q3
+                // runs along u = v where the strip goes towards -x or -z, along u + v = 1 the other two ways. Split
+                // the other way, on a hill a strip cut across the crease, a third of a unit off the ground: hidden
+                // under it in places, it blinked as the camera turned (half a cell wide, its grid lies on the crease)
+                const bool alongQ03 = w.dx == -1 || w.dz == -1 ? a.across03 : !a.across03;
                 for (int j = 0; j < kAcross; ++j)
                     for (int i = 0; i < kAlong; ++i) {
                         const uint16_t q0 = uint16_t(first + j * (kAlong + 1) + i), q1 = uint16_t(q0 + 1),
                                        q2 = uint16_t(q0 + kAlong + 1), q3 = uint16_t(q2 + 1);
-                        for (uint16_t k : {q0, q1, q2, q2, q1, q3}) s.indices.push_back(k);
+                        if (alongQ03)
+                            for (uint16_t k : {q0, q1, q3, q0, q3, q2}) s.indices.push_back(k);
+                        else
+                            for (uint16_t k : {q0, q1, q2, q2, q1, q3}) s.indices.push_back(k);
                     }
             };
             emit(b.group, false, width);

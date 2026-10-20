@@ -71,6 +71,46 @@ TEST(seams_strips_lie_on_the_games_triangles) {
     }
 }
 
+TEST(seams_strips_follow_the_cells_crease) {
+    // 2.7.5 (the tester: «что-то мигает на холмах, когда кручу камерой» - gone with «Стыки травы и дорог» off): each
+    // little quad of a strip split along its cell's own crease - split the other way, a strip cut across the crease
+    // of a hill's cell and ran under the ground there. Both ways a cell can be split, corner 3 raised 4 units.
+    for (const bool across03 : {false, true}) {
+        std::vector<seams::Triangle> ground;
+        cell(ground, 0, 0, 10.0f, 0);
+        cell(ground, 1, 0, 10.0f, 1);
+        if (across03) {  // cell 0 split along its corners 0-3 instead
+            seams::Vertex c[4] = {ground[0].v[0], ground[0].v[1], ground[0].v[2], ground[1].v[2]};
+            ground[0].v[0] = c[0], ground[0].v[1] = c[1], ground[0].v[2] = c[3];
+            ground[1].v[0] = c[0], ground[1].v[1] = c[3], ground[1].v[2] = c[2];
+        }
+        for (seams::Triangle& t : ground)
+            for (seams::Vertex& v : t.v)
+                if (v.pos[0] > 14.0f && v.pos[0] < 16.0f && v.pos[2] > 4.0f) v.pos[1] = -4.0f;
+        // cell 0's ground at (x, z): its two triangles (up is -y)
+        const auto groundY = [&](float x, float z) {
+            const float u = (x - 5.0f) / 10.0f, w = (z + 5.0f) / 10.0f;
+            if (!across03) return u + w > 1.0f ? -4.0f * (u + w - 1.0f) : 0.0f;
+            return u >= w ? -4.0f * w : -4.0f * u;
+        };
+        const std::vector<uint32_t> textures = {1, 2};
+        int triangles = 0;
+        for (const seams::Strip& s : seams::build(ground, textures, 0.5f)) {
+            if (s.inside != 0 || s.shows != 1) continue;  // the neighbour's strip: half a cell wide, its quads square
+            for (size_t k = 0; k + 2 < s.indices.size(); k += 3) {
+                float c[3] = {0.0f, 0.0f, 0.0f};
+                for (size_t n = 0; n < 3; ++n)
+                    for (int a = 0; a < 3; ++a) c[a] += s.vertices[s.indices[k + n]].pos[a] / 3.0f;
+                const float off = std::fabs(c[1] - groundY(c[0], c[2]));
+                if (off > 1e-3f) std::printf("  across03 %d: a triangle %.3f off the ground\n", int(across03), off);
+                CHECK(off < 1e-3f);
+                ++triangles;
+            }
+        }
+        CHECK(triangles >= 16);
+    }
+}
+
 TEST(seams_none_over_a_step) {
     // 2.1.6: two textures, the second cell a step higher - a wall between them, no seam (it blinked at the wall's foot)
     std::vector<seams::Triangle> ground;
@@ -137,6 +177,23 @@ uint64_t hashOf(const std::vector<seams::Strip>& strips) {
     return h;
 }
 
+// The vertices alone (2.7.5: the indices follow each cell's crease now, the vertices stay as they were).
+uint64_t verticesHashOf(const std::vector<seams::Strip>& strips) {
+    uint64_t h = 1469598103934665603ull;
+    const auto add = [&](const void* p, size_t n) {
+        for (size_t i = 0; i < n; ++i) h = (h ^ static_cast<const uint8_t*>(p)[i]) * 1099511628211ull;
+    };
+    for (const seams::Strip& s : strips)
+        for (const seams::Vertex& v : s.vertices) {
+            add(v.pos, 12);
+            add(&v.diffuse, 4);
+            add(&v.specular, 4);
+            add(v.uv0, 8);
+            add(v.uv1, 8);
+        }
+    return h;
+}
+
 }  // namespace
 
 TEST(seams_strips_stay_as_they_were_byte_for_byte) {
@@ -148,9 +205,11 @@ TEST(seams_strips_stay_as_they_were_byte_for_byte) {
     const std::vector<seams::Strip> strips = seams::build(ground, textures, 0.5f);
     size_t vertices = 0;
     for (const seams::Strip& s : strips) vertices += s.vertices.size();
-    std::printf("  seams snapshot: %zu strips, %zu vertices, %016llx\n", strips.size(), vertices,
-                static_cast<unsigned long long>(hashOf(strips)));
-    CHECK(hashOf(strips) == 0x73823ca6fdbf5b50ull);  // as 2.5.10 made them
+    std::printf("  seams snapshot: %zu strips, %zu vertices, %016llx, vertices %016llx\n", strips.size(), vertices,
+                static_cast<unsigned long long>(hashOf(strips)),
+                static_cast<unsigned long long>(verticesHashOf(strips)));
+    CHECK(verticesHashOf(strips) == 0x54bb99aff7242b14ull);  // every vertex as 2.5.10 made them
+    CHECK(hashOf(strips) == 0x3b248f39ab4b0410ull);  // 2.7.5: the quads split along each cell's crease
 }
 
 TEST(seams_cache_builds_again_only_when_the_ground_differs) {
