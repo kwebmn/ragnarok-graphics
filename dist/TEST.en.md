@@ -1,3 +1,23 @@
+# uaRO Graphics 2.6.19 — to check
+
+- **No more leaves falling in the Pyramids.** Leaves fall only from trees, and the graphics know trees by a green
+  picture with gaps. There are no trees in the Pyramids, but green Poporings live there: the page with their frames
+  was now and then taken for leaves, so the monsters shed leaves, the wind swayed them and "Living characters" did
+  not work on them. Now the pictures of characters, monsters and effects are never taken for leaves.
+- **The Clock is the master of the time of day.** It now sits at the top, right under the Quality and the Mode - in
+  the settings app and in the console (~), not inside the Air and weather group. What the Clock says all the effects
+  show: the sun and its light, the night, the butterflies, birds and fireflies, the dew, the morning fog.
+- **A new choice "From the server":** day and night as on the server. When the server's night comes, the sun sets
+  through a sunset in about a minute; when it goes, it rises through a dawn. The server tells the night only on the
+  maps that have one; elsewhere it is day.
+- **The night always goes by the Clock.** The "Night" and "By the clock" boxes are gone, only the "Night strength"
+  under the Clock stays (0 % - no night). Note: on Auto the world now darkens from 20:00 to 6:00 by the computer's
+  clock even if the Night was off before; "Quality: Off" takes the night away too.
+- "Moths at the fire" removed.
+- Please check: in the Pyramids near the Poporings no leaves fall; in a field by the trees the leaves still fall.
+  Then the Clock and the Night strength sit under the Quality and the Mode; with "From the server" type @night -
+  night in a minute, @day - the dawn.
+
 # uaRO Graphics 2.6.18 — to check
 
 - **The torches' fire on the walls no longer blinks every 1-2 seconds.** The real cause was in the game itself: it
