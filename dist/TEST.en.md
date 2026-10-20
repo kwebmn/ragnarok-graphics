@@ -1,3 +1,13 @@
+# uaRO Graphics 2.6.13 — to check
+
+- **"No server night"** - a new switch in "Picture fixes" (in every set, on by default). The night the server brings
+  now and then (half an hour after every two hours of day, in the towns and on the fields) no longer darkens the
+  picture nor tints it blue: the time of day is the Clock's and the Night's. Turn it off for the server's night as in
+  the game. It works when uaRO.exe is the same build (else the log says "server's night: the game's own").
+- Please check: in Prontera wait for the server's night or type `@night` (a GM command: night for every player on
+  the night maps), then `@day`. With "No server night" the picture does not darken; hold Tab on that line of the
+  console - in a second or two the world's light goes half as dark and bluer, let go - it brightens back.
+
 # uaRO Graphics 2.6.12 — to check
 
 - **Fixed a game crash (uaRO.exe+0xa89f6)** on Enter in the chat box while a map loads: through a portal, a
