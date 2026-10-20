@@ -1,3 +1,18 @@
+# uaRO Graphics 2.6.16 — to check
+
+- **The torches' "Flicker" now shows across the whole slider.** From 0 to 100 % the light on the walls went from
+  steady to only ±12 %, the flame and its glow to ±17 %, hardly seen under the fire's own motion. Now 50 % is the
+  same calm flicker as before (nothing changes by default), 0 % burns evenly, 100 % four times livelier: the light on
+  the walls sways ±25 %, the glow ±35 %, the flame dances. The shadows from the fire tremble alike.
+- **A new torch fire - "Alive"** (picked from four on the comparison page). Instead of a smooth candle-like drop,
+  a wide flame whose top tears into tongues and flamelets breaking off; coloured as heat glows: from dark-red
+  edges through orange to a near-white heart. And every torch burns its own way - its own pace, height, lean and
+  moment - instead of repeating its neighbours. With "New flame" on.
+- Please check: by a torch in the Pyramids set "Flicker" to 0 - the light on the wall is steady; to 100 - the light
+  clearly breathes and the flame dances; to 50 - as before. Move the slider slowly, a second or two on each value.
+- Please check: in the Pyramids turn "New flame" on - the torches burn with a live, tongued flame; stand where
+  you see several torches - they burn differently.
+
 # uaRO Graphics 2.6.15 — to check
 
 - **No more two shadows.** Under the characters and the monsters with their own shadow (from the sun or a fire) the
