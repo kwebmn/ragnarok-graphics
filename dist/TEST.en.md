@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.6 — to check
+
+- **Fixed again: "Grass and road seams without steps" on hills.** The seams' strips were drawn in an order that
+  changed with every turn of the camera, and at the cells' corners, where strips overlap, the colour blinked. Now
+  the order is always the same.
+- **No flowers in the grass in winter.** While the season's snow lies on the map no flowers bloom in the grass - as
+  the butterflies, they come back in spring.
+- Please check: the field by Prontera (prt_fild08 200 200) - turn the camera over the hills with the seams on: no
+  blinking; Season: Winter (with Snow in winter and Grass by the season on) - no flowers in the grass; Spring or
+  Summer - the flowers are back.
+
 # uaRO Graphics 2.7.5 — to check
 
 - **Fixed: "Grass and road seams without steps" no longer blink on hills.** The seams' strips were cut along the
