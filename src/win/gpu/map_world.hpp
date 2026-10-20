@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/ground_heights.hpp"
 #include "core/map_axes.hpp"
 #include "core/rsw.hpp"
 
@@ -29,6 +30,8 @@ public:
     // and the torch lights that place itself.
     const std::vector<rsw::Light>& lamps() const { return lamps_; }
     map::Axes axes() const { return axes_; }
+    // 2.6.18: its ground's heights (its .gnd, read with the .rsw) - where its walls stand; none not read
+    const ground_heights::Ground* ground() const { return ready_ && !ground_.corners.empty() ? &ground_ : nullptr; }
     // The base of a torch's flame seen this frame, in the game's world: the axes are found from them.
     void noteTorch(const map::Point& world);
 
@@ -43,6 +46,7 @@ private:
     std::string gameDir_;
     std::string shown_;  // the map world_ is of
     rsw::World world_;
+    ground_heights::Ground ground_;  // 2.6.18
     bool ready_ = false;
     map::Axes axes_;
     std::vector<map::Point> placed_;  // the file's torches (effect 47)

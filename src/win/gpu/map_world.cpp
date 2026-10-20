@@ -78,6 +78,7 @@ struct MapWorld::Shared {
     bool asked = false;
     std::string doneName;  // a finished read
     rsw::World done;
+    ground_heights::Ground doneGround;  // 2.6.18: its .gnd's heights (none: not read)
     bool doneOk = false;
     bool doneReady = false;
 };
@@ -122,6 +123,7 @@ void MapWorld::setMap(const std::string& name) {
     shown_ = name;
     ready_ = false;
     world_ = rsw::World{};
+    ground_ = ground_heights::Ground{};
     placed_.clear();
     lamps_.clear();
     seen_.clear();
@@ -139,6 +141,7 @@ void MapWorld::poll() {
     const bool fresh = shared_->doneReady && shared_->doneName == shown_;
     if (shared_->doneReady && shared_->doneName == shown_) {
         world_ = std::move(shared_->done);
+        ground_ = std::move(shared_->doneGround);
         ready_ = shared_->doneOk;
     }
     shared_->doneReady = shared_->doneReady && !fresh;
@@ -233,7 +236,8 @@ void MapWorld::loop() {
             a.tried = true;
             const auto maps = [](const std::string& n) {  // 2.0: and the models, for the trees
                 return n.size() > 4 && (n.compare(n.size() - 4, 4, ".rsw") == 0 ||
-                                        n.compare(n.size() - 4, 4, ".rsm") == 0);
+                                        n.compare(n.size() - 4, 4, ".rsm") == 0 ||
+                                        n.compare(n.size() - 4, 4, ".gnd") == 0);  // 2.6.18: its ground
             };
             std::string why;
             a.ok = a.grf ? a.g.openToRead(a.path, why) : a.zip.open(a.path, maps, why);  // 2.3.1: reading alone
@@ -263,9 +267,28 @@ void MapWorld::loop() {
             LOG_INFO("map objects: %s from %s - %u lamps, %u effects (%u torches, %u the game does not show)",
                      name.c_str(), from.c_str(), unsigned(w.lights.size()), unsigned(w.effects.size()), torches, hidden);
         }
+        // 2.6.18: its ground's heights, where its .rsw came from or after it (the walls between a fire and a shadow)
+        ground_heights::Ground ground;
+        if (ok) {
+            const std::string gnd = "data\\" + name + ".gnd";
+            std::vector<uint8_t> gb;
+            std::string gfrom, why;
+            if (readFile(dir + "\\" + gnd, gb)) gfrom = "the data folder";
+            for (size_t i = 0; i < archives.size() && gfrom.empty(); ++i) {
+                Archive& a = *archives[i];
+                if (!open(a)) continue;
+                if (a.grf ? a.g.find(gnd) && a.g.read(gnd, gb, why) : a.zip.has(gnd) && a.zip.read(gnd, gb, why))
+                    gfrom = a.path.substr(a.path.find_last_of('\\') + 1);
+            }
+            if (gfrom.empty())
+                LOG_INFO("map objects: %s.gnd is in neither the data folder nor DATA.INI's archives", name.c_str());
+            else if (!ground_heights::parse(gb.data(), gb.size(), ground, why))
+                LOG_INFO("map objects: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
+        }
         EnterCriticalSection(&shared_->lock);
         shared_->doneName = name;
         shared_->done = std::move(w);
+        shared_->doneGround = std::move(ground);
         shared_->doneOk = ok;
         shared_->doneReady = true;
         LeaveCriticalSection(&shared_->lock);

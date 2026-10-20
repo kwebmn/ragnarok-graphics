@@ -181,7 +181,8 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
         blobs, layers,
         actor_shadows::castsFor(blobs, lights, camera::projectionFor(gameWidth_, gameHeight_), viewToWorld_,
                                 layout != nullptr, sun.shadow, sun.length, outdoors_, night, kLength,
-                                double(waterTime()), flicker));
+                                double(waterTime()), flicker,
+                                actor_shadows::Walls{mapWorld_.ground(), mapWorld_.axes()}));  // 2.6.18
     // the round ones, under the feet - 2.6.15: as much of each as effects.actor_shadows_spot leaves
     const std::vector<float> spots = actor_shadows::spotShares(quads, blobs.size(), effects_.actorShadowsSpot);
     for (size_t i = 0; i < rounds.size(); ++i) {

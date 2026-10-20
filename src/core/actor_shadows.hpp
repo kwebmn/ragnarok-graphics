@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/game_camera.hpp"
+#include "core/ground_heights.hpp"
 #include "core/map_axes.hpp"
 #include "core/rsw.hpp"
 
@@ -80,10 +81,18 @@ struct Lit {
     float weight;
 };
 
+// 2.6.18: what stands between the map's lights and a character (R-QPYCS9: "a fire behind the wall, its shadow goes
+// through the wall") - its ground (none: nothing does) and the axes that put its places into the game's world
+struct Walls {
+    const ground_heights::Ground* ground = nullptr;
+    map::Axes axes;
+};
+
 // The two nearest lights within their reach and more than a unit off the feet, the nearest first; `flicker` the
-// flames' amount (as the torches' light trembles), `time` seconds.
+// flames' amount (as the torches' light trembles), `time` seconds. 2.6.18: and that reach the character - no wall of
+// `walls` between them and a point five units over the feet.
 std::vector<Lit> litBy(const std::vector<Light>& lights, float feetX, float feetY, float feetZ, double time,
-                       float flicker);
+                       float flicker, const Walls& walls = {});
 
 // 2.6.14: the map's lights a shadow falls from - its torches (map effect 47, and 690, 691, 696 the game does not
 // show), each reaching 40 units and trembling by its place, and its lamps (`lamps`: those not on a torch), reaching
@@ -97,7 +106,7 @@ std::vector<Light> lightsOf(const rsw::World& map, const std::vector<rsw::Light>
 std::vector<std::vector<Cast>> castsFor(const std::vector<Blob>& blobs, const std::vector<Light>& lights,
                                         const camera::Projection& p, const float viewToWorld[12], bool known,
                                         const float sun[2], float sunLength, bool openSky, float night, float base,
-                                        double time, float flicker);
+                                        double time, float flicker, const Walls& walls = {});
 
 // 2.6.15: how much of the game's round spot stays under each blob - all of it with `spot` (effects.
 // actor_shadows_spot), else none under its own shadow - back only as that one all but fades (a third of its darkness

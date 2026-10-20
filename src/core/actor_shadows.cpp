@@ -85,15 +85,22 @@ std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<L
 }
 
 std::vector<Lit> litBy(const std::vector<Light>& lights, float feetX, float feetY, float feetZ, double time,
-                       float flicker) {
+                       float flicker, const Walls& walls) {
     struct Near {
         const Light* light;
         float distance;
     };
     std::vector<Near> near;
+    // 2.6.18: the file's places (the axes but turn x and z about) - a light six units off its wall (a torch hangs on
+    // it), the character five over its feet
+    const map::Point body = map::toWorld(walls.axes, map::Point{feetX, feetY - 5.0f, feetZ});
     for (const Light& l : lights) {
         const float d = std::hypot(feetX - l.x, feetZ - l.z);
-        if (d > 1.0f && d < l.reach) near.push_back(Near{&l, d});
+        if (d <= 1.0f || d >= l.reach) continue;
+        if (walls.ground && !ground_heights::clear(*walls.ground, map::toWorld(walls.axes, map::Point{l.x, l.y, l.z}),
+                                                   body, 6.0f, 1.5f, 2.0f))
+            continue;
+        near.push_back(Near{&l, d});
     }
     std::sort(near.begin(), near.end(), [](const Near& a, const Near& b) { return a.distance < b.distance; });
     if (near.size() > 2) near.resize(2);
@@ -140,7 +147,7 @@ std::vector<Light> lightsOf(const rsw::World& map, const std::vector<rsw::Light>
 std::vector<std::vector<Cast>> castsFor(const std::vector<Blob>& blobs, const std::vector<Light>& lights,
                                         const camera::Projection& p, const float viewToWorld[12], bool known,
                                         const float sun[2], float sunLength, bool openSky, float night, float base,
-                                        double time, float flicker) {
+                                        double time, float flicker, const Walls& walls) {
     const float dark = std::clamp(night, 0.0f, 1.0f);
     const float sunWeight = openSky ? 1.0f - dark : 0.0f, fireWeight = openSky ? dark : 1.0f;
     const float* m = viewToWorld;
@@ -151,7 +158,7 @@ std::vector<std::vector<Cast>> castsFor(const std::vector<Blob>& blobs, const st
             const float vz = b.viewZ, vx = (b.x - p.cx) * vz / p.f0, vy = (b.y - p.cy) * vz / p.f1;
             const float fx = vx * m[0] + vy * m[3] + vz * m[6] + m[9], fy = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
             const float fz = vx * m[2] + vy * m[5] + vz * m[8] + m[11];
-            for (const Lit& l : litBy(lights, fx, fy, fz, time, flicker)) {
+            for (const Lit& l : litBy(lights, fx, fy, fz, time, flicker, walls)) {
                 const float weight = l.weight * fireWeight;
                 if (weight < 0.01f) continue;
                 // the feet and a point five units away from the light, on the screen

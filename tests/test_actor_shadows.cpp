@@ -4,6 +4,7 @@
 #include "core/actor_shadows.hpp"
 #include "core/config.hpp"
 #include "core/game_camera.hpp"
+#include "core/ground_heights.hpp"
 #include "core/map_axes.hpp"
 #include "core/rsw.hpp"
 #include "test.hpp"
@@ -229,6 +230,31 @@ TEST(actor_shadows_lit_by_the_two_nearest_lights_within_their_reach) {
         CHECK(std::fabs(lit[0].awayX + 1.0f) < 1e-4f);  // from the one 8 away
         CHECK(std::fabs(lit[1].awayZ + 1.0f) < 1e-4f);  // from the one 10 away
     }
+}
+
+TEST(actor_shadows_no_light_through_a_wall) {
+    // 2.6.18, R-QPYCS9: "a fire behind the wall, its shadow goes through the wall" - a wall 60 high a cell thick
+    // (x 10-20) between the nearest torch and the character: the next nearest on its own side throws its shadow
+    ground_heights::Ground g;
+    g.width = 8;
+    g.height = 8;
+    g.corners.assign(size_t(8 * 8 * 4), 0.0f);
+    for (int z = 0; z < 8; ++z)
+        for (int k = 0; k < 4; ++k) g.corners[size_t((z * 8 + 5) * 4 + k)] = -60.0f;  // cell 5: x 10-20
+    using actor_shadows::Light;
+    const std::vector<Light> two = {Light{21.0f, -30.0f, 0.0f, 40.0f, 0},    // on the wall's far face, 13 off
+                                    Light{-10.0f, -30.0f, 0.0f, 40.0f, 0}};  // on this side, 18 off
+    const actor_shadows::Walls walls{&g, map::Axes{1, 1, 1}};
+    std::vector<actor_shadows::Lit> lit = actor_shadows::litBy(two, 8.0f, 0.0f, 0.0f, 0.0, 0.0f, walls);
+    CHECK_EQ(lit.size(), size_t(1));
+    if (lit.size() == 1) CHECK(lit[0].awayX > 0.99f);  // away from the one on this side
+    CHECK_EQ(actor_shadows::litBy(two, 8.0f, 0.0f, 0.0f, 0.0, 0.0f).size(), size_t(2));  // no walls known: both
+    // the axes turned about: the same wall in the game's world at x -20 to -10
+    const actor_shadows::Walls turned{&g, map::Axes{-1, 1, 1}};
+    const std::vector<Light> mirrored = {Light{-21.0f, -30.0f, 0.0f, 40.0f, 0}, Light{10.0f, -30.0f, 0.0f, 40.0f, 0}};
+    lit = actor_shadows::litBy(mirrored, -8.0f, 0.0f, 0.0f, 0.0, 0.0f, turned);
+    CHECK_EQ(lit.size(), size_t(1));
+    if (lit.size() == 1) CHECK(lit[0].awayX < -0.99f);
 }
 
 TEST(actor_shadows_tremble_with_a_flame_a_lamp_steady) {
