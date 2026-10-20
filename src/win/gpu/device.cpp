@@ -2041,6 +2041,10 @@ void Renderer::setStudio(uint8_t flags, int x, int y) {
     Impl& m = *impl_;
     if (m.xray != ((flags & 1) != 0)) LOG_INFO("X-ray: %s", (flags & 1) ? "on" : "off");
     m.xray = (flags & 1) != 0;
+    const int seams = (flags >> 3) & 3;  // 2.7.8
+    if (m.seamsView != seams)
+        LOG_INFO("ground seams view: %s", seams == 2 ? "coloured over everything" : seams ? "coloured" : "off");
+    m.seamsView = seams;
     if (flags & 2) m.pick.ask(float(x) + 0.5f, float(y) + 0.5f, GetTickCount64());  // what the next frame draws there
     if (flags & 4) m.abWanted = true;
 }

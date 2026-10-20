@@ -3198,6 +3198,16 @@ const Entry kTexts[] = {
     {"Nothing found - Backspace erases, Esc clears",
      "Нічого не знайдено — Backspace стирає, Esc очищує",
      "Ничего не найдено — Backspace стирает, Esc сбрасывает"},
+    {"Ground seams view", "Стики землі: перегляд", "Стыки земли: просмотр"},  // 2.7.8
+    {"To find what blinks: the strips of Grass and road seams painted - their own band cyan, the neighbour's strip "
+     "magenta; over everything - without the depth test. Off: the picture as usual.",
+     "Щоб знайти, що блимає: смужки «Стиків трави й доріг» зафарбовані — свій край клітинки блакитним, смужка сусіда "
+     "пурпуровим; «поверх усього» — без перевірки глибини. Вимкнено — картинка як звичайно.",
+     "Чтобы найти, что мигает: полоски «Стыков травы и дорог» закрашены — свой край клетки голубым, полоска соседа "
+     "пурпурным; «поверх всего» — без проверки глубины. Выключено — картинка как обычно."},
+    {"Off", "Вимк", "Выкл"},
+    {"Coloured", "Кольором", "Цветом"},
+    {"Coloured, over everything", "Кольором поверх усього", "Цветом поверх всего"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

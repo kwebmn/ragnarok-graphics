@@ -413,6 +413,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
         std::memcpy(c.projection, proj, sizeof proj);
         std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
+        if (seamsView) {  // 2.7.8: [debug] seams_view - own bands cyan, the neighbours' strips magenta (as the X-ray)
+            static const float kOwn[3] = {0.1f, 0.9f, 1.0f}, kTheirs[3] = {1.0f, 0.15f, 0.85f};
+            for (int k = 0; k < 3; ++k) c.fogColor[k] = seamOwnBand ? kOwn[k] : kTheirs[k];
+            c.fogColor[3] = 0.85f;
+            c.fogEnable = 2;
+        }
     }
     if (water) {  // the game's camera, the waves' time and the page's settings (water_ps)
         std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);

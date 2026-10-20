@@ -245,3 +245,16 @@ TEST(night_creatures_off_by_default_in_no_set) {
     CHECK(m && m->group == effect_groups::Creatures && m->level == 0);
     CHECK(!effect_groups::memberOf("effects.moths"));
 }
+
+TEST(debug_seams_view_off_by_default_applied_at_once) {
+    // 2.7.8: [debug] seams_view - the ground seams' strips coloured (1) or coloured over everything (2), to find what
+    // blinks on the hills (prt_fild08 200 200); a running game takes it at once (the console's row)
+    CHECK_EQ(parseConfig("").seamsView, 0);
+    CHECK_EQ(parseConfig("[debug]\nseams_view = 1\n").seamsView, 1);
+    CHECK_EQ(parseConfig("[debug]\nseams_view = 2\n").seamsView, 2);
+    CHECK_EQ(parseConfig("[debug]\nseams_view = 7\n").seamsView, 0);
+    const Config two = parseConfig("[debug]\nseams_view = 2\n");
+    CHECK(settings::tokenOf(*settings::findSetting("debug.seams_view"), two) == "2");
+    CHECK(appliesNow("debug.seams_view"));
+    CHECK_EQ(liveUpdate(parseConfig(""), two).next.seamsView, 2);
+}

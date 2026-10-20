@@ -110,6 +110,7 @@ bool Renderer::Impl::applySeams() {
         const GroundGroup* shows;
         std::vector<Tl2> verts;
         std::vector<uint16_t> indices;
+        bool own;  // 2.7.8: the cells' own bands (the debug view's colour)
     };
     std::vector<Batch> batches;
     // 1.25: the cells' own bands first (their texture over their rim, whole at the edge), then the neighbours' strips
@@ -138,7 +139,7 @@ bool Renderer::Impl::applySeams() {
             }
         }
         if (!into) {
-            batches.push_back(Batch{&in, &shows, {}, {}});
+            batches.push_back(Batch{&in, &shows, {}, {}, at < ownBands});
             into = &batches.back();
         }
         const uint16_t base = uint16_t(into->verts.size());
@@ -171,6 +172,7 @@ bool Renderer::Impl::applySeams() {
         for (uint16_t k : s.indices) into->indices.push_back(uint16_t(base + k));
     }
     size_t drawn = 0;
+    std::vector<bool> owns;  // 2.7.8: of each draw
     for (const Batch& bt : batches) {
         if (bt.verts.empty()) continue;
         DrawSetup st = bt.in->state;
@@ -178,7 +180,7 @@ bool Renderer::Impl::applySeams() {
         st.srcBlend = d3d7::BLEND_SRCALPHA;
         st.dstBlend = d3d7::BLEND_INVSRCALPHA;
         st.zWrite = false;
-        st.zFunc = d3d7::CMP_LESSEQUAL;
+        st.zFunc = seamsView == 2 ? d3d7::CMP_ALWAYS : d3d7::CMP_LESSEQUAL;  // 2.7.8: the debug view over everything
         st.cull = d3d7::CULL_NONE;
         st.alphaTest = false;
         DrawCmd cmd;
@@ -190,6 +192,7 @@ bool Renderer::Impl::applySeams() {
         cmd.primitive = d3d7::PT_TRIANGLELIST;
         cmd.fvf = d3d7::FVF_TL2;
         seamRec.draw(cmd, bt.verts.data(), uint32_t(bt.verts.size()), bt.indices.data(), uint32_t(bt.indices.size()));
+        owns.push_back(bt.own);
         ++drawn;
     }
     stripDraws = drawn;  // 2.7.7: diagnostics
@@ -198,7 +201,10 @@ bool Renderer::Impl::applySeams() {
     prepareGeometry(seamRec);
     if (vertexBase) {
         seamPass = true;
-        for (const DrawCmd& cmd : seamRec.draws()) draw(seamRec, cmd);
+        for (size_t k = 0; k < seamRec.draws().size(); ++k) {
+            seamOwnBand = k < owns.size() && owns[k];
+            draw(seamRec, seamRec.draws()[k]);
+        }
         seamPass = false;
     }
     geometryList = 0;  // the game's record's vertices go up again with its next draw

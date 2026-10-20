@@ -580,6 +580,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.profile);
         } else if (key == "debug.xray") {  // 2.3
             setBool(val, c.xray);
+        } else if (key == "debug.seams_view") {  // 2.7.8
+            if (val == "0" || val == "1" || val == "2") c.seamsView = val[0] - '0';
         } else if (key == "debug.log") {
             if (val == "normal") c.logLevel = LogLevel::Info;
             if (val == "verbose") c.logLevel = LogLevel::Debug;

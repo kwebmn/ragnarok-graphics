@@ -65,7 +65,8 @@ void writeRecord(WireWriter& w, const FrameRecord& r);
 bool readRecord(WireReader& rd, FrameRecord& r);
 
 // 2.3, uaRO Studio's keys in the game (Msg::SetStudio): bit 0 the X-ray on; bit 1 a pick at (x, y), the cursor in the
-// game's picture; bit 2 the picked texture's picture off, or on again (A/B).
+// game's picture; bit 2 the picked texture's picture off, or on again (A/B); 2.7.8: bits 3-4 the ground seams' debug
+// view ([debug] seams_view: 1 the strips coloured, 2 and over everything).
 struct StudioKeys {
     uint8_t flags = 0;
     int32_t x = 0, y = 0;

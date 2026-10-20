@@ -329,6 +329,10 @@ struct Renderer::Impl {
     int anisotropy = 0;           // stage 4: of world draws; 0 = off
     bool alphaToCoverage = false;  // stage 4
     bool xray = false;             // 2.3: uaRO Studio's X-ray - the world's and the interface's textures tinted
+    // 2.7.8: [debug] seams_view - the ground seams' strips coloured (1), and over everything (2); seamOwnBand: the
+    // strips' draw now is of the cells' own bands
+    int seamsView = 0;
+    bool seamOwnBand = false;
     // 2.3, uaRO Studio's pick (L2): the cursor's game pixel asked about - the next frame's records looked through, its
     // present writing the texture of the last draw found under it (2.3.1) - and the picked texture's picture off or
     // on (A/B).

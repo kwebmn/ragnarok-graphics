@@ -157,6 +157,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("xray", flag(running.xray), flag(file.xray)));
         n.xray = file.xray;
     }
+    if (file.seamsView != running.seamsView) {  // 2.7.8: the seams' debug view at once (the console)
+        u.applied.push_back(change("seams_view", std::to_string(running.seamsView), std::to_string(file.seamsView)));
+        n.seamsView = file.seamsView;
+    }
     if (file.fpsCounter != running.fpsCounter) {  // 2.2.1: the frame counter at once
         u.applied.push_back(change("fps_counter", flag(running.fpsCounter), flag(file.fpsCounter)));
         n.fpsCounter = file.fpsCounter;
@@ -186,7 +190,8 @@ bool appliesNow(const std::string& k) {
            k == "quality.msaa" || k == "quality.taa" ||
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
-           k == "debug.profile" || k == "debug.xray" || k == "frames.fps_counter" || k == "stats.send" ||
+           k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
+           k == "stats.send" ||
            k.compare(0, 8, "effects.") == 0;
 }
 

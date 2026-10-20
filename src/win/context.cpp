@@ -1,5 +1,6 @@
 #include "win/context.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <fstream>
 
@@ -491,7 +492,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
         }
     }
     if (abKey_.pressed(ctrlShift && GetAsyncKeyState(VK_F7) < 0)) once |= 4;
-    const uint8_t studio = config.xray && enhanced_ ? 1 : 0;  // Pause: the game's own everywhere, no tint
+    // Pause: the game's own everywhere, no tint; 2.7.8: bits 3-4 the ground seams' debug view ([debug] seams_view)
+    const uint8_t studio = enhanced_ ? uint8_t((config.xray ? 1 : 0) | (std::clamp(config.seamsView, 0, 2) << 3)) : 0;
     if (studio != studioSent_ || once) {
         renderer->setStudio(uint8_t(studio | once), cursorX, cursorY);
         studioSent_ = studio;

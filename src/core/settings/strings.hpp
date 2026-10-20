@@ -345,6 +345,7 @@ enum class Text : uint16_t {
     FxWeatherKindSnow, FxWeatherKindLeaves, FxWeatherKindSand,
     FxGroupCreatures, FxGroupCreaturesHint, FxGroupCaves, FxGroupCavesHint, FxGroupSky, FxGroupSkyHint,  // 2.6.22
     FxGroupScreen, FxGroupScreenHint, ConsoleThisMap, ConsoleSearch, ConsoleNothing,
+    DebugSeams, DebugSeamsHint, DebugSeamsOff, DebugSeamsColour, DebugSeamsOnTop,  // 2.7.8
     Count
 };
 
