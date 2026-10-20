@@ -1,3 +1,11 @@
+# uaRO Graphics 2.6.20 — to check
+
+- **Fixed the black screen at the login (1 frame a second).** In 2.6.19 the renderer (uaro-render64.exe) went down
+  right after the start: the log line about the effects' settings had, since the Depth of field was removed, read
+  data that was not there - it got away with it before, not in 2.6.19. The line is fixed, and the build now checks
+  every log line itself so that it cannot happen again.
+- Please check: the game reaches the login and enters the world as usual. All else as in 2.6.19.
+
 # uaRO Graphics 2.6.19 — to check
 
 - **No more leaves falling in the Pyramids.** Leaves fall only from trees, and the graphics know trees by a green
