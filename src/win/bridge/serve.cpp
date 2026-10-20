@@ -142,7 +142,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.treeVolume = rd.u8() != 0;  // 1.7
             e.leafLight = rd.u8() != 0;
             e.treeTints = rd.u8() != 0;
-            e.gusts = rd.u8() != 0;
             e.flowers = rd.u8() != 0;  // 1.7.1
             e.dew = rd.u8() != 0;
             e.morningFog = rd.u8() != 0;

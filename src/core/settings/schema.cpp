@@ -272,8 +272,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxLeafLightHint, "", &E::leafLight},
         {"effects", "tree_tints", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeTints,
          Text::FxTreeTintsHint, "", &E::treeTints},
-        {"effects", "gusts", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGusts,
-         Text::FxGustsHint, "", &E::gusts},
         {"effects", "flowers", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFlowers,
          Text::FxFlowersHint, "", &E::flowers},
         {"effects", "dew", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDew,

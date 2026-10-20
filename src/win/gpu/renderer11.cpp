@@ -1396,7 +1396,6 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         l.volume = effects_.treeVolume;
         l.through = effects_.leafLight;
         l.tints = effects_.treeTints;
-        l.gusts = effects_.gusts && effects_.foliage && effects_.foliageStrength > 0;
         const daylight::Light sun = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
         l.sun[0] = sun.shadow[0];
         l.sun[1] = sun.shadow[1];
@@ -1405,8 +1404,6 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         l.viewToWorld = cameraValid_ ? viewToWorld_ : nullptr;
         l.projection = camera::projectionFor(gameWidth_, gameHeight_);
         leafShading(rec, d, l, c);
-        if (windShared())  // 2.5.5: the leaves sway the shared wind's way
-            c.uiPixels[3] *= (windScreenX_ < 0.0f ? -1.0f : 1.0f) * (0.4f + 0.6f * windNow_.strength);
         if (effects_.leafFall) noteCrown(rec, d);  // 2.5.4: the leaves falling from it (the living world)
     }
     // 0.99, the modern water (as draw.cpp): a cell of the map's water by water_vs/water_ps, from the picture and the
@@ -2749,7 +2746,6 @@ void Renderer11::applyGrass() {
     }
     const int minute = effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();  // 2.6.11
     if (effects_.dew) c.twin[3] = living::dew(minute) * (1.0f - float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f);
-    if (effects_.gusts) c.sourceRect[0] = 1.0f;
     if (windShared()) {  // 2.5.5: the shared wind's way times its strength
         c.sourceRect[2] = windNow_.x * windNow_.strength;
         c.sourceRect[3] = windNow_.z * windNow_.strength;

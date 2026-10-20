@@ -192,7 +192,6 @@ EffectSettings effectsOff() {
     e.morningFog = false;
     e.dew = false;
     e.flowers = false;
-    e.gusts = false;
     e.treeTints = false;
     e.leafLight = false;
     e.treeVolume = false;
@@ -264,7 +263,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.morningFog ||
            e.dew ||
            e.flowers ||
-           e.gusts ||
            e.treeTints ||
            e.leafLight ||
            e.treeVolume ||

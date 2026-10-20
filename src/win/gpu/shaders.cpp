@@ -74,13 +74,6 @@ struct PsIn {
     float2 uv1 : TEXCOORD1;
 };
 
-// 1.7: a gust's strength at game x and time t (0-1): a band about 250 pixels wide crossing the screen from the left
-// every 9 s or so, stronger and weaker in turn.
-float gustAt(float x, float t) {
-    float band = pow(saturate(sin(x * 0.0042 - t * 0.7)), 8.0);
-    return band * (0.55 + 0.45 * sin(t * 0.23));
-}
-
 // D3D7 puts pixel centres on integer coordinates, D3D12 on half-integers, and the target is `scale` times the
 // game's size: a game x lands at x * scale + 0.5 (stage 3 spec §4; at scale 1 that is calibration.md §3).
 PsIn draw_vs(VsIn i) {
@@ -93,10 +86,6 @@ PsIn draw_vs(VsIn i) {
         float up = saturate((twinY - i.pos.y) / max(twinW, 1.0));
         float wave = sin(twinH * 1.6 + i.pos.x * 0.013 + i.pos.y * 0.007) * 0.7 +
                      sin(twinH * 2.9 + i.pos.x * 0.031) * 0.3;
-        // 1.7, gusts (uiPixels.w): a band of wind crossing the screen from the left now and then (grass_ps alike).
-        // 1.22: the shared wind's - its sign the side it comes from, its size how strong
-        float across = uiPixels.w < 0.0 ? 4096.0 - i.pos.x : i.pos.x;
-        wave += uiPixels.w * gustAt(across, twinH) * 2.6;
         gx += twinX * up * up * wave;
     }
     float gy = i.pos.y;
@@ -1677,8 +1666,8 @@ float4 embers_ps(PresentOut i) : SV_Target {
 // the screen) in front. The blades sway in the wind and lie down where a step was left lately (t1, as steps_ps reads
 // it; footprint how many). twinX the blades' longest (target pixels), twinY how many (0-1), sharpen the time.
 // 1.7: the trodden blades lean away from the step; twinW the share of flowers (flowers), sourceRect.y their colours
-// (living::Place::flowers); twinH the dew (dew) glinting on the tips; sourceRect.x the gusts (gusts): a band of
-// wind crossing the screen bends the blades and lightens them. 2.6.8 (R-9K2F6E: 22 ms on an HD 6570): the steps'
+// (living::Place::flowers); twinH the dew (dew) glinting on the tips (2.7.10: the gusts gone - too faint to see).
+// 2.6.8 (R-9K2F6E: 22 ms on an HD 6570): the steps'
 // hold read from their grid (footprint 1: t1, core/trample.hpp; fogColor its corner, one over a texel's side, texels
 // a side) instead of up to 64 steps a pixel; the root's depth read once; the map's ground looked up only for a root
 // that has a blade; uiPixels.z 2 (Direct3D 11) looks for roots on every second row only - a blade still found
@@ -1710,11 +1699,11 @@ float4 grass_ps(PresentOut i) : SV_Target {
     int longest = int(twinX);
     float t = sharpen;
     // 1.7: the way the steps near here push the blades, along the screen (the view's x axis in the world: r0-r2).
-    // 1.8.3: the wind's sway and the gusts by the place in the world under the pixel, not by the pixel - by the
-    // pixel the waves moved over the grass with the camera as one walked.
+    // 1.8.3: the wind's sway by the place in the world under the pixel, not by the pixel - by the pixel the waves
+    // moved over the grass with the camera as one walked.
     // 1.9.9: how far the steps trod the grass down here, once a pixel (until 1.9.8 for every root it looked at: up
     // to 28 roots times 64 steps a pixel - the costliest effect, 1.3-3.2 ms at 4K)
-    float lean = 0.0, swayPhase = 0.0, gust = 0.0, trod = 1.0;
+    float lean = 0.0, swayPhase = 0.0, trod = 1.0;
     float windStrength = length(sourceRect.zw);
     float2 windWay = windStrength > 1e-4 ? sourceRect.zw / windStrength : float2(0.943, 0.33);
     // 1.22: the blades lean the wind's way on the screen (the view's x axis in the world: r0-r2)
@@ -1724,9 +1713,6 @@ float4 grass_ps(PresentOut i) : SV_Target {
         float3 hw = hv.x * float3(r0, r1, r2) + hv.y * float3(r3, r4, r5) + hv.z * float3(r6, r7, r8) +
                     float3(r9, r10, r11);
         swayPhase = hw.x * 0.35 + hw.z * 0.22;
-        if (sourceRect.x > 0.0)  // 1.22: along the shared wind (sourceRect.zw its way times its strength)
-            gust = pow(saturate(sin(dot(hw.xz, windWay * 0.042) - t * 0.7)), 8.0) * (0.55 + 0.45 * sin(t * 0.23)) *
-                   sourceRect.x;
         if (footprint > 0.5) {  // 2.6.8: the steps' hold, from their grid
             float4 hold = trampleAt(hw.xz);
             lean = clamp(dot(float3(hold.x, 0.0, hold.y) * 2.0, float3(r0, r1, r2)), -1.0, 1.0);
@@ -1738,7 +1724,7 @@ float4 grass_ps(PresentOut i) : SV_Target {
     [loop] for (int k = first; k >= 1; k -= every) {
         float up = float(k) / twinX;
         float sway = sin(t * 1.7 + swayPhase) * 0.25 * twinX * up * up;
-        sway += (gust * 0.55 + lean * 0.5 + windLean) * twinX * up * up;
+        sway += (lean * 0.5 + windLean) * twinX * up * up;
         int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
         float rd = sceneDepth.Load(int3(root, 0));
         if (rd >= 0.99999) continue;
@@ -1777,7 +1763,7 @@ float4 grass_ps(PresentOut i) : SV_Target {
         }
         height *= trod;  // trodden down
         if (up > height) continue;
-        float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3)) * (1.0 + 0.2 * gust * up);
+        float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3));
         if (head) colour = flowerColour(hash12(id + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * rc.g);
         if (twinH > 0.0 && up > height * 0.85) {  // a dew drop on the tip, now and then catching the sun
             float seed = hash12(id + 43.1);

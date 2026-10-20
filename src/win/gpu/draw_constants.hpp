@@ -62,10 +62,10 @@ inline bool yExtent(const FrameRecord& rec, const DrawCmd& d, float& top, float&
 }
 
 // 1.7, the trees (core/trees.hpp): a draw of leaves lit as a round crown, lit through towards the sun, its own shade
-// and the season's colours (shaders.cpp leafLight), and the gusts' share of its sway (draw_vs). sun: the way the
-// shadows fall on the screen (core/daylight.hpp).
+// and the season's colours (shaders.cpp leafLight; 2.7.10: the gusts in their sway gone). sun: the way the shadows
+// fall on the screen (core/daylight.hpp).
 struct LeafLook {
-    bool volume = false, through = false, tints = false, gusts = false;
+    bool volume = false, through = false, tints = false;
     float sun[2] = {0.83f, 0.56f};
     float throughLight = 0.0f;  // trees::throughLight
     trees::Season season = trees::Season::Green;
@@ -74,8 +74,6 @@ struct LeafLook {
 };
 
 inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook& look, Constants& c) {
-    if (!look.volume && !look.through && !look.tints && !look.gusts) return;
-    c.uiPixels[3] = look.gusts ? 1.0f : 0.0f;
     if (!look.volume && !look.through && !look.tints) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);

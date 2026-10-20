@@ -297,13 +297,12 @@ struct EffectSettings {
     bool flare = false;
     // 1.7: the living world, trees: tree_volume - a crown lit as a round shape (its side to the sun lighter);
     // leaf_light - the leaves on the crown's sunward edge lit through; tree_tints - each tree a shade of its
-    // own, autumn colours in autumn, rime in Lutie; gusts - gusts cross the woods (with foliage). Off by default.
-    // (2.6.22: dapple - the sun's spots in the trees' shadows - gone: it drew nothing since the sun's shadows went in
-    // 2.1.4.)
+    // own, autumn colours in autumn, rime in Lutie. Off by default. (2.6.22: dapple - the sun's spots in the trees'
+    // shadows - gone: it drew nothing since the sun's shadows went in 2.1.4. 2.7.10: gusts - a band of wind across the
+    // grass and the woods - gone: the tester could not see it.)
     bool treeVolume = false;
     bool leafLight = false;
     bool treeTints = false;
-    bool gusts = false;
     // 1.7.1: the living world, the ground: flowers in the grass, dew on it in the morning (with grass); a low morning
     // fog (2.6.8: on its own, the haze gone); sand drifting over the desert, snow glittering, damp caves' walls
     // glistening. Off by default.

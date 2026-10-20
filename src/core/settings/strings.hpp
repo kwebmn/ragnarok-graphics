@@ -215,7 +215,6 @@ enum class Text : uint16_t {
     AiSmall, AiSmallHint, AiSmallSide, AiSmallModel,  // 1.6.3
     // 1.7: the living world
     FxTreeVolume, FxTreeVolumeHint, FxLeafLight, FxLeafLightHint, FxTreeTints, FxTreeTintsHint,
-    FxGusts, FxGustsHint,
     // 1.7.1
     FxFlowers, FxFlowersHint, FxDew, FxDewHint, FxMorningFog, FxMorningFogHint, FxSandDrift, FxSandDriftHint,
     FxSnowSparkle, FxSnowSparkleHint, FxWetWalls, FxWetWallsHint,

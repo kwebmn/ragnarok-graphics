@@ -399,7 +399,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (leaves) {  // 1.7
         LeafLook look = leafLook();
         leafShading(rec, d, look, c);
-        if (windShared()) c.uiPixels[3] *= (windScreenX < 0.0f ? -1.0f : 1.0f) * (0.4f + 0.6f * windNow.strength);
         if (effects.leafFall) noteCrown(rec, d);
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
@@ -512,7 +511,6 @@ LeafLook Renderer::Impl::leafLook() const {
     l.volume = effects.treeVolume;
     l.through = effects.leafLight;
     l.tints = effects.treeTints;
-    l.gusts = effects.gusts && effects.foliage && effects.foliageStrength > 0;
     sunOnScreen(l.sun);
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     l.throughLight = trees::throughLight(daylight::at(effects.dayCycle ? effects.dayNow : -1).length, night);

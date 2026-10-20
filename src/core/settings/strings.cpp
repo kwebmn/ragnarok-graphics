@@ -2070,15 +2070,6 @@ const Entry kTexts[] = {
     {"Each tree gets a slightly different shade and brightness, so a wood is not one crown copied.",
      "Кожне дерево трохи іншого відтінку й яскравості, тож ліс не складається з однієї скопійованої крони.",
      "Каждое дерево чуть другого оттенка и яркости, так что лес не состоит из одной скопированной кроны."},
-    {"Gusts of wind",
-     "Пориви вітру",
-     "Порывы ветра"},
-    {"Now and then a gust crosses the screen: the trees bend one after another and the grass bends and lightens along "
-     "a band. Needs Leaves in the wind (and Grass for the grass).",
-     "Час від часу екраном проходить порив: дерева гнуться одне за одним, а трава хилиться й світлішає смугою. "
-     "Потрібне «Листя на вітрі» (і «Трава» для трави).",
-     "Время от времени по экрану проходит порыв: деревья гнутся одно за другим, а трава клонится и светлеет полосой. "
-     "Нужна «Листва на ветру» (и «Трава» для травы)."},
     {"Flowers in the grass",
      "Квіти в траві",
      "Цветы в траве"},
@@ -2322,11 +2313,11 @@ const Entry kTexts[] = {
     {"One wind for everything",
      "Один вітер для всього",
      "Один ветер для всего"},
-    {"The grass, the leaves, drifting sand, rain and snow all go one way with one wind, which slowly turns and "
-     "blows stronger and weaker - instead of each going its own way (Direct3D 12).",
-     "Трава, листя, піщана поземка, дощ і сніг рухаються в один бік з одним вітром, що поволі змінює напрям і то "
-     "посилюється, то слабне, — а не кожне куди саме хоче (Direct3D 12).",
-     "Трава, листва, песчаная позёмка, дождь и снег движутся в одну сторону с одним ветром, который медленно меняет "
+    {"The grass, drifting sand, rain and snow all go one way with one wind, which slowly turns and blows stronger and "
+     "weaker - instead of each going its own way (Direct3D 12).",
+     "Трава, піщана поземка, дощ і сніг рухаються в один бік з одним вітром, що поволі змінює напрям і то посилюється, "
+     "то слабне, — а не кожне куди саме хоче (Direct3D 12).",
+     "Трава, песчаная позёмка, дождь и снег движутся в одну сторону с одним ветром, который медленно меняет "
      "направление и то усиливается, то стихает, — а не каждое куда само хочет (Direct3D 12)."},
     {"Dust in beams of light", "Пил у променях світла", "Пыль в лучах света"},
     {"Indoors and in dungeons the dust in the air shows where light falls - in the beams from the windows, by the "
@@ -2416,12 +2407,10 @@ const Entry kTexts[] = {
      "Рельеф и материалы земли, домов и скал, стыки травы и дорог, холмы, тени в углах, отражения на полу, "
      "карты, поблёскивающие на земле."},
     {"Grass and trees", "Трава й дерева", "Трава и деревья"},
-    {"Grass, flowers and dew, leaves in the wind, gusts, the trees' crowns, light through the leaves, sun "
-     "spots in their shade, their shades of colour, falling leaves.",
-     "Трава, квіти й роса, листя на вітрі, пориви, крони дерев, світло крізь листя, сонячні плями в їхній "
-     "тіні, відтінки дерев, листопад.",
-     "Трава, цветы и роса, листва на ветру, порывы, кроны деревьев, свет сквозь листву, солнечные пятна в их "
-     "тени, оттенки деревьев, падающие листья."},
+    {"Grass, flowers and dew, leaves in the wind, the trees' crowns, light through the leaves, their shades of "
+     "colour, falling leaves.",
+     "Трава, квіти й роса, листя на вітрі, крони дерев, світло крізь листя, відтінки дерев, листопад.",
+     "Трава, цветы и роса, листва на ветру, кроны деревьев, свет сквозь листву, оттенки деревьев, падающие листья."},
     {"Water", "Вода", "Вода"},
     {"The modern water and all on it: ripples and splashes from steps, the world under water, swamps, reflections.",
      "Сучасна вода і все на ній: кола й бризки від кроків, світ під водою, болота, відображення.",
