@@ -33,6 +33,15 @@ void onGround(const Cell& c, float u, float v, float out[3]) {
 }
 
 int64_t keyOf(int x, int z) { return (int64_t(x) << 32) ^ int64_t(uint32_t(z)); }
+int xOf(int64_t key) { return int(key >> 32); }
+int zOf(int64_t key) { return int(int32_t(uint32_t(key))); }
+
+// 2.7.9: two cells in order - by x, then by z, both signed. The keys' order put z -1 after 0 (their low half is z
+// unsigned), and the grid's origin, taken from the first triangle's corner, falls either side of a cell's line by the
+// rounding of the ground back from the screen - as the camera turned, every cell's place moved by one now and then,
+// and the row of edges at z -1/0 took the other side's noise: the line between grass and road jumped there, at the
+// middle of a map (prt_fild08 200 200: the neighbours' strips blinked). Moved all by one, this order stays.
+bool before(int64_t a, int64_t b) { return xOf(a) < xOf(b) || (xOf(a) == xOf(b) && zOf(a) < zOf(b)); }
 
 // The cell's attributes at (u, v) of its own square, bilinear (outside [0, 1] carried on), colours rounded channel by
 // channel at each of the three steps. 2.5.11: only the parts a strip's corner keeps, each by the same arithmetic as
@@ -169,12 +178,12 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
     std::vector<const std::pair<const int64_t, Cell>*> placed;
     placed.reserve(cells.size());
     for (const auto& entry : cells) placed.push_back(&entry);
-    std::sort(placed.begin(), placed.end(), [](const auto* x, const auto* y) { return x->first < y->first; });
+    std::sort(placed.begin(), placed.end(), [](const auto* x, const auto* y) { return before(x->first, y->first); });
     for (const auto* at : placed) {
         const auto& entry = *at;
         const Cell& a = entry.second;
         if (!(a.have[0] && a.have[1] && a.have[2] && a.have[3])) continue;
-        const int ix = int(entry.first >> 32), iz = int(int32_t(uint32_t(entry.first)));
+        const int ix = xOf(entry.first), iz = zOf(entry.first);
         for (const Way& w : kWays) {
             const auto nb = cells.find(keyOf(ix + w.dx, iz + w.dz));
             if (nb == cells.end()) continue;
@@ -197,7 +206,7 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                 }
                 if (alike) continue;
             }
-            const bool low = entry.first < nb->first;  // the side whose noise counts up for the other
+            const bool low = before(entry.first, nb->first);  // the side whose noise counts up for the other
             // 1.9.5: how much a place belongs to the neighbour's texture - its cells (the neighbour alone where both
             // have one texture) as 1 at their middles, bilinear between the cells' middles: 0.5 at the edge, more at
             // a corner the neighbour's texture goes round - the line rounds the cells' corners off (shade(), bit 31).

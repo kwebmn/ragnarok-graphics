@@ -179,6 +179,56 @@ TEST(seams_every_strip_lies_on_its_cells_ground) {
     }
 }
 
+TEST(seams_strips_the_same_when_the_ground_comes_back_a_hair_off) {
+    // 2.7.9 (the tester: the neighbours' strips - magenta in [debug] seams_view - still blinked at prt_fild08 200 200,
+    // the map's middle): the ground comes back from the screen with a rounding error that changes as the camera turns.
+    // The grid's origin is taken from the first corner - a hair under a line, every cell's place moved by one - and
+    // the order of two cells by their keys, z unsigned in their low half, put the row at z -1 after the one at 0: that
+    // row of edges took the other side's noise, the line between grass and road jumped. Four rows of cells about the
+    // world's z 0, another texture each row; the same strips with the ground a thousandth of a unit off either way.
+    const auto block = [](float dx, float dz) {
+        std::vector<seams::Triangle> ground;
+        for (int iz = -2; iz < 2; ++iz)
+            for (int ix = -2; ix < 2; ++ix) {
+                seams::Vertex c[4];
+                for (int k = 0; k < 4; ++k) {
+                    c[k].pos[0] = float(ix + (k & 1)) * 10.0f + dx;
+                    c[k].pos[2] = float(iz + (k >> 1)) * 10.0f + dz;
+                    c[k].uv0[0] = float(k & 1);
+                    c[k].uv0[1] = float(k >> 1);
+                }
+                seams::Triangle a, b;
+                a.v[0] = c[0], a.v[1] = c[1], a.v[2] = c[2];
+                b.v[0] = c[2], b.v[1] = c[1], b.v[2] = c[3];
+                a.group = b.group = uint32_t((iz + 2) * 4 + ix + 2);
+                ground.push_back(a);
+                ground.push_back(b);
+            }
+        return ground;
+    };
+    std::vector<uint32_t> textures;
+    for (int g = 0; g < 16; ++g) textures.push_back(uint32_t(1 + (g / 4) % 2));  // rows of two textures in turn
+    // each strip's vertices by the noise's side (green) and the band's flag (red)
+    const auto sides = [&](float dx, float dz) {
+        std::vector<std::vector<uint32_t>> out(16 * 16);
+        for (const seams::Strip& s : seams::build(block(dx, dz), textures, 0.5f))
+            for (const seams::Vertex& v : s.vertices) out[s.inside * 16 + s.shows].push_back(v.specular & 0xffff00u);
+        return out;
+    };
+    const auto exact = sides(0.0f, 0.0f);
+    size_t strips = 0;
+    for (const auto& s : exact) strips += s.empty() ? 0 : 1;
+    CHECK(strips >= 24);  // the rows' edges both ways and the bands
+    for (const float dz : {-1e-3f, 1e-3f})
+        for (const float dx : {-1e-3f, 0.0f, 1e-3f}) {
+            const auto off = sides(dx, dz);
+            int differ = 0;
+            for (size_t k = 0; k < exact.size(); ++k) differ += off[k] != exact[k] ? 1 : 0;
+            if (differ) std::printf("  ground off by (%g, %g): %d strips otherwise\n", dx, dz, differ);
+            CHECK_EQ(differ, 0);
+        }
+}
+
 TEST(seams_none_over_a_step) {
     // 2.1.6: two textures, the second cell a step higher - a wall between them, no seam (it blinked at the wall's foot)
     std::vector<seams::Triangle> ground;
