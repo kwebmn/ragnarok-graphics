@@ -90,9 +90,6 @@ bool Renderer::Impl::applySeams() {
     crumb("ground seams");
     // 2.5.11: built again only when the ground differs from the last frame's (the camera moved)
     const std::vector<seams::Strip>& strips = seamsCache.build(groundTris, groundTextures, 0.5f);
-    groundAtSeams = groundTris.size();  // 2.7.7: diagnostics
-    stripsAtSeams = strips.size();
-    stripDraws = 0;
     if (strips.empty()) return true;
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
@@ -195,7 +192,6 @@ bool Renderer::Impl::applySeams() {
         owns.push_back(bt.own);
         ++drawn;
     }
-    stripDraws = drawn;  // 2.7.7: diagnostics
     if (!drawn) return true;
     flushDraws();  // 2.5: the game's draws gathered so far are of its own vertices, uploaded before the strips'
     prepareGeometry(seamRec);
@@ -334,19 +330,6 @@ void Renderer::Impl::hillsConstants(Constants& c) const {
     const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
     std::memcpy(c.projection, proj, sizeof proj);
     std::memcpy(c.reproject, viewToWorld, sizeof c.reproject);
-}
-
-// 2.7.7, diagnostics of the seams blinking on hills: once a frame (the present) - every five seconds the strips of the
-// last frame, and whether any of the ground came after them (its cells without strips, the strips under it covered)
-void Renderer::Impl::logSeamsFrame() {
-    const float now = waterTime();
-    if (seamsDone && seamsWanted() && (now - seamsDiagAt > 5.0f || now < seamsDiagAt)) {
-        LOG_INFO("ground seams: %zu kinds of strips in %zu draws over %zu triangles of %s's ground; %d draws of the "
-                 "ground after them this frame (%zu triangles in all)",
-                 stripsAtSeams, stripDraws, groundAtSeams, mapName.c_str(), groundAfterSeams, groundTris.size());
-        seamsDiagAt = now;
-    }
-    groundAfterSeams = 0;
 }
 
 }  // namespace uagfx::gpu

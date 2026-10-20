@@ -1083,12 +1083,6 @@ struct Renderer::Impl {
     bool applyDarkness();  // false: lost
     seams::Cache seamsCache;  // 2.5.11
     bool seamPass = false, seamsDone = false, seamsLogged = false;
-    // 2.7.7, diagnostics of the seams blinking on hills (prt_fild08 200 200): the frame's ground drawn after its
-    // strips, the triangles there were when they were made, the strips and their draws; logged every few seconds
-    int groundAfterSeams = 0;
-    size_t groundAtSeams = 0, stripsAtSeams = 0, stripDraws = 0;
-    float seamsDiagAt = -1e9f;
-    void logSeamsFrame();
     // 2.2.1: outdoors only - a dungeon's floor is tiles (Glast Heim's church: stone and black broken ones), whose
     // edges are meant straight: the wandering line spread the black over the stones as cracks, and blinked
     bool seamsWanted() const { return effects.groundSeams && viewToWorldValid && mapOutdoors; }

@@ -88,10 +88,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
     if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite &&
-        (seamsWanted() || hillsWanted() || grassCellsWanted())) {
-        if (seamsDone) ++groundAfterSeams;  // 2.7.7: diagnostics - ground after this frame's strips
+        (seamsWanted() || hillsWanted() || grassCellsWanted()))
         noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame; 2.2.1 the grass's ground
-    }
     // 1.16: an opaque draw of the world into the next frame's mirror (2.2: the sun's map is gone)
     if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting()) noteCaster(rec, d, s);
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows

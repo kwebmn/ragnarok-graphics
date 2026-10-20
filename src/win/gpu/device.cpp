@@ -2863,7 +2863,6 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     }
     m.renderStarted = false;
     m.upscaledNow = false;
-    m.logSeamsFrame();  // 2.7.7: diagnostics of the hills' blinking seams
     m.newPicture();  // 0.19-0.23: the next frame's water, shadows, torches, colours, depth of field
     if (m.upscale) {  // part 3: the next frame - a new jitter, this camera the previous one, a clean layer
         ++m.upscaleFrame;
