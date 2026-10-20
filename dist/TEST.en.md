@@ -1,3 +1,16 @@
+# uaRO Graphics 2.7.2 — to check
+
+- **Fixed: no grass in the water.** In shallow ponds and rivers the green bed showed through the water and blades
+  were drawn over it. Now no grass grows under the water.
+- **"Surf" removed with its "Wet sand".** The wet sand darkened the shore barely, and only warm-coloured sand, and
+  the foam "breathed" too slowly - switching it changed nothing seen. The foam along the shore stays: it is a part of
+  Modern water ("Foam along the shore").
+- **"Fish" removed.** The fish's shapes under the water were too faint: a fifth of a cell long and only a little
+  darker than the water, they could not be made out even where it is deep. The switch is gone from the Water group;
+  an old `fish` line in uaro-graphics.ini is no longer read.
+- Please check: the pond on cmd_fild01 (244 187) - no blades on the water, the grass around as before; no Fish in the
+  Water group; the water in Alberta as before - waves, glints, the houses and the ships reflected.
+
 # uaRO Graphics 2.7.1 — to check
 
 - **Fixed (Direct3D 12): "World reflections in water" work.** They were never drawn before: the game starts every
