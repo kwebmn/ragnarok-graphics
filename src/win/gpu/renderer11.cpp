@@ -1142,7 +1142,8 @@ void Renderer11::upload(const FrameRecord& rec, const UploadCmd& u) {
         it->second.transparent = clear || (!whole && it->second.transparent);
     }
     if (level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
-        it->second.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
+        it->second.leafy = foliage::leafyTexture(rec.pixels().data() + u.pixels, t.width, t.height,  // 0.64
+                                                 u.slotCount > 0 || !it->second.cells.empty());  // 2.6.19
         // 2.5.1: a whole picture - how much it looks like fire, or lights in its own colour (as device.cpp upload)
         it->second.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height,
                                                it->second.fireColour);
@@ -1380,9 +1381,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
         std::memcpy(c.projection, proj, sizeof proj);
     }
+    // 2.6.19 (draw.cpp): leaves as the game draws a tree's - alpha-tested, not blended: never a sprite or an effect
+    const bool leaves = !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2 && !s.blend;
     float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind (as draw.cpp)
-    if (!s.ui && !twin && c.uiMode == 0 && effects_.foliage && effects_.foliageStrength > 0 && t[0] && t[0]->leafy &&
-        d.fvf != d3d7::FVF_TL2 && yExtent(rec, d, swayTop, swayBottom)) {
+    if (leaves && effects_.foliage && effects_.foliageStrength > 0 && yExtent(rec, d, swayTop, swayBottom)) {
         const unsigned long long now = GetTickCount64();
         if (!clockStart_) clockStart_ = now;
         c.twin[0] = 1.2f * float(effects_.foliageStrength) / 100.0f;
@@ -1390,7 +1392,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = float(double(now - clockStart_) / 1000.0);
     }
-    if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7: the trees
+    if (leaves) {  // 1.7: the trees
         LeafLook l;
         l.volume = effects_.treeVolume;
         l.through = effects_.leafLight;

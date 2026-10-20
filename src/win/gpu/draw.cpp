@@ -386,15 +386,17 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
         std::memcpy(c.projection, proj, sizeof proj);
     }
+    // 2.6.19: leaves as the game draws a tree's - cut by its alpha test, not blended over: never a sprite or an effect,
+    // whatever its picture looks like (the Pyramids' Poporings shed leaves)
+    const bool leaves = !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2 && !s.blend;
     float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind
-    if (!s.ui && !twin && c.uiMode == 0 && effects.foliage && effects.foliageStrength > 0 && t[0] && t[0]->leafy &&
-        d.fvf != d3d7::FVF_TL2 && yExtent(rec, d, swayTop, swayBottom)) {
+    if (leaves && effects.foliage && effects.foliageStrength > 0 && yExtent(rec, d, swayTop, swayBottom)) {
         c.twin[0] = 1.2f * float(effects.foliageStrength) / 100.0f;
         c.twin[1] = swayBottom;
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = waterTime();
     }
-    if (!s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2) {  // 1.7
+    if (leaves) {  // 1.7
         LeafLook look = leafLook();
         leafShading(rec, d, look, c);
         if (windShared()) c.uiPixels[3] *= (windScreenX < 0.0f ? -1.0f : 1.0f) * (0.4f + 0.6f * windNow.strength);

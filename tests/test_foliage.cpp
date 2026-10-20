@@ -22,6 +22,17 @@ TEST(foliage_knows_leaves_from_walls_and_fences) {
     CHECK(!foliage::leafy(leaves.data(), 4, 4));
 }
 
+TEST(foliage_a_sprite_cache_page_is_never_leaves) {
+    // 2.6.19: "standing in the Pyramids, some leaves are falling" - a page of the game's sprite cache full of green
+    // Poporings on transparent cells looked like leaves (their frames' mean colours about 187, 203, 144, a hair on
+    // either side of the line) and they shed them. The characters' and monsters' frames are never a tree's.
+    std::vector<uint32_t> page(32 * 32);
+    for (int i = 0; i < 32 * 32; ++i) page[size_t(i)] = (i * 7 % 10) < 4 ? 0x00000000u : 0xFFBBCB90u;
+    CHECK(foliage::leafy(page.data(), 32, 32));
+    CHECK(foliage::leafyTexture(page.data(), 32, 32, false));
+    CHECK(!foliage::leafyTexture(page.data(), 32, 32, true));
+}
+
 TEST(foliage_sways_the_top_not_the_trunk) {
     CHECK(foliage::sway(100, 200, 200, 100, 2.0f, 1.0f) == 0.0f);  // at the bottom
     float most = 0.0f;

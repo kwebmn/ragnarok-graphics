@@ -778,7 +778,8 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     if (u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
         t.fire = effect_light::fireOf(rec.pixels().data() + u.pixels, t.width, t.height, t.fireColour);
         t.light = effect_light::lightOf(rec.pixels().data() + u.pixels, t.width, t.height, t.lightColour);  // 0.36
-        t.leafy = foliage::leafy(rec.pixels().data() + u.pixels, t.width, t.height);  // 0.64
+        t.leafy = foliage::leafyTexture(rec.pixels().data() + u.pixels, t.width, t.height,  // 0.64
+                                        u.slotCount > 0 || !t.spriteCells.empty());  // 2.6.19: no sprite cache
     }
     const D3D12_TEXTURE_COPY_LOCATION src = stage(*this, rec.pixels().data() + u.pixels, UINT(u.rect.width()),
                                                   UINT(u.rect.height()));

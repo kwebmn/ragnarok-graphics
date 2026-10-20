@@ -27,6 +27,10 @@ bool leafy(const uint32_t* argb, int width, int height) {
     return hole > 0.12 && hole < 0.85 && mg > mr * 1.08 && mg > mb * 1.15 && mg > 40.0;
 }
 
+bool leafyTexture(const uint32_t* argb, int width, int height, bool spriteCache) {
+    return !spriteCache && leafy(argb, width, height);
+}
+
 float sway(float x, float y, float bottom, float height, float amplitude, float t) {
     if (height <= 1.0f || amplitude <= 0.0f) return 0.0f;
     const float up = std::clamp((bottom - y) / height, 0.0f, 1.0f);
