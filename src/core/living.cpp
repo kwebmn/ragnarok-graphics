@@ -68,11 +68,6 @@ float morningFog(int minute) {
     return ramp(h, 4.5f, 6.0f) * (1.0f - ramp(h, 8.0f, 10.5f));
 }
 
-float dew(int minute) {
-    const float h = float(minute) / 60.0f;
-    return ramp(h, 5.0f, 6.5f) * (1.0f - ramp(h, 9.0f, 12.0f));
-}
-
 float daytime(int minute) {
     const float h = float(minute) / 60.0f;
     return ramp(h, 6.5f, 7.5f) * (1.0f - ramp(h, 18.5f, 19.5f));

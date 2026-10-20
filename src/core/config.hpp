@@ -302,11 +302,10 @@ struct EffectSettings {
     bool treeVolume = false;
     bool leafLight = false;
     bool treeTints = false;
-    // 1.7.1: the living world, the ground: flowers in the grass, dew on it in the morning (with grass); a low morning
-    // fog (2.6.8: on its own, the haze gone); sand drifting over the desert, snow glittering, damp caves' walls
-    // glistening. Off by default.
+    // 1.7.1: the living world, the ground: flowers in the grass (with grass); a low morning fog (2.6.8: on its own, the
+    // haze gone); sand drifting over the desert, snow glittering, damp caves' walls glistening. Off by default.
+    // (2.7.10: dew - drops on the grass's tips in the morning - gone: blinking dots.)
     bool flowers = false;
-    bool dew = false;
     bool morningFog = false;
     bool sandDrift = false;
     bool snowSparkle = false;

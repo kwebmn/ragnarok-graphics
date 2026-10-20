@@ -190,7 +190,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"shafts", Lights}, {"rays", Lights},
         {"relief", Ground}, {"materials", Ground}, {"ground_seams", Ground}, {"smooth_hills", Ground}, {"ao", Ground},
         {"floor_reflections", Ground}, {"glint", Ground},
-        {"grass", Plants}, {"flowers", Plants}, {"dew", Plants}, {"foliage", Plants},
+        {"grass", Plants}, {"flowers", Plants}, {"foliage", Plants},
         {"tree_volume", Plants}, {"leaf_light", Plants}, {"tree_tints", Plants},
         {"leaf_fall", Plants},
         {"water", Waters}, {"ripples", Waters}, {"splashes", Waters},

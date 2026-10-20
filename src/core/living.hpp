@@ -27,8 +27,6 @@ Place placeOf(const std::string& map, bool outdoors, bool autumn);
 int localMinute();
 // The morning's low fog (morning_fog), 0-1: from 4:30 up, thick 6:00-8:00, gone by 10:30.
 float morningFog(int minute);
-// Dew on the grass (dew), 0-1: at dawn and in the morning, gone by noon.
-float dew(int minute);
 // Daytime for the creatures (butterflies, birds), 0-1: 7:00-19:00 with an hour to come and go.
 float daytime(int minute);
 

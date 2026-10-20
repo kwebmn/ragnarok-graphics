@@ -334,13 +334,11 @@ bool Renderer::Impl::applyGrass() {
     c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, remaster() ? 28.0f : 16.0f);
     c.twin[1] = 0.65f * float(std::clamp(effects.grassAmount, 0, 100)) / 100.0f;
     c.sharpen = waterTime();
-    // 1.7: flowers among the blades, dew on their tips in the morning
+    // 1.7: flowers among the blades
     if (effects.flowers && mapPlace.flowers >= 0) {
         c.twin[2] = 0.12f;  // 1.8.3: in the patches only (grass_ps)
         c.sourceRect[1] = float(mapPlace.flowers);
     }
-    if (effects.dew) c.twin[3] = living::dew(minuteNow()) *
-                                 (1.0f - float(std::clamp(effects.nightNow, 0, 100)) / 100.0f);
     if (windShared()) {  // 1.22: the shared wind's way times its strength
         c.sourceRect[2] = windNow.x * windNow.strength;
         c.sourceRect[3] = windNow.z * windNow.strength;

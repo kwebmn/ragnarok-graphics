@@ -190,7 +190,6 @@ EffectSettings effectsOff() {
     e.snowSparkle = false;
     e.sandDrift = false;
     e.morningFog = false;
-    e.dew = false;
     e.flowers = false;
     e.treeTints = false;
     e.leafLight = false;
@@ -260,7 +259,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.snowSparkle ||
            e.sandDrift ||
            e.morningFog ||
-           e.dew ||
            e.flowers ||
            e.treeTints ||
            e.leafLight ||
