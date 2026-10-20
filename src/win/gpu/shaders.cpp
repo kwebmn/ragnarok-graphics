@@ -1755,6 +1755,10 @@ float4 grass_ps(PresentOut i) : SV_Target {
         float2 id = floor(cell);
         float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
         if (hash12(id) > twinY) continue;  // no blade here
+        // 2.7.4: thinned out, then none, as the camera goes far back - a blade stands on a disc about a ninth of a
+        // unit across, under a pixel there: its root came and went with every frame's jitter and the grass blinked
+        float disc = 0.11 * f0 * scale / max(v.z, 1.0);  // the disc's radius in the picture's pixels
+        if (hash12(id + 7.7) > smoothstep(0.8, 1.6, disc)) continue;
         // 1.8.3: flowers in patches, a few in each (scattered over the whole field they were a speckle)
         bool flower = hash12(id + 31.7) < twinW && valueNoise(w.xz * 0.07 + 3.3) > 0.72;
         float height = (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0);
