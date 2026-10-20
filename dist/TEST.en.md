@@ -1,3 +1,14 @@
+# uaRO Graphics 2.6.15 — to check
+
+- **No more two shadows.** Under the characters and the monsters with their own shadow (from the sun or a fire) the
+  game's round spot is gone - under the bats too, where it lay on the floor apart. The spot stays only where none of
+  their own falls (underground with no fire near), so nobody floats, and comes back gently at a torch's far edge.
+- **"The game's round shadow"** - a new line under "Characters' shadows", off. Turn it on for the spot under
+  everyone, as before.
+- Please check: in the Pyramids (`@warp moc_pryd01 89 80`) by a torch with the "Shadows and volume" group on, one
+  shadow under your character and the bats - the fire's, no round spots; walk far from the torches - the spot comes
+  back little by little; turn "The game's round shadow" on - the spots are under everyone again.
+
 # uaRO Graphics 2.6.14 — to check
 
 - **"Characters' shadows" from fires** (the "Shadows and volume" group). Characters, monsters and NPCs cast shadows
