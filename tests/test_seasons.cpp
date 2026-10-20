@@ -55,4 +55,7 @@ TEST(seasons_no_insects_while_snow_lies) {
     CHECK(!winter.insects && winter.wildlife);
     CHECK(seasons::withYear(field, seasons::of("prt_fild08", 7, true, field)).insects);
     CHECK(!living::placeOf("xmas", true, false).insects);  // Lutie's snow all year: none, as before
+    // and no flowers in the grass under the snow (R-NV24QA: yellow and violet among the white)
+    CHECK(field.flowers >= 0 && winter.flowers < 0);
+    CHECK(seasons::withYear(field, seasons::of("prt_fild08", 7, true, field)).flowers == field.flowers);
 }

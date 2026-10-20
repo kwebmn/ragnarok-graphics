@@ -28,7 +28,10 @@ Look of(const std::string& map, int month, bool outdoors, const living::Place& p
 }
 
 living::Place withYear(living::Place place, const Look& year) {
-    if (year.snow > 0.0f) place.insects = false;
+    if (year.snow > 0.0f) {
+        place.insects = false;
+        place.flowers = -1;  // 2.7.6: and no flowers in the grass under the snow (R-NV24QA)
+    }
     return place;
 }
 
