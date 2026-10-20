@@ -1,3 +1,15 @@
+# uaRO Graphics 2.6.14 — to check
+
+- **"Characters' shadows" from fires** (the "Shadows and volume" group). Characters, monsters and NPCs cast shadows
+  from the two nearest torches and lamps: short right by a fire and longer as you step away; dense near it and fading
+  with its light; a torch's shadow trembles with its flame, a lamp's is steady. Between two torches - two shadows.
+  Underground the shadows come from fires alone; with no fire near only the game's round one. Under the open sky by
+  day the sun's, as before; at night with "Night" on the fires', the sun's fading with the dark. Now in Direct3D 11
+  too (it had the sun's alone).
+- Please check: turn the "Shadows and volume" group on, in the Pyramids (`@warp moc_pryd01 89 80`) walk up to a
+  torch - your character's and the bats' shadows fall away from the fire; step away - the shadow stretches and fades;
+  stand between two torches - two shadows. In Prontera by day - the sun's shadow as it was.
+
 # uaRO Graphics 2.6.13 — to check
 
 - **"No server night"** - a new switch in "Picture fixes" (in every set, on by default). The night the server brings
