@@ -40,7 +40,6 @@ const EffectLayout kEffects[] = {
       "effects.grade_vignette"},
      {},
      0},
-    {"effects.night", {"effects.night_clock"}, {"effects.night_strength"}, {}, 0},  // 0.63
     {"effects.foliage", {}, {"effects.foliage_strength"}, {}, 0},                    // 0.64
     {"effects.soft_particles", {}, {}, {}, 0},  // 0.67
     {"effects.rim_light", {}, {"effects.rim_strength"}, {}, 0},  // 0.68

@@ -6,5 +6,8 @@ namespace uagfx::win {
 // the world for the server's night taken away, given back when it is no longer left out (core/server_night.hpp);
 // the game's own when the exe is another build.
 void serverNightFrame(bool leaveOut);
+// 2.6.19: the server's night on the player now (its status SI_NIGHT, on the maps that have nights) - the Clock's
+// «От сервера»; false when the exe is another build.
+bool serverNightNow();
 
 }  // namespace uagfx::win

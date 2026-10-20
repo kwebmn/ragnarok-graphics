@@ -592,7 +592,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     {  // 2.6.11: the minute for all that goes by the hour - the computer's clock or the player's chosen moment
         SYSTEMTIME t{};
         GetLocalTime(&t);
-        applyClock(fx, t.wHour * 60 + t.wMinute);
+        // 2.6.19: «От сервера» - the server's night made a minute, the day going down or coming up a minute long
+        const int server = fx.clock == daylight::kClockServer
+                               ? serverClock_.minute(serverNightNow(), double(GetTickCount64()) / 1000.0)
+                               : -1;
+        applyClock(fx, t.wHour * 60 + t.wMinute, server);
     }
     for (const std::string& k : keepOff_) effect_costs::drop(fx, k);  // 0.76
     // 1.9.3: Tab held in the console - the chosen effect off while it is held (the file as it is, that key 0)

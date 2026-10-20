@@ -150,7 +150,8 @@ EffectSettings effectsOff() {
     EffectSettings e;  // every switch off (0.39.4: the ones added since 0.27 too), the sliders as they are
     e.smoothLight = e.torch = e.torchFlame = e.smoke = e.lamps = e.fireLight = e.skillColours = e.skillsSoft = false;
     e.aura = e.fireflies = e.mapGlows = e.rays = e.lava = e.actorShadows = e.actorShadowsSpot = e.heat = false;
-    e.portals = e.weather = e.glow = e.ao = e.grade = e.water = e.night = e.foliage = false;
+    e.portals = e.weather = e.glow = e.ao = e.grade = e.water = e.foliage = false;
+    e.nightStrength = 0;  // 2.6.19: the night is the clock's - Pause shows none
     e.litDust = false;
     e.sharedWind = false;
     e.nightWindows = false;
@@ -204,9 +205,7 @@ EffectSettings effectsOff() {
 }
 
 int nightAmount(const EffectSettings& e, int hour, int minute) {
-    if (!e.night) return 0;
     const int strength = std::clamp(e.nightStrength, 0, 100);
-    if (!e.nightClock) return strength;
     const double t = hour + minute / 60.0;
     double f = 0.0;
     if (t >= 21.0 || t < 5.0)
@@ -218,18 +217,16 @@ int nightAmount(const EffectSettings& e, int hour, int minute) {
     return int(strength * f + 0.5);
 }
 
-void applyClock(EffectSettings& e, int localMinute) {
-    const int minute = daylight::minuteOf(e.clock, localMinute);
+void applyClock(EffectSettings& e, int localMinute, int serverMinute) {
+    const int minute = daylight::minuteOf(e.clock, localMinute, serverMinute);
     e.dayNow = minute;
-    EffectSettings byTheHour = e;  // a moment the player chose says which hour it is - the night too
-    if (e.clock != daylight::kClockAuto) byTheHour.nightClock = true;
-    e.nightNow = nightAmount(byTheHour, minute / 60, minute % 60);
+    e.nightNow = nightAmount(e, minute / 60, minute % 60);  // 2.6.19: the night always the clock's
 }
 
 bool drawnByRenderer(const EffectSettings& e) {
     return e.smoothLight || e.torch || e.smoke || e.lamps || e.fireLight || e.fireflies || e.mapGlows || e.rays ||
            e.lava || e.actorShadows || e.heat || e.portals || e.weather || e.glow || e.ao ||
-           e.grade || e.water || e.night || e.foliage ||
+           e.grade || e.water || e.nightStrength > 0 || e.foliage ||
            e.litDust ||
            e.sharedWind ||
            e.nightWindows ||
@@ -484,7 +481,8 @@ Config parseConfig(const std::string& text) {
             effect_groups::presetFrom(val, c.effects.preset);
         } else if (key.compare(0, 14, "effects.group_") == 0 && groupKey(key, val, c.effects)) {  // 2.2
         } else if (key == "effects.clock") {  // 2.6.11
-            static const char* const kWords[daylight::kClocks] = {"auto", "dawn", "morning", "day", "sunset", "night"};
+            static const char* const kWords[daylight::kClocks] = {"auto",    "server", "dawn", "morning",
+                                                                  "day",     "sunset", "night"};  // 2.6.19: server
             for (int k = 0; k < daylight::kClocks; ++k)
                 if (val == kWords[k]) c.effects.clock = k;
         } else if (key == "effects.tier") {  // 1.8

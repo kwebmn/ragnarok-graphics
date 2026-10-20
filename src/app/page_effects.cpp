@@ -24,6 +24,7 @@ const int kEffectCount = effectLayoutCount();
 // The controls' numbers: the main window hands a page only those from 1000 on (2.2.1: the set's, the groups' and the
 // mode's were under it - they did nothing).
 constexpr int kPreset = 20000, kTier = 20001, kClock = 20002;  // 2.6.11: the clock
+constexpr int kNightStrength = 20003;  // 2.6.19: the clock's night, by it
 int groupBox(int g) { return 20100 + 20 * g; }
 int groupSlider(int g) { return 20102 + 20 * g; }  // its number: + 1
 int groupOpen(int g) { return 20105 + 20 * g; }
@@ -82,6 +83,19 @@ public:
             p.choice(kTier, t(tier.label), {t(Text::FxTierAuto), t(Text::FxTierClassic), t(Text::FxTierRemaster)},
                      token == "classic" ? 1 : token == "remaster" ? 2 : 0, t(tier.hint));
         }
+        {  // 2.6.19: the time of day for all the effects by the Quality and the Mode («Часы главные»), its night's
+           // strength under it
+            const IniSetting& clock = setting("effects.clock");
+            const std::string now = m.token(clock);
+            int at = 0;
+            std::vector<std::wstring> items;
+            for (size_t k = 0; k < clock.tokens.size() && k < clock.choices.size(); ++k) {
+                items.push_back(t(clock.choices[k]));
+                if (now == clock.tokens[k]) at = int(k);
+            }
+            dot(p, p.choice(kClock, t(clock.label), items, at, t(clock.hint)), clock);
+            slider(p, kNightStrength, "effects.night_strength", word != "off");
+        }
         if (!simple) p.note(t(Text::FxDetailsNote), Tone::Muted);
         const bool any = word != "off";
         const bool two = p.split();  // 2.6: the groups in two columns when the page is wide
@@ -106,17 +120,6 @@ public:
                 setting(groupKey(g)));
             if (effect_groups::hasStrength(g))
                 slider(p, groupSlider(g), (groupKey(g) + "_strength").c_str(), any && on);
-            if (g == effect_groups::Air) {  // 2.6.11: the time of day - for all that goes by the hour, any group's
-                const IniSetting& clock = setting("effects.clock");
-                const std::string now = m.token(clock);
-                int at = 0;
-                std::vector<std::wstring> items;
-                for (size_t k = 0; k < clock.tokens.size() && k < clock.choices.size(); ++k) {
-                    items.push_back(t(clock.choices[k]));
-                    if (now == clock.tokens[k]) at = int(k);
-                }
-                dot(p, p.choice(kClock, t(clock.label), items, at, t(clock.hint)), clock);
-            }
             if (simple) continue;
             p.buttons({{groupOpen(g),
                         g_open[g] ? t(Text::FxDetailsHide) : tf(Text::FxDetails, {std::to_string(count)})}});
@@ -295,6 +298,7 @@ private:
     static std::string sliderKey(int id) {
         if (const IniSetting* s = settingOfId(id))  // 2.6: the search's
             return s->control == Control::Slider && std::string(s->section) == "effects" ? sectionKey(*s) : "";
+        if (id == kNightStrength) return "effects.night_strength";  // 2.6.19
         for (int g = 0; g < kEffectGroups; ++g)
             if (id == groupSlider(g)) return groupKey(g) + "_strength";
         for (int e = 0; e < kEffectCount; ++e)

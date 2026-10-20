@@ -1230,7 +1230,7 @@ struct Renderer::Impl {
     bool applyAo();  // once a frame (aoDone); false: lost
     bool gradeWanted() const { return effects.grade; }
     bool nightDue() const {  // 0.74: also for the time of day's tint; 0.79: and the region's look
-        return ((effects.night && effects.nightNow > 0) || (effects.dayCycle && effects.dayNow >= 0) ||
+        return (effects.nightNow > 0 || (effects.dayCycle && effects.dayNow >= 0) ||
                 (effects.regionLooks && mapRegion) || flashNow() > 0.0f) &&
                nightPs && groundDrawn && !nightDone;
     }

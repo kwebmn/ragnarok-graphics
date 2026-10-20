@@ -1,3 +1,4 @@
+#include "core/daylight.hpp"
 #include "core/live_config.hpp"
 #include "test.hpp"
 
@@ -329,5 +330,5 @@ TEST(live_config_the_chosen_clock_applies_now) {
     CHECK(u.waiting.empty());
     CHECK_EQ(u.applied.size(), size_t(1));
     CHECK(u.applied.size() == 1 && u.applied[0] == "clock auto -> night");
-    CHECK_EQ(u.next.effects.clock, 5);
+    CHECK_EQ(u.next.effects.clock, int(daylight::kClockNight));
 }

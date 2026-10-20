@@ -42,6 +42,8 @@ bool hasStatus(int id) {
 
 }  // namespace
 
+bool serverNightNow() { return known() && hasStatus(server_night::kNight); }
+
 void serverNightFrame(bool leaveOut) {
     if ((!leaveOut && !g_held) || !known()) return;
     volatile uint8_t& dark = *reinterpret_cast<volatile uint8_t*>(uintptr_t(server_night::kDark));

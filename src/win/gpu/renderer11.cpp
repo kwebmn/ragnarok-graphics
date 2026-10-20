@@ -2173,7 +2173,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
 void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its strength now
     EffectSpan span(*this, kTimeNight11);  // 0.89
     nightDone_ = true;
-    const bool night = effects_.night && effects_.nightNow > 0, day = effects_.dayCycle && effects_.dayNow >= 0;
+    const bool night = effects_.nightNow > 0, day = effects_.dayCycle && effects_.dayNow >= 0;
     const region_look::Look look = region_look::of(map_, effects_.regionLooks ? effects_.regionLooksStrength : 0);
     // 2.5.21: the region's look only when it changes the picture - with region_looks off this was a pass for nothing
     // on every map of a region, and with super-light's 16-bit world (no copy of it into scene_) a black world

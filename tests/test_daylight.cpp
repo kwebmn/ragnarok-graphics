@@ -33,4 +33,35 @@ TEST(daylight_clock_gives_the_minute_of_the_day) {
     CHECK_EQ(daylight::minuteOf(daylight::kClockSunset, 777), 18 * 60 + 30);
     CHECK_EQ(daylight::minuteOf(daylight::kClockNight, 777), 0);
     CHECK_EQ(daylight::minuteOf(42, 777), 777);  // none of them: the computer's
+    // 2.6.19: «От сервера» - the minute the server clock made of the server's night; none yet: day
+    CHECK_EQ(daylight::minuteOf(daylight::kClockServer, 777, 100), 100);
+    CHECK_EQ(daylight::minuteOf(daylight::kClockServer, 777, -1), 13 * 60);
+}
+
+TEST(daylight_server_clock_eases_into_the_servers_night_and_out) {
+    // 2.6.19: the server's night (its status on the player) as the time of day - day 13:00, night 0:00; when it
+    // changes the day goes down through the sunset, and comes back up through the dawn, in about a minute
+    daylight::ServerClock s;
+    CHECK_EQ(s.minute(false, 0.0), 13 * 60);  // first heard: as it is, at once
+    CHECK_EQ(s.minute(true, 0.0), 13 * 60);   // the night comes: still noon this moment
+    int m = s.minute(true, 20.0);
+    CHECK(m > 13 * 60 && m < 24 * 60);  // the sun going down
+    CHECK_EQ(s.minute(true, 90.0), 0);  // night
+    m = s.minute(false, 110.0);
+    CHECK(m > 0 && m < 13 * 60);  // the dawn
+    CHECK_EQ(s.minute(false, 200.0), 13 * 60);
+    // the night again halfway through the dawn: back the way it came, not round through the evening
+    s.minute(true, 300.0);
+    s.minute(true, 400.0);
+    s.minute(false, 401.0);
+    const int dawn = s.minute(false, 430.0);
+    CHECK(dawn > 0 && dawn < 13 * 60);
+    m = s.minute(true, 440.0);
+    CHECK(m >= 0 && m < dawn);
+    CHECK_EQ(s.minute(true, 600.0), 0);
+}
+
+TEST(daylight_server_clock_starts_as_the_server_says) {
+    daylight::ServerClock s;
+    CHECK_EQ(s.minute(true, 5.0), 0);  // the game came up in the server's night: night at once
 }

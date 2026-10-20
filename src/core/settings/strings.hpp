@@ -132,7 +132,7 @@ enum class Text : uint16_t {
     // 0.62
     QualityUiNative, QualityUiNativeHint,
     // 0.63
-    FxNight, FxNightHint, FxNightStrength, FxNightStrengthHint, FxNightClock, FxNightClockHint,
+    FxNightStrength, FxNightStrengthHint,
     // 0.64
     FxFoliage, FxFoliageHint, FxFoliageStrength, FxFoliageStrengthHint,
     // 0.65
@@ -335,7 +335,8 @@ enum class Text : uint16_t {
     ConsoleGroupOff,  // 2.6.8: an effect on whose group is off
     FxNoGameFog, FxNoGameFogHint,  // 2.6.10
     FxNoServerNight, FxNoServerNightHint,  // 2.6.13
-    FxClock, FxClockHint, FxClockAuto, FxClockDawn, FxClockMorning, FxClockDay, FxClockSunset,  // 2.6.11
+    FxClock, FxClockHint, FxClockAuto, FxClockServer, FxClockDawn, FxClockMorning, FxClockDay,  // 2.6.11
+    FxClockSunset,
     FxClockNight,
     FxNightFireflies, FxNightFirefliesHint,  // 2.6.11
     Count

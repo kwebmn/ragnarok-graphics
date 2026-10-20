@@ -5,9 +5,28 @@
 
 namespace uagfx::daylight {
 
-int minuteOf(int clock, int localMinute) {
-    static const int kMinutes[kClocks] = {-1, 6 * 60 + 30, 9 * 60, 13 * 60, 18 * 60 + 30, 0};
-    return clock > kClockAuto && clock < kClocks ? kMinutes[clock] : localMinute;
+int minuteOf(int clock, int localMinute, int serverMinute) {
+    static const int kMinutes[kClocks] = {-1, -1, 6 * 60 + 30, 9 * 60, 13 * 60, 18 * 60 + 30, 0};
+    if (clock == kClockServer) return serverMinute >= 0 ? serverMinute % (24 * 60) : 13 * 60;
+    return clock > kClockServer && clock < kClocks ? kMinutes[clock] : localMinute;
+}
+
+int ServerClock::minute(bool night, double now) {
+    constexpr double kDay = 13 * 60.0, kMidnight = 24 * 60.0;
+    if (last_ < 0.0) {
+        minute_ = night ? 0.0 : kDay;
+        last_ = now;
+        return int(minute_);
+    }
+    const double step = std::max(0.0, now - last_) * kMinutesPerSecond;
+    last_ = now;
+    const bool evening = minute_ >= kDay;
+    if (night)
+        minute_ = evening ? std::min(kMidnight, minute_ + step) : std::max(0.0, minute_ - step);
+    else
+        minute_ = evening ? std::max(kDay, minute_ - step) : std::min(kDay, minute_ + step);
+    if (minute_ >= kMidnight) minute_ = 0.0;
+    return int(minute_);
 }
 
 Light at(int minute) {

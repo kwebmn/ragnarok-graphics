@@ -197,9 +197,7 @@ struct EffectSettings {
     // 0.64: the leaves sway in the wind (trees, bushes: green textures with holes)
     bool foliage = false;
     int foliageStrength = 100;  // %, 0-200
-    bool night = false;
-    int nightStrength = 60;  // %, 0-100
-    bool nightClock = false;
+    int nightStrength = 60;  // %, 0-100; 2.6.19: the night always the clock's (its switches gone)
     int nightNow = 0;
     bool water = false;
     int waterWaves = 50;        // %, 0-100: 0 a still mirror
@@ -388,11 +386,12 @@ EffectSettings effectsOff();
 // 0.46.1: one of the effects the Direct3D 12 renderer draws itself is on (all but the aura's and the skills'
 // softness, which the game's draws get on their way).
 bool drawnByRenderer(const EffectSettings& e);
-// 0.63: how much night now (0-100, EffectSettings::nightNow) at this local time: its strength, by the clock only
-// from 20:00 to 6:00 - rising from 20:00 to 21:00, fading from 5:00 to 6:00.
+// 0.63: how much night now (0-100, EffectSettings::nightNow) at this time of day: its strength from 20:00 to 6:00 -
+// rising from 20:00 to 21:00, fading from 5:00 to 6:00 (2.6.19: always by the clock, «Часы» the master).
 int nightAmount(const EffectSettings& e, int hour, int minute);
-// 2.6.11: dayNow and nightNow by the clock the player chose ([effects] clock) or the computer's (localMinute)
-void applyClock(EffectSettings& e, int localMinute);
+// 2.6.11: dayNow and nightNow by the clock the player chose ([effects] clock) or the computer's (localMinute);
+// 2.6.19: «От сервера» the server clock's minute (daylight::ServerClock; below 0 nothing heard)
+void applyClock(EffectSettings& e, int localMinute, int serverMinute = -1);
 
 // uaro-graphics.ini. Unknown keys and values that do not parse leave the default in place.
 // 0.91: [sound] - the game's sound through the driver (core/sound_mix.hpp, win/sound_hook.cpp)

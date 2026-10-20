@@ -10,6 +10,7 @@
 #include "core/appear.hpp"
 #include "core/hit_flash.hpp"
 #include "core/config.hpp"
+#include "core/daylight.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
 #include "core/pixel.hpp"
@@ -125,6 +126,7 @@ private:
     Console console_;               // 1.9.3: ~ - the effects' switches over the game
     std::string consoleOff_;        // the effect the console holds off, and the settings without it
     EffectSettings compareFx_;
+    daylight::ServerClock serverClock_;  // 2.6.19: the Clock's «От сервера»
     Throttle scaleLog_{500};  // the scale line while the window is being resized (stage 3 review M7)
     SIZE lastOut_{};
     ScalePlan lastPlan_;

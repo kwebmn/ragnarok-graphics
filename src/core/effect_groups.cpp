@@ -82,7 +82,6 @@ const Member kMembers[] = {
     {"lit_dust", Air, 3, &E::litDust},
     {"rain_wet", Air, 3, &E::rainWet},
     {"edge_land", Air, 3, &E::edgeLand},
-    {"night", Air, 0, &E::night},
 
     {"footprints", Life, 1, &E::footprints},
     {"butterflies", Life, 2, &E::butterflies},
@@ -176,6 +175,7 @@ EffectSettings effective(const EffectSettings& in, int card) {
         for (const Member& m : kMembers) e.*m.on = m.level > 0 && m.level <= level;
         e.tier = level >= 3 ? 2 : 1;
     }
+    if (level == 0) e.nightStrength = 0;  // 2.6.19: the effects off - the clock's night too, the game's own picture
     for (const Member& m : kMembers)
         if (!in.groups[m.group]) e.*m.on = false;
     for (const Strength& s : kStrengths) {

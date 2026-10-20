@@ -91,13 +91,15 @@ void Console::build(Lang lang) {
     rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
     rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
     rows_.push_back(Row{Kind::Choice, "effects.tier", 0});
+    if (settingOf("effects.clock")) {  // 2.6.19: the time of day for all the effects, by the set and the mode
+        rows_.push_back(Row{Kind::Choice, "effects.clock", 0});
+        rows_.push_back(Row{Kind::Slider, "effects.night_strength", 1});
+    }
     const EffectLayout* fx = effectLayout();
     for (int g = 0; g < kEffectGroups; ++g) {
         if (!settingOf(groupKey(g))) continue;
         rows_.push_back(Row{Kind::Box, groupKey(g), 0});
         if (effect_groups::hasStrength(g)) rows_.push_back(Row{Kind::Slider, groupKey(g) + "_strength", 1});
-        if (g == effect_groups::Air && settingOf("effects.clock"))  // 2.6.11: the time of day, ← → at once
-            rows_.push_back(Row{Kind::Choice, "effects.clock", 1});
         rows_.push_back(Row{Kind::Open, groupKey(g), 1});
         if (!groupOpen_[g]) continue;
         for (int i = 0; i < effect_groups::memberCount(); ++i) {

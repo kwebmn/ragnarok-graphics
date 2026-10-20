@@ -198,6 +198,9 @@ TEST(clock_auto_by_default_a_moment_by_its_word) {
     CHECK_EQ(c.effects.clock, int(daylight::kClockSunset));
     CHECK(settings::tokenOf(*settings::findSetting("effects.clock"), c) == "sunset");
     CHECK_EQ(parseConfig("[effects]\nclock = noon\n").effects.clock, int(daylight::kClockAuto));  // not its word
+    const Config server = parseConfig("[effects]\nclock = server\n");  // 2.6.19: the server's night
+    CHECK_EQ(server.effects.clock, int(daylight::kClockServer));
+    CHECK(settings::tokenOf(*settings::findSetting("effects.clock"), server) == "server");
     CHECK(!(c.effects == parseConfig("").effects));
 }
 
