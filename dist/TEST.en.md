@@ -1,3 +1,10 @@
+# uaRO Graphics 2.7.7 — to check
+
+- **Diagnostics of "Grass and road seams" blinking on hills.** Every five seconds the driver writes to its log how
+  many seam strips it drew and whether the game drew some of the ground after them. The picture does not change.
+- Please check: the field by Prontera (prt_fild08 200 200), the seams on, Direct3D 12 - turn the camera over the
+  hill for 20-30 seconds so that it blinks, then send a report.
+
 # uaRO Graphics 2.7.6 — to check
 
 - **Fixed again: "Grass and road seams without steps" on hills.** The seams' strips were drawn in an order that
