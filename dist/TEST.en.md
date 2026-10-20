@@ -1,3 +1,28 @@
+# uaRO Graphics 2.7.0 — to check
+
+- **New: the effects grouped by what the eye is on.** Fourteen groups instead of ten: Day, night and seasons;
+  Weather: rain, snow, sand; Characters and monsters; Skills; Fire and smoke; Light; Ground and walls; Grass and
+  trees; Water; Creatures; Caves and dungeons; Sky and air; Whole screen; Game fixes. A group's button tells how many
+  of its effects are on: "Effects: 3 of 7 on".
+- **Clear names.** 30 effects are named by what shows on the screen: "Living characters" is now "Volume from the
+  sun", "Rim light on characters" - "Lit edge on the fire's side", "Soft shadows" - "Shadows in corners and at
+  walls", "Damp cave walls" - "Water running down the walls". The app's search finds the effects by their old names
+  too.
+- **The console (~): search and "Only what this map has".** Type letters and the effects with them in the name or
+  the hint stay (Backspace erases, Esc clears). The row "Only what this map has" hides what does not work here: in a
+  cave the grass, the sky and the weather.
+- Your settings stay: an old group that was off keeps its effects off. The app rewrites uaro-graphics.ini once, after
+  a backup.
+- The switch "Sun spots under the trees" is gone: it drew nothing since 2.1.4.
+- **"Season" and "Weather", in the manner of the Clock.** At the top of the effects, under the Clock and the Night
+  strength (and in the console ~). Season: Auto - the computer's calendar, or spring, summer, autumn, winter.
+  Weather: Auto - the map's own, as before, Clear, or rain, snow, falling leaves, sand in the wind under every open
+  sky (none in houses and dungeons). They change at once. The snow-and-rain switch is now called "Precipitation" and
+  must be on.
+- Please check: in the app's Effects, fourteen groups and "N of M on" on their buttons; in the game ~, type "snow" -
+  the snow's effects stay, Esc clears; in a cave turn on "Only what this map has" - the grass, the sky and the weather
+  leave the list; on a field by Prontera "Season: Winter" - snow, "Weather: Rain" - rain and puddles.
+
 # uaRO Graphics 2.6.21 — to check
 
 - **"Dust in the light" shows now.** With it the dust used to vanish: by a torch the motes took nearly the colour of
