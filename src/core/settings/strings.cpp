@@ -3250,13 +3250,6 @@ const Entry kTexts[] = {
      "гаснуть (Direct3D 12).",
      "От сумерек до рассвета над травой, где днём летают бабочки, низко плывут светлячки — то светятся, то гаснут "
      "(Direct3D 12)."},
-    {"Moths at the fire", "Нічні метелики біля вогню", "Мотыльки у огня"},
-    {"At night a few moths circle in front of the torches and the fires near you, their wings flashing in the "
-     "flames' light (Direct3D 12).",
-     "Уночі кілька нічних метеликів кружляють перед смолоскипами й вогнищами поруч, їхні крила спалахують у світлі "
-     "полум'я (Direct3D 12).",
-     "Ночью несколько мотыльков кружат перед факелами и огнями рядом, их крылья вспыхивают в свете пламени "
-     "(Direct3D 12)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

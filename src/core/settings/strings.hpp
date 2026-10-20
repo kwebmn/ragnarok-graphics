@@ -337,7 +337,7 @@ enum class Text : uint16_t {
     FxNoServerNight, FxNoServerNightHint,  // 2.6.13
     FxClock, FxClockHint, FxClockAuto, FxClockDawn, FxClockMorning, FxClockDay, FxClockSunset,  // 2.6.11
     FxClockNight,
-    FxNightFireflies, FxNightFirefliesHint, FxMoths, FxMothsHint,  // 2.6.11
+    FxNightFireflies, FxNightFirefliesHint,  // 2.6.11
     Count
 };
 

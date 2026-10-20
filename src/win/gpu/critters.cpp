@@ -58,7 +58,6 @@ critters::Switches Renderer::Impl::critterSwitches() const {
     on.drips = effects.caveDrips;
     on.underwater = effects.underwater;
     on.nightFireflies = effects.nightFireflies;  // 2.6.11
-    on.moths = effects.moths;
     return on;
 }
 
@@ -108,8 +107,6 @@ bool Renderer::Impl::applyCritters() {
         critters::Point at;
         if (f.fires.size() < 32 && critters::fireOf(fl, proj, m, at)) f.fires.push_back(at);
     }
-    const float ground = std::hypot(m[6], m[8]);  // 2.6.12: the camera's side of the fires, for the moths
-    if (ground > 1e-3f) f.toCamera = critters::Point{-m[6] / ground, 0.0f, -m[8] / ground};
     f.crowns = frameCrowns;
     frameCrowns.clear();
     f.waterKnown = waterLevelKnown;

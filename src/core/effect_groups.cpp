@@ -88,7 +88,6 @@ const Member kMembers[] = {
     {"butterflies", Life, 2, &E::butterflies},
     {"birds", Life, 2, &E::birds},
     {"night_fireflies", Life, 0, &E::nightFireflies},  // 2.6.11: off by default, in no set
-    {"moths", Life, 0, &E::moths},
     {"embers", Life, 2, &E::embers},
     {"breath", Life, 2, &E::breath},
 

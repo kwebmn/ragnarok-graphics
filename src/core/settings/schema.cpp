@@ -300,8 +300,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxBirdsHint, "", &E::birds},
         {"effects", "night_fireflies", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::FxNightFireflies, Text::FxNightFirefliesHint, "", &E::nightFireflies},  // 2.6.11
-        {"effects", "moths", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMoths, Text::FxMothsHint,
-         "", &E::moths},
         {"effects", "leaf_fall", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLeafFall,
          Text::FxLeafFallHint, "", &E::leafFall},
         {"effects", "embers", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxEmbers,

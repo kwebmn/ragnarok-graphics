@@ -51,7 +51,6 @@ void World::setPlace(const living::Place& p) {
     drips_.clear();
     vents_.clear();
     glows_.clear();
-    moths_.clear();
     flockAgain_ = 0.0;
 }
 
@@ -63,7 +62,6 @@ void World::update(const Switches& on, const Frame& f) {
     motes(on, f);
     drips(on, f);
     fireflies(on, f);
-    moths(on, f);
     if (out_.size() > kMaxSprites) out_.resize(kMaxSprites);
 }
 
@@ -95,60 +93,6 @@ void World::fireflies(const Switches& on, const Frame& f) {
         p.y = f.centre.y - g.altitude - 0.25f * std::sin(float(f.now) * 1.3f + g.phase * 6.0f);
         Sprite s = sprite(Firefly, p, 0.5f, dusk);
         s.p1 = lit;
-        out_.push_back(s);
-    }
-}
-
-// 2.6.11: at night three pale moths circle each of the four fires nearest the player (within 45 units) - a fire
-// gone, its moths with it. 2.6.12: their circles out in front of the fire, on the camera's side (a torch hangs on a
-// wall), and wider: by the flame they were lost in its glow.
-void World::moths(const Switches& on, const Frame& f) {
-    if (!on.moths || f.day >= 0.3f || f.fires.empty()) {
-        moths_.clear();
-        return;
-    }
-    std::vector<Point> near;
-    for (const Point& p : f.fires)
-        if (distXz(p, f.centre) < 45.0f) near.push_back(p);
-    std::sort(near.begin(), near.end(),
-              [&](const Point& a, const Point& b) { return distXz(a, f.centre) < distXz(b, f.centre); });
-    if (near.size() > 4) near.resize(4);
-    // each moth keeps to its fire as this frame has it (the tips move a little from frame to frame)
-    std::vector<Circler> kept;
-    for (const Point& fire : near) {
-        int have = 0;
-        for (Circler& m : moths_)
-            if (have < 3 && distXz(m.fire, fire) < 2.0f) {
-                m.fire = fire;
-                kept.push_back(m);
-                ++have;
-            }
-        for (; have < 3; ++have) {
-            Circler m;
-            m.fire = fire;
-            m.angle = random() * 2.0f * kPi;
-            m.speed = (1.6f + 1.4f * random()) * (random() < 0.5f ? -1.0f : 1.0f);
-            m.radius = 1.2f + 1.4f * random();
-            m.height = -0.4f + 1.6f * random();
-            m.phase = random() * 10.0f;
-            kept.push_back(m);
-        }
-    }
-    moths_.swap(kept);
-    const float dusk = std::clamp((0.3f - f.day) / 0.3f, 0.0f, 1.0f);
-    for (Circler& m : moths_) {
-        m.angle += m.speed * f.dt;
-        m.phase += f.dt * 30.0f;  // quick wings
-        const float r = m.radius + 0.25f * std::sin(float(f.now) * 5.0f + m.phase * 0.1f);
-        const float out = 0.8f * m.radius;  // the circle's middle that far out towards the camera
-        const Point p{m.fire.x + f.toCamera.x * out + std::cos(m.angle) * r,
-                      m.fire.y - m.height - 0.3f * std::sin(float(f.now) * 3.1f + m.phase * 0.05f),
-                      m.fire.z + f.toCamera.z * out + std::sin(m.angle) * r};
-        Sprite s = sprite(Moth, p, 1.0f, dusk);  // 2.6.12: 0.55 was a speck by the flame, taken for a spark
-        s.p1 = m.phase;
-        const float along = m.angle + (m.speed > 0.0f ? 0.5f : -0.5f) * kPi;  // its way: along its circle
-        s.headingX = std::cos(along);
-        s.headingZ = std::sin(along);
         out_.push_back(s);
     }
 }

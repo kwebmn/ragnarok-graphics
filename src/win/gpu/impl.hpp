@@ -1034,7 +1034,7 @@ struct Renderer::Impl {
     bool crittersWanted() const;
     bool crittersDue() const { return !crittersDone && groundDrawn && crittersWanted(); }
     bool crittersNeedFeet() const { return effects.birds || effects.breath || effects.splashes; }
-    bool crittersNeedFire() const { return effects.moths || effects.embers; }  // 2.6.12
+    bool crittersNeedFire() const { return effects.embers; }  // 2.6.12
     void noteCrown(const FrameRecord& rec, const DrawCmd& d);
     // 1.8: the materials (materials.cpp) and the remaster (effects.tier)
     ID3DBlob* materialPs = nullptr;

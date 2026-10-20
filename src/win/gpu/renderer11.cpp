@@ -1228,8 +1228,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 2.5.2: a torch's layers - the glow and (torch_flame) the flame drawn anew once the world is (takeTorch)
     if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch && takeTorch(rec, d))
         return;
-    // 2.6.12: the torches off, the game's flames (drawn as it has them) still show the moths and the embers where
-    // the fires are
+    // 2.6.12: the torches off, the game's flames (drawn as it has them) still show the embers where the fires are
     if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && !effects_.torch && crittersNeedFire())
         noteCritterFlame(rec, d);
     // 2.5.3: a portal's draw - its middle, for its light and its swirl once the world is drawn (as draw.cpp 0.38)
@@ -2865,8 +2864,6 @@ void Renderer11::applyCritters() {
     for (const footsteps::Step& s : footTracker_.steps()) crittersStepsSeen_ = std::max(crittersStepsSeen_, s.born);
     f.fires = std::move(fires);
     f.crowns = std::move(crowns);
-    const float ground = std::hypot(m[6], m[8]);  // 2.6.12: the camera's side of the fires, for the moths
-    if (ground > 1e-3f) f.toCamera = critters::Point{-m[6] / ground, 0.0f, -m[8] / ground};
     f.waterKnown = waterLevelKnown_;
     f.waterLevel = waterLevel_;
     const int minute = effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();  // 2.6.11

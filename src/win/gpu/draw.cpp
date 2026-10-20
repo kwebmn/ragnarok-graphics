@@ -72,8 +72,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.23: the game's torch layers - its glow not drawn, its flame noted - are drawn anew once the world is.
     if (!s.ui && torchWanted() && !torchDone && d.vertexCount == 4 && !objectTextures.empty() && takeTorch(rec, d))
         return;
-    // 2.6.12: the torches' pass off, the game's flames (drawn as it has them) still show the moths and the embers
-    // where the fires are
+    // 2.6.12: the torches' pass off, the game's flames (drawn as it has them) still show the embers where the fires
+    // are
     if (!s.ui && !torchWanted() && crittersNeedFire() && d.vertexCount == 4 && !objectTextures.empty())
         noteCritterFlame(rec, d);
     // 0.28: a firefly the game draws (effect 45, known by the driver) - drawn anew with the torches.

@@ -317,7 +317,6 @@ struct EffectSettings {
     bool butterflies = false;
     bool birds = false;
     bool nightFireflies = false;  // 2.6.11: fireflies over the grass from dusk to dawn
-    bool moths = false;           // 2.6.11: moths round the fires at night
     bool leafFall = false;
     bool embers = false;
     bool breath = false;

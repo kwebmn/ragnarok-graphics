@@ -306,11 +306,10 @@ private:
         on.drips = effects_.caveDrips;
         on.underwater = effects_.underwater;
         on.nightFireflies = effects_.nightFireflies;  // 2.6.11
-        on.moths = effects_.moths;
         return on;
     }
     bool crittersNeedFeet() const { return effects_.birds || effects_.breath || effects_.splashes; }
-    bool crittersNeedFire() const { return effects_.moths || effects_.embers; }  // 2.6.12
+    bool crittersNeedFire() const { return effects_.embers; }  // 2.6.12
     // 2.5.5: the sun (actor_shadows.cpp): the way to it from the map's file, else the day's; on the screen
     bool mapSun(float toSun[3]) const;
     float sunHeight() const;
@@ -441,7 +440,7 @@ private:
     // torch_flame on (torches.cpp takeTorch); true: the game's draw is not made
     bool flamesWanted() const { return effects_.torch && torchFirePs_; }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);
-    // 2.6.12: the torches off, a flame the game draws noted for the moths and the embers alone (critterFlames_)
+    // 2.6.12: the torches off, a flame the game draws noted for the embers alone (critterFlames_)
     void noteCritterFlame(const FrameRecord& rec, const DrawCmd& d);
     ID3D11PixelShader* torchFirePs_ = nullptr;
     ID3D11PixelShader* dustPs_ = nullptr;  // 2.5.2: the maps' clouds of dust (core/map_glows.hpp)

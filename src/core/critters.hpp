@@ -27,7 +27,6 @@ enum Kind : uint8_t {
     Shadow = 12,  // on the ground, flat
     // 13: the light from above under the sea - the renderer's own, over the whole picture
     Firefly = 14,  // 2.6.11: a light over the grass at night, blinking (p1 how lit, 0-1)
-    Moth = 15,     // 2.6.11: round a fire at night (p1 its wings' beat)
 };
 
 struct Point {
@@ -56,10 +55,9 @@ struct Switches {
     bool drips = false;
     bool underwater = false;
     bool nightFireflies = false;  // 2.6.11: over the grass from dusk to dawn
-    bool moths = false;           // 2.6.11: round the fires at night
     bool any() const {
         return butterflies || birds || leaves || embers || breath || splashes || drips || underwater ||
-               nightFireflies || moths;
+               nightFireflies;
     }
 };
 
@@ -81,12 +79,11 @@ struct Frame {
     bool waterKnown = false;
     float day = 1.0f;     // 0-1: daylight (living::daytime)
     float night = 0.0f;   // 0-1
-    Point toCamera;       // 2.6.12: the way to the camera along the ground (x, z a unit long), 0: not known
 };
 
 // 2.6.12: where a flame the game drew burns in the world - its tip, four fifths of the way up from its base, back
-// from the screen by the game's projection and the camera backwards (view -> world, 4 x 3 rows): the moths circle
-// it, the embers rise from it. false for a flame with no depth.
+// from the screen by the game's projection and the camera backwards (view -> world, 4 x 3 rows): the embers rise
+// from it. false for a flame with no depth.
 bool fireOf(const torch::Flame& f, const camera::Projection& p, const float viewToWorld[12], Point& out);
 
 class World {
@@ -128,10 +125,6 @@ private:
         Point at;
         float heading = 0.0f, phase = 0.0f, period = 3.0f, altitude = 1.0f;
     };
-    struct Circler {  // 2.6.11: a moth round a fire
-        Point fire;
-        float angle = 0.0f, speed = 2.0f, radius = 1.2f, height = 0.5f, phase = 0.0f;
-    };
 
     float random();  // 0-1
     Point around(const Point& c, float near, float far);
@@ -140,7 +133,6 @@ private:
     void motes(const Switches& on, const Frame& f);
     void drips(const Switches& on, const Frame& f);
     void fireflies(const Switches& on, const Frame& f);  // 2.6.11
-    void moths(const Switches& on, const Frame& f);      // 2.6.11
 
     living::Place place_;
     uint32_t seed_ = 0x9e3779b9u;
@@ -151,7 +143,6 @@ private:
     std::vector<DripSpot> drips_;
     std::vector<Vent> vents_;
     std::vector<Glow> glows_;
-    std::vector<Circler> moths_;
     float fireCarry_ = 0.0f, leafCarry_ = 0.0f;
     std::vector<Sprite> out_;
 };

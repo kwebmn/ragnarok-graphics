@@ -1930,7 +1930,7 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
 // (pixels) and view depth; its kind, two numbers of its kind and its alpha; its heading on the screen (radians) and
 // how flat a circle on the ground looks; for a dragonfly the water's surface under it (pixels, depth, 1). Kind 13:
 // the light from above under the sea, over the whole picture. sharpen the time, twinW the creatures' light. 2.6.11:
-// kind 14 a firefly (q.y how lit), 15 a moth at a fire (q.y its wings' beat, r.x its heading) - lit by the flames.
+// kind 14 a firefly (q.y how lit).
 float segment(float2 p, float2 a, float2 b) {
     float2 pa = p - a, ba = b - a;
     return length(pa - ba * saturate(dot(pa, ba) / max(dot(ba, ba), 1e-6)));
@@ -2053,19 +2053,6 @@ float4 critters_ps(CritterIn i) : SV_Target {
     } else if (kind == 14) {  // 2.6.11: a firefly - a yellow-green light and its soft halo, lit a while (q.y)
         float rr = dot(d, d);
         glow = float3(0.78, 1.0, 0.38) * (exp(-rr * 3.0) * 1.5 + exp(-rr * 0.35) * 0.3) * q.y;
-    } else if (kind == 15) {  // 2.6.11: a moth at a fire: a butterfly's shape, beating fast, warm from the flames
-        float2 l = turned(d, r.x);
-        float beat = abs(sin(q.y));
-        float f = 0.25 + 0.75 * beat;
-        float2 wg = float2(abs(l.y) / f, l.x);
-        float wing = max(smoothstep(1.0, 0.75, length((wg - float2(0.45, 0.1)) / float2(0.45, 0.42))),
-                         smoothstep(1.0, 0.75, length((wg - float2(0.35, -0.25)) / float2(0.32, 0.3))));
-        float body = smoothstep(0.1, 0.05, abs(l.y)) * step(abs(l.x), 0.4);
-        // 2.6.12: dusty wings catching the fire's light as they open (pale and glowing they were taken for sparks)
-        c = lerp(float3(0.5, 0.44, 0.36), float3(0.98, 0.8, 0.55), 0.35 + 0.65 * beat);
-        c = lerp(c, float3(0.22, 0.17, 0.13), body);
-        a = max(wing, body);
-        glow = float3(1.0, 0.62, 0.28) * 0.08 * wing * beat;
     } else if (kind == 11) {  // a ring on the ground
         a = smoothstep(0.12, 0.0, abs(length(d / float2(1.0, r.y)) - 0.9)) * 0.7;
         c = float3(0.85, 0.92, 1.0);

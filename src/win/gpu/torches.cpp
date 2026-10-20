@@ -76,7 +76,7 @@ bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
 }
 
 // 2.6.12: with the torches' pass off, a flame the game draws (known as takeTorch knows it, drawn as the game has it)
-// noted for the creatures alone - the moths circle it, the embers rise from it (applyCritters).
+// noted for the creatures alone - the embers rise from it (applyCritters).
 void Renderer::Impl::noteCritterFlame(const FrameRecord& rec, const DrawCmd& d) {
     if (objectTextures.of(d.texture[0]) != objects::Kind::TorchFlame) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();

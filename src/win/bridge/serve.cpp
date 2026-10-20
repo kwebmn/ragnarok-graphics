@@ -196,7 +196,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.treeSeasons = rd.u8() != 0;
             e.dragonflies = rd.u8() != 0;
             e.nightFireflies = rd.u8() != 0;  // 2.6.11
-            e.moths = rd.u8() != 0;
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }
