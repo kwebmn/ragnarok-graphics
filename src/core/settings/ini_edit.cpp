@@ -94,22 +94,26 @@ std::string applyIniEdits(const std::string& text, const std::vector<IniEdit>& e
 
     std::vector<std::pair<size_t, std::string>> inserts;  // a new line after line i
     std::vector<IniEdit> newSections;
+    std::vector<bool> gone(lines.size(), false);  // 2.6.22: lines taken out
     for (const IniEdit& e : edits) {
         const std::string section = lower(e.section);
         const std::string wanted = lower(e.key);
         bool replaced = false;
         size_t last = lines.size();  // the section's last line with something on it
         for (size_t i = 0; i < lines.size(); ++i) {
-            if (sectionOf[i] != section) continue;
+            if (sectionOf[i] != section || gone[i]) continue;
             const std::string meant = meaning(lines[i].body, i == 0);
             std::string name;
             std::string key;
             if (!meant.empty()) last = i;
             if (sectionName(meant, name) || !keyName(meant, key) || key != wanted) continue;
-            lines[i].body = withValue(lines[i].body, e.value);
+            if (e.remove)
+                gone[i] = true;
+            else
+                lines[i].body = withValue(lines[i].body, e.value);
             replaced = true;
         }
-        if (replaced) continue;
+        if (replaced || e.remove) continue;
         if (last < lines.size())
             inserts.emplace_back(last, e.key + " = " + e.value);
         else
@@ -121,9 +125,11 @@ std::string applyIniEdits(const std::string& text, const std::vector<IniEdit>& e
     std::string out;
     size_t next = 0;
     for (size_t i = 0; i < lines.size(); ++i) {
-        out += lines[i].body;
         const bool more = next < inserts.size() && inserts[next].first == i;
-        out += lines[i].eol.empty() && more ? eol : lines[i].eol;
+        if (!gone[i]) {
+            out += lines[i].body;
+            out += lines[i].eol.empty() && more ? eol : lines[i].eol;
+        }
         for (; next < inserts.size() && inserts[next].first == i; ++next) out += inserts[next].second + eol;
     }
     std::vector<std::string> added;  // section names, in the order the edits name them

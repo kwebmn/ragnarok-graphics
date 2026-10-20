@@ -686,7 +686,7 @@ const Entry kTexts[] = {
     {"What lies on the ground: drops, loot.", "Те, що лежить на землі: здобич, луп.",
      "То, что лежит на земле: добыча, лут."},
     {"Effects", "Ефекти", "Эффекты"},
-    {"Glow of effects", "Світіння ефектів", "Свечение эффектов"},
+    {"Halo around fire and skills", "Ореол довкола вогню й умінь", "Ореол вокруг огня и умений"},
     {"Fire, lightning, the light of skills, portals and lamps shine with a soft halo, as in modern games. The rest "
      "of the picture keeps its brightness.",
      "Вогонь, блискавки, світло вмінь, портали й ліхтарі світяться м'яким ореолом, як у сучасних іграх. Решта "
@@ -727,7 +727,7 @@ const Entry kTexts[] = {
      "вулицю. 0 % — лише ореол.",
      "Насколько свет эффектов падает на землю, стены и персонажей рядом, в своём цвете: огненный шар освещает "
      "улицу. 0 % — только ореол."},
-    {"Soft shadows", "М'які тіні", "Мягкие тени"},
+    {"Shadows in corners and at walls", "Тіні в кутах і біля стін", "Тени в углах и у стен"},
     {"Soft shade where surfaces meet: at the foot of walls, in the corners of buildings, under trees and rocks, as in "
      "modern games (ambient occlusion). The characters and the effects keep their light.",
      "М'яка тінь там, де поверхні сходяться: біля стін, у кутах будівель, під деревами й каменями, як у сучасних "
@@ -768,7 +768,7 @@ const Entry kTexts[] = {
     {"Vignette", "Віньєтка", "Виньетка"},
     {"The corners of the screen darker, as in films; 0 % none.",
      "Кути екрана темніші, як у кіно; 0 % — без неї.", "Углы экрана темнее, как в кино; 0 % — без неё."},
-    {"Smooth map light", "М'яке світло карти", "Мягкий свет карты"},
+    {"Map light without steps", "Світло карти без сходинок", "Свет карты без ступенек"},
     {"The map's baked light - the pools of torches and lamps, the shadows of houses and trees on the ground - smooth "
      "instead of blotches with steps and dots: the game keeps it in a very coarse grid that shows its cells when "
      "enlarged.",
@@ -857,7 +857,7 @@ const Entry kTexts[] = {
     {"How bright the aura is, of what the game draws: 100 % as in the game, 0 % none.",
      "Наскільки яскрава аура від того, як її малює гра: 100 % — як у грі, 0 % — немає.",
      "Насколько ярка аура от того, как её рисует игра: 100 % — как в игре, 0 % — нет."},
-    {"Fireflies", "Світлячки", "Светлячки"},
+    {"The maps' fireflies", "Світлячки карт", "Светлячки карт"},
     {"The maps' fireflies glow, flash now and then and light the ground a little around them. Also those the maps' "
      "makers placed that the game never showed (once the map's file is read).",
      "Світлячки на картах світяться, час від часу спалахують і трохи освітлюють землю довкола. Також ті, що їх "
@@ -898,7 +898,7 @@ const Entry kTexts[] = {
     {"Lava's brightness", "Яскравість лави", "Яркость лавы"},
     {"How brightly the lava glows and lights around it.", "Наскільки яскраво лава сяє та освітлює довкола.",
      "Насколько ярко лава светится и освещает всё вокруг."},
-    {"Characters' shadows", "Тіні персонажів", "Тени персонажей"},
+    {"Shadows from the sun and fire", "Тіні від сонця й вогню", "Тени от солнца и огня"},
     {"Characters and monsters cast soft shadows the shape of their sprites on the ground, instead of the game's round "
      "spot under the feet: by day from the sun; underground and at night from the two nearest torches and lamps - "
      "short by a fire, longer farther off, fading with its light and trembling with its flame.",
@@ -934,7 +934,7 @@ const Entry kTexts[] = {
      "золотим, отрута — зеленим: кожне вміння кольором своєї картинки.",
      "Не только огонь: лёд и вода светят холодным голубым, молнии — короткими белыми вспышками, святые умения — "
      "золотым, яд — зелёным: каждое умение цветом своей картинки."},
-    {"Softer skills", "М'якші вміння", "Мягкие умения"},
+    {"Skills that do not blind", "Уміння не сліплять", "Умения не слепят"},
     {"Skills and other effects of the game (not the maps' torches, smoke and the like) shine softer, so that big ones "
      "- Storm Gust, Magnus Exorcismus, Meteor Storm - do not blind.",
      "Уміння та інші ефекти гри (не смолоскипи, дим тощо на картах) світять м'якше, щоб великі — Storm Gust, Magnus "
@@ -1387,16 +1387,12 @@ const Entry kTexts[] = {
      "яскравіші за білий. Не з генерацією кадрів DLSS. Перевірка.",
      "Direct3D 12 на мониторе с включённым HDR в Windows: картинка в HDR10, белый 200 нит, огни и искры чуть ярче "
      "белого. Не с генерацией кадров DLSS. Проверка."},
-    {"Soft effects at the ground",
-     "М’які ефекти біля землі",
-     "Мягкие эффекты у земли"},
+    {"Effects not cut at the ground", "Ефекти не обрізаються біля землі", "Эффекты не обрезаются у земли"},
     {"Skills, sparks and portals fade softly where they touch the ground and the walls instead of being cut off along "
      "a hard line.",
      "Уміння, іскри й портали м’яко згасають там, де торкаються землі та стін, а не обрізаються різкою лінією.",
      "Умения, искры и порталы мягко гаснут там, где касаются земли и стен, а не обрезаются резкой линией."},
-    {"Rim light on characters",
-     "Контрове світло на персонажах",
-     "Контровой свет на персонажах"},
+    {"Lit edge on the fire's side", "Світлий край з боку вогню", "Светлый край со стороны огня"},
     {"Torches, lamps and burning skills light the edge of a character that faces them more, so the flat sprites look "
      "rounder near a fire.",
      "Факели, лампи й палаючі вміння сильніше освітлюють край персонажа, повернутий до них, тож пласкі спрайти біля "
@@ -1430,9 +1426,7 @@ const Entry kTexts[] = {
     {"How much the sky covers the void: less lets the game's own colour show through.",
      "Наскільки небо закриває порожнечу: менше — проступає власний колір гри.",
      "Насколько небо закрывает пустоту: меньше — проступает собственный цвет игры."},
-    {"Motes in the air",
-     "Порошинки в повітрі",
-     "Частицы в воздухе"},
+    {"Pollen and motes in the air", "Пилок і порошинки в повітрі", "Пыльца и пылинки в воздухе"},
     {"Where the map has no weather of its own, tiny motes drift in the air: pollen over the fields and the towns, "
      "dust in the dungeons and the houses. Direct3D 12.",
      "Де на карті немає власної погоди, у повітрі пливуть дрібні порошинки: пилок над полями й містами, пил у "
@@ -1457,9 +1451,7 @@ const Entry kTexts[] = {
     {"How deep the ground looks.",
      "Наскільки глибокою виглядає земля.",
      "Насколько глубокой выглядит земля."},
-    {"Reflections on the floor",
-     "Відбиття на підлозі",
-     "Отражения на полу"},
+    {"Reflections on smooth floors", "Відбиття на гладкій підлозі", "Отражения на гладком полу"},
     {"Indoors (dungeons, castles, houses) and in the rain the floor reflects the characters and what stands on it; a "
      "dry field does not shine. Direct3D 12.",
      "У приміщеннях (підземелля, замки, будинки) і під дощем підлога відбиває персонажів і те, що на ній стоїть; сухе "
@@ -1472,9 +1464,7 @@ const Entry kTexts[] = {
     {"How much the floor reflects; in the rain more.",
      "Наскільки підлога відбиває; під дощем більше.",
      "Насколько пол отражает; под дождём больше."},
-    {"Light in the air",
-     "Світло в повітрі",
-     "Свет в воздухе"},
+    {"Glowing air at fire and lamps", "Сяюче повітря біля вогню й ламп", "Светящийся воздух у огня и ламп"},
     {"The air glows around torches, lamps and burning skills, as in a light mist (walls in front hide it); on the "
      "fields rays of light stream from the sky past the edge of the map. Direct3D 12.",
      "Повітря світиться навколо факелів, ламп і палаючих умінь, як у легкому серпанку (стіни попереду його ховають); "
@@ -1487,9 +1477,7 @@ const Entry kTexts[] = {
     {"How bright the glowing air and the rays are.",
      "Наскільки яскраві повітря, що світиться, і промені.",
      "Насколько ярки светящийся воздух и лучи."},
-    {"Time of day",
-     "Час доби",
-     "Время суток"},
+    {"The sun moves by the clock", "Сонце рухається за годинником", "Солнце движется по часам"},
     {"The sun moves by the Clock's hour: the characters' shadows turn and are long in the morning and the evening, "
      "short at noon; the light is pink in the morning and golden in the evening.",
      "Сонце рухається за годиною «Годинника»: тіні персонажів повертаються, довгі вранці й увечері, короткі опівдні; "
@@ -1550,13 +1538,12 @@ const Entry kTexts[] = {
     {"How strong the region's colour mood is.",
      "Наскільки сильний настрій кольорів регіону.",
      "Насколько сильно настроение цветов региона."},
-    {"Footprints",
-     "Сліди",
-     "Следы"},
-    {"Characters leave footprints in the snow and the sand that slowly fade. Needs the characters' shadows. "
+    {"Footprints in snow and sand", "Сліди на снігу й піску", "Следы на снегу и песке"},
+    {"Characters leave footprints in the snow and the sand that slowly fade. Needs Shadows from the sun and fire. "
      "Direct3D 12.",
-     "Персонажі лишають сліди на снігу й піску, що поволі зникають. Потрібні тіні персонажів. Direct3D 12.",
-     "Персонажи оставляют следы на снегу и песке, которые понемногу исчезают. Нужны тени персонажей. Direct3D 12."},
+     "Персонажі лишають сліди на снігу й піску, що поволі зникають. Потрібні «Тіні від сонця й вогню». Direct3D 12.",
+     "Персонажи оставляют следы на снегу и песке, которые понемногу исчезают. Нужны «Тени от солнца и огня». "
+     "Direct3D 12."},
     {"Thunderstorms",
      "Грози",
      "Грозы"},
@@ -1600,9 +1587,7 @@ const Entry kTexts[] = {
     {"After a warp or a new map the world comes in smoothly from black instead of at once. Direct3D 12.",
      "Після телепорту чи нової карти світ плавно проявляється з темряви, а не одразу. Direct3D 12.",
      "После телепорта или новой карты мир плавно проявляется из темноты, а не сразу. Direct3D 12."},
-    {"Round characters",
-     "Об’ємні персонажі",
-     "Объёмные персонажи"},
+    {"Volume from fire and lamps", "Об'єм від вогню й ламп", "Объём от огня и ламп"},
     {"Torches, lamps and fire light a character as if it were round: the side towards the fire brighter, the far one "
      "darker.",
      "Факели, лампи й вогонь освітлюють персонажа як округлого: бік до вогню світліший, дальній темніший.",
@@ -1711,9 +1696,7 @@ const Entry kTexts[] = {
      "впізнається за звуком.",
      "Монстр, по которому попали, на мгновение вспыхивает белым, как в современных 2D-играх. Нужен включённый звук "
      "игры: удар узнаётся по звуку."},
-    {"Wet ground in the rain",
-     "Мокра земля в дощ",
-     "Мокрая земля в дождь"},
+    {"Wet ground and puddles", "Мокра земля й калюжі", "Мокрая земля и лужи"},
     {"On maps where it rains the ground is a little darker and puddles here and there mirror the houses, the trees "
      "and the characters (with Precipitation on, Direct3D 12).",
      "На мапах, де йде дощ, земля трохи темніша, а калюжі подекуди віддзеркалюють будинки, дерева й персонажів (з "
@@ -2083,9 +2066,7 @@ const Entry kTexts[] = {
      "Листя на краю крони з боку сонця світиться теплим зеленим, просвічене наскрізь, найбільше вранці й увечері.",
      "Листья на краю кроны со стороны солнца светятся тёплым зелёным, просвеченные насквозь, сильнее всего утром и "
      "вечером."},
-    {"Every tree its own",  // 2.4: its seasons a box of their own
-     "Кожне дерево своє",
-     "Каждое дерево своё"},
+    {"Trees of different shades", "Дерева різних відтінків", "Деревья разных оттенков"},
     {"Each tree gets a slightly different shade and brightness, so a wood is not one crown copied.",
      "Кожне дерево трохи іншого відтінку й яскравості, тож ліс не складається з однієї скопійованої крони.",
      "Каждое дерево чуть другого оттенка и яркости, так что лес не состоит из одной скопированной кроны."},
@@ -2098,15 +2079,6 @@ const Entry kTexts[] = {
      "Потрібне «Листя на вітрі» (і «Трава» для трави).",
      "Время от времени по экрану проходит порыв: деревья гнутся одно за другим, а трава клонится и светлеет полосой. "
      "Нужна «Листва на ветру» (и «Трава» для травы)."},
-    {"Sun spots under the trees",
-     "Сонячні плями під деревами",
-     "Солнечные пятна под деревьями"},
-    {"The shadow of a tree is not solid: spots of sun come through the leaves and stir with the wind. Needs Shadows "
-     "of houses and trees (Direct3D 12).",
-     "Тінь дерева не суцільна: крізь листя пробиваються сонячні плями й ворушаться від вітру. Потрібні «Тіні "
-     "будинків і дерев» (Direct3D 12).",
-     "Тень дерева не сплошная: сквозь листву пробиваются солнечные пятна и шевелятся от ветра. Нужны «Тени домов "
-     "и деревьев» (Direct3D 12)."},
     {"Flowers in the grass",
      "Квіти в траві",
      "Цветы в траве"},
@@ -2146,9 +2118,7 @@ const Entry kTexts[] = {
     {"The snow of Lutie and the ice caves glitters: points of light flash and go out as you walk (Direct3D 12).",
      "Сніг Лютії та крижаних печер іскриться: світлі точки спалахують і гаснуть, поки йдеш (Direct3D 12).",
      "Снег Лютие и ледяных пещер искрится: светлые точки вспыхивают и гаснут, пока идёшь (Direct3D 12)."},
-    {"Damp cave walls",
-     "Вологі стіни печер",
-     "Влажные стены пещер"},
+    {"Water running down the walls", "Вода стікає стінами", "Вода стекает по стенам"},
     {"In damp caves and dungeons thin trickles of water run down the walls where the light falls on them "
      "(Direct3D 12).",
      "У вологих печерах і підземеллях там, де на стіни падає світло, ними стікають тонкі струмки води (Direct3D 12).",
@@ -2208,38 +2178,28 @@ const Entry kTexts[] = {
     {"Sparks rise from the torches and the fires, sway, cool and go out in the air (Direct3D 12).",
      "Від смолоскипів і вогнищ здіймаються іскри, кружляють, холонуть і гаснуть у повітрі (Direct3D 12).",
      "От факелов и костров поднимаются искры, кружатся, остывают и гаснут в воздухе (Direct3D 12)."},
-    {"Breath in the cold",
-     "Пара в холод",
-     "Пар на морозе"},
+    {"Breath in the frost", "Пара з рота на морозі", "Пар изо рта на морозе"},
     {"On the snowy maps the characters' breath shows in short puffs (Direct3D 12).",
      "На сніжних мапах подих персонажів видно короткими хмаринками пари (Direct3D 12).",
      "На снежных картах дыхание персонажей видно короткими облачками пара (Direct3D 12)."},
-    {"Splashes",
-     "Бризки",
-     "Брызги"},
+    {"Splashes from steps", "Бризки від кроків", "Брызги от шагов"},
     {"A step into shallow water throws up drops that fall back (Direct3D 12).",
      "Крок у мілку воду підкидає краплі, що падають назад (Direct3D 12).",
      "Шаг в мелкую воду подбрасывает капли, которые падают обратно (Direct3D 12)."},
-    {"Drips in the caves",
-     "Краплі в печерах",
-     "Капли в пещерах"},
+    {"Drips from the ceiling", "Краплі зі стелі", "Капли с потолка"},
     {"In damp caves and dungeons a drop falls from above now and then and rings spread where it lands (Direct3D 12).",
      "У вологих печерах і підземеллях час від часу згори падає крапля, і там, де вона впала, розходяться кола "
      "(Direct3D 12).",
      "Во влажных пещерах и подземельях время от времени сверху падает капля, и там, где она упала, расходятся круги "
      "(Direct3D 12)."},
-    {"Under the sea",
-     "Під водою",
-     "Под водой"},
+    {"Bubbles and light under water", "Бульбашки й світло під водою", "Пузыри и свет под водой"},
     {"On the undersea maps (Byalan's dungeon) strings of bubbles rise and light from above falls in swaying bands "
      "(Direct3D 12).",
      "На підводних мапах (підземелля Бʼялану) здіймаються ланцюжки бульбашок, а згори хвилястими смугами падає світло "
      "(Direct3D 12).",
      "На подводных картах (подземелье Бьялана) поднимаются цепочки пузырьков, а сверху колышущимися полосами падает "
      "свет (Direct3D 12)."},
-    {"Materials of the world",
-     "Матеріали світу",
-     "Материалы мира"},
+    {"Materials: stone, brick, bark", "Матеріали: камінь, цегла, кора", "Материалы: камень, кирпич, кора"},
     {"Each texture of the ground, the houses and the rocks gets its relief, height and gloss, made by the card from "
      "its picture: the sun lights stones, bricks and bark from their side, the hollows are darker, smooth stone "
      "glints, the repeats of the ground's tiles hide under large patches of shade, steep cliffs get a stone grain "
@@ -2288,9 +2248,7 @@ const Entry kTexts[] = {
      "на форумі.",
      "Отчёт отправлен вместе со скриншотами ({2}). Его код: {1} (скопирован) — назовите его разработчикам в чате или "
      "на форуме."},
-    {"Smooth seams of the ground",
-     "Плавні стики землі",
-     "Плавные стыки земли"},
+    {"Grass and road seams without steps", "Стики трави й доріг без сходинок", "Стыки травы и дорог без ступенек"},
     {"Where grass meets a road or sand, the line between them no longer runs in steps along the ground's cells: it "
      "wanders, one texture reaching into the other. On fields and in towns; the tiled floors of dungeons keep their "
      "straight edges (Direct3D 12).",
@@ -2303,15 +2261,13 @@ const Entry kTexts[] = {
     {"uaRO Graphics - effects",
      "uaRO Graphics — ефекти",
      "uaRO Graphics — эффекты"},
-    {"Up/Down choose · Space on/off, a group's effects · Left/Right value · hold Tab to compare · Ctrl+Shift+F11 "
-     "frame counter · ↻ at the game's next start · ~ or Esc close",
-     "↑↓ вибір · Пробіл увімк/вимк, ефекти групи · ←→ значення · затисніть Tab — порівняти · Ctrl+Shift+F11 — "
-     "лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc — закрити",
-     "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение · зажмите Tab — сравнить · Ctrl+Shift+F11 — "
-     "счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
-    {"Smooth hills",
-     "Плавні пагорби",
-     "Плавные холмы"},
+    {"Up/Down choose · Space on/off, a group's effects · Left/Right value · letters search · hold Tab to compare · "
+     "Ctrl+Shift+F11 frame counter · ↻ at the game's next start · ~ or Esc close",
+     "↑↓ вибір · Пробіл увімк/вимк, ефекти групи · ←→ значення · літери — пошук · затисніть Tab — порівняти · "
+     "Ctrl+Shift+F11 — лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc — закрити",
+     "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение · буквы — поиск · зажмите Tab — сравнить · "
+     "Ctrl+Shift+F11 — счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
+    {"Hills without steps of light", "Пагорби без сходинок світла", "Холмы без ступенек света"},
     {"The game lights its ground cell by cell, and a hill shows as steps of light. The ground is lit by the sun over "
      "smooth slopes instead: the sunny side of a hill brighter, the far side in a soft shade (Direct3D 12).",
      "Гра освітлює землю клітинка за клітинкою, і пагорб видно сходинками світла. Натомість сонце освітлює плавні "
@@ -2333,9 +2289,7 @@ const Entry kTexts[] = {
      "показати не може. Потрібна «Сучасна вода»; лише в режимі «Ремастер» (Direct3D 12).",
      "Вода отражает дома, скалы и деревья на берегу — также то, что выше верхнего края экрана и чего сама картинка "
      "показать не может. Нужна «Современная вода»; только в режиме «Ремастер» (Direct3D 12)."},
-    {"Living characters",
-     "Живі персонажі",
-     "Живые персонажи"},
+    {"Volume from the sun", "Об'єм від сонця", "Объём от солнца"},
     {"Characters and monsters are lit by the sun as figures: the side of the body towards it a little lighter and "
      "warmer, the far side in a soft shade - no longer flat stickers.",
      "Персонажів і монстрів сонце освітлює як об'ємні фігури: бік тіла до сонця трохи світліший і тепліший, дальній "
@@ -2366,44 +2320,39 @@ const Entry kTexts[] = {
      "тримають сніг на дахах увесь рік; пустеля й тропіки без пір року (Direct3D 12).",
      "По календарю компьютера: снег зимой и цвет травы по сезону, каждое своей галочкой ниже. Снежные карты держат "
      "снег на крышах весь год; пустыня и тропики без времён года (Direct3D 12)."},
-    {"Wet in the rain",
-     "Мокре під дощем",
-     "Мокрое под дождём"},
+    {"Wet walls and roofs", "Мокрі стіни й дахи", "Мокрые стены и крыши"},
     {"Where it rains, the walls, roofs and models get wet too, not only the ground: darker, with a sheen where you "
      "look along them and water running down the walls. Needs Precipitation on (Direct3D 12).",
      "Де йде дощ, мокнуть не лише земля, а й стіни, дахи й моделі: темніші, з полиском, коли дивишся вздовж них, і "
      "водою, що стікає стінами. Потрібні «Опади» (Direct3D 12).",
      "Где идёт дождь, мокнет не только земля, но и стены, крыши и модели: темнее, с блеском, когда смотришь вдоль "
      "них, и водой, стекающей по стенам. Нужны «Осадки» (Direct3D 12)."},
-    {"Windows at night",
-     "Вікна вночі",
-     "Окна ночью"},
+    {"Windows lit at night", "Вікна світяться вночі", "Окна светятся ночью"},
     {"As the night comes the houses' windows light up warm, not all of them. The panes are found in the walls' "
-     "pictures by themselves; needs Materials of the world and the night (Direct3D 12).",
+     "pictures by themselves; needs the Materials and the night (Direct3D 12).",
      "З настанням ночі вікна будинків загоряються теплим світлом, не всі. Шибки знаходяться в картинках стін самі; "
-     "потрібні «Матеріали світу» й ніч (Direct3D 12).",
+     "потрібні «Матеріали: камінь, цегла, кора» й ніч (Direct3D 12).",
      "С наступлением ночи окна домов загораются тёплым светом, не все. Стёкла находятся в картинках стен сами; нужны "
-     "«Материалы мира» и ночь (Direct3D 12)."},
+     "«Материалы: камень, кирпич, кора» и ночь (Direct3D 12)."},
     {"One wind for everything",
      "Один вітер для всього",
      "Один ветер для всего"},
-    {"The grass, the leaves, drifting sand, rain, snow and the clouds all go one way with one wind, which slowly "
-     "turns and blows stronger and weaker - instead of each going its own way (Direct3D 12).",
-     "Трава, листя, піщана поземка, дощ, сніг і хмари рухаються в один бік з одним вітром, що поволі змінює напрям і "
-     "то посилюється, то слабне, — а не кожне куди саме хоче (Direct3D 12).",
-     "Трава, листва, песчаная позёмка, дождь, снег и облака движутся в одну сторону с одним ветром, который медленно "
-     "меняет направление и то усиливается, то стихает, — а не каждое куда само хочет (Direct3D 12)."},
-    {"Dust in the light",
-     "Пил у світлі",
-     "Пыль в свете"},
+    {"The grass, the leaves, drifting sand, rain and snow all go one way with one wind, which slowly turns and "
+     "blows stronger and weaker - instead of each going its own way (Direct3D 12).",
+     "Трава, листя, піщана поземка, дощ і сніг рухаються в один бік з одним вітром, що поволі змінює напрям і то "
+     "посилюється, то слабне, — а не кожне куди саме хоче (Direct3D 12).",
+     "Трава, листва, песчаная позёмка, дождь и снег движутся в одну сторону с одним ветром, который медленно меняет "
+     "направление и то усиливается, то стихает, — а не каждое куда само хочет (Direct3D 12)."},
+    {"Dust in beams of light", "Пил у променях світла", "Пыль в лучах света"},
     {"Indoors and in dungeons the dust in the air shows where light falls - in the beams from the windows, by the "
-     "torches - tinted by that light, and hardly in the dark corners. Needs Motes in the air and Dust indoors "
+     "torches - tinted by that light, and hardly in the dark corners. Needs Pollen and motes in the air, Dust indoors "
      "(Direct3D 12).",
      "У приміщеннях і підземеллях пил у повітрі видно там, де падає світло, — у променях із вікон, біля факелів, — у "
-     "кольорі цього світла, а в темних кутах ледь-ледь. Потрібні «Порошинки в повітрі» й «Пил у приміщеннях» "
+     "кольорі цього світла, а в темних кутах ледь-ледь. Потрібні «Пилок і порошинки в повітрі» й «Пил у приміщеннях» "
      "(Direct3D 12).",
      "В помещениях и подземельях пыль в воздухе видна там, где падает свет, — в лучах из окон, у факелов, — в цвете "
-     "этого света, а в тёмных углах едва-едва. Нужны «Частицы в воздухе» и «Пыль в помещениях» (Direct3D 12)."},
+     "этого света, а в тёмных углах едва-едва. Нужны «Пыльца и пылинки в воздухе» и «Пыль в помещениях» "
+     "(Direct3D 12)."},
     {"Effects quality",
      "Якість ефектів",
      "Качество эффектов"},
@@ -2440,93 +2389,67 @@ const Entry kTexts[] = {
      "слабшими; кнопка групи відкриває її ефекти, кожен окремо.",
      "Выберите настройки для своей видеокарты, потом включайте или выключайте группы и делайте их сильнее или "
      "слабее; кнопка группы открывает её эффекты, каждый отдельно."},
-    {"Light",
-     "Світло",
-     "Свет"},
-    {"Torches, lamps, fire of skills, fireflies, the map's glows, beams, lava, portals, glow; with a "
-     "strong card lit windows at night.",
-     "Смолоскипи, лампи, вогонь умінь, світлячки, сяйво карти, промені, лава, портали, сяйво; з потужною "
-     "картою — освітлені вікна вночі.",
-     "Факелы, лампы, огонь умений, светлячки, свечения карты, лучи, лава, порталы, свечение; с мощной "
-     "картой — освещённые окна ночью."},
-    {"Shadows and depth",
-     "Тіні та об'єм",
-     "Тени и объём"},
-    {"The characters' shadows, soft shade in corners (AO), a rim of light on the characters; with a strong "
-     "card the characters lit by the world's light.",
-     "Тіні персонажів, м'яка тінь у кутах (AO), обідок світла на персонажах; з потужною картою — "
-     "персонажі, освітлені світлом світу.",
-     "Тени персонажей, мягкая тень в углах (AO), ободок света на персонажах; с мощной картой — персонажи, "
-     "освещённые светом мира."},
-    {"Surfaces",
-     "Поверхні",
-     "Поверхности"},
-    {"Relief of the ground, reflections in the floors, wet ground and walls, glints; with a strong card "
-     "the world's materials (stone, tiles, wood), smooth seams between textures, smooth hills and models.",
-     "Рельєф землі, відбиття в підлозі, мокра земля й стіни, відблиски; з потужною картою — матеріали "
-     "світу (камінь, черепиця, дерево), плавні шви між текстурами, плавні пагорби й моделі.",
-     "Рельеф земли, отражения в полу, мокрая земля и стены, блики; с мощной картой — материалы мира "
-     "(камень, черепица, дерево), плавные швы между текстурами, плавные холмы и модели."},
-    {"Nature",
-     "Природа",
-     "Природа"},
-    {"Grass, flowers, the trees' volume, light and colours, gusts of wind, light through leaves; with a "
-     "strong card dew, falling leaves, seasons and one wind for all.",
-     "Трава, квіти, об'єм, світло й кольори дерев, пориви вітру, світло крізь листя; з потужною картою — "
-     "роса, листопад, пори року й один вітер для всього.",
-     "Трава, цветы, объём, свет и цвета деревьев, порывы ветра, свет сквозь листву; с мощной картой — "
-     "роса, листопад, времена года и один ветер для всего."},
-    {"Water",
-     "Вода",
-     "Вода"},
-    {"Waves and reflections of the water, ripples, foam at the shore, splashes, under the water, swamps; "
-     "with a strong card fish and the world reflected in the water.",
-     "Хвилі й відбиття води, кола, піна біля берега, бризки, під водою, болота; з потужною картою — риби й "
-     "світ, відбитий у воді.",
-     "Волны и отражения воды, круги, пена у берега, брызги, под водой, болота; с мощной картой — рыбы и "
-     "мир, отражённый в воде."},
-    {"Air and weather",
-     "Повітря й погода",
-     "Воздух и погода"},
-    {"Weather, heat haze, storms, the sky, day and night, dust, morning fog, sand "
-     "and snow; with a strong card sun beams, dust in the light, wet after rain and the "
-     "land past the map's edge.",
-     "Погода, марево, грози, небо, день і ніч, пил, ранковий туман, пісок і сніг; з "
-     "потужною картою — сонячні промені, пил у світлі, мокре після дощу й земля за краєм "
-     "карти.",
-     "Погода, марево, грозы, небо, день и ночь, пыль, утренний туман, песок и снег; с "
-     "мощной картой — солнечные лучи, пыль в свете, мокрое после дождя и земля за краем "
-     "карты."},
-    {"Living world",
-     "Живий світ",
-     "Живой мир"},
-    {"Footprints, butterflies, birds, embers from fires, breath in the cold.",
-     "Сліди, метелики, птахи, іскри від вогнищ, пара з рота на морозі.",
-     "Следы, бабочки, птицы, искры от костров, пар изо рта на морозе."},
-    {"Skills",
-     "Уміння",
-     "Умения"},
-    {"The skills' colours and softness, the aura, appearing, the flash of a hit, soft particles, the fade "
-     "between maps, sparks of skills.",
-     "Кольори й м'якість умінь, аура, поява, спалах удару, м'які частинки, перехід між картами, іскри "
-     "умінь.",
-     "Цвета и мягкость умений, аура, появление, вспышка удара, мягкие частицы, переход между картами, "
-     "искры умений."},
-    {"Picture",
-     "Картинка",
-     "Картинка"},
-    {"Colour, the regions' looks; with a strong card bloom and the sun's flare.",
-     "Колір, вигляд регіонів; з потужною картою — bloom і відблиск сонця.",
-     "Цвет, вид регионов; с мощной картой — bloom и блик солнца."},
+    {"Day, night and seasons", "День, ніч і пори року", "День, ночь и времена года"},  // 2.6.22
+    {"What the Clock and the Season at the top change: the sun moving, lit windows at night, the morning fog, "
+     "the server's night, the seasons on the map.",
+     "Що змінюють «Годинник» і «Пора року» вгорі: рух сонця, світло у вікнах уночі, ранковий туман, ніч "
+     "сервера, пори року на карті.",
+     "Что меняют «Часы» и «Время года» вверху: движение солнца, свет в окнах ночью, утренний туман, ночь "
+     "сервера, времена года на карте."},
+    {"Weather: rain, snow, sand", "Погода: дощ, сніг, пісок", "Погода: дождь, снег, песок"},
+    {"What the Weather at the top brings: snow, rain, leaves or sand in the air, thunderstorms, wet ground, "
+     "walls and roofs, drifting sand, glittering snow.",
+     "Що приносить «Погода» вгорі: сніг, дощ, листя чи пісок у повітрі, грози, мокрі земля, стіни й дахи, "
+     "позмінка піску, іскристий сніг.",
+     "Что приносит «Погода» вверху: снег, дождь, листья или песок в воздухе, грозы, мокрые земля, стены и "
+     "крыши, позёмка песка, искрящийся снег."},
+    {"Characters and monsters", "Персонажі та монстри", "Персонажи и монстры"},
+    {"Their shadows, volume and light, footprints, breath in the frost, appearing smoothly, the flash of a "
+     "hit, the level 99 aura.",
+     "Їхні тіні, об'єм і світло, сліди, пара на морозі, плавна поява, спалах від удару, аура 99 рівня.",
+     "Их тени, объём и свет, следы, пар на морозе, плавное появление, вспышка при ударе, аура 99 уровня."},
+    {"Skills", "Уміння", "Умения"},
+    {"The skills softer so the big ones do not blind, their sparks, the light of their fire around.",
+     "Уміння м'якші, щоб великі не сліпили, їхні іскри, світло їхнього вогню довкола.",
+     "Умения мягче, чтобы большие не слепили, их искры, свет их огня вокруг."},
+    {"Fire and smoke", "Вогонь і дим", "Огонь и дым"},
+    {"Torches, embers over the fires, chimney smoke, lava, the heat haze over fire.",
+     "Смолоскипи, іскри над вогнищами, дим із труб, лава, марево над вогнем.",
+     "Факелы, угольки над огнём, дым из труб, лава, марево над огнём."},
+    {"Light", "Світло", "Свет"},
+    {"Lamps' light, the maps' hidden lights and fireflies, portals, the halo around fire and skills, the "
+     "glowing air, beams of light in the forests.",
+     "Світло ламп, приховані вогники й світлячки карт, портали, ореол довкола вогню й умінь, сяюче повітря, "
+     "промені світла в лісах.",
+     "Свет ламп, скрытые огоньки и светлячки карт, порталы, ореол вокруг огня и умений, светящийся воздух, "
+     "лучи света в лесах."},
+    {"Ground and walls", "Земля і стіни", "Земля и стены"},
+    {"Relief and materials of the ground, the houses and the rocks, seams of grass and roads, hills, shadows "
+     "in corners, reflections on floors, cards sparkling on the ground.",
+     "Рельєф і матеріали землі, будинків і скель, стики трави й доріг, пагорби, тіні в кутах, відбиття на "
+     "підлозі, картки, що виблискують на землі.",
+     "Рельеф и материалы земли, домов и скал, стыки травы и дорог, холмы, тени в углах, отражения на полу, "
+     "карты, поблёскивающие на земле."},
+    {"Grass and trees", "Трава й дерева", "Трава и деревья"},
+    {"Grass, flowers and dew, leaves in the wind, gusts, the trees' crowns, light through the leaves, sun "
+     "spots in their shade, their shades of colour, falling leaves.",
+     "Трава, квіти й роса, листя на вітрі, пориви, крони дерев, світло крізь листя, сонячні плями в їхній "
+     "тіні, відтінки дерев, листопад.",
+     "Трава, цветы и роса, листва на ветру, порывы, кроны деревьев, свет сквозь листву, солнечные пятна в их "
+     "тени, оттенки деревьев, падающие листья."},
+    {"Water", "Вода", "Вода"},
+    {"The modern water and all on it: ripples and splashes from steps, surf, the world under water, swamps, "
+     "fish, reflections.",
+     "Сучасна вода і все на ній: кола й бризки від кроків, прибій, світ під водою, болота, риби, "
+     "відображення.",
+     "Современная вода и всё на ней: круги и брызги от шагов, прибой, мир под водой, болота, рыбы, отражения."},
     {"Strength",
      "Сила",
      "Сила"},
     {"How strong the group's effects are: 100 % as made, less is gentler, more is stronger.",
      "Наскільки сильні ефекти групи: 100 % — як задумано, менше — м'якше, більше — сильніше.",
      "Насколько сильны эффекты группы: 100 % — как задумано, меньше — мягче, больше — сильнее."},
-    {"The group's effects ({1}) ▸",
-     "Ефекти групи ({1}) ▸",
-     "Эффекты группы ({1}) ▸"},
+    {"Effects: {1} of {2} on ▸", "Ефекти: увімкнено {1} з {2} ▸", "Эффекты: включено {1} из {2} ▸"},  // 2.6.22
     {"Hide the effects ▾",
      "Сховати ефекти ▾",
      "Скрыть эффекты ▾"},
@@ -2536,15 +2459,13 @@ const Entry kTexts[] = {
      "починаючи з того, що вона мала увімкненим; галочка групи й далі вимикає всі її ефекти.",
      "Каждый эффект можно переключить внутри его группы (кнопка под ней). Переключённый эффект делает качество «Свои», "
      "начиная с того, что оно держало включённым; галочка группы по-прежнему выключает все её эффекты."},
-    {"Fixes of the picture",
-     "Виправлення картинки",
-     "Исправления картинки"},
-    {"What mends the old picture rather than adds to it: the map's baked light smooth instead of blotches, the effects "
-     "fading where they meet the walls instead of cut, the world coming in softly after a new map. In every set.",
-     "Те, що лагодить стару картинку, а не додає до неї: запечене світло карти плавне замість плям, ефекти тануть "
-     "біля стін замість обрізаних, світ плавно з'являється після нової карти. У кожному наборі.",
-     "То, что чинит старую картинку, а не добавляет к ней: запечённый свет карты плавный вместо пятен, эффекты тают "
-     "у стен вместо обрезанных, мир плавно появляется после новой карты. В каждом наборе."},
+    {"Game fixes", "Виправлення гри", "Исправления игры"},  // 2.6.22
+    {"What mends the game's old picture rather than adds to it: the map's light without steps, the effects "
+     "not cut at the ground, the smooth change of maps, no game fog under the open sky. In every set.",
+     "Те, що лагодить стару картинку гри, а не додає до неї: світло карти без сходинок, ефекти не обрізаються "
+     "біля землі, плавна зміна карти, без туману гри під відкритим небом. У кожному наборі.",
+     "То, что чинит старую картинку игры, а не добавляет к ней: свет карты без ступенек, эффекты не "
+     "обрезаются у земли, плавная смена карты, без тумана игры под открытым небом. В каждом наборе."},
     {"Send anonymous statistics of the settings",
      "Надсилати анонімну статистику налаштувань",
      "Отправлять анонимную статистику настроек"},
@@ -3211,7 +3132,9 @@ const Entry kTexts[] = {
      "віддаляється. Підземелля зберігають свій темний туман.",
      "На полях и в городах собственный туман игры не рисуется — зелёная или белая пелена, которая густеет, когда "
      "камера отдаляется. Подземелья сохраняют свой тёмный туман."},
-    {"No server night", "Без ночі сервера", "Без ночи сервера"},  // 2.6.13
+    {"No darkening by the server's night",
+     "Без затемнення від ночі сервера",
+     "Без затемнения от ночи сервера"},  // 2.6.13
     {"The night the server brings now and then does not darken the picture nor tint it blue - the time of day is the "
      "Clock's (\"From the server\" follows the server's night with the graphics' own). Off: the server's night as "
      "the game shows it.",
@@ -3235,7 +3158,7 @@ const Entry kTexts[] = {
     {"Day 13:00", "День 13:00", "День 13:00"},
     {"Sunset 18:30", "Захід 18:30", "Закат 18:30"},
     {"Night 0:00", "Ніч 0:00", "Ночь 0:00"},
-    {"Fireflies in the grass", "Світлячки в траві", "Светлячки в траве"},
+    {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",
      "Від сутінків до світанку над травою, де вдень літають метелики, низько пливуть світлячки — то світяться, то "
@@ -3273,6 +3196,29 @@ const Entry kTexts[] = {
     {"Snow", "Сніг", "Снег"},
     {"Falling leaves", "Листопад", "Листопад"},
     {"Sand in the wind", "Піщаний вітер", "Песчаный ветер"},
+    // 2.6.22: the groups by what the eye is on, the console's search
+    {"Creatures", "Живність", "Живность"},
+    {"Butterflies and dragonflies, birds, fireflies in the grass at night.",
+     "Метелики й бабки, птахи, світлячки в траві вночі.",
+     "Бабочки и стрекозы, птицы, светлячки в траве ночью."},
+    {"Caves and dungeons", "Печери й підземелля", "Пещеры и подземелья"},
+    {"Water running down the walls, drips from the ceiling, dust in the beams of light.",
+     "Вода, що стікає стінами, краплі зі стелі, пил у променях світла.",
+     "Вода, стекающая по стенам, капли с потолка, пыль в лучах света."},
+    {"Sky and air", "Небо й повітря", "Небо и воздух"},
+    {"The sky and the land past the map's edge, the sun's flare, pollen and motes in the air, one wind for "
+     "everything.",
+     "Небо й земля за краєм карти, відблиск сонця, пилок і порошинки в повітрі, один вітер для всього.",
+     "Небо и земля за краем карты, блик солнца, пыльца и пылинки в воздухе, один ветер для всего."},
+    {"Whole screen", "Весь екран", "Весь экран"},
+    {"The colours of the whole picture: colour grading, each region's colours, the glow of bright places.",
+     "Кольори всієї картинки: корекція кольору, кольори кожного регіону, сяйво яскравих місць.",
+     "Цвета всей картинки: цветокоррекция, цвета каждого региона, свечение ярких мест."},
+    {"Only what this map has", "Лише те, що є на цій карті", "Только то, что есть на этой карте"},
+    {"Search: {1}", "Пошук: {1}", "Поиск: {1}"},
+    {"Nothing found - Backspace erases, Esc clears",
+     "Нічого не знайдено — Backspace стирає, Esc очищує",
+     "Ничего не найдено — Backspace стирает, Esc сбрасывает"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

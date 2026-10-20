@@ -51,6 +51,17 @@ bool groupKey(const std::string& key, const std::string& val, EffectSettings& e)
             return true;
         }
     }
+    for (int g = 0; g < kOldEffectGroups; ++g) {  // 2.6.22: an old file's ten groups, held until written out
+        const std::string word = effect_groups::oldGroupWord(g);
+        if (rest == word) {
+            if (val == "1" || val == "0") e.legacyGroups[g] = val == "1";
+            return true;
+        }
+        if (rest == word + "_strength") {
+            toInt(val, 0, 200, e.legacyStrength[g]);
+            return true;
+        }
+    }
     return false;
 }
 
@@ -183,7 +194,6 @@ EffectSettings effectsOff() {
     e.morningFog = false;
     e.dew = false;
     e.flowers = false;
-    e.dapple = false;
     e.gusts = false;
     e.treeTints = false;
     e.leafLight = false;
@@ -258,7 +268,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.morningFog ||
            e.dew ||
            e.flowers ||
-           e.dapple ||
            e.gusts ||
            e.treeTints ||
            e.leafLight ||
@@ -285,7 +294,9 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
     return nightNow == o.nightNow && dayNow == o.dayNow && clock == o.clock && season == o.season &&
            weatherKind == o.weatherKind && tier == o.tier && preset == o.preset &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&
-           std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength);
+           std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength) &&
+           std::equal(legacyGroups, legacyGroups + kOldEffectGroups, o.legacyGroups) &&
+           std::equal(legacyStrength, legacyStrength + kOldEffectGroups, o.legacyStrength);
 }
 
 AiPreset aiPresetOf(const AiSettings& a) {

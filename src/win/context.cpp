@@ -662,8 +662,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     fps_.setGpu(timed ? &gpuNow : nullptr);
     fps_.present(window, fpsShown_);
     noteUsage(foreground, out.cx, out.cy, timed ? &gpuNow : nullptr);  // 2.2.1
-    if (console_.present(window, foreground, gameDir() + "\\uaro-graphics.ini", config,
-                         timed ? &gpuNow : nullptr)) {  // 1.9.3
+    if (console_.present(window, foreground, gameDir() + "\\uaro-graphics.ini", config, map_,
+                         timed ? &gpuNow : nullptr)) {  // 1.9.3; 2.6.22: the map for «Только на этой карте»
         settingsChecked_ = 0;  // read at once, at the next present
         settingsKnown_ = false;
     }

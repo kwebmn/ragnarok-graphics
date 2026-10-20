@@ -14,7 +14,7 @@ TEST(server_night_left_out_by_default_a_fix_of_every_set) {
     CHECK(!parseConfig("[effects]\nno_server_night = 0\n").effects.noServerNight);
     CHECK(!effectsOff().noServerNight);
     const effect_groups::Member* m = effect_groups::memberOf("effects.no_server_night");
-    CHECK(m && m->group == effect_groups::Fixes && m->level == 1);
+    CHECK(m && m->group == effect_groups::Time && m->level == 1);  // 2.6.22: by the clock
 }
 
 TEST(server_night_darkness_taken_away_for_the_night_alone) {

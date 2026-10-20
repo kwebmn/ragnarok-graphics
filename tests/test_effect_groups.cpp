@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <string>
 
 #include "core/effect_groups.hpp"
@@ -59,7 +60,7 @@ TEST(effect_groups_custom_keeps_the_switches_a_group_turns_its_off) {
     e.grass = true;
     e.water = false;
     CHECK(effective(e, 1).grass && !effective(e, 3).water);
-    e.groups[Nature] = false;
+    e.groups[Plants] = false;
     CHECK(!effective(e, 3).grass && effective(e, 3).torch);
     e.preset = EffectPreset::Strong;
     CHECK(!effective(e, 3).grass && effective(e, 3).water);
@@ -67,21 +68,24 @@ TEST(effect_groups_custom_keeps_the_switches_a_group_turns_its_off) {
 
 TEST(effect_groups_strength_scales_its_effects) {
     EffectSettings e;
-    e.groupStrength[Light] = 50;
-    e.groupStrength[Shadows] = 200;
+    e.groupStrength[Fire] = 50;
+    e.groupStrength[Lights] = 50;
+    e.groupStrength[Characters] = 200;
     const EffectSettings x = effective(e, 3);
     CHECK_EQ(x.torchLight, 50);
     CHECK_EQ(x.lampsLight, 30);
     CHECK_EQ(x.actorShadowsStrength, 100);  // 55 x 2, kept to its most
-    CHECK_EQ(x.heatStrength, e.heatStrength);  // another group's as it was
-    CHECK(!hasStrength(Life) && hasStrength(Water));
+    CHECK_EQ(x.weatherAmount, e.weatherAmount);  // another group's as it was
+    CHECK(!hasStrength(Creatures) && !hasStrength(Time) && !hasStrength(Caves) && !hasStrength(GameFixes));
+    CHECK(hasStrength(Waters) && hasStrength(Characters) && hasStrength(SkillEffects) && hasStrength(Sky));
 }
 
 TEST(effect_groups_ini_words) {
-    const Config c = parseConfig("[effects]\npreset = medium\ngroup_water = 0\ngroup_light_strength = 70\n");
+    const Config c = parseConfig("[effects]\npreset = medium\ngroup_waters = 0\ngroup_lights_strength = 70\n");
     CHECK(c.effects.preset == EffectPreset::Medium);
-    CHECK(!c.effects.groups[Water] && c.effects.groups[Light]);
-    CHECK_EQ(c.effects.groupStrength[Light], 70);
+    CHECK(!c.effects.groups[Waters] && c.effects.groups[Lights]);
+    CHECK_EQ(c.effects.groupStrength[Lights], 70);
+    CHECK(!hasLegacy(c.effects));
     CHECK(parseConfig("").effects.preset == EffectPreset::Custom);  // an old ini keeps its switches
     EffectPreset p = EffectPreset::Custom;
     CHECK(presetFrom("strong", p) && p == EffectPreset::Strong && !presetFrom("ultra", p));
@@ -111,14 +115,14 @@ TEST(effect_groups_shown_takes_the_sets_switches_and_mode) {
     EffectSettings e;  // custom: as written
     e.grass = true;
     e.tier = 0;
-    e.groups[Nature] = false;
-    e.groupStrength[Light] = 50;
+    e.groups[Plants] = false;
+    e.groupStrength[Lights] = 50;
     CHECK(shown(e, 1).grass && shown(e, 1).tier == 0);  // a group off is shown over the switch, not in it
     e.preset = EffectPreset::Weak;
     const EffectSettings s = shown(e, 3);
     CHECK(!s.grass && s.torch && s.tier == 1);
-    CHECK(!s.groups[Nature] && s.groups[Light]);  // the groups as written
-    CHECK_EQ(s.groupStrength[Light], 50);
+    CHECK(!s.groups[Plants] && s.groups[Lights]);  // the groups as written
+    CHECK_EQ(s.groupStrength[Lights], 50);
     CHECK_EQ(s.torchLight, e.torchLight);  // the strengths as written, not scaled by the group's
     e.preset = EffectPreset::Auto;
     CHECK(shown(e, 3).materials && shown(e, 3).tier == 2 && !shown(e, 2).materials);
@@ -128,7 +132,7 @@ TEST(effect_groups_materialize_writes_the_set_then_custom) {
     EffectSettings e;
     CHECK(materialize(e, 3).empty());  // custom already: nothing to write
     e.preset = EffectPreset::Medium;
-    e.groups[Nature] = false;  // the group stays the group's: the switches are the set's
+    e.groups[Plants] = false;  // the group stays the group's: the switches are the set's
     const auto lines = materialize(e, 3, "grass");
     CHECK_EQ(lines.size(), size_t(memberCount()) - 1 + 2);  // every switch but the one left out, tier, preset
     CHECK(lines.back().first == "preset" && lines.back().second == "custom");
@@ -154,7 +158,7 @@ TEST(effect_groups_a_materialized_set_draws_the_same) {
     // what the set drew is drawn the same once it is written out as the player's own (custom)
     for (const char* word : {"auto", "off", "weak", "medium", "strong"})
         for (int card = 1; card <= 3; ++card) {
-            const std::string text = std::string("[effects]\npreset = ") + word + "\ngroup_water = 0\n";
+            const std::string text = std::string("[effects]\npreset = ") + word + "\ngroup_waters = 0\n";
             const EffectSettings before = parseConfig(text).effects;
             std::vector<settings::IniEdit> edits;
             for (const auto& [key, value] : materialize(before, card)) edits.push_back({"effects", key, value});
@@ -164,4 +168,87 @@ TEST(effect_groups_a_materialized_set_draws_the_same) {
             for (int m = 0; m < memberCount(); ++m) CHECK(a.*members()[m].on == b.*members()[m].on);
             CHECK_EQ(a.tier, b.tier);
         }
+}
+
+TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
+    // 2.6.22 (the user: «непонятно что где искать»): a group is what the eye is on - characters, fire, water...; the
+    // night's, the season's and the weather's under the choices at the top of the page
+    const struct {
+        const char* key;
+        int group;
+    } kWhere[] = {
+        {"day_cycle", Time}, {"night_windows", Time}, {"morning_fog", Time}, {"no_server_night", Time},
+        {"seasons", Time},
+        {"weather", Weather}, {"storms", Weather}, {"wet_ground", Weather}, {"rain_wet", Weather},
+        {"sand_drift", Weather}, {"snow_sparkle", Weather},
+        {"actor_shadows", Characters}, {"sprite_light", Characters}, {"round_light", Characters},
+        {"rim_light", Characters}, {"footprints", Characters}, {"breath", Characters}, {"appear", Characters},
+        {"hit_flash", Characters}, {"aura", Characters},
+        {"skills_soft", SkillEffects}, {"skill_sparks", SkillEffects}, {"fire_light", SkillEffects},
+        {"torch", Fire}, {"embers", Fire}, {"smoke", Fire}, {"lava", Fire}, {"heat", Fire},
+        {"lamps", Lights}, {"map_glows", Lights}, {"fireflies", Lights}, {"portals", Lights}, {"glow", Lights},
+        {"shafts", Lights}, {"rays", Lights},
+        {"relief", Ground}, {"materials", Ground}, {"ground_seams", Ground}, {"smooth_hills", Ground}, {"ao", Ground},
+        {"floor_reflections", Ground}, {"glint", Ground},
+        {"grass", Plants}, {"flowers", Plants}, {"dew", Plants}, {"foliage", Plants}, {"gusts", Plants},
+        {"tree_volume", Plants}, {"leaf_light", Plants}, {"tree_tints", Plants},
+        {"leaf_fall", Plants},
+        {"water", Waters}, {"ripples", Waters}, {"shore_foam", Waters}, {"splashes", Waters},
+        {"underwater", Waters}, {"swamp", Waters}, {"fish", Waters}, {"world_reflections", Waters},
+        {"butterflies", Creatures}, {"birds", Creatures}, {"night_fireflies", Creatures},
+        {"wet_walls", Caves}, {"cave_drips", Caves}, {"lit_dust", Caves},
+        {"sky", Sky}, {"edge_land", Sky}, {"flare", Sky}, {"motes", Sky}, {"shared_wind", Sky},
+        {"grade", Screen}, {"region_looks", Screen}, {"bloom", Screen},
+        {"smooth_light", GameFixes}, {"soft_particles", GameFixes}, {"map_fade", GameFixes},
+        {"no_game_fog", GameFixes},
+    };
+    CHECK_EQ(int(sizeof kWhere / sizeof kWhere[0]), memberCount());
+    for (const auto& w : kWhere) {
+        const Member* m = memberOf(w.key);
+        if (!m || m->group != w.group) std::printf("  %s: group %d, not %d\n", w.key, m ? m->group : -1, w.group);
+        CHECK(m && m->group == w.group);
+    }
+    CHECK_EQ(kEffectGroups, 14);
+    // the file's words: none of the ten before (an old file's groups are read as they were)
+    for (int g = 0; g < kEffectGroups; ++g)
+        for (const char* old :
+             {"fixes", "light", "shadows", "surfaces", "nature", "water", "air", "life", "skills", "picture"})
+            CHECK(std::string(groupWord(g)) != old);
+    CHECK(std::string(groupWord(Time)) == "time" && std::string(groupWord(GameFixes)) == "game_fixes");
+}
+
+TEST(effect_groups_an_old_files_groups_still_hold) {
+    // 2.6.22: the ten groups before - an old file's group off keeps its effects off (as they were grouped then), its
+    // strength their strengths; the new groups stay as they are
+    const Config c = parseConfig("[effects]\npreset = custom\ngrass = 1\nflowers = 1\ntorch = 1\nlamps = 1\n"
+                                 "group_nature = 0\ngroup_light_strength = 50\n");
+    CHECK(hasLegacy(c.effects));
+    for (int g = 0; g < kEffectGroups; ++g) CHECK(c.effects.groups[g] && c.effects.groupStrength[g] == 100);
+    const EffectSettings x = effective(c.effects, 3);
+    CHECK(!x.grass && !x.flowers && x.torch);  // nature's grass and flowers off
+    CHECK_EQ(x.torchLight, 50);  // light at 50 %: the torches' and the lamps' light
+    CHECK_EQ(x.lampsLight, 30);
+    CHECK(!shown(c.effects, 3).grass);  // and so they are shown
+    CHECK(!hasLegacy(parseConfig("[effects]\ngroup_nature = 1\ngroup_light_strength = 100\n").effects));
+}
+
+TEST(effect_groups_an_old_files_groups_settle_into_the_effects) {
+    // the settings app and the console write them out once: the same picture, the old lines gone
+    for (const char* word : {"custom", "auto", "medium", "strong", "off"})
+        for (int card = 1; card <= 3; ++card) {
+            const std::string text = std::string("[effects]\npreset = ") + word +
+                                     "\ngrass = 1\ngroup_nature = 0\ngroup_light_strength = 50\ngroup_skills = 0\n";
+            const EffectSettings before = parseConfig(text).effects;
+            const std::string after = settings::applyIniEdits(text, settleLegacy(before, card));
+            CHECK(after.find("group_nature") == std::string::npos);
+            CHECK(after.find("group_light") == std::string::npos && after.find("group_skills") == std::string::npos);
+            const EffectSettings e = parseConfig(after).effects;
+            CHECK(!hasLegacy(e));
+            const EffectSettings a = effective(before, card), b = effective(e, card);
+            for (int m = 0; m < memberCount(); ++m) CHECK(a.*members()[m].on == b.*members()[m].on);
+            CHECK_EQ(a.torchLight, b.torchLight);
+            CHECK_EQ(a.lampsLight, b.lampsLight);
+            CHECK_EQ(a.tier, b.tier);
+        }
+    CHECK(settleLegacy(parseConfig("[effects]\npreset = auto\n").effects, 3).empty());  // nothing old: nothing
 }

@@ -9,6 +9,7 @@
 
 #include "app/files.hpp"
 #include "app/text.hpp"
+#include "core/effect_groups.hpp"
 #include "core/settings/compat_flags.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/recommended.hpp"
@@ -92,6 +93,30 @@ void Model::load() {
     s.folderWritable = folderWritable(paths_.dir);
     s.programFiles = underProgramFiles(paths_.dir);
     now_ = s;
+    settleOldGroups();
+}
+
+int Model::cardLevel() const {
+    const bool d3d12 = system_.d3d12Probed && system_.d3d12.ok &&
+                       token(*findSetting("renderer.api")) != "d3d11";
+    return effect_groups::cardLevel(d3d12, system_.d3d12.vramMb);
+}
+
+void Model::settleOldGroups() {
+    const auto ini = readIni(now_.iniText);
+    bool old = false;
+    for (int g = 0; g < kOldEffectGroups; ++g) {
+        const std::string key = std::string("effects.group_") + effect_groups::oldGroupWord(g);
+        old = old || ini.count(key) || ini.count(key + "_strength");
+    }
+    if (!old) return;
+    std::vector<IniEdit> edits = effect_groups::settleLegacy(now_.config.effects, cardLevel());
+    if (edits.empty()) edits = effect_groups::oldGroupLinesOut();  // only as they always were: on, 100 %
+    if (!backupOnce(Lang::En).empty()) return;  // the file left as it is: the driver holds them all the same
+    const std::string text = applyIniEdits(now_.iniText, edits);
+    if (!writeFileAtomic(paths_.ini, text)) return;
+    now_.iniText = text;
+    now_.config = parseConfig(text);
 }
 
 bool Model::refreshRunning() {

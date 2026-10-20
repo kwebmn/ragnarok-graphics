@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "core/settings/game_settings.hpp"
+#include "core/settings/old_names.hpp"
 
 namespace uagfx::settings {
 namespace {
@@ -88,6 +89,12 @@ bool textMatches(const std::string& text, const std::string& query) {
                        [&](const std::string& w) { return folded.find(w) != std::string::npos; });
 }
 
+bool settingMatches(const IniSetting& s, const std::string& query, Lang l) {
+    std::string text = std::string(tr(l, s.label)) + "\n" + tr(l, s.hint);
+    if (const char* old = oldName(sectionKey(s), l)) text += std::string("\n") + old;
+    return textMatches(text, query);
+}
+
 const std::vector<Action>& actions() {
     static const std::vector<Action> list{
         {Text::PadHeading, {View::Pad, 0}, Mode::Simple},
@@ -127,6 +134,7 @@ std::vector<Hit> findSettings(const std::string& query, Lang l, Mode m) {
         const IniSetting& s = rows[i];
         if (levelOf(s) > m) continue;
         std::string text = std::string(tr(l, s.label)) + "\n" + tr(l, s.hint);
+        if (const char* old = oldName(sectionKey(s), l)) text += std::string("\n") + old;  // 2.6.22: the name before
         if (m == Mode::Developer) text += "\n" + sectionKey(s);  // the ini's own words too
         if (!textMatches(text, query)) continue;
         add(HitKind::Ini, i, m == Mode::Simple && mainKey(sectionKey(s)) ? Place{View::Main, 0} : placeOf(s));

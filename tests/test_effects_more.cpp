@@ -184,7 +184,7 @@ TEST(no_game_fog_on_by_default_a_fix_of_every_set) {
     CHECK(!parseConfig("[effects]\nno_game_fog = 0\n").effects.noGameFog);
     CHECK(!effectsOff().noGameFog);
     const effect_groups::Member* m = effect_groups::memberOf("effects.no_game_fog");
-    CHECK(m && m->group == effect_groups::Fixes && m->level == 1);
+    CHECK(m && m->group == effect_groups::GameFixes && m->level == 1);
 }
 
 TEST(game_fog_drawn_but_under_the_open_sky_with_the_fix) {
@@ -242,6 +242,6 @@ TEST(night_creatures_off_by_default_in_no_set) {
     CHECK(e.nightFireflies);
     CHECK(!effectsOff().nightFireflies);
     const effect_groups::Member* m = effect_groups::memberOf("effects.night_fireflies");
-    CHECK(m && m->group == effect_groups::Life && m->level == 0);
+    CHECK(m && m->group == effect_groups::Creatures && m->level == 0);
     CHECK(!effect_groups::memberOf("effects.moths"));
 }

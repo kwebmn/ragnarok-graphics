@@ -71,6 +71,8 @@ public:
     bool refreshRunning();   // whether the game runs; true when that changed
     const Snapshot& now() const { return now_; }
     const SystemInfo& system() const { return system_; }
+    // 2.2: the card's level for the automatic set, as the driver finds it (effect_groups::cardLevel)
+    int cardLevel() const;
     const Paths& paths() const { return paths_; }
 
     // uaro-graphics.ini keys: the player's change, else the file's value.
@@ -162,6 +164,9 @@ private:
     // What a reset or a profile loaded keeps of the ini now: the language, (2.2.2) the statistics' answer and number.
     std::vector<settings::IniEdit> keptAcross() const;
     std::wstring backupOnce(settings::Lang l, bool prune = true);  // prune: only the 20 newest stay (spec §4.6)
+    // 2.6.22: an old file's ten groups (fixes, light...) written into the effects, the old lines taken out - at once,
+    // after a backup (effect_groups::settleLegacy)
+    void settleOldGroups();
     // Each value on its own (spec §4.5): "" or the ones that failed, "NAME (error N), ..."; the others are written.
     std::string writeValues(const std::vector<settings::RegWrite>& writes);
     std::vector<settings::IniEdit> pendingIniEdits() const;

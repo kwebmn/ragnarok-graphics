@@ -100,3 +100,13 @@ TEST(ini_edit_changes_the_shipped_file_in_place) {
     CHECK(!c.crispText);
     CHECK_EQ(out.size(), text.size());  // "50" -> "90", "1" -> "0": the same length, nothing added
 }
+
+TEST(ini_edit_takes_a_key_out) {
+    // 2.6.22: the old groups' lines taken out once they are written into the effects - every copy, comment and all
+    const std::string text = "[effects]\r\ngroup_nature = 0 ; old\r\ngrass = 1\r\n[x]\r\ngroup_nature = 5\r\n"
+                             "[effects]\r\ngroup_nature = 1\r\n";
+    IniEdit out{"effects", "group_nature", ""};
+    out.remove = true;
+    CHECK(applyIniEdits(text, {out}) == "[effects]\r\ngrass = 1\r\n[x]\r\ngroup_nature = 5\r\n[effects]\r\n");
+    CHECK(applyIniEdits("[effects]\ngrass = 1\n", {out}) == "[effects]\ngrass = 1\n");  // none: nothing added
+}

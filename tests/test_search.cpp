@@ -77,3 +77,23 @@ TEST(search_keeps_the_lists_order) {
     CHECK(ordered);
     CHECK(hits.size() <= 80);
 }
+
+TEST(search_finds_effects_by_their_old_names) {
+    // 2.6.22: the effects renamed with the new groups are found by the names the player knew too
+    CHECK(hasRow(findSettings("живые персонажи", Lang::Ru, Mode::Detailed), "effects.sprite_light"));
+    CHECK(hasRow(findSettings("объём от солнца", Lang::Ru, Mode::Detailed), "effects.sprite_light"));
+    CHECK(hasRow(findSettings("контровой", Lang::Ru, Mode::Detailed), "effects.rim_light"));
+    CHECK(hasRow(findSettings("Rim light", Lang::En, Mode::Detailed), "effects.rim_light"));
+    CHECK(hasRow(findSettings("Вологі стіни", Lang::Uk, Mode::Detailed), "effects.wet_walls"));
+    CHECK(!hasRow(findSettings("живые персонажи", Lang::Ru, Mode::Detailed), "effects.torch"));
+}
+
+TEST(search_one_setting_by_its_label_hint_and_old_name) {
+    // 2.6.22: the console's letters search by the same words as the app's search
+    const IniSetting& rim = *findSetting("effects.rim_light");
+    CHECK(settingMatches(rim, "край", Lang::Ru));        // its label now
+    CHECK(settingMatches(rim, "контровой", Lang::Ru));   // its name before
+    CHECK(settingMatches(rim, "факел", Lang::Ru));       // its hint
+    CHECK(!settingMatches(rim, "снег", Lang::Ru));
+    CHECK(!settingMatches(rim, "", Lang::Ru));           // no words: nothing
+}

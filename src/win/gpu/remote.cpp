@@ -403,7 +403,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.leafLight ? 1 : 0);
     w.u8(e.treeTints ? 1 : 0);
     w.u8(e.gusts ? 1 : 0);
-    w.u8(e.dapple ? 1 : 0);
     w.u8(e.flowers ? 1 : 0);  // 1.7.1
     w.u8(e.dew ? 1 : 0);
     w.u8(e.morningFog ? 1 : 0);

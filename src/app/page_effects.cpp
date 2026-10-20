@@ -35,10 +35,11 @@ int sliderId(int e, int k) { return 1010 + 100 * e + 10 * k; }
 int checkId(int e, int k) { return 1070 + 100 * e + 2 * k; }
 
 const char* const kPresets[] = {"auto", "off", "weak", "medium", "strong", "custom"};
-const Text kGroupNames[kEffectGroups] = {Text::FxGroupFixes,  Text::FxGroupLight, Text::FxGroupShadows,
-                                         Text::FxGroupSurfaces, Text::FxGroupNature, Text::FxGroupWater,
-                                         Text::FxGroupAir,    Text::FxGroupLife,  Text::FxGroupSkills,
-                                         Text::FxGroupPicture};
+// 2.6.22: by what the eye is on (effect_groups::Group's order)
+const Text kGroupNames[kEffectGroups] = {
+    Text::FxGroupTime,   Text::FxGroupWeather, Text::FxGroupCharacters, Text::FxGroupSkillEffects, Text::FxGroupFire,
+    Text::FxGroupLights, Text::FxGroupGround,  Text::FxGroupPlants,     Text::FxGroupWaters,
+    Text::FxGroupCreatures, Text::FxGroupCaves, Text::FxGroupSky, Text::FxGroupScreen, Text::FxGroupGameFixes};
 
 // 2.2.1: the groups opened to their effects - kept while the app runs (a page is made anew at every change)
 bool g_open[kEffectGroups] = {};
@@ -109,12 +110,13 @@ public:
             const bool on = m.token(setting(groupKey(g))) == "1";
             // its effects' costs, each timed pass once (the motes and the weather are one pass)
             double ms = 0.0;
-            int count = 0;
+            int count = 0, lit = 0;  // 2.6.22: "3 of 7 on" on its button
             std::set<std::string> passes;
             for (int i = 0; i < effect_groups::memberCount(); ++i) {
                 const effect_groups::Member& x = effect_groups::members()[i];
                 if (x.group != g) continue;
                 ++count;
+                lit += shown_.*x.on ? 1 : 0;
                 const std::string pass = effect_costs::passOf(x.key);
                 if (pass.empty() || !passes.insert(pass).second) continue;
                 const double c = effect_costs::costOf(costs, x.key);
@@ -125,8 +127,8 @@ public:
             if (effect_groups::hasStrength(g))
                 slider(p, groupSlider(g), (groupKey(g) + "_strength").c_str(), any && on);
             if (simple) continue;
-            p.buttons({{groupOpen(g),
-                        g_open[g] ? t(Text::FxDetailsHide) : tf(Text::FxDetails, {std::to_string(count)})}});
+            p.buttons({{groupOpen(g), g_open[g] ? t(Text::FxDetailsHide)
+                                                : tf(Text::FxDetails, {std::to_string(lit), std::to_string(count)})}});
             if (!g_open[g]) continue;
             for (int i = 0; i < effect_groups::memberCount(); ++i) {
                 const effect_groups::Member& x = effect_groups::members()[i];
@@ -313,13 +315,7 @@ private:
         return {};
     }
 
-    // 2.2: the card's level for the automatic set, as the driver finds it (effect_groups::cardLevel)
-    int cardLevel() const {
-        Model& m = host_.model();
-        const SystemInfo& sys = m.system();
-        const bool d3d12 = sys.d3d12Probed && sys.d3d12.ok && m.token(setting("renderer.api")) != "d3d11";
-        return effect_groups::cardLevel(d3d12, sys.d3d12.vramMb);
-    }
+    int cardLevel() const { return host_.model().cardLevel(); }  // 2.2: the card's level for the automatic set
 
     // 2.2: a set made the player's own (effect_groups::materialize) - each switch as the set has it now, the mode,
     // "custom", and `key` the switch the player changed: one write of the file in a running game. False: custom

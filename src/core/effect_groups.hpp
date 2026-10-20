@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/config.hpp"
+#include "core/settings/ini_edit.hpp"
 
 // 2.2: the Effects page made simple - a set for the card (weak, medium, strong) picks which effects are on, and nine
 // groups (light, shadows, surfaces, nature, water, air, life, skills, picture) each turn theirs on or off and make
@@ -12,10 +13,29 @@ namespace uagfx::effect_groups {
 
 // The groups, in the page's order; their ini words: [effects] group_<word> and group_<word>_strength. 2.2.1: Fixes -
 // what mends the old picture rather than adds to it (the map's light smooth, effects not cut at the walls, the
-// fade between maps), in every set.
-enum Group { Fixes, Light, Shadows, Surfaces, Nature, Water, Air, Life, Skills, Picture };
+// fade between maps), in every set. 2.6.22: fourteen, by what the eye is on (the user: «непонятно что где искать») -
+// the time of day and the year, the weather, then the world from the characters out to the sky, the whole screen,
+// the fixes; their words none of the ten before (fixes, light, shadows, surfaces, nature, water, air, life, skills,
+// picture), which an old file's lines keep (EffectSettings::legacyGroups).
+enum Group {
+    Time,          // day, night and the seasons: what the Clock and the Season at the top change
+    Weather,       // rain, snow, sand: what the Weather at the top brings
+    Characters,    // characters and monsters: their shadows, volume, light, prints, appearing, hits, aura
+    SkillEffects,  // the skills' look
+    Fire,          // torches, embers, chimney smoke, lava, heat haze
+    Lights,        // lamps, the maps' lights and fireflies, portals, glows, lit air, forest beams
+    Ground,        // the ground and the walls: relief, materials, seams, hills, corner shadows, floors, cards
+    Plants,        // grass and trees
+    Waters,        // the water and what lives in it
+    Creatures,     // butterflies, birds, fireflies
+    Caves,         // caves and dungeons: wet walls, drips, dust in the light
+    Sky,           // the sky, the land past the edge, the sun's flare, motes, the one wind
+    Screen,        // the whole picture's colours
+    GameFixes,     // what mends the game's old picture
+};
 const char* groupWord(int g);
-bool hasStrength(int g);  // false: no slider (the living world's creatures have no strength)
+const char* oldGroupWord(int g);  // 2.6.22: the ten before, for an old file's lines (0-9)
+bool hasStrength(int g);  // false: no slider (the creatures, the caves... have no strength)
 
 struct Member {
     const char* key;  // without "effects."
@@ -26,6 +46,14 @@ struct Member {
 const Member* members();
 int memberCount();
 const Member* memberOf(const std::string& key);  // "effects.x" or "x"; nullptr: not an effect's switch
+
+// 2.6.22: an old file's groups (the ten before) - any off or not at 100 %. effective() and shown() hold them by the
+// old grouping; settleLegacy() gives the lines that write them into the effects themselves - the set made the
+// player's own when one of them is off (as an effect switched under a set), the strengths into the effects', the old
+// lines taken out - the same picture after as before; none when there is nothing old.
+bool hasLegacy(const EffectSettings& e);
+std::vector<settings::IniEdit> settleLegacy(const EffectSettings& e, int cardLevel);
+std::vector<settings::IniEdit> oldGroupLinesOut();  // the old lines alone taken out (on, 100 %: nothing to keep)
 
 // The set's level: 0 off, 1 weak, 2 medium, 3 strong; auto by the card, `cardLevel` (see below); custom -1.
 int setLevel(EffectPreset p, int cardLevel);

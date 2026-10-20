@@ -24,9 +24,10 @@ app's Service page) downloads and installs the newest build; your settings stay.
   interface at the size you choose, the text and the windows' frames crisp (Screen and Graphics pages). MSAA,
   anisotropic filtering, TAA and contrast-adaptive sharpening are on the Graphics page.
 - **Effects, chosen by quality.** *Auto* picks a set by your graphics card — *Low* (Direct3D 11 or under 4 GB of
-  video memory), *Medium* (4–8 GB) or *High* (8 GB and more); *Off* and *Custom* are there too. Ten groups — fixes
-  of the picture, light, shadows, surfaces, nature, water, air and weather, the living world, skills, the picture —
-  each with its own switch and strength, and each opens to its effects. New effects come switched off.
+  video memory), *Medium* (4–8 GB) or *High* (8 GB and more); *Off* and *Custom* are there too. Fourteen groups by
+  what the eye is on — day, night and seasons; weather; characters and monsters; skills; fire and smoke; light; ground
+  and walls; grass and trees; water; creatures; caves and dungeons; sky and air; the whole screen; game fixes — each
+  with its own switch and strength, and each opens to its effects. New effects come switched off.
 - **AI textures.** The Neural network page's Pack tab builds `uaro-textures.zip` from the game's own pictures with Real-ESRGAN
   models or Game AI 2.0 (downloaded apart, `get-models.bat`), a model for each group of pictures; the game then shows
   them by kind — ground, buildings, characters and items, skills, icons.
@@ -52,7 +53,7 @@ app's Service page) downloads and installs the newest build; your settings stay.
 
 | Keys | What |
 |---|---|
-| `~` | The console: quality, groups and effects, the AI textures, the frame counter — changed live |
+| `~` | The console: quality, groups and effects (letters search), the AI textures, the frame counter — changed live |
 | `Pause` or `Scroll Lock` | Every improvement off and on again, to compare |
 | `Ctrl+Shift+F11` | The frame counter: frames a second, milliseconds, the graphics card's milliseconds |
 | `Ctrl+Shift+F12` | A screenshot of the picture as shown, into the game's `ScreenShot` folder |

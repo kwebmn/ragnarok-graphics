@@ -15,6 +15,9 @@ namespace uagfx::settings {
 std::string foldCase(const std::string& utf8);
 // Every word of the query is a part of the text, both folded.
 bool textMatches(const std::string& text, const std::string& query);
+// 2.6.22: a row of the schema by its label, its hint and its name before (old_names) in a language - the app's search
+// and the console's letters
+bool settingMatches(const IniSetting& s, const std::string& query, Lang l);
 
 enum class HitKind : uint8_t { Ini, Reg, Action };
 struct Hit {

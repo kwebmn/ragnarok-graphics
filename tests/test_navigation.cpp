@@ -65,7 +65,7 @@ TEST(nav_levels) {
     CHECK(levelOf(*findSetting("renderer.render_thread")) == Mode::Developer);
     CHECK(levelOf(*findSetting("quality.dlss")) == Mode::Simple);
     CHECK(levelOf(*findSetting("effects.preset")) == Mode::Simple);
-    CHECK(levelOf(*findSetting("effects.group_light")) == Mode::Simple);
+    CHECK(levelOf(*findSetting("effects.group_lights")) == Mode::Simple);
     CHECK(levelOf(*findSetting("effects.torch")) == Mode::Detailed);
     CHECK(levelOf(*findSetting("quality.msaa")) == Mode::Detailed);
     CHECK(mainKey("frames.fps_limit") && !mainKey("frames.keep_fps"));

@@ -1,5 +1,6 @@
 // The settings app's model (stage 2 spec §4) over the stand-ins of tests/fake_windows.cpp.
 #include "app/model.hpp"
+#include "core/effect_groups.hpp"
 #include "core/settings/game_settings.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/reg_file.hpp"
@@ -593,4 +594,27 @@ TEST(model_recommends_a_word_each_row_takes) {
     for (const IniSetting& s : iniSettings())
         CHECK(s.control == Control::Line || validToken(s, m.recommended(s)));
     CHECK_EQ(m.recommended(setting("renderer.gpu")), std::string("auto"));
+}
+
+TEST(model_settles_an_old_files_groups_at_its_start) {
+    // 2.6.22: the ten groups before written into the effects once, when the app opens - the same picture, the old
+    // lines gone, the file kept in a backup first
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-graphics.ini")] = "[effects]\r\npreset = custom\r\ngrass = 1\r\ntorch = 1\r\n"
+                                                "group_nature = 0\r\ngroup_light = 1\r\ngroup_light_strength = 100\r\n";
+    app::Model m;
+    const std::string ini = w.files[fake::path(L"uaro-graphics.ini")];
+    CHECK_EQ(valueOf(ini, "effects.grass"), std::string("0"));
+    CHECK_EQ(valueOf(ini, "effects.torch"), std::string("1"));
+    CHECK_EQ(valueOf(ini, "effects.group_nature"), std::string("<none>"));
+    CHECK_EQ(valueOf(ini, "effects.group_light"), std::string("<none>"));
+    CHECK_EQ(valueOf(ini, "effects.group_light_strength"), std::string("<none>"));
+    CHECK(!effect_groups::hasLegacy(m.now().config.effects));
+    CHECK(!m.now().config.effects.grass);
+    CHECK(w.folders.count(fake::path(kBackups)) == 1);
+    // a file of the new groups is left as it is
+    const std::string fresh = "[effects]\r\npreset = auto\r\ngroup_plants = 0\r\n";
+    w.files[fake::path(L"uaro-graphics.ini")] = fresh;
+    m.load();
+    CHECK(w.files[fake::path(L"uaro-graphics.ini")] == fresh);
 }

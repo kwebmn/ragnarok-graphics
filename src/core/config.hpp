@@ -97,12 +97,19 @@ AiSettings parseAiArgument(const std::string& word);
 // 2.2: the Effects page's set (core/effect_groups.hpp) - the card's size picks which effects are on, its groups
 // (light, water...) each on or off with a strength; custom: every switch as written below.
 enum class EffectPreset { Auto, Off, Weak, Medium, Strong, Custom };
-constexpr int kEffectGroups = 10;  // 2.2.1: the picture's fixes a group of their own
+// 2.2.1: the picture's fixes a group of their own; 2.6.22: fourteen, by what the eye is on (the user: «непонятно что
+// где искать»), the ten before read from an old file (legacyGroups) until written into the effects
+constexpr int kEffectGroups = 14;
+constexpr int kOldEffectGroups = 10;
 
 struct EffectSettings {
     EffectPreset preset = EffectPreset::Custom;  // an ini without it keeps its switches
-    bool groups[kEffectGroups] = {true, true, true, true, true, true, true, true, true, true};
-    int groupStrength[kEffectGroups] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100};  // %, 0-200
+    bool groups[kEffectGroups] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true};
+    int groupStrength[kEffectGroups] = {100, 100, 100, 100, 100, 100, 100,
+                                        100, 100, 100, 100, 100, 100, 100};  // %, 0-200
+    // 2.6.22: an old file's group_<word> of the ten groups before (effect_groups::hasLegacy, settleLegacy)
+    bool legacyGroups[kOldEffectGroups] = {true, true, true, true, true, true, true, true, true, true};
+    int legacyStrength[kOldEffectGroups] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
     // 0.22.6: the map's baked light - torches' and lamps' pools, the shadows of houses and trees on the ground -
     // smooth instead of blotches and steps (the ground's coarse lightmap blurred within its cells). On by default.
     bool smoothLight = true;
@@ -290,13 +297,13 @@ struct EffectSettings {
     bool flare = false;
     // 1.7: the living world, trees: tree_volume - a crown lit as a round shape (its side to the sun lighter);
     // leaf_light - the leaves on the crown's sunward edge lit through; tree_tints - each tree a shade of its
-    // own, autumn colours in autumn, rime in Lutie; gusts - gusts cross the woods (with foliage); dapple - spots of
-    // sun in the trees' shadows (with sun_shadows). Off by default.
+    // own, autumn colours in autumn, rime in Lutie; gusts - gusts cross the woods (with foliage). Off by default.
+    // (2.6.22: dapple - the sun's spots in the trees' shadows - gone: it drew nothing since the sun's shadows went in
+    // 2.1.4.)
     bool treeVolume = false;
     bool leafLight = false;
     bool treeTints = false;
     bool gusts = false;
-    bool dapple = false;
     // 1.7.1: the living world, the ground: flowers in the grass, dew on it in the morning (with grass); a low morning
     // fog (2.6.8: on its own, the haze gone); sand drifting over the desert, snow glittering, damp caves' walls
     // glistening. Off by default.

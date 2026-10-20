@@ -108,10 +108,10 @@ TEST(usage_changes_leave_out_what_a_set_switches) {
     CHECK(has(sets, "preset medium -> strong"));
     // the player's own switches, a group and the rest as they are
     const std::vector<std::string> own = noted("[effects]\npreset = custom\ngrass = 1\n[quality]\nsharpen = 50\n",
-                                               "[effects]\npreset = custom\ngrass = 0\ngroup_nature = 0\n"
+                                               "[effects]\npreset = custom\ngrass = 0\ngroup_plants = 0\n"
                                                "[quality]\nsharpen = 80\n",
                                                3);
-    CHECK(has(own, "grass 1 -> 0") && has(own, "group_nature 1 -> 0") && has(own, "sharpen 50 -> 80"));
+    CHECK(has(own, "grass 1 -> 0") && has(own, "group_plants 1 -> 0") && has(own, "sharpen 50 -> 80"));
     CHECK_EQ(own.size(), size_t(3));
 }
 
