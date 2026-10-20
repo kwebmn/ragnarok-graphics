@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.8 — to check
+
+- **Blinking on hills with "Grass and road seams" — fixed.** The narrow band at the edge of each cell cut across the
+  hill's crease and went under the ground in places (up to a third of a unit). As the camera turned, those places
+  hid and came out again — that was the blinking. The band now lies exactly on the ground; flat ground is unchanged.
+- **Debugging: "Ground seams view"** (the ~ console, the "AI textures" section, under "X-ray of the AI pictures"; in
+  the settings, the Debugging page). "Coloured" paints the seam strips: a cell's own band cyan, the neighbour's strip
+  magenta. "Coloured, over everything" is the same without the depth test. Direct3D 12 only.
+- Please check: prt_fild08 200 200, the seams on — does it still blink when you turn the camera? If it does, switch
+  on "Coloured": does the colour blink, and which colour; then "Coloured, over everything". And a report.
+
 # uaRO Graphics 2.7.7 — to check
 
 - **Diagnostics of "Grass and road seams" blinking on hills.** Every five seconds the driver writes to its log how
