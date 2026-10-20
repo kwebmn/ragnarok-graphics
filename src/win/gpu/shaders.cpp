@@ -2427,14 +2427,16 @@ float4 weather_ps(PresentOut i) : SV_Target {
     float3 sum = float3(0.0, 0.0, 0.0);
     float a = 0.0;
     // 1.23, dust in the light (twinY): indoors the motes show where light falls on what is behind them (the
-    // picture's copy, t0) - in the beams, by the torches - and hardly in the dark; tinted by that light
+    // picture's copy, t0) - in the beams, by the torches - and hardly in the dark; tinted by that light. 2.6.20: lit,
+    // a mote is lighter than what is behind it, and a third of it stays in the dark (by a torch's yellow wall the
+    // motes took the wall's own colour and the dark put them out - on, the dust was gone)
     float lit = 1.0;
     float3 litColour = float3(0.85, 0.80, 0.70);
     if (twinY > 0.0 && kind == 6) {
         float3 under = tex0.Load(int3(int2(i.pos.xy), 0)).rgb;
         float l = dot(under, float3(0.299, 0.587, 0.114));
-        lit = lerp(1.0, smoothstep(0.16, 0.6, l) * 2.4, twinY);
-        litColour = lerp(litColour, saturate(under * 1.3 + 0.25), 0.6 * twinY);
+        lit = lerp(1.0, 0.3 + 2.1 * smoothstep(0.12, 0.55, l), twinY);
+        litColour = lerp(litColour, saturate(under * 1.6 + 0.35), 0.6 * twinY);
     }
     [unroll] for (int layer = 0; layer < 3; ++layer) {
         float depth = 0.6 + 0.5 * float(layer);
