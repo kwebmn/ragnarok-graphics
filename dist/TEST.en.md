@@ -1,3 +1,14 @@
+# uaRO Graphics 2.6.21 — to check
+
+- **"Dust in the light" shows now.** With it the dust used to vanish: by a torch the motes took nearly the colour of
+  the yellow wall, and in the dark the effect put them out altogether. Now in the fire's light the motes are lighter
+  than what is behind them - warm specks by the torches - and in the dark a faint dust stays, about a third.
+- **"Damp cave walls": no blinking dots, the trickles run down.** The glints on the stone looked like dots in the
+  air - gone; the trickles of water crawled up the walls - now they run down.
+- Please check: in the Pyramids light motes in the warm light by the torches, a faint dust in the dark corners; with
+  Tab on the "Dust in the light" row the dust is even, without the fire's colour. In the Prontera sewers the
+  trickles on the walls by the torches run down, no dots.
+
 # uaRO Graphics 2.6.20 — to check
 
 - **Fixed the black screen at the login (1 frame a second).** In 2.6.19 the renderer (uaro-render64.exe) went down
