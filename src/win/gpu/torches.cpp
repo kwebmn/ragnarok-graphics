@@ -492,7 +492,7 @@ bool Renderer::Impl::applyTorches() {
     flames.swap(torchFlames);
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float time = waterTime();  // the effects' clock
-    const float amount = 0.35f * float(std::clamp(effects.torchFlicker, 0, 100)) / 100.0f;
+    const float amount = torch::flickerAmount(effects.torchFlicker);  // 2.6.16: the slider's ends seen
     const rsw::World* layout = viewToWorldValid && mapWorld.axes().known() ? mapWorld.world() : nullptr;
     const map::Axes axes = mapWorld.axes();
     // Off the screen by more than this (game pixels) a flame or a lamp's middle is not drawn nor lit from.

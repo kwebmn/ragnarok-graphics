@@ -322,7 +322,7 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     const rsw::World* layout = viewToWorldValid && mapWorld.axes().known() ? mapWorld.world() : nullptr;
     std::vector<actor_shadows::Light> lights;
     if (layout) lights = actor_shadows::lightsOf(*layout, mapWorld.lamps(), mapWorld.axes());
-    const float flicker = 0.35f * float(std::clamp(effects.torchFlicker, 0, 100)) / 100.0f;
+    const float flicker = torch::flickerAmount(effects.torchFlicker);
     const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     std::vector<actor_shadows::ShadowQuad> quads = actor_shadows::cast(
         blobs, layers,

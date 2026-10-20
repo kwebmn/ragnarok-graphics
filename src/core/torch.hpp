@@ -42,6 +42,10 @@ bool flameOfQuad(const uint8_t* vertices, size_t stride, Flame& out);
 
 // How bright a flame burns at time t (seconds): about 1, within 1 +- amount, smooth; each seed its own way.
 float flicker(double t, uint32_t seed, float amount);
+// 2.6.16: effects.torch_flicker (0-100 %) as flicker()'s amount - 50 % the calm flicker the torches had (0.175), 0
+// steady, 100 % four times its swing (0.7): the slider's ends now seen (R-N3ZZ3F: 0-100 % moved the light on the
+// walls between steady and 12 %).
+float flickerAmount(int percent);
 // A torch's seed from where it stands on the map (world x and z, ten units a cell): the same while the camera moves.
 uint32_t seedAt(float x, float z);
 

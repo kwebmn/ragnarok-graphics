@@ -265,7 +265,7 @@ void Renderer11::applyTorchLight() {
     }
     const float time = waterTime();  // 2.5.2: the effects' clock, as Direct3D 12's
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
-    const float amount = 0.35f * float(std::clamp(effects_.torchFlicker, 0, 100)) / 100.0f;
+    const float amount = torch::flickerAmount(effects_.torchFlicker);  // 2.6.16
     const float strength = 0.4f * float(std::clamp(effects_.torchLight, 0, 200)) / 100.0f;
     const float k = float(scale_);
     const int w = target_.width, h = target_.height;

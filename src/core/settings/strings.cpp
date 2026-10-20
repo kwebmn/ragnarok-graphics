@@ -793,9 +793,12 @@ const Entry kTexts[] = {
      "Скільки теплого світла смолоскип кидає на землю, стіни й тих, хто поруч; 0 % — без нього.",
      "Сколько тёплого света факел бросает на землю, стены и тех, кто рядом; 0 % — без него."},
     {"Flicker", "Мерехтіння", "Мерцание"},
-    {"How much the fire and its light flicker; 0 % burns evenly.",
-     "Наскільки мерехтять вогонь і його світло; 0 % — горить рівно.",
-     "Насколько мерцают огонь и его свет; 0 % — горит ровно."},
+    {"How much the fire and its light flicker: 0 % burns evenly, 50 % calmly, 100 % a lively fire throwing its light "
+     "about the walls.",
+     "Наскільки мерехтять вогонь і його світло: 0 % — горить рівно, 50 % — спокійно, 100 % — жвавий вогонь, що "
+     "кидає світло по стінах.",
+     "Насколько мерцают огонь и его свет: 0 % — горит ровно, 50 % — спокойно, 100 % — живой огонь, который бросает "
+     "свет по стенам."},
     {"New flame", "Новий вогонь", "Новый огонь"},
     {"A flame that burns, sways and throws sparks instead of the game's blurred picture. Off: the game's own flame, "
      "with the new glow and light around it.",

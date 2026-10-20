@@ -94,6 +94,11 @@ float flicker(double t, uint32_t seed, float amount) {
     return 1.0f + amount * (2.0f * n - 1.0f);
 }
 
+float flickerAmount(int percent) {
+    const float k = float(std::clamp(percent, 0, 100)) / 50.0f;
+    return 0.175f * k * k;
+}
+
 uint32_t seedAt(float x, float z) {
     const int32_t i = int32_t(std::floor(x / 5.0f)), j = int32_t(std::floor(z / 5.0f));
     return mix(uint32_t(i) * 0x9E3779B1u ^ mix(uint32_t(j) + 0x632BE5ABu));

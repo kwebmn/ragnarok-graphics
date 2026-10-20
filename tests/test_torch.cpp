@@ -119,3 +119,13 @@ TEST(torch_flame_of_the_games_vertices) {
         CHECK(!torch::flameOfQuad(v.data(), stride, f));
     }
 }
+
+TEST(torch_flicker_amount_by_the_slider) {
+    // 2.6.16: R-N3ZZ3F - "the flicker seems to change nothing": 0-100 % moved the light on the walls from steady to
+    // only 12 %. Now 50 % is the calm flicker the torches had, 0 steady, 100 % four times its swing
+    CHECK(torch::flickerAmount(0) == 0.0f);
+    CHECK(near(torch::flickerAmount(50), 0.175f, 1e-6f));
+    CHECK(near(torch::flickerAmount(100), 0.7f, 1e-6f));
+    CHECK(torch::flickerAmount(25) < 0.5f * torch::flickerAmount(50));
+    CHECK(torch::flickerAmount(150) == torch::flickerAmount(100) && torch::flickerAmount(-5) == 0.0f);
+}
