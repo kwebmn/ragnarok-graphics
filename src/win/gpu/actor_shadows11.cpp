@@ -20,8 +20,8 @@
 
 // 0.60.1: the characters' shadows with Direct3D 11 - as Direct3D 12's actor_shadows.cpp: the game's round shadows
 // and the sprite layers standing on them cast their shadows into a half-sized mask, softened and multiplied into the
-// picture before the characters are drawn. The light is the sun's alone (Direct3D 12 also turns them away from the
-// map's lamps, with the game's camera).
+// picture before the characters are drawn. 2.6.14: the light as Direct3D 12's - the sun's, the map's torches and
+// lamps' (core/actor_shadows.hpp castsFor).
 namespace uagfx::gpu {
 namespace {
 
@@ -171,9 +171,17 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
     if (blobs.empty()) return;  // no character in view: the game's round shadows stay
     // 0.74: the sun's way and the shadows' length by the time of day (core/daylight.hpp)
     const daylight::Light sun = daylight::at(effects_.dayCycle ? effects_.dayNow : -1);
-    std::vector<std::array<float, 2>> dirs(blobs.size(), std::array<float, 2>{sun.shadow[0], sun.shadow[1]});
-    std::vector<actor_shadows::ShadowQuad> quads =
-        actor_shadows::cast(blobs, layers, dirs, sun.shadow, kLength * sun.length);
+    // 2.6.14: and the map's torches and lamps under the ground and at night, as Direct3D 12's
+    const rsw::World* layout = cameraValid_ && mapWorld_.axes().known() ? mapWorld_.world() : nullptr;
+    std::vector<actor_shadows::Light> lights;
+    if (layout) lights = actor_shadows::lightsOf(*layout, mapWorld_.lamps(), mapWorld_.axes());
+    const float flicker = 0.35f * float(std::clamp(effects_.torchFlicker, 0, 100)) / 100.0f;
+    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    std::vector<actor_shadows::ShadowQuad> quads = actor_shadows::cast(
+        blobs, layers,
+        actor_shadows::castsFor(blobs, lights, camera::projectionFor(gameWidth_, gameHeight_), viewToWorld_,
+                                layout != nullptr, sun.shadow, sun.length, outdoors_, night, kLength,
+                                double(waterTime()), flicker));
     for (size_t i = 0; i < rounds.size(); ++i) {  // the round ones, under the feet
         const actor_shadows::Layer& r = rounds[i];
         actor_shadows::ShadowQuad sq{};

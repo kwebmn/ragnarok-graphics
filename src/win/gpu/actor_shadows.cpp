@@ -316,49 +316,18 @@ bool Renderer::Impl::applyActorShadows(const FrameRecord& rec, size_t from) {
     }
     // 0.94: the feet for the footprints are noted as the round shadows are drawn (noteFoot)
     if (blobs.empty()) return true;  // no character in view: the game's round shadows, if any, stay
-    // Each character's light: away from the map's nearest torch or lamp within 50 units, else the sun's way.
-    std::vector<std::array<float, 2>> dirs;
+    // 2.6.14: each character's shadows - the sun's under the open sky by day; under the ground, and as the night
+    // darkens the world, the map's two nearest torches or lamps', longer the farther off, fainter as their light
+    // fades, trembling with a flame (core/actor_shadows.hpp castsFor)
     const rsw::World* layout = viewToWorldValid && mapWorld.axes().known() ? mapWorld.world() : nullptr;
-    if (layout) {
-        const map::Axes axes = mapWorld.axes();
-        std::vector<map::Point> lamps;
-        for (const rsw::Effect& e : layout->effects)
-            if (e.id == 47 || e.id == 690 || e.id == 691 || e.id == 696)
-                lamps.push_back(map::toWorld(axes, map::Point{e.pos[0], e.pos[1], e.pos[2]}));
-        for (const rsw::Light& r : mapWorld.lamps())
-            lamps.push_back(map::toWorld(axes, map::Point{r.pos[0], r.pos[1], r.pos[2]}));
-        const float* m = viewToWorld;
-        for (const actor_shadows::Blob& b : blobs) {
-            const float vz = b.viewZ, vx = (b.x - proj.cx) * vz / proj.f0, vy = (b.y - proj.cy) * vz / proj.f1;
-            const map::Point feet{vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[1] + vy * m[4] + vz * m[7] + m[10],
-                                  vx * m[2] + vy * m[5] + vz * m[8] + m[11]};
-            const map::Point* nearest = nullptr;
-            float best = 50.0f;
-            for (const map::Point& p : lamps) {
-                const float dd = std::hypot(p.x - feet.x, p.z - feet.z);
-                if (dd < best && dd > 1.0f) {
-                    best = dd;
-                    nearest = &p;
-                }
-            }
-            std::array<float, 2> dir = {sun[0], sun[1]};
-            if (nearest) {  // the feet and a point a little away from the light, on the screen
-                const float ax = (feet.x - nearest->x) / best, az = (feet.z - nearest->z) / best;
-                const map::Point a{feet.x + ax * 5.0f, feet.y, feet.z + az * 5.0f};
-                const float dx = a.x - m[9], dy = a.y - m[10], dz = a.z - m[11];
-                const float px = dx * m[0] + dy * m[1] + dz * m[2], py = dx * m[3] + dy * m[4] + dz * m[5];
-                const float pz = dx * m[6] + dy * m[7] + dz * m[8];
-                if (pz > proj.nearZ) {
-                    const float sx = px / pz * proj.f0 + proj.cx - b.x, sy = py / pz * proj.f1 + proj.cy - b.y;
-                    const float len = std::hypot(sx, sy);
-                    if (len > 0.5f) dir = {sx / len, sy / len};
-                }
-            }
-            dirs.push_back(dir);
-        }
-    }
-    std::vector<actor_shadows::ShadowQuad> quads =
-        actor_shadows::cast(blobs, layers, dirs, sun, kLength * shadowLength);
+    std::vector<actor_shadows::Light> lights;
+    if (layout) lights = actor_shadows::lightsOf(*layout, mapWorld.lamps(), mapWorld.axes());
+    const float flicker = 0.35f * float(std::clamp(effects.torchFlicker, 0, 100)) / 100.0f;
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    std::vector<actor_shadows::ShadowQuad> quads = actor_shadows::cast(
+        blobs, layers,
+        actor_shadows::castsFor(blobs, lights, proj, viewToWorld, layout != nullptr, sun, shadowLength, mapOutdoors,
+                                night, kLength, double(waterTime()), flicker));
     for (size_t i = 0; i < rounds.size(); ++i) {  // the round ones, under the feet
         const actor_shadows::Layer& r = rounds[i];
         actor_shadows::ShadowQuad q{};

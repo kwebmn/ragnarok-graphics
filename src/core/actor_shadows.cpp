@@ -3,10 +3,22 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/torch.hpp"
+
 namespace uagfx::actor_shadows {
 
 std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<Layer>& layers,
                              const std::vector<std::array<float, 2>>& dirs, const float dir[2], float length) {
+    std::vector<std::vector<Cast>> casts(blobs.size());
+    for (size_t b = 0; b < blobs.size(); ++b) {
+        const float* d = dirs.size() == blobs.size() ? dirs[b].data() : dir;
+        casts[b].push_back(Cast{{d[0], d[1]}, length, 1.0f});
+    }
+    return cast(blobs, layers, casts);
+}
+
+std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<Layer>& layers,
+                             const std::vector<std::vector<Cast>>& casts) {
     std::vector<ShadowQuad> out;
     for (const Layer& l : layers) {
         float x0 = l.corner[0][0], x1 = x0, top = l.corner[0][1], bottom = top;
@@ -47,24 +59,101 @@ std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<L
             closest = off(s);
             best = int(b);
         }
-        if (best < 0) continue;
+        if (best < 0 || size_t(best) >= casts.size()) continue;
         const Blob& s = blobs[size_t(best)];
-        const float* d = dirs.size() == blobs.size() ? dirs[size_t(best)].data() : dir;
-        ShadowQuad q;
-        for (int i = 0; i < 4; ++i) {
-            const float h = std::max(0.0f, s.y - l.corner[i][1]) * length;
-            q.corner[i][0] = l.corner[i][0] + d[0] * h;
-            q.corner[i][1] = s.y + d[1] * h;
-            q.uv[i][0] = l.uv[i][0];
-            q.uv[i][1] = l.uv[i][1];
+        for (const Cast& c : casts[size_t(best)]) {
+            ShadowQuad q;
+            for (int i = 0; i < 4; ++i) {
+                const float h = std::max(0.0f, s.y - l.corner[i][1]) * c.length;
+                q.corner[i][0] = l.corner[i][0] + c.dir[0] * h;
+                q.corner[i][1] = s.y + c.dir[1] * h;
+                q.uv[i][0] = l.uv[i][0];
+                q.uv[i][1] = l.uv[i][1];
+            }
+            q.alpha = l.alpha * c.weight;
+            q.viewZ = s.viewZ;
+            q.feetX = s.x;
+            q.feetY = s.y;
+            q.texture = l.texture;
+            q.owned = owned;
+            out.push_back(q);
         }
-        q.alpha = l.alpha;
-        q.viewZ = s.viewZ;
-        q.feetX = s.x;
-        q.feetY = s.y;
-        q.texture = l.texture;
-        q.owned = owned;
-        out.push_back(q);
+    }
+    return out;
+}
+
+std::vector<Lit> litBy(const std::vector<Light>& lights, float feetX, float feetY, float feetZ, double time,
+                       float flicker) {
+    struct Near {
+        const Light* light;
+        float distance;
+    };
+    std::vector<Near> near;
+    for (const Light& l : lights) {
+        const float d = std::hypot(feetX - l.x, feetZ - l.z);
+        if (d > 1.0f && d < l.reach) near.push_back(Near{&l, d});
+    }
+    std::sort(near.begin(), near.end(), [](const Near& a, const Near& b) { return a.distance < b.distance; });
+    if (near.size() > 2) near.resize(2);
+    std::vector<Lit> out;
+    for (const Near& n : near) {
+        const Light& l = *n.light;
+        const float height = std::clamp(feetY - l.y, 4.0f, 40.0f);  // up along -y
+        const float t = std::clamp((n.distance - l.reach / 3.0f) / (l.reach * 2.0f / 3.0f), 0.0f, 1.0f);
+        float weight = 1.0f - t * t * (3.0f - 2.0f * t);
+        if (l.seed) weight *= torch::flicker(time, l.seed, flicker);
+        Lit lit;
+        lit.awayX = (feetX - l.x) / n.distance;
+        lit.awayZ = (feetZ - l.z) / n.distance;
+        lit.length = std::clamp(n.distance / height, 0.35f, 2.2f);
+        lit.weight = std::clamp(weight, 0.0f, 1.0f);
+        out.push_back(lit);
+    }
+    return out;
+}
+
+std::vector<Light> lightsOf(const rsw::World& map, const std::vector<rsw::Light>& lamps, const map::Axes& axes) {
+    std::vector<Light> out;
+    for (const rsw::Effect& e : map.effects)
+        if (e.id == 47 || e.id == 690 || e.id == 691 || e.id == 696) {
+            const map::Point p = map::toWorld(axes, map::Point{e.pos[0], e.pos[1], e.pos[2]});
+            out.push_back(Light{p.x, p.y, p.z, 40.0f, torch::seedAt(p.x, p.z) | 1u});
+        }
+    for (const rsw::Light& r : lamps) {
+        const map::Point p = map::toWorld(axes, map::Point{r.pos[0], r.pos[1], r.pos[2]});
+        out.push_back(Light{p.x, p.y, p.z, std::clamp(r.range * 0.45f, 15.0f, 70.0f), 0});
+    }
+    return out;
+}
+
+std::vector<std::vector<Cast>> castsFor(const std::vector<Blob>& blobs, const std::vector<Light>& lights,
+                                        const camera::Projection& p, const float viewToWorld[12], bool known,
+                                        const float sun[2], float sunLength, bool openSky, float night, float base,
+                                        double time, float flicker) {
+    const float dark = std::clamp(night, 0.0f, 1.0f);
+    const float sunWeight = openSky ? 1.0f - dark : 0.0f, fireWeight = openSky ? dark : 1.0f;
+    const float* m = viewToWorld;
+    std::vector<std::vector<Cast>> out(blobs.size());
+    for (size_t i = 0; i < blobs.size(); ++i) {
+        const Blob& b = blobs[i];
+        if (known && fireWeight > 0.01f && !lights.empty() && p.f0 > 0.0f && p.f1 > 0.0f) {
+            const float vz = b.viewZ, vx = (b.x - p.cx) * vz / p.f0, vy = (b.y - p.cy) * vz / p.f1;
+            const float fx = vx * m[0] + vy * m[3] + vz * m[6] + m[9], fy = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
+            const float fz = vx * m[2] + vy * m[5] + vz * m[8] + m[11];
+            for (const Lit& l : litBy(lights, fx, fy, fz, time, flicker)) {
+                const float weight = l.weight * fireWeight;
+                if (weight < 0.01f) continue;
+                // the feet and a point five units away from the light, on the screen
+                const float dx = fx + l.awayX * 5.0f - m[9], dy = fy - m[10], dz = fz + l.awayZ * 5.0f - m[11];
+                const float px = dx * m[0] + dy * m[1] + dz * m[2], py = dx * m[3] + dy * m[4] + dz * m[5];
+                const float pz = dx * m[6] + dy * m[7] + dz * m[8];
+                if (pz <= p.nearZ) continue;
+                const float sx = px / pz * p.f0 + p.cx - b.x, sy = py / pz * p.f1 + p.cy - b.y;
+                const float len = std::hypot(sx, sy);
+                if (len > 0.5f) out[i].push_back(Cast{{sx / len, sy / len}, base * l.length, weight});
+            }
+        }
+        if (sunWeight > 0.01f) out[i].push_back(Cast{{sun[0], sun[1]}, base * sunLength, sunWeight});
     }
     return out;
 }

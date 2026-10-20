@@ -896,12 +896,15 @@ const Entry kTexts[] = {
     {"How brightly the lava glows and lights around it.", "Наскільки яскраво лава сяє та освітлює довкола.",
      "Насколько ярко лава светится и освещает всё вокруг."},
     {"Characters' shadows", "Тіні персонажів", "Тени персонажей"},
-    {"Characters and monsters cast soft shadows the shape of their sprites - on the ground, away from the light: from "
-     "a torch nearby, else from the sun - instead of the game's round spot under the feet.",
-     "Персонажі й монстри відкидають м'які тіні за формою спрайта — на землю, від світла: від смолоскипа поруч, інакше "
-     "від сонця — замість круглої плями гри під ногами.",
-     "Персонажи и монстры отбрасывают мягкие тени по форме спрайта — на землю, от света: от факела рядом, иначе от "
-     "солнца — вместо круглого пятна игры под ногами."},
+    {"Characters and monsters cast soft shadows the shape of their sprites on the ground, instead of the game's round "
+     "spot under the feet: by day from the sun; underground and at night from the two nearest torches and lamps - "
+     "short by a fire, longer farther off, fading with its light and trembling with its flame.",
+     "Персонажі й монстри відкидають м'які тіні за формою спрайта на землю замість круглої плями гри під ногами: удень "
+     "від сонця; під землею й уночі — від двох найближчих смолоскипів і ліхтарів: коротка біля вогню, довша далі, "
+     "блідне з його світлом і тремтить із полум'ям.",
+     "Персонажи и монстры отбрасывают мягкие тени по форме спрайта на землю вместо круглого пятна игры под ногами: "
+     "днём от солнца; под землёй и ночью — от двух ближайших факелов и фонарей: короткая у огня, длиннее дальше, "
+     "бледнеет с его светом и дрожит вместе с пламенем."},
     {"Shadows' darkness", "Темрява тіней", "Темнота теней"},
     {"How dark the characters' shadows are.", "Наскільки темні тіні персонажів.", "Насколько темны тени персонажей."},
     {"Heat haze", "Марево від жару", "Марево от жара"},

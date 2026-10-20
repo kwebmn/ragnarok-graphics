@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "core/game_camera.hpp"
+#include "core/map_axes.hpp"
+#include "core/rsw.hpp"
 
 namespace uagfx::actor_shadows {
 
@@ -46,6 +48,54 @@ struct ShadowQuad {
 // from `dirs` when it has as many) for `length` of its height above them.
 std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<Layer>& layers,
                              const std::vector<std::array<float, 2>>& dirs, const float dir[2], float length);
+
+// 2.6.14: one of a character's shadows - its way on the screen (a unit), its length (of a layer's height above the
+// feet) and how dark (0-1, the layer's alpha times it)
+struct Cast {
+    float dir[2];
+    float length;
+    float weight;
+};
+
+// Each blob's shadows as `casts` has them, one list a blob (none: none but the game's round one).
+std::vector<ShadowQuad> cast(const std::vector<Blob>& blobs, const std::vector<Layer>& layers,
+                             const std::vector<std::vector<Cast>>& casts);
+
+// 2.6.14: a light of the map a shadow falls from - where it is in the world (up along -y), how far its light reaches
+// (world units), its flame's seed (torch::seedAt; 0 a steady lamp).
+struct Light {
+    float x, y, z;
+    float reach;
+    uint32_t seed;
+};
+
+// A light about a character's feet: the way away from it along the ground (x, z, a unit), the shadow's length - the
+// feet's distance from it over its height above them (a light above throws it short, one far off long), 0.35-2.2 -
+// and how dark: whole within a third of its reach, none at the reach, a flame's trembling with it.
+struct Lit {
+    float awayX, awayZ;
+    float length;
+    float weight;
+};
+
+// The two nearest lights within their reach and more than a unit off the feet, the nearest first; `flicker` the
+// flames' amount (as the torches' light trembles), `time` seconds.
+std::vector<Lit> litBy(const std::vector<Light>& lights, float feetX, float feetY, float feetZ, double time,
+                       float flicker);
+
+// 2.6.14: the map's lights a shadow falls from - its torches (map effect 47, and 690, 691, 696 the game does not
+// show), each reaching 40 units and trembling by its place, and its lamps (`lamps`: those not on a torch), reaching
+// as far as their light (0.45 of their range, 15-70), steady - in the game's world by the map's axes.
+std::vector<Light> lightsOf(const rsw::World& map, const std::vector<rsw::Light>& lamps, const map::Axes& axes);
+
+// 2.6.14: each blob's shadows, `base` long of a layer's height: under the ground from the two nearest of `lights`
+// about its feet (litBy, turned to the screen by the projection and the camera backwards, `known`), none with no fire
+// near; under the open sky the sun's way (`sun`, `sunLength`) by day - it outshines a torch - and the fires' as the
+// night (0-1) darkens the world, the sun's fading with it: both at dusk, the fires' alone at night.
+std::vector<std::vector<Cast>> castsFor(const std::vector<Blob>& blobs, const std::vector<Light>& lights,
+                                        const camera::Projection& p, const float viewToWorld[12], bool known,
+                                        const float sun[2], float sunLength, bool openSky, float night, float base,
+                                        double time, float flicker);
 
 // 2.6.3 (shadow_ps does the same): the ground's view depth at game pixel (x, y) under a character whose feet stand at
 // (feetX, feetY), feetZ deep - along `slope` (view units a pixel down the screen, from the scene's depth just below
