@@ -1,3 +1,13 @@
+# uaRO Graphics 2.7.9 — to check
+
+- **"Grass and road seams" blinking in the middle of a map — fixed.** The neighbour's strip (magenta in the seams
+  view) picks which way to bend the wavy line between grass and road by comparing two cells. On the map's middle row
+  that comparison hung on an error of thousandths of a unit that changes as the camera turns — the line jumped back
+  and forth. prt_fild 200 200 is exactly the map's middle. The side no longer depends on the camera; elsewhere the
+  seams look as before.
+- Please check: prt_fild08 200 200, the seams on — turn the camera. Does it still blink? To see it, you can switch on
+  "Ground seams view" → "Coloured" (the ~ console): does the magenta blink.
+
 # uaRO Graphics 2.7.8 — to check
 
 - **Blinking on hills with "Grass and road seams" — fixed.** The narrow band at the edge of each cell cut across the
