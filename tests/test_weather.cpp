@@ -21,3 +21,22 @@ TEST(weather_by_the_map) {
                           "ein_in01", "nif_in", ""})
         CHECK(weather::of(m) == Kind::None);
 }
+
+TEST(weather_chosen_like_the_clock) {
+    // 2.6.22, [effects] weather_kind (the user: «и погоду также сделай»): the map's own (auto), clear skies, or one of
+    // the four the player chose under every open sky - never under a roof
+    CHECK(weather::chosen(weather::kWeatherAuto, "xmas") == Kind::Snow);
+    CHECK(weather::chosen(weather::kWeatherAuto, "niflheim") == Kind::Rain);
+    CHECK(weather::chosen(weather::kWeatherAuto, "prontera") == Kind::None);
+    CHECK(weather::chosen(weather::kWeatherClear, "xmas") == Kind::None);
+    CHECK(weather::chosen(weather::kWeatherClear, "niflheim") == Kind::None);
+    CHECK(weather::chosen(weather::kWeatherRain, "prt_fild08") == Kind::Rain);
+    CHECK(weather::chosen(weather::kWeatherSnow, "prontera") == Kind::Snow);
+    CHECK(weather::chosen(weather::kWeatherLeaves, "morocc") == Kind::Leaves);
+    CHECK(weather::chosen(weather::kWeatherSand, "payon") == Kind::Sand);
+    for (int c = weather::kWeatherClear; c < weather::kWeathers; ++c)
+        for (const char* m : {"payon_in01", "pay_dun00", "xmas_in", "moc_pryd01", "ein_in01", ""})
+            CHECK(weather::chosen(c, m) == Kind::None);
+    CHECK(weather::chosen(42, "payon") == Kind::Leaves);  // none of them: the map's
+    CHECK(weather::chosen(-1, "xmas") == Kind::Snow);
+}

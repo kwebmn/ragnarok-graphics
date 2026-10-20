@@ -6,6 +6,7 @@
 #include "core/seasons.hpp"
 #include "core/settings/schema.hpp"
 #include "core/sprite_exe.hpp"
+#include "core/weather.hpp"
 
 #include <algorithm>
 
@@ -281,8 +282,8 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
         if (s.flag && this->*s.flag != o.*s.flag) return false;
         if (s.number && this->*s.number != o.*s.number) return false;
     }
-    return nightNow == o.nightNow && dayNow == o.dayNow && clock == o.clock && season == o.season && tier == o.tier &&
-           preset == o.preset &&
+    return nightNow == o.nightNow && dayNow == o.dayNow && clock == o.clock && season == o.season &&
+           weatherKind == o.weatherKind && tier == o.tier && preset == o.preset &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&
            std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength);
 }
@@ -491,6 +492,10 @@ Config parseConfig(const std::string& text) {
             static const char* const kWords[seasons::kSeasons] = {"auto", "spring", "summer", "autumn", "winter"};
             for (int k = 0; k < seasons::kSeasons; ++k)
                 if (val == kWords[k]) c.effects.season = k;
+        } else if (key == "effects.weather_kind") {  // 2.6.22
+            static const char* const kWords[weather::kWeathers] = {"auto", "clear", "rain", "snow", "leaves", "sand"};
+            for (int k = 0; k < weather::kWeathers; ++k)
+                if (val == kWords[k]) c.effects.weatherKind = k;
         } else if (key == "effects.tier") {  // 1.8
             if (val == "auto") c.effects.tier = 0;
             if (val == "classic") c.effects.tier = 1;

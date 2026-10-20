@@ -952,13 +952,14 @@ const Entry kTexts[] = {
     {"Portals' strength", "Сила порталів", "Сила порталов"},
     {"How bright their glow and how strong the swirl is.", "Наскільки яскраве світіння та сильний вир.",
      "Насколько ярко свечение и силён вихрь."},
-    {"Weather", "Погода", "Погода"},
-    {"The driver's own weather on some maps: snow over Lutie, leaves falling in Payon's woods, sand in the wind about "
-     "Morroc, a fine rain over Niflheim and Einbroch.",
-     "Власна погода драйвера на деяких картах: сніг над Лютією, листопад у лісах Пайона, піщаний вітер довкола "
-     "Морока, дрібний дощ над Нифльгеймом та Ейнброхом.",
-     "Своя погода драйвера на некоторых картах: снег над Лютией, листопад в лесах Пайона, песчаный ветер вокруг "
-     "Морокка, мелкий дождь над Нифльхеймом и Эйнброхом."},
+    {"Precipitation", "Опади", "Осадки"},  // 2.6.22: the Weather is the choice above
+    {"Snow, rain, falling leaves or sand in the wind - by the Weather choice at the top (Auto - the map's own: snow "
+     "over Lutie, leaves falling in Payon's woods, sand in the wind about Morroc, a fine rain over Niflheim and "
+     "Einbroch).",
+     "Сніг, дощ, листопад чи піщаний вітер — за вибором «Погода» вгорі (Авто — своя погода карти: сніг над Лютією, "
+     "листопад у лісах Пайона, піщаний вітер довкола Морока, дрібний дощ над Нифльгеймом та Ейнброхом).",
+     "Снег, дождь, листопад или песчаный ветер — по выбору «Погода» вверху (Авто — своя погода карты: снег над "
+     "Лютией, листопад в лесах Пайона, песчаный ветер вокруг Морокка, мелкий дождь над Нифльхеймом и Эйнброхом)."},
     {"Weather's amount", "Кількість опадів", "Количество осадков"},
     {"How much snow, rain, leaves or sand there is.", "Скільки снігу, дощу, листя чи піску.",
      "Сколько снега, дождя, листьев или песка."},
@@ -1559,10 +1560,10 @@ const Entry kTexts[] = {
     {"Thunderstorms",
      "Грози",
      "Грозы"},
-    {"Where it rains (with the weather on), lightning flashes now and then and lights up everything for a moment. "
+    {"Where it rains (with Precipitation on), lightning flashes now and then and lights up everything for a moment. "
      "Direct3D 12.",
-     "Де йде дощ (з увімкненою погодою), час від часу спалахує блискавка й на мить освітлює все. Direct3D 12.",
-     "Где идёт дождь (с включённой погодой), время от времени сверкает молния и на миг освещает всё. Direct3D 12."},
+     "Де йде дощ (з увімкненими «Опадами»), час від часу спалахує блискавка й на мить освітлює все. Direct3D 12.",
+     "Где идёт дождь (с включёнными «Осадками»), время от времени сверкает молния и на миг освещает всё. Direct3D 12."},
     {"Grass",
      "Трава",
      "Трава"},
@@ -1714,11 +1715,11 @@ const Entry kTexts[] = {
      "Мокра земля в дощ",
      "Мокрая земля в дождь"},
     {"On maps where it rains the ground is a little darker and puddles here and there mirror the houses, the trees "
-     "and the characters (with the weather on, Direct3D 12).",
+     "and the characters (with Precipitation on, Direct3D 12).",
      "На мапах, де йде дощ, земля трохи темніша, а калюжі подекуди віддзеркалюють будинки, дерева й персонажів (з "
-     "увімкненою погодою, Direct3D 12).",
-     "На картах, где идёт дождь, земля чуть темнее, а лужи кое-где отражают дома, деревья и персонажей (с включённой "
-     "погодой, Direct3D 12)."},
+     "увімкненими «Опадами», Direct3D 12).",
+     "На картах, где идёт дождь, земля чуть темнее, а лужи кое-где отражают дома, деревья и персонажей (с включёнными "
+     "«Осадками», Direct3D 12)."},
     {"Sun flare",
      "Відблиск сонця",
      "Блик солнца"},
@@ -2369,11 +2370,11 @@ const Entry kTexts[] = {
      "Мокре під дощем",
      "Мокрое под дождём"},
     {"Where it rains, the walls, roofs and models get wet too, not only the ground: darker, with a sheen where you "
-     "look along them and water running down the walls. Needs the weather (Direct3D 12).",
+     "look along them and water running down the walls. Needs Precipitation on (Direct3D 12).",
      "Де йде дощ, мокнуть не лише земля, а й стіни, дахи й моделі: темніші, з полиском, коли дивишся вздовж них, і "
-     "водою, що стікає стінами. Потрібна погода (Direct3D 12).",
+     "водою, що стікає стінами. Потрібні «Опади» (Direct3D 12).",
      "Где идёт дождь, мокнет не только земля, но и стены, крыши и модели: темнее, с блеском, когда смотришь вдоль "
-     "них, и водой, стекающей по стенам. Нужна погода (Direct3D 12)."},
+     "них, и водой, стекающей по стенам. Нужны «Осадки» (Direct3D 12)."},
     {"Windows at night",
      "Вікна вночі",
      "Окна ночью"},
@@ -3256,6 +3257,22 @@ const Entry kTexts[] = {
     {"Summer", "Літо", "Лето"},
     {"Autumn", "Осінь", "Осень"},
     {"Winter", "Зима", "Зима"},
+    {"Weather", "Погода", "Погода"},  // 2.6.22
+    {"The weather for all the effects that go by it - the snow, rain, leaves or sand in the air (Precipitation), the "
+     "wet ground, walls and roofs, the rain's splashes and the storms: the map's own, clear skies everywhere, or a "
+     "weather of your choice under every open sky (never indoors).",
+     "Погода для всіх ефектів, що залежать від неї, — сніг, дощ, листя чи пісок у повітрі («Опади»), мокра земля, "
+     "стіни й дахи, бризки дощу та грози: своя погода карти, ясне небо всюди або обрана вами погода під кожним "
+     "відкритим небом (ніколи в приміщеннях).",
+     "Погода для всех эффектов, которые от неё зависят, — снег, дождь, листья или песок в воздухе («Осадки»), мокрая "
+     "земля, стены и крыши, брызги дождя и грозы: своя погода карты, ясное небо везде или выбранная вами погода под "
+     "каждым открытым небом (никогда в помещениях)."},
+    {"Auto (the map's own)", "Авто (своя погода карти)", "Авто (своя погода карты)"},
+    {"Clear", "Ясно", "Ясно"},
+    {"Rain", "Дощ", "Дождь"},
+    {"Snow", "Сніг", "Снег"},
+    {"Falling leaves", "Листопад", "Листопад"},
+    {"Sand in the wind", "Піщаний вітер", "Песчаный ветер"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

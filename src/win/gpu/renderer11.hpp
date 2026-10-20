@@ -93,11 +93,15 @@ public:
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
     void saveScreenshot(const std::string& path);  // 0.54: the back buffer as it is now, to a PNG
     void setEffects(const EffectSettings& e) {  // 0.59: the colours (grade) are drawn here
-        const bool season = e.season != effects_.season;
+        const bool season = e.season != effects_.season, weatherKind = e.weatherKind != effects_.weatherKind;
         effects_ = e;
         if (season && !map_.empty()) {  // 2.6.22: another season chosen - the map's year at once (setMap)
             takeSeason();
             critterWorld_.setPlace(place_);
+        }
+        if (weatherKind && !map_.empty()) {  // 2.6.22: another weather chosen - at once, the log told it anew
+            weather_ = weather::chosen(e.weatherKind, map_);
+            weatherLogged_ = false;
         }
     }
     // 2.6.22: the map's trees, place and year by the month of the season chosen (effects.season)
@@ -120,7 +124,7 @@ public:
         groundLifeLogged_ = grassLogged_ = false;
         critterWorld_.setPlace(place_);  // 2.5.4: a new map - everything goes
         crittersTime_ = 0.0f;
-        weather_ = weather::of(map);
+        weather_ = weather::chosen(effects_.weatherKind, map);  // 2.6.22: the map's own, or the one chosen
         mistLogged_ = skyLogged_ = weatherLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
         if (!map.empty()) fadeStart_ = waterTime();  // 2.5.2: the world comes in from black (0.83)

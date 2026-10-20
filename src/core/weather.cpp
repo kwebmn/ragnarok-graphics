@@ -20,4 +20,10 @@ Kind of(const std::string& map) {
     return Kind::None;
 }
 
+Kind chosen(int choice, const std::string& map) {
+    static const Kind kKinds[kWeathers] = {Kind::None, Kind::None, Kind::Rain, Kind::Snow, Kind::Leaves, Kind::Sand};
+    if (choice <= kWeatherAuto || choice >= kWeathers) return of(map);
+    return outdoors(map) ? kKinds[choice] : Kind::None;
+}
+
 }  // namespace uagfx::weather

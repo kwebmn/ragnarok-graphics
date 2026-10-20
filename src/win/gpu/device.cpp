@@ -1953,7 +1953,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->torchKeeper.clear();  // 2.6.17: a new map's torches
     impl_->mapShine = floorShine(map);   // 2.5.17: the floor reflections on smooth floors alone
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
-    impl_->mapWeather = weather::of(map);  // 0.39: its weather
+    impl_->mapWeather = weather::chosen(impl_->effects.weatherKind, map);  // 0.39: its weather; 2.6.22: chosen
     impl_->footTracker.clear();  // 0.80
     impl_->waterLevelKnown = false;  // 1.7
     impl_->critterWorld.setPlace(impl_->mapPlace);
@@ -2071,11 +2071,15 @@ void Renderer::setEffects(const EffectSettings& e) {
     Impl& m = *impl_;
     if (e == m.effects) return;
     const bool was = m.glowWanted();
-    const bool season = e.season != m.effects.season;
+    const bool season = e.season != m.effects.season, weatherKind = e.weatherKind != m.effects.weatherKind;
     m.effects = e;
     if (season && !m.mapName.empty()) {  // 2.6.22: another season chosen - the map's year at once, its creatures anew
         m.takeSeason();
         m.critterWorld.setPlace(m.mapPlace);
+    }
+    if (weatherKind && !m.mapName.empty()) {  // 2.6.22: another weather chosen - at once, the log told it anew
+        m.mapWeather = weather::chosen(e.weatherKind, m.mapName);
+        m.weatherLogged = false;
     }
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "

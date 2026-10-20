@@ -368,6 +368,12 @@ const std::vector<IniSetting>& iniSettings() {
         {"effects", "season", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "spring", "summer", "autumn", "winter"},
          {Text::FxSeasonAuto, Text::FxSeasonSpring, Text::FxSeasonSummer, Text::FxSeasonAutumn, Text::FxSeasonWinter},
          Text::FxSeason, Text::FxSeasonHint, ""},
+        // 2.6.22: the weather for all that goes by it (core/weather.hpp Choice)
+        {"effects", "weather_kind", Page::Effects, Control::Choice, 0, 0, 0,
+         {"auto", "clear", "rain", "snow", "leaves", "sand"},
+         {Text::FxWeatherKindAuto, Text::FxWeatherKindClear, Text::FxWeatherKindRain, Text::FxWeatherKindSnow,
+          Text::FxWeatherKindLeaves, Text::FxWeatherKindSand},
+         Text::FxWeatherKind, Text::FxWeatherKindHint, ""},
         {"effects", "materials", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMaterials,
          Text::FxMaterialsHint, "", &E::materials},
         {"effects", "materials_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMaterialsStrength,
@@ -755,6 +761,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
         return s.tokens[c.effects.clock > 0 && c.effects.clock < int(s.tokens.size()) ? size_t(c.effects.clock) : 0];
     if (k == "effects.season")  // 2.6.22
         return s.tokens[c.effects.season > 0 && c.effects.season < int(s.tokens.size()) ? size_t(c.effects.season) : 0];
+    if (k == "effects.weather_kind")  // 2.6.22
+        return s.tokens[c.effects.weatherKind > 0 && c.effects.weatherKind < int(s.tokens.size())
+                            ? size_t(c.effects.weatherKind)
+                            : 0];
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.keep_fps") return std::to_string(c.keepFps);

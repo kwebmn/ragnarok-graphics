@@ -26,6 +26,7 @@ const int kEffectCount = effectLayoutCount();
 constexpr int kPreset = 20000, kTier = 20001, kClock = 20002;  // 2.6.11: the clock
 constexpr int kNightStrength = 20003;  // 2.6.19: the clock's night, by it
 constexpr int kSeason = 20004;  // 2.6.22: the season, by the clock
+constexpr int kWeatherKind = 20005;  // 2.6.22: the weather, by the clock
 int groupBox(int g) { return 20100 + 20 * g; }
 int groupSlider(int g) { return 20102 + 20 * g; }  // its number: + 1
 int groupOpen(int g) { return 20105 + 20 * g; }
@@ -97,6 +98,7 @@ public:
             dot(p, p.choice(kClock, t(clock.label), items, at, t(clock.hint)), clock);
             slider(p, kNightStrength, "effects.night_strength", word != "off");
             choiceRow(p, kSeason, "effects.season");  // 2.6.22: the year by the day
+            choiceRow(p, kWeatherKind, "effects.weather_kind");  // 2.6.22: and the weather
         }
         if (!simple) p.note(t(Text::FxDetailsNote), Tone::Muted);
         const bool any = word != "off";
@@ -192,8 +194,10 @@ public:
             chooseTier(SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0));
             return;
         }
-        if ((id == kClock || id == kSeason) && code == CBN_SELCHANGE) {  // 2.6.11; 2.6.22 the season
-            const IniSetting& s = setting(id == kClock ? "effects.clock" : "effects.season");
+        if ((id == kClock || id == kSeason || id == kWeatherKind) && code == CBN_SELCHANGE) {  // 2.6.11; 2.6.22
+            const IniSetting& s = setting(id == kClock    ? "effects.clock"
+                                          : id == kSeason ? "effects.season"
+                                                          : "effects.weather_kind");
             const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < s.tokens.size()) set(s, s.tokens[size_t(sel)], true);
             return;

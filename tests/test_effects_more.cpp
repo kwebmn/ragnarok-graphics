@@ -9,6 +9,7 @@
 #include "core/seasons.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/schema.hpp"
+#include "core/weather.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -215,6 +216,21 @@ TEST(season_auto_by_default_a_season_by_its_word) {
     CHECK_EQ(parseConfig("[effects]\nseason = fall\n").effects.season, int(seasons::kSeasonAuto));  // not its word
     CHECK(!(c.effects == parseConfig("").effects));
     CHECK(appliesNow("effects.season"));
+}
+
+TEST(weather_kind_auto_by_default_a_weather_by_its_word) {
+    // 2.6.22: [effects] weather_kind - auto (the map's own), clear, or one of four; a change of it alone is a change,
+    // and the weather effect's own switch stays as it was
+    CHECK_EQ(parseConfig("").effects.weatherKind, int(weather::kWeatherAuto));
+    const Config c = parseConfig("[effects]\nweather_kind = rain\n");
+    CHECK_EQ(c.effects.weatherKind, int(weather::kWeatherRain));
+    CHECK(settings::tokenOf(*settings::findSetting("effects.weather_kind"), c) == "rain");
+    CHECK(settings::tokenOf(*settings::findSetting("effects.weather_kind"), parseConfig("")) == "auto");
+    CHECK_EQ(parseConfig("[effects]\nweather_kind = clear\n").effects.weatherKind, int(weather::kWeatherClear));
+    CHECK_EQ(parseConfig("[effects]\nweather_kind = storm\n").effects.weatherKind, int(weather::kWeatherAuto));
+    CHECK(!(c.effects == parseConfig("").effects));
+    CHECK(c.effects.weather == parseConfig("").effects.weather);
+    CHECK(appliesNow("effects.weather_kind"));
 }
 
 TEST(night_creatures_off_by_default_in_no_set) {

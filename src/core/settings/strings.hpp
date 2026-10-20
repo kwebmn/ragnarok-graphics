@@ -340,6 +340,8 @@ enum class Text : uint16_t {
     FxClockNight,
     FxNightFireflies, FxNightFirefliesHint,  // 2.6.11
     FxSeason, FxSeasonHint, FxSeasonAuto, FxSeasonSpring, FxSeasonSummer, FxSeasonAutumn, FxSeasonWinter,  // 2.6.22
+    FxWeatherKind, FxWeatherKindHint, FxWeatherKindAuto, FxWeatherKindClear, FxWeatherKindRain,  // 2.6.22
+    FxWeatherKindSnow, FxWeatherKindLeaves, FxWeatherKindSand,
     Count
 };
 
