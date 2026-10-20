@@ -51,7 +51,10 @@ bool Renderer::Impl::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
     if (!torchReady()) return false;
     if (kind == objects::Kind::TorchGlow) return true;
     torch::Flame f;
-    if (torchFlames.size() >= kMaxTorches || !torch::flameOf(q, f) || f.rhw <= 0.0f) return false;
+    if (torchFlames.size() >= kMaxTorches) return false;
+    // 2.6.17: a frame of the flame flameOf does not read is not shown as the game's either - the new flame keeps the
+    // torch's place a moment (torch::Keeper); the game's blurred drop flashed up in it every couple of seconds
+    if (!torch::flameOf(q, f) || f.rhw <= 0.0f) return effects.torchFlame;
     f.alpha = std::min(1.0f, float(diffuse >> 24) / 240.0f);  // the .act shows the flame at 240
     torchFlames.push_back(f);
     if (viewToWorldValid && !mapWorld.axes().known()) {  // 0.25: where it stands, for the map file's axes
@@ -493,6 +496,11 @@ bool Renderer::Impl::applyTorches() {
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float time = waterTime();  // the effects' clock
     const float amount = torch::flickerAmount(effects.torchFlicker);  // 2.6.16: the slider's ends seen
+    // 2.6.17: each of the game's flames followed from frame to frame - its torch's seed kept, its fade smoothed, a
+    // frame without it bridged (torch::Keeper): the new flame jumped to another shape every couple of seconds
+    std::vector<uint32_t> torchSeeds;
+    for (const torch::Flame& f : flames) torchSeeds.push_back(torch::placeSeed(f, proj, viewToWorld, viewToWorldValid));
+    torchKeeper.update(flames, torchSeeds, double(time));
     const rsw::World* layout = viewToWorldValid && mapWorld.axes().known() ? mapWorld.world() : nullptr;
     const map::Axes axes = mapWorld.axes();
     // Off the screen by more than this (game pixels) a flame or a lamp's middle is not drawn nor lit from.
@@ -514,7 +522,9 @@ bool Renderer::Impl::applyTorches() {
             f.upY = vt.y / vt.z * proj.f1 + proj.cy - f.baseY;
             f.halfWidth = std::hypot(f.upX, f.upY) * (torch::kHalfWidth / torch::kHeight);
             f.rhw = 1.0f / vb.z;
-            if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
+            if (!onScreen(f.baseX, f.baseY, margin)) continue;
+            flames.push_back(f);
+            torchSeeds.push_back(torch::seedAt(base.x, base.z));  // its exact place: a steady seed
         }
     if (torchWanted()) critterFlames = flames;  // 2.5.4: the embers rise from them; off: noteCritterFlame's
     // 0.28: the fireflies - the game's (their flash by their primitive's seed) and, the map file read, those the
@@ -652,13 +662,9 @@ bool Renderer::Impl::applyTorches() {
         const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;  // game pixels
         const float vz = 1.0f / f.rhw;
         const float vx = (mx - proj.cx) * vz / proj.f0, vy = (my - proj.cy) * vz / proj.f1;
-        uint32_t s = 0;
-        if (viewToWorldValid) {  // its place on the map: its own flicker whichever way the camera looks
-            const float* m = viewToWorld;
-            s = torch::seedAt(vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[2] + vy * m[5] + vz * m[8] + m[11]);
-        } else {
-            s = torch::seedAt(mx, my);
-        }
+        // its torch's: its own flicker and flame whichever way the camera looks (2.6.17: kept as it is followed)
+        const uint32_t s =
+            i < torchSeeds.size() ? torchSeeds[i] : torch::placeSeed(f, proj, viewToWorld, viewToWorldValid);
         flickers[i] = torch::flicker(time, s, amount);
         seeds[i] = float(s % 1000u) / 1000.0f;
         if (strength <= 0.0f) continue;

@@ -1,6 +1,10 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <unordered_map>
+#include <vector>
+
+#include "core/game_camera.hpp"
 
 namespace uagfx::torch {
 
@@ -40,6 +44,31 @@ bool flameOf(const Corner q[4], Flame& out);
 // frame or it has no depth.
 bool flameOfQuad(const uint8_t* vertices, size_t stride, Flame& out);
 
+// 2.6.17: the game's flames of a frame as the torches' pass draws them anew, kept steady ("every couple of seconds the
+// torch blinks"). Each torch is followed from frame to frame by its place on the screen and keeps the seed it was
+// first given (by a seed cell's edge its place read a cell over now and then - the new flame jumped to another
+// shape); one missing a moment (a frame of the game's animation without its flame, or one flameOf does not read)
+// is kept as it last was for up to kKeepSeconds; its brightness follows the game's fade up at once and down only
+// slowly (kFall a second) - but a torch first seen takes the game's own fade-in.
+class Keeper {
+public:
+    static constexpr double kKeepSeconds = 0.35;
+    static constexpr float kFall = 0.8f;
+    // flames and their place seeds in; out each flame's own seed (a torch followed keeps its first), the alphas
+    // smoothed, the torches missing a moment added at the end
+    void update(std::vector<Flame>& flames, std::vector<uint32_t>& seeds, double now);
+    void clear() { kept_.clear(); }
+
+private:
+    struct Kept {
+        Flame flame;
+        float shown = 0.0f;
+        double seen = -1.0;
+    };
+    std::unordered_map<uint32_t, Kept> kept_;
+    double last_ = -1.0;
+};
+
 // How bright a flame burns at time t (seconds): about 1, within 1 +- amount, smooth; each seed its own way.
 float flicker(double t, uint32_t seed, float amount);
 // 2.6.16: effects.torch_flicker (0-100 %) as flicker()'s amount - 50 % the calm flicker the torches had (0.175), 0
@@ -48,5 +77,9 @@ float flicker(double t, uint32_t seed, float amount);
 float flickerAmount(int percent);
 // A torch's seed from where it stands on the map (world x and z, ten units a cell): the same while the camera moves.
 uint32_t seedAt(float x, float z);
+// 2.6.17: the seed of the torch a flame the game drew belongs to - seedAt of its middle (0.38 of the way up) back
+// from the screen into the world by the projection and the camera backwards; of its screen place when the camera is
+// not known. Its flicker's and the keeper's.
+uint32_t placeSeed(const Flame& f, const camera::Projection& p, const float viewToWorld[12], bool cameraKnown);
 
 }  // namespace uagfx::torch

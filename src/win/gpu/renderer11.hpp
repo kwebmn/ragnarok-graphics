@@ -97,6 +97,7 @@ public:
         map_ = map;
         season_ = trees::seasonOf(map, trees::monthNow());
         outdoors_ = outdoors(map);
+        torchKeeper_.clear();  // 2.6.17: a new map's torches
         shine_ = floorShine(map);  // 2.5.17
         desert_ = desert(map);  // 2.5.2: the prints in the sand
         footTracker_.clear();
@@ -572,6 +573,7 @@ private:
     ID3D11ShaderResourceView* lightDataSrv_ = nullptr;
     objects::Textures objectTextures_;
     std::vector<torch::Flame> flames_;  // this frame's
+    torch::Keeper torchKeeper_;         // 2.6.17: the game's flames kept steady (core/torch.hpp)
     bool lightDone_ = false, lightLogged_ = false;
     // 2.5: the mists, the sky and the weather (applyMist, applySky, applyWeather)
     ID3D11PixelShader* mistPs_ = nullptr;

@@ -476,6 +476,7 @@ struct Renderer::Impl {
     // 2.5.4: this frame's flames as the torches' pass had them (the hidden ones too), for the embers rising from
     // them (critters.cpp) - torchFlames is taken by the pass, and the creatures came after it: none ever rose
     std::vector<torch::Flame> critterFlames;
+    torch::Keeper torchKeeper;  // 2.6.17: the game's flames kept steady (core/torch.hpp)
     std::vector<FireSpark> fireSparks;      // 0.26: this frame's fire of skills
     std::vector<Firefly> fireflyDraws;      // 0.28: this frame's fireflies the game draws
     bool firefliesLogged = false;

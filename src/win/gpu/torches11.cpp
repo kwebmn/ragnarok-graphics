@@ -233,6 +233,15 @@ void Renderer11::applyTorchLight() {
     const bool mapFlies = layout && firefliesWanted();
     std::vector<torch::Flame> flames;
     flames.swap(flames_);
+    // 2.6.17 (torches.cpp): each of the game's flames followed from frame to frame - its torch's seed kept, its fade
+    // smoothed, a frame without it bridged (torch::Keeper)
+    std::vector<uint32_t> torchSeeds;
+    {
+        const camera::Projection seen = camera::projectionFor(gameWidth_, gameHeight_);
+        for (const torch::Flame& f : flames)
+            torchSeeds.push_back(torch::placeSeed(f, seen, viewToWorld_, cameraValid_));
+        torchKeeper_.update(flames, torchSeeds, double(waterTime()));
+    }
     std::vector<FireSpark11> sparks;
     sparks.swap(fireSparks_);
     std::vector<FireSpark11> lavaCells;  // 2.5.2: the lava's (noteLava)
@@ -297,17 +306,15 @@ void Renderer11::applyTorchLight() {
             f.upY = vt[1] / vt[2] * proj.f1 + proj.cy - f.baseY;
             f.halfWidth = std::hypot(f.upX, f.upY) * (torch::kHalfWidth / torch::kHeight);
             f.rhw = 1.0f / vb[2];
-            if (onScreen(f.baseX, f.baseY, margin)) flames.push_back(f);
+            if (!onScreen(f.baseX, f.baseY, margin)) continue;
+            flames.push_back(f);
+            torchSeeds.push_back(torch::seedAt(base.x, base.z));  // its exact place: a steady seed
         }
     // The flames' own flicker: each by its place in the world - whichever way the camera looks
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f), calms(flames.size(), 1.0f);
     for (size_t i = 0; i < flames.size(); ++i) {
         const torch::Flame& f = flames[i];
-        const float mx = f.baseX + f.upX * kMiddle, my = f.baseY + f.upY * kMiddle;
-        const float vz = 1.0f / f.rhw, vx = (mx - proj.cx) * vz / proj.f0, vy = (my - proj.cy) * vz / proj.f1;
-        const uint32_t s = cameraValid_ ? torch::seedAt(vx * m[0] + vy * m[3] + vz * m[6] + m[9],
-                                                        vx * m[2] + vy * m[5] + vz * m[8] + m[11])
-                                        : torch::seedAt(mx, my);
+        const uint32_t s = i < torchSeeds.size() ? torchSeeds[i] : torch::placeSeed(f, proj, m, cameraValid_);
         flickers[i] = torch::flicker(time, s, amount);
         seeds[i] = float(s % 1000u) / 1000.0f;
         calms[i] = torch::flicker(double(time) * 0.5, s ^ 0x5BD1E995u, amount * 0.35f);

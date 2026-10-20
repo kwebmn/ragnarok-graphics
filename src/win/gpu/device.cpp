@@ -1951,6 +1951,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->mapPlace = living::placeOf(map, outdoors(map), impl_->mapSeason == trees::Season::Autumn);
     impl_->mapYear = seasons::of(map, trees::monthNow(), outdoors(map), impl_->mapPlace);  // 1.20
     impl_->mapOutdoors = outdoors(map);  // 0.33: the open sky's effects
+    impl_->torchKeeper.clear();  // 2.6.17: a new map's torches
     impl_->mapShine = floorShine(map);   // 2.5.17: the floor reflections on smooth floors alone
     impl_->mapDesert = desert(map);      // 0.35: its heat haze far off
     impl_->mapWeather = weather::of(map);  // 0.39: its weather

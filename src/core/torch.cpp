@@ -99,6 +99,63 @@ float flickerAmount(int percent) {
     return 0.175f * k * k;
 }
 
+void Keeper::update(std::vector<Flame>& flames, std::vector<uint32_t>& seeds, double now) {
+    const float dt = last_ < 0.0 ? 0.0f : float(std::clamp(now - last_, 0.0, 0.25));
+    last_ = now;
+    const size_t present = std::min(flames.size(), seeds.size());
+    // each flame here: the torch it was last frame (the nearest kept one within its reach, not taken yet) - its seed
+    std::vector<uint32_t> taken;
+    for (size_t i = 0; i < present; ++i) {
+        const Flame& f = flames[i];
+        const float reach = std::max(4.0f, 0.5f * std::hypot(f.upX, f.upY));
+        uint32_t best = 0;
+        float nearest = reach;
+        bool found = false;
+        for (const auto& kv : kept_) {
+            if (kv.second.seen == now || std::find(taken.begin(), taken.end(), kv.first) != taken.end()) continue;
+            const float d = std::hypot(f.baseX - kv.second.flame.baseX, f.baseY - kv.second.flame.baseY);
+            if (d < nearest) {
+                nearest = d;
+                best = kv.first;
+                found = true;
+            }
+        }
+        if (found) seeds[i] = best;
+        taken.push_back(seeds[i]);
+        Kept& k = kept_[seeds[i]];
+        const bool fresh = k.seen < 0.0 || now - k.seen > kKeepSeconds;  // first seen: the game's own fade-in
+        k.shown = fresh ? f.alpha : std::max(f.alpha, k.shown - kFall * dt);
+        k.flame = f;
+        k.seen = now;
+        flames[i].alpha = k.shown;
+    }
+    for (auto it = kept_.begin(); it != kept_.end();) {
+        Kept& k = it->second;
+        if (k.seen == now) {
+            ++it;
+            continue;
+        }
+        if (now - k.seen > kKeepSeconds) {
+            it = kept_.erase(it);
+            continue;
+        }
+        k.shown = std::max(0.0f, k.shown - kFall * dt);  // missing a moment: as it last was, fading slowly
+        Flame f = k.flame;
+        f.alpha = k.shown;
+        flames.push_back(f);
+        seeds.push_back(it->first);
+        ++it;
+    }
+}
+
+uint32_t placeSeed(const Flame& f, const camera::Projection& p, const float viewToWorld[12], bool cameraKnown) {
+    const float mx = f.baseX + f.upX * 0.38f, my = f.baseY + f.upY * 0.38f;
+    if (!cameraKnown || f.rhw <= 0.0f || p.f0 <= 0.0f || p.f1 <= 0.0f) return seedAt(mx, my);
+    const float vz = 1.0f / f.rhw, vx = (mx - p.cx) * vz / p.f0, vy = (my - p.cy) * vz / p.f1;
+    const float* m = viewToWorld;
+    return seedAt(vx * m[0] + vy * m[3] + vz * m[6] + m[9], vx * m[2] + vy * m[5] + vz * m[8] + m[11]);
+}
+
 uint32_t seedAt(float x, float z) {
     const int32_t i = int32_t(std::floor(x / 5.0f)), j = int32_t(std::floor(z / 5.0f));
     return mix(uint32_t(i) * 0x9E3779B1u ^ mix(uint32_t(j) + 0x632BE5ABu));
