@@ -398,7 +398,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.glint ? 1 : 0);  // 0.95
     w.u8(e.hitFlash ? 1 : 0);  // 0.96
     w.u8(e.wetGround ? 1 : 0);  // 0.97
-    w.u8(e.flare ? 1 : 0);  // 0.98
     w.u8(e.treeVolume ? 1 : 0);  // 1.7
     w.u8(e.leafLight ? 1 : 0);
     w.u8(e.treeTints ? 1 : 0);

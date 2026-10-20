@@ -220,7 +220,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"bloom_down_ps", "ps_5_0", &bloomDownPs},
                    {"bloom_apply_ps", "ps_5_0", &bloomApplyPs},   {"steps_ps", "ps_5_0", &stepsPs},
                    {"grass_ps", "ps_5_0", &grassPs},              {"embers_ps", "ps_5_0", &embersPs},
-                   {"half_over_ps", "ps_5_0", &halfOverPs},       {"flare_ps", "ps_5_0", &flarePs},
+                   {"half_over_ps", "ps_5_0", &halfOverPs},
                    {"ground_life_ps", "ps_5_0", &groundLifePs},   {"critters_ps", "ps_5_0", &crittersPs},
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},
                    {"mirror_vs", "vs_5_0", &mirrorVs},            {"mirror_ps", "ps_5_0", &mirrorPs}};

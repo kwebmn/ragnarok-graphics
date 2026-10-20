@@ -264,8 +264,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxHitFlashHint, "", &E::hitFlash},
         {"effects", "wet_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetGround,
          Text::FxWetGroundHint, "", &E::wetGround},
-        {"effects", "flare", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFlare,
-         Text::FxFlareHint, "", &E::flare},
         {"effects", "tree_volume", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeVolume,
          Text::FxTreeVolumeHint, "", &E::treeVolume},
         {"effects", "leaf_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLeafLight,

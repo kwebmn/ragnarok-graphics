@@ -187,7 +187,6 @@ Renderer11::~Renderer11() {
     drop(crittersDataSrv_);
     drop(crittersData_);
     drop(shaftsPs_);
-    drop(flarePs_);
     dropTarget(shafts_);  // 2.5.7
     drop(hillsSrv_);  // 2.5.9
     drop(hillsData_);
@@ -401,7 +400,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[55] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[54] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -444,8 +443,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"grass_ps", ps, shaderSource(), {}, true},
                    {"critters_vs", vs, shaderSource(), {}, true},  // 2.5.4: the living world
                    {"critters_ps", ps, shaderSource(), {}, true},
-                   {"shafts_ps", ps, shaderSource(), {}, true},  // 2.5.5: shafts, flare, DoF
-                   {"flare_ps", ps, shaderSource(), {}, true},
+                   {"shafts_ps", ps, shaderSource(), {}, true},  // 2.5.5: the shafts (2.7.10: the flare gone)
                    {"mirror_vs", vs, shaderSource(), {}, true},  // 2.5.9: the world's reflections in the water
                    {"mirror_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
@@ -583,9 +581,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[49].code.empty() || !vsOf(wants[49], crittersVs_)) crittersVs_ = nullptr;
     if (wants[50].code.empty() || !psOf(wants[50], crittersPs_)) crittersPs_ = nullptr;
     if (wants[51].code.empty() || !psOf(wants[51], shaftsPs_)) shaftsPs_ = nullptr;
-    if (wants[52].code.empty() || !psOf(wants[52], flarePs_)) flarePs_ = nullptr;
-    if (wants[53].code.empty() || !vsOf(wants[53], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
-    if (wants[54].code.empty() || !psOf(wants[54], mirrorPs_)) mirrorPs_ = nullptr;
+    if (wants[52].code.empty() || !vsOf(wants[52], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
+    if (wants[53].code.empty() || !psOf(wants[53], mirrorPs_)) mirrorPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -622,7 +619,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"COLOR", 0, colour, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}};
-        if (FAILED(device_->CreateInputLayout(layout, 3, wants[53].code.data(), wants[53].code.size(),
+        if (FAILED(device_->CreateInputLayout(layout, 3, wants[52].code.data(), wants[52].code.size(),
                                               &mirrorLayout_)))
             mirrorLayout_ = nullptr;
     }
@@ -1198,7 +1195,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !mistDone_ ||
-                                !skyDone_ || !shaftsDone_ || !flareDone_ || !heatDone_ || !bloomDone_ ||
+                                !skyDone_ || !shaftsDone_ || !heatDone_ || !bloomDone_ ||
                                 !gradeDone_ || !weatherDone_ || !darknessLaid_))
         flushBatch();
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
@@ -1212,7 +1209,6 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !mistDone_) applyMist();  // 2.5: over the ground, before the colours
     if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: past the map's edge
     if (s.ui && worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5: the light in the air
-    if (s.ui && worldDrawn_ && !flareDone_) applyFlare();    // 2.5.5: the sun's flare
     if (s.ui && worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3: the hot air over all of that
     if (s.ui && worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2: before the colours (ao.cpp finishWorld)
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
@@ -2081,7 +2077,6 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (worldDrawn_ && !mistDone_) applyMist();  // 2.5
     if (worldDrawn_ && !skyDone_) applySky();
     if (worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5
-    if (worldDrawn_ && !flareDone_) applyFlare();
     if (worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3
     if (!flies_.empty()) applyFireflies();  // 1.0.1
     if (worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2
@@ -2126,7 +2121,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     critterFlames_.clear();  // 2.6.12
     darknessRec_.reset();  // 2.6.18
     darknessLaid_ = false;
-    shaftsDone_ = flareDone_ = false;  // 2.5.5
+    shaftsDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
     if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
@@ -3150,24 +3145,6 @@ void Renderer11::applyShafts() {
     ctx_->ClearRenderTargetView(shafts_.rtv, none);
     maskPass(shaftsPs_, shafts_, c, nullptr, depthSrv_, nullptr, shaftLights_ > 0 ? lightDataSrv_ : nullptr);
     worldPass(halfOverPs_, c, 0, 3, nullptr, shafts_.srv);
-}
-
-// 2.5.5: as Direct3D 12's applyFlare (haze.cpp) - where the sky shows towards the sun, a glow and rings, added
-void Renderer11::applyFlare() {
-    flareDone_ = true;
-    if (!flarePs_ || !effects_.flare || !outdoors_ || effects_.nightNow >= 60 || !target_.texture || !depthViews())
-        return;
-    const int w = target_.width, h = target_.height;
-    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
-    Constants c{};
-    c.uiPixels[0] = float(w);
-    c.uiPixels[1] = float(h);
-    float sun[2];
-    sunOnScreen(sun);
-    c.sourceRect[0] = float(w) * (0.5f - sun[0] * 1.6f);
-    c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
-    c.twin[0] = 0.35f * (1.0f - night / 0.6f);
-    worldPass(flarePs_, c, 0, 3, depthSrv_);
 }
 
 float Renderer11::mapFadeNow() {

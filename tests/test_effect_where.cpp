@@ -9,7 +9,7 @@ using effect_where::worksOn;
 TEST(effect_where_a_cave_and_a_field) {
     // 2.6.22, the console's «Только на этой карте» (the user: «в пещере не будут мешать трава и погода»)
     const EffectSettings e;
-    for (const char* k : {"effects.grass", "effects.flowers", "effects.sky", "effects.edge_land", "effects.flare",
+    for (const char* k : {"effects.grass", "effects.flowers", "effects.sky", "effects.edge_land",
                           "effects.weather", "effects.storms", "effects.butterflies", "effects.morning_fog",
                           "effects.ground_seams", "effects.no_game_fog"})
         CHECK(!worksOn(k, "pay_dun00", e));

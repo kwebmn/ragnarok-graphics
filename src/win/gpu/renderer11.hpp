@@ -333,11 +333,10 @@ private:
     float sunHeight() const;
     void sunGround(float out[3]) const;
     void sunOnScreen(float out[2]) const;
-    // 2.5.5: the light in the air about the lights and from the sky (haze.cpp applyShafts), the sun's flare
-    // (applyFlare); the characters lit by the sun from their sides (sun_map.cpp spriteConstants); the shared wind
-    // (weather.cpp updateWind) the weather, the clouds, the sky, the grass, the sand and the leaves go with
+    // 2.5.5: the light in the air about the lights and from the sky (haze.cpp applyShafts); the characters lit by the
+    // sun from their sides (sun_map.cpp spriteConstants); the shared wind (weather.cpp updateWind) the weather, the
+    // sky, the grass and the sand go with
     void applyShafts();
-    void applyFlare();
     void spriteConstants(Constants& c, int gameWidth) const;  // 2.6.3: the game texture's width
     void updateWind();
     bool windShared() const { return effects_.sharedWind && cameraValid_; }
@@ -682,12 +681,11 @@ private:
     std::vector<torch::Flame> critterFlames_;    // 2.6.12: this frame's flames with the torches off
     float crittersTime_ = 0.0f, crittersStepsSeen_ = 0.0f;
     bool crittersLogged_ = false;
-    // 2.5.5: the light in the air, the flare, the shared wind
+    // 2.5.5: the light in the air, the shared wind
     ID3D11PixelShader* shaftsPs_ = nullptr;
-    ID3D11PixelShader* flarePs_ = nullptr;
     int shaftLights_ = 0;  // the lights of this frame's torches' pass (lightData_)
     Target shafts_;        // 2.5.7: the light in the air at half the size
-    bool shaftsDone_ = false, flareDone_ = false;
+    bool shaftsDone_ = false;
     float windClock_ = -1.0f;
     wind::Wind windNow_;
     float windScreenX_ = 0.0f;

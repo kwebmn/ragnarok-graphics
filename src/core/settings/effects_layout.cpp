@@ -26,7 +26,6 @@ const EffectLayout kEffects[] = {
     {"effects.glint", {}, {}, {}, 0},  // 0.95
     {"effects.hit_flash", {}, {}, {}, 0},  // 0.96
     {"effects.wet_ground", {}, {}, {}, 0},  // 0.97
-    {"effects.flare", {}, {}, {}, 0},  // 0.98
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, 0},
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, 0},
     {"effects.water",

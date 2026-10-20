@@ -195,7 +195,6 @@ EffectSettings effectsOff() {
     e.treeTints = false;
     e.leafLight = false;
     e.treeVolume = false;
-    e.flare = false;
     e.wetGround = false;
     e.hitFlash = false;
     e.glint = false;
@@ -266,7 +265,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.treeTints ||
            e.leafLight ||
            e.treeVolume ||
-           e.flare ||
            e.wetGround ||
            e.hitFlash ||
            e.glint ||

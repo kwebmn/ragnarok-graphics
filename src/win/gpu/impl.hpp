@@ -552,12 +552,6 @@ struct Renderer::Impl {
     UINT shaftsSrv = 0;
     int shaftsWidth = 0, shaftsHeight = 0;
     bool shaftsDone = false;
-    ID3DBlob* flarePs = nullptr;  // 0.98: the sun's flare (haze.cpp applyFlare)
-    ID3D12PipelineState* flarePipelines[4] = {};
-    bool flareDone = false, flareLogged = false;
-    bool flareWanted() const { return effects.flare && flarePs && mapOutdoors && effects.nightNow < 60; }
-    bool flareDue() const { return flareWanted() && groundDrawn && !flareDone; }
-    bool applyFlare();  // once a frame, the world drawn; false: lost
     UINT shaftLights = 0;
     // 0.72, reflections on the floor (haze.cpp, floor_reflect_ps).
     ID3DBlob* floorReflectPs = nullptr;
@@ -1010,7 +1004,6 @@ struct Renderer::Impl {
         frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
-        flareDone = false;   // 0.98
         shaftLights = 0;
         heatDone = false;
         heatSpots.clear();

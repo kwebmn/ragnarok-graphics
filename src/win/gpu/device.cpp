@@ -1606,8 +1606,6 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : halfAddPipelines) releaseCom(p);
     releaseCom(shaftsTarget);
     releaseCom(shaftsPs);
-    releaseCom(flarePs);  // 0.98
-    for (ID3D12PipelineState*& f : flarePipelines) releaseCom(f);
     for (ID3D12PipelineState*& p : embersPipelines) releaseCom(p);  // 0.82
     releaseCom(embersPs);
     releaseCom(embersData);

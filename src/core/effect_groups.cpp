@@ -89,7 +89,6 @@ const Member kMembers[] = {
 
     {"sky", Sky, 2, &E::sky},
     {"edge_land", Sky, 3, &E::edgeLand},
-    {"flare", Sky, 3, &E::flare},
     {"motes", Sky, 2, &E::motes},
     {"shared_wind", Sky, 3, &E::sharedWind},
 
@@ -168,7 +167,6 @@ const OldMember kOldMembers[] = {
     {OldSkills, &E::aura},          {OldSkills, &E::skillsSoft},    {OldSkills, &E::appear},
     {OldSkills, &E::hitFlash},      {OldSkills, &E::skillSparks},
     {OldPicture, &E::grade},        {OldPicture, &E::regionLooks},  {OldPicture, &E::bloom},
-    {OldPicture, &E::flare},
 };
 const Strength kOldStrengths[] = {
     {OldLight, &E::torchBrightness, 200},   {OldLight, &E::torchGlow, 200},         {OldLight, &E::torchLight, 200},

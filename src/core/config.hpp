@@ -292,9 +292,8 @@ struct EffectSettings {
     // 0.97: wet_ground - where it rains the ground is darker and puddles mirror the world (floor_reflect_ps, Direct3D
     // 12). Off by default.
     bool wetGround = false;
-    // 0.98: flare - under the open sky in the day, the sun's flare across the screen when the sky shows towards it
-    // (flare_ps, Direct3D 12). Off by default.
-    bool flare = false;
+    // (2.7.10: flare - the sun's flare where the sky showed towards the sun - gone: the camera looks down at the
+    // ground, the sky is hardly ever in the picture.)
     // 1.7: the living world, trees: tree_volume - a crown lit as a round shape (its side to the sun lighter);
     // leaf_light - the leaves on the crown's sunward edge lit through; tree_tints - each tree a shade of its
     // own, autumn colours in autumn, rime in Lutie. Off by default. (2.6.22: dapple - the sun's spots in the trees'
