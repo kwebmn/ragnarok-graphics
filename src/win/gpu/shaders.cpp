@@ -1749,6 +1749,9 @@ float4 grass_ps(PresentOut i) : SV_Target {
         if (hereZ < v.z - 1.0) continue;  // something in front of the blade
         float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) +
                    float3(r9, r10, r11);
+        // 2.7.2: none on a pond's or a river's bed - under the water (uiPixels.w its level, up is -y; none known: far
+        // below): its green bed showed through the shallow water and grew blades over it (R-32CYUV, cmd_fild01)
+        if (w.y > uiPixels.w) continue;
         float2 cell = w.xz * 2.0;  // a blade or none every half unit
         float2 id = floor(cell);
         float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));

@@ -321,6 +321,7 @@ bool Renderer::Impl::applyGrass() {
     }
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
+    c.uiPixels[3] = waterLevelKnown ? waterLevel + 0.05f : 1e9f;  // 2.7.2: no blades under the water (grass_ps)
     if (held) {
         c.footprint = 1.0f;
         c.fogColor[0] = trample.originX;

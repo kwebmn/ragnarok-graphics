@@ -2731,6 +2731,7 @@ void Renderer11::applyGrass() {
     // 2.6.8: Direct3D 11 is a weak card's (an HD 6570's grass cost 22 ms, R-9K2F6E): the roots on every second row
     // only - each blade still found, the search half as long
     c.uiPixels[2] = 2.0f;
+    c.uiPixels[3] = waterLevelKnown_ ? waterLevel_ + 0.05f : 1e9f;  // 2.7.2: no blades under the water (grass_ps)
     c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, 16.0f);  // Classic+'s longest blade
     c.twin[1] = 0.65f * float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;
     c.sharpen = waterTime();
