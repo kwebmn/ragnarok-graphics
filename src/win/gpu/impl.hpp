@@ -952,6 +952,7 @@ struct Renderer::Impl {
         mapSeason = trees::seasonOf(mapName, month);
         mapPlace = living::placeOf(mapName, outdoors(mapName), mapSeason == trees::Season::Autumn);
         mapYear = seasons::of(mapName, month, outdoors(mapName), mapPlace);
+        mapPlace = seasons::withYear(mapPlace, mapYear);  // 2.7.5: no insects in winter
     }
     void newPicture() {
         waterCopied = false;  // 0.19: its water copies what is under it anew

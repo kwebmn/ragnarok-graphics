@@ -45,3 +45,14 @@ TEST(seasons_change_the_creatures_place_in_autumn_alone) {
     CHECK(!(summer == autumn));
     CHECK(!(summer == living::placeOf("moc_fild12", true, false)));
 }
+
+TEST(seasons_no_insects_while_snow_lies) {
+    // 2.7.5 (the tester: «бабочки зимой?»): butterflies, dragonflies and the night's fireflies keep away while the
+    // season's snow lies on the map; the birds stay
+    const living::Place field = living::placeOf("prt_fild08", true, false);
+    CHECK(field.insects && field.wildlife);
+    const living::Place winter = seasons::withYear(field, seasons::of("prt_fild08", 1, true, field));
+    CHECK(!winter.insects && winter.wildlife);
+    CHECK(seasons::withYear(field, seasons::of("prt_fild08", 7, true, field)).insects);
+    CHECK(!living::placeOf("xmas", true, false).insects);  // Lutie's snow all year: none, as before
+}

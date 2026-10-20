@@ -111,6 +111,7 @@ public:
         season_ = trees::seasonOf(map_, month);
         place_ = living::placeOf(map_, outdoors_, season_ == trees::Season::Autumn);
         year_ = seasons::of(map_, month, outdoors_, place_);
+        place_ = seasons::withYear(place_, year_);  // 2.7.5: no insects in winter
     }
     void setMap(const std::string& map) {  // 0.79: the region's look; 1.7: the trees' season
         map_ = map;

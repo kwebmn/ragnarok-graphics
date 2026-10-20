@@ -51,6 +51,7 @@ Place placeOf(const std::string& map, bool outdoors, bool autumn) {
         static const char* const kBare[] = {"nif", "niflheim", "gl_", "glast", "ein", "lhz", "lighthalzen"};
         if (startsWithAny(map, kBare)) p.flowers = -1;
         p.wildlife = p.flowers >= 0;
+        p.insects = p.wildlife;  // 2.7.5: seasons::withYear keeps them away in winter
     }
     p.leaves = startsWith(map, "ama") ? 2 : autumn ? 1 : 0;
     return p;

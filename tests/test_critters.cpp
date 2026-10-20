@@ -145,3 +145,22 @@ TEST(critters_fire_of_a_flame_is_its_tip_in_the_world) {
     fl.rhw = 0.0f;  // no depth: nowhere
     CHECK(!critters::fireOf(fl, p, viewToWorld, at));
 }
+
+TEST(critters_no_butterflies_nor_fireflies_without_insects_birds_stay) {
+    // 2.7.5: a place in winter (living::Place::insects off) - no butterflies by day, no fireflies at night; birds
+    critters::World w;
+    living::Place cold = living::placeOf("prt_fild08", true, false);
+    cold.insects = false;
+    w.setPlace(cold);
+    critters::Switches on;
+    on.butterflies = on.nightFireflies = on.birds = true;
+    critters::Frame f;
+    f.centreKnown = true;
+    f.dt = 0.016f;
+    w.update(on, f);
+    CHECK_EQ(count(w.sprites(), critters::Butterfly), 0);
+    f.day = 0.0f;
+    f.night = 1.0f;
+    w.update(on, f);
+    CHECK_EQ(count(w.sprites(), critters::Firefly), 0);
+}

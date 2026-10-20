@@ -23,4 +23,7 @@ Look of(const std::string& map, int month, bool outdoors, const living::Place& p
 enum Choice { kSeasonAuto, kSeasonSpring, kSeasonSummer, kSeasonAutumn, kSeasonWinter, kSeasons };
 int monthFor(int choice, int localMonth);  // localMonth: the computer's, 1-12
 
+// 2.7.5: the place as its year has it - no butterflies, dragonflies nor fireflies while snow lies (the birds stay)
+living::Place withYear(living::Place place, const Look& year);
+
 }  // namespace uagfx::seasons

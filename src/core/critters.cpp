@@ -68,7 +68,7 @@ void World::update(const Switches& on, const Frame& f) {
 // 2.6.11: where the butterflies fly by day, fireflies drift low over the grass from dusk to dawn (by the hour: day
 // under 0.3), each lit a while and dark a while; they come out as the light goes.
 void World::fireflies(const Switches& on, const Frame& f) {
-    if (!on.nightFireflies || !place_.wildlife || f.day >= 0.3f) {
+    if (!on.nightFireflies || !place_.insects || f.day >= 0.3f) {  // 2.7.5: not in winter
         glows_.clear();
         return;
     }
@@ -99,7 +99,7 @@ void World::fireflies(const Switches& on, const Frame& f) {
 
 // Butterflies wandering over the grass by day, a dragonfly or two darting over the water.
 void World::flies(const Switches& on, const Frame& f) {
-    const bool want = on.butterflies && place_.wildlife && f.day > 0.2f && f.night < 0.3f;
+    const bool want = on.butterflies && place_.insects && f.day > 0.2f && f.night < 0.3f;  // 2.7.5: not in winter
     if (!want) {
         flies_.clear();
         return;

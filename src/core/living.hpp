@@ -13,10 +13,11 @@ struct Place {
     int flowers = -1;         // the grass's flowers, their colours: 0 a meadow's, 1 Payon's, 2 Amatsu's, 3 the
                               // tropics'; -1 none
     bool wildlife = false;    // butterflies and birds by day (fields and green towns)
+    bool insects = false;     // 2.7.5: butterflies, dragonflies, the night's fireflies - the wildlife's, but in winter
     int leaves = 0;           // what falls from the crowns (leaf_fall): 0 green leaves, 1 autumn's, 2 sakura petals
     bool operator==(const Place& o) const {  // 2.7.5: the same place keeps its creatures (a season of the same leaves)
         return sand == o.sand && snow == o.snow && cave == o.cave && underwater == o.underwater && swamp == o.swamp &&
-               flowers == o.flowers && wildlife == o.wildlife && leaves == o.leaves;
+               flowers == o.flowers && wildlife == o.wildlife && insects == o.insects && leaves == o.leaves;
     }
 };
 
