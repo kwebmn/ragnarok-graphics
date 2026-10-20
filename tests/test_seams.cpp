@@ -177,21 +177,29 @@ uint64_t hashOf(const std::vector<seams::Strip>& strips) {
     return h;
 }
 
-// The vertices alone (2.7.5: the indices follow each cell's crease now, the vertices stay as they were).
-uint64_t verticesHashOf(const std::vector<seams::Strip>& strips) {
-    uint64_t h = 1469598103934665603ull;
-    const auto add = [&](const void* p, size_t n) {
-        for (size_t i = 0; i < n; ++i) h = (h ^ static_cast<const uint8_t*>(p)[i]) * 1099511628211ull;
-    };
+// 2.7.6: the strips' triangles as a set - each triangle's three vertices (in its own order) with its strip's groups,
+// summed: the same triangles in another order give the same number.
+uint64_t trianglesSetHashOf(const std::vector<seams::Strip>& strips) {
+    uint64_t sum = 0;
     for (const seams::Strip& s : strips)
-        for (const seams::Vertex& v : s.vertices) {
-            add(v.pos, 12);
-            add(&v.diffuse, 4);
-            add(&v.specular, 4);
-            add(v.uv0, 8);
-            add(v.uv1, 8);
+        for (size_t k = 0; k + 2 < s.indices.size(); k += 3) {
+            uint64_t h = 1469598103934665603ull;
+            const auto add = [&](const void* p, size_t n) {
+                for (size_t i = 0; i < n; ++i) h = (h ^ static_cast<const uint8_t*>(p)[i]) * 1099511628211ull;
+            };
+            add(&s.inside, 4);
+            add(&s.shows, 4);
+            for (size_t n = 0; n < 3; ++n) {
+                const seams::Vertex& v = s.vertices[s.indices[k + n]];
+                add(v.pos, 12);
+                add(&v.diffuse, 4);
+                add(&v.specular, 4);
+                add(v.uv0, 8);
+                add(v.uv1, 8);
+            }
+            sum += h;
         }
-    return h;
+    return sum;
 }
 
 }  // namespace
@@ -205,11 +213,28 @@ TEST(seams_strips_stay_as_they_were_byte_for_byte) {
     const std::vector<seams::Strip> strips = seams::build(ground, textures, 0.5f);
     size_t vertices = 0;
     for (const seams::Strip& s : strips) vertices += s.vertices.size();
-    std::printf("  seams snapshot: %zu strips, %zu vertices, %016llx, vertices %016llx\n", strips.size(), vertices,
+    std::printf("  seams snapshot: %zu strips, %zu vertices, %016llx, triangles %016llx\n", strips.size(), vertices,
                 static_cast<unsigned long long>(hashOf(strips)),
-                static_cast<unsigned long long>(verticesHashOf(strips)));
-    CHECK(verticesHashOf(strips) == 0x54bb99aff7242b14ull);  // every vertex as 2.5.10 made them
-    CHECK(hashOf(strips) == 0x3b248f39ab4b0410ull);  // 2.7.5: the quads split along each cell's crease
+                static_cast<unsigned long long>(trianglesSetHashOf(strips)));
+    // 2.7.5 split the quads along each cell's crease (every vertex as 2.5.10 made them); 2.7.6 orders the cells by
+    // their places - the same triangles as 2.7.5's, in that order
+    CHECK(trianglesSetHashOf(strips) == 0x9616b111034a2dfeull);
+    CHECK(hashOf(strips) == 0x6605d2879a72ef3cull);
+}
+
+TEST(seams_strips_the_same_whatever_order_the_ground_comes_in) {
+    // 2.7.6 (the tester: the hills still blinked with the seams on, 2.7.5): the strips came out in the order of a hash
+    // map's cells - another set of cells in view (the camera turned) and the blended strips that overlap at the
+    // cells' corners were drawn in another order, another colour there. The same cells now give the same strips.
+    std::vector<seams::Triangle> ground;
+    std::vector<uint32_t> textures;
+    varied(ground, textures, 12);
+    const uint64_t straight = hashOf(seams::build(ground, textures, 0.5f));
+    std::vector<seams::Triangle> backwards(ground.rbegin(), ground.rend());
+    CHECK(hashOf(seams::build(backwards, textures, 0.5f)) == straight);
+    std::vector<seams::Triangle> shuffled = ground;
+    for (size_t k = 0; k + 7 < shuffled.size(); k += 7) std::swap(shuffled[k], shuffled[k + 5]);
+    CHECK(hashOf(seams::build(shuffled, textures, 0.5f)) == straight);
 }
 
 TEST(seams_cache_builds_again_only_when_the_ground_differs) {

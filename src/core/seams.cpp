@@ -149,7 +149,15 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
     static const Way kWays[4] = {{1, 0, {1, 3}, {0, 2}}, {-1, 0, {0, 2}, {1, 3}},
                                  {0, 1, {2, 3}, {0, 1}}, {0, -1, {0, 1}, {2, 3}}};
     constexpr int kAlong = 4, kAcross = 2;
-    for (const auto& entry : cells) {
+    // 2.7.6: the cells in the order of their places, not of the hash map's buckets - those followed the set of cells
+    // in view, and as the camera turned the blended strips overlapping at the cells' corners were drawn in another
+    // order each frame: another colour there, the hills blinked
+    std::vector<const std::pair<const int64_t, Cell>*> placed;
+    placed.reserve(cells.size());
+    for (const auto& entry : cells) placed.push_back(&entry);
+    std::sort(placed.begin(), placed.end(), [](const auto* x, const auto* y) { return x->first < y->first; });
+    for (const auto* at : placed) {
+        const auto& entry = *at;
         const Cell& a = entry.second;
         if (!(a.have[0] && a.have[1] && a.have[2] && a.have[3])) continue;
         const int ix = int(entry.first >> 32), iz = int(int32_t(uint32_t(entry.first)));
