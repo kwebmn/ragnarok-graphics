@@ -220,7 +220,7 @@ enum class Text : uint16_t {
     FxFlowers, FxFlowersHint, FxDew, FxDewHint, FxMorningFog, FxMorningFogHint, FxSandDrift, FxSandDriftHint,
     FxSnowSparkle, FxSnowSparkleHint, FxWetWalls, FxWetWallsHint,
     // 1.7.2
-    FxShoreFoam, FxShoreFoamHint, FxSwamp, FxSwampHint,
+    FxSwamp, FxSwampHint,
     // 1.7.3
     FxButterflies, FxButterfliesHint, FxBirds, FxBirdsHint, FxLeafFall, FxLeafFallHint, FxEmbers, FxEmbersHint,
     FxBreath, FxBreathHint, FxSplashes, FxSplashesHint, FxCaveDrips, FxCaveDripsHint, FxUnderwater, FxUnderwaterHint,
@@ -290,7 +290,7 @@ enum class Text : uint16_t {
     StudioViewMaterial, StudioMatGloss, StudioMatRelief, StudioMatHeight, StudioMatSave, StudioJobMaterial,
     // 2.4: the parts of the effects
     FxWaterFoam, FxWaterFoamHint, FxWaterGlints, FxWaterGlintsHint, FxCaustics, FxCausticsHint, FxWaterfalls,
-    FxWaterfallsHint, FxWetSand, FxWetSandHint, FxStepDust, FxStepDustHint, FxSeasonSnow, FxSeasonSnowHint,
+    FxWaterfallsHint, FxStepDust, FxStepDustHint, FxSeasonSnow, FxSeasonSnowHint,
     FxSeasonGrass, FxSeasonGrassHint, FxPollen, FxPollenHint, FxIndoorDust, FxIndoorDustHint, FxRainSplashes,
     FxRainSplashesHint, FxStars, FxStarsHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
     FxSkyRaysHint, FxTreeSeasons, FxTreeSeasonsHint, FxDragonflies, FxDragonfliesHint,

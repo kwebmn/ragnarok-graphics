@@ -301,7 +301,7 @@ private:
                                                                     : user * shine_;  // 2.5.17
     }
     // 2.5.4: the living ground (ao.cpp applyGroundLife: sand drifting over the desert, snow glittering, a damp cave's
-    // walls glistening, the wet sand along the shore, the season's snow and grass, wet in the rain) and the grass
+    // walls glistening, the season's snow and grass, wet in the rain) and the grass
     // (applyGrass: on the map's ground only - its cells from the frame's ground triangles), before the characters
     void applyGroundLife();
     void applyGrass();
@@ -407,11 +407,9 @@ private:
                                     (effects_.seasonGrass && (year_.dry > 0.0f || year_.lush > 0.0f)));
     }
     bool rainWetShown() const { return effects_.rainWet && effects_.weather && weather_ == weather::Kind::Rain; }
-    bool wetSandWanted() const { return effects_.shoreFoam && effects_.wetSand && waterLevelKnown_ && outdoors_; }
     bool groundLifeWanted() const {
         return groundLifePs_ && ((effects_.sandDrift && place_.sand) || (effects_.snowSparkle && place_.snow) ||
-                                 (effects_.wetWalls && place_.cave) || wetSandWanted() || seasonsShown() ||
-                                 rainWetShown());
+                                 (effects_.wetWalls && place_.cave) || seasonsShown() || rainWetShown());
     }
     bool grassWanted() const {
         return effects_.grass && effects_.grassAmount > 0 && grassPs_ && outdoors_ && cameraValid_;

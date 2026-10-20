@@ -313,10 +313,9 @@ struct EffectSettings {
     bool sandDrift = false;
     bool snowSparkle = false;
     bool wetWalls = false;
-    // 1.7.2: the living world, the water (with water): shore_foam - the surf's swash, its foam coming and going and
-    // the sand wet along the shore; swamp - a swamp's bubbles and mist. Off by default. (2.7.2: the fish under the
-    // surface gone at the user's word - too faint to be seen.)
-    bool shoreFoam = false;
+    // 1.7.2: the living world, the water (with water): swamp - a swamp's bubbles and mist. Off by default. (2.7.2: the
+    // fish under the surface and the surf - its swash and the wet sand above it - gone at the user's word: too faint
+    // to be seen; the foam along the shore stays the water's own, water_foam.)
     bool swamp = false;
     // 1.7.3: the living world, creatures and particles (core/critters.hpp, Direct3D 12): butterflies and dragonflies,
     // birds, leaves falling from the crowns, embers from the fires, breath in the cold, splashes, the caves' drips,
@@ -375,7 +374,6 @@ struct EffectSettings {
     bool waterGlints = true;    // water: the sun's glints on the waves
     bool caustics = true;       // water: the light the waves focus on a shallow bed
     bool waterfalls = true;     // water: the waterfalls the maps' makers placed (0.65)
-    bool wetSand = true;        // shore_foam: the wet sand above the water
     bool stepDust = true;       // footprints: the dust a step lifts on dry ground
     bool seasonSnow = true;     // seasons: winter's snow on what faces up
     bool seasonGrass = true;    // seasons: the green ground drier in autumn, greener in spring

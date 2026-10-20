@@ -1418,7 +1418,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         water::isWaterQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
                            d.primitive == d3d7::PT_TRIANGLESTRIP))
         water = (!toGlow || waterGlowPs_) && copyForWater();  // 1.0: in the glow, its own glow shader
-    if (water) noteWaterLevel(rec, d);  // 2.5.4: the wet sand's and the creatures' water level
+    if (water) noteWaterLevel(rec, d);  // 2.5.4: the creatures' water level; 2.7.2: the grass's
     if (water && !mirrorDone_ && waterLevelKnown_ && mirrorCollecting() && !mirrorCasters_.empty()) {
         applyMirror();  // 2.5.9 (draw.cpp 1.16): the world mirrored, before the frame's first water
         bindTarget();
@@ -1756,12 +1756,12 @@ bool Renderer11::copyForWater() {
     return true;
 }
 
-// 2.5.9 (draw.cpp waterLife): water_ps's bits - 2 a swamp's bubbles, 4 the surf's swash (1, the fish, gone in 2.7.2);
+// 2.5.9 (draw.cpp waterLife): water_ps's bits - 2 a swamp's bubbles (1 the fish and 4 the surf's swash gone in 2.7.2);
 // the water's own parts, each a box of its own since 2.4: 8 the foam along the shore, 16 the sun's glints, 32 the
 // light on the bed
 float Renderer11::waterLife() const {
-    return float((effects_.swamp && place_.swamp ? 2 : 0) +
-                 (effects_.shoreFoam ? 4 : 0) + (effects_.waterFoam ? 8 : 0) + (effects_.waterGlints ? 16 : 0) +
+    return float((effects_.swamp && place_.swamp ? 2 : 0) + (effects_.waterFoam ? 8 : 0) +
+                 (effects_.waterGlints ? 16 : 0) +
                  (effects_.caustics ? 32 : 0));
 }
 
@@ -2651,10 +2651,6 @@ void Renderer11::applyGroundLife() {
     c.twin[0] = effects_.sandDrift && place_.sand ? 1.0f : 0.0f;
     c.twin[1] = effects_.snowSparkle && place_.snow ? 1.0f - 0.6f * night : 0.0f;
     c.twin[2] = effects_.wetWalls && place_.cave ? 1.0f : 0.0f;
-    if (wetSandWanted()) {  // the wet sand along the shore
-        c.twin[3] = 1.0f;
-        c.sourceClamp[0] = waterLevel_;
-    }
     if (seasonsShown()) {  // the season's snow and grass, each a box of its own
         c.sourceRect[0] = effects_.seasonSnow ? year_.snow : 0.0f;
         c.sourceRect[2] = effects_.seasonGrass ? year_.dry : 0.0f;
@@ -2671,7 +2667,6 @@ void Renderer11::applyGroundLife() {
                  c.twin[0] > 0.0f   ? "sand"
                  : c.twin[1] > 0.0f ? "snow"
                  : c.twin[2] > 0.0f ? "damp walls"
-                 : c.twin[3] > 0.0f ? "wet sand"
                                     : "nothing of its own",
                  seasonsShown() ? ", the season" : "", rainWetShown() ? ", wet in the rain" : "");
     groundLifeLogged_ = true;

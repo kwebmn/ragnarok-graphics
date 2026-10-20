@@ -193,7 +193,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"grass", Plants}, {"flowers", Plants}, {"dew", Plants}, {"foliage", Plants}, {"gusts", Plants},
         {"tree_volume", Plants}, {"leaf_light", Plants}, {"tree_tints", Plants},
         {"leaf_fall", Plants},
-        {"water", Waters}, {"ripples", Waters}, {"shore_foam", Waters}, {"splashes", Waters},
+        {"water", Waters}, {"ripples", Waters}, {"splashes", Waters},
         {"underwater", Waters}, {"swamp", Waters}, {"world_reflections", Waters},
         {"butterflies", Creatures}, {"birds", Creatures}, {"night_fireflies", Creatures},
         {"wet_walls", Caves}, {"cave_drips", Caves}, {"lit_dust", Caves},

@@ -409,7 +409,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.sandDrift ? 1 : 0);
     w.u8(e.snowSparkle ? 1 : 0);
     w.u8(e.wetWalls ? 1 : 0);
-    w.u8(e.shoreFoam ? 1 : 0);  // 1.7.2
     w.u8(e.swamp ? 1 : 0);
     w.u8(e.butterflies ? 1 : 0);  // 1.7.3
     w.u8(e.birds ? 1 : 0);
@@ -439,7 +438,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.waterGlints ? 1 : 0);
     w.u8(e.caustics ? 1 : 0);
     w.u8(e.waterfalls ? 1 : 0);
-    w.u8(e.wetSand ? 1 : 0);
     w.u8(e.stepDust ? 1 : 0);
     w.u8(e.seasonSnow ? 1 : 0);
     w.u8(e.seasonGrass ? 1 : 0);

@@ -921,7 +921,7 @@ float4 water(WaterIn i) {
     int2 px = int2(i.pos.xy);
     float t = sharpen;
     float waves = footprint;
-    // 1.7: 2 a swamp's bubbles, 4 the surf's swash (water_life; 1, the fish, gone in 2.7.2); 2.4: the water's own
+    // 1.7: 2 a swamp's bubbles (water_life; 1 the fish and 4 the surf's swash gone in 2.7.2); 2.4: the water's own
     // parts, each a box of its own - 8 the foam along the shore, 16 the sun's glints, 32 the light on the bed
     uint life = uint(twinH + 0.5);
     // 0.22.2: the world's axes turned, for the noise: no rows along them.
@@ -1003,8 +1003,7 @@ float4 water(WaterIn i) {
     // broken by noise that drifts with the waves.
     if ((life & 8) != 0) {
         float shore = 0.0;
-        float swash = (life & 4) != 0 ? 0.5 + 0.5 * sin(t * 0.55 + fp.x * 0.04) : 0.0;
-        float reach = (5.0 + 4.0 * swash) * scale;
+        float reach = 5.0 * scale;
         [unroll] for (int k = 0; k < 4; ++k) {
             float2 o = k == 0 ? float2(reach, 0.0) : k == 1 ? float2(-reach, 0.0) : k == 2 ? float2(0.0, reach)
                                                                                         : float2(0.0, -reach);
@@ -1021,7 +1020,7 @@ float4 water(WaterIn i) {
         float roll = frac(thick * 1.3 - t * 0.22);
         float swell = exp(-pow((roll - 0.5) * 9.0, 2.0)) * saturate(1.0 - thick / 2.5);
         float froth = saturate(rim * (0.5 + 0.5 * broken) + swell * broken * 0.7);
-        c = lerp(c, float3(0.92, 0.95, 0.97) * light, saturate(shore * 2.0) * froth * (0.55 + 0.3 * swash));
+        c = lerp(c, float3(0.92, 0.95, 0.97) * light, saturate(shore * 2.0) * froth * 0.55);
     }
     c = waterLife(c, life, i.world.xz, t, light);
     return float4(c, saturate(thick / 0.8));  // the shore line fades in, no hard edge
@@ -1838,26 +1837,6 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
         float wet = run * wall * twinW;
         o = lerp(o, min(col * 1.6 + 0.12, 1.0), saturate(wet));
         a = max(a, saturate(wet));
-    }
-    if (twinH > 0.0) {  // 1.7: wet sand along the shore (shore_foam): just above the water (sourceClamp.x its level,
-        // last frame's) near ground that lies under it, darker in a band that comes and goes with the swash
-        float above = sourceClamp.x - w.y;  // up is -y
-        float band = 0.9 + 0.7 * sin(t * 0.55 + dot(w.xz, float2(0.04, 0.03)));
-        if (above > 0.0 && above < band && col.r > col.b * 1.05) {
-            float near = 0.0;
-            float reach = 30.0 * scale;
-            [unroll] for (int k = 0; k < 8; ++k) {
-                float ang = float(k) * 0.785398;
-                int2 q = clamp(wp + int2(float2(cos(ang), sin(ang)) * reach), int2(0, 0), last);
-                if (sceneDepth.Load(int3(q, 0)) >= 0.99999) continue;
-                float3 qv = viewAt(q);
-                float qy = qv.x * r1 + qv.y * r4 + qv.z * r7 + r10;
-                near = max(near, step(sourceClamp.x + 0.1, qy));
-            }
-            float wet = smoothstep(band, band * 0.4, above) * 0.5 * near;
-            o = lerp(o, col * 0.6, wet / max(a + wet, 1e-3));
-            a = saturate(max(a, wet));
-        }
     }
 #ifndef UAGFX_SAFE
     // 1.20, the year and the rain on the whole map (core/seasons.hpp): sourceRect.x winter's snow on what faces up,

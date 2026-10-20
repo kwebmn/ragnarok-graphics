@@ -149,7 +149,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.sandDrift = rd.u8() != 0;
             e.snowSparkle = rd.u8() != 0;
             e.wetWalls = rd.u8() != 0;
-            e.shoreFoam = rd.u8() != 0;  // 1.7.2
             e.swamp = rd.u8() != 0;
             e.butterflies = rd.u8() != 0;  // 1.7.3
             e.birds = rd.u8() != 0;
@@ -179,7 +178,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.waterGlints = rd.u8() != 0;
             e.caustics = rd.u8() != 0;
             e.waterfalls = rd.u8() != 0;
-            e.wetSand = rd.u8() != 0;
             e.stepDust = rd.u8() != 0;
             e.seasonSnow = rd.u8() != 0;
             e.seasonGrass = rd.u8() != 0;

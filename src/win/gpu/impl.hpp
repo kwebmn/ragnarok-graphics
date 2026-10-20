@@ -1169,8 +1169,7 @@ struct Renderer::Impl {
     bool groundLifeDone = false, groundLifeLogged = false;
     bool groundLifeWanted() const {
         return groundLifePs && ((effects.sandDrift && mapPlace.sand) || (effects.snowSparkle && mapPlace.snow) ||
-                                (effects.wetWalls && mapPlace.cave) || wetSandWanted() || seasonsShown() ||
-                                rainWetShown());
+                                (effects.wetWalls && mapPlace.cave) || seasonsShown() || rainWetShown());
     }
     // 1.20: the year on the whole map, the rain's wet on the walls and roofs (ground_life_ps)
     bool seasonsShown() const {
@@ -1178,7 +1177,6 @@ struct Renderer::Impl {
                                    (effects.seasonGrass && (mapYear.dry > 0.0f || mapYear.lush > 0.0f)));
     }
     bool rainWetShown() const { return effects.rainWet && effects.weather && mapWeather == weather::Kind::Rain; }
-    bool wetSandWanted() const { return effects.shoreFoam && effects.wetSand && waterLevelKnown && mapOutdoors; }
     bool groundLifeDue() const { return groundLifeWanted() && groundDrawn && !groundLifeDone && viewToWorldValid; }
     bool applyGroundLife();  // once a frame, before the characters; false: lost
     float waterLife() const;  // 1.7: water_ps's bits (draw.cpp)

@@ -27,7 +27,7 @@ TEST(effect_parts_have_their_own_boxes_under_the_effect) {
     static const char* const kParts[][2] = {
         {"effects.water", "effects.water_foam"},       {"effects.water", "effects.water_glints"},
         {"effects.water", "effects.caustics"},         {"effects.water", "effects.waterfalls"},
-        {"effects.shore_foam", "effects.wet_sand"},    {"effects.footprints", "effects.step_dust"},
+        {"effects.footprints", "effects.step_dust"},
         {"effects.seasons", "effects.season_snow"},    {"effects.seasons", "effects.season_grass"},
         {"effects.motes", "effects.pollen"},           {"effects.motes", "effects.indoor_dust"},
         {"effects.weather", "effects.rain_splashes"},  {"effects.sky", "effects.stars"},

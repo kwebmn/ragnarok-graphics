@@ -186,7 +186,6 @@ EffectSettings effectsOff() {
     e.butterflies = false;
     e.nightFireflies = false;
     e.swamp = false;
-    e.shoreFoam = false;
     e.wetWalls = false;
     e.snowSparkle = false;
     e.sandDrift = false;
@@ -207,7 +206,7 @@ EffectSettings effectsOff() {
     e.bloom = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
     e.mapFade = e.noGameFog = e.noServerNight = e.roundLight = false;
     // 2.4: the parts of the effects
-    e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.wetSand = e.stepDust = e.seasonSnow = false;
+    e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.stepDust = e.seasonSnow = false;
     e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.stars = e.desertHeat = false;
     e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
@@ -259,7 +258,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.butterflies ||
            e.nightFireflies ||
            e.swamp ||
-           e.shoreFoam ||
            e.wetWalls ||
            e.snowSparkle ||
            e.sandDrift ||
