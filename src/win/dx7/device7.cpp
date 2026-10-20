@@ -261,8 +261,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         const Surface7* tex = textures_[0];
         bool card = false;
         const uint8_t kind = tex->spriteAt(u * float(tex->width()), w * float(tex->height()), &card);
-        if (fx.hitFlash && kind == uint8_t(sprite_exe::Source::Monster))
+        if (fx.hitFlash && kind == uint8_t(sprite_exe::Source::Monster)) {
+            c.monsters.note(hit_flash::Box{x0, x1, y0, y1});  // 2.7.10: the next frame's hits find it here
             flash = c.flashes.strength(x0, x1, y0, y1, c.nowMs());
+        }
         if (fx.glint && card && kind == uint8_t(sprite_exe::Source::Item)) {
             const uint32_t seed = uint32_t(int(x) / 8 * 7919 + int(y) / 8 * 104729);
             const float flare = glint::flare(c.nowMs() / 1000.0, seed);

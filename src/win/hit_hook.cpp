@@ -25,7 +25,7 @@ const uint8_t kPlayerCode[] = {0xB9, 0x78, 0xB5, 0x74, 0x00, 0xE8, 0x4C, 0x14, 0
 constexpr uint32_t kPlayerAt = 0x54567A, kModeKind = 0x74B5D0, kModeNow = 0x74B57C;
 uintptr_t g_trampoline = 0;
 
-void noteHit(float x, float y, float z) {
+void noteHit(const char* name, float x, float y, float z) {
     Context& c = Context::get();
     if (!c.effects().hitFlash || !c.enhanced()) return;
     if (*reinterpret_cast<const int*>(uintptr_t(kModeKind)) != 1) return;
@@ -38,11 +38,22 @@ void noteHit(float x, float y, float z) {
     if (!readGameCamera(view)) return;
     const camera::Projection p = camera::projectionFor(c.screenWidth, c.screenHeight);
     float sx = 0, sy = 0;
-    if (hit_flash::toScreen(view, p, at[0] + x, at[1] + y, at[2] + z, sx, sy)) c.flashes.add(sx, sy, c.nowMs());
+    if (!hit_flash::toScreen(view, p, at[0] + x, at[1] + y, at[2] + z, sx, sy)) return;
+    // 2.7.10: the place comes at the player's height - on a hill far from the monster's feet: given to the monster
+    // drawn last frame under or over it (hit_flash::Monsters)
+    const float heardX = sx, heardY = sy;
+    const bool aimed = c.monsters.aim(sx, sy);
+    c.flashes.add(sx, sy, c.nowMs());
+    static int told = 0;  // the first hits in the log: heard, and whether a monster took them
+    if (told < 8) {
+        ++told;
+        LOG_INFO("hit flash: %s heard at %.0f,%.0f - %s", name, heardX, heardY,
+                 aimed ? "given to the monster there" : "no monster drawn there");
+    }
 }
 
 void __cdecl playAt(const char* name, float x, float y, float z, int reach, int fade, uint32_t volume) {
-    if (hit_flash::hitSound(name)) noteHit(x, y, z);
+    if (hit_flash::hitSound(name)) noteHit(name, x, y, z);
     reinterpret_cast<PlayAtFn>(g_trampoline)(name, x, y, z, reach, fade, volume);
 }
 

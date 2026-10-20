@@ -421,6 +421,7 @@ void Context::updateLight() {
 void Context::present(const Rect& source, bool waitForVblank) {
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
+    monsters.frame();  // 2.7.10: this frame's monsters, where the next hits look for theirs
     if (!renderer) return;
     watchSettings();
     updateLight();  // 2.5.20

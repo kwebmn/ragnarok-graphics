@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -35,6 +36,48 @@ inline bool toScreen(const float view[12], const camera::Projection& p, float x,
     sy = vy / vz * p.f1 + p.cy;
     return true;
 }
+
+// A monster's sprite on the screen (the game's pixels): its box, the feet at y1.
+struct Box {
+    float x0, x1, y0, y1;
+};
+
+// 2.7.10 (the tester at prt_fild08 200 200, a hill: no flash seen): the game plays a hit's sound at the monster's x
+// and z but at the player's height (348 of its 366 calls pass 0 for it) - on a slope the point lands tens of pixels
+// above or below the monster's feet and no sprite took it. The monsters drawn last frame, and the hit given to the
+// one whose box takes its x, the feet nearest it - within kReach (about 24 units of height at the usual distance).
+class Monsters {
+public:
+    static constexpr float kReach = 240.0f;
+    void note(const Box& b) {
+        if (now_.size() < 256) now_.push_back(b);
+    }
+    void frame() {
+        last_.swap(now_);
+        now_.clear();
+    }
+    // The point moved onto the feet of that monster; false (and the point as it was): none.
+    bool aim(float& sx, float& sy) const {
+        const Box* best = nullptr;
+        float gap = kReach;
+        for (const Box& b : last_) {
+            const float pad = std::max((b.x1 - b.x0) * 0.15f, 6.0f);
+            if (sx < b.x0 - pad || sx > b.x1 + pad) continue;
+            const float d = std::fabs(sy - b.y1);
+            if (d <= gap) {
+                gap = d;
+                best = &b;
+            }
+        }
+        if (!best) return false;
+        sx = (best->x0 + best->x1) * 0.5f;
+        sy = best->y1;
+        return true;
+    }
+
+private:
+    std::vector<Box> now_, last_;
+};
 
 class Flashes {
 public:

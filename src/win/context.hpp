@@ -62,6 +62,7 @@ public:
     void present(const Rect& source, bool waitForVblank);
     bool enhanced() const { return enhanced_; }  // not paused (Pause or Scroll Lock: the game's own picture)
     hit_flash::Flashes flashes;  // 0.96: where hits landed (win/hit_hook.cpp), the monsters there flash
+    hit_flash::Monsters monsters;  // 2.7.10: the monsters drawn last frame (Device7::record), each hit given to one
     double nowMs() const;    // a millisecond clock for the effects made as the game draws
 
 private:
