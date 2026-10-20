@@ -982,8 +982,12 @@ struct Renderer::Impl {
         groundLifeDone = false;  // 1.7
         crittersDone = false;
         materialsMade = 0;  // 1.8
-        if (hillsWanted()) hillsGrid = hills::build(groundTris);  // 1.15: before they go
-        if (grassCellsWanted()) groundCells = ground_cells::build(groundTris);  // 2.2.1
+        // 1.15 smooth hills, 2.2.1 the grass's ground, 1.16 the mirror's casters: the last frame's for this one, built
+        // at the present. 2.7.1: a frame's first clear (the game clears all of the picture as it starts a frame,
+        // uaRO.exe 0x559750 -> 0x40d8c0) comes here too, with none of them - they are kept, not built of nothing (until
+        // now: no smooth hills, no grass mask and no world in the water on Direct3D 12)
+        if (hillsWanted() && !groundTris.empty()) hillsGrid = hills::build(groundTris);
+        if (grassCellsWanted() && !groundTris.empty()) groundCells = ground_cells::build(groundTris);
         hillsUp = hillsTried = false;
         groundCellsUp = groundCellsTried = false;
         if (windShared()) updateWind();  // 1.22
@@ -991,7 +995,7 @@ struct Renderer::Impl {
         groundGroups.clear();
         groundTextures.clear();
         seamsDone = false;
-        if (mirrorCollecting()) {  // 1.16: the last frame's casters for this one's mirror
+        if (mirrorCollecting() && !sunCasters.empty()) {  // 1.16: the last frame's casters for this one's mirror
             mirrorVerts.swap(sunVerts);
             mirrorCasters.swap(sunCasters);
         }

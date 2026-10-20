@@ -85,14 +85,15 @@ Console::~Console() {
 LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
     const bool key = msg == WM_KEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP ||
                      msg == WM_CHAR || msg == WM_SYSCHAR;
-    // 2.6.22: the ~ key's own letter (` or ё) that follows its press opens the console, it is not typed
+    // 2.6.22: the ~ key's own letter that follows its press (` or, in a Cyrillic layout, ё) opens or closes the
+    // console - typed neither in its search nor (2.7.1) in the game's chat, where every opening put an «ё»
     if (msg == WM_KEYDOWN && wp == VK_OEM_3) skipCharUntil_ = GetTickCount64() + 250;
-    if (msg == WM_CHAR && active_ && active_->open_) {  // 2.6.22: letters and Backspace for the search
-        if (GetTickCount64() < skipCharUntil_)
-            skipCharUntil_ = 0;
-        else if (wp == 8 || (wp > L' ' && wp != 127))
-            active_->typed_.push_back(wchar_t(wp));
+    if (msg == WM_CHAR && GetTickCount64() < skipCharUntil_) {
+        skipCharUntil_ = 0;
+        return 0;
     }
+    if (msg == WM_CHAR && active_ && active_->open_ && (wp == 8 || (wp > L' ' && wp != 127)))
+        active_->typed_.push_back(wchar_t(wp));  // 2.6.22: letters and Backspace for the search
     if (key && ((active_ && active_->open_) || wp == VK_OEM_3 || ((msg == WM_CHAR) && (wp == L'`' || wp == L'~'))))
         return 0;
     for (const Subclassed& s : subclassed_)
