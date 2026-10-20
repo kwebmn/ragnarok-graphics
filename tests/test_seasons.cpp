@@ -35,3 +35,13 @@ TEST(seasons_chosen_like_the_clock) {
     const seasons::Look summer = seasons::of("prt_fild08", seasons::monthFor(seasons::kSeasonSummer, 10), true, field);
     CHECK(summer.snow == 0.0f && summer.dry == 0.0f && summer.lush == 0.0f);
 }
+
+TEST(seasons_change_the_creatures_place_in_autumn_alone) {
+    // 2.7.5: another season chosen made the map's creatures anew every time (the butterflies came again); the place
+    // differs only by autumn's leaves - the same place, the same creatures
+    const living::Place summer = living::placeOf("prt_fild08", true, false);
+    const living::Place autumn = living::placeOf("prt_fild08", true, true);
+    CHECK(summer == living::placeOf("prt_fild08", true, false));
+    CHECK(!(summer == autumn));
+    CHECK(!(summer == living::placeOf("moc_fild12", true, false)));
+}

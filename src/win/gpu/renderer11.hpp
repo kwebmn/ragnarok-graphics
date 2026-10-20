@@ -96,8 +96,9 @@ public:
         const bool season = e.season != effects_.season, weatherKind = e.weatherKind != effects_.weatherKind;
         effects_ = e;
         if (season && !map_.empty()) {  // 2.6.22: another season chosen - the map's year at once (setMap)
+            const living::Place was = place_;
             takeSeason();
-            critterWorld_.setPlace(place_);
+            if (!(place_ == was)) critterWorld_.setPlace(place_);  // 2.7.5: its creatures anew if they change
         }
         if (weatherKind && !map_.empty()) {  // 2.6.22: another weather chosen - at once, the log told it anew
             weather_ = weather::chosen(e.weatherKind, map_);

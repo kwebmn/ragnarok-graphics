@@ -2073,9 +2073,10 @@ void Renderer::setEffects(const EffectSettings& e) {
     const bool was = m.glowWanted();
     const bool season = e.season != m.effects.season, weatherKind = e.weatherKind != m.effects.weatherKind;
     m.effects = e;
-    if (season && !m.mapName.empty()) {  // 2.6.22: another season chosen - the map's year at once, its creatures anew
+    if (season && !m.mapName.empty()) {  // 2.6.22: another season chosen - the map's year at once
+        const living::Place was = m.mapPlace;
         m.takeSeason();
-        m.critterWorld.setPlace(m.mapPlace);
+        if (!(m.mapPlace == was)) m.critterWorld.setPlace(m.mapPlace);  // 2.7.5: its creatures anew if they change
     }
     if (weatherKind && !m.mapName.empty()) {  // 2.6.22: another weather chosen - at once, the log told it anew
         m.mapWeather = weather::chosen(e.weatherKind, m.mapName);

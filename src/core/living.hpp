@@ -14,6 +14,10 @@ struct Place {
                               // tropics'; -1 none
     bool wildlife = false;    // butterflies and birds by day (fields and green towns)
     int leaves = 0;           // what falls from the crowns (leaf_fall): 0 green leaves, 1 autumn's, 2 sakura petals
+    bool operator==(const Place& o) const {  // 2.7.5: the same place keeps its creatures (a season of the same leaves)
+        return sand == o.sand && snow == o.snow && cave == o.cave && underwater == o.underwater && swamp == o.swamp &&
+               flowers == o.flowers && wildlife == o.wildlife && leaves == o.leaves;
+    }
 };
 
 Place placeOf(const std::string& map, bool outdoors, bool autumn);
