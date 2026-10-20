@@ -278,4 +278,40 @@ void Renderer11::applySeams() {
     seamsLogged_ = true;
 }
 
+// 2.6.18 (ao.cpp noteDarkness): a draw of blindness's darkness kept for applyDarkness.
+void Renderer11::noteDarkness(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const std::vector<uint16_t>& ix = rec.indices();
+    if (d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) > v.size() ||
+        size_t(d.firstIndex) + d.indexCount > ix.size())
+        return;
+    DrawCmd cmd = d;
+    cmd.state = darknessRec_.addState(s);
+    darknessRec_.draw(cmd, v.data() + d.vertexOffset, d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
+                      d.indexCount);
+}
+
+// 2.6.18: blindness's darkness over the world and its effects, from the strips' buffers (as applySeams draws them).
+void Renderer11::applyDarkness() {
+    darknessLaid_ = true;
+    if (darknessRec_.draws().empty()) return;
+    flushBatch();  // the game's draws gathered so far are of its own vertices
+    const std::vector<uint8_t>& v = darknessRec_.vertexBytes();
+    const std::vector<uint16_t>& ix = darknessRec_.indices();
+    if (fillBuffer(seamVertices_, seamVertexBytes_, D3D11_BIND_VERTEX_BUFFER, v.data(), v.size(),
+                   bgraVertices_ ? nullptr : &darknessRec_) &&
+        (ix.empty() || fillBuffer(seamIndices_, seamIndexBytes_, D3D11_BIND_INDEX_BUFFER, ix.data(),
+                                  ix.size() * sizeof(uint16_t), nullptr))) {
+        std::swap(vertices_, seamVertices_);
+        std::swap(indices_, seamIndices_);
+        darknessPass_ = true;
+        for (const DrawCmd& cmd : darknessRec_.draws()) draw(darknessRec_, cmd);
+        flushBatch();
+        darknessPass_ = false;
+        std::swap(vertices_, seamVertices_);
+        std::swap(indices_, seamIndices_);
+    }
+    darknessRec_.reset();
+}
+
 }  // namespace uagfx::gpu

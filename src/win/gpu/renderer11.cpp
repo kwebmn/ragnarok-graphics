@@ -1187,13 +1187,18 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         (d.indexCount && size_t(d.firstIndex) + d.indexCount > rec.indices().size()))
         return;
     const DrawSetup& s = rec.states()[d.state];
+    // 2.6.18: blindness's darkness waits for the world's effects (applyDarkness)
+    if (!seamPass_ && !darknessPass_ && !s.ui && d.effect == uint8_t(effect_exe::Kind::Darkness) && !darknessLaid_) {
+        noteDarkness(rec, d, s);
+        return;
+    }
     timeDraws(s.ui, true);  // 2.5.15: the world's and the interface's spans on the card
     // 0.59: the colours over the world, before the interface's first draw (as Direct3D 12's applyGrade); 0.61: the
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !mistDone_ ||
                                 !skyDone_ || !shaftsDone_ || !flareDone_ || !heatDone_ || !bloomDone_ ||
-                                !gradeDone_ || !weatherDone_))
+                                !gradeDone_ || !weatherDone_ || !darknessLaid_))
         flushBatch();
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
@@ -1212,6 +1217,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
     if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
     if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
+    if (s.ui && !darknessLaid_) applyDarkness();  // 2.6.18: blindness's darkness over all of it
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
     if (s.ui) exitWorld();              // 2.5.16: the world made larger into the picture, the interface sharp
     if (s.ui) timeDraws(true, false);   // 2.5.15: the interface's span after the world's effects
@@ -2082,6 +2088,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2
     if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
     if (worldDrawn_ && !weatherDone_) applyWeather();  // 2.5
+    if (!darknessLaid_) applyDarkness();  // 2.6.18
     if (glowDrawn_) addGlow();  // 1.0: likewise
     exitWorld();  // 2.5.16: a frame without an interface: its world made larger now
     frameOpen_ = false;
@@ -2118,6 +2125,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     frameCrowns_.clear();
     critterFires_.clear();
     critterFlames_.clear();  // 2.6.12
+    darknessRec_.reset();  // 2.6.18
+    darknessLaid_ = false;
     shaftsDone_ = flareDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();

@@ -354,6 +354,13 @@ private:
     ID3D11Buffer* seamIndices_ = nullptr;
     UINT seamVertexBytes_ = 0, seamIndexBytes_ = 0;
     bool seamPass_ = false;  // draw() draws a strip: no notes, no passes
+    // 2.6.18 (Direct3D 12's darknessRec): blindness's darkness kept from its place among the world's draws and laid
+    // over the world once its effects are drawn (applyDarkness, in seamVertices_ and seamIndices_ - the strips are
+    // drawn by then); darknessLaid_: this frame's is down - one after it is drawn in its place
+    FrameRecord darknessRec_;
+    bool darknessPass_ = false, darknessLaid_ = false;
+    void noteDarkness(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    void applyDarkness();
     bool seamsDone_ = false, seamsLogged_ = false;
     bool seamsWanted() const { return effects_.groundSeams && cameraValid_ && outdoors_; }
     void applySeams();

@@ -64,6 +64,18 @@ Kind kindOf(int id) {
     case 561:
     case 562:
         return Kind::Portal;
+    case 334:  // 2.6.18: blindness; the darkness's ten levels
+    case 475:
+    case 476:
+    case 477:
+    case 478:
+    case 479:
+    case 480:
+    case 481:
+    case 482:
+    case 483:
+    case 484:
+        return Kind::Darkness;
     // 0.37: the maps' own - torches, smoke, bubbles, pillars of light, the waterfall, the ghost and the bats, falls of
     // blue light - stay as they are.
     case 44:

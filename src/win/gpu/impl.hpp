@@ -948,6 +948,8 @@ struct Renderer::Impl {
     // A new picture (cleared, presented, another target): the world's effects are due again.
     void newPicture() {
         waterCopied = false;  // 0.19: its water copies what is under it anew
+        darknessRec.reset();  // 2.6.18
+        darknessLaid = false;
         aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
         softCopied = 0;     // 0.67
@@ -1055,6 +1057,14 @@ struct Renderer::Impl {
     std::vector<GroundGroup> groundGroups;
     std::vector<uint32_t> groundTextures;
     FrameRecord seamRec;
+    // 2.6.18: blindness's darkness (effect_exe::Kind::Darkness) kept from its place among the world's draws and laid
+    // over the world once its effects are drawn (finishWorld, applyDarkness): in its place the torches' light and
+    // flames, the glow and the rest shone through it (R-MCVUC8). darknessLaid: this picture's is down - one after it
+    // is drawn in its place.
+    FrameRecord darknessRec;
+    bool darknessPass = false, darknessLaid = false;
+    void noteDarkness(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    bool applyDarkness();  // false: lost
     seams::Cache seamsCache;  // 2.5.11
     bool seamPass = false, seamsDone = false, seamsLogged = false;
     // 2.2.1: outdoors only - a dungeon's floor is tiles (Glast Heim's church: stone and black broken ones), whose

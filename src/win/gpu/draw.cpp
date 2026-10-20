@@ -53,7 +53,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     const DrawSetup& s = rec.states()[d.state];
     crumb(seamPass ? "ground seams' strips" : s.ui ? "the game's interface" : "the game's world");
-    const bool inner = seamPass;  // 1.9: the driver's own draws (no hooks, nothing noted)
+    const bool inner = seamPass || darknessPass;  // 1.9: the driver's own draws (no hooks, nothing noted)
+    // 2.6.18: blindness's darkness waits for the world's effects (applyDarkness)
+    if (!inner && !s.ui && d.effect == uint8_t(effect_exe::Kind::Darkness) && !darknessLaid) {
+        noteDarkness(rec, d, s);
+        return;
+    }
     if (s.zEnable && s.zWrite) sceneDepthFresh = false;  // 0.39.2: the depth's copy is out of date
     // Stage 4: with several samples an alpha test that keeps the brighter alpha (the client's 0xCF on leaves and
     // fences, no blending) becomes coverage - a soft edge instead of a step. World textures get anisotropy.

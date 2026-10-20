@@ -11,6 +11,7 @@
 #include "core/settings/ini_edit.hpp"
 #include "core/texture_levels.hpp"
 #include "core/version.hpp"
+#include "win/blind_patch.hpp"
 #include "win/chat_patch.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
@@ -284,6 +285,7 @@ bool Context::open(std::string& error) {
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
+    installBlindFix();                 // 2.6.18: blindness's darkness over the whole screen (R-MCVUC8)
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)

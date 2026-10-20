@@ -34,6 +34,14 @@ TEST(effect_exe_knows_the_level_99_aura) {
     for (int id : {89, 199, 203, 361, 363, 396, 399, 629}) CHECK(effect_exe::kindOf(id) == Kind::Skill);
 }
 
+TEST(effect_exe_knows_blindnesss_darkness) {
+    // 2.6.18: blindness (334) and the darkness's ten levels (475-484): not a skill made softer (R-MCVUC8 - at the
+    // skills' 50 % the walls showed through it), laid over the world once its effects are drawn
+    CHECK(effect_exe::kindOf(334) == Kind::Darkness);
+    for (int id = 475; id <= 484; ++id) CHECK(effect_exe::kindOf(id) == Kind::Darkness);
+    for (int id : {333, 335, 474, 485, 487}) CHECK(effect_exe::kindOf(id) != Kind::Darkness);
+}
+
 TEST(effect_exe_softens_the_colour_and_alpha_of_a_draw) {
     // 25 % of an added draw's colour: a quarter of its light; its alpha, place, fog and texture as they were.
     Tl1 v[2] = {{1, 2, 3, 0.5f, 0xFFFFFFFF, 0xFF102030, 0.25f, 0.75f}, {4, 5, 6, 1, 0x80402010, 0, 0, 1}};

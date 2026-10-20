@@ -608,7 +608,35 @@ bool Renderer::Impl::finishWorld() {
     if (heatDue() && !applyHeat()) return false;      // 0.35: the hot air shimmering over all of that
     if (bloomDue() && !applyBloom()) return false;  // 0.78: before the colours
     if (gradeDue() && !applyGrade()) return false;
-    return !weatherDue() || applyWeather();  // 0.39: the weather in front of all of it, sharp
+    if (weatherDue() && !applyWeather()) return false;  // 0.39: the weather in front of all of it, sharp
+    return applyDarkness();  // 2.6.18: blindness's darkness over all of it
+}
+
+void Renderer::Impl::noteDarkness(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const std::vector<uint16_t>& ix = rec.indices();
+    if (d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) > v.size() ||
+        size_t(d.firstIndex) + d.indexCount > ix.size())
+        return;
+    DrawCmd cmd = d;
+    cmd.state = darknessRec.addState(s);
+    darknessRec.draw(cmd, v.data() + d.vertexOffset, d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
+                     d.indexCount);
+}
+
+bool Renderer::Impl::applyDarkness() {
+    darknessLaid = true;
+    if (darknessRec.draws().empty()) return true;
+    flushDraws();  // the game's draws gathered so far are of its own vertices
+    prepareGeometry(darknessRec);
+    if (vertexBase) {
+        darknessPass = true;
+        for (const DrawCmd& cmd : darknessRec.draws()) draw(darknessRec, cmd);
+        darknessPass = false;
+    }
+    geometryList = 0;  // the game's record's vertices go up again with its next draw
+    darknessRec.reset();
+    return !lost;
 }
 
 }  // namespace uagfx::gpu

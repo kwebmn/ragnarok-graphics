@@ -35,7 +35,9 @@ bool isShadowEntry(const uint8_t bytes[6]);
 // The effects the driver does something with.
 // Shadow: a character's (not an effect); 0.37: Skill - any other effect the game shows (skills, items, level ups).
 // 0.38: Portal - the warp NPC's portal (321, warpzone2: rings of effect\ring_blue.tga), the skill's and the like.
-enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow, Skill, Portal };
+// 2.6.18: Darkness - blindness's (334) and the darkness's levels' (475-484) square round the player
+// (core/blind_exe.hpp): not a skill made softer, laid over the world once its effects are drawn.
+enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow, Skill, Portal, Darkness };
 // The level 99 aura: 200, 201 and 202 - its ring (effect\ring_blue.tga), bubbles (effect\pikapika2.bmp) and circle
 // (effect\freezing_circle.bmp) - and 397, 398 and 362, those of the transcendent classes (362: effect\whitelight.tga).
 // The game shows the circles alone unless /aura is on (0x772CE4, 0 at start, not kept): it reads that when it makes
