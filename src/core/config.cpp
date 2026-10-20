@@ -198,7 +198,6 @@ EffectSettings effectsOff() {
     e.hitFlash = false;
     e.glint = false;
     e.ripples = false;
-    e.appear = false;
     e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.bloom = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
     e.mapFade = e.noGameFog = e.noServerNight = e.roundLight = false;
@@ -267,7 +266,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.hitFlash ||
            e.glint ||
            e.ripples ||
-           e.appear || e.softParticles || e.rimLight || e.sky || e.motes ||
+           e.softParticles || e.rimLight || e.sky || e.motes ||
            e.relief || e.floorReflections || e.shafts || e.dayCycle || e.bloom ||
            e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks ||
            e.roundLight;

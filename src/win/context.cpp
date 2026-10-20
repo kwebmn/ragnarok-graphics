@@ -275,8 +275,8 @@ bool Context::open(std::string& error) {
     const bool cells = ai.on() && (ai.sprites() || ai.effects || ai.icons);
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
     const EffectSettings drawn = effects();
-    const bool d3d11Hook = (aiHere && cells) || drawn.actorShadows || drawn.torch || drawn.appear || drawn.glint ||
-                           drawn.hitFlash;  // 0.93, 0.95, 0.96: the sprites' kinds
+    const bool d3d11Hook = (aiHere && cells) || drawn.actorShadows || drawn.torch || drawn.glint ||
+                           drawn.hitFlash;  // 0.95, 0.96: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
@@ -421,12 +421,6 @@ void Context::updateLight() {
 void Context::present(const Rect& source, bool waitForVblank) {
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
-    {
-        static double last = 0;  // 0.93: the sprites drawn are the next frame's known ones
-        const double now = nowMs();
-        appear.frame(last ? now - last : 1e9);
-        last = now;
-    }
     if (!renderer) return;
     watchSettings();
     updateLight();  // 2.5.20

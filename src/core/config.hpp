@@ -279,9 +279,8 @@ struct EffectSettings {
     // 0.84: round characters - the torches' light across a character as if it were round (0.79 with the rim light;
     // now its own switch). Off by default.
     bool roundLight = false;
-    // 0.93: appear - monsters, characters, NPCs and items fade in where they come into view (core/appear.hpp). Off
-    // by default.
-    bool appear = false;
+    // (2.7.10: appear - monsters, characters, NPCs and items fading in where they came into view - gone at the
+    // user's word.)
     // 0.94: ripples - rings on the modern water where characters and monsters step (Direct3D 12). Off by default.
     bool ripples = false;
     // 0.95: glint - a card lying on the ground sparkles now and then (core/glint.hpp). Off by default.

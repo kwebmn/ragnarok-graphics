@@ -1668,13 +1668,6 @@ const Entry kTexts[] = {
     {"Moving to another map the old music fades out and the new one in over 1.5 seconds instead of breaking off.",
      "Під час переходу на іншу мапу стара музика затихає, а нова наростає за 1,5 секунди, а не обривається.",
      "При переходе на другую карту старая музыка затихает, а новая нарастает за 1,5 секунды, а не обрывается."},
-    {"Fade in monsters and items",
-     "Плавна поява монстрів і предметів",
-     "Плавное появление монстров и предметов"},
-    {"Monsters, characters, NPCs and items on the ground fade in over a quarter of a second where they come into "
-     "view, instead of popping up.",
-     "Монстри, персонажі, NPC і предмети на землі з’являються за чверть секунди, а не виникають миттєво.",
-     "Монстры, персонажи, NPC и предметы на земле появляются за четверть секунды, а не возникают мгновенно."},
     {"Ripples from steps",
      "Кола від кроків",
      "Круги от шагов"},
@@ -2362,10 +2355,9 @@ const Entry kTexts[] = {
      "Что приносит «Погода» вверху: снег, дождь, листья или песок в воздухе, грозы, мокрые земля, стены и "
      "крыши, позёмка песка, искрящийся снег."},
     {"Characters and monsters", "Персонажі та монстри", "Персонажи и монстры"},
-    {"Their shadows, volume and light, footprints, breath in the frost, appearing smoothly, the flash of a "
-     "hit, the level 99 aura.",
-     "Їхні тіні, об'єм і світло, сліди, пара на морозі, плавна поява, спалах від удару, аура 99 рівня.",
-     "Их тени, объём и свет, следы, пар на морозе, плавное появление, вспышка при ударе, аура 99 уровня."},
+    {"Their shadows, volume and light, footprints, breath in the frost, the flash of a hit, the level 99 aura.",
+     "Їхні тіні, об'єм і світло, сліди, пара на морозі, спалах від удару, аура 99 рівня.",
+     "Их тени, объём и свет, следы, пар на морозе, вспышка при ударе, аура 99 уровня."},
     {"Skills", "Уміння", "Умения"},
     {"The skills softer so the big ones do not blind, their sparks, the light of their fire around.",
      "Уміння м'якші, щоб великі не сліпили, їхні іскри, світло їхнього вогню довкола.",

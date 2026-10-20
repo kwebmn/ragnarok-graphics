@@ -179,8 +179,6 @@ enum class Text : uint16_t {
     GfxSoundVoicesHint,
     GfxSoundBackground, GfxSoundBackgroundHint, GfxSoundLimiter, GfxSoundLimiterHint,
     GfxSoundStereo, GfxSoundStereoHint, GfxSoundSteal, GfxSoundStealHint, GfxSoundCrossfade, GfxSoundCrossfadeHint,
-    // 0.93
-    FxAppear, FxAppearHint,
     // 0.94
     FxRipples, FxRipplesHint,
     // 0.95

@@ -133,7 +133,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.mapFade = rd.u8() != 0;
             e.noGameFog = rd.u8() != 0;  // 2.6.10
             e.roundLight = rd.u8() != 0;  // 0.84
-            e.appear = rd.u8() != 0;  // 0.93
             e.ripples = rd.u8() != 0;  // 0.94
             e.glint = rd.u8() != 0;  // 0.95
             e.hitFlash = rd.u8() != 0;  // 0.96

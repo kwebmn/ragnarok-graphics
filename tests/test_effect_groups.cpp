@@ -182,7 +182,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"weather", Weather}, {"storms", Weather}, {"wet_ground", Weather}, {"rain_wet", Weather},
         {"sand_drift", Weather}, {"snow_sparkle", Weather},
         {"actor_shadows", Characters}, {"sprite_light", Characters}, {"round_light", Characters},
-        {"rim_light", Characters}, {"footprints", Characters}, {"breath", Characters}, {"appear", Characters},
+        {"rim_light", Characters}, {"footprints", Characters}, {"breath", Characters},
         {"hit_flash", Characters}, {"aura", Characters},
         {"skills_soft", SkillEffects}, {"skill_sparks", SkillEffects}, {"fire_light", SkillEffects},
         {"torch", Fire}, {"embers", Fire}, {"smoke", Fire}, {"lava", Fire}, {"heat", Fire},

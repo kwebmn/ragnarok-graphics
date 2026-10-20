@@ -21,7 +21,6 @@ const EffectLayout kEffects[] = {
     {"effects.no_game_fog", {}, {}, {}, 0},                             // 2.6.10
     {"effects.no_server_night", {}, {}, {}, 0},                         // 2.6.13
     {"effects.round_light", {}, {}, {}, 0},  // 0.84
-    {"effects.appear", {}, {}, {}, 0},  // 0.93
     {"effects.ripples", {}, {}, {}, 0},  // 0.94
     {"effects.glint", {}, {}, {}, 0},  // 0.95
     {"effects.hit_flash", {}, {}, {}, 0},  // 0.96

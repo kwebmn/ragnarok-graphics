@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "core/light_mode.hpp"
-#include "core/appear.hpp"
 #include "core/hit_flash.hpp"
 #include "core/config.hpp"
 #include "core/daylight.hpp"
@@ -62,7 +61,6 @@ public:
     // (spec §4.1), and so does Bink's.
     void present(const Rect& source, bool waitForVblank);
     bool enhanced() const { return enhanced_; }  // not paused (Pause or Scroll Lock: the game's own picture)
-    appear::Tracker appear;  // 0.93: the sprites coming into view (Device7::record)
     hit_flash::Flashes flashes;  // 0.96: where hits landed (win/hit_hook.cpp), the monsters there flash
     double nowMs() const;    // a millisecond clock for the effects made as the game draws
 

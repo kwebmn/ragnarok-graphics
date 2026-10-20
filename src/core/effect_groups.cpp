@@ -33,7 +33,6 @@ const Member kMembers[] = {
     {"rim_light", Characters, 2, &E::rimLight},
     {"footprints", Characters, 1, &E::footprints},
     {"breath", Characters, 2, &E::breath},
-    {"appear", Characters, 1, &E::appear},
     {"hit_flash", Characters, 1, &E::hitFlash},
     {"aura", Characters, 1, &E::aura},
 
@@ -163,7 +162,7 @@ const OldMember kOldMembers[] = {
     {OldAir, &E::rainWet},          {OldAir, &E::edgeLand},
     {OldLife, &E::footprints},      {OldLife, &E::butterflies},     {OldLife, &E::birds},
     {OldLife, &E::nightFireflies},  {OldLife, &E::embers},          {OldLife, &E::breath},
-    {OldSkills, &E::aura},          {OldSkills, &E::skillsSoft},    {OldSkills, &E::appear},
+    {OldSkills, &E::aura},          {OldSkills, &E::skillsSoft},
     {OldSkills, &E::hitFlash},      {OldSkills, &E::skillSparks},
     {OldPicture, &E::grade},        {OldPicture, &E::regionLooks},  {OldPicture, &E::bloom},
 };

@@ -254,8 +254,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxNoServerNightHint, "", &E::noServerNight},  // 2.6.13
         {"effects", "round_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRoundLight,
          Text::FxRoundLightHint, "", &E::roundLight},
-        {"effects", "appear", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAppear,
-         Text::FxAppearHint, "", &E::appear},
         {"effects", "ripples", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRipples,
          Text::FxRipplesHint, "", &E::ripples},
         {"effects", "glint", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxGlint,

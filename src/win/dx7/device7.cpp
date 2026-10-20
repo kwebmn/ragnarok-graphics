@@ -233,12 +233,12 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                            effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();
     }
-    // 0.93: a monster, a character, an NPC or an item coming into view fades in - its vertices' alpha, in a copy.
-    // 0.95: a card lying on the ground sparkles - a star drawn after it.
+    // 0.95: a card lying on the ground sparkles - a star drawn after it. (2.7.10: the sprites' fade-in as they came
+    // into view - 0.93 - gone at the user's word.)
     bool sparkle = false;
     glint::Vertex star[8];
     float flash = 0.0f;  // 0.96: a monster just hit - drawn once more, adding light
-    if ((fx.appear || fx.glint || fx.hitFlash) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
+    if ((fx.glint || fx.hitFlash) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
         vertexCount == 4 && !indices && textures_[0]) {
         const auto* v = static_cast<const uint8_t*>(vertices);
         float x = 0, y = 0, u = 0, w = 0, z = 0, rhw = 0;
@@ -261,33 +261,11 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         const Surface7* tex = textures_[0];
         bool card = false;
         const uint8_t kind = tex->spriteAt(u * float(tex->width()), w * float(tex->height()), &card);
-        const bool sprite = kind >= uint8_t(sprite_exe::Source::Monster) && kind <= uint8_t(sprite_exe::Source::Item);
-        // Its alpha must reach the picture: blended, the vertices' alpha times the texture's.
-        const bool fades = setup.blend && setup.stage[0].alphaOp == d3d7::TOP_MODULATE;
-        static bool told = false;
-        if (fx.appear && sprite && !told) {
-            told = true;
-            LOG_INFO("effects: sprites fade in as they come into view%s (blend %d, alpha op %u)",
-                     fades ? "" : " - not this one: its alpha is not the vertices'", setup.blend ? 1 : 0,
-                     unsigned(setup.stage[0].alphaOp));
-        }
-        float shown = 1.0f;
-        if (fx.appear && sprite && fades) {
-            shown = c.appear.alpha(kind, x, y, std::max(x1 - x0, y1 - y0), c.nowMs());
-            if (shown < 1.0f) {
-                if (vertices != soft_.data()) soft_.assign(v, v + 4 * 32);
-                for (int i = 0; i < 4; ++i) {
-                    uint8_t& alpha = soft_[size_t(i) * 32 + 19];  // the diffuse colour's alpha (ARGB)
-                    alpha = uint8_t(float(alpha) * shown + 0.5f);
-                }
-                vertices = soft_.data();
-            }
-        }
         if (fx.hitFlash && kind == uint8_t(sprite_exe::Source::Monster))
-            flash = c.flashes.strength(x0, x1, y0, y1, c.nowMs()) * shown;
+            flash = c.flashes.strength(x0, x1, y0, y1, c.nowMs());
         if (fx.glint && card && kind == uint8_t(sprite_exe::Source::Item)) {
             const uint32_t seed = uint32_t(int(x) / 8 * 7919 + int(y) / 8 * 104729);
-            const float flare = glint::flare(c.nowMs() / 1000.0, seed) * shown;
+            const float flare = glint::flare(c.nowMs() / 1000.0, seed);
             if (flare > 0.01f) {
                 const float size = std::max(x1 - x0, 8.0f) * 1.1f;
                 glint::star(x + (x1 - x0) * 0.18f, y0 + (y - y0) * 0.6f, z, rhw, size * (0.6f + 0.4f * flare), flare,
