@@ -150,7 +150,6 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.snowSparkle = rd.u8() != 0;
             e.wetWalls = rd.u8() != 0;
             e.shoreFoam = rd.u8() != 0;  // 1.7.2
-            e.fish = rd.u8() != 0;
             e.swamp = rd.u8() != 0;
             e.butterflies = rd.u8() != 0;  // 1.7.3
             e.birds = rd.u8() != 0;

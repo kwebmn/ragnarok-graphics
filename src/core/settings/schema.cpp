@@ -288,8 +288,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxWetWallsHint, "", &E::wetWalls},
         {"effects", "shore_foam", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxShoreFoam,
          Text::FxShoreFoamHint, "", &E::shoreFoam},
-        {"effects", "fish", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFish,
-         Text::FxFishHint, "", &E::fish},
         {"effects", "swamp", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSwamp,
          Text::FxSwampHint, "", &E::swamp},
         {"effects", "butterflies", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxButterflies,

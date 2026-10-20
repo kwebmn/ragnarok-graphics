@@ -894,30 +894,9 @@ float3 reflectionIn(float3 p, float3 r, float2 size, out float weight) {
 }
 float3 waterReflection(float3 p, float3 r, out float weight) { return reflectionIn(p, r, targetSize, weight); }
 
-// 1.7, the water's life (water(): twinH's bits): fish - dark shapes circling under the surface, now and then a ring
-// where one jumped; a swamp's bubbles swelling and bursting into rings, its water murkier.
-float3 waterLife(float3 c, uint life, float2 xz, float t, float thick, float light) {
-    // 1.25: fewer, larger and soft - shadows deep under the surface; small and sharp they read as scratches
-    if ((life & 1) != 0 && thick > 1.2) {
-        float2 cid = floor(xz / 11.0);
-        float seed = hash12(cid + 91.7);
-        if (seed < 0.16) {
-            float sp = (0.2 + 0.25 * hash12(cid + 3.3)) * (seed < 0.08 ? 1.0 : -1.0);
-            float ang = t * sp + seed * 40.0;
-            float2 pos = (cid + 0.5) * 11.0 + float2(cos(ang), sin(ang)) * 3.0;
-            float2 dir = float2(-sin(ang), cos(ang)) * sign(sp);
-            float2 d = xz - pos;
-            float2 l = float2(dot(d, dir), dot(d, float2(-dir.y, dir.x)));
-            l.y -= sin(t * 6.0 + seed * 20.0) * 0.1 * l.x * step(l.x, 0.0);
-            float body = smoothstep(1.0, 0.25, length(l / float2(1.1, 0.38)));
-            float tail = smoothstep(0.0, 0.3, -0.8 - l.x) * smoothstep(0.0, 0.3, l.x + 1.5) *
-                         smoothstep(0.1, 0.0, abs(l.y) - (-0.8 - l.x) * 0.7);
-            c *= 1.0 - 0.22 * saturate(body + tail * 0.6) * saturate((thick - 1.2) / 2.0);
-            float jump = frac(t * 0.05 + seed * 7.0);
-            float x = length(d) - jump / 0.06 * 1.6;
-            c += exp(-x * x * 30.0) * saturate(1.0 - jump / 0.06) * 0.35 * light;
-        }
-    }
+// 1.7, the water's life (water(): twinH's bits): a swamp's bubbles swelling and bursting into rings, its water
+// murkier (2.7.2: the fish circling under the surface gone - too faint to be seen).
+float3 waterLife(float3 c, uint life, float2 xz, float t, float light) {
     if ((life & 2) != 0) {
         float2 bid = floor(xz / 3.0);
         float seed = hash12(bid + 13.1);
@@ -942,8 +921,8 @@ float4 water(WaterIn i) {
     int2 px = int2(i.pos.xy);
     float t = sharpen;
     float waves = footprint;
-    // 1.7: 1 fish, 2 a swamp's bubbles, 4 the surf's swash (water_life); 2.4: the water's own parts, each a box of
-    // its own - 8 the foam along the shore, 16 the sun's glints, 32 the light on the bed
+    // 1.7: 2 a swamp's bubbles, 4 the surf's swash (water_life; 1, the fish, gone in 2.7.2); 2.4: the water's own
+    // parts, each a box of its own - 8 the foam along the shore, 16 the sun's glints, 32 the light on the bed
     uint life = uint(twinH + 0.5);
     // 0.22.2: the world's axes turned, for the noise: no rows along them.
     float2 fp = float2(dot(i.world.xz, float2(0.8, 0.6)), dot(i.world.xz, float2(-0.6, 0.8)));
@@ -1044,7 +1023,7 @@ float4 water(WaterIn i) {
         float froth = saturate(rim * (0.5 + 0.5 * broken) + swell * broken * 0.7);
         c = lerp(c, float3(0.92, 0.95, 0.97) * light, saturate(shore * 2.0) * froth * (0.55 + 0.3 * swash));
     }
-    c = waterLife(c, life, i.world.xz, t, thick, light);
+    c = waterLife(c, life, i.world.xz, t, light);
     return float4(c, saturate(thick / 0.8));  // the shore line fades in, no hard edge
 }
 

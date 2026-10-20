@@ -220,7 +220,7 @@ enum class Text : uint16_t {
     FxFlowers, FxFlowersHint, FxDew, FxDewHint, FxMorningFog, FxMorningFogHint, FxSandDrift, FxSandDriftHint,
     FxSnowSparkle, FxSnowSparkleHint, FxWetWalls, FxWetWallsHint,
     // 1.7.2
-    FxShoreFoam, FxShoreFoamHint, FxFish, FxFishHint, FxSwamp, FxSwampHint,
+    FxShoreFoam, FxShoreFoamHint, FxSwamp, FxSwampHint,
     // 1.7.3
     FxButterflies, FxButterfliesHint, FxBirds, FxBirdsHint, FxLeafFall, FxLeafFallHint, FxEmbers, FxEmbersHint,
     FxBreath, FxBreathHint, FxSplashes, FxSplashesHint, FxCaveDrips, FxCaveDripsHint, FxUnderwater, FxUnderwaterHint,

@@ -72,7 +72,6 @@ const EffectLayout kEffects[] = {
     {"effects.snow_sparkle", {}, {}, {}, 2},  // 1.7.1
     {"effects.wet_walls", {}, {}, {}, 2},  // 1.7.1
     {"effects.shore_foam", {"effects.wet_sand"}, {}, {}, 2},  // 1.7.2
-    {"effects.fish", {}, {}, {}, 2},  // 1.7.2
     {"effects.swamp", {}, {}, {}, 2},  // 1.7.2
     {"effects.butterflies", {"effects.dragonflies"}, {}, {}, 2},  // 1.7.3
     {"effects.birds", {}, {}, {}, 2},  // 1.7.3

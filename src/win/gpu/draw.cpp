@@ -517,11 +517,12 @@ LeafLook Renderer::Impl::leafLook() const {
 }
 
 
-// 1.7: the water's life (water_ps waterLife's bits): 1 fish, 2 a swamp's bubbles, 4 the surf's swash.
+// 1.7: the water's life (water_ps waterLife's bits): 2 a swamp's bubbles, 4 the surf's swash (1, the fish, gone in
+// 2.7.2).
 float Renderer::Impl::waterLife() const {
     // 2.4: and the water's own parts, each a box of its own: 8 the foam along the shore, 16 the sun's glints, 32 the
     // light on the bed
-    return float((effects.fish && !mapPlace.cave ? 1 : 0) + (effects.swamp && mapPlace.swamp ? 2 : 0) +
+    return float((effects.swamp && mapPlace.swamp ? 2 : 0) +
                  (effects.shoreFoam ? 4 : 0) + (effects.waterFoam ? 8 : 0) + (effects.waterGlints ? 16 : 0) +
                  (effects.caustics ? 32 : 0));
 }

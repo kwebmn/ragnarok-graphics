@@ -79,7 +79,6 @@ const Member kMembers[] = {
     {"splashes", Waters, 2, &E::splashes},
     {"underwater", Waters, 2, &E::underwater},
     {"swamp", Waters, 2, &E::swamp},
-    {"fish", Waters, 3, &E::fish},
     {"world_reflections", Waters, 3, &E::worldReflections},
 
     {"butterflies", Creatures, 2, &E::butterflies},
@@ -160,7 +159,7 @@ const OldMember kOldMembers[] = {
     {OldNature, &E::leafFall},      {OldNature, &E::seasons},       {OldNature, &E::sharedWind},
     {OldWater, &E::water},          {OldWater, &E::ripples},        {OldWater, &E::shoreFoam},
     {OldWater, &E::splashes},       {OldWater, &E::underwater},     {OldWater, &E::swamp},
-    {OldWater, &E::fish},           {OldWater, &E::worldReflections},
+    {OldWater, &E::worldReflections},
     {OldAir, &E::weather},          {OldAir, &E::heat},             {OldAir, &E::storms},
     {OldAir, &E::sky},              {OldAir, &E::dayCycle},         {OldAir, &E::motes},
     {OldAir, &E::morningFog},       {OldAir, &E::sandDrift},        {OldAir, &E::snowSparkle},

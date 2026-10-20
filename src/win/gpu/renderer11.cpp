@@ -1756,10 +1756,11 @@ bool Renderer11::copyForWater() {
     return true;
 }
 
-// 2.5.9 (draw.cpp waterLife): water_ps's bits - 1 fish, 2 a swamp's bubbles, 4 the surf's swash; the water's own
-// parts, each a box of its own since 2.4: 8 the foam along the shore, 16 the sun's glints, 32 the light on the bed
+// 2.5.9 (draw.cpp waterLife): water_ps's bits - 2 a swamp's bubbles, 4 the surf's swash (1, the fish, gone in 2.7.2);
+// the water's own parts, each a box of its own since 2.4: 8 the foam along the shore, 16 the sun's glints, 32 the
+// light on the bed
 float Renderer11::waterLife() const {
-    return float((effects_.fish && !place_.cave ? 1 : 0) + (effects_.swamp && place_.swamp ? 2 : 0) +
+    return float((effects_.swamp && place_.swamp ? 2 : 0) +
                  (effects_.shoreFoam ? 4 : 0) + (effects_.waterFoam ? 8 : 0) + (effects_.waterGlints ? 16 : 0) +
                  (effects_.caustics ? 32 : 0));
 }

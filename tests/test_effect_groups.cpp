@@ -194,7 +194,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"tree_volume", Plants}, {"leaf_light", Plants}, {"tree_tints", Plants},
         {"leaf_fall", Plants},
         {"water", Waters}, {"ripples", Waters}, {"shore_foam", Waters}, {"splashes", Waters},
-        {"underwater", Waters}, {"swamp", Waters}, {"fish", Waters}, {"world_reflections", Waters},
+        {"underwater", Waters}, {"swamp", Waters}, {"world_reflections", Waters},
         {"butterflies", Creatures}, {"birds", Creatures}, {"night_fireflies", Creatures},
         {"wet_walls", Caves}, {"cave_drips", Caves}, {"lit_dust", Caves},
         {"sky", Sky}, {"edge_land", Sky}, {"flare", Sky}, {"motes", Sky}, {"shared_wind", Sky},

@@ -186,7 +186,6 @@ EffectSettings effectsOff() {
     e.butterflies = false;
     e.nightFireflies = false;
     e.swamp = false;
-    e.fish = false;
     e.shoreFoam = false;
     e.wetWalls = false;
     e.snowSparkle = false;
@@ -260,7 +259,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.butterflies ||
            e.nightFireflies ||
            e.swamp ||
-           e.fish ||
            e.shoreFoam ||
            e.wetWalls ||
            e.snowSparkle ||
