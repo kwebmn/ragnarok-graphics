@@ -44,6 +44,17 @@ bool flameOf(const Corner q[4], Flame& out);
 // frame or it has no depth.
 bool flameOfQuad(const uint8_t* vertices, size_t stride, Flame& out);
 
+// 2.6.18: the game burns each map torch as two effects at once - the map's effect source (FUN_00652690) launches
+// effect 47 anew every 125 ticks of 60 a second (its .rsw emit speed; 5347 of the maps' 5664 torches) and each lasts
+// 250 (DAT_006d9100[47]): two flames over each other, each its own frame of the animation, and at each launch one or
+// three for a moment - two lights on the wall, one or three every two seconds ("на стене огонь мигает раз в 1-2
+// секунды"). One torch then, drawn as the two were (kGameEffects): its light, heat and flame as two of them gave.
+constexpr float kGameEffects = 2.0f;
+// Takes a flame the game drew into the frame's: one standing where it stands (its base and tip within a game pixel,
+// its depth within 1 %) is the same torch - the brighter fade kept; else added while there are fewer than `room`.
+// false: no room for it.
+bool take(std::vector<Flame>& flames, const Flame& f, size_t room);
+
 // 2.6.17: the game's flames of a frame as the torches' pass draws them anew, kept steady ("every couple of seconds the
 // torch blinks"). Each torch is followed from frame to frame by its place on the screen and keeps the seed it was
 // first given (by a seed cell's edge its place read a cell over now and then - the new flame jumped to another

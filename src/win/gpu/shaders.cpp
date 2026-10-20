@@ -1455,8 +1455,9 @@ float3 torchFlame(float2 q, float t, float seed, float flick, float hw, float h)
 
 // A torch's flame and the soft glow around it, over the picture (premultiplied: blend ONE, INVSRCALPHA - the glow
 // adds light, the flame hides some of what is behind it; under DLSS its alpha marks it in the mask). sourceRect.xy its
-// base and .zw base to tip in target pixels, sourceClamp.x its half width in target pixels, .y its view depth, .w its
-// seed (0-1); uiPixels.xy the world's size, .z its flicker, .w the time (seconds); twinX the glow's strength, twinY the
+// base and .zw base to tip in target pixels, sourceClamp.x its half width in target pixels, .y its view depth, .z how
+// many of the game's effects it stands for (2.6.18: a map torch's two, core/torch.hpp), .w its seed (0-1);
+// uiPixels.xy the world's size, .z its flicker, .w the time (seconds); twinX the glow's strength, twinY the
 // game's fade, twinW the flame's brightness (0: the game draws its own), fogColor its colour. Hidden behind what stands
 // in front of it - a character, the bowl's rim - by the picture's depth (t3).
 float4 torch_fire_ps(PresentOut i) : SV_Target {
@@ -1489,7 +1490,10 @@ float4 torch_fire_ps(PresentOut i) : SV_Target {
     if (coloured) f = lerp(f, tint * dot(f, float3(0.3, 0.5, 0.2)) * 1.8, 0.85);
     float3 glowColour = coloured ? tint * 0.8 : float3(1.0, 0.5, 0.18);
     float a = saturate(max(f.r, max(f.g, f.b)) * 0.45);
-    return float4(glowColour * glow * (1.0 - a) + f, a);
+    float3 c = glowColour * glow * (1.0 - a) + f;
+    // 2.6.18: as two of it over each other (premultiplied: c + (1 - a) c, 1 - (1 - a)^2) - the look the torches had
+    // while each of the game's two effects of a torch drew its own
+    return sourceClamp.z > 1.5 ? float4(c * (2.0 - a), a * (2.0 - a)) : float4(c, a);
 }
 
 // 0.24, the chimneys' smoke (draw.cpp): a puff the game sends up, drawn as the game would (its colour, fade and fog:

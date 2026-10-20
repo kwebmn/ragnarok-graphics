@@ -88,6 +88,20 @@ bool flameOfQuad(const uint8_t* vertices, size_t stride, Flame& out) {
     return true;
 }
 
+bool take(std::vector<Flame>& flames, const Flame& f, size_t room) {
+    for (Flame& o : flames) {
+        const bool base = std::hypot(f.baseX - o.baseX, f.baseY - o.baseY) <= 1.0f;
+        const bool tip = std::hypot(f.baseX + f.upX - o.baseX - o.upX, f.baseY + f.upY - o.baseY - o.upY) <= 1.0f;
+        if (base && tip && std::fabs(f.rhw - o.rhw) <= 0.01f * std::max(f.rhw, o.rhw)) {
+            o.alpha = std::max(o.alpha, f.alpha);
+            return true;
+        }
+    }
+    if (flames.size() >= room) return false;
+    flames.push_back(f);
+    return true;
+}
+
 float flicker(double t, uint32_t seed, float amount) {
     if (amount <= 0.0f) return 1.0f;
     const float n = 0.5f * noise(t * 7.0, seed) + 0.3f * noise(t * 13.0, seed + 1) + 0.2f * noise(t * 29.0, seed + 2);

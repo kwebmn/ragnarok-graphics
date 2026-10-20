@@ -425,8 +425,9 @@ private:
     void applyActorShadows(const FrameRecord& rec, size_t from);
     bool ensureShadowMask(int w, int h);
     // 0.61: the torches' light (torches11.cpp, as Direct3D 12's torch_light_ps): the flames the game draws noted,
-    // their light onto the ground before the colours; the flames and their glow stay the game's.
-    void noteTorch(const FrameRecord& rec, const DrawCmd& d);
+    // their light onto the ground before the colours; the flames and their glow stay the game's. 2.6.18: false when
+    // there is no room for another torch (a torch's second effect is the same torch: torch::take).
+    bool noteTorch(const FrameRecord& rec, const DrawCmd& d);
     void applyTorchLight();
     bool torchesWanted() const { return effects_.torch && effects_.torchLight > 0 && torchLightPs_; }
     // 2.5.2: the new flame and its glow (torch_fire_ps) in place of the game's glow - and of its flame with

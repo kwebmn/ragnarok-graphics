@@ -216,3 +216,41 @@ TEST(torch_place_seed_holds_whichever_way_the_camera_looks) {
     CHECK_EQ(a, b);
     CHECK_EQ(a, torch::seedAt(12.0f, 102.0f));
 }
+
+TEST(torch_take_merges_a_torchs_two_effects) {
+    // 2.6.18: the game burns a map torch as two effects at once (launched every 125 ticks, each lasting 250) - two
+    // flames on the same quad, each at its own frame of the animation, sometimes one or three: one torch, the
+    // brighter fade kept ("на стене огонь мигает раз в 1-2 секунды": its light was two lights, one or three a moment)
+    std::vector<torch::Flame> flames;
+    torch::Flame a = flameAt(300.0f, 0.6f), b = flameAt(300.0f, 1.0f), c = flameAt(300.2f, 0.9f);
+    b.rhw = 0.01005f;  // a hair nearer
+    CHECK(torch::take(flames, a, 32));
+    CHECK(torch::take(flames, b, 32));
+    CHECK(torch::take(flames, c, 32));
+    CHECK_EQ(flames.size(), size_t(1));
+    CHECK(flames.size() == 1 && near(flames[0].alpha, 1.0f) && near(flames[0].baseX, 300.0f));
+}
+
+TEST(torch_take_keeps_torches_apart) {
+    // side by side on the screen, one behind the other on the same line of sight, a nearer one standing on the same
+    // spot: each its own
+    std::vector<torch::Flame> flames;
+    torch::Flame side = flameAt(303.0f, 1.0f), behind = flameAt(300.0f, 1.0f), taller = flameAt(300.0f, 1.0f);
+    behind.rhw = 0.009f;
+    taller.upY = -66.0f;
+    CHECK(torch::take(flames, flameAt(300.0f, 1.0f), 32));
+    CHECK(torch::take(flames, side, 32));
+    CHECK(torch::take(flames, behind, 32));
+    CHECK(torch::take(flames, taller, 32));
+    CHECK_EQ(flames.size(), size_t(4));
+}
+
+TEST(torch_take_has_room_for_a_torchs_other_effect_when_full) {
+    // the frame's room is for torches, not their effects: a full list still takes a torch's second effect (else the
+    // game drew that one's own flame - which torches did changed as the game launched them anew)
+    std::vector<torch::Flame> flames;
+    for (int i = 0; i < 3; ++i) CHECK(torch::take(flames, flameAt(100.0f * float(i + 1), 1.0f), 3));
+    CHECK(!torch::take(flames, flameAt(500.0f, 1.0f), 3));
+    CHECK(torch::take(flames, flameAt(200.0f, 0.5f), 3));
+    CHECK_EQ(flames.size(), size_t(3));
+}

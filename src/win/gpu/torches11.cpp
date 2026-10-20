@@ -181,13 +181,14 @@ void Renderer11::applyFireflies() {
     ctx_->RSSetScissorRects(1, &all);
 }
 
-void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
-    if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame || flames_.size() >= kMaxTorches) return;
+bool Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
+    if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame) return true;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     torch::Flame f;
-    if (d.vertexOffset + 4 * stride > v.size() || !torch::flameOfQuad(v.data() + d.vertexOffset, stride, f)) return;
-    flames_.push_back(f);
+    if (d.vertexOffset + 4 * stride > v.size() || !torch::flameOfQuad(v.data() + d.vertexOffset, stride, f))
+        return true;
+    if (!torch::take(flames_, f, kMaxTorches)) return false;
     if (cameraValid_ && !mapWorld_.axes().known()) {  // 2.5.1: where it stands, for the map file's axes (torches.cpp)
         const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
         const float vz = 1.0f / f.rhw, vx = (f.baseX - p.cx) * vz / p.f0, vy = (f.baseY - p.cy) * vz / p.f1;
@@ -196,23 +197,26 @@ void Renderer11::noteTorch(const FrameRecord& rec, const DrawCmd& d) {
                                        vx * m[1] + vy * m[4] + vz * m[7] + m[10],
                                        vx * m[2] + vy * m[5] + vz * m[8] + m[11]});
     }
+    return true;
 }
 
 void Renderer11::noteCritterFlame(const FrameRecord& rec, const DrawCmd& d) {
-    if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame || critterFlames_.size() >= kMaxTorches) return;
+    if (objectTextures_.of(d.texture[0]) != objects::Kind::TorchFlame) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     torch::Flame f;
     if (d.vertexOffset + 4 * stride <= v.size() && torch::flameOfQuad(v.data() + d.vertexOffset, stride, f))
-        critterFlames_.push_back(f);
+        torch::take(critterFlames_, f, kMaxTorches);  // 2.6.18: a torch's two effects one fire
 }
 
 bool Renderer11::takeTorch(const FrameRecord& rec, const DrawCmd& d) {
     const objects::Kind kind = objectTextures_.of(d.texture[0]);
     if (kind != objects::Kind::TorchGlow && kind != objects::Kind::TorchFlame) return false;
     if (kind == objects::Kind::TorchGlow) return flamesWanted();  // the new flame's pass draws a glow of its own
-    if (torchesWanted() || flamesWanted()) noteTorch(rec, d);
-    return flamesWanted() && effects_.torchFlame;  // off: the game's own flame, the new glow and light around it
+    // 2.6.18: no room for another torch - the game's own flame; torch_flame off - the game's own, the new glow and
+    // light around it
+    const bool noted = !(torchesWanted() || flamesWanted()) || noteTorch(rec, d);
+    return flamesWanted() && effects_.torchFlame && noted;
 }
 
 // Once the world is drawn, before its colours (as torches.cpp applyTorches): the light of this frame's flames, the
@@ -242,6 +246,7 @@ void Renderer11::applyTorchLight() {
             torchSeeds.push_back(torch::placeSeed(f, seen, viewToWorld_, cameraValid_));
         torchKeeper_.update(flames, torchSeeds, double(waterTime()));
     }
+    const size_t gameFlames = flames.size();  // 2.6.18 (torches.cpp): each the game's two effects of its torch
     std::vector<FireSpark11> sparks;
     sparks.swap(fireSparks_);
     std::vector<FireSpark11> lavaCells;  // 2.5.2: the lava's (noteLava)
@@ -412,7 +417,8 @@ void Renderer11::applyTorchLight() {
             const float vz = 1.0f / f.rhw;
             const float view[3] = {(mx - proj.cx) * vz / proj.f0, (my - proj.cy) * vz / proj.f1, vz};
             const bool own = f.tint[0] < 0.99f || f.tint[1] < 0.99f || f.tint[2] < 0.99f;  // a hidden one's colour
-            addLight(view, kReach, own ? f.tint : kLightColor, strength * calms[i] * f.alpha);
+            const float layers = i < gameFlames ? torch::kGameEffects : 1.0f;  // 2.6.18
+            addLight(view, kReach, own ? f.tint : kLightColor, strength * calms[i] * f.alpha * layers);
         }
     if (fire) {  // 2.5.1: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16
         struct Cell {
@@ -655,11 +661,13 @@ void Renderer11::applyTorchLight() {
         if (critterFires_.size() < 32 && critters::fireOf(f, proj, m, at)) critterFires_.push_back(at);
     }
     if (heatWanted())  // 2.5.3: the hot air over each flame
-        for (const torch::Flame& f : flames) {
+        for (size_t i = 0; i < flames.size(); ++i) {
+            const torch::Flame& f = flames[i];
             const float fh = std::hypot(f.upX, f.upY) * k;
             if (fh < 2.0f) continue;
+            const float layers = i < gameFlames ? torch::kGameEffects : 1.0f;  // 2.6.18
             heatSpots_.push_back(HeatSpot11{(f.baseX + f.upX * 0.9f) * k + 0.5f, (f.baseY + f.upY * 0.9f) * k + 0.5f,
-                                            fh * 1.4f, 0.5f * f.alpha * heatUser()});
+                                            fh * 1.4f, 0.5f * f.alpha * layers * heatUser()});
         }
     const D3D11_RECT lit{LONG(std::max(0.0f, std::floor(lx0))), LONG(std::max(0.0f, std::floor(ly0))),
                          LONG(std::min(float(w), std::ceil(lx1))), LONG(std::min(float(h), std::ceil(ly1)))};
@@ -734,6 +742,7 @@ void Renderer11::applyTorchLight() {
             fc.sourceRect[3] = uy;
             fc.sourceClamp[0] = f.halfWidth * k;
             fc.sourceClamp[1] = 1.0f / f.rhw;
+            fc.sourceClamp[2] = i < gameFlames ? torch::kGameEffects : 1.0f;  // 2.6.18: drawn as the game's two were
             fc.sourceClamp[3] = seeds[i];
             fc.uiPixels[2] = flickers[i];
             fc.uiPixels[3] = time;
