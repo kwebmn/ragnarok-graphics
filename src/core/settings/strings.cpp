@@ -800,12 +800,12 @@ const Entry kTexts[] = {
      "Насколько мерцают огонь и его свет: 0 % — горит ровно, 50 % — спокойно, 100 % — живой огонь, который бросает "
      "свет по стенам."},
     {"New flame", "Новий вогонь", "Новый огонь"},
-    {"A flame that burns, sways and throws sparks instead of the game's blurred picture. Off: the game's own flame, "
-     "with the new glow and light around it.",
-     "Полум'я, що горить, гойдається й сипле іскрами, замість розмитої картинки гри. Вимкнено: вогонь гри, а сяйво "
-     "й світло довкола — нові.",
-     "Пламя, которое горит, колышется и сыплет искрами, вместо размытой картинки игры. Выключено: огонь игры, а "
-     "свечение и свет вокруг — новые."},
+    {"A live flame instead of the game's blurred picture: tongues of fire tear upwards and throw sparks, each torch "
+     "burning its own way. Off: the game's own flame, with the new glow and light around it.",
+     "Живе полум'я замість розмитої картинки гри: язики вогню рвуться вгору й сиплять іскрами, кожен смолоскип горить "
+     "по-своєму. Вимкнено: вогонь гри, а сяйво й світло довкола — нові.",
+     "Живое пламя вместо размытой картинки игры: языки огня рвутся вверх и сыплют искрами, каждый факел горит "
+     "по-своему. Выключено: огонь игры, а свечение и свет вокруг — новые."},
     {"Flame brightness", "Яскравість вогню", "Яркость огня"},
     {"How bright and dense the new flame burns: less is softer and more see-through, more is hotter.",
      "Наскільки яскраво й щільно горить новий вогонь: менше — м'якше й прозоріше, більше — гарячіше.",

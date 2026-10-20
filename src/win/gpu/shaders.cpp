@@ -1416,29 +1416,30 @@ float fbm4(float2 p) {
     return s;
 }
 
-// A flame at q (x across, its half width 1; y up from its base 0 to its tip 1), premultiplied: it rises, sways and
-// tears into tongues as noise scrolls up through it, a few sparks rise from it. hw and h are its half width and height
-// in pixels (the sparks' size), seed its own pattern (0-1), flick its flicker (about 1). 0.23.2: calmer and softer
-// than 0.23's ("burns too harshly") - slower, softer edges, orange more than white; its brightness the caller's.
+// A flame at q (x across, its half width 1; y up from its base 0 to its tip 1), premultiplied, and a few sparks rising
+// from it. hw and h are its half width and height in pixels (the sparks' size), seed its own pattern (0-1), flick its
+// flicker (about 1). 2.6.16: "alive", the player's pick of four (R-N3ZZ3F: the fire "not very beautiful" - a smooth
+// candle drop): a wide drop that keeps its width far up, its top torn by the noise rising through it into licking
+// tongues and flamelets, coloured as heat glows - dark red, red, orange, yellow, near white at the heart (1.5c, 1.5c^3,
+// c^6). Each torch its own ("several fires burn alike, repeating each other"): its seed sets its pace, height, lean
+// and moment, and shifts the noise.
 float3 torchFlame(float2 q, float t, float seed, float flick, float hw, float h) {
-    t *= 0.75;
-    float y = q.y / (0.97 + 0.4 * (flick - 1.0));  // a brighter moment burns taller
-    float n1 = fbm4(float2(q.x * 1.3 + seed * 7.1, q.y * 1.9 - t * 2.4 + seed * 3.3));
-    float n2 = fbm4(float2(q.x * 2.6 - seed * 2.3, q.y * 3.6 - t * 3.9));
-    float n3 = valueNoise(float2(q.x * 5.5 + seed, q.y * 7.0 - t * 6.5));
-    float sway = sin(t * 1.9 + seed * 5.0) * 0.10 + sin(t * 3.7 + seed) * 0.05;
-    float x = q.x + (n1 - 0.47) * 1.5 * pow(saturate(y), 1.4) + sway * y;
-    float width = 1.15 * pow(saturate(1.0 - y), 0.5) * smoothstep(-0.2, 0.25, y);
-    float body = 1.0 - smoothstep(0.0, 1.0, abs(x) / max(width, 1e-3));
-    float torn = body - (n2 - 0.32) * smoothstep(0.1, 0.85, y) - (n3 - 0.5) * 0.25 * y;
-    float heat = saturate(torn) * saturate(1.05 - y * 0.6) * smoothstep(-0.06, 0.06, q.y);
-    const float3 red = float3(0.6, 0.08, 0.02), orange = float3(1.0, 0.40, 0.06);
-    const float3 yellow = float3(1.0, 0.74, 0.28), white = float3(1.0, 0.86, 0.6);
-    float3 c = heat < 0.3    ? red * (heat / 0.3)
-               : heat < 0.55 ? lerp(red, orange, (heat - 0.3) / 0.25)
-               : heat < 0.88 ? lerp(orange, yellow, (heat - 0.55) / 0.33)
-                             : lerp(yellow, white, saturate((heat - 0.88) / 0.12));
-    float3 o = c * (smoothstep(0.02, 0.45, heat) * (1.0 + 0.5 * (flick - 1.0)));
+    float pace = 0.85 + 0.3 * frac(seed * 7.13);
+    float tall = 0.92 + 0.16 * frac(seed * 3.71);
+    float lean = (frac(seed * 5.37) - 0.5) * 0.12;
+    float tt = t * pace + seed * 37.0;
+    float y = q.y / ((0.95 + 0.45 * (flick - 1.0)) * tall);  // a brighter moment burns taller
+    float sway = sin(tt * 2.1 + seed * 4.0) * 0.05 + sin(tt * 4.7 + seed * 1.3) * 0.025;
+    float bend = (fbm4(float2(q.x * 0.8 + seed * 3.1, y * 1.1 - tt * 1.3)) - 0.47) * 0.6 * y;
+    float x = q.x + (sway + lean) * y + bend;
+    float wid = pow(saturate(1.0 - y * 0.72), 0.42) * smoothstep(-0.12, 0.2, y);
+    float env = saturate(1.0 - abs(x) / max(wid, 1e-3));
+    float n = fbm4(float2(x * 3.4 + seed * 5.0, y * 2.1 - tt * 3.1)) * 0.65 +
+              fbm4(float2(x * 7.14 - seed, y * 4.4 - tt * 4.8)) * 0.35;
+    float fire = env * 1.75 - n * (0.45 + 2.0 * y) + 0.1;
+    float c1 = saturate(fire) * (1.0 - 0.32 * saturate(y)) * smoothstep(-0.06, 0.05, q.y);
+    float3 o = float3(1.5 * c1, 1.5 * c1 * c1 * c1, pow(c1, 6.0)) * (1.0 + 0.5 * (flick - 1.0));
+    t *= 0.75;  // the sparks' clock, as it was
     float size = max(h / 160.0, 0.35);
     [unroll] for (int k = 0; k < 4; ++k) {  // sparks: each rises, drifts and dies out, then starts again elsewhere
         float phase = t * (0.45 + 0.11 * float(k)) + seed * 3.7 + float(k) * 0.29;
