@@ -1,3 +1,16 @@
+# uaRO Graphics 2.7.5 — to check
+
+- **Fixed: "Grass and road seams without steps" no longer blink on hills.** The seams' strips were cut along the
+  other diagonal than the ground's cell under them: on a hill a strip hung up to a third of a unit above or under
+  the ground and came and went as the camera turned. Now the strips lie right on the ground.
+- **No butterflies, dragonflies nor fireflies in winter.** While the season's snow lies on the map (the one chosen or
+  the calendar's), no insects fly; the birds stay.
+- **Another Season no longer makes the creatures anew** - the butterflies and the birds came again at every switch;
+  now only when it is needed (autumn's leaves, winter without insects).
+- Please check: the field by Prontera (prt_fild08 200 200) with the seams on - turn the camera over the hills: no
+  blinking. Turn on Snow in winter and Grass by the season under Seasons on the map, choose Season: Winter - snow,
+  no butterflies, birds there; Summer - the butterflies fly again.
+
 # uaRO Graphics 2.7.4 — to check
 
 - **Fixed: the grass no longer blinks with the camera far back.** Far off the blades grew smaller than a pixel and
