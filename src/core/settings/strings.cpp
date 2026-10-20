@@ -908,12 +908,12 @@ const Entry kTexts[] = {
     {"Shadows' darkness", "Темрява тіней", "Темнота теней"},
     {"How dark the characters' shadows are.", "Наскільки темні тіні персонажів.", "Насколько темны тени персонажей."},
     {"The game's round shadow", "Кругла тінь гри", "Круглая тень игры"},  // 2.6.15
-    {"The game's round spot under the characters and the monsters as well as their own shadows. Off: only where none "
-     "of theirs falls (underground with no fire near), fading out as theirs comes on.",
-     "Кругла пляма гри під персонажами й монстрами разом з їхніми тінями. Вимкнено: лише там, де їхня тінь не падає "
-     "(під землею без вогню поруч), і гасне, коли їхня тінь з'являється.",
-     "Круглое пятно игры под персонажами и монстрами вместе с их тенями. Выключено: только там, где их тень не падает "
-     "(под землёй без огня рядом), и гаснет, когда их тень появляется."},
+    {"The game's round spot under the characters and the monsters as well as their own shadows. Off: no two shadows - "
+     "the spot only where none of theirs falls (underground with no fire near).",
+     "Кругла пляма гри під персонажами й монстрами разом з їхніми тінями. Вимкнено: двох тіней немає — пляма лише "
+     "там, де їхня тінь не падає (під землею без вогню поруч).",
+     "Круглое пятно игры под персонажами и монстрами вместе с их тенями. Выключено: двух теней нет — пятно только "
+     "там, где их тень не падает (под землёй без огня рядом)."},
     {"Heat haze", "Марево від жару", "Марево от жара"},
     {"Over the torches' flames, burning skills and lava, and far off in the desert of Morroc, the picture shimmers as "
      "the hot air rises.",

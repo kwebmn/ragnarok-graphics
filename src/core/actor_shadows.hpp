@@ -100,7 +100,8 @@ std::vector<std::vector<Cast>> castsFor(const std::vector<Blob>& blobs, const st
                                         double time, float flicker);
 
 // 2.6.15: how much of the game's round spot stays under each blob - all of it with `spot` (effects.
-// actor_shadows_spot), else as much as its own shadow does not darken: none under a whole one, all where none falls.
+// actor_shadows_spot), else none under its own shadow - back only as that one all but fades (a third of its darkness
+// and less, a torch's far edge: no jump), all where none falls.
 std::vector<float> spotShares(const std::vector<ShadowQuad>& quads, size_t blobs, bool spot);
 
 // 2.6.3 (shadow_ps does the same): the ground's view depth at game pixel (x, y) under a character whose feet stand at

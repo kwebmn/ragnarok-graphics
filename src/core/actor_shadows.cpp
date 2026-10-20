@@ -119,7 +119,7 @@ std::vector<float> spotShares(const std::vector<ShadowQuad>& quads, size_t blobs
     if (spot) return out;
     for (const ShadowQuad& q : quads)
         if (q.blob >= 0 && size_t(q.blob) < blobs)
-            out[size_t(q.blob)] = std::min(out[size_t(q.blob)], 1.0f - std::clamp(q.weight, 0.0f, 1.0f));
+            out[size_t(q.blob)] = std::min(out[size_t(q.blob)], 1.0f - std::clamp(q.weight * 3.0f, 0.0f, 1.0f));
     return out;
 }
 

@@ -154,9 +154,9 @@ struct EffectSettings {
     // light - instead of the game's round ones. On by default.
     bool actorShadows = true;
     int actorShadowsStrength = 55;  // %, 0-100: how dark
-    // 2.6.15: the game's round spot under the characters with their own shadows; off - only where none of theirs
-    // falls, fading as theirs comes on (core/actor_shadows.hpp spotShares). On by default: as it was.
-    bool actorShadowsSpot = true;
+    // 2.6.15: the game's round spot under the characters with their own shadows too; off - no two shadows: only where
+    // none of theirs falls (core/actor_shadows.hpp spotShares). Off by default, at the player's word.
+    bool actorShadowsSpot = false;
     // 0.35: heat haze - the picture shimmers over the torches' flames, burning skills, lava and far off over the
     // desert. On by default.
     bool heat = true;
