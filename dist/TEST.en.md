@@ -1,3 +1,15 @@
+# uaRO Graphics 2.7.1 — to check
+
+- **Fixed (Direct3D 12): "World reflections in water" work.** They were never drawn before: the game starts every
+  frame by clearing the screen, and at that moment the driver swapped the houses and ships gathered from the last
+  frame for an empty list. For the same reason "Hills without steps of light" did not work on Direct3D 12, and the
+  grass grew on bridges and decks too, not only on the ground. All three work now.
+- **Fixed: the console ~ no longer types "ё" into the game's chat.** In a Russian or Ukrainian layout every opening
+  of the console added "ё" to the chat line.
+- Please check: Alberta, the pier's edge (167 162), Clock: Day, the Remaster mode - by the ships and the houses the
+  water mirrors them; on the fields' hills the sunny side lighter, without steps; no grass on bridges and decks;
+  open and close the console - no "ё" in the chat.
+
 # uaRO Graphics 2.7.0 — to check
 
 - **New: the effects grouped by what the eye is on.** Fourteen groups instead of ten: Day, night and seasons;
