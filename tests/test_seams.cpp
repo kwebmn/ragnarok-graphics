@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include "core/seams.hpp"
@@ -111,6 +112,73 @@ TEST(seams_strips_follow_the_cells_crease) {
     }
 }
 
+TEST(seams_every_strip_lies_on_its_cells_ground) {
+    // 2.7.8 (the tester: still «мигает в точке prt_fild 200 200», 2.7.7): a cell's own band - 0.06 of it wide, its
+    // quads a quarter long - crossed its cell's crease near the corners and ran up to a third of a unit under a hill's
+    // ground (prt_fild08's cells there, offline), hidden in places as the camera turned. Every strip, the bands too,
+    // on the game's two triangles of its cell: a block of 3 x 3 twisted cells, the middle one another texture.
+    for (const bool across03 : {false, true}) {
+        std::vector<seams::Triangle> ground;
+        for (int iz = 0; iz < 3; ++iz)
+            for (int ix = 0; ix < 3; ++ix) cell(ground, ix, iz, 10.0f, uint32_t(iz * 3 + ix));
+        if (across03)
+            for (size_t k = 0; k + 1 < ground.size(); k += 2) {  // each cell split along its corners 0-3 instead
+                const seams::Vertex c[4] = {ground[k].v[0], ground[k].v[1], ground[k].v[2], ground[k + 1].v[2]};
+                ground[k].v[0] = c[0], ground[k].v[1] = c[1], ground[k].v[2] = c[3];
+                ground[k + 1].v[0] = c[0], ground[k + 1].v[1] = c[3], ground[k + 1].v[2] = c[2];
+            }
+        for (seams::Triangle& t : ground)
+            for (seams::Vertex& v : t.v) {
+                const float gx = std::round((v.pos[0] - 5.0f) / 10.0f), gz = std::round((v.pos[2] + 5.0f) / 10.0f);
+                v.pos[1] = -3.0f * (gx - 1.0f) * (gz - 1.0f);  // every cell twisted by 3 units, none a wall
+            }
+        // the ground's height at (x, z) on the cell `group`'s two triangles
+        const auto groundY = [&](uint32_t group, float x, float z, float& y) {
+            for (const seams::Triangle& t : ground) {
+                if (t.group != group) continue;
+                const float* p0 = t.v[0].pos;
+                const float* p1 = t.v[1].pos;
+                const float* p2 = t.v[2].pos;
+                const float d = (p1[2] - p2[2]) * (p0[0] - p2[0]) + (p2[0] - p1[0]) * (p0[2] - p2[2]);
+                const float l0 = ((p1[2] - p2[2]) * (x - p2[0]) + (p2[0] - p1[0]) * (z - p2[2])) / d;
+                const float l1 = ((p2[2] - p0[2]) * (x - p2[0]) + (p0[0] - p2[0]) * (z - p2[2])) / d;
+                if (l0 < -1e-4f || l1 < -1e-4f || 1.0f - l0 - l1 < -1e-4f) continue;
+                y = l0 * p0[1] + l1 * p1[1] + (1.0f - l0 - l1) * p2[1];
+                return true;
+            }
+            return false;
+        };
+        const std::vector<uint32_t> textures = {2, 2, 2, 2, 1, 2, 2, 2, 2};
+        float worst = 0.0f;
+        int bands = 0, missed = 0;
+        for (const seams::Strip& s : seams::build(ground, textures, 0.5f)) {
+            bands += s.inside == s.shows ? 1 : 0;
+            for (size_t k = 0; k + 2 < s.indices.size(); k += 3) {
+                const seams::Vertex& a = s.vertices[s.indices[k]];
+                const seams::Vertex& b = s.vertices[s.indices[k + 1]];
+                const seams::Vertex& c = s.vertices[s.indices[k + 2]];
+                for (int i = 0; i <= 10; ++i)
+                    for (int j = 0; i + j <= 10; ++j) {  // points all over the triangle, its edges too
+                        const float l1 = float(i) / 10.0f, l2 = float(j) / 10.0f, l0 = 1.0f - l1 - l2;
+                        float at[3];
+                        for (int n = 0; n < 3; ++n) at[n] = l0 * a.pos[n] + l1 * b.pos[n] + l2 * c.pos[n];
+                        float y = 0.0f;
+                        if (!groundY(s.inside, at[0], at[2], y)) {
+                            ++missed;
+                            continue;
+                        }
+                        worst = std::max(worst, std::fabs(at[1] - y));
+                    }
+            }
+        }
+        std::printf("  across03 %d: %d own bands, the farthest point %.4f off its cell's ground\n", int(across03),
+                    bands, worst);
+        CHECK(bands >= 9);  // the middle cell's and its four neighbours' bands at their edges with it
+        CHECK_EQ(missed, 0);  // every point over its own cell
+        CHECK(worst < 1e-3f);
+    }
+}
+
 TEST(seams_none_over_a_step) {
     // 2.1.6: two textures, the second cell a step higher - a wall between them, no seam (it blinked at the wall's foot)
     std::vector<seams::Triangle> ground;
@@ -217,9 +285,10 @@ TEST(seams_strips_stay_as_they_were_byte_for_byte) {
                 static_cast<unsigned long long>(hashOf(strips)),
                 static_cast<unsigned long long>(trianglesSetHashOf(strips)));
     // 2.7.5 split the quads along each cell's crease (every vertex as 2.5.10 made them); 2.7.6 orders the cells by
-    // their places - the same triangles as 2.7.5's, in that order
-    CHECK(trianglesSetHashOf(strips) == 0x9616b111034a2dfeull);
-    CHECK(hashOf(strips) == 0x6605d2879a72ef3cull);
+    // their places - the same triangles as 2.7.5's, in that order; 2.7.8 cuts the triangles the crease runs through
+    // (the own bands' at the cells' corners) - the grid's points as before, the crease's after them
+    CHECK(trianglesSetHashOf(strips) == 0xc1c11344ed814c90ull);
+    CHECK(hashOf(strips) == 0xa013addc7024b46full);
 }
 
 TEST(seams_strips_the_same_whatever_order_the_ground_comes_in) {

@@ -76,6 +76,20 @@ void keptAt(const Cell& c, float u, float v, Vertex& p) {
 
 bool same(float a, float b) { return std::fabs(a - b) < 0.02f; }
 
+// 2.7.8: the point a share t of the way from a to b - its place on the cell's ground at (u, v), the rest as the
+// rasterizer had it there before the triangle was cut
+Vertex between(const Cell& c, const Vertex& a, const Vertex& b, float t, float u, float v) {
+    Vertex p;
+    onGround(c, u, v, p.pos);
+    p.diffuse = lerpChannels(a.diffuse, b.diffuse, t, 0, 24);
+    p.specular = lerpChannels(a.specular, b.specular, t, 0, 24);
+    for (int k = 0; k < 2; ++k) {
+        p.uv0[k] = lerpf(a.uv0[k], b.uv0[k], t);
+        p.uv1[k] = lerpf(a.uv1[k], b.uv1[k], t);
+    }
+    return p;
+}
+
 // 1.9.1: a place of the neighbour's square past its edge folded back into it - its texture mirrored across the edge.
 // Carried straight on, the coordinates left the cell's part of the texture: many grounds take a quarter of an atlas
 // of four, and the strip showed the next quarter's cracks and stones as dark blocks.
@@ -225,8 +239,10 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                     out.push_back(st);
                 }
                 Strip& s = out[found->second];
-                if (s.vertices.size() + (kAlong + 1) * (kAcross + 1) > 65535) return;
+                // the grid's points and two more for each triangle cut at the crease
+                if (s.vertices.size() + (kAlong + 1) * (kAcross + 1) + 4 * kAlong * kAcross > 65535) return;
                 const uint16_t first = uint16_t(s.vertices.size());
+                float placeU[(kAlong + 1) * (kAcross + 1)], placeV[(kAlong + 1) * (kAcross + 1)];
                 for (int j = 0; j <= kAcross; ++j)
                     for (int i = 0; i <= kAlong; ++i) {
                         const float along = float(i) / kAlong, into = stripWidth * float(j) / kAcross;
@@ -236,6 +252,8 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                         if (w.dx == -1) { u = into; v = along; }
                         if (w.dz == 1) { u = along; v = 1.0f - into; }
                         if (w.dz == -1) { u = along; v = into; }
+                        placeU[j * (kAlong + 1) + i] = u;
+                        placeV[j * (kAlong + 1) + i] = v;
                         Vertex p;
                         keptAt(a, u, v, p);
                         onGround(a, u, v, p.pos);  // 2.1.2: on the game's triangles
@@ -254,14 +272,66 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                 // the other way, on a hill a strip cut across the crease, a third of a unit off the ground: hidden
                 // under it in places, it blinked as the camera turned (half a cell wide, its grid lies on the crease)
                 const bool alongQ03 = w.dx == -1 || w.dz == -1 ? a.across03 : !a.across03;
+                // 2.7.8: and a triangle the crease still runs through cut along it - the own band's quads, 0.06 of a
+                // cell wide and a quarter long, crossed it near the cell's corners: up to a third of a unit under
+                // prt_fild08's hills about 200 200, hidden there now and then as the camera turned. A flat cell has
+                // no crease to follow.
+                const bool creased = std::fabs(a.corner[0].pos[1] + a.corner[3].pos[1] - a.corner[1].pos[1] -
+                                               a.corner[2].pos[1]) > 1e-3f;
+                const auto creaseSide = [&](float u, float v) { return a.across03 ? u - v : u + v - 1.0f; };
+                const auto triangle = [&](int k0, int k1, int k2) {  // the grid's points, from `first`
+                    const int k[3] = {k0, k1, k2};
+                    float side[3];
+                    int sign[3], plus = 0, minus = 0;
+                    for (int n = 0; n < 3; ++n) {
+                        side[n] = creaseSide(placeU[k[n]], placeV[k[n]]);
+                        sign[n] = side[n] > 1e-5f ? 1 : side[n] < -1e-5f ? -1 : 0;
+                        plus += sign[n] > 0 ? 1 : 0;
+                        minus += sign[n] < 0 ? 1 : 0;
+                    }
+                    if (!creased || !plus || !minus) {
+                        for (int n = 0; n < 3; ++n) s.indices.push_back(uint16_t(first + k[n]));
+                        return;
+                    }
+                    // where the crease crosses the edge from the triangle's corner n to its corner m
+                    const auto cross = [&](int n, int m) {
+                        const float t = side[n] / (side[n] - side[m]);
+                        const float u = lerpf(placeU[k[n]], placeU[k[m]], t), v = lerpf(placeV[k[n]], placeV[k[m]], t);
+                        s.vertices.push_back(between(a, s.vertices[first + k[n]], s.vertices[first + k[m]], t, u, v));
+                        return uint16_t(s.vertices.size() - 1);
+                    };
+                    const auto put = [&](uint16_t x, uint16_t y, uint16_t z) {
+                        for (uint16_t q : {x, y, z}) s.indices.push_back(q);
+                    };
+                    // turned so the corner alone on its side (or on the crease) comes first, the order kept
+                    int lone = 0;
+                    for (int n = 0; n < 3; ++n)
+                        if (sign[n] == 0 || (sign[n] > 0 ? plus : minus) == 1) lone = n;
+                    for (int n = 0; n < 3; ++n)
+                        if (sign[n] == 0) lone = n;
+                    const int l = lone, b = (lone + 1) % 3, c = (lone + 2) % 3;
+                    const uint16_t at[3] = {uint16_t(first + k[0]), uint16_t(first + k[1]), uint16_t(first + k[2])};
+                    if (sign[l] == 0) {  // the crease from this corner across the opposite edge: two halves
+                        const uint16_t x = cross(b, c);
+                        put(at[l], at[b], x);
+                        put(at[l], x, at[c]);
+                    } else {  // a corner cut off: it, and the four-sided rest in two
+                        const uint16_t x1 = cross(l, b), x2 = cross(c, l);
+                        put(at[l], x1, x2);
+                        put(x1, at[b], at[c]);
+                        put(x1, at[c], x2);
+                    }
+                };
                 for (int j = 0; j < kAcross; ++j)
                     for (int i = 0; i < kAlong; ++i) {
-                        const uint16_t q0 = uint16_t(first + j * (kAlong + 1) + i), q1 = uint16_t(q0 + 1),
-                                       q2 = uint16_t(q0 + kAlong + 1), q3 = uint16_t(q2 + 1);
-                        if (alongQ03)
-                            for (uint16_t k : {q0, q1, q3, q0, q3, q2}) s.indices.push_back(k);
-                        else
-                            for (uint16_t k : {q0, q1, q2, q2, q1, q3}) s.indices.push_back(k);
+                        const int q0 = j * (kAlong + 1) + i, q1 = q0 + 1, q2 = q0 + kAlong + 1, q3 = q2 + 1;
+                        if (alongQ03) {
+                            triangle(q0, q1, q3);
+                            triangle(q0, q3, q2);
+                        } else {
+                            triangle(q0, q1, q2);
+                            triangle(q2, q1, q3);
+                        }
                     }
             };
             emit(b.group, false, width);
