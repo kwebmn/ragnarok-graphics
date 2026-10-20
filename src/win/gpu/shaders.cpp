@@ -1807,7 +1807,7 @@ float4 grass_ps(PresentOut i) : SV_Target {
 
 // 1.7, the ground of the living world (ao.cpp applyGroundLife), before the characters, blended over by its alpha:
 // twinX sand drifting over desert ground in the wind (sand_drift), twinY snow glittering (snow_sparkle), twinW the
-// walls of a damp cave glistening where light falls on them and water running down (wet_walls). sharpen the time;
+// walls of a damp cave with water running down them where light falls (wet_walls). sharpen the time;
 // r0-r11 the view -> the world; the picture's copy t2.
 float4 ground_life_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
@@ -1849,16 +1849,11 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
         float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
         float wall = 1.0 - smoothstep(0.55, 0.85, abs(nw.y));
         float2 s = float2(w.x + w.z, w.y);
-        float2 cell = floor(s * 2.2);
-        float seed = hash12(cell);
         float lit = smoothstep(0.12, 0.45, luma);
-        float g = 0.0;
-        if (seed > 0.8) {
-            float2 f = frac(s * 2.2) - 0.5;
-            g = exp(-dot(f, f) * 30.0) * pow(saturate(sin(t * 0.7 + seed * 50.0)), 6.0) * lit;
-        }
-        float run = smoothstep(0.93, 1.0, valueNoise(float2(s.x * 2.5, s.y * 0.12 + t * 0.35))) * 0.5 * lit;
-        float wet = (g + run) * wall * twinW;
+        // 2.6.21: the glints gone - blinking dots in cells half a unit wide, "looks like dots in the air"; the
+        // trickles run down: the world's y grows downwards, and + t had them crawl up the walls
+        float run = smoothstep(0.93, 1.0, valueNoise(float2(s.x * 2.5, s.y * 0.12 - t * 0.35))) * 0.5 * lit;
+        float wet = run * wall * twinW;
         o = lerp(o, min(col * 1.6 + 0.12, 1.0), saturate(wet));
         a = max(a, saturate(wet));
     }

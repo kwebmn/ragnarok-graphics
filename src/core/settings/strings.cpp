@@ -2148,12 +2148,11 @@ const Entry kTexts[] = {
     {"Damp cave walls",
      "Вологі стіни печер",
      "Влажные стены пещер"},
-    {"In damp caves and dungeons the stone glistens where the light falls on it, and thin trickles of water run down "
-     "the walls (Direct3D 12).",
-     "У вологих печерах і підземеллях камінь вилискує там, де на нього падає світло, а стінами стікають тонкі струмки "
-     "води (Direct3D 12).",
-     "Во влажных пещерах и подземельях камень поблёскивает там, где на него падает свет, а по стенам стекают тонкие "
-     "струйки воды (Direct3D 12)."},
+    {"In damp caves and dungeons thin trickles of water run down the walls where the light falls on them "
+     "(Direct3D 12).",
+     "У вологих печерах і підземеллях там, де на стіни падає світло, ними стікають тонкі струмки води (Direct3D 12).",
+     "Во влажных пещерах и подземельях там, где на стены падает свет, по ним стекают тонкие струйки воды (Direct3D "
+     "12)."},
     {"Surf",
      "Прибій",
      "Прибой"},
