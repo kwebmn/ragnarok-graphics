@@ -1,3 +1,11 @@
+# uaRO Graphics 2.7.3 — to check
+
+- **Fixed: the grass by the water no longer blinks.** In shallow ponds the grass came under the water and went again -
+  the game's waves lift the water and let it fall, and the grass's line jumped with them. Now the line is the
+  highest the waves have come: no grass under the water, and it does not blink.
+- Please check: the pond on cmd_fild01 (244 187) - stand a minute: no grass on the water, the grass on the bank as
+  before, nothing blinks.
+
 # uaRO Graphics 2.7.2 — to check
 
 - **Fixed: no grass in the water.** In shallow ponds and rivers the green bed showed through the water and blades
