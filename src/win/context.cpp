@@ -18,6 +18,7 @@
 #include "win/ftol_patch.hpp"
 #include "win/hit_hook.hpp"
 #include "win/pick_hook.hpp"
+#include "win/server_night.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/game_camera.hpp"
@@ -613,6 +614,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         fx.dayNow = day;
     }
     renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
+    serverNightFrame(enhanced_ && fx.noServerNight);      // 2.6.13: the server's night by the clock and «Ночь»
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
     const bool changed = out.cx != lastOut_.cx || out.cy != lastOut_.cy || plan.k != lastPlan_.k ||

@@ -263,6 +263,9 @@ struct EffectSettings {
     // fields and in the towns, where it lay as a coloured veil, thicker as the camera went back (R-P6KRQF); the
     // dungeons keep theirs (dark, hiding the void past the map). A fix, in every set.
     bool noGameFog = true;
+    // 2.6.13: the server's night (its status SI_NIGHT) does not darken the picture: the game's half-dark blue light
+    // left out, the time of day the clock's and the night's (win/server_night.hpp). A fix, in every set.
+    bool noServerNight = true;
     // 0.84: round characters - the torches' light across a character as if it were round (0.79 with the rim light;
     // now its own switch). Off by default.
     bool roundLight = false;

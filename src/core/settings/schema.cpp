@@ -248,6 +248,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMapFadeHint, "", &E::mapFade},
         {"effects", "no_game_fog", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNoGameFog,
          Text::FxNoGameFogHint, "", &E::noGameFog},  // 2.6.10
+        {"effects", "no_server_night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNoServerNight,
+         Text::FxNoServerNightHint, "", &E::noServerNight},  // 2.6.13
         {"effects", "round_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRoundLight,
          Text::FxRoundLightHint, "", &E::roundLight},
         {"effects", "appear", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAppear,

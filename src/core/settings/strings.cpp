@@ -3209,6 +3209,13 @@ const Entry kTexts[] = {
      "віддаляється. Підземелля зберігають свій темний туман.",
      "На полях и в городах собственный туман игры не рисуется — зелёная или белая пелена, которая густеет, когда "
      "камера отдаляется. Подземелья сохраняют свой тёмный туман."},
+    {"No server night", "Без ночі сервера", "Без ночи сервера"},  // 2.6.13
+    {"The night the server brings now and then does not darken the picture nor tint it blue - the time of day is the "
+     "Clock's and the Night's. Off: the server's night as the game shows it.",
+     "Ніч, яку час від часу вмикає сервер, не затемнює картинку й не фарбує її в синє — час доби задають «Годинник» "
+     "і «Ніч». Вимкнено: ніч сервера, як її показує гра.",
+     "Ночь, которую время от времени включает сервер, не затемняет картинку и не красит её в синий — время суток "
+     "задают «Часы» и «Ночь». Выключено: ночь сервера, как её показывает игра."},
     {"Clock", "Годинник", "Часы"},  // 2.6.11
     {"The hour all that goes by the time of day takes - the sun and its light, the night by the clock, the "
      "butterflies and the birds, the dew, the morning fog: the computer's clock, or a moment of your choice that "
