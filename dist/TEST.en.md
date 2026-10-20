@@ -1,3 +1,13 @@
+# uaRO Graphics 2.6.17 — to check
+
+- **The torches no longer blink every couple of seconds.** The new fire was thrown by the game itself: its flame
+  shifts a little through its animation and now and then goes missing for a frame. That changed the torch's "seed",
+  and the "Alive" fire jumped to another shape, while in the missing frame the game's blurred drop showed through.
+  Now each torch is followed from frame to frame and keeps its look, one missing a moment stays in place, and the
+  game's brightness dips are smoothed. A torch's first appearance on entering a map is as before.
+- Please check: in the Pyramids stand by a torch and watch it for half a minute, then walk around near it - the fire
+  burns steadily, no flashes or jumps of shape.
+
 # uaRO Graphics 2.6.16 — to check
 
 - **The torches' "Flicker" now shows across the whole slider.** From 0 to 100 % the light on the walls went from
