@@ -1,3 +1,23 @@
+# uaRO Graphics 2.6.18 — to check
+
+- **The torches' fire on the walls no longer blinks every 1-2 seconds.** The real cause was in the game itself: it
+  burns every map torch as two effects at once - it starts a new one every 2 seconds and each lasts 4. At each
+  restart there are one or three of them for a moment. The graphics lit the wall from each one, so every two seconds
+  the light on the wall dipped or flared. Now both effects are one torch: one fire and one light, as bright as
+  before. And with many torches in view none of them shows the game's old drop any more.
+- "Embers from the fires" over the torches are half as frequent now: each torch used to be counted twice. "Moths at
+  the fire" circle the four nearest torches, not two.
+- **A fire's shadow no longer goes through the wall in front of it.** The graphics now read the map's shape (its
+  .gnd file) and know where its walls stand: a fire a wall hides the character from casts no shadow of them.
+- **Blindness covers the whole screen.** The game's darkness is a square round the character, and from a camera far
+  off it did not reach the sides of a wide screen. Now it covers the screen whole; "Softer skills" with "Skills'
+  brightness" no longer thin it (the walls showed through), and the torches' light and fire and our other effects no
+  longer shine through it.
+- Please check: in the Pyramids stand by a torch on a wall for half a minute - the light on the wall is steady, no
+  dips or flares, and the fire and its light are as bright as in 2.6.17. Then stand by a wall with a torch burning
+  behind it - no shadow from it; and under Blindness with the camera far off the screen is dark all over, the
+  torches far away do not shine.
+
 # uaRO Graphics 2.6.17 — to check
 
 - **The torches no longer blink every couple of seconds.** The new fire was thrown by the game itself: its flame
