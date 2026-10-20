@@ -64,6 +64,7 @@ const Member kMembers[] = {
 
     {"grass", Plants, 2, &E::grass},
     {"flowers", Plants, 2, &E::flowers},
+    {"dew", Plants, 3, &E::dew},
     {"foliage", Plants, 2, &E::foliage},
     {"tree_volume", Plants, 2, &E::treeVolume},
     {"leaf_light", Plants, 2, &E::leafLight},
@@ -150,7 +151,7 @@ const OldMember kOldMembers[] = {
     {OldSurfaces, &E::groundSeams}, {OldSurfaces, &E::smoothHills},
     {OldNature, &E::grass},         {OldNature, &E::foliage},       {OldNature, &E::treeVolume},
     {OldNature, &E::leafLight},     {OldNature, &E::treeTints},
-    {OldNature, &E::flowers},
+    {OldNature, &E::flowers},       {OldNature, &E::dew},
     {OldNature, &E::leafFall},      {OldNature, &E::seasons},       {OldNature, &E::sharedWind},
     {OldWater, &E::water},          {OldWater, &E::ripples},
     {OldWater, &E::splashes},       {OldWater, &E::underwater},     {OldWater, &E::swamp},

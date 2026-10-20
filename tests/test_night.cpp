@@ -22,7 +22,7 @@ TEST(night_always_by_the_clock) {
 }
 
 TEST(night_and_day_follow_the_chosen_clock) {
-    // 2.6.11: the minute the effects go by - the day's sun, the night, the creatures, the fog - is the chosen
+    // 2.6.11: the minute the effects go by - the day's sun, the night, the creatures, the dew, the fog - is the chosen
     // moment when there is one, the computer's otherwise
     EffectSettings e;
     e.nightStrength = 60;

@@ -1666,11 +1666,11 @@ float4 embers_ps(PresentOut i) : SV_Target {
 // the screen) in front. The blades sway in the wind and lie down where a step was left lately (t1, as steps_ps reads
 // it; footprint how many). twinX the blades' longest (target pixels), twinY how many (0-1), sharpen the time.
 // 1.7: the trodden blades lean away from the step; twinW the share of flowers (flowers), sourceRect.y their colours
-// (living::Place::flowers). 2.7.10: the gusts (too faint to see) and the dew (blinking dots) gone. 2.6.8 (R-9K2F6E:
-// 22 ms on an HD 6570): the steps' hold read from their grid (footprint 1: t1, core/trample.hpp; fogColor its corner,
-// one over a texel's side, texels a side) instead of up to 64 steps a pixel; the root's depth read once; the map's
-// ground looked up only for a root that has a blade; uiPixels.z 2 (Direct3D 11) looks for roots on every second row
-// only - a blade still found whole, its root a row higher or lower.
+// (living::Place::flowers); twinH the dew (dew) glinting on the tips. 2.7.10: the gusts gone (too faint to see).
+// 2.6.8 (R-9K2F6E: 22 ms on an HD 6570): the steps' hold read from their grid (footprint 1: t1, core/trample.hpp;
+// fogColor its corner, one over a texel's side, texels a side) instead of up to 64 steps a pixel; the root's depth
+// read once; the map's ground looked up only for a root that has a blade; uiPixels.z 2 (Direct3D 11) looks for roots
+// on every second row only - a blade still found whole, its root a row higher or lower.
 float4 trampleAt(float2 xz) {  // 2.6.8: the grid between its four texel centres around xz, past its edge the edge's
     float2 g = (xz - fogColor.xy) * fogColor.z - 0.5;
     int last = int(fogColor.w + 0.5) - 1;
@@ -1764,6 +1764,11 @@ float4 grass_ps(PresentOut i) : SV_Target {
         if (up > height) continue;
         float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3));
         if (head) colour = flowerColour(hash12(id + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * rc.g);
+        if (twinH > 0.0 && up > height * 0.85) {  // a dew drop on the tip, now and then catching the sun
+            float seed = hash12(id + 43.1);
+            float glint = pow(saturate(sin(t * (0.9 + seed * 1.7) + seed * 40.0)), 24.0) * step(0.8, seed);
+            colour = lerp(colour, float3(1.0, 1.0, 0.97), glint * twinH);
+        }
         return float4(colour, 1.0);
     }
     discard;

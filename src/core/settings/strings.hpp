@@ -212,7 +212,7 @@ enum class Text : uint16_t {
     // 1.7: the living world
     FxTreeVolume, FxTreeVolumeHint, FxLeafLight, FxLeafLightHint, FxTreeTints, FxTreeTintsHint,
     // 1.7.1
-    FxFlowers, FxFlowersHint, FxMorningFog, FxMorningFogHint, FxSandDrift, FxSandDriftHint,
+    FxFlowers, FxFlowersHint, FxDew, FxDewHint, FxMorningFog, FxMorningFogHint, FxSandDrift, FxSandDriftHint,
     FxSnowSparkle, FxSnowSparkleHint, FxWetWalls, FxWetWallsHint,
     // 1.7.2
     FxSwamp, FxSwampHint,

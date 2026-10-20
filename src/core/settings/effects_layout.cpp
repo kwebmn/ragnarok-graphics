@@ -63,6 +63,7 @@ const EffectLayout kEffects[] = {
     {"effects.leaf_light", {}, {}, {}, 2},  // 1.7
     {"effects.tree_tints", {"effects.tree_seasons"}, {}, {}, 2},  // 1.7
     {"effects.flowers", {}, {}, {}, 2},  // 1.7.1
+    {"effects.dew", {}, {}, {}, 2},  // 1.7.1
     {"effects.morning_fog", {}, {}, {}, 2},  // 1.7.1
     {"effects.sand_drift", {}, {}, {}, 2},  // 1.7.1
     {"effects.snow_sparkle", {}, {}, {}, 2},  // 1.7.1

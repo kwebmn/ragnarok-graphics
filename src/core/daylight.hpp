@@ -16,7 +16,7 @@ struct Light {
 Light at(int minute);
 
 // 2.6.11, [effects] clock: the time of day all that goes by the hour takes (the day's sun, the night, the creatures
-// of the day, the morning fog) - the computer's clock, or a moment the player chose, kept fixed: dawn 6:30,
+// of the day, the dew, the morning fog) - the computer's clock, or a moment the player chose, kept fixed: dawn 6:30,
 // morning 9:00, day 13:00, sunset 18:30, night 0:00 (in the order of the file's words). 2.6.19: the master of the
 // time of day, by the Quality and the Mode (the user: «Часы главные»), and «От сервера» - the server's night
 // (ServerClock's minute).

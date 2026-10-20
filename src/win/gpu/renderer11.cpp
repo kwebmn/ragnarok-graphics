@@ -2739,6 +2739,8 @@ void Renderer11::applyGrass() {
         c.twin[2] = 0.12f;
         c.sourceRect[1] = float(place_.flowers);
     }
+    const int minute = effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();  // 2.6.11
+    if (effects_.dew) c.twin[3] = living::dew(minute) * (1.0f - float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f);
     if (windShared()) {  // 2.5.5: the shared wind's way times its strength
         c.sourceRect[2] = windNow_.x * windNow_.strength;
         c.sourceRect[3] = windNow_.z * windNow_.strength;
