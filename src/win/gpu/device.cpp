@@ -2082,7 +2082,7 @@ void Renderer::setEffects(const EffectSettings& e) {
              "weather %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
              "water %s, waves %d%%, reflections %d%%, clarity %d%%; colour %s, saturation %d%%, contrast %d%%, "
-             "brightness %d%%, warmth %d%%, vignette %d%%; depth of field %s, blur %d%%, sharp zone %d%%",
+             "brightness %d%%, warmth %d%%, vignette %d%%",  // 2.6.20: the depth of field's places gone with it
              e.smoothLight ? "on" : "off", e.torch ? "on" : "off", e.torchFlame ? "on" : "off", e.torchBrightness,
              e.torchGlow, e.torchLight, e.torchFlicker, e.smoke ? "on" : "off", e.smokeDensity, e.lamps ? "on" : "off",
              e.lampsLight, e.fireLight ? "on" : "off", e.fireLightStrength, e.skillColours ? "on" : "off",

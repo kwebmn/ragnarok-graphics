@@ -10,7 +10,9 @@ void open(const std::string& path, LogLevel level);
 bool enabled(LogLevel level);
 // [debug] log changed while the game runs (stage 2 spec §3.4).
 void setLevel(LogLevel level);
-void line(LogLevel level, const char* fmt, ...);
+// 2.6.20: checked as printf by the compiler - a format with more places than arguments (the effects' line kept the
+// removed depth of field's three) read past them and took uaro-render64.exe down at the login (R-FS6S3K)
+void line(LogLevel level, const char* fmt, ...) __attribute__((format(gnu_printf, 2, 3)));
 // Part 3: uaro-render64.exe also hands every line it writes to the driver, which writes it into the game's log.
 void setSink(void (*sink)(LogLevel level, const char* text));
 
