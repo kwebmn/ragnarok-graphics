@@ -92,18 +92,30 @@ public:
     bool readTarget(std::vector<uint32_t>& argb);
     void present(HWND window, int outputWidth, int outputHeight, const Rect& source, const PresentOptions& options);
     void saveScreenshot(const std::string& path);  // 0.54: the back buffer as it is now, to a PNG
-    void setEffects(const EffectSettings& e) { effects_ = e; }  // 0.59: the colours (grade) are drawn here
+    void setEffects(const EffectSettings& e) {  // 0.59: the colours (grade) are drawn here
+        const bool season = e.season != effects_.season;
+        effects_ = e;
+        if (season && !map_.empty()) {  // 2.6.22: another season chosen - the map's year at once (setMap)
+            takeSeason();
+            critterWorld_.setPlace(place_);
+        }
+    }
+    // 2.6.22: the map's trees, place and year by the month of the season chosen (effects.season)
+    void takeSeason() {
+        const int month = seasons::monthFor(effects_.season, trees::monthNow());
+        season_ = trees::seasonOf(map_, month);
+        place_ = living::placeOf(map_, outdoors_, season_ == trees::Season::Autumn);
+        year_ = seasons::of(map_, month, outdoors_, place_);
+    }
     void setMap(const std::string& map) {  // 0.79: the region's look; 1.7: the trees' season
         map_ = map;
-        season_ = trees::seasonOf(map, trees::monthNow());
         outdoors_ = outdoors(map);
         torchKeeper_.clear();  // 2.6.17: a new map's torches
         shine_ = floorShine(map);  // 2.5.17
         desert_ = desert(map);  // 2.5.2: the prints in the sand
         footTracker_.clear();
         lavaLogged_ = false;
-        place_ = living::placeOf(map, outdoors_, season_ == trees::Season::Autumn);  // 2.5.4: as Direct3D 12's
-        year_ = seasons::of(map, trees::monthNow(), outdoors_, place_);
+        takeSeason();  // 2.5.4: as Direct3D 12's; 2.6.22: the chosen season's
         waterLevelKnown_ = false;
         groundLifeLogged_ = grassLogged_ = false;
         critterWorld_.setPlace(place_);  // 2.5.4: a new map - everything goes

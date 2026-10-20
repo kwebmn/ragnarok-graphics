@@ -25,6 +25,7 @@ const int kEffectCount = effectLayoutCount();
 // mode's were under it - they did nothing).
 constexpr int kPreset = 20000, kTier = 20001, kClock = 20002;  // 2.6.11: the clock
 constexpr int kNightStrength = 20003;  // 2.6.19: the clock's night, by it
+constexpr int kSeason = 20004;  // 2.6.22: the season, by the clock
 int groupBox(int g) { return 20100 + 20 * g; }
 int groupSlider(int g) { return 20102 + 20 * g; }  // its number: + 1
 int groupOpen(int g) { return 20105 + 20 * g; }
@@ -95,6 +96,7 @@ public:
             }
             dot(p, p.choice(kClock, t(clock.label), items, at, t(clock.hint)), clock);
             slider(p, kNightStrength, "effects.night_strength", word != "off");
+            choiceRow(p, kSeason, "effects.season");  // 2.6.22: the year by the day
         }
         if (!simple) p.note(t(Text::FxDetailsNote), Tone::Muted);
         const bool any = word != "off";
@@ -190,10 +192,10 @@ public:
             chooseTier(SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0));
             return;
         }
-        if (id == kClock && code == CBN_SELCHANGE) {  // 2.6.11
-            const IniSetting& clock = setting("effects.clock");
+        if ((id == kClock || id == kSeason) && code == CBN_SELCHANGE) {  // 2.6.11; 2.6.22 the season
+            const IniSetting& s = setting(id == kClock ? "effects.clock" : "effects.season");
             const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
-            if (sel >= 0 && size_t(sel) < clock.tokens.size()) set(clock, clock.tokens[size_t(sel)], true);
+            if (sel >= 0 && size_t(sel) < s.tokens.size()) set(s, s.tokens[size_t(sel)], true);
             return;
         }
         if (code != BN_CLICKED) return;
@@ -334,6 +336,19 @@ private:
         }
         host_.changed();
         return true;
+    }
+
+    // 2.6.22: a choice of the schema's words, its texts in their order (the season's)
+    void choiceRow(Panel& p, int id, const char* key) {
+        const IniSetting& s = setting(key);
+        const std::string now = host_.model().token(s);
+        int at = 0;
+        std::vector<std::wstring> items;
+        for (size_t k = 0; k < s.tokens.size() && k < s.choices.size(); ++k) {
+            items.push_back(t(s.choices[k]));
+            if (now == s.tokens[k]) at = int(k);
+        }
+        dot(p, p.choice(id, t(s.label), items, at, t(s.hint)), s);
     }
 
     void slider(Panel& p, int id, const char* key, bool enabled) {

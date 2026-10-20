@@ -3,10 +3,12 @@
 
 #include "core/config.hpp"
 #include "core/daylight.hpp"
-#include "core/settings/schema.hpp"
 #include "core/effect_groups.hpp"
+#include "core/live_config.hpp"
 #include "core/outdoors.hpp"
+#include "core/seasons.hpp"
 #include "core/settings/ini_edit.hpp"
+#include "core/settings/schema.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -202,6 +204,17 @@ TEST(clock_auto_by_default_a_moment_by_its_word) {
     CHECK_EQ(server.effects.clock, int(daylight::kClockServer));
     CHECK(settings::tokenOf(*settings::findSetting("effects.clock"), server) == "server");
     CHECK(!(c.effects == parseConfig("").effects));
+}
+
+TEST(season_auto_by_default_a_season_by_its_word) {
+    // 2.6.22: [effects] season - auto (the computer's calendar) or one of four; a change of it alone is a change
+    CHECK_EQ(parseConfig("").effects.season, int(seasons::kSeasonAuto));
+    const Config c = parseConfig("[effects]\nseason = winter\n");
+    CHECK_EQ(c.effects.season, int(seasons::kSeasonWinter));
+    CHECK(settings::tokenOf(*settings::findSetting("effects.season"), c) == "winter");
+    CHECK_EQ(parseConfig("[effects]\nseason = fall\n").effects.season, int(seasons::kSeasonAuto));  // not its word
+    CHECK(!(c.effects == parseConfig("").effects));
+    CHECK(appliesNow("effects.season"));
 }
 
 TEST(night_creatures_off_by_default_in_no_set) {

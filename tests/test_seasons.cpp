@@ -18,3 +18,20 @@ TEST(seasons_by_the_month_and_the_place) {
     lutie.snow = true;
     CHECK(seasons::of("xmas", 7, true, lutie).snow > 0.5f);  // all year
 }
+
+TEST(seasons_chosen_like_the_clock) {
+    // 2.6.22, [effects] season (the user: «время года по принципу с часами»): the computer's calendar, or a season
+    // of the player's choice that stays - its month in the middle of it
+    CHECK_EQ(seasons::monthFor(seasons::kSeasonAuto, 10), 10);
+    CHECK_EQ(seasons::monthFor(seasons::kSeasonSpring, 10), 4);
+    CHECK_EQ(seasons::monthFor(seasons::kSeasonSummer, 10), 7);
+    CHECK_EQ(seasons::monthFor(seasons::kSeasonAutumn, 1), 10);
+    CHECK_EQ(seasons::monthFor(seasons::kSeasonWinter, 10), 1);
+    CHECK_EQ(seasons::monthFor(42, 10), 10);  // none of them: the calendar's
+    // winter's month snows on the fields, autumn's is dry, spring's lush, summer's as the game
+    const living::Place field = living::placeOf("prt_fild08", true, false);
+    CHECK(seasons::of("prt_fild08", seasons::monthFor(seasons::kSeasonWinter, 10), true, field).snow > 0.5f);
+    CHECK(seasons::of("prt_fild08", seasons::monthFor(seasons::kSeasonSpring, 10), true, field).lush > 0.5f);
+    const seasons::Look summer = seasons::of("prt_fild08", seasons::monthFor(seasons::kSeasonSummer, 10), true, field);
+    CHECK(summer.snow == 0.0f && summer.dry == 0.0f && summer.lush == 0.0f);
+}

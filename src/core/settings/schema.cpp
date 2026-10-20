@@ -364,6 +364,10 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::FxClockAuto, Text::FxClockServer, Text::FxClockDawn, Text::FxClockMorning, Text::FxClockDay,
           Text::FxClockSunset, Text::FxClockNight},
          Text::FxClock, Text::FxClockHint, ""},
+        // 2.6.22: the season for all that goes by the year (core/seasons.hpp Choice)
+        {"effects", "season", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "spring", "summer", "autumn", "winter"},
+         {Text::FxSeasonAuto, Text::FxSeasonSpring, Text::FxSeasonSummer, Text::FxSeasonAutumn, Text::FxSeasonWinter},
+         Text::FxSeason, Text::FxSeasonHint, ""},
         {"effects", "materials", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMaterials,
          Text::FxMaterialsHint, "", &E::materials},
         {"effects", "materials_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMaterialsStrength,
@@ -749,6 +753,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "effects.tier") return c.effects.tier == 1 ? "classic" : c.effects.tier == 2 ? "remaster" : "auto";
     if (k == "effects.clock")  // 2.6.11
         return s.tokens[c.effects.clock > 0 && c.effects.clock < int(s.tokens.size()) ? size_t(c.effects.clock) : 0];
+    if (k == "effects.season")  // 2.6.22
+        return s.tokens[c.effects.season > 0 && c.effects.season < int(s.tokens.size()) ? size_t(c.effects.season) : 0];
     if (k == "frames.vsync") return c.vsync ? "1" : "0";
     if (k == "frames.fps_limit") return std::to_string(c.fpsLimit);
     if (k == "frames.keep_fps") return std::to_string(c.keepFps);

@@ -1948,9 +1948,7 @@ void Renderer::setMap(const std::string& map) {
     if (remote_) return remote_->setMap(map);
     impl_->mapWorld.setMap(map);
     impl_->mapName = map;  // 0.31: lava's maps
-    impl_->mapSeason = trees::seasonOf(map, trees::monthNow());  // 1.7
-    impl_->mapPlace = living::placeOf(map, outdoors(map), impl_->mapSeason == trees::Season::Autumn);
-    impl_->mapYear = seasons::of(map, trees::monthNow(), outdoors(map), impl_->mapPlace);  // 1.20
+    impl_->takeSeason();  // 1.7 the trees', 1.20 the year's; 2.6.22: the chosen season's month
     impl_->mapOutdoors = outdoors(map);  // 0.33: the open sky's effects
     impl_->torchKeeper.clear();  // 2.6.17: a new map's torches
     impl_->mapShine = floorShine(map);   // 2.5.17: the floor reflections on smooth floors alone
@@ -2073,7 +2071,12 @@ void Renderer::setEffects(const EffectSettings& e) {
     Impl& m = *impl_;
     if (e == m.effects) return;
     const bool was = m.glowWanted();
+    const bool season = e.season != m.effects.season;
     m.effects = e;
+    if (season && !m.mapName.empty()) {  // 2.6.22: another season chosen - the map's year at once, its creatures anew
+        m.takeSeason();
+        m.critterWorld.setPlace(m.mapPlace);
+    }
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "
              "the others %s; "

@@ -27,4 +27,9 @@ Look of(const std::string& map, int month, bool outdoors, const living::Place& p
     return l;
 }
 
+int monthFor(int choice, int localMonth) {
+    static const int kMonths[kSeasons] = {0, 4, 7, 10, 1};  // April, July, October, January
+    return choice > kSeasonAuto && choice < kSeasons ? kMonths[choice] : localMonth;
+}
+
 }  // namespace uagfx::seasons

@@ -18,4 +18,9 @@ struct Look {
 
 Look of(const std::string& map, int month, bool outdoors, const living::Place& place);
 
+// 2.6.22, [effects] season (by the Clock): the year all that goes by it takes - the computer's calendar, or a season
+// of the player's choice that stays, at the month in its middle (in the order of the file's words).
+enum Choice { kSeasonAuto, kSeasonSpring, kSeasonSummer, kSeasonAutumn, kSeasonWinter, kSeasons };
+int monthFor(int choice, int localMonth);  // localMonth: the computer's, 1-12
+
 }  // namespace uagfx::seasons

@@ -237,6 +237,7 @@ struct EffectSettings {
     bool dayCycle = false;
     int dayNow = -1;
     int clock = 0;  // 2.6.11: daylight::Clock - the computer's clock (0), or a moment the player chose
+    int season = 0;  // 2.6.22: seasons::Choice - the computer's calendar (0), or a season the player chose
     // 0.78: bloom - the bright parts of the picture (sunlit tiles, snow, windows, fire) glow softly. 0.84: off by
     // default. (2.6.11: the filmic curve with it gone at the player's word.)
     bool bloom = false;

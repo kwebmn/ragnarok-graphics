@@ -946,6 +946,13 @@ struct Renderer::Impl {
     bool torchReady();     // the shaders, pipelines and the picture's copies are there
     bool applyTorches();   // once a frame (torchDone), the world drawn: before its colours; false: lost
     // A new picture (cleared, presented, another target): the world's effects are due again.
+    // 2.6.22: the map's trees, place and year by the month of the season chosen (effects.season; core/seasons.hpp)
+    void takeSeason() {
+        const int month = seasons::monthFor(effects.season, trees::monthNow());
+        mapSeason = trees::seasonOf(mapName, month);
+        mapPlace = living::placeOf(mapName, outdoors(mapName), mapSeason == trees::Season::Autumn);
+        mapYear = seasons::of(mapName, month, outdoors(mapName), mapPlace);
+    }
     void newPicture() {
         waterCopied = false;  // 0.19: its water copies what is under it anew
         darknessRec.reset();  // 2.6.18
