@@ -660,6 +660,7 @@ private:
     living::Place place_;
     seasons::Look year_;
     float waterLevel_ = 0.0f;  // the last water seen, its height in the world (up is -y)
+    float waterTop_ = 0.0f;    // 2.7.3: the highest its waves have come on this map (the grass's line)
     bool waterLevelKnown_ = false, waterLevelNoted_ = false;
     // this frame's ground in the world: the next frame's cells (2.5.9: and hills), this frame's seams (ground11.cpp)
     std::vector<seams::Triangle> groundTris_;

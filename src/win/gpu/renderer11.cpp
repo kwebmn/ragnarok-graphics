@@ -2631,6 +2631,19 @@ void Renderer11::noteWaterLevel(const FrameRecord& rec, const DrawCmd& d) {
     const float* m = viewToWorld_;
     const float vz = 1.0f / xyzw[3], vx = (xyzw[0] - p.cx) * vz / p.f0, vy = (xyzw[1] - p.cy) * vz / p.f1;
     waterLevel_ = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
+    // 2.7.3 (draw.cpp noteWaterLevel): the highest any corner has come on this map - the grass's line, steady while
+    // the waves lift the water and let it fall
+    const size_t stride = FrameRecord::stride(d.fvf);
+    float top = waterLevel_;
+    for (uint32_t k = 1; k < 4 && k < d.vertexCount; ++k) {
+        if (d.vertexOffset + k * stride + 16 > v.size()) break;
+        float c[4];
+        std::memcpy(c, v.data() + d.vertexOffset + k * stride, sizeof c);
+        if (c[3] <= 0.0f) continue;
+        const float cz = 1.0f / c[3], cx = (c[0] - p.cx) * cz / p.f0, cy = (c[1] - p.cy) * cz / p.f1;
+        top = std::min(top, cx * m[1] + cy * m[4] + cz * m[7] + m[10]);  // up is -y
+    }
+    waterTop_ = waterLevelKnown_ ? std::min(waterTop_, top) : top;
     waterLevelNoted_ = waterLevelKnown_ = true;
 }
 
@@ -2726,7 +2739,7 @@ void Renderer11::applyGrass() {
     // 2.6.8: Direct3D 11 is a weak card's (an HD 6570's grass cost 22 ms, R-9K2F6E): the roots on every second row
     // only - each blade still found, the search half as long
     c.uiPixels[2] = 2.0f;
-    c.uiPixels[3] = waterLevelKnown_ ? waterLevel_ + 0.05f : 1e9f;  // 2.7.2: no blades under the water (grass_ps)
+    c.uiPixels[3] = waterLevelKnown_ ? waterTop_ + 0.05f : 1e9f;  // 2.7.2: no blades under the water (grass_ps)
     c.twin[0] = std::clamp(std::round(1.6f * proj.f0 * k / 350.0f), 4.0f, 16.0f);  // Classic+'s longest blade
     c.twin[1] = 0.65f * float(std::clamp(effects_.grassAmount, 0, 100)) / 100.0f;
     c.sharpen = waterTime();

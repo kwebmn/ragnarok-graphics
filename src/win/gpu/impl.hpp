@@ -1182,6 +1182,7 @@ struct Renderer::Impl {
     float waterLife() const;  // 1.7: water_ps's bits (draw.cpp)
     void noteWaterLevel(const FrameRecord& rec, const DrawCmd& d);
     float waterLevel = 0.0f;  // the last water seen, its height in the world (up is -y)
+    float waterTop = 0.0f;    // 2.7.3: the highest its waves have come on this map (the grass's line)
     bool waterLevelKnown = false, waterLevelNoted = false;
     // 0.80: footprints and dust (ao.cpp applySteps) - the characters' feet followed (actor_shadows.cpp)
     footsteps::Tracker footTracker;

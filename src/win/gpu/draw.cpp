@@ -527,18 +527,30 @@ float Renderer::Impl::waterLife() const {
                  (effects.caustics ? 32 : 0));
 }
 
-// 1.7: the water's level in the world (its first corner) - 2.7.2: no grass under it (grass_ps), the creatures' water.
+// 1.7: the water's level in the world (its first corner) - the mirror's plane, the creatures' water. 2.7.3: and the
+// highest any corner has come on this map (waterTop) - the grass's line: the game's waves lift the water and let it
+// fall, and a shallow bed between their low and high grew blades and lost them over and over (cmd_fild01's pond).
 void Renderer::Impl::noteWaterLevel(const FrameRecord& rec, const DrawCmd& d) {
     if (!viewToWorldValid || waterLevelNoted) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
-    if (d.vertexOffset + 16 > v.size()) return;
-    float xyzw[4];
-    std::memcpy(xyzw, v.data() + d.vertexOffset, sizeof xyzw);
-    if (xyzw[3] <= 0.0f) return;
+    const size_t stride = FrameRecord::stride(d.fvf);
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
-    const float vz = 1.0f / xyzw[3], vx = (xyzw[0] - p.cx) * vz / p.f0, vy = (xyzw[1] - p.cy) * vz / p.f1;
-    waterLevel = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
+    float top = 0.0f;
+    int seen = 0;
+    for (uint32_t k = 0; k < 4 && k < d.vertexCount; ++k) {
+        if (d.vertexOffset + k * stride + 16 > v.size()) break;
+        float xyzw[4];
+        std::memcpy(xyzw, v.data() + d.vertexOffset + k * stride, sizeof xyzw);
+        if (xyzw[3] <= 0.0f) continue;
+        const float vz = 1.0f / xyzw[3], vx = (xyzw[0] - p.cx) * vz / p.f0, vy = (xyzw[1] - p.cy) * vz / p.f1;
+        const float y = vx * m[1] + vy * m[4] + vz * m[7] + m[10];
+        if (k == 0) waterLevel = y;
+        top = seen ? std::min(top, y) : y;  // up is -y
+        ++seen;
+    }
+    if (!seen) return;
+    waterTop = waterLevelKnown ? std::min(waterTop, top) : top;
     waterLevelNoted = true;
     waterLevelKnown = true;
 }
