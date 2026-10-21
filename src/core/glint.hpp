@@ -77,8 +77,10 @@ inline void orb(float x, float y, float z, float rhw, float size, Vertex out[kOr
     }
 }
 
-// 2.7.25: the orbs' heads of a frame - of each caster's orb sprites the most opaque, the newest (each fades as it
-// ages); the sprites within kNear pixels of a head so far its caster's (its trail, its shadows on the ground).
+// 2.7.25: the orbs' heads of a frame - of each caster's orb sprites the newest; the sprites within kNear pixels of a
+// head so far its caster's (its trail, its shadows on the ground). 2.7.26: the newest is the biggest (a sprite's scale
+// 3, less by 0.1 a moment; its shadow's 1.5), the more opaque of two as big - 2.7.25's most opaque was the shadow
+// (the user: the ball not «на том же круге, что полоса»).
 class OrbHeads {
 public:
     struct Head {
@@ -89,7 +91,7 @@ public:
     void note(float x, float y, float z, float rhw, float size, float alpha) {
         for (Head& h : heads_)
             if (std::hypot(h.x - x, h.y - y) < kNear) {
-                if (alpha > h.alpha) h = Head{x, y, z, rhw, size, alpha};
+                if (size > h.size || (size == h.size && alpha > h.alpha)) h = Head{x, y, z, rhw, size, alpha};
                 return;
             }
         if (heads_.size() < kMost) heads_.push_back(Head{x, y, z, rhw, size, alpha});

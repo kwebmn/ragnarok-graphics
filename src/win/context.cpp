@@ -430,6 +430,14 @@ void Context::drawSparkles() {
         record.draw(cmd, s.v, glint::kSparkle, nullptr, 0);
     }
     sparkles.clear();
+    if (orbSprites > 0 && orbLogs < 3) {  // 2.7.26: which of Ruwach's sprites the ball is on, the first frames
+        ++orbLogs;
+        const glint::OrbHeads::Head* h = orbHeads.heads().empty() ? nullptr : &orbHeads.heads()[0];
+        LOG_INFO("orbs of light: %d of Ruwach's sprites, %d the orb's own (the others its shadows); the head %.0f "
+                 "pixels across, alpha %.2f, at %.0f,%.0f",
+                 orbSprites, orbOwn, h ? h->size : 0.0f, h ? h->alpha : 0.0f, h ? h->x : 0.0f, h ? h->y : 0.0f);
+    }
+    orbSprites = orbOwn = 0;
     for (const glint::OrbHeads::Head& h : orbHeads.heads()) {  // 2.7.25
         glint::Vertex v[glint::kOrb];
         glint::orb(h.x, h.y, h.z, h.rhw, h.size, v);

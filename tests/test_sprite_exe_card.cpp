@@ -58,13 +58,14 @@ TEST(glint_a_sparkle_not_a_cross) {
 
 TEST(glint_an_orbs_head_is_its_newest_sprite) {
     // 2.7.25 (the user: «можно сделать так, чтобы тот шарик был в начале того синего шлейфа?»): of each caster's orb
-    // sprites the most opaque - the newest, each fading as it ages - is the head of its trail; its shadows on the
-    // ground (fainter) and the older sprites behind are not; another caster far off its own head
+    // sprites the newest is the head of its trail - another caster far off its own head. 2.7.26 (the user: the ball
+    // «на том же круге, что полоса»): the newest is the biggest (its scale 3, less by 0.1 a moment, uaRO.exe
+    // 0x5CC5D0), not the most opaque - 2.7.25's ball sat on its shadow on the ground, more opaque than the sprite
     glint::OrbHeads heads;
-    for (int i = 0; i < 8; ++i)  // a trail: the newest first at 400, 300, the older behind it round the hero
-        heads.note(400.0f - 9.0f * float(i), 300.0f + 4.0f * float(i), 0.5f, 0.9f, 70.0f, (250.0f - 9.0f * i) / 255);
-    for (int i = 0; i < 8; ++i)  // their shadows on the ground under them, fainter
-        heads.note(400.0f - 9.0f * float(i), 345.0f + 4.0f * float(i), 0.5f, 0.9f, 35.0f, (150.0f - 7.0f * i) / 255);
+    for (int i = 0; i < 8; ++i)  // their shadows on the ground first, small and opaque
+        heads.note(400.0f - 9.0f * float(i), 345.0f + 4.0f * float(i), 0.5f, 0.9f, 35.0f - 2.0f * float(i), 1.0f);
+    for (int i = 0; i < 8; ++i)  // a trail: the newest at 400, 300 the biggest, the older smaller behind it
+        heads.note(400.0f - 9.0f * float(i), 300.0f + 4.0f * float(i), 0.5f, 0.9f, 70.0f - 3.0f * float(i), 0.7f);
     heads.note(1100.0f, 320.0f, 0.5f, 0.9f, 70.0f, 0.6f);  // another caster's
     CHECK_EQ(heads.heads().size(), size_t(2));
     const glint::OrbHeads::Head& h = heads.heads()[0];
