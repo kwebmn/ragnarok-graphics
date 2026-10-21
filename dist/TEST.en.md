@@ -1,3 +1,11 @@
+# uaRO Graphics 2.7.39 — to check
+
+- **Quieter casting** ("Skills that do not blind"). While a skill is cast a funnel of light rises round the hero's
+  feet - white as the game draws it. Now it is drawn at 40 % of "Skills' brightness" (at 50 %, 20 %) and no longer
+  lights the hero and the ground, makes no glowing air and no halo - a faint pale funnel, not a white flash. The skills
+  themselves as in 2.7.38.
+- To check: cast by day and at night (Magnus, Heal, buffs) - no white haze round the hero.
+
 # uaRO Graphics 2.7.38 — to check
 
 - **Skills no longer burn to white** ("Skills that do not blind"). The game draws skills by adding their light to the
