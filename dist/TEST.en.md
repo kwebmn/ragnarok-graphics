@@ -1,3 +1,10 @@
+# uaRO Graphics 2.7.15 — to check
+
+- **The card's sparkle on the ground is bigger and brighter.** In 2.7.14 only a thin line of it showed on bright
+  paving. Now it is twice the card's width, the rays are thicker, a golden glow sits in the middle, and it stands on
+  the card's upper right corner — the star shows and the card under it is not lost.
+- Please check: drop a card on the ground (on bright paving and on grass) — is it better?
+
 # uaRO Graphics 2.7.14 — to check
 
 - **"Cards on the ground glint": a proper sparkle over the card.** Instead of a white cross — a sparkle: four long
