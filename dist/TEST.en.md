@@ -1,3 +1,13 @@
+# uaRO Graphics 2.7.27 — to check
+
+- **Ruwach's ball is back — on the trail's circle.** 2.7.26 showed no ball at all: it told the orb's sprites from
+  their shadows by the sprites, and the game tells no effect sprite's file (the log: «0 the orb's own» of 18). Now the
+  driver reads each sprite's height over its effect: Ruwach's orbs float 10 units over the ground, the shadows lie on
+  it. The ball sits on the newest sprite in the air — at the head of the blue trail, on its circle.
+- The log line `orbs of light:` now counts the sprites in the air and says where the head is.
+- Please check: prt_fild08, Clock → "Deep night 3:00", cast Ruwach — the ball at the head of the trail, on the same
+  circle round the hero. Send a report.
+
 # uaRO Graphics 2.7.26 — to check
 
 - **Ruwach's ball on the trail's circle.** Ruwach draws sprites round the hero up in the air and their shadows on the
