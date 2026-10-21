@@ -98,7 +98,6 @@ const Member kMembers[] = {
     {"soft_particles", GameFixes, 1, &E::softParticles},
     {"map_fade", GameFixes, 1, &E::mapFade},
     {"no_game_fog", GameFixes, 1, &E::noGameFog},  // 2.6.10
-    {"soft_map_light", GameFixes, 1, &E::softMapLight},  // 2.7.32
 };
 
 // A group's strength works on these of its effects (each up to its own most).

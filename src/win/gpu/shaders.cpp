@@ -137,21 +137,11 @@ float4 combine(uint op, float4 a1, float4 a2, float4 diffuse, float4 tex, float4
     return current;
 }
 
-// 2.7.32 (core/map_light.hpp soft): the map's ground and walls - their texture shaded (base) plus the lightmap's
-// colour (light), which MODULATEALPHA_ADDCOLOR cuts at white: by a torch every shade of a wall one yellow (the
-// tester: «стены от огня очень гладкие»). A strong light goes on as onto a screen, a weak one (to 0.3) as the game
-// adds it.
-float3 softMapLight(float3 base, float3 light) {
-    float3 q = min(1.43 * max(light - 0.3, 0.0), light);
-    return saturate(base + light - base * q);
-}
-
 float4 stage(uint2 s, float4 diffuse, float4 specular, float4 current, float4 tex) {
     uint colorOp = s.x & 255, colorArg1 = (s.x >> 8) & 255, colorArg2 = (s.x >> 16) & 255, alphaOp = s.x >> 24;
     uint alphaArg1 = s.y & 255, alphaArg2 = (s.y >> 8) & 255;
-    float4 c1 = arg(colorArg1, diffuse, current, tex, specular), c2 = arg(colorArg2, diffuse, current, tex, specular);
-    float3 rgb = colorOp == 18 && ((s.y >> 19) & 1) != 0 ? softMapLight(c1.a * c2.rgb, c1.rgb)  // 2.7.32
-                                                         : combine(colorOp, c1, c2, diffuse, tex, current).rgb;
+    float3 rgb = combine(colorOp, arg(colorArg1, diffuse, current, tex, specular),
+                         arg(colorArg2, diffuse, current, tex, specular), diffuse, tex, current).rgb;
     float a = current.a;  // ALPHAOP DISABLE with COLOROP on: the alpha so far passes through
     if (alphaOp != 1)
         a = combine(alphaOp, arg(alphaArg1, diffuse, current, tex, specular),

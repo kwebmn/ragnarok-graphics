@@ -58,6 +58,15 @@ TEST(effect_pebbles_are_gone) {
     CHECK(parseConfig("[effects]\nground_clutter = 1\n").effects == parseConfig("").effects);
 }
 
+TEST(effect_soft_map_light_is_gone) {
+    // 2.7.33 (the user's choice, «1»): 2.7.32's «Світло карти без пересвіту» made no difference by the sewers' torch -
+    // the wall plain and its light strong - gone; its old line is read and left
+    CHECK(findSetting("effects.soft_map_light") == nullptr);
+    CHECK(effect_groups::memberOf("effects.soft_map_light") == nullptr);
+    CHECK(boxOf("effects.soft_map_light").empty());
+    CHECK(parseConfig("[effects]\nsoft_map_light = 0\n").effects == parseConfig("").effects);
+}
+
 TEST(effect_settings_compare_every_field) {
     // 2.4: the comparison left out every field since 1.9 - a change of one of them alone never reached the 64-bit
     // renderer (Remote::setEffects sends only what differs): the seasons off in the console did nothing under DLSS

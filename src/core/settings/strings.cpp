@@ -3105,16 +3105,6 @@ const Entry kTexts[] = {
      "як у комети.",
      "Голубой шар Ruwach, кружащий вокруг героя, — маленький яркий шарик в начале своего голубого шлейфа, как у "
      "кометы."},
-    {"Map light without blow-out", "Світло карти без пересвіту", "Свет карты без пересвета"},  // 2.7.32
-    {"By the torches and the lamps the map's own light took the ground's and the walls' every shade to one flat "
-     "colour; a strong light now lies over them softly and their stones stay - its brightest patches a little dimmer. "
-     "A weak light stays as the game has it.",
-     "Біля смолоскипів і ламп власне світло карти зводило всі відтінки землі й стін до одного рівного кольору; тепер "
-     "сильне світло лягає на них м'якше, і каміння лишається видно — найяскравіші плями трохи тьмяніші. Слабке "
-     "світло лишається як у грі.",
-     "У факелов и ламп собственный свет карты сводил все оттенки земли и стен к одному ровному цвету; теперь сильный "
-     "свет ложится на них мягче, и камни остаются видны — самые яркие пятна чуть тусклее. Слабый свет остаётся как в "
-     "игре."},
     {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",

@@ -98,8 +98,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::SmoothAnisoHint, ""},
         {"effects", "smooth_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoothLight,
          Text::FxSmoothLightHint, "", &E::smoothLight},
-        {"effects", "soft_map_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSoftMapLight,
-         Text::FxSoftMapLightHint, "", &E::softMapLight},  // 2.7.32
         {"effects", "torch", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTorch, Text::FxTorchHint,
          "", &E::torch},
         {"effects", "torch_flame", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTorchFlame,
