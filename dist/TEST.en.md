@@ -1,3 +1,10 @@
+# uaRO Graphics 2.7.14 — to check
+
+- **"Cards on the ground glint": a proper sparkle over the card.** Instead of a white cross — a sparkle: four long
+  rays and four short diagonal ones, each fading to its tip, with a soft glow in the middle, warm white-gold. It is
+  drawn after all the sprites, so the card no longer covers it, and "soft particles" no longer put it out.
+- Please check: drop a card on the ground — is the sparkle over it, and does it look better?
+
 # uaRO Graphics 2.7.13 — to check
 
 - **"Flash of a hit" is visible.** The monster was found and the white flash over it was added, but the renderer took
