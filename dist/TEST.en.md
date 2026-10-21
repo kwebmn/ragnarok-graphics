@@ -1,3 +1,15 @@
+# uaRO Graphics 2.7.20 — to check
+
+- **Moon beams.** At night broad slanting bands of moonlight lie on the ground of the fields and the towns, as through
+  gaps in the clouds, and drift slowly. They keep to the map: when you turn the camera they stay in place. On the
+  whole the night is as bright as in 2.7.19. Their own switch "Moon beams" under "Moonlight".
+- **Ruwach lights.** In 2.7.19 its light was too weak — about a tenth of a torch's, so the ground around it stayed
+  dark. Now at night every glowing skill's light is at least about a third of a torch's.
+- At night the log notes every 10 seconds how much skill light was found (`skills' light at night`): if Ruwach still
+  does not light, the report will show why.
+- Please check: prt_fild08, Clock → "Deep night 3:00" — are the beams visible, do they get in the way; turn the
+  camera. Cast Ruwach — does the ground around it light up. Send a report.
+
 # uaRO Graphics 2.7.19 — to check
 
 - **The moon is the night's main light.** Under it the map is bright, silver-blue and muted: plainly night, yet the
