@@ -1505,8 +1505,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (toGlow && (adds || (s.blend && (s.srcBlend == d3d7::BLEND_ZERO || s.srcBlend == d3d7::BLEND_DESTCOLOR))))
         c.alphaTest |= 1u << 19;
     if (toGlow) glowDrawn_ = true;
-    const bool effectDraw = adds || d.effect == uint8_t(effect_exe::Kind::Skill) ||
-                            d.effect == uint8_t(effect_exe::Kind::Portal);
+    const bool effectDraw = effect_exe::softEffect(adds, d.effect);  // 2.7.13: not a hit flash
     const bool soft = !water && !smoke && !lava && !ray && !s.ui && effects_.softParticles && d.vertexCount == 4 &&
                       s.blend && s.zEnable &&
                       !s.zWrite && effectDraw && s.srcBlend != d3d7::BLEND_ZERO &&

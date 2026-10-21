@@ -175,8 +175,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // where it goes into what is behind it (the frame's depth so far, copied once while nothing writes it). Not the
     // characters (their feet stand in the ground), not what writes depth itself. Copied once a picture: what is
     // drawn later (the characters) only hides the effect by the depth test - the ground and the walls are there.
-    const bool effectDraw = adds || d.effect == uint8_t(effect_exe::Kind::Skill) ||
-                            d.effect == uint8_t(effect_exe::Kind::Portal);
+    const bool effectDraw = effect_exe::softEffect(adds, d.effect);  // 2.7.13: not a hit flash
     bool soft = !s.ui && !water && !smoke && !ray && !lava && quad && effects.softParticles && s.blend &&
                 s.zEnable && !s.zWrite && effectDraw && s.srcBlend != d3d7::BLEND_ZERO &&
                 s.srcBlend != d3d7::BLEND_DESTCOLOR && softCopied >= 0;

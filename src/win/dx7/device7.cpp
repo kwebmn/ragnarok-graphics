@@ -330,6 +330,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         add.stage[1].colorOp = add.stage[1].alphaOp = d3d7::TOP_DISABLE;
         DrawCmd again = cmd;
         again.state = c.record.addState(add);
+        again.effect = uint8_t(effect_exe::Kind::HitFlash);  // 2.7.13: no soft particle - it went out wholly
+        again.effectSeed = 0;
         c.record.draw(again, soft_.data(), 4, nullptr, 0);
     }
     if (sparkle) {  // 0.95: adding light, untextured (white), tested against the depth but not written to it

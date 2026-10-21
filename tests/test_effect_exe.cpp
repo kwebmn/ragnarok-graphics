@@ -192,3 +192,15 @@ TEST(ftol_exe_fast_one_fits_in_the_games_place) {
     for (size_t i = 17; i < uagfx::ftol_exe::kSize; ++i) padded = padded && uagfx::ftol_exe::kFast[i] == 0xCC;
     CHECK(padded);
 }
+
+TEST(effect_exe_soft_particles_but_not_a_hit_flash) {
+    // 0.67: added light, a skill's or a portal's picture fade into what is behind them. 2.7.13 (the tester: «не
+    // вспыхивает» though every hit found its monster, 2.7.12): a monster's hit flash - its sprite drawn again in white,
+    // added - was taken for one, and the frame's depth copied with the monster in it put it out wholly
+    using effect_exe::Kind;
+    CHECK(effect_exe::softEffect(true, uint8_t(Kind::None)));
+    CHECK(effect_exe::softEffect(false, uint8_t(Kind::Skill)));
+    CHECK(effect_exe::softEffect(false, uint8_t(Kind::Portal)));
+    CHECK(!effect_exe::softEffect(false, uint8_t(Kind::None)));
+    CHECK(!effect_exe::softEffect(true, uint8_t(Kind::HitFlash)));
+}
