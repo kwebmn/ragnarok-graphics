@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.48 — to check
+
+- **New portal** ("New portal", a part of "Portals", on). The game's portal drawn anew: the same three waves of light
+  closing in on the middle, the column of light and the sparks, but sharp and with body. The walls are brighter at
+  the ground and melt upwards, their edges glow, a soft halo round them. The paving under the waves ripples as under
+  water, a soft light in the middle, streams run up the column. The old blue glow of "Portals" under it is softer
+  and lilac. Untick it and the game's own portal is back.
+- To check at the door in Prontera and at a map's exit: the portal stands in its place, the waves go to the middle,
+  houses and characters hide it. The log has a line "portals: the game's effect N drawn anew" telling which of the
+  game's effects was replaced.
+
 # uaRO Graphics 2.7.47 — to check
 
 - **Lit things keep their own colours.** The light of fires, torches, lamps and skills took 70 % of its colour from
