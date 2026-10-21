@@ -1,3 +1,4 @@
+#include <cmath>
 #include <vector>
 
 #include "core/effect_light.hpp"
@@ -55,6 +56,43 @@ TEST(effect_light_knows_the_orbs_of_light) {
     CHECK(!effect_light::orbOf(0, c));
     CHECK(!effect_light::orbOf(45, c));  // the maps' fireflies light as fireflies
     CHECK(!effect_light::orbOf(200, c));  // nor the level 99 aura
+}
+
+TEST(effect_light_orbs_light_calmly) {
+    // 2.7.22 (the user on 2.7.21's Ruwach: «мне кажется слишком ярко ... чтобы было спокойнее»): an orb's light a
+    // little weaker (0.5 at night, 2.7.21's 0.6), 15 units over its draws' middle - over the caster's head, no hot
+    // spot on the ground where the orb flies - reaching 50; by day half; a faint place in proportion
+    const effect_light::OrbLight night = effect_light::orbLight(2.65f, 1.0f, 1.0f);
+    CHECK(std::fabs(night.strength - 0.5f) < 1e-6f);
+    CHECK(night.height == 15.0f && night.reach == 50.0f);
+    CHECK(std::fabs(effect_light::orbLight(2.65f, 0.0f, 1.0f).strength - 0.25f) < 1e-6f);
+    CHECK(std::fabs(effect_light::orbLight(0.3f, 1.0f, 1.0f).strength - 0.15f) < 1e-6f);
+    CHECK(std::fabs(effect_light::orbLight(2.65f, 1.0f, 0.5f).strength - 0.25f) < 1e-6f);  // «Fire of skills» 50 %
+}
+
+TEST(effect_light_gathers_a_casters_orbs_into_one_light) {
+    // 2.7.22: Ruwach's orbs and their shadows round its caster one light, wherever the caster stands - 2.7.21's cells
+    // of 80 pixels split the orbit into two lights that jumped as it flew («in 2 places»); another caster its own
+    struct Spark {
+        float view[3];
+        float strength;
+        float colour[3];
+        float gameX, gameY;
+        bool orb;
+    };
+    std::vector<Spark> sparks;
+    for (int i = 0; i < 8; ++i) {  // the orbs round a caster at 400, 300 (the edge of 80 pixels' cells between)
+        const float a = float(i) * 0.785f;
+        sparks.push_back(Spark{{0, 0, 100}, 0.3f, {0.6f, 0.8f, 1.0f}, 400 + 60 * std::cos(a), 300 + 40 * std::sin(a),
+                               true});
+    }
+    sparks.push_back(Spark{{0, 0, 100}, 0.2f, {0.6f, 0.8f, 1.0f}, 1200, 300, true});  // another caster
+    sparks.push_back(Spark{{0, 0, 100}, 0.9f, {1, 0.5f, 0.2f}, 405, 300, false});      // a skill's fire, not an orb
+    const std::vector<effect_light::OrbPlace> places = effect_light::gatherOrbs(sparks, 160.0f);
+    CHECK_EQ(places.size(), size_t(2));
+    CHECK(std::fabs(places[0].w - 2.4f) < 1e-4f);
+    CHECK(std::fabs(places[0].gameX / places[0].w - 400.0f) < 1.0f);
+    CHECK(std::fabs(places[1].w - 0.2f) < 1e-6f);
 }
 
 TEST(effect_light_knows_the_colour_other_skills_light_in) {

@@ -189,3 +189,26 @@ TEST(game_camera_target_height_is_the_characters_ground) {
         CHECK(std::fabs(targetHeight(toWorld, viewZ(view, a)) - at.y) < 1e-3f);
     }
 }
+
+TEST(game_camera_up_in_the_view_raises_a_point) {
+    // 2.7.22: an orb of light's light raised over its caster's head - the world's up (y down positive: -y) in the view,
+    // by the view -> world affine
+    const V3 at{50, -12.5f, 80};
+    float view[12], v4[16], inv[16], toWorld[12];
+    lookAt({at.x + 250, at.y - 250, at.z + 20}, at, {0, -1, 0}, view);
+    affine4(view, v4);
+    CHECK(inverse4(v4, inv));
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 3; ++c) toWorld[3 * r + c] = inv[4 * r + c];
+    float up[3];
+    upInView(toWorld, up);
+    const float p[3] = {3, -4, 120}, q[3] = {p[0] + 15 * up[0], p[1] + 15 * up[1], p[2] + 15 * up[2]};
+    float wp[3], wq[3];
+    for (int k = 0; k < 3; ++k) {
+        wp[k] = p[0] * toWorld[k] + p[1] * toWorld[3 + k] + p[2] * toWorld[6 + k] + toWorld[9 + k];
+        wq[k] = q[0] * toWorld[k] + q[1] * toWorld[3 + k] + q[2] * toWorld[6 + k] + toWorld[9 + k];
+    }
+    CHECK(std::fabs(wq[1] - (wp[1] - 15)) < 1e-3f);  // 15 higher
+    CHECK(std::fabs(wq[0] - wp[0]) < 1e-3f && std::fabs(wq[2] - wp[2]) < 1e-3f);  // nowhere else
+}
+

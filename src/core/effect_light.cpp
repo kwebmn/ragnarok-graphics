@@ -66,8 +66,15 @@ float skillWeight(float w, float night) {
     return std::max(std::min(w, 1.0f), floor);
 }
 
+OrbLight orbLight(float w, float night, float fire) {
+    const float strength =
+        0.25f * std::clamp(fire, 0.0f, 2.0f) * (1.0f + std::clamp(night, 0.0f, 1.0f)) * std::clamp(w, 0.0f, 1.0f);
+    return OrbLight{strength, 50.0f, 15.0f};
+}
+
 bool orbOf(int id, float colour[3]) {
-    static const float kRuwach[3] = {0.72f, 0.86f, 1.0f}, kSight[3] = {1.0f, 0.62f, 0.3f};
+    // 2.7.22: Ruwach's a little deeper - 2.7.21's pale blue lit the ground near white
+    static const float kRuwach[3] = {0.62f, 0.8f, 1.0f}, kSight[3] = {1.0f, 0.62f, 0.3f};
     const float* c = id == 33 ? kRuwach : id == 22 ? kSight : nullptr;
     if (!c) return false;
     std::copy(c, c + 3, colour);

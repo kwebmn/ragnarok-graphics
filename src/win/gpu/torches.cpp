@@ -690,19 +690,35 @@ bool Renderer::Impl::applyTorches() {
     }
     // 0.26: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16. A little, as a torch:
     // the shader bounds it.
-    size_t skillPlaces = 0, orbDraws = 0;  // 2.7.20: for the log at night
+    size_t skillPlaces = 0, orbDraws = 0, orbPlaces = 0;  // 2.7.20: for the log at night
     float skillBrightest = 0.0f;
     if (fireWanted() && !fireSparks.empty()) {
+        // 2.7.22: the orbs of light (Ruwach's, Sight's) first, by caster - one calm light each over its head
+        // (effect_light::orbLight; 2.7.21's cells split an orbit into lights by the ground that jumped as it flew,
+        // the user: «слишком ярко ... чтобы было спокойнее»)
+        float up[3] = {0.0f, 0.0f, 0.0f};
+        if (viewToWorldValid) camera::upInView(viewToWorld, up);
+        const float fire = float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f;
+        for (const effect_light::OrbPlace& p : effect_light::gatherOrbs(fireSparks, 160.0f)) {
+            if (lights.size() >= kMaxLights) break;
+            const effect_light::OrbLight o = effect_light::orbLight(p.w, darkNow, fire);
+            const float top = std::max({p.colour[0], p.colour[1], p.colour[2], 1e-4f});
+            LightItem l{{p.view[0] / p.w + o.height * up[0], p.view[1] / p.w + o.height * up[1],
+                         p.view[2] / p.w + o.height * up[2]},
+                        o.strength, {p.colour[0] / top, p.colour[1] / top, p.colour[2] / top}, o.reach};
+            lights.push_back(l);
+            ++orbPlaces;
+        }
         struct Cell {
             float w = 0, view[3] = {0, 0, 0}, colour[3] = {0, 0, 0};
-            bool orb = false;  // 2.7.21: an orb of light's place (Ruwach's, Sight's)
         };
         std::unordered_map<int, Cell> cells;
         for (const FireSpark& f : fireSparks) {
-            const int at = int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f));
-            Cell& c = cells[at * 2 + (f.orb ? 1 : 0)];
-            c.orb = f.orb;
-            orbDraws += f.orb ? 1 : 0;
+            if (f.orb) {  // 2.7.21: an orb of light's - lit above
+                ++orbDraws;
+                continue;
+            }
+            Cell& c = cells[int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f))];
             c.w += f.strength;
             for (int k = 0; k < 3; ++k) {
                 c.view[k] += f.view[k] * f.strength;
@@ -723,7 +739,7 @@ bool Renderer::Impl::applyTorches() {
             for (size_t i = 0; i < best.size() && i < 16; ++i) {
                 const Cell& c = best[i];
                 const float vz = c.view[2] / c.w;
-                if (vz <= proj.nearZ || c.orb) continue;  // 2.7.21: an orb of light is not hot
+                if (vz <= proj.nearZ) continue;
                 const float gx = c.view[0] / c.w / vz * proj.f0 + proj.cx;
                 const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
                 heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 70.0f * hk, 0.6f * std::min(c.w, 1.0f) * heatUser()});
@@ -734,7 +750,7 @@ bool Renderer::Impl::applyTorches() {
         for (size_t i = 0; i < best.size() && embers.size() < kMaxEmbers && effects.skillSparks; ++i) {
             const Cell& c = best[i];
             const float vz = c.view[2] / c.w;
-            if (vz <= proj.nearZ || c.orb) continue;  // 2.7.21: nor does it spark
+            if (vz <= proj.nearZ) continue;
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
             Ember e{};
             e.x = (c.view[0] / c.w / vz * proj.f0 + proj.cx) * ek + 0.5f + (upscale ? jitter[0] : 0.0f);
@@ -745,18 +761,12 @@ bool Renderer::Impl::applyTorches() {
             e.fire = e.colour[0] > 0.8f && e.colour[2] < 0.6f;
             embers.push_back(e);
         }
-        // 2.7.21: an orb of light's place a light of its own - a torch's at night (0.6), half that by day, reaching 45
-        // units (a tenth of it lit 2.7.20's Ruwach, the tester: «рувотч не светит»)
-        const float orbStrength =
-            0.3f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f * (1.0f + darkNow);
         for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
-            // 2.7.20: at night a floor («рувотч не светит»)
-            const float w = c.orb ? std::min(c.w, 1.0f) : effect_light::skillWeight(c.w, darkNow);
-            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, (c.orb ? orbStrength : fireStrength) * w,
-                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top},
-                        c.orb ? 45.0f : 25.0f + 15.0f * w};
+            const float w = effect_light::skillWeight(c.w, darkNow);  // 2.7.20: at night a floor
+            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, fireStrength * w,
+                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top}, 25.0f + 15.0f * w};
             lights.push_back(l);
         }
         skillPlaces = best.size();
@@ -765,8 +775,10 @@ bool Renderer::Impl::applyTorches() {
     const float since = time - skillLightsTold;  // 2.7.20: at night, what of the skills lights, now and then
     if (darkNow > 0.0f && (since > 10.0f || since < 0.0f)) {
         skillLightsTold = time;
-        LOG_INFO("skills' light at night: %s, %zu draws (%zu of orbs of light) in %zu places, the brightest %.2f",
-                 fireWanted() ? "on" : "off", fireSparks.size(), orbDraws, skillPlaces, skillBrightest);
+        LOG_INFO("skills' light at night: %s, %zu draws in %zu places, the brightest %.2f; %zu of orbs of light, %zu "
+                 "casters",
+                 fireWanted() ? "on" : "off", fireSparks.size() - orbDraws, skillPlaces, skillBrightest, orbDraws,
+                 orbPlaces);
     }
     fireSparks.clear();
     // 0.28: the fireflies light a little around them, the nearest 16.

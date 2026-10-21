@@ -426,15 +426,25 @@ void Renderer11::applyTorchLight() {
             addLight(view, kReach, own ? f.tint : kLightColor, strength * calms[i] * f.alpha * layers);
         }
     if (fire) {  // 2.5.1: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16
+        // 2.7.22 (torches.cpp): the orbs of light by caster first, one calm light each over its head
+        float up[3] = {0.0f, 0.0f, 0.0f};
+        if (cameraValid_) camera::upInView(viewToWorld_, up);
+        const float fireAmount = float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f;
+        for (const effect_light::OrbPlace& p : effect_light::gatherOrbs(sparks, 160.0f)) {
+            const effect_light::OrbLight o = effect_light::orbLight(p.w, darkNow, fireAmount);
+            const float top = std::max({p.colour[0], p.colour[1], p.colour[2], 1e-4f});
+            const float view[3] = {p.view[0] / p.w + o.height * up[0], p.view[1] / p.w + o.height * up[1],
+                                   p.view[2] / p.w + o.height * up[2]};
+            const float colour[3] = {p.colour[0] / top, p.colour[1] / top, p.colour[2] / top};
+            addLight(view, o.reach, colour, o.strength);
+        }
         struct Cell {
             float w = 0, view[3] = {0, 0, 0}, colour[3] = {0, 0, 0};
-            bool orb = false;  // 2.7.21 (torches.cpp): an orb of light's place
         };
         std::unordered_map<int, Cell> cells;
         for (const FireSpark11& f : sparks) {
-            const int at = int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f));
-            Cell& c = cells[at * 2 + (f.orb ? 1 : 0)];
-            c.orb = f.orb;
+            if (f.orb) continue;  // 2.7.21: an orb of light's - lit above
+            Cell& c = cells[int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f))];
             c.w += f.strength;
             for (int i = 0; i < 3; ++i) {
                 c.view[i] += f.view[i] * f.strength;
@@ -450,7 +460,7 @@ void Renderer11::applyTorchLight() {
         for (size_t i = 0; i < best.size() && embers_.size() < 24 && effects_.skillSparks && embersPs_; ++i) {
             const Cell& c = best[i];  // 2.5.3 (torches.cpp 0.82): the places for the skills' sparks
             const float vz = c.view[2] / c.w;
-            if (vz <= proj.nearZ || c.orb) continue;  // 2.7.21: not an orb of light
+            if (vz <= proj.nearZ) continue;
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
             Ember11 e{};
             e.x = (c.view[0] / c.w / vz * proj.f0 + proj.cx) * k + 0.5f;
@@ -465,23 +475,16 @@ void Renderer11::applyTorchLight() {
             for (size_t i = 0; i < best.size() && i < 16; ++i) {
                 const Cell& c = best[i];
                 const float vz = c.view[2] / c.w;
-                if (vz <= proj.nearZ || c.orb) continue;  // 2.7.21: an orb of light is not hot
+                if (vz <= proj.nearZ) continue;
                 const float gx = c.view[0] / c.w / vz * proj.f0 + proj.cx;
                 const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
                 heatSpots_.push_back(HeatSpot11{gx * k, gy * k, 70.0f * k, 0.6f * std::min(c.w, 1.0f) * heatUser()});
             }
-        // 2.7.21 (torches.cpp): an orb of light's place a light of its own, a torch's at night
-        const float orbStrength =
-            0.3f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f * (1.0f + darkNow);
         for (size_t i = 0; i < best.size() && i < 16; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
             const float view[3] = {c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w};
             const float colour[3] = {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top};
-            if (c.orb) {
-                addLight(view, 45.0f, colour, orbStrength * std::min(c.w, 1.0f));
-                continue;
-            }
             const float w = effect_light::skillWeight(c.w, darkNow);  // 2.7.20 (torches.cpp): at night a floor
             addLight(view, 25.0f + 15.0f * w, colour, fireStrength * w);
         }

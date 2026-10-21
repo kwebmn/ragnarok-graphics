@@ -47,6 +47,14 @@ inline float targetHeight(const float viewToWorld[12], float targetZ) {
     return targetZ * viewToWorld[7] + viewToWorld[10];
 }
 
+// 2.7.22: the world's up (y down positive: -y) in the view, a unit vector - the view's axes in the world are the
+// affine's rows, so its view coordinates are their y's, negated.
+inline void upInView(const float viewToWorld[12], float up[3]) {
+    up[0] = -viewToWorld[1];
+    up[1] = -viewToWorld[4];
+    up[2] = -viewToWorld[7];
+}
+
 // The view matrix of a LookAt: an orthonormal rotation and a move; false for anything else (a stale pointer).
 bool plausibleView(const float view[12]);
 
