@@ -1,3 +1,16 @@
+# uaRO Graphics 2.7.18 — to check
+
+- **"Moonlight"** (the Time of day group, on by default, strength 0–200 %). The night is no longer just dark: the
+  moon lights the world in silver-blue. "Deep night" is about 40 % instead of 25 %, the whole night about 60 %. None
+  by day.
+- **"Light around the hero"** (same group, on, strength 0–200 %). At night a warm pool of light lies about your
+  character, as from a lantern, lighting the ground and those nearby. It grows with the night.
+- **"Fireflies light the ground"** — a part of "Fireflies in the grass at night": a little greenish light on the
+  ground under each firefly, pulsing with its glow.
+- **Skills light more at night** — up to 1.8 times.
+- Please check: prt_fild08, Clock → "Deep night 3:00" — can you see the road and monsters, is there a warm pool
+  about your character, do the fireflies light the ground, and cast a skill.
+
 # uaRO Graphics 2.7.17 — to check
 
 - **"Deep night" lighter: 25 %.** At 16 % it was simply black; now it is dark, but the road, the grass and monsters
