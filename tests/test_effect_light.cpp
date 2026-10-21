@@ -70,6 +70,18 @@ TEST(effect_light_orbs_light_calmly) {
     CHECK(std::fabs(effect_light::orbLight(2.65f, 1.0f, 0.5f).strength - 0.25f) < 1e-6f);  // «Fire of skills» 50 %
 }
 
+TEST(effect_light_an_orbs_light_stands_over_the_ground) {
+    // 2.7.24 (the user: «всё равно какой-то шар рядом с рувотчем крутится ... сам шар в игре был скрыт»): the orbs keep
+    // the game's depth again, so their light lights only what lies near the ground (torch_accum_ps) - and stands
+    // kGroundLight over the ground, wherever its draws' middle is: 7 units up, raised 13; 25 up (over a ledge), down 5
+    const float toWorld[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};  // the view the world (y down positive)
+    const float middle[3] = {4, -7, 90}, high[3] = {4, -25, 90};
+    CHECK(effect_light::kGroundLight == 20.0f);
+    CHECK(std::fabs(effect_light::raiseOverGround(middle, toWorld, 0.0f) - 13.0f) < 1e-4f);
+    CHECK(std::fabs(effect_light::raiseOverGround(high, toWorld, 0.0f) + 5.0f) < 1e-4f);
+    CHECK(std::fabs(effect_light::raiseOverGround(middle, toWorld, 3.0f) - 10.0f) < 1e-4f);  // the ground lower
+}
+
 TEST(effect_light_gathers_a_casters_orbs_into_one_light) {
     // 2.7.22: Ruwach's orbs and their shadows round its caster one light, wherever the caster stands - 2.7.21's cells
     // of 80 pixels split the orbit into two lights that jumped as it flew («in 2 places»); another caster its own

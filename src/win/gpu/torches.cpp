@@ -696,16 +696,21 @@ bool Renderer::Impl::applyTorches() {
         // 2.7.22: the orbs of light (Ruwach's, Sight's) first, by caster - one calm light each over its head
         // (effect_light::orbLight; 2.7.21's cells split an orbit into lights by the ground that jumped as it flew,
         // the user: «слишком ярко ... чтобы было спокойнее»)
+        // 2.7.24: a ground light (its strength negative, the shaders light what lies near the ground alone),
+        // effect_light::kGroundLight over the player's ground (the camera's target) - else o.height over the middle
         float up[3] = {0.0f, 0.0f, 0.0f};
         if (viewToWorldValid) camera::upInView(viewToWorld, up);
+        const bool groundKnown = viewToWorldValid && cameraTargetZ > 0.0f;
+        const float groundY = groundKnown ? camera::targetHeight(viewToWorld, cameraTargetZ) : 0.0f;
         const float fire = float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f;
         for (const effect_light::OrbPlace& p : effect_light::gatherOrbs(fireSparks, 160.0f)) {
             if (lights.size() >= kMaxLights) break;
             const effect_light::OrbLight o = effect_light::orbLight(p.w, darkNow, fire);
             const float top = std::max({p.colour[0], p.colour[1], p.colour[2], 1e-4f});
-            LightItem l{{p.view[0] / p.w + o.height * up[0], p.view[1] / p.w + o.height * up[1],
-                         p.view[2] / p.w + o.height * up[2]},
-                        o.strength, {p.colour[0] / top, p.colour[1] / top, p.colour[2] / top}, o.reach};
+            const float centre[3] = {p.view[0] / p.w, p.view[1] / p.w, p.view[2] / p.w};
+            const float raise = groundKnown ? effect_light::raiseOverGround(centre, viewToWorld, groundY) : o.height;
+            LightItem l{{centre[0] + raise * up[0], centre[1] + raise * up[1], centre[2] + raise * up[2]},
+                        -o.strength, {p.colour[0] / top, p.colour[1] / top, p.colour[2] / top}, o.reach};
             lights.push_back(l);
             ++orbPlaces;
         }
@@ -972,6 +977,7 @@ bool Renderer::Impl::applyTorches() {
     Constants c{};
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
     std::copy(pv, pv + 6, c.projection);
+    if (viewToWorldValid) std::copy(viewToWorld, viewToWorld + 12, c.reproject);  // 2.7.24: the ground lights' up
     c.scale = k;
     c.jitter[0] = jx;
     c.jitter[1] = jy;

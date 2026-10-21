@@ -29,6 +29,17 @@ struct OrbLight {
     float strength, reach, height;
 };
 OrbLight orbLight(float w, float night, float fire);
+// 2.7.24 (the user on 2.7.23: «всё равно какой-то шар рядом с рувотчем крутится ... сам шар в игре был скрыт»): the
+// orbs keep the game's depth again (their sprites hide each other: a line, not a ball), so their light lights only
+// what lies near the ground - its strength sent negative (torch_accum_ps, torch_light_ps), and the shaders take the
+// ground kGroundLight world units under it. How far up to move it from its draws' middle `centre` (view space) to
+// stand so over the ground at world y `groundY` (down positive), by the view -> world affine.
+constexpr float kGroundLight = 20.0f;
+inline float raiseOverGround(const float centre[3], const float viewToWorld[12], float groundY) {
+    const float y =
+        centre[0] * viewToWorld[1] + centre[1] * viewToWorld[4] + centre[2] * viewToWorld[7] + viewToWorld[10];
+    return kGroundLight - (groundY - y);
+}
 // 2.7.22: the orbs' draws (a Spark's orb set: Ruwach's orbs and their shadows) gathered by caster - each into the
 // place whose middle so far is within `radius` game pixels, else a place of its own (2.7.21's cells of 80 pixels
 // split an orbit into two lights that jumped as it flew); a place's sums weighed by its draws' strengths.

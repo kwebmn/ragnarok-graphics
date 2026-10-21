@@ -4,7 +4,6 @@
 #include <cstring>
 
 #include "core/device_caps.hpp"
-#include "core/effect_light.hpp"
 #include "core/frame.hpp"
 #include "core/glint.hpp"
 #include "core/sprite_exe.hpp"
@@ -210,11 +209,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 0.27: the level 99 aura softer - its vertices' colour and alpha, in a copy (the game's stay as they are).
     // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew).
     const effect_exe::Tag tag = win::drawnEffect(vertices);
-    // 2.7.23: an orb of light's sprites (Ruwach's, Sight's) leave the depth as it is - the game writes its laid-over
-    // sprites' depth wherever their alpha is not 0 (uaRO.exe 0x40E4D0: ZWRITEENABLE on, ALPHAREF 1), and the orb's
-    // own light lit each soft disc whole as a thing in the air (the tester: «какой-то круг рядом с рувотчем»)
-    float orbColour[3];
-    if (c.enhanced() && !setup.ui && effect_light::orbOf(tag.id, orbColour)) setup.zWrite = false;
+    // (2.7.23's orb sprites without depth gone in 2.7.24: the game writes its laid-over sprites' depth wherever their
+    // alpha is not 0 - uaRO.exe 0x40E4D0: ZWRITEENABLE on, ALPHAREF 1 - so Ruwach's sprites hide each other, a line;
+    // without it they piled up into a ball, the user: «всё равно какой-то шар крутится». Their light is a ground
+    // light instead: effect_light::kGroundLight.)
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;

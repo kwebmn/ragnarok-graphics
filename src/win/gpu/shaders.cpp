@@ -1306,9 +1306,9 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
         float d2 = dot(v, v), reach2 = t.w * t.w;
         if (d2 >= reach2) continue;
         float4 c = tex1.Load(int3(2 * k + 1, 0, 0));
-        float f = 1.0 - d2 / reach2;
+        float strength = abs(c.w), f = 1.0 - d2 / reach2;  // 2.7.24: negative a ground light's (below)
         float facing = saturate(dot(n, v * rsqrt(max(d2, 1e-4))) * 0.7 + 0.3);  // wrapped: soft on what turns away
-        float a = c.w * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;  // brighter near the source
+        float a = strength * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;  // brighter near the source
         // 0.68, rim light (sharpen: its strength): the flat characters and the models' outlines lit more on the side
         // that faces the light - where the depth a few pixels towards the light on the screen is far behind.
         if (sharpen > 0.0) {
@@ -1317,9 +1317,13 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
             if (sl > 1e-4) {
                 int2 q = clamp(wp + int2(round(sd / sl * 3.0 * scale)), int2(0, 0), last);
                 float gap = viewDepth(sceneDepth.Load(int3(q, 0))) - p.z;
-                a += c.w * f * smoothstep(3.0, 12.0, gap) * sharpen;
+                a += strength * f * smoothstep(3.0, 12.0, gap) * sharpen;
             }
         }
+        // 2.7.24: a ground light (an orb of light's, its strength negative) lights what lies near the ground alone -
+        // the ground effect_light::kGroundLight (20) under it, the world's up -(r1, r4, r7): not the orb's own sprites
+        // in the air, whose depth the game writes over their whole soft discs
+        if (c.w < 0.0) a *= 1.0 - smoothstep(3.0, 7.0, dot(p - t.xyz, -float3(r1, r4, r7)) + 20.0);
         light += a;
         colour += a * c.rgb;
     }
@@ -1373,7 +1377,8 @@ float4 torch_accum_ps(TorchIn i) : SV_Target {
     float3 v = t.xyz - p;
     float d2 = dot(v, v), reach2 = t.w * t.w;
     if (d2 >= reach2) discard;
-    float4 c = tex1.Load(int3(2 * int(i.light) + 1, 0, 0));  // its colour and strength
+    float4 c = tex1.Load(int3(2 * int(i.light) + 1, 0, 0));  // its colour and strength (2.7.24: < 0 a ground light's)
+    float strength = abs(c.w);
     int2 last = int2(uiPixels.xy) - 1;
     float3 l = viewAt(max(wp - int2(1, 0), int2(0, 0))), r = viewAt(min(wp + int2(1, 0), last));
     float3 u = viewAt(max(wp - int2(0, 1), int2(0, 0))), d = viewAt(min(wp + int2(0, 1), last));
@@ -1396,16 +1401,17 @@ float4 torch_accum_ps(TorchIn i) : SV_Target {
     }
     float f = 1.0 - d2 / reach2;
     float facing = saturate(dot(n, v * rsqrt(max(d2, 1e-4))) * 0.7 + 0.3);
-    float a = c.w * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;
+    float a = strength * f * f / (1.0 + d2 / (0.2 * reach2)) * facing;
     if (sharpen > 0.0) {  // 0.68, rim light (torch_light_ps)
         float2 sd = float2(f0 * (v.x * p.z - p.x * v.z), f1 * (v.y * p.z - p.y * v.z));
         float sl = length(sd);
         if (sl > 1e-4) {
             int2 q = clamp(wp + int2(round(sd / sl * 3.0 * scale)), int2(0, 0), last);
             float gap = viewDepth(sceneDepth.Load(int3(q, 0))) - p.z;
-            a += c.w * f * smoothstep(3.0, 12.0, gap) * sharpen;
+            a += strength * f * smoothstep(3.0, 12.0, gap) * sharpen;
         }
     }
+    if (c.w < 0.0) a *= 1.0 - smoothstep(3.0, 7.0, dot(p - t.xyz, -float3(r1, r4, r7)) + 20.0);  // 2.7.24: the ground's
     return float4(c.rgb * a, a);
 }
 
@@ -2209,7 +2215,7 @@ float4 shafts_ps(PresentOut i) : SV_Target {
         float along = (atan((far - t0) / h) + atan(t0 / h)) / h;  // the integral of 1 / distance^2 along the view
         float4 c = tex1.Load(int3(2 * k + 1, 0, 0));
         float fall = 1.0 - h / t.w;
-        sum += c.rgb * (c.w * along * fall * fall * twinX);
+        sum += c.rgb * (abs(c.w) * along * fall * fall * twinX);  // 2.7.24: a ground light's negative
     }
     if (twinY > 0.0) {
         float2 toSun = sourceRect.xy - float2(wp);
