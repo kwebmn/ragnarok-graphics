@@ -401,14 +401,12 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.dew ? 1 : 0);
     w.u8(e.morningFog ? 1 : 0);
     w.u8(e.sandDrift ? 1 : 0);
-    w.u8(e.snowSparkle ? 1 : 0);
     w.u8(e.wetWalls ? 1 : 0);
     w.u8(e.swamp ? 1 : 0);
     w.u8(e.butterflies ? 1 : 0);  // 1.7.3
     w.u8(e.birds ? 1 : 0);
     w.u8(e.leafFall ? 1 : 0);
     w.u8(e.embers ? 1 : 0);
-    w.u8(e.breath ? 1 : 0);
     w.u8(e.splashes ? 1 : 0);
     w.u8(e.caveDrips ? 1 : 0);
     w.u8(e.underwater ? 1 : 0);

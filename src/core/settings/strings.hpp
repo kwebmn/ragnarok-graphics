@@ -212,12 +212,12 @@ enum class Text : uint16_t {
     FxTreeVolume, FxTreeVolumeHint, FxLeafLight, FxLeafLightHint, FxTreeTints, FxTreeTintsHint,
     // 1.7.1
     FxFlowers, FxFlowersHint, FxDew, FxDewHint, FxMorningFog, FxMorningFogHint, FxSandDrift, FxSandDriftHint,
-    FxSnowSparkle, FxSnowSparkleHint, FxWetWalls, FxWetWallsHint,
+    FxWetWalls, FxWetWallsHint,
     // 1.7.2
     FxSwamp, FxSwampHint,
     // 1.7.3
     FxButterflies, FxButterfliesHint, FxBirds, FxBirdsHint, FxLeafFall, FxLeafFallHint, FxEmbers, FxEmbersHint,
-    FxBreath, FxBreathHint, FxSplashes, FxSplashesHint, FxCaveDrips, FxCaveDripsHint, FxUnderwater, FxUnderwaterHint,
+    FxSplashes, FxSplashesHint, FxCaveDrips, FxCaveDripsHint, FxUnderwater, FxUnderwaterHint,
     // 1.8
     FxMaterials, FxMaterialsHint, FxMaterialsStrength, FxMaterialsStrengthHint,
     FxTier, FxTierHint, FxTierAuto, FxTierClassic, FxTierRemaster,

@@ -178,7 +178,6 @@ EffectSettings effectsOff() {
     e.underwater = false;
     e.caveDrips = false;
     e.splashes = false;
-    e.breath = false;
     e.embers = false;
     e.leafFall = false;
     e.birds = false;
@@ -186,7 +185,6 @@ EffectSettings effectsOff() {
     e.nightFireflies = false;
     e.swamp = false;
     e.wetWalls = false;
-    e.snowSparkle = false;
     e.sandDrift = false;
     e.morningFog = false;
     e.dew = false;
@@ -250,7 +248,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.underwater ||
            e.caveDrips ||
            e.splashes ||
-           e.breath ||
            e.embers ||
            e.leafFall ||
            e.birds ||
@@ -258,7 +255,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.nightFireflies ||
            e.swamp ||
            e.wetWalls ||
-           e.snowSparkle ||
            e.sandDrift ||
            e.morningFog ||
            e.dew ||

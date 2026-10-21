@@ -246,7 +246,7 @@ private:
     float stepLife() const {
         const float prints = stepKind() == 3 ? 0.9f : stepKind() == 1 ? 25.0f : stepKind() ? 14.0f : 0.0f;
         return std::max(std::max(prints, ripplesWanted() ? kRippleLife : 0.0f),
-                        effects_.birds || effects_.breath || effects_.splashes ? 2.0f : 0.0f);
+                        effects_.birds || effects_.splashes ? 2.0f : 0.0f);
     }
     // 2.5.2: the chimneys' smoke (smoke_ps) and the lava (lava_ps) drawn by their own shaders, the lava lighting
     // around it in the torches' pass (draw.cpp, torches.cpp)
@@ -318,14 +318,13 @@ private:
         on.birds = effects_.birds;
         on.leaves = effects_.leafFall;
         on.embers = effects_.embers;
-        on.breath = effects_.breath;
         on.splashes = effects_.splashes;
         on.drips = effects_.caveDrips;
         on.underwater = effects_.underwater;
         on.nightFireflies = effects_.nightFireflies;  // 2.6.11
         return on;
     }
-    bool crittersNeedFeet() const { return effects_.birds || effects_.breath || effects_.splashes; }
+    bool crittersNeedFeet() const { return effects_.birds || effects_.splashes; }
     bool crittersNeedFire() const { return effects_.embers; }  // 2.6.12
     // 2.5.5: the sun (actor_shadows.cpp): the way to it from the map's file, else the day's; on the screen
     bool mapSun(float toSun[3]) const;
@@ -408,8 +407,8 @@ private:
     }
     bool rainWetShown() const { return effects_.rainWet && effects_.weather && weather_ == weather::Kind::Rain; }
     bool groundLifeWanted() const {
-        return groundLifePs_ && ((effects_.sandDrift && place_.sand) || (effects_.snowSparkle && place_.snow) ||
-                                 (effects_.wetWalls && place_.cave) || seasonsShown() || rainWetShown());
+        return groundLifePs_ && ((effects_.sandDrift && place_.sand) || (effects_.wetWalls && place_.cave) ||
+                                 seasonsShown() || rainWetShown());
     }
     bool grassWanted() const {
         return effects_.grass && effects_.grassAmount > 0 && grassPs_ && outdoors_ && cameraValid_;

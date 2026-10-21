@@ -30,7 +30,6 @@ bool worksOn(const std::string& sectionKey, const std::string& map, const Effect
     if (k == "storms" || k == "wet_ground" || k == "rain_wet") return sky == weather::Kind::Rain;
     if (k == "floor_reflections") return sky == weather::Kind::Rain || (!open && floorShine(map) > 0.0f);
     if (k == "sand_drift") return place.sand;
-    if (k == "snow_sparkle" || k == "breath") return place.snow;
     if (k == "footprints") return sky == weather::Kind::Snow || desert(map) || open;  // snow, sand, dust outdoors
     if (k == "wet_walls" || k == "cave_drips") return place.cave;
     if (k == "lit_dust") return !open;

@@ -66,7 +66,6 @@ const EffectLayout kEffects[] = {
     {"effects.dew", {}, {}, {}, 2},  // 1.7.1
     {"effects.morning_fog", {}, {}, {}, 2},  // 1.7.1
     {"effects.sand_drift", {}, {}, {}, 2},  // 1.7.1
-    {"effects.snow_sparkle", {}, {}, {}, 2},  // 1.7.1
     {"effects.wet_walls", {}, {}, {}, 2},  // 1.7.1
     {"effects.swamp", {}, {}, {}, 2},  // 1.7.2
     {"effects.butterflies", {"effects.dragonflies"}, {}, {}, 2},  // 1.7.3
@@ -74,7 +73,6 @@ const EffectLayout kEffects[] = {
     {"effects.night_fireflies", {"effects.fireflies_light"}, {}, {}, 2},  // 2.6.11; 2.7.18 their light
     {"effects.leaf_fall", {}, {}, {}, 2},  // 1.7.3
     {"effects.embers", {}, {}, {}, 2},  // 1.7.3
-    {"effects.breath", {}, {}, {}, 2},  // 1.7.3
     {"effects.splashes", {}, {}, {}, 2},  // 1.7.3
     {"effects.cave_drips", {}, {}, {}, 2},  // 1.7.3
     {"effects.underwater", {}, {}, {}, 2},  // 1.7.3

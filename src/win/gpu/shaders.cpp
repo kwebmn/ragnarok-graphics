@@ -1864,9 +1864,8 @@ float4 grass_ps(PresentOut i) : SV_Target {
 }
 
 // 1.7, the ground of the living world (ao.cpp applyGroundLife), before the characters, blended over by its alpha:
-// twinX sand drifting over desert ground in the wind (sand_drift), twinY snow glittering (snow_sparkle), twinW the
-// walls of a damp cave with water running down them where light falls (wet_walls), twinH 1 under uaRO Studio's X-ray
-// (2.7.42, diagnostics: the snow it finds tinted, each glint's place a red dot, unblinking). sharpen the time;
+// twinX sand drifting over desert ground in the wind (sand_drift), twinW the walls of a damp cave with water running
+// down them where light falls (wet_walls); 2.7.45: the snow's glints (twinY) gone. sharpen the time;
 // r0-r11 the view -> the world; the picture's copy t2.
 float4 ground_life_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
@@ -1889,37 +1888,6 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
         float streak = smoothstep(0.68, 0.86, n) * run * twinX;
         o = lerp(o, min(col * 1.15 + 0.05, 1.0), streak);
         a = max(a, streak * 0.32);
-    }
-    if (twinY > 0.0 && luma > 0.5 && max(col.r, max(col.g, col.b)) - min(col.r, min(col.g, col.b)) < 0.18) {  // snow
-        // 2.7.41 (the tester in Lutie: «іскристий сніг не работает»): cells a third of a unit across gave dots a
-        // fraction of a pixel wide, white on white snow - none was seen. Now a glint every unit or so, a pixel or two
-        // across with a short four-pointed cross, tinted as light through ice - blue, gold, rose - to show on white.
-        if (twinH > 0.5) {  // 2.7.42: the X-ray - the snow found tinted
-            o = lerp(o, float3(1.0, 0.4, 1.0), 0.25);
-            a = max(a, 0.25);
-        }
-        float2 gw = w.xz * 1.25;
-        float2 cell = floor(gw);
-        float seed = hash12(cell);
-        if (seed > 0.9) {
-            float2 f = (frac(gw) - (0.25 + 0.5 * float2(hash12(cell + 3.7), hash12(cell + 8.1)))) / 1.25;  // units
-            float tw = pow(saturate(sin(t * (0.8 + seed * 2.0) + seed * 60.0 + (v.x + v.y) * 0.02)), 12.0);
-            float2 af = abs(f);
-            float core = exp(-dot(f, f) / 0.0144);
-            float star = max(exp(-af.y * af.y / 0.0009) * exp(-af.x / 0.12),
-                             exp(-af.x * af.x / 0.0009) * exp(-af.y / 0.12));
-            float g = saturate(core + 0.8 * star) * tw * twinY;
-            if (twinH > 0.5) {  // 2.7.42: the X-ray - the place whether it blinks or not
-                o = lerp(o, float3(1.0, 0.0, 0.0), saturate(core * 2.0));
-                a = max(a, saturate(core * 2.0));
-            }
-            float hue = frac(seed * 37.0);
-            float3 ice = hue < 0.4   ? float3(0.55, 0.78, 1.0)
-                         : hue < 0.7 ? float3(1.0, 0.86, 0.5)
-                                     : float3(1.0, 0.7, 0.88);
-            o = lerp(o, ice, g);
-            a = max(a, g);
-        }
     }
     if (twinW > 0.0) {  // a damp cave
         float3 l = viewAt(max(wp - int2(1, 0), int2(0, 0))), r = viewAt(min(wp + int2(1, 0), last));
@@ -2090,9 +2058,6 @@ float4 critters_ps(CritterIn i) : SV_Target {
         a = smoothstep(1.0, 0.8, e);
     } else if (kind == 6) {  // an ember
         glow = float3(1.0, 0.62, 0.22) * exp(-dot(d, d) * 3.0) * 1.4;
-    } else if (kind == 7) {  // a puff of breath
-        c = float3(0.8, 0.85, 0.93);  // 2.7.41: a cold grey-blue - near white it was lost on the snow («пара не вижу»)
-        a = exp(-dot(d, d) * 1.6) * (0.75 + 0.25 * valueNoise(d * 2.0 + t));
     } else if (kind == 8) {  // a drop
         c = float3(0.85, 0.93, 1.0);
         a = smoothstep(1.0, 0.6, length(d));

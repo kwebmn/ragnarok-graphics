@@ -313,15 +313,15 @@ struct EffectSettings {
     bool dew = false;
     bool morningFog = false;
     bool sandDrift = false;
-    bool snowSparkle = false;
+    // (2.7.45: snow_sparkle gone - after three rounds in Lutie its glints were hardly seen; the user: «может уберем»)
     bool wetWalls = false;
     // 1.7.2: the living world, the water (with water): swamp - a swamp's bubbles and mist. Off by default. (2.7.2: the
     // fish under the surface and the surf - its swash and the wet sand above it - gone at the user's word: too faint
     // to be seen; the foam along the shore stays the water's own, water_foam.)
     bool swamp = false;
     // 1.7.3: the living world, creatures and particles (core/critters.hpp, Direct3D 12): butterflies and dragonflies,
-    // birds, leaves falling from the crowns, embers from the fires, breath in the cold, splashes, the caves' drips,
-    // bubbles and light under the sea. Off by default.
+    // birds, leaves falling from the crowns, embers from the fires, splashes, the caves' drips, bubbles and light under
+    // the sea. Off by default. (2.7.45: breath in the cold gone with the snow's glints - hardly seen, the user's word.)
     bool butterflies = false;
     bool birds = false;
     bool nightFireflies = false;  // 2.6.11: fireflies over the grass from dusk to dawn
@@ -329,7 +329,6 @@ struct EffectSettings {
     bool moonBeams = true;        // 2.7.20: moon_light - its beams on the ground, drifting
     bool leafFall = false;
     bool embers = false;
-    bool breath = false;
     bool splashes = false;
     bool caveDrips = false;
     bool underwater = false;

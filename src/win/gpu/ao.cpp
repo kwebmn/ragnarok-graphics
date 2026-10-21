@@ -405,11 +405,8 @@ bool Renderer::Impl::applyGroundLife() {
     }
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
-    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     c.twin[0] = effects.sandDrift && mapPlace.sand ? 1.0f : 0.0f;
-    c.twin[1] = effects.snowSparkle && mapPlace.snow ? 1.0f - 0.6f * night : 0.0f;
     c.twin[2] = effects.wetWalls && mapPlace.cave ? 1.0f : 0.0f;
-    c.twin[3] = xray ? 1.0f : 0.0f;  // 2.7.42: under the X-ray, where it finds snow and every glint's place
     if (seasonsShown()) {  // 1.20; 2.4: the snow and the grass each a box of its own, autumn's leaves gone (.y 0)
         c.sourceRect[0] = effects.seasonSnow ? mapYear.snow : 0.0f;
         c.sourceRect[2] = effects.seasonGrass ? mapYear.dry : 0.0f;
@@ -424,7 +421,6 @@ bool Renderer::Impl::applyGroundLife() {
     if (!groundLifeLogged)
         LOG_INFO("living ground: on %s (%s%s%s)", mapName.c_str(),
                  c.twin[0] > 0.0f   ? "sand"
-                 : c.twin[1] > 0.0f ? "snow"
                  : c.twin[2] > 0.0f ? "damp walls"
                                     : "nothing of its own",
                  seasonsShown() ? ", the season" : "", rainWetShown() ? ", wet in the rain" : "");

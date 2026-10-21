@@ -6,7 +6,7 @@ namespace uagfx::living {
 // 1.7, the living world: what a map is like for its small details - by its name, as region_look and weather go.
 struct Place {
     bool sand = false;        // desert ground: the wind drifts sand over it (sand_drift)
-    bool snow = false;        // snow on the ground: it glitters (snow_sparkle), breath shows (breath)
+    bool snow = false;        // snow on the ground
     bool cave = false;        // a damp cave or dungeon: its walls glisten (wet_walls), water drips (cave_drips)
     bool underwater = false;  // under the sea: bubbles and light from above (underwater)
     bool swamp = false;       // stagnant water: bubbles and a low mist (swamp)

@@ -53,7 +53,6 @@ critters::Switches Renderer::Impl::critterSwitches() const {
     on.birds = effects.birds;
     on.leaves = effects.leafFall;
     on.embers = effects.embers;
-    on.breath = effects.breath;
     on.splashes = effects.splashes;
     on.drips = effects.caveDrips;
     on.underwater = effects.underwater;
@@ -180,9 +179,7 @@ bool Renderer::Impl::applyCritters() {
         t0[0] = sx;
         t0[1] = sy;
         t0[2] = std::max(size, 1.0f);
-        // 2.7.42 (the tester in Lutie: «пара не вижу»): a puff of breath stands at its character's head - the game's
-        // sprite of it, its depth nearer, hid it wholly but its rim over the snow; six units nearer, it is before it
-        t0[3] = s.kind == critters::Puff ? v[2] - 6.0f : v[2];
+        t0[3] = v[2];
         float* t1 = data[4 * n + 1];
         t1[0] = float(s.kind);
         t1[1] = s.p1;

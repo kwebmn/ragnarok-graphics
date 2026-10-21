@@ -254,7 +254,7 @@ void World::birds(const Switches& on, const Frame& f) {
     }
 }
 
-// What falls, rises or flies off and goes: leaves from the crowns, embers from the fires, breath, drops, bubbles.
+// What falls, rises or flies off and goes: leaves from the crowns, embers from the fires, drops, bubbles.
 void World::motes(const Switches& on, const Frame& f) {
     // Leaves: about one every few seconds a crown, more in autumn.
     if (on.leaves && !f.crowns.empty()) {
@@ -292,23 +292,6 @@ void World::motes(const Switches& on, const Frame& f) {
             m.life = 1.2f + 1.4f * random();
             m.size = 0.16f;
             m.spin = random() * 6.0f;
-            if (motes_.size() < 400) motes_.push_back(m);
-        }
-    }
-    // Breath in the cold: each character's a puff every 2.6 s.
-    if (on.breath && place_.snow) {
-        for (size_t k = 0; k < f.feet.size() && k < 16; ++k) {
-            const float cycle = float(std::fmod(f.now / 2.6 + double(k) * 0.37, 1.0));
-            const float before = float(std::fmod((f.now - double(f.dt)) / 2.6 + double(k) * 0.37, 1.0));
-            if (cycle >= before) continue;  // a new cycle began: a puff
-            Mote m;
-            m.kind = Puff;
-            // 2.7.44 (the tester in Lutie: «пар идет в районе ног»): the mouth 15 units over the feet - 6.2 was the
-            // legs (Ruwach's orbs, which the game flies at the chest, go 10 up: uaRO.exe 0x5CC5D0)
-            m.at = Point{f.feet[k].x + 0.4f, f.feet[k].y - 15.0f, f.feet[k].z};
-            m.v = Point{0.5f * (random() - 0.5f), -0.5f, 0.5f * (random() - 0.5f)};
-            m.life = 1.3f;
-            m.size = 0.6f;  // 2.7.41: a little bigger and denser (below) - the tester in Lutie: «пара не вижу»
             if (motes_.size() < 400) motes_.push_back(m);
         }
     }
@@ -378,11 +361,6 @@ void World::motes(const Switches& on, const Frame& f) {
                 m.at.y += m.v.y * f.dt;
                 m.v.y *= 1.0f - 0.3f * f.dt;
                 break;
-            case Puff:
-                m.at.x += m.v.x * f.dt;
-                m.at.y += m.v.y * f.dt;
-                m.at.z += m.v.z * f.dt;
-                break;
             case Droplet:
                 m.v.y += 22.0f * f.dt;  // falls (up is -y)
                 m.at.x += m.v.x * f.dt;
@@ -412,7 +390,6 @@ void World::motes(const Switches& on, const Frame& f) {
             case Ember:
                 s = sprite(Ember, m.at, m.size, (1.0f - k) * (0.7f + 0.3f * std::sin(m.age * 20.0f + m.spin)));
                 break;
-            case Puff: s = sprite(Puff, m.at, m.size + 1.5f * k, 0.6f * (1.0f - k) * (1.0f - 0.6f * f.night)); break;
             case Droplet: s = sprite(Droplet, m.at, m.size, 0.9f); break;
             case Bubble: s = sprite(Bubble, m.at, m.size * (1.0f + 0.5f * k), std::min(1.0f, (1.0f - k) * 3.0f)); break;
             default: continue;

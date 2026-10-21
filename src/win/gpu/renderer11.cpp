@@ -2675,9 +2675,7 @@ void Renderer11::applyGroundLife() {
     c.scale = float(scale_);
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
-    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
     c.twin[0] = effects_.sandDrift && place_.sand ? 1.0f : 0.0f;
-    c.twin[1] = effects_.snowSparkle && place_.snow ? 1.0f - 0.6f * night : 0.0f;
     c.twin[2] = effects_.wetWalls && place_.cave ? 1.0f : 0.0f;
     if (seasonsShown()) {  // the season's snow and grass, each a box of its own
         c.sourceRect[0] = effects_.seasonSnow ? year_.snow : 0.0f;
@@ -2693,7 +2691,6 @@ void Renderer11::applyGroundLife() {
     if (!groundLifeLogged_)
         LOG_INFO("living ground: on %s (%s%s%s, Direct3D 11)", map_.c_str(),
                  c.twin[0] > 0.0f   ? "sand"
-                 : c.twin[1] > 0.0f ? "snow"
                  : c.twin[2] > 0.0f ? "damp walls"
                                     : "nothing of its own",
                  seasonsShown() ? ", the season" : "", rainWetShown() ? ", wet in the rain" : "");
@@ -2959,7 +2956,7 @@ void Renderer11::applyCritters() {
         t0[0] = sx;
         t0[1] = sy;
         t0[2] = std::max(size, 1.0f);
-        t0[3] = s.kind == critters::Puff ? v[2] - 6.0f : v[2];  // 2.7.42 (critters.cpp): before its own character
+        t0[3] = v[2];
         float* t1 = data[4 * n + 1];
         t1[0] = float(s.kind);
         t1[1] = s.p1;

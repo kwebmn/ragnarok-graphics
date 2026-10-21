@@ -67,6 +67,17 @@ TEST(effect_soft_map_light_is_gone) {
     CHECK(parseConfig("[effects]\nsoft_map_light = 0\n").effects == parseConfig("").effects);
 }
 
+TEST(effect_snow_sparkle_and_breath_are_gone) {
+    // 2.7.45 (the user, after three rounds in Lutie: «не вижу пара, снег редко поблискивает. может уберем эти
+    // функции»): «Іскристий сніг» and «Пара з рота на морозі» gone; their old lines are read and left
+    for (const char* key : {"effects.snow_sparkle", "effects.breath"}) {
+        CHECK(findSetting(key) == nullptr);
+        CHECK(effect_groups::memberOf(key) == nullptr);
+        CHECK(boxOf(key).empty());
+    }
+    CHECK(parseConfig("[effects]\nsnow_sparkle = 1\nbreath = 1\n").effects == parseConfig("").effects);
+}
+
 TEST(effect_settings_compare_every_field) {
     // 2.4: the comparison left out every field since 1.9 - a change of one of them alone never reached the 64-bit
     // renderer (Remote::setEffects sends only what differs): the seasons off in the console did nothing under DLSS

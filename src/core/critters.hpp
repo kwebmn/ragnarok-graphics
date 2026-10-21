@@ -10,10 +10,10 @@
 namespace uagfx::critters {
 
 // 1.7, the living world's creatures and particles (win/gpu/critters.cpp draws them with critters_ps): butterflies
-// and birds by day, leaves falling from the crowns, embers rising from the fires, breath in the cold, drops where a
-// step goes into the water, drips in the caves, bubbles under the sea. They live in the game's world (up along -y; a
-// character's mouth about 15 units over its feet - 2.7.44, not the 7 units tall once written here) about the player;
-// the renderer turns them to the screen each frame.
+// and birds by day, leaves falling from the crowns, embers rising from the fires, drops where a step goes into the
+// water, drips in the caves, bubbles under the sea. They live in the game's world (up along -y; a character's mouth
+// about 15 units over its feet - 2.7.44, not the 7 units tall once written here) about the player; the renderer turns
+// them to the screen each frame.
 enum Kind : uint8_t {
     Butterfly = 1,
     Dragonfly = 2,
@@ -21,7 +21,7 @@ enum Kind : uint8_t {
     BirdFlying = 4,
     Leaf = 5,
     Ember = 6,
-    Puff = 7,
+    // 7: a puff of breath - gone in 2.7.45
     Droplet = 8,
     Bubble = 9,
     Drip = 10,
@@ -52,14 +52,12 @@ struct Switches {
     bool birds = false;
     bool leaves = false;
     bool embers = false;
-    bool breath = false;
     bool splashes = false;
     bool drips = false;
     bool underwater = false;
     bool nightFireflies = false;  // 2.6.11: over the grass from dusk to dawn
     bool any() const {
-        return butterflies || birds || leaves || embers || breath || splashes || drips || underwater ||
-               nightFireflies;
+        return butterflies || birds || leaves || embers || splashes || drips || underwater || nightFireflies;
     }
 };
 

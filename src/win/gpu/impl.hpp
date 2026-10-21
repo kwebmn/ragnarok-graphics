@@ -1049,7 +1049,7 @@ struct Renderer::Impl {
     critters::Switches critterSwitches() const;
     bool crittersWanted() const;
     bool crittersDue() const { return !crittersDone && groundDrawn && crittersWanted(); }
-    bool crittersNeedFeet() const { return effects.birds || effects.breath || effects.splashes; }
+    bool crittersNeedFeet() const { return effects.birds || effects.splashes; }
     bool crittersNeedFire() const { return effects.embers; }  // 2.6.12
     void noteCrown(const FrameRecord& rec, const DrawCmd& d);
     // 1.8: the materials (materials.cpp) and the remaster (effects.tier)
@@ -1173,8 +1173,8 @@ struct Renderer::Impl {
     ID3D12PipelineState* groundLifePipelines[4] = {};
     bool groundLifeDone = false, groundLifeLogged = false;
     bool groundLifeWanted() const {
-        return groundLifePs && ((effects.sandDrift && mapPlace.sand) || (effects.snowSparkle && mapPlace.snow) ||
-                                (effects.wetWalls && mapPlace.cave) || seasonsShown() || rainWetShown());
+        return groundLifePs && ((effects.sandDrift && mapPlace.sand) || (effects.wetWalls && mapPlace.cave) ||
+                                seasonsShown() || rainWetShown());
     }
     // 1.20: the year on the whole map, the rain's wet on the walls and roofs (ground_life_ps)
     bool seasonsShown() const {

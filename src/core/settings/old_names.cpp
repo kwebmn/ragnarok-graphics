@@ -20,7 +20,6 @@ const Old kOld[] = {
     {"effects.round_light", {"Round characters", "Об’ємні персонажі", "Объёмные персонажи"}},
     {"effects.rim_light", {"Rim light on characters", "Контрове світло на персонажах", "Контровой свет на персонажах"}},
     {"effects.footprints", {"Footprints", "Сліди", "Следы"}},
-    {"effects.breath", {"Breath in the cold", "Пара в холод", "Пар на морозе"}},
     {"effects.skills_soft", {"Softer skills", "М'якші вміння", "Мягкие умения"}},
     {"effects.fireflies", {"Fireflies", "Світлячки", "Светлячки"}},
     {"effects.glow", {"Glow of effects", "Світіння ефектів", "Свечение эффектов"}},

@@ -20,7 +20,7 @@ TEST(effect_where_a_cave_and_a_field) {
                           "effects.morning_fog", "effects.footprints", "effects.seasons"})
         CHECK(worksOn(k, "prt_fild08", e));
     for (const char* k : {"effects.wet_walls", "effects.cave_drips", "effects.lit_dust", "effects.underwater",
-                          "effects.swamp", "effects.lava", "effects.snow_sparkle", "effects.breath",
+                          "effects.swamp", "effects.lava",
                           "effects.sand_drift", "effects.weather", "effects.floor_reflections"})
         CHECK(!worksOn(k, "prt_fild08", e));
 }
@@ -41,7 +41,6 @@ TEST(effect_where_the_weather_chosen) {
 TEST(effect_where_the_places) {
     const EffectSettings e;
     CHECK(worksOn("effects.lava", "mag_dun01", e) && !worksOn("effects.lava", "mag_dun03", e));
-    CHECK(worksOn("effects.snow_sparkle", "xmas", e) && worksOn("effects.breath", "ice_dun01", e));
     CHECK(worksOn("effects.footprints", "xmas", e) && worksOn("effects.footprints", "moc_fild12", e));
     CHECK(!worksOn("effects.footprints", "prt_in", e));
     CHECK(worksOn("effects.sand_drift", "moc_fild12", e) && !worksOn("effects.morning_fog", "moc_fild12", e));
