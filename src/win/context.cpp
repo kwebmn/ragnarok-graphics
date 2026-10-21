@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "core/effect_costs.hpp"
+#include "core/effect_exe.hpp"
 #include "core/effect_groups.hpp"
 #include "core/live_config.hpp"
 #include "core/outdoors.hpp"
@@ -418,7 +419,21 @@ void Context::updateLight() {
     effectsMade_ = false;  // effects() made again
 }
 
+// 2.7.14: the cards' sparkles (Device7::record) - added light of their own kind: no soft particle (2.7.14)
+void Context::drawSparkles() {
+    for (const Sparkle& s : sparkles) {
+        DrawCmd cmd;
+        cmd.state = record.addState(s.setup);
+        cmd.effect = uint8_t(effect_exe::Kind::Glint);
+        cmd.primitive = d3d7::PT_TRIANGLELIST;
+        cmd.fvf = d3d7::FVF_TL1;
+        record.draw(cmd, s.v, glint::kSparkle, nullptr, 0);
+    }
+    sparkles.clear();
+}
+
 void Context::present(const Rect& source, bool waitForVblank) {
+    drawSparkles();  // 2.7.14: a frame with no interface draw
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
     monsters.frame();  // 2.7.10: this frame's monsters, where the next hits look for theirs

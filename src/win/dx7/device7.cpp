@@ -267,8 +267,6 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     }
     // 0.95: a card lying on the ground sparkles - a star drawn after it. (2.7.10: the sprites' fade-in as they came
     // into view - 0.93 - gone at the user's word.)
-    bool sparkle = false;
-    glint::Vertex star[8];
     float flash = 0.0f;  // 0.96: a monster just hit - drawn once more, adding light
     if ((fx.glint || fx.hitFlash) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
         vertexCount == 4 && !indices && textures_[0]) {
@@ -300,14 +298,30 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         if (fx.glint && card && kind == uint8_t(sprite_exe::Source::Item)) {
             const uint32_t seed = uint32_t(int(x) / 8 * 7919 + int(y) / 8 * 104729);
             const float flare = glint::flare(c.nowMs() / 1000.0, seed);
-            if (flare > 0.01f) {
-                const float size = std::max(x1 - x0, 8.0f) * 1.1f;
-                glint::star(x + (x1 - x0) * 0.18f, y0 + (y - y0) * 0.6f, z, rhw, size * (0.6f + 0.4f * flare), flare,
-                            star);
-                sparkle = true;
+            if (flare > 0.01f && c.sparkles.size() < 64) {
+                // 0.95: adding light, untextured (white), tested against the depth but not written to it. 2.7.14:
+                // a sparkle, not a cross, drawn once the world's sprites are (Context::drawSparkles) - drawn at once,
+                // the card's picture laid over it hid it (the tester: «под картой»)
+                win::Context::Sparkle s;
+                s.setup = setup;
+                s.setup.blend = true;
+                s.setup.srcBlend = d3d7::BLEND_SRCALPHA;
+                s.setup.dstBlend = d3d7::BLEND_ONE;
+                s.setup.alphaTest = false;
+                s.setup.zWrite = false;
+                s.setup.fog = false;
+                s.setup.colorKey = false;
+                s.setup.stage[0].colorOp = s.setup.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+                s.setup.stage[0].colorArg1 = s.setup.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
+                s.setup.stage[1].colorOp = s.setup.stage[1].alphaOp = d3d7::TOP_DISABLE;
+                const float size = std::max(x1 - x0, 8.0f) * 1.4f;
+                glint::sparkle(x + (x1 - x0) * 0.18f, y0 + (y - y0) * 0.6f, z, rhw, size * (0.6f + 0.4f * flare), flare,
+                               s.v);
+                c.sparkles.push_back(s);
             }
         }
     }
+    if (setup.ui && !c.sparkles.empty()) c.drawSparkles();  // 2.7.14: the world drawn - the cards' sparkles over it
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
     if (flash > 0.01f) {  // 0.96: the sprite's shape once more in white, added, as strong as the flash is now
         if (vertices != soft_.data()) {
@@ -333,26 +347,6 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         again.effect = uint8_t(effect_exe::Kind::HitFlash);  // 2.7.13: no soft particle - it went out wholly
         again.effectSeed = 0;
         c.record.draw(again, soft_.data(), 4, nullptr, 0);
-    }
-    if (sparkle) {  // 0.95: adding light, untextured (white), tested against the depth but not written to it
-        DrawSetup add = setup;
-        add.blend = true;
-        add.srcBlend = d3d7::BLEND_SRCALPHA;
-        add.dstBlend = d3d7::BLEND_ONE;
-        add.alphaTest = false;
-        add.zWrite = false;
-        add.fog = false;
-        add.colorKey = false;
-        add.stage[0].colorOp = add.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
-        add.stage[0].colorArg1 = add.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
-        add.stage[1].colorOp = add.stage[1].alphaOp = d3d7::TOP_DISABLE;
-        DrawCmd bar;
-        bar.state = c.record.addState(add);
-        bar.effect = uint8_t(effect_exe::Kind::Glint);  // 2.7.14: no soft particle - at the card's depth it went out
-        bar.primitive = d3d7::PT_TRIANGLESTRIP;
-        bar.fvf = d3d7::FVF_TL1;
-        c.record.draw(bar, star, 4, nullptr, 0);
-        c.record.draw(bar, star + 4, 4, nullptr, 0);
     }
     c.flushIfFull();  // the textures this draw sent may have filled the record
     return D3D_OK;

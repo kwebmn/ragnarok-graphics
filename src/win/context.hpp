@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/light_mode.hpp"
+#include "core/glint.hpp"
 #include "core/hit_flash.hpp"
 #include "core/config.hpp"
 #include "core/daylight.hpp"
@@ -69,6 +70,14 @@ public:
         float x = 0, y = 0;
         int frames = 0, lines = 0;
     } hitProbe;
+    // 2.7.14: the cards' sparkles of this frame (Device7::record), drawn over the world once its sprites are - before
+    // the first interface draw, or at the present (drawSparkles)
+    struct Sparkle {
+        DrawSetup setup;
+        glint::Vertex v[glint::kSparkle];
+    };
+    std::vector<Sparkle> sparkles;
+    void drawSparkles();
     double nowMs() const;    // a millisecond clock for the effects made as the game draws
 
 private:
