@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.50 — to check
+
+- **The new portal was still not drawn; the real cause is found.** The driver started each portal it noticed at
+  strength 0 and in the same frame threw out everything not above 0, so no portal lived longer than a frame. The
+  mistake is old: the former blue glow of "Portals" never worked because of it either. Now a portal stays, and the
+  following is checked by a test.
+- To check at the door in Prontera: the new portal should come (three waves of light to the middle). The log gets a
+  line "portals: the new one drawn on …".
+
 # uaRO Graphics 2.7.49 — to check
 
 - **The new portal was not drawn** (2.7.48 left the game's portal out and the new one never came). Fixed:
