@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.28 — to check
+
+- **Ruwach's ball at the head of its trail all the way round.** 2.7.27's ball took the sprite biggest on the screen.
+  But the camera looks down at an angle and the sprites nearer it look bigger than those farther off: when the trail's
+  head went round to the far side of the circle, the ball jumped to an older sprite nearer the camera and spun beside
+  the trail. Now it takes the most opaque sprite in the air — always the newest, wherever it is on the circle.
+- Please check: prt_fild08, Clock → "Deep night 3:00", cast Ruwach and turn the camera — the ball should lead the blue
+  trail all the way round. Send a report.
+
 # uaRO Graphics 2.7.27 — to check
 
 - **Ruwach's ball is back — on the trail's circle.** 2.7.26 showed no ball at all: it told the orb's sprites from
