@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.23 — to check
+
+- **The circle next to Ruwach is gone.** The game writes all its laid-over sprites into the frame's depth whole —
+  wherever they show at all. So to the light each soft orb of Ruwach was "a thing in the air", and Ruwach's light lit
+  it whole — a bright circle or oval next to the hero. Now the orbs of light (Ruwach, Sight) leave the depth as it is:
+  the light falls on the ground under them, and the orbs look as the game draws them.
+- Please check: prt_fild08, Clock → "Deep night 3:00", cast Ruwach — no bright circle next to the hero any more, only
+  the soft blue light around. Send a report.
+
 # uaRO Graphics 2.7.22 — to check
 
 - **Ruwach's light is calmer.** In 2.7.21 Ruwach's orbs gave two lights right by the ground that jumped after the
