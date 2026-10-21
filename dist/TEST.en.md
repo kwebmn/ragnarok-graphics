@@ -1,3 +1,17 @@
+# uaRO Graphics 2.7.36 — to check
+
+- **"Wet ground and puddles" easier to see.** In the rain hardly more than the reflection changed: the ground darkened
+  by only 16 %, and a puddle showed only what stands close by - on open ground none was seen. Now the wet ground is
+  darker (by 30 %), a puddle shows the grey sky (dark at night) where nothing close stands in it, and the drops' rings
+  are thicker.
+- To check in Comodo (comodo 187 135): Weather - Rain, hold Tab on "Wet ground and puddles" - the ground darkens
+  plainly, puddles with the drops' rings show on the sand.
+- **Calmer skills.** Magnus at night was a white blot: the game's columns pile up in its middle, and our effects
+  added over them. Now skills give "Halo around fire and skills" 40 % of their light, the air about their lights
+  ("Glowing air at fire and lamps") glows a third, and their light on the ground at night is 1.4 times the day's (it
+  was 1.8). Torches and lamps are unchanged.
+- To check: Magnus Exorcismus at night - less of a white blot. If still too bright, lower "Skills' brightness".
+
 # uaRO Graphics 2.7.35 — to check
 
 - **Splashes from steps in all the water one can walk in** ("Splashes from steps"). The drops used to fly up only
