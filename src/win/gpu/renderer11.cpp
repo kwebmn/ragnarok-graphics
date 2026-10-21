@@ -2174,7 +2174,19 @@ void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its streng
     c.sourceRect[3] = look.saturation - 1.0f;
     c.uiPixels[0] = float(target_.width);
     c.uiPixels[1] = float(target_.height);
-    worldPass(nightPs_, c);
+    // 2.7.20: the moon's beams (ao.cpp's applyNight) - night_ps by the depth, kept to the map
+    const bool beams =
+        night && effects_.moonLight && effects_.moonBeams && outdoors_ && cameraValid_ && depthViews();
+    if (beams) {
+        const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+        const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+        std::copy(pv, pv + 6, c.projection);
+        std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
+        c.scale = float(scale_);
+        c.sourceRect[1] = 1.0f;
+        c.sourceRect[2] = waterTime();
+    }
+    worldPass(nightPs_, c, 1, 0, beams ? depthSrv_ : nullptr);
 }
 
 void Renderer11::applyGrade() {

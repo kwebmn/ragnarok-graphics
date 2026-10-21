@@ -1131,6 +1131,17 @@ float4 grade_ps(PresentOut i) : SV_Target {
     return float4(saturate(c), 1.0);
 }
 
+// 2.7.20, the moon's beams (the user: «хочется чтобы было видно сам луч света луны на карте»): broad slanting bands
+// of moonlight on the ground as through gaps in the clouds - kept to the map (g its world x and z, ten units a cell),
+// drifting slowly (t seconds); 1 in a beam's middle, 0 between the beams
+float moonBeam(float2 g, float t) {
+    float u = dot(g, float2(0.7071, 0.7071)) / 150.0 + t * 0.012;  // across the beams: one every 15 cells
+    float v = dot(g, float2(-0.7071, 0.7071)) / 420.0 - t * 0.004;  // along them
+    float band = smoothstep(-0.1, 0.6, sin(6.2832 * (u + 0.15 * sin(6.2832 * v))));  // a little bent
+    float gap = smoothstep(-0.8, 0.2, sin(6.2832 * (1.7 * v + 0.37 * u) + 1.3));  // clouds close one here and there
+    return band * gap;
+}
+
 // 0.63, night: the world from its copy (t2) darker and colder - the bright stays (a fire, a lamp, a spark), and the
 // torches' light (after this) shines out of it. sharpen how much (0-1). 0.74: first the time of day's light (twinX,
 // twinY, twinW: its tint, 1 none); 0.79: and the region's look - its tint in that too, its saturation 1 + sourceRect.w.
@@ -1149,6 +1160,18 @@ float4 night_ps(PresentOut i) : SV_Target {
     // darker than the night without it, nor brighter than the day
     float3 moon = lerp(float3(l, l, l), c, 0.35) * float3(0.62, 0.74, 1.0) * lerp(0.82, 0.72, saturate(footprint)) *
                   twinH;
+    // 2.7.20: the moon's beams where the map is drawn (sourceRect.y their strength, 0-1; sourceRect.z the time; the
+    // depth t3, the view's place in the world r0-r11): 1.56 times the moonlight in them, 0.86 between - the map as
+    // bright as before on the whole (a fifth of it in the beams)
+    if (sourceRect.y > 0.0) {
+        float raw = sceneDepth.Load(int3(int2(i.pos.xy), 0));
+        if (raw < 0.99999) {
+            float3 v = viewFrom(int2(i.pos.xy), raw);
+            float3 w =
+                v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+            moon *= 1.0 + sourceRect.y * (0.7 * moonBeam(w.xz, sourceRect.z) - 0.14);
+        }
+    }
     night = min(max(night, moon), max(c, float3(l, l, l)));
     // 2.7.17: what stays bright is a light - a fire's, a lamp's, a spell's colour - not a white flower, pale hair or
     // stone: under «Глибока ніч» the meadow's flowers stood out of the dark as stars on the ground

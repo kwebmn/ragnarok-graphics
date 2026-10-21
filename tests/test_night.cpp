@@ -101,3 +101,12 @@ TEST(night_lights_moon_on_by_default) {
     CHECK(effect_groups::memberOf("effects.hero_light") == nullptr);
     CHECK(settings::findSetting("effects.hero_light") == nullptr);
 }
+
+TEST(night_moon_beams_on_by_default) {
+    // 2.7.20 (the user: «хочется чтобы было видно сам луч света луны на карте»): the moon's beams on the ground, a
+    // part of the moonlight - on with it, off with the effects
+    const Config c = parseConfig("");
+    CHECK(c.effects.moonBeams);
+    CHECK(!parseConfig("[effects]\nmoon_beams = 0\n").effects.moonBeams);
+    CHECK(!effectsOff().moonBeams);
+}

@@ -3092,6 +3092,13 @@ const Entry kTexts[] = {
      "Кожен світлячок у траві вночі трохи освітлює землю під собою, зеленкувато, пульсуючи разом зі своїм вогником.",
      "Каждый светлячок в траве ночью немного освещает землю под собой, зеленовато, пульсируя вместе со своим "
      "огоньком."},
+    {"Moon beams", "Місячні промені", "Лунные лучи"},  // 2.7.20
+    {"Broad slanting beams of moonlight lie on the ground of the fields and the towns, as through gaps in the clouds, "
+     "and drift slowly; they keep to the map, not to the camera.",
+     "Широкі косі промені місячного світла лягають на землю полів і міст, наче крізь розриви хмар, і повільно "
+     "пливуть; вони тримаються карти, а не камери.",
+     "Широкие косые лучи лунного света ложатся на землю полей и городов, будто сквозь разрывы облаков, и медленно "
+     "плывут; они держатся карты, а не камеры."},
     {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",

@@ -944,6 +944,7 @@ struct Renderer::Impl {
     // 2.7.19 (the user: «пускай освещают всякие скилы типа рувотч»): how much of its own light a skill's picture needs
     // to light around it - at night down to a small bright ball's (Ruwach's: a speck of pale blue, about 0.15)
     float skillLightFloor() const { return 0.2f - 0.14f * float(std::clamp(effects.nightNow, 0, 100)) / 100.0f; }
+    float skillLightsTold = -1e9f;  // 2.7.20: the last log line of the skills' light at night
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     void noteCritterFlame(const FrameRecord& rec, const DrawCmd& d);  // 2.6.12: the torches off
     bool torchReady();     // the shaders, pipelines and the picture's copies are there

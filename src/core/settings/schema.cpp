@@ -252,6 +252,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMoonStrengthHint, " %", nullptr, &E::moonStrength},
         {"effects", "fireflies_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFirefliesLight,
          Text::FxFirefliesLightHint, "", &E::firefliesLight},  // 2.7.18: a part of night_fireflies
+        {"effects", "moon_beams", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMoonBeams,
+         Text::FxMoonBeamsHint, "", &E::moonBeams},  // 2.7.20: a part of moon_light
         {"effects", "round_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRoundLight,
          Text::FxRoundLightHint, "", &E::roundLight},
         {"effects", "ripples", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRipples,

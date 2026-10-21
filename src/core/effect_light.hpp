@@ -11,5 +11,9 @@ float fireOf(const uint32_t* argb, int width, int height, float colour[3]);
 // poison green, holy gold) by how saturated they are, near-white ones only when bright (lightning); grey, dark and
 // clear pictures none. colour as fireOf's.
 float lightOf(const uint32_t* argb, int width, int height, float colour[3]);
+// 2.7.20: how much a place of skills' light lights (0-1) from its weight w - the sum of its draws' strengths - with
+// night (0-1) as much night as it is: at night at least 0.7 (the tester: «рувотч не светит» - its blue mist a place
+// of about 0.2, a tenth of a torch's light), the faintest places (under 0.05) in proportion; by day w as it is.
+float skillWeight(float w, float night);
 
 }  // namespace uagfx::effect_light

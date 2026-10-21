@@ -30,6 +30,19 @@ TEST(effect_light_knows_fire_by_its_colours) {
     CHECK(effect_light::fireOf(nullptr, 0, 0, c) == 0.0f);
 }
 
+TEST(effect_light_skills_light_at_night) {
+    // 2.7.20 (the tester: «рувотч не светит» - its blue mist a place of about 0.2, a tenth of a torch's light): at
+    // night a place of skills' light lights at least 0.7, the faintest in proportion; by day as it was; never past 1
+    CHECK(effect_light::skillWeight(0.2f, 0.0f) == 0.2f);
+    CHECK(effect_light::skillWeight(0.2f, 1.0f) >= 0.7f);
+    const float half = effect_light::skillWeight(0.2f, 0.5f);
+    CHECK(half > 0.2f && half < 0.7f);
+    CHECK(effect_light::skillWeight(0.05f, 1.0f) >= 0.7f);  // a fourth of Ruwach's still lights as much
+    CHECK(effect_light::skillWeight(0.01f, 1.0f) > 0.01f && effect_light::skillWeight(0.01f, 1.0f) < 0.2f);
+    CHECK(effect_light::skillWeight(3.0f, 1.0f) == 1.0f);
+    CHECK(effect_light::skillWeight(3.0f, 0.0f) == 1.0f);
+}
+
 TEST(effect_light_knows_the_colour_other_skills_light_in) {
     // 0.36: a skill's picture lights in its own colour: ice blue, poison green, holy gold, lightning near white.
     float c[3];

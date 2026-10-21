@@ -204,7 +204,7 @@ EffectSettings effectsOff() {
     // 2.4: the parts of the effects
     e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.stepDust = e.seasonSnow = false;
     e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.desertHeat = false;
-    e.moonLight = e.firefliesLight = false;  // 2.7.18
+    e.moonLight = e.firefliesLight = e.moonBeams = false;  // 2.7.18; 2.7.20
     e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
     e.dayNow = -1;

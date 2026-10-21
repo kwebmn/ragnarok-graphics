@@ -7,6 +7,7 @@
 #include <cstring>
 #include <unordered_map>
 
+#include "core/effect_light.hpp"
 #include "core/fireflies.hpp"
 #include "core/game_camera.hpp"
 #include "core/map_glows.hpp"
@@ -688,6 +689,8 @@ bool Renderer::Impl::applyTorches() {
     }
     // 0.26: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16. A little, as a torch:
     // the shader bounds it.
+    size_t skillPlaces = 0;  // 2.7.20: for the log at night
+    float skillBrightest = 0.0f;
     if (fireWanted() && !fireSparks.empty()) {
         struct Cell {
             float w = 0, view[3] = {0, 0, 0}, colour[3] = {0, 0, 0};
@@ -740,10 +743,19 @@ bool Renderer::Impl::applyTorches() {
         for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
-            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, fireStrength * std::min(c.w, 1.0f),
-                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top}, 25.0f + 15.0f * std::min(c.w, 1.0f)};
+            const float w = effect_light::skillWeight(c.w, darkNow);  // 2.7.20: at night a floor («рувотч не светит»)
+            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, fireStrength * w,
+                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top}, 25.0f + 15.0f * w};
             lights.push_back(l);
         }
+        skillPlaces = best.size();
+        skillBrightest = best.empty() ? 0.0f : best[0].w;
+    }
+    const float since = time - skillLightsTold;  // 2.7.20: at night, what of the skills lights, now and then
+    if (darkNow > 0.0f && (since > 10.0f || since < 0.0f)) {
+        skillLightsTold = time;
+        LOG_INFO("skills' light at night: %s, %zu draws in %zu places, the brightest %.2f",
+                 fireWanted() ? "on" : "off", fireSparks.size(), skillPlaces, skillBrightest);
     }
     fireSparks.clear();
     // 0.28: the fireflies light a little around them, the nearest 16.

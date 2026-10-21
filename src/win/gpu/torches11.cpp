@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "core/d3d7.hpp"
+#include "core/effect_light.hpp"
 #include "core/fireflies.hpp"
 #include "core/game_camera.hpp"
 #include "core/map_glows.hpp"
@@ -470,7 +471,8 @@ void Renderer11::applyTorchLight() {
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
             const float view[3] = {c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w};
             const float colour[3] = {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top};
-            addLight(view, 25.0f + 15.0f * std::min(c.w, 1.0f), colour, fireStrength * std::min(c.w, 1.0f));
+            const float w = effect_light::skillWeight(c.w, darkNow);  // 2.7.20 (torches.cpp): at night a floor
+            addLight(view, 25.0f + 15.0f * w, colour, fireStrength * w);
         }
     }
     {  // 0.28: the fireflies light a little around them, the nearest 16 (2.5.2: the map's dots, its orbs and pools)

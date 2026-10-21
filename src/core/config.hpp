@@ -323,6 +323,7 @@ struct EffectSettings {
     bool birds = false;
     bool nightFireflies = false;  // 2.6.11: fireflies over the grass from dusk to dawn
     bool firefliesLight = true;   // 2.7.18: night_fireflies - each lights the ground under it a little
+    bool moonBeams = true;        // 2.7.20: moon_light - its beams on the ground, drifting
     bool leafFall = false;
     bool embers = false;
     bool breath = false;

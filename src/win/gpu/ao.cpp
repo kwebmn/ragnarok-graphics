@@ -240,8 +240,24 @@ bool Renderer::Impl::applyNight() {
             return true;
         }
     }
-    if (!copySceneColor()) return false;
+    // 2.7.20: the moon's beams on the ground of the fields and the towns - night_ps by the depth, kept to the map
+    const bool beams =
+        effects.moonLight && effects.moonBeams && effects.nightNow > 0 && mapOutdoors && viewToWorldValid;
+    if (!copySceneColor() || (beams && !copySceneDepth())) return false;
     Constants c{};
+    if (beams) {
+        const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+        const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+        std::copy(pv, pv + 6, c.projection);
+        std::copy(viewToWorld, viewToWorld + 12, c.reproject);
+        c.scale = float(upscale ? worldScale : scale);
+        if (upscale) {
+            c.jitter[0] = jitter[0];
+            c.jitter[1] = jitter[1];
+        }
+        c.sourceRect[1] = 1.0f;
+        c.sourceRect[2] = waterTime();
+    }
     c.sharpen = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;  // 2.6.19: the night always the clock's
     c.footprint = float(std::clamp(effects.nightNow - 100, 0, 100)) / 100.0f;  // 2.7.16: «Глибока ніч»
     c.twin[3] = effects.moonLight ? float(std::clamp(effects.moonStrength, 0, 200)) / 100.0f : 0.0f;  // 2.7.18

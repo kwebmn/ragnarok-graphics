@@ -61,4 +61,9 @@ float lightOf(const uint32_t* argb, int width, int height, float colour[3]) {
     return top >= 0.85 ? float(0.35 * seen) : 0.0f;  // near white: a flash of lightning, holy light
 }
 
+float skillWeight(float w, float night) {
+    const float floor = 0.7f * std::clamp(night, 0.0f, 1.0f) * std::min(w * 20.0f, 1.0f);  // whole from 0.05
+    return std::max(std::min(w, 1.0f), floor);
+}
+
 }  // namespace uagfx::effect_light
