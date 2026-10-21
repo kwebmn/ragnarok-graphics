@@ -1,3 +1,10 @@
+# uaRO Graphics 2.7.40 — to check
+
+- **One snow, not two.** Over Lutie both the game's snow and ours ("Precipitation") fell. Now where ours falls the
+  game's is not drawn; under a roof and with "Precipitation" off it is as before.
+- To check in Lutie (xmas 150 180): one snow; hold Tab on "Precipitation" - the game's snow comes in place of ours.
+  There too: "Glittering snow", "Breath in the frost", footprints in the snow.
+
 # uaRO Graphics 2.7.39 — to check
 
 - **Quieter casting** ("Skills that do not blind"). While a skill is cast a funnel of light rises round the hero's
