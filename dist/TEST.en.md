@@ -1,3 +1,13 @@
+# uaRO Graphics 2.7.16 — to check
+
+- **Rain on hills without the "squares".** Wet ground and puddles were decided by each ground triangle's own slope:
+  on a gentle hill one triangle was wet and the next dry — patches with straight edges, puddle reflections torn. Now
+  the water lies level: everything flatter than a wall gets wet alike, and puddles mirror like a still surface.
+- **"Deep night 3:00" in the Clock.** A nearly black night whatever the "Night strength" (but 0 %): the world goes
+  down to 16 % of its light, while torches, lamps, windows and fireflies shine out of the dark.
+- Please check: prt_fild08 at night in the rain — is the road even and are the reflections whole? And Clock → "Deep
+  night 3:00".
+
 # uaRO Graphics 2.7.15 — to check
 
 - **The card's sparkle on the ground is bigger and brighter.** In 2.7.14 only a thin line of it showed on bright
