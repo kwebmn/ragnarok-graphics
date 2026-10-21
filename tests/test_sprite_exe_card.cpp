@@ -29,19 +29,26 @@ TEST(glint_a_sparkle_not_a_cross) {
     glint::Vertex v[glint::kSparkle];
     glint::sparkle(100, 50, 0.3f, 0.9f, 40, 1.0f, v);
     float farthest = 0.0f;
-    int bright = 0, tips = 0, lit = 0;
+    int bright = 0, tips = 0, lit = 0, rim = 0, core = 0;
+    float middle = 0.0f;
     bool depth = true;
     for (const glint::Vertex& p : v) {
         const float d = std::hypot(p.x - 100.0f, p.y - 50.0f);
         const uint32_t a = p.diffuse >> 24;
         farthest = std::fmax(farthest, d);
-        if (d > 6.0f) (a == 0 ? tips : lit) += 1;  // past the glow: only the rays' tips, faded out
-        if (d < 3.0f && a > 200) ++bright;         // the long rays' middles and the glow's centre shine
+        if (d > 9.0f) (a == 0 ? tips : lit) += 1;  // past the glow: only the rays' tips, faded out
+        if (d < 4.0f && a > 200) ++bright;         // the long rays' middles shine
+        if (a > 200 && d > 0.5f) middle = std::fmax(middle, d);
+        if (a == 0 && d > 4.7f && d < 4.9f) ++rim;  // 2.7.15: the glow 12 % of the size across its middle
+        if (d < 0.01f && a >= 190 && a <= 192) ++core;  // at 75 %: at full it whited the card out
         depth = depth && p.z == 0.3f && p.rhw == 0.9f;
     }
     CHECK(farthest > 19.9f && farthest < 20.1f);  // tip to tip `size`
     CHECK(tips == 8 && lit == 0);                 // each ray's two tips
-    CHECK(bright >= 8);
+    CHECK(bright == 8);
+    // 2.7.15 (on the bright paving of Prontera a thin needle): the long rays 8 % of the size wide at their middles
+    CHECK(middle > 3.1f && middle < 3.3f);
+    CHECK(rim == 16 && core == 8);
     CHECK(depth);
     glint::sparkle(100, 50, 0.3f, 0.9f, 40, 0.0f, v);  // not flaring: nothing shows
     bool dark = true;

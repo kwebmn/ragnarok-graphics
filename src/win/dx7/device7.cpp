@@ -314,8 +314,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                 s.setup.stage[0].colorOp = s.setup.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
                 s.setup.stage[0].colorArg1 = s.setup.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
                 s.setup.stage[1].colorOp = s.setup.stage[1].alphaOp = d3d7::TOP_DISABLE;
-                const float size = std::max(x1 - x0, 8.0f) * 1.4f;
-                glint::sparkle(x + (x1 - x0) * 0.18f, y0 + (y - y0) * 0.6f, z, rhw, size * (0.6f + 0.4f * flare), flare,
+                // 2.7.15: twice the card's width, on its upper right corner (on Prontera's bright paving a thin needle
+                // above it; on its middle the glow whited the card out)
+                const float size = std::max(x1 - x0, 8.0f) * 2.0f;
+                glint::sparkle(x + (x1 - x0) * 0.3f, y - (y1 - y0) * 0.3f, z, rhw, size * (0.6f + 0.4f * flare), flare,
                                s.v);
                 c.sparkles.push_back(s);
             }
