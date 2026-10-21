@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdint>
 
 #include "core/d3d7.hpp"
@@ -231,4 +232,20 @@ TEST(effect_exe_skills_softer_at_night) {
     CHECK_EQ(effect_exe::skillPercent(80, 50), 64);
     CHECK_EQ(effect_exe::skillPercent(100, 100), 60);  // softer at night even when the slider is full
     CHECK_EQ(effect_exe::skillPercent(100, 0), 100);
+}
+
+TEST(effect_exe_skills_laid_over_softly) {
+    // 2.7.38 (the tester on Magnus by day in Comodo: «все умения, и даже когда кастуется что-то, какие-то очень
+    // яркие»): a skill's added light laid over softly - the lighter the picture under it, the less it adds; with
+    // «Skills that do not blind» on, only a skill's draw that adds light by ONE or by its alpha
+    const uint8_t skill = uint8_t(effect_exe::Kind::Skill), aura = uint8_t(effect_exe::Kind::Aura);
+    CHECK(effect_exe::softAdd(true, true, skill, d3d7::BLEND_ONE));
+    CHECK(effect_exe::softAdd(true, true, skill, d3d7::BLEND_SRCALPHA));
+    CHECK(!effect_exe::softAdd(false, true, skill, d3d7::BLEND_ONE));          // the switch off: as the game draws
+    CHECK(!effect_exe::softAdd(true, false, skill, d3d7::BLEND_SRCALPHA));     // laid over by its alpha: as it is
+    CHECK(!effect_exe::softAdd(true, true, aura, d3d7::BLEND_ONE));            // the aura has its own slider
+    CHECK(!effect_exe::softAdd(true, true, skill, d3d7::BLEND_DESTCOLOR));     // another factor: as it is
+    // half a Magnus' light on Comodo's sand by day: 0.75 + 0.5 burnt white; laid over softly 0.875
+    CHECK(std::fabs(effect_exe::laidOver(0.75f, 0.5f) - 0.875f) < 1e-6f);
+    CHECK(std::fabs(effect_exe::laidOver(0.1f, 0.5f) - 0.55f) < 1e-6f);  // at night nearly as added (0.6)
 }

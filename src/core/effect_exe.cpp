@@ -142,6 +142,11 @@ int skillPercent(int brightness, int night) {
     return int(float(std::clamp(brightness, 0, 100)) * (1.0f - 0.4f * dark) + 0.5f);
 }
 
+bool softAdd(bool skillsSoft, bool addsLight, uint8_t kind, uint32_t srcBlend) {
+    return skillsSoft && addsLight && kind == uint8_t(Kind::Skill) &&
+           (srcBlend == d3d7::BLEND_ONE || srcBlend == d3d7::BLEND_SRCALPHA);
+}
+
 size_t Faces::slotOf(uint32_t vertices) const {
     const size_t mask = slots_.size() - 1;
     size_t i = size_t((vertices * 0x9E3779B1u) >> 8) & mask;  // the address's bits spread (Fibonacci hashing)

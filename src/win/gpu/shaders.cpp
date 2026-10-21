@@ -578,6 +578,9 @@ float4 shade(PsIn i) {
         if (((alphaTest >> 21) & 1) != 0) c.rgb *= fade;
     }
 #endif
+    // 2.7.38: a skill's light laid over softly (draw.cpp: the target's colour its factor, not its alpha) - as much
+    // of it as its alpha lets through
+    if (((alphaTest >> 23) & 1) != 0) c.rgb *= c.a;
     return c;
 }
 

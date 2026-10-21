@@ -1504,6 +1504,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (toGlow && (adds || (s.blend && (s.srcBlend == d3d7::BLEND_ZERO || s.srcBlend == d3d7::BLEND_DESTCOLOR))))
         c.alphaTest |= 1u << 19;
     if (toGlow && adds && d.effect == uint8_t(effect_exe::Kind::Skill)) c.alphaTest |= 1u << 22;  // 2.7.36
+    // 2.7.38 (draw.cpp): a skill's added light laid over softly, the target's colour its factor
+    const bool softAdd = effect_exe::softAdd(effects_.skillsSoft, !s.ui && adds, d.effect, s.srcBlend);
+    if (softAdd && s.srcBlend == d3d7::BLEND_SRCALPHA) c.alphaTest |= 1u << 23;
     if (toGlow) glowDrawn_ = true;
     const bool effectDraw = effect_exe::softEffect(adds, d.effect);  // 2.7.13: not a hit flash
     const bool soft = !water && !smoke && !lava && !ray && !s.ui && effects_.softParticles && d.vertexCount == 4 &&
@@ -1560,7 +1563,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
             if (st.mipFilter == d3d7::TFP_LINEAR) st.mipFilter = d3d7::TFP_POINT;
     is.samplers[0] = samplerState(sampled[0], aniso);
     is.samplers[1] = samplerState(sampled[1], aniso);
-    is.blend = blendState(s.blend, d3dmap::blendOf(s.srcBlend, d3d7::BLEND_ONE),
+    const uint8_t srcBlend = softAdd ? uint8_t(d3d7::BLEND_INVDESTCOLOR) : s.srcBlend;  // 2.7.38
+    is.blend = blendState(s.blend, d3dmap::blendOf(srcBlend, d3d7::BLEND_ONE),
                           d3dmap::blendOf(s.dstBlend, d3d7::BLEND_ZERO),
                           D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
                               D3D11_COLOR_WRITE_ENABLE_BLUE);

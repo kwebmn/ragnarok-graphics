@@ -110,6 +110,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && !upscale && glowDrawn && !addGlowToTarget()) return;
     const bool adds = !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE;
     if (adds && !glowActive && glowWanted()) startGlow();
+    // 2.7.38 (the tester, Magnus by day in Comodo: «все умения, и даже когда кастуется что-то, какие-то очень
+    // яркие»): a skill's added light laid over softly, the target's colour its factor (effect_exe::softAdd) - half a
+    // Magnus added to Comodo's sand (0.75) burnt it white, as the game's whole one does with Pause
+    const bool softAdd = effect_exe::softAdd(effects.skillsSoft, adds, d.effect, s.srcBlend);
+    DrawSetup laid = s;
+    if (softAdd) laid.srcBlend = d3d7::BLEND_INVDESTCOLOR;
     // 0.26: the fire of skills (a fire-coloured picture added on) lights around it once the world is drawn.
     // 0.38: a portal's draw: its middle, for its glow and its swirl once the world is drawn.
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted() && !torchDone) notePortal(rec, d);
@@ -205,7 +211,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                               : ray ? DrawShader::Ray
                               : lava ? DrawShader::Lava
                                      : DrawShader::Game;
-    ID3D12PipelineState* pso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask, shader);
+    ID3D12PipelineState* pso = pipelineFor(laid, d.fvf, coverage, toLayer, toGlow, water, mask, shader);
     if (!pso) return;
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
@@ -345,6 +351,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (toGlow && (adds || (s.blend && (s.srcBlend == d3d7::BLEND_ZERO || s.srcBlend == d3d7::BLEND_DESTCOLOR))))
         c.alphaTest |= 1u << 19;
     if (toGlow && adds && d.effect == uint8_t(effect_exe::Kind::Skill)) c.alphaTest |= 1u << 22;  // 2.7.36: 40 %
+    if (softAdd && s.srcBlend == d3d7::BLEND_SRCALPHA) c.alphaTest |= 1u << 23;  // 2.7.38: its light times its alpha
     if (soft) {  // 0.67: its fade (shaders.cpp shade())
         c.alphaTest |= 1u << 20;
         if (s.srcBlend == d3d7::BLEND_ONE) c.alphaTest |= 1u << 21;  // added or premultiplied: the colour too
@@ -486,7 +493,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                       (c.stage1[1] & (1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
                       (c.stage0[1] & (1u << 26 | 1u << 28)) == 0 && (c.alphaTest & 1u << 20) == 0;
     if (lean) {
-        ID3D12PipelineState* leanPso = pipelineFor(s, d.fvf, coverage, toLayer, toGlow, water, mask, shader, true);
+        ID3D12PipelineState* leanPso = pipelineFor(laid, d.fvf, coverage, toLayer, toGlow, water, mask, shader, true);
         if (leanPso) pso = leanPso;
     }
     // 2.5: the draw goes on the gathered call when its state is the same and its vertices follow (draw_batch.hpp);

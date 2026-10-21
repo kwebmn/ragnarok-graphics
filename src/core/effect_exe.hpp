@@ -68,6 +68,12 @@ void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Sof
 // 2.7.37: how bright the skills are drawn, % of the game's - «Skills' brightness» (0-100) with the night now (0-100,
 // 200 «Deep night»): the world goes dark at night and the skills did not
 int skillPercent(int brightness, int night);
+// 2.7.38: whether a draw's added light is laid over softly - the target's colour its factor (1 - under), the lighter
+// the picture under it the less it adds - with «Skills that do not blind» on: a skill's that adds light by ONE or by
+// its alpha (premultiplied in the shader then)
+bool softAdd(bool skillsSoft, bool addsLight, uint8_t kind, uint32_t srcBlend);
+// What that gives: `light` laid over `under` (0-1).
+inline float laidOver(float under, float light) { return under + light * (1.0f - under); }
 
 // What a draw is of, and a seed of its primitive's own (its fireflies flash each its own way).
 struct Tag {
