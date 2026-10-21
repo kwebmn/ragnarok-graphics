@@ -1,3 +1,20 @@
+# uaRO Graphics 2.7.35 — to check
+
+- **Splashes from steps in all the water one can walk in** ("Splashes from steps"). The drops used to fly up only
+  where the bed lay no deeper than 3 units under the water, and in Comodo it lies 7 deep in the middle (up to 16): over
+  nearly all the shallows there were none. The game has no swimming, one wades - now the splashes come down to two
+  cells deep.
+- **"Falling leaves" easier to see** (Weather - Falling leaves): the leaves twice as big (they were 7 by 4 pixels -
+  orange specks) and a few more of them.
+- **Bigger, darker footprints** ("Footprints in snow and sand"): a print half again as big, darker on snow and sand.
+- To check in Comodo (comodo 187 135):
+  - by day walk into the water to comodo 180 135 - splashes in the deeper water too;
+  - Weather - Snow, walk about - the prints; Falling leaves - the leaves;
+  - Weather - Rain and stay under it 2-3 minutes: "Wet ground and puddles", "Wet walls and roofs", "Thunderstorms";
+  - Clock - Night 0:00, Magnus Exorcismus; while it stands hold Tab in turn on "Glowing air at fire and lamps",
+    "Halo around fire and skills", "Fire of skills lights around" and press Pause - with which of them the white blot
+    goes; look at the skill's sparks too ("Sparks of skills").
+
 # uaRO Graphics 2.7.34 — to check
 
 - **The birds no longer settle on the water.** A flock ("Birds") lands only where the map's ground stands above the
