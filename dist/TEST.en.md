@@ -1,3 +1,11 @@
+# uaRO Graphics 2.7.33 — to check
+
+- **"Map light without blow-out" removed.** By the sewers' wall with a torch it made no difference to be seen: the
+  wall is plain itself (with no effects, on Pause, no masonry even far from the fire), and the light by the fire is so
+  strong that it sets the colour. Its line in the settings file changes nothing.
+- The fire light that keeps a surface's pattern (2.7.31) stays.
+- Nothing much to check — on to the next: Prontera's church, prt_church 100 100, the reflections on the floor.
+
 # uaRO Graphics 2.7.32 — to check
 
 - **"Map light without blow-out" (a new switch among "Game fixes", on).** The smooth wall by the torch was the game's
