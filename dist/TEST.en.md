@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.41 — to check
+
+- **"Glittering snow" shows.** The glints were under a pixel across and white on white snow - none was seen. Now a
+  glint every step or two, a pixel or two across with a short four-pointed cross, tinted as light through ice - blue,
+  gold, rose; it flashes and fades as you walk.
+- **"Breath in the frost" easier to see**: a puff of a cold grey-blue, a little bigger and denser (near white, it was
+  lost on the snow).
+- To check in Lutie (xmas 150 180): walk over the snow - the glints; stand - puffs of breath at the characters.
+
 # uaRO Graphics 2.7.40 — to check
 
 - **One snow, not two.** Over Lutie both the game's snow and ours ("Precipitation") fell. Now where ours falls the
