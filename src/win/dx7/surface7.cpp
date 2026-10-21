@@ -120,15 +120,7 @@ Surface7* Surface7::create(const SurfacePlan& plan, DWORD caps, std::string& err
     return s;
 }
 
-uint8_t Surface7::spriteAt(float x, float y, bool* card) const {
-    for (const Cell& s : top()->cells_)
-        if (x >= float(s.rect.left) && x < float(s.rect.right) && y >= float(s.rect.top) && y < float(s.rect.bottom)) {
-            if (card) *card = s.card;
-            return s.source;
-        }
-    if (card) *card = false;
-    return 0;
-}
+uint8_t Surface7::spriteAt(float x, float y, bool* card) const { return top()->cells_.at(x, y, card); }
 
 Surface7* Surface7::from(IDirectDrawSurface7* s) {
     Surface7* p = static_cast<Surface7*>(s);
@@ -534,16 +526,8 @@ HRESULT STDMETHODCALLTYPE Surface7::Unlock(LPRECT) {
                     rowToArgb8(f, bytes, own.data(), int(own.size()));
             }
             top()->levels_->slotWritten(cell, source, own.empty() ? nullptr : &own);
-            std::vector<Cell>& cells = top()->cells_;  // 0.93
-            const bool card = win::spriteCellCard();
-            bool known = false;
-            for (Cell& s : cells)
-                if (s.rect == cell) {
-                    s.source = source;
-                    s.card = card;
-                    known = true;
-                }
-            if (!known && cells.size() < 1024) cells.push_back(Cell{cell, source, card});
+            // 0.93; 2.7.12: the frame takes the place of those it lies over (sprite_cells)
+            top()->cells_.written(cell, source, win::spriteCellCard());
         }
     }
     if (role_ == SurfaceRole::RenderTarget) {

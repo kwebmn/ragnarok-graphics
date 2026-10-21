@@ -234,7 +234,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         vertices = soft_.data();
     }
     // 2.7.11, diagnostics: a hit no monster took (win/hit_hook.cpp) - each quad drawn about its place now, in the log
-    if (c.hitProbe.frames > 0 && c.hitProbe.lines < 16 && vertexCount == 4) {
+    // (2.7.12: the sprites' only - the ground's cells took ten of the sixteen lines)
+    if (c.hitProbe.frames > 0 && c.hitProbe.lines < 16 && vertexCount == 4 && fvf == d3d7::FVF_TL1) {
         const size_t stride = FrameRecord::stride(fvf);
         const auto* v = static_cast<const uint8_t*>(vertices);
         float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f, u = 0, w = 0;

@@ -9,6 +9,7 @@
 #include "core/blit.hpp"
 #include "core/frame.hpp"
 #include "core/image.hpp"
+#include "core/sprite_cells.hpp"
 #include "core/surface_ops.hpp"
 #include "core/surface_plan.hpp"
 #include "core/texture_levels.hpp"
@@ -105,12 +106,7 @@ private:
     IDirectDrawClipper* clipper_ = nullptr;  // counted
     bool locked_ = false;
     Rect lockRect_;
-    struct Cell {  // 0.93: top level of a sprite cache - its cells and what each holds now
-        Rect rect;
-        uint8_t source;
-        bool card;  // 0.95
-    };
-    std::vector<Cell> cells_;
+    sprite_cells::Cells cells_;  // 0.93: top level of a sprite cache - its cells and what each holds now
     HDC dc_ = nullptr;
     HBITMAP dib_ = nullptr;
     HGDIOBJ oldBitmap_ = nullptr;
