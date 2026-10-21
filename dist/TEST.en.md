@@ -1,3 +1,15 @@
+# uaRO Graphics 2.7.24 — to check
+
+- **The ball at Ruwach is gone — the particles are as the game draws them again.** You were right: the game writes
+  Ruwach's particles into the frame's depth, so they hide one another — a blue streak of animation shows. 2.7.23 turned
+  that off and the particles piled up into a dense ball. Now it is as in the game.
+- **Ruwach's light lies on the ground alone.** So that it lights no particles in the air (the circle of 2.7.22), it
+  lights only what lies near the ground: the ground, the grass and the characters' feet. The same soft blue pool round
+  the hero, the light about two cells over the ground; the hero's body itself is no longer lit by it. The same for
+  Sight.
+- Please check: prt_fild08, Clock → "Deep night 3:00", cast Ruwach — by the hero the blue streak of animation as in the
+  game, no ball and no circle, and the soft blue light on the ground. Send a report.
+
 # uaRO Graphics 2.7.23 — to check
 
 - **The circle next to Ruwach is gone.** The game writes all its laid-over sprites into the frame's depth whole —
