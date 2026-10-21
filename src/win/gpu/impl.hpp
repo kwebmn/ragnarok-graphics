@@ -524,6 +524,10 @@ struct Renderer::Impl {
     ID3DBlob* portalPs = nullptr;
     ID3D12PipelineState* portalPipelines[4] = {};
     std::vector<int> portalIdsTold;
+    // 2.7.49: whether the new portal was drawn this frame and the one before (the game's is left out only then), and
+    // the map its numbers were last told for
+    bool newPortalsDrawn = false, newPortalsDrawnLast = false;
+    std::string portalsToldMap;
     ID3DBlob* fireflyPs = nullptr;                      // 0.28: a firefly's dot and halo
     ID3D12PipelineState* fireflyPipelines[5] = {};     // as torchFirePipelines
     ID3DBlob* dustPs = nullptr;                         // 0.29: a cloud of the towers' dust
@@ -988,6 +992,8 @@ struct Renderer::Impl {
         aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
         dayKept = false;    // 2.7.47
+        newPortalsDrawnLast = newPortalsDrawn;  // 2.7.49
+        newPortalsDrawn = false;
         softCopied = 0;     // 0.67
         waterfallsDone = false;  // 0.65
         torchFlames.clear();

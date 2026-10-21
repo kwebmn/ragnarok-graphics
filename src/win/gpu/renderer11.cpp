@@ -21,6 +21,7 @@
 #include "core/outdoors.hpp"
 #include "core/effect_exe.hpp"
 #include "core/effect_light.hpp"
+#include "core/portal.hpp"
 #include "core/foliage.hpp"
 #include "core/full_colour.hpp"
 #include "core/light_mode.hpp"
@@ -1239,7 +1240,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
             LOG_INFO("portals: the game's effect %d drawn anew - the new portal (on %s, Direct3D 11)", id,
                      map_.c_str());
         }
-        return;
+        if (portal::hidesGame(true, newPortalsDrawnLast_)) return;  // 2.7.49: never no portal
     }
     // 2.5.2: a character's round shadow - its feet followed for the footprints and the ripples (as draw.cpp)
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && (stepKind() || ripplesWanted() || crittersNeedFeet()))
@@ -2133,6 +2134,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     aoDone_ = false;  // 2.5.1
     fireSparks_.clear();
     lightDone_ = nightDone_ = dayKept_ = false;  // 0.61, 0.63, 2.7.47
+    newPortalsDrawnLast_ = newPortalsDrawn_;  // 2.7.49
+    newPortalsDrawn_ = false;
     mistDone_ = weatherDone_ = false;  // 2.5
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3

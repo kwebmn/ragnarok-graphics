@@ -274,6 +274,8 @@ private:
     bool newPortalWanted() const { return portalsWanted() && effects_.portalNew && portalPs_ && torchLightPs_; }
     ID3D11PixelShader* portalPs_ = nullptr;
     std::vector<int> portalIdsTold_;
+    bool newPortalsDrawn_ = false, newPortalsDrawnLast_ = false;  // 2.7.49: this frame and the one before
+    std::string portalsToldMap_;
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
     struct PortalTrack11 {
         float view[3];

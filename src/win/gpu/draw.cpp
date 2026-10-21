@@ -8,6 +8,7 @@
 #include "core/daylight.hpp"
 #include "core/effect_exe.hpp"
 #include "core/effect_light.hpp"
+#include "core/portal.hpp"
 #include "core/foliage.hpp"
 #include "core/game_camera.hpp"
 #include "core/scale.hpp"
@@ -112,16 +113,18 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         told = true;
         return;
     }
-    // 2.7.48: the new portal (torches.cpp drawNewPortals) where the game's is - its draws noted for its place only
+    // 2.7.48: the new portal (torches.cpp drawNewPortals) where the game's is - its draws noted for its place only.
+    // 2.7.49 (the tester: «порталы не нарисовались»): noted whatever the lights' pass did this frame (drawn the next),
+    // left out only while the new one was drawn the frame before - never no portal (portal::hidesGame)
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && newPortalWanted()) {
-        if (!torchDone) notePortal(rec, d);
+        notePortal(rec, d);
         const int id = int(d.effectId);
         if (portalIdsTold.size() < 16 &&
             std::find(portalIdsTold.begin(), portalIdsTold.end(), id) == portalIdsTold.end()) {
             portalIdsTold.push_back(id);
             LOG_INFO("portals: the game's effect %d drawn anew - the new portal (on %s)", id, mapName.c_str());
         }
-        return;
+        if (portal::hidesGame(true, newPortalsDrawnLast)) return;
     }
     // 0.21: the world done - at the interface - its colours, then its glow.
     if (s.ui && !upscale && !finishWorld()) return;
@@ -136,7 +139,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (softAdd) laid.srcBlend = d3d7::BLEND_INVDESTCOLOR;
     // 0.26: the fire of skills (a fire-coloured picture added on) lights around it once the world is drawn.
     // 0.38: a portal's draw: its middle, for its glow and its swirl once the world is drawn.
-    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted() && !torchDone) notePortal(rec, d);
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted() && !newPortalWanted() && !torchDone)
+        notePortal(rec, d);
     // 0.36: the other skills light too, in their pictures' colours - not the aura, the maps' objects (their own).
     // 2.7.21: an orb of light (Ruwach's, Sight's: effect_light::orbOf by the effect's number) whatever its blend - the
     // game lays it over the world as a sprite, its picture the sprite cache's (the tester: «рувотч не светит»)

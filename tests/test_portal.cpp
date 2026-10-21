@@ -63,3 +63,11 @@ TEST(portal_screen_box_round_its_column) {
     const float behind[3] = {0.0f, 0.0f, -10.0f};
     CHECK(!portal::screenBox(behind, up, p, 45.0f, box));
 }
+
+TEST(portal_game_portal_hidden_only_while_ours_was_drawn) {
+    // 2.7.49 (the tester on 2.7.48: «порталы не нарисовались» - the game's hidden, ours never drawn): the game's
+    // portal is left out only while the new one was drawn the frame before - never no portal at all
+    CHECK(portal::hidesGame(true, true));
+    CHECK(!portal::hidesGame(true, false));
+    CHECK(!portal::hidesGame(false, true));
+}

@@ -1534,6 +1534,18 @@ float4 portal_ps(PresentOut i) : SV_Target {
     float raw = sceneDepth.Load(int3(wp, 0));
     float3 p = viewFrom(wp, raw);
     float3 foot = sourceRect.xyz, up = fogColor.xyz;
+    // 2.7.49 (the tester on 2.7.48: «порталы не нарисовались»): the foot set on the ground the picture's depth shows -
+    // the lowest of five points round it on the screen, the ground and not who stands there (the map's file or the
+    // guess under its middle may be units off: the walls stood under the ground)
+    float perFoot = f0 * scale / max(foot.z, 1.0);
+    float lowest = 1e9;
+    [unroll] for (int s = 0; s < 5; ++s) {
+        float2 o = float2(s == 1 ? 1.0 : s == 2 ? -1.0 : 0.0, s == 3 ? 1.0 : s == 4 ? -1.0 : 0.0);
+        int2 q = clamp(int2(uiPixels.zw + o * 6.0 * perFoot), int2(0, 0), int2(uiPixels.xy) - 1);
+        float rq = sceneDepth.Load(int3(q, 0));
+        if (rq < 0.99999) lowest = min(lowest, dot(viewFrom(q, rq) - foot, up));
+    }
+    if (abs(lowest) < 20.0) foot += up * lowest;
     float strength = sourceRect.w, night = fogColor.w, time = sourceClamp.z;
     float3 rel = p - foot;
     float y = dot(rel, up);

@@ -871,14 +871,23 @@ void Renderer11::applyTorchLight() {
                 if (std::hypot(v[0] - t.view[0], v[1] - t.view[1], v[2] - t.view[2]) <= 30.0f)
                     std::copy(v, v + 3, foot);
             }
-            float box[4];
-            if (!portal::screenBox(foot, up, proj, 45.0f, box)) continue;
+            float box[4], low[3];
+            for (int i = 0; i < 3; ++i) low[i] = foot[i] - up[i] * 12.0f;  // 2.7.49: its foot may sit lower (portal_ps)
+            if (!portal::screenBox(low, up, proj, 69.0f, box)) continue;
             std::copy(foot, foot + 3, pc.sourceRect);
             pc.sourceRect[3] = shown * user;
             pc.footprint = float(++index) * 0.618f;  // its own sparks
             pc.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f;
             pc.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f;
+            if (portalsToldMap_ != map_) {  // 2.7.49: its numbers once a map, to check where it stands
+                portalsToldMap_ = map_;
+                LOG_INFO("portals: the new one drawn on %s (Direct3D 11) - its middle %.1f %.1f %.1f (the view), its "
+                         "foot %.1f under it, %.2f shown", map_.c_str(), t.view[0], t.view[1], t.view[2],
+                         (t.view[0] - foot[0]) * up[0] + (t.view[1] - foot[1]) * up[1] + (t.view[2] - foot[2]) * up[2],
+                         shown);
+            }
             cut(pc, box[0] * k, box[1] * k, box[2] * k, box[3] * k);
+            newPortalsDrawn_ = true;
         }
         ctx_->PSSetShaderResources(0, 4, none);
     }

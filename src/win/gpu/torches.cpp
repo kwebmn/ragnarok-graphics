@@ -1223,7 +1223,10 @@ bool Renderer::Impl::drawNewPortals(ID3D12Resource* dst, D3D12_RESOURCE_STATES& 
         if (shown <= 0.0f) continue;
         float foot[3], box[4];
         portalFoot(t, up, foot);
-        if (!portal::screenBox(foot, up, proj, 45.0f, box)) continue;
+        // 2.7.49: portal_ps sets its foot on the ground the picture's depth shows - the box a dozen units lower too
+        float low[3];
+        for (int i = 0; i < 3; ++i) low[i] = foot[i] - up[i] * 12.0f;
+        if (!portal::screenBox(low, up, proj, 69.0f, box)) continue;
         const D3D12_RECT around = clipped(box[0] * k + jx, box[1] * k + jy, box[2] * k + jx, box[3] * k + jy, w, h);
         if (around.right <= around.left || around.bottom <= around.top) continue;
         std::copy(foot, foot + 3, c.sourceRect);
@@ -1231,8 +1234,18 @@ bool Renderer::Impl::drawNewPortals(ID3D12Resource* dst, D3D12_RESOURCE_STATES& 
         c.footprint = float(++index) * 0.618f;  // its own sparks
         c.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f + jx;
         c.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f + jy;
+        if (portalsToldMap != mapName) {  // 2.7.49: its numbers once a map, to check where it stands
+            portalsToldMap = mapName;
+            LOG_INFO("portals: the new one drawn on %s - its middle %.1f %.1f %.1f (the view), its foot %.1f under it, "
+                     "on the screen %ld,%ld-%ld,%ld of %dx%d, %.2f shown, rings %.1f %.1f %.1f",
+                     mapName.c_str(), t.view[0], t.view[1], t.view[2],
+                     (t.view[0] - foot[0]) * up[0] + (t.view[1] - foot[1]) * up[1] + (t.view[2] - foot[2]) * up[2],
+                     long(around.left), long(around.top), long(around.right), long(around.bottom), w, h, shown,
+                     rings[0].radius, rings[1].radius, rings[2].radius);
+        }
         if (!effectPass(portalPipelines[code], dst, dstState, rtv, w, h, c, sceneColorSrv, true, kNoSrv, &around))
             return false;
+        newPortalsDrawn = true;
     }
     return true;
 }
