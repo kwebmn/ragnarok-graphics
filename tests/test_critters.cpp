@@ -266,3 +266,32 @@ TEST(critters_birds_never_settle_on_the_water) {
     CHECK_EQ(any, 0);
 }
 
+
+TEST(critters_breath_shows_in_the_snow) {
+    // 2.7.42 (the tester in Lutie: «пара не вижу» on 2.7.40 and 2.7.41): a character standing in the snow breathes a
+    // puff every 2.6 s, at its head (6.2 units over its feet)
+    critters::World w;
+    w.setPlace(living::placeOf("xmas", true, false));
+    critters::Switches on;
+    on.breath = true;
+    critters::Frame f;
+    f.centreKnown = true;
+    f.centre = critters::Point{100.0f, 0.0f, 100.0f};
+    f.feet.push_back(critters::Point{100.0f, 0.0f, 100.0f});
+    f.dt = 0.05f;
+    int puffs = 0, frames = 0;
+    for (int i = 0; i < 120; ++i) {  // six seconds
+        f.now += 0.05;
+        w.update(on, f);
+        bool any = false;
+        for (const critters::Sprite& s : w.sprites())
+            if (s.kind == critters::Puff) {
+                any = true;
+                CHECK(s.at.y < -4.0f);  // up is -y: at the head, not the feet
+                CHECK(s.alpha > 0.0f);
+            }
+        frames += any ? 1 : 0;
+        puffs += any ? 1 : 0;
+    }
+    CHECK(frames > 20);  // seen a good part of the time
+}

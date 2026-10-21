@@ -2959,7 +2959,7 @@ void Renderer11::applyCritters() {
         t0[0] = sx;
         t0[1] = sy;
         t0[2] = std::max(size, 1.0f);
-        t0[3] = v[2];
+        t0[3] = s.kind == critters::Puff ? v[2] - 6.0f : v[2];  // 2.7.42 (critters.cpp): before its own character
         float* t1 = data[4 * n + 1];
         t1[0] = float(s.kind);
         t1[1] = s.p1;

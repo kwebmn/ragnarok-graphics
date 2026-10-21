@@ -1865,7 +1865,8 @@ float4 grass_ps(PresentOut i) : SV_Target {
 
 // 1.7, the ground of the living world (ao.cpp applyGroundLife), before the characters, blended over by its alpha:
 // twinX sand drifting over desert ground in the wind (sand_drift), twinY snow glittering (snow_sparkle), twinW the
-// walls of a damp cave with water running down them where light falls (wet_walls). sharpen the time;
+// walls of a damp cave with water running down them where light falls (wet_walls), twinH 1 under uaRO Studio's X-ray
+// (2.7.42, diagnostics: the snow it finds tinted, each glint's place a red dot, unblinking). sharpen the time;
 // r0-r11 the view -> the world; the picture's copy t2.
 float4 ground_life_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
@@ -1893,6 +1894,10 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
         // 2.7.41 (the tester in Lutie: «іскристий сніг не работает»): cells a third of a unit across gave dots a
         // fraction of a pixel wide, white on white snow - none was seen. Now a glint every unit or so, a pixel or two
         // across with a short four-pointed cross, tinted as light through ice - blue, gold, rose - to show on white.
+        if (twinH > 0.5) {  // 2.7.42: the X-ray - the snow found tinted
+            o = lerp(o, float3(1.0, 0.4, 1.0), 0.25);
+            a = max(a, 0.25);
+        }
         float2 gw = w.xz * 1.25;
         float2 cell = floor(gw);
         float seed = hash12(cell);
@@ -1904,6 +1909,10 @@ float4 ground_life_ps(PresentOut i) : SV_Target {
             float star = max(exp(-af.y * af.y / 0.0009) * exp(-af.x / 0.12),
                              exp(-af.x * af.x / 0.0009) * exp(-af.y / 0.12));
             float g = saturate(core + 0.8 * star) * tw * twinY;
+            if (twinH > 0.5) {  // 2.7.42: the X-ray - the place whether it blinks or not
+                o = lerp(o, float3(1.0, 0.0, 0.0), saturate(core * 2.0));
+                a = max(a, saturate(core * 2.0));
+            }
             float hue = frac(seed * 37.0);
             float3 ice = hue < 0.4   ? float3(0.55, 0.78, 1.0)
                          : hue < 0.7 ? float3(1.0, 0.86, 0.5)

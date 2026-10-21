@@ -409,6 +409,7 @@ bool Renderer::Impl::applyGroundLife() {
     c.twin[0] = effects.sandDrift && mapPlace.sand ? 1.0f : 0.0f;
     c.twin[1] = effects.snowSparkle && mapPlace.snow ? 1.0f - 0.6f * night : 0.0f;
     c.twin[2] = effects.wetWalls && mapPlace.cave ? 1.0f : 0.0f;
+    c.twin[3] = xray ? 1.0f : 0.0f;  // 2.7.42: under the X-ray, where it finds snow and every glint's place
     if (seasonsShown()) {  // 1.20; 2.4: the snow and the grass each a box of its own, autumn's leaves gone (.y 0)
         c.sourceRect[0] = effects.seasonSnow ? mapYear.snow : 0.0f;
         c.sourceRect[2] = effects.seasonGrass ? mapYear.dry : 0.0f;
