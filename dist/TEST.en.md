@@ -1,3 +1,13 @@
+# uaRO Graphics 2.7.42 — to check
+
+- **Breath shows.** A puff rose at the character's head, but the character's own sprite is drawn nearer the camera
+  and hid all of it but its rim over the snow, and grey-blue on white does not show. Now the puff is before its own
+  character.
+- **Glittering snow - a check.** Still no glints, though by the count there should be hundreds. To find where they are
+  lost: in Lutie by day, Weather - Clear (no snowfall), turn on Ctrl+Shift+F9 ("X-ray of the AI pictures") - the snow
+  the driver knows turns pinkish, red dots where the glints should be. Send a report and turn the X-ray off with the
+  same Ctrl+Shift+F9.
+
 # uaRO Graphics 2.7.41 — to check
 
 - **"Glittering snow" shows.** The glints were under a pixel across and white on white snow - none was seen. Now a
