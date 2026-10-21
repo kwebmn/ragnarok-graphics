@@ -223,10 +223,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     cmd.effectSeed = tag.seed;
     cmd.effectId = tag.id;  // 2.7.21: Ruwach's orbs light by it
     const EffectSettings& fx = c.effects();  // 2.5.11: made once a change, not each draw
-    // 0.37: the skills likewise, by their own slider; 2.7.37: softer at night (the tester on Magnus at night: «не
-    // нравится, слишком ярко, надо сделать спокойнее»)
+    // 0.37: the skills likewise, by their own slider. (2.7.37's night that made them softer still gone in 2.7.46 -
+    // with 2.7.38's soft adding they do not burn white, and the tester found them «тусклые»)
     const bool aura = fx.aura && fx.auraBrightness < 100 && tag.kind == effect_exe::Kind::Aura;
-    const int skillPercent = effect_exe::skillPercent(fx.skillBrightness, c.nightNow());
+    const int skillPercent = std::clamp(fx.skillBrightness, 0, 100);
     // 2.7.39 (the tester: «как светится персонаж во время каста не устраивает»): a casting quieter still
     const int drawPercent = effect_exe::isCasting(tag.id) ? effect_exe::castPercent(skillPercent) : skillPercent;
     const bool skill = fx.skillsSoft && drawPercent < 100 && tag.kind == effect_exe::Kind::Skill;
@@ -239,7 +239,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         soft_.assign(bytes, bytes + size_t(vertexCount) * FrameRecord::stride(fvf));
         effect_exe::soften(soft_.data(), vertexCount, FrameRecord::stride(fvf),
                            aura ? fx.auraBrightness : drawPercent,
-                           effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend));
+                           aura ? effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend)
+                                : effect_exe::softenSkill(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();
     }
     if (c.enhanced()) {  // 2.7.37: what of the bright draws is made softer, now and then in the log

@@ -40,8 +40,6 @@ public:
     // time they were 2 % of the game's thread with Direct3D 11
     const EffectSettings& effects() const;
     void settingsChanged() { effectsMade_ = false; }  // `config` replaced
-    // 2.7.37: how much night it is this frame (EffectSettings::nightNow by the clock) - the skills softer at night
-    int nightNow() const { return nightNow_; }
     gpu::Renderer* renderer = nullptr;
     FrameRecord record;
     int screenWidth = 0;
@@ -116,7 +114,6 @@ private:
     bool enhanced_ = true;
     mutable EffectSettings effects_;  // 2.5.11: effects(), made from `config`
     mutable bool effectsMade_ = false;
-    int nightNow_ = 0;  // 2.7.37: nightNow()
     // 2.5.20: the light modes (core/light_mode.hpp) - what they take from `config` now, and the laptop's power
     light::Overrides light_;
     bool onBattery_ = false;

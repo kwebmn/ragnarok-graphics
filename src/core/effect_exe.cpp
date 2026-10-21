@@ -116,6 +116,11 @@ Soften softenFor(bool blend, uint32_t srcBlend, uint32_t dstBlend) {
     return Soften::None;
 }
 
+Soften softenSkill(bool blend, uint32_t srcBlend, uint32_t dstBlend) {
+    if (blend && srcBlend == d3d7::BLEND_SRCALPHA && dstBlend == d3d7::BLEND_INVSRCALPHA) return Soften::None;
+    return softenFor(blend, srcBlend, dstBlend);
+}
+
 void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Soften how) {
     if (!vertices || stride < 20 || percent >= 100 || how == Soften::None) return;
     const float f = float(std::max(percent, 0)) / 100.0f;
@@ -137,10 +142,6 @@ void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Sof
     }
 }
 
-int skillPercent(int brightness, int night) {
-    const float dark = float(std::clamp(night, 0, 100)) / 100.0f;
-    return int(float(std::clamp(brightness, 0, 100)) * (1.0f - 0.4f * dark) + 0.5f);
-}
 
 bool softAdd(bool skillsSoft, bool addsLight, uint8_t kind, uint32_t srcBlend) {
     return skillsSoft && addsLight && kind == uint8_t(Kind::Skill) &&

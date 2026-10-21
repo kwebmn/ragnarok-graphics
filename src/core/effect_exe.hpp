@@ -65,9 +65,9 @@ enum class Soften : uint8_t { None, Colour, Alpha, White };
 Soften softenFor(bool blend, uint32_t srcBlend, uint32_t dstBlend);
 // A draw's TL vertices (`stride` bytes each, the diffuse colour at byte 16) made `percent` % as strong, `how`.
 void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Soften how);
-// 2.7.37: how bright the skills are drawn, % of the game's - «Skills' brightness» (0-100) with the night now (0-100,
-// 200 «Deep night»): the world goes dark at night and the skills did not
-int skillPercent(int brightness, int night);
+// 2.7.46: how a skill's draw is made softer - as softenFor, but one laid over by its alpha (SRCALPHA, INVSRCALPHA)
+// not at all: it adds no light, made softer it only went see-through (the tester: «скилы ... сильно прозрачные»)
+Soften softenSkill(bool blend, uint32_t srcBlend, uint32_t dstBlend);
 // 2.7.38: whether a draw's added light is laid over softly - the target's colour its factor (1 - under), the lighter
 // the picture under it the less it adds - with «Skills that do not blind» on: a skill's that adds light by ONE or by
 // its alpha (premultiplied in the shader then)

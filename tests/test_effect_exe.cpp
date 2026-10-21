@@ -222,16 +222,16 @@ TEST(effect_exe_soft_particles_but_not_a_hit_flash) {
     CHECK(!effect_exe::softEffect(true, uint8_t(Kind::Glint)));
 }
 
-TEST(effect_exe_skills_softer_at_night) {
-    // 2.7.37 (the tester on 2.7.36's Magnus at night: «не нравится, слишком ярко, надо сделать спокойнее»): at night
-    // the world goes dark and the skills did not - «Skills' brightness» down to 60 % of itself in the whole night
-    // (nightNow 100; «Deep night» 200 the same), by day as it is
-    CHECK_EQ(effect_exe::skillPercent(50, 0), 50);
-    CHECK_EQ(effect_exe::skillPercent(50, 100), 30);
-    CHECK_EQ(effect_exe::skillPercent(50, 200), 30);
-    CHECK_EQ(effect_exe::skillPercent(80, 50), 64);
-    CHECK_EQ(effect_exe::skillPercent(100, 100), 60);  // softer at night even when the slider is full
-    CHECK_EQ(effect_exe::skillPercent(100, 0), 100);
+TEST(effect_exe_skills_laid_over_stay_solid) {
+    // 2.7.46 (the tester at night: «скилы какие-то тусклые получились, сильно прозрачные»): a skill's picture laid over
+    // by its alpha (SRCALPHA, INVSRCALPHA) adds no light and blinds no one - made softer by its alpha it only went
+    // see-through; it stays as the game draws it. What adds light is made softer as before.
+    using effect_exe::Soften;
+    CHECK(effect_exe::softenSkill(true, d3d7::BLEND_SRCALPHA, d3d7::BLEND_INVSRCALPHA) == Soften::None);
+    CHECK(effect_exe::softenSkill(true, d3d7::BLEND_SRCALPHA, d3d7::BLEND_ONE) == Soften::Alpha);
+    CHECK(effect_exe::softenSkill(true, d3d7::BLEND_ONE, d3d7::BLEND_ONE) == Soften::Colour);
+    CHECK(effect_exe::softenSkill(true, d3d7::BLEND_ZERO, d3d7::BLEND_SRCCOLOR) == Soften::White);
+    CHECK(effect_exe::softenSkill(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO) == Soften::None);
 }
 
 TEST(effect_exe_skills_laid_over_softly) {
