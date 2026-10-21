@@ -753,6 +753,13 @@ private:
     // 2.5.21: the picture into scene_, made of its size and format first (CopyResource between two formats copies
     // nothing: super-light's 16-bit world gave the passes an old copy); false: no memory for it
     bool copyScene();
+    // 2.7.47: the picture before the night (applyNight copies scene_ into it, keepDay) - the light gives a surface its
+    // own colours back from it (torch_light_ps, t0); dayKept_ this frame's, with the tint and the saturation
+    // night_ps gave it
+    Target day_;
+    bool dayKept_ = false;
+    float dayTint_[3] = {1.0f, 1.0f, 1.0f}, daySaturation_ = 0.0f;
+    void keepDay(const Constants& c);
     EffectSettings effects_;
     std::string map_;
     trees::Season season_ = trees::Season::Green;

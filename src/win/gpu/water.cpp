@@ -32,7 +32,9 @@ void Renderer::Impl::releaseScene() {
     Slot& s = slots[slot];  // what the open list recorded may still read them
     if (sceneColor) s.garbage.push_back(sceneColor);
     if (sceneDepth) s.garbage.push_back(sceneDepth);
-    sceneColor = sceneDepth = nullptr;
+    if (dayColor) s.garbage.push_back(dayColor);  // 2.7.47: made again at the new size when wanted
+    sceneColor = sceneDepth = dayColor = nullptr;
+    dayKept = dayFailed = false;
     sceneWidth = sceneHeight = 0;
     waterReady = false;
 }

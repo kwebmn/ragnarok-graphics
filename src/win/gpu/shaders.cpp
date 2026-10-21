@@ -1168,20 +1168,25 @@ float4 night_ps(PresentOut i) : SV_Target {
     // от лунного света», 2.7.18's about 30 % of the day's light «не играбельно»): the night's main light - the map
     // bright under it, silver-blue and muted, about 60 % of the day's light (the deep night's about 53 %); never
     // darker than the night without it, nor brighter than the day
-    float3 moon = lerp(float3(l, l, l), c, 0.35) * float3(0.62, 0.74, 1.0) * lerp(0.82, 0.72, saturate(footprint)) *
-                  twinH;
     // 2.7.20: the moon's beams where the map is drawn (sourceRect.y their strength, 0-1; sourceRect.z the time; the
     // depth t3, the view's place in the world r0-r11): 1.56 times the moonlight in them, 0.86 between - the map as
     // bright as before on the whole (a fifth of it in the beams)
+    float beam = 0.0, lift = 1.0;
     if (sourceRect.y > 0.0) {
         float raw = sceneDepth.Load(int3(int2(i.pos.xy), 0));
         if (raw < 0.99999) {
             float3 v = viewFrom(int2(i.pos.xy), raw);
             float3 w =
                 v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
-            moon *= 1.0 + sourceRect.y * (0.7 * moonBeam(w.xz, sourceRect.z) - 0.14);
+            beam = sourceRect.y * moonBeam(w.xz, sourceRect.z);
+            lift = 1.0 + 0.7 * beam - 0.14 * sourceRect.y;
         }
     }
+    // 2.7.47 (the user: «хотелось бы, чтобы ... в лунном луче цвета нормальными становились»): in a beam's middle the
+    // colours come back - 60 % of them, not 35 %, and the silver less blue (as bright: its luminance kept)
+    float3 tint = lerp(float3(0.62, 0.74, 1.0), float3(0.662, 0.740, 0.871), beam);
+    float3 moon = lerp(float3(l, l, l), c, 0.35 + 0.25 * beam) * tint * lerp(0.82, 0.72, saturate(footprint)) * twinH *
+                  lift;
     night = min(max(night, moon), max(c, float3(l, l, l)));
     // 2.7.17: what stays bright is a light - a fire's, a lamp's, a spell's colour - not a white flower, pale hair or
     // stone: under «Глибока ніч» the meadow's flowers stood out of the dark as stars on the ground
@@ -1278,10 +1283,23 @@ GlowOut water_glow_ps(WaterIn i) {
 // white) and its own colour a third under the light's. 0.23.3's lift - the darks 3.4 times, the mid-tones up to 0.9 -
 // pressed the stones' faces into one even orange (a lighter stone came out darker than a duller one: 0.5 -> 0.86, 0.7
 // -> 0.7), and the light's colour took the surface's whole.
-float3 litSurface(float3 sc, float lum, float3 colour) {
+// 2.7.47 (R-PH6H7S, the Wizard by a Fire Wall at deep night: «скин персонажа просто поменял цвет»; the user: «хотелось
+// бы, чтобы когда появляется свет, то цвета у персонажа становились нормальные»): in its own colours - the picture's
+// before the night (day; fogColor.rgb the time of day's and the region's tint night_ps gave it, fogColor.a the
+// region's saturation, sourceClamp.x the lightning) warmed by half the light's colour. 2.7.31 took a third of the hue
+// from the night's grey-blue and the rest from the light: a dark robe came out pale pink, the grass by a fire brown.
+// Under the open sky at night (twinH) no brighter than by day, a tenth over at most: the darks lifted fourfold out of
+// the night flattened a figure.
+float3 litSurface(float3 day, float lum, float3 colour) {
     const float3 luma = float3(0.2126, 0.7152, 0.0722);
+    float3 base = day * fogColor.rgb;
+    float g = dot(base, luma);
+    base = max(lerp(float3(g, g, g), base, 1.0 + fogColor.a), 0.0);
+    base += (base * 1.3 + float3(0.10, 0.11, 0.15)) * sourceClamp.x;
+    float b = dot(base, luma);
     float target = lum * 4.0 / (1.0 + lum * 3.0);
-    float3 hue = lerp(colour / max(dot(colour, luma), 0.05), sc / max(lum, 1e-3), 0.3);
+    target = lerp(target, min(target, b * 1.1), twinH);
+    float3 hue = base / max(b, 1e-3) * lerp(float3(1.0, 1.0, 1.0), colour / max(dot(colour, luma), 0.05), 0.5);
     return hue * (target / max(dot(hue, luma), 1e-3));
 }
 
@@ -1352,10 +1370,11 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
     float3 sc = sceneColor.Load(int3(wp, 0)).rgb;
     const float3 luma = float3(0.2126, 0.7152, 0.0722);
     float lum = dot(sc, luma);
-    float w = (1.0 - exp(-2.4 * light)) * (1.0 - 0.6 * smoothstep(0.3, 0.8, lum));
+    // 2.7.47: at night under the open sky (twinH) a light surface too - the night's grey-blue gone from it
+    float w = (1.0 - exp(-2.4 * light)) * (1.0 - 0.6 * smoothstep(0.3, 0.8, lum) * (1.0 - twinH));
     if (w < 0.004) discard;
     colour /= max(light, 1e-4);
-    float3 warm = litSurface(sc, lum, colour);  // 2.7.31: the surface's own steps and colour kept
+    float3 warm = litSurface(tex0.Load(int3(wp, 0)).rgb, lum, colour);  // 2.7.47: t0 the picture before the night
     // 2.5.17: a triangular noise of a step either way against the rings an 8-bit picture shows in a wide soft light
     // (a skill's fire round a character, R-HNEYBN)
     float3 lit = lerp(sc, saturate(warm), w * 0.9);
@@ -1436,7 +1455,8 @@ float4 torch_accum_ps(TorchIn i) : SV_Target {
     return float4(c.rgb * a, a);
 }
 
-// The buffer's sums (tex0) into the picture's copy (t2), as torch_light_ps ended.
+// The buffer's sums (tex0) into the picture's copy (t2), as torch_light_ps ended; 2.7.47: tex1 the picture before the
+// night, the lit surfaces' own colours.
 float4 torch_apply_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     float4 sum = tex0.Load(int3(wp, 0));
@@ -1445,10 +1465,10 @@ float4 torch_apply_ps(PresentOut i) : SV_Target {
     float3 sc = sceneColor.Load(int3(wp, 0)).rgb;
     const float3 luma = float3(0.2126, 0.7152, 0.0722);
     float lum = dot(sc, luma);
-    float w = (1.0 - exp(-2.4 * light)) * (1.0 - 0.6 * smoothstep(0.3, 0.8, lum));
+    float w = (1.0 - exp(-2.4 * light)) * (1.0 - 0.6 * smoothstep(0.3, 0.8, lum) * (1.0 - twinH));  // 2.7.47
     if (w < 0.004) discard;
     float3 colour = sum.rgb / max(light, 1e-4);
-    float3 warm = litSurface(sc, lum, colour);  // 2.7.31 (torch_light_ps)
+    float3 warm = litSurface(tex1.Load(int3(wp, 0)).rgb, lum, colour);  // 2.7.47: t1 the picture before the night
     // 2.5.17: a triangular noise of a step either way against the rings an 8-bit picture shows in a wide soft light
     // (a skill's fire round a character, R-HNEYBN)
     float3 lit = lerp(sc, saturate(warm), w * 0.9);

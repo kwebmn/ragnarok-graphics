@@ -268,7 +268,35 @@ bool Renderer::Impl::applyNight() {
     c.sourceRect[0] = flashNow();  // 0.80
     c.uiPixels[0] = float(sceneWidth);
     c.uiPixels[1] = float(sceneHeight);
+    if (torchDue()) keepDay(c);  // 2.7.47: for the lights after it
     return worldPass(nightPipelines[code], sceneWidth, sceneHeight, c, sceneColorSrv, true);
+}
+
+// 2.7.47: the picture before the night (the copy applyNight has just made) kept in dayColor with the look night_ps
+// gives it (c: its tint, the region's saturation, the lightning) - the lights give a surface its own colours from it
+void Renderer::Impl::keepDay(const Constants& c) {
+    if (dayFailed) return;
+    if (!dayColor) {
+        dayColor = createTexture2D(device, sceneWidth, sceneHeight, 1, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                   D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+        if (!dayColor) {
+            LOG_ERROR("lights: no video memory for the picture before the night at %dx%d: lit in the night's colours",
+                      sceneWidth, sceneHeight);
+            dayFailed = true;  // until the next size
+            return;
+        }
+        dayColorState = D3D12_RESOURCE_STATE_COPY_DEST;
+        device->CreateShaderResourceView(dayColor, nullptr, cpuSrvHandle(dayColorSrv));
+    }
+    transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    transition(dayColor, dayColorState, D3D12_RESOURCE_STATE_COPY_DEST);
+    list->CopyResource(dayColor, sceneColor);
+    transition(dayColor, dayColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    transition(sceneColor, sceneColorState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    std::copy(c.twin, c.twin + 3, dayTint);
+    daySaturation = c.sourceRect[3];
+    dayFlash = c.sourceRect[0];
+    dayKept = true;
 }
 
 float Renderer::Impl::flashNow() const {

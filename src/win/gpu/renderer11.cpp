@@ -111,6 +111,7 @@ Renderer11::~Renderer11() {
     dropTarget(target_);
     dropTarget(game_);
     dropTarget(scene_);
+    dropTarget(day_);  // 2.7.47
     drop(dsv_);
     drop(depth_);
     drop(staging_);
@@ -2117,7 +2118,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
     aoDone_ = false;  // 2.5.1
     fireSparks_.clear();
-    lightDone_ = nightDone_ = false;  // 0.61, 0.63
+    lightDone_ = nightDone_ = dayKept_ = false;  // 0.61, 0.63, 2.7.47
     mistDone_ = weatherDone_ = false;  // 2.5
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
@@ -2200,7 +2201,22 @@ void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its streng
         c.sourceRect[1] = 1.0f;
         c.sourceRect[2] = waterTime();
     }
-    worldPass(nightPs_, c, 1, 0, beams ? depthSrv_ : nullptr);
+    if (!copyScene()) return;
+    if (torchesWanted()) keepDay(c);  // 2.7.47: for the light after it
+    worldPass(nightPs_, c, 2, 0, beams ? depthSrv_ : nullptr);  // the copy just made
+}
+
+// 2.7.47: the picture before the night (scene_, the copy applyNight has just made) kept in day_ with the look night_ps
+// gives it (c: its tint, the region's saturation) - the light gives a surface its own colours from it
+void Renderer11::keepDay(const Constants& c) {
+    if (day_.width != scene_.width || day_.height != scene_.height || day_.format != scene_.format) {
+        dropTarget(day_);
+        if (!makeTarget(day_, scene_.width, scene_.height, scene_.format)) return;  // lit in the night's colours
+    }
+    ctx_->CopyResource(day_.texture, scene_.texture);
+    std::copy(c.twin, c.twin + 3, dayTint_);
+    daySaturation_ = c.sourceRect[3];
+    dayKept_ = true;
 }
 
 void Renderer11::applyGrade() {

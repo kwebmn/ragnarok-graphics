@@ -125,6 +125,18 @@ TEST(effect_light_knows_the_colour_other_skills_light_in) {
     CHECK(effect_light::lightOf(nullptr, 0, 0, c) == 0.0f);
 }
 
+TEST(effect_light_gives_the_days_look_back_under_the_open_sky_at_night) {
+    // 2.7.47 (the user: «хотелось бы, чтобы когда появляется свет, то цвета у персонажа становились нормальные»): how
+    // far a light gives a surface its day's brightness back, no further - outdoors as much as it is night (the deep
+    // night's 200 the whole of it), in a cave or a house never (their torches lift the dark as they did)
+    CHECK(effect_light::dayBack(true, 100) == 1.0f);
+    CHECK(effect_light::dayBack(true, 200) == 1.0f);
+    CHECK(std::fabs(effect_light::dayBack(true, 30) - 0.3f) < 1e-6f);
+    CHECK(effect_light::dayBack(true, 0) == 0.0f);
+    CHECK(effect_light::dayBack(false, 100) == 0.0f);
+    CHECK(effect_light::dayBack(false, 200) == 0.0f);
+}
+
 TEST(effect_light_skills_light_at_night_no_more_than_1_4_times) {
     // 2.7.36 (the tester in Comodo at night: «скилы очень яркие» - Magnus a white blot): the skills' fire light at
     // night up to 1.4 times the day's (2.7.18's 1.8 lit it white), still brighter than by day (the user on 2.7.17:

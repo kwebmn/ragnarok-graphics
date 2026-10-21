@@ -470,6 +470,15 @@ struct Renderer::Impl {
     bool nightDone = false;  // 0.63
     ID3DBlob* nightPs = nullptr;
     ID3D12PipelineState* nightPipelines[4] = {};
+    // 2.7.47: the picture as it was before the night (applyNight copies it, keepDay) - the lights give a surface its
+    // own colours back from it (torch_apply_ps, t1); dayKept this frame's, with the time of day's and the region's
+    // tint, the region's saturation and the lightning night_ps gave it
+    ID3D12Resource* dayColor = nullptr;  // as sceneColor
+    D3D12_RESOURCE_STATES dayColorState = D3D12_RESOURCE_STATE_COPY_DEST;
+    UINT dayColorSrv = 0;
+    bool dayKept = false, dayFailed = false;
+    float dayTint[3] = {1.0f, 1.0f, 1.0f}, daySaturation = 0.0f, dayFlash = 0.0f;
+    void keepDay(const Constants& c);
     // 0.22: the blur along one direction (dof_blur_ps) - the depth of field's, now the bloom's (2.6.11: the depth of
     // field gone at the player's word)
     ID3DBlob* dofBlurPs = nullptr;
@@ -966,6 +975,7 @@ struct Renderer::Impl {
         darknessLaid = false;
         aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
+        dayKept = false;    // 2.7.47
         softCopied = 0;     // 0.67
         waterfallsDone = false;  // 0.65
         torchFlames.clear();

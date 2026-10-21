@@ -1067,8 +1067,15 @@ bool Renderer::Impl::applyTorches() {
             boundTextures = boundSamplers = ~0ull;
             pass = kPassNone;
             transition(torchLight, torchLightState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-            if (!effectPass(torchLightPipelines[code], dst, dstState, rtv, w, h, c, torchLightSrv, true, kNoSrv,
-                            &lit))
+            // 2.7.47: the picture before the night (t1, applyNight's) - a lit surface in its own colours, with the
+            // look night_ps gave it; under the open sky at night no brighter than by day (twinH)
+            Constants lc = c;
+            for (int i = 0; i < 3; ++i) lc.fogColor[i] = dayKept ? dayTint[i] : 1.0f;
+            lc.fogColor[3] = dayKept ? daySaturation : 0.0f;
+            lc.sourceClamp[0] = dayKept ? dayFlash : 0.0f;
+            lc.twin[3] = dayKept ? effect_light::dayBack(mapOutdoors, effects.nightNow) : 0.0f;
+            if (!effectPass(torchLightPipelines[code], dst, dstState, rtv, w, h, lc, torchLightSrv, true,
+                            dayKept ? dayColorSrv : sceneColorSrv, &lit))
                 return false;
         }
     }

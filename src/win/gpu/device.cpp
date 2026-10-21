@@ -1551,6 +1551,7 @@ void Renderer::Impl::destroy() {
     releaseCom(glowAddPs);
     releaseCom(sceneColor);  // 0.19
     releaseCom(sceneDepth);
+    releaseCom(dayColor);  // 2.7.47
     releaseCom(depthCopyPipeline);
     releaseCom(depthCopyMsPipeline);
     releaseCom(waterVs);
@@ -2309,6 +2310,7 @@ bool Renderer::create(std::string& error) {
     m.depthTargetSrv = m.allocSrv();  // 0.19: the target's depth, the picture and depth under the water
     m.sceneColorSrv = m.allocSrv();
     m.sceneDepthSrv = m.allocSrv();
+    m.dayColorSrv = m.allocSrv();  // 2.7.47: the picture before the night
     for (UINT& srv : m.aoSrv) srv = m.allocSrv();  // 0.20: the soft shadows
     for (UINT& srv : m.shadowMaskSrv) srv = m.allocSrv();  // 0.32: the characters' shadows
     m.biasSrv = m.allocSrv();  // 0.22.3: DLSS's mask

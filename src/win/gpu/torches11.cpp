@@ -751,9 +751,15 @@ void Renderer11::applyTorchLight() {
         lc.footprint = float(count);
         lc.sourceRect[0] = effects_.roundLight ? 1.0f : 0.0f;  // 0.84
         lc.sharpen = effects_.rimLight ? 0.6f * float(std::clamp(effects_.rimStrength, 0, 200)) / 100.0f : 0.0f;
+        // 2.7.47: t0 the picture before the night (applyNight's) - a lit surface in its own colours, with the look
+        // night_ps gave it; under the open sky at night no brighter than by day (twinH)
+        for (int i = 0; i < 3; ++i) lc.fogColor[i] = dayKept_ ? dayTint_[i] : 1.0f;
+        lc.fogColor[3] = dayKept_ ? daySaturation_ : 0.0f;
+        lc.sourceClamp[0] = 0.0f;  // no lightning on Direct3D 11
+        lc.twin[3] = dayKept_ ? effect_light::dayBack(outdoors_, effects_.nightNow) : 0.0f;
         ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO, rgb), nullptr, 0xFFFFFFFF);
         ctx_->PSSetShader(torchLightPs_, nullptr, 0);
-        ID3D11ShaderResourceView* views[4] = {nullptr, lightDataSrv_, scene_.srv, depthSrv_};
+        ID3D11ShaderResourceView* views[4] = {dayKept_ ? day_.srv : scene_.srv, lightDataSrv_, scene_.srv, depthSrv_};
         ctx_->PSSetShaderResources(0, 4, views);
         cut(lc, float(lit.left), float(lit.top), float(lit.right), float(lit.bottom));
         ctx_->PSSetShaderResources(0, 4, none);

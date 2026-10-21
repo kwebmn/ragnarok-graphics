@@ -20,6 +20,11 @@ float skillWeight(float w, float night);
 // day (0.26.1: a third of 0.26's), at night up to 1.4 times (2.7.18's 1.8 lit Magnus white, the tester in Comodo:
 // «скилы очень яркие»)
 float skillStrength(float user, float night);
+// 2.7.47: how far a light gives a surface its day's brightness back, no further (shaders.cpp litSurface, twinH):
+// under the open sky as much as it is night (nightNow 0-100, the deep night's 200 the whole of it), in a cave or a
+// house never - their torches lift the dark as they did (the user: «хотелось бы, чтобы когда появляется свет, то
+// цвета у персонажа становились нормальные»: the darks lifted fourfold out of the night flattened a figure)
+float dayBack(bool outdoors, int nightNow);
 // 2.7.21: whether the game's effect `id` (effect_exe::Tag::id) is an orb of light the game lays over the world as a
 // sprite - not added, so neither fireOf nor lightOf ever sees it (the tester: «рувотч не светит»): Ruwach's (33,
 // 이팩트\particle2.spr round the caster, uaRO.exe 0x5CC5D0) pale blue, Sight's (22, its fireball, 0x5CA6F0) fire;
