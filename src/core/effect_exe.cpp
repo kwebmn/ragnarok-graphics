@@ -37,7 +37,7 @@ Tag Owner::faceTag(Tag current, uint32_t flags) const {
 void Owner::clear() { seed_ = 0; }
 
 bool softEffect(bool addsLight, uint8_t kind) {
-    if (kind == uint8_t(Kind::HitFlash)) return false;
+    if (kind == uint8_t(Kind::HitFlash) || kind == uint8_t(Kind::Glint)) return false;
     return addsLight || kind == uint8_t(Kind::Skill) || kind == uint8_t(Kind::Portal);
 }
 

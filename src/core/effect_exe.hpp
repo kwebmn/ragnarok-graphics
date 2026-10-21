@@ -37,8 +37,9 @@ bool isShadowEntry(const uint8_t bytes[6]);
 // 0.38: Portal - the warp NPC's portal (321, warpzone2: rings of effect\ring_blue.tga), the skill's and the like.
 // 2.6.18: Darkness - blindness's (334) and the darkness's levels' (475-484) square round the player
 // (core/blind_exe.hpp): not a skill made softer, laid over the world once its effects are drawn.
-// 2.7.13: HitFlash - not the game's: a monster's sprite drawn again in white over itself, as it is hit (Device7)
-enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow, Skill, Portal, Darkness, HitFlash };
+// 2.7.13: HitFlash - not the game's: a monster's sprite drawn again in white over itself, as it is hit (Device7);
+// 2.7.14: Glint - a card's star on the ground (Device7), likewise
+enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow, Skill, Portal, Darkness, HitFlash, Glint };
 // The level 99 aura: 200, 201 and 202 - its ring (effect\ring_blue.tga), bubbles (effect\pikapika2.bmp) and circle
 // (effect\freezing_circle.bmp) - and 397, 398 and 362, those of the transcendent classes (362: effect\whitelight.tga).
 // The game shows the circles alone unless /aura is on (0x772CE4, 0 at start, not kept): it reads that when it makes
@@ -49,7 +50,7 @@ Kind kindOf(int id);
 
 // 0.67, soft particles: the world's blended draws that fade into what is behind them - added light, a skill's or a
 // portal's picture. 2.7.13: not a hit flash (Kind::HitFlash) - the frame's depth copied with the monster in it put it
-// out wholly (the tester: «не вспыхивает», every hit given to its monster).
+// out wholly (the tester: «не вспыхивает», every hit given to its monster); 2.7.14: nor a card's star (Kind::Glint).
 bool softEffect(bool addsLight, uint8_t kind);
 
 // 0.39.1: how a draw is made softer, by how it blends (the game's draws multiply the texture by the vertices' colour

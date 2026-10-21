@@ -348,6 +348,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         add.stage[1].colorOp = add.stage[1].alphaOp = d3d7::TOP_DISABLE;
         DrawCmd bar;
         bar.state = c.record.addState(add);
+        bar.effect = uint8_t(effect_exe::Kind::Glint);  // 2.7.14: no soft particle - at the card's depth it went out
         bar.primitive = d3d7::PT_TRIANGLESTRIP;
         bar.fvf = d3d7::FVF_TL1;
         c.record.draw(bar, star, 4, nullptr, 0);
