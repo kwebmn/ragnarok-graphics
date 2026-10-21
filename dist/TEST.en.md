@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.49 — to check
+
+- **The new portal was not drawn** (2.7.48 left the game's portal out and the new one never came). Fixed:
+  - the driver notes the game's portal even when the game draws it after the lights' pass;
+  - the new portal stands on the ground the picture's depth shows, not only the map's file, so its walls do not sink
+    under the ground.
+- **A safeguard:** the game's portal is left out only while the new one was drawn the frame before. There is never no
+  portal at all.
+- To check at the door in Prontera. The log gets a line "portals: the new one drawn on …" with its place and its size
+  on the screen.
+
 # uaRO Graphics 2.7.48 — to check
 
 - **New portal** ("New portal", a part of "Portals", on). The game's portal drawn anew: the same three waves of light
