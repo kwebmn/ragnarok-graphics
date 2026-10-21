@@ -85,6 +85,20 @@ TEST(effect_exe_knows_the_faces_of_an_effect_by_their_vertices) {
     CHECK(f.of(0x2000000).kind == Kind::None);
 }
 
+TEST(effect_exe_knows_an_orbs_sprites_from_their_shadows) {
+    // 2.7.27 (2.7.26's log: «18 of Ruwach's sprites, 0 the orb's own» - the sprite cache's cells know no effect's
+    // file): a primitive's height over its effect (kPrimLift: Ruwach's orbs -10, their shadows 0, uaRO.exe 0x5CC5D0)
+    // goes with its faces, with the effect's number
+    CHECK_EQ(effect_exe::kPrimLift, 0x35Cu);
+    effect_exe::Faces f;
+    effect_exe::Tag orb{Kind::Skill, 5, false, 33};
+    orb.raised = true;
+    f.note(0x3000000, orb);
+    f.note(0x3000020, effect_exe::Tag{Kind::Skill, 6, false, 33});
+    CHECK(f.of(0x3000000).raised && f.of(0x3000000).id == 33);
+    CHECK(!f.of(0x3000020).raised && f.of(0x3000020).id == 33);
+}
+
 TEST(effect_exe_faces_of_a_crowded_frame_and_the_next) {
     // 2.5.20: a flat table, cleared by the frame's stamp - thousands of faces, grown on the way, frame after frame
     effect_exe::Faces f;

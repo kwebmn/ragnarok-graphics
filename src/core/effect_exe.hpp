@@ -18,6 +18,9 @@ constexpr uint32_t kPrimSize = 0xF9E4;
 constexpr uint32_t kPrimMaster = 0xF8;
 constexpr uint32_t kEffectVtable = 0x69F9CC;
 constexpr uint32_t kEffectId = 0x100;
+// 2.7.27: a primitive's height over its effect's place (a float, y down positive: FUN_00612de0 adds it to the
+// effect's) - Ruwach's orbs -10, their shadows on the ground 0 (FUN_005CC5D0)
+constexpr uint32_t kPrimLift = 0x35C;
 // 0.37: an effect's own Render (FUN_005c25a0, thiscall: the view matrix) - its STR animation's layers; its vtable
 // entry.
 constexpr uint32_t kEffectRender = 0x5C25A0;
@@ -69,6 +72,7 @@ struct Tag {
     uint8_t seed = 0;
     bool auraExtra = false;  // 0.63: the aura's ring or bubbles (auraExtra): what /aura shows
     uint16_t id = 0;         // 2.7.21: the effect's own number (kEffectId; 0 none) - Ruwach's orbs light by it
+    bool raised = false;     // 2.7.27: its primitive lifted over the effect's place (kPrimLift) - not a shadow
 };
 // 0.63: the level 99 aura's parts /aura turns on - the ring and bubbles (200, 201; 397, 398 transcendent), not the
 // circles (202, 362) the game always shows - and where the game keeps /aura (0 off; read only as an aura is made).

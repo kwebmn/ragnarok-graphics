@@ -44,6 +44,7 @@ void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
         tag.auraExtra = effect_exe::auraExtra(id);
         tag.seed = uint8_t((prim >> 4) * 2654435761u >> 24);  // the primitive's own
         tag.id = id > 0 && id < 65536 ? uint16_t(id) : 0;      // 2.7.21
+        tag.raised = *reinterpret_cast<const float*>(uintptr_t(prim) + effect_exe::kPrimLift) < -1.0f;  // 2.7.27
     }
     g_current = tag;
     reinterpret_cast<RenderFn>(g_render)(prim, matrix);

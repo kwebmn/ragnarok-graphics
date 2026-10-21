@@ -81,7 +81,7 @@ public:
     // last orb sprite's setup made adding and untextured
     glint::OrbHeads orbHeads;
     DrawSetup orbSetup;
-    int orbSprites = 0, orbOwn = 0, orbLogs = 0;  // 2.7.26: a frame's Ruwach sprites, the orb's own; lines logged
+    int orbSprites = 0, orbOwn = 0, orbLogs = 0;  // 2.7.26: a frame's Ruwach sprites, the raised; lines logged
     void drawSparkles();
     double nowMs() const;    // a millisecond clock for the effects made as the game draws
 

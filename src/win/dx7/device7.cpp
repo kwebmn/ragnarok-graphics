@@ -331,28 +331,26 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 2.7.25 (the user: «можно сделать так, чтобы тот шарик был в начале того синего шлейфа?»): Ruwach's sprites (its
     // effect 33: the orb's trail round the hero) - the newest of each caster's is the head of the trail: a small ball
     // of light there once the world is drawn (glint::orb). 2.7.26 (the user: «на том же круге, что полоса»): its
-    // shadows on the ground (Shadow.spr, of no folder: an unknown source) are not - 2.7.25's ball sat on one; the
-    // orb's own are the effects' folder's (이팩트\particle2.spr)
-    if (!setup.ui && setup.blend && tag.id == 33 && fvf == d3d7::FVF_TL1 && vertexCount == 4 && textures_[0] &&
-        c.enhanced() && fx.fireLight && fx.lightOrbs) {
+    // shadows on the ground are not - 2.7.25's ball sat on one. 2.7.27: told by their primitives' height over the
+    // effect (Tag::raised: the orbs 10 up, the shadows 0) - 2.7.26 by the sprite cache's cells, which know no
+    // effect's file (its log: none of 18 the orb's own)
+    if (!setup.ui && setup.blend && tag.id == 33 && fvf == d3d7::FVF_TL1 && vertexCount == 4 && c.enhanced() &&
+        fx.fireLight && fx.lightOrbs) {
         const size_t stride = FrameRecord::stride(fvf);
         const auto* v = static_cast<const uint8_t*>(vertices);
-        float x = 0, y = 0, z = 0, rhw = 0, u = 0, w = 0, x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
+        float x = 0, y = 0, z = 0, rhw = 0, x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
         uint32_t alpha = 0;
         for (DWORD i = 0; i < 4; ++i) {
-            float f[4], t[2];
+            float f[4];
             uint32_t diffuse = 0;
             std::memcpy(f, v + i * stride, sizeof f);
             std::memcpy(&diffuse, v + i * stride + 16, sizeof diffuse);
-            std::memcpy(t, v + i * stride + 24, sizeof t);
-            x += f[0] / 4, y += f[1] / 4, z += f[2] / 4, rhw += f[3] / 4, u += t[0] / 4, w += t[1] / 4;
+            x += f[0] / 4, y += f[1] / 4, z += f[2] / 4, rhw += f[3] / 4;
             x0 = std::min(x0, f[0]), x1 = std::max(x1, f[0]), y0 = std::min(y0, f[1]), y1 = std::max(y1, f[1]);
             alpha = std::max(alpha, diffuse >> 24);
         }
-        const Surface7* tex = textures_[0];
-        const uint8_t kind = tex->spriteAt(u * float(tex->width()), w * float(tex->height()), nullptr);
         ++c.orbSprites;
-        if (kind == uint8_t(sprite_exe::Source::Effect)) {
+        if (tag.raised) {
             ++c.orbOwn;
             c.orbHeads.note(x, y, z, rhw, std::max(x1 - x0, y1 - y0), float(alpha) / 255.0f);
         }
