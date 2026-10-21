@@ -339,6 +339,7 @@ bool Renderer::Impl::applyGrass() {
     }
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
+    c.uiPixels[2] = float(trample::rootRows(k));  // 2.7.29: at 4K the roots on every second row - half the work
     c.uiPixels[3] = waterLevelKnown ? waterTop + 0.05f : 1e9f;  // 2.7.2: no blades under the water (grass_ps)
     if (held) {
         c.footprint = 1.0f;
@@ -373,8 +374,10 @@ bool Renderer::Impl::applyGrass() {
         c.sourceClamp[3] = float(g.width) + 1024.0f * float(g.height);
         cells = groundCellsSrv;
     }
-    if (!grassLogged) LOG_INFO("grass: on %s, blades up to %.0f pixels%s", mapName.c_str(), c.twin[0],
-                               cells != kNoSrv ? ", on the map's ground only" : "");
+    if (!grassLogged)
+        LOG_INFO("grass: on %s, blades up to %.0f pixels%s%s", mapName.c_str(), c.twin[0],
+                 cells != kNoSrv ? ", on the map's ground only" : "",
+                 c.uiPixels[2] > 1.5f ? ", their roots on every second row" : "");
     grassLogged = true;
     const UINT list1 = held ? trampleSrv : sceneColorSrv;
     return worldPass(pso, w, h, c, sceneColorSrv, true, list1, nullptr, 3, cells);

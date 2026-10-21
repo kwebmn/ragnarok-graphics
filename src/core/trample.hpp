@@ -37,6 +37,10 @@ struct Grid {
 // unit, the edge's texels holding nothing): the shader reads past it the edge's - nothing.
 void build(const std::deque<footsteps::Step>& steps, float now, float life, Grid& out);
 
+// 2.7.29: on which rows grass_ps looks for the blades' roots (uiPixels.z): every second at twice the game's size and
+// more - a game pixel two rows and more (4K), the same blades for half the work - else every row.
+inline int rootRows(float scale) { return scale >= 1.5f ? 2 : 1; }
+
 // The grid read at a spot as grass_ps reads it (between the four texel centres around, by how near each is; past
 // the edge its edge) - for the tests; an empty grid holds nothing.
 Hold sample(const Grid& g, float x, float z);

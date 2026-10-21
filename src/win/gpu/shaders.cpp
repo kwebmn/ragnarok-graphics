@@ -1782,10 +1782,12 @@ float4 grass_ps(PresentOut i) : SV_Target {
     }
     int every = uiPixels.z > 1.5 ? 2 : 1;  // 2.6.8: every second row's roots only (the roots on the even rows)
     int first = longest - (every == 2 ? ((wp.y + longest) & 1) : 0);
+    // 2.7.29: the sway's wave once a pixel, not at every root (the user: «можешь оптимизировать?» - the grass 3-5 ms
+    // of a frame at 4K)
+    float swayAll = (sin(t * 1.7 + swayPhase) * 0.25 + lean * 0.5 + windLean) * twinX;
     [loop] for (int k = first; k >= 1; k -= every) {
         float up = float(k) / twinX;
-        float sway = sin(t * 1.7 + swayPhase) * 0.25 * twinX * up * up;
-        sway += (lean * 0.5 + windLean) * twinX * up * up;
+        float sway = swayAll * up * up;
         int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
         float rd = sceneDepth.Load(int3(root, 0));
         if (rd >= 0.99999) continue;
@@ -1800,17 +1802,21 @@ float4 grass_ps(PresentOut i) : SV_Target {
         if (w.y > uiPixels.w) continue;
         float2 cell = w.xz * 2.0;  // a blade or none every half unit
         float2 id = floor(cell);
-        float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
         if (hash12(id) > twinY) continue;  // no blade here
+        float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
+        float near = dot(at, at);
+        if (near > 0.2) continue;  // 2.7.29: off even a flower's head - before the patches' noise
         // 2.7.4: thinned out, then none, as the camera goes far back - a blade stands on a disc about a ninth of a
         // unit across, under a pixel there: its root came and went with every frame's jitter and the grass blinked
         float disc = 0.11 * f0 * scale / max(v.z, 1.0);  // the disc's radius in the picture's pixels
         if (hash12(id + 7.7) > smoothstep(0.8, 1.6, disc)) continue;
-        // 1.8.3: flowers in patches, a few in each (scattered over the whole field they were a speckle)
-        bool flower = hash12(id + 31.7) < twinW && valueNoise(w.xz * 0.07 + 3.3) > 0.72;
+        // 1.8.3: flowers in patches, a few in each (scattered over the whole field they were a speckle); 2.7.29: the
+        // patches' noise for a flower's root alone (an && of HLSL works both its sides out: for every root)
+        bool flower = false;
+        if (hash12(id + 31.7) < twinW) flower = valueNoise(w.xz * 0.07 + 3.3) > 0.72;
         float height = (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0);
         bool head = flower && up > height * 0.78;
-        if (dot(at, at) > (head ? 0.2 : 0.05)) continue;
+        if (near > (head ? 0.2 : 0.05)) continue;
         // 2.2.1: on the map's own ground only - sourceClamp the cells' grid (its corner, one over a side, the cells
         // across + 1024 * down), t5 each cell's lowest and highest y: umbala's green decks and bridges stand above it
         // (2.6.8: looked up only for a root that has a blade - most have none)
