@@ -44,7 +44,7 @@ bool hiddenTorch(int32_t id, float tint[3]) {
 
 // 2.5.1: as torches.cpp noteFire - the draw's middle and depth from its vertices, how much it lights: the picture's
 // fire (or its own light), the game's fade and colour of it, its size on the screen.
-void Renderer11::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]) {
+void Renderer11::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3], bool orb) {
     if (fireSparks_.size() >= 512) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
@@ -79,6 +79,7 @@ void Renderer11::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount
     const float size = std::sqrt(std::max(0.0f, (x1 - x0) * (y1 - y0)));  // game pixels
     s.strength = amount * shown * std::clamp(size / 120.0f, 0.15f, 1.5f);
     std::copy(colour, colour + 3, s.colour);
+    s.orb = orb;
     fireSparks_.push_back(s);
 }
 
@@ -427,10 +428,13 @@ void Renderer11::applyTorchLight() {
     if (fire) {  // 2.5.1: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16
         struct Cell {
             float w = 0, view[3] = {0, 0, 0}, colour[3] = {0, 0, 0};
+            bool orb = false;  // 2.7.21 (torches.cpp): an orb of light's place
         };
         std::unordered_map<int, Cell> cells;
         for (const FireSpark11& f : sparks) {
-            Cell& c = cells[int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f))];
+            const int at = int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f));
+            Cell& c = cells[at * 2 + (f.orb ? 1 : 0)];
+            c.orb = f.orb;
             c.w += f.strength;
             for (int i = 0; i < 3; ++i) {
                 c.view[i] += f.view[i] * f.strength;
@@ -446,7 +450,7 @@ void Renderer11::applyTorchLight() {
         for (size_t i = 0; i < best.size() && embers_.size() < 24 && effects_.skillSparks && embersPs_; ++i) {
             const Cell& c = best[i];  // 2.5.3 (torches.cpp 0.82): the places for the skills' sparks
             const float vz = c.view[2] / c.w;
-            if (vz <= proj.nearZ) continue;
+            if (vz <= proj.nearZ || c.orb) continue;  // 2.7.21: not an orb of light
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
             Ember11 e{};
             e.x = (c.view[0] / c.w / vz * proj.f0 + proj.cx) * k + 0.5f;
@@ -461,16 +465,23 @@ void Renderer11::applyTorchLight() {
             for (size_t i = 0; i < best.size() && i < 16; ++i) {
                 const Cell& c = best[i];
                 const float vz = c.view[2] / c.w;
-                if (vz <= proj.nearZ) continue;
+                if (vz <= proj.nearZ || c.orb) continue;  // 2.7.21: an orb of light is not hot
                 const float gx = c.view[0] / c.w / vz * proj.f0 + proj.cx;
                 const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
                 heatSpots_.push_back(HeatSpot11{gx * k, gy * k, 70.0f * k, 0.6f * std::min(c.w, 1.0f) * heatUser()});
             }
+        // 2.7.21 (torches.cpp): an orb of light's place a light of its own, a torch's at night
+        const float orbStrength =
+            0.3f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f * (1.0f + darkNow);
         for (size_t i = 0; i < best.size() && i < 16; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
             const float view[3] = {c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w};
             const float colour[3] = {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top};
+            if (c.orb) {
+                addLight(view, 45.0f, colour, orbStrength * std::min(c.w, 1.0f));
+                continue;
+            }
             const float w = effect_light::skillWeight(c.w, darkNow);  // 2.7.20 (torches.cpp): at night a floor
             addLight(view, 25.0f + 15.0f * w, colour, fireStrength * w);
         }

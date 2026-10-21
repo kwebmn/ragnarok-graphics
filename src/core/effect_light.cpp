@@ -66,4 +66,12 @@ float skillWeight(float w, float night) {
     return std::max(std::min(w, 1.0f), floor);
 }
 
+bool orbOf(int id, float colour[3]) {
+    static const float kRuwach[3] = {0.72f, 0.86f, 1.0f}, kSight[3] = {1.0f, 0.62f, 0.3f};
+    const float* c = id == 33 ? kRuwach : id == 22 ? kSight : nullptr;
+    if (!c) return false;
+    std::copy(c, c + 3, colour);
+    return true;
+}
+
 }  // namespace uagfx::effect_light

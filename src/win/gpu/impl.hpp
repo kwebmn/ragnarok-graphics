@@ -172,6 +172,7 @@ struct FireSpark {
     float strength;
     float colour[3];
     float gameX, gameY;  // its middle on the screen, game pixels (gathered by place)
+    bool orb = false;    // 2.7.21: an orb of light's (effect_light::orbOf) - lights as one, no heat nor sparks
 };
 
 // 0.30: a face of one of the forest's beams of light drawn this frame - its middle and its foot (the end at the
@@ -834,8 +835,8 @@ struct Renderer::Impl {
     bool smokeWanted() const { return effects.smoke && smokePs && smokeGlowPs; }  // 0.24
     bool lampsWanted() const { return effects.lamps; }  // 0.25
     bool fireWanted() const { return effects.fireLight && effects.fireLightStrength > 0; }  // 0.26
-    // `amount` and `colour`: the picture's fire, or (0.36) its own light.
-    void noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]);
+    // `amount` and `colour`: the picture's fire, or (0.36) its own light; 2.7.21: or an orb of light's (`orb`).
+    void noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3], bool orb = false);
     bool fireflyWanted() const { return effects.fireflies && effects.firefliesBrightness > 0 && fireflyPs; }  // 0.28
     bool takeFirefly(const FrameRecord& rec, const DrawCmd& d);  // one the game draws: true when it is not to be
     bool fireflyReady();  // its pipelines for this target

@@ -29,6 +29,7 @@ FrameRecord sampleRecord() {
     d.keyed[1] = true;
     d.effect = 2;        // 0.28: the game's effect the draw is of
     d.effectSeed = 201;
+    d.effectId = 33;  // 2.7.21: the game's own effect number (Ruwach's)
     d.primitive = d3d7::PT_TRIANGLESTRIP;
     d.fvf = d3d7::FVF_TL2;
     d.twin = 7;
@@ -73,6 +74,7 @@ TEST(bridge_a_record_crosses_field_by_field) {
     CHECK(d.keyed[1] && !d.keyed[0]);
     CHECK_EQ(int(d.effect), 2);
     CHECK_EQ(int(d.effectSeed), 201);
+    CHECK_EQ(int(d.effectId), 33);
     CHECK(b.states()[0] == a.states()[0]);
     CHECK(b.vertexBytes() == a.vertexBytes());
     CHECK(b.indices() == a.indices());

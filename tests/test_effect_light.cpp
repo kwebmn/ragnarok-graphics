@@ -43,6 +43,20 @@ TEST(effect_light_skills_light_at_night) {
     CHECK(effect_light::skillWeight(3.0f, 0.0f) == 1.0f);
 }
 
+TEST(effect_light_knows_the_orbs_of_light) {
+    // 2.7.21 (the tester: «рувотч не светит»): the game lays its orbs of light over the world as sprites, not added,
+    // so the skills' light never saw them - Ruwach's (33: 이팩트\particle2.spr round the caster) and Sight's (22: its
+    // fireball) light by their effect's number, Ruwach's pale blue, Sight's fire
+    float c[3] = {0, 0, 0};
+    CHECK(effect_light::orbOf(33, c));
+    CHECK(c[2] == 1.0f && c[0] < 0.9f && c[0] > 0.5f);
+    CHECK(effect_light::orbOf(22, c));
+    CHECK(c[0] == 1.0f && c[2] < 0.5f);
+    CHECK(!effect_light::orbOf(0, c));
+    CHECK(!effect_light::orbOf(45, c));  // the maps' fireflies light as fireflies
+    CHECK(!effect_light::orbOf(200, c));  // nor the level 99 aura
+}
+
 TEST(effect_light_knows_the_colour_other_skills_light_in) {
     // 0.36: a skill's picture lights in its own colour: ice blue, poison green, holy gold, lightning near white.
     float c[3];

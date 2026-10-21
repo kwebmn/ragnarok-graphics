@@ -1229,8 +1229,11 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && (stepKind() || ripplesWanted() || crittersNeedFeet()))
         noteFoot(rec, d);
     // 2.5.1: the fire of skills (as draw.cpp): an added picture that looks like fire, or one that lights in its own
-    // colour - not the maps' objects (their own)
-    if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && fireWanted() && d.texture[0]) {
+    // colour - not the maps' objects (their own); 2.7.21: an orb of light whatever its blend
+    float orb[3];
+    const bool orbDraw = !s.ui && s.blend && effect_light::orbOf(d.effectId, orb);
+    if (orbDraw && fireWanted()) noteFire(rec, d, 1.0f, orb, true);
+    if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !orbDraw && fireWanted() && d.texture[0]) {
         const auto ft = textures_.find(d.texture[0]);
         const bool mine = d.effect == uint8_t(effect_exe::Kind::None) || d.effect == uint8_t(effect_exe::Kind::Skill);
         if (ft != textures_.end() && ft->second.fire > 0.15f && mine) {

@@ -217,6 +217,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (tag.auraExtra && c.enhanced() && win::auraOff()) return D3D_OK;
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
+    cmd.effectId = tag.id;  // 2.7.21: Ruwach's orbs light by it
     const EffectSettings& fx = c.effects();  // 2.5.11: made once a change, not each draw
     // 0.37: the skills likewise, by their own slider.
     const bool aura = fx.aura && fx.auraBrightness < 100 && tag.kind == effect_exe::Kind::Aura;
@@ -348,6 +349,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         again.state = c.record.addState(add);
         again.effect = uint8_t(effect_exe::Kind::HitFlash);  // 2.7.13: no soft particle - it went out wholly
         again.effectSeed = 0;
+        again.effectId = 0;
         c.record.draw(again, soft_.data(), 4, nullptr, 0);
     }
     c.flushIfFull();  // the textures this draw sent may have filled the record

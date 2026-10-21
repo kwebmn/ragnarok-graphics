@@ -31,6 +31,7 @@ struct DrawCmd {
     // 0.28: the game's effect the draw is of (effect_exe::Kind; 0 none) and a seed of its primitive's own.
     uint8_t effect = 0;
     uint8_t effectSeed = 0;
+    uint16_t effectId = 0;  // 2.7.21: the game's own number of that effect (effect_exe::Tag::id; 0 none)
     uint32_t primitive = 0;        // d3d7::PT_*
     uint32_t fvf = 0;              // d3d7::FVF_TL1 or FVF_TL2
     uint32_t vertexOffset = 0;     // bytes into vertexBytes()

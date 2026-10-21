@@ -43,6 +43,7 @@ void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
         tag.kind = effect_exe::kindOf(id);
         tag.auraExtra = effect_exe::auraExtra(id);
         tag.seed = uint8_t((prim >> 4) * 2654435761u >> 24);  // the primitive's own
+        tag.id = id > 0 && id < 65536 ? uint16_t(id) : 0;      // 2.7.21
     }
     g_current = tag;
     reinterpret_cast<RenderFn>(g_render)(prim, matrix);
@@ -53,7 +54,8 @@ void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
 void __attribute__((thiscall)) effectRender(uint32_t effect, void* matrix) {
     const Tag before = g_current;
     const int id = *reinterpret_cast<const int*>(uintptr_t(effect) + effect_exe::kEffectId);
-    g_current = Tag{effect_exe::kindOf(id), uint8_t((effect >> 4) * 2654435761u >> 24), effect_exe::auraExtra(id)};
+    g_current = Tag{effect_exe::kindOf(id), uint8_t((effect >> 4) * 2654435761u >> 24), effect_exe::auraExtra(id),
+                    id > 0 && id < 65536 ? uint16_t(id) : uint16_t(0)};  // 2.7.21: its number too
     reinterpret_cast<RenderFn>(g_effect)(effect, matrix);
     g_current = before;
 }

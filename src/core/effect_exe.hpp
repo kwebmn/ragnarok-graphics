@@ -68,6 +68,7 @@ struct Tag {
     Kind kind = Kind::None;
     uint8_t seed = 0;
     bool auraExtra = false;  // 0.63: the aura's ring or bubbles (auraExtra): what /aura shows
+    uint16_t id = 0;         // 2.7.21: the effect's own number (kEffectId; 0 none) - Ruwach's orbs light by it
 };
 // 0.63: the level 99 aura's parts /aura turns on - the ring and bubbles (200, 201; 397, 398 transcendent), not the
 // circles (202, 362) the game always shows - and where the game keeps /aura (0 off; read only as an aura is made).

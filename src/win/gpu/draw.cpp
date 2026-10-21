@@ -7,6 +7,7 @@
 #include "core/d3d7.hpp"
 #include "core/daylight.hpp"
 #include "core/effect_exe.hpp"
+#include "core/effect_light.hpp"
 #include "core/game_camera.hpp"
 #include "core/scale.hpp"
 #include "core/twin_grid.hpp"
@@ -112,7 +113,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.38: a portal's draw: its middle, for its glow and its swirl once the world is drawn.
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted() && !torchDone) notePortal(rec, d);
     // 0.36: the other skills light too, in their pictures' colours - not the aura, the maps' objects (their own).
-    if (adds && fireWanted() && !torchDone && d.texture[0]) {
+    // 2.7.21: an orb of light (Ruwach's, Sight's: effect_light::orbOf by the effect's number) whatever its blend - the
+    // game lays it over the world as a sprite, its picture the sprite cache's (the tester: «рувотч не светит»)
+    float orb[3];
+    const bool orbDraw = !s.ui && s.blend && effect_light::orbOf(d.effectId, orb);
+    if (orbDraw && fireWanted() && !torchDone) noteFire(rec, d, 1.0f, orb, true);
+    if (adds && !orbDraw && fireWanted() && !torchDone && d.texture[0]) {
         const auto ft = textures.find(d.texture[0]);
         const bool mine = d.effect == uint8_t(effect_exe::Kind::None) || d.effect == uint8_t(effect_exe::Kind::Skill);
         if (ft != textures.end() && ft->second.fire > 0.15f && mine) {

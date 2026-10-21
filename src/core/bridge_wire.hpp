@@ -17,6 +17,7 @@ class WireWriter {
 public:
     explicit WireWriter(std::vector<uint8_t>& out) : out_(out) {}
     void u8(uint8_t v) { out_.push_back(v); }
+    void u16(uint16_t v) { bytes(&v, 2); }  // 2.7.21
     void u32(uint32_t v) { bytes(&v, 4); }  // x86 on both sides: little-endian as it is
     void i32(int32_t v) { u32(uint32_t(v)); }
     void u64(uint64_t v) { bytes(&v, 8); }
@@ -43,6 +44,7 @@ class WireReader {
 public:
     WireReader(const uint8_t* p, size_t n) : p_(p), end_(p + n) {}
     uint8_t u8();
+    uint16_t u16();  // 2.7.21
     uint32_t u32();
     int32_t i32() { return int32_t(u32()); }
     uint64_t u64();

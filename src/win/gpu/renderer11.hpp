@@ -467,6 +467,7 @@ private:
         float strength;
         float colour[3];
         float gameX, gameY;
+        bool orb = false;  // 2.7.21 (impl.hpp FireSpark)
     };
     // 2.7.18 (torches.cpp): the fireflies in the grass at night (the last creatures' pass), each lighting the ground
     // under it a little
@@ -480,7 +481,7 @@ private:
         return 0.2f - 0.14f * float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
     }
     std::vector<FireSpark11> fireSparks_;  // this frame's
-    void noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]);
+    void noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3], bool orb = false);
     bool compileShaders(const std::string& cacheFile, Renderer::StartSink sink, void* sinkContext, std::string& error);
     // 2.5.16: the draw shader made for each state of the game's draws (core/shader_variants.hpp, variants11.cpp) - made
     // on a thread of their own as the states come and kept in the shader cache; the one for every state draws

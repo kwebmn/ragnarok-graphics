@@ -24,6 +24,12 @@ uint8_t WireReader::u8() {
     return b ? *b : 0;
 }
 
+uint16_t WireReader::u16() {
+    uint16_t v = 0;
+    if (const uint8_t* b = take(2)) std::memcpy(&v, b, 2);
+    return v;
+}
+
 uint32_t WireReader::u32() {
     uint32_t v = 0;
     if (const uint8_t* b = take(4)) std::memcpy(&v, b, 4);
@@ -153,6 +159,7 @@ void writeRecord(WireWriter& w, const FrameRecord& r) {
         w.u8(uint8_t(d.keyed[1]));
         w.u8(d.effect);
         w.u8(d.effectSeed);
+        w.u16(d.effectId);  // 2.7.21
         w.u32(d.primitive);
         w.u32(d.fvf);
         w.u32(d.vertexOffset);
@@ -235,6 +242,7 @@ bool readRecord(WireReader& rd, FrameRecord& r) {
         d.keyed[1] = rd.u8() != 0;
         d.effect = rd.u8();
         d.effectSeed = rd.u8();
+        d.effectId = rd.u16();  // 2.7.21
         d.primitive = rd.u32();
         d.fvf = rd.u32();
         d.vertexOffset = rd.u32();

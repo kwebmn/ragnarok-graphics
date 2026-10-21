@@ -89,7 +89,7 @@ void Renderer::Impl::noteCritterFlame(const FrameRecord& rec, const DrawCmd& d) 
 
 // 0.26: a fire-coloured effect drawn this frame (draw.cpp) - its middle and depth from its vertices, how much it
 // lights: its picture's fire (0.36: or its own light), the game's fade and colour of it, its size on the screen.
-void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]) {
+void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3], bool orb) {
     if (fireSparks.size() >= 512) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
@@ -124,6 +124,7 @@ void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, float am
     const float size = std::sqrt(std::max(0.0f, (x1 - x0) * (y1 - y0)));  // game pixels
     s.strength = amount * shown * std::clamp(size / 120.0f, 0.15f, 1.5f);
     std::copy(colour, colour + 3, s.colour);
+    s.orb = orb;
     fireSparks.push_back(s);
 }
 
@@ -689,15 +690,19 @@ bool Renderer::Impl::applyTorches() {
     }
     // 0.26: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16. A little, as a torch:
     // the shader bounds it.
-    size_t skillPlaces = 0;  // 2.7.20: for the log at night
+    size_t skillPlaces = 0, orbDraws = 0;  // 2.7.20: for the log at night
     float skillBrightest = 0.0f;
     if (fireWanted() && !fireSparks.empty()) {
         struct Cell {
             float w = 0, view[3] = {0, 0, 0}, colour[3] = {0, 0, 0};
+            bool orb = false;  // 2.7.21: an orb of light's place (Ruwach's, Sight's)
         };
         std::unordered_map<int, Cell> cells;
         for (const FireSpark& f : fireSparks) {
-            Cell& c = cells[int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f))];
+            const int at = int(std::floor(f.gameX / 80.0f)) * 4096 + int(std::floor(f.gameY / 80.0f));
+            Cell& c = cells[at * 2 + (f.orb ? 1 : 0)];
+            c.orb = f.orb;
+            orbDraws += f.orb ? 1 : 0;
             c.w += f.strength;
             for (int k = 0; k < 3; ++k) {
                 c.view[k] += f.view[k] * f.strength;
@@ -718,7 +723,7 @@ bool Renderer::Impl::applyTorches() {
             for (size_t i = 0; i < best.size() && i < 16; ++i) {
                 const Cell& c = best[i];
                 const float vz = c.view[2] / c.w;
-                if (vz <= proj.nearZ) continue;
+                if (vz <= proj.nearZ || c.orb) continue;  // 2.7.21: an orb of light is not hot
                 const float gx = c.view[0] / c.w / vz * proj.f0 + proj.cx;
                 const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
                 heatSpots.push_back(HeatSpot{gx * hk, gy * hk, 70.0f * hk, 0.6f * std::min(c.w, 1.0f) * heatUser()});
@@ -729,7 +734,7 @@ bool Renderer::Impl::applyTorches() {
         for (size_t i = 0; i < best.size() && embers.size() < kMaxEmbers && effects.skillSparks; ++i) {
             const Cell& c = best[i];
             const float vz = c.view[2] / c.w;
-            if (vz <= proj.nearZ) continue;
+            if (vz <= proj.nearZ || c.orb) continue;  // 2.7.21: nor does it spark
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
             Ember e{};
             e.x = (c.view[0] / c.w / vz * proj.f0 + proj.cx) * ek + 0.5f + (upscale ? jitter[0] : 0.0f);
@@ -740,12 +745,18 @@ bool Renderer::Impl::applyTorches() {
             e.fire = e.colour[0] > 0.8f && e.colour[2] < 0.6f;
             embers.push_back(e);
         }
+        // 2.7.21: an orb of light's place a light of its own - a torch's at night (0.6), half that by day, reaching 45
+        // units (a tenth of it lit 2.7.20's Ruwach, the tester: «рувотч не светит»)
+        const float orbStrength =
+            0.3f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f * (1.0f + darkNow);
         for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
-            const float w = effect_light::skillWeight(c.w, darkNow);  // 2.7.20: at night a floor («рувотч не светит»)
-            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, fireStrength * w,
-                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top}, 25.0f + 15.0f * w};
+            // 2.7.20: at night a floor («рувотч не светит»)
+            const float w = c.orb ? std::min(c.w, 1.0f) : effect_light::skillWeight(c.w, darkNow);
+            LightItem l{{c.view[0] / c.w, c.view[1] / c.w, c.view[2] / c.w}, (c.orb ? orbStrength : fireStrength) * w,
+                        {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top},
+                        c.orb ? 45.0f : 25.0f + 15.0f * w};
             lights.push_back(l);
         }
         skillPlaces = best.size();
@@ -754,8 +765,8 @@ bool Renderer::Impl::applyTorches() {
     const float since = time - skillLightsTold;  // 2.7.20: at night, what of the skills lights, now and then
     if (darkNow > 0.0f && (since > 10.0f || since < 0.0f)) {
         skillLightsTold = time;
-        LOG_INFO("skills' light at night: %s, %zu draws in %zu places, the brightest %.2f",
-                 fireWanted() ? "on" : "off", fireSparks.size(), skillPlaces, skillBrightest);
+        LOG_INFO("skills' light at night: %s, %zu draws (%zu of orbs of light) in %zu places, the brightest %.2f",
+                 fireWanted() ? "on" : "off", fireSparks.size(), orbDraws, skillPlaces, skillBrightest);
     }
     fireSparks.clear();
     // 0.28: the fireflies light a little around them, the nearest 16.
