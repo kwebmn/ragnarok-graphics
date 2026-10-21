@@ -1,3 +1,16 @@
+# uaRO Graphics 2.7.31 — to check
+
+- **The walls by the fire show their stone again.** The torches' light lifted the darks 3.4 times and the mid-tones to
+  one level, and put the fire's colour in place of the surface's: the stones' faces by a torch ran together into one
+  even orange, a lighter stone could come out darker than a duller one. Now the brightness rises on a smooth curve
+  that keeps every step of the pattern (the darks the most), and a third of the colour stays the surface's own. The
+  walls and the floor by a fire show their stone, the light's pool a little softer. All fire light changes so:
+  torches, lamps, skills.
+- If the walls still look smooth, press Tab on "Map light without steps": it smooths the light baked into the map.
+  Say whether that is it.
+- Please check: prt_sewb1 166 19 and the Pyramids — the walls and floor by the torches. Send a report with a
+  screenshot.
+
 # uaRO Graphics 2.7.30 — to check
 
 - **"Leaves in the wind" easier to see.** The trees' tops swung only 1.2 game pixels — under a couple of the
