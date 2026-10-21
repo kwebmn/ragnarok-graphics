@@ -2199,7 +2199,7 @@ float4 steps_ps(PresentOut i) : SV_Target {
         } else {
             float ca = cos(s.w), sa = sin(s.w);
             float2 l = float2(d.x * ca + d.y * sa, -d.x * sa + d.y * ca);
-            float e = length(l / float2(1.1, 0.5));
+            float e = length(l / float2(1.6, 0.75));  // 2.7.35: half again as big (were 2.2 by 1 units)
             a = max(a, smoothstep(1.0, 0.65, e) * (1.0 - age * age));
         }
     }
@@ -2207,7 +2207,8 @@ float4 steps_ps(PresentOut i) : SV_Target {
     float3 colour = kind == 1   ? float3(0.42, 0.48, 0.62)
                     : kind == 2 ? float3(0.50, 0.38, 0.24)
                                 : float3(0.82, 0.74, 0.60);
-    float most = kind == 1 ? 0.5 : kind == 2 ? 0.4 : 0.35;
+    // 2.7.35 (the tester in Comodo: «Сліди на снігу й піску - еле заметно»): the prints darker
+    float most = kind == 1 ? 0.62 : kind == 2 ? 0.52 : 0.35;
     return float4(colour, a * most);
 }
 
@@ -2395,7 +2396,8 @@ float4 weather_ps(PresentOut i) : SV_Target {
         fall.x += sourceRect.w * blown;
         float2 id = floor(q / cell);
         float2 f = frac(q / cell);
-        float presence = kind == 3 ? 0.18 : kind == 4 ? 0.35 : kind >= 5 ? 0.3 : 0.55;
+        // 2.7.35: a few more leaves (the tester in Comodo: «Листопад плохо заметно»)
+        float presence = kind == 3 ? 0.24 : kind == 4 ? 0.35 : kind >= 5 ? 0.3 : 0.55;
         if (hash12(id + float2(91.0, 17.0) * float(layer + 1)) > presence * footprint) continue;
         float2 h = float2(hash12(id + float(layer) * 17.0), hash12(id * 1.7 + float(layer) * 3.1));
         float2 d = (f - (0.2 + 0.6 * h)) * cell;  // from the particle, game pixels
@@ -2414,8 +2416,9 @@ float4 weather_ps(PresentOut i) : SV_Target {
             colour = float3(0.78, 0.83, 0.92);
             alpha = 0.32;
         } else if (kind == 3) {  // a leaf: tumbling as it falls, its width turning
+            // 2.7.35: twice as big - 7 by 4 game pixels in the middle layer read as orange specks at 1080p
             float turn = abs(sin(t * 2.1 + h.y * 6.28));
-            float2 e = d / float2(max(3.2 * depth * turn, 0.6), 2.0 * depth);
+            float2 e = d / float2(max(7.0 * depth * turn, 1.2), 4.4 * depth);
             shape = saturate(1.0 - dot(e, e)) * 1.5;
             colour = h.x < 0.4    ? float3(0.86, 0.45, 0.13)
                      : h.x < 0.75 ? float3(0.58, 0.36, 0.16)
