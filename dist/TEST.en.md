@@ -1,3 +1,16 @@
+# uaRO Graphics 2.7.17 — to check
+
+- **"Deep night" lighter: 25 %.** At 16 % it was simply black; now it is dark, but the road, the grass and monsters
+  nearby can be made out.
+- **At night only light shines.** White flowers, pale hair and pale stone no longer glow in the dark like stars —
+  fire, lamps, windows and magic stay bright.
+- **Puddle reflections in the rain are short and even.** No long column of copies under a character any more: a
+  puddle mirrors what stands close by, and the reflection fades with distance.
+- **"Sky past the map's edge" and "Land past the map's edge" removed** (with "Clouds", "Sky strength" and "Stars at
+  night"). The "Sky and air" group is now "Air".
+- Please check: Clock → "Deep night 3:00" on prt_fild08 — better? And the rain: the character's reflection on the
+  wet ground.
+
 # uaRO Graphics 2.7.16 — to check
 
 - **Rain on hills without the "squares".** Wet ground and puddles were decided by each ground triangle's own slope:
