@@ -1,3 +1,15 @@
+# uaRO Graphics 2.7.47 — to check
+
+- **Lit things keep their own colours.** The light of fires, torches, lamps and skills took 70 % of its colour from
+  the light itself and the rest from the picture the night had already washed grey. So a dark robe by a fire turned
+  pale pink and the grass turned brown. Now a lit surface shows its day's colours, and the light only warms them. At
+  night under the open sky a lit surface is no brighter than by day, so a character no longer fades. Torches in
+  caves light as before.
+- **Colours come back in the moon's beams** ("Moon beams"): 60 % of the colour in a beam's middle instead of 35 %, and
+  the silver less blue. The brightness is the same.
+- To check at night on a field: a character by a Fire Wall or a torch keeps their colours, only warmer. The grass by
+  the fire is green-yellow, not brown. In a moon beam the colours show.
+
 # uaRO Graphics 2.7.46 — to check
 
 - **Skills solid again** ("Skills that do not blind"). It also softened the skills' pictures laid over the world - by
