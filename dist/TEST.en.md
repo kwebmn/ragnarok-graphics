@@ -1,3 +1,15 @@
+# uaRO Graphics 2.7.29 — to check
+
+- **Faster grass.** The grass was the costliest effect: 3–5 ms of a frame's 8–13 ms of the card's work at 4K. Now:
+  - at 4K the blades' roots are looked for on every second row — a game pixel is two rows of the picture there, the
+    same blades for half the work (Direct3D 11 always did so);
+  - the flower patches' pattern is worked out only for the blades that may be a flower (about 12 %), not for each;
+  - the sway in the wind is worked out once a pixel, not at every step of the search.
+  The grass looks the same.
+- Ruwach's ball stays as it is for now.
+- Please check: stand on prt_fild08's grass for half a minute and send a report — the log line `GPU: effects a frame`
+  will show what the grass costs now (it was 3–5 ms).
+
 # uaRO Graphics 2.7.28 — to check
 
 - **Ruwach's ball at the head of its trail all the way round.** 2.7.27's ball took the sprite biggest on the screen.
