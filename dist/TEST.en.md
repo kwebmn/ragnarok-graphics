@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.43 — to check
+
+- **In the rain only puddles reflect** ("Wet ground and puddles"). The whole wet ground used to mirror, and big grey
+  stains lay on the sand. Now the wet ground is only darker, and the puddles mirror - on hard ground only: paving,
+  stone, trodden earth. Sand, grass and snow take the water in - no puddles on them. The puddles are smaller, the sky
+  in them darker and more of it looking along.
+- To check: Weather - Rain. On Comodo's beach dark wet sand, no puddles or reflections; in Prontera puddles on the
+  paving with the characters reflected and the drops' rings.
+- Still from 2.7.42: breath in Lutie; the snow's glints - with Ctrl+Shift+F9 ("X-ray of the AI pictures") by day under
+  Clear, a report, then off.
+
 # uaRO Graphics 2.7.42 — to check
 
 - **Breath shows.** A puff rose at the character's head, but the character's own sprite is drawn nearer the camera
