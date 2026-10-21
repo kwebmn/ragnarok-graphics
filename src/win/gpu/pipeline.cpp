@@ -206,6 +206,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"mask_ps", "ps_5_0", &maskPs},
                    {"torch_light_vs", "vs_5_0", &torchLightVs},   {"torch_accum_ps", "ps_5_0", &torchAccumPs},
                    {"torch_apply_ps", "ps_5_0", &torchApplyPs},   {"torch_fire_ps", "ps_5_0", &torchFirePs},
+                   {"portal_ps", "ps_5_0", &portalPs},  // 2.7.48
                    {"smoke_ps", "ps_5_0", &smokePs},              {"smoke_glow_ps", "ps_5_0", &smokeGlowPs},
                    {"firefly_ps", "ps_5_0", &fireflyPs},          {"dust_ps", "ps_5_0", &dustPs},
                    {"ray_ps", "ps_5_0", &rayPs},                  {"ray_glow_ps", "ps_5_0", &rayGlowPs},

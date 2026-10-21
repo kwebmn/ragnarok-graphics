@@ -269,6 +269,11 @@ private:
     // 2.5.3: the portals (torches.cpp notePortal): their draws gathered into what stands there, followed from frame
     // to frame - a soft blue light about each and the air turning in it
     bool portalsWanted() const { return effects_.portals && effects_.portalsStrength > 0; }
+    // 2.7.48: the new portal (portal_ps, as Direct3D 12's drawNewPortals) where the game's was (not drawn); the
+    // game's effects taken for portals, told once each
+    bool newPortalWanted() const { return portalsWanted() && effects_.portalNew && portalPs_ && torchLightPs_; }
+    ID3D11PixelShader* portalPs_ = nullptr;
+    std::vector<int> portalIdsTold_;
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
     struct PortalTrack11 {
         float view[3];

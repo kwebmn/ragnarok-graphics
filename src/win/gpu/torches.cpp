@@ -11,6 +11,7 @@
 #include "core/fireflies.hpp"
 #include "core/game_camera.hpp"
 #include "core/map_glows.hpp"
+#include "core/portal.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -915,14 +916,17 @@ bool Renderer::Impl::applyTorches() {
         for (const PortalTrack& t : portalTracks) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
             if (shown <= 0.0f) continue;
+            // 2.7.48: under the new portal its light in its lilac and softer, the air's swirl half - no white blot
+            const bool anew = newPortalWanted();
             if (lit++ < 8 && lights.size() < kMaxLights) {
-                LightItem l{{t.view[0], t.view[1] - 4.0f, t.view[2]}, 0.35f * user * shown, {0.45f, 0.75f, 1.0f},
-                            30.0f};
+                LightItem l{{t.view[0], t.view[1] - 4.0f, t.view[2]}, (anew ? 0.21f : 0.35f) * user * shown,
+                            {anew ? 0.80f : 0.45f, anew ? 0.74f : 0.75f, 1.0f}, 30.0f};
                 lights.push_back(l);
             }
             if (heatPs) {
                 const float r = std::clamp(t.size * 0.6f, 30.0f, 140.0f) * hk;
-                heatSpots.push_back(HeatSpot{t.gx * hk, t.gy * hk, r, -0.7f * std::min(user, 1.5f) * shown});
+                heatSpots.push_back(
+                    HeatSpot{t.gx * hk, t.gy * hk, r, (anew ? -0.35f : -0.7f) * std::min(user, 1.5f) * shown});
             }
         }
     }
@@ -1152,6 +1156,84 @@ bool Renderer::Impl::applyTorches() {
                             &around))
                 return false;
         }
+    if (!portalTracks.empty() && newPortalWanted()) return drawNewPortals(dst, dstState, rtv, code, w, h, time);
+    return true;
+}
+
+// 2.7.48: a portal's foot - where the axis through its middle meets the map's ground (MapWorld's .gnd); without the
+// map's file, or a ground far off its middle (another place's), 6 units under its middle.
+void Renderer::Impl::portalFoot(const PortalTrack& t, const float up[3], float foot[3]) const {
+    for (int i = 0; i < 3; ++i) foot[i] = t.view[i] - up[i] * 6.0f;
+    if (!viewToWorldValid) return;
+    const float* m = viewToWorld;
+    const float wx = t.view[0] * m[0] + t.view[1] * m[3] + t.view[2] * m[6] + m[9];
+    const float wz = t.view[0] * m[2] + t.view[1] * m[5] + t.view[2] * m[8] + m[11];
+    float gy = 0.0f;
+    if (!mapWorld.groundAt(wx, wz, gy)) return;
+    const map::Point v = toView(viewToWorld, map::Point{wx, gy, wz});
+    if (std::hypot(v.x - t.view[0], v.y - t.view[1], v.z - t.view[2]) > 30.0f) return;
+    foot[0] = v.x;
+    foot[1] = v.y;
+    foot[2] = v.z;
+}
+
+// 2.7.48: the new portal (portal_ps; core/portal.hpp the game's warp zone) over each portal's place, cut to its box,
+// from a copy of the picture as it is now - its lights and flames in it (the ground under the walls ripples).
+bool Renderer::Impl::drawNewPortals(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
+                                    D3D12_CPU_DESCRIPTOR_HANDLE rtv, UINT code, int w, int h, float time) {
+    if (!portalPipelines[code]) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, portalPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
+        p.BlendState.RenderTarget[0].RenderTargetWriteMask =
+            D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&portalPipelines[code])))) {
+            portalPipelines[code] = nullptr;
+            LOG_ERROR("portals: the new portal's pipeline onto %u samples failed: the game's stays", 1u << code);
+            releaseCom(portalPs);  // not tried again: newPortalWanted() is false from now on
+            return true;
+        }
+    }
+    if (!copySceneColor() || !copySceneDepth()) return false;
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    float up[3] = {0.0f, -1.0f, 0.0f};
+    if (viewToWorldValid) camera::upInView(viewToWorld, up);
+    const float k = float(upscale ? worldScale : scale);
+    const float jx = upscale ? jitter[0] : 0.0f, jy = upscale ? jitter[1] : 0.0f;
+    const float user = float(std::clamp(effects.portalsStrength, 0, 200)) / 100.0f;
+    const std::array<portal::Ring, portal::kRings> rings = portal::ringsAt(double(time));
+    Constants c{};
+    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
+    std::copy(pv, pv + 6, c.projection);
+    c.scale = k;
+    c.jitter[0] = jx;
+    c.jitter[1] = jy;
+    c.uiPixels[0] = float(w);
+    c.uiPixels[1] = float(h);
+    const float twin[4] = {rings[0].radius, rings[0].alpha, rings[1].radius, rings[1].alpha};
+    std::copy(twin, twin + 4, c.twin);
+    c.sourceClamp[0] = rings[2].radius;
+    c.sourceClamp[1] = rings[2].alpha;
+    c.sourceClamp[2] = time;
+    std::copy(up, up + 3, c.fogColor);
+    c.fogColor[3] = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    int index = 0;
+    for (const PortalTrack& t : portalTracks) {
+        const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);
+        if (shown <= 0.0f) continue;
+        float foot[3], box[4];
+        portalFoot(t, up, foot);
+        if (!portal::screenBox(foot, up, proj, 45.0f, box)) continue;
+        const D3D12_RECT around = clipped(box[0] * k + jx, box[1] * k + jy, box[2] * k + jx, box[3] * k + jy, w, h);
+        if (around.right <= around.left || around.bottom <= around.top) continue;
+        std::copy(foot, foot + 3, c.sourceRect);
+        c.sourceRect[3] = shown * user;
+        c.footprint = float(++index) * 0.618f;  // its own sparks
+        c.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f + jx;
+        c.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f + jy;
+        if (!effectPass(portalPipelines[code], dst, dstState, rtv, w, h, c, sceneColorSrv, true, kNoSrv, &around))
+            return false;
+    }
     return true;
 }
 

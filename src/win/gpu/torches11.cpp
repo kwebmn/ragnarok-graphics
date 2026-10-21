@@ -9,6 +9,7 @@
 
 #include "core/d3d7.hpp"
 #include "core/effect_light.hpp"
+#include "core/portal.hpp"
 #include "core/fireflies.hpp"
 #include "core/game_camera.hpp"
 #include "core/map_glows.hpp"
@@ -609,17 +610,20 @@ void Renderer11::applyTorchLight() {
                             portalTracks_.end());
         const float user = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
         static const float kBlue[3] = {0.45f, 0.75f, 1.0f};
+        static const float kLilac[3] = {0.80f, 0.74f, 1.0f};  // 2.7.48: under the new portal, its colour
+        const bool anew = newPortalWanted();
         int shownCount = 0;
         for (const PortalTrack11& t : portalTracks_) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
             if (shown <= 0.0f) continue;
             if (shownCount++ < 8) {
                 const float view[3] = {t.view[0], t.view[1] - 4.0f, t.view[2]};
-                addLight(view, 30.0f, kBlue, 0.35f * user * shown);
+                addLight(view, 30.0f, anew ? kLilac : kBlue, (anew ? 0.21f : 0.35f) * user * shown);
             }
             if (heatPs_) {
                 const float r = std::clamp(t.size * 0.6f, 30.0f, 140.0f) * k;
-                heatSpots_.push_back(HeatSpot11{t.gx * k, t.gy * k, r, -0.7f * std::min(user, 1.5f) * shown});
+                heatSpots_.push_back(
+                    HeatSpot11{t.gx * k, t.gy * k, r, (anew ? -0.35f : -0.7f) * std::min(user, 1.5f) * shown});
             }
         }
     }
@@ -834,6 +838,50 @@ void Renderer11::applyTorchLight() {
         }
     }
     ctx_->PSSetShaderResources(0, 4, none);
+    // 2.7.48: the new portal (portal_ps, as Direct3D 12's drawNewPortals) over each portal's place, from a copy of the
+    // picture as it is now; its foot where its middle's axis meets the map's ground, else 6 units under its middle
+    if (!portalTracks_.empty() && newPortalWanted() && cameraValid_ && copyScene()) {
+        float up[3];
+        camera::upInView(viewToWorld_, up);
+        const std::array<portal::Ring, portal::kRings> rings = portal::ringsAt(double(time));
+        const float user = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
+        Constants pc = c;
+        const float twin[4] = {rings[0].radius, rings[0].alpha, rings[1].radius, rings[1].alpha};
+        std::copy(twin, twin + 4, pc.twin);
+        pc.sourceClamp[0] = rings[2].radius;
+        pc.sourceClamp[1] = rings[2].alpha;
+        pc.sourceClamp[2] = time;
+        std::copy(up, up + 3, pc.fogColor);
+        pc.fogColor[3] = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+        ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO, rgb), nullptr, 0xFFFFFFFF);
+        ctx_->PSSetShader(portalPs_, nullptr, 0);
+        ID3D11ShaderResourceView* views[4] = {nullptr, nullptr, scene_.srv, depthSrv_};
+        ctx_->PSSetShaderResources(0, 4, views);  // t2 the copy, t3 the depth
+        int index = 0;
+        for (const PortalTrack11& t : portalTracks_) {
+            const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);
+            if (shown <= 0.0f) continue;
+            float foot[3];
+            for (int i = 0; i < 3; ++i) foot[i] = t.view[i] - up[i] * 6.0f;
+            const float wx = t.view[0] * m[0] + t.view[1] * m[3] + t.view[2] * m[6] + m[9];
+            const float wz = t.view[0] * m[2] + t.view[1] * m[5] + t.view[2] * m[8] + m[11];
+            float gy = 0.0f, v[3];
+            if (mapWorld_.groundAt(wx, wz, gy)) {
+                toView(map::Point{wx, gy, wz}, v);
+                if (std::hypot(v[0] - t.view[0], v[1] - t.view[1], v[2] - t.view[2]) <= 30.0f)
+                    std::copy(v, v + 3, foot);
+            }
+            float box[4];
+            if (!portal::screenBox(foot, up, proj, 45.0f, box)) continue;
+            std::copy(foot, foot + 3, pc.sourceRect);
+            pc.sourceRect[3] = shown * user;
+            pc.footprint = float(++index) * 0.618f;  // its own sparks
+            pc.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f;
+            pc.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f;
+            cut(pc, box[0] * k, box[1] * k, box[2] * k, box[3] * k);
+        }
+        ctx_->PSSetShaderResources(0, 4, none);
+    }
     const D3D11_RECT all{0, 0, w, h};
     ctx_->RSSetScissorRects(1, &all);
     if (!lightLogged_)

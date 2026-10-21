@@ -178,6 +178,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxPortalsHint, "", &E::portals},
         {"effects", "portals_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxPortalsStrength,
          Text::FxPortalsStrengthHint, " %", nullptr, &E::portalsStrength},
+        {"effects", "portal_new", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxPortalNew,
+         Text::FxPortalNewHint, "", &E::portalNew},  // 2.7.48: a part of portals
         {"effects", "weather", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWeather,
          Text::FxWeatherHint, "", &E::weather},
         {"effects", "weather_amount", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxWeatherAmount,

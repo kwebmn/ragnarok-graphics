@@ -151,6 +151,7 @@ Renderer11::~Renderer11() {
     dropTarget(aoTarget_[0]);
     dropTarget(aoTarget_[1]);
     drop(torchFirePs_);  // 2.5.2
+    drop(portalPs_);     // 2.7.48
     drop(dustPs_);
     drop(bloomDownPs_);
     drop(dofBlurPs_);
@@ -400,7 +401,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[53] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[54] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -444,7 +445,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"critters_ps", ps, shaderSource(), {}, true},
                    {"shafts_ps", ps, shaderSource(), {}, true},  // 2.5.5: the shafts (2.7.10: the flare gone)
                    {"mirror_vs", vs, shaderSource(), {}, true},  // 2.5.9: the world's reflections in the water
-                   {"mirror_ps", ps, shaderSource(), {}, true}};
+                   {"mirror_ps", ps, shaderSource(), {}, true},
+                   {"portal_ps", ps, shaderSource(), {}, true}};  // 2.7.48: the new portal
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -581,6 +583,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[50].code.empty() || !psOf(wants[50], shaftsPs_)) shaftsPs_ = nullptr;
     if (wants[51].code.empty() || !vsOf(wants[51], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
     if (wants[52].code.empty() || !psOf(wants[52], mirrorPs_)) mirrorPs_ = nullptr;
+    if (wants[53].code.empty() || !psOf(wants[53], portalPs_)) portalPs_ = nullptr;  // 2.7.48
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -1227,6 +1230,17 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         noteCritterFlame(rec, d);
     // 2.5.3: a portal's draw - its middle, for its light and its swirl once the world is drawn (as draw.cpp 0.38)
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted()) notePortal(rec, d);
+    // 2.7.48: the new portal (torches11.cpp) where the game's is - its draws noted for its place only (as draw.cpp)
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && newPortalWanted()) {
+        const int id = int(d.effectId);
+        if (portalIdsTold_.size() < 16 &&
+            std::find(portalIdsTold_.begin(), portalIdsTold_.end(), id) == portalIdsTold_.end()) {
+            portalIdsTold_.push_back(id);
+            LOG_INFO("portals: the game's effect %d drawn anew - the new portal (on %s, Direct3D 11)", id,
+                     map_.c_str());
+        }
+        return;
+    }
     // 2.5.2: a character's round shadow - its feet followed for the footprints and the ripples (as draw.cpp)
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && (stepKind() || ripplesWanted() || crittersNeedFeet()))
         noteFoot(rec, d);

@@ -3095,6 +3095,16 @@ const Entry kTexts[] = {
      "як у комети.",
      "Голубой шар Ruwach, кружащий вокруг героя, — маленький яркий шарик в начале своего голубого шлейфа, как у "
      "кометы."},
+    {"New portal", "Новий портал", "Новый портал"},  // 2.7.48
+    {"The portals drawn anew the game's own way, only sharper: walls of light close in on the middle in waves, "
+     "the ground under them ripples as under water, a soft light in the middle, sparks rise, streams run up the "
+     "column of light. Off: the game's own portal.",
+     "Портали намальовані заново так само, як у грі, тільки чіткіше: стінки світла хвилями сходяться до середини, "
+     "земля під ними хвилюється, як під водою, посередині м'яке світло, іскри здіймаються, стовпом світла біжать "
+     "угору струмочки. Вимкнено — портал гри.",
+     "Порталы нарисованы заново так же, как в игре, только чётче: стенки света волнами сходятся к середине, "
+     "земля под ними колышется, как под водой, в середине мягкий свет, искры поднимаются, по столбу света бегут "
+     "вверх струйки. Выключено — портал игры."},
     {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",

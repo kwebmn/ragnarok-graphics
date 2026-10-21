@@ -203,6 +203,7 @@ EffectSettings effectsOff() {
     e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.stepDust = e.seasonSnow = false;
     e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.desertHeat = false;
     e.moonLight = e.firefliesLight = e.moonBeams = e.lightOrbs = false;  // 2.7.18; 2.7.20; 2.7.25
+    e.portalNew = false;  // 2.7.48
     e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
     e.dayNow = -1;

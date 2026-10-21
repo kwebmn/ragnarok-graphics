@@ -112,6 +112,17 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         told = true;
         return;
     }
+    // 2.7.48: the new portal (torches.cpp drawNewPortals) where the game's is - its draws noted for its place only
+    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && newPortalWanted()) {
+        if (!torchDone) notePortal(rec, d);
+        const int id = int(d.effectId);
+        if (portalIdsTold.size() < 16 &&
+            std::find(portalIdsTold.begin(), portalIdsTold.end(), id) == portalIdsTold.end()) {
+            portalIdsTold.push_back(id);
+            LOG_INFO("portals: the game's effect %d drawn anew - the new portal (on %s)", id, mapName.c_str());
+        }
+        return;
+    }
     // 0.21: the world done - at the interface - its colours, then its glow.
     if (s.ui && !upscale && !finishWorld()) return;
     if (s.ui && !upscale && glowDrawn && !addGlowToTarget()) return;

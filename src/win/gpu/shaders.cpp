@@ -1475,6 +1475,109 @@ float4 torch_apply_ps(PresentOut i) : SV_Target {
     return float4(lit + (hash12(i.pos.xy) + hash12(i.pos.xy + 17.3) - 1.0) / 255.0, 1.0);
 }
 
+// 2.7.48, the new portal (core/portal.hpp; the user's pick «Б»: «такой же волнами и объёмный, но лучше»): the game's
+// warp zone drawn anew over its place, the game's own draws of it not drawn - its walls of light closing in on the
+// middle (twin, sourceClamp.xy: three rings' radius and alpha, world units), a faint column of light with streams
+// running up it, sparks rising; the ground under the walls ripples as under water, a soft light in the middle.
+// sourceRect.xyz its foot in the view, .w its strength; fogColor.xyz the world's up in the view, .w the night;
+// sourceClamp.z the time, footprint its seed; uiPixels.xy the world's size, .zw its foot on the screen (its pixels).
+static const float3 kPortalWhite = float3(1.0, 0.99, 1.0);
+static const float3 kPortalLilac = float3(0.80, 0.74, 1.0);
+static const float3 kPortalDeep = float3(0.58, 0.48, 0.98);
+
+// The light of a wall h tall standing on a circle of radius r round the axis (foot, up), along the ray from the
+// camera through the pixel (dir, its z 1: the ray's t is the view's depth), hidden behind what the pixel shows (its
+// view depth z): brighter at its foot, melting upwards, its edges seen side on brighter (as a ring of light round); the
+// far side 0.55. px: world units a pixel at the depth 1.
+float portalWall(float3 dir, float3 foot, float3 up, float r, float h, float z, float px) {
+    if (r <= 0.0) return 0.0;
+    float3 o = -foot;
+    float3 oh = o - up * dot(o, up), dh = dir - up * dot(dir, up);
+    float a = dot(dh, dh), b = 2.0 * dot(oh, dh), c = dot(oh, oh) - r * r;
+    float disc = b * b - 4.0 * a * c;
+    if (disc <= 0.0 || a < 1e-6) return 0.0;
+    float sq = sqrt(disc);
+    float s = 0.0;
+    [unroll] for (int k = 0; k < 2; ++k) {
+        float t = (-b + (k == 0 ? -sq : sq)) / (2.0 * a);
+        if (t <= 0.0) continue;
+        float3 hit = o + dir * t;
+        float y = dot(hit, up);
+        float on = smoothstep(-0.15, 0.1, y) * (1.0 - smoothstep(h * 0.8, h, y));
+        float3 n = normalize(hit - up * y);
+        float limb = min(1.0 + 1.4 * pow(1.0 - abs(dot(n, normalize(dir))), 3.0), 2.4);
+        float seen = saturate((z - t) * 1.5 + 0.5);
+        s += on * pow(saturate(1.0 - y / h), 1.2) * limb * seen * (k == 0 ? 1.0 : 0.55);
+    }
+    float edge = saturate(sq / (2.0 * sqrt(a)) / max(2.0 * px * (-b / (2.0 * a)), 1e-4));  // soft over 2 pixels
+    return s * edge;
+}
+
+// The ground's ripple under a wall at radius r (alpha al) at rho from the middle, and the glow at its foot
+float2 portalRipple(float rho, float r, float al) {
+    float d = rho - r;
+    return float2(d * exp(-d * d / 2.0), exp(-d * d / 4.0)) * al * step(0.01, r);
+}
+
+// A ring of the portal: its wall of light 8 units tall (the game's 5 read thin as a line on the screen) and, a little
+// in and out of it, a soft halo that gives it its body
+float2 portalRing(float3 dir, float3 foot, float3 up, float r, float al, float z, float px) {
+    if (al <= 0.0) return float2(0.0, 0.0);
+    float wall = portalWall(dir, foot, up, r, 8.0, z, px);
+    float halo = 0.0;
+    if (r > 0.7) halo = portalWall(dir, foot, up, r - 0.6, 8.0, z, px) + portalWall(dir, foot, up, r + 0.6, 8.0, z, px);
+    return float2(wall, halo * 0.5) * al;
+}
+
+float4 portal_ps(PresentOut i) : SV_Target {
+    int2 wp = int2(i.pos.xy);
+    float raw = sceneDepth.Load(int3(wp, 0));
+    float3 p = viewFrom(wp, raw);
+    float3 foot = sourceRect.xyz, up = fogColor.xyz;
+    float strength = sourceRect.w, night = fogColor.w, time = sourceClamp.z;
+    float3 rel = p - foot;
+    float y = dot(rel, up);
+    float rho = length(rel - up * y);
+    float ground = raw < 0.99999 ? 1.0 - smoothstep(1.0, 3.0, abs(y)) : 0.0;  // the ground: not who stands in it
+    float2 rip = portalRipple(rho, twinX, twinY) + portalRipple(rho, twinW, twinH) +
+                 portalRipple(rho, sourceClamp.x, sourceClamp.y);
+    float2 away = float2(wp) + 0.5 - uiPixels.zw;
+    away /= max(length(away), 1.0);
+    float perUnit = f0 * scale / max(p.z, 1.0);
+    float2 off = away * rip.x * 0.35 * perUnit * ground * strength;
+    float3 base = sceneColor.SampleLevel(samp0, (float2(wp) + 0.5 + off) / uiPixels.xy, 0).rgb;
+    float pool = exp(-rho * rho / 196.0 * 1.6) * ground * (0.35 + 0.07 * sin(time * 2.0));
+    base *= 1.0 + kPortalLilac * pool * (0.4 + night) * strength;
+    float2 g = (float2(wp) + 0.5 - float2(jitterX, jitterY)) / scale;
+    float3 dir = float3((g.x - cx) / f0, (g.y - cy) / f1, 1.0);
+    float px = 1.0 / (f0 * scale);
+    float z = raw < 0.99999 ? p.z : 1e9;
+    float2 walls = portalRing(dir, foot, up, twinX, twinY, z, px) + portalRing(dir, foot, up, twinW, twinH, z, px) +
+                   portalRing(dir, foot, up, sourceClamp.x, sourceClamp.y, z, px);
+    float3 light = lerp(kPortalLilac, kPortalWhite, 0.65) * walls.x * 0.85 + kPortalDeep * walls.y * 0.35 +
+                   kPortalDeep * rip.y * ground * 0.4;
+    float stream = 0.6 + 0.4 * valueNoise(float2(g.x * 0.35, g.y * 0.06 + time * 0.7));
+    light += kPortalLilac * portalWall(dir, foot, up, 15.75, 45.0, z, px) * 0.16 * stream;
+    // the sparks: a pair of ways along the ground, 13 rising round it for 130 ticks
+    float3 pick = abs(up.x) < 0.9 ? float3(1.0, 0.0, 0.0) : float3(0.0, 1.0, 0.0);
+    float3 ea = normalize(cross(up, pick)), eb = cross(up, ea);
+    [loop] for (int k = 0; k < 13; ++k) {
+        float s1 = hash12(float2(float(k), footprint)), s2 = hash12(float2(footprint, float(k) + 7.3));
+        float ph = frac(time * 0.46 * (0.8 + 0.4 * hash12(float2(float(k) + 3.1, footprint))) + s2);
+        float ang = s1 * 6.2832, rad = 14.0 * (0.55 + 0.45 * hash12(float2(float(k) + 5.7, footprint)));
+        float3 sv = foot + (ea * cos(ang) + eb * sin(ang)) * rad + up * (ph * 26.0);
+        if (sv.z <= nearZ) continue;
+        float2 sg = float2(sv.x / sv.z * f0 + cx, sv.y / sv.z * f1 + cy);
+        float size = f0 / sv.z;  // game pixels a world unit there
+        float d2 = dot(g - sg, g - sg) / max(size * size, 1e-4);
+        float tw = (0.65 + 0.35 * sin(time * 9.0 + float(k) * 2.1)) * sin(ph * 3.14159) * saturate((z - sv.z) + 0.5);
+        light += (kPortalWhite * exp(-d2 / 0.09) + kPortalLilac * exp(-d2 / 0.7) * 0.35) * tw;
+    }
+    light *= strength;
+    float3 lit = 1.0 - (1.0 - base) * (1.0 - saturate(light));
+    return float4(lit + (hash12(i.pos.xy) + hash12(i.pos.xy + 17.3) - 1.0) / 255.0, 1.0);
+}
+
 float fbm4(float2 p) {
     float s = 0.0, a = 0.5;
     [unroll] for (int k = 0; k < 4; ++k) {

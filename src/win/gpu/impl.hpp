@@ -519,6 +519,11 @@ struct Renderer::Impl {
     ID3DBlob* smokeGlowPs = nullptr;
     ID3D12PipelineState* torchLightPipelines[4] = {};  // 2.5: the apply pass into the target of 1, 2, 4, 8 samples
     ID3D12PipelineState* torchFirePipelines[5] = {};   // the same, and the world under DLSS (its alpha the mask)
+    // 2.7.48: the new portal (portal_ps) over each portal's place, into the target of 1, 2, 4, 8 samples; the game's
+    // effects taken for portals, told once each
+    ID3DBlob* portalPs = nullptr;
+    ID3D12PipelineState* portalPipelines[4] = {};
+    std::vector<int> portalIdsTold;
     ID3DBlob* fireflyPs = nullptr;                      // 0.28: a firefly's dot and halo
     ID3D12PipelineState* fireflyPipelines[5] = {};     // as torchFirePipelines
     ID3DBlob* dustPs = nullptr;                         // 0.29: a cloud of the towers' dust
@@ -910,6 +915,13 @@ struct Renderer::Impl {
         return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));
     }
     bool portalsWanted() const { return effects.portals && effects.portalsStrength > 0; }  // 0.38
+    // 2.7.48: the new portal drawn where the game's was (not drawn): only while its shaders and the torches' are there
+    bool newPortalWanted() const {
+        return portalsWanted() && effects.portalNew && portalPs && torchApplyPs && torchFirePs && torchAccumPs;
+    }
+    bool drawNewPortals(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
+                        UINT code, int w, int h, float time);
+    void portalFoot(const PortalTrack& t, const float up[3], float foot[3]) const;
     float heatUser() const { return float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f; }
     bool mapWeatherWanted() const {  // 0.39
         return effects.weather && effects.weatherAmount > 0 && weatherPs && mapWeather != weather::Kind::None;

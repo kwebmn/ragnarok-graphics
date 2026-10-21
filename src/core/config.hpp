@@ -174,6 +174,7 @@ struct EffectSettings {
     // 0.38: the portals glow around in blue and the air turns in them. On by default.
     bool portals = true;
     int portalsStrength = 100;  // %, 0-200
+    bool portalNew = true;  // 2.7.48: portals - the game's warp zone drawn anew, sharper (core/portal.hpp, portal_ps)
     // 0.39: the driver's own weather (core/weather.hpp): snow in Lutie, leaves in Payon, sand about Morroc, rain over
     // Niflheim and Einbroch. On by default.
     bool weather = true;

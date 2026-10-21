@@ -58,7 +58,7 @@ const EffectLayout kEffects[] = {
     {"effects.map_glows", {}, {"effects.map_glows_brightness"}, {}, 1},
     {"effects.rays", {}, {"effects.rays_brightness"}, {}, 1},
     {"effects.lava", {}, {"effects.lava_brightness"}, {}, 1},
-    {"effects.portals", {}, {"effects.portals_strength"}, {}, 1},
+    {"effects.portals", {"effects.portal_new"}, {"effects.portals_strength"}, {}, 1},  // 2.7.48 the new portal
     {"effects.tree_volume", {}, {}, {}, 2},  // 1.7
     {"effects.leaf_light", {}, {}, {}, 2},  // 1.7
     {"effects.tree_tints", {"effects.tree_seasons"}, {}, {}, 2},  // 1.7
