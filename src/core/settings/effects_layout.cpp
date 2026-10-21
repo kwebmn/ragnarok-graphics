@@ -41,7 +41,6 @@ const EffectLayout kEffects[] = {
     {"effects.foliage", {}, {"effects.foliage_strength"}, {}, 0},                    // 0.64
     {"effects.soft_particles", {}, {}, {}, 0},  // 0.67
     {"effects.rim_light", {}, {"effects.rim_strength"}, {}, 0},  // 0.68
-    {"effects.sky", {"effects.stars"}, {"effects.sky_clouds", "effects.sky_strength"}, {}, 0},  // 0.69
     {"effects.motes", {"effects.pollen", "effects.indoor_dust"}, {"effects.motes_amount"}, {}, 0},  // 0.70
     {"effects.relief", {}, {"effects.relief_strength"}, {}, 0},  // 0.71
     {"effects.floor_reflections", {}, {"effects.floor_reflect_strength"}, {}, 0},  // 0.72
@@ -84,7 +83,6 @@ const EffectLayout kEffects[] = {
     {"effects.smooth_hills", {}, {"effects.smooth_hills_strength"}, {}, 3},  // 1.15
     {"effects.world_reflections", {}, {}, {}, 3},  // 1.16
     {"effects.sprite_light", {}, {"effects.sprite_light_strength"}, {}, 2},  // 1.17
-    {"effects.edge_land", {}, {}, {}, 3},  // 1.18
     {"effects.seasons", {"effects.season_snow", "effects.season_grass"}, {}, {}, 2},  // 1.20
     {"effects.rain_wet", {}, {}, {}, 2},  // 1.20
     {"effects.night_windows", {}, {}, {}, 2},  // 1.21

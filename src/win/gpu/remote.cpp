@@ -367,9 +367,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.softParticles ? 1 : 0);  // 0.67
     w.u8(e.rimLight ? 1 : 0);  // 0.68
     w.i32(e.rimStrength);
-    w.u8(e.sky ? 1 : 0);  // 0.69
-    w.i32(e.skyClouds);
-    w.i32(e.skyStrength);
     w.u8(e.motes ? 1 : 0);  // 0.70
     w.i32(e.motesAmount);
     w.u8(e.relief ? 1 : 0);  // 0.71
@@ -424,7 +421,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.worldReflections ? 1 : 0);  // 1.16
     w.u8(e.spriteLight ? 1 : 0);  // 1.17
     w.i32(e.spriteLightStrength);
-    w.u8(e.edgeLand ? 1 : 0);  // 1.18
     w.u8(e.seasons ? 1 : 0);  // 1.20
     w.u8(e.rainWet ? 1 : 0);
     w.u8(e.nightWindows ? 1 : 0);  // 1.21
@@ -441,7 +437,6 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.pollen ? 1 : 0);
     w.u8(e.indoorDust ? 1 : 0);
     w.u8(e.rainSplashes ? 1 : 0);
-    w.u8(e.stars ? 1 : 0);
     w.u8(e.desertHeat ? 1 : 0);
     w.u8(e.skyRays ? 1 : 0);
     w.u8(e.treeSeasons ? 1 : 0);

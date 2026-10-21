@@ -127,7 +127,7 @@ public:
         critterWorld_.setPlace(place_);  // 2.5.4: a new map - everything goes
         crittersTime_ = 0.0f;
         weather_ = weather::chosen(effects_.weatherKind, map);  // 2.6.22: the map's own, or the one chosen
-        mistLogged_ = skyLogged_ = weatherLogged_ = false;
+        mistLogged_ = weatherLogged_ = false;
         mapWorld_.setMap(map);  // 2.5.1: its file - the lamps' lights
         if (!map.empty()) fadeStart_ = waterTime();  // 2.5.2: the world comes in from black (0.83)
     }
@@ -222,10 +222,9 @@ private:
     void applyFireflies();
     void applyGrade();  // 0.59
     void applyNight();  // 0.63
-    // 2.5: the low mists, the sky past the map's edge, the map's weather (or the motes) - Direct3D 12's
-    // haze.cpp and weather.cpp passes by the same shaders, with the game's camera (setCamera) and the depth (t3)
+    // 2.5: the low mists, the map's weather (or the motes) - Direct3D 12's haze.cpp and weather.cpp passes by the
+    // same shaders, with the game's camera (setCamera) and the depth (t3) (2.7.17: the sky past the map's edge gone)
     void applyMist();
-    void applySky();
     void applyWeather();
     // 2.5.1: the soft shadows where surfaces meet (ao.cpp: a mask at a half or a quarter of the size, blurred twice,
     // multiplied in) - before the characters
@@ -597,12 +596,11 @@ private:
     std::vector<torch::Flame> flames_;  // this frame's
     torch::Keeper torchKeeper_;         // 2.6.17: the game's flames kept steady (core/torch.hpp)
     bool lightDone_ = false, lightLogged_ = false;
-    // 2.5: the mists, the sky and the weather (applyMist, applySky, applyWeather)
+    // 2.5: the mists and the weather (applyMist, applyWeather)
     ID3D11PixelShader* mistPs_ = nullptr;
-    ID3D11PixelShader* skyPs_ = nullptr;
     ID3D11PixelShader* weatherPs_ = nullptr;
-    bool mistDone_ = false, skyDone_ = false, weatherDone_ = false;
-    bool mistLogged_ = false, skyLogged_ = false, weatherLogged_ = false;
+    bool mistDone_ = false, weatherDone_ = false;
+    bool mistLogged_ = false, weatherLogged_ = false;
     bool outdoors_ = false;
     float shine_ = 0.0f;  // 2.5.17: how much the map's floor reflects under a roof (floorShine)
     weather::Kind weather_ = weather::Kind::None;
@@ -689,7 +687,7 @@ private:
     float windClock_ = -1.0f;
     wind::Wind windNow_;
     float windScreenX_ = 0.0f;
-    wind::Drift weatherDrift_, skyDrift_;
+    wind::Drift weatherDrift_;
     unsigned long long clockStart_ = 0;
     ID3D11VertexShader* clearVs_ = nullptr;
     ID3D11PixelShader* clearPs_ = nullptr;
@@ -816,7 +814,7 @@ private:
     struct FrameTimes {
         ID3D11Query* disjoint = nullptr;
         ID3D11Query* stamps[kStamps] = {};
-        ID3D11Query* effect[18][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21; 2.6.11: 18)
+        ID3D11Query* effect[17][2] = {};  // 0.89: the effects' own spans (EffectTime11; 2.5.15: 21 ... 2.7.17: 17)
         unsigned effectBegun = 0, effectEnded = 0;  // bits by EffectTime11
         UINT used = 0;          // stamps ended
         bool open = false;      // its disjoint begun: this frame is timed
@@ -826,14 +824,14 @@ private:
     FrameTimes times_[kTimedFrames];
     // 0.89: the effects timed one by one on the card (the log's "GPU: effects a frame" line)
     enum EffectTime11 {
-        kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeMist11, kTimeSky11, kTimeWeather11,
+        kTimeShadows11, kTimeLight11, kTimeNight11, kTimeGrade11, kTimeMist11, kTimeWeather11,
         kTimeAo11, kTimeBloom11, kTimeSteps11, kTimeHeat11, kTimeShafts11,
         kTimeGlow11, kTimeWater11, kTimeFloor11, kTimeGrass11,  // 2.5.9: the last four
         // 2.5.15: the game's world draws (with the effects drawn amid them) and its interface's - apart from the
         // effects' own passes in the log, not in their costs (an HD 6570: 46-57 ms a frame, effects a few of them)
         kTimeWorld11, kTimeUi11, kEffectTimes11
     };
-    static_assert(kEffectTimes11 == 18, "FrameTimes::effect holds 18");
+    static_assert(kEffectTimes11 == 17, "FrameTimes::effect holds 17");
     static bool drawsTimer(int e) { return e == kTimeWorld11 || e == kTimeUi11; }
     void effectBegin(EffectTime11 e);  // once a frame each, in an open frame
     void effectEnd(EffectTime11 e);

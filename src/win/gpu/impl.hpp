@@ -71,7 +71,7 @@ constexpr UINT kSlots = 2;              // submissions in flight
 // their own. 2.2.2: the sun's shadows' gone with them (2.1.4); 2.4.1: the new trees' too.
 enum EffectTimer : UINT {
     kTimeAo, kTimeActorShadows, kTimeLights, kTimeMist, kTimeHeat, kTimeGrade, kTimeWeather,
-    kTimeGlow, kTimeWater, kTimeSky, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
+    kTimeGlow, kTimeWater, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
     kEffectTimes
 };
 // 2.2.2: each timed pass's names, in the enum's order (core/effect_costs.hpp kTimedPasses: the key Costs know, the
@@ -564,11 +564,6 @@ struct Renderer::Impl {
     int floorWidth = 0, floorHeight = 0;
     bool floorReflectDone = false;
     bool floorReflectLogged = false;
-    // 0.69, the sky past the map's edge (haze.cpp, sky_ps).
-    ID3DBlob* skyPs = nullptr;
-    ID3D12PipelineState* skyPipelines[4] = {};
-    bool skyDone = false;
-    bool skyLogged = false;
     // 0.35, heat haze (heat.cpp): the spots the torches' pass gathers, read aside from the picture's copy.
     ID3DBlob* heatPs = nullptr;
     ID3D12PipelineState* heatPipelines[4] = {};
@@ -605,10 +600,11 @@ struct Renderer::Impl {
     trees::Season mapSeason = trees::Season::Green;  // 1.7: its trees' (core/trees.hpp)
     seasons::Look mapYear;  // 1.20: the year on its ground (core/seasons.hpp)
     // 1.22: the shared wind (core/wind.hpp), once a frame (weather.cpp updateWind): its way in the world, its way on
-    // the screen (the view's x axis), and what it has carried the weather (pixels) and the sky's clouds so far
+    // the screen (the view's x axis), and what it has carried the weather (pixels) so far (2.7.17: the sky's clouds
+    // gone with the sky)
     wind::Wind windNow;
     float windScreenX = 0.0f, windClock = -1.0f;
-    wind::Drift weatherDrift, skyDrift;
+    wind::Drift weatherDrift;
     bool windShared() const { return effects.sharedWind && viewToWorldValid; }
     void updateWind();
     living::Place mapPlace;                          // 1.7: its small details (core/living.hpp)
@@ -869,9 +865,6 @@ struct Renderer::Impl {
     bool mistDue() const { return mistWanted() && groundDrawn && !mistDone && viewToWorldValid; }
     bool applyMist();  // once a frame, the world drawn and lit; false: lost
     ID3D12PipelineState* mistPipeline(UINT samples);
-    bool skyWanted() const { return effects.sky && effects.skyStrength > 0 && skyPs && mapOutdoors; }
-    bool skyDue() const { return skyWanted() && groundDrawn && !skyDone && viewToWorldValid; }
-    bool applySky();  // once a frame, the world drawn; false: lost
     // 0.72: indoors (a polished or wet floor) and in the rain; a field under a dry sky does not shine
     float floorReflectAmount() const {
         if (!effects.floorReflections || !floorReflectPs || !halfOverPs) return 0.0f;
@@ -969,7 +962,6 @@ struct Renderer::Impl {
         actorShadowsDone = actorShadowsDrawn = false;
         sceneDepthFresh = false;
         mistDone = false;
-        skyDone = false;  // 0.69
         floorReflectDone = false;  // 0.72
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80

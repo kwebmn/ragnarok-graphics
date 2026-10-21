@@ -86,8 +86,6 @@ const Member kMembers[] = {
     {"cave_drips", Caves, 2, &E::caveDrips},
     {"lit_dust", Caves, 3, &E::litDust},
 
-    {"sky", Sky, 2, &E::sky},
-    {"edge_land", Sky, 3, &E::edgeLand},
     {"motes", Sky, 2, &E::motes},
     {"shared_wind", Sky, 3, &E::sharedWind},
 
@@ -122,7 +120,7 @@ const Strength kStrengths[] = {
     {Plants, &E::grassAmount, 100},    {Plants, &E::foliageStrength, 200},
     {Waters, &E::waterWaves, 100},     {Waters, &E::waterReflections, 100},
     {Weather, &E::weatherAmount, 200},
-    {Sky, &E::skyStrength, 100},       {Sky, &E::motesAmount, 200},
+    {Sky, &E::motesAmount, 200},
     {Screen, &E::bloomStrength, 200},  {Screen, &E::regionLooksStrength, 100},
 };
 
@@ -157,10 +155,10 @@ const OldMember kOldMembers[] = {
     {OldWater, &E::splashes},       {OldWater, &E::underwater},     {OldWater, &E::swamp},
     {OldWater, &E::worldReflections},
     {OldAir, &E::weather},          {OldAir, &E::heat},             {OldAir, &E::storms},
-    {OldAir, &E::sky},              {OldAir, &E::dayCycle},         {OldAir, &E::motes},
+    {OldAir, &E::dayCycle},         {OldAir, &E::motes},
     {OldAir, &E::morningFog},       {OldAir, &E::sandDrift},        {OldAir, &E::snowSparkle},
     {OldAir, &E::caveDrips},        {OldAir, &E::shafts},           {OldAir, &E::litDust},
-    {OldAir, &E::rainWet},          {OldAir, &E::edgeLand},
+    {OldAir, &E::rainWet},
     {OldLife, &E::footprints},      {OldLife, &E::butterflies},     {OldLife, &E::birds},
     {OldLife, &E::nightFireflies},  {OldLife, &E::embers},          {OldLife, &E::breath},
     {OldSkills, &E::aura},          {OldSkills, &E::skillsSoft},
@@ -179,7 +177,7 @@ const Strength kOldStrengths[] = {
     {OldSurfaces, &E::smoothHillsStrength, 200}, {OldSurfaces, &E::floorReflectStrength, 100},
     {OldNature, &E::grassAmount, 100},      {OldNature, &E::foliageStrength, 200},
     {OldWater, &E::waterWaves, 100},        {OldWater, &E::waterReflections, 100},
-    {OldAir, &E::heatStrength, 200},        {OldAir, &E::weatherAmount, 200},       {OldAir, &E::skyStrength, 100},
+    {OldAir, &E::heatStrength, 200},        {OldAir, &E::weatherAmount, 200},
     {OldAir, &E::shaftsStrength, 200},      {OldAir, &E::motesAmount, 200},
     {OldSkills, &E::auraBrightness, 100},   {OldSkills, &E::skillBrightness, 100},
     {OldSkills, &E::skillSparksAmount, 200},

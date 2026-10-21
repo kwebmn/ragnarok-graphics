@@ -30,14 +30,6 @@ TEST(rim_light_on_by_default_its_strength_bounded) {
     CHECK(!effectsOff().rimLight);
 }
 
-TEST(sky_on_by_default_with_its_clouds) {
-    // 0.69: the sky past the map's edge.
-    const Config c = parseConfig("[effects]\nsky_clouds = 30\n");
-    CHECK(c.effects.sky && c.effects.skyClouds == 30 && c.effects.skyStrength == 100);
-    CHECK(!parseConfig("[effects]\nsky = 0\n").effects.sky);
-    CHECK(!effectsOff().sky);
-}
-
 TEST(motes_on_by_default_their_amount_bounded) {
     // 0.70: pollen and dust in the air. 2.6.8: twice as many by default - at 100 % they were all but unseen over
     // Prontera's white paving (R-UT7AH3), and the pass costs 0.09 ms on an RTX 5060 Ti

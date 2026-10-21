@@ -30,8 +30,7 @@ TEST(effect_parts_have_their_own_boxes_under_the_effect) {
         {"effects.footprints", "effects.step_dust"},
         {"effects.seasons", "effects.season_snow"},    {"effects.seasons", "effects.season_grass"},
         {"effects.motes", "effects.pollen"},           {"effects.motes", "effects.indoor_dust"},
-        {"effects.weather", "effects.rain_splashes"},  {"effects.sky", "effects.stars"},
-        {"effects.heat", "effects.desert_heat"},
+        {"effects.weather", "effects.rain_splashes"},  {"effects.heat", "effects.desert_heat"},
         {"effects.shafts", "effects.sky_rays"},        {"effects.tree_tints", "effects.tree_seasons"},
         {"effects.butterflies", "effects.dragonflies"}};
     const Config defaults = parseConfig("");

@@ -1597,7 +1597,6 @@ void Renderer::Impl::destroy() {
     releaseCom(shadowApplyPs);
     for (ID3D12PipelineState*& p : mistPipelines) releaseCom(p);  // 0.34
     releaseCom(mistPs);
-    for (ID3D12PipelineState*& p : skyPipelines) releaseCom(p);  // 0.69
     releaseCom(floorReflectPipeline);  // 0.72, 0.86
     for (ID3D12PipelineState*& p : halfOverPipelines) releaseCom(p);
     releaseCom(halfOverPs);
@@ -1637,7 +1636,6 @@ void Renderer::Impl::destroy() {
     releaseCom(bloomDownPs);
     releaseCom(bloomApplyPs);
     releaseCom(floorReflectPs);
-    releaseCom(skyPs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
     for (ID3D12PipelineState*& p : splashPipelines) releaseCom(p);  // 0.64
     for (ID3D12PipelineState*& p : waterfallPipelines) releaseCom(p);  // 0.65

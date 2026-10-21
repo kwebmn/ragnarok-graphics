@@ -170,7 +170,6 @@ EffectSettings effectsOff() {
     e.nightWindows = false;
     e.rainWet = false;
     e.seasons = false;
-    e.edgeLand = false;
     e.spriteLight = false;
     e.worldReflections = false;
     e.smoothHills = false;
@@ -199,12 +198,12 @@ EffectSettings effectsOff() {
     e.hitFlash = false;
     e.glint = false;
     e.ripples = false;
-    e.softParticles = e.rimLight = e.sky = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
+    e.softParticles = e.rimLight = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
     e.bloom = e.regionLooks = e.footprints = e.storms = e.grass = e.skillSparks = false;
     e.mapFade = e.noGameFog = e.noServerNight = e.roundLight = false;
     // 2.4: the parts of the effects
     e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.stepDust = e.seasonSnow = false;
-    e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.stars = e.desertHeat = false;
+    e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.desertHeat = false;
     e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
     e.dayNow = -1;
@@ -242,7 +241,6 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.nightWindows ||
            e.rainWet ||
            e.seasons ||
-           e.edgeLand ||
            e.spriteLight ||
            e.worldReflections ||
            e.smoothHills ||
@@ -271,7 +269,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.hitFlash ||
            e.glint ||
            e.ripples ||
-           e.softParticles || e.rimLight || e.sky || e.motes ||
+           e.softParticles || e.rimLight || e.motes ||
            e.relief || e.floorReflections || e.shafts || e.dayCycle || e.bloom ||
            e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks ||
            e.roundLight;

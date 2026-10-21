@@ -217,11 +217,8 @@ struct EffectSettings {
     // that faces them more: the flat sprites look round. On by default.
     bool rimLight = true;
     int rimStrength = 100;  // %, 0-200
-    // 0.69: the sky past the map's edge on the fields and in the towns - a sky with drifting clouds instead of
-    // the void, at night darker with stars. On by default.
-    bool sky = true;
-    int skyClouds = 60;  // %, 0-100
-    int skyStrength = 100;  // %, 0-100
+    // (2.7.17: sky - the sky past the map's edge, its clouds and stars (0.69), and edge_land - the land past it
+    // (1.18) - gone at the user's word.)
     // 0.70: motes in the air where the map has no weather - pollen drifting over the fields and the towns, dust
     // in the dungeons and the houses. On by default.
     bool motes = true;
@@ -347,9 +344,6 @@ struct EffectSettings {
     // sides, a warm rim towards it; with Real sun shadows darker in a house's or a crown's shadow. Off by default.
     bool spriteLight = false;
     int spriteLightStrength = 100;  // %, 0-200 (2.6.4: the body's light, seen at 100; the old rim was 60)
-    // 1.18: land past the map's edge (sky_ps): looked down at, the ground goes on in the colours of the ground on
-    // the screen, fading into the haze - instead of a sea of clouds. Needs the sky. Off by default.
-    bool edgeLand = false;
     // 1.20: the year on the whole map (core/seasons.hpp) and the rain's wet on the walls and roofs
     // (ground_life_ps). Off by default.
     bool seasons = false;
@@ -377,7 +371,6 @@ struct EffectSettings {
     bool pollen = true;         // motes: under the open sky
     bool indoorDust = true;     // motes: in the dungeons and the houses
     bool rainSplashes = true;   // weather: the rain's rings on the ground
-    bool stars = true;          // sky: at night
     bool desertHeat = true;     // heat: far off in the desert
     bool skyRays = true;        // shafts: the rays from the sky over the fields
     bool treeSeasons = true;    // tree_tints: autumn's golden crowns, Lutie's rime

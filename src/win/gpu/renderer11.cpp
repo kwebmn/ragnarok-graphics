@@ -143,7 +143,6 @@ Renderer11::~Renderer11() {
     drop(drawLeanPs_);  // 2.5
     drop(drawGlowLeanPs_);
     drop(mistPs_);
-    drop(skyPs_);
     drop(weatherPs_);
     drop(aoPs_);  // 2.5.1
     drop(aoBlurPs_);
@@ -400,7 +399,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[54] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[53] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -417,7 +416,6 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"draw_lean_ps", ps, shaderSource(), {}, true, false, true},  // 2.5
                    {"draw_glow_lean_ps", ps, shaderSource(), {}, true, false, true},
                    {"mist_ps", ps, shaderSource(), {}, true},  // 2.5: the mists, the sky, the weather
-                   {"sky_ps", ps, shaderSource(), {}, true},
                    {"weather_ps", ps, shaderSource(), {}, true},
                    {"ao_ps", ps, shaderSource(), {}, true},  // 2.5.1: the soft shadows
                    {"ao_blur_ps", ps, shaderSource(), {}, true},
@@ -554,35 +552,34 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[22].code.empty() || !psOf(wants[22], drawLeanPs_)) drawLeanPs_ = nullptr;  // 2.5
     if (wants[23].code.empty() || !psOf(wants[23], drawGlowLeanPs_)) drawGlowLeanPs_ = nullptr;
     if (wants[24].code.empty() || !psOf(wants[24], mistPs_)) mistPs_ = nullptr;  // 2.5
-    if (wants[25].code.empty() || !psOf(wants[25], skyPs_)) skyPs_ = nullptr;
-    if (wants[26].code.empty() || !psOf(wants[26], weatherPs_)) weatherPs_ = nullptr;
-    if (wants[27].code.empty() || !psOf(wants[27], aoPs_)) aoPs_ = nullptr;  // 2.5.1
-    if (wants[28].code.empty() || !psOf(wants[28], aoBlurPs_)) aoBlurPs_ = nullptr;
-    if (wants[29].code.empty() || !psOf(wants[29], aoApplyPs_)) aoApplyPs_ = nullptr;
-    if (wants[30].code.empty() || !psOf(wants[30], torchFirePs_)) torchFirePs_ = nullptr;  // 2.5.2
-    if (wants[31].code.empty() || !psOf(wants[31], dustPs_)) dustPs_ = nullptr;
-    if (wants[32].code.empty() || !psOf(wants[32], bloomDownPs_)) bloomDownPs_ = nullptr;
-    if (wants[33].code.empty() || !psOf(wants[33], dofBlurPs_)) dofBlurPs_ = nullptr;
-    if (wants[34].code.empty() || !psOf(wants[34], bloomApplyPs_)) bloomApplyPs_ = nullptr;
-    if (wants[35].code.empty() || !psOf(wants[35], stepsPs_)) stepsPs_ = nullptr;
-    if (wants[36].code.empty() || !psOf(wants[36], smokePs_)) smokePs_ = nullptr;
-    if (wants[37].code.empty() || !psOf(wants[37], smokeGlowPs_)) smokeGlowPs_ = nullptr;
-    if (wants[38].code.empty() || !psOf(wants[38], lavaPs_)) lavaPs_ = nullptr;
-    if (wants[39].code.empty() || !psOf(wants[39], lavaGlowPs_)) lavaGlowPs_ = nullptr;
-    if (wants[40].code.empty() || !psOf(wants[40], heatPs_)) heatPs_ = nullptr;  // 2.5.3
-    if (wants[41].code.empty() || !psOf(wants[41], rayPs_)) rayPs_ = nullptr;
-    if (wants[42].code.empty() || !psOf(wants[42], rayGlowPs_)) rayGlowPs_ = nullptr;
-    if (wants[43].code.empty() || !psOf(wants[43], embersPs_)) embersPs_ = nullptr;
-    if (wants[44].code.empty() || !psOf(wants[44], floorReflectPs_)) floorReflectPs_ = nullptr;
-    if (wants[45].code.empty() || !psOf(wants[45], halfOverPs_)) halfOverPs_ = nullptr;
-    if (wants[46].code.empty() || !psOf(wants[46], splashPs_)) splashPs_ = nullptr;
-    if (wants[47].code.empty() || !psOf(wants[47], groundLifePs_)) groundLifePs_ = nullptr;  // 2.5.4
-    if (wants[48].code.empty() || !psOf(wants[48], grassPs_)) grassPs_ = nullptr;
-    if (wants[49].code.empty() || !vsOf(wants[49], crittersVs_)) crittersVs_ = nullptr;
-    if (wants[50].code.empty() || !psOf(wants[50], crittersPs_)) crittersPs_ = nullptr;
-    if (wants[51].code.empty() || !psOf(wants[51], shaftsPs_)) shaftsPs_ = nullptr;
-    if (wants[52].code.empty() || !vsOf(wants[52], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
-    if (wants[53].code.empty() || !psOf(wants[53], mirrorPs_)) mirrorPs_ = nullptr;
+    if (wants[25].code.empty() || !psOf(wants[25], weatherPs_)) weatherPs_ = nullptr;
+    if (wants[26].code.empty() || !psOf(wants[26], aoPs_)) aoPs_ = nullptr;  // 2.5.1
+    if (wants[27].code.empty() || !psOf(wants[27], aoBlurPs_)) aoBlurPs_ = nullptr;
+    if (wants[28].code.empty() || !psOf(wants[28], aoApplyPs_)) aoApplyPs_ = nullptr;
+    if (wants[29].code.empty() || !psOf(wants[29], torchFirePs_)) torchFirePs_ = nullptr;  // 2.5.2
+    if (wants[30].code.empty() || !psOf(wants[30], dustPs_)) dustPs_ = nullptr;
+    if (wants[31].code.empty() || !psOf(wants[31], bloomDownPs_)) bloomDownPs_ = nullptr;
+    if (wants[32].code.empty() || !psOf(wants[32], dofBlurPs_)) dofBlurPs_ = nullptr;
+    if (wants[33].code.empty() || !psOf(wants[33], bloomApplyPs_)) bloomApplyPs_ = nullptr;
+    if (wants[34].code.empty() || !psOf(wants[34], stepsPs_)) stepsPs_ = nullptr;
+    if (wants[35].code.empty() || !psOf(wants[35], smokePs_)) smokePs_ = nullptr;
+    if (wants[36].code.empty() || !psOf(wants[36], smokeGlowPs_)) smokeGlowPs_ = nullptr;
+    if (wants[37].code.empty() || !psOf(wants[37], lavaPs_)) lavaPs_ = nullptr;
+    if (wants[38].code.empty() || !psOf(wants[38], lavaGlowPs_)) lavaGlowPs_ = nullptr;
+    if (wants[39].code.empty() || !psOf(wants[39], heatPs_)) heatPs_ = nullptr;  // 2.5.3
+    if (wants[40].code.empty() || !psOf(wants[40], rayPs_)) rayPs_ = nullptr;
+    if (wants[41].code.empty() || !psOf(wants[41], rayGlowPs_)) rayGlowPs_ = nullptr;
+    if (wants[42].code.empty() || !psOf(wants[42], embersPs_)) embersPs_ = nullptr;
+    if (wants[43].code.empty() || !psOf(wants[43], floorReflectPs_)) floorReflectPs_ = nullptr;
+    if (wants[44].code.empty() || !psOf(wants[44], halfOverPs_)) halfOverPs_ = nullptr;
+    if (wants[45].code.empty() || !psOf(wants[45], splashPs_)) splashPs_ = nullptr;
+    if (wants[46].code.empty() || !psOf(wants[46], groundLifePs_)) groundLifePs_ = nullptr;  // 2.5.4
+    if (wants[47].code.empty() || !psOf(wants[47], grassPs_)) grassPs_ = nullptr;
+    if (wants[48].code.empty() || !vsOf(wants[48], crittersVs_)) crittersVs_ = nullptr;
+    if (wants[49].code.empty() || !psOf(wants[49], crittersPs_)) crittersPs_ = nullptr;
+    if (wants[50].code.empty() || !psOf(wants[50], shaftsPs_)) shaftsPs_ = nullptr;
+    if (wants[51].code.empty() || !vsOf(wants[51], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
+    if (wants[52].code.empty() || !psOf(wants[52], mirrorPs_)) mirrorPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -619,7 +616,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
             {"COLOR", 0, colour, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}};
-        if (FAILED(device_->CreateInputLayout(layout, 3, wants[52].code.data(), wants[52].code.size(),
+        if (FAILED(device_->CreateInputLayout(layout, 3, wants[51].code.data(), wants[51].code.size(),
                                               &mirrorLayout_)))
             mirrorLayout_ = nullptr;
     }
@@ -1195,7 +1192,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // torches' light before them
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !mistDone_ ||
-                                !skyDone_ || !shaftsDone_ || !heatDone_ || !bloomDone_ ||
+                                !shaftsDone_ || !heatDone_ || !bloomDone_ ||
                                 !gradeDone_ || !weatherDone_ || !darknessLaid_))
         flushBatch();
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
@@ -1207,7 +1204,6 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     if (s.ui && worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3: lit, before the mists
     if (s.ui && worldDrawn_ && !mistDone_) applyMist();  // 2.5: over the ground, before the colours
-    if (s.ui && worldDrawn_ && !skyDone_) applySky();    // 2.5: past the map's edge
     if (s.ui && worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5: the light in the air
     if (s.ui && worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3: the hot air over all of that
     if (s.ui && worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2: before the colours (ao.cpp finishWorld)
@@ -2074,7 +2070,6 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     }
     if (worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3
     if (worldDrawn_ && !mistDone_) applyMist();  // 2.5
-    if (worldDrawn_ && !skyDone_) applySky();
     if (worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5
     if (worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3
     if (!flies_.empty()) applyFireflies();  // 1.0.1
@@ -2109,7 +2104,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     aoDone_ = false;  // 2.5.1
     fireSparks_.clear();
     lightDone_ = nightDone_ = false;  // 0.61, 0.63
-    mistDone_ = skyDone_ = weatherDone_ = false;  // 2.5
+    mistDone_ = weatherDone_ = false;  // 2.5
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
     heatSpots_.clear();
@@ -3100,7 +3095,6 @@ void Renderer11::updateWind() {
     windScreenX_ = cameraValid_ && axis > 1e-4f ? (windNow_.x * m[0] + windNow_.z * m[2]) / axis : 0.0f;
     const float s = windNow_.strength;
     weatherDrift_.advance(windScreenX_ * s * 60.0f, 0.0f, dt);
-    skyDrift_.advance(windNow_.x * s * 0.012f, windNow_.z * s * 0.012f, dt);
 }
 
 // 2.5.5: as Direct3D 12's applyShafts (haze.cpp) - the light in the air about this frame's lights (the torches'
@@ -3274,48 +3268,6 @@ void Renderer11::applyMist() {
     worldPass(mistPs_, c, false, 1, depthSrv_);
 }
 
-// 2.5: the sky (sky_ps) as Direct3D 12's applySky - past the map's edge under the open sky, its clouds and stars,
-// land below the horizon when asked (the picture's copy then).
-void Renderer11::applySky() {
-    EffectSpan span(*this, kTimeSky11);
-    skyDone_ = true;
-    if (!skyPs_ || !effects_.sky || effects_.skyStrength <= 0 || !outdoors_ || !cameraValid_ || !target_.texture ||
-        !depthViews())
-        return;
-    Constants c{};
-    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
-    c.scale = float(scale_);
-    c.uiPixels[0] = float(target_.width);
-    c.uiPixels[1] = float(target_.height);
-    const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
-    const float pale[3] = {0.72f, 0.80f, 0.91f}, deep[3] = {0.33f, 0.52f, 0.86f}, dark[3] = {0.03f, 0.05f, 0.11f};
-    for (int k = 0; k < 3; ++k) {
-        const float horizon = pale[k];  // 2.6.8: the far haze's colour gone with it
-        c.fogColor[k] = horizon + (dark[k] * 2.0f - horizon) * night;
-        c.sourceRect[k] = deep[k] + (dark[k] - deep[k]) * night;
-    }
-    c.twin[0] = float(std::clamp(effects_.skyClouds, 0, 100)) / 100.0f;
-    c.twin[1] = float(std::clamp(effects_.skyStrength, 0, 100)) / 100.0f;
-    c.twin[2] = night;
-    c.sourceClamp[3] = effects_.stars ? 1.0f : 0.0f;
-    if (windShared()) {  // 2.5.5: the clouds drift with the shared wind
-        c.sourceClamp[1] = skyDrift_.x;
-        c.sourceClamp[2] = skyDrift_.y + 1e-3f;
-    }
-    const bool land = effects_.edgeLand && cameraTargetZ_ > 0.0f;
-    if (land) {
-        c.twin[3] = 1.0f;
-        c.sourceClamp[0] = camera::targetHeight(viewToWorld_, cameraTargetZ_);
-    }
-    c.sharpen = waterTime();
-    if (!skyLogged_) LOG_INFO("sky: over %s (Direct3D 11)", map_.c_str());
-    skyLogged_ = true;
-    worldPass(skyPs_, c, land, 1, depthSrv_);
-}
-
 // 2.5: the weather (weather_ps) as Direct3D 12's weather.cpp - the map's snow, rain, leaves or sand in three layers,
 // or the motes (the pollen outdoors, the dust indoors); the shared wind and the lit dust stay Direct3D 12's.
 void Renderer11::applyWeather() {
@@ -3485,7 +3437,7 @@ void Renderer11::timeFrame() {
     if (!recentSince_) recentSince_ = now;
     if (now - recentSince_ >= 500 && recentFrames_) {  // 2.2.1: twice a second, for the frame counter
         static const char* const kPasses[kEffectTimes11] = {"actor_shadows", "lights", "night", "grade",
-                                                             "mist", "sky", "weather", "ao", "bloom",
+                                                             "mist", "weather", "ao", "bloom",
                                                              "steps", "heat", "shafts",
                                                              "glow", "water", "floor", "grass", "world",
                                                              "interface"};
@@ -3586,7 +3538,7 @@ void Renderer11::logGpu(ULONGLONG now) {
                  double(now - gpuSince_) / 1000.0);
         // 0.89: the effects one by one, as Direct3D 12's log has them
         static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
-                                                            "colour", "mists", "sky", "weather", "soft shadows",
+                                                            "colour", "mists", "weather", "soft shadows",
                                                             "bloom", "footprints", "heat haze",
                                                             "light in the air",
                                                             "glow", "water's copies",

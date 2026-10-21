@@ -9,10 +9,10 @@ using namespace uagfx;
 
 TEST(effect_costs_read_back_what_was_written) {
     effect_costs::Costs c{{"ao", 0.42}, {"floor", 1.25}};
-    const effect_costs::Costs back = effect_costs::parse(effect_costs::format(c) + "junk\nsky -3\n");
+    const effect_costs::Costs back = effect_costs::parse(effect_costs::format(c) + "junk\nshafts -3\n");
     CHECK(back.size() == 2 && back.at("floor") > 1.24 && back.at("floor") < 1.26);
     CHECK(effect_costs::costOf(back, "effects.ao") > 0.41);
-    CHECK(effect_costs::costOf(back, "sky") < 0);       // not measured
+    CHECK(effect_costs::costOf(back, "shafts") < 0);    // not measured
     CHECK(effect_costs::costOf(back, "torch_flame") < 0);  // not one of them
 }
 

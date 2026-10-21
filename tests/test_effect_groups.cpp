@@ -197,7 +197,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"underwater", Waters}, {"swamp", Waters}, {"world_reflections", Waters},
         {"butterflies", Creatures}, {"birds", Creatures}, {"night_fireflies", Creatures},
         {"wet_walls", Caves}, {"cave_drips", Caves}, {"lit_dust", Caves},
-        {"sky", Sky}, {"edge_land", Sky}, {"motes", Sky}, {"shared_wind", Sky},
+        {"motes", Sky}, {"shared_wind", Sky},
         {"grade", Screen}, {"region_looks", Screen}, {"bloom", Screen},
         {"smooth_light", GameFixes}, {"soft_particles", GameFixes}, {"map_fade", GameFixes},
         {"no_game_fog", GameFixes},

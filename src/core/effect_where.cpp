@@ -40,7 +40,7 @@ bool worksOn(const std::string& sectionKey, const std::string& map, const Effect
     if (k == "butterflies" || k == "birds" || k == "night_fireflies") return place.wildlife;
     if (k == "flowers") return place.flowers >= 0;
     if (k == "grass" || k == "dew") return open;
-    if (k == "sky" || k == "edge_land" || k == "ground_seams" || k == "no_game_fog") return open;
+    if (k == "ground_seams" || k == "no_game_fog") return open;
     if (k == "morning_fog") return open && !desert(map);
     if (k == "region_looks") return region_look::of(map, 100).region[0] != 0;
     if (k == "seasons") return hasSeasons(map, open, place);

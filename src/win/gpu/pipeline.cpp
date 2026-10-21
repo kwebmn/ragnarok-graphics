@@ -215,7 +215,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"mist_ps", "ps_5_0", &mistPs},                {"heat_ps", "ps_5_0", &heatPs},
                    {"weather_ps", "ps_5_0", &weatherPs},          {"night_ps", "ps_5_0", &nightPs},
                    {"splash_ps", "ps_5_0", &splashPs},            {"waterfall_ps", "ps_5_0", &waterfallPs},
-                   {"sky_ps", "ps_5_0", &skyPs},                  {"floor_reflect_ps", "ps_5_0", &floorReflectPs},
+                   {"floor_reflect_ps", "ps_5_0", &floorReflectPs},
                    {"shafts_ps", "ps_5_0", &shaftsPs},            {"taa_ps", "ps_5_0", &taaPs},
                    {"bloom_down_ps", "ps_5_0", &bloomDownPs},
                    {"bloom_apply_ps", "ps_5_0", &bloomApplyPs},   {"steps_ps", "ps_5_0", &stepsPs},

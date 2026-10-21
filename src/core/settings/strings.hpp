@@ -142,7 +142,6 @@ enum class Text : uint16_t {
     // 0.68
     FxRimLight, FxRimLightHint, FxRimStrength, FxRimStrengthHint,
     // 0.69
-    FxSky, FxSkyHint, FxSkyClouds, FxSkyCloudsHint, FxSkyStrength, FxSkyStrengthHint,
     // 0.70
     FxMotes, FxMotesHint, FxMotesAmount, FxMotesAmountHint,
     // 0.71
@@ -235,7 +234,6 @@ enum class Text : uint16_t {
     // 1.17
     FxSpriteLight, FxSpriteLightHint, FxSpriteLightStrength, FxSpriteLightStrengthHint,
     // 1.18
-    FxEdgeLand, FxEdgeLandHint,
     // 1.20
     FxSeasons, FxSeasonsHint, FxRainWet, FxRainWetHint,
     // 1.21
@@ -287,7 +285,7 @@ enum class Text : uint16_t {
     FxWaterFoam, FxWaterFoamHint, FxWaterGlints, FxWaterGlintsHint, FxCaustics, FxCausticsHint, FxWaterfalls,
     FxWaterfallsHint, FxStepDust, FxStepDustHint, FxSeasonSnow, FxSeasonSnowHint,
     FxSeasonGrass, FxSeasonGrassHint, FxPollen, FxPollenHint, FxIndoorDust, FxIndoorDustHint, FxRainSplashes,
-    FxRainSplashesHint, FxStars, FxStarsHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
+    FxRainSplashesHint, FxDesertHeat, FxDesertHeatHint, FxSkyRays,
     FxSkyRaysHint, FxTreeSeasons, FxTreeSeasonsHint, FxDragonflies, FxDragonfliesHint,
     DiagRegistryOld,  // 2.4.2
     DlssCustom, DlssScale, DlssScaleHint, DlssWidth, DlssHeight, DlssSizeHint, DlssModel, DlssModelHint, DlssModelAuto,

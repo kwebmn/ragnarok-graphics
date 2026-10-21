@@ -29,7 +29,7 @@ enum Group {
     Waters,        // the water and what lives in it
     Creatures,     // butterflies, birds, fireflies
     Caves,         // caves and dungeons: wet walls, drips, dust in the light
-    Sky,           // the sky, the land past the edge, motes, the one wind
+    Sky,           // the air: motes, the one wind (2.7.17: the sky past the edge and the land there gone)
     Screen,        // the whole picture's colours
     GameFixes,     // what mends the game's old picture
 };

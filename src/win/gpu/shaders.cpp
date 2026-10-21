@@ -2270,68 +2270,6 @@ float4 half_over_ps(PresentOut i) : SV_Target {
     return c;
 }
 
-// 0.69, the sky (haze.cpp): on a map under the open sky, where nothing is drawn - past the map's edge - a sky
-// instead of the void: from the horizon's colour (fogColor) to the zenith's (sourceRect.rgb) by how far up the pixel
-// looks in the world (reproject: the camera's axes, up is -y), clouds drifting on a far layer (twinX how many; under
-// the map's edge looked down at, a sea of them), at night (twinW 0-1) darker and with stars. twinY its strength
-// (alpha), sharpen the time.
-float4 sky_ps(PresentOut i) : SV_Target {
-    int2 wp = int2(i.pos.xy);
-    if (sceneDepth.Load(int3(wp, 0)) < 0.99999) discard;
-    float2 g = (float2(wp) - float2(jitterX, jitterY)) / scale;
-    float3 dv = normalize(float3((g.x - cx) / f0, (g.y - cy) / f1, 1.0));
-    float3 d = normalize(dv.x * float3(r0, r1, r2) + dv.y * float3(r3, r4, r5) + dv.z * float3(r6, r7, r8));
-    float up = -d.y;
-    float night = twinW;
-    float t = sharpen;
-    float3 c = lerp(fogColor.rgb, sourceRect.rgb, smoothstep(-0.35, 0.6, up));
-    float2 layer = d.xz / (abs(d.y) + 0.3);
-    float2 uv = layer * 1.4 + (any(sourceClamp.yz != 0.0) ? sourceClamp.yz : float2(t * 0.010, t * 0.006));  // 1.22
-    float n = fbm4(uv);
-    float cover = smoothstep(0.62 - 0.3 * twinX, 0.92 - 0.2 * twinX, n) * saturate(twinX * 1.5);
-    float lit = saturate(0.55 + (n - fbm4(uv + float2(0.06, 0.04))) * 6.0);  // the side towards the light brighter
-    float3 day = lerp(float3(0.78, 0.80, 0.86), float3(1.0, 0.99, 0.96), lit);
-    float3 cloud = lerp(day, float3(0.16, 0.18, 0.26) + 0.08 * lit, night);
-    c = lerp(c, cloud, cover * smoothstep(-0.95, -0.2, -abs(up)));  // thinner straight up and straight down
-    if (night > 0.0 && sourceClamp.w > 0.0) {  // 2.4: the stars a box of their own
-        float2 cell = floor(layer * 70.0);
-        float h = hash12(cell);
-        float2 at = frac(layer * 70.0) - (0.25 + 0.5 * float2(hash12(cell + 7.1), hash12(cell + 3.7)));
-        float star = step(0.985, h) * saturate(1.0 - length(at) * 6.0);
-        star *= 0.6 + 0.4 * sin(t * (1.5 + 3.0 * hash12(cell + 1.3)) + h * 40.0);
-        c += star * night * (1.0 - cover) * float3(0.9, 0.95, 1.0);
-    }
-#ifndef UAGFX_SAFE
-    // 1.18, land past the map's edge (edge_land, twinH): looked down at, the ground goes on - the plane of the
-    // ground's height at the player (sourceClamp.x) in the colours of the ground drawn on the screen (5 x 5 of it,
-    // t2), in fields and darker woods, fading into the horizon's haze far off - instead of a sea of clouds.
-    if (twinH > 0.0 && d.y > 0.02) {
-        float3 eye = float3(r9, r10, r11);
-        float dist = (sourceClamp.x - eye.y) / d.y;
-        float3 ground = float3(0.0, 0.0, 0.0);
-        float found = 0.0;
-        [unroll] for (int gy = 0; gy < 5; ++gy)
-            [unroll] for (int gx = 0; gx < 5; ++gx) {
-                int2 q = int2((float2(gx, gy) + 0.5) / 5.0 * uiPixels.xy);
-                if (sceneDepth.Load(int3(q, 0)) < 0.99999) {
-                    ground += sceneColor.Load(int3(q, 0)).rgb;
-                    found += 1.0;
-                }
-            }
-        if (dist > 0.0 && found > 0.0) {
-            float3 p = eye + d * dist;
-            ground /= found;
-            float grain = fbm4(p.xz * 0.012);
-            float wood = smoothstep(0.5, 0.7, fbm4(p.xz * 0.004 + 7.3));
-            float3 land = ground * (0.75 + 0.5 * grain) * lerp(float3(1.0, 1.0, 1.0), float3(0.55, 0.68, 0.5), wood);
-            land = lerp(land, fogColor.rgb, smoothstep(150.0, 1200.0, dist));
-            c = lerp(c, land, twinH * smoothstep(0.02, 0.12, d.y));
-        }
-    }
-#endif
-    return float4(c, twinY);
-}
-
 // 0.35, heat haze (heat.cpp): where the hot air rises - over the torches' flames, burning skills, lava, and far off
 // in the desert - the picture is read from its copy (t2) a little aside, the aside drifting up. t1 holds a texel a
 // spot - its middle (target pixels) .xy, radius .z, strength .w - footprint how many; twinX the desert's (0 none, by
