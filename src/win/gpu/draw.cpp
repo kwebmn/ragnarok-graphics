@@ -344,6 +344,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.18: its colour into the glow target - light it adds, or a factor it multiplies the light under it by.
     if (toGlow && (adds || (s.blend && (s.srcBlend == d3d7::BLEND_ZERO || s.srcBlend == d3d7::BLEND_DESTCOLOR))))
         c.alphaTest |= 1u << 19;
+    if (toGlow && adds && d.effect == uint8_t(effect_exe::Kind::Skill)) c.alphaTest |= 1u << 22;  // 2.7.36: 40 %
     if (soft) {  // 0.67: its fade (shaders.cpp shade())
         c.alphaTest |= 1u << 20;
         if (s.srcBlend == d3d7::BLEND_ONE) c.alphaTest |= 1u << 21;  // added or premultiplied: the colour too

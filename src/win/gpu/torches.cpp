@@ -666,6 +666,7 @@ bool Renderer::Impl::applyTorches() {
     // not so bright" - the game's torch lights nothing, its glow is baked into the ground).
     const float strength = 0.4f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
     std::vector<LightItem> lights;
+    skillAirFirst = skillAirEnd = 0;  // 2.7.36: none until the skills' come
     const float darkNow = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;  // 2.7.18: how much night it is
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f);
     for (size_t i = 0; i < flames.size(); ++i) {
@@ -736,9 +737,9 @@ bool Renderer::Impl::applyTorches() {
         std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
         // 0.26.1: a third of 0.26's, the brightest place no more than one fire ("светит слишком сильно, намного
         // помягче"), a shorter reach.
-        // 2.7.18: brighter at night (the user: «скилы должны освещать») - up to 1.8 times
+        // 2.7.18: brighter at night (the user: «скилы должны освещать»); 2.7.36: up to 1.4 times, not 1.8
         const float fireStrength =
-            0.18f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f * (1.0f + 0.8f * darkNow);
+            effect_light::skillStrength(float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f, darkNow);
         if (heatWanted()) {  // 0.35: the hot air over burning skills (their middles, game pixels to the target's)
             const float hk = float(upscale ? worldScale : scale);
             for (size_t i = 0; i < best.size() && i < 16; ++i) {
@@ -766,6 +767,7 @@ bool Renderer::Impl::applyTorches() {
             e.fire = e.colour[0] > 0.8f && e.colour[2] < 0.6f;
             embers.push_back(e);
         }
+        skillAirFirst = UINT(lights.size());
         for (size_t i = 0; i < best.size() && i < 16 && lights.size() < kMaxLights; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
@@ -774,6 +776,7 @@ bool Renderer::Impl::applyTorches() {
                         {c.colour[0] / top, c.colour[1] / top, c.colour[2] / top}, 25.0f + 15.0f * w};
             lights.push_back(l);
         }
+        skillAirEnd = UINT(lights.size());
         skillPlaces = best.size();
         skillBrightest = best.empty() ? 0.0f : best[0].w;
     }

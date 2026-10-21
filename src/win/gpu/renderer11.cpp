@@ -1503,6 +1503,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 1.0: its colour into the glow - light it adds, or a factor it multiplies the light under it by (as draw.cpp)
     if (toGlow && (adds || (s.blend && (s.srcBlend == d3d7::BLEND_ZERO || s.srcBlend == d3d7::BLEND_DESTCOLOR))))
         c.alphaTest |= 1u << 19;
+    if (toGlow && adds && d.effect == uint8_t(effect_exe::Kind::Skill)) c.alphaTest |= 1u << 22;  // 2.7.36
     if (toGlow) glowDrawn_ = true;
     const bool effectDraw = effect_exe::softEffect(adds, d.effect);  // 2.7.13: not a hit flash
     const bool soft = !water && !smoke && !lava && !ray && !s.ui && effects_.softParticles && d.vertexCount == 4 &&
@@ -3148,6 +3149,8 @@ void Renderer11::applyShafts() {
     c.sourceRect[0] = float(w) * (0.5f - sun[0] * 1.6f);
     c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
     c.sourceRect[2] = 1.0f;
+    c.twin[2] = float(skillAirFirst_);  // 2.7.36: the skills' lights, a third of the glow (haze.cpp)
+    c.twin[3] = float(skillAirEnd_);
     // 2.5.7: at half the size into a target of its own (a quarter of the rays' depth reads), added over smoothly
     const int hw = std::max(1, (w + 1) / 2), hh = std::max(1, (h + 1) / 2);
     if (shafts_.width != hw || shafts_.height != hh) {

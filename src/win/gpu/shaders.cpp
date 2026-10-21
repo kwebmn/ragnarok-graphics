@@ -601,6 +601,9 @@ GlowOut draw_glow_ps(PsIn i) {
     GlowOut o;
     o.c = shade(i);
     o.g = ((alphaTest >> 19) & 1) != 0 ? o.c : float4(0.0, 0.0, 0.0, o.c.a);
+    // 2.7.36 (the tester in Comodo at night: «скилы очень яркие»): a skill's light 40 % into the glow (bit 22) - a
+    // Magnus' columns, their light piled up, and its halo and light on what is around laid a white blot over them
+    if (((alphaTest >> 22) & 1) != 0) o.g.rgb *= 0.4;
     return o;
 }
 
@@ -2236,7 +2239,9 @@ float4 shafts_ps(PresentOut i) : SV_Target {
         float along = (atan((far - t0) / h) + atan(t0 / h)) / h;  // the integral of 1 / distance^2 along the view
         float4 c = tex1.Load(int3(2 * k + 1, 0, 0));
         float fall = 1.0 - h / t.w;
-        sum += c.rgb * (abs(c.w) * along * fall * fall * twinX);  // 2.7.24: a ground light's negative
+        // 2.7.36: the skills' lights (twinW to twinH in the list) a third - sixteen of a Magnus whitened the air
+        float share = float(k) >= twinW && float(k) < twinH ? 0.33 : 1.0;
+        sum += c.rgb * (abs(c.w) * along * fall * fall * twinX * share);  // 2.7.24: a ground light's negative
     }
     if (twinY > 0.0) {
         float2 toSun = sourceRect.xy - float2(wp);

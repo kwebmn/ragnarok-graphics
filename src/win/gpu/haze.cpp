@@ -130,6 +130,8 @@ bool Renderer::Impl::applyShafts() {
     c.sourceRect[1] = float(h) * (0.5f - sun[1] * 1.6f);
     c.sourceRect[2] = 1.0f;
     c.sourceRect[3] = 2.0f;  // 2.5.7: a pixel for the world's two by two
+    c.twin[2] = float(skillAirFirst);  // 2.7.36: the skills' lights, a third of the glow
+    c.twin[3] = float(skillAirEnd);
     const UINT lights = torchDataSrv;
     transition(shaftsTarget, shaftsState, D3D12_RESOURCE_STATE_RENDER_TARGET);
     const float none[4] = {0.0f, 0.0f, 0.0f, 0.0f};

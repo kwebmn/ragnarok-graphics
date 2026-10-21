@@ -394,6 +394,7 @@ void Renderer11::applyTorchLight() {
     float data[kMaxLights * 2][4] = {};
     float lx0 = float(w), ly0 = float(h), lx1 = 0.0f, ly1 = 0.0f;
     int count = 0;
+    skillAirFirst_ = skillAirEnd_ = 0;  // 2.7.36: none until the skills' come
     // A light into the list: its place in the view and reach, its colour and strength; where its reach falls on
     // the screen (the cube about it, each corner projected) widens the lit rectangle.
     const auto addLight = [&](const float view[3], float reach, const float colour[3], float amountOf) {
@@ -459,8 +460,8 @@ void Renderer11::applyTorchLight() {
         for (const auto& kv : cells)
             if (kv.second.w > 0.02f) best.push_back(kv.second);
         std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
-        const float fireStrength =  // 2.7.18: brighter at night, up to 1.8 times
-            0.18f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f * (1.0f + 0.8f * darkNow);
+        const float fireStrength =  // 2.7.18: brighter at night; 2.7.36: up to 1.4 times, not 1.8
+            effect_light::skillStrength(float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f, darkNow);
         for (size_t i = 0; i < best.size() && embers_.size() < 24 && effects_.skillSparks && embersPs_; ++i) {
             const Cell& c = best[i];  // 2.5.3 (torches.cpp 0.82): the places for the skills' sparks
             const float vz = c.view[2] / c.w;
@@ -484,6 +485,7 @@ void Renderer11::applyTorchLight() {
                 const float gy = c.view[1] / c.w / vz * proj.f1 + proj.cy;
                 heatSpots_.push_back(HeatSpot11{gx * k, gy * k, 70.0f * k, 0.6f * std::min(c.w, 1.0f) * heatUser()});
             }
+        skillAirFirst_ = count;
         for (size_t i = 0; i < best.size() && i < 16; ++i) {
             const Cell& c = best[i];
             const float top = std::max({c.colour[0], c.colour[1], c.colour[2], 1e-4f});
@@ -492,6 +494,7 @@ void Renderer11::applyTorchLight() {
             const float w = effect_light::skillWeight(c.w, darkNow);  // 2.7.20 (torches.cpp): at night a floor
             addLight(view, 25.0f + 15.0f * w, colour, fireStrength * w);
         }
+        skillAirEnd_ = count;
     }
     {  // 0.28: the fireflies light a little around them, the nearest 16 (2.5.2: the map's dots, its orbs and pools)
         std::vector<size_t> order(dots.size());

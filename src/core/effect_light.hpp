@@ -16,6 +16,10 @@ float lightOf(const uint32_t* argb, int width, int height, float colour[3]);
 // night (0-1) as much night as it is: at night at least 0.7 (the tester: «рувотч не светит» - its blue mist a place
 // of about 0.2, a tenth of a torch's light), the faintest places (under 0.05) in proportion; by day w as it is.
 float skillWeight(float w, float night);
+// 2.7.36: how strong the skills' fire light is - user «Fire of skills»'s strength (0-2), night 0-1: 0.18 a place by
+// day (0.26.1: a third of 0.26's), at night up to 1.4 times (2.7.18's 1.8 lit Magnus white, the tester in Comodo:
+// «скилы очень яркие»)
+float skillStrength(float user, float night);
 // 2.7.21: whether the game's effect `id` (effect_exe::Tag::id) is an orb of light the game lays over the world as a
 // sprite - not added, so neither fireOf nor lightOf ever sees it (the tester: «рувотч не светит»): Ruwach's (33,
 // 이팩트\particle2.spr round the caster, uaRO.exe 0x5CC5D0) pale blue, Sight's (22, its fireball, 0x5CA6F0) fire;

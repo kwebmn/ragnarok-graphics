@@ -124,3 +124,15 @@ TEST(effect_light_knows_the_colour_other_skills_light_in) {
     CHECK(effect_light::lightOf(filled(0xFF301008).data(), 64, 64, c) == 0.0f);  // too dark to light
     CHECK(effect_light::lightOf(nullptr, 0, 0, c) == 0.0f);
 }
+
+TEST(effect_light_skills_light_at_night_no_more_than_1_4_times) {
+    // 2.7.36 (the tester in Comodo at night: «скилы очень яркие» - Magnus a white blot): the skills' fire light at
+    // night up to 1.4 times the day's (2.7.18's 1.8 lit it white), still brighter than by day (the user on 2.7.17:
+    // «скилы должны освещать»); «Fire of skills»'s strength scales it as before
+    const float day = effect_light::skillStrength(1.0f, 0.0f), night = effect_light::skillStrength(1.0f, 1.0f);
+    CHECK(std::fabs(day - 0.18f) < 1e-6f);
+    CHECK(night <= day * 1.4f + 1e-6f);
+    CHECK(night > day * 1.2f);
+    CHECK(std::fabs(effect_light::skillStrength(2.0f, 0.0f) - 0.36f) < 1e-6f);
+    CHECK(effect_light::skillStrength(1.0f, 3.0f) == night);  // the night 0-1
+}

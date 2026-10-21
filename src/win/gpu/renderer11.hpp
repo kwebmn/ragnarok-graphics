@@ -694,6 +694,7 @@ private:
     // 2.5.5: the light in the air, the shared wind
     ID3D11PixelShader* shaftsPs_ = nullptr;
     int shaftLights_ = 0;  // the lights of this frame's torches' pass (lightData_)
+    int skillAirFirst_ = 0, skillAirEnd_ = 0;  // 2.7.36 (torches.cpp): the skills' lights in it
     Target shafts_;        // 2.5.7: the light in the air at half the size
     bool shaftsDone_ = false;
     float windClock_ = -1.0f;

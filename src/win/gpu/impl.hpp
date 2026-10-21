@@ -554,6 +554,7 @@ struct Renderer::Impl {
     int shaftsWidth = 0, shaftsHeight = 0;
     bool shaftsDone = false;
     UINT shaftLights = 0;
+    UINT skillAirFirst = 0, skillAirEnd = 0;  // 2.7.36: the skills' lights in that list - a third of the air's glow
     // 0.72, reflections on the floor (haze.cpp, floor_reflect_ps).
     ID3DBlob* floorReflectPs = nullptr;
     ID3DBlob* halfOverPs = nullptr;  // 0.86: at half the size, then laid over
