@@ -6,7 +6,7 @@
 namespace uagfx::daylight {
 
 int minuteOf(int clock, int localMinute, int serverMinute) {
-    static const int kMinutes[kClocks] = {-1, -1, 6 * 60 + 30, 9 * 60, 13 * 60, 18 * 60 + 30, 0};
+    static const int kMinutes[kClocks] = {-1, -1, 6 * 60 + 30, 9 * 60, 13 * 60, 18 * 60 + 30, 0, 3 * 60};
     if (clock == kClockServer) return serverMinute >= 0 ? serverMinute % (24 * 60) : 13 * 60;
     return clock > kClockServer && clock < kClocks ? kMinutes[clock] : localMinute;
 }

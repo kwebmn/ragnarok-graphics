@@ -1,6 +1,7 @@
 #include "core/config.hpp"
 #include "core/daylight.hpp"
 #include "core/effect_groups.hpp"
+#include "core/settings/schema.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -62,4 +63,25 @@ TEST(night_none_with_the_effects_set_off) {
     e = effect_groups::effective(parseConfig("[effects]\npreset = weak\n").effects, 3);
     applyClock(e, 23 * 60);
     CHECK_EQ(e.nightNow, 60);
+}
+
+TEST(deep_night_near_black_whatever_the_strength) {
+    // 2.7.16 (the user: «ночь какая-то светлая, возможно надо ввести ещё одну ночь, когда вообще темно» - chose a
+    // choice of «Годинник» of its own): «Глибока ніч» at 3:00, past the strength's whole night (night_ps darkens
+    // further above 100) - but none where the night is off (0 %: the effects' set «off» makes it so)
+    EffectSettings e;
+    e.nightStrength = 30;
+    e.clock = daylight::kClockDeepNight;
+    applyClock(e, 13 * 60);  // the computer says noon
+    CHECK_EQ(e.dayNow, 3 * 60);
+    CHECK_EQ(e.nightNow, 200);
+    e.nightStrength = 100;
+    applyClock(e, 13 * 60);
+    CHECK_EQ(e.nightNow, 200);
+    e.nightStrength = 0;
+    applyClock(e, 13 * 60);
+    CHECK_EQ(e.nightNow, 0);
+    const Config deep = parseConfig("[effects]\nclock = deep_night\n");
+    CHECK(deep.effects.clock == daylight::kClockDeepNight);
+    CHECK(settings::tokenOf(*settings::findSetting("effects.clock"), deep) == "deep_night");
 }

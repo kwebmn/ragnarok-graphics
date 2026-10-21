@@ -228,6 +228,9 @@ void applyClock(EffectSettings& e, int localMinute, int serverMinute) {
     const int minute = daylight::minuteOf(e.clock, localMinute, serverMinute);
     e.dayNow = minute;
     e.nightNow = nightAmount(e, minute / 60, minute % 60);  // 2.6.19: the night always the clock's
+    // 2.7.16: «Глибока ніч» - past the strength's whole night (night_ps darkens further above 100), whatever it is
+    // but 0 % (the night off: the effects' set «off» makes it so)
+    if (e.clock == daylight::kClockDeepNight && e.nightStrength > 0) e.nightNow = 200;
 }
 
 bool drawnByRenderer(const EffectSettings& e) {
@@ -486,8 +489,8 @@ Config parseConfig(const std::string& text) {
             effect_groups::presetFrom(val, c.effects.preset);
         } else if (key.compare(0, 14, "effects.group_") == 0 && groupKey(key, val, c.effects)) {  // 2.2
         } else if (key == "effects.clock") {  // 2.6.11
-            static const char* const kWords[daylight::kClocks] = {"auto",    "server", "dawn", "morning",
-                                                                  "day",     "sunset", "night"};  // 2.6.19: server
+            static const char* const kWords[daylight::kClocks] = {
+                "auto", "server", "dawn", "morning", "day", "sunset", "night", "deep_night"};  // 2.6.19, 2.7.16
             for (int k = 0; k < daylight::kClocks; ++k)
                 if (val == kWords[k]) c.effects.clock = k;
         } else if (key == "effects.season") {  // 2.6.22

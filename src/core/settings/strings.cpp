@@ -3097,11 +3097,13 @@ const Entry kTexts[] = {
     {"Clock", "Годинник", "Часы"},  // 2.6.11
     {"The time of day for all the effects - the sun and its light, the night, the butterflies, birds and fireflies, "
      "the dew, the morning fog: the computer's clock, the server's day and night, or a moment of your choice that "
-     "stays.",
+     "stays. Deep night: nearly black whatever the night's strength (but 0 %), the lights shining out of it.",
      "Час доби для всіх ефектів — сонце та його світло, ніч, метелики, птахи й світлячки, роса, ранковий туман: "
-     "годинник комп'ютера, день і ніч сервера або обраний вами момент, що не змінюється.",
+     "годинник комп'ютера, день і ніч сервера або обраний вами момент, що не змінюється. Глибока ніч — майже чорна "
+     "за будь-якої сили ночі (крім 0 %), вогні світять із неї.",
      "Время суток для всех эффектов — солнце и его свет, ночь, бабочки, птицы и светлячки, роса, утренний туман: "
-     "часы компьютера, день и ночь сервера или выбранный вами момент, который не меняется."},
+     "часы компьютера, день и ночь сервера или выбранный вами момент, который не меняется. Глубокая ночь — почти "
+     "чёрная при любой силе ночи (кроме 0 %), огни светят из неё."},
     {"Auto (the computer's clock)", "Авто (годинник комп'ютера)", "Авто (часы компьютера)"},
     {"From the server (its day and night)", "Від сервера (його день і ніч)", "От сервера (его день и ночь)"},
     {"Dawn 6:30", "Світанок 6:30", "Рассвет 6:30"},
@@ -3109,6 +3111,7 @@ const Entry kTexts[] = {
     {"Day 13:00", "День 13:00", "День 13:00"},
     {"Sunset 18:30", "Захід 18:30", "Закат 18:30"},
     {"Night 0:00", "Ніч 0:00", "Ночь 0:00"},
+    {"Deep night 3:00", "Глибока ніч 3:00", "Глубокая ночь 3:00"},  // 2.7.16
     {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",

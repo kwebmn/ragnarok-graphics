@@ -1119,7 +1119,8 @@ float4 night_ps(PresentOut i) : SV_Target {
     c = max(lerp(float3(grey, grey, grey), c, 1.0 + sourceRect.w), 0.0);
     c += (c * 1.3 + float3(0.10, 0.11, 0.15)) * sourceRect.x;  // 0.80: a flash of lightning
     float l = dot(c, float3(0.2126, 0.7152, 0.0722));
-    float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * 0.45;
+    // 2.7.16: deeper past the whole night (footprint 0-1, «Глибока ніч»): 45 % of the light down to 16 %
+    float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * lerp(0.45, 0.16, saturate(footprint));
     float keep = smoothstep(0.72, 0.97, l);
     return float4(lerp(c, lerp(night, c, keep), sharpen), 1.0);
 }

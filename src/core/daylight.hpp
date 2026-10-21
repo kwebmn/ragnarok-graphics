@@ -20,7 +20,18 @@ Light at(int minute);
 // morning 9:00, day 13:00, sunset 18:30, night 0:00 (in the order of the file's words). 2.6.19: the master of the
 // time of day, by the Quality and the Mode (the user: «Часы главные»), and «От сервера» - the server's night
 // (ServerClock's minute).
-enum Clock { kClockAuto, kClockServer, kClockDawn, kClockMorning, kClockDay, kClockSunset, kClockNight, kClocks };
+// 2.7.16: kClockDeepNight - 3:00, near black whatever the night's strength (applyClock, night_ps)
+enum Clock {
+    kClockAuto,
+    kClockServer,
+    kClockDawn,
+    kClockMorning,
+    kClockDay,
+    kClockSunset,
+    kClockNight,
+    kClockDeepNight,
+    kClocks
+};
 // localMinute: the computer's, 0-1439; serverMinute: ServerClock's (below 0: nothing heard - day)
 int minuteOf(int clock, int localMinute, int serverMinute = -1);
 

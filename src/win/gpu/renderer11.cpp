@@ -2172,6 +2172,7 @@ void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its streng
     if ((!night && !day && !region_look::changes(look)) || !nightPs_ || !target_.texture) return;
     Constants c{};
     c.sharpen = night ? float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f : 0.0f;
+    c.footprint = float(std::clamp(effects_.nightNow - 100, 0, 100)) / 100.0f;  // 2.7.16: «Глибока ніч»
     const daylight::Light light = daylight::at(day ? effects_.dayNow : -1);  // 0.74: the time of day's tint
     for (int k = 0; k < 3; ++k) c.twin[k] = light.tint[k] * look.tint[k];  // 0.79: and the region's look
     c.sourceRect[3] = look.saturation - 1.0f;

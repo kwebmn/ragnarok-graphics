@@ -359,9 +359,9 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::FxTierAuto, Text::FxTierClassic, Text::FxTierRemaster}, Text::FxTier, Text::FxTierHint, ""},
         // 2.6.11: the time of day for all that goes by the hour (core/daylight.hpp Clock)
         {"effects", "clock", Page::Effects, Control::Choice, 0, 0, 0,
-         {"auto", "server", "dawn", "morning", "day", "sunset", "night"},  // 2.6.19: the server's night
+         {"auto", "server", "dawn", "morning", "day", "sunset", "night", "deep_night"},  // 2.6.19, 2.7.16
          {Text::FxClockAuto, Text::FxClockServer, Text::FxClockDawn, Text::FxClockMorning, Text::FxClockDay,
-          Text::FxClockSunset, Text::FxClockNight},
+          Text::FxClockSunset, Text::FxClockNight, Text::FxClockDeepNight},
          Text::FxClock, Text::FxClockHint, ""},
         // 2.6.22: the season for all that goes by the year (core/seasons.hpp Choice)
         {"effects", "season", Page::Effects, Control::Choice, 0, 0, 0, {"auto", "spring", "summer", "autumn", "winter"},
