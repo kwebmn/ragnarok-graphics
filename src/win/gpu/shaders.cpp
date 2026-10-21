@@ -1263,6 +1263,18 @@ GlowOut water_glow_ps(WaterIn i) {
     return o;
 }
 
+// 2.7.31 (the tester in Prontera's sewers: «стены от огня очень гладкие»): a surface under a fire's light - its
+// brightness lifted on a curve that keeps every step of it (the darks the most, four times at the bottom, never past
+// white) and its own colour a third under the light's. 0.23.3's lift - the darks 3.4 times, the mid-tones up to 0.9 -
+// pressed the stones' faces into one even orange (a lighter stone came out darker than a duller one: 0.5 -> 0.86, 0.7
+// -> 0.7), and the light's colour took the surface's whole.
+float3 litSurface(float3 sc, float lum, float3 colour) {
+    const float3 luma = float3(0.2126, 0.7152, 0.0722);
+    float target = lum * 4.0 / (1.0 + lum * 3.0);
+    float3 hue = lerp(colour / max(dot(colour, luma), 0.05), sc / max(lum, 1e-3), 0.3);
+    return hue * (target / max(dot(hue, luma), 1e-3));
+}
+
 // 0.23, the torches (torches.cpp). Their light, from the picture's copy (t2) and its depth (t3) into the picture -
 // the pixels it reaches only: t1 holds two texels a light (0.25: the torches' and the lamps'), its place in the view
 // (xyz) and (0.39.2) reach (w, world units), then its colour and strength (w: with its flicker and the game's
@@ -1333,8 +1345,7 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
     float w = (1.0 - exp(-2.4 * light)) * (1.0 - 0.6 * smoothstep(0.3, 0.8, lum));
     if (w < 0.004) discard;
     colour /= max(light, 1e-4);
-    float lift = 1.0 + 2.4 * (1.0 - smoothstep(0.08, 0.7, lum));  // dark surfaces lit more, bright ones tinted
-    float3 warm = colour * (min(lum * lift, 0.9) / max(dot(colour, luma), 0.05));
+    float3 warm = litSurface(sc, lum, colour);  // 2.7.31: the surface's own steps and colour kept
     // 2.5.17: a triangular noise of a step either way against the rings an 8-bit picture shows in a wide soft light
     // (a skill's fire round a character, R-HNEYBN)
     float3 lit = lerp(sc, saturate(warm), w * 0.9);
@@ -1427,8 +1438,7 @@ float4 torch_apply_ps(PresentOut i) : SV_Target {
     float w = (1.0 - exp(-2.4 * light)) * (1.0 - 0.6 * smoothstep(0.3, 0.8, lum));
     if (w < 0.004) discard;
     float3 colour = sum.rgb / max(light, 1e-4);
-    float lift = 1.0 + 2.4 * (1.0 - smoothstep(0.08, 0.7, lum));
-    float3 warm = colour * (min(lum * lift, 0.9) / max(dot(colour, luma), 0.05));
+    float3 warm = litSurface(sc, lum, colour);  // 2.7.31 (torch_light_ps)
     // 2.5.17: a triangular noise of a step either way against the rings an 8-bit picture shows in a wide soft light
     // (a skill's fire round a character, R-HNEYBN)
     float3 lit = lerp(sc, saturate(warm), w * 0.9);
