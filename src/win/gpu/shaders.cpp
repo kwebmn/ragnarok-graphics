@@ -883,6 +883,27 @@ float3 reflectionIn(float3 p, float3 r, float2 size, out float weight) {
 }
 float3 waterReflection(float3 p, float3 r, out float weight) { return reflectionIn(p, r, targetSize, weight); }
 
+// 2.7.17, the rain's puddles (floor_reflect_ps): what stands close by, in even steps of a unit, fading along the way.
+// reflectionIn's ever longer steps (made for the open water) met a standing sprite again and again, ever higher up it:
+// a column of its copies twice its height below it (the tester's shot at prt_fild08, 2.7.16).
+float3 puddleReflection(float3 p, float3 r, float2 size, out float weight) {
+    weight = 0.0;
+    float2 tp;
+    [loop] for (int k = 1; k <= 24; ++k) {
+        float dist = float(k);
+        float3 q = p + r * dist;
+        if (!viewToPixelIn(q, size, tp)) break;
+        float behind = q.z - viewDepth(sceneDepth.Load(int3(int2(tp), 0)));
+        if (behind > 0.0 && behind < 1.5) {
+            float2 edge = min(tp, size - tp) / (0.08 * size);
+            float fade = 1.0 - dist / 24.0;
+            weight = saturate(min(edge.x, edge.y)) * fade * fade;
+            return sceneColor.Load(int3(int2(tp), 0)).rgb;
+        }
+    }
+    return float3(0.0, 0.0, 0.0);
+}
+
 // 1.7, the water's life (water(): twinH's bits): a swamp's bubbles swelling and bursting into rings, its water
 // murkier (2.7.2: the fish circling under the surface gone - too faint to be seen).
 float3 waterLife(float3 c, uint life, float2 xz, float t, float light) {
@@ -1119,9 +1140,13 @@ float4 night_ps(PresentOut i) : SV_Target {
     c = max(lerp(float3(grey, grey, grey), c, 1.0 + sourceRect.w), 0.0);
     c += (c * 1.3 + float3(0.10, 0.11, 0.15)) * sourceRect.x;  // 0.80: a flash of lightning
     float l = dot(c, float3(0.2126, 0.7152, 0.0722));
-    // 2.7.16: deeper past the whole night (footprint 0-1, «Глибока ніч»): 45 % of the light down to 16 %
-    float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * lerp(0.45, 0.16, saturate(footprint));
-    float keep = smoothstep(0.72, 0.97, l);
+    // 2.7.16: deeper past the whole night (footprint 0-1, «Глибока ніч»): 45 % of the light down to 25 % (2.7.17, the
+    // user's choice: 16 % was black)
+    float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * lerp(0.45, 0.25, saturate(footprint));
+    // 2.7.17: what stays bright is a light - a fire's, a lamp's, a spell's colour - not a white flower, pale hair or
+    // stone: under «Глибока ніч» the meadow's flowers stood out of the dark as stars on the ground
+    float hi = max(c.r, max(c.g, c.b)), lo = min(c.r, min(c.g, c.b));
+    float keep = smoothstep(0.72, 0.97, l) * smoothstep(0.12, 0.35, (hi - lo) / max(hi, 1e-3));
     return float4(lerp(c, lerp(night, c, keep), sharpen), 1.0);
 }
 
@@ -2210,7 +2235,9 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
     if (shine <= 0.0 && wet <= 0.0) return float4(0.0, 0.0, 0.0, 0.0);
     float weight = 0.0;
     float3 c = float3(0.0, 0.0, 0.0);
-    if (shine > 0.0) c = reflectionIn(p + nr * 0.6, reflect(v, nr), uiPixels.xy, weight);
+    if (shine > 0.0)  // 2.7.17: the rain's water mirrors what stands close by
+        c = rain ? puddleReflection(p + nr * 0.6, reflect(v, nr), uiPixels.xy, weight)
+                 : reflectionIn(p + nr * 0.6, reflect(v, nr), uiPixels.xy, weight);
     float fresnel = 0.04 + 0.96 * pow(1.0 - saturate(dot(-v, nr)), 5.0);
     float a = shine * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
     // 0.97, wet ground (twinY): the ground a little darker all over, and puddles - patches of noise over the world,
