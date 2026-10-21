@@ -135,6 +135,7 @@ struct EffectSettings {
     bool fireLight = true;
     int fireLightStrength = 100;  // %, 0-200
     bool skillColours = true;  // 0.36: the other skills too, each in its own colour (ice blue, lightning white...)
+    bool lightOrbs = true;     // 2.7.25: Ruwach's orb a small ball of light at the head of its trail (core/glint.hpp)
     // 0.37: the skills a little softer - their pictures' colour and alpha, as the aura's. On by default.
     bool skillsSoft = true;
     int skillBrightness = 80;  // %, 0-100 of the game's

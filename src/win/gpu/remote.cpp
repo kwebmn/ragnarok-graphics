@@ -448,6 +448,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.i32(e.moonStrength);
     w.u8(e.firefliesLight ? 1 : 0);
     w.u8(e.moonBeams ? 1 : 0);  // 2.7.20
+    w.u8(e.lightOrbs ? 1 : 0);  // 2.7.25
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

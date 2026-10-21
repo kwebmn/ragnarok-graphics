@@ -9,7 +9,7 @@ const EffectLayout kEffects[] = {
     {"effects.bloom", {}, {"effects.bloom_strength"}, {}, 0},  // 0.78
     {"effects.region_looks", {}, {"effects.region_looks_strength"}, {}, 0},  // 0.79
     {"effects.glow", {}, {"effects.glow_strength", "effects.glow_size", "effects.glow_light"}, {}, 0},
-    {"effects.fire_light", {"effects.skill_colours"}, {"effects.fire_light_strength"}, {}, 0},
+    {"effects.fire_light", {"effects.skill_colours", "effects.light_orbs"}, {"effects.fire_light_strength"}, {}, 0},
     {"effects.actor_shadows", {"effects.actor_shadows_spot"}, {"effects.actor_shadows_strength"}, {}, 0},
     {"effects.heat", {"effects.desert_heat"}, {"effects.heat_strength"}, {}, 0},
     {"effects.weather", {"effects.rain_splashes"}, {"effects.weather_amount"}, {}, 0},

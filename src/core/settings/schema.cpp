@@ -138,6 +138,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFireLightStrength, Text::FxFireLightStrengthHint, " %", nullptr, &E::fireLightStrength},
         {"effects", "skill_colours", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSkillColours,
          Text::FxSkillColoursHint, "", &E::skillColours},
+        {"effects", "light_orbs", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxLightOrbs,
+         Text::FxLightOrbsHint, "", &E::lightOrbs},  // 2.7.25: a part of fire_light
         {"effects", "aura", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAura, Text::FxAuraHint,
          "", &E::aura},
         {"effects", "aura_brightness", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAuraBrightness,

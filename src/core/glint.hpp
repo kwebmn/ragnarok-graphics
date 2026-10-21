@@ -1,7 +1,9 @@
 #pragma once
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <vector>
 
 namespace uagfx::glint {
 
@@ -54,5 +56,49 @@ inline void sparkle(float x, float y, float z, float rhw, float size, float stre
         put(x + std::cos(a1) * glow, y + std::sin(a1) * glow, alpha(0.0f) | 0xFFD27A);
     }
 }
+
+// 2.7.25 (the user: «можно сделать так, чтобы тот шарик был в начале того синего шлейфа?»): Ruwach's orb at the head
+// of the blue trail its sprites leave - a small ball of light, adding: a white core and a pale blue glow fading out,
+// `size` / 3 pixels across (`size` its sprite's), at the sprite's depth; one list of triangles (kOrb vertices).
+constexpr int kOrb = 108;
+inline void orb(float x, float y, float z, float rhw, float size, Vertex out[kOrb]) {
+    const float glow = size / 6.0f, core = glow * 0.35f;
+    const uint32_t middle = 0xF2FFFFFFu, edge = 0xB4D2E8FFu, rim = 0x0080B8FFu;
+    int n = 0;
+    const auto put = [&](float px, float py, uint32_t colour) { out[n++] = Vertex{px, py, z, rhw, colour, 0, 0, 0}; };
+    for (int k = 0; k < 12; ++k) {
+        const float a0 = float(k) * 0.52359878f, a1 = float(k + 1) * 0.52359878f;
+        const float c0 = std::cos(a0), s0 = std::sin(a0), c1 = std::cos(a1), s1 = std::sin(a1);
+        put(x, y, middle), put(x + c0 * core, y + s0 * core, edge), put(x + c1 * core, y + s1 * core, edge);
+        put(x + c0 * core, y + s0 * core, edge), put(x + c0 * glow, y + s0 * glow, rim);
+        put(x + c1 * glow, y + s1 * glow, rim);
+        put(x + c0 * core, y + s0 * core, edge), put(x + c1 * glow, y + s1 * glow, rim);
+        put(x + c1 * core, y + s1 * core, edge);
+    }
+}
+
+// 2.7.25: the orbs' heads of a frame - of each caster's orb sprites the most opaque, the newest (each fades as it
+// ages); the sprites within kNear pixels of a head so far its caster's (its trail, its shadows on the ground).
+class OrbHeads {
+public:
+    struct Head {
+        float x, y, z, rhw, size, alpha;
+    };
+    static constexpr float kNear = 200.0f;
+    static constexpr size_t kMost = 8;
+    void note(float x, float y, float z, float rhw, float size, float alpha) {
+        for (Head& h : heads_)
+            if (std::hypot(h.x - x, h.y - y) < kNear) {
+                if (alpha > h.alpha) h = Head{x, y, z, rhw, size, alpha};
+                return;
+            }
+        if (heads_.size() < kMost) heads_.push_back(Head{x, y, z, rhw, size, alpha});
+    }
+    const std::vector<Head>& heads() const { return heads_; }
+    void clear() { heads_.clear(); }
+
+private:
+    std::vector<Head> heads_;
+};
 
 }  // namespace uagfx::glint

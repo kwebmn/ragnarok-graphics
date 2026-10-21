@@ -77,6 +77,10 @@ public:
         glint::Vertex v[glint::kSparkle];
     };
     std::vector<Sparkle> sparkles;
+    // 2.7.25: Ruwach's orbs' heads this frame (device7), each a small ball of light drawn with the sparkles, and the
+    // last orb sprite's setup made adding and untextured
+    glint::OrbHeads orbHeads;
+    DrawSetup orbSetup;
     void drawSparkles();
     double nowMs() const;    // a millisecond clock for the effects made as the game draws
 

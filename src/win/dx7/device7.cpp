@@ -328,7 +328,35 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             }
         }
     }
-    if (setup.ui && !c.sparkles.empty()) c.drawSparkles();  // 2.7.14: the world drawn - the cards' sparkles over it
+    // 2.7.25 (the user: «можно сделать так, чтобы тот шарик был в начале того синего шлейфа?»): Ruwach's sprites (its
+    // effect 33: the orb's trail round the hero and their shadows) - the most opaque of each caster's, the newest, is
+    // the head of the trail: a small ball of light there once the world is drawn (glint::orb)
+    if (!setup.ui && setup.blend && tag.id == 33 && fvf == d3d7::FVF_TL1 && vertexCount == 4 && c.enhanced() &&
+        fx.fireLight && fx.lightOrbs) {
+        const size_t stride = FrameRecord::stride(fvf);
+        const auto* v = static_cast<const uint8_t*>(vertices);
+        float x = 0, y = 0, z = 0, rhw = 0, x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
+        uint32_t alpha = 0;
+        for (DWORD i = 0; i < 4; ++i) {
+            float f[4];
+            uint32_t diffuse = 0;
+            std::memcpy(f, v + i * stride, sizeof f);
+            std::memcpy(&diffuse, v + i * stride + 16, sizeof diffuse);
+            x += f[0] / 4, y += f[1] / 4, z += f[2] / 4, rhw += f[3] / 4;
+            x0 = std::min(x0, f[0]), x1 = std::max(x1, f[0]), y0 = std::min(y0, f[1]), y1 = std::max(y1, f[1]);
+            alpha = std::max(alpha, diffuse >> 24);
+        }
+        c.orbHeads.note(x, y, z, rhw, std::max(x1 - x0, y1 - y0), float(alpha) / 255.0f);
+        c.orbSetup = setup;  // adding light, untextured, tested against the depth but not written to it (as a sparkle)
+        c.orbSetup.srcBlend = d3d7::BLEND_SRCALPHA;
+        c.orbSetup.dstBlend = d3d7::BLEND_ONE;
+        c.orbSetup.alphaTest = c.orbSetup.zWrite = c.orbSetup.fog = c.orbSetup.colorKey = false;
+        c.orbSetup.stage[0].colorOp = c.orbSetup.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+        c.orbSetup.stage[0].colorArg1 = c.orbSetup.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
+        c.orbSetup.stage[1].colorOp = c.orbSetup.stage[1].alphaOp = d3d7::TOP_DISABLE;
+    }
+    // 2.7.14: the world drawn - the cards' sparkles over it; 2.7.25: and the orbs' heads
+    if (setup.ui && (!c.sparkles.empty() || !c.orbHeads.heads().empty())) c.drawSparkles();
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
     if (flash > 0.01f) {  // 0.96: the sprite's shape once more in white, added, as strong as the flash is now
         if (vertices != soft_.data()) {

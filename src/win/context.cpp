@@ -430,6 +430,17 @@ void Context::drawSparkles() {
         record.draw(cmd, s.v, glint::kSparkle, nullptr, 0);
     }
     sparkles.clear();
+    for (const glint::OrbHeads::Head& h : orbHeads.heads()) {  // 2.7.25
+        glint::Vertex v[glint::kOrb];
+        glint::orb(h.x, h.y, h.z, h.rhw, h.size, v);
+        DrawCmd cmd;
+        cmd.state = record.addState(orbSetup);
+        cmd.effect = uint8_t(effect_exe::Kind::Glint);
+        cmd.primitive = d3d7::PT_TRIANGLELIST;
+        cmd.fvf = d3d7::FVF_TL1;
+        record.draw(cmd, v, glint::kOrb, nullptr, 0);
+    }
+    orbHeads.clear();
 }
 
 void Context::present(const Rect& source, bool waitForVblank) {

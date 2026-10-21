@@ -334,6 +334,7 @@ enum class Text : uint16_t {
     FxClockNight, FxClockDeepNight,
     FxMoonLight, FxMoonLightHint, FxMoonStrength, FxMoonStrengthHint, FxFirefliesLight, FxFirefliesLightHint,  // 2.7.18
     FxMoonBeams, FxMoonBeamsHint,  // 2.7.20
+    FxLightOrbs, FxLightOrbsHint,  // 2.7.25
     FxNightFireflies, FxNightFirefliesHint,  // 2.6.11
     FxSeason, FxSeasonHint, FxSeasonAuto, FxSeasonSpring, FxSeasonSummer, FxSeasonAutumn, FxSeasonWinter,  // 2.6.22
     FxWeatherKind, FxWeatherKindHint, FxWeatherKindAuto, FxWeatherKindClear, FxWeatherKindRain,  // 2.6.22

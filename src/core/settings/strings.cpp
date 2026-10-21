@@ -3099,6 +3099,12 @@ const Entry kTexts[] = {
      "пливуть; вони тримаються карти, а не камери.",
      "Широкие косые лучи лунного света ложатся на землю полей и городов, будто сквозь разрывы облаков, и медленно "
      "плывут; они держатся карты, а не камеры."},
+    {"Orbs of light", "Кулі світла", "Шары света"},  // 2.7.25
+    {"Ruwach's blue orb circling the hero a small bright ball at the head of its blue trail, as a comet's.",
+     "Блакитна куля Ruwach, що кружляє довкола героя, — маленька яскрава кулька на початку свого блакитного шлейфу, "
+     "як у комети.",
+     "Голубой шар Ruwach, кружащий вокруг героя, — маленький яркий шарик в начале своего голубого шлейфа, как у "
+     "кометы."},
     {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",

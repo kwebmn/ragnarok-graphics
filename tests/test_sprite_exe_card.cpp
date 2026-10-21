@@ -55,3 +55,42 @@ TEST(glint_a_sparkle_not_a_cross) {
     for (const glint::Vertex& p : v) dark = dark && (p.diffuse >> 24) == 0;
     CHECK(dark);
 }
+
+TEST(glint_an_orbs_head_is_its_newest_sprite) {
+    // 2.7.25 (the user: «можно сделать так, чтобы тот шарик был в начале того синего шлейфа?»): of each caster's orb
+    // sprites the most opaque - the newest, each fading as it ages - is the head of its trail; its shadows on the
+    // ground (fainter) and the older sprites behind are not; another caster far off its own head
+    glint::OrbHeads heads;
+    for (int i = 0; i < 8; ++i)  // a trail: the newest first at 400, 300, the older behind it round the hero
+        heads.note(400.0f - 9.0f * float(i), 300.0f + 4.0f * float(i), 0.5f, 0.9f, 70.0f, (250.0f - 9.0f * i) / 255);
+    for (int i = 0; i < 8; ++i)  // their shadows on the ground under them, fainter
+        heads.note(400.0f - 9.0f * float(i), 345.0f + 4.0f * float(i), 0.5f, 0.9f, 35.0f, (150.0f - 7.0f * i) / 255);
+    heads.note(1100.0f, 320.0f, 0.5f, 0.9f, 70.0f, 0.6f);  // another caster's
+    CHECK_EQ(heads.heads().size(), size_t(2));
+    const glint::OrbHeads::Head& h = heads.heads()[0];
+    CHECK(h.x == 400.0f && h.y == 300.0f && h.size == 70.0f);
+    CHECK(std::fabs(heads.heads()[1].x - 1100.0f) < 1e-3f);
+    heads.clear();
+    CHECK(heads.heads().empty());
+}
+
+TEST(glint_an_orbs_head_a_small_ball_of_light) {
+    // 2.7.25: a white core and a pale blue glow fading out, a third of the sprite's size across, at its depth
+    glint::Vertex v[glint::kOrb];
+    glint::orb(200, 100, 0.4f, 0.8f, 60, v);
+    float farthest = 0.0f;
+    int middle = 0, rim = 0;
+    bool depth = true;
+    for (const glint::Vertex& p : v) {
+        const float d = std::hypot(p.x - 200.0f, p.y - 100.0f);
+        const uint32_t a = p.diffuse >> 24;
+        farthest = std::fmax(farthest, d);
+        if (d < 0.01f && a > 230) ++middle;  // the core's middle near opaque white
+        if (d > 9.9f && a == 0) ++rim;      // the glow gone at its edge
+        depth = depth && p.z == 0.4f && p.rhw == 0.8f;
+    }
+    CHECK(farthest > 9.9f && farthest < 10.1f);  // the glow's radius a sixth of the size
+    CHECK(middle == 12 && rim == 36);
+    CHECK(depth);
+}
+
