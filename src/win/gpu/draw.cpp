@@ -117,7 +117,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         const bool mine = d.effect == uint8_t(effect_exe::Kind::None) || d.effect == uint8_t(effect_exe::Kind::Skill);
         if (ft != textures.end() && ft->second.fire > 0.15f && mine) {
             noteFire(rec, d, ft->second.fire, ft->second.fireColour);
-        } else if (ft != textures.end() && effects.skillColours && ft->second.light > 0.2f && mine &&
+        } else if (ft != textures.end() && effects.skillColours && ft->second.light > skillLightFloor() && mine &&
                    (objectTextures.empty() || objectTextures.of(d.texture[0]) == objects::Kind::None)) {
             noteFire(rec, d, ft->second.light, ft->second.lightColour);
         }

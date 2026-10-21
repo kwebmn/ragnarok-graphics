@@ -665,14 +665,6 @@ bool Renderer::Impl::applyTorches() {
     const float strength = 0.4f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
     std::vector<LightItem> lights;
     const float darkNow = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;  // 2.7.18: how much night it is
-    // 2.7.18: a warm pool of light about the hero at night - the point the camera looks at, three units up from the
-    // ground; first, so no cap drops it
-    if (heroLightWanted()) {
-        const float up[3] = {-viewToWorld[1], -viewToWorld[4], -viewToWorld[7]};  // the world's up (-y) in the view
-        const float user = float(std::clamp(effects.heroLightStrength, 0, 200)) / 100.0f;
-        lights.push_back(LightItem{{up[0] * 3.0f, up[1] * 3.0f, cameraTargetZ + up[2] * 3.0f}, 0.45f * darkNow * user,
-                                   {1.0f, 0.82f, 0.62f}, 40.0f});
-    }
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f);
     for (size_t i = 0; i < flames.size(); ++i) {
         const torch::Flame& f = flames[i];

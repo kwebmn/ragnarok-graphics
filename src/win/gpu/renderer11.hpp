@@ -469,17 +469,16 @@ private:
         float gameX, gameY;
     };
     // 2.7.18 (torches.cpp): the fireflies in the grass at night (the last creatures' pass), each lighting the ground
-    // under it a little; the hero's warm light at night
+    // under it a little
     struct NightGlow11 {
         map::Point at;
         float lit;
     };
     std::vector<NightGlow11> nightGlows_;
-    bool heroLightWanted() const {
-        return effects_.heroLight && effects_.heroLightStrength > 0 && effects_.nightNow > 0 && cameraValid_ &&
-               cameraTargetZ_ > 0.0f;
-    }
     bool nightGlowsWanted() const { return effects_.nightFireflies && effects_.firefliesLight && !nightGlows_.empty(); }
+    float skillLightFloor() const {  // 2.7.19 (impl.hpp): at night a small bright ball's light lights around it too
+        return 0.2f - 0.14f * float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
+    }
     std::vector<FireSpark11> fireSparks_;  // this frame's
     void noteFire(const FrameRecord& rec, const DrawCmd& d, float amount, const float colour[3]);
     bool compileShaders(const std::string& cacheFile, Renderer::StartSink sink, void* sinkContext, std::string& error);

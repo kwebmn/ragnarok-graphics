@@ -178,7 +178,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         int group;
     } kWhere[] = {
         {"day_cycle", Time}, {"night_windows", Time}, {"morning_fog", Time}, {"no_server_night", Time},
-        {"moon_light", Time}, {"hero_light", Time},
+        {"moon_light", Time},
         {"seasons", Time},
         {"weather", Weather}, {"storms", Weather}, {"wet_ground", Weather}, {"rain_wet", Weather},
         {"sand_drift", Weather}, {"snow_sparkle", Weather},

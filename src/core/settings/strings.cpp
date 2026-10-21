@@ -3079,24 +3079,14 @@ const Entry kTexts[] = {
     {"Night 0:00", "Ніч 0:00", "Ночь 0:00"},
     {"Deep night 3:00", "Глибока ніч 3:00", "Глубокая ночь 3:00"},  // 2.7.16
     {"Moonlight", "Місячне світло", "Лунный свет"},  // 2.7.18
-    {"At night the moon lights the world in silver-blue: the road, the grass and the monsters stay in sight, colder "
-     "and quieter than by day. The deeper the night, the more it shows; none by day.",
-     "Уночі місяць освітлює світ сріблясто-синім: дорогу, траву й монстрів видно, але холодніше й тихіше, ніж удень. "
-     "Що глибша ніч, то він помітніший; удень його немає.",
-     "Ночью луна освещает мир серебристо-синим: дорогу, траву и монстров видно, но холоднее и тише, чем днём. Чем "
-     "глубже ночь, тем она заметнее; днём её нет."},
+    {"At night the moon is the night's light: the map stays bright under it, silver-blue and muted - plainly night, "
+     "and the road, the grass and the monsters in sight. None by day.",
+     "Уночі місяць — головне світло ночі: карта під ним світла, сріблясто-синя й приглушена — видно, що ніч, а "
+     "дорогу, траву й монстрів добре видно. Удень його немає.",
+     "Ночью луна — главный свет ночи: карта под ней светлая, серебристо-синяя и приглушённая — видно, что ночь, а "
+     "дорогу, траву и монстров хорошо видно. Днём её нет."},
     {"Moon strength", "Сила місяця", "Сила луны"},
     {"How bright the moonlight is.", "Наскільки яскраве місячне світло.", "Насколько ярок лунный свет."},
-    {"Light around the hero", "Світло героя", "Свет героя"},
-    {"At night a warm pool of light lies about your character, as from a lantern: it lights the ground and those "
-     "nearby. Only at night, growing with it.",
-     "Уночі довкола вашого персонажа тепла пляма світла, як від ліхтаря: вона освітлює землю й тих, хто поруч. Лише "
-     "вночі, разом із нею розгоряється.",
-     "Ночью вокруг вашего персонажа тёплое пятно света, как от фонаря: оно освещает землю и тех, кто рядом. Только "
-     "ночью, разгорается вместе с ней."},
-    {"Hero light strength", "Сила світла героя", "Сила света героя"},
-    {"How bright the light around your character is.", "Наскільки яскраве світло довкола вашого персонажа.",
-     "Насколько ярок свет вокруг вашего персонажа."},
     {"Fireflies light the ground", "Світлячки світять", "Светлячки светят"},
     {"Each firefly in the grass at night lights the ground under it a little, greenish, pulsing with its glow.",
      "Кожен світлячок у траві вночі трохи освітлює землю під собою, зеленкувато, пульсуючи разом зі своїм вогником.",

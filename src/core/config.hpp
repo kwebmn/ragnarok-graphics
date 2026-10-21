@@ -205,13 +205,11 @@ struct EffectSettings {
     bool foliage = false;
     int foliageStrength = 100;  // %, 0-200
     int nightStrength = 60;  // %, 0-100; 2.6.19: the night always the clock's (its switches gone)
-    // 2.7.18 (the user: «очень темно ночью ... луна светит», chose «Луна и свет героя»): moon_light - the moon lifts
-    // the night to a silver-blue light (night_ps); hero_light - a warm pool of light about the player's character at
-    // night (the lights' pass, at the point the camera looks at). On by default.
+    // 2.7.18 (the user: «очень темно ночью ... луна светит»): moon_light - the moon lights the night silver-blue
+    // (night_ps); 2.7.19: the night's main light, the map bright under it. On by default. (2.7.19: hero_light - a
+    // warm pool about the player's character - gone: «так себе, его можно убрать».)
     bool moonLight = true;
     int moonStrength = 100;  // %, 0-200
-    bool heroLight = true;
-    int heroLightStrength = 100;  // %, 0-200
     int nightNow = 0;
     bool water = false;
     int waterWaves = 50;        // %, 0-100: 0 a still mirror

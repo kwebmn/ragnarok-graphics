@@ -256,10 +256,10 @@ void Renderer11::applyTorchLight() {
     std::vector<RayPart11> rayParts;
     rayParts.swap(rayParts_);
     if (!portalsWanted()) portalTracks_.clear();
-    const bool hero = heroLightWanted(), nightFlies = nightGlowsWanted();  // 2.7.18
+    const bool nightFlies = nightGlowsWanted();  // 2.7.18
     if ((!torches && !lampsOn && !hidden && !fire && !glows && !mapFlies && lavaCells.empty() &&
          portalSparks.empty() && portalTracks_.empty() && rayParts.empty() && !(flamesWanted() && !flames.empty()) &&
-         !hero && !nightFlies) ||
+         !nightFlies) ||
         !depth_ || !target_.texture || !depthViews())
         return;
     if (!lightData_ && torchLightPs_) {
@@ -413,12 +413,6 @@ void Renderer11::applyTorchLight() {
         ++count;
     };
     const float darkNow = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;  // 2.7.18: how much night it is
-    if (hero) {  // 2.7.18 (torches.cpp): the hero's warm light at night, three units up from the ground; first
-        const float up[3] = {-m[1], -m[4], -m[7]};  // the world's up (-y) in the view
-        const float view[3] = {up[0] * 3.0f, up[1] * 3.0f, cameraTargetZ_ + up[2] * 3.0f};
-        static const float kWarm[3] = {1.0f, 0.82f, 0.62f};
-        addLight(view, 40.0f, kWarm, 0.45f * darkNow * float(std::clamp(effects_.heroLightStrength, 0, 200)) / 100.0f);
-    }
     if (torchesWanted())
         for (size_t i = 0; i < flames.size(); ++i) {  // the game's flames and the hidden ones
             const torch::Flame& f = flames[i];

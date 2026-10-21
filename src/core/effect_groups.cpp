@@ -19,7 +19,6 @@ const Member kMembers[] = {
     {"morning_fog", Time, 2, &E::morningFog},
     {"no_server_night", Time, 1, &E::noServerNight},  // 2.6.13
     {"moon_light", Time, 1, &E::moonLight},           // 2.7.18
-    {"hero_light", Time, 1, &E::heroLight},           // 2.7.18
     {"seasons", Time, 3, &E::seasons},
 
     {"weather", Weather, 1, &E::weather},

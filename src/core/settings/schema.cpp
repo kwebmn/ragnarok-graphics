@@ -250,10 +250,6 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMoonLightHint, "", &E::moonLight},  // 2.7.18
         {"effects", "moon_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMoonStrength,
          Text::FxMoonStrengthHint, " %", nullptr, &E::moonStrength},
-        {"effects", "hero_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxHeroLight,
-         Text::FxHeroLightHint, "", &E::heroLight},  // 2.7.18
-        {"effects", "hero_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
-         Text::FxHeroLightStrength, Text::FxHeroLightStrengthHint, " %", nullptr, &E::heroLightStrength},
         {"effects", "fireflies_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFirefliesLight,
          Text::FxFirefliesLightHint, "", &E::firefliesLight},  // 2.7.18: a part of night_fireflies
         {"effects", "round_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRoundLight,

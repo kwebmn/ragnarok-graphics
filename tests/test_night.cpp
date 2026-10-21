@@ -86,21 +86,18 @@ TEST(deep_night_near_black_whatever_the_strength) {
     CHECK(settings::tokenOf(*settings::findSetting("effects.clock"), deep) == "deep_night");
 }
 
-TEST(night_lights_moon_and_hero_on_by_default) {
+TEST(night_lights_moon_on_by_default) {
     // 2.7.18 (the user: «очень темно ночью, надо продумать какой-то источник освещения типа луна светит ... и такие
-    // вещи как светлячки, скилы должны освещать»; chose «Луна и свет героя»): the moon lifts the night to a
-    // silver-blue light, a warm pool lies about the hero, the fireflies in the grass light the ground under them
+    // вещи как светлячки, скилы должны освещать»): the moon lights the night, the fireflies in the grass the ground
+    // under them. 2.7.19 (the user: «свет вокруг героя так себе, его можно убрать»): the light about the hero gone.
     const Config c = parseConfig("");
     CHECK(c.effects.moonLight && c.effects.moonStrength == 100);
-    CHECK(c.effects.heroLight && c.effects.heroLightStrength == 100);
     CHECK(c.effects.firefliesLight);
-    const Config off = parseConfig("[effects]\nmoon_light = 0\nhero_light = 0\nmoon_strength = 150\n"
-                                   "hero_light_strength = 40\nfireflies_light = 0\n");
-    CHECK(!off.effects.moonLight && !off.effects.heroLight && !off.effects.firefliesLight);
-    CHECK(off.effects.moonStrength == 150 && off.effects.heroLightStrength == 40);
-    CHECK(!effectsOff().moonLight && !effectsOff().heroLight);
+    const Config off = parseConfig("[effects]\nmoon_light = 0\nmoon_strength = 150\nfireflies_light = 0\n");
+    CHECK(!off.effects.moonLight && !off.effects.firefliesLight && off.effects.moonStrength == 150);
+    CHECK(!effectsOff().moonLight);
     const effect_groups::Member* moon = effect_groups::memberOf("effects.moon_light");
-    const effect_groups::Member* hero = effect_groups::memberOf("effects.hero_light");
     CHECK(moon && moon->group == effect_groups::Time && moon->level == 1);
-    CHECK(hero && hero->group == effect_groups::Time && hero->level == 1);
+    CHECK(effect_groups::memberOf("effects.hero_light") == nullptr);
+    CHECK(settings::findSetting("effects.hero_light") == nullptr);
 }
