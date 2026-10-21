@@ -1,3 +1,10 @@
+# uaRO Graphics 2.7.44 — to check
+
+- **Breath at the head**, not the feet: the puff rose 6.2 units over the feet - knee height; now 15 (at the face).
+- To check in Lutie: stand - puffs of breath at the characters' heads.
+- Still waiting: the snow's glints - by day under Weather - Clear press Ctrl+Shift+F9, a report, off again; puddles -
+  under Rain on Prontera's paving and on Comodo's beach.
+
 # uaRO Graphics 2.7.43 — to check
 
 - **In the rain only puddles reflect** ("Wet ground and puddles"). The whole wet ground used to mirror, and big grey
