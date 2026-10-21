@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.32 — to check
+
+- **"Map light without blow-out" (a new switch among "Game fixes", on).** The smooth wall by the torch was the game's
+  own: it draws the ground and the walls as their texture in shade plus the map's coloured light, added and cut at
+  white. By a torch every shade of the stone came out one yellow. Now a strong map light lies over the texture softly,
+  as onto a screen, and never reaches white — the stones by the torches stay. A weak light (the map's tint all over)
+  stays exactly as in the game; the brightest patches are a little dimmer.
+- Please check: prt_sewb1 166 19, the wall by a torch — is the masonry seen; compare with Tab on "Map light without
+  blow-out". Look at the bright spots of other maps too (Prontera's lamps) — are they too dim now. Send a report with
+  screenshots.
+
 # uaRO Graphics 2.7.31 — to check
 
 - **The walls by the fire show their stone again.** The torches' light lifted the darks 3.4 times and the mid-tones to
