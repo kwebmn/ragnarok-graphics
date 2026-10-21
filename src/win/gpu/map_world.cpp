@@ -164,6 +164,16 @@ void MapWorld::poll() {
     tryAxes();
 }
 
+bool MapWorld::groundAt(float x, float z, float& y) const {
+    const ground_heights::Ground* g = ground();
+    if (!g || !axes_.known()) return false;
+    const map::Point at = map::toWorld(axes_, map::Point{x, 0.0f, z});  // the signs: the file's place, and back
+    float h = 0.0f;
+    if (!ground_heights::heightAt(*g, at.x, at.z, h)) return false;
+    y = float(axes_.y) * h;
+    return true;
+}
+
 void MapWorld::noteTorch(const map::Point& world) {
     if (axes_.known() || seen_.size() >= 64) return;
     for (const map::Point& s : seen_)  // the same torch again

@@ -19,6 +19,17 @@ Sprite sprite(Kind k, const Point& at, float size, float alpha) {
     return s;
 }
 
+// 2.7.34: whether the map's ground at p stands over the water, and its height into y (the frame's centre's when the
+// ground is not known - over the water then too, as before)
+bool dryAt(const Frame& f, const Point& p, float& y) {
+    y = f.centre.y;
+    float g = 0.0f;
+    if (!f.ground || !f.ground(p, g)) return true;
+    if (f.waterKnown && g > f.waterLevel - 0.2f) return false;  // up is -y: at the water or under it
+    y = g;
+    return true;
+}
+
 }  // namespace
 
 float World::random() {
@@ -174,19 +185,22 @@ void World::birds(const Switches& on, const Frame& f) {
         flock_.clear();
         return;
     }
-    if (flock_.empty() && f.now >= flockAgain_) {
+    // 2.7.34: a spot over the map's ground, a few tries - each bird on the ground's own height, none in the water
+    for (int tries = 0; flock_.empty() && f.now >= flockAgain_ && tries < 6; ++tries) {
         Point c = around(f.centre, 18.0f, 34.0f);
+        float y = f.centre.y;
+        if (!dryAt(f, c, y)) continue;
         bool clear = true;
         for (const Point& foot : f.feet) clear = clear && distXz(foot, c) > 14.0f;
-        if (clear) {
-            const int n = 5 + int(random() * 4.0f);
-            for (int k = 0; k < n; ++k) {
-                Bird b;
-                b.at = Point{c.x + (random() - 0.5f) * 5.0f, f.centre.y, c.z + (random() - 0.5f) * 5.0f};
-                b.phase = random() * 10.0f;
-                b.facing = random() < 0.5f ? -1.0f : 1.0f;
-                flock_.push_back(b);
-            }
+        if (!clear) break;
+        const int n = 5 + int(random() * 4.0f);
+        for (int k = 0; k < n; ++k) {
+            Bird b;
+            b.at = Point{c.x + (random() - 0.5f) * 5.0f, y, c.z + (random() - 0.5f) * 5.0f};
+            if (!dryAt(f, b.at, b.at.y)) continue;
+            b.phase = random() * 10.0f;
+            b.facing = random() < 0.5f ? -1.0f : 1.0f;
+            flock_.push_back(b);
         }
     }
     bool startled = false;

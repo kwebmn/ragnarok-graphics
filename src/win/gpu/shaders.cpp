@@ -1007,7 +1007,11 @@ float4 water(WaterIn i) {
     float3 h = normalize(normalize(float3(-0.45, -0.8, 0.4)) + toEye);
     float ndh = saturate(dot(n, h));
     float sun = fogEnable != 0 ? 0.25 : 1.0;  // in a fog (dungeons, caves) hardly any sun
-    if ((life & 16) != 0) c += (pow(ndh, 600.0) * 3.0 + pow(ndh, 60.0) * 0.12) * light * (0.25 + 0.75 * waves) * sun;
+    // 2.7.34 (the tester in Alberta: «нравятся, но слишком шумно»): the sharp glints half as bright and in patches
+    // that drift with the waves - all over the water they were a field of noise
+    float patch = smoothstep(0.42, 0.62, valueNoise(fp * 0.06 + t * float2(0.03, -0.02)));
+    if ((life & 16) != 0)
+        c += (pow(ndh, 600.0) * 1.5 * patch + pow(ndh, 60.0) * 0.12) * light * (0.25 + 0.75 * waves) * sun;
     // 0.22.2: foam where the water meets the shore - near a pixel whose ground stands at or above the water there
     // (the water's own depth carried over by its slope on the screen), not over the whole of shallow water -
     // broken by noise that drifts with the waves.

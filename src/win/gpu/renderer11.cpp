@@ -2878,6 +2878,7 @@ void Renderer11::applyCritters() {
     f.crowns = std::move(crowns);
     f.waterKnown = waterLevelKnown_;
     f.waterLevel = waterLevel_;
+    f.ground = [this](const critters::Point& p, float& y) { return mapWorld_.groundAt(p.x, p.z, y); };  // 2.7.34
     const int minute = effects_.dayNow >= 0 ? effects_.dayNow : living::localMinute();  // 2.6.11
     f.day = living::daytime(minute);
     f.night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;

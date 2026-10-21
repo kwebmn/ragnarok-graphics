@@ -32,6 +32,9 @@ public:
     map::Axes axes() const { return axes_; }
     // 2.6.18: its ground's heights (its .gnd, read with the .rsw) - where its walls stand; none not read
     const ground_heights::Ground* ground() const { return ready_ && !ground_.corners.empty() ? &ground_ : nullptr; }
+    // 2.7.34: the ground's height (the world's y) at the world's x and z - false with no .gnd read, the axes not found
+    // or off the map (the birds settle only over the water)
+    bool groundAt(float x, float z, float& y) const;
     // The base of a torch's flame seen this frame, in the game's world: the axes are found from them.
     void noteTorch(const map::Point& world);
 

@@ -192,3 +192,46 @@ TEST(critters_falling_leaves_seen_against_the_green) {
     CHECK(leaves > 5);
 }
 
+TEST(critters_birds_never_settle_on_the_water) {
+    // 2.7.34 (the tester in Alberta: «уточек с воды убери, лишнее»): a flock settles where the map's ground stands
+    // over the water (Frame::ground), at that ground's height - Alberta's pier had them on the harbour's water
+    critters::World w;
+    w.setPlace(living::placeOf("alberta", true, false));
+    critters::Switches on;
+    on.birds = true;
+    critters::Frame f;
+    f.centreKnown = true;
+    f.dt = 0.1f;
+    f.waterKnown = true;
+    f.waterLevel = 0.0f;  // up is -y: the ground at -1.5 over the water, at +2 under it
+    f.ground = [](const critters::Point& p, float& y) {
+        y = p.x >= 0.0f ? -1.5f : 2.0f;
+        return true;
+    };
+    int birds = 0;
+    for (int i = 0; i < 600 && birds == 0; ++i) {
+        f.now += 0.1;
+        w.update(on, f);
+        for (const critters::Sprite& s : w.sprites())
+            if (s.kind == critters::BirdGround) {
+                ++birds;
+                CHECK(s.at.x >= 0.0f);
+                CHECK(s.at.y == -1.5f);
+            }
+    }
+    CHECK(birds > 0);
+    critters::World sea;  // nothing but water about: no flock at all
+    sea.setPlace(living::placeOf("alberta", true, false));
+    f.ground = [](const critters::Point&, float& y) {
+        y = 2.0f;
+        return true;
+    };
+    int any = 0;
+    for (int i = 0; i < 600; ++i) {
+        f.now += 0.1;
+        sea.update(on, f);
+        for (const critters::Sprite& s : sea.sprites()) any += s.kind == critters::BirdGround ? 1 : 0;
+    }
+    CHECK_EQ(any, 0);
+}
+

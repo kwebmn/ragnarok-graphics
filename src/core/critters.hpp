@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include "core/game_camera.hpp"
@@ -77,6 +78,9 @@ struct Frame {
     std::vector<Crown> crowns;  // the trees in sight
     float waterLevel = 0.0f;    // the water's height, when known
     bool waterKnown = false;
+    // 2.7.34: the map's ground at a point - its height (world y) into y, false not known (no .gnd read, the axes not
+    // found): the birds settle on it only over the water (the tester in Alberta: «уточек с воды убери»)
+    std::function<bool(const Point&, float&)> ground;
     float day = 1.0f;     // 0-1: daylight (living::daytime)
     float night = 0.0f;   // 0-1
 };

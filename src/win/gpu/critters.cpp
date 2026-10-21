@@ -111,6 +111,7 @@ bool Renderer::Impl::applyCritters() {
     frameCrowns.clear();
     f.waterKnown = waterLevelKnown;
     f.waterLevel = waterLevel;
+    f.ground = [this](const critters::Point& p, float& y) { return mapWorld.groundAt(p.x, p.z, y); };  // 2.7.34
     f.day = living::daytime(minuteNow());
     f.night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     critterWorld.update(critterSwitches(), f);
