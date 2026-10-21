@@ -72,6 +72,11 @@ int skillPercent(int brightness, int night);
 // the picture under it the less it adds - with «Skills that do not blind» on: a skill's that adds light by ONE or by
 // its alpha (premultiplied in the shader then)
 bool softAdd(bool skillsSoft, bool addsLight, uint8_t kind, uint32_t srcBlend);
+// 2.7.39: whether the game's effect `id` is a casting's - the light rising round the caster's feet as a skill is cast,
+// one a kind of element (uaRO.exe's effect switch: 12 beginspell, 54-59 beginspell2-7)
+bool isCasting(int id);
+// How bright a casting is drawn, % of the game's, from the skills' (skillPercent): 40 % of it
+int castPercent(int skillPercent);
 // What that gives: `light` laid over `under` (0-1).
 inline float laidOver(float under, float light) { return under + light * (1.0f - under); }
 

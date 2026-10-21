@@ -147,6 +147,10 @@ bool softAdd(bool skillsSoft, bool addsLight, uint8_t kind, uint32_t srcBlend) {
            (srcBlend == d3d7::BLEND_ONE || srcBlend == d3d7::BLEND_SRCALPHA);
 }
 
+bool isCasting(int id) { return id == 12 || (id >= 54 && id <= 59); }
+
+int castPercent(int skillPercent) { return int(float(std::clamp(skillPercent, 0, 100)) * 0.4f + 0.5f); }
+
 size_t Faces::slotOf(uint32_t vertices) const {
     const size_t mask = slots_.size() - 1;
     size_t i = size_t((vertices * 0x9E3779B1u) >> 8) & mask;  // the address's bits spread (Fibonacci hashing)

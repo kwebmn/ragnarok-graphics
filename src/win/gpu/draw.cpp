@@ -127,7 +127,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (orbDraw && fireWanted() && !torchDone) noteFire(rec, d, 1.0f, orb, true);
     if (adds && !orbDraw && fireWanted() && !torchDone && d.texture[0]) {
         const auto ft = textures.find(d.texture[0]);
-        const bool mine = d.effect == uint8_t(effect_exe::Kind::None) || d.effect == uint8_t(effect_exe::Kind::Skill);
+        // 2.7.39: a casting lights nothing round it - not the caster, not the ground, not the air
+        const bool mine = (d.effect == uint8_t(effect_exe::Kind::None) ||
+                           d.effect == uint8_t(effect_exe::Kind::Skill)) &&
+                          !effect_exe::isCasting(d.effectId);
         if (ft != textures.end() && ft->second.fire > 0.15f && mine) {
             noteFire(rec, d, ft->second.fire, ft->second.fireColour);
         } else if (ft != textures.end() && effects.skillColours && ft->second.light > skillLightFloor() && mine &&
@@ -136,7 +139,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
     }
     // 1.25: not the level 99 aura - blurred into the glow it lay as white pools under the players (Prontera)
-    const bool toGlow = !s.ui && glowActive && d.effect != uint8_t(effect_exe::Kind::Aura);
+    // 2.7.39: nor a casting (the light round the caster's feet) - its halo lay as a white haze round the caster
+    const bool toGlow = !s.ui && glowActive && d.effect != uint8_t(effect_exe::Kind::Aura) &&
+                        !effect_exe::isCasting(d.effectId);
     // 0.19, modern water: a cell of a map's water (core/water.hpp) is drawn by its own shader, from the picture and
     // the depth the frame had before its first water (copyScene); without them, as the game draws it.
     bool water = false;

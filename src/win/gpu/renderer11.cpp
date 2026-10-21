@@ -1216,7 +1216,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui) timeDraws(true, false);   // 2.5.15: the interface's span after the world's effects
     // 1.0: from the world's first draw that adds light, its draws write into the glow too
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
-    const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura);  // 1.25
+    const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura) &&  // 1.25
+                        !effect_exe::isCasting(d.effectId);                                          // 2.7.39
     // 2.5.2: a torch's layers - the glow and (torch_flame) the flame drawn anew once the world is (takeTorch)
     if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch && takeTorch(rec, d))
         return;
@@ -1235,7 +1236,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (orbDraw && fireWanted()) noteFire(rec, d, 1.0f, orb, true);
     if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !orbDraw && fireWanted() && d.texture[0]) {
         const auto ft = textures_.find(d.texture[0]);
-        const bool mine = d.effect == uint8_t(effect_exe::Kind::None) || d.effect == uint8_t(effect_exe::Kind::Skill);
+        const bool mine = (d.effect == uint8_t(effect_exe::Kind::None) ||
+                           d.effect == uint8_t(effect_exe::Kind::Skill)) &&
+                          !effect_exe::isCasting(d.effectId);  // 2.7.39 (draw.cpp)
         if (ft != textures_.end() && ft->second.fire > 0.15f && mine) {
             noteFire(rec, d, ft->second.fire, ft->second.fireColour);
         } else if (ft != textures_.end() && effects_.skillColours && ft->second.light > skillLightFloor() && mine &&

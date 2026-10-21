@@ -249,3 +249,19 @@ TEST(effect_exe_skills_laid_over_softly) {
     CHECK(std::fabs(effect_exe::laidOver(0.75f, 0.5f) - 0.875f) < 1e-6f);
     CHECK(std::fabs(effect_exe::laidOver(0.1f, 0.5f) - 0.55f) < 1e-6f);  // at night nearly as added (0.6)
 }
+
+TEST(effect_exe_casting_is_quieter) {
+    // 2.7.39 (the tester: «как светится персонаж во время каста не устраивает»): the casting effects - the light
+    // rising round the caster's feet, one a kind of element (12, 54-59) - drawn at 40 % of the skills' brightness and
+    // lighting nothing round them
+    CHECK(effect_exe::isCasting(12));
+    for (int id = 54; id <= 59; ++id) CHECK(effect_exe::isCasting(id));
+    CHECK(!effect_exe::isCasting(13));
+    CHECK(!effect_exe::isCasting(53));
+    CHECK(!effect_exe::isCasting(60));
+    CHECK(!effect_exe::isCasting(113));  // Magnus itself
+    CHECK(!effect_exe::isCasting(0));
+    CHECK_EQ(effect_exe::castPercent(50), 20);
+    CHECK_EQ(effect_exe::castPercent(100), 40);
+    CHECK_EQ(effect_exe::castPercent(30), 12);
+}
