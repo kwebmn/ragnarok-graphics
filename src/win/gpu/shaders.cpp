@@ -2325,21 +2325,30 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
         c = rain ? puddleReflection(p + nr * 0.6, reflect(v, nr), uiPixels.xy, weight)
                  : reflectionIn(p + nr * 0.6, reflect(v, nr), uiPixels.xy, weight);
     float fresnel = 0.04 + 0.96 * pow(1.0 - saturate(dot(-v, nr)), 5.0);
-    float a = shine * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
+    // 2.7.43 (the user: «отражение должно быть в калюжах, а не на песке под дождём»): in the rain only the puddles
+    // mirror - the wet ground round them darker, no mirror
+    float a = rain ? 0.0 : shine * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
     // 0.97, wet ground (twinY): the ground a little darker all over, and puddles - patches of noise over the world,
     // the same wherever the camera goes - mirroring nearly as water does.
     float dark = 0.0;
     if (twinY > 0.0) {
         float3 world = p.x * float3(r0, r1, r2) + p.y * float3(r3, r4, r5) + p.z * float3(r6, r7, r8) +
                        float3(r9, r10, r11);
-        float n0 = valueNoise(world.xz * 0.045) * 0.7 + valueNoise(world.xz * 0.17 + 3.1) * 0.3;
-        float puddle = smoothstep(0.58, 0.66, n0) * shine;
+        // 2.7.43: puddles only where the ground is hard - paving, stone, trodden earth: grey or dark, not much
+        // colour; sand, grass and snow take the water in. Smaller (about 12 units, not 22) and fewer.
+        float3 ground = sceneColor.Load(int3(wp, 0)).rgb;
+        float top = max(ground.r, max(ground.g, ground.b)), low = min(ground.r, min(ground.g, ground.b));
+        float tint = (top - low) / max(top, 1e-3);
+        float light = dot(ground, float3(0.3, 0.59, 0.11));
+        float hard = smoothstep(0.32, 0.18, tint) * (1.0 - smoothstep(0.62, 0.78, light));
+        float n0 = valueNoise(world.xz * 0.08) * 0.7 + valueNoise(world.xz * 0.3 + 3.1) * 0.3;
+        float puddle = smoothstep(0.6, 0.68, n0) * shine * hard;
         // 2.7.36 (the tester in Comodo: «меняется только отражение, а так визуально ничего не меняется»): the wet
-        // ground darker - 16 % was hardly seen - and a puddle shows the grey sky where nothing close stands in it:
-        // on open ground it showed nothing at all. At night that sky is dark.
-        dark = 0.3 * wet * twinY;
-        float3 sky = float3(0.58, 0.62, 0.68) * lerp(1.0, 0.15, twinW);
-        float pa = puddle * (0.45 + 0.4 * saturate(fresnel * 3.0)) * twinY;
+        // ground darker - 16 % was hardly seen - and a puddle shows the sky where nothing close stands in it; 2.7.43:
+        // a darker sky, and much of it only looking along the puddle - big grey stains lay over the sand
+        dark = (0.3 + 0.15 * puddle) * wet * twinY;
+        float3 sky = float3(0.42, 0.46, 0.52) * lerp(1.0, 0.15, twinW);
+        float pa = puddle * (0.2 + 0.6 * saturate(fresnel * 3.0) + 0.3 * weight) * twinY;
         if (pa > a) {
             c = lerp(sky, c, weight);
             a = pa;
