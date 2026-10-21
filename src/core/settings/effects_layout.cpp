@@ -20,6 +20,8 @@ const EffectLayout kEffects[] = {
     {"effects.map_fade", {}, {}, {}, 0},                                // 0.83
     {"effects.no_game_fog", {}, {}, {}, 0},                             // 2.6.10
     {"effects.no_server_night", {}, {}, {}, 0},                         // 2.6.13
+    {"effects.moon_light", {}, {"effects.moon_strength"}, {}, 0},        // 2.7.18
+    {"effects.hero_light", {}, {"effects.hero_light_strength"}, {}, 0},  // 2.7.18
     {"effects.round_light", {}, {}, {}, 0},  // 0.84
     {"effects.ripples", {}, {}, {}, 0},  // 0.94
     {"effects.glint", {}, {}, {}, 0},  // 0.95
@@ -70,7 +72,7 @@ const EffectLayout kEffects[] = {
     {"effects.swamp", {}, {}, {}, 2},  // 1.7.2
     {"effects.butterflies", {"effects.dragonflies"}, {}, {}, 2},  // 1.7.3
     {"effects.birds", {}, {}, {}, 2},  // 1.7.3
-    {"effects.night_fireflies", {}, {}, {}, 2},  // 2.6.11
+    {"effects.night_fireflies", {"effects.fireflies_light"}, {}, {}, 2},  // 2.6.11; 2.7.18 their light
     {"effects.leaf_fall", {}, {}, {}, 2},  // 1.7.3
     {"effects.embers", {}, {}, {}, 2},  // 1.7.3
     {"effects.breath", {}, {}, {}, 2},  // 1.7.3

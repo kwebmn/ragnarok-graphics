@@ -2168,6 +2168,7 @@ void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its streng
     Constants c{};
     c.sharpen = night ? float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f : 0.0f;
     c.footprint = float(std::clamp(effects_.nightNow - 100, 0, 100)) / 100.0f;  // 2.7.16: «Глибока ніч»
+    c.twin[3] = effects_.moonLight ? float(std::clamp(effects_.moonStrength, 0, 200)) / 100.0f : 0.0f;  // 2.7.18
     const daylight::Light light = daylight::at(day ? effects_.dayNow : -1);  // 0.74: the time of day's tint
     for (int k = 0; k < 3; ++k) c.twin[k] = light.tint[k] * look.tint[k];  // 0.79: and the region's look
     c.sourceRect[3] = look.saturation - 1.0f;
@@ -2867,6 +2868,12 @@ void Renderer11::applyCritters() {
     f.night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
     critterWorld_.update(on, f);
     const std::vector<critters::Sprite>& all = critterWorld_.sprites();
+    // 2.7.18 (critters.cpp): the fireflies in the grass light the ground under them - for the next lights' pass
+    nightGlows_.clear();
+    if (effects_.firefliesLight)
+        for (const critters::Sprite& s : all)
+            if (s.kind == critters::Firefly && s.p1 * s.alpha > 0.05f && nightGlows_.size() < 24)
+                nightGlows_.push_back(NightGlow11{map::Point{s.at.x, s.at.y, s.at.z}, s.p1 * s.alpha});
     const bool shafts = effects_.underwater && place_.underwater;
     if (all.empty() && !shafts) return;
     if (!crittersData_) {

@@ -204,6 +204,7 @@ EffectSettings effectsOff() {
     // 2.4: the parts of the effects
     e.waterFoam = e.waterGlints = e.caustics = e.waterfalls = e.stepDust = e.seasonSnow = false;
     e.seasonGrass = e.pollen = e.indoorDust = e.rainSplashes = e.desertHeat = false;
+    e.moonLight = e.heroLight = e.firefliesLight = false;  // 2.7.18
     e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
     e.dayNow = -1;
@@ -269,7 +270,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.hitFlash ||
            e.glint ||
            e.ripples ||
-           e.softParticles || e.rimLight || e.motes ||
+           e.softParticles || e.rimLight || e.motes || e.moonLight || e.heroLight ||
            e.relief || e.floorReflections || e.shafts || e.dayCycle || e.bloom ||
            e.regionLooks || e.footprints || e.storms || e.grass || e.skillSparks ||
            e.roundLight;

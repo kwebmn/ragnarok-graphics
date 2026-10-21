@@ -1143,6 +1143,9 @@ float4 night_ps(PresentOut i) : SV_Target {
     // 2.7.16: deeper past the whole night (footprint 0-1, «Глибока ніч»): 45 % of the light down to 25 % (2.7.17, the
     // user's choice: 16 % was black)
     float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * lerp(0.45, 0.25, saturate(footprint));
+    // 2.7.18, moonlight (twinH its strength, 0-2): the night lifted by a silver-blue light - «Глибока ніч» from 25 %
+    // to about 40 %, the whole night from 45 % to about 60 %
+    night += lerp(float3(l, l, l), c, 0.35) * float3(0.62, 0.72, 1.0) * 0.17 * twinH;
     // 2.7.17: what stays bright is a light - a fire's, a lamp's, a spell's colour - not a white flower, pale hair or
     // stone: under «Глибока ніч» the meadow's flowers stood out of the dark as stars on the ground
     float hi = max(c.r, max(c.g, c.b)), lo = min(c.r, min(c.g, c.b));

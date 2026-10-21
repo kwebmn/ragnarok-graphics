@@ -184,6 +184,11 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.nightFireflies = rd.u8() != 0;  // 2.6.11
             e.season = rd.u8();               // 2.6.22
             e.weatherKind = rd.u8();          // 2.6.22
+            e.moonLight = rd.u8() != 0;       // 2.7.18
+            e.moonStrength = rd.i32();
+            e.heroLight = rd.u8() != 0;
+            e.heroLightStrength = rd.i32();
+            e.firefliesLight = rd.u8() != 0;
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

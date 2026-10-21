@@ -244,6 +244,7 @@ bool Renderer::Impl::applyNight() {
     Constants c{};
     c.sharpen = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;  // 2.6.19: the night always the clock's
     c.footprint = float(std::clamp(effects.nightNow - 100, 0, 100)) / 100.0f;  // 2.7.16: «Глибока ніч»
+    c.twin[3] = effects.moonLight ? float(std::clamp(effects.moonStrength, 0, 200)) / 100.0f : 0.0f;  // 2.7.18
     const daylight::Light day = daylight::at(effects.dayCycle ? effects.dayNow : -1);  // 0.74
     const region_look::Look look = region_look::of(mapName, effects.regionLooks ? effects.regionLooksStrength : 0);
     for (int k = 0; k < 3; ++k) c.twin[k] = day.tint[k] * look.tint[k];  // 0.79: and the region's

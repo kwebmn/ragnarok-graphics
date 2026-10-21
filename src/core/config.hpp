@@ -205,6 +205,13 @@ struct EffectSettings {
     bool foliage = false;
     int foliageStrength = 100;  // %, 0-200
     int nightStrength = 60;  // %, 0-100; 2.6.19: the night always the clock's (its switches gone)
+    // 2.7.18 (the user: «очень темно ночью ... луна светит», chose «Луна и свет героя»): moon_light - the moon lifts
+    // the night to a silver-blue light (night_ps); hero_light - a warm pool of light about the player's character at
+    // night (the lights' pass, at the point the camera looks at). On by default.
+    bool moonLight = true;
+    int moonStrength = 100;  // %, 0-200
+    bool heroLight = true;
+    int heroLightStrength = 100;  // %, 0-200
     int nightNow = 0;
     bool water = false;
     int waterWaves = 50;        // %, 0-100: 0 a still mirror
@@ -317,6 +324,7 @@ struct EffectSettings {
     bool butterflies = false;
     bool birds = false;
     bool nightFireflies = false;  // 2.6.11: fireflies over the grass from dusk to dawn
+    bool firefliesLight = true;   // 2.7.18: night_fireflies - each lights the ground under it a little
     bool leafFall = false;
     bool embers = false;
     bool breath = false;

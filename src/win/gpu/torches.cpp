@@ -664,6 +664,15 @@ bool Renderer::Impl::applyTorches() {
     // not so bright" - the game's torch lights nothing, its glow is baked into the ground).
     const float strength = 0.4f * float(std::clamp(effects.torchLight, 0, 200)) / 100.0f;
     std::vector<LightItem> lights;
+    const float darkNow = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;  // 2.7.18: how much night it is
+    // 2.7.18: a warm pool of light about the hero at night - the point the camera looks at, three units up from the
+    // ground; first, so no cap drops it
+    if (heroLightWanted()) {
+        const float up[3] = {-viewToWorld[1], -viewToWorld[4], -viewToWorld[7]};  // the world's up (-y) in the view
+        const float user = float(std::clamp(effects.heroLightStrength, 0, 200)) / 100.0f;
+        lights.push_back(LightItem{{up[0] * 3.0f, up[1] * 3.0f, cameraTargetZ + up[2] * 3.0f}, 0.45f * darkNow * user,
+                                   {1.0f, 0.82f, 0.62f}, 40.0f});
+    }
     std::vector<float> flickers(flames.size(), 1.0f), seeds(flames.size(), 0.0f);
     for (size_t i = 0; i < flames.size(); ++i) {
         const torch::Flame& f = flames[i];
@@ -706,7 +715,9 @@ bool Renderer::Impl::applyTorches() {
         std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
         // 0.26.1: a third of 0.26's, the brightest place no more than one fire ("светит слишком сильно, намного
         // помягче"), a shorter reach.
-        const float fireStrength = 0.18f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f;
+        // 2.7.18: brighter at night (the user: «скилы должны освещать») - up to 1.8 times
+        const float fireStrength =
+            0.18f * float(std::clamp(effects.fireLightStrength, 0, 200)) / 100.0f * (1.0f + 0.8f * darkNow);
         if (heatWanted()) {  // 0.35: the hot air over burning skills (their middles, game pixels to the target's)
             const float hk = float(upscale ? worldScale : scale);
             for (size_t i = 0; i < best.size() && i < 16; ++i) {
@@ -757,6 +768,14 @@ bool Renderer::Impl::applyTorches() {
             ++used;
         }
     }
+    // 2.7.18: the fireflies in the grass at night light the ground under them a little, pulsing with their glow
+    if (nightGlowsWanted())
+        for (const NightGlow& g : nightGlows) {
+            if (lights.size() >= kMaxLights) break;
+            const map::Point v = toView(viewToWorld, g.at);
+            if (v.z <= proj.nearZ) continue;
+            lights.push_back(LightItem{{v.x, v.y, v.z}, 0.12f * g.lit, {0.75f, 1.0f, 0.42f}, 9.0f});
+        }
     // 0.31: the lava's heat, gathered by place (cells of 96 game pixels): the nearest 12 light around, breathing.
     if (!lavaCells.empty() && lavaWanted()) {
         struct Pool {

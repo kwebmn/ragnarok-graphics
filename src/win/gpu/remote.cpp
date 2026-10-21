@@ -444,6 +444,11 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.nightFireflies ? 1 : 0);  // 2.6.11
     w.u8(uint8_t(e.season));      // 2.6.22
     w.u8(uint8_t(e.weatherKind));  // 2.6.22
+    w.u8(e.moonLight ? 1 : 0);  // 2.7.18
+    w.i32(e.moonStrength);
+    w.u8(e.heroLight ? 1 : 0);
+    w.i32(e.heroLightStrength);
+    w.u8(e.firefliesLight ? 1 : 0);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

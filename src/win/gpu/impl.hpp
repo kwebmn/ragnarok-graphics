@@ -930,8 +930,22 @@ struct Renderer::Impl {
     bool torchDue() const {
         return !torchDone && (torchWanted() || lampsWanted() || fireflyWanted() || mapGlowsWanted() ||
                               !torchFlames.empty() || !fireSparks.empty() || !rayParts.empty() ||
-                              !lavaCells.empty() || !portalSparks.empty() || !portalTracks.empty());
+                              !lavaCells.empty() || !portalSparks.empty() || !portalTracks.empty() ||
+                              heroLightWanted() || nightGlowsWanted());
     }
+    // 2.7.18: at night a warm pool of light about the hero - the point the camera looks at (the player)
+    bool heroLightWanted() const {
+        return effects.heroLight && effects.heroLightStrength > 0 && effects.nightNow > 0 && cameraValid &&
+               cameraTargetZ > 0.0f;
+    }
+    // 2.7.18: the fireflies in the grass at night (the last creatures' pass, critters.cpp), each lighting the ground
+    // under it a little in the lights' pass
+    struct NightGlow {
+        map::Point at;
+        float lit;
+    };
+    std::vector<NightGlow> nightGlows;
+    bool nightGlowsWanted() const { return effects.nightFireflies && effects.firefliesLight && !nightGlows.empty(); }
     bool takeTorch(const FrameRecord& rec, const DrawCmd& d);  // a torch layer: true when it is not to be drawn
     void noteCritterFlame(const FrameRecord& rec, const DrawCmd& d);  // 2.6.12: the torches off
     bool torchReady();     // the shaders, pipelines and the picture's copies are there

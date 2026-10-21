@@ -256,8 +256,10 @@ void Renderer11::applyTorchLight() {
     std::vector<RayPart11> rayParts;
     rayParts.swap(rayParts_);
     if (!portalsWanted()) portalTracks_.clear();
+    const bool hero = heroLightWanted(), nightFlies = nightGlowsWanted();  // 2.7.18
     if ((!torches && !lampsOn && !hidden && !fire && !glows && !mapFlies && lavaCells.empty() &&
-         portalSparks.empty() && portalTracks_.empty() && rayParts.empty() && !(flamesWanted() && !flames.empty())) ||
+         portalSparks.empty() && portalTracks_.empty() && rayParts.empty() && !(flamesWanted() && !flames.empty()) &&
+         !hero && !nightFlies) ||
         !depth_ || !target_.texture || !depthViews())
         return;
     if (!lightData_ && torchLightPs_) {
@@ -410,6 +412,13 @@ void Renderer11::applyTorchLight() {
         }
         ++count;
     };
+    const float darkNow = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;  // 2.7.18: how much night it is
+    if (hero) {  // 2.7.18 (torches.cpp): the hero's warm light at night, three units up from the ground; first
+        const float up[3] = {-m[1], -m[4], -m[7]};  // the world's up (-y) in the view
+        const float view[3] = {up[0] * 3.0f, up[1] * 3.0f, cameraTargetZ_ + up[2] * 3.0f};
+        static const float kWarm[3] = {1.0f, 0.82f, 0.62f};
+        addLight(view, 40.0f, kWarm, 0.45f * darkNow * float(std::clamp(effects_.heroLightStrength, 0, 200)) / 100.0f);
+    }
     if (torchesWanted())
         for (size_t i = 0; i < flames.size(); ++i) {  // the game's flames and the hidden ones
             const torch::Flame& f = flames[i];
@@ -437,7 +446,8 @@ void Renderer11::applyTorchLight() {
         for (const auto& kv : cells)
             if (kv.second.w > 0.02f) best.push_back(kv.second);
         std::sort(best.begin(), best.end(), [](const Cell& a, const Cell& b) { return a.w > b.w; });
-        const float fireStrength = 0.18f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f;
+        const float fireStrength =  // 2.7.18: brighter at night, up to 1.8 times
+            0.18f * float(std::clamp(effects_.fireLightStrength, 0, 200)) / 100.0f * (1.0f + 0.8f * darkNow);
         for (size_t i = 0; i < best.size() && embers_.size() < 24 && effects_.skillSparks && embersPs_; ++i) {
             const Cell& c = best[i];  // 2.5.3 (torches.cpp 0.82): the places for the skills' sparks
             const float vz = c.view[2] / c.w;
@@ -481,6 +491,14 @@ void Renderer11::applyTorchLight() {
             ++used;
         }
     }
+    if (nightFlies)  // 2.7.18 (torches.cpp): the fireflies in the grass at night light the ground under them
+        for (const NightGlow11& g : nightGlows_) {
+            float view[3];
+            toView(g.at, view);
+            if (view[2] <= proj.nearZ) continue;
+            static const float kGreen[3] = {0.75f, 1.0f, 0.42f};
+            addLight(view, 9.0f, kGreen, 0.12f * g.lit);
+        }
     if (!lavaCells.empty()) {  // 0.31 (torches.cpp): the lava's heat by place (96 px cells), the nearest 12
         struct Pool {
             float view[3] = {0, 0, 0};

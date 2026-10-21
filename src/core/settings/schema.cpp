@@ -246,6 +246,16 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxNoGameFogHint, "", &E::noGameFog},  // 2.6.10
         {"effects", "no_server_night", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxNoServerNight,
          Text::FxNoServerNightHint, "", &E::noServerNight},  // 2.6.13
+        {"effects", "moon_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMoonLight,
+         Text::FxMoonLightHint, "", &E::moonLight},  // 2.7.18
+        {"effects", "moon_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxMoonStrength,
+         Text::FxMoonStrengthHint, " %", nullptr, &E::moonStrength},
+        {"effects", "hero_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxHeroLight,
+         Text::FxHeroLightHint, "", &E::heroLight},  // 2.7.18
+        {"effects", "hero_light_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
+         Text::FxHeroLightStrength, Text::FxHeroLightStrengthHint, " %", nullptr, &E::heroLightStrength},
+        {"effects", "fireflies_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFirefliesLight,
+         Text::FxFirefliesLightHint, "", &E::firefliesLight},  // 2.7.18: a part of night_fireflies
         {"effects", "round_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRoundLight,
          Text::FxRoundLightHint, "", &E::roundLight},
         {"effects", "ripples", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRipples,

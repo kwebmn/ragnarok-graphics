@@ -115,6 +115,12 @@ bool Renderer::Impl::applyCritters() {
     f.night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
     critterWorld.update(critterSwitches(), f);
     const std::vector<critters::Sprite>& all = critterWorld.sprites();
+    // 2.7.18: the fireflies in the grass light the ground under them - kept for the next frame's lights' pass
+    nightGlows.clear();
+    if (effects.firefliesLight)
+        for (const critters::Sprite& s : all)
+            if (s.kind == critters::Firefly && s.p1 * s.alpha > 0.05f && nightGlows.size() < 24)
+                nightGlows.push_back(NightGlow{map::Point{s.at.x, s.at.y, s.at.z}, s.p1 * s.alpha});
     const bool shafts = effects.underwater && mapPlace.underwater;
     if (all.empty() && !shafts) return true;
     if (!ensureScene("living creatures")) return true;
