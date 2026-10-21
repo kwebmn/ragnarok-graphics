@@ -11,8 +11,9 @@ namespace uagfx::critters {
 
 // 1.7, the living world's creatures and particles (win/gpu/critters.cpp draws them with critters_ps): butterflies
 // and birds by day, leaves falling from the crowns, embers rising from the fires, breath in the cold, drops where a
-// step goes into the water, drips in the caves, bubbles under the sea. They live in the game's world (up along -y,
-// a character about 7 units tall) about the player; the renderer turns them to the screen each frame.
+// step goes into the water, drips in the caves, bubbles under the sea. They live in the game's world (up along -y; a
+// character's mouth about 15 units over its feet - 2.7.44, not the 7 units tall once written here) about the player;
+// the renderer turns them to the screen each frame.
 enum Kind : uint8_t {
     Butterfly = 1,
     Dragonfly = 2,

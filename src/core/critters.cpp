@@ -303,7 +303,9 @@ void World::motes(const Switches& on, const Frame& f) {
             if (cycle >= before) continue;  // a new cycle began: a puff
             Mote m;
             m.kind = Puff;
-            m.at = Point{f.feet[k].x + 0.4f, f.feet[k].y - 6.2f, f.feet[k].z};
+            // 2.7.44 (the tester in Lutie: «пар идет в районе ног»): the mouth 15 units over the feet - 6.2 was the
+            // legs (Ruwach's orbs, which the game flies at the chest, go 10 up: uaRO.exe 0x5CC5D0)
+            m.at = Point{f.feet[k].x + 0.4f, f.feet[k].y - 15.0f, f.feet[k].z};
             m.v = Point{0.5f * (random() - 0.5f), -0.5f, 0.5f * (random() - 0.5f)};
             m.life = 1.3f;
             m.size = 0.6f;  // 2.7.41: a little bigger and denser (below) - the tester in Lutie: «пара не вижу»
