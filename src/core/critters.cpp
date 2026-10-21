@@ -306,7 +306,7 @@ void World::motes(const Switches& on, const Frame& f) {
             m.at = Point{f.feet[k].x + 0.4f, f.feet[k].y - 6.2f, f.feet[k].z};
             m.v = Point{0.5f * (random() - 0.5f), -0.5f, 0.5f * (random() - 0.5f)};
             m.life = 1.3f;
-            m.size = 0.5f;
+            m.size = 0.6f;  // 2.7.41: a little bigger and denser (below) - the tester in Lutie: «пара не вижу»
             if (motes_.size() < 400) motes_.push_back(m);
         }
     }
@@ -410,7 +410,7 @@ void World::motes(const Switches& on, const Frame& f) {
             case Ember:
                 s = sprite(Ember, m.at, m.size, (1.0f - k) * (0.7f + 0.3f * std::sin(m.age * 20.0f + m.spin)));
                 break;
-            case Puff: s = sprite(Puff, m.at, m.size + 1.3f * k, 0.45f * (1.0f - k) * (1.0f - 0.6f * f.night)); break;
+            case Puff: s = sprite(Puff, m.at, m.size + 1.5f * k, 0.6f * (1.0f - k) * (1.0f - 0.6f * f.night)); break;
             case Droplet: s = sprite(Droplet, m.at, m.size, 0.9f); break;
             case Bubble: s = sprite(Bubble, m.at, m.size * (1.0f + 0.5f * k), std::min(1.0f, (1.0f - k) * 3.0f)); break;
             default: continue;
