@@ -310,10 +310,12 @@ void World::motes(const Switches& on, const Frame& f) {
             if (motes_.size() < 400) motes_.push_back(m);
         }
     }
-    // A step into shallow water: drops fly up.
+    // A step into the water: drops fly up. 2.7.35: the game has no swimming - where one walks in the water one wades,
+    // the step on the bed: Comodo's walkable water is 7 units deep in the middle, up to 16 (only 3 kept them before);
+    // over two cells deep is a special map's floor (the airship, the waiting hall), no place to wade
     if (on.splashes && f.waterKnown) {
         for (const Point& s : f.steps) {
-            if (s.y < f.waterLevel - 0.2f || s.y > f.waterLevel + 3.0f) continue;  // dry ground, or swimming deep
+            if (s.y < f.waterLevel - 0.2f || s.y > f.waterLevel + 20.0f) continue;  // dry ground, or far under
             for (int k = 0; k < 9; ++k) {
                 const float a = random() * 2.0f * kPi, sp = 1.5f + 2.0f * random();
                 Mote m;

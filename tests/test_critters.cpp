@@ -192,6 +192,37 @@ TEST(critters_falling_leaves_seen_against_the_green) {
     CHECK(leaves > 5);
 }
 
+TEST(critters_splashes_rise_where_the_hero_wades) {
+    // 2.7.35: the game has no swimming - where one walks in the water one wades, the steps (the round shadows'
+    // middles) on the bed: 7 units under the surface is Comodo's middle depth, so a splash; 25 under is no place to
+    // wade (the special maps: the airship, the waiting hall), and the dry shore none either
+    auto drops = [](float depth) {
+        critters::World w;
+        w.setPlace(living::placeOf("comodo", true, false));
+        critters::Switches on;
+        on.splashes = true;
+        critters::Frame f;
+        f.centreKnown = true;
+        f.dt = 0.05f;
+        f.waterKnown = true;
+        f.waterLevel = 15.0f;  // up is -y: the bed `depth` under it
+        f.steps.push_back(critters::Point{0.0f, 15.0f + depth, 0.0f});
+        f.now = 1.0;
+        w.update(on, f);
+        f.steps.clear();
+        f.now += 0.05;
+        w.update(on, f);
+        int n = 0;
+        for (const critters::Sprite& s : w.sprites()) n += s.kind == critters::Droplet ? 1 : 0;
+        return n;
+    };
+    CHECK(drops(1.0f) > 0);
+    CHECK(drops(7.0f) > 0);
+    CHECK(drops(18.0f) > 0);
+    CHECK_EQ(drops(25.0f), 0);
+    CHECK_EQ(drops(-2.0f), 0);
+}
+
 TEST(critters_birds_never_settle_on_the_water) {
     // 2.7.34 (the tester in Alberta: «уточек с воды убери, лишнее»): a flock settles where the map's ground stands
     // over the water (Frame::ground), at that ground's height - Alberta's pier had them on the harbour's water
