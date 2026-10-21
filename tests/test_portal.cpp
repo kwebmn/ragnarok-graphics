@@ -71,3 +71,42 @@ TEST(portal_game_portal_hidden_only_while_ours_was_drawn) {
     CHECK(!portal::hidesGame(true, false));
     CHECK(!portal::hidesGame(false, true));
 }
+
+namespace {
+portal::Seen seenAt(float gx, float gy, float z = 300.0f) {
+    return portal::Seen{{gx * 0.1f, gy * 0.1f, z}, gx, gy, 90.0f};
+}
+}  // namespace
+
+TEST(portal_seen_once_is_followed) {
+    // 2.7.50 (the tester on 2.7.49: still the game's portal - ours never drawn): 0.39.1 started a track at strength 0
+    // and dropped every track at 0 or under in the same frame - no portal was ever followed (nor its 0.38 blue glow)
+    std::vector<portal::Track> tracks;
+    portal::follow(tracks, {seenAt(500.0f, 300.0f)}, 1.0f / 60.0f);
+    CHECK(tracks.size() == 1);
+    CHECK(!tracks.empty() && tracks[0].strength > 0.0f);
+    std::vector<portal::Track> first;
+    portal::follow(first, {seenAt(500.0f, 300.0f)}, 0.0f);  // the very first frame: no time gone yet
+    CHECK(first.size() == 1);
+}
+
+TEST(portal_followed_comes_in_and_goes_out) {
+    std::vector<portal::Track> tracks;
+    for (int f = 0; f < 30; ++f) portal::follow(tracks, {seenAt(500.0f, 300.0f)}, 1.0f / 60.0f);  // half a second
+    CHECK(tracks.size() == 1 && tracks[0].strength == 1.0f);
+    for (int f = 0; f < 60; ++f) portal::follow(tracks, {}, 1.0f / 60.0f);  // a second unseen: fading
+    CHECK(tracks.size() == 1 && tracks[0].strength > 0.0f && tracks[0].strength < 0.3f);
+    for (int f = 0; f < 30; ++f) portal::follow(tracks, {}, 1.0f / 60.0f);
+    CHECK(tracks.empty());
+}
+
+TEST(portal_draws_near_each_other_one_portal) {
+    // its rings, its column and its sparks are many draws: within 80 game pixels (or 0.8 of their size) one portal
+    std::vector<portal::Track> tracks;
+    portal::follow(tracks, {seenAt(500.0f, 300.0f), seenAt(530.0f, 280.0f), seenAt(900.0f, 300.0f)}, 1.0f / 60.0f);
+    CHECK(tracks.size() == 2);
+    float near = 0.0f;
+    for (const portal::Track& t : tracks)
+        if (t.gx < 700.0f) near = t.gx;
+    CHECK(std::fabs(near - 515.0f) < 0.01f);  // their middle
+}

@@ -50,4 +50,61 @@ bool screenBox(const float foot[3], const float up[3], const camera::Projection&
     return true;
 }
 
+void follow(std::vector<Track>& tracks, const std::vector<Seen>& draws, float step) {
+    struct Gate {
+        float view[3] = {0.0f, 0.0f, 0.0f}, gx = 0.0f, gy = 0.0f, size = 0.0f;
+        int n = 0;
+        bool claimed = false;
+    };
+    std::vector<Gate> seen;
+    for (const Seen& s : draws) {
+        Gate* g = nullptr;
+        for (Gate& o : seen)
+            if (std::hypot(o.gx / float(o.n) - s.gx, o.gy / float(o.n) - s.gy) <
+                std::max(80.0f, std::max(o.size, s.size) * 0.8f))
+                g = &o;
+        if (!g) {
+            seen.push_back(Gate{});
+            g = &seen.back();
+        }
+        for (int k = 0; k < 3; ++k) g->view[k] += s.view[k];
+        g->gx += s.gx;
+        g->gy += s.gy;
+        g->size = std::max(g->size, s.size);
+        ++g->n;
+    }
+    for (Gate& g : seen) {
+        for (float& v : g.view) v /= float(g.n);
+        g.gx /= float(g.n);
+        g.gy /= float(g.n);
+    }
+    const float ease = 1.0f - std::exp(-step * 5.0f), rise = step / 0.4f;
+    for (Track& t : tracks) {
+        Gate* best = nullptr;
+        float bestD = 140.0f;
+        for (Gate& g : seen) {
+            const float d = std::hypot(g.gx - t.gx, g.gy - t.gy);
+            if (!g.claimed && d < bestD) {
+                bestD = d;
+                best = &g;
+            }
+        }
+        if (best) {
+            best->claimed = true;
+            for (int k = 0; k < 3; ++k) t.view[k] += (best->view[k] - t.view[k]) * ease;
+            t.gx += (best->gx - t.gx) * ease;
+            t.gy += (best->gy - t.gy) * ease;
+            t.size += (best->size - t.size) * ease;
+            t.strength = std::min(1.0f, t.strength + rise);
+        } else {
+            t.strength -= step / 1.2f;  // its rings gone a moment: it fades rather than goes out
+        }
+    }
+    for (const Gate& g : seen)
+        if (!g.claimed && tracks.size() < 16)
+            tracks.push_back(Track{{g.view[0], g.view[1], g.view[2]}, g.gx, g.gy, g.size, std::max(rise, 1e-3f)});
+    tracks.erase(std::remove_if(tracks.begin(), tracks.end(), [](const Track& t) { return t.strength <= 0.0f; }),
+                 tracks.end());
+}
+
 }  // namespace uagfx::portal

@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <vector>
 
 #include "core/game_camera.hpp"
 
@@ -36,5 +37,26 @@ bool screenBox(const float foot[3], const float up[3], const camera::Projection&
 // draw of the game's portal is left out - only while the new one is wanted and was drawn the frame before, so that
 // there is never no portal at all.
 inline bool hidesGame(bool wanted, bool drawnLastFrame) { return wanted && drawnLastFrame; }
+
+// A draw of a portal this frame (the renderers' notePortal): its middle in the view and on the screen (game
+// pixels), its size there.
+struct Seen {
+    float view[3];
+    float gx, gy, size;
+};
+
+// A portal followed from frame to frame (0.39.1: its glow held steady while its rings rise and come and go).
+struct Track {
+    float view[3];
+    float gx, gy, size;
+    float strength;  // 0-1: up over 0.4 s while seen, down over 1.2 s while not
+};
+
+// This frame's draws gathered into what stands there (within 80 game pixels, or 0.8 of the larger size: one portal,
+// its middle theirs), then the tracks followed by `step` seconds: each takes the nearest gathering within 140 pixels -
+// its place eased towards it, its strength up - or fades; a gathering no track took starts one (16 at most) and faded
+// ones go. 2.7.50 (the tester on 2.7.49: still the game's portal): 0.39.1 started a track at 0 and dropped those at 0
+// in the same frame - no portal was ever followed, nor its 0.38 glow lit; one starts a step's rise strong now.
+void follow(std::vector<Track>& tracks, const std::vector<Seen>& draws, float step);
 
 }  // namespace uagfx::portal

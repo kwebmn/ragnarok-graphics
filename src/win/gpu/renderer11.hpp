@@ -12,6 +12,7 @@
 #include "core/critters.hpp"
 #include "core/draw_batch.hpp"
 #include "core/footsteps.hpp"
+#include "core/portal.hpp"
 #include "core/trample.hpp"
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
@@ -277,10 +278,7 @@ private:
     bool newPortalsDrawn_ = false, newPortalsDrawnLast_ = false;  // 2.7.49: this frame and the one before
     std::string portalsToldMap_;
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
-    struct PortalTrack11 {
-        float view[3];
-        float gx, gy, size, strength;
-    };
+    using PortalTrack11 = portal::Track;  // 2.7.50: followed by core/portal.hpp
     std::vector<PortalTrack11> portalTracks_;
     float portalTime_ = 0.0f;
     // 2.5.3: the forest's beams of light (ray_ps, draw.cpp 0.30) - their dust and light where they fall

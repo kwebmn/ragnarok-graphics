@@ -17,6 +17,7 @@
 #include "core/footsteps.hpp"
 #include "core/trample.hpp"
 #include "core/frame.hpp"
+#include "core/portal.hpp"
 #include "core/critters.hpp"
 #include "core/draw_batch.hpp"
 #include "core/key_pair.hpp"
@@ -191,10 +192,7 @@ struct HeatSpot {
 
 // 0.39.1: a portal followed from frame to frame: its middle in the view and on the screen (game pixels), its size,
 // how much it shows (fading in and out as its rings come and go).
-struct PortalTrack {
-    float view[3];
-    float gx, gy, size, strength;
-};
+using PortalTrack = portal::Track;  // 2.7.50: followed by core/portal.hpp
 
 // 0.28: a firefly the game draws this frame (effect 45: its dot, a quad facing the screen) - drawn anew.
 struct Firefly {

@@ -553,61 +553,10 @@ void Renderer11::applyTorchLight() {
     const float portalStep = std::clamp(time - portalTime_, 0.0f, 0.25f);
     portalTime_ = time;
     if (portalsWanted()) {
-        struct Gate {
-            float view[3] = {0, 0, 0}, gx = 0, gy = 0, size = 0;
-            int n = 0;
-            bool claimed = false;
-        };
-        std::vector<Gate> seen;
-        for (const FireSpark11& s : portalSparks) {
-            Gate* g = nullptr;
-            for (Gate& o : seen)
-                if (std::hypot(o.gx / float(o.n) - s.gameX, o.gy / float(o.n) - s.gameY) <
-                    std::max(80.0f, std::max(o.size, s.strength) * 0.8f))
-                    g = &o;
-            if (!g) {
-                seen.push_back(Gate{});
-                g = &seen.back();
-            }
-            for (int i = 0; i < 3; ++i) g->view[i] += s.view[i];
-            g->gx += s.gameX;
-            g->gy += s.gameY;
-            g->size = std::max(g->size, s.strength);
-            ++g->n;
-        }
-        for (Gate& g : seen) {
-            for (int i = 0; i < 3; ++i) g.view[i] /= float(g.n);
-            g.gx /= float(g.n);
-            g.gy /= float(g.n);
-        }
-        const float ease = 1.0f - std::exp(-portalStep * 5.0f);
-        for (PortalTrack11& t : portalTracks_) {
-            Gate* best = nullptr;
-            float bestD = 140.0f;
-            for (Gate& g : seen) {
-                const float dist = std::hypot(g.gx - t.gx, g.gy - t.gy);
-                if (!g.claimed && dist < bestD) {
-                    bestD = dist;
-                    best = &g;
-                }
-            }
-            if (best) {
-                best->claimed = true;
-                for (int i = 0; i < 3; ++i) t.view[i] += (best->view[i] - t.view[i]) * ease;
-                t.gx += (best->gx - t.gx) * ease;
-                t.gy += (best->gy - t.gy) * ease;
-                t.size += (best->size - t.size) * ease;
-                t.strength = std::min(1.0f, t.strength + portalStep / 0.4f);
-            } else {
-                t.strength -= portalStep / 1.2f;  // its rings gone a moment: it fades rather than goes out
-            }
-        }
-        for (const Gate& g : seen)
-            if (!g.claimed && portalTracks_.size() < 16)
-                portalTracks_.push_back(PortalTrack11{{g.view[0], g.view[1], g.view[2]}, g.gx, g.gy, g.size, 0.0f});
-        portalTracks_.erase(std::remove_if(portalTracks_.begin(), portalTracks_.end(),
-                                           [](const PortalTrack11& t) { return t.strength <= 0.0f; }),
-                            portalTracks_.end());
+        std::vector<portal::Seen> seen;  // 2.7.50: followed by core/portal.hpp (0.39.1's dropped every new one)
+        for (const FireSpark11& s : portalSparks)
+            seen.push_back(portal::Seen{{s.view[0], s.view[1], s.view[2]}, s.gameX, s.gameY, s.strength});
+        portal::follow(portalTracks_, seen, portalStep);
         const float user = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
         static const float kBlue[3] = {0.45f, 0.75f, 1.0f};
         static const float kLilac[3] = {0.80f, 0.74f, 1.0f};  // 2.7.48: under the new portal, its colour
