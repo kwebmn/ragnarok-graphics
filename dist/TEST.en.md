@@ -1,3 +1,15 @@
+# uaRO Graphics 2.7.21 — to check
+
+- **Ruwach lights — the cause found.** The game draws Ruwach's orbs as sprites laid over the world, not added light,
+  and their picture comes from the shared sprite cache. So "Fire of skills lights around" never saw them — neither in
+  2.7.19 nor in 2.7.20. Now the driver knows such effects by their number — Ruwach (pale blue-white light) and the
+  mages' Sight (fire) — and gives them a light of their own: a torch's at night, half that by day, reaching about 4.5
+  cells.
+- The log line `skills' light at night` now also counts the orbs' draws (`of orbs of light`).
+- The moon beams show on the 2.7.20 screenshots: broad slanting bands on the ground.
+- Please check: prt_fild08, Clock → "Deep night 3:00", cast Ruwach — the ground around the hero should light up
+  clearly, pale blue-white. Send a report.
+
 # uaRO Graphics 2.7.20 — to check
 
 - **Moon beams.** At night broad slanting bands of moonlight lie on the ground of the fields and the towns, as through
