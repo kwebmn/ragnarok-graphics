@@ -1,3 +1,13 @@
+# uaRO Graphics 2.7.30 — to check
+
+- **"Leaves in the wind" easier to see.** The trees' tops swung only 1.2 game pixels — under a couple of the
+  picture's. Now 4: the crown sways softly, the trunk stays.
+- **"Leaves from the trees" to be seen.** The leaves did fall, but tiny (0.38 units, some 6 pixels) and dark green
+  over the green forest. Now twice as big, and in summer light ones — yellow-green and yellow. In autumn as before.
+- "Volume of the crowns" changes the crowns' light alone (the side to the sun lighter, the far side darker), not
+  their shape — as meant.
+- Please check: pay_fild01 200 200, by day — the leaves swaying and falling. Send a report.
+
 # uaRO Graphics 2.7.29 — to check
 
 - **Faster grass.** The grass was the costliest effect: 3–5 ms of a frame's 8–13 ms of the card's work at 4K. Now:
