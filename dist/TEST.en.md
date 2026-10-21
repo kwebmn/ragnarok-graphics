@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.12 — to check
+
+- **"Flash of a hit": the monster is recognised.** The driver remembers which frame lies where in the sprite cache.
+  When the game wrote a monster's frame where a cursor's or a player's frame lay before, the old record stayed first
+  and the monster was taken for a cursor or a player — the flash found it only now and then. Now a new frame pushes
+  out the old ones. "Cards on the ground" (the little star) needs the same recognition.
+- Please check: "Flash of a hit" and the game's sound on — hit a monster 5–8 times with a normal attack. Does it
+  flash white? If not — a report.
+
 # uaRO Graphics 2.7.11 — to check
 
 - **Diagnostics of "Flash of a hit".** The 2.7.10 report shows the driver hears the hits and finds their place on
