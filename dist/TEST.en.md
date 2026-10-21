@@ -1,3 +1,13 @@
+# uaRO Graphics 2.7.34 — to check
+
+- **The birds no longer settle on the water.** A flock ("Birds") lands only where the map's ground stands above the
+  water, and at the ground's own height rather than the hero's. In Alberta by the water the birds land on the shore
+  and the pavement, never on the water.
+- **The sun's glints on the water are calmer** ("The sun's glints on the water"). The bright sparks are half as strong
+  and no longer all over the water but in patches that drift slowly with the waves. The broad soft sheen stays.
+- To check in Alberta (alberta 167 162, the pier's end): no birds on the water; the glints do not flicker all over it.
+  The world's reflections in the water (checked) are unchanged.
+
 # uaRO Graphics 2.7.33 — to check
 
 - **"Map light without blow-out" removed.** By the sewers' wall with a torch it made no difference to be seen: the
