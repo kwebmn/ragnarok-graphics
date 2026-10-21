@@ -1,3 +1,11 @@
+# uaRO Graphics 2.7.38 — to check
+
+- **Skills no longer burn to white** ("Skills that do not blind"). The game draws skills by adding their light to the
+  picture: by day on Comodo's light sand even half a Magnus column came over 100 % - white (the game's own does the
+  same with Pause). Now the skills' light is laid on softly: the lighter what is under it, the less it adds. On dark
+  ground nearly as before; on light ground and where layers pile up - no white blots. All skills and casting.
+- To check: Magnus Exorcismus, casting, buffs by day and at night - no white blots; tune "Skills' brightness" if wanted.
+
 # uaRO Graphics 2.7.37 — to check
 
 - **Calmer skills at night** ("Skills that do not blind"). At night the world goes dark and the skills did not -
