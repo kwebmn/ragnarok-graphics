@@ -26,4 +26,6 @@ Kind chosen(int choice, const std::string& map) {
     return outdoors(map) ? kKinds[choice] : Kind::None;
 }
 
+bool hidesGameEffect(Kind sky, bool shown, int effectId) { return shown && sky == Kind::Snow && effectId == 162; }
+
 }  // namespace uagfx::weather

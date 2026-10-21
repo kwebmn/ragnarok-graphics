@@ -105,6 +105,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         return;
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && feetWanted()) noteFoot(rec, d);  // 0.94
     if (!s.ui && actorShadowsDrawn && d.effect == uint8_t(effect_exe::Kind::Shadow)) return;
+    // 2.7.40: the game's own snow where ours falls - one snow, not two (weather::hidesGameEffect)
+    if (!s.ui && weather::hidesGameEffect(mapWeather, mapWeatherWanted(), d.effectId)) {
+        static bool told = false;
+        if (!told) LOG_INFO("weather: the game's own snow not drawn - ours falls over %s", mapName.c_str());
+        told = true;
+        return;
+    }
     // 0.21: the world done - at the interface - its colours, then its glow.
     if (s.ui && !upscale && !finishWorld()) return;
     if (s.ui && !upscale && glowDrawn && !addGlowToTarget()) return;

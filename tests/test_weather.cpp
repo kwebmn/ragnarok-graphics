@@ -40,3 +40,15 @@ TEST(weather_chosen_like_the_clock) {
     CHECK(weather::chosen(42, "payon") == Kind::Leaves);  // none of them: the map's
     CHECK(weather::chosen(-1, "xmas") == Kind::Snow);
 }
+
+TEST(weather_ours_hides_the_games_snow) {
+    // 2.7.40 (the tester in Lutie: «а можно как-то снег игры убрать, там получается 2 снега»): where our snow falls
+    // («Опади» on, snow over the map), the game's own (its effect 162) is not drawn - one snow; elsewhere it stays
+    using weather::Kind;
+    CHECK(weather::hidesGameEffect(Kind::Snow, true, 162));
+    CHECK(!weather::hidesGameEffect(Kind::Snow, false, 162));  // «Опади» off: the game's snow as it was
+    CHECK(!weather::hidesGameEffect(Kind::None, true, 162));   // indoors, or clear: the game's stays
+    CHECK(!weather::hidesGameEffect(Kind::Rain, true, 162));
+    CHECK(!weather::hidesGameEffect(Kind::Snow, true, 163));   // sakura - not snow
+    CHECK(!weather::hidesGameEffect(Kind::Snow, true, 0));
+}

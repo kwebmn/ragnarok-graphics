@@ -1248,6 +1248,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     // 1.0.1: a firefly the game draws - drawn anew at the interface instead
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Firefly) && firefliesWanted() && takeFirefly(rec, d)) return;
+    // 2.7.40 (draw.cpp): the game's own snow where ours falls
+    const bool ownWeather = effects_.weather && effects_.weatherAmount > 0 && weatherPs_;
+    if (!s.ui && weather::hidesGameEffect(weather_, ownWeather, d.effectId)) return;
     if (!s.ui) worldDrawn_ = true;
     // 0.60.1: the characters' shadows, before the first blended draw after the ground (as draw.cpp does)
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn_ = true;

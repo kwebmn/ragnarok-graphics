@@ -17,4 +17,8 @@ Kind of(const std::string& map);
 enum Choice { kWeatherAuto, kWeatherClear, kWeatherRain, kWeatherSnow, kWeatherLeaves, kWeatherSand, kWeathers };
 Kind chosen(int choice, const std::string& map);
 
+// 2.7.40: whether a draw of the game's effect `effectId` is not drawn - its own snow (162: uaRO.exe's EF_SNOW, which a
+// map's snow sets going) where ours falls (`sky` the weather drawn, `shown` «Опади» on): two snows fell over Lutie
+bool hidesGameEffect(Kind sky, bool shown, int effectId);
+
 }  // namespace uagfx::weather
