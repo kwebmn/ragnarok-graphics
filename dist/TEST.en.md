@@ -1,3 +1,10 @@
+# uaRO Graphics 2.7.13 — to check
+
+- **"Flash of a hit" is visible.** The monster was found and the white flash over it was added, but the renderer took
+  it for an effect with "soft particles": such an effect fades out near what is behind it, and the monster stands on
+  the ground — the flash went out almost wholly. Now it is drawn in full.
+- Please check: "Flash of a hit" and the game's sound on — hit a monster a few times. Does it flash white?
+
 # uaRO Graphics 2.7.12 — to check
 
 - **"Flash of a hit": the monster is recognised.** The driver remembers which frame lies where in the sprite cache.
