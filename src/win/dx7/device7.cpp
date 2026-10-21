@@ -240,6 +240,21 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                            effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();
     }
+    if (c.enhanced()) {  // 2.7.37: what of the bright draws is made softer, now and then in the log
+        if (tag.kind == effect_exe::Kind::Skill)
+            ++skillDraws_;
+        else if (!setup.ui && setup.blend && setup.dstBlend == d3d7::BLEND_ONE && tag.kind == effect_exe::Kind::None)
+            ++plainAdds_;
+        const ULONGLONG now = GetTickCount64();
+        if (now - skillsTold_ >= 10000) {
+            if (skillDraws_ || plainAdds_)
+                LOG_INFO("effects: in 10 s %u draws of skills at %d %% of the game's brightness; %u draws adding light "
+                         "of no effect known, as the game draws them",
+                         skillDraws_, fx.skillsSoft ? std::min(skillPercent, 100) : 100, plainAdds_);
+            skillDraws_ = plainAdds_ = 0;
+            skillsTold_ = now;
+        }
+    }
     // 2.7.11, diagnostics: a hit no monster took (win/hit_hook.cpp) - each quad drawn about its place now, in the log
     // (2.7.12: the sprites' only - the ground's cells took ten of the sixteen lines)
     if (c.hitProbe.frames > 0 && c.hitProbe.lines < 16 && vertexCount == 4 && fvf == d3d7::FVF_TL1) {
