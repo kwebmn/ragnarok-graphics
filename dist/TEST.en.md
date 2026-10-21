@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.26 — to check
+
+- **Ruwach's ball on the trail's circle.** Ruwach draws sprites round the hero up in the air and their shadows on the
+  ground. 2.7.25's ball took the most opaque of them — a shadow, so it flew under the blue trail, along the ground. Now
+  it takes the effect's own sprites alone (no shadows) and of them the newest, the biggest: the ball leads the trail,
+  on the same circle.
+- The first frames with Ruwach log which sprite the ball is on (`orbs of light:`) — if it sits wrong again, the report
+  will show it.
+- Please check: prt_fild08, Clock → "Deep night 3:00", cast Ruwach — the ball should fly at the head of the blue
+  trail, on the same circle round the hero. Send a report.
+
 # uaRO Graphics 2.7.25 — to check
 
 - **A little ball at the head of Ruwach's trail.** Ruwach's blue trail is its sprites: the newest the brightest, the
