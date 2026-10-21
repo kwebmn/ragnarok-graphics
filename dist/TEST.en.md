@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.22 — to check
+
+- **Ruwach's light is calmer.** In 2.7.21 Ruwach's orbs gave two lights right by the ground that jumped after the
+  orbs and lit the orbs themselves almost white. Now all the orbs round the hero are one steady light over its head:
+  a soft blue pool around, about half as bright in the middle, no white blob; the colour a little deeper, blue.
+  Strength 0.5 at night (was 0.6), half by day, reaching 5 cells. The same for the mages' Sight.
+- Please check: prt_fild08, Clock → "Deep night 3:00", cast Ruwach — the light should be soft and steady. If it is
+  still too bright, or too faint, say so and I will tune it. Send a report.
+
 # uaRO Graphics 2.7.21 — to check
 
 - **Ruwach lights — the cause found.** The game draws Ruwach's orbs as sprites laid over the world, not added light,
