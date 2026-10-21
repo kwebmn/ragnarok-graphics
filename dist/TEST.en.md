@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.46 — to check
+
+- **Skills solid again** ("Skills that do not blind"). It also softened the skills' pictures laid over the world - by
+  their alpha: they add no light, they only went see-through. Now only what adds light is made softer. The night's
+  softening (2.7.37) is gone - with 2.7.38's soft adding the skills do not burn white anyway.
+- **"Glittering snow" and "Breath in the frost" removed** - after three rounds in Lutie they were hardly seen.
+- To check at night: Fire Wall, Magnus and others - more solid and brighter, no white blots. Better set the "Skills"
+  group's strength back from 190 % to 100 % - it also raises the skills' fire light on the characters.
+
 # uaRO Graphics 2.7.44 — to check
 
 - **Breath at the head**, not the feet: the puff rose 6.2 units over the feet - knee height; now 15 (at the face).
