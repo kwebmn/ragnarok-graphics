@@ -2194,15 +2194,23 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
     float breakX = min(abs(r.z - p.z), abs(p.z - l.z)), breakY = min(abs(d.z - p.z), abs(p.z - u.z));
     float rim = smoothstep(0.008, 0.02, max(breakX, breakY) / p.z);
     float3 nw = n.x * float3(r0, r1, r2) + n.y * float3(r3, r4, r5) + n.z * float3(r6, r7, r8);
-    float flat = smoothstep(0.88, 0.97, -nw.y);  // up is -y
-    float shine = flat * (1.0 - rim) * smoothstep(0.15, 0.3, dot(-v, n));  // what reflects
+    // 2.7.16 (the tester at prt_fild08 in the rain: «квадратность на дороге», «отражения побитые»): the rain's water
+    // lies level - it mirrors along the world's up, not each triangle's own slope - and a gentle hill's faces hold it
+    // alike; by a face's own flatness (0.88-0.97) one face of a slope was wet and the next dry, a reflection cut at
+    // their edges. The floors of dungeons and houses (no rain) as before.
+    bool rain = twinY > 0.0;
+    float3 up = normalize(float3(-r1, -r4, -r7));  // the world's up (-y) in the view
+    if (dot(up, p) > 0.0) up = -up;
+    float3 nr = rain ? up : n;
+    float flat = rain ? smoothstep(0.6, 0.85, -nw.y) : smoothstep(0.88, 0.97, -nw.y);  // up is -y
+    float shine = flat * (1.0 - rim) * smoothstep(0.15, 0.3, dot(-v, nr));  // what reflects
     // the rain's wet darkens a rim as the floor about it (taken for floor): no light specks along the edges
-    float wet = twinY > 0.0 ? lerp(flat, 1.0, rim) : 0.0;
+    float wet = rain ? lerp(flat, 1.0, rim) : 0.0;
     if (shine <= 0.0 && wet <= 0.0) return float4(0.0, 0.0, 0.0, 0.0);
     float weight = 0.0;
     float3 c = float3(0.0, 0.0, 0.0);
-    if (shine > 0.0) c = reflectionIn(p + n * 0.6, reflect(v, n), uiPixels.xy, weight);
-    float fresnel = 0.04 + 0.96 * pow(1.0 - saturate(dot(-v, n)), 5.0);
+    if (shine > 0.0) c = reflectionIn(p + nr * 0.6, reflect(v, nr), uiPixels.xy, weight);
+    float fresnel = 0.04 + 0.96 * pow(1.0 - saturate(dot(-v, nr)), 5.0);
     float a = shine * weight * twinX * (0.35 + 0.65 * saturate(fresnel * 4.0));
     // 0.97, wet ground (twinY): the ground a little darker all over, and puddles - patches of noise over the world,
     // the same wherever the camera goes - mirroring nearly as water does.
