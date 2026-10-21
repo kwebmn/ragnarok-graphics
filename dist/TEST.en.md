@@ -1,3 +1,15 @@
+# uaRO Graphics 2.7.37 — to check
+
+- **Calmer skills at night** ("Skills that do not blind"). At night the world goes dark and the skills did not -
+  Magnus and the other big skills stood out as a bright blot. Now they soften with the night: in the whole night (and
+  "Deep night") down to 60 % of "Skills' brightness" (at 50 %, 30 %), less in a light night, by day as before. The
+  skills' halo and light soften with them.
+- To check: Clock - Night 0:00 or Deep night 3:00, Magnus Exorcismus - calmer than on 2.7.36. Also in Comodo:
+  Weather - Rain and Tab on "Wet ground and puddles"; during Magnus - Tab on "Sparks of skills".
+- All skills and casting: in the effects console (~) under "Skills that do not blind" lower "Skills' brightness"
+  with ← to 25-30 % and cast - say which value is calm: it becomes the default (80 % now). The report's log now
+  shows at what % the skills are drawn and whether bright effects slip past it.
+
 # uaRO Graphics 2.7.36 — to check
 
 - **"Wet ground and puddles" easier to see.** In the rain hardly more than the reflection changed: the ground darkened
