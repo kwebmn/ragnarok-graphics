@@ -2257,7 +2257,7 @@ float4 shafts_ps(PresentOut i) : SV_Target {
 // 0.72, reflections on the floor (haze.cpp): what faces up - the floors of the dungeons and houses, the ground in the
 // rain - reflects the picture (t2, before it) along the mirrored view (waterReflection), the more the flatter one looks
 // along it. twinX its strength. 0.86: drawn at half the world's size (a pixel for four: a quarter of the rays),
-// premultiplied - none where nothing reflects - then laid over the world by half_over_ps.
+// premultiplied - none where nothing reflects - then laid over the world by half_over_ps. 2.7.36: twinW the night.
 float4 floor_reflect_ps(PresentOut i) : SV_Target {
     int2 last = int2(uiPixels.xy) - 1;
     int2 wp = min(int2(i.pos.xy) * 2, last);
@@ -2305,15 +2305,24 @@ float4 floor_reflect_ps(PresentOut i) : SV_Target {
                        float3(r9, r10, r11);
         float n0 = valueNoise(world.xz * 0.045) * 0.7 + valueNoise(world.xz * 0.17 + 3.1) * 0.3;
         float puddle = smoothstep(0.58, 0.66, n0) * shine;
-        dark = 0.16 * wet * twinY;
-        a = max(a, puddle * weight * (0.45 + 0.4 * saturate(fresnel * 3.0)) * twinY);
-        // 1.7: rings where the rain's drops fall into the puddles (sharpen the time)
+        // 2.7.36 (the tester in Comodo: «меняется только отражение, а так визуально ничего не меняется»): the wet
+        // ground darker - 16 % was hardly seen - and a puddle shows the grey sky where nothing close stands in it:
+        // on open ground it showed nothing at all. At night that sky is dark.
+        dark = 0.3 * wet * twinY;
+        float3 sky = float3(0.58, 0.62, 0.68) * lerp(1.0, 0.15, twinW);
+        float pa = puddle * (0.45 + 0.4 * saturate(fresnel * 3.0)) * twinY;
+        if (pa > a) {
+            c = lerp(sky, c, weight);
+            a = pa;
+        }
+        // 1.7: rings where the rain's drops fall into the puddles (sharpen the time); 2.7.36: thicker - a twentieth
+        // of a unit was lost at the pass's half size
         float2 rc = world.xz * 0.6;
         float2 cid = floor(rc);
         float2 cf = frac(rc) - (0.3 + 0.4 * float2(hash12(cid + 1.3), hash12(cid + 4.1)));
         float age = frac(sharpen * 0.9 + hash12(cid));
-        float ring = exp(-pow((length(cf) - age * 0.45) * 30.0, 2.0)) * (1.0 - age) * puddle * twinY;
-        c = lerp(c, float3(0.92, 0.95, 1.0), saturate(ring * 0.7));
+        float ring = exp(-pow((length(cf) - age * 0.45) * 12.0, 2.0)) * (1.0 - age) * puddle * twinY;
+        c = lerp(c, float3(0.92, 0.95, 1.0) * lerp(1.0, 0.35, twinW), saturate(ring * 0.7));
         a = max(a, ring * 0.45);
     }
     // Premultiplied over: the ground darkened by `dark`, then the reflection over it by `a`.

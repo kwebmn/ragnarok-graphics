@@ -194,6 +194,7 @@ bool Renderer::Impl::applyFloorReflections() {
     c.uiPixels[1] = float(h);
     c.twin[0] = floorReflectAmount();
     c.twin[1] = wetWanted() ? 1.0f : 0.0f;  // 0.97
+    c.twin[2] = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;  // 2.7.36: the puddles' sky darker at night
     c.sharpen = waterTime();                // 1.7: the drops' rings in the puddles
     if (!floorReflectLogged) LOG_INFO("floor reflections: on %s, at %dx%d", mapName.c_str(), hw, hh);
     floorReflectLogged = true;

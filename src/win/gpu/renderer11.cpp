@@ -2615,6 +2615,7 @@ void Renderer11::applyFloorReflections() {
     c.uiPixels[1] = float(h);
     c.twin[0] = amount;
     c.twin[1] = wetWanted() ? 1.0f : 0.0f;
+    c.twin[2] = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;  // 2.7.36: the puddles' sky darker at night
     c.sharpen = waterTime();  // the drops' rings in the puddles
     if (!floorLogged_) LOG_INFO("floor reflections: on %s, at %dx%d (Direct3D 11)", map_.c_str(), hw, hh);
     floorLogged_ = true;
