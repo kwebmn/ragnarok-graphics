@@ -1,3 +1,11 @@
+# uaRO Graphics 2.7.11 — to check
+
+- **Diagnostics of "Flash of a hit".** The 2.7.10 report shows the driver hears the hits and finds their place on
+  the screen correctly, but sees no monster there. Now, when a hit finds no monster, the driver writes into its log
+  everything drawn at that place over the next two frames. The picture does not change.
+- Please check: "Flash of a hit" on (ticked), the game's sound on — hit a monster 5–8 times with a normal attack and
+  send a report right away.
+
 # uaRO Graphics 2.7.10 — to check
 
 - **"Flash of a hit" on hills.** The game gives a hit's place at the player's height, so on a slope the driver
