@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.25 — to check
+
+- **A little ball at the head of Ruwach's trail.** Ruwach's blue trail is its sprites: the newest the brightest, the
+  older fading behind it. Now where the newest one appears there is a small bright ball — white in the middle, blue at
+  its edge, as a comet's head, the blue trail behind it. It hides behind the hero when it passes behind. Its own
+  switch "Orbs of light" under "Fire of skills lights around".
+- Please check: prt_fild08, Clock → "Deep night 3:00", cast Ruwach — the ball should lead the trail. If it ends up at
+  the trail's tail, or is too small, big or bright, say so and I will tune it. Send a report.
+
 # uaRO Graphics 2.7.24 — to check
 
 - **The ball at Ruwach is gone — the particles are as the game draws them again.** You were right: the game writes
