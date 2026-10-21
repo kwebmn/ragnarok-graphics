@@ -2039,12 +2039,12 @@ float4 critters_ps(CritterIn i) : SV_Target {
                       segment(d, float2(0.0, 0.0), float2(0.7, -flap)));
         c = float3(0.22, 0.18, 0.15);
         a = smoothstep(0.09, 0.05, v) + smoothstep(0.18, 0.12, length(d / float2(1.0, 0.7)));
-    } else if (kind == 5) {  // a leaf turning: q.y its angle, q.z its colour
+    } else if (kind == 5) {  // a leaf turning: q.y its angle, q.z its colour (2.7.30: 4 a summer's yellow-green)
         float2 l = turned(d, q.y);
         float e = length(l / float2(1.0, 0.45 + 0.35 * abs(sin(q.y * 0.7))));
         int ci = int(q.z + 0.5);
         c = ci == 0 ? float3(0.42, 0.62, 0.2) : ci == 1 ? float3(0.86, 0.66, 0.16)
-          : ci == 2 ? float3(0.82, 0.38, 0.12) : float3(0.97, 0.76, 0.84);
+          : ci == 2 ? float3(0.82, 0.38, 0.12) : ci == 4 ? float3(0.74, 0.84, 0.32) : float3(0.97, 0.76, 0.84);
         c *= 0.85 + 0.25 * step(0.0, l.y);
         a = smoothstep(1.0, 0.8, e);
     } else if (kind == 6) {  // an ember

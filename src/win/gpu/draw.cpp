@@ -8,6 +8,7 @@
 #include "core/daylight.hpp"
 #include "core/effect_exe.hpp"
 #include "core/effect_light.hpp"
+#include "core/foliage.hpp"
 #include "core/game_camera.hpp"
 #include "core/scale.hpp"
 #include "core/twin_grid.hpp"
@@ -396,7 +397,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool leaves = !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2 && !s.blend;
     float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind
     if (leaves && effects.foliage && effects.foliageStrength > 0 && yExtent(rec, d, swayTop, swayBottom)) {
-        c.twin[0] = 1.2f * float(effects.foliageStrength) / 100.0f;
+        c.twin[0] = foliage::kSwing * float(effects.foliageStrength) / 100.0f;  // 2.7.30
         c.twin[1] = swayBottom;
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = waterTime();

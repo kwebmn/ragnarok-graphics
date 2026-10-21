@@ -254,9 +254,13 @@ void World::motes(const Switches& on, const Frame& f) {
                          c.centre.z + (random() - 0.5f) * c.radius * 1.2f};
             m.v = Point{0.4f * (random() - 0.3f), 0.9f + 0.6f * random(), 0.3f * (random() - 0.5f)};
             m.life = 14.0f;
-            m.size = place_.leaves == 2 ? 0.28f : 0.38f;
+            // 2.7.30 (the tester in Payon's forest: «не увидел»): twice as big, and a summer's leaves light -
+            // yellow-green (4) or yellow (1): 0.38 units of dark green were lost over the green forest
+            m.size = place_.leaves == 2 ? 0.55f : 0.75f;
             m.spin = random() * 6.0f;
-            m.colour = place_.leaves == 2 ? 3.0f : place_.leaves == 1 ? float(int(random() * 3.0f)) : 0.0f;
+            m.colour = place_.leaves == 2   ? 3.0f
+                       : place_.leaves == 1 ? float(int(random() * 3.0f))
+                                            : (random() < 0.6f ? 4.0f : 1.0f);
             m.ground = f.centre.y;
             if (motes_.size() < 400) motes_.push_back(m);
         }

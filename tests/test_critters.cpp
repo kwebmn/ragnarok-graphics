@@ -164,3 +164,31 @@ TEST(critters_no_butterflies_nor_fireflies_without_insects_birds_stay) {
     w.update(on, f);
     CHECK_EQ(count(w.sprites(), critters::Firefly), 0);
 }
+
+TEST(critters_falling_leaves_seen_against_the_green) {
+    // 2.7.30 (the tester in Payon's forest: «Листя з дерев - не увидел»): the leaves falling from the crowns were 0.38
+    // units across (some 6 pixels of a 4K picture) and dark green over the green forest - now twice as big, and a
+    // summer's light ones: yellow-green or yellow, never the dark green
+    critters::World w;
+    w.setPlace(living::placeOf("pay_fild01", true, false));
+    critters::Switches on;
+    on.leaves = true;
+    critters::Frame f;
+    f.centreKnown = true;
+    f.dt = 0.1f;
+    for (int k = 0; k < 12; ++k)
+        f.crowns.push_back(critters::Crown{critters::Point{float(k) * 8.0f, -30.0f, 4.0f}, 6.0f});
+    for (int i = 0; i < 30; ++i) {
+        f.now += 0.1;
+        w.update(on, f);
+    }
+    int leaves = 0;
+    for (const critters::Sprite& s : w.sprites())
+        if (s.kind == critters::Leaf) {
+            ++leaves;
+            CHECK(s.size >= 0.7f);
+            CHECK(s.p2 == 1.0f || s.p2 == 4.0f);
+        }
+    CHECK(leaves > 5);
+}
+

@@ -1381,7 +1381,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (leaves && effects_.foliage && effects_.foliageStrength > 0 && yExtent(rec, d, swayTop, swayBottom)) {
         const unsigned long long now = GetTickCount64();
         if (!clockStart_) clockStart_ = now;
-        c.twin[0] = 1.2f * float(effects_.foliageStrength) / 100.0f;
+        c.twin[0] = foliage::kSwing * float(effects_.foliageStrength) / 100.0f;  // 2.7.30
         c.twin[1] = swayBottom;
         c.twin[2] = swayBottom - swayTop;
         c.twin[3] = float(double(now - clockStart_) / 1000.0);

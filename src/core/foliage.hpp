@@ -14,5 +14,8 @@ bool leafyTexture(const uint32_t* argb, int width, int height, bool spriteCache)
 // How far a vertex at game y moves across (game pixels) at time t: nothing at the draw's bottom, `amplitude` swing at
 // its top; slow waves over the screen, so that neighbouring trees move a little apart.
 float sway(float x, float y, float bottom, float height, float amplitude, float t);
+// 2.7.30: the swing at a tree's top at foliage_strength 100 % (game pixels) - 1.2 until 2.7.29, a pixel or two of the
+// picture (the tester in Payon's forest: «Листя на вітрі не вижу»)
+constexpr float kSwing = 4.0f;
 
 }  // namespace uagfx::foliage

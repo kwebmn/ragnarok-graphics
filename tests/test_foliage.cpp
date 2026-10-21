@@ -41,3 +41,10 @@ TEST(foliage_sways_the_top_not_the_trunk) {
     CHECK(most > 1.0f && most <= 2.0f);
     CHECK(foliage::sway(100, 100, 200, 0.5f, 2.0f, 1.0f) == 0.0f);  // no height
 }
+
+TEST(foliage_swings_far_enough_to_be_seen) {
+    // 2.7.30 (the tester in Payon's forest: «Листя на вітрі не вижу»): a tree's top swung 1.2 game pixels at 100 % -
+    // under a pixel or two of the picture; now 4
+    CHECK(foliage::kSwing == 4.0f);
+}
+
