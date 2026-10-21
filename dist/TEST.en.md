@@ -1,3 +1,12 @@
+# uaRO Graphics 2.7.19 — to check
+
+- **The moon is the night's main light.** Under it the map is bright, silver-blue and muted: plainly night, yet the
+  road, the grass and the monsters are easy to see — about 60 % of the day's light ("Deep night" about 53 %) instead
+  of the earlier ~30 %.
+- **"Light around the hero" removed.**
+- **Skills light around them at night** — now small bright ones like Ruwach too.
+- Please check: prt_fild08, Clock → "Deep night 3:00" — is it playable? Cast Ruwach and see whether it lights around.
+
 # uaRO Graphics 2.7.18 — to check
 
 - **"Moonlight"** (the Time of day group, on by default, strength 0–200 %). The night is no longer just dark: the
