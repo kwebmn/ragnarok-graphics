@@ -137,6 +137,11 @@ void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Sof
     }
 }
 
+int skillPercent(int brightness, int night) {
+    const float dark = float(std::clamp(night, 0, 100)) / 100.0f;
+    return int(float(std::clamp(brightness, 0, 100)) * (1.0f - 0.4f * dark) + 0.5f);
+}
+
 size_t Faces::slotOf(uint32_t vertices) const {
     const size_t mask = slots_.size() - 1;
     size_t i = size_t((vertices * 0x9E3779B1u) >> 8) & mask;  // the address's bits spread (Fibonacci hashing)

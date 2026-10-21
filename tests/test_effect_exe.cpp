@@ -220,3 +220,15 @@ TEST(effect_exe_soft_particles_but_not_a_hit_flash) {
     // 2.7.14: nor a card's star on the ground - added light at the card's own depth, put out the same way
     CHECK(!effect_exe::softEffect(true, uint8_t(Kind::Glint)));
 }
+
+TEST(effect_exe_skills_softer_at_night) {
+    // 2.7.37 (the tester on 2.7.36's Magnus at night: «не нравится, слишком ярко, надо сделать спокойнее»): at night
+    // the world goes dark and the skills did not - «Skills' brightness» down to 60 % of itself in the whole night
+    // (nightNow 100; «Deep night» 200 the same), by day as it is
+    CHECK_EQ(effect_exe::skillPercent(50, 0), 50);
+    CHECK_EQ(effect_exe::skillPercent(50, 100), 30);
+    CHECK_EQ(effect_exe::skillPercent(50, 200), 30);
+    CHECK_EQ(effect_exe::skillPercent(80, 50), 64);
+    CHECK_EQ(effect_exe::skillPercent(100, 100), 60);  // softer at night even when the slider is full
+    CHECK_EQ(effect_exe::skillPercent(100, 0), 100);
+}

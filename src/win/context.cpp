@@ -631,6 +631,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                : -1;
         applyClock(fx, t.wHour * 60 + t.wMinute, server);
     }
+    nightNow_ = fx.nightNow;  // 2.7.37: the skills' draws take it (dx7/device7.cpp)
     for (const std::string& k : keepOff_) effect_costs::drop(fx, k);  // 0.76
     // 1.9.3: Tab held in the console - the chosen effect off while it is held (the file as it is, that key 0)
     const std::string& comparing = console_.comparing();

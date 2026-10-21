@@ -65,6 +65,9 @@ enum class Soften : uint8_t { None, Colour, Alpha, White };
 Soften softenFor(bool blend, uint32_t srcBlend, uint32_t dstBlend);
 // A draw's TL vertices (`stride` bytes each, the diffuse colour at byte 16) made `percent` % as strong, `how`.
 void soften(uint8_t* vertices, uint32_t count, uint32_t stride, int percent, Soften how);
+// 2.7.37: how bright the skills are drawn, % of the game's - «Skills' brightness» (0-100) with the night now (0-100,
+// 200 «Deep night»): the world goes dark at night and the skills did not
+int skillPercent(int brightness, int night);
 
 // What a draw is of, and a seed of its primitive's own (its fireflies flash each its own way).
 struct Tag {
