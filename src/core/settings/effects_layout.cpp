@@ -5,6 +5,7 @@ namespace {
 
 const EffectLayout kEffects[] = {
     {"effects.smooth_light", {}, {}, {}, 0},
+    {"effects.soft_map_light", {}, {}, {}, 0},  // 2.7.32
     {"effects.ao", {}, {"effects.ao_strength", "effects.ao_size"}, {}, 0},
     {"effects.bloom", {}, {"effects.bloom_strength"}, {}, 0},  // 0.78
     {"effects.region_looks", {}, {"effects.region_looks_strength"}, {}, 0},  // 0.79

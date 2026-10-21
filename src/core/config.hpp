@@ -113,6 +113,10 @@ struct EffectSettings {
     // 0.22.6: the map's baked light - torches' and lamps' pools, the shadows of houses and trees on the ground -
     // smooth instead of blotches and steps (the ground's coarse lightmap blurred within its cells). On by default.
     bool smoothLight = true;
+    // 2.7.32 (the tester in Prontera's sewers: «стены от огня очень гладкие»): the map's own strong light - by its
+    // torches and lamps - laid over the ground and the walls softly, never cut at white (core/map_light.hpp): their
+    // stones stay. On by default.
+    bool softMapLight = true;
     // 0.23: the maps' torches drawn anew (core/torch.hpp) - a flame that burns and sparks instead of the game's
     // magnified drop, a soft glow in the air around it instead of its red blotch, and its warm flickering light on
     // the ground and the walls. On by default.

@@ -189,6 +189,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.firefliesLight = rd.u8() != 0;
             e.moonBeams = rd.u8() != 0;  // 2.7.20
             e.lightOrbs = rd.u8() != 0;  // 2.7.25
+            e.softMapLight = rd.u8() != 0;  // 2.7.32
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

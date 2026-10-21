@@ -1345,6 +1345,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // weak set's own, never set here until now
     if (effects_.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1]->width == 256 && t[1]->height == 256)
         c.stage1[1] |= 1u << 25;
+    if (effects_.softMapLight && !s.ui && d.fvf == d3d7::FVF_TL2 &&
+        s.stage[1].colorOp == d3d7::TOP_MODULATEALPHA_ADDCOLOR)
+        c.stage1[1] |= 1u << 19;  // 2.7.32 (draw.cpp): the map's strong light laid over softly
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
     c.fogEnable = gameFogDrawn(s.fog, effects_.noGameFog, outdoors_) ? 1u : 0u;  // 2.6.10
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;

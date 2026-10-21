@@ -201,7 +201,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"motes", Sky}, {"shared_wind", Sky},
         {"grade", Screen}, {"region_looks", Screen}, {"bloom", Screen},
         {"smooth_light", GameFixes}, {"soft_particles", GameFixes}, {"map_fade", GameFixes},
-        {"no_game_fog", GameFixes},
+        {"no_game_fog", GameFixes}, {"soft_map_light", GameFixes},
     };
     CHECK_EQ(int(sizeof kWhere / sizeof kWhere[0]), memberCount());
     for (const auto& w : kWhere) {
