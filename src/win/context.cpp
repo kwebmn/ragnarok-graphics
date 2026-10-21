@@ -422,6 +422,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
     monsters.frame();  // 2.7.10: this frame's monsters, where the next hits look for theirs
+    if (hitProbe.frames > 0 && --hitProbe.frames == 0)  // 2.7.11: the probe's end
+        LOG_INFO("hit flash probe: %d quads about %.0f,%.0f", hitProbe.lines, hitProbe.x, hitProbe.y);
     if (!renderer) return;
     watchSettings();
     updateLight();  // 2.5.20

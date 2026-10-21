@@ -233,6 +233,37 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                            effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();
     }
+    // 2.7.11, diagnostics: a hit no monster took (win/hit_hook.cpp) - each quad drawn about its place now, in the log
+    if (c.hitProbe.frames > 0 && c.hitProbe.lines < 16 && vertexCount == 4) {
+        const size_t stride = FrameRecord::stride(fvf);
+        const auto* v = static_cast<const uint8_t*>(vertices);
+        float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f, u = 0, w = 0;
+        for (DWORD i = 0; i < 4; ++i) {
+            float f[2], t[2];
+            std::memcpy(f, v + i * stride, sizeof f);
+            std::memcpy(t, v + i * stride + 24, sizeof t);
+            x0 = std::min(x0, f[0]);
+            x1 = std::max(x1, f[0]);
+            y0 = std::min(y0, f[1]);
+            y1 = std::max(y1, f[1]);
+            u += t[0] / 4;
+            w += t[1] / 4;
+        }
+        const float px = c.hitProbe.x, py = c.hitProbe.y, pad = std::max((x1 - x0) * 0.15f, 6.0f);
+        if (px >= x0 - pad && px <= x1 + pad && py >= y0 - 300.0f && py <= y1 + 300.0f) {
+            ++c.hitProbe.lines;
+            bool card = false;
+            const uint8_t kind = textures_[0] ? textures_[0]->spriteAt(u * float(textures_[0]->width()),
+                                                                         w * float(textures_[0]->height()), &card)
+                                              : 0;
+            LOG_INFO("hit flash probe: fvf %X, %u vertices, %u indices, %s, blend %d, %s texture %dx%d, kind %s, box "
+                     "%.0f..%.0f x %.0f..%.0f",
+                     unsigned(fvf), unsigned(vertexCount), unsigned(indices ? indexCount : 0),
+                     setup.ui ? "interface" : "world", setup.blend ? 1 : 0, textures_[0] ? "a" : "no",
+                     textures_[0] ? textures_[0]->width() : 0, textures_[0] ? textures_[0]->height() : 0,
+                     sprite_exe::sourceName(kind), x0, x1, y0, y1);
+        }
+    }
     // 0.95: a card lying on the ground sparkles - a star drawn after it. (2.7.10: the sprites' fade-in as they came
     // into view - 0.93 - gone at the user's word.)
     bool sparkle = false;

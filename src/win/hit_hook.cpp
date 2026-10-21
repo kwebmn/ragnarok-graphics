@@ -44,6 +44,11 @@ void noteHit(const char* name, float x, float y, float z) {
     const float heardX = sx, heardY = sy;
     const bool aimed = c.monsters.aim(sx, sy);
     c.flashes.add(sx, sy, c.nowMs());
+    static int probes = 0;  // 2.7.11: the first three no monster took - what is drawn there, in the log
+    if (!aimed && probes < 3 && c.hitProbe.frames == 0) {
+        ++probes;
+        c.hitProbe = Context::HitProbe{heardX, heardY, 2, 0};
+    }
     static int told = 0;  // the first hits in the log: heard, and whether a monster took them
     if (told < 8) {
         ++told;

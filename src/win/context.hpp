@@ -63,6 +63,12 @@ public:
     bool enhanced() const { return enhanced_; }  // not paused (Pause or Scroll Lock: the game's own picture)
     hit_flash::Flashes flashes;  // 0.96: where hits landed (win/hit_hook.cpp), the monsters there flash
     hit_flash::Monsters monsters;  // 2.7.10: the monsters drawn last frame (Device7::record), each hit given to one
+    // 2.7.11, diagnostics (the tester on 2.7.10: every hit «no monster drawn there»): a hit no monster took - the quads
+    // drawn about its place over the next two frames go into the log (Device7::record), what they are and why
+    struct HitProbe {
+        float x = 0, y = 0;
+        int frames = 0, lines = 0;
+    } hitProbe;
     double nowMs() const;    // a millisecond clock for the effects made as the game draws
 
 private:
