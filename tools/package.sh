@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Builds the Windows DLL, checks it and packs build-win/uaro-graphics.zip: release/ keeps it under this one name, the
-# link update.bat downloads. uaro-graphics/version.txt tells which build is installed.
+# link an older update.bat downloads (2.10: the settings app takes its updates from uaro.kiev.ua - publish_site.py).
+# uaro-graphics/version.txt tells which build is installed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 version=$(sed -n 's/.*kVersion = "\(.*\)".*/\1/p' src/core/version.cpp)
@@ -19,7 +20,7 @@ stage="build-win/package"
 rm -rf "$out" "$stage"
 mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/notes" \
          "$stage/uaro-graphics/defaults"
-cp dist/install.bat dist/uninstall.bat dist/update.bat dist/get-dlss.bat dist/get-models.bat "$stage/"
+cp dist/install.bat "$stage/"  # 2.10: the only .bat - an older update.bat runs it once (uaro-graphics.exe --install)
 # 2.8: the notes of "What is new" and the template ini in uaro-graphics\ - never uaro-graphics\uaro-graphics.ini,
 # the player's settings. 2.6.1-2.7: uaro-flags.grf went here too; it is the client's file now (its DATA.INI).
 cp dist/TEST.en.md dist/TEST.uk.md dist/TEST.ru.md "$stage/uaro-graphics/notes/"

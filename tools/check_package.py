@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the release zip: the layout install.bat expects and Windows line endings in the .bat files.
+"""Checks the release zip: its layout, install.bat (2.10: the settings app installs) and its Windows line endings.
 
 The archive is unpacked into the uaRO client folder. Our ddraw.dll sits in uaro-graphics\ so unpacking never
 overwrites dgVoodoo's DDraw.dll; install.bat moves the files into place.
@@ -12,7 +12,7 @@ from pathlib import Path
 # 2.8: the notes and the template ini in uaro-graphics\ (core/layout); never uaro-graphics/uaro-graphics.ini - an
 # older update.bat copies uaro-graphics\ of the archive over the installed one, and that path holds the player's
 # settings now. uaro-flags.grf is the client's file.
-EXPECTED = {"install.bat", "uninstall.bat", "update.bat", "get-dlss.bat", "get-models.bat",
+EXPECTED = {"install.bat",  # 2.10: the only .bat - for an older update.bat, which runs it once
             "uaro-graphics/notes/TEST.en.md", "uaro-graphics/notes/TEST.uk.md", "uaro-graphics/notes/TEST.ru.md",
             "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.exe",
             "uaro-graphics/defaults/uaro-graphics.ini", "uaro-graphics/version.txt", "uaro-graphics/uaro-render64.exe",
@@ -41,38 +41,18 @@ def main(path):
     for bat in sorted(n for n in names if n.endswith(".bat")):
         if b"\n" in z.read(bat).replace(b"\r\n", b""):
             fail(bat + " has LF line endings: cmd.exe needs CRLF")
-    # 0.11.0: update.bat copied only the files of uaro-graphics\, never its folders, so the AI model (ai\) and
-    # rtx.conf (remix\) did not arrive. It copies the folders now; install.bat does it too for an update.bat older
-    # than that, which runs the new install.bat while the unpacked update is still there.
-    if any(n.count("/") > 1 for n in names if n.startswith("uaro-graphics/")):
-        if not re.search(rb'(?im)^\s*xcopy /e /i /y /q "%work%\\files\\uaro-graphics" "uaro-graphics"\s',
-                         z.read("update.bat")):
-            fail('update.bat does not copy the folders of uaro-graphics\\ (xcopy /e /i /y /q ...)')
-        if not re.search(rb'(?im)^\s*xcopy /e /i /y /q "uaro-graphics-update\\files\\uaro-graphics" "uaro-graphics"\s',
-                         z.read("install.bat")):
-            fail("install.bat does not copy the folders an older update.bat leaves out")
-    # 2.8: a fresh install has no root uaro-graphics.ini: install.bat's additions to a 2.x one must not make one, and
-    # dgVoodoo is kept in uaro-graphics\dgvoodoo.
+    # 2.10: install.bat hands the install to the settings app (app/modes --install); an update.bat of 0.11.0 or older
+    # copied only the files of uaro-graphics\, so it still copies the folders such an update leaves out.
     install = z.read("install.bat").decode("ascii")
-    guard = install.find('if not exist "uaro-graphics.ini" goto :old_ini_done')
-    first_edit = install.find('>>"uaro-graphics.ini"')
-    if guard < 0 or (first_edit >= 0 and guard > first_edit):
-        fail('install.bat adds to a root uaro-graphics.ini that a fresh install does not have (no :old_ini_done guard)')
-    # 2.9: uaRO Pad is inside ddraw.dll - install.bat takes a 2.x pad dinput.dll away
-    if 'findstr /m /c:"uaro-pad.log" "dinput.dll"' not in install or 'del /f "dinput.dll"' not in install:
-        fail("install.bat does not take an old uaRO Pad dinput.dll away")
-    if 'move /y "ddraw.dll" "uaro-graphics\\dgvoodoo\\DDraw.dll"' not in install:
-        fail("install.bat does not keep dgVoodoo's DDraw.dll in uaro-graphics\\dgvoodoo")
-    # GitHub's raw link is cached for 5 minutes (a query does not change that): right after a release update.bat got
-    # the one before (0.11.2). It takes the archive of the newest commit by its number first.
-    update = z.read("update.bat").decode("ascii")
-    for part in ('"%accept%" "%api%"', 'findstr /x /r "[0-9a-f]*"', '"%raw%/%fresh%/release/uaro-graphics.zip"',
-                 'set "accept=Accept: application/vnd.github.sha"'):
-        if part not in update:
-            fail("update.bat does not take the newest commit's archive: no " + part)
+    if '"uaro-graphics\\uaro-graphics.exe" --install %1' not in install:
+        fail("install.bat does not hand the install to uaro-graphics\\uaro-graphics.exe --install")
+    if 'xcopy /e /i /y /q "uaro-graphics-update\\files\\uaro-graphics" "uaro-graphics"' not in install:
+        fail("install.bat does not copy the folders an older update.bat leaves out")
+    if len(install) > 1500:
+        fail("install.bat is %d bytes: the install is the settings app's now" % len(install))
     # update.bat shows this line inside a ( ) block: no brackets or other cmd syntax, one CRLF line.
     stamp = z.read("uaro-graphics/version.txt")
-    m = re.fullmatch(rb"(\d+\.\d+\.\d+) build \d{4}-\d{2}-\d{2} \d{2}:\d{2}\r\n", stamp)
+    m = re.fullmatch(rb"(\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?) build \d{4}-\d{2}-\d{2} \d{2}:\d{2}\r\n", stamp)
     if not m:
         fail("uaro-graphics/version.txt is %r, expected '<version> build YYYY-MM-DD HH:MM' and CRLF" % stamp)
     version = re.search(r'kVersion = "([^"]+)"', VERSION_CPP.read_text()).group(1)

@@ -10,13 +10,15 @@ Players: **[Українською](README.uk.md)** · **[По-русски](REA
 
 ## Download
 
-- **[uaro-graphics-setup.exe](https://github.com/kwebmn/ragnarok-graphics/raw/main/release/uaro-graphics-setup.exe)**
-  — the installer: choose the uaRO client folder, it does the rest and opens the settings.
-- **[uaro-graphics.zip](https://github.com/kwebmn/ragnarok-graphics/raw/main/release/uaro-graphics.zip)** — the same
-  as an archive: unpack it into the client folder, next to `uaRO.exe`, and run `install.bat`.
+- **[uaro-graphics-setup.exe](https://uaro.kiev.ua/files/graphics/uaro-graphics-setup.exe)** — the installer: put
+  it into the uaRO client folder (or choose that folder when it asks) and run it; it does the rest and opens the
+  settings. A client under Program Files asks Windows for administrator rights by itself.
 
-`uninstall.bat` in the client folder puts everything back as it was. `update.bat` (or **Update** on the settings
-app's Service page) downloads and installs the newest build; your settings stay.
+Updates come from uaro.kiev.ua: the settings app checks at its start, and the game's next start asks before the login
+window — **Update** closes the game, updates it and starts it again, with no console window. The previous version is
+kept: **Back to the previous version** on the Service page. **Remove uaRO Graphics** there (or in Windows' Apps) puts
+the folder back as it was before the install — dgVoodoo too, if it was there; the settings and the texture pack can
+stay.
 
 ## What it does
 
@@ -29,7 +31,7 @@ app's Service page) downloads and installs the newest build; your settings stay.
   and walls; grass and trees; water; creatures; caves and dungeons; sky and air; the whole screen; game fixes — each
   with its own switch and strength, and each opens to its effects. New effects come switched off.
 - **AI textures.** The Neural network page's Pack tab builds `uaro-textures.zip` from the game's own pictures with Real-ESRGAN
-  models or Game AI 2.0 (downloaded apart, `get-models.bat`), a model for each group of pictures; the game then shows
+  models or Game AI 2.0 (downloaded apart, with the page's button), a model for each group of pictures; the game then shows
   them by kind — ground, buildings, characters and items, skills, icons.
 - **uaRO Studio** (`uaro-graphics\uaro-studio.exe`, for the pack's makers and testers): every texture of the game
   beside its pack picture — its archive and the ones it shadows, the model and the date it was made, the maps it is
@@ -116,10 +118,9 @@ changes with DXC `-HV 2018`, which keeps to FXC's rules (a loop's variable lives
 | `src/win` | `ddraw.dll`: DirectDraw 7 and Direct3D 7 over the renderers, the game's hooks, the console, the frame counter |
 | `src/win/gpu` | The renderers: Direct3D 12 (and its effects), Direct3D 11, RTX Remix, the bridge to the 64-bit process |
 | `src/host` | `uaro-render64.exe`: the 64-bit renderer, DLSS through NVIDIA Streamline, the texture pack builder |
-| `src/app` | `uaro-graphics.exe`, the settings app |
+| `src/app` | `uaro-graphics.exe`, the settings app — and the installer, the updates and the removal (with the package appended it is `uaro-graphics-setup.exe`) |
 | `src/studio` | `uaro-studio.exe`, uaRO Studio; its engine is `uaro-render64.exe --studio` |
-| `src/setup` | `uaro-graphics-setup.exe` |
-| `dist` | What the archive carries besides the programs: scripts, the default `uaro-graphics.ini`, the notes |
+| `dist` | What the archive carries besides the programs: the default `uaro-graphics.ini`, the notes, `install.bat` for older updaters |
 | `docs` | Research of the client and the design notes |
 
 ## License
