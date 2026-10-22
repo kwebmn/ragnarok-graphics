@@ -11,6 +11,9 @@ namespace uagfx::app {
 // returning false stops it. false and why, in English.
 bool download(const std::string& file, const std::wstring& to,
               const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error);
+// 2.14: the same for a file of another folder of the site (the client patch's /files/client/<sha256>)
+bool downloadPath(const std::string& path, const std::wstring& to,
+                  const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error);
 // A small file's text (update.ini), at most 64 KB, never from a cache.
 bool fetch(const std::string& file, std::string& out, std::string& error);
 // 2.11: the text of a path of the site with its query (the launcher's answer), at most `most` bytes (2.13: a

@@ -38,6 +38,9 @@ constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
 // reports the site did not take yet (queued-*.json, sent at the app's next start)
 constexpr const char* kReports = "uaro-graphics\\reports";
 constexpr const char* kComputerKey = "uaro-graphics\\reports\\computer.txt";
+// 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
+constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
+constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";
 // The package's templates: a settings file that is not there yet starts from one of them (never at the settings'
 // own place - an older update.bat copies uaro-graphics\ of the archive over the installed one).
 constexpr const char* kIniTemplate = "uaro-graphics\\defaults\\uaro-graphics.ini";

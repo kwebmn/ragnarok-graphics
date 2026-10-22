@@ -101,7 +101,7 @@ elseif(WIN32)
                 src/app/ai_cache.cpp src/app/update.cpp src/app/report_send.cpp src/app/pack_compact.cpp
                 src/app/shots.cpp src/app/palettes.cpp src/app/installer.cpp src/app/update_run.cpp src/app/download.cpp src/app/args.cpp
                 src/app/launcher.cpp src/app/launcher_thread.cpp src/app/shortcuts.cpp src/app/reports.cpp
-                src/win/system_probe.cpp src/win/gpu/adapters.cpp)
+                src/app/client_patch.cpp src/win/system_probe.cpp src/win/gpu/adapters.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)
@@ -127,7 +127,7 @@ else()
     # The settings app's model runs here too, over the stand-ins of tests/fake_windows.cpp for its Windows layer.
     add_executable(uagfx_tests ${UAGFX_TEST_SOURCES} src/app/model.cpp src/app/app_disk.cpp src/app/text.cpp
                    src/app/rebuilds.cpp src/app/mnemonic.cpp src/app/installer.cpp src/app/update_run.cpp src/app/args.cpp
-                   src/app/launcher.cpp src/app/reports.cpp)
+                   src/app/launcher.cpp src/app/reports.cpp src/app/client_patch.cpp)
     target_include_directories(uagfx_tests PRIVATE tests)
     target_link_libraries(uagfx_tests PRIVATE uagfx_core uagfx_pad)
     target_compile_definitions(uagfx_tests PRIVATE UAGFX_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

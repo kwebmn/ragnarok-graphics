@@ -87,11 +87,17 @@ uint64_t sizeOf(const std::wstring& path) {
 
 bool download(const std::string& file, const std::wstring& to,
               const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error) {
+    return downloadPath(filePath(file), to, progress, error);
+}
+
+bool downloadPath(const std::string& path, const std::wstring& to,
+                  const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error) {
+    const std::string file = path.substr(0, path.find('?'));  // for the messages
     const std::wstring part = to + L".part";
     for (int attempt = 0; attempt < 2; ++attempt) {
         uint64_t have = sizeOf(part);
         Get g;
-        if (!open(g, filePath(file), have, error)) return false;
+        if (!open(g, path, have, error)) return false;
         if (have && g.status == 416) {  // the .part is the whole file or more: start over once
             DeleteFileW(part.c_str());
             continue;

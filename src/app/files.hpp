@@ -9,6 +9,7 @@ bool readFile(const std::wstring& path, std::string& out);
 // Written to "<path>.new" and moved over the old file in one step: a reader never sees half of it (spec §4.5).
 bool writeFileAtomic(const std::wstring& path, const std::string& bytes);
 bool fileExists(const std::wstring& path);
+long long fileSize(const std::wstring& path);  // 2.14: -1 when there is no such file
 bool dirExists(const std::wstring& path);
 std::vector<std::wstring> listFolder(const std::wstring& dir, bool folders);  // names, sorted
 bool makeFolder(const std::wstring& path);   // also when it exists

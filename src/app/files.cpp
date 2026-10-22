@@ -71,6 +71,14 @@ bool fileExists(const std::wstring& path) {
     return a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY);
 }
 
+long long fileSize(const std::wstring& path) {
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &a) ||
+        (a.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        return -1;
+    return (static_cast<long long>(a.nFileSizeHigh) << 32) | a.nFileSizeLow;
+}
+
 bool dirExists(const std::wstring& path) {
     const DWORD a = GetFileAttributesW(path.c_str());
     return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY);

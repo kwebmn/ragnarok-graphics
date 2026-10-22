@@ -85,6 +85,11 @@ bool writeFileAtomic(const std::wstring& path, const std::string& bytes) {
 
 bool fileExists(const std::wstring& path) { return windows().files.count(path) > 0; }
 
+long long fileSize(const std::wstring& path) {
+    const auto it = windows().files.find(path);
+    return it == windows().files.end() ? -1 : (long long)it->second.size();
+}
+
 bool dirExists(const std::wstring& path) { return windows().folders.count(path) > 0; }
 
 std::vector<std::wstring> listFolder(const std::wstring& dir, bool folders) {
@@ -262,6 +267,24 @@ bool download(const std::string& file, const std::wstring& to,
     }
     const uint64_t size = it->second.size();
     if (!progress(size / 2, size) || !progress(size, size)) {
+        error = "stopped";
+        return false;
+    }
+    if (!writeFileAtomic(to, it->second)) {
+        error = "cannot write " + utf8(to);
+        return false;
+    }
+    return true;
+}
+
+bool downloadPath(const std::string& path, const std::wstring& to,
+                  const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error) {
+    const auto it = windows().web.find(path);
+    if (it == windows().web.end()) {
+        error = "uaro.kiev.ua answered 404 for " + path;
+        return false;
+    }
+    if (!progress(it->second.size(), it->second.size())) {
         error = "stopped";
         return false;
     }
