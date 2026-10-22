@@ -83,11 +83,14 @@ if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
 elseif(WIN32)
     # ddraw.dll that uaRO.exe loads from its own folder instead of dgVoodoo's or the system one.
     file(GLOB_RECURSE UAGFX_WIN_SOURCES CONFIGURE_DEPENDS src/win/*.cpp)
-    add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} src/win/ddraw.def)
+    # 2.9: uaRO Pad's Windows part (DirectInput 7 wrappers, the client's memory, its windows), mounted by the driver
+    file(GLOB UAGFX_PAD_WIN_SOURCES CONFIGURE_DEPENDS src/pad/win/*.cpp)
+    add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} ${UAGFX_PAD_WIN_SOURCES} src/win/ddraw.def)
     set_target_properties(ddraw PROPERTIES PREFIX "" OUTPUT_NAME "ddraw")
-    target_compile_definitions(ddraw PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS)
+    target_compile_definitions(ddraw PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS
+                               DIRECTINPUT_VERSION=0x0700)
     target_compile_options(ddraw PRIVATE -Wall -Wextra)
-    target_link_libraries(ddraw PRIVATE uagfx_core)
+    target_link_libraries(ddraw PRIVATE uagfx_pad uagfx_core uuid)
     # 2.5.5: its link map beside it - the profile's places in ddraw.dll (offsets) are found in it afterwards
     target_link_options(ddraw PRIVATE -static -static-libgcc -static-libstdc++ -s
                         "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/ddraw.map")

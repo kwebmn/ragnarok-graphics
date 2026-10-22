@@ -440,6 +440,9 @@ struct Config {
     // settings app; id - this installation's random number there (no name, no login)
     bool statsSend = false;
     std::string statsId;
+    // 2.9: [pad] enabled - uaRO Pad, a part of the driver now, mounted at the game's start (src/pad); on by default.
+    // Its own [general] enabled in uaro-pad.ini is the in-game switch (Back).
+    bool padEnabled = true;
     bool bridgeDpiScale = true;
     // Part 4 (test): [renderer] remix = 1 draws through Direct3D 9's fixed function, with the world in world space:
     // RTX Remix when its d3d9.dll is next to uaRO.exe, else the system's Direct3D 9.

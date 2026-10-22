@@ -9,6 +9,7 @@
 #include "win/context.hpp"
 #include "win/dx7/ddraw7.hpp"
 #include "win/log.hpp"
+#include "win/pad_mount.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
 
@@ -197,7 +198,11 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(inst);
         uagfx::win::installSoundHooks();  // 0.91: before the game opens its sound (its import slots only)
+        uagfx::win::mountPad();           // 2.9: uaRO Pad, before the game makes its DirectInput
     }
-    if (reason == DLL_PROCESS_DETACH) uagfx::win::logModulesAtExit();
+    if (reason == DLL_PROCESS_DETACH) {
+        uagfx::win::logModulesAtExit();
+        uagfx::win::unmountPad();
+    }
     return TRUE;
 }

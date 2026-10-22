@@ -589,3 +589,9 @@ TEST(config_shader_variants) {
     CHECK(parseConfig("").shaderVariants);
     CHECK(!parseConfig("[debug]\nshader_variants = 0\n").shaderVariants);
 }
+
+TEST(config_the_pad_is_on_by_default) {
+    // 2.9: uaRO Pad inside the driver, mounted unless [pad] enabled = 0
+    CHECK(parseConfig("").padEnabled);
+    CHECK(!parseConfig("[pad]\nenabled = 0\n").padEnabled);
+}

@@ -403,6 +403,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.renderThread);
         } else if (key == "report.auto") {
             setBool(val, c.reportAuto);
+        } else if (key == "pad.enabled") {  // 2.9
+            setBool(val, c.padEnabled);
         } else if (key == "stats.send") {  // 2.2.1
             setBool(val, c.statsSend);
         } else if (key == "stats.id") {
