@@ -2900,7 +2900,7 @@ const Entry kTexts[] = {
     {"Compact the texture pack", "Стиснути пакет текстур", "Сжать пакет текстур"},
     {"Build Palettes.grf", "Зібрати Palettes.grf", "Собрать Palettes.grf"},
     {"Model preview", "Попередній перегляд моделей", "Превью моделей"},
-    {"In the game: Ctrl+~ the console; Ctrl+Shift+F10 «Нове звернення» with a snapshot; Ctrl+Shift+F11 the frame "
+    {"In the game: Ctrl+~ the console; Ctrl+Shift+F10 «New report» with a snapshot; Ctrl+Shift+F11 the frame "
      "counter; Ctrl+Shift+F12 a full-size snapshot; "
      "Ctrl+Shift+F9 X-ray; Ctrl+Shift+F8 the texture under the cursor into uaRO Studio, Ctrl+Shift+F7 its picture off "
      "and on.",
@@ -2908,7 +2908,7 @@ const Entry kTexts[] = {
      "Ctrl+Shift+F12 - знімок у повному розмірі; "
      "Ctrl+Shift+F9 - рентген; Ctrl+Shift+F8 - текстура під курсором в uaRO Studio, Ctrl+Shift+F7 - її картинка "
      "вимк./увімк.",
-     "В игре: Ctrl+~ - консоль; Ctrl+Shift+F10 - «Нове звернення» со снимком; Ctrl+Shift+F11 - счётчик кадров; "
+     "В игре: Ctrl+~ - консоль; Ctrl+Shift+F10 - «Новое обращение» со снимком; Ctrl+Shift+F11 - счётчик кадров; "
      "Ctrl+Shift+F12 - снимок в полном размере; "
      "Ctrl+Shift+F9 - рентген; Ctrl+Shift+F8 - текстура под курсором в uaRO Studio, Ctrl+Shift+F7 - её картинка "
      "выкл./вкл."},
@@ -3245,7 +3245,7 @@ const Entry kTexts[] = {
     {"Start the game at once",
      "Запускати гру одразу",
      "Запускать игру сразу"},
-    {"uaRO.exe and the game's old shortcut start the game itself, not the page «Гра»; the question about an update "
+    {"uaRO.exe and the game's old shortcut start the game itself, not the page «Play»; the question about an update "
      "stays.",
      "uaRO.exe і старий ярлик гри запускають саму гру, а не сторінку «Гра»; питання про оновлення лишається.",
      "uaRO.exe и старый ярлык игры запускают саму игру, а не страницу «Игра»; вопрос об обновлении остаётся."},

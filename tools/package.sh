@@ -17,6 +17,7 @@ python3 tools/check_studio.py build-win64/uaro-studio.exe  # 2.3: uaRO Studio
 python3 -I tools/check_layout.py  # 2.8: our paths only in src/core/layout.cpp
 out="build-win/uaro-graphics.zip"
 stage="build-win/package"
+python3 -I -B tools/check_text_names.py  # 2.15: every «name» in the texts is the interface's
 rm -rf "$out" "$stage"
 mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/notes" \
          "$stage/uaro-graphics/defaults"
