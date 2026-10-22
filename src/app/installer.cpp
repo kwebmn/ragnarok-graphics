@@ -11,6 +11,7 @@
 #include "core/ini_upgrade.hpp"
 #include "core/layout.hpp"
 #include "core/layout_migration.hpp"
+#include "core/settings/ini_edit.hpp"
 #include "core/settings/pad_files.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -225,13 +226,20 @@ Result finishInstall(const std::wstring& dir, bool scripts) {
     if (!fileExists(ourFile(dir, layout::File::Ini)) && readFile(join(dir, wide(layout::kIniTemplate)), templ) &&
         writeFileAtomic(ini, templ))
         r.log.push_back("installer: the settings file from the package's template");
+    std::string version;
+    readFile(join(dir, L"uaro-graphics\\version.txt"), version);
+    while (!version.empty() && (version.back() == '\r' || version.back() == '\n')) version.pop_back();
+    // 3.0.0-beta.2: a beta build puts the install on «Бета» (a tester joins so); a release build leaves the channel
+    std::string current;
+    if (update::preRelease(update::bare(version)) && readFile(ini, current)) {
+        const std::string beta = settings::applyIniEdits(current, {{"update", "channel", "beta"}});
+        if (beta != current && writeFileAtomic(ini, beta))
+            r.log.push_back("installer: a beta build - the beta channel");
+    }
     removeOldPad(dir);
     removeTree(join(dir, L"uaro-graphics\\pad"));
     if (scripts) removeOldScripts(dir);
     placeShortcut(dir, r);
-    std::string version;
-    readFile(join(dir, L"uaro-graphics\\version.txt"), version);
-    while (!version.empty() && (version.back() == '\r' || version.back() == '\n')) version.pop_back();
     if (!writeAppsEntry(dir, version.empty() ? std::string(kVersion) : update::bare(version)))
         r.log.push_back("installer: Windows refused the entry in Apps");
     return r;

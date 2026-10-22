@@ -19,6 +19,7 @@
 #include "core/settings/screen.hpp"
 #include "core/settings/strings.hpp"
 #include "core/settings/window_place.hpp"
+#include "core/update_check.hpp"
 
 namespace uagfx::app {
 
@@ -144,6 +145,12 @@ public:
     // first start ([utility] report_asked), «Так» preselected; the answer written at once, kept like the statistics'
     bool reportAsked() const;
     std::wstring setReportAuto(bool send, settings::Lang l);
+    // 3.0.0-beta.2: the update channel ([update] channel, else by the installed build: core/update_check channelOf) -
+    // written at once like the statistics' answer and kept across a reset and a profile; recordChannel writes the
+    // build's when there is no line (the app's start), so a tester updated to a release build stays on «Бета».
+    update::Channel channel() const;
+    std::wstring setChannel(update::Channel c, settings::Lang l);
+    void recordChannel(settings::Lang l);
 
     // 2.6: the app's own keys of [utility], written at once without a backup like the language and kept across a
     // reset and a profile: the mode (a new install starts Simple, one the app ran in before Detailed), the window's

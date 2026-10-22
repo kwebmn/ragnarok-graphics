@@ -570,6 +570,43 @@ TEST(model_asks_about_the_automatic_reports_once) {
     CHECK_EQ(valueOf(w.files[ini], "report.auto"), std::string("0"));
 }
 
+// 3.0.0-beta.2: the update channel - with no line the app's start writes the build's («Бета» for a beta build), so a
+// tester updated to a release build stays on «Бета»; the player's choice is written at once.
+TEST(model_records_the_channel_at_its_start) {
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(kIni);
+    const std::wstring version = fake::path(L"uaro-graphics\\version.txt");
+    w.files[ini] = "[display]\r\nmode = window\r\n\r\n[update]\r\n; the template's words\r\n";
+    w.files[version] = "3.0.0-beta.2 build 2026-10-23 03:00\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(m.channel() == update::Channel::Beta);
+    m.recordChannel(Lang::En);
+    CHECK_EQ(valueOf(w.files[ini], "update.channel"), std::string("beta"));
+    CHECK(w.files[ini].find("[update]") == w.files[ini].rfind("[update]"));  // into the template's section
+    w.files[version] = "3.0.0 build 2026-10-24 03:00\r\n";  // updated to a release
+    app::Model later;
+    later.recordChannel(Lang::En);
+    CHECK(later.channel() == update::Channel::Beta);
+    CHECK(later.setChannel(update::Channel::Release, Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[ini], "update.channel"), std::string("release"));
+    CHECK(later.channel() == update::Channel::Release);
+}
+
+TEST(model_keeps_the_channel_through_a_reset) {
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(kIni);
+    w.files[ini] = "[quality]\r\nsharpen = 70\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(m.saveProfile(L"old", Lang::En).empty());  // made before the choice
+    CHECK(m.setChannel(update::Channel::Beta, Lang::En).empty());
+    CHECK(m.loadProfile(L"old", Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[ini], "update.channel"), std::string("beta"));
+    CHECK(m.resetDefaults(Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[ini], "update.channel"), std::string("beta"));
+}
+
 // 2.6: the modes, the window's place and the version whose notes were shown - the app's own keys of [utility].
 TEST(model_new_install_starts_simple) {
     fake::Windows& w = fake::reset();

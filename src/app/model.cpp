@@ -11,6 +11,7 @@
 #include "app/files.hpp"
 #include "app/installer.hpp"
 #include "app/text.hpp"
+#include "app/update_run.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/compat_flags.hpp"
 #include "core/settings/pad_files.hpp"
@@ -476,6 +477,8 @@ std::vector<IniEdit> Model::keptAcross() const {
     // 3.0.0-beta.1: the answer about the automatic reports, once given - else a reset would take it back unasked
     if (const auto it = now.find("report.auto"); it != now.end() && now.count("utility.report_asked"))
         keep.push_back({"report", "auto", it->second});
+    // 3.0.0-beta.2: the update channel - a reset or a profile never takes a tester off «Бета»
+    if (const auto it = now.find("update.channel"); it != now.end()) keep.push_back({"update", "channel", it->second});
     return keep;
 }
 
@@ -703,6 +706,22 @@ std::wstring Model::setReportAuto(bool send, Lang l) {
     const std::wstring err = writeIni({{"report", "auto", send ? "1" : "0"}, {"utility", "report_asked", "1"}}, l);
     if (err.empty()) load();
     return err;
+}
+
+update::Channel Model::channel() const {
+    const auto v = readIni(currentIni());
+    const auto it = v.find("update.channel");
+    return update::channelOf(it == v.end() ? "" : it->second, installedVersion(paths_.dir));
+}
+
+std::wstring Model::setChannel(update::Channel c, Lang l) {
+    const std::wstring err = writeIni({{"update", "channel", update::channelToken(c)}}, l);
+    if (err.empty()) load();
+    return err;
+}
+
+void Model::recordChannel(Lang l) {
+    if (!readIni(currentIni()).count("update.channel")) setChannel(channel(), l);
 }
 
 bool Model::usedBefore() const {

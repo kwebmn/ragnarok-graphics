@@ -222,6 +222,21 @@ TEST(finish_install_leaves_the_scripts_while_one_runs) {
     CHECK(fake::windows().folders.count(fake::path(L"uaro-graphics-update")) == 1);
 }
 
+// 3.0.0-beta.2: a beta build put in puts the install on «Бета» (a tester joins so, by its setup too); a release build
+// never changes the channel - a tester updated to a release stays on «Бета».
+TEST(installing_a_beta_build_joins_the_beta_channel) {
+    client();
+    put(L"uaro-graphics\\uaro-graphics.ini", "[display]\r\nmode = window\r\n[update]\r\nchannel = release\r\n");
+    put(L"uaro-graphics\\version.txt", "3.0.0-beta.2 build 2026-10-23 03:00\r\n");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK(at(L"uaro-graphics\\uaro-graphics.ini").find("channel = beta") != std::string::npos);
+    CHECK(at(L"uaro-graphics\\uaro-graphics.ini").find("channel = release") == std::string::npos);
+    put(L"uaro-graphics\\version.txt", "3.0.0 build 2026-10-24 03:00\r\n");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK(at(L"uaro-graphics\\uaro-graphics.ini").find("channel = beta") != std::string::npos);
+    CHECK(at(L"uaro-graphics\\uaro-graphics.ini").rfind("[display]\r\nmode = window\r\n", 0) == 0);
+}
+
 TEST(finish_install_writes_the_apps_entry) {
     client();
     put(L"uaro-graphics\\version.txt", "2.10.0 build 2026-10-22 18:00\r\n");
