@@ -1479,9 +1479,8 @@ float4 torch_apply_ps(PresentOut i) : SV_Target {
 // warp zone drawn anew over its place, the game's own draws of it not drawn - its walls of light closing in on the
 // middle (twin, sourceClamp.xy: three rings' radius and alpha, world units), a faint column of light with streams
 // running up it, sparks rising; the ground under the walls ripples as under water, a soft light in the middle.
-// sourceRect.x how far apart the points that find its ground are (pixels), .w its strength; fogColor.xyz the world's
-// up in the view, .w the night; sourceClamp.z the time, footprint its seed; uiPixels.xy the world's size, .zw where it
-// stands on the screen (its pixels).
+// sourceRect.xyz its foot in the view, .w its strength; fogColor.xyz the world's up in the view, .w the night;
+// sourceClamp.z the time, footprint its seed; uiPixels.xy the world's size, .zw its foot on the screen (its pixels).
 static const float3 kPortalWhite = float3(1.0, 0.99, 1.0);
 static const float3 kPortalLilac = float3(0.80, 0.74, 1.0);
 static const float3 kPortalDeep = float3(0.58, 0.48, 0.98);
@@ -1534,23 +1533,9 @@ float4 portal_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     float raw = sceneDepth.Load(int3(wp, 0));
     float3 p = viewFrom(wp, raw);
-    float3 up = fogColor.xyz;
-    // 2.7.51 (the tester on 2.7.50: «два портала, один портал двигается»): its foot - the game draws the warp NPC's
-    // portal flat over the screen, its depth not the world's: the ground under where it stands on the screen
-    // (uiPixels.zw), as high as the lowest of five points round it (sourceRect.x apart) - the ground, not who stands
-    // on it
-    float lowest = 1e9;
-    [unroll] for (int s = 0; s < 5; ++s) {
-        float2 o = float2(s == 1 ? 1.0 : s == 2 ? -1.0 : 0.0, s == 3 ? 1.0 : s == 4 ? -1.0 : 0.0);
-        int2 q = clamp(int2(uiPixels.zw + o * sourceRect.x), int2(0, 0), int2(uiPixels.xy) - 1);
-        float rq = sceneDepth.Load(int3(q, 0));
-        if (rq < 0.99999) lowest = min(lowest, dot(viewFrom(q, rq), up));
-    }
-    float2 ga = (uiPixels.zw - float2(jitterX, jitterY)) / scale;
-    float3 da = float3((ga.x - cx) / f0, (ga.y - cy) / f1, 1.0);
-    float along = dot(da, up);
-    if (lowest > 1e8 || abs(along) < 1e-4) discard;  // no ground under it
-    float3 foot = da * (lowest / along);
+    // 2.7.52: its foot where it stands on the screen at its draws' own depth (core/portal.hpp footOf) - hidden behind
+    // what stands in front of it as the game's own (2.7.51's ground looked for in the picture was a tower's roof)
+    float3 foot = sourceRect.xyz, up = fogColor.xyz;
     float strength = sourceRect.w, night = fogColor.w, time = sourceClamp.z;
     float3 rel = p - foot;
     float y = dot(rel, up);

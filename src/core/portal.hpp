@@ -2,6 +2,8 @@
 #include <array>
 #include <vector>
 
+#include "core/game_camera.hpp"
+
 namespace uagfx::portal {
 
 // 2.7.48, the new portal (the user's pick «Б» of the options page: «такой же волнами и объёмный, но лучше»): the
@@ -56,10 +58,20 @@ struct Track {
 // 2.7.51: a draw over 600 pixels is no part of a portal (its corners behind the camera) and is left out.
 void follow(std::vector<Track>& tracks, const std::vector<Seen>& draws, float step);
 
-// 2.7.51 (the tester on 2.7.50: «два портала, один портал двигается»; the log: its middle 299 deep, off the screen):
-// where a followed portal stands on the screen (game pixels) - the game draws the warp NPC's portal (321) flat over
-// the screen, its depth not the world's: the middle of its draws' span, up from their bottom by half the span
-// squashed as a circle lying on the ground is (squash: |the world's up's view z|).
+// 2.7.51 (the tester on 2.7.50: «два портала, один портал двигается»): where a followed portal stands on the screen
+// (game pixels) - the middle of its draws' span, up from their bottom by half the span squashed as a circle lying on
+// the ground is (squash: |the world's up's view z|). Its draws (a fan of triangles round its middle) give it better
+// than their middles' mean, a draw or two of its sparks off to a side.
 void anchorOf(const Track& t, float squash, float out[2]);
+
+// 2.7.52 (the tester on 2.7.51: one on a tower's roof - the ground 2.7.51 looked for in the depth under where it stands
+// was the tower in front of it): its foot in the view - where it stands on the screen at its draws' own depth (the
+// game's vertices lie on the ground, the fan 465-474 deep round its middle; the 299 deep one 2.7.50 told was another
+// portal, off the screen).
+void footOf(const Track& t, float squash, const camera::Projection& p, float out[3]);
+
+// The screen box (game pixels: x0, y0, x1, y1) round a portal standing at foot (the view) with the world's up (the
+// view's): its column, a fifth wider than kColumnRadius, `height` tall; false when any of it is behind the camera.
+bool screenBox(const float foot[3], const float up[3], const camera::Projection& p, float height, float box[4]);
 
 }  // namespace uagfx::portal

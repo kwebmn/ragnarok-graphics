@@ -95,4 +95,39 @@ void anchorOf(const Track& t, float squash, float out[2]) {
     out[1] = t.bottom - (t.right - t.left) * 0.5f * std::fabs(squash);
 }
 
+void footOf(const Track& t, float squash, const camera::Projection& p, float out[3]) {
+    float at[2];
+    anchorOf(t, squash, at);
+    const float z = t.view[2];
+    out[0] = (at[0] - p.cx) / p.f0 * z;
+    out[1] = (at[1] - p.cy) / p.f1 * z;
+    out[2] = z;
+}
+
+bool screenBox(const float foot[3], const float up[3], const camera::Projection& p, float height, float box[4]) {
+    // two ways along the ground, square to the up
+    const float pick[3] = {std::fabs(up[0]) < 0.9f ? 1.0f : 0.0f, std::fabs(up[0]) < 0.9f ? 0.0f : 1.0f, 0.0f};
+    float a[3] = {up[1] * pick[2] - up[2] * pick[1], up[2] * pick[0] - up[0] * pick[2],
+                  up[0] * pick[1] - up[1] * pick[0]};
+    const float al = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+    for (float& v : a) v /= al;
+    const float b[3] = {up[1] * a[2] - up[2] * a[1], up[2] * a[0] - up[0] * a[2], up[0] * a[1] - up[1] * a[0]};
+    const float r = kColumnRadius * 1.2f;
+    box[0] = box[1] = 1e30f;
+    box[2] = box[3] = -1e30f;
+    for (int k = 0; k < 8; ++k)
+        for (const float h : {0.0f, height}) {
+            const float c = std::cos(float(k) * 0.785398f) * r, s = std::sin(float(k) * 0.785398f) * r;
+            float q[3];
+            for (int i = 0; i < 3; ++i) q[i] = foot[i] + a[i] * c + b[i] * s + up[i] * h;
+            if (q[2] <= p.nearZ) return false;
+            const float x = q[0] / q[2] * p.f0 + p.cx, y = q[1] / q[2] * p.f1 + p.cy;
+            box[0] = std::min(box[0], x);
+            box[1] = std::min(box[1], y);
+            box[2] = std::max(box[2], x);
+            box[3] = std::max(box[3], y);
+        }
+    return true;
+}
+
 }  // namespace uagfx::portal

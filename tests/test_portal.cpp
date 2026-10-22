@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include "core/config.hpp"
+#include "core/game_camera.hpp"
 #include "core/portal.hpp"
 #include "test.hpp"
 
@@ -123,4 +124,38 @@ TEST(portal_draws_too_big_to_be_one_left_out) {
     huge.right = 1600.0f;
     portal::follow(tracks, {huge}, 1.0f / 60.0f);
     CHECK(tracks.empty());
+}
+
+TEST(portal_screen_box_round_its_column) {
+    // 2.7.48: the pass runs over the screen box round the portal's column (kColumnRadius, the height given) only
+    const camera::Projection p = camera::projectionFor(1920, 1080);
+    const float foot[3] = {0.0f, 0.0f, 100.0f}, up[3] = {0.0f, -0.7071f, -0.7071f};  // the camera 45 degrees down
+    float box[4];
+    CHECK(portal::screenBox(foot, up, p, 45.0f, box));
+    CHECK(std::fabs((box[0] + box[2]) * 0.5f - p.cx) < 1.0f);  // straight ahead: as wide either way
+    const float half = portal::kColumnRadius * p.f0 / 100.0f;
+    CHECK(box[2] - box[0] > 2.0f * half && box[2] - box[0] < 4.5f * half);  // its top nearer the camera: wider
+    CHECK(box[1] < p.cy - 45.0f * p.f1 / 100.0f * 0.9f);  // its top over it
+    CHECK(box[3] > p.cy);                                 // its foot's circle below the middle
+    const float behind[3] = {0.0f, 0.0f, -10.0f};
+    CHECK(!portal::screenBox(behind, up, p, 45.0f, box));
+}
+
+TEST(portal_foot_where_its_draws_are_at_their_depth) {
+    // 2.7.52 (the tester on 2.7.51: one portal on a tower's roof - the ground looked for under it on the screen was
+    // the tower in front of it): its foot is where it stands on the screen at its draws' own depth (the game's
+    // vertices of the warp NPC's portal lie on the ground: a fan 465-474 deep round its middle)
+    const camera::Projection p = camera::projectionFor(1920, 1080);
+    std::vector<portal::Track> tracks;
+    portal::Seen s = seenAt(565.0f, 559.0f, 470.0f);
+    s.left = 434.0f, s.right = 697.0f, s.bottom = 655.0f;
+    portal::follow(tracks, {s}, 1.0f / 60.0f);
+    CHECK(tracks.size() == 1);
+    if (tracks.empty()) return;
+    float foot[3], at[2];
+    portal::footOf(tracks[0], 0.72f, p, foot);
+    portal::anchorOf(tracks[0], 0.72f, at);
+    CHECK(std::fabs(foot[2] - 470.0f) < 1e-3f);
+    CHECK(std::fabs(foot[0] - (at[0] - p.cx) / p.f0 * 470.0f) < 1e-3f);
+    CHECK(std::fabs(foot[1] - (at[1] - p.cy) / p.f1 * 470.0f) < 1e-3f);
 }

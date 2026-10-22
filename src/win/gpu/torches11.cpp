@@ -566,18 +566,13 @@ void Renderer11::applyTorchLight() {
         for (const PortalTrack11& t : portalTracks_) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
             if (shown <= 0.0f) continue;
-            // 2.7.51 (torches.cpp portalGround): 4 units over the ground under where it stands on the screen - the
-            // camera's ground plane along that pixel's ray (its draws' depth is not the world's)
-            if (shownCount++ < 8 && cameraValid_ && cameraTargetZ_ > 0.0f) {
-                float up[3], at[2];
+            // 2.7.52 (torches.cpp portalGround): 4 units over its foot (portal::footOf)
+            if (shownCount++ < 8 && cameraValid_) {
+                float up[3], foot[3];
                 camera::upInView(viewToWorld_, up);
-                portal::anchorOf(t, up[2], at);
-                const float dir[3] = {(at[0] - proj.cx) / proj.f0, (at[1] - proj.cy) / proj.f1, 1.0f};
-                const float along = dir[0] * up[0] + dir[1] * up[1] + dir[2] * up[2];
-                const float depth = std::fabs(along) < 1e-4f ? -1.0f : cameraTargetZ_ * up[2] / along;
-                if (depth > 0.0f) {
-                    const float view[3] = {dir[0] * depth + up[0] * 4.0f, dir[1] * depth + up[1] * 4.0f,
-                                           dir[2] * depth + up[2] * 4.0f};
+                portal::footOf(t, up[2], proj, foot);
+                if (foot[2] > 0.0f) {
+                    const float view[3] = {foot[0] + up[0] * 4.0f, foot[1] + up[1] * 4.0f, foot[2] + up[2] * 4.0f};
                     addLight(view, 30.0f, anew ? kLilac : kBlue, (anew ? 0.21f : 0.35f) * user * shown);
                 }
             }
@@ -822,21 +817,22 @@ void Renderer11::applyTorchLight() {
         for (const PortalTrack11& t : portalTracks_) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);
             if (shown <= 0.0f) continue;
-            float at[2];  // 2.7.51: where it stands on the screen - portal_ps finds the ground there in the depth
-            portal::anchorOf(t, up[2], at);
-            const float span = std::max(t.right - t.left, 8.0f);
-            pc.sourceRect[0] = span * 0.12f * k;
+            // 2.7.52: its foot where it stands on the screen at its draws' depth (portal::footOf), the box round it
+            float foot[3], box[4];
+            portal::footOf(t, up[2], proj, foot);
+            if (foot[2] <= 0.0f || !portal::screenBox(foot, up, proj, 45.0f, box)) continue;
+            std::copy(foot, foot + 3, pc.sourceRect);
             pc.sourceRect[3] = shown * user;
             pc.footprint = float(++index) * 0.618f;  // its own sparks
-            pc.uiPixels[2] = at[0] * k + 0.5f;
-            pc.uiPixels[3] = at[1] * k + 0.5f;
+            pc.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f;
+            pc.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f;
             if (portalsToldMap_ != map_) {  // 2.7.49: its numbers once a map, to check where it stands
                 portalsToldMap_ = map_;
-                LOG_INFO("portals: the new one drawn on %s (Direct3D 11) - at %.0f,%.0f, its draws %.0f-%.0f across "
-                         "down to %.0f, %.2f shown", map_.c_str(), at[0], at[1], t.left, t.right, t.bottom, shown);
+                LOG_INFO("portals: the new one drawn on %s (Direct3D 11) - its foot %.1f %.1f %.1f (the view), its "
+                         "draws %.0f-%.0f across down to %.0f, %.2f shown", map_.c_str(), foot[0], foot[1], foot[2],
+                         t.left, t.right, t.bottom, shown);
             }
-            cut(pc, (t.left - span * 0.4f) * k, (at[1] - span * 2.2f) * k, (t.right + span * 0.4f) * k,
-                (t.bottom + span * 0.4f) * k);
+            cut(pc, box[0] * k, box[1] * k, box[2] * k, box[3] * k);
             newPortalsDrawn_ = true;
         }
         ctx_->PSSetShaderResources(0, 4, none);

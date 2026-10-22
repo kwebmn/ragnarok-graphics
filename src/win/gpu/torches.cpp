@@ -876,8 +876,8 @@ bool Renderer::Impl::applyTorches() {
             if (shown <= 0.0f) continue;
             // 2.7.48: under the new portal its light in its lilac and softer, the air's swirl half - no white blot
             const bool anew = newPortalWanted();
-            // 2.7.51: its light 4 units over the ground under where it stands on the screen (its draws' depth is not
-            // the world's: 0.38 lit 299 deep, off the screen)
+            // 2.7.52: its light 4 units over its foot (portal::footOf) - 0.38 lit its draws' mean place, sparks and
+            // all
             float ground[3];
             if (lit++ < 8 && lights.size() < kMaxLights && portalGround(t, ground)) {
                 float up[3];
@@ -1124,21 +1124,14 @@ bool Renderer::Impl::applyTorches() {
     return true;
 }
 
-// 2.7.51: the ground under where a portal stands on the screen (portal::anchorOf) - the plane of the ground the
-// camera looks at (the character's) along that pixel's ray; false with no camera known.
+// 2.7.52: a portal's foot in the view (portal::footOf: where it stands on the screen, at its draws' own depth); false
+// with no camera known.
 bool Renderer::Impl::portalGround(const PortalTrack& t, float out[3]) const {
-    if (!viewToWorldValid || cameraTargetZ <= 0.0f) return false;
-    float up[3], at[2];
+    if (!viewToWorldValid) return false;
+    float up[3];
     camera::upInView(viewToWorld, up);
-    portal::anchorOf(t, up[2], at);
-    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
-    const float dir[3] = {(at[0] - proj.cx) / proj.f0, (at[1] - proj.cy) / proj.f1, 1.0f};
-    const float along = dir[0] * up[0] + dir[1] * up[1] + dir[2] * up[2];
-    if (std::fabs(along) < 1e-4f) return false;
-    const float depth = cameraTargetZ * up[2] / along;  // the target (0, 0, z) and the pixel's ray on one plane
-    if (depth <= 0.0f) return false;
-    for (int i = 0; i < 3; ++i) out[i] = dir[i] * depth;
-    return true;
+    portal::footOf(t, up[2], camera::projectionFor(gameWidth, gameHeight), out);
+    return out[2] > 0.0f;
 }
 
 // 2.7.48: the new portal (portal_ps; core/portal.hpp the game's warp zone) over each portal's place, cut to its box,
@@ -1185,24 +1178,22 @@ bool Renderer::Impl::drawNewPortals(ID3D12Resource* dst, D3D12_RESOURCE_STATES& 
     for (const PortalTrack& t : portalTracks) {
         const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);
         if (shown <= 0.0f) continue;
-        // 2.7.51: where it stands on the screen (portal::anchorOf) - portal_ps finds the ground there in the depth
-        float at[2];
-        portal::anchorOf(t, up[2], at);
-        const float span = std::max(t.right - t.left, 8.0f);
-        const D3D12_RECT around = clipped((t.left - span * 0.4f) * k + jx, (at[1] - span * 2.2f) * k + jy,
-                                          (t.right + span * 0.4f) * k + jx, (t.bottom + span * 0.4f) * k + jy, w, h);
+        // 2.7.52: its foot where it stands on the screen at its draws' depth (portal::footOf), the box round its column
+        float foot[3], box[4];
+        if (!portalGround(t, foot) || !portal::screenBox(foot, up, proj, 45.0f, box)) continue;
+        const D3D12_RECT around = clipped(box[0] * k + jx, box[1] * k + jy, box[2] * k + jx, box[3] * k + jy, w, h);
         if (around.right <= around.left || around.bottom <= around.top) continue;
-        c.sourceRect[0] = span * 0.12f * k;  // the ground's five points this far apart
+        std::copy(foot, foot + 3, c.sourceRect);
         c.sourceRect[3] = shown * user;
         c.footprint = float(++index) * 0.618f;  // its own sparks
-        c.uiPixels[2] = at[0] * k + 0.5f + jx;
-        c.uiPixels[3] = at[1] * k + 0.5f + jy;
+        c.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f + jx;
+        c.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f + jy;
         if (portalsToldMap != mapName) {  // 2.7.49: its numbers once a map, to check where it stands
             portalsToldMap = mapName;
-            LOG_INFO("portals: the new one drawn on %s - at %.0f,%.0f of the game's %dx%d, its draws %.0f-%.0f across "
-                     "down to %.0f, %.2f shown, rings %.1f %.1f %.1f",
-                     mapName.c_str(), at[0], at[1], gameWidth, gameHeight, t.left, t.right, t.bottom, shown,
-                     rings[0].radius, rings[1].radius, rings[2].radius);
+            LOG_INFO("portals: the new one drawn on %s - its foot %.1f %.1f %.1f (the view), its draws %.0f-%.0f "
+                     "across down to %.0f of the game's %dx%d, %.2f shown, rings %.1f %.1f %.1f",
+                     mapName.c_str(), foot[0], foot[1], foot[2], t.left, t.right, t.bottom, gameWidth, gameHeight,
+                     shown, rings[0].radius, rings[1].radius, rings[2].radius);
         }
         if (!effectPass(portalPipelines[code], dst, dstState, rtv, w, h, c, sceneColorSrv, true, kNoSrv, &around))
             return false;
