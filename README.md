@@ -72,12 +72,18 @@ effects for your card.
 
 ## Files in the client folder
 
+Since 2.8 only `ddraw.dll` and `uaro-graphics.exe` (with the gamepad also its `dinput.dll`) sit next to `uaRO.exe`;
+the rest is in `uaro-graphics\`, and a 2.x install moves there by itself at the first start.
+
 | File | What |
 |---|---|
-| `uaro-graphics.ini` | Every setting; the settings app edits it, the game reads changes within a second |
-| `uaro-graphics.log`, `uaro-render64.log` | What the driver and the 64-bit renderer did — the report sends them |
-| `uaro-graphics\` | The driver, the settings app, the 64-bit renderer, the models, the shader caches |
-| `uaro-textures.zip` | The AI texture pack, when built |
+| `uaro-graphics\uaro-graphics.ini` | Every setting; the settings app edits it, the game reads changes within a second |
+| `uaro-graphics\logs\` | The logs of the driver (and of the game before), the 64-bit renderer, the pack's builder |
+| `uaro-graphics\cache\` | The shader caches and the prepared pipelines |
+| `uaro-graphics\textures\uaro-textures.zip` | The AI texture pack |
+| `uaro-graphics\backup\` | The settings app's copies of the settings |
+| `uaro-graphics\dgvoodoo\` | The client's dgVoodoo, back in its place when uaRO Graphics is removed |
+| `uaro-graphics\` | The driver, the settings app, the 64-bit renderer, the models, the notes of «Що нового» |
 | `uaro-graphics\seen\` | What the game drew on the last 20 maps and how (uaRO Studio reads it) |
 
 ## Building from source
