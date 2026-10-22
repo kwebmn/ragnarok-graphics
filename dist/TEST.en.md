@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.51 — to check
+
+- **The new portal stood in the wrong place and "moved".** The game draws the exit portal (effect 321) as a flat
+  picture over the screen, and its depth is not the world's. The driver took the portal's place from that depth and put
+  it far past the screen's edge. Now its place is where the game draws the portal on the screen, and the shader finds
+  the ground under it in the picture's own depth. Huge draws reaching past the screen no longer join a portal. The
+  portal's light on the ground is in its place too.
+- To check at the door in Prontera: one portal where the old one was, not drifting as the camera turns. The log has
+  "portals: the new one drawn on … at X,Y" and the first lines "portals: a draw of effect 321 …" - what the game makes
+  it of.
+
 # uaRO Graphics 2.7.50 — to check
 
 - **The new portal was still not drawn; the real cause is found.** The driver started each portal it noticed at
