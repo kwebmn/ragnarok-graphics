@@ -33,6 +33,12 @@ uint64_t fileSize(std::FILE* f) {
 
 bool readAt(std::FILE* f, uint64_t at, void* data, size_t n) { return seek(f, at) && std::fread(data, 1, n, f) == n; }
 
+bool copyAt(const std::string& bytes, uint64_t at, void* data, size_t n) {
+    if (at > bytes.size() || n > bytes.size() - at) return false;
+    if (n) std::memcpy(data, bytes.data() + at, n);
+    return true;
+}
+
 struct File {
     std::FILE* f = nullptr;
     ~File() {
@@ -57,6 +63,7 @@ std::string normalName(const std::string& name) {
 
 bool Index::open(const std::string& path, const std::function<bool(const std::string&)>& keep, std::string& error) {
     entries_.clear();
+    bytes_.reset();
     path_ = path;
     File file;
     file.f = std::fopen(path.c_str(), "rb");
@@ -64,11 +71,25 @@ bool Index::open(const std::string& path, const std::function<bool(const std::st
         error = "cannot open " + path;
         return false;
     }
-    const uint64_t size = fileSize(file.f);
+    return scan(fileSize(file.f), [&](uint64_t at, void* d, size_t n) { return readAt(file.f, at, d, n); }, keep,
+                error);
+}
+
+bool Index::openBytes(std::string bytes, const std::function<bool(const std::string&)>& keep, std::string& error) {
+    entries_.clear();
+    path_ = "the archive in memory";
+    bytes_ = std::make_shared<const std::string>(std::move(bytes));
+    const std::shared_ptr<const std::string> b = bytes_;
+    return scan(b->size(), [b](uint64_t at, void* d, size_t n) { return copyAt(*b, at, d, n); }, keep, error);
+}
+
+bool Index::scan(uint64_t size, const ReadAt& readAt, const std::function<bool(const std::string&)>& keep,
+                 std::string& error) {
+    const std::string& path = path_;
     // The end of the central directory: in the last 64 KB and 22 bytes (its comment at most 65535).
     const uint64_t tail = std::min<uint64_t>(size, 65557);
     std::vector<uint8_t> t(size_t(tail), 0);
-    if (tail < 22 || !readAt(file.f, size - tail, t.data(), t.size())) {
+    if (tail < 22 || !readAt(size - tail, t.data(), t.size())) {
         error = path + " is not a zip";
         return false;
     }
@@ -83,7 +104,7 @@ bool Index::open(const std::string& path, const std::function<bool(const std::st
     if ((count == 0xFFFF || dirSize == 0xFFFFFFFF || dirAt == 0xFFFFFFFF) && e >= 20 &&
         get32(&t[e - 20]) == 0x07064b50) {  // zip64: its locator before the end record, the record where it says
         uint8_t z[56];
-        if (!readAt(file.f, get64(&t[e - 20 + 8]), z, sizeof z) || get32(z) != 0x06064b50) {
+        if (!readAt(get64(&t[e - 20 + 8]), z, sizeof z) || get32(z) != 0x06064b50) {
             error = path + ": a damaged zip64 record";
             return false;
         }
@@ -109,7 +130,7 @@ bool Index::open(const std::string& path, const std::function<bool(const std::st
         const size_t take = size_t(std::min<uint64_t>(want, end - next));
         const size_t old = buf.size();
         buf.resize(old + take);
-        if (take && !readAt(file.f, next, buf.data() + old, take)) {
+        if (take && !readAt(next, buf.data() + old, take)) {
             buf.resize(old);
             return false;
         }
@@ -160,14 +181,17 @@ bool Index::read(const std::string& name, std::vector<uint8_t>& out, std::string
         return false;
     }
     File file;
-    file.f = std::fopen(path_.c_str(), "rb");
+    if (!bytes_) file.f = std::fopen(path_.c_str(), "rb");
+    const auto at = [&](uint64_t from, void* d, size_t n) {
+        return bytes_ ? copyAt(*bytes_, from, d, n) : file.f && readAt(file.f, from, d, n);
+    };
     uint8_t local[30];
-    if (!file.f || !readAt(file.f, en.local, local, sizeof local) || get32(local) != 0x04034b50) {
+    if (!at(en.local, local, sizeof local) || get32(local) != 0x04034b50) {
         error = name + ": its local header cannot be read";
         return false;
     }
     std::vector<uint8_t> data(size_t(en.compressed), 0);
-    if (!readAt(file.f, en.local + 30 + get16(local + 26) + get16(local + 28), data.data(), data.size())) {
+    if (!at(en.local + 30 + get16(local + 26) + get16(local + 28), data.data(), data.size())) {
         error = name + ": its data cannot be read";
         return false;
     }
