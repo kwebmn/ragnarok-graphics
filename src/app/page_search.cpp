@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <utility>
 
 #include "app/page.hpp"
@@ -45,6 +46,13 @@ public:
 
     void build(Panel& p) override {
         hits_ = findSettings(query_, host_.lang(), host_.mode());
+        const Machine machine = host_.model().machine();  // 2.15: what this computer cannot use is not found
+        hits_.erase(std::remove_if(hits_.begin(), hits_.end(),
+                                   [&](const Hit& h) {
+                                       return h.kind == HitKind::Ini &&
+                                              !fitsMachine(sectionKey(iniSettings()[h.index]), machine);
+                                   }),
+                    hits_.end());
         if (hits_.empty()) {
             p.heading(tf(Text::SearchNothing, {query_}));
             return;

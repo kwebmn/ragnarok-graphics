@@ -109,3 +109,22 @@ TEST(nav_resettable_views_are_made_of_rows) {
     CHECK(resettable(View::Ai, 0) && resettable(View::Ai, 1) && !resettable(View::Ai, 2));
     CHECK(!resettable(View::Main, 0) && !resettable(View::Service, 0) && !resettable(View::Screen, 0));
 }
+
+TEST(rows_hide_what_the_card_cannot_do) {
+    // 2.15: DLSS, frame generation and Reflex on NVIDIA cards only, HDR with an HDR screen only
+    Machine amd;
+    amd.vendor = 0x1002;
+    Machine rtx;
+    rtx.vendor = 0x10de;
+    rtx.hdr = true;
+    for (const char* k : {"quality.dlss", "quality.dlss_scale", "quality.dlss_width", "quality.dlss_height",
+                          "quality.dlss_model", "quality.dlss_jitter", "quality.dlss_motion", "frames.frame_generation",
+                          "frames.reflex"}) {
+        CHECK(!fitsMachine(k, amd));
+        CHECK(fitsMachine(k, rtx));
+    }
+    CHECK(!fitsMachine("display.hdr", amd));
+    CHECK(fitsMachine("display.hdr", rtx));
+    CHECK(fitsMachine("quality.msaa", amd));  // the rest everywhere
+    CHECK(fitsMachine("quality.dlss", Machine{}));  // no card known (no probe): nothing hidden for it
+}

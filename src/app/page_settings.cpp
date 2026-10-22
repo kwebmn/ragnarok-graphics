@@ -47,6 +47,7 @@ public:
                 if (key.compare(4, std::string::npos, regKey(reg[i])) == 0) return buildReg(p, i) != nullptr;
             return false;
         }
+        if (!fitsMachine(key, host_.model().machine())) return false;  // 2.15
         const std::vector<IniSetting>& all = iniSettings();
         for (size_t i = 0; i < all.size(); ++i)
             if (sectionKey(all[i]) == key) return buildOne(p, i) != nullptr;
@@ -399,7 +400,11 @@ private:
     }
 
     // A row of the part being built that the mode shows (2.6) and its values call for.
-    bool listed(const IniSetting& s) const { return s.page == which_ && levelOf(s) <= host_.mode() && shown(s); }
+    // 2.15: and this computer can use (fitsMachine: DLSS on NVIDIA, HDR with an HDR screen)
+    bool listed(const IniSetting& s) const {
+        return s.page == which_ && levelOf(s) <= host_.mode() && shown(s) &&
+               fitsMachine(sectionKey(s), host_.model().machine());
+    }
 
     // 2.4.2: DLSS's own size shows under Own size, its model with DLSS on
     bool shown(const IniSetting& s) const {

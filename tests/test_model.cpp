@@ -3,6 +3,7 @@
 #include "core/effect_groups.hpp"
 #include "core/settings/game_settings.hpp"
 #include "core/settings/ini_edit.hpp"
+#include "core/settings/navigation.hpp"
 #include "core/settings/reg_file.hpp"
 #include "fake_windows.hpp"
 #include "test.hpp"
@@ -749,4 +750,15 @@ TEST(model_safe_mode_and_switching_off) {
     CHECK_EQ(valueOf(w.files[fake::path(kIni)], "renderer.api"), std::string("system"));
     CHECK(m.setSwitchedOff(false, Lang::Uk).empty());
     CHECK_EQ(valueOf(w.files[fake::path(kIni)], "renderer.api"), std::string("auto"));
+}
+
+TEST(rows_follow_the_card_the_game_draws_on) {
+    // 2.15: a laptop's NVIDIA card and its Intel one - the DLSS rows follow the card the Render page chose
+    fake::Windows& w = fake::reset();
+    w.system.adapters.push_back(win::AdapterProbe{"NVIDIA GeForce RTX 4060 Laptop GPU", 0x10de, 8188, true, 0xc100});
+    w.system.adapters.push_back(win::AdapterProbe{"Intel(R) UHD Graphics", 0x8086, 128, true, 0xc100, 8192});
+    app::Model m;
+    CHECK(fitsMachine("quality.dlss", m.machine()));  // auto: the fast one
+    m.setToken(setting("renderer.gpu"), "Intel(R) UHD Graphics");
+    CHECK(!fitsMachine("quality.dlss", m.machine()));
 }

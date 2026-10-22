@@ -181,7 +181,10 @@ private:
             p.note(tf(Text::MainPack, {num((long long)s.pictures), sizeText(s.bytes, host_.lang())}));
         else
             p.note(tf(Text::PackWriting, {sizeText(s.bytes, host_.lang())}));
-        p.buttons({{kMakePack, t(Text::MainMakePack)}, {kAiMore, t(Text::MainMore)}});
+        if (host_.mode() == Mode::Developer)  // 2.15: the pack comes with the full client; making it is ours
+            p.buttons({{kMakePack, t(Text::MainMakePack)}, {kAiMore, t(Text::MainMore)}});
+        else
+            p.buttons({{kAiMore, t(Text::MainMore)}});
     }
 
     std::unique_ptr<Page> rows_;  // the schema's rows, built and changed as their pages do

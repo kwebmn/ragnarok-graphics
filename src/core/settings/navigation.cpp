@@ -171,6 +171,16 @@ Mode levelOf(const IniSetting& s) {
     return Mode::Detailed;
 }
 
+bool fitsMachine(const std::string& k, const Machine& m) {
+    static const char* const kNvidia[] = {"quality.dlss",        "quality.dlss_scale",  "quality.dlss_width",
+                                          "quality.dlss_height", "quality.dlss_model",  "quality.dlss_jitter",
+                                          "quality.dlss_motion", "frames.frame_generation", "frames.reflex"};
+    for (const char* n : kNvidia)
+        if (k == n) return m.vendor == 0 || m.vendor == 0x10de;
+    if (k == "display.hdr") return m.hdr;
+    return true;
+}
+
 bool resettable(View v, int tab) {
     return v == View::Graphics || v == View::Effects || v == View::Sound || (v == View::Ai && tab < 2);
 }

@@ -439,8 +439,9 @@ const Entry kTexts[] = {
     {"4×", "4×", "4×"},
     {"8×", "8×", "8×"},
     {"16×", "16×", "16×"},
-    {"64-bit renderer (test, for DLSS)", "64-бітний рендер (перевірка, для DLSS)",
-     "64-битный рендер (проверка, для DLSS)"},
+    {"64-bit renderer",
+     "64-бітний рендер",
+     "64-битный рендер"},
     {"Draws in a separate 64-bit process, uaro-render64.exe: DLSS and frame generation need it. The picture should "
      "look the same.",
      "Малює в окремому 64-бітному процесі uaro-render64.exe: він потрібен для DLSS і генерації кадрів. Картинка має "
@@ -3563,6 +3564,9 @@ const Entry kTexts[] = {
     {"The game's files were not updated: {1}. The game starts as it is.",
      "Файли гри не оновлено: {1}. Гра запуститься як є.",
      "Файлы игры не обновлены: {1}. Игра запустится как есть."},
+    {"The HD texture pack comes with the game's full client on uaro.kiev.ua.",
+     "Пакет HD-текстур іде разом із повним клієнтом гри на uaro.kiev.ua.",
+     "Пакет HD-текстур идёт вместе с полным клиентом игры на uaro.kiev.ua."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

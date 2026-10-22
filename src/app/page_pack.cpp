@@ -134,6 +134,11 @@ public:
             p.note(t(Text::PackCompactNote));
             compactLine_ = p.note(compactText() + L"\n ");
         }
+        // 2.15: making the pack is the developer's (it comes with the full client); a build under way shows
+        if (!developer && !running_) {
+            p.note(t(Text::PackFromClient));
+            return;
+        }
         p.gap();
         p.heading(t(Text::PackMakeHeading));
         p.note(t(Text::PackIntro));

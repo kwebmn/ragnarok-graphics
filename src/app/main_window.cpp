@@ -127,6 +127,12 @@ int MainWindow::run(HINSTANCE inst, int show) {
             SendMessageW(search_, EM_SETSEL, 0, -1);
             continue;
         }
+        if (msg.message == WM_KEYDOWN && msg.wParam == 'D' && GetKeyState(VK_CONTROL) < 0 &&
+            GetKeyState(VK_SHIFT) < 0) {  // 2.15: the Developer mode, whose button players do not see
+            developerShown_ = true;
+            setMode(Mode::Developer);
+            continue;
+        }
         if (IsDialogMessageW(hwnd_, &msg)) {  // Tab, arrows and Alt+letter between the controls
             if (msg.message == WM_KEYDOWN || msg.message == WM_SYSCHAR || msg.message == WM_CHAR) showFocused();
             continue;
@@ -372,8 +378,11 @@ void MainWindow::layout() {
         SendMessageW(ctl, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
     // 2.6: the modes, the search (what the rest leaves of 300), "Report a problem" and the language on the right
     int x = at(16);
-    for (HWND m : modes_) {
-        MoveWindow(m, x, at(11), at(100), at(30), TRUE);
+    for (int i = 0; i < kModeCount; ++i) {  // 2.15: the Developer mode's button while it is the mode, or Ctrl+Shift+D
+        const bool shown = Mode(i) != Mode::Developer || mode_ == Mode::Developer || developerShown_;
+        ShowWindow(modes_[i], shown ? SW_SHOW : SW_HIDE);
+        if (!shown) continue;
+        MoveWindow(modes_[i], x, at(11), at(100), at(30), TRUE);
         x += at(100) + at(2);
     }
     const int right = w - at(16 + 130 + 12 + 170 + 12);
@@ -542,6 +551,7 @@ void MainWindow::setMode(Mode m) {
     if (m == mode_) return;
     mode_ = m;
     model_->saveMode(m);
+    layout();  // 2.15: the Developer mode's button shows with its mode
     if (!listed(shown_)) {
         shown_ = viewsOf(m).front();
         tab_ = 0;

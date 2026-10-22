@@ -148,7 +148,8 @@ public:
         p.gap();
         p.note(t(Text::AiPackNote));  // 0.42
         // 1.5.8: a switch of its own - without the pack's pictures it makes them all anew and keeps none.
-        p.check(kGenerate, t(Text::AiGenerate), a.generate, t(Text::AiGenerateHint));
+        if (host_.mode() == Mode::Developer)  // 2.15: making pictures while playing is the developer's
+            p.check(kGenerate, t(Text::AiGenerate), a.generate, t(Text::AiGenerateHint));
         if (m.token(setting("renderer.api")) == "d3d11") p.note(t(Text::AiD3d11Note));  // 0.47
         p.note(t(Text::AfterRestart));
         if (!on) p.note(t(Text::AiOffNote));

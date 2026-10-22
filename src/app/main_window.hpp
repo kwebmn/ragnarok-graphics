@@ -106,6 +106,7 @@ private:
     int tab_ = 0;
     std::vector<int> listItems_;  // the list's entries: a View, or -1 for the "Developer only" heading
     HWND modes_[settings::kModeCount] = {};
+    bool developerShown_ = false;  // 2.15: Ctrl+Shift+D showed the Developer mode's button
     HWND report_ = nullptr;     // 2.13: «Звернення» and the number of new answers
     HWND search_ = nullptr;     // the search's field; its text, once taken, shows the search's page
     std::wstring query_;

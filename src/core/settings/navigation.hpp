@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "core/settings/auto_setup.hpp"
 #include "core/settings/schema.hpp"
 #include "core/settings/strings.hpp"
 
@@ -48,5 +49,8 @@ std::vector<std::string> simpleKeys();        // the rows of the Simple level
 std::vector<std::string> developerKeys();     // the rows of the Developer level
 // A view made of schema rows: "Reset the page to the recommended values" sets them.
 bool resettable(View v, int tab);
+// 2.15: a row this computer can use - DLSS, frame generation and Reflex on an NVIDIA card (the one the game draws
+// on), HDR with an HDR screen; a hidden row keeps its value. A card not known (no probe): none hidden for it.
+bool fitsMachine(const std::string& sectionKey, const Machine& m);
 
 }  // namespace uagfx::settings
