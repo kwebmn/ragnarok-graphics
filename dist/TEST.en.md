@@ -1,3 +1,21 @@
+# uaRO Graphics 2.7.54 — to check
+
+- **The new portal, made on the facts, is on again** ("New portal" ticked by default). The driver no longer draws a
+  portal of its own over the game's: the game's own draws of the warp (effect 321) are shaded anew where it draws
+  them. Two portals, or one off its place, cannot happen now.
+  - The rings are the game's: two sets of 4, flat at the edge, coming in to the middle and standing up as walls. Each
+    wall now has a crisp bright line along its top, lilac light down it and a fine circle where it meets the ground.
+  - The portal's floor is a lilac pool instead of the white haze: by day the paving under it is no longer burnt white.
+  - The sparks are crisp stars.
+  - All of it from the game's record (report R-FP2F4H) and the client's code: the rings' sizes, speed (0.05 a tick),
+    tilt, fades and pictures.
+- **The warp's light on what is around** ("Living portals"): a soft lilac light set exactly at the middle of the
+  portal's floor. The air's swirl is gone - it blurred the rings.
+- **The portals' record into the log is gone**: in 2.7.53 it blew the log up to 24 MB.
+- To check: at the door in Prontera by day and by night - one portal where it should be, the rings sharp and coming
+  in to the middle, the floor not white. The log has «portals: the warps shaded anew on …». If you do not like it,
+  untick "New portal" - the game's own portal comes back.
+
 # uaRO Graphics 2.7.53 — to check
 
 - **The new portal is off** ("New portal" unticked by default). Everyone has the game's own portal again, not two.
