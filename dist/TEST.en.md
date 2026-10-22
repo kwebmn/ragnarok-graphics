@@ -1,3 +1,18 @@
+# uaRO Graphics 2.7.56 — to check
+
+- **The portal is the game's own, at full resolution** (report R-9GC93H: the new and the old portal did not differ
+  at all). 2.7.55 recorded the warp's real pictures: the game's ring is a white band at the ground and a crown of
+  light spikes rising up the wall and turning blue. But the whole picture is 64 texels round a ring with 16 steps of
+  alpha - hence the blur. Now it is drawn anew by the same shapes at full resolution:
+  - the rings: a crisp white band at the ground and a crown of spikes (large, middle and fine), smooth edges, the
+    spikes gently breathing;
+  - the game's colours and brightness: white at the ground, blue spike tips;
+  - the floor: the same white haze, smooth, without its steps, a little less (80 %);
+  - the sparks: the game's.
+- **The warp's pictures are no longer written to the log** - they are in.
+- To check: at the door in Prontera by day and by night, crisp white rings with a crown of spikes instead of a blur,
+  recognisably the same portal. Compare by unticking and ticking "New portal".
+
 # uaRO Graphics 2.7.55 — to check
 
 - **The portal neater and closer to the game's** (report R-C6HFHG: make it neater and more like the original). In
