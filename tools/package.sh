@@ -19,7 +19,7 @@ out="build-win/uaro-graphics.zip"
 stage="build-win/package"
 python3 -I -B tools/check_text_names.py  # 2.15: every «name» in the texts is the interface's
 rm -rf "$out" "$stage"
-mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/notes" \
+mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/notes" \
          "$stage/uaro-graphics/defaults"
 cp dist/install.bat "$stage/"  # 2.10: the only .bat - an older update.bat runs it once (uaro-graphics.exe --install)
 # 2.8: the notes of "What is new" and the template ini in uaro-graphics\ - never uaro-graphics\uaro-graphics.ini,
@@ -31,11 +31,8 @@ cp build-win/ddraw.dll build-win/uaro-graphics.exe build-win64/uaro-render64.exe
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 # 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.
 cp dist/pad/uaro-pad.ini "$stage/uaro-graphics/defaults/"  # 2.9: uaRO Pad inside ddraw.dll, its template
-# AI textures: the neural network's model and its weak-denoise twin, mixed by [quality] ai_denoise (Real-ESRGAN,
-# BSD-3-Clause), and their licence.
-cp dist/ai/realesr-general-x4v3.bin dist/ai/realesr-general-wdn-x4v3.bin dist/ai/realesr-animevideov3.bin \
-   dist/ai/realesrgan-x4plus-anime-6b.bin \
-   dist/ai/LICENSE-Real-ESRGAN.txt "$stage/uaro-graphics/ai/"
+# 2.15: the AI textures' models are no part of the package (about 8 MB now): tools/models_package.py puts them in
+# release/uaro-graphics-models.zip, which an update brings when the AI textures are on (app/update_run).
 printf '%s build %s\r\n' "$version" "$(date '+%Y-%m-%d %H:%M')" > "$stage/uaro-graphics/version.txt"
 (cd "$stage" && zip -q -r "../uaro-graphics.zip" .)
 python3 tools/check_package.py "$out"

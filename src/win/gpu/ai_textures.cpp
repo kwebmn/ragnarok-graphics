@@ -143,9 +143,9 @@ bool AiTextures::loadNet(const std::string& dir, const std::string& token, int d
         std::ifstream f(dir + net.name + ".bin", std::ios::binary);
         const std::vector<uint8_t> file((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
         if (file.empty()) {
-            error = "no model " + dir + net.name + ".bin (" +
-                    (token == "gameai" ? "get-models.bat or the AI textures page downloads it"
-                                       : "update.bat installs it") + ")";
+            // 2.15: every model comes apart from the package now
+            error = "no model " + dir + net.name +
+                    ".bin (the settings app brings it: an update with the AI textures on, or the AI textures page)";
             return false;
         }
         if (!ai::parseRrdb(file, net.rrdbModel, error)) return false;

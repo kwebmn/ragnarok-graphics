@@ -2,11 +2,13 @@
 
 #include <map>
 
+#include "app/app_disk.hpp"
 #include "app/download.hpp"
 #include "app/files.hpp"
 #include "app/installer.hpp"
 #include "app/system.hpp"
 #include "app/text.hpp"
+#include "core/config.hpp"
 #include "core/layout.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/sha256.hpp"
@@ -206,13 +208,21 @@ bool installStaged(const std::wstring& dir, bool repair, const update::Manifest*
         return false;
     }
     installer::finishInstall(dir, true);
-    if (nvidiaHere()) {
+    // DLSS on an NVIDIA card; 2.15: the AI models (they left the package) when the AI textures are on - each when the
+    // site's version is not the one here (a failure leaves it as it was)
+    std::string ini;
+    readFile(ourFile(dir, layout::File::Ini), ini);
+    const bool nvidia = nvidiaHere(), ai = parseConfig(ini).ai.on();
+    if (nvidia || ai) {
         CheckResult asked;
         if (!site) asked = checkNow(dir);
         const update::Manifest* m = site ? site : asked.ok ? &asked.site : nullptr;
         const std::string dlss = firstLine(join(dir, L"uaro-graphics\\dlss\\version.txt"));
-        std::wstring dlssError;
-        if (m && !m->dlss.file.empty() && dlss != m->dlss.version) runDlss(dir, *m, report, dlssError);
+        const std::string models = firstLine(join(dir, L"uaro-graphics\\ai\\models-version.txt"));
+        std::wstring partError;
+        if (nvidia && m && !m->dlss.file.empty() && dlss != m->dlss.version) runDlss(dir, *m, report, partError);
+        if (ai && m && !m->models.file.empty() && models != m->models.version)
+            runModels(dir, *m, report, partError);
     }
     removeTree(work);
     Step done;

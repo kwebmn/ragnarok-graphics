@@ -18,10 +18,8 @@ EXPECTED = {"install.bat",  # 2.10: the only .bat - for an older update.bat, whi
             "uaro-graphics/defaults/uaro-graphics.ini", "uaro-graphics/version.txt", "uaro-graphics/uaro-render64.exe",
             "uaro-graphics/uaro-studio.exe",
             "uaro-graphics/dlss-version.txt", "uaro-graphics/models-version.txt", "uaro-graphics/remix/rtx.conf",
-            "uaro-graphics/ai/realesr-general-x4v3.bin", "uaro-graphics/ai/realesr-general-wdn-x4v3.bin",
-            "uaro-graphics/ai/realesr-animevideov3.bin", "uaro-graphics/ai/LICENSE-Real-ESRGAN.txt",
-            "uaro-graphics/ai/realesrgan-x4plus-anime-6b.bin",
             "uaro-graphics/defaults/uaro-pad.ini"}  # 2.9: uaRO Pad inside ddraw.dll, its template here
+# 2.15: the AI models are in release/uaro-graphics-models.zip, not here
 VERSION_CPP = Path(__file__).resolve().parent.parent / "src" / "core" / "version.cpp"
 
 

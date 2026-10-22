@@ -40,7 +40,7 @@ std::string section(const std::string& name, const std::string& file, const std:
 }
 
 // The site with release `v` (its zip in web), its update.ini parsed.
-update::Manifest site(const std::string& v, const std::string& dlss = "") {
+update::Manifest site(const std::string& v, const std::string& dlss = "", const std::string& models = "") {
     fake::Windows& w = fake::windows();
     const std::string file = "uaro-graphics-" + v + ".zip";
     w.web[file] = package(v);
@@ -48,6 +48,10 @@ update::Manifest site(const std::string& v, const std::string& dlss = "") {
     if (!dlss.empty()) {
         w.web["uaro-graphics-dlss-streamline-2.14.1.zip"] = dlss;
         text += section("dlss", "uaro-graphics-dlss-streamline-2.14.1.zip", dlss, "streamline 2.14.1");
+    }
+    if (!models.empty()) {  // 2.15
+        w.web["uaro-graphics-models-2.zip"] = models;
+        text += section("models", "uaro-graphics-models-2.zip", models, "models-2 1");
     }
     w.web["update.ini"] = text;
     update::Manifest m;
@@ -193,4 +197,27 @@ TEST(setup_installs_the_package_it_carries) {
     CHECK(w.folders.count(fake::path(L"uaro-graphics\\update")) == 0);
     std::wstring broken;
     CHECK(!app::runInstall(app::exeFolder(), zip.substr(0, zip.size() / 2), kGo, broken));
+}
+
+TEST(the_update_brings_the_models_when_ai_is_on) {
+    // 2.15: the package carries no AI models: an update brings them when the AI textures are on
+    fake::Windows& w = installed();
+    put(L"uaro-graphics\\uaro-graphics.ini", "[ai]\r\nenabled = 1\r\n");
+    const std::string models =
+        fixture::zipBytes({fixture::item("uaro-graphics/ai/realesr-general-x4v3.bin", "net"),
+                           fixture::item("uaro-graphics/ai/models-version.txt", "models-2 1\r\n")});
+    std::wstring error;
+    CHECK(app::runUpdate(app::exeFolder(), site("2.0.0", "", models), false, kGo, error));
+    CHECK_EQ(at(L"uaro-graphics\\ai\\realesr-general-x4v3.bin"), std::string("net"));
+    w.web.erase("uaro-graphics-models-2.zip");  // the same version here: not asked for again
+    CHECK(app::runUpdate(app::exeFolder(), site("2.0.1", "", models), false, kGo, error));
+    CHECK_EQ(at(L"uaro-graphics\\ai\\realesr-general-x4v3.bin"), std::string("net"));
+}
+
+TEST(the_update_leaves_the_models_when_ai_is_off) {
+    installed();
+    const std::string models = fixture::zipBytes({fixture::item("uaro-graphics/ai/realesr-general-x4v3.bin", "net")});
+    std::wstring error;
+    CHECK(app::runUpdate(app::exeFolder(), site("2.0.0", "", models), false, kGo, error));
+    CHECK_EQ(at(L"uaro-graphics\\ai\\realesr-general-x4v3.bin"), std::string("<none>"));
 }
