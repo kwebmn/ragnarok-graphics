@@ -22,20 +22,26 @@ struct Get {
     }
 };
 
-bool open(Get& g, const std::string& path, uint64_t range, std::string& error) {
+// 2.13: `body` - a POST of JSON instead of the GET (with the timeouts of the reports' POST since 0.51)
+bool open(Get& g, const std::string& path, uint64_t range, std::string& error, const std::string* body = nullptr) {
     g.session = WinHttpOpen(L"uaRO Graphics", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
                             WINHTTP_NO_PROXY_BYPASS, 0);
+    if (g.session && body) WinHttpSetTimeouts(g.session, 10000, 10000, 30000, 30000);
     g.connect = g.session ? WinHttpConnect(g.session, wide(update::kSite).c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0)
                           : nullptr;
     const std::wstring wpath = wide(path);
-    g.request = g.connect ? WinHttpOpenRequest(g.connect, L"GET", wpath.c_str(), nullptr, WINHTTP_NO_REFERER,
-                                               WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)
+    g.request = g.connect ? WinHttpOpenRequest(g.connect, body ? L"POST" : L"GET", wpath.c_str(), nullptr,
+                                               WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)
                           : nullptr;
-    const std::wstring header = range ? L"Range: bytes=" + std::to_wstring(range) + L"-" : L"";
+    const std::wstring header = body    ? L"Content-Type: application/json\r\nAccept: application/json\r\n"
+                                : range ? L"Range: bytes=" + std::to_wstring(range) + L"-"
+                                        : L"";
+    void* data = body ? const_cast<char*>(body->data()) : WINHTTP_NO_REQUEST_DATA;
+    const DWORD length = body ? DWORD(body->size()) : 0;
     DWORD size = sizeof g.status;
     const bool sent = g.request &&
-                      WinHttpSendRequest(g.request, range ? header.c_str() : WINHTTP_NO_ADDITIONAL_HEADERS,
-                                         range ? DWORD(-1L) : 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
+                      WinHttpSendRequest(g.request, header.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : header.c_str(),
+                                         header.empty() ? 0 : DWORD(-1L), data, length, length, 0) &&
                       WinHttpReceiveResponse(g.request, nullptr) &&
                       WinHttpQueryHeaders(g.request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
                                           WINHTTP_HEADER_NAME_BY_INDEX, &g.status, &size, WINHTTP_NO_HEADER_INDEX);
@@ -56,9 +62,11 @@ std::string filePath(const std::string& file) {
     return std::string(update::kFiles) + file + "?" + std::to_string(GetTickCount());
 }
 
-bool readAll(Get& g, std::string& out) {
+// false when the answer is longer than `most`
+bool readAll(Get& g, std::string& out, size_t most) {
     DWORD n = 0;
-    while (WinHttpQueryDataAvailable(g.request, &n) && n && out.size() < (64u << 10)) {
+    while (WinHttpQueryDataAvailable(g.request, &n) && n) {
+        if (out.size() + n > most) return false;
         std::string part(n, '\0');
         DWORD read = 0;
         if (!WinHttpReadData(g.request, &part[0], n, &read) || !read) break;
@@ -137,7 +145,7 @@ bool fetch(const std::string& file, std::string& out, std::string& error) {
     return fetchPath(filePath(file), out, error);
 }
 
-bool fetchPath(const std::string& path, std::string& out, std::string& error) {
+bool fetchPath(const std::string& path, std::string& out, std::string& error, size_t most) {
     out.clear();
     Get g;
     if (!open(g, path, 0, error)) return false;
@@ -145,7 +153,22 @@ bool fetchPath(const std::string& path, std::string& out, std::string& error) {
         error = std::string(update::kSite) + " answered " + std::to_string(g.status) + " for " + path;
         return false;
     }
-    return readAll(g, out);
+    if (!readAll(g, out, most)) {
+        error = std::string(update::kSite) + " answered more than " + std::to_string(most) + " bytes for " + path;
+        return false;
+    }
+    return true;
+}
+
+bool postPath(const std::string& path, const std::string& body, long& status, std::string& answer,
+              std::string& error) {
+    answer.clear();
+    status = 0;
+    Get g;
+    if (!open(g, path, 0, error, &body)) return false;
+    status = long(g.status);
+    readAll(g, answer, 64u << 10);
+    return true;
 }
 
 }  // namespace uagfx::app

@@ -34,6 +34,10 @@ constexpr const char* kRedirected = "uaro-graphics\\cache\\launcher-redirect.txt
 // removes it - «Звичайний режим»)
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
+// 2.13: «Звернення» (app/reports): the computer's random key - the site's reports belong to it, no login - and the
+// reports the site did not take yet (queued-*.json, sent at the app's next start)
+constexpr const char* kReports = "uaro-graphics\\reports";
+constexpr const char* kComputerKey = "uaro-graphics\\reports\\computer.txt";
 // The package's templates: a settings file that is not there yet starts from one of them (never at the settings'
 // own place - an older update.bat copies uaro-graphics\ of the archive over the installed one).
 constexpr const char* kIniTemplate = "uaro-graphics\\defaults\\uaro-graphics.ini";

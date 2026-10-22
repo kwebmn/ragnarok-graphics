@@ -168,20 +168,32 @@ bool canConfirm(const Conversation& c, const std::string& installedVersion) {
 }
 
 bool utcOf(const std::string& iso, Civil& out) {
+    // "YYYY-MM-DDTHH:MM:SS" and "Z", "+HH:MM" or "-HH:MM" (no sscanf: it brings getc into the app's imports)
+    size_t at = 0;
+    const auto number = [&](size_t digits, int& value) {
+        if (at + digits > iso.size()) return false;
+        value = 0;
+        for (size_t i = 0; i < digits; ++i, ++at) {
+            if (iso[at] < '0' || iso[at] > '9') return false;
+            value = value * 10 + (iso[at] - '0');
+        }
+        return true;
+    };
+    const auto mark = [&](char ch) { return at < iso.size() && iso[at++] == ch; };
     Civil c;
-    char sign = 0;
-    int oh = 0, om = 0, used = 0;
-    if (std::sscanf(iso.c_str(), "%4d-%2d-%2dT%2d:%2d:%2d%n", &c.year, &c.month, &c.day, &c.hour, &c.minute,
-                    &c.second, &used) != 6)
+    if (!number(4, c.year) || !mark('-') || !number(2, c.month) || !mark('-') || !number(2, c.day) || !mark('T') ||
+        !number(2, c.hour) || !mark(':') || !number(2, c.minute) || !mark(':') || !number(2, c.second))
         return false;
     if (c.month < 1 || c.month > 12 || c.day < 1 || c.day > daysIn(c.year, c.month) || c.hour > 23 || c.minute > 59)
         return false;
-    const std::string rest = iso.substr(size_t(used));
-    if (rest == "Z" || rest.empty()) {
+    if (at == iso.size() || (iso[at] == 'Z' && at + 1 == iso.size())) {
         out = c;
         return true;
     }
-    if (std::sscanf(rest.c_str(), "%c%2d:%2d", &sign, &oh, &om) != 3 || (sign != '+' && sign != '-')) return false;
+    const char sign = iso[at++];
+    int oh = 0, om = 0;
+    if ((sign != '+' && sign != '-') || !number(2, oh) || !mark(':') || !number(2, om) || at != iso.size())
+        return false;
     addMinutes(c, (sign == '+' ? -1 : 1) * (oh * 60 + om));
     out = c;
     return true;

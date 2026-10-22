@@ -85,6 +85,7 @@ ALLOWED = {
         "CoInitializeEx", "CoUninitialize",
         "CoCreateInstance", "CreateStreamOnHGlobal", "GetHGlobalFromStream",  # 1.8.1: screenshots for a report
         "CoTaskMemFree",  # 2.5.19: the palettes' folder
+        "CoCreateGuid",  # 2.13: the computer's key for «Звернення»
     },
     "winhttp.dll": {  # 0.49: the update check
         "WinHttpCloseHandle", "WinHttpConnect", "WinHttpOpen", "WinHttpOpenRequest", "WinHttpQueryDataAvailable",

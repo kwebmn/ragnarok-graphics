@@ -3,9 +3,12 @@
 #include <windows.h>
 
 #include <dxgi1_6.h>
+#include <objbase.h>
 #include <tlhelp32.h>
 
 #include <algorithm>
+#include <cstdint>
+#include <cstdio>
 
 #include "app/text.hpp"
 #include "core/settings/compat_flags.hpp"
@@ -208,5 +211,20 @@ void waitMs(unsigned ms) { Sleep(ms); }
 bool elevatedNow() { return runsElevated(); }
 
 void markOurStart() { SetEnvironmentVariableW(L"UARO_LAUNCHER", L"1"); }
+
+std::string randomKey() {
+    GUID g{};
+    if (FAILED(CoCreateGuid(&g))) {  // no RPC: the clock and the process, mixed (a key, not a secret)
+        g.Data1 = GetTickCount() ^ (GetCurrentProcessId() << 16);
+        g.Data2 = WORD(GetCurrentProcessId());
+        const uint64_t mixed = (uint64_t(GetTickCount()) * 0x9e3779b97f4a7c15ull) ^ uint64_t(uintptr_t(&g));
+        for (int i = 0; i < 8; ++i) g.Data4[i] = BYTE(mixed >> (8 * i));
+    }
+    char text[40];
+    std::snprintf(text, sizeof text, "%08lx%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x",
+                  static_cast<unsigned long>(g.Data1), g.Data2, g.Data3, g.Data4[0], g.Data4[1], g.Data4[2],
+                  g.Data4[3], g.Data4[4], g.Data4[5], g.Data4[6], g.Data4[7]);
+    return text;
+}
 
 }  // namespace uagfx::app

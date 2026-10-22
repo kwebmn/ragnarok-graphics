@@ -1,7 +1,6 @@
 #include "app/report_send.hpp"
 
 #include <windows.h>
-#include <winhttp.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -10,7 +9,9 @@
 #include <sstream>
 
 #include "app/app_disk.hpp"
+#include "app/download.hpp"
 #include "app/files.hpp"
+#include "app/reports.hpp"
 #include "app/shots.hpp"
 #include "app/text.hpp"
 #include "app/update_run.hpp"
@@ -31,32 +32,6 @@ std::string hresult(long hr) {
     char buf[16];
     std::snprintf(buf, sizeof buf, "0x%08lX", static_cast<unsigned long>(hr));
     return buf;
-}
-
-std::wstring sentFile(const Model& m) { return m.paths().dir + L"\\uaro-graphics\\reports.txt"; }
-
-struct Sent {
-    long long time = 0;
-    std::string code, reason;
-    bool automatic = false;
-};
-
-std::vector<Sent> readSent(const Model& m) {  // oldest first
-    std::vector<Sent> out;
-    std::string text;
-    if (!readFile(sentFile(m), text)) return out;
-    std::istringstream in(text);
-    std::string line;
-    while (std::getline(in, line)) {
-        std::istringstream l(line);
-        Sent s;
-        std::string kind;
-        if (l >> s.time >> s.code >> s.reason >> kind) {
-            s.automatic = kind == "auto";
-            out.push_back(s);
-        }
-    }
-    return out;
 }
 
 // A file of the game's folder for the report: its end, the Windows user name hidden; "" when there is none.
@@ -120,6 +95,7 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
     u.automatic = automatic;
     u.version = kVersion;
     u.comment = comment;
+    u.computer = computerKey(m.paths().dir);  // 2.13: the report comes back to «Звернення» of this computer
     std::string log;
     readFile(m.paths().log, log);
     // 2.6.12: the settings and the log as the disk has them now - the game's console writes the ini while this app
@@ -179,42 +155,13 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
 
 namespace {
 
-// A JSON body POSTed to uaro.kiev.ua's `path`: its status and answer, false when no answer came (`error` says why).
+// A JSON body POSTed to uaro.kiev.ua's `path` (2.13: app/download's postPath): its status and answer, false when no
+// answer came (`error` says why).
 bool postJson(const wchar_t* path, const std::string& body, DWORD& status, std::string& answer, std::string& error) {
-    HINTERNET session = WinHttpOpen(L"uaRO Graphics Settings", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if (session) WinHttpSetTimeouts(session, 10000, 10000, 30000, 30000);
-    HINTERNET connect = session ? WinHttpConnect(session, report::kHost, INTERNET_DEFAULT_HTTPS_PORT, 0) : nullptr;
-    HINTERNET request = connect ? WinHttpOpenRequest(connect, L"POST", path, nullptr, WINHTTP_NO_REFERER,
-                                                     WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)
-                                : nullptr;
-    const wchar_t* headers = L"Content-Type: application/json\r\nAccept: application/json\r\n";
-    status = 0;
-    DWORD size = sizeof status;
-    const bool sent = request &&
-                      WinHttpSendRequest(request, headers, DWORD(-1L), const_cast<char*>(body.data()),
-                                         DWORD(body.size()), DWORD(body.size()), 0) &&
-                      WinHttpReceiveResponse(request, nullptr) &&
-                      WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                                          WINHTTP_HEADER_NAME_BY_INDEX, &status, &size, WINHTTP_NO_HEADER_INDEX);
-    answer.clear();
-    if (sent) {
-        DWORD n = 0;
-        while (WinHttpQueryDataAvailable(request, &n) && n && answer.size() < (64u << 10)) {
-            std::string part(n, '\0');
-            DWORD read = 0;
-            if (!WinHttpReadData(request, &part[0], n, &read) || !read) break;
-            answer.append(part, 0, read);
-        }
-    }
-    if (request) WinHttpCloseHandle(request);
-    if (connect) WinHttpCloseHandle(connect);
-    if (session) WinHttpCloseHandle(session);
-    if (!sent) {
-        error = "no answer from uaro.kiev.ua (error " + std::to_string(GetLastError()) + ")";
-        return false;
-    }
-    return true;
+    long code = 0;
+    const bool answered = postPath(utf8(path), body, code, answer, error);
+    status = DWORD(code);
+    return answered;
 }
 
 }  // namespace
@@ -235,21 +182,10 @@ bool sendUpload(const report::Upload& u, std::string& code, std::string& error) 
 }
 
 void noteSent(const Model& m, const std::string& code, const std::string& reason, bool automatic) {
-    DeleteFileW((m.paths().dir + L"\\uaro-graphics\\crash.dmp").c_str());  // 0.52: on the site now
-    std::string text;
-    readFile(sentFile(m), text);
-    text += std::to_string(static_cast<long long>(std::time(nullptr))) + " " + code + " " + reason + " " +
-            (automatic ? "auto" : "manual") + "\n";
-    makeFolder(m.paths().dir + L"\\uaro-graphics");
-    writeFileAtomic(sentFile(m), report::tailOf(text, 16u << 10));
+    noteSentIn(m.paths().dir, code, reason, automatic);
 }
 
-std::vector<std::string> sentCodes(const Model& m, size_t most) {
-    const std::vector<Sent> all = readSent(m);
-    std::vector<std::string> out;
-    for (auto it = all.rbegin(); it != all.rend() && out.size() < most; ++it) out.push_back(it->code);
-    return out;
-}
+std::vector<std::string> sentCodes(const Model& m, size_t most) { return sentCodesIn(m.paths().dir, most); }
 
 namespace {
 
@@ -358,12 +294,10 @@ int watchGame(unsigned long pid) {
     if (reason.empty()) return 0;
     Model m;
     if (!m.now().config.reportAuto) return 0;  // turned off meanwhile
-    for (const Sent& s : readSent(m))
-        if (s.automatic && std::time(nullptr) - s.time < kAutoEvery) return 0;
-    std::string code, error;
-    if (!sendUpload(makeUpload(m, reason, true, "", {}), code, error)) return 1;
-    noteSent(m, code, reason, true);
-    return 0;
+    if (std::time(nullptr) - lastAutomaticIn(m.paths().dir) < kAutoEvery) return 0;
+    // 2.13: kept for later when the site does not answer (app/reports), and in the tester's «Звернення»
+    const NewReport r = sendNew(m.paths().dir, makeUpload(m, reason, true, "", {}));
+    return r.code.empty() && !r.queued ? 1 : 0;
 }
 
 }  // namespace uagfx::app

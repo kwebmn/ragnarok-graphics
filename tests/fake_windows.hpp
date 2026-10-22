@@ -27,6 +27,14 @@ struct Windows {
     // closed by the first one)
     std::map<std::string, std::string> web;
     int waits = 0;
+    // 2.13: the site's POSTs (app/download postPath): a path's status and answer - none there: no answer came; what
+    // was posted; the keys randomKey made
+    struct Post {
+        std::string path, body;
+    };
+    std::map<std::string, std::pair<long, std::string>> postAnswers;
+    std::vector<Post> posts;
+    int keys = 0;
     // 2.11: what was started (launch's file), and whether this process marked it as ours (UARO_LAUNCHER)
     std::vector<std::wstring> launched;
     bool marked = false;

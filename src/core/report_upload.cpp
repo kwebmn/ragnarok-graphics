@@ -76,7 +76,9 @@ std::string uploadJson(const Upload& u) {
     field(out, "gpu", u.gpu.substr(0, 200));
     field(out, "windows", u.windows.substr(0, 64));
     field(out, "api", u.api.substr(0, 16));
-    field(out, "comment", u.comment.substr(0, 2000));
+    field(out, "comment", u.comment.substr(0, kMostComment));
+    if (!u.computer.empty()) field(out, "computer", u.computer);
+    if (!u.kind.empty()) field(out, "kind", u.kind);
     field(out, "report", u.report);
     out += "\"files\":[";
     for (size_t i = 0; i < u.files.size(); ++i) {

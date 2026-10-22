@@ -22,7 +22,11 @@ struct Upload {
     std::string dump;  // 0.52: uaro-graphics\crash.dmp's bytes (win/crash.cpp), "" none
     // 1.8.1: name -> a JPEG's bytes - the player's screenshots of the last day (app/shots.hpp), when asked
     std::vector<std::pair<std::string, std::string>> shots;
+    // 2.13: «Звернення» - the computer's random key (its reports come back to it, app/reports) and what the player
+    // says it is: "graphics", "crash", "slow", "other"; "" leaves them out
+    std::string computer, kind;
 };
+constexpr size_t kMostComment = 4000;  // 2.13 (2000 before): bytes of the player's words
 constexpr size_t kMostShots = 6;
 constexpr size_t kMostDump = 2u << 20;  // a bigger one stays at home
 constexpr size_t kMostImages = 64;

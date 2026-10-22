@@ -25,6 +25,20 @@ TEST(report_upload_json_has_the_sites_fields) {
     CHECK(j.front() == '{' && j.back() == '}');
 }
 
+TEST(report_upload_names_the_computer_and_the_kind) {
+    // 2.13: «Звернення» - the computer's key (its reports come back to it) and what the player says it is.
+    Upload u;
+    CHECK(uploadJson(u).find("\"computer\"") == std::string::npos);
+    CHECK(uploadJson(u).find("\"kind\"") == std::string::npos);
+    u.computer = "0123456789abcdef0123456789abcdef";
+    u.kind = "slow";
+    u.comment = std::string(3000, 'a');  // longer than before 2.13 (2000)
+    const std::string j = uploadJson(u);
+    CHECK(j.find("\"computer\":\"0123456789abcdef0123456789abcdef\"") != std::string::npos);
+    CHECK(j.find("\"kind\":\"slow\"") != std::string::npos);
+    CHECK(j.find(std::string(3000, 'a')) != std::string::npos);
+}
+
 TEST(report_upload_sends_the_missing_pictures) {
     // 0.52: BMPs as base64; anything else, or past the count, is left out.
     CHECK(base64("") == "" && base64("M") == "TQ==" && base64("Ma") == "TWE=" && base64("Man") == "TWFu");

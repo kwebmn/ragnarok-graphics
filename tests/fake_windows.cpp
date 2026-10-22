@@ -272,14 +272,37 @@ bool download(const std::string& file, const std::wstring& to,
     return true;
 }
 
-bool fetchPath(const std::string& path, std::string& out, std::string& error) {
+bool fetchPath(const std::string& path, std::string& out, std::string& error, size_t most) {
     const auto it = windows().web.find(path);
     if (it == windows().web.end()) {
         error = "no answer from uaro.kiev.ua";
         return false;
     }
+    if (it->second.size() > most) {
+        error = "uaro.kiev.ua answered more than " + std::to_string(most) + " bytes";
+        return false;
+    }
     out = it->second;
     return true;
+}
+
+bool postPath(const std::string& path, const std::string& body, long& status, std::string& answer,
+              std::string& error) {
+    windows().posts.push_back({path, body});
+    const auto it = windows().postAnswers.find(path);
+    if (it == windows().postAnswers.end()) {
+        error = "no answer from uaro.kiev.ua";
+        return false;
+    }
+    status = it->second.first;
+    answer = it->second.second;
+    return true;
+}
+
+std::string randomKey() {  // a new one each time, as a GUID
+    char text[40];
+    std::snprintf(text, sizeof text, "%032x", ++windows().keys);
+    return text;
 }
 
 bool fetch(const std::string& file, std::string& out, std::string& error) {
