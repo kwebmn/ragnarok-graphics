@@ -106,6 +106,8 @@ bool Renderer11::ensureMaterial(Texture& t, ID3D11ShaderResourceView* source) {
         c.uiPixels[3] = float(sourceLevels);
         c.sourceRect[0] = float(sw);
         c.sourceRect[1] = float(sh);
+        c.sourceRect[2] = float(t.width);  // 2.7.58: the game's own size (its windows)
+        c.sourceRect[3] = float(t.height);
         c.sourceClamp[0] = c.sourceClamp[1] = c.sourceClamp[2] = 1.0f;  // 2.3: as built (the studio's on D3D12)
         setConstants(c);
         ctx_->PSSetShaderResources(0, 1, &source);

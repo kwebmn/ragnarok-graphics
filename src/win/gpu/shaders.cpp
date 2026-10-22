@@ -2219,10 +2219,12 @@ float4 material_ps(PresentOut i) : SV_Target {
     float lum = dot(rgb, float3(0.299, 0.587, 0.114));
     float gloss = min(saturate((0.22 - sat) * 4.0) * smoothstep(0.2, 0.6, lum) * 0.7 * sourceClamp.x, 0.7);
     // 1.21: a window's pane - an even patch clearly darker than the wall about it: alpha 0.75-1 (gloss stays under
-    // 0.7), lit at night by shade()
+    // 0.7), lit at night by shade(). 2.7.58 (R-JSBTFQ: a guild's emblem on its flag lit in warm blocks at night - its
+    // black rider an even dark patch on a light field): none in a picture under 64 texels a side (sourceRect.zw the
+    // game's own size, the AI's copy four times it) - an emblem's 24 in 32, a house's walls 128 and more
     float local = matLuma(p >> 2, base + 2), wide = matLuma(p >> 4, base + 4);
     float pane = smoothstep(0.1, 0.2, wide - local) * smoothstep(0.35, 0.22, local) *
-                 smoothstep(0.08, 0.03, abs(lum - local));
+                 smoothstep(0.08, 0.03, abs(lum - local)) * step(64.0, min(sourceRect.z, sourceRect.w));
     if (pane > 0.3 && sourceClamp.x > 0.0) gloss = 0.75 + 0.25 * pane;
     return float4(n.xy * 0.5 + 0.5, saturate(0.5 + h / weights * 1.6 * sourceClamp.z), gloss);
 }

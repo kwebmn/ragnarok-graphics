@@ -87,6 +87,8 @@ bool Renderer::Impl::ensureMaterial(uint32_t id, Texture& t, bool fromAi) {
         c.uiPixels[3] = float(sourceLevels);
         c.sourceRect[0] = float(sw);
         c.sourceRect[1] = float(sh);
+        c.sourceRect[2] = float(t.width);  // 2.7.58: the game's own size (its windows)
+        c.sourceRect[3] = float(t.height);
         pack::MaterialScales scales;  // 2.3: uaRO Studio's material of this texture ('#' lines), 1 as built
         if (ai) ai->materialScales(id, scales);
         c.sourceClamp[0] = scales.gloss;
