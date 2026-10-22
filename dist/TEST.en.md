@@ -1,3 +1,26 @@
+# uaRO Graphics 2.8.0 — what to check
+
+- **Our files are out of the game's folder.** Everything of uaRO Graphics is in the `uaro-graphics` folder now: the
+  settings (`uaro-graphics\uaro-graphics.ini`), the logs (`logs`), the shader cache (`cache`), the texture pack
+  (`textures\uaro-textures.zip`), the settings' copies (`backup`), the client's dgVoodoo (`dgvoodoo`), the notes of
+  «Що нового» (`notes`). The root keeps, of ours, `ddraw.dll`, `uaro-graphics.exe` and with the pad `dinput.dll`; the
+  .bat files go in the next phase, the pad's files when the pad moves inside uaRO Graphics. `uaro-flags.grf` is the
+  client's file now and stays where it is.
+- **The move is automatic.** At the first start of the game or the settings app on 2.8.0 the old files move; the
+  settings, the copies and the pack are kept. A file that cannot move (a game under Program Files, a pack being built)
+  keeps working where it is.
+- **Logs.** The previous game's log stays beside it (`uaro-graphics.prev.log`) and goes into a report. A log over
+  32 MiB starts a new part; the game's start stays in `uaro-graphics.1.log`.
+- What to check after updating from 2.7.58 with «Оновити зараз», starting the settings app and the game:
+  1. the root has none of our `uaro-graphics.ini`, logs, `uaro-graphics-pipelines.txt`, `uaro-textures.zip`,
+     `uaro-graphics-backup`, `dgvoodoo`, `TEST.*.md`;
+  2. the settings are the same (quality, effects, the pad);
+  3. HD textures are there, uaRO Studio sees the pack;
+  4. `uaro-graphics\logs` has the logs, after the game's second start also `uaro-graphics.prev.log`;
+  5. «Що нового в 2.8.0» opens, «Повідомити про проблему» sends a report;
+  6. «Сервіс» restores a copy of the settings made before the update;
+  7. uninstall.bat puts dgVoodoo back.
+
 # uaRO Graphics 2.7.58 — to check
 
 - **Guild emblems without beige blotches at night** (report R-JSBTFQ). "Windows at night" looks for panes in the
