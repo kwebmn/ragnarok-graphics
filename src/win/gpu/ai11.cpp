@@ -16,6 +16,7 @@
 #include "core/sprite_exe.hpp"
 #include "core/webp_image.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::gpu {
 namespace {
@@ -84,13 +85,13 @@ bool Ai11::start(const std::string& gameDir, const AiSettings& s, std::string& e
         return false;
     }
     dump_.setGameDir(gameDir);
-    const std::string packPath = gameDir + "\\uaro-textures.zip";
+    const std::string packPath = win::ourFile(gameDir, layout::File::Pack);  // 2.8: uaro-graphics\textures
     std::string why;
     if (!pack_.open(packPath, why) && GetFileAttributesA(packPath.c_str()) != INVALID_FILE_ATTRIBUTES)
         LOG_ERROR("AI textures: the texture pack cannot be read (%s)", why.c_str());
     if (!pack_.isOpen()) {
-        error = "no texture pack (uaro-textures.zip) in the game's folder - there is nothing to show (its builder is "
-                "on the Texture pack page of the settings)";
+        error = "no texture pack (uaro-graphics\\textures\\uaro-textures.zip) - there is nothing to show (it comes "
+                "with the full client; its builder is on the Texture pack page of the settings)";
         return false;
     }
     std::vector<uint8_t> index;

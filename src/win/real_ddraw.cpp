@@ -1,5 +1,8 @@
 #include "win/real_ddraw.hpp"
 
+#include "core/layout_migration.hpp"
+#include "win/disk.hpp"
+
 #include <string>
 
 #include "core/effect_groups.hpp"
@@ -56,13 +59,19 @@ HMODULE loadSystem() {
 Startup decide() {
     Startup s;
     const std::string dir = gameDir();
+    // 2.8: a 2.x install's files into uaro-graphics\ before anything reads them (core/layout_migration)
+    WinDisk disk;
+    const std::vector<std::string> moved = layout::migrate(dir, disk);
     std::string ini;
-    const bool haveIni = readTextFile(dir + "\\uaro-graphics.ini", ini);
+    const std::string iniPath = ourFile(dir, layout::File::Ini);
+    const bool haveIni = readTextFile(iniPath, ini);
     s.config = parseConfig(ini);
-    wlog::open(dir + "\\uaro-graphics.log", s.config.logLevel);
+    wlog::open(layout::join(dir, layout::now(layout::File::DriverLog)), s.config.logLevel);
     installCrashHandler(dir);  // 0.52: where a crash happened, and a minidump
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
-    LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? "uaro-graphics.ini" : "no uaro-graphics.ini, defaults",
+    for (const std::string& line : moved) LOG_INFO("%s", line.c_str());
+    makeFolders(layout::join(dir, layout::kCache));
+    LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? iniPath.c_str() : "no uaro-graphics.ini, defaults",
              apiToken(s.config.api), displayModeToken(s.config.mode));
     LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%, sharpen = %d",
              s.config.highResolution ? 1 : 0, uiFilterToken(s.config.uiFilter), s.config.renderScale, s.config.sharpen);

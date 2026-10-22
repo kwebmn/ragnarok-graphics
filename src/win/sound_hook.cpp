@@ -86,7 +86,7 @@ void readSettings() {
     if (g_read) return;
     g_read = true;
     std::string text;
-    if (readTextFile(gameDir() + "\\uaro-graphics.ini", text)) g_set = parseConfig(text).sound;
+    if (readTextFile(ourFile(layout::File::Ini), text)) g_set = parseConfig(text).sound;
     audio::configure(g_set.engine, g_set.reverb, g_set.background, g_set.limiter, g_set.headphones);  // 1.1, 1.2
 }
 

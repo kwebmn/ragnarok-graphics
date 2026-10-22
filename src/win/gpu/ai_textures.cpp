@@ -215,7 +215,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
         if (!selfTest(int(i), error)) return false;
     const ULONGLONG tested = GetTickCount64() - t0;
     // 0.42: the texture pack - read by the I/O thread, looked up here; 0.48: the only place of the pictures.
-    packPath_ = gameDir + "\\uaro-textures.zip";
+    packPath_ = win::ourFile(gameDir, layout::File::Pack);  // 2.8: uaro-graphics\textures
     dump_.setGameDir(gameDir);
     const bool packThere = GetFileAttributesA(packPath_.c_str()) != INVALID_FILE_ATTRIBUTES;
     std::string packError;
@@ -223,8 +223,8 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     if (s.enabled && !pack_->open(packPath_, packError) && packThere)
         LOG_ERROR("AI textures: the texture pack cannot be read (%s)", packError.c_str());
     if (!pack_->isOpen() && !generate_) {
-        error = "no texture pack (uaro-textures.zip) in the game's folder - its builder is on the Texture pack page of "
-                "the settings";
+        error = "no texture pack (uaro-graphics\\textures\\uaro-textures.zip) - it comes with the full client; its "
+                "builder is on the Texture pack page of the settings";
         return false;
     }
     std::vector<uint8_t> index;
@@ -284,7 +284,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     else if (!s.enabled)
         LOG_INFO("AI textures: the texture pack is not read - its pictures are off, the network makes them all");
     else
-        LOG_INFO("AI textures: no texture pack (uaro-textures.zip) in the game's folder yet");
+        LOG_INFO("AI textures: no texture pack (uaro-graphics\\textures\\uaro-textures.zip) yet");
     WIN32_FILE_ATTRIBUTE_DATA old{};
     if (GetFileAttributesExA((gameDir + "\\upscaled.grf").c_str(), GetFileExInfoStandard, &old))
         LOG_INFO("AI textures: upscaled.grf (%llu MB) is not used any more - the Ready textures page of the settings "

@@ -171,7 +171,7 @@ bool Context::open(std::string& error) {
     const bool d3d11 = startup().choice.api == Api::D3d11;
     if (d3d11) {
         std::string why;
-        const std::string shaders = gameDir() + "\\uaro-graphics\\shaders-d3d11.bin";
+        const std::string shaders = ourFile(layout::File::ShadersD3d11);
         bool made = false;
         if (config.renderThread) {  // 2.5.12 (test): on a thread of its own - the game's thread only writes frames down
             gpu::BridgeOptions o;
@@ -240,7 +240,7 @@ bool Context::open(std::string& error) {
         else
             LOG_ERROR("bridge: %s; drawing in the game's process", why.c_str());
     }
-    r->setShaderCache(gameDir() + "\\uaro-graphics\\shaders-32.bin");  // 0.39.5
+    r->setShaderCache(ourFile(layout::File::Shaders32));  // 0.39.5; 2.8: uaro-graphics\cache
     if (!remote && !r->create(error)) {
         delete r;
         return false;
@@ -255,7 +255,7 @@ bool Context::open(std::string& error) {
         LOG_INFO("Direct3D 11: every draw with the one shader for every state ([debug] shader_variants = 0)");
     if (!config.mergeDraws && !renderer->remote())  // 2.5: Direct3D 12 in this process gathers them too
         LOG_INFO("each of the game's draws by itself ([debug] merge_draws = 0)");
-    renderer->preparePipelines(gameDir() + "\\uaro-graphics-pipelines.txt");
+    renderer->preparePipelines(ourFile(layout::File::Pipelines));
     LOG_INFO("%s renderer on %s", d3d11 ? "Direct3D 11" : "Direct3D 12", renderer->adapterName().c_str());
     fpsShown_ = config.fpsCounter;  // 0.54
     fps_.setLabel(std::string(d3d11 ? "Direct3D 11" : "Direct3D 12") + (config.dlss != "off" ? " + DLSS" : ""));
@@ -488,7 +488,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                          GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F11) < 0;
     if (fpsKey_.pressed(fpsDown)) {  // 2.2.1: written too - the console, the settings and the next start see it
         fpsShown_ = !fpsShown_;
-        if (editIniFile(gameDir() + "\\uaro-graphics.ini", {{"frames", "fps_counter", fpsShown_ ? "1" : "0"}})) {
+        if (editIniFile(ourFile(layout::File::Ini), {{"frames", "fps_counter", fpsShown_ ? "1" : "0"}})) {
             config.fpsCounter = fpsShown_;  // what the file says now: not taken for a change of it
             LOG_INFO("frame counter: %s (Ctrl+Shift+F11)", fpsShown_ ? "on" : "off");
         }
@@ -499,7 +499,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                           GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F9) < 0;
     if (xrayKey_.pressed(xrayDown)) {
         const bool on = !config.xray;
-        if (editIniFile(gameDir() + "\\uaro-graphics.ini", {{"debug", "xray", on ? "1" : "0"}})) {
+        if (editIniFile(ourFile(layout::File::Ini), {{"debug", "xray", on ? "1" : "0"}})) {
             config.xray = on;
             LOG_INFO("X-ray: %s (Ctrl+Shift+F9)", on ? "on" : "off");
         }
@@ -637,7 +637,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (comparing != consoleOff_) {
         consoleOff_ = comparing;
         std::string text;
-        readTextFile(gameDir() + "\\uaro-graphics.ini", text);
+        readTextFile(ourFile(layout::File::Ini), text);
         if (!comparing.empty()) {  // 2.2: after the set and the groups - the switch as it comes out, then off
             EffectSettings file = parseConfig(text).effects;
             for (int g = 0; g < kEffectGroups; ++g)  // a group held: all of it off
@@ -695,7 +695,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     fps_.setGpu(timed ? &gpuNow : nullptr);
     fps_.present(window, fpsShown_);
     noteUsage(foreground, out.cx, out.cy, timed ? &gpuNow : nullptr);  // 2.2.1
-    if (console_.present(window, foreground, gameDir() + "\\uaro-graphics.ini", config, map_,
+    if (console_.present(window, foreground, ourFile(layout::File::Ini), config, map_,
                          timed ? &gpuNow : nullptr)) {  // 1.9.3; 2.6.22: the map for «Только на этой карте»
         settingsChecked_ = 0;  // read at once, at the next present
         settingsKnown_ = false;
@@ -756,7 +756,7 @@ void Context::watchSettings() {
     const uint64_t now = GetTickCount64();
     if (settingsChecked_ && now - settingsChecked_ < 1000) return;
     settingsChecked_ = now;
-    const std::string path = gameDir() + "\\uaro-graphics.ini";
+    const std::string path = ourFile(layout::File::Ini);
     WIN32_FILE_ATTRIBUTE_DATA a{};
     if (!GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &a)) return;  // no file: the defaults stay
     const uint64_t size = (uint64_t(a.nFileSizeHigh) << 32) | a.nFileSizeLow;

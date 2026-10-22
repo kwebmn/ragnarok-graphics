@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "core/layout.hpp"
 #include "core/settings/ini_edit.hpp"
 
 namespace uagfx::win {
@@ -11,6 +12,11 @@ namespace uagfx::win {
 std::string gameDir();               // folder of the game's exe, no trailing backslash
 std::string systemDir();             // System32; SysWOW64 for our 32-bit process on 64-bit Windows
 std::string modulePath(HMODULE m);   // "" when m is null
+// 2.8: a file of ours (core/layout) in a game's folder: where 2.8 keeps it, or where 2.x kept it when it could not
+// move (a game under Program Files, a pack held open)
+std::string ourFile(const std::string& gameDir, layout::File f);
+std::string ourFile(layout::File f);  // in this game's folder
+bool makeFolders(const std::string& path);  // 2.8: with every level above it; true when it is there
 bool fileExists(const std::string& path);
 // 2.3: a file's size and last write time (Unix seconds) - uaRO Studio's catalog knows the game's archives by them
 bool fileStamp(const std::string& path, uint64_t& size, int64_t& time);

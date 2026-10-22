@@ -15,6 +15,22 @@ std::string gameDir() {
     return slash == std::string::npos ? "." : exe.substr(0, slash);
 }
 
+std::string ourFile(const std::string& gameDir, layout::File f) {
+    const auto there = [](const std::string& p) { return GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES; };
+    return layout::locate(gameDir, f, there);
+}
+
+std::string ourFile(layout::File f) { return ourFile(gameDir(), f); }
+
+bool makeFolders(const std::string& path) {
+    for (size_t at = path.find('\\', 3);; at = path.find('\\', at + 1)) {  // past "C:\"
+        CreateDirectoryA(path.substr(0, at).c_str(), nullptr);
+        if (at == std::string::npos) break;
+    }
+    const DWORD a = GetFileAttributesA(path.c_str());
+    return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY);
+}
+
 std::string systemDir() {
     char dir[MAX_PATH];
     const UINT n = GetSystemDirectoryA(dir, MAX_PATH);
