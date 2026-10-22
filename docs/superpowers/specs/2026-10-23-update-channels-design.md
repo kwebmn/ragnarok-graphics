@@ -1,6 +1,6 @@
 # Update channels on GitHub - design
 
-Status: proposed 2026-10-23, waiting for the user's approval. It changes two decisions of the beta design
+Status: approved 2026-10-23 («делай, и делай все остальное без остановки»). It changes two decisions of the beta design
 (`2026-10-22-beta-release-design.md`): 4 (no channels) and 14 (updates from uaro.kiev.ua).
 
 ## Intent

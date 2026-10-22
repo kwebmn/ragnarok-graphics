@@ -17,7 +17,7 @@ console windows, no .bat.
 | 1 | Our files in the game's root | `ddraw.dll`, `uaro-graphics.exe`; with the pad also `dinput.dll` |
 | 2 | 64-bit renderer | on by itself where Direct3D 12 and 64-bit Windows are |
 | 3 | HD texture pack | the big pack ships with the full client |
-| 4 | Update channels | none: every release goes to everyone at once (so rollback matters) |
+| 4 | Update channels | 2026-10-23: two - «Реліз» (branch `main`, every player) and «Бета» (branch `beta`, the testers); see `2026-10-23-update-channels-design.md` |
 | 5 | Report when the game crashes | asked at the first start, «Так» preselected |
 | 6 | Beta number | 3.0.0-beta.1 |
 | 7 | Screenshot watermark | `data\texture\scr_logo.bmp` («uaro.kiev.ua») in the new full client and as the first patch |
@@ -27,7 +27,7 @@ console windows, no .bat.
 | 11 | Code signing | none; instructions for SmartScreen and antivirus |
 | 12 | Answers to reports | the user in the site's admin; Claude drafts answers and sets «Виправлено в X» at a release |
 | 13 | `uaRO.exe` started directly | the launcher page «Гра» first; «Запускати гру одразу» turns that off |
-| 14 | Where updates come from | uaro.kiev.ua: the newest version and the release archives themselves |
+| 14 | Where updates come from | 2026-10-23: GitHub (raw files of the channel's branch); the game's own files through uaro.kiev.ua |
 | 15 | Contact field in a report | none: the conversation in the app only |
 | 16 | Desktop shortcut | the installer replaces the game's with «uaRO» (the launcher) |
 | 17 | Patcher of the game's files | yes, its own phase before the closed round |
