@@ -1161,9 +1161,18 @@ float4 night_ps(PresentOut i) : SV_Target {
     c = max(lerp(float3(grey, grey, grey), c, 1.0 + sourceRect.w), 0.0);
     c += (c * 1.3 + float3(0.10, 0.11, 0.15)) * sourceRect.x;  // 0.80: a flash of lightning
     float l = dot(c, float3(0.2126, 0.7152, 0.0722));
+    float hi = max(c.r, max(c.g, c.b)), lo = min(c.r, min(c.g, c.b));
+    float sat = (hi - lo) / max(hi, 1e-3);
+    // 2.7.57 (R-ZPEV4V, the guild emblems on the flags grey at night; the user: «днём всё хорошо ... надо как-то
+    // продумать, чтобы не портились так сильно картинки»): a vivid colour - an emblem, a flag, a dress, a flower -
+    // keeps its hue in the dark (85 % of its colour under a pale silver), darkened as all is; the dull ground, stone
+    // and walls as before
+    float vivid = smoothstep(0.35, 0.75, sat) * smoothstep(0.08, 0.2, hi);
     // 2.7.16: deeper past the whole night (footprint 0-1, «Глибока ніч»): 45 % of the light down to 25 % (2.7.17, the
     // user's choice: 16 % was black)
-    float3 night = lerp(float3(l, l, l), c, 0.55) * float3(0.55, 0.68, 1.0) * lerp(0.45, 0.25, saturate(footprint));
+    float3 night = lerp(float3(l, l, l), c, lerp(0.55, 0.85, vivid)) *
+                   lerp(float3(0.55, 0.68, 1.0), float3(0.80, 0.85, 1.0), vivid) *
+                   lerp(0.45, 0.25, saturate(footprint));
     // 2.7.18, moonlight (twinH its strength, 0-2). 2.7.19 (the user: «луна должна светить и карта должна быть яркой
     // от лунного света», 2.7.18's about 30 % of the day's light «не играбельно»): the night's main light - the map
     // bright under it, silver-blue and muted, about 60 % of the day's light (the deep night's about 53 %); never
@@ -1185,13 +1194,12 @@ float4 night_ps(PresentOut i) : SV_Target {
     // 2.7.47 (the user: «хотелось бы, чтобы ... в лунном луче цвета нормальными становились»): in a beam's middle the
     // colours come back - 60 % of them, not 35 %, and the silver less blue (as bright: its luminance kept)
     float3 tint = lerp(float3(0.62, 0.74, 1.0), float3(0.662, 0.740, 0.871), beam);
-    float3 moon = lerp(float3(l, l, l), c, 0.35 + 0.25 * beam) * tint * lerp(0.82, 0.72, saturate(footprint)) * twinH *
-                  lift;
+    float3 moon = lerp(float3(l, l, l), c, lerp(0.35 + 0.25 * beam, 0.85, vivid)) *
+                  lerp(tint, float3(0.85, 0.90, 1.0), vivid) * lerp(0.82, 0.72, saturate(footprint)) * twinH * lift;
     night = min(max(night, moon), max(c, float3(l, l, l)));
     // 2.7.17: what stays bright is a light - a fire's, a lamp's, a spell's colour - not a white flower, pale hair or
     // stone: under «Глибока ніч» the meadow's flowers stood out of the dark as stars on the ground
-    float hi = max(c.r, max(c.g, c.b)), lo = min(c.r, min(c.g, c.b));
-    float keep = smoothstep(0.72, 0.97, l) * smoothstep(0.12, 0.35, (hi - lo) / max(hi, 1e-3));
+    float keep = smoothstep(0.72, 0.97, l) * smoothstep(0.12, 0.35, sat);
     return float4(lerp(c, lerp(night, c, keep), sharpen), 1.0);
 }
 
