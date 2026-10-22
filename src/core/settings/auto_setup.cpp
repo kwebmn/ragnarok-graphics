@@ -125,8 +125,8 @@ AutoSetup autoSetup(const Machine& m) {
         a.dlss = pixels <= 2560LL * 1440 ? "dlaa" : "quality";
         set(e, "quality", "dlss", a.dlss);
     }
-    a.hdrOn = m.hdr && (a.tier == Tier::High || a.tier == Tier::Middle);  // Direct3D 12's HDR10 picture
-    set(e, "display", "hdr", a.hdrOn ? "1" : "0");
+    // 3.0.0-beta.1 (the user): HDR off by default, whatever the monitor - the player turns it on (the Main page)
+    set(e, "display", "hdr", "0");
     a.soundEngine = m.windows10;  // XAudio2 2.9 is there
     set(e, "sound", "engine", a.soundEngine ? "1" : "0");
     if (a.soundEngine) set(e, "sound", "headphones", "1");

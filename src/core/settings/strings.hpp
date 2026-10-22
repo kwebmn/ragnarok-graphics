@@ -191,7 +191,7 @@ enum class Text : uint16_t {
     GfxSoundEngine, GfxSoundEngineHint, GfxSoundReverb, GfxSoundReverbHint,
     GfxSoundHeadphones, GfxSoundHeadphonesHint,
     GfxSoundDuck, GfxSoundDuckHint,
-    AutoUiWhole, AutoDlaa, AutoDlssQuality, AutoHdr, AutoSoundEngine,
+    AutoUiWhole, AutoDlaa, AutoDlssQuality, AutoSoundEngine,
     // 1.4: the Gamepad page (uaRO Pad)
     PagePad, PadHeading, PadIntro, PadStateOff, PadStateOn, PadStateOld, PadFailed, PadController, PadType, PadTypeHint,
     PadTypeAuto, PadTypeSony, PadLightbar, PadLightbarHint, ColourBlue, ColourRed, ColourGreen, ColourPurple,

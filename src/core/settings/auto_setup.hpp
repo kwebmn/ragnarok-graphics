@@ -47,7 +47,6 @@ struct AutoSetup {
     // the game at about 1000 lines or more: 100 % up to 1440p, 200 % at 4K
     int ui = 100;
     std::string dlss;  // 1.3.3: NVIDIA RTX - "dlaa" up to 2560x1440, "quality" above; "" untouched
-    bool hdrOn = false;
     bool soundEngine = false;  // Windows 10 and later: the sound placed around the player
 };
 

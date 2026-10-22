@@ -44,12 +44,13 @@ TEST(auto_setup_a_strong_nvidia_card) {
     full_hd.screenWidth = 1920;
     full_hd.screenHeight = 1080;
     CHECK(valueOf(autoSetup(full_hd), "quality", "render_scale") == "100");
-    // 1.3.3: an RTX 3060 on a 1080p HDR monitor - DLAA, the interface at 100 %, HDR
+    // 1.3.3: an RTX 3060 on a 1080p HDR monitor - DLAA, the interface at 100 %; 3.0.0-beta.1: HDR stays off (the
+    // user: off by default, the player turns it on)
     full_hd.adapter = "NVIDIA GeForce RTX 3060";
     full_hd.vramMb = 12288;
     full_hd.hdr = true;
     const AutoSetup b = autoSetup(full_hd);
-    CHECK(valueOf(b, "quality", "dlss") == "dlaa" && b.ui == 100 && valueOf(b, "display", "hdr") == "1");
+    CHECK(valueOf(b, "quality", "dlss") == "dlaa" && b.ui == 100 && valueOf(b, "display", "hdr") == "0");
     Machine gtx = full_hd;  // no RTX: no DLSS
     gtx.adapter = "NVIDIA GeForce GTX 1660";
     gtx.vramMb = 6144;

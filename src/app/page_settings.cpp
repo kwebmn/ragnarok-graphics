@@ -552,7 +552,6 @@ std::wstring autoSetupText(const Machine& x, const AutoSetup& a, bool uiChanged,
     if (uiChanged) text += L"\n" + wtrf(l, Text::AutoUiWhole, {std::to_string(a.ui)});  // 1.3.3
     if (a.dlss == "dlaa") text += L"\n" + wtr(l, Text::AutoDlaa);
     if (a.dlss == "quality") text += L"\n" + wtr(l, Text::AutoDlssQuality);
-    if (a.hdrOn) text += L"\n" + wtr(l, Text::AutoHdr);
     if (a.soundEngine) text += L"\n" + wtr(l, Text::AutoSoundEngine);
     return text;
 }
