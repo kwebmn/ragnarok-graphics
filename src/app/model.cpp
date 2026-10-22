@@ -51,8 +51,7 @@ Model::Model() {
         AppDisk disk;  // 2.8: a 2.x install's files into uaro-graphics\ before anything reads them
         layout::migrate(utf8(paths_.dir), disk);
     }
-    makeFolder(ourPlace(paths_.dir, layout::kOurs));
-    makeFolder(ourPlace(paths_.dir, layout::kLogs));
+    for (const char* folder : layout::kMadeAtStart) makeFolder(ourPlace(paths_.dir, folder));  // each one level
     paths_.ini = ourFile(paths_.dir, layout::File::Ini);
     paths_.log = ourPlace(paths_.dir, layout::now(layout::File::DriverLog));
     paths_.game = paths_.dir + L"\\uaRO.exe";

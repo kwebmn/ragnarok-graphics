@@ -45,3 +45,13 @@ TEST(layout_a_2x_backup_path_goes_where_the_file_is_now) {
     CHECK_EQ(layout::relativeNow("dinput8.ini"), std::string("dinput8.ini"));
     CHECK_EQ(layout::relativeNow("uaro-graphics\\uaro-graphics.ini"), std::string("uaro-graphics\\uaro-graphics.ini"));
 }
+
+TEST(layout_the_folders_made_at_start_hold_the_caches_and_a_new_pack) {
+    // what writes into them - the shader caches, the pipelines, a new texture pack, the logs - does not make them
+    const std::set<std::string> made(std::begin(layout::kMadeAtStart), std::end(layout::kMadeAtStart));
+    for (layout::File f : {layout::File::Shaders32, layout::File::Shaders64, layout::File::Pipelines,
+                           layout::File::Pack, layout::File::DriverLog}) {
+        const std::string now = layout::now(f);
+        CHECK(made.count(now.substr(0, now.find_last_of('\\'))) > 0);
+    }
+}

@@ -70,7 +70,7 @@ Startup decide() {
     installCrashHandler(dir);  // 0.52: where a crash happened, and a minidump
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
     for (const std::string& line : moved) LOG_INFO("%s", line.c_str());
-    makeFolders(layout::join(dir, layout::kCache));
+    for (const char* folder : layout::kMadeAtStart) makeFolders(layout::join(dir, folder));
     LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? iniPath.c_str() : "no uaro-graphics.ini, defaults",
              apiToken(s.config.api), displayModeToken(s.config.mode));
     LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%, sharpen = %d",

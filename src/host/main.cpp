@@ -391,9 +391,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     Args a = parseArgs();
     gpu::setChosenAdapter(a.gpu);  // 0.50.2: the game's card, and the texture pack's
     const LogLevel level = LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log);
-    // 2.8: the logs in uaro-graphics\logs, the shader cache in uaro-graphics\cache (core/layout) - the settings app
-    // may start the pack's builder before a game of 2.8 made them
-    win::makeFolders(layout::join(a.dir, layout::kCache));
+    // 2.8: the logs, the shader cache and the texture pack in uaro-graphics\ (core/layout) - the settings app may start
+    // the pack's builder before a game of 2.8 made their folders
+    for (const char* folder : layout::kMadeAtStart) win::makeFolders(layout::join(a.dir, folder));
     if (!a.pack.mode.empty()) {  // 0.43: the texture pack, with a log of its own
         wlog::open(layout::join(a.dir, layout::now(layout::File::PackLog)), level);
         a.pack.dir = a.dir;
