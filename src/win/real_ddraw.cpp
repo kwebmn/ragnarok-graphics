@@ -133,7 +133,7 @@ void safeModeFirst(const std::string& dir, Config& config) {
     const std::string counter = layout::join(dir, layout::kFailedStarts);
     const std::string note = layout::join(dir, layout::kSafeModeNote);
     readTextFile(counter, kept);
-    const int inRow = safe::failedInRow(std::atoi(kept.c_str()), safe::startFailed(previous));
+    const int inRow = safe::failedInRow(std::atoi(kept.c_str()), safe::judge(previous));
     writeSmallFile(counter, std::to_string(inRow));
     const bool noted = fileExists(note);
     if (!noted && !safe::needed(inRow, config.safeMode)) return;

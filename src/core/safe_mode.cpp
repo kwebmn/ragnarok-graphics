@@ -4,12 +4,16 @@
 
 namespace uagfx::safe {
 
-bool startFailed(const std::string& previousLog) {
-    if (previousLog.empty() || previousLog.find(kFirstPicture) != std::string::npos) return false;
-    return !report::reasonOfLog(previousLog).empty();
+Start judge(const std::string& previousLog) {
+    if (previousLog.find(kFirstPicture) != std::string::npos) return Start::Fine;
+    return report::reasonOfLog(previousLog).empty() ? Start::Unknown : Start::Failed;
 }
 
-int failedInRow(int before, bool lastFailed) { return lastFailed ? before + 1 : 0; }
+bool startFailed(const std::string& previousLog) { return judge(previousLog) == Start::Failed; }
+
+int failedInRow(int before, Start last) {
+    return last == Start::Failed ? before + 1 : last == Start::Fine ? 0 : before;
+}
 
 bool needed(int failedInRow, bool asked) { return asked || failedInRow >= 2; }
 
