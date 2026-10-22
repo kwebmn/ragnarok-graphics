@@ -33,8 +33,8 @@ std::string langToken(settings::Lang l) {
     return l == settings::Lang::Uk ? "uk" : l == settings::Lang::Ru ? "ru" : "en";
 }
 
-bool redirect(bool startedByLauncher, bool directStart, bool appThere) {
-    return !startedByLauncher && !directStart && appThere;
+bool redirect(bool startedByLauncher, bool directStart, bool appThere, long sinceLast) {
+    return !startedByLauncher && !directStart && appThere && (sinceLast < 0 || sinceLast >= kRedirectGap);
 }
 
 }  // namespace uagfx::launcher

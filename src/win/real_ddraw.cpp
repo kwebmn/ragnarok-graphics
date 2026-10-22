@@ -76,6 +76,18 @@ bool takeLauncherMark() {
     return n == 1 && mark[0] == '1';
 }
 
+// Seconds since the file was written, -1 when it is not there.
+long secondsSince(const std::string& path) {
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    if (!GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &a)) return -1;
+    FILETIME now{};
+    GetSystemTimeAsFileTime(&now);
+    const unsigned long long t =
+        (unsigned long long)a.ftLastWriteTime.dwHighDateTime << 32 | a.ftLastWriteTime.dwLowDateTime;
+    const unsigned long long n = (unsigned long long)now.dwHighDateTime << 32 | now.dwLowDateTime;
+    return n > t ? long((n - t) / 10000000ull) : 0;
+}
+
 // 2.11: a direct start opens the launcher «Гра» instead (decision 13): its «Грати» starts the game again. false: it
 // could not open, the game plays.
 bool openLauncherInstead(const std::string& dir) {
@@ -91,6 +103,9 @@ bool openLauncherInstead(const std::string& dir) {
     AllowSetForegroundWindow(pi.dwProcessId);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
+    HANDLE mark = CreateFileA(layout::join(dir, layout::kRedirected).c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                              FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (mark != INVALID_HANDLE_VALUE) CloseHandle(mark);  // its time: when, for the next start (no bouncing)
     LOG_INFO("launcher: a direct start - «Гра» opens instead ([launcher] direct_start = 0); the game closes");
     TerminateProcess(GetCurrentProcess(), 0);
     return true;
@@ -156,7 +171,12 @@ Startup decide() {
     // 2.11: the launcher's own start plays at once; a direct one opens «Гра», or with «Запускати гру одразу» asks
     // about an update first (2.10)
     if (!takeLauncherMark()) {
-        const bool redirect = launcher::redirect(false, s.config.directStart, fileExists(dir + "\\uaro-graphics.exe"));
+        const long since = secondsSince(layout::join(dir, layout::kRedirected));
+        const bool redirect =
+            launcher::redirect(false, s.config.directStart, fileExists(dir + "\\uaro-graphics.exe"), since);
+        if (!redirect && since >= 0 && since < launcher::kRedirectGap)
+            LOG_INFO("launcher: «Гра» opened %ld s ago and the game came back unmarked (an older uaro-graphics.exe?)"
+                     " - it plays", since);
         if (!redirect || !openLauncherInstead(dir)) askUpdateFirst(dir);
     }
     LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%, sharpen = %d",

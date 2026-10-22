@@ -52,8 +52,17 @@ TEST(launcher_asks_in_the_players_language) {
 // 2.11: a direct start of uaRO.exe opens «Гра» instead (decision 13) - not the launcher's own start (UARO_LAUNCHER),
 // not with «Запускати гру одразу», not without uaro-graphics.exe next to the game.
 TEST(the_game_redirects_only_a_direct_start_without_the_box) {
-    CHECK(launcher::redirect(false, false, true));
-    CHECK(!launcher::redirect(true, false, true));   // «Грати», the update's restart
-    CHECK(!launcher::redirect(false, true, true));   // [launcher] direct_start = 1
-    CHECK(!launcher::redirect(false, false, false));  // no launcher there: the game plays
+    CHECK(launcher::redirect(false, false, true, -1));
+    CHECK(!launcher::redirect(true, false, true, -1));   // «Грати», the update's restart
+    CHECK(!launcher::redirect(false, true, true, -1));   // [launcher] direct_start = 1
+    CHECK(!launcher::redirect(false, false, false, -1));  // no launcher there: the game plays
+}
+
+// A uaro-graphics.exe older than 2.11 starts the game without the mark: sent back to it again and again, the player
+// could never play - a redirect less than two minutes after the last one plays instead.
+TEST(the_game_never_bounces_between_itself_and_the_launcher) {
+    CHECK(!launcher::redirect(false, false, true, 30));
+    CHECK(!launcher::redirect(false, false, true, 119));
+    CHECK(launcher::redirect(false, false, true, 120));
+    CHECK(launcher::redirect(false, false, true, -1));  // never before
 }

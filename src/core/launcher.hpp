@@ -26,7 +26,10 @@ std::string langToken(settings::Lang l);  // the site's: "uk", "ru", "en"
 
 // The driver at the game's start: a direct start (not the launcher's own - its UARO_LAUNCHER=1, the update's restart
 // too) opens «Гра» instead, unless [launcher] direct_start = 1 or uaro-graphics.exe is not next to the game.
+// `sinceLast`: seconds since the last redirect (-1 never) - one less than kRedirectGap ago plays instead: a
+// uaro-graphics.exe older than 2.11 starts the game without the mark and the player would bounce between the two.
 constexpr const char* kStartedMark = "UARO_LAUNCHER";
-bool redirect(bool startedByLauncher, bool directStart, bool appThere);
+constexpr long kRedirectGap = 120;
+bool redirect(bool startedByLauncher, bool directStart, bool appThere, long sinceLast);
 
 }  // namespace uagfx::launcher
