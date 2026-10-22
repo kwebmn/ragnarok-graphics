@@ -36,6 +36,8 @@ bool nvidiaHere();  // a card of NVIDIA's among the adapters (DLSS)
 // installer::putPackage's. false and why for the player.
 bool runUpdate(const std::wstring& dir, const update::Manifest& m, bool repair, const Report& report,
                std::wstring& error);
+// The setup's: the package it carries (the zip's bytes) put in the same way; DLSS from the site when it answers.
+bool runInstall(const std::wstring& dir, std::string zip, const Report& report, std::wstring& error);
 bool runDlss(const std::wstring& dir, const update::Manifest& m, const Report& report, std::wstring& error);
 bool runModels(const std::wstring& dir, const update::Manifest& m, const Report& report, std::wstring& error);
 

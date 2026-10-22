@@ -12,6 +12,8 @@ namespace uagfx::app {
 // rollback, the removal and the install of an older update.bat, each with its own windows (app/update_window).
 int runMode(const Args& a);
 
+// 2.10: this exe is the setup - uaro-graphics.exe with the package appended (tools/package.sh).
+bool carriesPackage();
 // The game's folder: this exe's, or the one above it when the exe runs from uaro-graphics\ (install.bat's way).
 std::wstring gameFolder();
 settings::Lang playerLang(const std::wstring& dir);  // the app's choice in the settings file, else Windows'

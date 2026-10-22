@@ -36,5 +36,8 @@ std::string offer(const Manifest& m, const std::string& installed, const std::st
 // kUpdateChosen closes the game (the settings app updates it and starts it again).
 bool askAtStart(const std::string& updateInfo, const std::string& installed, std::string& version);
 constexpr unsigned long kUpdateChosen = 10;
+// The setup (uaro-graphics-setup.exe) is uaro-graphics.exe with the package appended by tools/package.sh: the zip, its
+// size in eight bytes (little-endian), "UAROSETP". From the file's last 16 bytes and its size: where the zip is.
+bool payloadAt(const uint8_t* tail16, uint64_t fileSize, uint64_t& offset, uint64_t& size);
 
 }  // namespace uagfx::update

@@ -1,3 +1,4 @@
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -101,4 +102,21 @@ TEST(the_game_asks_when_the_last_check_offered) {
     CHECK(!update::askAtStart("<html>502</html>", "2.9.0", version));
     CHECK(!update::askAtStart("", "2.9.0", version));
     CHECK(update::kUpdateChosen == 10);  // the settings app's exit code the driver closes the game on
+}
+
+// 2.10: uaro-graphics-setup.exe is uaro-graphics.exe with the package appended (tools/package.sh): the zip, its size
+// in eight bytes (little-endian) and "UAROSETP".
+TEST(setup_finds_the_package_appended_to_it) {
+    uint8_t tail[16] = {};
+    const uint64_t zip = 35690731, exe = 3677696;
+    for (int i = 0; i < 8; ++i) tail[i] = uint8_t(zip >> (8 * i));
+    std::memcpy(tail + 8, "UAROSETP", 8);
+    uint64_t offset = 0, size = 0;
+    CHECK(update::payloadAt(tail, exe + zip + 16, offset, size));
+    CHECK(offset == exe && size == zip);
+    tail[15] = 'X';
+    CHECK(!update::payloadAt(tail, exe + zip + 16, offset, size));  // the app itself
+    tail[15] = 'P';
+    CHECK(!update::payloadAt(tail, zip, offset, size));  // larger than the file
+    CHECK(!update::payloadAt(tail, 10, offset, size));
 }

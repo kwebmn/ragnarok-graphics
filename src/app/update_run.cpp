@@ -76,12 +76,12 @@ bool fetchArchive(const std::wstring& dir, const update::Archive& a, Step::What 
     return true;
 }
 
-// The archive's files into `to` (their tree as in it).
-bool unpack(const std::wstring& zipPath, const std::wstring& to, std::wstring& error) {
-    std::string bytes, e;
+// An archive's files into `to` (their tree as in it).
+bool unpackBytes(std::string bytes, const std::wstring& to, std::wstring& error) {
+    std::string e;
     zip::Index z;
-    if (!readFile(zipPath, bytes) || !z.openBytes(std::move(bytes), [](const std::string&) { return true; }, e)) {
-        error = L"cannot read " + zipPath + (e.empty() ? L"" : L": " + wide(e));
+    if (!z.openBytes(std::move(bytes), [](const std::string&) { return true; }, e)) {
+        error = L"the package cannot be read: " + wide(e);
         return false;
     }
     removeTree(to);
@@ -96,6 +96,15 @@ bool unpack(const std::wstring& zipPath, const std::wstring& to, std::wstring& e
         }
     }
     return true;
+}
+
+bool unpack(const std::wstring& zipPath, const std::wstring& to, std::wstring& error) {
+    std::string bytes;
+    if (!readFile(zipPath, bytes)) {
+        error = L"cannot read " + zipPath;
+        return false;
+    }
+    return unpackBytes(std::move(bytes), to, error);
 }
 
 // A part of the site (DLSS, the models) downloaded, checked, unpacked and put in, all or nothing.
@@ -159,16 +168,18 @@ bool nvidiaHere() {
     return false;
 }
 
-bool runUpdate(const std::wstring& dir, const update::Manifest& m, bool repair, const Report& report,
-               std::wstring& error) {
+namespace {
+
+// The package unpacked in uaro-graphics\update\files put in: the game waited for, the files (all or nothing), what
+// install.bat did; then DLSS on an NVIDIA card when the site's is another version (`site` null: asked now; a failure
+// there leaves DLSS as it was). The work folder goes at the end.
+bool installStaged(const std::wstring& dir, bool repair, const update::Manifest* site, const Report& report,
+                   std::wstring& error) {
     const std::wstring work = workOf(dir), files = join(work, L"files");
-    removeTree(join(work, L"rolled"));  // a rollback's leftovers (the uaro-graphics.exe that ran it)
-    std::wstring zipPath;
-    if (!fetchArchive(dir, m.package, Step::Download, report, zipPath, error) || !unpack(zipPath, files, error))
-        return false;
     if (!fileExists(join(files, L"uaro-graphics\\ddraw.dll")) ||
         !fileExists(join(files, L"uaro-graphics\\version.txt"))) {
-        error = wide(m.package.file) + L" is not a uaRO Graphics package";
+        error = L"this is not a uaRO Graphics package";
+        removeTree(files);
         return false;
     }
     const std::wstring game = join(dir, L"uaRO.exe");
@@ -195,15 +206,40 @@ bool runUpdate(const std::wstring& dir, const update::Manifest& m, bool repair, 
         return false;
     }
     installer::finishInstall(dir, true);
-    std::wstring dlssError;
-    const std::string dlss = firstLine(join(dir, L"uaro-graphics\\dlss\\version.txt"));
-    if (!m.dlss.file.empty() && nvidiaHere() && dlss != m.dlss.version)
-        runDlss(dir, m, report, dlssError);  // DLSS stays as it was when it cannot come now
+    if (nvidiaHere()) {
+        CheckResult asked;
+        if (!site) asked = checkNow(dir);
+        const update::Manifest* m = site ? site : asked.ok ? &asked.site : nullptr;
+        const std::string dlss = firstLine(join(dir, L"uaro-graphics\\dlss\\version.txt"));
+        std::wstring dlssError;
+        if (m && !m->dlss.file.empty() && dlss != m->dlss.version) runDlss(dir, *m, report, dlssError);
+    }
     removeTree(work);
     Step done;
     done.what = Step::Done;
     report(done);
     return true;
+}
+
+}  // namespace
+
+bool runUpdate(const std::wstring& dir, const update::Manifest& m, bool repair, const Report& report,
+               std::wstring& error) {
+    removeTree(join(workOf(dir), L"rolled"));  // a rollback's leftovers (the uaro-graphics.exe that ran it)
+    std::wstring zipPath;
+    if (!fetchArchive(dir, m.package, Step::Download, report, zipPath, error) ||
+        !unpack(zipPath, join(workOf(dir), L"files"), error))
+        return false;
+    return installStaged(dir, repair, &m, report, error);
+}
+
+bool runInstall(const std::wstring& dir, std::string zip, const Report& report, std::wstring& error) {
+    if (!makeFolders(workOf(dir)) || !unpackBytes(std::move(zip), join(workOf(dir), L"files"), error)) {
+        removeTree(workOf(dir));
+        if (error.empty()) error = L"cannot write " + workOf(dir);
+        return false;
+    }
+    return installStaged(dir, false, nullptr, report, error);
 }
 
 bool runDlss(const std::wstring& dir, const update::Manifest& m, const Report& report, std::wstring& error) {

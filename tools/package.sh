@@ -37,9 +37,10 @@ cp dist/ai/realesr-general-x4v3.bin dist/ai/realesr-general-wdn-x4v3.bin dist/ai
 printf '%s build %s\r\n' "$version" "$(date '+%Y-%m-%d %H:%M')" > "$stage/uaro-graphics/version.txt"
 (cd "$stage" && zip -q -r "../uaro-graphics.zip" .)
 python3 tools/check_package.py "$out"
-# 0.60: the setup in one file - the stub, the zip, its size (eight bytes, little-endian) and "UAROSETP".
+# 0.60: the setup in one file; 2.10: the settings app itself - uaro-graphics.exe, the zip, its size (eight bytes,
+# little-endian) and "UAROSETP" (app/modes: a package appended makes it the setup).
 setup="build-win/uaro-graphics-setup-full.exe"
-python3 - "build-win/uaro-graphics-setup.exe" "$out" "$setup" <<'PY'
+python3 - "build-win/uaro-graphics.exe" "$out" "$setup" <<'PY'
 import struct, sys
 stub, zipf, out = sys.argv[1:4]
 data = open(zipf, "rb").read()

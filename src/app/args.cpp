@@ -67,6 +67,8 @@ Args parseArgs(const std::wstring& line) {
             a.mode = Args::Mode::Uninstall;
         } else if (k == L"--uninstall-run") {
             a.mode = Args::Mode::UninstallRun;
+        } else if (k == L"--setup") {
+            a.mode = Args::Mode::Setup;
         } else if (k == L"--quiet" || k == L"/quiet") {
             a.quiet = true;
         } else if (k == L"--after") {
@@ -100,6 +102,7 @@ std::wstring argsLine(const Args& a) {
         case Args::Mode::Repair: s = L"--repair"; break;
         case Args::Mode::Uninstall: s = L"--uninstall"; break;
         case Args::Mode::UninstallRun: s = L"--uninstall-run"; break;
+        case Args::Mode::Setup: s = L"--setup"; break;
     }
     if (a.quiet) s += L" --quiet";
     if (!a.dir.empty()) s += L" --dir \"" + a.dir + L"\"";

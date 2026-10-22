@@ -350,7 +350,7 @@ enum class Text : uint16_t {
     UpdateWaitGame, UpdateInstalling, UpdateLoadingDlss, UpdateLoadingModels, UpdateNothingChanged, ButtonCancel,
     RollbackButton, RollbackAsk, RollingBack, RepairButton, RepairAsk, Repairing, UninstallButton, UninstallAsk,
     UninstallKeep, UninstallDo, Uninstalling, UninstallDone, UninstallKept, InstallDone, DlssDownload,  // 2.10
-    UninstallFailed,  // 2.10
+    UninstallFailed, SetupTitle, SetupChoose, SetupNoGame, SetupDamaged,  // 2.10
     Count
 };
 

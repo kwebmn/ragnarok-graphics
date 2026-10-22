@@ -170,3 +170,27 @@ TEST(models_come_from_the_site) {
     CHECK(app::runModels(app::exeFolder(), m, kGo, error));
     CHECK_EQ(at(L"uaro-graphics\\ai\\4x-gameai-2.0.bin"), std::string("weights"));
 }
+
+// 2.10: the setup (uaro-graphics.exe with the package appended) puts the package it carries in the way an update does.
+TEST(setup_installs_the_package_it_carries) {
+    fake::Windows& w = fake::reset();
+    put(L"uaRO.exe", "MZ uaRO");
+    put(L"ddraw.dll", "dgVoodoo DDraw");
+    const std::string zip =
+        fixture::zipBytes({fixture::item("uaro-graphics/ddraw.dll", "uaRO Graphics ddraw 2.0.0", true),
+                           fixture::item("uaro-graphics/uaro-graphics.exe", "uaRO Graphics exe 2.0.0", true),
+                           fixture::item("uaro-graphics/version.txt", "2.0.0 build 2026-10-22 18:00\r\n"),
+                           fixture::item("uaro-graphics/defaults/uaro-graphics.ini", "; the template\r\n"),
+                           fixture::item("install.bat", "rem uaRO Graphics: the older update.bat's way in")});
+    std::wstring error;
+    CHECK(app::runInstall(app::exeFolder(), zip, kGo, error));
+    CHECK_EQ(at(L"ddraw.dll"), std::string("uaRO Graphics ddraw 2.0.0"));
+    CHECK_EQ(at(L"uaro-graphics.exe"), std::string("uaRO Graphics exe 2.0.0"));
+    CHECK_EQ(at(L"uaro-graphics\\dgvoodoo\\DDraw.dll"), std::string("dgVoodoo DDraw"));
+    CHECK_EQ(at(L"uaro-graphics\\uaro-graphics.ini"), std::string("; the template\r\n"));
+    CHECK(w.appsEntry[L"DisplayVersion"] == L"2.0.0");
+    CHECK_EQ(at(L"install.bat"), std::string("<none>"));
+    CHECK(w.folders.count(fake::path(L"uaro-graphics\\update")) == 0);
+    std::wstring broken;
+    CHECK(!app::runInstall(app::exeFolder(), zip.substr(0, zip.size() / 2), kGo, broken));
+}

@@ -144,6 +144,16 @@ std::string offer(const Manifest& m, const std::string& installed, const std::st
     return newer(site, mine) ? site : "";
 }
 
+bool payloadAt(const uint8_t* tail16, uint64_t fileSize, uint64_t& offset, uint64_t& size) {
+    if (fileSize < 16 || std::string(reinterpret_cast<const char*>(tail16) + 8, 8) != "UAROSETP") return false;
+    uint64_t n = 0;
+    for (int i = 7; i >= 0; --i) n = n << 8 | tail16[i];
+    if (!n || n > fileSize - 16) return false;
+    offset = fileSize - 16 - n;
+    size = n;
+    return true;
+}
+
 bool askAtStart(const std::string& updateInfo, const std::string& installed, std::string& version) {
     Manifest m;
     std::string error;

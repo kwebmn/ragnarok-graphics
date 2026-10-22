@@ -1,3 +1,0 @@
-// uaro-graphics-setup.exe (0.60): the settings app's icon and manifest (asInvoker, per-monitor DPI).
-1 ICON "app.ico"
-1 24 "app.manifest"

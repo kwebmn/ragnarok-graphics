@@ -3255,6 +3255,18 @@ const Entry kTexts[] = {
     {"Not everything could be removed: {1}",
      "Не все вдалося видалити: {1}",
      "Не всё удалось удалить: {1}"},
+    {"Installing uaRO Graphics",
+     "Встановлення uaRO Graphics",
+     "Установка uaRO Graphics"},
+    {"Choose the uaRO client folder (the one with uaRO.exe):",
+     "Виберіть теку клієнта uaRO (де лежить uaRO.exe):",
+     "Выберите папку клиента uaRO (где лежит uaRO.exe):"},
+    {"There is no uaRO.exe in that folder. Run the setup again and choose the uaRO client folder.",
+     "У цій теці немає uaRO.exe. Запустіть встановлення ще раз і виберіть теку клієнта uaRO.",
+     "В этой папке нет uaRO.exe. Запустите установку ещё раз и выберите папку клиента uaRO."},
+    {"This setup is damaged (no package inside it). Download it again.",
+     "Це встановлення пошкоджене (у ньому немає пакета). Завантажте його ще раз.",
+     "Эта установка повреждена (в ней нет пакета). Скачайте её ещё раз."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

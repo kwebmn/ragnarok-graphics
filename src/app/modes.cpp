@@ -1,5 +1,7 @@
 #include "app/modes.hpp"
 
+#include <shlobj.h>
+
 #include "app/app_disk.hpp"
 #include "app/files.hpp"
 #include "app/installer.hpp"
@@ -174,12 +176,103 @@ int askAtGameStart(const std::wstring& dir, const Args& a, settings::Lang l) {
     return int(update::kUpdateChosen);
 }
 
+// This exe's own package (the setup's): where it is, its bytes.
+bool packageOf(uint64_t& offset, uint64_t& size) {
+    HANDLE f = CreateFileW(selfPath().c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return false;
+    LARGE_INTEGER total{}, at{};
+    uint8_t tail[16] = {};
+    DWORD got = 0;
+    bool ok = GetFileSizeEx(f, &total) && total.QuadPart > 16;
+    at.QuadPart = total.QuadPart - 16;
+    ok = ok && SetFilePointerEx(f, at, nullptr, FILE_BEGIN) && ReadFile(f, tail, 16, &got, nullptr) && got == 16;
+    CloseHandle(f);
+    return ok && update::payloadAt(tail, uint64_t(total.QuadPart), offset, size);
+}
+
+bool readPackage(uint64_t offset, uint64_t size, std::string& out) {
+    HANDLE f = CreateFileW(selfPath().c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return false;
+    LARGE_INTEGER at{};
+    at.QuadPart = LONGLONG(offset);
+    out.assign(size_t(size), '\0');
+    DWORD got = 0;
+    const bool ok = SetFilePointerEx(f, at, nullptr, FILE_BEGIN) && ReadFile(f, &out[0], DWORD(size), &got, nullptr) &&
+                    got == size;
+    CloseHandle(f);
+    return ok;
+}
+
+std::wstring chooseFolder(settings::Lang l) {
+    const std::wstring title = wtr(l, Text::SetupChoose);
+    BROWSEINFOW bi{};
+    bi.lpszTitle = title.c_str();
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+    PIDLIST_ABSOLUTE id = SHBrowseForFolderW(&bi);
+    if (!id) return L"";
+    wchar_t path[MAX_PATH] = {};
+    SHGetPathFromIDListW(id, path);
+    CoTaskMemFree(id);
+    return path;
+}
+
+// uaro-graphics-setup.exe: the game's folder (its own when uaRO.exe is there, else the player's choice), the package
+// it carries put in as an update's, then the installed settings app.
+int setup(const Args& a) {
+    const settings::Lang first = settings::windowLang(std::nullopt, PRIMARYLANGID(GetUserDefaultUILanguage()));
+    uint64_t offset = 0, size = 0;
+    if (!packageOf(offset, size)) {
+        tell(wtr(first, Text::SetupDamaged), true);
+        return 1;
+    }
+    std::wstring dir = !a.dir.empty() ? a.dir : exeFolder();
+    if (!fileExists(dir + L"\\uaRO.exe")) {
+        dir = chooseFolder(first);
+        if (dir.empty()) return 0;
+        if (!fileExists(dir + L"\\uaRO.exe")) {
+            tell(wtr(first, Text::SetupNoGame), true);
+            return 1;
+        }
+    }
+    const settings::Lang l = playerLang(dir);
+    if (!folderWritable(dir) && !elevatedNow()) {  // a game under Program Files: the setup again as administrator
+        Args again = a;
+        again.dir = dir;
+        if (launchArgs(selfPath(), argsLine(again), dir, true) == 0) return 0;
+        failed(l, Text::UpdateNothingChanged, L"Windows did not give the administrator rights the game's folder needs");
+        return 1;
+    }
+    std::wstring error;
+    const bool ok = runWithProgress(nullptr, wtr(l, Text::SetupTitle), l, false,
+                                    [&](const Report& report, std::wstring& e) {
+                                        std::string zip;
+                                        if (!readPackage(offset, size, zip)) {
+                                            e = wtr(l, Text::SetupDamaged);
+                                            return false;
+                                        }
+                                        return runInstall(dir, std::move(zip), report, e);
+                                    },
+                                    error);
+    if (!ok) {
+        failed(l, Text::UpdateNothingChanged, error);
+        return 1;
+    }
+    tell(wtrf(l, Text::InstallDone, {installedVersion(dir)}), false);
+    launch(dir + L"\\uaro-graphics.exe", dir);
+    return 0;
+}
+
 bool writes(Args::Mode m) {
     return m == Args::Mode::Install || m == Args::Mode::Update || m == Args::Mode::Repair ||
            m == Args::Mode::Rollback || m == Args::Mode::UninstallRun;
 }
 
 }  // namespace
+
+bool carriesPackage() {
+    uint64_t offset = 0, size = 0;
+    return packageOf(offset, size);
+}
 
 std::wstring gameFolder() {
     const std::wstring own = exeFolder();
@@ -215,6 +308,7 @@ int runMode(const Args& a) {
         case Args::Mode::Uninstall: return uninstallAsk(dir, l);
         case Args::Mode::UninstallRun: return uninstallRun(dir, a, l);
         case Args::Mode::AskUpdate: return askAtGameStart(dir, a, l);
+        case Args::Mode::Setup: return setup(a);
         default: return 0;
     }
 }
