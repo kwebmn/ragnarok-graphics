@@ -5,6 +5,7 @@
 #include "app/app_disk.hpp"
 #include "app/files.hpp"
 #include "app/installer.hpp"
+#include "app/model.hpp"
 #include "app/system.hpp"
 #include "app/text.hpp"
 #include "app/update_run.hpp"
@@ -46,7 +47,10 @@ bool waitForGame(const std::wstring& dir, const Report& report, std::wstring& er
 
 void then(const std::wstring& dir, const Args& a) {
     if (a.then == Args::Then::App) launch(dir + L"\\uaro-graphics.exe", dir);
-    if (a.then == Args::Then::Game) launchArgs(dir + L"\\uaRO.exe", a.gameArgs, dir, false);
+    if (a.then == Args::Then::Game) {
+        markOurStart();  // 2.11: the driver plays at once, no launcher «Гра» again
+        launchArgs(dir + L"\\uaRO.exe", a.gameArgs, dir, false);
+    }
 }
 
 void failed(settings::Lang l, Text t, const std::wstring& error) {
@@ -319,6 +323,18 @@ std::string startMode(Args a) {
     const bool admin = a.mode != Args::Mode::Uninstall && !folderWritable(dir) && !elevatedNow();
     const unsigned long e = launchArgs(selfPath(), argsLine(a), dir, admin);
     return e == 0 ? "" : "Windows did not start it (error " + std::to_string(e) + ")";
+}
+
+std::wstring playNow(Model& m, const std::string& offer, settings::Lang l, bool& closing) {
+    closing = false;
+    if (offer.empty()) return m.launchGame(l);
+    Args a;
+    a.mode = Args::Mode::Update;
+    a.then = Args::Then::Game;
+    const std::string err = startMode(a);
+    if (!err.empty()) return wtrf(l, Text::UpdateError, {err});
+    closing = true;
+    return L"";
 }
 
 std::wstring getDlss(HWND owner, const std::wstring& dir, settings::Lang l) {

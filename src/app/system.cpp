@@ -207,4 +207,6 @@ void waitMs(unsigned ms) { Sleep(ms); }
 
 bool elevatedNow() { return runsElevated(); }
 
+void markOurStart() { SetEnvironmentVariableW(L"UARO_LAUNCHER", L"1"); }
+
 }  // namespace uagfx::app

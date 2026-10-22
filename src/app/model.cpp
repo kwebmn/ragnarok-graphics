@@ -623,6 +623,7 @@ std::wstring Model::resetWindowLayout(Lang l) {
 }
 
 std::wstring Model::launchGame(Lang l) {
+    markOurStart();  // 2.11: the driver plays at once (no launcher «Гра» again)
     const unsigned long e = launch(paths_.game, paths_.dir);
     refreshRunning();
     return e ? wtrf(l, Text::ErrLaunch, {num(static_cast<long long>(e))}) : L"";

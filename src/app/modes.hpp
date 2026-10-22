@@ -8,6 +8,8 @@
 
 namespace uagfx::app {
 
+class Model;
+
 // 2.10: uaro-graphics.exe's modes but the settings app and the watcher (app/args): the update, the repair, the
 // rollback, the removal and the install of an older update.bat, each with its own windows (app/update_window).
 int runMode(const Args& a);
@@ -21,6 +23,9 @@ settings::Lang playerLang(const std::wstring& dir);  // the app's choice in the 
 // The settings app's way into a mode: this exe started with `a` and this process's id to wait for - as
 // administrator when the game's folder needs it. "" or why not, in English.
 std::string startMode(Args a);
+// 2.11: the one way to the game - an offered update first (as a process of its own that starts the game after it;
+// `closing`: this app is to close), else uaRO.exe marked as the launcher's start. "" or why not.
+std::wstring playNow(Model& m, const std::string& offer, settings::Lang l, bool& closing);
 // DLSS and the AI models from the site in a progress window over the settings app; "" or why not.
 std::wstring getDlss(HWND owner, const std::wstring& dir, settings::Lang l);
 std::wstring getModels(HWND owner, const std::wstring& dir, settings::Lang l);

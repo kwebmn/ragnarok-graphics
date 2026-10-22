@@ -64,6 +64,7 @@ ALLOWED = {
         # 2.10: the update's downloads - a number against caches, a .part continued at its end (Windows 2000); the
         # removal's copy of the app in %TEMP%, the process the update waits for (Windows NT)
         "GetTickCount", "SetFilePointerEx", "CopyFileW", "GetTempPathW", "GetCurrentProcessId",
+        "SetEnvironmentVariableW",  # 2.11: UARO_LAUNCHER for the game the launcher starts (Windows NT)
     },
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",

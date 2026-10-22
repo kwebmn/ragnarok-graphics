@@ -160,7 +160,10 @@ std::string regFileToUtf8(const std::string& bytes) { return bytes; }  // the fa
 
 std::string utf8ToRegFile(const std::string& utf8) { return utf8; }
 
-unsigned long launch(const std::wstring&, const std::wstring&) { return 0; }
+unsigned long launch(const std::wstring& file, const std::wstring&) {
+    windows().launched.push_back(file);
+    return 0;
+}
 
 unsigned long launchArgs(const std::wstring&, const std::wstring&, const std::wstring&, bool) { return 0; }
 
@@ -227,6 +230,8 @@ bool gameRunning(const std::wstring&) { return windows().gameRunning; }
 
 bool elevatedNow() { return false; }
 
+void markOurStart() { windows().marked = true; }
+
 void waitMs(unsigned) {  // the game closes while the update waits
     ++windows().waits;
     windows().gameRunning = false;
@@ -248,6 +253,16 @@ bool download(const std::string& file, const std::wstring& to,
         error = "cannot write " + utf8(to);
         return false;
     }
+    return true;
+}
+
+bool fetchPath(const std::string& path, std::string& out, std::string& error) {
+    const auto it = windows().web.find(path);
+    if (it == windows().web.end()) {
+        error = "no answer from uaro.kiev.ua";
+        return false;
+    }
+    out = it->second;
     return true;
 }
 

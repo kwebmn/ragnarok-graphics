@@ -27,6 +27,9 @@ struct Windows {
     // closed by the first one)
     std::map<std::string, std::string> web;
     int waits = 0;
+    // 2.11: what was started (launch's file), and whether this process marked it as ours (UARO_LAUNCHER)
+    std::vector<std::wstring> launched;
+    bool marked = false;
     int clock = 0;  // seconds after 2026-10-13 12:00:00: backup folders are named after it
 };
 

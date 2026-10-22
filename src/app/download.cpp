@@ -22,14 +22,13 @@ struct Get {
     }
 };
 
-bool open(Get& g, const std::string& file, uint64_t range, std::string& error) {
+bool open(Get& g, const std::string& path, uint64_t range, std::string& error) {
     g.session = WinHttpOpen(L"uaRO Graphics", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
                             WINHTTP_NO_PROXY_BYPASS, 0);
     g.connect = g.session ? WinHttpConnect(g.session, wide(update::kSite).c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0)
                           : nullptr;
-    // A number after the name: no proxy or cache on the way keeps an older update.ini (nginx ignores it).
-    const std::wstring path = wide(std::string(update::kFiles) + file + "?" + std::to_string(GetTickCount()));
-    g.request = g.connect ? WinHttpOpenRequest(g.connect, L"GET", path.c_str(), nullptr, WINHTTP_NO_REFERER,
+    const std::wstring wpath = wide(path);
+    g.request = g.connect ? WinHttpOpenRequest(g.connect, L"GET", wpath.c_str(), nullptr, WINHTTP_NO_REFERER,
                                                WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)
                           : nullptr;
     const std::wstring header = range ? L"Range: bytes=" + std::to_wstring(range) + L"-" : L"";
@@ -52,6 +51,22 @@ bool open(Get& g, const std::string& file, uint64_t range, std::string& error) {
     return true;
 }
 
+// A file of kFiles with a number after its name: no proxy or cache on the way keeps an older one (nginx ignores it).
+std::string filePath(const std::string& file) {
+    return std::string(update::kFiles) + file + "?" + std::to_string(GetTickCount());
+}
+
+bool readAll(Get& g, std::string& out) {
+    DWORD n = 0;
+    while (WinHttpQueryDataAvailable(g.request, &n) && n && out.size() < (64u << 10)) {
+        std::string part(n, '\0');
+        DWORD read = 0;
+        if (!WinHttpReadData(g.request, &part[0], n, &read) || !read) break;
+        out.append(part, 0, read);
+    }
+    return true;
+}
+
 uint64_t sizeOf(const std::wstring& path) {
     WIN32_FILE_ATTRIBUTE_DATA a{};
     if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &a)) return 0;
@@ -66,7 +81,7 @@ bool download(const std::string& file, const std::wstring& to,
     for (int attempt = 0; attempt < 2; ++attempt) {
         uint64_t have = sizeOf(part);
         Get g;
-        if (!open(g, file, have, error)) return false;
+        if (!open(g, filePath(file), have, error)) return false;
         if (have && g.status == 416) {  // the .part is the whole file or more: start over once
             DeleteFileW(part.c_str());
             continue;
@@ -119,21 +134,18 @@ bool download(const std::string& file, const std::wstring& to,
 }
 
 bool fetch(const std::string& file, std::string& out, std::string& error) {
+    return fetchPath(filePath(file), out, error);
+}
+
+bool fetchPath(const std::string& path, std::string& out, std::string& error) {
     out.clear();
     Get g;
-    if (!open(g, file, 0, error)) return false;
+    if (!open(g, path, 0, error)) return false;
     if (g.status != 200) {
-        error = std::string(update::kSite) + " answered " + std::to_string(g.status) + " for " + file;
+        error = std::string(update::kSite) + " answered " + std::to_string(g.status) + " for " + path;
         return false;
     }
-    DWORD n = 0;
-    while (WinHttpQueryDataAvailable(g.request, &n) && n && out.size() < (64u << 10)) {
-        std::string part(n, '\0');
-        DWORD read = 0;
-        if (!WinHttpReadData(g.request, &part[0], n, &read) || !read) break;
-        out.append(part, 0, read);
-    }
-    return true;
+    return readAll(g, out);
 }
 
 }  // namespace uagfx::app

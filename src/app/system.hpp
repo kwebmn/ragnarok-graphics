@@ -27,5 +27,8 @@ bool gameRunning(const std::wstring& gameExe);
 // 2.10: a pause of the update's own thread while it waits for the game to close.
 void waitMs(unsigned ms);
 bool elevatedNow();  // 2.10: this process runs as administrator
+// 2.11: UARO_LAUNCHER=1 in this process's environment - the game it starts inherits it, and the driver then plays
+// at once instead of opening the launcher «Гра».
+void markOurStart();
 
 }  // namespace uagfx::app
