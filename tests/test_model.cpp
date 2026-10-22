@@ -548,6 +548,28 @@ TEST(model_profiles_and_reset_keep_the_statistics_answer) {
     CHECK_EQ(valueOf(w.files[ini], "stats.id"), id);
 }
 
+TEST(model_asks_about_the_automatic_reports_once) {
+    // 3.0.0-beta.1 (decision 5): a report by itself when a game ends badly - asked once, at the first start; the
+    // answer and the asking stay through a profile loaded or a reset, as the statistics' answer does
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(kIni);
+    w.files[ini] = "[report]\r\nauto = 0\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(!m.reportAsked());
+    CHECK(m.saveProfile(L"old", Lang::En).empty());  // made before the question
+    CHECK(m.setReportAuto(true, Lang::En).empty());
+    CHECK(m.reportAsked() && m.now().config.reportAuto);
+    CHECK_EQ(valueOf(w.files[ini], "report.auto"), std::string("1"));
+    CHECK(m.loadProfile(L"old", Lang::En).empty());
+    CHECK(m.reportAsked() && m.now().config.reportAuto);
+    CHECK(m.resetDefaults(Lang::En).empty());
+    CHECK(m.reportAsked() && m.now().config.reportAuto);
+    CHECK(m.setReportAuto(false, Lang::En).empty());  // «Ні»: asked all the same
+    CHECK(m.reportAsked() && !m.now().config.reportAuto);
+    CHECK_EQ(valueOf(w.files[ini], "report.auto"), std::string("0"));
+}
+
 // 2.6: the modes, the window's place and the version whose notes were shown - the app's own keys of [utility].
 TEST(model_new_install_starts_simple) {
     fake::Windows& w = fake::reset();

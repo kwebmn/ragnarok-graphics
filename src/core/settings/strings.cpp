@@ -3570,6 +3570,21 @@ const Entry kTexts[] = {
     {"uaRO Graphics is off (Pause / Scroll Lock) - press it again to turn it on",
      "uaRO Graphics вимкнено (Pause / Scroll Lock) — натисніть ще раз, щоб увімкнути",
      "uaRO Graphics выключено (Pause / Scroll Lock) — нажмите ещё раз, чтобы включить"},
+    {"Send the developers a report by itself when the game crashes?\n\nAfter a game in which the renderer would not "
+     "start, the graphics card was lost or the game closed without closing the renderer, a report goes to "
+     "uaro.kiev.ua: this computer's graphics card, Windows, monitors, uaro-graphics.ini and the logs of uaRO Graphics "
+     "- no login, no character; the Windows user name is hidden. At most one in 6 hours.\n\nIt shows in the Reports "
+     "window, where you can add what you were doing. You can change your mind on the Diagnostics page.",
+     "Надсилати розробникам звіт самостійно, коли гра вилітає?\n\nПісля гри, у якій рендер не запустився, відеокарта "
+     "відпала або гра закрилася, не закривши рендер, звіт іде на uaro.kiev.ua: відеокарта, Windows, монітори цього "
+     "комп'ютера, uaro-graphics.ini та журнали uaRO Graphics — без логіна й персонажа; ім'я користувача Windows "
+     "приховано. Не частіше одного на 6 годин.\n\nВін з'явиться у вікні «Звернення», де можна дописати, що ви робили. "
+     "Передумати можна на сторінці «Діагностика».",
+     "Отправлять разработчикам отчёт самостоятельно, когда игра вылетает?\n\nПосле игры, в которой рендер не "
+     "запустился, видеокарта отвалилась или игра закрылась, не закрыв рендер, отчёт уходит на uaro.kiev.ua: "
+     "видеокарта, Windows, мониторы этого компьютера, uaro-graphics.ini и логи uaRO Graphics — без логина и персонажа; "
+     "имя пользователя Windows скрыто. Не чаще одного в 6 часов.\n\nОн появится в окне «Обращения», где можно "
+     "дописать, что вы делали. Передумать можно на странице «Диагностика»."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -49,7 +49,7 @@ constexpr int kHeader = 52;        // 2.6: the header's height at 96 DPI
 constexpr int kList = 200;         // the list's width
 constexpr UINT kRebuild = WM_APP + 1;
 constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page; 2.6: the view, lParam its tab
-constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics go
+constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics (and the reports) go
 constexpr UINT kAskMachine = WM_APP + 9;  // 2.12: the card or the screen changed since the settings were picked
 constexpr UINT kOpenReports = WM_APP + 10;  // 2.13: --report - «Нове звернення» once the window is up
 // 2.13: WM_COPYDATA of a second app the game's Ctrl+Shift+F10 started: "<shot>\n<map>" in UTF-8
@@ -1038,6 +1038,15 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (!model_->statsAsked()) {
                 const bool yes = box(wtr(lang_, Text::StatsAsk), MB_YESNO | MB_ICONQUESTION) == IDYES;
                 const std::wstring err = model_->setStats(yes, lang_);
+                if (!err.empty()) message(err, true);
+                rebuild();
+            }
+            // 3.0.0-beta.1 (decision 5): the report by itself when a game ends badly - asked once, «Так» preselected
+            // (the box's first button); one who turned it on already is not asked
+            if (!model_->reportAsked()) {
+                const bool yes = model_->now().config.reportAuto ||
+                                 box(wtr(lang_, Text::ReportAutoAsk), MB_YESNO | MB_ICONQUESTION) == IDYES;
+                const std::wstring err = model_->setReportAuto(yes, lang_);
                 if (!err.empty()) message(err, true);
                 rebuild();
             }

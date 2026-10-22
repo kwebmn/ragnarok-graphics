@@ -140,6 +140,10 @@ public:
     // the answer written at once (with this computer's random number the first time)
     bool statsAsked() const;
     std::wstring setStats(bool send, settings::Lang l);
+    // 3.0.0-beta.1 (decision 5): the report by itself when a game ends badly ([report] auto) - asked once at the
+    // first start ([utility] report_asked), «Так» preselected; the answer written at once, kept like the statistics'
+    bool reportAsked() const;
+    std::wstring setReportAuto(bool send, settings::Lang l);
 
     // 2.6: the app's own keys of [utility], written at once without a backup like the language and kept across a
     // reset and a profile: the mode (a new install starts Simple, one the app ran in before Detailed), the window's

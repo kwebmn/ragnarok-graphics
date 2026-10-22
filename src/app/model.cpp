@@ -470,9 +470,12 @@ std::vector<IniEdit> Model::keptAcross() const {
     for (const char* key : {"send", "id"})
         if (const auto it = now.find(std::string("stats.") + key); it != now.end())
             keep.push_back({"stats", key, it->second});
-    for (const char* key : {"mode", "window", "seen"})  // 2.6: the app's own
+    for (const char* key : {"mode", "window", "seen", "report_asked"})  // 2.6: the app's own
         if (const auto it = now.find(std::string("utility.") + key); it != now.end())
             keep.push_back({"utility", key, it->second});
+    // 3.0.0-beta.1: the answer about the automatic reports, once given - else a reset would take it back unasked
+    if (const auto it = now.find("report.auto"); it != now.end() && now.count("utility.report_asked"))
+        keep.push_back({"report", "auto", it->second});
     return keep;
 }
 
@@ -693,6 +696,14 @@ std::optional<Lang> Model::savedLanguage() const {
 void Model::saveLanguage(Lang l) { writeIni({{"utility", "language", langToken(l)}}, l); }
 
 bool Model::statsAsked() const { return readIni(currentIni()).count("stats.send") > 0; }
+
+bool Model::reportAsked() const { return readIni(currentIni()).count("utility.report_asked") > 0; }
+
+std::wstring Model::setReportAuto(bool send, Lang l) {
+    const std::wstring err = writeIni({{"report", "auto", send ? "1" : "0"}, {"utility", "report_asked", "1"}}, l);
+    if (err.empty()) load();
+    return err;
+}
 
 bool Model::usedBefore() const {
     const auto v = readIni(now_.iniText);
