@@ -25,4 +25,12 @@ PatchCheck checkClientPatch(const std::wstring& dir);
 bool applyClientPatch(const std::wstring& dir, const PatchCheck& c,
                       const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error);
 
+// «Гра»'s check on a thread of its own (app/client_patch_thread.cpp): at the app's start and after a put
+struct PatchState {
+    enum Kind { Idle, Asking, Done } kind = Idle;
+    PatchCheck check;
+};
+void startClientPatchCheck(const std::wstring& dir);
+PatchState clientPatchState();
+
 }  // namespace uagfx::app

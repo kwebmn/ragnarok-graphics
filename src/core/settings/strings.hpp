@@ -370,6 +370,7 @@ enum class Text : uint16_t {
     ReportPaste, ReportPasteNone, ReportTooMany, ReportMapLine, ReportNewSent, ReportNewQueued,
     ReportNewRefused, ReportPictures, ReportDiscard, ReportsOpen,  // 2.13: «Звернення»
     StartReportHint,  // 2.13: the splash names «Звернення»'s key
+    PlayPatchLine, PlayPatchNote, PatchApplying, PatchFailed,  // 2.14: the client patch
     Count
 };
 

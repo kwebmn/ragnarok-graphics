@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <memory>
 
+#include "app/client_patch.hpp"
 #include "app/mnemonic.hpp"
 #include "app/notes_window.hpp"
 #include "app/report_send.hpp"
@@ -15,6 +16,7 @@
 #include "app/launcher.hpp"
 #include "app/modes.hpp"
 #include "app/update.hpp"
+#include "app/update_window.hpp"
 #include "core/settings/search.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -334,6 +336,7 @@ void MainWindow::create() {
     if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
+    startClientPatchCheck(model_->paths().dir);  // 2.14: the game's new files
     // 2.13: the waiting reports sent, the answers counted
     startReportsCheck(model_->paths().dir, computerKey(model_->paths().dir));
     PostMessageW(hwnd_, kAskStats, 0, 0);
@@ -797,6 +800,30 @@ void MainWindow::doApply(bool play) {
     std::wstring err = model_->apply(lang_);
     bool closing = false;
     if (err.empty() && play) {  // 2.11: an offered update first (it starts the game after it), else the game
+        // 2.14: the game's new files before either (a failure is told and the game starts as it is; Cancel stops)
+        const PatchState patch = clientPatchState();
+        if (patch.kind == PatchState::Done && !patch.check.needed.empty()) {
+            std::wstring why;
+            const auto work = [&](const Report& report, std::wstring& e) {
+                std::string error;
+                const auto step = [&](uint64_t done, uint64_t total) {
+                    Step s;
+                    s.done = done;
+                    s.total = total;
+                    return report(s);
+                };
+                const bool put = applyClientPatch(model_->paths().dir, patch.check, step, error);
+                if (!put) e = wide(error);
+                return put;
+            };
+            const bool put = runWithProgress(hwnd_, wtr(lang_, Text::PatchApplying), lang_, false, work, why);
+            if (!put && why == L"stopped") {
+                reload();
+                return;
+            }
+            if (!put) message(wtrf(lang_, Text::PatchFailed, {utf8(why)}), true);
+            startClientPatchCheck(model_->paths().dir);
+        }
         const UpdateState u = updateState();
         err = playNow(*model_, u.kind == UpdateState::Done ? u.offer : "", lang_, closing);
     }

@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <cstdio>
 
+#include "app/client_patch.hpp"
 #include "app/files.hpp"
 #include "app/launcher.hpp"
 #include "app/page.hpp"
@@ -23,7 +25,7 @@ constexpr int kNewsMost = 10;
 
 std::string megabytes(uint64_t bytes) {
     char text[32];
-    std::snprintf(text, sizeof text, "%.1f", double(bytes) / (1024.0 * 1024.0));
+    std::snprintf(text, sizeof text, "%.1f", bytes ? std::max(0.1, double(bytes) / (1024.0 * 1024.0)) : 0.0);
     return text;
 }
 
@@ -37,9 +39,12 @@ public:
     void build(Panel& p) override {
         const LauncherState s = launcherState();
         const UpdateState u = updateState();
+        const PatchState patch = clientPatchState();  // 2.14: the game's own new files
         asking_ = s.kind == LauncherState::Asking;
         checking_ = u.kind == UpdateState::Checking;
+        patching_ = patch.kind == PatchState::Asking;
         const std::string offer = u.kind == UpdateState::Done ? u.offer : "";
+        const bool patchNeeded = patch.kind == PatchState::Done && !patch.check.needed.empty();
         buildCards(p);
         p.heading(t(Text::PlayNews));
         p.buttons({{kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});
@@ -76,8 +81,13 @@ public:
         } else {
             p.note(t(checking_ ? Text::UpdateChecking : Text::MainUpdateNone));
         }
+        if (patchNeeded) {
+            p.note(tf(Text::PlayPatchLine, {std::to_string(patch.check.needed.size()), megabytes(patch.check.bytes)}),
+                   Tone::Warn);
+            p.note(t(Text::PlayPatchNote));
+        }
         p.gap();
-        p.buttons({{kPlayNow, t(offer.empty() ? Text::PlayButton : Text::PlayUpdateButton)}});
+        p.buttons({{kPlayNow, t(offer.empty() && !patchNeeded ? Text::PlayButton : Text::PlayUpdateButton)}});
         rows_->buildRow(p, "launcher.direct_start");
     }
 
@@ -103,11 +113,12 @@ public:
         if (any) p.gap();
     }
 
-    bool ticks() const override { return asking_ || checking_; }
+    bool ticks() const override { return asking_ || checking_ || patching_; }
     void tick() override {
         const bool asking = launcherState().kind == LauncherState::Asking;
         const bool checking = updateState().kind == UpdateState::Checking;
-        if (asking != asking_ || checking != checking_) host_.rebuild();  // an answer came
+        const bool patching = clientPatchState().kind == PatchState::Asking;
+        if (asking != asking_ || checking != checking_ || patching != patching_) host_.rebuild();  // an answer came
     }
 
     void command(int id, int code) override {
@@ -142,7 +153,7 @@ public:
 private:
     std::unique_ptr<Page> rows_;
     std::vector<std::string> urls_;  // the news' "More", in the page's order
-    bool asking_ = false, checking_ = false;
+    bool asking_ = false, checking_ = false, patching_ = false;
 };
 
 }  // namespace

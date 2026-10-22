@@ -3551,6 +3551,18 @@ const Entry kTexts[] = {
     {"Something wrong with the picture? Ctrl+Shift+F10 in the game - a screenshot and a report to the developers",
      "Щось не так з картинкою? Ctrl+Shift+F10 у грі — знімок і звернення до розробників",
      "Что-то не так с картинкой? Ctrl+Shift+F10 в игре — снимок и обращение к разработчикам"},
+    {"New game files: {1} ({2} MB in all)",
+     "Нові файли гри: {1} (разом {2} МБ)",
+     "Новые файлы игры: {1} (всего {2} МБ)"},
+    {"They are downloaded and put into the game's folder before it starts - DATA.INI stays as it is.",
+     "Їх буде завантажено й покладено в теку гри перед запуском — DATA.INI не змінюється.",
+     "Они будут скачаны и положены в папку игры перед запуском — DATA.INI не меняется."},
+    {"Updating the game's files",
+     "Оновлюємо файли гри",
+     "Обновляем файлы игры"},
+    {"The game's files were not updated: {1}. The game starts as it is.",
+     "Файли гри не оновлено: {1}. Гра запуститься як є.",
+     "Файлы игры не обновлены: {1}. Игра запустится как есть."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
