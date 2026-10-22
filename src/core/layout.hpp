@@ -21,6 +21,11 @@ constexpr const char* kTextures = "uaro-graphics\\textures";
 // The folders the driver, the 64-bit host and the settings app make at their start, in this order: what writes into
 // them - the shader caches, the pipelines, a new texture pack - does not make them itself.
 constexpr const char* kMadeAtStart[] = {kOurs, kLogs, kCache, kTextures};
+// 2.10: the installer's places (app/installer): the files an update replaced, kept for a rollback; its downloads and
+// the package unpacked; the site's update.ini as last read (and the player's [local] choices).
+constexpr const char* kPrevious = "uaro-graphics\\previous";
+constexpr const char* kUpdateWork = "uaro-graphics\\update";
+constexpr const char* kUpdateInfo = "uaro-graphics\\update.ini";
 // The package's templates: a settings file that is not there yet starts from one of them (never at the settings'
 // own place - an older update.bat copies uaro-graphics\ of the archive over the installed one).
 constexpr const char* kIniTemplate = "uaro-graphics\\defaults\\uaro-graphics.ini";
