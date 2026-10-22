@@ -96,3 +96,18 @@ TEST(no_site_no_patch_the_game_starts) {
     CHECK(!apply(app::exeFolder(), c2, error));
     CHECK(s.files.count(fake::path(L"uaro-flags.grf")) == 0);
 }
+
+TEST(the_same_file_at_two_places_is_put_twice) {
+    // final review: one picture for two folders - one download, both places
+    fake::Windows& w = fake::reset();
+    const std::string sha = sha256::hexOf(kLogo), size = std::to_string(kLogo.size());
+    w.web["/api/public/client-patch"] = "{\"format\":1,\"version\":\"p9\",\"files\":[{\"path\":\"data/a/logo.bmp\","
+                                        "\"size\":" + size + ",\"sha256\":\"" + sha + "\"},{\"path\":\"data/b/logo.bmp\","
+                                        "\"size\":" + size + ",\"sha256\":\"" + sha + "\"}]}";
+    w.web["/files/client/" + sha] = kLogo;
+    const std::wstring dir = app::exeFolder();
+    std::string error;
+    CHECK(apply(dir, app::checkClientPatch(dir), error));
+    CHECK_EQ(w.files[fake::path(L"data\\a\\logo.bmp")], kLogo);
+    CHECK_EQ(w.files[fake::path(L"data\\b\\logo.bmp")], kLogo);
+}
