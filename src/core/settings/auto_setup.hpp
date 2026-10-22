@@ -55,6 +55,12 @@ AutoSetup autoSetup(const Machine& m);
 // 2.12: integrated by its memory - a little of its own (1 GB or less) and more of the computer's; strong by its name.
 bool integratedByMemory(unsigned long long dedicatedMb, unsigned long long sharedMb);
 bool strongIntegrated(const std::string& adapter);
+
+// 2.12: the app's start - a fresh install (the app never ran: no language, no statistics' answer) is set up for its
+// card at once; a used one's card and screen are only recorded ([utility] machine); a changed one is asked about.
+enum class FirstStart { Nothing, Apply, Ask, Record };
+std::string machineKey(const Machine& m);  // "adapter|vramMb|WxH"
+FirstStart firstStart(bool usedBefore, const std::string& kept, const std::string& now);
 // "high", "middle", ...: for the log and the tests.
 const char* tierName(Tier t);
 

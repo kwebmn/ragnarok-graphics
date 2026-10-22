@@ -47,6 +47,7 @@ constexpr int kList = 200;         // the list's width
 constexpr UINT kRebuild = WM_APP + 1;
 constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page; 2.6: the view, lParam its tab
 constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics go
+constexpr UINT kAskMachine = WM_APP + 9;  // 2.12: the card or the screen changed since the settings were picked
 
 // 2.2.1: the day's statistics, on a thread of its own (the network may take seconds); the folder's copy its own.
 DWORD WINAPI sendStats(void* folder) {
@@ -69,7 +70,8 @@ int MainWindow::run(HINSTANCE inst, int show) {
     }
     model_ = std::make_unique<Model>();
     const auto saved = model_->savedLanguage();
-    lang_ = startLang(saved);  // 0.48: English until one is chosen
+    // 0.48: English until one is chosen; 2.12: Windows' language until then (uk, ru, else en)
+    lang_ = settings::windowLang(saved, PRIMARYLANGID(GetUserDefaultUILanguage()));
     mode_ = model_->startMode();  // 2.6
     shown_ = viewsOf(mode_).front();
     newInstall_ = !model_->usedBefore();  // before the statistics' question writes its answer
@@ -319,6 +321,8 @@ void MainWindow::create() {
     if (!owned.empty()) message(owned, true);
     buildPage();
     SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
+    // 2.12: a fresh install set up for this computer at once («Гра» says so), a changed card or screen asked about
+    if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
     PostMessageW(hwnd_, kAskStats, 0, 0);
@@ -940,6 +944,19 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kRebuild:
             if (rebuilds_.arrived()) buildPage();
             return 0;
+        case kAskMachine: {  // 2.12: the settings picked again for the new card or screen, if the player wants
+            const settings::Machine x = model_->machine();
+            const std::string screen = std::to_string(x.screenWidth) + "x" + std::to_string(x.screenHeight);
+            if (box(wtrf(lang_, Text::MachineChanged, {x.adapter, screen}), MB_YESNO | MB_ICONQUESTION) == IDYES) {
+                bool uiChanged = false;
+                model_->pendAutoSetup(uiChanged);
+                const std::wstring err = model_->apply(lang_);
+                if (!err.empty()) message(err, true);
+            }
+            model_->recordMachine(lang_);
+            reload();
+            return 0;
+        }
         case kAskStats: {  // 2.2.1: asked once; then the day's statistics go in the background (not while it plays)
             if (!model_->statsAsked()) {
                 const bool yes = box(wtr(lang_, Text::StatsAsk), MB_YESNO | MB_ICONQUESTION) == IDYES;

@@ -686,3 +686,67 @@ TEST(model_leaves_an_old_pad_dll_while_the_game_runs) {
     app::Model m;
     CHECK_EQ(w.files[fake::path(L"dinput.dll")], pad);
 }
+
+namespace {
+
+void aCard(fake::Windows& w, const char* name, unsigned vendor, unsigned long long vram) {
+    w.system.windows.major = 10;
+    w.system.d3d12Probed = true;
+    w.system.d3d12.ok = true;
+    w.system.d3d12.adapter = name;
+    w.system.d3d12.vendor = vendor;
+    w.system.d3d12.vramMb = vram;
+    w.system.d3d11.ok = true;
+    w.system.d3d11.level = 0xc100;
+}
+
+}  // namespace
+
+// 2.12: the first start sets a fresh install up for its card, and records the card and the screen.
+TEST(model_sets_a_fresh_install_up) {
+    fake::Windows& w = fake::reset();
+    aCard(w, "NVIDIA GeForce RTX 4070", 0x10de, 12282);
+    app::Model m;
+    CHECK(m.startSetup(Lang::Uk) == FirstStart::Apply);
+    const std::string ini = w.files[fake::path(kIni)];
+    CHECK_EQ(valueOf(ini, "renderer.api"), std::string("auto"));
+    CHECK(valueOf(ini, "utility.machine").rfind("NVIDIA GeForce RTX 4070|12282|", 0) == 0);
+    CHECK(m.lastAutoSetup() && m.lastAutoSetup()->tier == Tier::High);
+}
+
+TEST(first_start_leaves_a_used_install_alone) {
+    fake::Windows& w = fake::reset();
+    aCard(w, "NVIDIA GeForce RTX 4070", 0x10de, 12282);
+    w.folders.insert(fake::path(L"uaro-graphics"));
+    w.files[fake::path(kIni)] = "[utility]\r\nlanguage = uk\r\n[quality]\r\nsharpen = 13\r\n";
+    app::Model m;
+    CHECK(m.startSetup(Lang::Uk) == FirstStart::Record);
+    const std::string ini = w.files[fake::path(kIni)];
+    CHECK_EQ(valueOf(ini, "quality.sharpen"), std::string("13"));  // the player's own
+    CHECK(!valueOf(ini, "utility.machine").empty());
+    CHECK(!m.lastAutoSetup());
+    w.system.d3d12.adapter = "AMD Radeon RX 7800 XT";  // another card in the computer
+    app::Model again;
+    CHECK(again.startSetup(Lang::Uk) == FirstStart::Ask);
+    CHECK_EQ(valueOf(w.files[fake::path(kIni)], "quality.sharpen"), std::string("13"));
+}
+
+// 2.12: «Безпечний режим» and «Вимкнути uaRO Graphics» in one press; «Звичайний режим» forgets an automatic one too.
+TEST(model_safe_mode_and_switching_off) {
+    fake::Windows& w = fake::reset();
+    app::Model m;
+    CHECK(m.setSafeMode(true, Lang::Uk).empty());
+    CHECK_EQ(valueOf(w.files[fake::path(kIni)], "renderer.safe_mode"), std::string("1"));
+    w.folders.insert(fake::path(L"uaro-graphics\\cache"));
+    w.files[fake::path(L"uaro-graphics\\cache\\safe-mode.txt")] = "2 starts in a row ended before their first picture";
+    w.files[fake::path(L"uaro-graphics\\cache\\failed-starts.txt")] = "2";
+    CHECK(m.safeModeNoted());
+    CHECK(m.setSafeMode(false, Lang::Uk).empty());
+    CHECK_EQ(valueOf(w.files[fake::path(kIni)], "renderer.safe_mode"), std::string("0"));
+    CHECK(!m.safeModeNoted());
+    CHECK(w.files.count(fake::path(L"uaro-graphics\\cache\\failed-starts.txt")) == 0);
+    CHECK(m.setSwitchedOff(true, Lang::Uk).empty());
+    CHECK_EQ(valueOf(w.files[fake::path(kIni)], "renderer.api"), std::string("system"));
+    CHECK(m.setSwitchedOff(false, Lang::Uk).empty());
+    CHECK_EQ(valueOf(w.files[fake::path(kIni)], "renderer.api"), std::string("auto"));
+}

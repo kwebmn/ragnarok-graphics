@@ -15,6 +15,9 @@ using namespace settings;
 
 constexpr int kPlayNow = 2101;
 constexpr int kWhatsNew = 2102;
+constexpr int kPicked = 2103;      // 2.12: «Як підібрано»
+constexpr int kNormalMode = 2104;  // the safe mode off
+constexpr int kSwitchOn = 2105;    // uaRO Graphics on again
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
 
@@ -37,6 +40,7 @@ public:
         asking_ = s.kind == LauncherState::Asking;
         checking_ = u.kind == UpdateState::Checking;
         const std::string offer = u.kind == UpdateState::Done ? u.offer : "";
+        buildCards(p);
         p.heading(t(Text::PlayNews));
         p.buttons({{kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});
         urls_.clear();
@@ -77,6 +81,28 @@ public:
         rows_->buildRow(p, "launcher.direct_start");
     }
 
+    // 2.12: this start's own setup, the safe mode, uaRO Graphics switched off - each with its one press
+    void buildCards(Panel& p) {
+        Model& m = host_.model();
+        bool any = false;
+        if (m.lastAutoSetup()) {
+            p.note(tf(Text::AutoPicked, {m.machine().adapter}), Tone::Good);
+            p.buttons({{kPicked, t(Text::AutoPickedMore)}});
+            any = true;
+        }
+        if (m.safeModeNoted() || m.now().config.safeMode) {
+            p.note(t(m.safeModeNoted() ? Text::SafeModeAuto : Text::SafeModeAsked), Tone::Warn);
+            p.buttons({{kNormalMode, t(Text::SafeModeOff)}});
+            any = true;
+        }
+        if (m.now().config.api == Api::System) {
+            p.note(t(Text::SwitchedOff), Tone::Warn);
+            p.buttons({{kSwitchOn, t(Text::SwitchOn)}});
+            any = true;
+        }
+        if (any) p.gap();
+    }
+
     bool ticks() const override { return asking_ || checking_; }
     void tick() override {
         const bool asking = launcherState().kind == LauncherState::Asking;
@@ -90,8 +116,16 @@ public:
             return;
         }
         if (code != BN_CLICKED) return;
+        Model& m = host_.model();
         if (id == kPlayNow) {
             host_.play();
+        } else if (id == kPicked && m.lastAutoSetup()) {
+            host_.message(autoSetupText(m.machine(), *m.lastAutoSetup(), false, host_.lang()), false);
+        } else if (id == kNormalMode || id == kSwitchOn) {
+            const std::wstring err =
+                id == kNormalMode ? m.setSafeMode(false, host_.lang()) : m.setSwitchedOff(false, host_.lang());
+            if (!err.empty()) host_.message(err, true);
+            host_.reload();
         } else if (id == kWhatsNew) {
             const std::wstring notes = notesText(host_.model().paths().dir, host_.lang());
             if (notes.empty())

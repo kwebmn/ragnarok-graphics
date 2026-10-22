@@ -629,6 +629,61 @@ std::wstring Model::launchGame(Lang l) {
     return e ? wtrf(l, Text::ErrLaunch, {num(static_cast<long long>(e))}) : L"";
 }
 
+AutoSetup Model::pendAutoSetup(bool& uiChanged) {
+    const AutoSetup a = autoSetup(machine());
+    applyPreset(a.preset);  // the game's own texture quality too
+    for (const IniEdit& e : a.edits)
+        if (const IniSetting* s = findSetting(e.section + "." + e.key)) setToken(*s, e.value);
+    // 1.3.3: the interface a whole number of times the game's pixels, where it is a fraction now (167 %)
+    uiChanged = false;
+    if (!integerScale(screenPlan().s)) {
+        const ScreenChoice before = screenChoice();
+        ScreenChoice c = before;
+        if (c.ui != a.ui) {
+            c.ui = a.ui;
+            setScreen(c);
+            uiChanged = screenPlan().problem == ScreenProblem::None;
+            if (!uiChanged) setScreen(before);  // too small a game at that size: as it was
+        }
+    }
+    return a;
+}
+
+std::string Model::machineKept() const {
+    const auto v = readIni(currentIni());
+    const auto it = v.find("utility.machine");
+    return it == v.end() ? "" : it->second;
+}
+
+std::wstring Model::recordMachine(Lang l) { return writeIni({{"utility", "machine", machineKey(machine())}}, l); }
+
+FirstStart Model::startSetup(Lang l) {
+    const FirstStart f = firstStart(usedBefore(), machineKept(), machineKey(machine()));
+    if (f == FirstStart::Apply) {
+        bool uiChanged = false;
+        lastAuto_ = pendAutoSetup(uiChanged);
+        apply(l);
+    }
+    if (f == FirstStart::Apply || f == FirstStart::Record) recordMachine(l);
+    return f;
+}
+
+std::wstring Model::setSafeMode(bool on, Lang l) {
+    if (!on) {
+        deleteFile(ourPlace(paths_.dir, layout::kSafeModeNote));
+        deleteFile(ourPlace(paths_.dir, layout::kFailedStarts));
+    }
+    setToken(*findSetting("renderer.safe_mode"), on ? "1" : "0");
+    return apply(l);
+}
+
+bool Model::safeModeNoted() const { return fileExists(ourPlace(paths_.dir, layout::kSafeModeNote)); }
+
+std::wstring Model::setSwitchedOff(bool off, Lang l) {
+    setToken(*findSetting("renderer.api"), off ? "system" : "auto");
+    return apply(l);
+}
+
 std::optional<Lang> Model::savedLanguage() const {
     const auto v = readIni(now_.iniText);
     const auto it = v.find("utility.language");

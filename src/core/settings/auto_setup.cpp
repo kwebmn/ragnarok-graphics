@@ -43,6 +43,16 @@ const char* tierName(Tier t) {
     return "?";
 }
 
+std::string machineKey(const Machine& m) {
+    return m.adapter + "|" + std::to_string(m.vramMb) + "|" + std::to_string(m.screenWidth) + "x" +
+           std::to_string(m.screenHeight);
+}
+
+FirstStart firstStart(bool usedBefore, const std::string& kept, const std::string& now) {
+    if (kept.empty()) return usedBefore ? FirstStart::Record : FirstStart::Apply;
+    return kept == now ? FirstStart::Nothing : FirstStart::Ask;
+}
+
 bool integratedByMemory(unsigned long long dedicatedMb, unsigned long long sharedMb) {
     return dedicatedMb <= 1024 && sharedMb > dedicatedMb;
 }

@@ -154,6 +154,20 @@ public:
     // This computer as the auto setup sees it (0.50; 2.6 from the Render page): the card the Render page's list
     // names, else the fast one.
     settings::Machine machine() const;
+    // 2.12: the auto setup's values made pending - its preset, its rows, a whole-number interface (`uiChanged` when
+    // that size changed); the caller applies them, or asks first (the Main page's «Рекомендовані налаштування»).
+    settings::AutoSetup pendAutoSetup(bool& uiChanged);
+    std::string machineKept() const;  // [utility] machine: what the settings were picked for
+    std::wstring recordMachine(settings::Lang l);
+    // The app's start (settings::firstStart): a fresh install set up and applied at once (lastAutoSetup), a used one
+    // recorded; Ask is the caller's question.
+    settings::FirstStart startSetup(settings::Lang l);
+    const std::optional<settings::AutoSetup>& lastAutoSetup() const { return lastAuto_; }
+    // 2.12: [renderer] safe_mode written and applied; off also forgets an automatic safe mode (the driver's note and
+    // its count of failed starts); [renderer] api = system (switched off) or auto (on).
+    std::wstring setSafeMode(bool on, settings::Lang l);
+    bool safeModeNoted() const;  // the driver started the game safe by itself (core/safe_mode)
+    std::wstring setSwitchedOff(bool off, settings::Lang l);
     // 2.6: the word recommended for a row on this computer - the auto setup's, else the shipped default.
     std::string recommended(const settings::IniSetting& s) const;
 
@@ -181,6 +195,7 @@ private:
     std::map<std::string, std::string> wroteNow_;  // "section.key" -> the word before the first writeNow
     bool backedUp_ = false;
     mutable std::map<std::string, std::string> recommended_;  // 2.6: recommendedTokens, made at the first ask
+    std::optional<settings::AutoSetup> lastAuto_;              // 2.12: this start's silent setup («Гра»'s card)
 };
 
 // What the Screen page says about a plan it cannot write.

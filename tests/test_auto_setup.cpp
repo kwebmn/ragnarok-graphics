@@ -226,3 +226,14 @@ TEST(auto_setup_takes_the_fast_card_of_a_laptop) {
     m.integrated = false;
     CHECK(autoSetup(m).tier == Tier::Middle);
 }
+
+// 2.12: the app's start - a fresh install set up at once, a used one only recorded, a changed card or screen asked.
+TEST(first_start_decides_by_the_install_and_the_machine) {
+    CHECK(firstStart(false, "", "RTX|8192|1920x1080") == FirstStart::Apply);
+    CHECK(firstStart(true, "", "RTX|8192|1920x1080") == FirstStart::Record);
+    CHECK(firstStart(true, "RTX|8192|1920x1080", "RTX|8192|1920x1080") == FirstStart::Nothing);
+    CHECK(firstStart(true, "RTX|8192|1920x1080", "RTX|8192|2560x1440") == FirstStart::Ask);
+    CHECK(firstStart(false, "RTX|8192|1920x1080", "UHD|128|1920x1080") == FirstStart::Ask);
+    Machine m = rtx5060();
+    CHECK_EQ(machineKey(m), std::string("NVIDIA GeForce RTX 5060 Ti|16384|3840x2160"));
+}

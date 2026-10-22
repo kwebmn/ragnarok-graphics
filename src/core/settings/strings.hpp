@@ -357,6 +357,8 @@ enum class Text : uint16_t {
     AutoTierIntegratedWeak, AutoTierIntegratedStrong,  // 2.12
     RenderApiSystem,  // 2.12
     RenderSafeMode, RenderSafeModeHint,  // 2.12
+    AutoPicked, AutoPickedMore, MachineChanged, SafeModeAuto, SafeModeAsked, SafeModeOff, TroubleHeading,
+    SwitchOff, SwitchOn, SwitchOffNote, SwitchedOff,  // 2.12
     Count
 };
 

@@ -28,6 +28,8 @@ constexpr int kUpdateNow = 1441;
 constexpr int kRollback = 1442;  // 2.10
 constexpr int kRepair = 1443;
 constexpr int kUninstall = 1444;
+constexpr int kSafeToggle = 1445;    // 2.12: the safe mode on or off
+constexpr int kSwitchToggle = 1446;  // uaRO Graphics off (api = system) or on
 constexpr int kProfiles = 1450;  // 0.55
 constexpr int kProfileName = 1451;
 constexpr int kProfileSave = 1452;
@@ -163,6 +165,15 @@ public:
         more.push_back({kRepair, t(Text::RepairButton)});
         more.push_back({kUninstall, t(Text::UninstallButton)});
         p.buttons(more);
+        // 2.12: when the game does not start - the safe mode, or uaRO Graphics switched off (the game's own look)
+        p.gap();
+        p.heading(t(Text::TroubleHeading));
+        const bool safe = m.safeModeNoted() || m.now().config.safeMode;
+        const bool off = m.now().config.api == Api::System;
+        p.buttons({{kSafeToggle, t(safe ? Text::SafeModeOff : Text::RenderSafeMode)},
+                   {kSwitchToggle, t(off ? Text::SwitchOn : Text::SwitchOff)}});
+        p.note(t(Text::RenderSafeModeHint));
+        p.note(t(Text::SwitchOffNote));
     }
 
     bool ticks() const override {
@@ -227,6 +238,12 @@ public:
             startAndClose(Args::Mode::Repair, t(Text::RepairAsk));
         } else if (id == kUninstall) {
             startAndClose(Args::Mode::Uninstall, L"");  // its own window asks
+        } else if (id == kSafeToggle || id == kSwitchToggle) {
+            const bool safe = m.safeModeNoted() || m.now().config.safeMode;
+            const bool off = m.now().config.api == Api::System;
+            const std::wstring err = id == kSafeToggle ? m.setSafeMode(!safe, l) : m.setSwitchedOff(!off, l);
+            if (!err.empty()) host_.message(err, true);
+            host_.reload();
         } else if (id == kReset) {
             if (!host_.ask(t(Text::ResetAsk))) return;
             const std::wstring err = m.resetDefaults(l);

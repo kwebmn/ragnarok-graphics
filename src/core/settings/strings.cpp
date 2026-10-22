@@ -3333,6 +3333,45 @@ const Entry kTexts[] = {
      "Вмикається й сама після двох невдалих запусків поспіль.",
      "Direct3D 11 без эффектов, нейросети, DLSS и 64-битного рендера — если игра не запускается или вылетает. "
      "Включается и сама после двух неудачных запусков подряд."},
+    {"Set up for {1}",
+     "Підібрано для {1}",
+     "Подобрано для {1}"},
+    {"What was picked",
+     "Як підібрано",
+     "Как подобрано"},
+    {"The graphics card or the monitor changed: {1}, {2}. Pick the settings for them again? Your present settings "
+     "change.",
+     "Відеокарта або монітор змінилися: {1}, {2}. Підібрати налаштування під них заново? Ваші теперішні налаштування "
+     "зміняться.",
+     "Видеокарта или монитор сменились: {1}, {2}. Подобрать настройки под них заново? Ваши нынешние настройки "
+     "изменятся."},
+    {"The game starts in the safe mode: its last starts did not get to the picture. Direct3D 12, the effects, the "
+     "neural network, DLSS and the 64-bit renderer are off.",
+     "Гра запускається в безпечному режимі: останні запуски не дійшли до картинки. Вимкнено Direct3D 12, ефекти, "
+     "нейромережу, DLSS і 64-бітний рендер.",
+     "Игра запускается в безопасном режиме: последние запуски не дошли до картинки. Выключены Direct3D 12, эффекты, "
+     "нейросеть, DLSS и 64-битный рендер."},
+    {"The safe mode is on: Direct3D 11 without effects, the neural network, DLSS and the 64-bit renderer.",
+     "Безпечний режим увімкнено: Direct3D 11 без ефектів, нейромережі, DLSS і 64-бітного рендера.",
+     "Безопасный режим включён: Direct3D 11 без эффектов, нейросети, DLSS и 64-битного рендера."},
+    {"Normal mode",
+     "Звичайний режим",
+     "Обычный режим"},
+    {"If the game does not start",
+     "Якщо гра не запускається",
+     "Если игра не запускается"},
+    {"Switch uaRO Graphics off",
+     "Вимкнути uaRO Graphics",
+     "Выключить uaRO Graphics"},
+    {"Switch uaRO Graphics on",
+     "Увімкнути uaRO Graphics",
+     "Включить uaRO Graphics"},
+    {"The game then draws by itself, as without uaRO Graphics; the gamepad and the launcher stay.",
+     "Тоді гра малює сама, як без uaRO Graphics; геймпад і лаунчер лишаються.",
+     "Тогда игра рисует сама, как без uaRO Graphics; геймпад и лаунчер остаются."},
+    {"uaRO Graphics is switched off: the game draws by itself.",
+     "uaRO Graphics вимкнено: гра малює сама.",
+     "uaRO Graphics выключен: игра рисует сама."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

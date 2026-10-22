@@ -522,32 +522,11 @@ private:
 
 }  // namespace
 
-// 0.50: what this computer carries, at a press (core/settings/auto_setup) - for a client handed to other players.
-// 2.6: the Main page's "Recommended settings" too.
-void runAutoSetup(PageHost& host) {
-    const Lang l = host.lang();
-    Model& m = host.model();
-    const Machine x = m.machine();  // 2.6: the model's, the recommended values' too
-    const AutoSetup a = autoSetup(x);
-    m.applyPreset(a.preset);  // the game's own texture quality too
+// 2.12: what the auto setup picked, in words - the Main page's question and «Гра»'s «Як підібрано».
+std::wstring autoSetupText(const Machine& x, const AutoSetup& a, bool uiChanged, Lang l) {
     std::string scale = "100";
-    for (const IniEdit& e : a.edits) {
-        if (const IniSetting* s = findSetting(e.section + "." + e.key)) m.setToken(*s, e.value);
+    for (const IniEdit& e : a.edits)
         if (e.key == "render_scale") scale = e.value;
-    }
-    // 1.3.3: the interface a whole number of times the game's pixels, where it is a fraction now (167 %)
-    bool uiChanged = false;
-    if (!integerScale(m.screenPlan().s)) {
-        const ScreenChoice before = m.screenChoice();
-        ScreenChoice c = before;
-        if (c.ui != a.ui) {
-            c.ui = a.ui;
-            m.setScreen(c);
-            uiChanged = m.screenPlan().problem == ScreenProblem::None;
-            if (!uiChanged) m.setScreen(before);  // too small a game at that size: as it was
-        }
-    }
-    host.changed();
     std::wstring text = wtrf(l, Text::AutoFound, {x.adapter.empty() ? utf8(wtr(l, Text::Unknown)) : x.adapter,
                                              std::to_string(x.vramMb),
                                              std::to_string(x.screenWidth) + "x" + std::to_string(x.screenHeight)});
@@ -570,6 +549,20 @@ void runAutoSetup(PageHost& host) {
     if (a.dlss == "quality") text += L"\n" + wtr(l, Text::AutoDlssQuality);
     if (a.hdrOn) text += L"\n" + wtr(l, Text::AutoHdr);
     if (a.soundEngine) text += L"\n" + wtr(l, Text::AutoSoundEngine);
+    return text;
+}
+
+// 0.50: what this computer carries, at a press (core/settings/auto_setup) - for a client handed to other players.
+// 2.6: the Main page's "Recommended settings" too.
+void runAutoSetup(PageHost& host) {
+    const Lang l = host.lang();
+    Model& m = host.model();
+    const Machine x = m.machine();  // 2.6: the model's, the recommended values' too
+    bool uiChanged = false;
+    const AutoSetup a = m.pendAutoSetup(uiChanged);  // 2.12: the model's, the first start's too
+    m.recordMachine(l);  // the card and the screen these were picked for: no question about them at the next start
+    host.changed();
+    std::wstring text = autoSetupText(x, a, uiChanged, l);
     text += L"\n\n" + wtr(l, Text::AutoAsk);
     if (host.ask(text)) {
         std::wstring err = m.apply(l);
