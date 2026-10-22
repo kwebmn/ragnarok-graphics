@@ -22,11 +22,13 @@ struct Get {
     }
 };
 
-// 2.13: `body` - a POST of JSON instead of the GET (with the timeouts of the reports' POST since 0.51)
-bool open(Get& g, const std::string& path, uint64_t range, std::string& error, const std::string* body = nullptr) {
+// 2.13: `body` - a POST of JSON instead of the GET; `quick` - a small answer the player waits for (the window
+// «Звернення»): 10 s to find and reach the site, not Windows' minute (the reports' POST timeouts since 0.51)
+bool open(Get& g, const std::string& path, uint64_t range, std::string& error, const std::string* body = nullptr,
+          bool quick = false) {
     g.session = WinHttpOpen(L"uaRO Graphics", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
                             WINHTTP_NO_PROXY_BYPASS, 0);
-    if (g.session && body) WinHttpSetTimeouts(g.session, 10000, 10000, 30000, 30000);
+    if (g.session && quick) WinHttpSetTimeouts(g.session, 10000, 10000, 30000, 30000);
     g.connect = g.session ? WinHttpConnect(g.session, wide(update::kSite).c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0)
                           : nullptr;
     const std::wstring wpath = wide(path);
@@ -148,7 +150,7 @@ bool fetch(const std::string& file, std::string& out, std::string& error) {
 bool fetchPath(const std::string& path, std::string& out, std::string& error, size_t most) {
     out.clear();
     Get g;
-    if (!open(g, path, 0, error)) return false;
+    if (!open(g, path, 0, error, nullptr, true)) return false;
     if (g.status != 200) {
         error = std::string(update::kSite) + " answered " + std::to_string(g.status) + " for " + path;
         return false;
@@ -165,7 +167,7 @@ bool postPath(const std::string& path, const std::string& body, long& status, st
     answer.clear();
     status = 0;
     Get g;
-    if (!open(g, path, 0, error, &body)) return false;
+    if (!open(g, path, 0, error, &body, true)) return false;
     status = long(g.status);
     readAll(g, answer, 64u << 10);
     return true;

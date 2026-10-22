@@ -20,6 +20,11 @@ bool answerReport(const std::string& key, const std::string& code, const std::st
 // «Підтверджую» (fixed) or «Ще є» (`text`; the site writes «Ще є» when it is empty)
 bool sendVerdict(const std::string& key, const std::string& code, bool fixed, const std::string& text,
                  std::string& error);
+// «Ще є» with the player's words and screenshots: with screenshots it goes as their message (`stillThere`, the
+// player's language, when no words) - the site makes the report «Нове» again as for the verdict, which takes none
+bool sendStillThere(const std::string& key, const std::string& code, const std::string& text,
+                    const std::string& stillThere, const std::vector<std::pair<std::string, std::string>>& shots,
+                    std::string& error);
 // A shot of a conversation (the player's or the developer's), for the app to open
 bool fetchShot(const std::string& key, const std::string& code, const std::string& name, std::string& bytes,
                std::string& error);

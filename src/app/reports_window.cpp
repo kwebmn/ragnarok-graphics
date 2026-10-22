@@ -466,7 +466,9 @@ void ReportsWindow::sendReply() {
 void ReportsWindow::verdict(bool fixed) {
     HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
     std::string error;
-    const bool ok = sendVerdict(key_, talk_.code, fixed, fixed ? "" : utf8(textOf(GetDlgItem(hwnd_, kReply))), error);
+    const bool ok = fixed ? sendVerdict(key_, talk_.code, true, "", error)
+                          : sendStillThere(key_, talk_.code, utf8(textOf(GetDlgItem(hwnd_, kReply))),
+                                           utf8(t(Text::ReportStillThere)), attached_, error);
     SetCursor(old);
     if (!ok) {
         status(tf(Text::ReportNotSent, {error}));

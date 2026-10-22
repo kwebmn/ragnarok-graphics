@@ -118,3 +118,23 @@ TEST(the_list_and_the_conversation_come_from_the_site) {
     CHECK(app::fetchShot(key, "R-ABCDEF", "m4-a.png", bytes, error));
     CHECK_EQ(bytes, std::string("\x89PNG"));
 }
+
+TEST(still_there_keeps_the_players_screenshots) {
+    // final review: «Ще є» with screenshots added goes as the player's message (the site makes it «Нове» again)
+    // - the verdict alone would drop them
+    fake::Windows& w = fake::reset();
+    const std::string key = app::computerKey(app::exeFolder());
+    w.postAnswers["/api/graphics/reports/R-ABCDEF/messages"] = {201, "{\"ok\":true}"};
+    w.postAnswers["/api/graphics/reports/R-ABCDEF/verdict"] = {200, "{\"ok\":true}"};
+    std::string error;
+    CHECK(app::sendStillThere(key, "R-ABCDEF", "", "Still there", {{"shot1.jpg", "\xFF\xD8\xFFx"}}, error));
+    CHECK_EQ(w.posts.back().path, std::string("/api/graphics/reports/R-ABCDEF/messages"));
+    CHECK(w.posts.back().body.find("\"text\":\"Still there\"") != std::string::npos);
+    CHECK(w.posts.back().body.find("\"screenshots\":[{\"name\":\"shot1.jpg\"") != std::string::npos);
+    CHECK(app::sendStillThere(key, "R-ABCDEF", "Блимає далі", "Still there", {{"shot1.jpg", "\xFF\xD8\xFFx"}},
+                              error));
+    CHECK(w.posts.back().body.find("\"text\":\"Блимає далі\"") != std::string::npos);
+    CHECK(app::sendStillThere(key, "R-ABCDEF", "", "Still there", {}, error));  // no shots: the verdict
+    CHECK_EQ(w.posts.back().path, std::string("/api/graphics/reports/R-ABCDEF/verdict"));
+    CHECK(w.posts.back().body.find("\"fixed\":false") != std::string::npos);
+}

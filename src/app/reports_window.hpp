@@ -20,7 +20,8 @@ struct ReportStart {
 int showReports(HWND owner, const Model& m, settings::Lang l, int dpi, const ReportStart& start);
 
 // The header's «Звернення (N)»: at the app's start, on a thread of its own - the waiting reports sent, the list asked.
-void startReportsCheck(const std::wstring& dir);
+// `key`: computerKey's, made before the thread (two first-time makers would part with different keys).
+void startReportsCheck(const std::wstring& dir, const std::string& key);
 int reportsUnread();  // -1 while asking or when the site did not answer
 
 }  // namespace uagfx::app

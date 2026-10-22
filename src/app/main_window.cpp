@@ -10,6 +10,7 @@
 #include "app/mnemonic.hpp"
 #include "app/notes_window.hpp"
 #include "app/report_send.hpp"
+#include "app/reports.hpp"
 #include "app/status_info.hpp"
 #include "app/launcher.hpp"
 #include "app/modes.hpp"
@@ -333,7 +334,8 @@ void MainWindow::create() {
     if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
-    startReportsCheck(model_->paths().dir);  // 2.13: the waiting reports sent, the answers counted
+    // 2.13: the waiting reports sent, the answers counted
+    startReportsCheck(model_->paths().dir, computerKey(model_->paths().dir));
     PostMessageW(hwnd_, kAskStats, 0, 0);
     if (startReport_) PostMessageW(hwnd_, kOpenReports, 0, 0);
 }

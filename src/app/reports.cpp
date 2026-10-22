@@ -176,6 +176,13 @@ bool sendVerdict(const std::string& key, const std::string& code, bool fixed, co
     return post(reportPath(code) + "/verdict", body, 200, error);
 }
 
+bool sendStillThere(const std::string& key, const std::string& code, const std::string& text,
+                    const std::string& stillThere, const std::vector<std::pair<std::string, std::string>>& shots,
+                    std::string& error) {
+    if (shots.empty()) return sendVerdict(key, code, false, text, error);
+    return answerReport(key, code, text.empty() ? stillThere : text, shots, error);
+}
+
 bool fetchShot(const std::string& key, const std::string& code, const std::string& name, std::string& bytes,
                std::string& error) {
     if (!validCode(code) || name.find_first_of("/\\?&#%") != std::string::npos) {
