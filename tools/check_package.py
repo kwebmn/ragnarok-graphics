@@ -21,7 +21,7 @@ EXPECTED = {"install.bat", "uninstall.bat", "update.bat", "get-dlss.bat", "get-m
             "uaro-graphics/ai/realesr-general-x4v3.bin", "uaro-graphics/ai/realesr-general-wdn-x4v3.bin",
             "uaro-graphics/ai/realesr-animevideov3.bin", "uaro-graphics/ai/LICENSE-Real-ESRGAN.txt",
             "uaro-graphics/ai/realesrgan-x4plus-anime-6b.bin",
-            "uaro-graphics/pad/dinput.dll", "uaro-graphics/pad/uaro-pad.ini", "uaro-graphics/pad/version.txt"}
+            "uaro-graphics/defaults/uaro-pad.ini"}  # 2.9: uaRO Pad inside ddraw.dll, its template here
 VERSION_CPP = Path(__file__).resolve().parent.parent / "src" / "core" / "version.cpp"
 
 
@@ -58,6 +58,9 @@ def main(path):
     first_edit = install.find('>>"uaro-graphics.ini"')
     if guard < 0 or (first_edit >= 0 and guard > first_edit):
         fail('install.bat adds to a root uaro-graphics.ini that a fresh install does not have (no :old_ini_done guard)')
+    # 2.9: uaRO Pad is inside ddraw.dll - install.bat takes a 2.x pad dinput.dll away
+    if 'findstr /m /c:"uaro-pad.log" "dinput.dll"' not in install or 'del /f "dinput.dll"' not in install:
+        fail("install.bat does not take an old uaRO Pad dinput.dll away")
     if 'move /y "ddraw.dll" "uaro-graphics\\dgvoodoo\\DDraw.dll"' not in install:
         fail("install.bat does not keep dgVoodoo's DDraw.dll in uaro-graphics\\dgvoodoo")
     # GitHub's raw link is cached for 5 minutes (a query does not change that): right after a release update.bat got

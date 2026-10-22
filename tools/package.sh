@@ -17,8 +17,8 @@ python3 -I tools/check_layout.py  # 2.8: our paths only in src/core/layout.cpp
 out="build-win/uaro-graphics.zip"
 stage="build-win/package"
 rm -rf "$out" "$stage"
-mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/pad" \
-         "$stage/uaro-graphics/notes" "$stage/uaro-graphics/defaults"
+mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/notes" \
+         "$stage/uaro-graphics/defaults"
 cp dist/install.bat dist/uninstall.bat dist/update.bat dist/get-dlss.bat dist/get-models.bat "$stage/"
 # 2.8: the notes of "What is new" and the template ini in uaro-graphics\ - never uaro-graphics\uaro-graphics.ini,
 # the player's settings. 2.6.1-2.7: uaro-flags.grf went here too; it is the client's file now (its DATA.INI).
@@ -28,7 +28,7 @@ cp build-win/ddraw.dll build-win/uaro-graphics.exe build-win64/uaro-render64.exe
    build-win64/uaro-studio.exe dist/dlss-version.txt dist/models-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 # 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.
-cp dist/pad/dinput.dll dist/pad/uaro-pad.ini dist/pad/version.txt "$stage/uaro-graphics/pad/"
+cp dist/pad/uaro-pad.ini "$stage/uaro-graphics/defaults/"  # 2.9: uaRO Pad inside ddraw.dll, its template
 # AI textures: the neural network's model and its weak-denoise twin, mixed by [quality] ai_denoise (Real-ESRGAN,
 # BSD-3-Clause), and their licence.
 cp dist/ai/realesr-general-x4v3.bin dist/ai/realesr-general-wdn-x4v3.bin dist/ai/realesr-animevideov3.bin \
