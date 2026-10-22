@@ -1,5 +1,6 @@
 #include "app/installer.hpp"
 
+#include <set>
 #include <utility>
 
 #include "app/app_disk.hpp"
@@ -208,6 +209,45 @@ void removeOldScripts(const std::wstring& dir) {
     for (const wchar_t* left :
          {L"uaro-graphics-update", L"uaro-graphics-dlss-download", L"uaro-graphics-models-download"})
         removeTree(join(dir, left));
+}
+
+Result uninstall(const std::wstring& dir, bool keep) {
+    Result r;
+    std::string bytes;
+    if (readFile(join(dir, L"ddraw.dll"), bytes) && ours(bytes) && !deleteFile(join(dir, L"ddraw.dll"))) {
+        r.ok = false;
+        r.error = L"cannot remove " + join(dir, L"ddraw.dll");
+        return r;
+    }
+    for (const char* place : {layout::now(layout::File::DgVoodoo), layout::before(layout::File::DgVoodoo)}) {
+        const std::wstring dg = join(dir, wide(place));
+        for (const wchar_t* name : {L"DDraw.dll", L"D3DImm.dll"})
+            if (fileExists(join(dg, name)) && !fileExists(join(dir, name)) &&
+                moveFile(join(dg, name), join(dir, name), false))
+                r.log.push_back("installer: dgVoodoo's " + utf8(name) + " back");
+        deleteFile(join(dg, L"dgVoodoo.conf"));
+        removeEmptyFolder(dg);
+    }
+    if (fileExists(join(dir, L"uaro-graphics.exe")) && !deleteFile(join(dir, L"uaro-graphics.exe")))
+        r.log.push_back("installer: self");
+    const std::wstring folder = join(dir, wide(layout::kOurs));
+    if (!keep) {
+        removeTree(folder);
+    } else {
+        const auto name = [](const char* place) { return wide(place).substr(std::string(layout::kOurs).size() + 1); };
+        const std::set<std::wstring> kept = {
+            name(layout::now(layout::File::Ini)), name(layout::now(layout::File::PadIni)),
+            name(layout::now(layout::File::PadBinds)), name(layout::now(layout::File::Backups)),
+            name(layout::kTextures)};
+        for (const std::wstring& f : listFolder(folder, false))
+            if (!kept.count(f)) deleteFile(join(folder, f));
+        for (const std::wstring& d : listFolder(folder, true))
+            if (!kept.count(d)) removeTree(join(folder, d));
+    }
+    if (!keep && dirExists(folder)) r.log.push_back("installer: uaro-graphics\\ could not go whole");
+    removeOldScripts(dir);
+    removeAppsEntry();
+    return r;
 }
 
 }  // namespace uagfx::app::installer

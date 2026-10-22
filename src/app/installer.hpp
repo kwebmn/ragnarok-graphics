@@ -30,6 +30,12 @@ Result rollBack(const std::wstring& dir);
 // and its folder away; our old .bat files away when `scripts` (not while an older update.bat runs this); the Apps
 // entry.
 Result finishInstall(const std::wstring& dir, bool scripts);
+// uaRO Graphics out of the game's folder: our ddraw.dll; dgVoodoo's files back from uaro-graphics\dgvoodoo\ and the
+// 2.x dgvoodoo\ (their dgVoodoo.conf copy deleted); the root uaro-graphics.exe (the running one cannot go: `log` says
+// "installer: self" and the caller deletes it later); uaro-graphics\ whole - or, `keep`, all but the settings, the
+// pad's, the copies of them (backup\) and the texture pack (textures\); our old scripts; the Apps entry. With nothing
+// kept the folder is as it was before the install.
+Result uninstall(const std::wstring& dir, bool keep);
 // 2.9: a 2.x uaRO Pad dinput.dll goes (the pad is inside the driver) and what it moved aside comes back
 // (uaro-pad.moved: ROExt as dinput8.dll, or dinput.dll.before-pad), as its own switch-off did.
 void removeOldPad(const std::wstring& dir);

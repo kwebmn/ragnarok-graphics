@@ -1,5 +1,7 @@
 // 2.10: the installer (app/installer) over the stand-ins of tests/fake_windows.cpp - no .bat does this any more.
+#include <cwctype>
 #include <map>
+#include <set>
 #include <string>
 
 #include "app/files.hpp"
@@ -51,6 +53,34 @@ std::map<std::wstring, std::string> outsideWork() {
     for (const auto& f : fake::windows().files)
         if (f.first.compare(0, work.size(), work) != 0) out.insert(f);
     return out;
+}
+
+// Paths as Windows compares them: in any case.
+std::wstring lower(std::wstring s) {
+    for (wchar_t& c : s) c = wchar_t(std::towlower(c));
+    return s;
+}
+
+std::map<std::wstring, std::string> filesAnyCase() {
+    std::map<std::wstring, std::string> out;
+    for (const auto& f : fake::windows().files) out[lower(f.first)] = f.second;
+    return out;
+}
+
+std::set<std::wstring> foldersAnyCase() {
+    std::set<std::wstring> out;
+    for (const std::wstring& d : fake::windows().folders) out.insert(lower(d));
+    return out;
+}
+
+// A client with dgVoodoo, uaRO Graphics 1.0.0 installed on it and played once.
+void installedAndPlayed() {
+    put(kStaged + L"\\uaro-graphics\\defaults\\uaro-graphics.ini", "; the template\r\n");
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("1.0.0"), false).ok);
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    put(L"uaro-graphics\\logs\\uaro-graphics.log", "a game's log");
+    put(L"uaro-graphics\\cache\\pipelines.txt", "pipelines");
+    put(L"uaro-graphics\\update.ini", "[release]\r\nformat = 1\r\n");
 }
 
 }  // namespace
@@ -199,4 +229,44 @@ TEST(finish_install_writes_the_apps_entry) {
     CHECK(e[L"DisplayVersion"] == L"2.10.0");
     CHECK(e[L"UninstallString"] == L"\"" + app::exeFolder() + L"\\uaro-graphics.exe\" --uninstall");
     CHECK(e[L"InstallLocation"] == app::exeFolder());
+}
+
+// 2.10: the removal - uninstall.bat's work, and more: nothing of ours is left unless the player keeps it.
+TEST(uninstall_leaves_the_folder_as_before_the_install) {
+    client();
+    put(L"ddraw.dll", "dgVoodoo DDraw");  // Windows finds DDraw.dll by any case; the stand-in by this one
+    put(L"D3DImm.dll", "dgVoodoo D3DImm");
+    put(L"dgVoodoo.conf", "[General]");
+    const std::map<std::wstring, std::string> files = filesAnyCase();
+    const std::set<std::wstring> folders = foldersAnyCase();
+    installedAndPlayed();
+    const app::installer::Result r = app::installer::uninstall(app::exeFolder(), false);
+    CHECK(r.ok);
+    CHECK(filesAnyCase() == files);
+    CHECK(foldersAnyCase() == folders);
+}
+
+TEST(uninstall_keeps_the_settings_and_the_pack) {
+    client();
+    installedAndPlayed();
+    put(L"uaro-graphics\\uaro-pad-binds.ini", "the characters' layouts");
+    put(L"uaro-graphics\\textures\\uaro-textures.zip", "the pack");
+    put(L"uaro-graphics\\backup\\2026-10-13-120000\\uaro-graphics.ini", "a copy");
+    CHECK(app::installer::uninstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"uaro-graphics\\uaro-graphics.ini"), std::string("; the template\r\n"));
+    CHECK_EQ(at(L"uaro-graphics\\uaro-pad-binds.ini"), std::string("the characters' layouts"));
+    CHECK_EQ(at(L"uaro-graphics\\textures\\uaro-textures.zip"), std::string("the pack"));
+    CHECK_EQ(at(L"uaro-graphics\\backup\\2026-10-13-120000\\uaro-graphics.ini"), std::string("a copy"));
+    CHECK_EQ(at(L"uaro-graphics\\logs\\uaro-graphics.log"), std::string("<none>"));
+    CHECK_EQ(at(L"uaro-graphics\\ddraw.dll"), std::string("<none>"));
+    CHECK_EQ(at(L"ddraw.dll"), std::string("<none>"));
+    CHECK_EQ(at(L"uaro-graphics.exe"), std::string("<none>"));
+}
+
+TEST(uninstall_removes_the_apps_entry) {
+    client();
+    installedAndPlayed();
+    CHECK(!fake::windows().appsEntry.empty());
+    CHECK(app::installer::uninstall(app::exeFolder(), false).ok);
+    CHECK(fake::windows().appsEntry.empty());
 }
