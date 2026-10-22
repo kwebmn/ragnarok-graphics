@@ -17,6 +17,7 @@
 #include "core/version.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::host {
 namespace {
@@ -204,7 +205,7 @@ private:
     bool ready(std::string& error) {
         if (renderer_) return true;
         auto r = std::make_unique<gpu::Renderer>();
-        r->setShaderCache(dir_ + "\\uaro-graphics\\studio-shaders-64.bin");
+        r->setShaderCache(win::ourFile(dir_, layout::File::StudioShaders64));
         if (!r->create(error) || !r->startAiForStudio(dir_, error)) return false;
         LOG_INFO("studio engine: %s", r->adapterName().c_str());
         renderer_ = std::move(r);

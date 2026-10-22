@@ -20,7 +20,7 @@ namespace {
 // The language the settings app was last left in ([utility] language of uaro-graphics.ini), else English.
 settings::Lang languageOf(const std::wstring& gameDir) {
     std::string ini;
-    if (!win::readTextFile(app::ansi(gameDir + L"\\uaro-graphics.ini"), ini)) return settings::Lang::En;
+    if (!win::readTextFile(win::ourFile(app::ansi(gameDir), layout::File::Ini), ini)) return settings::Lang::En;
     const auto v = settings::readIni(ini);
     const auto it = v.find("utility.language");
     const auto lang = it == v.end() ? std::nullopt : settings::parseLang(it->second);

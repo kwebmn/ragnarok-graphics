@@ -32,7 +32,7 @@ public:
     std::string stage() const;
     void count(uint64_t& done, uint64_t& total) const;
     pack::Choice choice() const;  // every kind, the server's colours, the [ai] sides
-    std::wstring packPath() const { return gameDir_ + L"\\uaro-textures.zip"; }
+    std::wstring packPath() const;  // 2.8: uaro-graphics\textures (core/layout)
 
     // A file of the game (its normal name); thread-safe, one read at a time.
     bool read(const std::string& name, std::vector<uint8_t>& out);

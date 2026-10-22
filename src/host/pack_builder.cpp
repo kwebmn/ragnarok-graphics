@@ -553,7 +553,7 @@ int Builder::preview() {
     for (int g = 0; g < ai::kGroups; ++g) s.models[size_t(g)] = models[std::min(size_t(g), models.size() - 1)];
     s.smallPictures = false;  // 1.6.3: each model as it is, also on a small picture
     gpu::Renderer renderer;
-    renderer.setShaderCache(a_.dir + "\\uaro-graphics\\shaders-64.bin");
+    renderer.setShaderCache(win::ourFile(a_.dir, layout::File::Shaders64));
     if (!renderer.create(error) || !renderer.startAiForPack(a_.dir, s, error))
         return fail("the graphics card: " + error);
     CreateDirectoryA(a_.out.c_str(), nullptr);
@@ -774,7 +774,7 @@ int Builder::build() {
     s_.current.clear();
     status_.write(s_, true);
     gpu::Renderer renderer;
-    renderer.setShaderCache(a_.dir + "\\uaro-graphics\\shaders-64.bin");
+    renderer.setShaderCache(win::ourFile(a_.dir, layout::File::Shaders64));
     if (!renderer.create(error) || !renderer.startAiForPack(a_.dir, a_.ai, error)) {
         checkpoint(nullptr, true);
         return fail("the graphics card: " + error);
@@ -875,7 +875,7 @@ int Builder::build() {
 
 int runPack(const PackArgs& args, BuildSink* sink) {
     PackArgs a = args;
-    if (a.out.empty()) a.out = a.dir + "\\uaro-textures.zip";
+    if (a.out.empty()) a.out = win::ourFile(a.dir, layout::File::Pack);  // 2.8: uaro-graphics\textures
     if (a.status.empty()) a.status = a.dir + "\\uaro-graphics\\pack-status.txt";
     if (a.mode == "preview") {  // 1.6: writes no pack - neither mutex; its pictures into uaro-graphics\preview
         a.out = a.dir + "\\uaro-graphics\\preview";

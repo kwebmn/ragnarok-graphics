@@ -62,10 +62,14 @@ DWORD WINAPI decodeMain(void* arg) {
 
 CatalogWork::~CatalogWork() { stop(); }
 
+std::wstring CatalogWork::packPath() const {
+    return app::wide(win::ourFile(app::ansi(gameDir_), layout::File::Pack));
+}
+
 pack::Choice CatalogWork::choice() const {
     pack::Choice c;  // every kind; the server's colours (hair 0-20, clothes 0-77)
     std::string ini;
-    if (win::readTextFile(app::ansi(gameDir_ + L"\\uaro-graphics.ini"), ini)) {
+    if (win::readTextFile(win::ourFile(app::ansi(gameDir_), layout::File::Ini), ini)) {
         const Config config = parseConfig(ini);
         c.minSide = std::min(config.ai.minSize, config.ai.maxSize);
         c.maxSide = std::max(config.ai.minSize, config.ai.maxSize);

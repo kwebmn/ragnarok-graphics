@@ -29,6 +29,7 @@
 #include "win/gpu/adapters.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 using namespace uagfx;
 using bridge::Msg;
@@ -266,7 +267,7 @@ int Host::run(const Args& a) {
     }
     out_.clear();
     WireWriter hello(out_);
-    renderer_.setShaderCache(a.dir + "\\uaro-graphics\\shaders-64.bin");  // 0.39.5
+    renderer_.setShaderCache(win::ourFile(a.dir, layout::File::Shaders64));  // 0.39.5; 2.8: uaro-graphics\cache
     renderer_.setStartSink(&Host::startProgress, this);                         // 0.40
     if (!renderer_.create(error)) {
         LOG_ERROR("Direct3D 12: %s", error.c_str());
@@ -389,8 +390,10 @@ void Host::present(const uint8_t* data, uint32_t size) {
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     Args a = parseArgs();
     gpu::setChosenAdapter(a.gpu);  // 0.50.2: the game's card, and the texture pack's
+    const LogLevel level = LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log);
+    // 2.8: the logs in uaro-graphics\logs (core/layout)
     if (!a.pack.mode.empty()) {  // 0.43: the texture pack, with a log of its own
-        wlog::open(a.dir + "\\uaro-pack.log", LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log));
+        wlog::open(layout::join(a.dir, layout::now(layout::File::PackLog)), level);
         a.pack.dir = a.dir;
         a.pack.ai = a.ai;
         a.pack.choice.minSide = std::min(a.ai.minSize, a.ai.maxSize);
@@ -398,10 +401,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         return host::runPack(a.pack);
     }
     if (!a.studio.empty()) {  // 2.3: uaRO Studio's engine, a log of its own
-        wlog::open(a.dir + "\\uaro-studio-engine.log", LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log));
+        wlog::open(layout::join(a.dir, layout::now(layout::File::StudioEngineLog)), level);
         return host::runStudio(a.dir, a.studio);
     }
-    wlog::open(a.dir + "\\uaro-render64.log", LogLevel(a.log < 0 ? 0 : a.log > 2 ? 2 : a.log));
+    wlog::open(layout::join(a.dir, layout::now(layout::File::Render64Log)), level);
     if (a.channel.empty() || !a.parent) {
         LOG_ERROR("uaro-render64.exe is started by the uaRO Graphics driver in the game, not by hand");
         return 1;
