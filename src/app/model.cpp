@@ -679,6 +679,7 @@ Machine Model::machine() const {
     x.vendor = sys.d3d12.vendor ? sys.d3d12.vendor : sys.d3d11.vendor;
     x.vramMb = sys.d3d12.vramMb ? sys.d3d12.vramMb : sys.d3d11.vramMb;
     x.adapter = !sys.d3d12.adapter.empty() ? sys.d3d12.adapter : sys.d3d11.adapter;
+    unsigned long long shared = sys.d3d12.sharedMb ? sys.d3d12.sharedMb : sys.d3d11.sharedMb;  // 2.12
     // 0.50.2: the card the game will draw on - the one the Render page's list names, else the fast one
     const std::string word = token(*findSetting("renderer.gpu"));
     const win::AdapterProbe* card = sys.adapters.empty() ? nullptr : &sys.adapters.front();
@@ -695,7 +696,10 @@ Machine Model::machine() const {
         x.vendor = card->vendor;
         x.vramMb = card->vramMb;
         x.adapter = card->name;
+        shared = card->sharedMb;
     }
+    x.integrated = integratedByMemory(x.vramMb, shared);  // 2.12: integrated graphics' own tiers
+    x.battery = sys.computer.battery == 1;
     x.vramCapped = x.vramMb == kVramSeenAtMost;  // 0.51.1: no better number from the driver's registry
     if (!sys.monitors.empty()) {
         x.screenWidth = sys.monitors[0].pixels.width;

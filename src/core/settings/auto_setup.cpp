@@ -10,6 +10,7 @@ constexpr unsigned kLevel11 = 0xb000;
 Tier tierOf(const Machine& m) {
     if (m.vendor == kMicrosoft) return Tier::NoDriver;
     if (m.windows10 && m.d3d12) {
+        if (m.integrated) return strongIntegrated(m.adapter) ? Tier::IntegratedStrong : Tier::IntegratedWeak;
         if (m.vramCapped) return Tier::Middle;  // 3 GB or more, how much more unknown
         if (m.vramMb < 4096) return Tier::Low;
         return m.vramMb < 8192 ? Tier::Middle : Tier::High;
@@ -36,8 +37,21 @@ const char* tierName(Tier t) {
         case Tier::Low: return "low";
         case Tier::Middle: return "middle";
         case Tier::High: return "high";
+        case Tier::IntegratedWeak: return "integrated, weak";
+        case Tier::IntegratedStrong: return "integrated, strong";
     }
     return "?";
+}
+
+bool integratedByMemory(unsigned long long dedicatedMb, unsigned long long sharedMb) {
+    return dedicatedMb <= 1024 && sharedMb > dedicatedMb;
+}
+
+bool strongIntegrated(const std::string& adapter) {
+    for (const char* n : {"Iris Xe", "Iris(R) Xe", "680M", "760M", "780M", "880M", "890M", "8050S", "8060S"})
+        if (adapter.find(n) != std::string::npos) return true;
+    // Intel's Arc in Core Ultra is "Arc(TM) Graphics"; its cards of their own have a model: "Arc(TM) A770 Graphics"
+    return adapter.find("Arc(TM) Graphics") != std::string::npos || adapter.find("Arc Graphics") != std::string::npos;
 }
 
 AutoSetup autoSetup(const Machine& m) {
@@ -46,7 +60,9 @@ AutoSetup autoSetup(const Machine& m) {
     switch (a.tier) {
         case Tier::NoDriver: a.preset = Preset::Plain; break;
         case Tier::Old:
-        case Tier::Low: a.preset = Preset::Speed; break;
+        case Tier::Low:
+        case Tier::IntegratedWeak:
+        case Tier::IntegratedStrong: a.preset = Preset::Speed; break;
         case Tier::Middle: a.preset = Preset::Balance; break;
         case Tier::High: a.preset = Preset::Balance; break;
     }
@@ -57,7 +73,8 @@ AutoSetup autoSetup(const Machine& m) {
     // times the pixels for an edge a little smoother) - MSAA and the sharpening do it for far less.
     // 0.58: a large screen for a smaller card - drawn smaller and made larger sharply (render_scale under 100 %)
     if (a.tier == Tier::Middle && pixels > 2560LL * 1440) set(e, "quality", "render_scale", "75");
-    if ((a.tier == Tier::Low || a.tier == Tier::Old) && pixels > 1920LL * 1200) set(e, "quality", "render_scale", "67");
+    const bool small = a.tier == Tier::Low || a.tier == Tier::Old || a.tier == Tier::IntegratedStrong;
+    if (small && pixels > 1920LL * 1200) set(e, "quality", "render_scale", "67");
     if (a.tier != Tier::High && pixels > 1920LL * 1200 && a.tier != Tier::NoDriver)
         set(e, "quality", "sharpen", "50");  // the sharp upscale's CAS
     set(e, "renderer", "api", a.tier == Tier::Old ? "d3d11" : "auto");
@@ -77,13 +94,13 @@ AutoSetup autoSetup(const Machine& m) {
         m.vendor != kNvidia && (a.tier == Tier::High || (a.tier == Tier::Middle && pixels <= 2560LL * 1440));
     set(e, "quality", "taa", taa ? "1" : "0");
     // 0.76: a card short of a strong one keeps 45 frames a second - the costliest effects go off when it cannot
-    const bool keep = a.tier == Tier::Old || a.tier == Tier::Low || a.tier == Tier::Middle;
+    const bool keep = small || a.tier == Tier::Middle;
     set(e, "frames", "keep_fps", keep ? "45" : "0");
     // 2.2: the Effects page's set by the card - its own switches as the set says
     set(e, "effects", "preset",
         a.tier == Tier::NoDriver ? "off" : a.tier == Tier::Middle ? "medium" : a.tier == Tier::High ? "strong" : "weak");
     // The effects of the Effects page: Direct3D 12's. A small card keeps the light ones.
-    if (a.tier == Tier::Low)
+    if (a.tier == Tier::Low || a.tier == Tier::IntegratedStrong)
         for (const char* k : {"ao", "rays", "heat", "weather", "glow"})
             set(e, "effects", k, "0");
     // The AI textures: the pack's pictures only (the game makes none: that is for debugging). The world's take the
@@ -110,9 +127,21 @@ AutoSetup autoSetup(const Machine& m) {
     set(e, "ai", "compress", "auto");
     // 1.5.9: a small card takes the pack's pictures at twice the game's size, not four times - a Radeon HD 6570 at
     // 1600x891 in Prontera: 25.7 ms of its work a frame with x4, 21.2 with x2 (33 frames a second, 42).
-    set(e, "ai", "scale", a.tier == Tier::Old || a.tier == Tier::Low ? "2" : "4");
+    const bool weak = a.tier == Tier::IntegratedWeak;
+    set(e, "ai", "scale", small || weak ? "2" : "4");
     // ... and on Direct3D 11 no day and night: about 1 ms of such a card's frame.
     if (a.tier == Tier::Old) set(e, "effects", "day_cycle", "0");
+    // 2.12: integrated graphics - the weak ones the super-light mode at 60 frames (the battery spared on a laptop),
+    // the strong ones 2x MSAA on the low set
+    set(e, "quality", "super_light", weak ? "1" : "0");
+    if (weak) {
+        set(e, "effects", "preset", "off");
+        set(e, "quality", "msaa", "0");
+        set(e, "frames", "fps_limit", "60");
+        set(e, "frames", "keep_fps", "0");
+        set(e, "frames", "battery_saver", m.battery ? "1" : "0");
+    }
+    if (a.tier == Tier::IntegratedStrong) set(e, "quality", "msaa", "2");
     if (a.ai) {
         for (const char* k : {"monsters", "players", "npcs", "items", "icons"}) set(e, "ai", k, "1");
         for (const char* k : {"ground", "objects", "effects"}) set(e, "ai", k, a.aiWorld ? "1" : "0");

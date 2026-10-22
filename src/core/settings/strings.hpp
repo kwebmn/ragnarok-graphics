@@ -354,6 +354,7 @@ enum class Text : uint16_t {
     ViewPlay, LauncherDirect, LauncherDirectHint,  // 2.11
     PlayNews, PlayAsking, PlayNoSite, PlayNoNews, PlayPinned, PlayMore, PlayServer, PlayOnline, PlayUpdateLine,
     PlayUpdateNote, PlayButton, PlayUpdateButton,  // 2.11
+    AutoTierIntegratedWeak, AutoTierIntegratedStrong,  // 2.12
     Count
 };
 

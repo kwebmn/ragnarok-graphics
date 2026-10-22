@@ -13,6 +13,7 @@ struct Computer {
     unsigned mhz = 0;  // its rated clock (the registry's ~MHz), 0 unknown
     unsigned long long ramMb = 0, freeMb = 0;
     int mains = -1;    // 1 on the mains (a desktop too), 0 on battery, -1 unknown
+    int battery = -1;  // 2.12: 1 a battery is there (a laptop, plugged in or not), 0 none, -1 unknown
     std::string plan;  // the power plan's name (powerPlanName), "" unknown
 };
 

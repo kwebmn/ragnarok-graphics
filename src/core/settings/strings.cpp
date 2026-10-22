@@ -3315,6 +3315,12 @@ const Entry kTexts[] = {
     {"Update and play",
      "Оновити й грати",
      "Обновить и играть"},
+    {"Integrated graphics, weak: the super-light mode - no effects, 60 frames, the battery spared on a laptop.",
+     "Вбудована графіка, слабка: надлегкий режим — без ефектів, 60 кадрів, на ноутбуці економія батареї.",
+     "Встроенная графика, слабая: сверхлёгкий режим — без эффектов, 60 кадров, на ноутбуке экономия батареи."},
+    {"Integrated graphics, strong: low quality, weak effects, 2x smoothing, 45 frames kept.",
+     "Вбудована графіка, сильна: низька якість, слабкі ефекти, згладжування 2×, тримати 45 кадрів.",
+     "Встроенная графика, сильная: низкое качество, слабые эффекты, сглаживание 2×, держать 45 кадров."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

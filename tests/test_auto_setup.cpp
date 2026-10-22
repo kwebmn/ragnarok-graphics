@@ -155,3 +155,74 @@ TEST(auto_setup_keeps_the_frame_rate_on_smaller_cards) {
     old.vramMb = 1024;
     CHECK(valueOf(autoSetup(old), "frames", "keep_fps") == "45");
 }
+
+namespace {
+
+Machine integratedCard(const std::string& name) {  // a laptop's integrated graphics: Windows 11, D3D12, 1080p
+    Machine m;
+    m.adapter = name;
+    m.windows10 = m.d3d12 = m.d3d11 = true;
+    m.d3d11Level = 0xc100;
+    m.vendor = 0x8086;
+    m.vramMb = 128;
+    m.integrated = true;
+    m.battery = true;
+    m.screenWidth = 1920;
+    m.screenHeight = 1080;
+    m.pack = true;
+    return m;
+}
+
+}  // namespace
+
+// 2.12: integrated graphics told apart (the page QjTrLqpnyyw8qKiUZQ3i24's tiers): the weak ones get the super-light
+// mode, the strong ones the low set with 2x MSAA.
+TEST(auto_setup_weak_integrated_is_super_light) {
+    const AutoSetup a = autoSetup(integratedCard("Intel(R) UHD Graphics 620"));
+    CHECK(a.tier == Tier::IntegratedWeak);
+    CHECK_EQ(valueOf(a, "quality", "super_light"), std::string("1"));
+    CHECK_EQ(valueOf(a, "effects", "preset"), std::string("off"));
+    CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("0"));
+    CHECK_EQ(valueOf(a, "frames", "fps_limit"), std::string("60"));
+    CHECK_EQ(valueOf(a, "frames", "battery_saver"), std::string("1"));
+    CHECK(a.ai && !a.aiWorld && valueOf(a, "ai", "scale") == "2");
+    CHECK_EQ(valueOf(a, "quality", "dlss"), std::string("off"));
+    Machine desktop = integratedCard("AMD Radeon(TM) Vega 8 Graphics");
+    desktop.vendor = 0x1002;
+    desktop.battery = false;
+    const AutoSetup b = autoSetup(desktop);
+    CHECK(b.tier == Tier::IntegratedWeak && valueOf(b, "frames", "battery_saver") == "0");
+}
+
+TEST(auto_setup_strong_integrated_is_low_with_msaa_2) {
+    for (const char* name : {"Intel(R) Iris(R) Xe Graphics", "Intel(R) Arc(TM) Graphics", "AMD Radeon 780M Graphics",
+                             "AMD Radeon(TM) 680M"}) {
+        const AutoSetup a = autoSetup(integratedCard(name));
+        CHECK(a.tier == Tier::IntegratedStrong);
+        CHECK(a.preset == Preset::Speed);
+        CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("2"));
+        CHECK_EQ(valueOf(a, "effects", "preset"), std::string("weak"));
+        CHECK_EQ(valueOf(a, "frames", "keep_fps"), std::string("45"));
+        CHECK_EQ(valueOf(a, "quality", "super_light"), std::string("0"));
+    }
+}
+
+TEST(integrated_by_memory_and_name) {
+    CHECK(integratedByMemory(128, 8192));
+    CHECK(integratedByMemory(512, 16384));
+    CHECK(!integratedByMemory(4096, 8192));  // a card of its own
+    CHECK(!integratedByMemory(1024, 0));      // no shared memory said: not told
+    CHECK(strongIntegrated("Intel(R) Iris(R) Xe Graphics"));
+    CHECK(strongIntegrated("AMD Radeon 890M Graphics"));
+    CHECK(!strongIntegrated("Intel(R) Arc(TM) A770 Graphics"));  // a card of its own
+    CHECK(!strongIntegrated("Intel(R) UHD Graphics 770"));
+}
+
+TEST(auto_setup_takes_the_fast_card_of_a_laptop) {
+    // Optimus: the probe's main adapter is the NVIDIA one the game draws on - its own memory, not integrated
+    Machine m = integratedCard("NVIDIA GeForce RTX 3060 Laptop GPU");
+    m.vendor = 0x10de;
+    m.vramMb = 6144;
+    m.integrated = false;
+    CHECK(autoSetup(m).tier == Tier::Middle);
+}

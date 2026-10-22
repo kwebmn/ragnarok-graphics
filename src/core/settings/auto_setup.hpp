@@ -21,6 +21,8 @@ struct Machine {
     int screenWidth = 0, screenHeight = 0;  // the main monitor's pixels
     bool pack = false;                      // uaro-textures.zip next to uaRO.exe
     bool hdr = false;                       // 1.3.3: the main monitor shows HDR now (Windows' HDR on)
+    bool integrated = false;  // 2.12: the main adapter shares the computer's memory (integrated graphics)
+    bool battery = false;     // 2.12: a laptop's battery is there
 };
 
 enum class Tier {
@@ -28,7 +30,11 @@ enum class Tier {
     Old,       // Direct3D 11 without 12 (Radeon HD 5000/6000, GeForce 400-600 on old drivers)
     Low,       // Direct3D 12 with less than 4 GB (integrated graphics, small cards)
     Middle,    // Direct3D 12, 4 to 8 GB
-    High       // Direct3D 12, 8 GB or more
+    High,      // Direct3D 12, 8 GB or more
+    // 2.12: integrated graphics with Direct3D 12 - weak (Intel HD/UHD, Radeon Vega 3-8): the super-light mode; strong
+    // (Iris Xe, Arc in Core Ultra, Radeon 680M/780M/880M/890M): the low set with 2x MSAA
+    IntegratedWeak,
+    IntegratedStrong
 };
 
 struct AutoSetup {
@@ -46,6 +52,9 @@ struct AutoSetup {
 };
 
 AutoSetup autoSetup(const Machine& m);
+// 2.12: integrated by its memory - a little of its own (1 GB or less) and more of the computer's; strong by its name.
+bool integratedByMemory(unsigned long long dedicatedMb, unsigned long long sharedMb);
+bool strongIntegrated(const std::string& adapter);
 // "high", "middle", ...: for the log and the tests.
 const char* tierName(Tier t);
 

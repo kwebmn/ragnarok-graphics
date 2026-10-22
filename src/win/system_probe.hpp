@@ -21,6 +21,7 @@ struct D3D12Probe {
     unsigned vendor = 0;
     unsigned device = 0;
     unsigned long long vramMb = 0;
+    unsigned long long sharedMb = 0;  // 2.12: the computer's memory it may take (integrated graphics: most of it)
 };
 // d3d12.dll and dxgi.dll are loaded at run time and stay loaded for the renderer: as the game finds them, or with
 // systemOnly Windows' own copies from System32 - the settings app has no business with a dxgi.dll the game folder may
@@ -35,6 +36,7 @@ struct D3D11Probe {
     std::string adapter;
     unsigned vendor = 0;                // 0.50: 0x1414 - Microsoft's software adapter (no graphics driver)
     unsigned long long vramMb = 0;      // 0.50: what an old card without Direct3D 12 has (the automatic setup)
+    unsigned long long sharedMb = 0;    // 2.12: the computer's memory it may take
 };
 D3D11Probe probeD3D11(bool systemOnly = false);
 std::string featureLevelName(unsigned level);  // "11_0"
@@ -52,6 +54,7 @@ struct AdapterProbe {
     unsigned long long vramMb = 0;
     bool d3d12 = false;
     unsigned d3d11Level = 0;  // 0: no Direct3D 11 device
+    unsigned long long sharedMb = 0;  // 2.12: integrated graphics take most of theirs from the computer's memory
 };
 std::vector<AdapterProbe> probeAdapters(bool systemOnly = false);
 

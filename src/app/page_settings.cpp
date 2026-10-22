@@ -557,6 +557,8 @@ void runAutoSetup(PageHost& host) {
         case Tier::Low: text += L"\n\n" + wtr(l, Text::AutoTierLow); break;
         case Tier::Middle: text += L"\n\n" + wtr(l, Text::AutoTierMiddle); break;
         case Tier::High: text += L"\n\n" + wtrf(l, Text::AutoTierHigh, {scale}); break;
+        case Tier::IntegratedWeak: text += L"\n\n" + wtr(l, Text::AutoTierIntegratedWeak); break;  // 2.12
+        case Tier::IntegratedStrong: text += L"\n\n" + wtr(l, Text::AutoTierIntegratedStrong); break;
     }
     const Text ai = a.aiWorld ? Text::AutoAiAll
                     : a.ai    ? Text::AutoAiSprites

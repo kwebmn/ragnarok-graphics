@@ -82,6 +82,7 @@ D3D12Probe probeD3D12(bool systemOnly) {
                 p.vendor = desc.VendorId;
                 p.device = desc.DeviceId;
                 p.vramMb = desc.DedicatedVideoMemory / (1024 * 1024);
+                p.sharedMb = desc.SharedSystemMemory / (1024 * 1024);
             }
             p.hr = hr;
         }
@@ -150,6 +151,7 @@ D3D11Probe probeD3D11(bool systemOnly) {
         p.adapter = utf8(desc.Description);
         p.vendor = desc.VendorId;
         p.vramMb = desc.DedicatedVideoMemory / (1024 * 1024);
+        p.sharedMb = desc.SharedSystemMemory / (1024 * 1024);
     }
     if (adapter) adapter->Release();
     if (dxgi) dxgi->Release();
@@ -183,6 +185,7 @@ std::vector<AdapterProbe> probeAdapters(bool systemOnly) {
             p.name = utf8(desc.Description);
             p.vendor = desc.VendorId;
             p.vramMb = desc.DedicatedVideoMemory / (1024 * 1024);
+            p.sharedMb = desc.SharedSystemMemory / (1024 * 1024);
         }
         ID3D12Device* device12 = nullptr;
         if (create12 && SUCCEEDED(create12(a, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device),
@@ -299,7 +302,10 @@ Computer probeComputer() {
         m.freeMb = memory.ullAvailPhys >> 20;
     }
     SYSTEM_POWER_STATUS power{};
-    if (GetSystemPowerStatus(&power)) m.mains = power.ACLineStatus == 1 ? 1 : power.ACLineStatus == 0 ? 0 : -1;
+    if (GetSystemPowerStatus(&power)) {
+        m.mains = power.ACLineStatus == 1 ? 1 : power.ACLineStatus == 0 ? 0 : -1;
+        m.battery = power.BatteryFlag == 255 ? -1 : (power.BatteryFlag & 128) ? 0 : 1;  // 128: no system battery
+    }
     using Active = DWORD(WINAPI*)(HKEY, GUID**);
     if (HMODULE powrprof = LoadLibraryA("powrprof.dll")) {  // the power plan, by its GUID (its name is localised)
         const auto active =
