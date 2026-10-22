@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <string>
 
+#include "core/settings/strings.hpp"
+
 namespace uagfx::start {
 
 // 0.40: what the driver does while the game's window waits for its first picture - shown over it with a bar
@@ -15,8 +17,9 @@ struct Progress {
     int total = 0;  // of them
 };
 
-std::string line(const Progress& p);  // "Compiling shaders: 12 of 43"
-std::string hint(const Progress& p);  // a second, smaller line; "" none
+// 2.12: in the player's language (the settings app's choice, else Windows' - settings::windowLang)
+std::string line(const Progress& p, settings::Lang l);  // "Compiling shaders: 12 of 43"
+std::string hint(const Progress& p, settings::Lang l);  // a second, smaller line; "" none
 float filled(const Progress& p);      // the bar, 0-1: the whole start, the shaders most of it
 
 }  // namespace uagfx::start

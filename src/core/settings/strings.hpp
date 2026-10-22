@@ -359,6 +359,7 @@ enum class Text : uint16_t {
     RenderSafeMode, RenderSafeModeHint,  // 2.12
     AutoPicked, AutoPickedMore, MachineChanged, SafeModeAuto, SafeModeAsked, SafeModeOff, TroubleHeading,
     SwitchOff, SwitchOn, SwitchOffNote, SwitchedOff,  // 2.12
+    StartRenderer, StartDlss, StartShadersLoad, StartShadersBuild, StartAiTextures, StartFirstHint,  // 2.12
     Count
 };
 

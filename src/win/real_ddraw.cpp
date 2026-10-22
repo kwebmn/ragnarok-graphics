@@ -12,6 +12,8 @@
 #include "core/launcher.hpp"
 #include "core/log_files.hpp"
 #include "core/safe_mode.hpp"
+#include "core/settings/ini_edit.hpp"
+#include "win/start_screen.hpp"
 #include "core/settings/report.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -198,6 +200,12 @@ Startup decide() {
     LOG_INFO("%s", padMountedText());  // 2.9
     for (const char* folder : layout::kMadeAtStart) makeFolders(layout::join(dir, folder));
     safeModeFirst(dir, s.config);  // 2.12: before anything reads the renderer's settings
+    {  // 2.12: the start panel in the player's language - the settings app's choice, else Windows'
+        const auto keys = settings::readIni(ini);
+        const auto chosen = keys.find("utility.language");
+        startLanguage(settings::windowLang(chosen == keys.end() ? std::nullopt : settings::parseLang(chosen->second),
+                                           PRIMARYLANGID(GetUserDefaultUILanguage())));
+    }
     LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? iniPath.c_str() : "no uaro-graphics.ini, defaults",
              apiToken(s.config.api), displayModeToken(s.config.mode));
     // 2.11: the launcher's own start plays at once; a direct one opens «Гра», or with «Запускати гру одразу» asks

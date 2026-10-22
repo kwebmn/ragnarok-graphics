@@ -4,20 +4,22 @@
 
 namespace uagfx::start {
 
-std::string line(const Progress& p) {
+std::string line(const Progress& p, settings::Lang l) {
+    using settings::Text;
     switch (p.stage) {
-        case Stage::Renderer: return "Starting the renderer...";
-        case Stage::Dlss: return "Starting NVIDIA DLSS...";
-        case Stage::ShadersLoad: return "Loading shaders...";
+        case Stage::Renderer: return settings::tr(l, Text::StartRenderer);
+        case Stage::Dlss: return settings::tr(l, Text::StartDlss);
+        case Stage::ShadersLoad: return settings::tr(l, Text::StartShadersLoad);
         case Stage::ShadersBuild:
-            return "Compiling shaders: " + std::to_string(std::max(p.done, 0)) + " of " + std::to_string(p.total);
-        case Stage::AiTextures: return "Starting AI textures...";
+            return settings::fmt(settings::tr(l, Text::StartShadersBuild),
+                                 {std::to_string(std::max(p.done, 0)), std::to_string(p.total)});
+        case Stage::AiTextures: return settings::tr(l, Text::StartAiTextures);
     }
     return "";
 }
 
-std::string hint(const Progress& p) {
-    return p.stage == Stage::ShadersBuild ? "First start of this version - the next ones skip this" : "";
+std::string hint(const Progress& p, settings::Lang l) {
+    return p.stage == Stage::ShadersBuild ? settings::tr(l, settings::Text::StartFirstHint) : "";
 }
 
 float filled(const Progress& p) {

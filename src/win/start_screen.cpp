@@ -8,6 +8,8 @@
 namespace uagfx::win {
 namespace {
 
+settings::Lang g_lang = settings::Lang::En;  // 2.12: startLanguage
+
 const wchar_t kClass[] = L"uaRO Graphics start";
 
 struct Panel {
@@ -33,7 +35,10 @@ void fill(HDC dc, const RECT& r, COLORREF colour) {
 }
 
 void write(HDC dc, HFONT f, COLORREF colour, const std::string& line, RECT r) {
-    const std::wstring w(line.begin(), line.end());  // the lines are ASCII
+    // 2.12: UTF-8 (the player's language) to the wide text DrawTextW takes
+    const int n = MultiByteToWideChar(CP_UTF8, 0, line.data(), int(line.size()), nullptr, 0);
+    std::wstring w(size_t(n > 0 ? n : 0), L'\0');
+    if (n > 0) MultiByteToWideChar(CP_UTF8, 0, line.data(), int(line.size()), &w[0], n);
     const HGDIOBJ old = SelectObject(dc, f);
     SetTextColor(dc, colour);
     DrawTextW(dc, w.c_str(), int(w.size()), &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
@@ -61,7 +66,7 @@ void paint(HDC dc) {
     int y = u * 3 / 4;
     write(mem, title, RGB(130, 142, 158), "uaRO Graphics", RECT{left, y, right, y + u});
     y += u + u / 4;
-    write(mem, big, RGB(232, 236, 242), start::line(p.shown), RECT{left, y, right, y + u * 5 / 4});
+    write(mem, big, RGB(232, 236, 242), start::line(p.shown, g_lang), RECT{left, y, right, y + u * 5 / 4});
     y += u * 5 / 4 + u / 2;
     const RECT track{left, y, right, y + std::max(4, u / 4)};
     fill(mem, track, RGB(44, 51, 62));
@@ -69,7 +74,7 @@ void paint(HDC dc) {
     done.right = track.left + int(float(track.right - track.left) * start::filled(p.shown) + 0.5f);
     fill(mem, done, RGB(86, 156, 230));
     y = track.bottom + u / 2;
-    const std::string hint = start::hint(p.shown);
+    const std::string hint = start::hint(p.shown, g_lang);
     if (!hint.empty()) write(mem, small, RGB(130, 142, 158), hint, RECT{left, y, right, y + u});
     BitBlt(dc, 0, 0, p.width, p.height, mem, 0, 0, SRCCOPY);
     DeleteObject(title);
@@ -98,6 +103,8 @@ LRESULT CALLBACK panelProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 }  // namespace
+
+void startLanguage(settings::Lang l) { g_lang = l; }
 
 void openStart(HWND game) {
     if (g_panel.hwnd || !game || !IsWindowVisible(game)) return;
