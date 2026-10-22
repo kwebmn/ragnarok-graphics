@@ -148,3 +148,14 @@ TEST(effect_light_skills_light_at_night_no_more_than_1_4_times) {
     CHECK(std::fabs(effect_light::skillStrength(2.0f, 0.0f) - 0.36f) < 1e-6f);
     CHECK(effect_light::skillStrength(1.0f, 3.0f) == night);  // the night 0-1
 }
+
+TEST(effect_light_portal_lights_three_times_at_night) {
+    // 2.7.57 (the tester on 2.7.56 at night: «он как-то не светится»): the night filter takes the warp's white light
+    // for white stone and darkens it; its light round it, three times by night, gives its picture and what is
+    // around it their day's colours back (torch_apply_ps: never brighter than by day)
+    CHECK(std::fabs(effect_light::portalStrength(1.0f, 0.0f) - 0.21f) < 1e-6f);  // by day as 2.7.48-2.7.56
+    CHECK(std::fabs(effect_light::portalStrength(1.0f, 1.0f) - 0.63f) < 1e-6f);
+    CHECK(std::fabs(effect_light::portalStrength(1.0f, 0.5f) - 0.42f) < 1e-6f);
+    CHECK(effect_light::portalStrength(0.0f, 1.0f) == 0.0f);                      // «Сила порталів» 0: none
+    CHECK(std::fabs(effect_light::portalStrength(5.0f, 3.0f) - 1.26f) < 1e-5f);  // at most 200 %, the whole night
+}

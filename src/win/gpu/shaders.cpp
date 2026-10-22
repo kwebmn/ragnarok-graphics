@@ -1845,6 +1845,12 @@ float3 flowerColour(float pick, int palette) {
     return pick < 0.4 ? a : pick < 0.75 ? b : c;
 }
 
+// 2.7.57: the picture there is green ground (the grass's test of a root, at its neighbours)
+bool greenGround(int2 p, int2 last) {
+    float3 c = sceneColor.Load(int3(clamp(p, int2(0, 0), last), 0)).rgb;
+    return c.g >= c.r * 1.04 && c.g >= c.b * 1.15 && c.g >= 0.12;
+}
+
 float4 grass_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     int2 last = int2(uiPixels.xy) - 1;
@@ -1910,6 +1916,13 @@ float4 grass_ps(PresentOut i) : SV_Target {
         float height = (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0);
         bool head = flower && up > height * 0.78;
         if (near > (head ? 0.2 : 0.05)) continue;
+        // 2.7.57 (the tester: «трава на брусчатке мигает когда идешь»): a root on a green patch, not a speck - the
+        // grass painted in the paving's cracks is a few pixels across: as the camera moved by parts of a pixel they
+        // came and went, and their blades with them. Green three of the game's pixels round it, each way.
+        int reach = max(int(3.0 * scale + 0.5), 3);
+        if (!greenGround(root + int2(reach, 0), last) || !greenGround(root - int2(reach, 0), last) ||
+            !greenGround(root + int2(0, reach), last) || !greenGround(root - int2(0, reach), last))
+            continue;
         // 2.2.1: on the map's own ground only - sourceClamp the cells' grid (its corner, one over a side, the cells
         // across + 1024 * down), t5 each cell's lowest and highest y: umbala's green decks and bridges stand above it
         // (2.6.8: looked up only for a root that has a blade - most have none)

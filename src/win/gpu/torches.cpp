@@ -875,7 +875,7 @@ bool Renderer::Impl::applyTorches() {
                 float up[3];
                 camera::upInView(viewToWorld, up);
                 LightItem l{{ground[0] + up[0] * 4.0f, ground[1] + up[1] * 4.0f, ground[2] + up[2] * 4.0f},
-                            0.21f * user * shown, {0.86f, 0.86f, 1.0f}, 30.0f};
+                            effect_light::portalStrength(user, darkNow) * shown, {0.86f, 0.86f, 1.0f}, 30.0f};
                 lights.push_back(l);
             }
         }

@@ -571,7 +571,7 @@ void Renderer11::applyTorchLight() {
                 portal::footOf(t, up[2], proj, foot);
                 if (foot[2] > 0.0f) {
                     const float view[3] = {foot[0] + up[0] * 4.0f, foot[1] + up[1] * 4.0f, foot[2] + up[2] * 4.0f};
-                    addLight(view, 30.0f, kLavender, 0.21f * user * shown);
+                    addLight(view, 30.0f, kLavender, effect_light::portalStrength(user, darkNow) * shown);
                 }
             }
         }

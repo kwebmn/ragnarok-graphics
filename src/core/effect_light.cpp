@@ -70,6 +70,10 @@ float skillStrength(float user, float night) {
     return 0.18f * std::clamp(user, 0.0f, 2.0f) * (1.0f + 0.4f * std::clamp(night, 0.0f, 1.0f));
 }
 
+float portalStrength(float user, float night) {
+    return 0.21f * std::clamp(user, 0.0f, 2.0f) * (1.0f + 2.0f * std::clamp(night, 0.0f, 1.0f));
+}
+
 float dayBack(bool outdoors, int nightNow) { return outdoors ? float(std::clamp(nightNow, 0, 100)) / 100.0f : 0.0f; }
 
 OrbLight orbLight(float w, float night, float fire) {

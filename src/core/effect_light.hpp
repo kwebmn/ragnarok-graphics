@@ -20,6 +20,11 @@ float skillWeight(float w, float night);
 // day (0.26.1: a third of 0.26's), at night up to 1.4 times (2.7.18's 1.8 lit Magnus white, the tester in Comodo:
 // «скилы очень яркие»)
 float skillStrength(float user, float night);
+// 2.7.57 (the tester on 2.7.56 at night: «он как-то не светится» - night_ps keeps a light by its colour, and the
+// warp's is white: darkened as a white stone is): how strong a warp's light round it is - user «Сила порталів»
+// (0-2), night 0-1: 0.21 by day (2.7.48), three times at night, so that its own picture comes back out of the dark
+// with what it lights (torch_apply_ps: the day's colours, never brighter than by day)
+float portalStrength(float user, float night);
 // 2.7.47: how far a light gives a surface its day's brightness back, no further (shaders.cpp litSurface, twinH):
 // under the open sky as much as it is night (nightNow 0-100, the deep night's 200 the whole of it), in a cave or a
 // house never - their torches lift the dark as they did (the user: «хотелось бы, чтобы когда появляется свет, то
