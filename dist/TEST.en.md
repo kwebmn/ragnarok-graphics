@@ -1,3 +1,13 @@
+# uaRO Graphics 2.7.58 — to check
+
+- **Guild emblems without beige blotches at night** (report R-JSBTFQ). "Windows at night" looks for panes in the
+  textures - an even dark patch on a lighter wall - and lights them warm at night (one in three left dark, hence the
+  blocks). The emblem's black rider on its light field looked like a window to it. Now panes are looked for only in
+  pictures of 64 texels and more: an emblem is 24 in a texture of 32, the houses' walls 128 and more. The houses'
+  windows glow as before.
+- To check: at night and at dawn the emblems on the guild flags look as by day, only darker; the houses' windows
+  still glow at night.
+
 # uaRO Graphics 2.7.57 — to check
 
 - **Straight lines on the floor gone** (R-NSHM8K: Prontera's paving, R-ENZVF2: a road in a field). "Grass and road
