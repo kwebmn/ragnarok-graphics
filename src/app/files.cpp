@@ -95,6 +95,12 @@ bool makeFolder(const std::wstring& path) { return CreateDirectoryW(path.c_str()
 
 bool deleteFile(const std::wstring& path) { return DeleteFileW(path.c_str()) != 0; }
 
+bool moveFile(const std::wstring& from, const std::wstring& to, bool replace) {
+    return MoveFileExW(from.c_str(), to.c_str(), replace ? MOVEFILE_REPLACE_EXISTING : 0) != 0;
+}
+
+bool removeEmptyFolder(const std::wstring& path) { return RemoveDirectoryW(path.c_str()) != 0; }
+
 bool removeTree(const std::wstring& path) {
     // A junction or a link to a folder goes itself: what it leads to is not ours (0.6.0 review M9).
     const DWORD a = GetFileAttributesW(path.c_str());

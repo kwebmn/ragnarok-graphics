@@ -288,7 +288,7 @@ private:
                  {t(Text::AiModelSetFast), t(Text::AiModelSetBalanced), t(Text::AiModelSetMaximum),
                   t(Text::AiModelSetCustom)},
                  int(ai::modelSetOf(a)), t(Text::AiModelSetHint), on);
-        const pack::Index* index = packIndex(host_.model().paths().dir + L"\\uaro-textures.zip");
+        const pack::Index* index = packIndex(host_.model().paths().pack);
         const ai::PackCounts counts = index ? ai::countPack(*index, a) : ai::PackCounts{};
         uint32_t other = 0;
         // 2.5.28: under the headings of their sections; the pack's pictures a line a section, group by group, those

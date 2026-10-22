@@ -25,6 +25,7 @@ namespace uagfx::app {
 struct Paths {
     std::wstring dir;  // the client folder
     std::wstring ini, log, game, version, backups, report, ddraw;
+    std::wstring pack;  // 2.8: the texture pack (core/layout: uaro-graphics\textures)
 };
 
 // A dinput DLL in the client folder (stage 2 spec §2.3).

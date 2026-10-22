@@ -27,7 +27,7 @@ public:
 
     void build(Panel& p) override {
         Model& m = host_.model();
-        path_ = m.paths().dir + L"\\uaro-textures.zip";
+        path_ = m.paths().pack;  // 2.8: uaro-graphics\textures
         oldPath_ = m.paths().dir + L"\\upscaled.grf";
         busy_ = m.now().gameRunning || packInUse();
         // 2.2.5: not read while its builder or a game writes it (it has no directory then)

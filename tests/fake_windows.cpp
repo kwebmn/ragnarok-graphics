@@ -114,6 +114,36 @@ bool removeTree(const std::wstring& path) {
 
 bool deleteFile(const std::wstring& path) { return windows().files.erase(path) > 0; }
 
+bool moveFile(const std::wstring& from, const std::wstring& to, bool replace) {
+    fake::Windows& w = windows();
+    if (w.locked.count(from) || !w.folders.count(fake::parentOf(to)) || w.folders.count(to)) return false;
+    if (w.files.count(from)) {
+        if (w.files.count(to) && !replace) return false;
+        w.files[to] = w.files[from];
+        w.files.erase(from);
+        return true;
+    }
+    if (!w.folders.count(from) || w.files.count(to)) return false;
+    std::map<std::wstring, std::string> files;  // a folder moves whole
+    for (const auto& f : w.files)
+        files[fake::under(f.first, from) ? to + f.first.substr(from.size()) : f.first] = f.second;
+    std::set<std::wstring> folders;
+    for (const std::wstring& d : w.folders)
+        folders.insert(d == from || fake::under(d, from) ? to + d.substr(from.size()) : d);
+    w.files.swap(files);
+    w.folders.swap(folders);
+    return true;
+}
+
+bool removeEmptyFolder(const std::wstring& path) {
+    fake::Windows& w = windows();
+    for (const auto& f : w.files)
+        if (fake::parentOf(f.first) == path) return false;
+    for (const std::wstring& d : w.folders)
+        if (fake::parentOf(d) == path) return false;
+    return w.folders.erase(path) > 0;
+}
+
 bool folderWritable(const std::wstring&) { return true; }
 
 bool underProgramFiles(const std::wstring&) { return false; }

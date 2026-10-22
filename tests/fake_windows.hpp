@@ -15,6 +15,7 @@ namespace fake {
 struct Windows {
     std::map<std::wstring, std::string> files;  // full path -> bytes
     std::set<std::wstring> folders;             // full paths
+    std::set<std::wstring> locked;              // 2.8: held open - moving them fails (a pack being made)
     uagfx::settings::GameRegistry registry;
     std::vector<uagfx::app::CompatEntry> compat;
     std::set<std::string> refused;  // value names the registry refuses to write (error 5)

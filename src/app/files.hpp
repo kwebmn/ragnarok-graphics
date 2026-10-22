@@ -14,6 +14,9 @@ std::vector<std::wstring> listFolder(const std::wstring& dir, bool folders);  //
 bool makeFolder(const std::wstring& path);   // also when it exists
 bool removeTree(const std::wstring& path);
 bool deleteFile(const std::wstring& path);  // 0.55
+// 2.8: one rename (MoveFileExW without copying: a pack of gigabytes never is); replace: a file at `to` goes
+bool moveFile(const std::wstring& from, const std::wstring& to, bool replace);
+bool removeEmptyFolder(const std::wstring& path);  // 2.8
 bool folderWritable(const std::wstring& dir);
 bool underProgramFiles(const std::wstring& dir);
 std::wstring timestampName();  // "2026-10-13-192033", for a backup folder

@@ -9,9 +9,11 @@
 #include <ctime>
 #include <sstream>
 
+#include "app/app_disk.hpp"
 #include "app/files.hpp"
 #include "app/shots.hpp"
 #include "app/text.hpp"
+#include "core/log_files.hpp"
 #include "core/settings/log_digest.hpp"
 #include "core/usage.hpp"
 #include "core/version.hpp"
@@ -133,12 +135,21 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         if (!chosen.empty() && a.name == chosen) u.gpu = a.name;
     u.api = report::apiOfLog(log);
     const std::wstring& dir = m.paths().dir;
-    const std::pair<const wchar_t*, size_t> files[] = {
-        {L"uaro-graphics.log", 1u << 20}, {L"uaro-render64.log", 512u << 10}, {L"uaro-pack.log", 256u << 10},
-        {L"uaro-graphics.ini", 256u << 10}};
-    for (const auto& f : files) {
-        const std::string text = fileFor(dir + L"\\" + f.first, f.second);
-        if (!text.empty()) u.files.emplace_back(utf8(f.first), text);
+    // 2.8: the logs in uaro-graphics\logs, the previous game's too; the names the site knows them by are 2.x's
+    struct Attached {
+        const char* name;
+        std::wstring path;
+        size_t most;
+    };
+    const Attached files[] = {
+        {"uaro-graphics.log", m.paths().log, 1u << 20},
+        {"uaro-graphics.prev.log", wide(logfiles::previous(utf8(m.paths().log))), 512u << 10},
+        {"uaro-render64.log", ourPlace(dir, layout::now(layout::File::Render64Log)), 512u << 10},
+        {"uaro-pack.log", ourPlace(dir, layout::now(layout::File::PackLog)), 256u << 10},
+        {"uaro-graphics.ini", m.paths().ini, 256u << 10}};
+    for (const Attached& f : files) {
+        const std::string text = fileFor(f.path, f.most);
+        if (!text.empty()) u.files.emplace_back(f.name, text);
     }
     // 0.52: the pictures the pack had none of (the driver saves the first 64 of a game, uaro-graphics\missing)
     const std::wstring missing = dir + L"\\uaro-graphics\\missing";
@@ -250,7 +261,7 @@ unsigned long long sizeOf(const std::wstring& path) {
 bool sendUsage(const std::wstring& dir, bool force, std::string& error, size_t* lines) {
     if (lines) *lines = 0;
     std::string ini;
-    readFile(dir + L"\\uaro-graphics.ini", ini);
+    readFile(ourFile(dir, layout::File::Ini), ini);
     const Config c = parseConfig(ini);
     if (!c.statsSend || c.statsId.empty()) return false;  // no leave: nothing goes
     HANDLE lock = CreateMutexA(nullptr, FALSE, "Local\\uaro-graphics-stats");
@@ -333,7 +344,7 @@ int watchGame(unsigned long pid) {
     std::string ignored;
     sendUsage(exeFolder(), false, ignored);  // 2.2.1: the statistics, with the player's leave
     std::string log;
-    if (!readFile(exeFolder() + L"\\uaro-graphics.log", log)) return 0;
+    if (!readFile(ourPlace(exeFolder(), layout::now(layout::File::DriverLog)), log)) return 0;
     const std::string reason = report::reasonOfLog(log);
     if (reason.empty()) return 0;
     Model m;

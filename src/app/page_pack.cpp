@@ -4,6 +4,7 @@
 #include <string>
 
 #include "app/ai_group_texts.hpp"
+#include "app/app_disk.hpp"
 #include "app/files.hpp"
 #include "app/pack_compact.hpp"
 #include "app/page.hpp"
@@ -278,7 +279,7 @@ public:
             return;
         }
         if (id == kCompact) {  // 2.5.28
-            const std::wstring path = dir_ + L"\\uaro-textures.zip";
+            const std::wstring path = ourFile(dir_, layout::File::Pack);
             const uint64_t need = packBytes_ > packUnread_ ? packBytes_ - packUnread_ : 0;
             const Lang l = host_.lang();
             if (!host_.ask(tf(Text::PackCompactAsk, {sizeText(packUnread_, l), sizeText(need, l)}))) return;
@@ -343,7 +344,7 @@ private:
     std::wstring packText() {
         if (running_ && haveStatus_ && status_.inPack)
             return tf(Text::PackHas, {num(status_.inPack), sizeText(status_.bytes, host_.lang())});
-        const std::wstring path = dir_ + L"\\uaro-textures.zip";
+        const std::wstring path = ourFile(dir_, layout::File::Pack);
         packCount_ = 0;
         packBytes_ = packUnread_ = 0;
         WIN32_FILE_ATTRIBUTE_DATA d{};

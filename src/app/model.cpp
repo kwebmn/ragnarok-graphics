@@ -7,6 +7,7 @@
 #include <ctime>
 #include <set>
 
+#include "app/app_disk.hpp"
 #include "app/files.hpp"
 #include "app/text.hpp"
 #include "core/effect_groups.hpp"
@@ -46,13 +47,20 @@ Text problemText(ScreenProblem p) {
 
 Model::Model() {
     paths_.dir = exeFolder();
-    paths_.ini = paths_.dir + L"\\uaro-graphics.ini";
-    paths_.log = paths_.dir + L"\\uaro-graphics.log";
+    {
+        AppDisk disk;  // 2.8: a 2.x install's files into uaro-graphics\ before anything reads them
+        layout::migrate(utf8(paths_.dir), disk);
+    }
+    makeFolder(ourPlace(paths_.dir, layout::kOurs));
+    makeFolder(ourPlace(paths_.dir, layout::kLogs));
+    paths_.ini = ourFile(paths_.dir, layout::File::Ini);
+    paths_.log = ourPlace(paths_.dir, layout::now(layout::File::DriverLog));
     paths_.game = paths_.dir + L"\\uaRO.exe";
     paths_.version = paths_.dir + L"\\uaro-graphics\\version.txt";
-    paths_.backups = paths_.dir + L"\\uaro-graphics-backup";
-    paths_.report = paths_.dir + L"\\uaro-graphics-report.txt";
+    paths_.backups = ourFile(paths_.dir, layout::File::Backups);
+    paths_.report = ourPlace(paths_.dir, layout::now(layout::File::Report));
     paths_.ddraw = paths_.dir + L"\\ddraw.dll";
+    paths_.pack = ourFile(paths_.dir, layout::File::Pack);
     system_ = probeSystem();
     load();
 }
@@ -249,7 +257,8 @@ std::wstring Model::backupOnce(Lang l, bool prune) {
         list += utf8(saved) + "\t" + utf8(relative) + "\r\n";
         return true;
     };
-    bool ok = keep(L"uaro-graphics.ini", L"uaro-graphics.ini");  // 2.2: dgVoodoo's own settings no longer
+    // 2.2: dgVoodoo's own settings no longer; 2.8: the ini by where it is now (uaro-graphics\)
+    bool ok = keep(paths_.ini.substr(paths_.dir.size() + 1), L"uaro-graphics.ini");
     for (const ModuleFile& m : now_.modules)
         if (ok && m.iniExists) ok = keep(wide(m.info.ini), L"module-" + wide(m.info.ini));
     const GameKeyPaths k = gameKeyPaths();
@@ -420,8 +429,10 @@ std::wstring Model::restore(const std::wstring& backup, Lang l) {
         const size_t tab = line.find('\t');
         if (tab == std::string::npos) continue;
         std::string bytes;
-        if (!readFile(dir + L"\\" + wide(line.substr(0, tab)), bytes) ||
-            !writeFileAtomic(paths_.dir + L"\\" + wide(line.substr(tab + 1)), bytes)) {
+        // 2.8: a 2.x backup names the root ini - it goes where the settings are now
+        const std::string now = layout::relativeNow(line.substr(tab + 1));
+        const std::wstring to = now == layout::now(layout::File::Ini) ? paths_.ini : paths_.dir + L"\\" + wide(now);
+        if (!readFile(dir + L"\\" + wide(line.substr(0, tab)), bytes) || !writeFileAtomic(to, bytes)) {
             load();
             return wtrf(l, Text::ErrRestore, {line.substr(tab + 1)});
         }
@@ -681,7 +692,7 @@ Machine Model::machine() const {
         x.screenHeight = sys.monitors[0].pixels.height;
         x.hdr = sys.monitors[0].hdr;  // 1.3.3
     }
-    x.pack = fileExists(paths_.dir + L"\\uaro-textures.zip");
+    x.pack = fileExists(paths_.pack);
     return x;
 }
 

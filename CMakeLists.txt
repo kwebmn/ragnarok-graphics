@@ -85,10 +85,10 @@ elseif(WIN32)
                         "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/ddraw.map")
 
     # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
-    add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/registry.cpp
-                src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp src/app/ai_cache.cpp
-                src/app/update.cpp src/app/report_send.cpp src/app/pack_compact.cpp src/app/shots.cpp
-                src/app/palettes.cpp src/win/system_probe.cpp src/win/gpu/adapters.cpp)
+    add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/app_disk.cpp
+                src/app/registry.cpp src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp
+                src/app/ai_cache.cpp src/app/update.cpp src/app/report_send.cpp src/app/pack_compact.cpp
+                src/app/shots.cpp src/app/palettes.cpp src/win/system_probe.cpp src/win/gpu/adapters.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)
@@ -120,8 +120,8 @@ else()
     enable_testing()
     file(GLOB UAGFX_TEST_SOURCES CONFIGURE_DEPENDS tests/*.cpp)
     # The settings app's model runs here too, over the stand-ins of tests/fake_windows.cpp for its Windows layer.
-    add_executable(uagfx_tests ${UAGFX_TEST_SOURCES} src/app/model.cpp src/app/text.cpp src/app/rebuilds.cpp
-                   src/app/mnemonic.cpp)
+    add_executable(uagfx_tests ${UAGFX_TEST_SOURCES} src/app/model.cpp src/app/app_disk.cpp src/app/text.cpp
+                   src/app/rebuilds.cpp src/app/mnemonic.cpp)
     target_include_directories(uagfx_tests PRIVATE tests)
     target_link_libraries(uagfx_tests PRIVATE uagfx_core)
     target_compile_definitions(uagfx_tests PRIVATE UAGFX_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

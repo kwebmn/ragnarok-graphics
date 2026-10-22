@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include "app/app_disk.hpp"
 #include "app/files.hpp"
 #include "app/text.hpp"
 #include "core/settings/whats_new.hpp"
@@ -12,7 +13,7 @@ namespace uagfx::app {
 
 PackSummary packSummary(const std::wstring& dir) {
     PackSummary s;
-    const std::wstring path = dir + L"\\uaro-textures.zip";
+    const std::wstring path = ourFile(dir, layout::File::Pack);  // 2.8: uaro-graphics\textures
     WIN32_FILE_ATTRIBUTE_DATA d{};
     if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &d)) return s;
     s.exists = true;
@@ -37,8 +38,9 @@ bool dlssInstalled(const std::wstring& dir) { return fileExists(dir + L"\\uaro-g
 std::wstring notesText(const std::wstring& dir, settings::Lang l) {
     std::string md;
     std::string notes;
-    if (readFile(dir + L"\\TEST." + wide(settings::langToken(l)) + L".md", md)) notes = settings::notesOf(md, kVersion);
-    if (notes.empty() && readFile(dir + L"\\TEST.en.md", md)) notes = settings::notesOf(md, kVersion);
+    // 2.8: the package's notes in uaro-graphics\notes
+    if (readFile(ourPlace(dir, layout::notes(settings::langToken(l))), md)) notes = settings::notesOf(md, kVersion);
+    if (notes.empty() && readFile(ourPlace(dir, layout::notes("en")), md)) notes = settings::notesOf(md, kVersion);
     return notes.empty() ? std::wstring() : wtrf(l, settings::Text::WhatsNewTitle, {kVersion}) + L"\n\n" + wide(notes);
 }
 

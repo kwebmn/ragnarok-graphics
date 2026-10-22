@@ -14,12 +14,15 @@ namespace {
 
 const IniSetting& setting(const char* sectionKey) { return *findSetting(sectionKey); }
 
-const std::wstring kBackups = L"uaro-graphics-backup";
+// 2.8: the settings and the backups in uaro-graphics\ (core/layout)
+const std::wstring kIni = L"uaro-graphics\\uaro-graphics.ini";
+const std::wstring kBackups = L"uaro-graphics\\backup";
 
 // A backup as the model writes it (spec §4.6): files.txt, the ini, personal.reg.
 void backup(const std::wstring& name, const std::string& ini) {
     fake::Windows& w = fake::windows();
     const std::wstring dir = fake::path(kBackups + L"\\" + name);
+    w.folders.insert(fake::path(L"uaro-graphics"));
     w.folders.insert(fake::path(kBackups));
     w.folders.insert(dir);
     w.files[dir + L"\\files.txt"] = "uaro-graphics.ini\tuaro-graphics.ini\r\n";
@@ -47,7 +50,7 @@ int effectiveDword(const char* name) {
 
 TEST(model_reads_the_client_folder_and_the_game_key) {
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 70\r\n";
+    w.files[fake::path(kIni)] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 70\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
     CHECK_EQ(m.token(setting("quality.sharpen")), std::string("70"));
@@ -58,7 +61,7 @@ TEST(model_reads_the_client_folder_and_the_game_key) {
 
 TEST(model_restoring_the_oldest_of_twenty_backups_keeps_it) {
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[quality]\r\nsharpen = 90\r\n";
+    w.files[fake::path(kIni)] = "[quality]\r\nsharpen = 90\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     for (int i = 0; i < 20; ++i)
         backup(L"2026-10-01-1200" + twoDigits(i), "[quality]\r\nsharpen = " + std::to_string(i) + "\r\n");
@@ -68,12 +71,12 @@ TEST(model_restoring_the_oldest_of_twenty_backups_keeps_it) {
     CHECK(oldest == L"2026-10-01-120000");
     CHECK(m.restore(oldest, Lang::En).empty());
     CHECK(w.folders.count(fake::path(kBackups + L"\\" + oldest)) > 0);
-    CHECK_EQ(w.files[fake::path(L"uaro-graphics.ini")], std::string("[quality]\r\nsharpen = 0\r\n"));
+    CHECK_EQ(w.files[fake::path(kIni)], std::string("[quality]\r\nsharpen = 0\r\n"));
 }
 
 TEST(model_a_backup_keeps_the_twenty_newest) {
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[quality]\r\nsharpen = 90\r\n";
+    w.files[fake::path(kIni)] = "[quality]\r\nsharpen = 90\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     for (int i = 0; i < 20; ++i) backup(L"2026-10-01-1200" + twoDigits(i), "[quality]\r\nsharpen = 1\r\n");
     app::Model m;
@@ -98,7 +101,7 @@ TEST(model_first_run_can_be_applied_with_nothing_changed) {
 
 TEST(model_apply_keeps_what_was_written_to_the_ini_meanwhile) {
     fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    const std::wstring ini = fake::path(kIni);
     w.files[ini] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 50\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
@@ -111,7 +114,7 @@ TEST(model_apply_keeps_what_was_written_to_the_ini_meanwhile) {
 
 TEST(model_apply_keeps_what_was_written_to_roexts_ini_meanwhile) {
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    w.files[fake::path(kIni)] = "[renderer]\r\nbackend = uaro\r\n";
     w.files[fake::path(L"dinput.dll")] = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput.ini" + '\0';
     const std::wstring roext = fake::path(L"dinput.ini");
     w.files[roext] = "[ROExt]\r\nWindowLock=1\r\nWindowWidth=1920\r\nWindowHeight=1080\r\n";
@@ -139,7 +142,7 @@ TEST(model_a_registry_value_refused_leaves_the_others_written) {
 
 TEST(model_a_backup_holds_the_registry_as_it_is_at_the_backup) {
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[quality]\r\nsharpen = 50\r\n";
+    w.files[fake::path(kIni)] = "[quality]\r\nsharpen = 50\r\n";
     fake::gameKey(w.registry.personal, 1920, 1080, false);
     app::Model m;
     w.registry.personal.keys["ShortcutItem\\uaRO"]["Slot1"] = RegValue::dword(7);  // the game, at a map change
@@ -156,7 +159,7 @@ TEST(model_a_screen_that_waits_for_the_game_leaves_the_rest_written) {
     // While the game runs, ROExt's ini is not written (spec §4.1): a screen that needs it waits for the game to
     // close, everything else is written now (0.6.0 review M4).
     fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    const std::wstring ini = fake::path(kIni);
     w.files[ini] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 50\r\n";
     w.files[fake::path(L"dinput.dll")] = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput.ini" + '\0';
     const std::wstring roext = fake::path(L"dinput.ini");
@@ -183,7 +186,7 @@ TEST(model_while_the_game_runs_only_a_screen_roext_sizes_waits) {
     // Spec §4.1, 0.6.1 minor 6: ROExt's ini waits while the game runs, and only a window's plan writes it - the full
     // screen does not: the Screen page greys the window's controls only.
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    w.files[fake::path(kIni)] = "[renderer]\r\nbackend = uaro\r\n";
     w.files[fake::path(L"dinput.dll")] = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput.ini" + '\0';
     w.files[fake::path(L"dinput.ini")] = "[ROExt]\r\nWindowLock=1\r\nWindowWidth=1920\r\nWindowHeight=1080\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
@@ -205,7 +208,7 @@ TEST(model_a_first_run_while_the_game_runs_writes_the_key_and_leaves_roexts_ini)
     // No key yet: the game waits in its setup.exe loop (registry.md §2) with ROExt loaded. The key goes now - it is
     // what lets the game start - and ROExt's ini waits for the game to close (spec §4.1; 0.6.1 review I1).
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    w.files[fake::path(kIni)] = "[renderer]\r\nbackend = uaro\r\n";
     w.files[fake::path(L"dinput.dll")] = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput.ini" + '\0';
     const std::wstring roext = fake::path(L"dinput.ini");
     w.files[roext] = "[ROExt]\r\nWindowLock=1\r\nWindowWidth=1600\r\nWindowHeight=900\r\n";
@@ -225,7 +228,7 @@ TEST(model_a_first_run_while_the_game_runs_writes_the_key_and_leaves_roexts_ini)
 
 TEST(model_game_settings_are_written_while_the_game_is_closed) {
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    w.files[fake::path(kIni)] = "[renderer]\r\nbackend = uaro\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
     m.setRegWord(*findRegSetting("SPRITEMODE"), "1");
@@ -245,7 +248,7 @@ TEST(model_game_settings_are_written_while_the_game_is_closed) {
 TEST(model_game_settings_the_game_writes_wait_while_it_runs) {
     // Spec §4.1: ISLIGHTMAP the game never writes - it goes now; SPRITEMODE it writes at exit - it waits.
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[renderer]\r\nbackend = uaro\r\n";
+    w.files[fake::path(kIni)] = "[renderer]\r\nbackend = uaro\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
     m.setRegWord(*findRegSetting("ISLIGHTMAP"), "0");
@@ -484,7 +487,7 @@ TEST(model_a_window_layout_reset_writes_the_personal_copy) {
 TEST(model_profiles_keep_and_bring_back_every_setting) {
     // 0.55: a profile is uaro-graphics.ini with the player's changes in, under a name; loading one writes it back.
     fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    const std::wstring ini = fake::path(kIni);
     w.files[ini] = "[renderer]\r\nbackend = uaro\r\n[quality]\r\nsharpen = 70\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
@@ -509,7 +512,7 @@ TEST(model_profiles_keep_and_bring_back_every_setting) {
 TEST(model_writes_several_keys_now_and_undo_brings_them_back) {
     // 2.2: a set made the player's own in a running game - every switch in one write, Undo takes them all back
     fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    const std::wstring ini = fake::path(kIni);
     w.files[ini] = "[effects]\r\npreset = strong\r\ngrass = 0\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
@@ -527,7 +530,7 @@ TEST(model_profiles_and_reset_keep_the_statistics_answer) {
     // 2.2.2: the player's answer about the statistics and this computer's number stay through a profile loaded or
     // a reset (as the language does): a profile saved before the question would ask it again and count a new player
     fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    const std::wstring ini = fake::path(kIni);
     w.files[ini] = "[quality]\r\nsharpen = 70\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
@@ -557,7 +560,7 @@ TEST(model_new_install_starts_simple) {
 
 TEST(model_used_install_starts_detailed) {
     fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    const std::wstring ini = fake::path(kIni);
     w.files[ini] = "[utility]\r\nlanguage = ru\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
@@ -571,7 +574,7 @@ TEST(model_used_install_starts_detailed) {
 
 TEST(model_mode_place_and_version_survive_reset) {
     fake::Windows& w = fake::reset();
-    const std::wstring ini = fake::path(L"uaro-graphics.ini");
+    const std::wstring ini = fake::path(kIni);
     w.files[ini] = "[quality]\r\nsharpen = 70\r\n";
     fake::gameKey(w.registry.common, 1920, 1080, false);
     app::Model m;
@@ -600,10 +603,10 @@ TEST(model_settles_an_old_files_groups_at_its_start) {
     // 2.6.22: the ten groups before written into the effects once, when the app opens - the same picture, the old
     // lines gone, the file kept in a backup first
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-graphics.ini")] = "[effects]\r\npreset = custom\r\ngrass = 1\r\ntorch = 1\r\n"
+    w.files[fake::path(kIni)] = "[effects]\r\npreset = custom\r\ngrass = 1\r\ntorch = 1\r\n"
                                                 "group_nature = 0\r\ngroup_light = 1\r\ngroup_light_strength = 100\r\n";
     app::Model m;
-    const std::string ini = w.files[fake::path(L"uaro-graphics.ini")];
+    const std::string ini = w.files[fake::path(kIni)];
     CHECK_EQ(valueOf(ini, "effects.grass"), std::string("0"));
     CHECK_EQ(valueOf(ini, "effects.torch"), std::string("1"));
     CHECK_EQ(valueOf(ini, "effects.group_nature"), std::string("<none>"));
@@ -614,7 +617,51 @@ TEST(model_settles_an_old_files_groups_at_its_start) {
     CHECK(w.folders.count(fake::path(kBackups)) == 1);
     // a file of the new groups is left as it is
     const std::string fresh = "[effects]\r\npreset = auto\r\ngroup_plants = 0\r\n";
-    w.files[fake::path(L"uaro-graphics.ini")] = fresh;
+    w.files[fake::path(kIni)] = fresh;
     m.load();
-    CHECK(w.files[fake::path(L"uaro-graphics.ini")] == fresh);
+    CHECK(w.files[fake::path(kIni)] == fresh);
+}
+
+TEST(model_moves_a_2x_install_into_uaro_graphics) {
+    fake::Windows& w = fake::reset();
+    w.folders.insert(fake::path(L"uaro-graphics"));
+    w.files[fake::path(L"uaro-graphics.ini")] = "[quality]\r\nsharpen = 70\r\n";  // as 2.7.58 left it
+    w.files[fake::path(kIni)] = "; the 2.x package's template\r\n";
+    w.files[fake::path(L"uaro-textures.zip")] = "pack";
+    app::Model m;
+    CHECK(m.paths().ini == fake::path(kIni));
+    CHECK_EQ(m.token(setting("quality.sharpen")), std::string("70"));
+    CHECK(w.files.count(fake::path(L"uaro-graphics.ini")) == 0);
+    CHECK(m.paths().pack == fake::path(L"uaro-graphics\\textures\\uaro-textures.zip"));
+    CHECK(w.files.count(m.paths().pack) > 0);
+}
+
+TEST(model_a_pack_that_could_not_move_is_used_where_it_is) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-textures.zip")] = "pack";
+    w.locked.insert(fake::path(L"uaro-textures.zip"));  // uaro-render64 makes the pack meanwhile
+    app::Model m;
+    CHECK(m.paths().pack == fake::path(L"uaro-textures.zip"));
+}
+
+TEST(model_restoring_a_2x_backup_writes_the_ini_in_uaro_graphics) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(kIni)] = "[quality]\r\nsharpen = 90\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    backup(L"2026-10-01-120000", "[quality]\r\nsharpen = 5\r\n");  // its files.txt names 2.x's root ini
+    app::Model m;
+    CHECK(m.restore(L"2026-10-01-120000", Lang::En).empty());
+    CHECK_EQ(w.files[fake::path(kIni)], std::string("[quality]\r\nsharpen = 5\r\n"));
+    CHECK(w.files.count(fake::path(L"uaro-graphics.ini")) == 0);
+}
+
+TEST(model_a_new_backup_names_the_ini_where_it_is_now) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(kIni)] = "[quality]\r\nsharpen = 90\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    m.setToken(setting("quality.sharpen"), "40");
+    CHECK(m.apply(Lang::En).empty());
+    const std::string list = w.files[fake::path(kBackups + L"\\2026-10-13-120000\\files.txt")];
+    CHECK(list.find("uaro-graphics.ini\tuaro-graphics\\uaro-graphics.ini\r\n") != std::string::npos);
 }
