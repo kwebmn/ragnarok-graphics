@@ -11,6 +11,7 @@
 #include "app/notes_window.hpp"
 #include "app/report_send.hpp"
 #include "app/status_info.hpp"
+#include "app/launcher.hpp"
 #include "app/modes.hpp"
 #include "app/update.hpp"
 #include "core/settings/search.hpp"
@@ -319,6 +320,7 @@ void MainWindow::create() {
     buildPage();
     SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
+    startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
     PostMessageW(hwnd_, kAskStats, 0, 0);
 }
 
@@ -534,7 +536,7 @@ std::unique_ptr<Page> MainWindow::makeView() {
     using P = settings::Page;
     switch (shown_) {
         case settings::View::Main: return makeMainPage(*this);
-        case settings::View::Play: return makeSettingsPage(*this, {P::Launcher}, {});  // 2.11: the launcher's row
+        case settings::View::Play: return makePlayPage(*this);  // 2.11: the launcher «Гра»
         case settings::View::Graphics:
             return makeSettingsPage(*this, {P::Render, P::Quality}, {P::Smoothing, P::Frames});
         case settings::View::Screen: return makeScreenPage(*this);
@@ -764,7 +766,15 @@ std::wstring MainWindow::windowLetters() const {
 
 void MainWindow::doApply(bool play) {
     std::wstring err = model_->apply(lang_);
-    if (err.empty() && play) err = model_->launchGame(lang_);
+    bool closing = false;
+    if (err.empty() && play) {  // 2.11: an offered update first (it starts the game after it), else the game
+        const UpdateState u = updateState();
+        err = playNow(*model_, u.kind == UpdateState::Done ? u.offer : "", lang_, closing);
+    }
+    if (closing) {
+        PostMessageW(hwnd_, WM_CLOSE, 0, 0);
+        return;
+    }
     if (!err.empty())
         message(err, true);
     else
@@ -828,6 +838,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 if (sel >= 0 && sel < kLangCount && Lang(sel) != lang_) {
                     lang_ = Lang(sel);
                     model_->saveLanguage(lang_);
+                    startLauncherCheck(lang_);  // 2.11: «Гра»'s news in that language
                     reload();
                 }
             } else if (id == kApply && code == BN_CLICKED) {

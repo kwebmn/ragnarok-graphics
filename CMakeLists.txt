@@ -115,6 +115,7 @@ elseif(WIN32)
                    src/app/page_effects.cpp src/app/page_pack.cpp src/app/page_pad.cpp src/app/preview_window.cpp
                    src/app/page_parts.cpp src/app/page_debug.cpp src/app/page_main.cpp src/app/status_info.cpp
                    src/app/page_search.cpp src/app/notes_window.cpp src/app/update_window.cpp src/app/modes.cpp
+                   src/app/page_play.cpp
                    src/app/app.rc)
     target_include_directories(uaro-graphics PRIVATE src/app dist ${CMAKE_BINARY_DIR}/app)
     target_compile_options(uaro-graphics PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)

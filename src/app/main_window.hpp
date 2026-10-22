@@ -34,6 +34,7 @@ public:
     void showView(settings::View view, int tab) override;
     settings::Mode mode() const override;
     void showNotes(const std::wstring& text) override;
+    void play() override { doApply(true); }
 
 private:
     static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);

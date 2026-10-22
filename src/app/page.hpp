@@ -42,6 +42,9 @@ public:
     virtual settings::Mode mode() const = 0;
     // 2.6: a long text in a window of its own that scrolls ("What's new"); the page stays under it like a box's
     virtual void showNotes(const std::wstring& text) = 0;
+    // 2.11: the one way to the game (the bottom row's «Застосувати й грати», «Гра»'s «Грати»): the changes applied,
+    // then an offered update first, then the game
+    virtual void play() = 0;
 };
 
 // 2.6: the Diagnostics page's report comment - the header's "Report a problem" puts the focus into it.
@@ -103,6 +106,7 @@ std::unique_ptr<Page> makePackPage(PageHost& host);     // 0.43: the texture pac
 std::unique_ptr<Page> makePadPage(PageHost& host);      // 1.4: uaRO Pad, the gamepad
 std::unique_ptr<Page> makeDebugPage(PageHost& host);    // 2.6: the Developer mode's switches and tools
 std::unique_ptr<Page> makeMainPage(PageHost& host);     // 2.6: the Simple mode's Main page
+std::unique_ptr<Page> makePlayPage(PageHost& host);     // 2.11: the launcher «Гра»
 
 // 2.6: "Recommended settings" of the Main page - the Render page's auto setup for this computer.
 void runAutoSetup(PageHost& host);

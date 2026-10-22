@@ -352,6 +352,8 @@ enum class Text : uint16_t {
     UninstallKeep, UninstallDo, Uninstalling, UninstallDone, UninstallKept, InstallDone, DlssDownload,  // 2.10
     UninstallFailed, SetupTitle, SetupChoose, SetupNoGame, SetupDamaged,  // 2.10
     ViewPlay, LauncherDirect, LauncherDirectHint,  // 2.11
+    PlayNews, PlayAsking, PlayNoSite, PlayNoNews, PlayPinned, PlayMore, PlayServer, PlayOnline, PlayUpdateLine,
+    PlayUpdateNote, PlayButton, PlayUpdateButton,  // 2.11
     Count
 };
 
