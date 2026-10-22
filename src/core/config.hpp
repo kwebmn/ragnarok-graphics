@@ -171,12 +171,13 @@ struct EffectSettings {
     // desert. On by default.
     bool heat = true;
     int heatStrength = 100;  // %, 0-200
-    // 0.38: the portals glow around in blue and the air turns in them. On by default.
+    // 0.38: the portals glow around (2.7.54: the map warps, in lilac; the air's swirl gone). On by default.
     bool portals = true;
     int portalsStrength = 100;  // %, 0-200
-    // 2.7.48: portals - the game's warp zone drawn anew, sharper (core/portal.hpp, portal_ps). 2.7.53: off by default -
-    // the game's own while its draws are recorded (core/portal_capture.hpp) and the new one is made on the facts
-    bool portalNew = false;
+    // 2.7.48: portals - the game's warp zone drawn anew, sharper. 2.7.53: off while its draws were recorded (git
+    // eea888f). 2.7.54: the game's own draws of the map warps shaded anew where it draws them (core/portal.hpp
+    // partOf, portal_draw_ps) - on by default
+    bool portalNew = true;
     // 0.39: the driver's own weather (core/weather.hpp): snow in Lutie, leaves in Payon, sand about Morroc, rain over
     // Niflheim and Einbroch. On by default.
     bool weather = true;

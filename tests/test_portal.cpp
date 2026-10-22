@@ -7,56 +7,44 @@
 
 using namespace uagfx;
 
-TEST(portal_rings_close_in_from_14_to_2_over_their_life) {
-    // 2.7.48 (the user's pick «Б» for the new portal): the game's warp zone (uaRO.exe FUN_005ce290) - a ring every 28
-    // ticks of 60 a second, each 80 ticks long, standing on a circle of 14 that closes in by 0.15 a tick
-    const auto born = portal::ringsAt(0.0);
-    CHECK(std::fabs(born[0].radius - 14.0f) < 1e-3f);
-    CHECK(born[0].alpha == 0.0f);  // it comes in
-    const double life = 80.0 / 60.0;
-    const auto old = portal::ringsAt(life * 0.999);
-    float smallest = 99.0f;
-    for (const portal::Ring& r : old) smallest = std::min(smallest, r.radius);
-    CHECK(smallest > 1.9f && smallest < 2.2f);
-}
-
-TEST(portal_rings_two_or_three_shown_at_any_moment) {
-    for (int k = 0; k < 600; ++k) {
-        const double t = 10.0 + k * 0.01;
-        int shown = 0;
-        for (const portal::Ring& r : portal::ringsAt(t)) {
-            if (r.alpha > 0.0f) CHECK(r.radius >= 2.0f - 1e-3f && r.radius <= 14.0f + 1e-3f);  // a gone one: 0
-            CHECK(r.alpha >= 0.0f && r.alpha <= 0.8f);
-            shown += r.alpha > 0.05f ? 1 : 0;
-        }
-        CHECK(shown >= 2 && shown <= 3);
-    }
-}
-
-TEST(portal_rings_fade_in_and_out) {
-    // a ring's alpha rises over its first eighth and falls over its last fifth (FUN_005ce290: 0x198 - 0x198 / 5)
-    const double tick = 1.0 / 60.0;
-    const auto mid = portal::ringsAt(40.0 * tick);
-    CHECK(std::fabs(mid[0].alpha - 200.0f / 255.0f) < 1e-3f);
-    const auto late = portal::ringsAt(79.0 * tick);
-    CHECK(late[2].alpha > 0.0f && late[2].alpha < 0.1f);  // the oldest, born at 0
-}
-
-TEST(portal_new_off_by_default_while_the_games_is_recorded) {
-    // 2.7.48: «Новий портал» - a part of «Портали». 2.7.53 (five builds and still two portals on the screen): off by
-    // default - the game's own portal while its draws are recorded (core/portal_capture.hpp) and the new one is made
-    // anew on the facts; one who wants it still ticks it. Pause and the set «off» give the game's own
-    CHECK(!parseConfig("").effects.portalNew);
-    CHECK(parseConfig("[effects]\nportal_new = 1\n").effects.portalNew);
+TEST(portal_new_on_by_default_the_games_own_draws_shaded_anew) {
+    // 2.7.48: «Новий портал» - a part of «Живі портали». 2.7.53: off while the game's portal was recorded. 2.7.54: on
+    // again - the game's own draws of the warp shaded anew where it draws them (nothing of the driver's own to place:
+    // the five builds' two portals came of placing one); Pause and the set «off» give the game's own
+    CHECK(parseConfig("").effects.portalNew);
+    CHECK(!parseConfig("[effects]\nportal_new = 0\n").effects.portalNew);
     CHECK(!effectsOff().portalNew);
 }
 
-TEST(portal_game_portal_hidden_only_while_ours_was_drawn) {
-    // 2.7.49 (the tester on 2.7.48: «порталы не нарисовались» - the game's hidden, ours never drawn): the game's
-    // portal is left out only while the new one was drawn the frame before - never no portal at all
-    CHECK(portal::hidesGame(true, true));
-    CHECK(!portal::hidesGame(true, false));
-    CHECK(!portal::hidesGame(false, true));
+TEST(portal_warp_parts_known_by_their_draws) {
+    // 2.7.54, the driver's record of the map warp (effect 321, R-FP2F4H): its rings added (SRCALPHA, ONE) in
+    // triangles, its floor blended over (SRCALPHA, INVSRCALPHA) in triangles, its sparks blended over in quads
+    CHECK(portal::partOf(321, true, 5, 2, 3) == portal::Part::Ring);
+    CHECK(portal::partOf(321, true, 5, 6, 3) == portal::Part::Floor);
+    CHECK(portal::partOf(321, true, 5, 6, 4) == portal::Part::Spark);
+    // anything else as the game draws it: another effect taken for a portal, a state the record has not shown
+    CHECK(portal::partOf(61, true, 5, 2, 3) == portal::Part::None);
+    CHECK(portal::partOf(36, true, 5, 6, 4) == portal::Part::None);
+    CHECK(portal::partOf(321, false, 5, 6, 3) == portal::Part::None);
+    CHECK(portal::partOf(321, true, 2, 2, 3) == portal::Part::None);
+    CHECK(portal::partOf(321, true, 5, 2, 4) == portal::Part::None);
+    CHECK(portal::partOf(321, true, 5, 6, 6) == portal::Part::None);
+}
+
+TEST(portal_warp_floor_middle_is_the_corner_all_its_triangles_share) {
+    // the floor: 20 triangles round its middle, v 1 there and 0 on its rim (half of them have the middle twice)
+    const portal::Corner rim[3] = {{1062.8f, 307.2f, 0.002251f, 0.0f}, {1147.7f, 317.1f, 0.002256f, 0.0f},
+                                   {1086.7f, 407.6f, 0.002301f, 1.0f}};
+    portal::Corner m;
+    CHECK(portal::floorMiddle(rim, m));
+    CHECK(m.x == 1086.7f && m.y == 407.6f && m.rhw == 0.002301f);
+    const portal::Corner twice[3] = {{1086.7f, 407.6f, 0.002301f, 1.0f}, {1086.7f, 407.6f, 0.002301f, 1.0f},
+                                     {1210.5f, 361.3f, 0.002278f, 0.0f}};
+    CHECK(portal::floorMiddle(twice, m));
+    CHECK(m.x == 1086.7f && m.y == 407.6f);
+    const portal::Corner none[3] = {
+        {0.0f, 0.0f, 0.002f, 0.0f}, {9.0f, 0.0f, 0.002f, 0.25f}, {0.0f, 9.0f, 0.002f, 0.5f}};
+    CHECK(!portal::floorMiddle(none, m));
 }
 
 namespace {
@@ -126,21 +114,6 @@ TEST(portal_draws_too_big_to_be_one_left_out) {
     huge.right = 1600.0f;
     portal::follow(tracks, {huge}, 1.0f / 60.0f);
     CHECK(tracks.empty());
-}
-
-TEST(portal_screen_box_round_its_column) {
-    // 2.7.48: the pass runs over the screen box round the portal's column (kColumnRadius, the height given) only
-    const camera::Projection p = camera::projectionFor(1920, 1080);
-    const float foot[3] = {0.0f, 0.0f, 100.0f}, up[3] = {0.0f, -0.7071f, -0.7071f};  // the camera 45 degrees down
-    float box[4];
-    CHECK(portal::screenBox(foot, up, p, 45.0f, box));
-    CHECK(std::fabs((box[0] + box[2]) * 0.5f - p.cx) < 1.0f);  // straight ahead: as wide either way
-    const float half = portal::kColumnRadius * p.f0 / 100.0f;
-    CHECK(box[2] - box[0] > 2.0f * half && box[2] - box[0] < 4.5f * half);  // its top nearer the camera: wider
-    CHECK(box[1] < p.cy - 45.0f * p.f1 / 100.0f * 0.9f);  // its top over it
-    CHECK(box[3] > p.cy);                                 // its foot's circle below the middle
-    const float behind[3] = {0.0f, 0.0f, -10.0f};
-    CHECK(!portal::screenBox(behind, up, p, 45.0f, box));
 }
 
 TEST(portal_foot_where_its_draws_are_at_their_depth) {

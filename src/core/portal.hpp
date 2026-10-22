@@ -1,38 +1,35 @@
 #pragma once
-#include <array>
+#include <cstdint>
 #include <vector>
 
 #include "core/game_camera.hpp"
 
 namespace uagfx::portal {
 
-// 2.7.48, the new portal (the user's pick «Б» of the options page: «такой же волнами и объёмный, но лучше»): the
-// game's warp zone (uaRO.exe FUN_005ce290, effect 61) drawn anew in the shaders (portal_ps). The game's own, at 60
-// ticks a second: a ring of light every 28 ticks, each 80 ticks long, a wall 5 units tall standing on a circle of 14
-// that closes in by 0.15 a tick, its alpha 200; a column of 15 round them; sparks every 10 ticks rising for 130.
-constexpr float kTick = 1.0f / 60.0f;
-constexpr float kRingEvery = 28.0f * kTick;
-constexpr float kRingLife = 80.0f * kTick;
-constexpr float kRingRadius = 14.0f;
-constexpr float kRingShrink = 0.15f;  // a tick
-constexpr float kRingHeight = 5.0f;
-constexpr float kRingAlpha = 200.0f / 255.0f;
-constexpr float kColumnRadius = 15.0f;
-constexpr int kRings = 3;  // alive at once: 80 / 28
+// 2.7.54, the map warps (effect 321, uaRO.exe FUN_00607500; the driver's record of their draws, R-FP2F4H): the game's
+// own draws shaded anew where it draws them (portal_draw_ps) - no portal of the driver's own to place (2.7.48-2.7.52
+// drew one over its place, guessed from the draws: twice, or off its place). Each frame, at 60 ticks a second: a floor
+// of 20 triangles round its middle, 15 units out (effect\alpha_down.tga, white, alpha 0.5, blended over); two prims of
+// four rings (effect\ring_blue.tga, added, 20 faces of two triangles each): walls leaning out from a circle on the
+// ground, coming in by 0.05 a tick from 10, standing up as they come (9 x (10 - r) degrees, r wide), their alpha up by
+// one a tick to 70 (FUN_005e4ee0); a spark every 10 ticks rising for 70 (particle1.spr, a quad facing the screen,
+// blended over).
+constexpr int kWarpEffect = 321;
 
-struct Ring {
-    float radius = 0.0f;  // world units
-    float alpha = 0.0f;   // 0-kRingAlpha
+enum class Part : uint8_t { None, Ring, Floor, Spark };
+
+// Which part of a warp a draw is, by its effect, blending (D3D7 factors) and vertices; None for anything else - another
+// effect taken for a portal, a state the record has not shown: as the game draws it.
+Part partOf(int effectId, bool blend, uint8_t srcBlend, uint8_t dstBlend, uint32_t vertexCount);
+
+// A corner of a draw: where it lies on the screen (game pixels), its rhw and its texture's v.
+struct Corner {
+    float x, y, rhw, v;
 };
 
-// The rings at time t (seconds), the newest first: each closes in from kRingRadius, comes in over its first eighth
-// and goes over its last fifth (FUN_005ce290's fade from 0x198 - 0x198 / 5); one past its life is gone (alpha 0).
-std::array<Ring, kRings> ringsAt(double t);
-
-// 2.7.49 (the tester on 2.7.48: «порталы не нарисовались» - the game's left out, the new one never drawn): whether a
-// draw of the game's portal is left out - only while the new one is wanted and was drawn the frame before, so that
-// there is never no portal at all.
-inline bool hidesGame(bool wanted, bool drawnLastFrame) { return wanted && drawnLastFrame; }
+// The middle of a warp's floor from one of its triangles: the corner whose v is 1 (its texture's bottom - every
+// triangle has it); false when none has.
+bool floorMiddle(const Corner c[3], Corner& out);
 
 // A draw of a portal this frame (the renderers' notePortal): its middle in the view and on the screen (game
 // pixels), its size there; 2.7.51: its span across and its bottom on the screen.
@@ -69,9 +66,5 @@ void anchorOf(const Track& t, float squash, float out[2]);
 // game's vertices lie on the ground, the fan 465-474 deep round its middle; the 299 deep one 2.7.50 told was another
 // portal, off the screen).
 void footOf(const Track& t, float squash, const camera::Projection& p, float out[3]);
-
-// The screen box (game pixels: x0, y0, x1, y1) round a portal standing at foot (the view) with the world's up (the
-// view's): its column, a fifth wider than kColumnRadius, `height` tall; false when any of it is behind the camera.
-bool screenBox(const float foot[3], const float up[3], const camera::Projection& p, float height, float box[4]);
 
 }  // namespace uagfx::portal

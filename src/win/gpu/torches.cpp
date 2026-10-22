@@ -195,42 +195,38 @@ bool Renderer::Impl::applyEmbers() {
     return effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, sceneColorSrv, false, list1, &lit);
 }
 
-// 0.38: a portal's draw (draw.cpp): its middle in the view and on the screen, gathered by place for its glow and swirl.
+// 0.38: a portal's draw (draw.cpp), for its light round it. 2.7.54: a triangle of a map warp's floor - the corner all
+// its triangles share is its middle (portal::floorMiddle), in the view and on the screen; 0.38-2.7.53 gathered every
+// draw of a portal by place, its rings and sparks too, and the gathering guessed where it stood.
 void Renderer::Impl::notePortal(const FrameRecord& rec, const DrawCmd& d) {
-    if (portalSparks.size() >= 256) return;
+    if (portalSparks.size() >= 64 || d.vertexCount != 3) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
-    const uint32_t n = std::min<uint32_t>(d.vertexCount, 64);
-    if (n == 0 || d.vertexOffset + size_t(n) * stride > v.size()) return;
-    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
-    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, rhw = 0.0f;
-    for (uint32_t i = 0; i < n; ++i) {
-        float xyzw[4];
+    if (stride < 32 || d.vertexOffset + 3 * stride > v.size()) return;
+    portal::Corner c[3];
+    for (uint32_t i = 0; i < 3; ++i) {
+        float xyzw[4], uv[2];
         std::memcpy(xyzw, v.data() + d.vertexOffset + size_t(i) * stride, sizeof xyzw);
-        x0 = std::min(x0, xyzw[0]);
-        y0 = std::min(y0, xyzw[1]);
-        x1 = std::max(x1, xyzw[0]);
-        y1 = std::max(y1, xyzw[1]);
-        rhw += xyzw[3];
+        std::memcpy(uv, v.data() + d.vertexOffset + size_t(i) * stride + 24, sizeof uv);
+        c[i] = portal::Corner{xyzw[0], xyzw[1], xyzw[3], uv[1]};
     }
-    rhw /= float(n);
-    if (rhw <= 0.0f) return;
+    portal::Corner m{};
+    if (!portal::floorMiddle(c, m) || m.rhw <= 0.0f) return;
+    for (const FireSpark& o : portalSparks)  // its other triangles: the same middle
+        if (std::fabs(o.gameX - m.x) < 0.5f && std::fabs(o.gameY - m.y) < 0.5f) return;
+    float reach = 0.0f;  // its rim's way from the middle on the screen
+    for (const portal::Corner& k : c) reach = std::max(reach, std::hypot(k.x - m.x, k.y - m.y));
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     FireSpark s{};
-    s.gameX = (x0 + x1) * 0.5f;
-    s.gameY = (y0 + y1) * 0.5f;
-    const float vz = 1.0f / rhw;
+    s.gameX = m.x;
+    s.gameY = m.y;
+    const float vz = 1.0f / m.rhw;
     s.view[0] = (s.gameX - p.cx) * vz / p.f0;
     s.view[1] = (s.gameY - p.cy) * vz / p.f1;
     s.view[2] = vz;
-    s.strength = std::max(x1 - x0, y1 - y0);  // its size on the screen, game pixels
-    s.left = x0;  // 2.7.51: where the portal stands is its draws' span (core/portal.hpp anchorOf)
-    s.right = x1;
-    s.bottom = y1;
-    if (portalDrawsTold < 12) {  // 2.7.51: what the game's portal is made of
-        ++portalDrawsTold;
-        LOG_INFO("portals: a draw of effect %d - %u vertices, the screen %.0f,%.0f-%.0f,%.0f, rhw %.6f (%.0f deep)",
-                 int(d.effectId), d.vertexCount, x0, y0, x1, y1, rhw, vz);
-    }
+    s.strength = 2.0f * reach;  // its size on the screen, game pixels
+    s.left = s.right = m.x;  // where it stands: its middle (portal::anchorOf)
+    s.bottom = m.y;
     portalSparks.push_back(s);
 }
 
@@ -855,10 +851,9 @@ bool Renderer::Impl::applyTorches() {
         }
     }
     lavaCells.clear();
-    // 0.38: the portals - a soft blue glow about each and (in the heat haze's pass) the air turning in it. 0.39.1:
-    // this frame's draws gathered into what stands there, followed from frame to frame - their places eased, their
-    // strength fading in and out - so that the glow holds steady while the rings rise and come and go (0.38 lit each
-    // frame's gathering by a grid: as the rings crossed its lines the lights doubled and went out - it blinked).
+    // 0.38: the portals - a soft glow about each. 0.39.1: followed from frame to frame - their places eased, their
+    // strength fading in and out (0.38 lit each frame's gathering by a grid: the lights doubled and went out).
+    // 2.7.54: by the map warps' floors' middles (notePortal), in lilac; the air's swirl gone - it blurred the rings.
     const float portalStep = std::clamp(time - portalTime, 0.0f, 0.25f);
     portalTime = time;
     if (!portalsWanted()) portalTracks.clear();
@@ -869,31 +864,18 @@ bool Renderer::Impl::applyTorches() {
                                         s.right, s.bottom});
         portal::follow(portalTracks, seen, portalStep);
         const float user = float(std::clamp(effects.portalsStrength, 0, 200)) / 100.0f;
-        const float hk = float(upscale ? worldScale : scale);
         int lit = 0;
         for (const PortalTrack& t : portalTracks) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
             if (shown <= 0.0f) continue;
-            // 2.7.48: under the new portal its light in its lilac and softer, the air's swirl half - no white blot.
-            // 2.7.53: with the new portal only - the game's own as it is otherwise (0.38's glow and swirl first came in
-            // 2.7.50, its tracks dying at birth before; the tester then saw «2 портала»)
-            const bool anew = newPortalWanted();
-            if (!anew) continue;
-            // 2.7.52: its light 4 units over its foot (portal::footOf) - 0.38 lit its draws' mean place, sparks and
-            // all
+            // 2.7.52: its light 4 units over its foot (portal::footOf: its floor's middle since 2.7.54)
             float ground[3];
             if (lit++ < 8 && lights.size() < kMaxLights && portalGround(t, ground)) {
                 float up[3];
                 camera::upInView(viewToWorld, up);
                 LightItem l{{ground[0] + up[0] * 4.0f, ground[1] + up[1] * 4.0f, ground[2] + up[2] * 4.0f},
-                            (anew ? 0.21f : 0.35f) * user * shown, {anew ? 0.80f : 0.45f, anew ? 0.74f : 0.75f, 1.0f},
-                            30.0f};
+                            0.21f * user * shown, {0.80f, 0.74f, 1.0f}, 30.0f};
                 lights.push_back(l);
-            }
-            if (heatPs) {
-                const float r = std::clamp(t.size * 0.6f, 30.0f, 140.0f) * hk;
-                heatSpots.push_back(
-                    HeatSpot{t.gx * hk, t.gy * hk, r, (anew ? -0.35f : -0.7f) * std::min(user, 1.5f) * shown});
             }
         }
     }
@@ -1123,7 +1105,6 @@ bool Renderer::Impl::applyTorches() {
                             &around))
                 return false;
         }
-    if (!portalTracks.empty() && newPortalWanted()) return drawNewPortals(dst, dstState, rtv, code, w, h, time);
     return true;
 }
 
@@ -1135,74 +1116,6 @@ bool Renderer::Impl::portalGround(const PortalTrack& t, float out[3]) const {
     camera::upInView(viewToWorld, up);
     portal::footOf(t, up[2], camera::projectionFor(gameWidth, gameHeight), out);
     return out[2] > 0.0f;
-}
-
-// 2.7.48: the new portal (portal_ps; core/portal.hpp the game's warp zone) over each portal's place, cut to its box,
-// from a copy of the picture as it is now - its lights and flames in it (the ground under the walls ripples).
-bool Renderer::Impl::drawNewPortals(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState,
-                                    D3D12_CPU_DESCRIPTOR_HANDLE rtv, UINT code, int w, int h, float time) {
-    if (!portalPipelines[code]) {
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
-            fullScreenPipeline(root, presentVs, portalPs, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
-        p.BlendState.RenderTarget[0].RenderTargetWriteMask =
-            D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN | D3D12_COLOR_WRITE_ENABLE_BLUE;
-        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
-                                                       reinterpret_cast<void**>(&portalPipelines[code])))) {
-            portalPipelines[code] = nullptr;
-            LOG_ERROR("portals: the new portal's pipeline onto %u samples failed: the game's stays", 1u << code);
-            releaseCom(portalPs);  // not tried again: newPortalWanted() is false from now on
-            return true;
-        }
-    }
-    if (!copySceneColor() || !copySceneDepth()) return false;
-    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
-    float up[3] = {0.0f, -1.0f, 0.0f};
-    if (viewToWorldValid) camera::upInView(viewToWorld, up);
-    const float k = float(upscale ? worldScale : scale);
-    const float jx = upscale ? jitter[0] : 0.0f, jy = upscale ? jitter[1] : 0.0f;
-    const float user = float(std::clamp(effects.portalsStrength, 0, 200)) / 100.0f;
-    const std::array<portal::Ring, portal::kRings> rings = portal::ringsAt(double(time));
-    Constants c{};
-    const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
-    std::copy(pv, pv + 6, c.projection);
-    c.scale = k;
-    c.jitter[0] = jx;
-    c.jitter[1] = jy;
-    c.uiPixels[0] = float(w);
-    c.uiPixels[1] = float(h);
-    const float twin[4] = {rings[0].radius, rings[0].alpha, rings[1].radius, rings[1].alpha};
-    std::copy(twin, twin + 4, c.twin);
-    c.sourceClamp[0] = rings[2].radius;
-    c.sourceClamp[1] = rings[2].alpha;
-    c.sourceClamp[2] = time;
-    std::copy(up, up + 3, c.fogColor);
-    c.fogColor[3] = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
-    int index = 0;
-    for (const PortalTrack& t : portalTracks) {
-        const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);
-        if (shown <= 0.0f) continue;
-        // 2.7.52: its foot where it stands on the screen at its draws' depth (portal::footOf), the box round its column
-        float foot[3], box[4];
-        if (!portalGround(t, foot) || !portal::screenBox(foot, up, proj, 45.0f, box)) continue;
-        const D3D12_RECT around = clipped(box[0] * k + jx, box[1] * k + jy, box[2] * k + jx, box[3] * k + jy, w, h);
-        if (around.right <= around.left || around.bottom <= around.top) continue;
-        std::copy(foot, foot + 3, c.sourceRect);
-        c.sourceRect[3] = shown * user;
-        c.footprint = float(++index) * 0.618f;  // its own sparks
-        c.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f + jx;
-        c.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f + jy;
-        if (portalsToldMap != mapName) {  // 2.7.49: its numbers once a map, to check where it stands
-            portalsToldMap = mapName;
-            LOG_INFO("portals: the new one drawn on %s - its foot %.1f %.1f %.1f (the view), its draws %.0f-%.0f "
-                     "across down to %.0f of the game's %dx%d, %.2f shown, rings %.1f %.1f %.1f",
-                     mapName.c_str(), foot[0], foot[1], foot[2], t.left, t.right, t.bottom, gameWidth, gameHeight,
-                     shown, rings[0].radius, rings[1].radius, rings[2].radius);
-        }
-        if (!effectPass(portalPipelines[code], dst, dstState, rtv, w, h, c, sceneColorSrv, true, kNoSrv, &around))
-            return false;
-        newPortalsDrawn = true;
-    }
-    return true;
 }
 
 }  // namespace uagfx::gpu

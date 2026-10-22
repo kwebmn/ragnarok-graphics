@@ -1475,109 +1475,72 @@ float4 torch_apply_ps(PresentOut i) : SV_Target {
     return float4(lit + (hash12(i.pos.xy) + hash12(i.pos.xy + 17.3) - 1.0) / 255.0, 1.0);
 }
 
-// 2.7.48, the new portal (core/portal.hpp; the user's pick «Б»: «такой же волнами и объёмный, но лучше»): the game's
-// warp zone drawn anew over its place, the game's own draws of it not drawn - its walls of light closing in on the
-// middle (twin, sourceClamp.xy: three rings' radius and alpha, world units), a faint column of light with streams
-// running up it, sparks rising; the ground under the walls ripples as under water, a soft light in the middle.
-// sourceRect.xyz its foot in the view, .w its strength; fogColor.xyz the world's up in the view, .w the night;
-// sourceClamp.z the time, footprint its seed; uiPixels.xy the world's size, .zw its foot on the screen (its pixels).
-static const float3 kPortalWhite = float3(1.0, 0.99, 1.0);
-static const float3 kPortalLilac = float3(0.80, 0.74, 1.0);
-static const float3 kPortalDeep = float3(0.58, 0.48, 0.98);
+// 2.7.54, the map warps (effect 321, draw.cpp; core/portal.hpp partOf): the game's own draws of a warp shaded anew
+// where it draws them - the facts from the driver's record of them (R-FP2F4H) and uaRO.exe. Its rings, walls leaning
+// out from a circle on the ground that come in to the middle as they stand up (uv0.y 1 on the ground, 0 along the top
+// edge; uv0.x round the ring in 21sts): a crisp line along the top edge as far as the wall stands, lilac light down
+// it with light running up, a fine circle where it meets the ground - the game's ring_blue.tga, 64 texels round a
+// ring, lay over each other as a white haze. Its floor (uv0.y 1 in the middle): a lilac pool for the game's white one
+// half over the ground; its sparks: crisp stars. The game's alpha in the colour keeps its fades. sourceRect.xyz the
+// world's up in the view, .w the part (1 a ring, 2 the floor, 3 a spark); twinH the time; footprint the strength
+// (1 = 100 %); f0-cy the projection.
+static const float3 kWarpLine = float3(0.86, 0.80, 1.0);
+static const float3 kWarpLilac = float3(0.62, 0.52, 1.0);
+static const float3 kWarpFloor = float3(0.56, 0.50, 0.92);
+static const float3 kWarpSpark = float3(1.0, 0.97, 1.0);
 
-// The light of a wall h tall standing on a circle of radius r round the axis (foot, up), along the ray from the
-// camera through the pixel (dir, its z 1: the ray's t is the view's depth), hidden behind what the pixel shows (its
-// view depth z): brighter at its foot, melting upwards, its edges seen side on brighter (as a ring of light round); the
-// far side 0.55. px: world units a pixel at the depth 1.
-float portalWall(float3 dir, float3 foot, float3 up, float r, float h, float z, float px) {
-    if (r <= 0.0) return 0.0;
-    float3 o = -foot;
-    float3 oh = o - up * dot(o, up), dh = dir - up * dot(dir, up);
-    float a = dot(dh, dh), b = 2.0 * dot(oh, dh), c = dot(oh, oh) - r * r;
-    float disc = b * b - 4.0 * a * c;
-    if (disc <= 0.0 || a < 1e-6) return 0.0;
-    float sq = sqrt(disc);
-    float s = 0.0;
-    [unroll] for (int k = 0; k < 2; ++k) {
-        float t = (-b + (k == 0 ? -sq : sq)) / (2.0 * a);
-        if (t <= 0.0) continue;
-        float3 hit = o + dir * t;
-        float y = dot(hit, up);
-        float on = smoothstep(-0.15, 0.1, y) * (1.0 - smoothstep(h * 0.8, h, y));
-        float3 n = normalize(hit - up * y);
-        float limb = min(1.0 + 1.4 * pow(1.0 - abs(dot(n, normalize(dir))), 3.0), 2.4);
-        float seen = saturate((z - t) * 1.5 + 0.5);
-        s += on * pow(saturate(1.0 - y / h), 1.2) * limb * seen * (k == 0 ? 1.0 : 0.55);
-    }
-    float edge = saturate(sq / (2.0 * sqrt(a)) / max(2.0 * px * (-b / (2.0 * a)), 1e-4));  // soft over 2 pixels
-    return s * edge;
+float4 warpShade(PsIn i) {
+    // the slopes first, outside any choice
+    float v = saturate(i.uv0.y);
+    float dv = max(fwidth(v), 1e-4);
+    float2 duv = fwidth(i.uv0);
+    float2 g = (i.pos.xy - 0.5 - float2(jitterX, jitterY)) / max(scale, 1e-3);
+    float z = i.pos.w;
+    float3 p = float3((g.x - cx) * z / max(f0, 1e-3), (g.y - cy) * z / max(f1, 1e-3), z);
+    float3 n = cross(ddx(p), ddy(p));
+    float facing = dot(n, normalize(sourceRect.xyz)) * rsqrt(max(dot(n, n), 1e-20));
+    float steep = sqrt(saturate(1.0 - facing * facing));  // 0 a ring lying on the ground, 1 a wall standing
+    float fog = fogEnable != 0 ? i.specular.a : 1.0;
+    float strength = max(footprint, 0.0);
+    // a ring: its alpha 70 once it is whole
+    float fade = saturate(i.diffuse.a * (255.0 / 70.0));
+    float3 tint = i.diffuse.rgb / max(max(i.diffuse.r, i.diffuse.g), max(i.diffuse.b, 1e-3));
+    tint = tint * 0.35 + kWarpLilac * 0.65;
+    float stands = steep * steep;
+    float crest = (1.0 - smoothstep(0.0, 1.8 * dv, v)) * stands;
+    float foot = (1.0 - smoothstep(0.0, 1.8 * dv, 1.0 - v)) * 0.55;
+    float halo = exp(-v / 0.14) * 0.42 * steep;
+    float edge = stands + (1.0 - stands) * smoothstep(0.0, 0.3, v);  // one lying on the ground: no rim
+    float ang = i.uv0.x * (21.0 / 20.0) * 6.2831853;  // whole turns round the ring: no seam
+    float run = sin(9.0 * ang + 2.0 * sin(4.0 * ang + twinH) + 6.0 * v - 2.4 * twinH) *
+                sin(5.0 * ang - 3.0 * v + 1.7 * twinH);
+    float body = (0.12 + 0.14 * smoothstep(0.3, 0.9, run)) * steep * (1.0 - 0.5 * v);
+    float3 ring = (kWarpLine * (crest + foot * 0.6) + tint * ((halo + body) * edge + foot * 0.4)) * fade * strength *
+                  fog;
+    // the floor: its alpha 0.5 while the warp is there
+    float pool = smoothstep(0.0, 0.7, v) * saturate(i.diffuse.a * 2.0);
+    float3 floorColour = fogEnable != 0 ? lerp(fogColor.rgb, kWarpFloor, i.specular.a) : kWarpFloor;
+    float floorAlpha = saturate(0.42 * pool * min(strength, 1.5));
+    // a spark: a core, two glints across it at least a pixel wide, a soft halo
+    float2 d = i.uv0 - 0.5;
+    float r2 = dot(d, d);
+    float wx = max(0.01, duv.x * 0.7), wy = max(0.01, duv.y * 0.7);
+    float glint = exp(-abs(d.x) / wx) * exp(-abs(d.y) / 0.13) + exp(-abs(d.y) / wy) * exp(-abs(d.x) / 0.13);
+    float sparkAlpha = saturate((exp(-r2 / 0.0018) + glint * 0.7 + exp(-r2 / 0.015) * 0.22) * i.diffuse.a *
+                                min(strength, 1.5)) * fog;
+    float part = sourceRect.w;
+    return part < 1.5   ? float4(ring, 1.0)
+           : part < 2.5 ? float4(floorColour, floorAlpha)
+                        : float4(kWarpSpark, sparkAlpha);
 }
 
-// The ground's ripple under a wall at radius r (alpha al) at rho from the middle, and the glow at its foot
-float2 portalRipple(float rho, float r, float al) {
-    float d = rho - r;
-    return float2(d * exp(-d * d / 2.0), exp(-d * d / 4.0)) * al * step(0.01, r);
-}
+float4 portal_draw_ps(PsIn i) : SV_Target { return warpShade(i); }
 
-// A ring of the portal: its wall of light 8 units tall (the game's 5 read thin as a line on the screen) and, a little
-// in and out of it, a soft halo that gives it its body
-float2 portalRing(float3 dir, float3 foot, float3 up, float r, float al, float z, float px) {
-    if (al <= 0.0) return float2(0.0, 0.0);
-    float wall = portalWall(dir, foot, up, r, 8.0, z, px);
-    float halo = 0.0;
-    if (r > 0.7) halo = portalWall(dir, foot, up, r - 0.6, 8.0, z, px) + portalWall(dir, foot, up, r + 0.6, 8.0, z, px);
-    return float2(wall, halo * 0.5) * al;
-}
-
-float4 portal_ps(PresentOut i) : SV_Target {
-    int2 wp = int2(i.pos.xy);
-    float raw = sceneDepth.Load(int3(wp, 0));
-    float3 p = viewFrom(wp, raw);
-    // 2.7.52: its foot where it stands on the screen at its draws' own depth (core/portal.hpp footOf) - hidden behind
-    // what stands in front of it as the game's own (2.7.51's ground looked for in the picture was a tower's roof)
-    float3 foot = sourceRect.xyz, up = fogColor.xyz;
-    float strength = sourceRect.w, night = fogColor.w, time = sourceClamp.z;
-    float3 rel = p - foot;
-    float y = dot(rel, up);
-    float rho = length(rel - up * y);
-    float ground = raw < 0.99999 ? 1.0 - smoothstep(1.0, 3.0, abs(y)) : 0.0;  // the ground: not who stands in it
-    float2 rip = portalRipple(rho, twinX, twinY) + portalRipple(rho, twinW, twinH) +
-                 portalRipple(rho, sourceClamp.x, sourceClamp.y);
-    float2 away = float2(wp) + 0.5 - uiPixels.zw;
-    away /= max(length(away), 1.0);
-    float perUnit = f0 * scale / max(p.z, 1.0);
-    float2 off = away * rip.x * 0.35 * perUnit * ground * strength;
-    float3 base = sceneColor.SampleLevel(samp0, (float2(wp) + 0.5 + off) / uiPixels.xy, 0).rgb;
-    float pool = exp(-rho * rho / 196.0 * 1.6) * ground * (0.35 + 0.07 * sin(time * 2.0));
-    base *= 1.0 + kPortalLilac * pool * (0.4 + night) * strength;
-    float2 g = (float2(wp) + 0.5 - float2(jitterX, jitterY)) / scale;
-    float3 dir = float3((g.x - cx) / f0, (g.y - cy) / f1, 1.0);
-    float px = 1.0 / (f0 * scale);
-    float z = raw < 0.99999 ? p.z : 1e9;
-    float2 walls = portalRing(dir, foot, up, twinX, twinY, z, px) + portalRing(dir, foot, up, twinW, twinH, z, px) +
-                   portalRing(dir, foot, up, sourceClamp.x, sourceClamp.y, z, px);
-    float3 light = lerp(kPortalLilac, kPortalWhite, 0.65) * walls.x * 0.85 + kPortalDeep * walls.y * 0.35 +
-                   kPortalDeep * rip.y * ground * 0.4;
-    float stream = 0.6 + 0.4 * valueNoise(float2(g.x * 0.35, g.y * 0.06 + time * 0.7));
-    light += kPortalLilac * portalWall(dir, foot, up, 15.75, 45.0, z, px) * 0.16 * stream;
-    // the sparks: a pair of ways along the ground, 13 rising round it for 130 ticks
-    float3 pick = abs(up.x) < 0.9 ? float3(1.0, 0.0, 0.0) : float3(0.0, 1.0, 0.0);
-    float3 ea = normalize(cross(up, pick)), eb = cross(up, ea);
-    [loop] for (int k = 0; k < 13; ++k) {
-        float s1 = hash12(float2(float(k), footprint)), s2 = hash12(float2(footprint, float(k) + 7.3));
-        float ph = frac(time * 0.46 * (0.8 + 0.4 * hash12(float2(float(k) + 3.1, footprint))) + s2);
-        float ang = s1 * 6.2832, rad = 14.0 * (0.55 + 0.45 * hash12(float2(float(k) + 5.7, footprint)));
-        float3 sv = foot + (ea * cos(ang) + eb * sin(ang)) * rad + up * (ph * 26.0);
-        if (sv.z <= nearZ) continue;
-        float2 sg = float2(sv.x / sv.z * f0 + cx, sv.y / sv.z * f1 + cy);
-        float size = f0 / sv.z;  // game pixels a world unit there
-        float d2 = dot(g - sg, g - sg) / max(size * size, 1e-4);
-        float tw = (0.65 + 0.35 * sin(time * 9.0 + float(k) * 2.1)) * sin(ph * 3.14159) * saturate((z - sv.z) + 0.5);
-        light += (kPortalWhite * exp(-d2 / 0.09) + kPortalLilac * exp(-d2 / 0.7) * 0.35) * tw;
-    }
-    light *= strength;
-    float3 lit = 1.0 - (1.0 - base) * (1.0 - saturate(light));
-    return float4(lit + (hash12(i.pos.xy) + hash12(i.pos.xy + 17.3) - 1.0) / 255.0, 1.0);
+GlowOut portal_draw_glow_ps(PsIn i) {  // the rings' light and the sparks into the glow; the floor hides what it covers
+    GlowOut o;
+    o.c = warpShade(i);
+    o.g = abs(sourceRect.w - 2.0) < 0.5 ? float4(0.0, 0.0, 0.0, o.c.a) : o.c;
+    return o;
 }
 
 float fbm4(float2 p) {

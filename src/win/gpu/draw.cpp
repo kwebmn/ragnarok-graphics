@@ -113,18 +113,17 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         told = true;
         return;
     }
-    // 2.7.48: the new portal (torches.cpp drawNewPortals) where the game's is - its draws noted for its place only.
-    // 2.7.49 (the tester: «порталы не нарисовались»): noted whatever the lights' pass did this frame (drawn the next),
-    // left out only while the new one was drawn the frame before - never no portal (portal::hidesGame)
-    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && newPortalWanted()) {
-        notePortal(rec, d);
-        const int id = int(d.effectId);
-        if (portalIdsTold.size() < 16 &&
-            std::find(portalIdsTold.begin(), portalIdsTold.end(), id) == portalIdsTold.end()) {
-            portalIdsTold.push_back(id);
-            LOG_INFO("portals: the game's effect %d drawn anew - the new portal (on %s)", id, mapName.c_str());
-        }
-        if (portal::hidesGame(true, newPortalsDrawnLast)) return;
+    // 2.7.54: a draw of a map warp - its rings, floor or sparks (portal::partOf) - shaded anew where the game draws it:
+    // the new portal (2.7.48-2.7.52 drew one of the driver's own over its place, the game's left out: two portals, or
+    // one off its place); the light round it by its floor's middle (notePortal)
+    const portal::Part warp = !s.ui && d.effect == uint8_t(effect_exe::Kind::Portal)
+                                  ? portal::partOf(int(d.effectId), s.blend, s.srcBlend, s.dstBlend, d.vertexCount)
+                                  : portal::Part::None;
+    const bool warpDrawn = warp != portal::Part::None && newPortalWanted();
+    if (warpDrawn && warpsToldMap != mapName) {  // once a map, for the reports
+        warpsToldMap = mapName;
+        LOG_INFO("portals: the warps shaded anew on %s - their rings, floor and sparks where the game draws them",
+                 mapName.c_str());
     }
     // 0.21: the world done - at the interface - its colours, then its glow.
     if (s.ui && !upscale && !finishWorld()) return;
@@ -138,9 +137,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     DrawSetup laid = s;
     if (softAdd) laid.srcBlend = d3d7::BLEND_INVDESTCOLOR;
     // 0.26: the fire of skills (a fire-coloured picture added on) lights around it once the world is drawn.
-    // 0.38: a portal's draw: its middle, for its glow and its swirl once the world is drawn.
-    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted() && !newPortalWanted() && !torchDone)
-        notePortal(rec, d);
+    // 0.38: a portal's draw, for its light round it once the world is drawn - 2.7.54: a map warp's floor
+    if (warp == portal::Part::Floor && portalsWanted() && !torchDone) notePortal(rec, d);
     // 0.36: the other skills light too, in their pictures' colours - not the aura, the maps' objects (their own).
     // 2.7.21: an orb of light (Ruwach's, Sight's: effect_light::orbOf by the effect's number) whatever its blend - the
     // game lays it over the world as a sprite, its picture the sprite cache's (the tester: «рувотч не светит»)
@@ -216,7 +214,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // characters (their feet stand in the ground), not what writes depth itself. Copied once a picture: what is
     // drawn later (the characters) only hides the effect by the depth test - the ground and the walls are there.
     const bool effectDraw = effect_exe::softEffect(adds, d.effect);  // 2.7.13: not a hit flash
-    bool soft = !s.ui && !water && !smoke && !ray && !lava && quad && effects.softParticles && s.blend &&
+    bool soft = !s.ui && !water && !smoke && !ray && !lava && !warpDrawn && quad && effects.softParticles && s.blend &&
                 s.zEnable && !s.zWrite && effectDraw && s.srcBlend != d3d7::BLEND_ZERO &&
                 s.srcBlend != d3d7::BLEND_DESTCOLOR && softCopied >= 0;
     if (soft && !softCopied) softCopied = ensureScene("soft particles") && copySceneDepth() ? 1 : -1;
@@ -224,8 +222,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 1.17, living characters: a sprite of the game's sprite cache (a character, a monster) facing the screen, blended
     // over - lit from its silhouette's sides; in the real sun's shadows (their map made) darker
     bool sprite = false;
-    if (spriteLightWanted() && !s.ui && !water && !smoke && !ray && !lava && !adds && !d.twin && s.blend &&
-        d.vertexCount == 4 && d.texture[0]) {
+    if (spriteLightWanted() && !s.ui && !water && !smoke && !ray && !lava && !warpDrawn && !adds && !d.twin &&
+        s.blend && d.vertexCount == 4 && d.texture[0]) {
         const auto it = textures.find(d.texture[0]);
         if (it != textures.end() && !it->second.spriteCells.empty() && !it->second.leafy) {
             const std::vector<uint8_t>& v = rec.vertexBytes();
@@ -234,10 +232,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                               ai::flatQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount));
         }
     }
-    const DrawShader shader = smoke ? DrawShader::Smoke
-                              : ray ? DrawShader::Ray
-                              : lava ? DrawShader::Lava
-                                     : DrawShader::Game;
+    const DrawShader shader = smoke       ? DrawShader::Smoke
+                              : ray       ? DrawShader::Ray
+                              : lava      ? DrawShader::Lava
+                              : warpDrawn ? DrawShader::Portal
+                                          : DrawShader::Game;
     ID3D12PipelineState* pso = pipelineFor(laid, d.fvf, coverage, toLayer, toGlow, water, mask, shader);
     if (!pso) return;
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
@@ -512,6 +511,17 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(c.projection, proj, sizeof proj);
         c.twin[3] = waterTime();
         c.footprint = float(std::clamp(ray ? effects.raysBrightness : effects.lavaBrightness, 0, 200)) / 100.0f;
+    }
+    if (warpDrawn) {  // 2.7.54: the projection, the world's up and the part, the time, the strength (portal_draw_ps)
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        float up[3] = {0.0f, -1.0f, 0.0f};
+        if (viewToWorldValid) camera::upInView(viewToWorld, up);
+        std::copy(up, up + 3, c.sourceRect);
+        c.sourceRect[3] = float(int(warp));
+        c.twin[3] = waterTime();
+        c.footprint = float(std::clamp(effects.portalsStrength, 0, 200)) / 100.0f;
     }
     // 2.5: a draw whose constants carry none of the world's extras (shade()'s bits: relief, leaves, material,
     // patches, seams; hills, the sprites' light; soft particles) takes the lean shader - the

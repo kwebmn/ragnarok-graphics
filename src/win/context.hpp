@@ -39,7 +39,6 @@ public:
     // made once a change of `config` (settingsChanged) - each of the game's draws asks for them, and made anew each
     // time they were 2 % of the game's thread with Direct3D 11
     const EffectSettings& effects() const;
-    const std::string& mapName() const { return map_; }  // 2.7.53: the map the game showed at the last present
     void settingsChanged() { effectsMade_ = false; }  // `config` replaced
     gpu::Renderer* renderer = nullptr;
     FrameRecord record;

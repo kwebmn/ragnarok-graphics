@@ -946,12 +946,12 @@ const Entry kTexts[] = {
      "Наскільки яскраві вміння від того, як їх малює гра: 100 % — як у грі.",
      "Насколько ярки умения от того, как их рисует игра: 100 % — как в игре."},
     {"Living portals", "Живі портали", "Живые порталы"},
-    {"The warps and the portals of the Warp Portal skill glow around in soft blue, and the air turns in them.",
-     "Варпи й портали вміння Warp Portal м'яко світять довкола блакитним, а повітря в них закручується.",
-     "Варпы и порталы умения Warp Portal мягко светят вокруг голубым, а воздух в них закручивается."},
+    {"The warps glow softly: their lilac light falls on what is around them.",
+     "Варпи м'яко світяться: їхнє бузкове світло падає на все довкола.",
+     "Варпы мягко светятся: их сиреневый свет падает на всё вокруг."},
     {"Portals' strength", "Сила порталів", "Сила порталов"},
-    {"How bright their glow and how strong the swirl is.", "Наскільки яскраве світіння та сильний вир.",
-     "Насколько ярко свечение и силён вихрь."},
+    {"How bright the warps' light and the new portal are.", "Наскільки яскраві світло варпів і новий портал.",
+     "Насколько ярки свет варпов и новый портал."},
     {"Precipitation", "Опади", "Осадки"},  // 2.6.22: the Weather is the choice above
     {"Snow, rain, falling leaves or sand in the wind - by the Weather choice at the top (Auto - the map's own: snow "
      "over Lutie, leaves falling in Payon's woods, sand in the wind about Morroc, a fine rain over Niflheim and "
@@ -3096,15 +3096,15 @@ const Entry kTexts[] = {
      "Голубой шар Ruwach, кружащий вокруг героя, — маленький яркий шарик в начале своего голубого шлейфа, как у "
      "кометы."},
     {"New portal", "Новий портал", "Новый портал"},  // 2.7.48
-    {"The portals drawn anew the game's own way, only sharper: walls of light close in on the middle in waves, "
-     "the ground under them ripples as under water, a soft light in the middle, sparks rise, streams run up the "
-     "column of light. Off: the game's own portal.",
-     "Портали намальовані заново так само, як у грі, тільки чіткіше: стінки світла хвилями сходяться до середини, "
-     "земля під ними хвилюється, як під водою, посередині м'яке світло, іскри здіймаються, стовпом світла біжать "
-     "угору струмочки. Вимкнено — портал гри.",
-     "Порталы нарисованы заново так же, как в игре, только чётче: стенки света волнами сходятся к середине, "
-     "земля под ними колышется, как под водой, в середине мягкий свет, искры поднимаются, по столбу света бегут "
-     "вверх струйки. Выключено — портал игры."},
+    {"The warps drawn anew where the game draws them: the same rings coming in to the middle in waves, only sharp - "
+     "a bright line along each wall's top, lilac light down it, a fine circle where it meets the ground; a lilac "
+     "pool on the ground instead of the white haze; the sparks crisp stars. Off: the game's own portal.",
+     "Варпи намальовані заново там, де їх малює гра: ті самі кільця, що хвилями сходяться до середини, тільки "
+     "чіткі — яскрава лінія по верху кожної стінки, бузкове світло по ній, тонке коло там, де вона торкається "
+     "землі; бузкова пляма на землі замість білого серпанку; іскри — чіткі зірочки. Вимкнено — портал гри.",
+     "Варпы нарисованы заново там, где их рисует игра: те же кольца, что волнами сходятся к середине, только "
+     "чёткие — яркая линия по верху каждой стенки, сиреневый свет по ней, тонкий круг там, где она касается "
+     "земли; сиреневое пятно на земле вместо белой дымки; искры — чёткие звёздочки. Выключено — портал игры."},
     {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",

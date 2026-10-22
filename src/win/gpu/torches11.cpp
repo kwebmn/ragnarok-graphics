@@ -548,8 +548,8 @@ void Renderer11::applyTorchLight() {
             }
         }
     }
-    // 0.38 (torches.cpp): the portals - this frame's draws gathered into what stands there, followed from frame to
-    // frame (their places eased, their strength fading in and out): a soft blue light about each, the air turning
+    // 0.38 (torches.cpp): the portals followed from frame to frame (their places eased, their strength fading in and
+    // out): a soft light about each - 2.7.54 by the map warps' floors' middles, in lilac; the air's swirl gone
     const float portalStep = std::clamp(time - portalTime_, 0.0f, 0.25f);
     portalTime_ = time;
     if (portalsWanted()) {
@@ -559,27 +559,20 @@ void Renderer11::applyTorchLight() {
                                         s.right, s.bottom});
         portal::follow(portalTracks_, seen, portalStep);
         const float user = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
-        static const float kBlue[3] = {0.45f, 0.75f, 1.0f};
-        static const float kLilac[3] = {0.80f, 0.74f, 1.0f};  // 2.7.48: under the new portal, its colour
-        const bool anew = newPortalWanted();
+        static const float kLilac[3] = {0.80f, 0.74f, 1.0f};
         int shownCount = 0;
         for (const PortalTrack11& t : portalTracks_) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
-            if (shown <= 0.0f || !anew) continue;  // 2.7.53: with the new portal only (torches.cpp)
-            // 2.7.52 (torches.cpp portalGround): 4 units over its foot (portal::footOf)
+            if (shown <= 0.0f) continue;
+            // 2.7.52 (torches.cpp portalGround): 4 units over its foot (portal::footOf: its floor's middle)
             if (shownCount++ < 8 && cameraValid_) {
                 float up[3], foot[3];
                 camera::upInView(viewToWorld_, up);
                 portal::footOf(t, up[2], proj, foot);
                 if (foot[2] > 0.0f) {
                     const float view[3] = {foot[0] + up[0] * 4.0f, foot[1] + up[1] * 4.0f, foot[2] + up[2] * 4.0f};
-                    addLight(view, 30.0f, anew ? kLilac : kBlue, (anew ? 0.21f : 0.35f) * user * shown);
+                    addLight(view, 30.0f, kLilac, 0.21f * user * shown);
                 }
-            }
-            if (heatPs_) {
-                const float r = std::clamp(t.size * 0.6f, 30.0f, 140.0f) * k;
-                heatSpots_.push_back(
-                    HeatSpot11{t.gx * k, t.gy * k, r, (anew ? -0.35f : -0.7f) * std::min(user, 1.5f) * shown});
             }
         }
     }
@@ -794,49 +787,6 @@ void Renderer11::applyTorchLight() {
         }
     }
     ctx_->PSSetShaderResources(0, 4, none);
-    // 2.7.48: the new portal (portal_ps, as Direct3D 12's drawNewPortals) over each portal's place, from a copy of the
-    // picture as it is now; its foot where its middle's axis meets the map's ground, else 6 units under its middle
-    if (!portalTracks_.empty() && newPortalWanted() && cameraValid_ && copyScene()) {
-        float up[3];
-        camera::upInView(viewToWorld_, up);
-        const std::array<portal::Ring, portal::kRings> rings = portal::ringsAt(double(time));
-        const float user = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
-        Constants pc = c;
-        const float twin[4] = {rings[0].radius, rings[0].alpha, rings[1].radius, rings[1].alpha};
-        std::copy(twin, twin + 4, pc.twin);
-        pc.sourceClamp[0] = rings[2].radius;
-        pc.sourceClamp[1] = rings[2].alpha;
-        pc.sourceClamp[2] = time;
-        std::copy(up, up + 3, pc.fogColor);
-        pc.fogColor[3] = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
-        ctx_->OMSetBlendState(blendState(false, d3d7::BLEND_ONE, d3d7::BLEND_ZERO, rgb), nullptr, 0xFFFFFFFF);
-        ctx_->PSSetShader(portalPs_, nullptr, 0);
-        ID3D11ShaderResourceView* views[4] = {nullptr, nullptr, scene_.srv, depthSrv_};
-        ctx_->PSSetShaderResources(0, 4, views);  // t2 the copy, t3 the depth
-        int index = 0;
-        for (const PortalTrack11& t : portalTracks_) {
-            const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);
-            if (shown <= 0.0f) continue;
-            // 2.7.52: its foot where it stands on the screen at its draws' depth (portal::footOf), the box round it
-            float foot[3], box[4];
-            portal::footOf(t, up[2], proj, foot);
-            if (foot[2] <= 0.0f || !portal::screenBox(foot, up, proj, 45.0f, box)) continue;
-            std::copy(foot, foot + 3, pc.sourceRect);
-            pc.sourceRect[3] = shown * user;
-            pc.footprint = float(++index) * 0.618f;  // its own sparks
-            pc.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f;
-            pc.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f;
-            if (portalsToldMap_ != map_) {  // 2.7.49: its numbers once a map, to check where it stands
-                portalsToldMap_ = map_;
-                LOG_INFO("portals: the new one drawn on %s (Direct3D 11) - its foot %.1f %.1f %.1f (the view), its "
-                         "draws %.0f-%.0f across down to %.0f, %.2f shown", map_.c_str(), foot[0], foot[1], foot[2],
-                         t.left, t.right, t.bottom, shown);
-            }
-            cut(pc, box[0] * k, box[1] * k, box[2] * k, box[3] * k);
-            newPortalsDrawn_ = true;
-        }
-        ctx_->PSSetShaderResources(0, 4, none);
-    }
     const D3D11_RECT all{0, 0, w, h};
     ctx_->RSSetScissorRects(1, &all);
     if (!lightLogged_)

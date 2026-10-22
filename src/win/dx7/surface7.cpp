@@ -127,17 +127,6 @@ Surface7* Surface7::from(IDirectDrawSurface7* s) {
     return p && p->magic_ == kMagic ? p : nullptr;
 }
 
-bool Surface7::topArgb(std::vector<uint32_t>& out) const {
-    const Surface7* s = top();
-    if (!s->levels_ || s->levels_->levels() == 0) return false;
-    const Image& img = s->levels_->level(0);
-    out.resize(size_t(img.width()) * size_t(img.height()));
-    for (int y = 0; y < img.height(); ++y)
-        for (int x = 0; x < img.width(); ++x)
-            out[size_t(y) * size_t(img.width()) + size_t(x)] = toArgb8(img.format(), img.pixel(x, y));
-    return true;
-}
-
 bool Surface7::fullColour(int x, int y, int w, int h, const uint32_t* picture, int pitch) {
     win::Guard guard;
     if (role_ != SurfaceRole::Texture || level_ != 0 || !picture || pitch <= 0) return false;

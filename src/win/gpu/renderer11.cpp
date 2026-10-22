@@ -152,7 +152,8 @@ Renderer11::~Renderer11() {
     dropTarget(aoTarget_[0]);
     dropTarget(aoTarget_[1]);
     drop(torchFirePs_);  // 2.5.2
-    drop(portalPs_);     // 2.7.48
+    drop(portalDrawPs_);  // 2.7.54
+    drop(portalDrawGlowPs_);
     drop(dustPs_);
     drop(bloomDownPs_);
     drop(dofBlurPs_);
@@ -402,7 +403,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[54] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[55] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -447,7 +448,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"shafts_ps", ps, shaderSource(), {}, true},  // 2.5.5: the shafts (2.7.10: the flare gone)
                    {"mirror_vs", vs, shaderSource(), {}, true},  // 2.5.9: the world's reflections in the water
                    {"mirror_ps", ps, shaderSource(), {}, true},
-                   {"portal_ps", ps, shaderSource(), {}, true}};  // 2.7.48: the new portal
+                   {"portal_draw_ps", ps, shaderSource(), {}, true},  // 2.7.54: the map warps shaded anew
+                   {"portal_draw_glow_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -584,7 +586,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[50].code.empty() || !psOf(wants[50], shaftsPs_)) shaftsPs_ = nullptr;
     if (wants[51].code.empty() || !vsOf(wants[51], mirrorVs_)) mirrorVs_ = nullptr;  // 2.5.9
     if (wants[52].code.empty() || !psOf(wants[52], mirrorPs_)) mirrorPs_ = nullptr;
-    if (wants[53].code.empty() || !psOf(wants[53], portalPs_)) portalPs_ = nullptr;  // 2.7.48
+    if (wants[53].code.empty() || !psOf(wants[53], portalDrawPs_)) portalDrawPs_ = nullptr;  // 2.7.54
+    if (wants[54].code.empty() || !psOf(wants[54], portalDrawGlowPs_)) portalDrawGlowPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -1229,19 +1232,17 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 2.6.12: the torches off, the game's flames (drawn as it has them) still show the embers where the fires are
     if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && !effects_.torch && crittersNeedFire())
         noteCritterFlame(rec, d);
-    // 2.5.3: a portal's draw - its middle, for its light and its swirl once the world is drawn (as draw.cpp 0.38)
-    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && portalsWanted()) notePortal(rec, d);
-    // 2.7.48: the new portal (torches11.cpp) where the game's is - its draws noted for its place only (as draw.cpp)
-    if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Portal) && newPortalWanted()) {
-        const int id = int(d.effectId);
-        if (portalIdsTold_.size() < 16 &&
-            std::find(portalIdsTold_.begin(), portalIdsTold_.end(), id) == portalIdsTold_.end()) {
-            portalIdsTold_.push_back(id);
-            LOG_INFO("portals: the game's effect %d drawn anew - the new portal (on %s, Direct3D 11)", id,
-                     map_.c_str());
-        }
-        if (portal::hidesGame(true, newPortalsDrawnLast_)) return;  // 2.7.49: never no portal
+    // 2.7.54 (as draw.cpp): a draw of a map warp - its rings, floor or sparks - shaded anew where the game draws it;
+    // the light round it (2.5.3) by its floor's middle (notePortal)
+    const portal::Part warp = !s.ui && d.effect == uint8_t(effect_exe::Kind::Portal)
+                                  ? portal::partOf(int(d.effectId), s.blend, s.srcBlend, s.dstBlend, d.vertexCount)
+                                  : portal::Part::None;
+    const bool warpDrawn = warp != portal::Part::None && newPortalWanted();
+    if (warpDrawn && warpsToldMap_ != map_) {  // once a map, for the reports
+        warpsToldMap_ = map_;
+        LOG_INFO("portals: the warps shaded anew on %s (Direct3D 11)", map_.c_str());
     }
+    if (warp == portal::Part::Floor && portalsWanted()) notePortal(rec, d);
     // 2.5.2: a character's round shadow - its feet followed for the footprints and the ripples (as draw.cpp)
     if (!s.ui && d.effect == uint8_t(effect_exe::Kind::Shadow) && (stepKind() || ripplesWanted() || crittersNeedFeet()))
         noteFoot(rec, d);
@@ -1519,6 +1520,17 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (!raysLogged_) LOG_INFO("rays: the forest's light drawn anew (Direct3D 11)");
         raysLogged_ = true;
     }
+    if (warpDrawn) {  // 2.7.54 (draw.cpp): the projection, the world's up and the part, the time, the strength
+        const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
+        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
+        std::memcpy(c.projection, proj, sizeof proj);
+        float up[3] = {0.0f, -1.0f, 0.0f};
+        if (cameraValid_) camera::upInView(viewToWorld_, up);
+        std::copy(up, up + 3, c.sourceRect);
+        c.sourceRect[3] = float(int(warp));
+        c.twin[3] = waterTime();
+        c.footprint = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
+    }
     // 0.67, soft particles (as draw.cpp): an effect facing the screen fades where it goes into the ground; the
     // depth read while it is tested only.
     const bool adds = s.blend && s.dstBlend == d3d7::BLEND_ONE;
@@ -1531,7 +1543,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (softAdd && s.srcBlend == d3d7::BLEND_SRCALPHA) c.alphaTest |= 1u << 23;
     if (toGlow) glowDrawn_ = true;
     const bool effectDraw = effect_exe::softEffect(adds, d.effect);  // 2.7.13: not a hit flash
-    const bool soft = !water && !smoke && !lava && !ray && !s.ui && effects_.softParticles && d.vertexCount == 4 &&
+    const bool soft = !water && !smoke && !lava && !ray && !warpDrawn && !s.ui && effects_.softParticles &&
+                      d.vertexCount == 4 &&
                       s.blend && s.zEnable &&
                       !s.zWrite && effectDraw && s.srcBlend != d3d7::BLEND_ZERO &&
                       s.srcBlend != d3d7::BLEND_DESTCOLOR &&
@@ -1560,7 +1573,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 2.5.5 (draw.cpp 1.17): a sprite of the game's sprite cache (a character, a monster) facing the screen, blended
     // over - lit by the sun from its silhouette's sides
     if (!mat && effects_.spriteLight && effects_.spriteLightStrength > 0 && !s.ui && !water && !smoke && !lava &&
-        !ray && !adds && !d.twin && c.uiMode == 0 && s.blend && d.vertexCount == 4 && t[0] != &white_ &&
+        !ray && !warpDrawn && !adds && !d.twin && c.uiMode == 0 && s.blend && d.vertexCount == 4 && t[0] != &white_ &&
         !t[0]->cells.empty() && !t[0]->leafy &&
         ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount))
         spriteConstants(c, t[0]->width);
@@ -1602,16 +1615,17 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
     is.vs = water ? waterVs_ : drawVs_;
     // 2.5: a draw whose constants carry none of the world's extras takes the lean shader (as draw.cpp)
-    const bool lean = !water && !smoke && !lava && !ray &&
+    const bool lean = !water && !smoke && !lava && !ray && !warpDrawn &&
                       (c.stage1[1] & (1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
                       (c.stage0[1] & (1u << 26 | 1u << 28)) == 0 && (c.alphaTest & 1u << 20) == 0;
     is.ps = water    ? (toGlow ? waterGlowPs_ : waterPs_)
             : smoke  ? (toGlow ? smokeGlowPs_ : smokePs_)  // 2.5.2
             : lava   ? (toGlow ? lavaGlowPs_ : lavaPs_)
             : ray    ? (toGlow ? rayGlowPs_ : rayPs_)  // 2.5.3
+            : warpDrawn ? (toGlow ? portalDrawGlowPs_ : portalDrawPs_)  // 2.7.54
             : toGlow ? (lean && drawGlowLeanPs_ ? drawGlowLeanPs_ : drawGlowPs_)
                      : lean && drawLeanPs_ ? drawLeanPs_ : drawPs_;
-    if (!water && !smoke && !lava && !ray) {  // 2.5.16: the shader made for this state, once it is
+    if (!water && !smoke && !lava && !ray && !warpDrawn) {  // 2.5.16: the shader made for this state, once it is
         using shader_variants::Base;
         const Base base = toGlow ? (lean && drawGlowLeanPs_ ? Base::GlowLean : Base::Glow)
                                  : (lean && drawLeanPs_ ? Base::Lean : Base::Full);
@@ -2134,8 +2148,6 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     aoDone_ = false;  // 2.5.1
     fireSparks_.clear();
     lightDone_ = nightDone_ = dayKept_ = false;  // 0.61, 0.63, 2.7.47
-    newPortalsDrawnLast_ = newPortalsDrawn_;  // 2.7.49
-    newPortalsDrawn_ = false;
     mistDone_ = weatherDone_ = false;  // 2.5
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
@@ -2508,37 +2520,37 @@ void Renderer11::applyHeat() {
     worldPass(heatPs_, c, 1, 0, depthSrv_, nullptr, heatDataSrv_, &clip);
 }
 
-// 2.5.3 (torches.cpp notePortal): a portal's draw - its middle in the view, its size on the screen
+// 2.5.3 (torches.cpp notePortal): a portal's draw, for its light round it - 2.7.54: a triangle of a map warp's floor,
+// its middle the corner all its triangles share (portal::floorMiddle), in the view and on the screen
 void Renderer11::notePortal(const FrameRecord& rec, const DrawCmd& d) {
-    if (portalSparks_.size() >= 256) return;
+    if (portalSparks_.size() >= 64 || d.vertexCount != 3) return;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
-    const uint32_t n = std::min<uint32_t>(d.vertexCount, 64);
-    if (n == 0 || d.vertexOffset + size_t(n) * stride > v.size()) return;
-    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
-    float x0 = 1e30f, y0 = 1e30f, x1 = -1e30f, y1 = -1e30f, rhw = 0.0f;
-    for (uint32_t i = 0; i < n; ++i) {
-        float xyzw[4];
+    if (stride < 32 || d.vertexOffset + 3 * stride > v.size()) return;
+    portal::Corner c[3];
+    for (uint32_t i = 0; i < 3; ++i) {
+        float xyzw[4], uv[2];
         std::memcpy(xyzw, v.data() + d.vertexOffset + size_t(i) * stride, sizeof xyzw);
-        x0 = std::min(x0, xyzw[0]);
-        y0 = std::min(y0, xyzw[1]);
-        x1 = std::max(x1, xyzw[0]);
-        y1 = std::max(y1, xyzw[1]);
-        rhw += xyzw[3];
+        std::memcpy(uv, v.data() + d.vertexOffset + size_t(i) * stride + 24, sizeof uv);
+        c[i] = portal::Corner{xyzw[0], xyzw[1], xyzw[3], uv[1]};
     }
-    rhw /= float(n);
-    if (rhw <= 0.0f) return;
+    portal::Corner m{};
+    if (!portal::floorMiddle(c, m) || m.rhw <= 0.0f) return;
+    for (const FireSpark11& o : portalSparks_)  // its other triangles: the same middle
+        if (std::fabs(o.gameX - m.x) < 0.5f && std::fabs(o.gameY - m.y) < 0.5f) return;
+    float reach = 0.0f;  // its rim's way from the middle on the screen
+    for (const portal::Corner& k : c) reach = std::max(reach, std::hypot(k.x - m.x, k.y - m.y));
+    const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
     FireSpark11 s{};
-    s.gameX = (x0 + x1) * 0.5f;
-    s.gameY = (y0 + y1) * 0.5f;
-    const float vz = 1.0f / rhw;
+    s.gameX = m.x;
+    s.gameY = m.y;
+    const float vz = 1.0f / m.rhw;
     s.view[0] = (s.gameX - p.cx) * vz / p.f0;
     s.view[1] = (s.gameY - p.cy) * vz / p.f1;
     s.view[2] = vz;
-    s.strength = std::max(x1 - x0, y1 - y0);  // its size on the screen, game pixels
-    s.left = x0;  // 2.7.51: where the portal stands is its draws' span (core/portal.hpp anchorOf)
-    s.right = x1;
-    s.bottom = y1;
+    s.strength = 2.0f * reach;  // its size on the screen, game pixels
+    s.left = s.right = m.x;  // where it stands: its middle (portal::anchorOf)
+    s.bottom = m.y;
     portalSparks_.push_back(s);
 }
 

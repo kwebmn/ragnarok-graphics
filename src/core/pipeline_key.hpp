@@ -8,8 +8,8 @@
 namespace uagfx {
 
 // 0.24, 0.30: a world draw by a shader of its own instead of the game's: a puff of the chimneys' smoke, a beam of the
-// forest's light, (0.31) lava.
-enum class DrawShader : uint8_t { Game, Smoke, Ray, Lava };
+// forest's light, (0.31) lava, (2.7.54) a draw of the map warp (core/portal.hpp partOf).
+enum class DrawShader : uint8_t { Game, Smoke, Ray, Lava, Portal };
 
 // The pipeline state a draw needs; packed, it is the key the renderer caches pipelines by. The keys met in a session
 // are saved and their pipelines built at the next start, so an effect does not stutter the first time it is drawn
@@ -29,7 +29,7 @@ struct PipelineKey {
     bool glow = false;   // 0.18: a world draw that also writes the light it adds into the glow target (two targets)
     bool water = false;  // 0.19: a cell of a map's water, drawn by the modern water's shaders
     bool mask = false;   // 0.22.3: a character or an effect in the DLSS world - its coverage into the alpha
-    DrawShader shader = DrawShader::Game;  // 0.24: Smoke (bit 25, as 0.24 saved it); 0.30: two bits
+    DrawShader shader = DrawShader::Game;  // 0.24: Smoke (bit 25, as 0.24 saved it); 0.30: two bits; 2.7.54 bit 29
     bool lean = false;  // 2.5: the draw shader without the world's extras (draw_lean_ps) - the game's shader only
     bool behind = false;  // 2.6.3: one step of a 16-bit Z deeper (behindGround)
     bool operator==(const PipelineKey& o) const;

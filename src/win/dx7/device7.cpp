@@ -80,7 +80,6 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
 
 HRESULT STDMETHODCALLTYPE Device7::EndScene() {
     win::Guard guard;
-    portalCapture_.endFrame();    // 2.7.53
     win::Context::get().flush();  // the GPU starts on the frame while the client gets ready to present it
     return D3D_OK;
 }
@@ -188,39 +187,6 @@ HRESULT STDMETHODCALLTYPE Device7::DrawIndexedPrimitive(D3DPRIMITIVETYPE type, D
     return record(type, fvf, vertices, vertexCount, indices, indexCount);
 }
 
-// 2.7.53: a draw of the game's portal into the log (core/portal_capture.hpp) - every 4th frame of its two seconds, each
-// texture of it once - the facts its new look is made on
-void Device7::capturePortal(const effect_exe::Tag& tag, const DrawSetup& setup, DWORD fvf, const void* vertices,
-                            DWORD vertexCount, const WORD* indices, DWORD indexCount) {
-    win::Context& c = win::Context::get();
-    if (!portalCapture_.take(c.mapName()) || portalCapture_.frame() % 4 != 0) return;
-    const size_t stride = FrameRecord::stride(fvf);
-    const auto* bytes = static_cast<const uint8_t*>(vertices);
-    std::vector<portal_capture::Vertex> v(std::min<DWORD>(vertexCount, 256));
-    for (size_t i = 0; i < v.size(); ++i) {
-        const uint8_t* p = bytes + i * stride;
-        std::memcpy(&v[i].x, p, 16);  // x, y, z, rhw
-        std::memcpy(&v[i].diffuse, p + 16, 4);
-        std::memcpy(&v[i].specular, p + 20, 4);
-        std::memcpy(&v[i].u, p + 24, 8);
-    }
-    Surface7* t = textures_[0];
-    const uint32_t id = t ? t->gpuTexture() : 0;
-    const int w = t ? t->width() : 0, h = t ? t->height() : 0;
-    for (const std::string& line : portal_capture::drawLines(portalCapture_.frame(), tag.id, setup, id, w, h, v.data(),
-                                                             int(v.size()), indices,
-                                                             int(std::min<DWORD>(indices ? indexCount : 0, 512))))
-        LOG_INFO("%s", line.c_str());
-    if (!t || portalTexturesTold_.size() >= 16 || w * h > 256 * 256 ||
-        std::find(portalTexturesTold_.begin(), portalTexturesTold_.end(), id) != portalTexturesTold_.end())
-        return;
-    portalTexturesTold_.push_back(id);
-    std::vector<uint32_t> argb;
-    if (t->topArgb(argb))
-        for (const std::string& line : portal_capture::textureLines(id, w, h, argb.data()))
-            LOG_INFO("%s", line.c_str());
-}
-
 HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, DWORD vertexCount,
                         const WORD* indices, DWORD indexCount) {
     if (fvf != d3d7::FVF_TL1 && fvf != d3d7::FVF_TL2)
@@ -256,8 +222,6 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
     cmd.effectId = tag.id;  // 2.7.21: Ruwach's orbs light by it
-    if (tag.kind == effect_exe::Kind::Portal)  // 2.7.53
-        capturePortal(tag, setup, fvf, vertices, vertexCount, indices, indexCount);
     const EffectSettings& fx = c.effects();  // 2.5.11: made once a change, not each draw
     // 0.37: the skills likewise, by their own slider. (2.7.37's night that made them softer still gone in 2.7.46 -
     // with 2.7.38's soft adding they do not burn white, and the tester found them «тусклые»)

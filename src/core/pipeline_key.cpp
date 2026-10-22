@@ -44,7 +44,8 @@ uint64_t packPipelineKey(const PipelineKey& k) {
            uint64_t(k.blend) << 8 | uint64_t(k.srcBlend & 15) << 9 | uint64_t(k.dstBlend & 15) << 13 |
            uint64_t(k.twoUv) << 17 | samplesCode(k.samples) << 18 | uint64_t(k.alphaToCoverage) << 20 |
            uint64_t(k.layer) << 21 | uint64_t(k.glow) << 22 | uint64_t(k.water) << 23 | uint64_t(k.mask) << 24 |
-           uint64_t(uint8_t(k.shader) & 3) << 25 | uint64_t(k.lean) << 27 | uint64_t(k.behind) << 28;
+           uint64_t(uint8_t(k.shader) & 3) << 25 | uint64_t(k.lean) << 27 | uint64_t(k.behind) << 28 |
+           uint64_t(uint8_t(k.shader) >> 2 & 1) << 29;
 }
 
 PipelineKey unpackPipelineKey(uint64_t v) {
@@ -63,7 +64,7 @@ PipelineKey unpackPipelineKey(uint64_t v) {
     k.glow = (v >> 22 & 1) != 0;
     k.water = (v >> 23 & 1) != 0;
     k.mask = (v >> 24 & 1) != 0;
-    k.shader = DrawShader(v >> 25 & 3);
+    k.shader = DrawShader((v >> 25 & 3) | (v >> 29 & 1) << 2);
     k.lean = (v >> 27 & 1) != 0;
     k.behind = (v >> 28 & 1) != 0;
     return k;
@@ -99,7 +100,7 @@ std::vector<uint64_t> parsePipelineKeys(const std::string& text) {
 
 bool validPipelineKey(uint64_t v) {
     const PipelineKey k = unpackPipelineKey(v);
-    if (packPipelineKey(k) != v || k.cull < d3d7::CULL_NONE) return false;
+    if (packPipelineKey(k) != v || k.cull < d3d7::CULL_NONE || k.shader > DrawShader::Portal) return false;
     if (k.alphaToCoverage && (k.samples < 2 || k.blend)) return false;
     if (k.layer && (k.samples != 1 || k.zEnable || k.glow || k.water || k.mask || k.shader != DrawShader::Game))
         return false;

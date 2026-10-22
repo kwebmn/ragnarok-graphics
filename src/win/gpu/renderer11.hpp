@@ -267,16 +267,16 @@ private:
     void applyHeat();
     bool heatWanted() const { return effects_.heat && effects_.heatStrength > 0 && heatPs_; }
     float heatUser() const { return float(std::clamp(effects_.heatStrength, 0, 200)) / 100.0f; }
-    // 2.5.3: the portals (torches.cpp notePortal): their draws gathered into what stands there, followed from frame
-    // to frame - a soft blue light about each and the air turning in it
+    // 2.5.3: the portals (torches.cpp notePortal) followed from frame to frame - a soft light about each (2.7.54: by
+    // the map warps' floors' middles, in lilac)
     bool portalsWanted() const { return effects_.portals && effects_.portalsStrength > 0; }
-    // 2.7.48: the new portal (portal_ps, as Direct3D 12's drawNewPortals) where the game's was (not drawn); the
-    // game's effects taken for portals, told once each
-    bool newPortalWanted() const { return portalsWanted() && effects_.portalNew && portalPs_ && torchLightPs_; }
-    ID3D11PixelShader* portalPs_ = nullptr;
-    std::vector<int> portalIdsTold_;
-    bool newPortalsDrawn_ = false, newPortalsDrawnLast_ = false;  // 2.7.49: this frame and the one before
-    std::string portalsToldMap_;
+    // 2.7.54: the new portal - the game's own draws of the map warps shaded anew where it draws them (as draw.cpp)
+    bool newPortalWanted() const {
+        return portalsWanted() && effects_.portalNew && portalDrawPs_ && portalDrawGlowPs_;
+    }
+    ID3D11PixelShader* portalDrawPs_ = nullptr;
+    ID3D11PixelShader* portalDrawGlowPs_ = nullptr;
+    std::string warpsToldMap_;  // the map they were last told for
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
     using PortalTrack11 = portal::Track;  // 2.7.50: followed by core/portal.hpp
     std::vector<PortalTrack11> portalTracks_;

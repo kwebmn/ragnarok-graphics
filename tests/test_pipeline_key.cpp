@@ -145,7 +145,8 @@ TEST(pipeline_key_each_form_the_renderer_never_makes_is_rejected) {
     CHECK(rejected(plain, [](PipelineKey& k) { k.dstBlend = BLEND_INVSRCALPHA; }));
     CHECK(validPipelineKey(packPipelineKey(good) | uint64_t(1) << 27));   // 2.5: bit 27 is the lean shader
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 28));  // 2.6.3: a step deeper - never blended
-    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 29));  // a bit past the packed fields
+    CHECK(validPipelineKey(packPipelineKey(good) | uint64_t(1) << 29));   // 2.7.54: bit 29 the warp's shader
+    CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 30));  // a bit past the packed fields
     CHECK(!validPipelineKey(packPipelineKey(good) | uint64_t(1) << 63));
 }
 
@@ -274,6 +275,38 @@ TEST(pipeline_key_draw_shaders_keep_the_smokes_bit) {
     k.layer = true;
     k.zEnable = false;
     k.zFunc = CMP_ALWAYS;
+    CHECK(!validPipelineKey(packPipelineKey(k)));
+}
+
+TEST(pipeline_key_warp_shader_takes_a_third_bit) {
+    // 2.7.54: the map warp's draws by a shader of their own (portal_draw_ps) - a fifth draw shader: the two bits of
+    // 0.30 are full, its third bit is bit 29 (the keys saved before have 0 there: as they were)
+    PipelineKey k;
+    k.zEnable = true;
+    k.zFunc = CMP_LESSEQUAL;
+    k.cull = CULL_NONE;
+    k.blend = true;
+    k.srcBlend = BLEND_SRCALPHA;
+    k.dstBlend = BLEND_ONE;
+    const uint64_t game = packPipelineKey(k);
+    k.shader = DrawShader::Portal;
+    CHECK_EQ(packPipelineKey(k), game | uint64_t(1) << 29);
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
+    k.glow = true;
+    k.mask = true;
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
+    for (const uint64_t other : {uint64_t(1) << 25, uint64_t(2) << 25, uint64_t(3) << 25})  // no shader of 5-7
+        CHECK(!validPipelineKey(game | uint64_t(1) << 29 | other));
+    k.lean = true;  // 2.5: the lean one is the game's shader only
+    CHECK(!validPipelineKey(packPipelineKey(k)));
+    k.lean = false;
+    k.layer = true;
+    k.zEnable = false;
+    k.zFunc = CMP_ALWAYS;
+    k.glow = false;
+    k.mask = false;
     CHECK(!validPipelineKey(packPipelineKey(k)));
 }
 

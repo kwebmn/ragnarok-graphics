@@ -518,15 +518,10 @@ struct Renderer::Impl {
     ID3DBlob* smokeGlowPs = nullptr;
     ID3D12PipelineState* torchLightPipelines[4] = {};  // 2.5: the apply pass into the target of 1, 2, 4, 8 samples
     ID3D12PipelineState* torchFirePipelines[5] = {};   // the same, and the world under DLSS (its alpha the mask)
-    // 2.7.48: the new portal (portal_ps) over each portal's place, into the target of 1, 2, 4, 8 samples; the game's
-    // effects taken for portals, told once each
-    ID3DBlob* portalPs = nullptr;
-    ID3D12PipelineState* portalPipelines[4] = {};
-    std::vector<int> portalIdsTold;
-    // 2.7.49: whether the new portal was drawn this frame and the one before (the game's is left out only then), and
-    // the map its numbers were last told for
-    bool newPortalsDrawn = false, newPortalsDrawnLast = false;
-    std::string portalsToldMap;
+    // 2.7.54: the map warps' own draws shaded anew (draw.cpp, core/portal.hpp partOf), with the glow's second target
+    ID3DBlob* portalDrawPs = nullptr;
+    ID3DBlob* portalDrawGlowPs = nullptr;
+    std::string warpsToldMap;  // the map they were last told for
     ID3DBlob* fireflyPs = nullptr;                      // 0.28: a firefly's dot and halo
     ID3D12PipelineState* fireflyPipelines[5] = {};     // as torchFirePipelines
     ID3DBlob* dustPs = nullptr;                         // 0.29: a cloud of the towers' dust
@@ -918,14 +913,9 @@ struct Renderer::Impl {
         return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));
     }
     bool portalsWanted() const { return effects.portals && effects.portalsStrength > 0; }  // 0.38
-    // 2.7.48: the new portal drawn where the game's was (not drawn): only while its shaders and the torches' are there
-    bool newPortalWanted() const {
-        return portalsWanted() && effects.portalNew && portalPs && torchApplyPs && torchFirePs && torchAccumPs;
-    }
-    bool drawNewPortals(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
-                        UINT code, int w, int h, float time);
+    // 2.7.54: the new portal - the game's own draws of the map warps shaded anew where it draws them
+    bool newPortalWanted() const { return portalsWanted() && effects.portalNew && portalDrawPs && portalDrawGlowPs; }
     bool portalGround(const PortalTrack& t, float out[3]) const;  // 2.7.51: its light's place
-    int portalDrawsTold = 0;  // 2.7.51: the first portal draws told
     float heatUser() const { return float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f; }
     bool mapWeatherWanted() const {  // 0.39
         return effects.weather && effects.weatherAmount > 0 && weatherPs && mapWeather != weather::Kind::None;
@@ -992,8 +982,6 @@ struct Renderer::Impl {
         aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
         dayKept = false;    // 2.7.47
-        newPortalsDrawnLast = newPortalsDrawn;  // 2.7.49
-        newPortalsDrawn = false;
         softCopied = 0;     // 0.67
         waterfallsDone = false;  // 0.65
         torchFlames.clear();
