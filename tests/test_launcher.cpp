@@ -48,3 +48,12 @@ TEST(launcher_asks_in_the_players_language) {
     CHECK_EQ(launcher::langToken(settings::Lang::Ru), std::string("ru"));
     CHECK_EQ(launcher::langToken(settings::Lang::En), std::string("en"));
 }
+
+// 2.11: a direct start of uaRO.exe opens «Гра» instead (decision 13) - not the launcher's own start (UARO_LAUNCHER),
+// not with «Запускати гру одразу», not without uaro-graphics.exe next to the game.
+TEST(the_game_redirects_only_a_direct_start_without_the_box) {
+    CHECK(launcher::redirect(false, false, true));
+    CHECK(!launcher::redirect(true, false, true));   // «Грати», the update's restart
+    CHECK(!launcher::redirect(false, true, true));   // [launcher] direct_start = 1
+    CHECK(!launcher::redirect(false, false, false));  // no launcher there: the game plays
+}

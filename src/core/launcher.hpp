@@ -24,4 +24,9 @@ struct Info {
 bool parse(const std::string& json, Info& out, std::string& error);
 std::string langToken(settings::Lang l);  // the site's: "uk", "ru", "en"
 
+// The driver at the game's start: a direct start (not the launcher's own - its UARO_LAUNCHER=1, the update's restart
+// too) opens «Гра» instead, unless [launcher] direct_start = 1 or uaro-graphics.exe is not next to the game.
+constexpr const char* kStartedMark = "UARO_LAUNCHER";
+bool redirect(bool startedByLauncher, bool directStart, bool appThere);
+
 }  // namespace uagfx::launcher

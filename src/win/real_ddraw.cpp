@@ -8,6 +8,7 @@
 #include <string>
 
 #include "core/effect_groups.hpp"
+#include "core/launcher.hpp"
 #include "core/settings/report.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -64,6 +65,35 @@ std::string gameArguments() {
     }
     while (*line == ' ') ++line;
     return line;
+}
+
+// 2.11: UARO_LAUNCHER=1 - the launcher «Гра» (or the update's restart) started this game. Taken away: what the game
+// starts (the watcher, the questions) does not inherit it.
+bool takeLauncherMark() {
+    char mark[8] = {};
+    const DWORD n = GetEnvironmentVariableA(launcher::kStartedMark, mark, sizeof mark);
+    SetEnvironmentVariableA(launcher::kStartedMark, nullptr);
+    return n == 1 && mark[0] == '1';
+}
+
+// 2.11: a direct start opens the launcher «Гра» instead (decision 13): its «Грати» starts the game again. false: it
+// could not open, the game plays.
+bool openLauncherInstead(const std::string& dir) {
+    const std::string exe = dir + "\\uaro-graphics.exe";
+    std::string line = "\"" + exe + "\"";
+    STARTUPINFOA si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (!CreateProcessA(exe.c_str(), &line[0], nullptr, nullptr, FALSE, 0, nullptr, dir.c_str(), &si, &pi)) {
+        LOG_ERROR("launcher: «Гра» would not open (error %lu) - the game plays", GetLastError());
+        return false;
+    }
+    AllowSetForegroundWindow(pi.dwProcessId);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    LOG_INFO("launcher: a direct start - «Гра» opens instead ([launcher] direct_start = 0); the game closes");
+    TerminateProcess(GetCurrentProcess(), 0);
+    return true;
 }
 
 // 2.10: the last check (the watcher's, at an earlier start) found an update - the question before the login window,
@@ -123,7 +153,12 @@ Startup decide() {
     for (const char* folder : layout::kMadeAtStart) makeFolders(layout::join(dir, folder));
     LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? iniPath.c_str() : "no uaro-graphics.ini, defaults",
              apiToken(s.config.api), displayModeToken(s.config.mode));
-    askUpdateFirst(dir);  // 2.10: before the login window, when the last check found an update
+    // 2.11: the launcher's own start plays at once; a direct one opens «Гра», or with «Запускати гру одразу» asks
+    // about an update first (2.10)
+    if (!takeLauncherMark()) {
+        const bool redirect = launcher::redirect(false, s.config.directStart, fileExists(dir + "\\uaro-graphics.exe"));
+        if (!redirect || !openLauncherInstead(dir)) askUpdateFirst(dir);
+    }
     LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%, sharpen = %d",
              s.config.highResolution ? 1 : 0, uiFilterToken(s.config.uiFilter), s.config.renderScale, s.config.sharpen);
     const WindowsVersion v = windowsVersion();
