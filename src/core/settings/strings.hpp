@@ -191,8 +191,7 @@ enum class Text : uint16_t {
     GfxSoundDuck, GfxSoundDuckHint,
     AutoUiWhole, AutoDlaa, AutoDlssQuality, AutoHdr, AutoSoundEngine,
     // 1.4: the Gamepad page (uaRO Pad)
-    PagePad, PadHeading, PadIntro, PadStateOff, PadStateOn, PadStateOld, PadStateOther, PadSwitchOn, PadSwitchOff,
-    PadUpdate, PadNoPackage, PadOnDone, PadOffDone, PadFailed, PadRunning, PadController, PadType, PadTypeHint,
+    PagePad, PadHeading, PadIntro, PadStateOff, PadStateOn, PadStateOld, PadFailed, PadController, PadType, PadTypeHint,
     PadTypeAuto, PadTypeSony, PadLightbar, PadLightbarHint, ColourBlue, ColourRed, ColourGreen, ColourPurple,
     ColourOrange, ColourWhite, ColourOff, ColourOwn, PadTouchpad, PadTouchpadHint, TouchNothing, TouchBack, TouchStart,
     PadRumble, PadRumbleHint, PadStartsOn, PadStartsOnHint, PadMenuLanguage, PadMenuLanguageHint, PadSettingsNote,
@@ -320,7 +319,7 @@ enum class Text : uint16_t {
     DebugTools, DebugStudio, DebugCompact, DebugPalettes, DebugPreview, DebugKeys,  // 2.6: the Debug page's tools
     // 2.6: the Main page
     MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
-    MainQualityHint, MainOther, MainPad, MainPadHint, MainRecommended, MainWhatsNew, MainState, MainDriver,
+    MainQualityHint, MainOther, MainRecommended, MainWhatsNew, MainState, MainDriver,
     MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,
     MainMore, NotesNone,
     SearchCue, SearchFound, SearchNothing, SearchMany, SearchHow,  // 2.6: the header's search
@@ -343,6 +342,7 @@ enum class Text : uint16_t {
     FxGroupCreatures, FxGroupCreaturesHint, FxGroupCaves, FxGroupCavesHint, FxGroupSky, FxGroupSkyHint,  // 2.6.22
     FxGroupScreen, FxGroupScreenHint, ConsoleThisMap, ConsoleSearch, ConsoleNothing,
     DebugSeams, DebugSeamsHint, DebugSeamsOff, DebugSeamsColour, DebugSeamsOnTop,  // 2.7.8
+    PadEnabled, PadEnabledHint,  // 2.9
     Count
 };
 

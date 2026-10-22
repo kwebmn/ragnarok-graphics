@@ -43,6 +43,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::ReportAutoHint, ""},
         {"stats", "send", Page::Diagnostics, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::StatsSend,
          Text::StatsSendHint, ""},  // 2.2.1
+        // 2.9: uaRO Pad inside the driver, on by default; the Main page shows it too
+        {"pad", "enabled", Page::Pad, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::PadEnabled, Text::PadEnabledHint,
+         ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         {"renderer", "render_thread", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderThread,
@@ -695,6 +698,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "renderer.api") return apiToken(c.api);
     if (k == "renderer.gpu") return c.gpu.empty() ? "auto" : c.gpu;
     if (k == "report.auto") return c.reportAuto ? "1" : "0";
+    if (k == "pad.enabled") return c.padEnabled ? "1" : "0";  // 2.9
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
     if (k == "renderer.render_thread") return c.renderThread ? "1" : "0";

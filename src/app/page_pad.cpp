@@ -1,14 +1,17 @@
+#include "app/app_disk.hpp"
 #include "app/files.hpp"
 #include "app/page.hpp"
+#include "app/setting_ids.hpp"
+#include "core/layout.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/pad_files.hpp"
+#include "core/version.hpp"
 
 namespace uagfx::app {
 namespace {
 
 using namespace settings;
 
-constexpr int kSwitch = 1500;  // on, off or update, by what the folder holds
 constexpr int kType = 1510;
 constexpr int kLightbar = 1511;
 constexpr int kTouchpad = 1512;
@@ -29,54 +32,33 @@ int indexOf(const char* const (&list)[N], const std::string& token, int otherwis
     return otherwise;
 }
 
-std::wstring inFolder(const wchar_t* name) { return exeFolder() + L"\\" + name; }
 std::string fileText(const std::wstring& path) {
     std::string s;
     return readFile(path, s) ? s : std::string();
 }
-std::string trimmed(const std::string& s) {
-    const size_t a = s.find_first_not_of(" \t\r\n");
-    return a == std::string::npos ? "" : s.substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
-}
 
-// The Gamepad page (1.4): uaRO Pad - the package's uaro-graphics\pad\dinput.dll - put into the game's folder or taken
-// out of it, and the settings of uaro-pad.ini a player looks for first, PlayStation's light bar and touchpad among
-// them. They are written at once, not with Apply: the file is the pad's, the game reads it when it starts.
+// The Gamepad page (1.4; 2.9: uaRO Pad inside the driver): its switch ([pad] enabled of uaro-graphics.ini, on by
+// default, from the next start of the game) and the settings of uaro-pad.ini a player looks for first, PlayStation's
+// light bar and touchpad among them. Those are written at once, not with Apply: the file is the pad's, the game reads
+// it when it starts.
 class PadPage : public Page {
 public:
-    explicit PadPage(PageHost& host) : Page(host) {}
-
-    // 2.6: the Main page's box - on or off as this page's buttons do it
-    std::wstring setOn(bool on) {
-        state_ = classifyPad(fileText(inFolder(L"dinput.dll")), fileText(inFolder(L"uaro-graphics\\pad\\dinput.dll")));
-        return on ? switchOn() : switchOff();
-    }
+    explicit PadPage(PageHost& host) : Page(host), rows_(makeSettingsPage(host, {})) {}
 
     void build(Panel& p) override {
-        const bool running = host_.model().now().gameRunning;
-        const std::string packaged = fileText(inFolder(L"uaro-graphics\\pad\\dinput.dll"));
-        const std::string version = trimmed(fileText(inFolder(L"uaro-graphics\\pad\\version.txt")));
-        state_ = classifyPad(fileText(inFolder(L"dinput.dll")), packaged);
+        Model& m = host_.model();
         p.heading(t(Text::PadHeading));
         p.note(t(Text::PadIntro), Tone::Normal);
-        switch (state_) {
-            case PadFile::None: p.note(t(Text::PadStateOff)); break;
-            case PadFile::Same: p.note(tf(Text::PadStateOn, {version}), Tone::Good); break;
-            case PadFile::Pad: p.note(tf(Text::PadStateOld, {version}), Tone::Warn); break;
-            case PadFile::Other: p.note(t(Text::PadStateOther)); break;
-        }
-        const bool on = state_ == PadFile::Same || state_ == PadFile::Pad;
-        std::vector<ButtonItem> buttons;
-        if (state_ == PadFile::Pad) buttons.push_back({kSwitch + 2, t(Text::PadUpdate), !running && !packaged.empty()});
-        if (on)
-            buttons.push_back({kSwitch + 1, t(Text::PadSwitchOff), !running});
+        rows_->buildRow(p, "pad.enabled");
+        if (m.now().config.padEnabled)
+            p.note(tf(Text::PadStateOn, {kVersion}), Tone::Good);
         else
-            buttons.push_back({kSwitch, t(Text::PadSwitchOn), !running && !packaged.empty()});
-        p.buttons(buttons);
-        if (packaged.empty()) p.note(t(Text::PadNoPackage), Tone::Bad);
-        if (running) p.note(t(Text::PadRunning), Tone::Warn);
+            p.note(t(Text::PadStateOff));
+        // a 2.x pad dinput.dll the settings app could not take away (the game was running)
+        if (classifyPad(fileText(m.paths().dir + L"\\dinput.dll"), "") == PadFile::Pad)
+            p.note(t(Text::PadStateOld), Tone::Warn);
 
-        const auto ini = readIni(fileText(inFolder(L"uaro-pad.ini")));
+        const auto ini = readIni(fileText(ourFile(m.paths().dir, layout::File::PadIni)));
         auto value = [&](const char* key, const char* otherwise) {
             const auto it = ini.find(key);
             return it == ini.end() ? std::string(otherwise) : it->second;
@@ -106,13 +88,11 @@ public:
     }
 
     void command(int id, int code) override {
-        HWND ctl = GetDlgItem(host_.window(), id);
-        if (id >= kSwitch && id <= kSwitch + 2 && code == BN_CLICKED) {
-            const std::wstring err = id == kSwitch + 1 ? switchOff() : switchOn();
-            host_.message(err.empty() ? t(id == kSwitch + 1 ? Text::PadOffDone : Text::PadOnDone) : err, !err.empty());
-            host_.reload();  // the Diagnostics page lists the dinput DLLs too
+        if (settingOfId(id)) {  // the switch: a row of uaro-graphics.ini, applied as the other pages' rows
+            rows_->command(id, code);
             return;
         }
+        HWND ctl = GetDlgItem(host_.window(), id);
         const bool checked = SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED;
         const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
         if ((id == kRumble || id == kStartsOn) && code == BN_CLICKED) {
@@ -127,68 +107,24 @@ public:
         }
     }
 
+    void scroll(int id, int code, int pos) override { rows_->scroll(id, code, pos); }
+
 private:
-    // uaro-pad.ini with one key changed; a missing file starts from the package's, with every key and its note.
+    // uaro-pad.ini (uaro-graphics\, core/layout) with one key changed; a missing file starts from the package's
+    // template, with every key and its note.
     void write(const char* section, const char* key, const char* token) {
-        const std::wstring path = inFolder(L"uaro-pad.ini");
+        const std::wstring& dir = host_.model().paths().dir;
+        const std::wstring path = ourFile(dir, layout::File::PadIni);
         std::string text = fileText(path);
-        if (text.empty()) text = fileText(inFolder(L"uaro-graphics\\pad\\uaro-pad.ini"));
+        if (text.empty()) text = fileText(ourPlace(dir, layout::kPadTemplate));
         if (!writeFileAtomic(path, applyIniEdits(text, {{section, key, token}})))
             host_.message(tf(Text::PadFailed, {"uaro-pad.ini"}), true);
     }
 
-    std::wstring failed(const char* file) const { return tf(Text::PadFailed, {file}); }
-
-    // The package's dinput.dll into the game's folder. Another tool's dinput.dll (ROExt) becomes dinput8.dll: the
-    // system dinput.dll the pad loads loads it from there, so it goes on working. Where the folder has a dinput8.dll
-    // already, it waits as dinput.dll.before-pad. uaro-pad.moved next to it remembers which, for switchOff.
-    std::wstring switchOn() {
-        std::string packaged;
-        if (!readFile(inFolder(L"uaro-graphics\\pad\\dinput.dll"), packaged)) return t(Text::PadNoPackage);
-        if (state_ == PadFile::Other) {
-            const bool free8 = !fileExists(inFolder(L"dinput8.dll"));
-            const wchar_t* to = free8 ? L"dinput8.dll" : L"dinput.dll.before-pad";
-            if (!MoveFileExW(inFolder(L"dinput.dll").c_str(), inFolder(to).c_str(), MOVEFILE_REPLACE_EXISTING))
-                return failed("dinput.dll");
-            writeFileAtomic(inFolder(L"uaro-pad.moved"), free8 ? "dinput8.dll" : "dinput.dll.before-pad");
-        }
-        if (!writeFileAtomic(inFolder(L"dinput.dll"), packaged)) return failed("dinput.dll");
-        if (!fileExists(inFolder(L"uaro-pad.ini"))) {
-            std::string ini;
-            if (readFile(inFolder(L"uaro-graphics\\pad\\uaro-pad.ini"), ini))
-                writeFileAtomic(inFolder(L"uaro-pad.ini"), ini);
-        }
-        return L"";
-    }
-
-    // Our dinput.dll out, and the one switchOn moved back in its place. uaro-pad.ini and the layouts stay.
-    std::wstring switchOff() {
-        if (!deleteFile(inFolder(L"dinput.dll"))) return failed("dinput.dll");
-        const std::wstring note = inFolder(L"uaro-pad.moved");
-        const std::string moved = trimmed(fileText(note));
-        if (moved == "dinput8.dll" || moved == "dinput.dll.before-pad") {
-            const std::wstring from = inFolder(moved == "dinput8.dll" ? L"dinput8.dll" : L"dinput.dll.before-pad");
-            if (fileExists(from) && !MoveFileExW(from.c_str(), inFolder(L"dinput.dll").c_str(), 0))
-                return failed(moved.c_str());
-        }
-        deleteFile(note);
-        return L"";
-    }
-
-    PadFile state_ = PadFile::None;
+    std::unique_ptr<Page> rows_;  // the switch's row (a page of the schema's rows, as the Main page's)
 };
 
 }  // namespace
-
-bool padOn() {
-    const PadFile s =
-        classifyPad(fileText(inFolder(L"dinput.dll")), fileText(inFolder(L"uaro-graphics\\pad\\dinput.dll")));
-    return s == PadFile::Same || s == PadFile::Pad;
-}
-
-std::wstring padVersion() { return wide(trimmed(fileText(inFolder(L"uaro-graphics\\pad\\version.txt")))); }
-
-std::wstring switchPad(PageHost& host, bool on) { return PadPage(host).setOn(on); }
 
 std::unique_ptr<Page> makePadPage(PageHost& host) { return std::make_unique<PadPage>(host); }
 

@@ -104,11 +104,6 @@ std::unique_ptr<Page> makePadPage(PageHost& host);      // 1.4: uaRO Pad, the ga
 std::unique_ptr<Page> makeDebugPage(PageHost& host);    // 2.6: the Developer mode's switches and tools
 std::unique_ptr<Page> makeMainPage(PageHost& host);     // 2.6: the Simple mode's Main page
 
-// 2.6: uaRO Pad from the Main page - whether it is in the game's folder, the package's version, and on or off as the
-// Gamepad page does it ("" or what went wrong).
-bool padOn();
-std::wstring padVersion();
-std::wstring switchPad(PageHost& host, bool on);
 // 2.6: "Recommended settings" of the Main page - the Render page's auto setup for this computer.
 void runAutoSetup(PageHost& host);
 // 2.6: the search's results - the rows changed in place, each with a button to its page.

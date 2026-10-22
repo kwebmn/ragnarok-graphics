@@ -211,9 +211,11 @@ const Entry kTexts[] = {
     {"all users", "усі користувачі", "все пользователи"},
     {"the game does not see its personal settings in the registry",
      "гра не бачить свої особисті налаштування в реєстрі", "игра не видит свои личные настройки в реестре"},
-    {"an old Windows mode: in the way of Direct3D 12 and scaling", "режим старої Windows: заважає Direct3D 12 і масштабу",
+    {"an old Windows mode: in the way of Direct3D 12 and scaling", "режим старої Windows: заважає Direct3D 12 і "
+     "масштабу",
      "режим старой Windows: мешает Direct3D 12 и масштабу"},
-    {"scaling overridden: the picture is not at the real pixels", "масштаб перевизначено: картинка не в справжніх точках",
+    {"scaling overridden: the picture is not at the real pixels", "масштаб перевизначено: картинка не в справжніх "
+     "точках",
      "масштаб переопределён: картинка не в настоящих точках"},
     {"old colours or 640×480", "старі кольори або 640×480", "старые цвета или 640×480"},
     {"a Windows compatibility flag", "прапорець сумісності Windows", "флажок совместимости Windows"},
@@ -267,7 +269,8 @@ const Entry kTexts[] = {
      "«Застосувати» ще раз.",
      "Записано всё, кроме того, что меняется только при закрытой игре, — оно не потерялось: закрой игру и нажми "
      "«Применить» ещё раз."},
-    {"Cannot make the backup ({1}): nothing was written.", "Не вдалося зробити резервну копію ({1}): нічого не записано.",
+    {"Cannot make the backup ({1}): nothing was written.", "Не вдалося зробити резервну копію ({1}): нічого не "
+     "записано.",
      "Не удалось сделать резервную копию ({1}): ничего не записано."},
     {"Screen: {1}", "Екран: {1}", "Экран: {1}"},
     {"Cannot start uaRO.exe (error {1}). The settings app must be in the uaRO client folder, next to uaRO.exe (or in "
@@ -1742,45 +1745,19 @@ const Entry kTexts[] = {
      "Геймпады Xbox и PlayStation (DualShock 4, DualSense - по USB или Bluetooth) управляют игрой: стик ведёт "
      "персонажа, кнопки атакуют ближайшего монстра и применяют умения с панели быстрого доступа, D-pad вниз говорит с "
      "ближайшим NPC, а кнопки отвечают его окнам. Start на геймпаде открывает его меню в игре."},
-    {"Off: there is no dinput.dll in the game's folder.",
-     "Вимкнено: у теці гри немає dinput.dll.",
-     "Выключено: в папке игры нет dinput.dll."},
+    {"Off: the game starts without the pad.",
+     "Вимкнено: гра запускається без геймпада.",
+     "Выключен: игра запускается без геймпада."},
     {"On: uaRO Pad {1}.",
      "Увімкнено: uaRO Pad {1}.",
      "Включено: uaRO Pad {1}."},
-    {"On, an older uaRO Pad: Update puts in {1}.",
-     "Увімкнено, старіша версія uaRO Pad: «Оновити» поставить {1}.",
-     "Включено, более старая версия uaRO Pad: «Обновить» поставит {1}."},
-    {"Off. The game's folder has another dinput.dll (ROExt, as the client comes): with the pad on it becomes "
-     "dinput8.dll and keeps working, switching the pad off puts it back.",
-     "Вимкнено. У теці гри інший dinput.dll (ROExt, як у клієнті): з геймпадом він стане dinput8.dll і працюватиме "
-     "далі, вимкнення геймпада поверне його на місце.",
-     "Выключено. В папке игры другой dinput.dll (ROExt, как в клиенте): с геймпадом он станет dinput8.dll и будет "
-     "работать дальше, выключение геймпада вернёт его на место."},
-    {"Switch on",
-     "Увімкнути",
-     "Включить"},
-    {"Switch off",
-     "Вимкнути",
-     "Выключить"},
-    {"Update",
-     "Оновити",
-     "Обновить"},
-    {"uaro-graphics\\pad\\dinput.dll is missing: update uaRO Graphics on the Service page.",
-     "Немає uaro-graphics\\pad\\dinput.dll: онови uaRO Graphics на сторінці «Сервіс».",
-     "Нет uaro-graphics\\pad\\dinput.dll: обнови uaRO Graphics на странице «Сервис»."},
-    {"uaRO Pad is on. Connect the controller and start the game; Start opens the pad's menu.",
-     "uaRO Pad увімкнено. Підключи геймпад і запусти гру; Start відкриває меню геймпада.",
-     "uaRO Pad включён. Подключи геймпад и запусти игру; Start открывает меню геймпада."},
-    {"uaRO Pad is off.",
-     "uaRO Pad вимкнено.",
-     "uaRO Pad выключен."},
+    {"An old uaRO Pad dinput.dll is still in the game's folder: close the game and open this app again - it takes it "
+     "away.",
+     "У теці гри ще старий dinput.dll від uaRO Pad: закрий гру й відкрий утиліту знову - вона його прибере.",
+     "В папке игры ещё старый dinput.dll от uaRO Pad: закрой игру и открой утилиту снова - она его уберёт."},
     {"Could not change {1}: close the game, or start uaro-graphics.exe as administrator.",
      "Не вдалося змінити {1}: закрий гру або запусти uaro-graphics.exe від імені адміністратора.",
      "Не удалось изменить {1}: закрой игру или запусти uaro-graphics.exe от имени администратора."},
-    {"The game is running: close it to switch the pad on or off.",
-     "Гра запущена: закрий її, щоб увімкнути або вимкнути геймпад.",
-     "Игра запущена: закрой её, чтобы включить или выключить геймпад."},
     {"Controller",
      "Контролер",
      "Контроллер"},
@@ -2977,10 +2954,6 @@ const Entry kTexts[] = {
      "Детализация и сглаживание одним выбором (пресеты страницы «Сервис»); «Супер-лёгкое» - для слабых видеокарт. "
      "Эффекты - на странице «Эффекты»."},
     {"Other", "Інше", "Прочее"},
-    {"Gamepad (uaRO Pad {1})", "Геймпад (uaRO Pad {1})", "Геймпад (uaRO Pad {1})"},
-    {"Play with a gamepad: uaRO Pad goes into the game's folder. Its settings are on the Gamepad page.",
-     "Гра з геймпадом: uaRO Pad потрапляє в теку гри. Його налаштування - на сторінці «Геймпад».",
-     "Игра с геймпадом: uaRO Pad попадает в папку игры. Его настройки - на странице «Геймпад»."},
     {"Recommended settings", "Рекомендовані налаштування", "Рекомендуемые настройки"},
     {"What's new in {1}", "Що нового в {1}", "Что нового в {1}"},
     {"State", "Стан", "Состояние"},
@@ -3174,6 +3147,15 @@ const Entry kTexts[] = {
     {"Off", "Вимк", "Выкл"},
     {"Coloured", "Кольором", "Цветом"},
     {"Coloured, over everything", "Кольором поверх усього", "Цветом поверх всего"},
+    {"Gamepad (uaRO Pad)",
+     "Геймпад (uaRO Pad)",
+     "Геймпад (uaRO Pad)"},
+    {"Xbox and PlayStation controllers play the game; with no controller connected nothing changes. Built into uaRO "
+     "Graphics. From the next start of the game.",
+     "Геймпади Xbox і PlayStation керують грою; без підключеного геймпада нічого не змінюється. Вбудований в uaRO "
+     "Graphics. Діє з наступного запуску гри.",
+     "Геймпады Xbox и PlayStation управляют игрой; без подключённого геймпада ничего не меняется. Встроен в uaRO "
+     "Graphics. Действует со следующего запуска игры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -146,6 +146,7 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         {"uaro-graphics.prev.log", wide(logfiles::previous(utf8(m.paths().log))), 512u << 10},
         {"uaro-render64.log", ourPlace(dir, layout::now(layout::File::Render64Log)), 512u << 10},
         {"uaro-pack.log", ourPlace(dir, layout::now(layout::File::PackLog)), 256u << 10},
+        {"uaro-pad.log", ourPlace(dir, layout::now(layout::File::PadLog)), 256u << 10},  // 2.9: inside the driver
         {"uaro-graphics.ini", m.paths().ini, 256u << 10}};
     for (const Attached& f : files) {
         const std::string text = fileFor(f.path, f.most);

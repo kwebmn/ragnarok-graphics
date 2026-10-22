@@ -665,3 +665,24 @@ TEST(model_a_new_backup_names_the_ini_where_it_is_now) {
     const std::string list = w.files[fake::path(kBackups + L"\\2026-10-13-120000\\files.txt")];
     CHECK(list.find("uaro-graphics.ini\tuaro-graphics\\uaro-graphics.ini\r\n") != std::string::npos);
 }
+
+TEST(model_removes_an_old_pad_dll_and_puts_back_what_it_moved) {
+    // 2.9: the pad is inside the driver - a 2.x uaRO Pad dinput.dll would be a second one
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"dinput.dll")] = std::string("MZ") + '\0' + "uaro-pad.ini" + '\0' + "uaro-pad.log";
+    w.files[fake::path(L"dinput.dll.before-pad")] = "ROExt";
+    w.files[fake::path(L"uaro-pad.moved")] = "dinput.dll.before-pad";
+    app::Model m;
+    CHECK_EQ(w.files[fake::path(L"dinput.dll")], std::string("ROExt"));
+    CHECK(w.files.count(fake::path(L"dinput.dll.before-pad")) == 0);
+    CHECK(w.files.count(fake::path(L"uaro-pad.moved")) == 0);
+}
+
+TEST(model_leaves_an_old_pad_dll_while_the_game_runs) {
+    fake::Windows& w = fake::reset();
+    const std::string pad = std::string("MZ") + '\0' + "uaro-pad.log";
+    w.files[fake::path(L"dinput.dll")] = pad;
+    w.gameRunning = true;  // it is the game's: it cannot go now
+    app::Model m;
+    CHECK_EQ(w.files[fake::path(L"dinput.dll")], pad);
+}

@@ -15,7 +15,6 @@ namespace {
 using namespace settings;
 
 constexpr int kQuality = 2001;
-constexpr int kPad = 2002;
 constexpr int kRecommended = 2003;
 constexpr int kWhatsNew = 2004;
 constexpr int kUpdateCheck = 2005;
@@ -53,9 +52,7 @@ public:
         p.gap();
         p.heading(t(Text::MainOther));
         rows_->buildRow(p, "sound.engine");
-        const std::wstring pad = padVersion();
-        p.check(kPad, pad.empty() ? t(Text::PadHeading) : tf(Text::MainPad, {utf8(pad)}), padOn(),
-                t(Text::MainPadHint), !m.now().gameRunning);
+        rows_->buildRow(p, "pad.enabled");  // 2.9: uaRO Pad inside the driver, on by default
         rows_->buildRow(p, "frames.battery_saver");
         p.buttons({{kRecommended, t(Text::MainRecommended)}, {kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});
         if (two)
@@ -88,13 +85,6 @@ public:
         }
         if (code != BN_CLICKED) return;
         switch (id) {
-            case kPad: {
-                const bool on = SendMessageW(ctl, BM_GETCHECK, 0, 0) == BST_CHECKED;
-                const std::wstring err = switchPad(host_, on);
-                host_.message(err.empty() ? t(on ? Text::PadOnDone : Text::PadOffDone) : err, !err.empty());
-                host_.reload();
-                return;
-            }
             case kRecommended: runAutoSetup(host_); return;
             case kWhatsNew: {
                 const std::wstring notes = notesText(m.paths().dir, host_.lang());
