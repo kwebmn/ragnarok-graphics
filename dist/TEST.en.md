@@ -1,3 +1,24 @@
+# uaRO Graphics 2.7.57 — to check
+
+- **Straight lines on the floor gone** (R-NSHM8K: Prontera's paving, R-ENZVF2: a road in a field). "Grass and road
+  joins without steps" took a texture's tile repeating (its edge at 1 and its start at 0 - the same place) for a jump
+  and laid its mirrored strip over every fourth cell's edge - straight lines across the stones and along the roads.
+  A repeat is no seam now.
+- **Mats and patches rectangular again** (R-8YJSCR). The same effect frayed with its noise the edges of the tatami,
+  the paving's squares and the beds laid straight. Now the driver finds in the map's file the patches laid by hand
+  (one texture filling a whole rectangle) and keeps their edge straight, as the game does. The edges of meadows and
+  roads are blended as before.
+- **Pictures keep their colours at night** (R-ZPEV4V: guild emblems). A vivid colour - an emblem, a flag, a dress,
+  flowers - keeps 85 % of its colour under a pale silver at night and darkens as all does; ground, stone and walls as
+  before.
+- **The portal glows at night** (R-6YHMQK). The night filter darkened the portal's white light as it does white stone;
+  now the warp's light is three times stronger at night and gives the portal and what is around it their day's
+  colours back (never brighter than by day).
+- **The grass on the paving no longer blinks as you walk** (R-QPMDP4). A blade needs a green patch round its root, not
+  a speck in a crack; the meadows keep their grass.
+- To check: no straight lines on Prontera's paving, the tatami and patches rectangular, no line along a field's road;
+  at night emblems and clothes in colour, the portal glowing; the grass on the paving not blinking.
+
 # uaRO Graphics 2.7.56 — to check
 
 - **The portal is the game's own, at full resolution** (report R-9GC93H: the new and the old portal did not differ
