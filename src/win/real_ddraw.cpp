@@ -4,10 +4,12 @@
 #include "win/disk.hpp"
 #include "win/pad_mount.hpp"
 
+#include <cstring>
 #include <string>
 
 #include "core/effect_groups.hpp"
 #include "core/settings/report.hpp"
+#include "core/update_check.hpp"
 #include "core/version.hpp"
 #include "win/crash.hpp"
 #include "win/gpu/adapters.hpp"
@@ -29,11 +31,12 @@ void logModule(const char* name) {
 }
 
 // 0.51: [report] auto - the settings app waits for this game to end and, when its log says it went badly, sends a
-// report to the developers (app/report_send.hpp). The game itself never goes to the network.
-void startReportWatcher(const std::string& dir) {
+// report to the developers (app/report_send.hpp). 2.10: at every start - it checks the site for an update first (the
+// next start asks). The game itself never goes to the network.
+void startWatcher(const std::string& dir) {
     const std::string exe = dir + "\\uaro-graphics.exe";
     if (!fileExists(exe)) {
-        LOG_INFO("report: uaro-graphics.exe is not next to the game - no report when something goes wrong");
+        LOG_INFO("watcher: uaro-graphics.exe is not next to the game - no update check, no report");
         return;
     }
     std::string line = "\"" + exe + "\" --watch " + std::to_string(GetCurrentProcessId());
@@ -42,12 +45,57 @@ void startReportWatcher(const std::string& dir) {
     PROCESS_INFORMATION pi{};
     if (!CreateProcessA(exe.c_str(), &line[0], nullptr, nullptr, FALSE, BELOW_NORMAL_PRIORITY_CLASS, nullptr,
                         dir.c_str(), &si, &pi)) {
-        LOG_ERROR("report: the watcher would not start (error %lu)", GetLastError());
+        LOG_ERROR("watcher: it would not start (error %lu)", GetLastError());
         return;
     }
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
-    LOG_INFO("report: the settings app watches this game ([report] auto = 1 or [stats] send = 1)");
+    LOG_INFO("watcher: the settings app checks for an update and watches this game (reports, statistics)");
+}
+
+// The game's own arguments: its command line after the exe's path.
+std::string gameArguments() {
+    const char* line = GetCommandLineA();
+    if (*line == '"') {
+        line = std::strchr(line + 1, '"');
+        line = line ? line + 1 : "";
+    } else {
+        while (*line && *line != ' ') ++line;
+    }
+    while (*line == ' ') ++line;
+    return line;
+}
+
+// 2.10: the last check (the watcher's, at an earlier start) found an update - the question before the login window,
+// asked by the settings app; its "Update" closes the game: the settings app updates it and starts it again.
+void askUpdateFirst(const std::string& dir) {
+    std::string info, version;
+    if (!readTextFile(layout::join(dir, layout::kUpdateInfo), info) || !update::askAtStart(info, kVersion, version))
+        return;
+    const std::string exe = dir + "\\uaro-graphics.exe";
+    std::string line =
+        "\"" + exe + "\" --ask-update " + std::to_string(GetCurrentProcessId()) + " -- " + gameArguments();
+    STARTUPINFOA si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (!fileExists(exe) ||
+        !CreateProcessA(exe.c_str(), &line[0], nullptr, nullptr, FALSE, 0, nullptr, dir.c_str(), &si, &pi)) {
+        LOG_ERROR("update: %s is out, the question would not open (error %lu)", version.c_str(), GetLastError());
+        return;
+    }
+    AllowSetForegroundWindow(pi.dwProcessId);
+    LOG_INFO("update: %s is out - the player is asked", version.c_str());
+    const DWORD waited = WaitForSingleObject(pi.hProcess, 10 * 60 * 1000);
+    DWORD code = 0;
+    GetExitCodeProcess(pi.hProcess, &code);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    if (waited != WAIT_OBJECT_0 || code != update::kUpdateChosen) {
+        LOG_INFO("update: played without it");
+        return;
+    }
+    LOG_INFO("update: the game closes for it - the settings app updates it and starts it again");
+    TerminateProcess(GetCurrentProcess(), 0);
 }
 
 HMODULE loadSystem() {
@@ -75,6 +123,7 @@ Startup decide() {
     for (const char* folder : layout::kMadeAtStart) makeFolders(layout::join(dir, folder));
     LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? iniPath.c_str() : "no uaro-graphics.ini, defaults",
              apiToken(s.config.api), displayModeToken(s.config.mode));
+    askUpdateFirst(dir);  // 2.10: before the login window, when the last check found an update
     LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%, sharpen = %d",
              s.config.highResolution ? 1 : 0, uiFilterToken(s.config.uiFilter), s.config.renderScale, s.config.sharpen);
     const WindowsVersion v = windowsVersion();
@@ -129,7 +178,7 @@ Startup decide() {
     LOG_INFO("effects: set %s, the card's level %d", effect_groups::presetToken(s.config.effects.preset),
              s.cardLevel);
     // 2.2.1: also for the statistics - sent when the game ends, with the player's leave
-    if ((s.config.reportAuto || s.config.statsSend) && s.choice.renderer == Renderer::Uaro) startReportWatcher(dir);
+    startWatcher(dir);  // 2.10: always - the update check; reports and statistics as the settings say
     LOG_INFO("renderer: %s%s (%s)", rendererName(s.choice.renderer),
              s.choice.renderer == Renderer::Uaro && s.choice.api == Api::D3d11 ? " with Direct3D 11" : "",
              s.choice.reason.c_str());

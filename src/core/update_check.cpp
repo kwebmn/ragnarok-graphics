@@ -144,4 +144,14 @@ std::string offer(const Manifest& m, const std::string& installed, const std::st
     return newer(site, mine) ? site : "";
 }
 
+bool askAtStart(const std::string& updateInfo, const std::string& installed, std::string& version) {
+    Manifest m;
+    std::string error;
+    if (!parseManifest(updateInfo, m, error)) return false;
+    const std::map<std::string, std::string> ini = settings::readIni(updateInfo);
+    const auto skip = ini.find("local.skip");
+    version = offer(m, installed, skip == ini.end() ? "" : skip->second);
+    return !version.empty();
+}
+
 }  // namespace uagfx::update

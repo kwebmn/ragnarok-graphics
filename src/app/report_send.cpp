@@ -13,6 +13,8 @@
 #include "app/files.hpp"
 #include "app/shots.hpp"
 #include "app/text.hpp"
+#include "app/update_run.hpp"
+#include "core/config.hpp"
 #include "core/log_files.hpp"
 #include "core/settings/log_digest.hpp"
 #include "core/usage.hpp"
@@ -337,6 +339,12 @@ void usageState(const std::wstring& dir, std::string& lastSent, unsigned long lo
 }
 
 int watchGame(unsigned long pid) {
+    // 2.10: the update check of every game's start: uaro-graphics\update.ini for the next start's question
+    checkNow(exeFolder());
+    std::string ini;
+    readFile(ourFile(exeFolder(), layout::File::Ini), ini);
+    const Config config = parseConfig(ini);
+    if (!config.reportAuto && !config.statsSend) return 0;  // nothing more to watch for
     HANDLE game = OpenProcess(SYNCHRONIZE, FALSE, pid);
     if (!game) return 0;
     WaitForSingleObject(game, INFINITE);

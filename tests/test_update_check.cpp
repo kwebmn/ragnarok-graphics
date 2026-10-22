@@ -89,3 +89,16 @@ TEST(update_check_orders_pre_releases) {
     CHECK(!update::newer("3.0.0-beta.1", "3.0.0"));
     CHECK(update::newer("3.0.0-beta.10", "3.0.0-beta.9"));
 }
+
+// 2.10: the game's start asks (through the settings app) when the last check - the watcher's, at an earlier start -
+// found an update; uaro-graphics\update.ini is the site's text and this computer's [local] section.
+TEST(the_game_asks_when_the_last_check_offered) {
+    std::string version;
+    CHECK(update::askAtStart(kSiteText, "2.9.0", version));
+    CHECK_EQ(version, std::string("2.10.0"));
+    CHECK(!update::askAtStart(std::string(kSiteText) + "[local]\r\nskip = 2.10.0\r\n", "2.9.0", version));
+    CHECK(!update::askAtStart(kSiteText, "2.10.0", version));  // already it
+    CHECK(!update::askAtStart("<html>502</html>", "2.9.0", version));
+    CHECK(!update::askAtStart("", "2.9.0", version));
+    CHECK(update::kUpdateChosen == 10);  // the settings app's exit code the driver closes the game on
+}

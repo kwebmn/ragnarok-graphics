@@ -31,5 +31,10 @@ bool parseManifest(const std::string& text, Manifest& out, std::string& error);
 // The version to offer an installed `installed`: the site's when it is newer, or when `installed` was withdrawn (even
 // an older one); "" none, or when it is `skip` (a version rolled back from).
 std::string offer(const Manifest& m, const std::string& installed, const std::string& skip);
+// The game's start: uaro-graphics\update.ini as the last check kept it (the site's text, then [local] skip) offers
+// `version` to `installed` - the driver then asks through "uaro-graphics.exe --ask-update", whose exit code
+// kUpdateChosen closes the game (the settings app updates it and starts it again).
+bool askAtStart(const std::string& updateInfo, const std::string& installed, std::string& version);
+constexpr unsigned long kUpdateChosen = 10;
 
 }  // namespace uagfx::update

@@ -157,6 +157,23 @@ int uninstallRun(const std::wstring& dir, const Args& a, settings::Lang l) {
     return ok ? 0 : 1;
 }
 
+// The game's question before its login window (the driver waits for this process): "Update" starts the update to
+// wait for the game, which the driver then closes (kUpdateChosen), and to start it again.
+int askAtGameStart(const std::wstring& dir, const Args& a, settings::Lang l) {
+    std::string info, version;
+    readFile(dir + L"\\" + wide(layout::kUpdateInfo), info);
+    if (!update::askAtStart(info, installedVersion(dir), version)) return 0;
+    if (askUpdate(version, l) != Answer::Update) return 0;
+    Args run;
+    run.mode = Args::Mode::Update;
+    run.pid = a.pid;  // the game
+    run.then = Args::Then::Game;
+    run.gameArgs = a.gameArgs;
+    const bool admin = !folderWritable(dir) && !elevatedNow();
+    if (launchArgs(selfPath(), argsLine(run), dir, admin) != 0) return 0;  // no update: play
+    return int(update::kUpdateChosen);
+}
+
 bool writes(Args::Mode m) {
     return m == Args::Mode::Install || m == Args::Mode::Update || m == Args::Mode::Repair ||
            m == Args::Mode::Rollback || m == Args::Mode::UninstallRun;
@@ -197,6 +214,7 @@ int runMode(const Args& a) {
         case Args::Mode::Rollback: return rollback(dir, a, l);
         case Args::Mode::Uninstall: return uninstallAsk(dir, l);
         case Args::Mode::UninstallRun: return uninstallRun(dir, a, l);
+        case Args::Mode::AskUpdate: return askAtGameStart(dir, a, l);
         default: return 0;
     }
 }
