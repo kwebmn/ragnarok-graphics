@@ -1,3 +1,18 @@
+# uaRO Graphics 2.7.55 — to check
+
+- **The portal neater and closer to the game's** (report R-C6HFHG: make it neater and more like the original). In
+  2.7.54 the doorway filled with lilac, the walls' tops burned in a bright line, thin arcs stuck out onto the street.
+  Now the rings and the floor come from the game's own pictures again, only cleaned:
+  - the ring's picture averaged round the ring - no streaks or noise, its colour and alpha down the wall as the
+    game's (white at the ground, bluish lavender higher up);
+  - a fine bright circle where each wall meets the ground - the original's main feature, sharper;
+  - the walls' tops fade softly, less glare (the walls 85 %, the floor 75 % of the game's);
+  - the sparks are the game's again, the light around ("Living portals") white lavender.
+- **The warp's pictures go into the log once** («portal capture: texture …» lines) - their alpha is in no copy on
+  the server; with them the next comparisons are exact.
+- To check: at the door in Prontera by day and by night the portal looks like the original - white circles and a soft
+  haze, no lilac box, no streaks on the walls. If you do not like it, untick "New portal" - the game's own comes back.
+
 # uaRO Graphics 2.7.54 — to check
 
 - **The new portal, made on the facts, is on again** ("New portal" ticked by default). The driver no longer draws a
