@@ -8,7 +8,8 @@ namespace uagfx {
 
 enum class LogLevel { Error = 0, Info = 1, Debug = 2 };
 // [renderer] api (0.46): Direct3D 12, Direct3D 11 (graphics cards without Direct3D 12), or 12 and else 11.
-enum class Api { D3d12, D3d11, Auto };
+// 2.12: System - uaRO Graphics switched off: the game draws with the system's DirectDraw (its own look)
+enum class Api { D3d12, D3d11, Auto, System };
 // [display] mode. Auto follows the game: a windowed game keeps its window (ROExt sizes it), full screen becomes
 // borderless. Window and Borderless override what the game asks for.
 enum class DisplayMode { Auto, Window, Borderless };

@@ -110,3 +110,14 @@ TEST(choose_auto_takes_direct3d_12_then_11) {
     CHECK(r.renderer == Renderer::System);
     CHECK(mentions(r.reason, "Direct3D 11"));
 }
+
+// 2.12: «Вимкнути uaRO Graphics» - api = system: the game's own look (the pad, the sound and the launcher stay)
+TEST(api_system_is_the_games_own_look) {
+    Config c;
+    c.api = Api::System;
+    const RendererChoice r = chooseRenderer(c, everything(), true);
+    CHECK(r.renderer == Renderer::System);
+    CHECK(mentions(r.reason, "api = system"));
+    CHECK(parseConfig("[renderer]\napi = system\n").api == Api::System);
+    CHECK(std::strcmp(apiToken(Api::System), "system") == 0);
+}

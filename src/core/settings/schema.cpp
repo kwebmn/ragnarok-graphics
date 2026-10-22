@@ -35,8 +35,9 @@ Text pageName(Page p) {
 const std::vector<IniSetting>& iniSettings() {
     using E = EffectSettings;  // 2.2.2: [effects] entries bound to their fields
     static const std::vector<IniSetting> list{
-        {"renderer", "api", Page::Render, Control::Choice, 0, 0, 0, {"d3d12", "d3d11", "auto"},
-         {Text::RenderApiD3d12, Text::RenderApiD3d11, Text::RenderApiAuto}, Text::RenderApi, Text::RenderApiHint, ""},
+        {"renderer", "api", Page::Render, Control::Choice, 0, 0, 0, {"d3d12", "d3d11", "auto", "system"},
+         {Text::RenderApiD3d12, Text::RenderApiD3d11, Text::RenderApiAuto, Text::RenderApiSystem}, Text::RenderApi,
+         Text::RenderApiHint, ""},
         // 0.50.2: a card's name as the Renderer page lists them, or auto (a list of its own there, not a text field)
         {"renderer", "gpu", Page::Render, Control::Line, 0, 0, 0, {}, {}, Text::RenderGpu, Text::RenderGpuHint, ""},
         // 0.51: the Diagnostics page's own check box

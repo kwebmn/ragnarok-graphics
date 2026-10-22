@@ -3321,6 +3321,9 @@ const Entry kTexts[] = {
     {"Integrated graphics, strong: low quality, weak effects, 2x smoothing, 45 frames kept.",
      "Вбудована графіка, сильна: низька якість, слабкі ефекти, згладжування 2×, тримати 45 кадрів.",
      "Встроенная графика, сильная: низкое качество, слабые эффекты, сглаживание 2×, держать 45 кадров."},
+    {"Off - the game's own look",
+     "Вимкнено — вигляд самої гри",
+     "Выключено — вид самой игры"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

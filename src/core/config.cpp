@@ -397,6 +397,7 @@ Config parseConfig(const std::string& text) {
             if (val == "d3d12") c.api = Api::D3d12;
             if (val == "d3d11") c.api = Api::D3d11;
             if (val == "auto") c.api = Api::Auto;
+            if (val == "system") c.api = Api::System;  // 2.12
         } else if (key == "renderer.bridge") {
             setBool(val, c.bridge);
         } else if (key == "renderer.render_thread") {  // 2.5.12
@@ -638,7 +639,9 @@ bool aiWaits(const std::string& key, const AiSettings& started, const AiSettings
 }
 
 
-const char* apiToken(Api a) { return a == Api::D3d11 ? "d3d11" : a == Api::Auto ? "auto" : "d3d12"; }
+const char* apiToken(Api a) {
+    return a == Api::D3d11 ? "d3d11" : a == Api::Auto ? "auto" : a == Api::System ? "system" : "d3d12";
+}
 
 const char* displayModeToken(DisplayMode m) {
     switch (m) {

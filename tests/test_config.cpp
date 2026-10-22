@@ -1,4 +1,7 @@
 #include <cstring>
+#include <fstream>
+#include <iterator>
+#include <string>
 
 #include "core/config.hpp"
 #include "core/live_config.hpp"
@@ -600,4 +603,12 @@ TEST(config_the_pad_is_on_by_default) {
     // 2.9: uaRO Pad inside the driver, mounted unless [pad] enabled = 0
     CHECK(parseConfig("").padEnabled);
     CHECK(!parseConfig("[pad]\nenabled = 0\n").padEnabled);
+}
+
+// 2.12: the shipped settings ask for Direct3D 12, then 11, then the game's own look (api = auto)
+TEST(the_shipped_settings_ask_for_auto) {
+    std::ifstream f(std::string(UAGFX_SOURCE_DIR) + "/dist/uaro-graphics.ini", std::ios::binary);
+    const std::string ini((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    CHECK(!ini.empty());
+    CHECK(parseConfig(ini).api == Api::Auto);
 }

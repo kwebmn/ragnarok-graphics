@@ -55,8 +55,9 @@ TEST(schema_defaults_match_the_driver) {
     // 0.46: the graphics API on the Render page - Direct3D 12 by default; 11 and auto for older graphics cards.
     const IniSetting* api = findSetting("renderer.api");
     CHECK(api && api->page == Page::Render && api->control == Control::Choice);
-    CHECK(api && api->tokens.size() == 3 && std::string(api->tokens[0]) == "d3d12" &&
-          std::string(api->tokens[1]) == "d3d11" && std::string(api->tokens[2]) == "auto");
+    CHECK(api && api->tokens.size() == 4 && std::string(api->tokens[0]) == "d3d12" &&
+          std::string(api->tokens[1]) == "d3d11" && std::string(api->tokens[2]) == "auto" &&
+          std::string(api->tokens[3]) == "system");  // 2.12: uaRO Graphics switched off
     CHECK(api && tokenOf(*api, defaults) == "d3d12");
     Config eleven;
     eleven.api = Api::D3d11;

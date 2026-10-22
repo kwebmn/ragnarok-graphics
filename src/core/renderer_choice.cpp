@@ -7,6 +7,8 @@ RendererChoice chooseRenderer(const Config& config, const SystemFacts& facts, bo
     std::string why;
     if (!uaroBuilt) {
         why = "the uaRO renderer is not in this version";
+    } else if (config.api == Api::System) {
+        why = "api = system: uaRO Graphics switched off - the game's own look";  // 2.12
     } else if (config.api != Api::D3d12) {
         // 0.46: Direct3D 11 - asked for, or (auto) where Direct3D 12 is not there; no Windows 10 needed.
         const bool d3d12 = facts.windows10 && facts.d3d12;
