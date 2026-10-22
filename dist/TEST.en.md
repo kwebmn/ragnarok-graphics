@@ -1,3 +1,14 @@
+# uaRO Graphics 2.7.52 — to check
+
+- **A portal on a tower's roof and a light rectangle by the windmill.** 2.7.51 looked for the ground under a portal in
+  the picture where it stands on the screen. For a portal behind the tower that place was the tower's roof, and the
+  portal hung there. By the windmill its foot went into the building and its column of light was cut at the edge of the
+  pass's box. Now its foot comes from the depth of the game's own draws: a fan of triangles on the ground round the
+  portal's middle, its depth right. A portal behind the tower hides behind it, as the game's does. The pass's box is
+  measured by the real column again.
+- To check by the windmill and the tower in Prontera, where the shot was: the portals stand on the ground at the doors,
+  none shows through the tower, no rectangles; they do not drift as the camera turns.
+
 # uaRO Graphics 2.7.51 — to check
 
 - **The new portal stood in the wrong place and "moved".** The game draws the exit portal (effect 321) as a flat
