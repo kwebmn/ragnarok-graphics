@@ -7,7 +7,7 @@
 - **Sets itself up.** The settings are picked for your graphics card and screen; integrated graphics get the
   super-light mode. Two failed starts in a row - the safe mode by itself.
 - **«Reports».** Ctrl+Shift+F10 in the game or «Reports» in the app: a description, screenshots - and the developers'
-  answer comes there too. When the game crashes, a report can go by itself: the app asks about it at its first start.
+  answer comes there too.
 - **The gamepad inside.** Xbox and PlayStation work at once; no separate files any more.
 - **A clean game folder.** All of ours is in the `uaro-graphics` folder.
 - **Nothing extra.** DLSS rows on NVIDIA RTX only; the effects' console on Ctrl + the key left of 1 («ё» and the
