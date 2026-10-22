@@ -149,7 +149,10 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
                     az = t.v[1].pos[2] - t.v[0].pos[2], bx = t.v[2].pos[0] - t.v[0].pos[0],
                     by = t.v[2].pos[1] - t.v[0].pos[1], bz = t.v[2].pos[2] - t.v[0].pos[2];
         const float nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
-        if (std::fabs(ny) < 0.6f * std::sqrt(nx * nx + ny * ny + nz * nz)) continue;
+        const float n = std::sqrt(nx * nx + ny * ny + nz * nz);
+        // 3.0.0-beta.2: nor a triangle of (almost) no area - the side face the game draws between two cells of one
+        // height has no normal, and took a cell with the wall's texture (R-45AV5H: lines round Aldebaran's paving)
+        if (n < 0.01f * side * side || std::fabs(ny) < 0.6f * n) continue;
         const float cx = (t.v[0].pos[0] + t.v[1].pos[0] + t.v[2].pos[0]) / 3.0f;
         const float cz = (t.v[0].pos[2] + t.v[1].pos[2] + t.v[2].pos[2]) / 3.0f;
         const int ix = int(std::floor((cx - ox) / side)), iz = int(std::floor((cz - oz) / side));

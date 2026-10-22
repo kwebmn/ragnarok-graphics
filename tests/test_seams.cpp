@@ -234,6 +234,31 @@ TEST(seams_strips_the_same_when_the_ground_comes_back_a_hair_off) {
         }
 }
 
+// 3.0.0-beta.2 (R-45AV5H, Aldebaran's square): the game draws a side face between two cells of one height too - a
+// wall of no height, its two triangles of no area, with the wall's texture and a dark lightmap. Its normal is
+// nothing, so it passed as a face of the ground, took the cell its middle fell in and put the wall's texture along
+// that cell's edges: dark lines and smudges round the paving's squares.
+TEST(seams_a_wall_of_no_height_is_no_ground) {
+    std::vector<seams::Triangle> ground;
+    cell(ground, 0, 0, 10.0f, 0);
+    cell(ground, 1, 0, 10.0f, 0);
+    seams::Vertex corner[4];  // on the cells' shared edge x = 15, its top and its foot at one height
+    for (int k = 0; k < 4; ++k) {
+        corner[k].pos[0] = 15.0f;
+        corner[k].pos[2] = (k & 1) ? 5.0f : -5.0f;
+        corner[k].uv0[0] = float(k & 1);
+        corner[k].uv0[1] = float(k >> 1);
+    }
+    seams::Triangle a, b;
+    a.v[0] = corner[0], a.v[1] = corner[1], a.v[2] = corner[2];
+    b.v[0] = corner[2], b.v[1] = corner[1], b.v[2] = corner[3];
+    a.group = b.group = 1;
+    ground.push_back(a);
+    ground.push_back(b);
+    const std::vector<uint32_t> textures = {7, 9};  // the paving's, the wall's
+    CHECK(seams::build(ground, textures, 0.45f).empty());  // the paving goes on: no seam
+}
+
 TEST(seams_none_over_a_step) {
     // 2.1.6: two textures, the second cell a step higher - a wall between them, no seam (it blinked at the wall's foot)
     std::vector<seams::Triangle> ground;
