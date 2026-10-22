@@ -7,6 +7,8 @@
 #include <vector>
 
 #include "core/d3d7.hpp"
+#include "core/effect_exe.hpp"
+#include "core/portal_capture.hpp"
 #include "core/scene.hpp"
 #include "core/states.hpp"
 #include "win/dx7/com_bases.hpp"
@@ -69,6 +71,11 @@ private:
     // draws made softer and the draws that add light of no effect known, told every 10 s
     uint32_t skillDraws_ = 0, plainAdds_ = 0;
     ULONGLONG skillsTold_ = 0;
+    // 2.7.53: the game's portal draws recorded into the log (core/portal_capture.hpp), each texture of theirs once
+    portal_capture::Recorder portalCapture_;
+    std::vector<uint32_t> portalTexturesTold_;
+    void capturePortal(const effect_exe::Tag& tag, const DrawSetup& setup, DWORD fvf, const void* vertices,
+                       DWORD vertexCount, const WORD* indices, DWORD indexCount);
 };
 
 }  // namespace uagfx::dx7

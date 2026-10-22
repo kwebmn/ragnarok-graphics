@@ -874,8 +874,11 @@ bool Renderer::Impl::applyTorches() {
         for (const PortalTrack& t : portalTracks) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
             if (shown <= 0.0f) continue;
-            // 2.7.48: under the new portal its light in its lilac and softer, the air's swirl half - no white blot
+            // 2.7.48: under the new portal its light in its lilac and softer, the air's swirl half - no white blot.
+            // 2.7.53: with the new portal only - the game's own as it is otherwise (0.38's glow and swirl first came in
+            // 2.7.50, its tracks dying at birth before; the tester then saw «2 портала»)
             const bool anew = newPortalWanted();
+            if (!anew) continue;
             // 2.7.52: its light 4 units over its foot (portal::footOf) - 0.38 lit its draws' mean place, sparks and
             // all
             float ground[3];

@@ -565,7 +565,7 @@ void Renderer11::applyTorchLight() {
         int shownCount = 0;
         for (const PortalTrack11& t : portalTracks_) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
-            if (shown <= 0.0f) continue;
+            if (shown <= 0.0f || !anew) continue;  // 2.7.53: with the new portal only (torches.cpp)
             // 2.7.52 (torches.cpp portalGround): 4 units over its foot (portal::footOf)
             if (shownCount++ < 8 && cameraValid_) {
                 float up[3], foot[3];

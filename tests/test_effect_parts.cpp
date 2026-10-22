@@ -33,8 +33,7 @@ TEST(effect_parts_have_their_own_boxes_under_the_effect) {
         {"effects.weather", "effects.rain_splashes"},  {"effects.heat", "effects.desert_heat"},
         {"effects.shafts", "effects.sky_rays"},        {"effects.tree_tints", "effects.tree_seasons"},
         {"effects.butterflies", "effects.dragonflies"}, {"effects.night_fireflies", "effects.fireflies_light"},
-        {"effects.moon_light", "effects.moon_beams"},  {"effects.fire_light", "effects.light_orbs"},
-        {"effects.portals", "effects.portal_new"}};
+        {"effects.moon_light", "effects.moon_beams"},  {"effects.fire_light", "effects.light_orbs"}};
     const Config defaults = parseConfig("");
     for (const auto& p : kParts) {
         if (boxOf(p[1]) != p[0]) std::printf("  not under %s: %s\n", p[0], p[1]);

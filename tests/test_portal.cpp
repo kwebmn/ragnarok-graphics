@@ -42,10 +42,12 @@ TEST(portal_rings_fade_in_and_out) {
     CHECK(late[2].alpha > 0.0f && late[2].alpha < 0.1f);  // the oldest, born at 0
 }
 
-TEST(portal_new_on_by_default_and_off_in_the_effects_off_set) {
-    // 2.7.48: «Новий портал» - a part of «Портали», on as the user asked; Pause and the set «off» give the game's own
-    CHECK(parseConfig("").effects.portalNew);
-    CHECK(!parseConfig("[effects]\nportal_new = 0\n").effects.portalNew);
+TEST(portal_new_off_by_default_while_the_games_is_recorded) {
+    // 2.7.48: «Новий портал» - a part of «Портали». 2.7.53 (five builds and still two portals on the screen): off by
+    // default - the game's own portal while its draws are recorded (core/portal_capture.hpp) and the new one is made
+    // anew on the facts; one who wants it still ticks it. Pause and the set «off» give the game's own
+    CHECK(!parseConfig("").effects.portalNew);
+    CHECK(parseConfig("[effects]\nportal_new = 1\n").effects.portalNew);
     CHECK(!effectsOff().portalNew);
 }
 
