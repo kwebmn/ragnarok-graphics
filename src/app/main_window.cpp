@@ -37,7 +37,7 @@ constexpr int kUndo = 22;
 constexpr int kCloseButton = 23;
 constexpr int kModeFirst = 30;     // 2.6: the three modes' buttons, 30-32
 constexpr int kSearch = 33;        // the search field
-constexpr int kReportButton = 34;  // "Report a problem"
+constexpr int kReportButton = 34;  // 2.13: «Звернення» (0.51-2.12: "Report a problem")
 constexpr int kTabFirst = 40;      // a view's tabs, 40-43: the page view's children, made with the page
 constexpr int kResetView = 44;     // "Reset the page to the recommended values", made with the page
 constexpr int kStrip = 26;         // 2.6: the status bar's height at 96 DPI
@@ -48,6 +48,7 @@ constexpr UINT kRebuild = WM_APP + 1;
 constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page; 2.6: the view, lParam its tab
 constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics go
 constexpr UINT kAskMachine = WM_APP + 9;  // 2.12: the card or the screen changed since the settings were picked
+constexpr UINT kOpenReports = WM_APP + 10;  // 2.13: --report - «Нове звернення» once the window is up
 
 // 2.2.1: the day's statistics, on a thread of its own (the network may take seconds); the folder's copy its own.
 DWORD WINAPI sendStats(void* folder) {
@@ -265,7 +266,7 @@ void MainWindow::create() {
         SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
         return c;
     };
-    // 2.6: the header - the modes, "Report a problem"; the list of the mode's views, drawn here
+    // 2.6: the header - the modes, «Звернення» (2.13); the list of the mode's views, drawn here
     for (int i = 0; i < kModeCount; ++i)
         modes_[i] =
             child(L"BUTTON", BS_AUTORADIOBUTTON | BS_PUSHLIKE | WS_TABSTOP | (i ? 0 : WS_GROUP), kModeFirst + i);
@@ -325,7 +326,9 @@ void MainWindow::create() {
     if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
+    startReportsCheck(model_->paths().dir);  // 2.13: the waiting reports sent, the answers counted
     PostMessageW(hwnd_, kAskStats, 0, 0);
+    if (startReport_) PostMessageW(hwnd_, kOpenReports, 0, 0);
 }
 
 // 2.6: the page view right of the list, between the header and the buttons' row; the page's own left margin holds
@@ -567,7 +570,7 @@ void MainWindow::retext() {
     SetWindowTextW(hwnd_, wtr(lang_, Text::AppTitle).c_str());
     fillList();
     for (int i = 0; i < kModeCount; ++i) SetWindowTextW(modes_[i], wtr(lang_, modeName(Mode(i))).c_str());
-    SetWindowTextW(report_, wtr(lang_, Text::ReportProblem).c_str());
+    retextReports();
     SetWindowTextW(stripUpdate_, wtr(lang_, Text::UpdateDo).c_str());
     SendMessageW(search_, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(wtr(lang_, Text::SearchCue).c_str()));
     SetWindowTextW(banner_, wtr(lang_, Text::ElevatedBanner).c_str());
@@ -634,13 +637,6 @@ void MainWindow::buildPage() {
             SetFocus(f);
             if (field) SendMessageW(f, EM_SETSEL, selStart, selEnd);
         }
-    if (reportFocus_) {  // 2.6: "Report a problem" - its comment field in view, the caret in it
-        reportFocus_ = false;
-        if (HWND f = GetDlgItem(view_, kReportField)) {
-            SetFocus(f);
-            showFocused();
-        }
-    }
     updateStatus();
 }
 
@@ -683,6 +679,24 @@ int MainWindow::box(const std::wstring& text, UINT type) {
     const int answer = MessageBoxW(hwnd_, text.c_str(), wtr(lang_, Text::AppTitle).c_str(), type);
     if (rebuilds_.boxClosed()) PostMessageW(hwnd_, kRebuild, 0, 0);
     return answer;
+}
+
+void MainWindow::openReports(bool fresh) {
+    ReportStart s = startReport_ ? reportStart_ : ReportStart{};
+    s.fresh = s.fresh || fresh;
+    startReport_ = false;
+    const int unread = showReports(hwnd_, *model_, lang_, dpi_, s);
+    if (unread >= 0) {
+        unread_ = unread;
+        unreadFromWindow_ = true;
+    }
+    retextReports();
+}
+
+void MainWindow::retextReports() {
+    SetWindowTextW(report_, unread_ > 0 ? wtrf(lang_, Text::ReportsButtonUnread, {std::to_string(unread_)}).c_str()
+                                        : wtr(lang_, Text::ReportsButton).c_str());
+    SendMessageW(report_, WM_SETFONT, reinterpret_cast<WPARAM>(unread_ > 0 && bold_ ? bold_ : font_), TRUE);
 }
 
 void MainWindow::showNotes(const std::wstring& text) {
@@ -828,8 +842,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 else
                     message(wtrf(lang_, Text::UpdateError, {err}), true);
             } else if (id == kReportButton && code == BN_CLICKED) {
-                reportFocus_ = true;
-                showView(settings::View::Service, 0);
+                openReports(false);
             } else if (id >= kTabFirst && id < kTabFirst + tabCount(shown_) && code == BN_CLICKED) {
                 if (id - kTabFirst != tab_) {
                     tab_ = id - kTabFirst;
@@ -913,7 +926,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (int(wp) < settings::kViewCount) {
                 const auto view = settings::View(wp);
                 const int tab = std::clamp(int(lp), 0, tabCount(view) - 1);
-                if (view != shown_ || tab != tab_ || reportFocus_ || !query_.empty()) {
+                if (view != shown_ || tab != tab_ || !query_.empty()) {
                     clearSearch();
                     shown_ = view;
                     tab_ = tab;
@@ -943,6 +956,9 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case kRebuild:
             if (rebuilds_.arrived()) buildPage();
+            return 0;
+        case kOpenReports:  // 2.13: --report
+            openReports(true);
             return 0;
         case kAskMachine: {  // 2.12: the settings picked again for the new card or screen, if the player wants
             const settings::Machine x = model_->machine();
@@ -990,6 +1006,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (wp == kTimer) {
                 if (model_->refreshRunning()) rebuild();  // the game started or closed
                 updateStrip();  // the update's check, the pack's builder
+                if (!unreadFromWindow_ && reportsUnread() != unread_) {  // 2.13: the start's check came back
+                    unread_ = reportsUnread();
+                    retextReports();
+                }
             }
             if (wp == kTickTimer && current_) current_->tick();
             return 0;

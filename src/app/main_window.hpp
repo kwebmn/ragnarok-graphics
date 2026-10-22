@@ -8,6 +8,7 @@
 #include "app/model.hpp"
 #include "app/page.hpp"
 #include "app/rebuilds.hpp"
+#include "app/reports_window.hpp"
 #include "app/ui.hpp"
 
 namespace uagfx::app {
@@ -35,6 +36,12 @@ public:
     settings::Mode mode() const override;
     void showNotes(const std::wstring& text) override;
     void play() override { doApply(true); }
+    void openReports(bool fresh) override;
+    // 2.13: uaro-graphics.exe --report (the game's Ctrl+Shift+F10): «Нове звернення» with its shot, the window up
+    void reportAtStart(const ReportStart& s) {
+        reportStart_ = s;
+        startReport_ = true;
+    }
 
 private:
     static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -99,10 +106,14 @@ private:
     int tab_ = 0;
     std::vector<int> listItems_;  // the list's entries: a View, or -1 for the "Developer only" heading
     HWND modes_[settings::kModeCount] = {};
-    HWND report_ = nullptr;     // "Report a problem"
+    HWND report_ = nullptr;     // 2.13: «Звернення» and the number of new answers
     HWND search_ = nullptr;     // the search's field; its text, once taken, shows the search's page
     std::wstring query_;
-    bool reportFocus_ = false;  // after the next build: the report's comment field focused
+    int unread_ = -1;               // 2.13: the developers' answers not read yet (-1 unknown)
+    bool unreadFromWindow_ = false;  // the window's count is newer than the start's check
+    bool startReport_ = false;
+    ReportStart reportStart_;
+    void retextReports();
     HFONT bold_ = nullptr;      // the list's chosen entry
     int listSel_ = -1;          // the list's entry chosen before (past the heading the way the arrow went)
     HBRUSH listBrush_ = nullptr;

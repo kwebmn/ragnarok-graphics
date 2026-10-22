@@ -6,10 +6,8 @@
 namespace uagfx::report {
 
 // 0.51: reports to the developers - uaro.kiev.ua's POST /api/graphics/reports (the site's admin lists them for 90
-// days). The settings app sends one at a press (Diagnostics), and, with [report] auto = 1, its watcher sends one when
-// a game ended badly (reasonOfLog).
-constexpr const wchar_t* kHost = L"uaro.kiev.ua";
-constexpr const wchar_t* kPath = L"/api/graphics/reports";
+// days). The settings app sends one from «Звернення» (2.13, app/reports), and, with [report] auto = 1, its watcher
+// sends one when a game ended badly (reasonOfLog).
 
 struct Upload {
     std::string reason = "manual";  // manual, start-failed, crash, gpu-lost

@@ -12,7 +12,6 @@
 #include "app/download.hpp"
 #include "app/files.hpp"
 #include "app/reports.hpp"
-#include "app/shots.hpp"
 #include "app/text.hpp"
 #include "app/update_run.hpp"
 #include "core/config.hpp"
@@ -88,7 +87,7 @@ ReportFacts reportFacts(const Model& m, const std::vector<std::string>& problems
 }
 
 report::Upload makeUpload(const Model& m, const std::string& reason, bool automatic, const std::string& comment,
-                          const std::vector<std::string>& problems, bool shots) {
+                          const std::vector<std::string>& problems) {
     const SystemInfo& sys = m.system();
     report::Upload u;
     u.reason = reason;
@@ -139,7 +138,6 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         if (bmp && readFile(missing + L"\\" + name, bytes))
             u.images.emplace_back(utf8(name), bytes);
     }
-    if (shots) u.shots = recentShots(shotFolders(dir), report::kMostShots);  // 1.8.1
     // 0.52: a crash's minidump (win/crash.cpp) of the last week
     const std::wstring dump = dir + L"\\uaro-graphics\\crash.dmp";
     WIN32_FILE_ATTRIBUTE_DATA a{};
@@ -165,27 +163,6 @@ bool postJson(const wchar_t* path, const std::string& body, DWORD& status, std::
 }
 
 }  // namespace
-
-bool sendUpload(const report::Upload& u, std::string& code, std::string& error) {
-    DWORD status = 0;
-    std::string answer;
-    if (!postJson(report::kPath, report::uploadJson(u), status, answer, error)) return false;
-    if (status == 429) {
-        error = "too many reports from this computer - try again in an hour";
-        return false;
-    }
-    if (status != 201 || !report::codeOf(answer, code)) {
-        error = "uaro.kiev.ua answered " + std::to_string(status);
-        return false;
-    }
-    return true;
-}
-
-void noteSent(const Model& m, const std::string& code, const std::string& reason, bool automatic) {
-    noteSentIn(m.paths().dir, code, reason, automatic);
-}
-
-std::vector<std::string> sentCodes(const Model& m, size_t most) { return sentCodesIn(m.paths().dir, most); }
 
 namespace {
 

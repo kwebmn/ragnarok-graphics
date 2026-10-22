@@ -1,10 +1,10 @@
 #include "app/shots.hpp"
 
 #include <windows.h>
-#include <shlobj.h>
 #include <wincodec.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
 
 namespace uagfx::app {
@@ -27,11 +27,9 @@ bool picture(const std::wstring& name) {
     return false;
 }
 
-// The picture as a JPEG of at most 1600 pixels across; "" when Windows cannot read it.
-std::string jpegOf(IWICImagingFactory* f, const std::wstring& path) {
+// A picture as a JPEG of at most 1600 pixels across; "" when Windows cannot read it or make one.
+std::string jpegOfSource(IWICImagingFactory* f, IWICBitmapSource* frame) {
     std::string out;
-    IWICBitmapDecoder* dec = nullptr;
-    IWICBitmapFrameDecode* frame = nullptr;
     IWICBitmapScaler* scaler = nullptr;
     IWICFormatConverter* bgr = nullptr;
     IStream* stream = nullptr;
@@ -39,9 +37,7 @@ std::string jpegOf(IWICImagingFactory* f, const std::wstring& path) {
     IWICBitmapFrameEncode* target = nullptr;
     IPropertyBag2* props = nullptr;
     UINT w = 0, h = 0;
-    if (SUCCEEDED(f->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ, WICDecodeMetadataCacheOnDemand,
-                                               &dec)) &&
-        SUCCEEDED(dec->GetFrame(0, &frame)) && SUCCEEDED(frame->GetSize(&w, &h)) && w && h) {
+    if (SUCCEEDED(frame->GetSize(&w, &h)) && w && h) {
         const UINT tw = std::min<UINT>(w, 1600), th = std::max<UINT>(1, UINT(double(h) * tw / w));
         IWICBitmapSource* src = frame;
         if (tw != w && SUCCEEDED(f->CreateBitmapScaler(&scaler)) &&
@@ -81,22 +77,70 @@ std::string jpegOf(IWICImagingFactory* f, const std::wstring& path) {
     release(stream);
     release(bgr);
     release(scaler);
+    return out;
+}
+
+std::string jpegOf(IWICImagingFactory* f, const std::wstring& path) {
+    IWICBitmapDecoder* dec = nullptr;
+    IWICBitmapFrameDecode* frame = nullptr;
+    std::string out;
+    if (SUCCEEDED(f->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ, WICDecodeMetadataCacheOnDemand,
+                                               &dec)) &&
+        SUCCEEDED(dec->GetFrame(0, &frame)))
+        out = jpegOfSource(f, frame);
     release(frame);
     release(dec);
     return out;
 }
 
-}  // namespace
-
-std::vector<std::wstring> shotFolders(const std::wstring& gameDir) {
-    std::vector<std::wstring> out = {gameDir + L"\\ScreenShot"};
-    wchar_t pictures[MAX_PATH] = {};
-    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_MYPICTURES, nullptr, 0, pictures)))
-        out.push_back(std::wstring(pictures) + L"\\Screenshots");
-    return out;
+IWICImagingFactory* factory() {
+    IWICImagingFactory* f = nullptr;
+    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_IWICImagingFactory,
+                                reinterpret_cast<void**>(&f))))
+        return nullptr;
+    return f;
 }
 
-std::vector<std::pair<std::string, std::string>> recentShots(const std::vector<std::wstring>& folders, size_t most) {
+// A decoded picture fitted into w x h on grey, as a 32-bit bitmap
+HBITMAP thumbOf(IWICImagingFactory* f, IWICBitmapSource* frame, int w, int h) {
+    UINT sw = 0, sh = 0;
+    if (FAILED(frame->GetSize(&sw, &sh)) || !sw || !sh || w <= 0 || h <= 0) return nullptr;
+    const double k = std::min(double(w) / sw, double(h) / sh);
+    const UINT tw = std::max<UINT>(1, UINT(sw * k)), th = std::max<UINT>(1, UINT(sh * k));
+    IWICBitmapScaler* scaler = nullptr;
+    IWICFormatConverter* bgra = nullptr;
+    HBITMAP bmp = nullptr;
+    BITMAPINFO bi{};
+    bi.bmiHeader.biSize = sizeof bi.bmiHeader;
+    bi.bmiHeader.biWidth = w;
+    bi.bmiHeader.biHeight = -h;  // top-down
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = 32;
+    bi.bmiHeader.biCompression = BI_RGB;
+    void* bits = nullptr;
+    if (SUCCEEDED(f->CreateBitmapScaler(&scaler)) &&
+        SUCCEEDED(scaler->Initialize(frame, tw, th, WICBitmapInterpolationModeFant)) &&
+        SUCCEEDED(f->CreateFormatConverter(&bgra)) &&
+        SUCCEEDED(bgra->Initialize(scaler, GUID_WICPixelFormat32bppBGRA, WICBitmapDitherTypeNone, nullptr, 0.0,
+                                   WICBitmapPaletteTypeCustom)) &&
+        (bmp = CreateDIBSection(nullptr, &bi, DIB_RGB_COLORS, &bits, nullptr, 0)) != nullptr) {
+        uint32_t* px = static_cast<uint32_t*>(bits);
+        for (int i = 0; i < w * h; ++i) px[i] = 0xFFE6E6E6;  // the list's grey around the picture, opaque
+        const UINT left = (UINT(w) - tw) / 2, top = (UINT(h) - th) / 2;
+        WICRect rect{0, 0, INT(tw), INT(th)};
+        std::vector<uint32_t> row(size_t(tw) * th);
+        if (SUCCEEDED(bgra->CopyPixels(&rect, tw * 4, UINT(row.size() * 4), reinterpret_cast<BYTE*>(row.data()))))
+            for (UINT y = 0; y < th; ++y)
+                std::copy(row.begin() + y * tw, row.begin() + (y + 1) * tw, px + (top + y) * UINT(w) + left);
+    }
+    release(bgra);
+    release(scaler);
+    return bmp;
+}
+
+}  // namespace
+
+std::vector<std::wstring> gameShots(const std::wstring& gameDir, size_t most) {
     struct Found {
         std::wstring path;
         unsigned long long time;
@@ -105,34 +149,86 @@ std::vector<std::pair<std::string, std::string>> recentShots(const std::vector<s
     FILETIME nowFt{};
     GetSystemTimeAsFileTime(&nowFt);
     const auto ticks = [](const FILETIME& t) { return (unsigned long long)t.dwHighDateTime << 32 | t.dwLowDateTime; };
-    const unsigned long long now = ticks(nowFt), day = 24ull * 3600 * 10000000ull;
-    for (const std::wstring& dir : folders) {
-        WIN32_FIND_DATAW d{};
-        HANDLE h = FindFirstFileW((dir + L"\\*").c_str(), &d);
-        if (h == INVALID_HANDLE_VALUE) continue;
+    const unsigned long long now = ticks(nowFt), week = 7ull * 24 * 3600 * 10000000ull;
+    const std::wstring dir = gameDir + L"\\ScreenShot";
+    WIN32_FIND_DATAW d{};
+    HANDLE h = FindFirstFileW((dir + L"\\*").c_str(), &d);
+    if (h != INVALID_HANDLE_VALUE) {
         do {
             if ((d.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || !picture(d.cFileName)) continue;
             const unsigned long long t = ticks(d.ftLastWriteTime);
-            if (now - t < day) found.push_back(Found{dir + L"\\" + d.cFileName, t});
+            if (now - t < week) found.push_back(Found{dir + L"\\" + d.cFileName, t});
         } while (FindNextFileW(h, &d));
         FindClose(h);
     }
     std::sort(found.begin(), found.end(), [](const Found& a, const Found& b) { return a.time > b.time; });
-    std::vector<std::pair<std::string, std::string>> out;
-    IWICImagingFactory* f = nullptr;
-    if (found.empty() || FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
-                                                 IID_IWICImagingFactory, reinterpret_cast<void**>(&f))))
-        return out;
+    std::vector<std::wstring> out;
     for (const Found& x : found) {
         if (out.size() >= most) break;
-        std::string jpeg = jpegOf(f, x.path);
-        if (jpeg.empty() || jpeg.size() > 600000) continue;  // the site takes the report under 8 MB
-        char name[32];
-        std::snprintf(name, sizeof name, "shot%u.jpg", unsigned(out.size() + 1));
-        out.emplace_back(name, std::move(jpeg));
+        out.push_back(x.path);
     }
-    release(f);
     return out;
+}
+
+std::string shotJpeg(const std::wstring& path) {
+    IWICImagingFactory* f = factory();
+    if (!f) return "";
+    std::string jpeg = jpegOf(f, path);
+    release(f);
+    return jpeg.size() > 600000 ? std::string() : jpeg;  // the site takes a shot of 600 KB at most
+}
+
+std::string clipboardJpeg(HWND owner) {
+    if (!IsClipboardFormatAvailable(CF_BITMAP) || !OpenClipboard(owner)) return "";
+    std::string jpeg;
+    IWICImagingFactory* f = factory();
+    IWICBitmap* bitmap = nullptr;
+    HBITMAP hb = static_cast<HBITMAP>(GetClipboardData(CF_BITMAP));
+    if (f && hb && SUCCEEDED(f->CreateBitmapFromHBITMAP(hb, nullptr, WICBitmapIgnoreAlpha, &bitmap)))
+        jpeg = jpegOfSource(f, bitmap);
+    CloseClipboard();
+    release(bitmap);
+    release(f);
+    return jpeg.size() > 600000 ? std::string() : jpeg;
+}
+
+HBITMAP shotThumb(const std::wstring& path, int w, int h) {
+    IWICImagingFactory* f = factory();
+    if (!f) return nullptr;
+    IWICBitmapDecoder* dec = nullptr;
+    IWICBitmapFrameDecode* frame = nullptr;
+    HBITMAP bmp = nullptr;
+    if (SUCCEEDED(f->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ, WICDecodeMetadataCacheOnDemand,
+                                               &dec)) &&
+        SUCCEEDED(dec->GetFrame(0, &frame)))
+        bmp = thumbOf(f, frame, w, h);
+    release(frame);
+    release(dec);
+    release(f);
+    return bmp;
+}
+
+HBITMAP jpegThumb(const std::string& jpeg, int w, int h) {
+    IWICImagingFactory* f = factory();
+    if (!f || jpeg.empty()) {
+        release(f);
+        return nullptr;
+    }
+    IWICStream* stream = nullptr;
+    IWICBitmapDecoder* dec = nullptr;
+    IWICBitmapFrameDecode* frame = nullptr;
+    HBITMAP bmp = nullptr;
+    if (SUCCEEDED(f->CreateStream(&stream)) &&
+        SUCCEEDED(stream->InitializeFromMemory(reinterpret_cast<BYTE*>(const_cast<char*>(jpeg.data())),
+                                               DWORD(jpeg.size()))) &&
+        SUCCEEDED(f->CreateDecoderFromStream(stream, nullptr, WICDecodeMetadataCacheOnDemand, &dec)) &&
+        SUCCEEDED(dec->GetFrame(0, &frame)))
+        bmp = thumbOf(f, frame, w, h);
+    release(frame);
+    release(dec);
+    release(stream);
+    release(f);
+    return bmp;
 }
 
 }  // namespace uagfx::app

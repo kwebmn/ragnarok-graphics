@@ -21,13 +21,11 @@ constexpr int kOpenLog = 1303;
 constexpr int kOpenFolder = 1304;
 constexpr int kReport = 1305;
 constexpr int kRecheck = 1306;
-constexpr int kComment = kReportField;  // 0.51: the report to the developers (2.6: the header's button's)
-constexpr int kSend = 1309;
+constexpr int kNewReport = 1308;  // 2.13: «Звернення» - the report to the developers in a window of its own
+constexpr int kMyReports = 1309;
 constexpr int kAutoReport = 1310;
 constexpr int kStats = 1315;  // 2.2.1: the anonymous statistics
 constexpr int kStatsNow = 1316;  // 2.2.2: sent at a press
-constexpr int kShots = 1311;  // 1.8.1
-bool g_shots = true;           // the box, while the settings app runs
 
 struct Row {
     std::wstring check;
@@ -82,9 +80,7 @@ public:
         p.gap();
         p.heading(t(Text::ReportHeading));
         p.note(t(Text::ReportNote));
-        p.line(kComment, t(Text::ReportComment), t(Text::ReportCommentCue), 2000, t(Text::ReportNote));
-        p.check(kShots, t(Text::ReportShots), g_shots, t(Text::ReportShotsHint));
-        p.buttons({{kSend, t(Text::ReportSend)}});
+        p.buttons({{kNewReport, t(Text::ReportsNew)}, {kMyReports, t(Text::ReportsOpen)}});
         p.check(kAutoReport, t(Text::ReportAuto), m.token(*findSetting("report.auto")) == "1", t(Text::ReportAutoHint));
         p.check(kStats, t(Text::StatsSend), m.now().config.statsSend, t(Text::StatsSendHint));  // 2.2.1
         if (m.now().config.statsSend) {  // 2.2.2: when they last went, what waits, and sent at a press
@@ -95,12 +91,6 @@ public:
                                          std::to_string((waiting + 1023) / 1024)}),
                    Tone::Muted);
             p.buttons({{kStatsNow, t(Text::StatsSendNow)}});
-        }
-        const std::vector<std::string> sent = sentCodes(m);
-        if (!sent.empty()) {
-            std::string list;
-            for (const std::string& c : sent) list += (list.empty() ? "" : ", ") + c;
-            p.note(tf(Text::ReportSentList, {list}));
         }
     }
 
@@ -125,10 +115,8 @@ public:
             const bool saved = writeFileAtomic(m.paths().report, text);
             copyToClipboard(host_.window(), wide(text));
             host_.message(saved ? t(Text::DiagReportDone) : tf(Text::ErrWriteFile, {"uaro-graphics-report.txt"}), !saved);
-        } else if (id == kSend) {
-            sendReport();
-        } else if (id == kShots) {
-            g_shots = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
+        } else if (id == kNewReport || id == kMyReports) {
+            host_.openReports(id == kNewReport);
         } else if (id == kStats) {  // 2.2.1: the leave given or taken back - written at once
             const bool on = SendMessageW(GetDlgItem(host_.window(), id), BM_GETCHECK, 0, 0) == BST_CHECKED;
             const std::wstring err = m.setStats(on, host_.lang());
@@ -288,29 +276,6 @@ private:
         return wtrf(lang_ ? *lang_ : host_.lang(), x, args);
     }
     std::optional<Lang> lang_;
-
-    // 0.51: the report to uaro.kiev.ua, its code back (copied for the player to name it)
-    void sendReport() {
-        Model& m = host_.model();
-        if (!host_.ask(t(Text::ReportAsk))) return;
-        const std::string comment = controlText(GetDlgItem(host_.window(), kComment));
-        const report::Upload u = makeUpload(m, "manual", false, comment, problems(), g_shots);
-        HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
-        std::string code, error;
-        const bool ok = sendUpload(u, code, error);
-        SetCursor(old);
-        if (!ok) {
-            writeFileAtomic(m.paths().report, u.report);
-            host_.message(tf(Text::ReportFailed, {error}), true);
-            return;
-        }
-        noteSent(m, code, "manual", false);
-        copyToClipboard(host_.window(), wide(code));
-        host_.message(u.shots.empty() ? tf(Text::ReportSent, {code})
-                                       : tf(Text::ReportSentShots, {code, std::to_string(u.shots.size())}),
-                      false);
-        host_.rebuild();  // the codes sent
-    }
 
     std::vector<Row> rows_;
     HWND list_ = nullptr;

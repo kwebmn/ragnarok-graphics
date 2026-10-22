@@ -119,8 +119,7 @@ enum class Text : uint16_t {
     // 0.50.2: the graphics card
     RenderGpu, RenderGpuHint, RenderGpuAuto, RenderGpuItem, RenderGpuMissing,
     // 0.51: reports to the developers
-    ReportHeading, ReportNote, ReportComment, ReportCommentCue, ReportSend, ReportAsk, ReportSent, ReportFailed,
-    ReportSentList, ReportAuto, ReportAutoHint,
+    ReportHeading, ReportNote, ReportComment, ReportCommentCue, ReportAuto, ReportAutoHint,
     // 0.53 (the site's download gone in 2.5.28)
     PackMakeHeading,
     // 0.54
@@ -223,7 +222,6 @@ enum class Text : uint16_t {
     // 1.8
     FxMaterials, FxMaterialsHint, FxMaterialsStrength, FxMaterialsStrengthHint,
     FxTier, FxTierHint, FxTierAuto, FxTierClassic, FxTierRemaster,
-    ReportShots, ReportShotsHint, ReportSentShots,
     // 1.9
     FxGroundSeams, FxGroundSeamsHint,
     ConsoleTitle, ConsoleKeys,
@@ -318,7 +316,7 @@ enum class Text : uint16_t {
     DebugPresentAuto, DebugPresentWindow, DebugPresentComposition, DebugDpiScale, DebugDpiScaleHint, DebugVariants,
     DebugVariantsHint, DebugStateCache, DebugStateCacheHint, DebugMergeDraws, DebugMergeDrawsHint, DebugFastPick,
     DebugFastPickHint, DebugFastFtol, DebugFastFtolHint, DebugFastTextures, DebugFastTexturesHint,
-    DeveloperOnly, ReportProblem,  // 2.6: the list's heading, the header's button
+    DeveloperOnly, // 2.6: the list's heading, the header's button
     DebugTools, DebugStudio, DebugCompact, DebugPalettes, DebugPreview, DebugKeys,  // 2.6: the Debug page's tools
     // 2.6: the Main page
     MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
@@ -360,6 +358,17 @@ enum class Text : uint16_t {
     AutoPicked, AutoPickedMore, MachineChanged, SafeModeAuto, SafeModeAsked, SafeModeOff, TroubleHeading,
     SwitchOff, SwitchOn, SwitchOffNote, SwitchedOff,  // 2.12
     StartRenderer, StartDlss, StartShadersLoad, StartShadersBuild, StartAiTextures, StartFirstHint,  // 2.12
+    ReportsButton, ReportsButtonUnread, ReportsTitle, ReportsNew, ReportsRefresh, ReportsLoading,
+    ReportsOffline, ReportsWaiting, ReportsEmpty, ReportsPick, ReportsColStatus, ReportsColTitle,
+    ReportsColDate, ReportStatusNew, ReportStatusRead, ReportStatusNeedInfo, ReportStatusFixing,
+    ReportStatusFixed, ReportStatusClosed, ReportKindGraphics, ReportKindCrash, ReportKindSlow,
+    ReportKindOther, ReportTitleCrash, ReportTitleStartFailed, ReportTitleGpuLost, ReportTitleNone, ReportYou,
+    ReportDev, ReportEventStatus, ReportAutoSent, ReportShotsCount, ReportShotsHeading, ReportOpenShot,
+    ReportReplyLabel, ReportAddShot, ReportAttached, ReportSendButton, ReportCancel, ReportConfirmNote,
+    ReportFixedWait, ReportConfirm, ReportStillThere, ReportSentOk, ReportNotSent, ReportNeedWords,
+    ReportShotFailed, ReportNewHeading, ReportKindLabel, ReportShotsPick, ReportNoGameShots, ReportAddFile,
+    ReportPaste, ReportPasteNone, ReportTooMany, ReportMapLine, ReportNewSent, ReportNewQueued,
+    ReportNewRefused, ReportPictures, ReportDiscard, ReportsOpen,  // 2.13: «Звернення»
     Count
 };
 

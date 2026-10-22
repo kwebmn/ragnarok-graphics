@@ -18,12 +18,14 @@ ALLOWED = {
         "RegDeleteValueW", "RegEnumKeyExW", "RegEnumValueW", "RegOpenKeyExW", "RegSetValueExW",
     },
     "comctl32.dll": {
+        "ImageList_Add", "ImageList_Create", "ImageList_Destroy", "ImageList_Remove",  # 2.13: «Звернення»
         "InitCommonControlsEx",
     },
     "comdlg32.dll": {
         "GetOpenFileNameW", "GetSaveFileNameW",
     },
     "gdi32.dll": {
+        "CreateDIBSection",  # 2.13: the screenshots' thumbnails
         "CreateFontIndirectW", "DeleteObject", "GetDeviceCaps", "GetTextExtentPoint32W", "SelectObject",
         "SetBkMode", "SetTextColor",
         # 1.6.1: the preview's zoom (all of them since Windows 2000)
@@ -32,6 +34,7 @@ ALLOWED = {
         "BitBlt", "CreateSolidBrush",  # 1.6.2: the preview's window
     },
     "kernel32.dll": {
+        "SystemTimeToTzSpecificLocalTime",  # 2.13: the site's times in the player's clock
         "GetFullPathNameW",  # 2.5.19: the palettes' source and result told apart (Windows 2000 and later)
         # 0.49: the update check's thread and its lock
         "AcquireSRWLockExclusive", "AcquireSRWLockShared", "CreateThread", "ReleaseSRWLockExclusive",
@@ -97,6 +100,7 @@ ALLOWED = {
         "SHBrowseForFolderW", "SHGetPathFromIDListW",  # 2.5.19: the palettes' folder (Windows 2000 and later)
     },
     "user32.dll": {
+        "GetClipboardData", "IsClipboardFormatAvailable", "UpdateWindow",  # 2.13: Ctrl+V of a screenshot
         "IsWindowEnabled", "IsWindowVisible",  # 2.10: the progress window's Cancel, the status bar's Update
         # 1.6.2: the preview's window
         "BeginPaint", "EndPaint", "FillRect", "InvalidateRect", "ReleaseCapture", "ScreenToClient", "SetCapture",
