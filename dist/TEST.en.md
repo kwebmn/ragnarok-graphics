@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.0-beta.2 — what is new
+
+- **Two update channels.** Updates come from GitHub: «Release» for every player, «Beta» - the testers' builds, before
+  everyone. A beta build puts itself on «Beta»; switch it on Service - «Update channel» (in the Detailed and
+  Developer modes). «Could not check» on the Service page is gone.
+- **HDR off by default.** The auto setup no longer turns it on; turn it on with the «HDR» row on the Main page.
+- **A report when the game crashes.** At the first start the app asks whether to send the developers a report when
+  the game crashes («Yes» preselected). You can change your mind on the Diagnostics page.
+- **If you have 3.0.0-beta.1:** install this version by hand once - the previous one looked for updates on the site.
+  Updates come by themselves after that.
+
 # uaRO Graphics 3.0.0-beta.1 — what is new
 
 - **The launcher «Play».** The «uaRO» shortcut opens the server's news, the online count and «Play». A new version or
