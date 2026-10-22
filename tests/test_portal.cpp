@@ -1,7 +1,6 @@
 #include <cmath>
 
 #include "core/config.hpp"
-#include "core/game_camera.hpp"
 #include "core/portal.hpp"
 #include "test.hpp"
 
@@ -49,21 +48,6 @@ TEST(portal_new_on_by_default_and_off_in_the_effects_off_set) {
     CHECK(!effectsOff().portalNew);
 }
 
-TEST(portal_screen_box_round_its_column) {
-    // 2.7.48: the pass runs over the screen box round the portal's column (kColumnRadius, the height given) only
-    const camera::Projection p = camera::projectionFor(1920, 1080);
-    const float foot[3] = {0.0f, 0.0f, 100.0f}, up[3] = {0.0f, -0.7071f, -0.7071f};  // the camera 45 degrees down
-    float box[4];
-    CHECK(portal::screenBox(foot, up, p, 45.0f, box));
-    CHECK(std::fabs((box[0] + box[2]) * 0.5f - p.cx) < 1.0f);  // straight ahead: as wide either way
-    const float half = portal::kColumnRadius * p.f0 / 100.0f;
-    CHECK(box[2] - box[0] > 2.0f * half && box[2] - box[0] < 4.5f * half);  // its top nearer the camera: wider
-    CHECK(box[1] < p.cy - 45.0f * p.f1 / 100.0f * 0.9f);  // its top over it
-    CHECK(box[3] > p.cy);                                 // its foot's circle below the middle
-    const float behind[3] = {0.0f, 0.0f, -10.0f};
-    CHECK(!portal::screenBox(behind, up, p, 45.0f, box));
-}
-
 TEST(portal_game_portal_hidden_only_while_ours_was_drawn) {
     // 2.7.49 (the tester on 2.7.48: «порталы не нарисовались» - the game's hidden, ours never drawn): the game's
     // portal is left out only while the new one was drawn the frame before - never no portal at all
@@ -74,7 +58,7 @@ TEST(portal_game_portal_hidden_only_while_ours_was_drawn) {
 
 namespace {
 portal::Seen seenAt(float gx, float gy, float z = 300.0f) {
-    return portal::Seen{{gx * 0.1f, gy * 0.1f, z}, gx, gy, 90.0f};
+    return portal::Seen{{gx * 0.1f, gy * 0.1f, z}, gx, gy, 90.0f, gx - 40.0f, gx + 40.0f, gy + 25.0f};
 }
 }  // namespace
 
@@ -109,4 +93,34 @@ TEST(portal_draws_near_each_other_one_portal) {
     for (const portal::Track& t : tracks)
         if (t.gx < 700.0f) near = t.gx;
     CHECK(std::fabs(near - 515.0f) < 0.01f);  // their middle
+}
+
+TEST(portal_stands_where_its_draws_span_on_the_screen) {
+    // 2.7.51 (the tester on 2.7.50: «два портала, один портал двигается»; the log: its middle 299 deep, off
+    // the screen): the game draws the warp NPC's portal (321) flat over the screen - its depth is not the
+    // world's; where it stands is the middle of its draws' span, up from their bottom by half the span
+    // squashed as a circle on the ground
+    std::vector<portal::Track> tracks;
+    portal::Seen a = seenAt(490.0f, 300.0f), b = seenAt(510.0f, 310.0f);
+    a.left = 460.0f, a.right = 520.0f, a.bottom = 320.0f;
+    b.left = 480.0f, b.right = 540.0f, b.bottom = 340.0f;
+    portal::follow(tracks, {a, b}, 1.0f / 60.0f);
+    CHECK(tracks.size() == 1);
+    if (tracks.empty()) return;
+    CHECK(tracks[0].left == 460.0f && tracks[0].right == 540.0f && tracks[0].bottom == 340.0f);
+    float at[2];
+    portal::anchorOf(tracks[0], 0.7f, at);
+    CHECK(std::fabs(at[0] - 500.0f) < 1e-3f);
+    CHECK(std::fabs(at[1] - (340.0f - 40.0f * 0.7f)) < 1e-3f);
+}
+
+TEST(portal_draws_too_big_to_be_one_left_out) {
+    // a draw thousands of pixels across (its corners behind the camera) is no part of a portal: it would gather all
+    std::vector<portal::Track> tracks;
+    portal::Seen huge = seenAt(500.0f, 300.0f);
+    huge.size = 2500.0f;
+    huge.left = -900.0f;
+    huge.right = 1600.0f;
+    portal::follow(tracks, {huge}, 1.0f / 60.0f);
+    CHECK(tracks.empty());
 }

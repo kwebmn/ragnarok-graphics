@@ -555,7 +555,8 @@ void Renderer11::applyTorchLight() {
     if (portalsWanted()) {
         std::vector<portal::Seen> seen;  // 2.7.50: followed by core/portal.hpp (0.39.1's dropped every new one)
         for (const FireSpark11& s : portalSparks)
-            seen.push_back(portal::Seen{{s.view[0], s.view[1], s.view[2]}, s.gameX, s.gameY, s.strength});
+            seen.push_back(portal::Seen{{s.view[0], s.view[1], s.view[2]}, s.gameX, s.gameY, s.strength, s.left,
+                                        s.right, s.bottom});
         portal::follow(portalTracks_, seen, portalStep);
         const float user = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
         static const float kBlue[3] = {0.45f, 0.75f, 1.0f};
@@ -565,9 +566,20 @@ void Renderer11::applyTorchLight() {
         for (const PortalTrack11& t : portalTracks_) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
             if (shown <= 0.0f) continue;
-            if (shownCount++ < 8) {
-                const float view[3] = {t.view[0], t.view[1] - 4.0f, t.view[2]};
-                addLight(view, 30.0f, anew ? kLilac : kBlue, (anew ? 0.21f : 0.35f) * user * shown);
+            // 2.7.51 (torches.cpp portalGround): 4 units over the ground under where it stands on the screen - the
+            // camera's ground plane along that pixel's ray (its draws' depth is not the world's)
+            if (shownCount++ < 8 && cameraValid_ && cameraTargetZ_ > 0.0f) {
+                float up[3], at[2];
+                camera::upInView(viewToWorld_, up);
+                portal::anchorOf(t, up[2], at);
+                const float dir[3] = {(at[0] - proj.cx) / proj.f0, (at[1] - proj.cy) / proj.f1, 1.0f};
+                const float along = dir[0] * up[0] + dir[1] * up[1] + dir[2] * up[2];
+                const float depth = std::fabs(along) < 1e-4f ? -1.0f : cameraTargetZ_ * up[2] / along;
+                if (depth > 0.0f) {
+                    const float view[3] = {dir[0] * depth + up[0] * 4.0f, dir[1] * depth + up[1] * 4.0f,
+                                           dir[2] * depth + up[2] * 4.0f};
+                    addLight(view, 30.0f, anew ? kLilac : kBlue, (anew ? 0.21f : 0.35f) * user * shown);
+                }
             }
             if (heatPs_) {
                 const float r = std::clamp(t.size * 0.6f, 30.0f, 140.0f) * k;
@@ -810,32 +822,21 @@ void Renderer11::applyTorchLight() {
         for (const PortalTrack11& t : portalTracks_) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);
             if (shown <= 0.0f) continue;
-            float foot[3];
-            for (int i = 0; i < 3; ++i) foot[i] = t.view[i] - up[i] * 6.0f;
-            const float wx = t.view[0] * m[0] + t.view[1] * m[3] + t.view[2] * m[6] + m[9];
-            const float wz = t.view[0] * m[2] + t.view[1] * m[5] + t.view[2] * m[8] + m[11];
-            float gy = 0.0f, v[3];
-            if (mapWorld_.groundAt(wx, wz, gy)) {
-                toView(map::Point{wx, gy, wz}, v);
-                if (std::hypot(v[0] - t.view[0], v[1] - t.view[1], v[2] - t.view[2]) <= 30.0f)
-                    std::copy(v, v + 3, foot);
-            }
-            float box[4], low[3];
-            for (int i = 0; i < 3; ++i) low[i] = foot[i] - up[i] * 12.0f;  // 2.7.49: its foot may sit lower (portal_ps)
-            if (!portal::screenBox(low, up, proj, 69.0f, box)) continue;
-            std::copy(foot, foot + 3, pc.sourceRect);
+            float at[2];  // 2.7.51: where it stands on the screen - portal_ps finds the ground there in the depth
+            portal::anchorOf(t, up[2], at);
+            const float span = std::max(t.right - t.left, 8.0f);
+            pc.sourceRect[0] = span * 0.12f * k;
             pc.sourceRect[3] = shown * user;
             pc.footprint = float(++index) * 0.618f;  // its own sparks
-            pc.uiPixels[2] = (foot[0] / foot[2] * proj.f0 + proj.cx) * k + 0.5f;
-            pc.uiPixels[3] = (foot[1] / foot[2] * proj.f1 + proj.cy) * k + 0.5f;
+            pc.uiPixels[2] = at[0] * k + 0.5f;
+            pc.uiPixels[3] = at[1] * k + 0.5f;
             if (portalsToldMap_ != map_) {  // 2.7.49: its numbers once a map, to check where it stands
                 portalsToldMap_ = map_;
-                LOG_INFO("portals: the new one drawn on %s (Direct3D 11) - its middle %.1f %.1f %.1f (the view), its "
-                         "foot %.1f under it, %.2f shown", map_.c_str(), t.view[0], t.view[1], t.view[2],
-                         (t.view[0] - foot[0]) * up[0] + (t.view[1] - foot[1]) * up[1] + (t.view[2] - foot[2]) * up[2],
-                         shown);
+                LOG_INFO("portals: the new one drawn on %s (Direct3D 11) - at %.0f,%.0f, its draws %.0f-%.0f across "
+                         "down to %.0f, %.2f shown", map_.c_str(), at[0], at[1], t.left, t.right, t.bottom, shown);
             }
-            cut(pc, box[0] * k, box[1] * k, box[2] * k, box[3] * k);
+            cut(pc, (t.left - span * 0.4f) * k, (at[1] - span * 2.2f) * k, (t.right + span * 0.4f) * k,
+                (t.bottom + span * 0.4f) * k);
             newPortalsDrawn_ = true;
         }
         ctx_->PSSetShaderResources(0, 4, none);

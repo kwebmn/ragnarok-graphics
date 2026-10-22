@@ -24,40 +24,16 @@ std::array<Ring, kRings> ringsAt(double t) {
     return out;
 }
 
-bool screenBox(const float foot[3], const float up[3], const camera::Projection& p, float height, float box[4]) {
-    // two ways along the ground, square to the up
-    const float pick[3] = {std::fabs(up[0]) < 0.9f ? 1.0f : 0.0f, std::fabs(up[0]) < 0.9f ? 0.0f : 1.0f, 0.0f};
-    float a[3] = {up[1] * pick[2] - up[2] * pick[1], up[2] * pick[0] - up[0] * pick[2],
-                  up[0] * pick[1] - up[1] * pick[0]};
-    const float al = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-    for (float& v : a) v /= al;
-    const float b[3] = {up[1] * a[2] - up[2] * a[1], up[2] * a[0] - up[0] * a[2], up[0] * a[1] - up[1] * a[0]};
-    const float r = kColumnRadius * 1.2f;
-    box[0] = box[1] = 1e30f;
-    box[2] = box[3] = -1e30f;
-    for (int k = 0; k < 8; ++k)
-        for (const float h : {0.0f, height}) {
-            const float c = std::cos(float(k) * 0.785398f) * r, s = std::sin(float(k) * 0.785398f) * r;
-            float q[3];
-            for (int i = 0; i < 3; ++i) q[i] = foot[i] + a[i] * c + b[i] * s + up[i] * h;
-            if (q[2] <= p.nearZ) return false;
-            const float x = q[0] / q[2] * p.f0 + p.cx, y = q[1] / q[2] * p.f1 + p.cy;
-            box[0] = std::min(box[0], x);
-            box[1] = std::min(box[1], y);
-            box[2] = std::max(box[2], x);
-            box[3] = std::max(box[3], y);
-        }
-    return true;
-}
-
 void follow(std::vector<Track>& tracks, const std::vector<Seen>& draws, float step) {
     struct Gate {
         float view[3] = {0.0f, 0.0f, 0.0f}, gx = 0.0f, gy = 0.0f, size = 0.0f;
+        float left = 1e30f, right = -1e30f, bottom = -1e30f;
         int n = 0;
         bool claimed = false;
     };
     std::vector<Gate> seen;
     for (const Seen& s : draws) {
+        if (s.size > 600.0f) continue;
         Gate* g = nullptr;
         for (Gate& o : seen)
             if (std::hypot(o.gx / float(o.n) - s.gx, o.gy / float(o.n) - s.gy) <
@@ -71,6 +47,9 @@ void follow(std::vector<Track>& tracks, const std::vector<Seen>& draws, float st
         g->gx += s.gx;
         g->gy += s.gy;
         g->size = std::max(g->size, s.size);
+        g->left = std::min(g->left, s.left);
+        g->right = std::max(g->right, s.right);
+        g->bottom = std::max(g->bottom, s.bottom);
         ++g->n;
     }
     for (Gate& g : seen) {
@@ -95,6 +74,9 @@ void follow(std::vector<Track>& tracks, const std::vector<Seen>& draws, float st
             t.gx += (best->gx - t.gx) * ease;
             t.gy += (best->gy - t.gy) * ease;
             t.size += (best->size - t.size) * ease;
+            t.left += (best->left - t.left) * ease;
+            t.right += (best->right - t.right) * ease;
+            t.bottom += (best->bottom - t.bottom) * ease;
             t.strength = std::min(1.0f, t.strength + rise);
         } else {
             t.strength -= step / 1.2f;  // its rings gone a moment: it fades rather than goes out
@@ -102,9 +84,15 @@ void follow(std::vector<Track>& tracks, const std::vector<Seen>& draws, float st
     }
     for (const Gate& g : seen)
         if (!g.claimed && tracks.size() < 16)
-            tracks.push_back(Track{{g.view[0], g.view[1], g.view[2]}, g.gx, g.gy, g.size, std::max(rise, 1e-3f)});
+            tracks.push_back(Track{{g.view[0], g.view[1], g.view[2]}, g.gx, g.gy, g.size, std::max(rise, 1e-3f),
+                                   g.left, g.right, g.bottom});
     tracks.erase(std::remove_if(tracks.begin(), tracks.end(), [](const Track& t) { return t.strength <= 0.0f; }),
                  tracks.end());
+}
+
+void anchorOf(const Track& t, float squash, float out[2]) {
+    out[0] = (t.left + t.right) * 0.5f;
+    out[1] = t.bottom - (t.right - t.left) * 0.5f * std::fabs(squash);
 }
 
 }  // namespace uagfx::portal

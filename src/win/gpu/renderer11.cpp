@@ -2536,6 +2536,9 @@ void Renderer11::notePortal(const FrameRecord& rec, const DrawCmd& d) {
     s.view[1] = (s.gameY - p.cy) * vz / p.f1;
     s.view[2] = vz;
     s.strength = std::max(x1 - x0, y1 - y0);  // its size on the screen, game pixels
+    s.left = x0;  // 2.7.51: where the portal stands is its draws' span (core/portal.hpp anchorOf)
+    s.right = x1;
+    s.bottom = y1;
     portalSparks_.push_back(s);
 }
 

@@ -472,6 +472,7 @@ private:
         float colour[3];
         float gameX, gameY;
         bool orb = false;  // 2.7.21 (impl.hpp FireSpark)
+        float left = 0.0f, right = 0.0f, bottom = 0.0f;  // 2.7.51: a portal's draw - its span on the screen
     };
     // 2.7.18 (torches.cpp): the fireflies in the grass at night (the last creatures' pass), each lighting the ground
     // under it a little

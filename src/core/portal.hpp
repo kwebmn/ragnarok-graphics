@@ -2,8 +2,6 @@
 #include <array>
 #include <vector>
 
-#include "core/game_camera.hpp"
-
 namespace uagfx::portal {
 
 // 2.7.48, the new portal (the user's pick «Б» of the options page: «такой же волнами и объёмный, но лучше»): the
@@ -29,20 +27,17 @@ struct Ring {
 // and goes over its last fifth (FUN_005ce290's fade from 0x198 - 0x198 / 5); one past its life is gone (alpha 0).
 std::array<Ring, kRings> ringsAt(double t);
 
-// The screen box (game pixels: x0, y0, x1, y1) round a portal standing at foot (the view) with the world's up (the
-// view's): its column, a fifth wider than kColumnRadius, `height` tall; false when any of it is behind the camera.
-bool screenBox(const float foot[3], const float up[3], const camera::Projection& p, float height, float box[4]);
-
 // 2.7.49 (the tester on 2.7.48: «порталы не нарисовались» - the game's left out, the new one never drawn): whether a
 // draw of the game's portal is left out - only while the new one is wanted and was drawn the frame before, so that
 // there is never no portal at all.
 inline bool hidesGame(bool wanted, bool drawnLastFrame) { return wanted && drawnLastFrame; }
 
 // A draw of a portal this frame (the renderers' notePortal): its middle in the view and on the screen (game
-// pixels), its size there.
+// pixels), its size there; 2.7.51: its span across and its bottom on the screen.
 struct Seen {
     float view[3];
     float gx, gy, size;
+    float left, right, bottom;
 };
 
 // A portal followed from frame to frame (0.39.1: its glow held steady while its rings rise and come and go).
@@ -50,6 +45,7 @@ struct Track {
     float view[3];
     float gx, gy, size;
     float strength;  // 0-1: up over 0.4 s while seen, down over 1.2 s while not
+    float left, right, bottom;  // 2.7.51: its draws' span on the screen (game pixels)
 };
 
 // This frame's draws gathered into what stands there (within 80 game pixels, or 0.8 of the larger size: one portal,
@@ -57,6 +53,13 @@ struct Track {
 // its place eased towards it, its strength up - or fades; a gathering no track took starts one (16 at most) and faded
 // ones go. 2.7.50 (the tester on 2.7.49: still the game's portal): 0.39.1 started a track at 0 and dropped those at 0
 // in the same frame - no portal was ever followed, nor its 0.38 glow lit; one starts a step's rise strong now.
+// 2.7.51: a draw over 600 pixels is no part of a portal (its corners behind the camera) and is left out.
 void follow(std::vector<Track>& tracks, const std::vector<Seen>& draws, float step);
+
+// 2.7.51 (the tester on 2.7.50: «два портала, один портал двигается»; the log: its middle 299 deep, off the screen):
+// where a followed portal stands on the screen (game pixels) - the game draws the warp NPC's portal (321) flat over
+// the screen, its depth not the world's: the middle of its draws' span, up from their bottom by half the span
+// squashed as a circle lying on the ground is (squash: |the world's up's view z|).
+void anchorOf(const Track& t, float squash, float out[2]);
 
 }  // namespace uagfx::portal

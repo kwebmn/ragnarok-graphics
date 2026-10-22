@@ -174,6 +174,7 @@ struct FireSpark {
     float colour[3];
     float gameX, gameY;  // its middle on the screen, game pixels (gathered by place)
     bool orb = false;    // 2.7.21: an orb of light's (effect_light::orbOf) - lights as one, no heat nor sparks
+    float left = 0.0f, right = 0.0f, bottom = 0.0f;  // 2.7.51: a portal's draw - its span on the screen
 };
 
 // 0.30: a face of one of the forest's beams of light drawn this frame - its middle and its foot (the end at the
@@ -923,7 +924,8 @@ struct Renderer::Impl {
     }
     bool drawNewPortals(ID3D12Resource* dst, D3D12_RESOURCE_STATES& dstState, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
                         UINT code, int w, int h, float time);
-    void portalFoot(const PortalTrack& t, const float up[3], float foot[3]) const;
+    bool portalGround(const PortalTrack& t, float out[3]) const;  // 2.7.51: its light's place
+    int portalDrawsTold = 0;  // 2.7.51: the first portal draws told
     float heatUser() const { return float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f; }
     bool mapWeatherWanted() const {  // 0.39
         return effects.weather && effects.weatherAmount > 0 && weatherPs && mapWeather != weather::Kind::None;
