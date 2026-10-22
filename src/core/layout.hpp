@@ -10,9 +10,9 @@ namespace uagfx::layout {
 // a 2.x install moves into place by core/layout_migration.
 enum class File : uint8_t {
     Ini, DriverLog, Render64Log, PackLog, StudioEngineLog, Report, Pipelines, Shaders32, Shaders64, ShadersD3d11,
-    StudioShaders64, Pack, Backups, DgVoodoo
+    StudioShaders64, Pack, Backups, DgVoodoo, PadIni, PadBinds, PadLog
 };
-constexpr int kFileCount = 14;
+constexpr int kFileCount = 17;
 
 constexpr const char* kOurs = "uaro-graphics";
 constexpr const char* kLogs = "uaro-graphics\\logs";

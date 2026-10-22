@@ -55,3 +55,10 @@ TEST(layout_the_folders_made_at_start_hold_the_caches_and_a_new_pack) {
         CHECK(made.count(now.substr(0, now.find_last_of('\\'))) > 0);
     }
 }
+
+TEST(layout_the_pads_files_live_in_uaro_graphics) {
+    CHECK_EQ(std::string(layout::now(layout::File::PadIni)), std::string("uaro-graphics\\uaro-pad.ini"));
+    CHECK_EQ(std::string(layout::before(layout::File::PadBinds)), std::string("uaro-pad-binds.ini"));
+    CHECK_EQ(std::string(layout::now(layout::File::PadBinds)), std::string("uaro-graphics\\uaro-pad-binds.ini"));
+    CHECK_EQ(std::string(layout::now(layout::File::PadLog)), std::string("uaro-graphics\\logs\\uaro-pad.log"));
+}

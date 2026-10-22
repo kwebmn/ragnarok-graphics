@@ -181,9 +181,24 @@ TEST(migration_removes_only_our_test_notes) {
 
 TEST(migration_leaves_the_client_files_and_the_bats) {
     MemoryDisk d = twoX();
-    for (const char* own : {"uaro-flags.grf", "update.bat", "dinput.dll", "uaro-pad.ini", "DATA.INI"})
+    for (const char* own : {"uaro-flags.grf", "update.bat", "dinput.dll", "uaro-pad.moved", "DATA.INI"})
         d.files[at(own)] = own;
     layout::migrate(kGame, d);
-    for (const char* own : {"uaro-flags.grf", "update.bat", "dinput.dll", "uaro-pad.ini", "DATA.INI"})
+    for (const char* own : {"uaro-flags.grf", "update.bat", "dinput.dll", "uaro-pad.moved", "DATA.INI"})
         CHECK_EQ(d.files[at(own)], std::string(own));
+}
+
+TEST(migration_moves_the_pads_files) {
+    MemoryDisk d;
+    d.folders = {"C:", kGame};
+    d.files[at("uaro-pad.ini")] = "[pad]\r\ntype = sony\r\n";
+    d.files[at("uaro-pad-binds.ini")] = "binds";
+    d.files[at("uaro-pad.log")] = "log";
+    d.files[at("dinput.dll")] = "the old pad";  // the settings app and install.bat take it away, not this
+    layout::migrate(kGame, d);
+    CHECK_EQ(d.files[at("uaro-graphics\\uaro-pad.ini")], std::string("[pad]\r\ntype = sony\r\n"));
+    CHECK_EQ(d.files[at("uaro-graphics\\uaro-pad-binds.ini")], std::string("binds"));
+    CHECK_EQ(d.files[at("uaro-graphics\\logs\\uaro-pad.log")], std::string("log"));
+    for (const char* old : {"uaro-pad.ini", "uaro-pad-binds.ini", "uaro-pad.log"}) CHECK(d.files.count(at(old)) == 0);
+    CHECK_EQ(d.files[at("dinput.dll")], std::string("the old pad"));
 }

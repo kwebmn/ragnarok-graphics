@@ -27,6 +27,10 @@ const Place kPlaces[kFileCount] = {
     {"uaro-graphics\\textures\\uaro-textures.zip", "uaro-textures.zip", false},
     {"uaro-graphics\\backup", "uaro-graphics-backup", true},
     {"uaro-graphics\\dgvoodoo", "dgvoodoo", true},
+    // 2.9: uaRO Pad, a part of the driver now - its settings, the characters' layouts, its log
+    {"uaro-graphics\\uaro-pad.ini", "uaro-pad.ini", false},
+    {"uaro-graphics\\uaro-pad-binds.ini", "uaro-pad-binds.ini", false},
+    {"uaro-graphics\\logs\\uaro-pad.log", "uaro-pad.log", false},
 };
 
 const Place& place(File f) {
