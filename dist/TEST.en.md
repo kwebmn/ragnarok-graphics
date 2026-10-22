@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.0-beta.1 — what is new
+
+- **The launcher «Play».** The «uaRO» shortcut opens the server's news, the online count and «Play». A new version or
+  new game files - «Update and play» does it all.
+- **No .bat.** Installing, updating, going back to the previous version and removing - in the app, with a progress
+  window.
+- **Sets itself up.** The settings are picked for your graphics card and screen; integrated graphics get the
+  super-light mode. Two failed starts in a row - the safe mode by itself.
+- **«Reports».** Ctrl+Shift+F10 in the game or «Reports» in the app: a description, screenshots - and the developers'
+  answer comes there too.
+- **The gamepad inside.** Xbox and PlayStation work at once; no separate files any more.
+- **A clean game folder.** All of ours is in the `uaro-graphics` folder.
+- **Nothing extra.** DLSS rows on NVIDIA RTX only; the effects' console on Ctrl + the key left of 1 («ё» and the
+  apostrophe typed in the chat); Pause says the improvements are off.
+
 # uaRO Graphics 2.8.0 — what to check
 
 - **Our files are out of the game's folder.** Everything of uaRO Graphics is in the `uaro-graphics` folder now: the
