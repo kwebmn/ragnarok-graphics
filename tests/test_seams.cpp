@@ -32,7 +32,10 @@ TEST(seams_strips_where_two_textures_meet_none_where_one_goes_on) {
     cell(ground, 0, 0, 10.0f, 0);
     cell(ground, 1, 0, 10.0f, 1);
     cell(ground, 0, 1, 10.0f, 2);
-    const std::vector<uint32_t> textures = {7, 8, 7};  // groups 0 and 2: one texture, but its coordinates restart
+    for (seams::Triangle& t : ground)  // 2.7.57: half a tile on - a repeat (v 1 to 0) is no jump
+        if (t.group == 2)
+            for (seams::Vertex& v : t.v) v.uv0[1] += 0.5f;
+    const std::vector<uint32_t> textures = {7, 8, 7};  // groups 0 and 2: one texture, but its coordinates jump
     CHECK(seams::cellSide(ground) > 9.9f);
     const std::vector<seams::Strip> strips = seams::build(ground, textures, 0.45f);
     // 0|1 both ways, 0|2 both ways (the coordinates jump at their edge), and each cell's own band at its seams
@@ -173,7 +176,9 @@ TEST(seams_every_strip_lies_on_its_cells_ground) {
         }
         std::printf("  across03 %d: %d own bands, the farthest point %.4f off its cell's ground\n", int(across03),
                     bands, worst);
-        CHECK(bands >= 9);  // the middle cell's and its four neighbours' bands at their edges with it
+        // the middle cell's and its four neighbours' bands at their edges with it (2.7.57: the texture 2 around it
+        // repeats from cell to cell - no seams between those)
+        CHECK(bands >= 5);
         CHECK_EQ(missed, 0);  // every point over its own cell
         CHECK(worst < 1e-3f);
     }
@@ -322,6 +327,22 @@ uint64_t trianglesSetHashOf(const std::vector<seams::Strip>& strips) {
 
 }  // namespace
 
+TEST(seams_none_where_a_texture_repeats) {
+    // 2.7.57 (R-NSHM8K: straight lines across Prontera's paving; R-ENZVF2: one along a field's road): one texture whose
+    // tile ends at the edge (u 1) and starts again past it (u 0) goes on - the same texel; 1.9-2.7.56 took it for a
+    // jump and laid its own picture mirrored over every fourth cell's edge
+    std::vector<seams::Triangle> ground;
+    cell(ground, 0, 0, 10.0f, 0);
+    cell(ground, 1, 0, 10.0f, 1);  // u 0-1 again past u 1: the tile repeats
+    std::vector<seams::Triangle> shifted = ground;
+    for (seams::Triangle& t : shifted)
+        if (t.group == 1)
+            for (seams::Vertex& v : t.v) v.uv0[1] += 0.5f;  // half a tile off across the edge: a real jump
+    const std::vector<uint32_t> textures = {7, 7};
+    CHECK(seams::build(ground, textures, 0.45f).empty());
+    CHECK(!seams::build(shifted, textures, 0.45f).empty());
+}
+
 TEST(seams_strips_stay_as_they_were_byte_for_byte) {
     // 2.5.11: the strips' loops made a few times faster (8.7 ms a frame over cmd_fild02's view, the game's own
     // thread with Direct3D 11) - every vertex as before
@@ -336,9 +357,10 @@ TEST(seams_strips_stay_as_they_were_byte_for_byte) {
                 static_cast<unsigned long long>(trianglesSetHashOf(strips)));
     // 2.7.5 split the quads along each cell's crease (every vertex as 2.5.10 made them); 2.7.6 orders the cells by
     // their places - the same triangles as 2.7.5's, in that order; 2.7.8 cuts the triangles the crease runs through
-    // (the own bands' at the cells' corners) - the grid's points as before, the crease's after them
-    CHECK(trianglesSetHashOf(strips) == 0xc1c11344ed814c90ull);
-    CHECK(hashOf(strips) == 0xa013addc7024b46full);
+    // (the own bands' at the cells' corners) - the grid's points as before, the crease's after them. 2.7.57: a texture
+    // that repeats across an edge (u 1 to 0) seams no more - the strips of the edges of real jumps and of two textures
+    CHECK(trianglesSetHashOf(strips) == 0x0ebb3bb22c8bbfc9ull);
+    CHECK(hashOf(strips) == 0xb7d520a4a5a51058ull);
 }
 
 TEST(seams_strips_the_same_whatever_order_the_ground_comes_in) {
@@ -378,4 +400,32 @@ TEST(seams_cache_builds_again_only_when_the_ground_differs) {
     cache.clear();  // another map
     cache.build(ground, textures, 0.4f);
     CHECK_EQ(cache.made(), size_t(5));
+}
+
+TEST(seams_none_round_a_patch_laid_by_hand) {
+    // 2.7.57 (R-8YJSCR: Prontera's mats torn at their edges; R-NSHM8K: straight lines across its paving): no strip
+    // where either cell lies in a patch the map's makers laid (the caller's laid(x, z), core/ground_heights.hpp) -
+    // the game's straight edge; between the field's own textures as before
+    std::vector<seams::Triangle> ground;
+    std::vector<uint32_t> textures;
+    for (int z = 0; z < 3; ++z)
+        for (int x = 0; x < 5; ++x) {
+            const bool mat = z == 1 && (x == 1 || x == 2);
+            const bool stone = z == 1 && x == 4;
+            textures.push_back(mat ? 9u : stone ? 5u : 1u);
+            cell(ground, x, z, 10.0f, uint32_t(textures.size() - 1));
+        }
+    const auto onMat = [](float x, float z) {  // the cells' corners from (5, -5): the mat's cells at z 5-15, x 15-35
+        return z > 5.0f && z < 15.0f && x > 15.0f && x < 35.0f;
+    };
+    const std::vector<seams::Strip> all = seams::build(ground, textures, 0.45f);
+    const std::vector<seams::Strip> kept = seams::build(ground, textures, 0.45f, onMat);
+    const auto touches = [&](const std::vector<seams::Strip>& strips, uint32_t texture) {
+        for (const seams::Strip& s : strips)
+            if (textures[s.inside] == texture || textures[s.shows] == texture) return true;
+        return false;
+    };
+    CHECK(touches(all, 9u) && touches(all, 5u));  // without the map's patches: both seamed
+    CHECK(!touches(kept, 9u));                     // the mat keeps its straight edge
+    CHECK(touches(kept, 5u));                      // the stone is no laid patch: seamed as before
 }

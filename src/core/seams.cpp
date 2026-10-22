@@ -83,7 +83,11 @@ void keptAt(const Cell& c, float u, float v, Vertex& p) {
     p.specular = colour(&Vertex::specular, 24, 24);
 }
 
-bool same(float a, float b) { return std::fabs(a - b) < 0.02f; }
+// 2.7.57: a texture repeats - a tile ending at 1 and the next starting at 0 is the same place on it
+bool same(float a, float b) {
+    const float d = a - b;
+    return std::fabs(d - std::round(d)) < 0.02f;
+}
 
 // 2.7.8: the point a share t of the way from a to b - its place on the cell's ground at (u, v), the rest as the
 // rasterizer had it there before the triangle was cut
@@ -130,7 +134,8 @@ float cellSide(const std::vector<Triangle>& ground) {
     return sides[sides.size() / 2];
 }
 
-std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width) {
+std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width,
+                         const Laid& laid) {
     std::vector<Strip> out;
     const float side = cellSide(ground);
     if (side < 0.5f || ground.empty()) return out;
@@ -195,6 +200,10 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
             for (int k = 0; k < 2; ++k)
                 step = step || std::fabs(a.corner[w.mine[k]].pos[1] - b.corner[w.theirs[k]].pos[1]) > 0.05f * side;
             if (step) continue;
+            // 2.7.57: no seam round a patch laid by hand - its edge as straight as the game draws it
+            if (laid && (laid(ox + (float(ix) + 0.5f) * side, oz + (float(iz) + 0.5f) * side) ||
+                         laid(ox + (float(ix + w.dx) + 0.5f) * side, oz + (float(iz + w.dz) + 0.5f) * side)))
+                continue;
             const uint32_t ta = a.group < texture.size() ? texture[a.group] : 0;
             const uint32_t tb = b.group < texture.size() ? texture[b.group] : 0;
             if (ta == tb) {  // one texture: a seam only where its coordinates jump at the edge
@@ -351,17 +360,18 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
 }
 
 const std::vector<Strip>& Cache::build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture,
-                                       float width) {
+                                       float width, const Laid& laid, uint64_t laidKey) {
     const size_t groundBytes = ground.size() * sizeof(Triangle), textureBytes = texture.size() * sizeof(uint32_t);
-    const bool same = known_ && width == width_ && ground.size() == ground_.size() &&
+    const bool same = known_ && width == width_ && laidKey == laidKey_ && ground.size() == ground_.size() &&
                       texture.size() == texture_.size() &&
                       (!groundBytes || std::memcmp(ground.data(), ground_.data(), groundBytes) == 0) &&
                       (!textureBytes || std::memcmp(texture.data(), texture_.data(), textureBytes) == 0);
     if (same) return strips_;
-    strips_ = seams::build(ground, texture, width);
+    strips_ = seams::build(ground, texture, width, laid);
     ground_ = ground;
     texture_ = texture;
     width_ = width;
+    laidKey_ = laidKey;
     known_ = true;
     ++made_;
     return strips_;

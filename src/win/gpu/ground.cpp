@@ -89,7 +89,10 @@ bool Renderer::Impl::applySeams() {
     seamsDone = true;
     crumb("ground seams");
     // 2.5.11: built again only when the ground differs from the last frame's (the camera moved)
-    const std::vector<seams::Strip>& strips = seamsCache.build(groundTris, groundTextures, 0.5f);
+    // 2.7.57: none round the patches the map's makers laid by hand (its .gnd, MapWorld::laidAt)
+    const std::vector<seams::Strip>& strips =
+        seamsCache.build(groundTris, groundTextures, 0.5f,
+                         [this](float x, float z) { return mapWorld.laidAt(x, z); }, mapWorld.laidKey());
     if (strips.empty()) return true;
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;

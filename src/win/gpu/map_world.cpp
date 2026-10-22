@@ -143,6 +143,7 @@ void MapWorld::poll() {
         world_ = std::move(shared_->done);
         ground_ = std::move(shared_->doneGround);
         ready_ = shared_->doneOk;
+        ++reads_;
     }
     shared_->doneReady = shared_->doneReady && !fresh;
     LeaveCriticalSection(&shared_->lock);
@@ -172,6 +173,13 @@ bool MapWorld::groundAt(float x, float z, float& y) const {
     if (!ground_heights::heightAt(*g, at.x, at.z, h)) return false;
     y = float(axes_.y) * h;
     return true;
+}
+
+bool MapWorld::laidAt(float x, float z) const {
+    const ground_heights::Ground* g = ground();
+    if (!g || !axes_.known()) return false;
+    const map::Point at = map::toWorld(axes_, map::Point{x, 0.0f, z});
+    return ground_heights::laidAt(*g, at.x, at.z);
 }
 
 void MapWorld::noteTorch(const map::Point& world) {

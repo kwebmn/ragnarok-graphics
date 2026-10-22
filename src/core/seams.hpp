@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 namespace uagfx::seams {
@@ -33,8 +34,12 @@ struct Strip {
 };
 
 // texture: each group's texture (stage 0) - neighbours of one texture whose coordinates go on across their edge look
-// alike and get no strip. width: the strips' share of a cell (0-0.5).
-std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width);
+// alike and get no strip. width: the strips' share of a cell (0-0.5). 2.7.57: laid(x, z), when given, whether the cell
+// with its middle at the world's (x, z) lies in a patch the map's makers laid by hand (core/ground_heights.hpp
+// laidPatches: Prontera's squares of paving, its mats) - no strip at its edges: the game's straight line.
+using Laid = std::function<bool(float x, float z)>;
+std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width,
+                         const Laid& laid = {});
 
 // The cells' side (world units) the triangles show - the median of their extents; 0 when none.
 float cellSide(const std::vector<Triangle>& ground);
@@ -43,14 +48,16 @@ float cellSide(const std::vector<Triangle>& ground);
 // standing still, the game draws the same ground frame after frame (with Direct3D 11 on the game's own thread).
 class Cache {
 public:
+    // laidKey: changes as what laid() says changes (another map's patches, its axes found)
     const std::vector<Strip>& build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture,
-                                    float width);
+                                    float width, const Laid& laid = {}, uint64_t laidKey = 0);
     void clear();          // another map
     size_t made() const { return made_; }  // builds so far
 private:
     std::vector<Triangle> ground_;
     std::vector<uint32_t> texture_;
     float width_ = -1.0f;
+    uint64_t laidKey_ = 0;
     bool known_ = false;
     std::vector<Strip> strips_;
     size_t made_ = 0;

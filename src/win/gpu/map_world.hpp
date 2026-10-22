@@ -35,6 +35,13 @@ public:
     // 2.7.34: the ground's height (the world's y) at the world's x and z - false with no .gnd read, the axes not found
     // or off the map (the birds settle only over the water)
     bool groundAt(float x, float z, float& y) const;
+    // 2.7.57: whether the ground at the world's x and z lies in a patch its makers laid by hand (ground_heights::
+    // laidPatches) - false not known; laidKey() changes as what it says does (another read, the axes found), 0 never
+    bool laidAt(float x, float z) const;
+    uint64_t laidKey() const {
+        return ground() && axes_.known() ? uint64_t(reads_) << 8 | uint64_t(axes_.x + 1) << 4 | uint64_t(axes_.z + 1)
+                                         : 0;
+    }
     // The base of a torch's flame seen this frame, in the game's world: the axes are found from them.
     void noteTorch(const map::Point& world);
 
@@ -51,6 +58,7 @@ private:
     rsw::World world_;
     ground_heights::Ground ground_;  // 2.6.18
     bool ready_ = false;
+    uint32_t reads_ = 0;  // 2.7.57: the maps read so far (laidKey)
     map::Axes axes_;
     std::vector<map::Point> placed_;  // the file's torches (effect 47)
     std::vector<rsw::Light> lamps_;

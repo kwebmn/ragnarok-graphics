@@ -158,7 +158,10 @@ void Renderer11::hillsConstants(Constants& c) const {
 void Renderer11::applySeams() {
     seamsDone_ = true;
     // 2.5.11: built again only when the ground differs from the last frame's (the camera moved)
-    const std::vector<seams::Strip>& strips = seamsCache_.build(groundTris_, groundTextures_, 0.5f);
+    // 2.7.57 (ground.cpp): none round the patches the map's makers laid by hand
+    const std::vector<seams::Strip>& strips =
+        seamsCache_.build(groundTris_, groundTextures_, 0.5f,
+                          [this](float x, float z) { return mapWorld_.laidAt(x, z); }, mapWorld_.laidKey());
     if (strips.empty()) return;
     const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
     const float* m = viewToWorld_;
