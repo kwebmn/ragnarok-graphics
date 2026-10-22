@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "core/layout.hpp"
+#include "core/layout_migration.hpp"
 #include "pad/core/bytes.hpp"
 #include "pad/core/config/bindings.hpp"
 #include "pad/core/config/config.hpp"
@@ -35,6 +36,7 @@
 #include "pad/win/log.hpp"
 #include "pad/win/overlay.hpp"
 #include "pad/win/pads.hpp"
+#include "win/disk.hpp"
 #include "win/paths.hpp"
 
 namespace uapad::runtime {
@@ -522,12 +524,16 @@ void init() {
         // file not moved yet (the driver moves them at its start) is read where it is
         namespace layout = uagfx::layout;
         const std::string game = uagfx::win::gameDir();
+        // the game may make its DirectInput before its DirectDraw (the driver's own move): the move first, here too
+        uagfx::win::WinDisk disk;
+        const std::vector<std::string> moved = layout::migrate(game, disk);
         s.iniPath = uagfx::win::ourFile(game, layout::File::PadIni);
         s.bindsPath = uagfx::win::ourFile(game, layout::File::PadBinds);
         s.cfg = parseConfig(readFile(s.iniPath));
         uagfx::win::makeFolders(layout::join(game, layout::kLogs));
         wlog::open(layout::join(game, layout::now(layout::File::PadLog)), s.cfg.logLevel);
         LOG_INFO("uaRO Pad %s", version());
+        for (const std::string& line : moved) LOG_INFO("%s", line.c_str());
         s.gameThread = GetCurrentThreadId();
         s.session = std::make_unique<Session>(s.cfg);
         if (!s.cfg.enabled) LOG_INFO("starts switched off ([general] enabled = 0); press Back to switch on");
