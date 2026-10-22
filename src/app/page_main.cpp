@@ -175,8 +175,8 @@ private:
         p.heading(t(Text::MainHd));
         rows_->buildRow(p, "ai.enabled");
         const PackSummary s = packSummary(m.paths().dir);
-        if (!s.exists)
-            p.note(t(Text::MainNoPack));
+        if (!s.exists)  // 2.15: making it is the developer's; players get it with the full client
+            p.note(t(host_.mode() == Mode::Developer ? Text::MainNoPack : Text::PackFromClient));
         else if (s.counted)
             p.note(tf(Text::MainPack, {num((long long)s.pictures), sizeText(s.bytes, host_.lang())}));
         else
