@@ -76,7 +76,7 @@ public:
         p.gap();
         p.heading(t(Text::ServiceUpdate));
         if (!offer.empty()) {
-            p.note(tf(Text::PlayUpdateLine, {offer, megabytes(u.site.package.size)}), Tone::Warn);
+            p.note(tf(Text::PlayUpdateLine, {offer, megabytes(u.branch.package.size)}), Tone::Warn);
             p.note(t(Text::PlayUpdateNote));
         } else {
             p.note(t(checking_ ? Text::UpdateChecking : Text::MainUpdateNone));

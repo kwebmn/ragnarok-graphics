@@ -22,9 +22,9 @@ DWORD WINAPI check(void*) {
     const CheckResult c = checkNow(exeFolder());
     UpdateState s;
     s.kind = c.ok ? UpdateState::Done : UpdateState::Failed;
-    s.latest = c.site.package.version;
+    s.latest = c.branch.package.version;
     s.offer = c.offer;
-    s.site = c.site;
+    s.branch = c.branch;
     s.error = c.error;
     set(s);
     return 0;

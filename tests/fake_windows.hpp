@@ -23,8 +23,8 @@ struct Windows {
     uagfx::app::SystemInfo system;
     // 2.10: the entry in Windows' Apps (app/registry writeAppsEntry): its values, empty when there is none
     std::map<std::wstring, std::wstring> appsEntry;
-    // 2.10: uaro.kiev.ua's files/graphics/ (app/download): a name, its bytes; waits: waitMs's calls (the game is
-    // closed by the first one)
+    // 2.10: the web (app/download) - a path of uaro.kiev.ua (fetchPath, downloadPath) or, 3.0.0-beta.2, a URL of
+    // GitHub's (fetchUrl, downloadUrl) - and its bytes; waits: waitMs's calls (the game is closed by the first one)
     std::map<std::string, std::string> web;
     int waits = 0;
     // 2.13: the site's POSTs (app/download postPath): a path's status and answer - none there: no answer came; what

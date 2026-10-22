@@ -35,31 +35,32 @@ std::string firstLine(const std::wstring& path) {
     return end == std::string::npos ? text : text.substr(0, end);
 }
 
-// uaro-graphics\update.ini: the site's text, then "[local]" and this computer's choices.
-void keepInfo(const std::wstring& dir, std::string site, const std::string& skip) {
-    if (!site.empty() && site.back() != '\n') site += "\r\n";
-    if (!skip.empty()) site += "[local]\r\nskip = " + skip + "\r\n";
-    writeFileAtomic(infoOf(dir), site);
+// uaro-graphics\update.ini: the branch's text, then "[local]" and this computer's choices.
+void keepInfo(const std::wstring& dir, std::string branch, const std::string& skip) {
+    if (!branch.empty() && branch.back() != '\n') branch += "\r\n";
+    if (!skip.empty()) branch += "[local]\r\nskip = " + skip + "\r\n";
+    writeFileAtomic(infoOf(dir), branch);
 }
 
-std::string siteText(const std::string& kept) {
+std::string branchText(const std::string& kept) {
     const size_t local = kept.find("[local]");
     return local == std::string::npos ? kept : kept.substr(0, local);
 }
 
-// The archive at `path` is the site's: its size and SHA-256.
-bool sameAsSite(const std::wstring& path, const update::Archive& a) {
+// The archive at `path` is the one update.ini names: its size and SHA-256.
+bool named(const std::wstring& path, const update::Archive& a) {
     std::string bytes;
     return readFile(path, bytes) && bytes.size() == a.size && sha256::hexOf(bytes) == a.sha256;
 }
 
-// `a` of the site into uaro-graphics\update\<its file>, unless it is there already; checked.
+// `a` from its commit into uaro-graphics\update\<update::localName>, unless it is there already; checked.
 bool fetchArchive(const std::wstring& dir, const update::Archive& a, Step::What what, const Report& report,
                   std::wstring& path, std::wstring& error) {
-    path = join(workOf(dir), wide(a.file));
-    if (sameAsSite(path, a)) return true;
+    path = join(workOf(dir), wide(update::localName(a)));
+    if (named(path, a)) return true;
     std::string e;
-    const bool got = makeFolders(workOf(dir)) && download(a.file, path, [&](uint64_t done, uint64_t total) {
+    const bool got = makeFolders(workOf(dir)) && downloadUrl(update::archiveUrl(a), path, [&](uint64_t done,
+                                                                                               uint64_t total) {
         Step s;
         s.what = what;
         s.done = done;
@@ -70,9 +71,10 @@ bool fetchArchive(const std::wstring& dir, const update::Archive& a, Step::What 
         error = wide(e.empty() ? "cannot write " + utf8(workOf(dir)) : e);
         return false;
     }
-    if (!sameAsSite(path, a)) {
+    if (!named(path, a)) {
         deleteFile(path);
-        error = L"the downloaded " + wide(a.file) + L" is not the site's (its size or SHA-256 differs): try again";
+        error = L"the downloaded " + wide(a.file) +
+                L" is not the one update.ini names (its size or SHA-256 differs): try again";
         return false;
     }
     return true;
@@ -109,11 +111,11 @@ bool unpack(const std::wstring& zipPath, const std::wstring& to, std::wstring& e
     return unpackBytes(std::move(bytes), to, error);
 }
 
-// A part of the site (DLSS, the models) downloaded, checked, unpacked and put in, all or nothing.
+// A part of the branch (DLSS, the models) downloaded, checked, unpacked and put in, all or nothing.
 bool runPart(const std::wstring& dir, const update::Archive& a, Step::What what, const wchar_t* mustHave,
              const Report& report, std::wstring& error) {
     if (a.file.empty()) {
-        error = L"the site has none";
+        error = L"the branch has none";
         return false;
     }
     std::wstring zipPath;
@@ -150,16 +152,26 @@ std::string skipped(const std::wstring& dir) {
 void setSkipped(const std::wstring& dir, const std::string& version) {
     std::string kept;
     readFile(infoOf(dir), kept);
-    keepInfo(dir, siteText(kept), version);
+    keepInfo(dir, branchText(kept), version);
+}
+
+update::Channel channelOf(const std::wstring& dir) {
+    std::string ini;
+    readFile(ourFile(dir, layout::File::Ini), ini);
+    const std::map<std::string, std::string> keys = settings::readIni(ini);
+    const auto it = keys.find("update.channel");
+    return update::channelOf(it == keys.end() ? "" : it->second, installedVersion(dir));
 }
 
 CheckResult checkNow(const std::wstring& dir) {
     CheckResult c;
+    c.channel = channelOf(dir);
     std::string text;
-    if (!fetch(update::kManifest, text, c.error) || !update::parseManifest(text, c.site, c.error)) return c;
+    if (!fetchUrl(update::manifestUrl(c.channel), text, c.error) || !update::parseManifest(text, c.branch, c.error))
+        return c;
     const std::string skip = skipped(dir);
     keepInfo(dir, text, skip);
-    c.offer = update::offer(c.site, installedVersion(dir), skip);
+    c.offer = update::offer(c.branch, installedVersion(dir), skip);
     c.ok = true;
     return c;
 }
@@ -173,9 +185,9 @@ bool nvidiaHere() {
 namespace {
 
 // The package unpacked in uaro-graphics\update\files put in: the game waited for, the files (all or nothing), what
-// install.bat did; then DLSS on an NVIDIA card when the site's is another version (`site` null: asked now; a failure
-// there leaves DLSS as it was). The work folder goes at the end.
-bool installStaged(const std::wstring& dir, bool repair, const update::Manifest* site, const Report& report,
+// install.bat did; then DLSS on an NVIDIA card when the branch's is another version (`branch` null: asked now; a
+// failure there leaves DLSS as it was). The work folder goes at the end.
+bool installStaged(const std::wstring& dir, bool repair, const update::Manifest* branch, const Report& report,
                    std::wstring& error) {
     const std::wstring work = workOf(dir), files = join(work, L"files");
     if (!fileExists(join(files, L"uaro-graphics\\ddraw.dll")) ||
@@ -209,14 +221,14 @@ bool installStaged(const std::wstring& dir, bool repair, const update::Manifest*
     }
     installer::finishInstall(dir, true);
     // DLSS on an NVIDIA card; 2.15: the AI models (they left the package) when the AI textures are on - each when the
-    // site's version is not the one here (a failure leaves it as it was)
+    // branch's version is not the one here (a failure leaves it as it was)
     std::string ini;
     readFile(ourFile(dir, layout::File::Ini), ini);
     const bool nvidia = nvidiaHere(), ai = parseConfig(ini).ai.on();
     if (nvidia || ai) {
         CheckResult asked;
-        if (!site) asked = checkNow(dir);
-        const update::Manifest* m = site ? site : asked.ok ? &asked.site : nullptr;
+        if (!branch) asked = checkNow(dir);
+        const update::Manifest* m = branch ? branch : asked.ok ? &asked.branch : nullptr;
         const std::string dlss = firstLine(join(dir, L"uaro-graphics\\dlss\\version.txt"));
         const std::string models = firstLine(join(dir, L"uaro-graphics\\ai\\models-version.txt"));
         std::wstring partError;

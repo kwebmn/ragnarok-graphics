@@ -94,10 +94,10 @@ int update(const std::wstring& dir, const Args& a, settings::Lang l) {
     bool ok = false;
     if (c.ok) {
         const std::wstring title =
-            repair ? wtr(l, Text::Repairing) : wtrf(l, Text::UpdatingTo, {c.site.package.version});
+            repair ? wtr(l, Text::Repairing) : wtrf(l, Text::UpdatingTo, {c.branch.package.version});
         ok = runWithProgress(nullptr, title, l, a.then == Args::Then::Game,
                              [&](const Report& report, std::wstring& e) {
-                                 return runUpdate(dir, c.site, repair, report, e);
+                                 return runUpdate(dir, c.branch, repair, report, e);
                              },
                              error);
     }
@@ -343,7 +343,7 @@ std::wstring getDlss(HWND owner, const std::wstring& dir, settings::Lang l) {
                                     [&](const Report& report, std::wstring& e) {
                                         const CheckResult c = checkNow(dir);
                                         if (!c.ok) e = wide(c.error);
-                                        return c.ok && runDlss(dir, c.site, report, e);
+                                        return c.ok && runDlss(dir, c.branch, report, e);
                                     },
                                     error);
     return ok ? L"" : error;
@@ -355,7 +355,7 @@ std::wstring getModels(HWND owner, const std::wstring& dir, settings::Lang l) {
                                     [&](const Report& report, std::wstring& e) {
                                         const CheckResult c = checkNow(dir);
                                         if (!c.ok) e = wide(c.error);
-                                        return c.ok && runModels(dir, c.site, report, e);
+                                        return c.ok && runModels(dir, c.branch, report, e);
                                     },
                                     error);
     return ok ? L"" : error;

@@ -258,19 +258,32 @@ void waitMs(unsigned) {  // the game closes while the update waits
     windows().gameRunning = false;
 }
 
-bool download(const std::string& file, const std::wstring& to,
-              const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error) {
-    const auto it = windows().web.find(file);
+// 3.0.0-beta.2: "https://host/path" - the host, for the answers' words
+std::string hostOf(const std::string& url) {
+    const size_t start = url.find("://") == std::string::npos ? 0 : url.find("://") + 3;
+    return url.substr(start, url.find('/', start) - start);
+}
+
+bool downloadUrl(const std::string& url, const std::wstring& to,
+                 const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error) {
+    const auto it = windows().web.find(url);
     if (it == windows().web.end()) {
-        error = "uaro.kiev.ua answered 404 for " + file;
+        error = hostOf(url) + " answered 404 for " + url;
         return false;
     }
-    const uint64_t size = it->second.size();
+    // a .part an earlier try left is continued, as WinHTTP's Range does
+    std::string bytes = it->second;
+    const auto part = windows().files.find(to + L".part");
+    if (part != windows().files.end()) {
+        if (part->second.size() < bytes.size()) bytes = part->second + bytes.substr(part->second.size());
+        windows().files.erase(part);
+    }
+    const uint64_t size = bytes.size();
     if (!progress(size / 2, size) || !progress(size, size)) {
         error = "stopped";
         return false;
     }
-    if (!writeFileAtomic(to, it->second)) {
+    if (!writeFileAtomic(to, bytes)) {
         error = "cannot write " + utf8(to);
         return false;
     }
@@ -328,10 +341,14 @@ std::string randomKey() {  // a new one each time, as a GUID
     return text;
 }
 
-bool fetch(const std::string& file, std::string& out, std::string& error) {
-    const auto it = windows().web.find(file);
+bool fetchUrl(const std::string& url, std::string& out, std::string& error, size_t most) {
+    const auto it = windows().web.find(url);
     if (it == windows().web.end()) {
-        error = "uaro.kiev.ua answered 404 for " + file;
+        error = "no answer from " + hostOf(url);
+        return false;
+    }
+    if (it->second.size() > most) {
+        error = hostOf(url) + " answered more than " + std::to_string(most) + " bytes";
         return false;
     }
     out = it->second;

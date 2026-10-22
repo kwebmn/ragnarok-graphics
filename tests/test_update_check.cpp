@@ -19,13 +19,15 @@ TEST(update_check_compares_versions_by_their_numbers) {
 namespace {
 
 const char* const kSiteText =
-    "; uaRO Graphics: the newest release\r\n"
-    "[release]\r\nformat = 1\r\nversion = 2.10.0\r\nwithdrawn = 2.9.1 2.9.2\r\n"
-    "[package]\r\nfile = uaro-graphics-2.10.0.zip\r\nsize = 35690731\r\n"
-    "sha256 = 0123456789abcdef0123456789abcdef0123456789abcdef0123456789ABCDEF\r\n"
-    "[dlss]\r\nversion = streamline 2.14.1\r\nfile = uaro-graphics-dlss-streamline-2.14.1.zip\r\nsize = 36007336\r\n"
+    "; uaRO Graphics: the newest release of this branch (tools/release_ini.py)\r\n"
+    "[release]\r\nformat = 2\r\nversion = 2.10.0\r\nwithdrawn = 2.9.1 2.9.2\r\n"
+    "[package]\r\nref = 0dfe661d7f5f3eb871c5defcd398a543196dbfd8\r\nfile = release/uaro-graphics.zip\r\n"
+    "size = 35690731\r\nsha256 = 0123456789abcdef0123456789abcdef0123456789abcdef0123456789ABCDEF\r\n"
+    "[dlss]\r\nversion = streamline 2.14.1\r\nref = 0dfe661d7f5f3eb871c5defcd398a543196dbfd8\r\n"
+    "file = release/uaro-graphics-dlss.zip\r\nsize = 36007336\r\n"
     "sha256 = 1111111111111111111111111111111111111111111111111111111111111111\r\n"
-    "[models]\r\nversion = gameai-2.0 1\r\nfile = uaro-graphics-models-gameai-2.0-1.zip\r\nsize = 30873160\r\n"
+    "[models]\r\nversion = gameai-2.0 1\r\nref = 28aa38a537beb4e8d29c6b6c8b17f5c94255ba48\r\n"
+    "file = release/uaro-graphics-models.zip\r\nsize = 30873160\r\n"
     "sha256 = 2222222222222222222222222222222222222222222222222222222222222222\r\n";
 
 std::string replaced(std::string text, const std::string& from, const std::string& to) {
@@ -41,31 +43,74 @@ bool refused(const std::string& text, const std::string& field) {
 
 }  // namespace
 
-// 2.10: the site's update.ini (tools/publish_site.py) - the newest release and its archives.
-TEST(manifest_reads_the_newest_release) {
+// 3.0.0-beta.2: GitHub's update.ini of a branch (tools/release_ini.py) - its newest release and the archives, each
+// by the commit that holds it.
+TEST(manifest_2_reads_the_commits_and_paths) {
     update::Manifest m;
     std::string error;
     CHECK(update::parseManifest(kSiteText, m, error));
     CHECK_EQ(m.package.version, std::string("2.10.0"));
-    CHECK_EQ(m.package.file, std::string("uaro-graphics-2.10.0.zip"));
+    CHECK_EQ(m.package.ref, std::string("0dfe661d7f5f3eb871c5defcd398a543196dbfd8"));
+    CHECK_EQ(m.package.file, std::string("release/uaro-graphics.zip"));
     CHECK(m.package.size == 35690731u);
     CHECK_EQ(m.package.sha256, std::string("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
     CHECK_EQ(m.dlss.version, std::string("streamline 2.14.1"));
-    CHECK_EQ(m.models.file, std::string("uaro-graphics-models-gameai-2.0-1.zip"));
+    CHECK_EQ(m.models.ref, std::string("28aa38a537beb4e8d29c6b6c8b17f5c94255ba48"));
+    CHECK_EQ(m.models.file, std::string("release/uaro-graphics-models.zip"));
     CHECK(m.withdrawn == std::vector<std::string>({"2.9.1", "2.9.2"}));
-    update::Manifest bare;  // no DLSS, no models on the site: none
+    update::Manifest bare;  // no DLSS, no models in the branch: none
     CHECK(update::parseManifest(std::string(kSiteText).substr(0, std::string(kSiteText).find("[dlss]")), bare, error));
     CHECK(bare.dlss.file.empty() && bare.models.file.empty() && bare.package.size == 35690731u);
 }
 
-TEST(manifest_refuses_what_is_not_format_1) {
+TEST(manifest_refuses_what_is_not_format_2) {
+    const std::string file = "file = release/uaro-graphics.zip", ref = "ref = 0dfe661d7f5f3eb871c5defcd398a543196dbfd8";
     CHECK(refused("<html><body>502 Bad Gateway</body></html>", "format"));
-    CHECK(refused(replaced(kSiteText, "format = 1", "format = 2"), "format"));
+    CHECK(refused(replaced(kSiteText, "format = 2", "format = 1"), "format"));  // uaro.kiev.ua's of 2.10
     CHECK(refused(replaced(kSiteText, "sha256 = 0123", "checksum = 0123"), "sha256"));
     CHECK(refused(replaced(kSiteText, "size = 35690731", "size = -5"), "size"));
-    CHECK(refused(replaced(kSiteText, "file = uaro-graphics-2.10.0.zip", "file = ../ddraw.dll"), "file"));
+    CHECK(refused(replaced(kSiteText, file, "file = release/../ddraw.dll"), "file"));
+    CHECK(refused(replaced(kSiteText, file, "file = /release/uaro-graphics.zip"), "file"));
+    CHECK(refused(replaced(kSiteText, file, "file = release\\uaro-graphics.zip"), "file"));
+    CHECK(refused(replaced(kSiteText, file, "file = release/"), "file"));
+    CHECK(refused(replaced(kSiteText, ref, ref.substr(0, ref.size() - 1)), "ref"));  // 39 hex digits
+    CHECK(refused(replaced(kSiteText, "ref = 0dfe661d", "ref = 0DFE661D"), "ref"));
+    CHECK(refused(replaced(kSiteText, "ref = 0dfe661d", "ref = 0dfe661g"), "ref"));
+    CHECK(refused(replaced(kSiteText, ref + "\r\n", ""), "ref"));
     CHECK(refused(std::string(kSiteText).substr(0, std::string(kSiteText).find("456789ABCDEF")), "sha256"));
     CHECK(refused(replaced(kSiteText, "version = 2.10.0", "version ="), "version"));
+}
+
+// 3.0.0-beta.2: «Реліз» is the branch main, «Бета» the branch beta; an archive comes from its commit - a commit's file
+// never changes, so an update.ini GitHub's cache keeps for 5 minutes names archives that still match it.
+TEST(update_urls_name_the_branch_and_the_commit) {
+    CHECK_EQ(update::manifestUrl(update::Channel::Release),
+             std::string("https://raw.githubusercontent.com/kwebmn/ragnarok-graphics/main/release/update.ini"));
+    CHECK_EQ(update::manifestUrl(update::Channel::Beta),
+             std::string("https://raw.githubusercontent.com/kwebmn/ragnarok-graphics/beta/release/update.ini"));
+    update::Manifest m;
+    std::string error;
+    CHECK(update::parseManifest(kSiteText, m, error));
+    CHECK_EQ(update::archiveUrl(m.package),
+             std::string("https://raw.githubusercontent.com/kwebmn/ragnarok-graphics/"
+                         "0dfe661d7f5f3eb871c5defcd398a543196dbfd8/release/uaro-graphics.zip"));
+    CHECK_EQ(update::localName(m.package), std::string("0123456789ab-uaro-graphics.zip"));
+    update::Archive next = m.package;  // the next version under the same name: its own .part
+    next.sha256 = std::string(64, 'f');
+    CHECK(update::localName(next) != update::localName(m.package));
+}
+
+// 3.0.0-beta.2: the computer's channel - its [update] channel line, else a beta build's is «Бета».
+TEST(update_channel_by_the_line_else_by_the_build) {
+    using update::Channel;
+    CHECK(update::channelOf("beta", "3.0.0") == Channel::Beta);
+    CHECK(update::channelOf("release", "3.0.0-beta.2") == Channel::Release);
+    CHECK(update::channelOf("", "3.0.0-beta.2") == Channel::Beta);
+    CHECK(update::channelOf("", "3.0.0") == Channel::Release);
+    CHECK(update::channelOf("nightly", "3.0.0") == Channel::Release);
+    CHECK(update::preRelease("3.0.0-beta.2") && !update::preRelease("3.0.0") && !update::preRelease(""));
+    CHECK_EQ(std::string(update::channelToken(Channel::Beta)), std::string("beta"));
+    CHECK_EQ(std::string(update::channelToken(Channel::Release)), std::string("release"));
 }
 
 TEST(offer_is_a_newer_version_or_a_way_back_from_a_withdrawn_one) {
@@ -92,7 +137,7 @@ TEST(update_check_orders_pre_releases) {
 }
 
 // 2.10: the game's start asks (through the settings app) when the last check - the watcher's, at an earlier start -
-// found an update; uaro-graphics\update.ini is the site's text and this computer's [local] section.
+// found an update; uaro-graphics\update.ini is the branch's text and this computer's [local] section.
 TEST(the_game_asks_when_the_last_check_offered) {
     std::string version;
     CHECK(update::askAtStart(kSiteText, "2.9.0", version));

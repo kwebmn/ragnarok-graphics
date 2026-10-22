@@ -48,14 +48,24 @@ bool isVersion(const std::string& v) {
     return true;
 }
 
-// One archive's lines: a plain file name (no folder), a size, a SHA-256.
-bool archiveOf(const std::string& file, const std::string& size, const std::string& sha, Archive& a,
-               const std::string& section, std::string& error) {
-    bool plain = !file.empty() && file.size() <= 80;
+bool hexDigits(const std::string& s, size_t count) {
+    return s.size() == count && s.find_first_not_of("0123456789abcdef") == std::string::npos;
+}
+
+// One archive's lines: the commit that holds it, its path there (letters, digits, ". _ -" between "/"), a size, a
+// SHA-256.
+bool archiveOf(const std::string& ref, const std::string& file, const std::string& size, const std::string& sha,
+               Archive& a, const std::string& section, std::string& error) {
+    if (!hexDigits(ref, 40)) {
+        error = "update.ini: [" + section + "] ref is not a commit (40 lower-case hex digits)";
+        return false;
+    }
+    bool path = !file.empty() && file.size() <= 120 && file.front() != '/' && file.back() != '/' &&
+                file.find("//") == std::string::npos && file.find("..") == std::string::npos;
     for (char c : file)
-        plain = plain && (std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '_' || c == '-');
-    if (!plain || file.find("..") != std::string::npos) {
-        error = "update.ini: [" + section + "] file is not a plain file name";
+        path = path && (std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '_' || c == '-' || c == '/');
+    if (!path) {
+        error = "update.ini: [" + section + "] file is not a path in the repository";
         return false;
     }
     char* end = nullptr;
@@ -66,10 +76,11 @@ bool archiveOf(const std::string& file, const std::string& size, const std::stri
     }
     std::string hex;
     for (char c : sha) hex += char(std::tolower(static_cast<unsigned char>(c)));
-    if (hex.size() != 64 || hex.find_first_not_of("0123456789abcdef") != std::string::npos) {
+    if (!hexDigits(hex, 64)) {
         error = "update.ini: [" + section + "] sha256 is not 64 hex digits";
         return false;
     }
+    a.ref = ref;
     a.file = file;
     a.size = n;
     a.sha256 = hex;
@@ -99,8 +110,8 @@ bool parseManifest(const std::string& text, Manifest& out, std::string& error) {
         return it == ini.end() ? std::string() : it->second;
     };
     const std::string format = value("release.format");
-    if (format != "1") {
-        error = "update.ini is not format 1 (format " + (format.empty() ? std::string("?") : format) + ")";
+    if (format != "2") {
+        error = "update.ini is not format 2 (format " + (format.empty() ? std::string("?") : format) + ")";
         return false;
     }
     Manifest m;
@@ -114,15 +125,16 @@ bool parseManifest(const std::string& text, Manifest& out, std::string& error) {
         Archive& a = s == "package" ? m.package : s == "dlss" ? m.dlss : m.models;
         if (s != "package") {
             bool any = false;
-            for (const char* k : {".version", ".file", ".size", ".sha256"}) any = any || ini.count(s + k);
-            if (!any) continue;  // the site has none of them
+            for (const char* k : {".version", ".ref", ".file", ".size", ".sha256"}) any = any || ini.count(s + k);
+            if (!any) continue;  // the branch has none of them
             a.version = value(s + ".version");
             if (a.version.empty()) {
                 error = "update.ini has no [" + s + "] version";
                 return false;
             }
         }
-        if (!archiveOf(value(s + ".file"), value(s + ".size"), value(s + ".sha256"), a, s, error)) return false;
+        if (!archiveOf(value(s + ".ref"), value(s + ".file"), value(s + ".size"), value(s + ".sha256"), a, s, error))
+            return false;
     }
     std::string list = value("release.withdrawn");
     for (size_t at = 0; at < list.size();) {
@@ -137,11 +149,11 @@ bool parseManifest(const std::string& text, Manifest& out, std::string& error) {
 }
 
 std::string offer(const Manifest& m, const std::string& installed, const std::string& skip) {
-    const std::string site = m.package.version, mine = bare(installed);
-    if (site.empty() || site == mine || site == skip) return "";
+    const std::string latest = m.package.version, mine = bare(installed);
+    if (latest.empty() || latest == mine || latest == skip) return "";
     for (const std::string& w : m.withdrawn)
-        if (w == mine) return site;
-    return newer(site, mine) ? site : "";
+        if (w == mine) return latest;
+    return newer(latest, mine) ? latest : "";
 }
 
 bool payloadAt(const uint8_t* tail16, uint64_t fileSize, uint64_t& offset, uint64_t& size) {
@@ -152,6 +164,30 @@ bool payloadAt(const uint8_t* tail16, uint64_t fileSize, uint64_t& offset, uint6
     offset = fileSize - 16 - n;
     size = n;
     return true;
+}
+
+const char* channelToken(Channel c) { return c == Channel::Beta ? "beta" : "release"; }
+
+bool preRelease(const std::string& version) { return isVersion(version) && version.find('-') != std::string::npos; }
+
+Channel channelOf(const std::string& token, const std::string& installed) {
+    if (token == "beta") return Channel::Beta;
+    if (token == "release") return Channel::Release;
+    return preRelease(bare(installed)) ? Channel::Beta : Channel::Release;
+}
+
+namespace {
+const char* const kRepo = "https://raw.githubusercontent.com/kwebmn/ragnarok-graphics/";
+}
+
+std::string manifestUrl(Channel c) {
+    return std::string(kRepo) + (c == Channel::Beta ? "beta" : "main") + "/release/update.ini";
+}
+
+std::string archiveUrl(const Archive& a) { return std::string(kRepo) + a.ref + "/" + a.file; }
+
+std::string localName(const Archive& a) {
+    return a.sha256.substr(0, 12) + "-" + a.file.substr(a.file.find_last_of('/') + 1);
 }
 
 bool askAtStart(const std::string& updateInfo, const std::string& installed, std::string& version) {
