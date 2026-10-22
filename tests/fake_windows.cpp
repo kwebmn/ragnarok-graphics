@@ -8,6 +8,7 @@
 
 #include "app/download.hpp"
 #include "app/files.hpp"
+#include "app/shortcuts.hpp"
 #include "app/text.hpp"
 
 namespace fake {
@@ -229,6 +230,21 @@ SystemInfo probeSystem() { return windows().system; }
 bool gameRunning(const std::wstring&) { return windows().gameRunning; }
 
 bool elevatedNow() { return false; }
+
+std::wstring desktopFolder() { return L"C:\\Users\\player\\Desktop"; }
+
+std::vector<Shortcut> desktopShortcuts() {
+    std::vector<Shortcut> out;
+    for (const auto& f : windows().files)
+        if (fake::parentOf(f.first) == desktopFolder() && f.first.size() > 4 &&
+            f.first.compare(f.first.size() - 4, 4, L".lnk") == 0 && f.second.rfind("lnk:", 0) == 0)
+            out.push_back({f.first, wide(f.second.substr(4))});
+    return out;
+}
+
+bool makeShortcut(const std::wstring& path, const std::wstring& target, const std::wstring&, const std::wstring&) {
+    return writeFileAtomic(path, "lnk:" + utf8(target));
+}
 
 void markOurStart() { windows().marked = true; }
 

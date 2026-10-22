@@ -6,6 +6,7 @@
 #include "app/app_disk.hpp"
 #include "app/files.hpp"
 #include "app/registry.hpp"
+#include "app/shortcuts.hpp"
 #include "app/text.hpp"
 #include "core/ini_upgrade.hpp"
 #include "core/layout.hpp"
@@ -44,6 +45,39 @@ std::vector<std::wstring> filesUnder(const std::wstring& folder) {
 }
 
 bool ours(const std::string& bytes) { return bytes.find("uaRO Graphics") != std::string::npos; }
+
+bool samePath(std::wstring a, std::wstring b) {
+    for (std::wstring* s : {&a, &b})
+        for (wchar_t& c : *s) c = c >= L'A' && c <= L'Z' ? wchar_t(c - L'A' + L'a') : c == L'/' ? L'\\' : c;
+    return a == b;
+}
+
+std::wstring nameOf(const std::wstring& path) { return path.substr(path.find_last_of(L'\\') + 1); }
+
+// 2.11: once - the desktop's shortcuts of the game go aside into uaro-graphics\shortcuts and «uaRO» (the launcher,
+// the game's icon) takes their place; a player who deleted «uaRO» does not get it back from an update.
+void placeShortcut(const std::wstring& dir, Result& r) {
+    const std::wstring aside = join(dir, wide(layout::kShortcuts)), marker = join(aside, L"made.txt");
+    const std::wstring desk = desktopFolder();
+    if (fileExists(marker) || desk.empty() || !makeFolders(aside)) return;
+    for (const Shortcut& s : desktopShortcuts())
+        if (samePath(s.target, join(dir, L"uaRO.exe")) && moveFile(s.path, join(aside, nameOf(s.path)), true))
+            r.log.push_back("installer: the game's shortcut " + utf8(nameOf(s.path)) + " aside");
+    if (makeShortcut(join(desk, L"uaRO.lnk"), join(dir, L"uaro-graphics.exe"), dir, join(dir, L"uaRO.exe")))
+        r.log.push_back("installer: the shortcut uaRO on the desktop");
+    writeFileAtomic(marker, "uaRO.lnk\r\n");
+}
+
+// The removal's: the game's shortcuts back where they were, «uaRO» away.
+void restoreShortcuts(const std::wstring& dir) {
+    const std::wstring aside = join(dir, wide(layout::kShortcuts)), desk = desktopFolder();
+    if (desk.empty()) return;
+    for (const Shortcut& s : desktopShortcuts())
+        if (samePath(s.target, join(dir, L"uaro-graphics.exe"))) deleteFile(s.path);
+    for (const std::wstring& name : listFolder(aside, false))
+        if (name.size() > 4 && name.compare(name.size() - 4, 4, L".lnk") == 0 && !fileExists(join(desk, name)))
+            moveFile(join(aside, name), join(desk, name), false);
+}
 
 // The moves done, undone in the reverse order when a later one fails.
 struct Journal {
@@ -194,6 +228,7 @@ Result finishInstall(const std::wstring& dir, bool scripts) {
     removeOldPad(dir);
     removeTree(join(dir, L"uaro-graphics\\pad"));
     if (scripts) removeOldScripts(dir);
+    placeShortcut(dir, r);
     std::string version;
     readFile(join(dir, L"uaro-graphics\\version.txt"), version);
     while (!version.empty() && (version.back() == '\r' || version.back() == '\n')) version.pop_back();
@@ -232,6 +267,7 @@ void removeOldScripts(const std::wstring& dir) {
 
 Result uninstall(const std::wstring& dir, bool keep) {
     Result r;
+    restoreShortcuts(dir);  // 2.11: before uaro-graphics\ goes
     std::string bytes;
     if (readFile(join(dir, L"ddraw.dll"), bytes) && ours(bytes) && !deleteFile(join(dir, L"ddraw.dll"))) {
         r.ok = false;

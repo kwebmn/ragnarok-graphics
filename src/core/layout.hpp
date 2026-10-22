@@ -26,6 +26,8 @@ constexpr const char* kMadeAtStart[] = {kOurs, kLogs, kCache, kTextures};
 constexpr const char* kPrevious = "uaro-graphics\\previous";
 constexpr const char* kUpdateWork = "uaro-graphics\\update";
 constexpr const char* kUpdateInfo = "uaro-graphics\\update.ini";
+// 2.11: the game's desktop shortcuts the installer's «uaRO» replaced, kept for the removal (and its once-marker)
+constexpr const char* kShortcuts = "uaro-graphics\\shortcuts";
 // The package's templates: a settings file that is not there yet starts from one of them (never at the settings'
 // own place - an older update.bat copies uaro-graphics\ of the archive over the installed one).
 constexpr const char* kIniTemplate = "uaro-graphics\\defaults\\uaro-graphics.ini";

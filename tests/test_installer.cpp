@@ -6,10 +6,12 @@
 
 #include "app/files.hpp"
 #include "app/installer.hpp"
+#include "app/text.hpp"
 #include "fake_windows.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
+using app::utf8;
 
 namespace {
 
@@ -269,4 +271,52 @@ TEST(uninstall_removes_the_apps_entry) {
     CHECK(!fake::windows().appsEntry.empty());
     CHECK(app::installer::uninstall(app::exeFolder(), false).ok);
     CHECK(fake::windows().appsEntry.empty());
+}
+
+namespace {
+
+const std::wstring kDesktop = L"C:\\Users\\player\\Desktop";  // the stand-ins' desktop (app/shortcuts)
+
+void onDesktop(const std::wstring& name, const std::wstring& target) {
+    fake::Windows& w = fake::windows();
+    for (const wchar_t* f : {L"C:\\Users", L"C:\\Users\\player", L"C:\\Users\\player\\Desktop"}) w.folders.insert(f);
+    w.files[kDesktop + L"\\" + name] = "lnk:" + utf8(target);
+}
+
+std::string desktop(const std::wstring& name) {
+    const auto it = fake::windows().files.find(kDesktop + L"\\" + name);
+    return it == fake::windows().files.end() ? "<none>" : it->second;
+}
+
+}  // namespace
+
+// 2.11: the desktop shortcut «uaRO» opens the launcher «Гра» (decision 16): the game's own shortcuts go aside into
+// uaro-graphics\shortcuts and come back on removal.
+TEST(shortcuts_of_the_game_go_aside_and_come_back) {
+    client();
+    onDesktop(L"uaRO Online.lnk", fake::path(L"uaRO.exe"));
+    onDesktop(L"Ragnarok.lnk", L"c:\\uaro\\UARO.EXE");  // the same game, another case
+    onDesktop(L"Discord.lnk", L"C:\\Discord\\Discord.exe");
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("1.0.0"), false).ok);
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(desktop(L"uaRO.lnk"), "lnk:" + utf8(fake::path(L"uaro-graphics.exe")));
+    CHECK_EQ(desktop(L"uaRO Online.lnk"), std::string("<none>"));
+    CHECK_EQ(desktop(L"Ragnarok.lnk"), std::string("<none>"));
+    CHECK_EQ(at(L"uaro-graphics\\shortcuts\\uaRO Online.lnk"), "lnk:" + utf8(fake::path(L"uaRO.exe")));
+    CHECK_EQ(desktop(L"Discord.lnk"), std::string("lnk:C:\\Discord\\Discord.exe"));
+    CHECK(app::installer::uninstall(app::exeFolder(), false).ok);
+    CHECK_EQ(desktop(L"uaRO.lnk"), std::string("<none>"));
+    CHECK_EQ(desktop(L"uaRO Online.lnk"), "lnk:" + utf8(fake::path(L"uaRO.exe")));
+    CHECK_EQ(desktop(L"Ragnarok.lnk"), std::string("lnk:c:\\uaro\\UARO.EXE"));
+    CHECK_EQ(desktop(L"Discord.lnk"), std::string("lnk:C:\\Discord\\Discord.exe"));
+}
+
+TEST(the_shortcut_is_made_once) {
+    client();
+    onDesktop(L"Discord.lnk", L"C:\\Discord\\Discord.exe");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK(desktop(L"uaRO.lnk") != "<none>");
+    fake::windows().files.erase(kDesktop + L"\\uaRO.lnk");  // the player deleted it
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);  // the next update
+    CHECK_EQ(desktop(L"uaRO.lnk"), std::string("<none>"));
 }
