@@ -122,6 +122,17 @@ Surface7* Surface7::create(const SurfacePlan& plan, DWORD caps, std::string& err
 
 uint8_t Surface7::spriteAt(float x, float y, bool* card) const { return top()->cells_.at(x, y, card); }
 
+bool Surface7::topArgb(std::vector<uint32_t>& out) const {
+    const Surface7* s = top();
+    if (!s->levels_ || s->levels_->levels() == 0) return false;
+    const Image& img = s->levels_->level(0);
+    out.resize(size_t(img.width()) * size_t(img.height()));
+    for (int y = 0; y < img.height(); ++y)
+        for (int x = 0; x < img.width(); ++x)
+            out[size_t(y) * size_t(img.width()) + size_t(x)] = toArgb8(img.format(), img.pixel(x, y));
+    return true;
+}
+
 Surface7* Surface7::from(IDirectDrawSurface7* s) {
     Surface7* p = static_cast<Surface7*>(s);
     return p && p->magic_ == kMagic ? p : nullptr;

@@ -549,7 +549,7 @@ void Renderer11::applyTorchLight() {
         }
     }
     // 0.38 (torches.cpp): the portals followed from frame to frame (their places eased, their strength fading in and
-    // out): a soft light about each - 2.7.54 by the map warps' floors' middles, in lilac; the air's swirl gone
+    // out): a soft light about each - 2.7.54 by the map warps' floors' middles; the air's swirl gone
     const float portalStep = std::clamp(time - portalTime_, 0.0f, 0.25f);
     portalTime_ = time;
     if (portalsWanted()) {
@@ -559,7 +559,7 @@ void Renderer11::applyTorchLight() {
                                         s.right, s.bottom});
         portal::follow(portalTracks_, seen, portalStep);
         const float user = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
-        static const float kLilac[3] = {0.80f, 0.74f, 1.0f};
+        static const float kLavender[3] = {0.86f, 0.86f, 1.0f};  // 2.7.55: the warp's own
         int shownCount = 0;
         for (const PortalTrack11& t : portalTracks_) {
             const float shown = t.strength * t.strength * (3.0f - 2.0f * t.strength);  // eased in and out
@@ -571,7 +571,7 @@ void Renderer11::applyTorchLight() {
                 portal::footOf(t, up[2], proj, foot);
                 if (foot[2] > 0.0f) {
                     const float view[3] = {foot[0] + up[0] * 4.0f, foot[1] + up[1] * 4.0f, foot[2] + up[2] * 4.0f};
-                    addLight(view, 30.0f, kLilac, 0.21f * user * shown);
+                    addLight(view, 30.0f, kLavender, 0.21f * user * shown);
                 }
             }
         }

@@ -3,6 +3,7 @@
 #include "core/config.hpp"
 #include "core/game_camera.hpp"
 #include "core/portal.hpp"
+#include "core/report_upload.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -29,6 +30,31 @@ TEST(portal_warp_parts_known_by_their_draws) {
     CHECK(portal::partOf(321, true, 2, 2, 3) == portal::Part::None);
     CHECK(portal::partOf(321, true, 5, 2, 4) == portal::Part::None);
     CHECK(portal::partOf(321, true, 5, 6, 6) == portal::Part::None);
+}
+
+TEST(portal_warp_rings_and_floor_shaded_anew_sparks_the_games) {
+    // 2.7.55 (the tester on 2.7.54: «аккуратнее ... более похожим на тот что в оригинале»): the rings and the floor
+    // from the game's own pictures, cleaned; the sparks the game's own
+    CHECK(portal::reshaded(portal::Part::Ring));
+    CHECK(portal::reshaded(portal::Part::Floor));
+    CHECK(!portal::reshaded(portal::Part::Spark));
+    CHECK(!portal::reshaded(portal::Part::None));
+}
+
+TEST(portal_warp_picture_told_in_lines_the_tools_read) {
+    // 2.7.55: the warp's pictures into the log once a run - their alpha is in no copy on the server; the lines as
+    // 2.7.53's record wrote them ($S/portal/capture_tool.py reads them): a head, then base64 of ARGB, 160 a line
+    std::vector<uint32_t> argb(64 * 64);
+    for (size_t k = 0; k < argb.size(); ++k) argb[k] = uint32_t(k * 2654435761u);
+    const std::vector<std::string> lines = portal::pictureLines(1073742059u, 64, 64, argb.data());
+    CHECK(!lines.empty() && lines[0] == "portal capture: texture 1073742059 64x64 (ARGB, base64)");
+    std::string text;
+    for (size_t k = 1; k < lines.size(); ++k) {
+        CHECK(lines[k].rfind("  t ", 0) == 0 && lines[k].size() <= 164);
+        text += lines[k].substr(4);
+    }
+    CHECK_EQ(text.size(), size_t((64 * 64 * 4 + 2) / 3 * 4));
+    CHECK(text == report::base64(std::string(reinterpret_cast<const char*>(argb.data()), argb.size() * 4)));
 }
 
 TEST(portal_warp_floor_middle_is_the_corner_all_its_triangles_share) {

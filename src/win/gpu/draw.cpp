@@ -115,14 +115,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     // 2.7.54: a draw of a map warp - its rings, floor or sparks (portal::partOf) - shaded anew where the game draws it:
     // the new portal (2.7.48-2.7.52 drew one of the driver's own over its place, the game's left out: two portals, or
-    // one off its place); the light round it by its floor's middle (notePortal)
+    // one off its place); the light round it by its floor's middle (notePortal). 2.7.55: its rings and floor only
     const portal::Part warp = !s.ui && d.effect == uint8_t(effect_exe::Kind::Portal)
                                   ? portal::partOf(int(d.effectId), s.blend, s.srcBlend, s.dstBlend, d.vertexCount)
                                   : portal::Part::None;
-    const bool warpDrawn = warp != portal::Part::None && newPortalWanted();
+    const bool warpDrawn = portal::reshaded(warp) && newPortalWanted();
     if (warpDrawn && warpsToldMap != mapName) {  // once a map, for the reports
         warpsToldMap = mapName;
-        LOG_INFO("portals: the warps shaded anew on %s - their rings, floor and sparks where the game draws them",
+        LOG_INFO("portals: the warps shaded anew on %s - their rings and floor from the game's pictures, cleaned",
                  mapName.c_str());
     }
     // 0.21: the world done - at the interface - its colours, then its glow.
@@ -512,15 +512,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[3] = waterTime();
         c.footprint = float(std::clamp(ray ? effects.raysBrightness : effects.lavaBrightness, 0, 200)) / 100.0f;
     }
-    if (warpDrawn) {  // 2.7.54: the projection, the world's up and the part, the time, the strength (portal_draw_ps)
-        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
-        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
-        std::memcpy(c.projection, proj, sizeof proj);
-        float up[3] = {0.0f, -1.0f, 0.0f};
-        if (viewToWorldValid) camera::upInView(viewToWorld, up);
-        std::copy(up, up + 3, c.sourceRect);
+    if (warpDrawn) {  // 2.7.54: the part and the strength (portal_draw_ps)
         c.sourceRect[3] = float(int(warp));
-        c.twin[3] = waterTime();
         c.footprint = float(std::clamp(effects.portalsStrength, 0, 200)) / 100.0f;
     }
     // 2.5: a draw whose constants carry none of the world's extras (shade()'s bits: relief, leaves, material,

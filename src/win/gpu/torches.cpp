@@ -853,7 +853,8 @@ bool Renderer::Impl::applyTorches() {
     lavaCells.clear();
     // 0.38: the portals - a soft glow about each. 0.39.1: followed from frame to frame - their places eased, their
     // strength fading in and out (0.38 lit each frame's gathering by a grid: the lights doubled and went out).
-    // 2.7.54: by the map warps' floors' middles (notePortal), in lilac; the air's swirl gone - it blurred the rings.
+    // 2.7.54: by the map warps' floors' middles (notePortal); the air's swirl gone - it blurred the rings. 2.7.55: in
+    // the warp's own white lavender.
     const float portalStep = std::clamp(time - portalTime, 0.0f, 0.25f);
     portalTime = time;
     if (!portalsWanted()) portalTracks.clear();
@@ -874,7 +875,7 @@ bool Renderer::Impl::applyTorches() {
                 float up[3];
                 camera::upInView(viewToWorld, up);
                 LightItem l{{ground[0] + up[0] * 4.0f, ground[1] + up[1] * 4.0f, ground[2] + up[2] * 4.0f},
-                            0.21f * user * shown, {0.80f, 0.74f, 1.0f}, 30.0f};
+                            0.21f * user * shown, {0.86f, 0.86f, 1.0f}, 30.0f};
                 lights.push_back(l);
             }
         }

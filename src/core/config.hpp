@@ -171,7 +171,7 @@ struct EffectSettings {
     // desert. On by default.
     bool heat = true;
     int heatStrength = 100;  // %, 0-200
-    // 0.38: the portals glow around (2.7.54: the map warps, in lilac; the air's swirl gone). On by default.
+    // 0.38: the portals glow around (2.7.54: the map warps; the air's swirl gone). On by default.
     bool portals = true;
     int portalsStrength = 100;  // %, 0-200
     // 2.7.48: portals - the game's warp zone drawn anew, sharper. 2.7.53: off while its draws were recorded (git

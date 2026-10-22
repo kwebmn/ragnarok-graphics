@@ -1476,70 +1476,40 @@ float4 torch_apply_ps(PresentOut i) : SV_Target {
 }
 
 // 2.7.54, the map warps (effect 321, draw.cpp; core/portal.hpp partOf): the game's own draws of a warp shaded anew
-// where it draws them - the facts from the driver's record of them (R-FP2F4H) and uaRO.exe. Its rings, walls leaning
-// out from a circle on the ground that come in to the middle as they stand up (uv0.y 1 on the ground, 0 along the top
-// edge; uv0.x round the ring in 21sts): a crisp line along the top edge as far as the wall stands, lilac light down
-// it with light running up, a fine circle where it meets the ground - the game's ring_blue.tga, 64 texels round a
-// ring, lay over each other as a white haze. Its floor (uv0.y 1 in the middle): a lilac pool for the game's white one
-// half over the ground; its sparks: crisp stars. The game's alpha in the colour keeps its fades. sourceRect.xyz the
-// world's up in the view, .w the part (1 a ring, 2 the floor, 3 a spark); twinH the time; footprint the strength
-// (1 = 100 %); f0-cy the projection.
-static const float3 kWarpLine = float3(0.86, 0.80, 1.0);
-static const float3 kWarpLilac = float3(0.62, 0.52, 1.0);
-static const float3 kWarpFloor = float3(0.56, 0.50, 0.92);
-static const float3 kWarpSpark = float3(1.0, 0.97, 1.0);
-
+// where it draws them. 2.7.55 (the tester on 2.7.54's lilac walls with crisp tops: «аккуратнее ... более похожим на
+// тот что в оригинале»): from the game's own pictures, cleaned - a ring's and the floor's texture averaged round the
+// ring (8 taps along u: the streaks of its 64 texels gone; its colour and alpha down the wall kept, whatever they are),
+// the rings' top edge soft, a fine bright circle where each wall meets the ground (uv0.y 1 there), a little less light
+// than the game's (the walls 85 %, the floor 75 %); the sparks stay the game's. sourceRect.w the part (1 a ring, 2 the
+// floor); footprint the strength (1 = 100 %).
 float4 warpShade(PsIn i) {
-    // the slopes first, outside any choice
     float v = saturate(i.uv0.y);
     float dv = max(fwidth(v), 1e-4);
-    float2 duv = fwidth(i.uv0);
-    float2 g = (i.pos.xy - 0.5 - float2(jitterX, jitterY)) / max(scale, 1e-3);
-    float z = i.pos.w;
-    float3 p = float3((g.x - cx) * z / max(f0, 1e-3), (g.y - cy) * z / max(f1, 1e-3), z);
-    float3 n = cross(ddx(p), ddy(p));
-    float facing = dot(n, normalize(sourceRect.xyz)) * rsqrt(max(dot(n, n), 1e-20));
-    float steep = sqrt(saturate(1.0 - facing * facing));  // 0 a ring lying on the ground, 1 a wall standing
+    float2 gx = ddx(i.uv0), gy = ddy(i.uv0);  // the slopes first, outside any choice
+    float4 t = float4(0.0, 0.0, 0.0, 0.0);
+    [unroll] for (int k = 0; k < 8; ++k)
+        t += tex0.SampleGrad(samp0, float2(frac(i.uv0.x + float(k) * 0.125), i.uv0.y), gx, gy);
+    t *= 0.125;
     float fog = fogEnable != 0 ? i.specular.a : 1.0;
     float strength = max(footprint, 0.0);
-    // a ring: its alpha 70 once it is whole
+    // a ring, added: the game's colour and alpha (its alpha 70 once whole), its foot's circle
     float fade = saturate(i.diffuse.a * (255.0 / 70.0));
-    float3 tint = i.diffuse.rgb / max(max(i.diffuse.r, i.diffuse.g), max(i.diffuse.b, 1e-3));
-    tint = tint * 0.35 + kWarpLilac * 0.65;
-    float stands = steep * steep;
-    float crest = (1.0 - smoothstep(0.0, 1.8 * dv, v)) * stands;
-    float foot = (1.0 - smoothstep(0.0, 1.8 * dv, 1.0 - v)) * 0.55;
-    float halo = exp(-v / 0.14) * 0.42 * steep;
-    float edge = stands + (1.0 - stands) * smoothstep(0.0, 0.3, v);  // one lying on the ground: no rim
-    float ang = i.uv0.x * (21.0 / 20.0) * 6.2831853;  // whole turns round the ring: no seam
-    float run = sin(9.0 * ang + 2.0 * sin(4.0 * ang + twinH) + 6.0 * v - 2.4 * twinH) *
-                sin(5.0 * ang - 3.0 * v + 1.7 * twinH);
-    float body = (0.12 + 0.14 * smoothstep(0.3, 0.9, run)) * steep * (1.0 - 0.5 * v);
-    float3 ring = (kWarpLine * (crest + foot * 0.6) + tint * ((halo + body) * edge + foot * 0.4)) * fade * strength *
-                  fog;
-    // the floor: its alpha 0.5 while the warp is there
-    float pool = smoothstep(0.0, 0.7, v) * saturate(i.diffuse.a * 2.0);
-    float3 floorColour = fogEnable != 0 ? lerp(fogColor.rgb, kWarpFloor, i.specular.a) : kWarpFloor;
-    float floorAlpha = saturate(0.42 * pool * min(strength, 1.5));
-    // a spark: a core, two glints across it at least a pixel wide, a soft halo
-    float2 d = i.uv0 - 0.5;
-    float r2 = dot(d, d);
-    float wx = max(0.01, duv.x * 0.7), wy = max(0.01, duv.y * 0.7);
-    float glint = exp(-abs(d.x) / wx) * exp(-abs(d.y) / 0.13) + exp(-abs(d.y) / wy) * exp(-abs(d.x) / 0.13);
-    float sparkAlpha = saturate((exp(-r2 / 0.0018) + glint * 0.7 + exp(-r2 / 0.015) * 0.22) * i.diffuse.a *
-                                min(strength, 1.5)) * fog;
-    float part = sourceRect.w;
-    return part < 1.5   ? float4(ring, 1.0)
-           : part < 2.5 ? float4(floorColour, floorAlpha)
-                        : float4(kWarpSpark, sparkAlpha);
+    float top = smoothstep(0.0, 0.1, v);
+    float foot = 1.0 - smoothstep(0.0, 2.5 * dv, 1.0 - v);
+    float3 ring = i.diffuse.rgb * (t.rgb * (t.a * i.diffuse.a * top * 0.85) + foot * 0.3 * fade) * strength * fog;
+    // the floor, laid over
+    float3 floorColour = i.diffuse.rgb * t.rgb;
+    if (fogEnable != 0) floorColour = lerp(fogColor.rgb, floorColour, i.specular.a);
+    float floorAlpha = saturate(t.a * i.diffuse.a * 0.75 * min(strength, 1.33));
+    return sourceRect.w < 1.5 ? float4(ring, 1.0) : float4(floorColour, floorAlpha);
 }
 
 float4 portal_draw_ps(PsIn i) : SV_Target { return warpShade(i); }
 
-GlowOut portal_draw_glow_ps(PsIn i) {  // the rings' light and the sparks into the glow; the floor hides what it covers
+GlowOut portal_draw_glow_ps(PsIn i) {  // the rings' light into the glow; the floor hides what it covers
     GlowOut o;
     o.c = warpShade(i);
-    o.g = abs(sourceRect.w - 2.0) < 0.5 ? float4(0.0, 0.0, 0.0, o.c.a) : o.c;
+    o.g = sourceRect.w > 1.5 ? float4(0.0, 0.0, 0.0, o.c.a) : o.c;
     return o;
 }
 

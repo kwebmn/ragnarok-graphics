@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 #include "core/d3d7.hpp"
+#include "core/report_upload.hpp"
 
 namespace uagfx::portal {
 Part partOf(int effectId, bool blend, uint8_t srcBlend, uint8_t dstBlend, uint32_t vertexCount) {
@@ -11,6 +13,18 @@ Part partOf(int effectId, bool blend, uint8_t srcBlend, uint8_t dstBlend, uint32
     if (dstBlend == d3d7::BLEND_ONE) return vertexCount == 3 ? Part::Ring : Part::None;
     if (dstBlend != d3d7::BLEND_INVSRCALPHA) return Part::None;
     return vertexCount == 3 ? Part::Floor : vertexCount == 4 ? Part::Spark : Part::None;
+}
+
+std::vector<std::string> pictureLines(uint32_t texture, int width, int height, const uint32_t* argb) {
+    char head[96];
+    std::snprintf(head, sizeof head, "portal capture: texture %u %dx%d (ARGB, base64)", unsigned(texture), width,
+                  height);
+    std::vector<std::string> lines{head};
+    if (width <= 0 || height <= 0 || !argb) return lines;
+    const std::string text =
+        report::base64(std::string(reinterpret_cast<const char*>(argb), size_t(width) * size_t(height) * 4));
+    for (size_t at = 0; at < text.size(); at += 160) lines.push_back("  t " + text.substr(at, 160));
+    return lines;
 }
 
 bool floorMiddle(const Corner c[3], Corner& out) {

@@ -946,9 +946,9 @@ const Entry kTexts[] = {
      "Наскільки яскраві вміння від того, як їх малює гра: 100 % — як у грі.",
      "Насколько ярки умения от того, как их рисует игра: 100 % — как в игре."},
     {"Living portals", "Живі портали", "Живые порталы"},
-    {"The warps glow softly: their lilac light falls on what is around them.",
-     "Варпи м'яко світяться: їхнє бузкове світло падає на все довкола.",
-     "Варпы мягко светятся: их сиреневый свет падает на всё вокруг."},
+    {"The warps glow softly: their light falls on what is around them.",
+     "Варпи м'яко світяться: їхнє світло падає на все довкола.",
+     "Варпы мягко светятся: их свет падает на всё вокруг."},
     {"Portals' strength", "Сила порталів", "Сила порталов"},
     {"How bright the warps' light and the new portal are.", "Наскільки яскраві світло варпів і новий портал.",
      "Насколько ярки свет варпов и новый портал."},
@@ -3096,15 +3096,12 @@ const Entry kTexts[] = {
      "Голубой шар Ruwach, кружащий вокруг героя, — маленький яркий шарик в начале своего голубого шлейфа, как у "
      "кометы."},
     {"New portal", "Новий портал", "Новый портал"},  // 2.7.48
-    {"The warps drawn anew where the game draws them: the same rings coming in to the middle in waves, only sharp - "
-     "a bright line along each wall's top, lilac light down it, a fine circle where it meets the ground; a lilac "
-     "pool on the ground instead of the white haze; the sparks crisp stars. Off: the game's own portal.",
-     "Варпи намальовані заново там, де їх малює гра: ті самі кільця, що хвилями сходяться до середини, тільки "
-     "чіткі — яскрава лінія по верху кожної стінки, бузкове світло по ній, тонке коло там, де вона торкається "
-     "землі; бузкова пляма на землі замість білого серпанку; іскри — чіткі зірочки. Вимкнено — портал гри.",
-     "Варпы нарисованы заново там, где их рисует игра: те же кольца, что волнами сходятся к середине, только "
-     "чёткие — яркая линия по верху каждой стенки, сиреневый свет по ней, тонкий круг там, где она касается "
-     "земли; сиреневое пятно на земле вместо белой дымки; искры — чёткие звёздочки. Выключено — портал игры."},
+    {"The warps drawn from the game's own pictures, only neater: the rings without the streaks of their picture, a "
+     "fine bright circle where each meets the ground, a softer haze on the floor. Off: the game's own portal.",
+     "Варпи з власних картинок гри, тільки акуратніші: кільця без смуг на картинці, тонке світле коло там, де "
+     "кожне торкається землі, м'якший серпанок на підлозі. Вимкнено — портал гри.",
+     "Варпы из собственных картинок игры, только аккуратнее: кольца без полос на картинке, тонкий светлый круг "
+     "там, где каждое касается земли, мягче дымка на полу. Выключено — портал игры."},
     {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",

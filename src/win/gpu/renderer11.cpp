@@ -1237,7 +1237,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const portal::Part warp = !s.ui && d.effect == uint8_t(effect_exe::Kind::Portal)
                                   ? portal::partOf(int(d.effectId), s.blend, s.srcBlend, s.dstBlend, d.vertexCount)
                                   : portal::Part::None;
-    const bool warpDrawn = warp != portal::Part::None && newPortalWanted();
+    const bool warpDrawn = portal::reshaded(warp) && newPortalWanted();  // 2.7.55: its rings and floor
     if (warpDrawn && warpsToldMap_ != map_) {  // once a map, for the reports
         warpsToldMap_ = map_;
         LOG_INFO("portals: the warps shaded anew on %s (Direct3D 11)", map_.c_str());
@@ -1520,15 +1520,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (!raysLogged_) LOG_INFO("rays: the forest's light drawn anew (Direct3D 11)");
         raysLogged_ = true;
     }
-    if (warpDrawn) {  // 2.7.54 (draw.cpp): the projection, the world's up and the part, the time, the strength
-        const camera::Projection p = camera::projectionFor(gameWidth_, gameHeight_);
-        const float proj[6] = {p.f0, p.f1, p.cx, p.cy, p.nearZ, p.farZ};
-        std::memcpy(c.projection, proj, sizeof proj);
-        float up[3] = {0.0f, -1.0f, 0.0f};
-        if (cameraValid_) camera::upInView(viewToWorld_, up);
-        std::copy(up, up + 3, c.sourceRect);
+    if (warpDrawn) {  // 2.7.54 (draw.cpp): the part and the strength
         c.sourceRect[3] = float(int(warp));
-        c.twin[3] = waterTime();
         c.footprint = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
     }
     // 0.67, soft particles (as draw.cpp): an effect facing the screen fades where it goes into the ground; the
