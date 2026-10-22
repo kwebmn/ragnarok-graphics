@@ -1,3 +1,13 @@
+# uaRO Graphics 2.7.53 — to check
+
+- **The new portal is off** ("New portal" unticked by default). Everyone has the game's own portal again, not two.
+  The glow and swirl of "Portals" now come only with the new portal.
+- **The driver records the game's portals.** On the first three maps a portal is seen on, two seconds of its draws go
+  into the log: every triangle, its depth, alpha, blending, and the portal's pictures themselves. The new portal will
+  be made anew on these facts and checked before it is built.
+- What to do: start the game, go straight to the door in Prontera, stand three seconds with the portal on the screen,
+  take a screenshot and send a report.
+
 # uaRO Graphics 2.7.52 — to check
 
 - **A portal on a tower's roof and a light rectangle by the windmill.** 2.7.51 looked for the ground under a portal in
