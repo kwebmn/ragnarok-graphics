@@ -446,6 +446,8 @@ struct Config {
     bool padEnabled = true;
     // 2.11: [launcher] direct_start - a direct start of uaRO.exe plays at once instead of opening «Гра»
     bool directStart = false;
+    // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
+    bool safeMode = false;
     bool bridgeDpiScale = true;
     // Part 4 (test): [renderer] remix = 1 draws through Direct3D 9's fixed function, with the world in world space:
     // RTX Remix when its d3d9.dll is next to uaRO.exe, else the system's Direct3D 9.

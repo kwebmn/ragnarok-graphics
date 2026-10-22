@@ -47,6 +47,7 @@ public:
     PixelFormat screenFormat = PixelFormat::X8R8G8B8;
     HWND window = nullptr;
     bool windowApplied = false;  // [display] mode is applied at the first present, once the client's size is fixed
+    bool firstPicture_ = false;  // 2.12: the first picture logged (core/safe_mode: the start went well)
     bool vblankWaited = false;   // WaitForVerticalBlank came before the next Blt onto the primary
     bool gameFullscreen = false;  // the game asked for DDSCL_FULLSCREEN ([display] mode = auto follows it)
     Shadow shadow;

@@ -408,6 +408,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.padEnabled);
         } else if (key == "launcher.direct_start") {  // 2.11
             setBool(val, c.directStart);
+        } else if (key == "renderer.safe_mode") {  // 2.12
+            setBool(val, c.safeMode);
         } else if (key == "stats.send") {  // 2.2.1
             setBool(val, c.statsSend);
         } else if (key == "stats.id") {

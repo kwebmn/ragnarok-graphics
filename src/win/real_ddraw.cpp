@@ -4,11 +4,14 @@
 #include "win/disk.hpp"
 #include "win/pad_mount.hpp"
 
+#include <cstdlib>
 #include <cstring>
 #include <string>
 
 #include "core/effect_groups.hpp"
 #include "core/launcher.hpp"
+#include "core/log_files.hpp"
+#include "core/safe_mode.hpp"
 #include "core/settings/report.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -111,6 +114,34 @@ bool openLauncherInstead(const std::string& dir) {
     return true;
 }
 
+void writeSmallFile(const std::string& path, const std::string& text) {
+    HANDLE f = CreateFileA(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return;
+    DWORD wrote = 0;
+    WriteFile(f, text.data(), DWORD(text.size()), &wrote, nullptr);
+    CloseHandle(f);
+}
+
+// 2.12: the safe mode (core/safe_mode) - the last start judged by its log, the failed ones in a row counted; two, or
+// [renderer] safe_mode = 1, and this start's settings go safe. An automatic one stays (its note) until the settings
+// app's «Звичайний режим» removes the note.
+void safeModeFirst(const std::string& dir, Config& config) {
+    std::string previous, kept;
+    readTextFile(logfiles::previous(layout::join(dir, layout::now(layout::File::DriverLog))), previous);
+    const std::string counter = layout::join(dir, layout::kFailedStarts);
+    const std::string note = layout::join(dir, layout::kSafeModeNote);
+    readTextFile(counter, kept);
+    const int inRow = safe::failedInRow(std::atoi(kept.c_str()), safe::startFailed(previous));
+    writeSmallFile(counter, std::to_string(inRow));
+    const bool noted = fileExists(note);
+    if (!noted && !safe::needed(inRow, config.safeMode)) return;
+    if (!noted && !config.safeMode)
+        writeSmallFile(note, std::to_string(inRow) + " starts in a row ended before their first picture");
+    safe::apply(config);
+    LOG_INFO("safe mode (%s): Direct3D 11, no effects, AI textures, DLSS, 64-bit renderer",
+             config.safeMode ? "[renderer] safe_mode = 1" : "the last starts failed - the settings app tells");
+}
+
 // 2.10: the last check (the watcher's, at an earlier start) found an update - the question before the login window,
 // asked by the settings app; its "Update" closes the game: the settings app updates it and starts it again.
 void askUpdateFirst(const std::string& dir) {
@@ -166,6 +197,7 @@ Startup decide() {
     for (const std::string& line : moved) LOG_INFO("%s", line.c_str());
     LOG_INFO("%s", padMountedText());  // 2.9
     for (const char* folder : layout::kMadeAtStart) makeFolders(layout::join(dir, folder));
+    safeModeFirst(dir, s.config);  // 2.12: before anything reads the renderer's settings
     LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? iniPath.c_str() : "no uaro-graphics.ini, defaults",
              apiToken(s.config.api), displayModeToken(s.config.mode));
     // 2.11: the launcher's own start plays at once; a direct one opens «Гра», or with «Запускати гру одразу» asks

@@ -356,6 +356,7 @@ enum class Text : uint16_t {
     PlayUpdateNote, PlayButton, PlayUpdateButton,  // 2.11
     AutoTierIntegratedWeak, AutoTierIntegratedStrong,  // 2.12
     RenderApiSystem,  // 2.12
+    RenderSafeMode, RenderSafeModeHint,  // 2.12
     Count
 };
 

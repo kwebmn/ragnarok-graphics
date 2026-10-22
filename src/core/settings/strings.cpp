@@ -3324,6 +3324,15 @@ const Entry kTexts[] = {
     {"Off - the game's own look",
      "Вимкнено — вигляд самої гри",
      "Выключено — вид самой игры"},
+    {"Safe mode",
+     "Безпечний режим",
+     "Безопасный режим"},
+    {"Direct3D 11 without effects, the neural network, DLSS and the 64-bit renderer - when the game does not start or "
+     "crashes. It comes by itself after two failed starts in a row.",
+     "Direct3D 11 без ефектів, нейромережі, DLSS і 64-бітного рендера — якщо гра не запускається або вилітає. "
+     "Вмикається й сама після двох невдалих запусків поспіль.",
+     "Direct3D 11 без эффектов, нейросети, DLSS и 64-битного рендера — если игра не запускается или вылетает. "
+     "Включается и сама после двух неудачных запусков подряд."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

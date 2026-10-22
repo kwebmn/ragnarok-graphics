@@ -30,6 +30,10 @@ constexpr const char* kUpdateInfo = "uaro-graphics\\update.ini";
 constexpr const char* kShortcuts = "uaro-graphics\\shortcuts";
 // 2.11: when the driver last sent a direct start to «Гра» (its time is the file's): no bouncing (core/launcher)
 constexpr const char* kRedirected = "uaro-graphics\\cache\\launcher-redirect.txt";
+// 2.12: the safe mode's (core/safe_mode): the failed starts in a row; why the game starts safe (the app shows it and
+// removes it - «Звичайний режим»)
+constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
+constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
 // The package's templates: a settings file that is not there yet starts from one of them (never at the settings'
 // own place - an older update.bat copies uaro-graphics\ of the archive over the installed one).
 constexpr const char* kIniTemplate = "uaro-graphics\\defaults\\uaro-graphics.ini";

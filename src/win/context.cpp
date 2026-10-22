@@ -19,6 +19,7 @@
 #include "win/dpi.hpp"
 #include "win/effect_hook.hpp"
 #include "win/ftol_patch.hpp"
+#include "core/safe_mode.hpp"
 #include "win/hit_hook.hpp"
 #include "win/pick_hook.hpp"
 #include "win/server_night.hpp"
@@ -690,6 +691,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
     soundFrame(foreground);  // 0.91: quieter in the background; the crowd's limiter thinned out
     renderer->present(window, out.cx, out.cy, source, o);
+    if (!firstPicture_) {  // 2.12: the start went well (core/safe_mode)
+        firstPicture_ = true;
+        LOG_INFO("%s", safe::kFirstPicture);
+    }
     GpuTiming gpuNow;  // 2.2.1: the card's work a frame - the counter's and the console's
     const bool timed = renderer->gpuTiming(gpuNow);
     fps_.setGpu(timed ? &gpuNow : nullptr);
