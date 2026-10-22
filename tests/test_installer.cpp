@@ -125,3 +125,78 @@ TEST(installer_keeps_previous_when_nothing_changed_or_on_a_repair) {
     CHECK_EQ(at(L"ddraw.dll"), std::string("uaRO Graphics ddraw 2.0.0"));
     CHECK_EQ(at(L"uaro-graphics\\previous\\ddraw.dll"), std::string("uaRO Graphics ddraw 1.0.0"));
 }
+
+// What install.bat did after the files, now finishInstall's.
+TEST(finish_install_puts_the_template_for_a_fresh_install) {
+    client();
+    put(L"uaro-graphics\\defaults\\uaro-graphics.ini", "; the template\r\n[display]\r\nmode = window\r\n");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"uaro-graphics\\uaro-graphics.ini"), std::string("; the template\r\n[display]\r\nmode = window\r\n"));
+    CHECK(fake::windows().folders.count(fake::path(L"uaro-graphics\\logs")) == 1);
+}
+
+TEST(finish_install_upgrades_an_old_settings_file) {
+    client();
+    put(L"uaro-graphics\\defaults\\uaro-graphics.ini", "; the template\r\n");
+    put(L"uaro-graphics.ini", "[display]\r\nmode = window\r\n");  // a 0.3 file in the root
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"uaro-graphics.ini"), std::string("<none>"));
+    const std::string ini = at(L"uaro-graphics\\uaro-graphics.ini");
+    CHECK(ini.rfind("[display]\r\nmode = window\r\n", 0) == 0);
+    CHECK(ini.find("\r\nsharpen = 50\r\n") != std::string::npos);
+}
+
+TEST(finish_install_moves_dgvoodoos_files_aside_and_an_old_pad_away) {
+    client();
+    put(L"D3DImm.dll", "dgVoodoo D3DImm");
+    put(L"dgVoodoo.conf", "[General]");
+    put(L"dinput.dll", std::string("MZ") + '\0' + "uaro-pad.log");
+    put(L"dinput8.dll", "ROExt");
+    put(L"uaro-pad.moved", "dinput8.dll\r\n");
+    put(L"uaro-graphics\\pad\\dinput.dll", "pad");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"uaro-graphics\\dgvoodoo\\D3DImm.dll"), std::string("dgVoodoo D3DImm"));
+    CHECK_EQ(at(L"D3DImm.dll"), std::string("<none>"));
+    CHECK_EQ(at(L"uaro-graphics\\dgvoodoo\\dgVoodoo.conf"), std::string("[General]"));
+    CHECK_EQ(at(L"dgVoodoo.conf"), std::string("[General]"));  // install.bat copied it: the player's stays
+    CHECK_EQ(at(L"dinput.dll"), std::string("ROExt"));
+    CHECK_EQ(at(L"uaro-pad.moved"), std::string("<none>"));
+    CHECK(fake::windows().folders.count(fake::path(L"uaro-graphics\\pad")) == 0);
+}
+
+TEST(finish_install_removes_our_old_scripts_only) {
+    client();
+    put(L"install.bat", "@echo off\r\nrem uaRO Graphics: puts our ddraw.dll into this uaRO client folder.\r\n");
+    put(L"update.bat", "@echo off\r\nrem uaRO Graphics: downloads the newest build\r\n");
+    put(L"get-dlss.bat", "@echo off\r\nrem uaRO Graphics: NVIDIA DLSS\r\n");
+    put(L"uninstall.bat", "@echo off\r\nrem another program's\r\n");
+    put(L"run.bat", "start uaRO.exe\r\n");
+    put(L"uaro-graphics-update\\files\\uaro-graphics\\ddraw.dll", "left by an old update.bat");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"install.bat"), std::string("<none>"));
+    CHECK_EQ(at(L"update.bat"), std::string("<none>"));
+    CHECK_EQ(at(L"get-dlss.bat"), std::string("<none>"));
+    CHECK_EQ(at(L"uninstall.bat"), std::string("@echo off\r\nrem another program's\r\n"));
+    CHECK_EQ(at(L"run.bat"), std::string("start uaRO.exe\r\n"));
+    CHECK(fake::windows().folders.count(fake::path(L"uaro-graphics-update")) == 0);
+}
+
+TEST(finish_install_leaves_the_scripts_while_one_runs) {
+    client();
+    put(L"update.bat", "@echo off\r\nrem uaRO Graphics: downloads the newest build\r\n");  // it runs this
+    put(L"uaro-graphics-update\\files\\install.bat", "rem uaRO Graphics");
+    CHECK(app::installer::finishInstall(app::exeFolder(), false).ok);
+    CHECK(at(L"update.bat") != "<none>");
+    CHECK(fake::windows().folders.count(fake::path(L"uaro-graphics-update")) == 1);
+}
+
+TEST(finish_install_writes_the_apps_entry) {
+    client();
+    put(L"uaro-graphics\\version.txt", "2.10.0 build 2026-10-22 18:00\r\n");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    std::map<std::wstring, std::wstring>& e = fake::windows().appsEntry;
+    CHECK(e[L"DisplayName"] == L"uaRO Graphics");
+    CHECK(e[L"DisplayVersion"] == L"2.10.0");
+    CHECK(e[L"UninstallString"] == L"\"" + app::exeFolder() + L"\\uaro-graphics.exe\" --uninstall");
+    CHECK(e[L"InstallLocation"] == app::exeFolder());
+}

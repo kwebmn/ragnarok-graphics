@@ -24,4 +24,17 @@ std::string previousVersion(const std::wstring& dir);   // its version.txt's fir
 // uaro-graphics\previous\ back in place of the files it replaced (all or nothing); previous\ goes.
 Result rollBack(const std::wstring& dir);
 
+// What install.bat did after the files: a 2.x root settings file upgraded (core/ini_upgrade) and the 2.x layout moved
+// (core/layout_migration); the folders of layout::kMadeAtStart; dgVoodoo's D3DImm.dll and a copy of its dgVoodoo.conf
+// into uaro-graphics\dgvoodoo\; the settings file from the package's template when there is none; an old uaRO Pad dll
+// and its folder away; our old .bat files away when `scripts` (not while an older update.bat runs this); the Apps
+// entry.
+Result finishInstall(const std::wstring& dir, bool scripts);
+// 2.9: a 2.x uaRO Pad dinput.dll goes (the pad is inside the driver) and what it moved aside comes back
+// (uaro-pad.moved: ROExt as dinput8.dll, or dinput.dll.before-pad), as its own switch-off did.
+void removeOldPad(const std::wstring& dir);
+// install.bat, update.bat, uninstall.bat, get-dlss.bat, get-models.bat, use-dgvoodoo.bat, use-uaro.bat - each when
+// its bytes name "uaRO Graphics" - and the folders older scripts left (uaro-graphics-update and the downloads').
+void removeOldScripts(const std::wstring& dir);
+
 }  // namespace uagfx::app::installer

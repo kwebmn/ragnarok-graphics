@@ -9,6 +9,7 @@
 
 #include "app/app_disk.hpp"
 #include "app/files.hpp"
+#include "app/installer.hpp"
 #include "app/text.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/compat_flags.hpp"
@@ -48,24 +49,6 @@ Text problemText(ScreenProblem p) {
 
 namespace {
 
-// 2.9: uaRO Pad is inside the driver - a 2.x pad dinput.dll in the game's folder would be a second one. It goes, and
-// what it moved aside when it was switched on (uaro-pad.moved: ROExt as dinput8.dll or dinput.dll.before-pad) comes
-// back, as its own switch-off did.
-void removeOldPad(const std::wstring& dir) {
-    std::string installed;
-    if (!readFile(dir + L"\\dinput.dll", installed) || classifyPad(installed, "") != PadFile::Pad) return;
-    if (!deleteFile(dir + L"\\dinput.dll")) return;
-    std::string moved;
-    readFile(dir + L"\\uaro-pad.moved", moved);
-    while (!moved.empty() && (moved.back() == '\r' || moved.back() == '\n' || moved.back() == ' ')) moved.pop_back();
-    if (moved == "dinput8.dll" || moved == "dinput.dll.before-pad") {
-        const std::wstring from = dir + L"\\" + wide(moved);
-        std::string bytes;
-        if (readFile(from, bytes) && writeFileAtomic(dir + L"\\dinput.dll", bytes)) deleteFile(from);
-    }
-    deleteFile(dir + L"\\uaro-pad.moved");
-}
-
 }  // namespace
 
 Model::Model() {
@@ -83,7 +66,10 @@ Model::Model() {
     paths_.report = ourPlace(paths_.dir, layout::now(layout::File::Report));
     paths_.ddraw = paths_.dir + L"\\ddraw.dll";
     paths_.pack = ourFile(paths_.dir, layout::File::Pack);
-    if (!gameRunning(paths_.game)) removeOldPad(paths_.dir);  // 2.9: the pad is inside the driver
+    if (!gameRunning(paths_.game)) {
+        installer::removeOldPad(paths_.dir);      // 2.9: the pad is inside the driver
+        installer::removeOldScripts(paths_.dir);  // 2.10: no .bat of ours any more (an old update.bat's too)
+    }
     system_ = probeSystem();
     load();
 }

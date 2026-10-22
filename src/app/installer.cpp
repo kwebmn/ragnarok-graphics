@@ -2,10 +2,16 @@
 
 #include <utility>
 
+#include "app/app_disk.hpp"
 #include "app/files.hpp"
+#include "app/registry.hpp"
 #include "app/text.hpp"
+#include "core/ini_upgrade.hpp"
 #include "core/layout.hpp"
+#include "core/layout_migration.hpp"
+#include "core/settings/pad_files.hpp"
 #include "core/update_check.hpp"
+#include "core/version.hpp"
 
 namespace uagfx::app::installer {
 namespace {
@@ -138,6 +144,70 @@ Result rollBack(const std::wstring& dir) {
     Result r;
     r.log.push_back("installer: " + std::to_string(files.size()) + " file(s) of the previous version back");
     return r;
+}
+
+Result finishInstall(const std::wstring& dir, bool scripts) {
+    Result r;
+    // A 2.x root settings file: what older versions lack goes in before it moves (a 2.8 file is never upgraded).
+    const std::wstring rootIni = join(dir, wide(layout::before(layout::File::Ini)));
+    std::string text;
+    if (readFile(rootIni, text)) {
+        const std::string upgraded = upgradeIni(text);
+        if (upgraded != text && writeFileAtomic(rootIni, upgraded))
+            r.log.push_back("installer: the 2.x settings file got the keys it lacked");
+    }
+    AppDisk disk;
+    for (const std::string& line : layout::migrate(utf8(dir), disk)) r.log.push_back(line);
+    for (const char* folder : layout::kMadeAtStart) makeFolders(ourPlace(dir, folder));
+    const std::wstring dg = join(dir, wide(layout::now(layout::File::DgVoodoo)));
+    if (fileExists(join(dir, L"D3DImm.dll")) && makeFolders(dg) &&
+        moveFile(join(dir, L"D3DImm.dll"), join(dg, L"D3DImm.dll"), true))
+        r.log.push_back("installer: dgVoodoo's D3DImm.dll into uaro-graphics\\dgvoodoo");
+    std::string conf;
+    if (readFile(join(dir, L"dgVoodoo.conf"), conf) && makeFolders(dg))
+        writeFileAtomic(join(dg, L"dgVoodoo.conf"), conf);  // install.bat copied it: the player's one stays
+    const std::wstring ini = join(dir, wide(layout::now(layout::File::Ini)));
+    std::string templ;
+    if (!fileExists(ourFile(dir, layout::File::Ini)) && readFile(join(dir, wide(layout::kIniTemplate)), templ) &&
+        writeFileAtomic(ini, templ))
+        r.log.push_back("installer: the settings file from the package's template");
+    removeOldPad(dir);
+    removeTree(join(dir, L"uaro-graphics\\pad"));
+    if (scripts) removeOldScripts(dir);
+    std::string version;
+    readFile(join(dir, L"uaro-graphics\\version.txt"), version);
+    while (!version.empty() && (version.back() == '\r' || version.back() == '\n')) version.pop_back();
+    if (!writeAppsEntry(dir, version.empty() ? std::string(kVersion) : update::bare(version)))
+        r.log.push_back("installer: Windows refused the entry in Apps");
+    return r;
+}
+
+void removeOldPad(const std::wstring& dir) {
+    std::string installed;
+    if (!readFile(dir + L"\\dinput.dll", installed) ||
+        settings::classifyPad(installed, "") != settings::PadFile::Pad)
+        return;
+    if (!deleteFile(dir + L"\\dinput.dll")) return;
+    std::string moved;
+    readFile(dir + L"\\uaro-pad.moved", moved);
+    while (!moved.empty() && (moved.back() == '\r' || moved.back() == '\n' || moved.back() == ' ')) moved.pop_back();
+    if (moved == "dinput8.dll" || moved == "dinput.dll.before-pad") {
+        const std::wstring from = dir + L"\\" + wide(moved);
+        std::string bytes;
+        if (readFile(from, bytes) && writeFileAtomic(dir + L"\\dinput.dll", bytes)) deleteFile(from);
+    }
+    deleteFile(dir + L"\\uaro-pad.moved");
+}
+
+void removeOldScripts(const std::wstring& dir) {
+    for (const wchar_t* name : {L"install.bat", L"update.bat", L"uninstall.bat", L"get-dlss.bat", L"get-models.bat",
+                                L"use-dgvoodoo.bat", L"use-uaro.bat"}) {
+        std::string bytes;
+        if (readFile(join(dir, name), bytes) && ours(bytes)) deleteFile(join(dir, name));
+    }
+    for (const wchar_t* left :
+         {L"uaro-graphics-update", L"uaro-graphics-dlss-download", L"uaro-graphics-models-download"})
+        removeTree(join(dir, left));
 }
 
 }  // namespace uagfx::app::installer

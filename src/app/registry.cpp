@@ -191,4 +191,49 @@ bool writeUserCompat(const std::wstring& exePath, const std::string& flags) {
     return r == ERROR_SUCCESS;
 }
 
+namespace {
+
+const wchar_t kAppsParent[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
+const wchar_t kAppsName[] = L"uaRO Graphics";
+
+}  // namespace
+
+bool writeAppsEntry(const std::wstring& dir, const std::string& version) {
+    HKEY key = nullptr;
+    const std::wstring path = std::wstring(kAppsParent) + L"\\" + kAppsName;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, path.c_str(), 0, nullptr, 0, KEY_SET_VALUE | KEY_WOW64_64KEY, nullptr,
+                        &key, nullptr) != ERROR_SUCCESS)
+        return false;
+    bool ok = true;
+    const auto text = [&](const wchar_t* name, const std::wstring& v) {
+        ok = RegSetValueExW(key, name, 0, REG_SZ, reinterpret_cast<const BYTE*>(v.c_str()),
+                            DWORD((v.size() + 1) * sizeof(wchar_t))) == ERROR_SUCCESS && ok;
+    };
+    const auto number = [&](const wchar_t* name, DWORD v) {
+        ok = RegSetValueExW(key, name, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&v), sizeof v) == ERROR_SUCCESS &&
+             ok;
+    };
+    const std::wstring exe = dir + L"\\uaro-graphics.exe";
+    text(L"DisplayName", L"uaRO Graphics");
+    text(L"DisplayVersion", wide(version));
+    text(L"Publisher", L"KWEB Team");
+    text(L"DisplayIcon", exe + L",0");
+    text(L"InstallLocation", dir);
+    text(L"UninstallString", L"\"" + exe + L"\" --uninstall");
+    text(L"URLInfoAbout", L"https://uaro.kiev.ua");
+    number(L"NoModify", 1);
+    number(L"NoRepair", 1);
+    RegCloseKey(key);
+    return ok;
+}
+
+bool removeAppsEntry() {
+    HKEY parent = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, kAppsParent, 0, KEY_ALL_ACCESS | KEY_WOW64_64KEY, &parent) != ERROR_SUCCESS)
+        return false;
+    const LONG r = RegDeleteTreeW(parent, kAppsName);
+    RegCloseKey(parent);
+    return r == ERROR_SUCCESS || r == ERROR_FILE_NOT_FOUND;
+}
+
 }  // namespace uagfx::app

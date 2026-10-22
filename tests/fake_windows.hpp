@@ -21,6 +21,8 @@ struct Windows {
     std::set<std::string> refused;  // value names the registry refuses to write (error 5)
     bool gameRunning = false;
     uagfx::app::SystemInfo system;
+    // 2.10: the entry in Windows' Apps (app/registry writeAppsEntry): its values, empty when there is none
+    std::map<std::wstring, std::wstring> appsEntry;
     int clock = 0;  // seconds after 2026-10-13 12:00:00: backup folders are named after it
 };
 
