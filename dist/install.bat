@@ -1,6 +1,6 @@
 @echo off
 rem uaRO Graphics: puts our ddraw.dll into this uaRO client folder.
-rem dgVoodoo's DDraw.dll and D3DImm.dll move into the dgvoodoo folder, kept there for uninstall.bat (2.2: unused).
+rem dgVoodoo's DDraw.dll and D3DImm.dll move into uaro-graphics\dgvoodoo, kept there for uninstall.bat (2.2: unused).
 rem Running it again is safe. uninstall.bat puts everything back.
 setlocal
 cd /d "%~dp0"
@@ -25,27 +25,28 @@ rem RTX Remix's settings in remix), and then runs this new install.bat: the upda
 if /i "%~1"=="/quiet" if exist "uaro-graphics-update\files\uaro-graphics\ddraw.dll" (
     xcopy /e /i /y /q "uaro-graphics-update\files\uaro-graphics" "uaro-graphics" >nul || goto :noaccess
 )
-if not exist "dgvoodoo" mkdir "dgvoodoo" || goto :noaccess
+rem 2.8: dgVoodoo's files in uaro-graphics\dgvoodoo (2.x kept them in dgvoodoo in the root: the driver moves those).
+if not exist "uaro-graphics\dgvoodoo" mkdir "uaro-graphics\dgvoodoo" || goto :noaccess
 rem The ddraw.dll in this folder is dgVoodoo's unless it is already ours.
 if exist "ddraw.dll" (
     findstr /m /c:"uaRO Graphics" "ddraw.dll" >nul 2>&1
-    if errorlevel 1 move /y "ddraw.dll" "dgvoodoo\DDraw.dll" >nul || goto :noaccess
+    if errorlevel 1 move /y "ddraw.dll" "uaro-graphics\dgvoodoo\DDraw.dll" >nul || goto :noaccess
 )
-if exist "D3DImm.dll" move /y "D3DImm.dll" "dgvoodoo\D3DImm.dll" >nul || goto :noaccess
-if exist "dgVoodoo.conf" copy /y "dgVoodoo.conf" "dgvoodoo\dgVoodoo.conf" >nul
+if exist "D3DImm.dll" move /y "D3DImm.dll" "uaro-graphics\dgvoodoo\D3DImm.dll" >nul || goto :noaccess
+if exist "dgVoodoo.conf" copy /y "dgVoodoo.conf" "uaro-graphics\dgvoodoo\dgVoodoo.conf" >nul
 copy /y "uaro-graphics\ddraw.dll" "ddraw.dll" >nul || goto :noaccess
 rem The settings app, uaRO Graphics Settings, lives next to uaRO.exe.
 if exist "uaro-graphics\uaro-graphics.exe" copy /y "uaro-graphics\uaro-graphics.exe" "uaro-graphics.exe" >nul || goto :noaccess
-rem A settings file older than 0.3 holds the defaults only: it is replaced by the new one, with every new setting
-rem and its notes.
-if exist "uaro-graphics.ini" (
-    findstr /c:"high_resolution" "uaro-graphics.ini" >nul 2>&1
-    if errorlevel 1 copy /y "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
-)
 rem 2.2: dgVoodoo is no longer offered - its switches go (uninstall.bat still puts it back).
 if exist "use-dgvoodoo.bat" del /f "use-dgvoodoo.bat" >nul 2>&1
 if exist "use-uaro.bat" del /f "use-uaro.bat" >nul 2>&1
-if not exist "uaro-graphics.ini" copy "uaro-graphics\uaro-graphics.ini" "uaro-graphics.ini" >nul
+rem 2.8: the settings are uaro-graphics\uaro-graphics.ini, the package's template uaro-graphics\defaults (an older
+rem update.bat copies uaro-graphics\ of the archive over this folder). A 2.x install's root file moves there at the
+rem driver's or the settings app's start; a fresh install gets the template.
+if not exist "uaro-graphics\uaro-graphics.ini" if not exist "uaro-graphics.ini" ^
+    copy "uaro-graphics\defaults\uaro-graphics.ini" "uaro-graphics\uaro-graphics.ini" >nul
+rem What older settings files lack goes into a 2.x install's root file before it moves; a fresh install has none.
+if not exist "uaro-graphics.ini" goto :old_ini_done
 rem A 0.3 settings file has no sharpen key yet: it is added at the end, every other setting stays.
 findstr /c:"sharpen" "uaro-graphics.ini" >nul 2>&1
 if errorlevel 1 (
@@ -377,6 +378,7 @@ if errorlevel 1 (
     >>"uaro-graphics.ini" echo ; 0-200 %%: how much of it
     >>"uaro-graphics.ini" echo weather_amount = 100
 )
+:old_ini_done
 rem 1.4: uaRO Pad, the gamepad, switched on on the Gamepad page gets the package's version. A running game keeps
 rem the old one in use: it is updated next time.
 if exist "dinput.dll" if exist "uaro-graphics\pad\dinput.dll" (
@@ -389,7 +391,7 @@ if /i "%~1"=="/quiet" exit /b 0
 echo.
 echo uaRO Graphics is installed. Start the game as usual.
 echo Every setting is in uaro-graphics.exe (uaRO Graphics Settings) in this folder.
-echo The log is uaro-graphics.log in this folder. To undo everything, run uninstall.bat.
+echo The logs are in uaro-graphics\logs. To undo everything, run uninstall.bat.
 echo.
 pause
 exit /b 0

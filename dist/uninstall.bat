@@ -14,11 +14,15 @@ if exist "ddraw.dll" (
     findstr /m /c:"uaRO Graphics" "ddraw.dll" >nul 2>&1
     if not errorlevel 1 del /f "ddraw.dll"
 )
-if exist "dgvoodoo\DDraw.dll" move /y "dgvoodoo\DDraw.dll" "DDraw.dll" >nul || goto :noaccess
-if exist "dgvoodoo\D3DImm.dll" move /y "dgvoodoo\D3DImm.dll" "D3DImm.dll" >nul || goto :noaccess
-if exist "dgvoodoo\dgVoodoo.conf" del /f "dgvoodoo\dgVoodoo.conf"
+rem 2.8: dgVoodoo back from uaro-graphics\dgvoodoo (2.x kept it in dgvoodoo in the root)
+for %%d in ("uaro-graphics\dgvoodoo" "dgvoodoo") do (
+    if exist "%%~d\DDraw.dll" move /y "%%~d\DDraw.dll" "DDraw.dll" >nul || goto :noaccess
+    if exist "%%~d\D3DImm.dll" move /y "%%~d\D3DImm.dll" "D3DImm.dll" >nul || goto :noaccess
+    if exist "%%~d\dgVoodoo.conf" del /f "%%~d\dgVoodoo.conf"
+)
 if exist "uaro-graphics.exe" del /f "uaro-graphics.exe"
 rem The list of pipelines met in the game is a cache of uaRO Graphics: it goes too.
+if exist "uaro-graphics\cache" rmdir /s /q "uaro-graphics\cache"
 if exist "uaro-graphics-pipelines.txt" del /f "uaro-graphics-pipelines.txt"
 rem The shaders compiled at the first start and kept for the next ones are a cache too.
 if exist "uaro-graphics\shaders-32.bin" del /f "uaro-graphics\shaders-32.bin"
@@ -32,13 +36,13 @@ rem The texture pack builder's status for the settings app goes too.
 if exist "uaro-graphics\pack-status.txt" del /f "uaro-graphics\pack-status.txt"
 if exist "uaro-graphics\pack-status.txt.part" del /f "uaro-graphics\pack-status.txt.part"
 if exist "uaro-graphics\pack-status.txt.stop" del /f "uaro-graphics\pack-status.txt.stop"
+rmdir "uaro-graphics\dgvoodoo" 2>nul
 rmdir "dgvoodoo" 2>nul
 echo.
 echo uaRO Graphics is removed and dgVoodoo is back in place.
-echo uaro-graphics.ini, uaro-graphics.log and uaro-pack.log stay here; delete them if you like.
-echo The uaro-graphics-backup folder keeps the copies of your settings the settings app made.
-echo upscaled.grf of the versions before 0.48 is not used any more; delete it.
-echo uaro-textures.zip is the texture pack; delete it if you like.
+echo The uaro-graphics folder keeps your settings (uaro-graphics.ini), the logs (logs), the copies of your
+echo settings the settings app made (backup) and the texture pack (textures\uaro-textures.zip); delete it if
+echo you like. upscaled.grf of the versions before 0.48 is not used any more; delete it.
 echo.
 pause
 exit /b 0

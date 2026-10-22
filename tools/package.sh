@@ -13,15 +13,18 @@ cmake --build build-win64 -j >/dev/null
 python3 tools/check_dll.py build-win/ddraw.dll
 python3 tools/check_exe.py build-win/uaro-graphics.exe
 python3 tools/check_studio.py build-win64/uaro-studio.exe  # 2.3: uaRO Studio
+python3 -I tools/check_layout.py  # 2.8: our paths only in src/core/layout.cpp
 out="build-win/uaro-graphics.zip"
 stage="build-win/package"
 rm -rf "$out" "$stage"
-mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/pad"
-cp dist/install.bat dist/uninstall.bat dist/update.bat dist/get-dlss.bat dist/get-models.bat \
-   dist/TEST.en.md dist/TEST.uk.md dist/TEST.ru.md "$stage/"
-# 2.6.1: the flags of Ctrl+1 and Ctrl+2 (tools/emotion_flags.py) - the game reads it once DATA.INI lists it
-cp dist/uaro-flags.grf "$stage/"
-cp build-win/ddraw.dll build-win/uaro-graphics.exe dist/uaro-graphics.ini build-win64/uaro-render64.exe \
+mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/ai" "$stage/uaro-graphics/pad" \
+         "$stage/uaro-graphics/notes" "$stage/uaro-graphics/defaults"
+cp dist/install.bat dist/uninstall.bat dist/update.bat dist/get-dlss.bat dist/get-models.bat "$stage/"
+# 2.8: the notes of "What is new" and the template ini in uaro-graphics\ - never uaro-graphics\uaro-graphics.ini,
+# the player's settings. 2.6.1-2.7: uaro-flags.grf went here too; it is the client's file now (its DATA.INI).
+cp dist/TEST.en.md dist/TEST.uk.md dist/TEST.ru.md "$stage/uaro-graphics/notes/"
+cp dist/uaro-graphics.ini "$stage/uaro-graphics/defaults/"
+cp build-win/ddraw.dll build-win/uaro-graphics.exe build-win64/uaro-render64.exe \
    build-win64/uaro-studio.exe dist/dlss-version.txt dist/models-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 # 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.

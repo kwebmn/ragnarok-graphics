@@ -9,10 +9,13 @@ import sys
 import zipfile
 from pathlib import Path
 
+# 2.8: the notes and the template ini in uaro-graphics\ (core/layout); never uaro-graphics/uaro-graphics.ini - an
+# older update.bat copies uaro-graphics\ of the archive over the installed one, and that path holds the player's
+# settings now. uaro-flags.grf is the client's file.
 EXPECTED = {"install.bat", "uninstall.bat", "update.bat", "get-dlss.bat", "get-models.bat",
-            "TEST.en.md", "TEST.uk.md", "TEST.ru.md", "uaro-flags.grf", "uaro-graphics/ddraw.dll",
-            "uaro-graphics/uaro-graphics.exe",
-            "uaro-graphics/uaro-graphics.ini", "uaro-graphics/version.txt", "uaro-graphics/uaro-render64.exe",
+            "uaro-graphics/notes/TEST.en.md", "uaro-graphics/notes/TEST.uk.md", "uaro-graphics/notes/TEST.ru.md",
+            "uaro-graphics/ddraw.dll", "uaro-graphics/uaro-graphics.exe",
+            "uaro-graphics/defaults/uaro-graphics.ini", "uaro-graphics/version.txt", "uaro-graphics/uaro-render64.exe",
             "uaro-graphics/uaro-studio.exe",
             "uaro-graphics/dlss-version.txt", "uaro-graphics/models-version.txt", "uaro-graphics/remix/rtx.conf",
             "uaro-graphics/ai/realesr-general-x4v3.bin", "uaro-graphics/ai/realesr-general-wdn-x4v3.bin",
@@ -48,6 +51,15 @@ def main(path):
         if not re.search(rb'(?im)^\s*xcopy /e /i /y /q "uaro-graphics-update\\files\\uaro-graphics" "uaro-graphics"\s',
                          z.read("install.bat")):
             fail("install.bat does not copy the folders an older update.bat leaves out")
+    # 2.8: a fresh install has no root uaro-graphics.ini: install.bat's additions to a 2.x one must not make one, and
+    # dgVoodoo is kept in uaro-graphics\dgvoodoo.
+    install = z.read("install.bat").decode("ascii")
+    guard = install.find('if not exist "uaro-graphics.ini" goto :old_ini_done')
+    first_edit = install.find('>>"uaro-graphics.ini"')
+    if guard < 0 or (first_edit >= 0 and guard > first_edit):
+        fail('install.bat adds to a root uaro-graphics.ini that a fresh install does not have (no :old_ini_done guard)')
+    if 'move /y "ddraw.dll" "uaro-graphics\\dgvoodoo\\DDraw.dll"' not in install:
+        fail("install.bat does not keep dgVoodoo's DDraw.dll in uaro-graphics\\dgvoodoo")
     # GitHub's raw link is cached for 5 minutes (a query does not change that): right after a release update.bat got
     # the one before (0.11.2). It takes the archive of the newest commit by its number first.
     update = z.read("update.bat").decode("ascii")
