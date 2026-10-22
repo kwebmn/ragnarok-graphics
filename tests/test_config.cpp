@@ -612,3 +612,11 @@ TEST(the_shipped_settings_ask_for_auto) {
     CHECK(!ini.empty());
     CHECK(parseConfig(ini).api == Api::Auto);
 }
+
+TEST(developer_mode_comes_from_the_apps_mode) {
+    // 2.15: uaRO Studio's keys (Ctrl+Shift+F7, F8, F9) for the settings app's Developer mode only
+    CHECK(!parseConfig("").developer);
+    CHECK(!parseConfig("[utility]\nmode = detailed\n").developer);
+    CHECK(parseConfig("[utility]\nmode = developer\n").developer);
+    CHECK(parseConfig("[utility]\nmode = Developer\n").developer);
+}

@@ -4,6 +4,7 @@
 #include "core/computer.hpp"
 #include "core/config.hpp"
 #include "core/renderer_choice.hpp"
+#include "core/settings/strings.hpp"
 
 namespace uagfx::win {
 
@@ -17,6 +18,7 @@ struct Startup {
     unsigned vendor = 0;
     unsigned long long vramMb = 0;
     Computer computer;  // 2.5.15: the processor, the memory, the power (the log, the statistics)
+    settings::Lang lang = settings::Lang::En;  // 2.15: the player's (the settings app's choice, else Windows')
 };
 const Startup& startup();
 

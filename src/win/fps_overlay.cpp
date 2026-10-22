@@ -56,12 +56,12 @@ void FpsOverlay::present(HWND game, bool shown) {
     frames_ = 0;
     worstMs_ = 0;
     since_ = now;
-    const bool show = shown && game && IsWindowVisible(game) && GetForegroundWindow() == game;
+    const bool show = (shown || !note_.empty()) && game && IsWindowVisible(game) && GetForegroundWindow() == game;
     if (!show) {
         if (window_) ShowWindow(window_, SW_HIDE);
         return;
     }
-    draw(game, text);
+    draw(game, note_.empty() ? std::wstring(text) : shown ? note_ + L"  ·  " + text : note_);
 }
 
 void FpsOverlay::draw(HWND game, const std::wstring& text) {

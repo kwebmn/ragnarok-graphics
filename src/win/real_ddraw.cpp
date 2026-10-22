@@ -229,8 +229,9 @@ Startup decide() {
     {  // 2.12: the start panel in the player's language - the settings app's choice, else Windows'
         const auto keys = settings::readIni(ini);
         const auto chosen = keys.find("utility.language");
-        startLanguage(settings::windowLang(chosen == keys.end() ? std::nullopt : settings::parseLang(chosen->second),
-                                           PRIMARYLANGID(GetUserDefaultUILanguage())));
+        s.lang = settings::windowLang(chosen == keys.end() ? std::nullopt : settings::parseLang(chosen->second),
+                                      PRIMARYLANGID(GetUserDefaultUILanguage()));
+        startLanguage(s.lang);
     }
     LOG_INFO("settings: %s; api = %s, mode = %s", haveIni ? iniPath.c_str() : "no uaro-graphics.ini, defaults",
              apiToken(s.config.api), displayModeToken(s.config.mode));

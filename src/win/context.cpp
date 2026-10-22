@@ -39,6 +39,13 @@
 namespace uagfx::win {
 namespace {
 
+std::wstring wideOf(const std::string& utf8) {  // 2.15: a text of strings.cpp for the overlay
+    const int n = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), nullptr, 0);
+    std::wstring w(size_t(n > 0 ? n : 0), L'\0');
+    if (n > 0) MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.size()), &w[0], n);
+    return w;
+}
+
 // The window in front, for the log: its class and its program (no title: it may name the player).
 std::string foregroundName() {
     const HWND fg = GetForegroundWindow();
@@ -483,6 +490,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (compareKey_.pressed(keyDown)) {
         enhanced_ = !enhanced_;
         LOG_INFO("compare key: improvements %s", enhanced_ ? "on" : "off");
+        // 2.15: said on the screen while they are off - a stray press looked like a broken game
+        fps_.setNote(enhanced_ ? L"" : wideOf(settings::tr(startup().lang, settings::Text::CompareOffNote)));
     }
     // 0.54: Ctrl+Shift+F11 - the frame counter
     const bool fpsDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
@@ -498,7 +507,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // as Ctrl+Shift+F11 is ([debug] xray, the console's switch)
     const bool xrayDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                           GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F9) < 0;
-    if (xrayKey_.pressed(xrayDown)) {
+    if (xrayKey_.pressed(xrayDown && config.developer)) {  // 2.15: uaRO Studio's keys - the Developer mode's
         const bool on = !config.xray;
         if (editIniFile(ourFile(layout::File::Ini), {{"debug", "xray", on ? "1" : "0"}})) {
             config.xray = on;
@@ -508,7 +517,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 2.3: Ctrl+Shift+F8 - the texture under the game's cursor into uaRO Studio; Ctrl+Shift+F7 - its picture off in
     // the game, and on again (A/B of one texture)
     const bool ctrlShift = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
-                           GetAsyncKeyState(VK_SHIFT) < 0;
+                           GetAsyncKeyState(VK_SHIFT) < 0 && config.developer;  // 2.15: the Developer mode's
     uint8_t once = 0;
     int cursorX = 0, cursorY = 0;
     if (pickKey_.pressed(ctrlShift && GetAsyncKeyState(VK_F8) < 0)) {

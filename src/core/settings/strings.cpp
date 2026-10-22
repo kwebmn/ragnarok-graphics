@@ -1255,16 +1255,16 @@ const Entry kTexts[] = {
      "Счётчик кадров"},
     {"Frames a second, the frame time and the graphics card's work a frame (GPU, DLSS apart) in the game window's top "
      "left corner. The frames a second stay at the limit (60) whatever is on - the GPU's milliseconds show what an "
-     "effect costs: watch them as you switch it (the console, ~, has each effect's own). Ctrl+Shift+F11 in the game "
-     "shows and hides it at any time.",
+     "effect costs: watch them as you switch it (the console, Ctrl+~, has each effect's own). Ctrl+Shift+F11 in the "
+     "game shows and hides it at any time.",
      "Кадри за секунду, час кадру й робота відеокарти за кадр (GPU, окремо DLSS) у лівому верхньому куті вікна гри. "
      "Кадри за секунду лишаються на межі (60), хоч би що було ввімкнено, — мілісекунди GPU показують, скільки коштує "
-     "ефект: дивіться на них, перемикаючи його (у консолі, ~, — ціна кожного ефекту окремо). Ctrl+Shift+F11 у грі "
+     "ефект: дивіться на них, перемикаючи його (у консолі, Ctrl+~, — ціна кожного ефекту окремо). Ctrl+Shift+F11 у грі "
      "показує й ховає його будь-коли.",
      "Кадры в секунду, время кадра и работа видеокарты за кадр (GPU, отдельно DLSS) в левом верхнем углу окна игры. "
      "Кадры в секунду остаются на пределе (60), что бы ни было включено, — миллисекунды GPU показывают, сколько стоит "
-     "эффект: смотрите на них, переключая его (в консоли, ~, — цена каждого эффекта отдельно). Ctrl+Shift+F11 в игре "
-     "показывает и прячет его в любой момент."},
+     "эффект: смотрите на них, переключая его (в консоли, Ctrl+~, — цена каждого эффекта отдельно). Ctrl+Shift+F11 в "
+     "игре показывает и прячет его в любой момент."},
     {"Profiles",
      "Профілі",
      "Профили"},
@@ -2900,13 +2900,16 @@ const Entry kTexts[] = {
     {"Compact the texture pack", "Стиснути пакет текстур", "Сжать пакет текстур"},
     {"Build Palettes.grf", "Зібрати Palettes.grf", "Собрать Palettes.grf"},
     {"Model preview", "Попередній перегляд моделей", "Превью моделей"},
-    {"In the game: ~ the console; Ctrl+Shift+F11 the frame counter; Ctrl+Shift+F12 a full-size snapshot; "
+    {"In the game: Ctrl+~ the console; Ctrl+Shift+F10 «Нове звернення» with a snapshot; Ctrl+Shift+F11 the frame "
+     "counter; Ctrl+Shift+F12 a full-size snapshot; "
      "Ctrl+Shift+F9 X-ray; Ctrl+Shift+F8 the texture under the cursor into uaRO Studio, Ctrl+Shift+F7 its picture off "
      "and on.",
-     "У грі: ~ - консоль; Ctrl+Shift+F11 - лічильник кадрів; Ctrl+Shift+F12 - знімок у повному розмірі; "
+     "У грі: Ctrl+~ - консоль; Ctrl+Shift+F10 - «Нове звернення» зі знімком; Ctrl+Shift+F11 - лічильник кадрів; "
+     "Ctrl+Shift+F12 - знімок у повному розмірі; "
      "Ctrl+Shift+F9 - рентген; Ctrl+Shift+F8 - текстура під курсором в uaRO Studio, Ctrl+Shift+F7 - її картинка "
      "вимк./увімк.",
-     "В игре: ~ - консоль; Ctrl+Shift+F11 - счётчик кадров; Ctrl+Shift+F12 - снимок в полном размере; "
+     "В игре: Ctrl+~ - консоль; Ctrl+Shift+F10 - «Нове звернення» со снимком; Ctrl+Shift+F11 - счётчик кадров; "
+     "Ctrl+Shift+F12 - снимок в полном размере; "
      "Ctrl+Shift+F9 - рентген; Ctrl+Shift+F8 - текстура под курсором в uaRO Studio, Ctrl+Shift+F7 - её картинка "
      "выкл./вкл."},
     // 2.6: the Main page
@@ -3567,6 +3570,9 @@ const Entry kTexts[] = {
     {"The HD texture pack comes with the game's full client on uaro.kiev.ua.",
      "Пакет HD-текстур іде разом із повним клієнтом гри на uaro.kiev.ua.",
      "Пакет HD-текстур идёт вместе с полным клиентом игры на uaro.kiev.ua."},
+    {"uaRO Graphics is off (Pause / Scroll Lock) - press it again to turn it on",
+     "uaRO Graphics вимкнено (Pause / Scroll Lock) — натисніть ще раз, щоб увімкнути",
+     "uaRO Graphics выключено (Pause / Scroll Lock) — нажмите ещё раз, чтобы включить"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -153,6 +153,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         n.statsSend = file.statsSend;
     }
     n.statsId = file.statsId;
+    n.developer = file.developer;  // 2.15: uaRO Studio's keys follow the settings app's mode at once
     if (file.xray != running.xray) {  // 2.3: uaRO Studio's X-ray at once (the console, the settings app)
         u.applied.push_back(change("xray", flag(running.xray), flag(file.xray)));
         n.xray = file.xray;

@@ -18,6 +18,8 @@ public:
     ~FpsOverlay();
     void setLabel(const std::string& api) { label_ = api; }
     void setGpu(const GpuTiming* t);  // the last measurement, nullptr: none
+    // 2.15: a line shown whether the counter is or not (Pause kept the improvements off); "" none
+    void setNote(const std::wstring& note) { note_ = note; }
     // Every present of the game: counts, and twice a second redraws (or hides it, the game not in front).
     void present(HWND game, bool shown);
 
@@ -32,6 +34,7 @@ private:
     std::wstring text_;
     std::wstring gpu_;
     double shown_ = 0;  // 2.5.24: frames shown a frame of the game with frame generation; 0 none
+    std::wstring note_;
 };
 
 }  // namespace uagfx::win

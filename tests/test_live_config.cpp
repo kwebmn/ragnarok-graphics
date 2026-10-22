@@ -332,3 +332,11 @@ TEST(live_config_the_chosen_clock_applies_now) {
     CHECK(u.applied.size() == 1 && u.applied[0] == "clock auto -> night");
     CHECK_EQ(u.next.effects.clock, int(daylight::kClockNight));
 }
+
+TEST(live_config_takes_the_developer_mode_at_once) {
+    // 2.15: the settings app's Developer mode switched while the game runs: uaRO Studio's keys follow at once
+    Config running, file;
+    file.developer = true;
+    CHECK(liveUpdate(running, file).next.developer);
+    CHECK(!liveUpdate(file, running).next.developer);
+}

@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 
+#include "core/console_key.hpp"
 #include "core/effect_costs.hpp"
 #include "core/effect_groups.hpp"
 #include "core/effect_where.hpp"
@@ -91,16 +92,18 @@ LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
         GetKeyState(VK_SHIFT) < 0)
         return 0;
     // 2.6.22: the ~ key's own letter that follows its press (` or, in a Cyrillic layout, ё) opens or closes the
-    // console - typed neither in its search nor (2.7.1) in the game's chat, where every opening put an «ё»
-    if (msg == WM_KEYDOWN && wp == VK_OEM_3) skipCharUntil_ = GetTickCount64() + 250;
+    // console - typed neither in its search nor (2.7.1) in the game's chat, where every opening put an «ё».
+    // 2.15: with Ctrl only - the key alone types «ё» and the apostrophe in the chat (core/console_key)
+    const bool ctrl = GetKeyState(VK_CONTROL) < 0;
+    if (msg == WM_KEYDOWN && console::toggles(ctrl, unsigned(wp))) skipCharUntil_ = GetTickCount64() + 250;
     if (msg == WM_CHAR && GetTickCount64() < skipCharUntil_) {
         skipCharUntil_ = 0;
         return 0;
     }
     if (msg == WM_CHAR && active_ && active_->open_ && (wp == 8 || (wp > L' ' && wp != 127)))
         active_->typed_.push_back(wchar_t(wp));  // 2.6.22: letters and Backspace for the search
-    if (key && ((active_ && active_->open_) || wp == VK_OEM_3 || ((msg == WM_CHAR) && (wp == L'`' || wp == L'~'))))
-        return 0;
+    const bool toggleKey = msg != WM_CHAR && msg != WM_SYSCHAR && console::toggles(ctrl, unsigned(wp));
+    if (key && ((active_ && active_->open_) || toggleKey)) return 0;
     for (const Subclassed& s : subclassed_)
         if (s.window == w) return CallWindowProcW(s.proc, w, msg, wp, lp);
     return DefWindowProcW(w, msg, wp, lp);
@@ -290,7 +293,8 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         comparing_.clear();
         return false;
     }
-    if (pressed(VK_OEM_3, toggle_, false, now)) {
+    const bool toggled = pressed(console::kKey, toggle_, false, now);  // its edge, with Ctrl or not
+    if (toggled && console::toggles(GetAsyncKeyState(VK_CONTROL) < 0, console::kKey)) {
         open_ = !open_;
         if (open_) {
             std::string text;
