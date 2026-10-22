@@ -87,6 +87,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "renderer.render_thread" &&  // 2.5.12: the renderer's own thread, at the start
                                 k != "renderer.api" && k != "renderer.gpu" && k != "report.auto" &&
                                 k != "pad.enabled" &&  // 2.9: the pad is mounted at the game's start
+                                k != "launcher.direct_start" &&  // 2.11: read as the game starts
                                 k != "display.ui_native" &&
                                 k != "display.hdr" &&
                                 k.compare(0, 12, "quality.dlss") != 0 &&  // 2.4.2: its own size and model too
@@ -104,7 +105,7 @@ TEST(schema_live_keys_are_the_specs) {
 TEST(schema_pages_follow_the_spec) {
     // Stage 2 spec §6.1 with 0.6.2: Sound, Game, and Chat and login after Frames - the last holds the whisper, login
     // and chat macro rows the Game page has no room for.
-    CHECK_EQ(kPageCount, 16);
+    CHECK_EQ(kPageCount, 17);  // 2.11: Launcher, the rows of «Гра»
     CHECK(pageName(Page::Sound) == Text::PageSound);
     CHECK(pageName(Page::Game) == Text::PageGame);
     CHECK(pageName(Page::Chat) == Text::PageChat);

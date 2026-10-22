@@ -26,6 +26,7 @@ Text pageName(Page p) {
         case Page::Chat: return Text::PageChat;
         case Page::Diagnostics: return Text::PageDiagnostics;
         case Page::Debug: return Text::PageDebug;
+        case Page::Launcher: return Text::ViewPlay;
         case Page::Service: break;
     }
     return Text::PageService;
@@ -46,6 +47,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 2.9: uaRO Pad inside the driver, on by default; the Main page shows it too
         {"pad", "enabled", Page::Pad, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::PadEnabled, Text::PadEnabledHint,
          ""},
+        // 2.11: a direct start of uaRO.exe opens the launcher «Гра» unless this is ticked
+        {"launcher", "direct_start", Page::Launcher, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::LauncherDirect,
+         Text::LauncherDirectHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         {"renderer", "render_thread", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderThread,
@@ -699,6 +703,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "renderer.gpu") return c.gpu.empty() ? "auto" : c.gpu;
     if (k == "report.auto") return c.reportAuto ? "1" : "0";
     if (k == "pad.enabled") return c.padEnabled ? "1" : "0";  // 2.9
+    if (k == "launcher.direct_start") return c.directStart ? "1" : "0";  // 2.11
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";
     if (k == "renderer.render_thread") return c.renderThread ? "1" : "0";

@@ -13,7 +13,9 @@ struct Entry {
 
 // In the order of Text.
 const Entry kTexts[] = {
-    {"uaRO Graphics Settings", "uaRO Graphics Settings", "uaRO Graphics Settings"},
+    {"uaRO",
+     "uaRO",
+     "uaRO"},
     {"Renderer", "Рендер", "Рендер"},
     {"Screen", "Екран", "Экран"},
     {"Quality", "Якість", "Качество"},
@@ -3267,6 +3269,16 @@ const Entry kTexts[] = {
     {"This setup is damaged (no package inside it). Download it again.",
      "Це встановлення пошкоджене (у ньому немає пакета). Завантажте його ще раз.",
      "Эта установка повреждена (в ней нет пакета). Скачайте её ещё раз."},
+    {"Play",
+     "Гра",
+     "Игра"},
+    {"Start the game at once",
+     "Запускати гру одразу",
+     "Запускать игру сразу"},
+    {"uaRO.exe and the game's old shortcut start the game itself, not the page «Гра»; the question about an update "
+     "stays.",
+     "uaRO.exe і старий ярлик гри запускають саму гру, а не сторінку «Гра»; питання про оновлення лишається.",
+     "uaRO.exe и старый ярлык игры запускают саму игру, а не страницу «Игра»; вопрос об обновлении остаётся."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

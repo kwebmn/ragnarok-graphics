@@ -590,6 +590,12 @@ TEST(config_shader_variants) {
     CHECK(!parseConfig("[debug]\nshader_variants = 0\n").shaderVariants);
 }
 
+TEST(config_direct_start_is_off_by_default) {
+    // 2.11: a direct start of uaRO.exe opens the launcher «Гра» unless [launcher] direct_start = 1
+    CHECK(!parseConfig("").directStart);
+    CHECK(parseConfig("[launcher]\ndirect_start = 1\n").directStart);
+}
+
 TEST(config_the_pad_is_on_by_default) {
     // 2.9: uaRO Pad inside the driver, mounted unless [pad] enabled = 0
     CHECK(parseConfig("").padEnabled);

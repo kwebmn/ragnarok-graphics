@@ -63,15 +63,16 @@ Text viewName(View v) {
         case View::Pad: return Text::PagePad;
         case View::GameChat: return Text::ViewGameChat;
         case View::Service: return Text::PageService;
+        case View::Play: return Text::ViewPlay;
         case View::Debug: break;
     }
     return Text::PageDebug;
 }
 
 std::vector<View> viewsOf(Mode m) {
-    if (m == Mode::Simple) return {View::Main, View::Effects, View::Pad};
-    std::vector<View> list{View::Graphics, View::Screen, View::Effects, View::Ai,
-                           View::Sound,    View::Pad,    View::GameChat, View::Service};
+    if (m == Mode::Simple) return {View::Play, View::Main, View::Effects, View::Pad};
+    std::vector<View> list{View::Play,  View::Graphics, View::Screen,   View::Effects, View::Ai,
+                           View::Sound, View::Pad,      View::GameChat, View::Service};
     if (m == Mode::Developer) list.push_back(View::Debug);
     return list;
 }
@@ -102,6 +103,7 @@ std::vector<Page> partsOf(View v, int tab) {
         case View::Pad: return {Page::Pad};
         case View::GameChat: return {Page::Game, Page::Chat};
         case View::Service: return {Page::Service, Page::Diagnostics};
+        case View::Play: return {Page::Launcher};
         case View::Debug: break;
     }
     return {Page::Debug};
@@ -123,6 +125,7 @@ Place placeOf(Page p) {
         case Page::Game:
         case Page::Chat: return {View::GameChat, 0};
         case Page::Debug: return {View::Debug, 0};
+        case Page::Launcher: return {View::Play, 0};
         case Page::Diagnostics:
         case Page::Service: break;
     }

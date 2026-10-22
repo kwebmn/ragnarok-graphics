@@ -405,6 +405,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.reportAuto);
         } else if (key == "pad.enabled") {  // 2.9
             setBool(val, c.padEnabled);
+        } else if (key == "launcher.direct_start") {  // 2.11
+            setBool(val, c.directStart);
         } else if (key == "stats.send") {  // 2.2.1
             setBool(val, c.statsSend);
         } else if (key == "stats.id") {

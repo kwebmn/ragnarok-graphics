@@ -12,12 +12,20 @@ bool listed(const std::vector<Page>& pages, Page p) { return std::find(pages.beg
 }  // namespace
 
 TEST(nav_simple_lists_main_effects_pad) {
-    CHECK(viewsOf(Mode::Simple) == std::vector<View>({View::Main, View::Effects, View::Pad}));
+    CHECK(viewsOf(Mode::Simple) == std::vector<View>({View::Play, View::Main, View::Effects, View::Pad}));
 }
 
 TEST(nav_detailed_lists_eight_pages) {
-    CHECK(viewsOf(Mode::Detailed) == std::vector<View>({View::Graphics, View::Screen, View::Effects, View::Ai,
-                                                        View::Sound, View::Pad, View::GameChat, View::Service}));
+    CHECK(viewsOf(Mode::Detailed) == std::vector<View>({View::Play, View::Graphics, View::Screen, View::Effects,
+                                                        View::Ai, View::Sound, View::Pad, View::GameChat,
+                                                        View::Service}));
+}
+
+// 2.11: the launcher «Гра» first in every mode - the app opens on it
+TEST(views_open_on_play) {
+    for (Mode m : {Mode::Simple, Mode::Detailed, Mode::Developer}) CHECK(viewsOf(m).front() == View::Play);
+    CHECK(partsOf(View::Play, 0) == std::vector<Page>({Page::Launcher}));
+    CHECK(placeOf(Page::Launcher).view == View::Play);
 }
 
 TEST(nav_developer_adds_debug_last) {
