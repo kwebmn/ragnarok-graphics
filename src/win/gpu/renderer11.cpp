@@ -1520,8 +1520,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (!raysLogged_) LOG_INFO("rays: the forest's light drawn anew (Direct3D 11)");
         raysLogged_ = true;
     }
-    if (warpDrawn) {  // 2.7.54 (draw.cpp): the part and the strength
+    if (warpDrawn) {  // 2.7.54 (draw.cpp): the part, the time and the strength
         c.sourceRect[3] = float(int(warp));
+        c.twin[3] = waterTime();
         c.footprint = float(std::clamp(effects_.portalsStrength, 0, 200)) / 100.0f;
     }
     // 0.67, soft particles (as draw.cpp): an effect facing the screen fades where it goes into the ground; the

@@ -3096,12 +3096,14 @@ const Entry kTexts[] = {
      "Голубой шар Ruwach, кружащий вокруг героя, — маленький яркий шарик в начале своего голубого шлейфа, как у "
      "кометы."},
     {"New portal", "Новий портал", "Новый портал"},  // 2.7.48
-    {"The warps drawn from the game's own pictures, only neater: the rings without the streaks of their picture, a "
-     "fine bright circle where each meets the ground, a softer haze on the floor. Off: the game's own portal.",
-     "Варпи з власних картинок гри, тільки акуратніші: кільця без смуг на картинці, тонке світле коло там, де "
-     "кожне торкається землі, м'якший серпанок на підлозі. Вимкнено — портал гри.",
-     "Варпы из собственных картинок игры, только аккуратнее: кольца без полос на картинке, тонкий светлый круг "
-     "там, где каждое касается земли, мягче дымка на полу. Выключено — портал игры."},
+    {"The warps drawn anew at full resolution as the game's own: the white band of each ring and its crown of light "
+     "spikes rising and turning blue, sharp and smooth, gently breathing; the haze on the floor without its steps. "
+     "Off: the game's own portal.",
+     "Варпи намальовані заново в повній роздільності, як у гри: білий пояс кожного кільця й корона світлових "
+     "променів, що здіймаються й синіють, чіткі й плавні, ледь дихають; серпанок на підлозі без сходинок. "
+     "Вимкнено — портал гри.",
+     "Варпы нарисованы заново в полном разрешении, как у игры: белый пояс каждого кольца и корона световых лучей, "
+     "что поднимаются и синеют, чёткие и плавные, чуть дышат; дымка на полу без ступенек. Выключено — портал игры."},
     {"Fireflies in the grass at night", "Світлячки в траві вночі", "Светлячки в траве ночью"},
     {"From dusk to dawn fireflies drift low over the grass where butterflies fly by day, each lit a while and dark a "
      "while (Direct3D 12).",

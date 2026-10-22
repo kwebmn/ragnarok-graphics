@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <string>
 #include <vector>
 
 #include "core/game_camera.hpp"
@@ -24,12 +23,10 @@ enum class Part : uint8_t { None, Ring, Floor, Spark };
 Part partOf(int effectId, bool blend, uint8_t srcBlend, uint8_t dstBlend, uint32_t vertexCount);
 
 // 2.7.55 (the tester on 2.7.54's lilac walls: «аккуратнее ... более похожим на тот что в оригинале»): whether a part is
-// shaded anew - the rings and the floor, from the game's own pictures cleaned; the sparks stay the game's own.
+// shaded anew - the rings and the floor (2.7.56: the game's pictures drawn anew at full resolution); the sparks stay
+// the game's own.
 inline bool reshaded(Part p) { return p == Part::Ring || p == Part::Floor; }
 
-// 2.7.55: a warp's picture told in the log (ARGB, rows from the top): a head, then its base64 160 to a line - its
-// alpha is in no copy on the server (the client's data.grf), the look is tuned on it.
-std::vector<std::string> pictureLines(uint32_t texture, int width, int height, const uint32_t* argb);
 
 // A corner of a draw: where it lies on the screen (game pixels), its rhw and its texture's v.
 struct Corner {

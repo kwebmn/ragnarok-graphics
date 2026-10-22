@@ -6,7 +6,6 @@
 #include "core/device_caps.hpp"
 #include "core/frame.hpp"
 #include "core/glint.hpp"
-#include "core/portal.hpp"
 #include "core/sprite_exe.hpp"
 #include "win/context.hpp"
 #include "win/crisp/crisp.hpp"
@@ -188,20 +187,6 @@ HRESULT STDMETHODCALLTYPE Device7::DrawIndexedPrimitive(D3DPRIMITIVETYPE type, D
     return record(type, fvf, vertices, vertexCount, indices, indexCount);
 }
 
-// 2.7.55: a picture of the map warp (ring_blue.tga, alpha_down.tga, particle1.spr) into the log, each once a run -
-// their alpha is in no copy on the server (the client's data.grf); the warp's look is tuned on them
-void Device7::tellWarpPicture() {
-    Surface7* t = textures_[0];
-    if (!t || warpPicturesTold_.size() >= 4) return;
-    const uint32_t id = t->gpuTexture();
-    if (std::find(warpPicturesTold_.begin(), warpPicturesTold_.end(), id) != warpPicturesTold_.end()) return;
-    warpPicturesTold_.push_back(id);
-    std::vector<uint32_t> argb;
-    if (t->width() * t->height() > 128 * 128 || !t->topArgb(argb)) return;
-    for (const std::string& line : portal::pictureLines(id, t->width(), t->height(), argb.data()))
-        LOG_INFO("%s", line.c_str());
-}
-
 HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, DWORD vertexCount,
                         const WORD* indices, DWORD indexCount) {
     if (fvf != d3d7::FVF_TL1 && fvf != d3d7::FVF_TL2)
@@ -237,7 +222,6 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
     cmd.effectId = tag.id;  // 2.7.21: Ruwach's orbs light by it
-    if (tag.kind == effect_exe::Kind::Portal && tag.id == portal::kWarpEffect) tellWarpPicture();  // 2.7.55
     const EffectSettings& fx = c.effects();  // 2.5.11: made once a change, not each draw
     // 0.37: the skills likewise, by their own slider. (2.7.37's night that made them softer still gone in 2.7.46 -
     // with 2.7.38's soft adding they do not burn white, and the tester found them «тусклые»)

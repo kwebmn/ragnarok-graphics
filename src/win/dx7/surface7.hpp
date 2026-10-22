@@ -5,7 +5,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "core/blit.hpp"
 #include "core/frame.hpp"
@@ -70,8 +69,6 @@ public:
     // 2.5.18: what CTexture::Update just wrote into this texture (win/texture_hook.hpp) as its picture had it - w x h
     // texels at (x, y), pitch in texels - kept to go up in full colour; false: not kept.
     bool fullColour(int x, int y, int w, int h, const uint32_t* picture, int pitch);
-    // 2.7.55: a texture's top level in ARGB (rows from the top) - false for a surface that is not a texture
-    bool topArgb(std::vector<uint32_t>& out) const;
     int width() const { return width_; }
     int height() const { return height_; }
 

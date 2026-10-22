@@ -122,7 +122,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool warpDrawn = portal::reshaded(warp) && newPortalWanted();
     if (warpDrawn && warpsToldMap != mapName) {  // once a map, for the reports
         warpsToldMap = mapName;
-        LOG_INFO("portals: the warps shaded anew on %s - their rings and floor from the game's pictures, cleaned",
+        LOG_INFO("portals: the warps shaded anew on %s - their rings' light spikes and floor at full resolution",
                  mapName.c_str());
     }
     // 0.21: the world done - at the interface - its colours, then its glow.
@@ -512,8 +512,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[3] = waterTime();
         c.footprint = float(std::clamp(ray ? effects.raysBrightness : effects.lavaBrightness, 0, 200)) / 100.0f;
     }
-    if (warpDrawn) {  // 2.7.54: the part and the strength (portal_draw_ps)
+    if (warpDrawn) {  // 2.7.54: the part, the time (2.7.56: the spikes breathe) and the strength (portal_draw_ps)
         c.sourceRect[3] = float(int(warp));
+        c.twin[3] = waterTime();
         c.footprint = float(std::clamp(effects.portalsStrength, 0, 200)) / 100.0f;
     }
     // 2.5: a draw whose constants carry none of the world's extras (shade()'s bits: relief, leaves, material,

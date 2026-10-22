@@ -1476,31 +1476,46 @@ float4 torch_apply_ps(PresentOut i) : SV_Target {
 }
 
 // 2.7.54, the map warps (effect 321, draw.cpp; core/portal.hpp partOf): the game's own draws of a warp shaded anew
-// where it draws them. 2.7.55 (the tester on 2.7.54's lilac walls with crisp tops: «аккуратнее ... более похожим на
-// тот что в оригинале»): from the game's own pictures, cleaned - a ring's and the floor's texture averaged round the
-// ring (8 taps along u: the streaks of its 64 texels gone; its colour and alpha down the wall kept, whatever they are),
-// the rings' top edge soft, a fine bright circle where each wall meets the ground (uv0.y 1 there), a little less light
-// than the game's (the walls 85 %, the floor 75 %); the sparks stay the game's. sourceRect.w the part (1 a ring, 2 the
-// floor); footprint the strength (1 = 100 %).
+// where it draws them. 2.7.56 (the tester on 2.7.55, the game's pictures averaged: «новый и старый порталы не
+// отличаются совсем»; on 2.7.54's lilac walls: «аккуратнее ... более похожим на оригинал»): the game's ring_blue.tga
+// (2.7.55's record of it) drawn anew at full resolution - its white band at the ground and its crown of light spikes
+// rising up the wall and turning blue as they fade, every edge smooth (the game's: 64 texels round a whole ring, 16
+// steps of alpha), the spikes breathing slowly; the floor's ramp (alpha_down.tga: alpha 0.93 x v) without its 16
+// steps, a little less (80 %); the sparks stay the game's. uv0.y 1 on the ground, uv0.x round the ring in 21sts.
+// sourceRect.w the part (1 a ring, 2 the floor); twinH the time; footprint the strength (1 = 100 %).
+float warpHash(float i, float s) { return frac(sin(i * 12.9898 + s * 78.233) * 43758.5453); }
+
+// n spikes round the ring (phi: turns), w0 wide at the root (of a spike's share of the turn), each hmin-hmax of the
+// wall high; 1 in a spike at its root, fading to its tip
+float warpSpikes(float phi, float y, float n, float w0, float hmin, float hmax, float seed, float aa) {
+    float x = phi * n;
+    float cell = floor(x);
+    float id = cell - n * floor(cell / n);  // round the ring: the last and the first are one (no seam where it closes)
+    float local = x - cell - 0.5 - (warpHash(id, seed) - 0.5) * 0.5;
+    float h = lerp(hmin, hmax, warpHash(id, seed + 1.7));
+    h *= 0.88 + 0.12 * sin(twinH * (1.1 + warpHash(id, seed + 3.1)) + 6.28 * warpHash(id, seed + 5.3));
+    float along = saturate(1.0 - y / max(h, 1e-3));
+    float soft = aa * n * 1.2 + 0.035;  // soft as light, a pixel at least
+    return smoothstep(-soft, soft, w0 * along - abs(local)) * along;
+}
+
 float4 warpShade(PsIn i) {
     float v = saturate(i.uv0.y);
-    float dv = max(fwidth(v), 1e-4);
-    float2 gx = ddx(i.uv0), gy = ddy(i.uv0);  // the slopes first, outside any choice
-    float4 t = float4(0.0, 0.0, 0.0, 0.0);
-    [unroll] for (int k = 0; k < 8; ++k)
-        t += tex0.SampleGrad(samp0, float2(frac(i.uv0.x + float(k) * 0.125), i.uv0.y), gx, gy);
-    t *= 0.125;
+    float y = 1.0 - v;                            // 0 at the ground, 1 at the wall's top
+    float phi = i.uv0.x * (21.0 / 20.0);          // turns round the ring: whole ones, no seam
+    float dy = max(fwidth(y), 1e-4), dphi = fwidth(phi);  // the slopes first, outside any choice
     float fog = fogEnable != 0 ? i.specular.a : 1.0;
     float strength = max(footprint, 0.0);
-    // a ring, added: the game's colour and alpha (its alpha 70 once whole), its foot's circle
-    float fade = saturate(i.diffuse.a * (255.0 / 70.0));
-    float top = smoothstep(0.0, 0.1, v);
-    float foot = 1.0 - smoothstep(0.0, 2.5 * dv, 1.0 - v);
-    float3 ring = i.diffuse.rgb * (t.rgb * (t.a * i.diffuse.a * top * 0.85) + foot * 0.3 * fade) * strength * fog;
-    // the floor, laid over
-    float3 floorColour = i.diffuse.rgb * t.rgb;
-    if (fogEnable != 0) floorColour = lerp(fogColor.rgb, floorColour, i.specular.a);
-    float floorAlpha = saturate(t.a * i.diffuse.a * 0.75 * min(strength, 1.33));
+    // a ring, added: its band and its spikes, white turning blue up the wall, the game's tint and fade
+    float band = 1.0 - smoothstep(0.24 - dy, 0.24 + dy, y);
+    float spikes = max(max(warpSpikes(phi, y, 13.0, 0.26, 0.45, 0.85, 1.0, dphi),
+                           warpSpikes(phi, y, 31.0, 0.28, 0.28, 0.55, 7.0, dphi) * 0.8),
+                       warpSpikes(phi, y, 67.0, 0.24, 0.20, 0.42, 13.0, dphi) * 0.6);
+    float3 light = lerp(float3(1.0, 1.0, 1.0), float3(0.15, 0.55, 1.0), smoothstep(0.1, 0.6, y));
+    float3 ring = i.diffuse.rgb * light * (max(band, spikes) * i.diffuse.a) * strength * fog;
+    // the floor, laid over: the game's ramp, smooth
+    float3 floorColour = fogEnable != 0 ? lerp(fogColor.rgb, i.diffuse.rgb, i.specular.a) : i.diffuse.rgb;
+    float floorAlpha = saturate(v * 0.93 * i.diffuse.a * 0.8 * min(strength, 1.25));
     return sourceRect.w < 1.5 ? float4(ring, 1.0) : float4(floorColour, floorAlpha);
 }
 

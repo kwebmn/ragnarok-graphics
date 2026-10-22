@@ -69,9 +69,6 @@ private:
     // draws made softer and the draws that add light of no effect known, told every 10 s
     uint32_t skillDraws_ = 0, plainAdds_ = 0;
     ULONGLONG skillsTold_ = 0;
-    // 2.7.55: the map warp's pictures told in the log once a run (core/portal.hpp pictureLines)
-    std::vector<uint32_t> warpPicturesTold_;
-    void tellWarpPicture();
 };
 
 }  // namespace uagfx::dx7
