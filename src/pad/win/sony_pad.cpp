@@ -1,6 +1,9 @@
 #include "pad/win/sony_pad.hpp"
 
 #include <setupapi.h>
+
+#include <optional>
+#include <utility>
 extern "C" {  // MinGW's HID headers declare C functions without saying so
 #include <hidsdi.h>
 }
@@ -58,6 +61,28 @@ const HidApi& hidApi() {
         return a;
     }();
     return api;
+}
+
+// 2.9: the HID devices Windows lists for raw input (vendor, product), read from user32's own list with no device
+// opened; nothing when the list cannot be read. With the pad on for everyone, the scan below (every HID device opened,
+// once a second while no controller is found) waits for a Sony one among them.
+std::optional<std::vector<std::pair<uint16_t, uint16_t>>> listedHid() {
+    UINT n = 0;
+    if (GetRawInputDeviceList(nullptr, &n, sizeof(RAWINPUTDEVICELIST)) == UINT(-1) || n == 0) return std::nullopt;
+    std::vector<RAWINPUTDEVICELIST> list(n + 8);  // room for a device that comes meanwhile
+    n = UINT(list.size());
+    const UINT got = GetRawInputDeviceList(list.data(), &n, sizeof(RAWINPUTDEVICELIST));
+    if (got == UINT(-1)) return std::nullopt;
+    std::vector<std::pair<uint16_t, uint16_t>> ids;
+    for (UINT i = 0; i < got; ++i) {
+        if (list[i].dwType != RIM_TYPEHID) continue;
+        RID_DEVICE_INFO info{};
+        info.cbSize = sizeof info;
+        UINT size = sizeof info;
+        if (GetRawInputDeviceInfoA(list[i].hDevice, RIDI_DEVICEINFO, &info, &size) == UINT(-1)) continue;
+        ids.emplace_back(uint16_t(info.hid.dwVendorId), uint16_t(info.hid.dwProductId));
+    }
+    return ids;
 }
 
 // A HID device's path whose vendor and product are a Sony controller's - the first found - and its input report's
@@ -178,7 +203,8 @@ PadState SonyPad::poll() {
         if (scanned_ && now - lastScanMs_ < 1000) return PadState{};
         scanned_ = true;
         lastScanMs_ = now;
-        if (!find()) return PadState{};
+        const auto listed = listedHid();  // the full scan when a Sony controller is listed, or the list unread
+        if ((listed && !sony::anyController(*listed)) || !find()) return PadState{};
     }
     // Every report that came since the last poll, the newest kept.
     for (int k = 0; k < 16; ++k) {

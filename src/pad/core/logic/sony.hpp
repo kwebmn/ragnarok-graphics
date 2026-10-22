@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include "pad/core/logic/pad.hpp"
@@ -14,6 +15,8 @@ namespace uapad::sony {
 constexpr uint16_t kVendor = 0x054C;
 enum class Model { None, DualShock4, DualSense };
 Model modelOf(uint16_t vendor, uint16_t product);
+// 2.9: a Sony controller among these devices (vendor, product), as Windows lists them without opening any.
+bool anyController(const std::vector<std::pair<uint16_t, uint16_t>>& devices);
 
 // A light bar's colour, 0xRRGGBB.
 using Colour = uint32_t;

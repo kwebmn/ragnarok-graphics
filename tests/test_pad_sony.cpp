@@ -15,6 +15,15 @@ TEST(sony_models_by_vendor_and_product) {
     CHECK(sony::modelOf(0x045E, 0x028E) == sony::Model::None);  // an Xbox controller
 }
 
+// 2.9: the pad is on for everyone - the HID scan (every HID device opened) waits for a Sony controller among the
+// devices Windows lists without opening them.
+TEST(sony_controller_among_listed_devices) {
+    CHECK(!sony::anyController({}));
+    CHECK(!sony::anyController({{0x046D, 0xC52B}, {0x045E, 0x028E}}));  // a Logitech receiver, an Xbox controller
+    CHECK(sony::anyController({{0x046D, 0xC52B}, {0x054C, 0x0CE6}}));   // and a DualSense
+    CHECK(!sony::anyController({{0x054C, 0x0268}}));  // Sony's, but no controller the pad reads (a DualShock 3)
+}
+
 TEST(sony_dualshock4_usb_report) {
     std::vector<uint8_t> r(64, 0);
     r[0] = 0x01;

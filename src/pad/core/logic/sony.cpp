@@ -62,6 +62,12 @@ Model modelOf(uint16_t vendor, uint16_t product) {
     }
 }
 
+bool anyController(const std::vector<std::pair<uint16_t, uint16_t>>& devices) {
+    for (const auto& [vendor, product] : devices)
+        if (modelOf(vendor, product) != Model::None) return true;
+    return false;
+}
+
 bool parse(Model m, const uint8_t* r, size_t n, uint16_t touchpad, PadState& out) {
     if (!r || n < 10) return false;
     const uint8_t id = r[0];
