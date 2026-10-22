@@ -37,6 +37,14 @@ target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
 target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp uagfx_stb)
 
+# 2.9: uaRO Pad's portable core (from uaro-gamepad e59889d): the protocol, the world, the controller's logic. Its
+# Windows part (src/pad/win) is built into ddraw.dll, which mounts the pad itself.
+file(GLOB_RECURSE UAGFX_PAD_SOURCES CONFIGURE_DEPENDS src/pad/core/*.cpp)
+add_library(uagfx_pad STATIC ${UAGFX_PAD_SOURCES})
+target_include_directories(uagfx_pad PUBLIC src)
+target_compile_options(uagfx_pad PRIVATE -Wall -Wextra)
+target_link_libraries(uagfx_pad PUBLIC uagfx_core)
+
 if(WIN32)
     # The version of src/core/version.cpp for the resources of the settings app (32-bit) and uaRO Studio (64-bit).
     enable_language(RC)
@@ -123,7 +131,7 @@ else()
     add_executable(uagfx_tests ${UAGFX_TEST_SOURCES} src/app/model.cpp src/app/app_disk.cpp src/app/text.cpp
                    src/app/rebuilds.cpp src/app/mnemonic.cpp)
     target_include_directories(uagfx_tests PRIVATE tests)
-    target_link_libraries(uagfx_tests PRIVATE uagfx_core)
+    target_link_libraries(uagfx_tests PRIVATE uagfx_core uagfx_pad)
     target_compile_definitions(uagfx_tests PRIVATE UAGFX_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
     add_test(NAME uagfx_tests COMMAND uagfx_tests)
 endif()

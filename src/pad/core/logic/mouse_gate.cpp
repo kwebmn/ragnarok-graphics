@@ -1,0 +1,75 @@
+#include "pad/core/logic/mouse_gate.hpp"
+
+namespace uapad {
+
+void MouseGate::watch(bool foreground, uint32_t nowMs) {
+    if (foreground && !foreground_) frontSinceMs_ = nowMs;
+    if (!foreground && foreground_) reset();
+    foreground_ = foreground;
+}
+
+MouseGate::Out MouseGate::filter(uint8_t buttons, bool overGame, bool focusClick, uint32_t nowMs) {
+    passing_ &= buttons;  // let go: forgotten
+    blocked_ &= buttons;
+    const uint8_t fresh = uint8_t(buttons & ~(passing_ | blocked_));
+    const bool activating = frontSinceMs_ && nowMs - *frontSinceMs_ < kActivationMs;
+    if ((activating && !focusClick) || !overGame)
+        blocked_ |= fresh;
+    else
+        passing_ |= fresh;
+    Out out;
+    out.buttons = passing_;
+    out.wheel = overGame;
+    return out;
+}
+
+void MouseGate::reset() {
+    passing_ = 0;
+    blocked_ = 0;
+}
+
+std::vector<MouseKeys::KeyEvent> MouseKeys::update(uint8_t held, const std::array<int, 3>& keys, bool allowed,
+                                                   bool foreground) {
+    std::vector<KeyEvent> out;
+    const uint8_t pressed = uint8_t(held & ~prevHeld_);
+    prevHeld_ = held;
+    auto holders = [&](int key) {
+        int n = 0;
+        for (int h : holds_) n += h == key ? 1 : 0;
+        return n;
+    };
+    for (int i = 0; i < 3; ++i) {  // let go: the button, the game window, or the key it is set to
+        const int key = holds_[size_t(i)];
+        if (key == 0 || (((held >> i) & 1) && foreground && keys[size_t(i)] == key)) continue;
+        holds_[size_t(i)] = 0;
+        if (holders(key) == 0) out.push_back(KeyEvent{key, false});
+    }
+    for (int i = 0; i < 3; ++i) {  // a new press
+        const int key = keys[size_t(i)];
+        if (!((pressed >> i) & 1) || !allowed || !foreground || key < 1 || key > 9) continue;
+        const bool down = holders(key) > 0;  // another button holds it already
+        holds_[size_t(i)] = key;
+        if (!down) out.push_back(KeyEvent{key, true});
+    }
+    return out;
+}
+
+std::vector<MouseKeys::KeyEvent> MouseKeys::releaseAll() {
+    std::vector<KeyEvent> out;
+    for (size_t i = 0; i < holds_.size(); ++i) {
+        const int key = holds_[i];
+        if (key == 0) continue;
+        holds_[i] = 0;
+        bool still = false;
+        for (int h : holds_) still = still || h == key;
+        if (!still) out.push_back(KeyEvent{key, false});
+    }
+    return out;
+}
+
+int backgroundSleepMs(bool queueEmpty, bool foreground, bool minimized, int sleepMs) {
+    if (!queueEmpty || sleepMs <= 0) return 0;
+    return !foreground || minimized ? sleepMs : 0;
+}
+
+}  // namespace uapad
