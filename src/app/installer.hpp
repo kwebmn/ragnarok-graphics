@@ -19,6 +19,9 @@ struct Result {
 // rollback point, made anew only when something went there) - with `repair` it just goes (previous\ stays the version
 // before). A root ddraw.dll that is not ours (dgVoodoo's) goes into uaro-graphics\dgvoodoo\DDraw.dll instead.
 Result putPackage(const std::wstring& dir, const std::wstring& staged, bool repair);
+// Every file under `staged` (its tree as the game's folder's: uaro-graphics\dlss\...) into `dir`, replacing; the
+// replaced ones wait in uaro-graphics\update\replaced for the undo and go. All or nothing (DLSS, the AI models).
+Result putFiles(const std::wstring& dir, const std::wstring& staged);
 bool canRollBack(const std::wstring& dir);              // uaro-graphics\previous\ holds files
 std::string previousVersion(const std::wstring& dir);   // its version.txt's first word, "" none
 // uaro-graphics\previous\ back in place of the files it replaced (all or nothing); previous\ goes.

@@ -23,6 +23,10 @@ struct Windows {
     uagfx::app::SystemInfo system;
     // 2.10: the entry in Windows' Apps (app/registry writeAppsEntry): its values, empty when there is none
     std::map<std::wstring, std::wstring> appsEntry;
+    // 2.10: uaro.kiev.ua's files/graphics/ (app/download): a name, its bytes; waits: waitMs's calls (the game is
+    // closed by the first one)
+    std::map<std::string, std::string> web;
+    int waits = 0;
     int clock = 0;  // seconds after 2026-10-13 12:00:00: backup folders are named after it
 };
 

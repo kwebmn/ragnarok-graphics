@@ -203,4 +203,6 @@ bool gameRunning(const std::wstring& gameExe) {
     return running;
 }
 
+void waitMs(unsigned ms) { Sleep(ms); }
+
 }  // namespace uagfx::app

@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iterator>
 
+#include "app/download.hpp"
 #include "app/files.hpp"
 #include "app/text.hpp"
 
@@ -221,6 +222,40 @@ bool removeAppsEntry() {
 SystemInfo probeSystem() { return windows().system; }
 
 bool gameRunning(const std::wstring&) { return windows().gameRunning; }
+
+void waitMs(unsigned) {  // the game closes while the update waits
+    ++windows().waits;
+    windows().gameRunning = false;
+}
+
+bool download(const std::string& file, const std::wstring& to,
+              const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error) {
+    const auto it = windows().web.find(file);
+    if (it == windows().web.end()) {
+        error = "uaro.kiev.ua answered 404 for " + file;
+        return false;
+    }
+    const uint64_t size = it->second.size();
+    if (!progress(size / 2, size) || !progress(size, size)) {
+        error = "stopped";
+        return false;
+    }
+    if (!writeFileAtomic(to, it->second)) {
+        error = "cannot write " + utf8(to);
+        return false;
+    }
+    return true;
+}
+
+bool fetch(const std::string& file, std::string& out, std::string& error) {
+    const auto it = windows().web.find(file);
+    if (it == windows().web.end()) {
+        error = "uaro.kiev.ua answered 404 for " + file;
+        return false;
+    }
+    out = it->second;
+    return true;
+}
 
 // text.hpp: wchar_t holds a whole code point on Linux.
 

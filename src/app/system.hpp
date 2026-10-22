@@ -24,5 +24,7 @@ SystemInfo probeSystem();
 
 // Whether uaRO.exe from this folder runs (spec §4.1); a uaRO.exe whose path cannot be read counts as running.
 bool gameRunning(const std::wstring& gameExe);
+// 2.10: a pause of the update's own thread while it waits for the game to close.
+void waitMs(unsigned ms);
 
 }  // namespace uagfx::app

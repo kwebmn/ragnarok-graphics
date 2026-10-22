@@ -2,10 +2,10 @@
 
 #include <windows.h>
 #include <shellapi.h>
-#include <winhttp.h>
 
+#include "app/files.hpp"
 #include "app/text.hpp"
-#include "core/update_check.hpp"
+#include "app/update_run.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -19,56 +19,14 @@ void set(const UpdateState& s) {
     ReleaseSRWLockExclusive(&g_lock);
 }
 
-// GET https://host/path with one header more; the body, or "" and why.
-std::string get(const wchar_t* host, const std::wstring& path, const wchar_t* header, std::string& error) {
-    std::string body;
-    HINTERNET session = WinHttpOpen(L"uaRO Graphics Settings", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    HINTERNET connect = session ? WinHttpConnect(session, host, INTERNET_DEFAULT_HTTPS_PORT, 0) : nullptr;
-    HINTERNET request = connect ? WinHttpOpenRequest(connect, L"GET", path.c_str(), nullptr, WINHTTP_NO_REFERER,
-                                                     WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)
-                                : nullptr;
-    DWORD status = 0, size = sizeof status;
-    const bool sent = request &&
-                      WinHttpSendRequest(request, header ? header : WINHTTP_NO_ADDITIONAL_HEADERS,
-                                         header ? DWORD(-1L) : 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
-                      WinHttpReceiveResponse(request, nullptr) &&
-                      WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                                          WINHTTP_HEADER_NAME_BY_INDEX, &status, &size, WINHTTP_NO_HEADER_INDEX);
-    if (!sent) {
-        error = "no answer from " + utf8(host) + " (error " + std::to_string(GetLastError()) + ")";
-    } else if (status != 200) {
-        error = utf8(host) + " answered " + std::to_string(status);
-    } else {
-        DWORD n = 0;
-        while (WinHttpQueryDataAvailable(request, &n) && n && body.size() < (1u << 20)) {
-            std::string part(n, '\0');
-            DWORD read = 0;
-            if (!WinHttpReadData(request, &part[0], n, &read) || !read) break;
-            body.append(part, 0, read);
-        }
-    }
-    if (request) WinHttpCloseHandle(request);
-    if (connect) WinHttpCloseHandle(connect);
-    if (session) WinHttpCloseHandle(session);
-    return body;
-}
-
 DWORD WINAPI check(void*) {
+    const CheckResult c = checkNow(exeFolder());
     UpdateState s;
-    std::string error;
-    std::string commit = get(L"api.github.com", wide(update::kCommitPath), L"Accept: application/vnd.github.sha",
-                             error);
-    while (!commit.empty() && (commit.back() == '\n' || commit.back() == '\r')) commit.pop_back();
-    if (!update::isCommit(commit)) {
-        s.kind = UpdateState::Failed;
-        s.error = error.empty() ? "GitHub gave no commit" : error;
-        set(s);
-        return 0;
-    }
-    s.latest = update::versionOf(get(L"raw.githubusercontent.com", wide(update::versionPath(commit)), nullptr, error));
-    s.kind = s.latest.empty() ? UpdateState::Failed : UpdateState::Done;
-    if (s.latest.empty()) s.error = error.empty() ? "no version in the newest commit" : error;
+    s.kind = c.ok ? UpdateState::Done : UpdateState::Failed;
+    s.latest = c.site.package.version;
+    s.offer = c.offer;
+    s.site = c.site;
+    s.error = c.error;
     set(s);
     return 0;
 }

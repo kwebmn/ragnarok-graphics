@@ -119,6 +119,25 @@ Result putPackage(const std::wstring& dir, const std::wstring& staged, bool repa
     return r;
 }
 
+Result putFiles(const std::wstring& dir, const std::wstring& staged) {
+    const std::wstring replaced = join(join(dir, wide(layout::kUpdateWork)), L"replaced");
+    Journal j;
+    removeTree(replaced);
+    int put = 0;
+    for (const std::wstring& relative : filesUnder(staged)) {
+        const std::wstring from = join(staged, relative), to = join(dir, relative);
+        std::string now, next;
+        if (readFile(to, now) && readFile(from, next) && now == next) continue;
+        if (fileExists(to) && !j.move(to, join(replaced, relative))) return failed(j, L"cannot replace " + to);
+        if (!j.move(from, to)) return failed(j, L"cannot put " + to);
+        ++put;
+    }
+    removeTree(replaced);
+    Result r;
+    r.log.push_back("installer: " + std::to_string(put) + " file(s) put");
+    return r;
+}
+
 bool canRollBack(const std::wstring& dir) { return !filesUnder(join(dir, wide(layout::kPrevious))).empty(); }
 
 std::string previousVersion(const std::wstring& dir) {

@@ -61,6 +61,8 @@ ALLOWED = {
         "CreateMutexW", "DeleteFileA", "MoveFileExA", "GetDiskFreeSpaceExW",
         # 2.5.15: the computer in the report - its cores (XP SP3), memory and power (Windows 2000)
         "GetLogicalProcessorInformation", "GlobalMemoryStatusEx", "GetSystemPowerStatus",
+        # 2.10: the update's downloads - a number against caches, a .part continued at its end (Windows 2000)
+        "GetTickCount", "SetFilePointerEx",
     },
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",
