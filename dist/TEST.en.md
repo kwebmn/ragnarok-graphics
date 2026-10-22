@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.0 — what is new
+
+- **The launcher «Play».** The «uaRO» shortcut opens the server's news, the online count and «Play». A new version or
+  new game files - «Update and play» does it all.
+- **No .bat.** Installing, updating, going back to the previous version and removing - in the app, with a progress
+  window. Updates come from GitHub by themselves; for new builds before everyone - Service - «Update channel» - «Beta».
+- **Sets itself up.** On a new install the settings are picked for your graphics card and screen; integrated graphics
+  get the super-light mode. Your present settings stay. Two failed starts in a row - the safe mode by itself.
+- **«Reports».** Ctrl+Shift+F10 in the game or «Reports» in the app: a description, screenshots - and the developers'
+  answer comes there too. The app asks whether to send a report by itself when the game crashes.
+- **The gamepad inside.** Xbox and PlayStation work at once; no separate files any more.
+- **A clean game folder.** All of ours is in the `uaro-graphics` folder.
+- **Nothing extra.** DLSS rows on NVIDIA RTX only; the effects' console on Ctrl + the key left of 1 («ё» and the
+  apostrophe typed in the chat); Pause says the improvements are off. HDR goes on by hand only.
+- **Paving without dark lines.** On Aldebaran's square and other maps with such tiles no dark lines and smudges run
+  along the tiles' edges any more.
+
 # uaRO Graphics 3.0.0-beta.3 — what is new
 
 - **Paving without dark lines.** On Aldebaran's square and other maps with such tiles no dark lines and smudges run
