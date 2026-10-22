@@ -78,29 +78,6 @@ bool archiveOf(const std::string& file, const std::string& size, const std::stri
 
 }  // namespace
 
-std::string versionPath(const std::string& commit) {
-    return "/kwebmn/ragnarok-graphics/" + commit + "/src/core/version.cpp";
-}
-
-bool isCommit(const std::string& text) {
-    if (text.size() != 40) return false;
-    for (char c : text)
-        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
-    return true;
-}
-
-std::string versionOf(const std::string& cpp) {
-    const std::string mark = "kVersion = \"";
-    const size_t at = cpp.find(mark);
-    if (at == std::string::npos) return "";
-    const size_t end = cpp.find('"', at + mark.size());
-    if (end == std::string::npos) return "";
-    const std::string v = cpp.substr(at + mark.size(), end - at - mark.size());
-    for (char c : v)
-        if (!((c >= '0' && c <= '9') || c == '.')) return "";
-    return v;
-}
-
 bool newer(const std::string& a, const std::string& b) {
     if (a.empty()) return false;
     const size_t da = a.find('-'), db = b.find('-');

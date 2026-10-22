@@ -5,15 +5,8 @@
 
 namespace uagfx::update {
 
-// 0.49: the settings app's update check - GitHub's newest commit of main (by its number: no cache keeps that old, as
-// update.bat takes it) and the version its src/core/version.cpp names.
-constexpr const char* kHost = "api.github.com";
-constexpr const char* kCommitPath = "/repos/kwebmn/ragnarok-graphics/commits/main";
-constexpr const char* kRawHost = "raw.githubusercontent.com";
-std::string versionPath(const std::string& commit);  // "/kwebmn/ragnarok-graphics/<commit>/src/core/version.cpp"
-
-bool isCommit(const std::string& text);              // 40 hex digits: the API's answer to "Accept: ...sha"
-std::string versionOf(const std::string& versionCpp);  // its kVersion; "" none
+// 0.49: the settings app's update check; 2.10: from uaro.kiev.ua (no GitHub: its limit of 60 questions an hour from
+// one address, and update.bat).
 // a is a later version than b (by their numbers); 2.10: a pre-release ("3.0.0-beta.2") comes before its release
 bool newer(const std::string& a, const std::string& b);
 std::string bare(const std::string& version);  // "2.10.0 build 2026-10-22 18:00" -> "2.10.0"

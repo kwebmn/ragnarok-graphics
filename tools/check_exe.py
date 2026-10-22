@@ -61,8 +61,9 @@ ALLOWED = {
         "CreateMutexW", "DeleteFileA", "MoveFileExA", "GetDiskFreeSpaceExW",
         # 2.5.15: the computer in the report - its cores (XP SP3), memory and power (Windows 2000)
         "GetLogicalProcessorInformation", "GlobalMemoryStatusEx", "GetSystemPowerStatus",
-        # 2.10: the update's downloads - a number against caches, a .part continued at its end (Windows 2000)
-        "GetTickCount", "SetFilePointerEx",
+        # 2.10: the update's downloads - a number against caches, a .part continued at its end (Windows 2000); the
+        # removal's copy of the app in %TEMP%, the process the update waits for (Windows NT)
+        "GetTickCount", "SetFilePointerEx", "CopyFileW", "GetTempPathW", "GetCurrentProcessId",
     },
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",
@@ -94,6 +95,7 @@ ALLOWED = {
         "SHBrowseForFolderW", "SHGetPathFromIDListW",  # 2.5.19: the palettes' folder (Windows 2000 and later)
     },
     "user32.dll": {
+        "IsWindowEnabled", "IsWindowVisible",  # 2.10: the progress window's Cancel, the status bar's Update
         # 1.6.2: the preview's window
         "BeginPaint", "EndPaint", "FillRect", "InvalidateRect", "ReleaseCapture", "ScreenToClient", "SetCapture",
         "SetCursor",  # 0.51: waiting for uaro.kiev.ua

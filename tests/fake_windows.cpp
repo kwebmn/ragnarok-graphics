@@ -162,6 +162,8 @@ std::string utf8ToRegFile(const std::string& utf8) { return utf8; }
 
 unsigned long launch(const std::wstring&, const std::wstring&) { return 0; }
 
+unsigned long launchArgs(const std::wstring&, const std::wstring&, const std::wstring&, bool) { return 0; }
+
 void openInShell(const std::wstring&) {}
 
 std::string defaultIni() {
@@ -222,6 +224,8 @@ bool removeAppsEntry() {
 SystemInfo probeSystem() { return windows().system; }
 
 bool gameRunning(const std::wstring&) { return windows().gameRunning; }
+
+bool elevatedNow() { return false; }
 
 void waitMs(unsigned) {  // the game closes while the update waits
     ++windows().waits;

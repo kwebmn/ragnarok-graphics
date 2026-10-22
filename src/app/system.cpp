@@ -205,4 +205,6 @@ bool gameRunning(const std::wstring& gameExe) {
 
 void waitMs(unsigned ms) { Sleep(ms); }
 
+bool elevatedNow() { return runsElevated(); }
+
 }  // namespace uagfx::app

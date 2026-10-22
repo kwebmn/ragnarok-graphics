@@ -11,6 +11,7 @@
 #include "app/notes_window.hpp"
 #include "app/report_send.hpp"
 #include "app/status_info.hpp"
+#include "app/modes.hpp"
 #include "app/update.hpp"
 #include "core/settings/search.hpp"
 #include "core/update_check.hpp"
@@ -39,6 +40,7 @@ constexpr int kReportButton = 34;  // "Report a problem"
 constexpr int kTabFirst = 40;      // a view's tabs, 40-43: the page view's children, made with the page
 constexpr int kResetView = 44;     // "Reset the page to the recommended values", made with the page
 constexpr int kStrip = 26;         // 2.6: the status bar's height at 96 DPI
+constexpr int kStripUpdate = 45;   // 2.10: the status bar's "Update"
 constexpr int kHeader = 52;        // 2.6: the header's height at 96 DPI
 constexpr int kList = 200;         // the list's width
 constexpr UINT kRebuild = WM_APP + 1;
@@ -267,6 +269,8 @@ void MainWindow::create() {
     search_ = child(L"EDIT", ES_AUTOHSCROLL | WS_TABSTOP | WS_GROUP, kSearch, WS_EX_CLIENTEDGE);
     stripLeft_ = child(L"STATIC", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX | SS_ENDELLIPSIS, 0);
     stripRight_ = child(L"STATIC", SS_RIGHT | SS_CENTERIMAGE | SS_NOPREFIX, 0);
+    stripUpdate_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kStripUpdate);
+    ShowWindow(stripUpdate_, SW_HIDE);
     stripBrush_ = CreateSolidBrush(RGB(243, 243, 243));
     report_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP | WS_GROUP, kReportButton);
     listBrush_ = CreateSolidBrush(RGB(247, 247, 247));
@@ -314,6 +318,7 @@ void MainWindow::create() {
     if (!owned.empty()) message(owned, true);
     buildPage();
     SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
+    startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     PostMessageW(hwnd_, kAskStats, 0, 0);
 }
 
@@ -371,7 +376,8 @@ void MainWindow::layout() {
     // 2.6: the status bar - the driver and the pack on the left, the game on the right
     const int sy = c.bottom - at(kStrip);
     MoveWindow(stripRight_, w - at(16 + 220), sy, at(220), at(kStrip), TRUE);
-    MoveWindow(stripLeft_, at(16), sy, w - at(16 + 220 + 16 + 16), at(kStrip), TRUE);
+    MoveWindow(stripUpdate_, w - at(16 + 220 + 8 + 110), sy + at(2), at(110), at(kStrip - 4), TRUE);
+    MoveWindow(stripLeft_, at(16), sy, w - at(16 + 220 + 8 + 110 + 16 + 16), at(kStrip), TRUE);
     const RECT page = pageArea();
     MoveWindow(view_, page.left, page.top, page.right - page.left, page.bottom - page.top, TRUE);
     InvalidateRect(hwnd_, nullptr, TRUE);  // the lines and the list's ground move with them
@@ -408,9 +414,10 @@ void MainWindow::updateStrip() {
     std::wstring left = wtrf(lang_, Text::MainDriver, {installed.empty() ? std::string(kVersion) : installed});
     const UpdateState u = updateState();
     if (u.kind == UpdateState::Checking) left += L" · " + wtr(lang_, Text::UpdateChecking);
+    const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
     if (u.kind == UpdateState::Done)
-        left += L" · " + (update::newer(u.latest, kVersion) ? wtrf(lang_, Text::MainUpdateNew, {u.latest})
-                                                                 : wtr(lang_, Text::MainUpdateNone));
+        left += L" · " + (offered ? wtrf(lang_, Text::MainUpdateNew, {u.offer}) : wtr(lang_, Text::MainUpdateNone));
+    if (offered != (IsWindowVisible(stripUpdate_) != 0)) ShowWindow(stripUpdate_, offered ? SW_SHOW : SW_HIDE);
     const PackSummary pack = packSummary(model_->paths().dir);
     left += L"     ";
     if (!pack.exists)
@@ -554,6 +561,7 @@ void MainWindow::retext() {
     fillList();
     for (int i = 0; i < kModeCount; ++i) SetWindowTextW(modes_[i], wtr(lang_, modeName(Mode(i))).c_str());
     SetWindowTextW(report_, wtr(lang_, Text::ReportProblem).c_str());
+    SetWindowTextW(stripUpdate_, wtr(lang_, Text::UpdateDo).c_str());
     SendMessageW(search_, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(wtr(lang_, Text::SearchCue).c_str()));
     SetWindowTextW(banner_, wtr(lang_, Text::ElevatedBanner).c_str());
     SetWindowTextW(apply_, wtr(lang_, Text::Apply).c_str());
@@ -794,6 +802,16 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 SetTimer(hwnd_, kSearchTimer, 250, nullptr);
             } else if (id == kResetView && code == BN_CLICKED) {
                 resetView();
+            } else if (id == kStripUpdate && code == BN_CLICKED) {  // 2.10: as the Service page's "Update now"
+                if (box(wtr(lang_, Text::UpdateAsk), MB_YESNO | MB_ICONQUESTION) != IDYES) return 0;
+                Args a;
+                a.mode = Args::Mode::Update;
+                a.then = Args::Then::App;
+                const std::string err = startMode(a);
+                if (err.empty())
+                    PostMessageW(hwnd_, WM_CLOSE, 0, 0);
+                else
+                    message(wtrf(lang_, Text::UpdateError, {err}), true);
             } else if (id == kReportButton && code == BN_CLICKED) {
                 reportFocus_ = true;
                 showView(settings::View::Service, 0);

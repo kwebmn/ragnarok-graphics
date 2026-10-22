@@ -5,6 +5,7 @@
 #include "app/ai_cache.hpp"
 #include "app/ai_group_texts.hpp"
 #include "app/files.hpp"
+#include "app/modes.hpp"
 #include "app/page.hpp"
 #include "app/preview_window.hpp"
 #include "app/update.hpp"
@@ -35,7 +36,7 @@ constexpr int kPreviewOpen = 1133;  // 1.6.2: the viewer window
 constexpr int kSmall = 1140;  // 1.6.3: small pictures by their own model
 constexpr int kSmallSide = 1141;
 constexpr int kSmallModel = 1142;
-constexpr int kGetModels = 1150;  // 2.5.27: get-models.bat - Game AI's file
+constexpr int kGetModels = 1150;  // 2.5.27: Game AI's file; 2.10: from the site in a progress window
 
 const auto& kGroupLabels = kAiGroupLabels;  // 2.5.28: app/ai_group_texts.hpp
 const auto& kSectionLabels = kAiSectionLabels;
@@ -79,7 +80,7 @@ struct Preview {
     std::string error;
 };
 Preview g_preview;
-std::string g_getModelsError;  // 2.5.27: why get-models.bat did not start
+std::string g_getModelsError;  // 2.5.27: why Game AI did not come
 
 // What to improve, three to a row: the map, the sprites by their files (0.16), the interface.
 struct KindBox {
@@ -212,8 +213,9 @@ public:
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (sel < 0 || size_t(sel) >= s.tokens.size()) return;
             m.setToken(s, s.tokens[size_t(sel)]);
-        } else if (id == kGetModels && clicked) {  // 2.5.27: in its own console; the page looks again on its rebuild
-            g_getModelsError = startGetModels(m.paths().dir);
+        } else if (id == kGetModels && clicked) {  // 2.10: a progress window; the page looks again on its rebuild
+            const std::wstring err = getModels(GetAncestor(host_.window(), GA_ROOT), m.paths().dir, host_.lang());
+            g_getModelsError = err == L"stopped" ? "" : utf8(err);
             host_.rebuild();
             return;
         } else if (id == kRedo && clicked) {  // the Texture pack page, its "make again" ticked

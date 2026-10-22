@@ -1121,9 +1121,9 @@ const Entry kTexts[] = {
     {"Update now",
      "Оновити зараз",
      "Обновить сейчас"},
-    {"Asking GitHub for the newest version...",
-     "Запитую в GitHub найновішу версію...",
-     "Спрашиваю у GitHub новейшую версию..."},
+    {"Asking uaro.kiev.ua for the newest version...",
+     "Запитую на uaro.kiev.ua найновішу версію...",
+     "Спрашиваю у uaro.kiev.ua новейшую версию..."},
     {"A newer version is out: {1} (this one is {2}). Update now installs it.",
      "Вийшла новіша версія: {1} (ця — {2}). «Оновити зараз» встановить її.",
      "Вышла новая версия: {1} (эта — {2}). «Обновить сейчас» установит её."},
@@ -1133,17 +1133,18 @@ const Entry kTexts[] = {
     {"Could not check: {1}",
      "Не вдалося перевірити: {1}",
      "Не удалось проверить: {1}"},
-    {"update.bat downloads the newest uaRO Graphics from GitHub and installs it; this window closes now. Go on?",
-     "update.bat завантажить найновіший uaRO Graphics із GitHub і встановить його; це вікно зараз закриється. "
-     "Продовжити?",
-     "update.bat скачает новейший uaRO Graphics с GitHub и установит его; это окно сейчас закроется. Продолжить?"},
-    {"Close the game first: the update replaces its files.",
-     "Спершу закрийте гру: оновлення замінює її файли.",
-     "Сначала закройте игру: обновление заменяет её файлы."},
-    {"Update now runs update.bat: it downloads the newest package and installs it, the settings stay.",
-     "«Оновити зараз» запускає update.bat: він завантажує найновіший пакет і встановлює його, налаштування "
-     "залишаються.",
-     "«Обновить сейчас» запускает update.bat: он скачивает новейший пакет и устанавливает его, настройки остаются."},
+    {"The settings app closes, the update installs in a window of its own and the app opens again. Go on?",
+     "Утиліта закриється, оновлення встановиться в окремому вікні, і вона відкриється знову. Продовжити?",
+     "Утилита закроется, обновление установится в отдельном окне, и она откроется снова. Продолжить?"},
+    {"The game is open: the update waits until it closes.",
+     "Гра відкрита: оновлення дочекається, поки вона закриється.",
+     "Игра открыта: обновление дождётся, пока она закроется."},
+    {"Updates come from uaro.kiev.ua: the settings app downloads, checks and installs them by itself, the settings "
+     "stay. The previous version is kept to go back to.",
+     "Оновлення приходять із uaro.kiev.ua: утиліта сама завантажує, перевіряє й встановлює їх, налаштування "
+     "залишаються. Попередня версія зберігається, щоб до неї можна було повернутися.",
+     "Обновления приходят с uaro.kiev.ua: утилита сама скачивает, проверяет и устанавливает их, настройки остаются. "
+     "Предыдущая версия сохраняется, чтобы к ней можно было вернуться."},
     {"The update could not start: {1}",
      "Оновлення не запустилося: {1}",
      "Обновление не запустилось: {1}"},
@@ -2796,8 +2797,9 @@ const Entry kTexts[] = {
      "Game AI ещё нет на этом компьютере: она идёт отдельно от пакета (29 МБ). Пока её не скачали, картинки ею не "
      "делаются."},
     {"Download Game AI (29 MB)", "Завантажити Game AI (29 МБ)", "Скачать Game AI (29 МБ)"},
-    {"get-models.bat could not be started: {1}", "Не вдалося запустити get-models.bat: {1}",
-     "Не удалось запустить get-models.bat: {1}"},
+    {"Game AI could not be downloaded: {1}",
+     "Не вдалося завантажити Game AI: {1}",
+     "Не удалось скачать Game AI: {1}"},
     {"Of it {1} is pictures made again or taken out: the game never reads them, they only take room.",
      "З нього {1} — картинки, зроблені заново або прибрані: гра їх ніколи не читає, вони лише займають місце.",
      "Из него {1} — картинки, сделанные заново или убранные: игра их никогда не читает, они только занимают место."},
@@ -2964,8 +2966,9 @@ const Entry kTexts[] = {
      "Нет Direct3D 11: только собственный вид игры"},
     {"DLSS and frame generation are installed", "DLSS і генерацію кадрів встановлено",
      "DLSS и генерация кадров установлены"},
-    {"DLSS is not installed (get-dlss.bat downloads it)", "DLSS не встановлено (get-dlss.bat завантажить його)",
-     "DLSS не установлен (get-dlss.bat скачает его)"},
+    {"DLSS is not installed",
+     "DLSS не встановлено",
+     "DLSS не установлен"},
     {"HD textures", "HD-текстури", "HD-текстуры"},
     {"Pack: {1} pictures, {2}", "Пакет: {1} картинок, {2}", "Пакет: {1} картинок, {2}"},
     {"No texture pack yet: «Make the pack» makes it on this computer.",
@@ -3156,6 +3159,102 @@ const Entry kTexts[] = {
      "Graphics. Діє з наступного запуску гри.",
      "Геймпады Xbox и PlayStation управляют игрой; без подключённого геймпада ничего не меняется. Встроен в uaRO "
      "Graphics. Действует со следующего запуска игры."},
+    {"Update {1} is out",
+     "Вийшло оновлення {1}",
+     "Вышло обновление {1}"},
+    {"The game closes, updates and starts again - about 20 seconds.",
+     "Гра закриється, оновиться й запуститься знову — це близько 20 секунд.",
+     "Игра закроется, обновится и запустится снова — это около 20 секунд."},
+    {"Play without the update",
+     "Грати без оновлення",
+     "Играть без обновления"},
+    {"Update",
+     "Оновити",
+     "Обновить"},
+    {"Updating to {1}",
+     "Оновлюємо до {1}",
+     "Обновляем до {1}"},
+    {"{1} of {2} MB downloaded. Then the game starts by itself.",
+     "Завантажено {1} з {2} МБ. Потім гра запуститься сама.",
+     "Скачано {1} из {2} МБ. Потом игра запустится сама."},
+    {"{1} of {2} MB downloaded. Then the settings app opens again.",
+     "Завантажено {1} з {2} МБ. Потім утиліта відкриється знову.",
+     "Скачано {1} из {2} МБ. Потом утилита откроется снова."},
+    {"Waiting for the game to close...",
+     "Чекаємо, поки гра закриється…",
+     "Ждём, пока игра закроется…"},
+    {"Installing...",
+     "Встановлюємо…",
+     "Устанавливаем…"},
+    {"NVIDIA DLSS: {1} of {2} MB downloaded",
+     "NVIDIA DLSS: завантажено {1} з {2} МБ",
+     "NVIDIA DLSS: скачано {1} из {2} МБ"},
+    {"Game AI: {1} of {2} MB downloaded",
+     "Game AI: завантажено {1} з {2} МБ",
+     "Game AI: скачано {1} из {2} МБ"},
+    {"It did not work: {1}. Nothing changed in the game's folder.",
+     "Не вдалося: {1}. У теці гри нічого не змінилося.",
+     "Не удалось: {1}. В папке игры ничего не изменилось."},
+    {"Cancel",
+     "Скасувати",
+     "Отмена"},
+    {"Back to the previous version ({1})",
+     "Повернути попередню версію ({1})",
+     "Вернуть предыдущую версию ({1})"},
+    {"Go back to uaRO Graphics {1}? The settings app closes and opens again; the newer version is not offered until a "
+     "later one is out.",
+     "Повернути uaRO Graphics {1}? Утиліта закриється й відкриється знову; новішу версію не пропонуватиме, доки не "
+     "вийде наступна.",
+     "Вернуть uaRO Graphics {1}? Утилита закроется и откроется снова; более новую версию не будет предлагать, пока не "
+     "выйдет следующая."},
+    {"Going back to {1}",
+     "Повертаємо {1}",
+     "Возвращаем {1}"},
+    {"Repair the files",
+     "Відновити файли",
+     "Восстановить файлы"},
+    {"Download the newest uaRO Graphics again and replace the files that are damaged or missing? The settings stay; "
+     "the settings app closes and opens again.",
+     "Завантажити найновіший uaRO Graphics ще раз і замінити пошкоджені або відсутні файли? Налаштування залишаться; "
+     "утиліта закриється й відкриється знову.",
+     "Скачать новейший uaRO Graphics ещё раз и заменить повреждённые или отсутствующие файлы? Настройки останутся; "
+     "утилита закроется и откроется снова."},
+    {"Repairing the files",
+     "Відновлюємо файли",
+     "Восстанавливаем файлы"},
+    {"Remove uaRO Graphics",
+     "Видалити uaRO Graphics",
+     "Удалить uaRO Graphics"},
+    {"Remove uaRO Graphics from {1}? The game draws by itself again, as before the install; dgVoodoo comes back if it "
+     "was there.",
+     "Видалити uaRO Graphics із теки {1}? Гра знову малюватиме сама, як до встановлення; dgVoodoo повернеться, якщо "
+     "був.",
+     "Удалить uaRO Graphics из папки {1}? Игра снова будет рисовать сама, как до установки; dgVoodoo вернётся, если "
+     "был."},
+    {"Keep the settings and the texture pack",
+     "Залишити налаштування й пакет текстур",
+     "Оставить настройки и пакет текстур"},
+    {"Remove",
+     "Видалити",
+     "Удалить"},
+    {"Removing uaRO Graphics",
+     "Видаляємо uaRO Graphics",
+     "Удаляем uaRO Graphics"},
+    {"uaRO Graphics is removed.",
+     "uaRO Graphics видалено.",
+     "uaRO Graphics удалён."},
+    {"The settings and the texture pack stay in the uaro-graphics folder.",
+     "Налаштування й пакет текстур залишилися в теці uaro-graphics.",
+     "Настройки и пакет текстур остались в папке uaro-graphics."},
+    {"uaRO Graphics {1} is installed. Start the game as usual.",
+     "uaRO Graphics {1} встановлено. Запускайте гру як завжди.",
+     "uaRO Graphics {1} установлен. Запускайте игру как обычно."},
+    {"Download DLSS (34 MB)",
+     "Завантажити DLSS (34 МБ)",
+     "Скачать DLSS (34 МБ)"},
+    {"Not everything could be removed: {1}",
+     "Не все вдалося видалити: {1}",
+     "Не всё удалось удалить: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
@@ -3175,6 +3274,11 @@ const char* langToken(Lang l) { return l == Lang::Uk ? "uk" : l == Lang::Ru ? "r
 const char* langName(Lang l) { return l == Lang::Uk ? "Українська" : l == Lang::Ru ? "Русский" : "English"; }
 
 Lang startLang(std::optional<Lang> chosen) { return chosen ? *chosen : Lang::En; }
+
+Lang windowLang(std::optional<Lang> chosen, unsigned primaryLanguage) {
+    if (chosen) return *chosen;
+    return primaryLanguage == 0x22 ? Lang::Uk : primaryLanguage == 0x19 ? Lang::Ru : Lang::En;
+}
 
 const char* tr(Lang l, Text t) {
     const Entry& e = kTexts[size_t(t)];

@@ -25,6 +25,9 @@ std::string regFileToUtf8(const std::string& bytes);
 std::string utf8ToRegFile(const std::string& utf8);
 // 0 when started; else the Windows error.
 unsigned long launch(const std::wstring& file, const std::wstring& folder);
+// 2.10: with arguments, and as administrator ("runas": Windows asks) when `elevated`; 0 or the Windows error.
+unsigned long launchArgs(const std::wstring& file, const std::wstring& args, const std::wstring& folder,
+                         bool elevated);
 void openInShell(const std::wstring& path);
 // The text of dist/uaro-graphics.ini built into the app (resource DEFAULT_INI).
 std::string defaultIni();

@@ -17,6 +17,9 @@ const char* langName(Lang l);                             // in its own language
 // 0.48: the language the settings app starts in - the one chosen in it, else English (until 0.47 the language of
 // Windows).
 Lang startLang(std::optional<Lang> chosen);
+// 2.10: the language of the update's, the setup's and the removal's windows - the app's choice, else Windows' (its
+// primary language id: 0x22 Ukrainian, 0x19 Russian), else English: most players never opened the settings app.
+Lang windowLang(std::optional<Lang> chosen, unsigned primaryLanguage);
 
 enum class Text : uint16_t {
     AppTitle, PageRender, PageScreen, PageQuality, PageFrames, PageDiagnostics, PageService,
@@ -343,6 +346,11 @@ enum class Text : uint16_t {
     FxGroupScreen, FxGroupScreenHint, ConsoleThisMap, ConsoleSearch, ConsoleNothing,
     DebugSeams, DebugSeamsHint, DebugSeamsOff, DebugSeamsColour, DebugSeamsOnTop,  // 2.7.8
     PadEnabled, PadEnabledHint,  // 2.9
+    UpdateOut, UpdateRestartNote, UpdatePlayWithout, UpdateDo, UpdatingTo, UpdateLoadedGame, UpdateLoadedApp,
+    UpdateWaitGame, UpdateInstalling, UpdateLoadingDlss, UpdateLoadingModels, UpdateNothingChanged, ButtonCancel,
+    RollbackButton, RollbackAsk, RollingBack, RepairButton, RepairAsk, Repairing, UninstallButton, UninstallAsk,
+    UninstallKeep, UninstallDo, Uninstalling, UninstallDone, UninstallKept, InstallDone, DlssDownload,  // 2.10
+    UninstallFailed,  // 2.10
     Count
 };
 

@@ -1,6 +1,8 @@
 #include <cstdio>
 
 #include "app/files.hpp"
+#include "app/installer.hpp"
+#include "app/modes.hpp"
 #include "app/page.hpp"
 #include "app/palettes.hpp"
 #include "app/update.hpp"
@@ -23,6 +25,9 @@ constexpr int kGameLoad = 1431;
 constexpr int kLayoutReset = 1432;
 constexpr int kUpdateCheck = 1440;  // 0.49
 constexpr int kUpdateNow = 1441;
+constexpr int kRollback = 1442;  // 2.10
+constexpr int kRepair = 1443;
+constexpr int kUninstall = 1444;
 constexpr int kProfiles = 1450;  // 0.55
 constexpr int kProfileName = 1451;
 constexpr int kProfileSave = 1452;
@@ -132,25 +137,32 @@ public:
         p.note(tf(Text::VersionsValue,
                   {kVersion, m.now().installedVersion.empty() ? utf8(t(Text::Unknown)) : m.now().installedVersion}),
                Tone::Normal);
-        // 0.49: the newest version on GitHub, and update.bat started from here.
+        // 0.49: the newest version; 2.10: from uaro.kiev.ua, put in by this app's own modes (app/modes) - and the
+        // previous version back, the files repaired, uaRO Graphics removed.
         p.gap();
         p.heading(t(Text::ServiceUpdate));
         const UpdateState u = updateState();
         checking_ = u.kind == UpdateState::Checking;
-        p.buttons({{kUpdateCheck, t(Text::UpdateCheck), u.kind != UpdateState::Checking},
-                   {kUpdateNow, t(Text::UpdateNow), !running}});
+        const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
+        std::vector<ButtonItem> buttons{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
+        if (offered) buttons.push_back({kUpdateNow, t(Text::UpdateNow)});
+        p.buttons(buttons);
         if (u.kind == UpdateState::Checking)
             p.note(t(Text::UpdateChecking));
         else if (u.kind == UpdateState::Failed)
             p.note(tf(Text::UpdateFailed, {u.error}), Tone::Bad);
-        else if (u.kind == UpdateState::Done && update::newer(u.latest, kVersion))
-            p.note(tf(Text::UpdateNewer, {u.latest, kVersion}), Tone::Warn);
+        else if (offered)
+            p.note(tf(Text::UpdateNewer, {u.offer, kVersion}), Tone::Warn);
         else if (u.kind == UpdateState::Done)
             p.note(tf(Text::UpdateLatest, {kVersion}), Tone::Good);
-        if (running)
-            p.note(t(Text::UpdateGameRunning), Tone::Warn);
-        else
-            p.note(t(Text::UpdateNote));
+        if (running && offered) p.note(t(Text::UpdateGameRunning), Tone::Warn);
+        p.note(t(Text::UpdateNote));
+        std::vector<ButtonItem> more;
+        if (installer::canRollBack(m.paths().dir))
+            more.push_back({kRollback, tf(Text::RollbackButton, {installer::previousVersion(m.paths().dir)})});
+        more.push_back({kRepair, t(Text::RepairButton)});
+        more.push_back({kUninstall, t(Text::UninstallButton)});
+        p.buttons(more);
     }
 
     bool ticks() const override {
@@ -208,17 +220,13 @@ public:
             startUpdateCheck();
             host_.rebuild();
         } else if (id == kUpdateNow) {
-            if (m.now().gameRunning) {
-                host_.message(t(Text::UpdateGameRunning), true);
-                return;
-            }
-            if (!host_.ask(t(Text::UpdateAsk))) return;
-            const std::string err = startUpdate(m.paths().dir);
-            if (!err.empty()) {
-                host_.message(tf(Text::UpdateError, {err}), true);
-                return;
-            }
-            PostMessageW(GetAncestor(host_.window(), GA_ROOT), WM_CLOSE, 0, 0);  // update.bat replaces this exe too
+            startAndClose(Args::Mode::Update, t(Text::UpdateAsk));
+        } else if (id == kRollback) {
+            startAndClose(Args::Mode::Rollback, tf(Text::RollbackAsk, {installer::previousVersion(m.paths().dir)}));
+        } else if (id == kRepair) {
+            startAndClose(Args::Mode::Repair, t(Text::RepairAsk));
+        } else if (id == kUninstall) {
+            startAndClose(Args::Mode::Uninstall, L"");  // its own window asks
         } else if (id == kReset) {
             if (!host_.ask(t(Text::ResetAsk))) return;
             const std::wstring err = m.resetDefaults(l);
@@ -262,6 +270,20 @@ public:
     }
 
 private:
+    // 2.10: a mode of this exe as a process of its own (app/modes); the app closes: the files it runs from change.
+    void startAndClose(Args::Mode mode, const std::wstring& ask) {
+        if (!ask.empty() && !host_.ask(ask)) return;
+        Args a;
+        a.mode = mode;
+        a.then = mode == Args::Mode::Uninstall ? Args::Then::Nothing : Args::Then::App;
+        const std::string err = startMode(a);
+        if (!err.empty()) {
+            host_.message(tf(Text::UpdateError, {err}), true);
+            return;
+        }
+        PostMessageW(GetAncestor(host_.window(), GA_ROOT), WM_CLOSE, 0, 0);
+    }
+
     HWND list_ = nullptr;
     HWND profiles_ = nullptr;
     bool checking_ = false, making_ = false;  // at the last look: what ended since is shown anew

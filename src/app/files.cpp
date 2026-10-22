@@ -176,6 +176,19 @@ unsigned long launch(const std::wstring& file, const std::wstring& folder) {
     return ShellExecuteExW(&e) ? 0 : GetLastError();
 }
 
+unsigned long launchArgs(const std::wstring& file, const std::wstring& args, const std::wstring& folder,
+                         bool elevated) {
+    SHELLEXECUTEINFOW e{};
+    e.cbSize = sizeof e;
+    e.fMask = SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI;
+    e.lpVerb = elevated ? L"runas" : L"open";
+    e.lpFile = file.c_str();
+    e.lpParameters = args.empty() ? nullptr : args.c_str();
+    e.lpDirectory = folder.c_str();
+    e.nShow = SW_SHOWNORMAL;
+    return ShellExecuteExW(&e) ? 0 : GetLastError();
+}
+
 void openInShell(const std::wstring& path) {
     ShellExecuteW(nullptr, L"open", path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }

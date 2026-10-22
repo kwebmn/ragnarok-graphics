@@ -1,5 +1,6 @@
 #include <cstdio>
 
+#include "app/modes.hpp"
 #include "app/page.hpp"
 #include "app/setting_ids.hpp"
 #include "app/status_info.hpp"
@@ -21,6 +22,7 @@ constexpr int kUpdateCheck = 2005;
 constexpr int kUpdateNow = 2006;
 constexpr int kMakePack = 2007;
 constexpr int kAiMore = 2008;
+constexpr int kGetDlss = 2009;  // 2.10: DLSS from the site, in a progress window
 
 const Text kQualities[kMainQualityCount] = {Text::MainQualityLow, Text::MainQualityMedium, Text::MainQualityHigh,
                                             Text::MainQualitySuperLight};
@@ -98,18 +100,23 @@ public:
                 startUpdateCheck();
                 host_.rebuild();
                 return;
-            case kUpdateNow: {  // as the Service page's
-                if (m.now().gameRunning) {
-                    host_.message(t(Text::UpdateGameRunning), true);
-                    return;
-                }
+            case kUpdateNow: {  // as the Service page's: the update in a process of its own, this app closes
                 if (!host_.ask(t(Text::UpdateAsk))) return;
-                const std::string err = startUpdate(m.paths().dir);
+                Args a;
+                a.mode = Args::Mode::Update;
+                a.then = Args::Then::App;
+                const std::string err = startMode(a);
                 if (!err.empty()) {
                     host_.message(tf(Text::UpdateError, {err}), true);
                     return;
                 }
-                PostMessageW(GetAncestor(host_.window(), GA_ROOT), WM_CLOSE, 0, 0);  // update.bat replaces this exe
+                PostMessageW(GetAncestor(host_.window(), GA_ROOT), WM_CLOSE, 0, 0);
+                return;
+            }
+            case kGetDlss: {
+                const std::wstring err = getDlss(GetAncestor(host_.window(), GA_ROOT), m.paths().dir, host_.lang());
+                if (!err.empty() && err != L"stopped") host_.message(tf(Text::UpdateNothingChanged, {utf8(err)}), true);
+                host_.rebuild();
                 return;
             }
             case kMakePack: host_.showView(View::Ai, 2); return;
@@ -142,15 +149,15 @@ private:
             m.now().installedVersion.empty() ? std::string(kVersion) : firstWord(m.now().installedVersion);
         const UpdateState u = updateState();
         checking_ = u.kind == UpdateState::Checking;
-        const bool newer = u.kind == UpdateState::Done && update::newer(u.latest, kVersion);
+        const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
         std::wstring line = tf(Text::MainDriver, {installed});
         if (checking_) line += L" · " + t(Text::UpdateChecking);
-        if (newer) line += L" · " + tf(Text::MainUpdateNew, {u.latest});
-        if (u.kind == UpdateState::Done && !newer) line += L" · " + t(Text::MainUpdateNone);
-        p.note(line, newer ? Tone::Warn : Tone::Normal);
+        if (offered) line += L" · " + tf(Text::MainUpdateNew, {u.offer});
+        if (u.kind == UpdateState::Done && !offered) line += L" · " + t(Text::MainUpdateNone);
+        p.note(line, offered ? Tone::Warn : Tone::Normal);
         if (u.kind == UpdateState::Failed) p.note(tf(Text::UpdateFailed, {u.error}), Tone::Bad);
         std::vector<ButtonItem> buttons{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
-        if (newer) buttons.push_back({kUpdateNow, t(Text::UpdateNow), !m.now().gameRunning});
+        if (offered) buttons.push_back({kUpdateNow, t(Text::UpdateNow)});
         p.buttons(buttons);
         const Machine x = m.machine();
         const std::wstring api = x.d3d12 ? L"Direct3D 12" : x.d3d11 ? L"Direct3D 11" : t(Text::MainNoD3d);
@@ -158,6 +165,7 @@ private:
         if (x.vendor == 0x10de) {  // NVIDIA: DLSS and its frame generation
             const bool dlss = dlssInstalled(m.paths().dir);
             p.note(t(dlss ? Text::MainDlss : Text::MainNoDlss), dlss ? Tone::Good : Tone::Muted);
+            if (!dlss) p.buttons({{kGetDlss, t(Text::DlssDownload)}});
         }
         p.note(t(m.now().gameRunning ? Text::StatusRunning : Text::StatusClosed));
     }
