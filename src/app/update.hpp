@@ -11,7 +11,8 @@ struct UpdateState {
     enum Kind { Idle, Checking, Done, Failed } kind = Idle;
     std::string latest;  // Done: the branch's newest version
     std::string offer;   // Done: the version to offer what is installed, "" none
-    update::Manifest branch;  // the update.ini of the computer's channel
+    update::Channel channel = update::Channel::Release;  // 3.0.0-beta.2: the branch asked
+    update::Manifest branch;                             // its update.ini
     std::string error;  // Failed: why, in English
 };
 void startUpdateCheck();  // for the folder of this app

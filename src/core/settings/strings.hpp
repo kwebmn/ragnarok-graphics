@@ -373,6 +373,7 @@ enum class Text : uint16_t {
     PlayPatchLine, PlayPatchNote, PatchApplying, PatchFailed,  // 2.14: the client patch
     PackFromClient, CompareOffNote,  // 2.15: nothing extra
     ReportAutoAsk,  // 3.0.0-beta.1: the automatic reports asked about at the first start
+    UpdateChannel, UpdateChannelRelease, UpdateChannelBeta, UpdateChannelHint,  // 3.0.0-beta.2: the channels
     Count
 };
 

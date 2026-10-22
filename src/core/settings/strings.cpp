@@ -1124,9 +1124,9 @@ const Entry kTexts[] = {
     {"Update now",
      "Оновити зараз",
      "Обновить сейчас"},
-    {"Asking uaro.kiev.ua for the newest version...",
-     "Запитую на uaro.kiev.ua найновішу версію...",
-     "Спрашиваю у uaro.kiev.ua новейшую версию..."},
+    {"Asking GitHub for the newest version...",
+     "Запитую на GitHub найновішу версію...",
+     "Спрашиваю у GitHub новейшую версию..."},
     {"A newer version is out: {1} (this one is {2}). Update now installs it.",
      "Вийшла новіша версія: {1} (ця — {2}). «Оновити зараз» встановить її.",
      "Вышла новая версия: {1} (эта — {2}). «Обновить сейчас» установит её."},
@@ -1142,12 +1142,12 @@ const Entry kTexts[] = {
     {"The game is open: the update waits until it closes.",
      "Гра відкрита: оновлення дочекається, поки вона закриється.",
      "Игра открыта: обновление дождётся, пока она закроется."},
-    {"Updates come from uaro.kiev.ua: the settings app downloads, checks and installs them by itself, the settings "
-     "stay. The previous version is kept to go back to.",
-     "Оновлення приходять із uaro.kiev.ua: утиліта сама завантажує, перевіряє й встановлює їх, налаштування "
-     "залишаються. Попередня версія зберігається, щоб до неї можна було повернутися.",
-     "Обновления приходят с uaro.kiev.ua: утилита сама скачивает, проверяет и устанавливает их, настройки остаются. "
-     "Предыдущая версия сохраняется, чтобы к ней можно было вернуться."},
+    {"Updates come from GitHub (kwebmn/ragnarok-graphics): the settings app downloads, checks and installs them by "
+     "itself, the settings stay. The previous version is kept to go back to.",
+     "Оновлення приходять із GitHub (kwebmn/ragnarok-graphics): утиліта сама завантажує, перевіряє й встановлює їх, "
+     "налаштування залишаються. Попередня версія зберігається, щоб до неї можна було повернутися.",
+     "Обновления приходят с GitHub (kwebmn/ragnarok-graphics): утилита сама скачивает, проверяет и устанавливает их, "
+     "настройки остаются. Предыдущая версия сохраняется, чтобы к ней можно было вернуться."},
     {"The update could not start: {1}",
      "Оновлення не запустилося: {1}",
      "Обновление не запустилось: {1}"},
@@ -3585,6 +3585,22 @@ const Entry kTexts[] = {
      "видеокарта, Windows, мониторы этого компьютера, uaro-graphics.ini и логи uaRO Graphics — без логина и персонажа; "
      "имя пользователя Windows скрыто. Не чаще одного в 6 часов.\n\nОн появится в окне «Обращения», где можно "
      "дописать, что вы делали. Передумать можно на странице «Диагностика»."},
+    {"Update channel",
+     "Канал оновлень",
+     "Канал обновлений"},
+    {"Release",
+     "Реліз",
+     "Релиз"},
+    {"Beta (testing)",
+     "Бета (тестування)",
+     "Бета (тестирование)"},
+    {"Release: the versions every player gets. Beta: the testers' builds, before everyone - they may have bugs, tell "
+     "about them in the Reports window. Back on Release this version stays until a newer release comes.",
+     "Реліз — версії, які отримують усі гравці. Бета — збірки для тестувальників, раніше за всіх; у них можуть бути "
+     "помилки — пишіть про них у «Звернення». Після повернення на «Реліз» ця версія залишається, доки не вийде новіша.",
+     "Релиз — версии, которые получают все игроки. Бета — сборки для тестировщиков, раньше всех; в них могут быть "
+     "ошибки — пишите о них в «Обращения». После возвращения на «Релиз» эта версия остаётся, пока не выйдет более "
+     "новая."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

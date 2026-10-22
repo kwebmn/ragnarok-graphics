@@ -30,6 +30,7 @@ constexpr int kRepair = 1443;
 constexpr int kUninstall = 1444;
 constexpr int kSafeToggle = 1445;    // 2.12: the safe mode on or off
 constexpr int kSwitchToggle = 1446;  // uaRO Graphics off (api = system) or on
+constexpr int kChannel = 1447;  // 3.0.0-beta.2: «Реліз» or «Бета»
 constexpr int kProfiles = 1450;  // 0.55
 constexpr int kProfileName = 1451;
 constexpr int kProfileSave = 1452;
@@ -143,7 +144,15 @@ public:
         // previous version back, the files repaired, uaRO Graphics removed.
         p.gap();
         p.heading(t(Text::ServiceUpdate));
-        const UpdateState u = updateState();
+        // 3.0.0-beta.2: the channel - the testers' builds or the releases (not in the Simple mode)
+        if (host_.mode() != settings::Mode::Simple)
+            p.choice(kChannel, t(Text::UpdateChannel), {t(Text::UpdateChannelRelease), t(Text::UpdateChannelBeta)},
+                     m.channel() == update::Channel::Beta ? 1 : 0, t(Text::UpdateChannelHint));
+        UpdateState u = updateState();
+        if ((u.kind == UpdateState::Done || u.kind == UpdateState::Failed) && u.channel != m.channel()) {
+            startUpdateCheck();  // the last check asked the other channel's branch
+            u = updateState();
+        }
         checking_ = u.kind == UpdateState::Checking;
         const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
         std::vector<ButtonItem> buttons{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
@@ -188,6 +197,18 @@ public:
     }
 
     void command(int id, int code) override {
+        if (id == kChannel && (code == CBN_SELCHANGE || code == CBN_CLOSEUP)) {  // 3.0.0-beta.2
+            HWND ctl = GetDlgItem(host_.window(), id);
+            const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
+            const update::Channel c = sel == 1 ? update::Channel::Beta : update::Channel::Release;
+            if (code == CBN_SELCHANGE && sel >= 0 && c != host_.model().channel()) {
+                const std::wstring err = host_.model().setChannel(c, host_.lang());
+                if (!err.empty()) host_.message(err, true);
+                startUpdateCheck();
+            }
+            if (code == CBN_CLOSEUP || !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host_.rebuild();
+            return;
+        }
         if (code != BN_CLICKED) return;
         Model& m = host_.model();
         const Lang l = host_.lang();
