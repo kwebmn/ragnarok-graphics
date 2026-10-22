@@ -715,8 +715,12 @@ update::Channel Model::channel() const {
 }
 
 std::wstring Model::setChannel(update::Channel c, Lang l) {
+    const bool other = c != channel();
     const std::wstring err = writeIni({{"update", "channel", update::channelToken(c)}}, l);
-    if (err.empty()) load();
+    if (err.empty()) {
+        if (other) forgetBranch(paths_.dir);  // the left channel's offer never asked at the game's start
+        load();
+    }
     return err;
 }
 

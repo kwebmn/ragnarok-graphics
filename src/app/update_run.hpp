@@ -33,6 +33,9 @@ CheckResult checkNow(const std::wstring& dir);
 std::string installedVersion(const std::wstring& dir);  // uaro-graphics\version.txt's, else this app's
 std::string skipped(const std::wstring& dir);  // [local] skip: the version rolled back from, "" none
 void setSkipped(const std::wstring& dir, const std::string& version);
+// 3.0.0-beta.2: the kept branch's text gone, [local] kept - after a channel switch the game's start asks nothing of
+// the channel left until the next check
+void forgetBranch(const std::wstring& dir);
 bool nvidiaHere();  // a card of NVIDIA's among the adapters (DLSS)
 
 // The branch's package downloaded into uaro-graphics\update (kept while it is the named one: a stop does not lose

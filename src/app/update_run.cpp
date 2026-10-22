@@ -155,6 +155,8 @@ void setSkipped(const std::wstring& dir, const std::string& version) {
     keepInfo(dir, branchText(kept), version);
 }
 
+void forgetBranch(const std::wstring& dir) { keepInfo(dir, "", skipped(dir)); }
+
 update::Channel channelOf(const std::wstring& dir) {
     std::string ini;
     readFile(ourFile(dir, layout::File::Ini), ini);

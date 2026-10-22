@@ -593,6 +593,27 @@ TEST(model_records_the_channel_at_its_start) {
     CHECK(later.channel() == update::Channel::Release);
 }
 
+// 3.0.0-beta.2: a switched channel forgets the other branch's offer the last check kept - the game's start never asks
+// to update to a build of the channel the player left (that build would put the install back on «Бета»)
+TEST(model_switching_the_channel_forgets_the_other_branchs_offer) {
+    fake::Windows& w = fake::reset();
+    const std::wstring kept = fake::path(L"uaro-graphics\\update.ini");
+    w.files[fake::path(kIni)] = "[update]\r\nchannel = beta\r\n";
+    w.files[fake::path(L"uaro-graphics\\version.txt")] = "3.0.0-beta.2 build 2026-10-23 03:00\r\n";
+    w.files[kept] = "[release]\r\nformat = 2\r\nversion = 3.0.0-beta.3\r\n[package]\r\nref = " + std::string(40, 'a') +
+                    "\r\nfile = release/uaro-graphics.zip\r\nsize = 10\r\nsha256 = " + std::string(64, 'b') +
+                    "\r\n[local]\r\nskip = 3.0.0-beta.1\r\n";
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    std::string version;
+    CHECK(update::askAtStart(w.files[kept], "3.0.0-beta.2", version));  // the beta's offer, kept
+    CHECK(m.setChannel(update::Channel::Beta, Lang::En).empty());       // the same channel: kept
+    CHECK(update::askAtStart(w.files[kept], "3.0.0-beta.2", version));
+    CHECK(m.setChannel(update::Channel::Release, Lang::En).empty());
+    CHECK(!update::askAtStart(w.files[kept], "3.0.0-beta.2", version));
+    CHECK(w.files[kept].find("skip = 3.0.0-beta.1") != std::string::npos);  // a version rolled back from stays skipped
+}
+
 TEST(model_keeps_the_channel_through_a_reset) {
     fake::Windows& w = fake::reset();
     const std::wstring ini = fake::path(kIni);
