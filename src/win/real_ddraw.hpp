@@ -29,5 +29,8 @@ FARPROC realProc(const char* name);  // nullptr when the module or the function 
 FARPROC loadedProc(const char* name);
 // Called from DllMain on DLL_PROCESS_DETACH: which DirectDraw modules the game ended up with.
 void logModulesAtExit();
+// 2.13: Ctrl+Shift+F10 - uaro-graphics.exe --report "<shot>" --map <map>: «Нове звернення» over the game, with the
+// screenshot the press took (written by the renderer a frame later: the app waits for it)
+void startReport(const std::string& shot, const std::string& map);
 
 }  // namespace uagfx::win

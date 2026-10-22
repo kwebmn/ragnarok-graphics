@@ -15,11 +15,15 @@ TEST(start_screen_says_what_the_start_is_doing) {
     CHECK(start::line(Progress{Stage::ShadersLoad, 5, 43}, settings::Lang::En) == "Loading shaders...");
     CHECK(start::line(Progress{Stage::ShadersBuild, 12, 43}, settings::Lang::En) == "Compiling shaders: 12 of 43");
     CHECK(start::line(Progress{Stage::AiTextures, 0, 0}, settings::Lang::En) == "Starting AI textures...");
-    // Compiling comes once a version: said so under it; the other stages have no second line.
+    // Compiling comes once a version: said so under it; 2.13: the other stages name «Звернення»'s key.
     CHECK(start::hint(Progress{Stage::ShadersBuild, 1, 43}, settings::Lang::En) ==
           "First start of this version - the next ones skip this");
-    CHECK(start::hint(Progress{Stage::ShadersLoad, 1, 43}, settings::Lang::En).empty());
-    CHECK(start::hint(Progress{Stage::Renderer, 0, 0}, settings::Lang::En).empty());
+    const std::string key = "Something wrong with the picture? Ctrl+Shift+F10 in the game - a screenshot and a report "
+                            "to the developers";
+    CHECK(start::hint(Progress{Stage::ShadersLoad, 1, 43}, settings::Lang::En) == key);
+    CHECK(start::hint(Progress{Stage::Renderer, 0, 0}, settings::Lang::En) == key);
+    CHECK(start::hint(Progress{Stage::AiTextures, 0, 0}, settings::Lang::Uk) ==
+          "Щось не так з картинкою? Ctrl+Shift+F10 у грі — знімок і звернення до розробників");
 }
 
 TEST(start_screen_bar_only_moves_forward) {

@@ -19,7 +19,9 @@ std::string line(const Progress& p, settings::Lang l) {
 }
 
 std::string hint(const Progress& p, settings::Lang l) {
-    return p.stage == Stage::ShadersBuild ? settings::tr(l, settings::Text::StartFirstHint) : "";
+    // 2.13: while nothing else is said under the line - «Звернення»'s key
+    return settings::tr(l, p.stage == Stage::ShadersBuild ? settings::Text::StartFirstHint
+                                                         : settings::Text::StartReportHint);
 }
 
 float filled(const Progress& p) {

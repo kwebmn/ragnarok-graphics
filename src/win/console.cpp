@@ -85,6 +85,11 @@ Console::~Console() {
 LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
     const bool key = msg == WM_KEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP ||
                      msg == WM_CHAR || msg == WM_SYSCHAR;
+    // 2.13: Ctrl+Shift+F10 is «Звернення» (win/context): Windows' F10 (the window's menu, the game stopped until Esc)
+    // never sees it
+    if (key && msg != WM_CHAR && msg != WM_SYSCHAR && wp == VK_F10 && GetKeyState(VK_CONTROL) < 0 &&
+        GetKeyState(VK_SHIFT) < 0)
+        return 0;
     // 2.6.22: the ~ key's own letter that follows its press (` or, in a Cyrillic layout, ё) opens or closes the
     // console - typed neither in its search nor (2.7.1) in the game's chat, where every opening put an «ё»
     if (msg == WM_KEYDOWN && wp == VK_OEM_3) skipCharUntil_ = GetTickCount64() + 250;

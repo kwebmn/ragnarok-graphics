@@ -16,6 +16,9 @@ struct Args {
     bool keep = true;           // --uninstall-run --keep 0|1: the settings and the pack stay
     std::wstring dir;           // --uninstall-run, --setup: --dir "<the game's folder>"
     std::wstring gameArgs;      // everything after " -- ", verbatim: uaRO.exe's arguments
+    // 2.13: --report ["<shot>"] [--map <map>] - the game's Ctrl+Shift+F10: the settings app with «Нове звернення»
+    bool report = false;
+    std::wstring reportShot, reportMap;
 };
 
 Args parseArgs(const std::wstring& line);

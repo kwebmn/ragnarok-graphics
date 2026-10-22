@@ -3548,6 +3548,9 @@ const Entry kTexts[] = {
     {"My reports…",
      "Мої звернення…",
      "Мои обращения…"},
+    {"Something wrong with the picture? Ctrl+Shift+F10 in the game - a screenshot and a report to the developers",
+     "Щось не так з картинкою? Ctrl+Shift+F10 у грі — знімок і звернення до розробників",
+     "Что-то не так с картинкой? Ctrl+Shift+F10 в игре — снимок и обращение к разработчикам"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

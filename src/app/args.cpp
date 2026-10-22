@@ -84,6 +84,15 @@ Args parseArgs(const std::wstring& line) {
         } else if (k == L"--dir") {
             a.dir = next;
             ++i;
+        } else if (k == L"--report") {
+            a.report = true;
+            if (!next.empty() && next.rfind(L"--", 0) != 0) {  // its shot, when one follows
+                a.reportShot = next;
+                ++i;
+            }
+        } else if (k == L"--map") {
+            a.reportMap = next;
+            ++i;
         }
     }
     return a;
@@ -110,6 +119,8 @@ std::wstring argsLine(const Args& a) {
     if (a.pid && a.mode != Args::Mode::Watch && a.mode != Args::Mode::AskUpdate) s += L" --after " + pid;
     if (a.then == Args::Then::App) s += L" --then-app";
     if (a.then == Args::Then::Game) s += L" --then-game";
+    if (a.report) s += a.reportShot.empty() ? L" --report" : L" --report \"" + a.reportShot + L"\"";
+    if (!a.reportMap.empty()) s += L" --map " + a.reportMap;
     if (a.then == Args::Then::Game || !a.gameArgs.empty()) s += L" -- " + a.gameArgs;
     return s;
 }

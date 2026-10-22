@@ -7,6 +7,25 @@
 #include "app/main_window.hpp"
 #include "app/modes.hpp"
 #include "app/report_send.hpp"
+#include "app/text.hpp"
+
+namespace {
+
+// 2.13: the game's renderer writes the --report shot a frame or two after the press - waited for, 5 s at most
+void waitForShot(const std::wstring& path) {
+    unsigned long long last = ~0ull;
+    for (int i = 0; i < 25 && !path.empty(); ++i) {
+        WIN32_FILE_ATTRIBUTE_DATA a{};
+        if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &a)) {
+            const unsigned long long size = (static_cast<unsigned long long>(a.nFileSizeHigh) << 32) | a.nFileSizeLow;
+            if (size && size == last) return;  // written, and no longer growing
+            last = size;
+        }
+        Sleep(200);
+    }
+}
+
+}  // namespace
 
 // uaro-graphics.exe: the uaRO Graphics Settings app (stage 2 spec). 0.51: "--watch <pid>" - no window: the driver's
 // watcher of a game, for [report] auto (app/report_send.hpp). 2.10: the install, update, rollback, repair and removal
@@ -28,6 +47,14 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
         code = uagfx::app::runMode(args);
     } else {
         uagfx::app::MainWindow window;
+        if (args.report) {  // 2.13: the game's Ctrl+Shift+F10
+            waitForShot(args.reportShot);
+            uagfx::app::ReportStart start;
+            start.fresh = true;
+            start.shot = args.reportShot;
+            start.map = uagfx::app::utf8(args.reportMap);
+            window.reportAtStart(start);
+        }
         code = window.run(inst, show);
     }
     CoUninitialize();

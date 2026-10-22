@@ -49,6 +49,8 @@ constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page; 2.6: the view, 
 constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics go
 constexpr UINT kAskMachine = WM_APP + 9;  // 2.12: the card or the screen changed since the settings were picked
 constexpr UINT kOpenReports = WM_APP + 10;  // 2.13: --report - «Нове звернення» once the window is up
+// 2.13: WM_COPYDATA of a second app the game's Ctrl+Shift+F10 started: "<shot>\n<map>" in UTF-8
+constexpr ULONG_PTR kReportData = 0x52505254;
 
 // 2.2.1: the day's statistics, on a thread of its own (the network may take seconds); the folder's copy its own.
 DWORD WINAPI sendStats(void* folder) {
@@ -65,6 +67,11 @@ constexpr UINT_PTR kSearchTimer = 3;  // 2.6: the search runs once the typing st
 
 int MainWindow::run(HINSTANCE inst, int show) {
     if (HWND other = FindWindowW(kClass, nullptr)) {  // one settings app at a time: two would write over each other
+        if (startReport_) {  // 2.13: the open app makes the game's report
+            const std::string text = utf8(reportStart_.shot) + "\n" + reportStart_.map;
+            COPYDATASTRUCT cd{kReportData, DWORD(text.size()), const_cast<char*>(text.data())};
+            SendMessageW(other, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cd));
+        }
         ShowWindow(other, SW_RESTORE);
         SetForegroundWindow(other);
         return 0;
@@ -685,7 +692,9 @@ void MainWindow::openReports(bool fresh) {
     ReportStart s = startReport_ ? reportStart_ : ReportStart{};
     s.fresh = s.fresh || fresh;
     startReport_ = false;
+    reportsOpen_ = true;
     const int unread = showReports(hwnd_, *model_, lang_, dpi_, s);
+    reportsOpen_ = false;
     if (unread >= 0) {
         unread_ = unread;
         unreadFromWindow_ = true;
@@ -957,9 +966,22 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kRebuild:
             if (rebuilds_.arrived()) buildPage();
             return 0;
-        case kOpenReports:  // 2.13: --report
-            openReports(true);
+        case kOpenReports:  // 2.13: --report; a box over the window: the timer opens it after
+            if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_)) openReports(true);
             return 0;
+        case WM_COPYDATA: {  // 2.13: a second app's --report
+            const COPYDATASTRUCT* cd = reinterpret_cast<const COPYDATASTRUCT*>(lp);
+            if (!cd || cd->dwData != kReportData || reportsOpen_) return FALSE;
+            const std::string text(static_cast<const char*>(cd->lpData), cd->cbData);
+            const size_t nl = text.find('\n');
+            reportStart_ = ReportStart{};
+            reportStart_.fresh = true;
+            reportStart_.shot = wide(text.substr(0, nl));
+            reportStart_.map = nl == std::string::npos ? "" : text.substr(nl + 1);
+            startReport_ = true;
+            PostMessageW(hwnd_, kOpenReports, 0, 0);
+            return TRUE;
+        }
         case kAskMachine: {  // 2.12: the settings picked again for the new card or screen, if the player wants
             const settings::Machine x = model_->machine();
             const std::string screen = std::to_string(x.screenWidth) + "x" + std::to_string(x.screenHeight);
@@ -1010,6 +1032,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                     unread_ = reportsUnread();
                     retextReports();
                 }
+                if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_)) openReports(true);  // 2.13: --report
             }
             if (wp == kTickTimer && current_) current_->tick();
             return 0;

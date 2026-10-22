@@ -19,7 +19,7 @@ struct Progress {
 
 // 2.12: in the player's language (the settings app's choice, else Windows' - settings::windowLang)
 std::string line(const Progress& p, settings::Lang l);  // "Compiling shaders: 12 of 43"
-std::string hint(const Progress& p, settings::Lang l);  // a second, smaller line; "" none
+std::string hint(const Progress& p, settings::Lang l);  // a second, smaller line
 float filled(const Progress& p);      // the bar, 0-1: the whole start, the shaders most of it
 
 }  // namespace uagfx::start

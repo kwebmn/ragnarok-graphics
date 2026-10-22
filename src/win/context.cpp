@@ -533,8 +533,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 0.54: Ctrl+Shift+F12 - the picture as shown (4K, not the game's 1920x1080) into the game's ScreenShot folder
     const bool shotDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                           GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F12) < 0;
+    // 2.13: Ctrl+Shift+F10 - «Звернення»: the same shot, then the settings app's «Нове звернення» with it and the map
+    const bool reportDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
+                            GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F10) < 0;
+    const bool shotNow = shotKey_.pressed(shotDown), reportNow = reportKey_.pressed(reportDown);
     std::string screenshot;
-    if (shotKey_.pressed(shotDown)) {
+    if (shotNow || reportNow) {
         const std::string folder = gameDir() + "\\ScreenShot";
         CreateDirectoryA(folder.c_str(), nullptr);
         SYSTEMTIME t{};
@@ -543,6 +547,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         std::snprintf(name, sizeof name, "\\uaro-%04u%02u%02u-%02u%02u%02u.png", t.wYear, t.wMonth, t.wDay, t.wHour,
                       t.wMinute, t.wSecond);
         screenshot = folder + name;
+        if (reportNow) startReport(screenshot, readGameMap());
     }
     // Stage 3: the window's real pixels and the scale for them. The first present switches from the game's size:
     // the start-up calibration has run by then (spec §4.3).

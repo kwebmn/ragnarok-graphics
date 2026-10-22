@@ -59,6 +59,32 @@ void startWatcher(const std::string& dir) {
     LOG_INFO("watcher: the settings app checks for an update and watches this game (reports, statistics)");
 }
 
+}  // namespace
+
+void startReport(const std::string& shot, const std::string& map) {
+    const std::string dir = gameDir();
+    const std::string exe = dir + "\\uaro-graphics.exe";
+    if (!fileExists(exe)) {
+        LOG_INFO("report: uaro-graphics.exe is not next to the game - no «Звернення»");
+        return;
+    }
+    std::string line = "\"" + exe + "\" --report \"" + shot + "\"";
+    if (!map.empty()) line += " --map " + map;
+    STARTUPINFOA si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    // started by the game in front: Windows lets the app's window come in front of it
+    if (!CreateProcessA(exe.c_str(), &line[0], nullptr, nullptr, FALSE, 0, nullptr, dir.c_str(), &si, &pi)) {
+        LOG_ERROR("report: uaro-graphics.exe would not start (error %lu)", GetLastError());
+        return;
+    }
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    LOG_INFO("report: «Нове звернення» with %s%s%s", shot.c_str(), map.empty() ? "" : " on ", map.c_str());
+}
+
+namespace {
+
 // The game's own arguments: its command line after the exe's path.
 std::string gameArguments() {
     const char* line = GetCommandLineA();

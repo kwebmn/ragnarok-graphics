@@ -49,6 +49,24 @@ TEST(args_round_trip) {
     }
 }
 
+TEST(args_read_a_report_from_the_game) {
+    // 2.13: the game's Ctrl+Shift+F10 - «Нове звернення» with its shot and the map
+    const Args r =
+        app::parseArgs(L"--report \"C:\\Ігри\\ua RO\\ScreenShot\\uaro-20261022-215701.png\" --map prt_fild08");
+    CHECK(r.mode == Args::Mode::Settings && r.report);
+    CHECK(r.reportShot == L"C:\\Ігри\\ua RO\\ScreenShot\\uaro-20261022-215701.png");
+    CHECK(r.reportMap == L"prt_fild08");
+    const Args bare = app::parseArgs(L"--report --map payon");  // no shot: the map is no shot's name
+    CHECK(bare.report && bare.reportShot.empty() && bare.reportMap == L"payon");
+    CHECK(!app::parseArgs(L"").report);
+    Args a;
+    a.report = true;
+    a.reportShot = L"D:\\a b\\shot.png";
+    a.reportMap = L"payon";
+    const Args b = app::parseArgs(app::argsLine(a));
+    CHECK(b.mode == Args::Mode::Settings && b.report && b.reportShot == a.reportShot && b.reportMap == a.reportMap);
+}
+
 TEST(window_language_follows_windows_until_one_is_chosen) {
     CHECK(settings::windowLang(std::nullopt, 0x22) == settings::Lang::Uk);  // LANG_UKRAINIAN
     CHECK(settings::windowLang(std::nullopt, 0x19) == settings::Lang::Ru);  // LANG_RUSSIAN

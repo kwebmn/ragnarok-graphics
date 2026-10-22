@@ -111,7 +111,8 @@ private:
     std::wstring query_;
     int unread_ = -1;               // 2.13: the developers' answers not read yet (-1 unknown)
     bool unreadFromWindow_ = false;  // the window's count is newer than the start's check
-    bool startReport_ = false;
+    bool startReport_ = false;  // «Нове звернення» to open once the window is free (no box over it)
+    bool reportsOpen_ = false;
     ReportStart reportStart_;
     void retextReports();
     HFONT bold_ = nullptr;      // the list's chosen entry
