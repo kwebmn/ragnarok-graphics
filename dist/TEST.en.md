@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.0-beta.3 — what is new
+
+- **Paving without dark lines.** On Aldebaran's square and other maps with such tiles no dark lines and smudges run
+  along the tiles' edges any more (report R-45AV5H). The effect «Grass and road seams without steps» drew them: it took
+  the invisible walls of no height between tiles for the floor and spread the wall's texture and its shadow along the
+  edges.
+
 # uaRO Graphics 3.0.0-beta.2 — what is new
 
 - **Two update channels.** Updates come from GitHub: «Release» for every player, «Beta» - the testers' builds, before
