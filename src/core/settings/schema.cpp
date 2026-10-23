@@ -60,6 +60,26 @@ const std::vector<IniSetting>& iniSettings() {
          ""},  // 3.0.1-beta.6
         {"client", "mss", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientMss, Text::ClientMssHint,
          ""},  // 3.0.1-beta.7
+        {"client", "roext", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientRoext,
+         Text::ClientRoextHint, ""},  // 3.0.1-beta.8: ROExt's work in the driver; its own rows on «Гра й чат»
+        {"roext", "window_lock", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RoextLock,
+         Text::RoextLockHint, ""},
+        {"roext", "window_on_top", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RoextOnTop,
+         Text::RoextOnTopHint, ""},
+        {"roext", "mouse_buttons", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RoextMouse,
+         Text::RoextMouseHint, ""},
+        {"roext", "alt_f4", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RoextAltF4, Text::RoextAltF4Hint,
+         ""},
+        {"roext", "minimize_key", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RoextMinimize,
+         Text::RoextMinimizeHint, ""},
+        {"roext", "free_cpu", Page::Game, Control::Slider, 0, 1000, 1, {}, {}, Text::RoextFreeCpu,
+         Text::RoextFreeCpuHint, "ms"},
+        {"roext", "code_page", Page::Game, Control::Number, -1, 65535, 1, {}, {}, Text::RoextCodePage,
+         Text::RoextCodePageHint, ""},
+        {"roext", "window_x", Page::Game, Control::Number, -100000, 100000, 1, {}, {}, Text::RoextWindowX,
+         Text::RoextWindowPlaceHint, ""},
+        {"roext", "window_y", Page::Game, Control::Number, -100000, 100000, 1, {}, {}, Text::RoextWindowY,
+         Text::RoextWindowPlaceHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)
@@ -721,6 +741,16 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "client.bink") return c.clientBink ? "1" : "0";
     if (k == "client.ijl") return c.clientIjl ? "1" : "0";  // 3.0.1-beta.6
     if (k == "client.mss") return c.clientMss ? "1" : "0";  // 3.0.1-beta.7
+    if (k == "client.roext") return c.clientRoext ? "1" : "0";  // 3.0.1-beta.8
+    if (k == "roext.window_lock") return c.roext.windowLock ? "1" : "0";
+    if (k == "roext.window_on_top") return c.roext.windowOnTop ? "1" : "0";
+    if (k == "roext.mouse_buttons") return c.roext.mouseButtons ? "1" : "0";
+    if (k == "roext.alt_f4") return c.roext.altF4 ? "1" : "0";
+    if (k == "roext.minimize_key") return c.roext.minimizeKey ? "1" : "0";
+    if (k == "roext.free_cpu") return std::to_string(c.roext.freeCpu);
+    if (k == "roext.code_page") return std::to_string(c.roext.codePage);
+    if (k == "roext.window_x") return std::to_string(c.roext.windowX);
+    if (k == "roext.window_y") return std::to_string(c.roext.windowY);
     if (k == "renderer.safe_mode") return c.safeMode ? "1" : "0";  // 2.12
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";

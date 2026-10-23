@@ -55,6 +55,9 @@ struct Snapshot {
     std::vector<ModuleFile> modules;
     settings::RoextWindow roext;  // of the ROExt the game loads; inactive when there is none
     int roextModule = -1;         // its index in modules
+    // 3.0.1-beta.8: no ROExt the game loads and [client] roext on: the driver does ROExt's work, its window from
+    // uaro-graphics.ini [roext] (core/roext.hpp)
+    bool roextInDriver = false;
     std::vector<CompatFlag> compat;
     Ddraw ddraw = Ddraw::None;
     std::string installedVersion;  // uaro-graphics\version.txt

@@ -74,7 +74,8 @@ TEST(schema_covers_every_key_of_the_shipped_ini) {
     CHECK(keys.size() >= 14);
     for (const auto& kv : keys) {
         const bool screen = kv.first == "display.mode" || kv.first == "display.monitor" ||
-                            kv.first == "display.window_width" || kv.first == "display.window_height";
+                            kv.first == "display.window_width" || kv.first == "display.window_height" ||
+                            kv.first == "roext.window_width" || kv.first == "roext.window_height";  // 3.0.1-beta.8
         CHECK(screen || findSetting(kv.first) != nullptr);
     }
 }
@@ -90,6 +91,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "pad.enabled" &&  // 2.9: the pad is mounted at the game's start
                                 k != "launcher.direct_start" &&  // 2.11: read as the game starts
                                 k.compare(0, 7, "client.") != 0 &&  // 3.0.1-beta.5: the libraries, the game closed
+                                k.compare(0, 6, "roext.") != 0 &&   // 3.0.1-beta.8: read as the game starts
                                 k != "renderer.safe_mode" &&     // 2.12: the start's renderer
                                 k != "display.ui_native" &&
                                 k != "display.hdr" &&

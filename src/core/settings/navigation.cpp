@@ -13,7 +13,8 @@ const char* const kMainKeys[] = {"quality.super_light", "quality.dlss",   "frame
                                  "sound.engine",        "frames.battery_saver", "ai.enabled"};
 
 // The switches for checks and reports - besides every key of [debug].
-const char* const kDeveloperKeys[] = {"renderer.render_thread", "renderer.remix"};
+const char* const kDeveloperKeys[] = {"renderer.render_thread", "renderer.remix",
+                                      "roext.window_x", "roext.window_y"};  // 3.0.1-beta.8: ROExt's own place
 
 bool effectsSimple(const std::string& k) {  // the effects' set and its groups (Simple mode's Effects page)
     return k == "effects.preset" || k.compare(0, 14, "effects.group_") == 0;

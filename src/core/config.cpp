@@ -416,6 +416,30 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.clientIjl);
         } else if (key == "client.mss") {  // 3.0.1-beta.7
             setBool(val, c.clientMss);
+        } else if (key == "client.roext") {  // 3.0.1-beta.8: ROExt's work in the driver
+            setBool(val, c.clientRoext);
+        } else if (key == "roext.window_lock") {
+            setBool(val, c.roext.windowLock);
+        } else if (key == "roext.window_on_top") {
+            setBool(val, c.roext.windowOnTop);
+        } else if (key == "roext.window_x") {
+            toInt(val, -100000, 100000, c.roext.windowX);
+        } else if (key == "roext.window_y") {
+            toInt(val, -100000, 100000, c.roext.windowY);
+        } else if (key == "roext.window_width") {
+            toInt(val, 0, 100000, c.roext.windowWidth);
+        } else if (key == "roext.window_height") {
+            toInt(val, 0, 100000, c.roext.windowHeight);
+        } else if (key == "roext.mouse_buttons") {
+            setBool(val, c.roext.mouseButtons);
+        } else if (key == "roext.alt_f4") {
+            setBool(val, c.roext.altF4);
+        } else if (key == "roext.minimize_key") {
+            setBool(val, c.roext.minimizeKey);
+        } else if (key == "roext.free_cpu") {
+            toInt(val, 0, 1000, c.roext.freeCpu);
+        } else if (key == "roext.code_page") {
+            toInt(val, -1, 65535, c.roext.codePage);
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

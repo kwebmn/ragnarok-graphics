@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/ai/groups.hpp"
+#include "core/roext.hpp"
 
 namespace uagfx {
 
@@ -450,6 +451,10 @@ struct Config {
     // each on by default; off puts the game's own back (the settings app, with the game closed)
     bool clientCps = true, clientBink = true, clientIjl = true;  // 3.0.1-beta.6: ijl
     bool clientMss = true;  // 3.0.1-beta.7: mss32.dll, put in only where XAudio2 2.9 is
+    // 3.0.1-beta.8: [client] roext - ROExt's work (the client's dinput8.dll) in the driver, the DLL moved aside;
+    // [roext] its settings (core/roext.hpp), dinput8.ini's brought over by the installer
+    bool clientRoext = true;
+    roext::Settings roext;
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;
     // 2.15: [utility] mode = developer - the settings app's Developer mode: uaRO Studio's keys work in the game

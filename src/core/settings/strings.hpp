@@ -377,6 +377,10 @@ enum class Text : uint16_t {
     ServiceClientLibs, ClientLibsNote, ClientCps, ClientCpsHint, ClientBink, ClientBinkHint,  // 3.0.1-beta.5
     ClientIjl, ClientIjlHint,  // 3.0.1-beta.6
     ClientMss, ClientMssHint,  // 3.0.1-beta.7
+    ClientRoext, ClientRoextHint, RoextHeading, RoextNote, RoextLock, RoextLockHint, RoextOnTop, RoextOnTopHint,
+    RoextMouse, RoextMouseHint, RoextAltF4, RoextAltF4Hint, RoextMinimize, RoextMinimizeHint, RoextFreeCpu,
+    RoextFreeCpuHint, RoextCodePage, RoextCodePageHint, RoextWindowX, RoextWindowY,
+    RoextWindowPlaceHint,  // 3.0.1-beta.8: ROExt's work in the driver
     Count
 };
 

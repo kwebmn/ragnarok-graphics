@@ -3641,6 +3641,80 @@ const Entry kTexts[] = {
      "оригінал). Вимкнено — Miles Sound System 6 від RAD.",
      "Через неё звучат эффекты и музыка игры, через XAudio2 Windows (Windows 10 и новее; на более старых остаётся "
      "оригинал). Выключено — Miles Sound System 6 от RAD."},
+    {"Window, mouse and keys: ROExt's work in the driver (dinput8.dll)",
+     "Вікно, миша й клавіші — робота ROExt у драйвері (dinput8.dll)",
+     "Окно, мышь и клавиши — работа ROExt в драйвере (dinput8.dll)"},
+    {"The driver does what ROExt did (its settings on «Game and chat»), its dinput8.dll is no longer needed. Off: "
+     "ROExt's dinput8.dll and its dinput8.ini.",
+     "Драйвер робить те, що робив ROExt (його налаштування — на «Гра й чат»), його dinput8.dll більше не потрібна. "
+     "Вимкнено — dinput8.dll ROExt і його dinput8.ini.",
+     "Драйвер делает то, что делал ROExt (его настройки — на «Игра и чат»), его dinput8.dll больше не нужна. "
+     "Выключено — dinput8.dll ROExt и его dinput8.ini."},
+    {"The game's window, mouse and keys (ROExt)",
+     "Вікно, миша й клавіші гри (ROExt)",
+     "Окно, мышь и клавиши игры (ROExt)"},
+    {"What ROExt did, done by the driver; its dinput8.ini's settings were brought here. They change at the game's "
+     "next start.",
+     "Те, що робив ROExt, тепер робить драйвер; налаштування з його dinput8.ini перенесено сюди. Діють із наступного "
+     "запуску гри.",
+     "То, что делал ROExt, теперь делает драйвер; настройки из его dinput8.ini перенесены сюда. Действуют со "
+     "следующего запуска игры."},
+    {"A borderless window locked in place",
+     "Вікно без рамки, закріплене на місці",
+     "Окно без рамки, закреплённое на месте"},
+    {"The game's window without a border, at its place: over the whole screen but the taskbar, or of the size the "
+     "«Screen» page set.",
+     "Вікно гри без рамки на своєму місці: на весь екран, крім панелі задач, або розміру, заданого на сторінці "
+     "«Екран».",
+     "Окно игры без рамки на своём месте: на весь экран, кроме панели задач, или размера, заданного на странице "
+     "«Экран»."},
+    {"The game's window above the others",
+     "Вікно гри поверх інших",
+     "Окно игры поверх других"},
+    {"It stays above every other window, also when another one is active.",
+     "Воно лишається над усіма іншими вікнами, навіть коли активне інше.",
+     "Оно остаётся над всеми другими окнами, даже когда активно другое."},
+    {"Mouse buttons 3-5 as F24, F23, F22",
+     "Кнопки миші 3–5 як F24, F23, F22",
+     "Кнопки мыши 3–5 как F24, F23, F22"},
+    {"The middle button and the two side ones become keys F24, F23 and F22: skills can be put on them in the game's "
+     "keys.",
+     "Середня й дві бокові кнопки стають клавішами F24, F23 і F22: на них можна поставити вміння в клавішах гри.",
+     "Средняя и две боковые кнопки становятся клавишами F24, F23 и F22: на них можно поставить умения в клавишах "
+     "игры."},
+    {"Alt+F4 as a key of the game, Alt+Print Screen closes it",
+     "Alt+F4 — клавіша гри, закриває Alt+Print Screen",
+     "Alt+F4 — клавиша игры, закрывает Alt+Print Screen"},
+    {"Alt+F4 then works in the game as F4, and the game is closed with Alt+Print Screen.",
+     "Тоді Alt+F4 у грі працює як F4, а закривають гру через Alt+Print Screen.",
+     "Тогда Alt+F4 в игре работает как F4, а закрывают игру через Alt+Print Screen."},
+    {"Ctrl+W minimizes the game",
+     "Ctrl+W згортає гру",
+     "Ctrl+W сворачивает игру"},
+    {"The game's window goes to the taskbar on Ctrl+W.",
+     "На Ctrl+W вікно гри згортається на панель задач.",
+     "По Ctrl+W окно игры сворачивается на панель задач."},
+    {"Free the processor behind other windows",
+     "Звільняти процесор за іншими вікнами",
+     "Освобождать процессор за другими окнами"},
+    {"While another window is active and the game has nothing to do, it waits this long for input (0 - never). Scroll "
+     "Lock never reaches the game, as with ROExt.",
+     "Поки активне інше вікно і грі нічого робити, вона стільки чекає на введення (0 — ніколи). Scroll Lock до гри, як "
+     "і з ROExt, не доходить.",
+     "Пока активно другое окно и игре нечего делать, она столько ждёт ввода (0 — никогда). Scroll Lock до игры, как и "
+     "с ROExt, не доходит."},
+    {"The game's text code page",
+     "Кодова сторінка тексту гри",
+     "Кодовая страница текста игры"},
+    {"-1: as Windows has it. 1251: Cyrillic on a Windows of another language; 65001: UTF-8. Leave it unless you know "
+     "why.",
+     "-1 — як у Windows. 1251 — кирилиця на Windows іншої мови; 65001 — UTF-8. Не змінюйте без потреби.",
+     "-1 — как в Windows. 1251 — кириллица на Windows другого языка; 65001 — UTF-8. Не меняйте без нужды."},
+    {"The window's place: X", "Місце вікна: X", "Место окна: X"},
+    {"The window's place: Y", "Місце вікна: Y", "Место окна: Y"},
+    {"Where the game's window of the «Screen» page's size opens (its top left corner), as ROExt had it.",
+     "Де відкривається вікно гри розміру зі сторінки «Екран» (його лівий верхній кут), як було в ROExt.",
+     "Где открывается окно игры размера со страницы «Экран» (его левый верхний угол), как было в ROExt."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

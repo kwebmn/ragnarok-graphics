@@ -1,6 +1,7 @@
 // 3.0.1-beta.8: ROExt's work (the client's dinput8.dll) in the driver - core/roext: its settings as ROExt reads
 // dinput8.ini, the game's window it makes, the messages it changes.
 #include <string>
+#include <vector>
 
 #include "core/roext.hpp"
 #include "core/settings/ini_edit.hpp"
@@ -48,7 +49,9 @@ TEST(roext_settings_go_into_uaro_graphics_ini) {
     s.freeCpu = 10;
     s.codePage = 1251;
     s.windowWidth = 1280;
-    const std::string ini = settings::applyIniEdits("", roext::iniEdits(s));
+    std::vector<settings::IniEdit> edits;
+    for (const auto& kv : roext::iniValues(s)) edits.push_back({"roext", kv.first, kv.second});
+    const std::string ini = settings::applyIniEdits("", edits);
     const auto keys = settings::readIni(ini);
     CHECK_EQ(keys.at("roext.window_lock"), std::string("0"));
     CHECK_EQ(keys.at("roext.mouse_buttons"), std::string("1"));

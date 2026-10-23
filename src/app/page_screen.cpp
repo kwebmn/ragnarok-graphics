@@ -33,7 +33,8 @@ public:
         // ROExt sizes the window, and its ini is written only while the game is closed (spec §4.1): until then what
         // changes the window is grey (0.6.0 review M4). The full screen never needs it (0.6.1 minor 6).
         const Snapshot& snap = m.now();
-        const bool roext = snap.roext.active && (snap.roext.lock || snap.roext.size.width > 0) && snap.roextModule >= 0;
+        const bool roext = snap.roext.active && (snap.roext.lock || snap.roext.size.width > 0) &&
+                           (snap.roextModule >= 0 || snap.roextInDriver);  // 3.0.1-beta.8: or the driver's [roext]
         const bool open = !m.screenWaits();
 
         p.radio(kFullscreen, t(Text::ScreenShow), t(Text::ScreenFullscreen), c.show == Show::Fullscreen, true, L"");
@@ -99,7 +100,8 @@ public:
                 p.note(tf(Text::ScreenNowFullscreen, {num(now.game.width), num(now.game.height), num(now.choice.ui)}));
         }
         if (roext) {
-            p.note(tf(Text::ScreenRoext, {snap.modules[size_t(snap.roextModule)].info.ini}));
+            p.note(tf(Text::ScreenRoext, {snap.roextInDriver ? std::string("uaro-graphics.ini [roext]")
+                                                             : snap.modules[size_t(snap.roextModule)].info.ini}));
             if (!open) p.note(t(Text::ErrGameRunning), Tone::Warn);  // spec §4.1
         }
         p.note(t(Text::AfterRestart));

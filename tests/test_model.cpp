@@ -131,6 +131,41 @@ TEST(model_apply_keeps_what_was_written_to_roexts_ini_meanwhile) {
     CHECK_EQ(valueOf(w.files[roext], "roext.windowheight"), std::string("945"));
 }
 
+// 3.0.1-beta.8: ROExt's dinput8.dll moved aside, [client] roext on - the driver does ROExt's work: its window from
+// [roext], the Screen page's size written there; off, or a client that never had ROExt - the game's own window
+TEST(model_roext_in_the_driver_takes_the_windows_size) {
+    fake::Windows& w = fake::reset();
+    const std::wstring ini = fake::path(kIni);
+    const std::string roextDll = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput8.ini" + '\0';
+    w.files[ini] = "[renderer]\r\nbackend = uaro\r\n[roext]\r\nwindow_lock = 1\r\nwindow_width = 1920\r\n"
+                   "window_height = 1080\r\n";
+    w.files[fake::path(L"uaro-graphics\\original\\dinput8.dll")] = roextDll;
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    app::Model m;
+    CHECK(m.now().roextInDriver && m.now().roext.active && m.now().roext.lock && m.now().roextModule < 0);
+    CHECK(m.now().roext.size == (Size{1920, 1080}));
+    CHECK(m.screenNow().choice.window == (Size{3360, 1890}));
+    ScreenChoice c = m.screenChoice();
+    c.ui = 200;  // the same 3360 x 1890 window, the interface larger: the game 1680 x 945
+    m.setScreen(c);
+    CHECK(m.apply(Lang::En).empty());
+    CHECK_EQ(valueOf(w.files[ini], "roext.window_width"), std::string("1680"));
+    CHECK_EQ(valueOf(w.files[ini], "roext.window_height"), std::string("945"));
+    CHECK(!w.files.count(fake::path(L"dinput8.ini")));
+    w.gameRunning = true;  // as with ROExt's own ini: the window's size waits for the game to close
+    m.refreshRunning();
+    CHECK(m.screenWaits());
+    fake::Windows& v = fake::reset();
+    v.files[ini] = "[client]\r\nroext = 0\r\n";
+    v.files[fake::path(L"uaro-graphics\\original\\dinput8.dll")] = roextDll;
+    fake::gameKey(v.registry.common, 1920, 1080, false);
+    app::Model off;
+    CHECK(!off.now().roextInDriver && !off.now().roext.active);
+    fake::reset();  // no ROExt ever: nothing changes for it
+    app::Model never;
+    CHECK(!never.now().roextInDriver && !never.now().roext.active);
+}
+
 TEST(model_a_registry_value_refused_leaves_the_others_written) {
     fake::Windows& w = fake::reset();  // a first run: every value the game needs (spec §4.3)
     w.refused = {"WIDTH"};

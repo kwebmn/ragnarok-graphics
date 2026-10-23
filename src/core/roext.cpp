@@ -78,13 +78,13 @@ Settings fromDinput8Ini(const std::string& text) {
     return s;
 }
 
-std::vector<settings::IniEdit> iniEdits(const Settings& s) {
-    return {{"roext", "window_lock", flag(s.windowLock)},     {"roext", "window_on_top", flag(s.windowOnTop)},
-            {"roext", "window_x", num(s.windowX)},            {"roext", "window_y", num(s.windowY)},
-            {"roext", "window_width", num(s.windowWidth)},    {"roext", "window_height", num(s.windowHeight)},
-            {"roext", "mouse_buttons", flag(s.mouseButtons)}, {"roext", "alt_f4", flag(s.altF4)},
-            {"roext", "minimize_key", flag(s.minimizeKey)},   {"roext", "free_cpu", num(s.freeCpu)},
-            {"roext", "code_page", num(s.codePage)}};
+std::vector<std::pair<std::string, std::string>> iniValues(const Settings& s) {
+    return {{"window_lock", flag(s.windowLock)},     {"window_on_top", flag(s.windowOnTop)},
+            {"window_x", num(s.windowX)},            {"window_y", num(s.windowY)},
+            {"window_width", num(s.windowWidth)},    {"window_height", num(s.windowHeight)},
+            {"mouse_buttons", flag(s.mouseButtons)}, {"alt_f4", flag(s.altF4)},
+            {"minimize_key", flag(s.minimizeKey)},   {"free_cpu", num(s.freeCpu)},
+            {"code_page", num(s.codePage)}};
 }
 
 bool isGameWindow(uint32_t exStyle, uint32_t style, bool parent, bool menu, bool param) {

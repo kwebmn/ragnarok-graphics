@@ -88,6 +88,13 @@ public:
                 break;
             case settings::Page::Game:
                 regRows(p, [](const RegSetting&) { return true; });
+                // 3.0.1-beta.8: ROExt's settings, its work in the driver (uaro-graphics.ini [roext])
+                if (host_.model().now().roextInDriver && host_.mode() != settings::Mode::Simple) {
+                    p.gap();
+                    p.heading(t(Text::RoextHeading));
+                    p.note(t(Text::RoextNote));
+                    buildRows(p);
+                }
                 break;
             case settings::Page::Chat:
                 regRows(p, [](const RegSetting& s) { return *s.subkey && s.control == Control::Check; });  // whispers

@@ -1,9 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
-
-#include "core/settings/ini_edit.hpp"
 
 namespace uagfx::roext {
 
@@ -25,8 +24,8 @@ struct Settings {  // the defaults: the uaRO client's own dinput8.ini
 // dinput8.ini as ROExt reads it (GetPrivateProfileInt in [ROExt], its own defaults for a key not there: its mouse
 // buttons on, AutoFreeCPU 250 ms), the width rounded up to 4 as ROExt does
 Settings fromDinput8Ini(const std::string& text);
-// uaro-graphics.ini's [roext] lines for them
-std::vector<settings::IniEdit> iniEdits(const Settings& s);
+// uaro-graphics.ini's [roext] keys and values for them
+std::vector<std::pair<std::string, std::string>> iniValues(const Settings& s);
 
 // The game's main window as uaRO.exe makes it (windowed or full screen; ROExt's test)
 bool isGameWindow(uint32_t exStyle, uint32_t style, bool parent, bool menu, bool param);

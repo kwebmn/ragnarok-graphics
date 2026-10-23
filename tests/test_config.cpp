@@ -633,3 +633,32 @@ TEST(config_reads_the_sound_librarys_switch) {
         CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("1"));
     }
 }
+
+// 3.0.1-beta.8: [client] roext - ROExt's work in the driver (core/roext.hpp); [roext] its settings, the defaults the
+// client's own dinput8.ini
+TEST(config_reads_roexts_settings) {
+    const Config d = parseConfig("");
+    CHECK(d.clientRoext && d.roext.windowLock && !d.roext.windowOnTop && !d.roext.mouseButtons && !d.roext.altF4);
+    CHECK(!d.roext.minimizeKey && d.roext.freeCpu == 4 && d.roext.codePage == -1 && d.roext.windowWidth == 0);
+    const Config c = parseConfig("[client]\nroext = 0\n[roext]\nwindow_lock = 0\nwindow_on_top = 1\nwindow_x = 10\n"
+                                 "window_y = 20\nwindow_width = 1280\nwindow_height = 720\nmouse_buttons = 1\n"
+                                 "alt_f4 = 1\nminimize_key = 1\nfree_cpu = 0\ncode_page = 1251\n");
+    CHECK(!c.clientRoext && !c.roext.windowLock && c.roext.windowOnTop && c.roext.mouseButtons && c.roext.altF4);
+    CHECK(c.roext.minimizeKey && c.roext.freeCpu == 0 && c.roext.codePage == 1251);
+    CHECK(c.roext.windowX == 10 && c.roext.windowY == 20 && c.roext.windowWidth == 1280 && c.roext.windowHeight == 720);
+    CHECK(parseConfig("[roext]\nfree_cpu = 1000\n").roext.freeCpu == 1000);  // a second at most
+    CHECK(parseConfig("[roext]\nfree_cpu = 1001\n").roext.freeCpu == 4);     // past it: the default
+    CHECK(parseConfig("[roext]\nfree_cpu = -3\n").roext.freeCpu == 4);
+    CHECK(parseConfig("[roext]\ncode_page = 70000\n").roext.codePage == -1);
+    for (const char* key : {"client.roext", "roext.window_lock", "roext.window_on_top", "roext.mouse_buttons",
+                            "roext.alt_f4", "roext.minimize_key", "roext.free_cpu", "roext.code_page"}) {
+        const settings::IniSetting* s = settings::findSetting(key);
+        CHECK(s != nullptr);
+        if (!s) continue;
+        CHECK(s->page == (std::string(key) == "client.roext" ? settings::Page::Service : settings::Page::Game));
+        CHECK(settings::tokenOf(*s, d) == settings::tokenOf(*s, parseConfig("[client]\nroext = 1\n")));
+    }
+    CHECK_EQ(settings::tokenOf(*settings::findSetting("roext.code_page"), c), std::string("1251"));
+    CHECK_EQ(settings::tokenOf(*settings::findSetting("roext.free_cpu"), d), std::string("4"));
+    CHECK_EQ(settings::tokenOf(*settings::findSetting("client.roext"), c), std::string("0"));
+}

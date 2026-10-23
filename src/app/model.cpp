@@ -98,6 +98,19 @@ void Model::load() {
         }
         s.modules.push_back(m);
     }
+    // 3.0.1-beta.8: ROExt's work in the driver - its dinput8.dll moved aside by the installer (a client that never
+    // had ROExt keeps the game's own window), none loaded from the folder, [client] roext on
+    std::string aside;
+    const bool roextAside =
+        readFile(paths_.dir + L"\\" + wide(layout::kOriginals) + L"\\dinput8.dll", aside) &&
+        identifyModule("dinput8.dll", std::vector<uint8_t>(aside.begin(), aside.end())).kind == ModuleKind::Roext;
+    if (s.roextModule < 0 && s.config.clientRoext && roextAside) {
+        s.roextInDriver = true;
+        s.roext.active = true;
+        s.roext.lock = s.config.roext.windowLock;
+        if (s.config.roext.windowWidth > 0 && s.config.roext.windowHeight > 0)
+            s.roext.size = {s.config.roext.windowWidth, s.config.roext.windowHeight};
+    }
     for (const CompatEntry& e : readCompat(paths_.game))
         for (const std::string& f : parseLayers(e.flags).flags) s.compat.push_back(CompatFlag{e.allUsers, f});
     std::string bytes;
@@ -199,7 +212,7 @@ ScreenPlan Model::screenPlan() const {
 }
 
 bool Model::screenWaits() const {
-    return now_.gameRunning && now_.roextModule >= 0 && screenPlan().writesRoext;
+    return now_.gameRunning && (now_.roextModule >= 0 || now_.roextInDriver) && screenPlan().writesRoext;
 }
 
 std::string Model::regWord(const RegSetting& s) const {
@@ -306,7 +319,7 @@ std::wstring Model::apply(Lang l) {
         chosen = screenChoice();
         const ScreenPlan p = screenPlan();
         if (p.problem != ScreenProblem::None) return wtrf(l, Text::ErrScreen, {utf8(wtr(l, problemText(p.problem)))});
-        waits = p.writesRoext && now_.roextModule >= 0 && now_.gameRunning;
+        waits = p.writesRoext && (now_.roextModule >= 0 || now_.roextInDriver) && now_.gameRunning;
         // A first run's key goes even then: the game waits for it in its setup.exe loop (spec §4.3; 0.6.1 review I1).
         if (firstRun) reg = firstRunWrites(p.game.width, p.game.height, p.fullscreen);
         if (!waits) {  // the screen waits for the game to close; the rest goes now (0.6.0 M4)
@@ -327,6 +340,10 @@ std::wstring Model::apply(Lang l) {
             }
             if (p.writesRoext && now_.roextModule >= 0)
                 roext = {{"ROExt", "WindowWidth", num(p.game.width)}, {"ROExt", "WindowHeight", num(p.game.height)}};
+            if (p.writesRoext && now_.roextInDriver) {  // 3.0.1-beta.8: the driver's [roext]
+                ini.push_back({"roext", "window_width", num(p.game.width)});
+                ini.push_back({"roext", "window_height", num(p.game.height)});
+            }
         }
     }
     std::map<std::string, std::string> held;  // what the game writes itself waits for it to close (spec §4.1)
