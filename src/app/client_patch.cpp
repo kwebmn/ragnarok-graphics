@@ -49,15 +49,18 @@ PatchCheck checkClientPatch(const std::wstring& dir) {
     readFile(join(dir, wide(layout::kClientPatchRecord)), record);
     const auto sizeOf = [&](const std::string& path) { return fileSize(placeOf(dir, path)); };
     if (client_patch::upToDate(c.manifest, record, sizeOf)) return c;
-    c.needed = client_patch::needed(c.manifest, [&](const client_patch::File& f) {
+    const auto look = [&](const std::string& path, const std::vector<uint64_t>& sizes) {
         client_patch::Have h;
-        const long long size = sizeOf(f.path);
+        const long long size = sizeOf(path);
         h.exists = size >= 0;
         h.size = h.exists ? uint64_t(size) : 0;
         std::string bytes;
-        if (h.exists && h.size == f.size && readFile(placeOf(dir, f.path), bytes)) h.sha256 = sha256::hexOf(bytes);
+        if (h.exists && std::find(sizes.begin(), sizes.end(), h.size) != sizes.end() &&
+            readFile(placeOf(dir, path), bytes))
+            h.sha256 = sha256::hexOf(bytes);
         return h;
-    });
+    };
+    c.needed = client_patch::plan(c.manifest, {}, {}, look).put;
     for (const client_patch::File& f : c.needed) c.bytes += f.size;
     return c;
 }
