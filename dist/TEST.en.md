@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.1-beta.6 — what is new
+
+- **Our own ijl15.dll.** The game's JPEG pictures (the loading screens) are read and its Print Screen shots written
+  by our library in place of Intel JPEG Library 1.5 of 2000. To turn it off: «Service» → «The game's libraries» →
+  «JPEG pictures: ours (ijl15.dll)». Check the loading screens and a Print Screen shot with the «uaro.kiev.ua» mark.
+
 # uaRO Graphics 3.0.1-beta.5 — what is new
 
 - **The game's libraries, our own in place of the old ones.** uaRO Graphics puts its own cps.dll in the game's
