@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.1-beta.9 — what is new
+
+- **The update check's answer at once.** The app starts its checks (the update, «Play»'s news, the client's patch,
+  the reports) before it shows the page, and their answer appears on the page and in the bottom strip the moment it
+  comes, not a few seconds later. Check how soon after the app starts «Update now» or «… is the newest version» shows.
+
 # uaRO Graphics 3.0.1-beta.8 — what is new
 
 - **ROExt's work in the driver.** The game's window, mouse buttons, keys, freeing the processor in the background
