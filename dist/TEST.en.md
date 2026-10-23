@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.3-beta.2 — what is new
+
+- **The character's name in the game window's title.** In the game the window's title and its taskbar button say
+  whose window it is: "Lena — Ragnarok". With several game windows open it shows at once which is the priest's and
+  which the sage's. At the login and the character select the title is the usual one. Turned off on «Game and chat»
+  → «The character's name in the window's title».
+- **Each character's window at its own place.** Drag a character's window where you want it: a second later the
+  driver keeps the place, and when that character comes into the game again, its window goes there by itself. For a
+  window with a frame (not «A borderless window locked in place»); a place on no monitor is skipped. The window's size
+  is one for every window: it is the game's resolution. Turned off on «Game and chat» → «Each character's window at
+  its own place».
+
 # uaRO Graphics 3.0.3-beta.1 — what is new
 
 - **Several game windows: each has its own logs.** A second game started beside the first emptied the first one's
