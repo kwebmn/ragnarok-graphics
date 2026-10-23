@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.2-beta.12 — what is new
+
+- **A map's loading measured.** Each map's loading is now measured by itself, from its loading picture to the first
+  frame of its world. `uaro-graphics\logs\uaro-graphics.log` gets a block of lines `map <map>: loaded in … s`: the
+  frames shown meanwhile, where the game's thread was (Windows' functions - `Sleep`, `ReadFile` and so on; the game's
+  steps - its files read from the GRFs, the textures' pictures, the world and its near models, a frame shown, the
+  server's packets), how long the game's thread waited for the 64-bit renderer and what `cps.dll` inflated. The
+  measuring speeds nothing up: it shows what to speed up next. Inflating with libdeflate (3.0.2-beta.11) left
+  `prt_fild08`'s loading almost as it was (3.75 → 3.69 s), so the time goes elsewhere.
+- **The pack's pictures: the frame's length.** The line `AI textures: the pack's pictures` now gives, beside the wait
+  for the frame, how long that frame lasted (`its frame lasted`): whether a picture waited for a long frame of the
+  game's (it loads a window's icons in one frame) or for our code.
+
 # uaRO Graphics 3.0.2-beta.11 — what is new
 
 - **Maps load sooner.** Our `cps.dll`, through which the game inflates every file of its GRF archives, now runs on
