@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.1-beta.7 — what is new
+
+- **Our own mss32.dll: the game's sound.** The game's effects and music are now played by our library through
+  Windows' XAudio2 in place of RAD's Miles Sound System 6. It is put in on Windows 10 and later only; older Windows
+  keep the original. To turn it off: «Service» → «The game's libraries» → «Game sound: ours (mss32.dll)». Check the
+  music on a few maps (and after going from map to map), hits and spells in a fight, NPCs' and towns' sounds, the
+  effects' and music's volume in the game's settings, and setup.exe's 3D sound if you have it on. If the sound is
+  gone, crackles, comes from the wrong side or its volume is clearly different, write to «Reports».
+
 # uaRO Graphics 3.0.1-beta.6 — what is new
 
 - **Our own ijl15.dll.** The game's JPEG pictures (the loading screens) are read and its Print Screen shots written
