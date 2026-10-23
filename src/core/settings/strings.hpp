@@ -383,6 +383,14 @@ enum class Text : uint16_t {
     RoextWindowPlaceHint,  // 3.0.1-beta.8: ROExt's work in the driver
     MainKeys, MainKeysList, PlayKeysLine,  // 3.0.2-beta.4 (the user): the game's keys of uaRO Graphics, for players
     ServiceUpdates, ClientUpdates, ClientUpdatesHint, UpdatesNone, UpdatesSome,  // 3.0.2-beta.5: the updates folder
+    ViewHelp, HelpIntro, HelpFeatures, HelpFeaturesList, HelpViewPlay, HelpViewMain, HelpViewGraphics, HelpViewScreen,
+    HelpViewEffects, HelpViewAi, HelpViewSound, HelpViewPad, HelpViewGameChat, HelpViewService, HelpViewDebug,
+    HelpEffectsMore,  // 3.0.2-beta.6 (the user): «Довідка», every function described
+    ScreenShowHint, ScreenMonitorHint,  // and the Screen page's rows had none
+    SoundMusicHint, SoundEffectsHint, GameEffectsHint, GameMissHint, GameSkillSnapHint,
+    GameAttackSnapHint, GameItemSnapHint, GameCameraHint, GameHomunAiHint, GameMercAiHint,
+    GameTipsHint, GameIntroHint, GameMinimapHint, GameStacksHint,
+    ChatWhisperStrangersHint, ChatWhisperSoundHint, ChatRememberLoginHint,  // the game's own options: names only
     Count
 };
 

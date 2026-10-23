@@ -20,7 +20,23 @@ const Entry kTexts[] = {
 '''
 
 
+# 3.0.2-beta.6: each entry carries its Text id, the table constexpr (strings.cpp checks the order when built)
+SOURCE_IDS = r'''
+constexpr Entry kTexts[] = {
+    {Text::Apply, "&Apply", "&Застосувати", "&Применить"},
+    {Text::PressApply,
+     "Press «Apply»", "Натисніть «Застосувати»",
+     "Нажмите «Применить»"},  // 2.15
+};
+'''
+
+
 class CheckTextNames(unittest.TestCase):
+    def test_reads_the_entries_with_their_ids(self):
+        entries = check_text_names.entries(SOURCE_IDS)
+        self.assertEqual(entries, [("&Apply", "&Застосувати", "&Применить"),
+                                   ("Press «Apply»", "Натисніть «Застосувати»", "Нажмите «Применить»")])
+
     def test_reads_the_entries(self):
         entries = check_text_names.entries(SOURCE)
         self.assertEqual(len(entries), 6)

@@ -45,3 +45,18 @@ TEST(strings_languages_and_the_first_one) {
     CHECK(startLang(Lang::Ru) == Lang::Ru);
     CHECK(startLang(Lang::Uk) == Lang::Uk);
 }
+
+// 3.0.2-beta.6: the newest texts stand where their names are - three were put in before an older one in beta.4 and
+// every text after it shifted by one (the Main page's keys heading was their list)
+TEST(strings_newest_texts_in_their_places) {
+    const auto en = [](Text t) { return std::string(tr(Lang::En, t)); };
+    CHECK_EQ(en(Text::RoextWindowX), std::string("The window's place: X"));
+    CHECK(en(Text::RoextWindowPlaceHint).rfind("Where the game's window", 0) == 0);
+    CHECK_EQ(en(Text::MainKeys), std::string("Keys in the game"));
+    CHECK(en(Text::MainKeysList).rfind("Ctrl+~ (the key left of 1)", 0) == 0);
+    CHECK(en(Text::PlayKeysLine).rfind("In the game: Ctrl+~", 0) == 0);
+    CHECK_EQ(en(Text::ServiceUpdates), std::string("The client's graphics updates"));
+    CHECK(en(Text::UpdatesSome).rfind("Archives in the updates folder", 0) == 0);
+    CHECK_EQ(en(Text::ViewHelp), std::string("Help"));
+    CHECK(en(Text::HelpEffectsMore).rfind("Each group holds its effects", 0) == 0);
+}

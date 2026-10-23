@@ -39,8 +39,9 @@ def _unescape(s):
 
 
 def entries(source):
-    """[(en, uk, ru)] of kTexts, adjacent literals joined."""
-    i = source.index("const Entry kTexts[] = {") + len("const Entry kTexts[] = {")
+    """[(en, uk, ru)] of kTexts, adjacent literals joined (an entry's Text id before them is no literal)."""
+    head = "Entry kTexts[] = {"  # const, constexpr since 3.0.2-beta.6
+    i = source.index(head) + len(head)
     out, values, current, depth = [], [], None, 0
     while i < len(source):
         c = source[i]

@@ -37,15 +37,18 @@ public:
                            (snap.roextModule >= 0 || snap.roextInDriver);  // 3.0.1-beta.8: or the driver's [roext]
         const bool open = !m.screenWaits();
 
-        p.radio(kFullscreen, t(Text::ScreenShow), t(Text::ScreenFullscreen), c.show == Show::Fullscreen, true, L"");
-        p.radio(kWindow, L"", t(Text::ScreenWindow), c.show == Show::Window, false, L"");
+        // 3.0.2-beta.6: the hints «Довідка» shows too
+        p.radio(kFullscreen, t(Text::ScreenShow), t(Text::ScreenFullscreen), c.show == Show::Fullscreen, true,
+                t(Text::ScreenShowHint));
+        p.radio(kWindow, L"", t(Text::ScreenWindow), c.show == Show::Window, false, t(Text::ScreenShowHint));
         p.gap(6);
         std::vector<std::wstring> items;
         for (size_t i = 0; i < monitors.size(); ++i)
             items.push_back(tf(Text::MonitorItem, {num(long(i) + 1), num(monitors[i].pixels.width),
                                                    num(monitors[i].pixels.height), num(monitors[i].scale)}) +
                             (monitors[i].primary ? t(Text::MonitorMain) : L""));
-        p.choice(kMonitor, t(Text::ScreenMonitor), items, index, L"", monitors.size() > 1 && open);
+        p.choice(kMonitor, t(Text::ScreenMonitor), items, index, t(Text::ScreenMonitorHint),
+                 monitors.size() > 1 && open);
 
         {
             uis_ = uiSteps();

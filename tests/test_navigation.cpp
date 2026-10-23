@@ -12,13 +12,23 @@ bool listed(const std::vector<Page>& pages, Page p) { return std::find(pages.beg
 }  // namespace
 
 TEST(nav_simple_lists_main_effects_pad) {
-    CHECK(viewsOf(Mode::Simple) == std::vector<View>({View::Play, View::Main, View::Effects, View::Pad}));
+    CHECK(viewsOf(Mode::Simple) == std::vector<View>({View::Play, View::Main, View::Effects, View::Pad, View::Help}));
+}
+
+// 3.0.2-beta.6 (the user: a description of every function): «Довідка» last in every mode's list, before Debug
+TEST(nav_help_in_every_mode) {
+    for (Mode m : {Mode::Simple, Mode::Detailed, Mode::Developer}) {
+        const std::vector<View> list = viewsOf(m);
+        CHECK(std::find(list.begin(), list.end(), View::Help) != list.end());
+    }
+    CHECK(viewName(View::Help) == Text::ViewHelp);
+    CHECK(partsOf(View::Help, 0).empty() && tabCount(View::Help) == 1 && !developerView(View::Help));
 }
 
 TEST(nav_detailed_lists_eight_pages) {
     CHECK(viewsOf(Mode::Detailed) == std::vector<View>({View::Play, View::Graphics, View::Screen, View::Effects,
                                                         View::Ai, View::Sound, View::Pad, View::GameChat,
-                                                        View::Service}));
+                                                        View::Service, View::Help}));
 }
 
 // 2.11: the launcher «Гра» first in every mode - the app opens on it

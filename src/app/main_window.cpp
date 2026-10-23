@@ -577,6 +577,7 @@ std::unique_ptr<Page> MainWindow::makeView() {
     switch (shown_) {
         case settings::View::Main: return makeMainPage(*this);
         case settings::View::Play: return makePlayPage(*this);  // 2.11: the launcher «Гра»
+        case settings::View::Help: return makeHelpPage(*this);  // 3.0.2-beta.6: «Довідка»
         case settings::View::Graphics:
             return makeSettingsPage(*this, {P::Render, P::Quality}, {P::Smoothing, P::Frames});
         case settings::View::Screen: return makeScreenPage(*this);

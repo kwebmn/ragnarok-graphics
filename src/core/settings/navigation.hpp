@@ -25,8 +25,9 @@ Mode startMode(std::optional<Mode> saved, bool usedBefore);
 // 2.6: an entry of the list on the left - one or more of the old pages (Page), Main a page of its own made of rows of
 // the others.
 // 2.11: Play - the launcher «Гра», first in every mode's list.
-enum class View : uint8_t { Main, Graphics, Screen, Effects, Ai, Sound, Pad, GameChat, Service, Debug, Play };
-constexpr int kViewCount = 11;
+// 3.0.2-beta.6: Help - «Довідка», every function described, last in every list (before Debug)
+enum class View : uint8_t { Main, Graphics, Screen, Effects, Ai, Sound, Pad, GameChat, Service, Debug, Play, Help };
+constexpr int kViewCount = 12;
 
 Text viewName(View v);
 std::vector<View> viewsOf(Mode m);  // the list of a mode, in its order
