@@ -20,6 +20,7 @@ struct Windows {
     std::vector<uagfx::app::CompatEntry> compat;
     std::set<std::string> refused;  // value names the registry refuses to write (error 5)
     bool gameRunning = false;
+    std::set<std::wstring> running;  // 3.0.1: other programs running (app/system running): full paths, lower case
     uagfx::app::SystemInfo system;
     // 2.10: the entry in Windows' Apps (app/registry writeAppsEntry): its values, empty when there is none
     std::map<std::wstring, std::wstring> appsEntry;

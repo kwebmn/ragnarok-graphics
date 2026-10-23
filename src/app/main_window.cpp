@@ -813,7 +813,7 @@ void MainWindow::doApply(bool play) {
     if (err.empty() && play) {  // 2.11: an offered update first (it starts the game after it), else the game
         // 2.14: the game's new files before either (a failure is told and the game starts as it is; Cancel stops)
         const PatchState patch = clientPatchState();
-        if (patch.kind == PatchState::Done && !patch.check.needed.empty()) {
+        if (patch.kind == PatchState::Done && patch.check.work()) {  // 3.0.1: or files to take away only
             std::wstring why;
             const auto work = [&](const Report& report, std::wstring& e) {
                 std::string error;

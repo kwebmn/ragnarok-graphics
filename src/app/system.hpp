@@ -24,6 +24,9 @@ SystemInfo probeSystem();
 
 // Whether uaRO.exe from this folder runs (spec §4.1); a uaRO.exe whose path cannot be read counts as running.
 bool gameRunning(const std::wstring& gameExe);
+// 3.0.1: whether a program runs from this very file (the other client runs the same names from its own folder); one
+// whose path cannot be read (run as administrator) counts as this one.
+bool running(const std::wstring& exe);
 // 2.10: a pause of the update's own thread while it waits for the game to close.
 void waitMs(unsigned ms);
 bool elevatedNow();  // 2.10: this process runs as administrator

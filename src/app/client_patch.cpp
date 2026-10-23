@@ -38,15 +38,48 @@ bool makeWork(const std::wstring& dir) {
     return true;
 }
 
+// A client's name in a query: a space as %20 (clientName lets only letters, digits and " -_.()" through)
+std::string query(const std::string& name) {
+    std::string out;
+    for (char c : name) out += c == ' ' ? std::string("%20") : std::string(1, c);
+    return out;
+}
+
+// The list put recorded: what the patch made (nothing was at its place) - the last record's and this put's
+bool writeRecord(const std::wstring& dir, const PatchCheck& c, const std::set<std::string>& made) {
+    client_patch::Manifest m = c.manifest;
+    client_patch::carryMade(m, c.last);
+    for (client_patch::File& f : m.files) f.made = f.made || made.count(f.path) > 0;
+    return writeFileAtomic(join(dir, wide(layout::kClientPatchRecord)), client_patch::record(m));
+}
+
 }  // namespace
+
+client_patch::Manifest clientOf(const std::wstring& dir) {
+    client_patch::Manifest m;
+    std::string text, error;
+    if (!readFile(join(dir, wide(client_patch::kClientFile)), text) || !client_patch::parse(text, m, error))
+        m = client_patch::Manifest{};
+    m.client = client_patch::clientName(m.client);
+    return m;
+}
 
 PatchCheck checkClientPatch(const std::wstring& dir) {
     PatchCheck c;
+    const client_patch::Manifest build = clientOf(dir);
     std::string text;
-    if (!fetchPath(client_patch::kPath, text, c.error) || !client_patch::parse(text, c.manifest, c.error)) return c;
+    if (!fetchPath(std::string(client_patch::kPath) + "?client=" + query(build.client), text, c.error, 4u << 20) ||
+        !client_patch::parse(text, c.manifest, c.error))
+        return c;
+    if (!client_patch::sameClient(c.manifest.client, build.client)) {  // 3.0.1: never another client's files
+        c.error = "the site's list is for " + c.manifest.client + ", this game is " + build.client;
+        c.manifest = client_patch::Manifest{};
+        return c;
+    }
     c.asked = true;
     std::string record;
     readFile(join(dir, wide(layout::kClientPatchRecord)), record);
+    client_patch::readRecord(record, c.last);
     const auto sizeOf = [&](const std::string& path) { return fileSize(placeOf(dir, path)); };
     if (client_patch::upToDate(c.manifest, record, sizeOf)) return c;
     const auto look = [&](const std::string& path, const std::vector<uint64_t>& sizes) {
@@ -60,19 +93,33 @@ PatchCheck checkClientPatch(const std::wstring& dir) {
             h.sha256 = sha256::hexOf(bytes);
         return h;
     };
-    c.needed = client_patch::plan(c.manifest, {}, {}, look).put;
+    const client_patch::Plan plan = client_patch::plan(c.manifest, c.last, build, look);
+    c.needed = plan.put;
+    c.kept = plan.kept;
+    c.remove = plan.remove;
     for (const client_patch::File& f : c.needed) c.bytes += f.size;
+    if (!c.work()) writeRecord(dir, c, {});  // nothing to put or take away: not hashed again at the next start
     return c;
 }
 
 bool applyClientPatch(const std::wstring& dir, const PatchCheck& c,
                       const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error) {
     if (!c.asked) return true;  // no site: the game starts as it is
+    std::set<std::string> made;  // the files put where nothing was
+    if (c.work()) {
+        // 3.0.1: the game, its renderer and uaRO Studio of THIS folder hold the game's archives (the other client's may
+        // run from its own folder)
+        const std::pair<const wchar_t*, const char*> holders[] = {
+            {L"uaRO.exe", "the game is running - its files are put once it is closed"},
+            {L"uaro-graphics\\uaro-render64.exe", "uaro-render64.exe still runs - the files are put once it ends"},
+            {L"uaro-graphics\\uaro-studio.exe", "uaRO Studio is open - the game's files are put once it is closed"}};
+        for (const auto& h : holders)
+            if (running(join(dir, h.first))) {
+                error = h.second;
+                return false;
+            }
+    }
     if (!c.needed.empty()) {
-        if (gameRunning(join(dir, L"uaRO.exe"))) {
-            error = "the game is running - its files are put once it is closed";
-            return false;
-        }
         if (!makeWork(dir)) {
             error = "cannot make " + std::string(layout::kClientPatchWork);
             return false;
@@ -97,19 +144,28 @@ bool applyClientPatch(const std::wstring& dir, const PatchCheck& c,
             const client_patch::File& f = c.needed[i];
             const bool again = std::count_if(c.needed.begin() + std::ptrdiff_t(i) + 1, c.needed.end(),
                                              [&](const client_patch::File& g) { return g.sha256 == f.sha256; }) > 0;
-            const std::wstring from = join(work, wide(f.sha256));
+            const std::wstring from = join(work, wide(f.sha256)), place = placeOf(dir, f.path);
+            const bool there = fileExists(place);
             std::string bytes;  // a file wanted at another place after this one: copied, the last one moved
-            const bool put = makeFoldersFor(dir, f.path) &&
-                             (again ? readFile(from, bytes) && writeFileAtomic(placeOf(dir, f.path), bytes)
-                                    : moveFile(from, placeOf(dir, f.path), true));
+            bool put = makeFoldersFor(dir, f.path);
+            if (put && again)
+                put = readFile(from, bytes) && writeFileAtomic(place, bytes);
+            else if (put)
+                put = moveFile(from, place, true);
             if (!put) {
                 error = "cannot put " + f.path + " in its place";
                 return false;
             }
+            if (!there) made.insert(f.path);
         }
         removeTree(work);
     }
-    if (!writeFileAtomic(join(dir, wide(layout::kClientPatchRecord)), client_patch::record(c.manifest))) {
+    for (const client_patch::File& f : c.remove)  // 3.0.1: the withdrawn ones the patch made
+        if (!deleteFile(placeOf(dir, f.path)) && fileExists(placeOf(dir, f.path))) {
+            error = "cannot take " + f.path + " away";
+            return false;
+        }
+    if (!writeRecord(dir, c, made)) {
         error = "cannot write " + std::string(layout::kClientPatchRecord);
         return false;
     }

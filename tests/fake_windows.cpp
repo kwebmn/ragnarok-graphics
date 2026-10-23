@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cwctype>
 #include <fstream>
 #include <iterator>
 
@@ -233,6 +234,16 @@ bool removeAppsEntry() {
 SystemInfo probeSystem() { return windows().system; }
 
 bool gameRunning(const std::wstring&) { return windows().gameRunning; }
+
+// 3.0.1: this folder's game by the flag above, any program by the set (full paths, any case)
+bool running(const std::wstring& exe) {
+    const auto lower = [](std::wstring s) {
+        for (wchar_t& c : s) c = wchar_t(std::towlower(c));
+        return s;
+    };
+    return (lower(exe) == lower(fake::path(L"uaRO.exe")) && windows().gameRunning) ||
+           windows().running.count(lower(exe)) > 0;
+}
 
 bool elevatedNow() { return false; }
 

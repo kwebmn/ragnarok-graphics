@@ -181,29 +181,32 @@ SystemInfo probeSystem() {
     return s;
 }
 
-bool gameRunning(const std::wstring& gameExe) {
+bool gameRunning(const std::wstring& gameExe) { return running(gameExe); }
+
+bool running(const std::wstring& exe) {
+    const std::wstring name = exe.substr(exe.find_last_of(L'\\') + 1);
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snap == INVALID_HANDLE_VALUE) return false;
     PROCESSENTRY32W e{};
     e.dwSize = sizeof e;
-    bool running = false;
-    for (BOOL more = Process32FirstW(snap, &e); more && !running; more = Process32NextW(snap, &e)) {
-        if (lstrcmpiW(e.szExeFile, L"uaRO.exe") != 0) continue;
+    bool found = false;
+    for (BOOL more = Process32FirstW(snap, &e); more && !found; more = Process32NextW(snap, &e)) {
+        if (lstrcmpiW(e.szExeFile, name.c_str()) != 0) continue;
         HANDLE p = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, e.th32ProcessID);
         if (!p) {
-            running = true;  // a game run as administrator: its path cannot be read
+            found = true;  // a program run as administrator: its path cannot be read
             continue;
         }
         wchar_t path[MAX_PATH];
         DWORD n = MAX_PATH;
         if (QueryFullProcessImageNameW(p, 0, path, &n))
-            running = settings::samePath(utf8(std::wstring(path, n)), utf8(gameExe));
+            found = settings::samePath(utf8(std::wstring(path, n)), utf8(exe));
         else
-            running = true;
+            found = true;
         CloseHandle(p);
     }
     CloseHandle(snap);
-    return running;
+    return found;
 }
 
 void waitMs(unsigned ms) { Sleep(ms); }
