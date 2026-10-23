@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.2-beta.4 — what is new
+
+- **The game's keys in the app.** «Main» has a «Keys in the game» section: Ctrl+~ the effects console,
+  Ctrl+Shift+F10 «New report» with a screenshot, Ctrl+Shift+F11 the frame counter, Ctrl+Shift+F12 a full-size
+  screenshot, Pause or Scroll Lock every improvement off and on. Under «Play», a short line with the most needed.
+
 # uaRO Graphics 3.0.2-beta.3 — what is new
 
 - **«Recommended settings» blue too.** The button on the «Main» page is now blue, as the other important ones.
