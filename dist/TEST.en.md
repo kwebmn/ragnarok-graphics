@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.2-beta.15 — what is new
+
+- **A quick map load on every entry.** Some loads took 2.6-2.7 s again. The game's new camera gets the old one's
+  memory with the old matrix in it, and the driver took the loading picture for the world: then it waited for its
+  present again. The driver now follows the game's own map start, so both of 3.0.2-beta.13's speed-ups and the
+  measure work on every change of map. The checks of the cell under the mouse begin anew on every entry, the same
+  map's too.
+- **A load not measured, the log says why:** `map <map>: its loading not measured - …`.
+
 # uaRO Graphics 3.0.2-beta.14 — what is new
 
 - **A map's loading measured on the next entry too.** Maps load in 0.25 s now, and the same map's next entry was
