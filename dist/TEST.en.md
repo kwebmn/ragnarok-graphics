@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.1-beta.4 — what is new
+
+- **«Update now» on «Game».** When a newer version is out, «Update now» shows beside «Check for updates»: the update
+  installs and the settings app opens again - the game does not start. «Update and play» works as before.
+
 # uaRO Graphics 3.0.1-beta.3 — what is new
 
 - **Grass on the flower beds.** The round flower beds by Prontera's fountain (and the same beds on other maps) now
