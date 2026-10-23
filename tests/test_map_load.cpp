@@ -71,3 +71,34 @@ TEST(map_load_the_same_map_again_quickly) {
     CHECK(w.frame(266, "prt_fild08", false) == Event::Began);
     CHECK(w.frame(282, "prt_fild08", true) == Event::Dropped);
 }
+
+TEST(map_load_the_maps_start_is_no_world) {
+    // 3.0.2-beta.15 (beta.13 and 14: some loads slow again, unmeasured): uaRO.exe's new camera (0x4fa2e0) keeps its
+    // matrix's memory as it found it - the old camera's, when it gets the same block - so a loading picture could
+    // pass for the world. While the game's map start runs (0x559030, hooked) no frame is the world.
+    map_load::Watch w;
+    w.frame(0, "prontera", true);
+    CHECK(w.frame(16, "prt_fild08", true, false, true) == Event::Began);  // the old camera's matrix: not the world
+    CHECK(w.frame(30, "prt_fild08", true, true, true) == Event::None);
+    CHECK(w.frame(250, "prt_fild08", true) == Event::Ended);  // the map's start over: the world
+    CHECK(w.loadMs() == 234.0);
+    // a map's start makes it a load however quick, the same map without a loading picture too
+    CHECK(w.frame(300, "prt_fild08", false, false, true) == Event::Began);
+    CHECK(w.frame(400, "prt_fild08", true) == Event::Ended);
+}
+
+TEST(map_load_why_not_measured) {
+    // 3.0.2-beta.15: a dropped map start says why; a moment without the world in the same map says nothing
+    map_load::Watch w;
+    w.frame(0, "prontera", true);
+    CHECK(w.frame(10, "geffen", false, false, true) == Event::Began);
+    CHECK(w.frame(20, "", false) == Event::Dropped);
+    CHECK_EQ(std::string(w.droppedWhy()), std::string("back to the character list"));
+    CHECK(w.frame(30, "geffen", false, false, true) == Event::Began);
+    CHECK(w.frame(30 + 120001, "geffen", false) == Event::Dropped);
+    CHECK_EQ(std::string(w.droppedWhy()), std::string("no world for two minutes"));
+    w.frame(30 + 120100, "geffen", true);
+    CHECK(w.frame(30 + 120200, "geffen", false) == Event::Began);
+    CHECK(w.frame(30 + 120216, "geffen", true) == Event::Dropped);
+    CHECK_EQ(std::string(w.droppedWhy()), std::string());
+}

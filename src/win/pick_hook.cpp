@@ -7,6 +7,7 @@
 
 #include "core/ground_pick.hpp"
 #include "win/log.hpp"
+#include "win/map_start.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -76,8 +77,8 @@ unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) 
     if (!ground) return original(mode, x, y);
     const int w = int(at(ground + kWidth)), h = int(at(ground + kHeight)), size = int(at(ground + kSize));
     if (w <= 0 || h <= 0 || w > 8192 || h > 8192 || size <= 0 || !at(ground + kCells)) return original(mode, x, y);
-    if (g_trust.on(ground ^ (at(ground + kCells) * 31u) ^ (uint32_t(w) << 20) ^ uint32_t(h)))  // another map
-        g_ours = g_theirs = 0;
+    // Another map - 3.0.2-beta.15: or the same one entered again, its ground in the same memory
+    if (g_trust.on(pick::mapKey(ground, at(ground + kCells), w, h, mapStarts()))) g_ours = g_theirs = 0;
     if (g_trust.settling()) return 0;  // 3.0.2-beta.13: the game's own answer is none then, at 7.6 ms a time
     const bool checking = g_trust.check();
     const int64_t start = checking ? ticks() : 0;

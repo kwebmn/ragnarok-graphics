@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <utility>
 
 namespace uagfx::pick {
@@ -76,6 +77,12 @@ bool walk(const float ray[6], int w, int h, float size, Test&& test, int& cellX,
         if (cx < 0 || cz < 0 || cx >= w || cz >= h) break;
     }
     return false;
+}
+
+// 3.0.2-beta.15: a map's key for Trust::on - its ground (where it is, its cells, its size) and the game's map starts so
+// far, so that the same map entered again with its ground in the same memory is a new map too
+inline unsigned long mapKey(uint32_t ground, uint32_t cells, int w, int h, unsigned starts) {
+    return (ground ^ (cells * 31u) ^ (uint32_t(w) << 20) ^ uint32_t(h)) + starts * 2654435761u;
 }
 
 // The same distance, give or take the float's rounding: two cells sharing the edge the ray meets the ground at.

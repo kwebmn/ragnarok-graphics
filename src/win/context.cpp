@@ -21,6 +21,7 @@
 #include "win/ftol_patch.hpp"
 #include "core/safe_mode.hpp"
 #include "win/hit_hook.hpp"
+#include "win/map_start.hpp"
 #include "win/pick_hook.hpp"
 #include "win/server_night.hpp"
 #include "win/sound_hook.hpp"
@@ -292,6 +293,7 @@ bool Context::open(std::string& error) {
     setFastTextures(config.fastTextures);  // 2.5.20
     setSpriteDyes(config.aiNow.dyes);      // 2.5.23
     if (!config.remix) installTextureHook();
+    installMapStartHook();             // 3.0.2-beta.15: a map's loading known whatever its camera holds
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
@@ -712,7 +714,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // the game's loading picture while a map loads - no frame limit, its present not waited for, and through
     // uaro-render64.exe at most 10 a second (the game draws it anew for each per cent of the map's models)
     bool shown = true;
-    if (mapLoad_.loading() && !waitForVblank) {
+    if (!waitForVblank && (mapStarting() || mapLoad_.loading())) {  // 3.0.2-beta.15: inside the game's map start
         o.fpsLimit = 0;
         o.loading = true;
         shown = !renderer->remote() || loadShownMs_ <= 0.0 || frameMs_ - loadShownMs_ >= 100.0;
@@ -772,7 +774,7 @@ void Context::watchMapLoad(const std::string& map, bool world, bool picture) {
     QueryPerformanceFrequency(&f);
     frameMs_ = double(now.QuadPart) * 1000.0 / double(f.QuadPart);
     using Event = map_load::Watch::Event;
-    const Event event = mapLoad_.frame(frameMs_, map, world, picture);
+    const Event event = mapLoad_.frame(frameMs_, map, world, picture, mapStarting());
     if (event == Event::Began) {
         loadPictures_ = loadShown_ = loadGameFrames_ = 0;
         loadShownMs_ = 0.0;
@@ -830,6 +832,8 @@ void Context::watchMapLoad(const std::string& map, bool world, bool picture) {
     }
     case Event::Dropped:
         Profiler::get().drop();
+        if (*mapLoad_.droppedWhy())  // 3.0.2-beta.15: a map's start not measured says why
+            LOG_INFO("map %s: its loading not measured - %s", mapLoad_.map().c_str(), mapLoad_.droppedWhy());
         break;
     }
 }

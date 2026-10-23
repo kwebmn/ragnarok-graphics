@@ -171,6 +171,14 @@ TEST(ground_pick_trusted_after_agreeing_on_each_map) {
     CHECK(!trust.trusted());
 }
 
+TEST(ground_pick_each_map_start_anew) {
+    // 3.0.2-beta.15: a map's key takes the game's map starts too - the same map entered again with its ground in the
+    // same memory still settles first (its first picks, before the camera is built, cost the game's own 0.9 s)
+    CHECK(pick::mapKey(0x12340000, 0x56780000, 200, 200, 1) != pick::mapKey(0x12340000, 0x56780000, 200, 200, 2));
+    CHECK(pick::mapKey(0x12340000, 0x56780000, 200, 200, 1) == pick::mapKey(0x12340000, 0x56780000, 200, 200, 1));
+    CHECK(pick::mapKey(0x12340000, 0x56780000, 200, 200, 1) != pick::mapKey(0x12340000, 0x56780000, 156, 196, 1));
+}
+
 TEST(ground_pick_a_map_checked_briefly) {
     // 3.0.2-beta.13: a map's checks before it is trusted cost at most some 0.25 s of the game's own (7.6 ms each on
     // a 200x200 map), not 1.8 s
