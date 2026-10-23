@@ -199,6 +199,8 @@ HANDLE WINAPI setClipboard(UINT format, HANDLE data) {
 }  // namespace
 
 void installRoext() {
+    // the game alone (it imports DINPUT.dll; ROExt, loaded through DirectInput, never ran in setup.exe)
+    if (!GetModuleHandleA("dinput.dll")) return;
     std::string text;
     readTextFile(ourFile(layout::File::Ini), text);
     const Config c = parseConfig(text);
