@@ -1,0 +1,4 @@
+LIBRARY cps.dll
+EXPORTS
+    compress @1
+    uncompress @2

@@ -1,0 +1,13 @@
+LIBRARY binkw32.dll
+EXPORTS
+    _BinkOpen@8 = BinkOpen@8
+    _BinkClose@4 = BinkClose@4
+    _BinkDoFrame@4 = BinkDoFrame@4
+    _BinkNextFrame@4 = BinkNextFrame@4
+    _BinkCopyToBuffer@28 = BinkCopyToBuffer@28
+    _BinkDDSurfaceType@4 = BinkDDSurfaceType@4
+    _BinkWait@4 = BinkWait@4
+    _BinkPause@8 = BinkPause@8
+    _BinkGoto@12 = BinkGoto@12
+    _BinkOpenDirectSound@4 = BinkOpenDirectSound@4
+    _BinkSetSoundSystem@8 = BinkSetSoundSystem@8

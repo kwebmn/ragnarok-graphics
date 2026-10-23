@@ -95,6 +95,18 @@ elseif(WIN32)
     target_link_options(ddraw PRIVATE -static -static-libgcc -static-libstdc++ -s
                         "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/ddraw.map")
 
+    # 3.0.1-beta.5: our own libraries in place of the client's old ones (docs/superpowers/specs/
+    # 2026-10-23-own-client-libraries-design.md) - uaRO Graphics puts them in the game's root, the originals aside.
+    add_library(cps SHARED src/clientlibs/cps.cpp src/clientlibs/cps.def)  # zlib's two functions over miniz
+    set_target_properties(cps PROPERTIES PREFIX "" OUTPUT_NAME "cps")
+    target_compile_options(cps PRIVATE -Wall -Wextra)
+    target_link_libraries(cps PRIVATE uagfx_core)  # core/client_libs: zlib's two, tested on the host
+    target_link_options(cps PRIVATE -static -static-libgcc -static-libstdc++ -s)
+    add_library(binkw32 SHARED src/clientlibs/binkw32.cpp src/clientlibs/binkw32.def)  # Bink: no video
+    set_target_properties(binkw32 PROPERTIES PREFIX "" OUTPUT_NAME "binkw32")
+    target_compile_options(binkw32 PRIVATE -Wall -Wextra)
+    target_link_options(binkw32 PRIVATE -static -static-libgcc -static-libstdc++ -s)
+
     # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
     add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/app_disk.cpp
                 src/app/registry.cpp src/app/system.cpp src/app/model.cpp src/app/rebuilds.cpp src/app/mnemonic.cpp

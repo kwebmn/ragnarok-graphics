@@ -12,6 +12,7 @@ cmake -S . -B build-win64 --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=cmake/ming
       -DCMAKE_BUILD_TYPE=Release >/dev/null
 cmake --build build-win64 -j >/dev/null
 python3 tools/check_dll.py build-win/ddraw.dll
+python3 -I tools/check_client_libs.py build-win  # 3.0.1-beta.5: our own libraries in place of the client's old ones
 python3 tools/check_exe.py build-win/uaro-graphics.exe
 python3 tools/check_studio.py build-win64/uaro-studio.exe  # 2.3: uaRO Studio
 python3 -I tools/check_layout.py  # 2.8: our paths only in src/core/layout.cpp
@@ -20,7 +21,7 @@ stage="build-win/package"
 python3 -I -B tools/check_text_names.py  # 2.15: every «name» in the texts is the interface's
 rm -rf "$out" "$stage"
 mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/notes" \
-         "$stage/uaro-graphics/defaults"
+         "$stage/uaro-graphics/defaults" "$stage/uaro-graphics/clientlibs"
 cp dist/install.bat "$stage/"  # 2.10: the only .bat - an older update.bat runs it once (uaro-graphics.exe --install)
 # 2.8: the notes of "What is new" and the template ini in uaro-graphics\ - never uaro-graphics\uaro-graphics.ini,
 # the player's settings. 2.6.1-2.7: uaro-flags.grf went here too; it is the client's file now (its DATA.INI).
@@ -31,6 +32,7 @@ cp build-win/ddraw.dll build-win/uaro-graphics.exe build-win64/uaro-render64.exe
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 # 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.
 cp dist/pad/uaro-pad.ini "$stage/uaro-graphics/defaults/"  # 2.9: uaRO Pad inside ddraw.dll, its template
+cp build-win/cps.dll build-win/binkw32.dll "$stage/uaro-graphics/clientlibs/"  # 3.0.1-beta.5: the game's root's
 # 2.15: the AI textures' models are no part of the package (about 8 MB now): tools/models_package.py puts them in
 # release/uaro-graphics-models.zip, which an update brings when the AI textures are on (app/update_run).
 printf '%s build %s\r\n' "$version" "$(date '+%Y-%m-%d %H:%M')" > "$stage/uaro-graphics/version.txt"
