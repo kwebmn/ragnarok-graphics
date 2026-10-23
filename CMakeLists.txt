@@ -17,6 +17,14 @@ add_library(uagfx_miniz STATIC third_party/miniz/miniz.c)
 target_include_directories(uagfx_miniz PUBLIC third_party/miniz)
 target_compile_options(uagfx_miniz PRIVATE -w)
 target_compile_definitions(uagfx_miniz PUBLIC MINIZ_NO_STDIO MINIZ_NO_ARCHIVE_APIS MINIZ_NO_TIME)  # only (in)flate
+# libdeflate (MIT, 1.26): cps.dll's zlib (3.0.2-beta.11) - its zlib streams' files alone, C11.
+add_library(uagfx_libdeflate STATIC third_party/libdeflate/lib/deflate_compress.c
+    third_party/libdeflate/lib/deflate_decompress.c third_party/libdeflate/lib/zlib_compress.c
+    third_party/libdeflate/lib/zlib_decompress.c third_party/libdeflate/lib/adler32.c
+    third_party/libdeflate/lib/utils.c third_party/libdeflate/lib/x86/cpu_features.c)
+target_include_directories(uagfx_libdeflate PUBLIC third_party/libdeflate)
+set_target_properties(uagfx_libdeflate PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED ON)
+target_compile_options(uagfx_libdeflate PRIVATE -w -O2)
 
 # libwebp 1.5.0 (BSD): the texture pack's pictures (0.42) - encoded by the pack builder, decoded by the renderer.
 # Only its decoder, encoder and their helpers; third-party code: its own warnings are not ours.
@@ -40,7 +48,7 @@ file(GLOB_RECURSE UAGFX_CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(uagfx_core STATIC ${UAGFX_CORE_SOURCES})
 target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
-target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp uagfx_stb uagfx_minimp3)
+target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp uagfx_stb uagfx_minimp3 uagfx_libdeflate)
 
 # 2.9: uaRO Pad's portable core (from uaro-gamepad e59889d): the protocol, the world, the controller's logic. Its
 # Windows part (src/pad/win) is built into ddraw.dll, which mounts the pad itself.
@@ -102,7 +110,7 @@ elseif(WIN32)
 
     # 3.0.1-beta.5: our own libraries in place of the client's old ones (docs/superpowers/specs/
     # 2026-10-23-own-client-libraries-design.md) - uaRO Graphics puts them in the game's root, the originals aside.
-    add_library(cps SHARED src/clientlibs/cps.cpp src/clientlibs/cps.def)  # zlib's two functions over miniz
+    add_library(cps SHARED src/clientlibs/cps.cpp src/clientlibs/cps.def)  # zlib's two functions over libdeflate
     set_target_properties(cps PROPERTIES PREFIX "" OUTPUT_NAME "cps")
     target_compile_options(cps PRIVATE -Wall -Wextra)
     target_link_libraries(cps PRIVATE uagfx_core)  # core/client_libs: zlib's two, tested on the host

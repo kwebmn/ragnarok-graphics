@@ -1,5 +1,6 @@
 // 3.0.1-beta.5: our own libraries in place of the client's old ones (core/client_libs) - which they are, what a
 // sync does with each in the game's root, and cps.dll's zlib.
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -66,6 +67,36 @@ TEST(client_libs_zlib_is_zlibs) {
     const unsigned char garbage[] = "this is no zlib stream";
     unsigned long g = (unsigned long)back.size();
     CHECK_EQ(client_libs::zlibUncompress(back.data(), &g, garbage, sizeof garbage), -3);
+}
+
+// 3.0.2-beta.11 (cps.dll on libdeflate): as zlib's uncompress in what the game may pass - room to spare (the length
+// it took out), bytes after the stream (not read), a stream of many blocks, a damaged check (Adler-32)
+TEST(client_libs_zlib_as_the_game_calls_it) {
+    std::vector<unsigned char> data(3u << 20);
+    uint32_t x = 12345;
+    for (size_t i = 0; i < data.size(); ++i) {  // a ground file's mix: runs and noise
+        x = x * 1103515245u + 12345u;
+        data[i] = (i / 4096) % 3 ? static_cast<unsigned char>(x >> 24) : static_cast<unsigned char>(i / 64);
+    }
+    std::vector<unsigned char> packed(data.size() + data.size() / 100 + 1024);
+    unsigned long p = (unsigned long)packed.size();
+    CHECK_EQ(client_libs::zlibCompress(packed.data(), &p, data.data(), (unsigned long)data.size()), 0);
+    packed.resize(p);
+    std::vector<unsigned char> out(data.size() + 100);
+    unsigned long n = (unsigned long)out.size();
+    CHECK_EQ(client_libs::zlibUncompress(out.data(), &n, packed.data(), p), 0);
+    CHECK(n == data.size() && std::memcmp(out.data(), data.data(), n) == 0);
+    std::vector<unsigned char> tail = packed;
+    tail.insert(tail.end(), {0, 0, 0, 0, 0, 0, 0, 0});
+    n = (unsigned long)out.size();
+    CHECK_EQ(client_libs::zlibUncompress(out.data(), &n, tail.data(), (unsigned long)tail.size()), 0);
+    CHECK(n == data.size());
+    std::vector<unsigned char> broken = packed;
+    broken[broken.size() - 1] ^= 0x5A;  // the stream's Adler-32
+    n = (unsigned long)out.size();
+    CHECK_EQ(client_libs::zlibUncompress(out.data(), &n, broken.data(), (unsigned long)broken.size()), -3);
+    unsigned long none = 1;  // no room for a compressed stream
+    CHECK_EQ(client_libs::zlibCompress(out.data(), &none, data.data(), (unsigned long)data.size()), -5);
 }
 
 // 3.0.1-beta.8: a library the driver does the work of (ROExt): on - the game's aside, nothing in its place; off - back
