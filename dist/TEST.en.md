@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.1-beta.8 — what is new
+
+- **ROExt's work in the driver.** The game's window, mouse buttons, keys, freeing the processor in the background
+  and the text's code page are now done by the driver itself. ROExt's dinput8.dll went to `uaro-graphics\original`,
+  and the settings of its dinput8.ini into uaro-graphics.ini. To turn it off: «Service» → «The game's libraries» →
+  «Window, mouse and keys: ROExt's work in the driver (dinput8.dll)». The settings themselves are on «Game and chat»
+  («Detailed» mode). Check: the game's window (its size and place as before), changing the window's size on the
+  «Screen» page, the side mouse buttons if you put skills on them, Ctrl+W and Alt+F4 if you turned them on in
+  dinput8.ini, and that a minimized game takes less of the processor.
+
 # uaRO Graphics 3.0.1-beta.7 — what is new
 
 - **Our own mss32.dll: the game's sound.** The game's effects and music are now played by our library through
