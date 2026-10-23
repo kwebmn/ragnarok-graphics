@@ -53,7 +53,8 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
     if (o.thread) return startThread(name, error);
     std::string cmd = "\"" + o.hostExe + "\" --channel " + name + " --parent " +
                       std::to_string(GetCurrentProcessId()) + " --dir \"" + o.gameDir + "\" --log " +
-                      std::to_string(o.logLevel) + " --present " + o.present + " --dlss " + o.dlss +
+                      std::to_string(o.logLevel) + " --log-slot " + std::to_string(o.logSlot) + " --present " +
+                      o.present + " --dlss " + o.dlss +
                       " --dlss-scale " + std::to_string(o.dlssScale) + " --dlss-size " + std::to_string(o.dlssWidth) +
                       "x" + std::to_string(o.dlssHeight) + " --dlss-model " + o.dlssModel +  // 2.4.2
                       " --dlss-jitter " + (o.dlssJitterInverted ? "inverted" : "normal") + " --dlss-motion " +

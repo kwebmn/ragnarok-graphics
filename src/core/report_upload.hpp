@@ -28,6 +28,7 @@ constexpr size_t kMostComment = 4000;  // 2.13 (2000 before): bytes of the playe
 constexpr size_t kMostShots = 6;
 constexpr size_t kMostDump = 2u << 20;  // a bigger one stays at home
 constexpr size_t kMostImages = 64;
+constexpr size_t kMostFiles = 8;  // 3.0.3-beta.1: the site takes 8 files at most (the logs and the ini)
 std::string base64(const std::string& bytes);
 
 // The request's JSON (the site's fields; text made valid UTF-8).

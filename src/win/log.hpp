@@ -2,11 +2,15 @@
 #include <string>
 
 #include "core/config.hpp"
+#include "win/log_slot.hpp"
 
 namespace uagfx::wlog {
 
-// Opens the log once; when the file cannot be created the driver keeps working without a log.
-void open(const std::string& path, LogLevel level);
+// Opens the log once; when the file cannot be created the driver keeps working without a log. 3.0.3-beta.1: the
+// first of `path`'s slots (core/log_files slotted) no running game writes, from `firstSlot` on (uaro-render64.exe:
+// its game's); returns it, 0 for no log.
+int open(const std::string& path, LogLevel level, int firstSlot = 1);
+const std::string& path();  // the log's file: `path` or a slot's ("" for none)
 bool enabled(LogLevel level);
 // [debug] log changed while the game runs (stage 2 spec §3.4).
 void setLevel(LogLevel level);

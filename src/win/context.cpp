@@ -231,6 +231,7 @@ bool Context::open(std::string& error) {
         o.present = config.bridgePresent;
         o.dpiScale = config.bridgeDpiScale;
         o.logLevel = int(config.logLevel);
+        o.logSlot = std::max(1, wlog::slot());  // 3.0.3-beta.1: uaro-render64-<slot>.log beside this game's
         o.dlss = config.dlss;
         o.dlssScale = config.dlssScale;  // 2.4.2
         o.dlssWidth = config.dlssWidth;

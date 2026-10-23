@@ -36,7 +36,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
         args.mode = uagfx::app::Args::Mode::Setup;  // uaro-graphics-setup.exe: the app with the package appended
     if (args.mode == uagfx::app::Args::Mode::Watch) {
         SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
-        return args.pid ? uagfx::app::watchGame(args.pid) : 1;
+        return args.pid ? uagfx::app::watchGame(args.pid, args.logSlot) : 1;
     }
     INITCOMMONCONTROLSEX icc{sizeof icc, ICC_STANDARD_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES |
                                           ICC_PROGRESS_CLASS};
@@ -53,6 +53,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
             start.fresh = true;
             start.shot = args.reportShot;
             start.map = uagfx::app::utf8(args.reportMap);
+            start.logSlot = args.logSlot;  // 3.0.3-beta.1: the game window's logs
             window.reportAtStart(start);
         }
         code = window.run(inst, show);

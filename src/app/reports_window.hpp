@@ -14,6 +14,7 @@ struct ReportStart {
     bool fresh = false;  // the new report's form at once
     std::wstring shot;   // a picture ticked in it (the game's Ctrl+Shift+F10)
     std::string map;     // the game's map then, "" unknown
+    int logSlot = 1;     // 3.0.3-beta.1: that game window's logs (core/log_files slotted)
 };
 // A window over `owner` until it is closed (as the notes' window); the number of answers not read yet after it, -1
 // when the site could not be asked.

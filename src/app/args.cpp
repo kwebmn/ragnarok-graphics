@@ -3,6 +3,8 @@
 #include <cwchar>
 #include <vector>
 
+#include "core/log_files.hpp"
+
 namespace uagfx::app {
 namespace {
 
@@ -93,6 +95,10 @@ Args parseArgs(const std::wstring& line) {
         } else if (k == L"--map") {
             a.reportMap = next;
             ++i;
+        } else if (k == L"--log-slot") {
+            const unsigned long slot = number(next);
+            a.logSlot = slot >= 1 && slot <= unsigned(logfiles::kSlots) ? int(slot) : 1;
+            ++i;
         }
     }
     return a;
@@ -121,6 +127,7 @@ std::wstring argsLine(const Args& a) {
     if (a.then == Args::Then::Game) s += L" --then-game";
     if (a.report) s += a.reportShot.empty() ? L" --report" : L" --report \"" + a.reportShot + L"\"";
     if (!a.reportMap.empty()) s += L" --map " + a.reportMap;
+    if (a.logSlot > 1) s += L" --log-slot " + std::to_wstring(a.logSlot);
     if (a.then == Args::Then::Game || !a.gameArgs.empty()) s += L" -- " + a.gameArgs;
     return s;
 }

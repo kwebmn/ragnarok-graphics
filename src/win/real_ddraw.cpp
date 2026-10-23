@@ -48,6 +48,7 @@ void startWatcher(const std::string& dir) {
         return;
     }
     std::string line = "\"" + exe + "\" --watch " + std::to_string(GetCurrentProcessId());
+    if (wlog::slot() > 1) line += " --log-slot " + std::to_string(wlog::slot());  // 3.0.3-beta.1: this window's logs
     STARTUPINFOA si{};
     si.cb = sizeof si;
     PROCESS_INFORMATION pi{};
@@ -72,6 +73,7 @@ void startReport(const std::string& shot, const std::string& map) {
     }
     std::string line = "\"" + exe + "\" --report \"" + shot + "\"";
     if (!map.empty()) line += " --map " + map;
+    if (wlog::slot() > 1) line += " --log-slot " + std::to_string(wlog::slot());  // 3.0.3-beta.1: this window's logs
     STARTUPINFOA si{};
     si.cb = sizeof si;
     PROCESS_INFORMATION pi{};
@@ -157,7 +159,10 @@ void writeSmallFile(const std::string& path, const std::string& text) {
 // app's «Звичайний режим» removes the note.
 void safeModeFirst(const std::string& dir, Config& config) {
     std::string previous, kept;
-    readTextFile(logfiles::previous(layout::join(dir, layout::now(layout::File::DriverLog))), previous);
+    // 3.0.3-beta.1: the last game of this log's slot - a second window's start judges the second window's last one
+    const std::string log =
+        wlog::path().empty() ? layout::join(dir, layout::now(layout::File::DriverLog)) : wlog::path();
+    readTextFile(logfiles::previous(log), previous);
     const std::string counter = layout::join(dir, layout::kFailedStarts);
     const std::string note = layout::join(dir, layout::kSafeModeNote);
     readTextFile(counter, kept);
@@ -221,9 +226,12 @@ Startup decide() {
     const std::string iniPath = ourFile(dir, layout::File::Ini);
     const bool haveIni = readTextFile(iniPath, ini);
     s.config = parseConfig(ini);
-    wlog::open(layout::join(dir, layout::now(layout::File::DriverLog)), s.config.logLevel);
+    const int slot = wlog::open(layout::join(dir, layout::now(layout::File::DriverLog)), s.config.logLevel);
     installCrashHandler(dir);  // 0.52: where a crash happened, and a minidump
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
+    if (slot > 1)  // 3.0.3-beta.1: the logs of a game started while another runs
+        LOG_INFO("log: game window %d - another game runs beside it; its logs end in -%d (uaro-render64-%d.log, "
+                 "uaro-pad-%d.log)", slot, slot, slot, slot);
     for (const std::string& line : moved) LOG_INFO("%s", line.c_str());
     LOG_INFO("%s", padMountedText());  // 2.9
     logRoext();                         // 3.0.1-beta.8

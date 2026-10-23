@@ -1,6 +1,6 @@
 // uaro-render64.exe (part 3): draws for the 32-bit driver in uaRO.exe with Direct3D 12 in a 64-bit process, so that
 // what exists only for 64-bit programs - DLSS, frame generation - can come next. The driver starts it with
-//   uaro-render64.exe --channel <shared block> --parent <game pid> --dir "<game folder>" --log <level>
+//   uaro-render64.exe --channel <shared block> --parent <game pid> --dir "<game folder>" --log <level> [--log-slot N]
 //                     --present auto|window|composition
 // and it ends with the game. 0.43: the settings app starts it to make the texture pack (host/pack_builder.hpp):
 //   uaro-render64.exe --pack build|drop --dir "<game folder>" --ai <[ai] settings> --kinds <what>
@@ -43,6 +43,7 @@ struct Args {
     DWORD parent = 0;
     std::string dir = ".";
     int log = 1;
+    int logSlot = 1;  // 3.0.3-beta.1: its game's window (that game's log's slot): uaro-render64-<slot>.log
     std::string present = "auto";
     std::string dlss = "off";
     int dlssScale = 75;  // 2.4.2: dlss = custom - its share of the screen, or its size (0: by the share)
@@ -83,6 +84,7 @@ Args parseArgs() {
         else if (k == "--parent") a.parent = DWORD(std::strtoul(v.c_str(), nullptr, 10));
         else if (k == "--dir") a.dir = v;
         else if (k == "--log") a.log = std::atoi(v.c_str());
+        else if (k == "--log-slot") a.logSlot = std::atoi(v.c_str());
         else if (k == "--present") a.present = v;
         else if (k == "--dlss") a.dlss = v;
         else if (k == "--dlss-scale") a.dlssScale = std::clamp(std::atoi(v.c_str()), 33, 100);
@@ -406,7 +408,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         wlog::open(layout::join(a.dir, layout::now(layout::File::StudioEngineLog)), level);
         return host::runStudio(a.dir, a.studio);
     }
-    wlog::open(layout::join(a.dir, layout::now(layout::File::Render64Log)), level);
+    wlog::open(layout::join(a.dir, layout::now(layout::File::Render64Log)), level, a.logSlot);
     if (a.channel.empty() || !a.parent) {
         LOG_ERROR("uaro-render64.exe is started by the uaRO Graphics driver in the game, not by hand");
         return 1;

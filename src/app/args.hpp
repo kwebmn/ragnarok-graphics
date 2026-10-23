@@ -19,6 +19,8 @@ struct Args {
     // 2.13: --report ["<shot>"] [--map <map>] - the game's Ctrl+Shift+F10: the settings app with «Нове звернення»
     bool report = false;
     std::wstring reportShot, reportMap;
+    // 3.0.3-beta.1: --log-slot N - the game window whose logs these are (core/log_files slotted; 1-8, else 1)
+    int logSlot = 1;
 };
 
 Args parseArgs(const std::wstring& line);

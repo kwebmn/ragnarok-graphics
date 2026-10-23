@@ -87,7 +87,7 @@ ReportFacts reportFacts(const Model& m, const std::vector<std::string>& problems
 }
 
 report::Upload makeUpload(const Model& m, const std::string& reason, bool automatic, const std::string& comment,
-                          const std::vector<std::string>& problems) {
+                          const std::vector<std::string>& problems, int logSlot) {
     const SystemInfo& sys = m.system();
     report::Upload u;
     u.reason = reason;
@@ -95,8 +95,10 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
     u.version = kVersion;
     u.comment = comment;
     u.computer = computerKey(m.paths().dir);  // 2.13: the report comes back to «Звернення» of this computer
+    const auto slotted = [](const std::wstring& path, int slot) { return wide(logfiles::slotted(utf8(path), slot)); };
+    const std::wstring gameLog = slotted(m.paths().log, logSlot);  // 3.0.3-beta.1: that window's
     std::string log;
-    readFile(m.paths().log, log);
+    readFile(gameLog, log);
     // 2.6.12: the settings and the log as the disk has them now - the game's console writes the ini while this app
     // keeps what it read when it opened (R-TDWB4X and R-B27V4Y carried R-MUQ8U5's text, their files fresh)
     ReportFacts facts = reportFacts(m, problems);
@@ -119,15 +121,28 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
         size_t most;
     };
     const Attached files[] = {
-        {"uaro-graphics.log", m.paths().log, 1u << 20},
-        {"uaro-graphics.prev.log", wide(logfiles::previous(utf8(m.paths().log))), 512u << 10},
-        {"uaro-render64.log", ourPlace(dir, layout::now(layout::File::Render64Log)), 512u << 10},
+        {"uaro-graphics.log", gameLog, 1u << 20},
+        {"uaro-graphics.prev.log", wide(logfiles::previous(utf8(gameLog))), 512u << 10},
+        {"uaro-render64.log", slotted(ourPlace(dir, layout::now(layout::File::Render64Log)), logSlot), 512u << 10},
         {"uaro-pack.log", ourPlace(dir, layout::now(layout::File::PackLog)), 256u << 10},
-        {"uaro-pad.log", ourPlace(dir, layout::now(layout::File::PadLog)), 256u << 10},  // 2.9: inside the driver
+        {"uaro-pad.log", slotted(ourPlace(dir, layout::now(layout::File::PadLog)), logSlot), 256u << 10},  // 2.9
         {"uaro-graphics.ini", m.paths().ini, 256u << 10}};
     for (const Attached& f : files) {
         const std::string text = fileFor(f.path, f.most);
         if (!text.empty()) u.files.emplace_back(f.name, text);
+    }
+    // 3.0.3-beta.1: the other game windows' logs - of games running beside it, or just over (12 hours)
+    FILETIME now{};
+    GetSystemTimeAsFileTime(&now);
+    const auto ticks = [](const FILETIME& t) { return (uint64_t(t.dwHighDateTime) << 32) | t.dwLowDateTime; };
+    for (int slot = 1; slot <= logfiles::kSlots && u.files.size() < report::kMostFiles; ++slot) {
+        const std::wstring other = slotted(m.paths().log, slot);
+        WIN32_FILE_ATTRIBUTE_DATA a{};
+        if (slot == logSlot || !GetFileAttributesExW(other.c_str(), GetFileExInfoStandard, &a) ||
+            ticks(now) - ticks(a.ftLastWriteTime) > 12ull * 3600 * 10000000ull)
+            continue;
+        const std::string text = fileFor(other, 256u << 10);
+        if (!text.empty()) u.files.emplace_back("uaro-graphics-" + std::to_string(slot) + ".log", text);
     }
     // 0.52: the pictures the pack had none of (the driver saves the first 64 of a game, uaro-graphics\missing)
     const std::wstring missing = dir + L"\\uaro-graphics\\missing";
@@ -251,7 +266,7 @@ void usageState(const std::wstring& dir, std::string& lastSent, unsigned long lo
     waiting = sizeOf(folder + L"\\usage.jsonl") + sizeOf(folder + L"\\usage-sending.jsonl");
 }
 
-int watchGame(unsigned long pid) {
+int watchGame(unsigned long pid, int logSlot) {
     // 2.10: the update check of every game's start: uaro-graphics\update.ini for the next start's question
     checkNow(exeFolder());
     std::string ini;
@@ -265,15 +280,16 @@ int watchGame(unsigned long pid) {
     Sleep(2000);  // the log closed and flushed
     std::string ignored;
     sendUsage(exeFolder(), false, ignored);  // 2.2.1: the statistics, with the player's leave
-    std::string log;
-    if (!readFile(ourPlace(exeFolder(), layout::now(layout::File::DriverLog)), log)) return 0;
+    std::string log;  // 3.0.3-beta.1: that game window's
+    const std::wstring first = ourPlace(exeFolder(), layout::now(layout::File::DriverLog));
+    if (!readFile(wide(logfiles::slotted(utf8(first), logSlot)), log)) return 0;
     const std::string reason = report::reasonOfLog(log);
     if (reason.empty()) return 0;
     Model m;
     if (!m.now().config.reportAuto) return 0;  // turned off meanwhile
     if (std::time(nullptr) - lastAutomaticIn(m.paths().dir) < kAutoEvery) return 0;
     // 2.13: kept for later when the site does not answer (app/reports), and in the tester's «Звернення»
-    const NewReport r = sendNew(m.paths().dir, makeUpload(m, reason, true, "", {}));
+    const NewReport r = sendNew(m.paths().dir, makeUpload(m, reason, true, "", {}, logSlot));
     return r.code.empty() && !r.queued ? 1 : 0;
 }
 

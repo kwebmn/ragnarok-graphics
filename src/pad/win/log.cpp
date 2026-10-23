@@ -5,6 +5,8 @@
 #include <cstdarg>
 #include <cstdio>
 
+#include "win/log_slot.hpp"
+
 namespace uapad::wlog {
 namespace {
 FILE* g_file = nullptr;
@@ -16,7 +18,12 @@ void open(const std::string& path, LogLevel level) {
     if (g_file) return;
     InitializeCriticalSection(&g_lock);
     g_level = level;
-    g_file = std::fopen(path.c_str(), "w");
+    // 3.0.3-beta.1: a game started while another runs - a log of its own, the driver's window number first (the
+    // game may make its DirectInput first: the first free one then)
+    std::string opened;
+    int slot = 0;
+    const int driver = uagfx::wlog::slot();
+    g_file = uagfx::wlog::openFree(path, false, driver > 0 ? driver : 1, opened, slot);
 }
 
 bool enabled(LogLevel level) { return g_file && int(level) <= int(g_level); }

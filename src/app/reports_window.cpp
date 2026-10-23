@@ -627,7 +627,7 @@ void ReportsWindow::sendNewReport() {
     }
     std::string comment = utf8(what);
     if (!start_.map.empty()) comment += (comment.empty() ? "" : "\n\n") + utf8(tf(Text::ReportMapLine, {start_.map}));
-    report::Upload u = makeUpload(model_, "manual", false, comment, {});
+    report::Upload u = makeUpload(model_, "manual", false, comment, {}, start_.logSlot);
     for (int i = 0; i < 4; ++i)
         if (SendMessageW(GetDlgItem(hwnd_, kKind0 + i), BM_GETCHECK, 0, 0) == BST_CHECKED)
             u.kind = reports::kindToken(kKinds[i]);
