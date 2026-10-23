@@ -28,6 +28,10 @@ constexpr const char* kUpdateWork = "uaro-graphics\\update";
 constexpr const char* kUpdateInfo = "uaro-graphics\\update.ini";
 // 2.11: the game's desktop shortcuts the installer's «uaRO» replaced, kept for the removal (and its once-marker)
 constexpr const char* kShortcuts = "uaro-graphics\\shortcuts";
+// 3.0.1-beta.5: our own libraries in place of the client's old ones (core/client_libs.hpp) - the package's copies,
+// put into the game's root; the game's own kept aside for their switches and the removal
+constexpr const char* kClientLibs = "uaro-graphics\\clientlibs";
+constexpr const char* kOriginals = "uaro-graphics\\original";
 // 2.11: when the driver last sent a direct start to «Гра» (its time is the file's): no bouncing (core/launcher)
 constexpr const char* kRedirected = "uaro-graphics\\cache\\launcher-redirect.txt";
 // 2.12: the safe mode's (core/safe_mode): the failed starts in a row; why the game starts safe (the app shows it and

@@ -5,6 +5,7 @@
 #include "app/modes.hpp"
 #include "app/page.hpp"
 #include "app/palettes.hpp"
+#include "app/setting_ids.hpp"
 #include "app/update.hpp"
 #include "core/settings/presets.hpp"
 #include "core/update_check.hpp"
@@ -60,7 +61,7 @@ std::wstring backupLabel(const std::wstring& name) {
 // buttons are grey and their group's note says why.
 class ServicePage : public Page {
 public:
-    explicit ServicePage(PageHost& host) : Page(host) {}
+    explicit ServicePage(PageHost& host) : Page(host), rows_(makeSettingsPage(host, {})) {}
 
     void build(Panel& p) override {
         Model& m = host_.model();
@@ -168,6 +169,13 @@ public:
         more.push_back({kRepair, t(Text::RepairButton)});
         more.push_back({kUninstall, t(Text::UninstallButton)});
         p.buttons(more);
+        // 3.0.1-beta.5: our own libraries in place of the game's old ones, each switchable (core/client_libs.hpp)
+        if (host_.mode() != settings::Mode::Simple) {
+            p.gap();
+            p.heading(t(Text::ServiceClientLibs));
+            p.note(t(Text::ClientLibsNote));
+            for (const char* key : {"client.cps", "client.bink"}) rows_->buildRow(p, key);
+        }
         // 2.12: when the game does not start - the safe mode, or uaRO Graphics switched off (the game's own look)
         p.gap();
         p.heading(t(Text::TroubleHeading));
@@ -191,6 +199,10 @@ public:
     }
 
     void command(int id, int code) override {
+        if (settingOfId(id)) {  // 3.0.1-beta.5: the libraries' switches
+            rows_->command(id, code);
+            return;
+        }
         if (channelCommand(host_, id, code, kChannel)) return;  // 3.0.0-beta.2
         if (code != BN_CLICKED) return;
         Model& m = host_.model();
@@ -305,6 +317,7 @@ private:
         PostMessageW(GetAncestor(host_.window(), GA_ROOT), WM_CLOSE, 0, 0);
     }
 
+    std::unique_ptr<Page> rows_;  // 3.0.1-beta.5: the schema's rows (the libraries' switches)
     HWND list_ = nullptr;
     HWND profiles_ = nullptr;
     bool checking_ = false, making_ = false;  // at the last look: what ended since is shown anew

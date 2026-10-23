@@ -51,6 +51,11 @@ const std::vector<IniSetting>& iniSettings() {
         // 2.11: a direct start of uaRO.exe opens the launcher «Гра» unless this is ticked
         {"launcher", "direct_start", Page::Launcher, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::LauncherDirect,
          Text::LauncherDirectHint, ""},
+        // 3.0.1-beta.5: our own libraries in place of the game's old ones (core/client_libs.hpp), «Сервіс»
+        {"client", "cps", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientCps, Text::ClientCpsHint,
+         ""},
+        {"client", "bink", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientBink,
+         Text::ClientBinkHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)
@@ -708,6 +713,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "report.auto") return c.reportAuto ? "1" : "0";
     if (k == "pad.enabled") return c.padEnabled ? "1" : "0";  // 2.9
     if (k == "launcher.direct_start") return c.directStart ? "1" : "0";  // 2.11
+    if (k == "client.cps") return c.clientCps ? "1" : "0";  // 3.0.1-beta.5
+    if (k == "client.bink") return c.clientBink ? "1" : "0";
     if (k == "renderer.safe_mode") return c.safeMode ? "1" : "0";  // 2.12
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";

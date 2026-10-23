@@ -39,6 +39,11 @@ Result finishInstall(const std::wstring& dir, bool scripts);
 // pad's, the copies of them (backup\) and the texture pack (textures\); our old scripts; the Apps entry. With nothing
 // kept the folder is as it was before the install.
 Result uninstall(const std::wstring& dir, bool keep);
+// 3.0.1-beta.5: our own libraries in place of the game's old ones (core/client_libs.hpp): the game's root holds ours
+// (the package's uaro-graphics\clientlibs) where their switch is on ([client] cps, bink...), the game's own kept in
+// uaro-graphics\original; off - or `off` (the removal) - puts the game's own back. Nothing moves while the game runs
+// (the next sync does it): the install, an update, the app's start and its Apply sync.
+void syncClientLibs(const std::wstring& dir, bool off, Result& r);
 // 3.0.1: the names this folder's uaRO Graphics goes by - its client's (the build's uaro-client.json, else «uaRO»):
 // the desktop shortcut «uaRO HD» and the Apps entry «uaRO Graphics (uaRO HD)»; the old client's «uaRO», «uaRO Graphics»
 struct Names {

@@ -8,6 +8,8 @@
 #include "app/files.hpp"
 #include "app/registry.hpp"
 #include "app/shortcuts.hpp"
+#include "app/system.hpp"
+#include "core/client_libs.hpp"
 #include "app/text.hpp"
 #include "core/ini_upgrade.hpp"
 #include "core/layout.hpp"
@@ -287,9 +289,45 @@ Result finishInstall(const std::wstring& dir, bool scripts) {
     removeOldPad(dir);
     removeTree(join(dir, L"uaro-graphics\\pad"));
     if (scripts) removeOldScripts(dir);
+    syncClientLibs(dir, false, r);  // 3.0.1-beta.5: ours in the game's root, the game's own aside
     placeShortcut(dir, r);
     putAppsEntry(dir, version.empty() ? std::string(kVersion) : update::bare(version), r);
     return r;
+}
+
+void syncClientLibs(const std::wstring& dir, bool off, Result& r) {
+    if (running(join(dir, L"uaRO.exe"))) {  // the game holds them: the next sync
+        r.log.push_back("installer: the game is running - its libraries are left as they are");
+        return;
+    }
+    std::string ini;
+    readFile(ourFile(dir, layout::File::Ini), ini);
+    const std::map<std::string, std::string> keys = settings::readIni(ini);
+    const std::wstring ours = join(dir, wide(layout::kClientLibs)), kept = join(dir, wide(layout::kOriginals));
+    for (const client_libs::Lib& lib : client_libs::all()) {
+        const std::wstring name = wide(lib.file), root = join(dir, name), aside = join(kept, name);
+        const auto key = keys.find(std::string("client.") + lib.key);
+        const bool wanted = !off && (key == keys.end() || key->second != "0");
+        std::string package, now;
+        const bool haveOurs = readFile(join(ours, name), package) && client_libs::ours(package);
+        client_libs::Root state = client_libs::Root::Missing;
+        if (readFile(root, now))
+            state = !client_libs::ours(now) ? client_libs::Root::Game
+                    : now == package        ? client_libs::Root::Ours
+                                            : client_libs::Root::OursOther;
+        const client_libs::Step step = client_libs::decide(wanted, haveOurs, state, fileExists(aside));
+        if (step == client_libs::Step::PutOurs) {
+            if (state == client_libs::Root::Game && !(makeFolders(kept) && moveFile(root, aside, true))) {
+                r.log.push_back("installer: the game's " + std::string(lib.file) + " could not go aside");
+                continue;
+            }
+            r.log.push_back(writeFileAtomic(root, package) ? "installer: our " + std::string(lib.file)
+                                                           : "installer: cannot put our " + std::string(lib.file));
+        } else if (step == client_libs::Step::RestoreOriginal) {
+            r.log.push_back(moveFile(aside, root, true) ? "installer: the game's own " + std::string(lib.file)
+                                                        : "installer: cannot put back " + std::string(lib.file));
+        }
+    }
 }
 
 Names namesOf(const std::wstring& dir) {
@@ -339,6 +377,7 @@ void removeOldScripts(const std::wstring& dir) {
 
 Result uninstall(const std::wstring& dir, bool keep) {
     Result r;
+    syncClientLibs(dir, true, r);  // 3.0.1-beta.5: the game's own libraries back before uaro-graphics\ goes
     restoreShortcuts(dir);  // 2.11: before uaro-graphics\ goes
     std::string bytes;
     if (readFile(join(dir, L"ddraw.dll"), bytes) && ours(bytes) && !deleteFile(join(dir, L"ddraw.dll"))) {

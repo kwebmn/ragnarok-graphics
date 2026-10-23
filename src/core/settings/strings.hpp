@@ -374,6 +374,7 @@ enum class Text : uint16_t {
     PackFromClient, CompareOffNote,  // 2.15: nothing extra
     ReportAutoAsk,  // 3.0.0-beta.1: the automatic reports asked about at the first start
     UpdateChannel, UpdateChannelRelease, UpdateChannelBeta, UpdateChannelHint,  // 3.0.0-beta.2: the channels
+    ServiceClientLibs, ClientLibsNote, ClientCps, ClientCpsHint, ClientBink, ClientBinkHint,  // 3.0.1-beta.5
     Count
 };
 

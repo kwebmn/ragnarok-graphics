@@ -89,6 +89,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "renderer.api" && k != "renderer.gpu" && k != "report.auto" &&
                                 k != "pad.enabled" &&  // 2.9: the pad is mounted at the game's start
                                 k != "launcher.direct_start" &&  // 2.11: read as the game starts
+                                k.compare(0, 7, "client.") != 0 &&  // 3.0.1-beta.5: the libraries, the game closed
                                 k != "renderer.safe_mode" &&     // 2.12: the start's renderer
                                 k != "display.ui_native" &&
                                 k != "display.hdr" &&

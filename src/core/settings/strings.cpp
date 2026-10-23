@@ -3601,6 +3601,28 @@ const Entry kTexts[] = {
      "Релиз — версии, которые получают все игроки. Бета — сборки для тестировщиков, раньше всех; в них могут быть "
      "ошибки — пишите о них в «Обращения». После возвращения на «Релиз» эта версия остаётся, пока не выйдет более "
      "новая."},
+    {"The game's libraries",
+     "Бібліотеки гри",
+     "Библиотеки игры"},
+    {"Our own in place of the game's libraries of the 2000s; one turned off puts the game's own back. It changes once "
+     "the game is closed.",
+     "Свої замість старих бібліотек гри 2000-х; вимкнена повертає оригінал гри. Діє, коли гра закрита.",
+     "Свои вместо старых библиотек игры 2000-х; выключенная возвращает оригинал игры. Действует, когда игра закрыта."},
+    {"Files' compression: our zlib (cps.dll)",
+     "Стиснення файлів гри — свій zlib (cps.dll)",
+     "Сжатие файлов игры — свой zlib (cps.dll)"},
+    {"The game reads its archives through it. Off: the game's cps.dll of the 2000s.",
+     "Через неї гра читає свої архіви. Вимкнено — старий cps.dll гри.",
+     "Через неё игра читает свои архивы. Выключено — старый cps.dll игры."},
+    {"Bink video: none (binkw32.dll)",
+     "Відео Bink — без нього (binkw32.dll)",
+     "Видео Bink — без него (binkw32.dll)"},
+    {"The game has no Bink video to show (its opening is not in the client): ours holds none of RAD's code. Off: "
+     "RAD's binkw32.dll.",
+     "Відео Bink гра не показує (вступного ролика в клієнті немає): наша заміна без коду RAD. Вимкнено — binkw32.dll "
+     "від RAD.",
+     "Видео Bink игра не показывает (вступительного ролика в клиенте нет): наша замена без кода RAD. Выключено — "
+     "binkw32.dll от RAD."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

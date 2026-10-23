@@ -343,6 +343,7 @@ void MainWindow::create() {
     if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     model_->recordChannel(lang_);  // 3.0.0-beta.2: a beta build's install stays on «Бета» after a release build
     installer::atStart(model_->paths().dir);  // 3.0.1: an unpacked client's shortcut; this folder's Apps entry right
+    syncLibraries();  // 3.0.1-beta.5: our own libraries in the game's root as their switches say
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
     startClientPatchCheck(model_->paths().dir);  // 2.14: the game's new files
@@ -809,8 +810,15 @@ std::wstring MainWindow::windowLetters() const {
     return taken;
 }
 
+// 3.0.1-beta.5: the game's root's libraries as [client] says (core/client_libs.hpp) - nothing while the game runs
+void MainWindow::syncLibraries() {
+    installer::Result r;
+    installer::syncClientLibs(model_->paths().dir, false, r);
+}
+
 void MainWindow::doApply(bool play) {
     std::wstring err = model_->apply(lang_);
+    if (err.empty()) syncLibraries();  // a library's switch changed: put in now (the game closed)
     bool closing = false;
     if (err.empty() && play) {  // 2.11: an offered update first (it starts the game after it), else the game
         // 2.14: the game's new files before either (a failure is told and the game starts as it is; Cancel stops)

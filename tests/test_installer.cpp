@@ -434,3 +434,85 @@ TEST(an_unpacked_client_gets_its_shortcut_at_the_start) {
     app::installer::atStart(stray);
     CHECK(fake::windows().apps.size() == 1);
 }
+
+namespace {
+
+const std::string kGameCps = "MZ the game's cps.dll, zlib 1.1";
+const std::string kGameBink = "MZ RAD Game Tools binkw32.dll";
+std::string ourLib(const std::string& name, const std::string& build) {
+    return "MZ uaRO Graphics client library: " + name + " " + build;
+}
+
+// A client with the game's cps.dll and binkw32.dll, a package of ours staged and put in
+fake::Windows& clientWithLibraries(const std::string& build) {
+    fake::Windows& w = client();
+    put(L"cps.dll", kGameCps);
+    put(L"binkw32.dll", kGameBink);
+    put(kStaged + L"\\uaro-graphics\\clientlibs\\cps.dll", ourLib("cps.dll", build));
+    put(kStaged + L"\\uaro-graphics\\clientlibs\\binkw32.dll", ourLib("binkw32.dll", build));
+    return w;
+}
+
+}  // namespace
+
+// 3.0.1-beta.5: our own libraries go into the game's root, the game's own aside (uaro-graphics\original)
+TEST(the_update_puts_our_libraries_and_keeps_the_games) {
+    clientWithLibraries("1");
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("3.0.1"), false).ok);
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"cps.dll"), ourLib("cps.dll", "1"));
+    CHECK_EQ(at(L"binkw32.dll"), ourLib("binkw32.dll", "1"));
+    CHECK_EQ(at(L"uaro-graphics\\original\\cps.dll"), kGameCps);
+    CHECK_EQ(at(L"uaro-graphics\\original\\binkw32.dll"), kGameBink);
+    // the next package's: ours replaced, the game's kept as it was
+    put(kStaged + L"\\uaro-graphics\\clientlibs\\cps.dll", ourLib("cps.dll", "2"));
+    put(kStaged + L"\\uaro-graphics\\clientlibs\\binkw32.dll", ourLib("binkw32.dll", "2"));
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("3.0.2"), false).ok);
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"cps.dll"), ourLib("cps.dll", "2"));
+    CHECK_EQ(at(L"uaro-graphics\\original\\cps.dll"), kGameCps);
+}
+
+// 3.0.1-beta.5: each its own switch - off puts the game's back, on ours again
+TEST(a_library_switched_off_is_the_games) {
+    clientWithLibraries("1");
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("3.0.1"), false).ok);
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    put(L"uaro-graphics\\uaro-graphics.ini", "[client]\r\ncps = 0\r\n");
+    app::installer::Result r;
+    app::installer::syncClientLibs(app::exeFolder(), false, r);
+    CHECK_EQ(at(L"cps.dll"), kGameCps);
+    CHECK_EQ(at(L"uaro-graphics\\original\\cps.dll"), std::string("<none>"));
+    CHECK_EQ(at(L"binkw32.dll"), ourLib("binkw32.dll", "1"));  // the other one stays ours
+    put(L"uaro-graphics\\uaro-graphics.ini", "[client]\r\ncps = 1\r\n");
+    app::installer::syncClientLibs(app::exeFolder(), false, r);
+    CHECK_EQ(at(L"cps.dll"), ourLib("cps.dll", "1"));
+    CHECK_EQ(at(L"uaro-graphics\\original\\cps.dll"), kGameCps);
+}
+
+// 3.0.1-beta.5: the removal puts the game's own libraries back
+TEST(uninstall_puts_the_games_libraries_back) {
+    clientWithLibraries("1");
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("3.0.1"), false).ok);
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK(app::installer::uninstall(app::exeFolder(), false).ok);
+    CHECK_EQ(at(L"cps.dll"), kGameCps);
+    CHECK_EQ(at(L"binkw32.dll"), kGameBink);
+}
+
+// 3.0.1-beta.5: the game open - nothing moves (the next start of the app or Apply does it); never a root without one
+TEST(a_running_game_keeps_its_libraries) {
+    fake::Windows& w = clientWithLibraries("1");
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("3.0.1"), false).ok);
+    w.gameRunning = true;
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"cps.dll"), kGameCps);
+    w.gameRunning = false;
+    app::installer::Result r;
+    app::installer::syncClientLibs(app::exeFolder(), false, r);
+    CHECK_EQ(at(L"cps.dll"), ourLib("cps.dll", "1"));
+    fake::windows().files.erase(fake::path(L"uaro-graphics\\original\\cps.dll"));  // no original kept: ours stays
+    put(L"uaro-graphics\\uaro-graphics.ini", "[client]\r\ncps = 0\r\n");
+    app::installer::syncClientLibs(app::exeFolder(), false, r);
+    CHECK_EQ(at(L"cps.dll"), ourLib("cps.dll", "1"));
+}

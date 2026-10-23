@@ -77,6 +77,7 @@ private:
     void resetView();
     std::wstring searchText() const;
     std::wstring windowLetters() const;  // Alt+letter of the window's own buttons
+    void syncLibraries();  // 3.0.1-beta.5
     void doApply(bool play);
     RECT pageArea() const;
 
