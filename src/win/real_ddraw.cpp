@@ -3,6 +3,7 @@
 #include "core/layout_migration.hpp"
 #include "win/disk.hpp"
 #include "win/pad_mount.hpp"
+#include "win/roext.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -224,6 +225,7 @@ Startup decide() {
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
     for (const std::string& line : moved) LOG_INFO("%s", line.c_str());
     LOG_INFO("%s", padMountedText());  // 2.9
+    logRoext();                         // 3.0.1-beta.8
     for (const char* folder : layout::kMadeAtStart) makeFolders(layout::join(dir, folder));
     safeModeFirst(dir, s.config);  // 2.12: before anything reads the renderer's settings
     {  // 2.12: the start panel in the player's language - the settings app's choice, else Windows'

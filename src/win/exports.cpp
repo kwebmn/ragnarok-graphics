@@ -10,6 +10,7 @@
 #include "win/dx7/ddraw7.hpp"
 #include "win/log.hpp"
 #include "win/pad_mount.hpp"
+#include "win/roext.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
 
@@ -199,6 +200,7 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
         DisableThreadLibraryCalls(inst);
         uagfx::win::installSoundHooks();  // 0.91: before the game opens its sound (its import slots only)
         uagfx::win::mountPad();           // 2.9: uaRO Pad, before the game makes its DirectInput
+        uagfx::win::installRoext();       // 3.0.1-beta.8: ROExt's work, before the game makes its window
     }
     if (reason == DLL_PROCESS_DETACH) {
         uagfx::win::logModulesAtExit();

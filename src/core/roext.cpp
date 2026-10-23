@@ -48,7 +48,8 @@ int profileInt(const std::map<std::string, std::string>& keys, const char* key, 
     const bool minus = v[0] == '-';
     if (v[0] == '-' || v[0] == '+') ++i;
     long long n = 0;
-    for (; i < v.size() && std::isdigit(static_cast<unsigned char>(v[i])) && n < 0x7FFFFFFF; ++i) n = n * 10 + (v[i] - '0');
+    for (; i < v.size() && std::isdigit(static_cast<unsigned char>(v[i])) && n < 0x7FFFFFFF; ++i)
+        n = n * 10 + (v[i] - '0');
     return int(minus ? -n : n);
 }
 

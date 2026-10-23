@@ -5,6 +5,7 @@
 
 #include "pad/core/call_targets.hpp"
 #include "pad/win/iat.hpp"
+#include "win/iat.hpp"
 #include "pad/win/log.hpp"
 #include "pad/win/runtime.hpp"
 
@@ -74,6 +75,8 @@ void hook(HMODULE dll, const char* name, T replacement, T& original) {
     }
     if (iat::patch(GetModuleHandleA(nullptr), reinterpret_cast<void*>(target), reinterpret_cast<void*>(replacement)))
         LOG_INFO("hooked %s", name);
+    else if (uagfx::win::hookImport(nullptr, name, replacement, original))  // 3.0.1-beta.8: after the driver's ROExt
+        LOG_INFO("hooked %s after another hook", name);
     else
         LOG_ERROR("hook %s: not in the client's import table", name);
 }

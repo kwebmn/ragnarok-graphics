@@ -342,7 +342,8 @@ void syncClientLibs(const std::wstring& dir, bool off, Result& r) {
                 wanted, there ? client_libs::Root::Game : client_libs::Root::Missing, fileExists(aside));
             if (step == client_libs::Step::PutAside) {
                 if (makeFolders(kept) && moveFile(root, aside, true)) {
-                    r.log.push_back("installer: ROExt's " + std::string(lib.file) + " aside - the driver does its work");
+                    r.log.push_back("installer: ROExt's " + std::string(lib.file) +
+                                    " aside - the driver does its work");
                     bringRoextSettings(dir, r);
                 } else {
                     r.log.push_back("installer: ROExt's " + std::string(lib.file) + " could not go aside");

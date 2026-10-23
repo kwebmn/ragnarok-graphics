@@ -12,6 +12,7 @@
 #include "core/config.hpp"
 #include "core/sound_mix.hpp"
 #include "win/game_camera.hpp"
+#include "win/iat.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/sound_engine.hpp"
@@ -356,43 +357,16 @@ void WINAPI shutdownMiles() {
     g_shutdown();
 }
 
-// uaRO.exe's import slot of `name` from mss32.dll; null when it has none.
-IMAGE_THUNK_DATA* slotOf(const char* name) {
-    auto* base = reinterpret_cast<uint8_t*>(GetModuleHandleA(nullptr));
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-    const IMAGE_DATA_DIRECTORY& dir = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-    if (!dir.VirtualAddress) return nullptr;
-    for (auto* d = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(base + dir.VirtualAddress); d->Name; ++d) {
-        if (lstrcmpiA(reinterpret_cast<const char*>(base + d->Name), "mss32.dll") != 0 || !d->OriginalFirstThunk)
-            continue;
-        auto* names = reinterpret_cast<const IMAGE_THUNK_DATA*>(base + d->OriginalFirstThunk);
-        auto* slots = reinterpret_cast<IMAGE_THUNK_DATA*>(base + d->FirstThunk);
-        for (; names->u1.AddressOfData; ++names, ++slots) {
-            if (IMAGE_SNAP_BY_ORDINAL(names->u1.Ordinal)) continue;
-            const auto* by = reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(base + names->u1.AddressOfData);
-            if (std::strcmp(reinterpret_cast<const char*>(by->Name), name) == 0) return slots;
-        }
-    }
-    return nullptr;
-}
+IMAGE_THUNK_DATA* slotOf(const char* name) { return importSlot("mss32.dll", name); }
 
-// The import `name` to `hook`, the old one kept in `old`.
 template <typename Fn>
 bool hookImport(const char* name, Fn hook, Fn& old) {
-    IMAGE_THUNK_DATA* slot = slotOf(name);
-    DWORD was = 0;
-    if (!slot || !VirtualProtect(&slot->u1.Function, sizeof(void*), PAGE_READWRITE, &was)) return false;
-    old = reinterpret_cast<Fn>(slot->u1.Function);
-    slot->u1.Function = reinterpret_cast<uintptr_t>(hook);
-    DWORD unused = 0;
-    VirtualProtect(&slot->u1.Function, sizeof(void*), was, &unused);
-    return true;
+    return win::hookImport("mss32.dll", name, hook, old);
 }
 
 template <typename Fn>
 void readImport(const char* name, Fn& out) {
-    if (IMAGE_THUNK_DATA* slot = slotOf(name)) out = reinterpret_cast<Fn>(slot->u1.Function);
+    win::readImport("mss32.dll", name, out);
 }
 
 // The three calls of the game's sound at a place to play2D - each checked to be `call 0x421AF0; add esp, 1Ch`.
