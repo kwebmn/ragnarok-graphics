@@ -81,6 +81,10 @@ TEST(profile_step_the_innermost_known) {
     const uint32_t frame[] = {0x5597a0};
     CHECK_EQ(profile::stepOf(0x579a00, frame, 1), int(Step::Packets));  // its own place first
     CHECK_EQ(profile::stepOf(0x401000, nullptr, 0), -1);
+    // 3.0.2-beta.13: the ray's test with a triangle under the cell test, under the game's pick (or ours, in ddraw.dll)
+    const uint32_t pick[] = {0x42aa9c, 0x564ad5, 0x6a012345, 0x566514, 0x5597a0};
+    CHECK_EQ(profile::stepOf(0x40b2c0, pick, 5), int(Step::Pick));
+    CHECK_EQ(std::string(profile::stepName(int(Step::Pick))), std::string("the cell under the mouse"));
     CHECK_EQ(std::string(profile::stepName(int(Step::Present))), std::string("showing a frame"));
     CHECK_EQ(std::string(profile::stepName(-1)), std::string("elsewhere"));
 }

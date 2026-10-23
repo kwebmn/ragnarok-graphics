@@ -596,7 +596,7 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     // its input as late as Reflex wants it. Two frames ahead (above), the frames drawn waited out Reflex's sleep in
     // the queue instead - the cursor some 100 ms behind the mouse at 4x (R-Q7RBYV: "it feels slow"). 2.5.26: Reflex
     // without frame generation too ([frames] reflex).
-    if (timing_.reflex || timing_.shown > 1.05) {
+    if (!o.loading && (timing_.reflex || timing_.shown > 1.05)) {  // 3.0.2-beta.13: a loading picture not waited for
         QueryPerformanceCounter(&a);
         const bool shown = channel_.waitPresented(presentsSent_, 1000);
         QueryPerformanceCounter(&b);

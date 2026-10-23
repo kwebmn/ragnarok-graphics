@@ -87,10 +87,12 @@ inline bool sameDistance(float a, float b) {
 // 0.89: whether the walk is used on the map now: once it has agreed with the game's own answer kAgree times running
 // on it, and then checked again every kEvery picks. 0.90.1: a disagreement checks the map anew (a ray grazing the
 // eye's own cell may go either way); the kOff-th and the game's own pick is used from then on, on every map. 0.90.2:
-// in a map's first kSettle picks the game's answer is none while it is still setting the map up - not counted.
+// in a map's first kSettle picks the game's answer is none while it is still setting the map up. 3.0.2-beta.13: those
+// picks ask neither (none, as the game's own then), and kAgree 30 in place of 240 - the game's own takes 7.6 ms on a
+// 200x200 map, and a map's 240 checks made the second half of its loading (beta.12's measure: 1.8 s of 3.7).
 class Trust {
 public:
-    static constexpr int kAgree = 240, kEvery = 120, kOff = 3, kSettle = 60;
+    static constexpr int kAgree = 30, kEvery = 120, kOff = 3, kSettle = 60;
     // The map now (its ground's address, cells and size): another map's is checked anew (true).
     bool on(unsigned long map) {
         if (map == map_) return false;
@@ -101,16 +103,19 @@ public:
     }
     bool trusted() const { return !off_ && agreed_ >= kAgree; }
     bool off() const { return off_; }
-    // Whether this pick is checked against the game's own.
-    bool check() {
+    // 3.0.2-beta.13: one of the map's first kSettle picks - no cell, neither asked
+    bool settling() {
+        if (onMap_ >= kSettle) return false;
         ++onMap_;
-        return !trusted() || ++picks_ % kEvery == 0;
+        return true;
     }
+    // Whether this pick is checked against the game's own.
+    bool check() { return !trusted() || ++picks_ % kEvery == 0; }
     // A checked pick: whether both answers were the same. True when it is the one that makes the walk trusted.
     bool result(bool same) {
         if (!same) {
             agreed_ = 0;
-            if (onMap_ > kSettle) off_ = off_ || ++disagreed_ >= kOff;
+            off_ = off_ || ++disagreed_ >= kOff;
             return false;
         }
         if (off_ || agreed_ >= kAgree) return false;

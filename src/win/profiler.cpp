@@ -116,7 +116,8 @@ public:
     size_t ownIndex() const { return own_ >= 0 ? size_t(own_) : size_t(-1); }
 
     // Windows' function a place is in, by its module's exports (read the first time asked); "" when the nearest one
-    // before it is too far to be its own
+    // before it is too far to be its own (3.0.2-beta.13: 1 KB - beta.12 named the bridge's wait in ntdll's code of
+    // its own after an export far before it)
     std::string functionAt(int i, uint32_t address) {
         Module& m = mods_[size_t(i)];
         if (!m.exportsRead) {
@@ -124,7 +125,7 @@ public:
             m.exports = pe::exportsOf(reader(m.base, m.size));
         }
         const pe::Export* e = pe::exportAt(m.exports, address - m.base);
-        return e && address - m.base - e->rva < 0x1000 ? e->name : std::string();
+        return e && address - m.base - e->rva < 0x400 ? e->name : std::string();
     }
 
     // A return address: right after a call (E8 rel32; FF /2 by register, memory or [disp32]); remembered

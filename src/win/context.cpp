@@ -628,7 +628,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     if (knownGameBuild()) {  // 3.0.2-beta.12: the world by the game's camera, read for it alone without DLSS
         float seen[12];
-        watchMapLoad(readGameMap(), readGameCamera(seen));
+        watchMapLoad(readGameMap(), readGameCamera(seen), !waitForVblank);
     }
     // 2.2.1: the AI pictures' kinds as the file says now (a kind off hidden at once; 2.2.2: each kind of sprites
     // too); Pause: none
@@ -708,7 +708,20 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.screenshot = screenshot;
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
     soundFrame(foreground);  // 0.91: quieter in the background; the crowd's limiter thinned out
-    renderer->present(window, out.cx, out.cy, source, o);
+    // 3.0.2-beta.13 (beta.12's measure: a map's 102 loading pictures waited 1.68 s for their presents, 60 a second):
+    // the game's loading picture while a map loads - no frame limit, its present not waited for, and through
+    // uaro-render64.exe at most 10 a second (the game draws it anew for each per cent of the map's models)
+    bool shown = true;
+    if (mapLoad_.loading() && !waitForVblank) {
+        o.fpsLimit = 0;
+        o.loading = true;
+        shown = !renderer->remote() || loadShownMs_ <= 0.0 || frameMs_ - loadShownMs_ >= 100.0;
+        if (shown) {
+            loadShownMs_ = frameMs_;
+            ++loadShown_;
+        }
+    }
+    if (shown) renderer->present(window, out.cx, out.cy, source, o);
     if (!firstPicture_) {  // 2.12: the start went well (core/safe_mode)
         firstPicture_ = true;
         LOG_INFO("%s", safe::kFirstPicture);
@@ -753,26 +766,37 @@ bool inflatedSoFar(uint32_t out[3]) {
 // nothing): each map's loading measured by itself - from its loading picture to its world (core/map_load.hpp), the
 // game's thread sampled meanwhile (Profiler), with the frames shown, the bridge's times and cps.dll's inflating over
 // it; one block in the log at its end.
-void Context::watchMapLoad(const std::string& map, bool world) {
+void Context::watchMapLoad(const std::string& map, bool world, bool picture) {
     LARGE_INTEGER now, f;
     QueryPerformanceCounter(&now);
     QueryPerformanceFrequency(&f);
+    frameMs_ = double(now.QuadPart) * 1000.0 / double(f.QuadPart);
     using Event = map_load::Watch::Event;
-    switch (mapLoad_.frame(double(now.QuadPart) * 1000.0 / double(f.QuadPart), map, world)) {
-    case Event::Began:
-        loadFrames_ = 1;  // its loading picture
+    const Event event = mapLoad_.frame(frameMs_, map, world);
+    if (event == Event::Began) {
+        loadPictures_ = loadShown_ = loadGameFrames_ = 0;
+        loadShownMs_ = 0.0;
         renderer->bridgeTimes(loadSent_, loadWaited_);
         loadInflatedKnown_ = inflatedSoFar(loadInflated_);
+        pickCounts(loadPicks_, loadChecked_, loadTheirsMs_);
         Profiler::get().open(GetCurrentThreadId());
+    }
+    if ((event == Event::Began || event == Event::None) && mapLoad_.loading())
+        ++(picture ? loadPictures_ : loadGameFrames_);  // 3.0.2-beta.13: the game's loading picture shows at once
+    switch (event) {
+    case Event::Began:
+    case Event::None:
         break;
     case Event::Ended: {
         const std::string prefix = "map " + mapLoad_.map();
-        char head[200], before[64] = "";
+        char head[240], before[64] = "";
         if (mapLoad_.beforeMs() >= 0)
             std::snprintf(before, sizeof before, " (the old map's last frame %.2f s before it)",
                           mapLoad_.beforeMs() / 1000.0);
-        std::snprintf(head, sizeof head, "loaded in %.2f s from its loading picture to its world%s, %u frames shown",
-                      mapLoad_.loadMs() / 1000.0, before, loadFrames_);
+        std::snprintf(head, sizeof head,
+                      "loaded in %.2f s from its loading picture to its world%s; %u loading pictures (%u shown) and "
+                      "%u game frames meanwhile",
+                      mapLoad_.loadMs() / 1000.0, before, loadPictures_, loadShown_, loadGameFrames_);
         std::vector<std::string> more;
         char line[240];
         if (renderer->remote()) {
@@ -791,14 +815,21 @@ void Context::watchMapLoad(const std::string& map, bool world) {
                           double(inflated[2] - loadInflated_[2]) / 1e6);
             more.push_back(line);
         }
+        unsigned picks = 0, checked = 0;
+        double theirsMs = 0.0;
+        pickCounts(picks, checked, theirsMs);
+        if (picks != loadPicks_) {  // 3.0.2-beta.13
+            std::snprintf(line, sizeof line,
+                          "%s: the cell under the mouse - %u picks, %u of them checked against the game's own (%.2f s)",
+                          prefix.c_str(), picks - loadPicks_, checked - loadChecked_,
+                          (theirsMs - loadTheirsMs_) / 1000.0);
+            more.push_back(line);
+        }
         Profiler::get().close(prefix, head, more);
         break;
     }
     case Event::Dropped:
         Profiler::get().drop();
-        break;
-    case Event::None:
-        if (mapLoad_.loading()) ++loadFrames_;
         break;
     }
 }

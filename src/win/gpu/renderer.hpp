@@ -59,6 +59,9 @@ struct PresentOptions {
     std::string screenshot;     // 0.54: the picture as shown, to this PNG file (Ctrl+Shift+F12); "" none
     bool hdr = false;           // 0.65: [display] hdr - HDR10 where the monitor shows HDR (Direct3D 12)
     bool pacerSleeps = false;   // 2.5.20: the battery saver - fps_limit kept by sleeping alone (FramePacer)
+    // 3.0.2-beta.13: the game's loading picture while a map loads - the game's thread does not wait for its present
+    // (Reflex's, frame generation's); not sent to the renderer
+    bool loading = false;
 };
 
 // Direct3D 12 behind the DirectDraw surfaces: plays frame records onto the render target the client draws into,

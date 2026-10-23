@@ -29,7 +29,8 @@ constexpr StepSpan kStepSpans[] = {
     {0x42B030, 0x42C1A0, Step::Pictures},   {0x49D830, 0x49D950, Step::Pictures},  {0x4385F0, 0x4390C0, Step::Sprites},
     {0x5131F0, 0x513570, Step::Resources},  {0x4EA9A0, 0x4EB1D0, Step::World},     {0x559030, 0x559750, Step::MapStart},
     {0x40FDB0, 0x40FE40, Step::Present},    {0x404BC0, 0x404CB0, Step::Present},   {0x579900, 0x57D420, Step::Packets},
-    {0x654100, 0x654190, Step::Messages},   {0x559750, 0x559B00, Step::Frames},
+    {0x654100, 0x654190, Step::Messages},   {0x559750, 0x559B00, Step::Frames},    {0x42A9A0, 0x42AB00, Step::Pick},
+    {0x564A20, 0x564B80, Step::Pick},
 };
 
 int stepAt(uint32_t address) {
@@ -56,7 +57,8 @@ const char* stepName(int step) {
                                                          "showing a frame",
                                                          "the server's packets",
                                                          "Windows' messages",
-                                                         "the game's frames"};
+                                                         "the game's frames",
+                                                         "the cell under the mouse"};
     return step >= 0 && step < int(Step::Count) ? kNames[step] : "elsewhere";
 }
 

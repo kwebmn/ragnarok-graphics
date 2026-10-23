@@ -111,13 +111,17 @@ private:
     bool scaledUpscale_ = false;  // and whether DLSS draws the world (part 3)
     bool cameraKnown_ = false;    // the game's camera was read last frame (part 3, for the log)
     std::string map_;  // the map the game showed at the last present (AI textures)
-    // 3.0.2-beta.12: a map's loading measured (watchMapLoad) - the frames shown over it, the bridge's times and
-    // cps.dll's count at its start
+    // 3.0.2-beta.12: a map's loading measured (watchMapLoad) - the frames over it, the bridge's times and cps.dll's
+    // count at its start; 3.0.2-beta.13: its loading pictures and the game's frames apart, the ones shown, the picks
     map_load::Watch mapLoad_;
-    uint32_t loadFrames_ = 0;
+    double frameMs_ = 0.0;  // this present's time (QueryPerformanceCounter, ms)
+    uint32_t loadPictures_ = 0, loadShown_ = 0, loadGameFrames_ = 0;
+    double loadShownMs_ = 0.0;  // the last loading picture shown
     double loadSent_ = 0.0, loadWaited_ = 0.0;
     uint32_t loadInflated_[3] = {};
     bool loadInflatedKnown_ = false;
+    unsigned loadPicks_ = 0, loadChecked_ = 0;
+    double loadTheirsMs_ = 0.0;
     bool renderScaleNoted_ = false;  // the log has said render_scale is not used with DLSS
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
@@ -146,7 +150,7 @@ private:
     // 0.76: [frames] keep_fps - the frames counted since keepSince_, slow windows in a row, the effects turned off for
     // this game; the effects' costs written for the settings app every half minute
     void keepFrameRate(const Config& config, HWND window);
-    void watchMapLoad(const std::string& map, bool world);  // 3.0.2-beta.12
+    void watchMapLoad(const std::string& map, bool world, bool picture);  // 3.0.2-beta.12
     uint64_t keepSince_ = 0;
     unsigned keepFrames_ = 0;
     int keepSlow_ = 0;

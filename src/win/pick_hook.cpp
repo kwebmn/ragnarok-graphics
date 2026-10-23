@@ -48,6 +48,9 @@ pick::Trust g_trust;
 bool g_on = false;
 LARGE_INTEGER g_freq{};
 int64_t g_theirs = 0, g_ours = 0;  // the ticks both took while checked on the map
+// 3.0.2-beta.13: the picks, those checked and the game's own ticks on them - all of the game's (pickCounts)
+unsigned g_picks = 0, g_checked = 0;
+int64_t g_theirsAll = 0;
 
 uint32_t at(uint32_t address) { return *reinterpret_cast<volatile const uint32_t*>(uintptr_t(address)); }
 
@@ -66,6 +69,7 @@ uint32_t groundOf(uint32_t world) {
 
 unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) {
     const auto original = reinterpret_cast<PickFn>(uintptr_t(kPick));
+    ++g_picks;
     if (!g_on || g_trust.off()) return original(mode, x, y);
     const uint32_t world = at(mode + kWorld), view = at(mode + kView), camera = at(kCamera);
     const uint32_t ground = world && view && camera ? groundOf(world) : 0;
@@ -74,6 +78,7 @@ unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) 
     if (w <= 0 || h <= 0 || w > 8192 || h > 8192 || size <= 0 || !at(ground + kCells)) return original(mode, x, y);
     if (g_trust.on(ground ^ (at(ground + kCells) * 31u) ^ (uint32_t(w) << 20) ^ uint32_t(h)))  // another map
         g_ours = g_theirs = 0;
+    if (g_trust.settling()) return 0;  // 3.0.2-beta.13: the game's own answer is none then, at 7.6 ms a time
     const bool checking = g_trust.check();
     const int64_t start = checking ? ticks() : 0;
     float ray[6] = {};
@@ -96,6 +101,8 @@ unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) 
     int gx = *x, gy = *y;
     const bool theirs = original(mode, &gx, &gy) != 0;
     const int64_t ended = ticks();
+    ++g_checked;
+    g_theirsAll += ended - middle;
     bool same = theirs == hit;
     if (same && hit && (gx != cx || gy != cy))  // two cells at the same distance: the ray at their shared edge
         same = pick::sameDistance(cell(ground, ray, gx, gy), distance);
@@ -124,6 +131,13 @@ unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) 
 }
 
 }  // namespace
+
+void pickCounts(unsigned& picks, unsigned& checked, double& theirsMs) {
+    if (!g_freq.QuadPart) QueryPerformanceFrequency(&g_freq);
+    picks = g_picks;
+    checked = g_checked;
+    theirsMs = double(g_theirsAll) * 1000.0 / double(g_freq.QuadPart);
+}
 
 bool installPickHook(bool on) {
     static int done = -1;  // once: 1 hooked, 0 not

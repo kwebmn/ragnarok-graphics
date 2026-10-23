@@ -23,7 +23,8 @@ struct Module {
 // and .jpg: the picture's class 0x42b030-0x42c1a0); sprites (CSprRes::Load 0x4385f0); the resources made of their
 // files (0x5131f0: models, the map's files); the world and its near models (the map's load 0x4ea9a0); the rest of
 // the map's start (0x559030); showing a frame (0x40fdb0, 0x404bc0); the server's packets (0x579900); Windows'
-// messages (0x654100); the rest of a game's frame (CGameMode::OnRun 0x559750).
+// messages (0x654100); the rest of a game's frame (CGameMode::OnRun 0x559750). 3.0.2-beta.13: the cell under the
+// mouse (the game's pick 0x564a20 and its cell test 0x42a9a0, which the driver's own pick calls too).
 enum class Step : int {
     Files,
     Pictures,
@@ -35,6 +36,7 @@ enum class Step : int {
     Packets,
     Messages,
     Frames,
+    Pick,
     Count
 };
 

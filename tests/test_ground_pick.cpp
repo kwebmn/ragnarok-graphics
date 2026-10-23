@@ -141,25 +141,25 @@ TEST(ground_pick_walk_no_map_no_cell) {
 TEST(ground_pick_trusted_after_agreeing_on_each_map) {
     pick::Trust trust;
     CHECK(trust.on(0x1000));
+    // 3.0.2-beta.13: a map's first kSettle picks ask neither - the game's own answer is none while it sets the map up,
+    // and 240 checks of the game's own at 7.6 ms made the second half of a map's loading (beta.12's measure)
+    for (int i = 0; i < pick::Trust::kSettle; ++i) CHECK(trust.settling());
+    CHECK(!trust.settling());
     CHECK(!trust.trusted());
+    CHECK(trust.check());
     for (int i = 1; i < pick::Trust::kAgree; ++i) CHECK(!trust.result(true));
-    CHECK(trust.result(true));  // the 240th: trusted from now on
+    CHECK(trust.result(true));  // the kAgree-th: trusted from now on
     CHECK(trust.trusted());
     CHECK(!trust.result(true));
     int checked = 0;
     for (int i = 0; i < 10 * pick::Trust::kEvery; ++i) checked += trust.check() ? 1 : 0;
     CHECK(checked == 10);  // trusted: one pick in kEvery checked still
     CHECK(!trust.on(0x1000));  // the same map: still
-    CHECK(trust.trusted());
-    trust.on(0x2000);  // another: checked anew, every pick
+    CHECK(trust.trusted() && !trust.settling());
+    trust.on(0x2000);  // another: it settles, then every pick is checked anew
     CHECK(!trust.trusted());
-    CHECK(trust.check() && trust.check());
-    for (int i = 0; i < 10; ++i) {  // 0.90.2: while the map settles, not counted
-        trust.check();
-        CHECK(!trust.result(false));
-    }
-    CHECK(!trust.off());
-    for (int i = 0; i < pick::Trust::kSettle; ++i) trust.check();
+    for (int i = 0; i < pick::Trust::kSettle; ++i) CHECK(trust.settling());
+    CHECK(!trust.settling() && trust.check() && trust.check());
     CHECK(!trust.result(false));  // a disagreement: checked anew
     CHECK(!trust.off() && !trust.trusted());
     for (int i = 1; i < pick::Trust::kAgree; ++i) trust.result(true);
@@ -169,6 +169,12 @@ TEST(ground_pick_trusted_after_agreeing_on_each_map) {
     for (int i = 0; i < 300; ++i) trust.result(true);
     trust.on(0x3000);
     CHECK(!trust.trusted());
+}
+
+TEST(ground_pick_a_map_checked_briefly) {
+    // 3.0.2-beta.13: a map's checks before it is trusted cost at most some 0.25 s of the game's own (7.6 ms each on
+    // a 200x200 map), not 1.8 s
+    CHECK(pick::Trust::kAgree * 7.6 <= 250.0);
 }
 
 TEST(ground_pick_same_distance_is_a_tie) {
