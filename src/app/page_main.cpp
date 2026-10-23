@@ -56,7 +56,8 @@ public:
         rows_->buildRow(p, "sound.engine");
         rows_->buildRow(p, "pad.enabled");  // 2.9: uaRO Pad inside the driver, on by default
         rows_->buildRow(p, "frames.battery_saver");
-        p.buttons({{kRecommended, t(Text::MainRecommended)}, {kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});
+        p.buttons({{kRecommended, t(Text::MainRecommended), true, true},  // blue (the user)
+                   {kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});
         if (two)
             p.nextColumn();
         else
