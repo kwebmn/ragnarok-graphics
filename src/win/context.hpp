@@ -118,6 +118,7 @@ private:
     map_load::Watch mapLoad_;
     SeveralWindows severalWindows_;  // 3.0.3-beta.2: the name in the title, each character's window at its place
     unsigned windowsFrames_ = 0;
+    bool checkingWindows_ = false;  // 3.0.3-beta.4: a present from the game's WM_MOVE handler meanwhile skips it
     FrontGame frontGame_;      // 3.0.3-beta.3: which running game is the main one
     bool mainWindow_ = true;   // this one, at the last updateLight
     double frameMs_ = 0.0;  // this present's time (QueryPerformanceCounter, ms)

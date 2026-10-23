@@ -2,6 +2,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <utility>
 
 #include "app/page.hpp"
@@ -93,7 +94,13 @@ public:
                     p.gap();
                     p.heading(t(Text::RoextHeading));
                     p.note(t(Text::RoextNote));
-                    buildRows(p);
+                    buildRows(p, "roext", false);
+                }
+                // 3.0.3-beta.4: several game windows ([windows]) - their own heading, whatever ROExt is
+                if (anyListed("windows")) {
+                    p.gap();
+                    p.heading(t(Text::WindowsHeading));
+                    buildRows(p, "windows");
                 }
                 break;
             case settings::Page::Chat:
@@ -504,24 +511,35 @@ private:
         return wide(token + s.unit);
     }
 
-    void buildRows(Panel& p) {
+    // 3.0.3-beta.4: a page's rows of one section alone (nullptr: all); `liveNote` - the note on applying at the end
+    void buildRows(Panel& p, const char* section = nullptr, bool liveNote = true) {
         Model& m = host_.model();
         const std::vector<IniSetting>& all = iniSettings();
+        const auto mine = [&](const IniSetting& s) {
+            return listed(s) && (!section || std::strcmp(s.section, section) == 0);
+        };
         ownSize_ = nullptr;
         for (size_t i = 0; i < all.size(); ++i) {
             const IniSetting& s = all[i];
-            if (!listed(s)) continue;
+            if (!mine(s)) continue;
             buildOne(p, i);
             if (sectionKey(s) == "quality.dlss_height" && dlssScreen().width > 0)
                 ownSize_ = p.note(ownSizeText(), Tone::Normal);
             // 2.4.2: one note under rows in a row that apply at the next start
             size_t next = i + 1;
-            while (next < all.size() && !listed(all[next])) ++next;
+            while (next < all.size() && !mine(all[next])) ++next;
             if (!appliesNow(sectionKey(s)) && (next == all.size() || appliesNow(sectionKey(all[next]))))
                 p.note(t(Text::AfterRestart));
         }
+        if (!liveNote) return;
         p.gap();
         p.note(t(m.now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
+    }
+
+    bool anyListed(const char* section) const {
+        for (const IniSetting& s : iniSettings())
+            if (listed(s) && std::strcmp(s.section, section) == 0) return true;
+        return false;
     }
 
     std::vector<settings::Page> left_, right_;

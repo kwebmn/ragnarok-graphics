@@ -4318,6 +4318,7 @@ constexpr Entry kTexts[] = {
      "тихіші, як каже «Гучність у фоні».",
      "Выключено: когда открыто несколько окон игры, музыку играет только то, в котором вы играли последним. Их звуки "
      "остаются, тише, как говорит «Громкость в фоне»."},
+    {Text::WindowsHeading, "Several game windows", "Кілька вікон гри", "Несколько окон игры"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -394,6 +394,7 @@ enum class Text : uint16_t {
     WindowsTitleName, WindowsTitleNameHint, WindowsRememberPlace,
     WindowsRememberPlaceHint,  // 3.0.3-beta.2: several game windows at once
     WindowsOthersLight, WindowsOthersLightHint, WindowsOthersMusic, WindowsOthersMusicHint,  // 3.0.3-beta.3
+    WindowsHeading,  // 3.0.3-beta.4: «Гра й чат»'s heading of the several windows' rows
     Count
 };
 
