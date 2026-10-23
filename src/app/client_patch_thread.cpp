@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include "app/check_notify.hpp"
 #include "app/client_patch.hpp"
 
 namespace uagfx::app {
@@ -20,6 +21,7 @@ DWORD WINAPI ask(void*) {
     s.kind = PatchState::Done;
     s.check = checkClientPatch(g_dir);
     set(s);
+    checkDone();
     return 0;
 }
 

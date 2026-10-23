@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include "app/check_notify.hpp"
 #include "app/launcher.hpp"
 
 namespace uagfx::app {
@@ -17,6 +18,7 @@ void set(const LauncherState& s) {
 
 DWORD WINAPI ask(void*) {
     set(launcherNow(g_lang));
+    checkDone();
     return 0;
 }
 

@@ -44,6 +44,7 @@ TEST(roext_reads_dinput8_ini_as_roext) {
 
 TEST(roext_settings_go_into_uaro_graphics_ini) {
     roext::Settings s;
+    CHECK(s.windowWidth == 1600 && s.windowHeight == 863);  // the client's own dinput8.ini
     s.windowLock = false;
     s.mouseButtons = true;
     s.freeCpu = 10;
@@ -77,6 +78,7 @@ TEST(roext_knows_the_games_window) {
 TEST(roext_plans_the_window) {
     const int work[4] = {0, 0, 1921, 1040};  // the work area: all but the taskbar
     roext::Settings s;  // locked, no size of its own
+    s.windowWidth = s.windowHeight = 0;
     CHECK_EQ(roext::styleOf(s), 0x860A0000u);
     roext::WindowPlan p = roext::windowPlan(s, work, 16, 39);
     CHECK(p.style == 0x860A0000u && p.exStyle == 0 && p.place);

@@ -129,6 +129,7 @@ elseif(WIN32)
                 src/app/ai_cache.cpp src/app/update.cpp src/app/report_send.cpp src/app/pack_compact.cpp
                 src/app/shots.cpp src/app/palettes.cpp src/app/installer.cpp src/app/update_run.cpp src/app/download.cpp src/app/args.cpp
                 src/app/launcher.cpp src/app/launcher_thread.cpp src/app/shortcuts.cpp src/app/reports.cpp
+                src/app/check_notify.cpp
                 src/app/client_patch.cpp src/win/system_probe.cpp src/win/gpu/adapters.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE

@@ -639,7 +639,9 @@ TEST(config_reads_the_sound_librarys_switch) {
 TEST(config_reads_roexts_settings) {
     const Config d = parseConfig("");
     CHECK(d.clientRoext && d.roext.windowLock && !d.roext.windowOnTop && !d.roext.mouseButtons && !d.roext.altF4);
-    CHECK(!d.roext.minimizeKey && d.roext.freeCpu == 4 && d.roext.codePage == -1 && d.roext.windowWidth == 0);
+    CHECK(!d.roext.minimizeKey && d.roext.freeCpu == 4 && d.roext.codePage == -1);
+    CHECK(d.roext.windowWidth == 1600 && d.roext.windowHeight == 863);  // the client's dinput8.ini: a full client
+                                                                        // (its ini the template) as with ROExt
     const Config c = parseConfig("[client]\nroext = 0\n[roext]\nwindow_lock = 0\nwindow_on_top = 1\nwindow_x = 10\n"
                                  "window_y = 20\nwindow_width = 1280\nwindow_height = 720\nmouse_buttons = 1\n"
                                  "alt_f4 = 1\nminimize_key = 1\nfree_cpu = 0\ncode_page = 1251\n");

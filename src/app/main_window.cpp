@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <memory>
 
+#include "app/check_notify.hpp"
 #include "app/client_patch.hpp"
 #include "app/installer.hpp"
 #include "app/mnemonic.hpp"
@@ -53,6 +54,7 @@ constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page; 2.6: the view, 
 constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics (and the reports) go
 constexpr UINT kAskMachine = WM_APP + 9;  // 2.12: the card or the screen changed since the settings were picked
 constexpr UINT kOpenReports = WM_APP + 10;  // 2.13: --report - «Нове звернення» once the window is up
+constexpr UINT kChecked = WM_APP + 11;  // 3.0.1-beta.8: a start check's answer is in (app/check_notify)
 // 2.13: WM_COPYDATA of a second app the game's Ctrl+Shift+F10 started: "<shot>\n<map>" in UTF-8
 constexpr ULONG_PTR kReportData = 0x52505254;
 
@@ -337,18 +339,20 @@ void MainWindow::create() {
     // start setup.exe and wait for it), setup.exe's values taken over while the game is closed
     const std::wstring owned = model_->ownGameKey(lang_);
     if (!owned.empty()) message(owned, true);
-    buildPage();
-    SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
-    // 2.12: a fresh install set up for this computer at once («Гра» says so), a changed card or screen asked about
-    if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     model_->recordChannel(lang_);  // 3.0.0-beta.2: a beta build's install stays on «Бета» after a release build
     installer::atStart(model_->paths().dir);  // 3.0.1: an unpacked client's shortcut; this folder's Apps entry right
     syncLibraries();  // 3.0.1-beta.5: our own libraries in the game's root as their switches say
+    // 3.0.1-beta.8: the checks first, the page while they ask; each wakes the window with its answer (kChecked)
+    setCheckWindow(hwnd_, kChecked);
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
     startClientPatchCheck(model_->paths().dir);  // 2.14: the game's new files
     // 2.13: the waiting reports sent, the answers counted
     startReportsCheck(model_->paths().dir, computerKey(model_->paths().dir));
+    buildPage();
+    SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
+    // 2.12: a fresh install set up for this computer at once («Гра» says so), a changed card or screen asked about
+    if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     PostMessageW(hwnd_, kAskStats, 0, 0);
     if (startReport_) PostMessageW(hwnd_, kOpenReports, 0, 0);
 }
@@ -814,6 +818,7 @@ std::wstring MainWindow::windowLetters() const {
 void MainWindow::syncLibraries() {
     installer::Result r;
     installer::syncClientLibs(model_->paths().dir, false, r);
+    if (!r.log.empty()) model_->load();  // 3.0.1-beta.8: ROExt's dinput8.dll moved: its window now the driver's
 }
 
 void MainWindow::doApply(bool play) {
@@ -1032,6 +1037,14 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             PostMessageW(hwnd_, kOpenReports, 0, 0);
             return TRUE;
         }
+        case kChecked:  // 3.0.1-beta.8: a start check's answer - the strip and the page now, not at the next timer
+            updateStrip();
+            if (current_) current_->tick();
+            if (!unreadFromWindow_ && reportsUnread() != unread_) {
+                unread_ = reportsUnread();
+                retextReports();
+            }
+            return 0;
         case kAskMachine: {  // 2.12: the settings picked again for the new card or screen, if the player wants
             const settings::Machine x = model_->machine();
             const std::string screen = std::to_string(x.screenWidth) + "x" + std::to_string(x.screenHeight);

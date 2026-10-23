@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include "app/check_notify.hpp"
 #include "app/reports.hpp"
 #include "app/reports_window.hpp"
 
@@ -15,6 +16,7 @@ DWORD WINAPI ask(void*) {
     std::vector<reports::Summary> list;
     std::string error;
     if (listReports(*g_key, list, error)) InterlockedExchange(&g_unread, reports::unreadOf(list));
+    checkDone();
     return 0;
 }
 

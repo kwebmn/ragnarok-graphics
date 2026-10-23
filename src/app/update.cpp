@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include "app/check_notify.hpp"
 #include "app/files.hpp"
 #include "app/text.hpp"
 #include "app/update_run.hpp"
@@ -28,6 +29,7 @@ DWORD WINAPI check(void*) {
     s.branch = c.branch;
     s.error = c.error;
     set(s);
+    checkDone();
     return 0;
 }
 

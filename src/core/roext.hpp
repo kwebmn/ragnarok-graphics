@@ -13,7 +13,8 @@ namespace uagfx::roext {
 struct Settings {  // the defaults: the uaRO client's own dinput8.ini
     bool windowLock = true;    // borderless over the screen's work area (all but the taskbar)
     bool windowOnTop = false;  // above the other windows
-    int windowX = 0, windowY = 0, windowWidth = 0, windowHeight = 0;  // unlocked: this client size, both set
+    // this client size at this place when both sizes are set (past the lock's work area): the client's 1600 x 863
+    int windowX = 0, windowY = 0, windowWidth = 1600, windowHeight = 863;
     bool mouseButtons = false;  // the 3rd-5th mouse buttons as F24, F23, F22 (bindable in the game)
     bool altF4 = false;         // Alt+F4 as F4 in the game, Alt+Print Screen closes it
     bool minimizeKey = false;   // Ctrl+W minimizes the game
