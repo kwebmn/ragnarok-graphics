@@ -32,11 +32,15 @@ target_compile_options(uagfx_webp PRIVATE -w)
 add_library(uagfx_stb STATIC third_party/stb/stb_image_jpeg.c third_party/stb/stb_image_write_jpeg.c)
 target_include_directories(uagfx_stb PUBLIC third_party/stb)
 target_compile_options(uagfx_stb PRIVATE -w)
+# 3.0.1-beta.7: minimp3 (CC0): the mp3 decoder of our mss32.dll (the music, the game's mp3 sounds).
+add_library(uagfx_minimp3 STATIC third_party/minimp3/minimp3_impl.c)
+target_include_directories(uagfx_minimp3 PUBLIC third_party/minimp3)
+target_compile_options(uagfx_minimp3 PRIVATE -w)
 file(GLOB_RECURSE UAGFX_CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(uagfx_core STATIC ${UAGFX_CORE_SOURCES})
 target_include_directories(uagfx_core PUBLIC src)
 target_compile_options(uagfx_core PRIVATE -Wall -Wextra)
-target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp uagfx_stb)
+target_link_libraries(uagfx_core PUBLIC uagfx_miniz uagfx_webp uagfx_stb uagfx_minimp3)
 
 # 2.9: uaRO Pad's portable core (from uaro-gamepad e59889d): the protocol, the world, the controller's logic. Its
 # Windows part (src/pad/win) is built into ddraw.dll, which mounts the pad itself.
