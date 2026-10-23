@@ -161,6 +161,15 @@ TEST(miles_decodes_ima_adpcm) {
     int worst = 0;  // and the sine itself once the step has grown from the first block's index 0
     for (size_t i = 16; i < sine.size(); ++i) worst = std::max(worst, std::abs(int(pcm[i]) - int(sine[i])));
     CHECK(worst < 200);
+    // Miles' AILSOUNDINFO alone (no fmt chunk): the same samples, the frames a block holds by its size
+    miles::SoundInfo bare = info;
+    bare.fmt = nullptr;
+    bare.fmtLen = 0;
+    std::vector<int16_t> again;
+    CHECK(miles::decodeAdpcm(bare, again));
+    CHECK(again == pcm);
+    bare.blockSize = 0;
+    CHECK(!miles::decodeAdpcm(bare, again));
     // a last block cut short: its whole bytes still decode, and the count says so (3 blocks, then 1 + 2 * 242)
     const std::vector<uint8_t> cut(blocks.begin(), blocks.end() - 10);
     const std::vector<uint8_t> cutImage = wave(0x11, 1, 22050, 4, 256, {uint8_t(spb), uint8_t(spb >> 8)}, cut);
@@ -240,4 +249,75 @@ TEST(miles_mixes_as_miles) {
     const float far[3] = {0, 0, 150};
     miles::place3D(far, front, up, 10, 100, gain, pan);
     CHECK(gain == 0.0f);
+}
+
+// A sample's sound (mss32's AIL_set_sample_file): PCM as it is, ADPCM decoded to 16 bits; what XAudio2 cannot play
+// refused
+TEST(miles_makes_a_samples_sound) {
+    const std::vector<int16_t> two = {100, -100, 200, -200};
+    const std::vector<uint8_t> mono = miles::makeWav(two.data(), 4, 1, 22050);
+    CHECK_EQ(miles::imageSize(mono.data()), mono.size());
+    miles::Pcm p;
+    CHECK(miles::pcmOf(mono.data(), mono.size(), p));
+    CHECK(p.channels == 1 && p.bits == 16 && p.rate == 22050 && p.bytes.size() == 8);
+    CHECK(std::memcmp(p.bytes.data(), two.data(), 8) == 0);
+    const std::vector<uint8_t> eight = wave(1, 2, 11025, 8, 2, {}, {128, 128, 255, 0, 7});  // a byte over: dropped
+    CHECK(miles::pcmOf(eight.data(), eight.size(), p));
+    CHECK(p.channels == 2 && p.bits == 8 && p.rate == 11025 && p.bytes.size() == 4);
+    std::vector<int16_t> sine(600);
+    for (size_t i = 0; i < sine.size(); ++i) sine[i] = int16_t(8000.0 * std::sin(double(i) * 0.1));
+    uint16_t spb = 0;
+    std::vector<int16_t> heard;
+    const std::vector<uint8_t> blocks = imaEncode(sine, spb, heard);
+    const std::vector<uint8_t> ima = wave(0x11, 1, 44100, 4, 256, {uint8_t(spb), uint8_t(spb >> 8)}, blocks);
+    CHECK(miles::pcmOf(ima.data(), ima.size(), p));
+    CHECK(p.channels == 1 && p.bits == 16 && p.rate == 44100 && p.bytes.size() == heard.size() * 2);
+    CHECK(std::memcmp(p.bytes.data(), heard.data(), p.bytes.size()) == 0);
+    const std::vector<uint8_t> floats = wave(3, 1, 22050, 32, 4, {}, std::vector<uint8_t>(8, 0));
+    CHECK(!miles::pcmOf(floats.data(), floats.size(), p));
+    const std::vector<uint8_t> slow = wave(1, 1, 500, 16, 2, {}, std::vector<uint8_t>(8, 0));  // under 1000 Hz
+    CHECK(!miles::pcmOf(slow.data(), slow.size(), p));
+    const std::vector<uint8_t> three = wave(1, 3, 22050, 16, 6, {}, std::vector<uint8_t>(12, 0));
+    CHECK(!miles::pcmOf(three.data(), three.size(), p));
+    const std::vector<uint8_t> empty = wave(1, 1, 22050, 16, 2, {}, {});
+    CHECK(!miles::pcmOf(empty.data(), empty.size(), p));
+    std::vector<uint8_t> cut = mono;  // its header says more than there is: what there is
+    cut.resize(cut.size() - 4);
+    CHECK(miles::pcmOf(cut.data(), cut.size(), p) && p.bytes.size() == 4);
+    const uint8_t mp3[] = {0xFF, 0xFB, 0x90, 0xC0, 0, 0, 0, 0};
+    CHECK_EQ(miles::imageSize(mp3), size_t(0));  // no size of its own
+    CHECK(!miles::pcmOf(mp3, sizeof mp3, p) && !miles::pcmOf(nullptr, 0, p));
+}
+
+// The music (mss32's streams): a WAVE or an mp3 played `loops` times, 0 for ever, from its start again on restart
+TEST(miles_plays_music_in_loops) {
+    std::vector<int16_t> ten(20);
+    for (size_t i = 0; i < ten.size(); ++i) ten[i] = int16_t(i);
+    miles::Music m;
+    CHECK(m.open(miles::makeWav(ten.data(), 10, 2, 22050)));
+    CHECK(m.channels() == 2 && m.rate() == 22050);
+    std::vector<int16_t> out(60, -1);
+    m.setLoops(2);
+    CHECK_EQ(m.fill(out.data(), 25), size_t(20));  // twice, then its end
+    CHECK(m.ended());
+    CHECK(out[0] == 0 && out[19] == 19 && out[20] == 0 && out[39] == 19);
+    CHECK_EQ(m.fill(out.data(), 5), size_t(0));
+    m.restart();
+    CHECK(!m.ended());
+    m.setLoops(0);  // for ever
+    CHECK_EQ(m.fill(out.data(), 25), size_t(25));
+    CHECK(!m.ended() && out[48] == 8);
+    std::vector<uint8_t> eight = wave(1, 1, 8000, 8, 1, {}, {0, 128, 255});  // 8-bit PCM made 16
+    CHECK(m.open(eight));
+    m.setLoops(1);
+    CHECK_EQ(m.fill(out.data(), 10), size_t(3));
+    CHECK(out[0] == -32768 && out[1] == 0 && out[2] == 32512);
+    CHECK(m.open(silentMp3(8)));
+    CHECK(m.channels() == 1 && m.rate() == 44100);
+    m.setLoops(3);
+    std::vector<int16_t> big(1152 * 40);
+    const size_t thrice = m.fill(big.data(), big.size());
+    CHECK(m.ended() && thrice >= 3 * 1152 * 6 && thrice % 3 == 0);
+    CHECK(!m.open({}) && !m.open(std::vector<uint8_t>(100, 0x55)) && !m.open(wave(1, 1, 22050, 16, 2, {}, {})));
+    CHECK_EQ(m.fill(out.data(), 10), size_t(0));  // a failed one plays nothing
 }

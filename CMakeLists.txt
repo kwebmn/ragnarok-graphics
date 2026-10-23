@@ -116,6 +116,12 @@ elseif(WIN32)
     set_target_properties(binkw32 PROPERTIES PREFIX "" OUTPUT_NAME "binkw32")
     target_compile_options(binkw32 PRIVATE -Wall -Wextra)
     target_link_options(binkw32 PRIVATE -static -static-libgcc -static-libstdc++ -s)
+    # 3.0.1-beta.7: Miles Sound System 6 over XAudio2 2.9 (core/miles; minimp3 for the music)
+    add_library(mss32 SHARED src/clientlibs/mss32.cpp src/clientlibs/mss32.def)
+    set_target_properties(mss32 PROPERTIES PREFIX "" OUTPUT_NAME "mss32")
+    target_compile_options(mss32 PRIVATE -Wall -Wextra)
+    target_link_libraries(mss32 PRIVATE uagfx_core)
+    target_link_options(mss32 PRIVATE -static -static-libgcc -static-libstdc++ -s)
 
     # The settings app's Windows layer (stage 2 spec §3.3): files, registry, system, its model.
     add_library(uagfx_app STATIC src/app/text.cpp src/app/utf16.cpp src/app/files.cpp src/app/app_disk.cpp

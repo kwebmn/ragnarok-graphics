@@ -8,6 +8,7 @@
 #include <cstring>
 #include <string>
 
+#include "core/client_libs.hpp"
 #include "core/config.hpp"
 #include "core/sound_mix.hpp"
 #include "win/game_camera.hpp"
@@ -482,9 +483,12 @@ void soundFrame(bool foreground) {
         const std::string voices =
             g_voicesWere ? ", 48 sounds at once (the game's " + std::to_string(g_voicesWere) + ")" : "";
         const std::string threeD = fixMissing3D();
-        LOG_INFO("sound: Miles opened at %u Hz (the game asked %u)%s; limiter %s, %d%% in the background%s",
-                 g_openedRate, g_askedRate, voices.c_str(), g_set.limiter ? "on" : "off", g_set.background,
-                 threeD.c_str());
+        std::string bytes;  // 3.0.1-beta.7: our mss32.dll (Miles over XAudio2, core/client_libs.hpp) or RAD's own
+        const HMODULE mss = GetModuleHandleA("mss32.dll");
+        const bool ours = mss && readTextFile(modulePath(mss), bytes) && client_libs::ours(bytes);
+        LOG_INFO("sound: %s opened at %u Hz (the game asked %u)%s; limiter %s, %d%% in the background%s",
+                 ours ? "our mss32.dll (Miles over XAudio2 2.9)" : "Miles", g_openedRate, g_askedRate, voices.c_str(),
+                 g_set.limiter ? "on" : "off", g_set.background, threeD.c_str());
     }
     const ULONGLONG now = GetTickCount64();
     {  // 1.3: the music makes way while many sounds play, every frame

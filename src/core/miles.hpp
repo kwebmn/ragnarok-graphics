@@ -60,6 +60,44 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
+// A sound as an XAudio2 voice plays it (mss32's samples): 8 or 16-bit PCM, mono or stereo
+struct Pcm {
+    std::vector<uint8_t> bytes;
+    int channels = 0, bits = 0;
+    uint32_t rate = 0;
+};
+// A file image's size by its own RIFF header (at most 256 MB), 0 for anything else: the game passes its WAVE images
+// without their size
+size_t imageSize(const uint8_t* image);
+// A WAVE image's sound (at most `most` bytes of it): PCM as it is (its whole frames), ADPCM decoded to 16 bits; false
+// for what XAudio2 does not take (other formats, 3 channels or more, under 1000 Hz or over 200000 Hz) or no sound
+bool pcmOf(const uint8_t* image, size_t most, Pcm& out);
+
+// The music (mss32's streams): an mp3 read a piece at a time or a WAVE decoded whole, played `loops` times (0: for
+// ever); nothing at all from one that did not open
+class Music {
+public:
+    bool open(std::vector<uint8_t> file);
+    int channels() const { return channels_; }
+    uint32_t rate() const { return rate_; }
+    void setLoops(int loops) { loops_ = loops < 0 ? 0 : loops; }
+    void restart();  // from its start, its loops counted anew
+    // Up to `frames` frames (the channels interleaved), from its start again while it loops; fewer: it has ended
+    size_t fill(int16_t* out, size_t frames);
+    bool ended() const { return ended_; }
+
+private:
+    size_t read(int16_t* out, size_t samples);
+    void rewind();
+    Mp3Stream mp3_;
+    bool isMp3_ = false;
+    std::vector<int16_t> pcm_;
+    size_t at_ = 0;
+    int channels_ = 0, loops_ = 1, played_ = 0;
+    uint32_t rate_ = 0;
+    bool ended_ = false;
+};
+
 // The mix: a Miles volume (0-127) as a gain; a pan (0 left, 64 the middle, 127 right) as the sides' gains - the
 // middle both full, as a sound never panned
 float gainOf(int volume);

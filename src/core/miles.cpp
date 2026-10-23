@@ -4,13 +4,13 @@
 #include <cmath>
 #include <cstring>
 
+#include "core/wav.hpp"
 #include "minimp3_ex.h"
 
 namespace uagfx::miles {
 namespace {
 
 uint16_t u16(const uint8_t* p) { return uint16_t(p[0] | p[1] << 8); }
-uint32_t u32(const uint8_t* p) { return uint32_t(p[0] | p[1] << 8 | p[2] << 16 | uint32_t(p[3]) << 24); }
 int16_t s16(const uint8_t* p) { return int16_t(u16(p)); }
 
 int16_t clamp16(int v) { return int16_t(v < -32768 ? -32768 : v > 32767 ? 32767 : v); }
@@ -138,46 +138,34 @@ int fileType(const uint8_t* data, size_t size) {
 }
 
 bool wavInfo(const uint8_t* image, size_t most, SoundInfo& out) {
-    if (!image || most < 12 || std::memcmp(image, "RIFF", 4) != 0 || std::memcmp(image + 8, "WAVE", 4) != 0)
-        return false;
-    const size_t end = std::min<size_t>(most, size_t(u32(image + 4)) + 8);
+    wav::Sound w;
+    if (!wav::parse(image, uint32_t(std::min<size_t>(most, 0xFFFFFFFFu)), w)) return false;
     SoundInfo s;
+    s.format = w.format;
+    s.data = w.data;
+    s.dataLen = w.bytes;
+    s.rate = w.rate;
+    s.bits = w.bits;
+    s.channels = w.channels;
+    s.blockSize = w.blockAlign;
     s.initial = image;
-    for (size_t at = 12; at + 8 <= end;) {
-        const uint32_t size = u32(image + at + 4);
-        const uint8_t* body = image + at + 8;
-        const size_t room = end - (at + 8);
-        if (std::memcmp(image + at, "fmt ", 4) == 0 && size >= 16 && size <= room) {
-            s.format = u16(body);
-            s.channels = u16(body + 2);
-            s.rate = u32(body + 4);
-            s.blockSize = u16(body + 12);
-            s.bits = u16(body + 14);
-            s.fmt = body;
-            s.fmtLen = size;
-        } else if (std::memcmp(image + at, "data", 4) == 0) {
-            if (!s.fmt || s.channels <= 0 || s.blockSize == 0) return false;
-            s.data = body;
-            s.dataLen = uint32_t(std::min<size_t>(size, room));
-            if (s.format == 0x11 || s.format == 2) {
-                const uint32_t ch = uint32_t(s.channels), per = perBlockOf(s);
-                s.samples = s.dataLen / s.blockSize * blockFrames(s.format, ch, s.blockSize, per) +
-                            blockFrames(s.format, ch, s.dataLen % s.blockSize, per);
-            } else {
-                s.samples = s.dataLen / s.blockSize;
-            }
-            out = s;
-            return true;
-        }
-        if (size > room) break;
-        at += 8 + size + (size & 1);
+    s.fmt = w.fmt;
+    s.fmtLen = w.fmtBytes;
+    if (s.format == 0x11 || s.format == 2) {
+        const uint32_t ch = uint32_t(s.channels), per = perBlockOf(s);
+        s.samples = s.dataLen / s.blockSize * blockFrames(s.format, ch, s.blockSize, per) +
+                    blockFrames(s.format, ch, s.dataLen % s.blockSize, per);
+    } else {
+        s.samples = s.dataLen / s.blockSize;
     }
-    return false;
+    out = s;
+    return true;
 }
 
 bool decodeAdpcm(const SoundInfo& info, std::vector<int16_t>& pcm) {
     pcm.clear();
-    if (!info.data || !info.fmt || info.channels < 1 || info.channels > 2) return false;
+    // without its fmt chunk (Miles' AILSOUNDINFO alone): the block's frames by its size, the standard coefficients
+    if (!info.data || info.blockSize == 0 || info.channels < 1 || info.channels > 2) return false;
     if (info.format == 0x11) return decodeIma(info, pcm);
     if (info.format != 2) return false;
     std::vector<int16_t> coefs;
@@ -244,8 +232,9 @@ bool Mp3Stream::open(std::vector<uint8_t> file) {
     if (impl_->open) mp3dec_ex_close(&impl_->dec);
     impl_->open = false;
     impl_->file = std::move(file);
+    // not scanned whole: the music starts at once; a rewind to its start needs no index
     if (impl_->file.empty() || mp3dec_ex_open_buf(&impl_->dec, impl_->file.data(), impl_->file.size(),
-                                                  MP3D_SEEK_TO_SAMPLE) != 0)
+                                                  MP3D_SEEK_TO_SAMPLE | MP3D_DO_NOT_SCAN) != 0)
         return false;
     impl_->open = impl_->dec.info.channels > 0 && impl_->dec.info.hz > 0;
     return impl_->open;
@@ -261,6 +250,109 @@ void Mp3Stream::rewind() {
 
 int Mp3Stream::channels() const { return impl_->open ? impl_->dec.info.channels : 0; }
 uint32_t Mp3Stream::rate() const { return impl_->open ? uint32_t(impl_->dec.info.hz) : 0; }
+
+size_t imageSize(const uint8_t* image) {
+    if (!image || std::memcmp(image, "RIFF", 4) != 0) return 0;
+    uint32_t riff = 0;
+    std::memcpy(&riff, image + 4, 4);
+    return std::min<size_t>(size_t(riff) + 8, size_t(256) << 20);
+}
+
+bool pcmOf(const uint8_t* image, size_t most, Pcm& out) {
+    SoundInfo info;
+    if (!wavInfo(image, most, info) || info.channels < 1 || info.channels > 2 || info.rate < 1000 ||
+        info.rate > 200000)
+        return false;
+    Pcm p;
+    p.channels = info.channels;
+    p.rate = info.rate;
+    if (info.format == 1) {
+        if (info.bits != 8 && info.bits != 16) return false;
+        const uint32_t align = uint32_t(info.channels * info.bits / 8);
+        p.bytes.assign(info.data, info.data + info.dataLen / align * align);
+        p.bits = info.bits;
+    } else {
+        std::vector<int16_t> pcm;
+        if (!decodeAdpcm(info, pcm)) return false;
+        const auto* from = reinterpret_cast<const uint8_t*>(pcm.data());
+        p.bytes.assign(from, from + pcm.size() * 2);
+        p.bits = 16;
+    }
+    if (p.bytes.empty()) return false;
+    out = std::move(p);
+    return true;
+}
+
+bool Music::open(std::vector<uint8_t> file) {
+    isMp3_ = false;
+    pcm_.clear();
+    at_ = 0;
+    channels_ = 0;
+    rate_ = 0;
+    played_ = 0;
+    ended_ = false;
+    const int type = fileType(file.data(), file.size());
+    if (type == kMpegL1 || type == kMpegL2 || type == kMpegL3) {
+        if (!mp3_.open(std::move(file)) || mp3_.channels() < 1 || mp3_.channels() > 2) return false;
+        isMp3_ = true;
+        channels_ = mp3_.channels();
+        rate_ = mp3_.rate();
+        return true;
+    }
+    Pcm p;
+    if (!pcmOf(file.data(), file.size(), p)) return false;
+    if (p.bits == 8) {
+        pcm_.resize(p.bytes.size());
+        for (size_t i = 0; i < p.bytes.size(); ++i) pcm_[i] = int16_t((int(p.bytes[i]) - 128) * 256);
+    } else {
+        pcm_.resize(p.bytes.size() / 2);
+        std::memcpy(pcm_.data(), p.bytes.data(), pcm_.size() * 2);
+    }
+    channels_ = p.channels;
+    rate_ = p.rate;
+    return true;
+}
+
+size_t Music::read(int16_t* out, size_t samples) {
+    if (isMp3_) return mp3_.read(out, samples);
+    const size_t k = std::min(samples, pcm_.size() - at_);
+    if (k) std::memcpy(out, pcm_.data() + at_, k * 2);
+    at_ += k;
+    return k;
+}
+
+void Music::rewind() {
+    if (isMp3_) mp3_.rewind();
+    at_ = 0;
+}
+
+void Music::restart() {
+    rewind();
+    played_ = 0;
+    ended_ = false;
+}
+
+size_t Music::fill(int16_t* out, size_t frames) {
+    if (channels_ <= 0 || ended_) return 0;
+    const size_t want = frames * size_t(channels_);
+    size_t have = 0;
+    bool rewound = false;  // nothing read since: a file that gives nothing ends instead of turning for ever
+    while (have < want) {
+        const size_t got = read(out + have, want - have);
+        have += got;
+        if (got) {
+            rewound = false;
+            continue;
+        }
+        if (rewound || (loops_ > 0 && ++played_ >= loops_)) {
+            ended_ = true;
+            break;
+        }
+        rewind();
+        rewound = true;
+    }
+    return have / size_t(channels_);
+}
 
 float gainOf(int volume) { return float(std::clamp(volume, 0, 127)) / 127.0f; }
 

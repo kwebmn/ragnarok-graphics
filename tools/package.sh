@@ -32,7 +32,8 @@ cp build-win/ddraw.dll build-win/uaro-graphics.exe build-win64/uaro-render64.exe
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 # 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.
 cp dist/pad/uaro-pad.ini "$stage/uaro-graphics/defaults/"  # 2.9: uaRO Pad inside ddraw.dll, its template
-cp build-win/cps.dll build-win/binkw32.dll build-win/ijl15.dll "$stage/uaro-graphics/clientlibs/"  # the root's
+cp build-win/cps.dll build-win/binkw32.dll build-win/ijl15.dll build-win/mss32.dll \
+   "$stage/uaro-graphics/clientlibs/"  # the root's (mss32.dll only where XAudio2 2.9 is)
 # 2.15: the AI textures' models are no part of the package (about 8 MB now): tools/models_package.py puts them in
 # release/uaro-graphics-models.zip, which an update brings when the AI textures are on (app/update_run).
 printf '%s build %s\r\n' "$version" "$(date '+%Y-%m-%d %H:%M')" > "$stage/uaro-graphics/version.txt"

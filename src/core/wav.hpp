@@ -13,6 +13,8 @@ struct Sound {
     uint16_t blockAlign = 0;
     const uint8_t* data = nullptr;
     uint32_t bytes = 0;
+    const uint8_t* fmt = nullptr;  // 3.0.1-beta.7: its fmt chunk's body (ADPCM's own fields after the 16 bytes)
+    uint32_t fmtBytes = 0;
 };
 
 // The image at `p`, at most `most` bytes (its own RIFF size says how many): false for anything but a WAVE with a
@@ -34,6 +36,8 @@ inline bool parse(const uint8_t* p, uint32_t most, Sound& out) {
             std::memcpy(&out.rate, body + 4, 4);
             std::memcpy(&out.blockAlign, body + 12, 2);
             std::memcpy(&out.bits, body + 14, 2);
+            out.fmt = body;
+            out.fmtBytes = size;
             format = true;
         } else if (std::memcmp(p + at, "data", 4) == 0) {
             out.data = body;

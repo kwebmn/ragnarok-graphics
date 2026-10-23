@@ -17,6 +17,23 @@ LIBS = {
         "_BinkOpen@8", "_BinkClose@4", "_BinkDoFrame@4", "_BinkNextFrame@4", "_BinkCopyToBuffer@28",
         "_BinkDDSurfaceType@4", "_BinkWait@4", "_BinkPause@8", "_BinkGoto@12", "_BinkOpenDirectSound@4",
         "_BinkSetSoundSystem@8"]},
+    # 3.0.1-beta.7: Miles Sound System 6's 46, and _AIL_set_sample_pan@8 the driver looks up (win/sound_hook.cpp)
+    "mss32.dll": {n: None for n in [
+        "_AIL_init_sample@4", "_AIL_set_sample_file@12", "_AIL_set_sample_volume@8", "_AIL_start_sample@4",
+        "_AIL_end_sample@4", "_AIL_end_3D_sample@4", "_AIL_open_stream@12", "_AIL_set_stream_loop_count@8",
+        "_AIL_start_stream@4", "_AIL_pause_stream@8", "_AIL_stream_volume@4", "_AIL_set_stream_volume@8",
+        "_AIL_release_3D_sample_handle@4", "_AIL_close_3D_listener@4", "_AIL_sample_status@4",
+        "_AIL_release_sample_handle@4", "_AIL_close_digital_driver@4", "_AIL_shutdown@0",
+        "_AIL_set_redist_directory@4", "_AIL_startup@0", "_AIL_set_preference@8", "_AIL_open_digital_driver@16",
+        "_AIL_allocate_sample_handle@4", "_AIL_enumerate_3D_providers@12", "_AIL_open_3D_provider@4",
+        "_AIL_3D_speaker_type@4", "_AIL_set_3D_speaker_type@8", "_AIL_open_3D_listener@4",
+        "_AIL_allocate_3D_sample_handle@4", "_AIL_start_3D_sample@4", "_AIL_set_3D_sample_distances@12",
+        "_AIL_set_3D_sample_volume@8", "_AIL_close_3D_provider@4", "_AIL_set_3D_orientation@28",
+        "_AIL_set_3D_position@16", "_AIL_set_3D_sample_effects_level@8", "_AIL_set_3D_sample_file@8",
+        "_AIL_3D_sample_status@4", "_AIL_set_3D_room_type@8", "_AIL_mem_free_lock@4", "_AIL_decompress_ADPCM@12",
+        "_AIL_WAV_info@8", "_AIL_decompress_ASI@24", "_AIL_file_type@8", "_AIL_3D_room_type@4",
+        "_AIL_close_stream@4",
+        "_AIL_set_sample_pan@8"]},
 }
 
 
