@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.2-beta.7 — what is new
+
+- **The HD textures' start measured.** Two new lines in `uaro-graphics\logs\uaro-render64.log`. `AI textures:
+  started in … ms` says what each step of the HD textures' start takes: every shader, opening the pack, reading and
+  parsing its index. `AI textures: the pack's pictures, ms on average (at most)` says where a picture of the pack
+  spends its time: the queue, the read, WebP, the fitting, the wait for the frame; apart for sprite frames, icons,
+  the world's textures and the interface's. The measurement speeds nothing up: it is for the next betas.
+
 # uaRO Graphics 3.0.2-beta.6 — what is new
 
 - **Help.** A new menu item «Help» in every mode: what the program does, the game's keys, then view by view what each
