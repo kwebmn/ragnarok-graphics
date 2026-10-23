@@ -317,6 +317,7 @@ void MainWindow::create() {
     apply_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kApply);
     markPrimary(apply_);  // blue while there is something to apply (grey, disabled, without)
     play_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kPlay);
+    markPrimary(play_);  // «Застосувати й грати» blue too (the user)
     undo_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kUndo);
     close_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kCloseButton);
     tooltip_ = CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, nullptr, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX,
