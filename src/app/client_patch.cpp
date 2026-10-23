@@ -57,16 +57,24 @@ bool writeRecord(const std::wstring& dir, const PatchCheck& c, const std::set<st
 
 client_patch::Manifest clientOf(const std::wstring& dir) {
     client_patch::Manifest m;
+    const std::wstring file = join(dir, wide(client_patch::kClientFile));
+    if (!fileExists(file)) {
+        m.client = client_patch::kOldClient;
+        return m;
+    }
     std::string text, error;
-    if (!readFile(join(dir, wide(client_patch::kClientFile)), text) || !client_patch::parse(text, m, error))
-        m = client_patch::Manifest{};
-    m.client = client_patch::clientName(m.client);
+    if (!readFile(file, text) || !client_patch::parse(text, m, error)) return client_patch::Manifest{};
+    if (client_patch::clientName(m.client) != m.client) m.client.clear();
     return m;
 }
 
 PatchCheck checkClientPatch(const std::wstring& dir) {
     PatchCheck c;
     const client_patch::Manifest build = clientOf(dir);
+    if (build.client.empty()) {  // never another client's files: an unknown one gets none
+        c.error = std::string(client_patch::kClientFile) + " cannot be read - the client is unknown";
+        return c;
+    }
     std::string text;
     if (!fetchPath(std::string(client_patch::kPath) + "?client=" + query(build.client), text, c.error, 4u << 20) ||
         !client_patch::parse(text, c.manifest, c.error))

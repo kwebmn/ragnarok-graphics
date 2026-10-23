@@ -19,7 +19,8 @@ struct PatchCheck {
     uint64_t bytes = 0;  // of the needed files
     bool work() const { return !needed.empty() || !remove.empty(); }
 };
-// 3.0.1: this folder's client - the build's uaro-client.json (its name made fit), else the old «uaRO» with no files
+// 3.0.1: this folder's client - the build's uaro-client.json; none: the old «uaRO» with no files; a file that cannot
+// be read or names no fit client: "" (unknown - no patch is asked for it)
 client_patch::Manifest clientOf(const std::wstring& dir);
 // The site's list of this folder's client against the disk: the listed files hashed only when the record of the last
 // put does not match; a list with nothing to do is recorded at once

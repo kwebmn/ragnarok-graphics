@@ -142,8 +142,20 @@ TEST(the_patch_asks_for_its_clients_list) {
     CHECK(!c.asked && c.needed.empty() && !c.error.empty());
     w.files.erase(fake::path(L"uaro-client.json"));  // no file: the old client
     CHECK_EQ(app::clientOf(app::exeFolder()).client, std::string("uaRO"));
-    w.files[fake::path(L"uaro-client.json")] = "{\"format\":1,\"client\":\"a/b\",\"files\":[]}";  // no fit name
-    CHECK_EQ(app::clientOf(app::exeFolder()).client, std::string("uaRO"));
+}
+
+// 3.0.1 (final review): a uaro-client.json that cannot be read or names no fit client - the client is unknown, so no
+// list is asked (the old client's files could go into an HD folder)
+TEST(an_unknown_client_gets_no_patch) {
+    fake::Windows& w = site();
+    w.web["/api/public/client-patch?client="] = manifest("p1", "");
+    for (const std::string& broken : {std::string("{\"format\":1,\"client\":\"a/b\",\"files\":[]}"),
+                                      std::string("{\"format\":1,\"files\":[]}"), std::string("{garbage")}) {
+        w.files[fake::path(L"uaro-client.json")] = broken;
+        CHECK(app::clientOf(app::exeFolder()).client.empty());
+        const app::PatchCheck c = app::checkClientPatch(app::exeFolder());
+        CHECK(!c.asked && c.needed.empty() && !c.error.empty());
+    }
 }
 
 // 3.0.1: a file the admin withdrew goes when the patch made it; one the patch put over the client's own stays

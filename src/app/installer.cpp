@@ -293,7 +293,7 @@ Result finishInstall(const std::wstring& dir, bool scripts) {
 }
 
 Names namesOf(const std::wstring& dir) {
-    const std::string client = clientOf(dir).client;
+    const std::string client = client_patch::clientName(clientOf(dir).client);  // unknown: the old name
     Names n;
     n.shortcut = wide(client);
     n.apps = client_patch::sameClient(client, client_patch::kOldClient) ? L"uaRO Graphics"
