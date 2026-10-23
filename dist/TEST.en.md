@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.2-beta.6 — what is new
+
+- **Help.** A new menu item «Help» in every mode: what the program does, the game's keys, then view by view what each
+  page is for and what each of its functions does. The descriptions are the ones that show when the mouse stays over
+  a row.
+- **The game's options described.** The game's own options on «Game and chat» and «Sound» (/effect, /snap, /camera,
+  whispers, the minimap and more), and «Show» and «Monitor» on «Screen», got descriptions: they had their names only.
+- **Fixed:** in 3.0.2-beta.4 and beta.5 some texts stood in the wrong places: «Main» showed the keys' list instead of
+  the heading «Keys in the game», the graphics updates' texts and the window place's hint were mixed up. Now the
+  program does not build when a text is out of its place.
+
 # uaRO Graphics 3.0.2-beta.5 — what is new
 
 - **The client's graphics updates.** The administrator's new GRF archives come with the client's update from the
