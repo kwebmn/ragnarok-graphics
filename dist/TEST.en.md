@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.1-beta.2 — what is new
+
+- **The update channel and the check on «Game».** The first page's «Updates» part now has «Update channel» («Release»
+  or «Beta (testing)») and the «Check for updates» button, in every mode of the program. A changed channel asks its
+  branch at once; when a check fails, the reason shows there too.
+
 # uaRO Graphics 3.0.1-beta.1 — what is new
 
 - **uaRO HD next to the usual uaRO.** The new full client «uaRO HD» lives in a folder of its own. Each client now has
