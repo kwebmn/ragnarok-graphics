@@ -54,6 +54,12 @@ const char* before(File f) { return place(f).before; }
 
 bool isFolder(File f) { return place(f).folder; }
 
+std::string aiShadersBeside(const std::string& shaderCache) {
+    if (shaderCache.empty()) return {};
+    const size_t name = shaderCache.find_last_of("\\/") + 1;  // npos + 1: a bare name
+    return shaderCache.substr(0, name) + "ai-" + shaderCache.substr(name);
+}
+
 std::string notes(const std::string& langToken) { return "uaro-graphics\\notes\\TEST." + langToken + ".md"; }
 
 std::string join(const std::string& gameDir, const std::string& relative) { return gameDir + "\\" + relative; }

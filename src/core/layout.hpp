@@ -53,6 +53,8 @@ constexpr const char* kPadTemplate = "uaro-graphics\\defaults\\uaro-pad.ini";
 const char* now(File f);     // where 2.8 keeps it
 const char* before(File f);  // where 2.x kept it
 bool isFolder(File f);       // the settings app's backups, the client's dgVoodoo
+// 3.0.2-beta.8: the AI textures' shaders kept beside a renderer's own (shaders-64.bin: ai-shaders-64.bin); "" none
+std::string aiShadersBeside(const std::string& shaderCache);
 // «Що нового»: the package's notes for a language ("en", "uk", "ru")
 std::string notes(const std::string& langToken);
 std::string join(const std::string& gameDir, const std::string& relative);

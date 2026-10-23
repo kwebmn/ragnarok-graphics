@@ -242,7 +242,9 @@ private:
     };
 
     bool loadNet(const std::string& dir, const std::string& token, int denoise, Net& net, std::string& error);
-    bool createGpu(std::string& error, ai::Steps* steps = nullptr);  // 3.0.2-beta.7: steps, the start's times
+    // 3.0.2-beta.7: steps, the start's times; 3.0.2-beta.8: network - its shaders too (the pack's pictures need
+    // ai_mip alone), each kept between starts beside the renderer's own
+    bool createGpu(std::string& error, bool network, ai::Steps* steps = nullptr);
     bool uploadWeights(Net& net, std::string& error);
     bool selfTest(int net, std::string& error);
     bool ensureBuffers(int width, int height);

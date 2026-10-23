@@ -12,8 +12,11 @@
 #include "core/ai/file_groups.hpp"
 #include "core/ai/groups.hpp"
 #include "core/ai/recolour.hpp"
+#include "core/ai/shader_set.hpp"
 #include "core/ai/texture_cache.hpp"
 #include "core/ai/vram.hpp"
+#include "core/layout.hpp"
+#include "core/shader_cache.hpp"
 #include "core/sprite_exe.hpp"
 #include "core/webp_image.hpp"
 #include "win/gpu/impl.hpp"
@@ -239,7 +242,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
         return false;
     }
     at = clockNow();
-    if (!createGpu(error, &steps)) return false;
+    if (!createGpu(error, generate_, &steps)) return false;
     at = clockNow();
     const ULONGLONG t0 = GetTickCount64();
     for (size_t i = 0; i < nets_.size(); ++i)
@@ -392,7 +395,7 @@ bool AiTextures::startForPack(const std::string& gameDir, const AiSettings& s, s
         if (groupNet_[g] < 0) return false;
     }
     if (s.smallPictures && (smallNet_ = netOfToken(dir, s.smallModel, error)) < 0) return false;  // 1.6.3
-    if (!createGpu(error)) return false;
+    if (!createGpu(error, true)) return false;
     for (size_t i = 0; i < nets_.size(); ++i)
         if (!selfTest(int(i), error)) return false;
     ready_ = true;
@@ -404,7 +407,7 @@ bool AiTextures::startForStudio(const std::string& gameDir, std::string& error) 
     generate_ = true;
     modelDir_ = gameDir + "\\uaro-graphics\\ai\\";
     for (int k = 0; k < ai::kKinds; ++k) kindOn_[k] = true;
-    if (!createGpu(error)) return false;  // no network yet: the pipelines alone
+    if (!createGpu(error, true)) return false;  // no network yet: the pipelines alone
     ready_ = true;
     return true;
 }
@@ -547,7 +550,7 @@ bool AiTextures::enlargeRrdb(int net, const uint32_t* argb, int w, int h, uint32
     return ok;
 }
 
-bool AiTextures::createGpu(std::string& error, ai::Steps* steps) {
+bool AiTextures::createGpu(std::string& error, bool network, ai::Steps* steps) {
     ID3D12Device* device = m_.device;
     const auto compileFn = m_.compiler ? reinterpret_cast<pD3DCompile>(
                                              reinterpret_cast<void*>(GetProcAddress(m_.compiler, "D3DCompile")))
@@ -585,33 +588,72 @@ bool AiTextures::createGpu(std::string& error, ai::Steps* steps) {
         return false;
     }
     const char* src = aiShaderSource();
+    // 3.0.2-beta.8 (the client build session: all five compiled on every start, before the game's first picture):
+    // the code compiled once is kept beside the renderer's own (core/shader_cache, its key the source)
+    const std::string keptFile = layout::aiShadersBeside(m_.shaderCacheFile);
+    const uint64_t key = shader_cache::keyOf(src);
+    std::vector<shader_cache::Shader> kept;
+    std::string bytes;
+    if (!keptFile.empty() && win::readTextFile(keptFile, bytes))
+        kept = shader_cache::unpack(key, std::vector<uint8_t>(bytes.begin(), bytes.end()));
+    int reused = 0, compiled = 0;
     std::vector<std::pair<std::string, double>> made;  // 3.0.2-beta.7: each shader's compile and pipeline
     const int64_t shadersFrom = clockNow();
-    const auto pso = [&](const char* entry, ID3D12PipelineState*& out) {
+    const auto pso = [&](const std::string& entry, ID3D12PipelineState*& out) {
         const int64_t from = clockNow();
-        ID3DBlob* cs = nullptr;
-        ID3DBlob* msg = nullptr;
-        HRESULT r = compileFn(src, std::strlen(src), "uaro-graphics-ai.hlsl", nullptr, nullptr, entry, "cs_5_0",
-                              D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &cs, &msg);
-        if (FAILED(r)) {
-            error = std::string("shader ") + entry + ": " +
-                    (msg ? std::string(static_cast<const char*>(msg->GetBufferPointer()), msg->GetBufferSize())
-                         : std::string("compile failed"));
+        const std::vector<uint8_t>* code = nullptr;
+        for (const shader_cache::Shader& s : kept) {
+            bool safe = false;
+            if (shader_cache::matches(s, entry, "cs_5_0", safe) && !safe) code = &s.code;
+        }
+        HRESULT r = S_OK;
+        if (code) {
+            ++reused;
         } else {
+            ID3DBlob* cs = nullptr;
+            ID3DBlob* msg = nullptr;
+            r = compileFn(src, std::strlen(src), "uaro-graphics-ai.hlsl", nullptr, nullptr, entry.c_str(), "cs_5_0",
+                          D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &cs, &msg);
+            if (FAILED(r)) {
+                error = "shader " + entry + ": " +
+                        (msg ? std::string(static_cast<const char*>(msg->GetBufferPointer()), msg->GetBufferSize())
+                             : std::string("compile failed"));
+            } else {
+                const auto* b = static_cast<const uint8_t*>(cs->GetBufferPointer());
+                kept.push_back({entry, "cs_5_0", std::vector<uint8_t>(b, b + cs->GetBufferSize())});
+                code = &kept.back().code;
+                ++compiled;
+            }
+            releaseCom(cs);
+            releaseCom(msg);
+        }
+        if (SUCCEEDED(r)) {
             D3D12_COMPUTE_PIPELINE_STATE_DESC d{};
             d.pRootSignature = root_;
-            d.CS = {cs->GetBufferPointer(), cs->GetBufferSize()};
+            d.CS = {code->data(), code->size()};
             r = device->CreateComputePipelineState(&d, __uuidof(ID3D12PipelineState), reinterpret_cast<void**>(&out));
-            if (FAILED(r)) error = std::string("pipeline ") + entry;
+            if (FAILED(r)) error = "pipeline " + entry;
         }
-        releaseCom(cs);
-        releaseCom(msg);
         made.emplace_back(entry, msBetween(from, clockNow()));
         return SUCCEEDED(r);
     };
-    if (!pso("ai_conv", conv_) || !pso("ai_shuffle", shuffle_) || !pso("ai_mip", mip_) || !pso("ai_alpha", alpha_) ||
-        !pso("ai_place", place_))
-        return false;
+    for (const std::string& entry : ai::shadersFor(network)) {
+        ID3D12PipelineState*& out = entry == "ai_conv"      ? conv_
+                                    : entry == "ai_shuffle" ? shuffle_
+                                    : entry == "ai_mip"     ? mip_
+                                    : entry == "ai_alpha"   ? alpha_
+                                                            : place_;
+        if (!pso(entry, out)) return false;
+    }
+    // the ones kept and not needed this time stay (a generating start's networks' shaders for the next one)
+    if (compiled && !keptFile.empty()) {
+        const std::vector<uint8_t> file = shader_cache::pack(key, kept);
+        if (!win::writeFileAtomic(keptFile, file.data(), file.size()))
+            LOG_INFO("AI textures: the shaders cannot be kept in %s - compiled again at the next start",
+                     keptFile.c_str());
+    }
+    LOG_INFO("AI textures: shaders - %d kept from the last start, %d compiled, in %.0f ms", reused, compiled,
+             msBetween(shadersFrom, clockNow()));
     if (steps) {
         steps->add("shaders", msBetween(shadersFrom, clockNow()));
         for (const auto& m : made) steps->addPart(m.first, m.second);
