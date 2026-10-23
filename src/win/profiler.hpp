@@ -1,25 +1,44 @@
 #pragma once
 #include <windows.h>
 
+#include <string>
+#include <vector>
+
 namespace uagfx::win {
 
 // 0.87, [debug] profile: samples the game's thread about a thousand times a second from a thread of its own - the
 // game's thread stopped for the moment of reading where it is (and a little of its stack, for the uaRO.exe place
 // that called into another module), then let go before anything else - and writes the tally (core/sample_profile.hpp)
 // into the log every ten seconds. Off: the thread sleeps.
+// 3.0.2-beta.12: a map's loading by itself (Context's watch, core/map_load.hpp) - sampled from open() to close(), its
+// tally into the log then; each sample also says Windows' function it is in ("Sleep", "ReadFile") and the game's
+// step it is under (the world, its files, a frame shown).
 class Profiler {
 public:
     static Profiler& get();
     void run(DWORD gameThread, bool on);  // each present: on/off as the settings say, started the first time
-    void stop();                          // the game closing
+    // 3.0.2-beta.12: a map's loading - its tally's lines under `prefix` ("map prontera"), the first with `head`'s
+    // words ("loaded in 3.69 s"), then `more`; drop(): none
+    void open(DWORD gameThread);
+    void close(const std::string& prefix, const std::string& head, const std::vector<std::string>& more);
+    void drop();
+    void stop();  // the game closing
 
 private:
+    enum : LONG { kShut, kOpen, kReport, kDrop };  // window_
+    bool start(DWORD gameThread);                   // the sampling thread, once
     static DWORD WINAPI loop(void* self);
     void sampleLoop();
     HANDLE thread_ = nullptr;
     HANDLE game_ = nullptr;
+    HANDLE wake_ = nullptr;  // 3.0.2-beta.12: something to sample (in place of looking every 200 ms)
+    bool failed_ = false;    // the game's thread cannot be opened: said once
     volatile LONG on_ = 0;
+    volatile LONG window_ = kShut;
     volatile LONG quit_ = 0;
+    CRITICAL_SECTION lock_;  // close()'s words, for the sampling thread
+    std::string prefix_, head_;
+    std::vector<std::string> more_;
 };
 
 }  // namespace uagfx::win

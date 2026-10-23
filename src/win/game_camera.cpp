@@ -60,6 +60,8 @@ bool readCameraTargetDepth(float& z) {
     return std::isfinite(z) && z > camera::kNear && z < camera::kFar;
 }
 
+bool knownGameBuild() { return knownBuild(); }
+
 bool readGameCursor(int& x, int& y) {
     int32_t at[2] = {0, 0};
     if (!knownBuild() || !read(camera::kMouse + camera::kMouseX, &at[0], 4) ||

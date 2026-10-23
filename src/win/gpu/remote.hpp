@@ -26,6 +26,9 @@ public:
     bool start(const BridgeOptions& o, std::string& error);
     std::string adapterName() const { return adapter_; }
     bool upscales() const { return upscales_; }  // DLSS is ready in the renderer
+    // 3.0.2-beta.12: the game's thread here so far, ms - its frames' draws written and sent, its waits for the
+    // renderer's presents
+    void bridgeTimes(double& sendMs, double& waitMs) const;
     // 2.2.1: the renderer's work a frame, as it last sent it (Msg::Timing, twice a second)
     bool timing(GpuTiming& out) const {
         out = timing_;
@@ -83,6 +86,7 @@ private:
     // 2.1.1: the game's thread's time here - its draws written and sent, its wait for the renderer's presents -
     // logged every 30 s
     LONGLONG sendTicks_ = 0, waitTicks_ = 0, since_ = 0;
+    LONGLONG sendTotal_ = 0, waitTotal_ = 0;  // 3.0.2-beta.12: never reset - a map's loading takes their differences
     uint32_t frames_ = 0;
     void timeLog();
     int samples_ = 1;

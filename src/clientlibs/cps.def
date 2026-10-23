@@ -2,3 +2,4 @@ LIBRARY cps.dll
 EXPORTS
     compress @1
     uncompress @2
+    uagfx_inflated @3

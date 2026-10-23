@@ -143,6 +143,9 @@ public:
     bool effectCosts(effect_costs::Costs& out) const;
     // 2.2.1: the card's work a frame, the last half second (every renderer that times it); false: not measured
     bool gpuTiming(GpuTiming& out) const;
+    // 3.0.2-beta.12: the game's thread in the bridge to uaro-render64.exe so far - its frames' draws written and
+    // sent, its waits for the presents (ms); 0 and 0 without it
+    void bridgeTimes(double& sendMs, double& waitMs) const;
     bool canSupersample() const { return !remote_ && !d3d11_ && !remix_; }
     // 0.39.5, before create(): the shaders' code is kept in this file between starts - compiled once, not each time.
     void setShaderCache(const std::string& file);

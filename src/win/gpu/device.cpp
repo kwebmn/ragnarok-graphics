@@ -1763,6 +1763,11 @@ void Renderer::setUiSharp(bool sharp) {
 
 bool Renderer::upscales() const { return remote_ && remote_->upscales(); }
 
+void Renderer::bridgeTimes(double& sendMs, double& waitMs) const {
+    sendMs = waitMs = 0.0;
+    if (remote_) remote_->bridgeTimes(sendMs, waitMs);
+}
+
 int Renderer::samples() const {
     return remix_ || d3d11_ ? 1 : remote_ ? remote_->samples() : int(impl_->samples);
 }

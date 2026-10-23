@@ -1957,9 +1957,11 @@ void AiTextures::takeLoaded() {
     results.swap(ioOut_);
     LeaveCriticalSection(&ioLock_);
     const int64_t now = clockNow();
+    const double frameMs = lastTake_ ? msBetween(lastTake_, now) : 0.0;  // 3.0.2-beta.12: this frame's length
+    lastTake_ = now;
     const auto timed = [&](IoResult& r, int kind) {  // 3.0.2-beta.7: its wait for this frame, then its parts
         r.part[int(ai::LoadPart::Frame)] = msBetween(r.out, now);
-        loadTimes_[kind].add(r.part);
+        loadTimes_[kind].add(r.part, frameMs);
     };
     for (IoResult& r : results) {
         if (r.opened) {  // 3.0.2-beta.9: the pack opened alongside the game

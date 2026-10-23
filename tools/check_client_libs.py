@@ -11,7 +11,8 @@ MARK = b"uaRO Graphics client library"
 ALLOWED_IMPORTS = {"kernel32.dll", "msvcrt.dll", "user32.dll", "ole32.dll", "winmm.dll"}
 # uaRO.exe's import table (sha256 63902c46...): name -> the ordinal it must have, None when taken by name
 LIBS = {
-    "cps.dll": {"compress": 1, "uncompress": 2},
+    # 3.0.2-beta.12: uagfx_inflated the driver looks up (win/context.cpp, a map's loading measured)
+    "cps.dll": {"compress": 1, "uncompress": 2, "uagfx_inflated": 3},
     "ijl15.dll": {"ijlGetLibVersion": 1, "ijlInit": 2, "ijlFree": 3, "ijlRead": 4, "ijlWrite": 5, "ijlErrorStr": 6},
     "binkw32.dll": {n: None for n in [
         "_BinkOpen@8", "_BinkClose@4", "_BinkDoFrame@4", "_BinkNextFrame@4", "_BinkCopyToBuffer@28",

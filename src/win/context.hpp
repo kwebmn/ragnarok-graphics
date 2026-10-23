@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/light_mode.hpp"
+#include "core/map_load.hpp"
 #include "core/glint.hpp"
 #include "core/hit_flash.hpp"
 #include "core/config.hpp"
@@ -110,6 +111,13 @@ private:
     bool scaledUpscale_ = false;  // and whether DLSS draws the world (part 3)
     bool cameraKnown_ = false;    // the game's camera was read last frame (part 3, for the log)
     std::string map_;  // the map the game showed at the last present (AI textures)
+    // 3.0.2-beta.12: a map's loading measured (watchMapLoad) - the frames shown over it, the bridge's times and
+    // cps.dll's count at its start
+    map_load::Watch mapLoad_;
+    uint32_t loadFrames_ = 0;
+    double loadSent_ = 0.0, loadWaited_ = 0.0;
+    uint32_t loadInflated_[3] = {};
+    bool loadInflatedKnown_ = false;
     bool renderScaleNoted_ = false;  // the log has said render_scale is not used with DLSS
     ToggleKey compareKey_;  // Pause or Scroll Lock: every improvement off and on, to compare
     bool enhanced_ = true;
@@ -138,6 +146,7 @@ private:
     // 0.76: [frames] keep_fps - the frames counted since keepSince_, slow windows in a row, the effects turned off for
     // this game; the effects' costs written for the settings app every half minute
     void keepFrameRate(const Config& config, HWND window);
+    void watchMapLoad(const std::string& map, bool world);  // 3.0.2-beta.12
     uint64_t keepSince_ = 0;
     unsigned keepFrames_ = 0;
     int keepSlow_ = 0;

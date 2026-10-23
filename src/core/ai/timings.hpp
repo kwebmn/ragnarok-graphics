@@ -35,16 +35,18 @@ constexpr int kLoadParts = 5;
 
 class LoadTimes {
 public:
-    void add(const double (&ms)[kLoadParts]);
+    // frameMs (3.0.2-beta.12): how long the frame that took it lasted - from the frame before it; the wait for the
+    // frame is never longer, so a long wait beside a long frame is the game's frame (icons the game loads at once)
+    void add(const double (&ms)[kLoadParts], double frameMs);
     uint32_t count() const { return count_; }
     // "412: in the queue 0.4 (12), read 0.3 (2.1), WebP 1.2 (9.8), fitted 0.1 (0.6), until its frame 7.9 (16), in
-    // all 9.9 (31)" - each part's average (most); "" when none
+    // all 9.9 (31) - its frame lasted 16 (33)" - each part's average (most); "" when none
     std::string line() const;
 
 private:
     uint32_t count_ = 0;
-    double sum_[kLoadParts + 1] = {};  // the parts, then the whole
-    double most_[kLoadParts + 1] = {};
+    double sum_[kLoadParts + 2] = {};  // the parts, the whole, the frame's length
+    double most_[kLoadParts + 2] = {};
 };
 
 }  // namespace uagfx::ai

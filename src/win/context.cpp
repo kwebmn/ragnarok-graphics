@@ -626,6 +626,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
             if (!map.empty()) LOG_INFO("map: %s", map.c_str());
         }
     }
+    if (knownGameBuild()) {  // 3.0.2-beta.12: the world by the game's camera, read for it alone without DLSS
+        float seen[12];
+        watchMapLoad(readGameMap(), readGameCamera(seen));
+    }
     // 2.2.1: the AI pictures' kinds as the file says now (a kind off hidden at once; 2.2.2: each kind of sprites
     // too); Pause: none
     const bool aiShown = enhanced_ && !light_.aiHidden;  // 2.5.20: super-light draws none of them
@@ -721,6 +725,82 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     ++stats_.frames;
     logStats(false);
+}
+
+namespace {
+
+// 3.0.2-beta.12: our cps.dll's count of what the game has inflated (files, bytes, microseconds; each wraps at 2^32);
+// false with the game's own
+bool inflatedSoFar(uint32_t out[3]) {
+    using Fn = void(__cdecl*)(unsigned int out[3]);
+    static Fn fn = nullptr;
+    static bool looked = false;
+    if (!looked) {
+        looked = true;
+        if (HMODULE cps = GetModuleHandleA("cps.dll"))
+            fn = reinterpret_cast<Fn>(reinterpret_cast<void*>(GetProcAddress(cps, "uagfx_inflated")));
+    }
+    unsigned int now[3] = {};
+    if (!fn) return false;
+    fn(now);
+    for (int i = 0; i < 3; ++i) out[i] = now[i];
+    return true;
+}
+
+}  // namespace
+
+// 3.0.2-beta.12 (the client build session: prt_fild08 loads in 3.7 s, cps.dll's inflating 6 times as fast changed
+// nothing): each map's loading measured by itself - from its loading picture to its world (core/map_load.hpp), the
+// game's thread sampled meanwhile (Profiler), with the frames shown, the bridge's times and cps.dll's inflating over
+// it; one block in the log at its end.
+void Context::watchMapLoad(const std::string& map, bool world) {
+    LARGE_INTEGER now, f;
+    QueryPerformanceCounter(&now);
+    QueryPerformanceFrequency(&f);
+    using Event = map_load::Watch::Event;
+    switch (mapLoad_.frame(double(now.QuadPart) * 1000.0 / double(f.QuadPart), map, world)) {
+    case Event::Began:
+        loadFrames_ = 1;  // its loading picture
+        renderer->bridgeTimes(loadSent_, loadWaited_);
+        loadInflatedKnown_ = inflatedSoFar(loadInflated_);
+        Profiler::get().open(GetCurrentThreadId());
+        break;
+    case Event::Ended: {
+        const std::string prefix = "map " + mapLoad_.map();
+        char head[200], before[64] = "";
+        if (mapLoad_.beforeMs() >= 0)
+            std::snprintf(before, sizeof before, " (the old map's last frame %.2f s before it)",
+                          mapLoad_.beforeMs() / 1000.0);
+        std::snprintf(head, sizeof head, "loaded in %.2f s from its loading picture to its world%s, %u frames shown",
+                      mapLoad_.loadMs() / 1000.0, before, loadFrames_);
+        std::vector<std::string> more;
+        char line[240];
+        if (renderer->remote()) {
+            double sent = 0.0, waited = 0.0;
+            renderer->bridgeTimes(sent, waited);
+            std::snprintf(line, sizeof line,
+                          "%s: the bridge - %.2f s the frames' draws written and sent, %.2f s waiting for the 64-bit "
+                          "renderer's presents",
+                          prefix.c_str(), (sent - loadSent_) / 1000.0, (waited - loadWaited_) / 1000.0);
+            more.push_back(line);
+        }
+        uint32_t inflated[3] = {};
+        if (loadInflatedKnown_ && inflatedSoFar(inflated)) {
+            std::snprintf(line, sizeof line, "%s: cps.dll inflated %u files, %.1f MB in %.2f s", prefix.c_str(),
+                          inflated[0] - loadInflated_[0], double(inflated[1] - loadInflated_[1]) / 1048576.0,
+                          double(inflated[2] - loadInflated_[2]) / 1e6);
+            more.push_back(line);
+        }
+        Profiler::get().close(prefix, head, more);
+        break;
+    }
+    case Event::Dropped:
+        Profiler::get().drop();
+        break;
+    case Event::None:
+        if (mapLoad_.loading()) ++loadFrames_;
+        break;
+    }
 }
 
 // 0.76: every half minute the effects' costs into uaro-graphics\effect-costs.txt (the settings app shows them);

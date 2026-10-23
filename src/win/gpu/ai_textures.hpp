@@ -463,6 +463,7 @@ private:
     // 0.66: the frames' pictures from asked to in; 3.0.2-beta.7: every picture of the pack by its parts, apart for
     // sprite frames, icons, the world's textures and the interface's (kLoadKinds)
     ai::LoadTimes loadTimes_[4];
+    int64_t lastTake_ = 0;  // 3.0.2-beta.12: the frame before's takeLoaded (QueryPerformanceCounter) - a frame's length
     std::unordered_set<uint64_t> icons_;  // the icons asked for this run
     uint32_t iconsNetwork_ = 0;
     // 0.48 (in place of the settings app's "Check the keys"): what the pack had no picture of, by kind; frames; icons.

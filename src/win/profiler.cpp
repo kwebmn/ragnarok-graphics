@@ -2,11 +2,18 @@
 
 #include <psapi.h>
 
+#include <algorithm>
+#include <cstdio>
 #include <cstring>
+#include <map>
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "core/pe_exports.hpp"
 #include "core/sample_profile.hpp"
+#include "win/game_camera.hpp"
 #include "win/log.hpp"
 
 #ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
@@ -16,39 +23,181 @@
 namespace uagfx::win {
 namespace {
 
-// The process's modules now (uaRO.exe first found by its handle; 2.5.5: ours by an address in it).
-std::vector<profile::Module> modules(size_t& exe, size_t& ours) {
-    std::vector<profile::Module> out;
-    exe = 0;
-    ours = size_t(-1);
-    HMODULE own = nullptr;
-    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                       reinterpret_cast<LPCWSTR>(&modules), &own);
-    HMODULE list[512];
-    DWORD needed = 0;
-    if (!K32EnumProcessModules(GetCurrentProcess(), list, sizeof list, &needed)) return out;
-    const HMODULE self = GetModuleHandleW(nullptr);
-    for (DWORD i = 0; i < needed / sizeof(HMODULE) && i < 512; ++i) {
-        MODULEINFO info{};
-        char name[MAX_PATH] = "";
-        if (!K32GetModuleInformation(GetCurrentProcess(), list[i], &info, sizeof info)) continue;
-        K32GetModuleBaseNameA(GetCurrentProcess(), list[i], name, MAX_PATH);
-        if (list[i] == self) exe = out.size();
-        if (list[i] == own) ours = out.size();
-        out.push_back(profile::Module{name, uint32_t(uintptr_t(info.lpBaseOfDll)), uint32_t(info.SizeOfImage)});
-    }
-    return out;
+constexpr size_t kStackWords = 1024;  // 3.0.2-beta.12: 4 KB of the stack, deep enough for the game's steps
+constexpr size_t kFrames = 48;        // the return addresses looked at
+
+// Our own memory read: a place no longer mapped (a module gone meanwhile) fails instead of faulting
+bool readSelf(uint32_t address, void* out, size_t size) {
+    SIZE_T got = 0;
+    return address &&
+           ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), out, size, &got) &&
+           got == size;
 }
 
-// A return address into uaRO.exe: right after a call (E8 rel32; FF /2 by register, memory or [disp32]).
-bool afterCall(uint32_t ret, uint32_t lo, uint32_t hi) {
-    if (ret < lo + 8 || ret >= hi) return false;
-    const auto* b = reinterpret_cast<const uint8_t*>(uintptr_t(ret));
-    if (b[-5] == 0xE8) return true;
-    if (b[-2] == 0xFF && (b[-1] & 0x38) == 0x10) return true;  // call reg / [reg]
-    if (b[-3] == 0xFF && (b[-2] & 0x38) == 0x10) return true;  // call [reg+disp8]
-    if (b[-6] == 0xFF && (b[-5] & 0x38) == 0x10) return true;  // call [disp32] / [reg+disp32]
-    return false;
+struct Module {
+    std::string name;
+    uint32_t base = 0, size = 0;
+    uint32_t codeBegin = 0, codeEnd = 0;  // its code, absolute
+    bool windows = false;                 // one of Windows' own (its folder's), not the game folder's
+    bool exportsRead = false;
+    std::vector<pe::Export> exports;
+};
+
+// The process's modules by their places, with what a sample's classing needs (3.0.2-beta.12); uaRO.exe found by its
+// handle, ours (2.5.5) by an address in it
+class Modules {
+public:
+    void list() {
+        std::map<std::string, std::vector<pe::Export>> known;  // the functions read before, by module and place
+        for (Module& m : mods_)
+            if (m.exportsRead) known[keyOf(m)] = std::move(m.exports);
+        mods_.clear();
+        calls_.clear();
+        exe_ = own_ = -1;
+        HMODULE own = nullptr;
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           reinterpret_cast<LPCWSTR>(&readSelf), &own);
+        char windows[MAX_PATH] = "";
+        const UINT windowsLength = GetSystemWindowsDirectoryA(windows, MAX_PATH);
+        HMODULE list[512];
+        DWORD needed = 0;
+        if (!K32EnumProcessModules(GetCurrentProcess(), list, sizeof list, &needed)) return;
+        const HMODULE self = GetModuleHandleW(nullptr);
+        std::vector<std::pair<HMODULE, Module>> found;
+        for (DWORD i = 0; i < needed / sizeof(HMODULE) && i < 512; ++i) {
+            MODULEINFO info{};
+            char path[MAX_PATH] = "";
+            if (!K32GetModuleInformation(GetCurrentProcess(), list[i], &info, sizeof info)) continue;
+            K32GetModuleFileNameExA(GetCurrentProcess(), list[i], path, MAX_PATH);
+            Module m;
+            const char* slash = std::strrchr(path, '\\');
+            m.name = slash ? slash + 1 : path;
+            m.base = uint32_t(uintptr_t(info.lpBaseOfDll));
+            m.size = uint32_t(info.SizeOfImage);
+            m.windows = windowsLength > 0 && windowsLength < MAX_PATH &&
+                        _strnicmp(path, windows, windowsLength) == 0 && path[windowsLength] == '\\';
+            uint32_t begin = 0, end = 0;
+            if (pe::codeOf(reader(m.base, m.size), begin, end)) {
+                m.codeBegin = m.base + begin;
+                m.codeEnd = m.base + std::min(end, m.size);
+            }
+            const auto was = known.find(keyOf(m));
+            if (was != known.end()) {
+                m.exports = std::move(was->second);
+                m.exportsRead = true;
+            }
+            found.emplace_back(list[i], std::move(m));
+        }
+        std::sort(found.begin(), found.end(),
+                  [](const auto& a, const auto& b) { return a.second.base < b.second.base; });
+        for (auto& [handle, m] : found) {
+            if (handle == self) exe_ = int(mods_.size());
+            if (handle == own) own_ = int(mods_.size());
+            mods_.push_back(std::move(m));
+        }
+    }
+
+    int at(uint32_t address) const {  // the module a place is in, -1 none
+        const auto it = std::upper_bound(mods_.begin(), mods_.end(), address,
+                                         [](uint32_t a, const Module& m) { return a < m.base; });
+        if (it == mods_.begin()) return -1;
+        const Module& m = *(it - 1);
+        return address - m.base < m.size ? int(it - 1 - mods_.begin()) : -1;
+    }
+    const Module& operator[](int i) const { return mods_[size_t(i)]; }
+    int exe() const { return exe_; }
+
+    std::vector<profile::Module> forTally() const {
+        std::vector<profile::Module> out;
+        for (const Module& m : mods_) out.push_back({m.name, m.base, m.size});
+        return out;
+    }
+    size_t exeIndex() const { return exe_ >= 0 ? size_t(exe_) : 0; }
+    size_t ownIndex() const { return own_ >= 0 ? size_t(own_) : size_t(-1); }
+
+    // Windows' function a place is in, by its module's exports (read the first time asked); "" when the nearest one
+    // before it is too far to be its own
+    std::string functionAt(int i, uint32_t address) {
+        Module& m = mods_[size_t(i)];
+        if (!m.exportsRead) {
+            m.exportsRead = true;
+            m.exports = pe::exportsOf(reader(m.base, m.size));
+        }
+        const pe::Export* e = pe::exportAt(m.exports, address - m.base);
+        return e && address - m.base - e->rva < 0x1000 ? e->name : std::string();
+    }
+
+    // A return address: right after a call (E8 rel32; FF /2 by register, memory or [disp32]); remembered
+    bool afterCall(uint32_t ret) {
+        const auto it = calls_.find(ret);
+        if (it != calls_.end()) return it->second;
+        uint8_t b[8];  // b[7] = ret[-1]
+        const bool call = readSelf(ret - 8, b, sizeof b) &&
+                          (b[3] == 0xE8 || (b[6] == 0xFF && (b[7] & 0x38) == 0x10) ||
+                           (b[5] == 0xFF && (b[6] & 0x38) == 0x10) || (b[2] == 0xFF && (b[3] & 0x38) == 0x10));
+        if (calls_.size() > 200000) calls_.clear();
+        calls_.emplace(ret, call);
+        return call;
+    }
+
+private:
+    static std::string keyOf(const Module& m) {
+        return m.name + "@" + std::to_string(m.base) + "+" + std::to_string(m.size);
+    }
+    static pe::Read reader(uint32_t base, uint32_t size) {
+        return [base, size](uint32_t rva, void* out, size_t n) {
+            return rva <= size && n <= size - rva && readSelf(base + rva, out, n);
+        };
+    }
+    std::vector<Module> mods_;
+    int exe_ = -1, own_ = -1;
+    std::unordered_map<uint32_t, bool> calls_;
+};
+
+// What a sample is (3.0.2-beta.12): its return addresses on the stack's copy, innermost first; outside uaRO.exe the
+// uaRO.exe place that called out (0.87); in Windows' code the outermost of its functions before the game's or a
+// library's ("Sleep", "WaitForSingleObject from ddraw.dll"); the game's step it is under
+profile::Sample classify(Modules& mods, uint32_t at, const uint32_t* stack, size_t words, bool steps) {
+    profile::Sample s;
+    s.at = at;
+    uint32_t frames[kFrames];
+    size_t n = 0;
+    for (size_t i = 0; i < words && n < kFrames; ++i) {
+        const uint32_t v = stack[i];
+        const int m = mods.at(v);
+        if (m < 0 || v < mods[m].codeBegin + 8 || v >= mods[m].codeEnd || !mods.afterCall(v)) continue;
+        frames[n++] = v;
+    }
+    const int here = mods.at(at);
+    if (here != mods.exe())
+        for (size_t k = 0; k < n; ++k)
+            if (mods.at(frames[k]) == mods.exe()) {
+                s.caller = frames[k];
+                break;
+            }
+    if (here >= 0 && mods[here].windows) {
+        int inner = here, from = -1;
+        uint32_t place = at;
+        for (size_t k = 0; k < n; ++k) {
+            const int m = mods.at(frames[k]);
+            if (!mods[m].windows) {
+                from = m;
+                break;
+            }
+            inner = m;
+            place = frames[k];
+        }
+        s.where = mods.functionAt(inner, place);
+        if (s.where.empty()) s.where = mods[inner].name;
+        if (from >= 0 && from != mods.exe()) s.where += " from " + mods[from].name;
+    }
+    if (steps) s.step = profile::stepOf(at, frames, n);
+    return s;
+}
+
+void say(const std::string& prefix, const std::string& head, const std::vector<std::string>& more) {
+    LOG_INFO("%s: %s", prefix.c_str(), head.c_str());
+    for (const std::string& line : more) LOG_INFO("%s", line.c_str());
 }
 
 }  // namespace
@@ -58,26 +207,68 @@ Profiler& Profiler::get() {
     return p;
 }
 
-void Profiler::run(DWORD gameThread, bool on) {
-    InterlockedExchange(&on_, on ? 1 : 0);
-    if (!on || thread_) return;
+bool Profiler::start(DWORD gameThread) {
+    if (thread_) return true;
+    if (failed_) return false;
     game_ = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, gameThread);
-    if (!game_) {
-        LOG_ERROR("profile: the game's thread cannot be sampled (%lu)", GetLastError());
-        return;
+    wake_ = game_ ? CreateEventW(nullptr, FALSE, FALSE, nullptr) : nullptr;
+    if (wake_) {
+        InitializeCriticalSection(&lock_);
+        thread_ = CreateThread(nullptr, 0, &Profiler::loop, this, 0, nullptr);
     }
-    thread_ = CreateThread(nullptr, 0, &Profiler::loop, this, 0, nullptr);
-    if (thread_) SetThreadPriority(thread_, THREAD_PRIORITY_ABOVE_NORMAL);
+    if (!thread_) {
+        failed_ = true;
+        LOG_ERROR("profile: the game's thread cannot be sampled (%lu)", GetLastError());
+        if (game_) CloseHandle(game_);
+        if (wake_) CloseHandle(wake_);
+        game_ = wake_ = nullptr;
+        return false;
+    }
+    SetThreadPriority(thread_, THREAD_PRIORITY_ABOVE_NORMAL);
+    return true;
+}
+
+void Profiler::run(DWORD gameThread, bool on) {
+    const LONG was = InterlockedExchange(&on_, on ? 1 : 0);
+    if (!on || was || !start(gameThread)) return;
     LOG_INFO("profile: sampling the game's thread (about 1000 a second; the tally every 10 s)");
+    SetEvent(wake_);
+}
+
+void Profiler::open(DWORD gameThread) {
+    if (start(gameThread) && InterlockedCompareExchange(&window_, kOpen, kShut) == kShut) SetEvent(wake_);
+}
+
+// Only the game's thread opens and closes the window (the sampling thread shuts it after its report): open here
+// stays open until we close it.
+void Profiler::close(const std::string& prefix, const std::string& head, const std::vector<std::string>& more) {
+    if (!thread_ || window_ != kOpen)  // not started, or the last one still being written when this one began
+        return say(prefix, head + "; the game's thread not sampled", more);
+    EnterCriticalSection(&lock_);
+    prefix_ = prefix;
+    head_ = head;
+    more_ = more;
+    LeaveCriticalSection(&lock_);
+    InterlockedExchange(&window_, kReport);
+    SetEvent(wake_);
+}
+
+void Profiler::drop() {
+    if (thread_ && window_ == kOpen) {
+        InterlockedExchange(&window_, kDrop);
+        SetEvent(wake_);
+    }
 }
 
 void Profiler::stop() {
     if (!thread_) return;
     InterlockedExchange(&quit_, 1);
+    SetEvent(wake_);
     WaitForSingleObject(thread_, 2000);
     CloseHandle(thread_);
     CloseHandle(game_);
-    thread_ = game_ = nullptr;
+    CloseHandle(wake_);
+    thread_ = game_ = wake_ = nullptr;
 }
 
 DWORD WINAPI Profiler::loop(void* self) {
@@ -88,17 +279,49 @@ DWORD WINAPI Profiler::loop(void* self) {
 void Profiler::sampleLoop() {
     HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
     if (!timer) timer = CreateWaitableTimerExW(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
-    profile::Tally tally;
-    size_t exe = 0, own = 0;
-    std::vector<profile::Module> mods = modules(exe, own);
-    tally.setModules(mods, exe, own);
-    const uint32_t lo = exe < mods.size() ? mods[exe].base : 0, hi = exe < mods.size() ? lo + mods[exe].size : 0;
+    Modules mods;
+    profile::Tally tally;   // [debug] profile's, every 10 s
+    profile::Tally window;  // 3.0.2-beta.12: a map's loading
+    bool wasOn = false, windowLive = false;
+    const bool steps = knownGameBuild();
     ULONGLONG since = GetTickCount64();
+    uint32_t stack[kStackWords];
     while (!quit_) {
-        if (!on_) {
-            Sleep(200);
+        const LONG w = window_;
+        if (w == kReport || w == kDrop) {
+            if (w == kReport) {
+                EnterCriticalSection(&lock_);
+                const std::string prefix = prefix_, head = head_;
+                const std::vector<std::string> more = more_;
+                LeaveCriticalSection(&lock_);
+                char sampled[64];
+                std::snprintf(sampled, sizeof sampled, "; the game's thread sampled %zu times", window.samples());
+                if (!window.samples()) say(prefix, head + "; the game's thread not sampled", {});
+                for (const std::string& line : window.report(prefix, head + sampled)) LOG_INFO("%s", line.c_str());
+                for (const std::string& line : more) LOG_INFO("%s", line.c_str());
+            }
+            window.report(1.0);  // what is left: dropped
+            windowLive = false;
+            InterlockedExchange(&window_, kShut);
+            continue;
+        }
+        const bool on = on_ != 0, open = w == kOpen;
+        if (on != wasOn) {
+            wasOn = on;
             since = GetTickCount64();
             tally.report(1.0);  // what was gathered before it went off is dropped
+            if (on) {
+                mods.list();
+                tally.setModules(mods.forTally(), mods.exeIndex(), mods.ownIndex());
+            }
+        }
+        if (open && !windowLive) {
+            windowLive = true;
+            mods.list();  // the modules of now: the map's own may have come
+            window.setModules(mods.forTally(), mods.exeIndex(), mods.ownIndex());
+        }
+        if (!on && !open) {
+            WaitForSingleObject(wake_, 1000);
             continue;
         }
         if (timer) {
@@ -112,37 +335,35 @@ void Profiler::sampleLoop() {
         // heap's or the loader's).
         CONTEXT c{};
         c.ContextFlags = CONTEXT_CONTROL;
-        uint32_t stack[64];
+        size_t words = 0;
         bool got = false;
         if (SuspendThread(game_) != DWORD(-1)) {
             if (GetThreadContext(game_, &c)) {
                 MEMORY_BASIC_INFORMATION mbi{};
-                const auto sp = reinterpret_cast<const uint8_t*>(uintptr_t(c.Esp));
-                got = VirtualQuery(sp, &mbi, sizeof mbi) && mbi.State == MEM_COMMIT &&
-                      sp + sizeof stack <= static_cast<const uint8_t*>(mbi.BaseAddress) + mbi.RegionSize;
-                if (got) std::memcpy(stack, sp, sizeof stack);
-                else std::memset(stack, 0, sizeof stack);
+                const auto* sp = reinterpret_cast<const uint8_t*>(uintptr_t(c.Esp));
+                if (VirtualQuery(sp, &mbi, sizeof mbi) && mbi.State == MEM_COMMIT) {
+                    const auto* end = static_cast<const uint8_t*>(mbi.BaseAddress) + mbi.RegionSize;
+                    words = std::min(kStackWords, size_t(end - sp) / 4);
+                    std::memcpy(stack, sp, words * 4);
+                }
                 got = true;
             }
             ResumeThread(game_);
         }
         if (got) {
-            const uint32_t at = uint32_t(c.Eip);
-            uint32_t caller = 0;
-            if (at - lo >= hi - lo)
-                for (uint32_t v : stack)
-                    if (afterCall(v, lo, hi)) {
-                        caller = v;
-                        break;
-                    }
-            tally.add(at, caller);
+            const profile::Sample s = classify(mods, uint32_t(c.Eip), stack, words, steps);
+            if (on) tally.add(s);
+            if (open) window.add(s);
         }
-        const ULONGLONG now = GetTickCount64();
-        if (now - since >= 10000) {
-            for (const std::string& line : tally.report(double(now - since) / 1000.0)) LOG_INFO("%s", line.c_str());
-            since = now;
-            mods = modules(exe, own);  // modules come and go (the graphics driver's): listed anew for the next tally
-            tally.setModules(mods, exe, own);
+        if (on) {
+            const ULONGLONG now = GetTickCount64();
+            if (now - since >= 10000) {
+                for (const std::string& line : tally.report(double(now - since) / 1000.0))
+                    LOG_INFO("%s", line.c_str());
+                since = now;
+                mods.list();  // modules come and go (the graphics driver's): listed anew for the next tally
+                tally.setModules(mods.forTally(), mods.exeIndex(), mods.ownIndex());
+            }
         }
     }
     if (timer) CloseHandle(timer);

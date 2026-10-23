@@ -490,6 +490,14 @@ void Remote::execute(const FrameRecord& record) {
     send(Msg::Execute, buffer_);
     QueryPerformanceCounter(&b);
     sendTicks_ += b.QuadPart - a.QuadPart;  // 2.1.1
+    sendTotal_ += b.QuadPart - a.QuadPart;
+}
+
+void Remote::bridgeTimes(double& sendMs, double& waitMs) const {
+    LARGE_INTEGER f;
+    QueryPerformanceFrequency(&f);
+    sendMs = double(sendTotal_) * 1000.0 / double(f.QuadPart);
+    waitMs = double(waitTotal_) * 1000.0 / double(f.QuadPart);
 }
 
 // 2.1.1: every 30 s, where the game's thread spent a frame in the bridge - writing and sending its draws, waiting for
@@ -561,6 +569,7 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     const bool behind = presentsSent_ - channel_.presented() >= 2 && !channel_.waitPresented(presentsSent_ - 1, 1000);
     QueryPerformanceCounter(&b);
     waitTicks_ += b.QuadPart - a.QuadPart;  // 2.1.1
+    waitTotal_ += b.QuadPart - a.QuadPart;
     timeLog();
     if (behind && channel_.peerGone()) {
         setLost(who_ + " exited");
@@ -592,6 +601,7 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
         const bool shown = channel_.waitPresented(presentsSent_, 1000);
         QueryPerformanceCounter(&b);
         waitTicks_ += b.QuadPart - a.QuadPart;
+        waitTotal_ += b.QuadPart - a.QuadPart;
         if (!shown && channel_.peerGone()) setLost(who_ + " exited");
     }
 }

@@ -37,7 +37,7 @@ double Steps::total() const {
     return t;
 }
 
-void LoadTimes::add(const double (&parts)[kLoadParts]) {
+void LoadTimes::add(const double (&parts)[kLoadParts], double frameMs) {
     double whole = 0.0;
     for (int i = 0; i < kLoadParts; ++i) {
         sum_[i] += parts[i];
@@ -46,16 +46,19 @@ void LoadTimes::add(const double (&parts)[kLoadParts]) {
     }
     sum_[kLoadParts] += whole;
     most_[kLoadParts] = std::max(most_[kLoadParts], whole);
+    sum_[kLoadParts + 1] += frameMs;
+    most_[kLoadParts + 1] = std::max(most_[kLoadParts + 1], frameMs);
     ++count_;
 }
 
 std::string LoadTimes::line() const {
     if (!count_) return {};
-    static const char* const kNames[kLoadParts + 1] = {"in the queue", "read",           "WebP",
-                                                       "fitted",       "until its frame", "in all"};
+    static const char* const kNames[kLoadParts + 2] = {
+        "in the queue", "read", "WebP", "fitted", "until its frame", "in all", "its frame lasted"};
     std::string out = std::to_string(count_) + ":";
-    for (int i = 0; i <= kLoadParts; ++i)
-        out += std::string(i ? "," : "") + " " + kNames[i] + " " + ms(sum_[i] / count_) + " (" + ms(most_[i]) + ")";
+    for (int i = 0; i < kLoadParts + 2; ++i)
+        out += std::string(i == kLoadParts + 1 ? " -" : i ? "," : "") + " " + kNames[i] + " " + ms(sum_[i] / count_) +
+               " (" + ms(most_[i]) + ")";
     return out;
 }
 

@@ -15,5 +15,7 @@ bool readCameraTargetDepth(float& z);
 std::string readGameMap();
 // 2.3, uaRO Studio's pick: the game's own cursor in its pixels; false in another build of the exe.
 bool readGameCursor(int& x, int& y);
+// 3.0.2-beta.12: uaRO.exe is the build these addresses (and the profile's steps, core/sample_profile.hpp) belong to
+bool knownGameBuild();
 
 }  // namespace uagfx::win
