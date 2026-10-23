@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.2-beta.11 — what is new
+
+- **Maps load sooner.** Our `cps.dll`, through which the game inflates every file of its GRF archives, now runs on
+  libdeflate: on the client's files it inflates several times as fast as the version before, byte for byte the same.
+  As before, it is turned off on «Service» → «The game's libraries».
+
 # uaRO Graphics 3.0.2-beta.10 — what is new
 
 - **HD textures on a map come sooner.** The pack's pictures are now decoded by several threads, half the processor's
