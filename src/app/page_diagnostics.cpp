@@ -71,7 +71,7 @@ public:
             item.pszText = const_cast<wchar_t*>(rows_[i].result.c_str());
             SendMessageW(list_, LVM_SETITEMTEXTW, i, reinterpret_cast<LPARAM>(&item));
         }
-        p.buttons({{kFix, t(Text::DiagFix)}, {kRecheck, t(Text::DiagRecheck)}});
+        p.buttons({{kFix, t(Text::DiagFix), true, true}, {kRecheck, t(Text::DiagRecheck)}});
         EnableWindow(GetDlgItem(host_.window(), kFix), FALSE);
         p.buttons({{kOpenLog, t(Text::DiagOpenLog)}, {kOpenFolder, t(Text::DiagOpenFolder)}, {kReport, t(Text::DiagReport)}});
         EnableWindow(GetDlgItem(host_.window(), kOpenLog), m.now().log.found);

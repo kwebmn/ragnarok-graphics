@@ -176,7 +176,7 @@ public:
         p.check(kRedoBox, t(Text::PackRedo), packRedo(), t(Text::PackRedoHint), !running_);
         const bool chosen = pack::anyChosen(g_choice);
         const bool busy = running_ || compacting_;  // 2.5.28: Compact holds the pack too
-        p.buttons({{kMake, t(Text::PackMake), host && chosen && !busy}, {kStop, t(Text::PackStop), running_}});
+        p.buttons({{kMake, t(Text::PackMake), host && chosen && !busy, true}, {kStop, t(Text::PackStop), running_}});
         bar_ = p.progress(kBar);
         // The lines as they are now; while it works, room for two of each (tick() changes their text alone).
         std::wstring line, detail;

@@ -115,6 +115,7 @@ ALLOWED = {
         "RegisterClassExW", "ReleaseDC", "SendMessageW", "SetClipboardData", "SetDlgItemTextW", "SetFocus",
         "SetForegroundWindow", "SetTimer", "SetWindowLongW", "SetWindowPos", "SetWindowTextW", "ShowWindow",
         "SystemParametersInfoW", "TranslateMessage", "wsprintfW",
+        "FrameRect", "GetPropW", "SetPropW",  # 3.0.2: the important buttons blue (Windows 2000 and later)
         # 0.22.1, the page view that scrolls (all of them in Windows since 95 / NT 3.1)
         "GetClassNameW", "GetScrollInfo", "GetSystemMetrics", "ScrollWindowEx", "SetScrollInfo", "SetScrollPos",
         "WindowFromPoint",

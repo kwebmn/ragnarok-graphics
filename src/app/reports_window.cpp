@@ -201,7 +201,7 @@ HWND ReportsWindow::create(HWND owner) {
     SendMessageW(reply, EM_SETLIMITTEXT, 4000, 0);
     make(L"BUTTON", t(Text::ReportAddShot), tab | BS_PUSHBUTTON, kAddShot);
     make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, kAttached);
-    make(L"BUTTON", t(Text::ReportSendButton), tab | BS_PUSHBUTTON, kSend);
+    markPrimary(make(L"BUTTON", t(Text::ReportSendButton), tab | BS_PUSHBUTTON, kSend));  // 3.0.2: blue
     // the new report
     make(L"STATIC", t(Text::ReportNewHeading), SS_LEFT | SS_NOPREFIX, kNewHeading);
     make(L"STATIC", t(Text::ReportComment) + L" (" + t(Text::ReportCommentCue) + L")", SS_LEFT | SS_NOPREFIX,
@@ -224,7 +224,7 @@ HWND ReportsWindow::create(HWND owner) {
     make(L"BUTTON", t(Text::ReportPaste), tab | BS_PUSHBUTTON, kPaste);
     make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX, kGoes);
     make(L"BUTTON", t(Text::ReportCancel), tab | BS_PUSHBUTTON, kCancel);
-    make(L"BUTTON", t(Text::ReportSendButton), tab | BS_PUSHBUTTON, kSendNew);
+    markPrimary(make(L"BUTTON", t(Text::ReportSendButton), tab | BS_PUSHBUTTON, kSendNew));
     // the bottom row
     make(L"STATIC", L"", WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, kStatus);
     make(L"BUTTON", t(Text::Close), WS_VISIBLE | tab | BS_PUSHBUTTON, kClose);
@@ -677,6 +677,8 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_NOTIFY: {
             const NMHDR* n = reinterpret_cast<const NMHDR*>(lp);
+            LRESULT drawn = 0;
+            if (drawPrimary(n, drawn)) return drawn;  // 3.0.2: «Надіслати» blue
             if (n->idFrom == kList && n->code == LVN_ITEMCHANGED && !filling_) {
                 const NMLISTVIEW* v = reinterpret_cast<const NMLISTVIEW*>(lp);
                 if ((v->uNewState & LVIS_SELECTED) && !(v->uOldState & LVIS_SELECTED)) openSelected();

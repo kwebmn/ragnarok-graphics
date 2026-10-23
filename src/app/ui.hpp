@@ -31,7 +31,15 @@ struct ButtonItem {  // a button of Panel::buttons
     int id;
     std::wstring text;
     bool enabled = true;
+    bool primary = false;  // 3.0.2: an important one - blue (drawPrimary)
 };
+
+// 3.0.2 (the user: «важные кнопки — синие»): a button marked important is drawn in the accent blue with white text by
+// its parent's NM_CUSTOMDRAW - drawPrimary in the parent's WM_NOTIFY; disabled, or in Windows' high contrast, as
+// Windows draws it
+void markPrimary(HWND button);
+// True when `n` was a marked button's custom draw, its answer in `result`
+bool drawPrimary(const NMHDR* n, LRESULT& result);
 
 struct LineItem {  // a text field of Panel::lines
     int id;

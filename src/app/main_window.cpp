@@ -293,6 +293,7 @@ void MainWindow::create() {
     stripLeft_ = child(L"STATIC", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX | SS_ENDELLIPSIS, 0);
     stripRight_ = child(L"STATIC", SS_RIGHT | SS_CENTERIMAGE | SS_NOPREFIX, 0);
     stripUpdate_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kStripUpdate);
+    markPrimary(stripUpdate_);  // 3.0.2: the important buttons blue
     ShowWindow(stripUpdate_, SW_HIDE);
     stripBrush_ = CreateSolidBrush(RGB(243, 243, 243));
     report_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP | WS_GROUP, kReportButton);
@@ -314,6 +315,7 @@ void MainWindow::create() {
     ShowWindow(banner_, model_->system().elevated ? SW_SHOW : SW_HIDE);
     status_ = child(L"STATIC", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX | SS_ENDELLIPSIS, 0);
     apply_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kApply);
+    markPrimary(apply_);  // blue while there is something to apply (grey, disabled, without)
     play_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kPlay);
     undo_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kUndo);
     close_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kCloseButton);
@@ -967,6 +969,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_NOTIFY: {
             const auto* n = reinterpret_cast<const NMHDR*>(lp);
+            LRESULT drawn = 0;
+            if (drawPrimary(n, drawn)) return drawn;  // 3.0.2: a blue button, the page's or the window's own
             if (n && n->idFrom >= 1000 && current_ && !rebuilds_.quiet()) return current_->notify(n);
             return 0;
         }

@@ -151,7 +151,7 @@ public:
         checking_ = u.kind == UpdateState::Checking;
         const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
         std::vector<ButtonItem> buttons{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
-        if (offered) buttons.push_back({kUpdateNow, t(Text::UpdateNow)});
+        if (offered) buttons.push_back({kUpdateNow, t(Text::UpdateNow), true, true});
         p.buttons(buttons);
         if (u.kind == UpdateState::Checking)
             p.note(t(Text::UpdateChecking));

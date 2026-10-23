@@ -73,6 +73,11 @@ void showStep(Small& s) {
 LRESULT CALLBACK proc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     Small* s = reinterpret_cast<Small*>(GetWindowLongPtrW(h, GWLP_USERDATA));
     switch (msg) {
+        case WM_NOTIFY: {  // 3.0.2: «Оновити» blue
+            LRESULT drawn = 0;
+            if (drawPrimary(reinterpret_cast<const NMHDR*>(lp), drawn)) return drawn;
+            break;
+        }
         case WM_COMMAND: {
             if (!s) break;
             const int id = LOWORD(wp);
@@ -214,6 +219,7 @@ Answer askUpdate(const std::string& version, settings::Lang l) {
     w.control(L"BUTTON", wtr(l, Text::UpdatePlayWithout), BS_PUSHBUTTON | WS_TABSTOP, kSecond, 136, 106, 170, 30);
     HWND update =
         w.control(L"BUTTON", wtr(l, Text::UpdateDo), BS_DEFPUSHBUTTON | WS_TABSTOP, kFirst, 314, 106, 110, 30);
+    markPrimary(update);  // 3.0.2: the important buttons blue
     run(w.win, update);
     return s.pressed == kFirst ? Answer::Update : Answer::Play;
 }

@@ -73,6 +73,54 @@ COLORREF toneColor(Tone t) {
     return GetSysColor(COLOR_WINDOWTEXT);
 }
 
+namespace {
+const wchar_t kPrimaryProp[] = L"uagfx.primary";  // a window property: gone with its button
+}  // namespace
+
+void markPrimary(HWND button) {
+    if (button) SetPropW(button, kPrimaryProp, reinterpret_cast<HANDLE>(1));
+}
+
+bool drawPrimary(const NMHDR* n, LRESULT& result) {
+    if (!n || n->code != NM_CUSTOMDRAW || !GetPropW(n->hwndFrom, kPrimaryProp)) return false;
+    const auto* cd = reinterpret_cast<const NMCUSTOMDRAW*>(n);
+    result = CDRF_DODEFAULT;
+    HIGHCONTRASTW contrast{};
+    contrast.cbSize = sizeof contrast;
+    const bool high = SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof contrast, &contrast, 0) &&
+                      (contrast.dwFlags & HCF_HIGHCONTRASTON);
+    if (cd->dwDrawStage != CDDS_PREPAINT || high || !IsWindowEnabled(n->hwndFrom)) return true;
+    const UINT state = cd->uItemState;
+    // Windows 11's accent button: under the mouse a little darker, pressed darker still
+    const COLORREF fill = (state & CDIS_SELECTED) ? RGB(15, 84, 140)
+                          : (state & CDIS_HOT)    ? RGB(17, 94, 163)
+                                                  : toneColor(Tone::Accent);
+    HDC dc = cd->hdc;
+    RECT r = cd->rc;
+    HBRUSH brush = CreateSolidBrush(fill);
+    FillRect(dc, &r, brush);
+    DeleteObject(brush);
+    wchar_t text[256] = {};
+    GetWindowTextW(n->hwndFrom, text, 256);
+    const LRESULT cues = SendMessageW(n->hwndFrom, WM_QUERYUISTATE, 0, 0);
+    HFONT font = reinterpret_cast<HFONT>(SendMessageW(n->hwndFrom, WM_GETFONT, 0, 0));
+    HGDIOBJ old = font ? SelectObject(dc, font) : nullptr;
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, RGB(255, 255, 255));
+    DrawTextW(dc, text, -1, &r,
+              DT_CENTER | DT_VCENTER | DT_SINGLELINE | ((cues & UISF_HIDEACCEL) ? DT_HIDEPREFIX : 0));
+    if (old) SelectObject(dc, old);
+    if ((state & CDIS_FOCUS) && !(cues & UISF_HIDEFOCUS)) {  // the keyboard's: a white frame inside
+        const int in = px(3, windowDpi(n->hwndFrom));
+        RECT f{r.left + in, r.top + in, r.right - in, r.bottom - in};
+        HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
+        FrameRect(dc, &f, white);
+        DeleteObject(white);
+    }
+    result = CDRF_SKIPDEFAULT;
+    return true;
+}
+
 Panel::Panel(HWND owner, HFONT font, HFONT heading, HWND tooltip, int dpi, RECT area, std::wstring taken)
     : owner_(owner), font_(font), heading_(heading), tooltip_(tooltip), dpi_(dpi), area_(area), y_(area.top),
       taken_(std::move(taken)) {}
@@ -311,6 +359,7 @@ HWND Panel::buttons(const std::vector<ButtonItem>& list) {
         HWND c = make(L"BUTTON", b.enabled ? withMnemonic(b.text, taken_) : literal(b.text),
                       BS_PUSHBUTTON | WS_TABSTOP, x, y_, w, at(kRow + 4), b.id);
         EnableWindow(c, b.enabled);
+        if (b.primary) markPrimary(c);
         if (!first) first = c;
         x += w + at(8);
     }

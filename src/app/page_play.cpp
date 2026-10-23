@@ -88,7 +88,7 @@ public:
             p.note(t(checking_ ? Text::UpdateChecking : Text::MainUpdateNone));
         }
         std::vector<ButtonItem> updates{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
-        if (!offer.empty()) updates.push_back({kUpdateNow, t(Text::UpdateNow)});
+        if (!offer.empty()) updates.push_back({kUpdateNow, t(Text::UpdateNow), true, true});
         p.buttons(updates);
         if (patchNeeded) {
             p.note(tf(Text::PlayPatchLine, {std::to_string(patch.check.needed.size()), megabytes(patch.check.bytes)}),
@@ -96,7 +96,8 @@ public:
             p.note(t(Text::PlayPatchNote));
         }
         p.gap();
-        p.buttons({{kPlayNow, t(offer.empty() && !patchNeeded ? Text::PlayButton : Text::PlayUpdateButton)}});
+        p.buttons({{kPlayNow, t(offer.empty() && !patchNeeded ? Text::PlayButton : Text::PlayUpdateButton), true,
+                    true}});  // 3.0.2: blue
         rows_->buildRow(p, "launcher.direct_start");
     }
 
