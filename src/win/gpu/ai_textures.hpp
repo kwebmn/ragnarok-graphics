@@ -20,6 +20,7 @@
 #include "core/ai/rrdb.hpp"
 #include "core/ai/srvgg.hpp"
 #include "core/ai/timings.hpp"
+#include "core/ai/urgent_queue.hpp"
 #include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/studio_link.hpp"
@@ -312,7 +313,9 @@ private:
     void request(IoRequest r);
     static DWORD WINAPI ioMain(void* self);
     void ioLoop();
-    bool ioRead(const IoRequest& r, IoResult& res);  // the I/O thread's
+    // 3.0.2-beta.10: a picture's bytes, the I/O thread's (the pack's one FILE*) - decoded by the pool
+    bool readBlob(const IoRequest& r, IoResult& res, std::vector<uint8_t>& blob);
+    void deliver(IoResult&& res);  // into ioOut_, for takeLoaded
     bool ioCheckpoint();                             // the I/O thread's: the index and the central directory
     std::string packIndex() const;                   // the I/O thread's
     void logNow(bool final);
@@ -320,7 +323,9 @@ private:
     void requestPacked(uint32_t id, const std::string& name, int width, int height, Job cell, uint8_t rank = 1,
                        const std::vector<uint8_t>& shown = {});
     bool blackKeyed(Item& item, ai::Kind kind, std::string& name);  // 2.5.18: its plain picture's name
-    bool nextIo(IoRequest& r);  // 0.66: under ioLock_: the most urgent request, taken out
+    // 0.66: under ioLock_: the most urgent request, taken out; 3.0.2-beta.10: reads - a picture's too (the pool
+    // has room), its rank the one it is read by (read ahead, in view since: 1)
+    bool nextIo(IoRequest& r, bool reads);
 
     Renderer::Impl& m_;
     bool ready_ = false;
@@ -424,6 +429,28 @@ private:
     CRITICAL_SECTION ioLock_{};
     bool ioLockMade_ = false;
     bool ioStop_ = false;
+    // 3.0.2-beta.10 (the client build session: one thread read and decoded - a sprite frame waited for a ground
+    // texture's 26-73 ms of WebP, one of the 12 processors working): the I/O thread reads, a pool of half the
+    // logical processors (1-8, below normal) decodes, the most urgent first; the I/O thread reads on only while
+    // the pool holds fewer than twice its workers (a map's hundreds known ahead stay requests: a frame asked later
+    // still goes first)
+    struct DecodeTask {
+        IoResult res;               // its id, name, job and times so far
+        std::vector<uint8_t> blob;  // the picture as the pack holds it
+        int width = 0, height = 0;  // the game texture's (IoRequest's)
+        std::vector<uint8_t> shown;  // 2.5.18: a black-keyed texture's
+        int64_t pushed = 0;
+    };
+    ai::UrgentQueue<DecodeTask> decodeQueue_;  // under decodeLock_
+    CRITICAL_SECTION decodeLock_{};
+    CONDITION_VARIABLE decodeReady_{};
+    bool decodeLockMade_ = false;
+    bool decodeStop_ = false;
+    std::vector<HANDLE> decoders_;  // made before the I/O thread, never changed after
+    static DWORD WINAPI decodeMain(void* self);
+    void decodeLoop();
+    void decode(DecodeTask& t);  // WebP, halved, its key, its dye
+    bool decodeRoom();
     std::deque<IoRequest> ioIn_;
     std::unordered_set<uint32_t> urgent_;  // 0.66: textures read ahead and in view since: their turn first
     std::deque<IoResult> ioOut_;

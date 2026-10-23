@@ -107,6 +107,17 @@ AiTextures::~AiTextures() {
         WaitForSingleObject(ioThread_, 15000);  // the last pictures and the index go into the pack
         CloseHandle(ioThread_);
     }
+    if (decodeLockMade_) {  // 3.0.2-beta.10: what is left undecoded is not wanted any more
+        EnterCriticalSection(&decodeLock_);
+        decodeStop_ = true;
+        LeaveCriticalSection(&decodeLock_);
+        WakeAllConditionVariable(&decodeReady_);
+        for (HANDLE h : decoders_) {
+            WaitForSingleObject(h, 5000);
+            CloseHandle(h);
+        }
+        DeleteCriticalSection(&decodeLock_);
+    }
     if (ioWake_) CloseHandle(ioWake_);
     if (ioLockMade_) DeleteCriticalSection(&ioLock_);
     if (writerMutex_) {
@@ -303,6 +314,18 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     ioLockMade_ = true;
     ioWake_ = CreateEventA(nullptr, FALSE, FALSE, nullptr);
     startedAt_ = began;
+    // 3.0.2-beta.10: the decoding pool, before the I/O thread that feeds it (none made: it decodes them itself)
+    InitializeCriticalSection(&decodeLock_);
+    InitializeConditionVariable(&decodeReady_);
+    decodeLockMade_ = true;
+    SYSTEM_INFO system{};
+    GetSystemInfo(&system);
+    const int workers = std::clamp(int(system.dwNumberOfProcessors) / 2, 1, 8);
+    for (int i = 0; ioWake_ && i < workers; ++i)
+        if (HANDLE h = CreateThread(nullptr, 0, decodeMain, this, 0, nullptr)) {
+            SetThreadPriority(h, THREAD_PRIORITY_BELOW_NORMAL);  // the game first
+            decoders_.push_back(h);
+        }
     if (alongside && ioWake_) {  // 3.0.2-beta.9: the I/O thread's first
         IoRequest open;
         open.type = IoRequest::Open;
@@ -328,8 +351,9 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
                           : !s.enabled ? "not kept: the pack's pictures are off - all made anew, the pack untouched"
                                        : "not kept: the pack is being written by its builder or another game, or "
                                          "cannot be read");
-    LOG_INFO("AI textures: on - %s; x%d, textures %d-%d, ahead %s; %s", kinds.c_str(), scale_, minSide_, maxSide_,
-             ahead_ ? "on" : "off", making.c_str());
+    LOG_INFO("AI textures: on - %s; x%d, textures %d-%d, ahead %s; %s; the pack's pictures decoded by %zu threads",
+             kinds.c_str(), scale_, minSide_, maxSide_, ahead_ ? "on" : "off", making.c_str(),
+             decoders_.empty() ? size_t(1) : decoders_.size());
     if (alongside)
         LOG_INFO("AI textures: the texture pack uaro-textures.zip opens alongside the game");
     else if (pack_->isOpen())
@@ -1649,12 +1673,13 @@ void AiTextures::requestPacked(uint32_t id, const std::string& name, int width, 
     request(std::move(r));
 }
 
-bool AiTextures::nextIo(IoRequest& r) {
+bool AiTextures::nextIo(IoRequest& r, bool reads) {
     if (ioIn_.empty()) return false;
-    size_t best = 0;
+    size_t best = ioIn_.size();
     int bestRank = 9;
     for (size_t i = 0; i < ioIn_.size(); ++i) {
         const IoRequest& q = ioIn_[i];
+        if (!reads && q.type == IoRequest::Read) continue;  // 3.0.2-beta.10: the pool is full
         const bool first = q.type == IoRequest::Note || q.type == IoRequest::Reload || q.type == IoRequest::Open;
         int rank = first ? -1 : q.type == IoRequest::Write ? 3 : q.rank;
         if (rank == 2 && urgent_.count(q.id)) rank = 1;  // read ahead, in view now
@@ -1664,9 +1689,13 @@ bool AiTextures::nextIo(IoRequest& r) {
             if (rank < 0) break;
         }
     }
+    if (best == ioIn_.size()) return false;
     r = std::move(ioIn_[best]);
     ioIn_.erase(ioIn_.begin() + long(best));
-    if (r.type == IoRequest::Read) urgent_.erase(r.id);
+    if (r.type == IoRequest::Read) {
+        if (bestRank >= 0 && bestRank < r.rank) r.rank = uint8_t(bestRank);  // decoded as one in view too
+        urgent_.erase(r.id);
+    }
     return true;
 }
 
@@ -2221,8 +2250,9 @@ void AiTextures::ioLoop() {
         // longer keep the characters' frames waiting behind them.
         for (;;) {
             IoRequest r;
+            const bool room = decodeRoom();
             EnterCriticalSection(&ioLock_);
-            const bool have = nextIo(r);
+            const bool have = nextIo(r, room);
             stop = ioStop_;
             LeaveCriticalSection(&ioLock_);
             if (!have) break;
@@ -2280,22 +2310,31 @@ void AiTextures::ioLoop() {
                 if (!since) since = GetTickCount64();
                 continue;
             }
-            IoResult res;
+            DecodeTask task;
+            IoResult& res = task.res;
             res.id = r.id;
             res.name = r.name;
             res.cell = std::move(r.cell);
             res.part[int(ai::LoadPart::Queue)] = msBetween(r.asked, clockNow());  // 3.0.2-beta.7
-            res.ok = ioRead(r, res);
-            const Job& cj = res.cell;  // 2.5.23: a frame in a dye from its picture in its own colours
-            if (res.ok && !cj.own.empty() && res.width == cj.width * scale_ && res.height == cj.height * scale_) {
-                const int64_t from = clockNow();
-                ai::recolour(res.argb, res.width, res.height, cj.own.data(), cj.dyed.data(), cj.width, cj.height);
-                res.part[int(ai::LoadPart::Fit)] += msBetween(from, clockNow());
+            if (!readBlob(r, res, task.blob)) {
+                res.out = clockNow();
+                deliver(std::move(res));
+                continue;
             }
-            res.out = clockNow();
-            EnterCriticalSection(&ioLock_);
-            ioOut_.push_back(std::move(res));
-            LeaveCriticalSection(&ioLock_);
+            task.width = r.width;
+            task.height = r.height;
+            task.shown = std::move(r.shown);
+            task.pushed = clockNow();
+            if (decoders_.empty()) {  // no pool: here, as before 3.0.2-beta.10
+                decode(task);
+                res.out = clockNow();
+                deliver(std::move(res));
+                continue;
+            }
+            EnterCriticalSection(&decodeLock_);
+            decodeQueue_.push(r.rank, std::move(task));
+            LeaveCriticalSection(&decodeLock_);
+            WakeConditionVariable(&decodeReady_);
         }
         const ULONGLONG now = GetTickCount64();
         // At the end the maps seen go into the index too, also when no picture was made.
@@ -2331,9 +2370,8 @@ std::string AiTextures::packIndex() const {
 // The I/O thread's: a picture of the pack - written this run and not yet in its directory, in the pack as the game
 // found it, or in it since a checkpoint - 4 times the game's texture: twice at x2, and (0.45) a whole texture's
 // picture for one at a lower texture detail, 8 or 16 times its size.
-bool AiTextures::ioRead(const IoRequest& r, IoResult& res) {
-    std::vector<uint8_t> blob;
-    const int64_t from = clockNow();  // 3.0.2-beta.7: the read, WebP, the fitting
+bool AiTextures::readBlob(const IoRequest& r, IoResult& res, std::vector<uint8_t>& blob) {
+    const int64_t from = clockNow();  // 3.0.2-beta.7
     EnterCriticalSection(&ioLock_);
     const std::shared_ptr<pack::Reader> reader = pack_;  // 2.3: swapped by a reload of the studio's
     LeaveCriticalSection(&ioLock_);
@@ -2342,18 +2380,65 @@ bool AiTextures::ioRead(const IoRequest& r, IoResult& res) {
         blob = u->second;
     else if (!reader->read(r.name, blob) && !(fresh_.isOpen() && fresh_.read(r.name, blob)))
         return false;
-    const int64_t read = clockNow();
-    res.part[int(ai::LoadPart::Read)] = msBetween(from, read);
-    if (!webp::decode(blob.data(), blob.size(), res.argb, res.width, res.height)) return false;
+    res.part[int(ai::LoadPart::Read)] = msBetween(from, clockNow());
+    return true;
+}
+
+void AiTextures::deliver(IoResult&& res) {
+    EnterCriticalSection(&ioLock_);
+    ioOut_.push_back(std::move(res));
+    LeaveCriticalSection(&ioLock_);
+}
+
+// 3.0.2-beta.10, a pool's worker (or the I/O thread without one): the picture decoded - 4 times the game's texture:
+// twice at x2, and (0.45) a whole texture's picture for one at a lower texture detail, 8 or 16 times its size.
+void AiTextures::decode(DecodeTask& t) {
+    IoResult& res = t.res;
+    const int64_t from = clockNow();
+    res.ok = webp::decode(t.blob.data(), t.blob.size(), res.argb, res.width, res.height);
+    std::vector<uint8_t>().swap(t.blob);
+    if (!res.ok) return;
     const int64_t decoded = clockNow();
-    res.part[int(ai::LoadPart::Decode)] = msBetween(read, decoded);
-    while (r.width > 0 && r.height > 0 && res.width > r.width * scale_ && res.height > r.height * scale_ &&
+    res.part[int(ai::LoadPart::Decode)] = msBetween(from, decoded);
+    while (t.width > 0 && t.height > 0 && res.width > t.width * scale_ && res.height > t.height * scale_ &&
            res.width % 2 == 0 && res.height % 2 == 0)
         ai::halve(res.argb, res.width, res.height);
-    if (!r.shown.empty())  // 2.5.18: the plain texture's picture for one keyed black - the key on it
-        ai::keyAway(res.argb, res.width, res.height, r.shown, r.width, r.height);
+    if (!t.shown.empty())  // 2.5.18: the plain texture's picture for one keyed black - the key on it
+        ai::keyAway(res.argb, res.width, res.height, t.shown, t.width, t.height);
+    const Job& cj = res.cell;  // 2.5.23: a frame in a dye from its picture in its own colours
+    if (!cj.own.empty() && res.width == cj.width * scale_ && res.height == cj.height * scale_)
+        ai::recolour(res.argb, res.width, res.height, cj.own.data(), cj.dyed.data(), cj.width, cj.height);
     res.part[int(ai::LoadPart::Fit)] = msBetween(decoded, clockNow());
-    return true;
+}
+
+DWORD WINAPI AiTextures::decodeMain(void* self) {
+    static_cast<AiTextures*>(self)->decodeLoop();
+    return 0;
+}
+
+void AiTextures::decodeLoop() {
+    for (;;) {
+        DecodeTask task;
+        EnterCriticalSection(&decodeLock_);
+        while (decodeQueue_.empty() && !decodeStop_) SleepConditionVariableCS(&decodeReady_, &decodeLock_, INFINITE);
+        const bool have = !decodeStop_ && decodeQueue_.pop(task);
+        LeaveCriticalSection(&decodeLock_);
+        if (!have) return;  // stopping
+        task.res.part[int(ai::LoadPart::Queue)] += msBetween(task.pushed, clockNow());  // waited for a worker too
+        decode(task);
+        task.res.out = clockNow();
+        deliver(std::move(task.res));
+        SetEvent(ioWake_);  // room for the I/O thread's next read
+    }
+}
+
+// The I/O thread's: whether the pool takes another picture (twice its workers waiting at most)
+bool AiTextures::decodeRoom() {
+    if (decoders_.empty()) return true;
+    EnterCriticalSection(&decodeLock_);
+    const bool room = decodeQueue_.size() < decoders_.size() * 2;
+    LeaveCriticalSection(&decodeLock_);
+    return room;
 }
 
 // The I/O thread's: the index of what the pack holds and its central directory after the last picture - a whole ZIP
