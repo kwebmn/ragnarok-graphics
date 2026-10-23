@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.1-beta.3 — what is new
+
+- **Grass on the flower beds.** The round flower beds by Prontera's fountain (and the same beds on other maps) now
+  grow grass like the grassy ground round them (report R-SA3W7Y). A bed is a model whose top stands a little over the
+  map's ground, and the grass grew on the ground itself only.
+
 # uaRO Graphics 3.0.1-beta.2 — what is new
 
 - **The update channel and the check on «Game».** The first page's «Updates» part now has «Update channel» («Release»
