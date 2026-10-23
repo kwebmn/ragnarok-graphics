@@ -694,3 +694,21 @@ TEST(config_reads_the_several_windows_switches) {
         CHECK_EQ(settings::tokenOf(*s, off), std::string("0"));
     }
 }
+
+// 3.0.3-beta.3: [windows] others_light (the game windows not played in drawn light, «Кадри») and others_music (their
+// music; off by default, «Звук»)
+TEST(config_reads_the_other_windows_switches) {
+    const Config d = parseConfig("");
+    CHECK(d.windowOthersLight && !d.windowOthersMusic);
+    const Config c = parseConfig("[windows]\nothers_light = 0\nothers_music = 1\n");
+    CHECK(!c.windowOthersLight && c.windowOthersMusic);
+    const settings::IniSetting* light = settings::findSetting("windows.others_light");
+    const settings::IniSetting* music = settings::findSetting("windows.others_music");
+    CHECK(light != nullptr && music != nullptr);
+    if (!light || !music) return;
+    CHECK(light->page == settings::Page::Frames && music->page == settings::Page::Sound);
+    CHECK_EQ(settings::tokenOf(*light, d), std::string("1"));
+    CHECK_EQ(settings::tokenOf(*music, d), std::string("0"));
+    CHECK_EQ(settings::tokenOf(*music, c), std::string("1"));
+    CHECK(appliesNow("windows.others_light") && appliesNow("windows.others_music"));
+}

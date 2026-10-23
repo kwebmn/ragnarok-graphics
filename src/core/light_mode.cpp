@@ -7,14 +7,14 @@
 namespace uagfx::light {
 
 bool Overrides::operator==(const Overrides& o) const {
-    return superLight == o.superLight && battery == o.battery && effectsLevel == o.effectsLevel &&
+    return superLight == o.superLight && battery == o.battery && other == o.other && effectsLevel == o.effectsLevel &&
            aiHidden == o.aiHidden && worldScaleMax == o.worldScaleMax && renderScaleMax == o.renderScaleMax &&
            fpsMax == o.fpsMax && minimisedFps == o.minimisedFps && noSharpen == o.noSharpen &&
            noAnisotropy == o.noAnisotropy && noSupersampling == o.noSupersampling && pacerSleeps == o.pacerSleeps &&
-           flags == o.flags;
+           noUpscaler == o.noUpscaler && flags == o.flags;
 }
 
-Overrides overridesOf(const Config& c, bool onBattery) {
+Overrides overridesOf(const Config& c, bool onBattery, bool otherWindow) {
     Overrides o;
     if (c.batterySaver && onBattery) {
         o.battery = true;
@@ -33,6 +33,14 @@ Overrides overridesOf(const Config& c, bool onBattery) {
         o.renderScaleMax = 100;
         o.noSharpen = o.noAnisotropy = o.noSupersampling = true;
         o.flags = kFlatWorld | kWorld16 | kPointMips | kPlainUpscale;
+    }
+    if (c.windowOthersLight && otherWindow) {  // the stricter of each where another mode is on too
+        o.other = true;
+        o.effectsLevel = 0;
+        o.aiHidden = true;
+        o.renderScaleMax = std::min(o.renderScaleMax, 50);
+        o.noSharpen = o.noSupersampling = o.noUpscaler = true;
+        o.fpsMax = o.fpsMax > 0 ? std::min(o.fpsMax, 10) : 10;
     }
     return o;
 }

@@ -446,6 +446,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.windowTitleName);
         } else if (key == "windows.remember_place") {
             setBool(val, c.windowRememberPlace);
+        } else if (key == "windows.others_light") {  // 3.0.3-beta.3
+            setBool(val, c.windowOthersLight);
+        } else if (key == "windows.others_music") {
+            setBool(val, c.windowOthersMusic);
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

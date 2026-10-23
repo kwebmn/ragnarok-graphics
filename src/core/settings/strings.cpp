@@ -4298,6 +4298,26 @@ constexpr Entry kTexts[] = {
      "з рамкою (не «Вікно без рамки, закріплене на місці»).",
      "Перетащите окно персонажа, куда удобно: когда этот персонаж снова войдёт в игру, окно встанет туда само. Для "
      "окна с рамкой (не «Окно без рамки, закреплённое на месте»)."},
+    {Text::WindowsOthersLight, "The other game windows light",
+     "Інші вікна гри — легкі",
+     "Другие окна игры — лёгкие"},
+    {Text::WindowsOthersLightHint,
+     "With several game windows open, the ones you are not playing in draw without effects, HD pictures and DLSS, at "
+     "half the resolution and 10 frames a second. The window you switch to is whole again at once.",
+     "Коли відкрито кілька вікон гри, ті, у яких ви зараз не граєте, малюють без ефектів, HD-картинок і DLSS, у "
+     "половинній роздільності й 10 кадрів на секунду. Вікно, на яке ви перейшли, одразу знову повне.",
+     "Когда открыто несколько окон игры, те, в которых вы сейчас не играете, рисуют без эффектов, HD-картинок и DLSS, "
+     "в половинном разрешении и 10 кадров в секунду. Окно, на которое вы перешли, сразу снова полное."},
+    {Text::WindowsOthersMusic, "Music in the other game windows",
+     "Музика в інших вікнах гри",
+     "Музыка в других окнах игры"},
+    {Text::WindowsOthersMusicHint,
+     "Off: with several game windows open, only the one you played in last plays its music. Their sounds stay, as "
+     "quiet as «Volume in the background» says.",
+     "Вимкнено: коли відкрито кілька вікон гри, музику грає лише те, у якому ви грали останнім. Їхні звуки лишаються, "
+     "тихіші, як каже «Гучність у фоні».",
+     "Выключено: когда открыто несколько окон игры, музыку играет только то, в котором вы играли последним. Их звуки "
+     "остаются, тише, как говорит «Громкость в фоне»."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

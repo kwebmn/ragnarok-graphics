@@ -7,7 +7,8 @@ namespace uagfx::win {
 // tables hold, every sample's and stream's volume times the limiter's and the background's gain
 // (core/sound_mix.hpp). Nothing when the exe imports no mss32.dll.
 void installSoundHooks();
-// Each frame: whether the game is in front - the volumes follow it; the first one logs what was done.
-void soundFrame(bool foreground);
+// Each frame: whether the game is in front - the volumes follow it; the first one logs what was done. 3.0.3-beta.3:
+// `music` false - the music out (another game window is the main one), back when true.
+void soundFrame(bool foreground, bool music = true);
 
 }  // namespace uagfx::win

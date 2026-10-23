@@ -72,3 +72,18 @@ TEST(sound_music_ducks_in_a_fight) {
     d = sound::duckStep(d, 1.0, 1.0);  // a second back up: half way
     CHECK(d > 0.8 && d < 0.85);
 }
+
+// 3.0.3-beta.3: the music of a game window that is not the main one - out in half a second, back in one
+TEST(sound_music_leaves_and_comes_back_smoothly) {
+    double m = 1.0;
+    m = sound::musicStep(m, 0.0, 0.25);
+    CHECK(m > 0.45 && m < 0.55);
+    m = sound::musicStep(m, 0.0, 0.25);
+    CHECK(m == 0.0);
+    m = sound::musicStep(m, 0.0, 1.0);  // stays out
+    CHECK(m == 0.0);
+    m = sound::musicStep(m, 1.0, 0.5);
+    CHECK(m > 0.45 && m < 0.55);
+    m = sound::musicStep(m, 1.0, 5.0);
+    CHECK(m == 1.0);
+}

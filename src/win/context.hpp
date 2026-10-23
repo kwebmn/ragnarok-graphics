@@ -22,6 +22,7 @@
 #include "win/console.hpp"
 #include "win/fps_overlay.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/front_game.hpp"
 #include "win/several_windows.hpp"
 #include "win/shadow.hpp"
 
@@ -117,6 +118,8 @@ private:
     map_load::Watch mapLoad_;
     SeveralWindows severalWindows_;  // 3.0.3-beta.2: the name in the title, each character's window at its place
     unsigned windowsFrames_ = 0;
+    FrontGame frontGame_;      // 3.0.3-beta.3: which running game is the main one
+    bool mainWindow_ = true;   // this one, at the last updateLight
     double frameMs_ = 0.0;  // this present's time (QueryPerformanceCounter, ms)
     uint32_t loadPictures_ = 0, loadShown_ = 0, loadGameFrames_ = 0;
     double loadShownMs_ = 0.0;  // the last loading picture shown

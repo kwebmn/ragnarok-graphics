@@ -411,8 +411,14 @@ void Context::updateLight() {
         SYSTEM_POWER_STATUS p{};
         onBattery_ = GetSystemPowerStatus(&p) && p.ACLineStatus == 0;
     }
-    const light::Overrides o = light::overridesOf(config, onBattery_);
+    // 3.0.3-beta.3: several game windows - the ones not played in light, while another one is the main
+    mainWindow_ = frontGame_.main(!window || GetForegroundWindow() == window);
+    const light::Overrides o = light::overridesOf(config, onBattery_, !mainWindow_);
     if (o == light_) return;
+    if (o.other != light_.other)
+        LOG_INFO("windows: %s", o.other ? "another game window is the main one - this one light: no effects, AI "
+                                          "pictures or DLSS, half the render scale, 10 frames a second"
+                                        : "the main game window - the settings as the file has them");
     if (o.superLight != light_.superLight)
         LOG_INFO("super-light: %s", o.superLight ? "on - no effects, no AI pictures, the world at half size; Direct3D "
                                                    "11: its textures as their colour alone, 16-bit, no blended mip "
@@ -566,7 +572,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
     // Part 3: DLSS draws the world at its own size and shows it at the picture's - no supersampling on top of it
     // (DLAA at 150% would draw 2.25 times the pixels for nothing).
-    const bool dlss = renderer->upscales() && config.dlss != "off";
+    const bool dlss = renderer->upscales() && config.dlss != "off" && !light_.noUpscaler;  // 3.0.3-beta.3
     // 0.62: [display] ui_native - supersampling the world alone (Direct3D 12 in this process, no DLSS): the target the
     // picture's size, the world render_scale times it, made smaller into it; the interface at the picture's pixels.
     const bool nativeWanted = !dlss && config.uiNative && config.highResolution && config.renderScale > 100 &&
@@ -712,7 +718,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.vsyncSetting = config.vsync;
     o.screenshot = screenshot;
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
-    soundFrame(foreground);  // 0.91: quieter in the background; the crowd's limiter thinned out
+    // 0.91: quieter in the background; the crowd's limiter thinned out. 3.0.3-beta.3: the music of the main game
+    // window alone, unless [windows] others_music
+    soundFrame(foreground, mainWindow_ || config.windowOthersMusic);
     // 3.0.2-beta.13 (beta.12's measure: a map's 102 loading pictures waited 1.68 s for their presents, 60 a second):
     // the game's loading picture while a map loads - no frame limit, its present not waited for, and through
     // uaro-render64.exe at most 10 a second (the game draws it anew for each per cent of the map's models)

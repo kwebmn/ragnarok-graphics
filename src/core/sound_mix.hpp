@@ -66,5 +66,11 @@ inline double duckStep(double now, double target, double seconds) {
     const double rate = 0.35 * seconds / (target < now ? 0.33 : 2.0);  // the whole way (0.35) in that time
     return target < now ? std::max(target, now - rate) : std::min(target, now + rate);
 }
+// 3.0.3-beta.3: the music of a game window that is not the main one ([windows] others_music off) - out in half a
+// second, back in one, towards 0 or 1.
+inline double musicStep(double now, double target, double seconds) {
+    const double rate = seconds / (target < now ? 0.5 : 1.0);
+    return target < now ? std::max(target, now - rate) : std::min(target, now + rate);
+}
 
 }  // namespace uagfx::sound

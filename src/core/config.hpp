@@ -458,6 +458,9 @@ struct Config {
     // 3.0.3-beta.2 (the user, several game windows at once): [windows] title_name - the character's name in the game
     // window's title; remember_place - each character's window (a framed one) where it was put (core/window_places)
     bool windowTitleName = true, windowRememberPlace = true;
+    // 3.0.3-beta.3: others_light - a game window while another one is the main (in front, or the last in front) drawn
+    // light (core/light_mode); others_music - its music too (off: the main window's alone)
+    bool windowOthersLight = true, windowOthersMusic = false;
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;

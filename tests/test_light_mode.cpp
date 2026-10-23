@@ -70,3 +70,36 @@ TEST(light_both_modes_take_the_lighter_of_each) {
     CHECK_EQ(o.fpsMax, 30);
     CHECK(o.pacerSleeps);
 }
+
+// 3.0.3-beta.3 (the user, several game windows): a game window while another one is the main - light at once
+TEST(light_another_window_draws_light) {
+    Config c;
+    const light::Overrides o = light::overridesOf(c, false, true);
+    CHECK(o.other && !o.superLight && !o.battery);
+    CHECK_EQ(o.effectsLevel, 0);
+    CHECK(o.aiHidden && o.noUpscaler && o.noSharpen && o.noSupersampling);
+    CHECK_EQ(o.renderScaleMax, 50);
+    CHECK_EQ(o.worldScaleMax, 100);  // Direct3D 11's world as the file has it: the render scale does the work
+    CHECK_EQ(light::fpsLimit(60, o), 10);
+    CHECK_EQ(light::fpsLimit(0, o), 10);
+    CHECK(light::overridesOf(c, false, false) == light::Overrides{});  // the main window: as the file has it
+    c.windowOthersLight = false;  // the player's choice
+    CHECK(light::overridesOf(c, false, true) == light::Overrides{});
+}
+
+TEST(light_another_window_on_the_battery_keeps_the_stricter) {
+    Config c;
+    c.batterySaver = true;
+    c.batteryFps = 30;
+    const light::Overrides o = light::overridesOf(c, true, true);
+    CHECK(o.other && o.battery && o.pacerSleeps);
+    CHECK_EQ(o.effectsLevel, 0);
+    CHECK_EQ(o.worldScaleMax, 75);
+    CHECK_EQ(o.minimisedFps, 5);
+    CHECK_EQ(light::fpsLimit(60, o), 10);
+    c.superLight = true;  // super-light's world and render scales stay its own
+    const light::Overrides s = light::overridesOf(c, false, true);
+    CHECK_EQ(s.worldScaleMax, 50);
+    CHECK_EQ(s.renderScaleMax, 50);
+    CHECK(s.other && s.superLight && s.noAnisotropy);
+}

@@ -13,12 +13,16 @@ namespace uagfx::light {
 // - the battery's ([frames] battery_saver) while a laptop runs on its battery: battery_fps frames at most, the effects
 //   at most the weak set's, the world at 75 % at most (Direct3D 11), the frame pacer sleeping through, 5 frames when
 //   the game is minimised (docs/research/battery.md).
+// - 3.0.3-beta.3, another game window's ([windows] others_light) while another game window is the main one (the
+//   user, several game windows: the ones not played in light): no effect, AI picture, DLSS, sharpening or
+//   supersampling, half the render scale, 10 frames a second - whole again once it is the main one.
 // Direct3D 11's own (Renderer::setLight); kPlainUpscale (2.5.22): the smaller world made larger by one bilinear tap,
 // not its own sharpening (Catmull-Rom and CAS, 45 taps a pixel of the picture)
 enum Flag : uint8_t { kFlatWorld = 1, kWorld16 = 2, kPointMips = 4, kPlainUpscale = 8 };
 
 struct Overrides {
     bool superLight = false, battery = false;  // the modes on now
+    bool other = false;                        // 3.0.3-beta.3: another game window is the main one
     int effectsLevel = 3;                      // the effects' sets at most: 0 none, 1 the weak set's; 3 as the file
     bool aiHidden = false;
     int worldScaleMax = 100, renderScaleMax = 200;  // %
@@ -26,11 +30,12 @@ struct Overrides {
     int minimisedFps = 15;                          // [frames] save_power's in the background
     bool noSharpen = false, noAnisotropy = false, noSupersampling = false;  // the last: MSAA, TAA, ui_native's
     bool pacerSleeps = false;
+    bool noUpscaler = false;  // 3.0.3-beta.3: no DLSS
     uint8_t flags = 0;  // Flag
     bool operator==(const Overrides& o) const;
     bool operator!=(const Overrides& o) const { return !(*this == o); }
 };
-Overrides overridesOf(const Config& c, bool onBattery);
+Overrides overridesOf(const Config& c, bool onBattery, bool otherWindow = false);
 // The effects the light modes leave of the effective ones (effect_groups::effective of the file).
 EffectSettings effectsOf(const EffectSettings& effective, const Overrides& o);
 // [frames] fps_limit (0: none) under them.

@@ -148,6 +148,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("remember_place", flag(running.windowRememberPlace), flag(file.windowRememberPlace)));
         n.windowRememberPlace = file.windowRememberPlace;
     }
+    if (file.windowOthersLight != running.windowOthersLight) {  // 3.0.3-beta.3
+        u.applied.push_back(change("others_light", flag(running.windowOthersLight), flag(file.windowOthersLight)));
+        n.windowOthersLight = file.windowOthersLight;
+    }
+    if (file.windowOthersMusic != running.windowOthersMusic) {
+        u.applied.push_back(change("others_music", flag(running.windowOthersMusic), flag(file.windowOthersMusic)));
+        n.windowOthersMusic = file.windowOthersMusic;
+    }
     if (file.profile != running.profile) {  // 0.87
         u.applied.push_back(change("profile", flag(running.profile), flag(file.profile)));
         n.profile = file.profile;
@@ -201,8 +209,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
-           k == "stats.send" || k == "windows.title_name" || k == "windows.remember_place" ||
-           k.compare(0, 8, "effects.") == 0;
+           k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0;
 }
 
 }  // namespace uagfx
