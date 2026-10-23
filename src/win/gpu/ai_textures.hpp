@@ -19,6 +19,7 @@
 #include "core/ai/ready.hpp"
 #include "core/ai/rrdb.hpp"
 #include "core/ai/srvgg.hpp"
+#include "core/ai/timings.hpp"
 #include "core/config.hpp"
 #include "core/frame.hpp"
 #include "core/studio_link.hpp"
@@ -222,7 +223,7 @@ private:
         // 0.66: read in this order - 0 a sprite frame or an icon, 1 a texture in view, 2 one known ahead (a map's
         // hundreds as it loads), 3 a picture made, to write
         uint8_t rank = 1;
-        ULONGLONG asked = 0;  // 0.66: when (the log's waits)
+        int64_t asked = 0;  // 0.66: when (the log's waits); 3.0.2-beta.7: QueryPerformanceCounter's
         std::vector<uint8_t> shown;  // 2.5.18: a black-keyed texture's (Item::shown)
     };
     struct IoResult {
@@ -234,11 +235,14 @@ private:
         std::vector<uint32_t> argb;
         int width = 0, height = 0;
         Job cell;
-        ULONGLONG asked = 0;  // 0.66: its request's
+        // 3.0.2-beta.7: where its time went (ai::LoadPart: the queue, the read, WebP, the fitting - the frame's
+        // in takeLoaded) and when it was put out (QueryPerformanceCounter)
+        double part[ai::kLoadParts] = {};
+        int64_t out = 0;
     };
 
     bool loadNet(const std::string& dir, const std::string& token, int denoise, Net& net, std::string& error);
-    bool createGpu(std::string& error);
+    bool createGpu(std::string& error, ai::Steps* steps = nullptr);  // 3.0.2-beta.7: steps, the start's times
     bool uploadWeights(Net& net, std::string& error);
     bool selfTest(int net, std::string& error);
     bool ensureBuffers(int width, int height);
@@ -400,8 +404,9 @@ private:
     uint32_t unseen_ = 0, unseenFound_ = 0;  // 0.49.3: frames found changed past the game's call, of them in the pack
     uint32_t dyed_ = 0;  // 2.5.23: frames in a dye taken by their pictures in their own colours
     uint32_t cellsWritten_ = 0, cellsNetwork_ = 0;
-    ULONGLONG cellWait_ = 0, cellWaitMost_ = 0;  // 0.66: the frames' pictures from asked to in, all and the longest
-    uint32_t cellWaits_ = 0;  // sprite frames: by the game, by the network
+    // 0.66: the frames' pictures from asked to in; 3.0.2-beta.7: every picture of the pack by its parts, apart for
+    // sprite frames, icons, the world's textures and the interface's (kLoadKinds)
+    ai::LoadTimes loadTimes_[4];
     std::unordered_set<uint64_t> icons_;  // the icons asked for this run
     uint32_t iconsNetwork_ = 0;
     // 0.48 (in place of the settings app's "Check the keys"): what the pack had no picture of, by kind; frames; icons.

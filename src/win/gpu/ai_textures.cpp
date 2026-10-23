@@ -38,6 +38,26 @@ constexpr int kUiPictureMax = 1024;
 constexpr int kTrimSide = 512;  // past this a picture's network buffers are freed once it is done
 // 0.48: the pictures made go into the texture pack at once; its index and directory after this much or 30 seconds.
 constexpr size_t kBatchBytes = size_t(32) << 20;
+
+// 3.0.2-beta.7: the log's times by QueryPerformanceCounter - GetTickCount64 moves in 15.6 ms steps
+int64_t clockNow() {
+    LARGE_INTEGER t;
+    QueryPerformanceCounter(&t);
+    return t.QuadPart;
+}
+
+double msBetween(int64_t from, int64_t to) {
+    static const double perMs = [] {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);
+        return double(f.QuadPart) / 1000.0;
+    }();
+    return double(to - from) / perMs;
+}
+
+// The pictures' times by what they are (loadTimes_)
+enum LoadKind { kLoadFrames, kLoadIcons, kLoadWorld, kLoadUi };
+const char* const kLoadKindNames[4] = {"sprite frames", "icons", "the world's textures", "the interface's"};
 constexpr int kMadeQuality = 92;  // WebP of the pictures made in the game: the builder's "balanced"
 constexpr UINT kAiConstants = 0, kAiWeights = 1, kAiU0 = 2, kAiU1 = 3, kAiU2 = 4;  // root parameters
 
@@ -195,6 +215,14 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     generate_ = s.generate;
     seenDir_ = gameDir + "\\uaro-graphics\\seen";  // 2.3
     const std::string dir = gameDir + "\\uaro-graphics\\ai\\";
+    const int64_t began = clockNow();  // 3.0.2-beta.7: each step timed, a line at the end
+    ai::Steps steps;
+    int64_t at = began;
+    const auto step = [&](const char* name) {
+        const int64_t now = clockNow();
+        steps.add(name, msBetween(at, now));
+        at = now;
+    };
     bool anyKind = false;
     for (int k = 0; k < ai::kKinds; ++k)
         if (aiKind(s, k)) kindOn_[k] = anyKind = true;
@@ -205,15 +233,19 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
         if (groupNet_[g] < 0) return false;
     }
     if (generate_ && s.smallPictures && (smallNet_ = netOfToken(dir, s.smallModel, error)) < 0) return false;  // 1.6.3
+    if (generate_) step("the networks loaded");
     if (!anyKind) {
         error = "no kind of texture is chosen (the AI textures page)";
         return false;
     }
-    if (!createGpu(error)) return false;
+    at = clockNow();
+    if (!createGpu(error, &steps)) return false;
+    at = clockNow();
     const ULONGLONG t0 = GetTickCount64();
     for (size_t i = 0; i < nets_.size(); ++i)
         if (!selfTest(int(i), error)) return false;
     const ULONGLONG tested = GetTickCount64() - t0;
+    if (!nets_.empty()) step("the self-test");
     // 0.42: the texture pack - read by the I/O thread, looked up here; 0.48: the only place of the pictures.
     packPath_ = win::ourFile(gameDir, layout::File::Pack);  // 2.8: uaro-graphics\textures
     dump_.setGameDir(gameDir);
@@ -222,6 +254,7 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     // 1.5.8: with the pack's pictures off ([ai] enabled = 0, generate = 1) the pack stays closed: all is made anew.
     if (s.enabled && !pack_->open(packPath_, packError) && packThere)
         LOG_ERROR("AI textures: the texture pack cannot be read (%s)", packError.c_str());
+    step("the pack opened");
     if (!pack_->isOpen() && !generate_) {
         error = "no texture pack (uaro-graphics\\textures\\uaro-textures.zip) - it comes with the full client; its "
                 "builder is on the Texture pack page of the settings";
@@ -230,12 +263,15 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
     std::vector<uint8_t> index;
     if (pack_->isOpen() && !pack_->read(pack::kIndexName, index)) index.clear();
     const std::string indexFile(index.begin(), index.end());
+    step("its index read");
     // the I/O thread's from its start on: written with the pictures made; 2.3: what each was made from ('+', a line a
     // picture) only when this game writes the index again (generating) - else tens of MB for nothing
     index_ = pack::parseIndexFile(indexFile, generate_);
+    step("its index taken");
     pictures_ = std::make_unique<ai::ReadyPictures>(s);
     const std::shared_ptr<const pack::Reader> reader = pack_;
     pictures_->addPack([reader](const std::string& name) { return reader->has(name); }, indexFile);
+    step("its pictures listed");
     changedEvent_ = CreateEventA(nullptr, FALSE, FALSE, studio::kChangedEvent);  // 2.3: uaRO Studio's
     // The copies' share of the video memory.
     systemBudget_ = systemMemory(nullptr);
@@ -292,6 +328,8 @@ bool AiTextures::start(const std::string& gameDir, const AiSettings& s, std::str
                  static_cast<unsigned long long>((uint64_t(old.nFileSizeHigh) << 32 | old.nFileSizeLow) >> 20));
     LOG_INFO("AI textures: the copies keep to %llu MB of video memory (the system gives the game %llu MB)",
              static_cast<unsigned long long>(vramBudget_ >> 20), static_cast<unsigned long long>(systemBudget_ >> 20));
+    LOG_INFO("AI textures: started in %.0f ms - %s (the index %zu KB)", msBetween(began, clockNow()),
+             steps.line().c_str(), indexFile.size() >> 10);
     return true;
 }
 
@@ -509,7 +547,7 @@ bool AiTextures::enlargeRrdb(int net, const uint32_t* argb, int w, int h, uint32
     return ok;
 }
 
-bool AiTextures::createGpu(std::string& error) {
+bool AiTextures::createGpu(std::string& error, ai::Steps* steps) {
     ID3D12Device* device = m_.device;
     const auto compileFn = m_.compiler ? reinterpret_cast<pD3DCompile>(
                                              reinterpret_cast<void*>(GetProcAddress(m_.compiler, "D3DCompile")))
@@ -547,7 +585,10 @@ bool AiTextures::createGpu(std::string& error) {
         return false;
     }
     const char* src = aiShaderSource();
+    std::vector<std::pair<std::string, double>> made;  // 3.0.2-beta.7: each shader's compile and pipeline
+    const int64_t shadersFrom = clockNow();
     const auto pso = [&](const char* entry, ID3D12PipelineState*& out) {
+        const int64_t from = clockNow();
         ID3DBlob* cs = nullptr;
         ID3DBlob* msg = nullptr;
         HRESULT r = compileFn(src, std::strlen(src), "uaro-graphics-ai.hlsl", nullptr, nullptr, entry, "cs_5_0",
@@ -565,13 +606,20 @@ bool AiTextures::createGpu(std::string& error) {
         }
         releaseCom(cs);
         releaseCom(msg);
+        made.emplace_back(entry, msBetween(from, clockNow()));
         return SUCCEEDED(r);
     };
     if (!pso("ai_conv", conv_) || !pso("ai_shuffle", shuffle_) || !pso("ai_mip", mip_) || !pso("ai_alpha", alpha_) ||
         !pso("ai_place", place_))
         return false;
+    if (steps) {
+        steps->add("shaders", msBetween(shadersFrom, clockNow()));
+        for (const auto& m : made) steps->addPart(m.first, m.second);
+    }
+    const int64_t weightsFrom = clockNow();
     for (auto& n : nets_)
         if (!uploadWeights(*n, error)) return false;
+    if (steps && !nets_.empty()) steps->add("the weights", msBetween(weightsFrom, clockNow()));
     return true;
 }
 
@@ -1692,6 +1740,11 @@ void AiTextures::takeLoaded() {
     EnterCriticalSection(&ioLock_);
     results.swap(ioOut_);
     LeaveCriticalSection(&ioLock_);
+    const int64_t now = clockNow();
+    const auto timed = [&](IoResult& r, int kind) {  // 3.0.2-beta.7: its wait for this frame, then its parts
+        r.part[int(ai::LoadPart::Frame)] = msBetween(r.out, now);
+        loadTimes_[kind].add(r.part);
+    };
     for (IoResult& r : results) {
         if (r.reloaded) {  // 2.3: uaRO Studio's change
             reloaded(r);
@@ -1702,6 +1755,7 @@ void AiTextures::takeLoaded() {
             if (r.ok && r.width == j.width * scale_ && r.height == j.height * scale_ && m_.iconSink) {
                 m_.iconSink(m_.iconContext, j.iconKey, r.width, r.height, r.argb.data());
                 ++iconsPack_;
+                timed(r, kLoadIcons);
             } else if (j.net >= 0) {
                 cells_.push_back(std::move(j));
             } else if (m_.iconSink) {  // 0.47.1: not usable and none to make
@@ -1714,10 +1768,7 @@ void AiTextures::takeLoaded() {
             Job j = std::move(r.cell);
             if (!cellCurrent(j)) continue;
             if (r.ok && r.width == j.width * scale_ && r.height == j.height * scale_) {
-                const ULONGLONG waited = GetTickCount64() - r.asked;  // 0.66
-                cellWait_ += waited;
-                cellWaitMost_ = std::max(cellWaitMost_, waited);
-                ++cellWaits_;
+                timed(r, kLoadFrames);  // 0.66; 3.0.2-beta.7: by its parts
                 j.loaded = true;
                 j.pixels = std::move(r.argb);
                 loaded_.push_back(std::move(j));
@@ -1743,6 +1794,7 @@ void AiTextures::takeLoaded() {
             (item.later ? later_ : queue_).push_back(r.id);
             continue;
         }
+        timed(r, item.ui ? kLoadUi : kLoadWorld);
         item.later = false;
         Job j;
         j.id = r.id;
@@ -1921,11 +1973,14 @@ void AiTextures::logNow(bool final) {
                  blackKeyed_);
     if (cellsWritten_)
         LOG_INFO("AI textures: sprite frames - %u written by the game into %u caches, %u from the pack, %u made by the "
-                 "network, %u waiting; read in %llu ms on average, %llu at most",
+                 "network, %u waiting",
                  cellsWritten_, static_cast<unsigned>(atlases_.size()), cellsPack_, cellsNetwork_,
-                 static_cast<unsigned>(cells_.size()),
-                 static_cast<unsigned long long>(cellWaits_ ? cellWait_ / cellWaits_ : 0),
-                 static_cast<unsigned long long>(cellWaitMost_));
+                 static_cast<unsigned>(cells_.size()));
+    std::string times;  // 3.0.2-beta.7: in place of the frames' "read in N ms on average"
+    for (int k = 0; k < 4; ++k)
+        if (loadTimes_[k].count())
+            times += std::string(times.empty() ? "" : "; ") + kLoadKindNames[k] + " " + loadTimes_[k].line();
+    if (!times.empty()) LOG_INFO("AI textures: the pack's pictures, ms on average (at most) - %s", times.c_str());
     if (dyed_)  // 2.5.23
         LOG_INFO("AI textures: sprite frames in a dye - %u taken by their pictures in their own colours, coloured as "
                  "the dye",
@@ -1949,7 +2004,7 @@ void AiTextures::logNow(bool final) {
 }
 
 void AiTextures::request(IoRequest r) {
-    r.asked = GetTickCount64();
+    r.asked = clockNow();
     EnterCriticalSection(&ioLock_);
     ioIn_.push_back(std::move(r));
     LeaveCriticalSection(&ioLock_);
@@ -2029,11 +2084,15 @@ void AiTextures::ioLoop() {
             res.id = r.id;
             res.name = r.name;
             res.cell = std::move(r.cell);
+            res.part[int(ai::LoadPart::Queue)] = msBetween(r.asked, clockNow());  // 3.0.2-beta.7
             res.ok = ioRead(r, res);
             const Job& cj = res.cell;  // 2.5.23: a frame in a dye from its picture in its own colours
-            if (res.ok && !cj.own.empty() && res.width == cj.width * scale_ && res.height == cj.height * scale_)
+            if (res.ok && !cj.own.empty() && res.width == cj.width * scale_ && res.height == cj.height * scale_) {
+                const int64_t from = clockNow();
                 ai::recolour(res.argb, res.width, res.height, cj.own.data(), cj.dyed.data(), cj.width, cj.height);
-            res.asked = r.asked;
+                res.part[int(ai::LoadPart::Fit)] += msBetween(from, clockNow());
+            }
+            res.out = clockNow();
             EnterCriticalSection(&ioLock_);
             ioOut_.push_back(std::move(res));
             LeaveCriticalSection(&ioLock_);
@@ -2074,6 +2133,7 @@ std::string AiTextures::packIndex() const {
 // picture for one at a lower texture detail, 8 or 16 times its size.
 bool AiTextures::ioRead(const IoRequest& r, IoResult& res) {
     std::vector<uint8_t> blob;
+    const int64_t from = clockNow();  // 3.0.2-beta.7: the read, WebP, the fitting
     EnterCriticalSection(&ioLock_);
     const std::shared_ptr<pack::Reader> reader = pack_;  // 2.3: swapped by a reload of the studio's
     LeaveCriticalSection(&ioLock_);
@@ -2082,12 +2142,17 @@ bool AiTextures::ioRead(const IoRequest& r, IoResult& res) {
         blob = u->second;
     else if (!reader->read(r.name, blob) && !(fresh_.isOpen() && fresh_.read(r.name, blob)))
         return false;
+    const int64_t read = clockNow();
+    res.part[int(ai::LoadPart::Read)] = msBetween(from, read);
     if (!webp::decode(blob.data(), blob.size(), res.argb, res.width, res.height)) return false;
+    const int64_t decoded = clockNow();
+    res.part[int(ai::LoadPart::Decode)] = msBetween(read, decoded);
     while (r.width > 0 && r.height > 0 && res.width > r.width * scale_ && res.height > r.height * scale_ &&
            res.width % 2 == 0 && res.height % 2 == 0)
         ai::halve(res.argb, res.width, res.height);
     if (!r.shown.empty())  // 2.5.18: the plain texture's picture for one keyed black - the key on it
         ai::keyAway(res.argb, res.width, res.height, r.shown, r.width, r.height);
+    res.part[int(ai::LoadPart::Fit)] = msBetween(decoded, clockNow());
     return true;
 }
 
