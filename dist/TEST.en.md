@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.2-beta.1 — what is new
+
+- **The important buttons are blue.** The app marks its main actions in blue: «Play» and «Update and play» on
+  «Play», «Update now» on «Play», «Main» and «Service», «Update» in the bottom strip and in the update window before
+  the game, «Apply» (when there is something to apply), «Send» in «Reports», «Make the pack» and «Fix». Under the
+  mouse a button darkens a little, pressed more. In Windows' high contrast they stay as they were. Check how they
+  look and that their text reads well.
+
 # uaRO Graphics 3.0.1 — what is new
 
 - **uaRO HD next to the usual uaRO.** Each client has its own shortcut («uaRO», «uaRO HD») and its own line in
