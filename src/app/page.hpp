@@ -120,6 +120,9 @@ void runAutoSetup(PageHost& host);
 void buildChannel(Panel& p, PageHost& host, int id);
 bool channelCommand(PageHost& host, int id, int code, int channelId);
 UpdateState channelUpdate(const Model& m);
+// «Оновити зараз»: uaRO Graphics updated in a window of its own and this app opened again after it - not the game
+// (3.0.1-beta.4, the user: «Гра»'s besides «Оновити й грати»); `ask`: the question first (UpdateAsk)
+void updateAndReopen(PageHost& host, bool ask);
 // 2.6: the search's results - the rows changed in place, each with a button to its page.
 std::unique_ptr<Page> makeSearchPage(PageHost& host, const std::string& query);
 settings::Text effectGroupName(int g);  // the Effects page's name of a group

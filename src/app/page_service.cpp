@@ -235,7 +235,7 @@ public:
             startUpdateCheck();
             host_.rebuild();
         } else if (id == kUpdateNow) {
-            startAndClose(Args::Mode::Update, t(Text::UpdateAsk));
+            updateAndReopen(host_, true);
         } else if (id == kRollback) {
             startAndClose(Args::Mode::Rollback, tf(Text::RollbackAsk, {installer::previousVersion(m.paths().dir)}));
         } else if (id == kRepair) {
@@ -333,6 +333,19 @@ bool channelCommand(PageHost& host, int id, int code, int channelId) {
     }
     if (code == CBN_CLOSEUP || !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host.rebuild();
     return true;
+}
+
+void updateAndReopen(PageHost& host, bool ask) {
+    if (ask && !host.ask(wtr(host.lang(), settings::Text::UpdateAsk))) return;
+    Args a;
+    a.mode = Args::Mode::Update;
+    a.then = Args::Then::App;
+    const std::string err = startMode(a);
+    if (!err.empty()) {
+        host.message(wtrf(host.lang(), settings::Text::UpdateError, {err}), true);
+        return;
+    }
+    PostMessageW(GetAncestor(host.window(), GA_ROOT), WM_CLOSE, 0, 0);
 }
 
 UpdateState channelUpdate(const Model& m) {

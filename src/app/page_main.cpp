@@ -100,19 +100,7 @@ public:
                 startUpdateCheck();
                 host_.rebuild();
                 return;
-            case kUpdateNow: {  // as the Service page's: the update in a process of its own, this app closes
-                if (!host_.ask(t(Text::UpdateAsk))) return;
-                Args a;
-                a.mode = Args::Mode::Update;
-                a.then = Args::Then::App;
-                const std::string err = startMode(a);
-                if (!err.empty()) {
-                    host_.message(tf(Text::UpdateError, {err}), true);
-                    return;
-                }
-                PostMessageW(GetAncestor(host_.window(), GA_ROOT), WM_CLOSE, 0, 0);
-                return;
-            }
+            case kUpdateNow: updateAndReopen(host_, true); return;  // the update's window, then this app again
             case kGetDlss: {
                 const std::wstring err = getDlss(GetAncestor(host_.window(), GA_ROOT), m.paths().dir, host_.lang());
                 if (!err.empty() && err != L"stopped") host_.message(tf(Text::UpdateNothingChanged, {utf8(err)}), true);

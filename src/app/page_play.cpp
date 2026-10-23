@@ -22,6 +22,7 @@ constexpr int kNormalMode = 2104;  // the safe mode off
 constexpr int kSwitchOn = 2105;    // uaRO Graphics on again
 constexpr int kChannel = 2106;     // 3.0.1-beta.2 (the user): «Реліз» or «Бета» on the first page
 constexpr int kUpdateCheck = 2107;  // and «Перевірити оновлення»
+constexpr int kUpdateNow = 2108;    // 3.0.1-beta.4 (the user): «Оновити зараз» - updated, then this app, no game
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
 
@@ -86,7 +87,9 @@ public:
         } else {
             p.note(t(checking_ ? Text::UpdateChecking : Text::MainUpdateNone));
         }
-        p.buttons({{kUpdateCheck, t(Text::UpdateCheck), !checking_}});
+        std::vector<ButtonItem> updates{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
+        if (!offer.empty()) updates.push_back({kUpdateNow, t(Text::UpdateNow)});
+        p.buttons(updates);
         if (patchNeeded) {
             p.note(tf(Text::PlayPatchLine, {std::to_string(patch.check.needed.size()), megabytes(patch.check.bytes)}),
                    Tone::Warn);
@@ -140,6 +143,8 @@ public:
         } else if (id == kUpdateCheck) {
             startUpdateCheck();
             host_.rebuild();
+        } else if (id == kUpdateNow) {
+            updateAndReopen(host_, false);  // the button says it: no question
         } else if (id == kPicked && m.lastAutoSetup()) {
             host_.message(autoSetupText(m.machine(), *m.lastAutoSetup(), false, host_.lang()), false);
         } else if (id == kNormalMode || id == kSwitchOn) {
