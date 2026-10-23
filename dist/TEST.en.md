@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.2-beta.8 — what is new
+
+- **The game opens sooner with HD textures.** Before the game's first picture, five shaders of the HD textures were
+  compiled on every start, four of them needed only by the neural network. Now the pack's pictures take one, compiled
+  on the first start only: after that its code comes from `uaro-graphics\cache`. In `uaro-render64.log` - the line
+  `AI textures: shaders - N kept from the last start`.
+
 # uaRO Graphics 3.0.2-beta.7 — what is new
 
 - **The HD textures' start measured.** Two new lines in `uaro-graphics\logs\uaro-render64.log`. `AI textures:
