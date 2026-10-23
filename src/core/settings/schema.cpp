@@ -56,6 +56,8 @@ const std::vector<IniSetting>& iniSettings() {
          ""},
         {"client", "bink", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientBink,
          Text::ClientBinkHint, ""},
+        {"client", "ijl", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientIjl, Text::ClientIjlHint,
+         ""},  // 3.0.1-beta.6
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)
@@ -715,6 +717,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "launcher.direct_start") return c.directStart ? "1" : "0";  // 2.11
     if (k == "client.cps") return c.clientCps ? "1" : "0";  // 3.0.1-beta.5
     if (k == "client.bink") return c.clientBink ? "1" : "0";
+    if (k == "client.ijl") return c.clientIjl ? "1" : "0";  // 3.0.1-beta.6
     if (k == "renderer.safe_mode") return c.safeMode ? "1" : "0";  // 2.12
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";

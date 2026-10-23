@@ -3623,6 +3623,15 @@ const Entry kTexts[] = {
      "від RAD.",
      "Видео Bink игра не показывает (вступительного ролика в клиенте нет): наша замена без кода RAD. Выключено — "
      "binkw32.dll от RAD."},
+    {"JPEG pictures: ours (ijl15.dll)",
+     "Картинки JPEG — свої (ijl15.dll)",
+     "Картинки JPEG — свои (ijl15.dll)"},
+    {"The game's JPEG pictures (the loading screens) are read through it and its Print Screen shots written. Off: "
+     "Intel JPEG Library 1.5 of 2000.",
+     "Через неї гра читає картинки JPEG (екрани завантаження) і записує знімки Print Screen. Вимкнено — Intel JPEG "
+     "Library 1.5 2000 року.",
+     "Через неё игра читает картинки JPEG (экраны загрузки) и записывает снимки Print Screen. Выключено — Intel JPEG "
+     "Library 1.5 2000 года."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

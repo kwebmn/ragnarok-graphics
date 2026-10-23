@@ -27,8 +27,9 @@ target_include_directories(uagfx_webp PUBLIC third_party/libwebp/src PRIVATE thi
 target_compile_options(uagfx_webp PRIVATE -w)
 
 # Portable core: formats, surfaces, config, decisions. No Windows headers; unit-tested on Linux.
-# 0.49: stb_image's JPEG decoder (the game's .jpg pictures for the texture pack).
-add_library(uagfx_stb STATIC third_party/stb/stb_image_jpeg.c)
+# 0.49: stb_image's JPEG decoder (the game's .jpg pictures for the texture pack). 3.0.1-beta.6: stb_image_write's JPEG
+# writer (our ijl15.dll's ijlWrite).
+add_library(uagfx_stb STATIC third_party/stb/stb_image_jpeg.c third_party/stb/stb_image_write_jpeg.c)
 target_include_directories(uagfx_stb PUBLIC third_party/stb)
 target_compile_options(uagfx_stb PRIVATE -w)
 file(GLOB_RECURSE UAGFX_CORE_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
@@ -102,6 +103,11 @@ elseif(WIN32)
     target_compile_options(cps PRIVATE -Wall -Wextra)
     target_link_libraries(cps PRIVATE uagfx_core)  # core/client_libs: zlib's two, tested on the host
     target_link_options(cps PRIVATE -static -static-libgcc -static-libstdc++ -s)
+    add_library(ijl15 SHARED src/clientlibs/ijl15.cpp src/clientlibs/ijl15.def)  # 3.0.1-beta.6: JPEG over stb
+    set_target_properties(ijl15 PROPERTIES PREFIX "" OUTPUT_NAME "ijl15")
+    target_compile_options(ijl15 PRIVATE -Wall -Wextra)
+    target_link_libraries(ijl15 PRIVATE uagfx_core)
+    target_link_options(ijl15 PRIVATE -static -static-libgcc -static-libstdc++ -s)
     add_library(binkw32 SHARED src/clientlibs/binkw32.cpp src/clientlibs/binkw32.def)  # Bink: no video
     set_target_properties(binkw32 PROPERTIES PREFIX "" OUTPUT_NAME "binkw32")
     target_compile_options(binkw32 PRIVATE -Wall -Wextra)

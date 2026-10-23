@@ -174,7 +174,7 @@ public:
             p.gap();
             p.heading(t(Text::ServiceClientLibs));
             p.note(t(Text::ClientLibsNote));
-            for (const char* key : {"client.cps", "client.bink"}) rows_->buildRow(p, key);
+            for (const char* key : {"client.cps", "client.bink", "client.ijl"}) rows_->buildRow(p, key);
         }
         // 2.12: when the game does not start - the safe mode, or uaRO Graphics switched off (the game's own look)
         p.gap();

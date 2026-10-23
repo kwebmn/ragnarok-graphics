@@ -1,0 +1,8 @@
+LIBRARY ijl15.dll
+EXPORTS
+    ijlGetLibVersion = ijlGetLibVersion@0 @1
+    ijlInit = ijlInit@4 @2
+    ijlFree = ijlFree@4 @3
+    ijlRead = ijlRead@8 @4
+    ijlWrite = ijlWrite@8 @5
+    ijlErrorStr = ijlErrorStr@4 @6

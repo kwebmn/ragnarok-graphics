@@ -12,6 +12,7 @@ ALLOWED_IMPORTS = {"kernel32.dll", "msvcrt.dll", "user32.dll", "ole32.dll", "win
 # uaRO.exe's import table (sha256 63902c46...): name -> the ordinal it must have, None when taken by name
 LIBS = {
     "cps.dll": {"compress": 1, "uncompress": 2},
+    "ijl15.dll": {"ijlGetLibVersion": 1, "ijlInit": 2, "ijlFree": 3, "ijlRead": 4, "ijlWrite": 5, "ijlErrorStr": 6},
     "binkw32.dll": {n: None for n in [
         "_BinkOpen@8", "_BinkClose@4", "_BinkDoFrame@4", "_BinkNextFrame@4", "_BinkCopyToBuffer@28",
         "_BinkDDSurfaceType@4", "_BinkWait@4", "_BinkPause@8", "_BinkGoto@12", "_BinkOpenDirectSound@4",

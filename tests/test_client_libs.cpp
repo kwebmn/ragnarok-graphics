@@ -11,9 +11,10 @@ using namespace uagfx;
 using client_libs::Root;
 using client_libs::Step;
 
-TEST(client_libs_know_the_two_libraries) {
+TEST(client_libs_know_the_libraries) {
     const auto& all = client_libs::all();
-    CHECK_EQ(all.size(), size_t(2));
+    CHECK_EQ(all.size(), size_t(3));
+    CHECK(std::string(all[2].file) == "ijl15.dll" && std::string(all[2].key) == "ijl");  // 3.0.1-beta.6
     CHECK(std::string(all[0].file) == "cps.dll" && std::string(all[0].key) == "cps");
     CHECK(std::string(all[1].file) == "binkw32.dll" && std::string(all[1].key) == "bink");
     CHECK(client_libs::ours(std::string("MZ\x90\0 uaRO Graphics client library: cps.dll", 43)));
