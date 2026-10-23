@@ -442,6 +442,10 @@ Config parseConfig(const std::string& text) {
             toInt(val, 0, 1000, c.roext.freeCpu);
         } else if (key == "roext.code_page") {
             toInt(val, -1, 65535, c.roext.codePage);
+        } else if (key == "windows.title_name") {  // 3.0.3-beta.2: several game windows
+            setBool(val, c.windowTitleName);
+        } else if (key == "windows.remember_place") {
+            setBool(val, c.windowRememberPlace);
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

@@ -139,6 +139,15 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("save_power", flag(running.savePower), flag(file.savePower)));
         n.savePower = file.savePower;
     }
+    if (file.windowTitleName != running.windowTitleName) {  // 3.0.3-beta.2
+        u.applied.push_back(change("title_name", flag(running.windowTitleName), flag(file.windowTitleName)));
+        n.windowTitleName = file.windowTitleName;
+    }
+    if (file.windowRememberPlace != running.windowRememberPlace) {
+        u.applied.push_back(
+            change("remember_place", flag(running.windowRememberPlace), flag(file.windowRememberPlace)));
+        n.windowRememberPlace = file.windowRememberPlace;
+    }
     if (file.profile != running.profile) {  // 0.87
         u.applied.push_back(change("profile", flag(running.profile), flag(file.profile)));
         n.profile = file.profile;
@@ -192,7 +201,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
-           k == "stats.send" ||
+           k == "stats.send" || k == "windows.title_name" || k == "windows.remember_place" ||
            k.compare(0, 8, "effects.") == 0;
 }
 

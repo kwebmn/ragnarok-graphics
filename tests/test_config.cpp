@@ -677,3 +677,20 @@ TEST(config_reads_the_updates_switch) {
         CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("1"));
     }
 }
+
+// 3.0.3-beta.2: several game windows - [windows] title_name (the character's name in the window's title) and
+// remember_place (each character's window at its own place), both on by default, rows of «Гра й чат»
+TEST(config_reads_the_several_windows_switches) {
+    const Config d = parseConfig("");
+    CHECK(d.windowTitleName && d.windowRememberPlace);
+    const Config off = parseConfig("[windows]\ntitle_name = 0\nremember_place = 0\n");
+    CHECK(!off.windowTitleName && !off.windowRememberPlace);
+    for (const char* key : {"windows.title_name", "windows.remember_place"}) {
+        const settings::IniSetting* s = settings::findSetting(key);
+        CHECK(s != nullptr);
+        if (!s) continue;
+        CHECK(s->page == settings::Page::Game && s->control == settings::Control::Check);
+        CHECK_EQ(settings::tokenOf(*s, d), std::string("1"));
+        CHECK_EQ(settings::tokenOf(*s, off), std::string("0"));
+    }
+}

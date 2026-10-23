@@ -22,6 +22,7 @@
 #include "win/console.hpp"
 #include "win/fps_overlay.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/several_windows.hpp"
 #include "win/shadow.hpp"
 
 namespace uagfx::win {
@@ -114,6 +115,8 @@ private:
     // 3.0.2-beta.12: a map's loading measured (watchMapLoad) - the frames over it, the bridge's times and cps.dll's
     // count at its start; 3.0.2-beta.13: its loading pictures and the game's frames apart, the ones shown, the picks
     map_load::Watch mapLoad_;
+    SeveralWindows severalWindows_;  // 3.0.3-beta.2: the name in the title, each character's window at its place
+    unsigned windowsFrames_ = 0;
     double frameMs_ = 0.0;  // this present's time (QueryPerformanceCounter, ms)
     uint32_t loadPictures_ = 0, loadShown_ = 0, loadGameFrames_ = 0;
     double loadShownMs_ = 0.0;  // the last loading picture shown

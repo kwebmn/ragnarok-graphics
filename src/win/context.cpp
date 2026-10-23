@@ -633,6 +633,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
         float seen[12];
         watchMapLoad(readGameMap(), readGameCamera(seen), !waitForVblank);
     }
+    if (window && ++windowsFrames_ % 15 == 0)  // 3.0.3-beta.2: several game windows - a few times a second
+        severalWindows_.check(window, readOwnName(), config);
     // 2.2.1: the AI pictures' kinds as the file says now (a kind off hidden at once; 2.2.2: each kind of sprites
     // too); Pause: none
     const bool aiShown = enhanced_ && !light_.aiHidden;  // 2.5.20: super-light draws none of them

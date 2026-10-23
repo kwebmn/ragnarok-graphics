@@ -4,8 +4,10 @@
 
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 
 #include "core/ai/texture_cache.hpp"
+#include "core/char_name.hpp"
 #include "core/game_camera.hpp"
 
 namespace uagfx::win {
@@ -77,6 +79,21 @@ std::string readGameMap() {
     const uint32_t mode = gameMode();
     if (!mode || !read(mode + camera::kModeMap, name, sizeof name - 1)) return "";
     return ai::mapName(name, sizeof name - 1);
+}
+
+std::string readOwnName() {
+    static int known = -1;  // GetCharName as this build has it: the name's place and its key are where they are read
+    if (known < 0) {
+        uint8_t code[charname::kCodeSize];
+        known = knownBuild() && read(charname::kGetCharName, code, sizeof code) &&
+                std::memcmp(code, charname::kCode, sizeof code) == 0;
+    }
+    uint8_t stored[charname::kStored], key[charname::kStored];
+    uint32_t keyAt = 0;
+    if (known != 1 || !gameMode() || !read(charname::kSession + charname::kNameAt, stored, sizeof stored) ||
+        !read(charname::kKeyAt, &keyAt, 4) || !read(keyAt, key, sizeof key))
+        return "";
+    return charname::decode(stored, key);
 }
 
 }  // namespace uagfx::win

@@ -4278,6 +4278,26 @@ constexpr Entry kTexts[] = {
      "The login window keeps your login for the next time; the password is never kept.",
      "Вікно входу пам'ятає ваш логін до наступного разу; пароль не зберігається.",
      "Окно входа помнит ваш логин до следующего раза; пароль не сохраняется."},
+    {Text::WindowsTitleName, "The character's name in the window's title",
+     "Ім'я персонажа в заголовку вікна",
+     "Имя персонажа в заголовке окна"},
+    {Text::WindowsTitleNameHint,
+     "In the game the window's title and its taskbar button say whose window it is - handy with several game windows "
+     "open.",
+     "У грі заголовок вікна й кнопка на панелі задач показують, чиє це вікно, — зручно, коли відкрито кілька вікон "
+     "гри.",
+     "В игре заголовок окна и кнопка на панели задач показывают, чьё это окно, — удобно, когда открыто несколько окон "
+     "игры."},
+    {Text::WindowsRememberPlace, "Each character's window at its own place",
+     "Вікно кожного персонажа — на своєму місці",
+     "Окно каждого персонажа — на своём месте"},
+    {Text::WindowsRememberPlaceHint,
+     "Drag a character's window where you want it: when that character comes into the game again, its window goes "
+     "there by itself. For a window with a frame (not «A borderless window locked in place»).",
+     "Перетягніть вікно персонажа, куди зручно: коли цей персонаж знову ввійде в гру, вікно стане туди саме. Для вікна "
+     "з рамкою (не «Вікно без рамки, закріплене на місці»).",
+     "Перетащите окно персонажа, куда удобно: когда этот персонаж снова войдёт в игру, окно встанет туда само. Для "
+     "окна с рамкой (не «Окно без рамки, закреплённое на месте»)."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

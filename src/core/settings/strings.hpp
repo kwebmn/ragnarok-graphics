@@ -391,6 +391,8 @@ enum class Text : uint16_t {
     GameAttackSnapHint, GameItemSnapHint, GameCameraHint, GameHomunAiHint, GameMercAiHint,
     GameTipsHint, GameIntroHint, GameMinimapHint, GameStacksHint,
     ChatWhisperStrangersHint, ChatWhisperSoundHint, ChatRememberLoginHint,  // the game's own options: names only
+    WindowsTitleName, WindowsTitleNameHint, WindowsRememberPlace,
+    WindowsRememberPlaceHint,  // 3.0.3-beta.2: several game windows at once
     Count
 };
 

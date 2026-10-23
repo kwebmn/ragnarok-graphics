@@ -17,5 +17,8 @@ std::string readGameMap();
 bool readGameCursor(int& x, int& y);
 // 3.0.2-beta.12: uaRO.exe is the build these addresses (and the profile's steps, core/sample_profile.hpp) belong to
 bool knownGameBuild();
+// 3.0.3-beta.2: the name of the character in the game (core/char_name), as the game spells it; "" at the login and the
+// character select, or in another build of the exe (GetCharName's bytes are checked once)
+std::string readOwnName();
 
 }  // namespace uagfx::win

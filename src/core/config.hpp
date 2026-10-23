@@ -455,6 +455,9 @@ struct Config {
     // [roext] its settings (core/roext.hpp), dinput8.ini's brought over by the installer
     bool clientRoext = true;
     roext::Settings roext;
+    // 3.0.3-beta.2 (the user, several game windows at once): [windows] title_name - the character's name in the game
+    // window's title; remember_place - each character's window (a framed one) where it was put (core/window_places)
+    bool windowTitleName = true, windowRememberPlace = true;
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;

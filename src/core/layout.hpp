@@ -38,6 +38,8 @@ constexpr const char* kRedirected = "uaro-graphics\\cache\\launcher-redirect.txt
 // removes it - «Звичайний режим»)
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
+// 3.0.3-beta.2: where each character's game window was put (core/window_places), written by the games
+constexpr const char* kWindowPlaces = "uaro-graphics\\uaro-windows.txt";
 // 2.13: «Звернення» (app/reports): the computer's random key - the site's reports belong to it, no login - and the
 // reports the site did not take yet (queued-*.json, sent at the app's next start)
 constexpr const char* kReports = "uaro-graphics\\reports";
