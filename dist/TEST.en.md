@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.2-beta.5 — what is new
+
+- **The client's graphics updates.** The administrator's new GRF archives come with the client's update from the
+  site into the `updates` folder and go over the game's own archives: nothing is repacked, DATA.INI is not changed.
+  The newer archive (by name) is over the older, single files in the `data` folder over everything as before. What
+  the folder holds shows on «Service» → «The client's graphics updates», where it can be turned off. While there are
+  no updates, nothing changes.
+
 # uaRO Graphics 3.0.2-beta.4 — what is new
 
 - **The game's keys in the app.** «Main» has a «Keys in the game» section: Ctrl+~ the effects console,
