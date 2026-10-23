@@ -20,6 +20,8 @@ constexpr int kWhatsNew = 2102;
 constexpr int kPicked = 2103;      // 2.12: «Як підібрано»
 constexpr int kNormalMode = 2104;  // the safe mode off
 constexpr int kSwitchOn = 2105;    // uaRO Graphics on again
+constexpr int kChannel = 2106;     // 3.0.1-beta.2 (the user): «Реліз» or «Бета» on the first page
+constexpr int kUpdateCheck = 2107;  // and «Перевірити оновлення»
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
 
@@ -38,7 +40,7 @@ public:
 
     void build(Panel& p) override {
         const LauncherState s = launcherState();
-        const UpdateState u = updateState();
+        const UpdateState u = channelUpdate(host_.model());
         const PatchState patch = clientPatchState();  // 2.14: the game's own new files
         asking_ = s.kind == LauncherState::Asking;
         checking_ = u.kind == UpdateState::Checking;
@@ -75,12 +77,16 @@ public:
             p.note(t(Text::PlayAsking), Tone::Muted);
         p.gap();
         p.heading(t(Text::ServiceUpdate));
+        buildChannel(p, host_, kChannel);  // 3.0.1-beta.2 (the user): the channel and the check here, in every mode
         if (!offer.empty()) {
             p.note(tf(Text::PlayUpdateLine, {offer, megabytes(u.branch.package.size)}), Tone::Warn);
             p.note(t(Text::PlayUpdateNote));
+        } else if (u.kind == UpdateState::Failed) {
+            p.note(tf(Text::UpdateFailed, {u.error}), Tone::Bad);
         } else {
             p.note(t(checking_ ? Text::UpdateChecking : Text::MainUpdateNone));
         }
+        p.buttons({{kUpdateCheck, t(Text::UpdateCheck), !checking_}});
         if (patchNeeded) {
             p.note(tf(Text::PlayPatchLine, {std::to_string(patch.check.needed.size()), megabytes(patch.check.bytes)}),
                    Tone::Warn);
@@ -126,10 +132,14 @@ public:
             rows_->command(id, code);
             return;
         }
+        if (channelCommand(host_, id, code, kChannel)) return;
         if (code != BN_CLICKED) return;
         Model& m = host_.model();
         if (id == kPlayNow) {
             host_.play();
+        } else if (id == kUpdateCheck) {
+            startUpdateCheck();
+            host_.rebuild();
         } else if (id == kPicked && m.lastAutoSetup()) {
             host_.message(autoSetupText(m.machine(), *m.lastAutoSetup(), false, host_.lang()), false);
         } else if (id == kNormalMode || id == kSwitchOn) {

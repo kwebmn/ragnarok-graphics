@@ -9,6 +9,7 @@
 #include "app/model.hpp"
 #include "app/text.hpp"
 #include "app/ui.hpp"
+#include "app/update.hpp"
 #include "core/settings/navigation.hpp"
 #include "core/settings/schema.hpp"
 
@@ -112,6 +113,13 @@ std::wstring autoSetupText(const settings::Machine& x, const settings::AutoSetup
 
 // 2.6: "Recommended settings" of the Main page - the Render page's auto setup for this computer.
 void runAutoSetup(PageHost& host);
+// 3.0.0-beta.2: the update channel's choice («Реліз», «Бета») as control `id` - the Service page's, and 3.0.1-beta.2
+// «Гра»'s (the user: on the first page); channelCommand takes its commands: a change is recorded and its branch asked
+// at once (true: it was the choice's). channelUpdate: the check's state, asked again when the last one asked the
+// other channel's branch.
+void buildChannel(Panel& p, PageHost& host, int id);
+bool channelCommand(PageHost& host, int id, int code, int channelId);
+UpdateState channelUpdate(const Model& m);
 // 2.6: the search's results - the rows changed in place, each with a button to its page.
 std::unique_ptr<Page> makeSearchPage(PageHost& host, const std::string& query);
 settings::Text effectGroupName(int g);  // the Effects page's name of a group

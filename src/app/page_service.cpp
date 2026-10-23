@@ -144,15 +144,9 @@ public:
         // previous version back, the files repaired, uaRO Graphics removed.
         p.gap();
         p.heading(t(Text::ServiceUpdate));
-        // 3.0.0-beta.2: the channel - the testers' builds or the releases (not in the Simple mode)
-        if (host_.mode() != settings::Mode::Simple)
-            p.choice(kChannel, t(Text::UpdateChannel), {t(Text::UpdateChannelRelease), t(Text::UpdateChannelBeta)},
-                     m.channel() == update::Channel::Beta ? 1 : 0, t(Text::UpdateChannelHint));
-        UpdateState u = updateState();
-        if ((u.kind == UpdateState::Done || u.kind == UpdateState::Failed) && u.channel != m.channel()) {
-            startUpdateCheck();  // the last check asked the other channel's branch
-            u = updateState();
-        }
+        // 3.0.0-beta.2: the channel - the testers' builds or the releases (not in the Simple mode: «Гра» has it)
+        if (host_.mode() != settings::Mode::Simple) buildChannel(p, host_, kChannel);
+        const UpdateState u = channelUpdate(m);
         checking_ = u.kind == UpdateState::Checking;
         const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
         std::vector<ButtonItem> buttons{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
@@ -197,18 +191,7 @@ public:
     }
 
     void command(int id, int code) override {
-        if (id == kChannel && (code == CBN_SELCHANGE || code == CBN_CLOSEUP)) {  // 3.0.0-beta.2
-            HWND ctl = GetDlgItem(host_.window(), id);
-            const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
-            const update::Channel c = sel == 1 ? update::Channel::Beta : update::Channel::Release;
-            if (code == CBN_SELCHANGE && sel >= 0 && c != host_.model().channel()) {
-                const std::wstring err = host_.model().setChannel(c, host_.lang());
-                if (!err.empty()) host_.message(err, true);
-                startUpdateCheck();
-            }
-            if (code == CBN_CLOSEUP || !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host_.rebuild();
-            return;
-        }
+        if (channelCommand(host_, id, code, kChannel)) return;  // 3.0.0-beta.2
         if (code != BN_CLICKED) return;
         Model& m = host_.model();
         const Lang l = host_.lang();
@@ -330,5 +313,33 @@ private:
 }  // namespace
 
 std::unique_ptr<Page> makeServicePage(PageHost& host) { return std::make_unique<ServicePage>(host); }
+
+void buildChannel(Panel& p, PageHost& host, int id) {
+    using settings::Text;
+    const settings::Lang l = host.lang();
+    p.choice(id, wtr(l, Text::UpdateChannel), {wtr(l, Text::UpdateChannelRelease), wtr(l, Text::UpdateChannelBeta)},
+             host.model().channel() == update::Channel::Beta ? 1 : 0, wtr(l, Text::UpdateChannelHint));
+}
+
+bool channelCommand(PageHost& host, int id, int code, int channelId) {
+    if (id != channelId || (code != CBN_SELCHANGE && code != CBN_CLOSEUP)) return false;
+    HWND ctl = GetDlgItem(host.window(), id);
+    const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
+    const update::Channel c = sel == 1 ? update::Channel::Beta : update::Channel::Release;
+    if (code == CBN_SELCHANGE && sel >= 0 && c != host.model().channel()) {
+        const std::wstring err = host.model().setChannel(c, host.lang());
+        if (!err.empty()) host.message(err, true);
+        startUpdateCheck();
+    }
+    if (code == CBN_CLOSEUP || !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host.rebuild();
+    return true;
+}
+
+UpdateState channelUpdate(const Model& m) {
+    const UpdateState u = updateState();
+    if ((u.kind != UpdateState::Done && u.kind != UpdateState::Failed) || u.channel == m.channel()) return u;
+    startUpdateCheck();  // the last check asked the other channel's branch
+    return updateState();
+}
 
 }  // namespace uagfx::app
