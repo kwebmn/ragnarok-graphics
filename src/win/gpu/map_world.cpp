@@ -79,6 +79,7 @@ struct MapWorld::Shared {
     std::string doneName;  // a finished read
     rsw::World done;
     ground_heights::Ground doneGround;  // 2.6.18: its .gnd's heights (none: not read)
+    std::vector<grass_beds::Box> doneBeds;  // 3.0.1-beta.3: its flower beds' tops
     bool doneOk = false;
     bool doneReady = false;
 };
@@ -124,6 +125,7 @@ void MapWorld::setMap(const std::string& name) {
     ready_ = false;
     world_ = rsw::World{};
     ground_ = ground_heights::Ground{};
+    beds_.clear();
     placed_.clear();
     lamps_.clear();
     seen_.clear();
@@ -142,6 +144,7 @@ void MapWorld::poll() {
     if (shared_->doneReady && shared_->doneName == shown_) {
         world_ = std::move(shared_->done);
         ground_ = std::move(shared_->doneGround);
+        beds_ = std::move(shared_->doneBeds);
         ready_ = shared_->doneOk;
         ++reads_;
     }
@@ -303,10 +306,39 @@ void MapWorld::loop() {
             else if (!ground_heights::parse(gb.data(), gb.size(), ground, why))
                 LOG_INFO("map objects: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
         }
+        // 3.0.1-beta.3 (R-SA3W7Y): its flower beds' tops, the grass's ground too - each bed's model read once
+        std::vector<grass_beds::Box> beds;
+        std::vector<std::pair<std::string, rsm::Model>> bedModels;
+        for (const rsw::Model& m : w.models) {
+            if (!ok || !grass_beds::bedModel(m.file)) continue;
+            auto it = std::find_if(bedModels.begin(), bedModels.end(),
+                                   [&](const auto& b) { return b.first == lower(m.file); });
+            if (it == bedModels.end()) {
+                const std::string entry = "data\\model\\" + m.file;
+                std::vector<uint8_t> mb;
+                std::string why;
+                bool found = readFile(dir + "\\" + entry, mb);
+                for (size_t i = 0; i < archives.size() && !found; ++i) {
+                    Archive& a = *archives[i];
+                    if (!open(a)) continue;
+                    found = a.grf ? a.g.find(entry) && a.g.read(entry, mb, why)
+                                  : a.zip.has(entry) && a.zip.read(entry, mb, why);
+                }
+                rsm::Model model;
+                if (!found || !rsm::parse(mb.data(), mb.size(), model, why)) model = rsm::Model{};
+                bedModels.emplace_back(lower(m.file), model);
+                it = bedModels.end() - 1;
+            }
+            for (const grass_beds::Box& b : grass_beds::place(it->second, m)) beds.push_back(b);
+        }
+        if (!beds.empty())
+            LOG_INFO("map objects: %u flower beds' tops on %s - the grass grows on them", unsigned(beds.size()),
+                     name.c_str());
         EnterCriticalSection(&shared_->lock);
         shared_->doneName = name;
         shared_->done = std::move(w);
         shared_->doneGround = std::move(ground);
+        shared_->doneBeds = std::move(beds);
         shared_->doneOk = ok;
         shared_->doneReady = true;
         LeaveCriticalSection(&shared_->lock);

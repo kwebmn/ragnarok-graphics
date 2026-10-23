@@ -1009,7 +1009,10 @@ struct Renderer::Impl {
         // uaRO.exe 0x559750 -> 0x40d8c0) comes here too, with none of them - they are kept, not built of nothing (until
         // now: no smooth hills, no grass mask and no world in the water on Direct3D 12)
         if (hillsWanted() && !groundTris.empty()) hillsGrid = hills::build(groundTris);
-        if (grassCellsWanted() && !groundTris.empty()) groundCells = ground_cells::build(groundTris);
+        if (grassCellsWanted() && !groundTris.empty()) {
+            groundCells = ground_cells::build(groundTris);
+            grass_beds::addTo(groundCells, mapWorld.beds());  // 3.0.1-beta.3: the flower beds' tops too
+        }
         hillsUp = hillsTried = false;
         groundCellsUp = groundCellsTried = false;
         if (windShared()) updateWind();  // 1.22

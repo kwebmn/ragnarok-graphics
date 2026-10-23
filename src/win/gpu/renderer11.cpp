@@ -2156,7 +2156,10 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     shaftsDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
-    if (grassWanted() && !groundTris_.empty()) groundCells_ = ground_cells::build(groundTris_);  // the next frame's
+    if (grassWanted() && !groundTris_.empty()) {  // the next frame's; 3.0.1-beta.3: the flower beds' tops too
+        groundCells_ = ground_cells::build(groundTris_);
+        grass_beds::addTo(groundCells_, mapWorld_.beds());
+    }
     if (hillsWanted()) hillsGrid_ = hills::build(groundTris_);  // 2.5.9: the next frame's smooth hills
     groundTris_.clear();
     groundGroups_.clear();  // 2.5.9: the seams' groups

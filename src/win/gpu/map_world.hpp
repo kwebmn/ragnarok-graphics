@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/grass_beds.hpp"
 #include "core/ground_heights.hpp"
 #include "core/map_axes.hpp"
 #include "core/rsw.hpp"
@@ -44,6 +45,11 @@ public:
     }
     // The base of a torch's flame seen this frame, in the game's world: the axes are found from them.
     void noteTorch(const map::Point& world);
+    // 3.0.1-beta.3: the tops of its flower beds (core/grass_beds.hpp) in the game's world - the grass's ground too;
+    // none not read or before the axes are known
+    std::vector<grass_beds::Box> beds() const {
+        return ready_ ? grass_beds::inWorld(beds_, axes_) : std::vector<grass_beds::Box>{};
+    }
 
 private:
     struct Shared;
@@ -57,6 +63,7 @@ private:
     std::string shown_;  // the map world_ is of
     rsw::World world_;
     ground_heights::Ground ground_;  // 2.6.18
+    std::vector<grass_beds::Box> beds_;  // 3.0.1-beta.3: in the file's places
     bool ready_ = false;
     uint32_t reads_ = 0;  // 2.7.57: the maps read so far (laidKey)
     map::Axes axes_;
