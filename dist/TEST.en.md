@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.2-beta.14 — what is new
+
+- **A map's loading measured on the next entry too.** Maps load in 0.25 s now, and the same map's next entry was
+  taken for a moment without the world (under 0.3 s) and not written. Now whatever shows the game's loading picture
+  is a load: the lines `map <map>: loaded in …` come for every entry.
+
 # uaRO Graphics 3.0.2-beta.13 — what is new
 
 - **Maps load sooner.** 3.0.2-beta.12's measure split `prt_fild08`'s loading (3.7 s) in two halves, and both are
