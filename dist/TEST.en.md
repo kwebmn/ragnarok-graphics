@@ -1,3 +1,22 @@
+# uaRO Graphics 3.0.2 — what is new
+
+- **The game opens and maps load many times sooner.** With HD textures the game's first picture comes 0.3 s after
+  the start instead of 12-15 s: the texture pack opens alongside the game, and its shader is compiled at the first
+  start alone. A map loads in 0.2-0.3 s instead of 3.7 s: the loading picture no longer waits for the monitor, and
+  our find of the cell under the mouse is not checked against the game's own while the game sets the map up. The HD
+  pictures are decoded by several threads, the characters' and monsters' frames first; `cps.dll` inflates the game's
+  archives with libdeflate.
+- **Help.** A new menu item «Help» in every mode: what the program does, the game's keys and what each function of
+  each page does. The game's own options on «Game and chat», «Sound» and «Screen» got descriptions too.
+- **The game's keys on «Main».** Ctrl+~ the effects console, Ctrl+Shift+F10 «New report» with a screenshot,
+  Ctrl+Shift+F11 the frame counter, Ctrl+Shift+F12 a full-size screenshot, Pause or Scroll Lock every improvement off
+  and on.
+- **The important buttons are blue:** «Play», «Update and play», «Update now», «Apply», «Apply and play»,
+  «Recommended settings», «Send» and the other main actions.
+- **The client's graphics updates.** The administrator's new GRF archives come with the client's update into the
+  `updates` folder and go over the game's archives; DATA.INI is not changed. What it holds shows on «Service» →
+  «The client's graphics updates», where they can be turned off.
+
 # uaRO Graphics 3.0.2-beta.15 — what is new
 
 - **A quick map load on every entry.** Some loads took 2.6-2.7 s again. The game's new camera gets the old one's
