@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.2-beta.10 — what is new
+
+- **HD textures on a map come sooner.** The pack's pictures are now decoded by several threads, half the processor's
+  cores, not by one. The characters' and monsters' frames go first and no longer wait while a big ground texture is
+  decoded. In `uaro-render64.log` the line `AI textures: on` says how many threads decode the pictures.
+
 # uaRO Graphics 3.0.2-beta.9 — what is new
 
 - **The game does not wait for the texture pack.** `uaro-textures.zip` now opens alongside the game: the game's window
