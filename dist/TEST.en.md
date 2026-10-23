@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.3-beta.4 — what is new
+
+- **The several windows' switches under a heading of their own.** «Game and chat» has «Several game windows» now,
+  with «The character's name in the window's title» and «Each character's window at its own place». In
+  3.0.3-beta.2 they stood under ROExt's and did not show at all without its work in the driver.
+- A window going to its character's place can no longer draw a frame within another one: the check moved to the
+  frame's start.
+
 # uaRO Graphics 3.0.3-beta.3 — what is new
 
 - **The other game windows light.** With several game windows open, the main one is the one in front (or the one you
