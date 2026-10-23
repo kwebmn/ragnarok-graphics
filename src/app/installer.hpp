@@ -39,6 +39,16 @@ Result finishInstall(const std::wstring& dir, bool scripts);
 // pad's, the copies of them (backup\) and the texture pack (textures\); our old scripts; the Apps entry. With nothing
 // kept the folder is as it was before the install.
 Result uninstall(const std::wstring& dir, bool keep);
+// 3.0.1: the names this folder's uaRO Graphics goes by - its client's (the build's uaro-client.json, else «uaRO»):
+// the desktop shortcut «uaRO HD» and the Apps entry «uaRO Graphics (uaRO HD)»; the old client's «uaRO», «uaRO Graphics»
+struct Names {
+    std::wstring shortcut, apps;
+};
+Names namesOf(const std::wstring& dir);
+// 3.0.1, at the app's every start in a game's folder: a client unpacked from its archive (never installed) gets its
+// desktop shortcut once, as an install would; this folder's Apps entry is put right (written when missing or of
+// another version, an entry of this folder under an old name gone). A name another copy holds is left to it.
+void atStart(const std::wstring& dir);
 // 2.9: a 2.x uaRO Pad dinput.dll goes (the pad is inside the driver) and what it moved aside comes back
 // (uaro-pad.moved: ROExt as dinput8.dll, or dinput.dll.before-pad), as its own switch-off did.
 void removeOldPad(const std::wstring& dir);

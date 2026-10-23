@@ -230,7 +230,7 @@ TEST(setup_installs_the_package_it_carries) {
     CHECK_EQ(at(L"uaro-graphics.exe"), std::string("uaRO Graphics exe 2.0.0"));
     CHECK_EQ(at(L"uaro-graphics\\dgvoodoo\\DDraw.dll"), std::string("dgVoodoo DDraw"));
     CHECK_EQ(at(L"uaro-graphics\\uaro-graphics.ini"), std::string("; the template\r\n"));
-    CHECK(w.appsEntry[L"DisplayVersion"] == L"2.0.0");
+    CHECK(w.apps[L"uaRO Graphics"][L"DisplayVersion"] == L"2.0.0");
     CHECK_EQ(at(L"install.bat"), std::string("<none>"));
     CHECK(w.folders.count(fake::path(L"uaro-graphics\\update")) == 0);
     std::wstring broken;

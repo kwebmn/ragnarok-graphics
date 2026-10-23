@@ -22,8 +22,9 @@ struct Windows {
     bool gameRunning = false;
     std::set<std::wstring> running;  // 3.0.1: other programs running (app/system running): full paths, lower case
     uagfx::app::SystemInfo system;
-    // 2.10: the entry in Windows' Apps (app/registry writeAppsEntry): its values, empty when there is none
-    std::map<std::wstring, std::wstring> appsEntry;
+    // 2.10: the entries in Windows' Apps (app/registry) - 3.0.1: by their names («uaRO Graphics (uaRO HD)»), each its
+    // values (DisplayName, DisplayVersion, InstallLocation, UninstallString)
+    std::map<std::wstring, std::map<std::wstring, std::wstring>> apps;
     // 2.10: the web (app/download) - a path of uaro.kiev.ua (fetchPath, downloadPath) or, 3.0.0-beta.2, a URL of
     // GitHub's (fetchUrl, downloadUrl) - and its bytes; waits: waitMs's calls (the game is closed by the first one)
     std::map<std::string, std::string> web;

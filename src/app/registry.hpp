@@ -32,9 +32,15 @@ std::vector<CompatEntry> readCompat(const std::wstring& exePath);
 // The user's value for the exe; "" deletes it. false when Windows refused.
 bool writeUserCompat(const std::wstring& exePath, const std::string& flags);
 
-// 2.10: uaRO Graphics in Windows' Apps (HKCU ...\CurrentVersion\Uninstall\uaRO Graphics, no administrator needed):
-// its Uninstall runs "<dir>\uaro-graphics.exe" --uninstall. false when Windows refused.
-bool writeAppsEntry(const std::wstring& dir, const std::string& version);
-bool removeAppsEntry();
+// 2.10: uaRO Graphics in Windows' Apps (HKCU ...\CurrentVersion\Uninstall, no administrator needed): its Uninstall
+// runs "<dir>\uaro-graphics.exe" --uninstall. 3.0.1: one entry a client - «uaRO Graphics», «uaRO Graphics (uaRO HD)»
+// (app/installer names them); the key's name is its DisplayName. false when Windows refused.
+struct AppsEntry {
+    std::wstring name, dir;  // the key, its InstallLocation
+    std::string version;     // its DisplayVersion
+};
+std::vector<AppsEntry> appsEntries();  // the keys whose name starts with "uaRO Graphics"
+bool writeAppsEntry(const std::wstring& name, const std::wstring& dir, const std::string& version);
+bool removeAppsEntry(const std::wstring& name);
 
 }  // namespace uagfx::app

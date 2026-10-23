@@ -217,17 +217,24 @@ bool writeUserCompat(const std::wstring&, const std::string& flags) {
 
 // system.hpp
 
-bool writeAppsEntry(const std::wstring& dir, const std::string& version) {
-    std::map<std::wstring, std::wstring>& e = windows().appsEntry;
-    e[L"DisplayName"] = L"uaRO Graphics";
+std::vector<AppsEntry> appsEntries() {
+    std::vector<AppsEntry> out;
+    for (auto& e : windows().apps)
+        out.push_back({e.first, e.second[L"InstallLocation"], utf8(e.second[L"DisplayVersion"])});
+    return out;
+}
+
+bool writeAppsEntry(const std::wstring& name, const std::wstring& dir, const std::string& version) {
+    std::map<std::wstring, std::wstring>& e = windows().apps[name];
+    e[L"DisplayName"] = name;
     e[L"DisplayVersion"] = wide(version);
     e[L"InstallLocation"] = dir;
     e[L"UninstallString"] = L"\"" + dir + L"\\uaro-graphics.exe\" --uninstall";
     return true;
 }
 
-bool removeAppsEntry() {
-    windows().appsEntry.clear();
+bool removeAppsEntry(const std::wstring& name) {
+    windows().apps.erase(name);
     return true;
 }
 

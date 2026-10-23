@@ -194,27 +194,61 @@ bool writeUserCompat(const std::wstring& exePath, const std::string& flags) {
 namespace {
 
 const wchar_t kAppsParent[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
-const wchar_t kAppsName[] = L"uaRO Graphics";
+const wchar_t kAppsPrefix[] = L"uaRO Graphics";
+
+// A text value of a key under the Uninstall key, "" when there is none
+std::wstring appsText(HKEY parent, const std::wstring& key, const wchar_t* name) {
+    HKEY k = nullptr;
+    if (RegOpenKeyExW(parent, key.c_str(), 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY, &k) != ERROR_SUCCESS) return L"";
+    wchar_t text[1024] = {};
+    DWORD size = sizeof text - sizeof text[0], type = 0;  // room for the end a value may lack
+    const LONG r = RegQueryValueExW(k, name, nullptr, &type, reinterpret_cast<BYTE*>(text), &size);
+    RegCloseKey(k);
+    return r == ERROR_SUCCESS && type == REG_SZ ? std::wstring(text) : L"";
+}
 
 }  // namespace
 
-bool writeAppsEntry(const std::wstring& dir, const std::string& version) {
+std::vector<AppsEntry> appsEntries() {
+    std::vector<AppsEntry> out;
+    HKEY parent = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, kAppsParent, 0, KEY_READ | KEY_WOW64_64KEY, &parent) != ERROR_SUCCESS)
+        return out;
+    const size_t prefix = sizeof kAppsPrefix / sizeof kAppsPrefix[0] - 1;
+    for (DWORD i = 0;; ++i) {
+        wchar_t name[256];
+        DWORD n = 256;
+        const LONG r = RegEnumKeyExW(parent, i, name, &n, nullptr, nullptr, nullptr, nullptr);
+        if (r == ERROR_NO_MORE_ITEMS) break;
+        if (r != ERROR_SUCCESS || n < prefix) continue;
+        if (_wcsicmp(std::wstring(name, prefix).c_str(), kAppsPrefix) != 0) continue;  // not ours
+        AppsEntry e;
+        e.name.assign(name, n);
+        e.dir = appsText(parent, e.name, L"InstallLocation");
+        e.version = utf8(appsText(parent, e.name, L"DisplayVersion"));
+        out.push_back(e);
+    }
+    RegCloseKey(parent);
+    return out;
+}
+
+bool writeAppsEntry(const std::wstring& name, const std::wstring& dir, const std::string& version) {
     HKEY key = nullptr;
-    const std::wstring path = std::wstring(kAppsParent) + L"\\" + kAppsName;
+    const std::wstring path = std::wstring(kAppsParent) + L"\\" + name;
     if (RegCreateKeyExW(HKEY_CURRENT_USER, path.c_str(), 0, nullptr, 0, KEY_SET_VALUE | KEY_WOW64_64KEY, nullptr,
                         &key, nullptr) != ERROR_SUCCESS)
         return false;
     bool ok = true;
-    const auto text = [&](const wchar_t* name, const std::wstring& v) {
-        ok = RegSetValueExW(key, name, 0, REG_SZ, reinterpret_cast<const BYTE*>(v.c_str()),
+    const auto text = [&](const wchar_t* value, const std::wstring& v) {
+        ok = RegSetValueExW(key, value, 0, REG_SZ, reinterpret_cast<const BYTE*>(v.c_str()),
                             DWORD((v.size() + 1) * sizeof(wchar_t))) == ERROR_SUCCESS && ok;
     };
-    const auto number = [&](const wchar_t* name, DWORD v) {
-        ok = RegSetValueExW(key, name, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&v), sizeof v) == ERROR_SUCCESS &&
+    const auto number = [&](const wchar_t* value, DWORD v) {
+        ok = RegSetValueExW(key, value, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&v), sizeof v) == ERROR_SUCCESS &&
              ok;
     };
     const std::wstring exe = dir + L"\\uaro-graphics.exe";
-    text(L"DisplayName", L"uaRO Graphics");
+    text(L"DisplayName", name);
     text(L"DisplayVersion", wide(version));
     text(L"Publisher", L"KWEB Team");
     text(L"DisplayIcon", exe + L",0");
@@ -227,11 +261,11 @@ bool writeAppsEntry(const std::wstring& dir, const std::string& version) {
     return ok;
 }
 
-bool removeAppsEntry() {
+bool removeAppsEntry(const std::wstring& name) {
     HKEY parent = nullptr;
     if (RegOpenKeyExW(HKEY_CURRENT_USER, kAppsParent, 0, KEY_ALL_ACCESS | KEY_WOW64_64KEY, &parent) != ERROR_SUCCESS)
         return false;
-    const LONG r = RegDeleteTreeW(parent, kAppsName);
+    const LONG r = RegDeleteTreeW(parent, name.c_str());
     RegCloseKey(parent);
     return r == ERROR_SUCCESS || r == ERROR_FILE_NOT_FOUND;
 }

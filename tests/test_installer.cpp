@@ -6,6 +6,7 @@
 
 #include "app/files.hpp"
 #include "app/installer.hpp"
+#include "app/registry.hpp"
 #include "app/text.hpp"
 #include "fake_windows.hpp"
 #include "test.hpp"
@@ -241,7 +242,8 @@ TEST(finish_install_writes_the_apps_entry) {
     client();
     put(L"uaro-graphics\\version.txt", "2.10.0 build 2026-10-22 18:00\r\n");
     CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
-    std::map<std::wstring, std::wstring>& e = fake::windows().appsEntry;
+    CHECK(fake::windows().apps.size() == 1);
+    std::map<std::wstring, std::wstring>& e = fake::windows().apps[L"uaRO Graphics"];
     CHECK(e[L"DisplayName"] == L"uaRO Graphics");
     CHECK(e[L"DisplayVersion"] == L"2.10.0");
     CHECK(e[L"UninstallString"] == L"\"" + app::exeFolder() + L"\\uaro-graphics.exe\" --uninstall");
@@ -283,9 +285,9 @@ TEST(uninstall_keeps_the_settings_and_the_pack) {
 TEST(uninstall_removes_the_apps_entry) {
     client();
     installedAndPlayed();
-    CHECK(!fake::windows().appsEntry.empty());
+    CHECK(!fake::windows().apps.empty());
     CHECK(app::installer::uninstall(app::exeFolder(), false).ok);
-    CHECK(fake::windows().appsEntry.empty());
+    CHECK(fake::windows().apps.empty());
 }
 
 namespace {
@@ -334,4 +336,101 @@ TEST(the_shortcut_is_made_once) {
     fake::windows().files.erase(kDesktop + L"\\uaRO.lnk");  // the player deleted it
     CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);  // the next update
     CHECK_EQ(desktop(L"uaRO.lnk"), std::string("<none>"));
+}
+
+namespace {
+
+// A file anywhere, its folders made
+void putAt(const std::wstring& full, const std::string& bytes) {
+    fake::Windows& w = fake::windows();
+    for (size_t at = full.find(L'\\'); at != std::wstring::npos; at = full.find(L'\\', at + 1))
+        w.folders.insert(full.substr(0, at));
+    w.files[full] = bytes;
+}
+
+const std::wstring kHd = L"C:\\Games\\uaRO-HD";
+
+// «uaRO HD», the full client, next to the old one: its build's uaro-client.json names it
+void hdClient() {
+    putAt(kHd + L"\\uaRO.exe", "MZ uaRO HD");
+    putAt(kHd + L"\\uaro-graphics.exe", "uaRO Graphics exe 3.0.1");
+    putAt(kHd + L"\\uaro-graphics\\version.txt", "3.0.1 build 2026-10-23 18:00\r\n");
+    putAt(kHd + L"\\uaro-client.json", "{\"format\":1,\"client\":\"uaRO HD\",\"version\":\"2026.10.6\",\"files\":[]}");
+}
+
+}  // namespace
+
+// 3.0.1: the old uaRO and «uaRO HD» side by side - each its shortcut and its Apps entry, neither takes the other's
+TEST(two_clients_keep_their_own_names) {
+    client();
+    put(L"uaro-graphics.exe", "uaRO Graphics exe 3.0.1");
+    put(L"uaro-graphics\\version.txt", "3.0.1 build 2026-10-23 18:00\r\n");
+    hdClient();
+    onDesktop(L"Discord.lnk", L"C:\\Discord\\Discord.exe");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK(app::installer::finishInstall(kHd, true).ok);
+    CHECK_EQ(desktop(L"uaRO.lnk"), "lnk:" + utf8(fake::path(L"uaro-graphics.exe")));
+    CHECK_EQ(desktop(L"uaRO HD.lnk"), "lnk:" + utf8(kHd + L"\\uaro-graphics.exe"));
+    auto& apps = fake::windows().apps;
+    CHECK(apps.size() == 2);
+    CHECK(apps[L"uaRO Graphics"][L"InstallLocation"] == app::exeFolder());
+    CHECK(apps[L"uaRO Graphics (uaRO HD)"][L"InstallLocation"] == kHd);
+    CHECK(apps[L"uaRO Graphics (uaRO HD)"][L"DisplayName"] == L"uaRO Graphics (uaRO HD)");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);  // the old client's next update
+    CHECK(apps[L"uaRO Graphics (uaRO HD)"][L"InstallLocation"] == kHd);
+    CHECK(app::installer::uninstall(kHd, false).ok);
+    CHECK(apps.count(L"uaRO Graphics (uaRO HD)") == 0);
+    CHECK(apps[L"uaRO Graphics"][L"InstallLocation"] == app::exeFolder());
+    CHECK_EQ(desktop(L"uaRO HD.lnk"), std::string("<none>"));
+    CHECK_EQ(desktop(L"uaRO.lnk"), "lnk:" + utf8(fake::path(L"uaro-graphics.exe")));
+}
+
+// 3.0.1: a second copy of the same client: «uaRO (2)», and the Apps entry stays the first one's while it is there
+TEST(a_second_copy_does_not_take_the_first_ones_names) {
+    client();
+    put(L"uaro-graphics.exe", "uaRO Graphics exe 3.0.1");
+    onDesktop(L"Discord.lnk", L"C:\\Discord\\Discord.exe");
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    const std::wstring copy = L"C:\\Games\\uaRO-copy";  // no uaro-client.json: the old client again
+    putAt(copy + L"\\uaRO.exe", "MZ uaRO");
+    putAt(copy + L"\\uaro-graphics.exe", "uaRO Graphics exe 3.0.1");
+    CHECK(app::installer::finishInstall(copy, true).ok);
+    CHECK_EQ(desktop(L"uaRO.lnk"), "lnk:" + utf8(fake::path(L"uaro-graphics.exe")));
+    CHECK_EQ(desktop(L"uaRO (2).lnk"), "lnk:" + utf8(copy + L"\\uaro-graphics.exe"));
+    auto& apps = fake::windows().apps;
+    CHECK(apps.size() == 1 && apps[L"uaRO Graphics"][L"InstallLocation"] == app::exeFolder());
+    fake::windows().files.erase(fake::path(L"uaro-graphics.exe"));  // the first copy deleted by hand
+    app::installer::atStart(copy);
+    CHECK(apps.size() == 1 && apps[L"uaRO Graphics"][L"InstallLocation"] == copy);  // its stale entry taken over
+}
+
+// 3.0.1: 3.0.0 named every client's entry «uaRO Graphics» - the HD copy's start renames its own
+TEST(the_start_renames_an_entry_of_the_old_name) {
+    fake::reset();
+    hdClient();
+    putAt(kHd + L"\\uaro-graphics\\shortcuts\\made.txt", "uaRO.lnk\r\n");  // 3.0.0 made its shortcut once
+    app::writeAppsEntry(L"uaRO Graphics", kHd, "3.0.0");
+    app::installer::atStart(kHd);
+    auto& apps = fake::windows().apps;
+    CHECK(apps.count(L"uaRO Graphics") == 0);
+    CHECK(apps[L"uaRO Graphics (uaRO HD)"][L"InstallLocation"] == kHd);
+    CHECK(apps[L"uaRO Graphics (uaRO HD)"][L"DisplayVersion"] == L"3.0.1");
+    CHECK_EQ(desktop(L"uaRO HD.lnk"), std::string("<none>"));  // made once already
+}
+
+// 3.0.1: the full client is unpacked, not installed - its first start makes the shortcut, once
+TEST(an_unpacked_client_gets_its_shortcut_at_the_start) {
+    fake::reset();
+    hdClient();
+    onDesktop(L"Discord.lnk", L"C:\\Discord\\Discord.exe");
+    app::installer::atStart(kHd);
+    CHECK_EQ(desktop(L"uaRO HD.lnk"), "lnk:" + utf8(kHd + L"\\uaro-graphics.exe"));
+    CHECK(fake::windows().apps.count(L"uaRO Graphics (uaRO HD)") == 1);
+    fake::windows().files.erase(kDesktop + L"\\uaRO HD.lnk");  // the player deleted it: not made again
+    app::installer::atStart(kHd);
+    CHECK_EQ(desktop(L"uaRO HD.lnk"), std::string("<none>"));
+    const std::wstring stray = L"C:\\Games\\not-a-game";  // no game in the folder: nothing made
+    putAt(stray + L"\\uaro-graphics.exe", "uaRO Graphics exe 3.0.1");
+    app::installer::atStart(stray);
+    CHECK(fake::windows().apps.size() == 1);
 }

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "app/client_patch.hpp"
+#include "app/installer.hpp"
 #include "app/mnemonic.hpp"
 #include "app/notes_window.hpp"
 #include "app/report_send.hpp"
@@ -341,6 +342,7 @@ void MainWindow::create() {
     // 2.12: a fresh install set up for this computer at once («Гра» says so), a changed card or screen asked about
     if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     model_->recordChannel(lang_);  // 3.0.0-beta.2: a beta build's install stays on «Бета» after a release build
+    installer::atStart(model_->paths().dir);  // 3.0.1: an unpacked client's shortcut; this folder's Apps entry right
     startUpdateCheck();  // 2.10: at every start, on a thread of its own (about a second)
     startLauncherCheck(lang_);  // 2.11: the news and the online count of «Гра»
     startClientPatchCheck(model_->paths().dir);  // 2.14: the game's new files

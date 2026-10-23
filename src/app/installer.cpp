@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "app/app_disk.hpp"
+#include "app/client_patch.hpp"
 #include "app/files.hpp"
 #include "app/registry.hpp"
 #include "app/shortcuts.hpp"
@@ -55,8 +56,28 @@ bool samePath(std::wstring a, std::wstring b) {
 
 std::wstring nameOf(const std::wstring& path) { return path.substr(path.find_last_of(L'\\') + 1); }
 
+std::wstring lowerCase(std::wstring s) {
+    for (wchar_t& c : s) c = c >= L'A' && c <= L'Z' ? wchar_t(c - L'A' + L'a') : c;
+    return s;
+}
+
+// 3.0.1: "<name>.lnk" on the desktop - or "<name> (2).lnk" up to (9) while a file there is no shortcut to `app`
+// (another copy's whose program is still there, or the player's own); "" when all are taken
+std::wstring freeShortcut(const std::wstring& desk, const std::wstring& name, const std::wstring& app) {
+    const std::vector<Shortcut> links = desktopShortcuts();
+    for (int n = 1; n <= 9; ++n) {
+        const std::wstring file = name + (n == 1 ? L"" : L" (" + std::to_wstring(n) + L")") + L".lnk";
+        bool free = !fileExists(join(desk, file));
+        for (const Shortcut& s : links)
+            free = free || (samePath(s.path, join(desk, file)) && (samePath(s.target, app) || !fileExists(s.target)));
+        if (free) return file;
+    }
+    return L"";
+}
+
 // 2.11: once - the desktop's shortcuts of the game go aside into uaro-graphics\shortcuts and «uaRO» (the launcher,
-// the game's icon) takes their place; a player who deleted «uaRO» does not get it back from an update.
+// the game's icon) takes their place; a player who deleted «uaRO» does not get it back from an update. 3.0.1: named
+// after the client («uaRO HD»), never over another copy's.
 void placeShortcut(const std::wstring& dir, Result& r) {
     const std::wstring aside = join(dir, wide(layout::kShortcuts)), marker = join(aside, L"made.txt");
     const std::wstring desk = desktopFolder();
@@ -64,9 +85,38 @@ void placeShortcut(const std::wstring& dir, Result& r) {
     for (const Shortcut& s : desktopShortcuts())
         if (samePath(s.target, join(dir, L"uaRO.exe")) && moveFile(s.path, join(aside, nameOf(s.path)), true))
             r.log.push_back("installer: the game's shortcut " + utf8(nameOf(s.path)) + " aside");
-    if (makeShortcut(join(desk, L"uaRO.lnk"), join(dir, L"uaro-graphics.exe"), dir, join(dir, L"uaRO.exe")))
-        r.log.push_back("installer: the shortcut uaRO on the desktop");
-    writeFileAtomic(marker, "uaRO.lnk\r\n");
+    const std::wstring app = join(dir, L"uaro-graphics.exe");
+    const std::wstring name = freeShortcut(desk, namesOf(dir).shortcut, app);
+    if (!name.empty() && makeShortcut(join(desk, name), app, dir, join(dir, L"uaRO.exe")))
+        r.log.push_back("installer: the shortcut " + utf8(name) + " on the desktop");
+    writeFileAtomic(marker, utf8(name) + "\r\n");
+}
+
+// 3.0.1: this folder's entry in Windows' Apps under its client's name - an entry of this folder under another name
+// goes (3.0.0 named every client «uaRO Graphics»); the name held by another copy whose program is still there is left
+// to it, an entry of a folder gone is taken over
+void putAppsEntry(const std::wstring& dir, const std::string& version, Result& r) {
+    const std::wstring name = namesOf(dir).apps;
+    bool right = false;
+    for (const AppsEntry& e : appsEntries()) {
+        const bool named = lowerCase(e.name) == lowerCase(name);
+        if (samePath(e.dir, dir)) {
+            if (!named && removeAppsEntry(e.name))
+                r.log.push_back("installer: the Apps entry " + utf8(e.name) + " renamed");
+            right = right || (named && e.version == version);
+        } else if (named && fileExists(join(e.dir, L"uaro-graphics.exe"))) {
+            r.log.push_back("installer: Apps lists another copy as " + utf8(name) + " - left to it");
+            return;
+        }
+    }
+    if (!right && !writeAppsEntry(name, dir, version)) r.log.push_back("installer: Windows refused the entry in Apps");
+}
+
+std::string versionOf(const std::wstring& dir) {  // uaro-graphics\version.txt's line, else this app's
+    std::string version;
+    readFile(join(dir, L"uaro-graphics\\version.txt"), version);
+    while (!version.empty() && (version.back() == '\r' || version.back() == '\n')) version.pop_back();
+    return version;
 }
 
 // The removal's: the game's shortcuts back where they were, «uaRO» away.
@@ -226,9 +276,7 @@ Result finishInstall(const std::wstring& dir, bool scripts) {
     if (!fileExists(ourFile(dir, layout::File::Ini)) && readFile(join(dir, wide(layout::kIniTemplate)), templ) &&
         writeFileAtomic(ini, templ))
         r.log.push_back("installer: the settings file from the package's template");
-    std::string version;
-    readFile(join(dir, L"uaro-graphics\\version.txt"), version);
-    while (!version.empty() && (version.back() == '\r' || version.back() == '\n')) version.pop_back();
+    const std::string version = versionOf(dir);
     // 3.0.0-beta.2: a beta build puts the install on «Бета» (a tester joins so); a release build leaves the channel
     std::string current;
     if (update::preRelease(update::bare(version)) && readFile(ini, current)) {
@@ -240,9 +288,25 @@ Result finishInstall(const std::wstring& dir, bool scripts) {
     removeTree(join(dir, L"uaro-graphics\\pad"));
     if (scripts) removeOldScripts(dir);
     placeShortcut(dir, r);
-    if (!writeAppsEntry(dir, version.empty() ? std::string(kVersion) : update::bare(version)))
-        r.log.push_back("installer: Windows refused the entry in Apps");
+    putAppsEntry(dir, version.empty() ? std::string(kVersion) : update::bare(version), r);
     return r;
+}
+
+Names namesOf(const std::wstring& dir) {
+    const std::string client = clientOf(dir).client;
+    Names n;
+    n.shortcut = wide(client);
+    n.apps = client_patch::sameClient(client, client_patch::kOldClient) ? L"uaRO Graphics"
+                                                                         : L"uaRO Graphics (" + wide(client) + L")";
+    return n;
+}
+
+void atStart(const std::wstring& dir) {
+    if (!fileExists(join(dir, L"uaRO.exe"))) return;  // not a game's folder
+    Result r;
+    placeShortcut(dir, r);
+    const std::string version = versionOf(dir);
+    putAppsEntry(dir, version.empty() ? std::string(kVersion) : update::bare(version), r);
 }
 
 void removeOldPad(const std::wstring& dir) {
@@ -309,7 +373,8 @@ Result uninstall(const std::wstring& dir, bool keep) {
     }
     if (!keep && dirExists(folder)) r.log.push_back("installer: uaro-graphics\\ could not go whole");
     removeOldScripts(dir);
-    removeAppsEntry();
+    for (const AppsEntry& e : appsEntries())  // 3.0.1: only this folder's - the other client keeps its own
+        if (samePath(e.dir, dir)) removeAppsEntry(e.name);
     return r;
 }
 
