@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.1 — what is new
+
+- **uaRO HD next to the usual uaRO.** Each client has its own shortcut («uaRO», «uaRO HD») and its own line in
+  Windows' «Apps», and the game's new files come only to the client they were put out for. Palettes.grf and
+  dinput8.ini you changed yourself stay yours. An unpacked full client gets its shortcut at the app's first start.
+- **Updates on «Play».** It now has «Update channel» («Release» or «Beta (testing)»), «Check for updates» and
+  «Update now» - it updates and opens the app again, the game does not start. The check's answer shows right after
+  the app starts.
+- **Our own game libraries in place of the old ones of the 2000s.** The archives' compression (cps.dll), JPEG
+  pictures (ijl15.dll), the game's sound (mss32.dll, through XAudio2 - on Windows 10 and later) and ROExt's work (the
+  window, mouse buttons, keys - now in the driver, dinput8.dll not needed); Bink video without RAD's code
+  (binkw32.dll). The originals are in `uaro-graphics\original`. If something sounds or behaves differently than
+  before, turn that library off: «Service» → «The game's libraries» («Detailed» mode) - and write to «Reports».
+- **Grass on the flower beds.** The round flower beds by Prontera's fountain and the same ones on other maps grow
+  grass like the ground around them.
+
 # uaRO Graphics 3.0.1-beta.9 — what is new
 
 - **The update check's answer at once.** The app starts its checks (the update, «Play»'s news, the client's patch,
