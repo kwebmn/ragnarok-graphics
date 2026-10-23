@@ -8,12 +8,12 @@ constexpr double kLongest = 120000.0;  // ms: longer - dropped
 
 }  // namespace
 
-Watch::Event Watch::frame(double ms, const std::string& map, bool world) {
+Watch::Event Watch::frame(double ms, const std::string& map, bool world, bool picture) {
     if (loading_) {
         if (world) {
             loading_ = false;
             loadMs_ = ms - began_;
-            const bool load = loadMs_ > kShortest || map != worldMap_;
+            const bool load = loadMs_ > kShortest || map != worldMap_ || pictured_;
             hadWorld_ = true;
             worldMs_ = ms;
             worldMap_ = map;
@@ -25,6 +25,7 @@ Watch::Event Watch::frame(double ms, const std::string& map, bool world) {
             return Event::Dropped;
         }
         map_ = map;
+        pictured_ = pictured_ || picture;
         return Event::None;
     }
     if (world) {
@@ -36,6 +37,7 @@ Watch::Event Watch::frame(double ms, const std::string& map, bool world) {
     }
     if (blocked_ || map.empty()) return Event::None;
     loading_ = true;
+    pictured_ = picture;
     began_ = ms;
     map_ = map;
     loadMs_ = 0.0;

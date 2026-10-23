@@ -772,7 +772,7 @@ void Context::watchMapLoad(const std::string& map, bool world, bool picture) {
     QueryPerformanceFrequency(&f);
     frameMs_ = double(now.QuadPart) * 1000.0 / double(f.QuadPart);
     using Event = map_load::Watch::Event;
-    const Event event = mapLoad_.frame(frameMs_, map, world);
+    const Event event = mapLoad_.frame(frameMs_, map, world, picture);
     if (event == Event::Began) {
         loadPictures_ = loadShown_ = loadGameFrames_ = 0;
         loadShownMs_ = 0.0;

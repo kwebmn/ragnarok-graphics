@@ -58,3 +58,16 @@ TEST(map_load_given_up) {
     CHECK(w.frame(40 + 120200, "geffen", true) == Event::None);
     CHECK(w.frame(40 + 120300, "payon", false) == Event::Began);
 }
+
+TEST(map_load_the_same_map_again_quickly) {
+    // 3.0.2-beta.14 (beta.13: maps load in 0.25 s, and the same map's next entry was dropped as a glance away from
+    // the world): the game's loading pictures make it a load, however quick
+    map_load::Watch w;
+    w.frame(0, "prt_fild08", true);
+    CHECK(w.frame(16, "prt_fild08", false) == Event::Began);  // the map's start: a frame of the game's
+    CHECK(w.frame(30, "prt_fild08", false, true) == Event::None);  // its loading pictures
+    CHECK(w.frame(250, "prt_fild08", true) == Event::Ended);
+    // without the world for a moment, no loading picture, the same map: still none
+    CHECK(w.frame(266, "prt_fild08", false) == Event::Began);
+    CHECK(w.frame(282, "prt_fild08", true) == Event::Dropped);
+}

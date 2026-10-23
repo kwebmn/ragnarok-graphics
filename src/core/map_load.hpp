@@ -6,14 +6,15 @@ namespace uagfx::map_load {
 // 3.0.2-beta.12 (the client build session: prt_fild08 loads in 3.7 s, cps.dll's inflating 6 times as fast changed
 // nothing): a map's loading as the driver's frames see it - from the first frame without the world under a map's
 // name (uaRO.exe copies the name into its game mode and shows the loading picture as the map's start begins,
-// 0x559030) to the first frame with the world again. A world unseen for 300 ms or less in the same map is no load; a
-// load that never ends (two minutes, or back to the character list) is dropped.
+// 0x559030) to the first frame with the world again. A world unseen for 300 ms or less in the same map is no load
+// (3.0.2-beta.14: unless the game showed its loading picture meanwhile - maps load in 0.25 s now); a load that never
+// ends (two minutes, or back to the character list) is dropped.
 class Watch {
 public:
     enum class Event { None, Began, Ended, Dropped };
-    // A frame shown at `ms` (one clock, milliseconds): the game's map ("" at the login and the character list) and
-    // whether its world is in the frame
-    Event frame(double ms, const std::string& map, bool world);
+    // A frame shown at `ms` (one clock, milliseconds): the game's map ("" at the login and the character list),
+    // whether its world is in the frame, and (3.0.2-beta.14) whether it is the game's loading picture
+    Event frame(double ms, const std::string& map, bool world, bool picture = false);
     bool loading() const { return loading_; }
     const std::string& map() const { return map_; }  // the map being loaded
     double loadMs() const { return loadMs_; }         // at Ended: from its loading picture to its world
@@ -21,6 +22,7 @@ public:
 
 private:
     bool loading_ = false;
+    bool pictured_ = false;   // the game's loading picture shown in it
     bool blocked_ = false;    // dropped for its length: none begins until a world is seen
     bool hadWorld_ = false;
     double worldMs_ = 0.0;    // the last frame with a world
