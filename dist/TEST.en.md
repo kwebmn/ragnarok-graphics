@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.2-beta.9 — what is new
+
+- **The game does not wait for the texture pack.** `uaro-textures.zip` now opens alongside the game: the game's window
+  shows at once, and the HD textures come on as soon as the pack is ready (usually in 1-2 s). The textures, sprite
+  frames and icons that showed up meanwhile get their HD pictures by themselves, with no map entered again. In
+  `uaro-render64.log` - the lines `opens alongside the game` and `opened alongside the game, N s after the start`.
+
 # uaRO Graphics 3.0.2-beta.8 — what is new
 
 - **The game opens sooner with HD textures.** Before the game's first picture, five shaders of the HD textures were
