@@ -151,6 +151,7 @@ private:
         // 2.5.18: found by the plain texture's picture (a texture of the skills' animations, black its key -
         // core/ai/black_key.hpp): the texels the key took away, put on the picture as it is read
         std::vector<uint8_t> shown;
+        bool waits = false;  // 3.0.2-beta.9: drawn while the pack opened - looked up first once it is there
     };
     struct Level {
         UINT64 at = 0;  // bytes into the image
@@ -211,7 +212,8 @@ private:
     // one made written into the pack, or the index told of a kind and a map a picture was seen as and on.
     struct IoRequest {
         // 2.3 Reload: the pack's directory and index read again (uaRO Studio changed it), name the keys changed
-        enum Type : uint8_t { Read, Write, Note, Reload } type = Read;
+        // 3.0.2-beta.9 Open: the pack opened alongside the game, its index taken, its pictures listed (openPack)
+        enum Type : uint8_t { Read, Write, Note, Reload, Open } type = Read;
         uint32_t id = 0;
         std::string name;
         std::vector<uint32_t> argb;  // to write
@@ -231,6 +233,10 @@ private:
         std::string name;
         bool ok = false;
         std::shared_ptr<pack::Reader> reloaded;  // 2.3: the pack opened again, its index in `text`, its keys in name
+        // 3.0.2-beta.9 Open: the pack (reloaded), its pictures listed, its steps' times in `text`; not ok: why in
+        // name ("" - there is no pack)
+        bool opened = false;
+        std::unique_ptr<ai::ReadyPictures> pictures;
         std::string text;
         std::vector<uint32_t> argb;
         int width = 0, height = 0;
@@ -277,6 +283,10 @@ private:
     void cellWritten(uint32_t id, Texture& t, Atlas& a, int net, const Rect& c, const uint32_t* argb, int pitch,
                      uint8_t source, bool seen,  // a frame of this sprite file's kind goes to the network (sprite_exe)
                      const uint32_t* own = nullptr);
+    // 3.0.2-beta.9: a frame's picture looked up in the pack (by its own colours' in a dye), else made or missing;
+    // an icon's the same - apart from the notes, so that what came while the pack opened is looked up once it is
+    void lookUpCell(Job j, std::vector<uint32_t> pixels, std::vector<uint32_t> own, uint8_t source, bool seen);
+    void lookUpIcon(Job j);
     bool makeAtlas(uint32_t id, Texture& t);
     void standIn(Texture& t, const Atlas& a, const Rect& r, const uint32_t* argb, int pitch);
     void writeRegion(Texture& t, int level, int x, int y, int w, int h, const std::vector<uint32_t>& argb);
@@ -336,6 +346,23 @@ private:
     HANDLE changedEvent_ = nullptr;  // 2.3: Local\uaro-studio-changed, set by the studio after it wrote the pack
     void studioChanged();             // 2.3: the event set - the pack asked to be read again
     void reloaded(IoResult& r);       // 2.3: the pack read again - the keys changed taken from it anew
+    // 3.0.2-beta.9 (the client build session: the game waited 12-15 s for the start): the pack's pictures alone -
+    // the pack opens on the I/O thread alongside the game (openPack), handed over here (packOpened); meanwhile
+    // nothing is said to be missing: the textures drawn keep their pixels (Item::waits), frames and icons wait
+    struct WaitingCell {
+        Job job;
+        std::vector<uint32_t> pixels, own;
+        uint8_t source = 0;
+        bool seen = false;
+    };
+    bool packPending_ = false;
+    int64_t startedAt_ = 0;  // QueryPerformanceCounter's, the start's
+    std::deque<WaitingCell> waitingCells_;
+    std::vector<Job> waitingIcons_;
+    void openPack(IoResult& res);  // the I/O thread's
+    void packOpened(IoResult& r);
+    void logPack(const std::string& how) const;
+    void turnOff();  // no pack after all: off, as the start would have left them
     std::unique_ptr<ai::ReadyPictures> pictures_;  // 0.48: the pack's pictures and kinds, looked up here
     MissingDump dump_;                             // 0.49.1
     int scale_ = 4;                             // the result: 4 or 2 times the game's texture
