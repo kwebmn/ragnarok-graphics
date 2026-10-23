@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.2-beta.2 — what is new
+
+- **«Apply and play» blue too.** At the bottom of the app both buttons are blue now: «Apply» (when there is
+  something to apply) and «Apply and play».
+
 # uaRO Graphics 3.0.2-beta.1 — what is new
 
 - **The important buttons are blue.** The app marks its main actions in blue: «Play» and «Update and play» on
