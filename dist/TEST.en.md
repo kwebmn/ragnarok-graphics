@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.2-beta.3 — what is new
+
+- **«Recommended settings» blue too.** The button on the «Main» page is now blue, as the other important ones.
+
 # uaRO Graphics 3.0.2-beta.2 — what is new
 
 - **«Apply and play» blue too.** At the bottom of the app both buttons are blue now: «Apply» (when there is
