@@ -13,11 +13,14 @@ using client_libs::Step;
 
 TEST(client_libs_know_the_libraries) {
     const auto& all = client_libs::all();
-    CHECK_EQ(all.size(), size_t(4));
+    CHECK_EQ(all.size(), size_t(5));
     CHECK(std::string(all[2].file) == "ijl15.dll" && std::string(all[2].key) == "ijl");  // 3.0.1-beta.6
     // 3.0.1-beta.7: Miles over XAudio2 2.9 - put in only where Windows has it
     CHECK(std::string(all[3].file) == "mss32.dll" && std::string(all[3].key) == "mss" && all[3].needsXAudio2);
     CHECK(!all[0].needsXAudio2 && !all[1].needsXAudio2 && !all[2].needsXAudio2);
+    // 3.0.1-beta.8: ROExt's dinput8.dll - no file of ours, the driver does its work: the game's goes aside
+    CHECK(std::string(all[4].file) == "dinput8.dll" && std::string(all[4].key) == "roext" && all[4].aside);
+    CHECK(!all[0].aside && !all[3].aside);
     CHECK(std::string(all[0].file) == "cps.dll" && std::string(all[0].key) == "cps");
     CHECK(std::string(all[1].file) == "binkw32.dll" && std::string(all[1].key) == "bink");
     CHECK(client_libs::ours(std::string("MZ\x90\0 uaRO Graphics client library: cps.dll", 43)));
@@ -63,4 +66,14 @@ TEST(client_libs_zlib_is_zlibs) {
     const unsigned char garbage[] = "this is no zlib stream";
     unsigned long g = (unsigned long)back.size();
     CHECK_EQ(client_libs::zlibUncompress(back.data(), &g, garbage, sizeof garbage), -3);
+}
+
+// 3.0.1-beta.8: a library the driver does the work of (ROExt): on - the game's aside, nothing in its place; off - back
+TEST(client_libs_decide_a_library_put_aside) {
+    CHECK(client_libs::decideAside(true, Root::Game, false) == Step::PutAside);
+    CHECK(client_libs::decideAside(true, Root::Game, true) == Step::PutAside);  // a newer one of the game's: aside too
+    CHECK(client_libs::decideAside(true, Root::Missing, true) == Step::Nothing);
+    CHECK(client_libs::decideAside(false, Root::Missing, true) == Step::RestoreOriginal);
+    CHECK(client_libs::decideAside(false, Root::Missing, false) == Step::Nothing);
+    CHECK(client_libs::decideAside(false, Root::Game, true) == Step::Nothing);  // the game's there: it stays
 }

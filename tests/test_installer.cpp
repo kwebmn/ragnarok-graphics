@@ -8,6 +8,7 @@
 #include "app/installer.hpp"
 #include "app/registry.hpp"
 #include "app/text.hpp"
+#include "core/settings/ini_edit.hpp"
 #include "fake_windows.hpp"
 #include "test.hpp"
 
@@ -512,6 +513,40 @@ TEST(the_sound_library_needs_xaudio2) {
     app::installer::syncClientLibs(app::exeFolder(), false, r);
     CHECK_EQ(at(L"mss32.dll"), kGameMss);
     CHECK_EQ(at(L"uaro-graphics\\original\\mss32.dll"), std::string("<none>"));
+}
+
+// 3.0.1-beta.8: ROExt's dinput8.dll goes aside - the driver does its work - and its dinput8.ini's settings come into
+// uaro-graphics.ini [roext]; off: ROExt back; a dinput8.dll not ROExt's (ReShade's) stays where it is
+TEST(roext_goes_aside_with_its_settings) {
+    const std::string kRoext = std::string("MZ") + '\0' + "ROExt" + '\0' + ".\\dinput8.ini" + '\0';
+    const std::string kRoextIni = "[ROExt]\r\nAutoFreeCPU = 4\r\nRemapMouseButtons = 1\r\nWindowLock = 1\r\n"
+                                  "WindowWidth = 1600\r\nWindowHeight = 863\r\nCodePage = -1\r\n";
+    clientWithLibraries("1");
+    put(L"dinput8.dll", kRoext);
+    put(L"dinput8.ini", kRoextIni);
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("3.0.1"), false).ok);
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"dinput8.dll"), std::string("<none>"));
+    CHECK_EQ(at(L"uaro-graphics\\original\\dinput8.dll"), kRoext);
+    CHECK_EQ(at(L"dinput8.ini"), kRoextIni);  // the player's, for ROExt's return
+    auto ini = settings::readIni(at(L"uaro-graphics\\uaro-graphics.ini"));
+    CHECK_EQ(ini["roext.mouse_buttons"], std::string("1"));
+    CHECK_EQ(ini["roext.free_cpu"], std::string("4"));
+    CHECK_EQ(ini["roext.window_lock"], std::string("1"));
+    CHECK_EQ(ini["roext.window_width"], std::string("1600"));
+    CHECK_EQ(ini["roext.window_height"], std::string("863"));
+    CHECK_EQ(ini["roext.code_page"], std::string("-1"));
+    app::installer::Result r;
+    put(L"uaro-graphics\\uaro-graphics.ini", "[client]\r\nroext = 0\r\n");  // off: ROExt back
+    app::installer::syncClientLibs(app::exeFolder(), false, r);
+    CHECK_EQ(at(L"dinput8.dll"), kRoext);
+    CHECK_EQ(at(L"uaro-graphics\\original\\dinput8.dll"), std::string("<none>"));
+    CHECK(settings::readIni(at(L"uaro-graphics\\uaro-graphics.ini")).count("roext.free_cpu") == 0);
+    put(L"uaro-graphics\\uaro-graphics.ini", "[client]\r\nroext = 1\r\n");
+    put(L"dinput8.dll", "MZ ReShade's dinput8.dll");  // not ROExt's: left alone, nothing brought over
+    app::installer::syncClientLibs(app::exeFolder(), false, r);
+    CHECK_EQ(at(L"dinput8.dll"), std::string("MZ ReShade's dinput8.dll"));
+    CHECK(settings::readIni(at(L"uaro-graphics\\uaro-graphics.ini")).count("roext.free_cpu") == 0);
 }
 
 // 3.0.1-beta.5: the removal puts the game's own libraries back

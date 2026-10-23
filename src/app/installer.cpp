@@ -14,7 +14,9 @@
 #include "core/ini_upgrade.hpp"
 #include "core/layout.hpp"
 #include "core/layout_migration.hpp"
+#include "core/roext.hpp"
 #include "core/settings/ini_edit.hpp"
+#include "core/settings/input_module.hpp"
 #include "core/settings/pad_files.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -295,6 +297,25 @@ Result finishInstall(const std::wstring& dir, bool scripts) {
     return r;
 }
 
+namespace {
+
+// 3.0.1-beta.8: dinput8.ini's settings, as ROExt read them (its own defaults without it), into uaro-graphics.ini
+// [roext] - the driver does ROExt's work from there
+void bringRoextSettings(const std::wstring& dir, Result& r) {
+    std::string roextIni, ini;
+    readFile(join(dir, L"dinput8.ini"), roextIni);
+    const std::wstring path = ourFile(dir, layout::File::Ini);
+    readFile(path, ini);
+    std::vector<settings::IniEdit> edits;
+    for (const auto& kv : roext::iniValues(roext::fromDinput8Ini(roextIni)))
+        edits.push_back({"roext", kv.first, kv.second});
+    r.log.push_back(writeFileAtomic(path, settings::applyIniEdits(ini, edits))
+                        ? "installer: ROExt's settings (dinput8.ini) in uaro-graphics.ini [roext]"
+                        : "installer: cannot write ROExt's settings into uaro-graphics.ini");
+}
+
+}  // namespace
+
 void syncClientLibs(const std::wstring& dir, bool off, Result& r) {
     if (running(join(dir, L"uaRO.exe"))) {  // the game holds them: the next sync
         r.log.push_back("installer: the game is running - its libraries are left as they are");
@@ -311,6 +332,27 @@ void syncClientLibs(const std::wstring& dir, bool off, Result& r) {
         const bool wanted = !off && can && (key == keys.end() || key->second != "0");
         if (!off && !can) r.log.push_back("installer: no XAudio2 2.9 (Windows 10 and later) - the game's own " +
                                           std::string(lib.file));
+        if (lib.aside) {  // 3.0.1-beta.8: ROExt's - the driver does its work; another program's dll stays
+            std::string now;
+            const bool there = readFile(root, now);
+            if (there && settings::identifyModule(lib.file, std::vector<uint8_t>(now.begin(), now.end())).kind !=
+                             settings::ModuleKind::Roext)
+                continue;
+            const client_libs::Step step = client_libs::decideAside(
+                wanted, there ? client_libs::Root::Game : client_libs::Root::Missing, fileExists(aside));
+            if (step == client_libs::Step::PutAside) {
+                if (makeFolders(kept) && moveFile(root, aside, true)) {
+                    r.log.push_back("installer: ROExt's " + std::string(lib.file) + " aside - the driver does its work");
+                    bringRoextSettings(dir, r);
+                } else {
+                    r.log.push_back("installer: ROExt's " + std::string(lib.file) + " could not go aside");
+                }
+            } else if (step == client_libs::Step::RestoreOriginal) {
+                r.log.push_back(moveFile(aside, root, true) ? "installer: ROExt's own " + std::string(lib.file)
+                                                            : "installer: cannot put back " + std::string(lib.file));
+            }
+            continue;
+        }
         std::string package, now;
         const bool haveOurs = readFile(join(ours, name), package) && client_libs::ours(package);
         client_libs::Root state = client_libs::Root::Missing;
