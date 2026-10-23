@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.3-beta.3 — what is new
+
+- **The other game windows light.** With several game windows open, the main one is the one in front (or the one you
+  played in last while another program is in front). The others draw without effects, HD pictures and DLSS, at half
+  the resolution and 10 frames a second: less work for the graphics card. The window you switch to becomes the main
+  one at once and is whole again. Turned off on «Graphics» → «The other game windows light».
+- **Music in the main window only.** The other game windows' music fades out; their sounds stay, as quiet as «Volume
+  in the background» says. Music in every window again: «Sound» → «Music in the other game windows».
+- With one game window nothing changed.
+
 # uaRO Graphics 3.0.3-beta.2 — what is new
 
 - **The character's name in the game window's title.** In the game the window's title and its taskbar button say
