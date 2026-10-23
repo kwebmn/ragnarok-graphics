@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.1-beta.5 — what is new
+
+- **The game's libraries, our own in place of the old ones.** uaRO Graphics puts its own cps.dll in the game's
+  folder - the compression the game reads its archives through (a current zlib in place of the 2000s' one) - and a
+  binkw32.dll without RAD Game Tools' code (the game has no Bink video). The game's own files wait in
+  uaro-graphics\original and come back when a library is turned off («Service» → «The game's libraries», the
+  Detailed mode) or uaRO Graphics is removed. It changes while the game is closed.
+
 # uaRO Graphics 3.0.1-beta.4 — what is new
 
 - **«Update now» on «Game».** When a newer version is out, «Update now» shows beside «Check for updates»: the update
