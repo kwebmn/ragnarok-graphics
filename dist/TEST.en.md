@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.3-beta.1 — what is new
+
+- **Several game windows: each has its own logs.** A second game started beside the first emptied the first one's
+  log, and then both wrote into one file mixed together. A window opened beside another now writes logs of its own:
+  `uaro-graphics-2.log`, `uaro-render64-2.log`, `uaro-pad-2.log`, the third one's with `-3` and so on up to eight.
+  The first line of such a log says which window it is.
+- **A report from the game (Ctrl+Shift+F10) and the automatic one after a crash** take the logs of the window they
+  came from. A report from the app also carries the other game windows' logs of the last 12 hours.
+- The safe mode judges a failed start by the last game of the same window.
+
 # uaRO Graphics 3.0.2 — what is new
 
 - **The game opens and maps load many times sooner.** With HD textures the game's first picture comes 0.3 s after
