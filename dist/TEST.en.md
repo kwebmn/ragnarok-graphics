@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.2-beta.13 — what is new
+
+- **Maps load sooner.** 3.0.2-beta.12's measure split `prt_fild08`'s loading (3.7 s) in two halves, and both are
+  gone now:
+  - the game draws its loading picture anew for each per cent of the map's models - 102 times, and each was shown
+    after a wait of 16.5 ms (1.7 s in all). While a map loads it is shown at once now, with no frame limit and no
+    wait, and goes to the 64-bit renderer at most 10 times a second;
+  - our quick find of the cell under the mouse was checked against the game's own 240 times on each new map, and the
+    game's own takes 7.6 ms (1.8 s in all). Now 30 checks, and the map's first picks, while the game still sets it
+    up, look for no cell at all: the game's own answer then is none as well.
+- **A fuller measure.** The block `map <map>` now gives the loading pictures (and how many were shown) apart from
+  the game's frames, and how many times the cell under the mouse was looked for and what its checks took. A new step
+  of the game's: `the cell under the mouse`.
+
 # uaRO Graphics 3.0.2-beta.12 — what is new
 
 - **A map's loading measured.** Each map's loading is now measured by itself, from its loading picture to the first
