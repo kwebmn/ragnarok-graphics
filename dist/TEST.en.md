@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.1-beta.1 — what is new
+
+- **uaRO HD next to the usual uaRO.** The new full client «uaRO HD» lives in a folder of its own. Each client now has
+  its own desktop shortcut («uaRO» and «uaRO HD») and its own line in Windows' Apps («uaRO Graphics» and «uaRO Graphics
+  (uaRO HD)»). A second copy never takes the first one's shortcut or line, and a removal takes away only its own line.
+- **Client updates, each its own.** New game files come only to the client they were put up for. A Palettes.grf or a
+  dinput8.ini you changed yourself stays yours. A file taken off the update goes from your folder too, when the update
+  itself put it there and you did not change it. While uaRO Studio or the renderer of this folder is open, the game's
+  files are not changed; the other client's game is no obstacle.
+- **A shortcut for an unpacked client.** A full client unpacked from its archive gets its shortcut and its line in
+  Apps at the program's first start.
+
 # uaRO Graphics 3.0.0 — what is new
 
 - **The launcher «Play».** The «uaRO» shortcut opens the server's news, the online count and «Play». A new version or
