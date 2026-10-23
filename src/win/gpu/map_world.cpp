@@ -6,7 +6,10 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "core/config.hpp"
 #include "core/grf/grf.hpp"
+#include "core/layout.hpp"
+#include "core/updates.hpp"
 #include "core/zip.hpp"
 #include "win/log.hpp"
 
@@ -32,6 +35,25 @@ bool readFile(const std::string& path, std::vector<uint8_t>& out) {
     while ((n = std::fread(buf, 1, sizeof buf, f)) > 0 && out.size() < (size_t(64) << 20)) out.insert(out.end(), buf, buf + n);
     std::fclose(f);
     return !out.empty();
+}
+
+// 3.0.2-beta.5: the administrator's GRFs in updates\ (core/updates.hpp), looked in before DATA.INI's as the game
+// does - none with [client] updates off
+std::vector<std::string> updateFiles(const std::string& dir) {
+    std::vector<uint8_t> ini;
+    if (readFile(layout::join(dir, layout::now(layout::File::Ini)), ini) &&
+        !parseConfig(std::string(ini.begin(), ini.end())).clientUpdates)
+        return {};
+    std::vector<std::string> names;
+    WIN32_FIND_DATAA f{};
+    HANDLE h = FindFirstFileA(layout::join(layout::join(dir, updates::kFolder), "*.grf").c_str(), &f);
+    if (h != INVALID_HANDLE_VALUE) {
+        do {
+            if (!(f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) names.push_back(f.cFileName);
+        } while (FindNextFileA(h, &f));
+        FindClose(h);
+    }
+    return names;
 }
 
 // DATA.INI's [Data] archives in the order of their numbers (the client looks in them in that order).
@@ -238,7 +260,7 @@ void MapWorld::loop() {
         if (listedFor != dir) {  // DATA.INI's archives, opened when first looked in
             listedFor = dir;
             archives.clear();
-            for (const std::string& file : dataArchives(dir)) {
+            for (const std::string& file : updates::archiveOrder(updateFiles(dir), dataArchives(dir))) {
                 auto a = std::make_unique<Archive>();
                 a->path = file.find(':') != std::string::npos ? file : dir + "\\" + file;
                 const std::string ext = lower(file.size() > 4 ? file.substr(file.size() - 4) : "");

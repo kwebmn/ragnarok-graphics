@@ -8,6 +8,7 @@
 #include "core/grf/grf.hpp"
 #include "core/jpeg_image.hpp"
 #include "core/sprite_exe.hpp"
+#include "core/updates.hpp"
 #include "core/zip.hpp"
 
 namespace uagfx::pack {
@@ -83,7 +84,7 @@ std::vector<std::string> dataArchives(const std::string& text) {
 GameFiles::GameFiles() = default;
 GameFiles::~GameFiles() = default;
 
-bool GameFiles::open(const std::string& dir, std::string& error) {
+bool GameFiles::open(const std::string& dir, const std::vector<std::string>& updateFiles, std::string& error) {
     grfs_.clear();
     shared_.reset();
     auto sh = std::make_shared<Shared>();
@@ -105,7 +106,8 @@ bool GameFiles::open(const std::string& dir, std::string& error) {
         sh->where.emplace(n, Place{archive, stored});
         count += listed(n);
     };
-    for (const std::string& file : dataArchives(ini)) {
+    for (std::string file : updates::archiveOrder(updateFiles, dataArchives(ini))) {  // 3.0.2-beta.5: updates first
+        if (sep == '/') std::replace(file.begin(), file.end(), '\\', '/');
         const std::string ext = lower(file.size() > 4 ? file.substr(file.size() - 4) : "");
         if (ext != ".grf" && ext != ".gpf" && ext != ".zip") {
             sh->failed.push_back(file + " (not a GRF, GPF or ZIP)");  // 1.6.5

@@ -664,3 +664,16 @@ TEST(config_reads_roexts_settings) {
     CHECK_EQ(settings::tokenOf(*settings::findSetting("roext.free_cpu"), d), std::string("4"));
     CHECK_EQ(settings::tokenOf(*settings::findSetting("client.roext"), c), std::string("0"));
 }
+
+// 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives, on by default, a switch of «Сервіс»
+TEST(config_reads_the_updates_switch) {
+    CHECK(parseConfig("").clientUpdates);
+    CHECK(!parseConfig("[client]\nupdates = 0\n").clientUpdates);
+    const settings::IniSetting* s = settings::findSetting("client.updates");
+    CHECK(s != nullptr);
+    if (s) {
+        CHECK(s->page == settings::Page::Service && s->control == settings::Control::Check);
+        CHECK_EQ(settings::tokenOf(*s, parseConfig("[client]\nupdates = 0\n")), std::string("0"));
+        CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("1"));
+    }
+}

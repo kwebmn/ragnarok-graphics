@@ -382,6 +382,7 @@ enum class Text : uint16_t {
     RoextFreeCpuHint, RoextCodePage, RoextCodePageHint, RoextWindowX, RoextWindowY,
     RoextWindowPlaceHint,  // 3.0.1-beta.8: ROExt's work in the driver
     MainKeys, MainKeysList, PlayKeysLine,  // 3.0.2-beta.4 (the user): the game's keys of uaRO Graphics, for players
+    ServiceUpdates, ClientUpdates, ClientUpdatesHint, UpdatesNone, UpdatesSome,  // 3.0.2-beta.5: the updates folder
     Count
 };
 

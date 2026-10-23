@@ -29,7 +29,10 @@ public:
     GameFiles();
     ~GameFiles();
     // dir: the game's folder (its DATA.INI). false when no archive opens.
-    bool open(const std::string& dir, std::string& error);
+    bool open(const std::string& dir, std::string& error) { return open(dir, {}, error); }
+    // 3.0.2-beta.5: and the GRFs of its updates folder before DATA.INI's (their names; core/updates.hpp), as the
+    // game looks in them
+    bool open(const std::string& dir, const std::vector<std::string>& updates, std::string& error);
     // 2.3 (N3): the archives `other` has open, for another thread - their tables and the names shared, a file handle
     // of its own for each GRF. false when other has none open.
     bool openLike(const GameFiles& other, std::string& error);

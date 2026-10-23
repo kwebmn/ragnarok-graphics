@@ -3734,6 +3734,25 @@ const Entry kTexts[] = {
      "«Головне».",
      "В игре: Ctrl+~ — консоль эффектов, Ctrl+Shift+F10 — обращение, Pause — оригинальный вид. Все клавиши — на "
      "«Главное»."},
+    {"The client's graphics updates", "Оновлення графіки клієнта", "Обновления графики клиента"},
+    {"Mount the updates of the updates folder", "Підключати оновлення з теки updates",
+     "Подключать обновления из папки updates"},
+    {"The administrator's GRF archives come with the client's update from the site into the updates folder and go "
+     "over the game's own "
+     "archives: their files win, the newer archive (by name) over the older. Off: the game's own archives alone. It "
+     "changes at the game's next start.",
+     "GRF-архіви адміністратора приходять з оновленням клієнта із сайту в теку updates і перекривають власні архіви "
+     "гри: їхні "
+     "файли важливіші, новіший архів (за назвою) — над старішим. Вимкнено — лише власні архіви гри. Діє з наступного "
+     "запуску гри.",
+     "GRF-архивы администратора приходят с обновлением клиента с сайта в папку updates и перекрывают собственные "
+     "архивы "
+     "игры: их файлы важнее, более новый архив (по имени) — над более старым. Выключено — только собственные архивы "
+     "игры. Действует со следующего запуска игры."},
+    {"The updates folder holds no archive.", "У теці updates архівів немає.", "В папке updates архивов нет."},
+    {"Archives in the updates folder: {1} ({2}), the newer first: {3}",
+     "Архівів у теці updates: {1} ({2}), новіші першими: {3}",
+     "Архивов в папке updates: {1} ({2}), более новые первыми: {3}"},
     {"Where the game's window of the «Screen» page's size opens (its top left corner), as ROExt had it.",
      "Де відкривається вікно гри розміру зі сторінки «Екран» (його лівий верхній кут), як було в ROExt.",
      "Где открывается окно игры размера со страницы «Экран» (его левый верхний угол), как было в ROExt."},

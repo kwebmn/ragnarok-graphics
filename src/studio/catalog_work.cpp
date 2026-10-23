@@ -195,7 +195,16 @@ void CatalogWork::run() {
     setStage("archives");
     pack::GameFiles files;
     std::string error;
-    if (stop_ || !files.open(app::ansi(gameDir_), error)) {
+    std::vector<std::string> updates;  // 3.0.2-beta.5: the administrator's GRFs in updates\, before DATA.INI's
+    WIN32_FIND_DATAW found{};
+    HANDLE h = FindFirstFileW((gameDir_ + L"\\updates\\*.grf").c_str(), &found);
+    if (h != INVALID_HANDLE_VALUE) {
+        do {
+            if (!(found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) updates.push_back(app::ansi(found.cFileName));
+        } while (FindNextFileW(h, &found));
+        FindClose(h);
+    }
+    if (stop_ || !files.open(app::ansi(gameDir_), updates, error)) {
         setStage("");
         finished_ = true;
         PostMessageW(notify_, kCatalogReady, 0, 0);

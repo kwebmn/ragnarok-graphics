@@ -9,7 +9,7 @@ game must show it, without the player doing anything, without repacking the game
 
 ## What the game does (uaRO.exe 63902c46, read 2026-10-23)
 
-- `readfolder` is forced on (sclientinfo's test patched to NOPs at 0x4F31FE, 0x50D346): CFile::Open (0x50D310) reads
+- `readfolder` is forced on (its two jumps patched to NOPs at 0x4F3200, 0x50D348): CFile::Open (0x50D310) reads
   a loose file `data\...` first (CreateFileA, VirtualAlloc), and only when there is none asks the archives.
 - The archives: CFileMgr at 0x74BA18, a list of paks (DATA.INI's [Data], 9 down to 0). `CFileMgr::GetData`
   (0x50D120, thiscall: name, &size) walks the paks, VirtualAlloc(size + 8) and reads the first hit; the game frees it

@@ -62,6 +62,8 @@ const std::vector<IniSetting>& iniSettings() {
          ""},  // 3.0.1-beta.7
         {"client", "roext", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientRoext,
          Text::ClientRoextHint, ""},  // 3.0.1-beta.8: ROExt's work in the driver; its own rows on «Гра й чат»
+        {"client", "updates", Page::Service, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::ClientUpdates,
+         Text::ClientUpdatesHint, ""},  // 3.0.2-beta.5: the client's graphics updates (updates\)
         {"roext", "window_lock", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RoextLock,
          Text::RoextLockHint, ""},
         {"roext", "window_on_top", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RoextOnTop,
@@ -742,6 +744,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "client.ijl") return c.clientIjl ? "1" : "0";  // 3.0.1-beta.6
     if (k == "client.mss") return c.clientMss ? "1" : "0";  // 3.0.1-beta.7
     if (k == "client.roext") return c.clientRoext ? "1" : "0";  // 3.0.1-beta.8
+    if (k == "client.updates") return c.clientUpdates ? "1" : "0";  // 3.0.2-beta.5
     if (k == "roext.window_lock") return c.roext.windowLock ? "1" : "0";
     if (k == "roext.window_on_top") return c.roext.windowOnTop ? "1" : "0";
     if (k == "roext.mouse_buttons") return c.roext.mouseButtons ? "1" : "0";

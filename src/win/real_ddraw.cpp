@@ -4,6 +4,7 @@
 #include "win/disk.hpp"
 #include "win/pad_mount.hpp"
 #include "win/roext.hpp"
+#include "win/updates_hook.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -226,6 +227,7 @@ Startup decide() {
     for (const std::string& line : moved) LOG_INFO("%s", line.c_str());
     LOG_INFO("%s", padMountedText());  // 2.9
     logRoext();                         // 3.0.1-beta.8
+    logUpdates();                       // 3.0.2-beta.5
     for (const char* folder : layout::kMadeAtStart) makeFolders(layout::join(dir, folder));
     safeModeFirst(dir, s.config);  // 2.12: before anything reads the renderer's settings
     {  // 2.12: the start panel in the player's language - the settings app's choice, else Windows'

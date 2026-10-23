@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 
 #include "app/files.hpp"
@@ -8,6 +9,7 @@
 #include "app/setting_ids.hpp"
 #include "app/update.hpp"
 #include "core/settings/presets.hpp"
+#include "core/updates.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
 
@@ -176,6 +178,23 @@ public:
             p.note(t(Text::ClientLibsNote));
             for (const char* key : {"client.cps", "client.bink", "client.ijl", "client.mss", "client.roext"})
                 rows_->buildRow(p, key);
+            // 3.0.2-beta.5: the administrator's GRFs in updates\ over the game's archives (core/updates.hpp)
+            p.gap();
+            p.heading(t(Text::ServiceUpdates));
+            rows_->buildRow(p, "client.updates");
+            const std::wstring folder = host_.model().paths().dir + L"\\" + wide(updates::kFolder);
+            std::vector<std::string> names;
+            long long bytes = 0;
+            for (const std::wstring& f : listFolder(folder, false)) {
+                names.push_back(utf8(f));
+                bytes += std::max(0LL, fileSize(folder + L"\\" + f));
+            }
+            names = updates::lookupOrder(names);
+            std::string list;
+            for (const std::string& n : names) list += (list.empty() ? "" : ", ") + n;
+            p.note(names.empty() ? t(Text::UpdatesNone)
+                                 : tf(Text::UpdatesSome, {std::to_string(names.size()),
+                                                          sizeText(uint64_t(bytes), host_.lang()), list}));
         }
         // 2.12: when the game does not start - the safe mode, or uaRO Graphics switched off (the game's own look)
         p.gap();

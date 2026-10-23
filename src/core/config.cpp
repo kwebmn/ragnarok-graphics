@@ -418,6 +418,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.clientMss);
         } else if (key == "client.roext") {  // 3.0.1-beta.8: ROExt's work in the driver
             setBool(val, c.clientRoext);
+        } else if (key == "client.updates") {  // 3.0.2-beta.5: the client's graphics updates
+            setBool(val, c.clientUpdates);
         } else if (key == "roext.window_lock") {
             setBool(val, c.roext.windowLock);
         } else if (key == "roext.window_on_top") {

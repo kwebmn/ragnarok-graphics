@@ -455,6 +455,7 @@ struct Config {
     // [roext] its settings (core/roext.hpp), dinput8.ini's brought over by the installer
     bool clientRoext = true;
     roext::Settings roext;
+    bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;
     // 2.15: [utility] mode = developer - the settings app's Developer mode: uaRO Studio's keys work in the game
