@@ -10,6 +10,7 @@ namespace uagfx::client_libs {
 struct Lib {
     const char* file;  // in the game's root: "cps.dll"
     const char* key;   // its switch, [client] <key>: "cps"
+    bool needsXAudio2 = false;  // 3.0.1-beta.7: put in only where Windows has XAudio2 2.9 (Windows 10 and later)
 };
 const std::vector<Lib>& all();
 bool ours(const std::string& bytes);  // the marker our DLLs carry ("uaRO Graphics client library")

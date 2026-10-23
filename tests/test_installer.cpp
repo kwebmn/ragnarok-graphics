@@ -490,6 +490,30 @@ TEST(a_library_switched_off_is_the_games) {
     CHECK_EQ(at(L"uaro-graphics\\original\\cps.dll"), kGameCps);
 }
 
+// 3.0.1-beta.7: our mss32.dll plays through XAudio2 2.9 (Windows 10 and later): without it the game's own stays, and
+// ours put in before goes back (the folder taken to an older Windows)
+TEST(the_sound_library_needs_xaudio2) {
+    const std::string kGameMss = "MZ RAD Game Tools mss32.dll 6.1";
+    fake::Windows& w = clientWithLibraries("1");
+    put(L"mss32.dll", kGameMss);
+    put(kStaged + L"\\uaro-graphics\\clientlibs\\mss32.dll", ourLib("mss32.dll", "1"));
+    w.xaudio2 = false;
+    CHECK(app::installer::putPackage(app::exeFolder(), stage("3.0.1"), false).ok);
+    CHECK(app::installer::finishInstall(app::exeFolder(), true).ok);
+    CHECK_EQ(at(L"mss32.dll"), kGameMss);
+    CHECK_EQ(at(L"uaro-graphics\\original\\mss32.dll"), std::string("<none>"));
+    CHECK_EQ(at(L"cps.dll"), ourLib("cps.dll", "1"));  // the others as ever
+    w.xaudio2 = true;
+    app::installer::Result r;
+    app::installer::syncClientLibs(app::exeFolder(), false, r);
+    CHECK_EQ(at(L"mss32.dll"), ourLib("mss32.dll", "1"));
+    CHECK_EQ(at(L"uaro-graphics\\original\\mss32.dll"), kGameMss);
+    w.xaudio2 = false;
+    app::installer::syncClientLibs(app::exeFolder(), false, r);
+    CHECK_EQ(at(L"mss32.dll"), kGameMss);
+    CHECK_EQ(at(L"uaro-graphics\\original\\mss32.dll"), std::string("<none>"));
+}
+
 // 3.0.1-beta.5: the removal puts the game's own libraries back
 TEST(uninstall_puts_the_games_libraries_back) {
     clientWithLibraries("1");

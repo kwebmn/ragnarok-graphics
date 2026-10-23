@@ -21,6 +21,7 @@ struct Windows {
     std::set<std::string> refused;  // value names the registry refuses to write (error 5)
     bool gameRunning = false;
     std::set<std::wstring> running;  // 3.0.1: other programs running (app/system running): full paths, lower case
+    bool xaudio2 = true;             // 3.0.1-beta.7: Windows has XAudio2 2.9 (app/system hasXAudio2)
     uagfx::app::SystemInfo system;
     // 2.10: the entries in Windows' Apps (app/registry) - 3.0.1: by their names («uaRO Graphics (uaRO HD)»), each its
     // values (DisplayName, DisplayVersion, InstallLocation, UninstallString)

@@ -376,6 +376,7 @@ enum class Text : uint16_t {
     UpdateChannel, UpdateChannelRelease, UpdateChannelBeta, UpdateChannelHint,  // 3.0.0-beta.2: the channels
     ServiceClientLibs, ClientLibsNote, ClientCps, ClientCpsHint, ClientBink, ClientBinkHint,  // 3.0.1-beta.5
     ClientIjl, ClientIjlHint,  // 3.0.1-beta.6
+    ClientMss, ClientMssHint,  // 3.0.1-beta.7
     Count
 };
 

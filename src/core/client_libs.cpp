@@ -7,6 +7,7 @@ const std::vector<Lib>& all() {
         {"cps.dll", "cps"},       // zlib's compress and uncompress (the GRF archives' files)
         {"binkw32.dll", "bink"},  // RAD's Bink video: none in uaRO
         {"ijl15.dll", "ijl"},     // 3.0.1-beta.6: Intel JPEG Library 1.5 (the loading pictures, Print Screen)
+        {"mss32.dll", "mss", true},  // 3.0.1-beta.7: Miles Sound System 6 (the effects, the music) over XAudio2
     };
     return libs;
 }

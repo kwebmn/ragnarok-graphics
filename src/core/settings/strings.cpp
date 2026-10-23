@@ -3632,6 +3632,15 @@ const Entry kTexts[] = {
      "Library 1.5 2000 року.",
      "Через неё игра читает картинки JPEG (экраны загрузки) и записывает снимки Print Screen. Выключено — Intel JPEG "
      "Library 1.5 2000 года."},
+    {"Game sound: ours (mss32.dll)",
+     "Звук гри — свій (mss32.dll)",
+     "Звук игры — свой (mss32.dll)"},
+    {"The game's effects and music play through it, over Windows' XAudio2 (Windows 10 and later; on older Windows the "
+     "game's own stays). Off: RAD's Miles Sound System 6.",
+     "Через неї звучать ефекти й музика гри, через XAudio2 Windows (Windows 10 і новіші; на старіших лишається "
+     "оригінал). Вимкнено — Miles Sound System 6 від RAD.",
+     "Через неё звучат эффекты и музыка игры, через XAudio2 Windows (Windows 10 и новее; на более старых остаётся "
+     "оригинал). Выключено — Miles Sound System 6 от RAD."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -620,3 +620,16 @@ TEST(developer_mode_comes_from_the_apps_mode) {
     CHECK(parseConfig("[utility]\nmode = developer\n").developer);
     CHECK(parseConfig("[utility]\nmode = Developer\n").developer);
 }
+
+// 3.0.1-beta.7: [client] mss - our mss32.dll (Miles over XAudio2), on by default, a switch of «Сервіс»
+TEST(config_reads_the_sound_librarys_switch) {
+    CHECK(parseConfig("").clientMss);
+    CHECK(!parseConfig("[client]\nmss = 0\n").clientMss);
+    const settings::IniSetting* s = settings::findSetting("client.mss");
+    CHECK(s != nullptr);
+    if (s) {
+        CHECK(s->page == settings::Page::Service && s->control == settings::Control::Check);
+        CHECK_EQ(settings::tokenOf(*s, parseConfig("[client]\nmss = 0\n")), std::string("0"));
+        CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("1"));
+    }
+}

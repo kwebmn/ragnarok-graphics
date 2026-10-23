@@ -13,8 +13,11 @@ using client_libs::Step;
 
 TEST(client_libs_know_the_libraries) {
     const auto& all = client_libs::all();
-    CHECK_EQ(all.size(), size_t(3));
+    CHECK_EQ(all.size(), size_t(4));
     CHECK(std::string(all[2].file) == "ijl15.dll" && std::string(all[2].key) == "ijl");  // 3.0.1-beta.6
+    // 3.0.1-beta.7: Miles over XAudio2 2.9 - put in only where Windows has it
+    CHECK(std::string(all[3].file) == "mss32.dll" && std::string(all[3].key) == "mss" && all[3].needsXAudio2);
+    CHECK(!all[0].needsXAudio2 && !all[1].needsXAudio2 && !all[2].needsXAudio2);
     CHECK(std::string(all[0].file) == "cps.dll" && std::string(all[0].key) == "cps");
     CHECK(std::string(all[1].file) == "binkw32.dll" && std::string(all[1].key) == "bink");
     CHECK(client_libs::ours(std::string("MZ\x90\0 uaRO Graphics client library: cps.dll", 43)));

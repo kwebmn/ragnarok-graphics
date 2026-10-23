@@ -414,6 +414,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.clientBink);
         } else if (key == "client.ijl") {  // 3.0.1-beta.6
             setBool(val, c.clientIjl);
+        } else if (key == "client.mss") {  // 3.0.1-beta.7
+            setBool(val, c.clientMss);
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

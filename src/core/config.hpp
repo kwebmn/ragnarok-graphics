@@ -449,6 +449,7 @@ struct Config {
     // 3.0.1-beta.5: [client] cps, bink - our own libraries in place of the game's old ones (core/client_libs.hpp),
     // each on by default; off puts the game's own back (the settings app, with the game closed)
     bool clientCps = true, clientBink = true, clientIjl = true;  // 3.0.1-beta.6: ijl
+    bool clientMss = true;  // 3.0.1-beta.7: mss32.dll, put in only where XAudio2 2.9 is
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;
     // 2.15: [utility] mode = developer - the settings app's Developer mode: uaRO Studio's keys work in the game

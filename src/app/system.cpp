@@ -209,6 +209,14 @@ bool running(const std::wstring& exe) {
     return found;
 }
 
+// The game's own: a 32-bit process's System32 is SysWOW64 on 64-bit Windows (this app is 32-bit too)
+bool hasXAudio2() {
+    wchar_t dir[MAX_PATH];
+    const UINT n = GetSystemDirectoryW(dir, MAX_PATH);
+    return n && n < MAX_PATH &&
+           GetFileAttributesW((std::wstring(dir, n) + L"\\xaudio2_9.dll").c_str()) != INVALID_FILE_ATTRIBUTES;
+}
+
 void waitMs(unsigned ms) { Sleep(ms); }
 
 bool elevatedNow() { return runsElevated(); }

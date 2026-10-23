@@ -307,7 +307,10 @@ void syncClientLibs(const std::wstring& dir, bool off, Result& r) {
     for (const client_libs::Lib& lib : client_libs::all()) {
         const std::wstring name = wide(lib.file), root = join(dir, name), aside = join(kept, name);
         const auto key = keys.find(std::string("client.") + lib.key);
-        const bool wanted = !off && (key == keys.end() || key->second != "0");
+        const bool can = !lib.needsXAudio2 || hasXAudio2();  // 3.0.1-beta.7: mss32.dll plays through it
+        const bool wanted = !off && can && (key == keys.end() || key->second != "0");
+        if (!off && !can) r.log.push_back("installer: no XAudio2 2.9 (Windows 10 and later) - the game's own " +
+                                          std::string(lib.file));
         std::string package, now;
         const bool haveOurs = readFile(join(ours, name), package) && client_libs::ours(package);
         client_libs::Root state = client_libs::Root::Missing;

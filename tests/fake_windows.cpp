@@ -241,6 +241,7 @@ bool removeAppsEntry(const std::wstring& name) {
 SystemInfo probeSystem() { return windows().system; }
 
 bool gameRunning(const std::wstring&) { return windows().gameRunning; }
+bool hasXAudio2() { return windows().xaudio2; }
 
 // 3.0.1: this folder's game by the flag above, any program by the set (full paths, any case)
 bool running(const std::wstring& exe) {
