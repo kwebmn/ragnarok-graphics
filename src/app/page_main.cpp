@@ -65,6 +65,9 @@ public:
         buildState(p);
         p.gap();
         buildTextures(p);
+        p.gap();
+        p.heading(t(Text::MainKeys));  // 3.0.2-beta.4 (the user): the keys of the game a player should know
+        p.note(t(Text::MainKeysList), Tone::Normal);
         p.join();
     }
 

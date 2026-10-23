@@ -3712,6 +3712,28 @@ const Entry kTexts[] = {
      "-1 — как в Windows. 1251 — кириллица на Windows другого языка; 65001 — UTF-8. Не меняйте без нужды."},
     {"The window's place: X", "Місце вікна: X", "Место окна: X"},
     {"The window's place: Y", "Місце вікна: Y", "Место окна: Y"},
+    {"Keys in the game", "Клавіші в грі", "Клавиши в игре"},
+    {"Ctrl+~ (the key left of 1) - the effects console: effects on and off right in the game\n"
+     "Ctrl+Shift+F10 - «New report» to the developers, with a screenshot\n"
+     "Ctrl+Shift+F11 - the frame counter\n"
+     "Ctrl+Shift+F12 - a screenshot at full size (the ScreenShot folder)\n"
+     "Pause or Scroll Lock - every improvement off, and on again: to compare with the original look",
+     "Ctrl+~ (клавіша ліворуч від 1) — консоль ефектів: вмикати й вимикати ефекти просто в грі\n"
+     "Ctrl+Shift+F10 — «Нове звернення» до розробників зі знімком екрана\n"
+     "Ctrl+Shift+F11 — лічильник кадрів\n"
+     "Ctrl+Shift+F12 — знімок екрана в повному розмірі (тека ScreenShot)\n"
+     "Pause або Scroll Lock — усі покращення вимкнути й увімкнути знову: порівняти з оригінальним виглядом",
+     "Ctrl+~ (клавиша слева от 1) — консоль эффектов: включать и выключать эффекты прямо в игре\n"
+     "Ctrl+Shift+F10 — «Новое обращение» к разработчикам со снимком экрана\n"
+     "Ctrl+Shift+F11 — счётчик кадров\n"
+     "Ctrl+Shift+F12 — снимок экрана в полном размере (папка ScreenShot)\n"
+     "Pause или Scroll Lock — все улучшения выключить и включить снова: сравнить с оригинальным видом"},
+    {"In the game: Ctrl+~ the effects console, Ctrl+Shift+F10 a report, Pause the original look. Every key is on "
+     "«Main».",
+     "У грі: Ctrl+~ — консоль ефектів, Ctrl+Shift+F10 — звернення, Pause — оригінальний вигляд. Усі клавіші — на "
+     "«Головне».",
+     "В игре: Ctrl+~ — консоль эффектов, Ctrl+Shift+F10 — обращение, Pause — оригинальный вид. Все клавиши — на "
+     "«Главное»."},
     {"Where the game's window of the «Screen» page's size opens (its top left corner), as ROExt had it.",
      "Де відкривається вікно гри розміру зі сторінки «Екран» (його лівий верхній кут), як було в ROExt.",
      "Где открывается окно игры размера со страницы «Экран» (его левый верхний угол), как было в ROExt."},

@@ -98,6 +98,7 @@ public:
         p.gap();
         p.buttons({{kPlayNow, t(offer.empty() && !patchNeeded ? Text::PlayButton : Text::PlayUpdateButton), true,
                     true}});  // 3.0.2: blue
+        p.note(t(Text::PlayKeysLine));  // 3.0.2-beta.4: the game's keys, all of them on «Головне»
         rows_->buildRow(p, "launcher.direct_start");
     }
 

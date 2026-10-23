@@ -381,6 +381,7 @@ enum class Text : uint16_t {
     RoextMouse, RoextMouseHint, RoextAltF4, RoextAltF4Hint, RoextMinimize, RoextMinimizeHint, RoextFreeCpu,
     RoextFreeCpuHint, RoextCodePage, RoextCodePageHint, RoextWindowX, RoextWindowY,
     RoextWindowPlaceHint,  // 3.0.1-beta.8: ROExt's work in the driver
+    MainKeys, MainKeysList, PlayKeysLine,  // 3.0.2-beta.4 (the user): the game's keys of uaRO Graphics, for players
     Count
 };
 
