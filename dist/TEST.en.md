@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.4-beta.15 — what is new
+
+- **The own ground is much faster** (report R-N6FC5V: 7.7 ms of the processor a frame, up to 21 ms zoomed out). The
+  main cause: the game gives a corner shared by four cells different colours, so the corner "changed" every frame and
+  the colours of all the visible ground were made anew each frame. Now a corner takes its colour from one cell alone,
+  and the colours are kept.
+- Also faster:
+  - the vertices' projection - one division a vertex instead of four;
+  - while the camera stands still, the ready picture of the ground is drawn again;
+  - the smooth ground and the transitions between textures only where a cell is 40 pixels or more on the screen
+    (about 1000 units from the camera at 1080p). Further off the ground is the game's own - its cells are small there.
+- Confirmed by report R-N6FC5V: the houses and trees far off stand exactly where the game's do - all 228,558 triangles
+  matched (100 %).
+- To check on prt_fild08 with the own ground, as last time (zoom out, walk about), and send a report. The 600th frame's
+  `own ground: ...` line now shows how many corners change a frame (it should be about 0), the share of the frames
+  drawn again, and the processor's time.
+
 # uaRO Graphics 3.0.4-beta.14 — what is new
 
 - **Houses and trees far off (prototype).** Under "Own ground (prototype)" there is a new switch, "Houses and trees far
