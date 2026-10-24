@@ -1,6 +1,7 @@
 // 3.0.3-beta.7: the panel of the game windows - laid out at a scale, hit, kept at its place in any window, its shapes
 // drawn (core/window_panel)
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -169,7 +170,7 @@ TEST(window_panel_fades_as_a_whole) {
 namespace {
 
 // A quad of the game's interface (two triangles) from x0,y0 to x1,y1
-void quad(FrameRecord& r, float x0, float y0, float x1, float y1, bool ui) {
+void quad(FrameRecord& r, float x0, float y0, float x1, float y1, bool ui, uint32_t diffuse = 0) {
     DrawSetup s;
     s.ui = ui;
     DrawCmd cmd;
@@ -182,6 +183,7 @@ void quad(FrameRecord& r, float x0, float y0, float x1, float y1, bool ui) {
         v[i][0] = xs[i];
         v[i][1] = ys[i];
         v[i][3] = 1;
+        std::memcpy(&v[i][4], &diffuse, 4);
     }
     r.draw(cmd, v, 6, nullptr, 0);
 }
@@ -209,7 +211,7 @@ TEST(window_panel_menu_lays_out_its_rows) {
         {panel::MenuRow::Kind::Choice, 2, 0, false}, {panel::MenuRow::Kind::Choice, 4, 1, false},
         {panel::MenuRow::Kind::Check, 0, 0, true},   {panel::MenuRow::Kind::Action, 0, 0, false}};
     const panel::MenuGeometry g = panel::menuGeometry(rows, 1.0f);
-    CHECK_EQ(g.width, 340);
+    CHECK_EQ(g.width, 360);
     CHECK_EQ(g.rows.size(), size_t(4));
     CHECK_EQ(g.segments.size(), size_t(4));
     if (g.rows.size() != 4 || g.segments.size() != 4) return;
@@ -221,10 +223,13 @@ TEST(window_panel_menu_lays_out_its_rows) {
     CHECK(g.segments[1][0].x > g.label[1].x + g.label[1].w - 1 && g.segments[1][3].x + g.segments[1][3].w <= g.width);
     CHECK(g.segments[1][1].x >= g.segments[1][0].x + g.segments[1][0].w);
     const panel::MenuGeometry big = panel::menuGeometry(rows, 2.0f);
-    CHECK_EQ(big.width, 680);
+    CHECK_EQ(big.width, 720);
     // five segments (the opacity's): each one wide enough for «100 %»
     const panel::MenuGeometry five = panel::menuGeometry({{panel::MenuRow::Kind::Choice, 5, 0, false}}, 1.0f);
     CHECK(five.segments.size() == 1 && five.segments[0].size() == 5 && five.segments[0][0].w >= 34);
+    // three (the layouts): each one wide enough for «Стовпчиком»
+    const panel::MenuGeometry three = panel::menuGeometry({{panel::MenuRow::Kind::Choice, 3, 0, false}}, 1.0f);
+    CHECK(three.segments.size() == 1 && three.segments[0].size() == 3 && three.segments[0][0].w >= 70);
 }
 
 TEST(window_panel_menu_hits_a_row_and_a_segment) {
@@ -271,7 +276,7 @@ TEST(window_panel_menu_rows_follow_the_settings) {
     std::vector<panel::MenuRow> rows = panel::menuRows(c);
     CHECK_EQ(rows.size(), size_t(7));
     if (rows.size() != 7) return;
-    CHECK(rows[0].kind == panel::MenuRow::Kind::Choice && rows[0].segments == 2 && rows[0].chosen == 1);
+    CHECK(rows[0].kind == panel::MenuRow::Kind::Choice && rows[0].segments == 3 && rows[0].chosen == 1);
     CHECK(rows[1].kind == panel::MenuRow::Kind::Choice && rows[1].segments == 4 && rows[1].chosen == 2);
     CHECK(rows[2].kind == panel::MenuRow::Kind::Choice && rows[2].segments == 5 && rows[2].chosen == 1);
     CHECK(rows[3].kind == panel::MenuRow::Kind::Check && rows[3].on);
@@ -279,8 +284,10 @@ TEST(window_panel_menu_rows_follow_the_settings) {
     CHECK(rows[5].kind == panel::MenuRow::Kind::Check && rows[5].on);
     CHECK(rows[6].kind == panel::MenuRow::Kind::Action);
     c.panelSize = 110;  // set in the settings to a size the menu does not offer: none of its chosen
+    c.panelLayout = PanelLayout::Icons;
     rows = panel::menuRows(c);
     CHECK_EQ(rows[1].chosen, -1);
+    CHECK_EQ(rows[0].chosen, 2);
 }
 
 TEST(window_panel_menu_pick_changes_the_setting) {
@@ -292,6 +299,8 @@ TEST(window_panel_menu_pick_changes_the_setting) {
     CHECK(panel::menuPick(c, panel::MenuHit{0, 1}, ch));
     CHECK(c.panelLayout == PanelLayout::Column);
     CHECK(ch.section == "panel" && ch.key == "layout" && ch.value == "column");
+    CHECK(panel::menuPick(c, panel::MenuHit{0, 2}, ch));  // 3.0.3-beta.11: the icons
+    CHECK(c.panelLayout == PanelLayout::Icons && ch.key == "layout" && ch.value == "icons");
     CHECK(panel::menuPick(c, panel::MenuHit{2, 0}, ch));
     CHECK_EQ(c.panelOpacity, 60);
     CHECK(ch.key == "opacity" && ch.value == "60");
@@ -313,11 +322,92 @@ TEST(window_panel_menu_says_its_rows) {
     const std::vector<panel::MenuText> t = panel::menuTexts(settings::Lang::Uk);
     CHECK_EQ(t.size(), size_t(7));
     if (t.size() != 7) return;
-    CHECK(t[0].label == "Вигляд" && t[0].segments.size() == 2 && t[0].segments[1] == "Стовпчиком");
+    CHECK(t[0].label == "Вигляд" && t[0].segments.size() == 3 && t[0].segments[1] == "Стовпчиком");
+    if (t[0].segments.size() == 3) CHECK(t[0].segments[2] == "Іконки");
     CHECK(t[1].label == "Розмір" && t[1].segments.size() == 4 && t[1].segments[0] == "75 %");
     CHECK(t[2].label == "Непрозорість" && t[2].segments.size() == 5 && t[2].segments[4] == "100 %");
     CHECK(t[3].label == "Музика в інших вікнах гри" && t[3].segments.empty());
     CHECK(t[4].label == "Звуки в інших вікнах гри");
     CHECK(t[5].label == "Інші вікна гри — легкі");
     CHECK(t[6].label.find("Ctrl+Alt+0") != std::string::npos);
+}
+
+// 3.0.3-beta.11 (the user's report R-45N3WS: «мышка темная на менюшке переключения окон» on prontera): uaRO.exe's
+// cursor (FUN_004f60e0) is an interface face of the colour 0xFAFFFFFF, and the screen's additive faces (FUN_0040f9e0)
+// come after it - often more than the 8 draws looked at: found by its colour however many draws follow it
+TEST(window_panel_finds_the_games_cursor_by_its_colour) {
+    FrameRecord r;
+    quad(r, 0, 0, 800, 600, true);                   // a window of the game
+    quad(r, 400, 300, 432, 332, true, 0xFAFFFFFFu);  // a sprite at the mouse (FUN_0055bff0)
+    quad(r, 401, 301, 425, 325, true, 0xFAFFFFFFu);  // the cursor
+    for (int i = 0; i < 30; ++i) quad(r, 401, 301, 409, 309, true, 0xFFFFFFFFu);  // the screen's faces after it
+    CHECK_EQ(panel::cursorDraw(r, 402, 303), 2);
+    CHECK_EQ(panel::cursorDraw(r, 700, 500), -1);
+    FrameRecord world;  // of that colour but not the interface's: not it
+    quad(world, 401, 301, 425, 325, false, 0xFAFFFFFFu);
+    CHECK_EQ(panel::cursorDraw(world, 402, 303), -1);
+}
+
+// 3.0.3-beta.11 (the user: «супер минималистичный режим в котором типа иконки маленькие были этих окон, чтобы не
+// занимало много места»): small square tiles with the windows' numbers in a row, a grip at its start - no title, no
+// cross, no names (the name under the mouse in a tip of its own)
+TEST(window_panel_icons_are_small) {
+    const panel::Geometry icons = panel::geometry(3, panel::Layout::Icons, 1.0f, 1920);
+    const panel::Geometry row = panel::geometry(3, panel::Layout::Row, 1.0f, 1920);
+    CHECK_EQ(icons.cards.size(), size_t(3));
+    CHECK(icons.width * icons.height * 4 < row.width * row.height);
+    CHECK(icons.height <= 40);
+    if (icons.cards.size() != 3) return;
+    const panel::Box& t = icons.cards[0].plate;
+    CHECK(std::fabs(t.w - t.h) < 0.5f);
+    CHECK(icons.cards[1].plate.x >= t.x + t.w);
+    CHECK(icons.cards[0].name.w == 0 && icons.cards[0].levels.w == 0);
+    CHECK(icons.close.w == 0 && icons.layout.w == 0 && icons.title.w == 0);
+    const panel::Box n = icons.cards[0].number;  // the number's place: in the tile, over its bars
+    CHECK(n.w > 0 && n.x >= t.x && n.x + n.w <= t.x + t.w + 0.5f && n.y + n.h <= icons.cards[0].hp.y + 0.5f);
+    CHECK(icons.cards[0].hp.y + icons.cards[0].hp.h <= t.y + t.h);
+    CHECK(panel::hitTest(icons, 3, float(icons.height) / 2).part == panel::Part::Top);  // its grip drags it
+    const panel::Hit h = panel::hitTest(icons, icons.cards[2].plate.x + 5, icons.cards[2].plate.y + 5);
+    CHECK(h.part == panel::Part::Card && h.card == 2);
+    const panel::Geometry big = panel::geometry(3, panel::Layout::Icons, 2.0f, 1920);
+    CHECK(std::abs(big.width - 2 * icons.width) <= 1);
+    // the cards' layouts keep the number in the badge
+    const panel::CardBoxes& c = row.cards[0];
+    CHECK(std::fabs(c.number.x - (c.badgeX - c.badgeR)) < 0.01f && std::fabs(c.number.w - 2 * c.badgeR) < 0.01f);
+}
+
+TEST(window_panel_icons_paint_the_current_one) {
+    const panel::Geometry g = panel::geometry(2, panel::Layout::Icons, 1.0f, 1920);
+    std::vector<panel::Card> cards(2);
+    cards[1].current = true;
+    cards[0].hp = cards[1].hp = 80;
+    panel::Picture p;
+    panel::paint(p, g, cards, panel::Part::None, panel::Layout::Icons);
+    CHECK_EQ(p.width, g.width);
+    CHECK_EQ(p.height, g.height);
+    if (g.cards.size() != 2 || p.px.size() != size_t(g.width) * size_t(g.height)) return;
+    const panel::Box a = g.cards[0].plate, b = g.cards[1].plate;
+    const uint32_t other = at(p, a.x + a.w / 2, a.y + 3), current = at(p, b.x + b.w / 2, b.y + 3);
+    CHECK(blueOf(current) > blueOf(other) + 30);
+    const panel::Box hp = g.cards[0].hp;
+    const uint32_t bar = at(p, hp.x + 2, hp.y + hp.h / 2);
+    CHECK(greenOf(bar) > redOf(bar) + 40);
+}
+
+// The name of the icon under the mouse: above it, centred on it; no room above (the panel at the top) - under it;
+// inside the window whatever it takes
+TEST(window_panel_icons_tip_finds_room) {
+    panel::Point p = panel::tipPlace(panel::Box{500, 600, 30, 30}, 80, 24, 1920, 1080, 1.0f);
+    CHECK(p.y + 24 <= 600 && p.y >= 600 - 24 - 12);
+    CHECK_EQ(p.x, 500 + 15 - 40);
+    p = panel::tipPlace(panel::Box{500, 4, 30, 30}, 80, 24, 1920, 1080, 1.0f);
+    CHECK(p.y >= 34);
+    p = panel::tipPlace(panel::Box{2, 600, 30, 30}, 80, 24, 1920, 1080, 1.0f);
+    CHECK_EQ(p.x, 0);
+    p = panel::tipPlace(panel::Box{1900, 600, 30, 30}, 80, 24, 1920, 1080, 1.0f);
+    CHECK_EQ(p.x, 1920 - 80);
+    panel::Picture tip;
+    panel::paintTip(tip, 80, 24, 1.0f);
+    CHECK(tip.width == 80 && tip.height == 24 && tip.px.size() == size_t(80 * 24));
+    if (tip.px.size() == size_t(80 * 24)) CHECK(alphaOf(at(tip, 40, 12)) > 200 && alphaOf(at(tip, 0, 0)) < 128);
 }

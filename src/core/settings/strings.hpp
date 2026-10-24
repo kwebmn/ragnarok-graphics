@@ -402,6 +402,7 @@ enum class Text : uint16_t {
     PanelHeading, PanelOpacity, PanelOpacityHint,  // 3.0.3-beta.8: its own section, in the game's picture
     WindowsOthersSounds, WindowsOthersSoundsHint,  // 3.0.3-beta.9
     PanelMenuLayout, PanelMenuSize, PanelMenuOpacity, PanelMenuHide,  // 3.0.3-beta.10: the panel's menu
+    WindowsPanelIcons,  // 3.0.3-beta.11: its small icons
     Count
 };
 

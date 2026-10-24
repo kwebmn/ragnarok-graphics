@@ -188,6 +188,10 @@ void WindowSwitch::presented(bool light) {
 }
 
 bool WindowSwitch::activate(HWND window, WPARAM wp) {
+    if (LOWORD(wp) == WA_INACTIVE) {  // 3.0.3-beta.11: the panel's menu closed, the frame counter hidden
+        panel_.closeMenu();
+        if (onLeave) onLeave();
+    }
     if (!fullScreen_) return false;  // in a window the game does nothing there
     if (LOWORD(wp) == WA_INACTIVE) {  // not minimised at once: where the focus went decides (timer)
         leaveSince_ = GetTickCount64();

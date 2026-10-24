@@ -93,8 +93,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.3-beta.8: the game windows' panel in the game's picture - a section of its own («Панель вікон»)
         {"panel", "show", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsPanel,
          Text::WindowsPanelHint, ""},
-        {"panel", "layout", Page::Game, Control::Choice, 0, 0, 0, {"row", "column"},
-         {Text::WindowsPanelRow, Text::WindowsPanelColumn}, Text::WindowsPanelLayout, Text::WindowsPanelLayoutHint, ""},
+        {"panel", "layout", Page::Game, Control::Choice, 0, 0, 0, {"row", "column", "icons"},  // 3.0.3-beta.11: icons
+         {Text::WindowsPanelRow, Text::WindowsPanelColumn, Text::WindowsPanelIcons}, Text::WindowsPanelLayout,
+         Text::WindowsPanelLayoutHint, ""},
         {"panel", "size", Page::Game, Control::Slider, 75, 150, 25, {}, {}, Text::WindowsPanelSize,
          Text::WindowsPanelSizeHint, " %"},
         {"panel", "opacity", Page::Game, Control::Slider, 40, 100, 10, {}, {}, Text::PanelOpacity,

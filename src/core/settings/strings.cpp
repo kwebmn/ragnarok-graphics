@@ -4352,8 +4352,11 @@ constexpr Entry kTexts[] = {
      "кнопка рядом с крестиком кладёт карточки в ряд или столбиком; крестик или Ctrl+Alt+0 прячет её, Ctrl+Alt+0 "
      "или этот переключатель показывает снова."},
     {Text::WindowsPanelLayout, "The panel's layout", "Вигляд панелі", "Вид панели"},
-    {Text::WindowsPanelLayoutHint, "The windows' cards side by side or one under another.",
-     "Картки вікон поруч або одна під одною.", "Карточки окон рядом или одна под другой."},
+    {Text::WindowsPanelLayoutHint,
+     "The windows' cards side by side or one under another, or small icons with their numbers alone (the name shows "
+     "under the mouse).",
+     "Картки вікон поруч або одна під одною чи маленькі іконки лише з номерами (ім'я видно під мишею).",
+     "Карточки окон рядом или одна под другой либо маленькие иконки только с номерами (имя видно под мышью)."},
     {Text::WindowsPanelRow, "In a row", "В ряд", "В ряд"},
     {Text::WindowsPanelColumn, "In a column", "Стовпчиком", "Столбиком"},
     {Text::WindowsPanelSize, "The panel's size", "Розмір панелі", "Размер панели"},
@@ -4379,6 +4382,7 @@ constexpr Entry kTexts[] = {
     {Text::PanelMenuSize, "Size", "Розмір", "Размер"},
     {Text::PanelMenuOpacity, "Opacity", "Непрозорість", "Непрозрачность"},
     {Text::PanelMenuHide, "Hide the panel · Ctrl+Alt+0", "Сховати панель · Ctrl+Alt+0", "Спрятать панель · Ctrl+Alt+0"},
+    {Text::WindowsPanelIcons, "Icons", "Іконки", "Иконки"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

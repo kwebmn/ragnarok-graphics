@@ -27,6 +27,9 @@ public:
     // The effect held off for comparison ("effects.grass"), "" none.
     const std::string& comparing() const { return comparing_; }
     bool open() const { return open_; }
+    // 3.0.3-beta.11: hidden at once - the game window gone behind (it may present no more: its full screen); shown
+    // again by the game's next present in front while it is open
+    void hide();
 
 private:
     // 2.2.1: Open - a group's effects shown or not; 2.6.22: Here - «Только на этой карте» (the console's own)
@@ -46,7 +49,6 @@ private:
     bool pressed(int vk, Key& k, bool repeats, ULONGLONG now);
     bool change(const std::string& iniPath, const Config& config, int step);  // step 0: switch
     void draw(HWND game, const Config& config, const GpuTiming* timing);
-    void hide();
     static LRESULT CALLBACK wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp);
 
     bool open_ = false;

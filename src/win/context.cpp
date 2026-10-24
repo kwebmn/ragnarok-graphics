@@ -161,6 +161,12 @@ Context& Context::get() {
 
 Context::Context() {
     InitializeCriticalSection(&cs_);
+    // 3.0.3-beta.11 (the user: «счетчик кадров замер»): the frame counter and the console are windows of their own over
+    // all others - hidden when the game window goes behind, not left over another game window with what they last said
+    windowSwitch_.onLeave = [this] {
+        fps_.hide();
+        console_.hide();
+    };
     screenWidth = GetSystemMetrics(SM_CXSCREEN);  // what a windowed client sees until SetDisplayMode
     screenHeight = GetSystemMetrics(SM_CYSCREEN);
 }

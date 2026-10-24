@@ -17,7 +17,7 @@ enum class DisplayMode { Auto, Window, Borderless };
 enum class UiFilter { Sharp, Smooth };  // [display] ui_filter: how magnified interface pictures are sampled
 // 3.0.3-beta.6: [windows] switch_keys - Ctrl+Tab and Ctrl+Alt+1-8 (all), Ctrl+Tab alone (back) or none (off)
 enum class WindowKeys : uint8_t { All, Back, Off };
-enum class PanelLayout : uint8_t { Row, Column };  // 3.0.3-beta.8: [panel] layout
+enum class PanelLayout : uint8_t { Row, Column, Icons };  // 3.0.3-beta.8: [panel] layout; 3.0.3-beta.11 icons
 // [display] window_art (0.41): how crisp text enlarges the windows' buttons, frames and labels - xBR (core/xbr.hpp),
 // the AI (with [ai] ui_pieces) or as the game's pixels.
 enum class WindowArt { Xbr, Ai, Pixels };

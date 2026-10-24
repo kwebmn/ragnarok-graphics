@@ -463,6 +463,7 @@ Config parseConfig(const std::string& text) {
         } else if (key == "panel.layout") {
             if (val == "row") c.panelLayout = PanelLayout::Row;
             if (val == "column") c.panelLayout = PanelLayout::Column;
+            if (val == "icons") c.panelLayout = PanelLayout::Icons;  // 3.0.3-beta.11
         } else if (key == "panel.size" || key == "panel.opacity") {
             int n = 0;
             if (toInt(val, -100000, 100000, n)) {
@@ -725,7 +726,9 @@ const char* windowKeysToken(WindowKeys k) {
     return k == WindowKeys::Back ? "back" : k == WindowKeys::Off ? "off" : "all";
 }
 
-const char* panelLayoutToken(PanelLayout l) { return l == PanelLayout::Column ? "column" : "row"; }
+const char* panelLayoutToken(PanelLayout l) {
+    return l == PanelLayout::Icons ? "icons" : l == PanelLayout::Column ? "column" : "row";
+}
 
 const char* windowArtToken(WindowArt a) {
     return a == WindowArt::Ai ? "ai" : a == WindowArt::Pixels ? "pixels" : "xbr";

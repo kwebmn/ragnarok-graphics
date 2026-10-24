@@ -12,14 +12,18 @@ namespace uagfx::panel {
 // 3.0.3-beta.7 (the user: the game windows' panel in the game - «делай современно», «у каждого свое разрешение
 // екрана»): the panel's shapes laid out for a number of windows at a scale (the game's interface scale x [windows]
 // panel_size), drawn into a premultiplied BGRA picture; its words go over it by GDI (win/window_panel).
-enum class Layout : uint8_t { Row, Column };
+// 3.0.3-beta.11 (the user: «супер минималистичный режим ... иконки маленькие ... чтобы не занимало много места»):
+// Icons - small square tiles with the windows' numbers and bars in a row, a grip at its start; the name under the mouse
+// in a tip of its own (tipPlace, paintTip)
+enum class Layout : uint8_t { Row, Column, Icons };
 
 struct Box {
     float x = 0, y = 0, w = 0, h = 0;
     bool contains(float px, float py) const { return px >= x && py >= y && px < x + w && py < y + h; }
 };
 struct CardBoxes {
-    Box plate, name, levels, hp, sp;  // levels w 0: narrowed, no room for them
+    Box plate, name, levels, hp, sp;  // levels w 0: narrowed, no room for them; name and levels w 0 too: icons
+    Box number;                       // the window's number: its badge; an icon's upper part
     float badgeX = 0, badgeY = 0, badgeR = 0;
 };
 struct Geometry {
@@ -64,11 +68,19 @@ struct Picture {
 // `hovered`: the top row's button under the cursor (Close, Layout); `layout`: the cards' now - the button shows the
 // other one
 void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part hovered, Layout layout);
+// 3.0.3-beta.11: the tip with the name of the icon under the mouse - its top left for a tip w x h (the target's pixels)
+// above the tile (`tile` where it is in the target), centred on it; no room above: under it; inside the room
+Point tipPlace(const Box& tile, int w, int h, int roomW, int roomH, float scale);
+void paintTip(Picture& out, int w, int h, float scale);  // its ground; its words go over it by GDI
 // The whole picture (premultiplied) at an opacity: [panel] opacity
 void fade(Picture& p, float opacity);
 // 3.0.3-beta.9 (the user: the mouse over the panel «меняет цвет»): the command of the game's own cursor in a frame -
 // its last small interface quad over the cursor's point (game pixels) among the frame's last draws; -1 none (the
-// panel then goes over everything, Windows' arrow over it)
+// panel then goes over everything, Windows' arrow over it). 3.0.3-beta.11 (R-45N3WS: still dark on prontera): uaRO.exe
+// draws it as an interface face of the colour kCursorColour (FUN_004f60e0 -> FUN_004f5a90) and the screen's additive
+// faces after it (FUN_0040f9e0), often more than those last draws - the last interface draw of that colour over the
+// point among all the frame's draws first
+constexpr uint32_t kCursorColour = 0xFAFFFFFF;
 int cursorDraw(const FrameRecord& r, float x, float y);
 // 3.0.3-beta.10 (the user: «при нажатии правой кнопкой мышки ... опции разные задавать»): the panel's menu - rows
 // of choices (segments side by side, one chosen), switches (a box) and actions, a thin line between kinds; its words

@@ -105,6 +105,31 @@ The user: «хотелось бы чтобы при нажатии правой 
 - Tests: tests/test_window_panel.cpp - the menu's layout (340 wide at scale 1, each of 5 segments 34 at least for
   «100 %»), its hits, its paint, its rows from the settings, a pick's change, its words.
 
+## Task 6 (3.0.3-beta.11): the game's cursor over the panel, the icons, the frame counter
+
+The user: «мышка темная на менюшке переключения окон» (report R-45N3WS: prontera, full screen, 3840x2160), «супер
+минималистичный режим в котором типа иконки маленькие были этих окон, чтобы не занимало много места», «кажется
+счетчик кадров замер».
+
+- The cursor: uaRO.exe draws it (FUN_004f60e0 -> FUN_004f5a90) as a face of the renderer's interface list +0xec (flags
+  0x201) with the colour 0xFAFFFFFF, z 1e-6, rhw 0.999999. The Flush (FUN_0040e4d0) draws that list (FUN_0040f320)
+  after ZENABLE 0, then sorts and draws the additive screen list +0x11c (FUN_0040f9e0); FUN_0055b3f0's digits are
+  filed after the cursor too. beta.9's 8 last draws missed it on prontera: the panel stayed over the cursor, seen
+  dark through it. Now panel::cursorDraw takes the last interface draw of that colour over the point among all the
+  frame's draws first (the old way after it), and the panel moves the cursor's command to the frame's end
+  (moveLastBefore of everything after it): the cursor over the panel, the tip and the menu, the draws after it under
+  them.
+- The icons: [panel] layout = icons (the settings' «Вигляд панелі», the console, the menu's «Вигляд»: «Іконки»):
+  core/window_panel Layout::Icons - a grip (it drags the panel), then a 30x30 tile a window with its number and HP/SP
+  bars, the current one blue; no title, cross or names. The name and levels of the tile under the mouse in a tip above
+  it (under it at the window's top), a third picture (tipPlace, paintTip). The menu 360 wide for the three layouts.
+- The frame counter: a WS_EX_TOPMOST window hidden only by the game's presents. On its full screen the game no longer
+  presents behind another game window (beta.9: no longer minimised), so the counter stayed over the other window with
+  its last numbers. WM_ACTIVATE(WA_INACTIVE) in any mode now hides it and the console (WindowSwitch::onLeave) and
+  closes the panel's menu.
+- Tests: test_window_panel (the cursor by its colour behind 30 draws, the icons' size, hits and paint, the tip's place
+  and ground, the menu's three layouts), test_config (layout = icons).
+
 ## Rulings
 
 - The doc's betas 7 (panel) and 8 (HP/SP on the cards) are one beta: the cards' numbers come with the list in
@@ -122,3 +147,5 @@ The user: «хотелось бы чтобы при нажатии правой 
   see it.
 - 3.0.3-beta.10: the menu opens only for a right button pressed on the panel as well: let go over it after the game's
   camera was turned with it, it is the game's.
+- 3.0.3-beta.11: the game's cursor is moved to the frame's end (not the panel before it, as beta.9 did): the screen's
+  additive faces drawn after the cursor stay under the panel. The icons lie in a row only.

@@ -22,6 +22,8 @@ public:
     void setNote(const std::wstring& note) { note_ = note; }
     // Every present of the game: counts, and twice a second redraws (or hides it, the game not in front).
     void present(HWND game, bool shown);
+    // 3.0.3-beta.11: hidden at once - the game window gone behind (it may present no more: its full screen)
+    void hide();
 
 private:
     void draw(HWND game, const std::wstring& text);

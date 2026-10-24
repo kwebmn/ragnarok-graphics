@@ -765,6 +765,21 @@ TEST(config_reads_the_windows_panel) {
     CHECK(u.next.panelLayout == PanelLayout::Column && u.next.panelPlace == "1.000 0.500");
 }
 
+// 3.0.3-beta.11 (the user: «супер минималистичный режим в котором типа иконки маленькие были этих окон»): [panel]
+// layout = icons - small tiles with the windows' numbers; the third choice of «Вигляд» in the settings and the console
+TEST(config_reads_the_panels_icons) {
+    const Config c = parseConfig("[panel]\nlayout = icons\n");
+    CHECK(c.panelLayout == PanelLayout::Icons);
+    CHECK_EQ(std::string(panelLayoutToken(PanelLayout::Icons)), std::string("icons"));
+    const settings::IniSetting* layout = settings::findSetting("panel.layout");
+    CHECK(layout != nullptr);
+    if (!layout) return;
+    CHECK_EQ(layout->tokens.size(), size_t(3));
+    CHECK_EQ(layout->choices.size(), size_t(3));
+    CHECK_EQ(settings::tokenOf(*layout, c), std::string("icons"));
+    CHECK(liveUpdate(parseConfig(""), c).next.panelLayout == PanelLayout::Icons);
+}
+
 // 3.0.3-beta.9 (the user: «звуки идут с паралельного окна»): [windows] others_sounds - the other game windows' sounds,
 // off by default (the main window's alone), a row of «Звук» beside their music
 TEST(config_reads_the_other_windows_sounds) {

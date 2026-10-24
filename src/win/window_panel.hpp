@@ -27,7 +27,9 @@ namespace uagfx::win {
 // Ctrl+Alt+0 hides it ([panel] hidden); the pad's mouse gate keeps those clicks from the game. 3.0.3-beta.10 (the
 // user: «при нажатии правой кнопкой мышки ... опции разные задавать»): the right button on it opens its menu at the
 // cursor (core/window_panel menuRows), a second picture over it - a click on a row changes that setting at once and in
-// the file; a click off it, Esc, «hide», the window going behind or the panel gone close it. On the game's thread.
+// the file; a click off it, Esc, «hide», the window going behind or the panel gone close it. 3.0.3-beta.11: the icons
+// (core/window_panel Layout::Icons) with the name of the one under the mouse in a tip, a third picture over the panel;
+// the game's cursor moved to the frame's end, over them all (R-45N3WS). On the game's thread.
 class WindowPanel {
 public:
     // Every frame, once the frame's scale is known: shown or not, its picture and its place in the target's pixels -
@@ -52,6 +54,7 @@ private:
     panel::Hit hitAt(float tx, float ty) const;
     void openMenu(float tx, float ty);
     void renderMenu();  // its picture and its place: by the point it was opened at, inside the target
+    void renderTip();   // 3.0.3-beta.11: the icon under the mouse - its name (and levels)
     void pick(panel::MenuHit h);
 
     Config* config_ = nullptr;
@@ -88,6 +91,12 @@ private:
     int menuTexW_ = 0, menuTexH_ = 0;
     uint8_t swallowed_ = 0;  // the buttons (1 left, 2 right, 4 middle) whose press closed the menu: their let-go too
     bool rightOnPanel_ = false;  // the right button pressed on the panel: its let-go there opens the menu
+    // 3.0.3-beta.11: the icons' tip - what it says as drawn ("" none), its picture
+    std::string tipData_;
+    panel::Picture tipPicture_;
+    uint32_t tipTexture_ = 0;
+    int tipTexW_ = 0, tipTexH_ = 0;
+    bool tipUpload_ = false;
 };
 
 }  // namespace uagfx::win

@@ -18,6 +18,7 @@ constexpr float kPad = 6, kTop = 24, kRadius = 9, kCardRadius = 7, kBar = 5, kMa
 constexpr float kRowCard = 150, kNarrowCard = 104, kRowCardH = 52, kRowGap = 6;
 constexpr float kColumnCard = 210, kColumnCardH = 48, kColumnGap = 5;
 constexpr float kLevels = 46;
+constexpr float kIcon = 30, kIconGap = 4, kIconEdge = 4, kIconGrip = 12;  // 3.0.3-beta.11: the icons
 constexpr uint32_t kGround = 0x111319, kGreen = 0x4ADE80, kBlue = 0x60A5FA, kRed = 0xF87171, kWhite = 0xFFFFFF;
 constexpr uint32_t kCurrent = 0x3B82F6, kCurrentEdge = 0x60A5FA;
 
@@ -87,6 +88,28 @@ Geometry geometry(int count, Layout layout, float s, int roomWidth) {
     g.scale = s;
     g.radius = kRadius * s;
     count = std::max(count, 0);
+    if (layout == Layout::Icons) {  // 3.0.3-beta.11: the grip, then a tile a window; no top row
+        const float w = kIconEdge + kIconGrip + float(count) * kIcon + float(std::max(count - 1, 0)) * kIconGap +
+                        kIconEdge;
+        const float h = 2 * kIconEdge + kIcon;
+        g.width = int(std::lround(w * s));
+        g.height = int(std::lround(h * s));
+        g.radius = 8 * s;
+        g.top = Box{0, 0, (kIconEdge + kIconGrip) * s, h * s};
+        g.grip = g.top;
+        for (int i = 0; i < count; ++i) {
+            const float x = kIconEdge + kIconGrip + float(i) * (kIcon + kIconGap), y = kIconEdge;
+            CardBoxes c;
+            c.plate = Box{x * s, y * s, kIcon * s, kIcon * s};
+            c.number = Box{x * s, (y + 1) * s, kIcon * s, 18 * s};
+            c.badgeX = (x + kIcon / 2) * s;
+            c.badgeY = (y + 10) * s;
+            c.hp = Box{(x + 5) * s, (y + 20) * s, (kIcon - 10) * s, 3 * s};
+            c.sp = Box{(x + 5) * s, (y + 25) * s, (kIcon - 10) * s, 3 * s};
+            g.cards.push_back(c);
+        }
+        return g;
+    }
     const bool row = layout == Layout::Row;
     float cw = row ? kRowCard : kColumnCard;
     const float ch = row ? kRowCardH : kColumnCardH, gap = row ? kRowGap : kColumnGap;
@@ -116,6 +139,7 @@ Geometry geometry(int count, Layout layout, float s, int roomWidth) {
         c.badgeX = (x + 17) * s;
         c.badgeY = (y + middle) * s;
         c.badgeR = 9 * s;
+        c.number = Box{c.badgeX - c.badgeR, c.badgeY - c.badgeR, 2 * c.badgeR, 2 * c.badgeR};
         c.levels = Box{(x + cw - 10 - levels) * s, (y + middle - 10) * s, levels * s, 20 * s};
         c.name = Box{(x + 31) * s, (y + middle - 10) * s, (cw - 41 - (levels > 0 ? levels + 4 : 0)) * s, 20 * s};
         c.hp = Box{(x + 10) * s, (y + bars) * s, (cw - 20) * s, kBar * s};
@@ -179,34 +203,63 @@ Place placeOf(Point at, int panelW, int panelH, int roomW, int roomH, float scal
 uint32_t barColour(int percent, bool hp) { return percent < 25 ? kRed : hp ? kGreen : kBlue; }
 
 int cursorDraw(const FrameRecord& r, float x, float y) {
-    constexpr int kLookBack = 8;  // the cursor is among the frame's last draws
+    constexpr int kLookBack = 8;  // without its colour: among the frame's last draws
     constexpr float kMost = 64;   // a cursor's picture is no bigger
+    // A small interface quad over the point: whether every corner has the cursor's colour
+    const auto over = [&](const DrawCmd& d, bool& coloured) {
+        const uint32_t stride = FrameRecord::stride(d.fvf);
+        if (!stride || d.vertexCount < 3 || d.vertexCount > 6 || d.state >= r.states().size() ||
+            !r.states()[d.state].ui)
+            return false;
+        float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
+        coloured = true;
+        for (uint32_t v = 0; v < d.vertexCount; ++v) {
+            const uint8_t* at = r.vertexBytes().data() + d.vertexOffset + size_t(v) * stride;
+            float p[2];
+            uint32_t colour = 0;
+            std::memcpy(p, at, sizeof p);
+            std::memcpy(&colour, at + 16, 4);  // FVF_TL1 and TL2: x y z rhw, then the diffuse colour
+            x0 = std::min(x0, p[0]);
+            y0 = std::min(y0, p[1]);
+            x1 = std::max(x1, p[0]);
+            y1 = std::max(y1, p[1]);
+            coloured = coloured && colour == kCursorColour;
+        }
+        return x1 - x0 <= kMost && y1 - y0 <= kMost && x >= x0 && x <= x1 && y >= y0 && y <= y1;
+    };
+    bool coloured = false;
+    for (size_t c = r.commands().size(); c-- > 0;)  // 3.0.3-beta.11: by its colour, wherever it is
+        if (r.commands()[c].type == Cmd::Draw && over(r.draws()[r.commands()[c].index], coloured) && coloured)
+            return int(c);
     int seen = 0;
     for (size_t c = r.commands().size(); c-- > 0 && seen < kLookBack;) {
         const Command& cmd = r.commands()[c];
         if (cmd.type != Cmd::Draw) continue;
         ++seen;
-        const DrawCmd& d = r.draws()[cmd.index];
-        const uint32_t stride = FrameRecord::stride(d.fvf);
-        if (!stride || d.vertexCount < 3 || d.vertexCount > 6 || d.state >= r.states().size() ||
-            !r.states()[d.state].ui)
-            continue;
-        float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
-        for (uint32_t v = 0; v < d.vertexCount; ++v) {
-            float p[2];
-            std::memcpy(p, r.vertexBytes().data() + d.vertexOffset + size_t(v) * stride, sizeof p);
-            x0 = std::min(x0, p[0]);
-            y0 = std::min(y0, p[1]);
-            x1 = std::max(x1, p[0]);
-            y1 = std::max(y1, p[1]);
-        }
-        if (x1 - x0 <= kMost && y1 - y0 <= kMost && x >= x0 && x <= x1 && y >= y0 && y <= y1) return int(c);
+        if (over(r.draws()[cmd.index], coloured)) return int(c);
     }
     return -1;
 }
 
+Point tipPlace(const Box& tile, int w, int h, int roomW, int roomH, float scale) {
+    const float gap = 6 * scale;
+    float y = tile.y - gap - float(h);
+    if (y < 0) y = tile.y + tile.h + gap;  // the panel at the top: under the tile
+    const float x = tile.x + tile.w / 2 - float(w) / 2;
+    return Point{std::clamp(int(std::lround(x)), 0, std::max(0, roomW - w)),
+                 std::clamp(int(std::lround(y)), 0, std::max(0, roomH - h))};
+}
+
+void paintTip(Picture& out, int w, int h, float scale) {
+    out.width = std::max(w, 0);
+    out.height = std::max(h, 0);
+    out.px.assign(size_t(out.width) * size_t(out.height), 0u);
+    roundRect(out, Box{0, 0, float(out.width), float(out.height)}, 6 * scale, kGround, 236.0f / 255, kWhite,
+              40.0f / 255, std::max(1.0f, scale));
+}
+
 MenuGeometry menuGeometry(const std::vector<MenuRow>& rows, float s) {
-    constexpr float kWidth = 340, kRow = 28, kLabelW = 112, kSegmentsX = 128, kGap = 4, kLine = 7;
+    constexpr float kWidth = 360, kRow = 28, kLabelW = 112, kSegmentsX = 128, kGap = 4, kLine = 7;
     MenuGeometry g;
     g.scale = s;
     float y = kPad;
@@ -296,7 +349,7 @@ int indexOf(const int (&values)[N], int v) {
 
 std::vector<MenuRow> menuRows(const Config& c) {
     using K = MenuRow::Kind;
-    return {{K::Choice, 2, c.panelLayout == PanelLayout::Column ? 1 : 0, false},
+    return {{K::Choice, 3, int(c.panelLayout), false},  // a row, a column, the icons (3.0.3-beta.11)
             {K::Choice, int(std::size(kMenuSizes)), indexOf(kMenuSizes, c.panelSize), false},
             {K::Choice, int(std::size(kMenuOpacities)), indexOf(kMenuOpacities, c.panelOpacity), false},
             {K::Check, 0, -1, c.windowOthersMusic},
@@ -312,7 +365,8 @@ std::vector<MenuText> menuTexts(settings::Lang lang) {
     std::vector<std::string> sizes, opacities;
     for (int v : kMenuSizes) sizes.push_back(std::to_string(v) + percent);
     for (int v : kMenuOpacities) opacities.push_back(std::to_string(v) + percent);
-    return {{t(Text::PanelMenuLayout), {t(Text::WindowsPanelRow), t(Text::WindowsPanelColumn)}},
+    return {{t(Text::PanelMenuLayout),
+             {t(Text::WindowsPanelRow), t(Text::WindowsPanelColumn), t(Text::WindowsPanelIcons)}},
             {t(Text::PanelMenuSize), sizes},
             {t(Text::PanelMenuOpacity), opacities},
             {t(Text::WindowsOthersMusic), {}},
@@ -331,8 +385,8 @@ bool menuPick(Config& c, MenuHit hit, MenuChange& change) {
     };
     switch (hit.row) {
     case kLayoutItem:
-        if (!segment(2)) return false;
-        c.panelLayout = hit.segment == 1 ? PanelLayout::Column : PanelLayout::Row;
+        if (!segment(3)) return false;
+        c.panelLayout = PanelLayout(hit.segment);
         change = MenuChange{"panel", "layout", panelLayoutToken(c.panelLayout), false};
         return true;
     case kSizeItem:
@@ -382,6 +436,23 @@ void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part
     const float s = g.scale, edge = std::max(1.0f, s);
     roundRect(out, Box{0, 0, float(g.width), float(g.height)}, g.radius, kGround, 224.0f / 255, kWhite, 34.0f / 255,
               edge);
+    if (layout == Layout::Icons) {  // 3.0.3-beta.11: the grip at its start, a tile a window - the current one blue
+        const float middle = float(g.height) / 2;
+        for (float gx : {7.0f, 11.0f})
+            for (float gy : {-5.0f, 0.0f, 5.0f}) circle(out, gx * s, middle + gy * s, 1.3f * s, kWhite, 96.0f / 255);
+        for (size_t i = 0; i < g.cards.size() && i < cards.size(); ++i) {
+            const CardBoxes& b = g.cards[i];
+            const Card& c = cards[i];
+            if (c.current)
+                roundRect(out, b.plate, 7 * s, kCurrent, 200.0f / 255, kCurrentEdge, 1.0f, edge);
+            else
+                roundRect(out, b.plate, 7 * s, kWhite, (c.hover ? 30.0f : 14.0f) / 255, kWhite,
+                          (c.hover ? 70.0f : 30.0f) / 255, edge);
+            bar(out, b.hp, c.hp, true);
+            bar(out, b.sp, c.sp, false);
+        }
+        return;
+    }
     for (float gx : {10.0f, 15.0f})  // the grip: dragged by the top row
         for (float gy : {8.0f, 12.0f, 16.0f}) circle(out, gx * s, gy * s, 1.3f * s, kWhite, 96.0f / 255);
     const float cx = g.close.x + g.close.w / 2, cy = g.close.y + g.close.h / 2, arm = 4 * s;

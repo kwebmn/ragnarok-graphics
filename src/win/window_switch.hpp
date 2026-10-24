@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <functional>
 #include <string>
 
 #include "core/config.hpp"
@@ -39,6 +40,9 @@ public:
     bool key(unsigned vk, LPARAM lParam);
     bool mouse(HWND window, UINT m, LPARAM lp, LRESULT& result) { return panel_.mouse(window, m, lp, result); }
     bool activate(HWND window, WPARAM wp);  // WM_ACTIVATE on the full screen
+    // 3.0.3-beta.11 (the user: «счетчик кадров замер»): the game window no longer in front, in any mode - the
+    // driver's windows over it hidden at once (on its full screen the game no longer presents behind another one)
+    std::function<void()> onLeave;
     bool timer(HWND window, WPARAM id);     // WM_TIMER: where the focus went from the full screen
 
 private:

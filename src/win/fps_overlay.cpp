@@ -64,6 +64,14 @@ void FpsOverlay::present(HWND game, bool shown) {
     draw(game, note_.empty() ? std::wstring(text) : shown ? note_ + L"  ·  " + text : note_);
 }
 
+void FpsOverlay::hide() {
+    if (window_ && IsWindowVisible(window_)) ShowWindow(window_, SW_HIDE);
+    since_ = 0;  // counted anew when it presents again
+    frames_ = 0;
+    lastFrame_ = 0;
+    worstMs_ = 0;
+}
+
 void FpsOverlay::draw(HWND game, const std::wstring& text) {
     if (!window_ && windowClass())
         window_ = CreateWindowExW(

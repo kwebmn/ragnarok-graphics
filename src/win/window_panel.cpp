@@ -102,22 +102,21 @@ bool sameRows(const std::vector<panel::MenuRow>& a, const std::vector<panel::Men
 }
 
 // A picture as it is into the frame: its texture made for its size, uploaded when it changed, one quad with its top
-// left at (x, y) in the target's pixels over the game's interface. The commands added (0: no texture)
-size_t drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture,
-                   int& texW, int& texH, bool& upload, int x, int y, float k) {
+// left at (x, y) in the target's pixels over the game's interface
+void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
+                 int& texH, bool& upload, int x, int y, float k) {
+    if (pic.width <= 0 || pic.height <= 0) return;
     if (!texture || texW != pic.width || texH != pic.height) {
         if (texture) renderer.releaseTexture(texture);
         texture = renderer.createTexture(pic.width, pic.height, 1);
         texW = pic.width;
         texH = pic.height;
         upload = true;
-        if (!texture) return 0;
+        if (!texture) return;
     }
-    size_t added = 1;
     if (upload) {
         record.upload(texture, 0, Rect{0, 0, texW, texH}, pic.px.data());
         upload = false;
-        ++added;
     }
     // Premultiplied, no depth, a texel a target pixel
     DrawSetup s;
@@ -145,7 +144,22 @@ size_t drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pi
                                 {x0, y1, 0, 1, white, 0, 0, 1}, {x1, y0, 0, 1, white, 0, 1, 0},
                                 {x1, y1, 0, 1, white, 0, 1, 1}, {x0, y1, 0, 1, white, 0, 0, 1}};
     record.draw(cmd, v, 6, nullptr, 0);
-    return added;
+}
+
+// 3.0.3-beta.11: the words' width at a size (the target's pixels), as drawWords draws them
+int wordsWidth(const std::wstring& text, float px, bool bold) {
+    if (text.empty()) return 0;
+    HDC dc = CreateCompatibleDC(nullptr);
+    HFONT font = CreateFontW(-std::max(8, int(std::lround(px))), 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE,
+                             FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
+                             DEFAULT_PITCH, L"Segoe UI");
+    HGDIOBJ old = SelectObject(dc, font);
+    SIZE size{};
+    GetTextExtentPoint32W(dc, text.c_str(), int(text.size()), &size);
+    SelectObject(dc, old);
+    DeleteObject(font);
+    DeleteDC(dc);
+    return int(size.cx);
 }
 
 }  // namespace
@@ -184,8 +198,9 @@ void WindowPanel::frame(HWND game, bool main, Config& config, double k, int targ
     }
     k_ = float(k);
     const float scale = std::clamp(k_ * float(config.panelSize) / 100.0f, 0.75f, 6.0f);
-    const panel::Layout layout =
-        config.panelLayout == PanelLayout::Column ? panel::Layout::Column : panel::Layout::Row;
+    const panel::Layout layout = config.panelLayout == PanelLayout::Icons    ? panel::Layout::Icons
+                                 : config.panelLayout == PanelLayout::Column ? panel::Layout::Column
+                                                                             : panel::Layout::Row;
     bool move = !shown_;
     if (scale != scale_ || layout != layout_ || targetWidth != targetW_ || targetHeight != targetH_ ||
         config.panelOpacity != opacity_) {
@@ -228,6 +243,10 @@ void WindowPanel::frame(HWND game, bool main, Config& config, double k, int targ
         }
         if (menuDirty_) renderMenu();
     }
+    if (layout_ == panel::Layout::Icons && hover_ >= 0 && !dragging_ && !menuOpen_)
+        renderTip();
+    else
+        tipData_.clear();
     block(game);
 }
 
@@ -237,8 +256,10 @@ void WindowPanel::render() {
     std::vector<Words> words;
     const settings::Lang lang = startup().lang;
     const float s = geometry_.scale;
-    words.push_back(Words{geometry_.title, utf8Wide(settings::tr(lang, settings::Text::PanelTitle)), panel::kMuted,
-                          11 * s, false, DT_LEFT});
+    const bool icons = layout_ == panel::Layout::Icons;  // 3.0.3-beta.11: their numbers alone
+    if (!icons)
+        words.push_back(Words{geometry_.title, utf8Wide(settings::tr(lang, settings::Text::PanelTitle)),
+                              panel::kMuted, 11 * s, false, DT_LEFT});
     for (size_t i = 0; i < all_.size() && i < geometry_.cards.size(); ++i) {
         const gamewindows::Window& w = all_[i];
         const panel::CardBoxes& b = geometry_.cards[i];
@@ -248,9 +269,10 @@ void WindowPanel::render() {
         c.hp = w.hp;
         c.sp = w.sp;
         cards.push_back(c);
-        words.push_back(Words{panel::Box{b.badgeX - b.badgeR, b.badgeY - b.badgeR, 2 * b.badgeR, 2 * b.badgeR},
-                              std::to_wstring(w.number), c.current ? panel::kOnBadge : panel::kText, 10.5f * s, true,
+        words.push_back(Words{b.number, std::to_wstring(w.number),
+                              c.current && !icons ? panel::kOnBadge : panel::kText, (icons ? 13.5f : 10.5f) * s, true,
                               DT_CENTER});
+        if (icons) continue;
         const bool named = !w.name.empty();
         const std::string unnamed =  // the login, the character select, another build: «window 2»
             settings::fmt(settings::tr(lang, settings::Text::PanelWindow), {std::to_string(w.number)});
@@ -271,12 +293,51 @@ void WindowPanel::draw(FrameRecord& record, gpu::Renderer& renderer) {
     // frame's last draws, the panel's commands go before it - so that cursor stays over it, not Windows' arrow
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    size_t added = drawPicture(record, renderer, picture_, texture_, texW_, texH_, upload_, x_, y_, k_);
-    if (menuOpen_ && menuPicture_.width > 0 && menuPicture_.height > 0)  // 3.0.3-beta.10: its menu over it
-        added += drawPicture(record, renderer, menuPicture_, menuTexture_, menuTexW_, menuTexH_, menuUpload_, menuX_,
-                             menuY_, k_);
-    if (cursor >= 0 && added) record.moveLastBefore(added, size_t(cursor));
+    drawPicture(record, renderer, picture_, texture_, texW_, texH_, upload_, x_, y_, k_);
+    if (!tipData_.empty() && size_t(hover_) < geometry_.cards.size()) {  // 3.0.3-beta.11: the icon's name by it
+        const panel::Box& t = geometry_.cards[size_t(hover_)].plate;
+        const panel::Point at = panel::tipPlace(panel::Box{float(x_) + t.x, float(y_) + t.y, t.w, t.h},
+                                                tipPicture_.width, tipPicture_.height, targetW_, targetH_, scale_);
+        drawPicture(record, renderer, tipPicture_, tipTexture_, tipTexW_, tipTexH_, tipUpload_, at.x, at.y, k_);
+    }
+    if (menuOpen_)  // 3.0.3-beta.10: its menu over it
+        drawPicture(record, renderer, menuPicture_, menuTexture_, menuTexW_, menuTexH_, menuUpload_, menuX_, menuY_,
+                    k_);
+    // 3.0.3-beta.11 (R-45N3WS): the game's cursor to the frame's end, over them all - the draws after it (the screen's
+    // additive faces) stay under the panel
+    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
     underCursor_ = cursor >= 0;
+}
+
+void WindowPanel::renderTip() {
+    const size_t i = size_t(hover_);
+    if (i >= all_.size()) {
+        tipData_.clear();
+        return;
+    }
+    const gamewindows::Window& w = all_[i];
+    const std::string data = std::to_string(i) + '|' + shownData_ + '|' + std::to_string(scale_);
+    if (data == tipData_) return;
+    tipData_ = data;
+    const settings::Lang lang = startup().lang;
+    const float s = scale_;
+    const std::wstring name = utf8Wide(
+        w.name.empty() ? settings::fmt(settings::tr(lang, settings::Text::PanelWindow), {std::to_string(w.number)})
+                       : w.name);
+    const std::wstring levels = levelsOf(w);
+    const float namePx = 12.5f * s, levelsPx = 11 * s, pad = 8 * s, gap = 6 * s;
+    const int nameW = wordsWidth(name, namePx, true) + 2;
+    const int levelsW = levels.empty() ? 0 : wordsWidth(levels, levelsPx, false) + 2;
+    const int h = int(std::lround(24 * s));
+    const int width = int(std::lround(2 * pad + float(nameW) + (levelsW ? gap + float(levelsW) : 0.0f)));
+    panel::paintTip(tipPicture_, width, h, s);
+    std::vector<Words> words{Words{panel::Box{pad, 0, float(nameW), float(h)}, name, panel::kText, namePx, true,
+                                   DT_LEFT}};
+    if (levelsW)
+        words.push_back(Words{panel::Box{pad + float(nameW) + gap, 0, float(levelsW), float(h)}, levels,
+                              panel::kMuted, levelsPx, false, DT_LEFT});
+    drawWords(tipPicture_, words);
+    tipUpload_ = true;
 }
 
 bool WindowPanel::toTarget(HWND game, int x, int y, float& tx, float& ty) const {
