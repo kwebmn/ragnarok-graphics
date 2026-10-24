@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.4-beta.3 — what is new
+
+- **Notifications while the game is behind.** The game window behind others or minimised, and someone whispers,
+  invites you to a party or a guild, offers a trade, asks to be your friend, or the character dies: the game's
+  taskbar button flashes and Windows shows a notification - who and what. A click on it brings the game back. With
+  several game windows each tells of its own. «Game and chat» → «Notifications»: a box for each kind.
+- Players you ignore in the game send no notifications.
+
 # uaRO Graphics 3.0.4-beta.2 — what is new
 
 - **The «Graphics card» row is always seen.** «Graphics» → «What draws the game» → «Graphics card» shows which card
