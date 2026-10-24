@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.4-beta.5 — what is new
+
+- **A free camera in buildings.** In inns, shops, guild halls and castles (101 maps) the game held the camera: it
+  barely turned and did not zoom out. Now it turns, tilts and zooms out there as outdoors. «Game and chat» →
+  «Camera» → «Free camera in buildings» (on).
+- **The photo mode: Ctrl+Alt+F12.** The game's interface, the cursor, the windows' panel and the frame counter go -
+  the world alone for a fine shot (Ctrl+Shift+F12). The same keys again bring everything back.
+- Outdoors the game already lets the camera go very far (7 times the usual) and eases its zoom by itself - I checked
+  that in the game's code, so nothing changed there.
+
 # uaRO Graphics 3.0.4-beta.4 — what is new
 
 - **The windows' panel shows how the helpers are.** On another game window's card: red - its character died (until
