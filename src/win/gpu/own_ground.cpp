@@ -83,6 +83,7 @@ void Renderer::Impl::dropOwnGround() {
     ownState.most = 0;
     ownState.cornersChanged = ownState.chunksMade = 0;
     ownState.made.valid = false;  // its record names the textures let go
+    ownState.likeKnown = false;
     ownState.reused = 0;
 }
 
@@ -180,9 +181,9 @@ bool Renderer::Impl::prepareOwnGround() {
 // its corners (its walls' left to the cells: their corners lie under other colours)
 void Renderer::Impl::noteOwnGround(const FrameRecord& rec, const DrawCmd& d) {
     OwnState& o = ownState;
-    if (!o.likeKnown) {
+    if (!o.likeTaken) {
         o.like = rec.states()[d.state];
-        o.likeKnown = true;
+        o.likeKnown = o.likeTaken = true;
     }
     const std::vector<uint8_t>& vb = rec.vertexBytes();
     if (d.vertexOffset + size_t(d.vertexCount) * sizeof(own_ground::Tl2) > vb.size()) return;

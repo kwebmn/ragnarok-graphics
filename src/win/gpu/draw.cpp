@@ -111,6 +111,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             return;
         }
     }
+    // 3.0.4-beta.16 (R-35N5QN «когда отматываю до этого места становится темное»): the camera far out, all of the
+    // game's world past its far plane - no ground of the game's to note, the own ground drawn all the same
+    if (!inner && !ownState.decided && (s.ui || s.blend) && ownGroundWanted()) {
+        ownState.decided = true;
+        ownState.frame = prepareOwnGround();
+    }
     if (!inner && ownState.frame && !ownState.drawn && (s.ui || s.blend) && !drawOwnGround()) return;
     // 3.0.4-beta.14: a draw of the game's own models near - the far models' colours and state learnt from it. Not by
     // this picture's choice (ownState.frame): the game draws its models before its ground

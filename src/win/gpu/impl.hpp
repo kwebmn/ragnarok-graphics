@@ -978,7 +978,7 @@ struct Renderer::Impl {
         mapPlace = seasons::withYear(mapPlace, mapYear);  // 2.7.5: no insects in winter
     }
     void newPicture() {
-        ownState.decided = ownState.frame = ownState.drawn = ownState.likeKnown = false;  // 3.0.4-beta.10
+        ownState.decided = ownState.frame = ownState.drawn = ownState.likeTaken = false;  // 3.0.4-beta.10
         ownState.shading.beginFrame();
         ownState.modelsNoted = 0;  // 3.0.4-beta.14
         // off for 10 s (the switch) - its textures and the map's own ground let go; for less (Pause, to compare) kept
@@ -1157,7 +1157,8 @@ struct Renderer::Impl {
         int atlasRow = 0;
         bool up = false;            // all of them up
         bool decided = false, frame = false, drawn = false;  // this picture's: drawn in place of the game's
-        bool likeKnown = false;
+        bool likeKnown = false;     // 3.0.4-beta.16: kept over the pictures (the camera far out: none of the game's)
+        bool likeTaken = false;     // this picture's taken
         DrawSetup like;             // the game's ground draw's state this picture
         own_ground::Shading shading;
         FrameRecord rec, uploads;
