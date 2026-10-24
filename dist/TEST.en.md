@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.4-beta.19 — what is new
+
+- **The autumn patches and the leaves' shades stay on the leaves** (report R-E3A6C2, "the trees' colour changes as I
+  turn the map"). In the report's pictures other trees turned yellow at each turn of the camera. Which tree turns was
+  set by the crown's place - fixed in beta.18. The autumn patches themselves, and the crown's lighter and darker
+  clumps, were laid over the tree's box on the screen: as the camera turned, the leaves moved under them and the
+  patches stood. Now they are on the leaves themselves (a place on their texture) and turn with the tree. The crown's
+  volume and the rime on top stay by the camera - that is light.
+- To check: on prt_fild08 with "Autumn and winter crowns" on, turn the camera round the trees - which trees are yellow, and
+  where their patches are, should stay put.
+
 # uaRO Graphics 3.0.4-beta.18 — what is new
 
 - **The trees no longer change as the camera turns.** With "Trees of different shades" each tree has a shade of its
