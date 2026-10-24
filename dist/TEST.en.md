@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.4-beta.6 — what is new
+
+- **Time left on the buff icons.** Each icon at the screen's right edge (Blessing, Increase AGI, Kyrie, a Sage's
+  endows, potions...) shows how long its buff still lasts: «45», «4:32», «29m». The durations come from the server's
+  own data and the level from the cast itself, another player's too. With the level unknown, the longest time counts.
+  «Game and chat» → «Buffs» → «Time left on the buff icons».
+- Where a time is off, tell me which buff and I will fix the table.
+
 # uaRO Graphics 3.0.4-beta.5 — what is new
 
 - **A free camera in buildings.** In inns, shops, guild halls and castles (101 maps) the game held the camera: it
