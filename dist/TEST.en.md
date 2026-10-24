@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.4-beta.11 — what is new
+
+- **"Keep the frame rate" says what it turned off** (report R-EQDYNE, "no grass"). When the game runs below the limit
+  for a while because of the graphics card, it turns the costliest effect off for the rest of the game. Until now only
+  the log said so, and the grass simply vanished. Now a line shows over the game for 10 seconds, for example "Grass is
+  off for the rest of the game: 21 frames a second, under 45 (Keep the frame rate)".
+- An effect the player turned on during the game (the console ~ or the settings app) is left alone for the rest of the
+  game. One it had already turned off comes back when the player turns it on again.
+- To check: on the "Frames" page set "Keep the frame rate" above what your card gives (200, say) and wait a minute -
+  the line about the effect turned off shows. Then turn that effect off and on in the console - it comes back and is
+  not turned off again.
+
 # uaRO Graphics 3.0.4-beta.10 — what is new
 
 - **Own ground (prototype).** The first step to drawing the world ourselves: uaRO Graphics draws the map's ground
