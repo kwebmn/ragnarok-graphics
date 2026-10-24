@@ -125,4 +125,14 @@ void drop(EffectSettings& e, const std::string& key) {
     if (const Costly* k = find(key)) e.*k->on = false;
 }
 
+std::vector<std::string> turnedOn(const EffectSettings& was, const EffectSettings& now) {
+    std::vector<std::string> out;
+    const auto look = [&](const Costly& k) {
+        if (now.*k.on && !(was.*k.on)) out.push_back(k.key);
+    };
+    for (const Costly& k : kCostly) look(k);
+    for (const Costly& k : kWorldExtras) look(k);
+    return out;
+}
+
 }  // namespace uagfx::effect_costs

@@ -2,6 +2,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "core/config.hpp"
 
@@ -40,6 +41,9 @@ std::string passOf(const std::string& key);
 // the usually costliest down. "" when none is left. (2.5.9: Direct3D 11 times its passes too.)
 std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped);
 void drop(EffectSettings& e, const std::string& key);  // its switch off
+// 3.0.4-beta.11 (R-EQDYNE): the switches keep_fps may turn off that are on in `now` and were off in `was` - turned on
+// by hand while the game runs (the console, the settings app): keep_fps leaves them for the rest of the game
+std::vector<std::string> turnedOn(const EffectSettings& was, const EffectSettings& now);
 // 2.2.2, keep_fps: whether a five-second window was too slow because of the graphics card - under 90 % of the frames
 // a second wanted (`target`), and the card's own work a frame (`gpuMs`, below 0 when not measured: the frames alone
 // decide) over 85 % of a frame's time at that rate. A game slow for the processor's part (a crowd, a town) keeps its

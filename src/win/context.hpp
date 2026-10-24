@@ -172,6 +172,11 @@ private:
     unsigned keepFrames_ = 0;
     int keepSlow_ = 0;
     std::set<std::string> keepOff_;
+    // 3.0.4-beta.11 (R-EQDYNE «нету травы»): the switches the player turned on in this game, which keep_fps leaves,
+    // and its choice said on the screen for 10 s (the frame counter's line)
+    std::set<std::string> keepByHand_;
+    std::wstring keepNote_;
+    uint64_t keepNoteUntil_ = 0;
     uint64_t costsWritten_ = 0;
     FpsOverlay fps_;
     Console console_;               // 1.9.3: ~ - the effects' switches over the game

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <string>
 
@@ -72,4 +73,22 @@ TEST(effect_costs_keep_fps_blames_the_card_only_when_it_is_the_card) {
     CHECK(!effect_costs::slowForCard(58.0, 60, 16.5));  // 58 is not slow (54 is)
     CHECK(effect_costs::slowForCard(45.0, 60, -1.0));   // nothing measured: by the frames alone, as before
     CHECK(!effect_costs::slowForCard(70.0, 60, -1.0));
+}
+
+TEST(effect_costs_keep_fps_leaves_what_the_player_turned_on) {
+    // 3.0.4-beta.11 (R-EQDYNE «нету травы»: the grass turned on in the console at 23:00, off by keep_fps at 23:01): the
+    // switches turned on by hand while the game runs - keep_fps passes them by
+    EffectSettings was, now;
+    was.grass = false;
+    now.grass = true;
+    was.ao = now.ao = true;           // on before and after: not the player's doing now
+    was.bloom = true;
+    now.bloom = false;                // turned off: nothing to keep
+    was.materials = false;
+    now.materials = true;             // the world's extras count too
+    const std::vector<std::string> on = effect_costs::turnedOn(was, now);
+    CHECK_EQ(on.size(), size_t(2));
+    CHECK(std::find(on.begin(), on.end(), "grass") != on.end());
+    CHECK(std::find(on.begin(), on.end(), "materials") != on.end());
+    CHECK(effect_costs::turnedOn(now, now).empty());
 }

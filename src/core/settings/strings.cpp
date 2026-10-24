@@ -4525,6 +4525,9 @@ constexpr Entry kTexts[] = {
      "Direct3D 12.",
      "Проверка следующего шага ремастера: землю рисует сам uaRO Graphics из файла карты вместо игры — плавные холмы, "
      "текстуры в полном цвете, земля и за дальним краем, когда камера далеко. Сначала для prt_fild08; Direct3D 12."},
+    {Text::KeepFpsOffNote, "{1} is off for the rest of the game: {2} frames a second, under {3} (Keep the frame rate)",
+     "{1}: вимкнено до кінця гри — {2} кадр/с, менше ніж {3} («Тримати частоту кадрів»)",
+     "{1}: выключено до конца игры — {2} кадр/с, меньше {3} («Держать частоту кадров»)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

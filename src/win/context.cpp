@@ -11,6 +11,7 @@
 #include "core/outdoors.hpp"
 #include "core/scale.hpp"
 #include "core/settings/ini_edit.hpp"
+#include "core/settings/schema.hpp"
 #include "core/texture_levels.hpp"
 #include "core/version.hpp"
 #include "win/blind_patch.hpp"
@@ -951,6 +952,10 @@ void Context::watchMapLoad(const std::string& map, bool world, bool picture) {
 // two slow windows in a row (under 90 % of it) turn the costliest effect off for the rest of the game.
 void Context::keepFrameRate(const Config& config, HWND window) {
     const uint64_t now = GetTickCount64();
+    if (keepNoteUntil_ && now >= keepNoteUntil_) {  // 3.0.4-beta.11: its line said long enough
+        keepNoteUntil_ = 0;
+        if (enhanced_) fps_.setNote(L"");
+    }
     effect_costs::Costs costs;
     const bool measured = renderer && renderer->effectCosts(costs);
     if (measured && now - costsWritten_ >= 30000) {
@@ -983,7 +988,9 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     keepSlow_ = 0;
     EffectSettings fx = effects();
     for (const std::string& k : keepOff_) effect_costs::drop(fx, k);
-    const std::string key = effect_costs::pickToDrop(fx, measured ? costs : effect_costs::Costs{}, keepOff_);
+    std::set<std::string> passed = keepOff_;  // 3.0.4-beta.11: and what the player turned on in this game
+    passed.insert(keepByHand_.begin(), keepByHand_.end());
+    const std::string key = effect_costs::pickToDrop(fx, measured ? costs : effect_costs::Costs{}, passed);
     if (key.empty()) return;
     keepOff_.insert(key);
     const double ms = effect_costs::costOf(costs, key);
@@ -992,6 +999,14 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     if (gpuMs >= 0) std::snprintf(card, sizeof card, ", the card %.1f ms a frame", gpuMs);
     LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.%s off for this game%s", fps, config.keepFps, card, key.c_str(),
              cost);
+    // 3.0.4-beta.11: said on the screen too - the grass gone with nothing said looked like a fault (R-EQDYNE)
+    const settings::IniSetting* s = settings::findSetting("effects." + key);
+    const settings::Lang lang = startup().lang;
+    const std::string name = s ? settings::tr(lang, s->label) : key;
+    keepNote_ = wideOf(settings::fmt(settings::tr(lang, settings::Text::KeepFpsOffNote),
+                                     {name, std::to_string(int(fps + 0.5)), std::to_string(config.keepFps)}));
+    keepNoteUntil_ = now + 10000;
+    if (enhanced_) fps_.setNote(keepNote_);
 }
 
 void Context::watchSettings() {
@@ -1013,6 +1028,12 @@ void Context::watchSettings() {
     const Config was = config;
     config = u.next;  // render_scale, high_resolution, sharpen, vsync and fps_limit are read at every present
     settingsChanged();
+    // 3.0.4-beta.11: an effect the player turns on now is theirs for this game - keep_fps leaves it (and gives back
+    // one it had turned off)
+    for (const std::string& k : effect_costs::turnedOn(was.effects, config.effects)) {
+        keepByHand_.insert(k);
+        if (keepOff_.erase(k)) LOG_INFO("keep_fps: effects.%s turned on again by the player - back on", k.c_str());
+    }
     if (config.uiFilter != was.uiFilter) renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     if (config.crispText != was.crispText) {
         if (config.crispText) {
