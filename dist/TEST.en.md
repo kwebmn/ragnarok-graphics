@@ -1,3 +1,27 @@
+# uaRO Graphics 3.0.4-beta.20 — what is new
+
+- **Water and lava far off on the own ground.** The game lays its water a cell at a time with its ground, but only up
+  to its far edge. Past it the own ground showed the bed bare: in Alberta, with the camera pulled out all the way, the
+  sea near the horizon was black. Now the water goes on past the edge - the parts of the cells beyond it, at the same
+  level. It uses the same picture, state and colour as the game's own water near; with "Modern water" it is drawn as
+  the near water is. When none of the game's water is near, the driver uses its own copies of those pictures
+  (water*.jpg), changing at the game's pace. Lava likewise (mag_dun01, mag_dun02).
+- **The own ground on any map.** All 921 maps of the client checked offline: every ground and model file reads. Nine
+  maps have no ground at all (ma_zif01-09) and stay as the game has them. In the 32-bit game (without DLSS and AI
+  textures the drawing is in uaRO.exe itself, which has 2 GB of memory) on the heaviest maps (lighthalzen, ecl_fild01)
+  the driver first lets the houses far off go, then the smooth ground, when too little memory is left. The log has a
+  line with how much was left.
+- **The camera still - the ground not made again.** In report R-35N5QN the picture drawn again never once happened:
+  the count of the models' triangles grew every picture. Now only new colours count, and while the camera stands the
+  own ground's picture is taken as made.
+- To check (with "Own ground (prototype)"):
+  - `@warp alberta 193 146`: pull the camera out all the way and turn it to the sea. The sea to the horizon should be
+    water, with nothing black and no seam where the game's water ends. Look with "Modern water" on and off.
+  - The same on izlude.
+  - Prontera and a dungeon (pay_dun01, iz_dun00): anything strange.
+  - After a minute on a map with water, send a report - the log has the lines "own ground: ...'s water" and
+    "far water".
+
 # uaRO Graphics 3.0.4-beta.19 — what is new
 
 - **The autumn patches and the leaves' shades stay on the leaves** (report R-E3A6C2, "the trees' colour changes as I
