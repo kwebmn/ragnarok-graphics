@@ -90,10 +90,10 @@ TEST(own_ground_takes_the_game_s_colours) {
     s.reset(4, 2, 10.0f);  // 4 x 2 cells of 10: corners x -20..20, z -10..10
     CHECK_EQ(s.diffuseAt(0.0f, 0.0f), 0xFFFFFFFFu);  // nothing seen yet: white
     // the game's vertices, a hair off the corners as its own projection leaves them
-    s.note(-19.97f, -10.02f, 0xFF808080u);
-    s.note(-10.0f, -10.0f, 0xFF404040u);
-    s.note(-20.0f, 0.01f, 0xFF808080u);
-    s.note(-9.98f, 0.0f, 0xFF404040u);
+    s.note(-19.97f, -10.02f, 0xFF808080u, true);
+    s.note(-10.0f, -10.0f, 0xFF404040u, true);
+    s.note(-20.0f, 0.01f, 0xFF808080u, true);
+    s.note(-9.98f, 0.0f, 0xFF404040u, true);
     const uint32_t mid = s.diffuseAt(-15.0f, -5.0f);
     for (int k = 0; k < 24; k += 8) CHECK(std::abs(int((mid >> k) & 0xFF) - 0x60) <= 1);
     CHECK_EQ(mid >> 24, 0xFFu);
@@ -101,12 +101,12 @@ TEST(own_ground_takes_the_game_s_colours) {
     const uint32_t far = s.diffuseAt(15.0f, 5.0f);
     for (int k = 0; k < 24; k += 8) CHECK(std::abs(int((far >> k) & 0xFF) - 0x60) <= 1);
     // a corner drawn anew in another colour: the new one counts, once
-    s.note(-20.0f, -10.0f, 0xFF404040u);
-    s.note(-20.0f, 0.0f, 0xFF404040u);
+    s.note(-20.0f, -10.0f, 0xFF404040u, true);
+    s.note(-20.0f, 0.0f, 0xFF404040u, true);
     const uint32_t now = s.diffuseAt(15.0f, 5.0f);
     CHECK(std::abs(int(now & 0xFF) - 0x40) <= 1);
     // off the map: none counted, the nearest edge's
-    s.note(500.0f, 500.0f, 0xFF000000u);
+    s.note(500.0f, 500.0f, 0xFF000000u, true);
     CHECK(std::abs(int(s.diffuseAt(15.0f, 5.0f) & 0xFF) - 0x40) <= 1);
 }
 
@@ -140,16 +140,17 @@ TEST(own_ground_tells_which_corners_changed) {
     bool mean = false;
     s.takeChanged(changed, mean);
     CHECK(changed.empty());
-    s.note(-20.0f, -10.0f, 0xFF808080u);  // corner (0, 0)
-    s.note(-10.0f, -10.0f, 0xFF808080u);  // corner (1, 0)
+    s.note(-20.0f, -10.0f, 0xFF808080u, true);  // corner (0, 0)
+    s.note(-10.0f, -10.0f, 0xFF808080u, true);  // corner (1, 0)
     s.takeChanged(changed, mean);
     CHECK_EQ(changed.size(), size_t(2));
     CHECK(mean);  // the first seen: the mean the unseen ones take moved from white
     CHECK(changed.size() == 2 && changed[0] == 0u && changed[1] == 1u);
-    s.note(-20.0f, -10.0f, 0xFF808080u);  // the same colour again: nothing
+    s.note(-20.0f, -10.0f, 0xFF808080u, true);  // the same colour again: nothing
     s.takeChanged(changed, mean);
     CHECK(changed.empty() && !mean);
-    s.note(20.0f, 10.0f, 0xFF828282u);  // corner (4, 2): its index 2 * 5 + 4; the mean moved by less than a little
+    // corner (4, 2): its index 2 * 5 + 4; the mean moved by less than a little
+    s.note(20.0f, 10.0f, 0xFF828282u, true);
     s.takeChanged(changed, mean);
     CHECK(changed.size() == 1 && changed[0] == 14u && !mean);
 }
@@ -177,4 +178,26 @@ TEST(own_ground_keeps_what_lies_past_the_far_plane) {
         const float z = w[k][0] * twoPast[0] + w[k][1] * twoPast[1] + w[k][2] * twoPast[2];
         CHECK(z >= 1500.0f - 1e-3f);
     }
+}
+
+TEST(own_ground_a_corner_keeps_one_cell_s_colour) {
+    // 3.0.4-beta.15 (R-N6FC5V: 7.7 ms a frame, 21 at most - the chunks' colours made anew every picture): the game
+    // gives a corner a colour in each of the four cells round it; taken in turn, the corner changed four times a
+    // picture. Its own colour is the one of the cell whose first corner it is; the others only fill a corner not seen
+    own_ground::Shading s;
+    s.reset(4, 2, 10.0f);
+    std::vector<uint32_t> changed;
+    bool mean = false;
+    for (int picture = 0; picture < 3; ++picture) {
+        s.note(-10.0f, -10.0f, 0xFF404040u, false);  // corner (1, 0) as the cell (0, 0)'s second corner
+        s.note(-10.0f, -10.0f, 0xFF808080u, true);   // the cell (1, 0)'s own first corner
+        s.note(-10.0f, -10.0f, 0xFF606060u, false);  // and as another's
+        s.takeChanged(changed, mean);
+        if (picture > 0) CHECK(changed.empty());  // no change from the second picture on
+    }
+    CHECK_EQ(s.diffuseAt(-10.0f, -10.0f) & 0xFFu, 0x80u);
+    // a corner no cell has first (the map's last row): the first colour seen, kept
+    s.note(20.0f, 10.0f, 0xFF202020u, false);
+    s.note(20.0f, 10.0f, 0xFF303030u, false);
+    CHECK_EQ(s.diffuseAt(20.0f, 10.0f) & 0xFFu, 0x20u);
 }

@@ -1192,6 +1192,21 @@ struct Renderer::Impl {
         uint32_t modelFrames = 0;
         size_t modelsDrawn = 0;             // past the far plane, the last picture
         uint32_t frames = 0;        // drawn on this ground
+        size_t cornersChanged = 0, chunksMade = 0;  // 3.0.4-beta.15: over the frames, for the log
+        // 3.0.4-beta.15: what the record was made of last - the same again (the camera still, no colour new): it is
+        // drawn again as it is, not made anew
+        struct Made {
+            float view[12] = {};
+            int width = 0, height = 0;
+            uint32_t serial = 0;
+            bool blends = false, models = false;
+            int seamsView = 0;
+            size_t matched = 0;
+            uint32_t fog[2] = {0, 0};
+            DrawSetup like;
+            bool valid = false;
+        } made;
+        size_t madeChunks = 0, madeVertices = 0, madeTriangles = 0, reused = 0;
         double slowest = 0.0;       // ms, of the frames so far
         size_t most = 0;            // vertices, the most a frame
     } ownState;

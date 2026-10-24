@@ -68,8 +68,10 @@ bool boxInView(const View& v, const camera::Projection& p, int width, int height
 class Shading {
 public:
     void reset(int width, int height, float zoom);  // a map's cells, its corners all unseen
-    // a vertex of the game's ground at (x, z) in the file's places: its corner's colour
-    void note(float x, float z, uint32_t diffuse);
+    // a vertex of the game's ground at (x, z) in the file's places: its corner's colour. 3.0.4-beta.15: `own` - the
+    // cell's first corner (its least x and z): its colour the corner's; any other only fills a corner not seen yet
+    // (the game colours a corner in each cell round it, and taken in turn it changed four times a picture)
+    void note(float x, float z, uint32_t diffuse, bool own);
     // between the four corners round (x, z); one not seen yet takes the mean of those seen (none: white)
     uint32_t diffuseAt(float x, float z) const;
     void beginFrame();

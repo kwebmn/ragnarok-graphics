@@ -18,12 +18,24 @@ bool viewOf(const float viewToWorld[12], View& out) {
     return true;
 }
 
-float depthOf(const camera::Projection& p, float zd) {
-    const auto game = [&p](float z) { return p.farZ * (1.0f - p.nearZ / z) / (p.farZ - p.nearZ); };
+namespace {
+
+constexpr float kBelowOne = 0.99999994f;  // the largest float under 1
+
+// 3.0.4-beta.15: depthOf from the depth's inverse - one division a vertex, not four (R-N6FC5V: 7.7 ms a frame)
+float depthFromInverse(const camera::Projection& p, float zd, float inv) {
+    const float a = p.farZ / (p.farZ - p.nearZ), b = p.farZ * p.nearZ / (p.farZ - p.nearZ);
     const float split = p.farZ - kSqueeze;
-    if (zd <= split) return game(std::max(zd, p.nearZ));
-    const float at = game(split);
-    return std::min(at + (1.0f - at) * (1.0f - split / zd), std::nextafter(1.0f, 0.0f));
+    if (zd <= split) return a - b * inv;
+    const float at = a - b / split;
+    return std::min(at + (1.0f - at) * (1.0f - split * inv), kBelowOne);
+}
+
+}  // namespace
+
+float depthOf(const camera::Projection& p, float zd) {
+    const float z = std::max(zd, p.nearZ);
+    return depthFromInverse(p, z, 1.0f / z);
 }
 
 bool place(const View& v, const camera::Projection& p, const map::Axes& axes, const float file[3], Tl2& out) {
@@ -35,10 +47,11 @@ bool place(const View& v, const camera::Projection& p, const map::Axes& axes, co
 
 bool placeView(const camera::Projection& p, const float c[3], Tl2& out) {
     if (c[2] <= p.nearZ) return false;
-    out.x = c[0] / c[2] * p.f0 + p.cx;
-    out.y = c[1] / c[2] * p.f1 + p.cy;
-    out.z = depthOf(p, c[2]);
-    out.rhw = 1.0f / c[2];
+    const float inv = 1.0f / c[2];
+    out.x = c[0] * inv * p.f0 + p.cx;
+    out.y = c[1] * inv * p.f1 + p.cy;
+    out.z = depthFromInverse(p, c[2], inv);
+    out.rhw = inv;
     return true;
 }
 
@@ -100,12 +113,12 @@ void Shading::reset(int width, int height, float zoom) {
     fit();
 }
 
-void Shading::note(float x, float z, uint32_t diffuse) {
+void Shading::note(float x, float z, uint32_t diffuse, bool own) {
     const int i = int(std::lround(x / zoom_ + float(width_) / 2.0f));
     const int j = int(std::lround(z / zoom_ + float(height_) / 2.0f));
     if (i < 0 || j < 0 || i > width_ || j > height_ || corners_.empty() || !diffuse) return;
     uint32_t& c = corners_[size_t(j) * size_t(width_ + 1) + size_t(i)];
-    if (c == diffuse) return;
+    if (c == diffuse || (c && !own)) return;
     for (int k = 0; k < 4; ++k) {
         if (c) sum_[k] -= (c >> (k * 8)) & 0xFF;
         sum_[k] += (diffuse >> (k * 8)) & 0xFF;
@@ -155,7 +168,7 @@ uint32_t Shading::diffuseAt(float x, float z) const {
     for (int k = 0; k < 32; k += 8) {
         const float a = float((c00 >> k) & 0xFF) + (float((c10 >> k) & 0xFF) - float((c00 >> k) & 0xFF)) * tx;
         const float b = float((c01 >> k) & 0xFF) + (float((c11 >> k) & 0xFF) - float((c01 >> k) & 0xFF)) * tx;
-        out |= uint32_t(std::clamp(int(std::lround(a + (b - a) * tz)), 0, 255)) << k;
+        out |= uint32_t(std::clamp(a + (b - a) * tz, 0.0f, 255.0f) + 0.5f) << k;  // lround: a library call
     }
     return out;
 }
