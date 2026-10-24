@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.3-beta.7 — what is new
+
+- **The windows' panel in the game.** With two or more game windows open, a panel shows over the game: a card per
+  window - its number, the character's name, the levels and thin HP and SP bars (red under 25 %, as in the game).
+  A click on a card brings that window to the front; the current one is blue. The game does not get the click: the
+  character goes nowhere.
+- Drag the panel by its top row wherever you like. Its place is one for all the windows and kept from the nearest
+  edge, so it stands the same in a small window and a big one. Its cross or Ctrl+Alt+0 hides it, Ctrl+Alt+0 shows
+  it again.
+- The panel grows with «Interface size». The rows «The windows' panel in the game», «The panel's layout» (in a row
+  or a column) and «The panel's size» are on «Game and chat» → «Several game windows».
+
 # uaRO Graphics 3.0.3-beta.6 — what is new
 
 - **Keys that switch the game windows.** Ctrl+Tab goes back to the game window you played in before, and the next
