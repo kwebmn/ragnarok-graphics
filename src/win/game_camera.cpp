@@ -9,6 +9,7 @@
 #include "core/ai/texture_cache.hpp"
 #include "core/char_name.hpp"
 #include "core/game_camera.hpp"
+#include "win/log.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -94,6 +95,30 @@ std::string readOwnName() {
         !read(charname::kKeyAt, &keyAt, 4) || !read(keyAt, key, sizeof key))
         return "";
     return charname::decode(stored, key);
+}
+
+bool readOwnStatus(charstatus::Status& s) {
+    static int known = -1;  // the handlers and the unmasking as this build has them: the numbers are where read
+    if (known < 0) {
+        known = knownBuild() ? 1 : 0;
+        for (size_t i = 0; known == 1 && i < charstatus::kProbeCount; ++i) {
+            const charstatus::Probe& p = charstatus::kProbes[i];
+            uint8_t code[sizeof p.bytes];
+            known = read(p.at, code, p.size) && std::memcmp(code, p.bytes, p.size) == 0;
+        }
+        uint8_t code[charstatus::kUnmaskSize];
+        known = known == 1 && read(charstatus::kUnmaskAt, code, sizeof code) &&
+                charstatus::fnv1a(code, sizeof code) == charstatus::kUnmaskFnv;
+        LOG_INFO("windows: the character's levels, experience, HP and SP %s",
+                 known ? "are read for the window's title"
+                       : "are not where this build of uaRO.exe keeps them - the title shows the name and the map");
+    }
+    uint8_t plain[charstatus::kPlainSize], masked[charstatus::kMaskedSize];
+    if (known != 1 || !gameMode() || !read(charstatus::kPlainAt, plain, sizeof plain) ||
+        !read(charstatus::kMaskedAt, masked, sizeof masked))
+        return false;
+    s = charstatus::fromMemory(plain, masked);
+    return true;
 }
 
 }  // namespace uagfx::win

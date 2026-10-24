@@ -1,12 +1,18 @@
 #include "win/several_windows.hpp"
 
+#include "core/client_patch.hpp"
 #include "core/layout.hpp"
 #include "core/window_places.hpp"
+#include "core/window_title.hpp"
+#include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/real_ddraw.hpp"
 
 namespace uagfx::win {
 namespace {
+
+constexpr uint64_t kTitleMs = 1000;  // the numbers in the title at most once a second: the taskbar redraws its button
 
 // A window the player moves: with its caption, neither minimised nor maximised (a locked or full-screen one is not)
 bool movable(HWND w) {
@@ -22,31 +28,61 @@ std::wstring widened(const std::string& text, unsigned codePage) {
     return w;
 }
 
+std::string utf8(const std::wstring& text) {
+    const int n = WideCharToMultiByte(CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0, nullptr, nullptr);
+    if (n <= 0) return "";
+    std::string s(size_t(n), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, text.data(), int(text.size()), &s[0], n, nullptr, nullptr);
+    return s;
+}
+
 std::string placesFile() { return layout::join(gameDir(), layout::kWindowPlaces); }
+
+// The client's name: its build's (uaro-client.json in the game's folder), else the old «uaRO»
+std::string ourClient() {
+    std::string text, error;
+    client_patch::Manifest m;
+    if (!readTextFile(layout::join(gameDir(), client_patch::kClientFile), text) || !client_patch::parse(text, m, error))
+        return client_patch::kOldClient;
+    return client_patch::clientName(m.client);
+}
 
 }  // namespace
 
 void SeveralWindows::check(HWND window, const std::string& name, const Config& config) {
     if (!window) return;
-    // the game's text in the code page [roext] sets for it, else Windows' own
-    const unsigned cp = config.clientRoext && config.roext.codePage > 0 ? unsigned(config.roext.codePage) : CP_ACP;
-    title(window, config.windowTitleName ? name : "", cp);
-    place(window, config.windowRememberPlace ? name : "");
-}
-
-void SeveralWindows::title(HWND window, const std::string& name, unsigned codePage) {
-    if (name == titled_) return;
     if (!ownKept_) {
         wchar_t own[256] = {};
         InternalGetWindowText(window, own, 256);  // no message to the game's window procedure
-        own_ = own;
+        own_ = titled_ = own;
+        client_ = ourClient();
         ownKept_ = true;
     }
-    std::wstring text = own_;
-    if (!name.empty()) text = widened(name, codePage) + (own_.empty() ? L"" : L" — " + own_);
+    // the game's text in the code page [roext] sets for it, else Windows' own
+    const unsigned cp = config.clientRoext && config.roext.codePage > 0 ? unsigned(config.roext.codePage) : CP_ACP;
+    const bool on = config.windowTitleName;
+    title(window, on ? titleOf(name, cp) : own_, name != named_ || on != titleOn_);
+    named_ = name;
+    titleOn_ = on;
+    place(window, config.windowRememberPlace ? name : "");
+}
+
+std::wstring SeveralWindows::titleOf(const std::string& name, unsigned codePage) const {
+    charstatus::Status status;
+    const bool known = !name.empty() && readOwnStatus(status);
+    const std::string map = name.empty() ? "" : readGameMap();
+    const std::string text = window_title::title(utf8(widened(name, codePage)), known ? &status : nullptr, map,
+                                                 client_, startup().lang);
+    return widened(text, CP_UTF8);
+}
+
+void SeveralWindows::title(HWND window, const std::wstring& text, bool now) {
+    const uint64_t ms = GetTickCount64();
+    if (text == titled_ || (!now && ms - titledAt_ < kTitleMs)) return;  // a new character or the switch at once
     // past the game's own window procedure: Unicode whatever the window is, and nothing of the game's runs on it
     DefWindowProcW(window, WM_SETTEXT, 0, LPARAM(text.c_str()));
-    titled_ = name;
+    titled_ = text;
+    titledAt_ = ms;
 }
 
 void SeveralWindows::place(HWND window, const std::string& name) {

@@ -4278,16 +4278,19 @@ constexpr Entry kTexts[] = {
      "The login window keeps your login for the next time; the password is never kept.",
      "Вікно входу пам'ятає ваш логін до наступного разу; пароль не зберігається.",
      "Окно входа помнит ваш логин до следующего раза; пароль не сохраняется."},
-    {Text::WindowsTitleName, "The character's name in the window's title",
-     "Ім'я персонажа в заголовку вікна",
-     "Имя персонажа в заголовке окна"},
+    {Text::WindowsTitleName, "The character in the window's title",
+     "Персонаж у заголовку вікна",
+     "Персонаж в заголовке окна"},
     {Text::WindowsTitleNameHint,
-     "In the game the window's title and its taskbar button say whose window it is - handy with several game windows "
-     "open.",
-     "У грі заголовок вікна й кнопка на панелі задач показують, чиє це вікно, — зручно, коли відкрито кілька вікон "
-     "гри.",
-     "В игре заголовок окна и кнопка на панели задач показывают, чьё это окно, — удобно, когда открыто несколько окон "
-     "игры."},
+     "The window's title and its taskbar button show the character: the levels, the experience to the next level, HP "
+     "and SP, the weight from 50 % and the map - for example, Lena · 99/70 · 45.2 % · HP 85 % · SP 40 % · prt_fild08 "
+     "- uaRO HD. With several game windows open each one is seen in Alt+Tab.",
+     "Заголовок вікна й кнопка на панелі задач показують персонажа: рівні, досвід до наступного рівня, HP і SP, вагу "
+     "від 50 % і карту — наприклад, Lena · 99/70 · 45,2 % · HP 85 % · SP 40 % · prt_fild08 - uaRO HD. Коли відкрито "
+     "кілька вікон гри, кожне видно в Alt+Tab.",
+     "Заголовок окна и кнопка на панели задач показывают персонажа: уровни, опыт до следующего уровня, HP и SP, вес "
+     "от 50 % и карту — например, Lena · 99/70 · 45,2 % · HP 85 % · SP 40 % · prt_fild08 - uaRO HD. Когда открыто "
+     "несколько окон игры, каждое видно в Alt+Tab."},
     {Text::WindowsRememberPlace, "Each character's window at its own place",
      "Вікно кожного персонажа — на своєму місці",
      "Окно каждого персонажа — на своём месте"},
@@ -4319,6 +4322,7 @@ constexpr Entry kTexts[] = {
      "Выключено: когда открыто несколько окон игры, музыку играет только то, в котором вы играли последним. Их звуки "
      "остаются, тише, как говорит «Громкость в фоне»."},
     {Text::WindowsHeading, "Several game windows", "Кілька вікон гри", "Несколько окон игры"},
+    {Text::TitleWeight, "weight {1} %", "вага {1} %", "вес {1} %"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

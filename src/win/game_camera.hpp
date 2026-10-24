@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#include "core/char_status.hpp"
+
 namespace uagfx::win {
 
 // Part 3 (DLSS): the view matrix of the frame being drawn, read from uaRO.exe's memory (core/game_camera.hpp). False
@@ -20,5 +22,8 @@ bool knownGameBuild();
 // 3.0.3-beta.2: the name of the character in the game (core/char_name), as the game spells it; "" at the login and the
 // character select, or in another build of the exe (GetCharName's bytes are checked once)
 std::string readOwnName();
+// 3.0.3-beta.5: that character's levels, experience, HP, SP and weight (core/char_status); false at the login and the
+// character select, or in another build of the exe (the instructions that put them there are checked once)
+bool readOwnStatus(charstatus::Status& s);
 
 }  // namespace uagfx::win
