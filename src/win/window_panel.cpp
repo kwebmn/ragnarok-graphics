@@ -307,6 +307,13 @@ void WindowPanel::draw(FrameRecord& record, gpu::Renderer& renderer) {
     // additive faces) stay under the panel
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
     underCursor_ = cursor >= 0;
+    if (int(underCursor_) != cursorSaid_ && cursorLines_ < 6) {  // 3.0.3-beta.12: what the next report shows
+        cursorSaid_ = int(underCursor_);
+        ++cursorLines_;
+        LOG_INFO(underCursor_ ? "windows: the game's cursor found among the frame's %zu commands - drawn over the panel"
+                              : "windows: the game's cursor not among the frame's %zu commands - the panel over it",
+                 record.commands().size());
+    }
 }
 
 void WindowPanel::renderTip() {

@@ -79,6 +79,7 @@ private:
     uint32_t texture_ = 0;
     int texW_ = 0, texH_ = 0;
     bool underCursor_ = false;  // 3.0.3-beta.9: drawn under the game's own cursor (found in the frame)
+    int cursorSaid_ = -1, cursorLines_ = 0;  // 3.0.3-beta.12: the log told whether it was found (1, 0), how often
     // 3.0.3-beta.10: its menu - the rows as last drawn, where it was opened (the target's pixels), its top left
     bool menuOpen_ = false, menuDirty_ = false, menuUpload_ = false;
     std::vector<panel::MenuRow> menuRows_;

@@ -19,6 +19,7 @@
 #include "core/throttle.hpp"
 #include "core/toggle_key.hpp"
 #include "core/usage.hpp"
+#include "core/window_panel.hpp"
 #include "win/console.hpp"
 #include "win/fps_overlay.hpp"
 #include "win/gpu/renderer.hpp"
@@ -60,6 +61,9 @@ public:
     void close();                           // the client released DirectDraw: the renderer goes with it
     bool setTarget(int width, int height);  // the renderer's target and the shadow, in the screen format
     void flush();                           // plays the record on the GPU
+    // 3.0.3-beta.12: the game's EndScene - the windows' panel into its scene (the game's cursor still in the record,
+    // moved over it), then the scene to the GPU
+    void endScene();
     bool readTarget(std::vector<uint32_t>& argb);
     void writeTarget(const Rect& rect, const uint32_t* argb);
     void flushIfFull();  // past FrameRecord::kFlushBytes: play the record now (a map's first frame, big writes)
@@ -119,6 +123,8 @@ private:
     map_load::Watch mapLoad_;
     SeveralWindows severalWindows_;  // 3.0.3-beta.2: the name in the title, each character's window at its place
     WindowSwitch windowSwitch_;      // 3.0.3-beta.6: the windows' list the games share, the keys that switch them
+    panel::FrameSlot panelSlot_;     // 3.0.3-beta.12: the panel into the game's scene at its EndScene, once a frame
+    void behind();                   // 3.0.3-beta.12: behind another window, by the clock - what the presents did
     ULONGLONG windowsAt_ = 0;  // 3.0.3-beta.7: checked by the clock (a light window draws 10 frames a second)
     bool checkingWindows_ = false;  // 3.0.3-beta.4: a present from the game's WM_MOVE handler meanwhile skips it
     FrontGame frontGame_;      // 3.0.3-beta.3: which running game is the main one

@@ -167,6 +167,7 @@ Context::Context() {
         fps_.hide();
         console_.hide();
     };
+    windowSwitch_.onBehind = [this] { behind(); };  // 3.0.3-beta.12
     screenWidth = GetSystemMetrics(SM_CXSCREEN);  // what a windowed client sees until SetDisplayMode
     screenHeight = GetSystemMetrics(SM_CYSCREEN);
 }
@@ -483,12 +484,40 @@ void Context::drawSparkles() {
     orbHeads.clear();
 }
 
+void Context::endScene() {
+    // 3.0.3-beta.12 (the user's R-KVTEMT: «всеравно курсор не видно»): the scene goes to the GPU here, before the
+    // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
+    const bool drawn = record.takeWork() > 0;
+    if (panelSlot_.endScene(drawn) && renderer) {
+        windowSwitch_.draw(record, *renderer);
+        record.takeWork();  // the driver's own draws are not the game's
+    }
+    flush();
+}
+
+// 3.0.3-beta.12 (R-KVTEMT: «звуки со второго окна слышно»): a game window behind another one - on its full screen the
+// game no longer presents there, and what its presents did stopped with them: its sounds' fade (the background's
+// volume, the other windows quiet) and its entry for the other windows' panels (its HP and SP)
+void Context::behind() {
+    Guard guard;
+    if (!window || !renderer) return;
+    if (!checkingWindows_ && GetTickCount64() - windowsAt_ >= 250) {
+        windowsAt_ = GetTickCount64();
+        checkingWindows_ = true;
+        windowSwitch_.check(window, false, readOwnName(), config);
+        checkingWindows_ = false;
+    }
+    mainWindow_ = frontGame_.main(false);
+    soundFrame(false, mainWindow_ || config.windowOthersMusic, mainWindow_ || config.windowOthersSounds);
+}
+
 void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.3-beta.8: whether the game drew this picture anew - the windows' panel goes over such a one alone: the
-    // target keeps its pixels across a present, and over the same picture again the panel would darken itself
+    // target keeps its pixels across a present, and over the same picture again the panel would darken itself.
+    // 3.0.3-beta.12: put into the game's scene at its EndScene; here only into a picture drawn without one
     const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
-    if (renderer && drawnAnew) windowSwitch_.draw(record, *renderer);  // the windows' panel over the game's picture
+    if (panelSlot_.present(drawnAnew) && renderer) windowSwitch_.draw(record, *renderer);
     record.takeWork();  // the driver's own draws are not the game's
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame

@@ -205,8 +205,9 @@ uint32_t barColour(int percent, bool hp) { return percent < 25 ? kRed : hp ? kGr
 int cursorDraw(const FrameRecord& r, float x, float y) {
     constexpr int kLookBack = 8;  // without its colour: among the frame's last draws
     constexpr float kMost = 64;   // a cursor's picture is no bigger
-    // A small interface quad over the point: whether every corner has the cursor's colour
-    const auto over = [&](const DrawCmd& d, bool& coloured) {
+    // A small interface quad over the point (`near`: up to that far off it): whether every corner has the cursor's
+    // colour
+    const auto over = [&](const DrawCmd& d, bool& coloured, float near) {
         const uint32_t stride = FrameRecord::stride(d.fvf);
         if (!stride || d.vertexCount < 3 || d.vertexCount > 6 || d.state >= r.states().size() ||
             !r.states()[d.state].ui)
@@ -225,18 +226,21 @@ int cursorDraw(const FrameRecord& r, float x, float y) {
             y1 = std::max(y1, p[1]);
             coloured = coloured && colour == kCursorColour;
         }
-        return x1 - x0 <= kMost && y1 - y0 <= kMost && x >= x0 && x <= x1 && y >= y0 && y <= y1;
+        return x1 - x0 <= kMost && y1 - y0 <= kMost && x >= x0 - near && x <= x1 + near && y >= y0 - near &&
+               y <= y1 + near;
     };
     bool coloured = false;
-    for (size_t c = r.commands().size(); c-- > 0;)  // 3.0.3-beta.11: by its colour, wherever it is
-        if (r.commands()[c].type == Cmd::Draw && over(r.draws()[r.commands()[c].index], coloured) && coloured)
+    // 3.0.3-beta.11: by its colour, wherever it is; 3.0.3-beta.12: a few pixels off it too - FUN_004f5a90 puts its
+    // quad half a pixel right and down of the point, the arrow's tip at the picture's corner
+    for (size_t c = r.commands().size(); c-- > 0;)
+        if (r.commands()[c].type == Cmd::Draw && over(r.draws()[r.commands()[c].index], coloured, 3.0f) && coloured)
             return int(c);
     int seen = 0;
     for (size_t c = r.commands().size(); c-- > 0 && seen < kLookBack;) {
         const Command& cmd = r.commands()[c];
         if (cmd.type != Cmd::Draw) continue;
         ++seen;
-        if (over(r.draws()[cmd.index], coloured)) return int(c);
+        if (over(r.draws()[cmd.index], coloured, 0.0f)) return int(c);
     }
     return -1;
 }

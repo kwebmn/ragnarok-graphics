@@ -43,6 +43,8 @@ public:
     // 3.0.3-beta.11 (the user: «счетчик кадров замер»): the game window no longer in front, in any mode - the
     // driver's windows over it hidden at once (on its full screen the game no longer presents behind another one)
     std::function<void()> onLeave;
+    // 3.0.3-beta.12: while it is behind, ten times a second - what the game's presents did, they may have stopped
+    std::function<void()> onBehind;
     bool timer(HWND window, WPARAM id);     // WM_TIMER: where the focus went from the full screen
 
 private:

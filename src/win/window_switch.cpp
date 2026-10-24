@@ -11,6 +11,7 @@ namespace uagfx::win {
 namespace {
 
 constexpr UINT_PTR kLeaveTimer = 0x75A9;  // the focus gone from the full screen: where to (WM_TIMER)
+constexpr UINT_PTR kBehindTimer = 0x75AA;  // 3.0.3-beta.12: behind another window - the presents' work by the clock
 
 WindowSwitch* g_switch = nullptr;
 WNDPROC g_original = nullptr;
@@ -191,6 +192,9 @@ bool WindowSwitch::activate(HWND window, WPARAM wp) {
     if (LOWORD(wp) == WA_INACTIVE) {  // 3.0.3-beta.11: the panel's menu closed, the frame counter hidden
         panel_.closeMenu();
         if (onLeave) onLeave();
+        SetTimer(window, kBehindTimer, 100, nullptr);  // 3.0.3-beta.12
+    } else {
+        KillTimer(window, kBehindTimer);
     }
     if (!fullScreen_) return false;  // in a window the game does nothing there
     if (LOWORD(wp) == WA_INACTIVE) {  // not minimised at once: where the focus went decides (timer)
@@ -204,6 +208,13 @@ bool WindowSwitch::activate(HWND window, WPARAM wp) {
 }
 
 bool WindowSwitch::timer(HWND window, WPARAM id) {
+    if (id == kBehindTimer) {  // 3.0.3-beta.12: its sounds' fade and its entry, while it presents no more
+        if (GetForegroundWindow() == window)
+            KillTimer(window, kBehindTimer);  // in front again: its presents do it
+        else if (onBehind)
+            onBehind();
+        return true;
+    }
     if (id != kLeaveTimer) return false;
     const HWND front = GetForegroundWindow();
     DWORD pid = 0;

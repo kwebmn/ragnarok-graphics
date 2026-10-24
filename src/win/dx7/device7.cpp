@@ -80,7 +80,8 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
 
 HRESULT STDMETHODCALLTYPE Device7::EndScene() {
     win::Guard guard;
-    win::Context::get().flush();  // the GPU starts on the frame while the client gets ready to present it
+    // the GPU starts on the frame while the client gets ready to present it; 3.0.3-beta.12: the windows' panel into it
+    win::Context::get().endScene();
     return D3D_OK;
 }
 

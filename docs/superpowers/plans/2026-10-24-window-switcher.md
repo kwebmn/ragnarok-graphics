@@ -130,6 +130,23 @@ The user: «мышка темная на менюшке переключения
 - Tests: test_window_panel (the cursor by its colour behind 30 draws, the icons' size, hits and paint, the tip's place
   and ground, the menu's three layouts), test_config (layout = icons).
 
+## Task 7 (3.0.3-beta.12): the panel into the game's scene, the background windows' sounds
+
+The user (report R-KVTEMT, 3.0.3-beta.11, full screen): «всеравно курсор не видно. звуки со второго окна слышно, надо
+чтобы звуки со второго окна небыло слышно».
+
+- The cursor: Device7::EndScene flushes the record (the GPU starts on the frame before the present), so at the present
+  the record held nothing of the game's scene, and beta.9's and beta.11's cursorDraw never found the cursor. The panel
+  now goes into the scene at the game's EndScene (Context::endScene; panel::FrameSlot - once a frame, the present only
+  for a picture drawn without a scene), where the cursor's face is still in the record (FUN_0040d8d0: BeginScene,
+  Flush, EndScene). The colour pass takes a quad up to 3 pixels off the point: FUN_004f5a90 puts the quad half a pixel
+  right and down of it. A log line says whether the cursor was found (at most 6 lines).
+- The sounds: on its full screen the game no longer presents behind another window, and soundFrame (the background's
+  volume, the other windows' fade) ran only from presents - their sounds stayed loud (window 1 played 2361 sounds a
+  minute behind). WindowSwitch sets a 100 ms timer at WM_ACTIVATE(WA_INACTIVE) in any mode, killed in front again;
+  Context::behind runs the sounds' fade and the window's entry (its HP and SP for the other panels, every 250 ms).
+- Tests: test_window_panel (FrameSlot; the cursor half a pixel off its quad).
+
 ## Rulings
 
 - The doc's betas 7 (panel) and 8 (HP/SP on the cards) are one beta: the cards' numbers come with the list in
@@ -149,3 +166,6 @@ The user: «мышка темная на менюшке переключения
   camera was turned with it, it is the game's.
 - 3.0.3-beta.11: the game's cursor is moved to the frame's end (not the panel before it, as beta.9 did): the screen's
   additive faces drawn after the cursor stay under the panel. The icons lie in a row only.
+- 3.0.3-beta.12: beta.11's cause for the dark cursor (the 8 last draws) was a guess made without checking what the
+  record holds at the present - after EndScene's flush, nothing. The panel moved into the scene; the cursor's search
+  logs its result now.

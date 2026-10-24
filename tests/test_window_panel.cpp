@@ -346,6 +346,12 @@ TEST(window_panel_finds_the_games_cursor_by_its_colour) {
     FrameRecord world;  // of that colour but not the interface's: not it
     quad(world, 401, 301, 425, 325, false, 0xFAFFFFFFu);
     CHECK_EQ(panel::cursorDraw(world, 402, 303), -1);
+    // 3.0.3-beta.12: FUN_004f5a90 puts a sprite's quad half a pixel right and down of its point - the arrow's tip at
+    // its picture's corner leaves the mouse's point just outside it
+    FrameRecord tip;
+    quad(tip, 0, 0, 800, 600, true);
+    quad(tip, 402.5f, 303.5f, 426.5f, 327.5f, true, 0xFAFFFFFFu);
+    CHECK_EQ(panel::cursorDraw(tip, 402, 303), 1);
 }
 
 // 3.0.3-beta.11 (the user: «супер минималистичный режим в котором типа иконки маленькие были этих окон, чтобы не
@@ -410,4 +416,18 @@ TEST(window_panel_icons_tip_finds_room) {
     panel::paintTip(tip, 80, 24, 1.0f);
     CHECK(tip.width == 80 && tip.height == 24 && tip.px.size() == size_t(80 * 24));
     if (tip.px.size() == size_t(80 * 24)) CHECK(alphaOf(at(tip, 40, 12)) > 200 && alphaOf(at(tip, 0, 0)) < 128);
+}
+
+// 3.0.3-beta.12 (the user's report R-KVTEMT: «всеравно курсор не видно»): the game's EndScene sends its scene to
+// the GPU before the present (Device7::EndScene flushes the record), the game's cursor with it - the panel goes into
+// the frame there, once a frame; at the present only into a picture drawn without a scene
+TEST(window_panel_goes_into_the_frame_at_the_games_end_scene) {
+    panel::FrameSlot slot;
+    CHECK(slot.endScene(true));    // the game's scene: the panel into it
+    CHECK(!slot.endScene(true));   // a second scene in the same frame: not again
+    CHECK(!slot.present(true));    // drawn after the scene too: it is in the frame already
+    CHECK(!slot.endScene(false));  // the next frame: a scene with no draw of the game's - nothing to go over
+    CHECK(slot.present(true));     // a picture drawn without a scene: at the present
+    CHECK(!slot.present(false));   // the same picture shown again: no panel over it again
+    CHECK(slot.endScene(true));
 }

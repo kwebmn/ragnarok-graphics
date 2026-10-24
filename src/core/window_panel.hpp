@@ -81,6 +81,26 @@ void fade(Picture& p, float opacity);
 // faces after it (FUN_0040f9e0), often more than those last draws - the last interface draw of that colour over the
 // point among all the frame's draws first
 constexpr uint32_t kCursorColour = 0xFAFFFFFF;
+// 3.0.3-beta.12 (R-KVTEMT: the cursor still under the panel - at the present the record was empty): the game's
+// EndScene sends its scene to the GPU before the present (Device7::EndScene flushes), its cursor with it - the panel
+// goes into the frame there, once a frame; at the present only into a picture drawn without a scene (`drawn`: the game
+// drew since the last present)
+class FrameSlot {
+public:
+    bool endScene(bool drawn) {
+        if (in_ || !drawn) return false;
+        in_ = true;
+        return true;
+    }
+    bool present(bool drawn) {
+        const bool now = drawn && !in_;
+        in_ = false;
+        return now;
+    }
+
+private:
+    bool in_ = false;  // in this frame already
+};
 int cursorDraw(const FrameRecord& r, float x, float y);
 // 3.0.3-beta.10 (the user: «при нажатии правой кнопкой мышки ... опции разные задавать»): the panel's menu - rows
 // of choices (segments side by side, one chosen), switches (a box) and actions, a thin line between kinds; its words
