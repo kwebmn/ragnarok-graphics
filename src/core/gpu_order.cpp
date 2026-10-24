@@ -28,6 +28,11 @@ std::vector<size_t> adapterOrder(const std::vector<AdapterFacts>& adapters, bool
     return out;
 }
 
+GpuRow gpuRow(size_t cards, bool chosen) {
+    const bool choosable = cards > 1 || chosen;
+    return {choosable || cards == 1, choosable};
+}
+
 std::string adaptersText(const std::vector<AdapterFacts>& adapters) {
     std::string out;
     for (const AdapterFacts& a : adapters) {

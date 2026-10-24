@@ -23,4 +23,12 @@ std::vector<size_t> adapterOrder(const std::vector<AdapterFacts>& adapters, bool
 // "NVIDIA GeForce RTX 4070 (12282 MB), Intel(R) UHD Graphics 770 (128 MB)": for the log.
 std::string adaptersText(const std::vector<AdapterFacts>& adapters);
 
+// 3.0.4-beta.2 (the user): the settings app's graphics card row for `cards` real cards found, one `chosen` by name or
+// not - shown with any card (which one draws the game), a list to choose from with several or a chosen one.
+struct GpuRow {
+    bool shown = false;
+    bool choosable = false;
+};
+GpuRow gpuRow(size_t cards, bool chosen);
+
 }  // namespace uagfx

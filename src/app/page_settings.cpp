@@ -8,6 +8,7 @@
 #include "app/page.hpp"
 #include "app/setting_ids.hpp"
 #include "core/dlss_size.hpp"
+#include "core/gpu_order.hpp"
 #include "core/live_config.hpp"
 #include "core/scale.hpp"
 #include "core/audio_output.hpp"
@@ -383,11 +384,13 @@ private:
                 }
                 p.choice(rowId(i), t(s.label), items, selected, t(s.hint), true);
             }
-        // 0.50.2: the graphics card, when there are several (or one is chosen that is gone)
+        // 0.50.2: the graphics card, when there are several (or one is chosen that is gone); 3.0.4-beta.2 (the user):
+        // a single one too, grey - which card draws the game
         const auto& cards = sys.adapters;
         const std::string card = m.token(*findSetting("renderer.gpu"));
         gpuWords_.clear();
-        if (cards.size() > 1 || card != "auto") {
+        const GpuRow gpuShown = gpuRow(cards.size(), card != "auto");
+        if (gpuShown.shown) {
             std::vector<std::wstring> items;
             int selected = 0;
             items.push_back(tf(Text::RenderGpuAuto, {cards.empty() ? utf8(t(Text::Unknown)) : cards.front().name}));
@@ -402,7 +405,7 @@ private:
                 items.push_back(tf(Text::RenderGpuMissing, {card}));
                 gpuWords_.push_back(card);
             }
-            p.choice(kGpu, t(Text::RenderGpu), items, selected, t(Text::RenderGpuHint), true);
+            p.choice(kGpu, t(Text::RenderGpu), items, selected, t(Text::RenderGpuHint), gpuShown.choosable);
         }
         p.gap();
         // part 3: the renderer in a 64-bit process (2.6: its thread and Remix on the Debug page)

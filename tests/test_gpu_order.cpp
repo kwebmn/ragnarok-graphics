@@ -22,3 +22,13 @@ TEST(gpu_order_takes_the_fast_card) {
     CHECK(adaptersText(laptop) == "Intel(R) UHD Graphics (128 MB), NVIDIA GeForce RTX 3060 Laptop GPU (6144 MB), "
                                   "Microsoft Basic Render Driver (0 MB, software)");
 }
+
+TEST(gpu_row_shows_the_card_even_alone) {
+    // 3.0.4-beta.2 (the user): the Renderer's graphics card row seen with a single card too - which card draws the
+    // game; a list to choose from with several cards, or when one was chosen by name
+    CHECK(!gpuRow(0, false).shown);  // none found: nothing to tell
+    CHECK(gpuRow(1, false).shown && !gpuRow(1, false).choosable);
+    CHECK(gpuRow(2, false).shown && gpuRow(2, false).choosable);
+    CHECK(gpuRow(1, true).shown && gpuRow(1, true).choosable);  // chosen by name: back to Automatic
+    CHECK(gpuRow(0, true).shown && gpuRow(0, true).choosable);  // a chosen card not found
+}

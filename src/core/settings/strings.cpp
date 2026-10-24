@@ -1342,12 +1342,13 @@ constexpr Entry kTexts[] = {
     {Text::RenderGpuHint,
      "Which graphics card draws the game when the computer has several (a laptop's integrated one and its NVIDIA or "
      "AMD). Automatic takes the fast one - Windows' choice for high performance. The game, the 64-bit renderer and "
-     "the texture pack's builder use it.",
+     "the texture pack's builder use it. With one card the row only shows it.",
      "Яка відеокарта малює гру, якщо їх кілька (вбудована в ноутбуці та NVIDIA чи AMD). «Автоматично» бере швидшу — "
-     "вибір Windows для високої продуктивності. Нею користуються гра, 64-бітний рендер і збирач пакета текстур.",
+     "вибір Windows для високої продуктивності. Нею користуються гра, 64-бітний рендер і збирач пакета текстур. З "
+     "однією відеокартою рядок лише показує її.",
      "Какая видеокарта рисует игру, если их несколько (встроенная в ноутбуке и NVIDIA или AMD). «Автоматически» берёт "
      "быструю — выбор Windows для высокой производительности. Ею пользуются игра, 64-битный рендер и сборщик пакета "
-     "текстур."},
+     "текстур. С одной видеокартой строка только показывает её."},
     {Text::RenderGpuAuto, "Automatic: {1}",
      "Автоматично: {1}",
      "Автоматически: {1}"},
