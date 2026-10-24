@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.4-beta.7 — what is new
+
+- **Sounds of the world.** The game's makers placed almost 26 thousand sounds on 563 maps: birds in the fields,
+  brooks, the sea's waves, the wind in the desert, insects, frogs, waterfalls, drops in the caves. Our old client
+  loaded them and never played them. Now the driver plays them: each is heard near its place, louder as you come
+  closer, from its side, with the place's echo. «Sound» → «Sound through uaRO Graphics» → «Sounds of the world» (off:
+  turn it on to listen) and their volume.
+- The sounds are the game's own files from data.grf; nothing new is downloaded.
+
 # uaRO Graphics 3.0.4-beta.6 — what is new
 
 - **Time left on the buff icons.** Each icon at the screen's right edge (Blessing, Increase AGI, Kyrie, a Sage's
