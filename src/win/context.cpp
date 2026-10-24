@@ -27,6 +27,7 @@
 #include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
+#include "win/shadow_patch.hpp"
 #include "win/sound_engine.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
@@ -319,6 +320,7 @@ bool Context::open(std::string& error) {
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
+    installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
     installBlindFix();                 // 2.6.18: blindness's darkness over the whole screen (R-MCVUC8)
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     renderer->setIconSink(&crisp::iconReady, nullptr);
