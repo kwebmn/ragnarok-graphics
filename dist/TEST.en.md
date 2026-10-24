@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.3-beta.10 — what is new
+
+- **The windows' panel has a menu on the right mouse button.** Right-click the panel and a menu opens by the cursor.
+  In it you can change:
+  - the layout: «In a row» or «In a column»;
+  - the size: 75, 100, 125 or 150 %;
+  - the opacity: 60, 70, 80, 90 or 100 %;
+  - «Music in the other game windows», «Sounds in the other game windows», «The other game windows light»;
+  - «Hide the panel» (Ctrl+Alt+0 shows it again).
+- A change works at once and is kept in the settings; the menu stays open. It closes on a click off it, on Esc (the
+  game's own menu does not open then), or when you go to another window.
+
 # uaRO Graphics 3.0.3-beta.9 — what is new
 
 - **No blink on the full screen.** On its full screen the game minimised its own window as soon as it was not in
