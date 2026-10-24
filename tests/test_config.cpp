@@ -730,3 +730,33 @@ TEST(config_reads_the_window_keys) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[windows]\nswitch_keys = off\n"));
     CHECK(u.next.windowKeys == WindowKeys::Off);
 }
+
+// 3.0.3-beta.7: the windows' panel - [windows] panel (on), panel_layout (row | column), panel_size (75-150 %, rows of
+// «Гра й чат»); panel_hidden and panel_place the driver's own (Ctrl+Alt+0, the cross, a drag), no rows
+TEST(config_reads_the_windows_panel) {
+    const Config d = parseConfig("");
+    CHECK(d.windowPanel && !d.windowPanelHidden);
+    CHECK(d.windowPanelLayout == PanelLayout::Row);
+    CHECK_EQ(d.windowPanelSize, 100);
+    CHECK_EQ(d.windowPanelPlace, std::string(""));
+    const Config c = parseConfig("[windows]\npanel = 0\npanel_layout = column\npanel_size = 150\npanel_hidden = 1\n"
+                                 "panel_place = 1.000 0.500\n");
+    CHECK(!c.windowPanel && c.windowPanelHidden);
+    CHECK(c.windowPanelLayout == PanelLayout::Column);
+    CHECK_EQ(c.windowPanelSize, 150);
+    CHECK_EQ(c.windowPanelPlace, std::string("1.000 0.500"));
+    CHECK_EQ(parseConfig("[windows]\npanel_size = 400\n").windowPanelSize, 150);
+    CHECK_EQ(parseConfig("[windows]\npanel_size = 10\n").windowPanelSize, 75);
+    for (const char* key : {"windows.panel", "windows.panel_layout", "windows.panel_size"}) {
+        const settings::IniSetting* s = settings::findSetting(key);
+        CHECK(s != nullptr);
+        if (s) CHECK(s->page == settings::Page::Game);
+    }
+    CHECK(settings::findSetting("windows.panel_hidden") == nullptr && settings::findSetting("windows.panel_place") ==
+                                                                          nullptr);
+    const settings::IniSetting* layout = settings::findSetting("windows.panel_layout");
+    if (layout) CHECK_EQ(settings::tokenOf(*layout, c), std::string("column"));
+    const LiveUpdate u = liveUpdate(d, c);
+    CHECK(!u.next.windowPanel && u.next.windowPanelHidden && u.next.windowPanelSize == 150);
+    CHECK(u.next.windowPanelLayout == PanelLayout::Column && u.next.windowPanelPlace == "1.000 0.500");
+}

@@ -15,6 +15,9 @@ public:
     void publish(const gamewindows::Entry& mine);  // into its number's place
     std::vector<gamewindows::Window> live();
     void leave(int number);  // this game's place free again
+    // A place for a game whose log has no slot (its folder not writable): its own already, else the first free one
+    // (no game's, or a game gone); 0 none
+    int claim();
 
 private:
     bool open();

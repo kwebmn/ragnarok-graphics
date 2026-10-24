@@ -397,6 +397,8 @@ enum class Text : uint16_t {
     WindowsHeading,  // 3.0.3-beta.4: «Гра й чат»'s heading of the several windows' rows
     TitleWeight,     // 3.0.3-beta.5: the weight in the game window's title (core/window_title)
     WindowsKeys, WindowsKeysHint, WindowsKeysAll, WindowsKeysBack, WindowsKeysOff,  // 3.0.3-beta.6
+    WindowsPanel, WindowsPanelHint, WindowsPanelLayout, WindowsPanelLayoutHint, WindowsPanelRow, WindowsPanelColumn,
+    WindowsPanelSize, WindowsPanelSizeHint, PanelTitle, PanelWindow,  // 3.0.3-beta.7: the windows' panel
     Count
 };
 

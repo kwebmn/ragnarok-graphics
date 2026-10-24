@@ -161,6 +161,28 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("switch_keys", windowKeysToken(running.windowKeys), windowKeysToken(file.windowKeys)));
         n.windowKeys = file.windowKeys;
     }
+    if (file.windowPanel != running.windowPanel) {  // 3.0.3-beta.7: the windows' panel
+        u.applied.push_back(change("panel", flag(running.windowPanel), flag(file.windowPanel)));
+        n.windowPanel = file.windowPanel;
+    }
+    if (file.windowPanelHidden != running.windowPanelHidden) {  // another game's Ctrl+Alt+0
+        u.applied.push_back(change("panel_hidden", flag(running.windowPanelHidden), flag(file.windowPanelHidden)));
+        n.windowPanelHidden = file.windowPanelHidden;
+    }
+    if (file.windowPanelLayout != running.windowPanelLayout) {
+        u.applied.push_back(change("panel_layout", panelLayoutToken(running.windowPanelLayout),
+                                   panelLayoutToken(file.windowPanelLayout)));
+        n.windowPanelLayout = file.windowPanelLayout;
+    }
+    if (file.windowPanelSize != running.windowPanelSize) {
+        u.applied.push_back(
+            change("panel_size", std::to_string(running.windowPanelSize), std::to_string(file.windowPanelSize)));
+        n.windowPanelSize = file.windowPanelSize;
+    }
+    if (file.windowPanelPlace != running.windowPanelPlace) {  // another game's panel dragged
+        u.applied.push_back(change("panel_place", running.windowPanelPlace, file.windowPanelPlace));
+        n.windowPanelPlace = file.windowPanelPlace;
+    }
     if (file.profile != running.profile) {  // 0.87
         u.applied.push_back(change("profile", flag(running.profile), flag(file.profile)));
         n.profile = file.profile;

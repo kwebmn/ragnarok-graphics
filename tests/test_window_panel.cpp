@@ -1,0 +1,130 @@
+// 3.0.3-beta.7: the panel of the game windows - laid out at a scale, hit, kept at its place in any window, its shapes
+// drawn (core/window_panel)
+#include <cmath>
+#include <string>
+#include <vector>
+
+#include "core/window_panel.hpp"
+#include "test.hpp"
+
+using namespace uagfx;
+
+namespace {
+
+uint32_t alphaOf(uint32_t c) { return c >> 24; }
+uint32_t redOf(uint32_t c) { return (c >> 16) & 0xFF; }
+uint32_t greenOf(uint32_t c) { return (c >> 8) & 0xFF; }
+uint32_t blueOf(uint32_t c) { return c & 0xFF; }
+uint32_t at(const panel::Picture& p, float x, float y) {
+    return p.px[size_t(int(y)) * size_t(p.width) + size_t(int(x))];
+}
+
+}  // namespace
+
+TEST(window_panel_a_row_of_three) {
+    const panel::Geometry g = panel::geometry(3, panel::Layout::Row, 1.0f, 1024);
+    CHECK_EQ(g.width, 474);
+    CHECK_EQ(g.height, 82);
+    CHECK(!g.narrow);
+    CHECK_EQ(g.cards.size(), size_t(3));
+    if (g.cards.size() != 3) return;
+    CHECK(g.cards[0].plate.x == 6 && g.cards[0].plate.y == 24 && g.cards[0].plate.w == 150);
+    CHECK(g.cards[2].plate.x == 318);
+    CHECK(g.cards[1].levels.w > 0);
+    CHECK(g.cards[1].hp.y < g.cards[1].sp.y && g.cards[1].sp.y + g.cards[1].sp.h <= g.cards[1].plate.y + 52);
+}
+
+TEST(window_panel_a_row_too_wide_for_half_the_window_narrows) {
+    const panel::Geometry g = panel::geometry(3, panel::Layout::Row, 1.0f, 800);
+    CHECK(g.narrow);
+    CHECK_EQ(g.width, 336);
+    if (!g.cards.empty()) CHECK(g.cards[0].levels.w == 0);  // the number and the start of the name
+}
+
+TEST(window_panel_a_column_of_three) {
+    const panel::Geometry g = panel::geometry(3, panel::Layout::Column, 1.0f, 1024);
+    CHECK_EQ(g.width, 222);
+    CHECK_EQ(g.height, 184);
+    if (g.cards.size() == 3) CHECK(g.cards[1].plate.y == 77 && g.cards[1].plate.x == 6);
+}
+
+TEST(window_panel_grows_with_the_scale) {
+    const panel::Geometry g = panel::geometry(3, panel::Layout::Row, 2.0f, 3840);
+    CHECK_EQ(g.width, 948);
+    CHECK_EQ(g.height, 164);
+    CHECK(g.scale == 2.0f);
+}
+
+TEST(window_panel_hits_its_parts) {
+    const panel::Geometry g = panel::geometry(3, panel::Layout::Row, 1.0f, 1024);
+    CHECK(panel::hitTest(g, 40, 10).part == panel::Part::Top);
+    CHECK(panel::hitTest(g, g.close.x + g.close.w / 2, g.close.y + g.close.h / 2).part == panel::Part::Close);
+    const panel::Hit h = panel::hitTest(g, 170, 50);
+    CHECK(h.part == panel::Part::Card && h.card == 1);
+    CHECK(panel::hitTest(g, 159, 50).part == panel::Part::None);  // between two cards
+    CHECK(panel::hitTest(g, 500, 50).part == panel::Part::None);
+}
+
+TEST(window_panel_keeps_to_its_edge_in_any_window) {
+    const panel::Place left{0.0f, 0.2f};
+    panel::Point p = panel::position(left, 474, 82, 1024, 768, 1.0f);
+    CHECK(p.x == 8 && p.y == 142);  // 8 + 0.2 x (768 - 82 - 16)
+    const panel::Place right{1.0f, 0.5f};
+    p = panel::position(right, 474, 82, 1024, 768, 1.0f);
+    CHECK_EQ(p.x, 1024 - 474 - 8);
+    p = panel::position(right, 948, 164, 3840, 2160, 2.0f);
+    CHECK_EQ(p.x, 3840 - 948 - 16);  // at the right edge in the big window too
+    const panel::Place back = panel::placeOf(panel::Point{542, 343}, 474, 82, 1024, 768, 1.0f);
+    CHECK(std::fabs(back.x - 1.0f) < 0.01f && std::fabs(back.y - 0.5f) < 0.01f);
+    const panel::Place out = panel::placeOf(panel::Point{-50, 5000}, 474, 82, 1024, 768, 1.0f);
+    CHECK(out.x == 0.0f && out.y == 1.0f);
+    p = panel::position(right, 474, 82, 300, 60, 1.0f);  // a window smaller than the panel: at its corner
+    CHECK(p.x == 8 && p.y == 8);
+}
+
+TEST(window_panel_place_in_the_file) {
+    const panel::Place p = panel::parsePlace("0.250 0.750");
+    CHECK(std::fabs(p.x - 0.25f) < 1e-4f && std::fabs(p.y - 0.75f) < 1e-4f);
+    CHECK_EQ(panel::formatPlace(p), std::string("0.250 0.750"));
+    const panel::Place d = panel::parsePlace("left top");
+    CHECK(d.x == 0.0f && std::fabs(d.y - 0.2f) < 1e-4f);
+    const panel::Place c = panel::parsePlace("1.7 -3");
+    CHECK(c.x == 1.0f && c.y == 0.0f);
+}
+
+TEST(window_panel_bars_red_under_a_quarter) {
+    CHECK_EQ(panel::barColour(85, true), panel::barColour(25, true));
+    CHECK(panel::barColour(24, true) != panel::barColour(25, true));
+    CHECK_EQ(panel::barColour(24, true), panel::barColour(10, false));  // SP as HP: the game's gauges both
+    CHECK(panel::barColour(40, false) != panel::barColour(40, true));
+}
+
+TEST(window_panel_paints_its_shapes) {
+    const panel::Geometry g = panel::geometry(2, panel::Layout::Row, 1.0f, 1024);
+    std::vector<panel::Card> cards(2);
+    cards[0].current = true;
+    cards[0].hp = 85;
+    cards[0].sp = 40;
+    cards[1].hp = 10;
+    panel::Picture pic;
+    panel::paint(pic, g, cards, false);
+    CHECK_EQ(pic.width, g.width);
+    CHECK_EQ(pic.height, g.height);
+    CHECK_EQ(pic.px.size(), size_t(g.width) * size_t(g.height));
+    if (pic.px.size() != size_t(g.width) * size_t(g.height)) return;
+    CHECK_EQ(alphaOf(at(pic, 0, 0)), 0u);  // the rounded corner
+    const uint32_t ground = at(pic, g.width / 2.0f, 2);  // the dark top row
+    CHECK(alphaOf(ground) > 200 && redOf(ground) < 40);
+    const panel::CardBoxes& c0 = g.cards[0];
+    const uint32_t plate = at(pic, c0.plate.x + 3, c0.plate.y + c0.plate.h - 4);  // the current card: blue
+    CHECK(blueOf(plate) > redOf(plate) + 15);
+    const uint32_t hpStart = at(pic, c0.hp.x + 4, c0.hp.y + c0.hp.h / 2);
+    CHECK(greenOf(hpStart) > redOf(hpStart) + 60);  // HP 85 %: green
+    const uint32_t hpEnd = at(pic, c0.hp.x + c0.hp.w - 3, c0.hp.y + c0.hp.h / 2);
+    CHECK(greenOf(hpEnd) < 120);  // past 85 %: the track
+    const panel::CardBoxes& c1 = g.cards[1];
+    const uint32_t low = at(pic, c1.hp.x + 3, c1.hp.y + c1.hp.h / 2);
+    CHECK(redOf(low) > greenOf(low) + 60);  // HP 10 %: red
+    const uint32_t noSp = at(pic, c1.sp.x + 6, c1.sp.y + c1.sp.h / 2);  // SP not known: no bar, no track
+    CHECK(redOf(noSp) < 90 && greenOf(noSp) < 90 && blueOf(noSp) < 90);
+}

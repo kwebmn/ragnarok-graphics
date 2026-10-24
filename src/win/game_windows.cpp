@@ -54,6 +54,18 @@ void SharedWindows::leave(int number) {
     publish(none);
 }
 
+int SharedWindows::claim() {
+    if (!open()) return 0;
+    const DWORD self = GetCurrentProcessId();
+    for (int i = 0; i < gamewindows::kMost; ++i)
+        if (table_->entries[i].pid == self) return i + 1;
+    for (int i = 0; i < gamewindows::kMost; ++i) {
+        const gamewindows::Entry& e = table_->entries[i];
+        if (e.pid == 0 || !alive(e)) return i + 1;
+    }
+    return 0;
+}
+
 std::vector<gamewindows::Window> SharedWindows::live() {
     gamewindows::Table copy{};
     if (!open()) return {};

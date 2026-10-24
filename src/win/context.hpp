@@ -119,7 +119,7 @@ private:
     map_load::Watch mapLoad_;
     SeveralWindows severalWindows_;  // 3.0.3-beta.2: the name in the title, each character's window at its place
     WindowSwitch windowSwitch_;      // 3.0.3-beta.6: the windows' list the games share, the keys that switch them
-    unsigned windowsFrames_ = 0;
+    ULONGLONG windowsAt_ = 0;  // 3.0.3-beta.7: checked by the clock (a light window draws 10 frames a second)
     bool checkingWindows_ = false;  // 3.0.3-beta.4: a present from the game's WM_MOVE handler meanwhile skips it
     FrontGame frontGame_;      // 3.0.3-beta.3: which running game is the main one
     bool mainWindow_ = true;   // this one, at the last updateLight

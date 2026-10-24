@@ -1,5 +1,9 @@
 #include "pad/win/game_window.hpp"
 
+#include <cstring>
+
+#include "core/window_panel.hpp"
+
 namespace uapad::gamewindow {
 namespace {
 
@@ -107,11 +111,17 @@ bool cursorOverGame(HWND game, POINT screen) {
     POINT p = screen;
     if (!game || !GetClientRect(game, &client) || !ScreenToClient(game, &p) || !PtInRect(&client, p)) return false;
     // Any window of the client's own process counts: a graphics wrapper may present the picture in a window
-    // of its own over the game's. A window of another program on top does not.
+    // of its own over the game's. A window of another program on top does not, nor the driver's panel of the game
+    // windows (3.0.3-beta.7): a click on it is the panel's, not the game's.
+    const auto panel = [](HWND w) {
+        char cls[64] = {};
+        return w && GetClassNameA(w, cls, sizeof cls) && std::strcmp(cls, uagfx::panel::kWindowClass) == 0;
+    };
+    if (panel(GetCapture())) return false;  // the panel dragged: the held button is not the game's, wherever it is
     const HWND under = WindowFromPoint(screen);
     DWORD pid = 0;
     if (under) GetWindowThreadProcessId(under, &pid);
-    return pid == GetCurrentProcessId();
+    return !panel(under) && pid == GetCurrentProcessId();
 }
 
 void sendFKey(int key, bool down) {

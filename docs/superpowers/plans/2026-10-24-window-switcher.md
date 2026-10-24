@@ -47,3 +47,9 @@ the user's words: «я хочу в игре мышкой переключатс�
 
 - The doc's betas 7 (panel) and 8 (HP/SP on the cards) are one beta: the cards' numbers come with the list in
   task 1, and a panel without them would be shipped only to be changed.
+- The windows are checked by the clock (every 250 ms), not every 15 frames: a light window draws 10 frames a second,
+  and its HP on the panel would come every 1.5 s.
+- The panel's window is per-monitor DPI aware and placed in real pixels (win/dpi RealPixels): uaRO.exe is not, and
+  Windows would stretch the panel blurry under its scaling; the interface scale then carries the DPI too.
+- A button held on the panel (a drag) is not the game's even off it: the pad's gate asks GetCapture as well.
+- Ctrl+Alt+0 is the game's own (Alt+0's chat macro) while [windows] panel is off.

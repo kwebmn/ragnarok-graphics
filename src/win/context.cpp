@@ -492,16 +492,18 @@ void Context::present(const Rect& source, bool waitForVblank) {
         windowApplied = true;
         applyWindowMode(window, config, gameFullscreen, shadow.width(), shadow.height());
     }
-    // 3.0.3-beta.2: several game windows - the name in the title, each character's window at its place, a few times
+    // 3.0.3-beta.2: several game windows - the name in the title, each character's window at its place, four times
     // a second. Here, before the frame is made, and not within itself: moving the window sends WM_MOVE, and the
     // client may present again from its handler (3.0.3-beta.4).
-    if (window && !checkingWindows_ && ++windowsFrames_ % 15 == 0) {
+    if (window && !checkingWindows_ && GetTickCount64() - windowsAt_ >= 250) {
+        windowsAt_ = GetTickCount64();
         checkingWindows_ = true;
         const std::string name = readOwnName();
         severalWindows_.check(window, name, config);
         windowSwitch_.check(window, foreground, name, config);  // 3.0.3-beta.6: the keys that switch the windows
         checkingWindows_ = false;
     }
+    if (window) windowSwitch_.frame(window, mainWindow_, config, shadow.width());  // 3.0.3-beta.7: the panel
     // Pause or Scroll Lock in the game window: every improvement off - the game's size stretched like Windows does,
     // no interface filter, no sharpening - and on again, to compare without a restart.
     const bool keyDown = window && GetForegroundWindow() == window &&

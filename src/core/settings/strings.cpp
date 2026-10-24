@@ -4326,14 +4326,41 @@ constexpr Entry kTexts[] = {
     {Text::WindowsKeys, "Window keys", "Клавіші вікон", "Клавиши окон"},
     {Text::WindowsKeysHint,
      "Ctrl+Tab goes back to the game window you played in before this one, Ctrl+Alt+1...8 straight to the window of "
-     "that number: the order the windows were started in, the first one 1. The game does not get these keys.",
+     "that number: the order the windows were started in, the first one 1. Ctrl+Alt+0 shows or hides the windows' "
+     "panel. The game does not get these keys.",
      "Ctrl+Tab повертає до вікна гри, у якому ви грали перед цим, Ctrl+Alt+1…8 — одразу до вікна з цим номером: це "
-     "порядок, у якому вікна запускали, перше — 1. Гра цих натискань не отримує.",
+     "порядок, у якому вікна запускали, перше — 1. Ctrl+Alt+0 показує або ховає панель вікон. Гра цих натискань не "
+     "отримує.",
      "Ctrl+Tab возвращает к окну игры, в котором вы играли перед этим, Ctrl+Alt+1…8 — сразу к окну с этим номером: "
-     "это порядок, в котором окна запускали, первое — 1. Игра этих нажатий не получает."},
+     "это порядок, в котором окна запускали, первое — 1. Ctrl+Alt+0 показывает или прячет панель окон. Игра этих "
+     "нажатий не получает."},
     {Text::WindowsKeysAll, "Ctrl+Tab and Ctrl+Alt+1...8", "Ctrl+Tab і Ctrl+Alt+1…8", "Ctrl+Tab и Ctrl+Alt+1…8"},
     {Text::WindowsKeysBack, "Ctrl+Tab alone", "Лише Ctrl+Tab", "Только Ctrl+Tab"},
     {Text::WindowsKeysOff, "Off", "Вимкнено", "Выключено"},
+    {Text::WindowsPanel, "The windows' panel in the game", "Панель вікон у грі", "Панель окон в игре"},
+    {Text::WindowsPanelHint,
+     "With two or more game windows open, a panel over the game shows them: a click on a window's card brings it to "
+     "the front, the current one is blue, the thin bars are HP and SP (red under 25 %). Drag it by its top row; its "
+     "cross or Ctrl+Alt+0 hides it, Ctrl+Alt+0 or this switch shows it again.",
+     "Коли відкрито два вікна гри або більше, панель над грою показує їх: клік по картці вікна виводить його вперед, "
+     "поточне — синє, тонкі смужки — HP і SP (червоні нижче 25 %). Панель тягнуть за верхній рядок; хрестик на ній "
+     "або Ctrl+Alt+0 ховає її, Ctrl+Alt+0 або цей перемикач показує знову.",
+     "Когда открыто два окна игры или больше, панель над игрой показывает их: клик по карточке окна выводит его "
+     "вперёд, текущее — синее, тонкие полоски — HP и SP (красные ниже 25 %). Панель тянут за верхнюю строку; крестик "
+     "на ней или Ctrl+Alt+0 прячет её, Ctrl+Alt+0 или этот переключатель показывает снова."},
+    {Text::WindowsPanelLayout, "The panel's layout", "Вигляд панелі", "Вид панели"},
+    {Text::WindowsPanelLayoutHint, "The windows' cards side by side or one under another.",
+     "Картки вікон поруч або одна під одною.", "Карточки окон рядом или одна под другой."},
+    {Text::WindowsPanelRow, "In a row", "В ряд", "В ряд"},
+    {Text::WindowsPanelColumn, "In a column", "Стовпчиком", "Столбиком"},
+    {Text::WindowsPanelSize, "The panel's size", "Розмір панелі", "Размер панели"},
+    {Text::WindowsPanelSizeHint,
+     "The panel grows with the game's interface («Interface size»); this makes it larger or smaller still.",
+     "Панель росте разом з інтерфейсом гри («Розмір інтерфейсу»); тут її можна зробити ще більшою або меншою.",
+     "Панель растёт вместе с интерфейсом игры («Размер интерфейса»); здесь её можно сделать ещё крупнее или "
+     "мельче."},
+    {Text::PanelTitle, "Windows", "Вікна", "Окна"},
+    {Text::PanelWindow, "window {1}", "вікно {1}", "окно {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
