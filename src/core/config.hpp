@@ -445,6 +445,8 @@ struct Config {
     // surface for Windows scaling of the game's window.
     bool bridge = false;
     std::string bridgePresent = "auto";
+    // 3.0.4-beta.8: [renderer] bridge_wine = 1 - the 64-bit renderer under Wine too (core/platform.hpp; a try)
+    bool bridgeWine = false;
     // 2.5.12 (test): [renderer] render_thread = 1 - Direct3D 11 draws on a thread of its own in the game's process
     // (gpu/local_host.cpp): the game's thread only writes the frame down, as for uaro-render64.exe
     bool renderThread = false;

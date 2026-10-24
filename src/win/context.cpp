@@ -26,6 +26,7 @@
 #include "win/server_night.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
+#include "win/platform.hpp"
 #include "win/sound_engine.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
@@ -234,8 +235,16 @@ bool Context::open(std::string& error) {
     if (config.frameGeneration && config.dlss == "off")
         LOG_INFO("frame generation %dx: off - it needs NVIDIA DLSS on (Smoothing page)", config.frameGeneration);
     gpu::setChosenAdapter(config.gpu);  // 0.50.2
+    // 3.0.4-beta.8 (the user's idea 7): under Wine (Linux, the Steam Deck) the 64-bit renderer's picture would have to
+    // cross processes - the game's own process draws, unless [renderer] bridge_wine
+    const platform::Facts& where = platformFacts();
+    LOG_INFO("platform: %s", platform::describe(where).c_str());
+    const bool bridgeWanted = config.bridge || config.dlss != "off" || config.ai.on();
+    if (!remote && bridgeWanted && !platform::bridgeAllowed(where, config.bridgeWine))
+        LOG_INFO("bridge: not under Wine - its picture would cross processes (no DirectComposition there); DLSS and "
+                 "the HD textures need it ([renderer] bridge_wine = 1 to try)");
     // Part 3: the 64-bit renderer - DLSS and the AI textures need it.
-    if (!remote && (config.bridge || config.dlss != "off" || config.ai.on())) {
+    if (!remote && bridgeWanted && platform::bridgeAllowed(where, config.bridgeWine)) {
         gpu::BridgeOptions o;
         o.hostExe = gameDir() + "\\uaro-graphics\\uaro-render64.exe";
         o.gameDir = gameDir();

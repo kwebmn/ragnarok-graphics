@@ -44,5 +44,9 @@ beta each, no review stops; releases only on «выпускай». Facts from ua
 6. World sounds (beta.7): the maps' own sound objects played by the driver's XAudio2 engine (the chosen output
    device), each looping by its cycle within its range, quieter with the distance, at most 8 at once, the game's
    effects volume times [sound] ambience_volume; [sound] ambience = 0 by default (new effects ship off).
-7. Linux / Steam Deck (beta.8): Wine detected (ntdll wine_get_version) and logged; paths Wine lacks avoided
-   (DirectComposition presentation, Windows' spatial sound); a guide written. Testing needs a Linux PC or a Deck.
+7. Linux / Steam Deck (beta.8): Wine detected (ntdll wine_get_version, Proton and the Deck by Steam's environment)
+   and logged; the 64-bit renderer not started under Wine (its picture crosses processes; DirectComposition missing)
+   unless [renderer] bridge_wine = 1 - the HD textures and DLSS off there for now; Windows' spatial sound and the
+   notifications fail quietly; guide docs/guides/steam-deck.uk.md. Testing needs a Linux PC or a Deck.
+8. World sounds (beta.7) built on the maps' own sound objects (FUN_0043a200 case 3 loads them, nothing plays them);
+   buff timers (beta.6) lay the icons out with the game's own IconImage (thiscall on CSession 0x771148).
