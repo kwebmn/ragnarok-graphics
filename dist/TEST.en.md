@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.4-beta.12 — what is new
+
+- **Own ground: soft texture transitions.** With "Own ground (prototype)" and "Grass and road seams without steps" on,
+  the line between grass, road and sand on the own ground no longer runs along the cells' squares: it wanders, one
+  texture reaching into the other, as on the game's ground with the seams. The strips are made of the ground's own
+  points and lie exactly on it, so they do not blink. Seams between tiles of one texture are smoothed too. The tiled
+  floors of dungeons and patches laid by hand (Prontera's paving) keep their straight edges. Far off, where the game no
+  longer draws its ground, there are no transitions.
+- **The own ground is faster.** Chunks under the camera that cannot be seen are no longer worked out, and the vertex
+  colours are made again only when the game gives a new one. Measured on prt_fild08: 0.3 ms of the processor a frame
+  with the usual camera, up to 1.6 ms at a middle distance with the transitions.
+- To check on prt_fild08: turn both switches on and look at the edges of grass and road, on hills and by the steps;
+  turn "Grass and road seams without steps" off - the edges are square again. In the log the `own ground: ...` line
+  ends with "strips between the textures on".
+
 # uaRO Graphics 3.0.4-beta.11 — what is new
 
 - **"Keep the frame rate" says what it turned off** (report R-EQDYNE, "no grass"). When the game runs below the limit
