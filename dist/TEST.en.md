@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.4-beta.4 — what is new
+
+- **The windows' panel shows how the helpers are.** On another game window's card: red - its character died (until
+  it lives again or you go to that window), orange - it is being hit, a blue dot in the corner - someone whispered to
+  it (until you go to that window). The HP bar turns red when health is low, as before.
+- **A set of windows at one press.** «Game and chat» → «Game windows started by «Play»» (1-8): the settings app's
+  «Play» starts the game that many times, one every second and a half. You log in to each yourself - no login or
+  password is kept.
+
 # uaRO Graphics 3.0.4-beta.3 — what is new
 
 - **Notifications while the game is behind.** The game window behind others or minimised, and someone whispers,
