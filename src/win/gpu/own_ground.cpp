@@ -55,6 +55,12 @@ uint32_t Renderer::Impl::ownTexture(int width, int height, int levels) {
 void Renderer::Impl::dropOwnGround() {
     for (uint32_t id : ownState.ids)
         if (id && textures.count(id)) dying.push_back(id);
+    for (uint32_t id : ownState.modelIds)  // 3.0.4-beta.14
+        if (id && textures.count(id)) dying.push_back(id);
+    ownState.modelIds.clear();
+    ownState.modelTexture = ownState.modelLevel = 0;
+    ownState.modelLikeKnown = false;
+    ownState.modelFrames = 0;
     if (ownState.atlas && textures.count(ownState.atlas)) dying.push_back(ownState.atlas);
     ownState.serial = 0;
     ownState.ids.clear();
@@ -103,6 +109,9 @@ bool Renderer::Impl::prepareOwnGround() {
         for (const OwnGround::Picture& p : g->textures)
             o.ids.push_back(p.levels.empty() ? 0 : ownTexture(p.width, p.height, int(p.levels.size())));
         o.atlas = g->atlas.argb.empty() ? 0 : ownTexture(g->atlas.width, g->atlas.height, 1);
+        for (const OwnGround::Picture& p : g->modelTextures)  // 3.0.4-beta.14
+            o.modelIds.push_back(p.levels.empty() ? 0 : ownTexture(p.width, p.height, int(p.levels.size())));
+        o.learning.reset(g->models, g->toLight);
     }
     if (o.up) return true;
     o.uploads.reset();
@@ -128,6 +137,22 @@ bool Renderer::Impl::prepareOwnGround() {
                              g->atlas.argb.data() + size_t(o.atlasRow) * size_t(g->atlas.width));
             texels += size_t(rows) * size_t(g->atlas.width);
             o.atlasRow += rows;
+            continue;
+        }
+        if (o.modelTexture < g->modelTextures.size()) {  // 3.0.4-beta.14: the models' last
+            const OwnGround::Picture& p = g->modelTextures[o.modelTexture];
+            const int w = std::max(p.width >> o.modelLevel, 1), h = std::max(p.height >> o.modelLevel, 1);
+            if (o.modelTexture >= o.modelIds.size() || !o.modelIds[o.modelTexture] || o.modelLevel >= p.levels.size() ||
+                p.levels[o.modelLevel].size() != size_t(w) * size_t(h)) {
+                ++o.modelTexture;
+                o.modelLevel = 0;
+                continue;
+            }
+            o.uploads.upload(o.modelIds[o.modelTexture], uint32_t(o.modelLevel), Rect{0, 0, w, h},
+                             p.levels[o.modelLevel].data(), {},
+                             o.modelLevel == 0 ? PixelFormat::A1R5G5B5 : PixelFormat::Unknown);
+            texels += size_t(w) * size_t(h);
+            ++o.modelLevel;
             continue;
         }
         o.up = true;
@@ -320,6 +345,7 @@ bool Renderer::Impl::drawOwnGround() {
     }
     for (uint8_t layer = 0; layer < 3; ++layer)  // the ground, then the own bands, then the neighbours' strips
         for (size_t t = 0; t < o.pending[layer].size(); ++t) emit(layer, t);
+    drawOwnModels(view, p, axes);  // 3.0.4-beta.14: the models past the far plane, into the same record (layer 3)
     const double built = msSince(start);
     if (!o.rec.draws().empty()) {
         flushDraws();  // the game's draws gathered so far are of its own vertices, uploaded before these
@@ -327,9 +353,9 @@ bool Renderer::Impl::drawOwnGround() {
         if (vertexBase) {
             ownPass = true;
             for (size_t k = 0; k < o.rec.draws().size(); ++k) {
-                seamPass = o.drawLayer[k] != terrain::kGround;
+                seamPass = o.drawLayer[k] == terrain::kOwnBand || o.drawLayer[k] == terrain::kNeighbour;
                 seamOwnBand = o.drawLayer[k] == terrain::kOwnBand;
-                draw(o.rec, o.rec.draws()[k]);
+                draw(o.rec, o.rec.draws()[k]);  // layer 3: the models (as the game's own models are drawn)
             }
             seamPass = seamOwnBand = false;
             ownPass = false;
@@ -344,7 +370,208 @@ bool Renderer::Impl::drawOwnGround() {
                  "CPU (frame %u: at most %zu vertices, %.2f ms); strips between the textures %s",
                  g->map.c_str(), chunks, g->mesh.chunks.size(), o.rec.draws().size(), vertices, triangles, built,
                  o.frames, o.most, o.slowest, blends ? "on" : "off");
+    // 3.0.4-beta.14: whether the own models stand where the game's do - of the game's model triangles near, how many
+    // lay where one of ours does (all but the moving ones: placed as the game places them)
+    if (o.frames == 600 && effects.ownFarModels)
+        LOG_INFO("own models: %s - of the game's model triangles near %zu noted, %zu (%.0f %%) where ours lie; %zu "
+                 "triangles of ours past the far plane in the last picture",
+                 g->map.c_str(), o.learning.seen(), o.learning.matched(),
+                 o.learning.seen() ? 100.0 * double(o.learning.matched()) / double(o.learning.seen()) : 0.0,
+                 o.modelsDrawn);
     return !lost;
+}
+
+// 3.0.4-beta.14: a draw of the game's own models near (one texture coordinate, writing depth, not blended, no
+// effect's): its triangles back into the world - the own models' colours learnt from them, and how many lie where ours
+// do (the log); its state the far models' (the stages, the alpha test, as the game draws its models)
+void Renderer::Impl::noteOwnModels(const FrameRecord& rec, const DrawCmd& d) {
+    OwnState& o = ownState;
+    // the learning's own ground still the one MapWorld has (it may have read another since: the old one let go)
+    const OwnGround* g = mapWorld.ownGround();
+    if (!g || g->serial != o.serial) return;
+    if (!o.modelLikeKnown) {
+        o.modelLike = rec.states()[d.state];
+        o.modelLikeKnown = true;
+    }
+    constexpr uint32_t kMostNoted = 600;  // a picture's: the learning goes on over the pictures
+    if (o.modelsNoted >= kMostNoted) return;
+    const std::vector<uint8_t>& vb = rec.vertexBytes();
+    if (d.vertexOffset + size_t(d.vertexCount) * sizeof(own_ground::Tl1) > vb.size()) return;
+    const own_ground::Tl1* v = reinterpret_cast<const own_ground::Tl1*>(vb.data() + d.vertexOffset);
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const float* m = viewToWorld;
+    const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
+    const auto file = [&](const own_ground::Tl1& t, float out[3]) {
+        if (t.rhw <= 0.0f) return false;
+        const float vz = 1.0f / t.rhw, vx = (t.x - p.cx) * vz / p.f0, vy = (t.y - p.cy) * vz / p.f1;
+        out[0] = (vx * m[0] + vy * m[3] + vz * m[6] + m[9]) * float(axes.x);
+        out[1] = (vx * m[1] + vy * m[4] + vz * m[7] + m[10]) * float(axes.y);
+        out[2] = (vx * m[2] + vy * m[5] + vz * m[8] + m[11]) * float(axes.z);
+        return true;
+    };
+    const std::vector<uint16_t>& ix = rec.indices();
+    const uint32_t n = d.indexCount ? d.indexCount : d.vertexCount;
+    const auto vertexAt = [&](uint32_t k, uint32_t& out) {
+        if (!d.indexCount) {
+            out = k;
+            return k < d.vertexCount;
+        }
+        if (d.firstIndex + k >= ix.size()) return false;
+        out = ix[d.firstIndex + k];
+        return out < d.vertexCount;
+    };
+    const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
+    const uint32_t triangles = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
+    for (uint32_t t = 0; t < triangles && o.modelsNoted < kMostNoted; ++t) {
+        uint32_t k[3];
+        const uint32_t base = strip ? t : t * 3;
+        if (!vertexAt(base, k[0]) || !vertexAt(base + 1, k[1]) || !vertexAt(base + 2, k[2])) break;
+        float corners[3][3];
+        uint32_t colours[3];
+        bool ok = true;
+        for (int c = 0; c < 3 && ok; ++c) {
+            ok = file(v[k[c]], corners[c]);
+            colours[c] = v[k[c]].diffuse;
+        }
+        if (!ok) continue;
+        o.learning.note(corners, colours);
+        ++o.modelsNoted;
+    }
+}
+
+// 3.0.4-beta.14: the parts of the map's models past the game's far plane (own_ground::pastDepth) - the chunks reaching
+// past it, each triangle cut at it, in the colours learnt (own_models::Learning), a draw a texture with the game's
+// model state (both sides; its alpha test lower: the leaves stay at the smaller mipmaps)
+void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::Projection& p, const map::Axes& axes) {
+    OwnState& o = ownState;
+    o.modelsDrawn = 0;
+    const OwnGround* g = mapWorld.ownGround();
+    if (!g || !effects.ownFarModels || !o.modelLikeKnown || g->models.chunks.empty()) return;
+    o.learning.fit();
+    DrawSetup ms = o.modelLike;
+    ms.cull = d3d7::CULL_NONE;
+    ms.stage[0].mipFilter = d3d7::TFP_LINEAR;
+    if (ms.alphaTest && ms.alphaRef > 0x60) ms.alphaRef = 0x60;
+    const uint32_t state = o.rec.addState(ms);
+    o.modelPending.resize(o.modelIds.size() + 1);
+    for (OwnState::ModelPending& pd : o.modelPending) pd.verts.clear(), pd.idx.clear();
+    const bool fogged = o.shading.fogged();
+    const uint32_t plain = o.shading.specularAt(0.0f);
+    const auto emit = [&](size_t t) {
+        OwnState::ModelPending& pd = o.modelPending[t];
+        if (!pd.idx.empty()) {
+            DrawCmd cmd;
+            cmd.state = state;
+            cmd.texture[0] = t < o.modelIds.size() ? o.modelIds[t] : 0;
+            cmd.primitive = d3d7::PT_TRIANGLELIST;
+            cmd.fvf = d3d7::FVF_TL1;
+            o.rec.draw(cmd, pd.verts.data(), uint32_t(pd.verts.size()), pd.idx.data(), uint32_t(pd.idx.size()));
+            o.drawLayer.push_back(3);
+        }
+        pd.verts.clear();
+        pd.idx.clear();
+    };
+    const float sign[3] = {float(axes.x), float(axes.y), float(axes.z)};
+    const terrain::Mesh& mesh = g->models;
+    std::vector<float> seen;      // a batch's vertices in the view, each worked out once
+    std::vector<int32_t> putAt;   // a batch's vertex in its texture's draw, -1 not yet
+    for (const terrain::Chunk& box : mesh.chunks) {
+        float lo[3], hi[3];
+        for (int a = 0; a < 3; ++a) {
+            lo[a] = std::min(box.lo[a] * sign[a], box.hi[a] * sign[a]);
+            hi[a] = std::max(box.lo[a] * sign[a], box.hi[a] * sign[a]);
+        }
+        float nearest = 0.0f, farthest = 0.0f;
+        if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, kMostDepth, nearest, &farthest) ||
+            farthest < p.farZ)
+            continue;  // none of it past the far plane: the game's own
+        for (uint32_t b = box.firstBatch; b < box.firstBatch + box.batchCount; ++b) {
+            const terrain::Batch& bt = mesh.batches[b];
+            const size_t tex = bt.texture >= 0 && size_t(bt.texture) < o.modelIds.size() ? size_t(bt.texture)
+                                                                                          : o.modelIds.size();
+            OwnState::ModelPending& pd = o.modelPending[tex];
+            if (pd.verts.size() + bt.vertexCount + 64 > 65535) emit(tex);
+            seen.resize(size_t(bt.vertexCount) * 3);
+            putAt.assign(bt.vertexCount, -1);
+            for (uint32_t v = 0; v < bt.vertexCount; ++v) {
+                const float* f = mesh.vertices[bt.firstVertex + v].pos;
+                const float w[3] = {f[0] * sign[0], f[1] * sign[1], f[2] * sign[2]};
+                own_ground::toView(view, w, &seen[size_t(v) * 3]);
+            }
+            // a corner of ours: its place on the screen, its colour, its fog, its texture's coordinates
+            const auto corner = [&](const float at[3], uint32_t colour, float u, float v, own_ground::Tl1& t) {
+                own_ground::Tl2 placed;
+                if (!own_ground::placeView(p, at, placed)) return false;
+                t.x = placed.x, t.y = placed.y, t.z = placed.z, t.rhw = placed.rhw;
+                t.diffuse = colour;
+                t.specular = fogged ? o.shading.specularAt(at[2]) : plain;
+                t.u = u, t.v = v;
+                return true;
+            };
+            for (uint32_t i = bt.firstIndex; i + 3 <= bt.firstIndex + bt.indexCount; i += 3) {
+                const uint32_t lv[3] = {mesh.indices[i], mesh.indices[i + 1], mesh.indices[i + 2]};
+                const float zd[3] = {seen[size_t(lv[0]) * 3 + 2], seen[size_t(lv[1]) * 3 + 2],
+                                     seen[size_t(lv[2]) * 3 + 2]};
+                if (zd[0] < p.farZ && zd[1] < p.farZ && zd[2] < p.farZ) continue;  // the game's own
+                if (zd[0] >= p.farZ && zd[1] >= p.farZ && zd[2] >= p.farZ) {  // all of it: its corners as they are
+                    if (pd.verts.size() + 3 > 65535) {
+                        emit(tex);
+                        putAt.assign(bt.vertexCount, -1);
+                    }
+                    for (int k = 0; k < 3; ++k) {
+                        if (putAt[lv[k]] < 0) {
+                            const terrain::Vertex& mv = mesh.vertices[bt.firstVertex + lv[k]];
+                            own_ground::Tl1 t{};
+                            corner(&seen[size_t(lv[k]) * 3], o.learning.colourOf(bt.firstVertex + lv[k]), mv.uv[0],
+                                   mv.uv[1], t);
+                            putAt[lv[k]] = int32_t(pd.verts.size());
+                            pd.verts.push_back(t);
+                        }
+                        pd.idx.push_back(uint16_t(putAt[lv[k]]));
+                    }
+                    ++o.modelsDrawn;
+                    continue;
+                }
+                // across the far plane: the part past it (own_ground::pastDepth), its corners made anew
+                float share[4][3];
+                const int corners = own_ground::pastDepth(zd, p.farZ, share);
+                if (corners < 3) continue;
+                if (pd.verts.size() + 4 > 65535) {
+                    emit(tex);
+                    putAt.assign(bt.vertexCount, -1);
+                }
+                const size_t base = pd.verts.size();
+                bool ok = true;
+                for (int q = 0; q < corners && ok; ++q) {
+                    float at[3] = {0, 0, 0}, u = 0.0f, v = 0.0f, ch[4] = {0, 0, 0, 0};
+                    for (int k = 0; k < 3; ++k) {
+                        const terrain::Vertex& mv = mesh.vertices[bt.firstVertex + lv[k]];
+                        const uint32_t c = o.learning.colourOf(bt.firstVertex + lv[k]);
+                        for (int a = 0; a < 3; ++a) at[a] += share[q][k] * seen[size_t(lv[k]) * 3 + size_t(a)];
+                        u += share[q][k] * mv.uv[0];
+                        v += share[q][k] * mv.uv[1];
+                        for (int n = 0; n < 4; ++n) ch[n] += share[q][k] * float((c >> (n * 8)) & 0xFF);
+                    }
+                    uint32_t colour = 0;
+                    for (int n = 0; n < 4; ++n) colour |= uint32_t(std::clamp(int(ch[n] + 0.5f), 0, 255)) << (n * 8);
+                    own_ground::Tl1 t{};
+                    ok = corner(at, colour, u, v, t);
+                    pd.verts.push_back(t);
+                }
+                if (!ok) {
+                    pd.verts.resize(base);
+                    continue;
+                }
+                for (int q = 1; q + 1 < corners; ++q) {  // a fan round the first corner
+                    pd.idx.push_back(uint16_t(base));
+                    pd.idx.push_back(uint16_t(base + size_t(q)));
+                    pd.idx.push_back(uint16_t(base + size_t(q) + 1));
+                    ++o.modelsDrawn;
+                }
+            }
+        }
+    }
+    for (size_t t = 0; t < o.modelPending.size(); ++t) emit(t);
 }
 
 }  // namespace uagfx::gpu

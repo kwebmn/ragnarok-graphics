@@ -16,10 +16,21 @@ struct Part {
     int faces = 0;
 };
 
+// 3.0.4-beta.14 (the user chose «Дома и деревья вдали»): a face whole as the model stands (the parts' frame): its
+// corners' places and texture coordinates, its texture (Model::textures), drawn from both sides or its front alone
+struct Face {
+    float pos[3][3] = {};
+    float uv[3][2] = {};
+    int texture = -1;
+    bool twoSided = false;
+};
+
 struct Model {
     int version = 0;
     std::vector<Part> parts;  // one a texture that has faces
     float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};  // the whole
+    std::vector<std::string> textures;  // 3.0.4-beta.14: the file's, as it names them
+    std::vector<Face> faces;
 };
 
 // false (and why) when it is not a model file or is cut short.

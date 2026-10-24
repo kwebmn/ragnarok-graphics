@@ -64,10 +64,11 @@ TEST(own_ground_vertices_where_the_game_puts_its_own) {
 TEST(own_ground_chunks_in_view) {
     const camera::Projection p = camera::projectionFor(1920, 1080);
     const own_ground::View v = straightAhead(0, 0, 0);
-    float nearest = 0.0f;
+    float nearest = 0.0f, farthest = 0.0f;
     const float aheadLo[3] = {-10, -10, 100}, aheadHi[3] = {10, 10, 120};
-    CHECK(own_ground::boxInView(v, p, 1920, 1080, aheadLo, aheadHi, 4000.0f, nearest));
+    CHECK(own_ground::boxInView(v, p, 1920, 1080, aheadLo, aheadHi, 4000.0f, nearest, &farthest));
     CHECK(std::fabs(nearest - 100.0f) < 1e-3f);
+    CHECK(std::fabs(farthest - 120.0f) < 1e-3f);  // 3.0.4-beta.14: the own models draw what lies past the far plane
     const float behindLo[3] = {-10, -10, -120}, behindHi[3] = {10, 10, -100};
     CHECK(!own_ground::boxInView(v, p, 1920, 1080, behindLo, behindHi, 4000.0f, nearest));
     const float rightLo[3] = {5000, -10, 100}, rightHi[3] = {5100, 10, 120};  // far off the screen's right
@@ -151,4 +152,29 @@ TEST(own_ground_tells_which_corners_changed) {
     s.note(20.0f, 10.0f, 0xFF828282u);  // corner (4, 2): its index 2 * 5 + 4; the mean moved by less than a little
     s.takeChanged(changed, mean);
     CHECK(changed.size() == 1 && changed[0] == 14u && !mean);
+}
+
+TEST(own_ground_keeps_what_lies_past_the_far_plane) {
+    // 3.0.4-beta.14: a model's triangle across the game's far plane - the game draws it up to the plane, the driver the
+    // rest: its part past it, as up to four corners, each the share of the triangle's three it is made of
+    float w[4][3];
+    const float allPast[3] = {1600.0f, 1700.0f, 1800.0f}, allNear[3] = {100.0f, 200.0f, 300.0f};
+    CHECK_EQ(own_ground::pastDepth(allPast, 1500.0f, w), 3);
+    CHECK(w[0][0] == 1.0f && w[1][1] == 1.0f && w[2][2] == 1.0f);
+    CHECK_EQ(own_ground::pastDepth(allNear, 1500.0f, w), 0);
+    // one corner past: its tip, cut where the edges cross 1500
+    const float onePast[3] = {1000.0f, 1000.0f, 2000.0f};
+    CHECK_EQ(own_ground::pastDepth(onePast, 1500.0f, w), 3);
+    for (int k = 0; k < 3; ++k) {
+        const float z = w[k][0] * onePast[0] + w[k][1] * onePast[1] + w[k][2] * onePast[2];
+        CHECK(z >= 1500.0f - 1e-3f);
+        CHECK(std::fabs(w[k][0] + w[k][1] + w[k][2] - 1.0f) < 1e-5f);
+    }
+    // two past: a four-cornered piece
+    const float twoPast[3] = {2000.0f, 1000.0f, 2000.0f};
+    CHECK_EQ(own_ground::pastDepth(twoPast, 1500.0f, w), 4);
+    for (int k = 0; k < 4; ++k) {
+        const float z = w[k][0] * twoPast[0] + w[k][1] * twoPast[1] + w[k][2] * twoPast[2];
+        CHECK(z >= 1500.0f - 1e-3f);
+    }
 }

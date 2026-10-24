@@ -174,6 +174,7 @@ EffectSettings effectsOff() {
     e.worldReflections = false;
     e.smoothHills = false;
     e.ownGround = false;  // 3.0.4-beta.10
+    e.ownFarModels = false;  // 3.0.4-beta.14
     e.groundSeams = false;
     e.materials = false;
     e.underwater = false;

@@ -1,5 +1,6 @@
 #include "core/rsw.hpp"
 
+#include <cmath>
 #include <cstring>
 
 namespace uagfx::rsw {
@@ -112,6 +113,28 @@ bool parse(const uint8_t* data, size_t size, World& out, std::string& error) {
         }
     }
     return true;
+}
+
+namespace {
+
+// A turn of p by `degrees` about one axis (0 x, 1 y, 2 z), as the game's matrices turn a model
+void turn(float p[3], int axis, float degrees) {
+    if (degrees == 0.0f) return;
+    const float r = degrees * 3.14159265f / 180.0f, c = std::cos(r), s = std::sin(r);
+    const int a = (axis + 1) % 3, b = (axis + 2) % 3;  // y: z, x - so x' = c x + s z, z' = -s x + c z
+    const float u = p[a], v = p[b];
+    p[a] = c * u - s * v;
+    p[b] = s * u + c * v;
+}
+
+}  // namespace
+
+void placeInMap(const Model& at, float p[3]) {
+    for (int a = 0; a < 3; ++a) p[a] *= at.scale[a];
+    turn(p, 1, at.rot[1]);
+    turn(p, 0, at.rot[0]);
+    turn(p, 2, at.rot[2]);
+    for (int a = 0; a < 3; ++a) p[a] += at.pos[a];
 }
 
 }  // namespace uagfx::rsw

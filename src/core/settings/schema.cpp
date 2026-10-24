@@ -469,6 +469,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSmoothHillsStrength, Text::FxSmoothHillsStrengthHint, " %", nullptr, &E::smoothHillsStrength},
         {"effects", "own_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxOwnGround,
          Text::FxOwnGroundHint, "", &E::ownGround},  // 3.0.4-beta.10: the own world's prototype
+        {"effects", "own_far_models", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxOwnFarModels,
+         Text::FxOwnFarModelsHint, "", &E::ownFarModels},  // 3.0.4-beta.14: a part of own_ground
         {"effects", "world_reflections", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::FxWorldReflections, Text::FxWorldReflectionsHint, "", &E::worldReflections},
         {"effects", "sprite_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSpriteLight,

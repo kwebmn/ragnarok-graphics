@@ -50,10 +50,13 @@ struct Node {
     float mat[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
     float offset[3] = {0, 0, 0}, pos[3] = {0, 0, 0};
     float angle = 0, axis[3] = {0, 1, 0}, scale[3] = {1, 1, 1};
-    std::vector<float> verts;  // x y z
+    std::vector<float> verts;   // x y z
+    std::vector<float> tverts;  // 3.0.4-beta.14: u v
     struct Face {
         uint16_t v[3];
+        uint16_t tv[3];  // 3.0.4-beta.14
         uint16_t texture;
+        bool twoSided;
     };
     std::vector<Face> faces;
 };
@@ -130,7 +133,12 @@ bool parse(const uint8_t* data, size_t size, Model& out, std::string& error) {
             error = "a damaged model file";
             return false;
         }
-        r.skip(size_t(tvc) * (v >= 0x102 ? 12 : 8));
+        n.tverts.resize(size_t(tvc) * 2);
+        for (int32_t i = 0; i < tvc; ++i) {  // 3.0.4-beta.14: kept (1.2 and later a colour first)
+            if (v >= 0x102) r.skip(4);
+            n.tverts[size_t(i) * 2] = r.get<float>();
+            n.tverts[size_t(i) * 2 + 1] = r.get<float>();
+        }
         const int32_t fc = r.get<int32_t>();
         if (!r.ok() || fc < 0 || fc > 1000000) {
             error = "a damaged model file";
@@ -139,9 +147,11 @@ bool parse(const uint8_t* data, size_t size, Model& out, std::string& error) {
         for (int32_t i = 0; i < fc; ++i) {
             Node::Face f{};
             for (uint16_t& x : f.v) x = r.get<uint16_t>();
-            r.skip(6);  // its texture coordinates
+            for (uint16_t& x : f.tv) x = r.get<uint16_t>();  // its texture coordinates
             f.texture = r.get<uint16_t>();
-            r.skip(2 + 4 + (v >= 0x102 ? 4 : 0));  // padding, two-sided, the smoothing group
+            r.skip(2);  // padding
+            f.twoSided = r.get<int32_t>() != 0;
+            r.skip(v >= 0x102 ? 4 : 0);  // the smoothing group
             n.faces.push_back(f);
         }
         if (v >= 0x105) {
@@ -203,6 +213,29 @@ bool parse(const uint8_t* data, size_t size, Model& out, std::string& error) {
     for (int a = 0; a < 3; ++a) {
         out.lo[a] = lo[a] + shift[a];
         out.hi[a] = hi[a] + shift[a];
+    }
+    out.textures = textures;  // 3.0.4-beta.14: the faces whole
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        const Node& n = nodes[i];
+        for (const Node::Face& f : n.faces) {
+            if (f.texture >= n.textures.size()) continue;
+            const int32_t t = n.textures[f.texture];
+            if (t < 0 || size_t(t) >= textures.size()) continue;
+            Face face;
+            face.texture = int(t);
+            face.twoSided = f.twoSided;
+            bool whole = true;
+            for (int k = 0; k < 3; ++k) {
+                if (size_t(f.v[k]) * 3 + 2 >= placed[i].size()) whole = false;
+                if (!whole) break;
+                for (int a = 0; a < 3; ++a) face.pos[k][a] = placed[i][size_t(f.v[k]) * 3 + size_t(a)] + shift[a];
+                if (size_t(f.tv[k]) * 2 + 1 < n.tverts.size()) {
+                    face.uv[k][0] = n.tverts[size_t(f.tv[k]) * 2];
+                    face.uv[k][1] = n.tverts[size_t(f.tv[k]) * 2 + 1];
+                }
+            }
+            if (whole) out.faces.push_back(face);
+        }
     }
     for (size_t i = 0; i < nodes.size(); ++i) {
         const Node& n = nodes[i];

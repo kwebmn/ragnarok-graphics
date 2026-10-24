@@ -26,6 +26,7 @@
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
 #include "core/own_ground.hpp"
+#include "core/own_models.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
 #include "core/wind.hpp"
@@ -979,6 +980,7 @@ struct Renderer::Impl {
     void newPicture() {
         ownState.decided = ownState.frame = ownState.drawn = ownState.likeKnown = false;  // 3.0.4-beta.10
         ownState.shading.beginFrame();
+        ownState.modelsNoted = 0;  // 3.0.4-beta.14
         // off for 10 s (the switch) - its textures and the map's own ground let go; for less (Pause, to compare) kept
         if (effects.ownGround) {
             ownOffSince = 0;
@@ -1173,6 +1175,22 @@ struct Renderer::Impl {
         std::vector<int32_t> chunkAt;  // a chunk's index by its square of cells (kChunk), -1 none
         int chunksWide = 0;
         std::vector<uint32_t> changed;
+        // 3.0.4-beta.14 (the user chose «Дома и деревья вдали»): the map's models past the game's far plane - their
+        // textures (after the ground's in the pictures put up), their colours learnt from the game's own draws of them
+        // near (own_models::Learning), the state of the game's model draws
+        std::vector<uint32_t> modelIds;
+        size_t modelTexture = 0, modelLevel = 0;
+        own_models::Learning learning;
+        bool modelLikeKnown = false;
+        DrawSetup modelLike;
+        struct ModelPending {  // a texture's pieces of the models past the far plane, one draw
+            std::vector<own_ground::Tl1> verts;
+            std::vector<uint16_t> idx;
+        };
+        std::vector<ModelPending> modelPending;  // by texture
+        uint32_t modelsNoted = 0;           // the game's model triangles noted this picture
+        uint32_t modelFrames = 0;
+        size_t modelsDrawn = 0;             // past the far plane, the last picture
         uint32_t frames = 0;        // drawn on this ground
         double slowest = 0.0;       // ms, of the frames so far
         size_t most = 0;            // vertices, the most a frame
@@ -1185,6 +1203,8 @@ struct Renderer::Impl {
     void dropOwnGround();
     bool prepareOwnGround();  // its textures made and put up, a few a frame; true: drawn this picture
     void noteOwnGround(const FrameRecord& rec, const DrawCmd& d);
+    void noteOwnModels(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.14: the game's own models near
+    void drawOwnModels(const own_ground::View& view, const camera::Projection& p, const map::Axes& axes);
     bool drawOwnGround();  // once a picture, the game's ground noted; false: lost
     // 1.12: the frame's opaque world (sun_map.cpp noteCaster) - since 2.2 for the mirror only
     struct SunCaster {

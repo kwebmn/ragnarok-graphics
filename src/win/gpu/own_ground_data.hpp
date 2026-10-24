@@ -24,6 +24,12 @@ struct OwnGround {
         std::vector<std::vector<uint32_t>> levels;  // ARGB, the whole first, then each half
     };
     std::vector<Picture> textures;  // the .gnd's, by index; 0 x 0 not found
+    // 3.0.4-beta.14 (the user chose «Дома и деревья вдали»): the map's models placed (core/own_models.hpp), their
+    // textures (the magenta keyed away, as the game does), the way to the map's light (file places, up along -y)
+    terrain::Mesh models;
+    std::vector<Picture> modelTextures;
+    float toLight[3] = {0.0f, -1.0f, 0.0f};
+    unsigned modelFiles = 0, modelFilesRead = 0;
 };
 
 }  // namespace uagfx::gpu

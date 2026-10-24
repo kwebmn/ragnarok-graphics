@@ -56,4 +56,8 @@ struct World {
 // false (and why) when it is not a map file; a file cut short or an unknown object keeps what came before it.
 bool parse(const uint8_t* data, size_t size, World& out, std::string& error);
 
+// 3.0.1-beta.3 (grass_beds), 3.0.4-beta.14 shared: a point of a model as it stands (core/rsm.hpp's frame) where the map
+// puts it - scaled, turned about y, x and z (degrees), moved to its place
+void placeInMap(const Model& at, float p[3]);
+
 }  // namespace uagfx::rsw

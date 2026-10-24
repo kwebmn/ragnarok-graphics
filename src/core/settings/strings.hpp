@@ -414,6 +414,7 @@ enum class Text : uint16_t {
     GfxSoundAmbience, GfxSoundAmbienceHint, GfxSoundAmbienceVolume, GfxSoundAmbienceVolumeHint,  // 3.0.4-beta.7
     FxOwnGround, FxOwnGroundHint,  // 3.0.4-beta.10: the own world's prototype
     KeepFpsOffNote,                // 3.0.4-beta.11: keep_fps's choice said on the screen (R-EQDYNE)
+    FxOwnFarModels, FxOwnFarModelsHint,  // 3.0.4-beta.14: a part of the own ground
     Count
 };
 

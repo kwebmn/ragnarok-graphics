@@ -112,6 +112,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
     }
     if (!inner && ownState.frame && !ownState.drawn && (s.ui || s.blend) && !drawOwnGround()) return;
+    // 3.0.4-beta.14: a draw of the game's own models near - the far models' colours and state learnt from it. Not by
+    // this picture's choice (ownState.frame): the game draws its models before its ground
+    if (!inner && ownState.serial && ownGroundWanted() && effects.ownFarModels && !s.ui && d.fvf == d3d7::FVF_TL1 &&
+        s.zWrite && !s.blend && d.effect == 0)
+        noteOwnModels(rec, d);
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass

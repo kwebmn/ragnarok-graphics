@@ -4528,6 +4528,15 @@ constexpr Entry kTexts[] = {
     {Text::KeepFpsOffNote, "{1} is off for the rest of the game: {2} frames a second, under {3} (Keep the frame rate)",
      "{1}: вимкнено до кінця гри — {2} кадр/с, менше ніж {3} («Тримати частоту кадрів»)",
      "{1}: выключено до конца игры — {2} кадр/с, меньше {3} («Держать частоту кадров»)"},
+    {Text::FxOwnFarModels, "Houses and trees far off", "Будинки й дерева вдалині", "Дома и деревья вдали"},
+    {Text::FxOwnFarModelsHint,
+     "With the own ground, the map's houses, trees and rocks drawn by uaRO Graphics from the map's files past the edge "
+     "where the game cuts them off - the land is not bare when the camera goes far out. Their colours are taken "
+     "from the game's own drawing of them near.",
+     "Зі своєю землею будинки, дерева й скелі карти малює сам uaRO Graphics з файлів карти й за краєм, де гра їх "
+     "обрізає, — коли камера далеко, земля не порожня. Їхні кольори беруться з того, як гра малює їх поблизу.",
+     "Со своей землёй дома, деревья и скалы карты рисует сам uaRO Graphics из файлов карты и за краем, где игра их "
+     "обрезает, — когда камера далеко, земля не пустая. Их цвета берутся из того, как игра рисует их вблизи."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

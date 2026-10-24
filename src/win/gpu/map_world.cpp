@@ -10,6 +10,7 @@
 #include "core/full_colour.hpp"
 #include "core/gnd.hpp"
 #include "core/grf/grf.hpp"
+#include "core/own_models.hpp"
 #include "core/pack_source.hpp"
 #include "core/layout.hpp"
 #include "core/updates.hpp"
@@ -119,6 +120,7 @@ void MapWorld::setOwnGround(bool wanted) {
 void MapWorld::ownPicturesUp() {
     if (!own_) return;
     for (OwnGround::Picture& p : own_->textures) std::vector<std::vector<uint32_t>>().swap(p.levels);
+    for (OwnGround::Picture& p : own_->modelTextures) std::vector<std::vector<uint32_t>>().swap(p.levels);
     std::vector<uint32_t>().swap(own_->atlas.argb);
 }
 
@@ -314,37 +316,95 @@ void MapWorld::loop() {
                     const std::vector<uint8_t>* laid = ground.laid.size() == full.cells.size() ? &ground.laid : nullptr;
                     own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid);
                     own->distant = terrain::build(full, 1, own->atlas);
-                    unsigned found = 0;
-                    for (const std::string& t : full.textures) {
-                        OwnGround::Picture pic;
-                        const std::string entry = "data\\texture\\" + t, low = lower(entry);
-                        std::vector<uint8_t> tb;
-                        bool got = win::gamefiles::readWhole(dir + "\\" + entry, tb);
+                    // a file of the game's: the data folder first, then its archives (names as written, or lower case)
+                    const auto readGame = [&](const std::string& entry, std::vector<uint8_t>& out) {
+                        const std::string low = lower(entry);
+                        bool got = win::gamefiles::readWhole(dir + "\\" + entry, out);
                         for (size_t i = 0; i < archives.size() && !got; ++i) {
                             Archive& a = *archives[i];
                             if (!open(a)) continue;
-                            got = a.grf ? (a.g.find(entry) && a.g.read(entry, tb, why)) ||
-                                              (a.g.find(low) && a.g.read(low, tb, why))
-                                        : a.zip.has(low) && a.zip.read(low, tb, why);
+                            got = a.grf ? (a.g.find(entry) && a.g.read(entry, out, why)) ||
+                                              (a.g.find(low) && a.g.read(low, out, why))
+                                        : a.zip.has(low) && a.zip.read(low, out, why);
                         }
+                        return got;
+                    };
+                    // a texture in full colour with its mipmaps, each half of the one before; `keyed`: the magenta
+                    // see-through (3.0.4-beta.14, the models' leaves and fences, as the game keys them)
+                    const auto picture = [&](const std::string& name, bool keyed) {
+                        OwnGround::Picture pic;
+                        std::vector<uint8_t> tb;
                         std::vector<uint32_t> argb;
-                        int w = 0, h = 0;
-                        if (got && pack::decodeBmp(tb.data(), tb.size(), argb, w, h) && w > 0 && h > 0) {
-                            pic.width = w;
-                            pic.height = h;
-                            pic.levels.push_back(std::move(argb));
-                            while (w > 1 || h > 1) {  // its mipmaps, each half of the one before
-                                std::vector<uint32_t> half;
-                                int hw = 0, hh = 0;
-                                full_colour::halve(pic.levels.back(), w, h, half, hw, hh);
-                                if (half.empty()) break;
-                                pic.levels.push_back(std::move(half));
-                                w = hw, h = hh;
-                            }
-                            ++found;
+                        int pw = 0, ph = 0;
+                        bool alpha = false;
+                        const std::string low = lower(name);
+                        const bool tga = low.size() > 4 && low.compare(low.size() - 4, 4, ".tga") == 0;
+                        if (!readGame("data\\texture\\" + name, tb) ||
+                            !(tga ? pack::decodeTga(tb.data(), tb.size(), argb, pw, ph, alpha)
+                                  : pack::decodeBmp(tb.data(), tb.size(), argb, pw, ph)) ||
+                            pw <= 0 || ph <= 0)
+                            return pic;
+                        // keyed to the game's own see-through texel (0x0421 in its 16 bits): the AI textures know it
+                        if (keyed && !tga)
+                            for (uint32_t& c : argb)
+                                if (((c >> 16) & 0xFF) >= 0xFE && ((c >> 8) & 0xFF) <= 3 && (c & 0xFF) >= 0xFE)
+                                    c = 0x00080808u;
+                        pic.width = pw;
+                        pic.height = ph;
+                        pic.levels.push_back(std::move(argb));
+                        while (pw > 1 || ph > 1) {
+                            std::vector<uint32_t> half;
+                            int hw = 0, hh = 0;
+                            full_colour::halve(pic.levels.back(), pw, ph, half, hw, hh);
+                            if (half.empty()) break;
+                            pic.levels.push_back(std::move(half));
+                            pw = hw, ph = hh;
                         }
-                        own->textures.push_back(std::move(pic));
+                        return pic;
+                    };
+                    unsigned found = 0;
+                    for (const std::string& t : full.textures) {
+                        own->textures.push_back(picture(t, false));
+                        found += own->textures.back().levels.empty() ? 0 : 1;
                     }
+                    // 3.0.4-beta.14: its models, each file read once, placed as the map places them
+                    std::vector<std::string> modelNames;
+                    std::vector<rsm::Model> files;
+                    std::vector<bool> filesOk;
+                    std::vector<size_t> fileOf;
+                    for (const rsw::Model& m : w.models) {
+                        const std::string key = lower(m.file);
+                        size_t k = 0;
+                        while (k < modelNames.size() && modelNames[k] != key) ++k;
+                        if (k == modelNames.size()) {
+                            modelNames.push_back(key);
+                            std::vector<uint8_t> mb;
+                            rsm::Model model;
+                            const bool ok = readGame("data\\model\\" + m.file, mb) &&
+                                            rsm::parse(mb.data(), mb.size(), model, why);
+                            files.push_back(ok ? std::move(model) : rsm::Model{});
+                            filesOk.push_back(ok);
+                        }
+                        fileOf.push_back(k);
+                    }
+                    std::vector<const rsm::Model*> perInstance;
+                    for (size_t k : fileOf) perInstance.push_back(filesOk[k] ? &files[k] : nullptr);
+                    std::vector<std::string> modelTextureNames;
+                    own->models = own_models::place(w.models, perInstance, full.width, full.height, full.zoom,
+                                                    modelTextureNames);
+                    for (const std::string& t : modelTextureNames) own->modelTextures.push_back(picture(t, true));
+                    own->modelFiles = unsigned(modelNames.size());
+                    for (bool ok : filesOk) own->modelFilesRead += ok ? 1 : 0;
+                    if (w.lightKnown) {  // the way to the light as the client turns the file's (Impl::mapSun)
+                        const float lon = float(w.lightLongitude) * 0.0174533f;
+                        const float lat = float(w.lightLatitude) * 0.0174533f;
+                        own->toLight[0] = -std::cos(lon) * std::sin(lat);
+                        own->toLight[1] = -std::cos(lat);
+                        own->toLight[2] = -std::sin(lon) * std::sin(lat);
+                    }
+                    LOG_INFO("own ground: %s's models - %u placed from %u of %u files, %u triangles, %u textures",
+                             name.c_str(), unsigned(w.models.size()), own->modelFilesRead, own->modelFiles,
+                             unsigned(own->models.indices.size() / 3), unsigned(own->modelTextures.size()));
                     LOG_INFO("own ground: %s - %u cells' worth in %u chunks, %u triangles, %u of %u textures, "
                              "lightmaps %dx%d", name.c_str(), unsigned(full.cells.size()),
                              unsigned(own->mesh.chunks.size()), unsigned(own->mesh.indices.size() / 3), found,

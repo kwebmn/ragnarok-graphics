@@ -18,6 +18,13 @@ struct Tl2 {
     float u0, v0, u1, v1;
 };
 static_assert(sizeof(Tl2) == 40, "the game's FVF_TL2 vertex");
+// 3.0.4-beta.14: its one-texture vertex (FVF_TL1) - the models' draws
+struct Tl1 {
+    float x, y, z, rhw;
+    uint32_t diffuse, specular;
+    float u, v;
+};
+static_assert(sizeof(Tl1) == 32, "the game's FVF_TL1 vertex");
 
 // The camera, world to view: rows into the view's x, y, z (as ground.cpp's seams take it) and its place
 struct View {
@@ -42,11 +49,19 @@ float depthOf(const camera::Projection& p, float zd);
 // A vertex of the own ground at its place in the map's file (the axes make it the world's) as the game would put it on
 // the screen - its colours and texture coordinates left; false behind the near plane
 bool place(const View& v, const camera::Projection& p, const map::Axes& axes, const float file[3], Tl2& out);
+// 3.0.4-beta.14: the same for a point already in the view
+bool placeView(const camera::Projection& p, const float view[3], Tl2& out);
+
+// 3.0.4-beta.14 (the own models): the part of a triangle past the view depth `from` (its corners' depths zd) - what the
+// game cuts off at its far plane - as up to four corners, each the shares of the triangle's three it is made of (in
+// order round it); 0: none of it
+int pastDepth(const float zd[3], float from, float out[4][3]);
 
 // Whether a box of the world (lo, hi) may show: not when all of it lies behind the near plane, past `most` or off one
-// side of the screen (width x height game pixels); nearest: its corners' least view depth (0 round the eye)
+// side of the screen (width x height game pixels); nearest: its corners' least view depth (0 round the eye);
+// farthest (3.0.4-beta.14), when given: their greatest
 bool boxInView(const View& v, const camera::Projection& p, int width, int height, const float lo[3], const float hi[3],
-               float most, float& nearest);
+               float most, float& nearest, float* farthest = nullptr);
 
 // The game's own colours of its ground, learnt from its draws: each cell corner's vertex colour (the colour the game
 // lights its ground with) and the fog of this frame (the specular's alpha by the view depth)

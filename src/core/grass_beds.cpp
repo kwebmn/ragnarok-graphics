@@ -15,16 +15,6 @@ std::string lower(std::string s) {  // the ASCII letters (the Korean names' cp94
 const char kRoundBed[] = "\xb3\xaa\xb9\xab\xc0\xe2\xc3\xca\xb2\xc9\\\xb5\xd5\xb1\xd9\xb2\xc9\xb9\xe7.rsm";
 const char kWeed[] = "\xc7\xc1\xb7\xd0\xc5\xd7\xb6\xf3\\weed.bmp";
 
-// A turn of p by `degrees` about one axis (0 x, 1 y, 2 z), as the game's matrices turn a model
-void turn(float p[3], int axis, float degrees) {
-    if (degrees == 0.0f) return;
-    const float r = degrees * 3.14159265f / 180.0f, c = std::cos(r), s = std::sin(r);
-    const int a = (axis + 1) % 3, b = (axis + 2) % 3;  // y: z, x - so x' = c x + s z, z' = -s x + c z
-    const float u = p[a], v = p[b];
-    p[a] = c * u - s * v;
-    p[b] = s * u + c * v;
-}
-
 }  // namespace
 
 bool bedModel(const std::string& file) { return lower(file) == kRoundBed; }
@@ -40,12 +30,8 @@ std::vector<Box> place(const rsm::Model& model, const rsw::Model& at) {
         for (int k = 0; k < 8; ++k) {  // its corners: scaled, turned about y, x and z, put at the place
             float p[3] = {(k & 1) ? part.hi[0] : part.lo[0], (k & 2) ? part.hi[1] : part.lo[1],
                           (k & 4) ? part.hi[2] : part.lo[2]};
-            for (int a = 0; a < 3; ++a) p[a] *= at.scale[a];
-            turn(p, 1, at.rot[1]);
-            turn(p, 0, at.rot[0]);
-            turn(p, 2, at.rot[2]);
+            rsw::placeInMap(at, p);  // 3.0.4-beta.14: shared with the own models
             for (int a = 0; a < 3; ++a) {
-                p[a] += at.pos[a];
                 b.lo[a] = std::min(b.lo[a], p[a]);
                 b.hi[a] = std::max(b.hi[a], p[a]);
             }

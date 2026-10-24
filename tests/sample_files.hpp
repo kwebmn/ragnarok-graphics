@@ -138,6 +138,51 @@ inline std::vector<uint8_t> rsm() {
     return w.b;
 }
 
+// 3.0.4-beta.14: a wall of 4 x 6 standing on the ground at x 1..5, its texture's coordinates (version 1.4: a colour
+// and u, v each), the second of its two faces drawn on both sides
+inline std::vector<uint8_t> rsmWall() {
+    RsmBytes w;
+    w.b = {'G', 'R', 'S', 'M', 1, 4};
+    w.put<int32_t>(0);
+    w.put<int32_t>(1);
+    w.put<uint8_t>(255);
+    for (int i = 0; i < 16; ++i) w.put<uint8_t>(0);
+    w.put<int32_t>(1);
+    w.name("wall.bmp", 40);
+    w.name("main", 40);
+    w.put<int32_t>(1);
+    w.name("main", 40);
+    w.name("", 40);
+    w.put<int32_t>(1);
+    w.put<int32_t>(0);
+    const float mat[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+    for (float f : mat) w.put(f);
+    for (int i = 0; i < 3; ++i) w.put(0.0f);  // offset
+    for (int i = 0; i < 3; ++i) w.put(0.0f);  // pos
+    w.put(0.0f);                              // angle
+    w.put(0.0f), w.put(1.0f), w.put(0.0f);    // axis
+    w.put(1.0f), w.put(1.0f), w.put(1.0f);    // scale
+    const float v[][3] = {{1, 0, 0}, {5, 0, 0}, {5, -6, 0}, {1, -6, 0}};  // up along -y
+    w.put<int32_t>(4);
+    for (const auto& p : v)
+        for (float f : p) w.put(f);
+    const float uv[][2] = {{0, 1}, {1, 1}, {1, 0}, {0, 0}};
+    w.put<int32_t>(4);
+    for (const auto& t : uv) w.put<uint32_t>(0xffffffffu), w.put(t[0]), w.put(t[1]);
+    w.put<int32_t>(2);
+    const uint16_t faces[][3] = {{0, 1, 2}, {0, 2, 3}};
+    for (int k = 0; k < 2; ++k) {
+        for (uint16_t i : faces[k]) w.put(i);
+        for (uint16_t i : faces[k]) w.put(i);  // its corners' texture coordinates
+        w.put<uint16_t>(0);                    // its texture
+        w.put<uint16_t>(0);
+        w.put<int32_t>(k == 1 ? 1 : 0);  // both sides
+        w.put<int32_t>(0);
+    }
+    w.put<int32_t>(0);  // rotation keys
+    return w.b;
+}
+
 // 2.3: a ground file (.gnd, version 1.7): its textures, one lightmap, a top surface a cell. cells[y * width + x]:
 // the cell's texture and its corners' UV ({u0, u1, u2, u3}, {v0, v1, v2, v3}: (x, y), (x+1, y), (x, y+1),
 // (x+1, y+1)); texture -1: no top surface there.

@@ -30,6 +30,10 @@ bool place(const View& v, const camera::Projection& p, const map::Axes& axes, co
     const float w[3] = {file[0] * float(axes.x), file[1] * float(axes.y), file[2] * float(axes.z)};
     float c[3];
     toView(v, w, c);
+    return placeView(p, c, out);
+}
+
+bool placeView(const camera::Projection& p, const float c[3], Tl2& out) {
     if (c[2] <= p.nearZ) return false;
     out.x = c[0] / c[2] * p.f0 + p.cx;
     out.y = c[1] / c[2] * p.f1 + p.cy;
@@ -38,18 +42,38 @@ bool place(const View& v, const camera::Projection& p, const map::Axes& axes, co
     return true;
 }
 
+int pastDepth(const float zd[3], float from, float out[4][3]) {
+    int n = 0;
+    for (int i = 0; i < 3; ++i) {
+        const int j = (i + 1) % 3;
+        const bool here = zd[i] >= from, next = zd[j] >= from;
+        if (here) {
+            for (int k = 0; k < 3; ++k) out[n][k] = k == i ? 1.0f : 0.0f;
+            ++n;
+        }
+        if (here != next) {  // the edge crosses the plane
+            const float t = (from - zd[i]) / (zd[j] - zd[i]);
+            for (int k = 0; k < 3; ++k) out[n][k] = (k == i ? 1.0f - t : 0.0f) + (k == j ? t : 0.0f);
+            ++n;
+        }
+    }
+    return n;
+}
+
 bool boxInView(const View& v, const camera::Projection& p, int width, int height, const float lo[3], const float hi[3],
-               float most, float& nearest) {
+               float most, float& nearest, float* farthest) {
     // 3.0.4-beta.12: by the view's planes - through the eye and the screen's edges, the near one, `most` - which hold
     // for corners behind the eye too: all eight outside one of them, none of it shows
     const float l = -p.cx / p.f0, r = (float(width) - p.cx) / p.f0, t = -p.cy / p.f1, b = (float(height) - p.cy) / p.f1;
     int out[6] = {0, 0, 0, 0, 0, 0};
     nearest = 1e30f;
+    if (farthest) *farthest = -1e30f;
     for (int k = 0; k < 8; ++k) {
         const float w[3] = {k & 1 ? hi[0] : lo[0], k & 2 ? hi[1] : lo[1], k & 4 ? hi[2] : lo[2]};
         float c[3];
         toView(v, w, c);
         nearest = std::min(nearest, std::max(c[2], 0.0f));
+        if (farthest) *farthest = std::max(*farthest, c[2]);
         out[0] += c[2] <= p.nearZ;
         out[1] += c[2] > most;
         out[2] += c[0] < l * c[2];

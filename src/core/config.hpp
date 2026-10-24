@@ -359,6 +359,9 @@ struct EffectSettings {
     // .gnd (core/terrain.hpp: smooth, its textures in full colour, no cut at the far plane) in place of the game's
     // cells (gpu/own_ground.cpp, Direct3D 12)
     bool ownGround = false;
+    // 3.0.4-beta.14 (the user chose «Дома и деревья вдали»), a part of own_ground: the map's houses, trees and
+    // rocks from its files (core/own_models.hpp) past the game's far plane, where it cuts them off
+    bool ownFarModels = true;
     // 1.16: the remaster's world reflections (mirror.cpp): the last frame's opaque world turned over the water's
     // level, read by water_ps where the picture has nothing to reflect. Remaster mode. Off by default.
     bool worldReflections = false;
