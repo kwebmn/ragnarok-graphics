@@ -153,6 +153,14 @@ void Console::build(Lang lang, const Config& config) {
         if (rows_.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleNothing), 0});
     } else {
         rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11 as well)
+        // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)
+        if (settingOf("panel.show")) {
+            rows_.push_back(Row{Kind::Heading, tr(lang, Text::PanelHeading), 0});
+            rows_.push_back(Row{Kind::Box, "panel.show", 0});
+            rows_.push_back(Row{Kind::Choice, "panel.layout", 1});
+            rows_.push_back(Row{Kind::Slider, "panel.size", 1});
+            rows_.push_back(Row{Kind::Slider, "panel.opacity", 1});
+        }
         // 2.2.1: the AI pictures of the texture pack - a kind off hidden at once, on at once when the game started
         // with it
         rows_.push_back(Row{Kind::Heading, tr(lang, Text::PageAi), 0});

@@ -102,6 +102,12 @@ public:
                     p.heading(t(Text::WindowsHeading));
                     buildRows(p, "windows");
                 }
+                // 3.0.3-beta.8: the game windows' panel ([panel]) - settings of its own (the user)
+                if (anyListed("panel")) {
+                    p.gap();
+                    p.heading(t(Text::PanelHeading));
+                    buildRows(p, "panel");
+                }
                 break;
             case settings::Page::Chat:
                 regRows(p, [](const RegSetting& s) { return *s.subkey && s.control == Control::Check; });  // whispers

@@ -9,8 +9,6 @@ namespace uagfx::panel {
 // екрана»): the panel's shapes laid out for a number of windows at a scale (the game's interface scale x [windows]
 // panel_size), drawn into a premultiplied BGRA picture; its words go over it by GDI (win/window_panel).
 enum class Layout : uint8_t { Row, Column };
-// Its window's class: the pad's mouse gate keeps a click on it from the game (pad/win/game_window)
-constexpr const char* kWindowClass = "uaro-graphics-windows-panel";
 
 struct Box {
     float x = 0, y = 0, w = 0, h = 0;
@@ -24,12 +22,13 @@ struct Geometry {
     int width = 0, height = 0;  // the picture's
     float scale = 1, radius = 0;
     Box top, grip, title, close;  // dragged by its top row; the close «x» hides it
+    Box layout;  // the button that lays the cards the other way (the user: «по горизонтали так и по вертикали»)
     std::vector<CardBoxes> cards;
     bool narrow = false;  // a row wider than half the window: the number, the start of the name and the bars
 };
 Geometry geometry(int count, Layout layout, float scale, int roomWidth);
 
-enum class Part : uint8_t { None, Top, Close, Card };
+enum class Part : uint8_t { None, Top, Close, Layout, Card };
 struct Hit {
     Part part = Part::None;
     int card = -1;
@@ -58,7 +57,11 @@ struct Picture {
     int width = 0, height = 0;
     std::vector<uint32_t> px;  // premultiplied 0xAARRGGBB, rows top down
 };
-void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, bool hoverClose);
+// `hovered`: the top row's button under the cursor (Close, Layout); `layout`: the cards' now - the button shows the
+// other one
+void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part hovered, Layout layout);
+// The whole picture (premultiplied) at an opacity: [panel] opacity
+void fade(Picture& p, float opacity);
 // A colour (0xRRGGBB) at an opacity over a premultiplied pixel: the words' coverage over the picture
 void over(uint32_t& pixel, uint32_t rgb, float opacity);
 // A bar's colour (0xRRGGBB): red under 25 % as the game's own gauges (0x4490d0); else green HP, blue SP

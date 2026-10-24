@@ -731,32 +731,36 @@ TEST(config_reads_the_window_keys) {
     CHECK(u.next.windowKeys == WindowKeys::Off);
 }
 
-// 3.0.3-beta.7: the windows' panel - [windows] panel (on), panel_layout (row | column), panel_size (75-150 %, rows of
-// «Гра й чат»); panel_hidden and panel_place the driver's own (Ctrl+Alt+0, the cross, a drag), no rows
+// 3.0.3-beta.8: the windows' panel - a section of its own: [panel] show (on), layout (row | column), size (75-150 %),
+// opacity (40-100 %, 90): rows of «Гра й чат» under «Панель вікон» and in the game's console; hidden and place the
+// driver's own (Ctrl+Alt+0, its cross, a drag), no rows
 TEST(config_reads_the_windows_panel) {
     const Config d = parseConfig("");
-    CHECK(d.windowPanel && !d.windowPanelHidden);
-    CHECK(d.windowPanelLayout == PanelLayout::Row);
-    CHECK_EQ(d.windowPanelSize, 100);
-    CHECK_EQ(d.windowPanelPlace, std::string(""));
-    const Config c = parseConfig("[windows]\npanel = 0\npanel_layout = column\npanel_size = 150\npanel_hidden = 1\n"
-                                 "panel_place = 1.000 0.500\n");
-    CHECK(!c.windowPanel && c.windowPanelHidden);
-    CHECK(c.windowPanelLayout == PanelLayout::Column);
-    CHECK_EQ(c.windowPanelSize, 150);
-    CHECK_EQ(c.windowPanelPlace, std::string("1.000 0.500"));
-    CHECK_EQ(parseConfig("[windows]\npanel_size = 400\n").windowPanelSize, 150);
-    CHECK_EQ(parseConfig("[windows]\npanel_size = 10\n").windowPanelSize, 75);
-    for (const char* key : {"windows.panel", "windows.panel_layout", "windows.panel_size"}) {
+    CHECK(d.panelShow && !d.panelHidden);
+    CHECK(d.panelLayout == PanelLayout::Row);
+    CHECK_EQ(d.panelSize, 100);
+    CHECK_EQ(d.panelOpacity, 90);
+    CHECK_EQ(d.panelPlace, std::string(""));
+    const Config c = parseConfig("[panel]\nshow = 0\nlayout = column\nsize = 150\nopacity = 60\nhidden = 1\n"
+                                 "place = 1.000 0.500\n");
+    CHECK(!c.panelShow && c.panelHidden);
+    CHECK(c.panelLayout == PanelLayout::Column);
+    CHECK_EQ(c.panelSize, 150);
+    CHECK_EQ(c.panelOpacity, 60);
+    CHECK_EQ(c.panelPlace, std::string("1.000 0.500"));
+    CHECK_EQ(parseConfig("[panel]\nsize = 400\n").panelSize, 150);
+    CHECK_EQ(parseConfig("[panel]\nsize = 10\n").panelSize, 75);
+    CHECK_EQ(parseConfig("[panel]\nopacity = 5\n").panelOpacity, 40);
+    for (const char* key : {"panel.show", "panel.layout", "panel.size", "panel.opacity"}) {
         const settings::IniSetting* s = settings::findSetting(key);
         CHECK(s != nullptr);
         if (s) CHECK(s->page == settings::Page::Game);
+        CHECK(appliesNow(key));
     }
-    CHECK(settings::findSetting("windows.panel_hidden") == nullptr && settings::findSetting("windows.panel_place") ==
-                                                                          nullptr);
-    const settings::IniSetting* layout = settings::findSetting("windows.panel_layout");
+    CHECK(settings::findSetting("panel.hidden") == nullptr && settings::findSetting("panel.place") == nullptr);
+    const settings::IniSetting* layout = settings::findSetting("panel.layout");
     if (layout) CHECK_EQ(settings::tokenOf(*layout, c), std::string("column"));
     const LiveUpdate u = liveUpdate(d, c);
-    CHECK(!u.next.windowPanel && u.next.windowPanelHidden && u.next.windowPanelSize == 150);
-    CHECK(u.next.windowPanelLayout == PanelLayout::Column && u.next.windowPanelPlace == "1.000 0.500");
+    CHECK(!u.next.panelShow && u.next.panelHidden && u.next.panelSize == 150 && u.next.panelOpacity == 60);
+    CHECK(u.next.panelLayout == PanelLayout::Column && u.next.panelPlace == "1.000 0.500");
 }

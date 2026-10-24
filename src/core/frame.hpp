@@ -112,6 +112,13 @@ public:
                 const std::vector<std::vector<uint32_t>>& own = {});
     void writeTarget(const Rect& rect, const uint32_t* argb);
     bool empty() const { return commands_.empty(); }
+    // 3.0.3-beta.8: the draws, clears and writes since the last call, through flushes (reset keeps it): whether the
+    // game drew a picture anew - the windows' panel goes over such a one alone (the target keeps its pixels)
+    uint32_t takeWork() {
+        const uint32_t n = work_;
+        work_ = 0;
+        return n;
+    }
     // Bytes waiting to go to the GPU: vertices, indices and pixels. Past kFlushBytes the driver plays the record at
     // once rather than letting the GPU upload buffers grow: a 32-bit game has 2 GB of address space.
     static constexpr size_t kFlushBytes = size_t(16) << 20;
@@ -147,6 +154,7 @@ private:
     std::vector<uint8_t> vertices_;
     std::vector<uint16_t> indices_;
     std::vector<uint32_t> pixels_;
+    uint32_t work_ = 0;
     std::vector<SpriteCell> slots_;
 };
 

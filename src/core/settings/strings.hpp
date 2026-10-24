@@ -399,6 +399,7 @@ enum class Text : uint16_t {
     WindowsKeys, WindowsKeysHint, WindowsKeysAll, WindowsKeysBack, WindowsKeysOff,  // 3.0.3-beta.6
     WindowsPanel, WindowsPanelHint, WindowsPanelLayout, WindowsPanelLayoutHint, WindowsPanelRow, WindowsPanelColumn,
     WindowsPanelSize, WindowsPanelSizeHint, PanelTitle, PanelWindow,  // 3.0.3-beta.7: the windows' panel
+    PanelHeading, PanelOpacity, PanelOpacityHint,  // 3.0.3-beta.8: its own section, in the game's picture
     Count
 };
 

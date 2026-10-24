@@ -4339,15 +4339,18 @@ constexpr Entry kTexts[] = {
     {Text::WindowsKeysOff, "Off", "Вимкнено", "Выключено"},
     {Text::WindowsPanel, "The windows' panel in the game", "Панель вікон у грі", "Панель окон в игре"},
     {Text::WindowsPanelHint,
-     "With two or more game windows open, a panel over the game shows them: a click on a window's card brings it to "
-     "the front, the current one is blue, the thin bars are HP and SP (red under 25 %). Drag it by its top row; its "
-     "cross or Ctrl+Alt+0 hides it, Ctrl+Alt+0 or this switch shows it again.",
-     "Коли відкрито два вікна гри або більше, панель над грою показує їх: клік по картці вікна виводить його вперед, "
-     "поточне — синє, тонкі смужки — HP і SP (червоні нижче 25 %). Панель тягнуть за верхній рядок; хрестик на ній "
-     "або Ctrl+Alt+0 ховає її, Ctrl+Alt+0 або цей перемикач показує знову.",
-     "Когда открыто два окна игры или больше, панель над игрой показывает их: клик по карточке окна выводит его "
-     "вперёд, текущее — синее, тонкие полоски — HP и SP (красные ниже 25 %). Панель тянут за верхнюю строку; крестик "
-     "на ней или Ctrl+Alt+0 прячет её, Ctrl+Alt+0 или этот переключатель показывает снова."},
+     "With two or more game windows open, a panel in the game's picture shows them: a click on a window's card brings "
+     "it to the front, the current one is blue, the thin bars are HP and SP (red under 25 %). Drag it by its top row; "
+     "the button beside its cross lays the cards in a row or a column; the cross or Ctrl+Alt+0 hides it, Ctrl+Alt+0 "
+     "or this switch shows it again.",
+     "Коли відкрито два вікна гри або більше, панель у картинці гри показує їх: клік по картці вікна виводить його "
+     "вперед, поточне — синє, тонкі смужки — HP і SP (червоні нижче 25 %). Панель тягнуть за верхній рядок; кнопка "
+     "біля хрестика кладе картки в ряд або стовпчиком; хрестик або Ctrl+Alt+0 ховає її, Ctrl+Alt+0 або цей "
+     "перемикач показує знову.",
+     "Когда открыто два окна игры или больше, панель в картинке игры показывает их: клик по карточке окна выводит "
+     "его вперёд, текущее — синее, тонкие полоски — HP и SP (красные ниже 25 %). Панель тянут за верхнюю строку; "
+     "кнопка рядом с крестиком кладёт карточки в ряд или столбиком; крестик или Ctrl+Alt+0 прячет её, Ctrl+Alt+0 "
+     "или этот переключатель показывает снова."},
     {Text::WindowsPanelLayout, "The panel's layout", "Вигляд панелі", "Вид панели"},
     {Text::WindowsPanelLayoutHint, "The windows' cards side by side or one under another.",
      "Картки вікон поруч або одна під одною.", "Карточки окон рядом или одна под другой."},
@@ -4361,6 +4364,10 @@ constexpr Entry kTexts[] = {
      "мельче."},
     {Text::PanelTitle, "Windows", "Вікна", "Окна"},
     {Text::PanelWindow, "window {1}", "вікно {1}", "окно {1}"},
+    {Text::PanelHeading, "The windows' panel", "Панель вікон", "Панель окон"},
+    {Text::PanelOpacity, "The panel's opacity", "Непрозорість панелі", "Непрозрачность панели"},
+    {Text::PanelOpacityHint, "Less: the game shows through the panel more.",
+     "Менше — гру крізь панель видно більше.", "Меньше — игру сквозь панель видно больше."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

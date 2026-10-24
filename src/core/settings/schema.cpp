@@ -90,12 +90,15 @@ const std::vector<IniSetting>& iniSettings() {
         {"windows", "switch_keys", Page::Game, Control::Choice, 0, 0, 0, {"all", "back", "off"},
          {Text::WindowsKeysAll, Text::WindowsKeysBack, Text::WindowsKeysOff}, Text::WindowsKeys,
          Text::WindowsKeysHint, ""},  // 3.0.3-beta.6: the keys that switch the game windows
-        {"windows", "panel", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsPanel,
-         Text::WindowsPanelHint, ""},  // 3.0.3-beta.7: the windows' panel over the game
-        {"windows", "panel_layout", Page::Game, Control::Choice, 0, 0, 0, {"row", "column"},
+        // 3.0.3-beta.8: the game windows' panel in the game's picture - a section of its own («Панель вікон»)
+        {"panel", "show", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsPanel,
+         Text::WindowsPanelHint, ""},
+        {"panel", "layout", Page::Game, Control::Choice, 0, 0, 0, {"row", "column"},
          {Text::WindowsPanelRow, Text::WindowsPanelColumn}, Text::WindowsPanelLayout, Text::WindowsPanelLayoutHint, ""},
-        {"windows", "panel_size", Page::Game, Control::Slider, 75, 150, 25, {}, {}, Text::WindowsPanelSize,
+        {"panel", "size", Page::Game, Control::Slider, 75, 150, 25, {}, {}, Text::WindowsPanelSize,
          Text::WindowsPanelSizeHint, " %"},
+        {"panel", "opacity", Page::Game, Control::Slider, 40, 100, 10, {}, {}, Text::PanelOpacity,
+         Text::PanelOpacityHint, " %"},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)
@@ -777,9 +780,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "windows.others_light") return c.windowOthersLight ? "1" : "0";  // 3.0.3-beta.3
     if (k == "windows.others_music") return c.windowOthersMusic ? "1" : "0";
     if (k == "windows.switch_keys") return windowKeysToken(c.windowKeys);  // 3.0.3-beta.6
-    if (k == "windows.panel") return c.windowPanel ? "1" : "0";  // 3.0.3-beta.7
-    if (k == "windows.panel_layout") return panelLayoutToken(c.windowPanelLayout);
-    if (k == "windows.panel_size") return std::to_string(c.windowPanelSize);
+    if (k == "panel.show") return c.panelShow ? "1" : "0";  // 3.0.3-beta.8
+    if (k == "panel.layout") return panelLayoutToken(c.panelLayout);
+    if (k == "panel.size") return std::to_string(c.panelSize);
+    if (k == "panel.opacity") return std::to_string(c.panelOpacity);
     if (k == "renderer.safe_mode") return c.safeMode ? "1" : "0";  // 2.12
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";

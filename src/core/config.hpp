@@ -17,7 +17,7 @@ enum class DisplayMode { Auto, Window, Borderless };
 enum class UiFilter { Sharp, Smooth };  // [display] ui_filter: how magnified interface pictures are sampled
 // 3.0.3-beta.6: [windows] switch_keys - Ctrl+Tab and Ctrl+Alt+1-8 (all), Ctrl+Tab alone (back) or none (off)
 enum class WindowKeys : uint8_t { All, Back, Off };
-enum class PanelLayout : uint8_t { Row, Column };  // 3.0.3-beta.7: [windows] panel_layout
+enum class PanelLayout : uint8_t { Row, Column };  // 3.0.3-beta.8: [panel] layout
 // [display] window_art (0.41): how crisp text enlarges the windows' buttons, frames and labels - xBR (core/xbr.hpp),
 // the AI (with [ai] ui_pieces) or as the game's pixels.
 enum class WindowArt { Xbr, Ai, Pixels };
@@ -466,13 +466,14 @@ struct Config {
     bool windowOthersLight = true, windowOthersMusic = false;
     // 3.0.3-beta.6: switch_keys - the keys that switch the game windows (core/game_windows)
     WindowKeys windowKeys = WindowKeys::All;
-    // 3.0.3-beta.7: panel - the windows' panel over the game (core/window_panel), panel_layout its cards in a row or a
-    // column, panel_size % over the game's interface scale (75-150); panel_hidden (Ctrl+Alt+0, its cross) and
-    // panel_place ("x y", core/window_panel's Place; "" its first place) written by the driver
-    bool windowPanel = true, windowPanelHidden = false;
-    PanelLayout windowPanelLayout = PanelLayout::Row;
-    int windowPanelSize = 100;
-    std::string windowPanelPlace;
+    // 3.0.3-beta.8: [panel] - the game windows' panel in the game's picture (core/window_panel, win/window_panel):
+    // show; layout - its cards in a row or a column; size - % over the game's interface scale (75-150); opacity (40-100
+    // %); hidden (Ctrl+Alt+0, its cross) and place ("x y", core/window_panel's Place; "" its first place) written by
+    // the driver
+    bool panelShow = true, panelHidden = false;
+    PanelLayout panelLayout = PanelLayout::Row;
+    int panelSize = 100, panelOpacity = 90;
+    std::string panelPlace;
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;

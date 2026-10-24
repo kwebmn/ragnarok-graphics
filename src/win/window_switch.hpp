@@ -21,11 +21,15 @@ public:
     ~WindowSwitch();
     // A few times a second: the entry written, the window's procedure ours once, the panel's windows
     void check(HWND window, bool foreground, const std::string& name, const Config& config);
-    // 3.0.3-beta.7: every frame - the windows' panel (win/window_panel) in the main game window
-    void frame(HWND window, bool main, Config& config, int gameWidth) { panel_.frame(window, main, config, gameWidth); }
+    // 3.0.3-beta.8: every frame once its scale is known - the windows' panel (win/window_panel) in the main game
+    // window's picture; and into the frame's record before it goes
+    void frame(HWND window, bool main, Config& config, double k, int targetWidth, int targetHeight) {
+        panel_.frame(window, main, config, k, targetWidth, targetHeight);
+    }
+    void draw(FrameRecord& record, gpu::Renderer& renderer) { panel_.draw(record, renderer); }
     // A key going down in the game window: true - taken (the game does not get it)
     bool key(unsigned vk, LPARAM lParam);
-    void moved() { panel_.follow(); }  // the game window moved
+    bool mouse(HWND window, UINT m, LPARAM lp, LRESULT& result) { return panel_.mouse(window, m, lp, result); }
 
 private:
     void publish(bool frontNow);

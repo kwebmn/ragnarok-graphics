@@ -454,18 +454,21 @@ Config parseConfig(const std::string& text) {
             if (val == "all") c.windowKeys = WindowKeys::All;
             if (val == "back") c.windowKeys = WindowKeys::Back;
             if (val == "off") c.windowKeys = WindowKeys::Off;
-        } else if (key == "windows.panel") {  // 3.0.3-beta.7: the windows' panel
-            setBool(val, c.windowPanel);
-        } else if (key == "windows.panel_hidden") {
-            setBool(val, c.windowPanelHidden);
-        } else if (key == "windows.panel_layout") {
-            if (val == "row") c.windowPanelLayout = PanelLayout::Row;
-            if (val == "column") c.windowPanelLayout = PanelLayout::Column;
-        } else if (key == "windows.panel_size") {
-            int size = 0;
-            if (toInt(val, -100000, 100000, size)) c.windowPanelSize = std::clamp(size, 75, 150);
-        } else if (key == "windows.panel_place") {
-            c.windowPanelPlace = val;
+        } else if (key == "panel.show") {  // 3.0.3-beta.8: the game windows' panel
+            setBool(val, c.panelShow);
+        } else if (key == "panel.hidden") {
+            setBool(val, c.panelHidden);
+        } else if (key == "panel.layout") {
+            if (val == "row") c.panelLayout = PanelLayout::Row;
+            if (val == "column") c.panelLayout = PanelLayout::Column;
+        } else if (key == "panel.size" || key == "panel.opacity") {
+            int n = 0;
+            if (toInt(val, -100000, 100000, n)) {
+                if (key == "panel.size") c.panelSize = std::clamp(n, 75, 150);
+                else c.panelOpacity = std::clamp(n, 40, 100);
+            }
+        } else if (key == "panel.place") {
+            c.panelPlace = val;
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

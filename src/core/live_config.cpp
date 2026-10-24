@@ -161,27 +161,31 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("switch_keys", windowKeysToken(running.windowKeys), windowKeysToken(file.windowKeys)));
         n.windowKeys = file.windowKeys;
     }
-    if (file.windowPanel != running.windowPanel) {  // 3.0.3-beta.7: the windows' panel
-        u.applied.push_back(change("panel", flag(running.windowPanel), flag(file.windowPanel)));
-        n.windowPanel = file.windowPanel;
+    if (file.panelShow != running.panelShow) {  // 3.0.3-beta.8: the game windows' panel
+        u.applied.push_back(change("show", flag(running.panelShow), flag(file.panelShow)));
+        n.panelShow = file.panelShow;
     }
-    if (file.windowPanelHidden != running.windowPanelHidden) {  // another game's Ctrl+Alt+0
-        u.applied.push_back(change("panel_hidden", flag(running.windowPanelHidden), flag(file.windowPanelHidden)));
-        n.windowPanelHidden = file.windowPanelHidden;
+    if (file.panelHidden != running.panelHidden) {  // another game's Ctrl+Alt+0
+        u.applied.push_back(change("hidden", flag(running.panelHidden), flag(file.panelHidden)));
+        n.panelHidden = file.panelHidden;
     }
-    if (file.windowPanelLayout != running.windowPanelLayout) {
-        u.applied.push_back(change("panel_layout", panelLayoutToken(running.windowPanelLayout),
-                                   panelLayoutToken(file.windowPanelLayout)));
-        n.windowPanelLayout = file.windowPanelLayout;
-    }
-    if (file.windowPanelSize != running.windowPanelSize) {
+    if (file.panelLayout != running.panelLayout) {
         u.applied.push_back(
-            change("panel_size", std::to_string(running.windowPanelSize), std::to_string(file.windowPanelSize)));
-        n.windowPanelSize = file.windowPanelSize;
+            change("layout", panelLayoutToken(running.panelLayout), panelLayoutToken(file.panelLayout)));
+        n.panelLayout = file.panelLayout;
     }
-    if (file.windowPanelPlace != running.windowPanelPlace) {  // another game's panel dragged
-        u.applied.push_back(change("panel_place", running.windowPanelPlace, file.windowPanelPlace));
-        n.windowPanelPlace = file.windowPanelPlace;
+    if (file.panelSize != running.panelSize) {
+        u.applied.push_back(change("size", std::to_string(running.panelSize), std::to_string(file.panelSize)));
+        n.panelSize = file.panelSize;
+    }
+    if (file.panelOpacity != running.panelOpacity) {
+        u.applied.push_back(
+            change("opacity", std::to_string(running.panelOpacity), std::to_string(file.panelOpacity)));
+        n.panelOpacity = file.panelOpacity;
+    }
+    if (file.panelPlace != running.panelPlace) {  // another game's panel dragged
+        u.applied.push_back(change("place", running.panelPlace, file.panelPlace));
+        n.panelPlace = file.panelPlace;
     }
     if (file.profile != running.profile) {  // 0.87
         u.applied.push_back(change("profile", flag(running.profile), flag(file.profile)));
@@ -236,7 +240,8 @@ bool appliesNow(const std::string& k) {
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
-           k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0;
+           k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
+           k.compare(0, 6, "panel.") == 0;  // 3.0.3-beta.8
 }
 
 }  // namespace uagfx

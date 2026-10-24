@@ -403,6 +403,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale, uiSharp ? UiFilter::Sharp : UiFilter::Smooth));
     // The AI's picture has the detail the game pixels lack: sampled as it is, not one tap per game pixel.
     if (aiDrawn[0]) c.uiMode = 0;
+    if (d.effect == uint8_t(effect_exe::Kind::Panel)) c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
         float quad[4];
         uiPixels(rec, d, quad);

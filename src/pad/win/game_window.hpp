@@ -16,6 +16,10 @@ bool setBorderless(HWND game, bool on, const WindowPlacement& where);
 void lockCursor(HWND game, bool on);
 // The Windows cursor is over the game's client area and no other program's window is on top of it there.
 bool cursorOverGame(HWND game, POINT screen);
+// 3.0.3-beta.8: the driver's panel of the game windows in the game's picture - its rectangle in the game window's
+// client pixels (Windows' size of them), whose clicks are not the game's; all: none of them is (the panel dragged);
+// nullptr: no panel. On the game's thread, as the gate.
+void setBlocked(const RECT* rect, bool all);
 // Presses or lets go F1-F9 (1-9) as if on the keyboard: the client gets it like any key press.
 void sendFKey(int key, bool down);
 // Lets the cursor go if we confined it (the client is closing).

@@ -6,10 +6,15 @@
 #include <cmath>
 #include <cstring>
 
+#include "core/d3d7.hpp"
+#include "core/effect_exe.hpp"
+#include "core/glint.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
+#include "core/states.hpp"
+#include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
-#include "win/dpi.hpp"
+#include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/real_ddraw.hpp"
@@ -88,29 +93,6 @@ std::wstring levelsOf(const gamewindows::Window& w) {
 
 }  // namespace
 
-WindowPanel::~WindowPanel() {
-    if (window_) DestroyWindow(window_);
-}
-
-bool WindowPanel::create(HWND game) {
-    static ATOM atom = 0;
-    if (!atom) {
-        WNDCLASSEXA c{};
-        c.cbSize = sizeof c;
-        c.lpfnWndProc = &WindowPanel::proc;
-        c.hInstance = GetModuleHandleA(nullptr);
-        c.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        c.lpszClassName = panel::kWindowClass;
-        atom = RegisterClassExA(&c);
-        if (!atom) return false;
-    }
-    window_ = CreateWindowExA(WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, panel::kWindowClass, "", WS_POPUP,
-                              0, 0, 1, 1, game, nullptr, GetModuleHandleA(nullptr), nullptr);
-    if (!window_) return false;
-    SetWindowLongPtrA(window_, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
-    return true;
-}
-
 void WindowPanel::update(const std::vector<gamewindows::Window>& all, uint32_t selfPid) {
     all_ = all;
     self_ = selfPid;
@@ -125,84 +107,63 @@ void WindowPanel::update(const std::vector<gamewindows::Window>& all, uint32_t s
     }
 }
 
-void WindowPanel::frame(HWND game, bool main, Config& config, int gameWidth) {
+void WindowPanel::frame(HWND game, bool main, Config& config, double k, int targetWidth, int targetHeight) {
     config_ = &config;
-    if (!game) return;
-    // In the screen's real pixels: the panel's window made aware of them, sharp under Windows' scaling (uaRO.exe is
-    // not), and the game window measured in them; its own messages come in them by themselves
-    const RealPixels real;
-    game_ = game;
-    if (seenSetting_ && !panelOn_ && config.windowPanel && config.windowPanelHidden)
-        hide(false);  // switched on in the settings: shown again, whatever its cross did
-    panelOn_ = config.windowPanel;
+    if (seenSetting_ && !panelOn_ && config.panelShow && config.panelHidden)
+        hide(false);  // switched on in the settings or the console: shown again, whatever its cross did
+    panelOn_ = config.panelShow;
     seenSetting_ = true;
-    const bool want = config.windowPanel && !config.windowPanelHidden && main && all_.size() >= 2 &&
-                      IsWindowVisible(game) && !IsIconic(game);
+    const bool want = game && config.panelShow && !config.panelHidden && main && all_.size() >= 2 && k > 0 &&
+                      targetWidth > 0 && targetHeight > 0;
     if (!want) {
-        if (dragging_) ReleaseCapture();  // gone from under the hand (another window in front): the drag is over
-        dragging_ = false;
-        if (shown_ && window_) ShowWindow(window_, SW_HIDE);
+        if (shown_) {
+            if (dragging_ && GetCapture() == game) ReleaseCapture();
+            dragging_ = false;
+            uapad::gamewindow::setBlocked(nullptr, false);
+        }
         shown_ = false;
         return;
     }
-    if (!window_ && !create(game)) return;
-    RECT client{};
-    GetClientRect(game, &client);
-    POINT origin{0, 0};
-    ClientToScreen(game, &origin);
-    const float interface = gameWidth > 0 && client.right > 0 ? float(client.right) / float(gameWidth) : 1.0f;
-    const float scale = std::clamp(interface * float(config.windowPanelSize) / 100.0f, 0.75f, 4.0f);
+    k_ = float(k);
+    const float scale = std::clamp(k_ * float(config.panelSize) / 100.0f, 0.75f, 6.0f);
     const panel::Layout layout =
-        config.windowPanelLayout == PanelLayout::Column ? panel::Layout::Column : panel::Layout::Row;
-    bool move = origin.x != origin_.x || origin.y != origin_.y;
-    if (scale != scale_ || layout != layout_ || client.right != roomW_ || client.bottom != roomH_) {
+        config.panelLayout == PanelLayout::Column ? panel::Layout::Column : panel::Layout::Row;
+    bool move = !shown_;
+    if (scale != scale_ || layout != layout_ || targetWidth != targetW_ || targetHeight != targetH_ ||
+        config.panelOpacity != opacity_) {
         scale_ = scale;
         layout_ = layout;
-        roomW_ = client.right;
-        roomH_ = client.bottom;
+        targetW_ = targetWidth;
+        targetH_ = targetHeight;
+        opacity_ = config.panelOpacity;
         dirty_ = move = true;
     }
-    if (config.windowPanelPlace != placeText_) {  // dragged here or in another game window
-        placeText_ = config.windowPanelPlace;
+    if (config.panelPlace != placeText_) {  // dragged here or in another game window
+        placeText_ = config.panelPlace;
         place_ = panel::parsePlace(placeText_);
         move = true;
     }
-    origin_ = origin;
-    if (dirty_) redraw();
+    if (dirty_) {
+        const int w = geometry_.width, h = geometry_.height;
+        render();
+        move = move || geometry_.width != w || geometry_.height != h;  // a card more or less: kept at its edge
+    }
     if (move && !dragging_) {
-        const POINT at = target();
-        SetWindowPos(window_, nullptr, at.x, at.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        const panel::Point p =
+            panel::position(place_, geometry_.width, geometry_.height, targetW_, targetH_, geometry_.scale);
+        x_ = p.x;
+        y_ = p.y;
     }
-    if (!shown_) {
-        ShowWindow(window_, SW_SHOWNOACTIVATE);
-        shown_ = true;
-        if (!everShown_)
-            LOG_INFO("windows: the panel shown - %d game windows, %s, scale %.2f, at %s", int(all_.size()),
-                     panelLayoutToken(config.windowPanelLayout), double(scale_),
-                     placeText_.empty() ? "its first place" : placeText_.c_str());
-        everShown_ = true;
-    }
+    if (!everShown_)
+        LOG_INFO("windows: the panel shown in the game's picture - %d game windows, %s, scale %.2f, at %s",
+                 int(all_.size()), panelLayoutToken(config.panelLayout), double(scale_),
+                 placeText_.empty() ? "its first place" : placeText_.c_str());
+    shown_ = everShown_ = true;
+    block(game);
 }
 
-void WindowPanel::follow() {
-    if (!shown_ || !window_ || !game_ || dragging_) return;
-    const RealPixels real;
-    POINT origin{0, 0};
-    ClientToScreen(game_, &origin);
-    if (origin.x == origin_.x && origin.y == origin_.y) return;
-    origin_ = origin;
-    const POINT at = target();
-    SetWindowPos(window_, nullptr, at.x, at.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-}
-
-POINT WindowPanel::target() const {
-    const panel::Point p =
-        panel::position(place_, geometry_.width, geometry_.height, roomW_, roomH_, geometry_.scale);
-    return POINT{origin_.x + p.x, origin_.y + p.y};
-}
-
-void WindowPanel::redraw() {
-    geometry_ = panel::geometry(int(all_.size()), layout_, scale_, roomW_);
+void WindowPanel::render() {
+    geometry_ = panel::geometry(int(all_.size()), layout_, scale_, targetW_);
     std::vector<panel::Card> cards;
     std::vector<Words> words;
     const settings::Lang lang = startup().lang;
@@ -228,155 +189,184 @@ void WindowPanel::redraw() {
         words.push_back(Words{b.name, name, named ? panel::kText : panel::kMuted, 13 * s, c.current, DT_LEFT});
         if (b.levels.w > 0) words.push_back(Words{b.levels, levelsOf(w), panel::kMuted, 11 * s, false, DT_RIGHT});
     }
-    panel::Picture pic;
-    panel::paint(pic, geometry_, cards, hoverClose_);
-    drawWords(pic, words);
+    panel::paint(picture_, geometry_, cards, hoverPart_, layout_);
+    drawWords(picture_, words);
+    panel::fade(picture_, float(opacity_) / 100.0f);
     dirty_ = false;
-    if (!window_ || pic.width <= 0 || pic.height <= 0) return;
-    HDC screen = GetDC(nullptr);
-    HDC dc = CreateCompatibleDC(screen);
-    BITMAPINFO bi{};
-    bi.bmiHeader.biSize = sizeof bi.bmiHeader;
-    bi.bmiHeader.biWidth = pic.width;
-    bi.bmiHeader.biHeight = -pic.height;
-    bi.bmiHeader.biPlanes = 1;
-    bi.bmiHeader.biBitCount = 32;
-    void* bits = nullptr;
-    HBITMAP bmp = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
-    if (bmp && bits) {
-        HGDIOBJ old = SelectObject(dc, bmp);
-        std::memcpy(bits, pic.px.data(), pic.px.size() * 4);
-        SIZE size{pic.width, pic.height};
-        POINT from{0, 0};
-        POINT at = target();
-        BLENDFUNCTION blend{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
-        // dragged now: where the hand has it; else at its place
-        UpdateLayeredWindow(window_, screen, dragging_ ? nullptr : &at, &size, dc, &from, 0, &blend, ULW_ALPHA);
-        SelectObject(dc, old);
+    upload_ = true;
+}
+
+void WindowPanel::draw(FrameRecord& record, gpu::Renderer& renderer) {
+    if (!shown_ || picture_.width <= 0 || picture_.height <= 0 || k_ <= 0) return;
+    if (!texture_ || texW_ != picture_.width || texH_ != picture_.height) {
+        if (texture_) renderer.releaseTexture(texture_);
+        texture_ = renderer.createTexture(picture_.width, picture_.height, 1);
+        texW_ = picture_.width;
+        texH_ = picture_.height;
+        upload_ = true;
+        if (!texture_) return;
     }
-    if (bmp) DeleteObject(bmp);
-    DeleteDC(dc);
-    ReleaseDC(nullptr, screen);
+    if (upload_) {
+        record.upload(texture_, 0, Rect{0, 0, texW_, texH_}, picture_.px.data());
+        upload_ = false;
+    }
+    // Its picture as it is: premultiplied, over the game's interface, no depth, a texel a target pixel
+    DrawSetup s;
+    s.ui = true;
+    s.blend = true;
+    s.srcBlend = d3d7::BLEND_ONE;
+    s.dstBlend = d3d7::BLEND_INVSRCALPHA;
+    s.stage[0].colorOp = s.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+    s.stage[0].colorArg1 = s.stage[0].alphaArg1 = d3d7::TA_TEXTURE;
+    s.stage[0].addressU = s.stage[0].addressV = d3d7::TADDRESS_CLAMP;
+    s.stage[0].magFilter = d3d7::TFG_POINT;
+    s.stage[0].minFilter = d3d7::TFN_POINT;
+    s.stage[1].colorOp = s.stage[1].alphaOp = d3d7::TOP_DISABLE;
+    DrawCmd cmd;
+    cmd.state = record.addState(s);
+    cmd.texture[0] = texture_;
+    cmd.effect = uint8_t(effect_exe::Kind::Panel);  // sampled as it is (draw.cpp, renderer11.cpp)
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    cmd.fvf = d3d7::FVF_TL1;
+    // a game x lands at x * k + 0.5 in the target (shaders.cpp draw_vs): the quad's edges on the target's pixel edges
+    const float x0 = (float(x_) - 0.5f) / k_, y0 = (float(y_) - 0.5f) / k_;
+    const float x1 = (float(x_ + texW_) - 0.5f) / k_, y1 = (float(y_ + texH_) - 0.5f) / k_;
+    const uint32_t white = 0xFFFFFFFFu;
+    const glint::Vertex v[6] = {{x0, y0, 0, 1, white, 0, 0, 0}, {x1, y0, 0, 1, white, 0, 1, 0},
+                                {x0, y1, 0, 1, white, 0, 0, 1}, {x1, y0, 0, 1, white, 0, 1, 0},
+                                {x1, y1, 0, 1, white, 0, 1, 1}, {x0, y1, 0, 1, white, 0, 0, 1}};
+    record.draw(cmd, v, 6, nullptr, 0);
+}
+
+bool WindowPanel::toTarget(HWND game, int x, int y, float& tx, float& ty) const {
+    RECT client{};
+    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
+    tx = float(x) * float(targetW_) / float(client.right);  // Windows' size of the window (uaRO.exe is not DPI-aware)
+    ty = float(y) * float(targetH_) / float(client.bottom);
+    return true;
+}
+
+panel::Hit WindowPanel::hitAt(float tx, float ty) const {
+    return panel::hitTest(geometry_, tx - float(x_), ty - float(y_));
+}
+
+void WindowPanel::block(HWND game) {
+    RECT client{};
+    if (!GetClientRect(game, &client) || targetW_ <= 0 || targetH_ <= 0) return;
+    const RECT r{LONG(int64_t(x_) * client.right / targetW_), LONG(int64_t(y_) * client.bottom / targetH_),
+                 LONG(int64_t(x_ + geometry_.width) * client.right / targetW_ + 1),
+                 LONG(int64_t(y_ + geometry_.height) * client.bottom / targetH_ + 1)};
+    uapad::gamewindow::setBlocked(&r, dragging_);
+}
+
+bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
+    if (!shown_) return false;
+    float tx = 0, ty = 0;
+    if (m == WM_SETCURSOR) {  // over it Windows' arrow: the game's own cursor is drawn under the panel
+        if (LOWORD(lp) != HTCLIENT) return false;
+        POINT p{};
+        GetCursorPos(&p);
+        ScreenToClient(game, &p);
+        if (!toTarget(game, p.x, p.y, tx, ty)) return false;
+        const panel::Hit h = hitAt(tx, ty);
+        const bool over = tx >= float(x_) && ty >= float(y_) && tx < float(x_ + geometry_.width) &&
+                          ty < float(y_ + geometry_.height);
+        if (!over && !dragging_) return false;
+        SetCursor(LoadCursor(nullptr, dragging_ || h.part == panel::Part::Top ? IDC_SIZEALL
+                                      : h.part == panel::Part::None           ? IDC_ARROW
+                                                                              : IDC_HAND));
+        result = TRUE;
+        return true;
+    }
+    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
+                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    if ((m != WM_MOUSEMOVE && !button) || !toTarget(game, GET_X_LPARAM(lp), GET_Y_LPARAM(lp), tx, ty)) return false;
+    const bool over = tx >= float(x_) && ty >= float(y_) && tx < float(x_ + geometry_.width) &&
+                      ty < float(y_ + geometry_.height);
+    result = 0;
+    if (m == WM_MOUSEMOVE) {
+        if (dragging_) {
+            x_ = std::clamp(dragStartX_ + int(std::lround(tx - dragFromX_)), 0,
+                            std::max(0, targetW_ - geometry_.width));
+            y_ = std::clamp(dragStartY_ + int(std::lround(ty - dragFromY_)), 0,
+                            std::max(0, targetH_ - geometry_.height));
+            block(game);
+            return true;
+        }
+        const panel::Hit h = over ? hitAt(tx, ty) : panel::Hit{};
+        const int hover = h.part == panel::Part::Card ? h.card : -1;
+        const panel::Part part =
+            h.part == panel::Part::Close || h.part == panel::Part::Layout ? h.part : panel::Part::None;
+        if (hover != hover_ || part != hoverPart_) {
+            hover_ = hover;
+            hoverPart_ = part;
+            dirty_ = true;
+        }
+        return false;  // the game's cursor still moves (drawn under the panel)
+    }
+    if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
+        if (!over) return false;
+        const panel::Hit h = hitAt(tx, ty);
+        if (h.part == panel::Part::Top) {
+            dragging_ = true;
+            dragFromX_ = tx;
+            dragFromY_ = ty;
+            dragStartX_ = x_;
+            dragStartY_ = y_;
+            SetCapture(game);
+            block(game);
+        }
+        pressed_ = h;
+        return true;
+    }
+    if (m == WM_LBUTTONUP) {
+        if (dragging_) {
+            dragging_ = false;
+            if (GetCapture() == game) ReleaseCapture();
+            keepPlace();
+            block(game);
+            return true;
+        }
+        const panel::Hit was = pressed_;
+        pressed_ = panel::Hit{};
+        if (!over) return was.part != panel::Part::None;  // pressed on it, let go off it: still the panel's
+        const panel::Hit h = hitAt(tx, ty);
+        if (h.part != was.part || h.card != was.card) return true;
+        if (h.part == panel::Part::Close) {
+            hide(true);
+        } else if (h.part == panel::Part::Layout && config_) {
+            config_->panelLayout = config_->panelLayout == PanelLayout::Row ? PanelLayout::Column : PanelLayout::Row;
+            editIniFile(ourFile(layout::File::Ini), {{"panel", "layout", panelLayoutToken(config_->panelLayout)}});
+            LOG_INFO("windows: the panel's cards %s (its button)",
+                     config_->panelLayout == PanelLayout::Row ? "in a row" : "in a column");
+        } else if (h.part == panel::Part::Card && size_t(h.card) < all_.size() && all_[size_t(h.card)].pid != self_ &&
+                   onPick) {
+            onPick(all_[size_t(h.card)].number);
+        }
+        return true;
+    }
+    return over;  // the other buttons on it: not the game's either
 }
 
 void WindowPanel::hide(bool hidden) {
     if (!config_) return;
-    config_->windowPanelHidden = hidden;  // what the file says now: not taken for a change of it
-    editIniFile(ourFile(layout::File::Ini), {{"windows", "panel_hidden", hidden ? "1" : "0"}});
+    config_->panelHidden = hidden;  // what the file says now: not taken for a change of it
+    editIniFile(ourFile(layout::File::Ini), {{"panel", "hidden", hidden ? "1" : "0"}});
     LOG_INFO("windows: the panel %s", hidden ? "hidden (its cross or Ctrl+Alt+0; Ctrl+Alt+0 shows it again)" : "shown");
 }
 
 void WindowPanel::toggle() {
-    if (config_) hide(!config_->windowPanelHidden);
+    if (config_) hide(!config_->panelHidden);
 }
 
 void WindowPanel::keepPlace() {
-    RECT r{};
-    if (!window_ || !GetWindowRect(window_, &r) || !config_) return;
-    place_ = panel::placeOf(panel::Point{r.left - origin_.x, r.top - origin_.y}, geometry_.width, geometry_.height,
-                            roomW_, roomH_, geometry_.scale);
+    if (!config_) return;
+    place_ = panel::placeOf(panel::Point{x_, y_}, geometry_.width, geometry_.height, targetW_, targetH_,
+                            geometry_.scale);
     placeText_ = panel::formatPlace(place_);
-    config_->windowPanelPlace = placeText_;
-    if (editIniFile(ourFile(layout::File::Ini), {{"windows", "panel_place", placeText_}}))
+    config_->panelPlace = placeText_;
+    if (editIniFile(ourFile(layout::File::Ini), {{"panel", "place", placeText_}}))
         LOG_INFO("windows: the panel dragged to %s (of the room beside it)", placeText_.c_str());
-}
-
-LRESULT CALLBACK WindowPanel::proc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
-    auto* self = reinterpret_cast<WindowPanel*>(GetWindowLongPtrA(w, GWLP_USERDATA));
-    return self && self->window_ == w ? self->message(m, wp, lp) : DefWindowProcA(w, m, wp, lp);
-}
-
-LRESULT WindowPanel::message(UINT m, WPARAM wp, LPARAM lp) {
-    const auto hitAt = [&](LPARAM at) {
-        return panel::hitTest(geometry_, float(GET_X_LPARAM(at)), float(GET_Y_LPARAM(at)));
-    };
-    switch (m) {
-        case WM_MOUSEACTIVATE:
-            return MA_NOACTIVATE;  // the game stays the window in front
-        case WM_SETCURSOR: {
-            POINT p{};
-            GetCursorPos(&p);
-            ScreenToClient(window_, &p);
-            const panel::Part part = panel::hitTest(geometry_, float(p.x), float(p.y)).part;
-            SetCursor(LoadCursor(nullptr, part == panel::Part::Top    ? IDC_SIZEALL
-                                          : part == panel::Part::None ? IDC_ARROW
-                                                                      : IDC_HAND));
-            return TRUE;
-        }
-        case WM_MOUSEMOVE: {
-            if (dragging_) {
-                POINT c{};
-                GetCursorPos(&c);
-                const LONG right = origin_.x + std::max(0, roomW_ - geometry_.width);  // within the game window
-                const LONG bottom = origin_.y + std::max(0, roomH_ - geometry_.height);
-                const LONG x = std::clamp(dragStart_.x + c.x - dragFrom_.x, origin_.x, right);
-                const LONG y = std::clamp(dragStart_.y + c.y - dragFrom_.y, origin_.y, bottom);
-                SetWindowPos(window_, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-                return 0;
-            }
-            if (!tracking_) {
-                TRACKMOUSEEVENT t{sizeof t, TME_LEAVE, window_, 0};
-                tracking_ = TrackMouseEvent(&t) != FALSE;
-            }
-            const panel::Hit h = hitAt(lp);
-            const int hover = h.part == panel::Part::Card ? h.card : -1;
-            const bool close = h.part == panel::Part::Close;
-            if (hover != hover_ || close != hoverClose_) {
-                hover_ = hover;
-                hoverClose_ = close;
-                redraw();
-            }
-            return 0;
-        }
-        case WM_MOUSELEAVE:
-            tracking_ = false;
-            if (hover_ != -1 || hoverClose_) {
-                hover_ = -1;
-                hoverClose_ = false;
-                redraw();
-            }
-            return 0;
-        case WM_LBUTTONDOWN: {
-            const panel::Hit h = hitAt(lp);
-            if (h.part == panel::Part::Top) {
-                RECT r{};
-                GetWindowRect(window_, &r);
-                GetCursorPos(&dragFrom_);
-                dragStart_ = POINT{r.left, r.top};
-                dragging_ = true;
-                SetCapture(window_);
-            }
-            pressed_ = h.part == panel::Part::Close ? -1 : h.part == panel::Part::Card ? h.card : -2;
-            return 0;
-        }
-        case WM_LBUTTONUP: {
-            if (dragging_) {
-                dragging_ = false;
-                ReleaseCapture();
-                keepPlace();
-                return 0;
-            }
-            const panel::Hit h = hitAt(lp);
-            const int part = h.part == panel::Part::Close ? -1 : h.part == panel::Part::Card ? h.card : -2;
-            const int pressed = pressed_;
-            pressed_ = -2;
-            if (part != pressed || part == -2) return 0;
-            if (part == -1) {
-                hide(true);
-            } else if (size_t(part) < all_.size() && all_[size_t(part)].pid != self_ && onPick) {
-                onPick(all_[size_t(part)].number);
-            }
-            return 0;
-        }
-        case WM_CAPTURECHANGED:
-            if (dragging_) {
-                dragging_ = false;
-                keepPlace();
-            }
-            return 0;
-        default:
-            return DefWindowProcA(window_, m, wp, lp);
-    }
 }
 
 }  // namespace uagfx::win

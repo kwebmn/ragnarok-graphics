@@ -42,7 +42,9 @@ bool isShadowEntry(const uint8_t bytes[6]);
 // (core/blind_exe.hpp): not a skill made softer, laid over the world once its effects are drawn.
 // 2.7.13: HitFlash - not the game's: a monster's sprite drawn again in white over itself, as it is hit (Device7);
 // 2.7.14: Glint - a card's star on the ground (Device7), likewise
-enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow, Skill, Portal, Darkness, HitFlash, Glint };
+enum class Kind : uint8_t { None, Aura, Firefly, Ray, Shadow, Skill, Portal, Darkness, HitFlash, Glint, Panel };
+// 3.0.3-beta.8: Panel - the driver's panel of the game windows (win/window_panel), a picture already at the
+// target's pixels: sampled as it is, no interface filter
 // The level 99 aura: 200, 201 and 202 - its ring (effect\ring_blue.tga), bubbles (effect\pikapika2.bmp) and circle
 // (effect\freezing_circle.bmp) - and 397, 398 and 362, those of the transcendent classes (362: effect\whitelight.tga).
 // The game shows the circles alone unless /aura is on (0x772CE4, 0 at start, not kept): it reads that when it makes

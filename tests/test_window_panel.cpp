@@ -59,6 +59,8 @@ TEST(window_panel_hits_its_parts) {
     const panel::Geometry g = panel::geometry(3, panel::Layout::Row, 1.0f, 1024);
     CHECK(panel::hitTest(g, 40, 10).part == panel::Part::Top);
     CHECK(panel::hitTest(g, g.close.x + g.close.w / 2, g.close.y + g.close.h / 2).part == panel::Part::Close);
+    CHECK(panel::hitTest(g, g.layout.x + g.layout.w / 2, g.layout.y + g.layout.h / 2).part == panel::Part::Layout);
+    CHECK(g.layout.x + g.layout.w <= g.close.x && g.title.x + g.title.w <= g.layout.x);
     const panel::Hit h = panel::hitTest(g, 170, 50);
     CHECK(h.part == panel::Part::Card && h.card == 1);
     CHECK(panel::hitTest(g, 159, 50).part == panel::Part::None);  // between two cards
@@ -107,7 +109,7 @@ TEST(window_panel_paints_its_shapes) {
     cards[0].sp = 40;
     cards[1].hp = 10;
     panel::Picture pic;
-    panel::paint(pic, g, cards, false);
+    panel::paint(pic, g, cards, panel::Part::None, panel::Layout::Row);
     CHECK_EQ(pic.width, g.width);
     CHECK_EQ(pic.height, g.height);
     CHECK_EQ(pic.px.size(), size_t(g.width) * size_t(g.height));
@@ -127,4 +129,34 @@ TEST(window_panel_paints_its_shapes) {
     CHECK(redOf(low) > greenOf(low) + 60);  // HP 10 %: red
     const uint32_t noSp = at(pic, c1.sp.x + 6, c1.sp.y + c1.sp.h / 2);  // SP not known: no bar, no track
     CHECK(redOf(noSp) < 90 && greenOf(noSp) < 90 && blueOf(noSp) < 90);
+}
+
+TEST(window_panel_layout_button_shows_the_other_layout) {
+    const panel::Geometry g = panel::geometry(2, panel::Layout::Row, 2.0f, 3840);
+    const std::vector<panel::Card> cards(2);
+    panel::Picture row, column;
+    panel::paint(row, g, cards, panel::Part::None, panel::Layout::Row);
+    panel::paint(column, g, cards, panel::Part::None, panel::Layout::Column);
+    int differ = 0;  // the button's icon: three bars one under another (to a column) or side by side (to a row)
+    for (int y = int(g.layout.y); y < int(g.layout.y + g.layout.h); ++y)
+        for (int x = int(g.layout.x); x < int(g.layout.x + g.layout.w); ++x)
+            differ += at(row, float(x), float(y)) != at(column, float(x), float(y));
+    CHECK(differ > 20);
+    int outside = 0;
+    for (size_t i = 0; i < row.px.size(); ++i) outside += row.px[i] != column.px[i];
+    CHECK_EQ(outside, differ);  // nothing else changes
+}
+
+TEST(window_panel_fades_as_a_whole) {
+    panel::Picture p;
+    p.width = 2;
+    p.height = 1;
+    p.px = {0xE0102030u, 0x80FFFFFFu};
+    panel::fade(p, 0.5f);
+    CHECK_EQ(alphaOf(p.px[0]), 0x70u);
+    CHECK_EQ(redOf(p.px[0]), 0x08u);
+    CHECK_EQ(blueOf(p.px[0]), 0x18u);
+    CHECK_EQ(alphaOf(p.px[1]), 0x40u);
+    panel::fade(p, 1.0f);
+    CHECK_EQ(alphaOf(p.px[1]), 0x40u);
 }

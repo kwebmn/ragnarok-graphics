@@ -15,10 +15,9 @@ WNDPROC g_original = nullptr;
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch && g_switch->key(unsigned(wp), lp)) return 0;
-    const LRESULT r = CallWindowProcA(g_original, w, m, wp, lp);
-    // the panel over it while the game window is dragged too: Windows' loop then, not the game's frames
-    if ((m == WM_MOVE || m == WM_SIZE) && g_switch) g_switch->moved();
-    return r;
+    LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
+    if (g_switch && g_switch->mouse(w, m, lp, answer)) return answer;
+    return CallWindowProcA(g_original, w, m, wp, lp);
 }
 
 }  // namespace

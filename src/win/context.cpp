@@ -469,7 +469,12 @@ void Context::drawSparkles() {
 }
 
 void Context::present(const Rect& source, bool waitForVblank) {
+    // 3.0.3-beta.8: whether the game drew this picture anew - the windows' panel goes over such a one alone: the
+    // target keeps its pixels across a present, and over the same picture again the panel would darken itself
+    const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
+    if (renderer && drawnAnew) windowSwitch_.draw(record, *renderer);  // the windows' panel over the game's picture
+    record.takeWork();  // the driver's own draws are not the game's
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
     monsters.frame();  // 2.7.10: this frame's monsters, where the next hits look for theirs
@@ -503,7 +508,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
         windowSwitch_.check(window, foreground, name, config);  // 3.0.3-beta.6: the keys that switch the windows
         checkingWindows_ = false;
     }
-    if (window) windowSwitch_.frame(window, mainWindow_, config, shadow.width());  // 3.0.3-beta.7: the panel
     // Pause or Scroll Lock in the game window: every improvement off - the game's size stretched like Windows does,
     // no interface filter, no sharpening - and on again, to compare without a restart.
     const bool keyDown = window && GetForegroundWindow() == window &&
@@ -621,6 +625,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
         scaledUpscale_ = upscale;
         scaleMade_ = renderer->setScale(plan.k, plan.targetWidth, plan.targetHeight, samples, upscale);
     }
+    // 3.0.3-beta.8: the windows' panel at this frame's scale - drawn into the next present's record
+    if (window)
+        windowSwitch_.frame(window, mainWindow_, config, scaleMade_ ? plan.k : 1.0,
+                            scaleMade_ ? plan.targetWidth : shadow.width(),
+                            scaleMade_ ? plan.targetHeight : shadow.height());
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);

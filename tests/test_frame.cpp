@@ -209,3 +209,25 @@ TEST(frame_sprite_cells_written_replace_what_they_cover) {
     CHECK_EQ(int(spriteSourceAt(cells, 256, 256, 0.05f, 0.05f)), 0);  // the rest of the old cell: nothing known
     CHECK_EQ(int(spriteSourceAt(cells, 256, 256, 0.3f, 0.1f)), 4);
 }
+
+// 3.0.3-beta.8: the game's work since the last present - draws, clears and writes, kept through a flush - so the
+// windows' panel goes over a picture drawn anew only
+TEST(frame_counts_the_work_of_a_frame) {
+    FrameRecord r;
+    CHECK_EQ(r.takeWork(), 0u);
+    uint8_t vertices[32 * 3] = {};
+    DrawCmd cmd;
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    r.draw(cmd, vertices, 3, nullptr, 0);
+    ClearCmd clear;
+    clear.rect = Rect{0, 0, 4, 4};
+    r.clear(clear);
+    r.reset();  // a flush within the frame
+    const uint32_t argb[4] = {};
+    r.writeTarget(Rect{0, 0, 2, 2}, argb);
+    CHECK_EQ(r.takeWork(), 3u);
+    CHECK_EQ(r.takeWork(), 0u);
+    r.upload(1, 0, Rect{0, 0, 2, 2}, argb);  // a texture's pixels are not a picture drawn
+    CHECK_EQ(r.takeWork(), 0u);
+}

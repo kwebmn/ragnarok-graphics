@@ -1,9 +1,5 @@
 #include "pad/win/game_window.hpp"
 
-#include <cstring>
-
-#include "core/window_panel.hpp"
-
 namespace uapad::gamewindow {
 namespace {
 
@@ -18,6 +14,8 @@ struct Framed {  // the window as the client made it, while it is borderless
 };
 Framed g_framed;
 bool g_clipped = false;
+bool g_blocked = false, g_blockedAll = false;  // 3.0.3-beta.8: setBlocked
+RECT g_blockedRect{};
 
 LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     if (msg == WM_SETCURSOR && LOWORD(lp) != HTCLIENT) return DefWindowProcA(hwnd, msg, wp, lp);
@@ -106,22 +104,25 @@ void releaseCursor() {
     g_clipped = false;
 }
 
+void setBlocked(const RECT* rect, bool all) {
+    g_blocked = rect != nullptr;
+    if (rect) g_blockedRect = *rect;
+    g_blockedAll = all;
+}
+
 bool cursorOverGame(HWND game, POINT screen) {
     RECT client{};
     POINT p = screen;
     if (!game || !GetClientRect(game, &client) || !ScreenToClient(game, &p) || !PtInRect(&client, p)) return false;
+    // 3.0.3-beta.8: the driver's panel of the game windows drawn in the game's picture - a click on it is the
+    // panel's, and while it is dragged the held button is not the game's anywhere
+    if (g_blockedAll || (g_blocked && PtInRect(&g_blockedRect, p))) return false;
     // Any window of the client's own process counts: a graphics wrapper may present the picture in a window
-    // of its own over the game's. A window of another program on top does not, nor the driver's panel of the game
-    // windows (3.0.3-beta.7): a click on it is the panel's, not the game's.
-    const auto panel = [](HWND w) {
-        char cls[64] = {};
-        return w && GetClassNameA(w, cls, sizeof cls) && std::strcmp(cls, uagfx::panel::kWindowClass) == 0;
-    };
-    if (panel(GetCapture())) return false;  // the panel dragged: the held button is not the game's, wherever it is
+    // of its own over the game's. A window of another program on top does not.
     const HWND under = WindowFromPoint(screen);
     DWORD pid = 0;
     if (under) GetWindowThreadProcessId(under, &pid);
-    return !panel(under) && pid == GetCurrentProcessId();
+    return pid == GetCurrentProcessId();
 }
 
 void sendFKey(int key, bool down) {

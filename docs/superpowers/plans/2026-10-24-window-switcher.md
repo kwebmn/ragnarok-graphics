@@ -43,6 +43,23 @@ the user's words: «я хочу в игре мышкой переключатс�
 - The pad's mouse gate: a click over the panel is not the game's (its window class).
 - `[windows] panel = 1`, `panel_layout = row | column`, `panel_size = 100` (75-150), `panel_place = "fx fy"`.
 
+## Task 3 (3.0.3-beta.8): the panel in the game's picture
+
+The user: «в самой игре это самое то что я хотел», «расположить список ... как по горизонтали так и по вертикали»,
+«в настройках консоли должна быть возможность включить или выключить данное окно, также отдельные настройки в
+конфигураторе».
+
+- The panel's picture, made in the target's pixels, goes with the frame record as a driver texture (createTexture,
+  record.upload) and one quad (TL, interface, premultiplied blend, effect_exe::Kind::Panel: uiMode 0 in draw.cpp and
+  renderer11.cpp, sampled as it is): every renderer plays it, the 64-bit one too. Its quad's edges on the target's
+  pixel edges (a game x lands at x * k + 0.5).
+- Drawn at the next present's start, before the flush, and only over a picture the game drew anew
+  (FrameRecord::takeWork): the target keeps its pixels across a present.
+- Its mouse in the game window's procedure: over it the clicks are the panel's, WM_SETCURSOR shows Windows' arrow (the
+  game's own cursor is drawn under it); the pad's gate setBlocked(rect, all while dragged).
+- A layout button beside its cross; [panel] a section of its own (show, layout, size, opacity, hidden, place) under
+  «Панель вікон» on «Гра й чат»; the console's rows.
+
 ## Rulings
 
 - The doc's betas 7 (panel) and 8 (HP/SP on the cards) are one beta: the cards' numbers come with the list in
@@ -53,3 +70,5 @@ the user's words: «я хочу в игре мышкой переключатс�
   Windows would stretch the panel blurry under its scaling; the interface scale then carries the DPI too.
 - A button held on the panel (a drag) is not the game's even off it: the pad's gate asks GetCapture as well.
 - Ctrl+Alt+0 is the game's own (Alt+0's chat macro) while [windows] panel is off.
+- 3.0.3-beta.8: beta.7's layered window is gone - the user wants the panel in the game's picture. beta.7's [windows]
+  panel* keys moved to [panel] (a beta's keys, never released: a beta.7 file's are not read).

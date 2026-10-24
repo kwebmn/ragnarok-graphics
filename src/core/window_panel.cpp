@@ -98,7 +98,8 @@ Geometry geometry(int count, Layout layout, float s, int roomWidth) {
     g.height = int(std::lround(h * s));
     g.top = Box{0, 0, w * s, kTop * s};
     g.grip = Box{6 * s, 4 * s, 14 * s, 16 * s};
-    g.title = Box{22 * s, 2 * s, (w - 50) * s, 20 * s};
+    g.title = Box{22 * s, 2 * s, (w - 72) * s, 20 * s};
+    g.layout = Box{(w - 48) * s, 2 * s, 20 * s, 20 * s};
     g.close = Box{(w - 26) * s, 2 * s, 20 * s, 20 * s};
     for (int i = 0; i < count; ++i) {
         const float x = row ? kPad + float(i) * (cw + gap) : kPad;
@@ -124,6 +125,8 @@ Hit hitTest(const Geometry& g, float x, float y) {
     if (x < 0 || y < 0 || x >= float(g.width) || y >= float(g.height)) return h;
     if (g.close.contains(x, y)) {
         h.part = Part::Close;
+    } else if (g.layout.contains(x, y)) {
+        h.part = Part::Layout;
     } else if (g.top.contains(x, y)) {
         h.part = Part::Top;
     } else {
@@ -170,6 +173,15 @@ Place placeOf(Point at, int panelW, int panelH, int roomW, int roomH, float scal
 
 uint32_t barColour(int percent, bool hp) { return percent < 25 ? kRed : hp ? kGreen : kBlue; }
 
+void fade(Picture& p, float opacity) {
+    if (opacity >= 1.0f) return;
+    const float a = std::max(opacity, 0.0f);
+    for (uint32_t& px : p.px) {
+        const auto scaled = [&](int shift) { return uint32_t(std::lround(float((px >> shift) & 0xFF) * a)) << shift; };
+        px = scaled(24) | scaled(16) | scaled(8) | scaled(0);
+    }
+}
+
 void over(uint32_t& dst, uint32_t rgb, float a) {
     if (a <= 0.0f) return;
     a = std::min(a, 1.0f);
@@ -181,7 +193,7 @@ void over(uint32_t& dst, uint32_t rgb, float a) {
     dst = uint32_t(alpha) << 24 | uint32_t(channel(16)) << 16 | uint32_t(channel(8)) << 8 | uint32_t(channel(0));
 }
 
-void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, bool hoverClose) {
+void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part hovered, Layout layout) {
     out.width = g.width;
     out.height = g.height;
     out.px.assign(size_t(g.width) * size_t(g.height), 0u);
@@ -191,9 +203,17 @@ void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, bool
     for (float gx : {10.0f, 15.0f})  // the grip: dragged by the top row
         for (float gy : {8.0f, 12.0f, 16.0f}) circle(out, gx * s, gy * s, 1.3f * s, kWhite, 96.0f / 255);
     const float cx = g.close.x + g.close.w / 2, cy = g.close.y + g.close.h / 2, arm = 4 * s;
-    const uint32_t closeRgb = hoverClose ? kWhite : 0x969EAE;
+    const uint32_t closeRgb = hovered == Part::Close ? kWhite : 0x969EAE;
     line(out, cx - arm, cy - arm, cx + arm, cy + arm, 0.7f * s, closeRgb, 1.0f);
     line(out, cx - arm, cy + arm, cx + arm, cy - arm, 0.7f * s, closeRgb, 1.0f);
+    // the layout button: three bars one under another (to a column) or side by side (to a row)
+    const float lx = g.layout.x + g.layout.w / 2, ly = g.layout.y + g.layout.h / 2;
+    const uint32_t layoutRgb = hovered == Part::Layout ? kWhite : 0x969EAE;
+    for (float o : {-4.0f, 0.0f, 4.0f}) {
+        const Box bar = layout == Layout::Row ? Box{lx - 5 * s, ly + (o - 1) * s, 10 * s, 2 * s}
+                                              : Box{lx + (o - 1) * s, ly - 5 * s, 2 * s, 10 * s};
+        roundRect(out, bar, s, layoutRgb, 1.0f);
+    }
     for (size_t i = 0; i < g.cards.size() && i < cards.size(); ++i) {
         const CardBoxes& b = g.cards[i];
         const Card& c = cards[i];

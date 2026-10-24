@@ -1377,6 +1377,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.colorKey = s.colorKey ? 1u : 0u;
     c.uiMode = uint32_t(uiFilterMode(s.ui, scale_, uiSharp_ ? UiFilter::Sharp : UiFilter::Smooth));
     if (aiDrawn[0]) c.uiMode = 0;  // the AI's picture has the detail the game's pixels lack: sampled as it is
+    if (d.effect == uint8_t(effect_exe::Kind::Panel)) c.uiMode = 0;  // 3.0.3-beta.8: at the target's pixels
     if (twin) {  // the tile's first game pixel is the window's place plus the tile's (spec §6)
         float quad[4];
         uiPixels(rec, d, quad);

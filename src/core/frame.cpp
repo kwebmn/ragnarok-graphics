@@ -17,6 +17,7 @@ uint32_t FrameRecord::addState(const DrawSetup& s) {
 // Every call adds its data, then its command: memory running out between the two leaves data no command uses, never
 // a command without its data (0.5.2 review 2a).
 void FrameRecord::clear(const ClearCmd& c) {
+    ++work_;
     clears_.push_back(c);
     commands_.push_back({Cmd::Clear, uint32_t(clears_.size() - 1)});
 }
@@ -28,6 +29,7 @@ void FrameRecord::viewport(const ViewportCmd& v) {
 
 void FrameRecord::draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, const uint16_t* indices,
                        uint32_t indexCount) {
+    ++work_;
     const uint32_t bytes = vertexCount * stride(cmd.fvf);
     cmd.vertexOffset = uint32_t(vertices_.size());
     cmd.vertexCount = vertexCount;
@@ -68,6 +70,7 @@ void FrameRecord::upload(uint32_t texture, uint32_t level, const Rect& rect, con
 }
 
 void FrameRecord::writeTarget(const Rect& rect, const uint32_t* argb) {
+    ++work_;
     WriteTargetCmd w;
     w.rect = rect;
     w.pixels = addPixels(argb, size_t(rect.width()) * size_t(rect.height()));
