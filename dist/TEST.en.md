@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.4-beta.16 — what is new
+
+- **The own ground does not vanish with the camera far out** (report R-35N5QN, "it goes dark when I zoom out to this
+  place"). The game lets the camera go out to 2040 but draws its world only to 1500 units, so at some distance all of
+  the ground in view lies past its edge and the game draws no cell at all. The own ground started at the game's first
+  cell, so it did not start either and the screen went black. Now the own ground, the houses and the trees are drawn
+  even when the game draws nothing.
+- The game does not draw the characters, the monsters and the effects past 1500 itself, and the own ground can do
+  nothing about it. How to fix that we discuss apart.
+- Confirmed by report R-35N5QN: the driver's work a frame went down from 10.6-11.2 ms (beta.14) to 3.0-3.5 ms, and the
+  game is held by the 60 frames a second limit again.
+
 # uaRO Graphics 3.0.4-beta.15 — what is new
 
 - **The own ground is much faster** (report R-N6FC5V: 7.7 ms of the processor a frame, up to 21 ms zoomed out). The
