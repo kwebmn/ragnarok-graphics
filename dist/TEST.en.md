@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.4-beta.10 — what is new
+
+- **Own ground (prototype).** The first step to drawing the world ourselves: uaRO Graphics draws the map's ground
+  itself from the map's file instead of the game. The switch "Own ground (prototype)" is on the "Effects" page, group
+  "Ground and walls"; off by default.
+  - Smooth hills: each cell is cut into smaller ones (3×3, 2×2 in the 32-bit renderer) and the heights follow a smooth
+    curve through the game's cell corners; steps and walls stay as the game has them.
+  - The ground's textures in full colour (24 bits instead of the game's 16) with their own mipmaps, so they do not
+    shimmer far off.
+  - With the camera far out the ground goes on past the edge where the game cuts it off.
+  - The vertex colours and the fog are taken from the game's own frame, so the light is the game's.
+  - Direct3D 12 only; on Direct3D 11 the switch changes nothing.
+  - To check on prt_fild08: turn it on and compare with Pause (before/after), zoom the camera out to the edge. Look for
+    holes and seams, colours that differ from the game's, characters and houses standing in the ground rather than on
+    it, and the FPS. The log has `own ground: ...` lines with the time a frame — send a report if something is off.
+
 # uaRO Graphics 3.0.4-beta.9 — what is new
 
 - **The game's crash on the way into moscovia fixed** (report R-VBDSCP). The game's own client drew a character's
