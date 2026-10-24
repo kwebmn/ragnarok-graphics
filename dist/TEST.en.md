@@ -1,3 +1,36 @@
+# uaRO Graphics 3.0.3 — what is new
+
+This release is for playing in several windows at once: the main character and the helpers.
+
+- **The windows' panel in the game.** With two game windows or more open, a panel shows in the game's picture itself:
+  a card for each window with its number, the character's name, levels and HP and SP bars (red under 25 %, as in the
+  game). A click on a card brings that window to the front; the current one is blue. The game does not get that click,
+  and the game's cursor stays over the panel.
+  - Drag the panel by its top row. The button by the cross lays the cards in a row or a column. The cross or
+    Ctrl+Alt+0 hides the panel, Ctrl+Alt+0 shows it again.
+  - The «Icons» layout: small tiles with the numbers and HP/SP bars, the name in a tip under the mouse.
+  - A right click on the panel opens its menu: layout, size, opacity, the other windows' music and sounds, the other
+    windows light, «Hide the panel».
+  - The settings are in «Game and chat» → «The windows' panel» and in the game's console (~).
+- **Keys that switch the windows.** Ctrl+Tab goes to the window you played in before. Ctrl+Alt+1…8 goes to the window
+  of that number (the order the windows were started in). The game does not get these keys. Set in «Game and chat» →
+  «Several game windows» → «Window keys».
+- **Switching without a blink.** A full-screen game no longer minimises when you go to another game window. To the
+  desktop or another program it still minimises, as before. A game in a window gets a sharp picture ready first (0.4 s
+  at most) and comes to the front with DLSS and the effects.
+- **The other game windows light and quiet.** The windows you are not playing in draw without effects, HD pictures
+  and DLSS, at half the resolution: a window you can see at 5 frames a second, one covered by another game window or
+  minimised at 2. Their music and sounds fade out, on the full screen too. The switches: «Graphics» → «The other game
+  windows light», «Sound» → «Music in the other game windows» and «Sounds in the other game windows».
+- **The character in the window's title:** name, levels, experience, HP, SP, weight from 50 %, map and the client's
+  name, for example Lena · 99/70 · 45,2 % · HP 85 % · SP 40 % · prt_fild08 - uaRO HD.
+- **Each character's window at its own place.** Drag a framed window, and when that character enters the game again,
+  the window goes there by itself.
+- **Each window has its own logs** (`uaro-graphics-2.log` and so on), and a report from the game takes its own
+  window's logs.
+- **The frame counter and the console (~)** hide as soon as the game window goes behind, instead of staying over the
+  other window.
+
 # uaRO Graphics 3.0.3-beta.12 — what is new
 
 - **The game's cursor really over the windows' panel.** In 3.0.3-beta.11 I looked for the cause in the wrong place: the
