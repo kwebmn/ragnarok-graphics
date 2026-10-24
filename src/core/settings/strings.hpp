@@ -396,6 +396,7 @@ enum class Text : uint16_t {
     WindowsOthersLight, WindowsOthersLightHint, WindowsOthersMusic, WindowsOthersMusicHint,  // 3.0.3-beta.3
     WindowsHeading,  // 3.0.3-beta.4: «Гра й чат»'s heading of the several windows' rows
     TitleWeight,     // 3.0.3-beta.5: the weight in the game window's title (core/window_title)
+    WindowsKeys, WindowsKeysHint, WindowsKeysAll, WindowsKeysBack, WindowsKeysOff,  // 3.0.3-beta.6
     Count
 };
 

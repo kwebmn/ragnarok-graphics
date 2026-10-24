@@ -497,7 +497,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // client may present again from its handler (3.0.3-beta.4).
     if (window && !checkingWindows_ && ++windowsFrames_ % 15 == 0) {
         checkingWindows_ = true;
-        severalWindows_.check(window, readOwnName(), config);
+        const std::string name = readOwnName();
+        severalWindows_.check(window, name, config);
+        windowSwitch_.check(window, foreground, name, config);  // 3.0.3-beta.6: the keys that switch the windows
         checkingWindows_ = false;
     }
     // Pause or Scroll Lock in the game window: every improvement off - the game's size stretched like Windows does,

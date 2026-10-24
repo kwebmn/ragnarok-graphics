@@ -15,6 +15,8 @@ enum class Api { D3d12, D3d11, Auto, System };
 // borderless. Window and Borderless override what the game asks for.
 enum class DisplayMode { Auto, Window, Borderless };
 enum class UiFilter { Sharp, Smooth };  // [display] ui_filter: how magnified interface pictures are sampled
+// 3.0.3-beta.6: [windows] switch_keys - Ctrl+Tab and Ctrl+Alt+1-8 (all), Ctrl+Tab alone (back) or none (off)
+enum class WindowKeys : uint8_t { All, Back, Off };
 // [display] window_art (0.41): how crisp text enlarges the windows' buttons, frames and labels - xBR (core/xbr.hpp),
 // the AI (with [ai] ui_pieces) or as the game's pixels.
 enum class WindowArt { Xbr, Ai, Pixels };
@@ -461,6 +463,8 @@ struct Config {
     // 3.0.3-beta.3: others_light - a game window while another one is the main (in front, or the last in front) drawn
     // light (core/light_mode); others_music - its music too (off: the main window's alone)
     bool windowOthersLight = true, windowOthersMusic = false;
+    // 3.0.3-beta.6: switch_keys - the keys that switch the game windows (core/game_windows)
+    WindowKeys windowKeys = WindowKeys::All;
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;
@@ -578,6 +582,7 @@ bool aiWaits(const std::string& key, const AiSettings& started, const AiSettings
 const char* apiToken(Api a);
 const char* displayModeToken(DisplayMode m);
 const char* uiFilterToken(UiFilter f);
+const char* windowKeysToken(WindowKeys k);  // 3.0.3-beta.6
 const char* windowArtToken(WindowArt a);
 
 }  // namespace uagfx

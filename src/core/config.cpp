@@ -450,6 +450,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.windowOthersLight);
         } else if (key == "windows.others_music") {
             setBool(val, c.windowOthersMusic);
+        } else if (key == "windows.switch_keys") {  // 3.0.3-beta.6
+            if (val == "all") c.windowKeys = WindowKeys::All;
+            if (val == "back") c.windowKeys = WindowKeys::Back;
+            if (val == "off") c.windowKeys = WindowKeys::Off;
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12
@@ -699,6 +703,10 @@ const char* displayModeToken(DisplayMode m) {
 }
 
 const char* uiFilterToken(UiFilter f) { return f == UiFilter::Smooth ? "smooth" : "sharp"; }
+
+const char* windowKeysToken(WindowKeys k) {
+    return k == WindowKeys::Back ? "back" : k == WindowKeys::Off ? "off" : "all";
+}
 
 const char* windowArtToken(WindowArt a) {
     return a == WindowArt::Ai ? "ai" : a == WindowArt::Pixels ? "pixels" : "xbr";

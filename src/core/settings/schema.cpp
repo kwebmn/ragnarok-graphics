@@ -87,6 +87,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::WindowsTitleNameHint, ""},
         {"windows", "remember_place", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsRememberPlace,
          Text::WindowsRememberPlaceHint, ""},
+        {"windows", "switch_keys", Page::Game, Control::Choice, 0, 0, 0, {"all", "back", "off"},
+         {Text::WindowsKeysAll, Text::WindowsKeysBack, Text::WindowsKeysOff}, Text::WindowsKeys,
+         Text::WindowsKeysHint, ""},  // 3.0.3-beta.6: the keys that switch the game windows
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)
@@ -767,6 +770,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "windows.remember_place") return c.windowRememberPlace ? "1" : "0";
     if (k == "windows.others_light") return c.windowOthersLight ? "1" : "0";  // 3.0.3-beta.3
     if (k == "windows.others_music") return c.windowOthersMusic ? "1" : "0";
+    if (k == "windows.switch_keys") return windowKeysToken(c.windowKeys);  // 3.0.3-beta.6
     if (k == "renderer.safe_mode") return c.safeMode ? "1" : "0";  // 2.12
     if (k == "stats.send") return c.statsSend ? "1" : "0";
     if (k == "renderer.bridge") return c.bridge ? "1" : "0";

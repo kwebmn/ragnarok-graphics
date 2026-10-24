@@ -4323,6 +4323,17 @@ constexpr Entry kTexts[] = {
      "остаются, тише, как говорит «Громкость в фоне»."},
     {Text::WindowsHeading, "Several game windows", "Кілька вікон гри", "Несколько окон игры"},
     {Text::TitleWeight, "weight {1} %", "вага {1} %", "вес {1} %"},
+    {Text::WindowsKeys, "Window keys", "Клавіші вікон", "Клавиши окон"},
+    {Text::WindowsKeysHint,
+     "Ctrl+Tab goes back to the game window you played in before this one, Ctrl+Alt+1...8 straight to the window of "
+     "that number: the order the windows were started in, the first one 1. The game does not get these keys.",
+     "Ctrl+Tab повертає до вікна гри, у якому ви грали перед цим, Ctrl+Alt+1…8 — одразу до вікна з цим номером: це "
+     "порядок, у якому вікна запускали, перше — 1. Гра цих натискань не отримує.",
+     "Ctrl+Tab возвращает к окну игры, в котором вы играли перед этим, Ctrl+Alt+1…8 — сразу к окну с этим номером: "
+     "это порядок, в котором окна запускали, первое — 1. Игра этих нажатий не получает."},
+    {Text::WindowsKeysAll, "Ctrl+Tab and Ctrl+Alt+1...8", "Ctrl+Tab і Ctrl+Alt+1…8", "Ctrl+Tab и Ctrl+Alt+1…8"},
+    {Text::WindowsKeysBack, "Ctrl+Tab alone", "Лише Ctrl+Tab", "Только Ctrl+Tab"},
+    {Text::WindowsKeysOff, "Off", "Вимкнено", "Выключено"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

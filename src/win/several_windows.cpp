@@ -4,6 +4,7 @@
 #include "core/layout.hpp"
 #include "core/window_places.hpp"
 #include "core/window_title.hpp"
+#include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -18,22 +19,6 @@ constexpr uint64_t kTitleMs = 1000;  // the numbers in the title at most once a 
 bool movable(HWND w) {
     const LONG style = GetWindowLongA(w, GWL_STYLE);
     return (style & WS_CAPTION) == WS_CAPTION && !IsIconic(w) && !IsZoomed(w);
-}
-
-std::wstring widened(const std::string& text, unsigned codePage) {
-    const int n = MultiByteToWideChar(codePage, 0, text.data(), int(text.size()), nullptr, 0);
-    if (n <= 0) return L"";
-    std::wstring w(size_t(n), L'\0');
-    MultiByteToWideChar(codePage, 0, text.data(), int(text.size()), &w[0], n);
-    return w;
-}
-
-std::string utf8(const std::wstring& text) {
-    const int n = WideCharToMultiByte(CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0, nullptr, nullptr);
-    if (n <= 0) return "";
-    std::string s(size_t(n), '\0');
-    WideCharToMultiByte(CP_UTF8, 0, text.data(), int(text.size()), &s[0], n, nullptr, nullptr);
-    return s;
 }
 
 std::string placesFile() { return layout::join(gameDir(), layout::kWindowPlaces); }
@@ -58,8 +43,7 @@ void SeveralWindows::check(HWND window, const std::string& name, const Config& c
         client_ = ourClient();
         ownKept_ = true;
     }
-    // the game's text in the code page [roext] sets for it, else Windows' own
-    const unsigned cp = config.clientRoext && config.roext.codePage > 0 ? unsigned(config.roext.codePage) : CP_ACP;
+    const unsigned cp = gameCodePage(config);  // the game's text in the code page [roext] sets for it
     const bool on = config.windowTitleName;
     title(window, on ? titleOf(name, cp) : own_, name != named_ || on != titleOn_);
     named_ = name;
@@ -71,7 +55,7 @@ std::wstring SeveralWindows::titleOf(const std::string& name, unsigned codePage)
     charstatus::Status status;
     const bool known = !name.empty() && readOwnStatus(status);
     const std::string map = name.empty() ? "" : readGameMap();
-    const std::string text = window_title::title(utf8(widened(name, codePage)), known ? &status : nullptr, map,
+    const std::string text = window_title::title(utf8Of(widened(name, codePage)), known ? &status : nullptr, map,
                                                  client_, startup().lang);
     return widened(text, CP_UTF8);
 }

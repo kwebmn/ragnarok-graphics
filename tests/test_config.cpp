@@ -712,3 +712,21 @@ TEST(config_reads_the_other_windows_switches) {
     CHECK_EQ(settings::tokenOf(*music, c), std::string("1"));
     CHECK(appliesNow("windows.others_light") && appliesNow("windows.others_music"));
 }
+
+// 3.0.3-beta.6: [windows] switch_keys - all (Ctrl+Tab and Ctrl+Alt+1-8), back (Ctrl+Tab alone) or off; a row of
+// «Гра й чат», applied at once
+TEST(config_reads_the_window_keys) {
+    CHECK(parseConfig("").windowKeys == WindowKeys::All);
+    CHECK(parseConfig("[windows]\nswitch_keys = back\n").windowKeys == WindowKeys::Back);
+    CHECK(parseConfig("[windows]\nswitch_keys = off\n").windowKeys == WindowKeys::Off);
+    CHECK(parseConfig("[windows]\nswitch_keys = sometimes\n").windowKeys == WindowKeys::All);
+    const settings::IniSetting* s = settings::findSetting("windows.switch_keys");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Game && s->control == settings::Control::Choice);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[windows]\nswitch_keys = back\n")), std::string("back"));
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("all"));
+    CHECK(appliesNow("windows.switch_keys"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[windows]\nswitch_keys = off\n"));
+    CHECK(u.next.windowKeys == WindowKeys::Off);
+}
