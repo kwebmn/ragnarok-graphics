@@ -59,6 +59,7 @@ private:
 
     Config* config_ = nullptr;
     std::vector<gamewindows::Window> all_;
+    std::vector<gamewindows::Marks> marks_;  // 3.0.4-beta.4: all_'s, the other windows' characters
     uint32_t self_ = 0;
     std::string shownData_;  // what the cards say, as last drawn
     panel::Geometry geometry_;

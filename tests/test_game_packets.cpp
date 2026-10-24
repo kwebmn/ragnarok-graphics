@@ -107,3 +107,36 @@ TEST(game_packets_status_icons_deaths_and_buffs_cast) {
     std::vector<uint8_t> other = packet(0x0088, 10);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(other.data(), other.size())));
 }
+
+TEST(game_packets_hits_on_a_unit) {
+    // 3.0.4-beta.4: a helper window's character hit - marked on the main window's panel
+    std::vector<uint8_t> act = packet(0x008a, 29);
+    put32(act, 2, 1100001);  // a monster
+    put32(act, 6, 2000123);  // the character
+    put16(act, 22, 57);
+    act[26] = 0;  // damage
+    const packets::Event ae = packets::parse(act.data(), act.size());
+    const auto* a = std::get_if<packets::Hit>(&ae);
+    CHECK(a && a->source == 1100001 && a->target == 2000123 && a->damage == 57);
+    act[26] = 10;  // a critical one
+    CHECK(std::holds_alternative<packets::Hit>(packets::parse(act.data(), act.size())));
+    act[26] = 2;  // sitting down: no hit
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(act.data(), act.size())));
+    act[26] = 0;
+    put16(act, 22, 0);  // a miss
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(act.data(), act.size())));
+    std::vector<uint8_t> skill = packet(0x01de, 33);
+    put16(skill, 2, 19);  // a bolt
+    put32(skill, 4, 1100001);
+    put32(skill, 8, 2000123);
+    put32(skill, 24, 1234);
+    const packets::Event se = packets::parse(skill.data(), skill.size());
+    const auto* s = std::get_if<packets::Hit>(&se);
+    CHECK(s && s->target == 2000123 && s->damage == 1234);
+    std::vector<uint8_t> old = packet(0x0114, 31);
+    put32(old, 8, 2000123);
+    put16(old, 24, 88);
+    const packets::Event oe = packets::parse(old.data(), old.size());
+    const auto* o = std::get_if<packets::Hit>(&oe);
+    CHECK(o && o->target == 2000123 && o->damage == 88);
+}

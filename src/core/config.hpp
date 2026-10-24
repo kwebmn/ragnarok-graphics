@@ -474,6 +474,7 @@ struct Config {
     // light (core/light_mode); others_music - its music too (off: the main window's alone)
     bool windowOthersLight = true, windowOthersMusic = false;
     bool windowOthersSounds = false;  // 3.0.3-beta.9: others_sounds - their sounds too (off: the main window's alone)
+    int windowStartCount = 1;  // 3.0.4-beta.4: start_count - the game windows the settings app's «Грати» starts (1-8)
     // 3.0.3-beta.6: switch_keys - the keys that switch the game windows (core/game_windows)
     WindowKeys windowKeys = WindowKeys::All;
     // 3.0.3-beta.8: [panel] - the game windows' panel in the game's picture (core/window_panel, win/window_panel):

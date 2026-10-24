@@ -113,6 +113,7 @@ private:
     std::wstring query_;
     int unread_ = -1;               // 2.13: the developers' answers not read yet (-1 unknown)
     bool unreadFromWindow_ = false;  // the window's count is newer than the start's check
+    int moreGames_ = 0;              // 3.0.4-beta.4: game windows of the set still to start
     bool startReport_ = false;  // «Нове звернення» to open once the window is free (no box over it)
     bool reportsOpen_ = false;
     ReportStart reportStart_;

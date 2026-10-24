@@ -16,6 +16,7 @@ constexpr UINT_PTR kBehindTimer = 0x75AA;  // 3.0.3-beta.12: behind another wind
 
 WindowSwitch* g_switch = nullptr;
 WNDPROC g_original = nullptr;
+uint32_t g_diedAt = 0, g_hitAt = 0, g_whisperAt = 0;  // 3.0.4-beta.4: windowmarks' (the game's thread)
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
@@ -39,6 +40,12 @@ bool above(HWND a, HWND b) {
 }
 
 }  // namespace
+
+namespace windowmarks {
+void died() { g_diedAt = gamewindows::stamp(GetTickCount64()); }
+void hit() { g_hitAt = gamewindows::stamp(GetTickCount64()); }
+void whispered() { g_whisperAt = gamewindows::stamp(GetTickCount64()); }
+}  // namespace windowmarks
 
 WindowSwitch::WindowSwitch() {
     panel_.onPick = [this](int number) { to(number, "the panel"); };
@@ -68,6 +75,9 @@ void WindowSwitch::check(HWND window, bool foreground, const std::string& name, 
     gamewindows::putName(mine_, utf8Of(widened(name, gameCodePage(config))));
     charstatus::Status s;
     gamewindows::putStatus(mine_, !name.empty() && readOwnStatus(s) ? &s : nullptr);
+    mine_.diedAt = g_diedAt;  // 3.0.4-beta.4
+    mine_.hitAt = g_hitAt;
+    mine_.whisperAt = g_whisperAt;
     publish(foreground);
     const std::vector<gamewindows::Window> all = shared_.live();
     // wholly behind another of the player's game windows, that window above it: nobody sees it

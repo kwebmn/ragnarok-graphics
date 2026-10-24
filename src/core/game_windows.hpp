@@ -30,7 +30,8 @@ struct Entry {
     uint8_t flags;                // 3.0.3-beta.9: kDrawsBehind
     uint8_t spare;
     uint32_t ready;  // 3.0.3-beta.9: the summon it answered - its whole picture drawn behind the window in front
-    uint8_t spare2[12];
+    // 3.0.4-beta.4: when (stamp) its character fell, was hit, was whispered to; 0 never - 3.0.3's spare bytes
+    uint32_t diedAt, hitAt, whisperAt;
 };
 static_assert(sizeof(Entry) == 96, "the shared block's layout is every game's");
 // The game draws while its window is not active - in a window; on its full screen uaRO.exe draws nothing then
@@ -57,6 +58,7 @@ struct Window {  // a live one, as the keys and the panel see it
     int baseLevel = 0, jobLevel = 0, hp = -1, sp = -1;
     uint32_t ready = 0;
     bool drawsBehind = false;
+    uint32_t diedAt = 0, hitAt = 0, whisperAt = 0;  // 3.0.4-beta.4
 };
 using Alive = std::function<bool(const Entry&)>;  // its game still runs and the window is still its own
 // The live windows by number: an entry in its own place (number = place + 1) whose game `alive` says runs
@@ -64,6 +66,16 @@ std::vector<Window> windows(const Table& t, const Alive& alive);
 // Ctrl+Tab's: the window in front last before this game's (self: its process); none in front ever - the next number
 // after this one's; nullptr with no other window
 const Window* previous(const std::vector<Window>& all, uint32_t selfPid);
+
+// 3.0.4-beta.4 (the user's idea 8): what a window's card shows of its character - fallen (until it lives again or the
+// player looks at the window), whispered to (until looked at, kWhisperMs at most), hit (kHitMs). Times: GetTickCount64
+// cut to 32 bits by stamp() (0 is never), compared across the cut's end.
+struct Marks {
+    bool died = false, whisper = false, hit = false;
+};
+constexpr uint32_t kHitMs = 4000, kWhisperMs = 300000;
+inline uint32_t stamp(uint64_t tick) { return uint32_t(tick) | 1u; }
+Marks marks(const Window& w, uint32_t now);
 const Window* byNumber(const std::vector<Window>& all, int number);
 
 // 3.0.3-beta.9 (the user: switching «более гладко», no blink): a switch by the keys or the panel asks the next window

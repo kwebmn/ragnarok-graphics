@@ -87,6 +87,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::WindowsTitleNameHint, ""},
         {"windows", "remember_place", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsRememberPlace,
          Text::WindowsRememberPlaceHint, ""},
+        {"windows", "start_count", Page::Game, Control::Slider, 1, 8, 1, {}, {}, Text::WindowsStartCount,
+         Text::WindowsStartCountHint, ""},  // 3.0.4-beta.4: a set of game windows by «Грати»
         {"windows", "switch_keys", Page::Game, Control::Choice, 0, 0, 0, {"all", "back", "off"},
          {Text::WindowsKeysAll, Text::WindowsKeysBack, Text::WindowsKeysOff}, Text::WindowsKeys,
          Text::WindowsKeysHint, ""},  // 3.0.3-beta.6: the keys that switch the game windows
@@ -802,6 +804,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "windows.others_sounds") return c.windowOthersSounds ? "1" : "0";  // 3.0.3-beta.9
     if (k == "windows.switch_keys") return windowKeysToken(c.windowKeys);  // 3.0.3-beta.6
     if (k == "panel.show") return c.panelShow ? "1" : "0";  // 3.0.3-beta.8
+    if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;
         const std::string w = k.substr(7);

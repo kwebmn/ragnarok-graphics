@@ -13,6 +13,7 @@
 #include "win/log.hpp"
 #include "win/packet_tap.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/window_switch.hpp"
 
 namespace uagfx::win::notifier {
 namespace {
@@ -122,8 +123,15 @@ void frame(HWND window, bool front, const Config& config) {
 }
 
 void packet(const packets::Event& e) {
+    const auto own = [](uint32_t id) {
+        return knownGameBuild() && id == *reinterpret_cast<const uint32_t*>(uintptr_t(kOwnAccount));
+    };
     if (const auto* w = std::get_if<packets::Whisper>(&e)) {
-        if (!ignored(w->from)) tell(notify::Kind::Whisper, w->from, w->text);
+        if (ignored(w->from)) return;
+        windowmarks::whispered();  // 3.0.4-beta.4: on its card in the other windows' panels
+        tell(notify::Kind::Whisper, w->from, w->text);
+    } else if (const auto* h = std::get_if<packets::Hit>(&e)) {
+        if (own(h->target)) windowmarks::hit();
     } else if (const auto* p = std::get_if<packets::PartyInvite>(&e)) {
         tell(notify::Kind::Party, p->party, "");
     } else if (const auto* t = std::get_if<packets::TradeRequest>(&e)) {
@@ -133,8 +141,10 @@ void packet(const packets::Event& e) {
     } else if (const auto* f = std::get_if<packets::FriendRequest>(&e)) {
         tell(notify::Kind::Friend, f->from, "");
     } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
-        if (v->type == 1 && knownGameBuild() && v->id == *reinterpret_cast<const uint32_t*>(uintptr_t(kOwnAccount)))
+        if (v->type == 1 && own(v->id)) {
+            windowmarks::died();
             tell(notify::Kind::Death, "", "");
+        }
     }
 }
 

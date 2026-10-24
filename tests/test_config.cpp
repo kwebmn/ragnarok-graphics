@@ -791,3 +791,15 @@ TEST(config_reads_the_other_windows_sounds) {
     CHECK(appliesNow("windows.others_sounds"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[windows]\nothers_sounds = 1\n")).next.windowOthersSounds);
 }
+
+// 3.0.4-beta.4 (the user's idea 8): «Грати» starts a set of game windows - [windows] start_count, 1-8
+TEST(config_windows_start_count) {
+    CHECK_EQ(parseConfig("").windowStartCount, 1);
+    CHECK_EQ(parseConfig("[windows]\nstart_count = 3\n").windowStartCount, 3);
+    CHECK_EQ(parseConfig("[windows]\nstart_count = 12\n").windowStartCount, 1);  // out of range: the default
+    const settings::IniSetting* s = settings::findSetting("windows.start_count");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Game && s->control == settings::Control::Slider && s->min == 1 && s->max == 8);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[windows]\nstart_count = 4\n")), std::string("4"));
+}

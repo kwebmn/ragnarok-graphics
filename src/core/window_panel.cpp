@@ -21,6 +21,7 @@ constexpr float kLevels = 46;
 constexpr float kIcon = 30, kIconGap = 4, kIconEdge = 4, kIconGrip = 12;  // 3.0.3-beta.11: the icons
 constexpr uint32_t kGround = 0x111319, kGreen = 0x4ADE80, kBlue = 0x60A5FA, kRed = 0xF87171, kWhite = 0xFFFFFF;
 constexpr uint32_t kCurrent = 0x3B82F6, kCurrentEdge = 0x60A5FA;
+constexpr uint32_t kOrange = 0xFB923C;  // 3.0.4-beta.4: a card's character hit
 
 // Signed distance to a rounded box (negative inside)
 float roundBox(float px, float py, const Box& b, float r) {
@@ -70,6 +71,15 @@ void line(Picture& p, float ax, float ay, float bx, float by, float r, uint32_t 
               return std::hypot(x - (ax + t * dx), y - (ay + t * dy)) - r;
           },
           rgb, a, 0, 0, 0);
+}
+
+// 3.0.4-beta.4: a card's marks over its plate - fallen: red, hit: orange, whispered to: a blue dot in its corner
+void marks(Picture& p, const Box& plate, float radius, const Card& c, float s, float edge) {
+    if (c.died)
+        roundRect(p, plate, radius, kRed, 50.0f / 255, kRed, 1.0f, edge);
+    else if (c.hit)
+        roundRect(p, plate, radius, kOrange, 36.0f / 255, kOrange, 1.0f, edge);
+    if (c.whisper) circle(p, plate.x + plate.w - 5 * s, plate.y + 5 * s, 3 * s, kBlue, 1.0f);
 }
 
 void bar(Picture& p, const Box& b, int percent, bool hp) {
@@ -452,6 +462,7 @@ void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part
             else
                 roundRect(out, b.plate, 7 * s, kWhite, (c.hover ? 30.0f : 14.0f) / 255, kWhite,
                           (c.hover ? 70.0f : 30.0f) / 255, edge);
+            marks(out, b.plate, 7 * s, c, s, edge);
             bar(out, b.hp, c.hp, true);
             bar(out, b.sp, c.sp, false);
         }
@@ -479,6 +490,7 @@ void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part
         else
             roundRect(out, b.plate, kCardRadius * s, kWhite, (c.hover ? 26.0f : 12.0f) / 255, kWhite,
                       (c.hover ? 60.0f : 26.0f) / 255, edge);
+        marks(out, b.plate, kCardRadius * s, c, s, edge);
         circle(out, b.badgeX, b.badgeY, b.badgeR, c.current ? kCurrentEdge : kWhite, c.current ? 1.0f : 46.0f / 255);
         bar(out, b.hp, c.hp, true);
         bar(out, b.sp, c.sp, false);

@@ -50,9 +50,23 @@ std::vector<Window> windows(const Table& t, const Alive& alive) {
         w.sp = e.sp;
         w.ready = e.ready;
         w.drawsBehind = (e.flags & kDrawsBehind) != 0;
+        w.diedAt = e.diedAt;
+        w.hitAt = e.hitAt;
+        w.whisperAt = e.whisperAt;
         out.push_back(w);
     }
     return out;  // by number: the places' order
+}
+
+Marks marks(const Window& w, uint32_t now) {
+    const auto since = [now](uint32_t at) { return now - at; };  // the 32-bit clock's end crossed
+    // the player looked at the window after it: its frontAt, cut the same way, later than the mark
+    const auto seen = [&w](uint32_t at) { return w.frontAt != 0 && int32_t(stamp(w.frontAt) - at) > 0; };
+    Marks m;
+    m.died = w.diedAt != 0 && w.hp <= 0 && !seen(w.diedAt);
+    m.whisper = w.whisperAt != 0 && since(w.whisperAt) < kWhisperMs && !seen(w.whisperAt);
+    m.hit = w.hitAt != 0 && since(w.hitAt) < kHitMs;
+    return m;
 }
 
 const Window* previous(const std::vector<Window>& all, uint32_t selfPid) {

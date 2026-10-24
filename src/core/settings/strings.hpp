@@ -408,6 +408,7 @@ enum class Text : uint16_t {
     NotifyHeading, NotifyOn, NotifyOnHint, NotifyWhisper, NotifyParty, NotifyTrade, NotifyGuild, NotifyFriend,
     NotifyDeath, NotifyKindHint, NotifyWhisperText, NotifyPartyText, NotifyTradeText, NotifyGuildText,
     NotifyFriendText, NotifyDeathText,  // 3.0.4-beta.3: notifications from behind
+    WindowsStartCount, WindowsStartCountHint,  // 3.0.4-beta.4: «Грати» for a set of windows
     Count
 };
 

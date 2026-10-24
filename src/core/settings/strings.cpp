@@ -4447,6 +4447,17 @@ constexpr Entry kTexts[] = {
     {Text::NotifyFriendText, "{1} asks to be your friend", "{1} хоче додати вас у друзі",
      "{1} хочет добавить вас в друзья"},
     {Text::NotifyDeathText, "The character died", "Персонаж загинув", "Персонаж погиб"},
+    // 3.0.4-beta.4: «Грати» starts a set of game windows
+    {Text::WindowsStartCount, "Game windows started by «Play»",
+     "Вікон гри за кнопкою «Грати»",
+     "Окон игры по кнопке «Играть»"},
+    {Text::WindowsStartCountHint,
+     "1 - one game, as before. 2-8: a set for several characters (a priest, a sage...) - «Play» starts the game that "
+     "many times, one every second and a half; you log in to each yourself, no login or password is kept.",
+     "1 — одна гра, як і раніше. 2–8: набір для кількох персонажів (прист, сейдж...) — «Грати» запускає гру стільки "
+     "разів, по одній кожні півтори секунди; у кожну ви входите самі, логіни й паролі не зберігаються.",
+     "1 — одна игра, как и раньше. 2–8: набор для нескольких персонажей (прист, сейдж...) — «Играть» запускает игру "
+     "столько раз, по одной каждые полторы секунды; в каждую вы входите сами, логины и пароли не хранятся."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

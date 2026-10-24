@@ -167,11 +167,19 @@ int wordsWidth(const std::wstring& text, float px, bool bold) {
 void WindowPanel::update(const std::vector<gamewindows::Window>& all, uint32_t selfPid) {
     all_ = all;
     self_ = selfPid;
-    std::string data;  // what the cards say: drawn again only when it changes
+    // 3.0.4-beta.4: the other windows' characters fallen, hit, whispered to (core/game_windows marks)
+    const uint32_t now = gamewindows::stamp(GetTickCount64());
+    marks_.clear();
     for (const gamewindows::Window& w : all_)
+        marks_.push_back(w.pid == self_ ? gamewindows::Marks{} : gamewindows::marks(w, now));
+    std::string data;  // what the cards say: drawn again only when it changes
+    for (size_t i = 0; i < all_.size(); ++i) {
+        const gamewindows::Window& w = all_[i];
+        const gamewindows::Marks& m = marks_[i];
         data += std::to_string(w.number) + '|' + w.name + '|' + std::to_string(w.baseLevel) + '/' +
                 std::to_string(w.jobLevel) + '|' + std::to_string(w.hp) + '|' + std::to_string(w.sp) + '|' +
-                (w.pid == self_ ? "*" : "") + ';';
+                (w.pid == self_ ? "*" : "") + (m.died ? "d" : "") + (m.hit ? "h" : "") + (m.whisper ? "w" : "") + ';';
+    }
     if (data != shownData_) {
         shownData_ = data;
         dirty_ = true;
@@ -268,6 +276,11 @@ void WindowPanel::render() {
         c.hover = int(i) == hover_ && !c.current;
         c.hp = w.hp;
         c.sp = w.sp;
+        if (i < marks_.size()) {  // 3.0.4-beta.4
+            c.died = marks_[i].died;
+            c.hit = marks_[i].hit;
+            c.whisper = marks_[i].whisper;
+        }
         cards.push_back(c);
         words.push_back(Words{b.number, std::to_wstring(w.number),
                               c.current && !icons ? panel::kOnBadge : panel::kText, (icons ? 13.5f : 10.5f) * s, true,

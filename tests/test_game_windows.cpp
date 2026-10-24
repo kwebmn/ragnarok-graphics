@@ -229,3 +229,46 @@ TEST(game_windows_one_window_wholly_over_another) {
     CHECK(!gamewindows::covers(gamewindows::Box{0, 0, 1000, 1080}, me));  // part of it seen
     CHECK(!gamewindows::covers(gamewindows::Box{}, me));
 }
+
+// 3.0.4-beta.4 (the user's idea 8): a helper window's character fallen, whispered to or hit - marked on its card in
+// the main window's panel
+TEST(game_windows_marks_carried_in_the_entry) {
+    gamewindows::Table t{};
+    t.entries[1] = entry(20, 2, 0, "Prist");
+    t.entries[1].diedAt = 5001;
+    t.entries[1].hitAt = 5003;
+    t.entries[1].whisperAt = 5005;
+    const auto all = gamewindows::windows(t, [](const gamewindows::Entry&) { return true; });
+    CHECK(all.size() == 1);
+    if (all.empty()) return;
+    CHECK(all[0].diedAt == 5001 && all[0].hitAt == 5003 && all[0].whisperAt == 5005);
+    CHECK(gamewindows::stamp(0) != 0 && gamewindows::stamp(0x100000000ull) != 0);  // 0 is "never"
+}
+
+TEST(game_windows_marks_shown_while_they_matter) {
+    gamewindows::Window w;
+    w.hp = 0;
+    w.diedAt = 1001;
+    CHECK(gamewindows::marks(w, 60000).died);  // dead and not looked at
+    w.hp = 40;
+    CHECK(!gamewindows::marks(w, 60000).died);  // raised again
+    w.hp = -1;
+    w.frontAt = 2001;  // the player went to it after
+    CHECK(!gamewindows::marks(w, 60000).died);
+    gamewindows::Window h;
+    h.hitAt = 10001;
+    CHECK(gamewindows::marks(h, 10001 + gamewindows::kHitMs - 1).hit);
+    CHECK(!gamewindows::marks(h, 10001 + gamewindows::kHitMs).hit);
+    gamewindows::Window s;
+    s.whisperAt = 20001;
+    CHECK(gamewindows::marks(s, 25000).whisper);
+    CHECK(!gamewindows::marks(s, 20001 + gamewindows::kWhisperMs).whisper);  // long ago
+    s.frontAt = 21001;
+    CHECK(!gamewindows::marks(s, 25000).whisper);  // read
+    gamewindows::Window none;
+    const gamewindows::Marks m = gamewindows::marks(none, 99999);
+    CHECK(!m.died && !m.hit && !m.whisper);
+    gamewindows::Window wrapped;  // the 32-bit clock past its end
+    wrapped.hitAt = 0xFFFFFF01u;
+    CHECK(gamewindows::marks(wrapped, 0x00000100u).hit);
+}

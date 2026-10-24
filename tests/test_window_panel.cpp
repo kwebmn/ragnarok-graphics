@@ -431,3 +431,29 @@ TEST(window_panel_goes_into_the_frame_at_the_games_end_scene) {
     CHECK(!slot.present(false));   // the same picture shown again: no panel over it again
     CHECK(slot.endScene(true));
 }
+
+// 3.0.4-beta.4 (the user's idea 8): a helper window's character fallen, whispered to, hit - marked on its card
+TEST(window_panel_marks_a_card) {
+    for (panel::Layout layout : {panel::Layout::Row, panel::Layout::Icons}) {
+        const panel::Geometry g = panel::geometry(3, layout, 1.0f, 1024);
+        std::vector<panel::Card> cards(3);
+        cards[0].died = true;
+        cards[1].whisper = true;
+        cards[2].hit = true;
+        panel::Picture pic;
+        panel::paint(pic, g, cards, panel::Part::None, layout);
+        if (pic.px.size() != size_t(g.width) * size_t(g.height)) {
+            CHECK(false);
+            continue;
+        }
+        const panel::Box& dead = g.cards[0].plate;
+        const uint32_t edge = at(pic, dead.x + dead.w / 2, dead.y + 0.6f);  // its edge red
+        CHECK(redOf(edge) > greenOf(edge) + 60 && redOf(edge) > blueOf(edge) + 60);
+        const panel::Box& told = g.cards[1].plate;
+        const uint32_t dot = at(pic, told.x + told.w - 5.0f, told.y + 5.0f);  // a blue dot in its corner
+        CHECK(blueOf(dot) > redOf(dot) + 60);
+        const panel::Box& hurt = g.cards[2].plate;
+        const uint32_t orange = at(pic, hurt.x + hurt.w / 2, hurt.y + 0.6f);
+        CHECK(redOf(orange) > blueOf(orange) + 80 && greenOf(orange) > blueOf(orange) + 30);
+    }
+}

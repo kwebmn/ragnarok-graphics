@@ -60,6 +60,9 @@ Place placeOf(Point at, int panelW, int panelH, int roomW, int roomH, float scal
 struct Card {
     bool current = false, hover = false;
     int hp = -1, sp = -1;  // percent; -1 not known: no bar
+    // 3.0.4-beta.4: its character fallen (a red card), hit (orange), whispered to (a blue dot in its corner) -
+    // core/game_windows marks()
+    bool died = false, hit = false, whisper = false;
 };
 struct Picture {
     int width = 0, height = 0;

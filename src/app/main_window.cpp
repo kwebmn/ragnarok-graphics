@@ -68,6 +68,7 @@ DWORD WINAPI sendStats(void* folder) {
 constexpr UINT_PTR kTimer = 1;
 constexpr UINT_PTR kTickTimer = 2;  // 0.43: a page's tick()
 constexpr UINT_PTR kSearchTimer = 3;  // 2.6: the search runs once the typing stops for a moment
+constexpr UINT_PTR kMoreGames = 4;    // 3.0.4-beta.4: the set's next game window ([windows] start_count)
 
 }  // namespace
 
@@ -856,6 +857,10 @@ void MainWindow::doApply(bool play) {
         }
         const UpdateState u = updateState();
         err = playNow(*model_, u.kind == UpdateState::Done ? u.offer : "", lang_, closing);
+        // 3.0.4-beta.4: a set of game windows - the rest one every 1.5 s (each its own log, place and panel card)
+        const bool started = err.empty() && !closing && u.kind != UpdateState::Done;  // the game itself started
+        moreGames_ = started ? model_->pendingConfig().windowStartCount - 1 : 0;
+        if (moreGames_ > 0) SetTimer(hwnd_, kMoreGames, 1500, nullptr);
     }
     if (closing) {
         PostMessageW(hwnd_, WM_CLOSE, 0, 0);
@@ -1113,6 +1118,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_)) openReports(true);  // 2.13: --report
             }
             if (wp == kTickTimer && current_) current_->tick();
+            if (wp == kMoreGames) {  // 3.0.4-beta.4
+                const std::wstring e = moreGames_ > 0 ? model_->launchGame(lang_) : L"";
+                if (--moreGames_ <= 0 || !e.empty()) KillTimer(hwnd_, kMoreGames);
+                if (!e.empty()) message(e, true);
+            }
             return 0;
         case WM_DPICHANGED: {
             dpi_ = HIWORD(wp);

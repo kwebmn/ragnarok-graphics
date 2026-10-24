@@ -42,8 +42,15 @@ struct SkillCast {  // 0x011a: <skill>.W <level>.W <target>.L <source>.L <result
     uint32_t target = 0, source = 0;
 };
 
+// 3.0.4-beta.4: a unit hurt - 0x008a (damage, endured, several hits, critical) <source>.L <target>.L .. <damage>.W
+// at 22, <type>.B at 26; a skill's 0x01de <damage>.L at 24, 0x0114 <damage>.W at 24
+struct Hit {
+    uint32_t source = 0, target = 0;
+    int32_t damage = 0;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
-                           Vanish, SkillCast>;
+                           Vanish, SkillCast, Hit>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

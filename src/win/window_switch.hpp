@@ -12,6 +12,14 @@
 
 namespace uagfx::win {
 
+// 3.0.4-beta.4 (the user's idea 8): this game's character fell, was hit, was whispered to (win/notifier.cpp from the
+// game's packets) - carried in its entry for the other windows' panels
+namespace windowmarks {
+void died();
+void hit();
+void whispered();
+}  // namespace windowmarks
+
 // 3.0.3-beta.6 (the user: «я хочу в игре мышкой переключатся и быстрой кнопкой»): this game's window among the
 // player's others - its entry in the block they share (its number, the character, when it was last in front), and the
 // keys that switch the windows ([windows] switch_keys), taken in the game window's procedure before the game sees
