@@ -315,15 +315,18 @@ float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
     float2 sun = uiPixels.xy;
     float luma = dot(c, float3(0.299, 0.587, 0.114));
     c *= sourceClamp.rgb;
-    // 1.24: clumps of the crown each a little their own - lighter and yellower, deeper and bluer - over the box, the
-    // tree's own patches (its tint the seed): the same picture repeated on every layer of leaves shows less
+    // 1.24: clumps of the crown each a little their own - lighter and yellower, deeper and bluer - the tree's own
+    // patches (its tint the seed): the same picture repeated on every layer of leaves shows less. 3.0.4-beta.19: on
+    // the leaves (their texture's place), not over the box on the screen - the leaves turned under them with the
+    // camera and the patches stood (R-E3A6C2 «когда кручу карту меняются цвет деревьев»)
     float2 seed = sourceClamp.rg * 37.0;
-    float clump = leafNoise(q * 3.2 + seed) * 0.65 + leafNoise(q * 7.5 + seed * 1.7) * 0.35;
+    float2 onLeaf = uv * 2.0 - 1.0;
+    float clump = leafNoise(onLeaf * 3.2 + seed) * 0.65 + leafNoise(onLeaf * 7.5 + seed * 1.7) * 0.35;
     c *= lerp(float3(0.86, 0.9, 0.98), float3(1.1, 1.08, 0.94), clump);
     // 1.8.2: golden, not brown; 1.24: in patches - some of the crown still green - and by the leaf's own light
     // (luma times the colour: the shade between the leaves stays, the crown is no flat orange)
     if (r3 > 0.0) {
-        float turned = r3 * smoothstep(0.25, 0.65, leafNoise(q * 2.4 + seed * 0.7 + 5.3));
+        float turned = r3 * smoothstep(0.25, 0.65, leafNoise(onLeaf * 2.4 + seed * 0.7 + 5.3));
         c = lerp(c, luma * 1.75 * float3(r0, r1, r2), turned);
     }
     if (r5 > 0.0) c = lerp(c, float3(0.86, 0.92, 1.0) * (0.55 + luma), r5 * saturate(0.35 - q.y * 0.65));
