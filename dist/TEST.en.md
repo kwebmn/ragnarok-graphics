@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.4-beta.9 — what is new
+
+- **The game's crash on the way into moscovia fixed** (report R-VBDSCP). The game's own client drew a character's
+  shadow while a map loaded, before it had a game mode, and fell. Now that frame simply has no shadow.
+
 # uaRO Graphics 3.0.4-beta.8 — what is new
 
 - **Linux and the Steam Deck (to be checked).** The driver tells Wine/Proton and the Steam Deck and writes it in the
