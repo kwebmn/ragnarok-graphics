@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.4-beta.1 — what is new
+
+- **A choice of the sound output device.** «Sound» → «Sound through uaRO Graphics» → «Sound output device» (in the
+  Simple mode on the «Main» page, «Other»): «As in Windows» or any device connected - headphones, speakers, the
+  monitor. Applies at once, in a running game too: the music and the sounds move to the chosen device.
+- **The chosen device turned off - the sound goes on.** While the headphones are not connected the sound plays as in
+  Windows, and when they are back the game moves it to them by itself.
+- **A device gone during the game** - the game opens its sound again on the device there is.
+- **The log tells where the sound plays:** the device's name and the devices Windows sees.
+
 # uaRO Graphics 3.0.3 — what is new
 
 This release is for playing in several windows at once: the main character and the helpers.
