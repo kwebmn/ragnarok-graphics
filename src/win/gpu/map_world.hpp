@@ -9,6 +9,7 @@
 #include "core/ground_heights.hpp"
 #include "core/map_axes.hpp"
 #include "core/rsw.hpp"
+#include "win/gpu/own_ground_data.hpp"
 
 namespace uagfx::gpu {
 
@@ -50,12 +51,19 @@ public:
     std::vector<grass_beds::Box> beds() const {
         return ready_ ? grass_beds::inWorld(beds_, axes_) : std::vector<grass_beds::Box>{};
     }
+    // 3.0.4-beta.10: the own ground (own_ground_data.hpp) read with the map while it is wanted - turned on for a map
+    // read without it, the map is read again; none not wanted, not read yet, or no .gnd. Its pictures let go once the
+    // renderer has them (ownPicturesUp).
+    void setOwnGround(bool wanted);
+    const OwnGround* ownGround() const { return own_ && own_->map == shown_ ? own_.get() : nullptr; }
+    void ownPicturesUp();
 
 private:
     struct Shared;
     static DWORD WINAPI threadMain(void* self);
     void loop();
     void tryAxes();
+    void ask(const std::string& name);  // the loader's thread reads it
 
     std::unique_ptr<Shared> shared_;  // with the loader's thread
     HANDLE thread_ = nullptr;
@@ -70,6 +78,9 @@ private:
     std::vector<map::Point> placed_;  // the file's torches (effect 47)
     std::vector<rsw::Light> lamps_;
     std::vector<map::Point> seen_;    // where torches were seen, until the axes are known
+    bool ownWanted_ = false;          // 3.0.4-beta.10
+    std::unique_ptr<OwnGround> own_;
+    uint32_t ownSerial_ = 0;
 };
 
 }  // namespace uagfx::gpu

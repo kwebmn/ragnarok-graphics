@@ -190,6 +190,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"lamps", Lights}, {"map_glows", Lights}, {"fireflies", Lights}, {"portals", Lights}, {"glow", Lights},
         {"shafts", Lights}, {"rays", Lights},
         {"relief", Ground}, {"materials", Ground}, {"ground_seams", Ground}, {"smooth_hills", Ground}, {"ao", Ground},
+        {"own_ground", Ground},  // 3.0.4-beta.10
         {"floor_reflections", Ground}, {"glint", Ground},
         {"grass", Plants}, {"flowers", Plants}, {"dew", Plants}, {"foliage", Plants},
         {"tree_volume", Plants}, {"leaf_light", Plants}, {"tree_tints", Plants},

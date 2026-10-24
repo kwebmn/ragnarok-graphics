@@ -4512,6 +4512,19 @@ constexpr Entry kTexts[] = {
     {Text::GfxSoundAmbienceVolumeHint, "Their share of the game's effects volume.",
      "Їхня частка від гучності звуків ефектів гри.",
      "Их доля от громкости звуков эффектов игры."},
+    // 3.0.4-beta.10: the own world's prototype
+    {Text::FxOwnGround, "Own ground (prototype)",
+     "Своя земля (прототип)",
+     "Своя земля (прототип)"},
+    {Text::FxOwnGroundHint,
+     "A test of the remaster's next step: the ground drawn by uaRO Graphics itself from the map's file instead of the "
+     "game - smooth hills, the textures in full colour, the land past the far edge when the camera goes far out. "
+     "Made for prt_fild08 first; Direct3D 12.",
+     "Перевірка наступного кроку ремастера: землю малює сам uaRO Graphics із файла карти замість гри — плавні "
+     "пагорби, текстури в повному кольорі, земля і за дальнім краєм, коли камера далеко. Спершу для prt_fild08; "
+     "Direct3D 12.",
+     "Проверка следующего шага ремастера: землю рисует сам uaRO Graphics из файла карты вместо игры — плавные холмы, "
+     "текстуры в полном цвете, земля и за дальним краем, когда камера далеко. Сначала для prt_fild08; Direct3D 12."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

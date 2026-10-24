@@ -18,14 +18,25 @@ struct Vertex {
     float lm[2];      // the lightmap atlas'
     uint32_t color;   // ARGB, the surface's
 };
+// 3.0.4-beta.10: a batch's vertices lie together and its indices count from its first - one draw of 16-bit indices
 struct Batch {
     int texture = -1;  // the .gnd's texture
+    uint32_t firstVertex = 0, vertexCount = 0;
     uint32_t firstIndex = 0, indexCount = 0;
+};
+// kChunk x kChunk cells with their own vertices and batches - the renderer projects those in view alone (3.0.4-beta.10:
+// 8, not 16 - prt_fild08 at the game's zoom 300 had 1481 of the 40096 vertices of the chunks in view on the screen)
+constexpr int kChunk = 8;
+struct Chunk {
+    float lo[3], hi[3];  // its box in the world
+    uint32_t firstVertex = 0, vertexCount = 0;
+    uint32_t firstBatch = 0, batchCount = 0;
 };
 struct Mesh {
     std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-    std::vector<Batch> batches;  // one a texture
+    std::vector<uint32_t> indices;  // each its batch's
+    std::vector<Batch> batches;  // a chunk's, one a texture
+    std::vector<Chunk> chunks;
 };
 
 // The lightmaps side by side, 8 x 8 each, as the game packs them (FUN_004e32e5): brightness in alpha, colour in RGB;

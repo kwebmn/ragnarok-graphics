@@ -25,6 +25,7 @@
 #include "core/gpu_timing.hpp"
 #include "core/ground_cells.hpp"
 #include "core/hills.hpp"
+#include "core/own_ground.hpp"
 #include "core/seams.hpp"
 #include "core/seasons.hpp"
 #include "core/wind.hpp"
@@ -976,6 +977,17 @@ struct Renderer::Impl {
         mapPlace = seasons::withYear(mapPlace, mapYear);  // 2.7.5: no insects in winter
     }
     void newPicture() {
+        ownState.decided = ownState.frame = ownState.drawn = ownState.likeKnown = false;  // 3.0.4-beta.10
+        ownState.shading.beginFrame();
+        // off for 10 s (the switch) - its textures and the map's own ground let go; for less (Pause, to compare) kept
+        if (effects.ownGround) {
+            ownOffSince = 0;
+        } else if (!ownOffSince) {
+            ownOffSince = GetTickCount64();
+        } else if (GetTickCount64() - ownOffSince > 10000) {
+            if (ownState.serial) dropOwnGround();
+            mapWorld.setOwnGround(false);
+        }
         waterCopied = false;  // 0.19: its water copies what is under it anew
         darknessRec.reset();  // 2.6.18
         darknessLaid = false;
@@ -1128,9 +1140,43 @@ struct Renderer::Impl {
     bool ensureGroundCells();  // the texture holds this frame's cells; false: none this frame
     void hillsConstants(Constants& c) const;
     void sunInWorld(float out[3]) const;  // the way to the sun (as the materials find it), up along -y
-    bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty(); }
+    bool seamsDue() const { return seamsWanted() && !seamsDone && !groundTris.empty() && !ownState.frame; }
     void noteGround(const FrameRecord& rec, const DrawCmd& d);
     bool applySeams();  // once a frame, the ground drawn; false: lost
+    // 3.0.4-beta.10 (the user: «сделай 1»): the own ground (own_ground.cpp) - the map's ground from its .gnd
+    // (MapWorld::ownGround) drawn in place of the game's ground draws: smooth, its pictures in full colour, on past
+    // the game's far plane; in the game's own colours and fog, learnt from its ground draws (own_ground::Shading),
+    // which are noted and left out
+    struct OwnState {
+        uint32_t serial = 0;        // the ground (OwnGround::serial) its textures are of; 0 none
+        std::vector<uint32_t> ids;  // the .gnd's textures (0: none - drawn white)
+        uint32_t atlas = 0;         // the lightmaps'
+        size_t texture = 0, level = 0;  // the next picture to put up, a few a frame
+        int atlasRow = 0;
+        bool up = false;            // all of them up
+        bool decided = false, frame = false, drawn = false;  // this picture's: drawn in place of the game's
+        bool likeKnown = false;
+        DrawSetup like;             // the game's ground draw's state this picture
+        own_ground::Shading shading;
+        FrameRecord rec, uploads;
+        struct Pending {  // a texture's vertices of the chunks in view, one draw (16-bit indices)
+            std::vector<own_ground::Tl2> verts;
+            std::vector<uint16_t> idx;
+        };
+        std::vector<Pending> pending;  // by texture, the last none
+        uint32_t frames = 0;        // drawn on this ground
+        double slowest = 0.0;       // ms, of the frames so far
+        size_t most = 0;            // vertices, the most a frame
+    } ownState;
+    uint32_t nextOwnTexture = 0xF0000000u;  // the driver's own textures, far above the game's (counted from 1)
+    bool ownPass = false;
+    ULONGLONG ownOffSince = 0;  // when it was turned off (GetTickCount64); 0 on
+    bool ownGroundWanted() const { return effects.ownGround && viewToWorldValid && gameWidth > 0 && gameHeight > 0; }
+    uint32_t ownTexture(int width, int height, int levels);
+    void dropOwnGround();
+    bool prepareOwnGround();  // its textures made and put up, a few a frame; true: drawn this picture
+    void noteOwnGround(const FrameRecord& rec, const DrawCmd& d);
+    bool drawOwnGround();  // once a picture, the game's ground noted; false: lost
     // 1.12: the frame's opaque world (sun_map.cpp noteCaster) - since 2.2 for the mirror only
     struct SunCaster {
         uint32_t first = 0, count = 0;  // vertices into sunVerts (six floats each: x, y, z, u, v, colour's bits)

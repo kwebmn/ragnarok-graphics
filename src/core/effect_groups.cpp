@@ -57,6 +57,7 @@ const Member kMembers[] = {
     {"materials", Ground, 3, &E::materials},
     {"ground_seams", Ground, 3, &E::groundSeams},
     {"smooth_hills", Ground, 3, &E::smoothHills},
+    {"own_ground", Ground, 3, &E::ownGround},  // 3.0.4-beta.10
     {"ao", Ground, 2, &E::ao},
     {"floor_reflections", Ground, 2, &E::floorReflections},
     {"glint", Ground, 2, &E::glint},
@@ -145,7 +146,7 @@ const OldMember kOldMembers[] = {
     {OldShadows, &E::spriteLight},
     {OldSurfaces, &E::relief},      {OldSurfaces, &E::floorReflections}, {OldSurfaces, &E::wetGround},
     {OldSurfaces, &E::wetWalls},    {OldSurfaces, &E::glint},       {OldSurfaces, &E::materials},
-    {OldSurfaces, &E::groundSeams}, {OldSurfaces, &E::smoothHills},
+    {OldSurfaces, &E::groundSeams}, {OldSurfaces, &E::smoothHills}, {OldSurfaces, &E::ownGround},
     {OldNature, &E::grass},         {OldNature, &E::foliage},       {OldNature, &E::treeVolume},
     {OldNature, &E::leafLight},     {OldNature, &E::treeTints},
     {OldNature, &E::flowers},       {OldNature, &E::dew},

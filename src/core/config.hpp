@@ -355,6 +355,10 @@ struct EffectSettings {
     // averaged normals, not cell by cell - the sun lights the slopes smoothly. Off by default.
     bool smoothHills = false;
     int smoothHillsStrength = 60;  // %, 0-200
+    // 3.0.4-beta.10 (the user: «сделай 1»), own_ground: the own world's prototype - the ground drawn from the map's
+    // .gnd (core/terrain.hpp: smooth, its textures in full colour, no cut at the far plane) in place of the game's
+    // cells (gpu/own_ground.cpp, Direct3D 12)
+    bool ownGround = false;
     // 1.16: the remaster's world reflections (mirror.cpp): the last frame's opaque world turned over the water's
     // level, read by water_ps where the picture has nothing to reflect. Remaster mode. Off by default.
     bool worldReflections = false;

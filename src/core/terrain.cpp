@@ -80,8 +80,11 @@ void normalize(float* n) {
 struct Builder {
     const gnd::Ground& g;
     const Atlas& atlas;
-    std::map<int, std::vector<uint32_t>> byTexture;  // indices, a texture's
-    std::vector<Vertex> vertices;
+    struct Part {  // a texture's vertices and its quads' indices into them
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+    };
+    std::map<int, Part> parts;
 
     void lightmapUv(uint16_t lightmap, float fu, float fv, float* out) const {
         const int cols = std::max(atlas.width / 8, 1);
@@ -91,9 +94,8 @@ struct Builder {
         out[1] = atlas.height > 0 ? y / float(atlas.height) : 0.0f;
     }
 
-    void quad(int texture, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {  // a b / c d
-        std::vector<uint32_t>& ix = byTexture[texture];
-        ix.insert(ix.end(), {a, b, c, b, d, c});
+    static void quad(Part& p, uint32_t a, uint32_t b, uint32_t c, uint32_t d) {  // a b / c d
+        p.indices.insert(p.indices.end(), {a, b, c, b, d, c});
     }
 };
 
@@ -123,97 +125,116 @@ Atlas lightmapAtlas(const gnd::Ground& g) {
 Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas) {
     const int n = std::clamp(subdivide, 1, 8);
     const Grid grid = joinedCorners(g);
-    Builder b{g, atlas, {}, {}};
     const float half[2] = {float(g.width) / 2.0f, float(g.height) / 2.0f};
     const float step = 1.0f / float(n), e = 0.05f;
-    for (int y = 0; y < g.height; ++y)
-        for (int x = 0; x < g.width; ++x) {
-            const gnd::Cell& c = g.cells[size_t(y) * size_t(g.width) + size_t(x)];
-            if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) continue;
-            const gnd::Surface& s = g.surfaces[size_t(c.top)];
-            const bool smooth = n > 1 && patchWhole(grid, x, y);
-            const uint32_t first = uint32_t(b.vertices.size());
-            for (int j = 0; j <= n; ++j)
-                for (int i = 0; i <= n; ++i) {
-                    const float fu = float(i) * step, fv = float(j) * step;
-                    Vertex v{};
-                    v.pos[0] = (float(x) + fu - half[0]) * g.zoom;
-                    v.pos[1] = heightAt(c, grid, x, y, fu, fv, smooth);
-                    v.pos[2] = (float(y) + fv - half[1]) * g.zoom;
-                    // its slope: the height's change along x and z (world units)
-                    const float dx = (heightAt(c, grid, x, y, std::min(fu + e, 1.0f), fv, smooth) -
-                                      heightAt(c, grid, x, y, std::max(fu - e, 0.0f), fv, smooth)) /
-                                     ((std::min(fu + e, 1.0f) - std::max(fu - e, 0.0f)) * g.zoom);
-                    const float dz = (heightAt(c, grid, x, y, fu, std::min(fv + e, 1.0f), smooth) -
-                                      heightAt(c, grid, x, y, fu, std::max(fv - e, 0.0f), smooth)) /
-                                     ((std::min(fv + e, 1.0f) - std::max(fv - e, 0.0f)) * g.zoom);
-                    v.normal[0] = dx, v.normal[1] = -1.0f, v.normal[2] = dz;
-                    normalize(v.normal);
-                    const float top = s.u[0] + (s.u[1] - s.u[0]) * fu, bottom = s.u[2] + (s.u[3] - s.u[2]) * fu;
-                    const float vt = s.v[0] + (s.v[1] - s.v[0]) * fu, vb = s.v[2] + (s.v[3] - s.v[2]) * fu;
-                    v.uv[0] = top + (bottom - top) * fv;
-                    v.uv[1] = vt + (vb - vt) * fv;
-                    b.lightmapUv(s.lightmap, fu, fv, v.lm);
-                    v.color = s.color;
-                    b.vertices.push_back(v);
-                }
-            for (int j = 0; j < n; ++j)
-                for (int i = 0; i < n; ++i) {
-                    const uint32_t a = first + uint32_t(j * (n + 1) + i);
-                    b.quad(s.texture, a, a + 1, a + uint32_t(n + 1), a + uint32_t(n + 2));
-                }
-        }
-    // The walls as the game has them: between a cell's side and its neighbour's, plain quads
-    const auto wall = [&](int surface, const float* p0, const float* p1, const float* p2, const float* p3) {
-        if (surface < 0 || size_t(surface) >= g.surfaces.size()) return;
-        const gnd::Surface& s = g.surfaces[size_t(surface)];
-        const float* p[4] = {p0, p1, p2, p3};
-        float nrm[3];  // across the wall, towards its lower side
-        const float ax = p1[0] - p0[0], ay = p1[1] - p0[1], az = p1[2] - p0[2];
-        const float bx = p2[0] - p0[0], by = p2[1] - p0[1], bz = p2[2] - p0[2];
-        nrm[0] = ay * bz - az * by, nrm[1] = az * bx - ax * bz, nrm[2] = ax * by - ay * bx;
-        normalize(nrm);
-        const uint32_t first = uint32_t(b.vertices.size());
-        for (int k = 0; k < 4; ++k) {
-            Vertex v{};
-            std::copy(p[k], p[k] + 3, v.pos);
-            std::copy(nrm, nrm + 3, v.normal);
-            v.uv[0] = s.u[k];
-            v.uv[1] = s.v[k];
-            b.lightmapUv(s.lightmap, float(k & 1), float(k >> 1), v.lm);
-            v.color = s.color;
-            b.vertices.push_back(v);
-        }
-        b.quad(s.texture, first, first + 1, first + 2, first + 3);
-    };
-    for (int y = 0; y < g.height; ++y)
-        for (int x = 0; x < g.width; ++x) {
-            const gnd::Cell& c = g.cells[size_t(y) * size_t(g.width) + size_t(x)];
-            const float x0 = (float(x) - half[0]) * g.zoom, x1 = x0 + g.zoom;
-            const float z0 = (float(y) - half[1]) * g.zoom, z1 = z0 + g.zoom;
-            if (c.right >= 0 && x + 1 < g.width) {  // its right side down (or up) to the next cell's left
-                const gnd::Cell& r = g.cells[size_t(y) * size_t(g.width) + size_t(x + 1)];
-                const float a[3] = {x1, c.h[1], z0}, b2[3] = {x1, c.h[3], z1}, d[3] = {x1, r.h[0], z0},
-                            e2[3] = {x1, r.h[2], z1};
-                wall(c.right, a, b2, d, e2);
-            }
-            if (c.front >= 0 && y + 1 < g.height) {  // its far side to the next row's cell
-                const gnd::Cell& f = g.cells[size_t(y + 1) * size_t(g.width) + size_t(x)];
-                const float a[3] = {x0, c.h[2], z1}, b2[3] = {x1, c.h[3], z1}, d[3] = {x0, f.h[0], z1},
-                            e2[3] = {x1, f.h[1], z1};
-                wall(c.front, a, b2, d, e2);
-            }
-        }
     Mesh m;
-    m.vertices = std::move(b.vertices);
-    for (auto& t : b.byTexture) {
-        Batch batch;
-        batch.texture = t.first;
-        batch.firstIndex = uint32_t(m.indices.size());
-        batch.indexCount = uint32_t(t.second.size());
-        m.indices.insert(m.indices.end(), t.second.begin(), t.second.end());
-        m.batches.push_back(batch);
-    }
+    for (int cy0 = 0; cy0 < g.height; cy0 += kChunk)
+        for (int cx0 = 0; cx0 < g.width; cx0 += kChunk) {
+            Builder b{g, atlas, {}};
+            const int cx1 = std::min(cx0 + kChunk, g.width), cy1 = std::min(cy0 + kChunk, g.height);
+            for (int y = cy0; y < cy1; ++y)
+                for (int x = cx0; x < cx1; ++x) {
+                    const gnd::Cell& c = g.cells[size_t(y) * size_t(g.width) + size_t(x)];
+                    if (c.top < 0 || size_t(c.top) >= g.surfaces.size()) continue;
+                    const gnd::Surface& s = g.surfaces[size_t(c.top)];
+                    const bool smooth = n > 1 && patchWhole(grid, x, y);
+                    Builder::Part& part = b.parts[s.texture];
+                    const uint32_t first = uint32_t(part.vertices.size());
+                    for (int j = 0; j <= n; ++j)
+                        for (int i = 0; i <= n; ++i) {
+                            const float fu = float(i) * step, fv = float(j) * step;
+                            Vertex v{};
+                            v.pos[0] = (float(x) + fu - half[0]) * g.zoom;
+                            v.pos[1] = heightAt(c, grid, x, y, fu, fv, smooth);
+                            v.pos[2] = (float(y) + fv - half[1]) * g.zoom;
+                            // its slope: the height's change along x and z (world units)
+                            const float u0 = std::max(fu - e, 0.0f), u1 = std::min(fu + e, 1.0f);
+                            const float w0 = std::max(fv - e, 0.0f), w1 = std::min(fv + e, 1.0f);
+                            const float dx = (heightAt(c, grid, x, y, u1, fv, smooth) -
+                                              heightAt(c, grid, x, y, u0, fv, smooth)) / ((u1 - u0) * g.zoom);
+                            const float dz = (heightAt(c, grid, x, y, fu, w1, smooth) -
+                                              heightAt(c, grid, x, y, fu, w0, smooth)) / ((w1 - w0) * g.zoom);
+                            v.normal[0] = dx, v.normal[1] = -1.0f, v.normal[2] = dz;
+                            normalize(v.normal);
+                            const float top = s.u[0] + (s.u[1] - s.u[0]) * fu, bottom = s.u[2] + (s.u[3] - s.u[2]) * fu;
+                            const float vt = s.v[0] + (s.v[1] - s.v[0]) * fu, vb = s.v[2] + (s.v[3] - s.v[2]) * fu;
+                            v.uv[0] = top + (bottom - top) * fv;
+                            v.uv[1] = vt + (vb - vt) * fv;
+                            b.lightmapUv(s.lightmap, fu, fv, v.lm);
+                            v.color = s.color;
+                            part.vertices.push_back(v);
+                        }
+                    for (int j = 0; j < n; ++j)
+                        for (int i = 0; i < n; ++i) {
+                            const uint32_t a = first + uint32_t(j * (n + 1) + i);
+                            Builder::quad(part, a, a + 1, a + uint32_t(n + 1), a + uint32_t(n + 2));
+                        }
+                }
+            // The walls as the game has them: between a cell's side and its neighbour's, plain quads
+            const auto wall = [&](int surface, const float* p0, const float* p1, const float* p2, const float* p3) {
+                if (surface < 0 || size_t(surface) >= g.surfaces.size()) return;
+                const gnd::Surface& s = g.surfaces[size_t(surface)];
+                const float* p[4] = {p0, p1, p2, p3};
+                float nrm[3];
+                const float ax = p1[0] - p0[0], ay = p1[1] - p0[1], az = p1[2] - p0[2];
+                const float bx = p2[0] - p0[0], by = p2[1] - p0[1], bz = p2[2] - p0[2];
+                nrm[0] = ay * bz - az * by, nrm[1] = az * bx - ax * bz, nrm[2] = ax * by - ay * bx;
+                normalize(nrm);
+                Builder::Part& part = b.parts[s.texture];
+                const uint32_t first = uint32_t(part.vertices.size());
+                for (int k = 0; k < 4; ++k) {
+                    Vertex v{};
+                    std::copy(p[k], p[k] + 3, v.pos);
+                    std::copy(nrm, nrm + 3, v.normal);
+                    v.uv[0] = s.u[k];
+                    v.uv[1] = s.v[k];
+                    b.lightmapUv(s.lightmap, float(k & 1), float(k >> 1), v.lm);
+                    v.color = s.color;
+                    part.vertices.push_back(v);
+                }
+                Builder::quad(part, first, first + 1, first + 2, first + 3);
+            };
+            for (int y = cy0; y < cy1; ++y)
+                for (int x = cx0; x < cx1; ++x) {
+                    const gnd::Cell& c = g.cells[size_t(y) * size_t(g.width) + size_t(x)];
+                    const float x0 = (float(x) - half[0]) * g.zoom, x1 = x0 + g.zoom;
+                    const float z0 = (float(y) - half[1]) * g.zoom, z1 = z0 + g.zoom;
+                    if (c.right >= 0 && x + 1 < g.width) {  // its right side down (or up) to the next cell's left
+                        const gnd::Cell& r = g.cells[size_t(y) * size_t(g.width) + size_t(x + 1)];
+                        const float a[3] = {x1, c.h[1], z0}, b2[3] = {x1, c.h[3], z1}, d[3] = {x1, r.h[0], z0},
+                                    e2[3] = {x1, r.h[2], z1};
+                        wall(c.right, a, b2, d, e2);
+                    }
+                    if (c.front >= 0 && y + 1 < g.height) {  // its far side to the next row's cell
+                        const gnd::Cell& f = g.cells[size_t(y + 1) * size_t(g.width) + size_t(x)];
+                        const float a[3] = {x0, c.h[2], z1}, b2[3] = {x1, c.h[3], z1}, d[3] = {x0, f.h[0], z1},
+                                    e2[3] = {x1, f.h[1], z1};
+                        wall(c.front, a, b2, d, e2);
+                    }
+                }
+            if (b.parts.empty()) continue;
+            Chunk ch;
+            ch.firstVertex = uint32_t(m.vertices.size());
+            ch.firstBatch = uint32_t(m.batches.size());
+            for (int k = 0; k < 3; ++k) ch.lo[k] = 1e30f, ch.hi[k] = -1e30f;
+            for (const auto& t : b.parts) {
+                Batch batch;
+                batch.texture = t.first;
+                batch.firstVertex = uint32_t(m.vertices.size());
+                batch.vertexCount = uint32_t(t.second.vertices.size());
+                batch.firstIndex = uint32_t(m.indices.size());
+                batch.indexCount = uint32_t(t.second.indices.size());
+                for (const Vertex& v : t.second.vertices)
+                    for (int k = 0; k < 3; ++k)
+                        ch.lo[k] = std::min(ch.lo[k], v.pos[k]), ch.hi[k] = std::max(ch.hi[k], v.pos[k]);
+                m.vertices.insert(m.vertices.end(), t.second.vertices.begin(), t.second.vertices.end());
+                m.indices.insert(m.indices.end(), t.second.indices.begin(), t.second.indices.end());
+                m.batches.push_back(batch);
+            }
+            ch.vertexCount = uint32_t(m.vertices.size()) - ch.firstVertex;
+            ch.batchCount = uint32_t(m.batches.size()) - ch.firstBatch;
+            m.chunks.push_back(ch);
+        }
     return m;
 }
 

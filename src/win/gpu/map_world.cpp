@@ -7,7 +7,10 @@
 #include <cstring>
 
 #include "core/config.hpp"
+#include "core/full_colour.hpp"
+#include "core/gnd.hpp"
 #include "core/grf/grf.hpp"
+#include "core/pack_source.hpp"
 #include "core/layout.hpp"
 #include "core/updates.hpp"
 #include "core/zip.hpp"
@@ -35,6 +38,8 @@ struct MapWorld::Shared {
     rsw::World done;
     ground_heights::Ground doneGround;  // 2.6.18: its .gnd's heights (none: not read)
     std::vector<grass_beds::Box> doneBeds;  // 3.0.1-beta.3: its flower beds' tops
+    bool ownWanted = false;                 // 3.0.4-beta.10: the own ground read with the map
+    std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
     bool doneReady = false;
 };
@@ -84,6 +89,11 @@ void MapWorld::setMap(const std::string& name) {
     placed_.clear();
     lamps_.clear();
     seen_.clear();
+    own_.reset();
+    ask(name);
+}
+
+void MapWorld::ask(const std::string& name) {
     if (name.empty() || gameDir_.empty()) return;
     EnterCriticalSection(&shared_->lock);
     shared_->wanted = name;
@@ -93,6 +103,25 @@ void MapWorld::setMap(const std::string& name) {
     SetEvent(shared_->wake);
 }
 
+void MapWorld::setOwnGround(bool wanted) {
+    if (wanted == ownWanted_) return;
+    ownWanted_ = wanted;
+    EnterCriticalSection(&shared_->lock);
+    shared_->ownWanted = wanted;
+    LeaveCriticalSection(&shared_->lock);
+    if (!wanted) {
+        own_.reset();
+        return;
+    }
+    if (!own_) ask(shown_);  // read again, with it
+}
+
+void MapWorld::ownPicturesUp() {
+    if (!own_) return;
+    for (OwnGround::Picture& p : own_->textures) std::vector<std::vector<uint32_t>>().swap(p.levels);
+    std::vector<uint32_t>().swap(own_->atlas.argb);
+}
+
 void MapWorld::poll() {
     EnterCriticalSection(&shared_->lock);
     const bool fresh = shared_->doneReady && shared_->doneName == shown_;
@@ -100,6 +129,9 @@ void MapWorld::poll() {
         world_ = std::move(shared_->done);
         ground_ = std::move(shared_->doneGround);
         beds_ = std::move(shared_->doneBeds);
+        own_ = std::move(shared_->doneOwn);  // 3.0.4-beta.10
+        if (!ownWanted_) own_.reset();       // read before it was turned off
+        if (own_) own_->serial = ++ownSerial_;
         ready_ = shared_->doneOk;
         ++reads_;
     }
@@ -213,7 +245,9 @@ void MapWorld::loop() {
             const auto maps = [](const std::string& n) {  // 2.0: and the models, for the trees
                 return n.size() > 4 && (n.compare(n.size() - 4, 4, ".rsw") == 0 ||
                                         n.compare(n.size() - 4, 4, ".rsm") == 0 ||
-                                        n.compare(n.size() - 4, 4, ".gnd") == 0);  // 2.6.18: its ground
+                                        n.compare(n.size() - 4, 4, ".gnd") == 0 ||  // 2.6.18: its ground
+                                        (n.compare(0, 13, "data\\texture\\") == 0 &&  // 3.0.4-beta.10: its pictures
+                                         n.compare(n.size() - 4, 4, ".bmp") == 0));
             };
             std::string why;
             a.ok = a.grf ? a.g.openToRead(a.path, why) : a.zip.open(a.path, maps, why);  // 2.3.1: reading alone
@@ -245,6 +279,7 @@ void MapWorld::loop() {
         }
         // 2.6.18: its ground's heights, where its .rsw came from or after it (the walls between a fire and a shadow)
         ground_heights::Ground ground;
+        std::unique_ptr<OwnGround> own;  // 3.0.4-beta.10
         if (ok) {
             const std::string gnd = "data\\" + name + ".gnd";
             std::vector<uint8_t> gb;
@@ -260,6 +295,60 @@ void MapWorld::loop() {
                 LOG_INFO("map objects: %s.gnd is in neither the data folder nor DATA.INI's archives", name.c_str());
             else if (!ground_heights::parse(gb.data(), gb.size(), ground, why))
                 LOG_INFO("map objects: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
+            EnterCriticalSection(&shared_->lock);
+            const bool ownWanted = shared_->ownWanted;
+            LeaveCriticalSection(&shared_->lock);
+            if (ownWanted && !gfrom.empty()) {  // 3.0.4-beta.10: the own ground - its whole .gnd, its textures
+                own = std::make_unique<OwnGround>();
+                gnd::Ground full;
+                if (!gnd::parse(gb.data(), gb.size(), full, why)) {
+                    LOG_INFO("own ground: %s.gnd (%s): %s", name.c_str(), gfrom.c_str(), why.c_str());
+                    own.reset();
+                } else {
+                    own->map = name;
+                    own->width = full.width;
+                    own->height = full.height;
+                    own->zoom = full.zoom;
+                    own->atlas = terrain::lightmapAtlas(full);
+                    own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas);
+                    own->distant = terrain::build(full, 1, own->atlas);
+                    unsigned found = 0;
+                    for (const std::string& t : full.textures) {
+                        OwnGround::Picture pic;
+                        const std::string entry = "data\\texture\\" + t, low = lower(entry);
+                        std::vector<uint8_t> tb;
+                        bool got = win::gamefiles::readWhole(dir + "\\" + entry, tb);
+                        for (size_t i = 0; i < archives.size() && !got; ++i) {
+                            Archive& a = *archives[i];
+                            if (!open(a)) continue;
+                            got = a.grf ? (a.g.find(entry) && a.g.read(entry, tb, why)) ||
+                                              (a.g.find(low) && a.g.read(low, tb, why))
+                                        : a.zip.has(low) && a.zip.read(low, tb, why);
+                        }
+                        std::vector<uint32_t> argb;
+                        int w = 0, h = 0;
+                        if (got && pack::decodeBmp(tb.data(), tb.size(), argb, w, h) && w > 0 && h > 0) {
+                            pic.width = w;
+                            pic.height = h;
+                            pic.levels.push_back(std::move(argb));
+                            while (w > 1 || h > 1) {  // its mipmaps, each half of the one before
+                                std::vector<uint32_t> half;
+                                int hw = 0, hh = 0;
+                                full_colour::halve(pic.levels.back(), w, h, half, hw, hh);
+                                if (half.empty()) break;
+                                pic.levels.push_back(std::move(half));
+                                w = hw, h = hh;
+                            }
+                            ++found;
+                        }
+                        own->textures.push_back(std::move(pic));
+                    }
+                    LOG_INFO("own ground: %s - %u cells' worth in %u chunks, %u triangles, %u of %u textures, "
+                             "lightmaps %dx%d", name.c_str(), unsigned(full.cells.size()),
+                             unsigned(own->mesh.chunks.size()), unsigned(own->mesh.indices.size() / 3), found,
+                             unsigned(full.textures.size()), own->atlas.width, own->atlas.height);
+                }
+            }
         }
         // 3.0.1-beta.3 (R-SA3W7Y): its flower beds' tops, the grass's ground too - each bed's model read once
         std::vector<grass_beds::Box> beds;
@@ -294,6 +383,7 @@ void MapWorld::loop() {
         shared_->done = std::move(w);
         shared_->doneGround = std::move(ground);
         shared_->doneBeds = std::move(beds);
+        shared_->doneOwn = std::move(own);
         shared_->doneOk = ok;
         shared_->doneReady = true;
         LeaveCriticalSection(&shared_->lock);

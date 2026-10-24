@@ -467,6 +467,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxSmoothHillsHint, "", &E::smoothHills},
         {"effects", "smooth_hills_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
          Text::FxSmoothHillsStrength, Text::FxSmoothHillsStrengthHint, " %", nullptr, &E::smoothHillsStrength},
+        {"effects", "own_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxOwnGround,
+         Text::FxOwnGroundHint, "", &E::ownGround},  // 3.0.4-beta.10: the own world's prototype
         {"effects", "world_reflections", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::FxWorldReflections, Text::FxWorldReflectionsHint, "", &E::worldReflections},
         {"effects", "sprite_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSpriteLight,

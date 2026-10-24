@@ -149,3 +149,66 @@ TEST(terrain_lightmaps_in_one_atlas) {
     const terrain::Mesh m = terrain::build(g, 1, a);
     for (const terrain::Vertex& v : m.vertices) CHECK(v.lm[0] >= 0.0f && v.lm[0] <= 1.0f && v.lm[1] <= 1.0f);
 }
+
+TEST(terrain_in_chunks_for_the_view) {
+    // the renderer projects the chunks in view alone: each its own vertices and batches, all of them together the mesh
+    const gnd::Ground g = parsed();
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const terrain::Mesh m = terrain::build(g, 2, atlas);
+    CHECK_EQ(m.chunks.size(), size_t(1));  // 4 x 2 cells: one chunk of kChunk x kChunk
+    if (m.chunks.empty()) return;
+    const terrain::Chunk& c = m.chunks[0];
+    CHECK(c.firstVertex == 0 && c.vertexCount == m.vertices.size());
+    CHECK(c.firstBatch == 0 && c.batchCount == m.batches.size());
+    uint32_t indices = 0;
+    for (const terrain::Batch& b : m.batches) indices += b.indexCount;
+    CHECK_EQ(size_t(indices), m.indices.size());
+    // its box holds every vertex: x -20..20, z -10..10, heights -8..26
+    CHECK(c.lo[0] == -20.0f && c.hi[0] == 20.0f && c.lo[2] == -10.0f && c.hi[2] == 10.0f);
+    CHECK(c.lo[1] <= -8.0f && c.hi[1] >= 26.0f);
+}
+
+TEST(terrain_batches_hold_their_own_vertices) {
+    // 3.0.4-beta.10: a batch's vertices lie together, its indices into them alone - one draw with 16-bit indices,
+    // the chunk's vertices not copied for each of its textures
+    const gnd::Ground g = parsed();
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    for (int n : {1, 3}) {
+        const terrain::Mesh m = terrain::build(g, n, atlas);
+        uint32_t vertices = 0;
+        for (const terrain::Chunk& c : m.chunks) {
+            uint32_t at = c.firstVertex;
+            for (uint32_t k = c.firstBatch; k < c.firstBatch + c.batchCount; ++k) {
+                const terrain::Batch& b = m.batches[k];
+                CHECK_EQ(b.firstVertex, at);  // one after another through the chunk's
+                CHECK(b.vertexCount > 0 && b.vertexCount <= 65535);
+                at += b.vertexCount;
+                for (uint32_t i = b.firstIndex; i < b.firstIndex + b.indexCount; ++i)
+                    CHECK(m.indices[i] < b.vertexCount);
+            }
+            CHECK_EQ(at, c.firstVertex + c.vertexCount);
+            vertices += c.vertexCount;
+        }
+        CHECK_EQ(size_t(vertices), m.vertices.size());
+        // the dirt's cells (texture 1: (2, 0) and (3, 0)) in its batch alone, the grass' in the other
+        for (const terrain::Batch& b : m.batches)
+            for (uint32_t v = b.firstVertex; v < b.firstVertex + b.vertexCount; ++v) {
+                const terrain::Vertex& x = m.vertices[v];
+                const bool dirtCell = x.pos[0] > 0.0f && x.pos[2] < 0.0f && x.normal[1] < -0.5f;
+                if (dirtCell) CHECK_EQ(b.texture, 1);
+            }
+    }
+}
+
+TEST(terrain_the_detail_levels_share_their_chunks) {
+    // 3.0.4-beta.10: far off the ground is drawn as the game's cells (detail 1) - its chunks the same as the smooth
+    // ground's, one for one
+    const gnd::Ground g = parsed();
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const terrain::Mesh fine = terrain::build(g, 3, atlas), coarse = terrain::build(g, 1, atlas);
+    CHECK_EQ(fine.chunks.size(), coarse.chunks.size());
+    for (size_t k = 0; k < fine.chunks.size() && k < coarse.chunks.size(); ++k) {
+        CHECK(fine.chunks[k].lo[0] == coarse.chunks[k].lo[0] && fine.chunks[k].lo[2] == coarse.chunks[k].lo[2]);
+        CHECK(fine.chunks[k].hi[0] == coarse.chunks[k].hi[0] && fine.chunks[k].hi[2] == coarse.chunks[k].hi[2]);
+    }
+}

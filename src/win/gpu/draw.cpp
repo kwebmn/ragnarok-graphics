@@ -55,8 +55,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         return;
     }
     const DrawSetup& s = rec.states()[d.state];
-    crumb(seamPass ? "ground seams' strips" : s.ui ? "the game's interface" : "the game's world");
-    const bool inner = seamPass || darknessPass;  // 1.9: the driver's own draws (no hooks, nothing noted)
+    crumb(seamPass  ? "ground seams' strips"
+          : ownPass ? "the own ground"
+          : s.ui    ? "the game's interface"
+                    : "the game's world");
+    // 1.9: the driver's own draws (no hooks, nothing noted); 3.0.4-beta.10 the own ground's
+    const bool inner = seamPass || darknessPass || ownPass;
     // 2.6.18: blindness's darkness waits for the world's effects (applyDarkness)
     if (!inner && !s.ui && d.effect == uint8_t(effect_exe::Kind::Darkness) && !darknessLaid) {
         noteDarkness(rec, d, s);
@@ -90,11 +94,24 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // characters' list comes first of those - or at the interface, the shadows go onto what is drawn so far: the
     // map and its models, before the characters and the effects.
     if (!s.ui && d.fvf == d3d7::FVF_TL2) groundDrawn = true;
-    if (!seamPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite &&
+    if (!seamPass && !ownPass && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite &&
         (seamsWanted() || hillsWanted() || grassCellsWanted()))
         noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame; 2.2.1 the grass's ground
     // 1.16: an opaque draw of the world into the next frame's mirror (2.2: the sun's map is gone)
     if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting()) noteCaster(rec, d, s);
+    // 3.0.4-beta.10: the own ground in place of the game's (own_ground.cpp) - the game's ground draws noted, not drawn,
+    // once its pictures are up; drawn itself at the world's first blended draw after them, or at the interface
+    if (!inner && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && ownGroundWanted()) {
+        if (!ownState.decided) {
+            ownState.decided = true;
+            ownState.frame = prepareOwnGround();
+        }
+        if (ownState.frame) {
+            noteOwnGround(rec, d);
+            return;
+        }
+    }
+    if (!inner && ownState.frame && !ownState.drawn && (s.ui || s.blend) && !drawOwnGround()) return;
     if (!inner && !s.ui && s.blend && seamsDue() && !applySeams()) return;  // 1.9: before the soft shadows
     if (!inner && !s.ui && s.blend && aoDue() && !applyAo()) return;
     if (!inner && !s.ui && s.blend && groundLifeDue() && !applyGroundLife()) return;  // 1.7: under the grass
