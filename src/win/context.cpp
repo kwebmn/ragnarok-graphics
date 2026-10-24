@@ -24,6 +24,7 @@
 #include "win/map_start.hpp"
 #include "win/pick_hook.hpp"
 #include "win/server_night.hpp"
+#include "win/notifier.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/game_camera.hpp"
@@ -509,6 +510,7 @@ void Context::behind() {
     }
     mainWindow_ = frontGame_.main(false);
     soundFrame(false, mainWindow_ || config.windowOthersMusic, mainWindow_ || config.windowOthersSounds);
+    notifier::frame(window, false, config);  // 3.0.4-beta.3
 }
 
 void Context::present(const Rect& source, bool waitForVblank) {
@@ -789,6 +791,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 0.91: quieter in the background; the crowd's limiter thinned out. 3.0.3-beta.3: the music of the main game
     // window alone, unless [windows] others_music
     soundFrame(foreground, mainWindow_ || config.windowOthersMusic, mainWindow_ || config.windowOthersSounds);
+    notifier::frame(window, foreground, config);  // 3.0.4-beta.3: whispers and the like told from behind
     // 3.0.2-beta.13 (beta.12's measure: a map's 102 loading pictures waited 1.68 s for their presents, 60 a second):
     // the game's loading picture while a map loads - no frame limit, its present not waited for, and through
     // uaro-render64.exe at most 10 a second (the game draws it anew for each per cent of the map's models)

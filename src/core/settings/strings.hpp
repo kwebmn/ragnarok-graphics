@@ -405,6 +405,9 @@ enum class Text : uint16_t {
     WindowsPanelIcons,  // 3.0.3-beta.11: its small icons
     SoundOutput, SoundOutputHint, SoundOutputWindows, SoundOutputWindowsNow, SoundOutputAway, SoundOutputGone,
     SoundOutputAwayNote,  // 3.0.4-beta.1: the output device
+    NotifyHeading, NotifyOn, NotifyOnHint, NotifyWhisper, NotifyParty, NotifyTrade, NotifyGuild, NotifyFriend,
+    NotifyDeath, NotifyKindHint, NotifyWhisperText, NotifyPartyText, NotifyTradeText, NotifyGuildText,
+    NotifyFriendText, NotifyDeathText,  // 3.0.4-beta.3: notifications from behind
     Count
 };
 

@@ -472,6 +472,17 @@ Config parseConfig(const std::string& text) {
             }
         } else if (key == "panel.place") {
             c.panelPlace = val;
+        } else if (key.compare(0, 7, "notify.") == 0) {  // 3.0.4-beta.3
+            const std::string k = key.substr(7);
+            bool* to = k == "on"       ? &c.notify.on
+                       : k == "whisper" ? &c.notify.whisper
+                       : k == "party"   ? &c.notify.party
+                       : k == "trade"   ? &c.notify.trade
+                       : k == "guild"   ? &c.notify.guild
+                       : k == "friend"  ? &c.notify.friendAsk
+                       : k == "death"   ? &c.notify.death
+                                        : nullptr;
+            if (to) setBool(val, *to);
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

@@ -192,6 +192,17 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("place", running.panelPlace, file.panelPlace));
         n.panelPlace = file.panelPlace;
     }
+    {  // 3.0.4-beta.3: the notifications, each box
+        const NotifySettings &f = file.notify, &r = running.notify;
+        const std::pair<const char*, std::pair<bool, bool>> boxes[] = {
+            {"notify on", {r.on, f.on}},          {"whisper", {r.whisper, f.whisper}}, {"party", {r.party, f.party}},
+            {"trade", {r.trade, f.trade}},        {"guild", {r.guild, f.guild}},
+            {"friend", {r.friendAsk, f.friendAsk}}, {"death", {r.death, f.death}}};
+        for (const auto& b : boxes)
+            if (b.second.first != b.second.second)
+                u.applied.push_back(change(b.first, flag(b.second.first), flag(b.second.second)));
+        n.notify = f;
+    }
     if (file.sound.output != running.sound.output) {  // 3.0.4-beta.1: the output device
         const auto word = [](const std::string& id) { return id.empty() ? std::string("auto") : id; };
         u.applied.push_back(change("output", word(running.sound.output), word(file.sound.output)));
@@ -252,7 +263,8 @@ bool appliesNow(const std::string& k) {
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
            k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
-           k == "sound.output";               // 3.0.4-beta.1: the music and the sounds move at once
+           k == "sound.output" ||             // 3.0.4-beta.1: the music and the sounds move at once
+           k.compare(0, 7, "notify.") == 0;   // 3.0.4-beta.3
 }
 
 }  // namespace uagfx

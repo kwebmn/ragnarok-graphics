@@ -9,6 +9,7 @@
 #include "win/context.hpp"
 #include "win/dx7/ddraw7.hpp"
 #include "win/log.hpp"
+#include "win/packet_tap.hpp"
 #include "win/pad_mount.hpp"
 #include "win/roext.hpp"
 #include "win/updates_hook.hpp"
@@ -200,6 +201,7 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(inst);
         uagfx::win::installSoundHooks();  // 0.91: before the game opens its sound (its import slots only)
+        uagfx::win::installPacketTap();   // 3.0.4-beta.3: the game's packets read (notifications)
         uagfx::win::mountPad();           // 2.9: uaRO Pad, before the game makes its DirectInput
         uagfx::win::installRoext();       // 3.0.1-beta.8: ROExt's work, before the game makes its window
         uagfx::win::installUpdates();     // 3.0.2-beta.5: updates\'s GRFs, before the game reads its files

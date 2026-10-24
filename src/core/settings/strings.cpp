@@ -4416,6 +4416,37 @@ constexpr Entry kTexts[] = {
      "The chosen device is not connected now: the game's sound plays as in Windows until it is back.",
      "Вибраний пристрій зараз не підключено: звук гри йде як у Windows, доки його не підключать.",
      "Выбранное устройство сейчас не подключено: звук игры идёт как в Windows, пока его не подключат."},
+    // 3.0.4-beta.3: notifications while the game is behind ([notify])
+    {Text::NotifyHeading, "Notifications", "Сповіщення", "Уведомления"},
+    {Text::NotifyOn, "Notifications while the game is behind",
+     "Сповіщення, коли гра у фоні",
+     "Уведомления, когда игра в фоне"},
+    {Text::NotifyOnHint,
+     "When the game window is behind others or minimised: its taskbar button flashes and Windows shows who wants "
+     "you - a whisper, an invitation, a trade, the character's death. A click on the notification brings the game "
+     "back. With several game windows each tells of its own.",
+     "Коли вікно гри за іншими вікнами чи згорнуте: його кнопка на панелі завдань блимає, а Windows показує, хто вас "
+     "кличе, — шепіт, запрошення, обмін, смерть персонажа. Клік по сповіщенню повертає гру. З кількома вікнами гри "
+     "кожне повідомляє про своє.",
+     "Когда окно игры за другими окнами или свёрнуто: его кнопка на панели задач мигает, а Windows показывает, кто "
+     "вас зовёт, — шёпот, приглашение, обмен, смерть персонажа. Щелчок по уведомлению возвращает игру. С несколькими "
+     "окнами игры каждое сообщает о своём."},
+    {Text::NotifyWhisper, "Whispers", "Шепіт", "Шёпот"},
+    {Text::NotifyParty, "Party invitations", "Запрошення до групи", "Приглашения в группу"},
+    {Text::NotifyTrade, "Trade offers", "Пропозиції обміну", "Предложения обмена"},
+    {Text::NotifyGuild, "Guild invitations", "Запрошення до гільдії", "Приглашения в гильдию"},
+    {Text::NotifyFriend, "Friend requests", "Запити в друзі", "Запросы в друзья"},
+    {Text::NotifyDeath, "The character's death", "Смерть персонажа", "Смерть персонажа"},
+    {Text::NotifyKindHint, "Told while the game is behind other windows.",
+     "Сповіщати, поки гра у фоні.",
+     "Уведомлять, пока игра в фоне."},
+    {Text::NotifyWhisperText, "Whisper from {1}: {2}", "Шепіт від {1}: {2}", "Шёпот от {1}: {2}"},
+    {Text::NotifyPartyText, "Invitation to the party {1}", "Запрошення до групи {1}", "Приглашение в группу {1}"},
+    {Text::NotifyTradeText, "{1} offers a trade", "{1} пропонує обмін", "{1} предлагает обмен"},
+    {Text::NotifyGuildText, "Invitation to the guild {1}", "Запрошення до гільдії {1}", "Приглашение в гильдию {1}"},
+    {Text::NotifyFriendText, "{1} asks to be your friend", "{1} хоче додати вас у друзі",
+     "{1} хочет добавить вас в друзья"},
+    {Text::NotifyDeathText, "The character died", "Персонаж загинув", "Персонаж погиб"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

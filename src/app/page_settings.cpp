@@ -113,6 +113,12 @@ public:
                     p.heading(t(Text::PanelHeading));
                     buildRows(p, "panel");
                 }
+                // 3.0.4-beta.3: notifications while the game is behind ([notify])
+                if (anyListed("notify")) {
+                    p.gap();
+                    p.heading(t(Text::NotifyHeading));
+                    buildRows(p, "notify");
+                }
                 break;
             case settings::Page::Chat:
                 regRows(p, [](const RegSetting& s) { return *s.subkey && s.control == Control::Check; });  // whispers

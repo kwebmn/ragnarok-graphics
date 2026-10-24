@@ -6,6 +6,7 @@
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/log_slot.hpp"
+#include "win/notifier.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -21,6 +22,8 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;
         if (m == WM_ACTIVATE && g_switch->activate(w, wp)) return 1;  // the game's own answer to it
         if (m == WM_TIMER && g_switch->timer(w, wp)) return 0;
+        if (notifier::message(w, m, wp, lp)) return 0;  // 3.0.4-beta.3: a click on a notification
+        if (m == WM_DESTROY) notifier::gone(w);
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
         if (g_switch->mouse(w, m, lp, answer)) return answer;
     }

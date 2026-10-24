@@ -100,6 +100,20 @@ const std::vector<IniSetting>& iniSettings() {
          Text::WindowsPanelSizeHint, " %"},
         {"panel", "opacity", Page::Game, Control::Slider, 40, 100, 10, {}, {}, Text::PanelOpacity,
          Text::PanelOpacityHint, " %"},
+        // 3.0.4-beta.3: notifications while the game is behind other windows - a section of its own («Сповіщення»)
+        {"notify", "on", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyOn, Text::NotifyOnHint, ""},
+        {"notify", "whisper", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyWhisper,
+         Text::NotifyKindHint, ""},
+        {"notify", "party", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyParty,
+         Text::NotifyKindHint, ""},
+        {"notify", "trade", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyTrade,
+         Text::NotifyKindHint, ""},
+        {"notify", "guild", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyGuild,
+         Text::NotifyKindHint, ""},
+        {"notify", "friend", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyFriend,
+         Text::NotifyKindHint, ""},
+        {"notify", "death", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyDeath,
+         Text::NotifyKindHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)
@@ -788,6 +802,18 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "windows.others_sounds") return c.windowOthersSounds ? "1" : "0";  // 3.0.3-beta.9
     if (k == "windows.switch_keys") return windowKeysToken(c.windowKeys);  // 3.0.3-beta.6
     if (k == "panel.show") return c.panelShow ? "1" : "0";  // 3.0.3-beta.8
+    if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
+        const NotifySettings& n = c.notify;
+        const std::string w = k.substr(7);
+        const bool on = w == "on"        ? n.on
+                        : w == "whisper" ? n.whisper
+                        : w == "party"   ? n.party
+                        : w == "trade"   ? n.trade
+                        : w == "guild"   ? n.guild
+                        : w == "friend"  ? n.friendAsk
+                                         : n.death;
+        return on ? "1" : "0";
+    }
     if (k == "panel.layout") return panelLayoutToken(c.panelLayout);
     if (k == "panel.size") return std::to_string(c.panelSize);
     if (k == "panel.opacity") return std::to_string(c.panelOpacity);

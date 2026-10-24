@@ -428,6 +428,12 @@ struct SoundSettings {
     std::string output;
 };
 
+// 3.0.4-beta.3, [notify] (core/notify.hpp): a game window behind others tells of these - on, then each kind
+struct NotifySettings {
+    bool on = true;
+    bool whisper = true, party = true, trade = true, guild = true, friendAsk = true, death = true;
+};
+
 struct Config {
     Api api = Api::D3d12;
     // Part 3 (test): [renderer] bridge = 1 draws in the 64-bit process uaro-render64.exe; bridge_present = auto,
@@ -478,6 +484,7 @@ struct Config {
     PanelLayout panelLayout = PanelLayout::Row;
     int panelSize = 100, panelOpacity = 90;
     std::string panelPlace;
+    NotifySettings notify;      // 3.0.4-beta.3
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;
