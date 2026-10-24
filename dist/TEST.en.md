@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.4-beta.17 — what is new
+
+- **The camera no further out than the character shows** (report R-35N5QN). The game lets the camera go out to 2040
+  but draws its world only to 1500 - further out the character, the monsters and the effects vanished. A new box,
+  "Camera no further out than the character shows" (the "Game and chat" page, the "Camera" section, on by default),
+  stops the camera at 1400. A camera already further out comes in at once. With the box off the game has its own
+  limit back.
+- The driver moves the limit in the game's memory itself: every place where the game limits the zoom (checked in
+  uaRO.exe's code) takes it from one variable.
+- To check: zoom out as far as it goes - the character should stay in sight; turn the box off - the camera goes out to
+  2040 again.
+
 # uaRO Graphics 3.0.4-beta.16 — what is new
 
 - **The own ground does not vanish with the camera far out** (report R-35N5QN, "it goes dark when I zoom out to this
