@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.3-beta.5 — what is new
+
+- **The character in the window's title.** The game window's title and its taskbar button show more than the name
+  now: the levels, the experience to the next level, HP and SP, the weight from 50 % and the map, with the client's
+  name last: Lena · 99/70 · 45.2 % · HP 85 % · SP 40 % · prt_fild08 - uaRO HD. Before the game it is the client's
+  name alone in place of «2007-05-07a kRO Sakexe». The switch is «The character in the window's title» now
+  («Game and chat» → «Several game windows»).
+
 # uaRO Graphics 3.0.3-beta.4 — what is new
 
 - **The several windows' switches under a heading of their own.** «Game and chat» has «Several game windows» now,
