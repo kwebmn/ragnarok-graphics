@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.3-beta.12 — what is new
+
+- **The game's cursor really over the windows' panel.** In 3.0.3-beta.11 I looked for the cause in the wrong place: the
+  game hands its frame to the graphics card before it is shown, and the panel was added after that, with no cursor
+  left in the frame. Now the panel goes into the frame together with the cursor, and the cursor is drawn last.
+- **The other game windows' sounds fade out on the full screen too.** A full-screen game behind draws no frames, so
+  neither «Sounds in the other game windows» nor «Volume in the background» worked for it. Now a window behind makes
+  itself quieter by itself, without frames.
+- **The background windows' HP and SP on the panel keep up,** even on the full screen.
+
 # uaRO Graphics 3.0.3-beta.11 — what is new
 
 - **The game's cursor over the windows' panel.** On maps with effects (such as prontera) the cursor ended up under
