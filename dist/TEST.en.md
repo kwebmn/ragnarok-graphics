@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.4-beta.14 — what is new
+
+- **Houses and trees far off (prototype).** Under "Own ground (prototype)" there is a new switch, "Houses and trees far
+  off". It is on by default and works only together with the own ground. uaRO Graphics reads the map's houses, trees
+  and rocks from its files and draws them past the edge where the game cuts them off (1500 units from the camera). Now,
+  with the camera far out, the own ground there is no longer bare. Nearer, the game draws its models itself, further
+  off the driver does, and at the edge a model is cut exactly there.
+- The models' colours are taken from how the game draws them near, as the own ground's colour is. Models the game has
+  not drawn yet are lit the way the game lights those already seen.
+- Checked offline on prt_fild08 and in Prontera from the client's files. All the models were read (23 and 65 files),
+  and the trees stand next to their shadows baked into the map. On the processor, with the camera zoomed out the most,
+  it takes 0.3-1.5 ms a frame.
+- To check on prt_fild08 with the own ground: zoom the camera out the most and tilt it. The trees and Prontera's wall
+  should be seen to the horizon, with no break at the edge. In about 10 seconds the log gets an
+  `own models: ... (N %) where ours lie` line - how many of the game's model triangles matched ours. It should be about
+  100 %, but for the models that move. Send a report with that line.
+
 # uaRO Graphics 3.0.4-beta.13 — what is new
 
 - **Own ground: the seams are no longer smeared.** Along each seam a strip covers the texture's dark rim, and in
