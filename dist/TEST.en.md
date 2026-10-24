@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.3-beta.6 — what is new
+
+- **Keys that switch the game windows.** Ctrl+Tab goes back to the game window you played in before, and the next
+  Ctrl+Tab back again. Ctrl+Alt+1...8 goes straight to the window of that number: the order the windows were started
+  in, the first one 1. A minimised window is restored. The game does not get these keys: Ctrl+Alt+1 sends no chat
+  macro. The row «Window keys» («Game and chat» → «Several game windows»): «Ctrl+Tab and Ctrl+Alt+1...8», «Ctrl+Tab
+  alone» or «Off».
+- The panel of the windows in the game comes in the next beta.
+
 # uaRO Graphics 3.0.3-beta.5 — what is new
 
 - **The character in the window's title.** The game window's title and its taskbar button show more than the name
