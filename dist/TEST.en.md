@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.4-beta.13 — what is new
+
+- **Own ground: the seams are no longer smeared.** Along each seam a strip covers the texture's dark rim, and in
+  beta.12 it took one place of the texture over all its width, so smears of one column of texels ran along the seams.
+  Now, as on the game's ground seams, the texture is only mirrored at the very edge there. Offline, on prt_fild08's
+  textures, the smears are gone.
+- **The own ground on newer maps too.** Grounds of versions 1.8 and 1.9 (88 of the client's maps, sva_god1 among
+  them) are 1.7 with the map's water at the end of the file. The own ground now works on them.
+- To check: the same place on prt_fild08 as in beta.12. If the seams between tiles of one texture (sand with sand)
+  still look smeared, the cause is another one: there the next tile's texture is mirrored across the seam, as "Grass
+  and road seams without steps" does on the game's ground. Then tell me - the blending between tiles of one texture
+  goes, and stays only between different textures.
+
 # uaRO Graphics 3.0.4-beta.12 — what is new
 
 - **Own ground: soft texture transitions.** With "Own ground (prototype)" and "Grass and road seams without steps" on,
