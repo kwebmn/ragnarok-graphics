@@ -10,8 +10,10 @@
 #include "core/dlss_size.hpp"
 #include "core/live_config.hpp"
 #include "core/scale.hpp"
+#include "core/audio_output.hpp"
 #include "core/settings/auto_setup.hpp"
 #include "core/settings/report.hpp"
+#include "win/audio_devices.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -49,6 +51,7 @@ public:
             return false;
         }
         if (!fitsMachine(key, host_.model().machine())) return false;  // 2.15
+        if (key == "sound.output") return buildOutput(p) != nullptr;  // 3.0.4-beta.1: its own list
         const std::vector<IniSetting>& all = iniSettings();
         for (size_t i = 0; i < all.size(); ++i)
             if (sectionKey(all[i]) == key) return buildOne(p, i) != nullptr;
@@ -85,6 +88,7 @@ public:
                 regRows(p, [](const RegSetting& s) { return s.control == Control::Slider; });
                 p.gap();
                 p.heading(t(Text::GfxSoundOurs));  // 0.91: uaro-graphics.ini's [sound]
+                buildOutput(p);                    // 3.0.4-beta.1: first, the device it plays on
                 buildRows(p);
                 break;
             case settings::Page::Game:
@@ -131,6 +135,13 @@ public:
         if (id == kGpu && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < gpuWords_.size()) m.setToken(*findSetting("renderer.gpu"), gpuWords_[sel]);
+            host_.changed();
+            return;
+        }
+        if (id == kOutput && code == CBN_SELCHANGE) {  // 3.0.4-beta.1
+            const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
+            if (sel >= 0 && size_t(sel) < outputWords_.size())
+                m.setToken(*findSetting("sound.output"), outputWords_[sel]);
             host_.changed();
             return;
         }
@@ -419,6 +430,39 @@ private:
         p.note(t(Text::PauseNote));
     }
 
+    // 3.0.4-beta.1: the output device - «As in Windows» (now: its default), the devices connected, the chosen one when
+    // it is not (by the name Windows still knows)
+    HWND buildOutput(Panel& p) {
+        Model& m = host_.model();
+        const std::string chosen = m.token(*findSetting("sound.output"));
+        std::vector<win::audio_devices::Device> active;
+        std::string defaultId, defaultName;
+        win::audio_devices::list(active, defaultId);
+        for (const win::audio_devices::Device& d : active)
+            if (audio_output::sameId(d.id, defaultId)) defaultName = d.name;
+        std::vector<std::wstring> items;
+        int selected = 0;
+        outputWords_.clear();
+        items.push_back(defaultName.empty() ? t(Text::SoundOutputWindows)
+                                            : tf(Text::SoundOutputWindowsNow, {defaultName}));
+        outputWords_.push_back("auto");
+        for (const win::audio_devices::Device& d : active) {
+            if (audio_output::sameId(d.id, chosen)) selected = int(items.size());
+            items.push_back(wide(d.name.empty() ? d.id : d.name));
+            outputWords_.push_back(d.id);
+        }
+        const bool away = chosen != "auto" && !selected;
+        if (away) {
+            const std::string name = win::audio_devices::nameOf(chosen);
+            selected = int(items.size());
+            items.push_back(tf(Text::SoundOutputAway, {name.empty() ? utf8(t(Text::SoundOutputGone)) : name}));
+            outputWords_.push_back(chosen);
+        }
+        HWND row = p.choice(kOutput, t(Text::SoundOutput), items, selected, t(Text::SoundOutputHint), true);
+        if (away) p.note(t(Text::SoundOutputAwayNote), Tone::Warn);
+        return row;
+    }
+
     // A row of the part being built that the mode shows (2.6) and its values call for.
     // 2.15: and this computer can use (fitsMachine: DLSS on NVIDIA, HDR with an HDR screen)
     bool listed(const IniSetting& s) const {
@@ -436,6 +480,7 @@ private:
         }
         if (k == "frames.battery_fps")  // 2.5.20: with the battery saver on
             return host_.model().token(*findSetting("frames.battery_saver")) == "1";
+        if (k == "sound.output") return false;  // 3.0.4-beta.1: its own list (buildOutput)
         if (k.compare(0, 13, "quality.dlss_") != 0) return true;
         const std::string dlss = host_.model().token(*findSetting("quality.dlss"));
         return k == "quality.dlss_model" ? dlss != "off" : dlss == "custom";
@@ -554,6 +599,7 @@ private:
     bool held_ = false;                   // a row is grey: the game runs and writes it itself
     std::vector<std::string> skinWords_;  // the skin list's words, in its order
     std::vector<std::string> gpuWords_;   // 0.50.2: the graphics card list's [renderer] gpu words, in its order
+    std::vector<std::string> outputWords_;  // 3.0.4-beta.1: the output device list's [sound] output words
 };
 
 }  // namespace

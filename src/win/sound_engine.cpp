@@ -9,10 +9,13 @@
 #include <cstring>
 #include <vector>
 
+#include "core/audio_output.hpp"
 #include "core/sound_mix.hpp"
 #include "core/sound_place.hpp"
 #include "core/sound_space.hpp"
 #include "core/wav.hpp"
+#include "win/audio_devices.hpp"
+#include "win/audio_master.hpp"
 #include "win/log.hpp"
 #include "win/spatial_audio.hpp"
 
@@ -65,11 +68,33 @@ struct Engine {
     sound::Room room = sound::Room::Open;
     std::string map = "-";
     unsigned played = 0, refused = 0, stolen = 0, spatial = 0;
+    // 3.0.4-beta.1: the output device asked for ("" Windows' default), the chosen one not connected, a new engine
+    // asked for, Windows' notices of devices looked at
+    std::string output;
+    bool away = false, reopen = false, watching = false;
+    unsigned seen = 0;
+    volatile LONG lost = 0;  // XAudio2's critical error (its thread): the device gone, the engine stopped for good
 };
 
 Engine& engine() {
     static Engine e;
     return e;
+}
+
+struct EngineWatch : IXAudio2EngineCallback {
+    void STDMETHODCALLTYPE OnProcessingPassStart() override {}
+    void STDMETHODCALLTYPE OnProcessingPassEnd() override {}
+    void STDMETHODCALLTYPE OnCriticalError(HRESULT) override { InterlockedExchange(&engine().lost, 1); }
+};
+EngineWatch g_engineWatch;
+
+// 3.0.4-beta.1: the ids of the output devices connected now; false when Windows did not answer
+bool activeIds(std::vector<std::string>& ids) {
+    std::vector<audio_devices::Device> active;
+    std::string ignored;
+    if (!audio_devices::list(active, ignored)) return false;
+    for (const audio_devices::Device& d : active) ids.push_back(d.id);
+    return true;
 }
 
 uint32_t keyOf(const wav::Sound& s) { return uint32_t(s.channels) << 28 | uint32_t(s.bits) << 20 | s.rate; }
@@ -87,8 +112,22 @@ bool start(Engine& e) {
         LOG_INFO("sound engine: no XAudio2 2.9 (Windows 10 and later) - the game's sound through Miles");
         return false;
     }
+    audio_output::Target t;  // 3.0.4-beta.1: the chosen device when it is connected, else Windows' default
+    if (!e.output.empty()) {
+        std::vector<std::string> ids;
+        if (!activeIds(ids)) ids.push_back(e.output);  // no answer: tried as it is
+        t = audio_output::pick(e.output, ids);
+    }
     HRESULT hr = createVersion ? createVersion(&e.x, 0, 1, 0x0A000000) : create(&e.x, 0, 1);
-    if (SUCCEEDED(hr)) hr = e.x->CreateMasteringVoice(&e.master, 0, 0, 0, nullptr, nullptr, AudioCategory_GameEffects);
+    if (SUCCEEDED(hr)) e.x->RegisterForCallbacks(&g_engineWatch);
+    if (SUCCEEDED(hr)) {
+        hr = audio_devices::openMaster(e.x, &e.master, 0, t.id);  // its channels: the device's
+        if (FAILED(hr) && !t.id.empty()) {  // refused (taken, gone just now): Windows' default
+            t = audio_output::Target{"", true};
+            hr = audio_devices::openMaster(e.x, &e.master, 0, "");
+        }
+    }
+    e.away = t.away;
     if (FAILED(hr)) {
         LOG_ERROR("sound engine: XAudio2 did not start (0x%08lx) - the game's sound through Miles",
                   static_cast<unsigned long>(hr));
@@ -113,11 +152,52 @@ bool start(Engine& e) {
         if (FAILED(e.x->CreateSubmixVoice(&e.reverb, 2, e.outRate, 0, 0, nullptr, &chain))) e.reverb = nullptr;
         apo->Release();
     }
-    LOG_INFO("sound engine: XAudio2 at %u Hz on %u channels (mask 0x%lx)%s", e.outRate, e.outChannels,
-             static_cast<unsigned long>(e.mask), e.reverb ? ", reverberation" : ", no reverberation");
+    LOG_INFO("sound engine: XAudio2 at %u Hz on %u channels (mask 0x%lx)%s, %s", e.outRate, e.outChannels,
+             static_cast<unsigned long>(e.mask), e.reverb ? ", reverberation" : ", no reverberation",
+             !t.id.empty() ? "on the chosen output device"
+             : t.away     ? "on Windows' default output (the chosen one is not connected)"
+                          : "on Windows' default output");
     e.on = true;
-    if (e.headphones) spatial::start();  // 1.2
+    if (e.headphones) spatial::start(t.id);  // 1.2; 3.0.4-beta.1: on its device
     return true;
+}
+
+// 3.0.4-beta.1: everything of it let go - a new engine follows (its device lost, another chosen, the chosen one back)
+void stop(Engine& e) {
+    spatial::stop();
+    for (Voice& v : e.voices)
+        if (v.voice) v.voice->DestroyVoice();
+    e.voices.clear();
+    if (e.reverb) e.reverb->DestroyVoice();
+    e.reverb = nullptr;
+    if (e.master) e.master->DestroyVoice();
+    e.master = nullptr;
+    if (e.x) e.x->Release();
+    e.x = nullptr;
+    e.on = false;
+    e.tried = false;
+    e.map = "-";       // the place's reverberation set again
+    e.others = -1.0f;  // and the volume
+}
+
+// While it plays on Windows' default instead of the chosen device (or not at all), Windows' notices of devices:
+// the chosen one connected again, or any device now
+bool deviceBack(Engine& e) {
+    if (!e.away && e.on) {
+        e.watching = false;
+        return false;
+    }
+    if (!e.on && !e.dll) return false;  // no XAudio2 2.9 here
+    const unsigned now = audio_devices::changes();  // the first call starts the watching
+    if (!e.watching || now == e.seen) {
+        e.watching = true;
+        e.seen = now;
+        return false;
+    }
+    e.seen = now;
+    if (!e.on) return true;
+    std::vector<std::string> ids;
+    return activeIds(ids) && !audio_output::pick(e.output, ids).id.empty();
 }
 
 // The place's reverberation (core/sound_place.hpp): how long and how much of it.
@@ -227,6 +307,13 @@ int playing() {
     return n;
 }
 
+void setOutput(const std::string& id) {
+    Engine& e = engine();
+    if (audio_output::sameId(e.output, id)) return;
+    e.output = id;
+    e.reopen = e.tried;  // a running engine moves at the next frame
+}
+
 void configure(bool on, int reverb, int background, bool limiter, bool headphones) {
     Engine& e = engine();
     e.wanted = on;
@@ -310,6 +397,15 @@ bool play(const void* image, float x, float y, float z, int reach, int inner, fl
 
 void frame(bool foreground, const std::string& map, float others) {
     Engine& e = engine();
+    if (e.tried && e.wanted) {  // 3.0.4-beta.1: a new engine - its device lost, another chosen, the chosen one back
+        const bool lost = InterlockedExchange(&e.lost, 0) != 0;
+        if (lost || e.reopen || deviceBack(e)) {
+            if (lost) LOG_INFO("sound engine: its output device is gone - opened again");
+            e.reopen = false;
+            stop(e);
+            start(e);
+        }
+    }
     if (!e.on) return;
     for (Voice& v : e.voices) {
         if (!v.busy) continue;

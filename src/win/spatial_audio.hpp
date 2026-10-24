@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 
 #include "core/wav.hpp"
 
@@ -10,8 +11,10 @@ namespace uagfx::win::spatial {
 // headphones made binaural by Windows itself. Its own thread (COM, the stream's event); the engine's reverberation
 // stays in XAudio2. Nothing when Windows has no spatial sound on.
 
-// Its start (once, on the engine's start): true when Windows takes the objects.
-bool start();
+// Its start on the engine's start: true when Windows takes the objects. 3.0.4-beta.1: on the engine's output device
+// (Windows' endpoint id, "" its default); stopped as the engine is made anew.
+bool start(const std::string& device);
+void stop();
 bool active();
 // A sound: its samples (copied), from `azimuth` degrees (+ right) at `meters`, its gain and muffle. False when there is
 // no object free for it (the engine plays it as before).

@@ -403,6 +403,8 @@ enum class Text : uint16_t {
     WindowsOthersSounds, WindowsOthersSoundsHint,  // 3.0.3-beta.9
     PanelMenuLayout, PanelMenuSize, PanelMenuOpacity, PanelMenuHide,  // 3.0.3-beta.10: the panel's menu
     WindowsPanelIcons,  // 3.0.3-beta.11: its small icons
+    SoundOutput, SoundOutputHint, SoundOutputWindows, SoundOutputWindowsNow, SoundOutputAway, SoundOutputGone,
+    SoundOutputAwayNote,  // 3.0.4-beta.1: the output device
     Count
 };
 

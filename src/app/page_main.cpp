@@ -54,6 +54,7 @@ public:
         p.gap();
         p.heading(t(Text::MainOther));
         rows_->buildRow(p, "sound.engine");
+        rows_->buildRow(p, "sound.output");  // 3.0.4-beta.1: the Simple mode has no Sound page
         rows_->buildRow(p, "pad.enabled");  // 2.9: uaRO Pad inside the driver, on by default
         rows_->buildRow(p, "frames.battery_saver");
         p.buttons({{kRecommended, t(Text::MainRecommended), true, true},  // blue (the user)
@@ -77,7 +78,7 @@ public:
     }
 
     void command(int id, int code) override {
-        if (settingOfId(id)) {
+        if (settingOfId(id) || id == kOutput) {  // 3.0.4-beta.1: the output device's list too
             rows_->command(id, code);
             return;
         }

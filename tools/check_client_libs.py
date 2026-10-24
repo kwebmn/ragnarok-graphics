@@ -34,7 +34,8 @@ LIBS = {
         "_AIL_3D_sample_status@4", "_AIL_set_3D_room_type@8", "_AIL_mem_free_lock@4", "_AIL_decompress_ADPCM@12",
         "_AIL_WAV_info@8", "_AIL_decompress_ASI@24", "_AIL_file_type@8", "_AIL_3D_room_type@4",
         "_AIL_close_stream@4",
-        "_AIL_set_sample_pan@8"]},
+        "_AIL_set_sample_pan@8",
+        "_UAGFX_set_output@4", "_UAGFX_output@8"]},  # 3.0.4-beta.1: the output device (win/sound_hook.cpp)
 }
 
 

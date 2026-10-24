@@ -999,6 +999,7 @@ void Context::watchSettings() {
     if (config.aiNow.dyes != was.aiNow.dyes) setSpriteDyes(config.aiNow.dyes);  // 2.5.23: the frames written next
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
     if (config.fpsCounter != was.fpsCounter) fpsShown_ = config.fpsCounter;  // 2.2.1: at once
+    if (config.sound.output != was.sound.output) soundOutput(config.sound.output);  // 3.0.4-beta.1
     if (config.statsSend && usage_.begun()) {  // 2.2.1: what was changed in the game - what was liked, or not
         std::string lines;  // 2.2.2: the effects by what is drawn (a set made the player's own changes nothing)
         for (const std::string& a : usage::changes(was.effects, config.effects, startup().cardLevel, u.applied))

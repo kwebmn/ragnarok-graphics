@@ -423,6 +423,9 @@ struct SoundSettings {
     int reverb = 60;        // reverb: the place's reverberation with the engine, 0-100
     bool headphones = true;  // 1.2, headphones: Windows' spatial sound (Sonic, Atmos) when it is on in Windows
     bool duck = true;        // 1.3, duck: the music quieter (to 65 %) while many sounds play at once
+    // 3.0.4-beta.1, output: the Windows output device it plays on (its endpoint id; "" - auto: as in Windows;
+    // core/audio_output.hpp)
+    std::string output;
 };
 
 struct Config {

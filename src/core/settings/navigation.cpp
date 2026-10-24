@@ -10,7 +10,8 @@ namespace {
 // The Main page's rows (2.6): the choices a player makes, everything else in the Detailed mode.
 const char* const kMainKeys[] = {"quality.super_light", "quality.dlss",   "frames.frame_generation",
                                  "frames.fps_limit",    "frames.vsync",   "display.hdr",
-                                 "sound.engine",        "frames.battery_saver", "ai.enabled"};
+                                 "sound.engine",        "frames.battery_saver", "ai.enabled",
+                                 "sound.output"};  // 3.0.4-beta.1
 
 // The switches for checks and reports - besides every key of [debug].
 const char* const kDeveloperKeys[] = {"renderer.render_thread", "renderer.remix",

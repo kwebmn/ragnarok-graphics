@@ -4170,9 +4170,11 @@ constexpr Entry kTexts[] = {
      "ШІ-текстури: текстури гри, зроблені чіткішими нейромережами, — що покращувати, моделі, пакет.",
      "ИИ-текстуры: текстуры игры, сделанные чётче нейросетями, — что улучшать, модели, пакет."},
     {Text::HelpViewSound,
-     "The game's sound: its own settings and ours - the sound around the player, the volume behind other windows.",
-     "Звук гри: її власні налаштування й наші — звук навколо гравця, гучність за іншими вікнами.",
-     "Звук игры: её собственные настройки и наши — звук вокруг игрока, громкость за другими окнами."},
+     "The game's sound: its own settings and ours - the output device, the sound around the player, the volume "
+     "behind other windows.",
+     "Звук гри: її власні налаштування й наші — пристрій виводу, звук навколо гравця, гучність за іншими вікнами.",
+     "Звук игры: её собственные настройки и наши — устройство вывода, звук вокруг игрока, громкость за другими "
+     "окнами."},
     {Text::HelpViewPad, "The gamepad: on or off, its buttons and sticks in the game.",
      "Геймпад: увімкнений чи ні, його кнопки й стіки в грі.",
      "Геймпад: включён или нет, его кнопки и стики в игре."},
@@ -4383,6 +4385,36 @@ constexpr Entry kTexts[] = {
     {Text::PanelMenuOpacity, "Opacity", "Непрозорість", "Непрозрачность"},
     {Text::PanelMenuHide, "Hide the panel · Ctrl+Alt+0", "Сховати панель · Ctrl+Alt+0", "Спрятать панель · Ctrl+Alt+0"},
     {Text::WindowsPanelIcons, "Icons", "Іконки", "Иконки"},
+    // 3.0.4-beta.1: the output device ([sound] output)
+    {Text::SoundOutput, "Sound output device",
+     "Пристрій виводу звуку",
+     "Устройство вывода звука"},
+    {Text::SoundOutputHint,
+     "Where the game's music and sounds play. «As in Windows»: the device Windows sends sound to. A device chosen "
+     "here: while it is off (headphones not connected), the sound plays as in Windows and comes back to it when it "
+     "is on again. Applies at once, in a running game too.",
+     "Куди грають музика й звуки гри. «Як у Windows» — на пристрій, куди звук спрямовує Windows. Вибраний тут "
+     "пристрій: поки він вимкнений (навушники не підключені), звук іде як у Windows, а коли пристрій знову "
+     "з'явиться — повертається на нього. Діє одразу, і в запущеній грі.",
+     "Куда играют музыка и звуки игры. «Как в Windows» — на устройство, куда звук направляет Windows. Выбранное "
+     "здесь устройство: пока оно выключено (наушники не подключены), звук идёт как в Windows, а когда устройство "
+     "снова появится — возвращается на него. Действует сразу, и в запущенной игре."},
+    {Text::SoundOutputWindows, "As in Windows",
+     "Як у Windows",
+     "Как в Windows"},
+    {Text::SoundOutputWindowsNow, "As in Windows (now: {1})",
+     "Як у Windows (зараз: {1})",
+     "Как в Windows (сейчас: {1})"},
+    {Text::SoundOutputAway, "{1} — not connected",
+     "{1} — не підключено",
+     "{1} — не подключено"},
+    {Text::SoundOutputGone, "A device no longer in Windows",
+     "Пристрій, якого вже немає у Windows",
+     "Устройство, которого уже нет в Windows"},
+    {Text::SoundOutputAwayNote,
+     "The chosen device is not connected now: the game's sound plays as in Windows until it is back.",
+     "Вибраний пристрій зараз не підключено: звук гри йде як у Windows, доки його не підключать.",
+     "Выбранное устройство сейчас не подключено: звук игры идёт как в Windows, пока его не подключат."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

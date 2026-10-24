@@ -192,6 +192,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("place", running.panelPlace, file.panelPlace));
         n.panelPlace = file.panelPlace;
     }
+    if (file.sound.output != running.sound.output) {  // 3.0.4-beta.1: the output device
+        const auto word = [](const std::string& id) { return id.empty() ? std::string("auto") : id; };
+        u.applied.push_back(change("output", word(running.sound.output), word(file.sound.output)));
+        n.sound.output = file.sound.output;
+    }
     if (file.profile != running.profile) {  // 0.87
         u.applied.push_back(change("profile", flag(running.profile), flag(file.profile)));
         n.profile = file.profile;
@@ -246,7 +251,8 @@ bool appliesNow(const std::string& k) {
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
-           k.compare(0, 6, "panel.") == 0;  // 3.0.3-beta.8
+           k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
+           k == "sound.output";               // 3.0.4-beta.1: the music and the sounds move at once
 }
 
 }  // namespace uagfx

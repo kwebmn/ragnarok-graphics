@@ -47,3 +47,5 @@ EXPORTS
     _AIL_start_stream@4 = AIL_start_stream@4
     _AIL_startup@0 = AIL_startup@0
     _AIL_stream_volume@4 = AIL_stream_volume@4
+    _UAGFX_output@8 = UAGFX_output@8
+    _UAGFX_set_output@4 = UAGFX_set_output@4

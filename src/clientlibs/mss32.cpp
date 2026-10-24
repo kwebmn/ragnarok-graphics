@@ -6,6 +6,8 @@
 // _AIL_set_sample_pan@8 the driver looks up (win/sound_hook.cpp), by their decorated names (stdcall, mss32.def).
 // Every handle may come NULL: the game sets a stream's volume and loop without one (0x421A75) and asks a missing
 // stream's volume (0x4219AD).
+// 3.0.4-beta.1: on the output device the driver passes ([sound] output, _UAGFX_set_output@4): the chosen one, Windows'
+// default while it is not connected; a device lost - everything on a new engine (core/audio_output.hpp).
 #include <windows.h>
 #include <xaudio2.h>
 
@@ -18,9 +20,14 @@
 #include <utility>
 #include <vector>
 
+#include "core/audio_output.hpp"
 #include "core/miles.hpp"
+#include "win/audio_devices.hpp"
+#include "win/audio_master.hpp"
 
 namespace miles = uagfx::miles;
+namespace output = uagfx::audio_output;
+namespace devices = uagfx::win::audio_devices;
 
 extern "C" {
 // Told from RAD's mss32.dll by these bytes (core/client_libs.hpp)
@@ -81,7 +88,7 @@ struct Stream {
     std::vector<int16_t> buffers[kBuffers];
     int next = 0;
     int volume = 127;
-    bool started = false;
+    bool started = false, paused = false;
     explicit Stream(Driver* d) : driver(d) {}
 };
 
@@ -100,6 +107,12 @@ struct Driver {
     std::vector<Sample*> samples;  // the game's thread alone
     std::vector<Idle> idle;
     HANDLE quit = nullptr, thread = nullptr;
+    // 3.0.4-beta.1: the device it plays on ("" Windows' default), the chosen one not connected, its openings
+    std::string opened;
+    bool away = false;
+    unsigned openings = 0;
+    bool watching = false;  // the feed's thread alone: Windows' notices of devices looked at, `seen` of them
+    unsigned seen = 0;
 };
 
 Driver* g_driver = nullptr;  // the game opens one
@@ -108,6 +121,16 @@ int g_speakers = 0;  // AIL_3D_2_SPEAKER
 int g_prefs[64] = {};
 char g_redist[MAX_PATH] = ".\\";
 std::vector<std::pair<ULONGLONG, std::vector<uint8_t>>> g_letGo;  // sounds a voice stopped this pass may still read
+std::string g_wanted;        // 3.0.4-beta.1: [sound] output from the driver ("" Windows' default); the driver's lock
+volatile LONG g_reopen = 0;  // a device lost (XAudio2's thread) or the chosen one back (the feed's): a new engine
+
+// XAudio2's word that its device is gone (XAUDIO2_E_DEVICE_INVALIDATED): the engine stopped for good
+struct EngineWatch : IXAudio2EngineCallback {
+    void STDMETHODCALLTYPE OnProcessingPassStart() override {}
+    void STDMETHODCALLTYPE OnProcessingPassEnd() override {}
+    void STDMETHODCALLTYPE OnCriticalError(HRESULT) override { InterlockedExchange(&g_reopen, 1); }
+};
+EngineWatch g_engineWatch;
 
 Kind kindOf(const void* h) { return h ? *static_cast<const Kind*>(h) : Kind::None; }
 Sample* sampleOf(void* h, Kind k) { return kindOf(h) == k ? static_cast<Sample*>(h) : nullptr; }
@@ -153,7 +176,7 @@ IXAudio2SourceVoice* takeVoice(Driver& d, uint32_t key, const WAVEFORMATEX& f) {
         return v;
     }
     IXAudio2SourceVoice* v = nullptr;
-    return SUCCEEDED(d.x->CreateSourceVoice(&v, &f, 0, 1.0f, nullptr, nullptr, nullptr)) ? v : nullptr;
+    return d.x && SUCCEEDED(d.x->CreateSourceVoice(&v, &f, 0, 1.0f, nullptr, nullptr, nullptr)) ? v : nullptr;
 }
 
 // A voice stopped and set aside for a later sound of its format. XAudio2 stops it at its next pass (a sound started
@@ -281,6 +304,51 @@ void topUp(Stream& s) {
         submitNext(s);
 }
 
+// A voice of its own for the music, fed from where it was read and started unless paused (under the driver's lock)
+bool newVoice(Driver& d, Stream& s) {
+    const WAVEFORMATEX f = formatOf(s.music.channels(), 16, s.music.rate());
+    s.voice = nullptr;
+    if (!d.x || FAILED(d.x->CreateSourceVoice(&s.voice, &f, 0, 1.0f, nullptr, nullptr, nullptr))) {
+        s.voice = nullptr;
+        return false;
+    }
+    const float mono[2] = {1.0f, 1.0f}, stereo[4] = {1.0f, 0.0f, 0.0f, 1.0f};  // a mono one on both sides
+    const int channels = s.music.channels();
+    s.voice->SetOutputMatrix(nullptr, UINT32(channels), 2, channels == 2 ? stereo : mono, XAUDIO2_COMMIT_NOW);
+    s.voice->SetVolume(miles::gainOf(s.volume), XAUDIO2_COMMIT_NOW);
+    s.next = 0;
+    s.started = true;
+    try {
+        topUp(s);
+    } catch (const std::bad_alloc&) {
+    }
+    if (!s.paused) s.voice->Start(0, XAUDIO2_COMMIT_NOW);
+    return true;
+}
+
+// 3.0.4-beta.1: while it plays on Windows' default instead of the chosen device (or on none), Windows' notices of
+// devices looked at: the chosen one connected again (or any device there now) - a new engine, on the game's thread
+bool deviceBack(Driver& d, bool away, bool none, const std::string& wanted) {
+    if (!away && !none) {
+        d.watching = false;
+        return false;
+    }
+    const unsigned now = devices::changes();  // the first call starts the watching
+    if (!d.watching || now == d.seen) {
+        d.watching = true;
+        d.seen = now;
+        return false;
+    }
+    d.seen = now;
+    if (none) return true;
+    std::vector<devices::Device> active;
+    std::string ignored;
+    if (!devices::list(active, ignored)) return false;
+    std::vector<std::string> ids;
+    for (const devices::Device& a : active) ids.push_back(a.id);
+    return !output::pick(wanted, ids).id.empty();
+}
+
 DWORD WINAPI feed(void* p) {
     Driver& d = *static_cast<Driver*>(p);
     while (WaitForSingleObject(d.quit, 20) == WAIT_TIMEOUT) {
@@ -289,7 +357,11 @@ DWORD WINAPI feed(void* p) {
             for (Stream* s : d.streams) topUp(*s);
         } catch (const std::bad_alloc&) {
         }
+        const bool away = d.away, none = !d.x;
+        std::string wanted;
+        if (away) wanted = g_wanted;
         LeaveCriticalSection(&d.lock);
+        if (deviceBack(d, away, none, wanted)) InterlockedExchange(&g_reopen, 1);
     }
     return 0;
 }
@@ -320,21 +392,54 @@ int give(const std::vector<uint8_t>& image, void** out, unsigned* size) {
     return 1;
 }
 
+// The engine and its mastering voice, stereo as Miles played it (Windows sends it on to the speakers there are) - on
+// the chosen device when it is connected, else on Windows' default (3.0.4-beta.1)
+bool openEngine(Driver& d, const std::string& wanted) {
+    const auto create =
+        d.dll ? reinterpret_cast<CreateFn>(reinterpret_cast<void*>(GetProcAddress(d.dll, "XAudio2Create"))) : nullptr;
+    const auto createVersion =  // newer Windows 10 has the SDK's own call too
+        d.dll ? reinterpret_cast<CreateVersionFn>(
+                    reinterpret_cast<void*>(GetProcAddress(d.dll, "XAudio2CreateWithVersionInfo")))
+              : nullptr;
+    output::Target t;
+    if (!wanted.empty()) {  // Windows asked only then (a thread for COM)
+        std::vector<devices::Device> active;
+        std::string ignored;
+        std::vector<std::string> ids{wanted};  // no answer: tried as it is
+        if (devices::list(active, ignored)) {
+            ids.clear();
+            for (const devices::Device& a : active) ids.push_back(a.id);
+        }
+        t = output::pick(wanted, ids);
+    }
+    HRESULT hr = createVersion ? createVersion(&d.x, 0, 1, 0x0A000000) : create ? create(&d.x, 0, 1) : E_FAIL;
+    if (SUCCEEDED(hr)) d.x->RegisterForCallbacks(&g_engineWatch);
+    if (SUCCEEDED(hr)) {
+        hr = devices::openMaster(d.x, &d.master, 2, t.id);
+        if (FAILED(hr) && !t.id.empty()) {  // refused (taken, gone just now): Windows' default
+            t = output::Target{"", true};
+            hr = devices::openMaster(d.x, &d.master, 2, "");
+        }
+    }
+    ++d.openings;
+    if (FAILED(hr)) {  // no output device at all: silent until one is connected
+        if (d.x) d.x->Release();
+        d.x = nullptr;
+        d.master = nullptr;
+        d.opened.clear();
+        d.away = false;
+        return false;
+    }
+    d.opened = t.id;
+    d.away = t.away;
+    return true;
+}
+
 Driver* openDriver() {
     auto* d = new (std::nothrow) Driver;
     if (!d) return nullptr;
     d->dll = LoadLibraryA("xaudio2_9.dll");
-    const auto create =
-        d->dll ? reinterpret_cast<CreateFn>(reinterpret_cast<void*>(GetProcAddress(d->dll, "XAudio2Create"))) : nullptr;
-    const auto createVersion =  // newer Windows 10 has the SDK's own call too
-        d->dll ? reinterpret_cast<CreateVersionFn>(
-                     reinterpret_cast<void*>(GetProcAddress(d->dll, "XAudio2CreateWithVersionInfo")))
-               : nullptr;
-    HRESULT hr = createVersion ? createVersion(&d->x, 0, 1, 0x0A000000) : create ? create(&d->x, 0, 1) : E_FAIL;
-    // stereo, as Miles played it; Windows sends it on to the speakers there are
-    if (SUCCEEDED(hr))
-        hr = d->x->CreateMasteringVoice(&d->master, 2, 0, 0, nullptr, nullptr, AudioCategory_GameEffects);
-    if (SUCCEEDED(hr)) {
+    if (d->dll && openEngine(*d, g_wanted)) {
         InitializeCriticalSection(&d->lock);
         d->quit = CreateEventA(nullptr, TRUE, FALSE, nullptr);
         d->thread = d->quit ? CreateThread(nullptr, 0, feed, d, 0, nullptr) : nullptr;
@@ -346,6 +451,37 @@ Driver* openDriver() {
     if (d->x) d->x->Release();
     delete d;
     return nullptr;
+}
+
+// 3.0.4-beta.1: everything on a new engine on the game's thread - its device lost (XAudio2 stops for good), another
+// chosen, or the chosen one back. The sounds playing end; the music goes on from where it was read.
+void reopen(Driver& d) {
+    EnterCriticalSection(&d.lock);
+    for (Sample* s : d.samples) {
+        if (s->voice) s->voice->DestroyVoice();
+        s->voice = nullptr;
+        s->started = false;
+    }
+    for (const Idle& i : d.idle) i.voice->DestroyVoice();
+    d.idle.clear();
+    for (Stream* s : d.streams) {
+        if (s->voice) s->voice->DestroyVoice();
+        s->voice = nullptr;
+    }
+    if (d.master) d.master->DestroyVoice();
+    d.master = nullptr;
+    if (d.x) d.x->Release();
+    d.x = nullptr;
+    g_letGo.clear();  // no voice reads them now
+    if (openEngine(d, g_wanted))
+        for (Stream* s : d.streams)
+            if (s->started) s->started = newVoice(d, *s);
+    LeaveCriticalSection(&d.lock);
+}
+
+// At the game's calls into it: a new engine when one was asked for
+void service() {
+    if (g_driver && InterlockedExchange(&g_reopen, 0)) reopen(*g_driver);
 }
 
 }  // namespace
@@ -378,7 +514,7 @@ void __stdcall AIL_close_digital_driver(void* h) {
     Driver* d = static_cast<Driver*>(h);
     if (!d || d != g_driver) return;
     SetEvent(d->quit);
-    WaitForSingleObject(d->thread, 5000);
+    WaitForSingleObject(d->thread, 10000);  // 3.0.4-beta.1: Windows' list of devices answers within 5 s
     CloseHandle(d->thread);
     CloseHandle(d->quit);
     for (Stream* s : d->streams) {
@@ -393,8 +529,8 @@ void __stdcall AIL_close_digital_driver(void* h) {
         s->driver = nullptr;
     }
     for (const Idle& i : d->idle) i.voice->DestroyVoice();
-    d->master->DestroyVoice();
-    d->x->Release();
+    if (d->master) d->master->DestroyVoice();  // 3.0.4-beta.1: none while no device would open
+    if (d->x) d->x->Release();
     DeleteCriticalSection(&d->lock);
     delete d;
     g_driver = nullptr;
@@ -449,6 +585,7 @@ void __stdcall AIL_set_sample_pan(void* h, int pan) {
 }
 
 void __stdcall AIL_start_sample(void* h) {
+    service();
     if (Sample* s = sampleOf(h, Kind::Sample)) start(*s);
 }
 
@@ -456,7 +593,10 @@ void __stdcall AIL_end_sample(void* h) {
     if (Sample* s = sampleOf(h, Kind::Sample)) stop(*s);
 }
 
-unsigned __stdcall AIL_sample_status(void* h) { return statusOf(sampleOf(h, Kind::Sample)); }
+unsigned __stdcall AIL_sample_status(void* h) {
+    service();
+    return statusOf(sampleOf(h, Kind::Sample));
+}
 
 // One provider, the one the game looks for
 int __stdcall AIL_enumerate_3D_providers(uint32_t* next, uint32_t* dest, char** name) {
@@ -517,6 +657,7 @@ void __stdcall AIL_set_3D_sample_distances(void* h, float farthest, float neares
 void __stdcall AIL_set_3D_sample_effects_level(void*, float) {}  // no rooms, nothing to send to them
 
 void __stdcall AIL_set_3D_position(void* h, float x, float y, float z) {
+    service();
     if (kindOf(h) == Kind::Listener) {
         g_listener.pos[0] = x, g_listener.pos[1] = y, g_listener.pos[2] = z;
         placeAll();
@@ -528,6 +669,7 @@ void __stdcall AIL_set_3D_position(void* h, float x, float y, float z) {
 
 // The listener's facing (the camera's turn, 0x421DD0); a sample's own is of no matter (no cones)
 void __stdcall AIL_set_3D_orientation(void* h, float fx, float fy, float fz, float ux, float uy, float uz) {
+    service();
     if (kindOf(h) != Kind::Listener) return;
     g_listener.front[0] = fx, g_listener.front[1] = fy, g_listener.front[2] = fz;
     g_listener.up[0] = ux, g_listener.up[1] = uy, g_listener.up[2] = uz;
@@ -535,6 +677,7 @@ void __stdcall AIL_set_3D_orientation(void* h, float fx, float fy, float fz, flo
 }
 
 void __stdcall AIL_start_3D_sample(void* h) {
+    service();
     if (Sample* s = sampleOf(h, Kind::Sample3D)) start(*s);
 }
 
@@ -542,9 +685,13 @@ void __stdcall AIL_end_3D_sample(void* h) {
     if (Sample* s = sampleOf(h, Kind::Sample3D)) stop(*s);
 }
 
-unsigned __stdcall AIL_3D_sample_status(void* h) { return statusOf(sampleOf(h, Kind::Sample3D)); }
+unsigned __stdcall AIL_3D_sample_status(void* h) {
+    service();
+    return statusOf(sampleOf(h, Kind::Sample3D));
+}
 
 void* __stdcall AIL_open_stream(void* h, const char* name, int) {
+    service();
     Driver* d = static_cast<Driver*>(h);
     if (!d || d != g_driver || !name) return nullptr;
     Stream* s = nullptr;
@@ -588,6 +735,7 @@ void __stdcall AIL_close_stream(void* h) {
 
 // From its start, on a voice of its own (the one before destroyed: XAudio2 is done with its buffers then)
 void __stdcall AIL_start_stream(void* h) {
+    service();
     Stream* s = streamOf(h);
     if (!s || !s->driver) return;
     Driver& d = *s->driver;
@@ -595,23 +743,9 @@ void __stdcall AIL_start_stream(void* h) {
     if (s->voice) s->voice->DestroyVoice();
     s->voice = nullptr;
     s->started = false;
+    s->paused = false;
     s->music.restart();
-    s->next = 0;
-    const WAVEFORMATEX f = formatOf(s->music.channels(), 16, s->music.rate());
-    if (SUCCEEDED(d.x->CreateSourceVoice(&s->voice, &f, 0, 1.0f, nullptr, nullptr, nullptr))) {
-        const float mono[2] = {1.0f, 1.0f}, stereo[4] = {1.0f, 0.0f, 0.0f, 1.0f};  // a mono one on both sides
-        const int channels = s->music.channels();
-        s->voice->SetOutputMatrix(nullptr, UINT32(channels), 2, channels == 2 ? stereo : mono, XAUDIO2_COMMIT_NOW);
-        s->voice->SetVolume(miles::gainOf(s->volume), XAUDIO2_COMMIT_NOW);
-        s->started = true;
-        try {
-            topUp(*s);
-        } catch (const std::bad_alloc&) {
-        }
-        s->voice->Start(0, XAUDIO2_COMMIT_NOW);
-    } else {
-        s->voice = nullptr;
-    }
+    s->started = newVoice(d, *s);
     LeaveCriticalSection(&d.lock);
 }
 
@@ -619,6 +753,7 @@ void __stdcall AIL_pause_stream(void* h, int on) {
     Stream* s = streamOf(h);
     if (!s || !s->driver) return;
     EnterCriticalSection(&s->driver->lock);
+    s->paused = on != 0;  // 3.0.4-beta.1: kept on a new engine's voice too
     if (s->voice && s->started) {
         if (on)
             s->voice->Stop(0, XAUDIO2_COMMIT_NOW);
@@ -710,6 +845,36 @@ int __stdcall AIL_decompress_ASI(const void* in, unsigned insize, const char*, v
 }
 
 void __stdcall AIL_mem_free_lock(void* p) { std::free(p); }
+
+// 3.0.4-beta.1, the driver's ([sound] output, win/sound_hook.cpp): the output device to play on - Windows' endpoint
+// id, "" or NULL its default. Before the game opens its driver, or at once on a new engine.
+void __stdcall UAGFX_set_output(const char* id) {
+    const std::string wanted = id ? id : "";
+    if (!g_driver) {
+        g_wanted = wanted;
+        return;
+    }
+    EnterCriticalSection(&g_driver->lock);
+    const bool same = output::sameId(g_wanted, wanted);
+    g_wanted = wanted;
+    LeaveCriticalSection(&g_driver->lock);
+    if (!same) reopen(*g_driver);
+}
+
+// For the driver's log, once a second: the device it plays on into `id` ("" Windows' default); its openings so far
+// (0 none) with bit 31 set while the chosen one is not connected, bit 30 while no device would open. A new engine
+// asked for is made first.
+unsigned __stdcall UAGFX_output(char* id, unsigned size) {
+    service();
+    if (id && size) id[0] = '\0';
+    if (!g_driver) return 0;
+    EnterCriticalSection(&g_driver->lock);
+    if (id && size) lstrcpynA(id, g_driver->opened.c_str(), int(size));
+    const unsigned r = (g_driver->openings & 0x3FFFFFFFu) | (g_driver->away ? 0x80000000u : 0u) |
+                       (g_driver->x ? 0u : 0x40000000u);
+    LeaveCriticalSection(&g_driver->lock);
+    return r;
+}
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {

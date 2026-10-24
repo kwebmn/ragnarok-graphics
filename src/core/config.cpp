@@ -639,6 +639,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.sound.headphones);
         } else if (key == "sound.duck") {  // 1.3
             setBool(val, c.sound.duck);
+        } else if (key == "sound.output") {  // 3.0.4-beta.1: an endpoint id, as written
+            c.sound.output = val == "auto" ? "" : raw;
         } else if (key == "debug.merge_draws") {
             setBool(val, c.mergeDraws);
         } else if (key == "debug.shader_variants") {  // 2.5.16

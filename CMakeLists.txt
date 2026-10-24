@@ -125,7 +125,7 @@ elseif(WIN32)
     target_compile_options(binkw32 PRIVATE -Wall -Wextra)
     target_link_options(binkw32 PRIVATE -static -static-libgcc -static-libstdc++ -s)
     # 3.0.1-beta.7: Miles Sound System 6 over XAudio2 2.9 (core/miles; minimp3 for the music)
-    add_library(mss32 SHARED src/clientlibs/mss32.cpp src/clientlibs/mss32.def)
+    add_library(mss32 SHARED src/clientlibs/mss32.cpp src/win/audio_devices.cpp src/clientlibs/mss32.def)
     set_target_properties(mss32 PROPERTIES PREFIX "" OUTPUT_NAME "mss32")
     target_compile_options(mss32 PRIVATE -Wall -Wextra)
     target_link_libraries(mss32 PRIVATE uagfx_core)
@@ -138,7 +138,7 @@ elseif(WIN32)
                 src/app/shots.cpp src/app/palettes.cpp src/app/installer.cpp src/app/update_run.cpp src/app/download.cpp src/app/args.cpp
                 src/app/launcher.cpp src/app/launcher_thread.cpp src/app/shortcuts.cpp src/app/reports.cpp
                 src/app/check_notify.cpp
-                src/app/client_patch.cpp src/win/system_probe.cpp src/win/gpu/adapters.cpp)
+                src/app/client_patch.cpp src/win/system_probe.cpp src/win/gpu/adapters.cpp src/win/audio_devices.cpp)
     target_include_directories(uagfx_app PUBLIC src)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)

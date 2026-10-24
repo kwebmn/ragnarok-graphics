@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "core/resample.hpp"
+#include "win/audio_devices.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win::spatial {
@@ -27,11 +28,15 @@ struct Playing {
 };
 
 using CoInitFn = HRESULT(WINAPI*)(void*, DWORD);
+using CoUninitFn = void(WINAPI*)();
 using CoCreateFn = HRESULT(WINAPI*)(REFCLSID, IUnknown*, DWORD, REFIID, void**);
 
 struct State {
     CRITICAL_SECTION lock;
     bool started = false, ready = false, failed = false;
+    volatile bool quit = false;  // 3.0.4-beta.1: stop()'s word to the thread
+    bool com = false;            // its thread in COM (left at its end)
+    std::string device;          // its output device ("" Windows' default)
     HANDLE thread = nullptr, event = nullptr, up = nullptr;
     ISpatialAudioObjectRenderStream* stream = nullptr;
     UINT32 objects = 0;
@@ -46,7 +51,8 @@ State& state() {
     return s;
 }
 
-// The default output's spatial sound, activated for floats at 48 kHz on one channel: false when Windows has none on.
+// The output's spatial sound (the default's, 3.0.4-beta.1: or the chosen device's), activated for floats at 48 kHz on
+// one channel: false when Windows has none on.
 bool open(State& s) {
     HMODULE ole = LoadLibraryA("ole32.dll");
     const auto init = ole ? reinterpret_cast<CoInitFn>(reinterpret_cast<void*>(GetProcAddress(ole, "CoInitializeEx")))
@@ -55,13 +61,16 @@ bool open(State& s) {
                                   reinterpret_cast<void*>(GetProcAddress(ole, "CoCreateInstance")))
                             : nullptr;
     if (!init || !create) return false;
-    init(nullptr, COINIT_MULTITHREADED);  // this thread is the driver's own
+    s.com = SUCCEEDED(init(nullptr, COINIT_MULTITHREADED));  // this thread is the driver's own (left at its end)
     IMMDeviceEnumerator* devices = nullptr;
     IMMDevice* device = nullptr;
     ISpatialAudioClient* client = nullptr;
     HRESULT hr = create(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
                         reinterpret_cast<void**>(&devices));
-    if (SUCCEEDED(hr)) hr = devices->GetDefaultAudioEndpoint(eRender, eConsole, &device);
+    const std::wstring id = audio_devices::wide(s.device);
+    if (SUCCEEDED(hr))
+        hr = id.empty() ? devices->GetDefaultAudioEndpoint(eRender, eConsole, &device)
+                        : devices->GetDevice(id.c_str(), &device);
     if (SUCCEEDED(hr))
         hr = device->Activate(__uuidof(ISpatialAudioClient), CLSCTX_INPROC_SERVER, nullptr,
                               reinterpret_cast<void**>(&client));
@@ -113,14 +122,37 @@ void release(Playing* p) {
     delete p;
 }
 
+// 3.0.4-beta.1: the thread's end - the stream and its objects let go, COM left
+void close(State& s) {
+    for (Playing* p : s.playing) release(p);
+    s.playing.clear();
+    if (s.stream) {
+        s.stream->Stop();
+        s.stream->Release();
+    }
+    s.stream = nullptr;
+    HMODULE ole = s.com ? GetModuleHandleA("ole32.dll") : nullptr;
+    const auto uninit =
+        ole ? reinterpret_cast<CoUninitFn>(reinterpret_cast<void*>(GetProcAddress(ole, "CoUninitialize"))) : nullptr;
+    if (uninit) uninit();
+    s.com = false;
+}
+
 DWORD WINAPI run(void*) {
     State& s = state();
     s.ready = open(s);
     s.failed = !s.ready;
     SetEvent(s.up);
-    if (!s.ready) return 0;
+    if (!s.ready) {
+        close(s);
+        return 0;
+    }
     std::vector<float> scratch;
     for (;;) {
+        if (s.quit) {
+            close(s);
+            return 0;
+        }
         if (WaitForSingleObject(s.event, 200) != WAIT_OBJECT_0) continue;
         UINT32 free = 0, frames = 0;
         if (FAILED(s.stream->BeginUpdatingAudioObjects(&free, &frames))) {
@@ -128,6 +160,7 @@ DWORD WINAPI run(void*) {
             EnterCriticalSection(&s.lock);
             s.ready = false;
             LeaveCriticalSection(&s.lock);
+            close(s);
             return 0;
         }
         EnterCriticalSection(&s.lock);
@@ -173,17 +206,44 @@ DWORD WINAPI run(void*) {
 
 }  // namespace
 
-bool start() {
+bool start(const std::string& device) {
     State& s = state();
     if (s.started) return s.ready;
     s.started = true;
-    s.event = CreateEventA(nullptr, FALSE, FALSE, nullptr);
-    s.up = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+    s.quit = false;
+    s.device = device;
+    if (!s.event) s.event = CreateEventA(nullptr, FALSE, FALSE, nullptr);
+    if (!s.up) s.up = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+    if (s.up) ResetEvent(s.up);
     s.thread = s.event && s.up ? CreateThread(nullptr, 0, &run, nullptr, 0, nullptr) : nullptr;
     if (!s.thread) return false;
     WaitForSingleObject(s.up, 3000);
     if (s.ready) LOG_INFO("spatial sound: %s - the sounds placed in three dimensions by Windows", s.what);
     return s.ready;
+}
+
+void stop() {
+    State& s = state();
+    if (!s.started) return;
+    EnterCriticalSection(&s.lock);
+    s.ready = false;  // add() takes no more
+    LeaveCriticalSection(&s.lock);
+    s.quit = true;
+    if (s.thread) {
+        SetEvent(s.event);
+        if (WaitForSingleObject(s.thread, 3000) == WAIT_OBJECT_0) {
+            CloseHandle(s.thread);
+        } else {  // stuck in Windows: left to itself, never started again
+            LOG_ERROR("spatial sound: its thread did not stop - none from now on");
+            return;
+        }
+    }
+    s.thread = nullptr;
+    EnterCriticalSection(&s.lock);
+    for (Playing* p : s.pending) release(p);
+    s.pending.clear();
+    LeaveCriticalSection(&s.lock);
+    s.started = false;
 }
 
 bool active() { return state().ready; }

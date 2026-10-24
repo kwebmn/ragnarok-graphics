@@ -19,5 +19,8 @@ int playing();
 // Its settings: on, the reverberation's strength (0-100), the background's volume (%), the crowd's limiter, (1.2)
 // Windows' spatial sound when it is on (headphones).
 void configure(bool on, int reverb, int background, bool limiter, bool headphones);
+// 3.0.4-beta.1: the output device ([sound] output: Windows' endpoint id, "" its default) - at the start, and a new
+// engine on it at the next frame when it changes
+void setOutput(const std::string& id);
 
 }  // namespace uagfx::win::audio

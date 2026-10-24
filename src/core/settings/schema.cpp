@@ -705,6 +705,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::GfxSoundHeadphonesHint, ""},  // 1.2
         {"sound", "duck", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundDuck,
          Text::GfxSoundDuckHint, ""},  // 1.3
+        // 3.0.4-beta.1: the output device - the page's own list of Windows' devices (app/page_settings.cpp)
+        {"sound", "output", Page::Sound, Control::Line, 0, 0, 0, {}, {}, Text::SoundOutput, Text::SoundOutputHint,
+         ""},
         // 2.6: the Debug page - the log, the profiler and X-ray from the Diagnostics page, then the test switches
         // the ini alone held before
         {"debug", "log", Page::Debug, Control::Check, 0, 1, 1, {"normal", "verbose"}, {}, Text::DiagVerboseLog,
@@ -881,6 +884,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "sound.reverb") return std::to_string(c.sound.reverb);
     if (k == "sound.headphones") return c.sound.headphones ? "1" : "0";  // 1.2
     if (k == "sound.duck") return c.sound.duck ? "1" : "0";              // 1.3
+    if (k == "sound.output") return c.sound.output.empty() ? "auto" : c.sound.output;  // 3.0.4-beta.1
     if (k == "debug.log") return c.logLevel == LogLevel::Debug ? "verbose" : "normal";
     // 2.6: the Debug page's test switches
     if (k == "quality.dlss_jitter") return c.dlssJitterInverted ? "inverted" : "normal";

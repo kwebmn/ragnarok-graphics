@@ -7,10 +7,13 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <vector>
 
+#include "core/audio_output.hpp"
 #include "core/client_libs.hpp"
 #include "core/config.hpp"
 #include "core/sound_mix.hpp"
+#include "win/audio_devices.hpp"
 #include "win/game_camera.hpp"
 #include "win/iat.hpp"
 #include "win/log.hpp"
@@ -43,6 +46,11 @@ std::string g_providers;  // 0.91.1: the 3D providers Miles offered, for the log
 // 0.92: left and right, a busy sample stopped for a new sound, the music's pieces crossfaded
 using PanFn = void(WINAPI*)(void* sample, int pan);
 PanFn g_pan = nullptr;  // not imported by the game: mss32.dll's own export
+// 3.0.4-beta.1: our mss32.dll's output device - set ([sound] output) and asked for the log
+using SetOutputFn = void(WINAPI*)(const char* id);
+using OutputFn = unsigned(WINAPI*)(char* id, unsigned size);
+SetOutputFn g_setOutput = nullptr;
+OutputFn g_output = nullptr;
 HandleFn g_end = nullptr, g_startStream = nullptr;
 using Play2DFn = char(__cdecl*)(void* file, float* x, float* y, float* z, int farthest, int nearest, uint32_t extra);
 constexpr uint32_t kPlay2D = 0x421AF0;                               // a sound at a place (FUN_00421af0)
@@ -90,6 +98,7 @@ void readSettings() {
     std::string text;
     if (readTextFile(ourFile(layout::File::Ini), text)) g_set = parseConfig(text).sound;
     audio::configure(g_set.engine, g_set.reverb, g_set.background, g_set.limiter, g_set.headphones);  // 1.1, 1.2
+    audio::setOutput(g_set.output);  // 3.0.4-beta.1
 }
 
 Tracked* track(void* handle, uint8_t kind) {
@@ -147,6 +156,7 @@ void apply(const Tracked* starting) {
 
 void* WINAPI openDriver(unsigned rate, int bits, int channels, unsigned flags) {
     readSettings();
+    if (g_setOutput) g_setOutput(g_set.output.c_str());  // 3.0.4-beta.1: opened on it
     g_askedRate = rate;
     const unsigned want = sound::rateFor(g_set.rate, rate);
     if (g_set.voices && std::memcmp(reinterpret_cast<const void*>(uintptr_t(kVoicesAt)), kVoicesCode,
@@ -359,6 +369,43 @@ void WINAPI shutdownMiles() {
     g_shutdown();
 }
 
+// 3.0.4-beta.1: where the music and the sounds play, as our mss32.dll opens a device (asked once a second) - with
+// Windows' output devices then
+void logOutput() {
+    static ULONGLONG looked = 0;
+    static unsigned last = 0;
+    const ULONGLONG now = GetTickCount64();
+    if (!g_output || now - looked < 1000) return;
+    looked = now;
+    char id[256];
+    const unsigned state = g_output(id, sizeof id);
+    if (state == last || !(state & 0x3FFFFFFFu)) return;
+    last = state;
+    std::vector<audio_devices::Device> active;
+    std::string defaultId, all, name;
+    audio_devices::list(active, defaultId);
+    const std::string playing = id[0] ? std::string(id) : defaultId;
+    for (const audio_devices::Device& d : active) {
+        all += (all.empty() ? "«" : ", «") + d.name + (audio_output::sameId(d.id, defaultId) ? "» (default)" : "»");
+        if (audio_output::sameId(d.id, playing)) name = d.name;
+    }
+    if (all.empty()) all = "none";
+    if (state & 0x40000000u) {
+        LOG_INFO("sound: no output device would open - silent until one is connected; Windows' outputs: %s",
+                 all.c_str());
+        return;
+    }
+    std::string why = "as in Windows";
+    if (id[0]) why = "chosen in the settings";
+    if (state & 0x80000000u) {
+        const std::string chosen = audio_devices::nameOf(g_set.output);
+        why = "the chosen «" + (chosen.empty() ? g_set.output : chosen) + "» is not connected: Windows' default "
+              "until it is back";
+    }
+    LOG_INFO("sound: the music and the sounds play on «%s» (%s); Windows' outputs: %s",
+             name.empty() ? "?" : name.c_str(), why.c_str(), all.c_str());
+}
+
 IMAGE_THUNK_DATA* slotOf(const char* name) { return importSlot("mss32.dll", name); }
 
 template <typename Fn>
@@ -431,8 +478,12 @@ void installSoundHooks() {
     hookImport("_AIL_open_digital_driver@16", &openDriver, g_open);
     // 0.92: left and right, the busy samples, the music's crossfade
     readImport("_AIL_end_sample@4", g_end);
-    if (HMODULE mss = GetModuleHandleA("mss32.dll"))
+    if (HMODULE mss = GetModuleHandleA("mss32.dll")) {
         g_pan = reinterpret_cast<PanFn>(reinterpret_cast<void*>(GetProcAddress(mss, "_AIL_set_sample_pan@8")));
+        g_setOutput =  // 3.0.4-beta.1: ours alone has them
+            reinterpret_cast<SetOutputFn>(reinterpret_cast<void*>(GetProcAddress(mss, "_UAGFX_set_output@4")));
+        g_output = reinterpret_cast<OutputFn>(reinterpret_cast<void*>(GetProcAddress(mss, "_UAGFX_output@8")));
+    }
     hookImport("_AIL_start_stream@4", &startStream, g_startStream);
     installPlay2D();
     hookImport("_AIL_set_sample_volume@8", &sampleVolume, g_sampleVolume);
@@ -440,6 +491,13 @@ void installSoundHooks() {
     hookImport("_AIL_set_stream_volume@8", &streamVolume, g_streamVolume);
     hookImport("_AIL_start_sample@4", &startSample, g_start);
     hookImport("_AIL_start_3D_sample@4", &start3D, g_start3D);
+}
+
+void soundOutput(const std::string& id) {
+    readSettings();
+    g_set.output = id;
+    audio::setOutput(id);
+    if (g_setOutput) g_setOutput(id.c_str());  // our mss32.dll: at once, on a new engine
 }
 
 void soundFrame(bool foreground, bool music, bool sounds) {
@@ -454,6 +512,7 @@ void soundFrame(bool foreground, bool music, bool sounds) {
         }
         audio::frame(foreground, map, float(g_sounds));
     }
+    logOutput();  // 3.0.4-beta.1
     if (!g_logged && g_askedRate) {
         g_logged = true;
         const std::string voices =

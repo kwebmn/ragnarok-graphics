@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 namespace uagfx::win {
 
@@ -11,5 +12,7 @@ void installSoundHooks();
 // `music` false - the music out (another game window is the main one), back when true.
 // 3.0.3-beta.9: sounds - this game's sounds heard (off: another game window is the main one, [windows] others_sounds)
 void soundFrame(bool foreground, bool music = true, bool sounds = true);
+// 3.0.4-beta.1: [sound] output changed in a running game - the music and the sounds move to it at once
+void soundOutput(const std::string& id);
 
 }  // namespace uagfx::win
