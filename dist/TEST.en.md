@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.4-beta.8 — what is new
+
+- **Linux and the Steam Deck (to be checked).** The driver tells Wine/Proton and the Steam Deck and writes it in the
+  log. Under Wine the 64-bit renderer (HD textures, DLSS) does not start: its picture would have to cross processes
+  and Wine has no DirectComposition, so instead of a black screen the game draws with its own renderer. To try the
+  64-bit one: `[renderer] bridge_wine = 1`. The Steam Deck's gamepad works through uaRO Pad. A guide is in the
+  repository, docs/guides/steam-deck.uk.md. A tester with Linux or a Steam Deck is needed.
+
 # uaRO Graphics 3.0.4-beta.7 — what is new
 
 - **Sounds of the world.** The game's makers placed almost 26 thousand sounds on 563 maps: birds in the fields,
