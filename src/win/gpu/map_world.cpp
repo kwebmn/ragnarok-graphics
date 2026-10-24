@@ -5,11 +5,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <new>
 
 #include "core/config.hpp"
 #include "core/full_colour.hpp"
 #include "core/gnd.hpp"
 #include "core/grf/grf.hpp"
+#include "core/jpeg_image.hpp"
+#include "core/own_ground.hpp"
 #include "core/own_models.hpp"
 #include "core/pack_source.hpp"
 #include "core/layout.hpp"
@@ -121,6 +124,7 @@ void MapWorld::ownPicturesUp() {
     if (!own_) return;
     for (OwnGround::Picture& p : own_->textures) std::vector<std::vector<uint32_t>>().swap(p.levels);
     for (OwnGround::Picture& p : own_->modelTextures) std::vector<std::vector<uint32_t>>().swap(p.levels);
+    for (OwnGround::Picture& p : own_->waterPictures) std::vector<std::vector<uint32_t>>().swap(p.levels);
     std::vector<uint32_t>().swap(own_->atlas.argb);
 }
 
@@ -300,7 +304,9 @@ void MapWorld::loop() {
             EnterCriticalSection(&shared_->lock);
             const bool ownWanted = shared_->ownWanted;
             LeaveCriticalSection(&shared_->lock);
-            if (ownWanted && !gfrom.empty()) {  // 3.0.4-beta.10: the own ground - its whole .gnd, its textures
+            // 3.0.4-beta.10: the own ground - its whole .gnd, its textures. 3.0.4-beta.20: no room for it in the game's
+            // memory (32-bit) - the game's own ground, the game goes on
+            if (ownWanted && !gfrom.empty()) try {
                 own = std::make_unique<OwnGround>();
                 gnd::Ground full;
                 if (!gnd::parse(gb.data(), gb.size(), full, why)) {
@@ -339,9 +345,11 @@ void MapWorld::loop() {
                         bool alpha = false;
                         const std::string low = lower(name);
                         const bool tga = low.size() > 4 && low.compare(low.size() - 4, 4, ".tga") == 0;
+                        const bool jpg = low.size() > 4 && low.compare(low.size() - 4, 4, ".jpg") == 0;  // the water's
                         if (!readGame("data\\texture\\" + name, tb) ||
-                            !(tga ? pack::decodeTga(tb.data(), tb.size(), argb, pw, ph, alpha)
-                                  : pack::decodeBmp(tb.data(), tb.size(), argb, pw, ph)) ||
+                            !(tga   ? pack::decodeTga(tb.data(), tb.size(), argb, pw, ph, alpha)
+                              : jpg ? jpeg::decode(tb.data(), tb.size(), argb, pw, ph)
+                                    : pack::decodeBmp(tb.data(), tb.size(), argb, pw, ph)) ||
                             pw <= 0 || ph <= 0)
                             return pic;
                         // keyed to the game's own see-through texel (0x0421 in its 16 bits): the AI textures know it
@@ -405,11 +413,63 @@ void MapWorld::loop() {
                     LOG_INFO("own ground: %s's models - %u placed from %u of %u files, %u triangles, %u textures",
                              name.c_str(), unsigned(w.models.size()), own->modelFilesRead, own->modelFiles,
                              unsigned(own->models.indices.size() / 3), unsigned(own->modelTextures.size()));
+                    // 3.0.4-beta.20: its water (460 of the client's 921 maps have some; lava on 3)
+                    if (w.waterKnown) {
+                        own->water = terrain::water(full, w.waterLevel, w.waveHeight);
+                        own->waterType = w.waterType;
+                        own->waterLevel = w.waterLevel;
+                        own->waterAnim = std::max(w.waterAnim, 1);
+                        // its 32 pictures as the game reads them (FUN_004e3b80: water%d%02d.jpg under 워터; a kind
+                        // it has none of: the kind modulo 6), as many as there are one after another
+                        for (int kind : {w.waterType, w.waterType % 6}) {
+                            for (int f = 0; f < 32 && !own->water.vertices.empty(); ++f) {
+                                char file[40];
+                                std::snprintf(file, sizeof file, "\xBF\xF6\xC5\xCD\\water%d%02d.jpg", kind, f);
+                                OwnGround::Picture pic = picture(file, false);
+                                if (pic.levels.empty()) break;
+                                own->waterPictures.push_back(std::move(pic));
+                            }
+                            if (!own->waterPictures.empty() || kind == w.waterType % 6) break;
+                        }
+                        if (!own->water.vertices.empty())
+                            LOG_INFO("own ground: %s's %s - level %.1f, waves %.1f, %u cells, %u pictures",
+                                     name.c_str(), w.waterType == 4 ? "lava" : "water", w.waterLevel, w.waveHeight,
+                                     unsigned(own->water.vertices.size() / 4), unsigned(own->waterPictures.size()));
+                    }
                     LOG_INFO("own ground: %s - %u cells' worth in %u chunks, %u triangles, %u of %u textures, "
                              "lightmaps %dx%d", name.c_str(), unsigned(full.cells.size()),
                              unsigned(own->mesh.chunks.size()), unsigned(own->mesh.indices.size() / 3), found,
                              unsigned(full.textures.size()), own->atlas.width, own->atlas.height);
+                    // 3.0.4-beta.20: room left in the game's memory (core/own_ground.hpp roomFor) - the far models let
+                    // go, then the smooth ground, then all of it
+                    MEMORYSTATUSEX mem{};
+                    mem.dwLength = sizeof mem;
+                    const uint64_t freeBytes = GlobalMemoryStatusEx(&mem) ? mem.ullAvailVirtual : ~uint64_t(0);
+                    const auto bytes = [](const terrain::Mesh& m) {
+                        return uint64_t(m.vertices.capacity()) * sizeof(terrain::Vertex) +
+                               uint64_t(m.indices.capacity()) * sizeof(uint32_t);
+                    };
+                    const own_ground::Room room = own_ground::roomFor(freeBytes, bytes(own->models), bytes(own->mesh));
+                    if (room != own_ground::Room::Whole) {
+                        own->models = terrain::Mesh();
+                        std::vector<OwnGround::Picture>().swap(own->modelTextures);
+                    }
+                    if (room == own_ground::Room::Coarse) {  // the plain ground near too (distant empty: mesh all)
+                        own->mesh = std::move(own->distant);
+                        own->distant = terrain::Mesh();
+                    }
+                    if (sizeof(void*) == 4 || room != own_ground::Room::Whole)
+                        LOG_INFO("own ground: %s - %u MB of the game's memory free with it made%s", name.c_str(),
+                                 unsigned(freeBytes >> 20),
+                                 room == own_ground::Room::NoModels ? ": the far models let go"
+                                 : room == own_ground::Room::Coarse ? ": the far models and the smooth ground let go"
+                                 : room == own_ground::Room::None   ? ": none of it - the game's own ground"
+                                                                    : "");
+                    if (room == own_ground::Room::None) own.reset();
                 }
+            } catch (const std::bad_alloc&) {
+                own.reset();
+                LOG_INFO("own ground: %s - no room for it in the game's memory: the game's own ground", name.c_str());
             }
         }
         // 3.0.1-beta.3 (R-SA3W7Y): its flower beds' tops, the grass's ground too - each bed's model read once

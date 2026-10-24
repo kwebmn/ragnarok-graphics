@@ -140,7 +140,7 @@ void Learning::reset(const terrain::Mesh& models, const float toLight[3]) {
     std::fill(&sums_[0][0][0], &sums_[0][0][0] + sizeof sums_ / sizeof sums_[0][0][0], 0.0);
     for (int c = 0; c < 4; ++c) a_[c] = 255.0f, b_[c] = 0.0f;
     side_ = 1.0f;
-    seen_ = matched_ = 0;
+    seen_ = matched_ = changes_ = 0;
     triangles_.clear();
     for (const terrain::Batch& b : models.batches)
         for (uint32_t i = b.firstIndex; i + 3 <= b.firstIndex + b.indexCount; i += 3) {
@@ -204,7 +204,12 @@ bool Learning::note(const float corners[3][3], const uint32_t colours[3]) {
             all = mine[c] >= 0;
         }
         if (!all) continue;
-        for (int c = 0; c < 3; ++c) learnt_[tri.v[mine[c]]] = colours[c] ? colours[c] : 1u;
+        for (int c = 0; c < 3; ++c) {
+            const uint32_t now = colours[c] ? colours[c] : 1u;
+            uint32_t& kept = learnt_[tri.v[mine[c]]];
+            changes_ += kept != now ? 1 : 0;
+            kept = now;
+        }
         ++matched_;
         return true;
     }

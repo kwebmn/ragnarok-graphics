@@ -58,9 +58,13 @@ bool parse(const uint8_t* data, size_t size, World& out, std::string& error) {
     out.version = v;
     r.skip(40 * 4);  // ini, gnd, gat, src
     if (v >= 0x103) {  // water: level, type, wave height, speed, pitch (and from 1.8 its animation)
-        r.skip(4);
+        out.waterLevel = r.get<float>();
         out.waterType = r.get<int32_t>();
-        r.skip(12 + (v >= 0x108 ? 4 : 0));
+        out.waveHeight = r.get<float>();
+        out.waveSpeed = r.get<float>();
+        out.wavePitch = r.get<float>();
+        if (v >= 0x108) out.waterAnim = r.get<int32_t>();
+        out.waterKnown = r.ok();
     }
     out.lightLongitude = r.get<int32_t>();  // 2.1.3: the light: longitude, latitude, then colours, opacity
     out.lightLatitude = r.get<int32_t>();

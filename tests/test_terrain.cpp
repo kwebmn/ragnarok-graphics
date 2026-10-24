@@ -363,3 +363,41 @@ TEST(terrain_an_own_band_mirrors_its_rim_not_smears_it) {
     }
     CHECK(seen > 0 && mirrored == seen);
 }
+
+TEST(terrain_water_lies_over_the_cells_under_it) {
+    // 3.0.4-beta.20 (the own ground on every map): the map's water as uaRO.exe lays it (0x4e59d0) - a quad over a cell
+    // a corner of which lies under the water's highest (its level less the waves' height; up along -y), flat at the
+    // level, its texture's coordinates the cell's place modulo four a quarter each; by the ground's chunks
+    gnd::Ground g;
+    g.width = 10, g.height = 3, g.zoom = 10.0f;
+    g.surfaces.resize(1);
+    g.cells.resize(30);
+    for (gnd::Cell& c : g.cells) {
+        c.top = 0;
+        for (float& h : c.h) h = 0.0f;
+    }
+    g.cells[1].h[3] = 8.0f;         // cell (1, 0): its far corner 8 under the ground's 0
+    g.cells[5].h[0] = 0.5f;         // cell (5, 0): 0.5 under - in reach of the waves alone
+    g.cells[9].h[1] = 3.0f;         // cell (9, 0): the next chunk's
+    g.cells[13].h[2] = 2.0f;        // cell (3, 1) - with no top: no water
+    g.cells[13].top = -1;
+    terrain::Mesh m = terrain::water(g, 1.0f, 0.4f);  // the highest water 0.6
+    CHECK_EQ(m.chunks.size(), size_t(2));
+    CHECK_EQ(m.vertices.size(), size_t(8));  // cells (1, 0) and (9, 0), four corners each
+    CHECK_EQ(m.indices.size(), size_t(12));
+    if (m.chunks.size() == 2 && m.vertices.size() == 8) {
+        CHECK(m.chunks[0].cellX == 0 && m.chunks[1].cellX == 8);
+        CHECK(m.batches.size() == 2 && m.batches[0].vertexCount == 4 && m.batches[1].firstVertex == 4);
+        const terrain::Vertex* v = &m.vertices[0];  // cell (1, 0): from x = (1 - 5) * 10, z = (0 - 1.5) * 10
+        CHECK(v[0].pos[0] == -40.0f && v[0].pos[2] == -15.0f && v[3].pos[0] == -30.0f && v[3].pos[2] == -5.0f);
+        for (int k = 0; k < 4; ++k) CHECK(v[k].pos[1] == 1.0f);  // flat at the level
+        CHECK(v[0].uv[0] == 0.25f && v[0].uv[1] == 0.0f && v[3].uv[0] == 0.5f && v[3].uv[1] == 0.25f);
+        CHECK(m.vertices[5].uv[0] == 0.5f);  // cell (9, 0): 9 modulo 4 is 1 - its far side at 2 quarters
+        CHECK(m.chunks[0].lo[1] == 1.0f && m.chunks[0].hi[1] == 1.0f);
+        for (uint32_t i = 0; i < 6; ++i) CHECK(m.indices[i] < 4);  // each batch's own, from its first
+    }
+    m = terrain::water(g, 1.0f, 1.0f);  // the highest 0: cell (5, 0) too
+    CHECK_EQ(m.vertices.size(), size_t(12));
+    CHECK(terrain::water(g, 10.0f, 0.0f).vertices.empty());   // the water below every corner (the deepest at 8)
+    CHECK_EQ(terrain::water(g, -1.0f, 0.0f).vertices.size(), size_t(29 * 4));  // over all of it: each cell with a top
+}

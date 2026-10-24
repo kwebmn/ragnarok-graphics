@@ -34,6 +34,7 @@ public:
     uint32_t colourOf(uint32_t vertex) const;  // a vertex of the models: learnt, else lit by the line
     size_t seen() const { return seen_; }       // the game's triangles noted
     size_t matched() const { return matched_; }  // those that are ours
+    size_t changes() const { return changes_; }  // 3.0.4-beta.20: the vertices' colours learnt anew so far
 
 private:
     static uint64_t keyOf(int x, int y, int z);
@@ -48,7 +49,7 @@ private:
     double sums_[2][4][5] = {};                       // by side, channel: n, sx, sxx, sc, sxc
     float a_[4] = {255, 255, 255, 255}, b_[4] = {0, 0, 0, 0};
     float side_ = 1.0f;
-    size_t seen_ = 0, matched_ = 0;
+    size_t seen_ = 0, matched_ = 0, changes_ = 0;
 };
 
 }  // namespace uagfx::own_models

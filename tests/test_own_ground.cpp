@@ -201,3 +201,16 @@ TEST(own_ground_a_corner_keeps_one_cell_s_colour) {
     s.note(20.0f, 10.0f, 0xFF303030u, false);
     CHECK_EQ(s.diffuseAt(20.0f, 10.0f) & 0xFFu, 0x20u);
 }
+
+TEST(own_ground_keeps_room_in_the_game_s_memory) {
+    // 3.0.4-beta.20: uaRO.exe is 32-bit and not large address aware - 2 GB for the game, the driver and the card's
+    // driver; lighthalzen's own world takes 214 MB as it is read. Less than kKeepFree left: the far models let go,
+    // then the smooth ground, then all of it (the game's own ground)
+    using own_ground::Room;
+    const uint64_t mb = 1ull << 20;
+    CHECK(own_ground::roomFor(1024 * mb, 100 * mb, 50 * mb) == Room::Whole);
+    CHECK(own_ground::roomFor(300 * mb, 100 * mb, 50 * mb) == Room::NoModels);
+    CHECK(own_ground::roomFor(250 * mb, 100 * mb, 50 * mb) == Room::Coarse);
+    CHECK(own_ground::roomFor(100 * mb, 100 * mb, 50 * mb) == Room::None);
+    CHECK(own_ground::roomFor(own_ground::kKeepFree, 0, 0) == Room::Whole);
+}

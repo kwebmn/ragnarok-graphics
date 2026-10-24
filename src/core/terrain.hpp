@@ -64,4 +64,10 @@ constexpr float kJoin = 0.5f;  // corners closer than this are one: whole ground
 // round it, its edges as straight as the game draws them; the strips with `subdivide` 2 and more alone (none far off)
 Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid = nullptr);
 
+// 3.0.4-beta.20 (the own ground on every map): the map's water as uaRO.exe lays it (0x4e59d0, core/water.hpp) - a
+// quad over each cell with a top a corner of which lies under the water's highest (its level less the waves' height;
+// up along -y), flat at the level (the waves' rise and fall, a unit or so, left out), its corners' texture coordinates
+// the cell's place modulo four a quarter each; by the ground's chunks, one batch each (the water's one texture)
+Mesh water(const gnd::Ground& g, float level, float waveHeight);
+
 }  // namespace uagfx::terrain

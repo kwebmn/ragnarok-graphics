@@ -10,6 +10,7 @@
 #include "core/game_camera.hpp"
 #include "core/own_ground.hpp"
 #include "core/trees.hpp"
+#include "core/water.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -64,8 +65,16 @@ void Renderer::Impl::dropOwnGround() {
         if (id && textures.count(id)) dying.push_back(id);
     ownState.modelIds.clear();
     ownState.modelTexture = ownState.modelLevel = 0;
+    for (uint32_t id : ownState.waterIds)  // 3.0.4-beta.20
+        if (id && textures.count(id)) dying.push_back(id);
+    ownState.waterIds.clear();
+    ownState.waterPicture = ownState.waterPictureLevel = 0;
     ownState.modelLikeKnown = false;
     ownState.modelFrames = 0;
+    ownState.waterTexture = ownState.waterColour = 0;  // 3.0.4-beta.20: the game's water picture of another map
+    ownState.waterLikeKnown = ownState.waterWaitLogged = false;
+    ownState.waterFrames = 0;
+    ownState.waterMost = 0;
     if (ownState.atlas && textures.count(ownState.atlas)) dying.push_back(ownState.atlas);
     ownState.serial = 0;
     ownState.ids.clear();
@@ -120,11 +129,33 @@ bool Renderer::Impl::prepareOwnGround() {
         o.atlas = g->atlas.argb.empty() ? 0 : ownTexture(g->atlas.width, g->atlas.height, 1);
         for (const OwnGround::Picture& p : g->modelTextures)  // 3.0.4-beta.14
             o.modelIds.push_back(p.levels.empty() ? 0 : ownTexture(p.width, p.height, int(p.levels.size())));
+        for (const OwnGround::Picture& p : g->waterPictures)  // 3.0.4-beta.20
+            o.waterIds.push_back(p.levels.empty() ? 0 : ownTexture(p.width, p.height, int(p.levels.size())));
         o.learning.reset(g->models, g->toLight);
     }
     if (o.up) return true;
     o.uploads.reset();
     size_t texels = 0;
+    // 3.0.4-beta.14: the models' pictures, then (3.0.4-beta.20) the water's - a level of the next one; false: all up
+    const auto putUp = [&](const std::vector<OwnGround::Picture>& pictures, const std::vector<uint32_t>& ids,
+                           size_t& index, size_t& level) {
+        while (index < pictures.size()) {
+            const OwnGround::Picture& p = pictures[index];
+            const int w = std::max(p.width >> level, 1), h = std::max(p.height >> level, 1);
+            if (index >= ids.size() || !ids[index] || level >= p.levels.size() ||
+                p.levels[level].size() != size_t(w) * size_t(h)) {
+                ++index;
+                level = 0;
+                continue;
+            }
+            o.uploads.upload(ids[index], uint32_t(level), Rect{0, 0, w, h}, p.levels[level].data(), {},
+                             level == 0 ? PixelFormat::A1R5G5B5 : PixelFormat::Unknown);
+            texels += size_t(w) * size_t(h);
+            ++level;
+            return true;
+        }
+        return false;
+    };
     while (texels < kTexelsAFrame) {
         if (o.texture < g->textures.size()) {
             const OwnGround::Picture& p = g->textures[o.texture];
@@ -148,22 +179,9 @@ bool Renderer::Impl::prepareOwnGround() {
             o.atlasRow += rows;
             continue;
         }
-        if (o.modelTexture < g->modelTextures.size()) {  // 3.0.4-beta.14: the models' last
-            const OwnGround::Picture& p = g->modelTextures[o.modelTexture];
-            const int w = std::max(p.width >> o.modelLevel, 1), h = std::max(p.height >> o.modelLevel, 1);
-            if (o.modelTexture >= o.modelIds.size() || !o.modelIds[o.modelTexture] || o.modelLevel >= p.levels.size() ||
-                p.levels[o.modelLevel].size() != size_t(w) * size_t(h)) {
-                ++o.modelTexture;
-                o.modelLevel = 0;
-                continue;
-            }
-            o.uploads.upload(o.modelIds[o.modelTexture], uint32_t(o.modelLevel), Rect{0, 0, w, h},
-                             p.levels[o.modelLevel].data(), {},
-                             o.modelLevel == 0 ? PixelFormat::A1R5G5B5 : PixelFormat::Unknown);
-            texels += size_t(w) * size_t(h);
-            ++o.modelLevel;
+        if (putUp(g->modelTextures, o.modelIds, o.modelTexture, o.modelLevel) ||
+            putUp(g->waterPictures, o.waterIds, o.waterPicture, o.waterPictureLevel))
             continue;
-        }
         o.up = true;
         break;
     }
@@ -258,7 +276,8 @@ bool Renderer::Impl::drawOwnGround() {
     OwnState::Made now;
     std::memcpy(now.view, viewToWorld, sizeof now.view);
     now.width = gameWidth, now.height = gameHeight, now.serial = o.serial, now.blends = blends;
-    now.models = effects.ownFarModels, now.seamsView = seamsView, now.matched = o.learning.matched();
+    // 3.0.4-beta.20: the colours learnt anew, not the triangles matched - those grew every picture (R-35N5QN: 0 %)
+    now.models = effects.ownFarModels, now.seamsView = seamsView, now.matched = o.learning.changes();
     now.fog[0] = o.shading.specularAt(100.0f), now.fog[1] = o.shading.specularAt(1000.0f);
     now.like = o.like;
     now.valid = true;
@@ -631,6 +650,173 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
         }
     }
     for (size_t t = 0; t < o.modelPending.size(); ++t) emit(t);
+}
+
+// 3.0.4-beta.20: a quad of the game's own water (on a map of lava, of lava: core/water.hpp) - its picture, the
+// picture's state and its colour noted for the own water past the far plane; true when it is one
+bool Renderer::Impl::noteOwnWater(const FrameRecord& rec, const DrawCmd& d) {
+    OwnState& o = ownState;
+    const OwnGround* g = mapWorld.ownGround();
+    if (!g || g->serial != o.serial || g->water.chunks.empty()) return false;
+    const std::vector<uint8_t>& vb = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    if (d.vertexOffset + 4 * stride > vb.size()) return false;
+    const uint8_t* at = vb.data() + d.vertexOffset;
+    const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
+    if (!(g->waterType == 4 ? water::isLavaQuad(at, stride, d.vertexCount, d.indexCount, strip)
+                            : water::isWaterQuad(at, stride, d.vertexCount, d.indexCount, strip)))
+        return false;
+    o.waterTexture = d.texture[0];
+    o.waterGame = true;
+    std::memcpy(&o.waterColour, at + 16, sizeof o.waterColour);  // its first corner's diffuse (lava: the map's light)
+    o.waterLike = rec.states()[d.state];
+    o.waterLikeKnown = true;
+    return true;
+}
+
+// 3.0.4-beta.20 (the user chose «Своя земля везде»): the map's water past the game's far plane - the game lays its
+// water a quad a cell with its ground (0x4e59d0), none past its far plane, and the own ground showed the bed bare
+// there (460 of the client's 921 maps have water, 3 lava). The parts of the quads past it (own_ground::pastDepth, as
+// the far models'), in the game's own water picture, state and colour, drawn as the game's water is drawn (the modern
+// water's shaders by ownWater; its copy of the world taken here - after the characters, as before)
+bool Renderer::Impl::drawOwnWater() {
+    OwnState& o = ownState;
+    o.waterDrawn = true;
+    const OwnGround* g = mapWorld.ownGround();
+    if (!g || g->serial != o.serial || g->water.chunks.empty()) return true;
+    // its picture: the game's own water's this picture (the far water then the same as the near), else the map's own
+    // copy of the one the game would show now (a picture every waterAnim ticks of 16 ms, FUN_004e3b80), else the last
+    // of the game's; its state the game's water's, else its models' made the water's (texture by diffuse, blended)
+    uint32_t texture = o.waterGame ? o.waterTexture : 0;
+    if (!texture && !o.waterIds.empty() && o.up) {
+        const uint64_t tick = GetTickCount64() / 16 / uint64_t(std::max(g->waterAnim, 1));
+        texture = o.waterIds[size_t(tick % o.waterIds.size())];
+    }
+    if (!texture) texture = o.waterTexture;
+    if (!o.waterLikeKnown && o.modelLikeKnown) {
+        DrawSetup& w = o.waterLike;
+        w = o.modelLike;
+        w.blend = true;
+        w.srcBlend = d3d7::BLEND_SRCALPHA;
+        w.dstBlend = d3d7::BLEND_INVSRCALPHA;
+        w.zWrite = w.alphaTest = w.colorKey = false;
+        w.stage[0].colorOp = w.stage[0].alphaOp = d3d7::TOP_MODULATE;
+        w.stage[0].colorArg1 = w.stage[0].alphaArg1 = d3d7::TA_TEXTURE;
+        w.stage[0].colorArg2 = w.stage[0].alphaArg2 = d3d7::TA_DIFFUSE;
+        w.stage[1] = StageSetup{};
+        o.waterLikeKnown = true;
+    }
+    if (!texture || !o.waterLikeKnown || !textures.count(texture)) {
+        if (!o.waterWaitLogged)
+            LOG_INFO("own ground: %s's far %s waits for its picture (%zu of the map's own)", g->map.c_str(),
+                     g->waterType == 4 ? "lava" : "water", o.waterIds.size());
+        o.waterWaitLogged = true;
+        return true;
+    }
+    own_ground::View view;
+    if (!own_ground::viewOf(viewToWorld, view)) return true;
+    crumb("own water");
+    const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
+    const float sign[3] = {float(axes.x), float(axes.y), float(axes.z)};
+    const bool fogged = o.shading.fogged();
+    const uint32_t plain = o.shading.specularAt(0.0f);
+    // lava's colour the map's light as the game's lava quads have it (not seen yet: white, opaque)
+    const uint32_t colour = g->waterType != 4 ? water::kDiffuse : o.waterColour ? o.waterColour : 0xFFFFFFFFu;
+    o.waterRec.reset();
+    DrawSetup st = o.waterLike;
+    st.cull = d3d7::CULL_NONE;  // the axes may turn the quads over
+    const uint32_t state = o.waterRec.addState(st);
+    o.waterVerts.clear();
+    o.waterIdx.clear();
+    size_t triangles = 0;
+    const auto emit = [&] {
+        if (!o.waterIdx.empty()) {
+            DrawCmd cmd;
+            cmd.state = state;
+            cmd.texture[0] = texture;
+            cmd.primitive = d3d7::PT_TRIANGLELIST;
+            cmd.fvf = d3d7::FVF_TL1;
+            o.waterRec.draw(cmd, o.waterVerts.data(), uint32_t(o.waterVerts.size()), o.waterIdx.data(),
+                            uint32_t(o.waterIdx.size()));
+        }
+        o.waterVerts.clear();
+        o.waterIdx.clear();
+    };
+    const terrain::Mesh& mesh = g->water;
+    for (const terrain::Chunk& box : mesh.chunks) {
+        float lo[3], hi[3];
+        for (int a = 0; a < 3; ++a) {
+            lo[a] = std::min(box.lo[a] * sign[a], box.hi[a] * sign[a]);
+            hi[a] = std::max(box.lo[a] * sign[a], box.hi[a] * sign[a]);
+        }
+        float nearest = 0.0f, farthest = 0.0f;
+        if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, kMostDepth, nearest, &farthest) ||
+            farthest < p.farZ)
+            continue;  // none of it past the far plane: the game's own
+        const terrain::Batch& bt = mesh.batches[box.firstBatch];
+        for (uint32_t i = bt.firstIndex; i + 3 <= bt.firstIndex + bt.indexCount; i += 3) {
+            const terrain::Vertex* tv[3];
+            float c[3][3];
+            for (int k = 0; k < 3; ++k) {
+                tv[k] = &mesh.vertices[bt.firstVertex + mesh.indices[i + size_t(k)]];
+                const float w[3] = {tv[k]->pos[0] * sign[0], tv[k]->pos[1] * sign[1], tv[k]->pos[2] * sign[2]};
+                own_ground::toView(view, w, c[k]);
+            }
+            const float zd[3] = {c[0][2], c[1][2], c[2][2]};
+            if (zd[0] < p.farZ && zd[1] < p.farZ && zd[2] < p.farZ) continue;  // the game's own
+            float share[4][3];
+            const int corners = own_ground::pastDepth(zd, p.farZ, share);
+            if (corners < 3) continue;
+            if (o.waterVerts.size() + 4 > 65535) emit();
+            const size_t base = o.waterVerts.size();
+            bool ok = true;
+            for (int q = 0; q < corners && ok; ++q) {
+                float at[3] = {0, 0, 0}, u = 0.0f, v = 0.0f;
+                for (int k = 0; k < 3; ++k) {
+                    for (int a = 0; a < 3; ++a) at[a] += share[q][k] * c[k][a];
+                    u += share[q][k] * tv[k]->uv[0];
+                    v += share[q][k] * tv[k]->uv[1];
+                }
+                own_ground::Tl2 placed;
+                ok = own_ground::placeView(p, at, placed);
+                own_ground::Tl1 t{};
+                t.x = placed.x, t.y = placed.y, t.z = placed.z, t.rhw = placed.rhw;
+                t.diffuse = colour;
+                t.specular = fogged ? o.shading.specularAt(at[2]) : plain;
+                t.u = u, t.v = v;
+                o.waterVerts.push_back(t);
+            }
+            if (!ok) {
+                o.waterVerts.resize(base);
+                continue;
+            }
+            for (int q = 1; q + 1 < corners; ++q) {  // a fan round the first corner
+                o.waterIdx.push_back(uint16_t(base));
+                o.waterIdx.push_back(uint16_t(base + size_t(q)));
+                o.waterIdx.push_back(uint16_t(base + size_t(q) + 1));
+                ++triangles;
+            }
+        }
+    }
+    emit();
+    o.waterTriangles = triangles;
+    o.waterMost = std::max(o.waterMost, triangles);
+    if (++o.waterFrames == 600)
+        LOG_INFO("own ground: %s's far %s - %zu triangles past the far plane in the last picture, %zu at most",
+                 g->map.c_str(), g->waterType == 4 ? "lava" : "water", triangles, o.waterMost);
+    if (o.waterRec.draws().empty()) return true;
+    flushDraws();  // the game's draws gathered so far are of its own vertices, uploaded before these
+    prepareGeometry(o.waterRec);
+    if (vertexBase) {
+        ownPass = true;
+        ownWater = g->waterType == 4 ? 2 : 1;
+        for (const DrawCmd& cmd : o.waterRec.draws()) draw(o.waterRec, cmd);
+        ownWater = 0;
+        ownPass = false;
+    }
+    geometryList = 0;  // the game's record's vertices go up again with its next draw
+    return !lost;
 }
 
 }  // namespace uagfx::gpu

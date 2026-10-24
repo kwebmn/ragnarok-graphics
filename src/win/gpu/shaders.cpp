@@ -58,6 +58,14 @@ SamplerState samp0 : register(s0);
 SamplerState samp1 : register(s1);
 // The distance from the camera of a depth the game's projection gave (water, the effects).
 float viewDepth(float d) { return farZ * nearZ / (farZ - d * (farZ - nearZ)); }
+// 3.0.4-beta.20: a depth of the own world past the game's far plane as own_ground::depthOf squeezes it (the game's own
+// up to farZ - kSqueeze, 10; the rest below 1) back into the view - the far water's bed (water()); the game's as above
+float bedDepth(float d) {
+    float split = farZ - 10.0;
+    float at = (farZ - farZ * nearZ / split) / (farZ - nearZ);
+    if (d <= at) return viewDepth(d);
+    return split / max(1.0 - (d - at) / (1.0 - at), 0.0001);
+}
 
 struct VsIn {
     float4 pos : POSITION;       // x, y in D3D7 pixels, z in [0, 1], rhw
@@ -973,13 +981,13 @@ float4 water(WaterIn i) {
     float3 nv = float3(dot(n, float3(r0, r1, r2)), dot(n, float3(r3, r4, r5)), dot(n, float3(r6, r7, r8)));
     float waterZ = i.view.z;
     float2 dz = float2(ddx(waterZ), ddy(waterZ));  // the water's depth from pixel to pixel (outside any branch)
-    float thick = max(viewDepth(sceneDepth.Load(int3(px, 0))) - waterZ, 0.0);
+    float thick = max(bedDepth(sceneDepth.Load(int3(px, 0))) - waterZ, 0.0);
     // The bed through the waves - shifted by how far the waves tilt the water from flat (its up in the view:
     // -y of the world); where the shifted pixel is in front of the water, straight through.
     float2 tilt = nv.xy + float2(r1, r4);
     float2 shift = tilt * (36.0 * scale) * saturate(thick / 6.0) * (0.2 + waves);
     int2 rp = clamp(int2(i.pos.xy + shift), int2(0, 0), int2(targetSize) - 1);
-    float bedZ = viewDepth(sceneDepth.Load(int3(rp, 0)));
+    float bedZ = bedDepth(sceneDepth.Load(int3(rp, 0)));
     if (bedZ < waterZ) {
         rp = px;
         bedZ = waterZ + thick;

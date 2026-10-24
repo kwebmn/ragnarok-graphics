@@ -208,4 +208,11 @@ uint32_t Shading::specularAt(float zd) const {
     return uint32_t(a) << 24 | specularRgb_;
 }
 
+Room roomFor(uint64_t free, uint64_t models, uint64_t fine) {
+    if (free >= kKeepFree) return Room::Whole;
+    if (free + models >= kKeepFree) return Room::NoModels;
+    if (free + models + fine >= kKeepFree) return Room::Coarse;
+    return Room::None;
+}
+
 }  // namespace uagfx::own_ground

@@ -390,4 +390,56 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
     return m;
 }
 
+Mesh water(const gnd::Ground& g, float level, float waveHeight) {
+    const float half[2] = {float(g.width) / 2.0f, float(g.height) / 2.0f};
+    const float highest = level - waveHeight;
+    Mesh m;
+    for (int cy0 = 0; cy0 < g.height; cy0 += kChunk)
+        for (int cx0 = 0; cx0 < g.width; cx0 += kChunk) {
+            Chunk ch;
+            ch.cellX = cx0, ch.cellY = cy0;
+            ch.firstVertex = uint32_t(m.vertices.size());
+            ch.firstBatch = uint32_t(m.batches.size());
+            Batch b;
+            b.texture = 0;
+            b.firstVertex = ch.firstVertex;
+            b.firstIndex = uint32_t(m.indices.size());
+            const int cx1 = std::min(cx0 + kChunk, g.width), cy1 = std::min(cy0 + kChunk, g.height);
+            for (int y = cy0; y < cy1; ++y)
+                for (int x = cx0; x < cx1; ++x) {
+                    const gnd::Cell& c = g.cells[size_t(y) * size_t(g.width) + size_t(x)];
+                    if (c.top < 0 || !(c.h[0] > highest || c.h[1] > highest || c.h[2] > highest || c.h[3] > highest))
+                        continue;
+                    const uint32_t first = uint32_t(m.vertices.size()) - b.firstVertex;
+                    for (int k = 0; k < 4; ++k) {  // (x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1) as the game's
+                        const int du = k & 1, dv = k >> 1;
+                        Vertex v{};
+                        v.pos[0] = (float(x + du) - half[0]) * g.zoom;
+                        v.pos[1] = level;
+                        v.pos[2] = (float(y + dv) - half[1]) * g.zoom;
+                        v.normal[1] = -1.0f;
+                        v.uv[0] = float((x & 3) + du) * 0.25f;
+                        v.uv[1] = float((y & 3) + dv) * 0.25f;
+                        v.color = 0x90FFFFFFu;
+                        m.vertices.push_back(v);
+                    }
+                    for (uint32_t k : {0u, 1u, 2u, 2u, 1u, 3u}) m.indices.push_back(first + k);
+                }
+            b.vertexCount = uint32_t(m.vertices.size()) - b.firstVertex;
+            b.indexCount = uint32_t(m.indices.size()) - b.firstIndex;
+            if (!b.vertexCount) continue;
+            ch.vertexCount = b.vertexCount;
+            ch.batchCount = 1;
+            for (int a = 0; a < 3; ++a) ch.lo[a] = 1e30f, ch.hi[a] = -1e30f;
+            for (uint32_t k = b.firstVertex; k < b.firstVertex + b.vertexCount; ++k)
+                for (int a = 0; a < 3; ++a) {
+                    ch.lo[a] = std::min(ch.lo[a], m.vertices[k].pos[a]);
+                    ch.hi[a] = std::max(ch.hi[a], m.vertices[k].pos[a]);
+                }
+            m.batches.push_back(b);
+            m.chunks.push_back(ch);
+        }
+    return m;
+}
+
 }  // namespace uagfx::terrain

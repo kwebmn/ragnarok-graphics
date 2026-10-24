@@ -43,6 +43,11 @@ struct Sound {
 struct World {
     int version = 0;     // major * 256 + minor
     int waterType = -1;  // 0.31: its water's kind (4: lava); -1 not known
+    // 3.0.4-beta.20 (the own ground's far water): its level (up along -y), its waves' height, speed (degrees a tick)
+    // and pitch (degrees a cell), and its pictures' pace (ticks a picture; 3 before 1.8) - known false before 1.3
+    float waterLevel = 0.0f, waveHeight = 0.0f, waveSpeed = 0.0f, wavePitch = 0.0f;
+    int waterAnim = 3;
+    bool waterKnown = false;
     // 2.1.3: the map's sun as its makers set it - the way its painted shadows fall (degrees; latitude from straight
     // above); known false for a file without it
     int lightLongitude = 0, lightLatitude = 0;

@@ -71,6 +71,12 @@ TEST(own_models_learn_the_game_s_colours) {
     CHECK(l.note(corners, colours));
     for (int k = 0; k < 3; ++k) CHECK_EQ(l.colourOf(m.indices[k]), colours[k]);
     CHECK(l.seen() == 1 && l.matched() == 1);
+    // 3.0.4-beta.20: the same triangle again - matched, nothing learnt anew (the renderer's record drawn again then;
+    // R-35N5QN: matched() grew every picture, and the record was never drawn again)
+    const size_t learnt = l.changes();
+    CHECK(learnt == 3);
+    CHECK(l.note(corners, colours));
+    CHECK(l.matched() == 2 && l.changes() == learnt);
     // one where none of ours lies: not ours, yet lit as the map lights - a flat face (facing up) bright, an upright
     // one dim
     float flat[3][3] = {{0, 0, 0}, {10, 0, 0}, {0, 0, 10}}, upright[3][3] = {{0, 0, 0}, {10, 0, 0}, {0, -10, 0}};

@@ -30,6 +30,15 @@ struct OwnGround {
     std::vector<Picture> modelTextures;
     float toLight[3] = {0.0f, -1.0f, 0.0f};
     unsigned modelFiles = 0, modelFilesRead = 0;
+    // 3.0.4-beta.20 (the own ground on every map): its water as the game lays it (core/terrain.hpp water) - drawn past
+    // the game's far plane, where the game lays none; its kind (4 lava) and level
+    terrain::Mesh water;
+    int waterType = -1;
+    float waterLevel = 0.0f;
+    // its pictures as the game names them, one after another, and their pace (game ticks of 16 ms a picture) - the far
+    // water's while none of the game's own water is near (the game's then: the same picture as its own)
+    std::vector<Picture> waterPictures;
+    int waterAnim = 3;
 };
 
 }  // namespace uagfx::gpu

@@ -58,3 +58,15 @@ TEST(rsw_sounds_of_a_map) {
     CHECK(s.pos[0] == 0.0f && s.pos[1] == 0.0f && s.pos[2] == 0.0f);
     CHECK(s.volume == 1.0f && s.range == 50.0f && s.cycle == 4.0f);
 }
+
+TEST(rsw_water_of_a_map) {
+    // 3.0.4-beta.20 (the own ground on every map): its water as the game lays it - the level, the waves, the pictures'
+    // pace - for the water past the game's far plane, where the game lays none
+    const std::vector<uint8_t> b = testfiles::rsw();
+    rsw::World w;
+    std::string error;
+    CHECK(rsw::parse(b.data(), b.size(), w, error));
+    CHECK(w.waterKnown);
+    CHECK(w.waterLevel == -5.0f && w.waveHeight == 1.0f && w.waveSpeed == 2.0f && w.wavePitch == 50.0f);
+    CHECK_EQ(w.waterAnim, 3);
+}

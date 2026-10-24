@@ -118,6 +118,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         ownState.frame = prepareOwnGround();
     }
     if (!inner && ownState.frame && !ownState.drawn && (s.ui || s.blend) && !drawOwnGround()) return;
+    // 3.0.4-beta.20: the picture's first quad of the game's own water (or lava) - its picture, state and colour noted,
+    // the own water past the far plane drawn before it (the modern water's copy of the world taken there, after the
+    // characters, as before); or at the interface, when the game lays none of it near
+    if (!inner && ownState.frame && !ownState.waterDrawn && !s.ui && d.fvf == d3d7::FVF_TL1 && d.vertexCount == 4 &&
+        s.blend && s.srcBlend == d3d7::BLEND_SRCALPHA && s.dstBlend == d3d7::BLEND_INVSRCALPHA &&
+        noteOwnWater(rec, d) && !drawOwnWater())
+        return;
+    if (!inner && ownState.frame && !ownState.waterDrawn && s.ui && !drawOwnWater()) return;
     // 3.0.4-beta.14: a draw of the game's own models near - the far models' colours and state learnt from it. Not by
     // this picture's choice (ownState.frame): the game draws its models before its ground
     if (!inner && ownState.serial && ownGroundWanted() && effects.ownFarModels && !s.ui && d.fvf == d3d7::FVF_TL1 &&
@@ -192,14 +200,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                         !effect_exe::isCasting(d.effectId);
     // 0.19, modern water: a cell of a map's water (core/water.hpp) is drawn by its own shader, from the picture and
     // the depth the frame had before its first water (copyScene); without them, as the game draws it.
+    // 3.0.4-beta.20: and the own water past the far plane (ownWater 1, drawOwnWater)
     bool water = false;
-    if (!s.ui && waterWanted() && d.fvf == d3d7::FVF_TL1 && d.vertexCount == 4 && s.blend &&
+    if (!s.ui && waterWanted() && d.fvf == d3d7::FVF_TL1 && (d.vertexCount == 4 || ownWater == 1) && s.blend &&
         s.srcBlend == d3d7::BLEND_SRCALPHA && s.dstBlend == d3d7::BLEND_INVSRCALPHA) {
         const std::vector<uint8_t>& v = rec.vertexBytes();
         const size_t stride = FrameRecord::stride(d.fvf);
-        water = d.vertexOffset + 4 * stride <= v.size() &&
-                water::isWaterQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
-                                   d.primitive == d3d7::PT_TRIANGLESTRIP) &&
+        water = (ownWater == 1 || (d.vertexOffset + 4 * stride <= v.size() &&
+                                   water::isWaterQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
+                                                      d.primitive == d3d7::PT_TRIANGLESTRIP))) &&
                 copyScene();
         if (water && mirrorDue() && !applyMirror()) return;  // 1.16: the world mirrored, before the first water
     }
@@ -220,14 +229,14 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         smoke = d.vertexOffset + 4 * FrameRecord::stride(d.fvf) <= rec.vertexBytes().size();
     // 0.31: a cell of lava (core/water.hpp) on a map that has it - by the lava's shaders; its middle lights around.
     bool lava = false;
-    if (!s.ui && !water && !smoke && lavaWanted() && d.fvf == d3d7::FVF_TL1 && d.vertexCount == 4 && s.blend &&
-        s.srcBlend == d3d7::BLEND_SRCALPHA && s.dstBlend == d3d7::BLEND_INVSRCALPHA && lavaMap()) {
+    if (!s.ui && !water && !smoke && lavaWanted() && d.fvf == d3d7::FVF_TL1 && (d.vertexCount == 4 || ownWater == 2) &&
+        s.blend && s.srcBlend == d3d7::BLEND_SRCALPHA && s.dstBlend == d3d7::BLEND_INVSRCALPHA && lavaMap()) {
         const std::vector<uint8_t>& v = rec.vertexBytes();
         const size_t stride = FrameRecord::stride(d.fvf);
-        lava = d.vertexOffset + 4 * stride <= v.size() &&
-               water::isLavaQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
-                                 d.primitive == d3d7::PT_TRIANGLESTRIP);
-        if (lava && !torchDone) noteLava(rec, d);
+        lava = ownWater == 2 || (d.vertexOffset + 4 * stride <= v.size() &&
+                                 water::isLavaQuad(v.data() + d.vertexOffset, stride, d.vertexCount, d.indexCount,
+                                                   d.primitive == d3d7::PT_TRIANGLESTRIP));
+        if (lava && !torchDone && !ownWater) noteLava(rec, d);  // the lava's light: the game's own near
         if (lava && !lavaLogged) LOG_INFO("lava: %s's drawn as living lava", mapName.c_str());
         lavaLogged = lavaLogged || lava;
     }
@@ -499,7 +508,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[1] = float(effects.waterClarity) / 100.0f;
         c.twin[3] = waterLife();  // 1.7
         if (mirrorMade) c.stage0[1] |= 1u << 27;  // 1.16: the world mirrored (t5)
-        noteWaterLevel(rec, d);
+        if (!ownWater) noteWaterLevel(rec, d);  // 3.0.4-beta.20: the game's own water's, not the far water's
         if (ripplesWanted()) {  // 0.94: the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};
             int n = 0;

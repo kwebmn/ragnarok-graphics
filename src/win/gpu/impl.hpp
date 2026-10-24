@@ -979,6 +979,7 @@ struct Renderer::Impl {
     }
     void newPicture() {
         ownState.decided = ownState.frame = ownState.drawn = ownState.likeTaken = false;  // 3.0.4-beta.10
+        ownState.waterDrawn = ownState.waterGame = false;  // 3.0.4-beta.20
         ownState.shading.beginFrame();
         ownState.modelsNoted = 0;  // 3.0.4-beta.14
         // off for 10 s (the switch) - its textures and the map's own ground let go; for less (Pause, to compare) kept
@@ -1210,9 +1211,24 @@ struct Renderer::Impl {
         size_t madeChunks = 0, madeVertices = 0, madeTriangles = 0, reused = 0;
         double slowest = 0.0;       // ms, of the frames so far
         size_t most = 0;            // vertices, the most a frame
+        // 3.0.4-beta.20 (the own ground on every map): the map's water past the game's far plane (OwnGround::water) -
+        // the game's own water picture (this picture's, or the last one seen on the map), the state and colour of its
+        // quads (lava's: the map's light); drawn before the picture's first of the game's own, or at the interface
+        uint32_t waterTexture = 0, waterColour = 0;
+        bool waterLikeKnown = false, waterDrawn = false, waterWaitLogged = false;
+        bool waterGame = false;  // this picture's waterTexture the game's own (its first water quad)
+        std::vector<uint32_t> waterIds;  // the map's own copies of the water's pictures (OwnGround::waterPictures)
+        size_t waterPicture = 0, waterPictureLevel = 0;
+        DrawSetup waterLike;
+        FrameRecord waterRec;
+        std::vector<own_ground::Tl1> waterVerts;
+        std::vector<uint16_t> waterIdx;
+        size_t waterTriangles = 0, waterMost = 0;  // past the far plane: the last picture, the most in one
+        uint32_t waterFrames = 0;
     } ownState;
     uint32_t nextOwnTexture = 0xF0000000u;  // the driver's own textures, far above the game's (counted from 1)
     bool ownPass = false;
+    uint8_t ownWater = 0;  // 3.0.4-beta.20: the own far water's draws - 1 water, 2 lava - drawn as the game's own are
     ULONGLONG ownOffSince = 0;  // when it was turned off (GetTickCount64); 0 on
     bool ownGroundWanted() const { return effects.ownGround && viewToWorldValid && gameWidth > 0 && gameHeight > 0; }
     uint32_t ownTexture(int width, int height, int levels);
@@ -1222,6 +1238,8 @@ struct Renderer::Impl {
     void noteOwnModels(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.14: the game's own models near
     void drawOwnModels(const own_ground::View& view, const camera::Projection& p, const map::Axes& axes);
     bool drawOwnGround();  // once a picture, the game's ground noted; false: lost
+    bool noteOwnWater(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.20: true - a quad of the map's water
+    bool drawOwnWater();  // once a picture, before the game's first water or at the interface; false: lost
     // 1.12: the frame's opaque world (sun_map.cpp noteCaster) - since 2.2 for the mirror only
     struct SunCaster {
         uint32_t first = 0, count = 0;  // vertices into sunVerts (six floats each: x, y, z, u, v, colour's bits)

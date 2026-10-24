@@ -63,6 +63,15 @@ int pastDepth(const float zd[3], float from, float out[4][3]);
 bool boxInView(const View& v, const camera::Projection& p, int width, int height, const float lo[3], const float hi[3],
                float most, float& nearest, float* farthest = nullptr);
 
+// 3.0.4-beta.20: what of a map's own world the game's memory has room for - uaRO.exe is 32-bit and not large address
+// aware: 2 GB for the game, the driver and the card's driver together (lighthalzen's own world takes 214 MB as it is
+// read, ecl_fild01's far models 115 MB). free: what was left with all of it made; models: the far models' bytes; fine:
+// the smooth ground's (the plain one, n = 1, stays). At least kKeepFree left: the models let go first, then the smooth
+// ground, then all of it (the game's own ground)
+enum class Room : uint8_t { Whole, NoModels, Coarse, None };
+constexpr uint64_t kKeepFree = uint64_t(384) << 20;
+Room roomFor(uint64_t free, uint64_t models, uint64_t fine);
+
 // The game's own colours of its ground, learnt from its draws: each cell corner's vertex colour (the colour the game
 // lights its ground with) and the fog of this frame (the specular's alpha by the view depth)
 class Shading {
