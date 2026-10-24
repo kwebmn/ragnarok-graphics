@@ -192,6 +192,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("place", running.panelPlace, file.panelPlace));
         n.panelPlace = file.panelPlace;
     }
+    if (file.buffTimers != running.buffTimers) {  // 3.0.4-beta.6
+        u.applied.push_back(change("buff timers", flag(running.buffTimers), flag(file.buffTimers)));
+        n.buffTimers = file.buffTimers;
+    }
     if (file.cameraIndoor != running.cameraIndoor) {  // 3.0.4-beta.5
         u.applied.push_back(change("camera indoor", flag(running.cameraIndoor), flag(file.cameraIndoor)));
         n.cameraIndoor = file.cameraIndoor;
@@ -269,7 +273,8 @@ bool appliesNow(const std::string& k) {
            k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
            k == "sound.output" ||             // 3.0.4-beta.1: the music and the sounds move at once
            k.compare(0, 7, "notify.") == 0 ||  // 3.0.4-beta.3
-           k == "camera.indoor";              // 3.0.4-beta.5
+           k == "camera.indoor" ||            // 3.0.4-beta.5
+           k == "buffs.timers";               // 3.0.4-beta.6
 }
 
 }  // namespace uagfx

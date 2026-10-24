@@ -23,6 +23,10 @@ bool knownGameBuild();
 // (core/game_camera.hpp kModeOutdoor) kept at 1 while `wanted`; set back to the game's 0 when not wanted any more on
 // the same map. True while it holds a building map's.
 bool keepCameraFree(bool wanted);
+// 3.0.4-beta.6: the game shows its world (not the login or the character list); false in another build of the exe
+bool inGameWorld();
+// The game's memory read without a fault where nothing is mapped
+bool readGame(uint32_t address, void* out, size_t size);
 // 3.0.3-beta.2: the name of the character in the game (core/char_name), as the game spells it; "" at the login and the
 // character select, or in another build of the exe (GetCharName's bytes are checked once)
 std::string readOwnName();

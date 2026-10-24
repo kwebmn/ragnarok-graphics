@@ -816,3 +816,15 @@ TEST(config_camera_indoor) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[camera]\nindoor = 0\n"));
     CHECK(!u.next.cameraIndoor && u.applied.size() == 1 && u.waiting.empty());
 }
+
+// 3.0.4-beta.6 (the user's idea 4): [buffs] timers - the time left on the buff icons
+TEST(config_buff_timers) {
+    CHECK(parseConfig("").buffTimers);
+    CHECK(!parseConfig("[buffs]\ntimers = 0\n").buffTimers);
+    const settings::IniSetting* s = settings::findSetting("buffs.timers");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Game && s->control == settings::Control::Check);
+    CHECK(appliesNow("buffs.timers"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[buffs]\ntimers = 0\n")).next.buffTimers);
+}

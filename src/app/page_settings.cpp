@@ -120,6 +120,11 @@ public:
                     buildRows(p, "camera", false);
                     p.note(t(Text::CameraPhotoNote));
                 }
+                if (anyListed("buffs")) {  // 3.0.4-beta.6: the buff icons' times
+                    p.gap();
+                    p.heading(t(Text::BuffsHeading));
+                    buildRows(p, "buffs", false);
+                }
                 // 3.0.4-beta.3: notifications while the game is behind ([notify])
                 if (anyListed("notify")) {
                     p.gap();

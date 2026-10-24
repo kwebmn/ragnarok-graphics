@@ -4477,6 +4477,21 @@ constexpr Entry kTexts[] = {
      "ті самі клавіші ще раз повертають їх.",
      "Ctrl+Alt+F12 — режим фото: интерфейс игры, курсор и панель окон скрыты для чистого снимка (Ctrl+Shift+F12); те "
      "же клавиши ещё раз возвращают их."},
+    // 3.0.4-beta.6: the time left on the buff icons
+    {Text::BuffsHeading, "Buffs", "Баффи", "Баффы"},
+    {Text::BuffTimers, "Time left on the buff icons",
+     "Час на значках баффів",
+     "Время на значках баффов"},
+    {Text::BuffTimersHint,
+     "How long Blessing, Increase AGI, the potions and the rest still last - on each icon at the screen's right edge. "
+     "The times come from the server's own data; a buff cast by another player counts from its level, an unknown one "
+     "from its longest time.",
+     "Скільки ще триватимуть Blessing, Increase AGI, зілля та інше — на кожному значку біля правого краю екрана. Час "
+     "береться з даних самого сервера; бафф від іншого гравця рахується за його рівнем, невідомий — за найдовшим "
+     "часом.",
+     "Сколько ещё продлятся Blessing, Increase AGI, зелья и остальное — на каждом значке у правого края экрана. Время "
+     "берётся из данных самого сервера; бафф от другого игрока считается по его уровню, неизвестный — по самому "
+     "долгому времени."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -410,6 +410,7 @@ enum class Text : uint16_t {
     NotifyFriendText, NotifyDeathText,  // 3.0.4-beta.3: notifications from behind
     WindowsStartCount, WindowsStartCountHint,  // 3.0.4-beta.4: «Грати» for a set of windows
     CameraHeading, CameraIndoor, CameraIndoorHint, CameraPhotoNote,  // 3.0.4-beta.5: the camera, the photo mode
+    BuffsHeading, BuffTimers, BuffTimersHint,  // 3.0.4-beta.6: the time left on the buff icons
     Count
 };
 

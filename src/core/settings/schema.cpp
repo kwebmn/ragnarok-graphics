@@ -105,6 +105,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.4-beta.5: the camera - building maps as free as outdoors (a section of its own, «Камера»)
         {"camera", "indoor", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::CameraIndoor,
          Text::CameraIndoorHint, ""},
+        // 3.0.4-beta.6: the time left on the buff icons
+        {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
+         Text::BuffTimersHint, ""},
         // 3.0.4-beta.3: notifications while the game is behind other windows - a section of its own («Сповіщення»)
         {"notify", "on", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyOn, Text::NotifyOnHint, ""},
         {"notify", "whisper", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyWhisper,
@@ -809,6 +812,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "panel.show") return c.panelShow ? "1" : "0";  // 3.0.3-beta.8
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5
+    if (k == "buffs.timers") return c.buffTimers ? "1" : "0";                   // 3.0.4-beta.6
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;
         const std::string w = k.substr(7);

@@ -24,6 +24,7 @@
 #include "win/map_start.hpp"
 #include "win/pick_hook.hpp"
 #include "win/server_night.hpp"
+#include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
@@ -490,6 +491,7 @@ void Context::endScene() {
     // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
     const bool drawn = record.takeWork() > 0;
     if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
+    if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
         windowSwitch_.draw(record, *renderer);
         record.takeWork();  // the driver's own draws are not the game's
@@ -691,6 +693,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         windowSwitch_.frame(window, mainWindow_, config, scaleMade_ ? plan.k : 1.0,
                             scaleMade_ ? plan.targetWidth : shadow.width(),
                             scaleMade_ ? plan.targetHeight : shadow.height(), gameFullscreen);
+    buffoverlay::frame(config.buffTimers, float(scaleMade_ ? plan.k : 1.0));  // 3.0.4-beta.6: the buffs' times
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);

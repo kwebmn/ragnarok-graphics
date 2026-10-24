@@ -65,6 +65,10 @@ bool readCameraTargetDepth(float& z) {
 
 bool knownGameBuild() { return knownBuild(); }
 
+bool inGameWorld() { return gameMode() != 0; }
+
+bool readGame(uint32_t address, void* out, size_t size) { return read(address, out, size); }
+
 bool keepCameraFree(bool wanted) {
     static uint32_t heldMode = 0;  // the game mode whose building map's flag we hold, and that map
     static std::string heldMap;

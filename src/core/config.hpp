@@ -489,6 +489,7 @@ struct Config {
     // 3.0.4-beta.5, [camera] indoor: building maps (data\indoorrswtable.txt) - the camera turns, tilts and zooms out
     // as outdoors (win/game_camera keepCameraFree)
     bool cameraIndoor = true;
+    bool buffTimers = true;  // 3.0.4-beta.6, [buffs] timers: the time left on the buff icons (win/buff_overlay)
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;

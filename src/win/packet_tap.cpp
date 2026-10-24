@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "core/game_packets.hpp"
+#include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
 
 namespace uagfx::win {
@@ -26,7 +27,10 @@ bool g_on = false;
 uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet) {
     const uint16_t id = g_take(connection, packet);
     const packets::Event e = packets::parse(packet, kReadable);
-    if (!std::holds_alternative<std::monostate>(e)) notifier::packet(e);
+    if (!std::holds_alternative<std::monostate>(e)) {
+        notifier::packet(e);
+        buffoverlay::packet(e);  // 3.0.4-beta.6
+    }
     return id;
 }
 
