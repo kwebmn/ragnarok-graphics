@@ -151,6 +151,25 @@ TEST(gnd_read_whole) {
     CHECK(!gnd::parse(cut.data(), cut.size(), none, error));
 }
 
+TEST(gnd_read_the_newer_versions_too) {
+    // 3.0.4-beta.13: 1.8 and 1.9 (88 of the client's 1246 grounds, sva_god1 among them) are 1.7 with the maps' water
+    // after the cells - 1.8 its plane, 1.9 a grid of planes; the ground itself read as 1.7's
+    for (uint8_t minor : {uint8_t(8), uint8_t(9)}) {
+        std::vector<uint8_t> b = sampleGnd();
+        b[5] = minor;
+        b.insert(b.end(), minor == 8 ? 36 : 56, uint8_t(0));  // the water as the client's files have it
+        gnd::Ground g;
+        std::string error;
+        CHECK(gnd::parse(b.data(), b.size(), g, error));
+        CHECK(g.width == 4 && g.height == 2 && g.cells.size() == 8 && g.cells[2].h[0] == 26.0f);
+    }
+    std::vector<uint8_t> b = sampleGnd();
+    b[5] = 6;  // an older one: not known
+    gnd::Ground g;
+    std::string error;
+    CHECK(!gnd::parse(b.data(), b.size(), g, error));
+}
+
 TEST(terrain_the_game_s_cells_where_whole_and_flat) {
     const gnd::Ground g = parsed();
     const terrain::Atlas atlas = terrain::lightmapAtlas(g);
@@ -316,4 +335,31 @@ TEST(terrain_no_blend_over_a_step_nor_far_off_nor_round_a_laid_patch) {
     laid[2] = laid[3] = 1;  // the dirt laid by hand: its edges straight, as the game draws them
     CHECK_EQ(layerBatches(terrain::build(g, 3, a2, &laid), terrain::kNeighbour), size_t(0));
     CHECK_EQ(layerBatches(terrain::build(g, 3, a2, &laid), terrain::kOwnBand), size_t(0));
+}
+
+TEST(terrain_an_own_band_mirrors_its_rim_not_smears_it) {
+    // 3.0.4-beta.13 (the user on beta.12: «как будто там замазались стыки однотипной текстурой»): a cell's own band
+    // takes its texture from a little inside, mirrored at kBand - beta.12's two rows put one place of the texture on
+    // both (inset(1) = inset(0.94) = 0.94), one column of texels stretched over the band at every seam
+    const gnd::Ground g = flat();
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const terrain::Mesh m = terrain::build(g, 3, atlas);
+    int seen = 0, mirrored = 0;  // the grass cell (1, 0)'s band along its seam with the dirt (2, 0) at x = 0
+    for (const terrain::Batch& b : m.batches) {
+        if (b.layer != terrain::kOwnBand || b.texture != 0) continue;
+        for (uint32_t k = b.firstVertex; k < b.firstVertex + b.vertexCount; ++k) {
+            const terrain::Vertex& e = m.vertices[k];
+            if (e.pos[0] != 0.0f || e.pos[2] <= -10.0f || e.pos[2] >= 0.0f) continue;
+            ++seen;
+            for (uint32_t q = b.firstVertex; q < b.firstVertex + b.vertexCount; ++q) {
+                const terrain::Vertex& o = m.vertices[q];
+                const bool inside = o.pos[2] == e.pos[2] && o.pos[0] < 0.0f && o.pos[0] > -1.0f;
+                if (inside && std::fabs(o.uv[0] - e.uv[0]) > 0.01f) {
+                    ++mirrored;
+                    break;
+                }
+            }
+        }
+    }
+    CHECK(seen > 0 && mirrored == seen);
 }

@@ -182,29 +182,30 @@ void blendsOf(Builder& b, const Grid& grid, int x, int y, int n, const std::vect
             v.normal[0] = 0.0f, v.normal[1] = -1.0f, v.normal[2] = 0.0f;
             b.lightmapUv(s.lightmap, fu, fv, v.lm);
         };
-        // its own band: its texture kept off its rim, over 2 kBand from the edge - whole there, then fading (shade())
+        // its own band: its texture kept off its rim, over 2 kBand from the edge - whole there, then fading (shade()).
+        // Three rows: the edge, kBand where the texture is mirrored back (inset), 2 kBand - with two (beta.12) both
+        // took one place of the texture, one column of its texels smeared over the band at every seam
         Builder::Part& band = b.bands[s.texture];
         uint32_t first = uint32_t(band.vertices.size());
-        for (int j = 0; j <= 1; ++j)
+        for (int j = 0; j <= 2; ++j)
             for (int i = 0; i <= n; ++i) {
                 int gi = 0, gj = 0;
                 gridOf(i, 0, gi, gj);
                 float fu = float(gi) * step, fv = float(gj) * step;  // on the edge: as the ground's own points
-                if (j) {
-                    if (w.dx) fu += w.dx > 0 ? -2.0f * kBand : 2.0f * kBand;
-                    if (w.dy) fv += w.dy > 0 ? -2.0f * kBand : 2.0f * kBand;
-                }
+                if (w.dx) fu += float(j) * (w.dx > 0 ? -kBand : kBand);
+                if (w.dy) fv += float(j) * (w.dy > 0 ? -kBand : kBand);
                 Vertex v{};
                 placed(fu, fv, v);
                 uvAt(s, inset(fu), inset(fv), v.uv);
                 v.color = s.color | 0xFF000000u;
-                v.blend = 0xFF0000u | (low ? 0xFF00u : 0u) | (j ? 0xFFu : 0u);
+                v.blend = 0xFF0000u | (low ? 0xFF00u : 0u) | uint32_t(j * 255 / 2);
                 band.vertices.push_back(v);
             }
-        for (int i = 0; i < n; ++i) {
-            const uint32_t a = first + uint32_t(i);
-            Builder::quad(band, a, a + 1, a + uint32_t(n + 1), a + uint32_t(n + 2));
-        }
+        for (int j = 0; j < 2; ++j)
+            for (int i = 0; i < n; ++i) {
+                const uint32_t a = first + uint32_t(j * (n + 1) + i);
+                Builder::quad(band, a, a + 1, a + uint32_t(n + 1), a + uint32_t(n + 2));
+            }
         // the neighbour's strip on the cell's own grid points (the ground's own, the same arithmetic), its quads split
         // as the ground's: from (gi + 1, gj) to (gi, gj + 1)
         Builder::Part& strip = b.strips[t.texture];

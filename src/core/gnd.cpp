@@ -41,8 +41,9 @@ bool parse(const uint8_t* data, size_t size, Ground& out, std::string& error) {
         error = "not a ground file (GRGN)";
         return false;
     }
-    if (data[4] != 1 || data[5] != 7) {
-        error = "a ground file of version " + std::to_string(data[4]) + "." + std::to_string(data[5]) + ", not 1.7";
+    // 3.0.4-beta.13: 1.8 and 1.9 are 1.7 with the map's water after the cells (left unread)
+    if (data[4] != 1 || data[5] < 7 || data[5] > 9) {
+        error = "a ground file of version " + std::to_string(data[4]) + "." + std::to_string(data[5]) + ", not 1.7-1.9";
         return false;
     }
     Reader r(data + 6, size - 6);

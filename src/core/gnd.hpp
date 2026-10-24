@@ -33,7 +33,7 @@ struct Ground {
     std::vector<Cell> cells;  // row by row
 };
 
-// False, with why, for what is not a .gnd 1.7 or ends short
+// False, with why, for what is not a .gnd 1.7 (3.0.4-beta.13: or 1.8, 1.9 - their water after the cells) or ends short
 bool parse(const uint8_t* data, size_t size, Ground& out, std::string& error);
 
 }  // namespace uagfx::gnd
