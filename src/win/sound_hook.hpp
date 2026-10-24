@@ -9,6 +9,7 @@ namespace uagfx::win {
 void installSoundHooks();
 // Each frame: whether the game is in front - the volumes follow it; the first one logs what was done. 3.0.3-beta.3:
 // `music` false - the music out (another game window is the main one), back when true.
-void soundFrame(bool foreground, bool music = true);
+// 3.0.3-beta.9: sounds - this game's sounds heard (off: another game window is the main one, [windows] others_sounds)
+void soundFrame(bool foreground, bool music = true, bool sounds = true);
 
 }  // namespace uagfx::win

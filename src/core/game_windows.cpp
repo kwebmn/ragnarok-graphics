@@ -48,6 +48,8 @@ std::vector<Window> windows(const Table& t, const Alive& alive) {
         w.jobLevel = e.jobLevel;
         w.hp = e.hp;
         w.sp = e.sp;
+        w.ready = e.ready;
+        w.drawsBehind = (e.flags & kDrawsBehind) != 0;
         out.push_back(w);
     }
     return out;  // by number: the places' order
@@ -72,6 +74,37 @@ const Window* byNumber(const std::vector<Window>& all, int number) {
     for (const Window& w : all)
         if (w.number == number) return &w;
     return nullptr;
+}
+
+std::string wakeName(uint32_t pid) { return "Local\\uaro-graphics-wake-" + std::to_string(pid); }
+
+bool summoned(int32_t pid, int32_t serial, uint32_t self, int32_t& seen) {
+    if (serial == seen || uint32_t(pid) != self) return false;
+    seen = serial;
+    return true;
+}
+
+bool switchNow(uint32_t ready, uint32_t serial, uint64_t since, uint64_t now) {
+    return ready == serial || now - since >= kSummonWaitMs;
+}
+
+Leave leaving(uint32_t foregroundPid, const std::string& foregroundClass, const std::vector<Window>& games,
+              uint32_t selfPid) {
+    // Windows' Alt+Tab (10, 11) and the moment between two windows: not settled yet
+    static const char* const kSwitchers[] = {"MultitaskingViewFrame", "TaskSwitcherWnd", "TaskSwitcherOverlayWnd",
+                                             "XamlExplorerHostIslandWindow", "ForegroundStaging"};
+    if (foregroundPid == 0) return Leave::Wait;
+    for (const char* s : kSwitchers)
+        if (foregroundClass == s) return Leave::Wait;
+    if (foregroundPid == selfPid) return Leave::Stay;
+    for (const Window& w : games)
+        if (w.pid == foregroundPid) return Leave::Stay;
+    return Leave::Minimise;
+}
+
+bool covers(const Box& outer, const Box& inner) {
+    return outer.right > outer.left && outer.bottom > outer.top && outer.left <= inner.left &&
+           outer.top <= inner.top && outer.right >= inner.right && outer.bottom >= inner.bottom;
 }
 
 KeyAction keyAction(unsigned vk, bool ctrl, bool alt, bool shift, WindowKeys keys) {

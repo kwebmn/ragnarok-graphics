@@ -3,7 +3,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <sstream>
+
+#include "core/d3d7.hpp"
+#include "core/states.hpp"
 
 namespace uagfx::panel {
 namespace {
@@ -172,6 +176,33 @@ Place placeOf(Point at, int panelW, int panelH, int roomW, int roomH, float scal
 }
 
 uint32_t barColour(int percent, bool hp) { return percent < 25 ? kRed : hp ? kGreen : kBlue; }
+
+int cursorDraw(const FrameRecord& r, float x, float y) {
+    constexpr int kLookBack = 8;  // the cursor is among the frame's last draws
+    constexpr float kMost = 64;   // a cursor's picture is no bigger
+    int seen = 0;
+    for (size_t c = r.commands().size(); c-- > 0 && seen < kLookBack;) {
+        const Command& cmd = r.commands()[c];
+        if (cmd.type != Cmd::Draw) continue;
+        ++seen;
+        const DrawCmd& d = r.draws()[cmd.index];
+        const uint32_t stride = FrameRecord::stride(d.fvf);
+        if (!stride || d.vertexCount < 3 || d.vertexCount > 6 || d.state >= r.states().size() ||
+            !r.states()[d.state].ui)
+            continue;
+        float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
+        for (uint32_t v = 0; v < d.vertexCount; ++v) {
+            float p[2];
+            std::memcpy(p, r.vertexBytes().data() + d.vertexOffset + size_t(v) * stride, sizeof p);
+            x0 = std::min(x0, p[0]);
+            y0 = std::min(y0, p[1]);
+            x1 = std::max(x1, p[0]);
+            y1 = std::max(y1, p[1]);
+        }
+        if (x1 - x0 <= kMost && y1 - y0 <= kMost && x >= x0 && x <= x1 && y >= y0 && y <= y1) return int(c);
+    }
+    return -1;
+}
 
 void fade(Picture& p, float opacity) {
     if (opacity >= 1.0f) return;

@@ -53,6 +53,7 @@ struct Engine {
     bool tried = false, on = false, wanted = false, logged = false, front = true, limiter = true;
     bool headphones = true;  // 1.2: Windows' spatial sound when it is on
     int reverbStrength = 60, background = 30;
+    float others = 1.0f;  // 3.0.3-beta.9: frame()'s
     HMODULE dll = nullptr;
     IXAudio2* x = nullptr;
     IXAudio2MasteringVoice* master = nullptr;
@@ -307,7 +308,7 @@ bool play(const void* image, float x, float y, float z, int reach, int inner, fl
     return true;
 }
 
-void frame(bool foreground, const std::string& map) {
+void frame(bool foreground, const std::string& map, float others) {
     Engine& e = engine();
     if (!e.on) return;
     for (Voice& v : e.voices) {
@@ -320,9 +321,10 @@ void frame(bool foreground, const std::string& map) {
         e.map = map;
         setRoom(e, sound::roomOf(map));
     }
-    if (foreground != e.front) {
+    if (foreground != e.front || std::fabs(others - e.others) > 0.01f) {
         e.front = foreground;
-        const float level = foreground ? 1.0f : float(std::clamp(e.background, 0, 100)) / 100.0f;
+        e.others = others;
+        const float level = (foreground ? 1.0f : float(std::clamp(e.background, 0, 100)) / 100.0f) * others;
         e.master->SetVolume(level, XAUDIO2_COMMIT_NOW);
         spatial::setMaster(level);  // 1.2
     }

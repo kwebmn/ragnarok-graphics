@@ -20,6 +20,7 @@
 
 #include "core/bridge_protocol.hpp"
 #include "core/bridge_wire.hpp"
+#include "core/game_windows.hpp"
 #include "core/version.hpp"
 #include "host/pack_builder.hpp"
 #include "host/studio_engine.hpp"
@@ -278,6 +279,8 @@ int Host::run(const Args& a) {
         channel_.send(Msg::Hello, out_);
         return 3;
     }
+    // 3.0.3-beta.9: the game's wake - the window switched to draws its whole picture at once
+    if (HANDLE wake = OpenEventA(SYNCHRONIZE, FALSE, gamewindows::wakeName(a.parent).c_str())) renderer_.setWake(wake);
     LOG_INFO("uaro-render64 %s (64-bit) draws on %s", kVersion, renderer_.adapterName().c_str());
     renderer_.setIconSink(&Host::iconDone, this);
     if (a.ai.on()) {

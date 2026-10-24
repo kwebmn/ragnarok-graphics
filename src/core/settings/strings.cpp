@@ -4368,6 +4368,13 @@ constexpr Entry kTexts[] = {
     {Text::PanelOpacity, "The panel's opacity", "Непрозорість панелі", "Непрозрачность панели"},
     {Text::PanelOpacityHint, "Less: the game shows through the panel more.",
      "Менше — гру крізь панель видно більше.", "Меньше — игру сквозь панель видно больше."},
+    {Text::WindowsOthersSounds, "Sounds in the other game windows", "Звуки в інших вікнах гри",
+     "Звуки в других окнах игры"},
+    {Text::WindowsOthersSoundsHint,
+     "Off: with several game windows open, only the one you play in now is heard; the others' sounds fade out.",
+     "Вимкнено: коли відкрито кілька вікон гри, чути лише те, у якому ви зараз граєте; звуки інших стихають.",
+     "Выключено: когда открыто несколько окон игры, слышно только то, в котором вы сейчас играете; звуки других "
+     "стихают."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

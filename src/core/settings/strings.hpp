@@ -400,6 +400,7 @@ enum class Text : uint16_t {
     WindowsPanel, WindowsPanelHint, WindowsPanelLayout, WindowsPanelLayoutHint, WindowsPanelRow, WindowsPanelColumn,
     WindowsPanelSize, WindowsPanelSizeHint, PanelTitle, PanelWindow,  // 3.0.3-beta.7: the windows' panel
     PanelHeading, PanelOpacity, PanelOpacityHint,  // 3.0.3-beta.8: its own section, in the game's picture
+    WindowsOthersSounds, WindowsOthersSoundsHint,  // 3.0.3-beta.9
     Count
 };
 

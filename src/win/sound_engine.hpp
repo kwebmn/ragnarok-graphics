@@ -12,7 +12,8 @@ namespace uagfx::win::audio {
 // the game's volume factor. False: not taken (no engine, not this format) - the game plays it through Miles.
 bool play(const void* image, float x, float y, float z, int reach, int inner, float factor);
 // Each frame: the game in front or not, the map (its reverberation); the finished voices freed. The first one logs.
-void frame(bool foreground, const std::string& map);
+// 3.0.3-beta.9: others - this game's share while another game window is the main one (0: not heard)
+void frame(bool foreground, const std::string& map, float others = 1.0f);
 // 1.3: the sounds it plays now (the music's ducking counts them with Miles').
 int playing();
 // Its settings: on, the reverberation's strength (0-100), the background's volume (%), the crowd's limiter, (1.2)

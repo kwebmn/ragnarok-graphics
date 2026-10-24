@@ -764,3 +764,15 @@ TEST(config_reads_the_windows_panel) {
     CHECK(!u.next.panelShow && u.next.panelHidden && u.next.panelSize == 150 && u.next.panelOpacity == 60);
     CHECK(u.next.panelLayout == PanelLayout::Column && u.next.panelPlace == "1.000 0.500");
 }
+
+// 3.0.3-beta.9 (the user: «звуки идут с паралельного окна»): [windows] others_sounds - the other game windows' sounds,
+// off by default (the main window's alone), a row of «Звук» beside their music
+TEST(config_reads_the_other_windows_sounds) {
+    CHECK(!parseConfig("").windowOthersSounds);
+    CHECK(parseConfig("[windows]\nothers_sounds = 1\n").windowOthersSounds);
+    const settings::IniSetting* s = settings::findSetting("windows.others_sounds");
+    CHECK(s != nullptr);
+    if (s) CHECK(s->page == settings::Page::Sound && s->control == settings::Control::Check);
+    CHECK(appliesNow("windows.others_sounds"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[windows]\nothers_sounds = 1\n")).next.windowOthersSounds);
+}

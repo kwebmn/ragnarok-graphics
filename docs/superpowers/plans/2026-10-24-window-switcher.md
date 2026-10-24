@@ -60,6 +60,32 @@ The user: «в самой игре это самое то что я хотел»
 - A layout button beside its cross; [panel] a section of its own (show, layout, size, opacity, hidden, place) under
   «Панель вікон» on «Гра й чат»; the console's rows.
 
+## Task 4 (3.0.3-beta.9): smooth switching, lighter background windows, their sounds, the game's cursor
+
+The user: «можно сделать переключение между окнами более гладко», «на полный екран ... блымает в момент
+переключения», «нагрузку фоновых окон надо уменьшить, не надо грузить просто так», «иногда я переключаюсь ... на
+рабочий стол», «звуки идут с паралельного окна», «мышка когда наводишь на окно переключения окна меняет цвет».
+
+- The blink: uaRO.exe on its full screen (0x6ebfec, ISFULLSCREENMODE the app writes for «на весь екран») calls
+  ShowWindow(SW_MINIMIZE) on WM_ACTIVATE(inactive) and SW_MAXIMIZE on activation (0x6541e0). The subclass answers
+  WM_ACTIVATE as the game does (1) without them; a timer then looks where the focus went
+  (gamewindows::leaving): another game window - it stays; the desktop or another program - minimised as before;
+  Windows' Alt+Tab still open - asked again (3 s at most). Activated while minimised: the game's own handler.
+- Summon then show: a switch by the keys or the panel writes the target's process and a serial in the block's header
+  (Local\uaro-graphics-windows-2, entries of 96 bytes) and wakes it (Local\uaro-graphics-wake-<pid>, the frame
+  pacer's wait and the minimised wait end at it; the 64-bit renderer opens it by --parent). The target draws whole
+  (main) while asked, its third whole present writes ready = serial into its entry; the window in front shows it then
+  or after 400 ms. A minimised target is restored at once. On its full screen uaRO.exe draws only while its window
+  is active ((0x6e4bdc != 0 || 0x6ebfec == 0) in its main loop, 0x4f... and 0x58...): such a window costs nothing
+  behind another and cannot get ready - its entry says so (kDrawsBehind clear) and it is shown at once.
+- Lighter background: another game window 5 frames a second, one wholly behind another game window of the player's
+  (above it in Windows' order) 2, minimised 2 (light::Role).
+- [windows] others_sounds (0): the other windows' sounds fade out as their music (sound_hook g_sounds, the sound
+  engine's master).
+- The panel under the game's own cursor: the frame's last small interface quad over the cursor's point
+  (panel::cursorDraw) - the panel's upload and quad moved before it (FrameRecord::moveLastBefore); Windows' arrow only
+  when it is not found.
+
 ## Rulings
 
 - The doc's betas 7 (panel) and 8 (HP/SP on the cards) are one beta: the cards' numbers come with the list in
@@ -72,3 +98,6 @@ The user: «в самой игре это самое то что я хотел»
 - Ctrl+Alt+0 is the game's own (Alt+0's chat macro) while [windows] panel is off.
 - 3.0.3-beta.8: beta.7's layered window is gone - the user wants the panel in the game's picture. beta.7's [windows]
   panel* keys moved to [panel] (a beta's keys, never released: a beta.7 file's are not read).
+- 3.0.3-beta.9: the user did not answer the switch's delay or the background's frame rates - the proposals stand:
+  400 ms at most, 5 and 2 frames a second. The block's layout changed (-2): a beta.8 game beside a beta.9 one does not
+  see it.

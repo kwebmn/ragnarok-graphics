@@ -14,6 +14,7 @@
 #include "core/states.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
+#include "win/game_camera.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -206,9 +207,15 @@ void WindowPanel::draw(FrameRecord& record, gpu::Renderer& renderer) {
         upload_ = true;
         if (!texture_) return;
     }
+    // 3.0.3-beta.9 (the user: the mouse over the panel «меняет цвет»): under the game's own cursor - found among the
+    // frame's last draws, the panel's commands go before it - so that cursor stays over it, not Windows' arrow
+    int cursor = -1, cx = 0, cy = 0;
+    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    size_t added = 1;
     if (upload_) {
         record.upload(texture_, 0, Rect{0, 0, texW_, texH_}, picture_.px.data());
         upload_ = false;
+        ++added;
     }
     // Its picture as it is: premultiplied, over the game's interface, no depth, a texel a target pixel
     DrawSetup s;
@@ -236,6 +243,8 @@ void WindowPanel::draw(FrameRecord& record, gpu::Renderer& renderer) {
                                 {x0, y1, 0, 1, white, 0, 0, 1}, {x1, y0, 0, 1, white, 0, 1, 0},
                                 {x1, y1, 0, 1, white, 0, 1, 1}, {x0, y1, 0, 1, white, 0, 0, 1}};
     record.draw(cmd, v, 6, nullptr, 0);
+    if (cursor >= 0) record.moveLastBefore(added, size_t(cursor));
+    underCursor_ = cursor >= 0;
 }
 
 bool WindowPanel::toTarget(HWND game, int x, int y, float& tx, float& ty) const {
@@ -262,8 +271,8 @@ void WindowPanel::block(HWND game) {
 bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
     if (!shown_) return false;
     float tx = 0, ty = 0;
-    if (m == WM_SETCURSOR) {  // over it Windows' arrow: the game's own cursor is drawn under the panel
-        if (LOWORD(lp) != HTCLIENT) return false;
+    if (m == WM_SETCURSOR) {  // over it Windows' arrow when the game's own cursor was not found over the panel
+        if (LOWORD(lp) != HTCLIENT || underCursor_) return false;
         POINT p{};
         GetCursorPos(&p);
         ScreenToClient(game, &p);

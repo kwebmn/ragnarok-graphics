@@ -10,14 +10,28 @@
 namespace uagfx::win {
 namespace {
 
+constexpr UINT_PTR kLeaveTimer = 0x75A9;  // the focus gone from the full screen: where to (WM_TIMER)
+
 WindowSwitch* g_switch = nullptr;
 WNDPROC g_original = nullptr;
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
-    if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch && g_switch->key(unsigned(wp), lp)) return 0;
-    LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
-    if (g_switch && g_switch->mouse(w, m, lp, answer)) return answer;
+    if (g_switch) {
+        if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;
+        if (m == WM_ACTIVATE && g_switch->activate(w, wp)) return 1;  // the game's own answer to it
+        if (m == WM_TIMER && g_switch->timer(w, wp)) return 0;
+        LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
+        if (g_switch->mouse(w, m, lp, answer)) return answer;
+    }
     return CallWindowProcA(g_original, w, m, wp, lp);
+}
+
+// Window a is above window b (nearer the top of Windows' order)
+bool above(HWND a, HWND b) {
+    int steps = 0;
+    for (HWND w = GetWindow(b, GW_HWNDPREV); w && steps < 1024; w = GetWindow(w, GW_HWNDPREV), ++steps)
+        if (w == a) return true;
+    return false;
 }
 
 }  // namespace
@@ -46,16 +60,47 @@ void WindowSwitch::check(HWND window, bool foreground, const std::string& name, 
     mine_.window = uint32_t(reinterpret_cast<uintptr_t>(window));
     if (mine_.number == 0) mine_.number = uint32_t(wlog::slot() > 0 ? wlog::slot() : shared_.claim());
     if (mine_.number == 0) return;  // eight games run: no place for a ninth
+    mine_.flags = fullScreen_ ? 0 : gamewindows::kDrawsBehind;  // on its full screen the game draws only in front
     gamewindows::putName(mine_, utf8Of(widened(name, gameCodePage(config))));
     charstatus::Status s;
     gamewindows::putStatus(mine_, !name.empty() && readOwnStatus(s) ? &s : nullptr);
     publish(foreground);
-    panel_.update(shared_.live(), mine_.pid);
+    const std::vector<gamewindows::Window> all = shared_.live();
+    // wholly behind another of the player's game windows, that window above it: nobody sees it
+    bool hidden = false;
+    RECT me{};
+    if (window && !foreground && GetWindowRect(window, &me)) {
+        const gamewindows::Box mine{me.left, me.top, me.right, me.bottom};
+        for (const gamewindows::Window& w : all) {
+            const HWND h = reinterpret_cast<HWND>(uintptr_t(w.window));
+            RECT r{};
+            if (w.pid == mine_.pid || !IsWindowVisible(h) || IsIconic(h) || !GetWindowRect(h, &r)) continue;
+            if (gamewindows::covers(gamewindows::Box{r.left, r.top, r.right, r.bottom}, mine) && above(h, window)) {
+                hidden = true;
+                break;
+            }
+        }
+    }
+    hidden_ = hidden;
+    panel_.update(all, mine_.pid);
+}
+
+void WindowSwitch::frame(HWND window, bool main, Config& config, double k, int targetWidth, int targetHeight,
+                         bool fullScreen) {
+    fullScreen_ = fullScreen;
+    panel_.frame(window, main, config, k, targetWidth, targetHeight);
+    if (!pendingNumber_) return;
+    const uint64_t now = GetTickCount64();
+    const uint32_t ready = shared_.readyOf(pendingNumber_);
+    if (!gamewindows::switchNow(ready, uint32_t(pendingSerial_), pendingSince_, now)) return;
+    const int number = pendingNumber_;
+    pendingNumber_ = 0;
+    show(number, pendingBy_, ready == uint32_t(pendingSerial_), now - pendingSince_);
 }
 
 void WindowSwitch::publish(bool frontNow) {
     if (frontNow) mine_.frontAt = GetTickCount64();
-    shared_.publish(mine_);
+    if (mine_.number) shared_.publish(mine_);
 }
 
 bool WindowSwitch::key(unsigned vk, LPARAM lParam) {
@@ -92,8 +137,83 @@ void WindowSwitch::to(int number, const char* by) {
         return;
     }
     publish(true);  // in front till now: Ctrl+Tab in the other one comes back here
+    // 3.0.3-beta.9: one that draws behind this one is asked to get its picture whole first, and woken to it; a
+    // minimised one, or one on its full screen (it draws nothing while not active), is shown at once
+    const bool asks = w->drawsBehind && !IsIconic(reinterpret_cast<HWND>(uintptr_t(w->window)));
+    const int32_t serial = asks ? shared_.summon(w->pid) : 0;
+    if (!serial) {
+        show(number, by, false, 0);
+        return;
+    }
+    pendingNumber_ = number;
+    pendingSerial_ = serial;
+    pendingSince_ = GetTickCount64();
+    pendingBy_ = by;
+    wake(w->pid);
+}
+
+void WindowSwitch::show(int number, const char* by, bool ready, uint64_t waited) {
+    const std::vector<gamewindows::Window> all = shared_.live();
+    const gamewindows::Window* w = gamewindows::byNumber(all, number);
+    if (!w) {
+        LOG_INFO("windows: %s - window %d is gone", by, number);
+        return;
+    }
     const bool ok = switchTo(*w);
-    LOG_INFO("windows: %s - to window %d%s", by, number, ok ? "" : " (Windows did not bring it to the front)");
+    LOG_INFO("windows: %s - to window %d, %s in %llu ms%s", by, number,
+             ready ? "its picture whole" : "shown as it is", static_cast<unsigned long long>(waited),
+             ok ? "" : " (Windows did not bring it to the front)");
+}
+
+bool WindowSwitch::summoned(bool foreground) {
+    int32_t serial = 0;
+    if (shared_.summonFor(GetCurrentProcessId(), seenSummon_, serial)) {
+        summonSerial_ = serial;
+        summonedAt_ = GetTickCount64();
+        wholeFrames_ = 0;
+    }
+    if (!summonedAt_) return false;
+    if (foreground || GetTickCount64() - summonedAt_ >= gamewindows::kSummonKeepMs) {
+        summonedAt_ = 0;  // in front now (the main one by itself), or the ask is old
+        return false;
+    }
+    return true;
+}
+
+void WindowSwitch::presented(bool light) {
+    if (!summonedAt_ || light || ++wholeFrames_ != 3) return;  // a frame or two for a new size and DLSS's history
+    mine_.ready = uint32_t(summonSerial_);
+    publish(false);
+}
+
+bool WindowSwitch::activate(HWND window, WPARAM wp) {
+    if (!fullScreen_) return false;  // in a window the game does nothing there
+    if (LOWORD(wp) == WA_INACTIVE) {  // not minimised at once: where the focus went decides (timer)
+        leaveSince_ = GetTickCount64();
+        SetTimer(window, kLeaveTimer, 50, nullptr);
+        return true;
+    }
+    KillTimer(window, kLeaveTimer);
+    leaveSince_ = 0;
+    return !IsIconic(window);  // shown already: nothing to maximise; minimised (back from the desktop): the game's own
+}
+
+bool WindowSwitch::timer(HWND window, WPARAM id) {
+    if (id != kLeaveTimer) return false;
+    const HWND front = GetForegroundWindow();
+    DWORD pid = 0;
+    char cls[64] = {};
+    if (front) {
+        GetWindowThreadProcessId(front, &pid);
+        GetClassNameA(front, cls, sizeof cls);
+    }
+    const gamewindows::Leave l = gamewindows::leaving(pid, cls, shared_.live(), GetCurrentProcessId());
+    if (l == gamewindows::Leave::Wait && GetTickCount64() - leaveSince_ < 3000) return true;  // asked again
+    KillTimer(window, kLeaveTimer);
+    leaveSince_ = 0;
+    if (l == gamewindows::Leave::Stay) return true;  // another game window: no blink
+    ShowWindow(window, SW_MINIMIZE);  // the desktop, another program: as the game itself does
+    return true;
 }
 
 }  // namespace uagfx::win

@@ -88,6 +88,9 @@ public:
     void setWindow(HWND window);  // the game's window, as soon as it is known (Direct3D 9 makes its device on it)
     std::string adapterName() const;
     void setUiSharp(bool sharp);  // [display] ui_filter for interface draws
+    // 3.0.3-beta.9: the game's wake (core/game_windows wakeName) - the frame limit's wait ends at it; after create().
+    // The 64-bit renderer opens it by the game's process itself.
+    void setWake(HANDLE event);
     void setStateCache(bool on);  // 0.88: [debug] state_cache (Direct3D 11)
     void setMergeDraws(bool on);  // 0.90: [debug] merge_draws (Direct3D 11)
     // 1B review M8: builds the pipelines whose keys file lists, so effects do not stutter the first time they are

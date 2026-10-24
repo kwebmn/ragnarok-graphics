@@ -1,5 +1,7 @@
 #include "core/frame.hpp"
 
+#include <algorithm>
+
 #include <cstring>
 
 #include "core/d3d7.hpp"
@@ -76,6 +78,12 @@ void FrameRecord::writeTarget(const Rect& rect, const uint32_t* argb) {
     w.pixels = addPixels(argb, size_t(rect.width()) * size_t(rect.height()));
     writes_.push_back(w);
     commands_.push_back({Cmd::WriteTarget, uint32_t(writes_.size() - 1)});
+}
+
+void FrameRecord::moveLastBefore(size_t count, size_t position) {
+    if (count == 0 || count > commands_.size() || position > commands_.size() - count) return;
+    std::rotate(commands_.begin() + std::ptrdiff_t(position), commands_.end() - std::ptrdiff_t(count),
+                commands_.end());
 }
 
 void FrameRecord::reset() {

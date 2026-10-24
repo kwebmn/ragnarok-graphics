@@ -119,7 +119,8 @@ bool playing(const Tracked& t) {
 
 // Every volume anew: the samples playing (and the one about to start) by the crowd, all by the background.
 double g_duck = 1.0;  // 1.3: the music's share now (the fight's ducking)
-double g_music = 1.0;  // 3.0.3-beta.3: the music while another game window is the main one (out: 0)
+double g_music = 1.0;   // 3.0.3-beta.3: the music while another game window is the main one (out: 0)
+double g_sounds = 1.0;  // 3.0.3-beta.9: the sounds while another game window is the main one (out: 0)
 int g_crowd = 0;      // the sounds playing at the last count (Miles' and the engine's)
 
 void apply(const Tracked* starting) {
@@ -136,7 +137,7 @@ void apply(const Tracked* starting) {
         double fade = 1.0;
         const double since = double(now - t.fadeFrom);
         if (t.fadeFrom) fade = t.out ? sound::fadeOut(since) : sound::fadeIn(since);
-        const int v = sound::scaled(t.wanted, (t.kind == 2 ? back * g_duck * g_music : gain) * fade);
+        const int v = sound::scaled(t.wanted, (t.kind == 2 ? back * g_duck * g_music : gain * g_sounds) * fade);
         if (v == t.applied) continue;
         t.applied = v;
         const VolumeFn set = t.kind == 0 ? g_sampleVolume : t.kind == 1 ? g_volume3D : g_streamVolume;
@@ -441,7 +442,7 @@ void installSoundHooks() {
     hookImport("_AIL_start_3D_sample@4", &start3D, g_start3D);
 }
 
-void soundFrame(bool foreground, bool music) {
+void soundFrame(bool foreground, bool music, bool sounds) {
     if (!g_open) return;
     {  // 1.1: the engine's frame - its voices, the background, the place (the map looked at twice a second)
         static std::string map;
@@ -451,7 +452,7 @@ void soundFrame(bool foreground, bool music) {
             looked = t;
             map = readGameMap();
         }
-        audio::frame(foreground, map);
+        audio::frame(foreground, map, float(g_sounds));
     }
     if (!g_logged && g_askedRate) {
         g_logged = true;
@@ -470,10 +471,11 @@ void soundFrame(bool foreground, bool music) {
         static ULONGLONG before = now;
         const double seconds = double(now - before) / 1000.0;
         before = now;
-        const double was = g_duck, musicWas = g_music;
+        const double was = g_duck, musicWas = g_music, soundsWere = g_sounds;
         g_duck = sound::duckStep(g_duck, g_set.duck ? sound::duckTarget(g_crowd) : 1.0, seconds);
-        g_music = sound::musicStep(g_music, music ? 1.0 : 0.0, seconds);  // 3.0.3-beta.3
-        if (std::fabs(g_duck - was) > 0.01 || g_music != musicWas) {
+        g_music = sound::musicStep(g_music, music ? 1.0 : 0.0, seconds);    // 3.0.3-beta.3
+        g_sounds = sound::musicStep(g_sounds, sounds ? 1.0 : 0.0, seconds);  // 3.0.3-beta.9: as the music fades
+        if (std::fabs(g_duck - was) > 0.01 || g_music != musicWas || g_sounds != soundsWere) {
             g_front = foreground;
             apply(nullptr);
         }

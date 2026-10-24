@@ -26,7 +26,7 @@ bool SharedWindows::open() {
     if (!tried_) {
         tried_ = true;
         map_ = CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(gamewindows::Table),
-                                  "Local\\uaro-graphics-windows");
+                                  "Local\\uaro-graphics-windows-2");  // 3.0.3-beta.9's layout
         if (map_)
             table_ = static_cast<gamewindows::Table*>(
                 MapViewOfFile(map_, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(gamewindows::Table)));
@@ -66,6 +66,32 @@ int SharedWindows::claim() {
     return 0;
 }
 
+int32_t SharedWindows::summon(uint32_t pid) {
+    if (!open()) return 0;
+    InterlockedExchange(reinterpret_cast<LONG*>(&table_->summonPid), LONG(pid));
+    return int32_t(InterlockedIncrement(reinterpret_cast<LONG*>(&table_->summonSerial)));
+}
+
+bool SharedWindows::summonFor(uint32_t self, int32_t& seen, int32_t& serial) {
+    if (!open()) return false;
+    serial = int32_t(InterlockedCompareExchange(reinterpret_cast<LONG*>(&table_->summonSerial), 0, 0));
+    const int32_t pid = int32_t(InterlockedCompareExchange(reinterpret_cast<LONG*>(&table_->summonPid), 0, 0));
+    return gamewindows::summoned(pid, serial, self, seen);
+}
+
+uint32_t SharedWindows::readyOf(int number) {
+    if (!open() || number < 1 || number > gamewindows::kMost) return 0;
+    gamewindows::Entry& e = table_->entries[number - 1];
+    for (int tries = 0; tries < 4; ++tries) {
+        const LONG before = seqOf(e);
+        if (before & 1) continue;
+        const uint32_t ready = e.ready;
+        MemoryBarrier();
+        if (seqOf(e) == before) return ready;
+    }
+    return 0;
+}
+
 std::vector<gamewindows::Window> SharedWindows::live() {
     gamewindows::Table copy{};
     if (!open()) return {};
@@ -81,6 +107,18 @@ std::vector<gamewindows::Window> SharedWindows::live() {
         }
     }
     return gamewindows::windows(copy, alive);
+}
+
+HANDLE ownWake() {
+    static HANDLE event = CreateEventA(nullptr, FALSE, FALSE, gamewindows::wakeName(GetCurrentProcessId()).c_str());
+    return event;
+}
+
+void wake(uint32_t pid) {
+    if (HANDLE e = OpenEventA(EVENT_MODIFY_STATE, FALSE, gamewindows::wakeName(pid).c_str())) {
+        SetEvent(e);
+        CloseHandle(e);
+    }
 }
 
 bool switchTo(const gamewindows::Window& w) {

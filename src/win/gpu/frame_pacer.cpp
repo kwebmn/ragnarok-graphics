@@ -37,9 +37,19 @@ void FramePacer::wait(int fps, bool sleep) {
     if (left > halfMs && timer_) {
         LARGE_INTEGER due;
         due.QuadPart = -((left - halfMs) * 10000000 / frequency_);  // 100 ns units, relative
-        if (SetWaitableTimer(timer_, &due, 0, nullptr, nullptr, FALSE)) WaitForSingleObject(timer_, 1000);
+        const HANDLE both[2] = {timer_, wake_};
+        if (SetWaitableTimer(timer_, &due, 0, nullptr, nullptr, FALSE) &&
+            WaitForMultipleObjects(wake_ ? 2 : 1, both, FALSE, 1000) == WAIT_OBJECT_0 + 1) {
+            next_ = 0;  // woken: this frame now, the schedule anew from it
+            return;
+        }
     } else if (left > halfMs) {
-        Sleep(DWORD((left - halfMs) * 1000 / frequency_));
+        const DWORD ms = DWORD((left - halfMs) * 1000 / frequency_);
+        if (wake_ && WaitForSingleObject(wake_, ms) == WAIT_OBJECT_0) {
+            next_ = 0;
+            return;
+        }
+        if (!wake_) Sleep(ms);
     }
     if (sleep) {  // the timer's own accuracy (half a millisecond with the high-resolution one) is close enough
         next_ += period;

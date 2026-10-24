@@ -231,3 +231,26 @@ TEST(frame_counts_the_work_of_a_frame) {
     r.upload(1, 0, Rect{0, 0, 2, 2}, argb);  // a texture's pixels are not a picture drawn
     CHECK_EQ(r.takeWork(), 0u);
 }
+
+// 3.0.3-beta.9: the windows' panel put before the game's cursor in the frame - its last commands moved before one
+TEST(frame_moves_its_last_commands_before_one) {
+    FrameRecord r;
+    uint8_t vertices[32 * 3] = {};
+    DrawCmd cmd;
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    for (int i = 0; i < 3; ++i) r.draw(cmd, vertices, 3, nullptr, 0);  // the game's: 0, 1, 2
+    const uint32_t argb[4] = {};
+    r.upload(5, 0, Rect{0, 0, 2, 2}, argb);  // the panel's: its picture and its quad
+    r.draw(cmd, vertices, 3, nullptr, 0);
+    r.moveLastBefore(2, 2);
+    CHECK_EQ(r.commands().size(), size_t(5));
+    if (r.commands().size() != 5) return;
+    CHECK(r.commands()[0].type == Cmd::Draw && r.commands()[0].index == 0);
+    CHECK(r.commands()[1].type == Cmd::Draw && r.commands()[1].index == 1);
+    CHECK(r.commands()[2].type == Cmd::Upload);
+    CHECK(r.commands()[3].type == Cmd::Draw && r.commands()[3].index == 3);
+    CHECK(r.commands()[4].type == Cmd::Draw && r.commands()[4].index == 2);  // the game's last one after them
+    r.moveLastBefore(9, 0);  // more than there are: nothing moves
+    CHECK(r.commands()[4].index == 2);
+}

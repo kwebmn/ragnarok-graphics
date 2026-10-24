@@ -135,6 +135,7 @@ public:
     void setGameDir(const std::string& dir) { mapWorld_.setGameDir(dir); }  // 2.5.1: the map files
     void noteObjectTexture(uint32_t id, uint8_t kind) { objectTextures_.note(id, objects::Kind(kind)); }  // 0.61
     void setUiSharp(bool sharp) { uiSharp_ = sharp; }
+    void setWake(HANDLE event) { pacer_.setWake(event); }  // 3.0.3-beta.9
     void setStateCache(bool on) { stateCache_ = on; }  // 0.88: [debug] state_cache
     void setShaderVariants(bool on) { variantsWanted_ = on; }  // 2.5.16: [debug] shader_variants
     void setMergeDraws(bool on) { mergeDraws_ = on; }  // 0.90: [debug] merge_draws

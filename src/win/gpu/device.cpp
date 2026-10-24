@@ -1754,6 +1754,12 @@ void Renderer::setStateCache(bool on) {
     if (d3d11_) d3d11_->setStateCache(on);
 }
 
+void Renderer::setWake(HANDLE event) {
+    if (d3d11_) return d3d11_->setWake(event);
+    if (remote_ || remix_ || !impl_) return;  // the 64-bit renderer: its own; Remix: no frame limit of ours
+    impl_->pacer.setWake(event);
+}
+
 void Renderer::setUiSharp(bool sharp) {
     if (remix_) return;
     if (d3d11_) return d3d11_->setUiSharp(sharp);

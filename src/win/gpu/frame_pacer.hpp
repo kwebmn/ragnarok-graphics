@@ -12,9 +12,13 @@ public:
     // before a present; 0: no limit. 2.5.20: sleep - on the timer to the frame's time (a laptop on its battery): no
     // last half a millisecond waited out awake
     void wait(int fps, bool sleep = false);
+    // 3.0.3-beta.9: an event that ends the wait at once (core/game_windows wakeName: the window switched to draws its
+    // whole picture now, not a background frame later); the schedule starts anew from it. Not owned.
+    void setWake(HANDLE event) { wake_ = event; }
 
 private:
     HANDLE timer_ = nullptr;
+    HANDLE wake_ = nullptr;
     bool tried_ = false;
     LONGLONG next_ = 0;
     LONGLONG frequency_ = 0;

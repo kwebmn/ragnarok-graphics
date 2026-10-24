@@ -173,6 +173,7 @@ bool Context::open(std::string& error) {
         ~CloseStart() { closeStart(); }
     } closeStartAtEnd;
     showStart(start::Progress{start::Stage::Renderer, 0, 0});
+    ownWake();  // 3.0.3-beta.9: made before the 64-bit renderer starts - it opens it by this game's process
     gpu::Renderer* r = new gpu::Renderer;
     r->setStartSink([](void*, const start::Progress& p) { showStart(p); }, nullptr);
     bool remote = false;
@@ -255,6 +256,7 @@ bool Context::open(std::string& error) {
         delete r;
         return false;
     }
+    r->setWake(ownWake());  // 3.0.3-beta.9: the frame limit's wait ends when the window is switched to
     renderer = r;
     renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
     renderer->setStateCache(config.stateCache);  // 0.88
@@ -411,14 +413,21 @@ void Context::updateLight() {
         SYSTEM_POWER_STATUS p{};
         onBattery_ = GetSystemPowerStatus(&p) && p.ACLineStatus == 0;
     }
-    // 3.0.3-beta.3: several game windows - the ones not played in light, while another one is the main
-    mainWindow_ = frontGame_.main(!window || GetForegroundWindow() == window);
-    const light::Overrides o = light::overridesOf(config, onBattery_, !mainWindow_);
+    // 3.0.3-beta.3: several game windows - the ones not played in light, while another one is the main;
+    // 3.0.3-beta.9: one asked to be shown next draws whole behind it, one wholly behind another one 2 frames a second
+    const bool foreground = !window || GetForegroundWindow() == window;
+    mainWindow_ = frontGame_.main(foreground) || windowSwitch_.summoned(foreground);
+    const light::Role role = mainWindow_              ? light::Role::Main
+                             : windowSwitch_.hidden() ? light::Role::Hidden
+                                                      : light::Role::Other;
+    const light::Overrides o = light::overridesOf(config, onBattery_, role);
     if (o == light_) return;
-    if (o.other != light_.other)
-        LOG_INFO("windows: %s", o.other ? "another game window is the main one - this one light: no effects, AI "
-                                          "pictures or DLSS, half the render scale, 10 frames a second"
-                                        : "the main game window - the settings as the file has them");
+    if (o.other && (!light_.other || o.fpsMax != light_.fpsMax))
+        LOG_INFO("windows: another game window is the main one - this one light: no effects, AI pictures or DLSS, "
+                 "half the render scale, %d frames a second%s",
+                 o.fpsMax, role == light::Role::Hidden ? " (wholly behind another game window)" : "");
+    else if (!o.other && light_.other)
+        LOG_INFO("windows: the main game window - the settings as the file has them");
     if (o.superLight != light_.superLight)
         LOG_INFO("super-light: %s", o.superLight ? "on - no effects, no AI pictures, the world at half size; Direct3D "
                                                    "11: its textures as their colour alone, 16-bit, no blended mip "
@@ -485,7 +494,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
     updateLight();  // 2.5.20
     if (window && IsIconic(window)) {  // minimised: nothing to show, and no vsync to hold the game's loop back
         noteWindow(true, false);
-        Sleep(light_.battery ? DWORD(1000 / std::max(1, light_.minimisedFps)) : 15);  // 2.5.20: 5 on the battery
+        // 2.5.20: 5 on the battery; 3.0.3-beta.9: another game window's 2 - woken at once when it is switched to
+        const DWORD ms = light_.battery || light_.other ? DWORD(1000 / std::max(1, light_.minimisedFps)) : 15;
+        if (HANDLE wake = ownWake())
+            WaitForSingleObject(wake, ms);
+        else
+            Sleep(ms);
         return;
     }
     const bool foreground = !window || GetForegroundWindow() == window;
@@ -629,7 +643,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (window)
         windowSwitch_.frame(window, mainWindow_, config, scaleMade_ ? plan.k : 1.0,
                             scaleMade_ ? plan.targetWidth : shadow.width(),
-                            scaleMade_ ? plan.targetHeight : shadow.height());
+                            scaleMade_ ? plan.targetHeight : shadow.height(), gameFullscreen);
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);
@@ -739,7 +753,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
     // 0.91: quieter in the background; the crowd's limiter thinned out. 3.0.3-beta.3: the music of the main game
     // window alone, unless [windows] others_music
-    soundFrame(foreground, mainWindow_ || config.windowOthersMusic);
+    soundFrame(foreground, mainWindow_ || config.windowOthersMusic, mainWindow_ || config.windowOthersSounds);
     // 3.0.2-beta.13 (beta.12's measure: a map's 102 loading pictures waited 1.68 s for their presents, 60 a second):
     // the game's loading picture while a map loads - no frame limit, its present not waited for, and through
     // uaro-render64.exe at most 10 a second (the game draws it anew for each per cent of the map's models)
@@ -754,6 +768,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         }
     }
     if (shown) renderer->present(window, out.cx, out.cy, source, o);
+    windowSwitch_.presented(light_.other);  // 3.0.3-beta.9: asked to be shown next - its whole picture answers
     if (!firstPicture_) {  // 2.12: the start went well (core/safe_mode)
         firstPicture_ = true;
         LOG_INFO("%s", safe::kFirstPicture);

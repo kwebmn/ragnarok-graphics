@@ -450,6 +450,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.windowOthersLight);
         } else if (key == "windows.others_music") {
             setBool(val, c.windowOthersMusic);
+        } else if (key == "windows.others_sounds") {  // 3.0.3-beta.9
+            setBool(val, c.windowOthersSounds);
         } else if (key == "windows.switch_keys") {  // 3.0.3-beta.6
             if (val == "all") c.windowKeys = WindowKeys::All;
             if (val == "back") c.windowKeys = WindowKeys::Back;

@@ -76,12 +76,14 @@ TEST(game_windows_a_name_is_cut_at_a_whole_letter) {
     gamewindows::Entry e{};
     gamewindows::putName(e, "Lena");
     CHECK_EQ(std::string(e.name), std::string("Lena"));
-    gamewindows::putName(e, std::string(40, 'a'));
-    CHECK_EQ(std::string(e.name), std::string(31, 'a'));
+    gamewindows::putName(e, std::string(60, 'a'));
+    CHECK_EQ(std::string(e.name), std::string(47, 'a'));
     std::string cyrillic;
-    for (int i = 0; i < 16; ++i) cyrillic += "\xd0\x96";  // 16 letters of two bytes: 15 fit before the end
+    for (int i = 0; i < 23; ++i) cyrillic += "\xd0\x96";  // the server's 23 letters, two bytes each: whole
     gamewindows::putName(e, cyrillic);
-    CHECK_EQ(std::string(e.name).size(), size_t(30));
+    CHECK_EQ(std::string(e.name), cyrillic);
+    gamewindows::putName(e, cyrillic + "\xd0\x96");  // one more: cut at a whole letter
+    CHECK_EQ(std::string(e.name), cyrillic);
     gamewindows::putName(e, "Bo");
     CHECK_EQ(std::string(e.name), std::string("Bo"));
 }
@@ -177,4 +179,53 @@ TEST(game_windows_the_characters_numbers_in_its_entry) {
     CHECK_EQ(int(e.baseLevel), 0);
     gamewindows::putStatus(e, nullptr);  // another build of the exe: nothing known
     CHECK(e.baseLevel == 0 && e.jobLevel == 0 && e.hp == -1 && e.sp == -1);
+}
+
+// 3.0.3-beta.9: on its full screen uaRO.exe draws nothing while its window is not active (0x6ebfec, 0x6e4bdc): only
+// a window that draws behind another is asked to get its picture whole
+TEST(game_windows_tell_whether_they_draw_behind) {
+    gamewindows::Table t{};
+    t.entries[0] = entry(10, 1, 0, "Lena");
+    t.entries[1] = entry(20, 2, 0, "Prist");
+    t.entries[1].flags = gamewindows::kDrawsBehind;
+    const auto all = gamewindows::windows(t, [](const gamewindows::Entry&) { return true; });
+    CHECK(all.size() == 2 && !all[0].drawsBehind && all[1].drawsBehind);
+}
+
+TEST(game_windows_a_summon_is_taken_once) {
+    int32_t seen = 0;
+    CHECK(!gamewindows::summoned(20, 1, 10, seen));  // another game's
+    CHECK(gamewindows::summoned(10, 2, 10, seen));
+    CHECK_EQ(seen, 2);
+    CHECK(!gamewindows::summoned(10, 2, 10, seen));  // the same one again
+    CHECK(gamewindows::summoned(10, 3, 10, seen));
+}
+
+TEST(game_windows_a_switch_waits_for_the_picture_or_its_time) {
+    CHECK(!gamewindows::switchNow(4, 5, 1000, 1100));  // not ready yet
+    CHECK(gamewindows::switchNow(5, 5, 1000, 1100));   // its picture whole
+    CHECK(gamewindows::switchNow(4, 5, 1000, 1000 + gamewindows::kSummonWaitMs));  // waited enough
+}
+
+TEST(game_windows_leaving_full_screen) {
+    gamewindows::Table t{};
+    t.entries[0] = entry(10, 1, 0, "Lena");
+    t.entries[1] = entry(20, 2, 0, "Prist");
+    const auto all = gamewindows::windows(t, [](const gamewindows::Entry&) { return true; });
+    using gamewindows::Leave;
+    CHECK(gamewindows::leaving(20, "2007-05-07a kRO Sakexe", all, 10) == Leave::Stay);  // to another game window
+    CHECK(gamewindows::leaving(10, "2007-05-07a kRO Sakexe", all, 10) == Leave::Stay);  // back to this one
+    CHECK(gamewindows::leaving(0, "", all, 10) == Leave::Wait);                          // nothing in front yet
+    CHECK(gamewindows::leaving(77, "XamlExplorerHostIslandWindow", all, 10) == Leave::Wait);  // Alt+Tab held
+    CHECK(gamewindows::leaving(77, "MultitaskingViewFrame", all, 10) == Leave::Wait);
+    CHECK(gamewindows::leaving(77, "Progman", all, 10) == Leave::Minimise);  // the desktop
+    CHECK(gamewindows::leaving(78, "Chrome_WidgetWin_1", all, 10) == Leave::Minimise);
+}
+
+TEST(game_windows_one_window_wholly_over_another) {
+    const gamewindows::Box me{100, 100, 1124, 868};
+    CHECK(gamewindows::covers(gamewindows::Box{0, 0, 1920, 1080}, me));
+    CHECK(gamewindows::covers(me, me));
+    CHECK(!gamewindows::covers(gamewindows::Box{0, 0, 1000, 1080}, me));  // part of it seen
+    CHECK(!gamewindows::covers(gamewindows::Box{}, me));
 }

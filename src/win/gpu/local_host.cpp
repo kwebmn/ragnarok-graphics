@@ -5,6 +5,7 @@
 
 #include "core/bridge_protocol.hpp"
 #include "core/bridge_wire.hpp"
+#include "core/game_windows.hpp"
 #include "core/start_screen.hpp"
 #include "win/bridge/channel.hpp"
 #include "win/bridge/serve.hpp"
@@ -62,6 +63,9 @@ DWORD WINAPI run(void* context) {
             channel.send(Msg::Hello, hello);
             return 2;
         }
+        // 3.0.3-beta.9: the game's wake (its own process), for the frame limit's wait
+        if (HANDLE wake = OpenEventA(SYNCHRONIZE, FALSE, gamewindows::wakeName(GetCurrentProcessId()).c_str()))
+            renderer.setWake(wake);
         renderer.setStateCache(s->options.stateCache);
         renderer.setMergeDraws(s->options.mergeDraws);
         renderer.setShaderVariants(s->options.shaderVariants);  // 2.5.16

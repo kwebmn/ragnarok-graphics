@@ -686,6 +686,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::GfxSoundBackgroundHint, "%"},
         {"windows", "others_music", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsOthersMusic,
          Text::WindowsOthersMusicHint, ""},  // 3.0.3-beta.3: several game windows
+        {"windows", "others_sounds", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsOthersSounds,
+         Text::WindowsOthersSoundsHint, ""},  // 3.0.3-beta.9
         {"sound", "limiter", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundLimiter,
          Text::GfxSoundLimiterHint, ""},
         {"sound", "stereo", Page::Sound, Control::Slider, 0, 100, 5, {}, {}, Text::GfxSoundStereo,
@@ -779,6 +781,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "windows.remember_place") return c.windowRememberPlace ? "1" : "0";
     if (k == "windows.others_light") return c.windowOthersLight ? "1" : "0";  // 3.0.3-beta.3
     if (k == "windows.others_music") return c.windowOthersMusic ? "1" : "0";
+    if (k == "windows.others_sounds") return c.windowOthersSounds ? "1" : "0";  // 3.0.3-beta.9
     if (k == "windows.switch_keys") return windowKeysToken(c.windowKeys);  // 3.0.3-beta.6
     if (k == "panel.show") return c.panelShow ? "1" : "0";  // 3.0.3-beta.8
     if (k == "panel.layout") return panelLayoutToken(c.panelLayout);

@@ -68,6 +68,7 @@ private:
     int dragStartX_ = 0, dragStartY_ = 0;
     uint32_t texture_ = 0;
     int texW_ = 0, texH_ = 0;
+    bool underCursor_ = false;  // 3.0.3-beta.9: drawn under the game's own cursor (found in the frame)
 };
 
 }  // namespace uagfx::win

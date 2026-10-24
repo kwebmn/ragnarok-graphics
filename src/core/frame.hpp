@@ -112,6 +112,9 @@ public:
                 const std::vector<std::vector<uint32_t>>& own = {});
     void writeTarget(const Rect& rect, const uint32_t* argb);
     bool empty() const { return commands_.empty(); }
+    // 3.0.3-beta.9: the last `count` commands moved before the one at `position` (the windows' panel under the game's
+    // cursor); nothing when there are not that many
+    void moveLastBefore(size_t count, size_t position);
     // 3.0.3-beta.8: the draws, clears and writes since the last call, through flushes (reset keeps it): whether the
     // game drew a picture anew - the windows' panel goes over such a one alone (the target keeps its pixels)
     uint32_t takeWork() {

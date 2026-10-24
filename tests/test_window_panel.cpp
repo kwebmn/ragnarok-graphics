@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+#include "core/d3d7.hpp"
+#include "core/frame.hpp"
+#include "core/states.hpp"
 #include "core/window_panel.hpp"
 #include "test.hpp"
 
@@ -159,4 +162,40 @@ TEST(window_panel_fades_as_a_whole) {
     CHECK_EQ(alphaOf(p.px[1]), 0x40u);
     panel::fade(p, 1.0f);
     CHECK_EQ(alphaOf(p.px[1]), 0x40u);
+}
+
+namespace {
+
+// A quad of the game's interface (two triangles) from x0,y0 to x1,y1
+void quad(FrameRecord& r, float x0, float y0, float x1, float y1, bool ui) {
+    DrawSetup s;
+    s.ui = ui;
+    DrawCmd cmd;
+    cmd.state = r.addState(s);
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    const float xs[6] = {x0, x1, x0, x1, x1, x0}, ys[6] = {y0, y0, y1, y0, y1, y1};
+    float v[6][8] = {};
+    for (int i = 0; i < 6; ++i) {
+        v[i][0] = xs[i];
+        v[i][1] = ys[i];
+        v[i][3] = 1;
+    }
+    r.draw(cmd, v, 6, nullptr, 0);
+}
+
+}  // namespace
+
+// 3.0.3-beta.9 (the user: the mouse over the panel «меняет цвет»): the game's own cursor - its last small interface
+// quad under the cursor's point - found, so the panel goes under it
+TEST(window_panel_finds_the_games_cursor) {
+    FrameRecord r;
+    quad(r, 0, 0, 800, 600, true);       // a window of the game under the cursor
+    quad(r, 395, 295, 410, 310, false);  // a sprite of the world there
+    quad(r, 400, 300, 432, 332, true);   // the cursor's
+    quad(r, 10, 10, 60, 30, true);       // drawn after it, somewhere else
+    CHECK_EQ(panel::cursorDraw(r, 402, 303), 2);
+    CHECK_EQ(panel::cursorDraw(r, 700, 500), -1);  // nothing small there
+    FrameRecord none;
+    CHECK_EQ(panel::cursorDraw(none, 402, 303), -1);
 }

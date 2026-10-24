@@ -35,7 +35,10 @@ struct Overrides {
     bool operator==(const Overrides& o) const;
     bool operator!=(const Overrides& o) const { return !(*this == o); }
 };
-Overrides overridesOf(const Config& c, bool onBattery, bool otherWindow = false);
+// 3.0.3-beta.3: a game window while another one is the main; 3.0.3-beta.9 (the user: «нагрузку фоновых окон надо
+// уменьшить»): one seen - 5 frames a second, one wholly behind another game window - 2 (minimised, either: 2)
+enum class Role : uint8_t { Main, Other, Hidden };
+Overrides overridesOf(const Config& c, bool onBattery, Role role = Role::Main);
 // The effects the light modes leave of the effective ones (effect_groups::effective of the file).
 EffectSettings effectsOf(const EffectSettings& effective, const Overrides& o);
 // [frames] fps_limit (0: none) under them.

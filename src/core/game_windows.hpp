@@ -11,10 +11,12 @@
 namespace uagfx::gamewindows {
 
 // 3.0.3-beta.6 (the user: switch between the game windows from inside the game, by a key and by a click): the running
-// games tell each other of their windows in a block they share (Local\uaro-graphics-windows) - each game its own
-// entry, the one of its log slot (1-8, the first started 1): the window's number for the keys and the panel.
+// games tell each other of their windows in a block they share - each game its own entry, the one of its log slot
+// (1-8, the first started 1): the window's number for the keys and the panel. 3.0.3-beta.9: a layout of its own
+// (Local\uaro-graphics-windows-2): a game asked to get its picture whole before it is shown (the summon), and its
+// answer; a 23-letter name in two-byte UTF-8 whole.
 constexpr int kMost = 8;
-constexpr size_t kName = 32;  // UTF-8 with its end: the server's 23 bytes of a name in any code page fit
+constexpr size_t kName = 48;  // UTF-8 with its end: the server's 23 bytes of a name, two-byte letters too
 
 struct Entry {
     uint32_t seq;      // odd while its game writes it
@@ -25,10 +27,19 @@ struct Entry {
     char name[kName];  // the character's, "" none yet (the login, the character select, another build of the exe)
     int16_t baseLevel, jobLevel;  // 0 not known
     int8_t hp, sp;                // percent, -1 not known
-    uint8_t spare[2];
+    uint8_t flags;                // 3.0.3-beta.9: kDrawsBehind
+    uint8_t spare;
+    uint32_t ready;  // 3.0.3-beta.9: the summon it answered - its whole picture drawn behind the window in front
+    uint8_t spare2[12];
 };
-static_assert(sizeof(Entry) == 64, "the shared block's layout is every game's");
+static_assert(sizeof(Entry) == 96, "the shared block's layout is every game's");
+// The game draws while its window is not active - in a window; on its full screen uaRO.exe draws nothing then
+// (0x6ebfec, 0x6e4bdc): a summon would only wait
+constexpr uint8_t kDrawsBehind = 1;
 struct Table {
+    int32_t summonPid;     // 3.0.3-beta.9: the game asked to get its picture whole (written by the window in front)
+    int32_t summonSerial;  // and the ask's number
+    uint8_t spare[56];
     Entry entries[kMost];
 };
 
@@ -44,6 +55,8 @@ struct Window {  // a live one, as the keys and the panel see it
     uint64_t frontAt = 0;
     std::string name;
     int baseLevel = 0, jobLevel = 0, hp = -1, sp = -1;
+    uint32_t ready = 0;
+    bool drawsBehind = false;
 };
 using Alive = std::function<bool(const Entry&)>;  // its game still runs and the window is still its own
 // The live windows by number: an entry in its own place (number = place + 1) whose game `alive` says runs
@@ -52,6 +65,31 @@ std::vector<Window> windows(const Table& t, const Alive& alive);
 // after this one's; nullptr with no other window
 const Window* previous(const std::vector<Window>& all, uint32_t selfPid);
 const Window* byNumber(const std::vector<Window>& all, int number);
+
+// 3.0.3-beta.9 (the user: switching «более гладко», no blink): a switch by the keys or the panel asks the next window
+// first to get its picture whole - its own resolution, DLSS, effects - behind the one in front, and shows it then,
+// or once kSummonWaitMs passed; asked, a game draws whole for kSummonKeepMs at most.
+constexpr uint64_t kSummonWaitMs = 400, kSummonKeepMs = 1000;
+// A game's wake: an event its frame limiter waits on with its timer - the one asked draws at once, not up to a
+// background frame (0.2-0.5 s) later
+std::string wakeName(uint32_t pid);
+// The block's ask is for this game (self) and new (seen: the last taken, set to it)
+bool summoned(int32_t pid, int32_t serial, uint32_t self, int32_t& seen);
+// The window asked answered (ready: its entry's; serial: the ask's), or it has had its time
+bool switchNow(uint32_t ready, uint32_t serial, uint64_t since, uint64_t now);
+
+// Where the focus went from a game on its full screen (uaRO.exe minimises itself then, WM_ACTIVATE at 0x6541e0):
+// another game window, or this one again - it stays (no blink); Windows' own switcher still open, or nothing in
+// front yet - wait; anything else (the desktop, a program) - minimised, as the game itself does
+enum class Leave { Wait, Stay, Minimise };
+Leave leaving(uint32_t foregroundPid, const std::string& foregroundClass, const std::vector<Window>& games,
+              uint32_t selfPid);
+
+// A window's place on the screen; one wholly over another (a game window behind another one is not seen)
+struct Box {
+    int left = 0, top = 0, right = 0, bottom = 0;
+};
+bool covers(const Box& outer, const Box& inner);
 
 // Windows' key codes the keys use (core knows no windows.h)
 constexpr unsigned kTab = 0x09, kPad0 = 0x60;

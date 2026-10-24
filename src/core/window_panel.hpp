@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "core/frame.hpp"
+
 namespace uagfx::panel {
 
 // 3.0.3-beta.7 (the user: the game windows' panel in the game - «делай современно», «у каждого свое разрешение
@@ -62,6 +64,10 @@ struct Picture {
 void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part hovered, Layout layout);
 // The whole picture (premultiplied) at an opacity: [panel] opacity
 void fade(Picture& p, float opacity);
+// 3.0.3-beta.9 (the user: the mouse over the panel «меняет цвет»): the command of the game's own cursor in a frame -
+// its last small interface quad over the cursor's point (game pixels) among the frame's last draws; -1 none (the
+// panel then goes over everything, Windows' arrow over it)
+int cursorDraw(const FrameRecord& r, float x, float y);
 // A colour (0xRRGGBB) at an opacity over a premultiplied pixel: the words' coverage over the picture
 void over(uint32_t& pixel, uint32_t rgb, float opacity);
 // A bar's colour (0xRRGGBB): red under 25 % as the game's own gauges (0x4490d0); else green HP, blue SP

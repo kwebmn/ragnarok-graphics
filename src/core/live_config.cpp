@@ -156,6 +156,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("others_music", flag(running.windowOthersMusic), flag(file.windowOthersMusic)));
         n.windowOthersMusic = file.windowOthersMusic;
     }
+    if (file.windowOthersSounds != running.windowOthersSounds) {  // 3.0.3-beta.9
+        u.applied.push_back(
+            change("others_sounds", flag(running.windowOthersSounds), flag(file.windowOthersSounds)));
+        n.windowOthersSounds = file.windowOthersSounds;
+    }
     if (file.windowKeys != running.windowKeys) {  // 3.0.3-beta.6
         u.applied.push_back(
             change("switch_keys", windowKeysToken(running.windowKeys), windowKeysToken(file.windowKeys)));

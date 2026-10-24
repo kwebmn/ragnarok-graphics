@@ -464,6 +464,7 @@ struct Config {
     // 3.0.3-beta.3: others_light - a game window while another one is the main (in front, or the last in front) drawn
     // light (core/light_mode); others_music - its music too (off: the main window's alone)
     bool windowOthersLight = true, windowOthersMusic = false;
+    bool windowOthersSounds = false;  // 3.0.3-beta.9: others_sounds - their sounds too (off: the main window's alone)
     // 3.0.3-beta.6: switch_keys - the keys that switch the game windows (core/game_windows)
     WindowKeys windowKeys = WindowKeys::All;
     // 3.0.3-beta.8: [panel] - the game windows' panel in the game's picture (core/window_panel, win/window_panel):
