@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.3-beta.9 — what is new
+
+- **No blink on the full screen.** On its full screen the game minimised its own window as soon as it was not in
+  front and maximised it again - the blink when switching. Now it does not minimise when you go to another game
+  window, and the switch is instant. To the desktop or another program it still minimises, as before.
+- **A sharp picture at once.** A game in a window gets its whole picture ready behind the current one first (0.4 s at
+  most) and comes to the front sharp, with DLSS and the effects. On the full screen windows behind draw nothing at
+  all, so they are shown at once.
+- **Lighter background windows.** One seen behind: 5 frames a second instead of 10; one covered by another game
+  window, or minimised: 2. A minimised one used to run its loop about 60 times a second.
+- **The other game windows' sounds fade out** as their music does: only the window you play in is heard. The row
+  «Sounds in the other game windows» on «Sound».
+- **The game's cursor stays over the windows' panel** instead of turning into Windows' arrow.
+
 # uaRO Graphics 3.0.3-beta.8 — what is new
 
 - **The windows' panel is in the game's picture itself** now, not a small window over it: it shows in a recording of
