@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.3-beta.8 — what is new
+
+- **The windows' panel is in the game's picture itself** now, not a small window over it: it shows in a recording of
+  the screen too. A click on a card still brings that window to the front, and the game does not get the click.
+  Over the panel Windows' own arrow shows.
+- **A button beside its cross** lays the cards in a row or a column, right in the game.
+- **The panel's own settings:** «Game and chat» has a section of its own, «The windows' panel» - «The windows' panel
+  in the game», «The panel's layout», «The panel's size» and the new «The panel's opacity». The same rows are in the
+  game's console (the ~ key): the panel goes on or off without leaving the game.
+
 # uaRO Graphics 3.0.3-beta.7 — what is new
 
 - **The windows' panel in the game.** With two or more game windows open, a panel shows over the game: a card per
