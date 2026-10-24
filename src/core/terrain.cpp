@@ -68,6 +68,24 @@ bool patchWhole(const Grid& grid, int x, int y) {
     return true;
 }
 
+// 3.0.4-beta.12, the strips (as core/seams.cpp's): a tile ending at 1 and the next starting at 0 is the same place
+bool same(float a, float b) {
+    const float d = a - b;
+    return std::fabs(d - std::round(d)) < 0.02f;
+}
+// a place of the neighbour's square past the shared edge folded back into it - its texture mirrored across the edge
+float fold(float x) { return x < 0.0f ? -x : x > 1.0f ? 2.0f - x : x; }
+// a place of a square kept off its outermost kBand: the textures' outer texels are their dark rims and what the next
+// quarter of an atlas bleeds in
+constexpr float kBand = 0.03f;
+float inset(float x) { return x < kBand ? 2.0f * kBand - x : x > 1.0f - kBand ? 2.0f * (1.0f - kBand) - x : x; }
+void uvAt(const gnd::Surface& s, float fu, float fv, float* out) {
+    const float top = s.u[0] + (s.u[1] - s.u[0]) * fu, bottom = s.u[2] + (s.u[3] - s.u[2]) * fu;
+    const float vt = s.v[0] + (s.v[1] - s.v[0]) * fu, vb = s.v[2] + (s.v[3] - s.v[2]) * fu;
+    out[0] = top + (bottom - top) * fv;
+    out[1] = vt + (vb - vt) * fv;
+}
+
 void normalize(float* n) {
     const float l = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
     if (l > 1e-12f) {
@@ -84,7 +102,7 @@ struct Builder {
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
     };
-    std::map<int, Part> parts;
+    std::map<int, Part> parts, bands, strips;  // by texture: the ground's; 3.0.4-beta.12 the own bands', the strips'
 
     void lightmapUv(uint16_t lightmap, float fu, float fv, float* out) const {
         const int cols = std::max(atlas.width / 8, 1);
@@ -98,6 +116,127 @@ struct Builder {
         p.indices.insert(p.indices.end(), {a, b, c, b, d, c});
     }
 };
+
+// 3.0.4-beta.12: the strips inside cell (x, y) along its edges with the neighbours that look different (terrain.hpp)
+void blendsOf(Builder& b, const Grid& grid, int x, int y, int n, const std::vector<uint8_t>* laid) {
+    const gnd::Ground& g = b.g;
+    const auto cellAt = [&](int cx, int cy) -> const gnd::Cell* {
+        if (cx < 0 || cy < 0 || cx >= g.width || cy >= g.height) return nullptr;
+        const gnd::Cell& c = g.cells[size_t(cy) * size_t(g.width) + size_t(cx)];
+        return c.top >= 0 && size_t(c.top) < g.surfaces.size() ? &c : nullptr;
+    };
+    const auto handLaid = [&](int cx, int cy) { return laid && (*laid)[size_t(cy) * size_t(g.width) + size_t(cx)]; };
+    const gnd::Cell* c = cellAt(x, y);
+    if (!c || handLaid(x, y)) return;
+    const gnd::Surface& s = g.surfaces[size_t(c->top)];
+    const bool smooth = patchWhole(grid, x, y);
+    const float half[2] = {float(g.width) / 2.0f, float(g.height) / 2.0f};
+    const float step = 1.0f / float(n);
+    const int rows = (n + 1) / 2;  // the cell's own rows that reach its middle
+    // the four ways: this cell's corners on the shared edge and the neighbour's same corners
+    struct Way {
+        int dx, dy, mine[2], theirs[2];
+    };
+    static const Way kWays[4] = {{1, 0, {1, 3}, {0, 2}}, {-1, 0, {0, 2}, {1, 3}},
+                                 {0, 1, {2, 3}, {0, 1}}, {0, -1, {0, 1}, {2, 3}}};
+    for (const Way& w : kWays) {
+        const int nx = x + w.dx, ny = y + w.dy;
+        const gnd::Cell* o = cellAt(nx, ny);
+        if (!o || handLaid(nx, ny)) continue;
+        bool wall = false;  // a step between the two
+        for (int k = 0; k < 2; ++k) wall = wall || std::fabs(c->h[w.mine[k]] - o->h[w.theirs[k]]) > 0.05f * g.zoom;
+        if (wall) continue;
+        const gnd::Surface& t = g.surfaces[size_t(o->top)];
+        const bool one = s.texture == t.texture;
+        if (one) {  // one texture: a seam only where its coordinates jump at the edge
+            bool alike = true;
+            for (int k = 0; k < 2; ++k)
+                alike = alike && same(s.u[w.mine[k]], t.u[w.theirs[k]]) && same(s.v[w.mine[k]], t.v[w.theirs[k]]);
+            if (alike) continue;
+        }
+        const bool low = x < nx || (x == nx && y < ny);  // the side whose noise counts up for the other
+        // how much a place is the neighbour's: its cells (the neighbour alone where both have one texture) 1 at their
+        // middles, bilinear between the cells' middles - 0.5 at the edge, the line rounds the cells' corners off
+        const auto theirs = [&](int cx, int cy) {
+            if (cx == nx && cy == ny) return 1.0f;
+            const gnd::Cell* k = one ? nullptr : cellAt(cx, cy);
+            return k && g.surfaces[size_t(k->top)].texture == t.texture ? 1.0f : 0.0f;
+        };
+        const auto claim = [&](float fu, float fv) {
+            const float gx = float(x) + fu - 0.5f, gy = float(y) + fv - 0.5f;
+            const int x0 = int(std::floor(gx)), y0 = int(std::floor(gy));
+            const float fx = gx - float(x0), fy = gy - float(y0);
+            const float top = theirs(x0, y0) + (theirs(x0 + 1, y0) - theirs(x0, y0)) * fx;
+            const float bottom = theirs(x0, y0 + 1) + (theirs(x0 + 1, y0 + 1) - theirs(x0, y0 + 1)) * fx;
+            return top + (bottom - top) * fy;
+        };
+        // (u, v) of the cell's grid point `across` rows from the edge, `along` it
+        const auto gridOf = [&](int along, int across, int& gi, int& gj) {
+            gi = w.dx == 1 ? n - across : w.dx == -1 ? across : along;
+            gj = w.dy == 1 ? n - across : w.dy == -1 ? across : along;
+        };
+        const auto placed = [&](float fu, float fv, Vertex& v) {
+            v.pos[0] = (float(x) + fu - half[0]) * g.zoom;
+            v.pos[1] = heightAt(*c, grid, x, y, fu, fv, smooth);
+            v.pos[2] = (float(y) + fv - half[1]) * g.zoom;
+            v.normal[0] = 0.0f, v.normal[1] = -1.0f, v.normal[2] = 0.0f;
+            b.lightmapUv(s.lightmap, fu, fv, v.lm);
+        };
+        // its own band: its texture kept off its rim, over 2 kBand from the edge - whole there, then fading (shade())
+        Builder::Part& band = b.bands[s.texture];
+        uint32_t first = uint32_t(band.vertices.size());
+        for (int j = 0; j <= 1; ++j)
+            for (int i = 0; i <= n; ++i) {
+                int gi = 0, gj = 0;
+                gridOf(i, 0, gi, gj);
+                float fu = float(gi) * step, fv = float(gj) * step;  // on the edge: as the ground's own points
+                if (j) {
+                    if (w.dx) fu += w.dx > 0 ? -2.0f * kBand : 2.0f * kBand;
+                    if (w.dy) fv += w.dy > 0 ? -2.0f * kBand : 2.0f * kBand;
+                }
+                Vertex v{};
+                placed(fu, fv, v);
+                uvAt(s, inset(fu), inset(fv), v.uv);
+                v.color = s.color | 0xFF000000u;
+                v.blend = 0xFF0000u | (low ? 0xFF00u : 0u) | (j ? 0xFFu : 0u);
+                band.vertices.push_back(v);
+            }
+        for (int i = 0; i < n; ++i) {
+            const uint32_t a = first + uint32_t(i);
+            Builder::quad(band, a, a + 1, a + uint32_t(n + 1), a + uint32_t(n + 2));
+        }
+        // the neighbour's strip on the cell's own grid points (the ground's own, the same arithmetic), its quads split
+        // as the ground's: from (gi + 1, gj) to (gi, gj + 1)
+        Builder::Part& strip = b.strips[t.texture];
+        first = uint32_t(strip.vertices.size());
+        for (int j = 0; j <= rows; ++j)
+            for (int i = 0; i <= n; ++i) {
+                int gi = 0, gj = 0;
+                gridOf(i, j, gi, gj);
+                const float fu = float(gi) * step, fv = float(gj) * step;
+                Vertex v{};
+                placed(fu, fv, v);
+                uvAt(t, inset(fold(fu - float(w.dx))), inset(fold(fv - float(w.dy))), v.uv);
+                const float f = float(j) * step > 0.5f + 1e-4f ? 0.0f : std::clamp(claim(fu, fv), 0.0f, 1.0f);
+                v.color = (s.color & 0xFFFFFFu) | uint32_t(255.0f * f + 0.5f) << 24;
+                v.blend = (low ? 0xFF00u : 0u) | uint32_t(255.0f * float(j) / float(rows) + 0.5f);
+                strip.vertices.push_back(v);
+            }
+        const auto at = [&](int gi, int gj) {  // the strip's point at the cell's grid point
+            const int along = w.dx ? gj : gi;
+            const int across = w.dx == 1 ? n - gi : w.dx == -1 ? gi : w.dy == 1 ? n - gj : gj;
+            return first + uint32_t(across * (n + 1) + along);
+        };
+        for (int j = 0; j < rows; ++j)
+            for (int i = 0; i < n; ++i) {
+                int gi0 = 0, gj0 = 0, gi1 = 0, gj1 = 0;
+                gridOf(i, j, gi0, gj0);
+                gridOf(i + 1, j + 1, gi1, gj1);
+                const int gi = std::min(gi0, gi1), gj = std::min(gj0, gj1);
+                Builder::quad(strip, at(gi, gj), at(gi + 1, gj), at(gi, gj + 1), at(gi + 1, gj + 1));
+            }
+    }
+}
 
 }  // namespace
 
@@ -122,15 +261,16 @@ Atlas lightmapAtlas(const gnd::Ground& g) {
     return a;
 }
 
-Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas) {
+Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid) {
     const int n = std::clamp(subdivide, 1, 8);
+    if (laid && laid->size() != g.cells.size()) laid = nullptr;
     const Grid grid = joinedCorners(g);
     const float half[2] = {float(g.width) / 2.0f, float(g.height) / 2.0f};
     const float step = 1.0f / float(n), e = 0.05f;
     Mesh m;
     for (int cy0 = 0; cy0 < g.height; cy0 += kChunk)
         for (int cx0 = 0; cx0 < g.width; cx0 += kChunk) {
-            Builder b{g, atlas, {}};
+            Builder b{g, atlas, {}, {}, {}};
             const int cx1 = std::min(cx0 + kChunk, g.width), cy1 = std::min(cy0 + kChunk, g.height);
             for (int y = cy0; y < cy1; ++y)
                 for (int x = cx0; x < cx1; ++x) {
@@ -213,24 +353,35 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas) {
                     }
                 }
             if (b.parts.empty()) continue;
+            if (n > 1)  // 3.0.4-beta.12: the strips between the cells that look different
+                for (int y = cy0; y < cy1; ++y)
+                    for (int x = cx0; x < cx1; ++x) blendsOf(b, grid, x, y, n, laid);
             Chunk ch;
+            ch.cellX = cx0;
+            ch.cellY = cy0;
             ch.firstVertex = uint32_t(m.vertices.size());
             ch.firstBatch = uint32_t(m.batches.size());
             for (int k = 0; k < 3; ++k) ch.lo[k] = 1e30f, ch.hi[k] = -1e30f;
-            for (const auto& t : b.parts) {
-                Batch batch;
-                batch.texture = t.first;
-                batch.firstVertex = uint32_t(m.vertices.size());
-                batch.vertexCount = uint32_t(t.second.vertices.size());
-                batch.firstIndex = uint32_t(m.indices.size());
-                batch.indexCount = uint32_t(t.second.indices.size());
-                for (const Vertex& v : t.second.vertices)
-                    for (int k = 0; k < 3; ++k)
-                        ch.lo[k] = std::min(ch.lo[k], v.pos[k]), ch.hi[k] = std::max(ch.hi[k], v.pos[k]);
-                m.vertices.insert(m.vertices.end(), t.second.vertices.begin(), t.second.vertices.end());
-                m.indices.insert(m.indices.end(), t.second.indices.begin(), t.second.indices.end());
-                m.batches.push_back(batch);
-            }
+            const auto put = [&](const std::map<int, Builder::Part>& parts, uint8_t layer) {
+                for (const auto& t : parts) {
+                    Batch batch;
+                    batch.texture = t.first;
+                    batch.layer = layer;
+                    batch.firstVertex = uint32_t(m.vertices.size());
+                    batch.vertexCount = uint32_t(t.second.vertices.size());
+                    batch.firstIndex = uint32_t(m.indices.size());
+                    batch.indexCount = uint32_t(t.second.indices.size());
+                    for (const Vertex& v : t.second.vertices)
+                        for (int k = 0; k < 3; ++k)
+                            ch.lo[k] = std::min(ch.lo[k], v.pos[k]), ch.hi[k] = std::max(ch.hi[k], v.pos[k]);
+                    m.vertices.insert(m.vertices.end(), t.second.vertices.begin(), t.second.vertices.end());
+                    m.indices.insert(m.indices.end(), t.second.indices.begin(), t.second.indices.end());
+                    m.batches.push_back(batch);
+                }
+            };
+            put(b.parts, kGround);
+            put(b.bands, kOwnBand);
+            put(b.strips, kNeighbour);
             ch.vertexCount = uint32_t(m.vertices.size()) - ch.firstVertex;
             ch.batchCount = uint32_t(m.batches.size()) - ch.firstBatch;
             m.chunks.push_back(ch);

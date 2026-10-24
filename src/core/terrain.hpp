@@ -16,11 +16,21 @@ struct Vertex {
     float normal[3];  // up is -y
     float uv[2];      // its texture's
     float lm[2];      // the lightmap atlas'
-    uint32_t color;   // ARGB, the surface's
+    uint32_t color;   // ARGB, the surface's; a neighbour's strip: alpha how much the place is the neighbour's
+    uint32_t blend;   // 3.0.4-beta.12, a strip's: as the ground seams' specular (shade() bit 31) - red 255 a cell's own
+                      // band, green 255 on the side whose noise counts up, blue the way across (0 at the edge)
 };
+// 3.0.4-beta.12 (the user chose «Мягкие переходы»): the layers of a chunk, drawn in this order - the ground; along each
+// edge between two cells that look different (another texture, or one whose coordinates jump there) and no step,
+// inside each: its own band (its texture again over the edge, kept off the texture's outer texels, whole at the edge,
+// fading - the rim's dark line covered), then the neighbour's strip (its texture mirrored across the edge over the
+// cell's own rows up to the middle, on its vertices exactly, shown where the noise over the world says - one wandering
+// line both sides agree on), as the game's ground seams (core/seams.hpp) on the game's cells
+constexpr uint8_t kGround = 0, kOwnBand = 1, kNeighbour = 2;
 // 3.0.4-beta.10: a batch's vertices lie together and its indices count from its first - one draw of 16-bit indices
 struct Batch {
     int texture = -1;  // the .gnd's texture
+    uint8_t layer = kGround;
     uint32_t firstVertex = 0, vertexCount = 0;
     uint32_t firstIndex = 0, indexCount = 0;
 };
@@ -28,6 +38,7 @@ struct Batch {
 // 8, not 16 - prt_fild08 at the game's zoom 300 had 1481 of the 40096 vertices of the chunks in view on the screen)
 constexpr int kChunk = 8;
 struct Chunk {
+    int cellX = 0, cellY = 0;  // 3.0.4-beta.12: its first cell
     float lo[3], hi[3];  // its box in the world
     uint32_t firstVertex = 0, vertexCount = 0;
     uint32_t firstBatch = 0, batchCount = 0;
@@ -49,6 +60,8 @@ struct Atlas {
 Atlas lightmapAtlas(const gnd::Ground& g);
 
 constexpr float kJoin = 0.5f;  // corners closer than this are one: whole ground
-Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas);
+// laid: a cell row by row 1 in a patch the map's makers laid by hand (core/ground_heights.hpp laidPatches) - no strips
+// round it, its edges as straight as the game draws them; the strips with `subdivide` 2 and more alone (none far off)
+Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid = nullptr);
 
 }  // namespace uagfx::terrain

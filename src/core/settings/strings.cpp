@@ -2338,13 +2338,13 @@ constexpr Entry kTexts[] = {
     {Text::FxGroundSeamsHint,
      "Where grass meets a road or sand, the line between them no longer runs in steps along the ground's cells: it "
      "wanders, one texture reaching into the other. On fields and in towns; the tiled floors of dungeons keep their "
-     "straight edges (Direct3D 12).",
+     "straight edges (Direct3D 12). With Own ground (prototype) on, its textures blend the same way.",
      "Там, де трава зустрічається з дорогою чи піском, межа між ними більше не йде сходинками вздовж клітинок землі: "
      "вона петляє, одна текстура заходить в іншу. На полях і в містах; плиткова підлога підземель зберігає рівні "
-     "краї (Direct3D 12).",
+     "краї (Direct3D 12). Зі «Своя земля (прототип)» так само змішуються текстури своєї землі.",
      "Там, где трава встречается с дорогой или песком, граница между ними больше не идёт ступеньками вдоль клеток "
      "земли: она петляет, одна текстура заходит в другую. На полях и в городах; плиточный пол подземелий сохраняет "
-     "ровные края (Direct3D 12)."},
+     "ровные края (Direct3D 12). Со «Своя земля (прототип)» так же смешиваются текстуры своей земли."},
     {Text::ConsoleTitle, "uaRO Graphics - effects",
      "uaRO Graphics — ефекти",
      "uaRO Graphics — эффекты"},

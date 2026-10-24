@@ -40,24 +40,26 @@ bool place(const View& v, const camera::Projection& p, const map::Axes& axes, co
 
 bool boxInView(const View& v, const camera::Projection& p, int width, int height, const float lo[3], const float hi[3],
                float most, float& nearest) {
-    int front = 0, left = 0, right = 0, above = 0, below = 0;
+    // 3.0.4-beta.12: by the view's planes - through the eye and the screen's edges, the near one, `most` - which hold
+    // for corners behind the eye too: all eight outside one of them, none of it shows
+    const float l = -p.cx / p.f0, r = (float(width) - p.cx) / p.f0, t = -p.cy / p.f1, b = (float(height) - p.cy) / p.f1;
+    int out[6] = {0, 0, 0, 0, 0, 0};
     nearest = 1e30f;
     for (int k = 0; k < 8; ++k) {
         const float w[3] = {k & 1 ? hi[0] : lo[0], k & 2 ? hi[1] : lo[1], k & 4 ? hi[2] : lo[2]};
         float c[3];
         toView(v, w, c);
         nearest = std::min(nearest, std::max(c[2], 0.0f));
-        if (c[2] <= p.nearZ) continue;
-        ++front;
-        const float x = c[0] / c[2] * p.f0 + p.cx, y = c[1] / c[2] * p.f1 + p.cy;
-        left += x < 0.0f;
-        right += x > float(width);
-        above += y < 0.0f;
-        below += y > float(height);
+        out[0] += c[2] <= p.nearZ;
+        out[1] += c[2] > most;
+        out[2] += c[0] < l * c[2];
+        out[3] += c[0] > r * c[2];
+        out[4] += c[1] < t * c[2];
+        out[5] += c[1] > b * c[2];
     }
-    if (front == 0 || nearest > most) return false;
-    if (front < 8) return true;  // round the eye: no side to tell
-    return left < 8 && right < 8 && above < 8 && below < 8;
+    for (int n : out)
+        if (n == 8) return false;
+    return true;
 }
 
 void Shading::reset(int width, int height, float zoom) {
@@ -67,6 +69,9 @@ void Shading::reset(int width, int height, float zoom) {
     corners_.assign(size_t(width_ + 1) * size_t(height_ + 1), 0u);
     std::fill(sum_, sum_ + 4, 0);
     seen_ = 0;
+    changed_.clear();
+    tooMany_ = false;
+    toldMean_ = 0xFFFFFFFFu;
     beginFrame();
     fit();
 }
@@ -83,6 +88,29 @@ void Shading::note(float x, float z, uint32_t diffuse) {
     }
     seen_ += c ? 0 : 1;
     c = diffuse;
+    if (changed_.size() < 65536)
+        changed_.push_back(uint32_t(j) * uint32_t(width_ + 1) + uint32_t(i));
+    else
+        tooMany_ = true;
+}
+
+uint32_t Shading::mean() const {
+    if (!seen_) return 0xFFFFFFFFu;
+    uint32_t m = 0;
+    for (int k = 0; k < 4; ++k) m |= uint32_t((sum_[k] + seen_ / 2) / seen_) << (k * 8);
+    return m;
+}
+
+void Shading::takeChanged(std::vector<uint32_t>& corners, bool& mean) {
+    corners.swap(changed_);
+    changed_.clear();
+    const uint32_t now = this->mean();
+    bool moved = tooMany_;
+    for (int k = 0; k < 32; k += 8)
+        moved = moved || std::abs(int((now >> k) & 0xFF) - int((toldMean_ >> k) & 0xFF)) > 4;
+    if (moved) toldMean_ = now;
+    tooMany_ = false;
+    mean = moved;
 }
 
 uint32_t Shading::cornerOr(int i, int j, uint32_t none) const {
@@ -93,11 +121,7 @@ uint32_t Shading::cornerOr(int i, int j, uint32_t none) const {
 }
 
 uint32_t Shading::diffuseAt(float x, float z) const {
-    uint32_t mean = 0xFFFFFFFFu;
-    if (seen_) {
-        mean = 0;
-        for (int k = 0; k < 4; ++k) mean |= uint32_t((sum_[k] + seen_ / 2) / seen_) << (k * 8);
-    }
+    const uint32_t mean = this->mean();
     const float fx = x / zoom_ + float(width_) / 2.0f, fz = z / zoom_ + float(height_) / 2.0f;
     const int i = int(std::floor(fx)), j = int(std::floor(fz));
     const float tx = std::clamp(fx - float(i), 0.0f, 1.0f), tz = std::clamp(fz - float(j), 0.0f, 1.0f);

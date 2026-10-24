@@ -61,9 +61,18 @@ public:
     void fog(float zd, uint32_t specular);  // a vertex of the game's ground this frame: its depth and its specular
     void fit();                             // the frame's fog line, once its vertices are in
     uint32_t specularAt(float zd) const;    // alpha by the line (none seen: 255), the game's colour
+    bool fogged() const { return fogged_; }
+    // 3.0.4-beta.12: the corners given another colour since the last call (index j * (width + 1) + i, in the order
+    // seen) - the renderer makes the colours round them again; mean: the mean the unseen ones take moved by more than
+    // a little (all to make again)
+    void takeChanged(std::vector<uint32_t>& corners, bool& mean);
 
 private:
     uint32_t cornerOr(int i, int j, uint32_t none) const;
+    uint32_t mean() const;
+    std::vector<uint32_t> changed_;
+    bool tooMany_ = false;
+    uint32_t toldMean_ = 0xFFFFFFFFu;
     int width_ = 0, height_ = 0;
     float zoom_ = 1.0f;
     std::vector<uint32_t> corners_;  // (width + 1) x (height + 1), ARGB; 0 not seen

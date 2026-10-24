@@ -1163,7 +1163,16 @@ struct Renderer::Impl {
             std::vector<own_ground::Tl2> verts;
             std::vector<uint16_t> idx;
         };
-        std::vector<Pending> pending;  // by texture, the last none
+        // by layer (terrain::kGround, 3.0.4-beta.12 the own bands and the neighbours' strips), by texture, last none
+        std::vector<Pending> pending[3];
+        std::vector<uint8_t> drawLayer;  // of each of rec's draws
+        // 3.0.4-beta.12: each vertex's diffuse kept (the mesh's, the distant one's) and each chunk's up to date - made
+        // again round the corners the game gives another colour (own_ground::Shading::takeChanged)
+        std::vector<uint32_t> colours[2];
+        std::vector<uint8_t> fresh[2];
+        std::vector<int32_t> chunkAt;  // a chunk's index by its square of cells (kChunk), -1 none
+        int chunksWide = 0;
+        std::vector<uint32_t> changed;
         uint32_t frames = 0;        // drawn on this ground
         double slowest = 0.0;       // ms, of the frames so far
         size_t most = 0;            // vertices, the most a frame

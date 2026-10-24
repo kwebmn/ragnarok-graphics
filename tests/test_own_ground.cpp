@@ -77,6 +77,11 @@ TEST(own_ground_chunks_in_view) {
     const float roundLo[3] = {-10, -10, -50}, roundHi[3] = {10, 10, 50};  // round the eye: kept
     CHECK(own_ground::boxInView(v, p, 1920, 1080, roundLo, roundHi, 4000.0f, nearest));
     CHECK(nearest == 0.0f);
+    // 3.0.4-beta.12: under the eye and partly behind it, yet off the screen (below its bottom edge) - left out: kept
+    // as "round the eye", prt_fild08's chunks under the camera were most of the vertices projected (7262 of 81264 on
+    // the screen at zoom 300)
+    const float underLo[3] = {-10, 100, -50}, underHi[3] = {10, 120, 50};
+    CHECK(!own_ground::boxInView(v, p, 1920, 1080, underLo, underHi, 4000.0f, nearest));
 }
 
 TEST(own_ground_takes_the_game_s_colours) {
@@ -123,4 +128,27 @@ TEST(own_ground_follows_the_game_s_fog) {
     for (float zd : {100.0f, 900.0f}) s.fog(zd, 0xFF000000u);
     s.fit();
     CHECK_EQ(s.specularAt(5000.0f) >> 24, 0xFFu);
+}
+
+TEST(own_ground_tells_which_corners_changed) {
+    // 3.0.4-beta.12: the renderer keeps each chunk's colours and makes them again only round the corners the game gave
+    // another colour (their look-ups were most of the pass: 4.4 of its 5.7 ms at zoom 1200 on prt_fild08)
+    own_ground::Shading s;
+    s.reset(4, 2, 10.0f);
+    std::vector<uint32_t> changed;
+    bool mean = false;
+    s.takeChanged(changed, mean);
+    CHECK(changed.empty());
+    s.note(-20.0f, -10.0f, 0xFF808080u);  // corner (0, 0)
+    s.note(-10.0f, -10.0f, 0xFF808080u);  // corner (1, 0)
+    s.takeChanged(changed, mean);
+    CHECK_EQ(changed.size(), size_t(2));
+    CHECK(mean);  // the first seen: the mean the unseen ones take moved from white
+    CHECK(changed.size() == 2 && changed[0] == 0u && changed[1] == 1u);
+    s.note(-20.0f, -10.0f, 0xFF808080u);  // the same colour again: nothing
+    s.takeChanged(changed, mean);
+    CHECK(changed.empty() && !mean);
+    s.note(20.0f, 10.0f, 0xFF828282u);  // corner (4, 2): its index 2 * 5 + 4; the mean moved by less than a little
+    s.takeChanged(changed, mean);
+    CHECK(changed.size() == 1 && changed[0] == 14u && !mean);
 }

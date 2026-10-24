@@ -84,6 +84,54 @@ gnd::Ground parsed() {
     return g;
 }
 
+// 3.0.4-beta.12: 4 x 2 flat cells of 10, the first row grass grass dirt dirt, the second all grass - seams between
+// (1, 0) and (2, 0) (x = 0), and under (2, 0) and (3, 0) (z = 0); `laid` the dirt as a patch laid by hand
+gnd::Ground flat() {
+    Writer w;
+    w.bytes("GRGN", 4);
+    const uint8_t version[2] = {1, 7};
+    w.bytes(version, 2);
+    w.i32(4);
+    w.i32(2);
+    w.f32(10.0f);
+    w.i32(2);
+    w.i32(80);
+    w.text("grass.bmp", 80);
+    w.text("dirt.bmp", 80);
+    w.i32(2);
+    w.i32(8);
+    w.i32(8);
+    w.i32(1);
+    for (int l = 0; l < 2; ++l) {
+        for (int i = 0; i < 64; ++i) w.bytes("\xff", 1);
+        for (int i = 0; i < 64; ++i) w.bytes("\x10\x20\x30", 3);
+    }
+    w.i32(2);
+    for (int s = 0; s < 2; ++s) {
+        const float u[4] = {0, 1, 0, 1}, v[4] = {0, 0, 1, 1};
+        for (float f : u) w.f32(f);
+        for (float f : v) w.f32(f);
+        w.i16(int16_t(s));
+        w.u16(uint16_t(s));
+        w.bytes("\xff\xff\xff\xff", 4);
+    }
+    for (int y = 0; y < 2; ++y)
+        for (int x = 0; x < 4; ++x) {
+            for (int k = 0; k < 4; ++k) w.f32(0.0f);
+            w.i32(y == 0 && x >= 2 ? 1 : 0), w.i32(-1), w.i32(-1);
+        }
+    gnd::Ground g;
+    std::string error;
+    CHECK(gnd::parse(w.b.data(), w.b.size(), g, error));
+    return g;
+}
+
+size_t layerBatches(const terrain::Mesh& m, uint8_t layer) {
+    size_t n = 0;
+    for (const terrain::Batch& b : m.batches) n += b.layer == layer ? 1 : 0;
+    return n;
+}
+
 }  // namespace
 
 TEST(gnd_read_whole) {
@@ -211,4 +259,61 @@ TEST(terrain_the_detail_levels_share_their_chunks) {
         CHECK(fine.chunks[k].lo[0] == coarse.chunks[k].lo[0] && fine.chunks[k].lo[2] == coarse.chunks[k].lo[2]);
         CHECK(fine.chunks[k].hi[0] == coarse.chunks[k].hi[0] && fine.chunks[k].hi[2] == coarse.chunks[k].hi[2]);
     }
+}
+
+TEST(terrain_blends_where_two_textures_meet) {
+    // 3.0.4-beta.12 (the user chose «Мягкие переходы»): inside each of two cells that meet with other textures, the
+    // neighbour's texture over the rows up to the middle - on the ground's own vertices - and the cell's own band
+    const gnd::Ground g = flat();
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const terrain::Mesh m = terrain::build(g, 3, atlas);
+    CHECK(layerBatches(m, terrain::kOwnBand) > 0);
+    CHECK(layerBatches(m, terrain::kNeighbour) > 0);
+    std::vector<const terrain::Vertex*> ground;
+    for (const terrain::Batch& b : m.batches)
+        if (b.layer == terrain::kGround)
+            for (uint32_t v = b.firstVertex; v < b.firstVertex + b.vertexCount; ++v) ground.push_back(&m.vertices[v]);
+    // the seam at x = 0 between grass (1, 0) and dirt (2, 0), z -10..0: the dirt's strip in (1, 0)
+    int onGround = 0, strips = 0, beyond = 0, atEdge = 0, lowSide = 0, highSide = 0;
+    for (const terrain::Batch& b : m.batches) {
+        if (b.layer != terrain::kNeighbour) continue;
+        for (uint32_t k = b.firstVertex; k < b.firstVertex + b.vertexCount; ++k) {
+            const terrain::Vertex& v = m.vertices[k];
+            ++strips;
+            for (const terrain::Vertex* x : ground)  // the strips on the ground's own vertices, exactly
+                if (x->pos[0] == v.pos[0] && x->pos[1] == v.pos[1] && x->pos[2] == v.pos[2]) {
+                    ++onGround;
+                    break;
+                }
+            if (v.pos[2] <= -10.0f || v.pos[2] >= 0.0f) continue;  // along the seam, its ends aside
+            const int alpha = int(v.color >> 24), green = int((v.blend >> 8) & 0xFF);
+            if (b.texture == 1 && v.pos[0] == 0.0f) {  // at the edge: much of it the dirt's (0.42 by its few cells)
+                CHECK(alpha > 90 && alpha <= 128);
+                ++atEdge;
+                lowSide += green == 255;
+            }
+            if (b.texture == 1 && v.pos[0] < -5.0f) {  // past the grass cell's middle: none
+                CHECK_EQ(alpha, 0);
+                ++beyond;
+            }
+            if (b.texture == 0 && v.pos[0] == 0.0f && green == 0) ++highSide;  // the grass' strip in (2, 0)
+        }
+    }
+    CHECK(strips > 0 && onGround == strips);
+    CHECK(atEdge > 0 && beyond > 0);
+    // the two strips of one edge count the noise opposite ways: one line between them
+    CHECK(lowSide == atEdge && highSide > 0);
+}
+
+TEST(terrain_no_blend_over_a_step_nor_far_off_nor_round_a_laid_patch) {
+    const gnd::Ground stepped = parsed();  // the dirt 30 below the grass all round
+    const terrain::Atlas a1 = terrain::lightmapAtlas(stepped);
+    CHECK_EQ(layerBatches(terrain::build(stepped, 3, a1), terrain::kNeighbour), size_t(0));
+    const gnd::Ground g = flat();
+    const terrain::Atlas a2 = terrain::lightmapAtlas(g);
+    CHECK_EQ(layerBatches(terrain::build(g, 1, a2), terrain::kNeighbour), size_t(0));  // the far ground's cells
+    std::vector<uint8_t> laid(8, 0);
+    laid[2] = laid[3] = 1;  // the dirt laid by hand: its edges straight, as the game draws them
+    CHECK_EQ(layerBatches(terrain::build(g, 3, a2, &laid), terrain::kNeighbour), size_t(0));
+    CHECK_EQ(layerBatches(terrain::build(g, 3, a2, &laid), terrain::kOwnBand), size_t(0));
 }

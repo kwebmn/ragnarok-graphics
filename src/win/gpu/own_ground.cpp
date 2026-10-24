@@ -63,6 +63,11 @@ void Renderer::Impl::dropOwnGround() {
     ownState.atlasRow = 0;
     ownState.up = false;
     ownState.frame = false;
+    for (int m = 0; m < 2; ++m) {  // 3.0.4-beta.12
+        std::vector<uint32_t>().swap(ownState.colours[m]);
+        std::vector<uint8_t>().swap(ownState.fresh[m]);
+    }
+    std::vector<int32_t>().swap(ownState.chunkAt);
     ownState.frames = 0;
     ownState.slowest = 0.0;
     ownState.most = 0;
@@ -84,6 +89,17 @@ bool Renderer::Impl::prepareOwnGround() {
         dropOwnGround();
         o.serial = g->serial;
         o.shading.reset(g->width, g->height, g->zoom);
+        o.colours[0].assign(g->mesh.vertices.size(), 0);  // 3.0.4-beta.12: the colours made as the chunks show
+        o.colours[1].assign(g->distant.vertices.size(), 0);
+        o.fresh[0].assign(g->mesh.chunks.size(), 0);
+        o.fresh[1].assign(g->distant.chunks.size(), 0);
+        o.chunksWide = (g->width + terrain::kChunk - 1) / terrain::kChunk;
+        o.chunkAt.assign(size_t(o.chunksWide) * size_t((g->height + terrain::kChunk - 1) / terrain::kChunk), -1);
+        for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
+            const terrain::Chunk& c = g->mesh.chunks[k];
+            o.chunkAt[size_t(c.cellY / terrain::kChunk) * size_t(o.chunksWide) + size_t(c.cellX / terrain::kChunk)] =
+                int32_t(k);
+        }
         for (const OwnGround::Picture& p : g->textures)
             o.ids.push_back(p.levels.empty() ? 0 : ownTexture(p.width, p.height, int(p.levels.size())));
         o.atlas = g->atlas.argb.empty() ? 0 : ownTexture(g->atlas.width, g->atlas.height, 1);
@@ -162,8 +178,11 @@ void Renderer::Impl::noteOwnGround(const FrameRecord& rec, const DrawCmd& d) {
 // The own ground once a picture, at the world's first blended draw (or the interface) after the game's ground: the
 // chunks in view (core/own_ground.hpp boxInView) - smooth near, the game's cells far off - projected as the game
 // projects, in its colours and fog, a draw a texture (the chunks' together: a draw each was up to 938) with the
-// state of the game's ground. A record of their own, as the seams' strips: the game's geometry goes up again with its
-// next draw.
+// state of the game's ground. 3.0.4-beta.12: with the ground seams (effects.ground_seams) the soft way from one
+// texture to the next over it -
+// the cells' own bands, then the neighbours' strips (core/terrain.hpp), blended by the noise as the game's ground's
+// seams are (seamPass: shade() bit 31), a little towards the camera. A record of their own, as the seams' strips: the
+// game's geometry goes up again with its next draw.
 bool Renderer::Impl::drawOwnGround() {
     OwnState& o = ownState;
     o.drawn = true;
@@ -177,26 +196,58 @@ bool Renderer::Impl::drawOwnGround() {
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
     o.shading.fit();
+    // the corners the game gave another colour: the chunks round them made again
+    bool meanMoved = false;
+    o.shading.takeChanged(o.changed, meanMoved);
+    if (meanMoved) {
+        for (std::vector<uint8_t>& f : o.fresh) std::fill(f.begin(), f.end(), uint8_t(0));
+    } else {
+        for (uint32_t c : o.changed) {
+            const int i = int(c % uint32_t(g->width + 1)), j = int(c / uint32_t(g->width + 1));
+            for (int cy = j - 1; cy <= j; ++cy)
+                for (int cx = i - 1; cx <= i; ++cx) {
+                    if (cx < 0 || cy < 0 || cx >= g->width || cy >= g->height) continue;
+                    const int32_t k = o.chunkAt[size_t(cy / terrain::kChunk) * size_t(o.chunksWide) +
+                                                size_t(cx / terrain::kChunk)];
+                    for (int m = 0; m < 2; ++m)
+                        if (k >= 0 && size_t(k) < o.fresh[m].size()) o.fresh[m][size_t(k)] = 0;
+                }
+        }
+    }
+    const bool fogged = o.shading.fogged();
+    const uint32_t plain = o.shading.specularAt(0.0f);  // no fog: the game's specular everywhere
+    const bool blends = effects.groundSeams && mapOutdoors;  // outdoors, as the game's ground's seams (seamsWanted)
     o.rec.reset();
+    o.drawLayer.clear();
     DrawSetup st = o.like;
     st.cull = d3d7::CULL_NONE;                     // the axes may turn the cells over
     st.stage[0].mipFilter = d3d7::TFP_LINEAR;      // its pictures have their mipmaps: no shimmer far off
     st.stage[1].mipFilter = d3d7::TFP_NONE;        // the lightmaps' one level
-    const uint32_t state = o.rec.addState(st);
-    o.pending.resize(o.ids.size() + 1);
-    for (OwnState::Pending& pd : o.pending) pd.verts.clear(), pd.idx.clear();
+    DrawSetup bs = st;                             // the strips': as the seams' (applySeams)
+    bs.blend = true;
+    bs.srcBlend = d3d7::BLEND_SRCALPHA;
+    bs.dstBlend = d3d7::BLEND_INVSRCALPHA;
+    bs.zWrite = false;
+    bs.zFunc = seamsView == 2 ? d3d7::CMP_ALWAYS : d3d7::CMP_LESSEQUAL;
+    bs.alphaTest = false;
+    const uint32_t state = o.rec.addState(st), blendState = o.rec.addState(bs);
+    for (std::vector<OwnState::Pending>& layer : o.pending) {
+        layer.resize(o.ids.size() + 1);
+        for (OwnState::Pending& pd : layer) pd.verts.clear(), pd.idx.clear();
+    }
     std::vector<uint8_t> behind;
     size_t chunks = 0, vertices = 0, triangles = 0;
-    const auto emit = [&](size_t t) {
-        OwnState::Pending& pd = o.pending[t];
+    const auto emit = [&](uint8_t layer, size_t t) {
+        OwnState::Pending& pd = o.pending[layer][t];
         if (!pd.idx.empty()) {
             DrawCmd cmd;
-            cmd.state = state;
+            cmd.state = layer == terrain::kGround ? state : blendState;
             cmd.texture[0] = t < o.ids.size() ? o.ids[t] : 0;
             cmd.texture[1] = o.atlas;
             cmd.primitive = d3d7::PT_TRIANGLELIST;
             cmd.fvf = d3d7::FVF_TL2;
             o.rec.draw(cmd, pd.verts.data(), uint32_t(pd.verts.size()), pd.idx.data(), uint32_t(pd.idx.size()));
+            o.drawLayer.push_back(layer);
             vertices += pd.verts.size();
             triangles += pd.idx.size() / 3;
         }
@@ -213,17 +264,34 @@ bool Renderer::Impl::drawOwnGround() {
         }
         float nearest = 0.0f;
         if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, kMostDepth, nearest)) continue;
-        const terrain::Mesh& mesh = nearest > kFineDepth && k < g->distant.chunks.size() ? g->distant : g->mesh;
+        const int which = nearest > kFineDepth && k < g->distant.chunks.size() ? 1 : 0;
+        const terrain::Mesh& mesh = which ? g->distant : g->mesh;
         const terrain::Chunk& ch = mesh.chunks[k];
+        std::vector<uint32_t>& colours = o.colours[which];
         ++chunks;
+        if (!o.fresh[which][k]) {  // its colours, the game's round its corners
+            for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
+                const terrain::Batch& bt = mesh.batches[b];
+                for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
+                    const terrain::Vertex& tv = mesh.vertices[v];
+                    const uint32_t c = o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
+                    // a neighbour's strip: its alpha how much the place is the neighbour's
+                    colours[v] = bt.layer == terrain::kNeighbour ? (c & 0xFFFFFFu) | (tv.color & 0xFF000000u) : c;
+                }
+            }
+            o.fresh[which][k] = 1;
+        }
         for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
             const terrain::Batch& bt = mesh.batches[b];
+            if (bt.layer != terrain::kGround && !blends) continue;
             const size_t tex = bt.texture >= 0 && size_t(bt.texture) < o.ids.size() ? size_t(bt.texture) : o.ids.size();
-            OwnState::Pending& pd = o.pending[tex];
-            if (pd.verts.size() + bt.vertexCount > 65535) emit(tex);
+            OwnState::Pending& pd = o.pending[bt.layer][tex];
+            if (pd.verts.size() + bt.vertexCount > 65535) emit(bt.layer, tex);
             const size_t base = pd.verts.size();
             pd.verts.resize(base + bt.vertexCount, own_ground::Tl2{});
             behind.assign(bt.vertexCount, 0);
+            // the strips a little towards the camera: on the ground's own points, the bands near them (as the seams')
+            const float lift = bt.layer == terrain::kNeighbour ? 0.05f : bt.layer == terrain::kOwnBand ? 0.12f : 0.0f;
             for (uint32_t i = 0; i < bt.vertexCount; ++i) {
                 const terrain::Vertex& tv = mesh.vertices[bt.firstVertex + i];
                 own_ground::Tl2& t = pd.verts[base + i];
@@ -231,8 +299,11 @@ bool Renderer::Impl::drawOwnGround() {
                     behind[i] = 1;
                     continue;
                 }
-                t.diffuse = o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
-                t.specular = o.shading.specularAt(1.0f / t.rhw);
+                const float zd = 1.0f / t.rhw;
+                if (lift > 0.0f) t.z = own_ground::depthOf(p, std::max(zd - lift, p.nearZ + 0.005f));
+                t.diffuse = colours[bt.firstVertex + i];
+                const uint32_t fog = fogged ? o.shading.specularAt(zd) : plain;
+                t.specular = bt.layer == terrain::kGround ? fog : (fog & 0xFF000000u) | (tv.blend & 0xFFFFFFu);
                 t.u0 = tv.uv[0];
                 t.v0 = tv.uv[1];
                 t.u1 = tv.lm[0];
@@ -247,14 +318,20 @@ bool Renderer::Impl::drawOwnGround() {
             }
         }
     }
-    for (size_t t = 0; t < o.pending.size(); ++t) emit(t);
+    for (uint8_t layer = 0; layer < 3; ++layer)  // the ground, then the own bands, then the neighbours' strips
+        for (size_t t = 0; t < o.pending[layer].size(); ++t) emit(layer, t);
     const double built = msSince(start);
     if (!o.rec.draws().empty()) {
         flushDraws();  // the game's draws gathered so far are of its own vertices, uploaded before these
         prepareGeometry(o.rec);
         if (vertexBase) {
             ownPass = true;
-            for (const DrawCmd& d : o.rec.draws()) draw(o.rec, d);
+            for (size_t k = 0; k < o.rec.draws().size(); ++k) {
+                seamPass = o.drawLayer[k] != terrain::kGround;
+                seamOwnBand = o.drawLayer[k] == terrain::kOwnBand;
+                draw(o.rec, o.rec.draws()[k]);
+            }
+            seamPass = seamOwnBand = false;
             ownPass = false;
         }
         geometryList = 0;  // the game's record's vertices go up again with its next draw
@@ -264,9 +341,9 @@ bool Renderer::Impl::drawOwnGround() {
     o.most = std::max(o.most, vertices);
     if (o.frames == 1 || o.frames == 600)  // the first picture, then ten seconds' or so worst
         LOG_INFO("own ground: %s - %zu chunks of %zu in view, %zu draws, %zu vertices, %zu triangles, %.2f ms on the "
-                 "CPU (frame %u: at most %zu vertices, %.2f ms)",
+                 "CPU (frame %u: at most %zu vertices, %.2f ms); strips between the textures %s",
                  g->map.c_str(), chunks, g->mesh.chunks.size(), o.rec.draws().size(), vertices, triangles, built,
-                 o.frames, o.most, o.slowest);
+                 o.frames, o.most, o.slowest, blends ? "on" : "off");
     return !lost;
 }
 
