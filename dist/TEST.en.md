@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.4-beta.2 — what is new
+
+- **The «Graphics card» row is always seen.** «Graphics» → «What draws the game» → «Graphics card» shows which card
+  draws the game when the computer has just one too - the row is grey then, there is nothing to choose. Before, it
+  came only with several cards.
+
 # uaRO Graphics 3.0.4-beta.1 — what is new
 
 - **A choice of the sound output device.** «Sound» → «Sound through uaRO Graphics» → «Sound output device» (in the
