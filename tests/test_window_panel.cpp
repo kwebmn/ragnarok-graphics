@@ -4,8 +4,10 @@
 #include <string>
 #include <vector>
 
+#include "core/config.hpp"
 #include "core/d3d7.hpp"
 #include "core/frame.hpp"
+#include "core/settings/strings.hpp"
 #include "core/states.hpp"
 #include "core/window_panel.hpp"
 #include "test.hpp"
@@ -198,4 +200,124 @@ TEST(window_panel_finds_the_games_cursor) {
     CHECK_EQ(panel::cursorDraw(r, 700, 500), -1);  // nothing small there
     FrameRecord none;
     CHECK_EQ(panel::cursorDraw(none, 402, 303), -1);
+}
+
+// 3.0.3-beta.10 (the user: «при нажатии правой кнопкой мышки ... опции разные задавать»): the panel's menu - rows of
+// choices (segments), switches and actions, laid out at a scale, hit, drawn
+TEST(window_panel_menu_lays_out_its_rows) {
+    const std::vector<panel::MenuRow> rows = {
+        {panel::MenuRow::Kind::Choice, 2, 0, false}, {panel::MenuRow::Kind::Choice, 4, 1, false},
+        {panel::MenuRow::Kind::Check, 0, 0, true},   {panel::MenuRow::Kind::Action, 0, 0, false}};
+    const panel::MenuGeometry g = panel::menuGeometry(rows, 1.0f);
+    CHECK_EQ(g.width, 340);
+    CHECK_EQ(g.rows.size(), size_t(4));
+    CHECK_EQ(g.segments.size(), size_t(4));
+    if (g.rows.size() != 4 || g.segments.size() != 4) return;
+    CHECK_EQ(g.segments[0].size(), size_t(2));
+    CHECK_EQ(g.segments[1].size(), size_t(4));
+    CHECK(g.segments[2].empty() && g.segments[3].empty());
+    CHECK(g.rows[1].y >= g.rows[0].y + g.rows[0].h && g.height >= int(g.rows[3].y + g.rows[3].h));
+    // the segments side by side within their row, right of its label
+    CHECK(g.segments[1][0].x > g.label[1].x + g.label[1].w - 1 && g.segments[1][3].x + g.segments[1][3].w <= g.width);
+    CHECK(g.segments[1][1].x >= g.segments[1][0].x + g.segments[1][0].w);
+    const panel::MenuGeometry big = panel::menuGeometry(rows, 2.0f);
+    CHECK_EQ(big.width, 680);
+    // five segments (the opacity's): each one wide enough for «100 %»
+    const panel::MenuGeometry five = panel::menuGeometry({{panel::MenuRow::Kind::Choice, 5, 0, false}}, 1.0f);
+    CHECK(five.segments.size() == 1 && five.segments[0].size() == 5 && five.segments[0][0].w >= 34);
+}
+
+TEST(window_panel_menu_hits_a_row_and_a_segment) {
+    const std::vector<panel::MenuRow> rows = {{panel::MenuRow::Kind::Choice, 4, 1, false},
+                                              {panel::MenuRow::Kind::Check, 0, 0, false}};
+    const panel::MenuGeometry g = panel::menuGeometry(rows, 1.0f);
+    const panel::Box s2 = g.segments[0][2];
+    panel::MenuHit h = panel::menuHit(g, s2.x + s2.w / 2, s2.y + s2.h / 2);
+    CHECK(h.row == 0 && h.segment == 2);
+    h = panel::menuHit(g, g.label[0].x + 2, g.rows[0].y + g.rows[0].h / 2);  // its label: the row, no segment
+    CHECK(h.row == 0 && h.segment == -1);
+    h = panel::menuHit(g, g.rows[1].x + 5, g.rows[1].y + 3);
+    CHECK(h.row == 1 && h.segment == -1);
+    h = panel::menuHit(g, -3, 5);
+    CHECK(h.row == -1);
+}
+
+TEST(window_panel_menu_paints_the_chosen_and_the_switch) {
+    const std::vector<panel::MenuRow> rows = {{panel::MenuRow::Kind::Choice, 2, 1, false},
+                                              {panel::MenuRow::Kind::Check, 0, 0, true}};
+    const panel::MenuGeometry g = panel::menuGeometry(rows, 1.0f);
+    panel::Picture p;
+    panel::paintMenu(p, g, rows, panel::MenuHit{});
+    CHECK_EQ(p.width, g.width);
+    CHECK_EQ(p.height, g.height);
+    if (p.px.size() != size_t(g.width) * size_t(g.height)) return;
+    const panel::Box chosen = g.segments[0][1], other = g.segments[0][0];
+    const uint32_t c = at(p, chosen.x + chosen.w / 2, chosen.y + 3);
+    const uint32_t o = at(p, other.x + other.w / 2, other.y + 3);
+    CHECK(blueOf(c) > blueOf(o) + 40);  // the chosen one blue
+    const uint32_t box = at(p, g.check[1].x + 2, g.check[1].y + 2);
+    CHECK(blueOf(box) > redOf(box) + 40);  // a switch on: its box blue
+}
+
+// The menu's rows as the settings are now: its layout, size and opacity chosen, the other windows' switches
+TEST(window_panel_menu_rows_follow_the_settings) {
+    Config c;
+    c.panelLayout = PanelLayout::Column;
+    c.panelSize = 125;
+    c.panelOpacity = 70;
+    c.windowOthersMusic = true;
+    c.windowOthersSounds = false;
+    c.windowOthersLight = true;
+    std::vector<panel::MenuRow> rows = panel::menuRows(c);
+    CHECK_EQ(rows.size(), size_t(7));
+    if (rows.size() != 7) return;
+    CHECK(rows[0].kind == panel::MenuRow::Kind::Choice && rows[0].segments == 2 && rows[0].chosen == 1);
+    CHECK(rows[1].kind == panel::MenuRow::Kind::Choice && rows[1].segments == 4 && rows[1].chosen == 2);
+    CHECK(rows[2].kind == panel::MenuRow::Kind::Choice && rows[2].segments == 5 && rows[2].chosen == 1);
+    CHECK(rows[3].kind == panel::MenuRow::Kind::Check && rows[3].on);
+    CHECK(rows[4].kind == panel::MenuRow::Kind::Check && !rows[4].on);
+    CHECK(rows[5].kind == panel::MenuRow::Kind::Check && rows[5].on);
+    CHECK(rows[6].kind == panel::MenuRow::Kind::Action);
+    c.panelSize = 110;  // set in the settings to a size the menu does not offer: none of its chosen
+    rows = panel::menuRows(c);
+    CHECK_EQ(rows[1].chosen, -1);
+}
+
+TEST(window_panel_menu_pick_changes_the_setting) {
+    Config c;
+    panel::MenuChange ch;
+    CHECK(panel::menuPick(c, panel::MenuHit{1, 3}, ch));
+    CHECK_EQ(c.panelSize, 150);
+    CHECK(ch.section == "panel" && ch.key == "size" && ch.value == "150" && !ch.hide);
+    CHECK(panel::menuPick(c, panel::MenuHit{0, 1}, ch));
+    CHECK(c.panelLayout == PanelLayout::Column);
+    CHECK(ch.section == "panel" && ch.key == "layout" && ch.value == "column");
+    CHECK(panel::menuPick(c, panel::MenuHit{2, 0}, ch));
+    CHECK_EQ(c.panelOpacity, 60);
+    CHECK(ch.key == "opacity" && ch.value == "60");
+    const bool sounds = c.windowOthersSounds;
+    CHECK(panel::menuPick(c, panel::MenuHit{4, -1}, ch));
+    CHECK(c.windowOthersSounds == !sounds);
+    CHECK(ch.section == "windows" && ch.key == "others_sounds" && ch.value == (sounds ? "0" : "1"));
+    const bool music = c.windowOthersMusic, light = c.windowOthersLight;
+    CHECK(panel::menuPick(c, panel::MenuHit{3, -1}, ch) && c.windowOthersMusic == !music && ch.key == "others_music");
+    CHECK(panel::menuPick(c, panel::MenuHit{5, -1}, ch) && c.windowOthersLight == !light && ch.key == "others_light");
+    CHECK(panel::menuPick(c, panel::MenuHit{6, -1}, ch) && ch.hide);
+    CHECK(!panel::menuPick(c, panel::MenuHit{1, -1}, ch));  // a choice's label: nothing
+    CHECK(!panel::menuPick(c, panel::MenuHit{-1, -1}, ch));
+    CHECK(!panel::menuPick(c, panel::MenuHit{9, 0}, ch));
+    CHECK(!panel::menuPick(c, panel::MenuHit{1, 7}, ch));
+}
+
+TEST(window_panel_menu_says_its_rows) {
+    const std::vector<panel::MenuText> t = panel::menuTexts(settings::Lang::Uk);
+    CHECK_EQ(t.size(), size_t(7));
+    if (t.size() != 7) return;
+    CHECK(t[0].label == "Вигляд" && t[0].segments.size() == 2 && t[0].segments[1] == "Стовпчиком");
+    CHECK(t[1].label == "Розмір" && t[1].segments.size() == 4 && t[1].segments[0] == "75 %");
+    CHECK(t[2].label == "Непрозорість" && t[2].segments.size() == 5 && t[2].segments[4] == "100 %");
+    CHECK(t[3].label == "Музика в інших вікнах гри" && t[3].segments.empty());
+    CHECK(t[4].label == "Звуки в інших вікнах гри");
+    CHECK(t[5].label == "Інші вікна гри — легкі");
+    CHECK(t[6].label.find("Ctrl+Alt+0") != std::string::npos);
 }

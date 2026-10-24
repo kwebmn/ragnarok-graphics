@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <iterator>
 #include <sstream>
 
 #include "core/d3d7.hpp"
@@ -202,6 +203,156 @@ int cursorDraw(const FrameRecord& r, float x, float y) {
         if (x1 - x0 <= kMost && y1 - y0 <= kMost && x >= x0 && x <= x1 && y >= y0 && y <= y1) return int(c);
     }
     return -1;
+}
+
+MenuGeometry menuGeometry(const std::vector<MenuRow>& rows, float s) {
+    constexpr float kWidth = 340, kRow = 28, kLabelW = 112, kSegmentsX = 128, kGap = 4, kLine = 7;
+    MenuGeometry g;
+    g.scale = s;
+    float y = kPad;
+    for (size_t i = 0; i < rows.size(); ++i) {
+        if (i > 0 && rows[i].kind != rows[i - 1].kind) {  // a thin line between kinds
+            g.lines.push_back((y + kLine / 2) * s);
+            y += kLine;
+        }
+        const MenuRow& r = rows[i];
+        g.rows.push_back(Box{kPad * s, y * s, (kWidth - 2 * kPad) * s, kRow * s});
+        const bool box = r.kind == MenuRow::Kind::Check;
+        const float lx = box ? 34 : 12;
+        const float lw = r.kind == MenuRow::Kind::Choice ? kLabelW : kWidth - lx - 12;
+        g.label.push_back(Box{lx * s, y * s, lw * s, kRow * s});
+        g.check.push_back(box ? Box{12 * s, (y + 7) * s, 14 * s, 14 * s} : Box{});
+        std::vector<Box> segs;
+        const int n = r.kind == MenuRow::Kind::Choice ? std::max(r.segments, 0) : 0;
+        if (n > 0) {
+            const float w = (kWidth - 10 - kSegmentsX - float(n - 1) * kGap) / float(n);
+            for (int k = 0; k < n; ++k)
+                segs.push_back(Box{(kSegmentsX + float(k) * (w + kGap)) * s, (y + 4) * s, w * s, (kRow - 8) * s});
+        }
+        g.segments.push_back(segs);
+        y += kRow;
+    }
+    g.width = int(std::lround(kWidth * s));
+    g.height = int(std::lround((y + kPad) * s));
+    return g;
+}
+
+MenuHit menuHit(const MenuGeometry& g, float x, float y) {
+    MenuHit h;
+    for (size_t i = 0; i < g.rows.size(); ++i) {
+        if (!g.rows[i].contains(x, y)) continue;
+        h.row = int(i);
+        for (size_t k = 0; k < g.segments[i].size(); ++k)
+            if (g.segments[i][k].contains(x, y)) h.segment = int(k);
+    }
+    return h;
+}
+
+void paintMenu(Picture& out, const MenuGeometry& g, const std::vector<MenuRow>& rows, MenuHit hover) {
+    out.width = g.width;
+    out.height = g.height;
+    out.px.assign(size_t(g.width) * size_t(g.height), 0u);
+    const float s = g.scale, edge = std::max(1.0f, s);
+    roundRect(out, Box{0, 0, float(g.width), float(g.height)}, kRadius * s, kGround, 236.0f / 255, kWhite,
+              40.0f / 255, edge);
+    for (float y : g.lines) roundRect(out, Box{12 * s, y - edge / 2, float(g.width) - 24 * s, edge}, 0, kWhite, 0.12f);
+    for (size_t i = 0; i < rows.size() && i < g.rows.size(); ++i) {
+        const MenuRow& r = rows[i];
+        if (hover.row == int(i) && r.kind != MenuRow::Kind::Choice)
+            roundRect(out, g.rows[i], 5 * s, kWhite, 22.0f / 255);
+        for (size_t k = 0; k < g.segments[i].size(); ++k) {
+            const bool chosen = int(k) == r.chosen, hovered = hover.row == int(i) && hover.segment == int(k);
+            if (chosen)
+                roundRect(out, g.segments[i][k], 5 * s, kCurrent, 170.0f / 255, kCurrentEdge, 1.0f, edge);
+            else
+                roundRect(out, g.segments[i][k], 5 * s, kWhite, (hovered ? 34.0f : 14.0f) / 255, kWhite,
+                          (hovered ? 70.0f : 30.0f) / 255, edge);
+        }
+        if (r.kind == MenuRow::Kind::Check) {
+            const Box& b = g.check[i];
+            if (r.on) {
+                roundRect(out, b, 3 * s, kCurrentEdge, 1.0f);
+                line(out, b.x + 3 * s, b.y + 7 * s, b.x + 6 * s, b.y + 10 * s, 0.9f * s, kWhite, 1.0f);  // a tick
+                line(out, b.x + 6 * s, b.y + 10 * s, b.x + 11 * s, b.y + 4 * s, 0.9f * s, kWhite, 1.0f);
+            } else {
+                roundRect(out, b, 3 * s, kWhite, 10.0f / 255, kWhite, 110.0f / 255, edge);
+            }
+        }
+    }
+}
+
+namespace {
+
+enum MenuItem : int { kLayoutItem, kSizeItem, kOpacityItem, kMusicItem, kSoundsItem, kLightItem, kHideItem };
+
+template <size_t N>
+int indexOf(const int (&values)[N], int v) {
+    for (size_t i = 0; i < N; ++i)
+        if (values[i] == v) return int(i);
+    return -1;
+}
+
+}  // namespace
+
+std::vector<MenuRow> menuRows(const Config& c) {
+    using K = MenuRow::Kind;
+    return {{K::Choice, 2, c.panelLayout == PanelLayout::Column ? 1 : 0, false},
+            {K::Choice, int(std::size(kMenuSizes)), indexOf(kMenuSizes, c.panelSize), false},
+            {K::Choice, int(std::size(kMenuOpacities)), indexOf(kMenuOpacities, c.panelOpacity), false},
+            {K::Check, 0, -1, c.windowOthersMusic},
+            {K::Check, 0, -1, c.windowOthersSounds},
+            {K::Check, 0, -1, c.windowOthersLight},
+            {K::Action, 0, -1, false}};
+}
+
+std::vector<MenuText> menuTexts(settings::Lang lang) {
+    using settings::Text;
+    const auto t = [lang](Text x) { return std::string(settings::tr(lang, x)); };
+    const char* percent = lang == settings::Lang::En ? "%" : " %";
+    std::vector<std::string> sizes, opacities;
+    for (int v : kMenuSizes) sizes.push_back(std::to_string(v) + percent);
+    for (int v : kMenuOpacities) opacities.push_back(std::to_string(v) + percent);
+    return {{t(Text::PanelMenuLayout), {t(Text::WindowsPanelRow), t(Text::WindowsPanelColumn)}},
+            {t(Text::PanelMenuSize), sizes},
+            {t(Text::PanelMenuOpacity), opacities},
+            {t(Text::WindowsOthersMusic), {}},
+            {t(Text::WindowsOthersSounds), {}},
+            {t(Text::WindowsOthersLight), {}},
+            {t(Text::PanelMenuHide), {}}};
+}
+
+bool menuPick(Config& c, MenuHit hit, MenuChange& change) {
+    change = MenuChange{};
+    const auto segment = [&](size_t count) { return hit.segment >= 0 && size_t(hit.segment) < count; };
+    const auto flip = [&](bool& on, const char* key) {
+        on = !on;
+        change = MenuChange{"windows", key, on ? "1" : "0", false};
+        return true;
+    };
+    switch (hit.row) {
+    case kLayoutItem:
+        if (!segment(2)) return false;
+        c.panelLayout = hit.segment == 1 ? PanelLayout::Column : PanelLayout::Row;
+        change = MenuChange{"panel", "layout", panelLayoutToken(c.panelLayout), false};
+        return true;
+    case kSizeItem:
+        if (!segment(std::size(kMenuSizes))) return false;
+        c.panelSize = kMenuSizes[hit.segment];
+        change = MenuChange{"panel", "size", std::to_string(c.panelSize), false};
+        return true;
+    case kOpacityItem:
+        if (!segment(std::size(kMenuOpacities))) return false;
+        c.panelOpacity = kMenuOpacities[hit.segment];
+        change = MenuChange{"panel", "opacity", std::to_string(c.panelOpacity), false};
+        return true;
+    case kMusicItem: return flip(c.windowOthersMusic, "others_music");
+    case kSoundsItem: return flip(c.windowOthersSounds, "others_sounds");
+    case kLightItem: return flip(c.windowOthersLight, "others_light");
+    case kHideItem:
+        change.hide = true;
+        return true;
+    default: return false;
+    }
 }
 
 void fade(Picture& p, float opacity) {

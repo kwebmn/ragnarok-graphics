@@ -3,7 +3,9 @@
 #include <string>
 #include <vector>
 
+#include "core/config.hpp"
 #include "core/frame.hpp"
+#include "core/settings/strings.hpp"
 
 namespace uagfx::panel {
 
@@ -68,6 +70,47 @@ void fade(Picture& p, float opacity);
 // its last small interface quad over the cursor's point (game pixels) among the frame's last draws; -1 none (the
 // panel then goes over everything, Windows' arrow over it)
 int cursorDraw(const FrameRecord& r, float x, float y);
+// 3.0.3-beta.10 (the user: «при нажатии правой кнопкой мышки ... опции разные задавать»): the panel's menu - rows
+// of choices (segments side by side, one chosen), switches (a box) and actions, a thin line between kinds; its words
+// go over it by GDI as the panel's
+struct MenuRow {
+    enum class Kind : uint8_t { Choice, Check, Action };
+    Kind kind = Kind::Action;
+    int segments = 0;  // Choice's
+    int chosen = -1;   // Choice's
+    bool on = false;   // Check's
+};
+struct MenuGeometry {
+    int width = 0, height = 0;
+    float scale = 1;
+    std::vector<Box> rows, label, check;     // a row's place, its words', a Check's box
+    std::vector<std::vector<Box>> segments;  // a Choice's
+    std::vector<float> lines;                // the lines between kinds (their y)
+};
+MenuGeometry menuGeometry(const std::vector<MenuRow>& rows, float scale);
+struct MenuHit {
+    int row = -1, segment = -1;
+};
+MenuHit menuHit(const MenuGeometry& g, float x, float y);
+void paintMenu(Picture& out, const MenuGeometry& g, const std::vector<MenuRow>& rows, MenuHit hover);
+// Its rows, in this order: the cards' layout (a row, a column), [panel] size (kMenuSizes) and opacity
+// (kMenuOpacities); the other game windows' music, sounds and light ([windows] others_*); hide the panel. A size or
+// an opacity the menu does not offer (set in the settings): none of its own chosen
+constexpr int kMenuSizes[] = {75, 100, 125, 150};
+constexpr int kMenuOpacities[] = {60, 70, 80, 90, 100};
+std::vector<MenuRow> menuRows(const Config& c);
+struct MenuText {
+    std::string label;
+    std::vector<std::string> segments;  // a choice's
+};
+std::vector<MenuText> menuTexts(settings::Lang lang);  // UTF-8
+// A click on a row (a choice: on one of its segments) - the setting changed in `c` and the line the file gets; hide:
+// the panel to be hidden (its own way, win/window_panel). false: nothing to do there
+struct MenuChange {
+    std::string section, key, value;
+    bool hide = false;
+};
+bool menuPick(Config& c, MenuHit hit, MenuChange& change);
 // A colour (0xRRGGBB) at an opacity over a premultiplied pixel: the words' coverage over the picture
 void over(uint32_t& pixel, uint32_t rgb, float opacity);
 // A bar's colour (0xRRGGBB): red under 25 % as the game's own gauges (0x4490d0); else green HP, blue SP

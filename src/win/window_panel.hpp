@@ -24,7 +24,10 @@ namespace uagfx::win {
 // interface, so every renderer draws it (the 64-bit one too). Shown in the main game window while two or more run.
 // The game window's mouse over it is the panel's: a click on a card brings that window to the front, its top row
 // drags it ([panel] place), the button beside its cross lays the cards the other way ([panel] layout), the cross or
-// Ctrl+Alt+0 hides it ([panel] hidden); the pad's mouse gate keeps those clicks from the game. On the game's thread.
+// Ctrl+Alt+0 hides it ([panel] hidden); the pad's mouse gate keeps those clicks from the game. 3.0.3-beta.10 (the
+// user: «при нажатии правой кнопкой мышки ... опции разные задавать»): the right button on it opens its menu at the
+// cursor (core/window_panel menuRows), a second picture over it - a click on a row changes that setting at once and in
+// the file; a click off it, Esc, «hide», the window going behind or the panel gone close it. On the game's thread.
 class WindowPanel {
 public:
     // Every frame, once the frame's scale is known: shown or not, its picture and its place in the target's pixels -
@@ -36,6 +39,7 @@ public:
     // A message of the game window's mouse: true - the panel's, the game does not get it (`result` its answer)
     bool mouse(HWND game, UINT m, LPARAM lp, LRESULT& result);
     void toggle();  // Ctrl+Alt+0
+    bool closeMenu();  // Esc: true - its menu was open (closed now; the game does not get the key)
     bool on() const { return config_ && config_->panelShow; }  // [panel] show: Ctrl+Alt+0 is its while on
     std::function<void(int number)> onPick;  // a card clicked: that window to the front
 
@@ -46,6 +50,9 @@ private:
     void block(HWND game);  // the pad's gate told where the panel is
     bool toTarget(HWND game, int x, int y, float& tx, float& ty) const;
     panel::Hit hitAt(float tx, float ty) const;
+    void openMenu(float tx, float ty);
+    void renderMenu();  // its picture and its place: by the point it was opened at, inside the target
+    void pick(panel::MenuHit h);
 
     Config* config_ = nullptr;
     std::vector<gamewindows::Window> all_;
@@ -69,6 +76,18 @@ private:
     uint32_t texture_ = 0;
     int texW_ = 0, texH_ = 0;
     bool underCursor_ = false;  // 3.0.3-beta.9: drawn under the game's own cursor (found in the frame)
+    // 3.0.3-beta.10: its menu - the rows as last drawn, where it was opened (the target's pixels), its top left
+    bool menuOpen_ = false, menuDirty_ = false, menuUpload_ = false;
+    std::vector<panel::MenuRow> menuRows_;
+    panel::MenuGeometry menuGeometry_;
+    panel::Picture menuPicture_;
+    panel::MenuHit menuHover_, menuPressed_;
+    float menuAtX_ = 0, menuAtY_ = 0, menuScale_ = 0;
+    int menuX_ = 0, menuY_ = 0;
+    uint32_t menuTexture_ = 0;
+    int menuTexW_ = 0, menuTexH_ = 0;
+    uint8_t swallowed_ = 0;  // the buttons (1 left, 2 right, 4 middle) whose press closed the menu: their let-go too
+    bool rightOnPanel_ = false;  // the right button pressed on the panel: its let-go there opens the menu
 };
 
 }  // namespace uagfx::win

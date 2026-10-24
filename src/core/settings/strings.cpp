@@ -4375,6 +4375,10 @@ constexpr Entry kTexts[] = {
      "Вимкнено: коли відкрито кілька вікон гри, чути лише те, у якому ви зараз граєте; звуки інших стихають.",
      "Выключено: когда открыто несколько окон игры, слышно только то, в котором вы сейчас играете; звуки других "
      "стихают."},
+    {Text::PanelMenuLayout, "Layout", "Вигляд", "Вид"},
+    {Text::PanelMenuSize, "Size", "Розмір", "Размер"},
+    {Text::PanelMenuOpacity, "Opacity", "Непрозорість", "Непрозрачность"},
+    {Text::PanelMenuHide, "Hide the panel · Ctrl+Alt+0", "Сховати панель · Ctrl+Alt+0", "Спрятать панель · Ctrl+Alt+0"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

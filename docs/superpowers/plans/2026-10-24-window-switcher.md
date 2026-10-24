@@ -86,6 +86,25 @@ The user: «можно сделать переключение между окн
   (panel::cursorDraw) - the panel's upload and quad moved before it (FrameRecord::moveLastBefore); Windows' arrow only
   when it is not found.
 
+## Task 5 (3.0.3-beta.10): the panel's menu (the right button)
+
+The user: «хотелось бы чтобы при нажатии правой кнопкой мышки и там можно было опции разные задавать».
+
+- The right button pressed and let go on the panel opens its menu at the cursor (right of it and below; no room there:
+  left of it, above it; always inside the target). A second picture and quad after the panel's, both moved before the
+  game's cursor; at the game's interface scale, not [panel] size (it would grow under the cursor when the size is
+  picked in it); not faded by [panel] opacity.
+- Its rows (core/window_panel menuRows, menuTexts, menuPick): «Вигляд» - «В ряд», «Стовпчиком»; «Розмір» 75, 100, 125,
+  150 %; «Непрозорість» 60, 70, 80, 90, 100 %; the switches «Музика в інших вікнах гри», «Звуки в інших вікнах гри»,
+  «Інші вікна гри — легкі»; «Сховати панель · Ctrl+Alt+0». A size or opacity set in the settings to another value:
+  none of the segments chosen. A pick changes the running settings and the file at once; the menu stays open.
+- It closes on a press off it (that press and its let-go are nobody's), on Esc (taken from the game, its key handler
+  0x4d96e0 switches on WM_KEYDOWN's key), on «hide», when the game window is not in front, when the panel goes. The
+  right button pressed on the panel while it is open opens it again there.
+- While it is open the pad's mouse gate keeps every click from the game (setBlocked all).
+- Tests: tests/test_window_panel.cpp - the menu's layout (340 wide at scale 1, each of 5 segments 34 at least for
+  «100 %»), its hits, its paint, its rows from the settings, a pick's change, its words.
+
 ## Rulings
 
 - The doc's betas 7 (panel) and 8 (HP/SP on the cards) are one beta: the cards' numbers come with the list in
@@ -101,3 +120,5 @@ The user: «можно сделать переключение между окн
 - 3.0.3-beta.9: the user did not answer the switch's delay or the background's frame rates - the proposals stand:
   400 ms at most, 5 and 2 frames a second. The block's layout changed (-2): a beta.8 game beside a beta.9 one does not
   see it.
+- 3.0.3-beta.10: the menu opens only for a right button pressed on the panel as well: let go over it after the game's
+  camera was turned with it, it is the game's.

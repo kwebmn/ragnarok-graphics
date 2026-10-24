@@ -104,6 +104,7 @@ void WindowSwitch::publish(bool frontNow) {
 }
 
 bool WindowSwitch::key(unsigned vk, LPARAM lParam) {
+    if (vk == VK_ESCAPE && panel_.closeMenu()) return true;  // 3.0.3-beta.10: its menu closed, not the game's opened
     const gamewindows::KeyAction a = gamewindows::keyAction(vk, GetKeyState(VK_CONTROL) < 0, GetKeyState(VK_MENU) < 0,
                                                             GetKeyState(VK_SHIFT) < 0, keys_);
     if (a.action == gamewindows::Action::None || (a.action == gamewindows::Action::Panel && !panel_.on())) return false;
