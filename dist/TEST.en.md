@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.4-beta.18 — what is new
+
+- **The trees no longer change as the camera turns.** With "Trees of different shades" each tree has a shade of its
+  own by its place in the world. That place was taken from the middle of the leaves' box on the screen at their mean
+  depth, and as the camera turned it went round the crown and moved by up to 6 units. So the tree took the next shade,
+  its brightness jumped by up to 15 %, and it looked as if the texture changed. Now the place is the middle of the
+  leaves themselves in the world, the same from every side. Checked offline on prt_fild08's trees for eight turns of
+  the camera.
+- The far trees the driver draws (past 1500) each get their own shade by their place, as the near ones do. Before, one
+  draw held many trees, and they had one shade between them and one "crown" for all.
+- To check: turn the camera round the trees on prt_fild08 - the trees should not change their colour.
+
 # uaRO Graphics 3.0.4-beta.17 — what is new
 
 - **The camera no further out than the character shows** (report R-35N5QN). The game lets the camera go out to 2040
