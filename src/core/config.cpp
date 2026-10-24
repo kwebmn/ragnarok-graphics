@@ -474,6 +474,8 @@ Config parseConfig(const std::string& text) {
             }
         } else if (key == "panel.place") {
             c.panelPlace = val;
+        } else if (key == "camera.indoor") {  // 3.0.4-beta.5
+            setBool(val, c.cameraIndoor);
         } else if (key.compare(0, 7, "notify.") == 0) {  // 3.0.4-beta.3
             const std::string k = key.substr(7);
             bool* to = k == "on"       ? &c.notify.on

@@ -113,6 +113,13 @@ public:
                     p.heading(t(Text::PanelHeading));
                     buildRows(p, "panel");
                 }
+                // 3.0.4-beta.5: the camera ([camera]) and the photo mode's keys
+                if (anyListed("camera")) {
+                    p.gap();
+                    p.heading(t(Text::CameraHeading));
+                    buildRows(p, "camera", false);
+                    p.note(t(Text::CameraPhotoNote));
+                }
                 // 3.0.4-beta.3: notifications while the game is behind ([notify])
                 if (anyListed("notify")) {
                     p.gap();

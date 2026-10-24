@@ -803,3 +803,16 @@ TEST(config_windows_start_count) {
     CHECK(s->page == settings::Page::Game && s->control == settings::Control::Slider && s->min == 1 && s->max == 8);
     CHECK_EQ(settings::tokenOf(*s, parseConfig("[windows]\nstart_count = 4\n")), std::string("4"));
 }
+
+// 3.0.4-beta.5 (the user's idea 5): [camera] indoor - building maps' camera as free as outdoors
+TEST(config_camera_indoor) {
+    CHECK(parseConfig("").cameraIndoor);
+    CHECK(!parseConfig("[camera]\nindoor = 0\n").cameraIndoor);
+    const settings::IniSetting* s = settings::findSetting("camera.indoor");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Game && s->control == settings::Control::Check);
+    CHECK(appliesNow("camera.indoor"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[camera]\nindoor = 0\n"));
+    CHECK(!u.next.cameraIndoor && u.applied.size() == 1 && u.waiting.empty());
+}

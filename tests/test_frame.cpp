@@ -254,3 +254,36 @@ TEST(frame_moves_its_last_commands_before_one) {
     r.moveLastBefore(9, 0);  // more than there are: nothing moves
     CHECK(r.commands()[4].index == 2);
 }
+
+// 3.0.4-beta.5 (the user's idea 5): the photo mode - the game's interface (the draws after its depth went off: the
+// windows, the text, the cursor) and the driver's own panel out of the frame, the world, its clears and uploads kept
+TEST(frame_drops_the_interface) {
+    FrameRecord f;
+    uint8_t v[4 * 32] = {};
+    DrawSetup world, ui;
+    ui.ui = true;
+    DrawCmd d;
+    d.primitive = d3d7::PT_TRIANGLESTRIP;
+    d.fvf = d3d7::FVF_TL1;
+    f.clear(ClearCmd{d3d7::CLEAR_TARGET, 0xFF000000, 1.0f, Rect{0, 0, 4, 4}});
+    d.state = f.addState(world);
+    f.draw(d, v, 4, nullptr, 0);
+    const uint32_t px[4] = {1, 2, 3, 4};
+    f.upload(7, 0, Rect{0, 0, 2, 2}, px);
+    d.state = f.addState(ui);
+    f.draw(d, v, 4, nullptr, 0);
+    d.state = f.addState(world);
+    f.draw(d, v, 4, nullptr, 0);
+    d.state = f.addState(ui);
+    f.draw(d, v, 4, nullptr, 0);
+    CHECK_EQ(f.dropInterface(), size_t(2));
+    CHECK_EQ(f.commands().size(), size_t(4));  // the clear, two world draws, the upload
+    size_t draws = 0;
+    for (const Command& c : f.commands())
+        if (c.type == Cmd::Draw) {
+            ++draws;
+            CHECK(!f.states()[f.draws()[c.index].state].ui);
+        }
+    CHECK_EQ(draws, size_t(2));
+    CHECK_EQ(f.dropInterface(), size_t(0));
+}

@@ -148,6 +148,8 @@ private:
     ULONGLONG powerChecked_ = 0;
     void updateLight();
     ToggleKey fpsKey_;  // 0.54: Ctrl+Shift+F11 - the frame counter
+    ToggleKey photoKey_;  // 3.0.4-beta.5: Ctrl+Alt+F12 - the photo mode
+    bool photo_ = false;  // the game's interface, the windows' panel and the counter out of the picture
     // 2.2.1: the statistics of the settings played with, with the player's leave ([stats] send; core/usage.hpp)
     usage::Recorder usage_;
     usage::Setup usageSetup_;

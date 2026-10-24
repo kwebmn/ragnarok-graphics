@@ -192,6 +192,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("place", running.panelPlace, file.panelPlace));
         n.panelPlace = file.panelPlace;
     }
+    if (file.cameraIndoor != running.cameraIndoor) {  // 3.0.4-beta.5
+        u.applied.push_back(change("camera indoor", flag(running.cameraIndoor), flag(file.cameraIndoor)));
+        n.cameraIndoor = file.cameraIndoor;
+    }
     {  // 3.0.4-beta.3: the notifications, each box
         const NotifySettings &f = file.notify, &r = running.notify;
         const std::pair<const char*, std::pair<bool, bool>> boxes[] = {
@@ -264,7 +268,8 @@ bool appliesNow(const std::string& k) {
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
            k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
            k == "sound.output" ||             // 3.0.4-beta.1: the music and the sounds move at once
-           k.compare(0, 7, "notify.") == 0;   // 3.0.4-beta.3
+           k.compare(0, 7, "notify.") == 0 ||  // 3.0.4-beta.3
+           k == "camera.indoor";              // 3.0.4-beta.5
 }
 
 }  // namespace uagfx

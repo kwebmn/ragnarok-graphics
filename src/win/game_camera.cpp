@@ -65,6 +65,35 @@ bool readCameraTargetDepth(float& z) {
 
 bool knownGameBuild() { return knownBuild(); }
 
+bool keepCameraFree(bool wanted) {
+    static uint32_t heldMode = 0;  // the game mode whose building map's flag we hold, and that map
+    static std::string heldMap;
+    const uint32_t mode = gameMode();
+    int32_t outdoor = 1;
+    if (!mode || !read(mode + camera::kModeOutdoor, &outdoor, 4)) {
+        heldMode = 0;
+        return false;
+    }
+    auto* flag = reinterpret_cast<int32_t*>(uintptr_t(mode + camera::kModeOutdoor));
+    if (wanted && outdoor == 0) {  // a building map just started (or the box ticked on it)
+        *flag = 1;
+        heldMode = mode;
+        heldMap = readGameMap();
+        LOG_INFO("camera: %s is a building - its camera free as outdoors ([camera] indoor)", heldMap.c_str());
+        return true;
+    }
+    if (heldMode != mode || readGameMap() != heldMap) {  // another map: its flag is the game's again
+        heldMode = 0;
+        return false;
+    }
+    if (!wanted) {  // the box off on the building map: the game's own lock back
+        *flag = 0;
+        heldMode = 0;
+        return false;
+    }
+    return true;
+}
+
 bool readGameCursor(int& x, int& y) {
     int32_t at[2] = {0, 0};
     if (!knownBuild() || !read(camera::kMouse + camera::kMouseX, &at[0], 4) ||

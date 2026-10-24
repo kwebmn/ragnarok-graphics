@@ -4458,6 +4458,25 @@ constexpr Entry kTexts[] = {
      "разів, по одній кожні півтори секунди; у кожну ви входите самі, логіни й паролі не зберігаються.",
      "1 — одна игра, как и раньше. 2–8: набор для нескольких персонажей (прист, сейдж...) — «Играть» запускает игру "
      "столько раз, по одной каждые полторы секунды; в каждую вы входите сами, логины и пароли не хранятся."},
+    // 3.0.4-beta.5: the camera and the photo mode
+    {Text::CameraHeading, "Camera", "Камера", "Камера"},
+    {Text::CameraIndoor, "Free camera in buildings",
+     "Вільна камера в будинках",
+     "Свободная камера в зданиях"},
+    {Text::CameraIndoorHint,
+     "Inside buildings - inns, shops, guild halls, castles - the game locks the camera: it barely turns and does not "
+     "zoom out. With this box it turns, tilts and zooms out there as it does outdoors.",
+     "У будинках — тавернах, крамницях, гільдіях, замках — гра тримає камеру: вона ледь повертається і не "
+     "віддаляється. З цим прапорцем там вона повертається, нахиляється й віддаляється, як надворі.",
+     "В зданиях — тавернах, лавках, гильдиях, замках — игра держит камеру: она едва поворачивается и не отдаляется. С "
+     "этим флажком там она поворачивается, наклоняется и отдаляется, как на улице."},
+    {Text::CameraPhotoNote,
+     "Ctrl+Alt+F12 - the photo mode: the game's interface, the cursor and the windows' panel hidden for a clean shot "
+     "(Ctrl+Shift+F12); the same keys again bring them back.",
+     "Ctrl+Alt+F12 — режим фото: інтерфейс гри, курсор і панель вікон сховані для чистого знімка (Ctrl+Shift+F12); "
+     "ті самі клавіші ще раз повертають їх.",
+     "Ctrl+Alt+F12 — режим фото: интерфейс игры, курсор и панель окон скрыты для чистого снимка (Ctrl+Shift+F12); те "
+     "же клавиши ещё раз возвращают их."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

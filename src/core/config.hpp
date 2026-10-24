@@ -486,6 +486,9 @@ struct Config {
     int panelSize = 100, panelOpacity = 90;
     std::string panelPlace;
     NotifySettings notify;      // 3.0.4-beta.3
+    // 3.0.4-beta.5, [camera] indoor: building maps (data\indoorrswtable.txt) - the camera turns, tilts and zooms out
+    // as outdoors (win/game_camera keepCameraFree)
+    bool cameraIndoor = true;
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player
     bool safeMode = false;

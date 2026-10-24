@@ -86,6 +86,16 @@ void FrameRecord::moveLastBefore(size_t count, size_t position) {
                 commands_.end());
 }
 
+size_t FrameRecord::dropInterface() {
+    const size_t before = commands_.size();
+    commands_.erase(std::remove_if(commands_.begin(), commands_.end(),
+                                   [this](const Command& c) {
+                                       return c.type == Cmd::Draw && states_[draws_[c.index].state].ui;
+                                   }),
+                    commands_.end());
+    return before - commands_.size();
+}
+
 void FrameRecord::reset() {
     commands_.clear();
     clears_.clear();

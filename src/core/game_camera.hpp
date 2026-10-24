@@ -12,6 +12,9 @@ constexpr uint32_t kModeMgr = 0x74B578;
 constexpr uint32_t kModeCurrent = 0x04;  // CGameMode*
 constexpr uint32_t kModeType = 0x58;     // 1 in the game, 0 at the login
 constexpr uint32_t kModeView = 0xC8;     // CView* of the game mode
+// 3.0.4-beta.5: CGameMode int[0xa0] - 1 outdoors, 0 on a map of data\indoorrswtable.txt (FUN_0055a230 at the map's
+// start): the yaw clamped to 45 +-20, the tilt's and the zoom's ranges (300 at most) the building's
+constexpr uint32_t kModeOutdoor = 0x280;
 constexpr uint32_t kModeMap = 0x60;      // the map's file name, "prontera.rsw" (copied there as the world loads)
 constexpr uint32_t kViewMatrix = 0x94;   // 4 x 3 floats: world -> view for row vectors (D3D), the last row a move
 constexpr uint32_t kViewAt = 0x28;       // 3 floats: the point the camera looks at - the character (0x4faf00)

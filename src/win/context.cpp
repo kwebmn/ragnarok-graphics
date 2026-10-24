@@ -489,7 +489,8 @@ void Context::endScene() {
     // 3.0.3-beta.12 (the user's R-KVTEMT: «всеравно курсор не видно»): the scene goes to the GPU here, before the
     // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
     const bool drawn = record.takeWork() > 0;
-    if (panelSlot_.endScene(drawn) && renderer) {
+    if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
+    if (panelSlot_.endScene(drawn) && renderer && !photo_) {
         windowSwitch_.draw(record, *renderer);
         record.takeWork();  // the driver's own draws are not the game's
     }
@@ -519,7 +520,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.3-beta.12: put into the game's scene at its EndScene; here only into a picture drawn without one
     const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
-    if (panelSlot_.present(drawnAnew) && renderer) windowSwitch_.draw(record, *renderer);
+    if (panelSlot_.present(drawnAnew) && renderer && !photo_) windowSwitch_.draw(record, *renderer);
     record.takeWork();  // the driver's own draws are not the game's
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
@@ -579,6 +580,15 @@ void Context::present(const Rect& source, bool waitForVblank) {
             LOG_INFO("frame counter: %s (Ctrl+Shift+F11)", fpsShown_ ? "on" : "off");
         }
     }
+    // 3.0.4-beta.5 (the user's idea 5): Ctrl+Alt+F12 - the photo mode, the game's interface out of the picture
+    const bool photoDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
+                           GetAsyncKeyState(VK_MENU) < 0 && GetAsyncKeyState(VK_F12) < 0;
+    if (photoKey_.pressed(photoDown)) {
+        photo_ = !photo_;
+        LOG_INFO("photo mode: %s (Ctrl+Alt+F12)", photo_ ? "on - the game's interface, the cursor and the panel hidden"
+                                                         : "off");
+    }
+    keepCameraFree(config.cameraIndoor);  // 3.0.4-beta.5: building maps' camera as outdoors
     // 2.3: Ctrl+Shift+F9 - uaRO Studio's X-ray: the AI pictures' textures tinted by how they are shown; written too,
     // as Ctrl+Shift+F11 is ([debug] xray, the console's switch)
     const bool xrayDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
@@ -814,7 +824,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     GpuTiming gpuNow;  // 2.2.1: the card's work a frame - the counter's and the console's
     const bool timed = renderer->gpuTiming(gpuNow);
     fps_.setGpu(timed ? &gpuNow : nullptr);
-    fps_.present(window, fpsShown_);
+    fps_.present(window, fpsShown_ && !photo_);  // 3.0.4-beta.5: not in the photo mode's picture
     noteUsage(foreground, out.cx, out.cy, timed ? &gpuNow : nullptr);  // 2.2.1
     if (console_.present(window, foreground, ourFile(layout::File::Ini), config, map_,
                          timed ? &gpuNow : nullptr)) {  // 1.9.3; 2.6.22: the map for «Только на этой карте»

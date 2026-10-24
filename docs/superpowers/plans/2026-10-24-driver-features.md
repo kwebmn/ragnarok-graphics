@@ -34,8 +34,9 @@ beta each, no review stops; releases only on «выпускай». Facts from ua
    windows' panel of the main window; «Грати» starts a set of N windows ([windows] start_count 1-8, 2 s apart).
    No logins stored.
 4. Camera (beta.5): [camera] indoor = 1 - building maps get the outdoor freedom (rotation, tilt, zoom to 2040; the
-   flag int[0xa0] kept at 1); smooth_zoom = 1 - the wheel's steps eased over 150 ms; far plane pushed past the
-   farthest zoom only if the world is cut there (checked first). Photo mode Ctrl+Shift+F11: the game's interface, the
+   flag int[0xa0] kept at 1). Dropped after the facts: smooth zoom - the game already eases tilt, yaw and distance by
+   0.1 a frame (FUN_004faca0); the far plane - 1500 also sets the maps' fog (13068), left as it is until a player
+   shows the world cut at the farthest zoom. Photo mode Ctrl+Shift+F11: the game's interface, the
    cursor, the panel and the counters hidden; Ctrl+Shift+F12 then shoots the picture without them.
 5. Buff timers (beta.6): a table generated from uAthena (icon -> skill/item -> duration by level); the player's own
    cast on self gives the level, another's buff or an item the longest; the time left drawn under each icon at the
