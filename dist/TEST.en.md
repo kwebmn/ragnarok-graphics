@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.3-beta.11 — what is new
+
+- **The game's cursor over the windows' panel.** On maps with effects (such as prontera) the cursor ended up under
+  the panel and looked dark through it. Now it is always over the panel, the tip and the menu.
+- **A new panel layout, «Icons».** Small tiles with the windows' numbers and HP/SP bars: the panel takes several
+  times less room. The character's name and levels show in a tip when the mouse is over a tile.
+  - To turn it on: right-click the panel → «Layout» → «Icons». Or «The panel's layout» in the settings or the console
+    (~).
+  - Drag the panel by the dots on its left.
+- **The frame counter no longer freezes.** When a full-screen game went behind, its counter stayed over the other
+  window with its last numbers. Now it hides at once, as the console (~) does.
+
 # uaRO Graphics 3.0.3-beta.10 — what is new
 
 - **The windows' panel has a menu on the right mouse button.** Right-click the panel and a menu opens by the cursor.
