@@ -98,7 +98,8 @@ void readSettings() {
     std::string text;
     if (readTextFile(ourFile(layout::File::Ini), text)) g_set = parseConfig(text).sound;
     audio::configure(g_set.engine, g_set.reverb, g_set.background, g_set.limiter, g_set.headphones);  // 1.1, 1.2
-    audio::setOutput(g_set.output);  // 3.0.4-beta.1
+    audio::setOutput(g_set.output);                                  // 3.0.4-beta.1
+    audio::configureAmbience(g_set.ambience, g_set.ambienceVolume);  // 3.0.4-beta.7
 }
 
 Tracked* track(void* handle, uint8_t kind) {

@@ -7,16 +7,20 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <map>
 #include <vector>
 
+#include "core/ambience.hpp"
 #include "core/audio_output.hpp"
 #include "core/sound_mix.hpp"
 #include "core/sound_place.hpp"
 #include "core/sound_space.hpp"
 #include "core/wav.hpp"
 #include "win/audio_devices.hpp"
+#include "win/ambience_files.hpp"
 #include "win/audio_master.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/spatial_audio.hpp"
 
 namespace uagfx::win::audio {
@@ -42,6 +46,8 @@ using ReverbFn = HRESULT(WINAPI*)(IUnknown** out);
 // mouse's ray is made with it: the screen's right its first row, where it looks its third).
 constexpr uint32_t kModeKind = 0x74B5D0, kModeNow = 0x74B57C;
 constexpr uint32_t kEffectsVolume = 0x70E814;  // the game's effects' volume (0-127), as FUN_00421af0 reads it
+// 3.0.4-beta.7: the game's sound mode (0 none) and its effects' box, as FUN_004396b0 asks them before a sound
+constexpr uint32_t kSoundMode = 0x6B7B54, kEffectsOn = 0x6B8320;
 constexpr int kMaxVoices = 64;
 
 struct Voice {
@@ -74,6 +80,21 @@ struct Engine {
     bool away = false, reopen = false, watching = false;
     unsigned seen = 0;
     volatile LONG lost = 0;  // XAudio2's critical error (its thread): the device gone, the engine stopped for good
+    // 3.0.4-beta.7: the map's own sounds (core/ambience.hpp) - on, their volume (%), the map asked for, its sounds and
+    // their files (the voices read the images), a voice for each file heard
+    bool ambience = false;
+    int ambienceVolume = 60;
+    std::string ambienceMap = "-";
+    ambience_files::MapSounds ambient;
+    std::map<std::string, wav::Sound> ambientSounds;  // by file, over ambient.files' images
+    struct AmbientVoice {
+        std::string file;
+        IXAudio2SourceVoice* voice = nullptr;
+        uint32_t key = 0;
+        uint64_t next = 0;  // when it sounds again
+    };
+    std::vector<AmbientVoice> ambientVoices;
+    unsigned ambientPlayed = 0;
 };
 
 Engine& engine() {
@@ -168,6 +189,9 @@ void stop(Engine& e) {
     for (Voice& v : e.voices)
         if (v.voice) v.voice->DestroyVoice();
     e.voices.clear();
+    for (Engine::AmbientVoice& v : e.ambientVoices)  // 3.0.4-beta.7
+        if (v.voice) v.voice->DestroyVoice();
+    e.ambientVoices.clear();
     if (e.reverb) e.reverb->DestroyVoice();
     e.reverb = nullptr;
     if (e.master) e.master->DestroyVoice();
@@ -257,6 +281,16 @@ bool camera(float& rx, float& rz, float& fx, float& fz) {
     return std::isfinite(rx) && std::isfinite(rz) && std::isfinite(fx) && std::isfinite(fz);
 }
 
+// 3.0.4-beta.7: where the camera looks - the character - in the world (CView+0x28, the maps' own places)
+bool listenerAt(float at[3]) {
+    if (*reinterpret_cast<const int*>(uintptr_t(kModeKind)) != 1) return false;
+    const uint32_t mode = *reinterpret_cast<const uint32_t*>(uintptr_t(kModeNow));
+    const uint32_t view = mode ? *reinterpret_cast<const uint32_t*>(uintptr_t(mode + 0xC8)) : 0;
+    if (!view) return false;
+    std::memcpy(at, reinterpret_cast<const void*>(uintptr_t(view + 0x28)), 12);
+    return std::isfinite(at[0]) && std::isfinite(at[1]) && std::isfinite(at[2]);
+}
+
 // A voice free for this format: an idle one of it, a new one, or the quietest playing (stopped for it).
 Voice* voiceFor(Engine& e, const wav::Sound& s) {
     const uint32_t key = keyOf(s);
@@ -299,7 +333,117 @@ Voice* voiceFor(Engine& e, const wav::Sound& s) {
     return victim;
 }
 
+std::string lowerName(std::string s) {
+    for (char& c : s) c = c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c;
+    return s;
+}
+
+void quietAmbient(Engine& e) {
+    for (Engine::AmbientVoice& v : e.ambientVoices)
+        if (v.voice) v.voice->SetVolume(0.0f, XAUDIO2_COMMIT_NOW);
+}
+
+// 3.0.4-beta.7 (the user's idea 6): the map's own sounds around the character - its .rsw's sound objects (read at
+// the map's change, win/ambience_files.cpp), the nearest of each file within its reach, the loudest few
+// (core/ambience.hpp): placed around the listener as the game's sounds are, each again once its last ended and its
+// cycle passed; the game's effects' volume and box, [sound] ambience_volume
+void ambienceFrame(Engine& e, const std::string& map, uint64_t now) {
+    if (map != e.ambienceMap) {  // another map: its own sounds asked for, the old ones' voices let go first
+        for (Engine::AmbientVoice& v : e.ambientVoices)
+            if (v.voice) v.voice->DestroyVoice();
+        e.ambientVoices.clear();
+        e.ambientSounds.clear();
+        e.ambient = ambience_files::MapSounds{};
+        e.ambienceMap = map;
+        if (!map.empty() && map != "-") ambience_files::ask(gameDir(), map);
+    }
+    ambience_files::MapSounds got;
+    if (ambience_files::take(got) && got.map == e.ambienceMap) {
+        e.ambient = std::move(got);
+        for (auto& f : e.ambient.files) {
+            wav::Sound s;
+            if (wav::parse(f.second.data(), uint32_t(f.second.size()), s) && wav::playable(s))
+                e.ambientSounds[f.first] = s;
+        }
+    }
+    float at[3], rx = 1, rz = 0, fx = 0, fz = 1;
+    const bool sounding = *reinterpret_cast<const int*>(uintptr_t(kSoundMode)) != 0 &&
+                          *reinterpret_cast<const int*>(uintptr_t(kEffectsOn)) != 0;
+    if (e.ambientSounds.empty() || !sounding || !listenerAt(at) || !camera(rx, rz, fx, fz)) {
+        quietAmbient(e);
+        return;
+    }
+    const float volume = float(std::clamp(*reinterpret_cast<const int*>(uintptr_t(kEffectsVolume)), 0, 127)) / 127.0f *
+                         float(std::clamp(e.ambienceVolume, 0, 100)) / 100.0f;
+    std::vector<bool> heard(e.ambientVoices.size(), false);
+    for (const ambience::Heard& h : ambience::heard(e.ambient.sounds, at[0], at[1], at[2], rx, rz, fx, fz)) {
+        const rsw::Sound& src = e.ambient.sounds[h.source];
+        const std::string file = lowerName(src.file);
+        const auto found = e.ambientSounds.find(file);
+        if (found == e.ambientSounds.end()) continue;
+        const wav::Sound& s = found->second;
+        size_t i = 0;
+        while (i < e.ambientVoices.size() && e.ambientVoices[i].file != file) ++i;
+        if (i == e.ambientVoices.size()) {  // its voice, on the master and the place's reverberation
+            WAVEFORMATEX f{};
+            f.wFormatTag = WAVE_FORMAT_PCM;
+            f.nChannels = s.channels;
+            f.nSamplesPerSec = s.rate;
+            f.wBitsPerSample = s.bits;
+            f.nBlockAlign = s.blockAlign;
+            f.nAvgBytesPerSec = s.rate * s.blockAlign;
+            XAUDIO2_SEND_DESCRIPTOR sends[2] = {{0, e.master}, {0, e.reverb}};
+            XAUDIO2_VOICE_SENDS list{e.reverb ? 2u : 1u, sends};
+            IXAudio2SourceVoice* made = nullptr;
+            if (FAILED(e.x->CreateSourceVoice(&made, &f, 0, 2.0f, nullptr, &list, nullptr))) continue;
+            e.ambientVoices.push_back(Engine::AmbientVoice{file, made, keyOf(s), 0});
+            heard.push_back(false);
+        }
+        Engine::AmbientVoice& v = e.ambientVoices[i];
+        heard[i] = true;
+        float pan[16] = {};
+        sound::pan(h.azimuth, e.angles, pan);
+        std::vector<float> matrix(size_t(e.outChannels) * s.channels);
+        for (UINT32 out = 0; out < e.outChannels && out < 16; ++out)
+            for (UINT32 in = 0; in < s.channels; ++in)
+                matrix[size_t(out) * s.channels + in] = pan[out] * (s.channels == 2 ? 0.7071f : 1.0f);
+        v.voice->SetOutputMatrix(e.master, s.channels, e.outChannels, matrix.data(), XAUDIO2_COMMIT_NOW);
+        if (e.reverb) {
+            const float wet = sendFor(e) * 0.5f, send[4] = {wet, wet, wet, wet};
+            v.voice->SetOutputMatrix(e.reverb, s.channels, 2, send, XAUDIO2_COMMIT_NOW);
+        }
+        v.voice->SetVolume(h.gain * volume, XAUDIO2_COMMIT_NOW);
+        if (now < v.next) continue;
+        const uint64_t lengthMs = uint64_t(s.bytes) * 1000 / std::max<uint64_t>(uint64_t(s.rate) * s.blockAlign, 1);
+        XAUDIO2_BUFFER b{};
+        b.Flags = XAUDIO2_END_OF_STREAM;
+        b.AudioBytes = s.bytes / s.blockAlign * s.blockAlign;
+        b.pAudioData = s.data;
+        v.voice->Stop(0, XAUDIO2_COMMIT_NOW);
+        v.voice->FlushSourceBuffers();
+        if (SUCCEEDED(v.voice->SubmitSourceBuffer(&b, nullptr)) && SUCCEEDED(v.voice->Start(0, XAUDIO2_COMMIT_NOW)))
+            ++e.ambientPlayed;
+        v.next = now + std::max<uint64_t>(lengthMs + 50, uint64_t(std::max(src.cycle, 0.5f) * 1000.0f));
+    }
+    for (size_t i = 0; i < e.ambientVoices.size(); ++i)
+        if (!heard[i] && e.ambientVoices[i].voice) e.ambientVoices[i].voice->SetVolume(0.0f, XAUDIO2_COMMIT_NOW);
+    static uint64_t said = 0;  // what they did, once a minute
+    if (now - said > 60000 && e.ambientPlayed) {
+        said = now;
+        LOG_INFO("world sounds: %u played in the last minute on %s (%u files' voices)", e.ambientPlayed,
+                 e.ambienceMap.c_str(), unsigned(e.ambientVoices.size()));
+        e.ambientPlayed = 0;
+    }
+}
+
 }  // namespace
+
+void configureAmbience(bool on, int volume) {
+    Engine& e = engine();
+    if (e.ambience && !on) quietAmbient(e);
+    e.ambience = on;
+    e.ambienceVolume = volume;
+}
 
 int playing() {
     int n = 0;
@@ -397,7 +541,8 @@ bool play(const void* image, float x, float y, float z, int reach, int inner, fl
 
 void frame(bool foreground, const std::string& map, float others) {
     Engine& e = engine();
-    if (e.tried && e.wanted) {  // 3.0.4-beta.1: a new engine - its device lost, another chosen, the chosen one back
+    if (!e.tried && e.ambience) start(e);  // 3.0.4-beta.7: the world's sounds need it, the game's sounds or not
+    if (e.tried && (e.wanted || e.ambience)) {  // 3.0.4-beta.1: a new engine - its device lost, another chosen, back
         const bool lost = InterlockedExchange(&e.lost, 0) != 0;
         if (lost || e.reopen || deviceBack(e)) {
             if (lost) LOG_INFO("sound engine: its output device is gone - opened again");
@@ -417,6 +562,7 @@ void frame(bool foreground, const std::string& map, float others) {
         e.map = map;
         setRoom(e, sound::roomOf(map));
     }
+    if (e.ambience) ambienceFrame(e, map, GetTickCount64());  // 3.0.4-beta.7
     if (foreground != e.front || std::fabs(others - e.others) > 0.01f) {
         e.front = foreground;
         e.others = others;

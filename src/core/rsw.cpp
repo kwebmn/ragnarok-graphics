@@ -90,7 +90,15 @@ bool parse(const uint8_t* data, size_t size, World& out, std::string& error) {
             l.range = r.get<float>();
             if (r.ok()) out.lights.push_back(l);
         } else if (type == 3) {  // a sound: name, file, place, volume, size, range, cycle (2.0 on)
-            r.skip(160 + 12 + 4 + 8 + 4 + (v >= 0x200 ? 4 : 0));
+            Sound s;
+            r.skip(80);
+            s.file = r.name(80);
+            for (float& f : s.pos) f = r.get<float>();
+            s.volume = r.get<float>();
+            r.skip(8);  // its width and height
+            s.range = r.get<float>();
+            if (v >= 0x200) s.cycle = r.get<float>();
+            if (r.ok() && out.sounds.size() < 100000) out.sounds.push_back(std::move(s));
         } else if (type == 4) {
             Effect e;
             r.skip(80);

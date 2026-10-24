@@ -31,6 +31,15 @@ struct Model {
     float scale[3] = {1, 1, 1};
 };
 
+// 3.0.4-beta.7 (the user's idea 6): a sound its makers placed - birds, a brook, waves, the wind: its file under
+// data\wav\, its place, its volume (about 1), its reach and how often it sounds (seconds; 4 before 2.0). uaRO.exe
+// loads them and never plays them; the driver does (core/ambience.hpp).
+struct Sound {
+    std::string file;
+    float pos[3] = {0, 0, 0};
+    float volume = 1.0f, range = 0.0f, cycle = 4.0f;
+};
+
 struct World {
     int version = 0;     // major * 256 + minor
     int waterType = -1;  // 0.31: its water's kind (4: lava); -1 not known
@@ -41,6 +50,7 @@ struct World {
     std::vector<Light> lights;
     std::vector<Effect> effects;
     std::vector<Model> models;  // 2.0
+    std::vector<Sound> sounds;  // 3.0.4-beta.7
 };
 
 // false (and why) when it is not a map file; a file cut short or an unknown object keeps what came before it.

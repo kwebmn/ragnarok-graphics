@@ -502,6 +502,8 @@ private:
         if (k == "frames.battery_fps")  // 2.5.20: with the battery saver on
             return host_.model().token(*findSetting("frames.battery_saver")) == "1";
         if (k == "sound.output") return false;  // 3.0.4-beta.1: its own list (buildOutput)
+        if (k == "sound.ambience_volume")      // 3.0.4-beta.7: with the world's sounds on
+            return host_.model().token(*findSetting("sound.ambience")) == "1";
         if (k.compare(0, 13, "quality.dlss_") != 0) return true;
         const std::string dlss = host_.model().token(*findSetting("quality.dlss"));
         return k == "quality.dlss_model" ? dlss != "off" : dlss == "custom";

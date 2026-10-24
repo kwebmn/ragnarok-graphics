@@ -22,5 +22,8 @@ void configure(bool on, int reverb, int background, bool limiter, bool headphone
 // 3.0.4-beta.1: the output device ([sound] output: Windows' endpoint id, "" its default) - at the start, and a new
 // engine on it at the next frame when it changes
 void setOutput(const std::string& id);
+// 3.0.4-beta.7 (the user's idea 6): the maps' own sounds - birds, brooks, waves, the wind ([sound] ambience,
+// ambience_volume %); the engine runs for them whatever [sound] engine says
+void configureAmbience(bool on, int volume);
 
 }  // namespace uagfx::win::audio

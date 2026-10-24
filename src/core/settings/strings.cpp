@@ -4492,6 +4492,26 @@ constexpr Entry kTexts[] = {
      "Сколько ещё продлятся Blessing, Increase AGI, зелья и остальное — на каждом значке у правого края экрана. Время "
      "берётся из данных самого сервера; бафф от другого игрока считается по его уровню, неизвестный — по самому "
      "долгому времени."},
+    // 3.0.4-beta.7: the maps' own sounds
+    {Text::GfxSoundAmbience, "Sounds of the world",
+     "Звуки світу",
+     "Звуки мира"},
+    {Text::GfxSoundAmbienceHint,
+     "Birds in the fields, brooks, the sea's waves, the wind in the desert, insects at night, drops in the caves - the "
+     "sounds the game's makers placed on 563 maps, which this old client never played. Each is heard near its place, "
+     "louder as you come closer, from its side. With the game's effects volume.",
+     "Птахи в полях, струмки, морські хвилі, вітер у пустелі, комахи, краплі в печерах — звуки, які розробники гри "
+     "розставили на 563 картах, а цей старий клієнт їх ніколи не грав. Кожен чути біля його місця, гучніше ближче, з "
+     "його боку. Разом із гучністю звуків ефектів гри.",
+     "Птицы в полях, ручьи, морские волны, ветер в пустыне, насекомые, капли в пещерах — звуки, которые разработчики "
+     "игры расставили на 563 картах, а этот старый клиент их никогда не играл. Каждый слышно у его места, громче "
+     "ближе, с его стороны. Вместе с громкостью звуков эффектов игры."},
+    {Text::GfxSoundAmbienceVolume, "Sounds of the world: volume",
+     "Звуки світу: гучність",
+     "Звуки мира: громкость"},
+    {Text::GfxSoundAmbienceVolumeHint, "Their share of the game's effects volume.",
+     "Їхня частка від гучності звуків ефектів гри.",
+     "Их доля от громкости звуков эффектов игры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

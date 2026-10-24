@@ -11,6 +11,7 @@
 #include "core/layout.hpp"
 #include "core/updates.hpp"
 #include "core/zip.hpp"
+#include "win/game_files.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::gpu {
@@ -19,74 +20,6 @@ namespace {
 std::string lower(std::string s) {
     for (char& c : s) c = c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c;
     return s;
-}
-
-std::string trim(const std::string& s) {
-    const size_t a = s.find_first_not_of(" \t\r\n"), b = s.find_last_not_of(" \t\r\n");
-    return a == std::string::npos ? "" : s.substr(a, b - a + 1);
-}
-
-bool readFile(const std::string& path, std::vector<uint8_t>& out) {
-    std::FILE* f = std::fopen(path.c_str(), "rb");
-    if (!f) return false;
-    out.clear();
-    uint8_t buf[65536];
-    size_t n = 0;
-    while ((n = std::fread(buf, 1, sizeof buf, f)) > 0 && out.size() < (size_t(64) << 20)) out.insert(out.end(), buf, buf + n);
-    std::fclose(f);
-    return !out.empty();
-}
-
-// 3.0.2-beta.5: the administrator's GRFs in updates\ (core/updates.hpp), looked in before DATA.INI's as the game
-// does - none with [client] updates off
-std::vector<std::string> updateFiles(const std::string& dir) {
-    std::vector<uint8_t> ini;
-    if (readFile(layout::join(dir, layout::now(layout::File::Ini)), ini) &&
-        !parseConfig(std::string(ini.begin(), ini.end())).clientUpdates)
-        return {};
-    std::vector<std::string> names;
-    WIN32_FIND_DATAA f{};
-    HANDLE h = FindFirstFileA(layout::join(layout::join(dir, updates::kFolder), "*.grf").c_str(), &f);
-    if (h != INVALID_HANDLE_VALUE) {
-        do {
-            if (!(f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) names.push_back(f.cFileName);
-        } while (FindNextFileA(h, &f));
-        FindClose(h);
-    }
-    return names;
-}
-
-// DATA.INI's [Data] archives in the order of their numbers (the client looks in them in that order).
-std::vector<std::string> dataArchives(const std::string& dir) {
-    std::vector<uint8_t> b;
-    if (!readFile(dir + "\\DATA.INI", b)) return {};
-    std::vector<std::pair<long, std::string>> found;
-    bool data = false;
-    std::string text(b.begin(), b.end()), line;
-    for (size_t p = 0; p <= text.size(); ++p) {
-        if (p < text.size() && text[p] != '\n') {
-            line += text[p];
-            continue;
-        }
-        const std::string l = trim(line);
-        line.clear();
-        if (l.empty() || l[0] == ';') continue;
-        if (l[0] == '[') {
-            data = lower(l) == "[data]";
-            continue;
-        }
-        const size_t eq = l.find('=');
-        if (!data || eq == std::string::npos) continue;
-        char* end = nullptr;
-        const std::string key = trim(l.substr(0, eq));
-        const long n = std::strtol(key.c_str(), &end, 10);
-        const std::string file = trim(l.substr(eq + 1));
-        if (end && *end == '\0' && !key.empty() && !file.empty()) found.emplace_back(n, file);
-    }
-    std::stable_sort(found.begin(), found.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-    std::vector<std::string> out;
-    for (const auto& f : found) out.push_back(f.second);
-    return out;
 }
 
 }  // namespace
@@ -131,7 +64,7 @@ void MapWorld::setGameDir(const std::string& dir) {
     LeaveCriticalSection(&shared_->lock);
     // The axes found in an earlier run.
     std::vector<uint8_t> b;
-    if (readFile(dir + "\\uaro-graphics\\map-axes.txt", b)) {
+    if (win::gamefiles::readWhole(dir + "\\uaro-graphics\\map-axes.txt", b)) {
         int x = 0, z = 0;
         const std::string text(b.begin(), b.end());
         if (std::sscanf(text.c_str(), "x %d z %d", &x, &z) == 2 && (x == 1 || x == -1) && (z == 1 || z == -1)) {
@@ -260,7 +193,7 @@ void MapWorld::loop() {
         if (listedFor != dir) {  // DATA.INI's archives, opened when first looked in
             listedFor = dir;
             archives.clear();
-            for (const std::string& file : updates::archiveOrder(updateFiles(dir), dataArchives(dir))) {
+            for (const std::string& file : win::gamefiles::archives(dir)) {
                 auto a = std::make_unique<Archive>();
                 a->path = file.find(':') != std::string::npos ? file : dir + "\\" + file;
                 const std::string ext = lower(file.size() > 4 ? file.substr(file.size() - 4) : "");
@@ -272,7 +205,7 @@ void MapWorld::loop() {
         const std::string entry = "data\\" + name + ".rsw";
         std::vector<uint8_t> bytes;
         std::string from, error;
-        if (readFile(dir + "\\" + entry, bytes)) from = "the data folder";
+        if (win::gamefiles::readWhole(dir + "\\" + entry, bytes)) from = "the data folder";
         // an archive opened when first looked in (2.0: also for the models, which may lie in a later one)
         const auto open = [&](Archive& a) {
             if (a.tried) return a.ok;
@@ -316,7 +249,7 @@ void MapWorld::loop() {
             const std::string gnd = "data\\" + name + ".gnd";
             std::vector<uint8_t> gb;
             std::string gfrom, why;
-            if (readFile(dir + "\\" + gnd, gb)) gfrom = "the data folder";
+            if (win::gamefiles::readWhole(dir + "\\" + gnd, gb)) gfrom = "the data folder";
             for (size_t i = 0; i < archives.size() && gfrom.empty(); ++i) {
                 Archive& a = *archives[i];
                 if (!open(a)) continue;
@@ -339,7 +272,7 @@ void MapWorld::loop() {
                 const std::string entry = "data\\model\\" + m.file;
                 std::vector<uint8_t> mb;
                 std::string why;
-                bool found = readFile(dir + "\\" + entry, mb);
+                bool found = win::gamefiles::readWhole(dir + "\\" + entry, mb);
                 for (size_t i = 0; i < archives.size() && !found; ++i) {
                     Archive& a = *archives[i];
                     if (!open(a)) continue;

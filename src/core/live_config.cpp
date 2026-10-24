@@ -211,6 +211,15 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
                 u.applied.push_back(change(b.first, flag(b.second.first), flag(b.second.second)));
         n.notify = f;
     }
+    if (file.sound.ambience != running.sound.ambience) {  // 3.0.4-beta.7: the maps' own sounds
+        u.applied.push_back(change("ambience", flag(running.sound.ambience), flag(file.sound.ambience)));
+        n.sound.ambience = file.sound.ambience;
+    }
+    if (file.sound.ambienceVolume != running.sound.ambienceVolume) {
+        u.applied.push_back(change("ambience_volume", std::to_string(running.sound.ambienceVolume),
+                                   std::to_string(file.sound.ambienceVolume)));
+        n.sound.ambienceVolume = file.sound.ambienceVolume;
+    }
     if (file.sound.output != running.sound.output) {  // 3.0.4-beta.1: the output device
         const auto word = [](const std::string& id) { return id.empty() ? std::string("auto") : id; };
         u.applied.push_back(change("output", word(running.sound.output), word(file.sound.output)));
@@ -272,6 +281,7 @@ bool appliesNow(const std::string& k) {
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
            k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
            k == "sound.output" ||             // 3.0.4-beta.1: the music and the sounds move at once
+           k == "sound.ambience" || k == "sound.ambience_volume" ||  // 3.0.4-beta.7
            k.compare(0, 7, "notify.") == 0 ||  // 3.0.4-beta.3
            k == "camera.indoor" ||            // 3.0.4-beta.5
            k == "buffs.timers";               // 3.0.4-beta.6

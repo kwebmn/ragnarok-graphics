@@ -426,6 +426,10 @@ struct SoundSettings {
     // 3.0.4-beta.1, output: the Windows output device it plays on (its endpoint id; "" - auto: as in Windows;
     // core/audio_output.hpp)
     std::string output;
+    // 3.0.4-beta.7, ambience: the maps' own sounds - birds, brooks, waves, the wind (core/ambience.hpp); off as new
+    // things ship; ambience_volume - their share of the game's effects' volume (%)
+    bool ambience = false;
+    int ambienceVolume = 60;
 };
 
 // 3.0.4-beta.3, [notify] (core/notify.hpp): a game window behind others tells of these - on, then each kind

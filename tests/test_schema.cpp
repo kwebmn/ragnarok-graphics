@@ -104,8 +104,10 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "debug.fast_textures" && k != "debug.merge_draws" &&
                                 k != "debug.shader_variants" &&
                                 k.compare(0, 3, "ai.") != 0 &&
-                                // [sound] at the game's start; 3.0.4-beta.1: the output device at once
-                                (k.compare(0, 6, "sound.") != 0 || k == "sound.output")));
+                                // [sound] at the game's start; 3.0.4-beta.1: the output device at once,
+                                // 3.0.4-beta.7: the world's sounds too
+                                (k.compare(0, 6, "sound.") != 0 || k == "sound.output" || k == "sound.ambience" ||
+                                 k == "sound.ambience_volume")));
     }
 }
 

@@ -44,3 +44,17 @@ TEST(rsw_refuses_what_is_not_a_map) {
     CHECK_EQ(w.lights.size(), size_t(1));
     CHECK(w.effects.empty());
 }
+
+TEST(rsw_sounds_of_a_map) {
+    // 3.0.4-beta.7 (the user's idea 6): its sound objects - birds, brooks, waves - uaRO.exe loads and never plays
+    const std::vector<uint8_t> b = testfiles::rsw();
+    rsw::World w;
+    std::string error;
+    CHECK(rsw::parse(b.data(), b.size(), w, error));
+    CHECK_EQ(w.sounds.size(), size_t(1));
+    if (w.sounds.size() != 1) return;
+    const rsw::Sound& s = w.sounds[0];
+    CHECK_EQ(s.file, std::string("s.wav"));
+    CHECK(s.pos[0] == 0.0f && s.pos[1] == 0.0f && s.pos[2] == 0.0f);
+    CHECK(s.volume == 1.0f && s.range == 50.0f && s.cycle == 4.0f);
+}

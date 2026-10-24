@@ -26,6 +26,7 @@
 #include "win/server_night.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
+#include "win/sound_engine.hpp"
 #include "win/sound_hook.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/game_camera.hpp"
@@ -1016,6 +1017,8 @@ void Context::watchSettings() {
     if (config.logLevel != was.logLevel) wlog::setLevel(config.logLevel);
     if (config.fpsCounter != was.fpsCounter) fpsShown_ = config.fpsCounter;  // 2.2.1: at once
     if (config.sound.output != was.sound.output) soundOutput(config.sound.output);  // 3.0.4-beta.1
+    if (config.sound.ambience != was.sound.ambience || config.sound.ambienceVolume != was.sound.ambienceVolume)
+        audio::configureAmbience(config.sound.ambience, config.sound.ambienceVolume);  // 3.0.4-beta.7
     if (config.statsSend && usage_.begun()) {  // 2.2.1: what was changed in the game - what was liked, or not
         std::string lines;  // 2.2.2: the effects by what is drawn (a set made the player's own changes nothing)
         for (const std::string& a : usage::changes(was.effects, config.effects, startup().cardLevel, u.applied))
