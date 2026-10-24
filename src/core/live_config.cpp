@@ -200,6 +200,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("camera indoor", flag(running.cameraIndoor), flag(file.cameraIndoor)));
         n.cameraIndoor = file.cameraIndoor;
     }
+    if (file.cameraZoomLimit != running.cameraZoomLimit) {  // 3.0.4-beta.17
+        u.applied.push_back(change("camera zoom_limit", flag(running.cameraZoomLimit), flag(file.cameraZoomLimit)));
+        n.cameraZoomLimit = file.cameraZoomLimit;
+    }
     {  // 3.0.4-beta.3: the notifications, each box
         const NotifySettings &f = file.notify, &r = running.notify;
         const std::pair<const char*, std::pair<bool, bool>> boxes[] = {
@@ -284,6 +288,7 @@ bool appliesNow(const std::string& k) {
            k == "sound.ambience" || k == "sound.ambience_volume" ||  // 3.0.4-beta.7
            k.compare(0, 7, "notify.") == 0 ||  // 3.0.4-beta.3
            k == "camera.indoor" ||            // 3.0.4-beta.5
+           k == "camera.zoom_limit" ||        // 3.0.4-beta.17
            k == "buffs.timers";               // 3.0.4-beta.6
 }
 

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "core/config.hpp"
+#include "core/game_camera.hpp"
 #include "core/live_config.hpp"
 #include "core/settings/schema.hpp"
 #include "test.hpp"
@@ -815,6 +816,22 @@ TEST(config_camera_indoor) {
     CHECK(appliesNow("camera.indoor"));
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[camera]\nindoor = 0\n"));
     CHECK(!u.next.cameraIndoor && u.applied.size() == 1 && u.waiting.empty());
+}
+
+// 3.0.4-beta.17 (the user chose «Ограничить отдаление», R-35N5QN): [camera] zoom_limit - the camera out no further
+// than the character stays this side of the game's far plane
+TEST(config_camera_zoom_limit) {
+    CHECK(parseConfig("").cameraZoomLimit);
+    CHECK(!parseConfig("[camera]\nzoom_limit = 0\n").cameraZoomLimit);
+    const settings::IniSetting* s = settings::findSetting("camera.zoom_limit");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Game && s->control == settings::Control::Check);
+    CHECK(appliesNow("camera.zoom_limit"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[camera]\nzoom_limit = 0\n"));
+    CHECK(!u.next.cameraZoomLimit && u.applied.size() == 1 && u.waiting.empty());
+    // the limit itself this side of the far plane, with room for the character's own height
+    CHECK(camera::kZoomLimit + 50.0f < camera::kFar && camera::kZoomLimit > 1000.0f);
 }
 
 // 3.0.4-beta.6 (the user's idea 4): [buffs] timers - the time left on the buff icons

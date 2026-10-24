@@ -23,6 +23,10 @@ bool knownGameBuild();
 // (core/game_camera.hpp kModeOutdoor) kept at 1 while `wanted`; set back to the game's 0 when not wanted any more on
 // the same map. True while it holds a building map's.
 bool keepCameraFree(bool wanted);
+// 3.0.4-beta.17 (the user chose «Ограничить отдаление», R-35N5QN): the game's outdoors zoom limit (camera::kZoomMost,
+// 2040) held at camera::kZoomLimit while `wanted` - past its far plane, 1500, the game draws neither the character nor
+// the monsters -, its own put back when not; a camera already further out drawn in at once
+void limitZoom(bool wanted);
 // 3.0.4-beta.6: the game shows its world (not the login or the character list); false in another build of the exe
 bool inGameWorld();
 // The game's memory read without a fault where nothing is mapped

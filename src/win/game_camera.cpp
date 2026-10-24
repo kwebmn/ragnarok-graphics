@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -96,6 +97,25 @@ bool keepCameraFree(bool wanted) {
         return false;
     }
     return true;
+}
+
+void limitZoom(bool wanted) {
+    static float own = 0.0f;  // the game's limit as the driver found it
+    float now = 0.0f;
+    if (!knownBuild() || !read(camera::kZoomMost, &now, 4)) return;
+    if (own == 0.0f) own = now >= 1000.0f && now <= 10000.0f ? now : 2040.0f;
+    const float want = wanted ? std::min(camera::kZoomLimit, own) : own;
+    if (now != want) {  // in the exe's .data: written as it is
+        *reinterpret_cast<float*>(uintptr_t(camera::kZoomMost)) = want;
+        LOG_INFO("camera: zoomed out %.0f at most (%s)", want, wanted ? "[camera] zoom_limit" : "the game's own");
+    }
+    uint32_t cview = 0;
+    const uint32_t mode = gameMode();
+    if (!wanted || !mode || !read(mode + camera::kModeView, &cview, 4) || !cview) return;
+    for (uint32_t at : {camera::kViewDistanceTo, camera::kViewDistance}) {  // the game clamps at its next zoom alone
+        float d = 0.0f;
+        if (read(cview + at, &d, 4) && d > want) *reinterpret_cast<float*>(uintptr_t(cview + at)) = want;
+    }
 }
 
 bool readGameCursor(int& x, int& y) {

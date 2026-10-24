@@ -415,6 +415,7 @@ enum class Text : uint16_t {
     FxOwnGround, FxOwnGroundHint,  // 3.0.4-beta.10: the own world's prototype
     KeepFpsOffNote,                // 3.0.4-beta.11: keep_fps's choice said on the screen (R-EQDYNE)
     FxOwnFarModels, FxOwnFarModelsHint,  // 3.0.4-beta.14: a part of the own ground
+    CameraZoomLimit, CameraZoomLimitHint,  // 3.0.4-beta.17: the camera no further out than the character is drawn
     Count
 };
 

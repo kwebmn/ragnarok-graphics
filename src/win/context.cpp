@@ -604,6 +604,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                                          : "off");
     }
     keepCameraFree(config.cameraIndoor);  // 3.0.4-beta.5: building maps' camera as outdoors
+    limitZoom(config.cameraZoomLimit);     // 3.0.4-beta.17: no further out than the character is drawn
     // 2.3: Ctrl+Shift+F9 - uaRO Studio's X-ray: the AI pictures' textures tinted by how they are shown; written too,
     // as Ctrl+Shift+F11 is ([debug] xray, the console's switch)
     const bool xrayDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&

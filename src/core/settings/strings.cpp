@@ -4537,6 +4537,16 @@ constexpr Entry kTexts[] = {
      "обрізає, — коли камера далеко, земля не порожня. Їхні кольори беруться з того, як гра малює їх поблизу.",
      "Со своей землёй дома, деревья и скалы карты рисует сам uaRO Graphics из файлов карты и за краем, где игра их "
      "обрезает, — когда камера далеко, земля не пустая. Их цвета берутся из того, как игра рисует их вблизи."},
+    {Text::CameraZoomLimit, "Camera no further out than the character shows",
+     "Камера не далі, ніж видно персонажа",
+     "Камера не дальше, чем виден персонаж"},
+    {Text::CameraZoomLimitHint,
+     "The game lets the camera go out to 2040 but draws its world only to 1500: further out the character, the "
+     "monsters and the effects vanish. With this box the camera stops at 1400.",
+     "Гра дає віддалити камеру до 2040, а свій світ малює лише до 1500: далі зникають персонаж, монстри й ефекти. З "
+     "цим прапорцем камера зупиняється на 1400.",
+     "Игра даёт отдалить камеру до 2040, а свой мир рисует только до 1500: дальше пропадают персонаж, монстры и "
+     "эффекты. С этим флажком камера останавливается на 1400."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

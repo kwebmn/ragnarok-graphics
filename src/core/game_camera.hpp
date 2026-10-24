@@ -23,6 +23,12 @@ constexpr uint32_t kConstants = 0x695740;  // pi, far, near, horizontal and vert
 // and y in the game's pixels, clamped to its picture (uaRO.exe 0x419c60)
 constexpr uint32_t kMouse = 0x6EE6F0;
 constexpr uint32_t kMouseX = 0x14, kMouseY = 0x18;
+// 3.0.4-beta.17: the outdoors' zoom limit (float 2040, in its .data; every zoom of the game clamps the camera's
+// distance - CView kViewDistance, its target kViewDistanceTo - to it, uaRO.exe 0x55a314, 0x565d2f, ...) and the one
+// the driver holds there: the character this side of the far plane, its height with it (R-35N5QN)
+constexpr uint32_t kZoomMost = 0x6D66B4;
+constexpr uint32_t kViewDistance = 0x24, kViewDistanceTo = 0x3C;
+constexpr float kZoomLimit = 1400.0f;
 constexpr float kPi = 3.141592025756836f;  // as the exe holds it
 constexpr float kFar = 1500.0f;
 constexpr float kNear = 10.0f;
