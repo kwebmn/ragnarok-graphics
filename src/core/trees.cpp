@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <cstdint>
 #include <ctime>
 
@@ -71,6 +72,26 @@ Shade shadeAt(float x, float z, Season season) {
     }
     if (season == Season::Rime) s.rime = 0.45f + 0.25f * light;
     return s;
+}
+
+bool crownPlace(const uint8_t* vertices, size_t stride, uint32_t count, const float viewToWorld[12],
+                const camera::Projection& p, float& x, float& z) {
+    const float* m = viewToWorld;
+    double sx = 0.0, sz = 0.0;
+    uint32_t n = 0;
+    for (uint32_t i = 0; i < count; ++i) {
+        float v[4];
+        std::memcpy(v, vertices + size_t(i) * stride, sizeof v);
+        if (!(v[3] > 0.0f)) continue;
+        const float vz = 1.0f / v[3], vx = (v[0] - p.cx) * vz / p.f0, vy = (v[1] - p.cy) * vz / p.f1;
+        sx += vx * m[0] + vy * m[3] + vz * m[6] + m[9];
+        sz += vx * m[2] + vy * m[5] + vz * m[8] + m[11];
+        ++n;
+    }
+    if (!n) return false;
+    x = float(sx / n);
+    z = float(sz / n);
+    return true;
 }
 
 float throughLight(float shadowLength, float night) {

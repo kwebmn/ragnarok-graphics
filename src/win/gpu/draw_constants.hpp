@@ -102,10 +102,10 @@ inline void leafShading(const FrameRecord& rec, const DrawCmd& d, const LeafLook
     c.reproject[4] = look.through ? look.throughLight : 0.0f;
     c.sourceClamp[0] = c.sourceClamp[1] = c.sourceClamp[2] = 1.0f;
     if (!look.tints || !look.viewToWorld || rhw <= 0.0f) return;
-    const camera::Projection& p = look.projection;
-    const float* m = look.viewToWorld;
-    const float vz = 1.0f / rhw, vx = ((x0 + x1) * 0.5f - p.cx) * vz / p.f0, vy = ((y0 + y1) * 0.5f - p.cy) * vz / p.f1;
-    const float wx = vx * m[0] + vy * m[3] + vz * m[6] + m[9], wz = vx * m[2] + vy * m[5] + vz * m[8] + m[11];
+    // 3.0.4-beta.18: the shade looked up where its leaves lie in the world (trees::crownPlace) - the box's middle on
+    // the screen went round the crown as the camera turned, and the tree changed its shade with it
+    float wx = 0.0f, wz = 0.0f;
+    if (!trees::crownPlace(v.data() + d.vertexOffset, stride, n, look.viewToWorld, look.projection, wx, wz)) return;
     const trees::Shade sh = trees::shadeAt(wx, wz, look.season);
     for (int k = 0; k < 3; ++k) {
         c.sourceClamp[k] = sh.tint[k];

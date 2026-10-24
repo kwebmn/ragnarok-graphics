@@ -9,6 +9,7 @@
 #include "core/d3d7.hpp"
 #include "core/game_camera.hpp"
 #include "core/own_ground.hpp"
+#include "core/trees.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -534,6 +535,21 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
                                                                                           : o.modelIds.size();
             OwnState::ModelPending& pd = o.modelPending[tex];
             if (pd.verts.size() + bt.vertexCount + 64 > 65535) emit(tex);
+            // 3.0.4-beta.18: leaves - each tree's own shade (tree_tints) baked into its vertices by where they lie: a
+            // draw of these holds many trees, the game's own leaves get theirs a draw at a time (leafShading)
+            const auto picture = tex < o.modelIds.size() ? textures.find(o.modelIds[tex]) : textures.end();
+            const bool tinted = effects.treeTints && picture != textures.end() && picture->second.leafy;
+            const trees::Season season = effects.treeSeasons ? mapSeason : trees::Season::Green;
+            const auto shaded = [&](uint32_t colour, const float* file) {
+                if (!tinted) return colour;
+                const trees::Shade sh = trees::shadeAt(file[0] * sign[0], file[2] * sign[2], season);
+                uint32_t out = colour & 0xFF000000u;
+                for (int n = 0; n < 3; ++n) {
+                    const float c = float((colour >> ((2 - n) * 8)) & 0xFF) * sh.tint[n];
+                    out |= uint32_t(std::clamp(c, 0.0f, 255.0f) + 0.5f) << ((2 - n) * 8);
+                }
+                return out;
+            };
             seen.resize(size_t(bt.vertexCount) * 3);
             putAt.assign(bt.vertexCount, -1);
             for (uint32_t v = 0; v < bt.vertexCount; ++v) {
@@ -565,8 +581,8 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
                         if (putAt[lv[k]] < 0) {
                             const terrain::Vertex& mv = mesh.vertices[bt.firstVertex + lv[k]];
                             own_ground::Tl1 t{};
-                            corner(&seen[size_t(lv[k]) * 3], o.learning.colourOf(bt.firstVertex + lv[k]), mv.uv[0],
-                                   mv.uv[1], t);
+                            corner(&seen[size_t(lv[k]) * 3],
+                                   shaded(o.learning.colourOf(bt.firstVertex + lv[k]), mv.pos), mv.uv[0], mv.uv[1], t);
                             putAt[lv[k]] = int32_t(pd.verts.size());
                             pd.verts.push_back(t);
                         }
@@ -589,7 +605,7 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
                     float at[3] = {0, 0, 0}, u = 0.0f, v = 0.0f, ch[4] = {0, 0, 0, 0};
                     for (int k = 0; k < 3; ++k) {
                         const terrain::Vertex& mv = mesh.vertices[bt.firstVertex + lv[k]];
-                        const uint32_t c = o.learning.colourOf(bt.firstVertex + lv[k]);
+                        const uint32_t c = shaded(o.learning.colourOf(bt.firstVertex + lv[k]), mv.pos);
                         for (int a = 0; a < 3; ++a) at[a] += share[q][k] * seen[size_t(lv[k]) * 3 + size_t(a)];
                         u += share[q][k] * mv.uv[0];
                         v += share[q][k] * mv.uv[1];

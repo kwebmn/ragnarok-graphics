@@ -457,7 +457,9 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     // 2.6.19: leaves as the game draws a tree's - cut by its alpha test, not blended over: never a sprite or an effect,
     // whatever its picture looks like (the Pyramids' Poporings shed leaves)
-    const bool leaves = !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2 && !s.blend;
+    // 3.0.4-beta.18: not the own far models' - a draw of theirs holds many trees (their shade baked in, drawOwnModels)
+    const bool leaves = !s.ui && !twin && c.uiMode == 0 && t[0] && t[0]->leafy && d.fvf != d3d7::FVF_TL2 && !s.blend &&
+                        !ownPass;
     float swayTop = 0.0f, swayBottom = 0.0f;  // 0.64: leaves in the wind
     if (leaves && effects.foliage && effects.foliageStrength > 0 && yExtent(rec, d, swayTop, swayBottom)) {
         c.twin[0] = foliage::kSwing * float(effects.foliageStrength) / 100.0f;  // 2.7.30

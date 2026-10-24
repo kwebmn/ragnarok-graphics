@@ -1,5 +1,7 @@
 #include <cmath>
+#include <vector>
 
+#include "core/game_camera.hpp"
 #include "core/trees.hpp"
 #include "test.hpp"
 
@@ -45,4 +47,42 @@ TEST(trees_light_through_the_leaves_low_sun_most_none_at_night) {
     CHECK(std::fabs(trees::throughLight(1.6f, 0.0f) - 1.0f) < 1e-5f);    // sunset
     CHECK(trees::throughLight(1.0f, 0.0f) > trees::throughLight(0.6f, 0.0f));
     CHECK(trees::throughLight(1.6f, 1.0f) == 0.0f);
+}
+
+TEST(trees_a_crown_s_place_does_not_turn_with_the_camera) {
+    // 3.0.4-beta.18 (the user: «когда кручу камеру деревья меняют текст[уру]»): the place a crown's shade is looked up
+    // at was its leaves' box on the screen, its middle at their mean depth - it went round the crown as the camera
+    // turned, up to 6 units, and the shade with it (0.87-1.01 on prt_fild08). Now their mean place in the world: the
+    // same from every side.
+    const float leaves[][3] = {{550, -40, 890}, {562, -55, 904}, {541, -48, 911}, {556, -70, 897}, {547, -62, 905}};
+    const camera::Projection p = camera::projectionFor(1920, 1080);
+    float first[2] = {0, 0};
+    for (int yawDeg = 0; yawDeg < 360; yawDeg += 60) {
+        const float yaw = float(yawDeg) * 3.14159265f / 180.0f, tilt = 0.785398f, dist = 600.0f;
+        const float at[3] = {550, 0, 900};
+        const float eye[3] = {at[0] - std::sin(yaw) * std::cos(tilt) * dist, at[1] - std::sin(tilt) * dist,
+                              at[2] - std::cos(yaw) * std::cos(tilt) * dist};
+        float z[3] = {at[0] - eye[0], at[1] - eye[1], at[2] - eye[2]};
+        float l = std::sqrt(z[0] * z[0] + z[1] * z[1] + z[2] * z[2]);
+        for (float& c : z) c /= l;
+        float x[3] = {-z[2], 0.0f, z[0]};  // (0, -1, 0) x z: level, the screen's right
+        l = std::sqrt(x[0] * x[0] + x[2] * x[2]);
+        x[0] /= l, x[2] /= l;
+        const float y[3] = {z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]};
+        const float m[12] = {x[0], x[1], x[2], y[0], y[1], y[2], z[0], z[1], z[2], eye[0], eye[1], eye[2]};
+        // the leaves as the game hands them over: on the screen, x y z rhw
+        std::vector<float> screen;
+        for (const auto& w : leaves) {
+            const float d[3] = {w[0] - eye[0], w[1] - eye[1], w[2] - eye[2]};
+            const float vx = d[0] * x[0] + d[1] * x[1] + d[2] * x[2], vy = d[0] * y[0] + d[1] * y[1] + d[2] * y[2];
+            const float vz = d[0] * z[0] + d[1] * z[1] + d[2] * z[2];
+            screen.insert(screen.end(), {vx / vz * p.f0 + p.cx, vy / vz * p.f1 + p.cy, 0.5f, 1.0f / vz});
+        }
+        float wx = 0, wz = 0;
+        CHECK(trees::crownPlace(reinterpret_cast<const uint8_t*>(screen.data()), 4 * sizeof(float),
+                                uint32_t(screen.size() / 4), m, p, wx, wz));
+        if (yawDeg == 0) first[0] = wx, first[1] = wz;
+        CHECK(std::fabs(wx - first[0]) < 0.05f && std::fabs(wz - first[1]) < 0.05f);
+        CHECK(std::fabs(wx - 551.2f) < 0.05f && std::fabs(wz - 901.4f) < 0.05f);  // their mean
+    }
 }

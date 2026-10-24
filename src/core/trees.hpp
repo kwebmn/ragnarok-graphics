@@ -1,5 +1,9 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include <string>
+
+#include "core/game_camera.hpp"
 
 namespace uagfx::trees {
 
@@ -25,6 +29,13 @@ struct Shade {
 // The shade of the tree whose crown is about (x, z) of the world: smooth over the world (value noise about every 14
 // units), so a crown keeps it as the camera turns, and trees apart differ.
 Shade shadeAt(float x, float z, Season season);
+
+// 3.0.4-beta.18 (the user: «когда кручу камеру деревья меняют текст[уру]»): where a draw of leaves lies in the world -
+// its vertices (x, y, z, rhw first, `stride` bytes apart) turned back by the camera (view -> world, row vectors) and
+// their mean taken: the same from every side. Before, its box on the screen, the middle at the mean depth, went round
+// the crown as the camera turned, up to 6 units - and its shade with it. False: no vertex in front.
+bool crownPlace(const uint8_t* vertices, size_t stride, uint32_t count, const float viewToWorld[12],
+                const camera::Projection& p, float& x, float& z);
 
 // How strongly the leaves are lit through: low sun (long shadows) the most; none in the night (night 0-1).
 float throughLight(float shadowLength, float night);
