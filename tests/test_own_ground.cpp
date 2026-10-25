@@ -288,3 +288,26 @@ TEST(own_ground_lights_its_slopes_as_the_smooth_hills) {
     CHECK(own_ground::reliefLight(away, toSun, 0.0f, 1.0f) >= 0.6f);  // as the shader: 0.6 to 1.4
 }
 
+TEST(own_ground_lights_its_corners_once_and_its_points_between_them) {
+    // 3.0.4-beta.30: the hills' light a corner of the cells, made once a light (a map's 40 000 corners), each point's
+    // between its cell's four - 73 ns a point were the normal and the light at each (the first picture of a map 3 ms
+    // dearer), the light between the corners costs a few
+    gnd::Ground g;
+    g.width = 2, g.height = 1, g.zoom = 10.0f;
+    g.cells.resize(2);
+    for (gnd::Cell& c : g.cells) c.top = 0;
+    g.cells[0].h[0] = g.cells[0].h[2] = 0.0f, g.cells[0].h[1] = g.cells[0].h[3] = -5.0f;  // rising along x
+    g.cells[1].h[0] = g.cells[1].h[2] = -5.0f, g.cells[1].h[1] = g.cells[1].h[3] = -5.0f;  // flat on top
+    const std::vector<float> n = own_ground::cornerNormals(g);
+    const float toSun[3] = {-0.6f, -0.8f, 0.0f};
+    const std::vector<float> lights = own_ground::cornerLights(n, toSun, 0.55f, 1.0f);
+    CHECK_EQ(lights.size(), size_t(3 * 2));
+    for (size_t k = 0; k < lights.size(); ++k)
+        CHECK(std::fabs(lights[k] - own_ground::reliefLight(&n[k * 3], toSun, 0.55f, 1.0f)) < 1e-6f);
+    // between: corner (0, 0) of the slope and corner (1, 0) shared by both cells - half way along the first cell
+    const float half = own_ground::lightAt(lights, g.width, g.height, g.zoom, -5.0f, -5.0f);
+    CHECK(std::fabs(half - 0.5f * (lights[0] + lights[1])) < 1e-5f);
+    CHECK(own_ground::lightAt(lights, g.width, g.height, g.zoom, -10.0f, -5.0f) == lights[0]);  // a corner: its own
+    CHECK(own_ground::lightAt({}, g.width, g.height, g.zoom, 0.0f, 0.0f) == 1.0f);  // none: no light
+}
+

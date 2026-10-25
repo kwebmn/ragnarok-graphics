@@ -74,6 +74,8 @@ void Renderer::Impl::dropOwnGround() {
     ownState.modelLikeKnown = false;
     ownState.modelFrames = 0;
     ownState.waterTexture = ownState.waterColour = 0;  // 3.0.4-beta.20: the game's water picture of another map
+    ownState.lightOn = false;  // 3.0.4-beta.30: the corners' light made again for the next map
+    std::vector<float>().swap(ownState.cornerLight);
     ownState.wavePhaseKnown = false;
     ownState.waterLikeKnown = ownState.waterWaitLogged = false;
     ownState.waterFrames = 0;
@@ -304,6 +306,11 @@ bool Renderer::Impl::drawOwnGround() {
         o.lightOn = relief;
         std::copy(sun, sun + 3, o.lightSun);
         o.lightAmbient = ambient, o.lightStrength = strength;
+        // 3.0.4-beta.30: the light a corner, once - each point takes it between its cell's corners
+        if (relief)
+            o.cornerLight = own_ground::cornerLights(g->cornerNormals, sun, ambient, strength);
+        else
+            std::vector<float>().swap(o.cornerLight);
         // 3.0.4-beta.28: made again a few chunks a picture (2: fresh but in the light before) - the sun of the day's
         // clock moves a little every minute or two, and all of the view at once was a hitch of 10 ms
         for (std::vector<uint8_t>& f : o.fresh)
@@ -415,12 +422,9 @@ bool Renderer::Impl::drawOwnGround() {
                     for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
                         const terrain::Vertex& tv = mesh.vertices[v];
                         uint32_t c = o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
-                        if (o.lightOn) {  // 3.0.4-beta.26: the smooth hills' light, the corners' normals between
-                            float n[3];
-                            own_ground::normalAt(g->cornerNormals, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2],
-                                                 n);
+                        if (o.lightOn) {  // 3.0.4-beta.26: the smooth hills' light; 3.0.4-beta.30 the corners' between
                             const float light =
-                                own_ground::reliefLight(n, o.lightSun, o.lightAmbient, o.lightStrength);
+                                own_ground::lightAt(o.cornerLight, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2]);
                             uint32_t lit = c & 0xFF000000u;
                             for (int part = 0; part < 3; ++part) {
                                 const float channel = float((c >> (part * 8)) & 0xFF) * light;

@@ -81,6 +81,10 @@ bool boxInView(const View& v, const camera::Projection& p, int width, int height
 std::vector<float> cornerNormals(const gnd::Ground& g);
 void normalAt(const std::vector<float>& corners, int width, int height, float zoom, float x, float z, float out[3]);
 float reliefLight(const float n[3], const float toSun[3], float ambient, float strength);
+// 3.0.4-beta.30: that light a corner (made once a light: a map's corners), a place's between its cell's four - the
+// normal and the light at each point cost 73 ns, the light between the corners a few; no corners' lights: 1
+std::vector<float> cornerLights(const std::vector<float>& normals, const float toSun[3], float ambient, float strength);
+float lightAt(const std::vector<float>& lights, int width, int height, float zoom, float x, float z);
 
 // 3.0.4-beta.20: what of a map's own world the game's memory has room for - uaRO.exe is 32-bit and not large address
 // aware: 2 GB for the game, the driver and the card's driver together (lighthalzen's own world takes 214 MB as it is

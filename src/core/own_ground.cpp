@@ -275,4 +275,24 @@ float reliefLight(const float n[3], const float toSun[3], float ambient, float s
     return 1.0f + (std::clamp(k, 0.6f, 1.4f) - 1.0f) * strength;
 }
 
+std::vector<float> cornerLights(const std::vector<float>& normals, const float toSun[3], float ambient,
+                                float strength) {
+    std::vector<float> out(normals.size() / 3);
+    for (size_t k = 0; k < out.size(); ++k) out[k] = reliefLight(&normals[k * 3], toSun, ambient, strength);
+    return out;
+}
+
+float lightAt(const std::vector<float>& lights, int width, int height, float zoom, float x, float z) {
+    if (width <= 0 || height <= 0 || zoom <= 0.0f || lights.size() < size_t(width + 1) * size_t(height + 1))
+        return 1.0f;
+    const float gx = std::clamp(x / zoom + float(width) / 2.0f, 0.0f, float(width));
+    const float gz = std::clamp(z / zoom + float(height) / 2.0f, 0.0f, float(height));
+    const int x0 = std::min(int(gx), width - 1), z0 = std::min(int(gz), height - 1);
+    const float fx = gx - float(x0), fz = gz - float(z0);
+    const size_t row = size_t(width + 1), at = size_t(z0) * row + size_t(x0);
+    const float top = lights[at] + (lights[at + 1] - lights[at]) * fx;
+    const float bottom = lights[at + row] + (lights[at + row + 1] - lights[at + row]) * fx;
+    return top + (bottom - top) * fz;
+}
+
 }  // namespace uagfx::own_ground
