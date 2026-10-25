@@ -408,10 +408,14 @@ bool Renderer::Impl::applyGrass() {
     }
     const UINT list1 = held ? trampleSrv : sceneColorSrv;
     // 3.0.5-beta.12: first where a blade's root can stand at all - each pixel once; grass_ps reads it (t0) before
-    // anything else of a root
-    const bool masked = ensureGrassMask(w, h) &&
-                        effectPass(grassMaskPipeline, grassMask, grassMaskState, rtvHandle(kRtvGrassMask), w, h, c,
-                                   sceneColorSrv, true, list1, nullptr, 3, cells);
+    // anything else of a root. 3.0.5-beta.16: with the roots on every second row half as tall (its row j the
+    // picture's 2j); a span of its own in [debug] profile
+    const int maskHeight = c.uiPixels[2] > 1.5f ? (h + 1) / 2 : h;
+    crumb("grass's roots");
+    const bool masked = ensureGrassMask(w, maskHeight) &&
+                        effectPass(grassMaskPipeline, grassMask, grassMaskState, rtvHandle(kRtvGrassMask), w,
+                                   maskHeight, c, sceneColorSrv, true, list1, nullptr, 3, cells);
+    crumb(passName(kTimeGrass).words);
     if (lost) return false;
     if (masked) {
         transition(grassMask, grassMaskState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

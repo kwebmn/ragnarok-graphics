@@ -2912,6 +2912,9 @@ void Renderer11::noteWaterLevel(const FrameRecord& rec, const DrawCmd& d) {
 // 2.5.4: as Direct3D 12's applyGroundLife (ao.cpp) - ground_life_ps from the picture's copy and its depth, blended
 void Renderer11::applyGroundLife() {
     groundLifeDone_ = true;
+    // 3.0.5-beta.16 (R-APBSRU): [debug] profile's own span - the soft shadows' held it (5.6 ms of «Високі»'s, the
+    // shadows themselves 3.3)
+    pmark("living ground");
     if (!groundLifeWanted() || !cameraValid_ || !target_.texture || !depthViews()) return;
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
@@ -3043,25 +3046,31 @@ void Renderer11::applyGrass() {
     ID3D11ShaderResourceView* cells = grid && groundCellsUp_ ? groundCellsSrv_ : nullptr;
     // 3.0.5-beta.12 (the grass 10 ms of a Radeon 610M's frame): first where a blade's root can stand at all - each
     // pixel once (grass_mask_ps); grass_ps reads it (t0) before anything else of a root
+    // 3.0.5-beta.16: half as tall - the roots on every second row only (uiPixels.z 2), its row j the picture's 2j
     bool masked = false;
+    const int maskHeight = (target_.height + 1) / 2;
     if (grassMaskPs_ && copyScene()) {
-        if (grassMask_.width != target_.width || grassMask_.height != target_.height) {
+        if (grassMask_.width != target_.width || grassMask_.height != maskHeight) {
             dropTarget(grassMask_);
-            if (!makeTarget(grassMask_, target_.width, target_.height, DXGI_FORMAT_R8_UNORM)) {
+            if (!makeTarget(grassMask_, target_.width, maskHeight, DXGI_FORMAT_R8_UNORM)) {
                 LOG_ERROR("grass: no video memory for its mask (Direct3D 11) - every root looked at, as before");
                 grassMaskPs_ = nullptr;  // not tried again
             }
         }
         if (grassMaskPs_) {
+            pmark("grass's roots");  // 3.0.5-beta.16: [debug] profile's own span - the mask apart from the blades
             maskPass(grassMaskPs_, grassMask_, c, nullptr, depthSrv_, scene_.srv, nullptr, cells);
             c.sourceRect[0] = 1.0f;
             masked = true;
         }
     }
+    pmark(effectName11(kTimeGrass11));
     if (!grassLogged_)
         LOG_INFO("grass: on %s, blades up to %.0f pixels%s, their roots on every second row%s (Direct3D 11)",
                  map_.c_str(), c.twin[0], cells ? ", on the map's ground only" : "",
-                 masked ? ", the roots that can be one marked first" : "");
+                 masked ? (", the roots that can be one marked first at " + std::to_string(grassMask_.width) + "x" +
+                           std::to_string(grassMask_.height)).c_str()
+                        : "");
     grassLogged_ = true;
     // copy 2: the picture's copy the mask was made from (made above), not made again
     worldPass(grassPs_, c, masked ? 2 : 1, 1, depthSrv_, masked ? grassMask_.srv : nullptr,

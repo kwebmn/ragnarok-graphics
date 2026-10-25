@@ -1972,6 +1972,24 @@ struct GrassRoot {
     bool flower;
 };
 
+// 3.0.5-beta.16: the parts of a root that grassRoot and grassRootAt both work out, one expression each - the root's
+// place in the world, how near it is to its cell's blade's spot, whether a flower, the blade's height
+float3 grassWorld(float3 v) {
+    return v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
+}
+float grassNear(float2 cell, float2 id) {
+    float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
+    return dot(at, at);
+}
+// 1.8.3: flowers in patches, a few in each (scattered over the whole field they were a speckle); 2.7.29: the
+// patches' noise for a flower's root alone (an && of HLSL works both its sides out: for every root)
+bool grassFlower(float2 id, float3 w) {
+    bool flower = false;
+    if (hash12(id + 31.7) < twinW) flower = valueNoise(w.xz * 0.07 + 3.3) > 0.72;
+    return flower;
+}
+float grassHeight(float2 id, bool flower) { return (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0); }
+
 bool grassRoot(int2 root, int2 last, out GrassRoot g) {
     g = (GrassRoot)0;
     float rd = sceneDepth.Load(int3(root, 0));
@@ -1979,26 +1997,21 @@ bool grassRoot(int2 root, int2 last, out GrassRoot g) {
     g.rc = sceneColor.Load(int3(root, 0)).rgb;
     if (g.rc.g < g.rc.r * 1.04 || g.rc.g < g.rc.b * 1.15 || g.rc.g < 0.12) return false;  // not green ground
     g.v = viewFrom(root, rd);
-    float3 w = g.v.x * float3(r0, r1, r2) + g.v.y * float3(r3, r4, r5) + g.v.z * float3(r6, r7, r8) +
-               float3(r9, r10, r11);
+    float3 w = grassWorld(g.v);
     // 2.7.2: none on a pond's or a river's bed - under the water (uiPixels.w its level, up is -y; none known: far
     // below): its green bed showed through the shallow water and grew blades over it (R-32CYUV, cmd_fild01)
     if (w.y > uiPixels.w) return false;
     float2 cell = w.xz * 2.0;  // a blade or none every half unit
     g.id = floor(cell);
     if (hash12(g.id) > twinY) return false;  // no blade here
-    float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(g.id + 11.3), hash12(g.id + 5.7)));
-    g.near = dot(at, at);
+    g.near = grassNear(cell, g.id);
     if (g.near > 0.2) return false;  // 2.7.29: off even a flower's head - before the patches' noise
     // 2.7.4: thinned out, then none, as the camera goes far back - a blade stands on a disc about a ninth of a unit
     // across, under a pixel there: its root came and went with every frame's jitter and the grass blinked
     float disc = 0.11 * f0 * scale / max(g.v.z, 1.0);  // the disc's radius in the picture's pixels
     if (hash12(g.id + 7.7) > smoothstep(0.8, 1.6, disc)) return false;
-    // 1.8.3: flowers in patches, a few in each (scattered over the whole field they were a speckle); 2.7.29: the
-    // patches' noise for a flower's root alone (an && of HLSL works both its sides out: for every root)
-    g.flower = false;
-    if (hash12(g.id + 31.7) < twinW) g.flower = valueNoise(w.xz * 0.07 + 3.3) > 0.72;
-    g.height = (0.45 + 0.55 * hash12(g.id + 2.1)) * (g.flower ? 1.15 : 1.0);
+    g.flower = grassFlower(g.id, w);
+    g.height = grassHeight(g.id, g.flower);
     if (!g.flower && g.near > 0.05) return false;  // a blade's own spot (a flower's head: up to 0.2, grass_ps)
     // 2.7.57 (the tester: «трава на брусчатке мигает когда идешь»): a root on a green patch, not a speck - the grass
     // painted in the paving's cracks is a few pixels across: as the camera moved by parts of a pixel they came and
@@ -2021,11 +2034,29 @@ bool grassRoot(int2 root, int2 last, out GrassRoot g) {
     return true;
 }
 
+// 3.0.5-beta.16 (R-APBSRU: the grass 5.4 ms of a Radeon 610M's 24 on «Середні»): what grassRoot makes of a root,
+// without its tests - for one the mask says passed them (the same picture and root: the same answers); grass_ps
+// worked each marked root out whole again for every pixel above it
+GrassRoot grassRootAt(int2 root) {
+    GrassRoot g = (GrassRoot)0;
+    g.rc = sceneColor.Load(int3(root, 0)).rgb;
+    g.v = viewFrom(root, sceneDepth.Load(int3(root, 0)));
+    float3 w = grassWorld(g.v);
+    float2 cell = w.xz * 2.0;
+    g.id = floor(cell);
+    g.near = grassNear(cell, g.id);
+    g.flower = grassFlower(g.id, w);
+    g.height = grassHeight(g.id, g.flower);
+    return g;
+}
+
 // 3.0.5-beta.12: each pixel as a blade's root, once: 1 where grassRoot finds one could stand (grass_ps then looks
-// at it), 0 where none can
+// at it), 0 where none can. 3.0.5-beta.16: with the roots on every second row only (uiPixels.z 2: Direct3D 11's, a
+// thinned grass's) half as tall - its row j the picture's row 2j (the odd rows' half of the work was never read)
 float grass_mask_ps(PresentOut i) : SV_Target {
+    int every = uiPixels.z > 1.5 ? 2 : 1;
     GrassRoot g;
-    return grassRoot(int2(i.pos.xy), int2(uiPixels.xy) - 1, g) ? 1.0 : 0.0;
+    return grassRoot(int2(int(i.pos.x), int(i.pos.y) * every), int2(uiPixels.xy) - 1, g) ? 1.0 : 0.0;
 }
 
 float4 grass_ps(PresentOut i) : SV_Target {
@@ -2066,9 +2097,15 @@ float4 grass_ps(PresentOut i) : SV_Target {
         float up = float(k) / twinX;
         float sway = swayAll * up * up;
         int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
-        if (masked && tex0.Load(int3(root, 0)).r < 0.5) continue;  // none can stand there
         GrassRoot g;
-        if (!grassRoot(root, last, g)) continue;
+        if (masked) {
+            // the mask's row of it (3.0.5-beta.16: every second row's - an odd row's root, the picture's last row
+            // clamped, has none), then only what grassRoot makes of it
+            if ((root.y & (every - 1)) != 0 || tex0.Load(int3(root.x, root.y >> (every - 1), 0)).r < 0.5) continue;
+            g = grassRootAt(root);
+        } else if (!grassRoot(root, last, g)) {
+            continue;
+        }
         if (hereZ < g.v.z - 1.0) continue;  // something in front of the blade
         bool head = g.flower && up > g.height * 0.78;
         if (g.near > (head ? 0.2 : 0.05)) continue;
