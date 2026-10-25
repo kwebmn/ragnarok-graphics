@@ -4152,7 +4152,7 @@ constexpr Entry kTexts[] = {
      "Ctrl+Shift+F10.\n"
      "• The gamepad: Xbox and PlayStation work at once, its buttons on «Gamepad».\n"
      "• The game's libraries: our own in place of the old ones of the 2000s, each can be turned off on «Service».\n"
-     "• «Graphics test»: for 75 seconds the game goes through every effects set by itself and sends the developers "
+     "• «Graphics test»: for 105 seconds the game goes through every effects set by itself and sends the developers "
      "how it runs on your computer - on «Play» or in the game's console (~).",
      "• uaRO Graphics малює гру наново на вашій відеокарті: чітка картинка будь-якого розміру, згладжування, світло й "
      "ефекти, ШІ-текстури.\n"
@@ -4162,8 +4162,8 @@ constexpr Entry kTexts[] = {
      "• «Звернення»: опишіть, що не так, додайте знімки — розробники відповідають там же; у грі Ctrl+Shift+F10.\n"
      "• Геймпад: Xbox і PlayStation працюють одразу, кнопки — на «Геймпад».\n"
      "• Бібліотеки гри: свої замість старих, 2000-х років; кожну можна вимкнути на «Сервіс».\n"
-     "• «Тест графіки»: 75 секунд гра сама проходить усі набори ефектів і надсилає розробникам, як вона йде на вашому "
-     "комп'ютері — на «Гра» або в консолі гри (~).",
+     "• «Тест графіки»: 105 секунд гра сама проходить усі набори ефектів і надсилає розробникам, як вона йде на "
+     "вашому комп'ютері — на «Гра» або в консолі гри (~).",
      "• uaRO Graphics рисует игру заново на вашей видеокарте: чёткая картинка любого размера, сглаживание, свет и "
      "эффекты, ИИ-текстуры.\n"
      "• «Игра» открывается перед игрой: новости сервера и кто онлайн, обновления, кнопка «Играть».\n"
@@ -4172,8 +4172,8 @@ constexpr Entry kTexts[] = {
      "• «Обращения»: опишите, что не так, добавьте снимки — разработчики отвечают там же; в игре Ctrl+Shift+F10.\n"
      "• Геймпад: Xbox и PlayStation работают сразу, кнопки — на «Геймпад».\n"
      "• Библиотеки игры: свои вместо старых, 2000-х годов; каждую можно выключить на «Сервис».\n"
-     "• «Тест графики»: 75 секунд игра сама проходит все наборы эффектов и отправляет разработчикам, как она идёт на "
-     "вашем компьютере — на «Игра» или в консоли игры (~)."},
+     "• «Тест графики»: 105 секунд игра сама проходит все наборы эффектов и отправляет разработчикам, как она идёт "
+     "на вашем компьютере — на «Игра» или в консоли игры (~)."},
     {Text::HelpViewPlay,
      "The server's news and who is online, the update channel and the updates, the «Play» button, the graphics test "
      "and its last result.",
@@ -4610,8 +4610,8 @@ constexpr Entry kTexts[] = {
      "Report {1} is sent; the shots in full quality did not go ({2}) - it has the smaller ones.",
      "Звернення {1} надіслано; знімки в повній якості не пішли ({2}) — у ньому лишилися зменшені.",
      "Обращение {1} отправлено; снимки в полном качестве не ушли ({2}) — в нём остались уменьшенные."},
-    {Text::TestRow, "Graphics test: 75 s, the result goes to the developers",
-     "Тест графіки: 75 с, результат піде розробникам", "Тест графики: 75 с, результат уйдёт разработчикам"},
+    {Text::TestRow, "Graphics test: 105 s, the result goes to the developers",
+     "Тест графіки: 105 с, результат піде розробникам", "Тест графики: 105 с, результат уйдёт разработчикам"},
     {Text::TestRunning, "Graphics test: {1} ({2} of {3}), {4} s left. Keep still; ~ stops it",
      "Тест графіки: {1} ({2} з {3}), ще {4} с. Не рухайтеся; ~ — зупинити",
      "Тест графики: {1} ({2} из {3}), ещё {4} с. Не двигайтесь; ~ — остановить"},
@@ -4650,11 +4650,11 @@ constexpr Entry kTexts[] = {
      "Тест графики начнётся через {1} с: встаньте в спокойном месте и не двигайтесь. ~ — отменить"},
     {Text::TestCancelled, "Graphics test cancelled", "Тест графіки скасовано", "Тест графики отменён"},
     {Text::PlayTestNote,
-     "75 seconds: the game itself shows each effects set and sends the developers how it runs on this computer. The "
+     "105 seconds: the game itself shows each effects set and sends the developers how it runs on this computer. The "
      "game starts, and the test begins 10 seconds after you enter a map - stand somewhere quiet.",
-     "75 секунд: гра сама показує кожен набір ефектів і надсилає розробникам, як він іде на цьому комп'ютері. Гра "
+     "105 секунд: гра сама показує кожен набір ефектів і надсилає розробникам, як він іде на цьому комп'ютері. Гра "
      "запуститься, а тест почнеться за 10 секунд після входу на карту — станьте в спокійному місці.",
-     "75 секунд: игра сама показывает каждый набор эффектов и отправляет разработчикам, как он идёт на этом "
+     "105 секунд: игра сама показывает каждый набор эффектов и отправляет разработчикам, как он идёт на этом "
      "компьютере. Игра запустится, а тест начнётся через 10 секунд после входа на карту — встаньте в спокойном месте."},
     {Text::PlayTestButton, "Run the graphics test", "Запустити тест графіки", "Запустить тест графики"},
     {Text::PlayTestRunning, "The game is running: open its console (~) and choose «Graphics test».",
@@ -4666,6 +4666,10 @@ constexpr Entry kTexts[] = {
     {Text::PlayTestNotSent, "Not sent: {1}.", "Не надіслано: {1}.", "Не отправлено: {1}."},
     {Text::PlayTestNone, "No graphics test on this computer yet.", "На цьому комп'ютері тесту графіки ще не було.",
      "На этом компьютере теста графики ещё не было."},
+    {Text::TestSetHighNoHills, "High without hills", "Високі без пагорбів", "Высокие без холмов"},
+    {Text::TestSetHighNoMaterials, "High without materials", "Високі без матеріалів", "Высокие без материалов"},
+    {Text::TestCosts, "The card's cost within «High», ms: {1}", "Ціна у «Високих» на відеокарті, мс: {1}",
+     "Цена в «Высоких» на видеокарте, мс: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

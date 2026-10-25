@@ -61,6 +61,8 @@ const char* setWord(Set s) {
         case Set::Low: return "low";
         case Set::Medium: return "medium";
         case Set::High: return "high";
+        case Set::HighNoHills: return "high-no-hills";
+        case Set::HighNoMaterials: return "high-no-materials";
         case Set::Own: return "own";
     }
     return "";
@@ -218,8 +220,10 @@ std::string summary(const Head& h, const PhaseResult (&r)[kSets], const std::map
     add(h.fpsLimit > 0 ? settings::fmt(t(Text::TestLimit), {std::to_string(h.fpsLimit)}) : t(Text::TestNoLimit));
     if (h.vsync) add(t(Text::TestVsync));
     add(h.mode);
-    static const Text kNames[kSets] = {Text::TestSetOff, Text::FxPresetWeak, Text::FxPresetMedium,
-                                       Text::FxPresetStrong, Text::TestSetOwn};
+    static const Text kNames[kSets] = {Text::TestSetOff,         Text::FxPresetWeak,
+                                       Text::FxPresetMedium,     Text::FxPresetStrong,
+                                       Text::TestSetHighNoHills, Text::TestSetHighNoMaterials,
+                                       Text::TestSetOwn};
     // the columns: as wide as their heading or their widest value, two spaces between
     const std::string heads[4] = {t(Text::TestColSet), t(Text::TestColFps), t(Text::TestColSlow), t(Text::TestColCard)};
     std::vector<std::string> cells[4];
@@ -267,6 +271,33 @@ std::string summary(const Head& h, const PhaseResult (&r)[kSets], const std::map
         for (int c = 0; c < 4; ++c) row += padded(cells[c][size_t(p)], width[c] + 2);
         out += row + dearest[size_t(p)] + "\n";
     }
+    // 3.0.5-beta.14: what four of «Високі» cost the card
+    const int high = int(Set::High);
+    if (!r[high].frames) return out;
+    const auto cardOf = [&](int p) {
+        const auto found = parts.find(p);
+        if (!r[p].frames) return -1.0;
+        return r[p].gpuMs >= 0.0 ? r[p].gpuMs : found != parts.end() ? found->second.cardMs : -1.0;
+    };
+    const auto spanOf = [&](const char* words) {
+        const auto found = parts.find(high);
+        if (found != parts.end())
+            for (const auto& [name, ms] : found->second.parts)
+                if (name == words) return ms;
+        return -1.0;
+    };
+    const auto without = [&](Set s) {
+        const double all = cardOf(high), less = cardOf(int(s));
+        return all >= 0.0 && less >= 0.0 ? all - less : -1.0;
+    };
+    const std::pair<Text, double> costs[] = {{Text::FxGroundSeams, spanOf("ground seams' strips")},
+                                             {Text::FxSmoothHills, without(Set::HighNoHills)},
+                                             {Text::FxMaterials, without(Set::HighNoMaterials)},
+                                             {Text::FxWorldReflections, spanOf("world reflections")}};
+    std::string list;
+    for (const auto& [name, ms] : costs)
+        if (ms > -1.0) list += (list.empty() ? "«" : ", «") + t(name) + "»" + number(" %.1f", ms);
+    if (!list.empty()) out += "\n" + settings::fmt(t(Text::TestCosts), {list}) + "\n";
     return out;
 }
 

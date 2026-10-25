@@ -17,7 +17,10 @@ bool near(double a, double b, double by = 0.01) { return std::fabs(a - b) <= by;
 
 struct Seen {
     int setBegins = 0, measureBegins = 0, measureEnds = 0, finished = 0;
-    int firstSet[graphics_test::kSets] = {-1, -1, -1, -1, -1};
+    int firstSet[graphics_test::kSets];
+    Seen() {
+        for (int& s : firstSet) s = -1;
+    }
 };
 
 // the game presenting at `fps` from `from` to `to` seconds; each step's events counted
@@ -40,15 +43,17 @@ Seen play(Run& run, double from, double to, double fps) {
 }  // namespace
 
 // 3.0.5-beta.6 (the user: «есть также идея сделать некий режим теста в игре ... чтобы не стоять кучу времени»):
-// five sets, each 3 s settling and 12 s measured, then the end - once
+// the sets, each 3 s settling and 12 s measured, then the end - once. 3.0.5-beta.14: seven (High twice more, without
+// the hills, without the materials)
 TEST(graphics_test_runs_each_set_settling_then_measured_and_ends_once) {
     Run run;
     run.start(100.0);
     CHECK(run.running());
-    const Seen s = play(run, 100.0, 190.0, 60.0);
-    CHECK_EQ(s.setBegins, 5);
-    CHECK_EQ(s.measureBegins, 5);
-    CHECK_EQ(s.measureEnds, 5);
+    const Seen s = play(run, 100.0, 220.0, 60.0);
+    CHECK_EQ(graphics_test::kSets, 7);
+    CHECK_EQ(s.setBegins, 7);
+    CHECK_EQ(s.measureBegins, 7);
+    CHECK_EQ(s.measureEnds, 7);
     CHECK_EQ(s.finished, 1);
     CHECK(!run.running());
     for (int p = 0; p < graphics_test::kSets; ++p) CHECK_EQ(s.firstSet[p], 100 + 15 * p);
@@ -133,9 +138,12 @@ TEST(graphics_test_camera_keeps_to_the_games_own_distances_of_the_map) {
 }
 
 TEST(graphics_test_tags_each_sets_profile_window) {
-    CHECK(graphics_test::tagOf(0) == "test 1/5 off");
-    CHECK(graphics_test::tagOf(1) == "test 2/5 low");
-    CHECK(graphics_test::tagOf(4) == "test 5/5 own");
+    CHECK(graphics_test::tagOf(0) == "test 1/7 off");
+    CHECK(graphics_test::tagOf(1) == "test 2/7 low");
+    CHECK(graphics_test::tagOf(3) == "test 4/7 high");
+    CHECK(graphics_test::tagOf(4) == "test 5/7 high-no-hills");
+    CHECK(graphics_test::tagOf(5) == "test 6/7 high-no-materials");
+    CHECK(graphics_test::tagOf(6) == "test 7/7 own");
 }
 
 // the renderers' lines for a set's window, read back from the logs; other lines between them left alone
@@ -186,7 +194,7 @@ TEST(graphics_test_summary_is_a_short_table_of_the_sets) {
     CHECK(has(uk, "prt_fild08") && has(uk, "Direct3D 12") && has(uk, "AMD Radeon(TM) 610M") && has(uk, "1920×1080"));
     CHECK(has(uk, "60"));  // the frame limit
     CHECK(has(uk, "Без ефектів") && has(uk, "Низькі") && has(uk, "Середні") && has(uk, "Високі") &&
-          has(uk, "Ваші налаштування"));
+          has(uk, "Високі без пагорбів") && has(uk, "Високі без матеріалів") && has(uk, "Ваші налаштування"));
     // the first set: its profile's three dearest parts; the second: the card's timed passes, the dearest first
     CHECK(has(uk, "the game's world 1.90, the interface 0.60, the picture into the window 0.30"));
     CHECK(!has(uk, "clears 0.10"));
@@ -224,7 +232,7 @@ TEST(graphics_test_summary_columns_line_up_by_letters) {
         if (end == std::string::npos) break;
         from = end + 1;
     }
-    CHECK_EQ(int(at.size()), 5);
+    CHECK_EQ(int(at.size()), 7);
     for (size_t k = 1; k < at.size(); ++k) CHECK_EQ(at[k], at[0]);
 }
 
@@ -235,7 +243,7 @@ TEST(graphics_test_summary_reads_back_into_its_cells) {
     h.version = "3.0.5-beta.7";
     h.map = "prt_fild08";
     graphics_test::PhaseResult r[graphics_test::kSets];
-    const double fps[] = {60.0, 60.0, 34.0, 0.0, 33.0}, slow[] = {57.0, 52.0, 28.0, 0.0, 27.0};
+    const double fps[] = {60.0, 60.0, 34.0, 0.0, 23.0, 26.0, 33.0}, slow[] = {57.0, 52.0, 28.0, 0.0, 20.0, 22.0, 27.0};
     for (int p = 0; p < graphics_test::kSets; ++p) {
         r[p].frames = p == 3 ? 0 : 700;
         r[p].fps = fps[p];
@@ -251,11 +259,13 @@ TEST(graphics_test_summary_reads_back_into_its_cells) {
     CHECK_EQ(int(t.columns.size()), 5);
     CHECK(t.columns[0] == "Набір" && t.columns[2] == "найповільніша десята, FPS");
     CHECK(t.columns[4] == "найдорожче на відеокарті, мс");
-    CHECK_EQ(int(t.rows.size()), 5);
+    CHECK_EQ(int(t.rows.size()), 7);
     CHECK(t.rows[0].size() == 5 && t.rows[0][0] == "Без ефектів" && t.rows[0][1] == "60" && t.rows[0][3] == "6.2");
     CHECK(t.rows[0][4] == "the game's world 3.90, the interface 1.40, the picture into the window 0.50");
     CHECK(t.rows[3].size() == 2 && t.rows[3][0] == "Високі" && t.rows[3][1] == "не виміряно");
-    CHECK(t.rows[4][0] == "Ваші налаштування" && t.rows[4][1] == "33");
+    CHECK(t.rows[4][0] == "Високі без пагорбів" && t.rows[4][1] == "23");
+    CHECK(t.rows[5][0] == "Високі без матеріалів" && t.rows[5][1] == "26");
+    CHECK(t.rows[6][0] == "Ваші налаштування" && t.rows[6][1] == "33");
     CHECK(!graphics_test::parseSummary("", t));
     CHECK(!graphics_test::parseSummary("a line of something else\n", t));
 }
@@ -271,4 +281,38 @@ TEST(graphics_test_summary_names_the_timed_passes_as_the_profile_does) {
     r[4].effects = {{"steps", 3.98}, {"world", 2.84}, {"actor_shadows", 0.67}, {"grade", 0.5}};
     const std::string uk = graphics_test::summary(h, r, {}, settings::Lang::Uk);
     CHECK(has(uk, "footprints 3.98, the game's world 2.84, characters' shadows 0.67"));
+}
+
+// 3.0.5-beta.14 (the user: «делать» - what of «Високі»'s world costs the card): under the table the High set's cost of
+// each of its four - the seams' strips and the world's reflections their own spans of the profile, the hills and the
+// materials what the card does less without them (the two sets High without each); none not measured
+TEST(graphics_test_summary_says_what_four_of_high_cost_the_card) {
+    graphics_test::Head h;
+    graphics_test::PhaseResult r[graphics_test::kSets];
+    for (int p = 0; p < graphics_test::kSets; ++p) {
+        r[p].frames = 600;
+        r[p].fps = 30.0;
+        r[p].slowFps = 25.0;
+    }
+    r[3].gpuMs = 47.8;  // High
+    r[4].gpuMs = 44.0;  // High without the hills
+    r[5].gpuMs = 40.1;  // High without the materials
+    std::map<int, graphics_test::Parts> parts;
+    parts[3].cardMs = 47.8;
+    parts[3].parts = {{"the game's world", 18.0}, {"ground seams' strips", 2.31}, {"world reflections", 1.66}};
+    const std::string uk = graphics_test::summary(h, r, parts, settings::Lang::Uk);
+    CHECK(has(uk, "Ціна у «Високих» на відеокарті, мс: «Стики трави й доріг без сходинок» 2.3, «Пагорби без "
+                  "сходинок світла» 3.8, «Матеріали: камінь, цегла, кора» 7.7, «Відображення світу у воді» 1.7"));
+    graphics_test::Table t;  // the table read back as before, the line under it left alone
+    CHECK(graphics_test::parseSummary(uk, t));
+    CHECK_EQ(int(t.rows.size()), 7);
+    const std::string en = graphics_test::summary(h, r, parts, settings::Lang::En);
+    CHECK(has(en, "The card's cost within «High», ms: «Grass and road seams without steps» 2.3"));
+    // High not measured: no such line; the materials' set not measured: the others alone
+    graphics_test::PhaseResult none[graphics_test::kSets];
+    CHECK(!has(graphics_test::summary(h, none, parts, settings::Lang::Uk), "Ціна у «Високих»"));
+    r[5] = graphics_test::PhaseResult{};
+    const std::string some = graphics_test::summary(h, r, parts, settings::Lang::Uk);
+    CHECK(has(some, "«Пагорби без сходинок світла» 3.8, «Відображення світу у воді» 1.7"));
+    CHECK(!has(some, "Матеріали: камінь, цегла, кора»"));
 }

@@ -432,6 +432,8 @@ enum class Text : uint16_t {
     // 3.0.5-beta.7: «Тест графіки» from the settings app - the game's countdown, «Гра»'s button and the last result
     TestWaitMap, TestCountdown, TestCancelled, PlayTestNote, PlayTestButton, PlayTestRunning, PlayTestLast,
     PlayTestSent, PlayTestNotSent, PlayTestNone,
+    // 3.0.5-beta.14: «Високі» twice more - without the hills, without the materials - and what four of it cost
+    TestSetHighNoHills, TestSetHighNoMaterials, TestCosts,
     Count
 };
 

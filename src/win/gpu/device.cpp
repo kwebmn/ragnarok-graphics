@@ -1269,9 +1269,13 @@ bool Renderer::Impl::composite() {
     // and the target keeps the old picture setScale stretched into it - not a black frame (0.10 review 6).
     if (!worldDrawn && !layerDrawn && !worldValid) return true;
     if (!begin()) return false;
-    profileMark("the picture put together (DLSS, TAA, the world made larger)");  // 3.0.5-beta.2
+    static const char* const kPutTogether = "the picture put together (DLSS, TAA, the world made larger)";
+    profileMark(kPutTogether);  // 3.0.5-beta.2
     static bool failedOnce = false;
     if (worldDrawn && !finishWorld()) return false;  // 0.20, 0.21: its shadows (if no blended draw came), colours
+    // 3.0.5-beta.14 (R-32YZ9K: «weather 3.10» on «Високі», «colour 3.06» on «Низькі» - DLSS Quality's 2.8 ms at 4K
+    // counted into the world's last pass): its span again after them
+    profileMark(kPutTogether);
     bool masked = false;
     const bool passthrough = upscaler && upscaler->passthrough();  // 0.62: only made smaller
     if (worldDrawn && passthrough) {

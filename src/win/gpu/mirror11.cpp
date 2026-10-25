@@ -83,6 +83,7 @@ void Renderer11::noteCaster(const FrameRecord& rec, const DrawCmd& d, const Draw
 // (t5) where the picture itself has nothing to reflect - what is above the screen's top, the far sides of things.
 void Renderer11::applyMirror() {
     mirrorDone_ = true;
+    pmark("world reflections");  // 3.0.5-beta.14: [debug] profile's own span (the world's held it), as Direct3D 12's
     if (!cameraValid_ || !target_.texture || mirrorVerts_.empty() || mirrorCasters_.empty()) return;
     const int w = std::max(1, target_.width / 2), h = std::max(1, target_.height / 2);
     if (mirror_.width != w || mirror_.height != h || !mirrorDsv_) {

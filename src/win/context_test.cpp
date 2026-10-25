@@ -20,9 +20,9 @@
 
 // 3.0.5-beta.6 (the user: «есть также идея сделать некий режим теста в игре, тоисть я в консоле выбираю пункт
 // тестировать графику и запускается тест где ты собираешь данные и отправляешь их на сервер»; «делай без снимков»):
-// «Тест графіки» - the console's row starts it on a map; for 75 s the driver shows each set in turn
-// (core/graphics_test), the camera on the same path each time, and measures them; then the player's camera and set
-// are back, and the table goes to the developers as a report of kind "test" (the settings app sends it).
+// «Тест графіки» - the console's row starts it on a map; for 75 s (3.0.5-beta.14: 105 s) the driver shows each set in
+// turn (core/graphics_test), the camera on the same path each time, and measures them; then the player's camera and
+// set are back, and the table goes to the developers as a report of kind "test" (the settings app sends it).
 namespace uagfx::win {
 
 namespace {
@@ -60,7 +60,8 @@ void Context::testNote(const std::string& utf8) {
 }
 
 // A set as the Effects page would draw it: the player's file with that set, every group on at its full strength (the
-// same on every computer); the player's own as it is
+// same on every computer); the player's own as it is. 3.0.5-beta.14: «Високі» without its smooth hills, without its
+// materials
 EffectSettings Context::testSet(graphics_test::Set s) const {
     using graphics_test::Set;
     EffectSettings file = config.effects;
@@ -78,7 +79,10 @@ EffectSettings Context::testSet(graphics_test::Set s) const {
             file.legacyStrength[g] = 100;
         }
     }
-    return madeEffects(file);
+    EffectSettings e = madeEffects(file);
+    if (s == Set::HighNoHills) e.smoothHills = false;
+    if (s == Set::HighNoMaterials) e.materials = false;
+    return e;
 }
 
 void Context::testStart() {
@@ -188,8 +192,10 @@ void Context::testFrame(bool foreground) {
     const int left = std::max(0, int(std::ceil(double(kSets) * graphics_test::kPhaseS - (now - test_.startS()))));
     if (left != testLeftShown_) {
         testLeftShown_ = left;
-        static const Text kNames[kSets] = {Text::TestSetOff, Text::FxPresetWeak, Text::FxPresetMedium,
-                                           Text::FxPresetStrong, Text::TestSetOwn};
+        static const Text kNames[kSets] = {Text::TestSetOff,         Text::FxPresetWeak,
+                                           Text::FxPresetMedium,     Text::FxPresetStrong,
+                                           Text::TestSetHighNoHills, Text::TestSetHighNoMaterials,
+                                           Text::TestSetOwn};
         testNote(said(Text::TestRunning, {said(kNames[step.phase]), std::to_string(step.phase + 1),
                                           std::to_string(kSets), std::to_string(left)}));
     }

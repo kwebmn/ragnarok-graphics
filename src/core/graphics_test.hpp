@@ -12,17 +12,19 @@
 namespace uagfx::graphics_test {
 
 // The sets in their order: the effects off, the three sets (the player's file with that set, every group on at 100 %)
-// and the player's own settings as they are
-enum class Set { Off, Low, Medium, High, Own };
-constexpr int kSets = 5;
+// and the player's own settings as they are. 3.0.5-beta.14 (the user: «делать» - what of «Високі»'s world costs the
+// card): «Високі» twice more, without the smooth hills and without the materials - what the card does less without
+// each is its cost (they work in the ground's and the models' own draws: no pass of their own to time)
+enum class Set { Off, Low, Medium, High, HighNoHills, HighNoMaterials, Own };
+constexpr int kSets = 7;
 constexpr double kSettleS = 3.0;    // a set's first seconds, not measured: its shaders and pictures made, the camera
                                     // to its start
 constexpr double kMeasureS = 12.0;  // then measured: the camera turns once, goes out and back in
 constexpr double kPhaseS = kSettleS + kMeasureS;
 constexpr double kGpuSkipS = 1.0;  // the card's half-second averages that may still hold the settling's frames
 
-const char* setWord(Set s);  // "off", "low", "medium", "high", "own"
-std::string tagOf(int phase);  // the profile's tag of a set's measured window: "test 2/5 low"
+const char* setWord(Set s);  // "off", "low", "medium", "high", "high-no-hills", "high-no-materials", "own"
+std::string tagOf(int phase);  // the profile's tag of a set's measured window: "test 2/7 low"
 
 // The game's camera: its turn (degrees, 0-360 as the game keeps it) and how far it is from the character
 struct Pose {
@@ -94,7 +96,9 @@ struct Head {
     std::string mode;  // the light mode's name, "" none
 };
 // The short table on top of the report: each set's frames a second, its slowest tenth, the card's ms and its three
-// dearest parts (the profile's, else its timed passes)
+// dearest parts (the profile's, else its timed passes). 3.0.5-beta.14: under it a line of what four of «Високі» cost
+// the card - the ground seams' strips and the world's reflections by their spans in the profile, the smooth hills
+// and the materials by the card's ms of «Високі» less those of the set without them; one not measured left out
 std::string summary(const Head& h, const PhaseResult (&r)[kSets], const std::map<int, Parts>& parts,
                     settings::Lang lang);
 // 3.0.5-beta.7: that table read back (the settings app's «Гра» shows the last test): its first line, the columns'
