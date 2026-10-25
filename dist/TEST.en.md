@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.5-beta.8 - what's new
+
+- **«Graphics test»: the «Your settings» row now has the frame's dearest parts.** The test's last set lost its
+  measurement (R-VMPQKX, R-XCHNKD); the table is whole now.
+- **The frame profile under Direct3D 12 is more exact.** «Footprints in snow and sand» (dust under the feet on grass),
+  the night, the skills' sparks, waterfalls and blindness's darkness have rows of their own now. Until now they went
+  into the rows next to them: on «Low» the footprints were 3.9 ms of «the game's interface» on a Radeon 610M.
+- **«Keep the frame rate» sees the footprints too.** When they are the dearest it may turn them off (4 ms of a frame on
+  a Radeon 610M). What you turned on by hand it still leaves on.
+- To check: the «Graphics test» once more on the laptop with Direct3D 12. The table should have the «Your settings» row
+  with the frame's parts, and the footprints apart, as «footprints».
+
 # uaRO Graphics 3.0.5-beta.7 - what's new
 
 - **«Run the graphics test» on the «Play» page.** The settings app starts the game for the test itself, one window only.
