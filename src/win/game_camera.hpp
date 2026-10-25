@@ -27,6 +27,10 @@ bool keepCameraFree(bool wanted);
 // 2040) held at camera::kZoomLimit while `wanted` - past its far plane, 1500, the game draws neither the character nor
 // the monsters -, its own put back when not; a camera already further out drawn in at once
 void limitZoom(bool wanted);
+// 3.0.4-beta.20 (R-UBT67Q «отчет с водой у горизонта»): the game's quadtree boxes raised to its water's top while
+// `wanted` (the own ground on; core/game_camera.hpp raiseToWater) - the game then draws its water up to its far plane,
+// the own far water on from there; its own boxes back when not wanted any more on the same map
+void raiseWaterBoxes(bool wanted);
 // 3.0.4-beta.6: the game shows its world (not the login or the character list); false in another build of the exe
 bool inGameWorld();
 // The game's memory read without a fault where nothing is mapped

@@ -6,6 +6,9 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "core/ai/texture_cache.hpp"
 #include "core/char_name.hpp"
@@ -21,6 +24,14 @@ bool read(uint32_t address, void* out, size_t size) {
     return address && ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(address)), out,
                                         size, &got) &&
            got == size;
+}
+
+// WriteProcessMemory likewise: a place that is not mapped (or not writable) fails
+bool write(uint32_t address, const void* in, size_t size) {
+    SIZE_T put = 0;
+    return address && WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(address)), in, size,
+                                         &put) &&
+           put == size;
 }
 
 // The exe the addresses belong to: known once (it does not change while it runs).
@@ -116,6 +127,75 @@ void limitZoom(bool wanted) {
         float d = 0.0f;
         if (read(cview + at, &d, 4) && d > want) *reinterpret_cast<float*>(uintptr_t(cview + at)) = want;
     }
+}
+
+void raiseWaterBoxes(bool wanted) {
+    struct Kept {
+        uint32_t node;
+        float centre, half;  // its box's height as the game had it
+    };
+    static std::vector<Kept> kept;  // the boxes raised in this world
+    static std::unordered_set<uint32_t> keptAt;
+    static uint32_t world = 0, firstChild = 0;
+    static ULONGLONG checked = 0;
+    uint32_t cview = 0, w = 0, ground = 0, child = 0;
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + camera::kModeView, &cview, 4) || !read(cview + camera::kViewWorld, &w, 4) || !w ||
+        !read(w + camera::kWorldGround, &ground, 4) || !ground ||
+        !read(w + camera::kWorldRoot + camera::kNodeChildren, &child, 4) || !child)
+        return;
+    if (w != world || child != firstChild) {  // another map's world: its tree is new
+        kept.clear();
+        keptAt.clear();
+        world = w;
+        firstChild = child;
+        checked = 0;
+    }
+    if (!wanted) {
+        for (const Kept& k : kept) {
+            write(k.node + camera::kNodeCentre + 4, &k.centre, 4);
+            write(k.node + camera::kNodeHalf + 4, &k.half, 4);
+        }
+        if (!kept.empty()) LOG_INFO("water: the game's own boxes of the map's %zu parts back", kept.size());
+        kept.clear();
+        keptAt.clear();
+        checked = 0;
+        return;
+    }
+    // once a map, then every ten seconds (a map without them in its .rsw makes them as its models come)
+    const ULONGLONG now = GetTickCount64();
+    if (checked && now - checked < 10000) return;
+    checked = now;
+    int32_t cells[2] = {0, 0};
+    float zoom = 0.0f, level = 0.0f, waves = 0.0f;
+    if (!read(ground + camera::kGroundWidth, cells, sizeof cells) || !read(ground + camera::kGroundZoom, &zoom, 4) ||
+        !read(ground + camera::kGroundWaterLevel, &level, 4) || !read(ground + camera::kGroundWaveHeight, &waves, 4) ||
+        cells[0] <= 0 || cells[0] > 4096 || cells[1] <= 0 || cells[1] > 4096 || !(zoom > 0.0f && zoom < 1000.0f) ||
+        !(std::fabs(level) < 1e5f) || !(std::fabs(waves) < 1000.0f))
+        return;  // no ground of this build's
+    const float waterTop = level - std::fabs(waves);
+    unsigned raised = 0, seen = 0;
+    std::vector<std::pair<uint32_t, int>> next{{w + camera::kWorldRoot, 0}};  // a node and its level
+    while (!next.empty() && seen < 2000) {
+        const auto [node, depth] = next.back();
+        next.pop_back();
+        float centre = 0.0f, half = 0.0f, toCentre = 0.0f, toHalf = 0.0f;
+        if (!read(node + camera::kNodeCentre + 4, &centre, 4) || !read(node + camera::kNodeHalf + 4, &half, 4))
+            continue;
+        ++seen;
+        if (camera::raiseToWater(centre, half, waterTop, toCentre, toHalf) &&
+            write(node + camera::kNodeCentre + 4, &toCentre, 4) && write(node + camera::kNodeHalf + 4, &toHalf, 4)) {
+            ++raised;
+            if (keptAt.insert(node).second) kept.push_back({node, centre, half});
+        }
+        uint32_t children[4] = {0, 0, 0, 0};
+        if (depth + 1 < camera::kTreeLevels && read(node + camera::kNodeChildren, children, sizeof children))
+            for (uint32_t c : children)
+                if (c) next.push_back({c, depth + 1});
+    }
+    if (raised)
+        LOG_INFO("water: %s - %u of the game's %u parts of the map raised to its water's top (%.1f): its own water up "
+                 "to its far plane", readGameMap().c_str(), raised, seen, waterTop);
 }
 
 bool readGameCursor(int& x, int& y) {

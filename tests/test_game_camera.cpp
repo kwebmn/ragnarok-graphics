@@ -212,3 +212,17 @@ TEST(game_camera_up_in_the_view_raises_a_point) {
     CHECK(std::fabs(wq[0] - wp[0]) < 1e-3f && std::fabs(wq[2] - wp[2]) < 1e-3f);  // nowhere else
 }
 
+TEST(game_camera_raises_a_box_of_the_bed_to_the_water) {
+    // 3.0.4-beta.20 (R-UBT67Q «отчет с водой у горизонта»): uaRO.exe culls its ground's parts by the boxes the map's
+    // .rsw keeps (FUN_004edac0; FUN_004fa060 by their centres and halves, far 1500) - 193 of alberta's 1024 leaves lie
+    // on the sea's bed (50) under its water (43; up is -y): one with its bed past the far plane went with the water
+    // over it, nearer - a black strip between the game's water and the own far water
+    float centre = 0.0f, half = 0.0f;
+    CHECK(raiseToWater(50.0f, 0.0f, 42.4f, centre, half));
+    CHECK(std::fabs(centre - 46.2f) < 1e-4f && std::fabs(half - 3.8f) < 1e-4f);
+    CHECK(!raiseToWater(0.0f, 50.0f, 42.4f, centre, half));   // the water within it
+    CHECK(!raiseToWater(-15.0f, 5.0f, 42.4f, centre, half));  // land above the water
+    CHECK(raiseToWater(60.0f, -5.0f, 42.4f, centre, half));   // a half the other way round
+    CHECK(std::fabs(centre - 53.7f) < 1e-4f && std::fabs(half - 11.3f) < 1e-4f);
+}
+

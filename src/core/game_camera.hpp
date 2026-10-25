@@ -29,6 +29,16 @@ constexpr uint32_t kMouseX = 0x14, kMouseY = 0x18;
 constexpr uint32_t kZoomMost = 0x6D66B4;
 constexpr uint32_t kViewDistance = 0x24, kViewDistanceTo = 0x3C;
 constexpr float kZoomLimit = 1400.0f;
+// 3.0.4-beta.20 (R-UBT67Q «отчет с водой у горизонта»): the world the view draws (CView+0x1B4, FUN_004fa8b0) - its
+// ground (C3dGround: cells wide, high, units a cell, the water's level and its waves' height, FUN_004e59d0) and the
+// root of its quadtree (FUN_004ec430: 6 levels, the leaves the 6th, each a node of 0x80 bytes - its four children, its
+// box's centre and half, FUN_004fa060 culls by them against the view's planes, far 1500, FUN_004f9e60)
+constexpr uint32_t kViewWorld = 0x1B4;
+constexpr uint32_t kWorldGround = 0x38, kWorldRoot = 0x68;
+constexpr uint32_t kGroundWidth = 0x08, kGroundHeight = 0x0C, kGroundZoom = 0x10;
+constexpr uint32_t kGroundWaterLevel = 0x40, kGroundWaveHeight = 0x54;
+constexpr uint32_t kNodeChildren = 0x04, kNodeCentre = 0x2C, kNodeHalf = 0x38;
+constexpr int kTreeLevels = 6;
 constexpr float kPi = 3.141592025756836f;  // as the exe holds it
 constexpr float kFar = 1500.0f;
 constexpr float kNear = 10.0f;
@@ -36,6 +46,12 @@ constexpr float kFov = 15.0f;
 
 // Whether the five floats at kConstants are this build's: then the addresses above are right.
 bool knownConstants(const float values[5]);
+
+// 3.0.4-beta.20: a box of the game's quadtree (its height's centre and half; up is -y) raised to the water's top
+// (its level less its waves) when all of it lies under it - the map's .rsw keeps its boxes by the ground and the models
+// (FUN_004edac0), the water left out: a part of the sea's bed past the far plane went with the water over it, which
+// was not. True when it was raised.
+bool raiseToWater(float centre, float half, float waterTop, float& outCentre, float& outHalf);
 
 struct Projection {
     float f0 = 0, f1 = 0;  // view x, y per z -> pixels

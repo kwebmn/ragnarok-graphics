@@ -9,6 +9,14 @@ bool knownConstants(const float v[5]) {
     return v[0] == kPi && v[1] == kFar && v[2] == kNear && v[3] == kFov && v[4] == kFov;
 }
 
+bool raiseToWater(float centre, float half, float waterTop, float& outCentre, float& outHalf) {
+    const float top = centre - std::fabs(half), bottom = centre + std::fabs(half);
+    if (!(top > waterTop)) return false;
+    outCentre = (waterTop + bottom) * 0.5f;
+    outHalf = (bottom - waterTop) * 0.5f;
+    return true;
+}
+
 Projection projectionFor(int width, int height) {
     Projection p;
     if (width <= 0 || height <= 0) return p;
