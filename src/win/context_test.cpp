@@ -221,9 +221,10 @@ void Context::testWatchSent() {
                               : said(Text::TestNotSent, {text.rfind("error: ", 0) == 0 ? text.substr(7) : text})));
         return;
     }
-    if (now >= testSentUntil_) {
+    if (now >= testSentUntil_) {  // the «sending» line not left on the screen
         testSentUntil_ = 0;
         LOG_INFO("test: no word from the settings app in 90 s - the result stays in %s", resultFile().c_str());
+        sayOnScreen(wide(said(Text::TestNoApp)));
     }
 }
 
