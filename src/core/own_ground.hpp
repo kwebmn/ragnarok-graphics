@@ -61,6 +61,10 @@ bool placeView(const camera::Projection& p, const float view[3], Tl2& out);
 // game cuts off at its far plane - as up to four corners, each the shares of the triangle's three it is made of (in
 // order round it); 0: none of it
 int pastDepth(const float zd[3], float from, float out[4][3]);
+// 3.0.4-beta.23: the part this side of `to` alike - the own ground's triangles cut where its depth is squeezed
+// (ownFrom), each piece one depth (the GPU carries a depth straight across a triangle, and the game's depth at one
+// corner with the squeezed one at another made it nearer than either: walls in front of roofs, R-W7A5XC)
+int nearDepth(const float zd[3], float to, float out[4][3]);
 
 // Whether a box of the world (lo, hi) may show: not when all of it lies behind the near plane, past `most` or off one
 // side of the screen (width x height game pixels); nearest: its corners' least view depth (0 round the eye);

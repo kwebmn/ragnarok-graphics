@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstring>
 #include <vector>
 
@@ -65,3 +66,30 @@ TEST(lava_quad_is_an_opaque_cell_in_the_maps_light) {
     CHECK(!water::isLavaQuad(v.data(), 32, 4, 0, true));
     CHECK(!water::isLavaQuad(cell(1, 1, 0xFF808080).data(), 32, 4, 0, false));  // a list
 }
+
+TEST(water_waves_as_the_game_lifts_them) {
+    // 3.0.4-beta.23 (R-W7A5XC «полоска стала меньше»): uaRO.exe's water rises and falls a cell corner at a time
+    // (0x4e59d0): its level plus the sine of (gx + gy - 1) * pitch + phase whole degrees times the waves' height - the
+    // own far water flat beside it left a broken line where the two met. The game's sine (FUN_0040ae60, a table filled
+    // by 0x40ad90): whole degrees, past +-360 their remainder, below 0 one degree off (its table read a place late)
+    const float d = 3.14159265f / 180.0f;
+    CHECK(std::fabs(water::gameSin(0)) < 1e-6f && std::fabs(water::gameSin(90) - 1.0f) < 1e-6f);
+    CHECK(std::fabs(water::gameSin(450) - 1.0f) < 1e-6f);             // 450 % 360
+    CHECK(std::fabs(water::gameSin(-90) - std::sin(-89.0f * d)) < 1e-6f);  // one degree off below 0
+    CHECK(std::fabs(water::gameSin(-1)) < 1e-6f);
+    CHECK(std::fabs(water::gameSin(-360) - std::sin(1.0f * d)) < 1e-6f);
+    // a corner's height: level 43, pitch 50, phase 30, waves 0.6 - the corner (3, 4): (3 + 4 - 1) * 50 + 30 = 330
+    CHECK(std::fabs(water::waveAt(3, 4, 50, 30, 43.0f, 0.6f) - (43.0f + 0.6f * std::sin(330.0f * d))) < 1e-5f);
+    CHECK(water::waveAt(3, 4, 50, 30, 43.0f, 0.0f) == 43.0f);  // no waves: flat
+    // the phase back from the heights of a quad's corners as the game drew them
+    for (int phase : {-180, -91, -1, 0, 37, 179}) {
+        const int gx[4] = {10, 11, 10, 11}, gy[4] = {20, 20, 21, 21};
+        float h[4];
+        for (int k = 0; k < 4; ++k) h[k] = water::waveAt(gx[k], gy[k], 50, phase, 43.0f, 0.6f) + 0.0005f;
+        CHECK_EQ(water::wavePhaseOf(gx, gy, h, 4, 50, 43.0f, 0.6f), phase);
+    }
+    // the phase on: its speed a game tick (16 ms), past 180 a turn back (FUN_004e3b80)
+    CHECK_EQ(water::phaseAfter(170, 3, 4), -178);
+    CHECK_EQ(water::phaseAfter(10, 3, 2), 16);
+}
+

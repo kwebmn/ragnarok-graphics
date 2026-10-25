@@ -230,3 +230,27 @@ TEST(own_ground_draws_its_own_from_where_its_depth_is_squeezed) {
     CHECK(std::fabs(own_ground::depthOf(p, from - 0.01f) - own_ground::depthOf(p, from + 0.01f)) < 1e-6f);
 }
 
+TEST(own_ground_cuts_a_triangle_where_its_depth_is_squeezed) {
+    // 3.0.4-beta.23 (R-W7A5XC «на строениях крыша пропала под эту же линию»): a triangle of the own ground across 1490
+    // had the game's depth at its near corners and the squeezed one at its far corners, the GPU carrying the depth
+    // straight between them - nearer than either: a quay's wall came out in front of the roofs and the water before it.
+    // Cut there, each piece one depth: the near side's part as up to four corners
+    float n[4][3], f[4][3];
+    const float across[3] = {1480.0f, 1500.0f, 1495.0f};
+    CHECK_EQ(own_ground::nearDepth(across, 1490.0f, n), 3);   // its near corner and the two cut points
+    CHECK_EQ(own_ground::pastDepth(across, 1490.0f, f), 4);   // its two far corners and the same two points
+    int shared = 0;
+    for (int a = 0; a < 3; ++a) {
+        const float zn = n[a][0] * across[0] + n[a][1] * across[1] + n[a][2] * across[2];
+        CHECK(zn <= 1490.0f + 1e-3f);
+        for (int b = 0; b < 4; ++b)
+            shared += std::fabs(n[a][0] - f[b][0]) < 1e-6f && std::fabs(n[a][1] - f[b][1]) < 1e-6f &&
+                      std::fabs(n[a][2] - f[b][2]) < 1e-6f;
+    }
+    CHECK_EQ(shared, 2);  // the cut points the same on both sides: no crack
+    const float allNear[3] = {100.0f, 200.0f, 300.0f};
+    CHECK_EQ(own_ground::nearDepth(allNear, 1490.0f, n), 3);
+    const float allFar[3] = {1600.0f, 1700.0f, 1800.0f};
+    CHECK_EQ(own_ground::nearDepth(allFar, 1490.0f, n), 0);
+}
+

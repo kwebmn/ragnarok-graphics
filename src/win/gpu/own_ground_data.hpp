@@ -35,6 +35,9 @@ struct OwnGround {
     terrain::Mesh water;
     int waterType = -1;
     float waterLevel = 0.0f;
+    // 3.0.4-beta.23: its waves as the game lifts them (core/water.hpp waveAt): their height, pitch and speed
+    float waveHeight = 0.0f;
+    int wavePitch = 0, waveSpeed = 0;
     // its pictures as the game names them, one after another, and their pace (game ticks of 16 ms a picture) - the far
     // water's while none of the game's own water is near (the game's then: the same picture as its own)
     std::vector<Picture> waterPictures;

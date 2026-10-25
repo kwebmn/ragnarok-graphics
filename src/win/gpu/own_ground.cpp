@@ -72,6 +72,7 @@ void Renderer::Impl::dropOwnGround() {
     ownState.modelLikeKnown = false;
     ownState.modelFrames = 0;
     ownState.waterTexture = ownState.waterColour = 0;  // 3.0.4-beta.20: the game's water picture of another map
+    ownState.wavePhaseKnown = false;
     ownState.waterLikeKnown = ownState.waterWaitLogged = false;
     ownState.waterFrames = 0;
     ownState.waterMost = 0;
@@ -332,6 +333,7 @@ bool Renderer::Impl::drawOwnGround() {
         };
         const float sign[3] = {float(axes.x), float(axes.y), float(axes.z)};
         const float fineDepth = std::clamp(g->zoom * p.f1 / kFinePixels, 600.0f, 1500.0f);
+        const float from = own_ground::ownFrom(p);  // 3.0.4-beta.23: the triangles across it cut there
         for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
             const terrain::Chunk& box = g->mesh.chunks[k];
             float lo[3], hi[3];
@@ -365,7 +367,8 @@ bool Renderer::Impl::drawOwnGround() {
                 const size_t tex =
                     bt.texture >= 0 && size_t(bt.texture) < o.ids.size() ? size_t(bt.texture) : o.ids.size();
                 OwnState::Pending& pd = o.pending[bt.layer][tex];
-                if (pd.verts.size() + bt.vertexCount > 65535) emit(bt.layer, tex);
+                // its vertices, and two more for each triangle cut where the depth is squeezed
+                if (pd.verts.size() + bt.vertexCount + bt.indexCount / 3 * 2 > 65535) emit(bt.layer, tex);
                 const size_t base = pd.verts.size();
                 pd.verts.resize(base + bt.vertexCount, own_ground::Tl2{});
                 behind.assign(bt.vertexCount, 0);
@@ -394,9 +397,63 @@ bool Renderer::Impl::drawOwnGround() {
                 for (uint32_t i = bt.firstIndex; i + 3 <= bt.firstIndex + bt.indexCount; i += 3) {
                     const uint32_t a = mesh.indices[i], b2 = mesh.indices[i + 1], c = mesh.indices[i + 2];
                     if (behind[a] || behind[b2] || behind[c]) continue;  // across the near plane: left out
-                    pd.idx.push_back(uint16_t(base + a));
-                    pd.idx.push_back(uint16_t(base + b2));
-                    pd.idx.push_back(uint16_t(base + c));
+                    const uint32_t tri[3] = {a, b2, c};
+                    const float zd[3] = {1.0f / pd.verts[base + a].rhw, 1.0f / pd.verts[base + b2].rhw,
+                                         1.0f / pd.verts[base + c].rhw};
+                    const bool nearer = zd[0] < from || zd[1] < from || zd[2] < from;
+                    if (!nearer || (zd[0] < from && zd[1] < from && zd[2] < from)) {
+                        for (uint32_t k : tri) pd.idx.push_back(uint16_t(base + k));
+                        continue;
+                    }
+                    // 3.0.4-beta.23 (R-W7A5XC): across the squeeze - its near side and its far side, each one depth
+                    // (own_ground::nearDepth), the two points of the cut shared
+                    float sides[2][4][3];
+                    const int corners[2] = {own_ground::nearDepth(zd, from, sides[0]),
+                                            own_ground::pastDepth(zd, from, sides[1])};
+                    float cutAt[2][3];
+                    uint16_t cutIndex[2] = {0, 0};
+                    int cuts = 0;
+                    const auto vertexOf = [&](const float* w) {
+                        for (int k = 0; k < 3; ++k)
+                            if (w[k] == 1.0f) return uint16_t(base + tri[k]);
+                        for (int k = 0; k < cuts; ++k)
+                            if (w[0] == cutAt[k][0] && w[1] == cutAt[k][1] && w[2] == cutAt[k][2]) return cutIndex[k];
+                        float at[3] = {0, 0, 0}, ch[2][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}}, uv[4] = {0, 0, 0, 0};
+                        for (int k = 0; k < 3; ++k) {
+                            const own_ground::Tl2& s = pd.verts[base + tri[k]];
+                            at[0] += w[k] * (s.x - p.cx) * zd[k] / p.f0;
+                            at[1] += w[k] * (s.y - p.cy) * zd[k] / p.f1;
+                            at[2] += w[k] * zd[k];
+                            for (int n = 0; n < 4; ++n) {
+                                ch[0][n] += w[k] * float((s.diffuse >> (n * 8)) & 0xFF);
+                                ch[1][n] += w[k] * float((s.specular >> (n * 8)) & 0xFF);
+                            }
+                            uv[0] += w[k] * s.u0, uv[1] += w[k] * s.v0, uv[2] += w[k] * s.u1, uv[3] += w[k] * s.v1;
+                        }
+                        own_ground::Tl2 t{};
+                        own_ground::placeView(p, at, t);
+                        if (lift > 0.0f) t.z = own_ground::depthOf(p, std::max(at[2] - lift, p.nearZ + 0.005f));
+                        for (int n = 0; n < 4; ++n) {
+                            t.diffuse |= uint32_t(std::clamp(int(ch[0][n] + 0.5f), 0, 255)) << (n * 8);
+                            t.specular |= uint32_t(std::clamp(int(ch[1][n] + 0.5f), 0, 255)) << (n * 8);
+                        }
+                        t.u0 = uv[0], t.v0 = uv[1], t.u1 = uv[2], t.v1 = uv[3];
+                        pd.verts.push_back(t);
+                        if (cuts < 2) {
+                            std::copy(w, w + 3, cutAt[cuts]);
+                            cutIndex[cuts++] = uint16_t(pd.verts.size() - 1);
+                        }
+                        return uint16_t(pd.verts.size() - 1);
+                    };
+                    for (int side = 0; side < 2; ++side) {
+                        uint16_t piece[4];
+                        for (int q = 0; q < corners[side]; ++q) piece[q] = vertexOf(sides[side][q]);
+                        for (int q = 1; q + 1 < corners[side]; ++q) {  // a fan round its first corner
+                            pd.idx.push_back(piece[0]);
+                            pd.idx.push_back(piece[q]);
+                            pd.idx.push_back(piece[q + 1]);
+                        }
+                    }
                 }
             }
         }
@@ -672,6 +729,32 @@ bool Renderer::Impl::noteOwnWater(const FrameRecord& rec, const DrawCmd& d) {
     std::memcpy(&o.waterColour, at + 16, sizeof o.waterColour);  // its first corner's diffuse (lava: the map's light)
     o.waterLike = rec.states()[d.state];
     o.waterLikeKnown = true;
+    // 3.0.4-beta.23 (R-W7A5XC): its waves' phase from its corners' heights (core/water.hpp wavePhaseOf) - the far
+    // water lifted alike meets it without a line
+    if (g->waveHeight != 0.0f && viewToWorldValid) {
+        const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+        const float* m = viewToWorld;
+        const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
+        int gx[4], gy[4];
+        float h[4];
+        bool seen = true;
+        for (int k = 0; k < 4 && seen; ++k) {
+            float v[4];
+            std::memcpy(v, at + size_t(k) * stride, sizeof v);
+            seen = v[3] > 0.0f;
+            const float vz = 1.0f / v[3], vx = (v[0] - p.cx) * vz / p.f0, vy = (v[1] - p.cy) * vz / p.f1;
+            const float x = (vx * m[0] + vy * m[3] + vz * m[6] + m[9]) * float(axes.x);
+            h[k] = (vx * m[1] + vy * m[4] + vz * m[7] + m[10]) * float(axes.y);
+            const float z = (vx * m[2] + vy * m[5] + vz * m[8] + m[11]) * float(axes.z);
+            gx[k] = int(std::lround(x / g->zoom + float(g->width) / 2.0f));
+            gy[k] = int(std::lround(z / g->zoom + float(g->height) / 2.0f));
+        }
+        if (seen) {
+            o.wavePhase = water::wavePhaseOf(gx, gy, h, 4, g->wavePitch, g->waterLevel, g->waveHeight);
+            o.wavePhaseKnown = true;
+            o.wavePhaseAt = GetTickCount64();
+        }
+    }
     return true;
 }
 
@@ -745,6 +828,10 @@ bool Renderer::Impl::drawOwnWater() {
         o.waterVerts.clear();
         o.waterIdx.clear();
     };
+    // 3.0.4-beta.23: the waves' phase now - the game's of this picture, else on from the last seen at its pace
+    int phase = o.wavePhaseKnown ? o.wavePhase : 0;
+    if (o.wavePhaseKnown && !o.waterGame)
+        phase = water::phaseAfter(o.wavePhase, g->waveSpeed, int((GetTickCount64() - o.wavePhaseAt) / 16));
     const terrain::Mesh& mesh = g->water;
     for (const terrain::Chunk& box : mesh.chunks) {
         float lo[3], hi[3];
@@ -762,7 +849,10 @@ bool Renderer::Impl::drawOwnWater() {
             float c[3][3];
             for (int k = 0; k < 3; ++k) {
                 tv[k] = &mesh.vertices[bt.firstVertex + mesh.indices[i + size_t(k)]];
-                const float w[3] = {tv[k]->pos[0] * sign[0], tv[k]->pos[1] * sign[1], tv[k]->pos[2] * sign[2]};
+                const int gx = int(std::lround(tv[k]->pos[0] / g->zoom + float(g->width) / 2.0f));
+                const int gy = int(std::lround(tv[k]->pos[2] / g->zoom + float(g->height) / 2.0f));
+                const float y = water::waveAt(gx, gy, g->wavePitch, phase, g->waterLevel, g->waveHeight);
+                const float w[3] = {tv[k]->pos[0] * sign[0], y * sign[1], tv[k]->pos[2] * sign[2]};
                 own_ground::toView(view, w, c[k]);
             }
             const float zd[3] = {c[0][2], c[1][2], c[2][2]};

@@ -1217,6 +1217,10 @@ struct Renderer::Impl {
         uint32_t waterTexture = 0, waterColour = 0;
         bool waterLikeKnown = false, waterDrawn = false, waterWaitLogged = false;
         bool waterGame = false;  // this picture's waterTexture the game's own (its first water quad)
+        // 3.0.4-beta.23: the phase of the game's waves, read from its first water quad of a picture, and when
+        int wavePhase = 0;
+        bool wavePhaseKnown = false;
+        ULONGLONG wavePhaseAt = 0;
         std::vector<uint32_t> waterIds;  // the map's own copies of the water's pictures (OwnGround::waterPictures)
         size_t waterPicture = 0, waterPictureLevel = 0;
         DrawSetup waterLike;

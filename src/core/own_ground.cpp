@@ -73,6 +73,11 @@ int pastDepth(const float zd[3], float from, float out[4][3]) {
     return n;
 }
 
+int nearDepth(const float zd[3], float to, float out[4][3]) {
+    const float turned[3] = {-zd[0], -zd[1], -zd[2]};  // this side of `to`: the far side of its depths turned round
+    return pastDepth(turned, -to, out);
+}
+
 bool boxInView(const View& v, const camera::Projection& p, int width, int height, const float lo[3], const float hi[3],
                float most, float& nearest, float* farthest) {
     // 3.0.4-beta.12: by the view's planes - through the eye and the screen's edges, the near one, `most` - which hold

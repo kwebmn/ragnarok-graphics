@@ -20,4 +20,15 @@ bool isWaterQuad(const uint8_t* vertices, size_t stride, uint32_t vertexCount, u
 // in the map's light (one colour), blended alike.
 bool isLavaQuad(const uint8_t* vertices, size_t stride, uint32_t vertexCount, uint32_t indexCount, bool strip);
 
+// 3.0.4-beta.23 (R-W7A5XC «полоска стала меньше»): the water's waves as uaRO.exe lifts them (0x4e59d0) - a corner of
+// the cells (gx, gy) at its level plus the sine of (gx + gy - 1) * pitch + phase whole degrees times the waves' height
+// (up along -y; no height: flat). The game's sine (FUN_0040ae60, its table filled by 0x40ad90): whole degrees, past
+// +-360 their remainder, below 0 one degree off - its table for them is read a place late
+float gameSin(int degrees);
+float waveAt(int gx, int gy, int pitch, int phase, float level, float height);
+// The phase (whole degrees, -180 to 180) that fits the heights h of n corners (gx, gy) of the game's water best
+int wavePhaseOf(const int* gx, const int* gy, const float* h, int n, int pitch, float level, float height);
+// The phase `ticks` game ticks (16 ms) on: its speed added each, past 180 a turn back (FUN_004e3b80)
+int phaseAfter(int phase, int speed, int ticks);
+
 }  // namespace uagfx::water

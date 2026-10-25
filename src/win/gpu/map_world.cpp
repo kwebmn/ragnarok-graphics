@@ -419,6 +419,9 @@ void MapWorld::loop() {
                         own->waterType = w.waterType;
                         own->waterLevel = w.waterLevel;
                         own->waterAnim = std::max(w.waterAnim, 1);
+                        own->waveHeight = w.waveHeight;  // 3.0.4-beta.23: the game holds pitch and speed whole
+                        own->wavePitch = int(w.wavePitch);
+                        own->waveSpeed = int(w.waveSpeed);
                         // its 32 pictures as the game reads them (FUN_004e3b80: water%d%02d.jpg under 워터; a kind
                         // it has none of: the kind modulo 6), as many as there are one after another
                         for (int kind : {w.waterType, w.waterType % 6}) {
