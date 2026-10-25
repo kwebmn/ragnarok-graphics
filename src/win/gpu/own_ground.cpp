@@ -758,6 +758,20 @@ bool Renderer::Impl::noteOwnWater(const FrameRecord& rec, const DrawCmd& d) {
     return true;
 }
 
+// 3.0.4-beta.24: the record's first quad of the game's own water (or lava) from draw `from` on, noted as above - the
+// far water drawn at the start of the game's sorted list, before the quad itself comes
+void Renderer::Impl::noteOwnWaterAhead(const FrameRecord& rec, size_t from) {
+    const std::vector<DrawCmd>& draws = rec.draws();
+    for (size_t k = from; k < draws.size() && k < from + 20000; ++k) {
+        const DrawCmd& d = draws[k];
+        const DrawSetup& s = rec.states()[d.state];
+        if (s.ui) return;  // the world's draws end
+        if (d.fvf == d3d7::FVF_TL1 && d.vertexCount == 4 && s.blend && s.srcBlend == d3d7::BLEND_SRCALPHA &&
+            s.dstBlend == d3d7::BLEND_INVSRCALPHA && noteOwnWater(rec, d))
+            return;
+    }
+}
+
 // 3.0.4-beta.20 (the user chose «Своя земля везде»): the map's water past the game's far plane - the game lays its
 // water a quad a cell with its ground (0x4e59d0), none past its far plane, and the own ground showed the bed bare
 // there (460 of the client's 921 maps have water, 3 lava). The parts of the quads past it (own_ground::pastDepth, as

@@ -118,13 +118,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         ownState.frame = prepareOwnGround();
     }
     if (!inner && ownState.frame && !ownState.drawn && (s.ui || s.blend) && !drawOwnGround()) return;
-    // 3.0.4-beta.20: the picture's first quad of the game's own water (or lava) - its picture, state and colour noted,
-    // the own water past the far plane drawn before it (the modern water's copy of the world taken there, after the
-    // characters, as before); or at the interface, when the game lays none of it near
-    if (!inner && ownState.frame && !ownState.waterDrawn && !s.ui && d.fvf == d3d7::FVF_TL1 && d.vertexCount == 4 &&
-        s.blend && s.srcBlend == d3d7::BLEND_SRCALPHA && s.dstBlend == d3d7::BLEND_INVSRCALPHA &&
-        noteOwnWater(rec, d) && !drawOwnWater())
-        return;
+    // 3.0.4-beta.20: the own water past the far plane, after the characters (the modern water's copy of the world taken
+    // there, as before). 3.0.4-beta.24 (R-PTAMG4 «на корабле видна полоса»): at the start of the game's sorted list -
+    // its water and its models' keyed faces back to front, depth not written (uaRO.exe 0x40e4d0) -, not at its first
+    // water quad: the faces before that one lay under the far water (a band of water over the ship's deck). The list's
+    // first water quad read ahead in the record for its picture, state, colour and waves; or at the interface
+    if (!inner && ownState.frame && !ownState.waterDrawn && !s.ui && s.blend && !s.zWrite) {
+        noteOwnWaterAhead(rec, size_t(&d - rec.draws().data()));
+        if (!drawOwnWater()) return;
+    }
     if (!inner && ownState.frame && !ownState.waterDrawn && s.ui && !drawOwnWater()) return;
     // 3.0.4-beta.14: a draw of the game's own models near - the far models' colours and state learnt from it. Not by
     // this picture's choice (ownState.frame): the game draws its models before its ground

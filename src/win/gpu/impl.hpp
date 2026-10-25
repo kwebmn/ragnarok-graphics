@@ -1243,6 +1243,7 @@ struct Renderer::Impl {
     void drawOwnModels(const own_ground::View& view, const camera::Projection& p, const map::Axes& axes);
     bool drawOwnGround();  // once a picture, the game's ground noted; false: lost
     bool noteOwnWater(const FrameRecord& rec, const DrawCmd& d);  // 3.0.4-beta.20: true - a quad of the map's water
+    void noteOwnWaterAhead(const FrameRecord& rec, size_t from);  // 3.0.4-beta.24: the record's first such on
     bool drawOwnWater();  // once a picture, before the game's first water or at the interface; false: lost
     // 1.12: the frame's opaque world (sun_map.cpp noteCaster) - since 2.2 for the mirror only
     struct SunCaster {
