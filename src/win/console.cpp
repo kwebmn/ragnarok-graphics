@@ -154,6 +154,8 @@ void Console::build(Lang lang, const Config& config) {
         if (rows_.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleNothing), 0});
     } else {
         rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11 as well)
+        // 3.0.5-beta.6: «Тест графіки» - not the first row, where the console opens: a Space there starts nothing
+        rows_.push_back(Row{Kind::Test, "", 0});
         // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)
         if (settingOf("panel.show")) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::PanelHeading), 0});
@@ -230,6 +232,10 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
             if (r.key == groupKey(g)) groupOpen_[g] = step == 0 ? !groupOpen_[g] : step > 0;
         build(lang_, config);
         dirty_ = true;
+        return false;
+    }
+    if (r.kind == Kind::Test) {  // 3.0.5-beta.6: Space or Enter starts it; the console closes (present)
+        testAsked_ = testAsked_ || step == 0;
         return false;
     }
     if (r.kind == Kind::Here) {  // 2.6.22: «Только на этой карте» - the console's own, not the file's
@@ -365,6 +371,13 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         changed = change(iniPath, config, 0);
     if (pressed(VK_LEFT, left_, true, now)) changed = change(iniPath, config, -1) || changed;
     if (pressed(VK_RIGHT, right_, true, now)) changed = change(iniPath, config, 1) || changed;
+    if (testAsked_) {  // 3.0.5-beta.6: the test runs over the game alone
+        LOG_INFO("console: «Тест графіки» chosen - closed");
+        open_ = false;
+        hide();
+        comparing_.clear();
+        return changed;
+    }
     if (pressed(VK_ESCAPE, escape_, false, now)) {
         if (!filter_.empty()) {  // 2.6.22: the letters cleared first, then the console closed
             filter_.clear();
@@ -505,6 +518,12 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                                                 : fmt(tr(lang_, Text::FxDetails),
                                                       {std::to_string(lit), std::to_string(count)});
                 text(fontH + r.depth * fontH * 2, y, wide(label), RGB(140, 180, 220));
+                continue;
+            }
+            if (r.kind == Kind::Test) {  // 3.0.5-beta.6
+                const int x = fontH + r.depth * fontH * 2;
+                text(x, y, L"▶", RGB(229, 169, 78));
+                text(x + fontH * 3 / 2, y, wide(tr(lang_, Text::TestRow)), RGB(240, 236, 226));
                 continue;
             }
             if (r.kind == Kind::Here) {  // 2.6.22: «Только на этой карте» and the map

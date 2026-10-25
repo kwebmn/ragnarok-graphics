@@ -10,6 +10,7 @@
 #include "core/light_mode.hpp"
 #include "core/map_load.hpp"
 #include "core/glint.hpp"
+#include "core/graphics_test.hpp"
 #include "core/hit_flash.hpp"
 #include "core/config.hpp"
 #include "core/daylight.hpp"
@@ -44,6 +45,7 @@ public:
     // 2.2: the effects as drawn - the set and the groups made into the switches (effect_groups::effective). 2.5.11:
     // made once a change of `config` (settingsChanged) - each of the game's draws asks for them, and made anew each
     // time they were 2 % of the game's thread with Direct3D 11
+    // 3.0.5-beta.6: while «Тест графіки» runs, the set it shows (the player's file is never written)
     const EffectSettings& effects() const;
     void settingsChanged() { effectsMade_ = false; }  // `config` replaced
     // 3.0.4-beta.35: the card's level for the automatic set now - the start's, moved by its speed (core/card_speed)
@@ -145,6 +147,31 @@ private:
     bool enhanced_ = true;
     mutable EffectSettings effects_;  // 2.5.11: effects(), made from `config`
     mutable bool effectsMade_ = false;
+    EffectSettings madeEffects(const EffectSettings& file) const;  // as drawn: the set, the light modes, thin grass
+    // 3.0.5-beta.6 (the user: «есть также идея сделать некий режим теста в игре ... чтобы не стоять кучу времени»):
+    // «Тест графіки» from the console (core/graphics_test; win/context_test.cpp) - each set drawn in turn as effects()
+    // for the frame alone, the camera written on its path, keep_fps and the card's judge held, the profile cut at the
+    // sets, the result's table sent by the settings app (--test-report) and its answer said on the screen
+    void testStart();
+    void testFrame(bool foreground);  // each present before its effects: the step, the set, the camera; the stops
+    void testStop(const char* why);
+    void testFinish();  // the last set measured: the player's camera back, the result made a moment later
+    void testSend();
+    void testWatchSent();
+    void testNote(const std::string& utf8);  // the frame counter's line, at once
+    static double testClockS();              // QueryPerformanceCounter's seconds
+    EffectSettings testSet(graphics_test::Set s) const;
+    graphics_test::Run test_;
+    EffectSettings testFx_;
+    graphics_test::Pose testStart_;  // the player's camera: the path turns from it, it is eased back at the end
+    float testFrom_ = 0.0f, testTo_ = 0.0f;
+    std::string testMap_;
+    double testLastS_ = 0.0;
+    uint32_t testGpuSerial_ = 0;
+    int testLeftShown_ = -1;      // the progress line's seconds as last shown
+    uint64_t testSendAt_ = 0;     // the result made then: the renderers' last lines in their logs first
+    uint64_t testSentUntil_ = 0;  // the settings app's answer looked for till then
+    uint64_t testSentLook_ = 0;
     // 2.5.20: the light modes (core/light_mode.hpp) - what they take from `config` now, and the laptop's power
     light::Overrides light_;
     bool onBattery_ = false;

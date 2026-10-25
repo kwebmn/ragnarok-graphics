@@ -38,5 +38,8 @@ void logModulesAtExit();
 // 2.13: Ctrl+Shift+F10 - uaro-graphics.exe --report "<shot>" --map <map>: «Нове звернення» over the game, with the
 // screenshot the press took (written by the renderer a frame later: the app waits for it)
 void startReport(const std::string& shot, const std::string& map);
+// 3.0.5-beta.6: «Тест графіки»'s result (its table in `file`) sent by the settings app without a window
+// (uaro-graphics.exe --test-report, app/test_report); false when it could not start
+bool startTestReport(const std::string& file);
 
 }  // namespace uagfx::win

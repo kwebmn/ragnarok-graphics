@@ -30,10 +30,17 @@ public:
     // 3.0.3-beta.11: hidden at once - the game window gone behind (it may present no more: its full screen); shown
     // again by the game's next present in front while it is open
     void hide();
+    // 3.0.5-beta.6: «Тест графіки» chosen (the console closed with it) - true once
+    bool takeTestAsk() {
+        const bool asked = testAsked_;
+        testAsked_ = false;
+        return asked;
+    }
 
 private:
-    // 2.2.1: Open - a group's effects shown or not; 2.6.22: Here - «Только на этой карте» (the console's own)
-    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here };
+    // 2.2.1: Open - a group's effects shown or not; 2.6.22: Here - «Только на этой карте» (the console's own);
+    // 3.0.5-beta.6: Test - «Тест графіки» (core/graphics_test)
+    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test };
     struct Row {
         Kind kind = Kind::Heading;
         std::string key;  // "effects.grass"; a heading's: its text (UTF-8)
@@ -56,6 +63,7 @@ private:
     std::string filter_;   // 2.6.22: the letters typed (UTF-8)
     std::wstring typed_;   // and those not taken yet (wndProc's WM_CHAR; 8 Backspace)
     bool thisMap_ = false; // «Только на этой карте», while the game runs
+    bool testAsked_ = false;
     std::string map_;
     std::vector<Row> rows_;
     int at_ = 0, top_ = 0;

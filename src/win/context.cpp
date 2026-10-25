@@ -151,13 +151,19 @@ void Context::writeUsage(const std::string& lines) {
     f.write(lines.data(), std::streamsize(lines.size()));
 }
 
+EffectSettings Context::madeEffects(const EffectSettings& file) const {
+    // 2.5.20: as the light modes leave them - super-light none, the battery's at most the weak set's
+    EffectSettings e = light::effectsOf(effect_groups::effective(file, cardLevel()), light_);
+    // 3.0.4-beta.35: a card weak by its memory - the grass thinned (its roots on every second row), even raised by its
+    // speed; keep_fps thins it too (keepOff_'s grass_thin)
+    e.grassThin = startup().memoryLevel == 1;
+    return e;
+}
+
 const EffectSettings& Context::effects() const {
+    if (test_.running()) return testFx_;  // 3.0.5-beta.6: the set «Тест графіки» shows
     if (!effectsMade_) {
-        // 2.5.20: as the light modes leave them - super-light none, the battery's at most the weak set's
-        effects_ = light::effectsOf(effect_groups::effective(config.effects, cardLevel()), light_);
-        // 3.0.4-beta.35: a card weak by its memory - the grass thinned (its roots on every second row), even raised by
-        // its speed; keep_fps thins it too (keepOff_'s grass_thin)
-        effects_.grassThin = startup().memoryLevel == 1;
+        effects_ = madeEffects(config.effects);
         effectsMade_ = true;
     }
     return effects_;
@@ -725,7 +731,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);
     renderer->setLight(enhanced_ ? light_.flags : uint8_t(0));  // 2.5.20: Pause shows the game's own picture
-    renderer->setProfile(config.profile);  // 3.0.5-beta.2: [debug] profile - the frame's spans too (frame_profile)
+    // 3.0.5-beta.2: [debug] profile - the frame's spans too (frame_profile); 3.0.5-beta.6: on while the test runs
+    renderer->setProfile(config.profile || test_.running());
     if (upscale && (dlss || taa)) {  // the camera of the frame being shown: the motion of its pixels
         float view[12];
         float targetZ = 0;
@@ -759,6 +766,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                              enhanced_ && config.alphaToCoverage && !light_.noSupersampling,
                              aiShown ? aiKindsShown(config.aiNow) : uint8_t(0),
                              aiShown ? aiSpritesShown(config.aiNow) : uint8_t(0));
+    testFrame(foreground);  // 3.0.5-beta.6: «Тест графіки» - its set is effects() below
     keepFrameRate(config, window);
     Profiler::get().run(GetCurrentThreadId(), config.profile);  // 0.87: [debug] profile
     // 2.2: the set and the groups made into the switches; 0.63: how much night now, by the clock; 0.74: the minute
@@ -772,7 +780,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                : -1;
         applyClock(fx, t.wHour * 60 + t.wMinute, server);
     }
-    for (const std::string& k : keepOff_) effect_costs::drop(fx, k);  // 0.76
+    if (!test_.running())  // 3.0.5-beta.6: the test measures the sets as they are
+        for (const std::string& k : keepOff_) effect_costs::drop(fx, k);  // 0.76
     // 1.9.3: Tab held in the console - the chosen effect off while it is held (the file as it is, that key 0)
     const std::string& comparing = console_.comparing();
     if (comparing != consoleOff_) {
@@ -856,12 +865,20 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool timed = renderer->gpuTiming(gpuNow);
     fps_.setGpu(timed ? &gpuNow : nullptr);
     fps_.present(window, fpsShown_ && !photo_);  // 3.0.4-beta.5: not in the photo mode's picture
-    noteUsage(foreground, out.cx, out.cy, timed ? &gpuNow : nullptr);  // 2.2.1
+    if (test_.running()) {  // 3.0.5-beta.6: the card's work of the set shown; the statistics leave the test out
+        if (timed && gpuNow.serial != testGpuSerial_) {
+            testGpuSerial_ = gpuNow.serial;
+            test_.gpu(testClockS(), gpuNow.gpuMs, gpuNow.effects);
+        }
+    } else {
+        noteUsage(foreground, out.cx, out.cy, timed ? &gpuNow : nullptr);  // 2.2.1
+    }
     if (console_.present(window, foreground, ourFile(layout::File::Ini), config, map_,
                          timed ? &gpuNow : nullptr)) {  // 1.9.3; 2.6.22: the map for «Только на этой карте»
         settingsChecked_ = 0;  // read at once, at the next present
         settingsKnown_ = false;
     }
+    if (console_.takeTestAsk()) testStart();  // 3.0.5-beta.6
     ++stats_.frames;
     logStats(false);
 }
@@ -981,7 +998,8 @@ void Context::keepFrameRate(const Config& config, HWND window) {
         keepOff_.clear();  // turned off: the effects come back (3.0.4-beta.35: the windows go on for the card's judge)
         keepSlow_ = 0;
     }
-    if (!enhanced_ || !window || GetForegroundWindow() != window || IsIconic(window)) {
+    // 3.0.5-beta.6: nor one of «Тест графіки» - its sets change every 15 s, and it turns nothing off
+    if (!enhanced_ || !window || GetForegroundWindow() != window || IsIconic(window) || test_.running()) {
         keepSince_ = 0;  // a frame rate in the background says nothing
         return;
     }

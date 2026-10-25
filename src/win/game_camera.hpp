@@ -33,6 +33,13 @@ void limitZoom(bool wanted);
 void raiseWaterBoxes(bool wanted);
 // 3.0.4-beta.6: the game shows its world (not the login or the character list); false in another build of the exe
 bool inGameWorld();
+// 3.0.5-beta.6 (the graphics test, core/graphics_test.hpp): the camera's turn and distance - the targets the game eases
+// toward; false outside its world or in another build of the exe
+bool readCameraPose(float& yaw, float& distance);
+// written as the targets, and with `exact` as the shown ones too (no easing: the same path on every computer)
+bool writeCameraPose(float yaw, float distance, bool exact);
+// the map's camera: outdoors or a building (as the game holds it now), its own limits (core::graphics_test zoomRange)
+bool readCameraLimits(bool& outdoor, bool& ownLimits, int& limitFrom, int& limitSpan);
 // The game's memory read without a fault where nothing is mapped
 bool readGame(uint32_t address, void* out, size_t size);
 // 3.0.3-beta.2: the name of the character in the game (core/char_name), as the game spells it; "" at the login and the

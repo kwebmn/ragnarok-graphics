@@ -28,6 +28,13 @@ constexpr uint32_t kMouseX = 0x14, kMouseY = 0x18;
 // the driver holds there: the character this side of the far plane, its height with it (R-35N5QN)
 constexpr uint32_t kZoomMost = 0x6D66B4;
 constexpr uint32_t kViewDistance = 0x24, kViewDistanceTo = 0x3C;
+// 3.0.5-beta.6 (the graphics test): the view's tilt and turn (degrees) as shown and their targets, which the game eases
+// them toward by a tenth a frame (FUN_004faca0: the turn kept within 0-360 and turned the short way)
+constexpr uint32_t kViewTilt = 0x1C, kViewTiltTo = 0x34;
+constexpr uint32_t kViewYaw = 0x20, kViewYawTo = 0x38;
+// a map's camera limits of its own (CGameMode int[0xa1]; its distances from the short at +0x288 over the one at
+// +0x28a - uaRO.exe 0x565f34), else 230 to 300 on a building map and to kZoomMost outdoors
+constexpr uint32_t kModeOwnLimits = 0x284, kModeLimitFrom = 0x288, kModeLimitSpan = 0x28A;
 constexpr float kZoomLimit = 1400.0f;
 // 3.0.4-beta.20 (R-UBT67Q «отчет с водой у горизонта»): the world the view draws (CView+0x1B4, FUN_004fa8b0) - its
 // ground (C3dGround: cells wide, high, units a cell, the water's level and its waves' height, FUN_004e59d0) and the

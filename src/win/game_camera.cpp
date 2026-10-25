@@ -81,6 +81,42 @@ bool inGameWorld() { return gameMode() != 0; }
 
 bool readGame(uint32_t address, void* out, size_t size) { return read(address, out, size); }
 
+bool readCameraPose(float& yaw, float& distance) {
+    uint32_t cview = 0;
+    const uint32_t mode = gameMode();
+    float y = 0.0f, d = 0.0f;
+    if (!mode || !read(mode + camera::kModeView, &cview, 4) || !cview || !read(cview + camera::kViewYawTo, &y, 4) ||
+        !read(cview + camera::kViewDistanceTo, &d, 4) || !std::isfinite(y) || !std::isfinite(d) || d <= 0.0f)
+        return false;
+    yaw = y;
+    distance = d;
+    return true;
+}
+
+bool writeCameraPose(float yaw, float distance, bool exact) {
+    uint32_t cview = 0;
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + camera::kModeView, &cview, 4) || !cview) return false;
+    bool ok = write(cview + camera::kViewYawTo, &yaw, 4) && write(cview + camera::kViewDistanceTo, &distance, 4);
+    if (exact)
+        ok = write(cview + camera::kViewYaw, &yaw, 4) && write(cview + camera::kViewDistance, &distance, 4) && ok;
+    return ok;
+}
+
+bool readCameraLimits(bool& outdoor, bool& ownLimits, int& limitFrom, int& limitSpan) {
+    const uint32_t mode = gameMode();
+    int32_t flag = 1, own = 0;
+    int16_t from = 0, span = 0;
+    if (!mode || !read(mode + camera::kModeOutdoor, &flag, 4) || !read(mode + camera::kModeOwnLimits, &own, 4) ||
+        !read(mode + camera::kModeLimitFrom, &from, 2) || !read(mode + camera::kModeLimitSpan, &span, 2))
+        return false;
+    outdoor = flag != 0;
+    ownLimits = own != 0;
+    limitFrom = from;
+    limitSpan = span;
+    return true;
+}
+
 bool keepCameraFree(bool wanted) {
     static uint32_t heldMode = 0;  // the game mode whose building map's flag we hold, and that map
     static std::string heldMap;

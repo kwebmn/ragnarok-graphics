@@ -59,6 +59,7 @@ public:
     void start(double nowS);
     bool running() const { return running_; }
     void stop() { running_ = false; }
+    double startS() const { return startS_; }
     // each present of the game: the time now (s) and since the last present (ms)
     Step frame(double nowS, double frameMs);
     // a new measurement of the card's (GpuTiming): its ms a frame and its timed passes' at nowS
