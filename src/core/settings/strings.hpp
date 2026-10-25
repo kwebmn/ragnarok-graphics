@@ -424,6 +424,11 @@ enum class Text : uint16_t {
     UpdateBackNote, UpdateBackButton, PlayBackButton, MainUpdateBack, UpdateBackDo, UpdateBackOut, UpdateBackStay,
     UpdateBackRestart,
     ReportOriginalsSending, ReportOriginalsFailed,  // 3.0.5-beta.5: the report's shots in full, sent after it
+    // 3.0.5-beta.6: «Тест графіки» (core/graphics_test) - the console's row, the frame counter's lines, the table,
+    // the kind of its report in «Звернення»
+    TestRow, TestRunning, TestNeedsMap, TestStopped, TestSending, TestSent, TestNotSent, TestNoApp, TestTitle,
+    TestColSet, TestColFps, TestColSlow, TestColCard, TestColDearest, TestSetOff, TestSetOwn, TestLimit, TestNoLimit,
+    TestVsync, TestNotMeasured, ReportKindTest,
     Count
 };
 
