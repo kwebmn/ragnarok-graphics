@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.5-beta.5 — what is new
+
+- **The shots in reports in full quality.** Until now the shots were made smaller, to 1600 points, and squeezed into
+  JPEG (the site takes a request of 8 MB at most), and the sharpness could not be judged by them. Now after a report the
+  settings app sends the originals too: the game's shots (Ctrl+Shift+F12, Ctrl+Shift+F10) as they are, PNG in full size;
+  the ones pasted (Ctrl+V) or added as a file - into PNG with nothing lost. They go in parts of 1 MB right after the
+  report, and the site shows them in the smaller ones' place. When an original does not go, the report keeps the smaller
+  one, and the app says so.
+- To check: send a report with a game's shot (Ctrl+Shift+F10) - after «Sending the shots in full quality…» the usual
+  «Report … is sent».
+
 # uaRO Graphics 3.0.5-beta.4 — what is new
 
 - **Direct3D 11: the smaller world made larger plainly - 6-7 ms a frame less on a weak card.** With «World resolution»
