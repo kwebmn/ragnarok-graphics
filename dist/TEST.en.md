@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.4-beta.21 — what is new
+
+- **No black strip between the game's water and the water far off** (report R-UBT67Q, "report with the water at the
+  horizon"). In the picture from Alberta the sea to the horizon was water already, but a black strip ran across it
+  where the game's water meets the water far off. The cause is in the game itself. It splits the map into parts and
+  drops those whose box lies past its far edge, 1500. It takes the parts' boxes from the map's file (.rsw), and there
+  they are made by the bed, without the water over it. In Alberta 193 of the 1024 parts are the sea's bed, 7 units
+  under the water. When a part's bed was past the edge, the game dropped it with the water over it, though the water
+  itself was still nearer. Nobody drew that water, and the black bed showed. Now, while "Own ground (prototype)" is
+  on, the driver raises the top of such boxes to the water's surface. The game draws its water right up to its edge,
+  and the water far off goes on from there. With the own ground off the game's boxes are put back as they were.
+- To check (with "Own ground (prototype)"): `@warp alberta 193 146`, pull the camera out all the way and turn it to
+  the sea - there should be no strip; the same on izlude. A report after a minute there: the log has the line
+  "water: ... raised to its water's top".
+
 # uaRO Graphics 3.0.4-beta.20 — what is new
 
 - **Water and lava far off on the own ground.** The game lays its water a cell at a time with its ground, but only up
