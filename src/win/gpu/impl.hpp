@@ -127,7 +127,8 @@ constexpr UINT kRtvMirror = kRtvMaterial + 1;  // 1.16: the world mirrored under
 constexpr UINT kRtvTorch = kRtvMirror + 1;  // 2.5: the torches' buffer of light
 constexpr UINT kRtvShafts = kRtvTorch + 1;  // 2.5.7: the light in the air at half the size
 constexpr UINT kRtvGrassMask = kRtvShafts + 1;  // 3.0.5-beta.12: where a blade's root can stand (grass_mask_ps)
-constexpr UINT kRtvCount = kRtvGrassMask + 1;
+constexpr UINT kRtvGrassTiles = kRtvGrassMask + 1;  // 3.0.5-beta.20: the picture's 8 x 8 tiles with a marked root
+constexpr UINT kRtvCount = kRtvGrassTiles + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
@@ -490,6 +491,10 @@ struct Renderer::Impl {
     bool dayKept = false, dayFailed = false;
     float dayTint[3] = {1.0f, 1.0f, 1.0f}, daySaturation = 0.0f, dayFlash = 0.0f;
     void keepDay(const Constants& c);
+    // 3.0.5-beta.20 (the user: «делай 1 и 2»): applyNight leaves the copy to the lights' pass - made there (sceneColor
+    // still the picture before the night) only when it has lights to draw; nightLook: night_ps's look for it
+    bool dayWanted = false;
+    Constants nightLook{};
     // 0.22: the blur along one direction (dof_blur_ps) - the depth of field's, now the bloom's (2.6.11: the depth of
     // field gone at the player's word)
     ID3DBlob* dofBlurPs = nullptr;
@@ -1076,7 +1081,7 @@ struct Renderer::Impl {
         darknessLaid = false;
         aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
-        dayKept = false;    // 2.7.47
+        dayKept = dayWanted = false;  // 2.7.47, 3.0.5-beta.20
         softCopied = 0;     // 0.67
         waterfallsDone = false;  // 0.65
         torchFlames.clear();
@@ -1390,7 +1395,18 @@ struct Renderer::Impl {
     UINT grassMaskSrv = kNoSrv;
     int grassMaskWidth = 0, grassMaskHeight = 0;
     bool grassMaskFailed = false;
-    bool ensureGrassMask(int w, int h);  // false: none (the grass looks at every root, as before)
+    // 3.0.5-beta.20: the picture's 8 x 8 tiles - with a marked root (grass_tiles_ps into grassTiles), able to reach
+    // one (grass_near_ps, under grassMask's own rows)
+    ID3DBlob* grassTilesPs = nullptr;
+    ID3DBlob* grassNearPs = nullptr;
+    ID3D12PipelineState* grassTilesPipeline = nullptr;
+    ID3D12PipelineState* grassNearPipeline = nullptr;
+    ID3D12Resource* grassTiles = nullptr;
+    D3D12_RESOURCE_STATES grassTilesState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT grassTilesSrv = kNoSrv;
+    int grassTilesWidth = 0, grassTilesHeight = 0;
+    // the mask (w x maskRows, the tiles' reach under it) and the tiles; false: none - no grass
+    bool ensureGrassMask(int w, int maskRows, int tilesWide, int tilesHigh);
     bool grassDue() const {
         return effects.grass && effects.grassAmount > 0 && grassPs && mapOutdoors && groundDrawn && !grassDone &&
                viewToWorldValid;

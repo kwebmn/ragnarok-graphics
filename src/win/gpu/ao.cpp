@@ -270,7 +270,10 @@ bool Renderer::Impl::applyNight() {
     c.sourceRect[0] = flashNow();  // 0.80
     c.uiPixels[0] = float(sceneWidth);
     c.uiPixels[1] = float(sceneHeight);
-    if (torchDue()) keepDay(c);  // 2.7.47: for the lights after it
+    // 2.7.47: the picture before the night for the lights after it - 3.0.5-beta.20: copied by the lights' pass when it
+    // has lights to draw (applyTorches), a frame without any spared the copy
+    dayWanted = torchDue();
+    nightLook = c;
     return worldPass(nightPipelines[code], sceneWidth, sceneHeight, c, sceneColorSrv, true);
 }
 
@@ -410,11 +413,35 @@ bool Renderer::Impl::applyGrass() {
     // 3.0.5-beta.12: first where a blade's root can stand at all - each pixel once; grass_ps reads it (t0) before
     // anything else of a root. 3.0.5-beta.16: with the roots on every second row half as tall (its row j the
     // picture's 2j); a span of its own in [debug] profile
+    // 3.0.5-beta.20: under its rows the picture's 8 x 8 tiles that can reach a marked root (grass_near_ps): grass_ps
+    // leaves the others' pixels at once - a town's paving, a road, the sand
     const int maskHeight = c.uiPixels[2] > 1.5f ? (h + 1) / 2 : h;
+    const int tilesWide = (w + 7) / 8, tilesHigh = (h + 7) / 8;
     crumb("grass's roots");
-    const bool masked = ensureGrassMask(w, maskHeight) &&
-                        effectPass(grassMaskPipeline, grassMask, grassMaskState, rtvHandle(kRtvGrassMask), w,
-                                   maskHeight, c, sceneColorSrv, true, list1, nullptr, 3, cells);
+    bool masked = ensureGrassMask(w, maskHeight, tilesWide, tilesHigh);
+    if (masked) {
+        const D3D12_RECT roots{0, 0, w, maskHeight};
+        masked = effectPass(grassMaskPipeline, grassMask, grassMaskState, rtvHandle(kRtvGrassMask), w,
+                            maskHeight + tilesHigh, c, sceneColorSrv, true, list1, &roots, 3, cells);
+    }
+    if (masked) {  // the tiles with a marked root, then each tile's reach - below, aside within the sway at its most
+        transition(grassMask, grassMaskState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        Constants tc = c;
+        const float wind = std::hypot(c.sourceRect[2], c.sourceRect[3]);
+        const float sway = std::ceil((0.75f + 0.35f * wind) * c.twin[0]) + 1.0f;
+        tc.reproject[0] = std::ceil(sway / 8.0f);
+        tc.reproject[1] = std::floor((7.0f + sway) / 8.0f);
+        tc.reproject[2] = std::floor((7.0f + c.twin[0]) / 8.0f);
+        tc.reproject[3] = float(maskHeight);
+        masked = effectPass(grassTilesPipeline, grassTiles, grassTilesState, rtvHandle(kRtvGrassTiles), tilesWide,
+                            tilesHigh, tc, grassMaskSrv, false);
+        if (masked) {
+            transition(grassTiles, grassTilesState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            const D3D12_RECT reach{0, maskHeight, tilesWide, maskHeight + tilesHigh};
+            masked = effectPass(grassNearPipeline, grassMask, grassMaskState, rtvHandle(kRtvGrassMask), w,
+                                maskHeight + tilesHigh, tc, grassTilesSrv, false, kNoSrv, &reach);
+        }
+    }
     crumb(passName(kTimeGrass).words);
     if (lost) return false;
     if (!masked) return true;  // 3.0.5-beta.17: grass_ps takes its roots from the mask alone
@@ -430,20 +457,52 @@ bool Renderer::Impl::applyGrass() {
 }
 
 // 3.0.5-beta.12: the grass's mask - R8 at the scene's size, its render target view and its shader view; made again
-// when the size changes, the old one freed once the lists that read it have run
-bool Renderer::Impl::ensureGrassMask(int w, int h) {
-    if (!grassMaskPs) return false;
+// when the size changes, the old one freed once the lists that read it have run. 3.0.5-beta.20: the tiles' reach
+// in rows of its own under the mask's, and the tiles with a marked root in a texture of their own
+bool Renderer::Impl::ensureGrassMask(int w, int maskRows, int tilesWide, int tilesHigh) {
+    if (!grassMaskPs || !grassTilesPs || !grassNearPs) return false;
     if (!grassMaskPipeline && !grassMaskFailed) {
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
-            fullScreenPipeline(root, presentVs, grassMaskPs, DXGI_FORMAT_R8_UNORM, 1);
-        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
-                                                       reinterpret_cast<void**>(&grassMaskPipeline)))) {
-            grassMaskPipeline = nullptr;
-            grassMaskFailed = true;
-            LOG_ERROR("grass: its mask's pipeline failed - no grass");
+        ID3DBlob* shaders[3] = {grassMaskPs, grassTilesPs, grassNearPs};
+        ID3D12PipelineState** made[3] = {&grassMaskPipeline, &grassTilesPipeline, &grassNearPipeline};
+        for (int k = 0; k < 3 && !grassMaskFailed; ++k) {
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+                fullScreenPipeline(root, presentVs, shaders[k], DXGI_FORMAT_R8_UNORM, 1);
+            if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                           reinterpret_cast<void**>(made[k])))) {
+                *made[k] = nullptr;
+                grassMaskFailed = true;
+                LOG_ERROR("grass: its mask's pipelines failed - no grass");
+            }
+        }
+        if (grassMaskFailed) {
+            releaseCom(grassMaskPipeline);
+            releaseCom(grassTilesPipeline);
+            releaseCom(grassNearPipeline);
         }
     }
-    if (!grassMaskPipeline) return false;
+    if (!grassMaskPipeline || !grassTilesPipeline || !grassNearPipeline) return false;
+    if (!grassTiles || tilesWide != grassTilesWidth || tilesHigh != grassTilesHeight) {
+        discard(grassTiles);
+        grassTilesWidth = tilesWide;
+        grassTilesHeight = tilesHigh;
+        D3D12_CLEAR_VALUE none{};
+        none.Format = DXGI_FORMAT_R8_UNORM;
+        grassTiles = createTexture2D(device, tilesWide, tilesHigh, 1, DXGI_FORMAT_R8_UNORM,
+                                     D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                     &none);
+        grassTilesState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        if (grassTiles && grassTilesSrv == kNoSrv) grassTilesSrv = allocSrv();
+        if (!grassTiles || grassTilesSrv == kNoSrv) {
+            discard(grassTiles);
+            grassTiles = nullptr;
+            LOG_ERROR("grass: no video memory for its tiles at %dx%d - no grass", tilesWide, tilesHigh);
+            return false;
+        }
+        nameResource(grassTiles, "grass tiles");
+        device->CreateRenderTargetView(grassTiles, nullptr, rtvHandle(kRtvGrassTiles));
+        device->CreateShaderResourceView(grassTiles, nullptr, cpuSrvHandle(grassTilesSrv));
+    }
+    const int h = maskRows + tilesHigh;
     if (grassMask && w == grassMaskWidth && h == grassMaskHeight) return true;
     discard(grassMask);
     grassMask = nullptr;

@@ -1740,6 +1740,14 @@ void Renderer::Impl::destroy() {
     releaseCom(embersPs);
     releaseCom(embersData);
     for (ID3D12PipelineState*& p : grassPipelines) releaseCom(p);  // 0.81
+    releaseCom(grassMaskPipeline);  // 3.0.5-beta.12
+    releaseCom(grassMask);
+    releaseCom(grassMaskPs);
+    releaseCom(grassTilesPipeline);  // 3.0.5-beta.20
+    releaseCom(grassNearPipeline);
+    releaseCom(grassTiles);
+    releaseCom(grassTilesPs);
+    releaseCom(grassNearPs);
     for (ID3D12PipelineState*& p : groundLifePipelines) releaseCom(p);  // 1.7
     for (ID3D12PipelineState*& p : crittersPipelines) releaseCom(p);
     releaseCom(materialPso);  // 1.8

@@ -2059,9 +2059,41 @@ float grass_mask_ps(PresentOut i) : SV_Target {
     return grassRoot(int2(int(i.pos.x), int(i.pos.y) * every), int2(uiPixels.xy) - 1, g) ? 1.0 : 0.0;
 }
 
+// 3.0.5-beta.20 (the user: «делай 1 и 2» - the grass pass worked every pixel of a town's paving, a road, the sand,
+// where no root can give a blade): the picture in tiles of 8 x 8 - grass_tiles_ps whether any pixel of a tile is a
+// root the mask marked (r3 the mask's rows); grass_near_ps whether a tile's pixels can reach one - the tiles below
+// within the longest blade and aside within the sway at its most (r0, r1 the tiles to the left and the right, r2
+// below; t0 the tiles), written under the mask's rows of its texture; grass_ps leaves a pixel of a tile that cannot
+// before anything else
+float grass_tiles_ps(PresentOut i) : SV_Target {
+    int every = uiPixels.z > 1.5 ? 2 : 1;
+    int2 tile = int2(i.pos.xy);
+    int rows = 8 / every, top = tile.y * rows, maskRows = int(r3), width = int(uiPixels.x);
+    [loop] for (int y = top; y < top + rows && y < maskRows; ++y)
+        [loop] for (int x = tile.x * 8; x < tile.x * 8 + 8 && x < width; ++x)
+            if (tex0.Load(int3(x, y, 0)).r > 0.5) return 1.0;
+    return 0.0;
+}
+
+float grass_near_ps(PresentOut i) : SV_Target {
+    int maskRows = int(r3);
+    int2 tile = int2(int(i.pos.x), int(i.pos.y) - maskRows);
+    int2 tiles = int2((int(uiPixels.x) + 7) / 8, (int(uiPixels.y) + 7) / 8);
+    int x0 = max(tile.x - int(r0), 0), x1 = min(tile.x + int(r1), tiles.x - 1);
+    int y1 = min(tile.y + int(r2), tiles.y - 1);
+    [loop] for (int y = tile.y; y <= y1; ++y)
+        [loop] for (int x = x0; x <= x1; ++x)
+            if (tex0.Load(int3(x, y, 0)).r > 0.5) return 1.0;
+    return 0.0;
+}
+
 float4 grass_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     int2 last = int2(uiPixels.xy) - 1;
+    int every = uiPixels.z > 1.5 ? 2 : 1;  // 2.6.8: every second row's roots only (the roots on the even rows)
+    // 3.0.5-beta.20: a tile none of whose pixels can reach a marked root (grass_near_ps, under the mask's rows)
+    int maskRows = (int(uiPixels.y) + every - 1) >> (every - 1);
+    if (tex0.Load(int3(wp.x >> 3, maskRows + (wp.y >> 3), 0)).r < 0.5) discard;
     float here = sceneDepth.Load(int3(wp, 0));
     float hereZ = here >= 0.99999 ? 1e6 : viewDepth(here);
     int longest = int(twinX);
@@ -2087,7 +2119,6 @@ float4 grass_ps(PresentOut i) : SV_Target {
             trod = hold.z;
         }
     }
-    int every = uiPixels.z > 1.5 ? 2 : 1;  // 2.6.8: every second row's roots only (the roots on the even rows)
     int first = longest - (every == 2 ? ((wp.y + longest) & 1) : 0);
     // 2.7.29: the sway's wave once a pixel, not at every root (the user: «можешь оптимизировать?» - the grass 3-5 ms
     // of a frame at 4K)

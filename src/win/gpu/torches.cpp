@@ -920,6 +920,8 @@ bool Renderer::Impl::applyTorches() {
     }
     if (lights.size() > kMaxLights) lights.resize(kMaxLights);
     if ((flames.empty() && lights.empty() && flies.empty() && clouds.empty()) || !torchReady()) return true;
+    // 3.0.5-beta.20: the picture before the night (sceneColor still applyNight's copy) - only for lights to draw
+    if (dayWanted && !lights.empty()) keepDay(nightLook);
     if (!copySceneColor() || !copySceneDepth()) return false;
     const float k = float(upscale ? worldScale : scale);
     const float jx = upscale ? jitter[0] : 0.0f, jy = upscale ? jitter[1] : 0.0f;

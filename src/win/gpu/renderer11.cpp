@@ -207,6 +207,9 @@ Renderer11::~Renderer11() {
     drop(grassPs_);
     drop(grassMaskPs_);  // 3.0.5-beta.12
     dropTarget(grassMask_);
+    drop(grassTilesPs_);  // 3.0.5-beta.20
+    drop(grassNearPs_);
+    dropTarget(grassTiles_);
     drop(groundCellsSrv_);
     drop(groundCellsData_);
     drop(crittersVs_);  // 2.5.4
@@ -439,7 +442,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[60] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[62] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -490,7 +493,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"grass_mask_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.12: where roots can stand
                    {"seam_vs", vs, shaderSource(), {}, true},        // 3.0.5-beta.13: the seams on the card
                    {"weather_vs", vs, shaderSource(), {}, true},     // 3.0.5-beta.19: the weather's quads
-                   {"weather_quad_ps", ps, shaderSource(), {}, true}};
+                   {"weather_quad_ps", ps, shaderSource(), {}, true},
+                   {"grass_tiles_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.20: the grass's tiles
+                   {"grass_near_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -634,6 +639,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[57].code.empty() || !vsOf(wants[57], seamVs_)) seamVs_ = nullptr;  // 3.0.5-beta.13
     if (wants[58].code.empty() || !vsOf(wants[58], weatherVs_)) weatherVs_ = nullptr;  // 3.0.5-beta.19
     if (wants[59].code.empty() || !psOf(wants[59], weatherQuadPs_)) weatherQuadPs_ = nullptr;
+    if (wants[60].code.empty() || !psOf(wants[60], grassTilesPs_)) grassTilesPs_ = nullptr;  // 3.0.5-beta.20
+    if (wants[61].code.empty() || !psOf(wants[61], grassNearPs_)) grassNearPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -2310,7 +2317,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
     aoDone_ = false;  // 2.5.1
     fireSparks_.clear();
-    lightDone_ = nightDone_ = dayKept_ = false;  // 0.61, 0.63, 2.7.47
+    lightDone_ = nightDone_ = dayKept_ = dayWanted_ = false;  // 0.61, 0.63, 2.7.47, 3.0.5-beta.20
     mistDone_ = weatherDone_ = false;  // 2.5
     bloomDone_ = stepsDone_ = false;  // 2.5.2
     heatDone_ = floorDone_ = false;  // 2.5.3
@@ -2406,7 +2413,10 @@ void Renderer11::applyNight() {  // 0.63: as the colours, night_ps by its streng
         c.sourceRect[2] = waterTime();
     }
     if (!copyScene()) return;
-    if (torchesWanted()) keepDay(c);  // 2.7.47: for the light after it
+    // 2.7.47: the picture before the night for the light after it - 3.0.5-beta.20: copied by the light's pass when it
+    // has light to draw (applyTorchLight), a frame without any spared the copy
+    dayWanted_ = torchesWanted();
+    nightLook_ = c;
     worldPass(nightPs_, c, 2, 0, beams ? depthSrv_ : nullptr);  // the copy just made
 }
 
@@ -2511,7 +2521,8 @@ void Renderer11::passSamplers() {
 
 void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c,
                           ID3D11ShaderResourceView* t0, ID3D11ShaderResourceView* depth,
-                          ID3D11ShaderResourceView* t2, ID3D11ShaderResourceView* t1, ID3D11ShaderResourceView* t5) {
+                          ID3D11ShaderResourceView* t2, ID3D11ShaderResourceView* t1, ID3D11ShaderResourceView* t5,
+                          const RECT* clip) {
     targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
     ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
     ctx_->PSSetShaderResources(0, 4, none);
@@ -2519,7 +2530,7 @@ void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Const
     const D3D11_VIEWPORT vp{0.0f, 0.0f, float(into.width), float(into.height), 0.0f, 1.0f};
     ctx_->RSSetViewports(1, &vp);
     const D3D11_RECT all{0, 0, into.width, into.height};
-    ctx_->RSSetScissorRects(1, &all);
+    ctx_->RSSetScissorRects(1, clip ? clip : &all);
     setConstants(c);
     // 2.5.7: all four channels, as Direct3D 12's (fullScreenPipeline): the alpha was never written - half_over_ps
     // reads it (none: nothing laid over), so the floors' reflections (2.5.3) could not show on Direct3D 11
@@ -2540,6 +2551,7 @@ void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Const
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
     if (t5) ctx_->PSSetShaderResources(5, 1, none);
+    if (clip) ctx_->RSSetScissorRects(1, &all);
 }
 
 // 2.5.2 (actor_shadows.cpp noteFoot): a character's round shadow - its middle in the world, the feet this frame
@@ -3052,20 +3064,37 @@ void Renderer11::applyGrass() {
     ID3D11ShaderResourceView* cells = grid && groundCellsUp_ ? groundCellsSrv_ : nullptr;
     // 3.0.5-beta.12 (the grass 10 ms of a Radeon 610M's frame): first where a blade's root can stand at all - each
     // pixel once (grass_mask_ps); grass_ps reads it (t0) before anything else of a root
-    // 3.0.5-beta.16: half as tall - the roots on every second row only (uiPixels.z 2), its row j the picture's 2j
+    // 3.0.5-beta.16: half as tall - the roots on every second row only (uiPixels.z 2), its row j the picture's 2j.
+    // 3.0.5-beta.20: under its rows the picture's 8 x 8 tiles that can reach a marked root (grass_near_ps)
     bool masked = false;
     const int maskHeight = (target_.height + 1) / 2;
-    if (grassMaskPs_ && copyScene()) {
-        if (grassMask_.width != target_.width || grassMask_.height != maskHeight) {
+    const int tilesWide = (target_.width + 7) / 8, tilesHigh = (target_.height + 7) / 8;
+    if (grassMaskPs_ && grassTilesPs_ && grassNearPs_ && copyScene()) {
+        if (grassMask_.width != target_.width || grassMask_.height != maskHeight + tilesHigh) {
             dropTarget(grassMask_);
-            if (!makeTarget(grassMask_, target_.width, maskHeight, DXGI_FORMAT_R8_UNORM)) {
+            dropTarget(grassTiles_);
+            if (!makeTarget(grassMask_, target_.width, maskHeight + tilesHigh, DXGI_FORMAT_R8_UNORM) ||
+                !makeTarget(grassTiles_, tilesWide, tilesHigh, DXGI_FORMAT_R8_UNORM)) {
                 LOG_ERROR("grass: no video memory for its mask (Direct3D 11) - no grass");
                 grassMaskPs_ = nullptr;  // not tried again
             }
         }
         if (grassMaskPs_) {
             pmark("grass's roots");  // 3.0.5-beta.16: [debug] profile's own span - the mask apart from the blades
-            maskPass(grassMaskPs_, grassMask_, c, nullptr, depthSrv_, scene_.srv, nullptr, cells);
+            const D3D11_RECT roots{0, 0, target_.width, maskHeight};
+            maskPass(grassMaskPs_, grassMask_, c, nullptr, depthSrv_, scene_.srv, nullptr, cells, &roots);
+            // the tiles with a marked root, then each tile's reach: below within the longest blade, aside within
+            // the sway at its most (grass_ps: its wave, the steps' lean, the shared wind's)
+            Constants tc = c;
+            const float wind = std::hypot(c.sourceRect[2], c.sourceRect[3]);
+            const float sway = std::ceil((0.75f + 0.35f * wind) * c.twin[0]) + 1.0f;
+            tc.reproject[0] = std::ceil(sway / 8.0f);
+            tc.reproject[1] = std::floor((7.0f + sway) / 8.0f);
+            tc.reproject[2] = std::floor((7.0f + c.twin[0]) / 8.0f);
+            tc.reproject[3] = float(maskHeight);
+            maskPass(grassTilesPs_, grassTiles_, tc, grassMask_.srv, nullptr);
+            const D3D11_RECT reach{0, maskHeight, tilesWide, maskHeight + tilesHigh};
+            maskPass(grassNearPs_, grassMask_, tc, grassTiles_.srv, nullptr, nullptr, nullptr, nullptr, &reach);
             c.sourceRect[0] = 1.0f;
             masked = true;
         }

@@ -477,7 +477,8 @@ private:
     // A pass into a small target of its own: t0 and the depth (t3) read, the whole target written
     void maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c, ID3D11ShaderResourceView* t0,
                   ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t2 = nullptr,
-                  ID3D11ShaderResourceView* t1 = nullptr, ID3D11ShaderResourceView* t5 = nullptr);
+                  ID3D11ShaderResourceView* t1 = nullptr, ID3D11ShaderResourceView* t5 = nullptr,
+                  const RECT* clip = nullptr);  // 3.0.5-beta.20: only these pixels when given
     void passSamplers();  // linear, clamped, at s0 and s1 - the passes' own
     // A pass over the whole picture: copy - 1 the picture copied now into t2 (sceneColor), 2 its copy as it is, 0
     // none; blend - 0 written whole, 1 blended over by its alpha, 2 multiplied in, 3 added, 4 premultiplied over;
@@ -727,6 +728,11 @@ private:
     ID3D11PixelShader* grassPs_ = nullptr;
     ID3D11PixelShader* grassMaskPs_ = nullptr;  // 3.0.5-beta.12: where a blade's root can stand (grass_mask_ps)
     Target grassMask_;
+    // 3.0.5-beta.20: the picture's 8 x 8 tiles - with a marked root (grass_tiles_ps, grassTiles_), able to reach one
+    // (grass_near_ps, under grassMask_'s own rows)
+    ID3D11PixelShader* grassTilesPs_ = nullptr;
+    ID3D11PixelShader* grassNearPs_ = nullptr;
+    Target grassTiles_;
     living::Place place_;
     seasons::Look year_;
     float waterLevel_ = 0.0f;  // the last water seen, its height in the world (up is -y)
@@ -820,6 +826,10 @@ private:
     bool dayKept_ = false;
     float dayTint_[3] = {1.0f, 1.0f, 1.0f}, daySaturation_ = 0.0f;
     void keepDay(const Constants& c);
+    // 3.0.5-beta.20 (the user: «делай 1 и 2»): applyNight leaves the copy to the light's pass - made there (scene_
+    // still the picture before the night) only when it has light to draw; nightLook_: night_ps's look for it
+    bool dayWanted_ = false;
+    Constants nightLook_{};
     EffectSettings effects_;
     std::string map_;
     trees::Season season_ = trees::Season::Green;

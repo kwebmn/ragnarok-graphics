@@ -663,6 +663,8 @@ void Renderer11::applyTorchLight() {
     const bool light = count && torchLightPs_ && lightData_ && lit.right > lit.left && lit.bottom > lit.top;
     const bool drawFlames = flamesWanted() && !flames.empty();
     if (!light && !drawFlames && dots.empty() && clouds.empty()) return;
+    // 3.0.5-beta.20: the picture before the night (scene_ still applyNight's copy) - only for light to draw
+    if (dayWanted_ && light) keepDay(nightLook_);
     // The picture's copy (scene_) read by the light and the flames - taken before either writes the picture
     if (!copyScene()) return;
     targetBound_ = false;
