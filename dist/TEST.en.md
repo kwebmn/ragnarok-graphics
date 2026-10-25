@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.4-beta.27 — what is new
+
+- **The own ground shows right after a map's start.** It waited for all its pictures to reach the graphics card,
+  the textures of the houses and water far off among them: on big maps the game's ground showed for 0.6-0.8 s, then
+  gave way to the own ground at once. Now the own ground is drawn as soon as its own textures and light are up; the
+  houses and the water far off join it when their pictures are up.
+- **The log: why the own ground's picture is made anew.** In the reports the picture was drawn again with the camera
+  still 0 % of the time. Now once a minute the log has a line: how many pictures were taken as made, and what changed
+  in the others (the camera, the ground's colours, the fog, the hills' light, the models). Stand still for a minute and
+  send a report - the cause will show.
+- All 921 maps of the client checked offline with the new parts (the slopes for the hills' light, the water): all
+  read.
+- To check: go into several maps (prontera, prt_fild08, alberta) - no visible change of the ground a second after
+  the start; on one, stand still for a minute and send a report.
+
 # uaRO Graphics 3.0.4-beta.26 — what is new
 
 - **"Own ground" is now a part of the "Remaster" mode** (you chose "Own ground into Remaster"). The name lost
