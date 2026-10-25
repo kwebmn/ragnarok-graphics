@@ -27,6 +27,8 @@ const Costly kCostly[] = {
     {"motes", "weather", &EffectSettings::motes},
     {"lamps", "lights", &EffectSettings::lamps},
     {"grade", "grade", &EffectSettings::grade},
+    // 3.0.5-beta.8 (R-VMPQKX: 4.1 ms of a Radeon 610M's frame on «Низькі»): footprints, timed now with Direct3D 12 too
+    {"footprints", "steps", &EffectSettings::footprints},
     // 2.6.8: the low mists' pass (haze.cpp applyMist) - it runs while either is on
     {"morning_fog", "mist", &EffectSettings::morningFog},
     {"swamp", "mist", &EffectSettings::swamp},

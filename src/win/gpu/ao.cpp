@@ -225,6 +225,7 @@ bool Renderer::Impl::applyGrade() {
 // 0.63: the night (night_ps) - as the colours are made, from the picture's copy into it.
 bool Renderer::Impl::applyNight() {
     nightDone = true;
+    crumb("night");  // 3.0.5-beta.8: a span of its own (no switch to time it for: the clock's)
     const UINT n = upscale ? 1 : samples;
     const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
     if (!nightPs || !ensureScene("night")) return true;
@@ -461,6 +462,7 @@ bool Renderer::Impl::applyGroundLife() {
 // 0.80: the steps the characters left - prints in the snow and the sand, dust on dry ground - onto the ground.
 bool Renderer::Impl::applySteps() {
     stepsDone = true;
+    EffectTime timing(*this, kTimeSteps);  // 3.0.5-beta.8: its own span (R-XCHNKD: 3.9 ms under «the game's interface»)
     const int kind = stepKind();
     const std::deque<footsteps::Step>& steps = footTracker.steps();
     if (steps.empty() || !ensureScene("footprints")) return true;
@@ -668,6 +670,7 @@ void Renderer::Impl::noteDarkness(const FrameRecord& rec, const DrawCmd& d, cons
 bool Renderer::Impl::applyDarkness() {
     darknessLaid = true;
     if (darknessRec.draws().empty()) return true;
+    crumb("blindness's darkness");  // 3.0.5-beta.8: a span of its own
     flushDraws();  // the game's draws gathered so far are of its own vertices
     prepareGeometry(darknessRec);
     if (vertexBase) {

@@ -133,6 +133,8 @@ void Renderer::Impl::noteFire(const FrameRecord& rec, const DrawCmd& d, float am
 bool Renderer::Impl::applyEmbers() {
     const std::vector<Ember> places = std::move(embers);
     embers.clear();
+    if (places.empty()) return true;
+    crumb("skills' sparks");  // 3.0.5-beta.8: a span of their own
     if (!ensureScene("skills' sparks")) return true;
     ID3D12PipelineState* pso = addPipeline(embersPs, embersPipelines, upscale ? 1 : samples, "skills' sparks");
     if (!pso) return true;

@@ -1,5 +1,7 @@
 #include "core/graphics_test.hpp"
 
+#include "core/effect_costs.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -38,6 +40,17 @@ std::string listed(const std::vector<std::pair<std::string, double>>& parts, int
     for (int i = 0; i < int(parts.size()) && i < most; ++i)
         out += (out.empty() ? "" : ", ") + parts[size_t(i)].first + number(" %.2f", parts[size_t(i)].second);
     return out;
+}
+
+// 3.0.5-beta.8: a timed pass's key (GpuTiming::effects - Direct3D 12's effect_costs::kTimedPasses, Direct3D 11's
+// own) as the profile's lines name it
+std::string wordsOf(const std::string& key) {
+    for (const effect_costs::TimedPass& p : effect_costs::kTimedPasses)
+        if (key == p.key) return p.words;
+    if (key == "steps") return "footprints";
+    if (key == "world") return "the game's world";
+    if (key == "interface") return "the game's interface";
+    return key;
 }
 
 }  // namespace
@@ -228,7 +241,8 @@ std::string summary(const Head& h, const PhaseResult (&r)[kSets], const std::map
         if (found != parts.end() && !found->second.parts.empty()) {
             dearest.push_back(listed(found->second.parts, kDearest));
         } else {  // no profile lines: the card's timed passes
-            std::vector<std::pair<std::string, double>> passes(r[p].effects.begin(), r[p].effects.end());
+            std::vector<std::pair<std::string, double>> passes;
+            for (const auto& [key, ms] : r[p].effects) passes.emplace_back(wordsOf(key), ms);
             std::stable_sort(passes.begin(), passes.end(),
                              [](const auto& a, const auto& b) { return a.second > b.second; });
             dearest.push_back(passes.empty() ? "—" : listed(passes, kDearest));

@@ -111,3 +111,18 @@ TEST(frame_profile_flush_ends_windows_by_time_or_by_the_tests_cuts) {
     f.reset();  // the profile turned off: nothing asked any more
     CHECK(!f.due(1.0, log, tag));
 }
+
+// 3.0.5-beta.8 (R-VMPQKX, R-XCHNKD: «Ваші налаштування» without its parts): the last set's cut and the test's end come
+// in one frame - the window asked into the log is not dropped by the end's "" after it, and the windows of 10 s
+// come back
+TEST(frame_profile_flush_keeps_a_window_asked_into_the_log_when_a_drop_follows_in_the_same_frame) {
+    frame_profile::Flush f;
+    bool log = false;
+    std::string tag;
+    f.cut("", true);
+    CHECK(f.due(1.0, log, tag) && !log);
+    f.cut("test 5/5 own", true);
+    f.cut("", false);  // testFinish's, the same frame
+    CHECK(f.due(12000.0, log, tag) && log && tag == "test 5/5 own");
+    CHECK(f.due(10000.0, log, tag) && log && tag.empty());  // every 10 s again
+}

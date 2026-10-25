@@ -79,6 +79,7 @@ constexpr UINT kMarks12 = 256;          // 3.0.5-beta.2: [debug] profile's marks
 enum EffectTimer : UINT {
     kTimeAo, kTimeActorShadows, kTimeLights, kTimeMist, kTimeHeat, kTimeGrade, kTimeWeather,
     kTimeGlow, kTimeWater, kTimeShafts, kTimeFloor, kTimeBloom, kTimeGrass,
+    kTimeSteps,  // 3.0.5-beta.8
     kEffectTimes
 };
 // 2.2.2: each timed pass's names, in the enum's order (core/effect_costs.hpp kTimedPasses: the key Costs know, the

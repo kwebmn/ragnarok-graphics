@@ -259,3 +259,16 @@ TEST(graphics_test_summary_reads_back_into_its_cells) {
     CHECK(!graphics_test::parseSummary("", t));
     CHECK(!graphics_test::parseSummary("a line of something else\n", t));
 }
+
+// 3.0.5-beta.8: a set without profile lines (the profile not run) - the card's timed passes by the profile's words
+TEST(graphics_test_summary_names_the_timed_passes_as_the_profile_does) {
+    graphics_test::Head h;
+    graphics_test::PhaseResult r[graphics_test::kSets];
+    r[4].frames = 700;
+    r[4].fps = 60.0;
+    r[4].slowFps = 54.0;
+    r[4].gpuMs = 10.0;
+    r[4].effects = {{"steps", 3.98}, {"world", 2.84}, {"actor_shadows", 0.67}, {"grade", 0.5}};
+    const std::string uk = graphics_test::summary(h, r, {}, settings::Lang::Uk);
+    CHECK(has(uk, "footprints 3.98, the game's world 2.84, characters' shadows 0.67"));
+}

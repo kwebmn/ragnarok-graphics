@@ -71,6 +71,7 @@ bool Renderer::Impl::applyWaterfalls() {
     waterfallsDone = true;
     const rsw::World* layout = viewToWorldValid && mapWorld.axes().known() ? mapWorld.world() : nullptr;
     if (!layout) return true;
+    crumb("waterfalls");  // 3.0.5-beta.8: a span of their own
     const map::Axes axes = mapWorld.axes();
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float k = float(upscale ? worldScale : scale);

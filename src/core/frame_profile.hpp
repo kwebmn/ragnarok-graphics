@@ -37,7 +37,8 @@ private:
 };
 
 // 3.0.5-beta.6: when a window ends - every 10 s, or at the graphics test's cuts (core/graphics_test): the window so far
-// under the cut's tag, or dropped ("" - a set's settling), the next ones by cuts alone while they go on
+// under the cut's tag, or dropped ("" - a set's settling; not one already asked into the log in the same frame), the
+// next ones by cuts alone while they go on
 class Flush {
 public:
     void cut(const std::string& tag, bool byCuts);

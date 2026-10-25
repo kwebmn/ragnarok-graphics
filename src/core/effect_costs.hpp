@@ -24,7 +24,10 @@ inline constexpr TimedPass kTimedPasses[] = {
     {"lights", "lights and torches"}, {"mist", "mists"}, {"heat", "heat haze"}, {"grade", "colour"},
     {"weather", "weather"}, {"glow", "glow"}, {"water", "water's copies"},
     {"shafts", "light in the air"}, {"floor", "floor reflections"}, {"bloom", "bloom"},
-    {"grass", "grass"}};
+    {"grass", "grass"},
+    // 3.0.5-beta.8 (R-XCHNKD): Direct3D 12's footprints timed too - till then the profile counted them into the pass
+    // before them (the interface on «Низькі», the grass on «Середні»; 4 ms on a Radeon 610M); Direct3D 11's key
+    {"steps", "footprints"}};
 
 // "name ms" a line; parse() skips what does not read.
 std::string format(const Costs& c);

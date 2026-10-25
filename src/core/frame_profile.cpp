@@ -89,7 +89,9 @@ void Window::clear() {
 }
 
 void Flush::cut(const std::string& tag, bool byCuts) {
-    tag_ = tag;
+    // 3.0.5-beta.8 (R-VMPQKX): a window asked into the log stays so when a drop comes after it before the frame's end
+    // (the test's last set and its end in one frame) - the window after it starts anew either way
+    if (!(asked_ && !tag_.empty() && tag.empty())) tag_ = tag;
     asked_ = true;
     next_ = byCuts;
 }
