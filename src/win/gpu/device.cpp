@@ -459,8 +459,12 @@ void Renderer::Impl::profilePresent() {
 void Renderer::Impl::profileRelease() {
     if (profileBuffer && profileData) profileBuffer->Unmap(0, nullptr);
     profileData = nullptr;
-    releaseCom(profileHeap);
-    releaseCom(profileBuffer);
+    // 3.0.5-beta.10 (R-GGKYDV: the device lost as «Тест графіки» ended - DRED's page fault, "freed lately: buffer 4 KB
+    // (readback)"): the last list may still stamp into the heap and resolve into the buffer - freed once it has run
+    discard(profileHeap);
+    discard(profileBuffer);
+    profileHeap = nullptr;
+    profileBuffer = nullptr;
     for (Slot& s : slots) s.marked = 0;
     profileOn = false;
     profileWindow.clear();

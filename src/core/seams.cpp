@@ -264,6 +264,11 @@ void makePiece(const Cell& a, const Cell& b, const Way& w, int ix, int iz, const
     s.vertices.clear();
     s.indices.clear();
     s.origins.clear();
+    // 3.0.5-beta.10: room for the worst at once - a kept edge's piece made anew grew from nothing, five times a
+    // vector, with the 32-bit game's own allocator
+    s.vertices.reserve(kPieceMost);
+    s.origins.reserve(kPieceMost);
+    s.indices.reserve(size_t(kAlong) * kAcross * 2 * 3 * 3);
     const bool low = (in.flags & 4u) != 0;
     // 1.9.5: how much a place belongs to the neighbour's texture - its cells (the neighbour alone where both have one
     // texture) as 1 at their middles, bilinear between the cells' middles: 0.5 at the edge, more at a corner the
@@ -552,7 +557,10 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
     return out;
 }
 
-// 3.0.5-beta.9: the edges' pieces kept from the last build, by their cell's place and way
+// 3.0.5-beta.9: the edges' pieces kept from the last builds, by their cell's place and way; 3.0.5-beta.10: an edge
+// out of view kept kKeptBuilds builds more
+constexpr uint64_t kKeptBuilds = 60;
+
 struct Cache::Kept {
     struct Edge {
         Inputs in;
@@ -620,8 +628,9 @@ const std::vector<Strip>& Cache::build(const std::vector<Triangle>& ground, cons
             onto(strips_[slot.index], p);
         }
     });
-    for (auto it = k.edges.begin(); it != k.edges.end();)  // the edges out of view gone
-        it = it->second.built == now ? std::next(it) : k.edges.erase(it);
+    // the edges out of view a while gone - a camera zooming out and back in finds the ones in between again
+    for (auto it = k.edges.begin(); it != k.edges.end();)
+        it = now - it->second.built <= kKeptBuilds ? std::next(it) : k.edges.erase(it);
     ground_ = ground;
     texture_ = texture;
     width_ = width;
