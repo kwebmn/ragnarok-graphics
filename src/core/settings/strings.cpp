@@ -3949,12 +3949,13 @@ constexpr Entry kTexts[] = {
      "Бета (тестирование)"},
     {Text::UpdateChannelHint,
      "Release: the versions every player gets. Beta: the testers' builds, before everyone - they may have bugs, tell "
-     "about them in the Reports window. Back on Release this version stays until a newer release comes.",
+     "about them in the Reports window. Back on Release with a beta, the settings app offers the release back.",
      "Реліз — версії, які отримують усі гравці. Бета — збірки для тестувальників, раніше за всіх; у них можуть бути "
-     "помилки — пишіть про них у «Звернення». Після повернення на «Реліз» ця версія залишається, доки не вийде новіша.",
+     "помилки — пишіть про них у «Звернення». Після повернення на «Реліз» із бетою утиліта запропонує повернутися на "
+     "реліз.",
      "Релиз — версии, которые получают все игроки. Бета — сборки для тестировщиков, раньше всех; в них могут быть "
-     "ошибки — пишите о них в «Обращения». После возвращения на «Релиз» эта версия остаётся, пока не выйдет более "
-     "новая."},
+     "ошибки — пишите о них в «Обращения». После возвращения на «Релиз» с бетой утилита предложит вернуться на "
+     "релиз."},
     {Text::ServiceClientLibs, "The game's libraries",
      "Бібліотеки гри",
      "Библиотеки игры"},
@@ -4567,6 +4568,24 @@ constexpr Entry kTexts[] = {
      "цим прапорцем камера зупиняється на 1400.",
      "Игра даёт отдалить камеру до 2040, а свой мир рисует только до 1500: дальше пропадают персонаж, монстры и "
      "эффекты. С этим флажком камера останавливается на 1400."},
+    {Text::UpdateBackNote,
+     "The channel is «Release», and the beta {2} is installed. «Back to the release {1}» puts the release in; the "
+     "settings stay.",
+     "Вибрано канал «Реліз», а встановлено бету {2}. «Повернутися на реліз {1}» встановить реліз, налаштування "
+     "залишаться.",
+     "Выбран канал «Релиз», а установлена бета {2}. «Вернуться на релиз {1}» установит релиз, настройки останутся."},
+    {Text::UpdateBackButton, "Back to the release {1}", "Повернутися на реліз {1}", "Вернуться на релиз {1}"},
+    {Text::PlayBackButton, "Back to the release and play", "Повернутися на реліз і грати",
+     "Вернуться на релиз и играть"},
+    {Text::MainUpdateBack, "back to the release {1} possible", "можна повернутися на реліз {1}",
+     "можно вернуться на релиз {1}"},
+    {Text::UpdateBackDo, "Go back", "Повернутися", "Вернуться"},
+    {Text::UpdateBackOut, "The channel is «Release»: back to the release {1}?",
+     "Вибрано канал «Реліз»: повернутися на реліз {1}?", "Выбран канал «Релиз»: вернуться на релиз {1}?"},
+    {Text::UpdateBackStay, "Stay on the beta", "Лишитися на беті", "Остаться на бете"},
+    {Text::UpdateBackRestart, "The game closes, goes back to the release and starts again - about 20 seconds.",
+     "Гра закриється, повернеться на реліз і запуститься знову — це близько 20 секунд.",
+     "Игра закроется, вернётся на релиз и запустится снова — это около 20 секунд."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

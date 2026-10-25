@@ -13,8 +13,9 @@ namespace uagfx::app {
 // small, over everything, in the player's language (settings::windowLang).
 
 enum class Answer { Play, Update };
-// The question before the login window when the game was started directly: "Update X is out".
-Answer askUpdate(const std::string& version, settings::Lang l);
+// The question before the login window when the game was started directly: "Update X is out"; 3.0.5-beta.1 `back`:
+// the way back to the release X («Реліз» chosen over a beta, update::backToRelease).
+Answer askUpdate(const std::string& version, settings::Lang l, bool back);
 
 // `work` on a thread of its own under a window with a bar - its steps shown, Cancel while it downloads or waits for
 // the game (`report` then answers false). `owner` (the settings app) is disabled meanwhile. true when it ended well,

@@ -153,14 +153,16 @@ public:
         checking_ = u.kind == UpdateState::Checking;
         const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
         std::vector<ButtonItem> buttons{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
-        if (offered) buttons.push_back({kUpdateNow, t(Text::UpdateNow), true, true});
+        // 3.0.5-beta.1: «Реліз» chosen over a beta - the release offered back (update::backToRelease)
+        if (offered) buttons.push_back({kUpdateNow, u.back ? tf(Text::UpdateBackButton, {u.offer}) : t(Text::UpdateNow),
+                                        true, true});
         p.buttons(buttons);
         if (u.kind == UpdateState::Checking)
             p.note(t(Text::UpdateChecking));
         else if (u.kind == UpdateState::Failed)
             p.note(tf(Text::UpdateFailed, {u.error}), Tone::Bad);
         else if (offered)
-            p.note(tf(Text::UpdateNewer, {u.offer, kVersion}), Tone::Warn);
+            p.note(tf(u.back ? Text::UpdateBackNote : Text::UpdateNewer, {u.offer, kVersion}), Tone::Warn);
         else if (u.kind == UpdateState::Done)
             p.note(tf(Text::UpdateLatest, {kVersion}), Tone::Good);
         if (running && offered) p.note(t(Text::UpdateGameRunning), Tone::Warn);

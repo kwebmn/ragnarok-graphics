@@ -81,14 +81,17 @@ public:
         buildChannel(p, host_, kChannel);  // 3.0.1-beta.2 (the user): the channel and the check here, in every mode
         if (!offer.empty()) {
             p.note(tf(Text::PlayUpdateLine, {offer, megabytes(u.branch.package.size)}), Tone::Warn);
-            p.note(t(Text::PlayUpdateNote));
+            p.note(u.back ? tf(Text::UpdateBackNote, {offer, kVersion}) : t(Text::PlayUpdateNote));
         } else if (u.kind == UpdateState::Failed) {
             p.note(tf(Text::UpdateFailed, {u.error}), Tone::Bad);
         } else {
             p.note(t(checking_ ? Text::UpdateChecking : Text::MainUpdateNone));
         }
         std::vector<ButtonItem> updates{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
-        if (!offer.empty()) updates.push_back({kUpdateNow, t(Text::UpdateNow), true, true});
+        if (!offer.empty()) {
+            const std::wstring now = u.back ? tf(Text::UpdateBackButton, {offer}) : t(Text::UpdateNow);
+            updates.push_back({kUpdateNow, now, true, true});
+        }
         p.buttons(updates);
         if (patchNeeded) {
             p.note(tf(Text::PlayPatchLine, {std::to_string(patch.check.needed.size()), megabytes(patch.check.bytes)}),
@@ -96,8 +99,9 @@ public:
             p.note(t(Text::PlayPatchNote));
         }
         p.gap();
-        p.buttons({{kPlayNow, t(offer.empty() && !patchNeeded ? Text::PlayButton : Text::PlayUpdateButton), true,
-                    true}});  // 3.0.2: blue
+        Text play = offer.empty() && !patchNeeded ? Text::PlayButton : Text::PlayUpdateButton;
+        if (!offer.empty() && u.back) play = Text::PlayBackButton;  // 3.0.5-beta.1: the release back, then the game
+        p.buttons({{kPlayNow, t(play), true, true}});  // 3.0.2: blue
         p.note(t(Text::PlayKeysLine));  // 3.0.2-beta.4: the game's keys, all of them on «Головне»
         rows_->buildRow(p, "launcher.direct_start");
     }

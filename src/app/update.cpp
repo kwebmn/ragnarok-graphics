@@ -25,6 +25,7 @@ DWORD WINAPI check(void*) {
     s.kind = c.ok ? UpdateState::Done : UpdateState::Failed;
     s.latest = c.branch.package.version;
     s.offer = c.offer;
+    s.back = c.back;
     s.channel = c.channel;
     s.branch = c.branch;
     s.error = c.error;

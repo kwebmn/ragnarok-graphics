@@ -210,15 +210,19 @@ DWORD WINAPI workThread(void* p) {
 
 }  // namespace
 
-Answer askUpdate(const std::string& version, settings::Lang l) {
+Answer askUpdate(const std::string& version, settings::Lang l, bool back) {
     Small s;
     Window w;
     if (!open(w, s, nullptr, 440, 150)) return Answer::Play;
-    w.control(L"STATIC", wtrf(l, Text::UpdateOut, {version}), SS_LEFT | SS_NOPREFIX, 0, 16, 14, 408, 28, true);
-    w.control(L"STATIC", wtr(l, Text::UpdateRestartNote), SS_LEFT | SS_NOPREFIX, 0, 16, 48, 408, 44);
-    w.control(L"BUTTON", wtr(l, Text::UpdatePlayWithout), BS_PUSHBUTTON | WS_TABSTOP, kSecond, 136, 106, 170, 30);
-    HWND update =
-        w.control(L"BUTTON", wtr(l, Text::UpdateDo), BS_DEFPUSHBUTTON | WS_TABSTOP, kFirst, 314, 106, 110, 30);
+    // 3.0.5-beta.1: «Реліз» chosen over a beta - the question is the way back to the release
+    w.control(L"STATIC", wtrf(l, back ? Text::UpdateBackOut : Text::UpdateOut, {version}), SS_LEFT | SS_NOPREFIX, 0,
+              16, 14, 408, 28, true);
+    w.control(L"STATIC", wtr(l, back ? Text::UpdateBackRestart : Text::UpdateRestartNote), SS_LEFT | SS_NOPREFIX, 0,
+              16, 48, 408, 44);
+    w.control(L"BUTTON", wtr(l, back ? Text::UpdateBackStay : Text::UpdatePlayWithout), BS_PUSHBUTTON | WS_TABSTOP,
+              kSecond, 136, 106, 170, 30);
+    HWND update = w.control(L"BUTTON", wtr(l, back ? Text::UpdateBackDo : Text::UpdateDo),
+                            BS_DEFPUSHBUTTON | WS_TABSTOP, kFirst, 314, 106, 110, 30);
     markPrimary(update);  // 3.0.2: the important buttons blue
     run(w.win, update);
     return s.pressed == kFirst ? Answer::Update : Answer::Play;

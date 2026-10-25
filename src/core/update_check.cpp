@@ -148,12 +148,32 @@ bool parseManifest(const std::string& text, Manifest& out, std::string& error) {
     return true;
 }
 
-std::string offer(const Manifest& m, const std::string& installed, const std::string& skip) {
+std::string offer(const Manifest& m, const std::string& installed, const std::string& skip, Channel channel) {
     const std::string latest = m.package.version, mine = bare(installed);
     if (latest.empty() || latest == mine || latest == skip) return "";
     for (const std::string& w : m.withdrawn)
         if (w == mine) return latest;
+    if (channel == Channel::Release && preRelease(mine) && !preRelease(latest)) return latest;
     return newer(latest, mine) ? latest : "";
+}
+
+bool backToRelease(Channel channel, const std::string& offered, const std::string& installed) {
+    const std::string mine = bare(installed);
+    return channel == Channel::Release && preRelease(mine) && isVersion(offered) && !preRelease(offered) &&
+           newer(mine, offered);
+}
+
+std::string keptInfo(std::string branch, const std::string& skip, Channel channel) {
+    if (!branch.empty() && branch.back() != '\n') branch += "\r\n";
+    branch += "[local]\r\n";
+    if (!skip.empty()) branch += "skip = " + skip + "\r\n";
+    return branch + "channel = " + channelToken(channel) + "\r\n";
+}
+
+Channel keptChannel(const std::string& updateInfo, const std::string& installed) {
+    const std::map<std::string, std::string> ini = settings::readIni(updateInfo);
+    const auto it = ini.find("local.channel");
+    return channelOf(it == ini.end() ? "" : it->second, installed);
 }
 
 bool payloadAt(const uint8_t* tail16, uint64_t fileSize, uint64_t& offset, uint64_t& size) {
@@ -196,7 +216,7 @@ bool askAtStart(const std::string& updateInfo, const std::string& installed, std
     if (!parseManifest(updateInfo, m, error)) return false;
     const std::map<std::string, std::string> ini = settings::readIni(updateInfo);
     const auto skip = ini.find("local.skip");
-    version = offer(m, installed, skip == ini.end() ? "" : skip->second);
+    version = offer(m, installed, skip == ini.end() ? "" : skip->second, keptChannel(updateInfo, installed));
     return !version.empty();
 }
 

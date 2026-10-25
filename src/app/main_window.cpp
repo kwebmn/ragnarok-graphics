@@ -458,7 +458,14 @@ void MainWindow::updateStrip() {
     if (u.kind == UpdateState::Checking) left += L" · " + wtr(lang_, Text::UpdateChecking);
     const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
     if (u.kind == UpdateState::Done)
-        left += L" · " + (offered ? wtrf(lang_, Text::MainUpdateNew, {u.offer}) : wtr(lang_, Text::MainUpdateNone));
+        left += L" · " + (offered ? wtrf(lang_, u.back ? Text::MainUpdateBack : Text::MainUpdateNew, {u.offer})
+                                  : wtr(lang_, Text::MainUpdateNone));
+    if (offered) {  // 3.0.5-beta.1: «Повернутися» when the offer takes a beta back to the release
+        const std::wstring word = wtr(lang_, u.back ? Text::UpdateBackDo : Text::UpdateDo);
+        wchar_t shown[64] = {};
+        GetWindowTextW(stripUpdate_, shown, 64);
+        if (word != shown) SetWindowTextW(stripUpdate_, word.c_str());
+    }
     if (offered != (IsWindowVisible(stripUpdate_) != 0)) ShowWindow(stripUpdate_, offered ? SW_SHOW : SW_HIDE);
     const PackSummary pack = packSummary(model_->paths().dir);
     left += L"     ";
@@ -606,7 +613,7 @@ void MainWindow::retext() {
     fillList();
     for (int i = 0; i < kModeCount; ++i) SetWindowTextW(modes_[i], wtr(lang_, modeName(Mode(i))).c_str());
     retextReports();
-    SetWindowTextW(stripUpdate_, wtr(lang_, Text::UpdateDo).c_str());
+    SetWindowTextW(stripUpdate_, wtr(lang_, updateState().back ? Text::UpdateBackDo : Text::UpdateDo).c_str());
     SendMessageW(search_, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(wtr(lang_, Text::SearchCue).c_str()));
     SetWindowTextW(banner_, wtr(lang_, Text::ElevatedBanner).c_str());
     SetWindowTextW(apply_, wtr(lang_, Text::Apply).c_str());

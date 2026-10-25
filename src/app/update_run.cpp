@@ -35,11 +35,9 @@ std::string firstLine(const std::wstring& path) {
     return end == std::string::npos ? text : text.substr(0, end);
 }
 
-// uaro-graphics\update.ini: the branch's text, then "[local]" and this computer's choices.
-void keepInfo(const std::wstring& dir, std::string branch, const std::string& skip) {
-    if (!branch.empty() && branch.back() != '\n') branch += "\r\n";
-    if (!skip.empty()) branch += "[local]\r\nskip = " + skip + "\r\n";
-    writeFileAtomic(infoOf(dir), branch);
+// uaro-graphics\update.ini: the branch's text, then "[local]" and this computer's choices (update::keptInfo).
+void keepInfo(const std::wstring& dir, std::string branch, const std::string& skip, update::Channel channel) {
+    writeFileAtomic(infoOf(dir), update::keptInfo(std::move(branch), skip, channel));
 }
 
 std::string branchText(const std::string& kept) {
@@ -152,10 +150,10 @@ std::string skipped(const std::wstring& dir) {
 void setSkipped(const std::wstring& dir, const std::string& version) {
     std::string kept;
     readFile(infoOf(dir), kept);
-    keepInfo(dir, branchText(kept), version);
+    keepInfo(dir, branchText(kept), version, update::keptChannel(kept, installedVersion(dir)));
 }
 
-void forgetBranch(const std::wstring& dir) { keepInfo(dir, "", skipped(dir)); }
+void forgetBranch(const std::wstring& dir) { keepInfo(dir, "", skipped(dir), channelOf(dir)); }
 
 update::Channel channelOf(const std::wstring& dir) {
     std::string ini;
@@ -172,8 +170,9 @@ CheckResult checkNow(const std::wstring& dir) {
     if (!fetchUrl(update::manifestUrl(c.channel), text, c.error) || !update::parseManifest(text, c.branch, c.error))
         return c;
     const std::string skip = skipped(dir);
-    keepInfo(dir, text, skip);
-    c.offer = update::offer(c.branch, installedVersion(dir), skip);
+    keepInfo(dir, text, skip, c.channel);
+    c.offer = update::offer(c.branch, installedVersion(dir), skip, c.channel);
+    c.back = update::backToRelease(c.channel, c.offer, installedVersion(dir));
     c.ok = true;
     return c;
 }

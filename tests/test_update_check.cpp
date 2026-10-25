@@ -117,15 +117,54 @@ TEST(offer_is_a_newer_version_or_a_way_back_from_a_withdrawn_one) {
     update::Manifest m;
     std::string error;
     CHECK(update::parseManifest(kSiteText, m, error));
-    CHECK_EQ(update::offer(m, "2.9.0", ""), std::string("2.10.0"));
-    CHECK_EQ(update::offer(m, "2.10.0", ""), std::string(""));
-    CHECK_EQ(update::offer(m, "2.11.0", ""), std::string(""));  // a developer's build
-    CHECK_EQ(update::offer(m, "2.9.0", "2.10.0"), std::string(""));  // rolled back from it
-    CHECK_EQ(update::offer(m, "2.9.1", ""), std::string("2.10.0"));
+    const update::Channel r = update::Channel::Release;
+    CHECK_EQ(update::offer(m, "2.9.0", "", r), std::string("2.10.0"));
+    CHECK_EQ(update::offer(m, "2.10.0", "", r), std::string(""));
+    CHECK_EQ(update::offer(m, "2.11.0", "", r), std::string(""));  // a developer's build
+    CHECK_EQ(update::offer(m, "2.9.0", "2.10.0", r), std::string(""));  // rolled back from it
+    CHECK_EQ(update::offer(m, "2.9.1", "", r), std::string("2.10.0"));
     m.package.version = "2.9.0";  // 2.9.1 withdrawn, the site back on 2.9.0: older, still offered
-    CHECK_EQ(update::offer(m, "2.9.1", ""), std::string("2.9.0"));
-    CHECK_EQ(update::offer(m, "2.9.0 build 2026-10-22 18:00", ""), std::string(""));
+    CHECK_EQ(update::offer(m, "2.9.1", "", r), std::string("2.9.0"));
+    CHECK_EQ(update::offer(m, "2.9.0 build 2026-10-22 18:00", "", r), std::string(""));
     CHECK_EQ(update::bare("2.9.0 build 2026-10-22 18:00"), std::string("2.9.0"));
+}
+
+// 3.0.5-beta.1 (the user: «я выбрал канал релиз, и нажал играть. и у меня запустилась моя бета. так должно быть?»): a
+// beta installed and «Реліз» chosen - the release is offered, an older one too; never on «Бета».
+TEST(offer_takes_a_beta_back_to_the_release_on_the_release_channel) {
+    using update::Channel;
+    update::Manifest m;
+    m.package.version = "3.0.4";
+    CHECK_EQ(update::offer(m, "3.0.5-beta.2", "", Channel::Release), std::string("3.0.4"));
+    CHECK_EQ(update::offer(m, "3.0.5-beta.2", "", Channel::Beta), std::string(""));
+    CHECK_EQ(update::offer(m, "3.0.5-beta.2", "3.0.4", Channel::Release), std::string(""));  // rolled back from it
+    CHECK_EQ(update::offer(m, "3.0.4-beta.36", "", Channel::Release), std::string("3.0.4"));  // newer anyway
+    CHECK_EQ(update::offer(m, "3.0.5", "", Channel::Release), std::string(""));  // a release is not taken back
+    m.package.version = "3.0.5-beta.1";  // back only to a release
+    CHECK_EQ(update::offer(m, "3.0.5-beta.2", "", Channel::Release), std::string(""));
+}
+
+TEST(update_back_to_the_release_is_a_beta_going_to_an_older_release) {
+    using update::Channel;
+    CHECK(update::backToRelease(Channel::Release, "3.0.4", "3.0.5-beta.2"));
+    CHECK(!update::backToRelease(Channel::Beta, "3.0.4", "3.0.5-beta.2"));
+    CHECK(!update::backToRelease(Channel::Release, "3.0.5", "3.0.5-beta.2"));  // the beta's own release: an update
+    CHECK(!update::backToRelease(Channel::Release, "", "3.0.5-beta.2"));
+    CHECK(!update::backToRelease(Channel::Release, "2.9.0", "2.9.1"));  // a withdrawn release's way back
+}
+
+TEST(update_the_games_start_asks_to_go_back_to_the_release) {
+    using update::Channel;
+    std::string version;
+    const std::string kept = update::keptInfo(kSiteText, "", Channel::Release);
+    CHECK(update::keptChannel(kept, "2.11.0-beta.1") == Channel::Release);
+    CHECK(update::askAtStart(kept, "2.11.0-beta.1", version));
+    CHECK_EQ(version, std::string("2.10.0"));
+    CHECK(!update::askAtStart(update::keptInfo(kSiteText, "", Channel::Beta), "2.11.0-beta.1", version));
+    CHECK(!update::askAtStart(kSiteText, "2.11.0-beta.1", version));  // an older app's: no channel, a beta's
+    const std::string skipped = update::keptInfo(kSiteText, "2.10.0", Channel::Release);
+    CHECK(!update::askAtStart(skipped, "2.11.0-beta.1", version));  // rolled back from it
+    CHECK(skipped.find("[local]\r\nskip = 2.10.0\r\nchannel = release\r\n") != std::string::npos);
 }
 
 TEST(update_check_orders_pre_releases) {

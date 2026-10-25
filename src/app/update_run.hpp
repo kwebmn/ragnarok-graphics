@@ -22,6 +22,7 @@ struct CheckResult {
     update::Channel channel = update::Channel::Release;  // 3.0.0-beta.2: the branch asked
     update::Manifest branch;                             // its update.ini
     std::string offer;  // the version to offer, "" none
+    bool back = false;  // 3.0.5-beta.1: the offer takes a beta back to the release («Реліз» chosen over it)
     std::string error;  // !ok: why, in English
 };
 // 3.0.0-beta.2: the computer's channel - uaro-graphics.ini's [update] channel, else by the installed build

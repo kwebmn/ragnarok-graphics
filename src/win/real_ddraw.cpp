@@ -196,7 +196,9 @@ void askUpdateFirst(const std::string& dir) {
         return;
     }
     AllowSetForegroundWindow(pi.dwProcessId);
-    LOG_INFO("update: %s is out - the player is asked", version.c_str());
+    const bool back = update::backToRelease(update::keptChannel(info, kVersion), version, kVersion);  // 3.0.5-beta.1
+    LOG_INFO("update: %s %s - the player is asked", version.c_str(),
+             back ? "is the release channel's, chosen over this beta" : "is out");
     const DWORD waited = WaitForSingleObject(pi.hProcess, 10 * 60 * 1000);
     DWORD code = 0;
     GetExitCodeProcess(pi.hProcess, &code);

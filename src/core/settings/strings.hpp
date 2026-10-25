@@ -420,6 +420,9 @@ enum class Text : uint16_t {
     CardLoweredNote,               // 3.0.4-beta.35: the medium set too much for it - the weak set back
     FxOwnFarModels, FxOwnFarModelsHint,  // 3.0.4-beta.14: a part of the own ground
     CameraZoomLimit, CameraZoomLimitHint,  // 3.0.4-beta.17: the camera no further out than the character is drawn
+    // 3.0.5-beta.1: «Реліз» chosen over a beta - the release offered back (update::backToRelease)
+    UpdateBackNote, UpdateBackButton, PlayBackButton, MainUpdateBack, UpdateBackDo, UpdateBackOut, UpdateBackStay,
+    UpdateBackRestart,
     Count
 };
 

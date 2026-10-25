@@ -93,8 +93,9 @@ int update(const std::wstring& dir, const Args& a, settings::Lang l) {
     std::wstring error = wide(c.error);
     bool ok = false;
     if (c.ok) {
-        const std::wstring title =
-            repair ? wtr(l, Text::Repairing) : wtrf(l, Text::UpdatingTo, {c.branch.package.version});
+        const std::wstring title = repair ? wtr(l, Text::Repairing)
+                                   : c.back ? wtrf(l, Text::RollingBack, {c.branch.package.version})  // 3.0.5-beta.1
+                                            : wtrf(l, Text::UpdatingTo, {c.branch.package.version});
         ok = runWithProgress(nullptr, title, l, a.then == Args::Then::Game,
                              [&](const Report& report, std::wstring& e) {
                                  return runUpdate(dir, c.branch, repair, report, e);
@@ -168,8 +169,10 @@ int uninstallRun(const std::wstring& dir, const Args& a, settings::Lang l) {
 int askAtGameStart(const std::wstring& dir, const Args& a, settings::Lang l) {
     std::string info, version;
     readFile(dir + L"\\" + wide(layout::kUpdateInfo), info);
-    if (!update::askAtStart(info, installedVersion(dir), version)) return 0;
-    if (askUpdate(version, l) != Answer::Update) return 0;
+    const std::string installed = installedVersion(dir);
+    if (!update::askAtStart(info, installed, version)) return 0;
+    const bool back = update::backToRelease(update::keptChannel(info, installed), version, installed);
+    if (askUpdate(version, l, back) != Answer::Update) return 0;
     Args run;
     run.mode = Args::Mode::Update;
     run.pid = a.pid;  // the game

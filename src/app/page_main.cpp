@@ -145,12 +145,13 @@ private:
         const bool offered = u.kind == UpdateState::Done && !u.offer.empty();
         std::wstring line = tf(Text::MainDriver, {installed});
         if (checking_) line += L" · " + t(Text::UpdateChecking);
-        if (offered) line += L" · " + tf(Text::MainUpdateNew, {u.offer});
+        if (offered) line += L" · " + tf(u.back ? Text::MainUpdateBack : Text::MainUpdateNew, {u.offer});
         if (u.kind == UpdateState::Done && !offered) line += L" · " + t(Text::MainUpdateNone);
         p.note(line, offered ? Tone::Warn : Tone::Normal);
         if (u.kind == UpdateState::Failed) p.note(tf(Text::UpdateFailed, {u.error}), Tone::Bad);
         std::vector<ButtonItem> buttons{{kUpdateCheck, t(Text::UpdateCheck), !checking_}};
-        if (offered) buttons.push_back({kUpdateNow, t(Text::UpdateNow), true, true});
+        if (offered) buttons.push_back({kUpdateNow, u.back ? tf(Text::UpdateBackButton, {u.offer}) : t(Text::UpdateNow),
+                                        true, true});
         p.buttons(buttons);
         const Machine x = m.machine();
         const std::wstring api = x.d3d12 ? L"Direct3D 12" : x.d3d11 ? L"Direct3D 11" : t(Text::MainNoD3d);

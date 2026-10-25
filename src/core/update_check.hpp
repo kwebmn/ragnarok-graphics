@@ -43,8 +43,16 @@ struct Manifest {
 // format 1). Sections it does not know (the settings app's [local]) are left alone.
 bool parseManifest(const std::string& text, Manifest& out, std::string& error);
 // The version to offer an installed `installed`: the branch's when it is newer, or when `installed` was withdrawn (even
-// an older one); "" none, or when it is `skip` (a version rolled back from).
-std::string offer(const Manifest& m, const std::string& installed, const std::string& skip);
+// an older one); "" none, or when it is `skip` (a version rolled back from). 3.0.5-beta.1 (the user: «я выбрал канал
+// релиз, и нажал играть. и у меня запустилась моя бета»): on «Реліз» a beta is offered the release, an older one too.
+std::string offer(const Manifest& m, const std::string& installed, const std::string& skip, Channel channel);
+// The offer takes a beta back to an older release - «Реліз» chosen over it: the texts say «Повернутися на реліз».
+bool backToRelease(Channel channel, const std::string& offered, const std::string& installed);
+// uaro-graphics\update.ini as the settings app keeps it: the branch's text, then "[local]" - skip (the version rolled
+// back from) and 3.0.5-beta.1 channel (the one the branch was asked for).
+std::string keptInfo(std::string branch, const std::string& skip, Channel channel);
+// Its channel: [local] channel's, else channelOf's for `installed` (an older app kept none).
+Channel keptChannel(const std::string& updateInfo, const std::string& installed);
 // The game's start: uaro-graphics\update.ini as the last check kept it (the branch's text, then [local] skip) offers
 // `version` to `installed` - the driver then asks through "uaro-graphics.exe --ask-update", whose exit code
 // kUpdateChosen closes the game (the settings app updates it and starts it again).
