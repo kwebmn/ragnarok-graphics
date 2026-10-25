@@ -232,6 +232,12 @@ void Remote::setLight(uint8_t flags) {
     send(Msg::SetLight, {flags});
 }
 
+void Remote::setProfile(bool on) {
+    if (on == profile_) return;
+    profile_ = on;
+    send(Msg::SetProfile, {uint8_t(on ? 1 : 0)});
+}
+
 void Remote::preparePipelines(const std::string& file) {
     buffer_.clear();
     WireWriter(buffer_).str(file);

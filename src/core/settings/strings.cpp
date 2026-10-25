@@ -1738,12 +1738,16 @@ constexpr Entry kTexts[] = {
      "Заміряти, на що гра витрачає час",
      "Замерять, на что игра тратит время"},
     {Text::DiagProfileHint,
-     "For the developers: about a thousand times a second the driver notes where uaRO.exe is busy and writes the "
-     "busiest places into the log every 10 seconds. Costs a little speed - turn it off afterwards.",
-     "Для розробників: приблизно тисячу разів на секунду драйвер помічає, чим зайнятий uaRO.exe, і кожні 10 секунд "
-     "пише в лог найзавантаженіші місця. Трохи сповільнює — потім вимкніть.",
-     "Для разработчиков: примерно тысячу раз в секунду драйвер отмечает, чем занят uaRO.exe, и каждые 10 секунд пишет "
-     "в лог самые загруженные места. Немного замедляет — потом выключите."},
+     "For the developers: about a thousand times a second the driver notes where uaRO.exe is busy, and it cuts each "
+     "frame into its parts - the game's world, its interface, each effect, the world made larger, the picture into "
+     "the window - with the card's and the processor's time of each; every 10 seconds all of it goes into the log. "
+     "Costs a little speed - turn it off afterwards.",
+     "Для розробників: приблизно тисячу разів на секунду драйвер помічає, чим зайнятий uaRO.exe, і розкладає кожен "
+     "кадр на частини — світ гри, інтерфейс, кожен ефект, збільшення світу, вивід у вікно — з часом відеокарти й "
+     "процесора на кожну; кожні 10 секунд усе це йде в лог. Трохи сповільнює — потім вимкніть.",
+     "Для разработчиков: примерно тысячу раз в секунду драйвер отмечает, чем занят uaRO.exe, и раскладывает каждый "
+     "кадр на части — мир игры, интерфейс, каждый эффект, увеличение мира, вывод в окно — со временем видеокарты и "
+     "процессора на каждую; каждые 10 секунд всё это идёт в лог. Немного замедляет — потом выключите."},
     {Text::GfxSoundOurs, "Sound through uaRO Graphics",
      "Звук через uaRO Graphics",
      "Звук через uaRO Graphics"},

@@ -147,6 +147,10 @@ ID3D12Resource* createTexture2D(ID3D12Device* device, int w, int h, int levels, 
 
 // ---- Impl: submissions -------------------------------------------------------------------------------------
 
+namespace {
+const char* const kListEnd = "(a list's end)";  // 3.0.5-beta.2: [debug] profile's last mark of a list
+}  // namespace
+
 bool Renderer::Impl::begin() {
     if (open) return true;
     if (lost) return false;
@@ -175,16 +179,23 @@ bool Renderer::Impl::begin() {
         readTimes(s, slot);
         list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes);
     }
+    profileRead(s, slot);  // 3.0.5-beta.2
+    profileStart();
     open = true;
     lastCrumb = nullptr;  // 1.9.4: each list its crumbs
     ++listSerial;
+    profileMark("(a list's first work)");
     return true;
 }
 
 void Renderer::Impl::submit() {
     if (!open) return;
     flushDraws();  // 2.5
+    profileMark(kListEnd);  // 3.0.5-beta.2: the list's last stamp
     open = false;
+    if (profileOn && slots[slot].marked > 1)
+        list->ResolveQueryData(profileHeap, D3D12_QUERY_TYPE_TIMESTAMP, slot * kMarks12, slots[slot].marked,
+                               profileBuffer, UINT64(slot) * kMarks12 * sizeof(UINT64));
     if (timer) {
         Slot& s = slots[slot];
         list->EndQuery(timer, D3D12_QUERY_TYPE_TIMESTAMP, slot * kTimes + 1);
@@ -248,9 +259,12 @@ void Renderer::Impl::effectBegin(EffectTimer e) {
 // 1.9.4: a breadcrumb - the pass's number (its name's place in crumbNames) and a count, written by the GPU as it
 // starts the pass (word 0) and once all the work before it is done (word 1).
 void Renderer::Impl::crumb(const char* what) {
-    if (!list2 || !crumbsMapped || !open || what == lastCrumb) return;
+    const bool breadcrumbs = list2 && crumbsMapped;
+    if ((!breadcrumbs && !profileOn) || !open || what == lastCrumb) return;
     flushDraws();  // 2.5: the pass before this one ends with its draws
     lastCrumb = what;
+    profileMark(what);  // 3.0.5-beta.2: [debug] profile's span
+    if (!breadcrumbs) return;
     uint32_t id = 0;
     while (id < crumbNames.size() && crumbNames[id] != what) ++id;
     if (id == crumbNames.size()) {
@@ -351,6 +365,100 @@ void Renderer::Impl::noteGpuFrame() {
     gpuTicks = upscaleTicks = aiTicks = 0;
     gpuFrames = 0;
     gpuSince = now;
+}
+
+void Renderer::Impl::profileStart() {
+    if (profileWanted == profileOn || profileFailed) return;
+    profileRelease();
+    if (!profileWanted) return;
+    LARGE_INTEGER freq;
+    QueryPerformanceFrequency(&freq);
+    qpcPerMs = double(freq.QuadPart) / 1000.0;
+    D3D12_QUERY_HEAP_DESC qh{};
+    qh.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+    qh.Count = kSlots * kMarks12;
+    void* data = nullptr;
+    if (!timerFrequency ||
+        FAILED(device->CreateQueryHeap(&qh, __uuidof(ID3D12QueryHeap), reinterpret_cast<void**>(&profileHeap))) ||
+        !(profileBuffer = createBuffer(device, D3D12_HEAP_TYPE_READBACK, kSlots * kMarks12 * sizeof(UINT64),
+                                       D3D12_RESOURCE_STATE_COPY_DEST)) ||
+        FAILED(profileBuffer->Map(0, nullptr, &data))) {
+        profileRelease();
+        profileFailed = true;
+        LOG_INFO("profile: Direct3D 12 made no time stamps for the frame's spans - not measured");
+        return;
+    }
+    profileData = static_cast<const UINT64*>(data);
+    for (Slot& s : slots) s.marked = 0;
+    profileOn = true;
+    profileSince = GetTickCount64();
+    profileShown = 0;
+    LOG_INFO("profile: Direct3D 12 - each frame cut into spans by the card's time stamps, the tally every 10 s");
+}
+
+// The draws gathered before it go to the list first, so that they fall into the span they belong to; crumb() marks
+// the next pass by its own name after one of these.
+void Renderer::Impl::profileMark(const char* name) {
+    if (!profileOn || !open) return;
+    Slot& s = slots[slot];
+    const bool last = name == kListEnd;
+    if ((s.marked && s.marks[s.marked - 1] == name) || s.marked + (last ? 1 : 2) > kMarks12) return;
+    flushDraws();
+    lastCrumb = name;
+    list->EndQuery(profileHeap, D3D12_QUERY_TYPE_TIMESTAMP, slot * kMarks12 + s.marked);
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    s.markCpu[s.marked] = now.QuadPart;
+    s.marks[s.marked] = name;
+    ++s.marked;
+}
+
+void Renderer::Impl::profileRead(Slot& s, UINT index) {
+    const UINT n = s.marked;
+    s.marked = 0;
+    if (!profileOn || !profileData || n < 2 || !timerFrequency) return;
+    const UINT64* t = profileData + UINT64(index) * kMarks12;
+    const double perMs = double(timerFrequency) / 1000.0;
+    for (UINT i = 0; i + 1 < n; ++i)
+        profileWindow.span(s.marks[i], t[i + 1] >= t[i] ? double(t[i + 1] - t[i]) / perMs : 0.0,
+                           double(s.markCpu[i + 1] - s.markCpu[i]) / qpcPerMs);
+}
+
+void Renderer::Impl::profilePresent() {
+    if (!profileOn) return;
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    const LONGLONG counters[5] = {cpuTicks, fenceTicks, pacerTicks, swapTicks, reflexTicks};
+    if (profileShown) {
+        LONGLONG d[5];
+        for (int i = 0; i < 5; ++i)  // noteGpuFrame lets them go every half minute
+            d[i] = counters[i] >= profileSeen[i] ? counters[i] - profileSeen[i] : counters[i];
+        profileWindow.cpu("the driver's drawing - its own work", double(std::max<LONGLONG>(0, d[0] - d[1])) / qpcPerMs);
+        profileWindow.cpu("waiting for the card (a list's slot)", double(d[1]) / qpcPerMs);
+        profileWindow.cpu("the frame limit's wait", double(d[2]) / qpcPerMs);
+        profileWindow.cpu("the swap chain's present", double(d[3]) / qpcPerMs);
+        if (d[4]) profileWindow.cpu("Reflex's wait", double(d[4]) / qpcPerMs);
+        profileWindow.frame(double(now.QuadPart - profileShown) / qpcPerMs);
+    }
+    profileShown = now.QuadPart;
+    std::copy(counters, counters + 5, profileSeen);
+    const ULONGLONG tick = GetTickCount64();
+    if (tick - profileSince >= ULONGLONG(frame_profile::kWindowMs)) {
+        for (const std::string& line : profileWindow.lines("Direct3D 12", double(tick - profileSince) / 1000.0))
+            LOG_INFO("%s", line.c_str());
+        profileWindow.clear();
+        profileSince = tick;
+    }
+}
+
+void Renderer::Impl::profileRelease() {
+    if (profileBuffer && profileData) profileBuffer->Unmap(0, nullptr);
+    profileData = nullptr;
+    releaseCom(profileHeap);
+    releaseCom(profileBuffer);
+    for (Slot& s : slots) s.marked = 0;
+    profileOn = false;
+    profileWindow.clear();
 }
 
 // 2.5.25: with frame generation the game's frames are held so that the shown ones stay under the refresh of the
@@ -675,6 +783,7 @@ void Renderer::Impl::placeSamples(bool center) {
 
 void Renderer::Impl::clear(const ClearCmd& c) {
     flushDraws();  // 2.5: before the clear
+    profileMark("clears");  // 3.0.5-beta.2
     if (c.flags & 2) sceneDepthFresh = false;  // 0.39.2: the depth cleared - its copy out of date
     // 0.18: the picture cleared - the light of a world no longer there is not added to the next one.
     if ((c.flags & 1) && c.rect.left <= 0 && c.rect.top <= 0 && c.rect.right >= gameWidth &&
@@ -773,6 +882,7 @@ D3D12_TEXTURE_COPY_LOCATION stage(Renderer::Impl& m, const uint32_t* argb, UINT 
 void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
     auto it = textures.find(u.texture);
     if (it == textures.end() || u.rect.empty()) return;
+    profileMark("the game's textures written");  // 3.0.5-beta.2
     Texture& t = it->second;
     // 0.26: a whole picture - how much it looks like fire (an effect drawn from it lights around it).
     if (u.level == 0 && u.rect.left == 0 && u.rect.top == 0 && u.rect.right == t.width && u.rect.bottom == t.height) {
@@ -802,6 +912,7 @@ void Renderer::Impl::upload(const FrameRecord& rec, const UploadCmd& u) {
 
 void Renderer::Impl::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
     if (w.rect.empty()) return;
+    profileMark("the game's pixels written");  // 3.0.5-beta.2
     if (upscale) startFrame();
     if (!upscale && !finishWorld()) return;  // 0.20, 0.21: the world's shadows, colours, glow under the game's pixels
     if (!upscale && glowDrawn && !addGlowToTarget()) return;
@@ -1148,6 +1259,7 @@ bool Renderer::Impl::composite() {
     // and the target keeps the old picture setScale stretched into it - not a black frame (0.10 review 6).
     if (!worldDrawn && !layerDrawn && !worldValid) return true;
     if (!begin()) return false;
+    profileMark("the picture put together (DLSS, TAA, the world made larger)");  // 3.0.5-beta.2
     static bool failedOnce = false;
     if (worldDrawn && !finishWorld()) return false;  // 0.20, 0.21: its shadows (if no blended draw came), colours
     bool masked = false;
@@ -1531,6 +1643,7 @@ void Renderer::Impl::destroy() {
     releaseCom(timer);
     releaseCom(timerBuffer);
     timerData = nullptr;
+    profileRelease();  // 3.0.5-beta.2
     releaseCom(copyPipeline);
     releaseCom(hudless);
     releaseCom(uiCopy);
@@ -2019,6 +2132,12 @@ bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
 
 void Renderer::setShaderVariants(bool on) {
     if (d3d11_) d3d11_->setShaderVariants(on);  // Direct3D 11's own thread is given it at its start
+}
+
+void Renderer::setProfile(bool on) {  // 3.0.5-beta.2
+    if (d3d11_) return d3d11_->setProfile(on);
+    if (remote_) return remote_->setProfile(on);
+    if (!remix_) impl_->setProfile(on);
 }
 
 void Renderer::setLight(uint8_t flags) {
@@ -2722,7 +2841,9 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (!m.begin() || !m.composite()) return;  // part 3: the upscaled world and the interface layer first
     if (!m.upscale && !m.finishWorld()) return;  // 0.20, 0.21, 0.18: a frame without an interface
     if (!m.upscale && m.glowDrawn && !m.addGlowToTarget()) return;
+    m.profileMark("the picture's samples put together (MSAA)");  // 3.0.5-beta.2
     const Impl::Readable shown = m.readableTarget();  // resolved first when it has several samples (stage 4)
+    m.profileMark("the picture into the window (the display letting go of it)");
     const UINT index = m.swapChain->GetCurrentBackBufferIndex();
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_RENDER_TARGET);
     const D3D12_CPU_DESCRIPTOR_HANDLE rtv = m.rtvHandle(kRtvSwap + index);
@@ -2790,6 +2911,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         m.blitHdr = false;
         if (!ok) return;
     }
+    m.profileMark("the AI textures' network");  // 3.0.5-beta.2
     if (m.ai) {  // a slice of the AI textures' network, in this frame's list, timed so that it keeps to its share
         if (m.timer) m.list->EndQuery(m.timer, D3D12_QUERY_TYPE_TIMESTAMP, m.slot * kTimes + 4);
         m.ai->work(options.foreground);
@@ -2862,6 +2984,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
             LOG_ERROR("screenshot: %s could not be saved", m.shotPath.c_str());
         m.shotPath.clear();
     }
+    m.profilePresent();  // 3.0.5-beta.2: before noteGpuFrame lets its counters go every half minute
     m.noteGpuFrame();
     m.notePresentation();  // 2.5.25
     if (paceAfter) {

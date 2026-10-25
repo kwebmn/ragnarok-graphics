@@ -723,6 +723,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);
     renderer->setLight(enhanced_ ? light_.flags : uint8_t(0));  // 2.5.20: Pause shows the game's own picture
+    renderer->setProfile(config.profile);  // 3.0.5-beta.2: [debug] profile - the frame's spans too (frame_profile)
     if (upscale && (dlss || taa)) {  // the camera of the frame being shown: the motion of its pixels
         float view[12];
         float targetZ = 0;

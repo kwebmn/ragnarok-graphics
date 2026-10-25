@@ -49,6 +49,26 @@ void drop(T*& p) {
     p = nullptr;
 }
 
+const char* const kFrameEnd = "(the frame's end)";  // 3.0.5-beta.2: [debug] profile's last mark of a frame
+
+// 3.0.5-beta.2: a part of the processor's work added to `ms` as it ends ([debug] profile; nothing when not `on`)
+struct PartTime {
+    double* ms;
+    double perMs;
+    LARGE_INTEGER start{};
+    PartTime(bool on, double& total, double qpcPerMs) : ms(on ? &total : nullptr), perMs(qpcPerMs) {
+        if (ms) QueryPerformanceCounter(&start);
+    }
+    ~PartTime() {
+        if (!ms) return;
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        *ms += double(now.QuadPart - start.QuadPart) / perMs;
+    }
+    PartTime(const PartTime&) = delete;
+    PartTime& operator=(const PartTime&) = delete;
+};
+
 // Direct3D 11.0 clears whole views: a part of the target is cleared by a triangle of the colour at the depth.
 const char* const kClearSource = R"HLSL(
 cbuffer ClearParams : register(b0) {
@@ -126,6 +146,7 @@ Renderer11::~Renderer11() {
         for (auto& pair : f.effect)
             for (ID3D11Query*& q : pair) drop(q);
     }
+    profileDrop();  // 3.0.5-beta.2
     if (batch_.open())  // 0.90: the views a gathered call held
         for (ID3D11ShaderResourceView* v : issue_.srvs)
             if (v) v->Release();
@@ -1668,7 +1689,19 @@ bool Renderer11::Issue::sameState(const Issue& o) const {
 
 // 0.90: the gathered draws as one draw call - the quads through their index pattern, a list as it is, a draw by
 // itself as the game made it. 0.88: only what differs from the last call's is called (bound_).
+// 3.0.5-beta.2: under [debug] profile its time counted - Direct3D 11's calls for the game's draws
 void Renderer11::flushBatch() {
+    if (!profileOn_ || !batch_.open()) return flushGathered();
+    LARGE_INTEGER a, b;
+    QueryPerformanceCounter(&a);
+    flushGathered();
+    QueryPerformanceCounter(&b);
+    if (inDraw_) flushInDraw_ += b.QuadPart - a.QuadPart;
+    ProfileFrame& f = pframes_[pslot_];
+    if (f.open) f.calls += profileMs(b.QuadPart - a.QuadPart);
+}
+
+void Renderer11::flushGathered() {
     if (!batch_.open()) return;
     const Issue& is = issue_;
     const batch::Kind kind = batch_.kind();
@@ -1908,6 +1941,7 @@ void Renderer11::execute(const FrameRecord& record) {
     if (lost_ || !target_.texture || record.empty()) return;
     LARGE_INTEGER started;  // 0.89: the processor's time in drawing, for the log
     QueryPerformanceCounter(&started);
+    profileOpen();  // 3.0.5-beta.2
     timeBegin();
     if (!frameOpen_) {  // 2.5.16: the frame's clear and its world on the world's picture (world_scale)
         frameOpen_ = true;
@@ -1917,23 +1951,43 @@ void Renderer11::execute(const FrameRecord& record) {
         }
         enterWorld();
     }
-    geometry_ = uploadGeometry(record);
+    {
+        PartTime t(profileOn_ && pframes_[pslot_].open, pframes_[pslot_].geometry, qpcPerMs_);  // 3.0.5-beta.2
+        geometry_ = uploadGeometry(record);
+    }
     targetBound_ = false;
     for (const Command& c : record.commands()) {
         if (c.type != Cmd::Draw) flushBatch();  // 0.90: the game's draws before it go first
         switch (c.type) {
-            case Cmd::Clear: clear(record.clears()[c.index]); break;
+            case Cmd::Clear:
+                pmark("clears");
+                clear(record.clears()[c.index]);
+                break;
             case Cmd::Viewport:
                 gameViewport_ = record.viewports()[c.index];
                 if (targetBound_) applyViewport();
                 break;
-            case Cmd::Upload: upload(record, record.uploads()[c.index]); break;
-            case Cmd::WriteTarget: writeTarget(record, record.writes()[c.index]); break;
-            case Cmd::Draw: draw(record, record.draws()[c.index]); break;
+            case Cmd::Upload: {
+                pmark("the game's textures written");
+                PartTime t(profileOn_ && pframes_[pslot_].open, pframes_[pslot_].textures, qpcPerMs_);
+                upload(record, record.uploads()[c.index]);
+                break;
+            }
+            case Cmd::WriteTarget:
+                pmark("the game's pixels written");
+                writeTarget(record, record.writes()[c.index]);
+                break;
+            case Cmd::Draw:
+                if (profileOn_)
+                    profiledDraw(record, record.draws()[c.index]);
+                else
+                    draw(record, record.draws()[c.index]);
+                break;
         }
     }
     flushBatch();
     geometry_ = false;
+    pmark("(the game's own work in between)");  // 3.0.5-beta.2: until the driver's next work of the frame
     timeEnd();
     LARGE_INTEGER ended;
     QueryPerformanceCounter(&ended);
@@ -2090,6 +2144,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         Sleep(15);
         return;
     }
+    profileOpen();  // 3.0.5-beta.2: a frame without a record of the game's opens here
     timeBegin();
     effectEnd(kTimeWorld11);  // 2.5.15: a frame without an interface ends its world here
     effectEnd(kTimeUi11);
@@ -2100,23 +2155,64 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         LOG_DEBUG("picture %dx%d of the game shown as %dx%d at %d,%d in the %ux%u window", source.width(),
                   source.height(), fit.width(), fit.height(), fit.left, fit.top, swapWidth_, swapHeight_);
     }
-    if (worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2
-    if (worldDrawn_ && !nightDone_) applyNight();  // 0.63
+    // 3.0.5-beta.2: each pass its span ([debug] profile; the timed ones by their effect's name)
+    if (worldDrawn_ && !stepsDone_) {
+        pmark(effectName11(kTimeSteps11));
+        applySteps();  // 2.5.2
+    }
+    if (worldDrawn_ && !nightDone_) {
+        pmark(effectName11(kTimeNight11));
+        applyNight();  // 0.63
+    }
     if (worldDrawn_ && !lightDone_) {
+        pmark(effectName11(kTimeLight11));
         applyTorchLight();  // 0.61
+        pmark("embers");
         applyEmbers();      // 2.5.3
+        pmark("living creatures");
         applyCritters();    // 2.5.4
     }
-    if (worldDrawn_ && !floorDone_) applyFloorReflections();  // 2.5.3
-    if (worldDrawn_ && !mistDone_) applyMist();  // 2.5
-    if (worldDrawn_ && !shaftsDone_) applyShafts();  // 2.5.5
-    if (worldDrawn_ && !heatDone_) applyHeat();  // 2.5.3
-    if (!flies_.empty()) applyFireflies();  // 1.0.1
-    if (worldDrawn_ && !bloomDone_) applyBloom();  // 2.5.2
-    if (worldDrawn_ && !gradeDone_) applyGrade();  // 0.59: a frame without an interface
-    if (worldDrawn_ && !weatherDone_) applyWeather();  // 2.5
-    if (!darknessLaid_) applyDarkness();  // 2.6.18
-    if (glowDrawn_) addGlow();  // 1.0: likewise
+    if (worldDrawn_ && !floorDone_) {
+        pmark(effectName11(kTimeFloor11));
+        applyFloorReflections();  // 2.5.3
+    }
+    if (worldDrawn_ && !mistDone_) {
+        pmark(effectName11(kTimeMist11));
+        applyMist();  // 2.5
+    }
+    if (worldDrawn_ && !shaftsDone_) {
+        pmark(effectName11(kTimeShafts11));
+        applyShafts();  // 2.5.5
+    }
+    if (worldDrawn_ && !heatDone_) {
+        pmark(effectName11(kTimeHeat11));
+        applyHeat();  // 2.5.3
+    }
+    if (!flies_.empty()) {
+        pmark("fireflies");
+        applyFireflies();  // 1.0.1
+    }
+    if (worldDrawn_ && !bloomDone_) {
+        pmark(effectName11(kTimeBloom11));
+        applyBloom();  // 2.5.2
+    }
+    if (worldDrawn_ && !gradeDone_) {
+        pmark(effectName11(kTimeGrade11));
+        applyGrade();  // 0.59: a frame without an interface
+    }
+    if (worldDrawn_ && !weatherDone_) {
+        pmark(effectName11(kTimeWeather11));
+        applyWeather();  // 2.5
+    }
+    if (!darknessLaid_) {
+        pmark("blindness's darkness");
+        applyDarkness();  // 2.6.18
+    }
+    if (glowDrawn_) {
+        pmark(effectName11(kTimeGlow11));
+        addGlow();  // 1.0: likewise
+    }
+    pmark("the world made larger");
     exitWorld();  // 2.5.16: a frame without an interface: its world made larger now
     frameOpen_ = false;
     scaled_ = true;  // the start-up calibration is over by the first present (stage 3 spec §4.3)
@@ -2131,13 +2227,16 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     // 2.5.14: the window's buffer last, outside the card's timed work - its first use waits until the display lets
     // go of it, and that wait was counted as the card's (keep_fps turned effects off for it)
     timeEnd();
+    pmark("the window's picture cleared (the display letting go of it)");
     const float black[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     ctx_->ClearRenderTargetView(backRtv_, black);
     timeBegin();
+    pmark("the picture into the window");
     blit(target_.srv, target_.width, target_.height, from, backRtv_, fit, int(swapWidth_), int(swapHeight_),
          options.sharpen);
     ctx_->OMSetRenderTargets(0, nullptr, nullptr);
     if (!options.screenshot.empty()) saveScreenshot(options.screenshot);  // 0.54
+    pmark("the next frame's preparations");
     gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
     aoDone_ = false;  // 2.5.1
@@ -2182,15 +2281,24 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     materialsMade_ = 0;  // 1.14
     flames_.clear();
     timeEnd();
+    ProfileFrame* closed = profileClose();  // 3.0.5-beta.2: the frame closed now - its waits come below
     LARGE_INTEGER ended;  // 0.89
     QueryPerformanceCounter(&ended);
     stats_.ticks += ended.QuadPart - started.QuadPart;
     ++stats_.frames;
     timeFrame();
-    pacer_.wait(options.fpsLimit, options.pacerSleeps);  // 0.85: kept to the frame
+    double unmeasured = 0.0;  // 3.0.5-beta.2: the waits of a frame [debug] profile did not measure
+    {
+        PartTime t(closed != nullptr, closed ? closed->pacer : unmeasured, qpcPerMs_);
+        pacer_.wait(options.fpsLimit, options.pacerSleeps);  // 0.85: kept to the frame
+    }
     const UINT sync = options.vsync ? 1 : 0;
     const UINT flags = !options.vsync && options.allowTearing && tearing_ ? DXGI_PRESENT_ALLOW_TEARING : 0;
-    const HRESULT hr = swap_->Present(sync, flags);
+    HRESULT hr = S_OK;
+    {
+        PartTime t(closed != nullptr, closed ? closed->presented : unmeasured, qpcPerMs_);
+        hr = swap_->Present(sync, flags);
+    }
     if (FAILED(hr))
         failed("Present", hr);
     else if (hr == DXGI_STATUS_OCCLUDED)
@@ -3597,6 +3705,7 @@ void Renderer11::timeDraws(bool ui, bool before) {
 }
 
 void Renderer11::effectBegin(EffectTime11 e) {
+    pmark(effectName11(e));  // 3.0.5-beta.2: [debug] profile's span
     if (!timing_ || untimed_) return;
     FrameTimes& f = times_[timeSlot_];
     if (!f.open || (f.effectBegun >> e & 1)) return;
@@ -3657,6 +3766,142 @@ void Renderer11::logGpu(ULONGLONG now) {
     gpuMs_ = 0.0;
     gpuFrames_ = 0;
     gpuSince_ = now;
+}
+
+const char* Renderer11::effectName11(int e) {
+    static const char* const kNames[kEffectTimes11] = {"characters' shadows", "torches' light", "night",
+                                                        "colour", "mists", "weather", "soft shadows",
+                                                        "bloom", "footprints", "heat haze",
+                                                        "light in the air", "glow", "water's copies",
+                                                        "floor reflections", "grass", "the game's world",
+                                                        "the game's interface"};
+    return e >= 0 && e < kEffectTimes11 ? kNames[e] : "?";
+}
+
+// 3.0.5-beta.2: the gathered draws before it go to the card first, so that they fall into the span they belong to
+void Renderer11::pmark(const char* name) {
+    if (!profileOn_) return;
+    ProfileFrame& f = pframes_[pslot_];
+    const bool last = name == kFrameEnd;
+    if (!f.open || (f.used && f.names[f.used - 1] == name) || f.used + (last ? 1 : 2) > kMarks11) return;
+    flushBatch();
+    ctx_->End(f.stamps[f.used]);
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    f.cpu[f.used] = now.QuadPart;
+    f.names[f.used] = name;
+    ++f.used;
+}
+
+void Renderer11::profileOpen() {
+    if (lost_ || pframes_[pslot_].open) return;
+    if (profileWanted_ != profileOn_ && !profileFailed_) {  // between frames
+        profileDrop();
+        if (profileWanted_) {
+            LARGE_INTEGER freq;
+            QueryPerformanceFrequency(&freq);
+            qpcPerMs_ = double(freq.QuadPart) / 1000.0;
+            bool made = true;
+            for (ProfileFrame& f : pframes_) {
+                D3D11_QUERY_DESC q{D3D11_QUERY_TIMESTAMP_DISJOINT, 0};
+                made = made && SUCCEEDED(device_->CreateQuery(&q, &f.disjoint));
+                q.Query = D3D11_QUERY_TIMESTAMP;
+                for (ID3D11Query*& t : f.stamps) made = made && SUCCEEDED(device_->CreateQuery(&q, &t));
+            }
+            if (!made) {
+                profileDrop();
+                profileFailed_ = true;
+                LOG_INFO("profile: Direct3D 11 made no time stamps for the frame's spans - not measured");
+                return;
+            }
+            profileOn_ = true;
+            profileSince_ = GetTickCount64();
+            LOG_INFO("profile: Direct3D 11 - each frame cut into spans by the card's time stamps, the tally every "
+                     "10 s");
+        }
+    }
+    if (!profileOn_) return;
+    ProfileFrame& f = pframes_[pslot_];
+    profileRead(pslot_);  // its frame of 4 frames ago
+    if (f.pending) return;  // still on the card: this frame is not measured
+    ctx_->Begin(f.disjoint);
+    f.open = true;
+    f.used = 0;
+    f.frameMs = f.drawsOwn = f.calls = f.geometry = f.textures = f.pacer = f.presented = 0.0;
+    pmark("the frame's start");
+}
+
+Renderer11::ProfileFrame* Renderer11::profileClose() {
+    if (!profileOn_) return nullptr;
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    const double since = lastClosed_ ? profileMs(now.QuadPart - lastClosed_) : 0.0;
+    lastClosed_ = now.QuadPart;
+    ProfileFrame& f = pframes_[pslot_];
+    if (!f.open) return nullptr;
+    pmark(kFrameEnd);  // the last stamp: no span after it
+    ctx_->End(f.disjoint);
+    f.open = false;
+    f.pending = true;
+    f.frameMs = since;
+    pslot_ = (pslot_ + 1) % kTimedFrames;
+    const ULONGLONG tick = GetTickCount64();
+    if (tick - profileSince_ >= ULONGLONG(frame_profile::kWindowMs)) {
+        for (const std::string& line : pwindow_.lines("Direct3D 11", double(tick - profileSince_) / 1000.0))
+            LOG_INFO("%s", line.c_str());
+        pwindow_.clear();
+        profileSince_ = tick;
+    }
+    return &f;
+}
+
+void Renderer11::profileRead(UINT slot) {
+    ProfileFrame& f = pframes_[slot];
+    if (!f.pending) return;
+    D3D11_QUERY_DATA_TIMESTAMP_DISJOINT d{};
+    if (ctx_->GetData(f.disjoint, &d, sizeof d, D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK) return;  // not yet
+    f.pending = false;
+    if (d.Disjoint || !d.Frequency || f.used < 2 || f.frameMs <= 0.0) return;
+    UINT64 t[kMarks11] = {};
+    for (UINT i = 0; i < f.used; ++i)
+        if (ctx_->GetData(f.stamps[i], &t[i], sizeof t[i], D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK) return;
+    const double perMs = double(d.Frequency) / 1000.0;
+    for (UINT i = 0; i + 1 < f.used; ++i)
+        pwindow_.span(f.names[i], t[i + 1] >= t[i] ? double(t[i + 1] - t[i]) / perMs : 0.0,
+                      profileMs(f.cpu[i + 1] - f.cpu[i]));
+    pwindow_.cpu("the game's draws - the driver's own work", f.drawsOwn);
+    pwindow_.cpu("the game's draws - Direct3D 11's calls", f.calls);
+    pwindow_.cpu("the game's geometry uploaded", f.geometry);
+    pwindow_.cpu("the game's textures written", f.textures);
+    pwindow_.cpu("the frame limit's wait", f.pacer);
+    pwindow_.cpu("Present's wait", f.presented);
+    pwindow_.frame(f.frameMs);
+}
+
+void Renderer11::profileDrop() {
+    for (ProfileFrame& f : pframes_) {
+        drop(f.disjoint);
+        for (ID3D11Query*& q : f.stamps) drop(q);
+        f.used = 0;
+        f.open = f.pending = false;
+    }
+    profileOn_ = false;
+    lastClosed_ = 0;
+    pslot_ = 0;
+    pwindow_.clear();
+}
+
+void Renderer11::profiledDraw(const FrameRecord& rec, const DrawCmd& d) {
+    ProfileFrame& f = pframes_[pslot_];
+    pmark(effectName11(rec.states()[d.state].ui ? kTimeUi11 : kTimeWorld11));
+    LARGE_INTEGER a, b;
+    QueryPerformanceCounter(&a);
+    inDraw_ = true;
+    flushInDraw_ = 0;
+    draw(rec, d);
+    inDraw_ = false;
+    QueryPerformanceCounter(&b);
+    if (f.open) f.drawsOwn += profileMs(b.QuadPart - a.QuadPart - flushInDraw_);
 }
 
 }  // namespace uagfx::gpu

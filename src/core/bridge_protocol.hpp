@@ -70,6 +70,7 @@ enum class Msg : uint32_t {
     SetStudio,          // 2.3: uaRO Studio's keys (writeStudioKeys): the X-ray, a pick, A/B
     SetWorldScale,      // 2.5.16: f64 the world's share of the picture (Direct3D 11's [quality] world_scale)
     SetLight,           // 2.5.20: u8 the light modes' flags (core/light_mode.hpp light::Flag; Direct3D 11's own)
+    SetProfile,         // 3.0.5-beta.2: u8 [debug] profile - the frame's spans into the log (core/frame_profile.hpp)
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text

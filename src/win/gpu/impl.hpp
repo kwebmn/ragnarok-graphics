@@ -15,6 +15,7 @@
 #include "core/pick.hpp"
 #include "core/effect_costs.hpp"
 #include "core/footsteps.hpp"
+#include "core/frame_profile.hpp"
 #include "core/trample.hpp"
 #include "core/frame.hpp"
 #include "core/portal.hpp"
@@ -70,6 +71,7 @@ void releaseCom(T*& p) {
 }
 
 constexpr UINT kSlots = 2;              // submissions in flight
+constexpr UINT kMarks12 = 256;          // 3.0.5-beta.2: [debug] profile's marks a list (more stretch the last span)
 // 0.39.2: the effects timed one by one, for the log; 0.76: the sky, the light in the air and the floors' reflections
 // their own. 2.2.2: the sun's shadows' gone with them (2.1.4); 2.4.1: the new trees' too.
 enum EffectTimer : UINT {
@@ -219,6 +221,10 @@ struct Slot {
     bool upscaleTimed = false;               // and those of an upscale in it
     bool aiTimed = false;                    // and those of the AI textures' work in it
     uint32_t effectTimed = 0;                // 0.39.2: and those of these effects (1 << EffectTimer)
+    // 3.0.5-beta.2: [debug] profile - its list's marks (Impl::profileMark): their names, the processor's clock
+    UINT marked = 0;
+    std::array<const char*, kMarks12> marks{};
+    std::array<LONGLONG, kMarks12> markCpu{};
 };
 
 struct Upload {
@@ -654,6 +660,25 @@ struct Renderer::Impl {
     void effectBegin(EffectTimer e);
     void effectEnd(EffectTimer e);
     void noteGpuFrame();                   // after a present
+    // 3.0.5-beta.2 (the user: «давай сделаем анализ, где именно идет больше всего расчетов»): [debug] profile - each
+    // list cut into spans at marks (crumb()'s passes and the frame's own: clears, uploads, the picture put together,
+    // into the window), a time stamp each resolved at submit and read as its slot comes round; the processor's clock
+    // at each; the frames and the processor's waits at each present - the tally every 10 s (core/frame_profile.hpp)
+    ID3D12QueryHeap* profileHeap = nullptr;  // kMarks12 a slot
+    ID3D12Resource* profileBuffer = nullptr;
+    const UINT64* profileData = nullptr;  // mapped for good
+    bool profileWanted = false, profileOn = false, profileFailed = false;
+    frame_profile::Window profileWindow;
+    ULONGLONG profileSince = 0;
+    LONGLONG profileShown = 0;  // the processor's clock at the last present
+    LONGLONG profileSeen[5] = {};  // cpuTicks, fenceTicks, pacerTicks, swapTicks, reflexTicks then
+    double qpcPerMs = 1.0;
+    void setProfile(bool on) { profileWanted = on; }
+    void profileStart();  // in begin(), between lists: made or let go as asked
+    void profileMark(const char* name);  // a span begins (the same name as the last: it goes on)
+    void profileRead(Slot& s, UINT index);  // the slot's last list has finished
+    void profilePresent();  // after a present
+    void profileRelease();
     void (*onDevice)(void*, ID3D12Device*) = nullptr;  // setOnDevice
     void* onDeviceContext = nullptr;
     // Frame generation: the back buffer's picture without the interface and the interface alone (upscaler.hpp).

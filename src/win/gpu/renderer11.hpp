@@ -12,6 +12,7 @@
 #include "core/critters.hpp"
 #include "core/draw_batch.hpp"
 #include "core/footsteps.hpp"
+#include "core/frame_profile.hpp"
 #include "core/portal.hpp"
 #include "core/trample.hpp"
 #include "core/ground_cells.hpp"
@@ -85,6 +86,7 @@ public:
     // interface, which stays at the picture's pixels (an HD 6570: the world was most of the frame)
     void setWorldScale(double share) { worldScale_ = std::clamp(share, 0.5, 1.0); }
     void setLight(uint8_t flags) { lightWanted_ = flags; }  // 2.5.20: taken at the next frame's start
+    void setProfile(bool on) { profileWanted_ = on; }  // 3.0.5-beta.2: [debug] profile, taken at a frame's start
     uint32_t createTexture(int width, int height, int levels);
     // 2.5.13: under the number the game's side gave it (Direct3D 11 on its own thread: Remote numbers them)
     bool createTextureAs(uint32_t id, int width, int height, int levels);
@@ -813,7 +815,8 @@ private:
         uint32_t primitive = 0, firstIndex = 0, indexCount = 0;  // a draw by itself: its own
         bool sameState(const Issue& o) const;
     };
-    void flushBatch();  // the gathered draw call to the driver
+    void flushBatch();     // the gathered draw call to the driver (3.0.5-beta.2: timed under [debug] profile)
+    void flushGathered();  // its work
     Issue issue_;
     batch::Batch batch_;
     ID3D11Buffer* quadIndices_ = nullptr;  // batch::quadIndices: the quads as lists of triangles
@@ -898,6 +901,40 @@ private:
     uint32_t gpuFrames_ = 0;
     ULONGLONG gpuSince_ = 0;
     std::map<std::pair<std::string, long>, int> failures_;  // a failure of each place and code logged once
+    // 3.0.5-beta.2 (the user: «давай сделаем анализ, где именно идет больше всего расчетов»): [debug] profile - each
+    // frame cut into spans by marks (pmark: a time stamp of the card's and the processor's clock), read 4 frames on
+    // and never waited for, summed into the log every 10 s (core/frame_profile.hpp); the processor's parts apart
+    static constexpr UINT kMarks11 = 192;  // more marks a frame stretch the last span
+    struct ProfileFrame {
+        ID3D11Query* disjoint = nullptr;
+        ID3D11Query* stamps[kMarks11] = {};
+        const char* names[kMarks11] = {};
+        LONGLONG cpu[kMarks11] = {};
+        UINT used = 0;
+        bool open = false, pending = false;
+        double frameMs = 0.0;  // since the frame before it closed
+        // ms: the game's draws' own work and Direct3D 11's calls for them, the geometry's and the textures' uploads,
+        // the frame limit's wait and Present's
+        double drawsOwn = 0.0, calls = 0.0, geometry = 0.0, textures = 0.0, pacer = 0.0, presented = 0.0;
+    };
+    static const char* effectName11(int e);  // the log's names of EffectTime11, the world's and the interface's too
+    void pmark(const char* name);  // a span begins (the same name as the last: it goes on)
+    void profileOpen();            // at a frame's first work: its marks begin, when its slot is free
+    ProfileFrame* profileClose();  // after the picture went into the window: the frame closed, else none
+    void profileRead(UINT slot);   // a closed frame's spans into the window, once the card has them
+    void profileDrop();
+    void profiledDraw(const FrameRecord& rec, const DrawCmd& d);
+    double profileMs(LONGLONG ticks) const { return double(ticks) / qpcPerMs_; }
+    bool profileWanted_ = false, profileOn_ = false;
+    bool profileFailed_ = false;  // no time stamps for it: not tried again
+    ProfileFrame pframes_[kTimedFrames];
+    UINT pslot_ = 0;
+    frame_profile::Window pwindow_;
+    ULONGLONG profileSince_ = 0;
+    LONGLONG lastClosed_ = 0;
+    double qpcPerMs_ = 1.0;
+    bool inDraw_ = false;
+    LONGLONG flushInDraw_ = 0;  // Direct3D 11's calls inside the draw being done
 };
 
 }  // namespace uagfx::gpu

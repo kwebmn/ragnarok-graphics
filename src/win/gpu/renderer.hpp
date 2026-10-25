@@ -140,6 +140,9 @@ public:
     // 2.5.20: the light modes' flags (core/light_mode.hpp light::Flag) - Direct3D 11's: the world's textures as their
     // colour alone, a 16-bit world, mip levels without blending; Direct3D 12 keeps its own picture
     void setLight(uint8_t flags);
+    // 3.0.5-beta.2 (the user: «давай сделаем анализ, где именно идет больше всего расчетов»): [debug] profile - each
+    // frame cut into spans, the card's and the processor's time of each into the log every 10 s (core/frame_profile)
+    void setProfile(bool on);
     void setShaderVariants(bool on);  // 2.5.16: [debug] shader_variants (Direct3D 11)
     void setUpscaler(Upscaler* u);   // before setScale
     // 0.62: [display] ui_native - the world `ratio` times the picture, made smaller into it, the interface at the

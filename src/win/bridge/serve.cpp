@@ -258,6 +258,11 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             if (rd.ok()) renderer_.setLight(flags);
             break;
         }
+        case Msg::SetProfile: {  // 3.0.5-beta.2
+            const uint8_t on = rd.u8();
+            if (rd.ok()) renderer_.setProfile(on != 0);
+            break;
+        }
         case Msg::Map: {
             const std::string map = rd.str();
             if (rd.ok()) renderer_.setMap(map);

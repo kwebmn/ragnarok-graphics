@@ -37,6 +37,7 @@ public:
     void setUiSharp(bool sharp);
     void setWorldScale(double share);  // 2.5.16: sent when it changes
     void setLight(uint8_t flags);      // 2.5.20: sent when they change
+    void setProfile(bool on);          // 3.0.5-beta.2: [debug] profile, sent when it changes
     void preparePipelines(const std::string& file);
     bool setTarget(int width, int height);
     bool setScale(double k, int width, int height, int samples, bool upscale);
@@ -82,6 +83,7 @@ private:
     uint32_t nextTexture_ = 0;
     double worldScale_ = 1.0;  // 2.5.16: the last sent
     uint8_t light_ = 0;        // 2.5.20: the last sent
+    bool profile_ = false;     // 3.0.5-beta.2: the last sent
     uint32_t presentsSent_ = 0;
     // 2.1.1: the game's thread's time here - its draws written and sent, its wait for the renderer's presents -
     // logged every 30 s
