@@ -80,6 +80,44 @@ std::string jpegOfSource(IWICImagingFactory* f, IWICBitmapSource* frame) {
     return out;
 }
 
+// 3.0.5-beta.5 (the user: «сделай так чтобы снимки делались без уменьшения качества»): a picture as a PNG of its own
+// size, every pixel as it is; "" when Windows cannot make one.
+std::string pngOfSource(IWICImagingFactory* f, IWICBitmapSource* frame) {
+    std::string out;
+    IWICFormatConverter* bgr = nullptr;
+    IStream* stream = nullptr;
+    IWICBitmapEncoder* enc = nullptr;
+    IWICBitmapFrameEncode* target = nullptr;
+    IPropertyBag2* props = nullptr;
+    UINT w = 0, h = 0;
+    if (SUCCEEDED(frame->GetSize(&w, &h)) && w && h && SUCCEEDED(f->CreateFormatConverter(&bgr)) &&
+        SUCCEEDED(bgr->Initialize(frame, GUID_WICPixelFormat24bppBGR, WICBitmapDitherTypeNone, nullptr, 0.0,
+                                  WICBitmapPaletteTypeCustom)) &&
+        SUCCEEDED(CreateStreamOnHGlobal(nullptr, TRUE, &stream)) &&
+        SUCCEEDED(f->CreateEncoder(GUID_ContainerFormatPng, nullptr, &enc)) &&
+        SUCCEEDED(enc->Initialize(stream, WICBitmapEncoderNoCache)) &&
+        SUCCEEDED(enc->CreateNewFrame(&target, &props))) {
+        WICPixelFormatGUID fmt = GUID_WICPixelFormat24bppBGR;
+        HGLOBAL mem = nullptr;
+        if (SUCCEEDED(target->Initialize(props)) && SUCCEEDED(target->SetSize(w, h)) &&
+            SUCCEEDED(target->SetPixelFormat(&fmt)) && SUCCEEDED(target->WriteSource(bgr, nullptr)) &&
+            SUCCEEDED(target->Commit()) && SUCCEEDED(enc->Commit()) && SUCCEEDED(GetHGlobalFromStream(stream, &mem))) {
+            STATSTG st{};
+            if (SUCCEEDED(stream->Stat(&st, STATFLAG_NONAME))) {
+                const void* bytes = GlobalLock(mem);
+                if (bytes) out.assign(static_cast<const char*>(bytes), size_t(st.cbSize.QuadPart));
+                GlobalUnlock(mem);
+            }
+        }
+    }
+    release(props);
+    release(target);
+    release(enc);
+    release(stream);
+    release(bgr);
+    return out;
+}
+
 std::string jpegOf(IWICImagingFactory* f, const std::wstring& path) {
     IWICBitmapDecoder* dec = nullptr;
     IWICBitmapFrameDecode* frame = nullptr;
@@ -176,6 +214,47 @@ std::string shotJpeg(const std::wstring& path) {
     std::string jpeg = jpegOf(f, path);
     release(f);
     return jpeg.size() > 600000 ? std::string() : jpeg;  // the site takes a shot of 600 KB at most
+}
+
+std::string shotPng(const std::wstring& path) {
+    std::string bytes;
+    HANDLE h = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0,
+                           nullptr);
+    if (h == INVALID_HANDLE_VALUE) return "";
+    LARGE_INTEGER size{};
+    if (GetFileSizeEx(h, &size) && size.QuadPart > 8 && size.QuadPart <= LONGLONG(kMostOriginal)) {
+        bytes.resize(size_t(size.QuadPart));
+        DWORD got = 0;
+        if (!ReadFile(h, &bytes[0], DWORD(bytes.size()), &got, nullptr) || got != bytes.size()) bytes.clear();
+    }
+    CloseHandle(h);
+    if (bytes.compare(0, 8, "\x89PNG\r\n\x1a\n", 8) == 0) return bytes;  // the game's own shots: sent as they are
+    IWICImagingFactory* f = factory();  // a JPG or a BMP: its pixels into a PNG, nothing lost on the way
+    IWICBitmapDecoder* dec = nullptr;
+    IWICBitmapFrameDecode* frame = nullptr;
+    std::string png;
+    if (f && SUCCEEDED(f->CreateDecoderFromFilename(path.c_str(), nullptr, GENERIC_READ,
+                                                    WICDecodeMetadataCacheOnDemand, &dec)) &&
+        SUCCEEDED(dec->GetFrame(0, &frame)))
+        png = pngOfSource(f, frame);
+    release(frame);
+    release(dec);
+    release(f);
+    return png.size() > kMostOriginal ? std::string() : png;
+}
+
+std::string clipboardPng(HWND owner) {
+    if (!IsClipboardFormatAvailable(CF_BITMAP) || !OpenClipboard(owner)) return "";
+    std::string png;
+    IWICImagingFactory* f = factory();
+    IWICBitmap* bitmap = nullptr;
+    HBITMAP hb = static_cast<HBITMAP>(GetClipboardData(CF_BITMAP));
+    if (f && hb && SUCCEEDED(f->CreateBitmapFromHBITMAP(hb, nullptr, WICBitmapIgnoreAlpha, &bitmap)))
+        png = pngOfSource(f, bitmap);
+    CloseClipboard();
+    release(bitmap);
+    release(f);
+    return png.size() > kMostOriginal ? std::string() : png;
 }
 
 std::string clipboardJpeg(HWND owner) {

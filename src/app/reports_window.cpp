@@ -78,6 +78,7 @@ struct Pick {
     std::wstring path;  // "" for a pasted one
     std::string jpeg;   // a pasted one's bytes
     std::wstring name;
+    std::string png;  // 3.0.5-beta.5: a pasted one in full (clipboardPng), sent after the report
 };
 
 class ReportsWindow {
@@ -504,9 +505,9 @@ void ReportsWindow::startNew() {
         picks_.clear();
         SendMessageW(GetDlgItem(hwnd_, kPick), LVM_DELETEALLITEMS, 0, 0);
         ImageList_RemoveAll(thumbs_);
-        if (!start_.shot.empty()) addPick(Pick{start_.shot, "", fileNameOf(start_.shot)}, true);
+        if (!start_.shot.empty()) addPick(Pick{start_.shot, "", fileNameOf(start_.shot), ""}, true);
         for (const std::wstring& path : gameShots(model_.paths().dir, kGameShots))
-            if (path != start_.shot) addPick(Pick{path, "", fileNameOf(path)}, false);
+            if (path != start_.shot) addPick(Pick{path, "", fileNameOf(path), ""}, false);
         std::wstring goes = t(Text::ReportNote);
         if (!start_.map.empty()) goes += L"\r\n" + tf(Text::ReportMapLine, {start_.map});
         SetWindowTextW(GetDlgItem(hwnd_, kGoes), goes.c_str());
@@ -559,7 +560,7 @@ void ReportsWindow::addFile(bool toReply) {
     }
     std::vector<size_t> ticked;
     picksTicked(ticked);
-    addPick(Pick{file, "", fileNameOf(file)}, ticked.size() < kMostPicked);
+    addPick(Pick{file, "", fileNameOf(file), ""}, ticked.size() < kMostPicked);
 }
 
 void ReportsWindow::paste(bool toReply) {
@@ -574,7 +575,8 @@ void ReportsWindow::paste(bool toReply) {
     }
     std::vector<size_t> ticked;
     picksTicked(ticked);
-    addPick(Pick{L"", jpeg, L"Ctrl+V " + std::to_wstring(++pasted_)}, ticked.size() < kMostPicked);
+    addPick(Pick{L"", jpeg, L"Ctrl+V " + std::to_wstring(++pasted_), clipboardPng(hwnd_)},
+            ticked.size() < kMostPicked);
 }
 
 void ReportsWindow::attach(const std::string& jpeg) {
@@ -615,6 +617,7 @@ void ReportsWindow::sendNewReport() {
     }
     HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
     std::vector<std::pair<std::string, std::string>> shots;
+    std::vector<std::pair<std::string, std::string>> originals;  // 3.0.5-beta.5: the same in full, sent after it
     for (size_t i : ticked) {
         const Pick& p = picks_[i];
         std::string jpeg = p.path.empty() ? p.jpeg : shotJpeg(p.path);
@@ -623,7 +626,10 @@ void ReportsWindow::sendNewReport() {
             status(tf(Text::ReportShotFailed, {utf8(p.name)}));
             return;
         }
-        shots.emplace_back("shot" + std::to_string(shots.size() + 1) + ".jpg", std::move(jpeg));
+        const std::string shot = "shot" + std::to_string(shots.size() + 1);
+        shots.emplace_back(shot + ".jpg", std::move(jpeg));
+        std::string png = p.path.empty() ? p.png : shotPng(p.path);
+        if (!png.empty()) originals.emplace_back(shot + ".png", std::move(png));
     }
     std::string comment = utf8(what);
     if (!start_.map.empty()) comment += (comment.empty() ? "" : "\n\n") + utf8(tf(Text::ReportMapLine, {start_.map}));
@@ -633,10 +639,19 @@ void ReportsWindow::sendNewReport() {
             u.kind = reports::kindToken(kKinds[i]);
     u.shots = shots;
     const NewReport r = sendNew(model_.paths().dir, u);
-    SetCursor(old);
     if (!r.code.empty()) {
         start_ = ReportStart{};
-        status(tf(Text::ReportNewSent, {r.code}));
+        // 3.0.5-beta.5: the shots in full now that the report has its code - the site shows them in the JPEGs' place
+        std::string why;
+        size_t sentFull = 0;
+        if (!originals.empty()) status(t(Text::ReportOriginalsSending));
+        for (const auto& o : originals) {
+            if (!sendOriginal(key_, r.code, o.first, o.second, why)) break;
+            ++sentFull;
+        }
+        SetCursor(old);
+        status(sentFull == originals.size() ? tf(Text::ReportNewSent, {r.code})
+                                            : tf(Text::ReportOriginalsFailed, {r.code, why}));
         std::vector<reports::Summary> list;
         std::string error;
         if (listReports(key_, list, error)) {
@@ -645,10 +660,12 @@ void ReportsWindow::sendNewReport() {
         }
         openCode(r.code);
     } else if (r.queued) {
+        SetCursor(old);
         start_ = ReportStart{};
         status(t(Text::ReportNewQueued));
         show(Pane::Hint);
     } else {
+        SetCursor(old);
         status(tf(Text::ReportNewRefused, {r.error}));
     }
 }

@@ -423,6 +423,7 @@ enum class Text : uint16_t {
     // 3.0.5-beta.1: «Реліз» chosen over a beta - the release offered back (update::backToRelease)
     UpdateBackNote, UpdateBackButton, PlayBackButton, MainUpdateBack, UpdateBackDo, UpdateBackOut, UpdateBackStay,
     UpdateBackRestart,
+    ReportOriginalsSending, ReportOriginalsFailed,  // 3.0.5-beta.5: the report's shots in full, sent after it
     Count
 };
 

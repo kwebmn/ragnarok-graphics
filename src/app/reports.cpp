@@ -15,7 +15,7 @@ namespace {
 
 constexpr const char* kPath = "/api/graphics/reports";
 constexpr size_t kMostAnswer = 1u << 20;  // a long conversation's JSON
-constexpr size_t kMostShot = 8u << 20;    // a developer's PNG
+constexpr size_t kMostShot = 40'000'000;  // a developer's PNG; 3.0.5-beta.5 a shot of the player's in full (shotPng)
 
 std::wstring join(const std::wstring& a, const std::wstring& b) { return a + L"\\" + b; }
 std::wstring sentFile(const std::wstring& dir) { return join(dir, L"uaro-graphics\\reports.txt"); }
@@ -181,6 +181,27 @@ bool sendStillThere(const std::string& key, const std::string& code, const std::
                     std::string& error) {
     if (shots.empty()) return sendVerdict(key, code, false, text, error);
     return answerReport(key, code, text.empty() ? stillThere : text, shots, error);
+}
+
+bool sendOriginal(const std::string& key, const std::string& code, const std::string& name, const std::string& png,
+                  std::string& error) {
+    constexpr size_t kPart = 1u << 20;  // the site takes a request of 8 MB at most: a part's base64 under 1.4 MB
+    const size_t parts = (png.size() + kPart - 1) / kPart;
+    if (!validCode(code) || png.empty() || parts > 48) {
+        error = "not a shot to send: " + name;
+        return false;
+    }
+    for (size_t i = 0; i < parts; ++i) {
+        json::Value body = json::Value::object();
+        body.set("computer", key);
+        body.set("name", name);
+        body.set("part", int(i));
+        body.set("parts", int(parts));
+        body.set("at", int64_t(i * kPart));  // what the site has of it so far: the parts go in their order
+        body.set("data", report::base64(png.substr(i * kPart, kPart)));
+        if (!post(reportPath(code) + "/originals", body, 201, error)) return false;
+    }
+    return true;
 }
 
 bool fetchShot(const std::string& key, const std::string& code, const std::string& name, std::string& bytes,

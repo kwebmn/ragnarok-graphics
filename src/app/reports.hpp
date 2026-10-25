@@ -25,6 +25,11 @@ bool sendVerdict(const std::string& key, const std::string& code, bool fixed, co
 bool sendStillThere(const std::string& key, const std::string& code, const std::string& text,
                     const std::string& stillThere, const std::vector<std::pair<std::string, std::string>>& shots,
                     std::string& error);
+// 3.0.5-beta.5 (the user: «сделай так чтобы снимки делались без уменьшения качества»): a shot of a report just sent
+// in full - shotN.png beside its shotN.jpg (app/shots shotPng) - in parts of 1 MB in their order; the site shows it in
+// the JPEG's place from then on
+bool sendOriginal(const std::string& key, const std::string& code, const std::string& name, const std::string& png,
+                  std::string& error);
 // A shot of a conversation (the player's or the developer's), for the app to open
 bool fetchShot(const std::string& key, const std::string& code, const std::string& name, std::string& bytes,
                std::string& error);

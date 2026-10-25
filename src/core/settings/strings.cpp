@@ -4594,6 +4594,12 @@ constexpr Entry kTexts[] = {
     {Text::UpdateBackRestart, "The game closes, goes back to the release and starts again - about 20 seconds.",
      "Гра закриється, повернеться на реліз і запуститься знову — це близько 20 секунд.",
      "Игра закроется, вернётся на релиз и запустится снова — это около 20 секунд."},
+    {Text::ReportOriginalsSending, "Sending the shots in full quality…", "Надсилаю знімки в повній якості…",
+     "Отправляю снимки в полном качестве…"},
+    {Text::ReportOriginalsFailed,
+     "Report {1} is sent; the shots in full quality did not go ({2}) - it has the smaller ones.",
+     "Звернення {1} надіслано; знімки в повній якості не пішли ({2}) — у ньому лишилися зменшені.",
+     "Обращение {1} отправлено; снимки в полном качестве не ушли ({2}) — в нём остались уменьшенные."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
