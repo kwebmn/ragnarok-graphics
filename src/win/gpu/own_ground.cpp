@@ -24,6 +24,7 @@ constexpr float kMostDepth = 4000.0f;               // how far off the own groun
 // game's 1080), the game's own cells past it - 3.0.4-beta.15: to 1500 before, much of the pass's 7.7 ms a frame on an
 // i7-8700 (R-N6FC5V)
 constexpr float kFinePixels = 40.0f;
+constexpr int kRelitAPicture = 8;  // 3.0.4-beta.28: chunks made again a picture when the hills' light moved
 
 double msSince(const LARGE_INTEGER& from) {
     LARGE_INTEGER now, f;
@@ -302,7 +303,10 @@ bool Renderer::Impl::drawOwnGround() {
         o.lightOn = relief;
         std::copy(sun, sun + 3, o.lightSun);
         o.lightAmbient = ambient, o.lightStrength = strength;
-        for (std::vector<uint8_t>& f : o.fresh) std::fill(f.begin(), f.end(), uint8_t(0));
+        // 3.0.4-beta.28: made again a few chunks a picture (2: fresh but in the light before) - the sun of the day's
+        // clock moves a little every minute or two, and all of the view at once was a hitch of 10 ms
+        for (std::vector<uint8_t>& f : o.fresh)
+            for (uint8_t& c : f) c = c ? uint8_t(2) : uint8_t(0);
     }
     const bool blends = effects.groundSeams && mapOutdoors;  // outdoors, as the game's ground's seams (seamsWanted)
     // 3.0.4-beta.15: the record of the last picture again when nothing it was made of changed
@@ -315,7 +319,7 @@ bool Renderer::Impl::drawOwnGround() {
     now.fog[0] = o.shading.specularAt(100.0f), now.fog[1] = o.shading.specularAt(1000.0f);
     now.like = o.like;
     now.valid = true;
-    const bool same = o.made.valid && !meanMoved && !lightMoved && o.changed.empty() &&
+    const bool same = o.made.valid && !meanMoved && !lightMoved && !o.lightPending && o.changed.empty() &&
                       std::memcmp(o.made.view, now.view, sizeof now.view) == 0 && o.made.width == now.width &&
                       o.made.height == now.height && o.made.serial == now.serial && o.made.blends == now.blends &&
                       o.made.models == now.models && o.made.seamsView == now.seamsView &&
@@ -378,6 +382,8 @@ bool Renderer::Impl::drawOwnGround() {
         };
         const float sign[3] = {float(axes.x), float(axes.y), float(axes.z)};
         const float fineDepth = std::clamp(g->zoom * p.f1 / kFinePixels, 600.0f, 1500.0f);
+        int relit = 0;  // 3.0.4-beta.28: chunks made again in the moved light this picture
+        o.lightPending = false;
         const float from = own_ground::ownFrom(p);  // 3.0.4-beta.23: the triangles across it cut there
         for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
             const terrain::Chunk& box = g->mesh.chunks[k];
@@ -393,7 +399,14 @@ bool Renderer::Impl::drawOwnGround() {
             const terrain::Chunk& ch = mesh.chunks[k];
             std::vector<uint32_t>& colours = o.colours[which];
             ++chunks;
-            if (!o.fresh[which][k]) {  // its colours, the game's round its corners
+            uint8_t& fresh = o.fresh[which][k];
+            if (fresh == 2) {  // 3.0.4-beta.28: in the light before it moved - a few a picture
+                if (relit < kRelitAPicture)
+                    ++relit, fresh = 0;
+                else
+                    o.lightPending = true;
+            }
+            if (!fresh) {  // its colours, the game's round its corners
                 ++o.chunksMade;
                 for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
                     const terrain::Batch& bt = mesh.batches[b];
@@ -404,11 +417,12 @@ bool Renderer::Impl::drawOwnGround() {
                             float n[3];
                             own_ground::normalAt(g->cornerNormals, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2],
                                                  n);
-                            const float k = own_ground::reliefLight(n, o.lightSun, o.lightAmbient, o.lightStrength);
+                            const float light =
+                                own_ground::reliefLight(n, o.lightSun, o.lightAmbient, o.lightStrength);
                             uint32_t lit = c & 0xFF000000u;
-                            for (int s = 0; s < 3; ++s) {
-                                const float ch = float((c >> (s * 8)) & 0xFF) * k;
-                                lit |= uint32_t(std::clamp(int(ch + 0.5f), 0, 255)) << (s * 8);
+                            for (int part = 0; part < 3; ++part) {
+                                const float channel = float((c >> (part * 8)) & 0xFF) * light;
+                                lit |= uint32_t(std::clamp(int(channel + 0.5f), 0, 255)) << (part * 8);
                             }
                             c = lit;
                         }
@@ -416,7 +430,7 @@ bool Renderer::Impl::drawOwnGround() {
                         colours[v] = bt.layer == terrain::kNeighbour ? (c & 0xFFFFFFu) | (tv.color & 0xFF000000u) : c;
                     }
                 }
-                o.fresh[which][k] = 1;
+                fresh = 1;
             }
             for (uint32_t b = ch.firstBatch; b < ch.firstBatch + ch.batchCount; ++b) {
                 const terrain::Batch& bt = mesh.batches[b];
