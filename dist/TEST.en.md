@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.4-beta.25 — what is new
+
+- **A check of the cut ship** (report R-GXHFX8, "the ship still comes out cut"). The beta.24 fix took away only part of
+  the cause, and from my own camera angles the cut does not come out offline. Rather than ship another beta on a
+  guess, the driver now writes the game's camera (its matrix and the picture's size) into the log with every shot and
+  report (Ctrl+Shift+F12, Ctrl+Shift+F10). With it I can make your picture again offline exactly. Nothing is drawn
+  differently.
+- What to do: at the same place where the ship is cut, send a report (Ctrl+Shift+F10).
+
 # uaRO Graphics 3.0.4-beta.24 — what is new
 
 - **No band across the ship with the camera pulled out all the way** (report R-PTAMG4, "a band is seen on the ship").
