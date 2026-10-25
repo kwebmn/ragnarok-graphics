@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.5-beta.17 - what's new
+
+- **Grass: beta.16's slowdown fixed.** The test showed the grass 0.9 ms dearer in beta.16, not cheaper: the roots' mark
+  got cheaper as it should (0.6 ms), but the blades' shader got heavier. Two ways were left in it - the new one and the
+  old one as a fallback - and the old cards' shader compiler seems to have worked each root out both ways. Now the
+  shader has one way; when the roots' mark cannot be made (only with no video memory at all) the grass is not drawn.
+  The same blades.
+- **The test's log now says where it was taken.** The «Graphics test» start line gives where the character stands (the
+  world's coordinates) - to compare tests from one spot: on the same prt_fild08 the seams cost 4.2 ms at one place and
+  9.7 ms at another.
+- To check on the laptop: the «Graphics test» under Direct3D 11 from the same spot as the last test (right by the
+  entrance from Prontera) - the grass with «grass's roots» was 5.2 ms in beta.15 and 6.1 ms in beta.16.
+
 # uaRO Graphics 3.0.5-beta.16 - what's new
 
 - **Lighter grass.** Two pieces of needless work gone, the same blades:
