@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.5-beta.12 - what's new
+
+- **Lighter grass.** Every pixel of the screen looked for a blade's root up to 16 pixels below it and for each candidate
+  read the depth and the colour, worked out its place in the world and several tests - nine candidates of ten fell out
+  for reasons of the root's own (not green ground, no blade at that spot, far from its middle and so on). Now a pass of
+  its own marks once a frame where a root can stand at all, and the grass looks further only at the marked ones. The
+  same tests in one function, so the blades are the same. Direct3D 11 and Direct3D 12.
+- To check: the «Graphics test» on the laptop under Direct3D 12 and Direct3D 11 - the grass on «Medium» was 9-10 ms; and
+  by eye: the grass and the flowers on a field should look as before.
+
 # uaRO Graphics 3.0.5-beta.11 - what's new
 
 - **Direct3D 11 on «High»: found what ate the processor (R-455GWU, 66 ms a frame).** The grass and road seams and «Hills
