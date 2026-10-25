@@ -659,6 +659,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
         std::snprintf(name, sizeof name, "\\uaro-%04u%02u%02u-%02u%02u%02u.png", t.wYear, t.wMonth, t.wDay, t.wHour,
                       t.wMinute, t.wSecond);
         screenshot = folder + name;
+        // 3.0.4-beta.25 (R-GXHFX8 «всеравно корабль разрезаный получается»): the game's camera with the shot - its
+        // view (world -> view, rows) and the game's size: the picture made again offline exactly
+        float view[12];
+        if (readGameCamera(view))
+            LOG_INFO("camera: the game's view with the shot %s - %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.4f "
+                     "%.4f %.4f; the game %dx%d", name + 1, view[0], view[1], view[2], view[3], view[4], view[5],
+                     view[6], view[7], view[8], view[9], view[10], view[11], screenWidth, screenHeight);
         if (reportNow) startReport(screenshot, readGameMap());
     }
     // Stage 3: the window's real pixels and the scale for them. The first present switches from the game's size:
