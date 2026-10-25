@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.5-beta.10 - what's new
+
+- **Fixed: under Direct3D 12 the game lost the graphics card at the end of the «Graphics test» (R-GGKYDV).** With
+  «Measure where the game spends its time» off, the test turns the measuring on for its run and off at its end. Turning
+  it off, the driver freed at once a buffer the card was still writing the last frame into. Now the buffer goes once
+  that frame is drawn. The same could happen turning the measuring off by hand in a game.
+- The «Graphics test» also records what the game's processor time goes to, so the report shows what loads the processor
+  on each set (63 ms a frame on «High» under Direct3D 11).
+- «Grass and road seams without steps»: less memory work while the camera zooms out and in - the seams that left the
+  picture are kept a little longer.
+- To check: the «Graphics test» again under Direct3D 12 and Direct3D 11. No lost graphics card at the end. The last
+  Direct3D 11 test had «World resolution» at 100 %, the one before at 75 %; for comparing, keep 100 %.
+
 # uaRO Graphics 3.0.5-beta.9 - what's new
 
 - **«Footprints in snow and sand» (dust under the feet on grass) tens of times lighter.** Until now every pixel of the
