@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.5-beta.15 - what's new
+
+- **«Grass and road seams without steps» lighter for the video card.** The test on a Radeon 610M laptop showed the seams
+  the dearest of the four on «High» (7.0 ms a frame; hills 3.1, materials 2.9, reflections 0.7). A seam's strip is half
+  a cell wide, and each of its pixels went through the whole ground shader - textures, materials, hills - though over
+  most of the strip the noise leaves the cell its own texture and the strip draws nothing there. Now the shader first
+  works out whether the neighbour's texture shows at the pixel, and stops when it does not. The look is the same: those
+  pixels were drawn fully transparent before too. Direct3D 11 and Direct3D 12.
+- To check on the laptop: the «Graphics test» under Direct3D 11 - «Grass and road seams without steps» in the line
+  under the table was 7.0 ms; and by eye the edges of grass and roads on prt_fild08 should look as before.
+
 # uaRO Graphics 3.0.5-beta.14 - what's new
 
 - **The «Graphics test» shows what exactly in «High» is dear for the video card.** After «High» the game goes the same
