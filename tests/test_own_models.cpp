@@ -107,3 +107,21 @@ TEST(own_models_note_the_game_s_triangles_in_turn) {
     CHECK_EQ(own_models::nextNotedFrom(4 * kMostNoted, 250), 0u);  // the last reached: the first again
     CHECK_EQ(own_models::nextNotedFrom(9 * kMostNoted, 0), 0u);    // fewer this picture: the first
 }
+
+TEST(own_models_keep_their_turn_over_the_pictures) {
+    // 3.0.4-beta.34 (R-37HNEB: beta.33's turn never moved - «noted 360600», 600 every picture): the renderer starts a
+    // picture at the present and again at the game's clear right after it; the second, with none of the game's model
+    // triangles seen, put the turn back to the first. A picture that saw none leaves it as it was
+    using own_models::kMostNoted;
+    own_models::NotingTurn turn;
+    turn.noted = kMostNoted, turn.passed = kMostNoted;  // a picture noted its 600
+    turn.next();
+    turn.next();  // the clear right after: nothing seen
+    CHECK_EQ(turn.from, kMostNoted);
+    CHECK_EQ(turn.noted, 0u);
+    turn.noted = 250, turn.passed = kMostNoted + 250;  // the rest: the game's last reached
+    turn.next();
+    CHECK_EQ(turn.from, 0u);
+    CHECK_EQ(turn.rounds, 1u);
+    CHECK_EQ(turn.most, kMostNoted + 250);
+}

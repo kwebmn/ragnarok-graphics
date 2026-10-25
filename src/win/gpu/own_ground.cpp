@@ -140,6 +140,7 @@ bool Renderer::Impl::prepareOwnGround() {
         for (const OwnGround::Picture& p : g->waterPictures)  // 3.0.4-beta.20
             o.waterIds.push_back(p.levels.empty() ? 0 : ownTexture(p.width, p.height, int(p.levels.size())));
         o.learning.reset(g->models, g->toLight);
+        o.modelsTurn = own_models::NotingTurn{};  // 3.0.4-beta.34: the map's own, from its first
     }
     if (o.up) return true;
     o.uploads.reset();
@@ -593,10 +594,11 @@ bool Renderer::Impl::drawOwnGround() {
     // lay where one of ours does (all but the moving ones: placed as the game places them)
     if (o.frames == 600 && effects.ownFarModels)
         LOG_INFO("own models: %s - of the game's model triangles near %zu noted, %zu (%.0f %%) where ours lie; %zu "
-                 "triangles of ours past the far plane in the last picture",
+                 "triangles of ours past the far plane in the last picture; noted in turn: all of them %u times, "
+                 "up to %u a picture",
                  g->map.c_str(), o.learning.seen(), o.learning.matched(),
                  o.learning.seen() ? 100.0 * double(o.learning.matched()) / double(o.learning.seen()) : 0.0,
-                 o.modelsDrawn);
+                 o.modelsDrawn, o.modelsTurn.rounds, o.modelsTurn.most);
     return !lost;
 }
 
@@ -613,7 +615,8 @@ void Renderer::Impl::noteOwnModels(const FrameRecord& rec, const DrawCmd& d) {
         o.modelLikeKnown = true;
     }
     using own_models::kMostNoted;  // a picture's: the learning goes on over the pictures, in turn (3.0.4-beta.33)
-    if (o.modelsNoted >= kMostNoted) return;
+    own_models::NotingTurn& turn = o.modelsTurn;
+    if (turn.noted >= kMostNoted) return;
     const std::vector<uint8_t>& vb = rec.vertexBytes();
     if (d.vertexOffset + size_t(d.vertexCount) * sizeof(own_ground::Tl1) > vb.size()) return;
     const own_ground::Tl1* v = reinterpret_cast<const own_ground::Tl1*>(vb.data() + d.vertexOffset);
@@ -641,12 +644,12 @@ void Renderer::Impl::noteOwnModels(const FrameRecord& rec, const DrawCmd& d) {
     };
     const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
     const uint32_t triangles = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
-    if (o.modelsPassed + triangles <= o.modelsFrom) {  // 3.0.4-beta.33: before this picture's turn
-        o.modelsPassed += triangles;
+    if (turn.passed + triangles <= turn.from) {  // 3.0.4-beta.33: before this picture's turn
+        turn.passed += triangles;
         return;
     }
-    for (uint32_t t = 0; t < triangles && o.modelsNoted < kMostNoted; ++t) {
-        if (o.modelsPassed++ < o.modelsFrom) continue;
+    for (uint32_t t = 0; t < triangles && turn.noted < kMostNoted; ++t) {
+        if (turn.passed++ < turn.from) continue;
         uint32_t k[3];
         const uint32_t base = strip ? t : t * 3;
         if (!vertexAt(base, k[0]) || !vertexAt(base + 1, k[1]) || !vertexAt(base + 2, k[2])) break;
@@ -659,7 +662,7 @@ void Renderer::Impl::noteOwnModels(const FrameRecord& rec, const DrawCmd& d) {
         }
         if (!ok) continue;
         o.learning.note(corners, colours);
-        ++o.modelsNoted;
+        ++turn.noted;
     }
 }
 

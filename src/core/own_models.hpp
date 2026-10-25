@@ -25,6 +25,20 @@ terrain::Mesh place(const std::vector<rsw::Model>& instances, const std::vector<
 // learn nothing while the camera stood, none of them ours
 constexpr uint32_t kMostNoted = 600;
 inline uint32_t nextNotedFrom(uint32_t from, uint32_t noted) { return noted < kMostNoted ? 0u : from + noted; }
+// 3.0.4-beta.34 (R-37HNEB: beta.33's turn never moved): the turn over the pictures - the renderer starts a picture at
+// the present and again at the game's clear right after it; one that saw none of the game's model triangles leaves
+// the turn as it was. rounds and most for the log: how often all were noted, the most a picture held
+struct NotingTurn {
+    uint32_t from = 0, noted = 0, passed = 0;  // this picture's first to note; noted; gone by, noted or not
+    uint32_t rounds = 0, most = 0;
+    void next() {
+        if (!passed) return;
+        most = passed > most ? passed : most;
+        from = nextNotedFrom(from, noted);
+        rounds += from ? 0u : 1u;
+        noted = passed = 0;
+    }
+};
 
 // The game's colours of its models, learnt from its own draws of them near (the own ground's way, own_ground::Shading):
 // a triangle of the game's where one of ours lies (its middle, then each corner within 0.3) gives our corners its
