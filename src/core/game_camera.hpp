@@ -78,6 +78,10 @@ inline float viewZ(const float view[12], const float at[3]) {
 inline float targetHeight(const float viewToWorld[12], float targetZ) {
     return targetZ * viewToWorld[7] + viewToWorld[10];
 }
+// 3.0.5-beta.17: that point whole - where the character stands in the world
+inline void targetPoint(const float viewToWorld[12], float targetZ, float out[3]) {
+    for (int a = 0; a < 3; ++a) out[a] = targetZ * viewToWorld[6 + a] + viewToWorld[9 + a];
+}
 
 // 2.7.22: the world's up (y down positive: -y) in the view, a unit vector - the view's axes in the world are the
 // affine's rows, so its view coordinates are their y's, negated.

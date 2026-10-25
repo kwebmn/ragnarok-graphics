@@ -417,17 +417,16 @@ bool Renderer::Impl::applyGrass() {
                                    maskHeight, c, sceneColorSrv, true, list1, nullptr, 3, cells);
     crumb(passName(kTimeGrass).words);
     if (lost) return false;
-    if (masked) {
-        transition(grassMask, grassMaskState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-        c.sourceRect[0] = 1.0f;
-    }
+    if (!masked) return true;  // 3.0.5-beta.17: grass_ps takes its roots from the mask alone
+    transition(grassMask, grassMaskState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    c.sourceRect[0] = 1.0f;
     if (!grassLogged)
         LOG_INFO("grass: on %s, blades up to %.0f pixels%s%s%s", mapName.c_str(), c.twin[0],
                  cells != kNoSrv ? ", on the map's ground only" : "",
                  c.uiPixels[2] > 1.5f ? ", their roots on every second row" : "",
-                 masked ? ", the roots that can be one marked first" : "");
+                 ", the roots that can be one marked first");
     grassLogged = true;
-    return worldPass(pso, w, h, c, masked ? grassMaskSrv : sceneColorSrv, true, list1, nullptr, 3, cells);
+    return worldPass(pso, w, h, c, grassMaskSrv, true, list1, nullptr, 3, cells);
 }
 
 // 3.0.5-beta.12: the grass's mask - R8 at the scene's size, its render target view and its shader view; made again
@@ -441,7 +440,7 @@ bool Renderer::Impl::ensureGrassMask(int w, int h) {
                                                        reinterpret_cast<void**>(&grassMaskPipeline)))) {
             grassMaskPipeline = nullptr;
             grassMaskFailed = true;
-            LOG_ERROR("grass: its mask's pipeline failed - every root looked at, as before");
+            LOG_ERROR("grass: its mask's pipeline failed - no grass");
         }
     }
     if (!grassMaskPipeline) return false;
@@ -456,7 +455,7 @@ bool Renderer::Impl::ensureGrassMask(int w, int h) {
                                 D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
     grassMaskState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     if (!grassMask) {
-        LOG_ERROR("grass: no video memory for its mask at %dx%d - every root looked at, as before", w, h);
+        LOG_ERROR("grass: no video memory for its mask at %dx%d - no grass", w, h);
         return false;
     }
     if (grassMaskSrv == kNoSrv) grassMaskSrv = allocSrv();

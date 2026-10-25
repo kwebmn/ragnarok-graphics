@@ -226,3 +226,20 @@ TEST(game_camera_raises_a_box_of_the_bed_to_the_water) {
     CHECK(std::fabs(centre - 53.7f) < 1e-4f && std::fabs(half - 11.3f) < 1e-4f);
 }
 
+
+TEST(game_camera_target_point_is_where_the_camera_looks) {
+    // 3.0.5-beta.17: the point the game's camera looks at (the character) in the world, by the view -> world affine
+    // and its view depth - «Тест графіки» says where it was taken (a field's spots differ: the seams 4 or 10 ms)
+    for (const V3 at : {V3{50, 0, 80}, V3{-1230, -12.5f, 845}}) {
+        float view[12], v4[16], inv[16], toWorld[12];
+        lookAt({at.x + 250, at.y - 250, at.z + 20}, at, {0, -1, 0}, view);
+        affine4(view, v4);
+        CHECK(inverse4(v4, inv));
+        for (int r = 0; r < 4; ++r)
+            for (int c = 0; c < 3; ++c) toWorld[3 * r + c] = inv[4 * r + c];
+        const float a[3] = {at.x, at.y, at.z};
+        float out[3];
+        targetPoint(toWorld, viewZ(view, a), out);
+        CHECK(std::fabs(out[0] - at.x) < 1e-2f && std::fabs(out[1] - at.y) < 1e-2f && std::fabs(out[2] - at.z) < 1e-2f);
+    }
+}

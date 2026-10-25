@@ -5,6 +5,7 @@
 #include <string>
 
 #include "core/effect_groups.hpp"
+#include "core/game_camera.hpp"
 #include "core/graphics_test.hpp"
 #include "core/layout.hpp"
 #include "core/light_mode.hpp"
@@ -103,6 +104,20 @@ void Context::testStart() {
         return;
     }
     graphics_test::zoomRange(outdoor, ownLimits, limitFrom, limitSpan, testFrom_, testTo_);
+    // 3.0.5-beta.17 (R-APBSRU, R-F9VN2U: one field, two spots - the seams 4.2 and 9.7 ms): where the character stands,
+    // so the logs tell the tests' spots apart
+    float at[3] = {0.0f, 0.0f, 0.0f};
+    {
+        float view[12], v4[16], inv[16], toWorld[12], depth = 0.0f;
+        if (readGameCamera(view) && readCameraTargetDepth(depth)) {
+            camera::affine4(view, v4);
+            if (camera::inverse4(v4, inv)) {
+                for (int r = 0; r < 4; ++r)
+                    for (int c = 0; c < 3; ++c) toWorld[3 * r + c] = inv[4 * r + c];
+                camera::targetPoint(toWorld, depth, at);
+            }
+        }
+    }
     testStart_ = {yaw, distance};
     testMap_ = map;
     testLastS_ = testClockS();
@@ -110,10 +125,10 @@ void Context::testStart() {
     testSendAt_ = testSentUntil_ = 0;
     testFx_ = testSet(graphics_test::Set::Off);  // the game's draws ask effects() before the next present's step
     test_.start(testLastS_);
-    LOG_INFO("test: «Тест графіки» on %s - %d sets, each %.0f s settling and %.0f s measured; the camera turns once "
-             "from %.0f degrees, %.0f to %.0f and back (%s; it was at %.0f)",
-             map.c_str(), kSets, graphics_test::kSettleS, graphics_test::kMeasureS, yaw, testFrom_, testTo_,
-             ownLimits ? "the map's own limits" : outdoor ? "outdoors" : "a building", distance);
+    LOG_INFO("test: «Тест графіки» on %s at the world's %.0f, %.0f - %d sets, each %.0f s settling and %.0f s "
+             "measured; the camera turns once from %.0f degrees, %.0f to %.0f and back (%s; it was at %.0f)",
+             map.c_str(), double(at[0]), double(at[2]), kSets, graphics_test::kSettleS, graphics_test::kMeasureS, yaw,
+             testFrom_, testTo_, ownLimits ? "the map's own limits" : outdoor ? "outdoors" : "a building", distance);
 }
 
 // 3.0.5-beta.7 (the user: «сделай» - the settings app's button): a game started by «Тест графіки» begins the test on

@@ -2092,20 +2092,17 @@ float4 grass_ps(PresentOut i) : SV_Target {
     // 2.7.29: the sway's wave once a pixel, not at every root (the user: «можешь оптимизировать?» - the grass 3-5 ms
     // of a frame at 4K)
     float swayAll = (sin(t * 1.7 + swayPhase) * 0.25 + lean * 0.5 + windLean) * twinX;
-    bool masked = sourceRect.x > 0.5;  // 3.0.5-beta.12: grass_mask_ps's mask in tex0
+    // 3.0.5-beta.12: grass_mask_ps's mask in tex0. 3.0.5-beta.17 (R-RAFYSB: beta.16's grass 0.9 ms dearer - with a
+    // way without the mask beside the masked one in its loop, the old cards' compiler worked a marked root out both
+    // ways): the masked way alone; without its mask the grass is not drawn (the renderers)
     [loop] for (int k = first; k >= 1; k -= every) {
         float up = float(k) / twinX;
         float sway = swayAll * up * up;
         int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
-        GrassRoot g;
-        if (masked) {
-            // the mask's row of it (3.0.5-beta.16: every second row's - an odd row's root, the picture's last row
-            // clamped, has none), then only what grassRoot makes of it
-            if ((root.y & (every - 1)) != 0 || tex0.Load(int3(root.x, root.y >> (every - 1), 0)).r < 0.5) continue;
-            g = grassRootAt(root);
-        } else if (!grassRoot(root, last, g)) {
-            continue;
-        }
+        // the mask's row of it (3.0.5-beta.16: every second row's - an odd row's root, the picture's last row clamped,
+        // has none), then only what grassRoot makes of it
+        if ((root.y & (every - 1)) != 0 || tex0.Load(int3(root.x, root.y >> (every - 1), 0)).r < 0.5) continue;
+        GrassRoot g = grassRootAt(root);
         if (hereZ < g.v.z - 1.0) continue;  // something in front of the blade
         bool head = g.flower && up > g.height * 0.78;
         if (g.near > (head ? 0.2 : 0.05)) continue;

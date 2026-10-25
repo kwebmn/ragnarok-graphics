@@ -3053,7 +3053,7 @@ void Renderer11::applyGrass() {
         if (grassMask_.width != target_.width || grassMask_.height != maskHeight) {
             dropTarget(grassMask_);
             if (!makeTarget(grassMask_, target_.width, maskHeight, DXGI_FORMAT_R8_UNORM)) {
-                LOG_ERROR("grass: no video memory for its mask (Direct3D 11) - every root looked at, as before");
+                LOG_ERROR("grass: no video memory for its mask (Direct3D 11) - no grass");
                 grassMaskPs_ = nullptr;  // not tried again
             }
         }
@@ -3065,16 +3065,15 @@ void Renderer11::applyGrass() {
         }
     }
     pmark(effectName11(kTimeGrass11));
+    if (!masked) return;  // 3.0.5-beta.17: grass_ps takes its roots from the mask alone
     if (!grassLogged_)
         LOG_INFO("grass: on %s, blades up to %.0f pixels%s, their roots on every second row%s (Direct3D 11)",
                  map_.c_str(), c.twin[0], cells ? ", on the map's ground only" : "",
-                 masked ? (", the roots that can be one marked first at " + std::to_string(grassMask_.width) + "x" +
-                           std::to_string(grassMask_.height)).c_str()
-                        : "");
+                 (", the roots that can be one marked first at " + std::to_string(grassMask_.width) + "x" +
+                  std::to_string(grassMask_.height)).c_str());
     grassLogged_ = true;
     // copy 2: the picture's copy the mask was made from (made above), not made again
-    worldPass(grassPs_, c, masked ? 2 : 1, 1, depthSrv_, masked ? grassMask_.srv : nullptr,
-              held ? trampleSrv_ : nullptr, nullptr, cells);
+    worldPass(grassPs_, c, 2, 1, depthSrv_, grassMask_.srv, held ? trampleSrv_ : nullptr, nullptr, cells);
 }
 
 // 2.5.4 (critters.cpp noteCrown): a tree's leaves drawn - its crown in the world, for the leaves falling from it
