@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.4-beta.28 — what is new
+
+- **No hitch when the sun moves.** The hills' light on the own ground (beta.26) is baked into its colours and made
+  again when the sun of the day's clock moves. All of the ground in view was made again in one picture (~10 ms) - a
+  hitch could show every minute or two. Now eight pieces of ground a picture: the light hardly changes meanwhile, no
+  seams.
+- To check: with "The sun moves by the clock" and "Hills without steps of light" on, stand on prt_fild08 for a few minutes - no
+  hitch every minute.
+
 # uaRO Graphics 3.0.4-beta.27 — what is new
 
 - **The own ground shows right after a map's start.** It waited for all its pictures to reach the graphics card,
