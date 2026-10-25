@@ -272,6 +272,29 @@ bool Renderer::Impl::drawOwnGround() {
                 }
         }
     }
+    // 3.0.4-beta.26 (the user chose «Свет своего мира»): the smooth hills' light worked out on the own ground itself
+    // (own_ground::reliefLight, as hillLight) from its corners' normals - near and past the game's far plane alike -,
+    // baked into its vertices' colours; made again when the sun, the light all round or the strength moved
+    const bool relief = hillsWanted() && !g->cornerNormals.empty();
+    float sun[3] = {0.0f, -1.0f, 0.0f};
+    if (relief) {
+        sunInWorld(sun);
+        sun[0] *= float(axes.x), sun[1] *= float(axes.y), sun[2] *= float(axes.z);  // the world's way in file places
+    }
+    const float night = float(std::clamp(effects.nightNow, 0, 100)) / 100.0f;
+    const float ambient = mapOutdoors ? 0.55f + 0.3f * night : 0.75f;  // as hillsConstants
+    const float strength = float(std::clamp(effects.smoothHillsStrength, 0, 200)) / 100.0f;
+    const bool lightMoved = relief != o.lightOn ||
+                            (relief && (std::fabs(sun[0] - o.lightSun[0]) > 0.005f ||
+                                        std::fabs(sun[1] - o.lightSun[1]) > 0.005f ||
+                                        std::fabs(sun[2] - o.lightSun[2]) > 0.005f ||
+                                        std::fabs(ambient - o.lightAmbient) > 0.005f || strength != o.lightStrength));
+    if (lightMoved) {
+        o.lightOn = relief;
+        std::copy(sun, sun + 3, o.lightSun);
+        o.lightAmbient = ambient, o.lightStrength = strength;
+        for (std::vector<uint8_t>& f : o.fresh) std::fill(f.begin(), f.end(), uint8_t(0));
+    }
     const bool blends = effects.groundSeams && mapOutdoors;  // outdoors, as the game's ground's seams (seamsWanted)
     // 3.0.4-beta.15: the record of the last picture again when nothing it was made of changed
     OwnState::Made now;
@@ -282,7 +305,7 @@ bool Renderer::Impl::drawOwnGround() {
     now.fog[0] = o.shading.specularAt(100.0f), now.fog[1] = o.shading.specularAt(1000.0f);
     now.like = o.like;
     now.valid = true;
-    const bool same = o.made.valid && !meanMoved && o.changed.empty() &&
+    const bool same = o.made.valid && !meanMoved && !lightMoved && o.changed.empty() &&
                       std::memcmp(o.made.view, now.view, sizeof now.view) == 0 && o.made.width == now.width &&
                       o.made.height == now.height && o.made.serial == now.serial && o.made.blends == now.blends &&
                       o.made.models == now.models && o.made.seamsView == now.seamsView &&
@@ -354,7 +377,19 @@ bool Renderer::Impl::drawOwnGround() {
                     const terrain::Batch& bt = mesh.batches[b];
                     for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
                         const terrain::Vertex& tv = mesh.vertices[v];
-                        const uint32_t c = o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
+                        uint32_t c = o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
+                        if (o.lightOn) {  // 3.0.4-beta.26: the smooth hills' light, the corners' normals between
+                            float n[3];
+                            own_ground::normalAt(g->cornerNormals, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2],
+                                                 n);
+                            const float k = own_ground::reliefLight(n, o.lightSun, o.lightAmbient, o.lightStrength);
+                            uint32_t lit = c & 0xFF000000u;
+                            for (int s = 0; s < 3; ++s) {
+                                const float ch = float((c >> (s * 8)) & 0xFF) * k;
+                                lit |= uint32_t(std::clamp(int(ch + 0.5f), 0, 255)) << (s * 8);
+                            }
+                            c = lit;
+                        }
                         // a neighbour's strip: its alpha how much the place is the neighbour's
                         colours[v] = bt.layer == terrain::kNeighbour ? (c & 0xFFFFFFu) | (tv.color & 0xFF000000u) : c;
                     }

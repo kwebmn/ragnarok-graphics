@@ -318,6 +318,7 @@ void MapWorld::loop() {
                     own->height = full.height;
                     own->zoom = full.zoom;
                     own->atlas = terrain::lightmapAtlas(full);
+                    own->cornerNormals = own_ground::cornerNormals(full);  // 3.0.4-beta.26: the smooth hills' light
                     // 3.0.4-beta.12: the strips between the cells, none round a patch laid by hand
                     const std::vector<uint8_t>* laid = ground.laid.size() == full.cells.size() ? &ground.laid : nullptr;
                     own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid);

@@ -310,8 +310,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (it != textures.end() && !it->second.leafy && ensureMaterial(it->first, it->second, aiDrawn[0]))
             matTex = &it->second;
     }
-    // 1.15: smooth hills - a draw of the ground (its own or a seam's strip) reads the corners' normals (t3)
-    bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin && (s.zWrite || seamPass);
+    // 1.15: smooth hills - a draw of the ground (its own or a seam's strip) reads the corners' normals (t3).
+    // 3.0.4-beta.26: not the own ground's - its light is baked into its colours (drawOwnGround)
+    bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin && (s.zWrite || seamPass) &&
+                 !ownPass;
     // 2.2.4: DLSS's (upscaleMipBias) - not for what its mask keeps from the history (sprites, effects): their finer
     // texels it cannot gather, they would only shimmer
     const float mipBias = toWorld && !mask ? worldMipBias() : 0.0f;
@@ -406,8 +408,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
-    // 0.22.6: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly.
-    if (effects.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1] && t[1]->width == 256 && t[1]->height == 256)
+    // 0.22.6: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly. 3.0.4-beta.26: and the own
+    // ground's (its atlas 2048 wide, the cells laid as the game lays them: terrain::lightmapAtlas)
+    if (effects.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1] &&
+        ((t[1]->width == 256 && t[1]->height == 256) || (ownPass && d.texture[1] && d.texture[1] == ownState.atlas)))
         c.stage1[1] |= 1u << 25;
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
     if (coverage) c.alphaTest |= 1u << 17;

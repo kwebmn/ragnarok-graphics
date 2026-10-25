@@ -2338,13 +2338,13 @@ constexpr Entry kTexts[] = {
     {Text::FxGroundSeamsHint,
      "Where grass meets a road or sand, the line between them no longer runs in steps along the ground's cells: it "
      "wanders, one texture reaching into the other. On fields and in towns; the tiled floors of dungeons keep their "
-     "straight edges (Direct3D 12). With Own ground (prototype) on, its textures blend the same way.",
+     "straight edges (Direct3D 12). With Own ground on, its textures blend the same way.",
      "Там, де трава зустрічається з дорогою чи піском, межа між ними більше не йде сходинками вздовж клітинок землі: "
      "вона петляє, одна текстура заходить в іншу. На полях і в містах; плиткова підлога підземель зберігає рівні "
-     "краї (Direct3D 12). Зі «Своя земля (прототип)» так само змішуються текстури своєї землі.",
+     "краї (Direct3D 12). Зі «Своя земля» так само змішуються текстури своєї землі.",
      "Там, где трава встречается с дорогой или песком, граница между ними больше не идёт ступеньками вдоль клеток "
      "земли: она петляет, одна текстура заходит в другую. На полях и в городах; плиточный пол подземелий сохраняет "
-     "ровные края (Direct3D 12). Со «Своя земля (прототип)» так же смешиваются текстуры своей земли."},
+     "ровные края (Direct3D 12). Со «Своя земля» так же смешиваются текстуры своей земли."},
     {Text::ConsoleTitle, "uaRO Graphics - effects",
      "uaRO Graphics — ефекти",
      "uaRO Graphics — эффекты"},
@@ -4513,18 +4513,17 @@ constexpr Entry kTexts[] = {
      "Їхня частка від гучності звуків ефектів гри.",
      "Их доля от громкости звуков эффектов игры."},
     // 3.0.4-beta.10: the own world's prototype
-    {Text::FxOwnGround, "Own ground (prototype)",
-     "Своя земля (прототип)",
-     "Своя земля (прототип)"},
+    {Text::FxOwnGround, "Own ground",  // 3.0.4-beta.26 (the user chose «Своя земля в «Ремастер»»): no «prototype»
+     "Своя земля",
+     "Своя земля"},
     {Text::FxOwnGroundHint,
-     "A test of the remaster's next step: the ground drawn by uaRO Graphics itself from the map's file instead of the "
-     "game - smooth hills, the textures in full colour, the land past the far edge when the camera goes far out. "
-     "Made for prt_fild08 first; Direct3D 12.",
-     "Перевірка наступного кроку ремастера: землю малює сам uaRO Graphics із файла карти замість гри — плавні "
-     "пагорби, текстури в повному кольорі, земля і за дальнім краєм, коли камера далеко. Спершу для prt_fild08; "
-     "Direct3D 12.",
-     "Проверка следующего шага ремастера: землю рисует сам uaRO Graphics из файла карты вместо игры — плавные холмы, "
-     "текстуры в полном цвете, земля и за дальним краем, когда камера далеко. Сначала для prt_fild08; Direct3D 12."},
+     "The ground drawn by uaRO Graphics itself from the map's file instead of the game: smooth hills, the textures in "
+     "full colour, soft passes from one to the next, and when the camera goes far out the land, the water and the "
+     "houses on past the game's far edge. Direct3D 12.",
+     "Землю малює сам uaRO Graphics із файла карти замість гри: плавні пагорби, текстури в повному кольорі, м'які "
+     "переходи між ними, а коли камера далеко — земля, вода й будинки і за дальнім краєм гри. Direct3D 12.",
+     "Землю рисует сам uaRO Graphics из файла карты вместо игры: плавные холмы, текстуры в полном цвете, мягкие "
+     "переходы между ними, а когда камера далеко — земля, вода и дома и за дальним краем игры. Direct3D 12."},
     {Text::KeepFpsOffNote, "{1} is off for the rest of the game: {2} frames a second, under {3} (Keep the frame rate)",
      "{1}: вимкнено до кінця гри — {2} кадр/с, менше ніж {3} («Тримати частоту кадрів»)",
      "{1}: выключено до конца игры — {2} кадр/с, меньше {3} («Держать частоту кадров»)"},

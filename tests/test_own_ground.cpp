@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include "core/game_camera.hpp"
+#include "core/gnd.hpp"
 #include "core/map_axes.hpp"
 #include "core/own_ground.hpp"
 #include "test.hpp"
@@ -252,5 +253,38 @@ TEST(own_ground_cuts_a_triangle_where_its_depth_is_squeezed) {
     CHECK_EQ(own_ground::nearDepth(allNear, 1490.0f, n), 3);
     const float allFar[3] = {1600.0f, 1700.0f, 1800.0f};
     CHECK_EQ(own_ground::nearDepth(allFar, 1490.0f, n), 0);
+}
+
+TEST(own_ground_lights_its_slopes_as_the_smooth_hills) {
+    // 3.0.4-beta.26 (the user chose «Свет своего мира» with «Своя земля в «Ремастер»»): the smooth hills' light
+    // (shaders.cpp hillLight) worked out by the own ground itself - its corners' normals from the map's cells (up along
+    // -y), the light of a slope against a flat ground's - near and past the game's far plane alike, where the game's
+    // cells (the hills' grid) end
+    gnd::Ground g;
+    g.width = 3, g.height = 2, g.zoom = 10.0f;
+    g.cells.resize(6);
+    for (int k = 0; k < 6; ++k) {
+        gnd::Cell& c = g.cells[size_t(k)];
+        c.top = 0;
+        const int x = k % 3;  // rising along x: up is -y, 2 units a cell
+        c.h[0] = c.h[2] = -2.0f * float(x);
+        c.h[1] = c.h[3] = -2.0f * float(x + 1);
+    }
+    const std::vector<float> n = own_ground::cornerNormals(g);
+    CHECK_EQ(n.size(), size_t(4 * 3 * 3));
+    const float len = std::sqrt(0.2f * 0.2f + 1.0f);
+    for (size_t k = 0; k < n.size(); k += 3)  // every corner: the slope's normal (-0.2, -1, 0) made one long
+        CHECK(std::fabs(n[k] + 0.2f / len) < 1e-5f && std::fabs(n[k + 1] + 1.0f / len) < 1e-5f && n[k + 2] == 0.0f);
+    float at[3];
+    own_ground::normalAt(n, g.width, g.height, g.zoom, 0.0f, 0.0f, at);  // the map's middle
+    CHECK(std::fabs(at[0] + 0.2f / len) < 1e-5f);
+    // the light: the sun over a flat ground gives 1; the slope towards the sun brighter, away darker; strength 0: 1
+    const float flat[3] = {0.0f, -1.0f, 0.0f}, toSun[3] = {-0.6f, -0.8f, 0.0f};
+    CHECK(std::fabs(own_ground::reliefLight(flat, toSun, 0.55f, 1.0f) - 1.0f) < 1e-5f);
+    const float facing[3] = {-0.6f, -0.8f, 0.0f}, away[3] = {0.6f, -0.8f, 0.0f};
+    CHECK(own_ground::reliefLight(facing, toSun, 0.55f, 1.0f) > 1.0f);
+    CHECK(own_ground::reliefLight(away, toSun, 0.55f, 1.0f) < 1.0f);
+    CHECK(own_ground::reliefLight(away, toSun, 0.55f, 0.0f) == 1.0f);
+    CHECK(own_ground::reliefLight(away, toSun, 0.0f, 1.0f) >= 0.6f);  // as the shader: 0.6 to 1.4
 }
 

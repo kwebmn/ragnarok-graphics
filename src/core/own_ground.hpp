@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "core/game_camera.hpp"
+#include "core/gnd.hpp"
 #include "core/map_axes.hpp"
 
 namespace uagfx::own_ground {
@@ -71,6 +72,15 @@ int nearDepth(const float zd[3], float to, float out[4][3]);
 // farthest (3.0.4-beta.14), when given: their greatest
 bool boxInView(const View& v, const camera::Projection& p, int width, int height, const float lo[3], const float hi[3],
                float most, float& nearest, float* farthest = nullptr);
+
+// 3.0.4-beta.26 (the user chose «Свет своего мира»): the smooth hills' light (shaders.cpp hillLight) worked out by the
+// own ground itself, all over it - the game's hills grid ends with the game's cells. Each corner of the cells its
+// normal (up along -y, one long), the cells' slopes round it averaged ((width + 1) x (height + 1), 3 floats each); a
+// place between them (file places); the light of a slope against a flat ground's, as the shader works it out: the
+// way to the sun, the light all round (ambient), the strength (0 none, 1 the whole) - 0.6 to 1.4 before the strength
+std::vector<float> cornerNormals(const gnd::Ground& g);
+void normalAt(const std::vector<float>& corners, int width, int height, float zoom, float x, float z, float out[3]);
+float reliefLight(const float n[3], const float toSun[3], float ambient, float strength);
 
 // 3.0.4-beta.20: what of a map's own world the game's memory has room for - uaRO.exe is 32-bit and not large address
 // aware: 2 GB for the game, the driver and the card's driver together (lighthalzen's own world takes 214 MB as it is

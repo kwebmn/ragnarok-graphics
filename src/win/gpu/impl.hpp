@@ -1209,6 +1209,10 @@ struct Renderer::Impl {
             bool valid = false;
         } made;
         size_t madeChunks = 0, madeVertices = 0, madeTriangles = 0, reused = 0;
+        // 3.0.4-beta.26: the smooth hills' light baked into the colours made - its sun (file places), its light all
+        // round and its strength as they were made
+        bool lightOn = false;
+        float lightSun[3] = {0.0f, 0.0f, 0.0f}, lightAmbient = 0.0f, lightStrength = 0.0f;
         double slowest = 0.0;       // ms, of the frames so far
         size_t most = 0;            // vertices, the most a frame
         // 3.0.4-beta.20 (the own ground on every map): the map's water past the game's far plane (OwnGround::water) -

@@ -19,6 +19,7 @@ struct OwnGround {
     terrain::Mesh distant;  // the game's own cells, for the ground far off - the same chunks, one for one (not "far":
                             // windef.h makes it nothing)
     terrain::Atlas atlas;
+    std::vector<float> cornerNormals;  // 3.0.4-beta.26: the cells' corners' (own_ground::cornerNormals) - its light
     struct Picture {
         int width = 0, height = 0;
         std::vector<std::vector<uint32_t>> levels;  // ARGB, the whole first, then each half

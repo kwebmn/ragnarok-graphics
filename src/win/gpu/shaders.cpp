@@ -214,8 +214,11 @@ float4 twinTexel(float2 pos) {
 // middle 6x6 and the border texels its neighbours' (0x4e32e5). RO bakes the torches' coloured light (RGB) as sparse
 // dots and the cells are coarse: magnified they show as blotches with edges. Blurred within the cell - the colour
 // much, the shadow (alpha) a little.
+// 3.0.4-beta.26: any such atlas (the own ground's is 2048 wide): its size from the texture itself
 float4 smoothLightmap(float2 uv, float4 sharp) {
-    float2 t = uv * 256.0;
+    float2 size;
+    tex1.GetDimensions(size.x, size.y);
+    float2 t = uv * size;
     float2 lo = floor(t / 8.0) * 8.0 + 0.5;
     float2 hi = lo + 7.0;
     float4 sum = float4(0.0, 0.0, 0.0, 0.0);
@@ -223,7 +226,7 @@ float4 smoothLightmap(float2 uv, float4 sharp) {
     [unroll] for (int y = -1; y <= 1; ++y)
         [unroll] for (int x = -1; x <= 1; ++x) {
             float w = (x == 0 ? 2.0 : 1.0) * (y == 0 ? 2.0 : 1.0);
-            sum += tex1.SampleLevel(samp1, clamp(t + float2(x, y) * 1.5, lo, hi) / 256.0, 0) * w;
+            sum += tex1.SampleLevel(samp1, clamp(t + float2(x, y) * 1.5, lo, hi) / size, 0) * w;
             weights += w;
         }
     float4 soft = sum / weights;

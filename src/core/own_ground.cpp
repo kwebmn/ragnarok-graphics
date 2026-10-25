@@ -220,4 +220,59 @@ Room roomFor(uint64_t free, uint64_t models, uint64_t fine) {
     return Room::None;
 }
 
+std::vector<float> cornerNormals(const gnd::Ground& g) {
+    const int w = std::max(g.width, 0), h = std::max(g.height, 0);
+    std::vector<float> n(size_t(w + 1) * size_t(h + 1) * 3, 0.0f);
+    const float zoom = g.zoom > 0.0f ? g.zoom : 1.0f;
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const gnd::Cell& c = g.cells[size_t(y) * size_t(w) + size_t(x)];
+            if (c.top < 0) continue;
+            const float dx = ((c.h[1] - c.h[0]) + (c.h[3] - c.h[2])) / (2.0f * zoom);
+            const float dz = ((c.h[2] - c.h[0]) + (c.h[3] - c.h[1])) / (2.0f * zoom);
+            for (int k = 0; k < 4; ++k) {
+                float* p = &n[(size_t(y + (k >> 1)) * size_t(w + 1) + size_t(x + (k & 1))) * 3];
+                p[0] += dx, p[1] -= 1.0f, p[2] += dz;
+            }
+        }
+    for (size_t k = 0; k + 2 < n.size(); k += 3) {
+        const float l = std::sqrt(n[k] * n[k] + n[k + 1] * n[k + 1] + n[k + 2] * n[k + 2]);
+        if (l < 1e-6f) {
+            n[k] = n[k + 2] = 0.0f, n[k + 1] = -1.0f;  // no cell round it: flat
+            continue;
+        }
+        n[k] /= l, n[k + 1] /= l, n[k + 2] /= l;
+    }
+    return n;
+}
+
+void normalAt(const std::vector<float>& corners, int width, int height, float zoom, float x, float z, float out[3]) {
+    out[0] = out[2] = 0.0f, out[1] = -1.0f;
+    if (width <= 0 || height <= 0 || corners.size() < size_t(width + 1) * size_t(height + 1) * 3 || zoom <= 0.0f)
+        return;
+    const float gx = std::clamp(x / zoom + float(width) / 2.0f, 0.0f, float(width));
+    const float gz = std::clamp(z / zoom + float(height) / 2.0f, 0.0f, float(height));
+    const int x0 = std::min(int(gx), width - 1), z0 = std::min(int(gz), height - 1);
+    const float fx = gx - float(x0), fz = gz - float(z0);
+    float n[3] = {0.0f, 0.0f, 0.0f};
+    for (int k = 0; k < 4; ++k) {
+        const int cx = x0 + (k & 1), cz = z0 + (k >> 1);
+        const float w = ((k & 1) ? fx : 1.0f - fx) * ((k >> 1) ? fz : 1.0f - fz);
+        const float* c = &corners[(size_t(cz) * size_t(width + 1) + size_t(cx)) * 3];
+        for (int a = 0; a < 3; ++a) n[a] += c[a] * w;
+    }
+    const float l = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+    if (l > 1e-6f)
+        for (int a = 0; a < 3; ++a) out[a] = n[a] / l;
+}
+
+float reliefLight(const float n[3], const float toSun[3], float ambient, float strength) {
+    const float sl = std::sqrt(toSun[0] * toSun[0] + toSun[1] * toSun[1] + toSun[2] * toSun[2]);
+    if (sl < 1e-6f) return 1.0f;
+    const float L[3] = {toSun[0] / sl, toSun[1] / sl, toSun[2] / sl};
+    const float lit = std::max(n[0] * L[0] + n[1] * L[1] + n[2] * L[2], 0.0f), flat = std::max(-L[1], 0.0f);
+    const float k = (ambient + (1.0f - ambient) * lit) / std::max(ambient + (1.0f - ambient) * flat, 1e-3f);
+    return 1.0f + (std::clamp(k, 0.6f, 1.4f) - 1.0f) * strength;
+}
+
 }  // namespace uagfx::own_ground
