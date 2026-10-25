@@ -276,6 +276,10 @@ struct EffectSettings {
     // characters walk. Off by default: it costs the card the most of the effects.
     bool grass = false;
     int grassAmount = 70;  // %, 0-100
+    // 3.0.4-beta.35 (the user: «у людей отключается трава на слабых видеокартах»): the driver's own, in no file - the
+    // grass thinned, its roots on every second row (half its work): a card weak by its memory's, and keep_fps's first
+    // step before it turns anything off (effect_costs::pickToDrop)
+    bool grassThin = false;
     // 0.82: the skills' sparks - embers rise from burning skills, glints of their colour spread from the others.
     // 0.84: off by default.
     bool skillSparks = false;
@@ -589,6 +593,9 @@ struct Config {
     // 2.7.8: [debug] seams_view - the ground seams' strips coloured (1) or coloured over everything (2): what blinks
     // on the hills; 0 the picture as usual
     int seamsView = 0;
+    // 3.0.4-beta.35: [debug] weak_card - the card taken as weak by its memory, to try the judge of its speed
+    // (core/card_speed.hpp) on a strong one
+    bool weakCard = false;
     // 0.88: [debug] state_cache - Direct3D 11 calls only for what changed between the game's draws; 0 calls everything
     // each draw as before (should a picture come out wrong with it)
     bool stateCache = true;

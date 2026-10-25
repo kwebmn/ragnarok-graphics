@@ -753,6 +753,8 @@ const std::vector<IniSetting>& iniSettings() {
         {"debug", "seams_view", Page::Debug, Control::Choice, 0, 0, 0, {"0", "1", "2"},  // 2.7.8
          {Text::DebugSeamsOff, Text::DebugSeamsColour, Text::DebugSeamsOnTop}, Text::DebugSeams,
          Text::DebugSeamsHint, ""},
+        {"debug", "weak_card", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugWeakCard,
+         Text::DebugWeakCardHint, ""},  // 3.0.4-beta.35
         {"quality", "dlss_jitter", Page::Debug, Control::Check, 0, 1, 1, {"normal", "inverted"}, {},
          Text::DebugDlssJitter, Text::DebugDlssJitterHint, ""},
         {"quality", "dlss_motion", Page::Debug, Control::Check, 0, 1, 1, {"normal", "inverted"}, {},
@@ -916,6 +918,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "debug.profile") return c.profile ? "1" : "0";
     if (k == "debug.xray") return c.xray ? "1" : "0";  // 2.3
     if (k == "debug.seams_view") return std::to_string(c.seamsView >= 0 && c.seamsView <= 2 ? c.seamsView : 0);
+    if (k == "debug.weak_card") return c.weakCard ? "1" : "0";  // 3.0.4-beta.35
     if (k == "frames.save_power") return c.savePower ? "1" : "0";
     if (k == "frames.fps_counter") return c.fpsCounter ? "1" : "0";
     if (k == "display.ui_native") return c.uiNative ? "1" : "0";

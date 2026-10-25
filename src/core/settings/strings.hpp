@@ -343,6 +343,7 @@ enum class Text : uint16_t {
     FxGroupCreatures, FxGroupCreaturesHint, FxGroupCaves, FxGroupCavesHint, FxGroupSky, FxGroupSkyHint,  // 2.6.22
     FxGroupScreen, FxGroupScreenHint, ConsoleThisMap, ConsoleSearch, ConsoleNothing,
     DebugSeams, DebugSeamsHint, DebugSeamsOff, DebugSeamsColour, DebugSeamsOnTop,  // 2.7.8
+    DebugWeakCard, DebugWeakCardHint,  // 3.0.4-beta.35
     PadEnabled, PadEnabledHint,  // 2.9
     UpdateOut, UpdateRestartNote, UpdatePlayWithout, UpdateDo, UpdatingTo, UpdateLoadedGame, UpdateLoadedApp,
     UpdateWaitGame, UpdateInstalling, UpdateLoadingDlss, UpdateLoadingModels, UpdateNothingChanged, ButtonCancel,
@@ -414,6 +415,9 @@ enum class Text : uint16_t {
     GfxSoundAmbience, GfxSoundAmbienceHint, GfxSoundAmbienceVolume, GfxSoundAmbienceVolumeHint,  // 3.0.4-beta.7
     FxOwnGround, FxOwnGroundHint,  // 3.0.4-beta.10: the own world's prototype
     KeepFpsOffNote,                // 3.0.4-beta.11: keep_fps's choice said on the screen (R-EQDYNE)
+    KeepFpsThinNote,               // 3.0.4-beta.35: keep_fps thinned the grass
+    CardRaisedNote,                // 3.0.4-beta.35: a weak card keeps up - the medium set on trial
+    CardLoweredNote,               // 3.0.4-beta.35: the medium set too much for it - the weak set back
     FxOwnFarModels, FxOwnFarModelsHint,  // 3.0.4-beta.14: a part of the own ground
     CameraZoomLimit, CameraZoomLimitHint,  // 3.0.4-beta.17: the camera no further out than the character is drawn
     Count

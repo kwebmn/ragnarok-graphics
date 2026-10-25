@@ -14,6 +14,7 @@
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/schema.hpp"
 #include "core/settings/search.hpp"
+#include "win/context.hpp"  // 3.0.4-beta.35: the card's level now (judged by its speed)
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/real_ddraw.hpp"
@@ -70,7 +71,7 @@ std::string groupKey(int g) { return std::string("effects.group_") + effect_grou
 // stay over the switches, as on the Effects page); a set other than custom decides them, not the file's lines.
 Config shownConfig(const Config& c) {
     Config shown = c;
-    shown.effects = effect_groups::shown(c.effects, startup().cardLevel);
+    shown.effects = effect_groups::shown(c.effects, Context::get().cardLevel());
     shown.ai = c.aiNow;  // 2.2.1: the AI pictures as the file says now (shown so at once)
     return shown;
 }
@@ -262,14 +263,15 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
     const std::string key = sectionKey(*s);
     // 2.6.22: an old file's ten groups written into the effects with this first change (as the settings app does)
     if (effect_groups::hasLegacy(config.effects))
-        for (const IniEdit& e : effect_groups::settleLegacy(config.effects, startup().cardLevel)) edits.push_back(e);
+        for (const IniEdit& e : effect_groups::settleLegacy(config.effects, Context::get().cardLevel()))
+            edits.push_back(e);
     // 2.2: an effect's own switch or the mode while a set decides them - the set made the player's own first (as it
     // has them, in the same write); 2.2.2: custom chosen here as well, as on the Effects page (the switches the set
     // had, not whatever the file held from before)
     const effect_groups::Member* member = effect_groups::memberOf(key);
     if (member || key == "effects.tier" || (key == "effects.preset" && next == "custom")) {
         const std::string except = member ? member->key : key.substr(8);
-        for (const auto& [k, v] : effect_groups::materialize(config.effects, startup().cardLevel, except))
+        for (const auto& [k, v] : effect_groups::materialize(config.effects, Context::get().cardLevel(), except))
             edits.push_back({"effects", k, v});
     }
     edits.push_back({s->section, s->key, next});
@@ -560,7 +562,7 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 if (r.key == "effects.preset" && tok == "auto") {  // 2.2.2: "Auto: Medium" - the card's (was "{1}")
                     static const Text kLevels[] = {Text::FxPresetWeak, Text::FxPresetWeak, Text::FxPresetMedium,
                                                    Text::FxPresetStrong};
-                    const int level = std::clamp(startup().cardLevel, 0, 3);
+                    const int level = std::clamp(Context::get().cardLevel(), 0, 3);
                     choice = fmt(tr(lang_, Text::FxPresetAuto), {tr(lang_, kLevels[level])});
                 }
                 text(x, y, wide(tr(lang_, s->label)), RGB(200, 200, 190));

@@ -367,7 +367,9 @@ bool Renderer::Impl::applyGrass() {
     }
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
-    c.uiPixels[2] = float(trample::rootRows(k));  // 2.7.29: at 4K the roots on every second row - half the work
+    // 2.7.29: at 4K the roots on every second row - half the work; 3.0.4-beta.35: so too the grass thinned (a card weak
+    // by its memory's, keep_fps's first step: EffectSettings::grassThin)
+    c.uiPixels[2] = effects.grassThin ? 2.0f : float(trample::rootRows(k));
     c.uiPixels[3] = waterLevelKnown ? waterTop + 0.05f : 1e9f;  // 2.7.2: no blades under the water (grass_ps)
     if (held) {
         c.footprint = 1.0f;

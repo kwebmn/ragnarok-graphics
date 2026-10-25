@@ -190,6 +190,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.portalNew = rd.u8() != 0;  // 2.7.48
             e.ownGround = rd.u8() != 0;  // 3.0.4-beta.10
             e.ownFarModels = rd.u8() != 0;  // 3.0.4-beta.14
+            e.grassThin = rd.u8() != 0;  // 3.0.4-beta.35
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

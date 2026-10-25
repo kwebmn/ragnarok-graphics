@@ -285,7 +285,7 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
         if (s.number && this->*s.number != o.*s.number) return false;
     }
     return nightNow == o.nightNow && dayNow == o.dayNow && clock == o.clock && season == o.season &&
-           weatherKind == o.weatherKind && tier == o.tier && preset == o.preset &&
+           weatherKind == o.weatherKind && tier == o.tier && preset == o.preset && grassThin == o.grassThin &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&
            std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength) &&
            std::equal(legacyGroups, legacyGroups + kOldEffectGroups, o.legacyGroups) &&
@@ -679,6 +679,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.xray);
         } else if (key == "debug.seams_view") {  // 2.7.8
             if (val == "0" || val == "1" || val == "2") c.seamsView = val[0] - '0';
+        } else if (key == "debug.weak_card") {  // 3.0.4-beta.35
+            setBool(val, c.weakCard);
         } else if (key == "debug.log") {
             if (val == "normal") c.logLevel = LogLevel::Info;
             if (val == "verbose") c.logLevel = LogLevel::Debug;

@@ -3444,6 +3444,17 @@ constexpr Entry kTexts[] = {
     {Text::DebugSeamsOff, "Off", "Вимк", "Выкл"},
     {Text::DebugSeamsColour, "Coloured", "Кольором", "Цветом"},
     {Text::DebugSeamsOnTop, "Coloured, over everything", "Кольором поверх усього", "Цветом поверх всего"},
+    {Text::DebugWeakCard, "Take the card as weak", "Вважати відеокарту слабкою", "Считать видеокарту слабой"},
+    {Text::DebugWeakCardHint,
+     "To try how a weak card is judged by its speed: the card counts as one with little memory of its own - «Auto» "
+     "starts with the weak set, the grass thinned; after a minute of room on a map the medium set on trial, kept after "
+     "three (uaro-graphics\\card-level.txt). Off: the card's own memory decides.",
+     "Щоб перевірити, як слабку відеокарту оцінює її швидкість: карта вважається такою, що має мало своєї пам'яті, — "
+     "«Авто» починає зі слабкого набору, трава проріджена; після хвилини із запасом на карті — середній набір на "
+     "пробу, після трьох він лишається (uaro-graphics\\card-level.txt). Вимкнено — вирішує пам'ять самої карти.",
+     "Чтобы проверить, как слабую видеокарту оценивает её скорость: карта считается такой, у которой мало своей "
+     "памяти, — «Авто» начинает со слабого набора, трава прорежена; после минуты с запасом на карте — средний набор на "
+     "пробу, после трёх он остаётся (uaro-graphics\\card-level.txt). Выключено — решает память самой карты."},
     {Text::PadEnabled, "Gamepad (uaRO Pad)",
      "Геймпад (uaRO Pad)",
      "Геймпад (uaRO Pad)"},
@@ -4527,6 +4538,16 @@ constexpr Entry kTexts[] = {
     {Text::KeepFpsOffNote, "{1} is off for the rest of the game: {2} frames a second, under {3} (Keep the frame rate)",
      "{1}: вимкнено до кінця гри — {2} кадр/с, менше ніж {3} («Тримати частоту кадрів»)",
      "{1}: выключено до конца игры — {2} кадр/с, меньше {3} («Держать частоту кадров»)"},
+    {Text::KeepFpsThinNote,
+     "The grass thinned for the rest of the game: {1} frames a second, under {2} (Keep the frame rate)",
+     "Траву проріджено до кінця гри — {1} кадр/с, менше ніж {2} («Тримати частоту кадрів»)",
+     "Трава прорежена до конца игры — {1} кадр/с, меньше {2} («Держать частоту кадров»)"},
+    {Text::CardRaisedNote, "The card keeps up: the medium set of effects, the grass with it, on trial",
+     "Відеокарта встигає: середній набір ефектів, із травою, — на пробу",
+     "Видеокарта успевает: средний набор эффектов, с травой, — на пробу"},
+    {Text::CardLoweredNote, "The medium set is too much for this card: the weak set back",
+     "Середній набір заважкий для цієї відеокарти — повернуто слабкий",
+     "Средний набор тяжёл для этой видеокарты — возвращён слабый"},
     {Text::FxOwnFarModels, "Houses and trees far off", "Будинки й дерева вдалині", "Дома и деревья вдали"},
     {Text::FxOwnFarModelsHint,
      "With the own ground, the map's houses, trees and rocks drawn by uaRO Graphics from the map's files past the edge "

@@ -10,6 +10,7 @@
 #include <cstring>
 #include <string>
 
+#include "core/card_speed.hpp"
 #include "core/effect_groups.hpp"
 #include "core/launcher.hpp"
 #include "core/log_files.hpp"
@@ -308,9 +309,18 @@ Startup decide() {
                  p.adapter.c_str(), p.ok ? featureLevelName(p.level).c_str() : "-", static_cast<unsigned long>(p.hr));
     }
     s.choice = chooseRenderer(s.config, facts, kUaroBuilt);
-    s.cardLevel = effect_groups::cardLevel(s.choice.api == Api::D3d12 && facts.d3d12, vramMb);
-    LOG_INFO("effects: set %s, the card's level %d", effect_groups::presetToken(s.config.effects.preset),
-             s.cardLevel);
+    s.memoryLevel = s.config.weakCard ? 1 : effect_groups::cardLevel(s.choice.api == Api::D3d12 && facts.d3d12, vramMb);
+    // 3.0.4-beta.35: a weak card judged by how it draws (core/card_speed.hpp) - its verdict from the last games
+    std::string judged;
+    readTextFile(dir + "\\uaro-graphics\\card-level.txt", judged);
+    s.cardLevel = card_speed::levelAt(s.memoryLevel, s.adapter, judged);
+    s.cardDecided = card_speed::decided(s.memoryLevel, s.adapter, judged);
+    LOG_INFO("effects: set %s, the card's level %d%s", effect_groups::presetToken(s.config.effects.preset),
+             s.cardLevel,
+             s.cardDecided ? (s.cardLevel > s.memoryLevel ? " (judged by its speed: it keeps up)"
+                                                         : " (judged by its speed: the medium set too much)")
+             : s.memoryLevel == 1 ? " (its speed to be judged on the maps)"
+                                   : "");
     // 2.2.1: also for the statistics - sent when the game ends, with the player's leave
     startWatcher(dir);  // 2.10: always - the update check; reports and statistics as the settings say
     LOG_INFO("renderer: %s%s (%s)", rendererName(s.choice.renderer),

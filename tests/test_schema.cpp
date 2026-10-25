@@ -103,6 +103,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "debug.state_cache" && k != "debug.fast_pick" && k != "debug.fast_ftol" &&
                                 k != "debug.fast_textures" && k != "debug.merge_draws" &&
                                 k != "debug.shader_variants" &&
+                                k != "debug.weak_card" &&  // 3.0.4-beta.35: the card's level is the start's
                                 k.compare(0, 3, "ai.") != 0 &&
                                 // [sound] at the game's start; 3.0.4-beta.1: the output device at once,
                                 // 3.0.4-beta.7: the world's sounds too

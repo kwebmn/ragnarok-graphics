@@ -92,3 +92,28 @@ TEST(effect_costs_keep_fps_leaves_what_the_player_turned_on) {
     CHECK(std::find(on.begin(), on.end(), "materials") != on.end());
     CHECK(effect_costs::turnedOn(now, now).empty());
 }
+
+TEST(effect_costs_keep_fps_thins_the_grass_first_and_turns_it_off_last) {
+    // 3.0.4-beta.35 (the user: «у людей отключается трава на слабых видеокартах»; R-EQDYNE, a Radeon 780M: the grass
+    // 4.94 ms, the costliest, went first): keep_fps thins the grass (its roots on every second row - half its work),
+    // then turns the others off by their cost, the grass itself last
+    EffectSettings e = effectsOff();
+    e.grass = e.ao = e.glow = true;
+    const effect_costs::Costs c{{"grass", 4.94}, {"ao", 1.71}, {"glow", 0.85}};
+    CHECK(effect_costs::pickToDrop(e, c, {}) == "grass_thin");
+    effect_costs::drop(e, "grass_thin");
+    CHECK(e.grass && e.grassThin);
+    CHECK(effect_costs::pickToDrop(e, c, {"grass_thin"}) == "ao");  // then the costliest of the others
+    CHECK(effect_costs::pickToDrop(e, c, {"grass_thin", "ao"}) == "glow");
+    CHECK(effect_costs::pickToDrop(e, c, {"grass_thin", "ao", "glow"}) == "grass");  // the grass last
+    EffectSettings cheap = effectsOff();  // a little grass: the others first, it thinned once they are gone
+    cheap.grass = cheap.ao = true;
+    const effect_costs::Costs little{{"grass", 0.4}, {"ao", 1.2}};
+    CHECK(effect_costs::pickToDrop(cheap, little, {}) == "ao");
+    CHECK(effect_costs::pickToDrop(cheap, little, {"ao"}) == "grass_thin");
+    CHECK(effect_costs::pickToDrop(e, {}, {}) == "ao");  // unmeasured: the usual order, the grass still last
+    EffectSettings own = e;  // turned on by hand in this game: left whole
+    own.grassThin = false;
+    CHECK(effect_costs::pickToDrop(own, c, {"grass"}) == "ao");
+    CHECK(effect_costs::pickToDrop(own, c, {"grass", "ao", "glow"}).empty());
+}

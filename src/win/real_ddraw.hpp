@@ -13,6 +13,10 @@ struct Startup {
     Config config;
     RendererChoice choice;
     int cardLevel = 1;  // 2.2: the card's for the automatic effects set (effect_groups::cardLevel)
+    // 3.0.4-beta.35: its memory's alone (a weak one's grass thinned), and whether its speed was judged already
+    // (core/card_speed.hpp: the judged level is cardLevel - the game's own judge goes on from it)
+    int memoryLevel = 1;
+    bool cardDecided = false;
     // 2.2.1: the card's name, maker and video memory (the statistics, core/usage.hpp)
     std::string adapter;
     unsigned vendor = 0;

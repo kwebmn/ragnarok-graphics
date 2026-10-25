@@ -93,7 +93,10 @@ double costOf(const Costs& c, const std::string& key) {
     return it == c.end() ? -1 : it->second;
 }
 
-std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped) {
+namespace {
+
+// The switches before 3.0.4-beta.35's grass order: the costliest measured, the extras, the usual order
+std::string pickOther(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped) {
     const Costly* best = nullptr;
     double most = 0.05;
     for (const Costly& k : kCostly) {
@@ -121,7 +124,28 @@ std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<s
     return extra();
 }
 
+}  // namespace
+
+// 3.0.4-beta.35 (the user: «у людей отключается трава на слабых видеокартах»; R-EQDYNE, a Radeon 780M: the grass, 4.94
+// ms the costliest, went first): the grass thinned first when it is worth a millisecond (or nothing is measured), then
+// the others by their cost, the grass thinned once they are gone, and turned off last
+std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped) {
+    const bool grassOn = e.grass && !dropped.count("grass");
+    const bool canThin = grassOn && !e.grassThin && !dropped.count("grass_thin");
+    const auto grassCost = c.find("grass");
+    if (canThin && (grassCost == c.end() || grassCost->second >= 1.0)) return "grass_thin";
+    std::set<std::string> others = dropped;
+    others.insert("grass");
+    const std::string other = pickOther(e, c, others);
+    if (!other.empty()) return other;
+    return canThin ? "grass_thin" : grassOn ? "grass" : "";
+}
+
 void drop(EffectSettings& e, const std::string& key) {
+    if (key == "grass_thin" || key == "effects.grass_thin") {
+        e.grassThin = true;
+        return;
+    }
     if (const Costly* k = find(key)) e.*k->on = false;
 }
 

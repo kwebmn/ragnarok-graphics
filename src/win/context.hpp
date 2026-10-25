@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "core/card_speed.hpp"
 #include "core/light_mode.hpp"
 #include "core/map_load.hpp"
 #include "core/glint.hpp"
@@ -45,6 +46,8 @@ public:
     // time they were 2 % of the game's thread with Direct3D 11
     const EffectSettings& effects() const;
     void settingsChanged() { effectsMade_ = false; }  // `config` replaced
+    // 3.0.4-beta.35: the card's level for the automatic set now - the start's, moved by its speed (core/card_speed)
+    int cardLevel() const { return judge().level(); }
     gpu::Renderer* renderer = nullptr;
     FrameRecord record;
     int screenWidth = 0;
@@ -177,6 +180,14 @@ private:
     std::set<std::string> keepByHand_;
     std::wstring keepNote_;
     uint64_t keepNoteUntil_ = 0;
+    // 3.0.4-beta.35 (the user: «у людей отключается трава на слабых видеокартах»): a weak card judged by how it draws,
+    // over keep_fps's windows - only those on a map the whole window (the game's camera read every frame)
+    card_speed::Judge& judge() const;
+    void judgeCard(const Config& config, double fps, double gpuMs);
+    void sayOnScreen(const std::wstring& note);
+    mutable card_speed::Judge judge_{0, true};
+    mutable bool judgeMade_ = false;
+    bool keepOnMap_ = false;
     uint64_t costsWritten_ = 0;
     FpsOverlay fps_;
     Console console_;               // 1.9.3: ~ - the effects' switches over the game

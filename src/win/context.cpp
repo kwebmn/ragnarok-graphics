@@ -154,7 +154,10 @@ void Context::writeUsage(const std::string& lines) {
 const EffectSettings& Context::effects() const {
     if (!effectsMade_) {
         // 2.5.20: as the light modes leave them - super-light none, the battery's at most the weak set's
-        effects_ = light::effectsOf(effect_groups::effective(config.effects, startup().cardLevel), light_);
+        effects_ = light::effectsOf(effect_groups::effective(config.effects, cardLevel()), light_);
+        // 3.0.4-beta.35: a card weak by its memory - the grass thinned (its roots on every second row), even raised by
+        // its speed; keep_fps thins it too (keepOff_'s grass_thin)
+        effects_.grassThin = startup().memoryLevel == 1;
         effectsMade_ = true;
     }
     return effects_;
@@ -777,7 +780,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
             EffectSettings file = parseConfig(text).effects;
             for (int g = 0; g < kEffectGroups; ++g)  // a group held: all of it off
                 if (comparing == std::string("effects.group_") + effect_groups::groupWord(g)) file.groups[g] = false;
-            compareFx_ = effect_groups::effective(file, startup().cardLevel);
+            compareFx_ = effect_groups::effective(file, cardLevel());
             if (const effect_groups::Member* fxm = effect_groups::memberOf(comparing)) compareFx_.*fxm->on = false;
         }
     }
@@ -972,26 +975,33 @@ void Context::keepFrameRate(const Config& config, HWND window) {
         writeFileAtomic(gameDir() + "\\uaro-graphics\\effect-costs.txt", effect_costs::format(costs));
     }
     if (config.keepFps <= 0) {
-        keepOff_.clear();  // turned off: the effects come back
-        keepSince_ = 0;
-        return;
+        keepOff_.clear();  // turned off: the effects come back (3.0.4-beta.35: the windows go on for the card's judge)
+        keepSlow_ = 0;
     }
     if (!enhanced_ || !window || GetForegroundWindow() != window || IsIconic(window)) {
         keepSince_ = 0;  // a frame rate in the background says nothing
         return;
     }
+    float seen[12];  // 3.0.4-beta.35: a map shown all the window long - the login's screens draw next to nothing
+    const bool onMap = !map_.empty() && readGameCamera(seen);
     if (!keepSince_) {
         keepSince_ = now;
         keepFrames_ = 0;
+        keepOnMap_ = onMap;
         return;
     }
     ++keepFrames_;
+    keepOnMap_ = keepOnMap_ && onMap;
     if (now - keepSince_ < 5000) return;
     const double fps = double(keepFrames_) * 1000.0 / double(now - keepSince_);
+    const bool windowOnMap = keepOnMap_;
     keepSince_ = now;
     keepFrames_ = 0;
+    keepOnMap_ = onMap;
     GpuTiming gpu;  // 2.2.2: the card's own work - a game slow for the processor's part keeps its effects
     const double gpuMs = renderer && renderer->gpuTiming(gpu) ? gpu.gpuMs : -1.0;
+    if (windowOnMap) judgeCard(config, fps, gpuMs);
+    if (config.keepFps <= 0) return;
     keepSlow_ = effect_costs::slowForCard(fps, config.keepFps, gpuMs) ? keepSlow_ + 1 : 0;
     if (keepSlow_ < 2) return;
     keepSlow_ = 0;
@@ -1002,20 +1012,70 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     const std::string key = effect_costs::pickToDrop(fx, measured ? costs : effect_costs::Costs{}, passed);
     if (key.empty()) return;
     keepOff_.insert(key);
-    const double ms = effect_costs::costOf(costs, key);
+    effectsMade_ = false;  // 3.0.4-beta.35: the thinned grass is in the effects made
+    const bool thin = key == "grass_thin";  // 3.0.4-beta.35: the grass thinned, not off
+    const double ms = effect_costs::costOf(costs, thin ? "grass" : key);
     char cost[48] = "", card[48] = "";
     if (ms >= 0) std::snprintf(cost, sizeof cost, " (it cost %.2f ms)", ms);
     if (gpuMs >= 0) std::snprintf(card, sizeof card, ", the card %.1f ms a frame", gpuMs);
-    LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.%s off for this game%s", fps, config.keepFps, card, key.c_str(),
-             cost);
+    if (thin)
+        LOG_INFO("keep_fps: %.0f fps, under %d%s - the grass thinned for this game (its roots on every second row)%s",
+                 fps, config.keepFps, card, cost);
+    else
+        LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.%s off for this game%s", fps, config.keepFps, card,
+                 key.c_str(), cost);
     // 3.0.4-beta.11: said on the screen too - the grass gone with nothing said looked like a fault (R-EQDYNE)
     const settings::IniSetting* s = settings::findSetting("effects." + key);
     const settings::Lang lang = startup().lang;
     const std::string name = s ? settings::tr(lang, s->label) : key;
-    keepNote_ = wideOf(settings::fmt(settings::tr(lang, settings::Text::KeepFpsOffNote),
-                                     {name, std::to_string(int(fps + 0.5)), std::to_string(config.keepFps)}));
-    keepNoteUntil_ = now + 10000;
+    const std::string fpsNow = std::to_string(int(fps + 0.5)), target = std::to_string(config.keepFps);
+    const settings::Text note = thin ? settings::Text::KeepFpsThinNote : settings::Text::KeepFpsOffNote;
+    sayOnScreen(wideOf(thin ? settings::fmt(settings::tr(lang, note), {fpsNow, target})
+                            : settings::fmt(settings::tr(lang, note), {name, fpsNow, target})));
+}
+
+// 3.0.4-beta.35: a line on the screen for 10 s (the frame counter's)
+void Context::sayOnScreen(const std::wstring& note) {
+    keepNote_ = note;
+    keepNoteUntil_ = GetTickCount64() + 10000;
     if (enhanced_) fps_.setNote(keepNote_);
+}
+
+card_speed::Judge& Context::judge() const {
+    if (!judgeMade_) {
+        judge_ = card_speed::Judge(startup().cardLevel, startup().cardDecided);
+        judgeMade_ = true;
+    }
+    return judge_;
+}
+
+// 3.0.4-beta.35 (the user: «у людей отключается трава на слабых видеокартах»): a window on a map for the card's judge
+// (core/card_speed.hpp) - the automatic set alone has a card's level to move; its verdict written for the next games
+// and the settings app (uaro-graphics\card-level.txt)
+void Context::judgeCard(const Config& config, double fps, double gpuMs) {
+    if (config.effects.preset != EffectPreset::Auto) return;
+    const int target = config.fpsLimit > 0 ? config.fpsLimit : 60;
+    const card_speed::Step step = judge().window(fps, target, gpuMs, config.keepFps);
+    if (step == card_speed::Step::None) return;
+    effectsMade_ = false;
+    const Startup& s = startup();
+    const settings::Lang lang = startup().lang;
+    if (step == card_speed::Step::Raise) {
+        LOG_INFO("card level: %s keeps up - its own work %.1f ms a frame of %.1f for a minute on the maps: the medium "
+                 "set on trial", s.adapter.c_str(), gpuMs, 1000.0 / double(target));
+        sayOnScreen(wideOf(settings::tr(lang, settings::Text::CardRaisedNote)));
+        return;
+    }
+    const bool kept = step == card_speed::Step::Keep;
+    writeFileAtomic(gameDir() + "\\uaro-graphics\\card-level.txt", card_speed::format({kept ? 2 : 1, s.adapter}));
+    if (kept) {
+        LOG_INFO("card level: %s - the medium set kept (three minutes on it without the card holding the game back)",
+                 s.adapter.c_str());
+        return;
+    }
+    LOG_INFO("card level: %s - %.0f fps, under %d with the card %.1f ms a frame: back to the weak set, not tried again",
+             s.adapter.c_str(), fps, config.keepFps > 0 ? config.keepFps : target, gpuMs);
+    sayOnScreen(wideOf(settings::tr(lang, settings::Text::CardLoweredNote)));
 }
 
 void Context::watchSettings() {
@@ -1062,7 +1122,7 @@ void Context::watchSettings() {
         audio::configureAmbience(config.sound.ambience, config.sound.ambienceVolume);  // 3.0.4-beta.7
     if (config.statsSend && usage_.begun()) {  // 2.2.1: what was changed in the game - what was liked, or not
         std::string lines;  // 2.2.2: the effects by what is drawn (a set made the player's own changes nothing)
-        for (const std::string& a : usage::changes(was.effects, config.effects, startup().cardLevel, u.applied))
+        for (const std::string& a : usage::changes(was.effects, config.effects, cardLevel(), u.applied))
             usage_.change(a, lines);
         writeUsage(lines);
     } else if (!config.statsSend && was.statsSend && usage_.begun()) {

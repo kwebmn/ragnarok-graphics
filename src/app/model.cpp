@@ -12,6 +12,7 @@
 #include "app/installer.hpp"
 #include "app/text.hpp"
 #include "app/update_run.hpp"
+#include "core/card_speed.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/compat_flags.hpp"
 #include "core/settings/pad_files.hpp"
@@ -130,7 +131,12 @@ void Model::load() {
 int Model::cardLevel() const {
     const bool d3d12 = system_.d3d12Probed && system_.d3d12.ok &&
                        token(*findSetting("renderer.api")) != "d3d11";
-    return effect_groups::cardLevel(d3d12, system_.d3d12.vramMb);
+    const bool weak = token(*findSetting("debug.weak_card")) == "1";  // 3.0.4-beta.35: taken as weak, to try it
+    const int memory = weak ? 1 : effect_groups::cardLevel(d3d12, system_.d3d12.vramMb);
+    // 3.0.4-beta.35: a weak card judged by how it draws in the game (the driver's uaro-graphics\card-level.txt)
+    std::string judged;
+    readFile(paths_.dir + L"\\uaro-graphics\\card-level.txt", judged);
+    return card_speed::levelAt(memory, system_.d3d12.adapter, judged);
 }
 
 void Model::settleOldGroups() {

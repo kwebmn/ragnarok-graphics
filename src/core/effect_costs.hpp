@@ -38,9 +38,10 @@ std::string passOf(const std::string& key);
 // [frames] keep_fps: the switch to turn off next - on, not turned off already: the costliest measured one of a
 // millisecond or more; then (2.5.16) what the world's own draws do (the materials, the relief, the characters' light,
 // ... - no pass to time); then the costliest measured over 0.05 ms; with nothing measured, the first of a list from
-// the usually costliest down. "" when none is left. (2.5.9: Direct3D 11 times its passes too.)
+// the usually costliest down. "" when none is left. (2.5.9: Direct3D 11 times its passes too.) 3.0.4-beta.35: the
+// grass apart - "grass_thin" first while it is worth a millisecond (or nothing is measured), turned off ("grass") last
 std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped);
-void drop(EffectSettings& e, const std::string& key);  // its switch off
+void drop(EffectSettings& e, const std::string& key);  // its switch off; "grass_thin": EffectSettings::grassThin
 // 3.0.4-beta.11 (R-EQDYNE): the switches keep_fps may turn off that are on in `now` and were off in `was` - turned on
 // by hand while the game runs (the console, the settings app): keep_fps leaves them for the rest of the game
 std::vector<std::string> turnedOn(const EffectSettings& was, const EffectSettings& now);
