@@ -82,7 +82,7 @@ void Renderer::Impl::dropOwnGround() {
     ownState.atlas = 0;
     ownState.texture = ownState.level = 0;
     ownState.atlasRow = 0;
-    ownState.up = false;
+    ownState.up = ownState.groundUp = false;
     ownState.frame = false;
     for (int m = 0; m < 2; ++m) {  // 3.0.4-beta.12
         std::vector<uint32_t>().swap(ownState.colours[m]);
@@ -96,6 +96,8 @@ void Renderer::Impl::dropOwnGround() {
     ownState.made.valid = false;  // its record names the textures let go
     ownState.likeKnown = false;
     ownState.reused = 0;
+    ownState.minuteFrames = ownState.minuteReused = 0;  // 3.0.4-beta.27
+    std::fill(ownState.anew, ownState.anew + 8, 0u);
 }
 
 // At the picture's first ground draw of the game's: the map's own ground read (MapWorld), its textures made and their
@@ -188,13 +190,20 @@ bool Renderer::Impl::prepareOwnGround() {
     }
     for (const UploadCmd& u : o.uploads.uploads()) upload(o.uploads, u);
     o.uploads.reset();
-    if (!o.up) return false;
-    unsigned made = 0;
-    for (uint32_t id : o.ids) made += id != 0;
-    LOG_INFO("own ground: %s's pictures up - %u of %u textures, lightmaps %dx%d; the game's ground left out from now",
-             g->map.c_str(), made, unsigned(o.ids.size()), g->atlas.width, g->atlas.height);
-    mapWorld.ownPicturesUp();  // the renderer has them: their memory back
-    return true;
+    // 3.0.4-beta.27: the own ground drawn as soon as its own pictures are up - the game's ground showed for most of a
+    // second after a map's start, then gave way to it; the models' and the water's go up on while it is drawn
+    if (!o.groundUp && (o.up || (o.texture >= g->textures.size() && (!o.atlas || o.atlasRow >= g->atlas.height)))) {
+        o.groundUp = true;
+        unsigned made = 0;
+        for (uint32_t id : o.ids) made += id != 0;
+        LOG_INFO("own ground: %s's pictures up - %u of %u textures, lightmaps %dx%d; the game's ground left out from "
+                 "now", g->map.c_str(), made, unsigned(o.ids.size()), g->atlas.width, g->atlas.height);
+    }
+    if (o.up) {
+        LOG_INFO("own ground: %s's models' and water's pictures up", g->map.c_str());
+        mapWorld.ownPicturesUp();  // the renderer has them all: their memory back
+    }
+    return o.groundUp;
 }
 
 // A ground draw of the game's in place of which the own ground is drawn: its state, and the colours and fog it gives
@@ -301,7 +310,8 @@ bool Renderer::Impl::drawOwnGround() {
     std::memcpy(now.view, viewToWorld, sizeof now.view);
     now.width = gameWidth, now.height = gameHeight, now.serial = o.serial, now.blends = blends;
     // 3.0.4-beta.20: the colours learnt anew, not the triangles matched - those grew every picture (R-35N5QN: 0 %)
-    now.models = effects.ownFarModels, now.seamsView = seamsView, now.matched = o.learning.changes();
+    // 3.0.4-beta.27: the models once their pictures are up (o.up)
+    now.models = effects.ownFarModels && o.up, now.seamsView = seamsView, now.matched = o.learning.changes();
     now.fog[0] = o.shading.specularAt(100.0f), now.fog[1] = o.shading.specularAt(1000.0f);
     now.like = o.like;
     now.valid = true;
@@ -312,7 +322,19 @@ bool Renderer::Impl::drawOwnGround() {
                       o.made.matched == now.matched && o.made.fog[0] == now.fog[0] && o.made.fog[1] == now.fog[1] &&
                       o.made.like == now.like;
     size_t chunks = o.madeChunks, vertices = o.madeVertices, triangles = o.madeTriangles;
-    if (same) ++o.reused;
+    if (same) ++o.reused, ++o.minuteReused;
+    if (!same && o.made.valid) {  // 3.0.4-beta.27: the first reason found
+        const int why = std::memcmp(o.made.view, now.view, sizeof now.view) != 0 ? 0
+                        : !o.changed.empty()                                  ? 1
+                        : meanMoved                                           ? 2
+                        : lightMoved                                          ? 3
+                        : o.made.fog[0] != now.fog[0] || o.made.fog[1] != now.fog[1] ? 4
+                        : !(o.made.like == now.like)                          ? 5
+                        : o.made.matched != now.matched                       ? 6
+                                                                              : 7;
+        ++o.anew[why];
+    }
+    ++o.minuteFrames;
     if (!same) {
         o.made = now;
         chunks = vertices = triangles = 0;
@@ -525,6 +547,16 @@ bool Renderer::Impl::drawOwnGround() {
                  o.frames, o.most, o.slowest, double(o.cornersChanged) / double(o.frames),
                  double(o.chunksMade) / double(o.frames), 100.0 * double(o.reused) / double(o.frames),
                  blends ? "on" : "off");
+    // 3.0.4-beta.27: a minute's worth - how much was drawn again as it was, and why it was made anew
+    if (o.minuteFrames >= 3600) {
+        LOG_INFO("own ground: %s - the last %u pictures: %.0f %% drawn again as they were; made anew for the camera "
+                 "%u, the ground's colours %u, their mean %u, the hills' light %u, the fog %u, the state %u, the "
+                 "models' colours %u, the rest %u", g->map.c_str(), o.minuteFrames,
+                 100.0 * double(o.minuteReused) / double(o.minuteFrames), o.anew[0], o.anew[1], o.anew[2], o.anew[3],
+                 o.anew[4], o.anew[5], o.anew[6], o.anew[7]);
+        o.minuteFrames = o.minuteReused = 0;
+        std::fill(o.anew, o.anew + 8, 0u);
+    }
     // 3.0.4-beta.14: whether the own models stand where the game's do - of the game's model triangles near, how many
     // lay where one of ours does (all but the moving ones: placed as the game places them)
     if (o.frames == 600 && effects.ownFarModels)
@@ -601,7 +633,7 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
     OwnState& o = ownState;
     o.modelsDrawn = 0;
     const OwnGround* g = mapWorld.ownGround();
-    if (!g || !effects.ownFarModels || !o.modelLikeKnown || g->models.chunks.empty()) return;
+    if (!g || !effects.ownFarModels || !o.modelLikeKnown || g->models.chunks.empty() || !o.up) return;
     o.learning.fit();
     const float from = own_ground::ownFrom(p);  // 3.0.4-beta.22: where the own ground's depth is squeezed
     DrawSetup ms = o.modelLike;

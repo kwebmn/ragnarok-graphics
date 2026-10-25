@@ -1157,6 +1157,7 @@ struct Renderer::Impl {
         size_t texture = 0, level = 0;  // the next picture to put up, a few a frame
         int atlasRow = 0;
         bool up = false;            // all of them up
+        bool groundUp = false;      // 3.0.4-beta.27: the ground's own (its textures, its lightmaps): drawn from then
         bool decided = false, frame = false, drawn = false;  // this picture's: drawn in place of the game's
         bool likeKnown = false;     // 3.0.4-beta.16: kept over the pictures (the camera far out: none of the game's)
         bool likeTaken = false;     // this picture's taken
@@ -1213,6 +1214,10 @@ struct Renderer::Impl {
         // round and its strength as they were made
         bool lightOn = false;
         float lightSun[3] = {0.0f, 0.0f, 0.0f}, lightAmbient = 0.0f, lightStrength = 0.0f;
+        // 3.0.4-beta.27 (the reuse 0 % in R-35N5QN and later): why a picture was made anew - the camera, the corners'
+        // colours, the mean, the light, the fog, the state, the models' colours, the rest; and the minute's own counts
+        uint32_t anew[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+        uint32_t minuteFrames = 0, minuteReused = 0;
         double slowest = 0.0;       // ms, of the frames so far
         size_t most = 0;            // vertices, the most a frame
         // 3.0.4-beta.20 (the own ground on every map): the map's water past the game's far plane (OwnGround::water) -
