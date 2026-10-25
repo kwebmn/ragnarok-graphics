@@ -507,6 +507,21 @@ float4 shade(PsIn i) {
     float2 pg = (i.pos.xy - 0.5 - float2(jitterX, jitterY)) / max(scale, 1e-3);
     float3 P = float3((pg.x - cx) * pz / max(f0, 1e-3), (pg.y - cy) * pz / max(f1, 1e-3), pz);
     float3 dp1 = ddx(P), dp2 = ddy(P);
+    // 1.9, a strip across a seam of the ground (seams.cpp): the other cell's texture where the noise over the world
+    // says: one wandering line between the two textures. 1.9.5: diffuse alpha how much the place is the other's
+    // (bilinear between the cells' middles: corners round off), the noise up on one side and down on the other - one
+    // line both sides agree on. 3.0.5-beta.15 (R-R9XBKP: the strips 7.0 ms of a Radeon 610M's 42 on «Високі», the
+    // dearest part): worked out first - a neighbour's strip's pixel the noise leaves the cell's own texture shows
+    // nothing (its alpha), and is left before its textures, materials and hills (the most of a strip)
+    float seamOther = 1.0;
+    if (((stage1.y >> 31) & 1) != 0) {
+        float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
+                   float3(r9, r10, r11);
+        float n = mnoise(w.xz * 0.22) * 0.65 + mnoise(w.xz * 0.7 + 5.1) * 0.35;
+        float side = i.specular.g > 0.5 ? 1.0 : -1.0;
+        seamOther = smoothstep(-0.05, 0.05, i.diffuse.a - 0.5 + side * (n - 0.5) * 0.9);
+        if (i.specular.r <= 0.5 && seamOther < 0.001) discard;  // under half a step of 255 over the ground
+    }
     bool material = ((stage1.y >> 28) & 1) != 0;
     float4 m = float4(0.5, 0.5, 0.5, 0.0);
     float pane = 0.0;
@@ -612,21 +627,13 @@ float4 shade(PsIn i) {
         warm *= smoothstep(0.06, 0.25, (most - min(c.r, min(c.g, c.b))) / max(most, 1e-3));
         c.rgb *= (0.88 + 0.24 * mnoise(w.xz * 0.012)) * float3(1.0 + warm * 0.6, 1.0 + warm * 0.15, 1.0 - warm * 0.5);
     }
-    // 1.9, a strip across a seam of the ground (seams.cpp): the other cell's texture where the noise over the world
-    // says: one wandering line between the two textures.
+    // 1.9: a strip across a seam - its alpha (seamOther, worked out above)
     if (((stage1.y >> 31) & 1) != 0) {
-        float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
-                   float3(r9, r10, r11);
-        float n = mnoise(w.xz * 0.22) * 0.65 + mnoise(w.xz * 0.7 + 5.1) * 0.35;
-        // 1.9.5: diffuse alpha how much the place is the other's (bilinear between the cells' middles: corners
-        // round off), the noise up on one side and down on the other - one line both sides agree on
-        float side = i.specular.g > 0.5 ? 1.0 : -1.0;
         bool own = i.specular.r > 0.5;  // 1.9.2: the cell's own band at the edge, its rim covered
-        float other = smoothstep(-0.05, 0.05, i.diffuse.a - 0.5 + side * (n - 0.5) * 0.9);
         // 1.25: the own band whole at the edge (drawn first, applySeams) - partly see-through, the texture's dark rim
         // under it showed through the neighbour's strip as a line along the cells (the desert's "cracks")
         // 2.0.2: whole over the rim only, then fading out - whole over all of it, its mirror's axis showed
-        c.a = own ? 1.0 - smoothstep(0.3, 0.9, i.specular.b) : other;
+        c.a = own ? 1.0 - smoothstep(0.3, 0.9, i.specular.b) : seamOther;
     }
 #endif
     if (fogEnable == 2) c.rgb = lerp(c.rgb, fogColor.rgb, fogColor.a);  // 2.3: uaRO Studio's X-ray, the state's colour
