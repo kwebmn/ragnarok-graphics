@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.5-beta.7 - what's new
+
+- **«Run the graphics test» on the «Play» page.** The settings app starts the game for the test itself, one window only.
+  While you log in, the bottom of the game says «Graphics test: it begins 10 s after you enter a map». On the map a
+  countdown follows, «Graphics test begins in N s: stand somewhere quiet and keep still. ~ cancels it», and then the
+  test itself, as from the console. Under the button the last test is shown: when it was, the sets' table and whether it
+  went to the developers (the report's code). The table refreshes by itself as soon as a test ends. While the game is
+  running the button is greyed out: the test is then in the game's console (~ → «Graphics test»).
+- «Help» now describes the graphics test.
+- To check:
+  1. Close the game, press «Run the graphics test» on «Play», enter a map and wait for the countdown and the test.
+  2. After «Graphics test sent: R-…» the «Play» page should show the last test's table and «Sent to the developers:
+     R-…».
+  3. Start it from the button once more and press ~ during the countdown - «Graphics test cancelled» should show.
+
 # uaRO Graphics 3.0.5-beta.6 - what's new
 
 - **«Graphics test» in the game's console.** ~ → the second row «Graphics test: 75 s, the result goes to the developers»
