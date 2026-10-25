@@ -2686,44 +2686,67 @@ float4 weather_ps(PresentOut i) : SV_Target {
         if (hash12(id + float2(91.0, 17.0) * float(layer + 1)) > presence * footprint) continue;
         float2 h = float2(hash12(id + float(layer) * 17.0), hash12(id * 1.7 + float(layer) * 3.1));
         float2 d = (f - (0.2 + 0.6 * h)) * cell;  // from the particle, game pixels
-        float shape = 0.0;
-        float3 colour = float3(1.0, 1.0, 1.0);
-        float alpha = 0.0;
-        if (kind == 1) {  // snow: a soft flake, swaying
-            d.x += sin(t * 1.3 + h.x * 6.28) * 4.0 * depth;
-            float r = 0.9 + 0.8 * depth;
-            shape = exp(-dot(d, d) / (r * r));
-            alpha = 0.85;
-        } else if (kind == 2) {  // rain: a thin streak along its fall
-            float2 dir = normalize(fall);
-            float along = dot(d, dir), across = dot(d, float2(-dir.y, dir.x));
-            shape = exp(-across * across / (0.35 * depth)) * saturate(1.0 - abs(along) / (10.0 * depth));
-            colour = float3(0.78, 0.83, 0.92);
-            alpha = 0.32;
-        } else if (kind == 3) {  // a leaf: tumbling as it falls, its width turning
-            // 2.7.35: twice as big - 7 by 4 game pixels in the middle layer read as orange specks at 1080p
-            float turn = abs(sin(t * 2.1 + h.y * 6.28));
-            float2 e = d / float2(max(7.0 * depth * turn, 1.2), 4.4 * depth);
-            shape = saturate(1.0 - dot(e, e)) * 1.5;
-            colour = h.x < 0.4    ? float3(0.86, 0.45, 0.13)
-                     : h.x < 0.75 ? float3(0.58, 0.36, 0.16)
-                                  : float3(0.62, 0.66, 0.2);
-            alpha = 0.92;
-        } else if (kind == 4) {  // sand: a streak blown across
+        // 3.0.5-beta.18 (R-H3QJBG: the pollen 2.55 ms of a Radeon 610M's 22 on «Середні» - every pixel of the screen
+        // worked out each layer's particle whole, its sines and its exp): a pixel farther from its cell's particle than
+        // the particle reaches - its shape and its own motion at their most - gets under 1e-4 of it (a leaf, none)
+        // and goes on to the next layer (a particle covers a few pixels of its cell's thousands)
+        bool close;
+        if (kind == 1) {
+            float reach = 3.01 * (0.9 + 0.8 * depth) + 4.0 * depth;  // the flake's sway at its most
+            close = dot(d, d) <= reach * reach;
+        } else if (kind == 2) {
+            float2 way = normalize(fall);
+            float along = dot(d, way), across = dot(d, float2(-way.y, way.x));
+            close = abs(along) < 10.0 * depth && across * across <= 2.83 * depth;
+        } else if (kind == 3) {
+            close = abs(d.x) < max(7.0 * depth, 1.2) && abs(d.y) < 4.4 * depth;  // the leaf at its widest
+        } else if (kind == 4) {
             float2 e = d / float2(26.0 * depth, 0.9 * depth);
-            shape = exp(-dot(e, e));
-            colour = float3(0.86, 0.76, 0.56);
-            alpha = 0.14;
-        } else {  // a mote: wandering slowly, now catching the light, now not
-            d += float2(sin(t * 0.37 + h.x * 6.28), cos(t * 0.29 + h.y * 6.28)) * 6.0 * depth;
-            float r = 0.45 + 0.35 * depth;
-            shape = exp(-dot(d, d) / (r * r)) * (0.55 + 0.45 * sin(t * (0.8 + h.y) + h.x * 20.0));
-            colour = kind == 5 ? float3(1.0, 0.95, 0.75) : litColour;
-            alpha = kind == 5 ? 0.55 : min(0.35 * lit, 0.8);
+            close = dot(e, e) <= 7.25;
+        } else {
+            float reach = 3.0 * (0.45 + 0.35 * depth) + 8.49 * depth;  // the mote's wander at its most
+            close = dot(d, d) <= reach * reach;
         }
-        float s = saturate(shape) * alpha;
-        sum += colour * s;
-        a += s;
+        [branch] if (close) {
+            float shape = 0.0;
+            float3 colour = float3(1.0, 1.0, 1.0);
+            float alpha = 0.0;
+            if (kind == 1) {  // snow: a soft flake, swaying
+                d.x += sin(t * 1.3 + h.x * 6.28) * 4.0 * depth;
+                float r = 0.9 + 0.8 * depth;
+                shape = exp(-dot(d, d) / (r * r));
+                alpha = 0.85;
+            } else if (kind == 2) {  // rain: a thin streak along its fall
+                float2 dir = normalize(fall);
+                float along = dot(d, dir), across = dot(d, float2(-dir.y, dir.x));
+                shape = exp(-across * across / (0.35 * depth)) * saturate(1.0 - abs(along) / (10.0 * depth));
+                colour = float3(0.78, 0.83, 0.92);
+                alpha = 0.32;
+            } else if (kind == 3) {  // a leaf: tumbling as it falls, its width turning
+                // 2.7.35: twice as big - 7 by 4 game pixels in the middle layer read as orange specks at 1080p
+                float turn = abs(sin(t * 2.1 + h.y * 6.28));
+                float2 e = d / float2(max(7.0 * depth * turn, 1.2), 4.4 * depth);
+                shape = saturate(1.0 - dot(e, e)) * 1.5;
+                colour = h.x < 0.4    ? float3(0.86, 0.45, 0.13)
+                         : h.x < 0.75 ? float3(0.58, 0.36, 0.16)
+                                      : float3(0.62, 0.66, 0.2);
+                alpha = 0.92;
+            } else if (kind == 4) {  // sand: a streak blown across
+                float2 e = d / float2(26.0 * depth, 0.9 * depth);
+                shape = exp(-dot(e, e));
+                colour = float3(0.86, 0.76, 0.56);
+                alpha = 0.14;
+            } else {  // a mote: wandering slowly, now catching the light, now not
+                d += float2(sin(t * 0.37 + h.x * 6.28), cos(t * 0.29 + h.y * 6.28)) * 6.0 * depth;
+                float r = 0.45 + 0.35 * depth;
+                shape = exp(-dot(d, d) / (r * r)) * (0.55 + 0.45 * sin(t * (0.8 + h.y) + h.x * 20.0));
+                colour = kind == 5 ? float3(1.0, 0.95, 0.75) : litColour;
+                alpha = kind == 5 ? 0.55 : min(0.35 * lit, 0.8);
+            }
+            float s = saturate(shape) * alpha;
+            sum += colour * s;
+            a += s;
+        }
     }
     if (kind == 4) {  // and the air itself a little sandy
         sum += float3(0.86, 0.76, 0.56) * 0.05 * footprint;
