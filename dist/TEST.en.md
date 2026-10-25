@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.5-beta.11 - what's new
+
+- **Direct3D 11 on «High»: found what ate the processor (R-455GWU, 66 ms a frame).** The grass and road seams and «Hills
+  without steps of light» looked their cells and strips up in tables keyed by two numbers (a cell's x and z, a group and
+  a texture). In the 32-bit game the standard table takes the low half of a key alone, so all the cells of one row or
+  all the strips of one texture fell into one slot and were searched one by one among hundreds. Now the whole key is
+  mixed. The 64-bit Direct3D 12 renderer never had this.
+- To check: the «Graphics test» under Direct3D 11 - the processor on «High» should be far lighter than 66 ms.
+
 # uaRO Graphics 3.0.5-beta.10 - what's new
 
 - **Fixed: under Direct3D 12 the game lost the graphics card at the end of the «Graphics test» (R-GGKYDV).** With
