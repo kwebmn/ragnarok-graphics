@@ -77,3 +77,37 @@ TEST(frame_profile_starts_again_when_cleared) {
     CHECK_EQ(w.frames(), 0);
     CHECK(w.lines("Direct3D 11", 10.0).empty());
 }
+
+// 3.0.5-beta.6: the graphics test's windows - each line tagged with its set, so that they are read back from the log
+TEST(frame_profile_tags_every_line_of_a_window) {
+    frame_profile::Window w;
+    w.span("grass", 2.0, 0.5);
+    w.cpu("the frame limit's wait", 3.0);
+    w.frame(16.0);
+    const std::vector<std::string> lines = w.lines("Direct3D 12", 12.0, "test 2/5 low");
+    CHECK_EQ(int(lines.size()), 4);
+    for (const std::string& line : lines) CHECK(line.rfind("profile [test 2/5 low]: ", 0) == 0);
+    CHECK(has(lines[1], "]: the card 2.00 ms a frame - grass 2.00 (ms)"));
+    CHECK(w.lines("Direct3D 12", 12.0)[0].rfind("profile: Direct3D 12 - ", 0) == 0);  // untagged as before
+}
+
+// every 10 s as before; a cut asked ends the window at once - logged under its tag, or dropped ("") - and while the
+// cuts go on, no window of 10 s
+TEST(frame_profile_flush_ends_windows_by_time_or_by_the_tests_cuts) {
+    frame_profile::Flush f;
+    bool log = false;
+    std::string tag = "x";
+    CHECK(!f.due(9999.0, log, tag));
+    CHECK(f.due(10000.0, log, tag) && log && tag.empty());
+    f.cut("", true);  // the test's set measured from now: the window so far dropped
+    CHECK(f.due(5.0, log, tag) && !log);
+    CHECK(!f.due(20000.0, log, tag));  // by cuts alone now
+    f.cut("test 1/5 off", true);
+    CHECK(f.due(12000.0, log, tag) && log && tag == "test 1/5 off");
+    f.cut("", false);  // the test over: every 10 s again
+    CHECK(f.due(1.0, log, tag) && !log);
+    CHECK(f.due(10000.0, log, tag) && log && tag.empty());
+    f.cut("test 2/5 low", true);
+    f.reset();  // the profile turned off: nothing asked any more
+    CHECK(!f.due(1.0, log, tag));
+}

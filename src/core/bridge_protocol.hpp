@@ -71,6 +71,7 @@ enum class Msg : uint32_t {
     SetWorldScale,      // 2.5.16: f64 the world's share of the picture (Direct3D 11's [quality] world_scale)
     SetLight,           // 2.5.20: u8 the light modes' flags (core/light_mode.hpp light::Flag; Direct3D 11's own)
     SetProfile,         // 3.0.5-beta.2: u8 [debug] profile - the frame's spans into the log (core/frame_profile.hpp)
+    ProfileCut,         // 3.0.5-beta.6: str tag, u8 by cuts - the graphics test's window ends (frame_profile::Flush)
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text

@@ -143,6 +143,9 @@ public:
     // 3.0.5-beta.2 (the user: «давай сделаем анализ, где именно идет больше всего расчетов»): [debug] profile - each
     // frame cut into spans, the card's and the processor's time of each into the log every 10 s (core/frame_profile)
     void setProfile(bool on);
+    // 3.0.5-beta.6: the graphics test (core/graphics_test) - the profile's window so far into the log under `tag`
+    // («profile [test 2/5 low]: ...»), "" dropped; the next windows by these cuts alone while `byCuts`
+    void profileCut(const std::string& tag, bool byCuts);
     void setShaderVariants(bool on);  // 2.5.16: [debug] shader_variants (Direct3D 11)
     void setUpscaler(Upscaler* u);   // before setScale
     // 0.62: [display] ui_native - the world `ratio` times the picture, made smaller into it, the interface at the

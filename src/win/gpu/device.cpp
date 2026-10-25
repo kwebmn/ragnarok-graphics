@@ -444,9 +444,13 @@ void Renderer::Impl::profilePresent() {
     profileShown = now.QuadPart;
     std::copy(counters, counters + 5, profileSeen);
     const ULONGLONG tick = GetTickCount64();
-    if (tick - profileSince >= ULONGLONG(frame_profile::kWindowMs)) {
-        for (const std::string& line : profileWindow.lines("Direct3D 12", double(tick - profileSince) / 1000.0))
-            LOG_INFO("%s", line.c_str());
+    bool log = false;
+    std::string tag;
+    if (profileFlush.due(double(tick - profileSince), log, tag)) {  // 3.0.5-beta.6: or at the graphics test's cuts
+        if (log)
+            for (const std::string& line :
+                 profileWindow.lines("Direct3D 12", double(tick - profileSince) / 1000.0, tag))
+                LOG_INFO("%s", line.c_str());
         profileWindow.clear();
         profileSince = tick;
     }
@@ -460,6 +464,7 @@ void Renderer::Impl::profileRelease() {
     for (Slot& s : slots) s.marked = 0;
     profileOn = false;
     profileWindow.clear();
+    profileFlush.reset();
 }
 
 // 2.5.25: with frame generation the game's frames are held so that the shown ones stay under the refresh of the
@@ -2141,6 +2146,12 @@ void Renderer::setProfile(bool on) {  // 3.0.5-beta.2
     if (d3d11_) return d3d11_->setProfile(on);
     if (remote_) return remote_->setProfile(on);
     if (!remix_) impl_->setProfile(on);
+}
+
+void Renderer::profileCut(const std::string& tag, bool byCuts) {  // 3.0.5-beta.6
+    if (d3d11_) return d3d11_->profileCut(tag, byCuts);
+    if (remote_) return remote_->profileCut(tag, byCuts);
+    if (!remix_) impl_->profileFlush.cut(tag, byCuts);
 }
 
 void Renderer::setLight(uint8_t flags) {

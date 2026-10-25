@@ -38,6 +38,7 @@ public:
     void setWorldScale(double share);  // 2.5.16: sent when it changes
     void setLight(uint8_t flags);      // 2.5.20: sent when they change
     void setProfile(bool on);          // 3.0.5-beta.2: [debug] profile, sent when it changes
+    void profileCut(const std::string& tag, bool byCuts);  // 3.0.5-beta.6: the graphics test's window ends
     void preparePipelines(const std::string& file);
     bool setTarget(int width, int height);
     bool setScale(double k, int width, int height, int samples, bool upscale);

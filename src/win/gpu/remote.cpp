@@ -239,6 +239,14 @@ void Remote::setProfile(bool on) {
     send(Msg::SetProfile, {uint8_t(on ? 1 : 0)});
 }
 
+void Remote::profileCut(const std::string& tag, bool byCuts) {
+    buffer_.clear();
+    WireWriter w(buffer_);
+    w.str(tag);
+    w.u8(byCuts ? 1 : 0);
+    send(Msg::ProfileCut, buffer_);
+}
+
 void Remote::preparePipelines(const std::string& file) {
     buffer_.clear();
     WireWriter(buffer_).str(file);

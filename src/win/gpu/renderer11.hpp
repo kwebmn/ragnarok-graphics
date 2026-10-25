@@ -87,6 +87,8 @@ public:
     void setWorldScale(double share) { worldScale_ = std::clamp(share, 0.5, 1.0); }
     void setLight(uint8_t flags) { lightWanted_ = flags; }  // 2.5.20: taken at the next frame's start
     void setProfile(bool on) { profileWanted_ = on; }  // 3.0.5-beta.2: [debug] profile, taken at a frame's start
+    // 3.0.5-beta.6: the graphics test's window ends at the frame's end (frame_profile::Flush)
+    void profileCut(const std::string& tag, bool byCuts) { pflush_.cut(tag, byCuts); }
     uint32_t createTexture(int width, int height, int levels);
     // 2.5.13: under the number the game's side gave it (Direct3D 11 on its own thread: Remote numbers them)
     bool createTextureAs(uint32_t id, int width, int height, int levels);
@@ -939,6 +941,7 @@ private:
     ProfileFrame pframes_[kTimedFrames];
     UINT pslot_ = 0;
     frame_profile::Window pwindow_;
+    frame_profile::Flush pflush_;  // 3.0.5-beta.6: every 10 s, or at the graphics test's cuts
     ULONGLONG profileSince_ = 0;
     LONGLONG lastClosed_ = 0;
     double qpcPerMs_ = 1.0;

@@ -3886,9 +3886,12 @@ Renderer11::ProfileFrame* Renderer11::profileClose() {
     f.frameMs = since;
     pslot_ = (pslot_ + 1) % kTimedFrames;
     const ULONGLONG tick = GetTickCount64();
-    if (tick - profileSince_ >= ULONGLONG(frame_profile::kWindowMs)) {
-        for (const std::string& line : pwindow_.lines("Direct3D 11", double(tick - profileSince_) / 1000.0))
-            LOG_INFO("%s", line.c_str());
+    bool log = false;
+    std::string tag;
+    if (pflush_.due(double(tick - profileSince_), log, tag)) {  // 3.0.5-beta.6: or at the graphics test's cuts
+        if (log)
+            for (const std::string& line : pwindow_.lines("Direct3D 11", double(tick - profileSince_) / 1000.0, tag))
+                LOG_INFO("%s", line.c_str());
         pwindow_.clear();
         profileSince_ = tick;
     }
@@ -3929,6 +3932,7 @@ void Renderer11::profileDrop() {
     lastClosed_ = 0;
     pslot_ = 0;
     pwindow_.clear();
+    pflush_.reset();
 }
 
 void Renderer11::profiledDraw(const FrameRecord& rec, const DrawCmd& d) {

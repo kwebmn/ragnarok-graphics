@@ -671,6 +671,7 @@ struct Renderer::Impl {
     const UINT64* profileData = nullptr;  // mapped for good
     bool profileWanted = false, profileOn = false, profileFailed = false;
     frame_profile::Window profileWindow;
+    frame_profile::Flush profileFlush;  // 3.0.5-beta.6: every 10 s, or at the graphics test's cuts
     ULONGLONG profileSince = 0;
     LONGLONG profileShown = 0;  // the processor's clock at the last present
     LONGLONG profileSeen[5] = {};  // cpuTicks, fenceTicks, pacerTicks, swapTicks, reflexTicks then
