@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.5-beta.2 — what is new
+
+- **The frame measured, to find what slows it.** «Debugging» → «Measure where the game spends its time» now also cuts
+  each frame into its parts: the game's world, its interface, each effect, the world made larger, the picture into the
+  window, the clears, the game's textures written. For each part - the card's and the processor's time. Every 10 seconds
+  «profile:» lines come into the log: how many frames, the average frame and the slowest tenth of the frames, the
+  frame's parts from the dearest, the waits apart (the frame limit, Present, the card). Works with Direct3D 12 and
+  Direct3D 11.
+- To check on the laptop with a Radeon 610M:
+  1. Turn «Measure where the game spends its time» on and play 1–2 minutes in Prontera and on a field, then send a
+     report (Ctrl+Shift+F10).
+  2. «Graphics» → «What draws the game» → «Graphics API» → «Direct3D 11 (older graphics cards, test)», start the game
+     again, the same places and a report once more: this is how the game runs for the player with an HD 6570.
+  3. Put «Graphics API» back as it was and turn the measuring off: it costs a little speed.
+
 # uaRO Graphics 3.0.5-beta.1 — what is new
 
 - **From a beta back to the release.** The channel «Release» chosen and a beta installed - the settings app now offers
