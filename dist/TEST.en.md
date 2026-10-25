@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.4-beta.24 — what is new
+
+- **No band across the ship with the camera pulled out all the way** (report R-PTAMG4, "a band is seen on the ship").
+  The game draws its water and most of the ship's faces (all whose textures have see-through places: sails, deck) in
+  one list, far to near, without writing depth. The water far off was drawn in the middle of that list - at the
+  game's first water cell. The deck's faces that came earlier in the list lay under it, and a band of water ran across
+  the deck. Now the water far off is drawn at the very start of that list, and the whole ship lies over it. The game's
+  water picture and waves the driver takes by looking ahead in the picture's record. Offline the band of water on the
+  deck came out again, and with the fix it is gone.
+- To check (with "Own ground (prototype)"): Alberta, the camera pulled out all the way, the ship near the top edge -
+  the deck whole; and the water as before (no strip, no line).
+
 # uaRO Graphics 3.0.4-beta.23 — what is new
 
 - **No line on the water, no cut roofs near the far edge** (report R-W7A5XC, "the strip got smaller; also noticed the
