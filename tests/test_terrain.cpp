@@ -401,3 +401,34 @@ TEST(terrain_water_lies_over_the_cells_under_it) {
     CHECK(terrain::water(g, 10.0f, 0.0f).vertices.empty());   // the water below every corner (the deepest at 8)
     CHECK_EQ(terrain::water(g, -1.0f, 0.0f).vertices.size(), size_t(29 * 4));  // over all of it: each cell with a top
 }
+
+TEST(terrain_knows_the_plain_ground_under_its_smooth_points) {
+    // 3.0.4-beta.29 (the user took «Скорость» whole: «плавный переход гладкой земли в дальнюю»): each point of the
+    // smooth ground (and its strips) knows the height the plain ground has there - the cell's two triangles as the
+    // plain mesh splits them, from (x + 1, y) to (x, y + 1) - so that it is eased onto it before a chunk changes from
+    // the one to the other (drawOwnGround): no jump, no crack between them
+    gnd::Ground g = flat();
+    for (gnd::Cell& c : g.cells) c.h[0] = 0.0f, c.h[1] = -4.0f, c.h[2] = -8.0f, c.h[3] = -6.0f;  // not a plane
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const terrain::Mesh fine = terrain::build(g, 3, atlas);
+    int checked = 0;
+    for (const terrain::Batch& b : fine.batches) {
+        if (b.layer != terrain::kGround) continue;
+        for (uint32_t k = b.firstVertex; k < b.firstVertex + b.vertexCount; ++k) {
+            const terrain::Vertex& v = fine.vertices[k];
+            if (std::fabs(v.normal[1]) < 0.5f) continue;  // a wall: plain as it is
+            const float gx = v.pos[0] / g.zoom + float(g.width) / 2.0f, gz = v.pos[2] / g.zoom + float(g.height) / 2.0f;
+            const float fu = gx - std::floor(gx + 1e-4f), fv = gz - std::floor(gz + 1e-4f);
+            if (fu > 1e-3f && fu < 0.999f && fv > 1e-3f && fv < 0.999f) {  // inside a cell (its edges two cells')
+                const float want = fu + fv <= 1.0f ? 0.0f - 4.0f * fu - 8.0f * fv
+                                                   : -6.0f - 2.0f * (1.0f - fu) + 2.0f * (1.0f - fv);
+                CHECK(std::fabs(v.plain - want) < 1e-3f);
+                ++checked;
+            }
+        }
+    }
+    CHECK(checked > 0);
+    for (const terrain::Vertex& v : terrain::build(g, 1, atlas).vertices)  // the plain ground: itself
+        CHECK(v.plain == v.pos[1]);
+}
+

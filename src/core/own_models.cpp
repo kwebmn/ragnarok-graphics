@@ -67,6 +67,7 @@ terrain::Mesh place(const std::vector<rsw::Model>& instances, const std::vector<
                 if (at == part.known.end()) {
                     terrain::Vertex v{};
                     std::copy(p[k], p[k] + 3, v.pos);
+                    v.plain = v.pos[1];  // 3.0.4-beta.29: the ground's own (not eased)
                     v.uv[0] = f.uv[k][0];
                     v.uv[1] = f.uv[k][1];
                     v.color = 0xFFFFFFFFu;

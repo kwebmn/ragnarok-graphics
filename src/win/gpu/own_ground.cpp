@@ -25,6 +25,7 @@ constexpr float kMostDepth = 4000.0f;               // how far off the own groun
 // i7-8700 (R-N6FC5V)
 constexpr float kFinePixels = 40.0f;
 constexpr int kRelitAPicture = 8;  // 3.0.4-beta.28: chunks made again a picture when the hills' light moved
+constexpr float kMorphFrom = 0.75f;  // 3.0.4-beta.29: of fineDepth - the smooth ground eased onto the plain past it
 
 double msSince(const LARGE_INTEGER& from) {
     LARGE_INTEGER now, f;
@@ -385,6 +386,7 @@ bool Renderer::Impl::drawOwnGround() {
         int relit = 0;  // 3.0.4-beta.28: chunks made again in the moved light this picture
         o.lightPending = false;
         const float from = own_ground::ownFrom(p);  // 3.0.4-beta.23: the triangles across it cut there
+        const float morphFrom = fineDepth * kMorphFrom;  // 3.0.4-beta.29: the smooth ground eased from here on
         for (size_t k = 0; k < g->mesh.chunks.size(); ++k) {
             const terrain::Chunk& box = g->mesh.chunks[k];
             float lo[3], hi[3];
@@ -455,7 +457,16 @@ bool Renderer::Impl::drawOwnGround() {
                         behind[i] = 1;
                         continue;
                     }
-                    const float zd = 1.0f / t.rhw;
+                    float zd = 1.0f / t.rhw;
+                    // 3.0.4-beta.29: the smooth ground eased onto the plain one as it nears the change (fineDepth) -
+                    // a chunk changes to the plain ground lying on it already: no jump, no crack along their seam
+                    if (which == 0 && zd > morphFrom && tv.plain != tv.pos[1]) {
+                        const float f = std::min((zd - morphFrom) / (fineDepth - morphFrom), 1.0f);
+                        const float m = f * f * (3.0f - 2.0f * f);
+                        const float eased[3] = {tv.pos[0], tv.pos[1] + (tv.plain - tv.pos[1]) * m, tv.pos[2]};
+                        own_ground::place(view, p, axes, eased, t);
+                        zd = 1.0f / t.rhw;
+                    }
                     if (lift > 0.0f) t.z = own_ground::depthOf(p, std::max(zd - lift, p.nearZ + 0.005f));
                     t.diffuse = colours[bt.firstVertex + i];
                     const uint32_t fog = fogged ? o.shading.specularAt(zd) : plain;

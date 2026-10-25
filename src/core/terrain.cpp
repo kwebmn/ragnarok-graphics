@@ -61,6 +61,13 @@ float heightAt(const gnd::Cell& c, const Grid& grid, int x, int y, float fu, flo
     return top + (bottom - top) * fv;
 }
 
+// 3.0.4-beta.29: the plain ground's height in a cell - its two triangles as the plain mesh has them (quad(): a b c,
+// b d c - from corner 1 to corner 2)
+float plainAt(const gnd::Cell& c, float fu, float fv) {
+    if (fu + fv <= 1.0f) return c.h[0] + (c.h[1] - c.h[0]) * fu + (c.h[2] - c.h[0]) * fv;
+    return c.h[3] + (c.h[2] - c.h[3]) * (1.0f - fu) + (c.h[1] - c.h[3]) * (1.0f - fv);
+}
+
 bool patchWhole(const Grid& grid, int x, int y) {
     for (int j = y - 1; j <= y + 2; ++j)
         for (int i = x - 1; i <= x + 2; ++i)
@@ -179,6 +186,7 @@ void blendsOf(Builder& b, const Grid& grid, int x, int y, int n, const std::vect
             v.pos[0] = (float(x) + fu - half[0]) * g.zoom;
             v.pos[1] = heightAt(*c, grid, x, y, fu, fv, smooth);
             v.pos[2] = (float(y) + fv - half[1]) * g.zoom;
+            v.plain = plainAt(*c, fu, fv);
             v.normal[0] = 0.0f, v.normal[1] = -1.0f, v.normal[2] = 0.0f;
             b.lightmapUv(s.lightmap, fu, fv, v.lm);
         };
@@ -288,6 +296,7 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
                             v.pos[0] = (float(x) + fu - half[0]) * g.zoom;
                             v.pos[1] = heightAt(c, grid, x, y, fu, fv, smooth);
                             v.pos[2] = (float(y) + fv - half[1]) * g.zoom;
+                            v.plain = n > 1 ? plainAt(c, fu, fv) : v.pos[1];
                             // its slope: the height's change along x and z (world units)
                             const float u0 = std::max(fu - e, 0.0f), u1 = std::min(fu + e, 1.0f);
                             const float w0 = std::max(fv - e, 0.0f), w1 = std::min(fv + e, 1.0f);
@@ -326,6 +335,7 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
                 for (int k = 0; k < 4; ++k) {
                     Vertex v{};
                     std::copy(p[k], p[k] + 3, v.pos);
+                    v.plain = v.pos[1];  // a wall: as it is
                     std::copy(nrm, nrm + 3, v.normal);
                     v.uv[0] = s.u[k];
                     v.uv[1] = s.v[k];
@@ -417,6 +427,7 @@ Mesh water(const gnd::Ground& g, float level, float waveHeight) {
                         v.pos[0] = (float(x + du) - half[0]) * g.zoom;
                         v.pos[1] = level;
                         v.pos[2] = (float(y + dv) - half[1]) * g.zoom;
+                        v.plain = level;
                         v.normal[1] = -1.0f;
                         v.uv[0] = float((x & 3) + du) * 0.25f;
                         v.uv[1] = float((y & 3) + dv) * 0.25f;

@@ -19,6 +19,8 @@ struct Vertex {
     uint32_t color;   // ARGB, the surface's; a neighbour's strip: alpha how much the place is the neighbour's
     uint32_t blend;   // 3.0.4-beta.12, a strip's: as the ground seams' specular (shade() bit 31) - red 255 a cell's own
                       // band, green 255 on the side whose noise counts up, blue the way across (0 at the edge)
+    float plain;      // 3.0.4-beta.29: the plain ground's height here (its cell's two triangles, from (x + 1, y) to
+                      // (x, y + 1)) - the smooth ground eased onto it before a chunk changes to the plain one
 };
 // 3.0.4-beta.12 (the user chose «Мягкие переходы»): the layers of a chunk, drawn in this order - the ground; along each
 // edge between two cells that look different (another texture, or one whose coordinates jump there) and no step,
