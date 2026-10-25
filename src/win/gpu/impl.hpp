@@ -1220,6 +1220,7 @@ struct Renderer::Impl {
         // colours, the mean, the light, the fog, the state, the models' colours, the rest; and the minute's own counts
         uint32_t anew[8] = {0, 0, 0, 0, 0, 0, 0, 0};
         uint32_t minuteFrames = 0, minuteReused = 0;
+        int sinceMade = 0;  // 3.0.4-beta.32: pictures drawn again since the record was made (modelsColoursDue)
         double slowest = 0.0;       // ms, of the frames so far
         size_t most = 0;            // vertices, the most a frame
         // 3.0.4-beta.20 (the own ground on every map): the map's water past the game's far plane (OwnGround::water) -

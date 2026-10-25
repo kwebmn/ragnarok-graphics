@@ -216,6 +216,19 @@ TEST(own_ground_keeps_room_in_the_game_s_memory) {
     CHECK(own_ground::roomFor(own_ground::kKeepFree, 0, 0) == Room::Whole);
 }
 
+TEST(own_ground_brings_the_models_colours_learnt_at_most_once_a_second) {
+    // 3.0.4-beta.32 (R-Q3W727 «минукта неподвижно стоял ничего не трогал», prontera): 3571 of the minute's 3600
+    // pictures were made anew for the colours learnt from the game's models - its cherry trees sway 4-8 degrees, its
+    // signs and clock hands turn, each lit anew every picture. The far models stand still: what was learnt reaches
+    // them at most every kModelsColoursEvery pictures, the last picture drawn again meanwhile
+    using own_ground::kModelsColoursEvery;
+    CHECK(!own_ground::modelsColoursDue(5, 5, 600));                       // nothing learnt anew
+    CHECK(!own_ground::modelsColoursDue(5, 6, 0));                         // the picture made just now
+    CHECK(!own_ground::modelsColoursDue(5, 9, kModelsColoursEvery - 1));  // a moment more
+    CHECK(own_ground::modelsColoursDue(5, 6, kModelsColoursEvery));       // its time: made again
+    CHECK(kModelsColoursEvery >= 30 && kModelsColoursEvery <= 120);       // half a second to two at 60 a second
+}
+
 TEST(own_ground_draws_its_own_from_where_its_depth_is_squeezed) {
     // 3.0.4-beta.22 (R-ZZN7GY «всеравно осталась черная полоса на воде»): past kSqueeze before the far plane the own
     // ground's depth is squeezed below 1 - a point of the game's there (its water, its models up to 1500) lies behind

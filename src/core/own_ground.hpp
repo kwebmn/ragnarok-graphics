@@ -51,6 +51,14 @@ float depthOf(const camera::Projection& p, float zd);
 // behind the own ground's squeezed depth there, though nearer, and is hidden by it (the game's water between 1490 and
 // 1500 behind the own bed: a black strip, the far water beginning at 1500)
 inline float ownFrom(const camera::Projection& p) { return p.farZ - kSqueeze; }
+// 3.0.4-beta.32 (R-Q3W727: a minute still in prontera, 3571 of 3600 pictures made anew for the models' colours): the
+// colours learnt from the game's models (own_models::Learning::changes, made then and now) reach the far models at
+// most every kModelsColoursEvery pictures - the game lights its swaying cherry trees, turning signs and clock hands
+// anew every picture, and the far models stand still
+constexpr int kModelsColoursEvery = 60;
+inline bool modelsColoursDue(size_t made, size_t now, int picturesSince) {
+    return made != now && picturesSince >= kModelsColoursEvery;
+}
 
 // A vertex of the own ground at its place in the map's file (the axes make it the world's) as the game would put it on
 // the screen - its colours and texture coordinates left; false behind the near plane

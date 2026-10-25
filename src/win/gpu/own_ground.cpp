@@ -100,6 +100,7 @@ void Renderer::Impl::dropOwnGround() {
     ownState.made.valid = false;  // its record names the textures let go
     ownState.likeKnown = false;
     ownState.reused = 0;
+    ownState.sinceMade = 0;
     ownState.minuteFrames = ownState.minuteReused = 0;  // 3.0.4-beta.27
     std::fill(ownState.anew, ownState.anew + 8, 0u);
 }
@@ -327,14 +328,15 @@ bool Renderer::Impl::drawOwnGround() {
     now.fog[0] = o.shading.specularAt(100.0f), now.fog[1] = o.shading.specularAt(1000.0f);
     now.like = o.like;
     now.valid = true;
+    // 3.0.4-beta.32 (R-Q3W727): the models' colours learnt anew at most every kModelsColoursEvery pictures
     const bool same = o.made.valid && !meanMoved && !lightMoved && !o.lightPending && o.changed.empty() &&
                       std::memcmp(o.made.view, now.view, sizeof now.view) == 0 && o.made.width == now.width &&
                       o.made.height == now.height && o.made.serial == now.serial && o.made.blends == now.blends &&
                       o.made.models == now.models && o.made.seamsView == now.seamsView &&
-                      o.made.matched == now.matched && o.made.fog[0] == now.fog[0] && o.made.fog[1] == now.fog[1] &&
-                      o.made.like == now.like;
+                      !own_ground::modelsColoursDue(o.made.matched, now.matched, o.sinceMade) &&
+                      o.made.fog[0] == now.fog[0] && o.made.fog[1] == now.fog[1] && o.made.like == now.like;
     size_t chunks = o.madeChunks, vertices = o.madeVertices, triangles = o.madeTriangles;
-    if (same) ++o.reused, ++o.minuteReused;
+    if (same) ++o.reused, ++o.minuteReused, o.sinceMade = std::min(o.sinceMade + 1, 1 << 20);
     if (!same && o.made.valid) {  // 3.0.4-beta.27: the first reason found
         const int why = std::memcmp(o.made.view, now.view, sizeof now.view) != 0 ? 0
                         : !o.changed.empty()                                  ? 1
@@ -349,6 +351,7 @@ bool Renderer::Impl::drawOwnGround() {
     ++o.minuteFrames;
     if (!same) {
         o.made = now;
+        o.sinceMade = 0;
         chunks = vertices = triangles = 0;
         const bool fogged = o.shading.fogged();
         const uint32_t plain = o.shading.specularAt(0.0f);  // no fog: the game's specular everywhere
