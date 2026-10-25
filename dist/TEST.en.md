@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.5-beta.18 - what's new
+
+- **Lighter weather.** The pollen over a field cost 2.55 ms of a Radeon 610M's frame on «Medium»: every pixel of the
+  screen worked out its particle in each of three layers whole - sines, cosines and an exp - though the particles are
+  small and sparse and nearly every pixel is far from them. Now a pixel first checks whether its particle reaches it
+  (its size and its own motion at their worst), and a far one goes on to the next layer at once. The look is the same:
+  a far particle gave under a ten-thousandth (a leaf, exactly nothing). The same for snow, rain, leaves, sand and dust.
+- To check on the laptop: the «Graphics test» under Direct3D 11 from the same spot - «weather» on «Medium» was 2.55
+  ms; and by eye the pollen (on prt_fild08) and snow or rain if they come - as before.
+
 # uaRO Graphics 3.0.5-beta.17 - what's new
 
 - **Grass: beta.16's slowdown fixed.** The test showed the grass 0.9 ms dearer in beta.16, not cheaper: the roots' mark
